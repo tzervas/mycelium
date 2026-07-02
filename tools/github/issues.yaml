@@ -11319,3 +11319,31 @@ issues:
       - Executed ONLY after the four-condition scorecard is green (recorded); DN-56 status
         advanced append-only; the post-freeze diff policy (DN-39-only) stated; CHANGELOG logs
         the act.
+
+  - id: M-970
+    title: "mycelium-fmt: render_expr_canonical drops the @forage(policy) Hypha annotation"
+    milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
+    labels: [phase:7, type:bug, area:tooling, priority:P3, status:todo]
+    epic: E28-1
+    depends_on: [M-906]
+    doc_refs:
+      - src:crates/mycelium-fmt/src/lib.rs:1410
+      - corpus:DN-70
+    body: |
+      FLAG raised by M-914 (kickoff `enb`, H1 capstone) and confirmed at integration-reconcile
+      2026-07-02. `crates/mycelium-fmt/src/lib.rs::render_expr_canonical` has no `Expr::Hypha`
+      arm, so a hypha's optional `@forage(policy)` placement annotation (activated by M-906, DN-70
+      D1) is silently dropped in the canonical render path — a formatter round-trip that erases the
+      annotation is a never-silent (G2) violation for that construct.
+
+      Follow-up candidate, NOT fixed in the reconcile PR (out of the close-out's scope). Recorded so
+      the gap is tracked, not lost.
+
+      User stories:
+      - As a Mycelium developer, I want `mycfmt` to preserve `@forage(policy)` on a hypha, so that
+        formatting never silently changes my program's placement policy.
+
+      Definition of Done:
+      - `render_expr_canonical` (and the comment-aware token path, if separately affected) emit the
+        `@forage(policy)` annotation; a round-trip conformance case (`format(parse(x)) preserves
+        @forage`) added; guarantee tag at the supportable strength.
