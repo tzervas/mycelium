@@ -18,18 +18,20 @@ comment is an explicit error; `mycfmt` never writes a partial or garbled rewrite
 
 ## Key items
 
-- `format_source` — formats a source string; returns `Formatted` or `FmtError`.
+- `format_source` — formats a source string in the compact canonical form; returns `Formatted` or `FmtError`.
+- `format_source_readable` — the human-readable multi-line style (M-974/DN-82): long argument / field / variant / arm segments break across lines, short ones stay inline. Presentation-only and functionally inert (same surface AST — C1/C2).
+- `Style` — `Compact` (default) or `Readable`; both are shared by `format_source_styled`.
 - `Formatted` — the successful result: output text, a changed flag, and any notes.
 - `FmtError` — explicit error variants (parse failure, header error, out-of-scope construct).
 - `MYCFMT_VERSION` — the formatter spelling/version this build implements (used for the hard pin check).
-- `mycfmt` binary — CLI entrypoint; supports `--check` mode and reads stdin or a file path.
+- `mycfmt` binary — CLI entrypoint; `--check` / `--write`, `--flatten` (single-line stream form) and `--readable` (human multi-line; mutually exclusive with `--flatten`); reads stdin or a file path.
 
 ## Design references
 
-- M-364, M-142, M-690
+- M-364, M-142, M-690, M-819, M-974
 - RFC-0001 §4.6/§4.8
 - ADR-003
-- DN-06
+- DN-06, DN-57, DN-82
 - G2, VR-5, KC-3
 
 ## Role in the workspace
