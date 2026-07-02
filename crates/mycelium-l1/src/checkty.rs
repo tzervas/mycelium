@@ -1330,7 +1330,54 @@ fn register_nodule_decls(nodule: &Nodule) -> Result<NoduleRegs, CheckError> {
     let p = prelude();
     types.insert(p.name.clone(), p);
     register_types(&mut types, nodule)?;
-    let traits = register_traits(&types, nodule)?;
+    let mut traits = register_traits(&types, nodule)?;
+    // M-965 (DN-58 §A F-A1): seed the built-in `Fuse` trait — the trait analogue of the `Bool`
+    // prelude type above — but only when this nodule actually declares an `impl Fuse[...] for
+    // ...` (never unconditionally). A nodule that tries to redeclare it gets an explicit refusal
+    // (never a silent shadow of the built-in — G2), exactly as redeclaring `Bool` would collide in
+    // `types`.
+    //
+    // **Why conditional (unlike `Bool`, which is always seeded):** `mono::is_already_monomorphic`
+    // (the "is this program already closed — no generics/traits/instances?" fast-path test) and a
+    // wide swath of the existing test corpus assert `env.traits.is_empty()` / `mono.traits.is_empty()`
+    // for any program that never mentions traits at all. Bool is harmless there (it has empty
+    // `params`, so it never trips the *type*-genericity half of that test); an unconditionally
+    // seeded `Fuse` trait would trip the *trait*-emptiness half for **every** program, including
+    // ones with no `fuse`/`Fuse` in sight — a real regression, not just a test artifact (it would
+    // force every trait-free program through mono's slow specializing pass). So `Fuse` is seeded
+    // **iff** this nodule's own items need it (an `impl Fuse[...] for ...`) — never based on
+    // whether `fuse(a, b)` is *called* (the repr-type fast path in `check_fuse` never touches the
+    // trait registry at all, and a Data-type `fuse` call always requires a prior `impl`, which is
+    // exactly what this scan detects).
+    //
+    // FLAG (M-965, narrow, honest residual): a nodule that delegates `Fuse` **only** via `via idx :
+    // Fuse` sugar (DN-53) — with no textual `impl Fuse[...] for ...` — is not detected here, because
+    // `via`-generated impls are expanded later (`check_nodule_with` Phase 0b, after imports/coherence
+    // are available) and are not yet in `nodule.items` at this registration pass. Such a program
+    // would see "impl for unknown trait `Fuse`" at via-expansion time — a never-silent refusal, not a
+    // silent misbehavior, but a real gap the scan below doesn't yet close (deferred, not hidden).
+    let fuse_used = nodule
+        .items
+        .iter()
+        .any(|item| matches!(item, Item::Impl(id) if id.trait_name == crate::fuse::TRAIT_NAME));
+    if fuse_used {
+        if traits.contains_key(crate::fuse::TRAIT_NAME) {
+            return Err(CheckError::new(
+                crate::fuse::TRAIT_NAME,
+                "cannot redeclare the built-in prelude trait `Fuse` (DN-58 §A / M-965 F-A1) — its \
+                 lawful-merge `join` contract is already provided by the prelude; remove this \
+                 declaration and `impl Fuse[T] for T { fn join(a: T, b: T) => T = … }` directly",
+            ));
+        }
+        traits.insert(crate::fuse::TRAIT_NAME.to_owned(), crate::fuse::prelude());
+    } else if traits.contains_key(crate::fuse::TRAIT_NAME) {
+        return Err(CheckError::new(
+            crate::fuse::TRAIT_NAME,
+            "cannot redeclare the built-in prelude trait `Fuse` (DN-58 §A / M-965 F-A1) — its \
+             lawful-merge `join` contract is already provided by the prelude; remove this \
+             declaration and `impl Fuse[T] for T { fn join(a: T, b: T) => T = … }` directly",
+        ));
+    }
     let mut fns: BTreeMap<String, FnDecl> = BTreeMap::new();
     for item in &nodule.items {
         if let Item::Fn(fd) = item {
@@ -2016,6 +2063,16 @@ fn check_nodule_with(
             resolved_impl_methods.extend(methods);
         }
     }
+
+    // Pass 3b-2 (M-965; DN-58 §A F-A2): the `Fuse` semilattice-law checker. Every `impl Fuse[T]
+    // for T` whose `T` is a finitely-enumerable domain (a nullary-constructor `Data` type — the
+    // `Bool`-shape) is exhaustively checked against the three semilattice laws (idempotence,
+    // commutativity, associativity — RFC-0008 RT6); a violation is an explicit, never-silent
+    // `CheckError` naming the failed law + a concrete witness (G2), refused **here at definition**,
+    // never reaching a `fuse` call site. A non-enumerable `T` (has fields, is parametric/recursive)
+    // is honestly left **unchecked** in v0 (DN-58 §A.6 F-A3 — deferred, never silently claimed
+    // lawful; VR-5). Runs after Pass 3b so every instance's resolved method bodies are available.
+    crate::fuse::check_fuse_laws(&types, &fns, &traits, &instances, &impls)?;
 
     // Pass 3e-late: **§4.1 IL-grammar RHS type-check** of each `lower` rule (DN-54 §4.1 / M-812-cont).
     // The structural checks (§3 uniqueness / param-uniqueness / §4.6 `wild`-purity), rule registration,
@@ -4134,19 +4191,28 @@ impl Cx<'_> {
         Ok(policy2)
     }
 
-    /// DN-58 §A (M-667): `fuse(a, b)` — lawful binary merge over the `Fuse` semilattice instance
-    /// carried by the type. Both operands must have the same type `T`; the result type is also `T`.
-    /// Repr types (Binary/Ternary/Dense/Bytes/Seq) are always fusible — the semilattice join is
-    /// bitwise-and for Binary/Ternary (commutative/associative/idempotent by semantics — Empirical).
-    /// Named Data types require a `Fuse` trait instance; absent one the error is never-silent (G2).
+    /// DN-58 §A (M-667, M-965): `fuse(a, b)` — lawful binary merge over the `Fuse` semilattice
+    /// instance carried by the type. Both operands must have the same type `T`; the result type is
+    /// also `T`. Repr types (Binary/Ternary/Dense/Bytes/Seq) are always fusible — the semilattice
+    /// join is bitwise-and for Binary/Ternary (commutative/associative/idempotent by semantics —
+    /// Empirical). Named Data types require a `Fuse` trait instance; absent one the error is
+    /// never-silent (G2).
     ///
     /// Guarantee: `Empirical` — the type-homogeneity check is Exact; the "repr types are fusible"
     /// claim is Empirical (bitwise-and semilattice laws are property-tested, not mechanized-Proven
-    /// here). The Data-type Fuse-instance check is Declared (trait registry lookup, not a proof).
-    /// FLAG F-A1: in v0 the Fuse trait is not yet in the prelude — a user must `declare trait Fuse`
-    /// and `impl Fuse for T` for named Data types. No built-in Fuse instance registry exists yet.
-    /// FLAG F-A2: the semilattice law checker (commutativity/associativity/idempotence) is not yet
-    /// wired — the instance check is structural-only in v0 (DN-58 §A.6 deferred check).
+    /// here). The Data-type Fuse-instance check is Declared (trait registry lookup, not a proof) —
+    /// **unless** [`crate::fuse::check_fuse_laws`] (M-965 F-A2) exhaustively verified the instance's
+    /// `join` (a finite nullary-constructor `for_ty`), in which case that instance's laws are
+    /// `Empirical`-checked, not merely Declared (VR-5: the checker runs at registration, before this
+    /// `fuse`-call site is ever reached, so a law-violating instance never gets this far — it was
+    /// already refused when it was `impl`ed).
+    /// **Landed (M-965):** F-A1 — `Fuse` is now a built-in prelude trait
+    /// (`crate::fuse::prelude`), so a program `impl Fuse[T] for T { … }`s directly, with no
+    /// `trait Fuse` declaration of its own. F-A2 — the semilattice law checker
+    /// (`crate::fuse::check_fuse_laws`) is wired into `check_nodule_with`'s impl pass; it is
+    /// exhaustive only over a **finite, enumerable** `for_ty` (a nullary-constructor Data type) —
+    /// a composite/parametric `for_ty`'s laws are honestly left unchecked (DN-58 §A.6 F-A3,
+    /// deferred), never silently assumed (VR-5).
     fn check_fuse(
         &self,
         scope: &mut Vec<(String, Ty)>,
@@ -4184,12 +4250,13 @@ impl Cx<'_> {
             };
             if !has_fuse_instance {
                 return self.err(format!(
-                    "`fuse` requires a `Fuse` semilattice instance for `{lty}` — declare \
-                     `trait Fuse {{ fn join(self, other: Self) => Self }}` and \
-                     `impl Fuse for {lty} {{ fn join(self, other: {lty}) => {lty} = … }}` with a \
-                     commutative/associative/idempotent `join`; RFC-0008 RT6 / DN-58 §A.4 \
-                     (never-silent — G2; FLAG F-A1: the built-in prelude Fuse instance for repr \
-                     types is deferred)"
+                    "`fuse` requires a `Fuse` semilattice instance for `{lty}` — `Fuse` is a \
+                     built-in prelude trait (M-965 F-A1), so declare \
+                     `impl Fuse[{lty}] for {lty} {{ fn join(a: {lty}, b: {lty}) => {lty} = … }}` \
+                     with a commutative/associative/idempotent `join`; RFC-0008 RT6 / DN-58 §A.4 \
+                     (never-silent — G2). If `{lty}` is a finite nullary-constructor type, the \
+                     three semilattice laws are exhaustively checked at `impl` time (M-965 F-A2) — \
+                     a law violation refuses right there, before this `fuse` call is ever reached."
                 ));
             }
         }

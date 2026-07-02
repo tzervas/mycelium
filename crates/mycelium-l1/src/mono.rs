@@ -183,7 +183,19 @@ pub fn monomorphize_with_selections(
 /// Is `env` already fully monomorphic, trait-free, **and** HOF-free? Then mono is the identity
 /// (the fast pass-through). True iff **no** function is generic, **no** function has a fn-typed
 /// value parameter (which needs defunctionalization — RFC-0024 §4, M-687), **no** data type is
-/// generic, and there are **no** traits / instances / retained impls.
+/// generic, and there are **no** (user) traits / instances / retained impls.
+///
+/// **M-965 note:** every `Env` now carries the built-in `Fuse` prelude trait
+/// ([`crate::fuse::TRAIT_NAME`]) even when the program never mentions `fuse`/`Fuse` — mirroring how
+/// every `Env` already carries the built-in `Bool` prelude *type* (which doesn't break this check,
+/// since `Bool` happens to have empty `params`). A trait registration with **zero** instances/impls
+/// contributes nothing to specialize (an unimplemented trait can't be called — `check_fuse`/generic
+/// dispatch always requires a resolved instance), so the trait-emptiness test here is *specifically*
+/// "no **user-declared** trait" — the always-present builtin is excluded, exactly as `Bool` is
+/// excluded from the phylum-wide coherence view (`checkty::check_phylum_inner`'s `name != "Bool"`
+/// guard). `env.instances`/`env.impls` being empty is unaffected and still does the real work: a
+/// program that actually declares `impl Fuse[T] for T` has a non-empty `instances`/`impls`, which
+/// correctly still forces the full (specializing) pass.
 fn is_already_monomorphic(env: &Env) -> bool {
     env.fns.values().all(|fd| {
         fd.sig.params.is_empty()
@@ -199,7 +211,10 @@ fn is_already_monomorphic(env: &Env) -> bool {
             && !body_has_lambda(&fd.body)
             && !body_has_fn_value(env, &fd.body)
     }) && env.types.values().all(|d| d.params.is_empty())
-        && env.traits.is_empty()
+        && env
+            .traits
+            .keys()
+            .all(|name| name == crate::fuse::TRAIT_NAME)
         && env.instances.is_empty()
         && env.impls.is_empty()
 }
