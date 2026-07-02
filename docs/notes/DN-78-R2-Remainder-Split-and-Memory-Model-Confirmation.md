@@ -220,6 +220,33 @@ A maintainer amendment to the split, if any, supersedes by dated section — nev
 
 ---
 
+## Appendix — M-964 RT2/determinism honesty audit (2026-07-02, append-only)
+
+**Scope** (`Empirical` — audited at the M-963 tip of this branch): every runtime/concurrency
+guarantee tag in `mycelium-std-runtime` — the 29 `guarantee_matrix::MATRIX` rows, the 7
+in-crate `*_STRENGTH` constants (`task`/`dataflow`/`network`/`colony`), the 5 re-exported
+constants (owned by `mycelium-sched` / `mycelium-rt-abi`; observed values recorded), and the
+prose tag tables in `rc.rs` / `region.rs` / `scope_region.rs` / `dataflow.rs` / `task.rs` /
+`colony.rs` / `network.rs`.
+
+**Audit rule applied** (the M-964 DoD): a determinism claim stays `Empirical` unless a
+machine-checked side-condition upgrades it; no `Proven` without a checked basis.
+
+| # | Finding | Verdict |
+|---|---|---|
+| 1 | **No `Proven` anywhere in the machine-readable surface** — zero MATRIX rows and zero strength constants at `Proven` (there is no in-repo mechanized concurrency theorem) | Holds; now **regression-guarded** by `determinism_claims_stay_honest` (`src/tests/guarantee_matrix.rs`), which fails on any future `Proven` row |
+| 2 | **Cross-thread / schedule-dependent determinism claims are all `Empirical`**, each with a property/differential test: Kahn-determinism (Scope/Colony/Network + `KAHN_DETERMINISM_STRENGTH`, `SCOPE_JOIN_STRENGTH`, `COLONY_KAHN_STRENGTH`), RT2 sequentialization (OS threads + work-stealing, `SCHEDULER_RT2_STRENGTH`), liveness ×2 (`SCHEDULER_LIVENESS_STRENGTH`), deadlock detection/freedom (`DEADLOCK_DETECTION_STRENGTH`), supervision propagation (`SUPERVISION_PROPAGATION_STRENGTH`), and the new M-963 replay differential | Retained at `Empirical` — no upgrade (no checked side-condition exists) |
+| 3 | **Two determinism claims are `Exact`:** `SweepOrder determinism` (a pure function of the queue state; the single-threaded cooperative sweep — `task.rs:82`, `SWEEP_DETERMINISM_STRENGTH` at `dataflow.rs:40`, whose `Exact` is explicitly scoped to the cooperative path with the OS-pool path separately `Empirical`) and `Steal-victim-selection policy determinism` (`StealPolicy::select_victim` is a total pure function of its inputs — `STEAL_POLICY_STRENGTH`; the cross-thread *execution* claims are the separate `Empirical` rows) | **Audited as by-construction** (pure single-threaded functions, no ambient input) and whitelisted in the regression test — any whitelist addition requires re-running this audit, not just editing the list |
+| 4 | **The prose `Proven`-modulo-LR-9 tag** (sibling-reclamation safety, `region.rs:48`/`:211`) mirrors RFC-0027 §8's Accepted, maintainer-ratified wording — a *qualified* claim that names its unchecked side-condition and states "no in-repo mechanized proof" | **Retained as qualified prose** — not a bare `Proven`, and rewriting it here would desync the crate from the Accepted RFC. Guard: it must not be promoted into any machine-readable tag above `Empirical` until an in-repo mechanized proof (LR-9 side-condition checked) lands — the no-`Proven` regression test enforces this for the MATRIX. *Observation (non-blocking FLAG):* a stricter VR-5 reading renders it `Declared`-with-argument; that reclassification belongs to an RFC-0027 amendment, not this leaf |
+| 5 | **`Declared` tags** — task purity (`TASK_PURITY_STRENGTH`; type system cannot enforce), the rc-probe / `rc==1`-reuse / region-batching **perf** claims (DN-32 §6a: expected, unmeasured) | Correctly `Declared`; retained |
+| 6 | **M-963's own rows** land per this rule: 4 × `Exact` (fail-closed / by-construction: setter record, unset-slot refusal, capture resolution, deferred-construct refusal) + 1 × `Empirical` (replay-reaches-recorded-decision — property-tested, not `Proven`) | Consistent; pinned by `m963_rows_present_at_expected_strength` |
+| 7 | Inline-test inventory: `colony.rs` + `task.rs` still carry inline `#[cfg(test)]` modules (M-797 lazy sweep) — untouched by this lane, so the as-touched extraction rule was not triggered for them (`guarantee_matrix.rs`, which this lane *did* touch, had its tests extracted) | Recorded, not silently skipped (G2) |
+
+**Downgrades required: none.** No tag was found above its supportable strength.
+**Upgrades performed: none** (nothing acquired a machine-checked side-condition).
+
+---
+
 ## Meta — changelog
 
 - **2026-07-02 — Created + Accepted under delegation (M-962, kickoff `frz` Lane C, epic E31-1).**
@@ -229,3 +256,12 @@ A maintainer amendment to the split, if any, supersedes by dated section — nev
   **confirmed** (`Empirical`, §2) with two honest residuals recorded. FLAGs F1–F5 raised.
   Grounded in DN-63, DN-70, RFC-0027, DN-32, RFC-0005, research/27 §2, frz Lane C brief.
   Append-only. No shared file touched from this branch.
+- **2026-07-02 — M-963 landed + M-964 audit appended (same branch, dated append).** The §3
+  subset is built in `mycelium-std-runtime` (`policy_mech` B-1/B-2, `r2_residual` B-3, five
+  guarantee-matrix rows, 94 tests green incl. the record-vs-replay proptest differential).
+  The M-964 RT2/determinism honesty audit is recorded as the appendix above: no `Proven`
+  anywhere in the machine-readable surface (now regression-guarded), all schedule-dependent
+  determinism claims `Empirical`, two by-construction `Exact` determinism claims whitelisted,
+  the `region.rs` `Proven`-modulo-LR-9 prose retained as qualified (with a non-blocking
+  observation FLAG), zero downgrades/upgrades. DoD items 1–2 satisfied; item 3 (FLAG-F2…F5)
+  remains the integrator's.
