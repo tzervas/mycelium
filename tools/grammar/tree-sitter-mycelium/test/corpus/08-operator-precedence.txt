@@ -1,0 +1,54 @@
+============================================================
+08 operator precedence
+============================================================
+
+nodule operators;
+
+fn chain(a: Binary{8}, b: Binary{8}, c: Binary{8}, d: Binary{8}, e: Binary{8}) => Binary{8} =
+    a + b * c == d && e;
+
+------------------------------------------------------------
+
+(source_file
+  (nodule_header
+    name: (identifier))
+  (fn_item
+    name: (identifier)
+    (params
+      (param
+        name: (identifier)
+        type: (type_ref
+          (repr_type
+            (int_literal))))
+      (param
+        name: (identifier)
+        type: (type_ref
+          (repr_type
+            (int_literal))))
+      (param
+        name: (identifier)
+        type: (type_ref
+          (repr_type
+            (int_literal))))
+      (param
+        name: (identifier)
+        type: (type_ref
+          (repr_type
+            (int_literal))))
+      (param
+        name: (identifier)
+        type: (type_ref
+          (repr_type
+            (int_literal)))))
+    return_type: (type_ref
+      (repr_type
+        (int_literal)))
+    body: (binary_expr
+      left: (binary_expr
+        left: (binary_expr
+          left: (identifier)
+          right: (binary_expr
+            left: (identifier)
+            right: (identifier)))
+        right: (identifier))
+      right: (identifier))))
