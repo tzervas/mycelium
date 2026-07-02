@@ -115,17 +115,17 @@ landed state before building** — the runtime pool (M-864/M-865) and the serial
 
 ## Definition of Done (kickoff)
 
-- **Kernel freeze:** DN-56's four conditions scored (`Empirical`, M-958), reject-ledger complete
++ **Kernel freeze:** DN-56's four conditions scored (`Empirical`, M-958), reject-ledger complete
   (M-959), and — once `enb`/`grm` close their conditions — the maintainer's freeze declaration
   executed (M-969) with the DN-39-only post-freeze diff policy stated; DN-56 advanced append-only.
-- **Inject-mode:** the maintainer-confirmed subset built + tested (M-961); RFC-0038's claims moved
++ **Inject-mode:** the maintainer-confirmed subset built + tested (M-961); RFC-0038's claims moved
   `Declared → Enacted` **only** for what is built (the deferred R&D stays `Declared`, flagged).
-- **Runtime closeout:** the directed R2 remainder activated (M-963); RT2 tags honest (M-964); the
++ **Runtime closeout:** the directed R2 remainder activated (M-963); RT2 tags honest (M-964); the
   heavy needs-design items (M-869/M-868/M-831) recorded as Phase-II/non-gating, none silently
   dropped.
-- **l1 tail:** `Fuse` law-checker, `via` ordering, and per-instantiation tag context landed; guard
++ **l1 tail:** `Fuse` law-checker, `via` ordering, and per-instantiation tag context landed; guard
   clauses ratification-ready (M-968, decision-gated).
-- Every op honestly tagged (VR-5); every refusal never-silent (G2); property test per bound;
++ Every op honestly tagged (VR-5); every refusal never-silent (G2); property test per bound;
   doc-maintenance per `_doc-maintenance.md`; every FLAG raised, none guessed. Land as scoped PRs to
   `dev` via `/pr-land`.
 

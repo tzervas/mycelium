@@ -57,6 +57,7 @@ use crate::checkty::{
     Env, TraitInfo, Ty, Width,
 };
 use crate::elab::ElabError;
+use crate::totality::{WalkDepthExceeded, MAX_WALK_DEPTH};
 
 /// A reified **instance selection** (RFC-0019 §4.4; house rule #2 — no black boxes). When mono
 /// lowers a trait-method call to a direct call, it records *which* instance it picked: the trait, the
@@ -2093,7 +2094,15 @@ impl<'e> Mono<'e> {
         bound_in_body.insert(param.name.clone());
         let mut free: Vec<String> = Vec::new();
         let mut seen_free: BTreeSet<String> = BTreeSet::new();
-        free_vars(body, &mut bound_in_body, &mut seen_free, &mut free);
+        // A `WalkDepthExceeded` from the free-variable walk (M-866) is the same never-silent
+        // operational-resource refusal `finish()` surfaces from `totality::classify_all` below —
+        // reuse `ElabError::DepthExceeded` rather than inventing a second depth-budget error shape.
+        free_vars(body, &mut bound_in_body, &mut seen_free, &mut free).map_err(|e| {
+            ElabError::DepthExceeded {
+                site: site.to_owned(),
+                limit: e.limit,
+            }
+        })?;
         // Keep only those that are locals in the enclosing scope (captured); a name resolving to a
         // top-level fn/ctor/prim is NOT captured (§4A.3 — handled by `rewrite_path`/§4). A HOF
         // value-parameter that was statically specialized (`fn_param_subst`, e.g. `f→negate` — M-687/
@@ -2558,12 +2567,40 @@ fn closure_param_ref(t: &Ty) -> TypeRef {
 ///
 /// This is a pure structural walk — never silent, never a guess (G2): every binder the AST exposes
 /// is respected, so `freevars` is invariant under α-renaming of bound variables (the §4A.9 property).
+///
+/// # Errors
+/// [`WalkDepthExceeded`] once this traversal's own recursion exceeds [`MAX_WALK_DEPTH`] (M-866,
+/// mirroring the totality/checker/elaborator `M-674` discipline — see [`free_vars_at`]) — a clean,
+/// explicit refusal rather than a host-stack overflow on a pathologically-nested `e` (G2).
 pub(crate) fn free_vars(
     e: &Expr,
     bound: &mut BTreeSet<String>,
     seen: &mut BTreeSet<String>,
     out: &mut Vec<String>,
-) {
+) -> Result<(), WalkDepthExceeded> {
+    free_vars_at(e, bound, seen, out, 0)
+}
+
+/// The depth-tracked worker behind [`free_vars`] (M-866): `depth` counts the live nesting of this
+/// traversal's own recursive descent (not any semantic property of `e`), charged on entry and
+/// checked against [`MAX_WALK_DEPTH`] before any further recursion — mirrors
+/// [`crate::totality::walk_expr_at`]'s M-674 discipline (same budget, same reified-counter
+/// mechanism, DRY): rather than rely on the host call stack (a resource, not a semantic limit) to
+/// bound the walk, the pass carries this explicit budget and refuses past it with a clean
+/// [`WalkDepthExceeded`], never a host-stack overflow.
+fn free_vars_at(
+    e: &Expr,
+    bound: &mut BTreeSet<String>,
+    seen: &mut BTreeSet<String>,
+    out: &mut Vec<String>,
+    depth: u32,
+) -> Result<(), WalkDepthExceeded> {
+    let depth = depth + 1;
+    if depth > MAX_WALK_DEPTH {
+        return Err(WalkDepthExceeded {
+            limit: MAX_WALK_DEPTH,
+        });
+    }
     match e {
         Expr::Path(p) => {
             if p.0.len() == 1 {
@@ -2575,7 +2612,7 @@ pub(crate) fn free_vars(
         }
         Expr::Lit(Literal::List(elems)) => {
             for el in elems {
-                free_vars(el, bound, seen, out);
+                free_vars_at(el, bound, seen, out, depth)?;
             }
         }
         Expr::Lit(_) => {}
@@ -2585,25 +2622,25 @@ pub(crate) fn free_vars(
             body,
             ..
         } => {
-            free_vars(b, bound, seen, out);
+            free_vars_at(b, bound, seen, out, depth)?;
             // `name` is bound in `body` only (let is non-recursive at the surface). Respect shadowing.
             let was = bound.insert(name.clone());
-            free_vars(body, bound, seen, out);
+            free_vars_at(body, bound, seen, out, depth)?;
             if was {
                 bound.remove(name);
             }
         }
         Expr::If { cond, conseq, alt } => {
-            free_vars(cond, bound, seen, out);
-            free_vars(conseq, bound, seen, out);
-            free_vars(alt, bound, seen, out);
+            free_vars_at(cond, bound, seen, out, depth)?;
+            free_vars_at(conseq, bound, seen, out, depth)?;
+            free_vars_at(alt, bound, seen, out, depth)?;
         }
         Expr::Match { scrutinee, arms } => {
-            free_vars(scrutinee, bound, seen, out);
+            free_vars_at(scrutinee, bound, seen, out, depth)?;
             for arm in arms {
                 let mut added: Vec<String> = Vec::new();
-                pattern_binders(&arm.pattern, bound, &mut added);
-                free_vars(&arm.body, bound, seen, out);
+                pattern_binders(&arm.pattern, bound, &mut added)?;
+                free_vars_at(&arm.body, bound, seen, out, depth)?;
                 for n in added {
                     bound.remove(&n);
                 }
@@ -2616,11 +2653,11 @@ pub(crate) fn free_vars(
             init,
             body,
         } => {
-            free_vars(xs, bound, seen, out);
-            free_vars(init, bound, seen, out);
+            free_vars_at(xs, bound, seen, out, depth)?;
+            free_vars_at(init, bound, seen, out, depth)?;
             let ax = bound.insert(x.clone());
             let aacc = bound.insert(acc.clone());
-            free_vars(body, bound, seen, out);
+            free_vars_at(body, bound, seen, out, depth)?;
             if aacc {
                 bound.remove(acc);
             }
@@ -2628,12 +2665,14 @@ pub(crate) fn free_vars(
                 bound.remove(x);
             }
         }
-        Expr::Swap { value, .. } => free_vars(value, bound, seen, out),
-        Expr::WithParadigm { body, .. } => free_vars(body, bound, seen, out),
-        Expr::Wild(b) | Expr::Spore(b) | Expr::Consume(b) => free_vars(b, bound, seen, out),
+        Expr::Swap { value, .. } => free_vars_at(value, bound, seen, out, depth)?,
+        Expr::WithParadigm { body, .. } => free_vars_at(body, bound, seen, out, depth)?,
+        Expr::Wild(b) | Expr::Spore(b) | Expr::Consume(b) => {
+            free_vars_at(b, bound, seen, out, depth)?;
+        }
         Expr::Colony(hyphae) => {
             for h in hyphae {
-                free_vars(&h.body, bound, seen, out);
+                free_vars_at(&h.body, bound, seen, out, depth)?;
             }
         }
         Expr::Lambda { params, body } => {
@@ -2644,33 +2683,34 @@ pub(crate) fn free_vars(
                     added.push(p.name.clone());
                 }
             }
-            free_vars(body, bound, seen, out);
+            free_vars_at(body, bound, seen, out, depth)?;
             for n in added {
                 bound.remove(&n);
             }
         }
         Expr::App { head, args } => {
-            free_vars(head, bound, seen, out);
+            free_vars_at(head, bound, seen, out, depth)?;
             for a in args {
-                free_vars(a, bound, seen, out);
+                free_vars_at(a, bound, seen, out, depth)?;
             }
         }
         Expr::Fuse { left, right } => {
-            free_vars(left, bound, seen, out);
-            free_vars(right, bound, seen, out);
+            free_vars_at(left, bound, seen, out, depth)?;
+            free_vars_at(right, bound, seen, out, depth)?;
         }
         Expr::Reclaim { policy, body } => {
-            free_vars(policy, bound, seen, out);
-            free_vars(body, bound, seen, out);
+            free_vars_at(policy, bound, seen, out, depth)?;
+            free_vars_at(body, bound, seen, out, depth)?;
         }
-        Expr::Ascribe(inner, _) => free_vars(inner, bound, seen, out),
+        Expr::Ascribe(inner, _) => free_vars_at(inner, bound, seen, out, depth)?,
         // M-826: a tuple literal's elements are all value positions; walk each for free variables.
         Expr::TupleLit(elems) => {
             for el in elems {
-                free_vars(el, bound, seen, out);
+                free_vars_at(el, bound, seen, out, depth)?;
             }
         }
     }
+    Ok(())
 }
 
 /// Collect a pattern's binders into `bound` (inserting each newly-bound name), recording the
@@ -2679,7 +2719,36 @@ pub(crate) fn free_vars(
 /// constructor written as a bare `Ident` is conservatively treated as a binder here — over-binding
 /// only ever *removes* a name from the capture set, never adds a spurious capture, so it is safe for
 /// the free-variable analysis; the real ctor/binder distinction is the checker's, already done.)
-fn pattern_binders(pat: &Pattern, bound: &mut BTreeSet<String>, added: &mut Vec<String>) {
+///
+/// # Errors
+/// [`WalkDepthExceeded`] once this traversal's own recursion exceeds [`MAX_WALK_DEPTH`] (M-866) — a
+/// clean, explicit refusal rather than a host-stack overflow on a pathologically-nested pattern.
+/// Mirrors [`crate::totality::pattern_binders`]'s own M-674 depth-budget discipline (same value,
+/// same reified-counter mechanism, DRY) — the two walk distinct pass concerns (free-variable capture
+/// here vs. structural-descent binder tracking there) so the code is not literally shared, but the
+/// budget and refusal shape are kept identical for one crate-wide "AST pass depth" guarantee.
+fn pattern_binders(
+    pat: &Pattern,
+    bound: &mut BTreeSet<String>,
+    added: &mut Vec<String>,
+) -> Result<(), WalkDepthExceeded> {
+    pattern_binders_at(pat, bound, added, 0)
+}
+
+/// The depth-tracked worker behind [`pattern_binders`] (M-866) — see [`free_vars_at`] for the
+/// shared discipline this mirrors.
+fn pattern_binders_at(
+    pat: &Pattern,
+    bound: &mut BTreeSet<String>,
+    added: &mut Vec<String>,
+    depth: u32,
+) -> Result<(), WalkDepthExceeded> {
+    let depth = depth + 1;
+    if depth > MAX_WALK_DEPTH {
+        return Err(WalkDepthExceeded {
+            limit: MAX_WALK_DEPTH,
+        });
+    }
     match pat {
         Pattern::Wildcard | Pattern::Lit(_) => {}
         Pattern::Ident(n) => {
@@ -2689,13 +2758,13 @@ fn pattern_binders(pat: &Pattern, bound: &mut BTreeSet<String>, added: &mut Vec<
         }
         Pattern::Ctor(_, subs) => {
             for s in subs {
-                pattern_binders(s, bound, added);
+                pattern_binders_at(s, bound, added, depth)?;
             }
         }
         // M-826: a tuple pattern `(x, y, …)` binds each sub-pattern element.
         Pattern::Tuple(subs) => {
             for s in subs {
-                pattern_binders(s, bound, added);
+                pattern_binders_at(s, bound, added, depth)?;
             }
         }
         // `Pattern::Or` is desugared in `check_match` before monomorphization; reaching here
@@ -2706,6 +2775,7 @@ fn pattern_binders(pat: &Pattern, bound: &mut BTreeSet<String>, added: &mut Vec<
              (invariant violation — report this)"
         ),
     }
+    Ok(())
 }
 
 /// The canonical dedup key of a work item — a kind-tagged string so a function and a data type that

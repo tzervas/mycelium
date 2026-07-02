@@ -35,7 +35,7 @@ use mycelium_core::{ContentHash, CoreValue, Node};
 use mycelium_interp::{EvalError, PrimRegistry, SwapEngine};
 use mycelium_mir_passes::emit::{emit_elided, EmitError};
 use mycelium_mir_passes::eval::{eval, AllocId, RcError};
-use mycelium_std_runtime::reclamation::{
+use mycelium_rt_abi::reclamation::{
     ReclamationRecord, ReclamationSink, ReclamationTrigger, ScopeId, SweepEpoch,
 };
 

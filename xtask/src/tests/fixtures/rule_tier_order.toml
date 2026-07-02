@@ -1,0 +1,29 @@
+# Test fixture for the `tier-order` named-rule kind (M-879 rule 2 shape).
+#
+# `tier_order` must precede EVERY `[table]` header (including `[meta]`) to bind at the TOML root —
+# once any `[table]` opens, subsequent bare keys belong to that table, not the root document.
+tier_order = ["core", "std", "tools"]
+
+[meta]
+derived_from = "test fixture"
+strata_guarantee = "n/a (test fixture)"
+tiers_guarantee = "n/a (test fixture)"
+basis_ref = "test fixture"
+
+[strata]
+mycelium-mlir = 1
+mycelium-core = 0
+mycelium-std-runtime = 1
+mycelium-cli = 2
+
+[tiers]
+mycelium-mlir = "core"
+mycelium-core = "core"
+mycelium-std-runtime = "std"
+mycelium-cli = "tools"
+
+[[named_rules]]
+id = "no-upward-tier-edges"
+description = "test: no crate may depend on a strictly-higher tier"
+basis_ref = "test fixture"
+kind = "tier-order"

@@ -1,0 +1,193 @@
+# xtask/deps-strata.toml — the acyclic-deps stratum + tier map (M-877 / M-878 / M-879).
+#
+# Consumed by `cargo run -p xtask -- deps` (`xtask/src/deps/`). This is DATA, not prose: every
+# violation the checker prints cites an entry here (never a hard-coded magic number/string — G2).
+#
+# Two independent, purpose-built views of the same 54-crate workspace dependency graph (53
+# `mycelium-*` crates + `xtask` itself):
+#
+# `[strata]` — a FINE per-crate numeric layer, one entry per workspace crate (M-877). Guarantee:
+# **Empirical** — derived once from `cargo metadata --format-version 1` at the point noted in
+# `[meta]`, as the longest NORMAL-only dependency chain from a sink (leaf = 0; each crate's number
+# is `1 + max(stratum(dep) for dep in its normal deps)`), computed INCLUSIVELY over the graph as it
+# stood at derivation time (no edges excluded). It is a FROZEN snapshot, not re-derived on every
+# run: the `deps` check loads this file and validates every *current* NORMAL edge against it
+# (source stratum must be strictly greater than target stratum). Because the numbers were derived
+# inclusively, this file is tautologically consistent with HEAD's normal-dep graph today (0
+# violations for the base M-877 check — "normal deps are already clean"); its value going forward
+# is as a REGRESSION gate — a normal edge added later that does not respect this frozen ordering
+# (e.g. a new edge from a low-stratum crate up to a high-stratum one) is caught, even though the
+# map itself cannot see an architecture problem that already existed at derivation time (that's
+# what `[tiers]` + the M-879 named rules are for, below).
+#
+# `[tiers]` — a COARSE, manually-curated 3-bucket architectural layering (`core` < `std` <
+# `tools`), independent of `[strata]`. Guarantee: **Declared** — an asserted judgment call about
+# intended architecture (VR-5: flagged as asserted, not derived/proven). `core` = language kernel +
+# runtime substrate (must stay independent of the standard library — KC-3 trusted-base boundary);
+# `std` = the `mycelium-std-*` library layer, built ON TOP of `core`; `tools` = user-facing
+# CLI/tooling/automation built on top of both. Used only by the M-879 `[[named_rules]]` below —
+# which is exactly why it catches what the tautological `[strata]` cannot: `mycelium-mlir` (tier
+# `core`) formerly had a NORMAL dependency on `mycelium-std-runtime` (tier `std`) — an upward-tier
+# anomaly that `[strata]` silently absorbed at derivation time (mlir's own stratum just grew to
+# accommodate it), but the `no-upward-tier-edges` rule flagged it, because a crate's `[tiers]`
+# bucket is a fixed architectural assertion that doesn't move just because a bad edge exists.
+# **M-883/M-884 fixed this**: the ABI surface mlir needed (reclamation + supervision) relocated to
+# the new `mycelium-rt-abi` crate (tier `core`, below both `mycelium-mlir` and
+# `mycelium-std-runtime`), so `mycelium-mlir` no longer depends on `mycelium-std-runtime` at all.
+#
+# Never-silent (G2): a crate missing from either table is itself reported as a violation by the
+# checker (`crate not in stratum/tier map`), not silently skipped.
+#
+# `tier_order` (below) is declared BEFORE `[meta]` deliberately: once any `[table]` header opens
+# (even `[meta]`), subsequent bare `key = value` lines belong to THAT table, not the root document
+# — so a key meant to bind at the TOML root must precede every `[table]`/`[[array]]` header.
+
+# The declared order of `[tiers]` buckets, lowest (most-depended-upon) first. A normal or dev edge
+# from a crate in a LATER tier to a crate in an EARLIER one (e.g. `tools -> core`) is "downward"
+# (allowed) — the later tier builds on the earlier one; same-tier is allowed; an edge from a crate
+# in an EARLIER tier UP to a crate in a LATER one (e.g. `core -> std`) is "upward" and is the
+# anomaly the `no-upward-tier-edges` rule below reports.
+tier_order = ["core", "std", "tools"]
+
+[meta]
+derived_from = "cargo metadata --format-version 1, workspace at dev@388a865, 2026-07-02; mycelium-rt-abi added + mycelium-std-runtime/mycelium-mlir re-derived by hand (same formula) for the M-883/M-884 runtime-ABI seam extraction, 2026-07-02"
+strata_guarantee = "Empirical (point-in-time topological derivation over the NORMAL-dep graph; not re-derived live — see file header)"
+tiers_guarantee = "Declared (manually-asserted architectural intent; flagged per VR-5, not derived from the graph)"
+basis_ref = "DN-68 (docs/notes/DN-68-Acyclic-Deps-Invariant.md) — the acyclic-deps invariant + change-procedure"
+
+# ---------------------------------------------------------------------------------------------
+# M-877: fine per-crate layer (longest normal-dependency chain from a sink; 0 = no in-workspace
+# normal deps). Every NORMAL edge in the live graph must go from a strictly higher stratum to a
+# strictly lower one.
+[strata]
+mycelium-bench = 5
+mycelium-build = 1
+mycelium-cert = 3
+mycelium-check = 7
+mycelium-cli = 7
+mycelium-cli-common = 0
+mycelium-core = 0
+mycelium-dense = 1
+mycelium-diag = 1
+mycelium-doc = 6
+mycelium-fmt = 6
+mycelium-interp = 2
+mycelium-l1 = 4
+mycelium-lint = 7
+mycelium-lsp = 6
+mycelium-mir-passes = 1
+mycelium-mlir = 4
+mycelium-numerics = 1
+mycelium-proj = 5
+mycelium-rt-abi = 3
+mycelium-sched = 1
+mycelium-sec = 1
+mycelium-select = 1
+mycelium-spore = 6
+mycelium-stack = 0
+mycelium-std-cmp = 2
+mycelium-std-collections = 2
+mycelium-std-content = 1
+mycelium-std-core = 1
+mycelium-std-dense = 2
+mycelium-std-diag = 2
+mycelium-std-error = 4
+mycelium-std-fmt = 3
+mycelium-std-fs = 2
+mycelium-std-io = 2
+mycelium-std-iter = 2
+mycelium-std-math = 3
+mycelium-std-numerics = 2
+mycelium-std-rand = 2
+mycelium-std-recover = 3
+# M-883/M-884: bumped 3 -> 4 (this crate now depends on mycelium-rt-abi, stratum 3, so
+# 1 + max(..., 3) = 4; the former mycelium-interp dependency, stratum 2, is no longer the max).
+mycelium-std-runtime = 4
+mycelium-std-select = 2
+mycelium-std-spore = 7
+mycelium-std-swap = 4
+mycelium-std-sys = 0
+mycelium-std-sys-host = 3
+mycelium-std-ternary = 1
+mycelium-std-testing = 6
+mycelium-std-text = 2
+mycelium-std-time = 2
+mycelium-std-vsa = 3
+mycelium-transpile = 0
+mycelium-vsa = 2
+xtask = 5
+
+# ---------------------------------------------------------------------------------------------
+# M-879: coarse architectural tier, used only by the named cross-boundary rules below.
+[tiers]
+mycelium-bench = "tools"
+mycelium-build = "tools"
+mycelium-cert = "core"
+mycelium-check = "tools"
+mycelium-cli = "tools"
+mycelium-cli-common = "tools"
+mycelium-core = "core"
+mycelium-dense = "core"
+mycelium-diag = "core"
+mycelium-doc = "tools"
+mycelium-fmt = "tools"
+mycelium-interp = "core"
+mycelium-l1 = "core"
+mycelium-lint = "tools"
+mycelium-lsp = "tools"
+mycelium-mir-passes = "core"
+mycelium-mlir = "core"
+mycelium-numerics = "core"
+mycelium-proj = "core"
+mycelium-rt-abi = "core"
+mycelium-sched = "core"
+mycelium-sec = "tools"
+mycelium-select = "core"
+mycelium-spore = "core"
+mycelium-stack = "core"
+mycelium-std-cmp = "std"
+mycelium-std-collections = "std"
+mycelium-std-content = "std"
+mycelium-std-core = "std"
+mycelium-std-dense = "std"
+mycelium-std-diag = "std"
+mycelium-std-error = "std"
+mycelium-std-fmt = "std"
+mycelium-std-fs = "std"
+mycelium-std-io = "std"
+mycelium-std-iter = "std"
+mycelium-std-math = "std"
+mycelium-std-numerics = "std"
+mycelium-std-rand = "std"
+mycelium-std-recover = "std"
+mycelium-std-runtime = "std"
+mycelium-std-select = "std"
+mycelium-std-spore = "std"
+mycelium-std-swap = "std"
+mycelium-std-sys = "std"
+mycelium-std-sys-host = "std"
+mycelium-std-ternary = "std"
+mycelium-std-testing = "std"
+mycelium-std-text = "std"
+mycelium-std-time = "std"
+mycelium-std-vsa = "std"
+mycelium-transpile = "core"
+mycelium-vsa = "core"
+xtask = "tools"
+
+# ---------------------------------------------------------------------------------------------
+# M-879: named cross-boundary rules (inspectable data, not hard-coded magic — G2). (`tier_order`
+# for the `no-upward-tier-edges` rule below is declared at the TOML root, above `[strata]`.)
+[[named_rules]]
+id = "no-interp-std-dep"
+description = "mycelium-interp must never depend (normal OR dev) on any mycelium-std-* crate — the KC-3 trusted-base boundary (also covers a latent interp<->cert risk via the std layer)."
+basis_ref = "DN-68 (docs/notes/DN-68-Acyclic-Deps-Invariant.md)"
+kind = "forbidden-target-prefix"
+source = "mycelium-interp"
+forbidden_target_prefix = "mycelium-std-"
+
+[[named_rules]]
+id = "no-upward-tier-edges"
+description = "No crate may have a normal or dev dependency on a crate in a strictly higher architectural tier per `tier_order` (core < std < tools). Formerly violated by mycelium-mlir (core) -> mycelium-std-runtime (std); fixed by M-883/M-884 (the mycelium-rt-abi runtime-ABI seam extraction) — this rule now guards against regressing that edge."
+basis_ref = "DN-68 (docs/notes/DN-68-Acyclic-Deps-Invariant.md)"
+kind = "tier-order"
