@@ -1,0 +1,152 @@
+//! Structured, never-silent gap report (G2 / M-873).
+//!
+//! Every Rust construct this PoC transpiler cannot (or, absent a confirmed Mycelium grammar
+//! mapping, will not) express in `.myc` surface syntax is recorded here — never dropped
+//! silently. This is the mechanism that keeps the transpiler honest: a construct that has no
+//! entry here and no entry in [`crate::gap::GapReport::emitted_items`] would be a silent drop,
+//! which the driver's invariant (see `src/transpile.rs`, `src/tests/invariant.rs`) forbids.
+
+use serde::Serialize;
+
+/// The category of an unsupported/uncertain Rust construct, so gaps can be grouped and counted.
+///
+/// This is a **closed, PoC-scoped** set (not exhaustive of every Rust construct) — a construct
+/// that fits none of these still gets [`Category::Other`] plus a free-text `reason`, never a
+/// silent drop.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+pub enum Category {
+    Trait,
+    Impl,
+    Struct,
+    MacroDef,
+    MacroInvocation,
+    MultiStmtBody,
+    GenericBound,
+    AssocConst,
+    DeriveAttr,
+    WhereClause,
+    PayloadVariant,
+    /// A `#[cfg(test)]` item — explicitly out of scope for this PoC's transpilation surface, but
+    /// still recorded (never silently skipped). Excluded from the "expressible fraction"
+    /// denominator (see [`GapReport::non_test_item_count`]).
+    TestItem,
+    /// A `Widen`/`Narrow` conversion-op body this pass deliberately left a gap even though a real
+    /// DN-41 `width_cast` prim exists — specifically the `Narrow::narrow` case (DN-41's narrowing
+    /// is fallible, `Result<To, NarrowError>`, and this grammar fragment's `fn_item` body has no
+    /// `= expr`-shaped Result surface to express a refuse), and the defensive fallback for a
+    /// `Widen::widen` body over `Binary{N}`/`Binary{M}` whose target width could not be resolved
+    /// from the impl's trait-generic argument (never guessed — VR-5). Distinct from the general
+    /// `Impl`/`Other` buckets so the union-backlog can rank "conversion-op gaps" on their own.
+    Conversion,
+    Other,
+}
+
+impl Category {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Category::Trait => "Trait",
+            Category::Impl => "Impl",
+            Category::Struct => "Struct",
+            Category::MacroDef => "MacroDef",
+            Category::MacroInvocation => "MacroInvocation",
+            Category::MultiStmtBody => "MultiStmtBody",
+            Category::GenericBound => "GenericBound",
+            Category::AssocConst => "AssocConst",
+            Category::DeriveAttr => "DeriveAttr",
+            Category::WhereClause => "WhereClause",
+            Category::PayloadVariant => "PayloadVariant",
+            Category::TestItem => "TestItem",
+            Category::Conversion => "Conversion",
+            Category::Other => "Other",
+        }
+    }
+}
+
+/// One construct this transpiler could not (or would not) express in Mycelium surface syntax.
+#[derive(Debug, Clone, Serialize)]
+pub struct Gap {
+    pub file: String,
+    pub line: usize,
+    pub col: usize,
+    pub category: Category,
+    /// `Category::as_str()` for [`Gap::category`] — kept as its own (string-typed) field for
+    /// serialization stability, but **always derived from `category`**, never a separately
+    /// re-derived coarse `syn::Item`-kind label (an earlier iteration used e.g. `"Impl"`/`"Fn"`
+    /// regardless of *why* an item failed; the finer per-reason `Category` taxonomy is the ground
+    /// truth the committed `.gap.json` is synthesized from — G2, no divergence between the
+    /// category actually assigned and the string reported for it).
+    pub rust_construct: String,
+    pub snippet: String,
+    pub reason: String,
+    /// Best-effort item name, when the Rust construct has one (functions/types/traits/impls/…).
+    /// `None` for anonymous constructs (e.g. a bare item-position macro invocation with no
+    /// binding name).
+    pub item_name: Option<String>,
+}
+
+/// Internal helper carrying a [`Category`] + reason before a [`Gap`] is materialized with its
+/// span/snippet/name. Used by `emit.rs`'s per-construct mapping functions so a failure's
+/// category survives from the point of detection up to the driver.
+#[derive(Debug, Clone)]
+pub struct GapReason {
+    pub category: Category,
+    pub reason: String,
+}
+
+impl GapReason {
+    pub fn new(category: Category, reason: impl Into<String>) -> Self {
+        GapReason {
+            category,
+            reason: reason.into(),
+        }
+    }
+}
+
+/// The full report for one transpiled source file.
+///
+/// **Transparency (VR-5):** `emitted_items` records that *some* `.myc` text was produced for an
+/// item — it is `Declared` (heuristic, unvalidated by any Mycelium parser/typechecker), never a
+/// claim that the output is well-typed Mycelium.
+#[derive(Debug, Clone, Serialize)]
+pub struct GapReport {
+    pub source: String,
+    pub emitted_items: Vec<String>,
+    pub gaps: Vec<Gap>,
+    /// `syn::File::items.len()` — every top-level item in the parsed file, test items included.
+    pub total_top_level_items: usize,
+}
+
+impl GapReport {
+    /// Count of gaps tagged [`Category::TestItem`] — `#[cfg(test)]` items excluded from scope.
+    pub fn test_item_count(&self) -> usize {
+        self.gaps
+            .iter()
+            .filter(|g| g.category == Category::TestItem)
+            .count()
+    }
+
+    /// `total_top_level_items` minus test items — the denominator for the expressible fraction.
+    pub fn non_test_item_count(&self) -> usize {
+        self.total_top_level_items
+            .saturating_sub(self.test_item_count())
+    }
+
+    /// Fraction of non-test top-level items for which some `.myc` text was emitted.
+    /// `Declared` (see struct docs) — a ratio over a heuristic classification, not a guarantee.
+    pub fn expressible_fraction(&self) -> f64 {
+        let denom = self.non_test_item_count();
+        if denom == 0 {
+            return 0.0;
+        }
+        self.emitted_items.len() as f64 / denom as f64
+    }
+
+    /// Per-category gap counts, for reporting.
+    pub fn category_counts(&self) -> std::collections::BTreeMap<&'static str, usize> {
+        let mut m = std::collections::BTreeMap::new();
+        for g in &self.gaps {
+            *m.entry(g.category.as_str()).or_insert(0) += 1;
+        }
+        m
+    }
+}

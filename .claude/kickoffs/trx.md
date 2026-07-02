@@ -1,5 +1,12 @@
 # Kickoff `trx` — Rust→Mycelium transpiler PoC (against the *existing* surface + gap-report)
 
+> **✅ LANDED (2026-07-01) — `dev`.** PoC (PR #911) + hardening follow-on (width_cast emission, batch
+> mode, 8-twin union backlog). `crates/mycelium-transpile`; M-873 → done; results in **DN-34 §8**
+> (§8.5 union: 12.4% expressible across 6 crates; §8.6 option/result are self-hosted, no Rust source).
+> Follow-on demand data (E18-1 `needs-design`): unsupported **types** #1 (36%), macros #2, bounded
+> generics #3. Deferred (tooling-blocked in-env): macro-expansion (needs nightly+cargo-expand) and the
+> `cargo-public-api` baseline. Subsequent work → the Rust-first-everything / no-circular-deps plan.
+>
 > **UID:** `trx` · **Issue:** M-873 (epic E18-1 self-hosting capstone) · **Basis:** DN-34 (transpiler
 > strategy, Draft) · DN-26 (bootstrap plan) · `docs/planning/dogfooding-effort-and-usage-assessment.md`
 > (§5a/§5b — the cost model + the crates→transpiler→self-hosted path) · `docs/planning/self-hosting-port-ledger.md`.

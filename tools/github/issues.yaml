@@ -9016,13 +9016,15 @@ issues:
   - id: M-873
     title: "M-873 -- feat(transpile): Rust→Mycelium transpiler PoC (existing surface + gap-report)"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:feature, area:toolchain, priority:P2, status:todo]
+    labels: [phase:8, type:feature, area:toolchain, priority:P2, status:done]
     depends_on: [M-719]
     epic: E18-1
     doc_refs:
       - corpus:DN-34
       - corpus:DN-26
       - src:docs/planning/dogfooding-effort-and-usage-assessment.md
+      - src:crates/mycelium-transpile/src/transpile.rs
+      - src:crates/mycelium-transpile/src/gap.rs
     body: |
       Kickoff `trx` (.claude/kickoffs/trx.md). Get a Rust→Mycelium transpiler working against the
       LANGUAGE SURFACE THAT ALREADY EXISTS (do not wait for full maturity): emit what the current
@@ -9054,3 +9056,126 @@ issues:
       - The MEASURED token cost recorded -> converts the assessment doc's Declared rates to Empirical
         (update docs/planning/dogfooding-effort-and-usage-assessment.md + the self-hosting port ledger).
       - Landed as a scoped PR to dev via /pr-land. Non-tag-gating (ADR-036).
+
+      LANDED (2026-07-01, kickoff trx, Hybrid swarm). crates/mycelium-transpile: syn-based AST-walk
+      -> best-effort .myc + never-silent structured gap report (exhaustive dispatch, fallback always
+      records a gap -- NOT the seed's allowlist anti-pattern). Run on mycelium-std-cmp, diffed vs
+      lib/std/cmp.myc. Measured (Empirical): 4/111 non-test top-level items expressible = 3.6% against
+      the current surface WITHOUT macro expansion (lower bound); 112 gap records. Dominant blocker:
+      macros ~55% -> top lever is transpiler-side macro expansion. Prioritized surface-feature backlog
+      (the E18-1 needs-design demand data) recorded in DN-34 section 8.3. Measured PoC cost
+      ~0.85-0.95M tokens -> converts the assessment doc's Declared build/PoC rows to Empirical (5a).
+      Review fix (G2/VR-5): 12 numeric-widening impls with a fabricated from(self) body reclassified
+      emitted->gapped (never emit plausible-but-wrong). fmt/clippy -D warnings/test -p green (7/7).
+      DN-34 stays Draft (a spike, not the gated full transpiler phase). The macro-expansion lever and
+      the surface gaps (rows 2-7 of the backlog) are the follow-on needs-design items under E18-1.
+
+      HARDENING FOLLOW-ON LANDED (2026-07-01, PR to dev). DN-41 width_cast faithful conversion
+      emission (unsigned Binary widening now emits the real width_cast prim, not a fabricated body;
+      std-cmp 3.6%->12.6%); directory/batch CLI mode; and the UNION gap-report across 6 core-lib
+      crates (grand union 43/346 = 12.4% expressible, Empirical) recorded in DN-34 section 8.5 +
+      crates/mycelium-transpile/fixtures/UNION-BACKLOG.md. Re-ranked backlog across the slice:
+      unsupported TYPES #1 (36% -- String/text, usize/isize, char, closures, signed ints [ADR-028
+      sign-free]), macros #2 (22%), trait-bounded generics #3 (12%). Grounded finding (DN-34 8.6):
+      std.option/std.result have NO Rust source -- already self-hosted (M-715/M-649), excluded from
+      the corpus not substituted. The demand-grounded surface-feature backlog is filed as the
+      needs-design issues M-874/M-875/M-876 below. Deferred (tooling-blocked in-env): macro-expansion
+      (needs nightly + cargo-expand) and the cargo-public-api baseline. 16/16 tests green.
+
+  - id: M-874
+    title: "M-874 -- design: surface type-coverage for Rust->Mycelium transpilation targets"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:design, area:language, priority:P2, status:needs-design]
+    depends_on: [M-873]
+    epic: E18-1
+    doc_refs:
+      - corpus:DN-34
+      - corpus:DN-41
+      - src:crates/mycelium-transpile/fixtures/UNION-BACKLOG.md
+    body: |
+      The #1 demand bucket in the transpiler union backlog (DN-34 §8.5): 36% of all gaps across the
+      6-crate core-lib slice are UNSUPPORTED RUST TYPES with no confirmed Mycelium surface form --
+      String/&str (vs Mycelium text), usize/isize (platform-dependent width, no fixed Binary{N}),
+      char, closures/fn-pointers, and (a real semantic gap, not a transpiler shortcoming) SIGNED
+      integers -- ADR-028 scoped Binary as sign-free, so i8..i128 have no representation at all.
+
+      User stories:
+      - As a self-hosting engineer, I want the surface (or a documented bridge) to express the scalar
+        types the Rust stdlib actually uses, so that the transpiler emits them instead of flagging
+        every signed-int / platform-width / text-typed item.
+      - As a language designer, I want a grounded decision on signed representation (a signed paradigm,
+        a sign+magnitude Binary variant, or an explicit "not supported, use X" ruling), so the gap is
+        resolved by decision, not left implicit.
+
+      Issues to resolve:
+      - Signed integers: introduce a signed representation, or rule them out-of-surface with a
+        documented mapping (e.g. via a library type)? (ADR-028 supersession vs a new paradigm.)
+      - usize/isize platform-width: fix a canonical Binary{N} mapping, or a platform-abstract width?
+      - char / String / &str: the bridge to Mycelium text (std.text) -- a surface form or a std API.
+
+      Definition of Done:
+      - A DN (or RFC) that decides each type-coverage question above (append-only; honest tags), OR
+        an explicit deferral with the rationale. The transpiler's `map_type` gap reasons cite it.
+      - No code required by this task (design only); it unblocks a transpiler emission follow-on.
+
+  - id: M-875
+    title: "M-875 -- design/arch: transpiler-side macro expansion (expand-first)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:design, area:toolchain, priority:P2, status:needs-design]
+    depends_on: [M-873]
+    epic: E18-1
+    doc_refs:
+      - corpus:DN-34
+      - src:crates/mycelium-transpile/fixtures/UNION-BACKLOG.md
+    body: |
+      The #2 demand bucket (DN-34 §8.5): 22% of gaps are macro_rules! definitions + item-position
+      macro invocations (syn cannot expand macros). The load-bearing conclusion from the PoC: the
+      highest-leverage transpiler lever after type-coverage is an EXPAND-FIRST pre-pass (expand Rust
+      macros via `cargo expand` / rustc `-Zunpretty=expanded` before the syn walk), converting the
+      macro-generated bulk into ordinary impls the transpiler already handles.
+
+      User stories:
+      - As a self-hosting engineer, I want macro-generated impls transpiled (not flagged), so the
+        transpiler covers real crates (~55% of std-cmp is macro-generated) instead of their skeleton.
+
+      Issues to resolve:
+      - Tooling: `cargo expand` needs nightly; is that acceptable in the transpiler's build env, or
+        use a vendored expansion? (This session's env lacked nightly + cargo-expand -- FLAGGED.)
+      - Post-expansion, the expanded bodies still hit type-coverage gaps (M-874) -- sequence M-874 first.
+
+      Definition of Done:
+      - A design decision (DN/arch note) on the expand-first approach + the toolchain requirement,
+        then (follow-on) the transpiler gains an optional expansion pre-pass, never-silent about
+        whether a run was expanded or raw. No code required by this design task.
+
+  - id: M-876
+    title: "M-876 -- design: surface completeness for transpilation (bounded generics, records, trait Self-bodies)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:design, area:language, priority:P3, status:needs-design]
+    depends_on: [M-873]
+    epic: E18-1
+    doc_refs:
+      - corpus:DN-34
+      - src:crates/mycelium-transpile/fixtures/UNION-BACKLOG.md
+    body: |
+      The remaining surface gaps from the transpiler union backlog (DN-34 §8.5), grouped: (3)
+      trait-bounded generics `<T: Bound>` (12% -- `[T]` type-params landed M-656/7, but the bound
+      slot on impl/fn generics is missing); (5) named-field records/structs (7% -- only a single-ctor
+      positional shape maps today); (7) payload-variant enums with named/generic fields (error enums
+      like ClampError<T>); (8) trait definitions with Self-referencing default-method bodies +
+      supertrait bounds.
+
+      User stories:
+      - As a self-hosting engineer, I want the surface to express bounded generics, record structs,
+        and richer enum payloads, so the transpiler stops flagging the ordinary shapes the Rust
+        stdlib is built from.
+
+      Issues to resolve:
+      - Trait-bounded generics surface (bound slot on type_params / impl generics).
+      - A named-field record/product-type surface (vs today's positional single-constructor only).
+      - Payload-variant enums with named + generic fields.
+      - Trait default-method bodies that reference Self at definition site.
+
+      Definition of Done:
+      - A DN/RFC deciding each (append-only; honest tags), or explicit deferral with rationale. These
+        are lower-frequency than M-874/M-875 so are P3; sequence after them. Design only.
