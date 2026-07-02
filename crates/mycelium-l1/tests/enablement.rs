@@ -95,6 +95,19 @@
 //!   injects `Repr::Vsa` argument values (see the M-892 section note below — recorded honestly,
 //!   not silently skipped); AOT closes over the equivalent hand-built `Node::Op` on every case,
 //!   including the runtime refusals. Static accept/reject in the `vsa_prims_conformance_*` tests.
+//! - **M-893** (RFC-0003 §4/§5, ADR-008, kickoff `enb` Phase-I H1 Gap C) — **`vsa_bundle`**, the
+//!   **certified superposition path** (kernel `vsa.bundle` → MAP-I's `bundle_values_certified`,
+//!   the M-131 checked-instantiation pattern): `Seq{VSA{…}, N≥1}` × `Float` δ → `VSA{…}`, the
+//!   dispatch set the **certified singleton {MAP-I}** (FHRR/BSC bundles are Empirical-profile
+//!   kernel ops — statically refused naming the certified set; an append-only future surfacing,
+//!   never a silent re-tag — VR-5). The result carries the kernel's **`Proven`** tag + its
+//!   checked `CapacityBound` (the value's own m/dim, `ProvenThm` citation) unchanged on every
+//!   path; an under-dimensioned bundle is an explicit `InsufficientCapacity` refusal naming the
+//!   required dim, never an unbacked `Proven`. Same three-way posture as M-892 (injected
+//!   hypervector arguments — no VSA construction form yet; the `Seq` rides the surface list
+//!   literal, δ rides a `Float` param/literal). Static accept/reject in the
+//!   `vsa_bundle_conformance_*` tests, incl. the *static* empty-bundle (`N = 0`) refusal (N
+//!   lives in the `Seq` type).
 
 use mycelium_core::{
     Bound, BoundBasis, BoundKind, FloatWidth, GuaranteeStrength, Meta, Node, NormKind, Payload,
@@ -3423,6 +3436,334 @@ fn vsa_prims_conformance_reject() {
             "nodule v;\nfn f(a: VSA{MAP_I, 4, Dense}, b: VSA{MAP_I, 4, Dense}) => \
              VSA{BSC, 4, Dense} = vsa_bind(a, b);",
             "VSA{MAP-I, 4, Dense}",
+        ),
+    ] {
+        let err =
+            check_nodule(&parse(src).expect("parses")).expect_err(&format!("must reject: {src}"));
+        let msg = err.to_string();
+        assert!(
+            msg.contains(needle),
+            "the refusal must name the offense.\n  src: {src}\n  want: {needle}\n  got: {msg}"
+        );
+    }
+}
+
+// ── M-893 (`enb` Gap C): `vsa_bundle` — the certified superposition path ────────────────────────
+//
+// `vsa_bundle(items: Seq{VSA{MAP_I, d, Dense}, N≥1}, δ: Float) → VSA{MAP_I, d, Dense}` (kernel
+// `vsa.bundle` → MAP-I's `bundle_values_certified`, the M-131 checked-instantiation pattern).
+// The static rules ride the types: item model/dim/sparsity + the item count N live in the `Seq`
+// type, so the certified-singleton dispatch ({MAP-I} — FHRR/BSC bundles are Empirical-profile
+// kernel ops, refused naming the certified set), the Dense-sparsity introduction scope, and the
+// **empty bundle (N = 0)** are all *static* refusals. The capacity side-condition
+// `dim ≥ requiredDim(N, δ)` stays **runtime** (δ is a run-time `Float`): the kernel refuses
+// `InsufficientCapacity` naming the required dim rather than issuing an unbacked `Proven` bound
+// (M-I2/VR-5), and issues the **`Proven` `CapacityBound`** — the value's OWN m/dim with the
+// `ProvenThm` citation — only when the check passes, carried unchanged on every path.
+//
+// **Where the three-way closes (recorded honestly — G2/VR-5).** Exactly the M-892 posture: L1
+// has no hypervector value-construction form, so the surface leg injects `Repr::Vsa` argument
+// values through `Evaluator::call` (the `Seq` is built by the surface **list literal** over the
+// injected params; δ rides a surface **float literal**) ≡ L0-interp over the equivalent
+// hand-built `Node::Op` (a `Const` of the kernel-shaped `Repr::Seq` value + a `Const` `Float`)
+// ≡ AOT over the same node — agreement on repr + payload + the carried `Proven` tag, and on the
+// never-silent runtime refusals. The nullary-main surface closure is deferred to a VSA
+// value-construction form (a later wave), not silently skipped.
+
+/// A `Float` δ value (`Exact`/`Root` meta) — the injected/`Const` form of the second operand.
+fn fval(x: f64) -> Value {
+    Value::new(
+        Repr::Float {
+            width: FloatWidth::F64,
+        },
+        Payload::Float(x),
+        Meta::exact(Provenance::Root),
+    )
+    .unwrap()
+}
+
+/// A `Seq` value over hypervector items (`Exact`/`Root` meta — the shape the surface list
+/// literal evaluates to), for the hand-built L0 leg.
+fn vsa_seq(items: &[Value]) -> Value {
+    let first = items.first().expect("test seqs are non-empty");
+    Value::new(
+        Repr::Seq {
+            elem: Box::new(first.repr().clone()),
+            len: u32::try_from(items.len()).expect("small"),
+        },
+        Payload::Seq(items.to_vec()),
+        Meta::exact(Provenance::Root),
+    )
+    .unwrap()
+}
+
+/// A deterministic bipolar (`±1`) MAP-I atom (tiny LCG — house style).
+fn bipolar_atom(dim: u32, seed: u64) -> Vec<f64> {
+    let mut s = seed.wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(1);
+    (0..dim)
+        .map(|_| {
+            s = s
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            if (s >> 63) & 1 == 1 {
+                1.0
+            } else {
+                -1.0
+            }
+        })
+        .collect()
+}
+
+/// Three-way: `vsa_bundle` over three MAP-I atoms at a sufficient dim (2048 ≥ requiredDim(3,
+/// 1e-2) = 1141) carries the kernel's **`Proven`** tag and its checked `CapacityBound` — the
+/// **value's own** items/dim with the `ProvenThm` citation — identically on every path, with the
+/// elementwise-sum payload. The `Seq` rides the surface list literal over the injected params;
+/// δ rides a surface float literal.
+#[test]
+fn vsa_bundle_three_way_carries_the_proven_tag_and_its_own_capacity_bound() {
+    const DIM: u32 = 2048;
+    let items: Vec<Value> = (0..3)
+        .map(|i| vsa_hv("MAP-I", DIM, bipolar_atom(DIM, 40 + i)))
+        .collect();
+    let src = "nodule v;\nfn f(a: VSA{MAP_I, 2048, Dense}, b: VSA{MAP_I, 2048, Dense}, \
+               c: VSA{MAP_I, 2048, Dense}) => VSA{MAP_I, 2048, Dense} = \
+               vsa_bundle([a, b, c], 0.01);";
+    let node = Node::Op {
+        prim: "vsa.bundle".to_owned(),
+        args: vec![Node::Const(vsa_seq(&items)), Node::Const(fval(0.01))],
+    };
+    let y = assert_vsa_three_way("vsa_bundle/MAP-I", src, "f", &node, &items);
+    // Payload: the elementwise integer superposition of the three bipolar atoms.
+    let expected: Vec<f64> = (0..DIM as usize)
+        .map(|k| {
+            items
+                .iter()
+                .map(|v| match v.payload() {
+                    Payload::Hypervector(h) => h[k],
+                    _ => unreachable!(),
+                })
+                .sum()
+        })
+        .collect();
+    assert_eq!(y.payload(), &Payload::Hypervector(expected));
+    // The kernel's Proven tag + its checked bound, carried unchanged (VR-5) — and the disclosed
+    // bound is the value's OWN (this bundle's m and d), with the checked basis recorded.
+    assert_eq!(y.meta().guarantee(), GuaranteeStrength::Proven);
+    match y.meta().bound() {
+        Some(Bound {
+            kind: BoundKind::Capacity { items: m, dim: d },
+            basis: BoundBasis::ProvenThm { citation },
+        }) => {
+            assert_eq!(*m, 3, "the bound discloses this bundle's item count");
+            assert_eq!(*d, u64::from(DIM), "the bound discloses this bundle's dim");
+            assert!(
+                citation.contains("Clarkson") && citation.contains("requiredDim"),
+                "the ProvenThm basis records the citation + checked side-condition: {citation}"
+            );
+        }
+        other => panic!("expected the kernel's checked Capacity/ProvenThm bound, got {other:?}"),
+    }
+}
+
+/// Runtime reject, three-way: an **under-dimensioned certified bundle** (dim 16 < requiredDim(3,
+/// 1e-2) = 1141 — the theorem's side-condition fails) refuses explicitly and consistently on
+/// every path, naming the required dim — never an unbacked `Proven` bound and never a
+/// silently-weaker result (M-I2/VR-5; G2).
+#[test]
+fn vsa_bundle_insufficient_capacity_refuses_on_every_path() {
+    const DIM: u32 = 16;
+    let items: Vec<Value> = (0..3)
+        .map(|i| vsa_hv("MAP-I", DIM, bipolar_atom(DIM, 50 + i)))
+        .collect();
+    let src = "nodule v;\nfn f(a: VSA{MAP_I, 16, Dense}, b: VSA{MAP_I, 16, Dense}, \
+               c: VSA{MAP_I, 16, Dense}) => VSA{MAP_I, 16, Dense} = \
+               vsa_bundle([a, b, c], 0.01);";
+    let env = check_nodule(&parse(src).expect("parses")).expect("checks");
+
+    let l1 = Evaluator::new(&env).call("f", items.iter().cloned().map(L1Value::Repr).collect());
+    match l1 {
+        Err(L1Error::Kernel(EvalError::PrimType { why, .. })) => assert!(
+            why.contains("insufficient capacity") && why.contains("1141"),
+            "L1-eval names the failed side-condition + required dim, got: {why}"
+        ),
+        other => panic!("L1-eval must refuse the under-dimensioned bundle, got {other:?}"),
+    }
+
+    let node = Node::Op {
+        prim: "vsa.bundle".to_owned(),
+        args: vec![Node::Const(vsa_seq(&items)), Node::Const(fval(0.01))],
+    };
+    let interp = Interpreter::new(
+        PrimRegistry::with_builtins(),
+        Box::new(mycelium_cert::BinaryTernarySwapEngine),
+    );
+    assert!(
+        matches!(interp.eval(&node), Err(EvalError::PrimType { .. })),
+        "L0-interp must refuse the under-dimensioned bundle explicitly"
+    );
+    assert!(
+        matches!(
+            mycelium_mlir::run(
+                &node,
+                &PrimRegistry::with_builtins(),
+                &mycelium_cert::BinaryTernarySwapEngine
+            ),
+            Err(EvalError::PrimType { .. })
+        ),
+        "AOT must refuse the under-dimensioned bundle explicitly"
+    );
+}
+
+/// Runtime reject, three-way: an **uncertified model reachable only at runtime** (the declared
+/// params say MAP-I, the injected items are BSC — injected arguments bypass the static types)
+/// refuses explicitly on every path naming the certified set — never a silent re-tag of the
+/// BSC empirical-profile bundle (VR-5/G2). (The static twin is in the conformance-reject suite.)
+#[test]
+fn vsa_bundle_uncertified_model_refuses_on_every_path() {
+    const DIM: u32 = 16;
+    let items: Vec<Value> = (0..3)
+        .map(|i| {
+            vsa_hv(
+                "BSC",
+                DIM,
+                bipolar_atom(DIM, 60 + i)
+                    .into_iter()
+                    .map(|x| if x > 0.0 { 1.0 } else { 0.0 })
+                    .collect(),
+            )
+        })
+        .collect();
+    let src = "nodule v;\nfn f(a: VSA{MAP_I, 16, Dense}, b: VSA{MAP_I, 16, Dense}, \
+               c: VSA{MAP_I, 16, Dense}) => VSA{MAP_I, 16, Dense} = \
+               vsa_bundle([a, b, c], 0.01);";
+    let env = check_nodule(&parse(src).expect("parses")).expect("checks");
+
+    let l1 = Evaluator::new(&env).call("f", items.iter().cloned().map(L1Value::Repr).collect());
+    match l1 {
+        Err(L1Error::Kernel(EvalError::PrimType { why, .. })) => assert!(
+            why.contains("certified singleton"),
+            "L1-eval names the certified set, got: {why}"
+        ),
+        other => panic!("L1-eval must refuse the uncertified model, got {other:?}"),
+    }
+
+    let node = Node::Op {
+        prim: "vsa.bundle".to_owned(),
+        args: vec![Node::Const(vsa_seq(&items)), Node::Const(fval(0.01))],
+    };
+    let interp = Interpreter::new(
+        PrimRegistry::with_builtins(),
+        Box::new(mycelium_cert::BinaryTernarySwapEngine),
+    );
+    assert!(
+        matches!(interp.eval(&node), Err(EvalError::PrimType { .. })),
+        "L0-interp must refuse the uncertified model explicitly"
+    );
+    assert!(
+        matches!(
+            mycelium_mlir::run(
+                &node,
+                &PrimRegistry::with_builtins(),
+                &mycelium_cert::BinaryTernarySwapEngine
+            ),
+            Err(EvalError::PrimType { .. })
+        ),
+        "AOT must refuse the uncertified model explicitly"
+    );
+}
+
+/// Static conformance — accept: the `vsa_bundle` signatures the checker must admit (a single
+/// item; several items; the bundle result feeding a sibling vsa prim — model + dim preserved;
+/// δ as a param instead of a literal).
+#[test]
+fn vsa_bundle_conformance_accept() {
+    for src in [
+        "nodule v;\nfn f(a: VSA{MAP_I, 2048, Dense}) => VSA{MAP_I, 2048, Dense} = \
+         vsa_bundle([a], 0.01);",
+        "nodule v;\nfn f(a: VSA{MAP_I, 2048, Dense}, b: VSA{MAP_I, 2048, Dense}, \
+         c: VSA{MAP_I, 2048, Dense}) => VSA{MAP_I, 2048, Dense} = vsa_bundle([a, b, c], 0.01);",
+        // Composition: the bundle's model + dim are preserved, so the result feeds vsa_permute.
+        "nodule v;\nfn f(a: VSA{MAP_I, 2048, Dense}, b: VSA{MAP_I, 2048, Dense}, s: Binary{8}) \
+         => VSA{MAP_I, 2048, Dense} = vsa_permute(vsa_bundle([a, b], 0.01), s);",
+        // δ as a Float parameter (runtime δ — the capacity check is the kernel's).
+        "nodule v;\nfn f(a: VSA{MAP_I, 2048, Dense}, b: VSA{MAP_I, 2048, Dense}, d: Float) => \
+         VSA{MAP_I, 2048, Dense} = vsa_bundle([a, b], d);",
+        // A Seq param (not a literal) works too — the item count is in the type.
+        "nodule v;\nfn f(xs: Seq{VSA{MAP_I, 2048, Dense}, 3}, d: Float) => \
+         VSA{MAP_I, 2048, Dense} = vsa_bundle(xs, d);",
+    ] {
+        check_nodule(&parse(src).expect("parses"))
+            .unwrap_or_else(|e| panic!("must accept: {src}\n  got: {e}"));
+    }
+}
+
+/// Static conformance — reject: the never-silent contract at check time, each refusal naming
+/// the offense (G2): an uncertified model (FHRR/BSC — the certified singleton), an out-of-set
+/// model, Sparse items, a non-Seq first operand, non-VSA items, the static empty bundle
+/// (`N = 0` lives in the type), a non-Float δ, arity, and a wrong declared result.
+#[test]
+fn vsa_bundle_conformance_reject() {
+    for (src, needle) in [
+        // FHRR/BSC: in the M-892 bind-group set, but their bundles are not certified — static
+        // refusal naming the certified singleton (never a silent re-tag of Empirical evidence).
+        (
+            "nodule v;\nfn f(a: VSA{FHRR, 2048, Dense}, b: VSA{FHRR, 2048, Dense}) => \
+             VSA{FHRR, 2048, Dense} = vsa_bundle([a, b], 0.01);",
+            "certified singleton",
+        ),
+        (
+            "nodule v;\nfn f(a: VSA{BSC, 2048, Dense}, b: VSA{BSC, 2048, Dense}) => \
+             VSA{BSC, 2048, Dense} = vsa_bundle([a, b], 0.01);",
+            "certified singleton",
+        ),
+        // A model outside the introduction dispatch set: the shared static refusal.
+        (
+            "nodule v;\nfn f(a: VSA{HRR, 2048, Dense}, b: VSA{HRR, 2048, Dense}) => \
+             VSA{HRR, 2048, Dense} = vsa_bundle([a, b], 0.01);",
+            "outside the vsa prim dispatch set",
+        ),
+        // Sparse items: refused at introduction (kernel results are dense-class).
+        (
+            "nodule v;\nfn f(a: VSA{MAP_I, 2048, Sparse{2}}, b: VSA{MAP_I, 2048, Sparse{2}}) \
+             => VSA{MAP_I, 2048, Sparse{2}} = vsa_bundle([a, b], 0.01);",
+            "requires `Dense`-sparsity hypervectors",
+        ),
+        // A non-Seq first operand: never a silent lift of one hypervector into a bundle.
+        (
+            "nodule v;\nfn f(a: VSA{MAP_I, 2048, Dense}) => VSA{MAP_I, 2048, Dense} = \
+             vsa_bundle(a, 0.01);",
+            "first operand must be a `Seq",
+        ),
+        // Non-VSA items: an explicit refusal pointing at the missing swap.
+        (
+            "nodule v;\nfn f(a: Binary{8}, b: Binary{8}) => VSA{MAP_I, 2048, Dense} = \
+             vsa_bundle([a, b], 0.01);",
+            "items must be `VSA{model, dim, sparsity}`",
+        ),
+        // The static empty bundle: N = 0 lives in the Seq type — no superposition is defined.
+        (
+            "nodule v;\nfn f(xs: Seq{VSA{MAP_I, 2048, Dense}, 0}, d: Float) => \
+             VSA{MAP_I, 2048, Dense} = vsa_bundle(xs, d);",
+            "at least one item",
+        ),
+        // δ must be a Float — never a defaulted or coerced parameter.
+        (
+            "nodule v;\nfn f(a: VSA{MAP_I, 2048, Dense}, b: VSA{MAP_I, 2048, Dense}, \
+             d: Binary{8}) => VSA{MAP_I, 2048, Dense} = vsa_bundle([a, b], d);",
+            "probability \u{3b4} must be a `Float`",
+        ),
+        // Arity: explicit.
+        (
+            "nodule v;\nfn f(a: VSA{MAP_I, 2048, Dense}) => VSA{MAP_I, 2048, Dense} = \
+             vsa_bundle([a]);",
+            "takes 2 operand(s)",
+        ),
+        // The result type is computed (model + dim preserved) — declaring another is a static
+        // mismatch, never a silent re-model.
+        (
+            "nodule v;\nfn f(a: VSA{MAP_I, 2048, Dense}, b: VSA{MAP_I, 2048, Dense}) => \
+             VSA{BSC, 2048, Dense} = vsa_bundle([a, b], 0.01);",
+            "VSA{MAP-I, 2048, Dense}",
         ),
     ] {
         let err =

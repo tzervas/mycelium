@@ -5156,10 +5156,12 @@ impl Cx<'_> {
         }
     }
 
-    /// Try to check a call to a **VSA bind-group prim** (RFC-0003 §3/§4; ADR-008; M-892, `enb`
-    /// Gap C) — `vsa_bind`/`vsa_unbind` (binary, hypervector × hypervector) and `vsa_permute`
-    /// (hypervector × `Binary{W}` shift), kernel `vsa.bind`/`vsa.unbind`/`vsa.permute` (surface
-    /// names `_`-joined like `dense_add`). Returns `Ok(None)` if `name` is not one of them.
+    /// Try to check a call to a **VSA prim** (RFC-0003 §3/§4/§5; ADR-008) — the M-892 bind group
+    /// `vsa_bind`/`vsa_unbind` (binary, hypervector × hypervector) and `vsa_permute`
+    /// (hypervector × `Binary{W}` shift), kernel `vsa.bind`/`vsa.unbind`/`vsa.permute`, plus the
+    /// M-893 **certified superposition** `vsa_bundle` (`Seq{VSA{…}, N≥1}` × `Float` δ →
+    /// `VSA{…}`), kernel `vsa.bundle` (surface names `_`-joined like `dense_add`). Returns
+    /// `Ok(None)` if `name` is not one of them.
     ///
     /// Model + dim + sparsity live in the type (`VSA{model, dim, sparsity}`), so the static rules
     /// are: every hypervector operand must be a `VSA` type with **one shared model + dim +
@@ -5173,11 +5175,23 @@ impl Cx<'_> {
     /// the complementary shift `dim − s`); a bare-decimal shift has no width anchor here and must
     /// be written/ascribed explicitly (RFC-0012 §4.3 — never a default width).
     ///
+    /// `vsa_bundle` adds two static rules of its own: the model must additionally be in the
+    /// **certified-bundle set {MAP-I}** — the only introduction-set model with a *certified*
+    /// Value-level bundle (`bundle_values_certified`, the M-131 checked-instantiation pattern);
+    /// an FHRR/BSC bundle is a **static** refusal naming the certified set (their kernel bundles
+    /// are `Empirical`-profile ops — routing them here would silently re-tag their evidence,
+    /// VR-5; surfacing them is a distinct append-only extension) — and the item count `N` lives
+    /// in the `Seq` type, so an **empty bundle (`N = 0`) is a static refusal** too (no
+    /// superposition is defined). The capacity side-condition `dim ≥ requiredDim(N, δ)` stays
+    /// **runtime** (δ is a run-time `Float`): the kernel refuses `InsufficientCapacity` naming
+    /// the required dim rather than issuing an unbacked `Proven` bound.
+    ///
     /// The numeric-domain contracts stay **runtime**, owned by the kernel and carried through the
     /// interpreter wrapper: alphabet violations, the FHRR unbind regime gate, and non-`Exact`
     /// operand composition are explicit runtime refusals; per-op tags ride the runtime value
     /// **per model** (MAP-I/BSC ops `Exact`; FHRR `unbind` `Empirical` with its trial-validated
-    /// δ bound — VR-5, carried, never re-stamped; `mycelium-interp/src/prims.rs`).
+    /// δ bound; the certified `vsa.bundle` result `Proven` with its checked `CapacityBound` —
+    /// VR-5, carried, never re-stamped; `mycelium-interp/src/prims.rs`).
     fn try_check_vsa_prim(
         &self,
         scope: &mut Vec<(String, Ty)>,
@@ -5185,7 +5199,10 @@ impl Cx<'_> {
         name: &str,
         args: &[Expr],
     ) -> Result<Option<(Ty, Expr)>, CheckError> {
-        if !matches!(name, "vsa_bind" | "vsa_unbind" | "vsa_permute") {
+        if !matches!(
+            name,
+            "vsa_bind" | "vsa_unbind" | "vsa_permute" | "vsa_bundle"
+        ) {
             return Ok(None);
         }
         // The M-892 introduction dispatch set (must mirror `vsa_model_of` in
@@ -5289,6 +5306,90 @@ impl Cx<'_> {
                         sparsity: sp,
                     },
                     app_node(head, vec![a2, s2]),
+                )))
+            }
+            "vsa_bundle" => {
+                if args.len() != 2 {
+                    return arity_err(2);
+                }
+                // First operand: `Seq{VSA{model, dim, Dense}, N ≥ 1}` — the items to superpose.
+                let (sty, s2) = self.check(scope, &args[0], None)?;
+                let Ty::Seq(elem, n) = sty else {
+                    return self.err(format!(
+                        "`vsa_bundle` first operand must be a `Seq{{VSA{{model, dim, \
+                         sparsity}}, N}}` of hypervectors to superpose, got {sty} (RFC-0003 \
+                         §4/§5; M-893 — never a silent conversion)"
+                    ));
+                };
+                let Ty::Vsa {
+                    model,
+                    dim,
+                    sparsity,
+                } = *elem
+                else {
+                    return self.err(format!(
+                        "`vsa_bundle` items must be `VSA{{model, dim, sparsity}}` \
+                         hypervectors, got a Seq of {elem} (RFC-0003 §4/§5; M-893 — never a \
+                         silent conversion; a cross-paradigm edge needs an explicit `swap`)"
+                    ));
+                };
+                if !VSA_PRIM_MODELS.contains(&model.as_str()) {
+                    return self.err(format!(
+                        "`vsa_bundle` model {model:?} is outside the vsa prim dispatch set at \
+                         introduction (MAP-I, FHRR, BSC — M-892); the type is a legal mention, \
+                         but its algebra is not surfaced — widening the set is an append-only \
+                         extension, never a guessed algebra (G2)"
+                    ));
+                }
+                // The certified-bundle set at introduction: {MAP-I} — the only model with a
+                // certified Value-level bundle (`bundle_values_certified`). FHRR/BSC kernel
+                // bundles are Empirical-profile ops; routing them through the certified prim
+                // would silently re-tag their evidence (VR-5), so the refusal is static and
+                // names the set (surfacing them is a distinct append-only extension).
+                if model != "MAP-I" {
+                    return self.err(format!(
+                        "`vsa_bundle` is the certified superposition path and its dispatch set \
+                         at introduction is the certified singleton {{MAP-I}} — model \
+                         {model:?} has no certified Value-level bundle (M-893); the FHRR/BSC \
+                         empirical-profile bundles are a distinct, append-only surfacing under \
+                         their own name, never a silent re-tag (VR-5)"
+                    ));
+                }
+                if sparsity != Sparsity::Dense {
+                    return self.err(
+                        "`vsa_bundle` requires `Dense`-sparsity hypervectors at introduction — \
+                         the kernel's Value-level ops construct dense-class results, so a \
+                         Sparse item type would diverge from the runtime value (M-893; \
+                         refused, never silently re-classed — G2)",
+                    );
+                }
+                // N lives in the Seq type, so the empty bundle is a *static* refusal here (the
+                // kernel's EmptyBundle stays as the runtime twin for injected values).
+                if n == 0 {
+                    return self.err(
+                        "`vsa_bundle` requires at least one item — no superposition is defined \
+                         over a `Seq{…, 0}` (RFC-0003 §4; M-893 — refused statically, never a \
+                         defaulted value — G2)"
+                            .to_owned(),
+                    );
+                }
+                // Second operand: the target failure probability δ, a `Float` (its (0, 1]
+                // domain and the capacity side-condition are runtime, kernel-owned refusals).
+                let (dty, d2) = self.check(scope, &args[1], Some(&Ty::Float))?;
+                if !matches!(dty, Ty::Float) {
+                    return self.err(format!(
+                        "`vsa_bundle` target failure probability δ must be a `Float`, got \
+                         {dty} (M-893 — the certified capacity bound targets an explicit δ; \
+                         never a defaulted or coerced parameter — G2)"
+                    ));
+                }
+                Ok(Some((
+                    Ty::Vsa {
+                        model,
+                        dim,
+                        sparsity,
+                    },
+                    app_node(head, vec![s2, d2]),
                 )))
             }
             _ => unreachable!("gated by the matches! above"),
@@ -6062,6 +6163,15 @@ pub fn prim_kernel_name(name: &str) -> Option<&'static str> {
         "vsa_bind" => "vsa.bind",
         "vsa_unbind" => "vsa.unbind",
         "vsa_permute" => "vsa.permute",
+        // RFC-0003 §4/§5 / ADR-008 (M-893, `enb` Gap C): the certified VSA superposition —
+        // kernel `vsa.bundle` via MAP-I's `bundle_values_certified` (the M-131 checked-
+        // instantiation pattern: a `Proven` `CapacityBound` iff `dim ≥ requiredDim(m, δ)` with
+        // bipolar + distinct items checked, else an explicit refusal). Typed by the
+        // `try_check_vsa_prim` branch: `Seq{VSA{…}, N≥1}` × `Float` δ → `VSA{…}`, with the
+        // certified-singleton {MAP-I} dispatch and the empty bundle refused *statically* (N is
+        // in the type); FHRR/BSC bundles are Empirical-profile kernel ops — statically refused
+        // here naming the certified set, an append-only future surfacing (VR-5).
+        "vsa_bundle" => "vsa.bundle",
         "add" => "trit.add",
         "sub" => "trit.sub",
         "mul" => "trit.mul",

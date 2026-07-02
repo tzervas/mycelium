@@ -305,8 +305,16 @@ fn vsa_bundle_carries_the_certified_singleton_proven_tag() {
         GuaranteeStrength::Proven,
         "vsa.bundle: intrinsic must stay the meet over the certified singleton {{MAP-I}} (VR-5)"
     );
-    assert_eq!(d.sig.arity(), 2, "vsa.bundle: arity drifted (Seq + Float δ)");
-    assert_eq!(d.sig.width, WidthRel::Uniform, "vsa.bundle: width rel drifted");
+    assert_eq!(
+        d.sig.arity(),
+        2,
+        "vsa.bundle: arity drifted (Seq + Float δ)"
+    );
+    assert_eq!(
+        d.sig.width,
+        WidthRel::Uniform,
+        "vsa.bundle: width rel drifted"
+    );
     assert!(
         d.sig.operands.iter().all(|p| *p == PrimParadigm::Any),
         "vsa.bundle: operands are the documented `Any` escape hatch"
