@@ -49,6 +49,10 @@ pub mod lexer;
 pub mod mono;
 pub mod nodule;
 pub mod parse;
+/// The `Substrate` v0 value form (M-902; DN-71 Model S §4.1) — an interpreter-level opaque affine
+/// handle at the L1 evaluator level. No new L0 node / no `Repr` growth (KC-3). The affine use-once
+/// enforcement (M-903) and `consume` lowering (M-904) are left as explicit, refusing seams here.
+pub mod substrate;
 pub mod token;
 pub mod totality;
 pub(crate) mod usefulness;
@@ -73,4 +77,5 @@ pub use mono::{
 };
 pub use nodule::{parse_nodule_header, NoduleHeader, NoduleHeaderError};
 pub use parse::{parse, parse_phylum};
+pub use substrate::{SubstrateError, SubstrateHandle, SubstrateProvenance};
 pub use totality::Totality;

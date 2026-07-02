@@ -54,15 +54,37 @@ pub enum L1Value {
         /// The constructor's field values, in declaration order.
         fields: Vec<L1Value>,
     },
+    /// An affine `Substrate` handle (DN-71 Model S §4.1; M-902) — an opaque, runtime-only
+    /// external-resource handle ([`crate::substrate::SubstrateHandle`]). It is **not** a repr value
+    /// and **not** algebraic data: it names an external resource (RFC-0006 LR-8), carries no
+    /// `Repr`/`Meta`, and never lowers to L0 (no kernel node — KC-3). It lives at this evaluator
+    /// level only, is *passed* by the ordinary value-binding machinery, and is *inspected* via its
+    /// [`SubstrateHandle`](crate::substrate::SubstrateHandle) accessors. The affine use-once
+    /// enforcement is M-903 and the `consume` lowering is M-904; both are explicit, refusing seams
+    /// (never a silent move — G2/VR-5).
+    Substrate(crate::substrate::SubstrateHandle),
 }
 
 impl L1Value {
-    /// The underlying L0 value, if this is a representation value.
+    /// The underlying L0 value, if this is a representation value; `None` for data or a `Substrate`
+    /// handle (never-silent — neither has a repr value here, G2).
     #[must_use]
     pub fn as_repr(&self) -> Option<&Value> {
         match self {
             L1Value::Repr(v) => Some(v),
-            L1Value::Data { .. } => None,
+            L1Value::Data { .. } | L1Value::Substrate(_) => None,
+        }
+    }
+
+    /// The affine [`SubstrateHandle`](crate::substrate::SubstrateHandle), if this is a `Substrate`
+    /// value; `None` otherwise (never-silent — a non-Substrate has no handle here, G2). The
+    /// inspection window onto the opaque handle (its tag, opaque identity, and acquisition
+    /// provenance — DN-71 §4.1; M-902).
+    #[must_use]
+    pub fn as_substrate(&self) -> Option<&crate::substrate::SubstrateHandle> {
+        match self {
+            L1Value::Substrate(h) => Some(h),
+            L1Value::Repr(_) | L1Value::Data { .. } => None,
         }
     }
 
@@ -87,6 +109,12 @@ impl L1Value {
                     .collect::<Option<Vec<_>>>()?;
                 Some(CoreValue::Data(Datum::new(ctor_ref, core_fields)))
             }
+            // A `Substrate` handle has **no** L0 projection — it is not a kernel value (no `Repr`,
+            // no L0 node; DN-71 §4.1). It never participates in the L0/AOT differential, so `None`
+            // here is the honest "no core value", never a fabricated lowering (G2). M-904 keeps this
+            // property: `consume` lowers through existing paths, and `Substrate` itself stays absent
+            // from the L0 value world.
+            L1Value::Substrate(_) => None,
         }
     }
 }
@@ -641,12 +669,17 @@ impl<'e> Evaluator<'e> {
                 what: "`spore` is deferred to the reconstruction-manifest work (E2-5/M-260)"
                     .to_owned(),
             }),
-            // M-664: `consume` of a `Substrate` has no v0 evaluation — `Substrate` has no value
-            // forms (LR-8; DN-03 §1). Never-silent (G2): an explicit `Unsupported`, never a guess.
+            // M-902: the `Substrate` v0 value form now exists ([`L1Value::Substrate`]), but the
+            // affine use-once **move** it needs is not built: the static affine enforcement is M-903
+            // (DN-71 §4.2) and the `consume` lowering is M-904 (DN-71 §4.3). Never-silent (G2/VR-5):
+            // an explicit `Unsupported` naming the staging owners, never a silent/fabricated move.
+            // (This is the surface twin of `SubstrateHandle::try_consume`'s refusing seam.)
             Expr::Consume(_) => Err(L1Error::Unsupported {
                 site: site.to_owned(),
-                what: "`consume` of an affine `Substrate` is staged — `Substrate` has no v0 value \
-                       forms to consume (LR-8; DN-03 §1; M-664)"
+                what: "`consume` of an affine `Substrate` is staged: the M-902 value form exists, \
+                       but the affine use-once move (static enforcement M-903; `consume` lowering \
+                       M-904) is not built — an explicit refusal, never a silent move (DN-71 Model \
+                       S §4.2/§4.3; LR-8; DN-03 §1)"
                     .to_owned(),
             }),
             // RFC-0024 §4A (M-704): the L1 evaluator runs on the **monomorphized** env, where every
@@ -926,7 +959,10 @@ impl<'e> Evaluator<'e> {
                     }
                     Ok(true)
                 }
-                L1Value::Repr(_) => Ok(false),
+                // A `Substrate` handle matches no constructor pattern (the checker's type discipline
+                // keeps a `Substrate`-typed scrutinee off a data-ctor arm anyway); never-silent
+                // `Ok(false)`, never a panic (G2).
+                L1Value::Repr(_) | L1Value::Substrate(_) => Ok(false),
             },
             Pattern::Lit(lit) => match val {
                 L1Value::Repr(v) => {
@@ -936,7 +972,9 @@ impl<'e> Evaluator<'e> {
                     })?;
                     Ok(lv.repr() == v.repr() && lv.payload() == v.payload())
                 }
-                L1Value::Data { .. } => Ok(false),
+                // A `Substrate` handle has no literal form to compare against — never-silent
+                // `Ok(false)` (a Substrate has no repr/payload; G2).
+                L1Value::Data { .. } | L1Value::Substrate(_) => Ok(false),
             },
             // M-826: a tuple pattern `(x, y, …)` desugars to `Ctor(MkTuple$N, subs)` during
             // checking/resolve. A raw `Pattern::Tuple` here means the evaluator was handed an
@@ -1113,6 +1151,16 @@ impl<'e> Evaluator<'e> {
                 site: site.to_owned(),
                 what: "a guarantee index on a data-typed value has no Meta to check in v0"
                     .to_owned(),
+            }),
+            // A `Substrate` handle carries no `Meta`/guarantee tag (it names an external resource,
+            // not a value — LR-8; DN-71 §4.1). A guarantee index on it has nothing to check: an
+            // explicit refusal, never a silently-passed assertion (G2/VR-5).
+            L1Value::Substrate(_) => Err(L1Error::Unsupported {
+                site: site.to_owned(),
+                what:
+                    "a guarantee index on a `Substrate` handle has no Meta to check — a Substrate \
+                       is an affine external-resource handle, not a repr value (LR-8; DN-71 §4.1)"
+                        .to_owned(),
             }),
         }
     }
