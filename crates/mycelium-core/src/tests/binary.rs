@@ -667,3 +667,241 @@ fn neg_matches_integer_oracle() {
         }
     }
 }
+
+// ---- M-767: the signedness-split signed op set — div/rem/shr/cmp (RFC-0033 §4.1.2/§4.1.3) ------
+
+use core::cmp::Ordering;
+
+/// Truncation toward zero (SMT-LIB `bvsdiv`/`bvsrem`; the module doc's rounding-convention note):
+/// `-7 / 2 = -3` remainder `-1` — a floored convention would give `-4` remainder `1`, so these
+/// examples pin the convention itself, not just arithmetic.
+#[test]
+fn div_rem_signed_worked_examples_pin_truncation() {
+    let enc = |v: i64| int_to_bits(v, 8).unwrap();
+    // 7 / 2 = 3 r 1.
+    assert_eq!(div_signed(&enc(7), &enc(2)), int_to_bits(3, 8));
+    assert_eq!(rem_signed(&enc(7), &enc(2)), int_to_bits(1, 8));
+    // -7 / 2 = -3 r -1 (truncated toward zero; remainder sign follows the dividend).
+    assert_eq!(div_signed(&enc(-7), &enc(2)), int_to_bits(-3, 8));
+    assert_eq!(rem_signed(&enc(-7), &enc(2)), int_to_bits(-1, 8));
+    // 7 / -2 = -3 r 1.
+    assert_eq!(div_signed(&enc(7), &enc(-2)), int_to_bits(-3, 8));
+    assert_eq!(rem_signed(&enc(7), &enc(-2)), int_to_bits(1, 8));
+    // -7 / -2 = 3 r -1.
+    assert_eq!(div_signed(&enc(-7), &enc(-2)), int_to_bits(3, 8));
+    assert_eq!(rem_signed(&enc(-7), &enc(-2)), int_to_bits(-1, 8));
+}
+
+/// The single signed-division overflow case: `B_8`'s minimum `-128 ÷ -1` has true quotient `+128`,
+/// out of `B_8 = [-128, 127]` — an explicit refusal, never a wrap back to `-128` (RFC-0033 §4.1.3).
+/// The remainder's exact result `0` fits, so `rem_signed` succeeds — deliberately not Rust's
+/// `checked_rem` over-refusal (see the `rem_signed` doc comment).
+#[test]
+fn div_signed_min_by_neg_one_overflows_rem_succeeds() {
+    let min = int_to_bits(-128, 8).unwrap();
+    let neg_one = int_to_bits(-1, 8).unwrap();
+    assert_eq!(
+        div_signed(&min, &neg_one),
+        None,
+        "-128 / -1 must be an explicit overflow, never a silent wrap"
+    );
+    assert_eq!(
+        rem_signed(&min, &neg_one),
+        int_to_bits(0, 8),
+        "-128 % -1 = 0 fits B_8 exactly and must succeed"
+    );
+    // The same edge at the width cap itself (n = 64): i64::MIN / -1.
+    let min64 = int_to_bits(i64::MIN, 64).unwrap();
+    let neg_one64 = int_to_bits(-1, 64).unwrap();
+    assert_eq!(div_signed(&min64, &neg_one64), None);
+    assert_eq!(rem_signed(&min64, &neg_one64), int_to_bits(0, 64));
+}
+
+#[test]
+fn div_rem_signed_by_zero_refuses() {
+    let a = int_to_bits(-7, 8).unwrap();
+    let zero = int_to_bits(0, 8).unwrap();
+    assert_eq!(div_signed(&a, &zero), None);
+    assert_eq!(rem_signed(&a, &zero), None);
+    // 0 / 0 refuses too (div-by-zero, not a special case defined away).
+    assert_eq!(div_signed(&zero, &zero), None);
+    assert_eq!(rem_signed(&zero, &zero), None);
+    // n = 0: the only representable divisor is 0, so every n = 0 pair is div-by-zero.
+    assert_eq!(div_signed(&[], &[]), None);
+    assert_eq!(rem_signed(&[], &[]), None);
+}
+
+#[test]
+fn div_rem_signed_reject_unequal_and_over_cap_widths() {
+    let a = int_to_bits(1, 8).unwrap();
+    let b = int_to_bits(1, 4).unwrap();
+    assert_eq!(div_signed(&a, &b), None);
+    assert_eq!(rem_signed(&a, &b), None);
+    let wide = vec![false; DIV_MAX_WIDTH + 1];
+    assert_eq!(div_signed(&wide, &wide), None);
+    assert_eq!(rem_signed(&wide, &wide), None);
+    // At the cap itself the boundary is accepted: 10 / 3 at n = 64.
+    let a64 = int_to_bits(10, 64).unwrap();
+    let b64 = int_to_bits(3, 64).unwrap();
+    assert_eq!(div_signed(&a64, &b64), int_to_bits(3, 64));
+    assert_eq!(rem_signed(&a64, &b64), int_to_bits(1, 64));
+}
+
+/// **Oracle property test (the signed-division identity on the domain):** for every operand pair
+/// at small widths, either the pair refuses for the *right* reason (div-by-zero; the `min ÷ −1`
+/// quotient overflow) or the truncated-division identity holds exactly against the `i64` oracle:
+/// `a == q·b + r`, `|r| < |b|`, `sign(r) ∈ {0, sign(a)}`, and `q`/`r` equal Rust's own truncated
+/// `/`/`%`. Mirrors `div_rem_matches_euclidean_identity_oracle` (the unsigned twin).
+#[test]
+fn div_rem_signed_match_truncated_identity_oracle() {
+    for n in 1u32..=8 {
+        let lo = -(1i64 << (n - 1));
+        let hi = (1i64 << (n - 1)) - 1;
+        for x in lo..=hi {
+            for y in lo..=hi {
+                let a = int_to_bits(x, n).unwrap();
+                let b = int_to_bits(y, n).unwrap();
+                let got_q = div_signed(&a, &b);
+                let got_r = rem_signed(&a, &b);
+                if y == 0 {
+                    assert_eq!(got_q, None, "div_signed {x}/{y} at n={n}: div-by-zero");
+                    assert_eq!(got_r, None, "rem_signed {x}%{y} at n={n}: div-by-zero");
+                    continue;
+                }
+                if x == lo && y == -1 {
+                    assert_eq!(got_q, None, "div_signed min/-1 at n={n}: overflow");
+                    assert_eq!(got_r, int_to_bits(0, n), "rem_signed min%-1 = 0 at n={n}");
+                    continue;
+                }
+                let q = x / y; // Rust `/` is truncated toward zero — the pinned convention.
+                let r = x % y; // Rust `%`: sign follows the dividend.
+                assert_eq!(got_q, int_to_bits(q, n), "div_signed {x}/{y} at n={n}");
+                assert_eq!(got_r, int_to_bits(r, n), "rem_signed {x}%{y} at n={n}");
+                // The identity, from the raw oracle values (belt-and-braces over the encoding).
+                assert_eq!(x, q * y + r, "identity a == q*b + r at {x}/{y}, n={n}");
+                assert!(r.abs() < y.abs(), "|r| < |b| at {x}/{y}, n={n}");
+                assert!(
+                    r == 0 || (r < 0) == (x < 0),
+                    "sign(r) follows the dividend at {x}/{y}, n={n}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn shr_signed_worked_examples_pin_sign_extension() {
+    let enc = |v: i64| int_to_bits(v, 8).unwrap();
+    let k = |v: u64| uint_to_bits(v, 8).unwrap();
+    // -8 >> 1 = -4 (sign bits shifted in, value halves toward −∞).
+    assert_eq!(shr_signed(&enc(-8), &k(1)), int_to_bits(-4, 8));
+    // -128 >> 4 = -8 (0b1000_0000 → 0b1111_1000: four copies of the sign bit shifted in —
+    // the logical `shr` would give 0b0000_1000 = +8 instead).
+    assert_eq!(shr_signed(&enc(-128), &k(4)), int_to_bits(-8, 8));
+    // -1 >> k = -1 for every in-range k (all-ones is a fixed point of sign extension).
+    for kk in 0..8 {
+        assert_eq!(shr_signed(&enc(-1), &k(kk)), int_to_bits(-1, 8), "k={kk}");
+    }
+    // Non-negative values agree with the logical shift (the sign bit is 0).
+    assert_eq!(shr_signed(&enc(64), &k(3)), int_to_bits(8, 8));
+    // Shift by 0 is the identity.
+    assert_eq!(shr_signed(&enc(-100), &k(0)), int_to_bits(-100, 8));
+}
+
+#[test]
+fn shr_signed_refusals_mirror_the_logical_shift() {
+    let a = int_to_bits(-1, 8).unwrap();
+    // Shift amount >= width refuses (exactly the width, and above it).
+    assert_eq!(shr_signed(&a, &uint_to_bits(8, 8).unwrap()), None);
+    assert_eq!(shr_signed(&a, &uint_to_bits(255, 8).unwrap()), None);
+    // Width mismatch refuses.
+    assert_eq!(shr_signed(&a, &uint_to_bits(1, 4).unwrap()), None);
+    // Over-cap width refuses; the cap boundary is accepted.
+    let wide = vec![true; SHIFT_MAX_WIDTH + 1];
+    assert_eq!(shr_signed(&wide, &wide), None);
+    let a64 = int_to_bits(i64::MIN, 64).unwrap();
+    let k63 = uint_to_bits(63, 64).unwrap();
+    assert_eq!(shr_signed(&a64, &k63), int_to_bits(-1, 64));
+    // n = 0 always refuses (the only representable amount, 0, is >= the width 0).
+    assert_eq!(shr_signed(&[], &[]), None);
+}
+
+/// **Oracle property test (sign extension):** for every value/amount pair at small widths,
+/// `shr_signed` agrees with the native `i64` arithmetic shift (`>>` on a signed operand) for
+/// in-range amounts — `⌊a / 2^k⌋`, toward −∞ — and refuses explicitly for `k >= n`. Mirrors
+/// `shift_matches_native_oracle` (the logical twin).
+#[test]
+fn shr_signed_matches_native_arithmetic_oracle() {
+    for n in 1u32..=8 {
+        let lo = -(1i64 << (n - 1));
+        let hi = (1i64 << (n - 1)) - 1;
+        for v in lo..=hi {
+            for k in 0..=(u64::from(n) + 2) {
+                let a = int_to_bits(v, n).unwrap();
+                let Some(kb) = uint_to_bits(k, n) else {
+                    continue; // amount not representable at this width — no operand to test.
+                };
+                let got = shr_signed(&a, &kb);
+                if k >= u64::from(n) {
+                    assert_eq!(got, None, "shr_signed {v}>>{k} at n={n} should refuse");
+                } else {
+                    let expected = v >> k; // native arithmetic shift on i64.
+                    assert_eq!(
+                        got,
+                        int_to_bits(expected, n),
+                        "shr_signed {v}>>{k} at n={n}"
+                    );
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn cmp_signed_worked_examples() {
+    let enc = |v: i64| int_to_bits(v, 8).unwrap();
+    // The distinguishing case vs the unsigned D1 order: -1 (0b1111_1111) < 0, where the unsigned
+    // magnitude order says 255 > 0.
+    assert_eq!(cmp_signed(&enc(-1), &enc(0)), Some(Ordering::Less));
+    assert_eq!(cmp_signed(&enc(0), &enc(-1)), Some(Ordering::Greater));
+    assert_eq!(cmp_signed(&enc(-128), &enc(127)), Some(Ordering::Less));
+    assert_eq!(cmp_signed(&enc(5), &enc(5)), Some(Ordering::Equal));
+    // Width mismatch is `None` (the caller refuses explicitly — never a silent ordering).
+    assert_eq!(cmp_signed(&enc(0), &int_to_bits(0, 4).unwrap()), None);
+    // The zero-width bitvector compares Equal (B_0 = {0}).
+    assert_eq!(cmp_signed(&[], &[]), Some(Ordering::Equal));
+}
+
+/// `cmp_signed` is width-unbounded (purely structural — no integer decode): a 100-bit negative
+/// sorts below a 100-bit non-negative, beyond the `i64` codec's 64-bit exactness cap.
+#[test]
+fn cmp_signed_orders_beyond_the_i64_codec_cap() {
+    let mut neg = vec![false; 100];
+    neg[0] = true; // sign bit set — a large-magnitude negative.
+    let pos = vec![false; 100]; // zero.
+    assert_eq!(cmp_signed(&neg, &pos), Some(Ordering::Less));
+    assert_eq!(cmp_signed(&pos, &neg), Some(Ordering::Greater));
+    assert_eq!(cmp_signed(&neg, &neg), Some(Ordering::Equal));
+}
+
+/// **Oracle property test (total order over the signed range):** exhaustively at small widths,
+/// `cmp_signed` equals the `i64` value order under `bits_to_int` — which makes it a total order on
+/// the domain (the oracle's order is), covering antisymmetry/transitivity by transport.
+#[test]
+fn cmp_signed_matches_the_value_order_oracle() {
+    for n in 1u32..=8 {
+        let lo = -(1i64 << (n - 1));
+        let hi = (1i64 << (n - 1)) - 1;
+        for x in lo..=hi {
+            for y in lo..=hi {
+                let a = int_to_bits(x, n).unwrap();
+                let b = int_to_bits(y, n).unwrap();
+                assert_eq!(
+                    cmp_signed(&a, &b),
+                    Some(x.cmp(&y)),
+                    "cmp_signed({x}, {y}) at n={n} must equal the value order"
+                );
+            }
+        }
+    }
+}

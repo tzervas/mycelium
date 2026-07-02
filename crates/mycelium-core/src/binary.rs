@@ -38,6 +38,24 @@
 //! the `bin.*`-namespaced, signed-committed reading this module follows; [`add`]/[`sub`] complete
 //! that pair and [`neg`] is the genuinely-missing fourth member (there is no existing unsigned
 //! "negate" to reconcile against — negation is inherently a signed concept).
+//!
+//! [`div_signed`]/[`rem_signed`]/[`shr_signed`]/[`cmp_signed`] (M-767, `enb` Gap B) complete the
+//! **signedness-split** op set RFC-0033 §4.1.2 requires as *distinct named ops* — the signed
+//! counterparts to the unsigned [`div_rem`] and the logical [`shr`], plus the two's-complement
+//! ordering (ADR-028: signedness is a property of the *operation*, not the stored bitvector; its
+//! Consequences section pins the SMT-LIB alignment — split `bvsdiv`/`bvudiv`, `bvslt`/`bvult`,
+//! `bvashr`/`bvlshr`). **Rounding convention (grounding, VR-5):** RFC-0033 §4.1.2/§4.1.3 requires
+//! the signedness *split* and never-silent overflow but does not literally pin the signed-division
+//! rounding; the implemented convention is **truncation toward zero** with the remainder's sign
+//! following the dividend (`a == q·b + r`, `|r| < |b|`) — the ADR-028-cited SMT-LIB `bvsdiv`/
+//! `bvsrem` semantics (also Rust's `/`/`%`). That choice is `Declared` against the RFC text alone
+//! and grounded by the ADR-028 SMT-LIB citation — FLAGged in the M-767 report for ratification,
+//! never silently chosen. The single signed-division **overflow** case (`B_n`'s minimum ÷ −1: the
+//! true quotient `+2^(n-1)` exceeds `B_n`'s maximum) is an explicit refusal, never an
+//! SMT-LIB-style wrap — §4.1.3's never-silent overflow rule outranks the wrap SMT-LIB defines
+//! there.
+
+use core::cmp::Ordering;
 
 /// The signed two's-complement value of an MSB-first bit string. The empty string is `0`.
 #[must_use]
@@ -341,4 +359,123 @@ pub fn neg(a: &[bool]) -> Option<Vec<bool>> {
         return None; // the exact negation does not fit B_n — never-silent overflow (the MIN case).
     }
     int_to_bits(negated as i64, n)
+}
+
+/// Validate the shared signed-division operand contract and decode: equal widths, `n ≤
+/// `[`DIV_MAX_WIDTH`]` (the same cap as the unsigned [`div_rem`] — both pairs ride the `i64`/`u64`
+/// codecs' exactness bound), `n > 0`, and a nonzero divisor. Returns the two's-complement operand
+/// values and the width; `None` on any violated precondition (the caller's `EvalError` layer keeps
+/// the refusal reasons honestly distinct by re-checking the cheap ones — G2, mirroring how
+/// [`DIV_MAX_WIDTH`]'s doc comment splits the unsigned pair's reasons).
+fn signed_div_operands(a: &[bool], b: &[bool]) -> Option<(i64, i64, u32)> {
+    if a.len() != b.len() || a.len() > DIV_MAX_WIDTH {
+        return None;
+    }
+    let n = a.len() as u32;
+    if n == 0 {
+        // B_0's only representable value is 0 — 0 / 0 is div-by-zero, exactly as in `div_rem`.
+        return None;
+    }
+    let bv = bits_to_int(b);
+    if bv == 0 {
+        return None; // explicit div-by-zero refusal — never silent (G2).
+    }
+    Some((bits_to_int(a), bv, n))
+}
+
+/// **Signed** (two's-complement) fixed-width division of two equal-width `n`-bit two's-complement
+/// integers (MSB-first), for `n ≤ `[`DIV_MAX_WIDTH`]` — the distinct-named signed counterpart to
+/// the unsigned [`div_rem`] quotient (RFC-0033 §4.1.2/§4.1.3; ADR-028; M-767). The quotient is
+/// **truncated toward zero** (SMT-LIB `bvsdiv`; Rust `/` — see the module doc's rounding-convention
+/// note): `-7 / 2 = -3`, not the floored `-4`.
+///
+/// `None` when `a.len() != b.len()`, `a.len() > DIV_MAX_WIDTH`, `b` is zero (explicit div-by-zero,
+/// never a panic — G2), **or the quotient overflows `B_n`** — unlike unsigned division, signed
+/// fixed-width division has exactly one overflow case: `B_n`'s minimum `−2^(n-1)` divided by `−1`
+/// has true quotient `+2^(n-1)`, which exceeds `B_n`'s maximum `2^(n-1) − 1`. That case is an
+/// explicit, never-silent refusal (RFC-0033 §4.1.3), never a wrap back to the minimum.
+#[must_use]
+pub fn div_signed(a: &[bool], b: &[bool]) -> Option<Vec<bool>> {
+    let (av, bv, n) = signed_div_operands(a, b)?;
+    // Truncated division in i128 — |av| ≤ 2^63 and |bv| ≥ 1, so the quotient never overflows the
+    // intermediate; only the final B_n range check (inside `int_to_bits`) can refuse, and the only
+    // pair it refuses is (min, −1) → +2^(n-1) (see the doc comment above).
+    let q = i128::from(av) / i128::from(bv);
+    let q64 = i64::try_from(q).ok()?; // out of i64 only for (i64::MIN, -1) at n = 64.
+    int_to_bits(q64, n)
+}
+
+/// **Signed** (two's-complement) fixed-width remainder — the companion to [`div_signed`], with the
+/// remainder's **sign following the dividend** (SMT-LIB `bvsrem`; Rust `%`): together they satisfy
+/// the truncated-division identity `a == div_signed(a,b)·b + rem_signed(a,b)` with `|r| < |b|`
+/// wherever the quotient exists (property-tested).
+///
+/// `None` on the same operand preconditions as [`div_signed`] (width mismatch, over-cap width,
+/// div-by-zero). Unlike the quotient, the remainder **never overflows**: `|r| < |b| ≤ 2^(n-1)`
+/// puts every remainder inside `B_n`, so `rem_signed(min, −1) = Some(0)` succeeds even though
+/// `div_signed(min, −1)` refuses — the exact result fits, and refusing an in-range exact result
+/// would be an over-refusal §4.1.3 does not ask for (the divergence from Rust's `checked_rem`,
+/// which refuses on the hardware's paired-instruction behavior, is deliberate and documented).
+#[must_use]
+pub fn rem_signed(a: &[bool], b: &[bool]) -> Option<Vec<bool>> {
+    let (av, bv, n) = signed_div_operands(a, b)?;
+    // Truncated remainder in i128 (sign follows the dividend). Always in B_n: |r| < |bv| ≤ 2^(n-1)
+    // bounds r to [−2^(n-1)+1, 2^(n-1)−1] ⊂ B_n, so the narrowing below cannot refuse.
+    let r = i128::from(av) % i128::from(bv);
+    int_to_bits(r as i64, n)
+}
+
+/// **Arithmetic** (sign-extending) fixed-width right shift — the distinct-named signed counterpart
+/// to the logical [`shr`] (RFC-0033 §4.1.2's signedness-split `shift` op set; ADR-028's SMT-LIB
+/// `bvashr`/`bvlshr` split; M-767). Same operand shape and refusal contract as [`shr`]: the shift
+/// amount is itself an unsigned `n`-bit bitvector (read via [`bits_to_uint`]), and `None` on a
+/// width mismatch, an over-cap width (`n > `[`SHIFT_MAX_WIDTH`]`), or a shift amount `>= n`
+/// (explicit, never-silent — never UB, a wrapped shift amount, or an implicit "fill with the sign
+/// bit for any amount" extension; at `n == 0` every amount refuses, as in [`shr`]).
+///
+/// Copies of the **sign bit** (the MSB) are shifted in where [`shr`] shifts in zeros, so the
+/// result equals `⌊a / 2^k⌋` under the two's-complement reading (floor, i.e. toward −∞ — the
+/// standard arithmetic-shift semantics; e.g. `-1 >> k = -1` for every in-range `k`). The result
+/// always fits `B_n` (a magnitude never grows under an arithmetic right shift), so shifting never
+/// overflows — the refusal reasons are exactly the operand preconditions above.
+#[must_use]
+pub fn shr_signed(a: &[bool], shift: &[bool]) -> Option<Vec<bool>> {
+    if a.len() != shift.len() || a.len() > SHIFT_MAX_WIDTH {
+        return None;
+    }
+    let n = a.len() as u32;
+    if n == 0 {
+        return None;
+    }
+    let k = bits_to_uint(shift);
+    if k >= u64::from(n) {
+        return None; // shift-amount >= width — explicit, never-silent refusal (G2).
+    }
+    let av = bits_to_int(a);
+    let result = av >> k; // k < n <= 64 ⇒ k <= 63: a defined, arithmetic (sign-extending) shift.
+    int_to_bits(result, n)
+}
+
+/// **Signed** (two's-complement) total order over two equal-width bitvectors — the distinct-named
+/// signed counterpart to the D1 comparison's unsigned-magnitude order on `Binary` (RFC-0033
+/// §4.1.2: ordering differs by signedness, so it MUST be a distinct named op; ADR-028's
+/// `bvslt`/`bvult` split; M-767). `None` on a width mismatch (the caller refuses explicitly —
+/// never a silent ordering); equal-width operands always order (`Some`), the zero-width bitvector
+/// comparing `Equal` (`B_0 = {0}`).
+///
+/// **Width-unbounded and purely structural** (no `DIV_MAX_WIDTH`-style cap): the two's-complement
+/// order is the unsigned lexicographic order with the sign bit's polarity flipped — compare
+/// `(¬a[0], a[1..])` against `(¬b[0], b[1..])` — so no integer decode (and hence no width cap)
+/// is involved, exactly as the unsigned D1 order compares the raw bits. Agreement with
+/// [`bits_to_int`]'s value order is property-tested on the decodable domain (`n ≤ 64`).
+#[must_use]
+pub fn cmp_signed(a: &[bool], b: &[bool]) -> Option<Ordering> {
+    if a.len() != b.len() {
+        return None;
+    }
+    if a.is_empty() {
+        return Some(Ordering::Equal);
+    }
+    // Flip the sign bit (negatives sort below non-negatives), then MSB-first lexicographic.
+    Some((!a[0], &a[1..]).cmp(&(!b[0], &b[1..])))
 }

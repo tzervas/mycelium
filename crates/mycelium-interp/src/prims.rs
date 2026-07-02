@@ -83,7 +83,12 @@ impl PrimRegistry {
     /// variant rides M-767), and the never-silent two's-complement `add`/`sub`/`neg`
     /// (`bin.add`/`bin.sub`/`bin.neg`, RFC-0033 §4.1.2/§4.1.3, M-766 — completes the shared
     /// two's-complement set `bin.mul` started; distinct from `bit.add`/`bit.sub`'s unsigned overflow
-    /// criterion), and the **dense group**
+    /// criterion), and the **signedness-split signed op set**
+    /// (`bin.div_s`/`bin.rem_s`/`bin.shr_s`/`cmp.lt_s`, RFC-0033 §4.1.2/§4.1.3, M-767 — signed
+    /// truncated-toward-zero division/remainder, the arithmetic sign-extending right shift, and
+    /// the two's-complement ordering, each a distinct named op from its unsigned counterpart per
+    /// ADR-028; the `min ÷ −1` overflow, div-by-zero, and an out-of-range shift amount are
+    /// explicit refusals), and the **dense group**
     /// (`dense.add`/`dense.sub`/`dense.neg`/`dense.scale`, RFC-0001 §4.1/RFC-0002 §5, M-890 —
     /// `enb` Gap C; the first tensor-valued prims — plus the M-891 measurement pair
     /// `dense.dot`/`dense.similarity`; all delegate to the `mycelium-dense` kernel and
@@ -128,6 +133,15 @@ impl PrimRegistry {
         r.register("bin.add", prim_bin_add);
         r.register("bin.sub", prim_bin_sub);
         r.register("bin.neg", prim_bin_neg);
+        // RFC-0033 §4.1.2/§4.1.3 (M-767, `enb` Gap B): the signedness-split signed op set —
+        // truncated signed division/remainder, the arithmetic (sign-extending) right shift, and
+        // the two's-complement ordering, each a distinct named op from its unsigned counterpart
+        // (ADR-028). Never-silent: div-by-zero and an out-of-range shift amount refuse as
+        // `PrimType`; the single signed-division overflow (`min ÷ −1`) refuses as `Overflow`.
+        r.register("bin.div_s", prim_bin_div_s);
+        r.register("bin.rem_s", prim_bin_rem_s);
+        r.register("bin.shr_s", prim_bin_shr_s);
+        r.register("cmp.lt_s", prim_cmp_lt_s);
         // DN-41 (M-798): never-silent width-cast (zero-extend widen / checked narrow) over `Binary`.
         r.register("bit.width_cast", prim_width_cast);
         // RFC-0032 D3 (M-749): never-silent indexed-sequence access over `Repr::Seq`.
@@ -756,10 +770,11 @@ fn prim_bin_rem(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
 // exact for `n ≤ `[`binary::SHIFT_MAX_WIDTH`]`; a wider operand refuses with an explicit
 // [`EvalError::PrimType`] naming the cap.
 
-/// Shared arity/width validation + kernel dispatch for `bin.shl`/`bin.shr`: checks arity 2,
-/// extracts equal-width `Binary` operand bits (width mismatch/over-cap → [`EvalError::PrimType`]),
-/// and calls `op` (`None` — a shift amount `>= N` — → an explicit [`EvalError::PrimType`], never a
-/// panic).
+/// Shared arity/width validation + kernel dispatch for `bin.shl`/`bin.shr` (M-889) and the
+/// arithmetic `bin.shr_s` (M-767 — same operand shape and refusal contract, sign-extending
+/// kernel): checks arity 2, extracts equal-width `Binary` operand bits (width mismatch/over-cap →
+/// [`EvalError::PrimType`]), and calls `op` (`None` — a shift amount `>= N` — → an explicit
+/// [`EvalError::PrimType`], never a panic).
 fn bin_shift(
     prim: &str,
     args: &[&Value],
@@ -778,7 +793,7 @@ fn bin_shift(
         return Err(EvalError::PrimType {
             prim: prim.to_owned(),
             why: format!(
-                "width {} exceeds the {}-bit logical shift cap (M-889 scope)",
+                "width {} exceeds the {}-bit shift cap (M-889/M-767 scope)",
                 a.len(),
                 binary::SHIFT_MAX_WIDTH
             ),
@@ -937,6 +952,179 @@ fn prim_bin_neg(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
         Payload::Bits(out),
         ApproxRule::Refuse,
     )
+}
+
+// --- RFC-0033 §4.1.2/§4.1.3 (M-767, `enb` Gap B): the signedness-split signed op set -------------
+//
+// `bin.div_s`/`bin.rem_s`/`bin.shr_s`/`cmp.lt_s` are the **signed** counterparts to the landed
+// unsigned `bin.div`/`bin.rem`/`bin.shr` and the D1 unsigned-magnitude `cmp.lt` — the operations
+// §4.1.2 requires as *distinct named ops* because their result differs by signedness (ADR-028:
+// signedness lives in the *op*, not the `Repr`; its Consequences pin the SMT-LIB split —
+// `bvsdiv`/`bvudiv`, `bvslt`/`bvult`, `bvashr`/`bvlshr`). The kernel codecs live in
+// [`mycelium_core::binary`] (`div_signed`/`rem_signed`/`shr_signed`/`cmp_signed`), reading
+// operands through the two's-complement [`binary::bits_to_int`] codec `bin.mul`/`bin.add` already
+// use — never the unsigned [`binary::bits_to_uint`] their `_u` twins read.
+//
+// **Rounding convention (grounding — see the `mycelium_core::binary` module note):** division is
+// **truncated toward zero**, the remainder's sign follows the dividend (`a == q·b + r`, `|r| <
+// |b|`) — the ADR-028-cited SMT-LIB `bvsdiv`/`bvsrem` semantics (also Rust `/`/`%`). RFC-0033's
+// text does not literally pin the rounding; the choice is grounded on the ADR-028 citation and
+// FLAGged in the M-767 report, never silently made (VR-5/G2).
+//
+// **Overflow-detect (§4.1.3), the signedness-split part:** unsigned fixed-width division never
+// overflows, but signed division has exactly one overflow — `B_N`'s minimum ÷ −1 (true quotient
+// `+2^(N-1)`, out of `B_N`) — which is an explicit [`EvalError::Overflow`], never SMT-LIB's
+// defined wrap (the never-silent rule outranks it) and never a panic. `rem_s(min, −1) = 0` fits
+// `B_N` exactly and succeeds (see [`binary::rem_signed`] — deliberately not Rust `checked_rem`'s
+// hardware-motivated over-refusal). Div-by-zero and a shift amount `>= N` remain value-
+// precondition [`EvalError::PrimType`] refusals, mirroring the unsigned pair (`Overflow` is
+// reserved for an out-of-range *result*).
+//
+// **Width cap (current scope).** Mirrors the unsigned pair: [`binary::div_signed`]/
+// [`binary::rem_signed`] share [`binary::DIV_MAX_WIDTH`], [`binary::shr_signed`] shares
+// [`binary::SHIFT_MAX_WIDTH`]; a wider operand refuses with an explicit [`EvalError::PrimType`]
+// naming the cap. `cmp.lt_s` is **width-unbounded** (the kernel order is purely structural — the
+// sign-bit-flip lexicographic compare), exactly as the D1 `cmp.lt` unsigned order is.
+
+/// Shared arity/width/divisor validation for `bin.div_s`/`bin.rem_s`: checks arity 2, extracts
+/// equal-width `Binary` operand bits (width mismatch/over-cap → [`EvalError::PrimType`]), and
+/// refuses an all-zero divisor (div-by-zero → [`EvalError::PrimType`], covering `N == 0`, whose
+/// only representable divisor is zero) — so the kernel's remaining `None` (quotient overflow,
+/// `div_s` only) maps unambiguously to [`EvalError::Overflow`] at the call sites (G2: the refusal
+/// reasons stay honestly distinct).
+fn bin_div_rem_s_operands<'a>(
+    prim: &str,
+    args: &'a [&Value],
+) -> Result<(&'a [bool], &'a [bool]), EvalError> {
+    expect_arity(prim, args, 2)?;
+    let a = as_bits(prim, args[0])?;
+    let b = as_bits(prim, args[1])?;
+    if a.len() != b.len() {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!("width mismatch: {} vs {} bits", a.len(), b.len()),
+        });
+    }
+    if a.len() > binary::DIV_MAX_WIDTH {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!(
+                "width {} exceeds the {}-bit signed division cap (M-767 scope)",
+                a.len(),
+                binary::DIV_MAX_WIDTH
+            ),
+        });
+    }
+    if b.iter().all(|&bit| !bit) {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: "division by zero".to_owned(),
+        });
+    }
+    Ok((a, b))
+}
+
+/// `bin.div_s : (Binary{N}, Binary{N}) → Binary{N}` — never-silent **signed** (two's-complement)
+/// division, truncated toward zero (RFC-0033 §4.1.2/§4.1.3, ADR-028, M-767; SMT-LIB `bvsdiv` —
+/// see the section note). Equal-width operands, `N ≤ `[`binary::DIV_MAX_WIDTH`]`; a width
+/// mismatch, an over-cap width, or division by zero is an explicit [`EvalError::PrimType`], and
+/// the single signed-division overflow — `B_N`'s minimum ÷ −1 — is an explicit
+/// [`EvalError::Overflow`], never a silent wrap (G2).
+fn prim_bin_div_s(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    let (a, b) = bin_div_rem_s_operands(prim, args)?;
+    // After the operand checks the kernel's only remaining refusal is the min ÷ −1 overflow.
+    let out = binary::div_signed(a, b).ok_or_else(|| EvalError::Overflow {
+        prim: prim.to_owned(),
+    })?;
+    compose_result(
+        prim,
+        args,
+        args[0].repr().clone(),
+        Payload::Bits(out),
+        ApproxRule::Refuse,
+    )
+}
+
+/// `bin.rem_s : (Binary{N}, Binary{N}) → Binary{N}` — never-silent **signed** remainder, sign
+/// following the dividend (RFC-0033 §4.1.2/§4.1.3, ADR-028, M-767; SMT-LIB `bvsrem`). Same
+/// operand contract as [`prim_bin_div_s`]; together they satisfy the truncated-division identity
+/// `a == div_s(a,b)·b + rem_s(a,b)` with `|r| < |b|` (property-tested in `mycelium-core`). The
+/// remainder itself **never overflows** (`|r| < |b| ≤ 2^(N-1)` keeps it inside `B_N`), so
+/// `rem_s(min, −1) = 0` succeeds where `div_s(min, −1)` refuses.
+fn prim_bin_rem_s(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    let (a, b) = bin_div_rem_s_operands(prim, args)?;
+    // Defensive: after the operand checks `rem_signed` is total (the remainder always fits B_N —
+    // see its doc comment); this arm is unreachable rather than a real refusal path.
+    let out = binary::rem_signed(a, b).ok_or_else(|| EvalError::Overflow {
+        prim: prim.to_owned(),
+    })?;
+    compose_result(
+        prim,
+        args,
+        args[0].repr().clone(),
+        Payload::Bits(out),
+        ApproxRule::Refuse,
+    )
+}
+
+/// `bin.shr_s : (Binary{N}, Binary{N}) → Binary{N}` — never-silent **arithmetic** (sign-extending)
+/// right shift (RFC-0033 §4.1.2/§4.1.3, ADR-028, M-767; SMT-LIB `bvashr`): copies of the sign bit
+/// are shifted in where the logical `bin.shr` shifts in zeros, so the result is `⌊a / 2^k⌋` under
+/// the two's-complement reading. Same operand shape and refusal contract as [`prim_bin_shr`]
+/// (shift amount an unsigned `Binary{N}`; width mismatch / over-cap width / amount `>= N` →
+/// explicit [`EvalError::PrimType`], never UB or a silently sign-filled out-of-range shift) —
+/// delegated through the same [`bin_shift`] validator.
+fn prim_bin_shr_s(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    let out = bin_shift(prim, args, binary::shr_signed)?;
+    compose_result(
+        prim,
+        args,
+        args[0].repr().clone(),
+        Payload::Bits(out),
+        ApproxRule::Refuse,
+    )
+}
+
+/// `cmp.lt_s : (Binary{N}, Binary{N}) → Binary{1}` — the **signed** (two's-complement) strict
+/// order (RFC-0033 §4.1.2, ADR-028, M-767; SMT-LIB `bvslt`), the distinct named counterpart to
+/// `cmp.lt`'s unsigned-magnitude order on `Binary` (e.g. at `Binary{8}`, `0b1111_1111` is `−1 <
+/// 0` here but `255 > 0` there). `Binary`-only: balanced ternary is inherently signed, so its D1
+/// `cmp.lt` order *is* the signed order — a ternary operand refuses with that routing (explicit,
+/// never a silently duplicated order), as does a float (partial order — ADR-040 §2.4) or any
+/// width mismatch (never a silent `false`; G2). Width-unbounded, like `cmp.lt`.
+fn prim_cmp_lt_s(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 2)?;
+    match (args[0].repr(), args[1].repr()) {
+        (Repr::Binary { width: wa }, Repr::Binary { width: wb }) => {
+            if wa != wb {
+                return Err(EvalError::PrimType {
+                    prim: prim.to_owned(),
+                    why: format!("width mismatch: Binary{{{wa}}} vs Binary{{{wb}}}"),
+                });
+            }
+            let a = as_bits(prim, args[0])?;
+            let b = as_bits(prim, args[1])?;
+            // Equal widths were just checked, so the kernel order is total (`Some`); the
+            // `PrimType` arm is defensive, not a reachable refusal path.
+            let ord = binary::cmp_signed(a, b).ok_or_else(|| EvalError::PrimType {
+                prim: prim.to_owned(),
+                why: "width mismatch".to_owned(),
+            })?;
+            bool_result(prim, args, ord == Ordering::Less)
+        }
+        (Repr::Ternary { .. }, Repr::Ternary { .. }) => Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: "balanced ternary is inherently signed — its cmp.lt order IS the signed order; \
+                  use cmp.lt (there is no distinct ternary signed comparison to select)"
+                .to_owned(),
+        }),
+        _ => Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: "cmp.lt_s is the Binary two's-complement order (ADR-028): both operands must be \
+                  Binary{N} of equal width"
+                .to_owned(),
+        }),
+    }
 }
 
 // --- DN-41 (M-798): never-silent `Binary` width-cast -------------------------------------------

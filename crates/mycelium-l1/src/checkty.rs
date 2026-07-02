@@ -3882,7 +3882,12 @@ impl Cx<'_> {
         // other operand (consistent with the width-preserving prims). Only when **both** operands are
         // bare decimals is there no anchor at all, and then it is refused honestly (G2 — never a default
         // width); ascribe one operand or write it explicitly.
-        if matches!(name.as_str(), "eq" | "lt") {
+        // M-767 (RFC-0033 §4.1.2; ADR-028): `lt_s` — the **signed** (two's-complement) order over
+        // `Binary{N}` — shares this width-collapsing comparison branch (same anchoring rules, same
+        // `Binary{1}` result) but is Binary-only: `lt` reads Binary operands as unsigned
+        // magnitudes, so the signed order is a distinct named op (DN-72 `_s`), while balanced
+        // ternary's `lt` order is already the signed order (no ternary `lt_s` exists).
+        if matches!(name.as_str(), "eq" | "lt" | "lt_s") {
             if args.len() != 2 {
                 return self.err(format!(
                     "`{name}` takes two operands (got {}); RFC-0032 D1",
@@ -3929,6 +3934,18 @@ impl Cx<'_> {
             }
             match (&tys[0], &tys[1]) {
                 (Ty::Binary(x), Ty::Binary(y)) if x == y => {}
+                // M-767: `lt_s` on a ternary pair refuses with the real routing — balanced
+                // ternary's D1 `lt` order IS the signed order, so a distinct ternary `lt_s`
+                // would silently duplicate it (G2: explicit teaching refusal, never two names
+                // for one order).
+                (Ty::Ternary(x), Ty::Ternary(y)) if x == y && name == "lt_s" => {
+                    return self.err(
+                        "`lt_s` is the Binary two's-complement order (RFC-0033 §4.1.2; ADR-028); \
+                         balanced ternary is inherently signed, so `lt` already orders it by \
+                         signed value — use `lt`"
+                            .to_owned(),
+                    );
+                }
                 (Ty::Ternary(x), Ty::Ternary(y)) if x == y => {}
                 // ADR-040 §2.4 (M-899): float ordering is *partial* (NaN is unordered), so
                 // floats never route through the D1 total order — refuse with the real routing
@@ -5594,6 +5611,12 @@ fn prim_family(name: &str) -> Option<PrimFam> {
         // signedness-split requirement for division). M-889 adds `shl_u`/`shr_u` — never-silent
         // **logical** left/right shift (the arithmetic/signed right shift rides M-767 likewise).
         // M-766 adds `add_s`/`sub_s`/`neg_s` — never-silent two's-complement add/sub/neg.
+        // M-767 adds `div_s`/`rem_s`/`shr_s` — the signed (two's-complement) division/remainder
+        // (truncated toward zero, remainder sign following the dividend — SMT-LIB `bvsdiv`/
+        // `bvsrem`; the `min ÷ −1` overflow refuses explicitly) and the arithmetic
+        // (sign-extending) right shift, completing the §4.1.2 signedness split. (The signed
+        // comparison `lt_s` rides the dedicated width-collapsing comparison branch, not this
+        // width-preserving family.)
         // **Surface naming (DN-72, ratified 2026-07-02):** every integer prim's surface name
         // carries an explicit signedness suffix — `_u` = unsigned semantics, `_s` =
         // signed/two's-complement (ADR-028: signedness lives in the operation, not the type).
@@ -5602,7 +5625,9 @@ fn prim_family(name: &str) -> Option<PrimFam> {
         // *kernel*-namespace inconsistency one layer down is deliberately NOT touched — kernel
         // names are content-addressed (DN-10 §3.4); see the DN-72 deferred FLAG.
         "not" | "xor" | "and" | "or" | "add_u" | "sub_u" | "mul_s" | "div_u" | "rem_u"
-        | "shl_u" | "shr_u" | "add_s" | "sub_s" | "neg_s" => PrimFam::Binary,
+        | "shl_u" | "shr_u" | "add_s" | "sub_s" | "neg_s" | "div_s" | "rem_s" | "shr_s" => {
+            PrimFam::Binary
+        }
         "add" | "sub" | "mul" | "neg" => PrimFam::Ternary,
         _ => return None,
     })
@@ -5701,9 +5726,12 @@ pub fn prim_sig(name: &str, args: &[Ty]) -> Option<Ty> {
         // contract (`bin.shl`/`bin.shr`'s `PrimType` refusal), not a static type error.
         // M-766: `add_s`/`sub_s` — same width-preserving shape; the never-silent two's-complement
         // overflow bound is likewise a runtime contract (`bin.add`/`bin.sub`'s `Overflow`).
+        // M-767: `div_s`/`rem_s`/`shr_s` — same width-preserving shape; div-by-zero, the
+        // `min ÷ −1` signed-division overflow, and an out-of-range shift amount are likewise
+        // runtime contracts, not static type errors.
         (
             "and" | "or" | "add_u" | "sub_u" | "mul_s" | "div_u" | "rem_u" | "shl_u" | "shr_u"
-            | "add_s" | "sub_s",
+            | "add_s" | "sub_s" | "div_s" | "rem_s" | "shr_s",
             [Ty::Binary(a), Ty::Binary(b)],
         ) if a == b => Some(Ty::Binary(a.clone())),
         ("add" | "sub" | "mul", [Ty::Ternary(a), Ty::Ternary(b)]) if a == b => {
@@ -5747,9 +5775,21 @@ pub fn prim_kernel_name(name: &str) -> Option<&'static str> {
         "add_s" => "bin.add",
         "sub_s" => "bin.sub",
         "neg_s" => "bin.neg",
+        // RFC-0033 §4.1.2/§4.1.3 (M-767, `enb` Gap B): the signedness-split signed op set — the
+        // signed truncated division/remainder and the arithmetic (sign-extending) right shift,
+        // distinct-named from their `_u` counterparts per ADR-028 (SMT-LIB `bvsdiv`/`bvudiv`,
+        // `bvashr`/`bvlshr`). The new kernel names take the `_s` spelling directly; the deferred
+        // DN-72 §5 kernel-namespace reconciliation (`bit.*` vs `bin.*`) is not prejudged here.
+        "div_s" => "bin.div_s",
+        "rem_s" => "bin.rem_s",
+        "shr_s" => "bin.shr_s",
         // RFC-0032 D1 (M-747): reduce-to-`Bool` comparison/equality (returns `Binary{1}`).
         "eq" => "cmp.eq",
         "lt" => "cmp.lt",
+        // RFC-0033 §4.1.2 (M-767): the signed (two's-complement) order over `Binary{N}` — `lt`
+        // reads Binary operands as unsigned magnitudes, so the signed order is a distinct named
+        // op (ADR-028's `bvslt`/`bvult` split); Binary-only (ternary's `lt` is already signed).
+        "lt_s" => "cmp.lt_s",
         // RFC-0032 D3/D4 (M-749/M-750): never-silent indexing/length over `Seq`/`Bytes` (the surface
         // names are `_`-joined since a `.` is the path separator in the lexer).
         "seq_len" => "seq.len",
