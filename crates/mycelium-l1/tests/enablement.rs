@@ -108,6 +108,23 @@
 //!   literal, δ rides a `Float` param/literal). Static accept/reject in the
 //!   `vsa_bundle_conformance_*` tests, incl. the *static* empty-bundle (`N = 0`) refusal (N
 //!   lives in the `Seq` type).
+//! - **M-894** (RFC-0003 §3/§5/§6, ADR-008, FR-S4, kickoff `enb` Phase-I H1 Gap C) — the
+//!   **cleanup/reconstruction pair + the capacity query**: `vsa_cleanup` (query × codebook →
+//!   the `Seq{Float, 3}` `[index, confidence, margin]` decision triple — retrieval is never a
+//!   silent nearest-neighbour pick; a tie is the RFC-0010 §4.4 identifiability refusal),
+//!   `vsa_reconstruct` (record × role × codebook × `Float` threshold → the triple; dispatch set
+//!   **{MAP-I, BSC}** — an FHRR record is a *static* refusal naming its unbind profile's regime;
+//!   a below-threshold retrieval is an explicit runtime refusal naming confidence vs threshold),
+//!   and `vsa_required_dim` (`Binary{W}` items × `Float` δ → `Binary{64}`, the M-131
+//!   `requiredDim` checked instantiation, its result carrying the kernel's **`Proven`**
+//!   `CapacityBound` — the capacity-bound query made inspectable). The triple carries the
+//!   query/record's own (strength, bound) pair through the §4.7 meet — reconstructing from a
+//!   certified bundle re-discloses its `Proven` `CapacityBound` (the disclosed bound is the
+//!   value's own — VR-5). Same three-way posture as M-892/M-893 (injected hypervector
+//!   arguments — no VSA construction form yet; codebooks ride the surface list literal,
+//!   thresholds/δ ride `Float` params/literals). Static accept/reject in the
+//!   `vsa_cleanup_reconstruct_conformance_*` tests, incl. the *static* empty-codebook (`N = 0`)
+//!   and FHRR-reconstruct refusals.
 
 use mycelium_core::{
     Bound, BoundBasis, BoundKind, FloatWidth, GuaranteeStrength, Meta, Node, NormKind, Payload,
@@ -3764,6 +3781,411 @@ fn vsa_bundle_conformance_reject() {
             "nodule v;\nfn f(a: VSA{MAP_I, 2048, Dense}, b: VSA{MAP_I, 2048, Dense}) => \
              VSA{BSC, 2048, Dense} = vsa_bundle([a, b], 0.01);",
             "VSA{MAP-I, 2048, Dense}",
+        ),
+    ] {
+        let err =
+            check_nodule(&parse(src).expect("parses")).expect_err(&format!("must reject: {src}"));
+        let msg = err.to_string();
+        assert!(
+            msg.contains(needle),
+            "the refusal must name the offense.\n  src: {src}\n  want: {needle}\n  got: {msg}"
+        );
+    }
+}
+
+// ── M-894 (`enb` Gap C): `vsa_cleanup` + `vsa_reconstruct` + `vsa_required_dim` ─────────────────
+//
+// The cleanup-memory retrieval, the RFC-0003 §6 compositional role-reconstruction, and the M-131
+// capacity-bound query (FR-S4). Signatures:
+//   vsa_cleanup(q: VSA{m, d, Dense}, cb: Seq{VSA{m, d, Dense}, N≥1}) → Seq{Float, 3}
+//   vsa_reconstruct(r: VSA{m, d, Dense}, role: VSA{m, d, Dense},
+//                   cb: Seq{VSA{m, d, Dense}, N≥1}, thr: Float) → Seq{Float, 3}
+//   vsa_required_dim(items: Binary{W}, δ: Float) → Binary{64}
+// The `Seq{Float, 3}` result is the `[index, confidence, margin]` decision triple — the retrieval
+// decision is a first-class, inspectable value (never a silent nearest-neighbour pick — G2), and
+// it carries the query/record's own (strength, bound) pair through the RFC-0001 §4.7 meet (a
+// certified bundle record re-discloses its `Proven` `CapacityBound`: the disclosed bound is the
+// value's own — VR-5).
+//
+// **Where the three-way closes (recorded honestly — G2/VR-5).** Exactly the M-892/M-893 posture:
+// L1 has no hypervector value-construction form, so the surface leg injects `Repr::Vsa` argument
+// values through `Evaluator::call` (codebooks ride the surface **list literal** over injected
+// params; thresholds/δ ride surface **float literals**/params; `vsa_required_dim`'s items ride a
+// `Binary{8}` param) ≡ L0-interp over the equivalent hand-built `Node::Op` ≡ AOT
+// (`mycelium_mlir::run`) over the same node — agreement on repr + payload + the carried tag, and
+// on the never-silent runtime refusals. The nullary-main surface closure is deferred to a VSA
+// value-construction form (a later wave), not silently skipped.
+
+/// Decode a `Binary{64}` result (MSB-first) to a u64 — `vsa_required_dim`'s result form.
+fn u64_of_bits(v: &Value) -> u64 {
+    match (v.repr(), v.payload()) {
+        (Repr::Binary { width: 64 }, Payload::Bits(bits)) => {
+            bits.iter().fold(0u64, |acc, &b| (acc << 1) | u64::from(b))
+        }
+        other => panic!("expected a Binary{{64}} dimension, got {other:?}"),
+    }
+}
+
+/// Unpack the `Seq{Float, 3}` decision triple.
+fn triple_of(v: &Value) -> [f64; 3] {
+    match v.payload() {
+        Payload::Seq(elems) => {
+            let xs: Vec<f64> = elems
+                .iter()
+                .map(|e| match e.payload() {
+                    Payload::Float(x) => *x,
+                    other => panic!("triple element must be a Float, got {other:?}"),
+                })
+                .collect();
+            [xs[0], xs[1], xs[2]]
+        }
+        other => panic!("expected the Seq{{Float, 3}} decision triple, got {other:?}"),
+    }
+}
+
+/// Three-way: `vsa_cleanup` over an exact-atom query returns the `[index, confidence, margin]`
+/// decision triple — index of the matching atom, confidence ≈ 1, positive margin — as an
+/// `Exact`/no-bound `Seq{Float, 3}` identically on every path (all operands `Exact`).
+#[test]
+fn vsa_cleanup_three_way_returns_the_decision_triple() {
+    const DIM: u32 = 64;
+    let atoms: Vec<Value> = (0..3)
+        .map(|i| vsa_hv("MAP-I", DIM, bipolar_atom(DIM, 70 + i)))
+        .collect();
+    let query = atoms[1].clone();
+    let src = "nodule v;\nfn f(q: VSA{MAP_I, 64, Dense}, a: VSA{MAP_I, 64, Dense}, \
+               b: VSA{MAP_I, 64, Dense}, c: VSA{MAP_I, 64, Dense}) => Seq{Float, 3} = \
+               vsa_cleanup(q, [a, b, c]);";
+    let node = Node::Op {
+        prim: "vsa.cleanup".to_owned(),
+        args: vec![Node::Const(query.clone()), Node::Const(vsa_seq(&atoms))],
+    };
+    let args: Vec<Value> = std::iter::once(query)
+        .chain(atoms.iter().cloned())
+        .collect();
+    let y = assert_vsa_three_way("vsa_cleanup/MAP-I", src, "f", &node, &args);
+    let [index, confidence, margin] = triple_of(&y);
+    assert_eq!(index, 1.0, "the exact atom cleans to its own index");
+    assert!((confidence - 1.0).abs() < 1e-9, "confidence={confidence}");
+    assert!(margin > 0.0, "unique arg-max, margin={margin}");
+    assert_eq!(y.meta().guarantee(), GuaranteeStrength::Exact);
+    assert!(y.meta().bound().is_none(), "Exact results carry no bound");
+}
+
+/// Three-way: `vsa_reconstruct` from a **certified bundle** record recovers the bound filler and
+/// **re-discloses the record's own `Proven` `CapacityBound`** on every path — the disclosed bound
+/// is the value's own (VR-5), never re-derived and never dropped. (The record is built through
+/// the interpreter's own certified-bundle prim, then injected — the M-892 injected-argument
+/// posture.)
+#[test]
+fn vsa_reconstruct_three_way_rediscloses_the_records_own_bound() {
+    const DIM: u32 = 2048;
+    let roles: Vec<Value> = (0..2)
+        .map(|i| vsa_hv("MAP-I", DIM, bipolar_atom(DIM, 80 + i)))
+        .collect();
+    let fillers: Vec<Value> = (0..2)
+        .map(|i| vsa_hv("MAP-I", DIM, bipolar_atom(DIM, 90 + i)))
+        .collect();
+    // record = certified_bundle([role0 ⊗ filler0, role1 ⊗ filler1], δ = 0.01), built through the
+    // registry's own prims so the Proven tag + CapacityBound are the kernel's.
+    let interp = Interpreter::new(
+        PrimRegistry::with_builtins(),
+        Box::new(mycelium_cert::BinaryTernarySwapEngine),
+    );
+    let pairs: Vec<Node> = roles
+        .iter()
+        .zip(&fillers)
+        .map(|(r, x)| op_node("vsa.bind", &[r.clone(), x.clone()]))
+        .collect();
+    let record = {
+        let products: Vec<Value> = pairs
+            .iter()
+            .map(|n| interp.eval(n).expect("bind accepts"))
+            .collect();
+        interp
+            .eval(&Node::Op {
+                prim: "vsa.bundle".to_owned(),
+                args: vec![Node::Const(vsa_seq(&products)), Node::Const(fval(0.01))],
+            })
+            .expect("certified bundle accepts")
+    };
+    assert_eq!(record.meta().guarantee(), GuaranteeStrength::Proven);
+    let record_bound = record.meta().bound().cloned().expect("Proven has a bound");
+
+    let src = "nodule v;\nfn f(r: VSA{MAP_I, 2048, Dense}, role: VSA{MAP_I, 2048, Dense}, \
+               x: VSA{MAP_I, 2048, Dense}, y: VSA{MAP_I, 2048, Dense}) => Seq{Float, 3} = \
+               vsa_reconstruct(r, role, [x, y], 0.2);";
+    let node = Node::Op {
+        prim: "vsa.reconstruct".to_owned(),
+        args: vec![
+            Node::Const(record.clone()),
+            Node::Const(roles[1].clone()),
+            Node::Const(vsa_seq(&fillers)),
+            Node::Const(fval(0.2)),
+        ],
+    };
+    let args = vec![
+        record,
+        roles[1].clone(),
+        fillers[0].clone(),
+        fillers[1].clone(),
+    ];
+    let y = assert_vsa_three_way("vsa_reconstruct/MAP-I", src, "f", &node, &args);
+    let [index, confidence, margin] = triple_of(&y);
+    assert_eq!(index, 1.0, "role 1 recovers filler 1 below capacity");
+    assert!(confidence >= 0.2 && margin > 0.0);
+    // The carried pair is the record's own: Proven + its OWN CapacityBound (m = 2, d = 2048).
+    assert_eq!(y.meta().guarantee(), GuaranteeStrength::Proven);
+    assert_eq!(
+        y.meta().bound(),
+        Some(&record_bound),
+        "the disclosed bound is the record's own (VR-5)"
+    );
+    match y.meta().bound() {
+        Some(Bound {
+            kind: BoundKind::Capacity { items: 2, dim },
+            basis: BoundBasis::ProvenThm { .. },
+        }) => assert_eq!(*dim, u64::from(DIM)),
+        other => panic!("expected the record's Capacity/ProvenThm bound, got {other:?}"),
+    }
+}
+
+/// Three-way: `vsa_required_dim` answers the M-001 probe row (requiredDim(3, 1e-2) = 1141) as a
+/// `Binary{64}` carrying the kernel's **`Proven`** `CapacityBound` for exactly that
+/// instantiation, identically on every path — the capacity-bound query is inspectable (the
+/// `ProvenThm` basis records the citation + μ + the checked side-condition).
+#[test]
+fn vsa_required_dim_three_way_carries_the_proven_capacity_bound() {
+    let items = shift8(3);
+    let src = "nodule v;\nfn f(m: Binary{8}, d: Float) => Binary{64} = vsa_required_dim(m, d);";
+    let node = Node::Op {
+        prim: "vsa.required_dim".to_owned(),
+        args: vec![Node::Const(items.clone()), Node::Const(fval(0.01))],
+    };
+    let y = assert_vsa_three_way("vsa_required_dim", src, "f", &node, &[items, fval(0.01)]);
+    assert_eq!(u64_of_bits(&y), 1141, "the M-001 probe instantiation");
+    assert_eq!(y.meta().guarantee(), GuaranteeStrength::Proven);
+    match y.meta().bound() {
+        Some(Bound {
+            kind:
+                BoundKind::Capacity {
+                    items: 3,
+                    dim: 1141,
+                },
+            basis: BoundBasis::ProvenThm { citation },
+        }) => assert!(
+            citation.contains("Clarkson") && citation.contains("requiredDim"),
+            "the ProvenThm basis records the citation + checked side-condition: {citation}"
+        ),
+        other => panic!("expected the kernel's Capacity/ProvenThm bound, got {other:?}"),
+    }
+}
+
+/// Runtime reject, three-way: a **below-threshold retrieval** refuses explicitly and consistently
+/// on every path, naming confidence vs threshold — never a silent low-quality answer (RFC-0003
+/// §6; G2). (The m = 3 crosstalk confidence ≈ 1/√3 cannot clear the 0.9 threshold.)
+#[test]
+fn vsa_reconstruct_below_threshold_refuses_on_every_path() {
+    const DIM: u32 = 2048;
+    let interp = Interpreter::new(
+        PrimRegistry::with_builtins(),
+        Box::new(mycelium_cert::BinaryTernarySwapEngine),
+    );
+    let roles: Vec<Value> = (0..3)
+        .map(|i| vsa_hv("MAP-I", DIM, bipolar_atom(DIM, 170 + i)))
+        .collect();
+    let fillers: Vec<Value> = (0..3)
+        .map(|i| vsa_hv("MAP-I", DIM, bipolar_atom(DIM, 180 + i)))
+        .collect();
+    let products: Vec<Value> = roles
+        .iter()
+        .zip(&fillers)
+        .map(|(r, x)| {
+            interp
+                .eval(&op_node("vsa.bind", &[r.clone(), x.clone()]))
+                .expect("bind accepts")
+        })
+        .collect();
+    let record = interp
+        .eval(&Node::Op {
+            prim: "vsa.bundle".to_owned(),
+            args: vec![Node::Const(vsa_seq(&products)), Node::Const(fval(0.01))],
+        })
+        .expect("certified bundle accepts");
+
+    let src = "nodule v;\nfn f(r: VSA{MAP_I, 2048, Dense}, role: VSA{MAP_I, 2048, Dense}, \
+               x: VSA{MAP_I, 2048, Dense}, y: VSA{MAP_I, 2048, Dense}, \
+               z: VSA{MAP_I, 2048, Dense}) => Seq{Float, 3} = \
+               vsa_reconstruct(r, role, [x, y, z], 0.9);";
+    let env = check_nodule(&parse(src).expect("parses")).expect("checks");
+    let mut l1_args = vec![record.clone(), roles[0].clone()];
+    l1_args.extend(fillers.iter().cloned());
+    let l1 = Evaluator::new(&env).call("f", l1_args.into_iter().map(L1Value::Repr).collect());
+    match l1 {
+        Err(L1Error::Kernel(EvalError::PrimType { why, .. })) => assert!(
+            why.contains("below the threshold 0.9"),
+            "L1-eval names confidence vs threshold, got: {why}"
+        ),
+        other => panic!("L1-eval must refuse the below-threshold retrieval, got {other:?}"),
+    }
+
+    let node = Node::Op {
+        prim: "vsa.reconstruct".to_owned(),
+        args: vec![
+            Node::Const(record),
+            Node::Const(roles[0].clone()),
+            Node::Const(vsa_seq(&fillers)),
+            Node::Const(fval(0.9)),
+        ],
+    };
+    assert!(
+        matches!(interp.eval(&node), Err(EvalError::PrimType { .. })),
+        "L0-interp must refuse the below-threshold retrieval explicitly"
+    );
+    assert!(
+        matches!(
+            mycelium_mlir::run(
+                &node,
+                &PrimRegistry::with_builtins(),
+                &mycelium_cert::BinaryTernarySwapEngine
+            ),
+            Err(EvalError::PrimType { .. })
+        ),
+        "AOT must refuse the below-threshold retrieval explicitly"
+    );
+}
+
+/// Static conformance — accept: the M-894 signatures the checker must admit — cleanup across the
+/// model set (incl. FHRR: the arg-max is model-generic), reconstruct over its {MAP-I, BSC}
+/// dispatch set, threshold/δ as params or literals, a `Seq` param codebook, composition (the
+/// capacity query's `Binary{64}` feeding the D1 `eq`), and the triple feeding `seq_len`.
+#[test]
+fn vsa_cleanup_reconstruct_conformance_accept() {
+    for src in [
+        // Cleanup, per dispatch-set model (the arg-max procedure is model-generic).
+        "nodule v;\nfn f(q: VSA{MAP_I, 64, Dense}, a: VSA{MAP_I, 64, Dense}, \
+         b: VSA{MAP_I, 64, Dense}) => Seq{Float, 3} = vsa_cleanup(q, [a, b]);",
+        "nodule v;\nfn f(q: VSA{FHRR, 256, Dense}, a: VSA{FHRR, 256, Dense}) => \
+         Seq{Float, 3} = vsa_cleanup(q, [a]);",
+        "nodule v;\nfn f(q: VSA{BSC, 64, Dense}, a: VSA{BSC, 64, Dense}) => Seq{Float, 3} = \
+         vsa_cleanup(q, [a]);",
+        // A Seq param codebook (the atom count is in the type).
+        "nodule v;\nfn f(q: VSA{MAP_I, 64, Dense}, cb: Seq{VSA{MAP_I, 64, Dense}, 4}) => \
+         Seq{Float, 3} = vsa_cleanup(q, cb);",
+        // Reconstruct over its dispatch set, threshold as a literal and as a param.
+        "nodule v;\nfn f(r: VSA{MAP_I, 2048, Dense}, role: VSA{MAP_I, 2048, Dense}, \
+         x: VSA{MAP_I, 2048, Dense}) => Seq{Float, 3} = vsa_reconstruct(r, role, [x], 0.3);",
+        "nodule v;\nfn f(r: VSA{BSC, 64, Dense}, role: VSA{BSC, 64, Dense}, \
+         x: VSA{BSC, 64, Dense}, t: Float) => Seq{Float, 3} = vsa_reconstruct(r, role, [x], t);",
+        // The capacity query; δ as a param; its Binary{64} result feeds sibling prims.
+        "nodule v;\nfn f(m: Binary{8}, d: Float) => Binary{64} = vsa_required_dim(m, d);",
+        "nodule v;\nfn f(m: Binary{8}, n: Binary{8}) => Binary{1} = \
+         eq(vsa_required_dim(m, 0.01), vsa_required_dim(n, 0.01));",
+        // The decision triple is a first-class Seq — it composes (e.g. its length).
+        "nodule v;\nfn f(q: VSA{MAP_I, 64, Dense}, a: VSA{MAP_I, 64, Dense}) => Binary{32} = \
+         seq_len(vsa_cleanup(q, [a]));",
+    ] {
+        check_nodule(&parse(src).expect("parses"))
+            .unwrap_or_else(|e| panic!("must accept: {src}\n  got: {e}"));
+    }
+}
+
+/// Static conformance — reject: the never-silent contract at check time, each refusal naming the
+/// offense (G2): codebook model/dim mismatches, the static empty codebook (`N = 0`), non-Seq /
+/// non-VSA codebooks, the FHRR-reconstruct dispatch refusal, out-of-set models, Sparse operands,
+/// non-Float thresholds/δ, a bare-decimal / non-Binary items operand, arity, and a wrong declared
+/// result type (the triple's type is computed).
+#[test]
+fn vsa_cleanup_reconstruct_conformance_reject() {
+    for (src, needle) in [
+        // Codebook model mismatch: never a coercion.
+        (
+            "nodule v;\nfn f(q: VSA{MAP_I, 64, Dense}, a: VSA{BSC, 64, Dense}) => \
+             Seq{Float, 3} = vsa_cleanup(q, [a]);",
+            "share the query's model and dim",
+        ),
+        // Codebook dim mismatch: never a resize.
+        (
+            "nodule v;\nfn f(q: VSA{MAP_I, 64, Dense}, cb: Seq{VSA{MAP_I, 128, Dense}, 2}) => \
+             Seq{Float, 3} = vsa_cleanup(q, cb);",
+            "share the query's model and dim",
+        ),
+        // The static empty codebook: N = 0 lives in the Seq type.
+        (
+            "nodule v;\nfn f(q: VSA{MAP_I, 64, Dense}, cb: Seq{VSA{MAP_I, 64, Dense}, 0}) => \
+             Seq{Float, 3} = vsa_cleanup(q, cb);",
+            "at least one codebook atom",
+        ),
+        // A non-Seq codebook: never a silent lift.
+        (
+            "nodule v;\nfn f(q: VSA{MAP_I, 64, Dense}, a: VSA{MAP_I, 64, Dense}) => \
+             Seq{Float, 3} = vsa_cleanup(q, a);",
+            "codebook must be a `Seq",
+        ),
+        // Non-VSA codebook atoms: an explicit refusal pointing at the missing swap.
+        (
+            "nodule v;\nfn f(q: VSA{MAP_I, 64, Dense}, a: Binary{8}) => Seq{Float, 3} = \
+             vsa_cleanup(q, [a]);",
+            "atoms must be `VSA{model, dim, sparsity}`",
+        ),
+        // FHRR reconstruct: a static refusal naming the dispatch set + the profile ground.
+        (
+            "nodule v;\nfn f(r: VSA{FHRR, 256, Dense}, role: VSA{FHRR, 256, Dense}, \
+             x: VSA{FHRR, 256, Dense}) => Seq{Float, 3} = vsa_reconstruct(r, role, [x], 0.3);",
+            "outside the reconstruct dispatch set",
+        ),
+        // An out-of-set model: the shared static refusal naming the M-892 set.
+        (
+            "nodule v;\nfn f(q: VSA{HRR, 64, Dense}, a: VSA{HRR, 64, Dense}) => \
+             Seq{Float, 3} = vsa_cleanup(q, [a]);",
+            "outside the vsa prim dispatch set",
+        ),
+        // Sparse operands: refused at introduction.
+        (
+            "nodule v;\nfn f(q: VSA{MAP_I, 64, Sparse{2}}, a: VSA{MAP_I, 64, Sparse{2}}) => \
+             Seq{Float, 3} = vsa_cleanup(q, [a]);",
+            "requires a `Dense`-sparsity hypervector",
+        ),
+        // Role/record mismatch: named.
+        (
+            "nodule v;\nfn f(r: VSA{MAP_I, 64, Dense}, role: VSA{MAP_I, 128, Dense}, \
+             x: VSA{MAP_I, 64, Dense}) => Seq{Float, 3} = vsa_reconstruct(r, role, [x], 0.3);",
+            "record and role must share one model and dim",
+        ),
+        // A non-Float threshold: never a defaulted or coerced parameter.
+        (
+            "nodule v;\nfn f(r: VSA{MAP_I, 64, Dense}, role: VSA{MAP_I, 64, Dense}, \
+             x: VSA{MAP_I, 64, Dense}, t: Binary{8}) => Seq{Float, 3} = \
+             vsa_reconstruct(r, role, [x], t);",
+            "threshold must be a `Float`",
+        ),
+        // The items operand must be a Binary magnitude (a bare decimal has no width anchor).
+        (
+            "nodule v;\nfn f(d: Float) => Binary{64} = vsa_required_dim(d, d);",
+            "items must be an unsigned `Binary{W}`",
+        ),
+        // δ must be a Float.
+        (
+            "nodule v;\nfn f(m: Binary{8}, d: Binary{8}) => Binary{64} = \
+             vsa_required_dim(m, d);",
+            "probability \u{3b4} must be a `Float`",
+        ),
+        // Arity: explicit.
+        (
+            "nodule v;\nfn f(q: VSA{MAP_I, 64, Dense}) => Seq{Float, 3} = vsa_cleanup(q);",
+            "takes 2 operand(s)",
+        ),
+        (
+            "nodule v;\nfn f(r: VSA{MAP_I, 64, Dense}, role: VSA{MAP_I, 64, Dense}, \
+             x: VSA{MAP_I, 64, Dense}) => Seq{Float, 3} = vsa_reconstruct(r, role, [x]);",
+            "takes 4 operand(s)",
+        ),
+        // The result type is computed (`Seq{Float, 3}`) — declaring another is a static
+        // mismatch, never a silent re-shape.
+        (
+            "nodule v;\nfn f(q: VSA{MAP_I, 64, Dense}, a: VSA{MAP_I, 64, Dense}) => \
+             VSA{MAP_I, 64, Dense} = vsa_cleanup(q, [a]);",
+            "Seq{Float, 3}",
         ),
     ] {
         let err =

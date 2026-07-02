@@ -388,16 +388,33 @@ fn surface_signature_matches_the_kernel_declaration() {
 /// `vsa_bundle` rides the same shape (`Seq{VSA{…}, N}` × `Float` δ under the `Any` hatch) with
 /// its intrinsic the meet over its **certified singleton** dispatch set {MAP-I} = `Proven` (the
 /// checked `CapacityBound` rides the runtime value; an FHRR/BSC bundle is a *static* refusal in
-/// `try_check_vsa_prim` naming the certified set).
+/// `try_check_vsa_prim` naming the certified set). The M-894 trio rides the same shape:
+/// `vsa_cleanup`/`vsa_reconstruct` are `Exact` — the RFC-0010 §4.4 exhaustive-arg-max decode
+/// claim, met over their dispatch sets (MAP-I/FHRR/BSC and {MAP-I, BSC} respectively; the runtime
+/// triple carries the query/record's own (strength, bound) pair) — and `vsa_required_dim` is
+/// `Proven` (the M-131 checked instantiation; its result carries the kernel's `CapacityBound`).
 #[test]
 fn vsa_prims_resolve_to_declared_model_dispatched_kernel_prims() {
     use mycelium_core::GuaranteeStrength;
     let table = PrimTable::builtins();
-    for (surface, kernel_expected, intrinsic) in [
-        ("vsa_bind", "vsa.bind", GuaranteeStrength::Exact),
-        ("vsa_unbind", "vsa.unbind", GuaranteeStrength::Empirical),
-        ("vsa_permute", "vsa.permute", GuaranteeStrength::Exact),
-        ("vsa_bundle", "vsa.bundle", GuaranteeStrength::Proven),
+    for (surface, kernel_expected, arity, intrinsic) in [
+        ("vsa_bind", "vsa.bind", 2, GuaranteeStrength::Exact),
+        ("vsa_unbind", "vsa.unbind", 2, GuaranteeStrength::Empirical),
+        ("vsa_permute", "vsa.permute", 2, GuaranteeStrength::Exact),
+        ("vsa_bundle", "vsa.bundle", 2, GuaranteeStrength::Proven),
+        ("vsa_cleanup", "vsa.cleanup", 2, GuaranteeStrength::Exact),
+        (
+            "vsa_reconstruct",
+            "vsa.reconstruct",
+            4,
+            GuaranteeStrength::Exact,
+        ),
+        (
+            "vsa_required_dim",
+            "vsa.required_dim",
+            2,
+            GuaranteeStrength::Proven,
+        ),
     ] {
         let kernel = prim_kernel_name(surface)
             .unwrap_or_else(|| panic!("vsa prim `{surface}` must map to a kernel name"));
@@ -407,7 +424,7 @@ fn vsa_prims_resolve_to_declared_model_dispatched_kernel_prims() {
             "surface `{surface}` → kernel `{kernel}`, but `{kernel}` is not declared in Π",
         );
         let decl = table.get(kernel).expect("declared prim");
-        assert_eq!(decl.sig.arity(), 2, "`{kernel}` arity drifted");
+        assert_eq!(decl.sig.arity(), arity, "`{kernel}` arity drifted");
         assert!(
             decl.sig.operands.iter().all(|p| *p == PrimParadigm::Any),
             "`{kernel}` operands use the documented `Any` escape hatch (no Vsa paradigm yet)",
@@ -415,8 +432,10 @@ fn vsa_prims_resolve_to_declared_model_dispatched_kernel_prims() {
         assert_eq!(decl.sig.result, PrimParadigm::Any);
         assert_eq!(
             decl.intrinsic, intrinsic,
-            "`{kernel}` intrinsic must be the meet over its dispatch set (MAP-I/FHRR/BSC for \
-             the bind group; the certified singleton {{MAP-I}} for vsa.bundle — VR-5)",
+            "`{kernel}` intrinsic must be the meet over its dispatch set / the checked \
+             instantiation stance (MAP-I/FHRR/BSC for the bind group + cleanup; the certified \
+             singleton {{MAP-I}} for vsa.bundle; {{MAP-I, BSC}} for vsa.reconstruct; the M-131 \
+             ProvenThm stance for vsa.required_dim — VR-5)",
         );
     }
 }

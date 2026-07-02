@@ -118,8 +118,11 @@ fn builtins_are_present_and_resolvable() {
     // below, `vsa.unbind`'s intrinsic is the `Empirical` meet over the MAP-I/FHRR/BSC dispatch
     // set; RFC-0003 §4/§5/M-893 added the certified superposition `vsa.bundle` — pinned
     // separately below, its intrinsic is `Proven` (the meet over its certified singleton
-    // dispatch set {MAP-I})).
-    assert_eq!(t.entries().len(), 54);
+    // dispatch set {MAP-I}); RFC-0003 §3/§5/§6/M-894 added the cleanup/reconstruction pair
+    // `vsa.cleanup`/`vsa.reconstruct` and the capacity query `vsa.required_dim` — pinned
+    // separately below, `vsa.required_dim`'s intrinsic is `Proven` (the M-131 checked
+    // instantiation)).
+    assert_eq!(t.entries().len(), 57);
 }
 
 // M-890 (`enb` Gap C): the dense elementwise group — the first non-`Exact` intrinsics in Π.
@@ -322,6 +325,46 @@ fn vsa_bundle_carries_the_certified_singleton_proven_tag() {
     assert_eq!(d.sig.result, PrimParadigm::Any);
 }
 
+// M-894 (`enb` Gap C): the cleanup/reconstruction pair + the capacity query (RFC-0003 §3/§5/§6;
+// ADR-008; FR-S4). `vsa.cleanup` and `vsa.reconstruct` are exhaustive arg-max retrieval decodes
+// guarded by the RFC-0010 §4.4 identifiability refusal, so their intrinsic is `Exact` — the meet
+// over their dispatch sets (MAP-I/FHRR/BSC for cleanup, whose decision procedure is model-generic;
+// {MAP-I, BSC} for reconstruct, whose unbind step is `Exact` self-inverse algebra in both — FHRR
+// reconstruct is an explicit refusal, its `Empirical` unbind profile covers only single bind
+// products). A non-`Exact` query/record passes its own (strength, bound) pair through to the
+// runtime value via the RFC-0001 §4.7 meet — the intrinsic here is the op's own contribution,
+// never the composed floor. `vsa.required_dim` is the M-131 checked instantiation of the cited
+// capacity theorem (`proven_capacity_bound` — the side-condition holds by construction at the
+// returned dim), so its intrinsic is `Proven`, the same stance as `vsa.bundle`. The table↔kernel
+// consistency is guarded in `mycelium-interp` (ADR-008 keeps the dependency one-way); this test
+// pins the table side.
+#[test]
+fn vsa_cleanup_reconstruct_and_capacity_query_carry_their_meet_tags() {
+    let t = PrimTable::builtins();
+    for (name, arity, intrinsic) in [
+        ("vsa.cleanup", 2, GuaranteeStrength::Exact),
+        ("vsa.reconstruct", 4, GuaranteeStrength::Exact),
+        ("vsa.required_dim", 2, GuaranteeStrength::Proven),
+    ] {
+        let d = t.get(name).expect("vsa builtin registered");
+        assert_eq!(
+            d.intrinsic, intrinsic,
+            "{name}: intrinsic must stay the meet over its dispatch set / the checked \
+             instantiation stance (VR-5)"
+        );
+        assert_eq!(d.sig.arity(), arity, "{name}: arity drifted");
+        assert_eq!(d.sig.width, WidthRel::Uniform, "{name}: width rel drifted");
+        // Paradigm-model escape hatch (FLAG in builtins()): no first-class `Vsa` paradigm yet;
+        // the real typing (equal model+dim hypervectors, the Seq codebook, the Float threshold/δ,
+        // the Binary items/dim) is the interpreter prim + the L1 checker branch.
+        assert!(
+            d.sig.operands.iter().all(|p| *p == PrimParadigm::Any),
+            "{name}: operands are the documented `Any` escape hatch"
+        );
+        assert_eq!(d.sig.result, PrimParadigm::Any);
+    }
+}
+
 // M-767 (`enb` Gap B): the signedness-split signed op set (RFC-0033 §4.1.2/§4.1.3; ADR-028).
 // `bin.div_s`/`bin.rem_s`/`bin.shr_s` are width-uniform Binary×Binary→Binary like their unsigned
 // counterparts; `cmp.lt_s` is width-collapsing like `cmp.eq`/`cmp.lt` but with its operands pinned
@@ -465,10 +508,12 @@ fn names_returns_registered_sorted_names() {
     // flt.lt/flt.le/flt.gt/flt.ge/flt.eq/flt.total_le + RFC-0033/M-767
     // bin.div_s/bin.rem_s/bin.shr_s/cmp.lt_s, the signedness-split signed set + RFC-0003
     // §3/§4/M-892 vsa.bind/vsa.unbind/vsa.permute, the model-dispatched VSA bind group +
-    // RFC-0003 §4/§5/M-893 vsa.bundle, the certified superposition path).
+    // RFC-0003 §4/§5/M-893 vsa.bundle, the certified superposition path + RFC-0003
+    // §3/§5/§6/M-894 vsa.cleanup/vsa.reconstruct/vsa.required_dim, the cleanup/reconstruction
+    // pair and the capacity-bound query).
     assert_eq!(
         ns.len(),
-        54,
+        57,
         "names() count must match the builtin count: {ns:?}"
     );
     // Sorted (BTreeMap iteration is sorted).

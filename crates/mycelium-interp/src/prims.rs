@@ -31,7 +31,7 @@ use mycelium_core::{
 };
 use mycelium_dense::{DenseError, DenseSpace};
 use mycelium_numerics::{compose_error_bound, ErrorOp};
-use mycelium_vsa::{Bsc, Fhrr, MapI, VsaError};
+use mycelium_vsa::{capacity, Bsc, CleanupMemory, Fhrr, MapI, Match, VsaError, VsaModel};
 
 use crate::EvalError;
 
@@ -112,7 +112,13 @@ impl PrimRegistry {
     /// Gap C; MAP-I's `bundle_values_certified` over a `Seq` of hypervectors + a `Float` δ,
     /// dispatch set the certified singleton {MAP-I}; the kernel issues the `Proven`
     /// `CapacityBound` only under its checked side-conditions, carried unchanged — see the vsa
-    /// section note below).
+    /// section note below), and the **VSA cleanup/reconstruction pair + capacity query**
+    /// (`vsa.cleanup`/`vsa.reconstruct`/`vsa.required_dim`, RFC-0003 §3/§5/§6/ADR-008, M-894 —
+    /// `enb` Gap C; the FR-S4 cleanup-memory retrieval and the §6 compositional
+    /// role-reconstruction, each returning the `[index, confidence, margin]` decision triple
+    /// with the query/record's own (strength, bound) pair carried through, plus the M-131
+    /// `requiredDim` query whose result carries the kernel-checked `Proven` `CapacityBound` —
+    /// see the M-894 section note below).
     #[must_use]
     pub fn with_builtins() -> Self {
         let mut r = PrimRegistry::empty();
@@ -215,6 +221,17 @@ impl PrimRegistry {
         // `Empirical`-profile ops) are explicit refusals, never a silent re-tag. See the module
         // note at the vsa section below.
         r.register("vsa.bundle", prim_vsa_bundle);
+        // RFC-0003 §3/§5/§6 / ADR-008 (M-894, `enb` Gap C): the cleanup/reconstruction pair +
+        // the capacity-bound query. `vsa.cleanup` snaps a (possibly noisy) hypervector to the
+        // nearest codebook atom and returns the `[index, confidence, margin]` decision triple —
+        // never a silent nearest-neighbour pick (FR-S4/G2); `vsa.reconstruct` is the §6
+        // compositional role-reconstruction (unbind → cleanup → an explicit caller threshold);
+        // `vsa.required_dim` surfaces the M-131 `requiredDim`/`proven_capacity_bound` checked
+        // instantiation, its result carrying the kernel's `Proven` `CapacityBound`. See the
+        // M-894 section note below for the tag/carry rules.
+        r.register("vsa.cleanup", prim_vsa_cleanup);
+        r.register("vsa.reconstruct", prim_vsa_reconstruct);
+        r.register("vsa.required_dim", prim_vsa_required_dim);
         r
     }
 
@@ -2126,6 +2143,31 @@ impl VsaDispatch {
             VsaDispatch::Bsc(m) => m.permute_value(a, shift),
         }
     }
+
+    /// **Data-level** unbind for the M-894 reconstruction decode. The record is a *composite*
+    /// (typically a bundle), so the Value-level unbind wrappers are the wrong entry: their
+    /// `Exact`/regime guards are about tagging a *surfaced* unbind result, while here the noisy
+    /// intermediate never surfaces as a `Value` — it flows straight into the cleanup arg-max,
+    /// whose own confidence/margin quantify it (FR-S4; exactly `recon.rs::reconstruct_role`'s
+    /// kernel posture). Model/dim were already checked by [`vsa_model_of`] + the operand guards.
+    fn unbind_data(&self, a: &[f64], b: &[f64]) -> Result<Vec<f64>, VsaError> {
+        match self {
+            VsaDispatch::MapI(m) => m.unbind(a, b),
+            VsaDispatch::Fhrr(m) => m.unbind(a, b),
+            VsaDispatch::Bsc(m) => m.unbind(a, b),
+        }
+    }
+
+    /// The cleanup arg-max under this model's similarity (M-894): delegate to the kernel's
+    /// [`CleanupMemory::cleanup`], which scores every atom and reports the best hit **with its
+    /// confidence and margin** (never a silent nearest-neighbour pick — FR-S4/G2).
+    fn cleanup_match(&self, mem: &CleanupMemory, query: &[f64]) -> Option<Match> {
+        match self {
+            VsaDispatch::MapI(m) => mem.cleanup(query, m),
+            VsaDispatch::Fhrr(m) => mem.cleanup(query, m),
+            VsaDispatch::Bsc(m) => mem.cleanup(query, m),
+        }
+    }
 }
 
 /// Bind the VSA model a `vsa.*` prim dispatches to off its **first operand's** `Repr::Vsa` model
@@ -2321,4 +2363,355 @@ fn prim_vsa_bundle(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
             ),
         }),
     }
+}
+
+// ── M-894 (`enb` Gap C): `vsa.cleanup` + `vsa.reconstruct` + `vsa.required_dim` ─────────────────
+//
+// The cleanup-memory retrieval, the RFC-0003 §6 compositional role-reconstruction, and the M-131
+// capacity-bound query (FR-S4; RFC-0003 §3/§5/§6; ADR-008). The retrieval prims return a
+// **decision triple** `Seq{Float, 3} = [index, confidence, margin]` rather than the recovered
+// atom alone: the confidence (match cosine) and margin (gap to the runner-up) are what make an
+// approximate retrieval *usable* (FR-S4) — the decision is inspectable, never a silent
+// nearest-neighbour pick (G2). The recovered clean atom itself is the caller's `codebook[index]`.
+//
+// **Tag rule (the RFC-0010 §4.4 precedent + the RFC-0001 §4.7 meet).** The decision procedure is
+// an *exhaustive* arg-max over the codebook guarded by an identifiability refusal (a tie —
+// `margin ≤ 0` — is an explicit error, never a coin-flip), so the op's own contribution is
+// `Exact`, the same claim shape as the RFC-0010 brute-force decode arm. The **query/record slot
+// may be non-`Exact`** — cleanup exists precisely to make a noisy unbind usable — and its own
+// (strength, bound) pair passes through to the triple via the meet (the M-204 `Passthrough`
+// posture: e.g. an FHRR-unbind query's `Empirical` probability bound, or a certified bundle
+// record's `Proven` `CapacityBound`, is re-disclosed on the decode — **the disclosed bound is the
+// value's own**, never re-derived or dropped). Every *other* operand (codebook atoms, the role,
+// the threshold) must be `Exact` — a second non-`Exact` input would make the carried pair
+// ambiguous, and no composition rule exists (refused, never fabricated — G2/VR-5).
+//
+// **Dispatch sets.** `vsa.cleanup` dispatches across the full M-892 set (MAP-I/FHRR/BSC — the
+// model only supplies `similarity`; the procedure is model-generic). `vsa.reconstruct` dispatches
+// over **{MAP-I, BSC}** — the models whose unbind is `Exact` self-inverse algebra; FHRR's unbind
+// tag is `Empirical` and trial-validated only for a single `vsa.fhrr.bind` product (the kernel's
+// `FHRR_UNBIND_PROFILE` regime gate), which a reconstruction record is not, so an FHRR
+// reconstruct is an explicit refusal naming that ground (never a stretched profile — VR-5);
+// surfacing it is an append-only extension under a reconstruction-regime profile of its own.
+// The factor decode (`reconstruct_factors`, RFC-0009/RFC-0010) is likewise NOT surfaced here:
+// it routes through the RFC-0005 selector whose mandatory EXPLAIN has no prim-surface carrier
+// yet — a distinct, append-only surfacing under its own name, never a silent conflation.
+//
+// **Provenance** is the standard composed shape `Derived{op: hash(prim), inputs}` (over the
+// operands as passed), not the kernel's model-namespaced ids: unlike bind/unbind, the decision
+// procedure here is model-generic — the dispatched model is recoverable from the operands'
+// `Repr::Vsa` model ids in the provenance chain.
+
+/// Extract the hypervector data of a `Vsa` operand whose repr the caller already checked.
+fn vsa_hv_data<'a>(prim: &str, v: &'a Value) -> Result<&'a [f64], EvalError> {
+    match v.payload() {
+        Payload::Hypervector(h) => Ok(h),
+        other => Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!("expected a Hypervector payload, got {other:?}"),
+        }),
+    }
+}
+
+/// The codebook operand: a **non-empty** `Seq` of clean atoms, each `Exact` and each of exactly
+/// the query/record's model + dim (`like`'s repr). Every violation is an explicit refusal naming
+/// the offense (G2): an empty codebook has nothing to clean up against; a non-`Exact` atom has no
+/// carry rule (only the query/record slot passes its pair through — see the section note); a
+/// cross-model/dim atom is never coerced.
+fn vsa_codebook<'a>(prim: &str, like: &Value, seq: &'a Value) -> Result<&'a [Value], EvalError> {
+    let elems = as_seq(prim, seq)?;
+    if elems.is_empty() {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: "the codebook must hold at least one atom — an empty cleanup memory has \
+                  nothing to clean up against (FR-S4; M-894 — refused, never a defaulted \
+                  retrieval; G2)"
+                .to_owned(),
+        });
+    }
+    if seq.meta().guarantee() != GuaranteeStrength::Exact
+        || elems
+            .iter()
+            .any(|v| v.meta().guarantee() != GuaranteeStrength::Exact)
+    {
+        // Only the query/record slot carries a pair through (section note); a non-Exact codebook
+        // atom would make the carried pair ambiguous — refuse, never fabricate (G2/VR-5).
+        return Err(EvalError::ApproxCompositionUnsupported {
+            prim: prim.to_owned(),
+        });
+    }
+    for (i, item) in elems.iter().enumerate() {
+        if item.repr() != like.repr() {
+            return Err(EvalError::PrimType {
+                prim: prim.to_owned(),
+                why: format!(
+                    "codebook atom {i} is {:?} but the query/record is {:?} — every atom must \
+                     share the query's model and dim (M-894 — a model or dim mismatch is an \
+                     explicit refusal, never a cross-model coercion; G2)",
+                    item.repr(),
+                    like.repr()
+                ),
+            });
+        }
+    }
+    Ok(elems)
+}
+
+/// Run the exhaustive cleanup arg-max over `atoms` and apply the identifiability guard
+/// (RFC-0010 §4.4: the retrieval is `Exact` only when the best atom is the *unique* arg-max —
+/// a tie, `margin ≤ 0`, is an explicit refusal, never a coin-flip between tied atoms).
+fn vsa_cleanup_hit(
+    prim: &str,
+    dispatch: &VsaDispatch,
+    dim: u32,
+    query: &[f64],
+    atoms: &[Value],
+) -> Result<Match, EvalError> {
+    let mut mem = CleanupMemory::new(dim);
+    for (i, atom) in atoms.iter().enumerate() {
+        mem.insert(i.to_string(), vsa_hv_data(prim, atom)?.to_vec())
+            .map_err(|e| map_vsa_err(prim, e))?;
+    }
+    let hit = dispatch
+        .cleanup_match(&mem, query)
+        .ok_or_else(|| EvalError::PrimType {
+            // Defensive: unreachable after the non-empty + equal-dim operand guards; kept as the
+            // never-silent twin of the kernel's EmptyCodebook (G2).
+            prim: prim.to_owned(),
+            why: "cleanup memory holds no usable codebook atom for this model/dim".to_owned(),
+        })?;
+    if hit.margin <= 0.0 {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!(
+                "retrieval is non-identifiable: the best atom (index {}, similarity {}) is not \
+                 the unique arg-max (margin {}) — a coin-flip between tied atoms is exactly what \
+                 the Exact decode claim forbids (RFC-0010 §4.4; M-894 — refused, never guessed; \
+                 G2)",
+                hit.index, hit.confidence, hit.margin
+            ),
+        });
+    }
+    Ok(hit)
+}
+
+/// Build the `Seq{Float, 3} = [index, confidence, margin]` decision triple, carrying the
+/// query/record's own (strength, bound) pair through the RFC-0001 §4.7 meet (the section note's
+/// `Passthrough` rule: the op's own contribution is `Exact` and every other operand is guarded
+/// `Exact`, so the meet is exactly `carried`'s strength, and the disclosed bound is the value's
+/// own). Provenance is `Derived{op: hash(prim), inputs: the operands as passed}`.
+fn vsa_decision_triple(
+    prim: &str,
+    inputs: &[&Value],
+    carried: &Value,
+    hit: &Match,
+) -> Result<Value, EvalError> {
+    let strength = carried.meta().guarantee();
+    let bound = if strength == GuaranteeStrength::Exact {
+        None // M-I1: Exact carries no bound.
+    } else {
+        carried.meta().bound().cloned()
+    };
+    let provenance = Provenance::Derived {
+        op: operation_hash(prim),
+        inputs: inputs.iter().map(|v| v.content_hash()).collect(),
+    };
+    let index = u32::try_from(hit.index).map_err(|_| EvalError::PrimType {
+        // Defensive: a Seq length is a u32, so a codebook index always fits (kept as the
+        // never-silent guard — G2).
+        prim: prim.to_owned(),
+        why: format!("codebook index {} exceeds the u32 index space", hit.index),
+    })?;
+    let triple_meta = || -> Result<Meta, EvalError> {
+        Meta::new(
+            provenance.clone(),
+            strength,
+            bound.clone(),
+            None,
+            None,
+            None,
+        )
+        .map_err(EvalError::Wf)
+    };
+    let float_repr = Repr::Float {
+        width: FloatWidth::F64,
+    };
+    let elems: Vec<Value> = [f64::from(index), hit.confidence, hit.margin]
+        .into_iter()
+        .map(|x| {
+            Value::new(float_repr.clone(), Payload::Float(x), triple_meta()?).map_err(EvalError::Wf)
+        })
+        .collect::<Result<_, _>>()?;
+    Value::new(
+        Repr::Seq {
+            elem: Box::new(float_repr),
+            len: 3,
+        },
+        Payload::Seq(elems),
+        triple_meta()?,
+    )
+    .map_err(EvalError::Wf)
+}
+
+/// `vsa.cleanup : (Vsa{m, d}, Seq{Vsa{m, d}, N≥1}) → Seq{Float, 3}` — the cleanup-memory
+/// retrieval (M-894; FR-S4): snap the (possibly noisy) query to the nearest codebook atom by the
+/// dispatched model's similarity, returning the `[index, confidence, margin]` decision triple.
+/// Dispatch set: the full M-892 set (MAP-I/FHRR/BSC — the procedure is model-generic). The
+/// query's own (strength, bound) pair carries through; codebook atoms must be `Exact`; a tie is
+/// the explicit identifiability refusal (see the section note).
+fn prim_vsa_cleanup(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 2)?;
+    let query = args[0];
+    let dispatch = vsa_model_of(prim, query)?;
+    let atoms = vsa_codebook(prim, query, args[1])?;
+    let dim = match query.repr() {
+        Repr::Vsa { dim, .. } => *dim,
+        _ => unreachable!("vsa_model_of admitted a Vsa first operand"),
+    };
+    let hit = vsa_cleanup_hit(prim, &dispatch, dim, vsa_hv_data(prim, query)?, atoms)?;
+    vsa_decision_triple(prim, args, query, &hit)
+}
+
+/// `vsa.reconstruct : (Vsa{m, d}, Vsa{m, d}, Seq{Vsa{m, d}, N≥1}, Float) → Seq{Float, 3}` — the
+/// RFC-0003 §6 compositional role-reconstruction (M-894; `recon.rs::reconstruct_role` semantics
+/// with the manifest's checks made operand-level): unbind the record by the role atom
+/// (data-level — the noisy intermediate never surfaces), clean the result up against the
+/// codebook, and **refuse explicitly below the caller's threshold** (the manifest's
+/// `cleanup_threshold ∈ [0, 1]` made an explicit `Float` operand — a below-threshold retrieval
+/// is an error naming confidence vs threshold, never a silent low-quality answer; G2). The
+/// record's own (strength, bound) pair carries through — reconstructing from a certified bundle
+/// re-discloses its `Proven` `CapacityBound` (the disclosed bound is the value's own). Dispatch
+/// set: **{MAP-I, BSC}** — an FHRR record is an explicit refusal (its `Empirical` unbind profile
+/// covers only single bind products, not reconstruction records — VR-5; see the section note).
+fn prim_vsa_reconstruct(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 4)?;
+    let (record, role, threshold_v) = (args[0], args[1], args[3]);
+    let dispatch = vsa_model_of(prim, record)?;
+    if matches!(dispatch, VsaDispatch::Fhrr(_)) {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: "model \"FHRR\" is outside the vsa.reconstruct dispatch set at introduction \
+                  ({MAP-I, BSC}) — FHRR's unbind tag is Empirical and trial-validated only for \
+                  a single vsa.fhrr.bind product (FHRR_UNBIND_PROFILE), which a reconstruction \
+                  record is not; stretching that profile would be an unearned tag (VR-5), so \
+                  surfacing FHRR reconstruction is a distinct, append-only extension under a \
+                  reconstruction-regime profile of its own (M-894)"
+                .to_owned(),
+        });
+    }
+    if role.repr() != record.repr() {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!(
+                "the role atom is {:?} but the record is {:?} — both must share one model and \
+                 dim (M-894 — a model or dim mismatch is an explicit refusal, never a \
+                 cross-model coercion; G2)",
+                role.repr(),
+                record.repr()
+            ),
+        });
+    }
+    if role.meta().guarantee() != GuaranteeStrength::Exact
+        || threshold_v.meta().guarantee() != GuaranteeStrength::Exact
+    {
+        // Only the record slot carries a pair through (section note).
+        return Err(EvalError::ApproxCompositionUnsupported {
+            prim: prim.to_owned(),
+        });
+    }
+    let atoms = vsa_codebook(prim, record, args[2])?;
+    let threshold = as_float(prim, threshold_v)?;
+    if !(threshold.is_finite() && (0.0..=1.0).contains(&threshold)) {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!(
+                "the cleanup threshold must be a finite Float in [0, 1], got {threshold} — the \
+                 RFC-0003 §6 manifest domain (`ReconInfo`'s cleanup_threshold), made an \
+                 explicit operand (M-894; refused, never a defaulted threshold — G2)"
+            ),
+        });
+    }
+    let dim = match record.repr() {
+        Repr::Vsa { dim, .. } => *dim,
+        _ => unreachable!("vsa_model_of admitted a Vsa first operand"),
+    };
+    let noisy = dispatch
+        .unbind_data(vsa_hv_data(prim, record)?, vsa_hv_data(prim, role)?)
+        .map_err(|e| map_vsa_err(prim, e))?;
+    let hit = vsa_cleanup_hit(prim, &dispatch, dim, &noisy, atoms)?;
+    if hit.confidence < threshold {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!(
+                "cleanup confidence {} is below the threshold {threshold} (best atom: index {}, \
+                 margin {}) — a below-threshold retrieval is an explicit refusal, never a \
+                 silent low-quality answer (RFC-0003 §6; FR-S4; M-894; G2)",
+                hit.confidence, hit.index, hit.margin
+            ),
+        });
+    }
+    vsa_decision_triple(prim, args, record, &hit)
+}
+
+/// `vsa.required_dim : (Binary{W}, Float) → Binary{64}` — the M-131 capacity-bound query
+/// (M-894; RFC-0003 §5): the sufficient dimension `requiredDim(items, δ) = ⌈(2/μ²)·ln(items/δ)⌉`
+/// (μ = 0.1 — the cited Clarkson/Thomas instantiation, `mycelium-vsa::capacity`). The result
+/// carries the kernel's **`Proven`** `CapacityBound` for exactly this (items, dim, δ)
+/// instantiation ([`capacity::proven_capacity_bound`] — the side-condition `dim ≥ requiredDim`
+/// holds *by construction* at the returned dim), so the query is inspectable/EXPLAIN-able: the
+/// `ProvenThm` basis records the citation, μ, and the checked side-condition. Degenerate inputs
+/// — zero items, or δ outside `(0, 1]` — are explicit refusals naming the offense, never the
+/// kernel's `u64::MAX` sentinel (G2). A zero `requiredDim` (items = 1, δ = 1) is disclosed as
+/// the smallest well-formed dimension 1 — still sufficient (the bound is monotone in dim), and
+/// a zero-dimensional hypervector is not a value form.
+fn prim_vsa_required_dim(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 2)?;
+    vsa_operands_exact(prim, args)?;
+    let items = as_index(prim, args[0])? as u64;
+    if items == 0 {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: "requiredDim is asked for zero items — no dimension certifies an empty bundle \
+                  (RFC-0003 §5; M-894 — refused, never the u64::MAX sentinel; G2)"
+                .to_owned(),
+        });
+    }
+    let delta = as_float(prim, args[1])?;
+    if !(delta.is_finite() && delta > 0.0 && delta <= 1.0) {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!(
+                "target failure probability δ must be a finite Float in (0, 1], got {delta} — \
+                 no capacity theorem instantiates outside that range (M-894; refused, never a \
+                 defaulted δ — G2)"
+            ),
+        });
+    }
+    // The smallest *well-formed* sufficient dimension (see the doc comment on the zero case).
+    let required = capacity::required_dim(items, delta, capacity::MARGIN_MU).max(1);
+    let bound = capacity::proven_capacity_bound(items, required, delta).ok_or_else(|| {
+        // Defensive: `required ≥ requiredDim` holds by construction after the guards above;
+        // kept as the never-silent twin of the kernel's refusal (G2).
+        EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!(
+                "no Proven capacity bound instantiates at (items {items}, dim {required}, \
+                 δ {delta})"
+            ),
+        }
+    })?;
+    let bits: Vec<bool> = (0..64u32).rev().map(|i| (required >> i) & 1 == 1).collect();
+    let meta = Meta::new(
+        Provenance::Derived {
+            op: operation_hash(prim),
+            inputs: args.iter().map(|v| v.content_hash()).collect(),
+        },
+        GuaranteeStrength::Proven,
+        Some(bound),
+        None,
+        None,
+        None,
+    )
+    .map_err(EvalError::Wf)?;
+    Value::new(Repr::Binary { width: 64 }, Payload::Bits(bits), meta).map_err(EvalError::Wf)
 }
