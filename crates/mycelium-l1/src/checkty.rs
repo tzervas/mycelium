@@ -2075,11 +2075,28 @@ fn check_lower_decl_structural(
 /// produce broken L0. Run over the whole rule set *after* §4.2 acyclicity (so a cyclic set reports
 /// the cycle, not an "unknown name" for the cycle's rule-reference edge).
 ///
-/// **Guarantee: `Declared`** (a structural type/grammar check, not a theorem — VR-5). The RHS has no
-/// value parameters in v0 (`lower Name[T] = <expr>`), so the value scope is empty; the params are the
-/// *type* scope. No expected type is pinned (a rule may lower to any well-typed term) — pure
-/// inference. The `@std-sys` gate is held **closed**: a `lower` rule is never an FFI escape (the
-/// §4.6 structural check already refused any `wild`; this is defense in depth).
+/// **Guarantee: `Declared`** (a structural type/grammar check, not a theorem — VR-5) **layered with
+/// `Empirical`** (M-919; DN-71 Model S §4.2) for any `Substrate`-typed binding the RHS introduces —
+/// see the affine-tracker note below. The RHS has no *value parameters* in v0 (`lower Name[T] =
+/// <expr>`), so the value scope starts empty; the rule's `[…]` params are the *type* scope only. No
+/// expected type is pinned (a rule may lower to any well-typed term) — pure inference. The
+/// `@std-sys` gate is held **closed**: a `lower` rule is never an FFI escape (the §4.6 structural
+/// check already refused any direct `wild`; this is defense in depth).
+///
+/// **Affine tracking is ACTIVE here, seeded empty (M-919 fix; DN-71 Model S §4.2).** A `lower`
+/// rule's RHS has no *initial* `Substrate` binding (no value params, no literal — DN-71 §4.1), but
+/// its RHS **can** legally introduce one mid-body: DN-54 §3.3 permits calling other already-checked
+/// top-level `fn`s, and nothing in v0 restricts those callees to non-affine return types, so a `let
+/// s = acquire_thing() in …` inside a rule's RHS can bind a real `Substrate{tag}` value (`acquire_thing`
+/// itself having gone through the ordinary `check_fn_body`'s active tracker at its own definition
+/// site, in an `@std-sys` nodule). An **inert** tracker here would silently exempt every such binding
+/// from the double-consume check ordinary function bodies get — a real, verified coverage gap (a
+/// probe reproduction confirmed a same-rule double-consume via a helper-fn-acquired `Substrate` type-checked
+/// under the pre-fix inert tracker). Seeding an **active-but-empty** tracker (mirroring
+/// `check_fn_body`'s `Tracker::seeded`, just from an empty initial scope, since a rule has no value
+/// params to seed from) closes this: every `let`/lambda/match binder pushed during the RHS walk is
+/// tracked exactly as it would be inside an ordinary function body, so a double-consume of a
+/// derive-site-acquired `Substrate` is refused here too, never silently.
 fn check_lower_rule_rhs_type(
     ld: &LowerDecl,
     types: &BTreeMap<String, DataInfo>,
@@ -2099,9 +2116,11 @@ fn check_lower_rule_rhs_type(
         bounds: &[],
         std_sys: false,
         depth: Cell::new(0),
-        // Not a whole-function-body walk (a `lower` rule has no value parameters — no `Substrate`
-        // binding is ever in scope here); the affine pass never needs to run (`crate::affine` docs).
-        affine: Tracker::inert(),
+        // M-919 / DN-71 Model S §4.2: active, seeded from the (empty) initial value scope — see the
+        // doc comment above. A `lower` rule has no value *parameters*, but its RHS can still
+        // introduce a `Substrate`-typed local via a helper-fn call, and that binding must be
+        // use-once-checked exactly like any other affine binding (never silently exempted).
+        affine: Tracker::seeded(&[]),
     };
     let mut scope: Vec<(String, Ty)> = Vec::new();
     cx.infer(&mut scope, &ld.rhs).map_err(|e| {

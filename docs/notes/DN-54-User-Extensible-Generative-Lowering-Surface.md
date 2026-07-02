@@ -839,3 +839,58 @@ entry by offering a grounded, ratifiable design position.
   for the implementing RFC. **DN-54 remains `Accepted`; no status advanced.** All new claims are
   `Declared` (design pass — VR-5). CHANGELOG / Doc-Index / issues.yaml reconciled by the
   integrating parent. (Append-only; VR-5; G2.)
+- **2026-07-02 — Extension-checker enactment of DN-71 Model S (M-919); status held at `Accepted`
+  (partial — VR-5), one FLAG raised.** Kickoff `grm`, task M-919, following the DN-75 (M-917)
+  completion audit and the DN-71 (M-901) affine-consume-model sign-off. Two distinct findings:
+  1. **A real coverage gap in the extension-checker, found and closed.** `check_lower_rule_rhs_type`
+     (`crates/mycelium-l1/src/checkty.rs`) ran the RHS type-check with a permanently **inert** affine
+     tracker, reasoned only from "a `lower` rule has no value parameters, so no `Substrate` binding
+     is ever in scope" (`crates/mycelium-l1/src/affine.rs` module docs, pre-fix). That reasoning
+     missed DN-54 §3.3's own permission for a rule's RHS to call other already-checked top-level
+     `fn`s — nothing restricts those callees' return types, so a `let s = acquire() in …` inside a
+     `lower` rule's RHS can legally bind a real `Substrate{tag}` value (`acquire`'s own body having
+     used `wild` in an `@std-sys` nodule). A reproduction confirmed the gap **non-vacuously**: a
+     same-rule double-consume of such a helper-acquired `Substrate` type-checked silently under the
+     inert tracker. **Fixed**: the tracker is now seeded **active** (`Tracker::seeded(&[])`, an empty
+     initial scope — a rule has no value parameters to seed from, but every subsequent
+     `let`/lambda/match binder in the RHS walk is tracked exactly as `check_fn_body` tracks one, so
+     DN-71 Model S §4.2's double-consume refusal now fires inside a `lower` rule's RHS too, citing
+     DN-71 by name). Reject-case conformance:
+     `lower_rule_rhs_double_consume_of_a_helper_acquired_substrate_is_refused`; the accept-side
+     regression guard: `lower_rule_rhs_single_consume_of_a_helper_acquired_substrate_checks`
+     (both `crates/mycelium-l1/src/tests/checkty.rs`). `cargo test -p mycelium-l1` green (all
+     suites); `cargo fmt` + `clippy -D warnings -A unsafe_code` clean. Guarantee: the double-consume
+     check itself is `Empirical` (M-903's own tag, unchanged); this fix only extends its *coverage*
+     to a checker context that previously bypassed it — no tag is upgraded past its basis (VR-5).
+  2. **FLAG — the M-918/M-919 `issues.yaml` framing conflates two different constructs; DN-54 §10's
+     own subject remains genuinely unresolved.** `tools/github/issues.yaml`'s M-918 entry records
+     the DN-54 §10 **derive-site attachment** question ("consumption model") as "RESOLVED: DN-71
+     Model S". Reading DN-71 itself (its own §3 and §7) refutes that framing: DN-71 Model S is the
+     **affine `Substrate`/`consume` execution model** (an interpreter-level opaque handle with
+     static use-once checking) — a construct DN-71 §3 explicitly distinguishes from DN-54 §10's
+     **attachment model** (where a `derive`'s generated L0 lives — Model A sibling-injection vs.
+     Model B registry, §10.3–§10.5). DN-71 §7 states plainly these "are two different constructs
+     sharing the word 'consume'" and even recommends M-918 be renamed to "attachment model" to stop
+     the collision — the opposite of treating them as one resolved model. No maintainer ratification
+     of DN-54 §10's attachment model (Model A vs. B) was found anywhere in the corpus (checked:
+     `docs/planning/Blocked-Decisions-Ratification-Map.md`, `git log --all` for "attachment"/"Model
+     A", `docs/notes/DN-76-*`) — DN-76 line 144 still lists it as a live **maintainer gate**
+     (`grm M-918/M-919`), unresolved. So: **item 1 above genuinely satisfies "enact DN-71 Model S in
+     the extension-checker"** (the literal M-919 DoD text), but it does **not** resolve DN-54 §10's
+     own attachment-model question, and the `issues.yaml` M-918 entry's "MET BY: DN-71 Model S"
+     wording should be corrected by the orchestrator (issues.yaml is orchestrator-owned; not edited
+     here — G2, flagged not guessed). The DN-75 residual ledger's R-1/R-2/R-3/R-4 (attachment model,
+     §4.4/§4.5/§4.6-row-6 downstream obligations, §7 corpus/DN-20 tiering, `certified`-mode
+     round-trip) are **all still open** — none are touched by this task.
+  3. **Editorial correction carried forward from DN-75 FLAG E-1** (docs/notes/DN-75, §4): the
+     2026-06-29 changelog entry's claim that `lower_derive_items_add_no_l0_to_an_unrelated_entry`
+     was "replaced" is imprecise — that test was retained and repurposed as a live isolation guard
+     (`crates/mycelium-l1/src/tests/checkty.rs`, still present). Recorded here per E-1's routing
+     (a one-line clarification, no history rewrite).
+  **DN-54 status: held at `Accepted` (honest partial — VR-5), NOT stepped to `Enacted`.** Per house
+  rule #3 and DN-54 §9's own gate, `Enacted` requires §10's attachment model to be ratified and
+  implemented plus the DN-75 residuals (R-1 through R-4) closed; none of that happened in this task.
+  What *did* land is real and verified (item 1), but it is a checker-coverage fix for the
+  already-Accepted affine `Substrate` construct, not a completion of DN-54's own open design
+  question. CHANGELOG / Doc-Index / issues.yaml / docs/api-index reconciled by the integrating
+  parent (FLAGged, not edited here). (Append-only; VR-5; G2.)
