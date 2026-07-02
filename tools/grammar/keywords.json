@@ -4,7 +4,6 @@
   "_honesty": "keyword set + class buckets are lexer-derived (G2); scope names are the ratified RFC-0026 \u00a73.2 table.",
   "classes": {
     "keyword": [
-      "Float",
       "backbone",
       "colony",
       "consume",
@@ -53,11 +52,16 @@
       "Binary",
       "Bytes",
       "Dense",
+      "Float",
       "Seq",
       "Sparse",
       "Substrate",
       "Ternary",
-      "VSA"
+      "VSA",
+      "bin",
+      "emb",
+      "hvec",
+      "tern"
     ],
     "scalar": [
       "BF16",
