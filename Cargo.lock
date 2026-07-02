@@ -341,6 +341,7 @@ dependencies = [
  "mycelium-mlir",
  "mycelium-numerics",
  "mycelium-stack",
+ "mycelium-std-diag",
  "mycelium-std-error",
 ]
 
