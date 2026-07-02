@@ -209,8 +209,38 @@ declines to introduce. **No crate is marked `#[deprecated]` by this note.**
 - M-719 issue body (`tools/github/issues.yaml`) — the "STILL OPEN... this is a maintainer/
   orchestrator decision, not closed by this leaf" framing this note takes literally and honors.
 
+## 6. Currency note — 2026-07-02 (post-M-883/M-884, kickoff `acy`)
+
+*Append-only currency record (house rule #3 — §4.c's original text stands unchanged; this records a
+changed factual basis, it does not rewrite the decision).*
+
+§4.c grounded "`mycelium-std-runtime` is load-bearing, not reference-only, and must not be retired" in
+`mycelium-mlir` depending on it **directly** (`crates/mycelium-mlir/src/{runtime.rs,rc_plan.rs,tests/rc_plan_tests.rs}`)
+for RC-plan and refcounting runtime behavior. That basis is now **void**: kickoff `acy` (M-883/M-884)
+extracted the exact surface mlir consumed — `reclamation` and `supervision` — into a new lower-stratum
+crate **`mycelium-rt-abi`** (tier `core`), which `mycelium-mlir` now depends on instead.
+`mycelium-std-runtime` **re-exports** those modules at their original paths (no API break), and the
+`mycelium-mlir → mycelium-std-runtime` edge is **removed** (`cargo metadata` confirms; it was the
+upward-tier anomaly the acyclic-deps gate — DN-68 — forbids).
+
+Consequences for §4.c:
+
+- The load-bearing reclamation and supervision surface now lives in `mycelium-rt-abi`.
+- `mycelium-std-runtime` remains a real, non-oracle crate (`network`/`rc`/`region`/`scope_region`/`colony`
+  modules; still consumed directly by `mycelium-bench`), so §4.c's *conclusion* ("not reference-only")
+  still holds — but **no longer via `mycelium-mlir`**.
+- A future `mycelium-std-runtime` retirement conversation **no longer requires `mycelium-mlir`
+  coordination** for reclamation and supervision. It remains an RFC-0031 §5 D6 maintainer-level decision;
+  this note neither triggers nor forecloses it.
+
+Basis: `cargo xtask deps` (0 violations post-extraction); `docs/notes/DN-68-Acyclic-Deps-Invariant.md`; PRs #935/#936.
+
 ## Changelog
 
+- **2026-07-02 — Currency note appended (acy integration-closeout, no status change).** §6 records
+  that the M-883/M-884 `mycelium-rt-abi` extraction voided §4.c's "`mlir` depends on
+  `mycelium-std-runtime` directly" basis; §4.c's original text is unchanged (append-only, house rule
+  #3). See PRs #935/#936, DN-68.
 - **2026-07-01 — Accepted (maintainer ratification via ADR-035).** This note's §2 freeze +
   §3 D6 assessment is adopted as the grounding evidence for **ADR-035**, which narrows ADR-022
   track T4's `lang 1.0.0` Definition of Done to the stable-API freeze + the core-lib self-host
