@@ -76,7 +76,7 @@ pub use checkty::{
 };
 pub use elab::{elaborate, elaborate_colony, elaborate_lower_rule, elaborate_reclaim, ElabError};
 pub use error::ParseError;
-pub use eval::{Evaluator, L1Error, L1Value};
+pub use eval::{Evaluator, ForageDecision, ForageError, L1Error, L1Value};
 pub use mono::{
     monomorphize, monomorphize_with_selections, ClosureSpecialization, InstanceSelection,
     MonoSelections,

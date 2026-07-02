@@ -250,7 +250,17 @@ pub enum DecodeMethod {
     Refuse,
 }
 
-/// A selectable candidate — the three RFC-0005 §4 sites share one vocabulary (one mechanism).
+/// A placement candidate — the identity of one member of a `forage` candidate set (RFC-0008 RT3;
+/// DN-63 §3.5; D-lite, M-906). v0/D-lite is **single-node**: a `NodeRef` names a local
+/// worker/execution slot, never a network node — multi-node placement is the DN-70 §5 R-6 H2
+/// residual. Content-neutral (a display-only identity); no affinity/capability data yet (DN-63
+/// FLAG-13 stays open for the full node-level signal set).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct NodeRef(pub String);
+
+/// A selectable candidate — the RFC-0005 §4 sites share one vocabulary (one mechanism). `Node`
+/// (M-906, DN-63 §3.5) is the **fourth** site, added the same additive way [`Candidate::Decode`]
+/// was: no change to [`select`]'s engine, just a new candidate/site pair.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Candidate {
     /// A swap-target representation (the RFC-0002 site).
@@ -259,6 +269,8 @@ pub enum Candidate {
     Packing(PackScheme),
     /// A decode methodology (the RFC-0010 site; executed by `mycelium-vsa`).
     Decode(DecodeMethod),
+    /// A placement target (the `forage` site; RFC-0008 RT3; DN-63 §3.5; M-906 D-lite).
+    Node(NodeRef),
 }
 
 /// What a matched rule does.
@@ -378,6 +390,12 @@ impl CostModel {
                 DecodeMethod::BruteForceExact => inputs.decode.map_or(0.0, |d| d.capacity as f64),
                 DecodeMethod::Resonator | DecodeMethod::Refuse => 0.0,
             },
+            // The `forage` site (M-906 D-lite): placement has no storage-bits meaning, so this is
+            // `0.0` for every `Node` candidate — the D-lite policy always decides via
+            // `Action::Choose`/the default arm (never `Cheapest`), so this line only fills the
+            // mandatory EXPLAIN's cost column honestly ("not costed"). A real placement cost
+            // function (network distance, occupancy-weighted…) is DN-63 FLAG-13/DN-70 §5 R-6 — H2.
+            Candidate::Node(_) => 0.0,
         };
         self.storage_weight * bits
     }
@@ -753,6 +771,28 @@ pub fn select_decode_method(
         other => Err(SelectError::WrongSiteKind {
             chosen: other,
             site: "decode-method",
+        }),
+    }
+}
+
+/// Placement site adapter (the fourth RFC-0005 §4 site, added additively alongside swap-target/
+/// packing/decode; RFC-0008 RT3; DN-63 §3.5; M-906 D-lite): the chosen candidate must be a
+/// [`NodeRef`] — anything else is an explicit [`SelectError::WrongSiteKind`]. `forage`'s D-lite
+/// caller builds a **single-node** candidate list (DN-70 D1: "degenerate but real") and gets back
+/// the chosen [`NodeRef`] with its mandatory [`Explanation`] — the same total/deterministic engine
+/// as every other site, no new mechanism (KC-3). Multi-node candidate sets (real network
+/// placement) are the DN-70 §5 R-6 H2 residual; this adapter does not change to support them.
+pub fn select_placement(
+    policy: &SelectionPolicy,
+    inputs: &SelectionInputs,
+    forced: Option<usize>,
+) -> Result<(NodeRef, Explanation), SelectError> {
+    let (chosen, explanation) = select(policy, inputs, forced)?;
+    match chosen {
+        Candidate::Node(n) => Ok((n, explanation)),
+        other => Err(SelectError::WrongSiteKind {
+            chosen: other,
+            site: "placement",
         }),
     }
 }

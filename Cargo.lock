@@ -343,6 +343,7 @@ dependencies = [
  "mycelium-interp",
  "mycelium-mlir",
  "mycelium-numerics",
+ "mycelium-select",
  "mycelium-stack",
  "mycelium-std-core",
  "mycelium-std-diag",

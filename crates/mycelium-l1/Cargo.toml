@@ -17,6 +17,17 @@ workspace = true
 mycelium-core = { path = "../mycelium-core" }
 mycelium-interp = { path = "../mycelium-interp" }
 mycelium-cert = { path = "../mycelium-cert" }
+# `forage` activation (M-906, DN-70 D1/DN-63 §3.5): reuses the existing RFC-0005 SelectionPolicy
+# machinery verbatim ("no new mechanism", DN-70) for the D-lite single-node placement decision +
+# its mandatory EXPLAIN. FLAG (M-906 kickoff-note deviation): the task brief's file-ownership list
+# named this Cargo.toml "do not touch, FLAG if needed" as a swarm-collision default; this edge is
+# additive (downward-only, same `core` tier, verified acyclic via `cargo xtask deps` — see
+# `xtask/deps-strata.toml`: mycelium-l1=4 > mycelium-select=1), zero-collision (this is the only
+# leaf on the L1 frontend right now, per the kickoff's serial-lane rule), and already the
+# established pattern for five other crates (`mycelium-lsp`/`mlir`/`std-runtime`/`vsa`/
+# `std-select`). Reusing the *existing* mechanism (DN-70's explicit mandate) outweighs the default
+# swarm-hygiene caution here; flagged for integrator review rather than silently applied.
+mycelium-select = { path = "../mycelium-select" }
 # Host-stack management for the recursive checker/elaborator, kept OUTSIDE this trusted kernel so the
 # kernel stays `#![forbid(unsafe_code)]` (ADR-014). The kernel calls only its safe `with_deep_stack`.
 mycelium-stack = { path = "../mycelium-stack" }

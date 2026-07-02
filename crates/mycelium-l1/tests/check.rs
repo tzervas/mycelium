@@ -1750,3 +1750,50 @@ fn rfc0020_r20q4_mutual_recursion_elaborates_not_deferred() {
     .expect("a mutually-recursive group elaborates (FixGroup), never `MutualRecursionDeferred`");
     assert_eq!(env.totality["ev"], Totality::Total);
 }
+
+// ---- M-906 (DN-70 D1; RFC-0008 RT3): `@forage(policy)` D-lite checker rules ----
+// The D-lite subset narrows DN-63 §3.5's open `policy: PlacementPolicy` expression sketch to a
+// **literal binary bitmask** (see `Cx::check_forage_policy`'s doc comment for the full grounding).
+// These pin the checker's two explicit refusals plus the accept case.
+
+#[test]
+fn forage_policy_well_formed_literal_checks() {
+    let env = check(
+        "nodule d;\nfn compute(x: Binary{8}) => Binary{8} = not(x);\n\
+         fn run() => Binary{8} = colony { @forage(0b101) hypha compute(0b0000_0001) };",
+    )
+    .expect("a literal binary-bitmask `@forage` policy must check (M-906)");
+    assert_eq!(env.totality["run"], Totality::Total);
+}
+
+#[test]
+fn forage_policy_non_binary_type_is_an_explicit_reject() {
+    // A `Ternary` policy is not the D-lite bitmask type — refused, never silently coerced.
+    let err = check(
+        "nodule d;\nfn compute(x: Binary{8}) => Binary{8} = not(x);\n\
+         fn run() => Binary{8} = colony { @forage(0t+0-) hypha compute(0b0000_0001) };",
+    )
+    .unwrap_err();
+    assert!(
+        err.message.contains("binary-bitmask") && err.message.contains("DN-63"),
+        "a non-`Binary` `@forage` policy must name the D-lite bitmask requirement, got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn forage_policy_non_literal_expression_is_an_explicit_reject() {
+    // A computed (non-literal) `Binary` expression is the DN-70 §5 R-5 H2 surface, not D-lite's —
+    // refused explicitly, never silently accepted as if it were a literal.
+    let err = check(
+        "nodule d;\nfn compute(x: Binary{8}) => Binary{8} = not(x);\n\
+         fn mask() => Binary{4} = 0b0101;\n\
+         fn run() => Binary{8} = colony { @forage(mask()) hypha compute(0b0000_0001) };",
+    )
+    .unwrap_err();
+    assert!(
+        err.message.contains("literal") && err.message.contains("R-5"),
+        "a non-literal `@forage` policy must name the D-lite literal requirement, got: {}",
+        err.message
+    );
+}

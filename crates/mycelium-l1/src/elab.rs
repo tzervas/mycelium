@@ -424,11 +424,26 @@ fn elaborate_colony_inner(env: &Env, entry: &str) -> Result<Vec<Node>, ElabError
     let mut stack = vec![entry.to_owned()];
     // One closed L0 program per hypha: the hypha body elaborated under the entry scope, then wrapped
     // in the *shared* recursive prelude (the binders are cloned per hypha so each task is independent
-    // — RT1: no shared state crosses a hypha boundary). Spawn order is preserved.
+    // — RT1: no shared state crosses a hypha boundary). Spawn order is preserved. Each hypha's
+    // `@forage(policy)` (M-906/DN-70 D1), if present, is folded into its own program the same way
+    // `elab_colony`'s sequential reference does (`Let{_=policy, body}` — RT3 semantics-free
+    // placement), and the DN-63 FLAG-14 empty-candidate-set check runs identically.
     let mut programs = Vec::with_capacity(hyphae.len());
     for h in hyphae {
         let body = el.expr(&mut stack, &[], &h.body)?;
-        programs.push(wrap_in_binders(binders.clone(), body));
+        let node = match &h.forage {
+            None => body,
+            Some(policy) => {
+                forage_reject_if_empty(entry, h)?;
+                let policy_node = el.expr(&mut stack, &[], policy)?;
+                Node::Let {
+                    id: el.fresh("forage_policy"),
+                    bound: Box::new(policy_node),
+                    body: Box::new(body),
+                }
+            }
+        };
+        programs.push(wrap_in_binders(binders.clone(), node));
     }
     Ok(programs)
 }
@@ -1957,10 +1972,10 @@ impl Elab<'_> {
             );
         };
         // The last hypha is the colony's observable (the RT2 sequentialization's final step).
-        let mut node = self.expr(stack, scope, &last.body)?;
+        let mut node = self.elab_hypha_node(stack, scope, &site, last)?;
         // Wrap right-to-left so the first hypha's `Let` ends up outermost (evaluated first, CBV).
         for h in leading.iter().rev() {
-            let bound = self.expr(stack, scope, &h.body)?;
+            let bound = self.elab_hypha_node(stack, scope, &site, h)?;
             // A fresh `%`-named binder: `%` is not a surface identifier char, so it never captures a
             // surface name, and the binding is intentionally unused (the value is sequentialized for
             // its effect only). The leading hypha is still fully evaluated under CBV.
@@ -1973,6 +1988,67 @@ impl Elab<'_> {
         }
         Ok(node)
     }
+
+    /// Elaborate one hypha's own contribution node, prefixed with its `@forage(policy)` policy
+    /// evaluation if present (RFC-0008 RT3; DN-63 §3.5; M-906/DN-70 D1) —
+    /// `Let{_=policy_node, node}`, mirroring `reclaim`'s `Let{_=policy, body}` sequential-reference
+    /// shape (DN-58 §B) exactly: the policy is evaluated for its effect (semantics-free placement,
+    /// RT3 — it never changes `node`'s value) after the static empty-candidate-set check
+    /// ([`forage_reject_if_empty`]) has already refused an all-zero bitmask. No new L0 node (KC-3).
+    fn elab_hypha_node(
+        &mut self,
+        stack: &mut Vec<String>,
+        scope: &[Binding],
+        site: &str,
+        h: &crate::ast::Hypha,
+    ) -> Result<Node, ElabError> {
+        forage_reject_if_empty(site, h)?;
+        let node = self.expr(stack, scope, &h.body)?;
+        let Some(policy) = &h.forage else {
+            return Ok(node);
+        };
+        let policy_node = self.expr(stack, scope, policy)?;
+        Ok(Node::Let {
+            id: self.fresh("forage_policy"),
+            bound: Box::new(policy_node),
+            body: Box::new(node),
+        })
+    }
+}
+
+/// Statically validate a hypha's `@forage(policy)` D-lite bitmask (RFC-0008 RT3; DN-63 §3.5
+/// FLAG-14; M-906/DN-70 D1). The checker guarantees `policy` is `Expr::Lit(Literal::Bin(_))` when
+/// present ([`crate::checkty::Cx::check_forage_policy`]); a defensive [`ElabError::Residual`]
+/// covers the (unreachable-on-a-checked-env) alternative — never a fabricated lowering (G2). An
+/// **all-zero mask** is the DN-63 FLAG-14 empty-candidate-set case: refused here, explicitly, as
+/// an [`ElabError::Residual`] (so neither elaborated path — L0-interp nor AOT — ever silently
+/// accepts a no-candidate forage) — the L1 evaluator refuses the *identical* source with a typed
+/// [`crate::eval::L1Error::Forage`] (`ForageError::NoCandidates`); see `differential.rs`'s
+/// `forage_no_candidates_is_an_explicit_refusal_on_every_path` for the three-way consistency
+/// check.
+fn forage_reject_if_empty(site: &str, h: &crate::ast::Hypha) -> Result<(), ElabError> {
+    let Some(policy) = &h.forage else {
+        return Ok(());
+    };
+    let Expr::Lit(Literal::Bin(s)) = policy.as_ref() else {
+        return residual(
+            site,
+            "internal: `@forage(policy)` reached elaboration with a non-literal policy — the \
+             checker requires a literal binary bitmask (M-906/DN-70 D1); never a fabricated \
+             lowering (G2)",
+        );
+    };
+    let popcount = s.chars().filter(|c| *c == '1').count();
+    if popcount == 0 {
+        return residual(
+            site,
+            "`@forage(policy)` has an all-zero worker-availability bitmask — the D-lite \
+             single-node candidate set is empty (DN-63 §3.5 FLAG-14); the L1 evaluator refuses \
+             this identically with an explicit `ForageError::NoCandidates` (never a silent \
+             placement — G2/RT4)",
+        );
+    }
+    Ok(())
 }
 
 /// Reconstruct the L0 [`Value`] of a literal-pattern key (`b:1010` / `t:+0-`) produced by the

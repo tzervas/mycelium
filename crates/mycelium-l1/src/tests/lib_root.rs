@@ -84,6 +84,13 @@ fn colony_and_hypha_are_active() {
         parse("nodule demo;\nfn hypha() => Binary{8} = 0b0").is_err(),
         "`hypha` as a fn name must stay an error (still a keyword)"
     );
+    // M-906 (DN-70 D1): every hypha's `forage` field defaults to `None` when no `@forage(policy)`
+    // annotation is written — the D-lite surface is additive, never a silent behavior change for
+    // existing colonies.
+    assert!(
+        hyphae.iter().all(|h| h.forage.is_none()),
+        "an un-annotated hypha's `forage` field must be `None`"
+    );
     // A bare `hypha` outside a colony is a never-silent error (RT7 — no orphan hypha).
     let orphan = parse("nodule demo;\nfn f() => Binary{8} = hypha g(0b0)").unwrap_err();
     assert!(
@@ -106,8 +113,13 @@ fn runtime_vocab_keywords_are_reserved_not_active() {
     // DN-03 §4 / RFC-0008 §4.5 / M-665: the Runtime-tier names are reserved keywords — they lex
     // as keywords (never silent identifiers, G2) but no L1 construct consumes them. `hypha`
     // **left** this set with M-666 (it is now active inside a `colony`); `fuse`/`reclaim`/`tier`
-    // left with M-667 / DN-58 (they are now active constructs). The remaining six stay
-    // reserved-not-active until their own constructs land (RFC-0008 §4.6 R1/R2).
+    // left with M-667 / DN-58 (they are now active constructs). `forage` gained a **narrow, D-lite**
+    // active surface with M-906/DN-70 D1 — but ONLY the `@forage(policy) hypha …` attribute form
+    // (`parse_hypha` special-cases `Tok::At` immediately followed by `Tok::Forage`); a *bare*
+    // `forage` at item/expression/fn-name/param-name position is still refused exactly as before
+    // (this test's cases a–d below are unaffected — see `forage_dlite_annotation_parses_and_is_
+    // recorded` for the new active-surface coverage). The remaining five (mesh/graft/cyst/xloc/
+    // backbone) stay fully reserved-not-active until their own constructs land (RFC-0008 §4.6 R2).
     //
     // Honesty (Declared): the RFC-0008 teaching diagnostic fires when the runtime keyword is
     // reached in a position where the parser dispatches to `parse_item` or `parse_expr_inner`
@@ -165,6 +177,61 @@ fn runtime_vocab_keywords_are_reserved_not_active() {
             err.message
         );
     }
+}
+
+#[test]
+fn forage_dlite_annotation_parses_and_is_recorded() {
+    // M-906 (DN-70 D1; RFC-0008 RT3): `@forage(policy) hypha <expr>` — the D-lite active surface.
+    // `forage` is still the same reserved keyword (never a silent identifier, G2); this is a
+    // grammar-level special case for exactly the `@forage(…) hypha` sequence (`parse_hypha`), not
+    // a general reactivation — see `runtime_vocab_keywords_are_reserved_not_active` above for the
+    // bare-word behavior, which is unchanged.
+    let n = parse(
+        "nodule demo;\nfn compute(x: Binary{8}) => Binary{8} = not(x);\n\
+         fn run() => Binary{8} = colony { @forage(0b101) hypha compute(0b0000_0001) };",
+    )
+    .expect("a `@forage(…) hypha` annotation parses (M-906)");
+    let Item::Fn(run) = n
+        .items
+        .iter()
+        .find(|i| matches!(i, Item::Fn(f) if f.sig.name == "run"))
+        .expect("run fn")
+    else {
+        panic!("run fn");
+    };
+    let Expr::Colony(hyphae) = &run.body else {
+        panic!("run body must be a colony, got {:?}", run.body);
+    };
+    assert_eq!(hyphae.len(), 1, "one hypha");
+    let policy = hyphae[0]
+        .forage
+        .as_deref()
+        .expect("the hypha's `forage` field must be `Some` after `@forage(0b101)`");
+    assert!(
+        matches!(policy, Expr::Lit(Literal::Bin(s)) if s == "101"),
+        "the parsed policy must be the literal bitmask expression, got {policy:?}"
+    );
+
+    // A hypha with no `@forage(…)` prefix in the SAME colony still parses with `forage: None` —
+    // the annotation is per-hypha, not per-colony (additive, never a silent colony-wide default).
+    let mixed = parse(
+        "nodule demo;\nfn compute(x: Binary{8}) => Binary{8} = not(x);\n\
+         fn run() => Binary{8} =\n  colony { @forage(0b1) hypha compute(0b0000_0001), hypha compute(0b0000_0010) };",
+    )
+    .expect("a mixed annotated/un-annotated colony parses");
+    let Item::Fn(run2) = mixed
+        .items
+        .iter()
+        .find(|i| matches!(i, Item::Fn(f) if f.sig.name == "run"))
+        .expect("run fn")
+    else {
+        panic!("run fn");
+    };
+    let Expr::Colony(hyphae2) = &run2.body else {
+        panic!("run body must be a colony");
+    };
+    assert!(hyphae2[0].forage.is_some(), "first hypha is annotated");
+    assert!(hyphae2[1].forage.is_none(), "second hypha is not annotated");
 }
 
 #[test]
