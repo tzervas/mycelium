@@ -217,6 +217,10 @@ base_type      ::= 'Binary'  '{' Int '}'
                  | 'Substrate' '{' Ident '}'                  /* affine external resource (LR-8) */
                  | 'Seq'     '{' type_ref ',' Int '}'         /* indexed homogeneous sequence (RFC-0032 D3) */
                  | 'Bytes'                                    /* first-class byte string (RFC-0032 D4) */
+                 | 'Float'                                    /* first-class scalar float, IEEE-754 binary64
+                                                               * only at introduction (ADR-040 FLAG-1; M-897) —
+                                                               * nullary like Bytes; a later width extends the
+                                                               * surface append-only under its own decision */
                  | '(' type_ref ',' type_ref (',' type_ref)* ')'  /* tuple/product type (M-826, arity >= 2);
                                                                    * desugars to a synthetic single-ctor data
                                                                    * type (KC-3 — no new L0 node) */
@@ -373,7 +377,7 @@ path           ::= Ident ('.' Ident)*
  * names its paradigm; a bare Int has no representation family on its own (Q6) UNLESS an ambient is
  * in scope, in which case it adopts the ambient paradigm and takes its width from the checked
  * context, else an explicit UnresolvedWidth (RFC-0012 §4.3; M-344). */
-literal        ::= BinLit | TritLit | BytesLit | StrLit | Int | ListLit
+literal        ::= BinLit | TritLit | BytesLit | StrLit | FloatLit | Int | ListLit
 ListLit        ::= '[' (expr (',' expr)*)? ']'       /* constructs a Seq{T, N} (RFC-0032 D3) */
 
 /* Terminals (lexer). */
@@ -393,6 +397,18 @@ StrLit         ::= '"' (StrChar | EscapeSeq)* '"'
 StrChar        ::= [^"\\\n\r]                        /* any char but the closing quote, a backslash,
                                                        * or a raw newline/CR */
 EscapeSeq      ::= '\' ('n' | 't' | '\\' | '"' | '0' | 'r')
+/* FloatLit: a decimal float literal (ADR-040; M-897) — it denotes the CORRECTLY-ROUNDED
+ * (round-to-nearest-even) IEEE-754 binary64 value of its decimal text (ADR-040 FLAG-3; the
+ * documented, EXPLAIN-able conversion — erroring on inexact decimals would reject nearly all real
+ * literals). Int-disambiguation is structural: digits become a float ONLY when followed by a `.`
+ * WITH a digit behind it (so `1.` stays Int `1` + `.` — the path/field glyph — and there is no
+ * leading-dot `.5` form), and/or an `e|E` exponent with at least one digit. Never-silent (G2): an
+ * exponent with no digits (`1e`, `1e+`) and a literal whose rounded binary64 value is not finite
+ * (`1e999` — beyond ~1.8e308) are explicit lex errors, mirroring Int's out-of-range refusal — a
+ * literal is a CONVERSION boundary (ADR-040 §2.4), so out-of-range never silently lands on ±inf. */
+FloatLit       ::= [0-9]+ '.' [0-9]+ Exponent?
+                 | [0-9]+ Exponent
+Exponent       ::= ('e' | 'E') ('+' | '-')? [0-9]+
 Int            ::= '-'? [0-9]+
 Ident          ::= (Letter | '_') (Letter | [0-9] | '_')*
 Letter         ::= [a-zA-Z]

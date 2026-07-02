@@ -1619,10 +1619,13 @@ fn render_literal(l: &mycelium_l1::ast::Literal) -> String {
         // (`\n \t \\ \" \0 \r`) so re-lexing the rendered output reproduces the same
         // `Literal::Str`.
         Literal::Str(s) => format!("\"{}\"", escape_string_literal(s)),
+        // ADR-040 (M-897): a decimal float literal stores its source text verbatim, so it
+        // round-trips as-is (re-lexing the rendered output reproduces the same `Literal::Float`).
+        Literal::Float(s) => s.clone(),
         // `Literal` is `#[non_exhaustive]` (mycelium-l1/src/ast.rs) precisely so a downstream
         // crate like this one is *required* to keep a wildcard arm — every variant as of this
-        // writing (Bin/Trit/Int/AmbientInt/List/Bytes/Str) has an explicit arm above, so this
-        // only fires for a variant added after this file and not yet wired up here: a
+        // writing (Bin/Trit/Int/AmbientInt/List/Bytes/Str/Float) has an explicit arm above, so
+        // this only fires for a variant added after this file and not yet wired up here: a
         // never-silent internal error (G2) rather than a silently-wrong render.
         _ => unreachable!(
             "unrecognized Literal variant — mycelium-l1 version mismatch (G2: never silent)"
@@ -1673,6 +1676,8 @@ fn render_type_ref(t: &mycelium_l1::ast::TypeRef) -> String {
         // RFC-0032 D3/D4 (M-749/M-750): `Seq{T, N}` / nullary `Bytes`.
         BaseType::Seq { elem, len } => format!("Seq{{{}, {len}}}", render_type_ref(elem)),
         BaseType::Bytes => "Bytes".to_owned(),
+        // ADR-040 (M-897): the nullary scalar-float repr keyword (binary64 only — FLAG-1).
+        BaseType::Float => "Float".to_owned(),
         BaseType::Named(n, args) if args.is_empty() => n.clone(),
         BaseType::Named(n, args) => {
             // RFC-0037 D1: type arguments in `[…]` (was `<…>`).

@@ -629,3 +629,105 @@ fn prop_string_escape_round_trip_over_swept_content() {
         );
     }
 }
+
+// -------------------------------------------------------------------------
+// ADR-040 (M-897) — decimal float literals. The lexer is the never-silent
+// gate: form (digits `.` digits and/or an `e|E` exponent with >= 1 digit)
+// and binary64 finiteness are validated here; the token carries the source
+// text verbatim (the single text→f64 conversion is elaboration's).
+// -------------------------------------------------------------------------
+
+/// Valid float literals lex to a `FloatLit` carrying the source text verbatim: fractional,
+/// exponent-only, combined, signed-exponent, and uppercase-`E` forms.
+#[test]
+fn lex_float_valid_literals() {
+    for text in ["1.5", "0.0", "3.14159", "1e10", "2.5e-3", "1E+5", "10e0"] {
+        assert_eq!(
+            toks(text),
+            vec![Tok::FloatLit(text.to_owned()), Tok::Eof],
+            "float literal {text:?} must lex whole, text preserved verbatim"
+        );
+    }
+}
+
+/// The Int-disambiguation is structural (never a guess): a `.` NOT followed by a digit stays the
+/// path/field glyph, so `1.` is `Int(1)` + `Dot` — a float always has digits on both sides of its
+/// dot, and there is no leading-dot `.5` float form (`.` never starts a number).
+#[test]
+fn lex_float_trailing_dot_stays_int_then_dot() {
+    assert_eq!(toks("1."), vec![Tok::Int(1), Tok::Dot, Tok::Eof]);
+    // `1.e5` likewise: no digit after the dot, so the number ends at `1`.
+    assert_eq!(
+        toks("1.e5"),
+        vec![Tok::Int(1), Tok::Dot, Tok::Ident("e5".to_owned()), Tok::Eof]
+    );
+    // `.5` — a bare dot never opens a number.
+    assert_eq!(toks(".5"), vec![Tok::Dot, Tok::Int(5), Tok::Eof]);
+}
+
+/// A second dot ends the float: `1.5.5` is `FloatLit(1.5)` + `Dot` + `Int(5)` (the grammar has no
+/// double-fraction form; whatever follows is the parser's to refuse).
+#[test]
+fn lex_float_second_dot_ends_the_literal() {
+    assert_eq!(
+        toks("1.5.5"),
+        vec![
+            Tok::FloatLit("1.5".to_owned()),
+            Tok::Dot,
+            Tok::Int(5),
+            Tok::Eof
+        ]
+    );
+}
+
+/// Never-silent (G2): an exponent with no digits (`1e`, `1e+`, `2.5e-` — including a sign with
+/// nothing behind it, or a letter where digits must be) is an explicit lex error naming the cause.
+#[test]
+fn lex_float_exponent_without_digits_is_a_lex_error() {
+    for text in ["1e", "1e+", "1e-", "2.5e-", "1ex"] {
+        let err = lex(text).expect_err("an exponent with no digits must be a lex error");
+        assert!(
+            err.to_string().contains("exponent with no digits"),
+            "{text:?}: error must name the empty-exponent cause: {err}"
+        );
+    }
+}
+
+/// Never-silent (G2, ADR-040 §2.4): a literal whose correctly-rounded binary64 value is not
+/// finite (magnitude beyond ~1.8e308) is an explicit out-of-range lex error — a literal is a
+/// conversion boundary, so it never silently lands on ±inf (in-band IEEE specials arise only
+/// from arithmetic).
+#[test]
+fn lex_float_overflow_to_infinity_is_a_lex_error() {
+    for text in ["1e999", "1.8e308", "123456789e400"] {
+        let err = lex(text).expect_err("a literal rounding to +inf must be a lex error");
+        assert!(
+            err.to_string().contains("float literal out of range"),
+            "{text:?}: error must name the out-of-range cause: {err}"
+        );
+    }
+}
+
+/// Correct rounding (FLAG-3) makes tiny magnitudes legal, not errors: a literal below the
+/// smallest subnormal rounds to `0.0` (the nearest representable) — that IS the correctly-rounded
+/// binary64, so the lexer accepts it (finite), preserving the text for elaboration.
+#[test]
+fn lex_float_underflow_rounds_finite_and_lexes() {
+    assert_eq!(
+        toks("1e-999"),
+        vec![Tok::FloatLit("1e-999".to_owned()), Tok::Eof]
+    );
+}
+
+/// The base-prefixed literals are untouched by the float extension: `0b1`, `0x48`, `0t+-` still
+/// lex as their own token kinds (the `0` dispatch runs before the decimal-number scanner), and an
+/// integer followed by whitespace and an identifier stays two tokens.
+#[test]
+fn lex_float_does_not_disturb_neighbouring_forms() {
+    assert_eq!(toks("0b1"), vec![Tok::BinLit("1".to_owned()), Tok::Eof]);
+    assert_eq!(toks("0x48"), vec![Tok::BytesLit("48".to_owned()), Tok::Eof]);
+    assert_eq!(
+        toks("1 e10"),
+        vec![Tok::Int(1), Tok::Ident("e10".to_owned()), Tok::Eof]
+    );
+}

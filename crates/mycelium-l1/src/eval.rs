@@ -473,8 +473,14 @@ impl<'e> Evaluator<'e> {
             // RFC-0032 D4 (M-750): `0x…` byte-string literals share the `lit_value` lowering with the
             // binary/ternary repr literals (all are context-free repr literals). M-910/M-911: `"…"`
             // string literals join the same group (they lower to the same `Repr::Bytes` form).
+            // ADR-040 (M-897): decimal float literals join it too (they lower to the M-896
+            // `Repr::Float`/`Payload::Float` scalar form — KC-3, no new L0 node).
             Expr::Lit(
-                l @ (Literal::Bin(_) | Literal::Trit(_) | Literal::Bytes(_) | Literal::Str(_)),
+                l @ (Literal::Bin(_)
+                | Literal::Trit(_)
+                | Literal::Bytes(_)
+                | Literal::Str(_)
+                | Literal::Float(_)),
             ) => Ok(L1Value::Repr(
                 lit_value(site, l).map_err(|e| unsupported(site, &e))?,
             )),

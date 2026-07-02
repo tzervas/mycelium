@@ -766,10 +766,13 @@ impl Resolver {
             // Tagged literals already name their paradigm; AmbientInt is only produced here.
             // RFC-0032 D4: a `0x…` byte-string literal is a tagged repr literal (no ambient).
             // M-910/M-911: a `"…"` string literal joins the same group (no ambient either).
+            // M-897: a float literal already names its representation (ADR-040) — an integer
+            // ambient never touches it (the group below is unchanged-under-ambients).
             Literal::Bin(_)
             | Literal::Trit(_)
             | Literal::Bytes(_)
             | Literal::Str(_)
+            | Literal::Float(_)
             | Literal::AmbientInt(_, _) => l.clone(),
         })
     }
@@ -1114,6 +1117,8 @@ impl core::fmt::Display for DisplayBase<'_> {
                 write!(f, "Seq{{{}, {len}}}", print_type_ref(elem))
             }
             BaseType::Bytes => write!(f, "Bytes"),
+            // ADR-040 (M-897): nullary scalar-float repr keyword.
+            BaseType::Float => write!(f, "Float"),
             BaseType::Named(n, args) if args.is_empty() => write!(f, "{n}"),
             BaseType::Named(n, args) => {
                 // RFC-0037 D2: type arguments render in `[…]` (parsed by `parse_type_args_opt`).
@@ -1305,6 +1310,8 @@ fn print_literal(l: &Literal) -> String {
         // re-escaped here, so `parse → expand_to_source → parse` is stable (M-818 discipline).
         Literal::Str(s) => format!("\"{}\"", escape_string_literal(s)),
         Literal::Int(i) => format!("{i}"),
+        // M-897: the float literal's surface form IS its stored source text (verbatim round-trip).
+        Literal::Float(s) => s.clone(),
         // A still-unresolved ambient decimal: show the decimal + its resolved paradigm (the width is
         // the checker's to fill — this only appears when expanding a type-form-only nodule).
         Literal::AmbientInt(p, i) => format!("{i} /* {p} (width from context) */"),

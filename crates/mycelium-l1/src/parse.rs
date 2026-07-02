@@ -1545,6 +1545,12 @@ impl Parser {
                 self.bump();
                 Ok(BaseType::Bytes)
             }
+            // ADR-040 (M-897): `Float` — a nullary repr keyword like `Bytes` (binary64 only at
+            // introduction, FLAG-1; a later width extends the surface append-only).
+            Tok::Float => {
+                self.bump();
+                Ok(BaseType::Float)
+            }
             Tok::Ident(s) => {
                 self.bump();
                 let args = self.parse_type_args_opt()?;
@@ -2030,6 +2036,7 @@ impl Parser {
             | Tok::TritLit(_)
             | Tok::BytesLit(_)
             | Tok::StrLit(_)
+            | Tok::FloatLit(_)
             | Tok::Int(_)
             | Tok::LBracket => Ok(Pattern::Lit(self.parse_literal()?)),
             // M-826: `(x, y, …)` is a tuple pattern (arity ≥ 2). A single `(_)` is grouping.
@@ -2190,6 +2197,7 @@ impl Parser {
             | Tok::TritLit(_)
             | Tok::BytesLit(_)
             | Tok::StrLit(_)
+            | Tok::FloatLit(_)
             | Tok::Int(_)
             | Tok::LBracket => Ok(Expr::Lit(self.parse_literal()?)),
             Tok::Ident(_) => Ok(Expr::Path(self.parse_path()?)),
@@ -2249,6 +2257,13 @@ impl Parser {
             Tok::StrLit(s) => {
                 self.bump();
                 Ok(Literal::Str(s))
+            }
+            // ADR-040 (M-897): a decimal float literal; the lexer already validated the form
+            // (digits `.` digits and/or an exponent with digits) and binary64 finiteness, so the
+            // source text is stored verbatim (the single text→f64 conversion is elaboration's).
+            Tok::FloatLit(s) => {
+                self.bump();
+                Ok(Literal::Float(s))
             }
             Tok::Int(n) => {
                 self.bump();
