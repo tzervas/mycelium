@@ -105,6 +105,20 @@ the usability critical path; `grm` is decision-gated; `opp` is non-gating and pa
 | **`grm`** | **H2a** — grammar-stability gate before mass porting (roadmap §5): RFC-0037 follow-ons · DN-54 completion · tuple decision · ADR-033 FLAG-1 | `mycelium-l1` frontend (serial) · extension-checker · `mycelium.ebnf`/editor grammars/api-index regeneration | 📋 planned — 10 tasks (M-915…M-924 proposed); **ratification-gated** (three maintainer decisions; dossiers first) |
 | **`opp`** | Opportunistic `.myc` ports — 9 ready-now pure/structural crates, smallest-first (roadmap §6; **non-gating**) | `lib/std/{diag,core,select,swap,recover,error,testing,ternary,spore}.myc` (new) · `mycelium-l1/tests/std_*.rs` · per-crate pre-port Rust polish | 📋 planned — 11 tasks (M-925…M-935 proposed); needs only `acy`; runs parallel with `enb` |
 
+### Phase-II kickoffs (post-public — ADR-038 §2.3/§2.8 · roadmap §7)
+
+Authored 2026-07-01 by the planning tier (same discipline). `flp` is the **Phase-I→II boundary
+event** — its prep may start once the Phase-I DoD is in sight, but **the flip act itself is
+strictly last** and waits on the maintainer's usability ratification (ADR-036 §2.4 as refined by
+ADR-038). `rwr` is deliberately **higher-altitude** (progressive, per-wave minting, decision-gated
+— ADR-038 §2.3); its per-crate issues are minted per wave, not by the kickoff. All M-ids proposed,
+not minted (mitigation #1).
+
+| UID | Scope | Owns | Status / remaining |
+|---|---|---|---|
+| **`flp`** | **The PUBLIC FLIP: decompose + publish** — author the owed binding decomposition ADR (ADR-039 proposed number; DN-27 §4), then lock+archive the monorepo, per-phylum-group repo scaffolds (~8–12, maintainer ⟐), per-repo CI+GHCR (ADR-037 rails), issue/docs porting, the one-act flip at a `0.x` | the decomposition ADR · repo scaffolds + history carry · reusable CI workflows · `repo:` issue axis · the flip runbook + act | 📋 planned — 11 tasks (M-936…M-946 proposed); everything private until the act; **the flip is maintainer-gated** (usability ratification · `0.x` · FLAG-V1) |
+| **`rwr`** | **Phase-II progressive Mycelium rewrite** (post-public; the public semver climbs `0.x → 1.0.0`; `1.0.0` = fully rewritten where appropriate + 100% operational) | port-wave manifests + waves (D5/differential/D6) · transpiler hardening ladder · toolchain-port scoping · V-wave remainder (RFC-0033 M-760…M-784 incl. the single M-780 rehash at its tripwire) · the `1.0.0` terminal dossier | 📋 planned — 11 wave-level tasks (M-947…M-957 proposed); **gated on `flp` + `grm`** (mass porting) and `enb` (V-wave audit); compiler self-hosting stays an **aspiration**, not a lane (FLAG-V2) |
+
 ### Kernel-enablement
 
 | UID | Scope | Owns | Status / remaining |
