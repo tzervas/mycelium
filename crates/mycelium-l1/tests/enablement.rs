@@ -342,6 +342,109 @@ fn eq_concrete_operand_anchors_bare_decimal() {
     );
 }
 
+// ── M-887 (`enb` Gap B): never-silent two's-complement multiply ─────────────────────────────────
+//
+// `mul_bin` (kernel `bin.mul`) is the first Gap-B prim of the RFC-0033 §4.1.2/§4.1.3 shared
+// two's-complement arithmetic set (ADR-028). It reads its `Binary{N}` operands under the
+// two's-complement (signed) interpretation — distinct from `add_bin`/`sub_bin`'s existing
+// **unsigned** overflow contract (RFC-0032 D2) — and refuses out-of-`B_N` products explicitly,
+// never a silent wrap (G2/VR-5).
+
+#[test]
+fn mul_bin_in_range_positive_and_negative() {
+    // 3 * 4 = 12.
+    assert_three_way(
+        "mul_bin positive",
+        "nodule d;\nfn main() => Binary{8} = mul_bin(0b0000_0011, 0b0000_0100);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("00001100".chars().map(|c| c == '1').collect()),
+    );
+    // -3 * 4 = -12 (two's complement: -3 = 0b1111_1101, -12 = 0b1111_0100).
+    assert_three_way(
+        "mul_bin negative operand",
+        "nodule d;\nfn main() => Binary{8} = mul_bin(0b1111_1101, 0b0000_0100);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("11110100".chars().map(|c| c == '1').collect()),
+    );
+    // -3 * -4 = 12.
+    assert_three_way(
+        "mul_bin both negative",
+        "nodule d;\nfn main() => Binary{8} = mul_bin(0b1111_1101, 0b1111_1100);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("00001100".chars().map(|c| c == '1').collect()),
+    );
+}
+
+/// `mul_bin` overflow (`127 * 2` at `Binary{8}`, out of `B_8 = [-128, 127]`) is an explicit refusal
+/// on **all three** paths — never a silent wrap. (The program type-checks: the two's-complement
+/// overflow bound is a runtime contract, like `add_bin`/`sub_bin`'s unsigned one.)
+#[test]
+fn mul_bin_overflow_refuses_on_every_path() {
+    let src = "nodule d;\nfn main() => Binary{8} = mul_bin(0b0111_1111, 0b0000_0010);";
+    let env = check_nodule(&parse(src).expect("parses")).expect("checks");
+
+    let interp = Interpreter::new(
+        PrimRegistry::with_builtins(),
+        Box::new(mycelium_cert::BinaryTernarySwapEngine),
+    );
+    let prims = PrimRegistry::with_builtins();
+    let engine = mycelium_cert::BinaryTernarySwapEngine;
+
+    assert!(
+        Evaluator::new(&env).call("main", vec![]).is_err(),
+        "L1-eval must refuse the overflow (never a silent wrap)"
+    );
+    let node = elaborate(&env, "main").expect("in fragment");
+    assert!(
+        interp.eval(&node).is_err(),
+        "L0-interp must refuse the overflow"
+    );
+    assert!(
+        mycelium_mlir::run(&node, &prims, &engine).is_err(),
+        "AOT must refuse the overflow"
+    );
+}
+
+/// The classic two's-complement multiply-overflow edge (`i8::MIN * -1 = 128`, out of `B_8`) refuses
+/// on all three paths — never a silent wrap back to `-128`.
+#[test]
+fn mul_bin_min_times_neg_one_refuses_on_every_path() {
+    let src = "nodule d;\nfn main() => Binary{8} = mul_bin(0b1000_0000, 0b1111_1111);";
+    let env = check_nodule(&parse(src).expect("parses")).expect("checks");
+
+    let interp = Interpreter::new(
+        PrimRegistry::with_builtins(),
+        Box::new(mycelium_cert::BinaryTernarySwapEngine),
+    );
+    let prims = PrimRegistry::with_builtins();
+    let engine = mycelium_cert::BinaryTernarySwapEngine;
+
+    assert!(
+        Evaluator::new(&env).call("main", vec![]).is_err(),
+        "i8::MIN * -1 must refuse on L1-eval (never a silent wrap to -128)"
+    );
+    let node = elaborate(&env, "main").expect("in fragment");
+    assert!(
+        interp.eval(&node).is_err(),
+        "i8::MIN * -1 must refuse on L0-interp"
+    );
+    assert!(
+        mycelium_mlir::run(&node, &prims, &engine).is_err(),
+        "i8::MIN * -1 must refuse on AOT"
+    );
+}
+
+/// A width/paradigm mismatch (`Binary{8}` vs `Binary{1}`) is a **static** never-silent refusal —
+/// caught at check time, mirroring `add_bin`/`sub_bin`'s width-preserving contract.
+#[test]
+fn mul_bin_width_mismatch_refuses_statically() {
+    let src = "nodule d;\nfn main() => Binary{8} = mul_bin(0b0000_0001, 0b0);";
+    assert!(
+        check_nodule(&parse(src).expect("parses")).is_err(),
+        "a width-mismatched mul_bin must be a static type error, never a silent coercion"
+    );
+}
+
 // ── M-749: indexed-sequence prims — prim-level differential (L0-interp ≡ AOT) ────────────────────
 //
 // `Repr::Seq` has no `.myc` surface literal yet (lexer/parser wiring deferred — FLAGGED in the

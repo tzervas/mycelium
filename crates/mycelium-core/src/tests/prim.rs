@@ -69,6 +69,7 @@ fn builtins_are_present_and_resolvable() {
         "cmp.lt",
         "bit.add",
         "bit.sub",
+        "bin.mul",
         "bit.width_cast",
         "seq.len",
         "seq.get",
@@ -86,8 +87,8 @@ fn builtins_are_present_and_resolvable() {
     // `entries()` is the EXPLAIN surface: one inspectable entry per builtin (RFC-0032 D1/D2
     // added cmp.eq/cmp.lt/bit.add/bit.sub to the original nine; D3/M-749 added seq.len/seq.get;
     // D4/M-750 added bytes.len/get/slice/concat; DN-41/M-798 added bit.width_cast; DN-58/M-817
-    // added the `Binary` `Fuse` meet `fuse_join:binary`).
-    assert_eq!(t.entries().len(), 21);
+    // added the `Binary` `Fuse` meet `fuse_join:binary`; RFC-0033/M-887 added `bin.mul`).
+    assert_eq!(t.entries().len(), 22);
 }
 
 #[test]
@@ -189,12 +190,12 @@ fn contains_returns_true_iff_registered() {
 fn names_returns_registered_sorted_names() {
     let t = PrimTable::builtins();
     let ns = t.names();
-    // Exactly 21 builtins (the original 9 + RFC-0032 cmp.eq/cmp.lt/bit.add/bit.sub + D3
+    // Exactly 22 builtins (the original 9 + RFC-0032 cmp.eq/cmp.lt/bit.add/bit.sub + D3
     // seq.len/seq.get + D4 bytes.len/get/slice/concat + DN-41 bit.width_cast + DN-58/M-817
-    // fuse_join:binary).
+    // fuse_join:binary + RFC-0033/M-887 bin.mul).
     assert_eq!(
         ns.len(),
-        21,
+        22,
         "names() count must match the builtin count: {ns:?}"
     );
     // Sorted (BTreeMap iteration is sorted).
