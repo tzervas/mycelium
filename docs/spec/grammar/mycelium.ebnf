@@ -222,10 +222,21 @@ effects        ::= '!' '{' (Ident (',' Ident)*)? '}'
 
 /* Types. A guarantee-annotated type carries its honesty tag as a type-level index (LR-6). */
 type_ref       ::= base_type ('@' strength)?
+/* RFC-0037 D2-b (M-915): `bin`/`tern`/`emb`/`hvec` are short repr-keyword aliases for
+ * `Binary`/`Ternary`/`Dense`/`VSA` — they elaborate identically (the same AST node either way; no
+ * new BaseType variant). `vec` was considered and REJECTED (DN-02) — it collides with
+ * `std.collections.Vec`; it is never a keyword. Both spellings are reserved full keywords
+ * (RFC-0037 §7 FLAG-3 resolved: reserved-keyword class, matching the long forms' existing
+ * posture) — `mycfmt` canonicalizes to the long form on output (Declared; avoids corpus reformat
+ * churn). */
 base_type      ::= 'Binary'  '{' Int '}'
                  | 'Ternary' '{' Int '}'
                  | 'Dense'   '{' Int ',' scalar '}'
                  | 'VSA'     '{' Ident ',' Int ',' sparsity '}'
+                 | 'bin'     '{' Int '}'                      /* D2-b short alias for Binary */
+                 | 'tern'    '{' Int '}'                      /* D2-b short alias for Ternary */
+                 | 'emb'     '{' Int ',' scalar '}'            /* D2-b short alias for Dense */
+                 | 'hvec'    '{' Ident ',' Int ',' sparsity '}' /* D2-b short alias for VSA */
                  | 'Substrate' '{' Ident '}'                  /* affine external resource (LR-8) */
                  | 'Seq'     '{' type_ref ',' Int '}'         /* indexed homogeneous sequence (RFC-0032 D3) */
                  | 'Bytes'                                    /* first-class byte string (RFC-0032 D4) */

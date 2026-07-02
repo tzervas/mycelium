@@ -731,3 +731,35 @@ fn lex_float_does_not_disturb_neighbouring_forms() {
         vec![Tok::Int(1), Tok::Ident("e10".to_owned()), Tok::Eof]
     );
 }
+
+// -------------------------------------------------------------------------
+// RFC-0037 D2-b: short repr-keyword aliases (M-915)
+// -------------------------------------------------------------------------
+
+/// `bin`/`tern`/`emb`/`hvec` lex as their own reserved keyword tokens — distinct from, but
+/// standing alongside, the long forms `Binary`/`Ternary`/`Dense`/`VSA` (D2-b; never a silent
+/// identifier, G2).
+#[test]
+fn short_repr_keywords_lex_as_reserved_keywords() {
+    assert_eq!(toks("bin"), vec![Tok::BinShort, Tok::Eof]);
+    assert_eq!(toks("tern"), vec![Tok::TernShort, Tok::Eof]);
+    assert_eq!(toks("emb"), vec![Tok::EmbShort, Tok::Eof]);
+    assert_eq!(toks("hvec"), vec![Tok::HvecShort, Tok::Eof]);
+}
+
+/// `vec` was explicitly REJECTED as a short alias (DN-02/RFC-0037 D2-b — collides with
+/// `std.collections.Vec`); it must lex as a plain identifier, never a keyword.
+#[test]
+fn vec_is_not_a_keyword_rejected_alias() {
+    assert_eq!(toks("vec"), vec![Tok::Ident("vec".to_owned()), Tok::Eof]);
+}
+
+/// The long forms are untouched by the alias addition — `Binary`/`Ternary`/`Dense`/`VSA` still
+/// lex to their own pre-existing tokens.
+#[test]
+fn long_form_repr_keywords_unaffected_by_short_aliases() {
+    assert_eq!(toks("Binary"), vec![Tok::Binary, Tok::Eof]);
+    assert_eq!(toks("Ternary"), vec![Tok::Ternary, Tok::Eof]);
+    assert_eq!(toks("Dense"), vec![Tok::Dense, Tok::Eof]);
+    assert_eq!(toks("VSA"), vec![Tok::Vsa, Tok::Eof]);
+}

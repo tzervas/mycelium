@@ -514,3 +514,74 @@ fn format_source_does_not_panic_on_a_string_literal() {
         Err(e) => panic!("unexpected error (not a panic, but unexpected): {e}"),
     }
 }
+
+// ============================================================================================
+// RFC-0037 D2-b short repr-keyword aliases (M-915): `bin`/`tern`/`emb`/`hvec`
+// ============================================================================================
+
+/// `mycfmt` canonicalizes every short repr-keyword alias to its long form on output — a
+/// `Declared` design choice (see `render_type_ref`'s doc comment) that avoids reformat churn on
+/// the existing long-form corpus. Each entry is `(label, short-form src, expected long-form
+/// output)`.
+const SHORT_REPR_KEYWORD_CORPUS: &[(&str, &str, &str)] = &[
+    (
+        "bin-canonicalizes-to-binary",
+        "nodule d;\nfn f(x: bin{8}) => bin{8} = x;\n",
+        "nodule d;\n\nfn f(x: Binary{8}) => Binary{8} =\n  x;\n",
+    ),
+    (
+        "tern-canonicalizes-to-ternary",
+        "nodule d;\nfn f(x: tern{6}) => tern{6} = x;\n",
+        "nodule d;\n\nfn f(x: Ternary{6}) => Ternary{6} =\n  x;\n",
+    ),
+    (
+        "emb-canonicalizes-to-dense",
+        "nodule d;\nfn f(x: emb{768, F32}) => emb{768, F32} = x;\n",
+        "nodule d;\n\nfn f(x: Dense{768, F32}) => Dense{768, F32} =\n  x;\n",
+    ),
+    (
+        "hvec-canonicalizes-to-vsa",
+        "nodule d;\nfn f(x: hvec{MAP, 10000, Dense}) => hvec{MAP, 10000, Dense} = x;\n",
+        "nodule d;\n\nfn f(x: VSA{MAP, 10000, Dense}) => VSA{MAP, 10000, Dense} =\n  x;\n",
+    ),
+];
+
+#[test]
+fn short_repr_keywords_canonicalize_to_long_form_and_are_idempotent() {
+    for (label, short_src, expected_long) in SHORT_REPR_KEYWORD_CORPUS {
+        let formatted = format_source(short_src, None)
+            .unwrap_or_else(|e| panic!("{label}: format_source failed: {e}"));
+        assert_eq!(
+            &formatted.output, expected_long,
+            "{label}: expected canonicalization to the long form"
+        );
+
+        // C1: the short-form input and the long-form output parse to the SAME surface AST — the
+        // alias elaborates identically (D2-b), so formatting never changes program meaning.
+        let before = parse(short_src).expect(label);
+        let after = parse(&formatted.output).expect(label);
+        assert_eq!(before, after, "{label}: C1 identity across the alias swap");
+
+        // C2: formatting the already-long-form output is a byte-for-byte no-op.
+        let again = format_source(&formatted.output, None).unwrap_or_else(|e| {
+            panic!("{label}: re-format of the canonicalized output failed: {e}")
+        });
+        assert_eq!(again.output, formatted.output, "{label}: idempotent (C2)");
+        assert!(!again.changed, "{label}: re-format reported a change (C2)");
+    }
+}
+
+/// A single program mixing the short and long spellings of the same paradigm formats to ONE
+/// canonical (long-form) spelling throughout — `mycfmt` never leaves a mixed-spelling program
+/// mixed (never-silent normalization, not a partial rewrite).
+#[test]
+fn mixed_short_and_long_spellings_canonicalize_uniformly() {
+    let src = "nodule d;\nfn f(x: bin{8}) => Binary{8} = x;\n";
+    let formatted = format_source(src, None).expect("formats");
+    assert_eq!(
+        formatted.output,
+        "nodule d;\n\nfn f(x: Binary{8}) => Binary{8} =\n  x;\n"
+    );
+    let again = format_source(&formatted.output, None).expect("re-formats");
+    assert_eq!(again.output, formatted.output, "idempotent");
+}

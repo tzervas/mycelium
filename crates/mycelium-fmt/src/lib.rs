@@ -1654,6 +1654,20 @@ fn escape_string_literal(s: &str) -> String {
     out
 }
 
+/// Renders a [`mycelium_l1::ast::TypeRef`] — the type-keyword render path, including the four
+/// paradigm repr keywords (`BaseType::Binary`/`Ternary`/`Dense`/`Vsa`).
+///
+/// **RFC-0037 D2-b (M-915) canonicalization choice — `Declared`.** The short repr-keyword aliases
+/// `bin`/`tern`/`emb`/`hvec` elaborate identically to their long forms at parse time (the parser
+/// produces the exact same `BaseType::Binary`/`Ternary`/`Dense`/`Vsa` for either spelling — see
+/// `mycelium-l1`'s `Tok::BinShort` doc comment); the AST itself retains **no record** of which
+/// spelling was written. Consequently there is no separate short-form render arm here by
+/// construction: this function always emits the long form (`Binary`/`Ternary`/`Dense`/`VSA`), so
+/// `mycfmt` canonicalizes a short-alias input to its long-form output. This keeps the existing
+/// corpus and every pre-existing `mycelium-fmt` fixture byte-identical (no reformat churn) while
+/// still accepting the ergonomic short spelling as input — verified by
+/// `docs/spec/grammar/conformance/accept/26-short-repr-keywords.myc` round-tripping through both
+/// `format_source` (C1/C2) and `flatten_source`.
 fn render_type_ref(t: &mycelium_l1::ast::TypeRef) -> String {
     use mycelium_l1::ast::BaseType;
     let base = match &t.base {
