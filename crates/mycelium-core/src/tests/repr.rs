@@ -2,7 +2,7 @@
 //! [`Repr::check_well_formed`], and the [`MAX_DIM`] over-allocation cap (DN-40 §3). Extracted from
 //! the logic file (test-layout rule, M-797).
 
-use crate::repr::{Repr, ScalarKind, SparsityClass, MAX_DIM};
+use crate::repr::{FloatWidth, Repr, ScalarKind, SparsityClass, MAX_DIM};
 use crate::WfError;
 
 #[test]
@@ -308,4 +308,54 @@ fn bytes_is_always_well_formed() {
         len: 4,
     }
     .well_formed());
+}
+
+// --- ADR-040 (M-896): Repr::Float — the scalar-float value form ---------------------------------
+
+/// A scalar float is well-formed unconditionally: it declares no dimension, and the width enum is
+/// the whole static constraint (ADR-040 §2.1). `Exact` — a total decidable predicate.
+#[test]
+fn float_is_always_well_formed() {
+    let f = Repr::Float {
+        width: FloatWidth::F64,
+    };
+    assert!(f.well_formed());
+    assert!(f.check_well_formed().is_ok());
+    // A `Seq` of scalar floats is also well-formed (the element repr recurses to Ok).
+    assert!(Repr::Seq {
+        elem: Box::new(f),
+        len: 3,
+    }
+    .well_formed());
+}
+
+/// The `FloatWidth` content-address tag registry is FROZEN (ADR-040 §2.1, the `ScalarKind::tag`
+/// discipline): `F64 == 0`, forever. A failing run here means an existing float value's identity
+/// shifted — a rehash, which ADR-040 §3 defers to E20-1 and this change must NOT spend.
+#[test]
+fn float_width_tags_are_frozen() {
+    assert_eq!(FloatWidth::F64.tag(), 0);
+}
+
+/// The `ScalarKind` tag registry stays frozen too (regression guard: adding `FloatWidth` must not
+/// disturb the Dense dtype registry).
+#[test]
+fn scalar_kind_tags_stay_frozen() {
+    assert_eq!(ScalarKind::F16.tag(), 0);
+    assert_eq!(ScalarKind::Bf16.tag(), 1);
+    assert_eq!(ScalarKind::F32.tag(), 2);
+    assert_eq!(ScalarKind::F64.tag(), 3);
+}
+
+/// The serde wire form is `{"kind":"Float","width":"F64"}` — internally tagged on `kind` like every
+/// other `Repr`, faithfully round-trippable (M-104 discipline).
+#[test]
+fn float_repr_wire_form_round_trips() {
+    let f = Repr::Float {
+        width: FloatWidth::F64,
+    };
+    let json = serde_json::to_value(&f).expect("serialize");
+    assert_eq!(json, serde_json::json!({"kind": "Float", "width": "F64"}));
+    let back: Repr = serde_json::from_value(json).expect("deserialize");
+    assert_eq!(back, f);
 }
