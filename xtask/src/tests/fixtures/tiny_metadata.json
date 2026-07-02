@@ -1,0 +1,203 @@
+{
+  "packages": [
+    {
+      "name": "a",
+      "version": "0.1.0",
+      "authors": [],
+      "id": "path+file:///fake/a#0.1.0",
+      "source": null,
+      "description": null,
+      "dependencies": [
+        {
+          "name": "b",
+          "source": null,
+          "req": "*",
+          "kind": null,
+          "optional": false,
+          "uses_default_features": true,
+          "features": [],
+          "target": null,
+          "rename": null,
+          "registry": null,
+          "path": "/fake/b"
+        },
+        {
+          "name": "ext",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "req": "^1.0",
+          "kind": null,
+          "optional": false,
+          "uses_default_features": true,
+          "features": [],
+          "target": null,
+          "rename": null,
+          "registry": null,
+          "path": null
+        }
+      ],
+      "license": null,
+      "license_file": null,
+      "targets": [],
+      "features": {},
+      "manifest_path": "/fake/a/Cargo.toml",
+      "categories": [],
+      "keywords": [],
+      "readme": null,
+      "repository": null,
+      "homepage": null,
+      "documentation": null,
+      "edition": "2021",
+      "links": null,
+      "publish": null,
+      "default_run": null,
+      "rust_version": null
+    },
+    {
+      "name": "b",
+      "version": "0.1.0",
+      "authors": [],
+      "id": "path+file:///fake/b#0.1.0",
+      "source": null,
+      "description": null,
+      "dependencies": [
+        {
+          "name": "c",
+          "source": null,
+          "req": "*",
+          "kind": "dev",
+          "optional": false,
+          "uses_default_features": true,
+          "features": [],
+          "target": null,
+          "rename": null,
+          "registry": null,
+          "path": "/fake/c"
+        }
+      ],
+      "license": null,
+      "license_file": null,
+      "targets": [],
+      "features": {},
+      "manifest_path": "/fake/b/Cargo.toml",
+      "categories": [],
+      "keywords": [],
+      "readme": null,
+      "repository": null,
+      "homepage": null,
+      "documentation": null,
+      "edition": "2021",
+      "links": null,
+      "publish": null,
+      "default_run": null,
+      "rust_version": null
+    },
+    {
+      "name": "c",
+      "version": "0.1.0",
+      "authors": [],
+      "id": "path+file:///fake/c#0.1.0",
+      "source": null,
+      "description": null,
+      "dependencies": [],
+      "license": null,
+      "license_file": null,
+      "targets": [],
+      "features": {},
+      "manifest_path": "/fake/c/Cargo.toml",
+      "categories": [],
+      "keywords": [],
+      "readme": null,
+      "repository": null,
+      "homepage": null,
+      "documentation": null,
+      "edition": "2021",
+      "links": null,
+      "publish": null,
+      "default_run": null,
+      "rust_version": null
+    },
+    {
+      "name": "ext",
+      "version": "1.0.0",
+      "authors": [],
+      "id": "registry+https://github.com/rust-lang/crates.io-index#ext@1.0.0",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "description": null,
+      "dependencies": [],
+      "license": null,
+      "license_file": null,
+      "targets": [],
+      "features": {},
+      "manifest_path": "/fake/registry/ext/Cargo.toml",
+      "categories": [],
+      "keywords": [],
+      "readme": null,
+      "repository": null,
+      "homepage": null,
+      "documentation": null,
+      "edition": "2021",
+      "links": null,
+      "publish": null,
+      "default_run": null,
+      "rust_version": null
+    }
+  ],
+  "workspace_members": [
+    "path+file:///fake/a#0.1.0",
+    "path+file:///fake/b#0.1.0",
+    "path+file:///fake/c#0.1.0"
+  ],
+  "workspace_default_members": null,
+  "resolve": {
+    "nodes": [
+      {
+        "id": "path+file:///fake/a#0.1.0",
+        "deps": [
+          {
+            "name": "b",
+            "pkg": "path+file:///fake/b#0.1.0",
+            "dep_kinds": [{ "kind": null, "target": null }]
+          },
+          {
+            "name": "ext",
+            "pkg": "registry+https://github.com/rust-lang/crates.io-index#ext@1.0.0",
+            "dep_kinds": [{ "kind": null, "target": null }]
+          }
+        ],
+        "dependencies": [
+          "path+file:///fake/b#0.1.0",
+          "registry+https://github.com/rust-lang/crates.io-index#ext@1.0.0"
+        ],
+        "features": []
+      },
+      {
+        "id": "path+file:///fake/b#0.1.0",
+        "deps": [
+          {
+            "name": "c",
+            "pkg": "path+file:///fake/c#0.1.0",
+            "dep_kinds": [{ "kind": "dev", "target": null }]
+          }
+        ],
+        "dependencies": ["path+file:///fake/c#0.1.0"],
+        "features": []
+      },
+      {
+        "id": "path+file:///fake/c#0.1.0",
+        "deps": [],
+        "dependencies": [],
+        "features": []
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#ext@1.0.0",
+        "deps": [],
+        "dependencies": [],
+        "features": []
+      }
+    ],
+    "root": "path+file:///fake/a#0.1.0"
+  },
+  "workspace_root": "/fake",
+  "target_directory": "/fake/target",
+  "version": 1
+}
