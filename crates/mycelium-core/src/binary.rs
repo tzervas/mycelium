@@ -24,6 +24,20 @@
 //! **logical** (unsigned) reading — same unsigned bitvector codec as [`div_rem`]. Shift-amount `>=`
 //! width is an explicit never-silent refusal (never UB, wrap, or a silently-zeroed result); the
 //! **arithmetic** (sign-extending) right shift is the distinct signed op M-767 lands later.
+//!
+//! [`add`]/[`sub`]/[`neg`] (M-766, `enb` Gap B) complete the **shared** two's-complement arithmetic
+//! set RFC-0033 §4.1.2 names (`add`/`sub`/`mul`/`neg` — identical bit pattern across the signed/
+//! unsigned reading, so they MAY be a single named op each; ADR-028). They read operands through the
+//! same signed [`bits_to_int`]/[`int_to_bits`] codec [`mul`] already uses, and refuse an out-of-`B_n`
+//! result explicitly — never a silent wrap. **Inventory note (verified against the registry before
+//! landing these, per the M-766 task):** the pre-existing `bit.add`/`bit.sub` (kpr/E19-1, RFC-0032
+//! D2) are a **different, unsigned-committed** family — their overflow criterion is unsigned
+//! carry/borrow-out, which *under-refuses* relative to the signed range `B_n` (e.g. at `Binary{4}`,
+//! `5 + 3 = 8` is unsigned-in-range `[0,15]` but signed-out-of-range `B_4 = [-8,7]`), so they cannot
+//! stand in for the two's-complement `add`/`sub` this RFC names. [`mul`] (M-887) already established
+//! the `bin.*`-namespaced, signed-committed reading this module follows; [`add`]/[`sub`] complete
+//! that pair and [`neg`] is the genuinely-missing fourth member (there is no existing unsigned
+//! "negate" to reconcile against — negation is inherently a signed concept).
 
 /// The signed two's-complement value of an MSB-first bit string. The empty string is `0`.
 #[must_use]
@@ -244,4 +258,87 @@ pub fn shr(a: &[bool], shift: &[bool]) -> Option<Vec<bool>> {
     let av = bits_to_uint(a);
     let result = av >> k; // k < n <= 64, safe unsigned/logical right shift.
     uint_to_bits(result, n)
+}
+
+/// The current [`add`]/[`sub`]/[`neg`] operand-width cap (`n ≤ 64`) — exact via the `i64` two's-
+/// complement codec ([`bits_to_int`]/[`int_to_bits`]), the same cap those functions already declare.
+/// Shared by all three two's-complement arithmetic ops, mirroring how [`DIV_MAX_WIDTH`] is shared by
+/// [`div_rem`]'s quotient/remainder pair and [`SHIFT_MAX_WIDTH`] by [`shl`]/[`shr`].
+pub const TC_MAX_WIDTH: usize = 64;
+
+/// Two's-complement fixed-width add of two equal-width `n`-bit two's-complement integers (MSB-first),
+/// for `n ≤ `[`TC_MAX_WIDTH`]. `None` when `a.len() != b.len()`, `a.len() > TC_MAX_WIDTH`, or the
+/// exact sum does not fit `B_n = [−2^(n-1), 2^(n-1) − 1]` — never-silent fixed-width overflow
+/// (RFC-0033 §4.1.2/§4.1.3), mirroring [`mul`]'s contract. `a`/`b` are widened to `i128` before
+/// summing so the addition itself never overflows the intermediate (`|a|,|b| ≤ 2^63` ⇒ `|a+b| ≤
+/// 2^64 « i128::MAX`); only the final range check against `B_n` can refuse.
+#[must_use]
+pub fn add(a: &[bool], b: &[bool]) -> Option<Vec<bool>> {
+    if a.len() != b.len() || a.len() > TC_MAX_WIDTH {
+        return None;
+    }
+    let n = a.len() as u32;
+    if n == 0 {
+        return Some(Vec::new()); // B_0 = {0}; 0 + 0 = 0, trivially in range.
+    }
+    let av = i128::from(bits_to_int(a));
+    let bv = i128::from(bits_to_int(b));
+    let sum = av + bv; // never overflows i128 — see the doc comment above.
+    let lo = -(1i128 << (n - 1));
+    let hi = (1i128 << (n - 1)) - 1;
+    if sum < lo || sum > hi {
+        return None; // the exact sum does not fit B_n — never-silent overflow.
+    }
+    // Safe narrow: the range check above puts `sum` inside B_n ⊆ i64's range (n ≤ 64).
+    int_to_bits(sum as i64, n)
+}
+
+/// Two's-complement fixed-width subtract (`a − b`) of two equal-width `n`-bit two's-complement
+/// integers (MSB-first), for `n ≤ `[`TC_MAX_WIDTH`]. Same never-silent contract as [`add`]: `None` on
+/// a width mismatch/over-cap width, or when the exact difference does not fit `B_n`.
+#[must_use]
+pub fn sub(a: &[bool], b: &[bool]) -> Option<Vec<bool>> {
+    if a.len() != b.len() || a.len() > TC_MAX_WIDTH {
+        return None;
+    }
+    let n = a.len() as u32;
+    if n == 0 {
+        return Some(Vec::new()); // B_0 = {0}; 0 - 0 = 0, trivially in range.
+    }
+    let av = i128::from(bits_to_int(a));
+    let bv = i128::from(bits_to_int(b));
+    let diff = av - bv; // never overflows i128 — |av|,|bv| <= 2^63.
+    let lo = -(1i128 << (n - 1));
+    let hi = (1i128 << (n - 1)) - 1;
+    if diff < lo || diff > hi {
+        return None; // the exact difference does not fit B_n — never-silent overflow.
+    }
+    int_to_bits(diff as i64, n)
+}
+
+/// Two's-complement fixed-width negate (`−a`) of an `n`-bit two's-complement integer (MSB-first), for
+/// `n ≤ `[`TC_MAX_WIDTH`]. `None` when `a.len() > TC_MAX_WIDTH`, or when the exact negation does not
+/// fit `B_n` — the classic two's-complement negate-overflow edge: `B_n`'s minimum value `−2^(n-1)`
+/// has no positive counterpart in `B_n` (its magnitude `2^(n-1)` exceeds the maximum `2^(n-1) − 1`),
+/// so negating it is an explicit refusal, never a silent wrap back to itself. The genuinely-missing
+/// member of the shared two's-complement set (§4.1.2) — `add`/`sub`/`mul` were already landed (`kpr`'s
+/// unsigned `bit.add`/`bit.sub`, reconciled as a *different* family in the module doc comment above,
+/// and M-887's signed [`mul`]); there is no pre-existing "negate" to reconcile against.
+#[must_use]
+pub fn neg(a: &[bool]) -> Option<Vec<bool>> {
+    if a.len() > TC_MAX_WIDTH {
+        return None;
+    }
+    let n = a.len() as u32;
+    if n == 0 {
+        return Some(Vec::new()); // B_0 = {0}; -0 = 0, trivially in range.
+    }
+    let av = i128::from(bits_to_int(a));
+    let negated = -av; // never overflows i128 — |av| <= 2^63.
+    let lo = -(1i128 << (n - 1));
+    let hi = (1i128 << (n - 1)) - 1;
+    if negated < lo || negated > hi {
+        return None; // the exact negation does not fit B_n — never-silent overflow (the MIN case).
+    }
+    int_to_bits(negated as i64, n)
 }

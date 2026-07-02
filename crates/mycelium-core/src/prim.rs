@@ -166,10 +166,13 @@ impl PrimTable {
     /// comparison prims (`cmp.eq`/`cmp.lt`, RFC-0032 D1), the never-silent binary arithmetic
     /// (`bit.add`/`bit.sub`, RFC-0032 D2), the never-silent two's-complement multiply
     /// (`bin.mul`, RFC-0033 §4.1.2/§4.1.3, M-887 — the first Gap-B `enb` prim), the never-silent
-    /// **unsigned** division/remainder (`bin.div`/`bin.rem`, RFC-0033 §4.1.2/§4.1.3, M-888), and the
+    /// **unsigned** division/remainder (`bin.div`/`bin.rem`, RFC-0033 §4.1.2/§4.1.3, M-888), the
     /// never-silent **logical** left/right shift (`bin.shl`/`bin.shr`, RFC-0033 §4.1.2/§4.1.3,
-    /// M-889 — the signed/arithmetic variants ride M-767 under distinct names). Every entry is
-    /// `intrinsic = Exact`; all are width-`Uniform`
+    /// M-889 — the signed/arithmetic variants ride M-767 under distinct names), and the never-silent
+    /// two's-complement `add`/`sub`/`neg` (`bin.add`/`bin.sub`/`bin.neg`, RFC-0033 §4.1.2/§4.1.3,
+    /// M-766 — completes the shared two's-complement op set `add`/`sub`/`mul`/`neg`; distinct from
+    /// the pre-existing unsigned `bit.add`/`bit.sub`, which under-refuse relative to the signed
+    /// domain). Every entry is `intrinsic = Exact`; all are width-`Uniform`
     /// **except** `cmp.eq`/`cmp.lt`, which are width-`Collapse` (operand width → `Binary{1}`). This is
     /// the single source of truth the `mycelium-interp` intrinsic and the `mycelium-l1` surface table
     /// are checked against.
@@ -237,6 +240,16 @@ impl PrimTable {
         // (sign-extending) right shift is the distinct signed op M-767 lands under its own name.
         t.insert("bin.shl", exact(vec![Binary, Binary], Binary));
         t.insert("bin.shr", exact(vec![Binary, Binary], Binary));
+        // RFC-0033 §4.1.2/§4.1.3 (M-766, `enb` Gap B): never-silent two's-complement `add`/`sub`/
+        // `neg` — completes the *shared* two's-complement arithmetic set `bin.mul` (M-887) started.
+        // Distinct from the pre-existing `bit.add`/`bit.sub` (RFC-0032 D2, unsigned-committed
+        // overflow criterion — verified insufficient for the signed domain: e.g. `Binary{4}`'s
+        // `5 + 3 = 8` is unsigned-in-range `[0,15]` but signed-out-of-range `B_4 = [-8,7]`).
+        // `intrinsic = Exact` (total/decidable over the in-range domain; an out-of-range sum/
+        // difference/negation is a runtime, not intrinsic, refusal — same posture as `bin.mul`).
+        t.insert("bin.add", exact(vec![Binary, Binary], Binary));
+        t.insert("bin.sub", exact(vec![Binary, Binary], Binary));
+        t.insert("bin.neg", exact(vec![Binary], Binary));
         // DN-41 (M-798): never-silent `Binary` width-cast (zero-extend widen / checked narrow).
         // `intrinsic = Exact` (the widen/identity/in-range-narrow result equals the unsigned value
         // exactly; a lossy narrow is a never-silent *runtime* refusal, not a non-Exact intrinsic).
