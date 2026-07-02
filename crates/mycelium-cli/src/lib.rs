@@ -2,9 +2,9 @@
 //!
 //! A single front door over the Mycelium toolchain: `myc init` scaffolds a phylum, `myc build`
 //! packages it (the content-addressed spore — M-368), `myc check` type-checks it (parse + check via
-//! the L1 front-end), `myc test` runs the available verification, `myc run` is the (honestly
-//! not-yet-wired) execution entry point, and `myc --stream` parses a `;`-delimited component stream
-//! from stdin or a file (M-820 / DN-57).
+//! the L1 front-end), `myc test` runs the available verification, `myc run` executes a
+//! **single-nodule** project through the reference interpreter (M-908 v0; multi-nodule is M-909),
+//! and `myc --stream` parses a `;`-delimited component stream from stdin or a file (M-820 / DN-57).
 //!
 //! ## Error-message quality bar (DN-22 / RFC-0013)
 //! Every user-visible failure is a structured [`Report`]: a stable `code`, a human-readable
@@ -15,12 +15,16 @@
 //! ## Honesty about scope (`Declared`)
 //! `init` / `build` / `check` do real end-to-end work. `test` runs `check` and is explicit that a
 //! dedicated `.myc` unit-test *runner* does not exist yet (it does not pretend to have run tests
-//! that were never written). `run` is **not yet wired** — the project→interpreter pipeline is later
-//! work — and says so with an actionable [`Report`] instead of a stub that silently does nothing.
-//! `--stream` is a **token-driven** component splitter: it lexes the source once
-//! ([`mycelium_l1::lexer::lex`]), segments the token stream at `nodule` header tokens (`;` as
-//! `Tok::Semi` is the per-item terminator — DN-57), and parse each component slice with
-//! [`mycelium_l1::parse`]. Splitting on *tokens* (not raw text) makes it comment-/string-safe by
+//! that were never written). `run` (M-908 v0) executes a project whose directory contains **exactly
+//! one** `.myc` source: parse → [`check_nodule`] → [`elaborate`](mycelium_l1::elaborate) its nullary
+//! `main` to closed L0 Core IR → [`mycelium_interp::Interpreter::eval`]. Zero or multiple `.myc`
+//! sources, a missing `main`, a program outside the evaluation-complete fragment, or an interpreter
+//! failure are each an explicit [`Report`] — never a silent narrowing to "the first file found" and
+//! never a stub that pretends to have run (G2/VR-5). See [`run`] for the full v0 scope note
+//! (multi-nodule loading/linking is M-909). `--stream` is a **token-driven** component splitter: it
+//! lexes the source once ([`mycelium_l1::lexer::lex`]), segments the token stream at `nodule` header
+//! tokens (`;` as `Tok::Semi` is the per-item terminator — DN-57), and parse each component slice
+//! with [`mycelium_l1::parse`]. Splitting on *tokens* (not raw text) makes it comment-/string-safe by
 //! construction: a `nodule`/`;` inside a `//` comment is never a token, so it can never mis-split
 //! (DN-57 §2). The per-component parse bounds parse state to one component at a time. **v0 I/O is
 //! whole-input-buffered** (`Declared`); true per-`;`-component incremental I/O would require a
@@ -31,7 +35,7 @@ use std::path::{Path, PathBuf};
 
 use mycelium_l1::lexer::lex;
 use mycelium_l1::token::{Pos, Spanned, Tok};
-use mycelium_l1::{check_nodule, parse, ParseError};
+use mycelium_l1::{check_nodule, elaborate, parse, ParseError};
 use mycelium_proj::parse_manifest;
 use mycelium_spore::{build_spore, explain, Spore};
 
@@ -218,23 +222,142 @@ pub fn check_project(manifest_path: &Path) -> Result<CheckReport, Report> {
     Ok(report)
 }
 
-/// `myc run` — **not yet wired** (honest, never-silent). The project→interpreter execution pipeline
-/// is later work; this returns an actionable [`Report`] rather than a stub that silently does nothing
-/// (VR-5 / G2). The interpreter ([`mycelium_interp`](mycelium-interp)) evaluates Core IR, but the
-/// surface-project→run path is not assembled in v0.
+/// The outcome of a successful `myc run` (M-908 v0): which source ran, which entry function was
+/// executed, and a rendering of the interpreter's result.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RunReport {
+    /// The `.myc` source file that ran, relative to the project directory.
+    pub source: String,
+    /// The entry function name that was executed (v0 convention: `main`).
+    pub entry: String,
+    /// A `{:?}`-rendered form of the interpreter's result value (`Declared` — a v0 debug rendering,
+    /// not a stable/parseable format; a dedicated value-printer is follow-up work, not silently
+    /// approximated here).
+    pub rendered: String,
+}
+
+/// `myc run` — execute a **single-nodule** project through the reference interpreter (M-908 v0).
+///
+/// The project directory (containing `manifest_path`) must hold exactly **one** `.myc` source file:
+/// multi-nodule project loading/linking is later work (M-909), and a directory with zero or more
+/// than one `.myc` source is refused with an explicit [`Report`] — never silently narrowed to "the
+/// first file found" (G2). The single source is parsed, type-checked ([`check_nodule`]), and its
+/// nullary `main` function [`elaborate`]d to a closed L0 Core IR node — the evaluation-complete
+/// fragment (RFC-0007 §4.6) — then run on the trusted reference interpreter
+/// ([`mycelium_interp::Interpreter`]).
+///
+/// ## Scope (`Declared`, v0)
+/// - **Entry convention:** the executed function must be named `main` and take no arguments (the
+///   convention already used by the differential/conformance corpora) — a missing `main` is an
+///   explicit refusal, never a silent pick of some other function.
+/// - **Result fragment:** v0 observes only **representation-value** results
+///   ([`mycelium_interp::Interpreter::eval`]); an entry that evaluates to an algebraic **data**
+///   value (r3, RFC-0011) is refused rather than rendered ad hoc — a dedicated data-value printer is
+///   follow-up work.
+/// - **Swap engine:** v0 runs on the interpreter's default identity swap engine (same-representation
+///   swap only, [`mycelium_interp::Interpreter::default`]); a program invoking the certified
+///   binary↔ternary swap surfaces the interpreter's own explicit `UnsupportedSwap` error — never a
+///   silent identity substitution for a real cross-paradigm conversion.
 ///
 /// # Errors
-/// Always returns [`Report`] (`myc-run-unwired`, exit 70) — `run` has no honest success path yet.
-pub fn run(_manifest_path: &Path) -> Result<(), Report> {
-    Err(Report::new(
-        "myc-run-unwired",
-        "running a phylum is not yet wired into `myc`",
-        70,
-    )
-    .help(
-        "the project→interpreter execution pipeline is later work; today use `myc check` to \
-         type-check and `myc build` to package the spore",
-    ))
+/// [`Report`] on: no/ambiguous `.myc` source (`myc-run-no-source` / `myc-run-multi-nodule`), a
+/// parse/check failure (`myc-parse` / `myc-check`), a missing `main` (`myc-run-no-entry`), a program
+/// outside the evaluation-complete fragment (`myc-run-residual`), or an interpreter-evaluation
+/// failure (`myc-run-eval`) — every path is an explicit, located [`Report`], never a panic (G2).
+pub fn run(manifest_path: &Path) -> Result<RunReport, Report> {
+    let (_, project_dir) = load_manifest(manifest_path)?;
+    let sources =
+        mycelium_cli_common::walk_myc(&project_dir).map_err(|e| Report::new("myc-io", e, 66))?;
+
+    let source_path = match sources.as_slice() {
+        [] => {
+            return Err(Report::new(
+                "myc-run-no-source",
+                format!("no `.myc` source found under {}", project_dir.display()),
+                66,
+            )
+            .help("add a `.myc` source file to the project"));
+        }
+        [p] => p,
+        multiple => {
+            return Err(Report::new(
+                "myc-run-multi-nodule",
+                format!(
+                    "{} `.myc` sources found under {} — multi-nodule `myc run` is not yet wired",
+                    multiple.len(),
+                    project_dir.display()
+                ),
+                70,
+            )
+            .help(
+                "v0 `myc run` executes a single-nodule project only; multi-nodule project loading \
+                 and nodule linking is tracked as follow-up work (M-909)",
+            ));
+        }
+    };
+
+    let rel = source_path
+        .strip_prefix(&project_dir)
+        .unwrap_or(source_path)
+        .display()
+        .to_string();
+
+    let text = std::fs::read_to_string(source_path)
+        .map_err(|e| Report::new("myc-io", format!("{}: {e}", source_path.display()), 66))?;
+
+    let nodule = parse(&text).map_err(|ParseError { pos, message }| {
+        Report::new("myc-parse", message, 65)
+            .at(format!("{rel}:{}:{}", pos.line, pos.col))
+            .help("fix the syntax error at the indicated position")
+    })?;
+
+    let env = check_nodule(&nodule).map_err(|ce| {
+        Report::new("myc-check", ce.to_string(), 65)
+            .at(rel.clone())
+            .help("resolve the type error reported above (see `myc check`)")
+    })?;
+
+    const ENTRY: &str = "main";
+    if env.fn_decl(ENTRY).is_none() {
+        let mut available: Vec<&str> = env.fns.keys().map(String::as_str).collect();
+        available.sort_unstable();
+        let list = if available.is_empty() {
+            "(none declared)".to_owned()
+        } else {
+            available.join(", ")
+        };
+        return Err(Report::new(
+            "myc-run-no-entry",
+            format!("no nullary `{ENTRY}` function in {rel} — v0 `myc run` executes `{ENTRY}`"),
+            65,
+        )
+        .at(rel.clone())
+        .help(format!(
+            "declare a nullary `fn {ENTRY}() => …` entry point; declared function(s): {list}"
+        )));
+    }
+
+    let node = elaborate(&env, ENTRY).map_err(|ee| {
+        Report::new("myc-run-residual", ee.to_string(), 70)
+            .at(rel.clone())
+            .help(
+                "the program uses a construct outside the evaluation-complete fragment \
+                 (RFC-0007 §4.6); `myc run` v0 executes only the elaborated fragment",
+            )
+    })?;
+
+    let interp = mycelium_interp::Interpreter::default();
+    let value = interp.eval(&node).map_err(|ee| {
+        Report::new("myc-run-eval", ee.to_string(), 65)
+            .at(rel.clone())
+            .help("the program failed during interpreted evaluation — see the error above")
+    })?;
+
+    Ok(RunReport {
+        source: rel,
+        entry: ENTRY.to_owned(),
+        rendered: format!("{value:?}"),
+    })
 }
 
 /// The outcome of a single nodule-component parse in [`stream_parse`].

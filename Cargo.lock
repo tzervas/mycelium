@@ -265,6 +265,7 @@ name = "mycelium-cli"
 version = "0.0.0"
 dependencies = [
  "mycelium-cli-common",
+ "mycelium-interp",
  "mycelium-l1",
  "mycelium-proj",
  "mycelium-spore",

@@ -17,6 +17,9 @@ mycelium-proj = { path = "../mycelium-proj" }
 mycelium-spore = { path = "../mycelium-spore" }
 # The L1 front-end: parse + type-check, so `myc check` is a real (not stubbed) verification.
 mycelium-l1 = { path = "../mycelium-l1" }
+# The trusted reference interpreter (M-908): `myc run` v0 elaborates the checked nodule to closed
+# L0 Core IR and evaluates it here — the same trusted execution path the differential suite pins.
+mycelium-interp = { path = "../mycelium-interp" }
 # The shared CLI substrate (M-643): the `.myc` source walk + read helpers, reused not re-rolled.
 mycelium-cli-common = { path = "../mycelium-cli-common" }
 
