@@ -27,7 +27,7 @@ use mycelium_select::{
     SelectionInputs, SelectionPolicy,
 };
 
-use crate::{
+use mycelium_vsa::{
     factorize, CleanupMemory, Match, ResonatorParams, ResonatorTrace, VsaError, VsaModel,
     MAPI_RESONATOR_PROFILE,
 };

@@ -50,7 +50,7 @@
 tier_order = ["core", "std", "tools"]
 
 [meta]
-derived_from = "cargo metadata --format-version 1, workspace at dev@388a865, 2026-07-02; mycelium-rt-abi added + mycelium-std-runtime/mycelium-mlir re-derived by hand (same formula) for the M-883/M-884 runtime-ABI seam extraction, 2026-07-02"
+derived_from = "cargo metadata --format-version 1, workspace at dev@388a865, 2026-07-02; mycelium-rt-abi added + mycelium-std-runtime/mycelium-mlir re-derived by hand (same formula) for the M-883/M-884 runtime-ABI seam extraction, 2026-07-02; M-971 (2026-07-02): mycelium-vsa-decode added (RFC-0010 decode-selection seam extracted UP out of mycelium-vsa) + mycelium-std-conformance added (std port-differential tests relocated out of mycelium-l1) + mycelium-vsa re-derived by hand 2->1 (it now depends only on mycelium-core, having shed its mycelium-select dep) — all same-formula, breaking the {interp,select,vsa} cycle and the 9 core->std l1 dev-edges without a whitelist (DN-68 §5 extraction remedy)"
 strata_guarantee = "Empirical (point-in-time topological derivation over the NORMAL-dep graph; not re-derived live — see file header)"
 tiers_guarantee = "Declared (manually-asserted architectural intent; flagged per VR-5, not derived from the graph)"
 basis_ref = "DN-68 (docs/notes/DN-68-Acyclic-Deps-Invariant.md) — the acyclic-deps invariant + change-procedure"
@@ -105,6 +105,7 @@ mycelium-std-recover = 3
 mycelium-std-runtime = 4
 mycelium-std-select = 2
 mycelium-std-spore = 7
+mycelium-std-conformance = 0
 mycelium-std-swap = 4
 mycelium-std-sys = 0
 mycelium-std-sys-host = 3
@@ -114,7 +115,14 @@ mycelium-std-text = 2
 mycelium-std-time = 2
 mycelium-std-vsa = 3
 mycelium-transpile = 0
-mycelium-vsa = 2
+# M-971: 2 -> 1. Shed the `mycelium-select` dep (the RFC-0010 decode-selection layer relocated to
+# mycelium-vsa-decode), so mycelium-vsa now depends only on mycelium-core (stratum 0) -> stratum 1.
+# This is what makes `mycelium-interp (2) -> mycelium-vsa (1)` downward again and removes the
+# interp<->vsa<->select cycle (no whitelist — a structural re-derivation, DN-68 §5).
+mycelium-vsa = 1
+# M-971: the RFC-0010 decode-methodology selection seam, extracted UP out of mycelium-vsa. Depends on
+# mycelium-vsa (1) + mycelium-select (1) + mycelium-core (0) -> 1 + max(1,1,0) = 2.
+mycelium-vsa-decode = 2
 xtask = 5
 
 # ---------------------------------------------------------------------------------------------
@@ -146,6 +154,10 @@ mycelium-select = "core"
 mycelium-spore = "core"
 mycelium-stack = "core"
 mycelium-std-cmp = "std"
+# M-971: test-only crate hosting the relocated `lib/std/*.myc` port-differentials; `std` tier because
+# it depends on the `std`-tier oracle crates (its downward deps on the `core`-tier L1 stack are
+# tier-legal). A leaf that nothing depends on — no cycle.
+mycelium-std-conformance = "std"
 mycelium-std-collections = "std"
 mycelium-std-content = "std"
 mycelium-std-core = "std"
@@ -173,6 +185,8 @@ mycelium-std-time = "std"
 mycelium-std-vsa = "std"
 mycelium-transpile = "core"
 mycelium-vsa = "core"
+# M-971: the RFC-0010 decode-selection seam (extracted out of mycelium-vsa) — runtime substrate.
+mycelium-vsa-decode = "core"
 xtask = "tools"
 
 # ---------------------------------------------------------------------------------------------

@@ -346,15 +346,6 @@ dependencies = [
  "mycelium-numerics",
  "mycelium-select",
  "mycelium-stack",
- "mycelium-std-core",
- "mycelium-std-diag",
- "mycelium-std-error",
- "mycelium-std-recover",
- "mycelium-std-select",
- "mycelium-std-spore",
- "mycelium-std-swap",
- "mycelium-std-ternary",
- "mycelium-std-testing",
 ]
 
 [[package]]
@@ -488,6 +479,26 @@ version = "0.0.0"
 dependencies = [
  "mycelium-core",
  "mycelium-std-core",
+]
+
+[[package]]
+name = "mycelium-std-conformance"
+version = "0.0.0"
+dependencies = [
+ "mycelium-cert",
+ "mycelium-core",
+ "mycelium-interp",
+ "mycelium-l1",
+ "mycelium-mlir",
+ "mycelium-std-core",
+ "mycelium-std-diag",
+ "mycelium-std-error",
+ "mycelium-std-recover",
+ "mycelium-std-select",
+ "mycelium-std-spore",
+ "mycelium-std-swap",
+ "mycelium-std-ternary",
+ "mycelium-std-testing",
 ]
 
 [[package]]
@@ -723,9 +734,17 @@ name = "mycelium-vsa"
 version = "0.0.0"
 dependencies = [
  "mycelium-core",
- "mycelium-select",
  "proptest",
  "serde_json",
+]
+
+[[package]]
+name = "mycelium-vsa-decode"
+version = "0.0.0"
+dependencies = [
+ "mycelium-core",
+ "mycelium-select",
+ "mycelium-vsa",
 ]
 
 [[package]]
