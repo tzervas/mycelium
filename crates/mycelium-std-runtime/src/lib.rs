@@ -17,17 +17,21 @@
 //! - [`scheduler::Scheduler`] (M-709 / M-861) — a per-worker-deque work-stealing OS-thread pool
 //!   with demand-signalled, bounded backpressure (RFC-0008 RT1·RT2·RT3·§4.3); the RT2
 //!   sequentialization differential is property-tested (`Empirical`). **Relocated to
-//!   `mycelium-sched`** (E25/M-862): this crate also depends on `mycelium-interp` (below), so the
-//!   Scheduler moved to a foundational crate below `mycelium-interp` to let the interpreter use it
-//!   too, without an `interp <-> std-runtime` cycle. [`scheduler`] here is a thin re-export —
-//!   see its module docs and `mycelium-sched`'s crate docs for the dependency-graph rationale.
+//!   `mycelium-sched`** (E25/M-862): a foundational crate below `mycelium-interp`, so the
+//!   interpreter can use it too, without an `interp <-> std-runtime` cycle. [`scheduler`] here is
+//!   a thin re-export — see its module docs and `mycelium-sched`'s crate docs for the
+//!   dependency-graph rationale.
 //! - [`dataflow::run_dataflow`] / [`dataflow::run_dataflow_scheduled`] (M-711) — deadlock-freedom
 //!   for communicating tasks: a no-progress sweep is an explicit [`task::Deadlock`], never a silent
 //!   hang (G2 / RFC-0008 §4.3), checked on both the cooperative path and the OS-thread pool.
 //! - [`supervision`] (M-713) — structured-concurrency cancellation ([`supervision::CancelTree`]),
 //!   explicit per-child outcome collection ([`supervision::run_supervised`]), and an EXPLAIN-able
 //!   bounded-cascade restart policy ([`supervision::supervise_with_restart`]) (RFC-0008 RT4·RT7),
-//!   reusing the M-356 composition kernel from `mycelium-interp`.
+//!   reusing the M-356 composition kernel from `mycelium-interp`. **Relocated to `mycelium-rt-abi`**
+//!   (M-883/M-884): a foundational crate below `mycelium-mlir`, so the AOT tier can use it too,
+//!   without an upward `mycelium-mlir -> mycelium-std-runtime` edge. [`supervision`] here is a
+//!   thin re-export — see its module docs and `mycelium-rt-abi`'s crate docs for the
+//!   dependency-graph rationale.
 //!
 //! # Reserved vocabulary (Glossary ⟂)
 //!
@@ -48,7 +52,8 @@
 //! # Memory model (E12 MEM-1/MEM-2/MEM-3 + live wiring)
 //!
 //! - [`reclamation`] (MEM-1) — the reclamation EXPLAIN/audit record and never-silent sink
-//!   contract (RFC-0027 §9).
+//!   contract (RFC-0027 §9). **Relocated to `mycelium-rt-abi`** (M-883/M-884), for the same
+//!   upward-tier-edge reason as [`supervision`] above; [`reclamation`] here is a thin re-export.
 //! - [`rc`] (MEM-2) — non-atomic intra-hypha RC cell + `rc`-probe decision (DN-32 §2.2).
 //! - [`region`] (MEM-3) — region-based batched scope-exit reclamation (DN-32 §2.3 / RFC-0027
 //!   §10.3): [`region::Region`] accumulates deferred entries and bulk-emits `ScopeExit` records
@@ -70,7 +75,17 @@
 //! Accepted, v0 R1 surface (2026-06-21)) and asserted by its guarantee-matrix table, is the **frozen baseline** per
 //! [DN-66](../../../docs/notes/DN-66-Stdlib-Stable-API-Freeze-And-Rust-Crate-Retirement-Status.md).
 //! A future breaking change here needs a spec amendment + changelog entry, not a silent edit (G2).
-//! Unlike the other 25 `mycelium-std-*` crates, this one is **load-bearing** (consumed directly by `mycelium-mlir`), not reference-only — it is never a retirement candidate under RFC-0031 D6 while that dependency exists (DN-66 S4.c).
+//! Unlike the other 25 `mycelium-std-*` crates, this one was **load-bearing** (consumed directly by
+//! `mycelium-mlir`), not reference-only, per [DN-66 §4.c](../../../docs/notes/DN-66-Stdlib-Stable-API-Freeze-And-Rust-Crate-Retirement-Status.md).
+//!
+//! **FLAG (M-883/M-884, this crate's own change):** the specific basis for DN-66 §4.c —
+//! `mycelium-mlir` depending on this crate *directly* — no longer holds after the runtime-ABI seam
+//! extraction: `mycelium-mlir` now consumes the relocated `reclamation`/`supervision` surfaces via
+//! `mycelium-rt-abi` (below `mycelium-mlir` in the dependency graph) instead of via this crate, and
+//! `mycelium-std-runtime` is removed from its `Cargo.toml` entirely. Whether this crate remains
+//! load-bearing (e.g. via `mycelium-bench`, or other v0 R1 surface usage) or reverts to an ordinary
+//! retirement candidate under RFC-0031 D6 is an **orchestrator/maintainer-level re-review of
+//! DN-66 §4.c**, not decided here — this note only records that its stated factual basis changed.
 #![forbid(unsafe_code)]
 
 pub mod colony;
