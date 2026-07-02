@@ -40,7 +40,9 @@ the prim lane (B → C → A → E) is **serial on `crates/mycelium-interp/src/p
 kickoffs README §Parallelization) — run those leaves one-at-a-time, land + pull down before the
 next. The parallel tracks (`myc run` in `mycelium-cli`, `hash.*`, mesh research doc) are disjoint
 by directory and run concurrently. **The string-literal tasks touch the L1 lexer — they join the
-serial lane**, they are "parallel" only in *dependency* terms. One isolated worktree per leaf
+serial lane**, they are "parallel" only in *dependency* terms. (Cross-kickoff: `grm`'s
+implementation slots — M-915/M-916/M-921/M-923 — serialize against this **same** lane where the two
+kickoffs overlap; one L1 surgery in flight at a time, as `grm`'s prerequisites state.) One isolated worktree per leaf
 (mitigation #11); commit/push split (#12); scoped PRs to `dev` via `/pr-land`.
 
 ## Ordering
@@ -102,7 +104,7 @@ overlaps the B/C lane.
 
 | M-id (proposed) | Task | User story | Definition of Done | Model | depends_on |
 |---|---|---|---|---|---|
-| M-901 | **Confirm the execution model**: the DN-54 §10 derive-site `consume` design-pass (M-824) as the target — a short confirm-memo for the maintainer (confirm, THEN implement; readiness §0 item 5 notes no execution issue exists) | As the maintainer, I want the consume-execution model confirmed before code, so that the affine semantics aren't improvised mid-implementation | Memo with the model, alternatives, and a recommendation; maintainer sign-off recorded; FLAGs listed | Sonnet | — (design; parallel with A) |
+| M-901 | **Confirm the execution model**: the DN-54 §10 derive-site `consume` design-pass (M-824) as the target — a short confirm-memo for the maintainer (confirm, THEN implement; readiness §0 item 5 notes no execution issue exists) | As the maintainer, I want the consume-execution model confirmed before code, so that the affine semantics aren't improvised mid-implementation | Memo with the model, alternatives, and a recommendation; maintainer sign-off recorded; FLAGs listed; **cross-checked against `grm` M-918's DN-54 dossier** (same consume model — the two kickoffs must not fork it; FLAG if they diverge) | Sonnet | — (design; parallel with A) |
 | M-902 | **`Substrate` v0 value form** — the value-model plumbing (creation, passage, inspection; never-silent errors) | As a stdlib author, I want `Substrate` values to exist at runtime, so that `fs`/`io`'s handle model has something to hold | Value form lands; invalid states unrepresentable or explicit errors; kernel/interp tests green | Sonnet | M-901 (confirmed model) |
 | M-903 | **Affine tracker** — `consume` checked semantics (use-once enforcement; double-consume/leak → explicit diagnostics) | As a language user, I want double-use of a consumed handle to be a compile/runtime error with a clear message, so that resource bugs are impossible to write silently | Tracker enforces use-once; property test (no path consumes twice undetected); reject-case conformance; diagnostics name the violation site | Sonnet | M-902 |
 | M-904 | **Lift the staged `Residual`** — `Substrate`/`consume` elaborate to *executing* forms in the interpreter; conformance accept + reject | As a stdlib author, I want `fs`/`io`'s affine-handle model to actually run, so that those modules become portable | The elab `Residual` for this fragment is gone (or explicitly narrowed + recorded); end-to-end accept cases run; reject cases still refuse cleanly | Sonnet | M-903 |
