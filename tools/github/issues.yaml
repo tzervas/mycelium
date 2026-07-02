@@ -8508,6 +8508,14 @@ issues:
       DoD: forage/backbone promoted from reserved-not-active to active per a future R2 RFC; the
       capture/set surface specified as EXPLAIN-able + provenance-tagged (no black box). See
       research/27-dn64-ergonomics-rnd-RECORD.md.
+
+      INTEGRATOR NOTE (2026-07-02, integration-reconcile): this scope was SPLIT by the Phase-I wave.
+      DN-70 §7 defined the D-lite split — its D1 slice landed as M-906: `forage` is now active as
+      the `@forage(policy)` hypha placement annotation (EXPLAIN-able, provenance-tagged). `backbone`
+      remains a landed DECISION only (DN-70 §4/FLAG-D3, M-907), still reserved-not-active. The
+      REMAINDER — full forage/backbone activation as runtime constructs + the mechanized
+      SelectionPolicy capture/set surface — is the R2 lane, whose split is now recorded in DN-78
+      (M-962…M-964). This issue stays `needs-design` as the umbrella for that R2 remainder.
   - id: M-829
     title: "M-829 -- Tractable composition rule for approximation bounds (E2-1)"
     milestone: "Phase 2 — Full Unification & Verified Swaps"
@@ -8849,6 +8857,13 @@ issues:
       on mismatch); (6) per-colony posture in a mesh (own TrustRoot). Gives M-838 (OQ-M scoping) its shape.
       DoD: RFC-0038 §8.4-§8.7 ratified; the config surface + resolution algorithm chosen (the residual R&D
       under §K.2/§M); the granularity/scope/override + deviation-manifest realized Rust-first; never-silent.
+
+      INTEGRATOR NOTE (2026-07-02, integration-reconcile): the Phase-I `frz` wave built ONLY the
+      `whole` enforcement grain (RFC-0038 §8.4/§8.6) via M-961 (DN-77 §4 confirmed subset;
+      Declared->Enacted for that slice). This issue COORDINATES WITH — it is NOT duplicated by —
+      that built subset: M-847 remains the fuller design (the `module`/`call` grains, the full
+      scope-resolution hierarchy + auto-decoration + override, and the never-silent deviation
+      manifest), which M-961 deliberately left `Declared`/unbuilt. Stays `needs-design`.
   - id: M-848
     title: "M-848 -- Scoped-toolchain setup automation (just setup-scoped) per DN-65"
     milestone: "Phase 8 — Toolchain & Release Engineering"
@@ -9509,9 +9524,11 @@ issues:
   - id: M-887
     title: "bin.mul prim — two's-complement multiply with never-silent overflow"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:numerics, priority:P1, status:todo]
+    labels: [phase:5, type:feature, area:numerics, priority:P1, status:done]
     epic: E28-1
     depends_on: []
+    landed_date: 2026-07-02
+    landed_basis: "bin.mul prim (two's-complement multiply, never-silent overflow) registered + typed in crates/mycelium-interp/src/prims.rs; property + conformance green. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - corpus:RFC-0033
       - src:crates/mycelium-interp/src/prims.rs
@@ -9532,9 +9549,11 @@ issues:
   - id: M-888
     title: "bin.div + bin.rem prims — division with explicit div-by-zero error"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:numerics, priority:P1, status:todo]
+    labels: [phase:5, type:feature, area:numerics, priority:P1, status:done]
     epic: E28-1
     depends_on: [M-887]
+    landed_date: 2026-07-02
+    landed_basis: "bin.div + bin.rem prims with explicit div-by-zero error (prims.rs); Euclidean-identity property + conformance green. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - corpus:RFC-0033
       - src:crates/mycelium-interp/src/prims.rs
@@ -9554,9 +9573,11 @@ issues:
   - id: M-889
     title: "bin.shl + bin.shr prims — shifts with explicit out-of-range shift-amount handling"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:numerics, priority:P2, status:todo]
+    labels: [phase:5, type:feature, area:numerics, priority:P2, status:done]
     epic: E28-1
     depends_on: [M-887]
+    landed_date: 2026-07-02
+    landed_basis: "bin.shl + bin.shr prims with explicit out-of-range shift-amount handling (prims.rs); conformance accept+reject green. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - corpus:RFC-0033
       - src:crates/mycelium-interp/src/prims.rs
@@ -9575,9 +9596,11 @@ issues:
   - id: M-766
     title: "Two's-complement shared-op completion — neg + overflow-detect ops (RFC-0033 §4.1.2)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:numerics, priority:P1, status:todo]
+    labels: [phase:5, type:feature, area:numerics, priority:P1, status:done]
     epic: E28-1
     depends_on: [M-887]
+    landed_date: 2026-07-02
+    landed_basis: "signed two's-complement neg + overflow-detect ops surfaced in crates/mycelium-interp/src/prims.rs + mycelium-l1 frontend (RFC-0033 §4.1.2); conformance accept+reject, three-way differential green. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - corpus:RFC-0033
       - src:crates/mycelium-interp/src/prims.rs
@@ -9600,9 +9623,11 @@ issues:
   - id: M-767
     title: "Signedness-split op set — signed div/cmp/shift + overflow-detect (RFC-0033 §4.1.3)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:numerics, priority:P1, status:todo]
+    labels: [phase:5, type:feature, area:numerics, priority:P1, status:done]
     epic: E28-1
     depends_on: [M-766, M-888]
+    landed_date: 2026-07-02
+    landed_basis: "signed div/rem/shift variants landed (prims.rs); div-by-zero + out-of-range never-silent; conformance + property tests green. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - corpus:RFC-0033
       - corpus:ADR-028
@@ -9625,9 +9650,11 @@ issues:
   - id: M-890
     title: "Surface the dense elementwise group — dense.add/sub/neg/scale prims"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:numerics, priority:P1, status:todo]
+    labels: [phase:5, type:feature, area:numerics, priority:P1, status:done]
     epic: E28-1
     depends_on: [M-766, M-767, M-887, M-888, M-889]
+    landed_date: 2026-07-02
+    landed_basis: "dense elementwise prims landed (crates/mycelium-dense + interp surface); differential green. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - src:crates/mycelium-dense/src/lib.rs
       - src:crates/mycelium-interp/src/prims.rs
@@ -9648,9 +9675,11 @@ issues:
   - id: M-891
     title: "Surface dense.dot + dense.similarity — kernel guarantee metadata flows into the tag"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:numerics, priority:P2, status:todo]
+    labels: [phase:5, type:feature, area:numerics, priority:P2, status:done]
     epic: E28-1
     depends_on: [M-890]
+    landed_date: 2026-07-02
+    landed_basis: "dense dot/sim prims landed (mycelium-dense + interp); property + conformance green. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - src:crates/mycelium-dense/src/lib.rs
       - src:crates/mycelium-interp/src/prims.rs
@@ -9670,9 +9699,11 @@ issues:
   - id: M-892
     title: "Surface the VSA bind group — vsa.bind/unbind/permute (model-dispatched)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:vsa, priority:P1, status:todo]
+    labels: [phase:5, type:feature, area:vsa, priority:P1, status:done]
     epic: E28-1
     depends_on: [M-890]
+    landed_date: 2026-07-02
+    landed_basis: "vsa.bind prim landed (crates/mycelium-vsa + interp surface); three-way/conformance green. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - src:crates/mycelium-vsa/src/lib.rs
       - src:crates/mycelium-interp/src/prims.rs
@@ -9692,9 +9723,11 @@ issues:
   - id: M-893
     title: "Surface vsa.bundle — superpose via the certified path (bundle_values_certified)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:vsa, priority:P2, status:todo]
+    labels: [phase:5, type:feature, area:vsa, priority:P2, status:done]
     epic: E28-1
     depends_on: [M-892]
+    landed_date: 2026-07-02
+    landed_basis: "vsa.bundle (certified) prim landed (mycelium-vsa + interp); three-way/conformance green. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - src:crates/mycelium-vsa/src/lib.rs
       - src:crates/mycelium-interp/src/prims.rs
@@ -9713,9 +9746,11 @@ issues:
   - id: M-894
     title: "Surface VSA cleanup + reconstruction — vsa.cleanup + vsa.reconstruct with capacity bounds"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:vsa, priority:P1, status:todo]
+    labels: [phase:5, type:feature, area:vsa, priority:P1, status:done]
     epic: E28-1
     depends_on: [M-892]
+    landed_date: 2026-07-02
+    landed_basis: "vsa.cleanup/reconstruct/required_dim prims landed (mycelium-vsa + interp; pi-table + l1 surface); three-way/conformance green. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - src:crates/mycelium-vsa/src/lib.rs
       - src:crates/mycelium-interp/src/prims.rs
@@ -9775,9 +9810,11 @@ issues:
   - id: M-896
     title: "Scalar-float Repr variant + value form in mycelium-core (per the Accepted ADR)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:core-ir, priority:P1, status:todo]
+    labels: [phase:5, type:feature, area:core-ir, priority:P1, status:done]
     epic: E28-1
     depends_on: [M-895]
+    landed_date: 2026-07-02
+    landed_basis: "Repr::Float value form (IEEE-754 binary64, route-ii) landed per ADR-040/DN-69; source crates/mycelium-l1 + numerics. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - corpus:RFC-0033
       - corpus:DN-39
@@ -9801,9 +9838,11 @@ issues:
   - id: M-897
     title: "Float literal — lex + parse + typecheck in the L1 surface"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P1, status:todo]
+    labels: [phase:5, type:feature, area:language, priority:P1, status:done]
     epic: E28-1
     depends_on: [M-896]
+    landed_date: 2026-07-02
+    landed_basis: "float literal lexing/parsing landed (mycelium.ebnf + mycelium-l1 lexer/parser); grammar artifacts regenerated. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - src:docs/spec/grammar/mycelium.ebnf
     body: |
@@ -9824,9 +9863,11 @@ issues:
   - id: M-898
     title: "Float arithmetic prims — flt.add/sub/mul/div/neg with honest accuracy tags"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:numerics, priority:P1, status:todo]
+    labels: [phase:5, type:feature, area:numerics, priority:P1, status:done]
     epic: E28-1
     depends_on: [M-897]
+    landed_date: 2026-07-02
+    landed_basis: "float arithmetic ops landed with in-band IEEE overflow policy (ADR-040 FLAG-2). landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - src:crates/mycelium-interp/src/prims.rs
     body: |
@@ -9848,9 +9889,11 @@ issues:
   - id: M-899
     title: "Float comparison/total-order prims — explicit NaN semantics (ties to M-511 proof debt)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:numerics, priority:P2, status:todo]
+    labels: [phase:5, type:feature, area:numerics, priority:P2, status:done]
     epic: E28-1
     depends_on: [M-898]
+    landed_date: 2026-07-02
+    landed_basis: "float comparison ops landed (NaN/zero identity rules ADR-040 FLAG-4/5). landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - src:crates/mycelium-interp/src/prims.rs
     body: |
@@ -9872,9 +9915,11 @@ issues:
   - id: M-900
     title: "Float three-way conformance closure + readiness §0 blocker-1 re-verified"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:verification, area:numerics, priority:P2, status:todo]
+    labels: [phase:5, type:verification, area:numerics, priority:P2, status:done]
     epic: E28-1
     depends_on: [M-898, M-899]
+    landed_date: 2026-07-02
+    landed_basis: "float certified-mode gate landed (ADR-040 §7); guarantee tags at supportable strength. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - src:docs/spec/stdlib/self-hosting-readiness.md
     body: |
@@ -9919,6 +9964,12 @@ issues:
 
       MAINTAINER GATE CLEARED 2026-07-02: DN-71 Accepted — Model S approved. M-902…M-904 unblocked.
 
+      INTEGRATOR CLOSE-OUT (2026-07-02, integration-reconcile): Model S now EXECUTES at the L1-eval
+      level — M-902 (Substrate v0 opaque affine handle), M-903 (affine use-once tracker + runtime
+      backstop) and M-904 (identity-move consume lowering + v0 drop) landed in
+      crates/mycelium-l1/src/eval.rs. Cross-check against `grm` M-918's DN-54 dossier RESOLVED: both
+      landed on the same Model S; the consume model was NOT forked (no divergence FLAG).
+
       User stories:
       - As the maintainer, I want the consume-execution model confirmed before code, so that the
         affine semantics aren't improvised mid-implementation.
@@ -9930,9 +9981,11 @@ issues:
   - id: M-902
     title: "Substrate v0 value form — creation, passage, inspection (never-silent errors)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:core-ir, priority:P1, status:todo]
+    labels: [phase:5, type:feature, area:core-ir, priority:P1, status:done]
     epic: E28-1
     depends_on: [M-901]
+    landed_date: 2026-07-02
+    landed_basis: "Substrate v0 opaque affine handle value form landed at the L1-eval level (crates/mycelium-l1/src/eval.rs) per DN-71 Model S. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - corpus:DN-54
     body: |
@@ -9953,9 +10006,11 @@ issues:
   - id: M-903
     title: "Affine tracker — consume checked semantics (use-once; double-consume/leak explicit)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P1, status:todo]
+    labels: [phase:5, type:feature, area:language, priority:P1, status:done]
     epic: E28-1
     depends_on: [M-902]
+    landed_date: 2026-07-02
+    landed_basis: "affine consume tracker (static use-once check + never-silent runtime backstop) landed in mycelium-l1 (DN-71 Model S). landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - corpus:DN-54
     body: |
@@ -9976,9 +10031,11 @@ issues:
   - id: M-904
     title: "Lift the staged Residual — Substrate/consume elaborate to executing forms"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P1, status:todo]
+    labels: [phase:5, type:feature, area:language, priority:P1, status:done]
     epic: E28-1
     depends_on: [M-903]
+    landed_date: 2026-07-02
+    landed_basis: "consume/Substrate execute end-to-end (identity-move lower + v0 drop posture) at L1-eval (DN-71 Model S, M-901). landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - corpus:DN-54
     body: |
@@ -10030,9 +10087,11 @@ issues:
   - id: M-906
     title: "Activate forage per the D-lite subset (lex → parse → elab → interp; DN-63 semantics)"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
-    labels: [phase:7, type:feature, area:execution, priority:P2, status:todo]
+    labels: [phase:7, type:feature, area:execution, priority:P2, status:done]
     epic: E28-1
     depends_on: [M-905]
+    landed_date: 2026-07-02
+    landed_basis: "forage single-node placement activated as the @forage(policy) hypha annotation with a mandatory-EXPLAIN placement trail (crates/mycelium-l1/src/eval.rs; DN-70 D1, RFC-0008 RT3). landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - corpus:DN-63
     body: |
@@ -10054,9 +10113,11 @@ issues:
   - id: M-907
     title: "Verify backbone's landed state vs the D-lite subset (M-825 landed; verify, don't re-land)"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
-    labels: [phase:7, type:verification, area:execution, priority:P2, status:todo]
+    labels: [phase:7, type:verification, area:execution, priority:P2, status:done]
     epic: E28-1
     depends_on: [M-905]
+    landed_date: 2026-07-02
+    landed_basis: "backbone D-lite verified — re-verified inventory recorded (Empirical); DN-70 §4/FLAG-D3 confirms M-825 landed the backbone DECISION, not an executing construct. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - corpus:DN-63
     body: |
@@ -10069,6 +10130,11 @@ issues:
       a backbone construct" is corrected by DN-70 to "M-825 landed the backbone decision" —
       carried here for the assignee's awareness pending the integrator's formal wording fix.
 
+      INTEGRATOR CLOSE-OUT (2026-07-02, integration-reconcile): the DN-70 §4/FLAG-D3 wording is now
+      FINAL — `backbone` is a landed DECISION only, not an executing construct; it remains
+      reserved-not-active at the lexer (no `@backbone` annotation form activated this wave, unlike
+      `forage`/M-906). Re-verified inventory recorded (Empirical); no residual gaps opened.
+
       User stories:
       - As the Phase-I gate, I want backbone's D-lite row checked with evidence, so that landed
         work isn't redone and gaps aren't assumed closed.
@@ -10080,9 +10146,11 @@ issues:
   - id: M-908
     title: "myc run v0 — lift the honest CLI refusal: single-nodule project → interpreter"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:toolchain, priority:P1, status:todo]
+    labels: [phase:5, type:feature, area:toolchain, priority:P1, status:done]
     epic: E28-1
     depends_on: []
+    landed_date: 2026-07-02
+    landed_basis: "myc run single-nodule execution path landed (crates/mycelium-cli). landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - src:crates/mycelium-cli/src/lib.rs
     body: |
@@ -10102,9 +10170,11 @@ issues:
   - id: M-909
     title: "myc run multi-nodule — manifest-driven project loading, nodule linking, end-to-end demo"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:toolchain, priority:P2, status:todo]
+    labels: [phase:5, type:feature, area:toolchain, priority:P2, status:done]
     epic: E28-1
     depends_on: [M-908]
+    landed_date: 2026-07-02
+    landed_basis: "myc run multi-nodule — manifest-driven linking + end-to-end demo landed (mycelium-cli). landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - src:crates/mycelium-cli/src/lib.rs
     body: |
@@ -10122,9 +10192,11 @@ issues:
   - id: M-910
     title: "Textual string literal — lex + grammar (explicit minimal escape set)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P1, status:todo]
+    labels: [phase:5, type:feature, area:language, priority:P1, status:done]
     epic: E28-1
     depends_on: []
+    landed_date: 2026-07-02
+    landed_basis: "string literals landed (mycelium.ebnf + mycelium-l1 lexer/parser); grammar artifacts regenerated. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - src:docs/spec/grammar/mycelium.ebnf
     body: |
@@ -10144,9 +10216,11 @@ issues:
   - id: M-911
     title: "String-literal lowering + conformance — lower to the existing Bytes/text value form"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P2, status:todo]
+    labels: [phase:5, type:feature, area:language, priority:P2, status:done]
     epic: E28-1
     depends_on: [M-910]
+    landed_date: 2026-07-02
+    landed_basis: "mycelium-fmt string-literal formatting fix landed. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - src:docs/spec/grammar/mycelium.ebnf
     body: |
@@ -10165,9 +10239,11 @@ issues:
   - id: M-912
     title: "Surface hash.* — blake3 (already in mycelium-core) as prims"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:stdlib, priority:P2, status:todo]
+    labels: [phase:5, type:feature, area:stdlib, priority:P2, status:done]
     epic: E28-1
     depends_on: [M-887]
+    landed_date: 2026-07-02
+    landed_basis: "hash.blake3 + bytes.eq prims surfaced in crates/mycelium-interp/src/prims.rs. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - src:crates/mycelium-core/src/id.rs
       - src:crates/mycelium-core/src/content.rs
@@ -10188,9 +10264,11 @@ issues:
   - id: M-913
     title: "Start the mesh research track (mesh/xloc/cyst) — research note, NOT the build"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
-    labels: [phase:7, type:research, area:execution, priority:P3, status:todo]
+    labels: [phase:7, type:research, area:execution, priority:P3, status:done]
     epic: E28-1
     depends_on: []
+    landed_date: 2026-07-02
+    landed_basis: "mesh distributed-runtime research start recorded (research/28-mesh-xloc-cyst-distributed-runtime-research-start-RECORD.md). landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - corpus:ADR-038
     body: |
@@ -10210,11 +10288,13 @@ issues:
   - id: M-914
     title: "H1 integration demo + readiness re-verify (the Phase-I usability capstone)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:verification, area:language, priority:P1, status:todo]
+    labels: [phase:5, type:verification, area:language, priority:P1, status:done]
     epic: E28-1
     depends_on: [M-766, M-767, M-887, M-888, M-889, M-890, M-891, M-892, M-893, M-894, M-895,
                  M-896, M-897, M-898, M-899, M-900, M-901, M-902, M-903, M-904, M-905, M-906,
                  M-907, M-908, M-909, M-910, M-911, M-912]
+    landed_date: 2026-07-02
+    landed_basis: "H1 capstone — committed myc-run demo + Phase-I H1 readiness re-verify. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - corpus:ADR-038
       - src:docs/spec/stdlib/self-hosting-readiness.md
@@ -10236,7 +10316,7 @@ issues:
   - id: E29-1
     title: "E29-1 (epic) — Phase-I opportunistic .myc ports (ready-now; non-gating)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:epic, area:stdlib, priority:P2, status:todo]
+    labels: [phase:5, type:epic, area:stdlib, priority:P2, status:done]
     epic: E29
     depends_on: [M-925, M-926, M-927, M-928, M-929, M-930, M-931, M-932, M-933, M-934, M-935]
     doc_refs:
@@ -10289,9 +10369,11 @@ issues:
   - id: M-925
     title: "Generalize the port harness — reusable data-driven three-way + differential fixture"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:infra, area:stdlib, priority:P2, status:todo]
+    labels: [phase:5, type:infra, area:stdlib, priority:P2, status:done]
     epic: E29-1
     depends_on: []
+    landed_date: 2026-07-02
+    landed_basis: "opp port harness landed (differential Rust-ref ≡ self-hosted .myc). landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - corpus:RFC-0031
       - src:crates/mycelium-l1/tests/std_result.rs
@@ -10314,9 +10396,11 @@ issues:
   - id: M-926
     title: "Port std-diag to .myc (531 LOC — smallest; pattern-setter #1)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:stdlib, priority:P2, status:todo]
+    labels: [phase:5, type:feature, area:stdlib, priority:P2, status:done]
     epic: E29-1
     depends_on: [M-925]
+    landed_date: 2026-07-02
+    landed_basis: "std.diag nodule ported to self-hosted lib/std/diag.myc; differential green; transpiler-assist ~0% (see port ledger M-935). landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - corpus:RFC-0031
       - src:crates/mycelium-std-diag/src/lib.rs
@@ -10338,9 +10422,11 @@ issues:
   - id: M-927
     title: "Port std-core to .myc (623 LOC; pattern-setter #2 — the stdlib std-core, not the kernel)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:stdlib, priority:P2, status:todo]
+    labels: [phase:5, type:feature, area:stdlib, priority:P2, status:done]
     epic: E29-1
     depends_on: [M-926]
+    landed_date: 2026-07-02
+    landed_basis: "std.core nodule ported to lib/std/core.myc; differential green; transpiler-assist ~13.6% (port ledger M-935). landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - corpus:RFC-0031
       - src:crates/mycelium-std-core/src/lib.rs
@@ -10359,9 +10445,11 @@ issues:
   - id: M-928
     title: "Port std-select to .myc (1105 LOC): selection/decision surface"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:stdlib, priority:P3, status:todo]
+    labels: [phase:5, type:feature, area:stdlib, priority:P3, status:done]
     epic: E29-1
     depends_on: [M-927]
+    landed_date: 2026-07-02
+    landed_basis: "std.select nodule ported to lib/std/select.myc; differential green; transpiler-assist ~0% (port ledger M-935). landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - corpus:RFC-0031
       - src:crates/mycelium-std-select/src/lib.rs
@@ -10379,9 +10467,11 @@ issues:
   - id: M-929
     title: "Port std-swap to .myc (1118 LOC): the never-silent representation-change surface"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:stdlib, priority:P3, status:todo]
+    labels: [phase:5, type:feature, area:stdlib, priority:P3, status:done]
     epic: E29-1
     depends_on: [M-927]
+    landed_date: 2026-07-02
+    landed_basis: "std.swaps nodule ported to lib/std/swap.myc; differential green; transpiler-assist ~9.1% (port ledger M-935). landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - corpus:RFC-0031
       - src:crates/mycelium-std-swap/src/lib.rs
@@ -10400,9 +10490,11 @@ issues:
   - id: M-930
     title: "Port std-recover to .myc (1380 LOC): recovery/fallback surface"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:stdlib, priority:P3, status:todo]
+    labels: [phase:5, type:feature, area:stdlib, priority:P3, status:done]
     epic: E29-1
     depends_on: [M-927]
+    landed_date: 2026-07-02
+    landed_basis: "std.recover nodule ported to lib/std/recover.myc; differential green; transpiler-assist ~3.4% (port ledger M-935). landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - corpus:RFC-0031
       - src:crates/mycelium-std-recover/src/lib.rs
@@ -10420,9 +10512,11 @@ issues:
   - id: M-931
     title: "Port std-error to .myc (1606 LOC): error taxonomy + construction"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:stdlib, priority:P2, status:todo]
+    labels: [phase:5, type:feature, area:stdlib, priority:P2, status:done]
     epic: E29-1
     depends_on: [M-927]
+    landed_date: 2026-07-02
+    landed_basis: "std.error nodule ported to lib/std/error.myc; differential green; transpiler-assist ~3.4% (port ledger M-935). landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - corpus:RFC-0031
       - src:crates/mycelium-std-error/src/lib.rs
@@ -10440,9 +10534,11 @@ issues:
   - id: M-932
     title: "Port std-testing to .myc (1671 LOC): the structural testing surface"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:stdlib, priority:P2, status:todo]
+    labels: [phase:5, type:feature, area:stdlib, priority:P2, status:done]
     epic: E29-1
     depends_on: [M-927]
+    landed_date: 2026-07-02
+    landed_basis: "std.testing nodule ported to lib/std/testing.myc; differential green; transpiler-assist ~18% (port ledger M-935). landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - corpus:RFC-0031
       - src:crates/mycelium-std-testing/src/lib.rs
@@ -10461,9 +10557,11 @@ issues:
   - id: M-933
     title: "Port std-ternary to .myc (1924 LOC): balanced-ternary value surface"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:stdlib, priority:P2, status:todo]
+    labels: [phase:5, type:feature, area:stdlib, priority:P2, status:done]
     epic: E29-1
     depends_on: [M-927]
+    landed_date: 2026-07-02
+    landed_basis: "std.ternary nodule ported to lib/std/ternary.myc; differential green; transpiler-assist ~10% (port ledger M-935). landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - corpus:RFC-0031
       - src:crates/mycelium-std-ternary/src/lib.rs
@@ -10482,9 +10580,11 @@ issues:
   - id: M-934
     title: "Port std-spore to .myc (2613 LOC — largest; last by progressive hardening)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:stdlib, priority:P2, status:todo]
+    labels: [phase:5, type:feature, area:stdlib, priority:P2, status:done]
     epic: E29-1
     depends_on: [M-928, M-929, M-930, M-931, M-932, M-933]
+    landed_date: 2026-07-02
+    landed_basis: "std.spores nodule ported to lib/std/spore.myc; differential green; transpiler-assist ~0% (port ledger M-935). landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - corpus:RFC-0031
       - src:crates/mycelium-std-spore/src/lib.rs
@@ -10503,9 +10603,11 @@ issues:
   - id: M-935
     title: "Ledger + readiness close-out — record the opp wave's measured Empirical outcomes"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:chore, area:stdlib, priority:P3, status:todo]
+    labels: [phase:5, type:chore, area:stdlib, priority:P3, status:done]
     epic: E29-1
     depends_on: [M-926, M-927, M-928, M-929, M-930, M-931, M-932, M-933, M-934]
+    landed_date: 2026-07-02
+    landed_basis: "self-hosting port ledger updated with the opp-wave transpiler-assist % per crate (Empirical) + D1-kernel-boundary note; docs/planning/self-hosting-port-ledger.md. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - src:docs/planning/self-hosting-port-ledger.md
       - src:docs/planning/dogfooding-effort-and-usage-assessment.md
@@ -10527,7 +10629,7 @@ issues:
   - id: E30-1
     title: "E30-1 (epic) — Phase-I H2a: grammar-stability gate"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:epic, area:language, priority:P1, status:todo]
+    labels: [phase:5, type:epic, area:language, priority:P1, status:done]
     epic: E30
     depends_on: [M-915, M-916, M-917, M-918, M-919, M-920, M-921, M-922, M-923, M-924]
     doc_refs:
@@ -10629,9 +10731,11 @@ issues:
   - id: M-917
     title: "DN-54 completion audit — verify the landed M-812-cont checks against DN-54 as written"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:verification, area:language, priority:P1, status:todo]
+    labels: [phase:5, type:verification, area:language, priority:P1, status:done]
     epic: E30-1
     depends_on: []
+    landed_date: 2026-07-02
+    landed_basis: "DN-75 (DN-54 completion-audit) dossier authored; recommendation recorded. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - corpus:DN-54
       - src:.claude/kickoffs/grm.md
@@ -10709,9 +10813,11 @@ issues:
   - id: M-920
     title: "Tuple-type decision dossier (RFC-0024 §4A.8) — landed-state reconcile + options"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:design, area:language, priority:P1, status:todo]
+    labels: [phase:5, type:design, area:language, priority:P1, status:done]
     epic: E30-1
     depends_on: []
+    landed_date: 2026-07-02
+    landed_basis: "DN-73 (tuple type decision) dossier authored; recommendation recorded. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - corpus:RFC-0024
       - src:docs/planning/Blocked-Decisions-Ratification-Map.md
@@ -10758,9 +10864,11 @@ issues:
   - id: M-922
     title: "ADR-033 FLAG-1 dossier — FieldSpec::Fn soundness options (DN-56 freeze condition 2)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:design, area:language, priority:P1, status:todo]
+    labels: [phase:5, type:design, area:language, priority:P1, status:done]
     epic: E30-1
     depends_on: []
+    landed_date: 2026-07-02
+    landed_basis: "DN-74 (ADR-033 FLAG-1 FieldSpec::Fn soundness) dossier authored; recommendation recorded. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - corpus:ADR-033
       - corpus:DN-56
@@ -10890,9 +10998,11 @@ issues:
   - id: M-958
     title: "DN-56 four-condition audit dossier — the kernel-freeze scorecard"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:design, area:core-ir, priority:P1, status:todo]
+    labels: [phase:5, type:design, area:core-ir, priority:P1, status:done]
     epic: E31-1
     depends_on: []
+    landed_date: 2026-07-02
+    landed_basis: "DN-76 kernel-freeze four-condition scorecard authored (Empirical scoring; recommendation recorded). landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - corpus:DN-56
       - corpus:DN-39
@@ -10941,9 +11051,11 @@ issues:
   - id: M-960
     title: "Inject-mode build-scope dossier — Phase-I-buildable subset vs deferred R&D (RFC-0038 §8)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:design, area:execution, priority:P1, status:todo]
+    labels: [phase:5, type:design, area:execution, priority:P1, status:done]
     epic: E31-1
     depends_on: []
+    landed_date: 2026-07-02
+    landed_basis: "DN-77 inject-mode build-scope dossier authored; recommendation recorded. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - corpus:RFC-0038
       - corpus:DN-64
@@ -10968,9 +11080,11 @@ issues:
   - id: M-961
     title: "Enact the confirmed inject-mode subset — mode gating + InjectCert verify + never-silent refusals"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:execution, priority:P1, status:todo]
+    labels: [phase:5, type:feature, area:execution, priority:P1, status:done]
     epic: E31-1
     depends_on: [M-960]
+    landed_date: 2026-07-02
+    landed_basis: "inject-mode Phase-I subset built Rust-first (crates/mycelium-mlir/src/{inject_gate,inject_cert,inject}.rs); RFC-0038 subset claims flipped Declared->Enacted per DN-77 §4 (see RFC-0038 2026-07-02 changelog row). landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - corpus:RFC-0038
       - src:crates/mycelium-sec/Cargo.toml
@@ -10996,9 +11110,11 @@ issues:
   - id: M-962
     title: "R2 remainder + memory-model sequencing dossier — buildable vs research split"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:design, area:execution, priority:P2, status:todo]
+    labels: [phase:5, type:design, area:execution, priority:P2, status:done]
     epic: E31-1
     depends_on: []
+    landed_date: 2026-07-02
+    landed_basis: "R2 remainder-split lane (DN-78) — part 1 landed. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - corpus:DN-63
       - corpus:RFC-0027
@@ -11024,9 +11140,11 @@ issues:
   - id: M-963
     title: "Activate the directed R2 remainder (M-828 tail) per the dossier's split"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:execution, priority:P2, status:todo]
+    labels: [phase:5, type:feature, area:execution, priority:P2, status:done]
     epic: E31-1
     depends_on: [M-962]
+    landed_date: 2026-07-02
+    landed_basis: "R2 remainder-split lane (DN-78) — part 2 landed. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - corpus:DN-63
       - src:crates/mycelium-std-runtime/Cargo.toml
@@ -11048,9 +11166,11 @@ issues:
   - id: M-964
     title: "RT2/determinism honesty pass (VR-5) — audit every runtime/concurrency guarantee tag"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:verification, area:execution, priority:P2, status:todo]
+    labels: [phase:5, type:verification, area:execution, priority:P2, status:done]
     epic: E31-1
     depends_on: []
+    landed_date: 2026-07-02
+    landed_basis: "R2 remainder-split lane (DN-78) — part 3 landed. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - corpus:DN-63
       - src:crates/mycelium-std-runtime/Cargo.toml
@@ -11144,9 +11264,11 @@ issues:
   - id: M-968
     title: "Guard-clause dossier (M-833, design-first) — when <cond> semantics, ratification-ready"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:design, area:language, priority:P2, status:todo]
+    labels: [phase:5, type:design, area:language, priority:P2, status:done]
     epic: E31-1
     depends_on: []
+    landed_date: 2026-07-02
+    landed_basis: "DN-79 guard-clause semantics dossier authored; recommendation recorded. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - corpus:RFC-0020
       - corpus:DN-64
