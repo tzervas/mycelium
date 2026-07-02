@@ -1,26 +1,63 @@
-//! **RFC-0034 §13 conformance suite** (M-794 — the E21-1 capstone gate).
+//! **RFC-0034 §13 conformance suite** (M-794 — the E21-1 capstone gate; scope narrowed by M-882).
 //!
-//! This is the end-to-end consolidation of the tunable-certification epic (E21-1): it asserts **all
-//! six RFC-0034 §13 conformance clauses**, each **parameterized over the [`CertMode`] tiers**
-//! (`fast`/`balanced`/`certified`) **and** its **cross-mode negative** — the invariant must *fire*
-//! in the tiers it applies to **and** be *correctly absent/relaxed* in the tiers it does not (the
-//! M-795 cross-mode-negative pattern). A `certified`-only invariant holding spuriously in `fast` is
-//! a defect this suite catches, never silently passes (RFC-0034 §13 test contract).
+//! This is `mycelium-cert`'s share of the tunable-certification epic (E21-1) conformance suite: it
+//! asserts the **three of the six RFC-0034 §13 conformance clauses that are this crate's own
+//! contract** (a/b/c), each **parameterized over the [`CertMode`] tiers** (`fast`/`balanced`/
+//! `certified`) **and** its **cross-mode negative** — the invariant must *fire* in the tiers it
+//! applies to **and** be *correctly absent/relaxed* in the tiers it does not (the M-795
+//! cross-mode-negative pattern). A `certified`-only invariant holding spuriously in `fast` is a
+//! defect this suite catches, never silently passes (RFC-0034 §13 test contract). The remaining
+//! three clauses (d/e/f) are verified in the crates that own their logic — see the M-882 note below.
 //!
 //! The conformance clauses (RFC-0034 §13):
-//! - **(a)** every result carries a never-silent mode tag (§3.1);
-//! - **(b)** no `fast` result carries `Empirical`/`Proven` (§3.2);
-//! - **(c)** memory safety + Axis-B never-silent hold in **every** mode (§3.3);
-//! - **(d)** `EXPLAIN` of the active mode is always available (every mode, §7/§3.1);
-//! - **(e)** spores are mintable with the runtime cert **off** (§8);
-//! - **(f)** cross-mode composition surfaces the boundary, never a silent upgrade (§6/§3.1).
+//! - **(a)** every result carries a never-silent mode tag (§3.1) — verified **here**;
+//! - **(b)** no `fast` result carries `Empirical`/`Proven` (§3.2) — verified **here**;
+//! - **(c)** memory safety + Axis-B never-silent hold in **every** mode (§3.3) — verified **here**;
+//! - **(d)** `EXPLAIN` of the active mode is always available (every mode, §7/§3.1) — verified in
+//!   `crates/mycelium-proj/src/tests/cert_scope.rs` (see below);
+//! - **(e)** spores are mintable with the runtime cert **off** (§8) — verified in
+//!   `crates/mycelium-spore/src/tests/lib_tests.rs` (see below);
+//! - **(f)** cross-mode composition surfaces the boundary, never a silent upgrade (§6/§3.1) —
+//!   verified in `crates/mycelium-proj/src/tests/cert_scope.rs` (see below).
 //!
-//! ## Why this suite spans four crates
-//! The §13 contract is genuinely cross-crate: clauses (a)/(b)/(c)/(f) reach
-//! [`mycelium_core::CertMode`] + the [`mycelium_cert`] gated-swap surface; clause (d)+(f) the
-//! [`mycelium_proj::cert_scope`] EXPLAIN-of-mode + cross-mode composition (M-790/M-792); clause (e)
-//! the [`mycelium_spore`] compile/runtime phase split (M-789). `mycelium-proj`/`mycelium-spore` are
-//! **dev-dependencies** of this crate (test reach only; no runtime dep, no cycle — see Cargo.toml).
+//! ## M-882: clauses (d)/(e)/(f) relocated to their owning crates (dev-dep cycle break)
+//! This suite previously pulled in `mycelium-proj`/`mycelium-spore` as **dev-dependencies** to
+//! exercise clauses (d)/(e)/(f) "end-to-end". That created two dev-dep cycles: `cert →[dev] proj →
+//! … → l1 → cert` and `cert →[dev] spore → proj → … → l1 → cert` (`mycelium-proj` depends on
+//! `mycelium-l1`, which depends on `mycelium-cert`) — the "no cycle" claim the removed
+//! `Cargo.toml` comment made was **wrong**, and M-882 is the fix.
+//!
+//! On inspection, clauses (d)/(e)/(f) as previously written never actually exercised any
+//! `mycelium-cert` code path: `mycelium_proj::cert_scope::{explain_mode, compose, …}` and
+//! `mycelium_spore::build_spore` operate entirely on `mycelium-core` types (`CertMode`/
+//! `GuaranteeStrength`) with no wiring back through `mycelium-cert`'s own swap/gate surface — the
+//! "genuinely cross-crate" framing this doc comment previously carried was an overclaim (VR-5:
+//! corrected here rather than left standing). Each clause's real coverage already exists, more
+//! thoroughly (property-based, `proptest`), in the crate that owns the logic:
+//! - clause (d): `crates/mycelium-proj/src/tests/cert_scope.rs` —
+//!   `explain_mode_is_available_in_every_mode_including_fast`,
+//!   `generate_mode_signal_is_available_in_every_mode`, `lean_consumption_is_identical_to_explain_mode`,
+//!   `dialing_consumption_up_surfaces_more_without_rerun`, plus the `prop_explain_mode_available_in_every_mode`
+//!   / `prop_signal_generated_and_consumption_monotone` property tests;
+//! - clause (e): `crates/mycelium-spore/src/tests/lib_tests.rs` — the M-789 DoD property test
+//!   exhaustive over `CertMode::ALL` asserting spore mintability + content-identity independence
+//!   from the runtime cert mode;
+//! - clause (f): `crates/mycelium-proj/src/tests/cert_scope.rs` —
+//!   `fast_into_certified_is_an_explicit_boundary_never_an_upgrade`,
+//!   `structural_exact_survives_the_boundary`, plus the `prop_cross_mode_never_upgrades_strength`
+//!   property test.
+//!
+//! Duplicating that coverage here via a dev-dependency added no additional assurance and cost a
+//! dependency cycle; removing the duplication is not a coverage regression (the properties are
+//! still checked, and checked with a wider proptest sweep than this suite ever ran) — it is
+//! deduplication with an honest pointer, not a weakened test (never ship a hollow tautology in
+//! place of real coverage, but also never keep a redundant cycle-inducing copy where the real
+//! thing already exists and is stronger).
+//!
+//! ## Why this suite still spans (only) two crates
+//! Clauses (a)/(b)/(c) are genuinely `mycelium-cert`'s own contract: they reach
+//! [`mycelium_core::CertMode`] + the [`mycelium_cert`] gated-swap surface directly, with no need for
+//! `mycelium-proj`/`mycelium-spore` at all.
 //!
 //! ## Data-driven, not bespoke (CLAUDE.md test-layout)
 //! Each clause is a `#[test]` whose body is *assert over the [`CertMode::ALL`] sweep* via the
@@ -44,11 +81,6 @@ use mycelium_core::{
     NormKind, Payload, Provenance, Repr, ScalarKind, Value, WrappingOpt,
 };
 use mycelium_interp::{EvalError, SwapEngine};
-use mycelium_proj::cert_scope::{
-    compose, explain_mode, generate_mode_signal, render_mode_signal, CertScope, ConsumptionTier,
-    ResolvedMode,
-};
-use mycelium_spore::build_spore;
 
 // ===========================================================================
 // Shared harness (M-795 shapes, duplicated locally — see mode_harness.rs note)
@@ -474,209 +506,45 @@ fn clause_c_trusted_base_forbids_unsafe() {
 }
 
 // ===========================================================================
-// Clause (d) — EXPLAIN-of-mode is always available (every mode) (§7/§3.1)
+// Clauses (d)/(e)/(f) — relocated (M-882; see the module doc comment above)
 // ===========================================================================
-
-/// **(d)** The EXPLAIN of the active mode is available and non-empty in **every** mode (including
-/// `fast`) — the transparency floor is never conditioned on cert depth. `ALL_MODES`: the signal is
-/// always generatable and renderable; it names the active mode word.
-#[test]
-fn clause_d_explain_of_mode_always_available() {
-    use mycelium_proj::cert_scope::cert_mode_word;
-    assert_mode_scope(
-        ModeScope::ALL_MODES,
-        |mode| {
-            // A resolved mode at the nodule scope, then EXPLAIN it.
-            let resolved = ResolvedMode {
-                mode,
-                source: Some(CertScope::Nodule),
-            };
-            let explained = explain_mode(&resolved);
-            // The EXPLAIN is non-empty and names the active mode word — never ambient, never silent.
-            !explained.is_empty() && explained.contains(cert_mode_word(mode))
-        },
-        "EXPLAIN-of-mode is available and names the active mode",
-    );
-}
-
-/// **(d) generation ≠ consumption** — the inspectability *signal* is generated in **every** mode
-/// (always-on, §7), and dialing consumption up (`Lean → Full`) on the already-generated signal
-/// reveals *at least as much* — with no re-run, no mode switch. Holds in all three tiers.
-#[test]
-fn clause_d_signal_generated_in_every_mode_consumption_is_dialable() {
-    for_each_mode(|mode| {
-        let resolved = ResolvedMode {
-            mode,
-            source: Some(CertScope::Phylum),
-        };
-        let signal = generate_mode_signal(&resolved);
-        let lean = render_mode_signal(&signal, ConsumptionTier::Lean);
-        let full = render_mode_signal(&signal, ConsumptionTier::Full);
-        assert!(
-            !lean.is_empty(),
-            "the lean signal must be generated in {mode:?} (always-on transparency floor)"
-        );
-        assert!(
-            full.len() >= lean.len(),
-            "dialing consumption up (Lean→Full) must reveal at least as much in {mode:?} \
-             (the already-captured history)"
-        );
-        // The Lean render is exactly the explain_mode floor (DRY — §13d says so).
-        assert_eq!(
-            lean,
-            explain_mode(&resolved),
-            "Lean consumption is the explain_mode floor in {mode:?}"
-        );
-    });
-}
+//
+// These clauses were previously exercised here via `mycelium-proj`/`mycelium-spore`
+// dev-dependencies, which introduced a dev-dep cycle back through `mycelium-l1` to this crate.
+// None of the three actually reached any `mycelium-cert` code path (they only ever called
+// `mycelium_proj::cert_scope::*` / `mycelium_spore::build_spore` on plain `mycelium-core` types),
+// so the fix is a relocation, not a weakening: the identical properties are checked — more
+// thoroughly, with `proptest` sweeps this suite never ran — in the crate that owns the logic:
+//
+// - clause (d) EXPLAIN-of-mode / generation≠consumption:
+//   `crates/mycelium-proj/src/tests/cert_scope.rs`
+//   (`explain_mode_is_available_in_every_mode_including_fast`,
+//   `generate_mode_signal_is_available_in_every_mode`,
+//   `lean_consumption_is_identical_to_explain_mode`,
+//   `dialing_consumption_up_surfaces_more_without_rerun`,
+//   `prop_explain_mode_available_in_every_mode`,
+//   `prop_signal_generated_and_consumption_monotone`).
+// - clause (e) spore mintability + mode-independent content identity:
+//   `crates/mycelium-spore/src/tests/lib_tests.rs` (the M-789 DoD property test, exhaustive over
+//   `CertMode::ALL`).
+// - clause (f) cross-mode composition never upgrades:
+//   `crates/mycelium-proj/src/tests/cert_scope.rs`
+//   (`fast_into_certified_is_an_explicit_boundary_never_an_upgrade`,
+//   `structural_exact_survives_the_boundary`, `prop_cross_mode_never_upgrades_strength`).
 
 // ===========================================================================
-// Clause (e) — spores are mintable with the runtime cert off (§8)
-// ===========================================================================
-
-/// **(e)** A spore is mintable in **every** `CertMode`, and its content-addressed identity is
-/// **independent** of the mode (the runtime cert mode never enters the compile/deploy hash —
-/// RFC-0034 §8; ADR-003). In particular the project default `fast` (cert-off runtime) mints a valid
-/// spore: deployability survives a cert-off runtime.
-#[test]
-fn clause_e_spore_mintable_cert_off_and_mode_independent() {
-    // A minimal, valid phylum project tree under a unique temp dir.
-    let dir = std::env::temp_dir().join(format!(
-        "myc-m794-conf-{}",
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_nanos()
-    ));
-    std::fs::create_dir_all(&dir).unwrap();
-    let manifest_src = "[project]\nname=\"conf\"\nkind=\"phylum\"\nversion=\"1.0.0\"\n\
-                        [surface]\nexports=[\"conf.shapes\"]\n";
-    std::fs::write(dir.join("mycelium-proj.toml"), manifest_src).unwrap();
-    std::fs::write(
-        dir.join("shapes.myc"),
-        "// nodule: conf.shapes\nnodule conf.shapes\nfn a() -> Binary{8} = 0b0\n",
-    )
-    .unwrap();
-    let manifest = mycelium_proj::parse_manifest(manifest_src).unwrap();
-
-    // The spore identity is a pure compile/deploy artifact: `build_spore` never reads a CertMode at
-    // all (CertMode rides Meta, excluded from the content hash — RFC-0001 §4.6 / ADR-003), so it is
-    // mode-independent *by construction*. We assert mintability under the cert-off default and the
-    // identity-stability across the conceptual mode sweep.
-    let baseline =
-        build_spore(&manifest, &dir).expect("spore mints under the default (cert-off) runtime");
-    assert!(
-        baseline.id.as_str().starts_with("blake3:"),
-        "the minted spore must have a blake3 content identity"
-    );
-    for &mode in &CertMode::ALL {
-        // Re-mint: the mode is a runtime concern that does not enter `build_spore`'s inputs, so the
-        // identity is invariant. (This documents the §8 phase split end-to-end at the cert crate's
-        // conformance layer; the property is `Proven`-by-construction in mycelium-spore's own suite.)
-        let again = build_spore(&manifest, &dir).unwrap_or_else(|e| {
-            panic!("spore must mint regardless of runtime mode {mode:?}: {e:?}")
-        });
-        assert_eq!(
-            baseline.id, again.id,
-            "the spore identity must be independent of the runtime CertMode (RFC-0034 §8; ADR-003)"
-        );
-    }
-
-    // Cleanup (best-effort — a leftover temp dir is harmless).
-    let _ = std::fs::remove_dir_all(&dir);
-}
-
-// ===========================================================================
-// Clause (f) — cross-mode composition surfaces the boundary (§6/§3.1)
-// ===========================================================================
-
-/// **(f)** Composing a value produced under one mode into a computation running under a *stronger*
-/// mode surfaces an explicit [`CrossModeEvent`] boundary, and the effective strength is **floored by
-/// the producer**, never silently upgraded to the consumer's (VR-5). Cross-mode **negative**: the
-/// boundary fires exactly on an *up-crossing* (`producer.depth() < consumer.depth()`) and the
-/// effective strength is **never** upgraded in *any* crossing.
-#[test]
-fn clause_f_cross_mode_composition_surfaces_boundary() {
-    // Sweep every (producer, consumer) pair over a would-be-Proven incoming strength, asserting:
-    //  - is_boundary() iff producer is strictly weaker (an up-crossing);
-    //  - the effective strength is NEVER upgraded (rank never decreases below incoming).
-    for &producer in &CertMode::ALL {
-        for &consumer in &CertMode::ALL {
-            let incoming = GuaranteeStrength::Proven;
-            let event = compose(producer, consumer, incoming);
-            assert_eq!(
-                event.is_boundary(),
-                producer.depth() < consumer.depth(),
-                "is_boundary must fire exactly on an up-crossing ({producer:?} → {consumer:?})"
-            );
-            assert!(
-                !event.upgraded_strength(),
-                "cross-mode composition must NEVER upgrade strength ({producer:?} → {consumer:?}): \
-                 incoming {:?}, effective {:?}",
-                event.incoming,
-                event.effective,
-            );
-            // The effective strength is exactly the producer's floor — never the consumer's.
-            assert_eq!(
-                event.effective,
-                producer.gate_guarantee(incoming),
-                "effective strength must be floored by the PRODUCER, not the consumer"
-            );
-        }
-    }
-}
-
-/// **(f) the silent-upgrade negative, sharpened** — a `fast`-produced would-be-`Proven` value
-/// composed into a `certified` computation stays at its `fast` floor (`Declared`), it does **not**
-/// silently inherit `certified`'s `Proven`. This is the exact defect §3.1 forbids.
-#[test]
-fn clause_f_fast_value_in_certified_computation_is_not_upgraded() {
-    let event = compose(
-        CertMode::Fast,
-        CertMode::Certified,
-        GuaranteeStrength::Proven,
-    );
-    assert!(
-        event.is_boundary(),
-        "fast → certified is a genuine mode boundary"
-    );
-    assert_eq!(
-        event.effective,
-        GuaranteeStrength::Declared,
-        "a fast-produced value must keep its Declared floor inside a certified computation — \
-         never a silent upgrade to Proven (RFC-0034 §3.1; VR-5)"
-    );
-}
-
-/// **(f) negative — a non-up-crossing is not flagged as a boundary.** A `certified`-produced value
-/// entering a `fast` computation is *not* an up-crossing (no silent-upgrade risk), so `is_boundary`
-/// is `false` — the flag is not raised where it must not be.
-#[test]
-fn clause_f_down_crossing_is_not_a_boundary() {
-    let event = compose(
-        CertMode::Certified,
-        CertMode::Fast,
-        GuaranteeStrength::Proven,
-    );
-    assert!(
-        !event.is_boundary(),
-        "certified → fast is a down-crossing, not a silent-upgrade boundary"
-    );
-    // And still no upgrade (the producer's strength is preserved, here unchanged).
-    assert!(!event.upgraded_strength());
-}
-
-// ===========================================================================
-// Capstone — all six clauses converge on one gated swap (end-to-end witness)
+// Capstone — clauses (a)/(b)/(c) converge on one gated swap (this crate's own witness)
 // ===========================================================================
 
 /// The capstone witness: a single bounded-ε swap, driven through the full
 /// [`ModeGatedSwapEngine`] in every mode, exhibits the clause-(a) mode tag, the clause-(b) floor in
-/// `fast`, the clause-(c) never-silent error path (asserted separately), the clause-(d) EXPLAIN, and
-/// the clause-(f) composition — all consistent on one value. This is the end-to-end shape the §13
-/// DoD asks for: the clauses are not independent unit facts but properties of one coherent pipeline.
+/// `fast`, and the cert-emission/checking scope — all consistent on one value, using only this
+/// crate's own surface. (Clauses (d)/(e)/(f) — EXPLAIN-of-mode, spore mintability, cross-mode
+/// composition — are verified in their owning crates; see the relocation note above. They are not
+/// re-asserted here because doing so would require the `mycelium-proj`/`mycelium-spore`
+/// dev-dependencies this change removes to break the M-882 cycle.)
 #[test]
-fn capstone_one_pipeline_exhibits_every_clause() {
+fn capstone_one_pipeline_exhibits_clauses_a_b_and_emission_scope() {
     let src = dense_f32(vec![1.0, 2.0, 1.0, 2.0]);
     for_each_mode(|mode| {
         let engine = ModeGatedSwapEngine::new(mode);
@@ -718,18 +586,6 @@ fn capstone_one_pipeline_exhibits_every_clause() {
             mode == CertMode::Certified,
             "certificate checked iff certified"
         );
-
-        // (d) EXPLAIN of this value's mode is always available.
-        let resolved = ResolvedMode {
-            mode,
-            source: Some(CertScope::Nodule),
-        };
-        assert!(!explain_mode(&resolved).is_empty(), "(d) EXPLAIN available");
-
-        // (f) composing this value forward into a certified computation never upgrades it past its
-        //     producer floor.
-        let event = compose(mode, CertMode::Certified, strength);
-        assert!(!event.upgraded_strength(), "(f) no silent upgrade");
     });
 }
 
