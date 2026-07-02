@@ -698,8 +698,10 @@ pub(crate) fn resolve_ty(
         }
         // RFC-0024 §3 (M-686): function types are now checked. Resolve both sides recursively
         // under the same `tyvars` scope — the param and return types may themselves be abstract.
-        // Single-argument only in stage-1; multi-argument `(A, B) -> C` is refused below (deferred).
-        // Guarantee: Declared (a type-level contract — VR-5).
+        // This node is single-argument by construction; a curried multi-arg value type is nested
+        // `Fn`s (`A => B => C`, M-822) and a tuple-domain arrow `(A, B) => C` is this same node
+        // with a `BaseType::Tuple` param (M-826) — both compose through this one arm, no separate
+        // refusal (DN-73 D1/D2, ratified). Guarantee: Declared (a type-level contract — VR-5).
         BaseType::Fn(param, ret) => {
             let (param_ty, _) = resolve_ty(site, types, tyvars, param)?;
             let (ret_ty, _) = resolve_ty(site, types, tyvars, ret)?;
@@ -3112,9 +3114,10 @@ impl Cx<'_> {
             // `B = infer(body)` under `scope ∪ {p: A}`. The closure's *capture set* (free variables
             // of the body, bound in the enclosing scope) is implicit here — it is computed and lowered
             // by monomorphization (`mono.rs`), which reuses this same re-inference. No new `Ty` variant
-            // (the closure struct is an ordinary `Ty::Data` after lowering — §4A.6). Single-argument
-            // only in stage-1; a multi-argument lambda needs the tuple-type prerequisite (§4A.8) and is
-            // a never-silent refusal (FLAG, never a silent accept — G2).
+            // (the closure struct is an ordinary `Ty::Data` after lowering — §4A.6). A **multi-argument**
+            // `lambda(p1, p2, …) => body` desugars to nested single-param lambdas (`check_lambda`,
+            // M-822) — no tuple-type prerequisite needed (DN-73 D1, ratified); only the zero-argument
+            // case stays a never-silent refusal (G2).
             Expr::Lambda { params, body } => self.check_lambda(scope, params, body, expected),
             Expr::WithParadigm { .. } => self.err(
                 "internal: a `with paradigm` block reached the checker — the ambient resolution \

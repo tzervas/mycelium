@@ -552,12 +552,15 @@ pub enum BaseType {
     /// enclosing ambient, or refuses (`UnresolvedAmbient`/`ParadigmShapeMismatch`). It never
     /// survives into the checker (defense-in-depth: a residual one is an explicit internal refusal).
     Ambient(AmbientParams),
-    /// **Function type** `A -> B` (RFC-0024 §3, HOF stage 1 — surface only). Single-argument
-    /// v1; right-associative; `@` binds tighter than `->` (so `A @ Exact -> B` parses as
-    /// `(A @ Exact) -> B`). The checker and mono are responsible for defunctionalization
-    /// (M-686/M-687); this variant does **not** survive past the checker in v1 (deferred —
-    /// multi-argument `(A, B) -> C` is not yet supported and is a never-silent refusal at the
-    /// parser).
+    /// **Function type** `A => B` (RFC-0024 §3/§4A.8, HOF stage 1 — surface only). Single-argument
+    /// v1; right-associative; `@` binds tighter than `=>` (so `A @ Exact => B` parses as
+    /// `(A @ Exact) => B`). The checker and mono are responsible for defunctionalization
+    /// (M-686/M-687); this variant does **not** survive past the checker in v1. **Multi-argument
+    /// function values are the curried arrow `A => B => C`** (M-822; ratified canonical by
+    /// DN-73 D1) — nested `Fn` nodes, no new mechanism. A **tuple-domain arrow** `(A, B) => C`
+    /// is a *distinct* type — this same `Fn` node with a [`BaseType::Tuple`] on the left (M-826)
+    /// — with **no implicit interconversion** to/from the curried form (DN-73 D2; a mismatch is
+    /// a never-silent type error naming both types, never a silent adaptation).
     Fn(Box<TypeRef>, Box<TypeRef>),
     /// **Tuple type** `(T, U, …)` (M-826 — v0 first-class product type; arity ≥ 2). A single
     /// parenthesized type `(T)` stays grouping, never a 1-tuple. The checker desugars each arity-N
