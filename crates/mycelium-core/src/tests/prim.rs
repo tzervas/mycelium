@@ -116,8 +116,10 @@ fn builtins_are_present_and_resolvable() {
     // `bin.div`/`bin.rem`/`bin.shr`/`cmp.lt` per ADR-028; RFC-0003 §3/§4/M-892 added the
     // model-dispatched VSA bind group `vsa.bind`/`vsa.unbind`/`vsa.permute` — pinned separately
     // below, `vsa.unbind`'s intrinsic is the `Empirical` meet over the MAP-I/FHRR/BSC dispatch
-    // set).
-    assert_eq!(t.entries().len(), 53);
+    // set; RFC-0003 §4/§5/M-893 added the certified superposition `vsa.bundle` — pinned
+    // separately below, its intrinsic is `Proven` (the meet over its certified singleton
+    // dispatch set {MAP-I})).
+    assert_eq!(t.entries().len(), 54);
 }
 
 // M-890 (`enb` Gap C): the dense elementwise group — the first non-`Exact` intrinsics in Π.
@@ -283,6 +285,35 @@ fn vsa_bind_group_carries_the_dispatch_set_meet_tags() {
     }
 }
 
+// M-893 (`enb` Gap C): `vsa.bundle` — superposition via the **certified path** (RFC-0003 §4/§5;
+// ADR-008). Its dispatch set is the certified singleton {MAP-I} (the only introduction-set model
+// with a certified Value-level bundle — `bundle_values_certified`, the M-131 checked-instantiation
+// pattern); FHRR/BSC bundles are `Empirical`-profile kernel ops, refused explicitly by the
+// wrapper/checker rather than silently re-tagged (VR-5) — surfacing them is a distinct append-only
+// extension. The intrinsic is therefore the meet over that singleton = MAP-I's `Bundle` tag =
+// `Proven`; the runtime value carries the kernel-checked `CapacityBound` itself. The table↔kernel
+// consistency is guarded in `mycelium-interp` (this crate cannot depend on `mycelium-vsa` —
+// ADR-008 keeps the dependency one-way); this test pins the table side. Operands are the
+// documented `Any`/`Uniform` escape hatch (really `Seq{Vsa{m, d}, N≥1}` × `Float` δ → `Vsa{m, d}`,
+// enforced by the interpreter prim + the L1 checker branch).
+#[test]
+fn vsa_bundle_carries_the_certified_singleton_proven_tag() {
+    let t = PrimTable::builtins();
+    let d = t.get("vsa.bundle").expect("vsa.bundle registered");
+    assert_eq!(
+        d.intrinsic,
+        GuaranteeStrength::Proven,
+        "vsa.bundle: intrinsic must stay the meet over the certified singleton {{MAP-I}} (VR-5)"
+    );
+    assert_eq!(d.sig.arity(), 2, "vsa.bundle: arity drifted (Seq + Float δ)");
+    assert_eq!(d.sig.width, WidthRel::Uniform, "vsa.bundle: width rel drifted");
+    assert!(
+        d.sig.operands.iter().all(|p| *p == PrimParadigm::Any),
+        "vsa.bundle: operands are the documented `Any` escape hatch"
+    );
+    assert_eq!(d.sig.result, PrimParadigm::Any);
+}
+
 // M-767 (`enb` Gap B): the signedness-split signed op set (RFC-0033 §4.1.2/§4.1.3; ADR-028).
 // `bin.div_s`/`bin.rem_s`/`bin.shr_s` are width-uniform Binary×Binary→Binary like their unsigned
 // counterparts; `cmp.lt_s` is width-collapsing like `cmp.eq`/`cmp.lt` but with its operands pinned
@@ -417,7 +448,7 @@ fn contains_returns_true_iff_registered() {
 fn names_returns_registered_sorted_names() {
     let t = PrimTable::builtins();
     let ns = t.names();
-    // Exactly 53 builtins (the original 9 + RFC-0032 cmp.eq/cmp.lt/bit.add/bit.sub + D3
+    // Exactly 54 builtins (the original 9 + RFC-0032 cmp.eq/cmp.lt/bit.add/bit.sub + D3
     // seq.len/seq.get + D4 bytes.len/get/slice/concat + DN-41 bit.width_cast + DN-58/M-817
     // fuse_join:binary + RFC-0033/M-887 bin.mul + RFC-0033/M-888 bin.div/bin.rem + RFC-0033/M-889
     // bin.shl/bin.shr + RFC-0033/M-766 bin.add/bin.sub/bin.neg + RFC-0001 §4.1/M-890
@@ -425,10 +456,11 @@ fn names_returns_registered_sorted_names() {
     // ADR-040 §2.5/M-898 flt.add/flt.sub/flt.mul/flt.div/flt.neg + ADR-040 §2.4/M-899
     // flt.lt/flt.le/flt.gt/flt.ge/flt.eq/flt.total_le + RFC-0033/M-767
     // bin.div_s/bin.rem_s/bin.shr_s/cmp.lt_s, the signedness-split signed set + RFC-0003
-    // §3/§4/M-892 vsa.bind/vsa.unbind/vsa.permute, the model-dispatched VSA bind group).
+    // §3/§4/M-892 vsa.bind/vsa.unbind/vsa.permute, the model-dispatched VSA bind group +
+    // RFC-0003 §4/§5/M-893 vsa.bundle, the certified superposition path).
     assert_eq!(
         ns.len(),
-        53,
+        54,
         "names() count must match the builtin count: {ns:?}"
     );
     // Sorted (BTreeMap iteration is sorted).

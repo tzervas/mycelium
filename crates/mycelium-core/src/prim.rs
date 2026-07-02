@@ -201,12 +201,18 @@ impl PrimTable {
     /// *property* stays `Empirical` until the M-511 proof debt is discharged),
     /// and the **VSA bind group** (`vsa.bind`/`vsa.unbind`/`vsa.permute`, RFC-0003 §3/§4/ADR-008,
     /// M-892 — `enb` Gap C; model-dispatched MAP-I/FHRR/BSC, tags per model carried from the
-    /// `mycelium-vsa` kernel — see the entry comment for the meet-tag rule).
+    /// `mycelium-vsa` kernel — see the entry comment for the meet-tag rule), plus the **certified
+    /// VSA superposition** (`vsa.bundle`, RFC-0003 §4/§5/ADR-008, M-893 — `enb` Gap C; the
+    /// certified path via MAP-I's `bundle_values_certified`, dispatch set the certified singleton
+    /// {MAP-I}; the runtime value carries the kernel-checked `Proven` `CapacityBound` — see the
+    /// entry comment).
     /// Every entry is `intrinsic = Exact` **except** `dense.add`/`dense.sub`/`dense.scale`/
     /// `dense.dot`/`dense.similarity` (`Proven`, carried from the kernel's per-op tag), the
     /// `flt.*` group (`Empirical` — the ratified ADR-040 §2.6 host-conformance posture; see the
-    /// entry comment), and `vsa.unbind` (`Empirical` — the meet over the model set: FHRR's
-    /// normative weak-link unbind; see the entry comment); all are width-`Uniform` **except**
+    /// entry comment), `vsa.unbind` (`Empirical` — the meet over the model set: FHRR's
+    /// normative weak-link unbind; see the entry comment), and `vsa.bundle` (`Proven` — the meet
+    /// over its certified singleton dispatch set {MAP-I}; see the entry comment); all are
+    /// width-`Uniform` **except**
     /// `cmp.eq`/`cmp.lt`/`cmp.lt_s`,
     /// `dense.dot`/`dense.similarity`, and the `flt.*` comparison group, which are
     /// width-`Collapse` (operand width → `Binary{1}` / operand dim → a dim-1 measurement /
@@ -557,6 +563,26 @@ impl PrimTable {
             vsa(vec![Any, Any], GuaranteeStrength::Empirical),
         );
         t.insert("vsa.permute", vsa(vec![Any, Any], GuaranteeStrength::Exact));
+        // RFC-0003 §4/§5 / ADR-008 (M-893, `enb` Gap C): **`vsa.bundle`** — superposition via the
+        // **certified path** (`MapI::bundle_values_certified` in `mycelium-vsa`). Operands are a
+        // `Seq` of hypervectors and a `Float` target failure probability δ (both typed `Any` under
+        // the same paradigm-model escape hatch as the bind group above; the real typing —
+        // `Seq{Vsa{m, d}, N≥1}` × `Float` → `Vsa{m, d}` — is enforced by the interpreter prim and
+        // the L1 checker branch).
+        //
+        // **The dispatch set for bundle is the certified singleton {MAP-I}** — the only
+        // introduction-set model with a *certified* Value-level bundle (the M-131
+        // checked-instantiation pattern: a `Proven` `CapacityBound` citing Clarkson/Thomas is
+        // issued **iff** `dim ≥ requiredDim(m, δ)` is checked, with bipolar + distinct items also
+        // checked; otherwise an explicit refusal, never an unbacked tag). FHRR/BSC bundles are
+        // **`Empirical`-profile ops** in the kernel — routing them through this prim would either
+        // silently downgrade the prim's meaning or silently upgrade their tag (both VR-5
+        // violations), so they are explicit refusals in the wrapper/checker; surfacing them is a
+        // distinct, append-only extension under its own name. The intrinsic is therefore the meet
+        // over that certified singleton = MAP-I's `Bundle` tag = **`Proven`**; the runtime value
+        // carries the kernel-checked `CapacityBound` itself (kernel↔table consistency is guarded
+        // by a `mycelium-interp` test — this crate cannot see `mycelium-vsa`).
+        t.insert("vsa.bundle", vsa(vec![Any, Any], GuaranteeStrength::Proven));
         t
     }
 
