@@ -2,10 +2,73 @@ pub mod mycelium_doc
 pub mod mycelium_doc::apiref
 pub fn mycelium_doc::apiref::project_nodule(&str, &str, &mut mycelium_doc::corpus::AnchorAlloc) -> mycelium_doc::ir::Node
 pub fn mycelium_doc::apiref::project_schema(&str, &str, &mut mycelium_doc::corpus::AnchorAlloc) -> core::option::Option<mycelium_doc::ir::Node>
+pub mod mycelium_doc::book
+pub struct mycelium_doc::book::BookError(pub alloc::string::String)
+impl core::clone::Clone for mycelium_doc::book::BookError
+pub fn mycelium_doc::book::BookError::clone(&self) -> mycelium_doc::book::BookError
+impl core::cmp::Eq for mycelium_doc::book::BookError
+impl core::cmp::PartialEq for mycelium_doc::book::BookError
+pub fn mycelium_doc::book::BookError::eq(&self, &mycelium_doc::book::BookError) -> bool
+impl core::error::Error for mycelium_doc::book::BookError
+impl core::fmt::Debug for mycelium_doc::book::BookError
+pub fn mycelium_doc::book::BookError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_doc::book::BookError
+pub fn mycelium_doc::book::BookError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_doc::book::BookError
+impl core::marker::Freeze for mycelium_doc::book::BookError
+impl core::marker::Send for mycelium_doc::book::BookError
+impl core::marker::Sync for mycelium_doc::book::BookError
+impl core::marker::Unpin for mycelium_doc::book::BookError
+impl core::marker::UnsafeUnpin for mycelium_doc::book::BookError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::book::BookError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::book::BookError
+pub struct mycelium_doc::book::BookManifest
+pub mycelium_doc::book::BookManifest::chapters: alloc::vec::Vec<mycelium_doc::book::ChapterSpec>
+pub mycelium_doc::book::BookManifest::preface: alloc::string::String
+pub mycelium_doc::book::BookManifest::title: alloc::string::String
+impl core::clone::Clone for mycelium_doc::book::BookManifest
+pub fn mycelium_doc::book::BookManifest::clone(&self) -> mycelium_doc::book::BookManifest
+impl core::fmt::Debug for mycelium_doc::book::BookManifest
+pub fn mycelium_doc::book::BookManifest::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for mycelium_doc::book::BookManifest
+pub fn mycelium_doc::book::BookManifest::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_doc::book::BookManifest
+pub fn mycelium_doc::book::BookManifest::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_doc::book::BookManifest
+impl core::marker::Send for mycelium_doc::book::BookManifest
+impl core::marker::Sync for mycelium_doc::book::BookManifest
+impl core::marker::Unpin for mycelium_doc::book::BookManifest
+impl core::marker::UnsafeUnpin for mycelium_doc::book::BookManifest
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::book::BookManifest
+impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::book::BookManifest
+pub struct mycelium_doc::book::ChapterSpec
+pub mycelium_doc::book::ChapterSpec::exclude: alloc::vec::Vec<alloc::string::String>
+pub mycelium_doc::book::ChapterSpec::globs: alloc::vec::Vec<alloc::string::String>
+pub mycelium_doc::book::ChapterSpec::sources: alloc::vec::Vec<alloc::string::String>
+pub mycelium_doc::book::ChapterSpec::title: alloc::string::String
+impl core::clone::Clone for mycelium_doc::book::ChapterSpec
+pub fn mycelium_doc::book::ChapterSpec::clone(&self) -> mycelium_doc::book::ChapterSpec
+impl core::fmt::Debug for mycelium_doc::book::ChapterSpec
+pub fn mycelium_doc::book::ChapterSpec::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for mycelium_doc::book::ChapterSpec
+pub fn mycelium_doc::book::ChapterSpec::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_doc::book::ChapterSpec
+pub fn mycelium_doc::book::ChapterSpec::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_doc::book::ChapterSpec
+impl core::marker::Send for mycelium_doc::book::ChapterSpec
+impl core::marker::Sync for mycelium_doc::book::ChapterSpec
+impl core::marker::Unpin for mycelium_doc::book::ChapterSpec
+impl core::marker::UnsafeUnpin for mycelium_doc::book::ChapterSpec
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::book::ChapterSpec
+impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::book::ChapterSpec
+pub const mycelium_doc::book::DEFAULT_MANIFEST_PATH: &str
+pub fn mycelium_doc::book::build_book(&mycelium_doc::ir::DocModel, &mycelium_doc::book::BookManifest, &std::path::Path) -> core::result::Result<mycelium_doc::emit::Artifacts, mycelium_doc::book::BookError>
+pub fn mycelium_doc::book::load_manifest(&std::path::Path) -> core::result::Result<mycelium_doc::book::BookManifest, mycelium_doc::book::BookError>
 pub mod mycelium_doc::build
 pub struct mycelium_doc::build::BuildInput
 pub mycelium_doc::build::BuildInput::corpus_root: core::option::Option<std::path::PathBuf>
 pub mycelium_doc::build::BuildInput::example_roots: alloc::vec::Vec<std::path::PathBuf>
+pub mycelium_doc::build::BuildInput::extra_md_files: alloc::vec::Vec<std::path::PathBuf>
 pub mycelium_doc::build::BuildInput::repo_root: std::path::PathBuf
 pub mycelium_doc::build::BuildInput::schemas_root: core::option::Option<std::path::PathBuf>
 impl mycelium_doc::build::BuildInput
@@ -22,7 +85,7 @@ impl core::marker::UnsafeUnpin for mycelium_doc::build::BuildInput
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::build::BuildInput
 impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::build::BuildInput
 pub const mycelium_doc::build::EPUB_DEFERRAL: &str
-pub fn mycelium_doc::build::build(&mycelium_doc::build::BuildInput) -> std::io::error::Result<mycelium_doc::ir::DocModel>
+pub fn mycelium_doc::build::build(&mycelium_doc::build::BuildInput) -> core::io::error::Result<mycelium_doc::ir::DocModel>
 pub fn mycelium_doc::build::emit_all(&mycelium_doc::ir::DocModel) -> mycelium_doc::emit::Artifacts
 pub mod mycelium_doc::corpus
 pub struct mycelium_doc::corpus::AnchorAlloc
@@ -163,7 +226,7 @@ pub mycelium_doc::emit::Artifacts::files: alloc::collections::btree::map::BTreeM
 impl mycelium_doc::emit::Artifacts
 pub fn mycelium_doc::emit::Artifacts::new() -> Self
 pub fn mycelium_doc::emit::Artifacts::put(&mut self, impl core::convert::Into<alloc::string::String>, impl core::convert::Into<alloc::string::String>)
-pub fn mycelium_doc::emit::Artifacts::write_to(&self, &std::path::Path) -> std::io::error::Result<usize>
+pub fn mycelium_doc::emit::Artifacts::write_to(&self, &std::path::Path) -> core::io::error::Result<usize>
 impl core::clone::Clone for mycelium_doc::emit::Artifacts
 pub fn mycelium_doc::emit::Artifacts::clone(&self) -> mycelium_doc::emit::Artifacts
 impl core::default::Default for mycelium_doc::emit::Artifacts
@@ -530,9 +593,48 @@ impl core::marker::Unpin for mycelium_doc::ir::SourceKind
 impl core::marker::UnsafeUnpin for mycelium_doc::ir::SourceKind
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::ir::SourceKind
 impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::ir::SourceKind
+pub struct mycelium_doc::BookError(pub alloc::string::String)
+impl core::clone::Clone for mycelium_doc::book::BookError
+pub fn mycelium_doc::book::BookError::clone(&self) -> mycelium_doc::book::BookError
+impl core::cmp::Eq for mycelium_doc::book::BookError
+impl core::cmp::PartialEq for mycelium_doc::book::BookError
+pub fn mycelium_doc::book::BookError::eq(&self, &mycelium_doc::book::BookError) -> bool
+impl core::error::Error for mycelium_doc::book::BookError
+impl core::fmt::Debug for mycelium_doc::book::BookError
+pub fn mycelium_doc::book::BookError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_doc::book::BookError
+pub fn mycelium_doc::book::BookError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_doc::book::BookError
+impl core::marker::Freeze for mycelium_doc::book::BookError
+impl core::marker::Send for mycelium_doc::book::BookError
+impl core::marker::Sync for mycelium_doc::book::BookError
+impl core::marker::Unpin for mycelium_doc::book::BookError
+impl core::marker::UnsafeUnpin for mycelium_doc::book::BookError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::book::BookError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::book::BookError
+pub struct mycelium_doc::BookManifest
+pub mycelium_doc::BookManifest::chapters: alloc::vec::Vec<mycelium_doc::book::ChapterSpec>
+pub mycelium_doc::BookManifest::preface: alloc::string::String
+pub mycelium_doc::BookManifest::title: alloc::string::String
+impl core::clone::Clone for mycelium_doc::book::BookManifest
+pub fn mycelium_doc::book::BookManifest::clone(&self) -> mycelium_doc::book::BookManifest
+impl core::fmt::Debug for mycelium_doc::book::BookManifest
+pub fn mycelium_doc::book::BookManifest::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for mycelium_doc::book::BookManifest
+pub fn mycelium_doc::book::BookManifest::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_doc::book::BookManifest
+pub fn mycelium_doc::book::BookManifest::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_doc::book::BookManifest
+impl core::marker::Send for mycelium_doc::book::BookManifest
+impl core::marker::Sync for mycelium_doc::book::BookManifest
+impl core::marker::Unpin for mycelium_doc::book::BookManifest
+impl core::marker::UnsafeUnpin for mycelium_doc::book::BookManifest
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::book::BookManifest
+impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::book::BookManifest
 pub struct mycelium_doc::BuildInput
 pub mycelium_doc::BuildInput::corpus_root: core::option::Option<std::path::PathBuf>
 pub mycelium_doc::BuildInput::example_roots: alloc::vec::Vec<std::path::PathBuf>
+pub mycelium_doc::BuildInput::extra_md_files: alloc::vec::Vec<std::path::PathBuf>
 pub mycelium_doc::BuildInput::repo_root: std::path::PathBuf
 pub mycelium_doc::BuildInput::schemas_root: core::option::Option<std::path::PathBuf>
 impl mycelium_doc::build::BuildInput
@@ -548,6 +650,26 @@ impl core::marker::Unpin for mycelium_doc::build::BuildInput
 impl core::marker::UnsafeUnpin for mycelium_doc::build::BuildInput
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::build::BuildInput
 impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::build::BuildInput
+pub struct mycelium_doc::ChapterSpec
+pub mycelium_doc::ChapterSpec::exclude: alloc::vec::Vec<alloc::string::String>
+pub mycelium_doc::ChapterSpec::globs: alloc::vec::Vec<alloc::string::String>
+pub mycelium_doc::ChapterSpec::sources: alloc::vec::Vec<alloc::string::String>
+pub mycelium_doc::ChapterSpec::title: alloc::string::String
+impl core::clone::Clone for mycelium_doc::book::ChapterSpec
+pub fn mycelium_doc::book::ChapterSpec::clone(&self) -> mycelium_doc::book::ChapterSpec
+impl core::fmt::Debug for mycelium_doc::book::ChapterSpec
+pub fn mycelium_doc::book::ChapterSpec::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for mycelium_doc::book::ChapterSpec
+pub fn mycelium_doc::book::ChapterSpec::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_doc::book::ChapterSpec
+pub fn mycelium_doc::book::ChapterSpec::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_doc::book::ChapterSpec
+impl core::marker::Send for mycelium_doc::book::ChapterSpec
+impl core::marker::Sync for mycelium_doc::book::ChapterSpec
+impl core::marker::Unpin for mycelium_doc::book::ChapterSpec
+impl core::marker::UnsafeUnpin for mycelium_doc::book::ChapterSpec
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::book::ChapterSpec
+impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::book::ChapterSpec
 pub struct mycelium_doc::CheckOutcome
 pub mycelium_doc::CheckOutcome::findings: alloc::vec::Vec<mycelium_doc::doc_lint::Finding>
 pub mycelium_doc::CheckOutcome::name: alloc::string::String
@@ -677,6 +799,8 @@ impl core::marker::UnsafeUnpin for mycelium_doc::ir::Provenance
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::ir::Provenance
 impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::ir::Provenance
 pub const mycelium_doc::CHECK_NAMES: &[&str]
-pub fn mycelium_doc::build(&mycelium_doc::build::BuildInput) -> std::io::error::Result<mycelium_doc::ir::DocModel>
+pub fn mycelium_doc::build(&mycelium_doc::build::BuildInput) -> core::io::error::Result<mycelium_doc::ir::DocModel>
+pub fn mycelium_doc::build_book(&mycelium_doc::ir::DocModel, &mycelium_doc::book::BookManifest, &std::path::Path) -> core::result::Result<mycelium_doc::emit::Artifacts, mycelium_doc::book::BookError>
 pub fn mycelium_doc::emit_all(&mycelium_doc::ir::DocModel) -> mycelium_doc::emit::Artifacts
 pub fn mycelium_doc::lint(&mycelium_doc::ir::DocModel) -> mycelium_doc::doc_lint::DocLintReport
+pub fn mycelium_doc::load_manifest(&std::path::Path) -> core::result::Result<mycelium_doc::book::BookManifest, mycelium_doc::book::BookError>

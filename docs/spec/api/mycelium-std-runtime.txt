@@ -257,6 +257,234 @@ impl<V> core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::networ
 impl<V> core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::network::Sender<V>
 pub const mycelium_std_runtime::network::CHANNEL_FIFO_STRENGTH: mycelium_core::guarantee::GuaranteeStrength
 pub const mycelium_std_runtime::network::KAHN_DETERMINISM_STRENGTH: mycelium_core::guarantee::GuaranteeStrength
+pub mod mycelium_std_runtime::policy_mech
+pub enum mycelium_std_runtime::policy_mech::CaptureError
+pub mycelium_std_runtime::policy_mech::CaptureError::RefMismatch
+pub mycelium_std_runtime::policy_mech::CaptureError::RefMismatch::requested: mycelium_core::id::ContentHash
+pub mycelium_std_runtime::policy_mech::CaptureError::RefMismatch::resolved: mycelium_core::id::ContentHash
+pub mycelium_std_runtime::policy_mech::CaptureError::UnknownPolicyRef
+pub mycelium_std_runtime::policy_mech::CaptureError::UnknownPolicyRef::policy_ref: mycelium_core::id::ContentHash
+impl core::clone::Clone for mycelium_std_runtime::policy_mech::CaptureError
+pub fn mycelium_std_runtime::policy_mech::CaptureError::clone(&self) -> mycelium_std_runtime::policy_mech::CaptureError
+impl core::cmp::Eq for mycelium_std_runtime::policy_mech::CaptureError
+impl core::cmp::PartialEq for mycelium_std_runtime::policy_mech::CaptureError
+pub fn mycelium_std_runtime::policy_mech::CaptureError::eq(&self, &mycelium_std_runtime::policy_mech::CaptureError) -> bool
+impl core::error::Error for mycelium_std_runtime::policy_mech::CaptureError
+impl core::fmt::Debug for mycelium_std_runtime::policy_mech::CaptureError
+pub fn mycelium_std_runtime::policy_mech::CaptureError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_runtime::policy_mech::CaptureError
+pub fn mycelium_std_runtime::policy_mech::CaptureError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_runtime::policy_mech::CaptureError
+impl core::marker::Freeze for mycelium_std_runtime::policy_mech::CaptureError
+impl core::marker::Send for mycelium_std_runtime::policy_mech::CaptureError
+impl core::marker::Sync for mycelium_std_runtime::policy_mech::CaptureError
+impl core::marker::Unpin for mycelium_std_runtime::policy_mech::CaptureError
+impl core::marker::UnsafeUnpin for mycelium_std_runtime::policy_mech::CaptureError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::policy_mech::CaptureError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::policy_mech::CaptureError
+pub enum mycelium_std_runtime::policy_mech::PolicySite
+pub mycelium_std_runtime::policy_mech::PolicySite::Packing
+pub mycelium_std_runtime::policy_mech::PolicySite::Placement
+pub mycelium_std_runtime::policy_mech::PolicySite::SwapTarget
+impl core::clone::Clone for mycelium_std_runtime::policy_mech::PolicySite
+pub fn mycelium_std_runtime::policy_mech::PolicySite::clone(&self) -> mycelium_std_runtime::policy_mech::PolicySite
+impl core::cmp::Eq for mycelium_std_runtime::policy_mech::PolicySite
+impl core::cmp::PartialEq for mycelium_std_runtime::policy_mech::PolicySite
+pub fn mycelium_std_runtime::policy_mech::PolicySite::eq(&self, &mycelium_std_runtime::policy_mech::PolicySite) -> bool
+impl core::fmt::Debug for mycelium_std_runtime::policy_mech::PolicySite
+pub fn mycelium_std_runtime::policy_mech::PolicySite::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_runtime::policy_mech::PolicySite
+pub fn mycelium_std_runtime::policy_mech::PolicySite::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_runtime::policy_mech::PolicySite
+impl core::marker::StructuralPartialEq for mycelium_std_runtime::policy_mech::PolicySite
+impl core::marker::Freeze for mycelium_std_runtime::policy_mech::PolicySite
+impl core::marker::Send for mycelium_std_runtime::policy_mech::PolicySite
+impl core::marker::Sync for mycelium_std_runtime::policy_mech::PolicySite
+impl core::marker::Unpin for mycelium_std_runtime::policy_mech::PolicySite
+impl core::marker::UnsafeUnpin for mycelium_std_runtime::policy_mech::PolicySite
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::policy_mech::PolicySite
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::policy_mech::PolicySite
+pub enum mycelium_std_runtime::policy_mech::ReplayError
+pub mycelium_std_runtime::policy_mech::ReplayError::Diverged
+pub mycelium_std_runtime::policy_mech::ReplayError::Diverged::recorded: alloc::boxed::Box<mycelium_select::Explanation>
+pub mycelium_std_runtime::policy_mech::ReplayError::Diverged::replayed: alloc::boxed::Box<mycelium_select::Explanation>
+pub mycelium_std_runtime::policy_mech::ReplayError::PolicyMismatch
+pub mycelium_std_runtime::policy_mech::ReplayError::PolicyMismatch::captured: mycelium_core::id::ContentHash
+pub mycelium_std_runtime::policy_mech::ReplayError::PolicyMismatch::recorded: mycelium_core::id::ContentHash
+pub mycelium_std_runtime::policy_mech::ReplayError::Select(mycelium_select::SelectError)
+impl core::clone::Clone for mycelium_std_runtime::policy_mech::ReplayError
+pub fn mycelium_std_runtime::policy_mech::ReplayError::clone(&self) -> mycelium_std_runtime::policy_mech::ReplayError
+impl core::cmp::PartialEq for mycelium_std_runtime::policy_mech::ReplayError
+pub fn mycelium_std_runtime::policy_mech::ReplayError::eq(&self, &mycelium_std_runtime::policy_mech::ReplayError) -> bool
+impl core::convert::From<mycelium_select::SelectError> for mycelium_std_runtime::policy_mech::ReplayError
+pub fn mycelium_std_runtime::policy_mech::ReplayError::from(mycelium_select::SelectError) -> Self
+impl core::error::Error for mycelium_std_runtime::policy_mech::ReplayError
+impl core::fmt::Debug for mycelium_std_runtime::policy_mech::ReplayError
+pub fn mycelium_std_runtime::policy_mech::ReplayError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_runtime::policy_mech::ReplayError
+pub fn mycelium_std_runtime::policy_mech::ReplayError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_runtime::policy_mech::ReplayError
+impl core::marker::Freeze for mycelium_std_runtime::policy_mech::ReplayError
+impl core::marker::Send for mycelium_std_runtime::policy_mech::ReplayError
+impl core::marker::Sync for mycelium_std_runtime::policy_mech::ReplayError
+impl core::marker::Unpin for mycelium_std_runtime::policy_mech::ReplayError
+impl core::marker::UnsafeUnpin for mycelium_std_runtime::policy_mech::ReplayError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::policy_mech::ReplayError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::policy_mech::ReplayError
+pub enum mycelium_std_runtime::policy_mech::SlotError
+pub mycelium_std_runtime::policy_mech::SlotError::NoActivePolicy
+pub mycelium_std_runtime::policy_mech::SlotError::NoActivePolicy::site: mycelium_std_runtime::policy_mech::PolicySite
+pub mycelium_std_runtime::policy_mech::SlotError::Select(mycelium_select::SelectError)
+impl core::clone::Clone for mycelium_std_runtime::policy_mech::SlotError
+pub fn mycelium_std_runtime::policy_mech::SlotError::clone(&self) -> mycelium_std_runtime::policy_mech::SlotError
+impl core::cmp::PartialEq for mycelium_std_runtime::policy_mech::SlotError
+pub fn mycelium_std_runtime::policy_mech::SlotError::eq(&self, &mycelium_std_runtime::policy_mech::SlotError) -> bool
+impl core::convert::From<mycelium_select::SelectError> for mycelium_std_runtime::policy_mech::SlotError
+pub fn mycelium_std_runtime::policy_mech::SlotError::from(mycelium_select::SelectError) -> Self
+impl core::error::Error for mycelium_std_runtime::policy_mech::SlotError
+impl core::fmt::Debug for mycelium_std_runtime::policy_mech::SlotError
+pub fn mycelium_std_runtime::policy_mech::SlotError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_runtime::policy_mech::SlotError
+pub fn mycelium_std_runtime::policy_mech::SlotError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_runtime::policy_mech::SlotError
+impl core::marker::Freeze for mycelium_std_runtime::policy_mech::SlotError
+impl core::marker::Send for mycelium_std_runtime::policy_mech::SlotError
+impl core::marker::Sync for mycelium_std_runtime::policy_mech::SlotError
+impl core::marker::Unpin for mycelium_std_runtime::policy_mech::SlotError
+impl core::marker::UnsafeUnpin for mycelium_std_runtime::policy_mech::SlotError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::policy_mech::SlotError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::policy_mech::SlotError
+pub struct mycelium_std_runtime::policy_mech::CapturedPolicy
+pub mycelium_std_runtime::policy_mech::CapturedPolicy::policy: mycelium_select::SelectionPolicy
+pub mycelium_std_runtime::policy_mech::CapturedPolicy::policy_ref: mycelium_core::id::ContentHash
+impl core::clone::Clone for mycelium_std_runtime::policy_mech::CapturedPolicy
+pub fn mycelium_std_runtime::policy_mech::CapturedPolicy::clone(&self) -> mycelium_std_runtime::policy_mech::CapturedPolicy
+impl core::cmp::PartialEq for mycelium_std_runtime::policy_mech::CapturedPolicy
+pub fn mycelium_std_runtime::policy_mech::CapturedPolicy::eq(&self, &mycelium_std_runtime::policy_mech::CapturedPolicy) -> bool
+impl core::fmt::Debug for mycelium_std_runtime::policy_mech::CapturedPolicy
+pub fn mycelium_std_runtime::policy_mech::CapturedPolicy::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_runtime::policy_mech::CapturedPolicy
+impl core::marker::Freeze for mycelium_std_runtime::policy_mech::CapturedPolicy
+impl core::marker::Send for mycelium_std_runtime::policy_mech::CapturedPolicy
+impl core::marker::Sync for mycelium_std_runtime::policy_mech::CapturedPolicy
+impl core::marker::Unpin for mycelium_std_runtime::policy_mech::CapturedPolicy
+impl core::marker::UnsafeUnpin for mycelium_std_runtime::policy_mech::CapturedPolicy
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::policy_mech::CapturedPolicy
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::policy_mech::CapturedPolicy
+pub struct mycelium_std_runtime::policy_mech::PolicySetRecord
+pub mycelium_std_runtime::policy_mech::PolicySetRecord::new_policy: mycelium_core::id::ContentHash
+pub mycelium_std_runtime::policy_mech::PolicySetRecord::new_policy_name: alloc::string::String
+pub mycelium_std_runtime::policy_mech::PolicySetRecord::previous: core::option::Option<mycelium_core::id::ContentHash>
+pub mycelium_std_runtime::policy_mech::PolicySetRecord::seq: u64
+pub mycelium_std_runtime::policy_mech::PolicySetRecord::site: mycelium_std_runtime::policy_mech::PolicySite
+impl core::clone::Clone for mycelium_std_runtime::policy_mech::PolicySetRecord
+pub fn mycelium_std_runtime::policy_mech::PolicySetRecord::clone(&self) -> mycelium_std_runtime::policy_mech::PolicySetRecord
+impl core::cmp::Eq for mycelium_std_runtime::policy_mech::PolicySetRecord
+impl core::cmp::PartialEq for mycelium_std_runtime::policy_mech::PolicySetRecord
+pub fn mycelium_std_runtime::policy_mech::PolicySetRecord::eq(&self, &mycelium_std_runtime::policy_mech::PolicySetRecord) -> bool
+impl core::fmt::Debug for mycelium_std_runtime::policy_mech::PolicySetRecord
+pub fn mycelium_std_runtime::policy_mech::PolicySetRecord::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_runtime::policy_mech::PolicySetRecord
+impl core::marker::Freeze for mycelium_std_runtime::policy_mech::PolicySetRecord
+impl core::marker::Send for mycelium_std_runtime::policy_mech::PolicySetRecord
+impl core::marker::Sync for mycelium_std_runtime::policy_mech::PolicySetRecord
+impl core::marker::Unpin for mycelium_std_runtime::policy_mech::PolicySetRecord
+impl core::marker::UnsafeUnpin for mycelium_std_runtime::policy_mech::PolicySetRecord
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::policy_mech::PolicySetRecord
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::policy_mech::PolicySetRecord
+pub struct mycelium_std_runtime::policy_mech::PolicySlot
+impl mycelium_std_runtime::policy_mech::PolicySlot
+pub fn mycelium_std_runtime::policy_mech::PolicySlot::active(&self) -> core::option::Option<&mycelium_select::SelectionPolicy>
+pub fn mycelium_std_runtime::policy_mech::PolicySlot::new(mycelium_std_runtime::policy_mech::PolicySite) -> Self
+pub fn mycelium_std_runtime::policy_mech::PolicySlot::select(&mut self, &mycelium_select::SelectionInputs, core::option::Option<usize>) -> core::result::Result<(mycelium_select::Candidate, mycelium_select::Explanation), mycelium_std_runtime::policy_mech::SlotError>
+pub fn mycelium_std_runtime::policy_mech::PolicySlot::set(&mut self, mycelium_select::SelectionPolicy) -> &mycelium_std_runtime::policy_mech::PolicySetRecord
+pub fn mycelium_std_runtime::policy_mech::PolicySlot::site(&self) -> mycelium_std_runtime::policy_mech::PolicySite
+pub fn mycelium_std_runtime::policy_mech::PolicySlot::trace(&self) -> &[mycelium_select::Explanation]
+pub fn mycelium_std_runtime::policy_mech::PolicySlot::transitions(&self) -> &[mycelium_std_runtime::policy_mech::PolicySetRecord]
+impl core::fmt::Debug for mycelium_std_runtime::policy_mech::PolicySlot
+pub fn mycelium_std_runtime::policy_mech::PolicySlot::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_std_runtime::policy_mech::PolicySlot
+impl core::marker::Send for mycelium_std_runtime::policy_mech::PolicySlot
+impl core::marker::Sync for mycelium_std_runtime::policy_mech::PolicySlot
+impl core::marker::Unpin for mycelium_std_runtime::policy_mech::PolicySlot
+impl core::marker::UnsafeUnpin for mycelium_std_runtime::policy_mech::PolicySlot
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::policy_mech::PolicySlot
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::policy_mech::PolicySlot
+pub fn mycelium_std_runtime::policy_mech::capture(&mycelium_select::PolicyRegistry, &mycelium_select::Explanation) -> core::result::Result<mycelium_std_runtime::policy_mech::CapturedPolicy, mycelium_std_runtime::policy_mech::CaptureError>
+pub fn mycelium_std_runtime::policy_mech::replay(&mycelium_std_runtime::policy_mech::CapturedPolicy, &mycelium_select::Explanation) -> core::result::Result<mycelium_select::Explanation, mycelium_std_runtime::policy_mech::ReplayError>
+pub mod mycelium_std_runtime::r2_residual
+pub enum mycelium_std_runtime::r2_residual::DeferredR2
+pub mycelium_std_runtime::r2_residual::DeferredR2::CaptureSetL1Surface
+pub mycelium_std_runtime::r2_residual::DeferredR2::CystCheckpoint
+pub mycelium_std_runtime::r2_residual::DeferredR2::GraftCapability
+pub mycelium_std_runtime::r2_residual::DeferredR2::MeshOverlay
+pub mycelium_std_runtime::r2_residual::DeferredR2::MultiNodePlacement
+pub mycelium_std_runtime::r2_residual::DeferredR2::XlocMovement
+impl mycelium_std_runtime::r2_residual::DeferredR2
+pub const mycelium_std_runtime::r2_residual::DeferredR2::ALL: [mycelium_std_runtime::r2_residual::DeferredR2; 6]
+impl core::clone::Clone for mycelium_std_runtime::r2_residual::DeferredR2
+pub fn mycelium_std_runtime::r2_residual::DeferredR2::clone(&self) -> mycelium_std_runtime::r2_residual::DeferredR2
+impl core::cmp::Eq for mycelium_std_runtime::r2_residual::DeferredR2
+impl core::cmp::PartialEq for mycelium_std_runtime::r2_residual::DeferredR2
+pub fn mycelium_std_runtime::r2_residual::DeferredR2::eq(&self, &mycelium_std_runtime::r2_residual::DeferredR2) -> bool
+impl core::fmt::Debug for mycelium_std_runtime::r2_residual::DeferredR2
+pub fn mycelium_std_runtime::r2_residual::DeferredR2::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_runtime::r2_residual::DeferredR2
+impl core::marker::StructuralPartialEq for mycelium_std_runtime::r2_residual::DeferredR2
+impl core::marker::Freeze for mycelium_std_runtime::r2_residual::DeferredR2
+impl core::marker::Send for mycelium_std_runtime::r2_residual::DeferredR2
+impl core::marker::Sync for mycelium_std_runtime::r2_residual::DeferredR2
+impl core::marker::Unpin for mycelium_std_runtime::r2_residual::DeferredR2
+impl core::marker::UnsafeUnpin for mycelium_std_runtime::r2_residual::DeferredR2
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::r2_residual::DeferredR2
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::r2_residual::DeferredR2
+pub struct mycelium_std_runtime::r2_residual::R2DeferredError
+pub mycelium_std_runtime::r2_residual::R2DeferredError::item: mycelium_std_runtime::r2_residual::DeferredR2
+pub mycelium_std_runtime::r2_residual::R2DeferredError::row: &'static mycelium_std_runtime::r2_residual::ResidualRow
+impl core::clone::Clone for mycelium_std_runtime::r2_residual::R2DeferredError
+pub fn mycelium_std_runtime::r2_residual::R2DeferredError::clone(&self) -> mycelium_std_runtime::r2_residual::R2DeferredError
+impl core::cmp::Eq for mycelium_std_runtime::r2_residual::R2DeferredError
+impl core::cmp::PartialEq for mycelium_std_runtime::r2_residual::R2DeferredError
+pub fn mycelium_std_runtime::r2_residual::R2DeferredError::eq(&self, &mycelium_std_runtime::r2_residual::R2DeferredError) -> bool
+impl core::error::Error for mycelium_std_runtime::r2_residual::R2DeferredError
+impl core::fmt::Debug for mycelium_std_runtime::r2_residual::R2DeferredError
+pub fn mycelium_std_runtime::r2_residual::R2DeferredError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_runtime::r2_residual::R2DeferredError
+pub fn mycelium_std_runtime::r2_residual::R2DeferredError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_runtime::r2_residual::R2DeferredError
+impl core::marker::StructuralPartialEq for mycelium_std_runtime::r2_residual::R2DeferredError
+impl core::marker::Freeze for mycelium_std_runtime::r2_residual::R2DeferredError
+impl core::marker::Send for mycelium_std_runtime::r2_residual::R2DeferredError
+impl core::marker::Sync for mycelium_std_runtime::r2_residual::R2DeferredError
+impl core::marker::Unpin for mycelium_std_runtime::r2_residual::R2DeferredError
+impl core::marker::UnsafeUnpin for mycelium_std_runtime::r2_residual::R2DeferredError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::r2_residual::R2DeferredError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::r2_residual::R2DeferredError
+pub struct mycelium_std_runtime::r2_residual::ResidualRow
+pub mycelium_std_runtime::r2_residual::ResidualRow::basis: &'static str
+pub mycelium_std_runtime::r2_residual::ResidualRow::construct: &'static str
+pub mycelium_std_runtime::r2_residual::ResidualRow::item: mycelium_std_runtime::r2_residual::DeferredR2
+pub mycelium_std_runtime::r2_residual::ResidualRow::tracker: &'static str
+pub mycelium_std_runtime::r2_residual::ResidualRow::why_deferred: &'static str
+impl core::clone::Clone for mycelium_std_runtime::r2_residual::ResidualRow
+pub fn mycelium_std_runtime::r2_residual::ResidualRow::clone(&self) -> mycelium_std_runtime::r2_residual::ResidualRow
+impl core::cmp::Eq for mycelium_std_runtime::r2_residual::ResidualRow
+impl core::cmp::PartialEq for mycelium_std_runtime::r2_residual::ResidualRow
+pub fn mycelium_std_runtime::r2_residual::ResidualRow::eq(&self, &mycelium_std_runtime::r2_residual::ResidualRow) -> bool
+impl core::fmt::Debug for mycelium_std_runtime::r2_residual::ResidualRow
+pub fn mycelium_std_runtime::r2_residual::ResidualRow::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_runtime::r2_residual::ResidualRow
+impl core::marker::StructuralPartialEq for mycelium_std_runtime::r2_residual::ResidualRow
+impl core::marker::Freeze for mycelium_std_runtime::r2_residual::ResidualRow
+impl core::marker::Send for mycelium_std_runtime::r2_residual::ResidualRow
+impl core::marker::Sync for mycelium_std_runtime::r2_residual::ResidualRow
+impl core::marker::Unpin for mycelium_std_runtime::r2_residual::ResidualRow
+impl core::marker::UnsafeUnpin for mycelium_std_runtime::r2_residual::ResidualRow
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::r2_residual::ResidualRow
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::r2_residual::ResidualRow
+pub static mycelium_std_runtime::r2_residual::RESIDUALS: &[mycelium_std_runtime::r2_residual::ResidualRow]
+pub fn mycelium_std_runtime::r2_residual::require(mycelium_std_runtime::r2_residual::DeferredR2) -> core::result::Result<(), mycelium_std_runtime::r2_residual::R2DeferredError>
+pub fn mycelium_std_runtime::r2_residual::residual_for(mycelium_std_runtime::r2_residual::DeferredR2) -> &'static mycelium_std_runtime::r2_residual::ResidualRow
 pub mod mycelium_std_runtime::rc
 pub enum mycelium_std_runtime::rc::RcProbe<T>
 pub mycelium_std_runtime::rc::RcProbe::Shared

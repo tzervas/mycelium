@@ -103,6 +103,49 @@ impl core::marker::Unpin for mycelium_interp::budget::EffectBudgetExhausted
 impl core::marker::UnsafeUnpin for mycelium_interp::budget::EffectBudgetExhausted
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_interp::budget::EffectBudgetExhausted
 impl core::panic::unwind_safe::UnwindSafe for mycelium_interp::budget::EffectBudgetExhausted
+pub mod mycelium_interp::parallel
+pub enum mycelium_interp::parallel::BatchHead
+pub mycelium_interp::parallel::BatchHead::Construct
+pub mycelium_interp::parallel::BatchHead::Op
+impl core::clone::Clone for mycelium_interp::parallel::BatchHead
+pub fn mycelium_interp::parallel::BatchHead::clone(&self) -> mycelium_interp::parallel::BatchHead
+impl core::cmp::Eq for mycelium_interp::parallel::BatchHead
+impl core::cmp::PartialEq for mycelium_interp::parallel::BatchHead
+pub fn mycelium_interp::parallel::BatchHead::eq(&self, &mycelium_interp::parallel::BatchHead) -> bool
+impl core::fmt::Debug for mycelium_interp::parallel::BatchHead
+pub fn mycelium_interp::parallel::BatchHead::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_interp::parallel::BatchHead
+impl core::marker::StructuralPartialEq for mycelium_interp::parallel::BatchHead
+impl core::marker::Freeze for mycelium_interp::parallel::BatchHead
+impl core::marker::Send for mycelium_interp::parallel::BatchHead
+impl core::marker::Sync for mycelium_interp::parallel::BatchHead
+impl core::marker::Unpin for mycelium_interp::parallel::BatchHead
+impl core::marker::UnsafeUnpin for mycelium_interp::parallel::BatchHead
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_interp::parallel::BatchHead
+impl core::panic::unwind_safe::UnwindSafe for mycelium_interp::parallel::BatchHead
+pub enum mycelium_interp::parallel::ParallelPlan
+pub mycelium_interp::parallel::ParallelPlan::SequentialImpure
+pub mycelium_interp::parallel::ParallelPlan::SequentialNoBatch
+pub mycelium_interp::parallel::ParallelPlan::TopLevelBatch
+pub mycelium_interp::parallel::ParallelPlan::TopLevelBatch::head: mycelium_interp::parallel::BatchHead
+pub mycelium_interp::parallel::ParallelPlan::TopLevelBatch::width: usize
+impl core::clone::Clone for mycelium_interp::parallel::ParallelPlan
+pub fn mycelium_interp::parallel::ParallelPlan::clone(&self) -> mycelium_interp::parallel::ParallelPlan
+impl core::cmp::Eq for mycelium_interp::parallel::ParallelPlan
+impl core::cmp::PartialEq for mycelium_interp::parallel::ParallelPlan
+pub fn mycelium_interp::parallel::ParallelPlan::eq(&self, &mycelium_interp::parallel::ParallelPlan) -> bool
+impl core::fmt::Debug for mycelium_interp::parallel::ParallelPlan
+pub fn mycelium_interp::parallel::ParallelPlan::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_interp::parallel::ParallelPlan
+impl core::marker::Freeze for mycelium_interp::parallel::ParallelPlan
+impl core::marker::Send for mycelium_interp::parallel::ParallelPlan
+impl core::marker::Sync for mycelium_interp::parallel::ParallelPlan
+impl core::marker::Unpin for mycelium_interp::parallel::ParallelPlan
+impl core::marker::UnsafeUnpin for mycelium_interp::parallel::ParallelPlan
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_interp::parallel::ParallelPlan
+impl core::panic::unwind_safe::UnwindSafe for mycelium_interp::parallel::ParallelPlan
+pub fn mycelium_interp::parallel::is_pure(&mycelium_core::node::Node) -> bool
+pub fn mycelium_interp::parallel::plan_parallel(&mycelium_core::node::Node) -> mycelium_interp::parallel::ParallelPlan
 pub mod mycelium_interp::prims
 pub struct mycelium_interp::prims::PrimRegistry
 impl mycelium_interp::prims::PrimRegistry
@@ -122,6 +165,10 @@ impl core::marker::Unpin for mycelium_interp::prims::PrimRegistry
 impl core::marker::UnsafeUnpin for mycelium_interp::prims::PrimRegistry
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_interp::prims::PrimRegistry
 impl core::panic::unwind_safe::UnwindSafe for mycelium_interp::prims::PrimRegistry
+pub const mycelium_interp::prims::FLT_CMP_CONFORMANCE_METHOD: &str
+pub const mycelium_interp::prims::FLT_CMP_CONFORMANCE_TRIALS: u64
+pub const mycelium_interp::prims::FLT_CONFORMANCE_METHOD: &str
+pub const mycelium_interp::prims::FLT_CONFORMANCE_TRIALS: u64
 pub type mycelium_interp::prims::PrimFn = fn(&str, &[&mycelium_core::value::Value]) -> core::result::Result<mycelium_core::value::Value, mycelium_interp::EvalError>
 pub mod mycelium_interp::supervise
 pub enum mycelium_interp::supervise::Escalation
@@ -264,10 +311,29 @@ impl core::marker::Unpin for mycelium_interp::swap::IdentitySwapEngine
 impl core::marker::UnsafeUnpin for mycelium_interp::swap::IdentitySwapEngine
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_interp::swap::IdentitySwapEngine
 impl core::panic::unwind_safe::UnwindSafe for mycelium_interp::swap::IdentitySwapEngine
-pub trait mycelium_interp::swap::SwapEngine
+pub trait mycelium_interp::swap::SwapEngine: core::marker::Send + core::marker::Sync
 pub fn mycelium_interp::swap::SwapEngine::swap(&self, &mycelium_core::value::Value, &mycelium_core::repr::Repr, &mycelium_core::id::ContentHash) -> core::result::Result<mycelium_core::value::Value, mycelium_interp::EvalError>
 impl mycelium_interp::swap::SwapEngine for mycelium_interp::swap::IdentitySwapEngine
 pub fn mycelium_interp::swap::IdentitySwapEngine::swap(&self, &mycelium_core::value::Value, &mycelium_core::repr::Repr, &mycelium_core::id::ContentHash) -> core::result::Result<mycelium_core::value::Value, mycelium_interp::EvalError>
+pub enum mycelium_interp::BatchHead
+pub mycelium_interp::BatchHead::Construct
+pub mycelium_interp::BatchHead::Op
+impl core::clone::Clone for mycelium_interp::parallel::BatchHead
+pub fn mycelium_interp::parallel::BatchHead::clone(&self) -> mycelium_interp::parallel::BatchHead
+impl core::cmp::Eq for mycelium_interp::parallel::BatchHead
+impl core::cmp::PartialEq for mycelium_interp::parallel::BatchHead
+pub fn mycelium_interp::parallel::BatchHead::eq(&self, &mycelium_interp::parallel::BatchHead) -> bool
+impl core::fmt::Debug for mycelium_interp::parallel::BatchHead
+pub fn mycelium_interp::parallel::BatchHead::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_interp::parallel::BatchHead
+impl core::marker::StructuralPartialEq for mycelium_interp::parallel::BatchHead
+impl core::marker::Freeze for mycelium_interp::parallel::BatchHead
+impl core::marker::Send for mycelium_interp::parallel::BatchHead
+impl core::marker::Sync for mycelium_interp::parallel::BatchHead
+impl core::marker::Unpin for mycelium_interp::parallel::BatchHead
+impl core::marker::UnsafeUnpin for mycelium_interp::parallel::BatchHead
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_interp::parallel::BatchHead
+impl core::panic::unwind_safe::UnwindSafe for mycelium_interp::parallel::BatchHead
 pub enum mycelium_interp::EffectBudget
 pub mycelium_interp::EffectBudget::Attempts(u64)
 pub mycelium_interp::EffectBudget::Bytes(u64)
@@ -393,6 +459,27 @@ impl core::marker::Unpin for mycelium_interp::EvalError
 impl core::marker::UnsafeUnpin for mycelium_interp::EvalError
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_interp::EvalError
 impl core::panic::unwind_safe::UnwindSafe for mycelium_interp::EvalError
+pub enum mycelium_interp::ParallelPlan
+pub mycelium_interp::ParallelPlan::SequentialImpure
+pub mycelium_interp::ParallelPlan::SequentialNoBatch
+pub mycelium_interp::ParallelPlan::TopLevelBatch
+pub mycelium_interp::ParallelPlan::TopLevelBatch::head: mycelium_interp::parallel::BatchHead
+pub mycelium_interp::ParallelPlan::TopLevelBatch::width: usize
+impl core::clone::Clone for mycelium_interp::parallel::ParallelPlan
+pub fn mycelium_interp::parallel::ParallelPlan::clone(&self) -> mycelium_interp::parallel::ParallelPlan
+impl core::cmp::Eq for mycelium_interp::parallel::ParallelPlan
+impl core::cmp::PartialEq for mycelium_interp::parallel::ParallelPlan
+pub fn mycelium_interp::parallel::ParallelPlan::eq(&self, &mycelium_interp::parallel::ParallelPlan) -> bool
+impl core::fmt::Debug for mycelium_interp::parallel::ParallelPlan
+pub fn mycelium_interp::parallel::ParallelPlan::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_interp::parallel::ParallelPlan
+impl core::marker::Freeze for mycelium_interp::parallel::ParallelPlan
+impl core::marker::Send for mycelium_interp::parallel::ParallelPlan
+impl core::marker::Sync for mycelium_interp::parallel::ParallelPlan
+impl core::marker::Unpin for mycelium_interp::parallel::ParallelPlan
+impl core::marker::UnsafeUnpin for mycelium_interp::parallel::ParallelPlan
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_interp::parallel::ParallelPlan
+impl core::panic::unwind_safe::UnwindSafe for mycelium_interp::parallel::ParallelPlan
 pub enum mycelium_interp::Step
 pub mycelium_interp::Step::Next(alloc::boxed::Box<mycelium_core::node::Node>)
 pub mycelium_interp::Step::Value
@@ -544,11 +631,16 @@ pub fn mycelium_interp::Interpreter::new(mycelium_interp::prims::PrimRegistry, a
 pub fn mycelium_interp::Interpreter::prim_names(&self) -> alloc::vec::Vec<&str>
 pub fn mycelium_interp::Interpreter::step(&self, &mycelium_core::node::Node) -> core::result::Result<mycelium_interp::Step, mycelium_interp::EvalError>
 pub fn mycelium_interp::Interpreter::with_fuel(self, u64) -> Self
+impl mycelium_interp::Interpreter
+pub fn mycelium_interp::Interpreter::eval_core_parallel(&self, &mycelium_core::node::Node) -> core::result::Result<mycelium_core::datum::CoreValue, mycelium_interp::EvalError>
+pub fn mycelium_interp::Interpreter::eval_parallel(&self, &mycelium_core::node::Node) -> core::result::Result<mycelium_core::value::Value, mycelium_interp::EvalError>
+impl core::clone::Clone for mycelium_interp::Interpreter
+pub fn mycelium_interp::Interpreter::clone(&self) -> mycelium_interp::Interpreter
 impl core::default::Default for mycelium_interp::Interpreter
 pub fn mycelium_interp::Interpreter::default() -> Self
 impl core::marker::Freeze for mycelium_interp::Interpreter
-impl !core::marker::Send for mycelium_interp::Interpreter
-impl !core::marker::Sync for mycelium_interp::Interpreter
+impl core::marker::Send for mycelium_interp::Interpreter
+impl core::marker::Sync for mycelium_interp::Interpreter
 impl core::marker::Unpin for mycelium_interp::Interpreter
 impl core::marker::UnsafeUnpin for mycelium_interp::Interpreter
 impl !core::panic::unwind_safe::RefUnwindSafe for mycelium_interp::Interpreter
@@ -608,7 +700,9 @@ impl core::marker::Unpin for mycelium_interp::supervise::Supervisor
 impl core::marker::UnsafeUnpin for mycelium_interp::supervise::Supervisor
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_interp::supervise::Supervisor
 impl core::panic::unwind_safe::UnwindSafe for mycelium_interp::supervise::Supervisor
-pub trait mycelium_interp::SwapEngine
+pub trait mycelium_interp::SwapEngine: core::marker::Send + core::marker::Sync
 pub fn mycelium_interp::SwapEngine::swap(&self, &mycelium_core::value::Value, &mycelium_core::repr::Repr, &mycelium_core::id::ContentHash) -> core::result::Result<mycelium_core::value::Value, mycelium_interp::EvalError>
 impl mycelium_interp::swap::SwapEngine for mycelium_interp::swap::IdentitySwapEngine
 pub fn mycelium_interp::swap::IdentitySwapEngine::swap(&self, &mycelium_core::value::Value, &mycelium_core::repr::Repr, &mycelium_core::id::ContentHash) -> core::result::Result<mycelium_core::value::Value, mycelium_interp::EvalError>
+pub fn mycelium_interp::is_pure(&mycelium_core::node::Node) -> bool
+pub fn mycelium_interp::plan_parallel(&mycelium_core::node::Node) -> mycelium_interp::parallel::ParallelPlan

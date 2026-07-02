@@ -117,6 +117,7 @@ pub mycelium_vsa::fhrr::Fhrr::dim: u32
 impl mycelium_vsa::fhrr::Fhrr
 pub fn mycelium_vsa::fhrr::Fhrr::bind_values(&self, &mycelium_core::value::Value, &mycelium_core::value::Value) -> core::result::Result<mycelium_core::value::Value, mycelium_vsa::VsaError>
 pub fn mycelium_vsa::fhrr::Fhrr::new(u32) -> Self
+pub fn mycelium_vsa::fhrr::Fhrr::permute_value(&self, &mycelium_core::value::Value, i64) -> core::result::Result<mycelium_core::value::Value, mycelium_vsa::VsaError>
 pub fn mycelium_vsa::fhrr::Fhrr::unbind_values(&self, &mycelium_core::value::Value, &mycelium_core::value::Value) -> core::result::Result<mycelium_core::value::Value, mycelium_vsa::VsaError>
 impl core::clone::Clone for mycelium_vsa::fhrr::Fhrr
 pub fn mycelium_vsa::fhrr::Fhrr::clone(&self) -> mycelium_vsa::fhrr::Fhrr
@@ -735,6 +736,7 @@ pub mycelium_vsa::Fhrr::dim: u32
 impl mycelium_vsa::fhrr::Fhrr
 pub fn mycelium_vsa::fhrr::Fhrr::bind_values(&self, &mycelium_core::value::Value, &mycelium_core::value::Value) -> core::result::Result<mycelium_core::value::Value, mycelium_vsa::VsaError>
 pub fn mycelium_vsa::fhrr::Fhrr::new(u32) -> Self
+pub fn mycelium_vsa::fhrr::Fhrr::permute_value(&self, &mycelium_core::value::Value, i64) -> core::result::Result<mycelium_core::value::Value, mycelium_vsa::VsaError>
 pub fn mycelium_vsa::fhrr::Fhrr::unbind_values(&self, &mycelium_core::value::Value, &mycelium_core::value::Value) -> core::result::Result<mycelium_core::value::Value, mycelium_vsa::VsaError>
 impl core::clone::Clone for mycelium_vsa::fhrr::Fhrr
 pub fn mycelium_vsa::fhrr::Fhrr::clone(&self) -> mycelium_vsa::fhrr::Fhrr
