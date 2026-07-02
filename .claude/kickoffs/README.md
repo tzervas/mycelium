@@ -90,6 +90,21 @@ tree**, branches **off `dev`**, merges into `dev`, then promotes `dev → integr
 *(T2 = `s10`, T3 = `r10`, T4 = `lib10`, T5 = `ffi10`, T6 = `aot10`, T7 = `tool10` are all **complete →
 archived**.)*
 
+### Phase-I function-first kickoffs (ADR-038 Proposed · umbrella roadmap)
+
+Authored 2026-07-01 by the planning tier (ADR-038 §2.7 — Fable plans, Sonnet/Haiku implement; every
+task PM-prepped with user stories + DoD **before** any implementation agent). Decomposition source:
+`docs/planning/road-to-1.0.0-and-mycelium-rewrite.md`. All M-ids in these kickoffs are **proposed,
+not minted** — verify free slots at each kickoff (mitigation #1). `acy` **lands first**; `enb` is
+the usability critical path; `grm` is decision-gated; `opp` is non-gating and parallel.
+
+| UID | Scope | Owns | Status / remaining |
+|---|---|---|---|
+| **`acy`** | **H0** — acyclic-deps enforcement + workspace hygiene (roadmap §2) — **LANDS FIRST** | dep-structure check (xtask/`deny.toml`) · `cert`/`select` fixture refactors · runtime-ABI seam crate · workspace `publish = false` sweep · M-866 `mono.rs` recursion bound | 📋 planned — 11 tasks (M-877…M-886 proposed + existing M-866) |
+| **`enb`** | **H1** — below-grammar enabler closure: B→C→A(float route-ii)→E prim lane + D-lite/`myc run`/strings/`hash.*` (roadmap §3; the Phase-I critical path) | `mycelium-interp/src/prims.rs` + `mycelium-l1` frontend (**the serial lane**) · `mycelium-cli` (`myc run`) · float ADR + DN-39 dossier | 📋 planned — 30 tasks (M-887…M-914 proposed + RFC-0033-named M-766/M-767); after `acy`; maintainer gates inside (float ADR · consume model · M-828 D-lite split) |
+| **`grm`** | **H2a** — grammar-stability gate before mass porting (roadmap §5): RFC-0037 follow-ons · DN-54 completion · tuple decision · ADR-033 FLAG-1 | `mycelium-l1` frontend (serial) · extension-checker · `mycelium.ebnf`/editor grammars/api-index regeneration | 📋 planned — 10 tasks (M-915…M-924 proposed); **ratification-gated** (three maintainer decisions; dossiers first) |
+| **`opp`** | Opportunistic `.myc` ports — 9 ready-now pure/structural crates, smallest-first (roadmap §6; **non-gating**) | `lib/std/{diag,core,select,swap,recover,error,testing,ternary,spore}.myc` (new) · `mycelium-l1/tests/std_*.rs` · per-crate pre-port Rust polish | 📋 planned — 11 tasks (M-925…M-935 proposed); needs only `acy`; runs parallel with `enb` |
+
 ### Kernel-enablement
 
 | UID | Scope | Owns | Status / remaining |
