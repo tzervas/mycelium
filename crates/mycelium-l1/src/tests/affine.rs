@@ -297,20 +297,19 @@ fn passing_a_substrate_as_a_function_argument_twice_is_refused() {
     assert!(is_double_consume(&err), "got: {}", err.message);
 }
 
-// ---- leak-without-consume: NOT a static refusal in v0 (DN-71 FLAG-4 is not yet ratified) --
+// ---- leak-without-consume: NOT a static refusal — released at runtime instead (M-904) -----
 
 #[test]
 fn a_never_consumed_substrate_binding_checks_the_static_pass_does_not_reject_leaks() {
-    // DN-71 §4.2/§8 FLAG-4 proposes a v0 *drop* posture (deterministic scope-exit release with a
-    // recorded reclamation/EXPLAIN event) for a Substrate that is never consumed, but the
-    // maintainer's 2026-07-02 sign-off explicitly does NOT itemize FLAG-1..FLAG-9 dispositions —
-    // they "remain for the integrator/maintainer to record explicitly before any FLAG-dependent
-    // implementation choice is made (G2 — not guessed)". `Substrate` also has no runtime execution
-    // path yet (M-904 is still staged), so there is no actual scope-exit *event* to hook a release
-    // into. M-903's honest v0 posture: the static use-once tracker enforces the *upper* bound (at
-    // most one move) and stays silent on the *lower* bound (zero moves is not an error) — a leak is
-    // accepted here, not rejected. This is recorded explicitly (never a silent omission — G2) and
-    // flagged to the maintainer/M-904 rather than guessed at.
+    // M-903's static use-once tracker enforces only the *upper* bound (at most one move) and stays
+    // silent on the *lower* bound (zero moves is not a checker error) — a never-consumed binding
+    // still type-checks. This is not a gap: DN-71 §8 FLAG-4's v0 drop-without-consume posture
+    // (accepted 2026-07-02, delegated to the M-904 integrator) closes the *lower* bound at
+    // **runtime** instead — a live, un-consumed `Substrate` is deterministically released and the
+    // release recorded at scope exit (`crate::eval`'s `release_if_abandoned`, exercised in
+    // `tests/substrate.rs`), never a silent leak (G2). So "checks" here is deliberately not "runs
+    // clean" — the static pass's job is only the upper bound; the runtime v0 posture is the other
+    // half of the story, landed separately from the checker (KC-3: two concerns, two mechanisms).
     check("nodule d;\nfn f(s: Substrate{Sock}) => Bool = True;")
         .expect("a Substrate binding that is never consumed still type-checks in v0");
 }

@@ -83,5 +83,5 @@ pub use mono::{
 };
 pub use nodule::{parse_nodule_header, NoduleHeader, NoduleHeaderError};
 pub use parse::{parse, parse_phylum};
-pub use substrate::{SubstrateError, SubstrateHandle, SubstrateProvenance};
+pub use substrate::{ReleaseEvent, SubstrateError, SubstrateHandle, SubstrateProvenance};
 pub use totality::Totality;

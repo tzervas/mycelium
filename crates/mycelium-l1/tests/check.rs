@@ -1586,8 +1586,10 @@ fn hof_multi_param_fn_as_value_arity_mismatch_is_refused() {
 #[test]
 fn consume_of_a_substrate_param_typechecks() {
     // DN-03 §1 / LR-8 / M-664: `consume <expr>` over a `Substrate`-typed value type-checks and
-    // yields the moved substrate (`Substrate{tag}`). Execution stays staged (an elab `Residual`,
-    // since `Substrate` has no v0 value forms) — the *type* discipline is what is checked here.
+    // yields the moved substrate (`Substrate{tag}`). This is the *type* discipline; the affine
+    // *use-once* discipline is the M-903 static tracker wired into this same `Cx` (see
+    // `src/tests/affine.rs`), and M-904 (DN-71 §4.3) now **executes** the move end-to-end in the
+    // evaluator (`src/tests/substrate.rs`) — `Substrate`/`consume` is no longer staged.
     let env = check("nodule d;\nfn take(s: Substrate{Sock}) => Substrate{Sock} = consume s;")
         .expect("consume of a Substrate value checks");
     assert_eq!(env.totality["take"], Totality::Total);

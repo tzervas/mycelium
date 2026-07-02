@@ -1,11 +1,15 @@
-//! White-box tests for the `Substrate` v0 value form (M-902; DN-71 Model S §4.1) and its M-903
-//! runtime use-once backstop (DN-71 §4.2).
+//! White-box tests for the `Substrate` v0 value form (M-902; DN-71 Model S §4.1), its M-903
+//! runtime use-once backstop (DN-71 §4.2), and its M-904 execution + drop posture (DN-71 §4.3/§8
+//! FLAG-4).
 //!
 //! Covers the M-902 Definition of Done: creation (acquisition + provenance), passage (round-trip
 //! through the evaluator's value-binding machinery), inspection (tag/id/provenance/EXPLAIN); the
 //! M-903 `try_consume` runtime backstop (first-consume succeeds, a second consume — even through a
-//! separate clone of the same identity — traps explicitly, never silently); and the surface
-//! `consume` refusal, honestly naming the M-904 lowering seam that is still staged.
+//! separate clone of the same identity — traps explicitly, never silently); the M-904 identity-move
+//! execution (`consume` now runs end-to-end, and a runtime double-consume that evades the static
+//! pass still traps, never silently); and the M-904 drop-without-consume v0 posture (a live,
+//! abandoned handle is deterministically released and the release recorded, while a handle that
+//! escapes — directly or nested in a constructed value — is never wrongly released).
 
 use std::collections::BTreeMap;
 
@@ -179,23 +183,199 @@ fn distinct_identities_are_consumed_independently() {
         .expect("consuming `b` independently succeeds");
 }
 
-// --- the still-staged M-904 lowering seam --------------------------------------------------
+// --- M-904: `consume` now executes (the identity-move lowering, DN-71 §4.3) ---------------
 
 #[test]
-fn surface_consume_is_an_explicit_refusal_naming_the_m904_lowering_seam() {
-    // `consume s` type-checks (M-664 surface) and its affine discipline is now statically checked
-    // (M-903), but the evaluator still has no execution path for the actual move — that lowering is
-    // M-904 (DN-71 §4.3). The refusal is explicit, never silent (G2), and honestly describes M-903 as
-    // landed rather than staged.
+fn surface_consume_executes_and_marks_the_handle_consumed() {
+    // `consume s` type-checks (M-664 surface), its affine discipline is statically checked (M-903),
+    // and it now **executes** as the identity-move (M-904; DN-71 §4.3): the evaluator returns the
+    // same identity, now consumed — never a refusal, never a silent no-op.
     let env = env("nodule d;\nfn take(s: Substrate{Sock}) => Substrate{Sock} = consume s;");
-    let err = Evaluator::new(&env)
-        .call("take", vec![L1Value::Substrate(a_handle("Sock"))])
-        .expect_err("surface consume execution must still refuse in v0");
-    let L1Error::Unsupported { what, .. } = err else {
-        panic!("expected Unsupported, got {err:?}");
+    let h = a_handle("Sock");
+    let out = Evaluator::new(&env)
+        .call("take", vec![L1Value::Substrate(h.clone())])
+        .expect("`consume` now executes end-to-end (M-904)");
+    let got = out.as_substrate().expect("result is a Substrate handle");
+    assert_eq!(got.id(), h.id(), "the move preserves identity");
+    assert!(got.is_consumed(), "the moved-out handle is now consumed");
+    assert!(
+        h.is_consumed(),
+        "the shared flag is visible through the original too"
+    );
+}
+
+#[test]
+fn a_full_acquire_use_consume_program_evaluates_through_the_real_interpreter() {
+    // The M-904 DoD's end-to-end accept case: acquire (stood in by the Rust-level `acquire` — v0 has
+    // no surface acquisition op yet, DN-71 §4.1) -> use (an intervening `let` binds and passes it
+    // along unconsumed) -> consume, all evaluated by the real `Evaluator`, not a residual/refusal.
+    let env = env("nodule d;\n\
+         fn take(s: Substrate{Sock}) => Substrate{Sock} = let t = s in consume t;");
+    let h = a_handle("Sock");
+    let out = Evaluator::new(&env)
+        .call("take", vec![L1Value::Substrate(h.clone())])
+        .expect("acquire -> use -> consume runs end-to-end");
+    assert_eq!(out.as_substrate().unwrap().id(), h.id());
+    assert!(out.as_substrate().unwrap().is_consumed());
+    // The intervening `let t = s in …` binding escaped into `consume t`'s result (it's the same
+    // identity returned), so no scope-exit release fires for it — only the `consume` did the work.
+    assert!(
+        Evaluator::new(&env).release_events().is_empty(),
+        "a fresh evaluator's own release log starts empty"
+    );
+}
+
+#[test]
+fn a_runtime_double_consume_that_evades_the_static_pass_still_traps_never_silently() {
+    // The static pass (M-903) refuses double-consume at *check* time (see `tests/affine.rs`), so a
+    // checker-accepted program never reaches this at runtime. This test exercises the **backstop**
+    // directly (M-903's own escape hatch — a closure/loop-multiplicity gap `crate::affine`'s docs
+    // name) by calling `take` twice with *clones of the same identity*: each individual call
+    // type-checks (each call site only ever moves its own argument once), but the second call's
+    // `consume` hits an already-consumed handle at runtime — an `L1Error::Stuck` (an evaluation state
+    // the checker proves unreachable for a single well-typed program), never a silent second move
+    // (G2/VR-5; DN-71 §4.2 backstop, wired into execution by M-904).
+    let env = env("nodule d;\nfn take(s: Substrate{Sock}) => Substrate{Sock} = consume s;");
+    let h = a_handle("Sock");
+    let ev = Evaluator::new(&env);
+    ev.call("take", vec![L1Value::Substrate(h.clone())])
+        .expect("first consume succeeds");
+    let err = ev
+        .call("take", vec![L1Value::Substrate(h.clone())])
+        .expect_err("a second consume of the same identity must trap at runtime");
+    let L1Error::Stuck { why, .. } = err else {
+        panic!("expected Stuck (the runtime backstop), got {err:?}");
     };
-    assert!(what.contains("M-903"), "refusal must cite M-903: {what}");
-    assert!(what.contains("M-904"), "refusal must name M-904: {what}");
+    assert!(why.contains("double-consume"), "got: {why}");
+    assert!(why.contains("M-903"), "must cite the backstop: {why}");
+}
+
+// --- M-904: the drop-without-consume v0 posture (DN-71 §8 FLAG-4) --------------------------
+
+#[test]
+fn a_never_consumed_parameter_is_released_at_scope_exit_and_the_release_is_recorded() {
+    // `f` never references `s` at all — it is abandoned at the end of `f`'s own call frame. The v0
+    // drop posture (accepted 2026-07-02) releases it deterministically and records the event: never
+    // a silent leak (G2).
+    let env = env("nodule d;\ntype Unit = Unit;\nfn f(s: Substrate{Sock}) => Unit = Unit;");
+    let h = a_handle("Sock");
+    let ev = Evaluator::new(&env);
+    ev.call("f", vec![L1Value::Substrate(h.clone())])
+        .expect("f evaluates (dropping s is not a checker or runtime error in v0)");
+    assert!(
+        h.is_consumed(),
+        "the abandoned handle is released (terminal)"
+    );
+    let events = ev.release_events();
+    assert_eq!(events.len(), 1, "exactly one release event: {events:?}");
+    assert_eq!(events[0].tag, "Sock");
+    assert_eq!(events[0].id, h.id());
+    let msg = events[0].to_string();
+    assert!(msg.contains("released"), "got: {msg}");
+    assert!(
+        msg.contains("never `consume`d") || msg.contains("FLAG-4"),
+        "got: {msg}"
+    );
+}
+
+#[test]
+fn a_let_bound_substrate_abandoned_before_the_body_ends_is_released_at_its_own_scope_exit() {
+    // `let t = s in True` — `t` is bound, never used, and its own `let` scope ends before `f`
+    // returns. The release must fire at `t`'s own scope exit (inside the `let`), not merely at the
+    // outer call boundary — both are wired (M-904), but this pins the inner one specifically.
+    let env = env("nodule d;\nfn f(s: Substrate{Sock}) => Bool = let t = s in True;");
+    let h = a_handle("Sock");
+    let ev = Evaluator::new(&env);
+    ev.call("f", vec![L1Value::Substrate(h.clone())])
+        .expect("f evaluates");
+    assert!(
+        h.is_consumed(),
+        "the let-bound-and-abandoned handle is released"
+    );
+    let events = ev.release_events();
+    assert_eq!(events.len(), 1, "exactly one release event: {events:?}");
+    assert_eq!(events[0].id, h.id());
+}
+
+#[test]
+fn a_substrate_returned_unconsumed_is_not_released_it_escapes() {
+    // Plain passthrough (no `consume`): `s` is *returned*, not abandoned, so releasing it would
+    // destroy a value the caller still legitimately holds live. The escape check must see through
+    // the direct return.
+    let env = env("nodule d;\nfn passthrough(s: Substrate{Sock}) => Substrate{Sock} = s;");
+    let h = a_handle("Sock");
+    let ev = Evaluator::new(&env);
+    let out = ev
+        .call("passthrough", vec![L1Value::Substrate(h.clone())])
+        .expect("passthrough evaluates");
+    assert!(
+        !out.as_substrate().unwrap().is_consumed(),
+        "the returned handle must still be live — it escaped, it was not abandoned"
+    );
+    assert!(
+        ev.release_events().is_empty(),
+        "no release event for a value that escaped via return"
+    );
+}
+
+#[test]
+fn a_substrate_nested_in_a_returned_constructor_is_not_released_it_escapes_deeply() {
+    // The escape check must see through a constructed value, not just a bare direct return — `Mk(s)`
+    // returns `s` nested one level deep.
+    let env = env("nodule d;\ntype Box = Mk(Substrate{Sock});\n\
+         fn wrap(s: Substrate{Sock}) => Box = Mk(s);");
+    let h = a_handle("Sock");
+    let ev = Evaluator::new(&env);
+    let out = ev
+        .call("wrap", vec![L1Value::Substrate(h.clone())])
+        .expect("wrap evaluates");
+    let L1Value::Data { fields, .. } = out else {
+        panic!("expected a Data value");
+    };
+    let inner = fields[0].as_substrate().expect("field is the Substrate");
+    assert!(
+        !inner.is_consumed(),
+        "a handle nested in the returned value must still be live"
+    );
+    assert!(
+        ev.release_events().is_empty(),
+        "no release event for a value that escaped nested in a constructor"
+    );
+}
+
+#[test]
+fn an_explicitly_consumed_substrate_never_also_gets_a_release_event() {
+    // Consuming and releasing are the same terminal transition (KC-3 — no third state); an explicit
+    // `consume` must not ALSO generate a spurious release event.
+    let env = env("nodule d;\nfn take(s: Substrate{Sock}) => Substrate{Sock} = consume s;");
+    let h = a_handle("Sock");
+    let ev = Evaluator::new(&env);
+    ev.call("take", vec![L1Value::Substrate(h.clone())])
+        .expect("consume succeeds");
+    assert!(
+        ev.release_events().is_empty(),
+        "an explicit consume must not also be logged as a release: {:?}",
+        ev.release_events()
+    );
+}
+
+#[test]
+fn release_reuses_the_terminal_state_a_released_handle_cannot_be_consumed_afterward() {
+    // `release` and `try_consume` share the same terminal flag (KC-3, substrate.rs docs): once
+    // released, a subsequent `try_consume` on the same identity traps exactly like a double-consume,
+    // never silently succeeding on an already-abandoned handle.
+    let h = a_handle("Sock");
+    let event = h.release("test-site").expect("a live handle releases once");
+    assert_eq!(event.tag, "Sock");
+    assert_eq!(event.id, h.id());
+    assert!(h.is_consumed());
+    let err = h
+        .try_consume()
+        .expect_err("consuming an already-released handle must trap");
+    assert!(matches!(err, SubstrateError::AlreadyConsumed { .. }));
+    // Releasing an already-terminal handle again is a legitimate no-op — `None`, not a duplicate
+    // event and not an error.
+    assert!(h.release("test-site-2").is_none());
 }
 
 #[test]
