@@ -107,7 +107,12 @@ impl PrimRegistry {
     /// `enb` Gap C; **model-dispatched** MAP-I/FHRR/BSC on the operand's `Repr::Vsa` model id, an
     /// out-of-set model an explicit refusal; the `mycelium-vsa` kernel constructs the result with
     /// its honest per-model tag — MAP-I/BSC ops `Exact`, FHRR `unbind` `Empirical` with its
-    /// trial-validated δ — carried unchanged; see the vsa section note below).
+    /// trial-validated δ — carried unchanged; see the vsa section note below), and the
+    /// **certified VSA superposition** (`vsa.bundle`, RFC-0003 §4/§5/ADR-008, M-893 — `enb`
+    /// Gap C; MAP-I's `bundle_values_certified` over a `Seq` of hypervectors + a `Float` δ,
+    /// dispatch set the certified singleton {MAP-I}; the kernel issues the `Proven`
+    /// `CapacityBound` only under its checked side-conditions, carried unchanged — see the vsa
+    /// section note below).
     #[must_use]
     pub fn with_builtins() -> Self {
         let mut r = PrimRegistry::empty();
@@ -202,6 +207,14 @@ impl PrimRegistry {
         r.register("vsa.bind", prim_vsa_bind);
         r.register("vsa.unbind", prim_vsa_unbind);
         r.register("vsa.permute", prim_vsa_permute);
+        // RFC-0003 §4/§5 / ADR-008 (M-893, `enb` Gap C): `vsa.bundle` — superposition via the
+        // **certified path** (`MapI::bundle_values_certified`, the M-131 checked-instantiation
+        // pattern). The kernel constructs the result `Value` with its `Proven` tag + checked
+        // `CapacityBound`; the wrapper carries it through unchanged (VR-5). Dispatch set for
+        // bundle: the certified singleton {MAP-I} — FHRR/BSC (whose kernel bundles are
+        // `Empirical`-profile ops) are explicit refusals, never a silent re-tag. See the module
+        // note at the vsa section below.
+        r.register("vsa.bundle", prim_vsa_bundle);
         r
     }
 
@@ -2224,4 +2237,88 @@ fn prim_vsa_permute(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
     model
         .permute(args[0], shift)
         .map_err(|e| map_vsa_err(prim, e))
+}
+
+/// `vsa.bundle : (Seq{Vsa{m, d}, N≥1}, Float δ) → Vsa{m, d}` — superposition via the **certified
+/// path** (M-893): `MapI::bundle_values_certified(items, δ)`, the M-131 checked-instantiation
+/// pattern. The kernel issues a **`Proven`** `CapacityBound` (citing Clarkson/Thomas, targeting
+/// failure probability δ) **only** under its *checked* side-conditions — `dim ≥ requiredDim(m, δ)`,
+/// bipolar (±1) atoms, distinct items — and refuses explicitly otherwise
+/// (`InsufficientCapacity` naming the required dim / `NonAlphabetComponent` /
+/// `DuplicateBundleItems`), never an unbacked tag (M-I2/VR-5). The wrapper carries the kernel's
+/// tag + bound through unchanged; the disclosed bound is the value's own (`Capacity{items, dim}`
+/// = this bundle's m and d, with the checked basis in `ProvenThm`), EXPLAIN-able through the
+/// model-namespaced `vsa.map_i.bundle` provenance over all input hashes.
+///
+/// **The dispatch set for bundle is the certified singleton {MAP-I}.** FHRR/BSC are in the M-892
+/// *bind-group* dispatch set but their kernel bundles are **`Empirical`-profile ops**
+/// (`bundle_values_empirical` — trial-validated δ, not a checked theorem): routing them through
+/// this prim would either silently weaken the prim's certified meaning or silently re-tag their
+/// evidence (both VR-5 violations), so an FHRR/BSC first element is an explicit refusal naming
+/// the certified set — surfacing the empirical bundles is a distinct, append-only extension
+/// under its own name (the M-894 lane), never a silent downgrade. An out-of-set model (HRR/…)
+/// refuses via [`vsa_model_of`] as for the bind group.
+///
+/// δ is a `Float` operand and must be a probability in `(0, 1]` — a non-finite or out-of-range δ
+/// is refused here with its own message (the kernel's `required_dim` would fold it into an
+/// `InsufficientCapacity` whose "required u64::MAX" obscures the actual offense — G2 prefers the
+/// named refusal). The Exact-input guard of the section note applies to the operands **and each
+/// seq element** (the kernel stamps `Proven` without meeting element strengths — a non-`Exact`
+/// element would be a silent upgrade; in particular a bundle result fed back in refuses:
+/// no δ-composition rule for nested certified bundles exists).
+fn prim_vsa_bundle(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 2)?;
+    vsa_operands_exact(prim, args)?;
+    let elems = as_seq(prim, args[0])?;
+    let Some(first) = elems.first() else {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: "bundle requires at least one item — no superposition is defined over an empty \
+                  Seq (RFC-0003 §4; refused, never a defaulted value — G2)"
+                .to_owned(),
+        });
+    };
+    // Elementwise Exact-input guard (see the doc comment): the seq value's own meta passed the
+    // operand guard above, but the *elements* carry their own tags and the kernel stamps the
+    // result `Proven` without meeting them (VR-5 — refuse, never fabricate a composed δ).
+    if elems
+        .iter()
+        .any(|v| v.meta().guarantee() != GuaranteeStrength::Exact)
+    {
+        return Err(EvalError::ApproxCompositionUnsupported {
+            prim: prim.to_owned(),
+        });
+    }
+    let delta = as_float(prim, args[1])?;
+    if !(delta.is_finite() && delta > 0.0 && delta <= 1.0) {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!(
+                "target failure probability δ must be a finite Float in (0, 1], got {delta} — \
+                 no capacity theorem instantiates outside that range (M-893; refused, never a \
+                 defaulted δ — G2)"
+            ),
+        });
+    }
+    match vsa_model_of(prim, first)? {
+        VsaDispatch::MapI(m) => {
+            let refs: Vec<&Value> = elems.iter().collect();
+            m.bundle_values_certified(&refs, delta)
+                .map_err(|e| map_vsa_err(prim, e))
+        }
+        VsaDispatch::Fhrr(_) | VsaDispatch::Bsc(_) => Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!(
+                "model {:?} has no certified Value-level bundle — `vsa.bundle` is the certified \
+                 path (MAP-I's checked capacity bound) and its dispatch set at introduction is \
+                 the certified singleton {{MAP-I}} (M-893); the FHRR/BSC empirical-profile \
+                 bundles are a distinct, append-only surfacing under their own name, never a \
+                 silent re-tag (VR-5)",
+                match first.repr() {
+                    Repr::Vsa { model, .. } => model.as_str(),
+                    _ => unreachable!("vsa_model_of admitted a Vsa first element"),
+                }
+            ),
+        }),
+    }
 }

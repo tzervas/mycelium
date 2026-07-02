@@ -14,7 +14,8 @@
 //! carried-not-upgraded contract. The **model-dispatched** `vsa.*` bind group (M-892) likewise
 //! bypasses `compose_result` — the `mycelium-vsa` kernel constructs the result with its
 //! per-*model* tag — so its Π entry is pinned to the **meet over the dispatch set** (MAP-I/FHRR/
-//! BSC), recomputed from the kernel (VR-5: one table slot must not over-claim for any model).
+//! BSC), recomputed from the kernel (VR-5: one table slot must not over-claim for any model);
+//! the certified `vsa.bundle` (M-893) pins the same way over its certified singleton {MAP-I}.
 
 use mycelium_core::{GuaranteeStrength, PrimTable};
 use mycelium_dense::{DenseOp, DenseSpace};
@@ -57,7 +58,7 @@ fn every_interp_builtin_intrinsic_matches_its_composition_path() {
         };
         Some(DenseSpace::op_guarantee(op))
     };
-    // M-892: the VSA bind group's kernel ops (bundle/cleanup ride M-893/M-894).
+    // M-892: the VSA bind group's kernel ops (cleanup/reconstruct ride M-894).
     let vsa_op = |name: &str| -> Option<VsaOp> {
         match name {
             "vsa.bind" => Some(VsaOp::Bind),
@@ -67,7 +68,20 @@ fn every_interp_builtin_intrinsic_matches_its_composition_path() {
         }
     };
     for name in PrimRegistry::with_builtins().names() {
-        if let Some(kernel_tag) = dense_kernel_tag(name) {
+        if name == "vsa.bundle" {
+            // M-893: `vsa.bundle` is the **certified path** — its dispatch set is the certified
+            // singleton {MAP-I} (the only model whose Value-level bundle carries a *checked*
+            // capacity bound, `bundle_values_certified`; the wrapper refuses FHRR/BSC, whose
+            // kernel bundles are Empirical-profile ops, explicitly). So the Π intrinsic is the
+            // meet over that singleton = MAP-I's own `Bundle` tag — recomputed from the kernel
+            // here so widening the certified set must keep the meet honest (VR-5).
+            assert_eq!(
+                table.intrinsic(name),
+                Some(MapI::new(4).intrinsic_guarantee(VsaOp::Bundle)),
+                "prim `{name}`: the table's intrinsic must be MAP-I's kernel Bundle tag — the \
+                 meet over the certified singleton dispatch set (VR-5)",
+            );
+        } else if let Some(kernel_tag) = dense_kernel_tag(name) {
             assert_eq!(
                 table.intrinsic(name),
                 Some(kernel_tag),
