@@ -70,7 +70,6 @@ nodule std.core;
 // `bytes_len`/`bytes_get`/`eq` prims into full content equality — no new prim, no approximation.
 // Free-form prose fields (`op`, `fallibility`) remain transcribed byte-faithfully but are only
 // spot-checked (first byte) in std_core.rs, as in std.diag.
-
 // ── Guarantee ────────────────────────────────────────────────────────────────────────────────────
 // The lattice tag Exact ⊐ Proven ⊐ Empirical ⊐ Declared (VR-5). Typed — never stringly. Mirrors the
 // kernel `GuaranteeStrength` re-export (FLAG-core-1) as local VALUE-level data, exactly as
@@ -129,13 +128,7 @@ fn byte_is(b: Bytes, i: Binary{8}, v: Binary{8}) => Bool =
 // makes the byte reads total: the byte comparisons run only in the len==4 arm.
 // 'n' = 0x6E, 'o' = 0x6F, 'e' = 0x65. Total (Exact by composition of Exact prims).
 fn effects_is_none(b: Bytes) => Bool =
-  match eq(bytes_len(b), 0b0000_0000_0000_0000_0000_0000_0000_0100) {
-    0b1 => bool_and(byte_is(b, 0b0000_0000, 0b0110_1110),
-           bool_and(byte_is(b, 0b0000_0001, 0b0110_1111),
-           bool_and(byte_is(b, 0b0000_0010, 0b0110_1110),
-                    byte_is(b, 0b0000_0011, 0b0110_0101)))),
-    _ => False
-  };
+  match eq(bytes_len(b), 0b0000_0000_0000_0000_0000_0000_0000_0100) { 0b1 => bool_and(byte_is(b, 0b0000_0000, 0b0110_1110), bool_and(byte_is(b, 0b0000_0001, 0b0110_1111), bool_and(byte_is(b, 0b0000_0010, 0b0110_1110), byte_is(b, 0b0000_0011, 0b0110_0101)))), _ => False };
 
 // ── The 9 rows (hand-transcribed verbatim from mycelium_std_core::GUARANTEE_MATRIX, RFC-0016 §4.5) ──
 // Same order as the Rust const. Every row is GExact and effect-free ("none") — the honest floor
@@ -200,25 +193,11 @@ fn all_effects_none(xs: Vec[GuaranteeRow]) => Bool =
 // explainable_count: how many rows surface an inspectable EXPLAIN artifact, as Binary{8} —
 // the cardinality half of lib.rs::tests::only_query_rows_are_explainable.
 fn explainable_count(xs: Vec[GuaranteeRow]) => Binary{8} =
-  match xs {
-    Nil => 0b0000_0000,
-    Cons(r, rest) => match row_explainable(r) {
-      True => add_bin(0b0000_0001, explainable_count(rest)),
-      False => explainable_count(rest)
-    }
-  };
+  match xs { Nil => 0b0000_0000, Cons(r, rest) => match row_explainable(r) { True => add_bin(0b0000_0001, explainable_count(rest)), False => explainable_count(rest) } };
 
 // only_query_rows_explainable: the EXPLAIN window is exactly the value-tag/bound/provenance
 // queries — lib.rs::tests::only_query_rows_are_explainable, ported as a per-row identity check
 // (the Rust test's op-NAME list equality needs bytes_eq — the identity of each row constructor
 // carries the same information here, so nothing is lost).
 fn only_query_rows_explainable() => Bool =
-  bool_and(row_explainable(row_guarantee_of()),
-  bool_and(row_explainable(row_bound_of()),
-  bool_and(row_explainable(row_provenance_of()),
-  bool_and(bool_not(row_explainable(row_value_repr_meta())),
-  bool_and(bool_not(row_explainable(row_corevalue_datum())),
-  bool_and(bool_not(row_explainable(row_guarantee_strength())),
-  bool_and(bool_not(row_explainable(row_bound_boundbasis())),
-  bool_and(bool_not(row_explainable(row_repr_of())),
-           bool_not(row_explainable(row_meta_of()))))))))));
+  bool_and(row_explainable(row_guarantee_of()), bool_and(row_explainable(row_bound_of()), bool_and(row_explainable(row_provenance_of()), bool_and(bool_not(row_explainable(row_value_repr_meta())), bool_and(bool_not(row_explainable(row_corevalue_datum())), bool_and(bool_not(row_explainable(row_guarantee_strength())), bool_and(bool_not(row_explainable(row_bound_boundbasis())), bool_and(bool_not(row_explainable(row_repr_of())), bool_not(row_explainable(row_meta_of()))))))))));

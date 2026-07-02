@@ -1,16 +1,16 @@
-// nodule: std.spores  (canonical name `std.spore` — see FLAG-spore-1)
+// nodule: std.spores
 // @version: 0.1.0
 // @license: MIT
 // @authors: Tyler Zervas
 // @since: 2026-07-02
 // @updated: 2026-07-02
 // @summary: Self-hosted deployable / reconstruction-manifest surface — the structural half of
+nodule std.spores;
+
 //   ADR-013's content-addressed spore: identity is CARRIED (kernel-minted, never fabricated),
 //   verification/deploy refusals are explicit and named, and the FR-C2 resonator honesty ceiling
 //   is enforced by construction (M-934, E29-1, RFC-0031 §5 D5; kickoff opp; ports the EXPRESSIBLE
 //   surface of crates/mycelium-std-spore; docs/spec/stdlib/spore.md).
-nodule std.spores;
-
 // ── Surface-check (D5 row 1, Empirical, 2026-07-02) ─────────────────────────────────────────────
 //
 // crates/mycelium-std-spore's public surface (lib.rs re-exports + modules): the spore handle +
@@ -113,7 +113,6 @@ nodule std.spores;
 // upgraded by translation); the no-opaque-lowering check Declared (structural assertion, MLIR
 // pending); matrix row DATA Declared (hand-transcribed, live-oracle-checked in std_spore.rs);
 // differential agreement Empirical (std_spore.rs).
-
 // ── local mirrors (single-nodule harness — see the substitution notes above) ────────────────────
 type Result[A, E] = Ok(A) | Err(E);
 
@@ -143,15 +142,20 @@ fn bool_text(b: Bool) => Bytes =
 fn cat(a: Bytes, b: Bytes) => Bytes =
   bytes_concat(a, b);
 
-fn b32_zero() => Binary{32} = 0b0000_0000_0000_0000_0000_0000_0000_0000;
+fn b32_zero() => Binary{32} =
+  0b0000_0000_0000_0000_0000_0000_0000_0000;
 
-fn b32_one() => Binary{32} = 0b0000_0000_0000_0000_0000_0000_0000_0001;
+fn b32_one() => Binary{32} =
+  0b0000_0000_0000_0000_0000_0000_0000_0001;
 
-fn b32_two() => Binary{32} = 0b0000_0000_0000_0000_0000_0000_0000_0010;
+fn b32_two() => Binary{32} =
+  0b0000_0000_0000_0000_0000_0000_0000_0010;
 
-fn b32_three() => Binary{32} = 0b0000_0000_0000_0000_0000_0000_0000_0011;
+fn b32_three() => Binary{32} =
+  0b0000_0000_0000_0000_0000_0000_0000_0011;
 
-fn b32_four() => Binary{32} = 0b0000_0000_0000_0000_0000_0000_0000_0100;
+fn b32_four() => Binary{32} =
+  0b0000_0000_0000_0000_0000_0000_0000_0100;
 
 // nonempty: True iff `b` has at least one byte (bytes_len is the Exact prim at Binary{32};
 // std.diag/std.recover precedent).
@@ -163,19 +167,7 @@ fn nonempty(b: Bytes) => Bool =
 // Every bytes_get is bounds-guarded by the preceding `eq(index, n)` check, so the prim's
 // out-of-range refusal is unreachable by construction (total on its domain). Exact.
 fn bytes_eq_from(a: Bytes, b: Bytes, i: Binary{32}, n: Binary{32}) => Bool =
-  match eq(i, n) { 0b1 => True, _ =>
-    match eq(bytes_get(a, i), bytes_get(b, i)) { 0b1 =>
-      match eq(add_bin(i, b32_one()), n) { 0b1 => True, _ =>
-        match eq(bytes_get(a, add_bin(i, b32_one())), bytes_get(b, add_bin(i, b32_one()))) { 0b1 =>
-          match eq(add_bin(i, b32_two()), n) { 0b1 => True, _ =>
-            match eq(bytes_get(a, add_bin(i, b32_two())), bytes_get(b, add_bin(i, b32_two()))) { 0b1 =>
-              match eq(add_bin(i, b32_three()), n) { 0b1 => True, _ =>
-                match eq(bytes_get(a, add_bin(i, b32_three())), bytes_get(b, add_bin(i, b32_three()))) { 0b1 =>
-                  bytes_eq_from(a, b, add_bin(i, b32_four()), n),
-                  _ => False } },
-              _ => False } },
-          _ => False } },
-      _ => False } };
+  match eq(i, n) { 0b1 => True, _ => match eq(bytes_get(a, i), bytes_get(b, i)) { 0b1 => match eq(add_bin(i, b32_one()), n) { 0b1 => True, _ => match eq(bytes_get(a, add_bin(i, b32_one())), bytes_get(b, add_bin(i, b32_one()))) { 0b1 => match eq(add_bin(i, b32_two()), n) { 0b1 => True, _ => match eq(bytes_get(a, add_bin(i, b32_two())), bytes_get(b, add_bin(i, b32_two()))) { 0b1 => match eq(add_bin(i, b32_three()), n) { 0b1 => True, _ => match eq(bytes_get(a, add_bin(i, b32_three())), bytes_get(b, add_bin(i, b32_three()))) { 0b1 => bytes_eq_from(a, b, add_bin(i, b32_four()), n), _ => False } }, _ => False } }, _ => False } }, _ => False } };
 
 // bytes_eq: whole byte-string equality composed from the D4 prims (no equality prim exists —
 // the gap std.diag FLAGged; this is the honest composition, not a fabricated prim). Exact.
@@ -204,10 +196,7 @@ type SporeErr = HashMismatch(Bytes, Bytes) | PublishErr(Bytes) | IoErr(Bytes);
 // spore_err_display: the oracle's `Display for SporeErr`, byte-for-byte (differentially checked
 // against `mycelium-std-spore` in std_spore.rs). Exact (deterministic concat of Exact prims).
 fn spore_err_display(e: SporeErr) => Bytes =
-  match e {
-    HashMismatch(expected, found) => cat("spore-error: hash mismatch — declared ", cat(expected, cat(" but recomputed ", cat(found, " (ADR-003 violation; deploy aborted, no partial artifact written — C1/G2)")))),
-    PublishErr(m) => cat("spore-publish-error: ", m),
-    IoErr(m) => cat("spore-io-error: ", m) };
+  match e { HashMismatch(expected, found) => cat("spore-error: hash mismatch — declared ", cat(expected, cat(" but recomputed ", cat(found, " (ADR-003 violation; deploy aborted, no partial artifact written — C1/G2)")))), PublishErr(m) => cat("spore-publish-error: ", m), IoErr(m) => cat("spore-io-error: ", m) };
 
 // ── SporeUnit (ADR-013) — the carry-only value handle (FLAG-spore-2/-3) ─────────────────────────
 // Spore(identity, surface, manifest): the kernel-minted canonical content hash (the identity IS
@@ -277,9 +266,7 @@ type MalformedManifest = ResonatorOverStrength | KernelWf;
 
 // malformed_display: the oracle's `Display for MalformedManifest`, byte-for-byte. Exact.
 fn malformed_display(e: MalformedManifest) => Bytes =
-  match e {
-    ResonatorOverStrength => "manifest-error: a Resonator decode is probabilistic-only (FR-C2); its bound.basis must not exceed Empirical — never Proven (VR-5)",
-    KernelWf => "manifest-error: kernel well-formedness check failed (bad mode/bound, missing recipe or decode param)" };
+  match e { ResonatorOverStrength => "manifest-error: a Resonator decode is probabilistic-only (FR-C2); its bound.basis must not exceed Empirical — never Proven (VR-5)", KernelWf => "manifest-error: kernel well-formedness check failed (bad mode/bound, missing recipe or decode param)" };
 
 // ReconManifest — the RFC-0003 §6 record: mode, model, dim, codebooks (kernel-minted content
 // hashes, carried — FLAG-spore-2), decode procedure, and the bound's Basis (its {ε,δ} scalars
@@ -293,23 +280,14 @@ type ReconManifest = Manifest(ReconMode, Bytes, Binary{32}, Vec[Bytes], DecodePr
 // `MalformedManifest::KernelWf` (the ResonatorOverStrength variant is validate's, below).
 // Exact (a pure predicate; same inputs, same outcome).
 fn manifest_new(mode: ReconMode, model: Bytes, dim: Binary{32}, codebooks: Vec[Bytes], dec: DecodeProcedure, basis: Basis) => Result[ReconManifest, MalformedManifest] =
-  match nonempty(model) {
-    False => Err(KernelWf),
-    True => match eq(dim, b32_zero()) {
-      0b1 => Err(KernelWf),
-      _ => match vec_is_empty(codebooks) {
-        True => Err(KernelWf),
-        False => match resonator_over_strength(dec, basis) {
-          True => Err(KernelWf),
-          False => Ok(Manifest(mode, model, dim, codebooks, dec, basis)) } } } };
+  match nonempty(model) { False => Err(KernelWf), True => match eq(dim, b32_zero()) { 0b1 => Err(KernelWf), _ => match vec_is_empty(codebooks) { True => Err(KernelWf), False => match resonator_over_strength(dec, basis) { True => Err(KernelWf), False => Ok(Manifest(mode, model, dim, codebooks, dec, basis)) } } } };
 
 // manifest_validate: the carry-in path (deserialized/kernel-built manifests) — the explicit
 // defense-in-depth FR-C2 re-check (C1/G2: never silently trust a carry-in). Unlike Rust (where
 // the private inner field makes an over-strength ReconInfo unrepresentable), `.myc` constructors
 // are open, so this check is genuinely reachable here. Exact.
 fn manifest_validate(m: ReconManifest) => Result[ReconManifest, MalformedManifest] =
-  match m { Manifest(_, _, _, _, dec, basis) =>
-    match resonator_over_strength(dec, basis) { True => Err(ResonatorOverStrength), False => Ok(m) } };
+  match m { Manifest(_, _, _, _, dec, basis) => match resonator_over_strength(dec, basis) { True => Err(ResonatorOverStrength), False => Ok(m) } };
 
 // ── manifest accessors (Exact; total) ───────────────────────────────────────────────────────────
 fn manifest_mode(m: ReconManifest) => ReconMode =
@@ -394,14 +372,7 @@ fn surface_is_ambiguous(xs: Vec[Bytes]) => Bool =
 // verify means the spore is not well-formed → MissingInput, the oracle's mapping), then the
 // VR-4 opaque-step check, then success with the fully-checked Verification record.
 fn germinate_checked(s: SporeUnit, recomputed: Bytes, target: DeployTarget) => Result[DeployResult, DeployError] =
-  match verify(s, recomputed) {
-    Err(e) => match e {
-      HashMismatch(expected, found) => Err(DeployHashMismatch(expected, found)),
-      PublishErr(_) => Err(MissingInput),
-      IoErr(_) => Err(MissingInput) },
-    Ok(_) => match detect_opaque_step(target) {
-      Some(step) => Err(OpaqueStepDetected(step)),
-      None => Ok(Deployed(identity(s), Verification(True, True))) } };
+  match verify(s, recomputed) { Err(e) => match e { HashMismatch(expected, found) => Err(DeployHashMismatch(expected, found)), PublishErr(_) => Err(MissingInput), IoErr(_) => Err(MissingInput) }, Ok(_) => match detect_opaque_step(target) { Some(step) => Err(OpaqueStepDetected(step)), None => Ok(Deployed(identity(s), Verification(True, True))) } };
 
 // germinate: the ADR-013 native germination entry point (the oracle's check order, mirrored):
 // (1) missing input — a Local target with an empty path refuses before any other work (G2);
@@ -411,32 +382,21 @@ fn germinate_checked(s: SporeUnit, recomputed: Bytes, target: DeployTarget) => R
 // deploy path is not proven end-to-end (the oracle's tag; MLIR pending; VR-5: never upgraded
 // even though this structural mirror is a pure function).
 fn germinate(s: SporeUnit, recomputed: Bytes, target: DeployTarget) => Result[DeployResult, DeployError] =
-  match target {
-    Local(path) => match nonempty(path) {
-      False => Err(MissingInput),
-      True => germinate_checked(s, recomputed, target) },
-    InMemory => match surface_is_ambiguous(spore_surface(s)) {
-      True => Err(AmbiguousInput(spore_surface(s))),
-      False => germinate_checked(s, recomputed, target) } };
+  match target { Local(path) => match nonempty(path) { False => Err(MissingInput), True => germinate_checked(s, recomputed, target) }, InMemory => match surface_is_ambiguous(spore_surface(s)) { True => Err(AmbiguousInput(spore_surface(s))), False => germinate_checked(s, recomputed, target) } };
 
 // deploy_error_display: the oracle's `Display for DeployError` — byte-for-byte for
 // MissingInput / DeployHashMismatch / OpaqueStepDetected (differentially checked); None for
 // AmbiguousInput (FLAG-spore-6: its rendering interpolates the decimal candidate count, which
 // is not expressible — explicit absence, never a fabricated rendering). Exact where Some.
 fn deploy_error_display(e: DeployError) => Option[Bytes] =
-  match e {
-    MissingInput => Some("deploy-error: required input is absent — no guessed default (G2 / ADR-013)"),
-    AmbiguousInput(_) => None,
-    DeployHashMismatch(expected, actual) => Some(cat("deploy-error: content-hash mismatch — declared ", cat(expected, cat(" but recomputed ", cat(actual, " (C4 / ADR-003 violation; deploy aborted, no partial unit written — G2)"))))),
-    OpaqueStepDetected(step) => Some(cat("deploy-error: opaque lowering step detected: \"", cat(step, "\" (VR-4 violation; no opaque step is permitted between input and deployed unit)"))) };
+  match e { MissingInput => Some("deploy-error: required input is absent — no guessed default (G2 / ADR-013)"), AmbiguousInput(_) => None, DeployHashMismatch(expected, actual) => Some(cat("deploy-error: content-hash mismatch — declared ", cat(expected, cat(" but recomputed ", cat(actual, " (C4 / ADR-003 violation; deploy aborted, no partial unit written — G2)"))))), OpaqueStepDetected(step) => Some(cat("deploy-error: opaque lowering step detected: \"", cat(step, "\" (VR-4 violation; no opaque step is permitted between input and deployed unit)"))) };
 
 // explain_deployed: the Deployed-arm EXPLAIN of explain_deploy — a total, deterministic function
 // of the deployed id + verification record, byte-for-byte the oracle's rendering (VR-4/SC-3/C3:
 // it always mentions both the content-hash check and the opaque-lowering check — no silent
 // omission). The Failed arm rides deploy_error_display (FLAG-spore-6). Exact.
 fn explain_deployed(spore_id: Bytes, v: DeployVerification) => Bytes =
-  match v { Verification(hash_ok, opaque_ok) =>
-    cat("deploy-result: Deployed\nspore-id (content-hash): ", cat(spore_id, cat("\ncontent_hash_canonical: ", cat(bool_text(hash_ok), cat(" (Exact — BLAKE3 deterministic; C4/ADR-003)\nno_opaque_lowering: ", cat(bool_text(opaque_ok), " (Declared — structural assertion; VR-4)\noutcome: all invariants checked; no opaque lowering step detected in pipeline")))))) };
+  match v { Verification(hash_ok, opaque_ok) => cat("deploy-result: Deployed\nspore-id (content-hash): ", cat(spore_id, cat("\ncontent_hash_canonical: ", cat(bool_text(hash_ok), cat(" (Exact — BLAKE3 deterministic; C4/ADR-003)\nno_opaque_lowering: ", cat(bool_text(opaque_ok), " (Declared — structural assertion; VR-4)\noutcome: all invariants checked; no opaque lowering step detected in pipeline")))))) };
 
 // ── guarantee matrix (RFC-0016 §4.5; spec §4) — the 15-row table as CHECKED DATA ────────────────
 // Mirrors guarantee_matrix.rs::MATRIX row-for-row (11 spec §4.5 rows + 4 M-620 deploy rows).
