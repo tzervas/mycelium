@@ -585,3 +585,74 @@ fn mixed_short_and_long_spellings_canonicalize_uniformly() {
     let again = format_source(&formatted.output, None).expect("re-formats");
     assert_eq!(again.output, formatted.output, "idempotent");
 }
+
+// ============================================================================================
+// `@forage(policy)` Hypha placement annotation (M-970; found by M-914's H1-capstone fixture)
+// ============================================================================================
+
+/// Round-trip corpus for a `colony { … }` expression, with and without the optional
+/// `@forage(policy)` placement annotation on a `hypha` (RFC-0008 RT3; DN-63 §3.5; M-906/DN-70
+/// D1). Each entry is `(label, src)`.
+///
+/// Guarantee tag: `Empirical` — verified by execution of this test, not a formal proof.
+const COLONY_FORAGE_ROUNDTRIP_CORPUS: &[(&str, &str)] = &[
+    (
+        "hypha-no-forage",
+        "nodule d;\nfn f() => Binary{1} = colony { hypha g() };\n",
+    ),
+    (
+        "hypha-with-forage",
+        "nodule d;\nfn f() => Binary{1} = colony { @forage(0b101) hypha g() };\n",
+    ),
+    (
+        "two-hyphae-mixed-forage",
+        "nodule d;\nfn f() => Binary{1} = colony { @forage(0b101) hypha g(), hypha h() };\n",
+    ),
+];
+
+/// `render_expr_canonical`'s `Expr::Colony` arm previously dropped `Hypha::forage` entirely
+/// (M-970, found by M-914's H1-capstone fixture): the canonical render always emitted a bare
+/// `hypha <body>`, silently erasing any `@forage(policy)` annotation. The C1 identity guard in
+/// `format_source` caught the resulting AST mismatch and refused (exit 4, `OutOfScope`) rather
+/// than emit a corrupted rewrite (G2 held) — but a `@forage`-bearing nodule could never be
+/// formatted at all. Fixed by rendering `@forage(<policy>) hypha <body>`, the exact inverse of
+/// `Parser::parse_hypha` (`crates/mycelium-l1/src/parse.rs`).
+///
+/// Mutant witness: reverting the `Expr::Colony` arm to drop `h.forage` (the pre-fix form) fails
+/// this test both ways — `format_source` on the `-with-forage` entries falls back to
+/// `Err(OutOfScope)` (C1 mismatch), and even if the guard were bypassed the
+/// `contains("@forage")` assertion would fail.
+#[test]
+fn forage_annotation_round_trips_through_canonical_render() {
+    for &(label, src) in COLONY_FORAGE_ROUNDTRIP_CORPUS {
+        let original = parse(src).unwrap_or_else(|e| panic!("{label}: source must parse: {e}"));
+        let formatted = format_source(src, None)
+            .unwrap_or_else(|e| panic!("{label}: format_source failed: {e}"));
+
+        // C1: the formatted output re-parses to the identical surface AST — `Hypha::forage`
+        // included — the exact property the pre-fix drop violated.
+        let reparsed = parse(&formatted.output)
+            .unwrap_or_else(|e| panic!("{label}: formatted output must re-parse: {e}"));
+        assert_eq!(
+            reparsed, original,
+            "{label}: C1 identity — @forage must survive formatting\nformatted: {:?}",
+            formatted.output
+        );
+
+        // The annotation must actually appear in the rendered text (not just AST-equal by
+        // accident of an unrelated bug) for every corpus entry that carries `@forage`.
+        if src.contains("@forage") {
+            assert!(
+                formatted.output.contains("@forage"),
+                "{label}: @forage must appear in the rendered output: {:?}",
+                formatted.output
+            );
+        }
+
+        // C2: idempotent.
+        let again = format_source(&formatted.output, None)
+            .unwrap_or_else(|e| panic!("{label}: re-format failed: {e}"));
+        assert_eq!(again.output, formatted.output, "{label}: idempotent (C2)");
+        assert!(!again.changed, "{label}: re-format reported a change (C2)");
+    }
+}
