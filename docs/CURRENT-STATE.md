@@ -87,8 +87,16 @@ digest is a snapshot, that table is live.
   `enb` (H1 enabler closure, the usability critical path) · `grm` (H2a grammar-stability gate,
   ratification-gated) · `opp` (opportunistic `.myc` ports, non-gating, parallel). Every task
   carries a user story + DoD; M-ids **M-877…M-935** (plus the RFC-0033-named M-766/M-767) are
-  **proposed only** — minted at each kickoff after slot re-verification (mitigation #1). Phase-II
-  kickoffs are deliberately **not** authored (post-public — roadmap §7).
+  **proposed only** — minted at each kickoff after slot re-verification (mitigation #1).
+- **Phase-II kickoffs authored (2026-07-01, same planning tier)** — `.claude/kickoffs/{flp,rwr}.md`:
+  `flp` (**the public flip** — decompose + publish; its first task authors the owed DN-27 §4
+  binding decomposition ADR at the next-free number, ADR-039 proposed; the flip act itself is
+  strictly last, maintainer-gated on the usability ratification + the `0.x` choice + FLAG-V1) and
+  `rwr` (**the post-public progressive rewrite** — mass porting gated on `grm`, transpiler ladder,
+  toolchain ports, the V-wave remainder with the single M-780 rehash at its value-persistence
+  tripwire, `1.0.0` terminal dossier with FLAG-V2; compiler self-hosting stays an aspiration, not
+  a lane). M-ids **M-936…M-957 proposed only**; `rwr` is deliberately higher-altitude (per-wave
+  minting — ADR-038 §2.3).
 
 ## Open maintainer decisions
 
