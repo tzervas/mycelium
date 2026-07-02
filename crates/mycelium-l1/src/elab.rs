@@ -567,6 +567,27 @@ pub fn elaborate_lower_rule(env: &Env, rule_name: &str) -> Result<Node, ElabErro
     let Some(rule) = env.lower_rules.get(rule_name) else {
         return Err(ElabError::UnknownFn(rule_name.to_owned()));
     };
+    // An **item-shaped** rule (DN-54 §10 Model A / M-973 — `lower Name[T] = impl Trait for T { … }`)
+    // is **not** elaborated to a nullary-fn value here: its output is a sibling `impl` injected at the
+    // `derive` site (checkty.rs), which the ordinary instance/method passes lower — there is no
+    // free-standing L0 term for the rule itself. Surfacing it as a never-silent residual keeps this
+    // path honest (G2): the caller wanting the derived L0 must go through the injected sibling.
+    let rule = match &rule.rhs {
+        crate::ast::LowerRhs::Expr(_) => rule,
+        crate::ast::LowerRhs::Impl(_) => {
+            return residual(
+                rule_name,
+                "this `lower` rule has an item-shaped (`impl … for …`) RHS — a DN-54 §10 Model A \
+                 sibling-injection template (M-973). It has no stand-alone L0 term: its output is \
+                 the concrete `impl` injected at each `derive Name for T` site (checked/lowered by \
+                 the ordinary instance passes). `elaborate_lower_rule` lowers only expression-shaped \
+                 rules; there is nothing to elaborate here (never silent — G2).",
+            );
+        }
+    };
+    let rhs_expr = rule
+        .expr_rhs()
+        .expect("matched the Expr arm just above — item-shaped rules returned early");
     // The synthetic entry name is `%`-prefixed: `%` is not a surface identifier character (the lexer
     // forbids it), so this can never collide with a real fn / rule / constructor name (G2 — no
     // silent shadowing). The RHS becomes its body verbatim.
@@ -588,7 +609,7 @@ pub fn elaborate_lower_rule(env: &Env, rule_name: &str) -> Result<Node, ElabErro
             effects: vec![],
             effect_budgets: std::collections::BTreeMap::new(),
         },
-        body: rule.rhs.clone(),
+        body: rhs_expr.clone(),
     };
     let mut env2 = env.clone();
     env2.fns.insert(entry.clone(), synth);
