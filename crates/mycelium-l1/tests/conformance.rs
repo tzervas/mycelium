@@ -186,6 +186,15 @@ const REJECT_EXPECTED: &[(&str, &str)] = &[
         "29-missing-semicolon-terminator.myc",
         "expected `;` to terminate this item",
     ),
+    (
+        // RFC-0037 D2-b / DN-02 (M-915): `vec` was explicitly REJECTED as the short repr-keyword
+        // alias for `VSA` (collides with `std.collections.Vec`) — it is never a keyword, so
+        // `vec{...}` in type position parses `vec` as a bare identifier and then fails on the
+        // unexpected `{` where the parameter list's closing `)` was expected (never a silent
+        // accept, G2).
+        "30-vec-short-alias-rejected.myc",
+        "expected `)` to close the parameter list",
+    ),
 ];
 
 #[test]

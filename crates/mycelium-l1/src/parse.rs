@@ -1483,34 +1483,43 @@ impl Parser {
 
     fn parse_base_type(&mut self) -> Result<BaseType, ParseError> {
         match self.cur().clone() {
-            Tok::Binary => {
+            // RFC-0037 D2-b: `bin` is a short repr-keyword alias for `Binary` — it elaborates
+            // identically (the exact same `BaseType::Binary`), so both spellings share one arm.
+            Tok::Binary | Tok::BinShort => {
                 self.bump();
                 let w = self.braced_width()?;
                 Ok(BaseType::Binary(w))
             }
-            Tok::Ternary => {
+            // RFC-0037 D2-b: `tern` is a short repr-keyword alias for `Ternary` (see `Tok::Binary`
+            // arm above).
+            Tok::Ternary | Tok::TernShort => {
                 self.bump();
                 let t = self.braced_width()?;
                 Ok(BaseType::Ternary(t))
             }
-            Tok::Dense => {
+            // RFC-0037 D2-b: `emb` is a short repr-keyword alias for `Dense` (see `Tok::Binary` arm
+            // above).
+            Tok::Dense | Tok::EmbShort => {
                 self.bump();
-                self.expect(&Tok::LBrace, "`{` after `Dense`")?;
+                self.expect(&Tok::LBrace, "`{` after `Dense`/`emb`")?;
                 let dim = self.u32_lit()?;
                 self.expect(&Tok::Comma, "`,` between dim and dtype")?;
                 let scalar = self.parse_scalar()?;
-                self.expect(&Tok::RBrace, "`}` to close `Dense{…}`")?;
+                self.expect(&Tok::RBrace, "`}` to close `Dense{…}`/`emb{…}`")?;
                 Ok(BaseType::Dense(dim, scalar))
             }
-            Tok::Vsa => {
+            // RFC-0037 D2-b: `hvec` is a short repr-keyword alias for `VSA` (see `Tok::Binary` arm
+            // above). `vec` was rejected (collides with `std.collections.Vec`) — it is never a
+            // keyword, so it cannot reach this arm.
+            Tok::Vsa | Tok::HvecShort => {
                 self.bump();
-                self.expect(&Tok::LBrace, "`{` after `VSA`")?;
+                self.expect(&Tok::LBrace, "`{` after `VSA`/`hvec`")?;
                 let model = self.ident()?;
                 self.expect(&Tok::Comma, "`,` after the model")?;
                 let dim = self.u32_lit()?;
                 self.expect(&Tok::Comma, "`,` before the sparsity")?;
                 let sparsity = self.parse_sparsity()?;
-                self.expect(&Tok::RBrace, "`}` to close `VSA{…}`")?;
+                self.expect(&Tok::RBrace, "`}` to close `VSA{…}`/`hvec{…}`")?;
                 Ok(BaseType::Vsa {
                     model,
                     dim,
