@@ -430,7 +430,6 @@ dependencies = [
 name = "mycelium-select"
 version = "0.0.0"
 dependencies = [
- "mycelium-cert",
  "mycelium-core",
  "mycelium-interp",
  "serde",
