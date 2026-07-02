@@ -2319,13 +2319,16 @@ impl Parser {
 /// The infix binding power and canonical word function for an operator token (RFC-0025 / M-705),
 /// or `None` if the token does not open an infix operator. Higher binding power binds tighter;
 /// every binary operator is left-associative. The precedence tiers follow **Rust's** table (the
-/// implementation language, syntactically adjacent; RFC-0025 §4), omitting the angle-bracket
-/// operators (`<`, `<=`, `>`, `>=`, `<<`, `>>`) which are **deferred** (RFC-0025 §3 / M-745)
-/// because `<`/`>` collide with the type-argument `<…>` grammar (resolving that cleanly needs
-/// contextual lexing, a separate effort). The desugaring is purely syntactic: a word target whose
-/// prim/stdlib function does not yet exist (`div`, `rem`, `band`, `bor`, `eq`, `ne`, `and`, `or`)
-/// still desugars here and surfaces an explicit "unknown function/prim" refusal downstream (never
-/// silent — G2); only `add`/`sub`/`mul`/`xor` (and unary `neg`/`not`) resolve end-to-end today.
+/// implementation language, syntactically adjacent; RFC-0025 §4.1). The angle-bracket/shift
+/// operators (`<`, `>`, `<<`, `>>`) are **wired** (M-745, resolved by RFC-0037 D1's `[…]`
+/// type-argument kind-split, which frees `<>` for operators-only use — no contextual lexing
+/// needed; see `Tok::LAngle`/`RAngle`/`Shl`/`Shr` below). `<=`/`>=` have **no glyph at all** —
+/// they are retired (RFC-0037 D1); their word-canonical forms `lte`/`gte` are ordinary calls, not
+/// entries in this table (M-916 verified this inventory; no residual glyph wiring remained). The
+/// desugaring is purely syntactic: a word target whose prim/stdlib function does not yet exist
+/// (`div`, `rem`, `band`, `bor`, `ne`, `and`, `or`, `gt`, `shl`, `shr`) still desugars here and
+/// surfaces an explicit "unknown function/prim" refusal downstream (never silent — G2); today
+/// `add`/`sub`/`mul`/`xor`/`eq`/`lt` (and unary `neg`/`not`) resolve end-to-end.
 fn infix_op(tok: &Tok) -> Option<(u8, &'static str)> {
     Some(match tok {
         Tok::Star => (70, "mul"),

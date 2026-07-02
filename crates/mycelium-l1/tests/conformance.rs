@@ -195,6 +195,15 @@ const REJECT_EXPECTED: &[(&str, &str)] = &[
         "30-vec-short-alias-rejected.myc",
         "expected `)` to close the parameter list",
     ),
+    (
+        // M-916 (RFC-0025 §4.2, resolved by RFC-0037 D1): `<=`/`>=` are retired glyphs — no such
+        // token exists, so `a <= b` lexes as `LAngle`, `Eq` and the parser reads `a < (= b)`,
+        // failing on the `=` where a right-hand-side expression was expected (never a silent
+        // reinterpretation of the old two-char glyph, G2). The word forms `lte`/`gte` are the only
+        // valid spelling (see accept/20-operator-syntax.myc).
+        "31-old-le-ge-glyph-retired.myc",
+        "expected an expression",
+    ),
 ];
 
 #[test]
