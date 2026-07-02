@@ -11,6 +11,33 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Fixed (2026-07-02: M-971 — DN-68 acyclic-deps regression, 12 to 0 violations; dev to integration close-out)
+
+The Phase-I H1 wave (below) regressed the DN-68 acyclic-deps invariant to 12 violations; this fix
+(PR #1015) resolves all of them by structural extraction, mirroring the M-881/882 fixture-refactor
+and M-883/884 rt-abi/sched seam precedents, with no strata/tier whitelist.
+
+- **New `mycelium-std-conformance` crate** (tier `std`, stratum 0). Relocated the 11 oracle-backed
+  `lib/std/*.myc` port-differential tests and their shared `tests/harness/` out of the core-tier
+  `mycelium-l1`, dropping 9 `mycelium-std-*` dev-deps from `mycelium-l1` and dissolving the
+  `{l1, proj, spore, std-spore, std-testing}` dev-cycle that ran through the removed edges. The
+  relocated tests still run from their new home unchanged.
+- **New `mycelium-vsa-decode` crate** (RFC-0010 decode-methodology selection seam). Extracted
+  `decode_select` and `reconstruct_factors_selected` up out of `mycelium-vsa` (the only VSA code
+  depending on `mycelium-select`), breaking the `{interp, select, vsa}` dev-cycle and the
+  `interp to vsa` upward-stratum violation structurally: `mycelium-vsa` now depends only on
+  `mycelium-core` (stratum re-derived 2 to 1). No external crate consumed the moved surface;
+  consumers (`cert`/`mlir`/`std-vsa`/`std-spore`) are untouched.
+- `xtask/deps-strata.toml` updated: both new crates registered in `[strata]`/`[tiers]`, the
+  `mycelium-vsa` re-derivation recorded, `[meta].derived_from` updated.
+- Verified: `cargo run -p xtask -- deps` reports **0 violations** (was 12); full workspace test,
+  fmt, clippy, and build all clean; `api` gate green (regenerated `mycelium-vsa.txt` plus baselines
+  for the two new crates).
+- **Integration close-out** — `docs/api-index/` regenerated to cover the two new crates and the
+  `mycelium-vsa` surface shrink; `docs/Doc-Index.md` and `tools/github/issues.yaml` (M-971 to
+  `done`) updated per the concurrent-dev pattern (leaves FLAG close-out items, the integrating
+  parent applies them once). Basis: PR #1015.
+
 ### Added (2026-07-02: Phase-I H1 wave — enb enablers, opp ports, grm/frz dossiers; integration close-out)
 
 The Phase-I H1 wave landed the below-grammar functional-usability enablers ADR-038 §2.6 named, a

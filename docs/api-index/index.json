@@ -26523,34 +26523,12 @@
       "corpus_refs": []
     },
     {
-      "symbol": "mycelium_vsa::DEFAULT_ENUM_BUDGET:",
-      "kind": "const",
-      "crate": "mycelium-vsa",
-      "module": "mycelium_vsa",
-      "file": "crates/mycelium-vsa/src/decode_select.rs",
-      "line": 53,
-      "summary": "The default enumeration budget: brute force is chosen when `∏ᵢ kᵢ ≤` this.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_vsa::DecodeSelection",
-      "kind": "struct",
-      "crate": "mycelium-vsa",
-      "module": "mycelium_vsa",
-      "file": "crates/mycelium-vsa/src/decode_select.rs",
-      "line": 142,
-      "summary": "A reified decode-method selection result (RFC-0010): the chosen methodology, the mandatory EXPLAIN",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
       "symbol": "mycelium_vsa::EmpiricalProfile",
       "kind": "struct",
       "crate": "mycelium-vsa",
       "module": "mycelium_vsa",
       "file": "crates/mycelium-vsa/src/lib.rs",
-      "line": 366,
+      "line": 367,
       "summary": "A **trial-validated empirical profile**: the regime over which a crate-declared `Empirical`",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26561,7 +26539,7 @@
       "crate": "mycelium-vsa",
       "module": "mycelium_vsa::EmpiricalProfile",
       "file": "crates/mycelium-vsa/src/lib.rs",
-      "line": 405,
+      "line": 406,
       "summary": "The δ bound this profile backs, with its honest `EmpiricalFit` basis (M-I3).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26572,7 +26550,7 @@
       "crate": "mycelium-vsa",
       "module": "mycelium_vsa::EmpiricalProfile",
       "file": "crates/mycelium-vsa/src/lib.rs",
-      "line": 384,
+      "line": 385,
       "summary": "Check the profile's side-conditions for an op over `items` operands at `dim`; a violation",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26748,7 +26726,7 @@
       "crate": "mycelium-vsa",
       "module": "mycelium_vsa",
       "file": "crates/mycelium-vsa/src/lib.rs",
-      "line": 73,
+      "line": 74,
       "summary": "Why a VSA operation could not be performed — always explicit, never a silent coercion (G2).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26759,7 +26737,7 @@
       "crate": "mycelium-vsa",
       "module": "mycelium_vsa",
       "file": "crates/mycelium-vsa/src/lib.rs",
-      "line": 327,
+      "line": 328,
       "summary": "A composition-style VSA model (RFC-0003 §3): the `bind`/`unbind` (+ self-inverse flag),",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26770,7 +26748,7 @@
       "crate": "mycelium-vsa",
       "module": "mycelium_vsa",
       "file": "crates/mycelium-vsa/src/lib.rs",
-      "line": 60,
+      "line": 61,
       "summary": "The VSA operations a model supplies (RFC-0003 §3).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26996,39 +26974,6 @@
       "corpus_refs": []
     },
     {
-      "symbol": "mycelium_vsa::decode_method_policy",
-      "kind": "fn",
-      "crate": "mycelium-vsa",
-      "module": "mycelium_vsa",
-      "file": "crates/mycelium-vsa/src/decode_select.rs",
-      "line": 70,
-      "summary": "Build the **default decode-method policy** (RFC-0010 §4): three candidates",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_vsa::decode_select",
-      "kind": "mod",
-      "crate": "mycelium-vsa",
-      "module": "mycelium_vsa",
-      "file": "crates/mycelium-vsa/src/lib.rs",
-      "line": 25,
-      "summary": null,
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_vsa::explain_decode_method",
-      "kind": "fn",
-      "crate": "mycelium-vsa",
-      "module": "mycelium_vsa",
-      "file": "crates/mycelium-vsa/src/decode_select.rs",
-      "line": 127,
-      "summary": "The mandatory **EXPLAIN** for a decode-method choice (RFC-0005 §4), without executing the decode:",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
       "symbol": "mycelium_vsa::factorize",
       "kind": "fn",
       "crate": "mycelium-vsa",
@@ -27045,7 +26990,7 @@
       "crate": "mycelium-vsa",
       "module": "mycelium_vsa",
       "file": "crates/mycelium-vsa/src/lib.rs",
-      "line": 26,
+      "line": 25,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27111,7 +27056,7 @@
       "crate": "mycelium-vsa",
       "module": "mycelium_vsa",
       "file": "crates/mycelium-vsa/src/lib.rs",
-      "line": 27,
+      "line": 26,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27166,7 +27111,7 @@
       "crate": "mycelium-vsa",
       "module": "mycelium_vsa",
       "file": "crates/mycelium-vsa/src/lib.rs",
-      "line": 28,
+      "line": 27,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27243,7 +27188,7 @@
       "crate": "mycelium-vsa",
       "module": "mycelium_vsa",
       "file": "crates/mycelium-vsa/src/lib.rs",
-      "line": 29,
+      "line": 28,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27309,7 +27254,7 @@
       "crate": "mycelium-vsa",
       "module": "mycelium_vsa",
       "file": "crates/mycelium-vsa/src/lib.rs",
-      "line": 30,
+      "line": 29,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27331,8 +27276,30 @@
       "crate": "mycelium-vsa",
       "module": "mycelium_vsa",
       "file": "crates/mycelium-vsa/src/lib.rs",
-      "line": 31,
+      "line": 30,
       "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_vsa::recon::hv_payload",
+      "kind": "fn",
+      "crate": "mycelium-vsa",
+      "module": "mycelium_vsa::recon",
+      "file": "crates/mycelium-vsa/src/recon.rs",
+      "line": 151,
+      "summary": "Resolve a record `Value` to its hypervector payload slice, checking the model id and dimension",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_vsa::recon::resonator_params_from_manifest",
+      "kind": "fn",
+      "crate": "mycelium-vsa",
+      "module": "mycelium_vsa::recon",
+      "file": "crates/mycelium-vsa/src/recon.rs",
+      "line": 119,
+      "summary": "Read the manifest's (additive RFC-0003 §6.1) resonator decode params into a [`ResonatorParams`].",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -27342,30 +27309,8 @@
       "crate": "mycelium-vsa",
       "module": "mycelium_vsa",
       "file": "crates/mycelium-vsa/src/recon.rs",
-      "line": 90,
+      "line": 89,
       "summary": "Factorize `record` — a bind product `s = x₁ ⊛ … ⊛ x_F` — into one codebook atom per slot, following",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_vsa::reconstruct_factors_auto",
-      "kind": "fn",
-      "crate": "mycelium-vsa",
-      "module": "mycelium_vsa",
-      "file": "crates/mycelium-vsa/src/decode_select.rs",
-      "line": 164,
-      "summary": "**Automatic factor reconstruction** (RFC-0010): select the decode methodology for `s` against",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_vsa::reconstruct_factors_selected",
-      "kind": "fn",
-      "crate": "mycelium-vsa",
-      "module": "mycelium_vsa",
-      "file": "crates/mycelium-vsa/src/recon.rs",
-      "line": 158,
-      "summary": "Value-level **auto-selected** factor decode (RFC-0010): like [`reconstruct_factors`], but routes",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -27375,7 +27320,7 @@
       "crate": "mycelium-vsa",
       "module": "mycelium_vsa",
       "file": "crates/mycelium-vsa/src/recon.rs",
-      "line": 24,
+      "line": 23,
       "summary": "Compositionally reconstruct the filler bound under `role` inside `record`, following the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27386,7 +27331,7 @@
       "crate": "mycelium-vsa",
       "module": "mycelium_vsa",
       "file": "crates/mycelium-vsa/src/lib.rs",
-      "line": 32,
+      "line": 31,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27430,7 +27375,7 @@
       "crate": "mycelium-vsa",
       "module": "mycelium_vsa",
       "file": "crates/mycelium-vsa/src/lib.rs",
-      "line": 33,
+      "line": 32,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27498,6 +27443,83 @@
       "file": "crates/mycelium-vsa/src/sbc.rs",
       "line": 126,
       "summary": "Construct an **`Exact`** SBC value from per-block active indices, carrying the declared",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_vsa_decode::DEFAULT_ENUM_BUDGET:",
+      "kind": "const",
+      "crate": "mycelium-vsa-decode",
+      "module": "mycelium_vsa_decode",
+      "file": "crates/mycelium-vsa-decode/src/decode_select.rs",
+      "line": 53,
+      "summary": "The default enumeration budget: brute force is chosen when `∏ᵢ kᵢ ≤` this.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_vsa_decode::DecodeSelection",
+      "kind": "struct",
+      "crate": "mycelium-vsa-decode",
+      "module": "mycelium_vsa_decode",
+      "file": "crates/mycelium-vsa-decode/src/decode_select.rs",
+      "line": 142,
+      "summary": "A reified decode-method selection result (RFC-0010): the chosen methodology, the mandatory EXPLAIN",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_vsa_decode::decode_method_policy",
+      "kind": "fn",
+      "crate": "mycelium-vsa-decode",
+      "module": "mycelium_vsa_decode",
+      "file": "crates/mycelium-vsa-decode/src/decode_select.rs",
+      "line": 70,
+      "summary": "Build the **default decode-method policy** (RFC-0010 §4): three candidates",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_vsa_decode::decode_select",
+      "kind": "mod",
+      "crate": "mycelium-vsa-decode",
+      "module": "mycelium_vsa_decode",
+      "file": "crates/mycelium-vsa-decode/src/lib.rs",
+      "line": 19,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_vsa_decode::explain_decode_method",
+      "kind": "fn",
+      "crate": "mycelium-vsa-decode",
+      "module": "mycelium_vsa_decode",
+      "file": "crates/mycelium-vsa-decode/src/decode_select.rs",
+      "line": 127,
+      "summary": "The mandatory **EXPLAIN** for a decode-method choice (RFC-0005 §4), without executing the decode:",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_vsa_decode::reconstruct_factors_auto",
+      "kind": "fn",
+      "crate": "mycelium-vsa-decode",
+      "module": "mycelium_vsa_decode",
+      "file": "crates/mycelium-vsa-decode/src/decode_select.rs",
+      "line": 164,
+      "summary": "**Automatic factor reconstruction** (RFC-0010): select the decode methodology for `s` against",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_vsa_decode::reconstruct_factors_selected",
+      "kind": "fn",
+      "crate": "mycelium-vsa-decode",
+      "module": "mycelium_vsa_decode",
+      "file": "crates/mycelium-vsa-decode/src/lib.rs",
+      "line": 51,
+      "summary": "Value-level **auto-selected** factor decode (RFC-0010): like `mycelium_vsa::reconstruct_factors`,",
       "guarantee_tag": null,
       "corpus_refs": []
     }
@@ -48384,10 +48406,6 @@
       "reason": "dedup-alias: same definition as `mycelium_transpile::transpile_source` at crates/mycelium-transpile/src/transpile.rs:31 — one canonical row kept"
     },
     {
-      "symbol": "mycelium_vsa::DecodeMethod",
-      "reason": "re-export (pub use) — cannot locate definition without type resolution"
-    },
-    {
       "symbol": "mycelium_vsa::EmpiricalProfile::clone",
       "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
     },
@@ -48398,10 +48416,6 @@
     {
       "symbol": "mycelium_vsa::EmpiricalProfile::fmt",
       "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_vsa::Explanation",
-      "reason": "re-export (pub use) — cannot locate definition without type resolution"
     },
     {
       "symbol": "mycelium_vsa::VsaError::clone",
@@ -48658,58 +48672,6 @@
     {
       "symbol": "mycelium_vsa::cleanup::Match::fmt",
       "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_vsa::decode_select::DEFAULT_ENUM_BUDGET:",
-      "reason": "dedup-alias: same definition as `mycelium_vsa::DEFAULT_ENUM_BUDGET:` at crates/mycelium-vsa/src/decode_select.rs:53 — one canonical row kept"
-    },
-    {
-      "symbol": "mycelium_vsa::decode_select::DecodeMethod",
-      "reason": "re-export (pub use) — cannot locate definition without type resolution"
-    },
-    {
-      "symbol": "mycelium_vsa::decode_select::DecodeSelection",
-      "reason": "dedup-alias: same definition as `mycelium_vsa::DecodeSelection` at crates/mycelium-vsa/src/decode_select.rs:142 — one canonical row kept"
-    },
-    {
-      "symbol": "mycelium_vsa::decode_select::DecodeSelection::clone",
-      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_vsa::decode_select::DecodeSelection::clone",
-      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_vsa::decode_select::DecodeSelection::eq",
-      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_vsa::decode_select::DecodeSelection::eq",
-      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_vsa::decode_select::DecodeSelection::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_vsa::decode_select::DecodeSelection::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_vsa::decode_select::Explanation",
-      "reason": "re-export (pub use) — cannot locate definition without type resolution"
-    },
-    {
-      "symbol": "mycelium_vsa::decode_select::decode_method_policy",
-      "reason": "dedup-alias: same definition as `mycelium_vsa::decode_method_policy` at crates/mycelium-vsa/src/decode_select.rs:70 — one canonical row kept"
-    },
-    {
-      "symbol": "mycelium_vsa::decode_select::explain_decode_method",
-      "reason": "dedup-alias: same definition as `mycelium_vsa::explain_decode_method` at crates/mycelium-vsa/src/decode_select.rs:127 — one canonical row kept"
-    },
-    {
-      "symbol": "mycelium_vsa::decode_select::reconstruct_factors_auto",
-      "reason": "dedup-alias: same definition as `mycelium_vsa::reconstruct_factors_auto` at crates/mycelium-vsa/src/decode_select.rs:164 — one canonical row kept"
     },
     {
       "symbol": "mycelium_vsa::fhrr::Fhrr",
@@ -49265,15 +49227,11 @@
     },
     {
       "symbol": "mycelium_vsa::recon::reconstruct_factors",
-      "reason": "dedup-alias: same definition as `mycelium_vsa::reconstruct_factors` at crates/mycelium-vsa/src/recon.rs:90 — one canonical row kept"
-    },
-    {
-      "symbol": "mycelium_vsa::recon::reconstruct_factors_selected",
-      "reason": "dedup-alias: same definition as `mycelium_vsa::reconstruct_factors_selected` at crates/mycelium-vsa/src/recon.rs:158 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_vsa::reconstruct_factors` at crates/mycelium-vsa/src/recon.rs:89 — one canonical row kept"
     },
     {
       "symbol": "mycelium_vsa::recon::reconstruct_role",
-      "reason": "dedup-alias: same definition as `mycelium_vsa::reconstruct_role` at crates/mycelium-vsa/src/recon.rs:24 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_vsa::reconstruct_role` at crates/mycelium-vsa/src/recon.rs:23 — one canonical row kept"
     },
     {
       "symbol": "mycelium_vsa::resonator::Cleanup",
@@ -49642,6 +49600,66 @@
     {
       "symbol": "mycelium_vsa::sbc::Sbc::unpermute",
       "reason": "definition not found via regex heuristic (kind='fn', name='unpermute') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_vsa_decode::DecodeMethod",
+      "reason": "re-export (pub use) — cannot locate definition without type resolution"
+    },
+    {
+      "symbol": "mycelium_vsa_decode::Explanation",
+      "reason": "re-export (pub use) — cannot locate definition without type resolution"
+    },
+    {
+      "symbol": "mycelium_vsa_decode::decode_select::DEFAULT_ENUM_BUDGET:",
+      "reason": "dedup-alias: same definition as `mycelium_vsa_decode::DEFAULT_ENUM_BUDGET:` at crates/mycelium-vsa-decode/src/decode_select.rs:53 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_vsa_decode::decode_select::DecodeMethod",
+      "reason": "re-export (pub use) — cannot locate definition without type resolution"
+    },
+    {
+      "symbol": "mycelium_vsa_decode::decode_select::DecodeSelection",
+      "reason": "dedup-alias: same definition as `mycelium_vsa_decode::DecodeSelection` at crates/mycelium-vsa-decode/src/decode_select.rs:142 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_vsa_decode::decode_select::DecodeSelection::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_vsa_decode::decode_select::DecodeSelection::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_vsa_decode::decode_select::DecodeSelection::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_vsa_decode::decode_select::DecodeSelection::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_vsa_decode::decode_select::DecodeSelection::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_vsa_decode::decode_select::DecodeSelection::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_vsa_decode::decode_select::Explanation",
+      "reason": "re-export (pub use) — cannot locate definition without type resolution"
+    },
+    {
+      "symbol": "mycelium_vsa_decode::decode_select::decode_method_policy",
+      "reason": "dedup-alias: same definition as `mycelium_vsa_decode::decode_method_policy` at crates/mycelium-vsa-decode/src/decode_select.rs:70 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_vsa_decode::decode_select::explain_decode_method",
+      "reason": "dedup-alias: same definition as `mycelium_vsa_decode::explain_decode_method` at crates/mycelium-vsa-decode/src/decode_select.rs:127 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_vsa_decode::decode_select::reconstruct_factors_auto",
+      "reason": "dedup-alias: same definition as `mycelium_vsa_decode::reconstruct_factors_auto` at crates/mycelium-vsa-decode/src/decode_select.rs:164 — one canonical row kept"
     },
     {
       "symbol": "u128::myc_cmp",

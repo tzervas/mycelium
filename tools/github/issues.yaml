@@ -10376,8 +10376,8 @@ issues:
     landed_basis: "opp port harness landed (differential Rust-ref ≡ self-hosted .myc). landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - corpus:RFC-0031
-      - src:crates/mycelium-l1/tests/std_result.rs
-      - src:crates/mycelium-l1/tests/std_option.rs
+      - src:crates/mycelium-std-conformance/tests/std_result.rs
+      - src:crates/mycelium-std-conformance/tests/std_option.rs
     body: |
       Minted 2026-07-02 (kickoff `opp`, Phase-I). Generalize the port harness: extract the
       `std_result.rs`/`std_option.rs` pattern (verbatim `include_str!` load, three-way execution,
@@ -10392,6 +10392,11 @@ issues:
       - Fixture landed; `std_result`/`std_option` migrated onto it (proof it generalizes); a
         new-port checklist (the D5 rows) embedded as the fixture's doc; `cargo test -p mycelium-l1`
         green.
+
+      NOTE (2026-07-02, M-971 fallout): `std_result.rs`/`std_option.rs` (and the rest of the
+      relocated port-differential set) moved from `crates/mycelium-l1/tests/` to the new
+      `crates/mycelium-std-conformance/tests/` crate as part of the M-971 acyclic-deps fix
+      (PR #1015); `doc_refs` above updated to the new paths, tests unchanged and still green.
 
   - id: M-926
     title: "Port std-diag to .myc (531 LOC — smallest; pattern-setter #1)"
@@ -11351,12 +11356,16 @@ issues:
   - id: M-971
     title: "Phase-I wave regressed the acyclic-deps invariant — 12 violations (3 cycles + upward-tier dev-deps)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:bug, area:core-ir, priority:P1, status:todo]
+    labels: [phase:5, type:bug, area:core-ir, priority:P1, status:done]
     epic: E27-1
     depends_on: [M-877, M-878, M-879]
+    landed_date: 2026-07-02
+    landed_basis: "PR #1015 'fix(deps): M-971 — resolve DN-68 acyclic-deps regression (12→0 violations)'; CHANGELOG.md '### Fixed (2026-07-02: M-971 — DN-68 acyclic-deps regression, 12 to 0 violations; dev to integration close-out)'"
     doc_refs:
       - corpus:DN-68
       - src:xtask/deps-strata.toml
+      - src:crates/mycelium-std-conformance/src/lib.rs
+      - src:crates/mycelium-vsa-decode/src/lib.rs
     body: |
       FLAG raised at integration-reconcile 2026-07-02. The Phase-I H1 wave (enb/opp) reintroduced
       dependency-graph violations that kickoff `acy` (H0, M-881/M-882) had driven to 0. `cargo run
@@ -11387,3 +11396,13 @@ issues:
       - `cargo run -p xtask -- deps` reports 0 violations; the interp/vsa and l1/std-* edges are
         removed or relocated per DN-68's change-procedure; `just check` green on deps-acyclic;
         no guarantee tag weakened (VR-5).
+
+      DONE (2026-07-02, PR #1015): both categories fixed by structural extraction, no whitelist.
+      Category A — the 11 oracle-backed port-differential tests + shared harness relocated out of
+      `mycelium-l1` into a new `mycelium-std-conformance` crate (tier std, stratum 0); 9
+      `mycelium-std-*` dev-deps dropped from `mycelium-l1`, dissolving the l1/proj/spore/std-spore/
+      std-testing dev-cycle. Category B — `decode_select`/`reconstruct_factors_selected` extracted
+      out of `mycelium-vsa` into a new `mycelium-vsa-decode` crate, breaking the interp/select/vsa
+      cycle and the interp-to-vsa upward-stratum violation (`mycelium-vsa` stratum re-derived 2 to
+      1). `cargo run -p xtask -- deps` reports 0 violations; full-workspace test/fmt/clippy/build
+      and the `api` gate all green (baselines regenerated). Unblocks dev to integration promotion.
