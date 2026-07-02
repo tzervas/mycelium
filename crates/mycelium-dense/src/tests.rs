@@ -360,10 +360,7 @@ fn measurement_ops_share_the_elementwise_operand_contract() {
     );
     // An approximate source is refused — same honest scope as the elementwise ops.
     let approx = s.add_values(&a, &dense_f32(vec![0.5, 0.5])).unwrap();
-    assert_eq!(
-        s.dot_value(&a, &approx),
-        Err(DenseError::ApproximateSource)
-    );
+    assert_eq!(s.dot_value(&a, &approx), Err(DenseError::ApproximateSource));
     assert_eq!(
         s.similarity_value(&approx, &a),
         Err(DenseError::ApproximateSource)

@@ -266,11 +266,9 @@ impl DenseSpace {
     pub fn op_guarantee(op: DenseOp) -> GuaranteeStrength {
         match op {
             DenseOp::Neg => GuaranteeStrength::Exact,
-            DenseOp::Add
-            | DenseOp::Sub
-            | DenseOp::Scale
-            | DenseOp::Dot
-            | DenseOp::Similarity => GuaranteeStrength::Proven,
+            DenseOp::Add | DenseOp::Sub | DenseOp::Scale | DenseOp::Dot | DenseOp::Similarity => {
+                GuaranteeStrength::Proven
+            }
         }
     }
 

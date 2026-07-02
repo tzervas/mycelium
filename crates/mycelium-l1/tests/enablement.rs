@@ -1667,3 +1667,175 @@ fn dense_prims_conformance_reject() {
         );
     }
 }
+
+// ── M-891 (`enb` Gap C): the dense measurement pair `dense_dot`/`dense_similarity` ──────────────
+//
+// Kernel `dense.dot`/`dense.similarity` — two equal-dim/dtype `Dense{d, s}` operands reduce to a
+// **`Dense{1, F64}` measurement** (the binary64 the kernel computed, delivered exactly), carrying
+// the kernel's `Proven` **accumulation bound**: absolute (`Linf`), `dot_abs_eps`/
+// `similarity_abs_eps` under a ProvenThm citation — deliberately NOT the dtype's per-element
+// `op_rel_eps` (inputs are exact on-grid and the accumulation is binary64, so the dtype ε never
+// enters; a per-element relative claim on a dot would be false under cancellation — VR-5). The
+// M-891 crux is that this bound **flows into the per-op tag and is EXPLAIN-able**: the tests
+// below inspect guarantee + ε + norm + citation off the result `Value` itself, on every path.
+//
+// **Where the three-way closes:** same as M-890 (see the section note above) — a nullary `main`
+// over dense values is inexpressible until a dense value-construction form lands (Gap A float /
+// a dense literal), so the surface leg takes kernel-built `Dense` arguments through
+// `Evaluator::call`; recorded honestly, not silently skipped.
+
+/// M-891 three-way + EXPLAIN: `dense_dot` agrees on L1-eval ≡ L0-interp ≡ AOT, its result is the
+/// `Dense{1, F64}` measurement form, and the disclosed accumulation bound (ε, norm, ProvenThm
+/// citation) is **inspectable off the value** — the accuracy claim is never a black box (G2/SC-3).
+#[test]
+fn dense_dot_three_way_measurement_with_inspectable_bound() {
+    let a = dense_f32(vec![1.5, 2.0, -0.5]);
+    let b = dense_f32(vec![2.0, 0.25, 4.0]);
+    let y = assert_dense_three_way(
+        "dense_dot",
+        "nodule d;\nfn f(a: Dense{3, F32}, b: Dense{3, F32}) => Dense{1, F64} = dense_dot(a, b);",
+        "f",
+        "dense.dot",
+        &[a, b],
+    );
+    // 3.0 + 0.5 − 2.0 = 1.5 (every product and partial sum exact in binary64).
+    assert_eq!(
+        y.repr(),
+        &Repr::Dense {
+            dim: 1,
+            dtype: ScalarKind::F64
+        },
+        "the measurement result form is Dense{{1, F64}}"
+    );
+    assert_eq!(y.payload(), &Payload::Scalars(vec![1.5]));
+    assert_eq!(y.meta().guarantee(), GuaranteeStrength::Proven);
+    // EXPLAIN: the kernel's guarantee metadata is inspectable — ε is `dot_abs_eps` over the
+    // computed abs-product sum (3.0 + 0.5 + 2.0), the norm is absolute (Linf), and the
+    // ProvenThm citation names its theorem basis.
+    let space = DenseSpace::new(3, ScalarKind::F32).unwrap();
+    match y.meta().bound() {
+        Some(Bound {
+            kind: BoundKind::Error { eps, norm },
+            basis: BoundBasis::ProvenThm { citation },
+        }) => {
+            assert_eq!(*eps, space.dot_abs_eps(3.0 + 0.5 + 2.0));
+            assert_eq!(*norm, NormKind::Linf);
+            assert!(
+                citation.contains("Higham"),
+                "the EXPLAIN-able citation must name its theorem basis: {citation}"
+            );
+        }
+        other => panic!("expected the kernel's ProvenThm Linf bound, got {other:?}"),
+    }
+}
+
+#[test]
+fn dense_similarity_three_way_and_zero_convention() {
+    // Orthogonal on-grid vectors: the cosine is exactly 0 (every product is 0).
+    let a = dense_f32(vec![1.0, 0.0]);
+    let b = dense_f32(vec![0.0, 1.0]);
+    let y = assert_dense_three_way(
+        "dense_similarity",
+        "nodule d;\nfn f(a: Dense{2, F32}, b: Dense{2, F32}) => Dense{1, F64} = \
+         dense_similarity(a, b);",
+        "f",
+        "dense.similarity",
+        &[a.clone(), b],
+    );
+    assert_eq!(
+        y.repr(),
+        &Repr::Dense {
+            dim: 1,
+            dtype: ScalarKind::F64
+        }
+    );
+    assert_eq!(y.payload(), &Payload::Scalars(vec![0.0]));
+    assert_eq!(y.meta().guarantee(), GuaranteeStrength::Proven);
+    // The similarity bound is input-independent (normalization caps the absolute error).
+    let space = DenseSpace::new(2, ScalarKind::F32).unwrap();
+    match y.meta().bound() {
+        Some(Bound {
+            kind: BoundKind::Error { eps, norm },
+            basis: BoundBasis::ProvenThm { .. },
+        }) => {
+            assert_eq!(*eps, space.similarity_abs_eps());
+            assert_eq!(*norm, NormKind::Linf);
+        }
+        other => panic!("expected the kernel's ProvenThm Linf bound, got {other:?}"),
+    }
+    // The zero-norm convention (documented in the kernel citation): exactly 0 on every path.
+    let z = dense_f32(vec![0.0, 0.0]);
+    let zc = assert_dense_three_way(
+        "dense_similarity_zero",
+        "nodule d;\nfn f(a: Dense{2, F32}, b: Dense{2, F32}) => Dense{1, F64} = \
+         dense_similarity(a, b);",
+        "f",
+        "dense.similarity",
+        &[a, z],
+    );
+    assert_eq!(zc.payload(), &Payload::Scalars(vec![0.0]));
+}
+
+/// Static conformance — accept: the measurement-pair signatures the checker must admit
+/// (the result type is always `Dense{1, F64}`, whatever the operand dim/dtype).
+#[test]
+fn dense_measurement_conformance_accept() {
+    for src in [
+        "nodule d;\nfn f(a: Dense{4, F32}, b: Dense{4, F32}) => Dense{1, F64} = dense_dot(a, b);",
+        "nodule d;\nfn f(a: Dense{4, F32}, b: Dense{4, F32}) => Dense{1, F64} = \
+         dense_similarity(a, b);",
+        // BF16 operands measure identically (the dtype rides the operand type; result is F64).
+        "nodule d;\nfn f(a: Dense{8, BF16}, b: Dense{8, BF16}) => Dense{1, F64} = dense_dot(a, b);",
+        // Composition: a dense-elementwise result feeds the measurement.
+        "nodule d;\nfn f(a: Dense{4, F32}, b: Dense{4, F32}) => Dense{1, F64} = \
+         dense_dot(dense_add(a, b), b);",
+    ] {
+        check_nodule(&parse(src).expect("parses"))
+            .unwrap_or_else(|e| panic!("must accept: {src}\n  got: {e}"));
+    }
+}
+
+/// Static conformance — reject: the never-silent shape/dtype contract, plus the
+/// measurement-result form itself (the result is `Dense{1, F64}`, not the operand type —
+/// mis-declaring it is a check-time refusal, so the F64 measurement can never silently pose as
+/// an on-grid operand value).
+#[test]
+fn dense_measurement_conformance_reject() {
+    for (src, needle) in [
+        // Dim mismatch: never a broadcast.
+        (
+            "nodule d;\nfn f(a: Dense{4, F32}, b: Dense{8, F32}) => Dense{1, F64} = dense_dot(a, b);",
+            "share one dim and dtype",
+        ),
+        // Dtype mismatch: never a silent re-round.
+        (
+            "nodule d;\nfn f(a: Dense{4, F32}, b: Dense{4, BF16}) => Dense{1, F64} = \
+             dense_similarity(a, b);",
+            "share one dim and dtype",
+        ),
+        // Cross-paradigm operand: an explicit refusal pointing at the missing swap.
+        (
+            "nodule d;\nfn f(a: Dense{4, F32}, b: Binary{8}) => Dense{1, F64} = dense_dot(a, b);",
+            "must be a `Dense{dim, scalar}`",
+        ),
+        // Arity: explicit.
+        (
+            "nodule d;\nfn f(a: Dense{4, F32}) => Dense{1, F64} = dense_dot(a);",
+            "takes 2 operand(s)",
+        ),
+        // The result is the Dense{1, F64} measurement form — declaring the operand type is a
+        // static mismatch, never a silent re-round of the measurement onto the operand grid.
+        (
+            "nodule d;\nfn f(a: Dense{4, F32}, b: Dense{4, F32}) => Dense{4, F32} = dense_dot(a, b);",
+            "Dense{1, F64}",
+        ),
+    ] {
+        let err = check_nodule(&parse(src).expect("parses"))
+            .expect_err(&format!("must reject: {src}"));
+        let msg = err.to_string();
+        assert!(
+            msg.contains(needle),
+            "the refusal must name the offense.\n  src: {src}\n  want: {needle}\n  got: {msg}"
+        );
+    }
+}

@@ -143,6 +143,15 @@ fn dense_prims_resolve_to_declared_tensor_valued_kernel_prims() {
         ("dense_sub", "dense.sub", 2, GuaranteeStrength::Proven),
         ("dense_neg", "dense.neg", 1, GuaranteeStrength::Exact),
         ("dense_scale", "dense.scale", 2, GuaranteeStrength::Proven),
+        // M-891: the measurement pair — Proven (the kernel's binary64 accumulation bound;
+        // the runtime result is Dense{1, F64}, typed by the dedicated checker branch).
+        ("dense_dot", "dense.dot", 2, GuaranteeStrength::Proven),
+        (
+            "dense_similarity",
+            "dense.similarity",
+            2,
+            GuaranteeStrength::Proven,
+        ),
     ] {
         let kernel = prim_kernel_name(surface)
             .unwrap_or_else(|| panic!("dense prim `{surface}` must map to a kernel name"));

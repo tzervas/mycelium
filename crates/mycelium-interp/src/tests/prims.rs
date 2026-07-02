@@ -1109,11 +1109,8 @@ fn dense_measurement_reject_surface_is_never_silent() {
         // Wrong arity → explicit PrimType.
         assert!(matches!(f(prim, &[&a]), Err(EvalError::PrimType { .. })));
         // An approximate source → ApproxCompositionUnsupported (no composition rule yet).
-        let approx = reg.get("dense.add").unwrap()(
-            "dense.add",
-            &[&a, &dense_f32(vec![0.5, 0.5])],
-        )
-        .expect("a Proven value");
+        let approx = reg.get("dense.add").unwrap()("dense.add", &[&a, &dense_f32(vec![0.5, 0.5])])
+            .expect("a Proven value");
         assert!(matches!(
             f(prim, &[&a, &approx]),
             Err(EvalError::ApproxCompositionUnsupported { .. })

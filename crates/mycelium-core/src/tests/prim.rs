@@ -126,7 +126,12 @@ fn dense_group_carries_the_kernel_tags() {
             GuaranteeStrength::Proven,
             WidthRel::Uniform,
         ),
-        ("dense.dot", 2, GuaranteeStrength::Proven, WidthRel::Collapse),
+        (
+            "dense.dot",
+            2,
+            GuaranteeStrength::Proven,
+            WidthRel::Collapse,
+        ),
         (
             "dense.similarity",
             2,
