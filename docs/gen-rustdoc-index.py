@@ -24,9 +24,7 @@ def main() -> int:
         return 66
 
     crates = sorted(
-        p.name
-        for p in out_dir.iterdir()
-        if p.is_dir() and (p / "index.html").is_file()
+        p.name for p in out_dir.iterdir() if p.is_dir() and (p / "index.html").is_file()
     )
 
     items = "\n".join(
@@ -65,7 +63,9 @@ footer{{color:var(--dim);font-size:.85rem;border-top:1px solid #ddd;margin-top:2
 </html>
 """
     (out_dir / "index.html").write_text(page)
-    print(f"gen-rustdoc-index.py: wrote {out_dir / 'index.html'} ({len(crates)} crates)")
+    print(
+        f"gen-rustdoc-index.py: wrote {out_dir / 'index.html'} ({len(crates)} crates)"
+    )
     return 0
 
 

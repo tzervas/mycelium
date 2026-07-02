@@ -33,7 +33,14 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # in the README — the phantom check validates anything that *is* listed).
 # `mutants.out`/`mutants.out.old` are cargo-mutants runtime output (git-ignored, written by
 # `just mutants` into the cwd) — transient artifacts, not repo structure (M-654).
-IGNORE_TOPLEVEL = {"target", "oom", "__pycache__", "mutants.out", "mutants.out.old", "node_modules"}
+IGNORE_TOPLEVEL = {
+    "target",
+    "oom",
+    "__pycache__",
+    "mutants.out",
+    "mutants.out.old",
+    "node_modules",
+}
 
 # Top-level files the README tree is expected to mention (the load-bearing ones).
 KEY_FILES = {

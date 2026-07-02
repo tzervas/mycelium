@@ -10,7 +10,7 @@
 **Status:** design + **Rust-first implementation underway.** The design corpus spans Foundation,
 RFC-0001…0039, ADR-001…034, DN-01 onward — per-document status (Draft / Proposed / Accepted /
 Enacted / Resolved) is in [`docs/Doc-Index.md`](docs/Doc-Index.md). The Rust workspace has
-**52 crates** (+ `xtask`) <!-- doc-currency:crate-count --> — a trusted reference interpreter,
+**53 crates** (+ `xtask`) <!-- doc-currency:crate-count --> — a trusted reference interpreter,
 explicit representation **swaps** (certified at the `certified` mode), the selection-policy
 engine, a verified-numerics layer, a **Rust-first standard library**, an L1 surface with
 **generics · traits · higher-order functions · operator syntax**, a **runtime** (scheduler,
