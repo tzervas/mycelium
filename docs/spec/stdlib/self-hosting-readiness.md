@@ -33,6 +33,38 @@
 > 1. **No float value form/ops** (no float literal/type/prims; F16–F64 exist only as Dense dtypes) →
 >    blocks `math`(f64 half), `numerics`. `Exact` (grammar + `interp/src/prims.rs`). Tracked: E20-1 /
 >    RFC-0033 (full self-hosting deferred post-1.0 by ADR-035).
+>    **→ CLOSED (2026-07-02, M-900 re-verification, `Empirical`).** The float value form/ops gap is
+>    landed: `Repr::Float{F64}`/`Payload::Float` (M-896), the decimal float literal + nullary
+>    `Float` type (M-897), `flt.{add,sub,mul,div,neg}` (M-898), and
+>    `flt.{lt,le,gt,ge,eq,total_le}` (M-899) all close the **full three-way**
+>    (L1-eval ≡ elaborate→L0-interp ≡ AOT) over surface `.myc` programs — the literal (incl. exponent
+>    forms, the round-trip corpus, out-of-range/pattern/type-mismatch refusals), arithmetic,
+>    comparisons, in-band specials (±inf, div-by-zero, `0/0` → canonical NaN, overflow → inf), NaN
+>    *propagation* through arithmetic and re-canonicalization on `neg`, signed zeros (`+0`/`−0`
+>    distinct under the total order, IEEE-equal under `flt_eq`), and canonical-NaN identity — **88
+>    passing tests**, `crates/mycelium-l1/tests/enablement.rs` (verified + one closeout test added
+>    for M-900: `flt_arith_nan_propagates_and_recanonicalizes_three_way`). **No AOT refusal was
+>    needed for any float form** — every float form closes three-way with no exception to record
+>    (contrast the dense group, M-890/M-891, whose nullary-main surface is still inexpressible
+>    pending a dense literal) — recorded honestly per G2/VR-5. **No content-address rehash was
+>    spent**, re-confirmed green against the M-896 golden-digest pin
+>    (`crates/mycelium-core/src/tests/content.rs::adding_float_spent_no_rehash_existing_addresses_stable`,
+>    RFC-0033 §7). **Tag discipline unchanged (`Empirical`, ADR-040 §2.6, VR-5 — never upgraded to
+>    `Proven`):** the float *definition* (correctly-rounded RNE) is `Exact` as a definition; the
+>    *host-delivers-those-bits* implementation claim stays `Empirical`, evidenced by the
+>    hand-derived IEEE reference corpus in `mycelium-interp/src/tests/prims.rs`, and the
+>    `flt_total_le` total-order property stays `Empirical` pending the M-511 proof (never `Proven`
+>    without a checked theorem). **Residual FLAGs (not closed by this task, carried forward):**
+>    `is_nan`/`is_finite` classification prims are still OPEN (`mycelium-core/src/prim.rs` —
+>    M-899 shipped comparison/total-order only; NaN is detectable today via `¬flt_eq(x, x)`,
+>    finiteness via `flt_lt(-inf, x) ∧ flt_lt(x, +inf)`; the float *gate* itself does not need
+>    dedicated classification prims to close, so this is a follow-up, not a blocker); the
+>    `flt.*`/`Float` surface-name ratification is deferred to the `integration` tier. This closes
+>    blocker 1 of the 5 numbered + 2 untracked items in this section — the remaining 4 numbered
+>    blockers (binary `mul`/`div`/`shl`/`shr` + signed ops, dense/VSA op-prims, RFC-0008 R2 runtime
+>    vocabulary, `Substrate`/`consume` execution) and the 2 untracked items are **UNCHANGED** by
+>    this task (out of scope — M-900 is the Gap-A float capstone only; several of them landed under
+>    sibling `enb` tasks M-887…M-894/M-901…M-914 but re-verifying those is not this gate record).
 > 2. **No binary `mul`/`div`/`shl`/`shr` prims + no signed-op set** → blocks the integer numeric half.
 >    `Exact`. Tracked: M-718 FLAG · ADR-028 (signedness-as-operations) · E20-1.
 > 3. **Dense/VSA op-prims not surfaced to L1** (types/literals exist; no `dense.*`/`vsa.*` ops in the
@@ -149,6 +181,29 @@ clear it is the *evidence* that upgrades this verdict — never a forward declar
 
 ## Meta — changelog
 
+- **2026-07-02 — §0 blocker 1 (float value form/ops) CLOSED (M-900, `Empirical`); the other §0
+  blockers are UNCHANGED.** Kickoff `enb` Phase-I H1 Gap A (M-895…M-900) landed the scalar-float
+  value form (M-896), the decimal float literal + nullary `Float` type (M-897),
+  `flt.{add,sub,mul,div,neg}` (M-898), and `flt.{lt,le,gt,ge,eq,total_le}` (M-899); M-900 (this
+  entry) re-verifies the **full three-way** (L1-eval ≡ elaborate→L0-interp ≡ AOT) closure over the
+  whole group — literal, arithmetic, comparisons, in-band specials, NaN propagation/
+  re-canonicalization, signed zeros, canonical-NaN identity — 88 green tests in
+  `crates/mycelium-l1/tests/enablement.rs` (one test added this task:
+  `flt_arith_nan_propagates_and_recanonicalizes_three_way`, closing the one genuinely-uncovered
+  three-way corner: NaN *propagated* through arithmetic, not only *produced* by `0/0`). **No AOT
+  refusal was needed for any float form** (recorded honestly — there was nothing to refuse). **No
+  content-address rehash was spent**, re-confirmed against the M-896 golden-digest pin in
+  `crates/mycelium-core/src/tests/content.rs` (RFC-0033 §7). Tag discipline unchanged: `Empirical`
+  per ADR-040 §2.6 (VR-5 — never upgraded to `Proven`; the `flt_total_le` total-order property
+  stays `Empirical` pending the M-511 proof). §0 item 1 is edited in place with a `→ CLOSED`
+  annotation (append-only — the original 2026-07-01 blocker text is preserved, not deleted).
+  **FLAGged residuals, explicitly NOT closed by this task:** the `is_nan`/`is_finite`
+  classification prims remain OPEN (workaround: `¬flt_eq(x,x)` / `flt_lt(-inf,x) ∧ flt_lt(x,+inf)`
+  — the float *gate* does not need them to close); the `flt.*`/`Float` surface-name ratification is
+  deferred to the `integration` tier; and §0's other 4 numbered blockers (binary `mul`/`div`/`shl`/
+  `shr` + signed ops, dense/VSA op-prims, RFC-0008 R2 runtime vocabulary, `Substrate`/`consume`
+  execution) plus its 2 untracked items are **out of this task's scope** and stay as last recorded
+  (several landed under sibling `enb` tasks — re-verifying them is not this gate record). Append-only.
 - **2026-06-18 — KC-2 design gate cleared (DN-09; RFC-0006 r5); capability #3 design-ready; overall verdict held at *not yet* (execution gate remains).** The **KC-2 verdict = proceed** (DN-09, 2026-06-18) closes the design gate on capability #3 (concrete L3 surface syntax): the v0 grammar is now the ratified L3 text surface (RFC-0006 r5), refined append-only. The maintainer A2 ruling from 2026-06-17 that "the authoring surface stays KC-2-gated" is **superseded** by this verdict — the design gate is cleared. **However, the overall verdict stays NOT YET established**: the gate that now blocks is the *implementation* of #3 (a working parser for the committed grammar), not the design decision. A stdlib module cannot be truthfully "self-hosted" until `.myc` source can actually be parsed, elaborated, and run (the execution gate). Capabilities #5/#6 surface forms and #7 ambient-repr enactment follow the implementation. §2 capability #3 status, §3, §4, and §5 re-check trigger updated to reflect the design/execution gate distinction. Honest scope: the T3.6 ablation remains open (DN-09 §4); "proceed" does not upgrade to the strong Q1 confirmation (VR-5). Append-only.
 - **2026-06-17 — RFC-0016 ratified; the §8-Q5 differential bar fixed; verdict held at *not yet* (A2 ruling).**
   With RFC-0016 now **Accepted** (DN-07), the gate's two carried FLAGs are partly discharged: **Q-a / §8-Q5
