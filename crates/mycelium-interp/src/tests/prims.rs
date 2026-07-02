@@ -1251,17 +1251,22 @@ fn flt_reference_cases() -> Vec<FltCase> {
             f64::NEG_INFINITY,
             "overflow → −inf, in-band",
         ),
-        c("flt.add", &[f64::INFINITY, 1.0], f64::INFINITY, "inf + finite = inf"),
+        c(
+            "flt.add",
+            &[f64::INFINITY, 1.0],
+            f64::INFINITY,
+            "inf + finite = inf",
+        ),
         c(
             "flt.add",
             &[f64::INFINITY, f64::NEG_INFINITY],
-            f64::from_bits(CANONICAL_NAN_BITS),
+            cnan(),
             "inf + (−inf) is invalid → NaN (canonical)",
         ),
         c(
             "flt.add",
-            &[f64::from_bits(CANONICAL_NAN_BITS), 1.0],
-            f64::from_bits(CANONICAL_NAN_BITS),
+            &[cnan(), 1.0],
+            cnan(),
             "NaN propagates (canonical)",
         ),
         // flt.sub.
@@ -1277,7 +1282,7 @@ fn flt_reference_cases() -> Vec<FltCase> {
         c(
             "flt.sub",
             &[f64::INFINITY, f64::INFINITY],
-            f64::from_bits(CANONICAL_NAN_BITS),
+            cnan(),
             "inf − inf is invalid → NaN (canonical)",
         ),
         c(
@@ -1294,7 +1299,12 @@ fn flt_reference_cases() -> Vec<FltCase> {
         ),
         // flt.mul.
         c("flt.mul", &[1.5, 2.0], 3.0, "exact dyadic product"),
-        c("flt.mul", &[-1.5, 2.0], -3.0, "exact dyadic product, sign rule"),
+        c(
+            "flt.mul",
+            &[-1.5, 2.0],
+            -3.0,
+            "exact dyadic product, sign rule",
+        ),
         c("flt.mul", &[0.5, 0.5], 0.25, "exact dyadic product"),
         c(
             "flt.mul",
@@ -1305,10 +1315,15 @@ fn flt_reference_cases() -> Vec<FltCase> {
         c(
             "flt.mul",
             &[0.0, f64::INFINITY],
-            f64::from_bits(CANONICAL_NAN_BITS),
+            cnan(),
             "0 × inf is invalid → NaN (canonical)",
         ),
-        c("flt.mul", &[-1.0, 0.0], -0.0, "IEEE sign rule: (−1) × (+0) = −0"),
+        c(
+            "flt.mul",
+            &[-1.0, 0.0],
+            -0.0,
+            "IEEE sign rule: (−1) × (+0) = −0",
+        ),
         c(
             "flt.mul",
             &[f64::INFINITY, -2.0],
@@ -1346,26 +1361,41 @@ fn flt_reference_cases() -> Vec<FltCase> {
         c(
             "flt.div",
             &[0.0, 0.0],
-            f64::from_bits(CANONICAL_NAN_BITS),
+            cnan(),
             "0/0 is invalid → NaN (canonical)",
         ),
         c(
             "flt.div",
             &[f64::INFINITY, f64::INFINITY],
-            f64::from_bits(CANONICAL_NAN_BITS),
+            cnan(),
             "inf/inf is invalid → NaN (canonical)",
         ),
         c("flt.div", &[1.0, f64::INFINITY], 0.0, "finite/inf = +0"),
-        c("flt.div", &[-1.0, f64::INFINITY], -0.0, "finite/inf, sign rule = −0"),
+        c(
+            "flt.div",
+            &[-1.0, f64::INFINITY],
+            -0.0,
+            "finite/inf, sign rule = −0",
+        ),
         // flt.neg — sign-bit flip (exact; never rounds).
         c("flt.neg", &[1.5], -1.5, "sign flip"),
-        c("flt.neg", &[0.0], -0.0, "neg(+0) = −0 (bit-distinct — ADR-040 §2.3)"),
-        c("flt.neg", &[-0.0], 0.0, "neg(−0) = +0"),
-        c("flt.neg", &[f64::INFINITY], f64::NEG_INFINITY, "neg(inf) = −inf"),
         c(
             "flt.neg",
-            &[f64::from_bits(CANONICAL_NAN_BITS)],
-            f64::from_bits(CANONICAL_NAN_BITS),
+            &[0.0],
+            -0.0,
+            "neg(+0) = −0 (bit-distinct — ADR-040 §2.3)",
+        ),
+        c("flt.neg", &[-0.0], 0.0, "neg(−0) = +0"),
+        c(
+            "flt.neg",
+            &[f64::INFINITY],
+            f64::NEG_INFINITY,
+            "neg(inf) = −inf",
+        ),
+        c(
+            "flt.neg",
+            &[cnan()],
+            cnan(),
             "neg(NaN) re-canonicalizes: NaN sign/payload bits are not observable (§2.3)",
         ),
     ]
@@ -1388,9 +1418,8 @@ fn flt_reference_case_corpus() {
         let f = reg.get(case.op).expect("flt prim registered");
         let args: Vec<Value> = case.args.iter().copied().map(fv).collect();
         let argrefs: Vec<&Value> = args.iter().collect();
-        let y = f(case.op, &argrefs).unwrap_or_else(|e| {
-            panic!("{}({:?}) must be total, got {e:?}", case.op, case.args)
-        });
+        let y = f(case.op, &argrefs)
+            .unwrap_or_else(|e| panic!("{}({:?}) must be total, got {e:?}", case.op, case.args));
         let Payload::Float(x) = y.payload() else {
             panic!("{}: result payload must be Float", case.op)
         };
@@ -1436,7 +1465,7 @@ fn flt_value_corpus() -> Vec<f64> {
         9_007_199_254_740_992.0,
         f64::INFINITY,
         f64::NEG_INFINITY,
-        f64::from_bits(CANONICAL_NAN_BITS),
+        cnan(),
     ]
 }
 
@@ -1481,7 +1510,11 @@ fn flt_add_zero_is_the_identity_modulo_ieee() {
             panic!("float result expected")
         };
         if x.is_nan() {
-            assert_eq!(out.to_bits(), CANONICAL_NAN_BITS, "NaN + 0 is canonical NaN");
+            assert_eq!(
+                out.to_bits(),
+                CANONICAL_NAN_BITS,
+                "NaN + 0 is canonical NaN"
+            );
         } else {
             assert_eq!(*out, x, "x + 0.0 must be IEEE-equal to x (x = {x:?})");
             if x.to_bits() != (-0.0f64).to_bits() {
