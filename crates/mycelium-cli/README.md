@@ -8,22 +8,25 @@
 
 `mycelium-cli` provides the single front door over the Mycelium toolchain. `myc init` scaffolds a
 phylum, `myc build` packages it as a content-addressed spore (M-368), `myc check` type-checks it
-via the L1 front-end, `myc test` runs available verification, and `myc run` is explicitly not yet
-wired — it says so with an actionable `Report` rather than a silent stub. Every user-visible failure
-is a structured `Report` with a stable code, human-readable message, optional source location, and
-actionable help; no raw Rust panic ever reaches the user (G2). The driver orchestrates real library
-APIs directly — no fragile subprocess plumbing.
+via the L1 front-end, `myc test` runs available verification, and `myc run` executes a project's
+`.myc` sources through the reference interpreter — a single source via the M-908 v0 path, two or
+more via the M-909 multi-nodule path (manifest-driven project loading + nodule linking, with an
+explicit, named `Report` for every unresolved/duplicate/cyclic nodule reference — never a silent
+narrowing or a stub). Every user-visible failure is a structured `Report` with a stable code,
+human-readable message, optional source location, and actionable help; no raw Rust panic ever
+reaches the user (G2). The driver orchestrates real library APIs directly — no fragile subprocess
+plumbing.
 
 ## Key items
 
 - `myc` binary — the single toolchain entry point.
 - `Report` — structured, actionable diagnostic (code, message, location, help, exit code); renders as `error[<code>]: <message>`.
 - `init` / `build` / `check` / `test` subcommands — each does real end-to-end work.
-- `run` subcommand — explicitly not yet wired; reports its unimplemented status honestly.
+- `run` subcommand — executes single-nodule (M-908) and multi-nodule (M-909) projects end-to-end through the reference interpreter; nodule-link failures (unresolved/duplicate/cyclic `use` refs) are explicit, named `Report`s.
 
 ## Design references
 
-- M-733, M-368, M-359
+- M-733, M-368, M-359, M-908, M-909
 - E16-1
 - DN-22
 - RFC-0013

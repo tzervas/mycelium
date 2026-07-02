@@ -5,15 +5,15 @@
 //! myc build [--config <manifest>]  # build the content-addressed spore
 //! myc check [--config <manifest>]  # parse + type-check every .myc source
 //! myc test  [--config <manifest>]  # run the available verification (check)
-//! myc run   [--config <manifest>]  # run a single-nodule project's `main` (M-908 v0)
+//! myc run   [--config <manifest>]  # run a project's `main` (M-908 v0 single-nodule; M-909 multi-nodule)
 //! myc --stream [<file>]            # parse a `;`-terminated component stream (M-820/DN-57)
 //! ```
 //!
 //! Every failure is a DN-22 structured [`Report`](mycelium_cli::Report) — `error[<code>]: …` with a
 //! source location and an actionable `help:` line; no raw panic ever reaches the user (G2).
 //!
-//! Exit codes: 0 ok · 2 manifest · 64 usage · 65 source/eval error · 66 I/O · 70 unsupported
-//! (multi-nodule project, or a program outside the evaluation-complete fragment — M-909/RFC-0007).
+//! Exit codes: 0 ok · 2 manifest · 64 usage · 65 source/eval/nodule-link error · 66 I/O · 70 a
+//! program outside the evaluation-complete fragment (RFC-0007).
 
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
@@ -27,7 +27,7 @@ fn usage() -> ExitCode {
          myc build [--config <manifest>]\n  \
          myc check [--config <manifest>]\n  \
          myc test  [--config <manifest>]\n  \
-         myc run   [--config <manifest>]\n  \
+         myc run   [--config <manifest>]  # single- or multi-nodule (M-908/M-909)\n  \
          myc --stream [<file>]"
     );
     ExitCode::from(64)
