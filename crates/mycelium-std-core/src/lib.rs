@@ -42,7 +42,15 @@
 //! Accepted (2026-06-20)) and asserted by its guarantee-matrix table, is the **frozen baseline** per
 //! [DN-66](../../../docs/notes/DN-66-Stdlib-Stable-API-Freeze-And-Rust-Crate-Retirement-Status.md).
 //! A future breaking change here needs a spec amendment + changelog entry, not a silent edit (G2).
-//! It remains the RFC-0031 D6 differential-oracle reference; no `.myc` port of this module exists yet, so the D6 retirement trigger has not fired and no item here is `#[deprecated]`.
+//! It remains the RFC-0031 D6 differential-oracle reference. A `.myc` port of the
+//! [`GUARANTEE_MATRIX`] DATA now exists (`lib/std/core.myc`, M-927, kickoff `opp`) — but the
+//! kernel re-export facade that is the bulk of this crate's surface (the `mycelium-core` type
+//! re-exports, the `prelude`, the §4.8 query fns over `CoreValue`, and the `error_scaffold`)
+//! remains Rust-only per RFC-0031 D1 (no `.myc`-surface FFI/kernel-type construction or
+//! value-reflection mechanism exists yet). So the D6 retirement trigger has still NOT fired for
+//! this crate as a whole (D6 retires a crate only once its full public surface has a `.myc`
+//! counterpart, not just part of it — M-867 is post-1.0 regardless); no item here is
+//! `#[deprecated]`.
 #![forbid(unsafe_code)]
 
 // ---- shared stdlib error scaffold (M-535, E5-1; DN-17 §2.4/§4 P3) ----------------
