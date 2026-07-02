@@ -2678,11 +2678,9 @@
 | `mycelium_vsa::Bsc` | struct | `crates/mycelium-vsa/src/bsc.rs:42` | The BSC model at a fixed dimensionality. |
 | `mycelium_vsa::Cleanup` | enum | `crates/mycelium-vsa/src/resonator.rs:63` | Per-slot cleanup projection (RFC-0009 §3 / §9 Q2 / §10.3 ablation). |
 | `mycelium_vsa::CleanupMemory` | struct | `crates/mycelium-vsa/src/cleanup.rs:28` | A labelled item memory at a fixed dimensionality. |
-| `mycelium_vsa::DEFAULT_ENUM_BUDGET:` | const | `crates/mycelium-vsa/src/decode_select.rs:53` | The default enumeration budget: brute force is chosen when `∏ᵢ kᵢ ≤` this. |
-| `mycelium_vsa::DecodeSelection` | struct | `crates/mycelium-vsa/src/decode_select.rs:142` | A reified decode-method selection result (RFC-0010): the chosen methodology, the mandatory EXPLAIN |
-| `mycelium_vsa::EmpiricalProfile` | struct | `crates/mycelium-vsa/src/lib.rs:366` | A **trial-validated empirical profile**: the regime over which a crate-declared `Empirical` |
-| `mycelium_vsa::EmpiricalProfile::bound` | fn | `crates/mycelium-vsa/src/lib.rs:405` | The δ bound this profile backs, with its honest `EmpiricalFit` basis (M-I3). |
-| `mycelium_vsa::EmpiricalProfile::check` | fn | `crates/mycelium-vsa/src/lib.rs:384` | Check the profile's side-conditions for an op over `items` operands at `dim`; a violation |
+| `mycelium_vsa::EmpiricalProfile` | struct | `crates/mycelium-vsa/src/lib.rs:367` | A **trial-validated empirical profile**: the regime over which a crate-declared `Empirical` |
+| `mycelium_vsa::EmpiricalProfile::bound` | fn | `crates/mycelium-vsa/src/lib.rs:406` | The δ bound this profile backs, with its honest `EmpiricalFit` basis (M-I3). |
+| `mycelium_vsa::EmpiricalProfile::check` | fn | `crates/mycelium-vsa/src/lib.rs:385` | Check the profile's side-conditions for an op over `items` operands at `dim`; a violation |
 | `mycelium_vsa::Factorization` | struct | `crates/mycelium-vsa/src/resonator.rs:196` | A clean, gate-passing factorization: the per-slot recovered atom plus its confidence/margin, and |
 | `mycelium_vsa::Fhrr` | struct | `crates/mycelium-vsa/src/fhrr.rs:48` | The FHRR model at a fixed dimensionality. |
 | `mycelium_vsa::Hrr` | struct | `crates/mycelium-vsa/src/hrr.rs:54` | The HRR model at a fixed dimensionality. |
@@ -2698,9 +2696,9 @@
 | `mycelium_vsa::ResonatorTrace` | struct | `crates/mycelium-vsa/src/resonator.rs:181` | The full inspectable trace + verdict — returned on **any** stop (success or error), so `EXPLAIN` |
 | `mycelium_vsa::Sbc` | struct | `crates/mycelium-vsa/src/sbc.rs:36` | The SBC model: `blocks` blocks of `block_len` components (`dim = blocks · block_len`). |
 | `mycelium_vsa::StopReason` | enum | `crates/mycelium-vsa/src/resonator.rs:137` | The terminal verdict of a run (RFC-0009 §3/§6). |
-| `mycelium_vsa::VsaError` | enum | `crates/mycelium-vsa/src/lib.rs:73` | Why a VSA operation could not be performed — always explicit, never a silent coercion (G2). |
-| `mycelium_vsa::VsaModel` | trait | `crates/mycelium-vsa/src/lib.rs:327` | A composition-style VSA model (RFC-0003 §3): the `bind`/`unbind` (+ self-inverse flag), |
-| `mycelium_vsa::VsaOp` | enum | `crates/mycelium-vsa/src/lib.rs:60` | The VSA operations a model supplies (RFC-0003 §3). |
+| `mycelium_vsa::VsaError` | enum | `crates/mycelium-vsa/src/lib.rs:74` | Why a VSA operation could not be performed — always explicit, never a silent coercion (G2). |
+| `mycelium_vsa::VsaModel` | trait | `crates/mycelium-vsa/src/lib.rs:328` | A composition-style VSA model (RFC-0003 §3): the `bind`/`unbind` (+ self-inverse flag), |
+| `mycelium_vsa::VsaOp` | enum | `crates/mycelium-vsa/src/lib.rs:61` | The VSA operations a model supplies (RFC-0003 §3). |
 | `mycelium_vsa::bsc` | mod | `crates/mycelium-vsa/src/lib.rs:22` | — |
 | `mycelium_vsa::bsc::BSC_BUNDLE_PROFILE:` | const | `crates/mycelium-vsa/src/bsc.rs:30` | The trial-validated regime backing the Value-level BSC bundle's `Empirical` δ |
 | `mycelium_vsa::bsc::Bsc::bind_values` | fn | `crates/mycelium-vsa/src/bsc.rs:75` | Value-level `bind` (Exact, XOR). |
@@ -2721,52 +2719,61 @@
 | `mycelium_vsa::cleanup::CleanupMemory::is_empty` | fn | `crates/mycelium-vsa/src/cleanup.rs:63` | Whether the memory is empty. |
 | `mycelium_vsa::cleanup::CleanupMemory::len` | fn | `crates/mycelium-vsa/src/cleanup.rs:57` | Number of stored items. |
 | `mycelium_vsa::cleanup::CleanupMemory::new` | fn | `crates/mycelium-vsa/src/cleanup.rs:36` | An empty memory for `dim`-dimensional atoms. |
-| `mycelium_vsa::decode_method_policy` | fn | `crates/mycelium-vsa/src/decode_select.rs:70` | Build the **default decode-method policy** (RFC-0010 §4): three candidates |
-| `mycelium_vsa::decode_select` | mod | `crates/mycelium-vsa/src/lib.rs:25` | — |
-| `mycelium_vsa::explain_decode_method` | fn | `crates/mycelium-vsa/src/decode_select.rs:127` | The mandatory **EXPLAIN** for a decode-method choice (RFC-0005 §4), without executing the decode: |
 | `mycelium_vsa::factorize` | fn | `crates/mycelium-vsa/src/resonator.rs:326` | Factorize `s` into one atom per slot of `codebooks`, running the RFC-0009 §3 loop with `params`. |
-| `mycelium_vsa::fhrr` | mod | `crates/mycelium-vsa/src/lib.rs:26` | — |
+| `mycelium_vsa::fhrr` | mod | `crates/mycelium-vsa/src/lib.rs:25` | — |
 | `mycelium_vsa::fhrr::FHRR_UNBIND_PROFILE:` | const | `crates/mycelium-vsa/src/fhrr.rs:26` | The trial-validated regime backing the Value-level FHRR unbind's `Empirical` δ |
 | `mycelium_vsa::fhrr::Fhrr::bind_values` | fn | `crates/mycelium-vsa/src/fhrr.rs:84` | Value-level `bind` (deterministic phasor algebra). |
 | `mycelium_vsa::fhrr::Fhrr::new` | fn | `crates/mycelium-vsa/src/fhrr.rs:56` | An FHRR model of dimension `dim`. |
 | `mycelium_vsa::fhrr::Fhrr::permute_value` | fn | `crates/mycelium-vsa/src/fhrr.rs:134` | Value-level `permute` (Exact): cyclic shift by `shift` (M-892 — completes the FHRR |
 | `mycelium_vsa::fhrr::Fhrr::unbind_values` | fn | `crates/mycelium-vsa/src/fhrr.rs:102` | Value-level **`Empirical` unbind** (the RFC-0003 §4 weak-link tag, like HRR): the decoded |
-| `mycelium_vsa::hrr` | mod | `crates/mycelium-vsa/src/lib.rs:27` | — |
+| `mycelium_vsa::hrr` | mod | `crates/mycelium-vsa/src/lib.rs:26` | — |
 | `mycelium_vsa::hrr::HRR_UNBIND_PROFILE:` | const | `crates/mycelium-vsa/src/hrr.rs:42` | The trial-validated regime backing the Value-level HRR unbind's `Empirical` δ |
 | `mycelium_vsa::hrr::Hrr::bind_values` | fn | `crates/mycelium-vsa/src/hrr.rs:100` | Value-level `bind` (deterministic algebra; binding is where HRR is honest — the |
 | `mycelium_vsa::hrr::Hrr::new` | fn | `crates/mycelium-vsa/src/hrr.rs:62` | An HRR model of dimension `dim`. |
 | `mycelium_vsa::hrr::Hrr::unbind_values` | fn | `crates/mycelium-vsa/src/hrr.rs:119` | Value-level **`Empirical` unbind** — the documented weak link (RFC-0003 §4). |
-| `mycelium_vsa::mapb` | mod | `crates/mycelium-vsa/src/lib.rs:28` | — |
+| `mycelium_vsa::mapb` | mod | `crates/mycelium-vsa/src/lib.rs:27` | — |
 | `mycelium_vsa::mapb::MAPB_BUNDLE_PROFILE:` | const | `crates/mycelium-vsa/src/mapb.rs:34` | The trial-validated regime backing the Value-level MAP-B bundle's `Empirical` δ |
 | `mycelium_vsa::mapb::MapB::bind_values` | fn | `crates/mycelium-vsa/src/mapb.rs:83` | Value-level `bind` (Exact). |
 | `mycelium_vsa::mapb::MapB::bundle_values_empirical` | fn | `crates/mycelium-vsa/src/mapb.rs:134` | Value-level **`Empirical` bundle**: sign-rounded superposition carrying the |
 | `mycelium_vsa::mapb::MapB::new` | fn | `crates/mycelium-vsa/src/mapb.rs:54` | A MAP-B model of dimension `dim`. |
 | `mycelium_vsa::mapb::MapB::permute_value` | fn | `crates/mycelium-vsa/src/mapb.rs:118` | Value-level `permute` (Exact). |
 | `mycelium_vsa::mapb::MapB::unbind_values` | fn | `crates/mycelium-vsa/src/mapb.rs:102` | Value-level `unbind` (Exact; self-inverse). |
-| `mycelium_vsa::mapi` | mod | `crates/mycelium-vsa/src/lib.rs:29` | — |
+| `mycelium_vsa::mapi` | mod | `crates/mycelium-vsa/src/lib.rs:28` | — |
 | `mycelium_vsa::mapi::MapI::bind_values` | fn | `crates/mycelium-vsa/src/mapi.rs:94` | Value-level `bind` (Exact): `bind(a, b)` with `Derived` provenance over both inputs. |
 | `mycelium_vsa::mapi::MapI::bundle_values_certified` | fn | `crates/mycelium-vsa/src/mapi.rs:135` | Value-level **certified `bundle`** (M-131): superpose `items` and attach a **`Proven`** |
 | `mycelium_vsa::mapi::MapI::new` | fn | `crates/mycelium-vsa/src/mapi.rs:28` | A MAP-I model of dimension `dim`. |
 | `mycelium_vsa::mapi::MapI::permute_value` | fn | `crates/mycelium-vsa/src/mapi.rs:123` | Value-level `permute` (Exact): cyclic shift by `shift`. |
 | `mycelium_vsa::mapi::MapI::unbind_values` | fn | `crates/mycelium-vsa/src/mapi.rs:110` | Value-level `unbind` (Exact): recover a factor (self-inverse for MAP-I). |
-| `mycelium_vsa::matrix` | mod | `crates/mycelium-vsa/src/lib.rs:30` | — |
+| `mycelium_vsa::matrix` | mod | `crates/mycelium-vsa/src/lib.rs:29` | — |
 | `mycelium_vsa::matrix_tag` | fn | `crates/mycelium-vsa/src/matrix.rs:70` | Look up the normative tag for `(model_id, op)`; `None` for a model the matrix does not cover |
-| `mycelium_vsa::recon` | mod | `crates/mycelium-vsa/src/lib.rs:31` | — |
-| `mycelium_vsa::reconstruct_factors` | fn | `crates/mycelium-vsa/src/recon.rs:90` | Factorize `record` — a bind product `s = x₁ ⊛ … ⊛ x_F` — into one codebook atom per slot, following |
-| `mycelium_vsa::reconstruct_factors_auto` | fn | `crates/mycelium-vsa/src/decode_select.rs:164` | **Automatic factor reconstruction** (RFC-0010): select the decode methodology for `s` against |
-| `mycelium_vsa::reconstruct_factors_selected` | fn | `crates/mycelium-vsa/src/recon.rs:158` | Value-level **auto-selected** factor decode (RFC-0010): like [`reconstruct_factors`], but routes |
-| `mycelium_vsa::reconstruct_role` | fn | `crates/mycelium-vsa/src/recon.rs:24` | Compositionally reconstruct the filler bound under `role` inside `record`, following the |
-| `mycelium_vsa::resonator` | mod | `crates/mycelium-vsa/src/lib.rs:32` | — |
+| `mycelium_vsa::recon` | mod | `crates/mycelium-vsa/src/lib.rs:30` | — |
+| `mycelium_vsa::recon::hv_payload` | fn | `crates/mycelium-vsa/src/recon.rs:151` | Resolve a record `Value` to its hypervector payload slice, checking the model id and dimension |
+| `mycelium_vsa::recon::resonator_params_from_manifest` | fn | `crates/mycelium-vsa/src/recon.rs:119` | Read the manifest's (additive RFC-0003 §6.1) resonator decode params into a [`ResonatorParams`]. |
+| `mycelium_vsa::reconstruct_factors` | fn | `crates/mycelium-vsa/src/recon.rs:89` | Factorize `record` — a bind product `s = x₁ ⊛ … ⊛ x_F` — into one codebook atom per slot, following |
+| `mycelium_vsa::reconstruct_role` | fn | `crates/mycelium-vsa/src/recon.rs:23` | Compositionally reconstruct the filler bound under `role` inside `record`, following the |
+| `mycelium_vsa::resonator` | mod | `crates/mycelium-vsa/src/lib.rs:31` | — |
 | `mycelium_vsa::resonator::ResonatorParams::mapi_default` | fn | `crates/mycelium-vsa/src/resonator.rs:121` | The recommended MAP-I defaults (Hebbian bipolar cleanup, uniform superposition init, τ_lock=0.9, |
 | `mycelium_vsa::resonator::ResonatorProfile::bound` | fn | `crates/mycelium-vsa/src/resonator.rs:281` | The δ bound this profile backs, with its honest `EmpiricalFit` basis (RFC-0009 §5.2). |
 | `mycelium_vsa::resonator::ResonatorProfile::check` | fn | `crates/mycelium-vsa/src/resonator.rs:229` | Check the regime side-conditions for a concrete request; a violation is an explicit |
-| `mycelium_vsa::sbc` | mod | `crates/mycelium-vsa/src/lib.rs:33` | — |
+| `mycelium_vsa::sbc` | mod | `crates/mycelium-vsa/src/lib.rs:32` | — |
 | `mycelium_vsa::sbc::Sbc::bind_values` | fn | `crates/mycelium-vsa/src/sbc.rs:167` | Value-level `bind`: per-block index addition; the result keeps the one-hot refinement, |
 | `mycelium_vsa::sbc::Sbc::dim` | fn | `crates/mycelium-vsa/src/sbc.rs:52` | Total dimensionality. |
 | `mycelium_vsa::sbc::Sbc::new` | fn | `crates/mycelium-vsa/src/sbc.rs:46` | An SBC model with `blocks` blocks of `block_len` components. |
 | `mycelium_vsa::sbc::Sbc::repr` | fn | `crates/mycelium-vsa/src/sbc.rs:106` | The SBC `Repr`: the declared sparsity class is the static refinement |
 | `mycelium_vsa::sbc::Sbc::unbind_values` | fn | `crates/mycelium-vsa/src/sbc.rs:179` | Value-level `unbind`: per-block index subtraction (the exact algebraic inverse of `bind`). |
 | `mycelium_vsa::sbc::Sbc::value` | fn | `crates/mycelium-vsa/src/sbc.rs:126` | Construct an **`Exact`** SBC value from per-block active indices, carrying the declared |
+
+## mycelium-vsa-decode
+
+| Symbol | Kind | File:Line | Summary |
+|---|---|---|---|
+| `mycelium_vsa_decode::DEFAULT_ENUM_BUDGET:` | const | `crates/mycelium-vsa-decode/src/decode_select.rs:53` | The default enumeration budget: brute force is chosen when `∏ᵢ kᵢ ≤` this. |
+| `mycelium_vsa_decode::DecodeSelection` | struct | `crates/mycelium-vsa-decode/src/decode_select.rs:142` | A reified decode-method selection result (RFC-0010): the chosen methodology, the mandatory EXPLAIN |
+| `mycelium_vsa_decode::decode_method_policy` | fn | `crates/mycelium-vsa-decode/src/decode_select.rs:70` | Build the **default decode-method policy** (RFC-0010 §4): three candidates |
+| `mycelium_vsa_decode::decode_select` | mod | `crates/mycelium-vsa-decode/src/lib.rs:19` | — |
+| `mycelium_vsa_decode::explain_decode_method` | fn | `crates/mycelium-vsa-decode/src/decode_select.rs:127` | The mandatory **EXPLAIN** for a decode-method choice (RFC-0005 §4), without executing the decode: |
+| `mycelium_vsa_decode::reconstruct_factors_auto` | fn | `crates/mycelium-vsa-decode/src/decode_select.rs:164` | **Automatic factor reconstruction** (RFC-0010): select the decode methodology for `s` against |
+| `mycelium_vsa_decode::reconstruct_factors_selected` | fn | `crates/mycelium-vsa-decode/src/lib.rs:51` | Value-level **auto-selected** factor decode (RFC-0010): like `mycelium_vsa::reconstruct_factors`, |
 
 ## Flagged items
 
@@ -7994,11 +8001,9 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_transpile::gap::GapReport::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
 | `mycelium_transpile::transpile::transpile_file` | dedup-alias: same definition as `mycelium_transpile::transpile_file` at crates/mycelium-transpile/src/transpile.rs:19 — one canonical row kept |
 | `mycelium_transpile::transpile::transpile_source` | dedup-alias: same definition as `mycelium_transpile::transpile_source` at crates/mycelium-transpile/src/transpile.rs:31 — one canonical row kept |
-| `mycelium_vsa::DecodeMethod` | re-export (pub use) — cannot locate definition without type resolution |
 | `mycelium_vsa::EmpiricalProfile::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_vsa::EmpiricalProfile::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_vsa::EmpiricalProfile::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_vsa::Explanation` | re-export (pub use) — cannot locate definition without type resolution |
 | `mycelium_vsa::VsaError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_vsa::VsaError::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_vsa::VsaError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
@@ -8063,19 +8068,6 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_vsa::cleanup::Match::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_vsa::cleanup::Match::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_vsa::cleanup::Match::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_vsa::decode_select::DEFAULT_ENUM_BUDGET:` | dedup-alias: same definition as `mycelium_vsa::DEFAULT_ENUM_BUDGET:` at crates/mycelium-vsa/src/decode_select.rs:53 — one canonical row kept |
-| `mycelium_vsa::decode_select::DecodeMethod` | re-export (pub use) — cannot locate definition without type resolution |
-| `mycelium_vsa::decode_select::DecodeSelection` | dedup-alias: same definition as `mycelium_vsa::DecodeSelection` at crates/mycelium-vsa/src/decode_select.rs:142 — one canonical row kept |
-| `mycelium_vsa::decode_select::DecodeSelection::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
-| `mycelium_vsa::decode_select::DecodeSelection::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
-| `mycelium_vsa::decode_select::DecodeSelection::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
-| `mycelium_vsa::decode_select::DecodeSelection::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
-| `mycelium_vsa::decode_select::DecodeSelection::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_vsa::decode_select::DecodeSelection::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_vsa::decode_select::Explanation` | re-export (pub use) — cannot locate definition without type resolution |
-| `mycelium_vsa::decode_select::decode_method_policy` | dedup-alias: same definition as `mycelium_vsa::decode_method_policy` at crates/mycelium-vsa/src/decode_select.rs:70 — one canonical row kept |
-| `mycelium_vsa::decode_select::explain_decode_method` | dedup-alias: same definition as `mycelium_vsa::explain_decode_method` at crates/mycelium-vsa/src/decode_select.rs:127 — one canonical row kept |
-| `mycelium_vsa::decode_select::reconstruct_factors_auto` | dedup-alias: same definition as `mycelium_vsa::reconstruct_factors_auto` at crates/mycelium-vsa/src/decode_select.rs:164 — one canonical row kept |
 | `mycelium_vsa::fhrr::Fhrr` | dedup-alias: same definition as `mycelium_vsa::Fhrr` at crates/mycelium-vsa/src/fhrr.rs:48 — one canonical row kept |
 | `mycelium_vsa::fhrr::Fhrr::bind` | definition not found via regex heuristic (kind='fn', name='bind') — possibly macro-generated or cfg-gated |
 | `mycelium_vsa::fhrr::Fhrr::bind` | definition not found via regex heuristic (kind='fn', name='bind') — possibly macro-generated or cfg-gated |
@@ -8214,9 +8206,8 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_vsa::mapi::MapI::unpermute` | definition not found via regex heuristic (kind='fn', name='unpermute') — possibly macro-generated or cfg-gated |
 | `mycelium_vsa::matrix::RFC0003_MATRIX:` | dedup-alias: same definition as `mycelium_vsa::RFC0003_MATRIX:` at crates/mycelium-vsa/src/matrix.rs:34 — one canonical row kept |
 | `mycelium_vsa::matrix::matrix_tag` | dedup-alias: same definition as `mycelium_vsa::matrix_tag` at crates/mycelium-vsa/src/matrix.rs:70 — one canonical row kept |
-| `mycelium_vsa::recon::reconstruct_factors` | dedup-alias: same definition as `mycelium_vsa::reconstruct_factors` at crates/mycelium-vsa/src/recon.rs:90 — one canonical row kept |
-| `mycelium_vsa::recon::reconstruct_factors_selected` | dedup-alias: same definition as `mycelium_vsa::reconstruct_factors_selected` at crates/mycelium-vsa/src/recon.rs:158 — one canonical row kept |
-| `mycelium_vsa::recon::reconstruct_role` | dedup-alias: same definition as `mycelium_vsa::reconstruct_role` at crates/mycelium-vsa/src/recon.rs:24 — one canonical row kept |
+| `mycelium_vsa::recon::reconstruct_factors` | dedup-alias: same definition as `mycelium_vsa::reconstruct_factors` at crates/mycelium-vsa/src/recon.rs:89 — one canonical row kept |
+| `mycelium_vsa::recon::reconstruct_role` | dedup-alias: same definition as `mycelium_vsa::reconstruct_role` at crates/mycelium-vsa/src/recon.rs:23 — one canonical row kept |
 | `mycelium_vsa::resonator::Cleanup` | dedup-alias: same definition as `mycelium_vsa::Cleanup` at crates/mycelium-vsa/src/resonator.rs:63 — one canonical row kept |
 | `mycelium_vsa::resonator::Cleanup::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_vsa::resonator::Cleanup::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
@@ -8309,6 +8300,21 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_vsa::sbc::Sbc::unpermute` | definition not found via regex heuristic (kind='fn', name='unpermute') — possibly macro-generated or cfg-gated |
 | `mycelium_vsa::sbc::Sbc::unpermute` | definition not found via regex heuristic (kind='fn', name='unpermute') — possibly macro-generated or cfg-gated |
 | `mycelium_vsa::sbc::Sbc::unpermute` | definition not found via regex heuristic (kind='fn', name='unpermute') — possibly macro-generated or cfg-gated |
+| `mycelium_vsa_decode::DecodeMethod` | re-export (pub use) — cannot locate definition without type resolution |
+| `mycelium_vsa_decode::Explanation` | re-export (pub use) — cannot locate definition without type resolution |
+| `mycelium_vsa_decode::decode_select::DEFAULT_ENUM_BUDGET:` | dedup-alias: same definition as `mycelium_vsa_decode::DEFAULT_ENUM_BUDGET:` at crates/mycelium-vsa-decode/src/decode_select.rs:53 — one canonical row kept |
+| `mycelium_vsa_decode::decode_select::DecodeMethod` | re-export (pub use) — cannot locate definition without type resolution |
+| `mycelium_vsa_decode::decode_select::DecodeSelection` | dedup-alias: same definition as `mycelium_vsa_decode::DecodeSelection` at crates/mycelium-vsa-decode/src/decode_select.rs:142 — one canonical row kept |
+| `mycelium_vsa_decode::decode_select::DecodeSelection::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_vsa_decode::decode_select::DecodeSelection::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_vsa_decode::decode_select::DecodeSelection::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_vsa_decode::decode_select::DecodeSelection::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_vsa_decode::decode_select::DecodeSelection::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_vsa_decode::decode_select::DecodeSelection::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_vsa_decode::decode_select::Explanation` | re-export (pub use) — cannot locate definition without type resolution |
+| `mycelium_vsa_decode::decode_select::decode_method_policy` | dedup-alias: same definition as `mycelium_vsa_decode::decode_method_policy` at crates/mycelium-vsa-decode/src/decode_select.rs:70 — one canonical row kept |
+| `mycelium_vsa_decode::decode_select::explain_decode_method` | dedup-alias: same definition as `mycelium_vsa_decode::explain_decode_method` at crates/mycelium-vsa-decode/src/decode_select.rs:127 — one canonical row kept |
+| `mycelium_vsa_decode::decode_select::reconstruct_factors_auto` | dedup-alias: same definition as `mycelium_vsa_decode::reconstruct_factors_auto` at crates/mycelium-vsa-decode/src/decode_select.rs:164 — one canonical row kept |
 | `u128::myc_cmp` | definition not found via regex heuristic (kind='fn', name='myc_cmp') — possibly macro-generated or cfg-gated |
 | `u128::myc_eq` | definition not found via regex heuristic (kind='fn', name='myc_eq') — possibly macro-generated or cfg-gated |
 | `u128::myc_ge` | definition not found via regex heuristic (kind='fn', name='myc_ge') — possibly macro-generated or cfg-gated |
