@@ -1,4 +1,4 @@
-# CHANGELOG — archived entries (2026-06-16 → 2026-06-27)
+## CHANGELOG — archived entries (2026-06-16 → 2026-06-27)
 
 Verbatim archive of the older CHANGELOG window (docs-consolidation, 2026-07). The live changelog is
 `/CHANGELOG.md` (`[Unreleased]` + recent window). Nothing below is rewritten.
