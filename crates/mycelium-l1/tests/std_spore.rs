@@ -1085,12 +1085,12 @@ const MYC_ROW_FNS: [&str; 15] = [
     "row_explain_deploy",
 ];
 
-/// The `n`-deep `add_bin` chain `matrix_len` expands to (the `std_diag.rs` provenance
+/// The `n`-deep `add_u` chain `matrix_len` expands to (the `std_diag.rs` provenance
 /// convention: recompute via the SAME prims, not a bare literal).
 fn myc_len_chain(n: u8) -> String {
     let mut expr = "0b0000_0000".to_owned();
     for _ in 0..n {
-        expr = format!("add_bin(0b0000_0001, {expr})");
+        expr = format!("add_u(0b0000_0001, {expr})");
     }
     expr
 }

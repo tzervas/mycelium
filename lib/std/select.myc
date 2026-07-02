@@ -75,7 +75,7 @@ nodule std.select;
 //   only the arity of the constructor differs (documented, not silent).
 // - `usize` indices/counts are `Binary{8}` (domain 0..=255 — covers every table the Rust
 //   crate's own tests exercise); widths/dims/costs are `Binary{16}` (a Dense{8,F32} candidate
-//   already costs 256 bits). `lt`/`eq`/`add_bin`/`mul_bin` are the Exact kernel prims used.
+//   already costs 256 bits). `lt`/`eq`/`add_u`/`mul_s` are the Exact kernel prims used.
 // - FLAG-select-6 (encapsulation gap): Rust `SelectionPolicy` has PRIVATE fields, so "every
 //   constructed policy is total by construction" (indices in range, validated by `new`). `.myc`
 //   v0 has no field visibility — `SPol` can be constructed without `build` — so `select` carries
@@ -156,7 +156,7 @@ fn kind_eq(a: Kind, b: Kind) => Bool =
 // lower bound). Total, Exact on the in-range result; a product overflowing Binary{16} is the
 // kernel prim's explicit never-silent Overflow refusal (G2), never a wrap.
 fn repr_bits(r: ReprDesc) => Binary{16} =
-  match r { RBinary(w) => w, RTernary(t) => mul_bin(0b0000_0000_0000_0010, t), RDense(dim, dt) => mul_bin(dim, dtype_bits(dt)), RVsaDense(dim) => mul_bin(dim, 0b0000_0000_0100_0000), RVsaSparse(ma) => mul_bin(ma, 0b0000_0000_0110_0000), RSeq(e, len) => mul_bin(len, repr_bits(e)), RBytes => 0b0000_0000_0000_0000 };
+  match r { RBinary(w) => w, RTernary(t) => mul_s(0b0000_0000_0000_0010, t), RDense(dim, dt) => mul_s(dim, dtype_bits(dt)), RVsaDense(dim) => mul_s(dim, 0b0000_0000_0100_0000), RVsaSparse(ma) => mul_s(ma, 0b0000_0000_0110_0000), RSeq(e, len) => mul_s(len, repr_bits(e)), RBytes => 0b0000_0000_0000_0000 };
 
 // ── Candidate — the selectable vocabulary (Repr site only; FLAG-select-3 for Packing/Decode) ────
 type Cand = CRepr(ReprDesc);
@@ -201,15 +201,15 @@ type CandList = CLNil | CLCons(Cand, CandList);
 
 type RuleList = RLNil | RLCons(Rule, RuleList);
 
-// cand_len: the candidate count. O(n) spine walk; > 255 candidates is add_bin's explicit
+// cand_len: the candidate count. O(n) spine walk; > 255 candidates is add_u's explicit
 // never-silent Overflow refusal (G2), never a wrap. Exact on the in-range domain.
 fn cand_len(cs: CandList) => Binary{8} =
-  match cs { CLNil => 0b0000_0000, CLCons(_, t) => add_bin(0b0000_0001, cand_len(t)) };
+  match cs { CLNil => 0b0000_0000, CLCons(_, t) => add_u(0b0000_0001, cand_len(t)) };
 
 // cand_at: the candidate at index `i`, or None if out of range (never-silent, G2). Declared
 // (type-level contract).
 fn cand_at(cs: CandList, i: Binary{8}) => Option[Cand] =
-  match cs { CLNil => None, CLCons(c, t) => match eq(i, 0b0000_0000) { 0b1 => Some(c), _ => cand_at(t, sub_bin(i, 0b0000_0001)) } };
+  match cs { CLNil => None, CLCons(c, t) => match eq(i, 0b0000_0000) { 0b1 => Some(c), _ => cand_at(t, sub_u(i, 0b0000_0001)) } };
 
 // ── SelectionPolicy — the reified decision table (ADR-006; RFC-0005 §2/§3): name (Bytes — the
 // load-bearing string payload), finite candidates, ordered rules, mandatory default arm.
@@ -260,13 +260,13 @@ fn line_cand(l: CandidateCost) => Cand =
 fn line_cost(l: CandidateCost) => Binary{16} =
   match l { CCost(_, x) => x };
 
-// costs_len: the ranking length. Exact on the in-range domain (add_bin refusal past 255 — G2).
+// costs_len: the ranking length. Exact on the in-range domain (add_u refusal past 255 — G2).
 fn costs_len(ks: CostList) => Binary{8} =
-  match ks { KNil => 0b0000_0000, KCons(_, t) => add_bin(0b0000_0001, costs_len(t)) };
+  match ks { KNil => 0b0000_0000, KCons(_, t) => add_u(0b0000_0001, costs_len(t)) };
 
 // cost_at: the cost line at index `i`, or None if out of range (never-silent, G2). Declared.
 fn cost_at(ks: CostList, i: Binary{8}) => Option[CandidateCost] =
-  match ks { KNil => None, KCons(l, t) => match eq(i, 0b0000_0000) { 0b1 => Some(l), _ => cost_at(t, sub_bin(i, 0b0000_0001)) } };
+  match ks { KNil => None, KCons(l, t) => match eq(i, 0b0000_0000) { 0b1 => Some(l), _ => cost_at(t, sub_u(i, 0b0000_0001)) } };
 
 // costs_of: every candidate's cost line, in candidate order. Total, Exact.
 fn costs_of(cs: CandList) => CostList =
@@ -323,13 +323,13 @@ type MatchHit = Hit(Binary{8}, Action);
 // find_rule: the first rule whose guard holds (table order — fixed declared precedence,
 // RFC-0005 §2.3), or None when no rule matches (the default arm decides). Total, Exact.
 fn find_rule(rs: RuleList, i: Inputs, idx: Binary{8}) => Option[MatchHit] =
-  match rs { RLNil => None, RLCons(r, t) => match r { When(p, a) => match eval_pred(p, i) { True => Some(Hit(idx, a)), False => find_rule(t, i, add_bin(idx, 0b0000_0001)) } } };
+  match rs { RLNil => None, RLCons(r, t) => match r { When(p, a) => match eval_pred(p, i) { True => Some(Hit(idx, a)), False => find_rule(t, i, add_u(idx, 0b0000_0001)) } } };
 
 // cheapest_from: index of the minimum-cost line over `ks`, seeded with the best so far; ties
 // break to the LOWEST index (strict `lt` — deterministic, kernel `cheapest` verbatim). Total,
 // Exact.
 fn cheapest_from(ks: CostList, best_i: Binary{8}, best_c: Binary{16}, i: Binary{8}) => Binary{8} =
-  match ks { KNil => best_i, KCons(l, t) => match lt(line_cost(l), best_c) { 0b1 => cheapest_from(t, i, line_cost(l), add_bin(i, 0b0000_0001)), _ => cheapest_from(t, best_i, best_c, add_bin(i, 0b0000_0001)) } };
+  match ks { KNil => best_i, KCons(l, t) => match lt(line_cost(l), best_c) { 0b1 => cheapest_from(t, i, line_cost(l), add_u(i, 0b0000_0001)), _ => cheapest_from(t, best_i, best_c, add_u(i, 0b0000_0001)) } };
 
 // cheapest_of: index of the minimum-cost candidate. The CLNil arm yields index 0, which every
 // downstream path refuses explicitly (`cand_at` on an empty list is None → DanglingChoice) —
@@ -404,7 +404,7 @@ fn grow_explain_able(r: GRow) => ExplainAble =
 
 // matrix_len: the row count. Exact on the in-range domain.
 fn matrix_len(rs: GRowList) => Binary{8} =
-  match rs { GLNil => 0b0000_0000, GLCons(_, t) => add_bin(0b0000_0001, matrix_len(t)) };
+  match rs { GLNil => 0b0000_0000, GLCons(_, t) => add_u(0b0000_0001, matrix_len(t)) };
 
 // matrix_all_exact: True iff every row carries the GExact tag (the VR-5 assertion the Rust
 // test suite makes over GUARANTEE_MATRIX). Total, Exact.

@@ -43,12 +43,12 @@ nodule std.math;
 // badd<N>: unsigned width-preserving addition. Exact on the in-range result; an overflow (carry-out)
 // is a never-silent `Overflow` refusal — never a modular wrap (G2).
 fn badd{N}(a: Binary{N}, b: Binary{N}) => Binary{N} =
-  add_bin(a, b);
+  add_u(a, b);
 
 // bsub<N>: unsigned width-preserving subtraction. Exact on the in-range result; an underflow
 // (borrow-out below 0) is a never-silent `Overflow` refusal — never a wrap to a large value (G2).
 fn bsub{N}(a: Binary{N}, b: Binary{N}) => Binary{N} =
-  sub_bin(a, b);
+  sub_u(a, b);
 
 // ── Binary bitwise logic over Binary{N} (total, Exact) ─────────────────────────────────────────────
 // band<N>: bitwise AND. Total, Exact over Binary{N} x Binary{N}.

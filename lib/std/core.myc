@@ -176,7 +176,7 @@ fn matrix() => Vec[GuaranteeRow] =
 // matrix_len: the row count, as Binary{8} (9 rows fits trivially). O(n) spine-walk (Declared,
 // mirrors std.diag::matrix_len).
 fn matrix_len(xs: Vec[GuaranteeRow]) => Binary{8} =
-  match xs { Nil => 0b0000_0000, Cons(_, rest) => add_bin(0b0000_0001, matrix_len(rest)) };
+  match xs { Nil => 0b0000_0000, Cons(_, rest) => add_u(0b0000_0001, matrix_len(rest)) };
 
 // all_exact: True iff every row's tag is Exact — one half of
 // lib.rs::tests::matrix_is_all_exact_and_effect_free ("a Proven/Empirical tag here would itself
@@ -193,7 +193,7 @@ fn all_effects_none(xs: Vec[GuaranteeRow]) => Bool =
 // explainable_count: how many rows surface an inspectable EXPLAIN artifact, as Binary{8} —
 // the cardinality half of lib.rs::tests::only_query_rows_are_explainable.
 fn explainable_count(xs: Vec[GuaranteeRow]) => Binary{8} =
-  match xs { Nil => 0b0000_0000, Cons(r, rest) => match row_explainable(r) { True => add_bin(0b0000_0001, explainable_count(rest)), False => explainable_count(rest) } };
+  match xs { Nil => 0b0000_0000, Cons(r, rest) => match row_explainable(r) { True => add_u(0b0000_0001, explainable_count(rest)), False => explainable_count(rest) } };
 
 // only_query_rows_explainable: the EXPLAIN window is exactly the value-tag/bound/provenance
 // queries — lib.rs::tests::only_query_rows_are_explainable, ported as a per-row identity check

@@ -167,7 +167,7 @@ fn concat_with_empty_is_identity() {
 
 /// `bytes_slice(0xDEADBEEF, 2, 9)` — `end = 9 > len = 4` — is out of bounds: an explicit refusal on
 /// **every** path (L1-eval, L0-interp, AOT), never a silent clamp to `[2, 4)`. The program
-/// type-checks: the range fit is a runtime contract (DN-43), exactly like `add_bin`/`width_cast`
+/// type-checks: the range fit is a runtime contract (DN-43), exactly like `add_u`/`width_cast`
 /// overflow.
 #[test]
 fn slice_out_of_range_refuses_on_every_path() {

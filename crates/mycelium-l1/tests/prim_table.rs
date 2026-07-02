@@ -66,58 +66,58 @@ fn surface_cases() -> Vec<(&'static str, Vec<Ty>, Ty)> {
             Ty::Binary(Width::Lit(8)),
         ),
         (
-            "add_bin",
+            "add_u",
             vec![Ty::Binary(Width::Lit(8)), Ty::Binary(Width::Lit(8))],
             Ty::Binary(Width::Lit(8)),
         ),
         (
-            "sub_bin",
+            "sub_u",
             vec![Ty::Binary(Width::Lit(8)), Ty::Binary(Width::Lit(8))],
             Ty::Binary(Width::Lit(8)),
         ),
         // RFC-0033 §4.1.2/§4.1.3 (M-887, `enb` Gap B): never-silent two's-complement multiply.
         (
-            "mul_bin",
+            "mul_s",
             vec![Ty::Binary(Width::Lit(8)), Ty::Binary(Width::Lit(8))],
             Ty::Binary(Width::Lit(8)),
         ),
         // RFC-0033 §4.1.2/§4.1.3 (M-888, `enb` Gap B): never-silent unsigned division/remainder.
         (
-            "div_bin",
+            "div_u",
             vec![Ty::Binary(Width::Lit(8)), Ty::Binary(Width::Lit(8))],
             Ty::Binary(Width::Lit(8)),
         ),
         (
-            "rem_bin",
+            "rem_u",
             vec![Ty::Binary(Width::Lit(8)), Ty::Binary(Width::Lit(8))],
             Ty::Binary(Width::Lit(8)),
         ),
         // RFC-0033 §4.1.2/§4.1.3 (M-889, `enb` Gap B): never-silent logical left/right shift.
         (
-            "shl_bin",
+            "shl_u",
             vec![Ty::Binary(Width::Lit(8)), Ty::Binary(Width::Lit(8))],
             Ty::Binary(Width::Lit(8)),
         ),
         (
-            "shr_bin",
+            "shr_u",
             vec![Ty::Binary(Width::Lit(8)), Ty::Binary(Width::Lit(8))],
             Ty::Binary(Width::Lit(8)),
         ),
         // RFC-0033 §4.1.2/§4.1.3 (M-766, `enb` Gap B): never-silent two's-complement add/sub/neg —
-        // completes the shared set `mul_bin` started. `add_tc`/`sub_tc` (not `add_bin`/`sub_bin`,
-        // already claimed by the unsigned `bit.add`/`bit.sub`); `neg_bin` has no such conflict.
+        // completes the shared set `mul_s` started. The `_s` suffix marks the signed reading,
+        // distinct from the unsigned `add_u`/`sub_u` (`bit.add`/`bit.sub`) — DN-72.
         (
-            "add_tc",
+            "add_s",
             vec![Ty::Binary(Width::Lit(8)), Ty::Binary(Width::Lit(8))],
             Ty::Binary(Width::Lit(8)),
         ),
         (
-            "sub_tc",
+            "sub_s",
             vec![Ty::Binary(Width::Lit(8)), Ty::Binary(Width::Lit(8))],
             Ty::Binary(Width::Lit(8)),
         ),
         (
-            "neg_bin",
+            "neg_s",
             vec![Ty::Binary(Width::Lit(8))],
             Ty::Binary(Width::Lit(8)),
         ),

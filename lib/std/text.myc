@@ -31,8 +31,8 @@ nodule std.text;
 //   coercion, never a wrapped/truncated codepoint.
 //
 // Codepoint assembly without a shift prim: the surface has no `shl`/`shr` (or Binary multiply), so a
-// left-shift-by-6k is expressed as repeated doubling `add_bin(v, v)` at Binary{32} width (each `dbl`
-// is one left shift; six `dbl`s = `<< 6`). All shifts happen at Binary{32} so no `add_bin` overflow
+// left-shift-by-6k is expressed as repeated doubling `add_u(v, v)` at Binary{32} width (each `dbl`
+// is one left shift; six `dbl`s = `<< 6`). All shifts happen at Binary{32} so no `add_u` overflow
 // is reachable for the U+0000..U+10FFFF range. The 6-bit continuation payloads are lifted to
 // Binary{32} via `width_cast` before the shift-accumulate, then OR-combined.
 //
@@ -164,11 +164,11 @@ fn widen8(x: Binary{8}) => Binary{32} =
   width_cast(x, bytes_len(0x00_00_00_00));
 
 // ── dbl / shl6 / shl12 / shl18 ───────────────────────────────────────────────────────────────────
-// dbl: one left shift of a Binary{32} value (multiply by two) via never-silent `add_bin` (Exact for
+// dbl: one left shift of a Binary{32} value (multiply by two) via never-silent `add_u` (Exact for
 // the small values handled here — all decoded codepoints are < 2^21, so doubling never overflows
 // Binary{32}). shl6/shl12/shl18 compose `dbl` to shift a continuation payload into its codepoint slot.
 fn dbl(v: Binary{32}) => Binary{32} =
-  add_bin(v, v);
+  add_u(v, v);
 
 fn shl6(v: Binary{32}) => Binary{32} =
   dbl(dbl(dbl(dbl(dbl(dbl(v))))));
@@ -236,16 +236,16 @@ fn decode_ascii(b: Bytes, i: Binary{8}) => Result[Binary{8}, Utf8Error] =
 //
 // 2-byte: lead 0b110xxxxx, cont 0b10yyyyyy yields cp = (lead & 0x1F) << 6 | (cont & 0x3F).
 fn decode_two(b: Bytes, i: Binary{8}, lead: Binary{8}) => Result[Pair[Binary{32}, Binary{8}], Utf8Error] =
-  match byte_at(b, add_bin(i, 0b0000_0001)) { None => Err(Invalid(lead)), Some(c1) => match is_cont_byte(c1) { False => Err(Invalid(c1)), True => reject_two(or(shl6(widen8(and(lead, 0b0001_1111))), cont_payload(c1)), lead) } };
+  match byte_at(b, add_u(i, 0b0000_0001)) { None => Err(Invalid(lead)), Some(c1) => match is_cont_byte(c1) { False => Err(Invalid(c1)), True => reject_two(or(shl6(widen8(and(lead, 0b0001_1111))), cont_payload(c1)), lead) } };
 
 // 3-byte: lead 0b1110xxxx, two conts yield cp = (lead & 0x0F) << 12 | (c1 & 0x3F) << 6 | (c2 & 0x3F).
 fn decode_three(b: Bytes, i: Binary{8}, lead: Binary{8}) => Result[Pair[Binary{32}, Binary{8}], Utf8Error] =
-  match byte_at(b, add_bin(i, 0b0000_0001)) { None => Err(Invalid(lead)), Some(c1) => match is_cont_byte(c1) { False => Err(Invalid(c1)), True => match byte_at(b, add_bin(i, 0b0000_0010)) { None => Err(Invalid(c1)), Some(c2) => match is_cont_byte(c2) { False => Err(Invalid(c2)), True => reject_three(or(or(shl12(widen8(and(lead, 0b0000_1111))), shl6(cont_payload(c1))), cont_payload(c2)), lead) } } } };
+  match byte_at(b, add_u(i, 0b0000_0001)) { None => Err(Invalid(lead)), Some(c1) => match is_cont_byte(c1) { False => Err(Invalid(c1)), True => match byte_at(b, add_u(i, 0b0000_0010)) { None => Err(Invalid(c1)), Some(c2) => match is_cont_byte(c2) { False => Err(Invalid(c2)), True => reject_three(or(or(shl12(widen8(and(lead, 0b0000_1111))), shl6(cont_payload(c1))), cont_payload(c2)), lead) } } } };
 
 // 4-byte: lead 0b11110xxx, three conts yield
 //   cp = (lead & 0x07) << 18 | (c1 & 0x3F) << 12 | (c2 & 0x3F) << 6 | (c3 & 0x3F).
 fn decode_four(b: Bytes, i: Binary{8}, lead: Binary{8}) => Result[Pair[Binary{32}, Binary{8}], Utf8Error] =
-  match byte_at(b, add_bin(i, 0b0000_0001)) { None => Err(Invalid(lead)), Some(c1) => match is_cont_byte(c1) { False => Err(Invalid(c1)), True => match byte_at(b, add_bin(i, 0b0000_0010)) { None => Err(Invalid(c1)), Some(c2) => match is_cont_byte(c2) { False => Err(Invalid(c2)), True => match byte_at(b, add_bin(i, 0b0000_0011)) { None => Err(Invalid(c2)), Some(c3) => match is_cont_byte(c3) { False => Err(Invalid(c3)), True => reject_four(or(or(or(shl18(widen8(and(lead, 0b0000_0111))), shl12(cont_payload(c1))), shl6(cont_payload(c2))), cont_payload(c3)), lead) } } } } } };
+  match byte_at(b, add_u(i, 0b0000_0001)) { None => Err(Invalid(lead)), Some(c1) => match is_cont_byte(c1) { False => Err(Invalid(c1)), True => match byte_at(b, add_u(i, 0b0000_0010)) { None => Err(Invalid(c1)), Some(c2) => match is_cont_byte(c2) { False => Err(Invalid(c2)), True => match byte_at(b, add_u(i, 0b0000_0011)) { None => Err(Invalid(c2)), Some(c3) => match is_cont_byte(c3) { False => Err(Invalid(c3)), True => reject_four(or(or(or(shl18(widen8(and(lead, 0b0000_0111))), shl12(cont_payload(c1))), shl6(cont_payload(c2))), cont_payload(c3)), lead) } } } } } };
 
 // ── decode_one ─────────────────────────────────────────────────────────────────────────────────────
 // decode_one: decode the UTF-8 sequence beginning at byte index `i` in `b`, returning

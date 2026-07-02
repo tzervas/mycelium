@@ -134,7 +134,7 @@ fn cheapest_selects_minimum_cost_candidate() {
 }
 
 /// The EXPLAIN record ranks EVERY candidate, not just the winner (RFC-0005 §2.2): the Dense
-/// line's cost is dim × dtype_bits = 8 × 32 = 256, computed by the same `mul_bin` composition.
+/// line's cost is dim × dtype_bits = 8 × 32 = 256, computed by the same `mul_s` composition.
 #[test]
 fn explanation_costs_covers_all_candidates_with_exact_bits() {
     let driver = &format!(
@@ -142,7 +142,7 @@ fn explanation_costs_covers_all_candidates_with_exact_bits() {
     );
     let src = program(driver);
     // Same primitive-op composition (Derived provenance): dim × dtype_bits(F32).
-    let expected = "nodule ref;\nfn main() => Binary{16} = mul_bin(0b0000_0000_0000_1000, 0b0000_0000_0010_0000);";
+    let expected = "nodule ref;\nfn main() => Binary{16} = mul_s(0b0000_0000_0000_1000, 0b0000_0000_0010_0000);";
     assert_three_way("costs[1] = Dense bits = 8×32", &src, expected);
 }
 
@@ -249,12 +249,12 @@ fn connectives_and_or_not() {
 }
 
 /// The Seq cost recurses through the element repr (RFC-0032 D3): Seq{Binary{8}, 4} = 4 × 8 bits,
-/// by the same `mul_bin` composition.
+/// by the same `mul_s` composition.
 #[test]
 fn seq_cost_recurses_through_element() {
     let driver = "fn main() => Binary{16} = repr_bits(RSeq(RBinary(0b0000_0000_0000_1000), 0b0000_0000_0000_0100));";
     let src = program(driver);
-    let expected = "nodule ref;\nfn main() => Binary{16} = mul_bin(0b0000_0000_0000_0100, 0b0000_0000_0000_1000);";
+    let expected = "nodule ref;\nfn main() => Binary{16} = mul_s(0b0000_0000_0000_0100, 0b0000_0000_0000_1000);";
     assert_three_way("Seq cost = len × elem bits", &src, expected);
 }
 
@@ -289,7 +289,7 @@ fn select_emits_not_overridden() {
 
 /// `select_with_override` refuses an out-of-range forced index with `OverrideOutOfRange` — never
 /// a snap to the nearest legal choice (C1). The refusal carries the offending index AND the
-/// candidate count (the count is the same `add_bin` spine-walk composition).
+/// candidate count (the count is the same `add_u` spine-walk composition).
 #[test]
 fn select_with_override_refuses_out_of_range() {
     let driver = &format!(
@@ -341,8 +341,8 @@ fn explain_and_select_consistent() {
 fn matrix_has_four_rows() {
     let driver = "fn main() => Binary{8} = matrix_len(guarantee_matrix());";
     let src = program(driver);
-    // Same composition: four add_bin(1, ·) steps over the spine, ending at the literal 0.
-    let expected = "nodule ref;\nfn main() => Binary{8} = add_bin(0b0000_0001, add_bin(0b0000_0001, add_bin(0b0000_0001, add_bin(0b0000_0001, 0b0000_0000))));";
+    // Same composition: four add_u(1, ·) steps over the spine, ending at the literal 0.
+    let expected = "nodule ref;\nfn main() => Binary{8} = add_u(0b0000_0001, add_u(0b0000_0001, add_u(0b0000_0001, add_u(0b0000_0001, 0b0000_0000))));";
     assert_three_way("matrix has 4 rows", &src, expected);
 }
 

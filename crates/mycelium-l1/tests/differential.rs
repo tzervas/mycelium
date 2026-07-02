@@ -1639,9 +1639,9 @@ fn reclaim_real_supervision_driver_dispatches_with_explain() {
     );
 
     // (b) Bounded failure: a deterministically-refusing body (add overflow) escalates with an EXPLAIN
-    // trace — `add_bin(0b1111_1111, 0b0000_0001)` overflows `Binary{8}` (never a silent wrap — G2).
+    // trace — `add_u(0b1111_1111, 0b0000_0001)` overflows `Binary{8}` (never a silent wrap — G2).
     let bad_src =
-        "nodule d;\nfn main() => Binary{8} = reclaim(0b0000_0001) { add_bin(0b1111_1111, 0b0000_0001) };";
+        "nodule d;\nfn main() => Binary{8} = reclaim(0b0000_0001) { add_u(0b1111_1111, 0b0000_0001) };";
     let bad_env = check_nodule(&parse(bad_src).expect("parses")).expect("checks");
     let (policy, body) = mycelium_l1::elaborate_reclaim(&bad_env, "main")
         .expect("reclaim elaborates to its (policy, body) programs");

@@ -185,7 +185,7 @@ fn matrix() => Vec[MatrixRow] =
 // matrix_len: the row count, as Binary{8} (14 rows fits trivially). O(n) spine-walk (Declared,
 // mirrors std.collections::len).
 fn matrix_len(xs: Vec[MatrixRow]) => Binary{8} =
-  match xs { Nil => 0b0000_0000, Cons(_, rest) => add_bin(0b0000_0001, matrix_len(rest)) };
+  match xs { Nil => 0b0000_0000, Cons(_, rest) => add_u(0b0000_0001, matrix_len(rest)) };
 
 // all_exact: True iff every row's guarantee is Exact (guarantee_matrix.rs::all_diag_ops_are_exact).
 fn all_exact(xs: Vec[MatrixRow]) => Bool =

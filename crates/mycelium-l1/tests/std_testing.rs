@@ -29,7 +29,7 @@
 //!
 //! # Self-application smoke (the M-932 DoD extra)
 //! [`self_application_shl_conformance_case_is_green`] expresses an EXISTING conformance case —
-//! the `enablement.rs` RFC-0033 Gap-B worked example `shl_bin(1, 3) = 8` — through the ported
+//! the `enablement.rs` RFC-0033 Gap-B worked example `shl_u(1, 3) = 8` — through the ported
 //! harness itself: the `.myc` `differential` op checks the case, the `.myc` `summarize`/
 //! `is_green` aggregate it, and the three-way differential proves the ported harness reaches the
 //! same verdict on every execution path. Its negative twin proves a wrong expectation is a
@@ -194,13 +194,13 @@ fn eval_bytes(driver: &str) -> Vec<u8> {
 // ── the honest aggregator (C1/G2 — skips aggregate DISTINCTLY from passes) ──────────────────────
 
 /// `summarize` keeps all four verdict classes distinct — one of each ⇒ `Counts(1,1,1,1)`, each
-/// count derived by exactly one `add_bin` bump over the zero base.
+/// count derived by exactly one `add_u` bump over the zero base.
 #[test]
 fn summarize_counts_each_class_distinct() {
     let driver = "fn one_of_each() => Vec[Verdict[Unit]] = Cons(Pass, Cons(Fail(FRec(U, zero64(), 0b0000_0000, \"x\")), Cons(Skipped(Ignored), Cons(Undetermined(OracleUnavailable), Nil))));\nfn main() => Summary = summarize(one_of_each());";
     let src = program(driver);
     let expected = format!(
-        "{T_SUMMARY}fn main() => Summary = Counts(add_bin(0b0000_0000, 0b0000_0001), add_bin(0b0000_0000, 0b0000_0001), add_bin(0b0000_0000, 0b0000_0001), add_bin(0b0000_0000, 0b0000_0001));"
+        "{T_SUMMARY}fn main() => Summary = Counts(add_u(0b0000_0000, 0b0000_0001), add_u(0b0000_0000, 0b0000_0001), add_u(0b0000_0000, 0b0000_0001), add_u(0b0000_0000, 0b0000_0001));"
     );
     assert_three_way("summarize one-of-each", &src, &expected);
 }
@@ -277,7 +277,7 @@ fn rng_new_nonzero_seed_passes_through() {
 }
 
 /// One Xorshift64 step from seed 1, three-way — the expected side replicates the same
-/// xor/shl_bin/shr_bin composition (same ops, same shift constants).
+/// xor/shl_u/shr_u composition (same ops, same shift constants).
 #[test]
 fn rng_next_xorshift_step_three_way() {
     let driver = format!(
@@ -286,7 +286,7 @@ fn rng_next_xorshift_step_three_way() {
     );
     let src = program(&driver);
     let expected = format!(
-        "nodule ref;\nfn main() => Binary{{64}} =\n  let a = xor({one}, shl_bin({one}, {c13})) in\n  let b = xor(a, shr_bin(a, {c7})) in\n  xor(b, shl_bin(b, {c17}));",
+        "nodule ref;\nfn main() => Binary{{64}} =\n  let a = xor({one}, shl_u({one}, {c13})) in\n  let b = xor(a, shr_u(a, {c7})) in\n  xor(b, shl_u(b, {c17}));",
         one = lit64(1),
         c13 = lit64(13),
         c7 = lit64(7),
@@ -350,14 +350,14 @@ fn for_all_failure_carries_reified_counterexample() {
 #[test]
 fn for_all_shrinks_to_minimal_counterexample() {
     let driver = format!(
-        "fn gen_eight(s: Binary{{64}}) => GenStep[Binary{{8}}] = Stepped(Some(0b0000_1000), s);\nfn shrink_dec(x: Binary{{8}}) => Vec[Binary{{8}}] = match eq(x, 0b0000_0000) {{ 0b1 => Nil, _ => Cons(sub_bin(x, 0b0000_0001), Nil) }};\nfn prop_lt3(x: Binary{{8}}) => Bool = match lt(x, 0b0000_0011) {{ 0b1 => True, _ => False }};\nfn main() => Verdict[Binary{{8}}] = for_all(gen_eight, shrink_dec, {}, Trials(0b0000_0011), prop_lt3);",
+        "fn gen_eight(s: Binary{{64}}) => GenStep[Binary{{8}}] = Stepped(Some(0b0000_1000), s);\nfn shrink_dec(x: Binary{{8}}) => Vec[Binary{{8}}] = match eq(x, 0b0000_0000) {{ 0b1 => Nil, _ => Cons(sub_u(x, 0b0000_0001), Nil) }};\nfn prop_lt3(x: Binary{{8}}) => Bool = match lt(x, 0b0000_0011) {{ 0b1 => True, _ => False }};\nfn main() => Verdict[Binary{{8}}] = for_all(gen_eight, shrink_dec, {}, Trials(0b0000_0011), prop_lt3);",
         lit64(2)
     );
     let src = program(&driver);
     // 8 → 7 → 6 → 5 → 4 → 3 (all still fail `x < 3`); shrink(3) = [2], 2 passes ⇒ minimal is 3,
-    // derived by five sub_bin decrements from the generated 8.
+    // derived by five sub_u decrements from the generated 8.
     let expected = format!(
-        "{T_VERDICT}fn main() => Verdict[Binary{{8}}] = Fail(FRec(sub_bin(sub_bin(sub_bin(sub_bin(sub_bin(0b0000_1000, 0b0000_0001), 0b0000_0001), 0b0000_0001), 0b0000_0001), 0b0000_0001), {}, 0b0000_0000, \"for_all property violated\"));",
+        "{T_VERDICT}fn main() => Verdict[Binary{{8}}] = Fail(FRec(sub_u(sub_u(sub_u(sub_u(sub_u(0b0000_1000, 0b0000_0001), 0b0000_0001), 0b0000_0001), 0b0000_0001), 0b0000_0001), {}, 0b0000_0000, \"for_all property violated\"));",
         lit64(2)
     );
     assert_three_way("for_all shrink-to-minimal", &src, &expected);
@@ -422,10 +422,9 @@ fn golden_second_width_binary16() {
 
 // ── differential (C1: an unavailable backend is NEVER a silent pass) ────────────────────────────
 
-/// Shared backend thunks: the `enablement.rs` RFC-0033 Gap-B worked example `shl_bin(1,3) = 8`
+/// Shared backend thunks: the `enablement.rs` RFC-0033 Gap-B worked example `shl_u(1,3) = 8`
 /// as the case under test (the self-application conformance case).
-const DIFF_PRELUDE: &str =
-    "fn lhs_shl(_u: Unit) => Binary{8} = shl_bin(0b0000_0001, 0b0000_0011);\n\
+const DIFF_PRELUDE: &str = "fn lhs_shl(_u: Unit) => Binary{8} = shl_u(0b0000_0001, 0b0000_0011);\n\
 fn rhs_eight(_u: Unit) => Binary{8} = 0b0000_1000;\n\
 fn rhs_nine(_u: Unit) => Binary{8} = 0b0000_1001;\n";
 
@@ -442,7 +441,7 @@ fn differential_unavailable_backend_is_skipped() {
     assert_three_way("differential backend unavailable", &src, &expected);
 }
 
-/// Agreement passes: `shl_bin(1,3)` ≡ the hand-computed 8.
+/// Agreement passes: `shl_u(1,3)` ≡ the hand-computed 8.
 #[test]
 fn differential_agreement_passes() {
     let driver = format!(
@@ -463,7 +462,7 @@ fn differential_disagreement_fails_with_both_outputs() {
     );
     let src = program(&driver);
     let expected = format!(
-        "{T_VERDICT}{T_DIFF_FAIL}fn main() => Verdict[DiffFail[Binary{{8}}]] = Fail(FRec(DFail(shl_bin(0b0000_0001, 0b0000_0011), 0b0000_1001), {}, 0b0000_0000, bytes_concat(bytes_concat(\"differential(\", \"shl 1<<3\"), \")\")));",
+        "{T_VERDICT}{T_DIFF_FAIL}fn main() => Verdict[DiffFail[Binary{{8}}]] = Fail(FRec(DFail(shl_u(0b0000_0001, 0b0000_0011), 0b0000_1001), {}, 0b0000_0000, bytes_concat(bytes_concat(\"differential(\", \"shl 1<<3\"), \")\")));",
         lit64(0)
     );
     assert_three_way("differential disagreement", &src, &expected);
@@ -472,7 +471,7 @@ fn differential_disagreement_fails_with_both_outputs() {
 // ── the self-application smoke (the M-932 DoD extra) ────────────────────────────────────────────
 
 /// **Self-application:** the ported `.myc` harness expresses an EXISTING conformance case — the
-/// `enablement.rs` RFC-0033 Gap-B worked example `shl_bin(1, 3) = 8` — end to end: the `.myc`
+/// `enablement.rs` RFC-0033 Gap-B worked example `shl_u(1, 3) = 8` — end to end: the `.myc`
 /// `differential` op checks the case, `summarize` aggregates it, `is_green` reports it, and the
 /// three-way differential proves every execution path reaches the same green verdict. `.myc`
 /// testing infrastructure is testing `.myc`-visible language behaviour.
@@ -603,12 +602,12 @@ fn mode_negative_violation_fires_outside_scope() {
 // ── guarantee matrix (spec §4 — the table as checked data) ──────────────────────────────────────
 
 /// The matrix has exactly 5 rows (spec §4 lists five ops) — the count derived by the vec_len
-/// add_bin spine.
+/// add_u spine.
 #[test]
 fn matrix_has_five_rows() {
     let driver = "fn main() => Binary{8} = vec_len(matrix());";
     let src = program(driver);
-    let expected = "nodule ref;\nfn main() => Binary{8} = add_bin(0b0000_0001, add_bin(0b0000_0001, add_bin(0b0000_0001, add_bin(0b0000_0001, add_bin(0b0000_0001, 0b0000_0000)))));";
+    let expected = "nodule ref;\nfn main() => Binary{8} = add_u(0b0000_0001, add_u(0b0000_0001, add_u(0b0000_0001, add_u(0b0000_0001, add_u(0b0000_0001, 0b0000_0000)))));";
     assert_three_way("matrix has 5 rows", &src, expected);
 }
 
