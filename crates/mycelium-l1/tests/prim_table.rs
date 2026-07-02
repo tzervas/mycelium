@@ -81,6 +81,17 @@ fn surface_cases() -> Vec<(&'static str, Vec<Ty>, Ty)> {
             vec![Ty::Binary(Width::Lit(8)), Ty::Binary(Width::Lit(8))],
             Ty::Binary(Width::Lit(8)),
         ),
+        // RFC-0033 §4.1.2/§4.1.3 (M-888, `enb` Gap B): never-silent unsigned division/remainder.
+        (
+            "div_bin",
+            vec![Ty::Binary(Width::Lit(8)), Ty::Binary(Width::Lit(8))],
+            Ty::Binary(Width::Lit(8)),
+        ),
+        (
+            "rem_bin",
+            vec![Ty::Binary(Width::Lit(8)), Ty::Binary(Width::Lit(8))],
+            Ty::Binary(Width::Lit(8)),
+        ),
     ]
 }
 

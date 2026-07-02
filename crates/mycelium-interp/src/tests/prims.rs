@@ -378,3 +378,141 @@ fn bin_mul_matches_integer_oracle_at_width6() {
         }
     }
 }
+
+// ---- RFC-0033 §4.1.2/§4.1.3 (M-888, `enb` Gap B): never-silent unsigned division/remainder ----
+
+/// A `Binary{n}` value from a non-negative `u64`, built via `mycelium_core::binary::uint_to_bits`.
+fn u_bin(value: u64, n: u32) -> Value {
+    let bits = mycelium_core::binary::uint_to_bits(value, n).expect("in range");
+    Value::new(
+        Repr::Binary { width: n },
+        Payload::Bits(bits),
+        Meta::exact(Provenance::Root),
+    )
+    .unwrap()
+}
+
+#[test]
+fn bin_div_and_rem_worked_examples() {
+    let reg = PrimRegistry::with_builtins();
+    let div = reg.get("bin.div").expect("bin.div registered");
+    let rem = reg.get("bin.rem").expect("bin.rem registered");
+    // 7 / 2 = 3 remainder 1.
+    let a = u_bin(7, 8);
+    let b = u_bin(2, 8);
+    let q = div("bin.div", &[&a, &b]).expect("7 / 2");
+    let r = rem("bin.rem", &[&a, &b]).expect("7 % 2");
+    assert_eq!(
+        q.payload(),
+        &Payload::Bits(mycelium_core::binary::uint_to_bits(3, 8).unwrap())
+    );
+    assert_eq!(
+        r.payload(),
+        &Payload::Bits(mycelium_core::binary::uint_to_bits(1, 8).unwrap())
+    );
+}
+
+#[test]
+fn bin_div_by_zero_is_never_silent() {
+    let reg = PrimRegistry::with_builtins();
+    let div = reg.get("bin.div").expect("bin.div registered");
+    let rem = reg.get("bin.rem").expect("bin.rem registered");
+    let a = u_bin(7, 8);
+    let zero = u_bin(0, 8);
+    assert!(
+        matches!(
+            div("bin.div", &[&a, &zero]),
+            Err(EvalError::PrimType { .. })
+        ),
+        "division by zero must be an explicit PrimType refusal, never a panic or silent value"
+    );
+    assert!(
+        matches!(
+            rem("bin.rem", &[&a, &zero]),
+            Err(EvalError::PrimType { .. })
+        ),
+        "remainder by zero must be an explicit PrimType refusal, never a panic or silent value"
+    );
+}
+
+#[test]
+fn bin_div_rem_width_mismatch_is_never_silent() {
+    let reg = PrimRegistry::with_builtins();
+    let div = reg.get("bin.div").expect("bin.div registered");
+    let wide = u_bin(1, 8);
+    let narrow = u_bin(1, 1);
+    assert!(
+        matches!(
+            div("bin.div", &[&wide, &narrow]),
+            Err(EvalError::PrimType { .. })
+        ),
+        "mismatched-width div must be PrimType, never a silent coercion"
+    );
+}
+
+/// A width beyond the current `bin.div`/`bin.rem` cap (`mycelium_core::binary::DIV_MAX_WIDTH`) is
+/// an explicit `PrimType` refusal — never a silently-truncated native-int computation (M-888 scope
+/// boundary, mirroring `bin.mul`'s `MUL_MAX_WIDTH` refusal).
+#[test]
+fn bin_div_over_cap_width_is_never_silent() {
+    let reg = PrimRegistry::with_builtins();
+    let div = reg.get("bin.div").expect("bin.div registered");
+    let width = mycelium_core::binary::DIV_MAX_WIDTH + 1;
+    let a = wide_binary(width, &[]);
+    let b = wide_binary(width, &[]);
+    assert!(
+        matches!(div("bin.div", &[&a, &b]), Err(EvalError::PrimType { .. })),
+        "an over-cap width must be an explicit PrimType refusal, never a silent truncation"
+    );
+}
+
+/// **Property test (the Euclidean identity):** for every pair at a small width with a nonzero
+/// divisor, `bin.div`/`bin.rem` satisfy `a == (a/b)*b + (a%b)` bit-exactly, with `remainder <
+/// divisor`; every zero-divisor pair is an explicit `PrimType` refusal, never a panic. Mirrors
+/// `mycelium_core::binary`'s own `div_rem_matches_euclidean_identity_oracle` at the codec layer,
+/// one level up through the prim's dispatch + never-silent-error mapping.
+#[test]
+fn bin_div_rem_satisfy_euclidean_identity_at_width6() {
+    let reg = PrimRegistry::with_builtins();
+    let div = reg.get("bin.div").expect("bin.div registered");
+    let rem = reg.get("bin.rem").expect("bin.rem registered");
+    let n: u32 = 6;
+    let hi: u64 = (1u64 << n) - 1;
+    for x in 0..=hi {
+        for y in 0..=hi {
+            let a = u_bin(x, n);
+            let b = u_bin(y, n);
+            let got_q = div("bin.div", &[&a, &b]);
+            let got_r = rem("bin.rem", &[&a, &b]);
+            if y == 0 {
+                assert!(
+                    matches!(got_q, Err(EvalError::PrimType { .. })),
+                    "div by zero at x={x} must refuse, got {got_q:?}"
+                );
+                assert!(
+                    matches!(got_r, Err(EvalError::PrimType { .. })),
+                    "rem by zero at x={x} must refuse, got {got_r:?}"
+                );
+            } else {
+                let q_val = got_q.expect("in-range div must succeed");
+                let r_val = got_r.expect("in-range rem must succeed");
+                let Payload::Bits(q_bits) = q_val.payload() else {
+                    panic!("bin.div must return Payload::Bits")
+                };
+                let Payload::Bits(r_bits) = r_val.payload() else {
+                    panic!("bin.rem must return Payload::Bits")
+                };
+                let qv = mycelium_core::binary::bits_to_uint(q_bits);
+                let rv = mycelium_core::binary::bits_to_uint(r_bits);
+                assert_eq!(qv, x / y, "quotient {x}/{y} at n={n}");
+                assert_eq!(rv, x % y, "remainder {x}/{y} at n={n}");
+                assert_eq!(
+                    qv * y + rv,
+                    x,
+                    "Euclidean identity {x} == ({x}/{y})*{y} + {x}%{y}"
+                );
+                assert!(rv < y, "remainder must be < divisor");
+            }
+        }
+    }
+}

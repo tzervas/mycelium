@@ -452,6 +452,96 @@ fn mul_bin_width_mismatch_refuses_statically() {
     );
 }
 
+// ── M-888 (`enb` Gap B): never-silent unsigned division/remainder ───────────────────────────────
+//
+// `div_bin`/`rem_bin` (kernel `bin.div`/`bin.rem`) are the second Gap-B prims of the RFC-0033
+// §4.1.2/§4.1.3 arithmetic set. Division *differs* by signedness (§4.1.2), so — unlike `mul_bin` —
+// it MUST be a distinct-named op per signedness; this lands the **unsigned** reading first (the
+// signed reading rides M-767 under its own name). Division by zero refuses explicitly on every
+// path, never a panic or a silent value (G2/VR-5).
+
+#[test]
+fn div_bin_and_rem_bin_worked_examples() {
+    // 7 / 2 = 3, 7 % 2 = 1.
+    assert_three_way(
+        "div_bin 7/2",
+        "nodule d;\nfn main() => Binary{8} = div_bin(0b0000_0111, 0b0000_0010);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("00000011".chars().map(|c| c == '1').collect()),
+    );
+    assert_three_way(
+        "rem_bin 7%2",
+        "nodule d;\nfn main() => Binary{8} = rem_bin(0b0000_0111, 0b0000_0010);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("00000001".chars().map(|c| c == '1').collect()),
+    );
+    // 255 / 1 = 255, 255 % 1 = 0 (upper boundary at Binary{8}).
+    assert_three_way(
+        "div_bin 255/1",
+        "nodule d;\nfn main() => Binary{8} = div_bin(0b1111_1111, 0b0000_0001);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("11111111".chars().map(|c| c == '1').collect()),
+    );
+    assert_three_way(
+        "rem_bin 255%1",
+        "nodule d;\nfn main() => Binary{8} = rem_bin(0b1111_1111, 0b0000_0001);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("00000000".chars().map(|c| c == '1').collect()),
+    );
+    // 0 / 17 = 0, 0 % 17 = 0.
+    assert_three_way(
+        "div_bin 0/17",
+        "nodule d;\nfn main() => Binary{8} = div_bin(0b0000_0000, 0b0001_0001);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("00000000".chars().map(|c| c == '1').collect()),
+    );
+}
+
+/// Division/remainder by zero (`7 / 0`, `7 % 0` at `Binary{8}`) is an explicit refusal on **all
+/// three** paths — never a panic or a silently-defined value. (The program type-checks: div-by-zero
+/// is a runtime contract, like `mul_bin`'s overflow.)
+#[test]
+fn div_bin_and_rem_bin_by_zero_refuse_on_every_path() {
+    for src in [
+        "nodule d;\nfn main() => Binary{8} = div_bin(0b0000_0111, 0b0000_0000);",
+        "nodule d;\nfn main() => Binary{8} = rem_bin(0b0000_0111, 0b0000_0000);",
+    ] {
+        let env = check_nodule(&parse(src).expect("parses")).expect("checks");
+
+        let interp = Interpreter::new(
+            PrimRegistry::with_builtins(),
+            Box::new(mycelium_cert::BinaryTernarySwapEngine),
+        );
+        let prims = PrimRegistry::with_builtins();
+        let engine = mycelium_cert::BinaryTernarySwapEngine;
+
+        assert!(
+            Evaluator::new(&env).call("main", vec![]).is_err(),
+            "L1-eval must refuse division by zero (never a silent value): {src}"
+        );
+        let node = elaborate(&env, "main").expect("in fragment");
+        assert!(
+            interp.eval(&node).is_err(),
+            "L0-interp must refuse division by zero: {src}"
+        );
+        assert!(
+            mycelium_mlir::run(&node, &prims, &engine).is_err(),
+            "AOT must refuse division by zero: {src}"
+        );
+    }
+}
+
+/// A width/paradigm mismatch (`Binary{8}` vs `Binary{1}`) is a **static** never-silent refusal —
+/// caught at check time, mirroring `mul_bin`'s width-preserving contract.
+#[test]
+fn div_bin_width_mismatch_refuses_statically() {
+    let src = "nodule d;\nfn main() => Binary{8} = div_bin(0b0000_0001, 0b0);";
+    assert!(
+        check_nodule(&parse(src).expect("parses")).is_err(),
+        "a width-mismatched div_bin must be a static type error, never a silent coercion"
+    );
+}
+
 // ── M-749: indexed-sequence prims — prim-level differential (L0-interp ≡ AOT) ────────────────────
 //
 // `Repr::Seq` has no `.myc` surface literal yet (lexer/parser wiring deferred — FLAGGED in the
