@@ -77,9 +77,12 @@ impl PrimRegistry {
     /// `enb` Gap-B prim; sets the registry pattern the sibling Gap-B/C prims mirror), the
     /// never-silent **unsigned** `Binary` division/remainder (`bin.div`/`bin.rem`, RFC-0033
     /// §4.1.2/§4.1.3, M-888 — div-by-zero is an explicit refusal; the signed variant rides M-767),
-    /// and the never-silent **logical** `Binary` left/right shift (`bin.shl`/`bin.shr`, RFC-0033
+    /// the never-silent **logical** `Binary` left/right shift (`bin.shl`/`bin.shr`, RFC-0033
     /// §4.1.2/§4.1.3, M-889 — a shift amount `>= N` is an explicit refusal; the arithmetic/signed
-    /// variant rides M-767).
+    /// variant rides M-767), and the never-silent two's-complement `add`/`sub`/`neg`
+    /// (`bin.add`/`bin.sub`/`bin.neg`, RFC-0033 §4.1.2/§4.1.3, M-766 — completes the shared
+    /// two's-complement set `bin.mul` started; distinct from `bit.add`/`bit.sub`'s unsigned overflow
+    /// criterion).
     #[must_use]
     pub fn with_builtins() -> Self {
         let mut r = PrimRegistry::empty();
@@ -106,6 +109,11 @@ impl PrimRegistry {
         // RFC-0033 §4.1.2/§4.1.3 (M-889, `enb` Gap B): never-silent logical left/right shift.
         r.register("bin.shl", prim_bin_shl);
         r.register("bin.shr", prim_bin_shr);
+        // RFC-0033 §4.1.2/§4.1.3 (M-766, `enb` Gap B): never-silent two's-complement add/sub/neg —
+        // completes the shared two's-complement op set `bin.mul` started.
+        r.register("bin.add", prim_bin_add);
+        r.register("bin.sub", prim_bin_sub);
+        r.register("bin.neg", prim_bin_neg);
         // DN-41 (M-798): never-silent width-cast (zero-extend widen / checked narrow) over `Binary`.
         r.register("bit.width_cast", prim_width_cast);
         // RFC-0032 D3 (M-749): never-silent indexed-sequence access over `Repr::Seq`.
@@ -742,6 +750,126 @@ fn prim_bin_shl(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
 /// **arithmetic**/sign-extending right shift is the distinct signed op M-767 lands separately.
 fn prim_bin_shr(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
     let out = bin_shift(prim, args, binary::shr)?;
+    compose_result(
+        prim,
+        args,
+        args[0].repr().clone(),
+        Payload::Bits(out),
+        ApproxRule::Refuse,
+    )
+}
+
+// --- RFC-0033 §4.1.2/§4.1.3 (M-766, `enb` Gap B): never-silent two's-complement add/sub/neg --------
+//
+// `bin.add`/`bin.sub`/`bin.neg` complete the *shared* two's-complement arithmetic set `bin.mul`
+// (M-887) started (ADR-028: `add`/`sub`/`mul`/`neg` are bit-identical across the signed/unsigned
+// reading of the operands, so they MAY be a single named op each). They read equal-width `Binary{N}`
+// operands under the two's-complement (**signed**) interpretation, exactly mirroring `bin.mul`.
+//
+// **Inventory (verified against the registry before landing these, per the M-766 task text —
+// "reconcile against the kpr-landed add/sub").** The pre-existing `bit.add`/`bit.sub` (kpr/E19-1,
+// RFC-0032 D2, registered above) are a **different, unsigned-committed** family: their overflow
+// criterion is the unsigned carry/borrow-out, which *under-refuses* relative to the signed range
+// `B_n` — e.g. at `Binary{4}`, `5 + 3 = 8` is unsigned-in-range `[0,15]` but signed-out-of-range
+// `B_4 = [-8,7]`, so `bit.add` would accept a sum a signed/two's-complement caller must not silently
+// receive. They therefore do **not** satisfy the RFC-0033 §4.1.2 shared two's-complement `add`/`sub`
+// this task names, and `bin.add`/`bin.sub` are genuinely missing (not a re-land of E19-1's work).
+// `bin.neg` has no pre-existing counterpart to reconcile against (negation is inherently a signed
+// concept) — it is unambiguously the shared set's missing fourth member.
+//
+// Never-silent: an out-of-range sum/difference/negation is an explicit [`EvalError::Overflow`],
+// never a wrap (RFC-0033 §4.1.3; G2) — the same posture as `bin.mul`.
+//
+// **Width cap (current scope).** Mirrors `bin.mul`: [`binary::add`]/[`binary::sub`]/[`binary::neg`]
+// are exact for `n ≤ `[`binary::TC_MAX_WIDTH`]`; a wider operand refuses with an explicit
+// [`EvalError::PrimType`] naming the cap.
+
+/// Shared arity/width validation + kernel dispatch for the two's-complement `bin.add`/`bin.sub`
+/// prims (M-766): checks arity 2, extracts equal-width `Binary` operand bits (width mismatch/
+/// over-cap → [`EvalError::PrimType`]), and calls `op` (`None` — the exact result does not fit
+/// `B_n` — → an explicit [`EvalError::Overflow`], never a silent wrap).
+fn bin_add_sub(
+    prim: &str,
+    args: &[&Value],
+    op: fn(&[bool], &[bool]) -> Option<Vec<bool>>,
+) -> Result<Vec<bool>, EvalError> {
+    expect_arity(prim, args, 2)?;
+    let a = as_bits(prim, args[0])?;
+    let b = as_bits(prim, args[1])?;
+    if a.len() != b.len() {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!("width mismatch: {} vs {} bits", a.len(), b.len()),
+        });
+    }
+    if a.len() > binary::TC_MAX_WIDTH {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!(
+                "width {} exceeds the {}-bit two's-complement arithmetic cap (M-766 scope)",
+                a.len(),
+                binary::TC_MAX_WIDTH
+            ),
+        });
+    }
+    op(a, b).ok_or_else(|| EvalError::Overflow {
+        prim: prim.to_owned(),
+    })
+}
+
+/// `bin.add : (Binary{N}, Binary{N}) → Binary{N}` — never-silent two's-complement add (RFC-0033
+/// §4.1.2/§4.1.3, M-766). Equal-width operands, `N ≤ `[`binary::TC_MAX_WIDTH`]`; a width mismatch or
+/// an over-cap width is an explicit [`EvalError::PrimType`], and an out-of-range sum is an explicit
+/// [`EvalError::Overflow`] — never a silent wrap (G2). Distinct from `bit.add` (RFC-0032 D2), whose
+/// unsigned carry-out overflow criterion under-refuses relative to the signed domain `B_N` (see the
+/// module-level inventory note above).
+fn prim_bin_add(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    let out = bin_add_sub(prim, args, binary::add)?;
+    compose_result(
+        prim,
+        args,
+        args[0].repr().clone(),
+        Payload::Bits(out),
+        ApproxRule::Refuse,
+    )
+}
+
+/// `bin.sub : (Binary{N}, Binary{N}) → Binary{N}` — never-silent two's-complement subtract
+/// (RFC-0033 §4.1.2/§4.1.3, M-766). Same never-silent contract as [`prim_bin_add`]; distinct from
+/// `bit.sub`'s unsigned borrow-out overflow criterion for the same reason.
+fn prim_bin_sub(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    let out = bin_add_sub(prim, args, binary::sub)?;
+    compose_result(
+        prim,
+        args,
+        args[0].repr().clone(),
+        Payload::Bits(out),
+        ApproxRule::Refuse,
+    )
+}
+
+/// `bin.neg : Binary{N} → Binary{N}` — never-silent two's-complement negate (RFC-0033
+/// §4.1.2/§4.1.3, M-766): the shared op set's genuinely-missing member (unlike `add`/`sub`/`mul`,
+/// there is no pre-existing unsigned "negate" to reconcile against). An over-cap width is an
+/// explicit [`EvalError::PrimType`]; negating `B_N`'s minimum value `-2^(N-1)` (which has no positive
+/// two's-complement counterpart in `B_N`) is an explicit [`EvalError::Overflow`] — never a silent
+/// wrap (G2), the classic two's-complement negate-overflow case.
+fn prim_bin_neg(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 1)?;
+    let a = as_bits(prim, args[0])?;
+    if a.len() > binary::TC_MAX_WIDTH {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!(
+                "width {} exceeds the {}-bit two's-complement arithmetic cap (M-766 scope)",
+                a.len(),
+                binary::TC_MAX_WIDTH
+            ),
+        });
+    }
+    let out = binary::neg(a).ok_or_else(|| EvalError::Overflow {
+        prim: prim.to_owned(),
+    })?;
     compose_result(
         prim,
         args,

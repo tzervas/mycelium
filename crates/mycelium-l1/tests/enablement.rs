@@ -629,6 +629,158 @@ fn shl_bin_width_mismatch_refuses_statically() {
     );
 }
 
+// ── M-766 (`enb` Gap B): never-silent two's-complement add/sub/neg ──────────────────────────────
+//
+// `add_tc`/`sub_tc`/`neg_bin` (kernel `bin.add`/`bin.sub`/`bin.neg`) complete the *shared*
+// two's-complement arithmetic set `mul_bin` (M-887) started — RFC-0033 §4.1.2/§4.1.3, ADR-028.
+//
+// **Inventory (verified before landing, per the M-766 task's "reconcile against the kpr-landed
+// add/sub" instruction).** The pre-existing `add_bin`/`sub_bin` (kernel `bit.add`/`bit.sub`,
+// kpr/E19-1, RFC-0032 D2) are a **different, unsigned-committed** family: their overflow criterion
+// is the unsigned carry/borrow-out, which *under-refuses* relative to the signed range `B_N` (e.g.
+// at `Binary{4}`, `5 + 3 = 8` is unsigned-in-range `[0,15]` but signed-out-of-range `B_4 = [-8,7]`),
+// so they do not stand in for the RFC-0033 shared `add`/`sub`. `add_tc`/`sub_tc` are therefore
+// genuinely missing (not a re-land of E19-1's work), completed here alongside `neg_bin` (which has
+// no pre-existing counterpart at all — negation is inherently a signed concept). Naming: `_tc`
+// (not `_bin`) for `add`/`sub` because `add_bin`/`sub_bin` are already claimed; see the
+// `checkty::prim_family` FLAG comment for the maintainer-facing naming note.
+
+#[test]
+fn add_tc_and_sub_tc_worked_examples() {
+    // 3 + 4 = 7.
+    assert_three_way(
+        "add_tc positive",
+        "nodule d;\nfn main() => Binary{8} = add_tc(0b0000_0011, 0b0000_0100);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("00000111".chars().map(|c| c == '1').collect()),
+    );
+    // -3 + 4 = 1 (two's complement: -3 = 0b1111_1101).
+    assert_three_way(
+        "add_tc negative operand",
+        "nodule d;\nfn main() => Binary{8} = add_tc(0b1111_1101, 0b0000_0100);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("00000001".chars().map(|c| c == '1').collect()),
+    );
+    // 7 - 4 = 3.
+    assert_three_way(
+        "sub_tc positive",
+        "nodule d;\nfn main() => Binary{8} = sub_tc(0b0000_0111, 0b0000_0100);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("00000011".chars().map(|c| c == '1').collect()),
+    );
+    // 4 - (-3) = 7 (two's complement: -3 = 0b1111_1101).
+    assert_three_way(
+        "sub_tc subtract-negative",
+        "nodule d;\nfn main() => Binary{8} = sub_tc(0b0000_0100, 0b1111_1101);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("00000111".chars().map(|c| c == '1').collect()),
+    );
+}
+
+#[test]
+fn neg_bin_worked_examples() {
+    // -(3) = -3 (0b1111_1101).
+    assert_three_way(
+        "neg_bin positive operand",
+        "nodule d;\nfn main() => Binary{8} = neg_bin(0b0000_0011);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("11111101".chars().map(|c| c == '1').collect()),
+    );
+    // -(-3) = 3.
+    assert_three_way(
+        "neg_bin negative operand",
+        "nodule d;\nfn main() => Binary{8} = neg_bin(0b1111_1101);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("00000011".chars().map(|c| c == '1').collect()),
+    );
+    // -(0) = 0.
+    assert_three_way(
+        "neg_bin zero",
+        "nodule d;\nfn main() => Binary{8} = neg_bin(0b0000_0000);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("00000000".chars().map(|c| c == '1').collect()),
+    );
+}
+
+/// `add_tc`/`sub_tc` overflow (`127 + 1`, `-128 - 1` at `Binary{8}`, both out of `B_8 = [-128,
+/// 127]`) is an explicit refusal on **all three** paths — never a silent wrap. (The program
+/// type-checks: the two's-complement overflow bound is a runtime contract, like `mul_bin`'s.)
+#[test]
+fn add_tc_and_sub_tc_overflow_refuse_on_every_path() {
+    for src in [
+        "nodule d;\nfn main() => Binary{8} = add_tc(0b0111_1111, 0b0000_0001);",
+        "nodule d;\nfn main() => Binary{8} = sub_tc(0b1000_0000, 0b0000_0001);",
+    ] {
+        let env = check_nodule(&parse(src).expect("parses")).expect("checks");
+
+        let interp = Interpreter::new(
+            PrimRegistry::with_builtins(),
+            Box::new(mycelium_cert::BinaryTernarySwapEngine),
+        );
+        let prims = PrimRegistry::with_builtins();
+        let engine = mycelium_cert::BinaryTernarySwapEngine;
+
+        assert!(
+            Evaluator::new(&env).call("main", vec![]).is_err(),
+            "L1-eval must refuse the overflow (never a silent wrap): {src}"
+        );
+        let node = elaborate(&env, "main").expect("in fragment");
+        assert!(
+            interp.eval(&node).is_err(),
+            "L0-interp must refuse the overflow: {src}"
+        );
+        assert!(
+            mycelium_mlir::run(&node, &prims, &engine).is_err(),
+            "AOT must refuse the overflow: {src}"
+        );
+    }
+}
+
+/// The classic two's-complement negate-overflow edge (`i8::MIN` negated at `Binary{8}`, out of
+/// `B_8 = [-128, 127]`) refuses on all three paths — never a silent wrap back to `-128`.
+#[test]
+fn neg_bin_min_value_refuses_on_every_path() {
+    let src = "nodule d;\nfn main() => Binary{8} = neg_bin(0b1000_0000);";
+    let env = check_nodule(&parse(src).expect("parses")).expect("checks");
+
+    let interp = Interpreter::new(
+        PrimRegistry::with_builtins(),
+        Box::new(mycelium_cert::BinaryTernarySwapEngine),
+    );
+    let prims = PrimRegistry::with_builtins();
+    let engine = mycelium_cert::BinaryTernarySwapEngine;
+
+    assert!(
+        Evaluator::new(&env).call("main", vec![]).is_err(),
+        "-(i8::MIN) must refuse on L1-eval (never a silent wrap to -128)"
+    );
+    let node = elaborate(&env, "main").expect("in fragment");
+    assert!(
+        interp.eval(&node).is_err(),
+        "-(i8::MIN) must refuse on L0-interp"
+    );
+    assert!(
+        mycelium_mlir::run(&node, &prims, &engine).is_err(),
+        "-(i8::MIN) must refuse on AOT"
+    );
+}
+
+/// A width/paradigm mismatch (`Binary{8}` vs `Binary{1}`) is a **static** never-silent refusal for
+/// `add_tc`/`sub_tc` — caught at check time, mirroring `mul_bin`'s width-preserving contract.
+#[test]
+fn add_tc_and_sub_tc_width_mismatch_refuse_statically() {
+    for src in [
+        "nodule d;\nfn main() => Binary{8} = add_tc(0b0000_0001, 0b0);",
+        "nodule d;\nfn main() => Binary{8} = sub_tc(0b0000_0001, 0b0);",
+    ] {
+        assert!(
+            check_nodule(&parse(src).expect("parses")).is_err(),
+            "a width-mismatched add_tc/sub_tc must be a static type error, never a silent \
+             coercion: {src}"
+        );
+    }
+}
+
 // ── M-749: indexed-sequence prims — prim-level differential (L0-interp ≡ AOT) ────────────────────
 //
 // `Repr::Seq` has no `.myc` surface literal yet (lexer/parser wiring deferred — FLAGGED in the

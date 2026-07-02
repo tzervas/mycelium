@@ -5311,8 +5311,16 @@ fn prim_family(name: &str) -> Option<PrimFam> {
         // (the signed variant rides M-767 under its own distinct name, per RFC-0033 §4.1.2's
         // signedness-split requirement for division). M-889 adds `shl_bin`/`shr_bin` — never-silent
         // **logical** left/right shift (the arithmetic/signed right shift rides M-767 likewise).
+        // M-766 adds `add_tc`/`sub_tc`/`neg_bin` — never-silent two's-complement add/sub/neg,
+        // completing the shared set `mul_bin` started. **Naming FLAG (maintainer call).** `add_bin`/
+        // `sub_bin` were already claimed by the pre-existing *unsigned* `bit.add`/`bit.sub` (RFC-0032
+        // D2), so the new signed/two's-complement pair cannot reuse the `_bin` suffix `mul_bin`/
+        // `div_bin`/`shl_bin`/etc. use for the rest of the RFC-0033 set; they are named `add_tc`/
+        // `sub_tc` ("two's complement") to disambiguate. `neg_bin` has no such conflict (there is no
+        // unsigned "negate") and keeps the `_bin` suffix. This mirrors the M-888 `bin.*`/`bit.*`
+        // kernel-namespace FLAG one layer up, at the surface-name layer.
         "not" | "xor" | "and" | "or" | "add_bin" | "sub_bin" | "mul_bin" | "div_bin"
-        | "rem_bin" | "shl_bin" | "shr_bin" => PrimFam::Binary,
+        | "rem_bin" | "shl_bin" | "shr_bin" | "add_tc" | "sub_tc" | "neg_bin" => PrimFam::Binary,
         "add" | "sub" | "mul" | "neg" => PrimFam::Ternary,
         _ => return None,
     })
@@ -5397,7 +5405,8 @@ fn encode_balanced_ternary(site: &str, v: i64, width: u32) -> Result<Literal, Ch
 #[must_use]
 pub fn prim_sig(name: &str, args: &[Ty]) -> Option<Ty> {
     match (name, args) {
-        ("not", [Ty::Binary(w)]) => Some(Ty::Binary(w.clone())),
+        // M-766: `neg_bin` — the two's-complement unary negate joins `not` (unary, width-preserving).
+        ("not" | "neg_bin", [Ty::Binary(w)]) => Some(Ty::Binary(w.clone())),
         ("xor", [Ty::Binary(a), Ty::Binary(b)]) if a == b => Some(Ty::Binary(a.clone())),
         // RFC-0032 D2 (M-748): width-preserving binary arithmetic/logical (never-silent overflow is
         // a runtime contract; the static signature is width-preserving like the trit arithmetic).
@@ -5408,9 +5417,11 @@ pub fn prim_sig(name: &str, args: &[Ty]) -> Option<Ty> {
         // M-889: `shl_bin`/`shr_bin` — same width-preserving shape (both operands, including the
         // shift amount, are `Binary{N}`); an out-of-range shift amount is likewise a runtime
         // contract (`bin.shl`/`bin.shr`'s `PrimType` refusal), not a static type error.
+        // M-766: `add_tc`/`sub_tc` — same width-preserving shape; the never-silent two's-complement
+        // overflow bound is likewise a runtime contract (`bin.add`/`bin.sub`'s `Overflow`).
         (
             "and" | "or" | "add_bin" | "sub_bin" | "mul_bin" | "div_bin" | "rem_bin" | "shl_bin"
-            | "shr_bin",
+            | "shr_bin" | "add_tc" | "sub_tc",
             [Ty::Binary(a), Ty::Binary(b)],
         ) if a == b => Some(Ty::Binary(a.clone())),
         ("add" | "sub" | "mul", [Ty::Ternary(a), Ty::Ternary(b)]) if a == b => {
@@ -5445,6 +5456,13 @@ pub fn prim_kernel_name(name: &str) -> Option<&'static str> {
         // the arithmetic/signed right shift rides M-767 under its own surface name.
         "shl_bin" => "bin.shl",
         "shr_bin" => "bin.shr",
+        // RFC-0033 §4.1.2/§4.1.3 (M-766, `enb` Gap B): never-silent two's-complement add/sub/neg —
+        // completes the shared set `mul_bin` started. `add_tc`/`sub_tc` ("two's complement") avoid
+        // reusing `add_bin`/`sub_bin`, already claimed above by the *unsigned* `bit.add`/`bit.sub`
+        // (see the `prim_family` FLAG comment); `neg_bin` has no such conflict.
+        "add_tc" => "bin.add",
+        "sub_tc" => "bin.sub",
+        "neg_bin" => "bin.neg",
         // RFC-0032 D1 (M-747): reduce-to-`Bool` comparison/equality (returns `Binary{1}`).
         "eq" => "cmp.eq",
         "lt" => "cmp.lt",
