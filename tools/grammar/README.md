@@ -71,7 +71,7 @@ then re-run.
 | `scalar` | `support.type.builtin.mycelium` | `@type.builtin` | `type` |
 | `strength` | `storage.modifier.guarantee.mycelium` | `@attribute` | `enumMember` |
 | comment | `comment.line.double-slash.mycelium` | `@comment` | `comment` |
-| string | `string.quoted.double.mycelium` | `@string` | `—` (M-910 postdates the legend) |
+| string | `string.quoted.double.mycelium` | `@string` | `—` (mapping gap — flagged) |
 | numeric | `constant.numeric.<kind>.mycelium` | `@number` | `number` |
 | operator | `keyword.operator.mycelium` | `@operator` | `operator` |
 | declarations | `entity.name.*.mycelium` | `@function` / `@type` / `@module` … | `function`/`type` |
