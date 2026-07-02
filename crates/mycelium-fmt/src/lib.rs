@@ -53,7 +53,7 @@
 //! `Arm`).  Adding line numbers to `ast.rs`/`Arm` collides with the parallel HOF track (M-689
 //! stage-1 sibling) and is serialized — flagged up rather than silently worked around.
 
-use mycelium_l1::ast::{Expr, FnDecl, ImplDecl, Item, Nodule, Pattern};
+use mycelium_l1::ast::{Expr, FnDecl, Hypha, ImplDecl, Item, Nodule, Pattern};
 use mycelium_l1::lexer::{lex_with_comments, Comment};
 use mycelium_l1::token::{Spanned, Tok};
 use mycelium_l1::{expand_to_source, parse, parse_phylum};
@@ -1075,9 +1075,26 @@ fn collect_match_arm_comments(
         }
         Expr::Colony(hyphae) => {
             for h in hyphae {
+                // M-970: recurse into the optional `@forage(policy)` expression too — it is a
+                // plain expression (parsed by `parse_expr`, same as `reclaim`'s policy) and could
+                // in principle carry a nested match with a trailing comment, so it must not be
+                // skipped alongside the body. Destructuring `Hypha { forage, body }` (rather than
+                // `h.forage`/`h.body` access) makes a future field on `Hypha` a compile error here
+                // instead of a silent skip.
+                let Hypha { forage, body } = h;
+                if let Some(policy) = forage {
+                    collect_match_arm_comments(
+                        item_idx,
+                        policy,
+                        remaining,
+                        arm_trailing,
+                        fat_arrow_lines,
+                        depth,
+                    )?;
+                }
                 collect_match_arm_comments(
                     item_idx,
-                    &h.body,
+                    body,
                     remaining,
                     arm_trailing,
                     fat_arrow_lines,
@@ -1499,9 +1516,31 @@ fn render_expr_canonical(e: &Expr) -> String {
         Expr::Wild(b) => format!("wild {{ {} }}", render_expr_canonical(b)),
         Expr::Spore(b) => format!("spore({})", render_expr_canonical(b)),
         Expr::Colony(hyphae) => {
+            // M-970 (found by M-914): a hypha's optional `@forage(policy)` placement annotation
+            // (RFC-0008 RT3; DN-63 §3.5; M-906/DN-70 D1) must round-trip through the canonical
+            // render — this is the exact inverse of `Parser::parse_hypha`
+            // (`crates/mycelium-l1/src/parse.rs`): `@forage(<policy>) hypha <body>` when present,
+            // else bare `hypha <body>`. Previously this arm dropped `Hypha::forage` entirely,
+            // which silently erased the annotation on format (a G2 violation) — the C1 identity
+            // guard below caught the mismatch and refused (exit 4), but never emitted the fix.
+            //
+            // The `Hypha { forage, body }` destructure (rather than `h.forage`/`h.body` field
+            // access) is deliberate: it makes a FUTURE field added to `Hypha` a compile error
+            // here (non-exhaustive destructure) instead of a silent drop like this one was — the
+            // struct-field analogue of an exhaustive enum match with no catch-all arm.
             let hs: Vec<String> = hyphae
                 .iter()
-                .map(|h| format!("hypha {}", render_expr_canonical(&h.body)))
+                .map(|h| {
+                    let Hypha { forage, body } = h;
+                    match forage {
+                        Some(policy) => format!(
+                            "@forage({}) hypha {}",
+                            render_expr_canonical(policy),
+                            render_expr_canonical(body)
+                        ),
+                        None => format!("hypha {}", render_expr_canonical(body)),
+                    }
+                })
                 .collect();
             format!("colony {{ {} }}", hs.join(", "))
         }
