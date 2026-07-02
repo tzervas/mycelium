@@ -1,0 +1,259 @@
+pub mod mycelium_rt_abi
+pub mod mycelium_rt_abi::reclamation
+pub enum mycelium_rt_abi::reclamation::ReclamationTrigger
+pub mycelium_rt_abi::reclamation::ReclamationTrigger::ChannelClose
+pub mycelium_rt_abi::reclamation::ReclamationTrigger::RcZero
+pub mycelium_rt_abi::reclamation::ReclamationTrigger::ScopeExit
+impl core::clone::Clone for mycelium_rt_abi::reclamation::ReclamationTrigger
+pub fn mycelium_rt_abi::reclamation::ReclamationTrigger::clone(&self) -> mycelium_rt_abi::reclamation::ReclamationTrigger
+impl core::cmp::Eq for mycelium_rt_abi::reclamation::ReclamationTrigger
+impl core::cmp::PartialEq for mycelium_rt_abi::reclamation::ReclamationTrigger
+pub fn mycelium_rt_abi::reclamation::ReclamationTrigger::eq(&self, &mycelium_rt_abi::reclamation::ReclamationTrigger) -> bool
+impl core::fmt::Debug for mycelium_rt_abi::reclamation::ReclamationTrigger
+pub fn mycelium_rt_abi::reclamation::ReclamationTrigger::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_rt_abi::reclamation::ReclamationTrigger
+impl core::marker::Freeze for mycelium_rt_abi::reclamation::ReclamationTrigger
+impl core::marker::Send for mycelium_rt_abi::reclamation::ReclamationTrigger
+impl core::marker::Sync for mycelium_rt_abi::reclamation::ReclamationTrigger
+impl core::marker::Unpin for mycelium_rt_abi::reclamation::ReclamationTrigger
+impl core::marker::UnsafeUnpin for mycelium_rt_abi::reclamation::ReclamationTrigger
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_rt_abi::reclamation::ReclamationTrigger
+impl core::panic::unwind_safe::UnwindSafe for mycelium_rt_abi::reclamation::ReclamationTrigger
+pub struct mycelium_rt_abi::reclamation::ChannelId(pub u64)
+impl core::clone::Clone for mycelium_rt_abi::reclamation::ChannelId
+pub fn mycelium_rt_abi::reclamation::ChannelId::clone(&self) -> mycelium_rt_abi::reclamation::ChannelId
+impl core::cmp::Eq for mycelium_rt_abi::reclamation::ChannelId
+impl core::cmp::PartialEq for mycelium_rt_abi::reclamation::ChannelId
+pub fn mycelium_rt_abi::reclamation::ChannelId::eq(&self, &mycelium_rt_abi::reclamation::ChannelId) -> bool
+impl core::fmt::Debug for mycelium_rt_abi::reclamation::ChannelId
+pub fn mycelium_rt_abi::reclamation::ChannelId::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_rt_abi::reclamation::ChannelId
+pub fn mycelium_rt_abi::reclamation::ChannelId::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::Copy for mycelium_rt_abi::reclamation::ChannelId
+impl core::marker::StructuralPartialEq for mycelium_rt_abi::reclamation::ChannelId
+impl core::marker::Freeze for mycelium_rt_abi::reclamation::ChannelId
+impl core::marker::Send for mycelium_rt_abi::reclamation::ChannelId
+impl core::marker::Sync for mycelium_rt_abi::reclamation::ChannelId
+impl core::marker::Unpin for mycelium_rt_abi::reclamation::ChannelId
+impl core::marker::UnsafeUnpin for mycelium_rt_abi::reclamation::ChannelId
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_rt_abi::reclamation::ChannelId
+impl core::panic::unwind_safe::UnwindSafe for mycelium_rt_abi::reclamation::ChannelId
+pub struct mycelium_rt_abi::reclamation::CollectingSink
+pub mycelium_rt_abi::reclamation::CollectingSink::records: alloc::vec::Vec<mycelium_rt_abi::reclamation::ReclamationRecord>
+impl mycelium_rt_abi::reclamation::CollectingSink
+pub fn mycelium_rt_abi::reclamation::CollectingSink::drain(&mut self) -> alloc::vec::Vec<mycelium_rt_abi::reclamation::ReclamationRecord>
+pub fn mycelium_rt_abi::reclamation::CollectingSink::is_empty(&self) -> bool
+pub fn mycelium_rt_abi::reclamation::CollectingSink::len(&self) -> usize
+pub fn mycelium_rt_abi::reclamation::CollectingSink::new() -> Self
+impl core::default::Default for mycelium_rt_abi::reclamation::CollectingSink
+pub fn mycelium_rt_abi::reclamation::CollectingSink::default() -> mycelium_rt_abi::reclamation::CollectingSink
+impl core::fmt::Debug for mycelium_rt_abi::reclamation::CollectingSink
+pub fn mycelium_rt_abi::reclamation::CollectingSink::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl mycelium_rt_abi::reclamation::ReclamationSink for mycelium_rt_abi::reclamation::CollectingSink
+pub fn mycelium_rt_abi::reclamation::CollectingSink::emit(&mut self, mycelium_rt_abi::reclamation::ReclamationRecord)
+impl core::marker::Freeze for mycelium_rt_abi::reclamation::CollectingSink
+impl core::marker::Send for mycelium_rt_abi::reclamation::CollectingSink
+impl core::marker::Sync for mycelium_rt_abi::reclamation::CollectingSink
+impl core::marker::Unpin for mycelium_rt_abi::reclamation::CollectingSink
+impl core::marker::UnsafeUnpin for mycelium_rt_abi::reclamation::CollectingSink
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_rt_abi::reclamation::CollectingSink
+impl core::panic::unwind_safe::UnwindSafe for mycelium_rt_abi::reclamation::CollectingSink
+pub struct mycelium_rt_abi::reclamation::ExplainRecord
+pub mycelium_rt_abi::reclamation::ExplainRecord::channel_id: core::option::Option<mycelium_rt_abi::reclamation::ChannelId>
+pub mycelium_rt_abi::reclamation::ExplainRecord::scope_id: mycelium_rt_abi::reclamation::ScopeId
+pub mycelium_rt_abi::reclamation::ExplainRecord::sweep_epoch: mycelium_rt_abi::reclamation::SweepEpoch
+pub mycelium_rt_abi::reclamation::ExplainRecord::trigger: mycelium_rt_abi::reclamation::ReclamationTrigger
+pub mycelium_rt_abi::reclamation::ExplainRecord::value_meta_hash: mycelium_core::id::ContentHash
+impl core::clone::Clone for mycelium_rt_abi::reclamation::ExplainRecord
+pub fn mycelium_rt_abi::reclamation::ExplainRecord::clone(&self) -> mycelium_rt_abi::reclamation::ExplainRecord
+impl core::cmp::Eq for mycelium_rt_abi::reclamation::ExplainRecord
+impl core::cmp::PartialEq for mycelium_rt_abi::reclamation::ExplainRecord
+pub fn mycelium_rt_abi::reclamation::ExplainRecord::eq(&self, &mycelium_rt_abi::reclamation::ExplainRecord) -> bool
+impl core::fmt::Debug for mycelium_rt_abi::reclamation::ExplainRecord
+pub fn mycelium_rt_abi::reclamation::ExplainRecord::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_rt_abi::reclamation::ExplainRecord
+pub fn mycelium_rt_abi::reclamation::ExplainRecord::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_rt_abi::reclamation::ExplainRecord
+impl core::marker::Freeze for mycelium_rt_abi::reclamation::ExplainRecord
+impl core::marker::Send for mycelium_rt_abi::reclamation::ExplainRecord
+impl core::marker::Sync for mycelium_rt_abi::reclamation::ExplainRecord
+impl core::marker::Unpin for mycelium_rt_abi::reclamation::ExplainRecord
+impl core::marker::UnsafeUnpin for mycelium_rt_abi::reclamation::ExplainRecord
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_rt_abi::reclamation::ExplainRecord
+impl core::panic::unwind_safe::UnwindSafe for mycelium_rt_abi::reclamation::ExplainRecord
+pub struct mycelium_rt_abi::reclamation::ReclamationRecord
+pub mycelium_rt_abi::reclamation::ReclamationRecord::channel_id: core::option::Option<mycelium_rt_abi::reclamation::ChannelId>
+pub mycelium_rt_abi::reclamation::ReclamationRecord::scope_id: mycelium_rt_abi::reclamation::ScopeId
+pub mycelium_rt_abi::reclamation::ReclamationRecord::sweep_epoch: mycelium_rt_abi::reclamation::SweepEpoch
+pub mycelium_rt_abi::reclamation::ReclamationRecord::trigger: mycelium_rt_abi::reclamation::ReclamationTrigger
+pub mycelium_rt_abi::reclamation::ReclamationRecord::value_meta_hash: mycelium_core::id::ContentHash
+impl mycelium_rt_abi::reclamation::ReclamationRecord
+pub fn mycelium_rt_abi::reclamation::ReclamationRecord::explain(&self) -> mycelium_rt_abi::reclamation::ExplainRecord
+pub fn mycelium_rt_abi::reclamation::ReclamationRecord::for_channel_close(mycelium_rt_abi::reclamation::ScopeId, mycelium_rt_abi::reclamation::SweepEpoch, mycelium_core::id::ContentHash, mycelium_rt_abi::reclamation::ChannelId) -> Self
+pub fn mycelium_rt_abi::reclamation::ReclamationRecord::new(mycelium_rt_abi::reclamation::ScopeId, mycelium_rt_abi::reclamation::SweepEpoch, mycelium_rt_abi::reclamation::ReclamationTrigger, mycelium_core::id::ContentHash) -> Self
+pub fn mycelium_rt_abi::reclamation::ReclamationRecord::trigger(&self) -> &mycelium_rt_abi::reclamation::ReclamationTrigger
+pub fn mycelium_rt_abi::reclamation::ReclamationRecord::value_meta_hash(&self) -> &mycelium_core::id::ContentHash
+impl core::clone::Clone for mycelium_rt_abi::reclamation::ReclamationRecord
+pub fn mycelium_rt_abi::reclamation::ReclamationRecord::clone(&self) -> mycelium_rt_abi::reclamation::ReclamationRecord
+impl core::cmp::Eq for mycelium_rt_abi::reclamation::ReclamationRecord
+impl core::cmp::PartialEq for mycelium_rt_abi::reclamation::ReclamationRecord
+pub fn mycelium_rt_abi::reclamation::ReclamationRecord::eq(&self, &mycelium_rt_abi::reclamation::ReclamationRecord) -> bool
+impl core::fmt::Debug for mycelium_rt_abi::reclamation::ReclamationRecord
+pub fn mycelium_rt_abi::reclamation::ReclamationRecord::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_rt_abi::reclamation::ReclamationRecord
+impl core::marker::Freeze for mycelium_rt_abi::reclamation::ReclamationRecord
+impl core::marker::Send for mycelium_rt_abi::reclamation::ReclamationRecord
+impl core::marker::Sync for mycelium_rt_abi::reclamation::ReclamationRecord
+impl core::marker::Unpin for mycelium_rt_abi::reclamation::ReclamationRecord
+impl core::marker::UnsafeUnpin for mycelium_rt_abi::reclamation::ReclamationRecord
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_rt_abi::reclamation::ReclamationRecord
+impl core::panic::unwind_safe::UnwindSafe for mycelium_rt_abi::reclamation::ReclamationRecord
+pub struct mycelium_rt_abi::reclamation::ScopeId(pub u64)
+impl core::clone::Clone for mycelium_rt_abi::reclamation::ScopeId
+pub fn mycelium_rt_abi::reclamation::ScopeId::clone(&self) -> mycelium_rt_abi::reclamation::ScopeId
+impl core::cmp::Eq for mycelium_rt_abi::reclamation::ScopeId
+impl core::cmp::PartialEq for mycelium_rt_abi::reclamation::ScopeId
+pub fn mycelium_rt_abi::reclamation::ScopeId::eq(&self, &mycelium_rt_abi::reclamation::ScopeId) -> bool
+impl core::fmt::Debug for mycelium_rt_abi::reclamation::ScopeId
+pub fn mycelium_rt_abi::reclamation::ScopeId::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_rt_abi::reclamation::ScopeId
+pub fn mycelium_rt_abi::reclamation::ScopeId::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::Copy for mycelium_rt_abi::reclamation::ScopeId
+impl core::marker::StructuralPartialEq for mycelium_rt_abi::reclamation::ScopeId
+impl core::marker::Freeze for mycelium_rt_abi::reclamation::ScopeId
+impl core::marker::Send for mycelium_rt_abi::reclamation::ScopeId
+impl core::marker::Sync for mycelium_rt_abi::reclamation::ScopeId
+impl core::marker::Unpin for mycelium_rt_abi::reclamation::ScopeId
+impl core::marker::UnsafeUnpin for mycelium_rt_abi::reclamation::ScopeId
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_rt_abi::reclamation::ScopeId
+impl core::panic::unwind_safe::UnwindSafe for mycelium_rt_abi::reclamation::ScopeId
+pub struct mycelium_rt_abi::reclamation::SweepEpoch(pub u64)
+impl core::clone::Clone for mycelium_rt_abi::reclamation::SweepEpoch
+pub fn mycelium_rt_abi::reclamation::SweepEpoch::clone(&self) -> mycelium_rt_abi::reclamation::SweepEpoch
+impl core::cmp::Eq for mycelium_rt_abi::reclamation::SweepEpoch
+impl core::cmp::Ord for mycelium_rt_abi::reclamation::SweepEpoch
+pub fn mycelium_rt_abi::reclamation::SweepEpoch::cmp(&self, &mycelium_rt_abi::reclamation::SweepEpoch) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_rt_abi::reclamation::SweepEpoch
+pub fn mycelium_rt_abi::reclamation::SweepEpoch::eq(&self, &mycelium_rt_abi::reclamation::SweepEpoch) -> bool
+impl core::cmp::PartialOrd for mycelium_rt_abi::reclamation::SweepEpoch
+pub fn mycelium_rt_abi::reclamation::SweepEpoch::partial_cmp(&self, &mycelium_rt_abi::reclamation::SweepEpoch) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_rt_abi::reclamation::SweepEpoch
+pub fn mycelium_rt_abi::reclamation::SweepEpoch::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_rt_abi::reclamation::SweepEpoch
+pub fn mycelium_rt_abi::reclamation::SweepEpoch::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::Copy for mycelium_rt_abi::reclamation::SweepEpoch
+impl core::marker::StructuralPartialEq for mycelium_rt_abi::reclamation::SweepEpoch
+impl core::marker::Freeze for mycelium_rt_abi::reclamation::SweepEpoch
+impl core::marker::Send for mycelium_rt_abi::reclamation::SweepEpoch
+impl core::marker::Sync for mycelium_rt_abi::reclamation::SweepEpoch
+impl core::marker::Unpin for mycelium_rt_abi::reclamation::SweepEpoch
+impl core::marker::UnsafeUnpin for mycelium_rt_abi::reclamation::SweepEpoch
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_rt_abi::reclamation::SweepEpoch
+impl core::panic::unwind_safe::UnwindSafe for mycelium_rt_abi::reclamation::SweepEpoch
+pub trait mycelium_rt_abi::reclamation::ReclamationSink
+pub fn mycelium_rt_abi::reclamation::ReclamationSink::emit(&mut self, mycelium_rt_abi::reclamation::ReclamationRecord)
+impl mycelium_rt_abi::reclamation::ReclamationSink for mycelium_rt_abi::reclamation::CollectingSink
+pub fn mycelium_rt_abi::reclamation::CollectingSink::emit(&mut self, mycelium_rt_abi::reclamation::ReclamationRecord)
+pub mod mycelium_rt_abi::supervision
+pub use mycelium_rt_abi::supervision::CancelToken
+pub use mycelium_rt_abi::supervision::Cancelled
+pub use mycelium_rt_abi::supervision::Escalation
+pub use mycelium_rt_abi::supervision::RestartIntensity
+pub use mycelium_rt_abi::supervision::Supervisor
+pub use mycelium_rt_abi::supervision::TaskOutcome
+pub enum mycelium_rt_abi::supervision::SupervisedFailure
+pub mycelium_rt_abi::supervision::SupervisedFailure::Cancelled
+pub mycelium_rt_abi::supervision::SupervisedFailure::Escalated(mycelium_interp::supervise::Escalation)
+impl core::clone::Clone for mycelium_rt_abi::supervision::SupervisedFailure
+pub fn mycelium_rt_abi::supervision::SupervisedFailure::clone(&self) -> mycelium_rt_abi::supervision::SupervisedFailure
+impl core::cmp::Eq for mycelium_rt_abi::supervision::SupervisedFailure
+impl core::cmp::PartialEq for mycelium_rt_abi::supervision::SupervisedFailure
+pub fn mycelium_rt_abi::supervision::SupervisedFailure::eq(&self, &mycelium_rt_abi::supervision::SupervisedFailure) -> bool
+impl core::fmt::Debug for mycelium_rt_abi::supervision::SupervisedFailure
+pub fn mycelium_rt_abi::supervision::SupervisedFailure::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_rt_abi::supervision::SupervisedFailure
+impl core::marker::Freeze for mycelium_rt_abi::supervision::SupervisedFailure
+impl core::marker::Send for mycelium_rt_abi::supervision::SupervisedFailure
+impl core::marker::Sync for mycelium_rt_abi::supervision::SupervisedFailure
+impl core::marker::Unpin for mycelium_rt_abi::supervision::SupervisedFailure
+impl core::marker::UnsafeUnpin for mycelium_rt_abi::supervision::SupervisedFailure
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_rt_abi::supervision::SupervisedFailure
+impl core::panic::unwind_safe::UnwindSafe for mycelium_rt_abi::supervision::SupervisedFailure
+pub enum mycelium_rt_abi::supervision::SupervisionAction
+pub mycelium_rt_abi::supervision::SupervisionAction::Escalated(mycelium_interp::supervise::Escalation)
+pub mycelium_rt_abi::supervision::SupervisionAction::Restarted
+impl core::clone::Clone for mycelium_rt_abi::supervision::SupervisionAction
+pub fn mycelium_rt_abi::supervision::SupervisionAction::clone(&self) -> mycelium_rt_abi::supervision::SupervisionAction
+impl core::cmp::Eq for mycelium_rt_abi::supervision::SupervisionAction
+impl core::cmp::PartialEq for mycelium_rt_abi::supervision::SupervisionAction
+pub fn mycelium_rt_abi::supervision::SupervisionAction::eq(&self, &mycelium_rt_abi::supervision::SupervisionAction) -> bool
+impl core::fmt::Debug for mycelium_rt_abi::supervision::SupervisionAction
+pub fn mycelium_rt_abi::supervision::SupervisionAction::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_rt_abi::supervision::SupervisionAction
+impl core::marker::Freeze for mycelium_rt_abi::supervision::SupervisionAction
+impl core::marker::Send for mycelium_rt_abi::supervision::SupervisionAction
+impl core::marker::Sync for mycelium_rt_abi::supervision::SupervisionAction
+impl core::marker::Unpin for mycelium_rt_abi::supervision::SupervisionAction
+impl core::marker::UnsafeUnpin for mycelium_rt_abi::supervision::SupervisionAction
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_rt_abi::supervision::SupervisionAction
+impl core::panic::unwind_safe::UnwindSafe for mycelium_rt_abi::supervision::SupervisionAction
+pub struct mycelium_rt_abi::supervision::CancelTree
+impl mycelium_rt_abi::supervision::CancelTree
+pub fn mycelium_rt_abi::supervision::CancelTree::cancel(&self)
+pub fn mycelium_rt_abi::supervision::CancelTree::child(&mut self) -> &mut mycelium_rt_abi::supervision::CancelTree
+pub fn mycelium_rt_abi::supervision::CancelTree::child_count(&self) -> usize
+pub fn mycelium_rt_abi::supervision::CancelTree::is_cancelled(&self) -> bool
+pub fn mycelium_rt_abi::supervision::CancelTree::new() -> Self
+pub fn mycelium_rt_abi::supervision::CancelTree::token(&self) -> mycelium_interp::supervise::CancelToken
+impl core::default::Default for mycelium_rt_abi::supervision::CancelTree
+pub fn mycelium_rt_abi::supervision::CancelTree::default() -> mycelium_rt_abi::supervision::CancelTree
+impl core::fmt::Debug for mycelium_rt_abi::supervision::CancelTree
+pub fn mycelium_rt_abi::supervision::CancelTree::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_rt_abi::supervision::CancelTree
+impl core::marker::Send for mycelium_rt_abi::supervision::CancelTree
+impl core::marker::Sync for mycelium_rt_abi::supervision::CancelTree
+impl core::marker::Unpin for mycelium_rt_abi::supervision::CancelTree
+impl core::marker::UnsafeUnpin for mycelium_rt_abi::supervision::CancelTree
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_rt_abi::supervision::CancelTree
+impl core::panic::unwind_safe::UnwindSafe for mycelium_rt_abi::supervision::CancelTree
+pub struct mycelium_rt_abi::supervision::SupervisedRun<T>
+pub mycelium_rt_abi::supervision::SupervisedRun::result: core::result::Result<T, mycelium_rt_abi::supervision::SupervisedFailure>
+pub mycelium_rt_abi::supervision::SupervisedRun::trace: alloc::vec::Vec<mycelium_rt_abi::supervision::SupervisionRecord>
+impl<T: core::clone::Clone> core::clone::Clone for mycelium_rt_abi::supervision::SupervisedRun<T>
+pub fn mycelium_rt_abi::supervision::SupervisedRun<T>::clone(&self) -> mycelium_rt_abi::supervision::SupervisedRun<T>
+impl<T: core::cmp::Eq> core::cmp::Eq for mycelium_rt_abi::supervision::SupervisedRun<T>
+impl<T: core::cmp::PartialEq> core::cmp::PartialEq for mycelium_rt_abi::supervision::SupervisedRun<T>
+pub fn mycelium_rt_abi::supervision::SupervisedRun<T>::eq(&self, &mycelium_rt_abi::supervision::SupervisedRun<T>) -> bool
+impl<T: core::cmp::PartialEq> core::marker::StructuralPartialEq for mycelium_rt_abi::supervision::SupervisedRun<T>
+impl<T: core::fmt::Debug> core::fmt::Debug for mycelium_rt_abi::supervision::SupervisedRun<T>
+pub fn mycelium_rt_abi::supervision::SupervisedRun<T>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<T> core::marker::Freeze for mycelium_rt_abi::supervision::SupervisedRun<T> where T: core::marker::Freeze
+impl<T> core::marker::Send for mycelium_rt_abi::supervision::SupervisedRun<T> where T: core::marker::Send
+impl<T> core::marker::Sync for mycelium_rt_abi::supervision::SupervisedRun<T> where T: core::marker::Sync
+impl<T> core::marker::Unpin for mycelium_rt_abi::supervision::SupervisedRun<T> where T: core::marker::Unpin
+impl<T> core::marker::UnsafeUnpin for mycelium_rt_abi::supervision::SupervisedRun<T> where T: core::marker::UnsafeUnpin
+impl<T> core::panic::unwind_safe::RefUnwindSafe for mycelium_rt_abi::supervision::SupervisedRun<T> where T: core::panic::unwind_safe::RefUnwindSafe
+impl<T> core::panic::unwind_safe::UnwindSafe for mycelium_rt_abi::supervision::SupervisedRun<T> where T: core::panic::unwind_safe::UnwindSafe
+pub struct mycelium_rt_abi::supervision::SupervisionRecord
+pub mycelium_rt_abi::supervision::SupervisionRecord::action: mycelium_rt_abi::supervision::SupervisionAction
+pub mycelium_rt_abi::supervision::SupervisionRecord::logical_tick: u64
+pub mycelium_rt_abi::supervision::SupervisionRecord::restarts_before: u64
+impl core::clone::Clone for mycelium_rt_abi::supervision::SupervisionRecord
+pub fn mycelium_rt_abi::supervision::SupervisionRecord::clone(&self) -> mycelium_rt_abi::supervision::SupervisionRecord
+impl core::cmp::Eq for mycelium_rt_abi::supervision::SupervisionRecord
+impl core::cmp::PartialEq for mycelium_rt_abi::supervision::SupervisionRecord
+pub fn mycelium_rt_abi::supervision::SupervisionRecord::eq(&self, &mycelium_rt_abi::supervision::SupervisionRecord) -> bool
+impl core::fmt::Debug for mycelium_rt_abi::supervision::SupervisionRecord
+pub fn mycelium_rt_abi::supervision::SupervisionRecord::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_rt_abi::supervision::SupervisionRecord
+impl core::marker::Freeze for mycelium_rt_abi::supervision::SupervisionRecord
+impl core::marker::Send for mycelium_rt_abi::supervision::SupervisionRecord
+impl core::marker::Sync for mycelium_rt_abi::supervision::SupervisionRecord
+impl core::marker::Unpin for mycelium_rt_abi::supervision::SupervisionRecord
+impl core::marker::UnsafeUnpin for mycelium_rt_abi::supervision::SupervisionRecord
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_rt_abi::supervision::SupervisionRecord
+impl core::panic::unwind_safe::UnwindSafe for mycelium_rt_abi::supervision::SupervisionRecord
+pub const mycelium_rt_abi::supervision::SUPERVISION_PROPAGATION_STRENGTH: mycelium_core::guarantee::GuaranteeStrength
+pub const mycelium_rt_abi::supervision::SUPERVISION_RESTART_BOUND_STRENGTH: mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_rt_abi::supervision::run_supervised<T, E, F>(&mycelium_sched::scheduler::Scheduler, &mycelium_interp::supervise::CancelToken, alloc::vec::Vec<F>) -> alloc::vec::Vec<mycelium_interp::supervise::TaskOutcome<T, E>> where F: core::ops::function::FnOnce(&mycelium_interp::supervise::CancelToken) -> mycelium_interp::supervise::TaskOutcome<T, E> + core::marker::Send + 'static, T: core::marker::Send + 'static, E: core::marker::Send + 'static
+pub fn mycelium_rt_abi::supervision::supervise_with_restart<T, E>(&mut mycelium_interp::supervise::Supervisor, impl core::ops::function::FnMut() -> mycelium_interp::supervise::TaskOutcome<T, E>) -> mycelium_rt_abi::supervision::SupervisedRun<T>

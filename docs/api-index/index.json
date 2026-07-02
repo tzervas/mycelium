@@ -10364,6 +10364,17 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_mlir::ConcurrentPlan",
+      "kind": "enum",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/concurrent.rs",
+      "line": 94,
+      "summary": "The **reified, EXPLAIN-able** decision this module's dispatchers make for a given fragment — never",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_mlir::CrossBackendGate",
       "kind": "struct",
       "crate": "mycelium-mlir",
@@ -10371,6 +10382,17 @@
       "file": "crates/mycelium-mlir/src/vr4.rs",
       "line": 146,
       "summary": "The full VR-4 cross-backend gate result for one program: a [`BackendStage`] for **every** backend.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::DENSE_CODEGEN_GUARANTEE:",
+      "kind": "const",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/dense_codegen.rs",
+      "line": 291,
+      "summary": "The codegen-correctness guarantee for the native Dense path: **`Empirical`** (the basis is the",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -10393,6 +10415,72 @@
       "file": "crates/mycelium-mlir/src/accel.rs",
       "line": 127,
       "summary": "Why the reference path was chosen instead of the accelerator — the recorded, inspectable basis for",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::DenseAotError",
+      "kind": "enum",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/dense_codegen.rs",
+      "line": 171,
+      "summary": "Why the native Dense path could not lower/run a program — **always explicit, never silent** (G2).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::DenseArtifact",
+      "kind": "struct",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/dense_codegen.rs",
+      "line": 788,
+      "summary": "A compiled native Dense artifact: the executable on disk (cleaned on drop) plus the read-back",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::DenseCgOp",
+      "kind": "enum",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/dense_codegen.rs",
+      "line": 82,
+      "summary": "The Dense element-wise ops native codegen lowers — the `mycelium-dense::DenseSpace` surface",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::DenseExplain",
+      "kind": "struct",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/dense_codegen.rs",
+      "line": 265,
+      "summary": "The inspectable record of how a Dense op was lowered — the EXPLAIN payload (RFC-0004 §6; no black",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::DenseProgram",
+      "kind": "struct",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/dense_codegen.rs",
+      "line": 136,
+      "summary": "A native-Dense lowering program: one element-wise op over a Dense space, plus its operand(s).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::DenseResult",
+      "kind": "enum",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/dense_codegen.rs",
+      "line": 158,
+      "summary": "What a Dense native op produces: a Dense `Value` (for `add`/`sub`/`neg`/`scale`) or a bare-`f64`",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -10448,6 +10536,28 @@
       "file": "crates/mycelium-mlir/src/budget.rs",
       "line": 75,
       "summary": "A resolved depth ceiling plus the [`DepthBasis`] explaining how it was chosen.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::FHRR_BUNDLE_PROFILE:",
+      "kind": "const",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/vsa_codegen.rs",
+      "line": 137,
+      "summary": "The trial-validated regime backing the native FHRR-`bundle` `Empirical` δ (M-854; the FLAG-0",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::HRR_BUNDLE_PROFILE:",
+      "kind": "const",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/vsa_codegen.rs",
+      "line": 119,
+      "summary": "The trial-validated regime backing the native HRR-`bundle` `Empirical` δ (M-854; RFC-0039 §5.2,",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -10683,6 +10793,28 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_mlir::SwapCertMode",
+      "kind": "enum",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/swap_codegen.rs",
+      "line": 72,
+      "summary": "How the swap's **certificate** is handled by native codegen — a reified, EXPLAIN-able,",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::SwapExplain",
+      "kind": "struct",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/swap_codegen.rs",
+      "line": 109,
+      "summary": "The inspectable record of how a `Swap` node was lowered — the EXPLAIN payload (RFC-0004 §6;",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_mlir::SweepOrder",
       "kind": "enum",
       "crate": "mycelium-mlir",
@@ -10734,6 +10866,116 @@
       "file": "crates/mycelium-mlir/src/channel.rs",
       "line": 128,
       "summary": "Why a [`Sender::try_send`] could not complete *right now*.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::VSA_CODEGEN_GUARANTEE:",
+      "kind": "const",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/vsa_codegen.rs",
+      "line": 492,
+      "summary": "The codegen-correctness guarantee for the native VSA path: **`Empirical`** (the basis is the M-210",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::VSA_JIT_GUARANTEE:",
+      "kind": "const",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/vsa_jit.rs",
+      "line": 88,
+      "summary": "The codegen-correctness guarantee for the dynamic-VSA JIT path (M-855; RFC-0039 §5.3) —",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::VsaAotError",
+      "kind": "enum",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/vsa_codegen.rs",
+      "line": 345,
+      "summary": "Why the native VSA path could not lower/run a program — **always explicit, never silent** (G2).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::VsaArtifact",
+      "kind": "struct",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/vsa_codegen.rs",
+      "line": 1169,
+      "summary": "A compiled native VSA artifact: the executable on disk (cleaned on drop) plus the read-back shape",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::VsaCgOp",
+      "kind": "enum",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/vsa_codegen.rs",
+      "line": 153,
+      "summary": "The VSA ops native codegen lowers — the `mycelium-vsa::VsaModel` surface (RFC-0039 §5.2).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::VsaExplain",
+      "kind": "struct",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/vsa_codegen.rs",
+      "line": 467,
+      "summary": "The inspectable record of how a VSA op was lowered — the EXPLAIN payload (RFC-0004 §6; no black",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::VsaJitArtifact",
+      "kind": "struct",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/vsa_jit.rs",
+      "line": 448,
+      "summary": "A JIT-compiled dynamic-VSA kernel: the `.so` on disk (per-artifact temp dir, cleaned on drop) plus",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::VsaModelId",
+      "kind": "enum",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/vsa_codegen.rs",
+      "line": 178,
+      "summary": "The 1.0.0-native-mandatory VSA models (OQ-3 resolved 2026-06-30).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::VsaProgram",
+      "kind": "struct",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/vsa_codegen.rs",
+      "line": 309,
+      "summary": "A native-VSA lowering program: one op over a model's hypervector carrier, plus its operand(s).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::VsaResult",
+      "kind": "enum",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/vsa_codegen.rs",
+      "line": 332,
+      "summary": "What a VSA native op produces: a VSA `Value` (`bind`/`unbind`/`bundle`/`permute`) or a bare-`f64`",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -11046,6 +11288,39 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_mlir::compile_and_run_concurrent",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/concurrent.rs",
+      "line": 183,
+      "summary": "The harness-level parallel entry point for the **direct-LLVM AOT** path (default",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::compile_and_run_concurrent_with_swap_mode",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/concurrent.rs",
+      "line": 189,
+      "summary": "[`compile_and_run_concurrent`] under an **explicit** native swap cert mode (M-852 parameterization",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::compile_and_run_with_swap_mode",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/llvm.rs",
+      "line": 2835,
+      "summary": "Compile + run under an **explicit** native swap cert mode (M-852): `Recheck` (DEFAULT) or",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_mlir::compile_bitnet_dot",
       "kind": "fn",
       "crate": "mycelium-mlir",
@@ -11123,6 +11398,28 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_mlir::compile_with_swap_mode",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/llvm.rs",
+      "line": 2784,
+      "summary": "Compile under an **explicit** native swap cert mode (M-852): `Recheck` (DEFAULT — compile-time",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::concurrent",
+      "kind": "mod",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/lib.rs",
+      "line": 61,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_mlir::cross_backend_gate",
       "kind": "fn",
       "crate": "mycelium-mlir",
@@ -11141,6 +11438,83 @@
       "file": "crates/mycelium-mlir/src/aot.rs",
       "line": 64,
       "summary": "The default depth-budget resolution — the resolved ceiling **and** its `EXPLAIN`-able basis (no",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen",
+      "kind": "mod",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/lib.rs",
+      "line": 65,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen::DenseArtifact::run",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::dense_codegen::DenseArtifact",
+      "file": "crates/mycelium-mlir/src/dense_codegen.rs",
+      "line": 824,
+      "summary": "Run the artifact and read its result back.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen::DenseCgOp::is_value_op",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::dense_codegen::DenseCgOp",
+      "file": "crates/mycelium-mlir/src/dense_codegen.rs",
+      "line": 115,
+      "summary": "Whether the op produces a Dense `Value` (vs a bare-`f64` measurement).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen::DenseCgOp::name",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::dense_codegen::DenseCgOp",
+      "file": "crates/mycelium-mlir/src/dense_codegen.rs",
+      "line": 101,
+      "summary": "The `mycelium-dense` operation name (matches the reference's `operation_hash` keys), recorded in",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen::DenseCgOp::reference_guarantee",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::dense_codegen::DenseCgOp",
+      "file": "crates/mycelium-mlir/src/dense_codegen.rs",
+      "line": 122,
+      "summary": "The honest reference guarantee for a value op (mirrors `DenseSpace::op_guarantee`).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::dense_compile",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/dense_codegen.rs",
+      "line": 944,
+      "summary": "Compile a Dense program to a native executable (emit IR → `llc` → `clang`) without running it.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::dense_compile_and_run",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/dense_codegen.rs",
+      "line": 1001,
+      "summary": "Compile + run a Dense program: the compiled execution path the M-853 differential checks against",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -11310,6 +11684,17 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_mlir::emit_dense_llvm_ir",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/dense_codegen.rs",
+      "line": 435,
+      "summary": "Emit textual LLVM IR for a Dense element-wise program — a `main` that computes each result element",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_mlir::emit_llvm_ir",
       "kind": "fn",
       "crate": "mycelium-mlir",
@@ -11317,6 +11702,17 @@
       "file": "crates/mycelium-mlir/src/llvm.rs",
       "line": 2176,
       "summary": "Emit textual LLVM IR for the bit/trit + non-recursive-data program `node` — a `main` that",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::emit_llvm_ir_with_swap_mode",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/llvm.rs",
+      "line": 2187,
+      "summary": "Emit textual LLVM IR under an **explicit** native swap cert mode (M-852): `Recheck` (DEFAULT —",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -11339,6 +11735,17 @@
       "file": "crates/mycelium-mlir/src/specialize.rs",
       "line": 57,
       "summary": "Emit the textual LLVM IR for a **weight-specialized** ternary dot kernel",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::emit_vsa_llvm_ir",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/vsa_codegen.rs",
+      "line": 672,
+      "summary": "Emit textual LLVM IR for a VSA program — a `main` that computes each result component (or the",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -11475,6 +11882,17 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_mlir::jit_run_concurrent",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/concurrent.rs",
+      "line": 206,
+      "summary": "The harness-level parallel entry point for the **in-process JIT** path — see the module docs for",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_mlir::jit_specialized_dot",
       "kind": "fn",
       "crate": "mycelium-mlir",
@@ -11548,6 +11966,28 @@
       "file": "crates/mycelium-mlir/src/llvm.rs",
       "line": 2828,
       "summary": "Compile the bit/trit-subset program to a native executable, run it once, and read the result",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::llvm::emit_llvm_ir_many",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::llvm",
+      "file": "crates/mycelium-mlir/src/llvm.rs",
+      "line": 2290,
+      "summary": "Lower `nodes` — a batch of **independent** functions/nodules — in parallel across the native",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::llvm::emit_llvm_ir_many_with_swap_mode",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::llvm",
+      "file": "crates/mycelium-mlir/src/llvm.rs",
+      "line": 2298,
+      "summary": "[`emit_llvm_ir_many`] under an explicit, whole-batch [`SwapCertMode`] (M-852).",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -11981,6 +12421,17 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_mlir::plan_concurrent",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/concurrent.rs",
+      "line": 114,
+      "summary": "Compute the [`ConcurrentPlan`] for `node` — reuses",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_mlir::rc_plan",
       "kind": "mod",
       "crate": "mycelium-mlir",
@@ -12190,6 +12641,50 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_mlir::swap_codegen",
+      "kind": "mod",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/lib.rs",
+      "line": 77,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::swap_codegen::SwapCertMode::cert_source",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::swap_codegen::SwapCertMode",
+      "file": "crates/mycelium-mlir/src/swap_codegen.rs",
+      "line": 96,
+      "summary": "The cert **source** this mode records — independently re-checked vs carried-from-interp.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::swap_codegen::SwapCertMode::label",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::swap_codegen::SwapCertMode",
+      "file": "crates/mycelium-mlir/src/swap_codegen.rs",
+      "line": 86,
+      "summary": "A short, stable label for the EXPLAIN record / IR comment (never a hidden mode — G2).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::swap_codegen::legal_pair",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::swap_codegen",
+      "file": "crates/mycelium-mlir/src/swap_codegen.rs",
+      "line": 134,
+      "summary": "Whether `(n, m)` admits a lossless binary↔ternary swap: `B_n ⊆ T_m ⇔ 2^(n-1) ≤ (3^m − 1)/2`",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_mlir::ternary_dot_ref",
       "kind": "fn",
       "crate": "mycelium-mlir",
@@ -12197,6 +12692,17 @@
       "file": "crates/mycelium-mlir/src/bitnet.rs",
       "line": 135,
       "summary": "The reference (oracle) ternary dot product `Σ digit(wᵢ)·xᵢ` over `i64`, the exact semantics the",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::trampoline",
+      "kind": "mod",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/lib.rs",
+      "line": 78,
+      "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -12285,6 +12791,171 @@
       "file": "crates/mycelium-mlir/src/vr4.rs",
       "line": 105,
       "summary": "Whether this stage was actually dumped (covered), vs.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen",
+      "kind": "mod",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/lib.rs",
+      "line": 83,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaArtifact::run",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::vsa_codegen::VsaArtifact",
+      "file": "crates/mycelium-mlir/src/vsa_codegen.rs",
+      "line": 1284,
+      "summary": "Run the artifact and read its result back.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaCgOp::is_value_op",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::vsa_codegen::VsaCgOp",
+      "file": "crates/mycelium-mlir/src/vsa_codegen.rs",
+      "line": 170,
+      "summary": "Whether the op produces a VSA `Value` (vs a bare-`f64` measurement).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaModelId::from_registry_id",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::vsa_codegen::VsaModelId",
+      "file": "crates/mycelium-mlir/src/vsa_codegen.rs",
+      "line": 208,
+      "summary": "Parse a registry model id into a native-mandatory model, or `None` for a non-mandatory model",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaModelId::op_name",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::vsa_codegen::VsaModelId",
+      "file": "crates/mycelium-mlir/src/vsa_codegen.rs",
+      "line": 233,
+      "summary": "The full op name for `(model, op)` matching the reference's keys, e.g.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaModelId::op_prefix",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::vsa_codegen::VsaModelId",
+      "file": "crates/mycelium-mlir/src/vsa_codegen.rs",
+      "line": 221,
+      "summary": "The `mycelium-vsa` operation-name prefix for this model (e.g.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaModelId::reference_guarantee",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::vsa_codegen::VsaModelId",
+      "file": "crates/mycelium-mlir/src/vsa_codegen.rs",
+      "line": 260,
+      "summary": "The honest **value-level** guarantee the native read-back carries for `(model, op)` — derived",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaModelId::registry_id",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::vsa_codegen::VsaModelId",
+      "file": "crates/mycelium-mlir/src/vsa_codegen.rs",
+      "line": 195,
+      "summary": "The `mycelium-vsa` registry model id (matches `Repr::Vsa { model }` + the reference's",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::resolve_model",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::vsa_codegen",
+      "file": "crates/mycelium-mlir/src/vsa_codegen.rs",
+      "line": 291,
+      "summary": "Resolve a `Repr::Vsa { model, sparsity }` to the native [`VsaModelId`] for lowering, or an",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_compile",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/vsa_codegen.rs",
+      "line": 1485,
+      "summary": "Compile a VSA program to a native executable (emit IR → `llc` → `clang`) without running it.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_compile_and_run",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/vsa_codegen.rs",
+      "line": 1528,
+      "summary": "Compile + run a VSA program: the compiled execution path the M-854 differential checks against the",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_jit",
+      "kind": "mod",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/lib.rs",
+      "line": 89,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_jit::VsaJitArtifact::call",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::vsa_jit::VsaJitArtifact",
+      "file": "crates/mycelium-mlir/src/vsa_jit.rs",
+      "line": 465,
+      "summary": "Call the kernel in-process (`dlopen` -> `dlsym` -> call) and read the result back, applying the",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_jit_compile",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/vsa_jit.rs",
+      "line": 512,
+      "summary": "Compile a dynamic-VSA program to an in-process JIT kernel (emit IR -> `clang -shared` -> ready to",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_jit_compile_and_run",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/vsa_jit.rs",
+      "line": 549,
+      "summary": "Compile + call a dynamic-VSA program in-process: the JIT execution path the M-855 differential",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -13319,6 +13990,369 @@
       "file": "crates/mycelium-proj/src/cert_scope.rs",
       "line": 170,
       "summary": "**Resolve the active certification mode most-specific-wins** over a set of `@certification`",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation",
+      "kind": "mod",
+      "crate": "mycelium-rt-abi",
+      "module": "mycelium_rt_abi",
+      "file": "crates/mycelium-rt-abi/src/lib.rs",
+      "line": 29,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::ChannelId",
+      "kind": "struct",
+      "crate": "mycelium-rt-abi",
+      "module": "mycelium_rt_abi::reclamation",
+      "file": "crates/mycelium-rt-abi/src/reclamation.rs",
+      "line": 61,
+      "summary": "A stable, opaque identifier for a channel (RFC-0027 §9, `channel_id`).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::CollectingSink",
+      "kind": "struct",
+      "crate": "mycelium-rt-abi",
+      "module": "mycelium_rt_abi::reclamation",
+      "file": "crates/mycelium-rt-abi/src/reclamation.rs",
+      "line": 343,
+      "summary": "A `ReclamationSink` implementation that collects all emitted records into a `Vec`.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::CollectingSink::drain",
+      "kind": "fn",
+      "crate": "mycelium-rt-abi",
+      "module": "mycelium_rt_abi::reclamation::CollectingSink",
+      "file": "crates/mycelium-rt-abi/src/reclamation.rs",
+      "line": 370,
+      "summary": "Drain all collected records, leaving the sink empty.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::CollectingSink::is_empty",
+      "kind": "fn",
+      "crate": "mycelium-rt-abi",
+      "module": "mycelium_rt_abi::reclamation::CollectingSink",
+      "file": "crates/mycelium-rt-abi/src/reclamation.rs",
+      "line": 365,
+      "summary": "Whether no records have been collected.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::CollectingSink::len",
+      "kind": "fn",
+      "crate": "mycelium-rt-abi",
+      "module": "mycelium_rt_abi::reclamation::CollectingSink",
+      "file": "crates/mycelium-rt-abi/src/reclamation.rs",
+      "line": 359,
+      "summary": "Number of records collected so far.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::CollectingSink::new",
+      "kind": "fn",
+      "crate": "mycelium-rt-abi",
+      "module": "mycelium_rt_abi::reclamation::CollectingSink",
+      "file": "crates/mycelium-rt-abi/src/reclamation.rs",
+      "line": 182,
+      "summary": "Construct a `ReclamationRecord` for a `RcZero` or `ScopeExit` event (no channel).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::ExplainRecord",
+      "kind": "struct",
+      "crate": "mycelium-rt-abi",
+      "module": "mycelium_rt_abi::reclamation",
+      "file": "crates/mycelium-rt-abi/src/reclamation.rs",
+      "line": 270,
+      "summary": "The EXPLAIN output for a `ReclamationRecord` — the RFC-0005 EXPLAIN contract applied",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::ReclamationRecord",
+      "kind": "struct",
+      "crate": "mycelium-rt-abi",
+      "module": "mycelium_rt_abi::reclamation",
+      "file": "crates/mycelium-rt-abi/src/reclamation.rs",
+      "line": 148,
+      "summary": "The EXPLAIN/audit record for a single reclamation event (RFC-0027 §9).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::ReclamationRecord::explain",
+      "kind": "fn",
+      "crate": "mycelium-rt-abi",
+      "module": "mycelium_rt_abi::reclamation::ReclamationRecord",
+      "file": "crates/mycelium-rt-abi/src/reclamation.rs",
+      "line": 234,
+      "summary": "EXPLAIN-ability (RFC-0005): return a human-readable summary of all five fields.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::ReclamationRecord::for_channel_close",
+      "kind": "fn",
+      "crate": "mycelium-rt-abi",
+      "module": "mycelium_rt_abi::reclamation::ReclamationRecord",
+      "file": "crates/mycelium-rt-abi/src/reclamation.rs",
+      "line": 207,
+      "summary": "Construct a `ReclamationRecord` for a `ChannelClose` event.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::ReclamationRecord::trigger",
+      "kind": "fn",
+      "crate": "mycelium-rt-abi",
+      "module": "mycelium_rt_abi::reclamation::ReclamationRecord",
+      "file": "crates/mycelium-rt-abi/src/reclamation.rs",
+      "line": 246,
+      "summary": "Return a reference to the trigger — the G2 \"why\" of this reclamation event.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::ReclamationRecord::value_meta_hash",
+      "kind": "fn",
+      "crate": "mycelium-rt-abi",
+      "module": "mycelium_rt_abi::reclamation::ReclamationRecord",
+      "file": "crates/mycelium-rt-abi/src/reclamation.rs",
+      "line": 252,
+      "summary": "Return the content-identity hash of the reclaimed value (RFC-0027 §9 / RFC-0001 §4.6).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::ReclamationSink",
+      "kind": "trait",
+      "crate": "mycelium-rt-abi",
+      "module": "mycelium_rt_abi::reclamation",
+      "file": "crates/mycelium-rt-abi/src/reclamation.rs",
+      "line": 330,
+      "summary": "The never-silent emit contract (G2 / RFC-0027 §9).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::ReclamationTrigger",
+      "kind": "enum",
+      "crate": "mycelium-rt-abi",
+      "module": "mycelium_rt_abi::reclamation",
+      "file": "crates/mycelium-rt-abi/src/reclamation.rs",
+      "line": 93,
+      "summary": "The reason a reclamation event fired — exhaustive over the three structural triggers",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::ScopeId",
+      "kind": "struct",
+      "crate": "mycelium-rt-abi",
+      "module": "mycelium_rt_abi::reclamation",
+      "file": "crates/mycelium-rt-abi/src/reclamation.rs",
+      "line": 52,
+      "summary": "A stable, opaque identifier for a runtime scope (RT7 scope tree node).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::SweepEpoch",
+      "kind": "struct",
+      "crate": "mycelium-rt-abi",
+      "module": "mycelium_rt_abi::reclamation",
+      "file": "crates/mycelium-rt-abi/src/reclamation.rs",
+      "line": 76,
+      "summary": "A monotonic epoch counter from the `SweepOrder` model (RFC-0008 §4.3).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_rt_abi::supervision",
+      "kind": "mod",
+      "crate": "mycelium-rt-abi",
+      "module": "mycelium_rt_abi",
+      "file": "crates/mycelium-rt-abi/src/lib.rs",
+      "line": 30,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_rt_abi::supervision::CancelTree",
+      "kind": "struct",
+      "crate": "mycelium-rt-abi",
+      "module": "mycelium_rt_abi::supervision",
+      "file": "crates/mycelium-rt-abi/src/supervision.rs",
+      "line": 48,
+      "summary": "A cancellation **tree** (RFC-0008 RT7): a node with its own [`CancelToken`] and child tokens.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_rt_abi::supervision::CancelTree::cancel",
+      "kind": "fn",
+      "crate": "mycelium-rt-abi",
+      "module": "mycelium_rt_abi::supervision::CancelTree",
+      "file": "crates/mycelium-rt-abi/src/supervision.rs",
+      "line": 88,
+      "summary": "Cancel this node **and every descendant** — the never-silent cascade (G2/RT7).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_rt_abi::supervision::CancelTree::child",
+      "kind": "fn",
+      "crate": "mycelium-rt-abi",
+      "module": "mycelium_rt_abi::supervision::CancelTree",
+      "file": "crates/mycelium-rt-abi/src/supervision.rs",
+      "line": 74,
+      "summary": "Attach a fresh child scope and return a mutable handle to it, so callers can build a genuine",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_rt_abi::supervision::CancelTree::child_count",
+      "kind": "fn",
+      "crate": "mycelium-rt-abi",
+      "module": "mycelium_rt_abi::supervision::CancelTree",
+      "file": "crates/mycelium-rt-abi/src/supervision.rs",
+      "line": 97,
+      "summary": "The number of direct child scopes (for inspection/tests).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_rt_abi::supervision::CancelTree::is_cancelled",
+      "kind": "fn",
+      "crate": "mycelium-rt-abi",
+      "module": "mycelium_rt_abi::supervision::CancelTree",
+      "file": "crates/mycelium-rt-abi/src/supervision.rs",
+      "line": 83,
+      "summary": "Whether this node has been cancelled.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_rt_abi::supervision::CancelTree::new",
+      "kind": "fn",
+      "crate": "mycelium-rt-abi",
+      "module": "mycelium_rt_abi::supervision::CancelTree",
+      "file": "crates/mycelium-rt-abi/src/supervision.rs",
+      "line": 56,
+      "summary": "A fresh, un-cancelled root.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_rt_abi::supervision::CancelTree::token",
+      "kind": "fn",
+      "crate": "mycelium-rt-abi",
+      "module": "mycelium_rt_abi::supervision::CancelTree",
+      "file": "crates/mycelium-rt-abi/src/supervision.rs",
+      "line": 65,
+      "summary": "This node's cooperative cancel token (clones share the same flag).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_rt_abi::supervision::SUPERVISION_PROPAGATION_STRENGTH:",
+      "kind": "const",
+      "crate": "mycelium-rt-abi",
+      "module": "mycelium_rt_abi::supervision",
+      "file": "crates/mycelium-rt-abi/src/supervision.rs",
+      "line": 32,
+      "summary": "Guarantee strength for cancellation propagation + explicit outcome collection.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_rt_abi::supervision::SUPERVISION_RESTART_BOUND_STRENGTH:",
+      "kind": "const",
+      "crate": "mycelium-rt-abi",
+      "module": "mycelium_rt_abi::supervision",
+      "file": "crates/mycelium-rt-abi/src/supervision.rs",
+      "line": 35,
+      "summary": "Guarantee strength for the restart bound (inherited from the M-356 [`Supervisor`]).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_rt_abi::supervision::SupervisedFailure",
+      "kind": "enum",
+      "crate": "mycelium-rt-abi",
+      "module": "mycelium_rt_abi::supervision",
+      "file": "crates/mycelium-rt-abi/src/supervision.rs",
+      "line": 190,
+      "summary": "Why a supervised child run ended in failure — always explicit (G2).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_rt_abi::supervision::SupervisedRun",
+      "kind": "struct",
+      "crate": "mycelium-rt-abi",
+      "module": "mycelium_rt_abi::supervision",
+      "file": "crates/mycelium-rt-abi/src/supervision.rs",
+      "line": 174,
+      "summary": "The result of supervising a restartable child to resolution or escalation.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_rt_abi::supervision::SupervisionAction",
+      "kind": "enum",
+      "crate": "mycelium-rt-abi",
+      "module": "mycelium_rt_abi::supervision",
+      "file": "crates/mycelium-rt-abi/src/supervision.rs",
+      "line": 153,
+      "summary": "What a supervisor did about one child failure — a reified, inspectable action (EXPLAIN; no black",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_rt_abi::supervision::SupervisionRecord",
+      "kind": "struct",
+      "crate": "mycelium-rt-abi",
+      "module": "mycelium_rt_abi::supervision",
+      "file": "crates/mycelium-rt-abi/src/supervision.rs",
+      "line": 163,
+      "summary": "One reified supervision decision — the EXPLAIN record (RFC-0008 §4.7; ADR-006: selections are",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_rt_abi::supervision::run_supervised",
+      "kind": "fn",
+      "crate": "mycelium-rt-abi",
+      "module": "mycelium_rt_abi::supervision",
+      "file": "crates/mycelium-rt-abi/src/supervision.rs",
+      "line": 120,
+      "summary": "Run `tasks` on the OS-thread pool under a shared [`CancelToken`], collecting **every** child's",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_rt_abi::supervision::supervise_with_restart",
+      "kind": "fn",
+      "crate": "mycelium-rt-abi",
+      "module": "mycelium_rt_abi::supervision",
+      "file": "crates/mycelium-rt-abi/src/supervision.rs",
+      "line": 208,
+      "summary": "Run a restartable child under a live [`Supervisor`] (M-356) until it succeeds or the supervisor",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -19241,17 +20275,6 @@
       "corpus_refs": []
     },
     {
-      "symbol": "mycelium_std_runtime::scheduler::Scheduler::new",
-      "kind": "fn",
-      "crate": "mycelium-std-runtime",
-      "module": "mycelium_std_runtime::scheduler::Scheduler",
-      "file": "crates/mycelium-std-runtime/src/colony.rs",
-      "line": 63,
-      "summary": "Create a new empty scope.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
       "symbol": "mycelium_std_runtime::scope_region",
       "kind": "mod",
       "crate": "mycelium-std-runtime",
@@ -19347,17 +20370,6 @@
       "file": "crates/mycelium-std-runtime/src/lib.rs",
       "line": 100,
       "summary": null,
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_std_runtime::supervision::CancelTree::cancel",
-      "kind": "fn",
-      "crate": "mycelium-std-runtime",
-      "module": "mycelium_std_runtime::supervision::CancelTree",
-      "file": "crates/mycelium-std-runtime/src/colony.rs",
-      "line": 88,
-      "summary": "Cancel this scope.",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -33121,6 +34133,210 @@
       "reason": "ambiguous: short name 'compile_and_run' is defined in multiple modules; attributed to crates/mycelium-mlir/src/dialect/native.rs by heuristic — verify against source (ground truth)"
     },
     {
+      "symbol": "mycelium_mlir::concurrent::ConcurrentPlan",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::ConcurrentPlan` at crates/mycelium-mlir/src/concurrent.rs:94 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::concurrent::ConcurrentPlan::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::concurrent::ConcurrentPlan::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::concurrent::ConcurrentPlan::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::concurrent::ConcurrentPlan::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::concurrent::ConcurrentPlan::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::concurrent::ConcurrentPlan::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::concurrent::compile_and_run_concurrent",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::compile_and_run_concurrent` at crates/mycelium-mlir/src/concurrent.rs:183 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::concurrent::compile_and_run_concurrent_with_swap_mode",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::compile_and_run_concurrent_with_swap_mode` at crates/mycelium-mlir/src/concurrent.rs:189 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::concurrent::jit_run_concurrent",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::jit_run_concurrent` at crates/mycelium-mlir/src/concurrent.rs:206 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::concurrent::plan_concurrent",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::plan_concurrent` at crates/mycelium-mlir/src/concurrent.rs:114 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen::DENSE_CODEGEN_GUARANTEE:",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::DENSE_CODEGEN_GUARANTEE:` at crates/mycelium-mlir/src/dense_codegen.rs:291 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen::DenseAotError",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::DenseAotError` at crates/mycelium-mlir/src/dense_codegen.rs:171 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen::DenseAotError::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen::DenseAotError::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen::DenseAotError::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen::DenseAotError::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen::DenseAotError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen::DenseAotError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen::DenseAotError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen::DenseAotError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen::DenseArtifact",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::DenseArtifact` at crates/mycelium-mlir/src/dense_codegen.rs:788 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen::DenseCgOp",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::DenseCgOp` at crates/mycelium-mlir/src/dense_codegen.rs:82 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen::DenseCgOp::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen::DenseCgOp::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen::DenseCgOp::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen::DenseCgOp::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen::DenseCgOp::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen::DenseCgOp::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen::DenseExplain",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::DenseExplain` at crates/mycelium-mlir/src/dense_codegen.rs:265 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen::DenseExplain::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen::DenseExplain::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen::DenseExplain::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen::DenseExplain::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen::DenseExplain::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen::DenseExplain::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen::DenseProgram",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::DenseProgram` at crates/mycelium-mlir/src/dense_codegen.rs:136 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen::DenseProgram::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen::DenseProgram::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen::DenseProgram::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen::DenseProgram::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen::DenseResult",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::DenseResult` at crates/mycelium-mlir/src/dense_codegen.rs:158 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen::DenseResult::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen::DenseResult::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen::DenseResult::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen::DenseResult::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen::DenseResult::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen::DenseResult::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen::dense_compile",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::dense_compile` at crates/mycelium-mlir/src/dense_codegen.rs:944 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen::dense_compile_and_run",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::dense_compile_and_run` at crates/mycelium-mlir/src/dense_codegen.rs:1001 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::dense_codegen::emit_dense_llvm_ir",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::emit_dense_llvm_ir` at crates/mycelium-mlir/src/dense_codegen.rs:435 — one canonical row kept"
+    },
+    {
       "symbol": "mycelium_mlir::deploy::DeployError",
       "reason": "dedup-alias: same definition as `mycelium_mlir::DeployError` at crates/mycelium-mlir/src/deploy.rs:60 — one canonical row kept"
     },
@@ -33329,8 +34545,20 @@
       "reason": "dedup-alias: same definition as `mycelium_mlir::CompiledArtifact` at crates/mycelium-mlir/src/llvm.rs:2731 — one canonical row kept"
     },
     {
+      "symbol": "mycelium_mlir::llvm::compile_and_run_with_swap_mode",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::compile_and_run_with_swap_mode` at crates/mycelium-mlir/src/llvm.rs:2835 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::llvm::compile_with_swap_mode",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::compile_with_swap_mode` at crates/mycelium-mlir/src/llvm.rs:2784 — one canonical row kept"
+    },
+    {
       "symbol": "mycelium_mlir::llvm::emit_llvm_ir",
       "reason": "dedup-alias: same definition as `mycelium_mlir::emit_llvm_ir` at crates/mycelium-mlir/src/llvm.rs:2176 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::llvm::emit_llvm_ir_with_swap_mode",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::emit_llvm_ir_with_swap_mode` at crates/mycelium-mlir/src/llvm.rs:2187 — one canonical row kept"
     },
     {
       "symbol": "mycelium_mlir::mode::ExecMode::clone",
@@ -33621,6 +34849,10 @@
       "reason": "dedup-alias: same definition as `mycelium_mlir::run_with_reclamation` at crates/mycelium-mlir/src/rc_plan.rs:163 — one canonical row kept"
     },
     {
+      "symbol": "mycelium_mlir::resolve_vsa_model",
+      "reason": "definition not found via regex heuristic (kind='fn', name='resolve_vsa_model') — possibly macro-generated or cfg-gated"
+    },
+    {
       "symbol": "mycelium_mlir::run",
       "reason": "ambiguous: short name 'run' is defined in multiple modules; attributed to crates/mycelium-mlir/src/aot.rs by heuristic — verify against source (ground truth)"
     },
@@ -33909,6 +35141,74 @@
       "reason": "dedup-alias: same definition as `mycelium_mlir::jit_specialized_dot` at crates/mycelium-mlir/src/specialize.rs:205 — one canonical row kept"
     },
     {
+      "symbol": "mycelium_mlir::swap_codegen::SwapCertMode",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::SwapCertMode` at crates/mycelium-mlir/src/swap_codegen.rs:72 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::swap_codegen::SwapCertMode::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::swap_codegen::SwapCertMode::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::swap_codegen::SwapCertMode::default",
+      "reason": "definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::swap_codegen::SwapCertMode::default",
+      "reason": "definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::swap_codegen::SwapCertMode::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::swap_codegen::SwapCertMode::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::swap_codegen::SwapCertMode::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::swap_codegen::SwapCertMode::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::swap_codegen::SwapExplain",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::SwapExplain` at crates/mycelium-mlir/src/swap_codegen.rs:109 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::swap_codegen::SwapExplain::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::swap_codegen::SwapExplain::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::swap_codegen::SwapExplain::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::swap_codegen::SwapExplain::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::swap_codegen::SwapExplain::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::swap_codegen::SwapExplain::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::swap_legal_pair",
+      "reason": "definition not found via regex heuristic (kind='fn', name='swap_legal_pair') — possibly macro-generated or cfg-gated"
+    },
+    {
       "symbol": "mycelium_mlir::vr4::Backend",
       "reason": "dedup-alias: same definition as `mycelium_mlir::Backend` at crates/mycelium-mlir/src/vr4.rs:49 — one canonical row kept"
     },
@@ -34039,6 +35339,218 @@
     {
       "symbol": "mycelium_mlir::vr4::cross_backend_gate",
       "reason": "dedup-alias: same definition as `mycelium_mlir::cross_backend_gate` at crates/mycelium-mlir/src/vr4.rs:195 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::FHRR_BUNDLE_PROFILE:",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::FHRR_BUNDLE_PROFILE:` at crates/mycelium-mlir/src/vsa_codegen.rs:137 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::HRR_BUNDLE_PROFILE:",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::HRR_BUNDLE_PROFILE:` at crates/mycelium-mlir/src/vsa_codegen.rs:119 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VSA_CODEGEN_GUARANTEE:",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::VSA_CODEGEN_GUARANTEE:` at crates/mycelium-mlir/src/vsa_codegen.rs:492 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaAotError",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::VsaAotError` at crates/mycelium-mlir/src/vsa_codegen.rs:345 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaAotError::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaAotError::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaAotError::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaAotError::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaAotError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaAotError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaAotError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaAotError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaArtifact",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::VsaArtifact` at crates/mycelium-mlir/src/vsa_codegen.rs:1169 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaCgOp",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::VsaCgOp` at crates/mycelium-mlir/src/vsa_codegen.rs:153 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaCgOp::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaCgOp::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaCgOp::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaCgOp::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaCgOp::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaCgOp::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaExplain",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::VsaExplain` at crates/mycelium-mlir/src/vsa_codegen.rs:467 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaExplain::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaExplain::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaExplain::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaExplain::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaExplain::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaExplain::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaModelId",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::VsaModelId` at crates/mycelium-mlir/src/vsa_codegen.rs:178 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaModelId::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaModelId::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaModelId::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaModelId::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaModelId::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaModelId::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaProgram",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::VsaProgram` at crates/mycelium-mlir/src/vsa_codegen.rs:309 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaProgram::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaProgram::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaProgram::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaProgram::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaResult",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::VsaResult` at crates/mycelium-mlir/src/vsa_codegen.rs:332 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaResult::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaResult::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaResult::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaResult::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaResult::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::VsaResult::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::emit_vsa_llvm_ir",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::emit_vsa_llvm_ir` at crates/mycelium-mlir/src/vsa_codegen.rs:672 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::vsa_compile",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::vsa_compile` at crates/mycelium-mlir/src/vsa_codegen.rs:1485 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_codegen::vsa_compile_and_run",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::vsa_compile_and_run` at crates/mycelium-mlir/src/vsa_codegen.rs:1528 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_jit::VSA_JIT_GUARANTEE:",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::VSA_JIT_GUARANTEE:` at crates/mycelium-mlir/src/vsa_jit.rs:88 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_jit::VsaJitArtifact",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::VsaJitArtifact` at crates/mycelium-mlir/src/vsa_jit.rs:448 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_jit::vsa_jit_compile",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::vsa_jit_compile` at crates/mycelium-mlir/src/vsa_jit.rs:512 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::vsa_jit::vsa_jit_compile_and_run",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::vsa_jit_compile_and_run` at crates/mycelium-mlir/src/vsa_jit.rs:549 — one canonical row kept"
     },
     {
       "symbol": "mycelium_numerics::cert::Certificate",
@@ -35139,6 +36651,206 @@
     {
       "symbol": "mycelium_proj::resolve::resolve",
       "reason": "dedup-alias: same definition as `mycelium_proj::resolve` at crates/mycelium-proj/src/resolve.rs:83 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::ChannelId::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::ChannelId::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::ChannelId::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::ChannelId::hash",
+      "reason": "definition not found via regex heuristic (kind='fn', name='hash') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::CollectingSink::default",
+      "reason": "definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::CollectingSink::emit",
+      "reason": "definition not found via regex heuristic (kind='fn', name='emit') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::CollectingSink::emit",
+      "reason": "definition not found via regex heuristic (kind='fn', name='emit') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::CollectingSink::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::ExplainRecord::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::ExplainRecord::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::ExplainRecord::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::ExplainRecord::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::ReclamationRecord::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::ReclamationRecord::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::ReclamationRecord::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::ReclamationRecord::new",
+      "reason": "dedup-alias: same definition as `mycelium_rt_abi::reclamation::CollectingSink::new` at crates/mycelium-rt-abi/src/reclamation.rs:182 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::ReclamationSink::emit",
+      "reason": "definition not found via regex heuristic (kind='fn', name='emit') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::ReclamationTrigger::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::ReclamationTrigger::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::ReclamationTrigger::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::ScopeId::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::ScopeId::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::ScopeId::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::ScopeId::hash",
+      "reason": "definition not found via regex heuristic (kind='fn', name='hash') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::SweepEpoch::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::SweepEpoch::cmp",
+      "reason": "definition not found via regex heuristic (kind='fn', name='cmp') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::SweepEpoch::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::SweepEpoch::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::SweepEpoch::hash",
+      "reason": "definition not found via regex heuristic (kind='fn', name='hash') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_rt_abi::reclamation::SweepEpoch::partial_cmp",
+      "reason": "definition not found via regex heuristic (kind='fn', name='partial_cmp') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_rt_abi::supervision::CancelToken",
+      "reason": "re-export (pub use) — cannot locate definition without type resolution"
+    },
+    {
+      "symbol": "mycelium_rt_abi::supervision::CancelTree::default",
+      "reason": "definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_rt_abi::supervision::CancelTree::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_rt_abi::supervision::Cancelled",
+      "reason": "re-export (pub use) — cannot locate definition without type resolution"
+    },
+    {
+      "symbol": "mycelium_rt_abi::supervision::Escalation",
+      "reason": "re-export (pub use) — cannot locate definition without type resolution"
+    },
+    {
+      "symbol": "mycelium_rt_abi::supervision::RestartIntensity",
+      "reason": "re-export (pub use) — cannot locate definition without type resolution"
+    },
+    {
+      "symbol": "mycelium_rt_abi::supervision::SupervisedFailure::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_rt_abi::supervision::SupervisedFailure::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_rt_abi::supervision::SupervisedFailure::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_rt_abi::supervision::SupervisedRun",
+      "reason": "definition not found via regex heuristic (kind='fn', name='SupervisedRun') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_rt_abi::supervision::SupervisedRun",
+      "reason": "definition not found via regex heuristic (kind='fn', name='SupervisedRun') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_rt_abi::supervision::SupervisedRun",
+      "reason": "definition not found via regex heuristic (kind='fn', name='SupervisedRun') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_rt_abi::supervision::SupervisionAction::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_rt_abi::supervision::SupervisionAction::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_rt_abi::supervision::SupervisionAction::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_rt_abi::supervision::SupervisionRecord::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_rt_abi::supervision::SupervisionRecord::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_rt_abi::supervision::SupervisionRecord::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_rt_abi::supervision::Supervisor",
+      "reason": "re-export (pub use) — cannot locate definition without type resolution"
+    },
+    {
+      "symbol": "mycelium_rt_abi::supervision::TaskOutcome",
+      "reason": "re-export (pub use) — cannot locate definition without type resolution"
     },
     {
       "symbol": "mycelium_sec::Finding::clone",
@@ -39362,195 +41074,35 @@
     },
     {
       "symbol": "mycelium_std_runtime::reclamation::ChannelId",
-      "reason": "definition not found via regex heuristic (kind='struct', name='ChannelId') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::ChannelId::clone",
-      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::ChannelId::eq",
-      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::ChannelId::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::ChannelId::hash",
-      "reason": "definition not found via regex heuristic (kind='fn', name='hash') — possibly macro-generated or cfg-gated"
+      "reason": "re-export (pub use) — cannot locate definition without type resolution"
     },
     {
       "symbol": "mycelium_std_runtime::reclamation::CollectingSink",
-      "reason": "definition not found via regex heuristic (kind='struct', name='CollectingSink') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::CollectingSink::default",
-      "reason": "definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::CollectingSink::drain",
-      "reason": "definition not found via regex heuristic (kind='fn', name='drain') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::CollectingSink::emit",
-      "reason": "definition not found via regex heuristic (kind='fn', name='emit') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::CollectingSink::emit",
-      "reason": "definition not found via regex heuristic (kind='fn', name='emit') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::CollectingSink::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::CollectingSink::is_empty",
-      "reason": "definition not found via regex heuristic (kind='fn', name='is_empty') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::CollectingSink::len",
-      "reason": "definition not found via regex heuristic (kind='fn', name='len') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::CollectingSink::new",
-      "reason": "ambiguous: short name 'new' is defined in multiple modules; attributed to crates/mycelium-std-runtime/src/colony.rs by heuristic — verify against source (ground truth)"
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::CollectingSink::new",
-      "reason": "dedup-alias: same definition as `mycelium_std_runtime::scheduler::Scheduler::new` at crates/mycelium-std-runtime/src/colony.rs:63 — one canonical row kept"
+      "reason": "re-export (pub use) — cannot locate definition without type resolution"
     },
     {
       "symbol": "mycelium_std_runtime::reclamation::ExplainRecord",
-      "reason": "definition not found via regex heuristic (kind='struct', name='ExplainRecord') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::ExplainRecord::clone",
-      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::ExplainRecord::eq",
-      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::ExplainRecord::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::ExplainRecord::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+      "reason": "re-export (pub use) — cannot locate definition without type resolution"
     },
     {
       "symbol": "mycelium_std_runtime::reclamation::ReclamationRecord",
-      "reason": "definition not found via regex heuristic (kind='struct', name='ReclamationRecord') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::ReclamationRecord::clone",
-      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::ReclamationRecord::eq",
-      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::ReclamationRecord::explain",
-      "reason": "definition not found via regex heuristic (kind='fn', name='explain') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::ReclamationRecord::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::ReclamationRecord::for_channel_close",
-      "reason": "definition not found via regex heuristic (kind='fn', name='for_channel_close') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::ReclamationRecord::new",
-      "reason": "ambiguous: short name 'new' is defined in multiple modules; attributed to crates/mycelium-std-runtime/src/colony.rs by heuristic — verify against source (ground truth)"
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::ReclamationRecord::new",
-      "reason": "dedup-alias: same definition as `mycelium_std_runtime::scheduler::Scheduler::new` at crates/mycelium-std-runtime/src/colony.rs:63 — one canonical row kept"
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::ReclamationRecord::trigger",
-      "reason": "definition not found via regex heuristic (kind='fn', name='trigger') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::ReclamationRecord::value_meta_hash",
-      "reason": "definition not found via regex heuristic (kind='fn', name='value_meta_hash') — possibly macro-generated or cfg-gated"
+      "reason": "re-export (pub use) — cannot locate definition without type resolution"
     },
     {
       "symbol": "mycelium_std_runtime::reclamation::ReclamationSink",
-      "reason": "definition not found via regex heuristic (kind='trait', name='ReclamationSink') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::ReclamationSink::emit",
-      "reason": "definition not found via regex heuristic (kind='fn', name='emit') — possibly macro-generated or cfg-gated"
+      "reason": "re-export (pub use) — cannot locate definition without type resolution"
     },
     {
       "symbol": "mycelium_std_runtime::reclamation::ReclamationTrigger",
-      "reason": "definition not found via regex heuristic (kind='enum', name='ReclamationTrigger') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::ReclamationTrigger::clone",
-      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::ReclamationTrigger::eq",
-      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::ReclamationTrigger::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+      "reason": "re-export (pub use) — cannot locate definition without type resolution"
     },
     {
       "symbol": "mycelium_std_runtime::reclamation::ScopeId",
-      "reason": "definition not found via regex heuristic (kind='struct', name='ScopeId') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::ScopeId::clone",
-      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::ScopeId::eq",
-      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::ScopeId::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::ScopeId::hash",
-      "reason": "definition not found via regex heuristic (kind='fn', name='hash') — possibly macro-generated or cfg-gated"
+      "reason": "re-export (pub use) — cannot locate definition without type resolution"
     },
     {
       "symbol": "mycelium_std_runtime::reclamation::SweepEpoch",
-      "reason": "definition not found via regex heuristic (kind='struct', name='SweepEpoch') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::SweepEpoch::clone",
-      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::SweepEpoch::cmp",
-      "reason": "definition not found via regex heuristic (kind='fn', name='cmp') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::SweepEpoch::eq",
-      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::SweepEpoch::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::SweepEpoch::hash",
-      "reason": "definition not found via regex heuristic (kind='fn', name='hash') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::SweepEpoch::partial_cmp",
-      "reason": "definition not found via regex heuristic (kind='fn', name='partial_cmp') — possibly macro-generated or cfg-gated"
+      "reason": "re-export (pub use) — cannot locate definition without type resolution"
     },
     {
       "symbol": "mycelium_std_runtime::region::ClosedRegion::clone",
@@ -39649,68 +41201,32 @@
       "reason": "dedup-alias: same definition as `mycelium_std_runtime::region::Region::new` at crates/mycelium-std-runtime/src/region.rs:190 — one canonical row kept"
     },
     {
-      "symbol": "mycelium_std_runtime::scheduler::SCHEDULER_LIVENESS_STRENGTH:",
-      "reason": "definition not found via regex heuristic (kind='const', name='SCHEDULER_LIVENESS_STRENGTH:') — possibly macro-generated or cfg-gated"
+      "symbol": "mycelium_std_runtime::scheduler::SCHEDULER_LIVENESS_STRENGTH",
+      "reason": "re-export (pub use) — cannot locate definition without type resolution"
     },
     {
-      "symbol": "mycelium_std_runtime::scheduler::SCHEDULER_RT2_STRENGTH:",
-      "reason": "definition not found via regex heuristic (kind='const', name='SCHEDULER_RT2_STRENGTH:') — possibly macro-generated or cfg-gated"
+      "symbol": "mycelium_std_runtime::scheduler::SCHEDULER_RT2_STRENGTH",
+      "reason": "re-export (pub use) — cannot locate definition without type resolution"
+    },
+    {
+      "symbol": "mycelium_std_runtime::scheduler::STEAL_POLICY_STRENGTH",
+      "reason": "re-export (pub use) — cannot locate definition without type resolution"
     },
     {
       "symbol": "mycelium_std_runtime::scheduler::Scheduler",
-      "reason": "definition not found via regex heuristic (kind='struct', name='Scheduler') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::scheduler::Scheduler::capacity",
-      "reason": "definition not found via regex heuristic (kind='fn', name='capacity') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::scheduler::Scheduler::clone",
-      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::scheduler::Scheduler::default",
-      "reason": "definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::scheduler::Scheduler::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::scheduler::Scheduler::new",
-      "reason": "ambiguous: short name 'new' is defined in multiple modules; attributed to crates/mycelium-std-runtime/src/colony.rs by heuristic — verify against source (ground truth)"
-    },
-    {
-      "symbol": "mycelium_std_runtime::scheduler::Scheduler::run_indexed",
-      "reason": "definition not found via regex heuristic (kind='fn', name='run_indexed') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::scheduler::Scheduler::with_workers",
-      "reason": "definition not found via regex heuristic (kind='fn', name='with_workers') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::scheduler::Scheduler::workers",
-      "reason": "definition not found via regex heuristic (kind='fn', name='workers') — possibly macro-generated or cfg-gated"
+      "reason": "re-export (pub use) — cannot locate definition without type resolution"
     },
     {
       "symbol": "mycelium_std_runtime::scheduler::SchedulerError",
-      "reason": "definition not found via regex heuristic (kind='enum', name='SchedulerError') — possibly macro-generated or cfg-gated"
+      "reason": "re-export (pub use) — cannot locate definition without type resolution"
     },
     {
-      "symbol": "mycelium_std_runtime::scheduler::SchedulerError::clone",
-      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+      "symbol": "mycelium_std_runtime::scheduler::StealDecision",
+      "reason": "re-export (pub use) — cannot locate definition without type resolution"
     },
     {
-      "symbol": "mycelium_std_runtime::scheduler::SchedulerError::eq",
-      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::scheduler::SchedulerError::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::scheduler::SchedulerError::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+      "symbol": "mycelium_std_runtime::scheduler::StealPolicy",
+      "reason": "re-export (pub use) — cannot locate definition without type resolution"
     },
     {
       "symbol": "mycelium_std_runtime::scope_region::RegionScope::fmt",
@@ -39722,43 +41238,7 @@
     },
     {
       "symbol": "mycelium_std_runtime::supervision::CancelTree",
-      "reason": "definition not found via regex heuristic (kind='struct', name='CancelTree') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::supervision::CancelTree::cancel",
-      "reason": "ambiguous: short name 'cancel' is defined in multiple modules; attributed to crates/mycelium-std-runtime/src/colony.rs by heuristic — verify against source (ground truth)"
-    },
-    {
-      "symbol": "mycelium_std_runtime::supervision::CancelTree::child",
-      "reason": "definition not found via regex heuristic (kind='fn', name='child') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::supervision::CancelTree::child_count",
-      "reason": "definition not found via regex heuristic (kind='fn', name='child_count') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::supervision::CancelTree::default",
-      "reason": "definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::supervision::CancelTree::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::supervision::CancelTree::is_cancelled",
-      "reason": "dedup-alias: same definition as `mycelium_std_runtime::task::TaskCtx::is_cancelled` at crates/mycelium-std-runtime/src/task.rs:57 — one canonical row kept"
-    },
-    {
-      "symbol": "mycelium_std_runtime::supervision::CancelTree::new",
-      "reason": "ambiguous: short name 'new' is defined in multiple modules; attributed to crates/mycelium-std-runtime/src/colony.rs by heuristic — verify against source (ground truth)"
-    },
-    {
-      "symbol": "mycelium_std_runtime::supervision::CancelTree::new",
-      "reason": "dedup-alias: same definition as `mycelium_std_runtime::scheduler::Scheduler::new` at crates/mycelium-std-runtime/src/colony.rs:63 — one canonical row kept"
-    },
-    {
-      "symbol": "mycelium_std_runtime::supervision::CancelTree::token",
-      "reason": "definition not found via regex heuristic (kind='fn', name='token') — possibly macro-generated or cfg-gated"
+      "reason": "re-export (pub use) — cannot locate definition without type resolution"
     },
     {
       "symbol": "mycelium_std_runtime::supervision::Cancelled",
@@ -39773,76 +41253,28 @@
       "reason": "re-export (pub use) — cannot locate definition without type resolution"
     },
     {
-      "symbol": "mycelium_std_runtime::supervision::SUPERVISION_PROPAGATION_STRENGTH:",
-      "reason": "definition not found via regex heuristic (kind='const', name='SUPERVISION_PROPAGATION_STRENGTH:') — possibly macro-generated or cfg-gated"
+      "symbol": "mycelium_std_runtime::supervision::SUPERVISION_PROPAGATION_STRENGTH",
+      "reason": "re-export (pub use) — cannot locate definition without type resolution"
     },
     {
-      "symbol": "mycelium_std_runtime::supervision::SUPERVISION_RESTART_BOUND_STRENGTH:",
-      "reason": "definition not found via regex heuristic (kind='const', name='SUPERVISION_RESTART_BOUND_STRENGTH:') — possibly macro-generated or cfg-gated"
+      "symbol": "mycelium_std_runtime::supervision::SUPERVISION_RESTART_BOUND_STRENGTH",
+      "reason": "re-export (pub use) — cannot locate definition without type resolution"
     },
     {
       "symbol": "mycelium_std_runtime::supervision::SupervisedFailure",
-      "reason": "definition not found via regex heuristic (kind='enum', name='SupervisedFailure') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::supervision::SupervisedFailure::clone",
-      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::supervision::SupervisedFailure::eq",
-      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::supervision::SupervisedFailure::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+      "reason": "re-export (pub use) — cannot locate definition without type resolution"
     },
     {
       "symbol": "mycelium_std_runtime::supervision::SupervisedRun",
-      "reason": "definition not found via regex heuristic (kind='struct', name='SupervisedRun') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::supervision::SupervisedRun",
-      "reason": "definition not found via regex heuristic (kind='fn', name='SupervisedRun') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::supervision::SupervisedRun",
-      "reason": "definition not found via regex heuristic (kind='fn', name='SupervisedRun') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::supervision::SupervisedRun",
-      "reason": "definition not found via regex heuristic (kind='fn', name='SupervisedRun') — possibly macro-generated or cfg-gated"
+      "reason": "re-export (pub use) — cannot locate definition without type resolution"
     },
     {
       "symbol": "mycelium_std_runtime::supervision::SupervisionAction",
-      "reason": "definition not found via regex heuristic (kind='enum', name='SupervisionAction') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::supervision::SupervisionAction::clone",
-      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::supervision::SupervisionAction::eq",
-      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::supervision::SupervisionAction::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+      "reason": "re-export (pub use) — cannot locate definition without type resolution"
     },
     {
       "symbol": "mycelium_std_runtime::supervision::SupervisionRecord",
-      "reason": "definition not found via regex heuristic (kind='struct', name='SupervisionRecord') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::supervision::SupervisionRecord::clone",
-      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::supervision::SupervisionRecord::eq",
-      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
-    },
-    {
-      "symbol": "mycelium_std_runtime::supervision::SupervisionRecord::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+      "reason": "re-export (pub use) — cannot locate definition without type resolution"
     },
     {
       "symbol": "mycelium_std_runtime::supervision::Supervisor",
@@ -39854,11 +41286,11 @@
     },
     {
       "symbol": "mycelium_std_runtime::supervision::run_supervised",
-      "reason": "definition not found via regex heuristic (kind='fn', name='run_supervised') — possibly macro-generated or cfg-gated"
+      "reason": "re-export (pub use) — cannot locate definition without type resolution"
     },
     {
       "symbol": "mycelium_std_runtime::supervision::supervise_with_restart",
-      "reason": "definition not found via regex heuristic (kind='fn', name='supervise_with_restart') — possibly macro-generated or cfg-gated"
+      "reason": "re-export (pub use) — cannot locate definition without type resolution"
     },
     {
       "symbol": "mycelium_std_runtime::task::Deadlock::eq",
