@@ -71,6 +71,20 @@
 //!   `Empirical` until a proof lands, never `Proven` on host documentation (VR-5)**. The
 //!   nullary-main surface three-way closes (`flt_cmp_*_three_way` below) with the NaN-unordered
 //!   behavior pinned on every path; static accept/reject in the `flt_cmp_conformance_*` tests.
+//! - **M-900** (`enb` Phase-I H1 Gap A capstone) — the **float three-way conformance closeout**:
+//!   verification + recording, not new prims. Confirms the M-896…M-899 float suite above is
+//!   comprehensive and coherent across the literal, `flt.{add,sub,mul,div,neg}`,
+//!   `flt.{lt,le,gt,ge,eq,total_le}`, in-band specials, signed zeros, and canonical-NaN identity —
+//!   adding exactly one genuinely-missing corner (`flt_arith_nan_propagates_and_recanonicalizes_three_way`:
+//!   a NaN operand *propagates* through arithmetic, not only *produced* by `0/0`, three-way).
+//!   **Recorded honestly (G2/VR-5): every float form here closes three-way — there is no AOT
+//!   refusal to record for Gap A** (unlike the M-890/M-891 dense group, which has no nullary-main
+//!   surface form yet). `docs/spec/stdlib/self-hosting-readiness.md` §0 blocker-1 is re-verified
+//!   and recorded closed against this evidence. Residual FLAGs (not this task's scope, carried
+//!   forward): `is_nan`/`is_finite` classification prims are still OPEN (`mycelium-core/src/prim.rs`
+//!   flt.add doc comment) — NaN is detectable today via `¬flt_eq(x, x)` and finiteness via
+//!   `flt_lt(-inf, x) ∧ flt_lt(x, +inf)`, so the float gate itself does not need them; and the
+//!   `flt.*`/`Float` surface-name ratification is deferred to the `integration` tier.
 
 use mycelium_core::{
     Bound, BoundBasis, BoundKind, FloatWidth, GuaranteeStrength, Meta, Node, NormKind, Payload,
@@ -1843,6 +1857,41 @@ fn flt_arith_specials_are_in_band_three_way() {
         "neg(0.0) → -0.0 bit-exactly",
         "nodule d;\nfn main() => Float = flt_neg(0.0);",
         -0.0,
+    );
+}
+
+/// **NaN propagation through arithmetic, end-to-end three-way (M-900 closeout addition).**
+/// `flt_arith_specials_are_in_band_three_way` above pins the canonical NaN as a *produced*
+/// value (`0/0`); this pins it as a *propagated* value — a NaN operand infects every arithmetic
+/// op and every result stays the SAME canonical bits (ADR-040 §2.3: one NaN, one identity, never
+/// re-derived or drifted) on all three paths. Closes the last un-covered "specials in-band"
+/// corner of the M-900 comprehensiveness sweep (the `mycelium-interp` prim-level corpus already
+/// covers this per-op; this is the surface-program three-way closure over it).
+#[test]
+fn flt_arith_nan_propagates_and_recanonicalizes_three_way() {
+    let cnan = f64::from_bits(mycelium_core::CANONICAL_NAN_BITS);
+    // NaN, constructed in-language via the in-band 0/0 special, infects flt_add/flt_mul/flt_sub.
+    assert_flt_three_way_with_tag(
+        "NaN + 1.0 → canonical NaN (propagation)",
+        "nodule d;\nfn main() => Float = flt_add(flt_div(0.0, 0.0), 1.0);",
+        cnan,
+    );
+    assert_flt_three_way_with_tag(
+        "1.0 * NaN → canonical NaN (propagation, either operand side)",
+        "nodule d;\nfn main() => Float = flt_mul(1.0, flt_div(0.0, 0.0));",
+        cnan,
+    );
+    assert_flt_three_way_with_tag(
+        "NaN - NaN → canonical NaN (not 0 — NaN algebra, not ordinary subtraction)",
+        "nodule d;\nfn main() => Float = flt_sub(flt_div(0.0, 0.0), flt_div(0.0, 0.0));",
+        cnan,
+    );
+    // neg(NaN) re-canonicalizes: sign/payload bits are never observable (ADR-040 §2.3) — the
+    // result is bit-identical to the canonical NaN, not a sign-flipped variant.
+    assert_flt_three_way_with_tag(
+        "neg(NaN) re-canonicalizes to the SAME canonical bits",
+        "nodule d;\nfn main() => Float = flt_neg(flt_div(0.0, 0.0));",
+        cnan,
     );
 }
 
