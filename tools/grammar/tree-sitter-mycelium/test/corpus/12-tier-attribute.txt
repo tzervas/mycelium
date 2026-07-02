@@ -1,0 +1,28 @@
+============================================================
+12 tier attribute
+============================================================
+
+nodule perf;
+
+@tier(compiled)
+fn fast(x: Binary{8}) => Binary{8} = x;
+
+------------------------------------------------------------
+
+(source_file
+  (nodule_header
+    name: (identifier))
+  (fn_item
+    (tier_attribute
+      mode: (identifier))
+    name: (identifier)
+    (params
+      (param
+        name: (identifier)
+        type: (type_ref
+          (repr_type
+            (int_literal)))))
+    return_type: (type_ref
+      (repr_type
+        (int_literal)))
+    body: (identifier)))

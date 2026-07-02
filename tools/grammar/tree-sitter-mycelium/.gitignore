@@ -1,0 +1,13 @@
+# tree-sitter-mycelium — local build/tooling artifacts.
+# NOTE: src/ (parser.c, grammar.json, node-types.json, tree_sitter/) is COMMITTED — it is the
+# generated-parser convention consumers (nvim-treesitter, Helix, Emacs) build against without
+# needing the tree-sitter CLI installed. Do not ignore it.
+
+node_modules/
+build/
+prebuilds/
+*.wasm
+*.dylib
+*.so
+*.dll
+log.html
