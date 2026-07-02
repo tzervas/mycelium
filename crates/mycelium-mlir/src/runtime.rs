@@ -33,9 +33,12 @@
 use mycelium_core::{CoreValue, Node};
 use mycelium_interp::{Budgets, CancelToken, EvalError, PrimRegistry, SwapEngine, TaskOutcome};
 // DN-58 §B (M-817): the `reclaim` driver dispatches to the M-713 supervision machinery. The trusted
-// base (`mycelium-interp`/`-l1`) cannot depend on `mycelium-std-runtime`, so the dispatch lives here
-// in the runtime tier — the same crate that holds the real `colony` executor.
-use mycelium_std_runtime::supervision::{
+// base (`mycelium-interp`/`-l1`) cannot depend on the supervision surface's original crate
+// (`mycelium-std-runtime`), so the dispatch lives here in the runtime tier — the same crate that
+// holds the real `colony` executor. M-883/M-884: the surface itself is now consumed from
+// `mycelium-rt-abi` (below `mycelium-mlir`), not `mycelium-std-runtime` (which this crate no longer
+// depends on at all — the runtime-ABI seam extraction fixed the former upward `core -> std` edge).
+use mycelium_rt_abi::supervision::{
     supervise_with_restart, RestartIntensity, SupervisedFailure, SupervisedRun, SupervisionRecord,
     Supervisor,
 };
@@ -515,8 +518,9 @@ pub fn run_colony(
 // cascade + the `SupervisionRecord` EXPLAIN trail is the RT7 value-add on failure. KC-3: **no** L0
 // supervision node — supervision is scheduling layered *over* the unchanged body L0 term, exactly as
 // `run_colony` layers concurrency over per-hypha terms. The supervision machinery itself is
-// `mycelium-std-runtime::supervision` (M-713), which the trusted base (`mycelium-interp`/`-l1`) cannot
-// depend on — so the dispatch lives here, in the runtime tier, never in a kernel prim.
+// `mycelium_rt_abi::supervision` (M-713; relocated from `mycelium-std-runtime` by M-883/M-884), which
+// the trusted base (`mycelium-interp`/`-l1`) cannot depend on — so the dispatch lives here, in the
+// runtime tier, never in a kernel prim.
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// The result of supervising a `reclaim(policy) { body }` scope: the body's value plus the EXPLAIN
@@ -579,7 +583,7 @@ impl std::error::Error for ReclaimError {}
 /// The driver:
 /// 1. evaluates `policy` once (for its effect / well-formedness) — a policy refusal is an explicit
 ///    [`ReclaimError::Policy`], never a silent default (G2);
-/// 2. runs `body` under [`mycelium_std_runtime::supervision::supervise_with_restart`], **re-evaluating
+/// 2. runs `body` under [`mycelium_rt_abi::supervision::supervise_with_restart`], **re-evaluating
 ///    the body node per restart** (which is why the body is a node, not a value): a `Done` body
 ///    succeeds; a `Failed` body is restarted under the bounded cascade until it succeeds or the
 ///    supervisor escalates (never an unbounded storm — RT4/RT7);

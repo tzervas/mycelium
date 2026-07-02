@@ -4,8 +4,8 @@
 //! M-797 in-crate test layout: extracted from the former inline `#[cfg(test)] mod tests` in
 //! `supervision.rs` (as-touched, per the M-864 change to `run_supervised`).
 
-use crate::scheduler::Scheduler;
 use crate::supervision::*;
+use mycelium_sched::scheduler::Scheduler;
 
 /// A boxed supervised task closure (alias to keep the test signatures readable).
 type BoxTask<T, E> = Box<dyn FnOnce(&CancelToken) -> TaskOutcome<T, E> + Send>;
