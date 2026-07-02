@@ -60,8 +60,10 @@ pub enum L1Value {
     /// `Repr`/`Meta`, and never lowers to L0 (no kernel node — KC-3). It lives at this evaluator
     /// level only, is *passed* by the ordinary value-binding machinery, and is *inspected* via its
     /// [`SubstrateHandle`](crate::substrate::SubstrateHandle) accessors. The affine use-once
-    /// enforcement is M-903 and the `consume` lowering is M-904; both are explicit, refusing seams
-    /// (never a silent move — G2/VR-5).
+    /// enforcement is M-903 (a static checker pass plus a runtime backstop) and the `consume`
+    /// lowering — M-904, DN-71 §4.3 — now **executes** the checked move (never a silent move —
+    /// G2/VR-5); a live, un-`consume`d handle is deterministically released at scope exit and the
+    /// release recorded (M-904, DN-71 §8 FLAG-4's v0 posture — never a silent leak).
     Substrate(crate::substrate::SubstrateHandle),
 }
 
@@ -116,6 +118,22 @@ impl L1Value {
             // from the L0 value world.
             L1Value::Substrate(_) => None,
         }
+    }
+}
+
+/// Whether `v` transitively contains a `Substrate` handle with the given `id` — the M-904 (DN-71
+/// §8 FLAG-4) scope-exit-release **escape check**: a handle still reachable from a scope's own
+/// result (directly, or nested inside a constructed `Data` value) must never be released, even if
+/// it was never explicitly `consume`d. `L1Value` is finite and acyclic by construction (`Data`'s
+/// own doc comment — every field existed before its containing value), so this recursion always
+/// terminates and is a **precise** (not merely approximating) check for everything the v0 evaluator
+/// can construct — never a false negative that would let a live, still-reachable handle be wrongly
+/// released (G2).
+fn value_contains_substrate_id(v: &L1Value, id: u64) -> bool {
+    match v {
+        L1Value::Substrate(h) => h.id() == id,
+        L1Value::Data { fields, .. } => fields.iter().any(|f| value_contains_substrate_id(f, id)),
+        L1Value::Repr(_) => false,
     }
 }
 
@@ -306,6 +324,13 @@ pub struct Evaluator<'e> {
     swap: Box<dyn SwapEngine + Send + Sync>,
     fuel: u64,
     depth: u32,
+    /// The M-904 (DN-71 §8 FLAG-4 v0 posture) scope-exit **release log** — every deterministic
+    /// release of a live, never-`consume`d `Substrate` binding is recorded here (never a silent
+    /// leak — G2), inspectable via [`Self::release_events`]. A [`std::sync::Mutex`] (not a
+    /// `RefCell`) so `Evaluator` stays `Sync` — [`Self::call`]'s deep-stack worker closure captures
+    /// `&self` (see that method's doc for the full `Sync` argument); the lock is only ever held for
+    /// the length of a single `Vec::push`/clone, so it never contends across the recursive walk.
+    releases: std::sync::Mutex<Vec<crate::substrate::ReleaseEvent>>,
 }
 
 impl<'e> Evaluator<'e> {
@@ -318,6 +343,55 @@ impl<'e> Evaluator<'e> {
             swap: Box::new(BinaryTernarySwapEngine),
             fuel: DEFAULT_FUEL,
             depth: DEFAULT_DEPTH,
+            releases: std::sync::Mutex::new(Vec::new()),
+        }
+    }
+
+    /// The [`ReleaseEvent`](crate::substrate::ReleaseEvent) log accumulated by scope-exit releases
+    /// (M-904; DN-71 §8 FLAG-4's v0 drop-without-consume posture) across every [`Self::call`] made
+    /// on this `Evaluator` so far — inspectable, never a black box (house rule 2). Empty iff no live
+    /// `Substrate` binding was ever abandoned (every one reached either escaped into its scope's own
+    /// result, or had already been explicitly `consume`d). A poisoned lock (only reachable if a prior
+    /// panic occurred while holding it, which this evaluator never does by design) is recovered
+    /// rather than propagated, so an unrelated panic elsewhere can never make this accessor itself
+    /// panic or silently report an empty log (G2).
+    #[must_use]
+    pub fn release_events(&self) -> Vec<crate::substrate::ReleaseEvent> {
+        self.releases
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .clone()
+    }
+
+    /// M-904 (DN-71 §8 FLAG-4 v0 posture): release `popped` at its scope-exit iff it is a still-live
+    /// `Substrate` handle that does **not** escape into `escaping` (the enclosing scope's own
+    /// result — checked via [`value_contains_substrate_id`], not assumed, so a returned handle, or
+    /// one nested inside a constructed `Data` value, is never wrongly released). Records a
+    /// [`ReleaseEvent`](crate::substrate::ReleaseEvent) into [`Self::releases`] when a release
+    /// actually happens. A non-`Substrate` binding, an already-terminal handle (already `consume`d,
+    /// or already released through another clone of the same identity), or an escaping handle are
+    /// all legitimate no-ops here — nothing to release, never an error.
+    ///
+    /// **Known v0 limitation (honest, not silently hidden — mirrors `crate::affine`'s documented
+    /// loop/closure gap):** this is called at the two scope-exit points M-904 wires it into —
+    /// `Expr::Let` and a function's own parameters at the end of [`Self::invoke`] — not at every
+    /// binder in the evaluator (e.g. a `match`-arm pattern binder that captures a `Substrate` out of
+    /// a data field is not yet covered). A handle abandoned only through such an uncovered binder is
+    /// not released here; closing that gap is future work, not silently claimed done.
+    fn release_if_abandoned(&self, popped: &(String, L1Value), escaping: Option<&L1Value>) {
+        let L1Value::Substrate(handle) = &popped.1 else {
+            return;
+        };
+        if let Some(v) = escaping {
+            if value_contains_substrate_id(v, handle.id()) {
+                return;
+            }
+        }
+        if let Some(event) = handle.release(popped.0.clone()) {
+            self.releases
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner)
+                .push(event);
         }
     }
 
@@ -457,7 +531,16 @@ impl<'e> Evaluator<'e> {
             .map(|p| p.name.clone())
             .zip(args)
             .collect();
-        let result = self.eval(fuel, depth, ledger, name, &mut scope, &fd.body)?;
+        let result = self.eval(fuel, depth, ledger, name, &mut scope, &fd.body);
+        // M-904 (DN-71 §8 FLAG-4 v0 posture): this call's own parameter scope ends here — release
+        // any still-live `Substrate` param that isn't escaping into the call's own result (deep, via
+        // `value_contains_substrate_id`), on both the success and error path (deterministic, never
+        // skipped just because the body itself failed — G2).
+        let escaping = result.as_ref().ok();
+        for popped in &scope {
+            self.release_if_abandoned(popped, escaping);
+        }
+        let result = result?;
         if let Some(g) = fd.sig.ret.guarantee {
             self.assert_guarantee(name, &result, g)?;
         }
@@ -598,7 +681,12 @@ impl<'e> Evaluator<'e> {
                 }
                 scope.push((name.clone(), bv));
                 let r = self.eval(fuel, depth, ledger, site, scope, body);
-                scope.pop();
+                let popped = scope.pop().expect("just pushed above");
+                // M-904 (DN-71 §8 FLAG-4 v0 posture): `name`'s binding scope ends exactly here —
+                // release it if it's a still-live `Substrate` that isn't escaping into this `let`'s
+                // own result (`r`'s `Ok` value, if any). Runs on both the success and error path
+                // (deterministic scope-exit release, never a silent leak — G2).
+                self.release_if_abandoned(&popped, r.as_ref().ok());
                 r
             }
 
@@ -669,22 +757,35 @@ impl<'e> Evaluator<'e> {
                 what: "`spore` is deferred to the reconstruction-manifest work (E2-5/M-260)"
                     .to_owned(),
             }),
-            // M-902 landed the `Substrate` v0 value form ([`L1Value::Substrate`]); M-903 landed the
-            // affine use-once **check** (the static pass in `crate::affine`, run at check time, plus
-            // `SubstrateHandle::try_consume`'s runtime backstop — DN-71 §4.2). What is still missing
-            // is the **lowering**: this evaluator has no execution path that performs the actual move
-            // through existing nodes — that wiring is M-904 (DN-71 §4.3). So a program that reaches
-            // here has *already* been statically checked to be affine-clean; this refusal is honestly
-            // about execution, not about the affine discipline being unchecked. Never-silent (G2/VR-5):
-            // an explicit `Unsupported` naming the staging owner, never a silent/fabricated move.
-            Expr::Consume(_) => Err(L1Error::Unsupported {
-                site: site.to_owned(),
-                what: "`consume` of an affine `Substrate` type-checks and its use-once discipline is \
-                       statically checked (M-903; DN-71 §4.2), but the interpreter has no execution \
-                       path for the move yet — the `consume` lowering through existing nodes is M-904 \
-                       (DN-71 §4.3). An explicit refusal, never a silent move (LR-8; DN-03 §1)"
-                    .to_owned(),
-            }),
+            // M-904 (DN-71 Model S §4.3, maintainer-accepted 2026-07-02): `consume <expr>` executes
+            // as the **checked identity-move** through existing paths — evaluate the operand (the
+            // checker's `check_consume` type rule, DN-03 §1, guarantees it is `Substrate{tag}`-typed)
+            // and perform the affine Live→Consumed transition via `SubstrateHandle::try_consume`
+            // (M-903's runtime backstop). Under a well-typed program the static affine pass
+            // (`crate::affine`, M-903) already guarantees no reachable path double-consumes this
+            // identity, so `try_consume` succeeds here; a trip is exactly the internal-invariant-break
+            // case the backstop exists to catch — surfaced loudly as `L1Error::Stuck` (an evaluation
+            // state the checker proves unreachable), never a silent no-op or a fabricated second move
+            // (G2/VR-5). This lifts the M-664/M-903-era `Unsupported` staging refusal: `consume` no
+            // longer merely type-checks, it runs.
+            Expr::Consume(operand) => {
+                let v = self.eval(fuel, depth, ledger, site, scope, operand)?;
+                let Some(handle) = v.as_substrate() else {
+                    return Err(L1Error::Stuck {
+                        site: site.to_owned(),
+                        why: "internal: `consume`'s operand evaluated to a non-Substrate value — \
+                              `check_consume`'s type rule (DN-03 §1 / LR-8) guarantees a \
+                              `Substrate{tag}` operand, so this is a staging invariant break, never \
+                              a silent move (G2)"
+                            .to_owned(),
+                    });
+                };
+                let moved = handle.try_consume().map_err(|e| L1Error::Stuck {
+                    site: site.to_owned(),
+                    why: e.to_string(),
+                })?;
+                Ok(L1Value::Substrate(moved))
+            }
             // RFC-0024 §4A (M-704): the L1 evaluator runs on the **monomorphized** env, where every
             // closure has been lowered (`mono.rs`) to an ordinary `L1Value::Data` constructor value +
             // an `apply` dispatch fn — so a raw `Expr::Lambda` never reaches eval. This arm is a

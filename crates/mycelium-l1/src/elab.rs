@@ -1158,14 +1158,23 @@ impl Elab<'_> {
             // artifact (G2).
             Expr::Wild(body) => self.elab_wild(stack, scope, body),
             Expr::Spore(_) => residual(site, "`spore` is deferred (E2-5/M-260)"),
-            // M-664: `consume` of an affine `Substrate` — `Substrate` has no v0 value/representation
-            // lowering (LR-8; it is an external-resource kind, never a repr type), so its execution
-            // is a never-silent `Residual`, exactly like every other `Substrate` site (G2/VR-5).
-            Expr::Consume(_) => residual(
-                site,
-                "`consume` of an affine `Substrate` is staged — `Substrate` has no v0 \
-                 value/representation lowering (LR-8; DN-03 §1; M-664)",
-            ),
+            // M-904 (DN-71 Model S §4.3, maintainer-accepted 2026-07-02): `consume <expr>` lowers as
+            // the **observational-identity move** through existing paths — the affine obligation is
+            // discharged statically at check time (M-903's tracker), and `consume` is already
+            // move-transparent in `crate::grade` (it neither upgrades nor downgrades the operand's
+            // tag), so there is nothing left for L0 to represent beyond the operand itself. No new L0
+            // node (KC-3); `Substrate` itself still has no `Repr`/kernel projection (LR-8) — this arm
+            // never claims otherwise, it just stops refusing to elaborate the *move*. This lifts the
+            // former M-664 residual for this fragment (the M-904 DoD's "the Residual is gone").
+            //
+            // AOT posture (DN-71 §8 FLAG-8, recorded, not silently dropped): v0 has no acquisition
+            // surface that actually produces a `Substrate` value in a running Mycelium program (the
+            // `wild` host-call registry grants no op that returns one yet), so no program reaching
+            // this arm today can carry a live `Substrate` value into `mycelium-mlir`'s AOT path in
+            // practice. Whether a *future* acquisition surface's handle can cross into the AOT
+            // kernel-`Value` world is a separate, still-open question owned by that crate — not
+            // reopened or silently assumed answered by this arm (out of this leaf's scope).
+            Expr::Consume(operand) => self.expr(stack, scope, operand),
             Expr::Colony(hyphae) => self.elab_colony(stack, scope, hyphae),
             // RFC-0024 §4A (M-704): closures are **lowered by monomorphization** (`mono.rs`) — a
             // lambda becomes a tag-sum constructor application + a generated `apply` dispatcher, so a

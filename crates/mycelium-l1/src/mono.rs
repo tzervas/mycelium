@@ -1252,13 +1252,17 @@ impl<'e> Mono<'e> {
                 "wild/FFI has no L0 form in v0 — monomorphization does not change that (M-661)",
             ),
             Expr::Spore(_) => residual(site, "`spore` is deferred (E2-5/M-260)"),
-            // M-664: `consume` of a `Substrate` has no L0 form in v0 (LR-8) — monomorphization does
-            // not change that; an explicit residual (defense in depth) mirrors the elaborator's
-            // refusal, never a fabricated artifact (G2).
-            Expr::Consume(_) => residual(
-                site,
-                "`consume` of an affine `Substrate` has no L0 form in v0 (LR-8; DN-03 §1; M-664)",
-            ),
+            // M-904 (DN-71 Model S §4.3): `consume`'s L0 form is the identity of its operand (the
+            // affine move is a checker-level fact, discharged statically at check time — DN-71 §4.2;
+            // `crate::grade` already treats `consume` as move-transparent). `Substrate{tag}` carries
+            // no type parameters (LR-8), so there is nothing here for mono to specialize — rewrite the
+            // operand and reconstruct `Consume`, mirroring the `Ascribe` transparent-wrapper case
+            // above. This lifts the former M-664 residual: the same `consume` type rule, now honestly
+            // passed through rather than staged (G2/VR-5) — matching `elab.rs`'s own M-904 arm.
+            Expr::Consume(operand) => {
+                let operand2 = self.rewrite(site, scope, operand, expected)?;
+                Ok(Expr::Consume(Box::new(operand2)))
+            }
             // RFC-0024 §4A.4 (M-704): a `lambda` lowers to a **closure-constructor application** — its
             // captured environment, snapshotted by value at this definition site (value-semantics).
             // The closure tag-sum + the `apply$<arrow>` dispatcher are emitted once per arrow at

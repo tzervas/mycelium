@@ -3119,11 +3119,17 @@ impl Cx<'_> {
     /// (never silent — G2). The result is the moved substrate (`Substrate{tag}`), now exclusively
     /// owned by the consumer.
     ///
-    /// Guarantee `Declared` (recorded in [`crate::grade`]): v0 has **no value-level affine-usage
-    /// tracker** (only pattern-binder linearity — `check_linear`), so the *single-use* property of
-    /// `consume` is asserted by the construct, not yet checked. The type rule itself is exact — only
-    /// a `Substrate` operand is admitted — so this is honest: the type discipline is checked, the
-    /// affinity is staged.
+    /// Guarantee **`Empirical`** (M-903; DN-71 Model S §4.2/§4.4 — updated from the M-664-era
+    /// `Declared`, note that stated the pre-M-903 baseline honestly and is stale as of this
+    /// affine-tracker landing, VR-5 requires this update rather than leaving it): the *single-use*
+    /// property is now **checked**, not merely asserted — every reference to a `Substrate`-typed
+    /// binding is recorded in `self.affine` (`crate::affine::Tracker`, wired below via `use_at` at
+    /// every scope reference) and a second move on any reachable path is refused here, naming both
+    /// sites. `Empirical`, not `Proven`: the tracker's own module docs are explicit that it is a
+    /// sound-over-precise conservative approximation (verified by an exhaustive sweep, not a
+    /// mechanized soundness proof) with a known, documented loop/closure multiplicity gap closed only
+    /// by [`crate::substrate::SubstrateHandle::try_consume`]'s runtime backstop (M-903; wired into
+    /// execution by M-904, DN-71 §4.3).
     fn check_consume(
         &self,
         scope: &mut Vec<(String, Ty)>,

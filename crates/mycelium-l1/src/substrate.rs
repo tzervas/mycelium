@@ -35,11 +35,15 @@
 //! by a closure or a `for`-loop body that runs more than once at runtime (`crate::affine`'s module
 //! docs name this limitation explicitly).
 //!
-//! # What is still *not* here — the M-904 seam
-//! The **`consume` lowering** (real L0/evaluator execution through existing paths, DN-71 §4.3) is
-//! **M-904**. The surface `consume <expr>` therefore still refuses at evaluation time (see
-//! `crate::eval`) — but it is now, honestly, only the *lowering* that is missing: the affine
-//! discipline itself (this module + `crate::affine`) is checked, not merely asserted.
+//! # M-904 — the `consume` lowering, and the drop-without-consume v0 posture
+//! **M-904** (DN-71 §4.3) wires [`SubstrateHandle::try_consume`] into real evaluator execution: the
+//! surface `consume <expr>` now performs the checked move rather than refusing (see `crate::eval`'s
+//! `Expr::Consume` arm). M-904 also lands the **drop-without-consume v0 posture** (DN-71 §8
+//! FLAG-4 — the maintainer-delegated recommendation, accepted 2026-07-02): a live `Substrate`
+//! binding whose lexical scope ends without an explicit `consume` and without escaping into that
+//! scope's own result is **deterministically released** ([`SubstrateHandle::release`]) and the
+//! release is **recorded** as a [`ReleaseEvent`] — never a silent leak (G2). This is a v0 posture,
+//! not RFC-0027 OQ-5's full drop *protocol* (still open, pending the future `graft` RFC).
 
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
@@ -182,8 +186,9 @@ impl SubstrateHandle {
     /// AlreadyConsumed)` on any subsequent call, naming the `tag` and `id` of the violated handle —
     /// never a silent no-op or a fabricated second move.
     ///
-    /// M-904 still owns the surface `consume <expr>` **lowering** (wiring this into real L0/evaluator
-    /// execution); this method is the checked primitive that lowering will call.
+    /// M-904 (DN-71 §4.3) wires the surface `consume <expr>` into real evaluator execution
+    /// (`crate::eval`'s `Expr::Consume` arm): this method is the checked primitive that lowering
+    /// calls.
     pub fn try_consume(&self) -> Result<Self, SubstrateError> {
         // The only legal transition is `false -> true`; a `false` result (the AtomicBool's own
         // *prior* value) means WE won the race and made the move — `Ordering::AcqRel` on success
@@ -199,6 +204,70 @@ impl SubstrateHandle {
                 id: self.id,
             }),
         }
+    }
+
+    /// The **deterministic scope-exit release** — M-904's drop-without-consume v0 posture (DN-71
+    /// §8 FLAG-4, maintainer-delegated acceptance 2026-07-02). This is the *other* terminal
+    /// Live→terminal transition alongside [`Self::try_consume`]: both end the handle's life, and
+    /// there is deliberately **no third Rust-level state** to track (KC-3) — a release reuses the
+    /// same shared `consumed` flag, so a handle that is released can never subsequently be
+    /// `try_consume`d (or released again) without tripping the same never-silent backstop.
+    ///
+    /// The evaluator (`crate::eval`) calls this exactly when a live `Substrate` binding's lexical
+    /// scope ends **without** an explicit `consume` and **without** the value escaping (directly, or
+    /// nested in a constructed value) into what that scope returns — see
+    /// `crate::eval::Evaluator::release_events`. `site` is a free-form description of where the
+    /// release happened (a binding name, mirroring [`SubstrateProvenance::site`]'s honesty — this
+    /// evaluator has no source spans, so nothing more precise is fabricated).
+    ///
+    /// Returns `Some(ReleaseEvent)` on the *first* terminal transition for this identity — a real
+    /// release happened, recorded, never silent (G2). Returns `None` if the handle was already
+    /// terminal (already `consume`d, or already released through another clone of the same
+    /// identity) — nothing new happened, so no duplicate/fabricated event is manufactured.
+    #[must_use]
+    pub fn release(&self, site: impl Into<String>) -> Option<ReleaseEvent> {
+        match self
+            .consumed
+            .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+        {
+            Ok(_was_live) => Some(ReleaseEvent {
+                tag: self.tag.clone(),
+                id: self.id,
+                site: site.into(),
+            }),
+            Err(_already_terminal) => None,
+        }
+    }
+}
+
+/// A recorded **scope-exit release** — the DN-71 §8 FLAG-4 v0 drop-without-consume posture (M-904).
+/// Produced by [`SubstrateHandle::release`] exactly when a live handle is released at scope exit;
+/// never fabricated for a handle that was explicitly `consume`d or already released (G2). Inspect
+/// the accumulated log via `crate::eval::Evaluator::release_events` — never a silent leak (house
+/// rule 2: no black boxes).
+///
+/// This is the v0 posture only: RFC-0027 OQ-5's full drop *protocol* (a possible future
+/// `graft`-RFC-driven alternative reclamation policy) stays open; DN-71 does not re-decide it here.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ReleaseEvent {
+    /// The tag of the released handle.
+    pub tag: String,
+    /// The opaque identity ([`SubstrateHandle::id`]) of the released handle.
+    pub id: u64,
+    /// Where the release happened (a binding name / free-form site description — no fabricated
+    /// line/column; this evaluator has no source spans, VR-5).
+    pub site: String,
+}
+
+impl core::fmt::Display for ReleaseEvent {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f,
+            "released: `Substrate{{{}}}` #{} was never `consume`d — deterministically released at \
+             scope exit (`{}`), per DN-71 §8 FLAG-4's v0 drop-without-consume posture (never a \
+             silent leak — G2/M-904)",
+            self.tag, self.id, self.site
+        )
     }
 }
 
