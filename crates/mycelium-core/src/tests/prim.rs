@@ -77,6 +77,10 @@ fn builtins_are_present_and_resolvable() {
         "bin.add",
         "bin.sub",
         "bin.neg",
+        "bin.div_s",
+        "bin.rem_s",
+        "bin.shr_s",
+        "cmp.lt_s",
         "bit.width_cast",
         "seq.len",
         "seq.get",
@@ -106,8 +110,11 @@ fn builtins_are_present_and_resolvable() {
     // added the scalar-float comparison group `flt.lt`/`flt.le`/`flt.gt`/`flt.ge`/`flt.eq`
     // (the IEEE-754 §5.11 partial-order predicates, NaN unordered) plus the named opt-in
     // total order `flt.total_le` — likewise `Empirical`, pinned separately below; the
-    // total-order property stays unproven until the M-511 proof debt is discharged).
-    assert_eq!(t.entries().len(), 46);
+    // total-order property stays unproven until the M-511 proof debt is discharged;
+    // RFC-0033/M-767 added the signedness-split signed set `bin.div_s`/`bin.rem_s`/`bin.shr_s`
+    // + the two's-complement ordering `cmp.lt_s`, the distinct-named signed counterparts to
+    // `bin.div`/`bin.rem`/`bin.shr`/`cmp.lt` per ADR-028).
+    assert_eq!(t.entries().len(), 50);
 }
 
 // M-890 (`enb` Gap C): the dense elementwise group — the first non-`Exact` intrinsics in Π.
@@ -238,6 +245,41 @@ fn flt_cmp_group_carries_the_adr040_empirical_intrinsic() {
     }
 }
 
+// M-767 (`enb` Gap B): the signedness-split signed op set (RFC-0033 §4.1.2/§4.1.3; ADR-028).
+// `bin.div_s`/`bin.rem_s`/`bin.shr_s` are width-uniform Binary×Binary→Binary like their unsigned
+// counterparts; `cmp.lt_s` is width-collapsing like `cmp.eq`/`cmp.lt` but with its operands pinned
+// `Binary` (not the D1 `Any` — balanced ternary's D1 order is already the signed order, so no
+// ternary `lt_s` exists). All `Exact` (total/decidable over the in-range domain; div-by-zero /
+// shift-range / the `min ÷ −1` overflow are runtime refusals, same posture as the unsigned pair).
+#[test]
+fn signed_split_ops_are_declared_with_pinned_signatures() {
+    let t = PrimTable::builtins();
+    for name in ["bin.div_s", "bin.rem_s", "bin.shr_s"] {
+        let d = t.get(name).expect("signed-split builtin registered");
+        assert_eq!(d.intrinsic, GuaranteeStrength::Exact, "{name}: intrinsic");
+        assert_eq!(d.sig.arity(), 2, "{name}: arity");
+        assert!(
+            d.sig.operands.iter().all(|p| *p == PrimParadigm::Binary),
+            "{name}: operands are Binary"
+        );
+        assert_eq!(d.sig.result, PrimParadigm::Binary, "{name}: result");
+        assert_eq!(d.sig.width, WidthRel::Uniform, "{name}: width-uniform");
+    }
+    let d = t.get("cmp.lt_s").expect("cmp.lt_s registered");
+    assert_eq!(d.intrinsic, GuaranteeStrength::Exact);
+    assert_eq!(d.sig.arity(), 2);
+    assert!(
+        d.sig.operands.iter().all(|p| *p == PrimParadigm::Binary),
+        "cmp.lt_s operands are pinned Binary (no ternary signed order exists)"
+    );
+    assert_eq!(d.sig.result, PrimParadigm::Binary);
+    assert_eq!(
+        d.sig.width,
+        WidthRel::Collapse,
+        "cmp.lt_s is width-collapsing (equal-width operands → Binary{{1}})"
+    );
+}
+
 #[test]
 fn build_is_deterministic() {
     // Two independent builds produce the same hashes (content-addressing is a pure function).
@@ -343,10 +385,11 @@ fn names_returns_registered_sorted_names() {
     // bin.shl/bin.shr + RFC-0033/M-766 bin.add/bin.sub/bin.neg + RFC-0001 §4.1/M-890
     // dense.add/dense.sub/dense.neg/dense.scale + M-891 dense.dot/dense.similarity +
     // ADR-040 §2.5/M-898 flt.add/flt.sub/flt.mul/flt.div/flt.neg + ADR-040 §2.4/M-899
-    // flt.lt/flt.le/flt.gt/flt.ge/flt.eq/flt.total_le).
+    // flt.lt/flt.le/flt.gt/flt.ge/flt.eq/flt.total_le + RFC-0033/M-767
+    // bin.div_s/bin.rem_s/bin.shr_s/cmp.lt_s, the signedness-split signed set).
     assert_eq!(
         ns.len(),
-        46,
+        50,
         "names() count must match the builtin count: {ns:?}"
     );
     // Sorted (BTreeMap iteration is sorted).

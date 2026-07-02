@@ -182,7 +182,10 @@ impl PrimTable {
     /// two's-complement `add`/`sub`/`neg` (`bin.add`/`bin.sub`/`bin.neg`, RFC-0033 §4.1.2/§4.1.3,
     /// M-766 — completes the shared two's-complement op set `add`/`sub`/`mul`/`neg`; distinct from
     /// the pre-existing unsigned `bit.add`/`bit.sub`, which under-refuse relative to the signed
-    /// domain), and the **dense elementwise group**
+    /// domain), and the **signedness-split signed op set** (`bin.div_s`/`bin.rem_s`/`bin.shr_s` +
+    /// `cmp.lt_s`, RFC-0033 §4.1.2/§4.1.3, M-767 — signed truncated division/remainder, the
+    /// arithmetic right shift, and the two's-complement ordering, each a distinct named op from
+    /// its unsigned counterpart per ADR-028), and the **dense elementwise group**
     /// (`dense.add`/`dense.sub`/`dense.neg`/`dense.scale`, RFC-0001 §4.1/RFC-0002 §5, M-890 —
     /// `enb` Gap C; the first *tensor-valued* prims, and the first non-`Exact` intrinsics — see
     /// the crate-level Scope note), plus the **dense measurement pair**
@@ -199,7 +202,7 @@ impl PrimTable {
     /// Every entry is `intrinsic = Exact` **except** `dense.add`/`dense.sub`/`dense.scale`/
     /// `dense.dot`/`dense.similarity` (`Proven`, carried from the kernel's per-op tag) and the
     /// `flt.*` group (`Empirical` — the ratified ADR-040 §2.6 host-conformance posture; see the
-    /// entry comment); all are width-`Uniform` **except** `cmp.eq`/`cmp.lt`,
+    /// entry comment); all are width-`Uniform` **except** `cmp.eq`/`cmp.lt`/`cmp.lt_s`,
     /// `dense.dot`/`dense.similarity`, and the `flt.*` comparison group, which are
     /// width-`Collapse` (operand width → `Binary{1}` / operand dim → a dim-1 measurement /
     /// two `Float` scalars → a `Binary{1}` truth value). This is the single source of truth the
@@ -278,6 +281,35 @@ impl PrimTable {
         t.insert("bin.add", exact(vec![Binary, Binary], Binary));
         t.insert("bin.sub", exact(vec![Binary, Binary], Binary));
         t.insert("bin.neg", exact(vec![Binary], Binary));
+        // RFC-0033 §4.1.2/§4.1.3 (M-767, `enb` Gap B): the **signedness-split** op set — signed
+        // (two's-complement) division/remainder and the arithmetic (sign-extending) right shift,
+        // the distinct-named signed counterparts to `bin.div`/`bin.rem`/`bin.shr` (ADR-028:
+        // signedness lives in the *op*, not the `Repr`; the SMT-LIB `bvsdiv`/`bvudiv`,
+        // `bvashr`/`bvlshr` split). Division is truncated toward zero, remainder sign follows the
+        // dividend (SMT-LIB `bvsdiv`/`bvsrem` — see `mycelium_core::binary`'s rounding-convention
+        // note). `intrinsic = Exact` (total/decidable over the in-range domain; div-by-zero, an
+        // out-of-range shift amount, and the single signed-division overflow `min ÷ −1` are
+        // runtime, not intrinsic, refusals — same posture as the unsigned pair).
+        t.insert("bin.div_s", exact(vec![Binary, Binary], Binary));
+        t.insert("bin.rem_s", exact(vec![Binary, Binary], Binary));
+        t.insert("bin.shr_s", exact(vec![Binary, Binary], Binary));
+        // RFC-0033 §4.1.2 (M-767): the **signed** (two's-complement) ordering — `cmp.lt` reads
+        // `Binary` operands as unsigned magnitudes (the D1 total order), so the signed order MUST
+        // be a distinct named op (ADR-028's `bvslt`/`bvult` split). Width-collapsing like
+        // `cmp.eq`/`cmp.lt` (two equal-width operands → a `Binary{1}` truth value) — but its
+        // operands are pinned `Binary` (not the D1 pair's `Any`): balanced ternary is inherently
+        // signed, so its D1 `cmp.lt` order IS the signed order and no ternary `lt_s` exists.
+        t.insert(
+            "cmp.lt_s",
+            PrimDecl {
+                sig: PrimSig {
+                    operands: vec![Binary, Binary],
+                    result: Binary,
+                    width: WidthRel::Collapse,
+                },
+                intrinsic: GuaranteeStrength::Exact,
+            },
+        );
         // DN-41 (M-798): never-silent `Binary` width-cast (zero-extend widen / checked narrow).
         // `intrinsic = Exact` (the widen/identity/in-range-narrow result equals the unsigned value
         // exactly; a lossy narrow is a never-silent *runtime* refusal, not a non-Exact intrinsic).
