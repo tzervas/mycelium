@@ -4,8 +4,8 @@
 > kickoff and its plan doc.** Nothing here is started; no issue statuses have been touched.
 >
 > **⚠ Plan revised (2026-07-01):** the plan doc was revised into the **function-first umbrella
-> roadmap** `docs/planning/road-to-1.0.0-and-mycelium-rewrite.md` (governed by **ADR-038**, Proposed;
-> a pointer stub remains at the old path). This kickoff's workstream references map per the roadmap's
+> roadmap** `docs/planning/road-to-1.0.0-and-mycelium-rewrite.md` (governed by **ADR-038**, Accepted
+> 2026-07-01; a pointer stub remains at the old path). This kickoff's workstream references map per the roadmap's
 > meta-changelog: **A→H0 · §8a→H1 · B–G→H2 · grammar items→H2a**. Read the roadmap first; the "before
 > self-hosting" framing below is superseded by ADR-038's function-first sequencing.
 >

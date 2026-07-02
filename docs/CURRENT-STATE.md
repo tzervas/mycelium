@@ -71,7 +71,8 @@ digest is a snapshot, that table is live.
   (**revised 2026-07-01** from the Rust-reference-completion + acyclic-deps plan, kickoff UID `rcp`;
   a pointer stub remains at the old path, which open **PR #913** carried in its prior form) is
   **Advisory/Proposed**, governed by **ADR-038** (*Pragmatic Dogfooding: the Function-First Release
-  Strategy* — **Proposed**, awaiting maintainer ratification): Phase I → `lang 1.0.0` + public
+  Strategy* — **Accepted**, 2026-07-01, maintainer-ratified; **FLAG-V1/V2 resolved** — public release
+  sub-`1.0.0`/`0.x` at usability, `1.0.0` = fully-rewritten-where-appropriate): Phase I → `lang 1.0.0` + public
   release gated on **functional usability** (H0 acyclic-deps enforcement → H1 below-grammar
   enablers → H2 closeout lanes, H2a grammar-stability gate before mass porting); Phase II →
   post-public **progressive** Mycelium rewrite (compiler self-hosting deferred/conditional).
@@ -91,10 +92,12 @@ digest is a snapshot, that table is live.
 - **Phase-II kickoffs authored (2026-07-01, same planning tier)** — `.claude/kickoffs/{flp,rwr}.md`:
   `flp` (**the public flip** — decompose + publish; its first task authors the owed DN-27 §4
   binding decomposition ADR at the next-free number, ADR-039 proposed; the flip act itself is
-  strictly last, maintainer-gated on the usability ratification + the `0.x` choice + FLAG-V1) and
+  strictly last, maintainer-gated on the usability ratification + the `0.x` choice + FLAG-V1,
+  resolved 2026-07-01: public release is sub-`1.0.0`, no label collision) and
   `rwr` (**the post-public progressive rewrite** — mass porting gated on `grm`, transpiler ladder,
   toolchain ports, the V-wave remainder with the single M-780 rehash at its value-persistence
-  tripwire, `1.0.0` terminal dossier with FLAG-V2; compiler self-hosting stays an aspiration, not
+  tripwire, `1.0.0` terminal dossier with FLAG-V2, resolved 2026-07-01: `1.0.0` = fully dogfooded/
+  self-hosted/rewritten-where-appropriate; compiler self-hosting stays an aspiration, not
   a lane). M-ids **M-936…M-957 proposed only**; `rwr` is deliberately higher-altitude (per-wave
   minting — ADR-038 §2.3).
 

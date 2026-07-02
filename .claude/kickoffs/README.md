@@ -90,7 +90,7 @@ tree**, branches **off `dev`**, merges into `dev`, then promotes `dev → integr
 *(T2 = `s10`, T3 = `r10`, T4 = `lib10`, T5 = `ffi10`, T6 = `aot10`, T7 = `tool10` are all **complete →
 archived**.)*
 
-### Phase-I function-first kickoffs (ADR-038 Proposed · umbrella roadmap)
+### Phase-I function-first kickoffs (ADR-038 Accepted, 2026-07-01 · umbrella roadmap)
 
 Authored 2026-07-01 by the planning tier (ADR-038 §2.7 — Fable plans, Sonnet/Haiku implement; every
 task PM-prepped with user stories + DoD **before** any implementation agent). Decomposition source:
