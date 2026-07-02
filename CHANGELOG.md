@@ -11,6 +11,104 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Fixed (2026-07-02: M-971 — DN-68 acyclic-deps regression, 12 to 0 violations; dev to integration close-out)
+
+The Phase-I H1 wave (below) regressed the DN-68 acyclic-deps invariant to 12 violations; this fix
+(PR #1015) resolves all of them by structural extraction, mirroring the M-881/882 fixture-refactor
+and M-883/884 rt-abi/sched seam precedents, with no strata/tier whitelist.
+
+- **New `mycelium-std-conformance` crate** (tier `std`, stratum 0). Relocated the 11 oracle-backed
+  `lib/std/*.myc` port-differential tests and their shared `tests/harness/` out of the core-tier
+  `mycelium-l1`, dropping 9 `mycelium-std-*` dev-deps from `mycelium-l1` and dissolving the
+  `{l1, proj, spore, std-spore, std-testing}` dev-cycle that ran through the removed edges. The
+  relocated tests still run from their new home unchanged.
+- **New `mycelium-vsa-decode` crate** (RFC-0010 decode-methodology selection seam). Extracted
+  `decode_select` and `reconstruct_factors_selected` up out of `mycelium-vsa` (the only VSA code
+  depending on `mycelium-select`), breaking the `{interp, select, vsa}` dev-cycle and the
+  `interp to vsa` upward-stratum violation structurally: `mycelium-vsa` now depends only on
+  `mycelium-core` (stratum re-derived 2 to 1). No external crate consumed the moved surface;
+  consumers (`cert`/`mlir`/`std-vsa`/`std-spore`) are untouched.
+- `xtask/deps-strata.toml` updated: both new crates registered in `[strata]`/`[tiers]`, the
+  `mycelium-vsa` re-derivation recorded, `[meta].derived_from` updated.
+- Verified: `cargo run -p xtask -- deps` reports **0 violations** (was 12); full workspace test,
+  fmt, clippy, and build all clean; `api` gate green (regenerated `mycelium-vsa.txt` plus baselines
+  for the two new crates).
+- **Integration close-out** — `docs/api-index/` regenerated to cover the two new crates and the
+  `mycelium-vsa` surface shrink; `docs/Doc-Index.md` and `tools/github/issues.yaml` (M-971 to
+  `done`) updated per the concurrent-dev pattern (leaves FLAG close-out items, the integrating
+  parent applies them once). Basis: PR #1015.
+
+### Added (2026-07-02: Phase-I H1 wave — enb enablers, opp ports, grm/frz dossiers; integration close-out)
+
+The Phase-I H1 wave landed the below-grammar functional-usability enablers ADR-038 §2.6 named, a
+first tranche of self-hosted stdlib ports, and the design dossiers that disposition the remaining
+kernel-freeze questions. This entry is the `dev → integration` whole-batch close-out (api-index +
+grammar regenerated, statuses transitioned append-only, issues closed).
+
+- **Integer prim surface completed** (kickoff `enb`, E28-1, Gap B — RFC-0033 §4.1.2/§4.1.3). New
+  never-silent two's-complement prims in `crates/mycelium-interp/src/prims.rs`: `bin.mul` (M-887,
+  overflow → explicit error, no wrap-by-default), `bin.div`/`bin.rem` (M-888, explicit div-by-zero
+  error), `bin.shl`/`bin.shr` (M-889, explicit out-of-range shift-amount), plus the signed op set
+  M-766 (neg and overflow-detect) and M-767 (signed div/rem/shift variants). Property tests on
+  every bound; conformance accept and reject.
+- **Dense and VSA prims** (E28-1, Gap C/D). Dense elementwise (M-890) and dot/similarity (M-891)
+  over `crates/mycelium-dense`; VSA bind (M-892), certified bundle (M-893), and cleanup/reconstruct/
+  required_dim (M-894) over `crates/mycelium-vsa`, each surfaced through the interpreter with
+  three-way differential and conformance green.
+- **Scalar-float value form landed and ADR-040 Enacted** (E28-1, Gap A). Route-(ii) `Repr::Float`
+  binary64 (M-896), float literal lex/parse (M-897), IEEE arithmetic (M-898), comparison (M-899),
+  and the certified-mode gate (M-900). Round-to-nearest-even only, canonical quiet-NaN, bit-distinct
+  signed zeros, in-band specials with never-silent conversion boundaries. **ADR-040** stepped
+  Accepted → **Enacted**; companion promotion dossier **DN-69** (PROMOTE — the first candidate to
+  clear the DN-39 four-clause bar).
+- **`Substrate`/`consume` affine construct executes at the L1-eval level** (E28-1, Gap E; DN-71
+  Model S). Substrate v0 opaque affine handle (M-902), static use-once affine tracker with a
+  never-silent runtime backstop (M-903), and identity-move `consume` lowering with a v0 drop posture
+  (M-904) — all in `crates/mycelium-l1/src/eval.rs`, no new L0 node. Cross-checked against the `grm`
+  DN-54 dossier: same model, not forked.
+- **R2-lite runtime surface (D-lite D1)** (E28-1; DN-70). `forage` activated as the `@forage(policy)`
+  hypha placement annotation with a mandatory-EXPLAIN placement trail (M-906); `backbone` verified as
+  a landed decision, not an executing construct (M-907, DN-70 §4/FLAG-D3). Mesh/xloc/cyst long-lead
+  research track started (M-913, **Research Record 28**).
+- **`myc run` and surface literals** (E28-1). `myc run` single- and multi-nodule execution with
+  manifest-driven linking (M-908/M-909, `crates/mycelium-cli`); string literals (M-910, grammar +
+  lexer/parser) and a `mycelium-fmt` string-literal fix (M-911); `hash.blake3` and `bytes.eq` prims
+  (M-912). H1 capstone demo and readiness re-verify (M-914).
+- **Nine self-hosted stdlib nodule ports** (kickoff `opp`, E29-1). A differential port harness
+  (M-925) plus `std.core`/`diag`/`error`/`recover`/`select`/`swaps`/`ternary`/`testing`/`spores`
+  ported to `lib/std/*.myc` (M-926…M-934), Rust-ref ≡ `.myc` differential green, and added to the
+  `[surface].exports` freeze list. Measured transpiler-assist % per nodule recorded in the
+  self-hosting port ledger (M-935); the D1-kernel-boundary halves (re-export and `hash`-mint) stay
+  Rust per KC-3.
+
+### Changed (2026-07-02: Phase-I H1 wave — decision dispositions and status transitions)
+
+- **Design dossiers authored and accepted** (kickoffs `grm`/`frz`), all under the maintainer's
+  2026-07-02 delegation of these decisions to the wave orchestrator (`Declared` as relayed), recorded
+  append-only at the integration-reconcile promotion gate: **DN-73** tuple-type ratification (M-920 →
+  Accepted, Option A), **DN-74** ADR-033 FLAG-1 `FieldSpec::Fn` soundness (M-922 → Accepted, Option A
+  — dispositions the soundness question without stepping ADR-033), **DN-75** DN-54 completion audit
+  (M-917 → Resolved, audit stands), **DN-76** kernel-freeze four-condition scorecard (M-958 →
+  Accepted as the M-969 gate instrument; the kernel is **not** frozen — 0/4 green, M-969 stays gated),
+  **DN-77** inject-mode build-scope (M-960 → Accepted, Option B), **DN-78** the M-828 R2 remainder
+  buildable-vs-research split and memory-model confirmation (M-962…M-964 → Accepted), and **DN-79**
+  `when`-guard clause semantics and guarantee propagation (M-968 → Accepted, impl held).
+- **Inject-mode Phase-I subset built** (frz, M-961; DN-77 §4). The confirmed buildable slice of
+  RFC-0038 landed Rust-first (`crates/mycelium-mlir/src/{inject_gate,inject_cert,inject}.rs`); the
+  matching RFC-0038 claims (§4.2/§5.1/§6.2/§7.1/§7.3/§8.4/§8.6/§8.5) flipped `Declared → Enacted` for
+  exactly that slice, with everything else (all §9 R&D, the `module`/`call` grains) held `Declared`.
+  RFC-0038 as a whole stays **Accepted** (its §13 Implementation DoD is not fully met).
+- **Integer-prim signedness naming convention** (DN-72). Integer-prim surface names carry an explicit
+  `_u`/`_s` signedness suffix (never-silent about signedness); **DN-72** Accepted and enacted in the
+  same change.
+- **RFC-0033 progress note** — the Gap-A/Gap-B enablers above (binary prims, signed ops, float value
+  form) landed; the design and the post-1.0 V1–V5 deferral are unchanged, and no content-address
+  identity is spent (single-rehash-deferred-to-first-value-persistence stands, §7).
+- **Integration close-out** — `docs/api-index/` and the derived grammar artifacts regenerated;
+  `docs/Doc-Index.md` + `docs/adr/README.md` register ADR-040 and DN-69…DN-79 and Research Record 28;
+  every landed M-id flipped to `done` with a `landed_basis`; the held `grm`/`frz` L1-impl issues
+  (M-915/916/919/921/923/924, M-959/965/966/967/969) left blocked/todo — never silently closed.
+
 ### Added (2026-07-02: kickoff `acy` — Phase-I H0 acyclic-deps hardening, integration close-out)
 
 - **Structural acyclic-deps gate landed and wired into `just check`** (M-877…M-880). A new

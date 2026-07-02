@@ -22,7 +22,6 @@
 pub mod bsc;
 pub mod capacity;
 pub mod cleanup;
-pub mod decode_select;
 pub mod fhrr;
 pub mod hrr;
 pub mod mapb;
@@ -31,20 +30,24 @@ pub mod matrix;
 pub mod recon;
 pub mod resonator;
 pub mod sbc;
+#[cfg(test)]
+mod tests;
 pub(crate) mod wrap;
 
 pub use bsc::Bsc;
 pub use cleanup::{CleanupMemory, Match};
-pub use decode_select::{
-    decode_method_policy, explain_decode_method, reconstruct_factors_auto, DecodeMethod,
-    DecodeSelection, Explanation, DEFAULT_ENUM_BUDGET,
-};
+// The RFC-0010 decode-methodology selection surface (`decode_select` + `reconstruct_factors_selected`)
+// was relocated to the `mycelium-vsa-decode` crate (M-971): it is the only part of this crate that
+// used `mycelium-select`, and hosting it here made `mycelium-vsa` depend on `mycelium-select`, which
+// (with `mycelium-select -[dev]-> mycelium-interp`) closed the interp↔vsa↔select cycle DN-68 forbids.
+// `mycelium-vsa` now depends only on `mycelium-core`; consumers of the selected decode depend on
+// `mycelium-vsa-decode` instead. See DN-68 + xtask/deps-strata.toml.
 pub use fhrr::Fhrr;
 pub use hrr::Hrr;
 pub use mapb::MapB;
 pub use mapi::MapI;
 pub use matrix::{matrix_tag, RFC0003_MATRIX};
-pub use recon::{reconstruct_factors, reconstruct_factors_selected, reconstruct_role};
+pub use recon::{reconstruct_factors, reconstruct_role};
 pub use resonator::{
     factorize, Cleanup, Factorization, Init, IterationRecord, ResonatorParams, ResonatorProfile,
     ResonatorTrace, StopReason, MAPI_RESONATOR_PROFILE,

@@ -4,6 +4,9 @@ pub enum mycelium_l1::ambient::AmbientError
 pub mycelium_l1::ambient::AmbientError::BareDecimalNoEncoding
 pub mycelium_l1::ambient::AmbientError::BareDecimalNoEncoding::paradigm: mycelium_l1::ast::Paradigm
 pub mycelium_l1::ambient::AmbientError::BareDecimalNoEncoding::site: alloc::string::String
+pub mycelium_l1::ambient::AmbientError::DepthExceeded
+pub mycelium_l1::ambient::AmbientError::DepthExceeded::limit: u32
+pub mycelium_l1::ambient::AmbientError::DepthExceeded::site: alloc::string::String
 pub mycelium_l1::ambient::AmbientError::MultipleDefaults
 pub mycelium_l1::ambient::AmbientError::MultipleDefaults::first: mycelium_l1::ast::Paradigm
 pub mycelium_l1::ambient::AmbientError::MultipleDefaults::second: mycelium_l1::ast::Paradigm
@@ -101,6 +104,7 @@ pub mycelium_l1::ast::BaseType::Ambient(mycelium_l1::ast::AmbientParams)
 pub mycelium_l1::ast::BaseType::Binary(mycelium_l1::ast::WidthRef)
 pub mycelium_l1::ast::BaseType::Bytes
 pub mycelium_l1::ast::BaseType::Dense(u32, mycelium_l1::ast::Scalar)
+pub mycelium_l1::ast::BaseType::Float
 pub mycelium_l1::ast::BaseType::Fn(alloc::boxed::Box<mycelium_l1::ast::TypeRef>, alloc::boxed::Box<mycelium_l1::ast::TypeRef>)
 pub mycelium_l1::ast::BaseType::Named(alloc::string::String, alloc::vec::Vec<mycelium_l1::ast::TypeRef>)
 pub mycelium_l1::ast::BaseType::Seq
@@ -235,11 +239,15 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::Item
 pub mycelium_l1::ast::Literal::AmbientInt(mycelium_l1::ast::Paradigm, i64)
 pub mycelium_l1::ast::Literal::Bin(alloc::string::String)
 pub mycelium_l1::ast::Literal::Bytes(alloc::string::String)
+pub mycelium_l1::ast::Literal::Float(alloc::string::String)
 pub mycelium_l1::ast::Literal::Int(i64)
 pub mycelium_l1::ast::Literal::List(alloc::vec::Vec<mycelium_l1::ast::Expr>)
+pub mycelium_l1::ast::Literal::Str(alloc::string::String)
 pub mycelium_l1::ast::Literal::Trit(alloc::string::String)
 impl mycelium_l1::ast::Literal
 pub fn mycelium_l1::ast::Literal::binary(impl core::convert::Into<alloc::string::String>) -> Self
+pub fn mycelium_l1::ast::Literal::float(impl core::convert::Into<alloc::string::String>) -> Self
+pub fn mycelium_l1::ast::Literal::string(impl core::convert::Into<alloc::string::String>) -> Self
 pub fn mycelium_l1::ast::Literal::ternary(impl core::convert::Into<alloc::string::String>) -> Self
 impl core::clone::Clone for mycelium_l1::ast::Literal
 pub fn mycelium_l1::ast::Literal::clone(&self) -> mycelium_l1::ast::Literal
@@ -523,6 +531,7 @@ impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::ast::FnSig
 impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::FnSig
 pub struct mycelium_l1::ast::Hypha
 pub mycelium_l1::ast::Hypha::body: mycelium_l1::ast::Expr
+pub mycelium_l1::ast::Hypha::forage: core::option::Option<alloc::boxed::Box<mycelium_l1::ast::Expr>>
 impl core::clone::Clone for mycelium_l1::ast::Hypha
 pub fn mycelium_l1::ast::Hypha::clone(&self) -> mycelium_l1::ast::Hypha
 impl core::cmp::PartialEq for mycelium_l1::ast::Hypha
@@ -818,11 +827,16 @@ pub mycelium_l1::checkty::Ty::Binary(mycelium_l1::checkty::Width)
 pub mycelium_l1::checkty::Ty::Bytes
 pub mycelium_l1::checkty::Ty::Data(alloc::string::String, alloc::vec::Vec<mycelium_l1::checkty::Ty>)
 pub mycelium_l1::checkty::Ty::Dense(u32, mycelium_l1::ast::Scalar)
+pub mycelium_l1::checkty::Ty::Float
 pub mycelium_l1::checkty::Ty::Fn(alloc::boxed::Box<mycelium_l1::checkty::Ty>, alloc::boxed::Box<mycelium_l1::checkty::Ty>)
 pub mycelium_l1::checkty::Ty::Seq(alloc::boxed::Box<mycelium_l1::checkty::Ty>, u32)
 pub mycelium_l1::checkty::Ty::Substrate(alloc::string::String)
 pub mycelium_l1::checkty::Ty::Ternary(mycelium_l1::checkty::Width)
 pub mycelium_l1::checkty::Ty::Var(alloc::string::String)
+pub mycelium_l1::checkty::Ty::Vsa
+pub mycelium_l1::checkty::Ty::Vsa::dim: u32
+pub mycelium_l1::checkty::Ty::Vsa::model: alloc::string::String
+pub mycelium_l1::checkty::Ty::Vsa::sparsity: mycelium_l1::ast::Sparsity
 impl core::clone::Clone for mycelium_l1::checkty::Ty
 pub fn mycelium_l1::checkty::Ty::clone(&self) -> mycelium_l1::checkty::Ty
 impl core::cmp::Eq for mycelium_l1::checkty::Ty
@@ -1010,8 +1024,12 @@ pub fn mycelium_l1::checkty::check_phylum_matured(&mycelium_l1::ast::Phylum, boo
 pub fn mycelium_l1::checkty::prim_kernel_name(&str) -> core::option::Option<&'static str>
 pub fn mycelium_l1::checkty::prim_sig(&str, &[mycelium_l1::checkty::Ty]) -> core::option::Option<mycelium_l1::checkty::Ty>
 pub fn mycelium_l1::checkty::type_head(&mycelium_l1::checkty::Ty) -> core::option::Option<alloc::string::String>
+pub fn mycelium_l1::checkty::vsa_kernel_model_id(&str) -> alloc::string::String
 pub mod mycelium_l1::elab
 pub enum mycelium_l1::elab::ElabError
+pub mycelium_l1::elab::ElabError::DepthExceeded
+pub mycelium_l1::elab::ElabError::DepthExceeded::limit: u32
+pub mycelium_l1::elab::ElabError::DepthExceeded::site: alloc::string::String
 pub mycelium_l1::elab::ElabError::Residual
 pub mycelium_l1::elab::ElabError::Residual::site: alloc::string::String
 pub mycelium_l1::elab::ElabError::Residual::what: alloc::string::String
@@ -1068,10 +1086,33 @@ impl core::marker::UnsafeUnpin for mycelium_l1::error::ParseError
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::error::ParseError
 impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::error::ParseError
 pub mod mycelium_l1::eval
+pub enum mycelium_l1::eval::ForageError
+pub mycelium_l1::eval::ForageError::NoCandidates
+impl core::clone::Clone for mycelium_l1::eval::ForageError
+pub fn mycelium_l1::eval::ForageError::clone(&self) -> mycelium_l1::eval::ForageError
+impl core::cmp::Eq for mycelium_l1::eval::ForageError
+impl core::cmp::PartialEq for mycelium_l1::eval::ForageError
+pub fn mycelium_l1::eval::ForageError::eq(&self, &mycelium_l1::eval::ForageError) -> bool
+impl core::convert::From<mycelium_l1::eval::ForageError> for mycelium_l1::eval::L1Error
+pub fn mycelium_l1::eval::L1Error::from(mycelium_l1::eval::ForageError) -> Self
+impl core::error::Error for mycelium_l1::eval::ForageError
+impl core::fmt::Debug for mycelium_l1::eval::ForageError
+pub fn mycelium_l1::eval::ForageError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_l1::eval::ForageError
+pub fn mycelium_l1::eval::ForageError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::eval::ForageError
+impl core::marker::Freeze for mycelium_l1::eval::ForageError
+impl core::marker::Send for mycelium_l1::eval::ForageError
+impl core::marker::Sync for mycelium_l1::eval::ForageError
+impl core::marker::Unpin for mycelium_l1::eval::ForageError
+impl core::marker::UnsafeUnpin for mycelium_l1::eval::ForageError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::eval::ForageError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::eval::ForageError
 pub enum mycelium_l1::eval::L1Error
 pub mycelium_l1::eval::L1Error::DepthExceeded
 pub mycelium_l1::eval::L1Error::DepthExceeded::limit: u32
 pub mycelium_l1::eval::L1Error::EffectBudget(mycelium_interp::budget::EffectBudgetExhausted)
+pub mycelium_l1::eval::L1Error::Forage(mycelium_l1::eval::ForageError)
 pub mycelium_l1::eval::L1Error::FuelExhausted
 pub mycelium_l1::eval::L1Error::GuaranteeTooWeak
 pub mycelium_l1::eval::L1Error::GuaranteeTooWeak::actual: mycelium_core::guarantee::GuaranteeStrength
@@ -1092,6 +1133,8 @@ impl core::convert::From<mycelium_interp::EvalError> for mycelium_l1::eval::L1Er
 pub fn mycelium_l1::eval::L1Error::from(mycelium_interp::EvalError) -> Self
 impl core::convert::From<mycelium_interp::budget::EffectBudgetExhausted> for mycelium_l1::eval::L1Error
 pub fn mycelium_l1::eval::L1Error::from(mycelium_interp::budget::EffectBudgetExhausted) -> Self
+impl core::convert::From<mycelium_l1::eval::ForageError> for mycelium_l1::eval::L1Error
+pub fn mycelium_l1::eval::L1Error::from(mycelium_l1::eval::ForageError) -> Self
 impl core::error::Error for mycelium_l1::eval::L1Error
 impl core::fmt::Debug for mycelium_l1::eval::L1Error
 pub fn mycelium_l1::eval::L1Error::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -1111,8 +1154,10 @@ pub mycelium_l1::eval::L1Value::Data::ctor: alloc::string::String
 pub mycelium_l1::eval::L1Value::Data::fields: alloc::vec::Vec<mycelium_l1::eval::L1Value>
 pub mycelium_l1::eval::L1Value::Data::ty: alloc::string::String
 pub mycelium_l1::eval::L1Value::Repr(mycelium_core::value::Value)
+pub mycelium_l1::eval::L1Value::Substrate(mycelium_l1::substrate::SubstrateHandle)
 impl mycelium_l1::eval::L1Value
 pub fn mycelium_l1::eval::L1Value::as_repr(&self) -> core::option::Option<&mycelium_core::value::Value>
+pub fn mycelium_l1::eval::L1Value::as_substrate(&self) -> core::option::Option<&mycelium_l1::substrate::SubstrateHandle>
 pub fn mycelium_l1::eval::L1Value::to_core(&self, &mycelium_l1::checkty::Env, &mycelium_core::data::DataRegistry) -> core::option::Option<mycelium_core::datum::CoreValue>
 impl core::clone::Clone for mycelium_l1::eval::L1Value
 pub fn mycelium_l1::eval::L1Value::clone(&self) -> mycelium_l1::eval::L1Value
@@ -1131,12 +1176,14 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::eval::L1Value
 pub struct mycelium_l1::eval::Evaluator<'e>
 impl<'e> mycelium_l1::eval::Evaluator<'e>
 pub fn mycelium_l1::eval::Evaluator<'e>::call(&self, &str, alloc::vec::Vec<mycelium_l1::eval::L1Value>) -> core::result::Result<mycelium_l1::eval::L1Value, mycelium_l1::eval::L1Error>
+pub fn mycelium_l1::eval::Evaluator<'e>::forage_decisions(&self) -> alloc::vec::Vec<mycelium_l1::eval::ForageDecision>
 pub fn mycelium_l1::eval::Evaluator<'e>::new(&'e mycelium_l1::checkty::Env) -> Self
+pub fn mycelium_l1::eval::Evaluator<'e>::release_events(&self) -> alloc::vec::Vec<mycelium_l1::substrate::ReleaseEvent>
 pub fn mycelium_l1::eval::Evaluator<'e>::with_depth(self, u32) -> Self
 pub fn mycelium_l1::eval::Evaluator<'e>::with_engines(self, mycelium_interp::prims::PrimRegistry, alloc::boxed::Box<(dyn mycelium_interp::swap::SwapEngine + core::marker::Send + core::marker::Sync)>) -> Self
 pub fn mycelium_l1::eval::Evaluator<'e>::with_fuel(self, u64) -> Self
 pub fn mycelium_l1::eval::Evaluator<'e>::with_opts(self, mycelium_l1::eval::EvaluatorOpts) -> Self
-impl<'e> core::marker::Freeze for mycelium_l1::eval::Evaluator<'e>
+impl<'e> !core::marker::Freeze for mycelium_l1::eval::Evaluator<'e>
 impl<'e> core::marker::Send for mycelium_l1::eval::Evaluator<'e>
 impl<'e> core::marker::Sync for mycelium_l1::eval::Evaluator<'e>
 impl<'e> core::marker::Unpin for mycelium_l1::eval::Evaluator<'e>
@@ -1167,6 +1214,23 @@ impl core::marker::Unpin for mycelium_l1::eval::EvaluatorOpts
 impl core::marker::UnsafeUnpin for mycelium_l1::eval::EvaluatorOpts
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::eval::EvaluatorOpts
 impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::eval::EvaluatorOpts
+pub struct mycelium_l1::eval::ForageDecision
+pub mycelium_l1::eval::ForageDecision::explanation: mycelium_select::Explanation
+pub mycelium_l1::eval::ForageDecision::site: alloc::string::String
+impl core::clone::Clone for mycelium_l1::eval::ForageDecision
+pub fn mycelium_l1::eval::ForageDecision::clone(&self) -> mycelium_l1::eval::ForageDecision
+impl core::cmp::PartialEq for mycelium_l1::eval::ForageDecision
+pub fn mycelium_l1::eval::ForageDecision::eq(&self, &mycelium_l1::eval::ForageDecision) -> bool
+impl core::fmt::Debug for mycelium_l1::eval::ForageDecision
+pub fn mycelium_l1::eval::ForageDecision::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::eval::ForageDecision
+impl core::marker::Freeze for mycelium_l1::eval::ForageDecision
+impl core::marker::Send for mycelium_l1::eval::ForageDecision
+impl core::marker::Sync for mycelium_l1::eval::ForageDecision
+impl core::marker::Unpin for mycelium_l1::eval::ForageDecision
+impl core::marker::UnsafeUnpin for mycelium_l1::eval::ForageDecision
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::eval::ForageDecision
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::eval::ForageDecision
 pub fn mycelium_l1::eval::strength_of(mycelium_l1::ast::Strength) -> mycelium_core::guarantee::GuaranteeStrength
 pub mod mycelium_l1::lexer
 pub struct mycelium_l1::lexer::Comment
@@ -1326,6 +1390,94 @@ pub fn mycelium_l1::nodule::parse_nodule_header(&str) -> core::result::Result<co
 pub mod mycelium_l1::parse
 pub fn mycelium_l1::parse::parse(&str) -> core::result::Result<mycelium_l1::ast::Nodule, mycelium_l1::error::ParseError>
 pub fn mycelium_l1::parse::parse_phylum(&str) -> core::result::Result<mycelium_l1::ast::Phylum, mycelium_l1::error::ParseError>
+pub mod mycelium_l1::substrate
+pub enum mycelium_l1::substrate::SubstrateError
+pub mycelium_l1::substrate::SubstrateError::AlreadyConsumed
+pub mycelium_l1::substrate::SubstrateError::AlreadyConsumed::id: u64
+pub mycelium_l1::substrate::SubstrateError::AlreadyConsumed::tag: alloc::string::String
+impl core::clone::Clone for mycelium_l1::substrate::SubstrateError
+pub fn mycelium_l1::substrate::SubstrateError::clone(&self) -> mycelium_l1::substrate::SubstrateError
+impl core::cmp::Eq for mycelium_l1::substrate::SubstrateError
+impl core::cmp::PartialEq for mycelium_l1::substrate::SubstrateError
+pub fn mycelium_l1::substrate::SubstrateError::eq(&self, &mycelium_l1::substrate::SubstrateError) -> bool
+impl core::error::Error for mycelium_l1::substrate::SubstrateError
+impl core::fmt::Debug for mycelium_l1::substrate::SubstrateError
+pub fn mycelium_l1::substrate::SubstrateError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_l1::substrate::SubstrateError
+pub fn mycelium_l1::substrate::SubstrateError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::substrate::SubstrateError
+impl core::marker::Freeze for mycelium_l1::substrate::SubstrateError
+impl core::marker::Send for mycelium_l1::substrate::SubstrateError
+impl core::marker::Sync for mycelium_l1::substrate::SubstrateError
+impl core::marker::Unpin for mycelium_l1::substrate::SubstrateError
+impl core::marker::UnsafeUnpin for mycelium_l1::substrate::SubstrateError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::substrate::SubstrateError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::substrate::SubstrateError
+pub struct mycelium_l1::substrate::ReleaseEvent
+pub mycelium_l1::substrate::ReleaseEvent::id: u64
+pub mycelium_l1::substrate::ReleaseEvent::site: alloc::string::String
+pub mycelium_l1::substrate::ReleaseEvent::tag: alloc::string::String
+impl core::clone::Clone for mycelium_l1::substrate::ReleaseEvent
+pub fn mycelium_l1::substrate::ReleaseEvent::clone(&self) -> mycelium_l1::substrate::ReleaseEvent
+impl core::cmp::Eq for mycelium_l1::substrate::ReleaseEvent
+impl core::cmp::PartialEq for mycelium_l1::substrate::ReleaseEvent
+pub fn mycelium_l1::substrate::ReleaseEvent::eq(&self, &mycelium_l1::substrate::ReleaseEvent) -> bool
+impl core::fmt::Debug for mycelium_l1::substrate::ReleaseEvent
+pub fn mycelium_l1::substrate::ReleaseEvent::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_l1::substrate::ReleaseEvent
+pub fn mycelium_l1::substrate::ReleaseEvent::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::substrate::ReleaseEvent
+impl core::marker::Freeze for mycelium_l1::substrate::ReleaseEvent
+impl core::marker::Send for mycelium_l1::substrate::ReleaseEvent
+impl core::marker::Sync for mycelium_l1::substrate::ReleaseEvent
+impl core::marker::Unpin for mycelium_l1::substrate::ReleaseEvent
+impl core::marker::UnsafeUnpin for mycelium_l1::substrate::ReleaseEvent
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::substrate::ReleaseEvent
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::substrate::ReleaseEvent
+pub struct mycelium_l1::substrate::SubstrateHandle
+impl mycelium_l1::substrate::SubstrateHandle
+pub fn mycelium_l1::substrate::SubstrateHandle::acquire(impl core::convert::Into<alloc::string::String>, mycelium_l1::substrate::SubstrateProvenance) -> Self
+pub fn mycelium_l1::substrate::SubstrateHandle::explain(&self) -> alloc::string::String
+pub fn mycelium_l1::substrate::SubstrateHandle::id(&self) -> u64
+pub fn mycelium_l1::substrate::SubstrateHandle::is_consumed(&self) -> bool
+pub fn mycelium_l1::substrate::SubstrateHandle::provenance(&self) -> &mycelium_l1::substrate::SubstrateProvenance
+pub fn mycelium_l1::substrate::SubstrateHandle::release(&self, impl core::convert::Into<alloc::string::String>) -> core::option::Option<mycelium_l1::substrate::ReleaseEvent>
+pub fn mycelium_l1::substrate::SubstrateHandle::tag(&self) -> &str
+pub fn mycelium_l1::substrate::SubstrateHandle::try_consume(&self) -> core::result::Result<Self, mycelium_l1::substrate::SubstrateError>
+impl core::clone::Clone for mycelium_l1::substrate::SubstrateHandle
+pub fn mycelium_l1::substrate::SubstrateHandle::clone(&self) -> mycelium_l1::substrate::SubstrateHandle
+impl core::cmp::Eq for mycelium_l1::substrate::SubstrateHandle
+impl core::cmp::PartialEq for mycelium_l1::substrate::SubstrateHandle
+pub fn mycelium_l1::substrate::SubstrateHandle::eq(&self, &Self) -> bool
+impl core::fmt::Debug for mycelium_l1::substrate::SubstrateHandle
+pub fn mycelium_l1::substrate::SubstrateHandle::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_l1::substrate::SubstrateHandle
+impl core::marker::Send for mycelium_l1::substrate::SubstrateHandle
+impl core::marker::Sync for mycelium_l1::substrate::SubstrateHandle
+impl core::marker::Unpin for mycelium_l1::substrate::SubstrateHandle
+impl core::marker::UnsafeUnpin for mycelium_l1::substrate::SubstrateHandle
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::substrate::SubstrateHandle
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::substrate::SubstrateHandle
+pub struct mycelium_l1::substrate::SubstrateProvenance
+pub mycelium_l1::substrate::SubstrateProvenance::acquired_via: alloc::string::String
+pub mycelium_l1::substrate::SubstrateProvenance::site: alloc::string::String
+impl mycelium_l1::substrate::SubstrateProvenance
+pub fn mycelium_l1::substrate::SubstrateProvenance::new(impl core::convert::Into<alloc::string::String>, impl core::convert::Into<alloc::string::String>) -> Self
+impl core::clone::Clone for mycelium_l1::substrate::SubstrateProvenance
+pub fn mycelium_l1::substrate::SubstrateProvenance::clone(&self) -> mycelium_l1::substrate::SubstrateProvenance
+impl core::cmp::Eq for mycelium_l1::substrate::SubstrateProvenance
+impl core::cmp::PartialEq for mycelium_l1::substrate::SubstrateProvenance
+pub fn mycelium_l1::substrate::SubstrateProvenance::eq(&self, &mycelium_l1::substrate::SubstrateProvenance) -> bool
+impl core::fmt::Debug for mycelium_l1::substrate::SubstrateProvenance
+pub fn mycelium_l1::substrate::SubstrateProvenance::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::substrate::SubstrateProvenance
+impl core::marker::Freeze for mycelium_l1::substrate::SubstrateProvenance
+impl core::marker::Send for mycelium_l1::substrate::SubstrateProvenance
+impl core::marker::Sync for mycelium_l1::substrate::SubstrateProvenance
+impl core::marker::Unpin for mycelium_l1::substrate::SubstrateProvenance
+impl core::marker::UnsafeUnpin for mycelium_l1::substrate::SubstrateProvenance
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::substrate::SubstrateProvenance
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::substrate::SubstrateProvenance
 pub mod mycelium_l1::token
 pub enum mycelium_l1::token::ScalarTok
 pub mycelium_l1::token::ScalarTok::Bf16
@@ -1397,6 +1549,8 @@ pub mycelium_l1::token::Tok::Eof
 pub mycelium_l1::token::Tok::Eq
 pub mycelium_l1::token::Tok::EqEq
 pub mycelium_l1::token::Tok::FatArrow
+pub mycelium_l1::token::Tok::Float
+pub mycelium_l1::token::Tok::FloatLit(alloc::string::String)
 pub mycelium_l1::token::Tok::Fn
 pub mycelium_l1::token::Tok::For
 pub mycelium_l1::token::Tok::Forage
@@ -1444,6 +1598,7 @@ pub mycelium_l1::token::Tok::Slash
 pub mycelium_l1::token::Tok::Sparse
 pub mycelium_l1::token::Tok::Spore
 pub mycelium_l1::token::Tok::Star
+pub mycelium_l1::token::Tok::StrLit(alloc::string::String)
 pub mycelium_l1::token::Tok::Strength(mycelium_l1::token::StrengthTok)
 pub mycelium_l1::token::Tok::Substrate
 pub mycelium_l1::token::Tok::Swap
@@ -1534,11 +1689,36 @@ impl core::marker::Unpin for mycelium_l1::totality::Totality
 impl core::marker::UnsafeUnpin for mycelium_l1::totality::Totality
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::totality::Totality
 impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::totality::Totality
-pub fn mycelium_l1::totality::classify_all(&alloc::collections::btree::map::BTreeMap<alloc::string::String, mycelium_l1::ast::FnDecl>) -> alloc::collections::btree::map::BTreeMap<alloc::string::String, mycelium_l1::totality::Totality>
+pub struct mycelium_l1::totality::WalkDepthExceeded
+pub mycelium_l1::totality::WalkDepthExceeded::limit: u32
+impl core::clone::Clone for mycelium_l1::totality::WalkDepthExceeded
+pub fn mycelium_l1::totality::WalkDepthExceeded::clone(&self) -> mycelium_l1::totality::WalkDepthExceeded
+impl core::cmp::Eq for mycelium_l1::totality::WalkDepthExceeded
+impl core::cmp::PartialEq for mycelium_l1::totality::WalkDepthExceeded
+pub fn mycelium_l1::totality::WalkDepthExceeded::eq(&self, &mycelium_l1::totality::WalkDepthExceeded) -> bool
+impl core::error::Error for mycelium_l1::totality::WalkDepthExceeded
+impl core::fmt::Debug for mycelium_l1::totality::WalkDepthExceeded
+pub fn mycelium_l1::totality::WalkDepthExceeded::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_l1::totality::WalkDepthExceeded
+pub fn mycelium_l1::totality::WalkDepthExceeded::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_l1::totality::WalkDepthExceeded
+impl core::marker::StructuralPartialEq for mycelium_l1::totality::WalkDepthExceeded
+impl core::marker::Freeze for mycelium_l1::totality::WalkDepthExceeded
+impl core::marker::Send for mycelium_l1::totality::WalkDepthExceeded
+impl core::marker::Sync for mycelium_l1::totality::WalkDepthExceeded
+impl core::marker::Unpin for mycelium_l1::totality::WalkDepthExceeded
+impl core::marker::UnsafeUnpin for mycelium_l1::totality::WalkDepthExceeded
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::totality::WalkDepthExceeded
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::totality::WalkDepthExceeded
+pub const mycelium_l1::totality::MAX_WALK_DEPTH: u32
+pub fn mycelium_l1::totality::classify_all(&alloc::collections::btree::map::BTreeMap<alloc::string::String, mycelium_l1::ast::FnDecl>) -> core::result::Result<alloc::collections::btree::map::BTreeMap<alloc::string::String, mycelium_l1::totality::Totality>, mycelium_l1::totality::WalkDepthExceeded>
 pub enum mycelium_l1::AmbientError
 pub mycelium_l1::AmbientError::BareDecimalNoEncoding
 pub mycelium_l1::AmbientError::BareDecimalNoEncoding::paradigm: mycelium_l1::ast::Paradigm
 pub mycelium_l1::AmbientError::BareDecimalNoEncoding::site: alloc::string::String
+pub mycelium_l1::AmbientError::DepthExceeded
+pub mycelium_l1::AmbientError::DepthExceeded::limit: u32
+pub mycelium_l1::AmbientError::DepthExceeded::site: alloc::string::String
 pub mycelium_l1::AmbientError::MultipleDefaults
 pub mycelium_l1::AmbientError::MultipleDefaults::first: mycelium_l1::ast::Paradigm
 pub mycelium_l1::AmbientError::MultipleDefaults::second: mycelium_l1::ast::Paradigm
@@ -1569,6 +1749,9 @@ impl core::marker::UnsafeUnpin for mycelium_l1::ambient::AmbientError
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::ambient::AmbientError
 impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ambient::AmbientError
 pub enum mycelium_l1::ElabError
+pub mycelium_l1::ElabError::DepthExceeded
+pub mycelium_l1::ElabError::DepthExceeded::limit: u32
+pub mycelium_l1::ElabError::DepthExceeded::site: alloc::string::String
 pub mycelium_l1::ElabError::Residual
 pub mycelium_l1::ElabError::Residual::site: alloc::string::String
 pub mycelium_l1::ElabError::Residual::what: alloc::string::String
@@ -1591,10 +1774,33 @@ impl core::marker::Unpin for mycelium_l1::elab::ElabError
 impl core::marker::UnsafeUnpin for mycelium_l1::elab::ElabError
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::elab::ElabError
 impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::elab::ElabError
+pub enum mycelium_l1::ForageError
+pub mycelium_l1::ForageError::NoCandidates
+impl core::clone::Clone for mycelium_l1::eval::ForageError
+pub fn mycelium_l1::eval::ForageError::clone(&self) -> mycelium_l1::eval::ForageError
+impl core::cmp::Eq for mycelium_l1::eval::ForageError
+impl core::cmp::PartialEq for mycelium_l1::eval::ForageError
+pub fn mycelium_l1::eval::ForageError::eq(&self, &mycelium_l1::eval::ForageError) -> bool
+impl core::convert::From<mycelium_l1::eval::ForageError> for mycelium_l1::eval::L1Error
+pub fn mycelium_l1::eval::L1Error::from(mycelium_l1::eval::ForageError) -> Self
+impl core::error::Error for mycelium_l1::eval::ForageError
+impl core::fmt::Debug for mycelium_l1::eval::ForageError
+pub fn mycelium_l1::eval::ForageError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_l1::eval::ForageError
+pub fn mycelium_l1::eval::ForageError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::eval::ForageError
+impl core::marker::Freeze for mycelium_l1::eval::ForageError
+impl core::marker::Send for mycelium_l1::eval::ForageError
+impl core::marker::Sync for mycelium_l1::eval::ForageError
+impl core::marker::Unpin for mycelium_l1::eval::ForageError
+impl core::marker::UnsafeUnpin for mycelium_l1::eval::ForageError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::eval::ForageError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::eval::ForageError
 pub enum mycelium_l1::L1Error
 pub mycelium_l1::L1Error::DepthExceeded
 pub mycelium_l1::L1Error::DepthExceeded::limit: u32
 pub mycelium_l1::L1Error::EffectBudget(mycelium_interp::budget::EffectBudgetExhausted)
+pub mycelium_l1::L1Error::Forage(mycelium_l1::eval::ForageError)
 pub mycelium_l1::L1Error::FuelExhausted
 pub mycelium_l1::L1Error::GuaranteeTooWeak
 pub mycelium_l1::L1Error::GuaranteeTooWeak::actual: mycelium_core::guarantee::GuaranteeStrength
@@ -1615,6 +1821,8 @@ impl core::convert::From<mycelium_interp::EvalError> for mycelium_l1::eval::L1Er
 pub fn mycelium_l1::eval::L1Error::from(mycelium_interp::EvalError) -> Self
 impl core::convert::From<mycelium_interp::budget::EffectBudgetExhausted> for mycelium_l1::eval::L1Error
 pub fn mycelium_l1::eval::L1Error::from(mycelium_interp::budget::EffectBudgetExhausted) -> Self
+impl core::convert::From<mycelium_l1::eval::ForageError> for mycelium_l1::eval::L1Error
+pub fn mycelium_l1::eval::L1Error::from(mycelium_l1::eval::ForageError) -> Self
 impl core::error::Error for mycelium_l1::eval::L1Error
 impl core::fmt::Debug for mycelium_l1::eval::L1Error
 pub fn mycelium_l1::eval::L1Error::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -1634,8 +1842,10 @@ pub mycelium_l1::L1Value::Data::ctor: alloc::string::String
 pub mycelium_l1::L1Value::Data::fields: alloc::vec::Vec<mycelium_l1::eval::L1Value>
 pub mycelium_l1::L1Value::Data::ty: alloc::string::String
 pub mycelium_l1::L1Value::Repr(mycelium_core::value::Value)
+pub mycelium_l1::L1Value::Substrate(mycelium_l1::substrate::SubstrateHandle)
 impl mycelium_l1::eval::L1Value
 pub fn mycelium_l1::eval::L1Value::as_repr(&self) -> core::option::Option<&mycelium_core::value::Value>
+pub fn mycelium_l1::eval::L1Value::as_substrate(&self) -> core::option::Option<&mycelium_l1::substrate::SubstrateHandle>
 pub fn mycelium_l1::eval::L1Value::to_core(&self, &mycelium_l1::checkty::Env, &mycelium_core::data::DataRegistry) -> core::option::Option<mycelium_core::datum::CoreValue>
 impl core::clone::Clone for mycelium_l1::eval::L1Value
 pub fn mycelium_l1::eval::L1Value::clone(&self) -> mycelium_l1::eval::L1Value
@@ -1651,6 +1861,28 @@ impl core::marker::Unpin for mycelium_l1::eval::L1Value
 impl core::marker::UnsafeUnpin for mycelium_l1::eval::L1Value
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::eval::L1Value
 impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::eval::L1Value
+pub enum mycelium_l1::SubstrateError
+pub mycelium_l1::SubstrateError::AlreadyConsumed
+pub mycelium_l1::SubstrateError::AlreadyConsumed::id: u64
+pub mycelium_l1::SubstrateError::AlreadyConsumed::tag: alloc::string::String
+impl core::clone::Clone for mycelium_l1::substrate::SubstrateError
+pub fn mycelium_l1::substrate::SubstrateError::clone(&self) -> mycelium_l1::substrate::SubstrateError
+impl core::cmp::Eq for mycelium_l1::substrate::SubstrateError
+impl core::cmp::PartialEq for mycelium_l1::substrate::SubstrateError
+pub fn mycelium_l1::substrate::SubstrateError::eq(&self, &mycelium_l1::substrate::SubstrateError) -> bool
+impl core::error::Error for mycelium_l1::substrate::SubstrateError
+impl core::fmt::Debug for mycelium_l1::substrate::SubstrateError
+pub fn mycelium_l1::substrate::SubstrateError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_l1::substrate::SubstrateError
+pub fn mycelium_l1::substrate::SubstrateError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::substrate::SubstrateError
+impl core::marker::Freeze for mycelium_l1::substrate::SubstrateError
+impl core::marker::Send for mycelium_l1::substrate::SubstrateError
+impl core::marker::Sync for mycelium_l1::substrate::SubstrateError
+impl core::marker::Unpin for mycelium_l1::substrate::SubstrateError
+impl core::marker::UnsafeUnpin for mycelium_l1::substrate::SubstrateError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::substrate::SubstrateError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::substrate::SubstrateError
 pub enum mycelium_l1::Totality
 pub mycelium_l1::Totality::Partial
 pub mycelium_l1::Totality::Total
@@ -1675,11 +1907,16 @@ pub mycelium_l1::Ty::Binary(mycelium_l1::checkty::Width)
 pub mycelium_l1::Ty::Bytes
 pub mycelium_l1::Ty::Data(alloc::string::String, alloc::vec::Vec<mycelium_l1::checkty::Ty>)
 pub mycelium_l1::Ty::Dense(u32, mycelium_l1::ast::Scalar)
+pub mycelium_l1::Ty::Float
 pub mycelium_l1::Ty::Fn(alloc::boxed::Box<mycelium_l1::checkty::Ty>, alloc::boxed::Box<mycelium_l1::checkty::Ty>)
 pub mycelium_l1::Ty::Seq(alloc::boxed::Box<mycelium_l1::checkty::Ty>, u32)
 pub mycelium_l1::Ty::Substrate(alloc::string::String)
 pub mycelium_l1::Ty::Ternary(mycelium_l1::checkty::Width)
 pub mycelium_l1::Ty::Var(alloc::string::String)
+pub mycelium_l1::Ty::Vsa
+pub mycelium_l1::Ty::Vsa::dim: u32
+pub mycelium_l1::Ty::Vsa::model: alloc::string::String
+pub mycelium_l1::Ty::Vsa::sparsity: mycelium_l1::ast::Sparsity
 impl core::clone::Clone for mycelium_l1::checkty::Ty
 pub fn mycelium_l1::checkty::Ty::clone(&self) -> mycelium_l1::checkty::Ty
 impl core::cmp::Eq for mycelium_l1::checkty::Ty
@@ -1792,18 +2029,37 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::checkty::Env
 pub struct mycelium_l1::Evaluator<'e>
 impl<'e> mycelium_l1::eval::Evaluator<'e>
 pub fn mycelium_l1::eval::Evaluator<'e>::call(&self, &str, alloc::vec::Vec<mycelium_l1::eval::L1Value>) -> core::result::Result<mycelium_l1::eval::L1Value, mycelium_l1::eval::L1Error>
+pub fn mycelium_l1::eval::Evaluator<'e>::forage_decisions(&self) -> alloc::vec::Vec<mycelium_l1::eval::ForageDecision>
 pub fn mycelium_l1::eval::Evaluator<'e>::new(&'e mycelium_l1::checkty::Env) -> Self
+pub fn mycelium_l1::eval::Evaluator<'e>::release_events(&self) -> alloc::vec::Vec<mycelium_l1::substrate::ReleaseEvent>
 pub fn mycelium_l1::eval::Evaluator<'e>::with_depth(self, u32) -> Self
 pub fn mycelium_l1::eval::Evaluator<'e>::with_engines(self, mycelium_interp::prims::PrimRegistry, alloc::boxed::Box<(dyn mycelium_interp::swap::SwapEngine + core::marker::Send + core::marker::Sync)>) -> Self
 pub fn mycelium_l1::eval::Evaluator<'e>::with_fuel(self, u64) -> Self
 pub fn mycelium_l1::eval::Evaluator<'e>::with_opts(self, mycelium_l1::eval::EvaluatorOpts) -> Self
-impl<'e> core::marker::Freeze for mycelium_l1::eval::Evaluator<'e>
+impl<'e> !core::marker::Freeze for mycelium_l1::eval::Evaluator<'e>
 impl<'e> core::marker::Send for mycelium_l1::eval::Evaluator<'e>
 impl<'e> core::marker::Sync for mycelium_l1::eval::Evaluator<'e>
 impl<'e> core::marker::Unpin for mycelium_l1::eval::Evaluator<'e>
 impl<'e> core::marker::UnsafeUnpin for mycelium_l1::eval::Evaluator<'e>
 impl<'e> !core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::eval::Evaluator<'e>
 impl<'e> !core::panic::unwind_safe::UnwindSafe for mycelium_l1::eval::Evaluator<'e>
+pub struct mycelium_l1::ForageDecision
+pub mycelium_l1::ForageDecision::explanation: mycelium_select::Explanation
+pub mycelium_l1::ForageDecision::site: alloc::string::String
+impl core::clone::Clone for mycelium_l1::eval::ForageDecision
+pub fn mycelium_l1::eval::ForageDecision::clone(&self) -> mycelium_l1::eval::ForageDecision
+impl core::cmp::PartialEq for mycelium_l1::eval::ForageDecision
+pub fn mycelium_l1::eval::ForageDecision::eq(&self, &mycelium_l1::eval::ForageDecision) -> bool
+impl core::fmt::Debug for mycelium_l1::eval::ForageDecision
+pub fn mycelium_l1::eval::ForageDecision::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::eval::ForageDecision
+impl core::marker::Freeze for mycelium_l1::eval::ForageDecision
+impl core::marker::Send for mycelium_l1::eval::ForageDecision
+impl core::marker::Sync for mycelium_l1::eval::ForageDecision
+impl core::marker::Unpin for mycelium_l1::eval::ForageDecision
+impl core::marker::UnsafeUnpin for mycelium_l1::eval::ForageDecision
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::eval::ForageDecision
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::eval::ForageDecision
 pub struct mycelium_l1::InstanceSelection
 pub mycelium_l1::InstanceSelection::for_ty: mycelium_l1::checkty::Ty
 pub mycelium_l1::InstanceSelection::impl_mangled: alloc::string::String
@@ -1968,6 +2224,27 @@ impl core::marker::Unpin for mycelium_l1::checkty::PhylumEnv
 impl core::marker::UnsafeUnpin for mycelium_l1::checkty::PhylumEnv
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::checkty::PhylumEnv
 impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::checkty::PhylumEnv
+pub struct mycelium_l1::ReleaseEvent
+pub mycelium_l1::ReleaseEvent::id: u64
+pub mycelium_l1::ReleaseEvent::site: alloc::string::String
+pub mycelium_l1::ReleaseEvent::tag: alloc::string::String
+impl core::clone::Clone for mycelium_l1::substrate::ReleaseEvent
+pub fn mycelium_l1::substrate::ReleaseEvent::clone(&self) -> mycelium_l1::substrate::ReleaseEvent
+impl core::cmp::Eq for mycelium_l1::substrate::ReleaseEvent
+impl core::cmp::PartialEq for mycelium_l1::substrate::ReleaseEvent
+pub fn mycelium_l1::substrate::ReleaseEvent::eq(&self, &mycelium_l1::substrate::ReleaseEvent) -> bool
+impl core::fmt::Debug for mycelium_l1::substrate::ReleaseEvent
+pub fn mycelium_l1::substrate::ReleaseEvent::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_l1::substrate::ReleaseEvent
+pub fn mycelium_l1::substrate::ReleaseEvent::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::substrate::ReleaseEvent
+impl core::marker::Freeze for mycelium_l1::substrate::ReleaseEvent
+impl core::marker::Send for mycelium_l1::substrate::ReleaseEvent
+impl core::marker::Sync for mycelium_l1::substrate::ReleaseEvent
+impl core::marker::Unpin for mycelium_l1::substrate::ReleaseEvent
+impl core::marker::UnsafeUnpin for mycelium_l1::substrate::ReleaseEvent
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::substrate::ReleaseEvent
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::substrate::ReleaseEvent
 pub struct mycelium_l1::Resolved
 pub mycelium_l1::Resolved::nodule: mycelium_l1::ast::Nodule
 pub mycelium_l1::Resolved::notes: alloc::vec::Vec<mycelium_l1::ambient::ResolutionNote>
@@ -1985,6 +2262,50 @@ impl core::marker::Unpin for mycelium_l1::ambient::Resolved
 impl core::marker::UnsafeUnpin for mycelium_l1::ambient::Resolved
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::ambient::Resolved
 impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ambient::Resolved
+pub struct mycelium_l1::SubstrateHandle
+impl mycelium_l1::substrate::SubstrateHandle
+pub fn mycelium_l1::substrate::SubstrateHandle::acquire(impl core::convert::Into<alloc::string::String>, mycelium_l1::substrate::SubstrateProvenance) -> Self
+pub fn mycelium_l1::substrate::SubstrateHandle::explain(&self) -> alloc::string::String
+pub fn mycelium_l1::substrate::SubstrateHandle::id(&self) -> u64
+pub fn mycelium_l1::substrate::SubstrateHandle::is_consumed(&self) -> bool
+pub fn mycelium_l1::substrate::SubstrateHandle::provenance(&self) -> &mycelium_l1::substrate::SubstrateProvenance
+pub fn mycelium_l1::substrate::SubstrateHandle::release(&self, impl core::convert::Into<alloc::string::String>) -> core::option::Option<mycelium_l1::substrate::ReleaseEvent>
+pub fn mycelium_l1::substrate::SubstrateHandle::tag(&self) -> &str
+pub fn mycelium_l1::substrate::SubstrateHandle::try_consume(&self) -> core::result::Result<Self, mycelium_l1::substrate::SubstrateError>
+impl core::clone::Clone for mycelium_l1::substrate::SubstrateHandle
+pub fn mycelium_l1::substrate::SubstrateHandle::clone(&self) -> mycelium_l1::substrate::SubstrateHandle
+impl core::cmp::Eq for mycelium_l1::substrate::SubstrateHandle
+impl core::cmp::PartialEq for mycelium_l1::substrate::SubstrateHandle
+pub fn mycelium_l1::substrate::SubstrateHandle::eq(&self, &Self) -> bool
+impl core::fmt::Debug for mycelium_l1::substrate::SubstrateHandle
+pub fn mycelium_l1::substrate::SubstrateHandle::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_l1::substrate::SubstrateHandle
+impl core::marker::Send for mycelium_l1::substrate::SubstrateHandle
+impl core::marker::Sync for mycelium_l1::substrate::SubstrateHandle
+impl core::marker::Unpin for mycelium_l1::substrate::SubstrateHandle
+impl core::marker::UnsafeUnpin for mycelium_l1::substrate::SubstrateHandle
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::substrate::SubstrateHandle
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::substrate::SubstrateHandle
+pub struct mycelium_l1::SubstrateProvenance
+pub mycelium_l1::SubstrateProvenance::acquired_via: alloc::string::String
+pub mycelium_l1::SubstrateProvenance::site: alloc::string::String
+impl mycelium_l1::substrate::SubstrateProvenance
+pub fn mycelium_l1::substrate::SubstrateProvenance::new(impl core::convert::Into<alloc::string::String>, impl core::convert::Into<alloc::string::String>) -> Self
+impl core::clone::Clone for mycelium_l1::substrate::SubstrateProvenance
+pub fn mycelium_l1::substrate::SubstrateProvenance::clone(&self) -> mycelium_l1::substrate::SubstrateProvenance
+impl core::cmp::Eq for mycelium_l1::substrate::SubstrateProvenance
+impl core::cmp::PartialEq for mycelium_l1::substrate::SubstrateProvenance
+pub fn mycelium_l1::substrate::SubstrateProvenance::eq(&self, &mycelium_l1::substrate::SubstrateProvenance) -> bool
+impl core::fmt::Debug for mycelium_l1::substrate::SubstrateProvenance
+pub fn mycelium_l1::substrate::SubstrateProvenance::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::substrate::SubstrateProvenance
+impl core::marker::Freeze for mycelium_l1::substrate::SubstrateProvenance
+impl core::marker::Send for mycelium_l1::substrate::SubstrateProvenance
+impl core::marker::Sync for mycelium_l1::substrate::SubstrateProvenance
+impl core::marker::Unpin for mycelium_l1::substrate::SubstrateProvenance
+impl core::marker::UnsafeUnpin for mycelium_l1::substrate::SubstrateProvenance
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::substrate::SubstrateProvenance
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::substrate::SubstrateProvenance
 pub struct mycelium_l1::UsePath
 pub mycelium_l1::UsePath::glob: bool
 pub mycelium_l1::UsePath::path: mycelium_l1::ast::Path

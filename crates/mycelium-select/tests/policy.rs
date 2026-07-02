@@ -8,8 +8,9 @@ use mycelium_core::{
     ScalarKind,
 };
 use mycelium_select::{
-    explain, select, select_packing, select_swap_target, Action, Candidate, CostModel, Explanation,
-    ParadigmKind, PolicyError, Predicate, Rule, SelectError, SelectionInputs, SelectionPolicy,
+    explain, select, select_packing, select_placement, select_swap_target, Action, Candidate,
+    CostModel, Explanation, NodeRef, ParadigmKind, PolicyError, Predicate, Rule, SelectError,
+    SelectionInputs, SelectionPolicy,
 };
 
 fn unit_cost() -> CostModel {
@@ -341,6 +342,31 @@ fn site_adapters_share_one_mechanism() {
         select_swap_target(&packing, &inputs, None),
         Err(SelectError::WrongSiteKind {
             site: "swap-target",
+            ..
+        })
+    ));
+
+    // The fourth site (M-906 D-lite `forage`; RFC-0008 RT3): `select_placement` shares the SAME
+    // `select` engine — no new mechanism — and refuses a non-`Node` candidate the same way the
+    // other three adapters refuse a wrong-kind candidate.
+    let placement = SelectionPolicy::new(
+        "forage.dlite.v0",
+        vec![Candidate::Node(NodeRef("worker-0".to_owned()))],
+        Vec::new(),
+        0,
+        unit_cost(),
+    )
+    .unwrap();
+    let (node, node_expl) = select_placement(&placement, &inputs, None).unwrap();
+    assert_eq!(node, NodeRef("worker-0".to_owned()));
+    assert_eq!(
+        node_expl.chosen,
+        Candidate::Node(NodeRef("worker-0".to_owned()))
+    );
+    assert!(matches!(
+        select_placement(&packing, &inputs, None),
+        Err(SelectError::WrongSiteKind {
+            site: "placement",
             ..
         })
     ));

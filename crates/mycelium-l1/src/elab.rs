@@ -32,11 +32,11 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use mycelium_core::{
-    operation_hash, Alt, CtorRef, CtorSpec, DataRegistry, DeclSpec, FieldSpec, Meta, Node, Payload,
-    PolicyRef, Provenance, Repr, ScalarKind, Trit, Value,
+    operation_hash, Alt, CtorRef, CtorSpec, DataRegistry, DeclSpec, FieldSpec, FloatWidth, Meta,
+    Node, Payload, PolicyRef, Provenance, Repr, ScalarKind, SparsityClass, Trit, Value,
 };
 
-use crate::ast::{Arm, BaseType, Expr, Literal, Path, Scalar, TypeRef, WidthRef};
+use crate::ast::{Arm, BaseType, Expr, Literal, Path, Scalar, Sparsity, TypeRef, WidthRef};
 use crate::checkty::{infer_type, normalize_pattern, prim_kernel_name, resolve_ty, Env, Ty};
 use crate::decision::{self, Head, Tree};
 
@@ -170,6 +170,53 @@ pub fn lit_value(site: &str, l: &Literal) -> Result<Value, ElabError> {
                 Ok,
             )
         }
+        // M-910/M-911 (kickoff `enb` Phase-I H1): a `"…"` textual string literal lowers to the
+        // SAME `Repr::Bytes`/`Payload::Bytes` value form as `Literal::Bytes` above (KC-3 — no new
+        // L0 node) — its decoded content, UTF-8-encoded. The lexer already decoded the escape set
+        // and validated termination, so the encode is total.
+        Literal::Str(s) => Value::new(
+            Repr::Bytes,
+            Payload::Bytes(s.as_bytes().to_vec()),
+            Meta::exact(Provenance::Root),
+        )
+        .map_or_else(
+            |e| residual(site, format!("malformed string literal: {e}")),
+            Ok,
+        ),
+        // ADR-040 (M-897, kickoff `enb` Phase-I H1 Gap A): a decimal float literal lowers to the
+        // EXISTING `Repr::Float`/`Payload::Float` scalar value form landed by M-896 (KC-3 — no new
+        // L0 node). The single text→f64 conversion happens here, via `f64::from_str` — the
+        // **correctly-rounded** (RNE) decimal→binary64 conversion the literal's spec documents
+        // (ADR-040 FLAG-3; correct rounding is a Rust-std claim — `Declared` — pinned `Empirical`
+        // by the round-trip conformance corpus). Meta is `Exact` **as a definition**: the literal
+        // denotes exactly the correctly-rounded binary64 of its decimal text, and this value *is*
+        // that binary64 (ADR-040 §2.6 — the definition is Exact; the host-conversion claim is the
+        // Empirical residue, tested, never silently upgraded — VR-5). The lexer already validated
+        // form + finiteness, so the parse is total; a failure here is a never-silent internal
+        // `Residual` (defense in depth, mirroring the `Bytes` arm). `Value::new` canonicalizes any
+        // NaN (unreachable for a finite literal) per ADR-040 §2.3.
+        Literal::Float(s) => {
+            let x: f64 = match s.parse() {
+                Ok(x) => x,
+                Err(_) => {
+                    return residual(
+                        site,
+                        format!("internal: malformed float literal text {s:?} reached elaboration"),
+                    )
+                }
+            };
+            Value::new(
+                Repr::Float {
+                    width: FloatWidth::F64,
+                },
+                Payload::Float(x),
+                Meta::exact(Provenance::Root),
+            )
+            .map_or_else(
+                |e| residual(site, format!("malformed float literal: {e}")),
+                Ok,
+            )
+        }
         Literal::Int(_) => residual(
             site,
             "a bare integer literal has no representation family (Q6)",
@@ -192,7 +239,7 @@ pub fn lit_value(site: &str, l: &Literal) -> Result<Value, ElabError> {
 }
 
 /// Resolve a surface [`TypeRef`] to a kernel [`Repr`] (swap targets). Only representation types
-/// resolve; named/data, VSA, and `Substrate` types are explicit refusals.
+/// resolve; named/data and `Substrate` types are explicit refusals.
 pub fn type_repr(site: &str, t: &TypeRef) -> Result<Repr, ElabError> {
     match &t.base {
         BaseType::Binary(WidthRef::Lit(n)) => Ok(Repr::Binary { width: *n }),
@@ -220,7 +267,22 @@ pub fn type_repr(site: &str, t: &TypeRef) -> Result<Repr, ElabError> {
                 Scalar::F64 => ScalarKind::F64,
             },
         }),
-        BaseType::Vsa { .. } => residual(site, "VSA types are deferred in the L1 v0 prototype"),
+        // RFC-0003 §3 / ADR-008 (M-892): the VSA type resolves to its kernel `Repr` — the lift of
+        // the former blanket deferral (the `vsa_*` prims need typable operands). Not a v0 swap
+        // target (the checker's swap gate admits only Binary/Ternary/Dense), but `type_repr` is
+        // the general surface→`Repr` resolver, so a concrete resolution here is correct and
+        // never-silent (the `Bytes`/`Seq`/`Float` posture). The surface model ident is
+        // canonicalized to the kernel model id exactly as the checker does (one mapping — the
+        // types the checker admits and the reprs elaboration emits must not fork).
+        BaseType::Vsa {
+            model,
+            dim,
+            sparsity,
+        } => Ok(Repr::Vsa {
+            model: crate::checkty::vsa_kernel_model_id(model),
+            dim: *dim,
+            sparsity: sparsity_class(sparsity),
+        }),
         // RFC-0032 D3/D4: the sequence/byte-string reprs resolve to their kernel `Repr` (the element
         // type recurses through `type_repr`). They are not v0 swap targets (the checker refuses a
         // `swap` to them — no swap engine), but `type_repr` is the general surface→`Repr` resolver,
@@ -230,6 +292,13 @@ pub fn type_repr(site: &str, t: &TypeRef) -> Result<Repr, ElabError> {
             len: *len,
         }),
         BaseType::Bytes => Ok(Repr::Bytes),
+        // ADR-040 (M-897): the nullary scalar-float repr type resolves to its kernel `Repr`
+        // (binary64 only — FLAG-1). Not a v0 swap target (the checker's swap gate admits only
+        // Binary/Ternary/Dense), but `type_repr` is the general surface→`Repr` resolver, so a
+        // concrete resolution here is correct and never-silent (the `Bytes`/`Seq` posture).
+        BaseType::Float => Ok(Repr::Float {
+            width: FloatWidth::F64,
+        }),
         BaseType::Substrate(tag) => residual(
             site,
             format!("Substrate{{{tag}}} is not a representation type"),
@@ -355,11 +424,26 @@ fn elaborate_colony_inner(env: &Env, entry: &str) -> Result<Vec<Node>, ElabError
     let mut stack = vec![entry.to_owned()];
     // One closed L0 program per hypha: the hypha body elaborated under the entry scope, then wrapped
     // in the *shared* recursive prelude (the binders are cloned per hypha so each task is independent
-    // — RT1: no shared state crosses a hypha boundary). Spawn order is preserved.
+    // — RT1: no shared state crosses a hypha boundary). Spawn order is preserved. Each hypha's
+    // `@forage(policy)` (M-906/DN-70 D1), if present, is folded into its own program the same way
+    // `elab_colony`'s sequential reference does (`Let{_=policy, body}` — RT3 semantics-free
+    // placement), and the DN-63 FLAG-14 empty-candidate-set check runs identically.
     let mut programs = Vec::with_capacity(hyphae.len());
     for h in hyphae {
         let body = el.expr(&mut stack, &[], &h.body)?;
-        programs.push(wrap_in_binders(binders.clone(), body));
+        let node = match &h.forage {
+            None => body,
+            Some(policy) => {
+                forage_reject_if_empty(entry, h)?;
+                let policy_node = el.expr(&mut stack, &[], policy)?;
+                Node::Let {
+                    id: el.fresh("forage_policy"),
+                    bound: Box::new(policy_node),
+                    body: Box::new(body),
+                }
+            }
+        };
+        programs.push(wrap_in_binders(binders.clone(), node));
     }
     Ok(programs)
 }
@@ -767,12 +851,27 @@ fn field_spec(ty: &Ty) -> Option<FieldSpec> {
             dim: *d,
             dtype: scalar_kind(*s),
         }),
+        // RFC-0003 §3 (M-892): the VSA repr has a monomorphic kernel form (the model id in the
+        // checked type is already the canonical kernel id).
+        Ty::Vsa {
+            model,
+            dim,
+            sparsity,
+        } => FieldSpec::Repr(Repr::Vsa {
+            model: model.clone(),
+            dim: *dim,
+            sparsity: sparsity_class(sparsity),
+        }),
         // RFC-0032 D3/D4: the sequence/byte-string reprs have monomorphic kernel forms.
         Ty::Seq(elem, n) => FieldSpec::Repr(Repr::Seq {
             elem: Box::new(ty_to_repr(elem)?),
             len: *n,
         }),
         Ty::Bytes => FieldSpec::Repr(Repr::Bytes),
+        // ADR-040 (M-897): the scalar float has a monomorphic kernel form (binary64 — FLAG-1).
+        Ty::Float => FieldSpec::Repr(Repr::Float {
+            width: FloatWidth::F64,
+        }),
         Ty::Data(n, args) if args.is_empty() => FieldSpec::Data(n.clone()),
         Ty::Data(_, _) | Ty::Var(_) => return None,
         Ty::Substrate(_) => return None,
@@ -798,11 +897,25 @@ fn ty_to_repr(ty: &Ty) -> Option<Repr> {
             dim: *d,
             dtype: scalar_kind(*s),
         },
+        // RFC-0003 §3 (M-892): the VSA repr resolves concretely (model already canonical).
+        Ty::Vsa {
+            model,
+            dim,
+            sparsity,
+        } => Repr::Vsa {
+            model: model.clone(),
+            dim: *dim,
+            sparsity: sparsity_class(sparsity),
+        },
         Ty::Seq(elem, n) => Repr::Seq {
             elem: Box::new(ty_to_repr(elem)?),
             len: *n,
         },
         Ty::Bytes => Repr::Bytes,
+        // ADR-040 (M-897): the scalar float resolves to its kernel `Repr` (binary64 — FLAG-1).
+        Ty::Float => Repr::Float {
+            width: FloatWidth::F64,
+        },
         Ty::Data(_, _) | Ty::Var(_) | Ty::Substrate(_) | Ty::Fn(_, _) => return None,
     })
 }
@@ -814,6 +927,14 @@ fn scalar_kind(s: Scalar) -> ScalarKind {
         Scalar::Bf16 => ScalarKind::Bf16,
         Scalar::F32 => ScalarKind::F32,
         Scalar::F64 => ScalarKind::F64,
+    }
+}
+
+/// The surface `Sparsity` → kernel `SparsityClass` mapping (M-892; shared with [`type_repr`]).
+fn sparsity_class(sp: &Sparsity) -> SparsityClass {
+    match sp {
+        Sparsity::Dense => SparsityClass::Dense,
+        Sparsity::Sparse(k) => SparsityClass::Sparse { max_active: *k },
     }
 }
 
@@ -1052,14 +1173,23 @@ impl Elab<'_> {
             // artifact (G2).
             Expr::Wild(body) => self.elab_wild(stack, scope, body),
             Expr::Spore(_) => residual(site, "`spore` is deferred (E2-5/M-260)"),
-            // M-664: `consume` of an affine `Substrate` — `Substrate` has no v0 value/representation
-            // lowering (LR-8; it is an external-resource kind, never a repr type), so its execution
-            // is a never-silent `Residual`, exactly like every other `Substrate` site (G2/VR-5).
-            Expr::Consume(_) => residual(
-                site,
-                "`consume` of an affine `Substrate` is staged — `Substrate` has no v0 \
-                 value/representation lowering (LR-8; DN-03 §1; M-664)",
-            ),
+            // M-904 (DN-71 Model S §4.3, maintainer-accepted 2026-07-02): `consume <expr>` lowers as
+            // the **observational-identity move** through existing paths — the affine obligation is
+            // discharged statically at check time (M-903's tracker), and `consume` is already
+            // move-transparent in `crate::grade` (it neither upgrades nor downgrades the operand's
+            // tag), so there is nothing left for L0 to represent beyond the operand itself. No new L0
+            // node (KC-3); `Substrate` itself still has no `Repr`/kernel projection (LR-8) — this arm
+            // never claims otherwise, it just stops refusing to elaborate the *move*. This lifts the
+            // former M-664 residual for this fragment (the M-904 DoD's "the Residual is gone").
+            //
+            // AOT posture (DN-71 §8 FLAG-8, recorded, not silently dropped): v0 has no acquisition
+            // surface that actually produces a `Substrate` value in a running Mycelium program (the
+            // `wild` host-call registry grants no op that returns one yet), so no program reaching
+            // this arm today can carry a live `Substrate` value into `mycelium-mlir`'s AOT path in
+            // practice. Whether a *future* acquisition surface's handle can cross into the AOT
+            // kernel-`Value` world is a separate, still-open question owned by that crate — not
+            // reopened or silently assumed answered by this arm (out of this leaf's scope).
+            Expr::Consume(operand) => self.expr(stack, scope, operand),
             Expr::Colony(hyphae) => self.elab_colony(stack, scope, hyphae),
             // RFC-0024 §4A (M-704): closures are **lowered by monomorphization** (`mono.rs`) — a
             // lambda becomes a tag-sum constructor application + a generated `apply` dispatcher, so a
@@ -1842,10 +1972,10 @@ impl Elab<'_> {
             );
         };
         // The last hypha is the colony's observable (the RT2 sequentialization's final step).
-        let mut node = self.expr(stack, scope, &last.body)?;
+        let mut node = self.elab_hypha_node(stack, scope, &site, last)?;
         // Wrap right-to-left so the first hypha's `Let` ends up outermost (evaluated first, CBV).
         for h in leading.iter().rev() {
-            let bound = self.expr(stack, scope, &h.body)?;
+            let bound = self.elab_hypha_node(stack, scope, &site, h)?;
             // A fresh `%`-named binder: `%` is not a surface identifier char, so it never captures a
             // surface name, and the binding is intentionally unused (the value is sequentialized for
             // its effect only). The leading hypha is still fully evaluated under CBV.
@@ -1858,6 +1988,67 @@ impl Elab<'_> {
         }
         Ok(node)
     }
+
+    /// Elaborate one hypha's own contribution node, prefixed with its `@forage(policy)` policy
+    /// evaluation if present (RFC-0008 RT3; DN-63 §3.5; M-906/DN-70 D1) —
+    /// `Let{_=policy_node, node}`, mirroring `reclaim`'s `Let{_=policy, body}` sequential-reference
+    /// shape (DN-58 §B) exactly: the policy is evaluated for its effect (semantics-free placement,
+    /// RT3 — it never changes `node`'s value) after the static empty-candidate-set check
+    /// ([`forage_reject_if_empty`]) has already refused an all-zero bitmask. No new L0 node (KC-3).
+    fn elab_hypha_node(
+        &mut self,
+        stack: &mut Vec<String>,
+        scope: &[Binding],
+        site: &str,
+        h: &crate::ast::Hypha,
+    ) -> Result<Node, ElabError> {
+        forage_reject_if_empty(site, h)?;
+        let node = self.expr(stack, scope, &h.body)?;
+        let Some(policy) = &h.forage else {
+            return Ok(node);
+        };
+        let policy_node = self.expr(stack, scope, policy)?;
+        Ok(Node::Let {
+            id: self.fresh("forage_policy"),
+            bound: Box::new(policy_node),
+            body: Box::new(node),
+        })
+    }
+}
+
+/// Statically validate a hypha's `@forage(policy)` D-lite bitmask (RFC-0008 RT3; DN-63 §3.5
+/// FLAG-14; M-906/DN-70 D1). The checker guarantees `policy` is `Expr::Lit(Literal::Bin(_))` when
+/// present ([`crate::checkty::Cx::check_forage_policy`]); a defensive [`ElabError::Residual`]
+/// covers the (unreachable-on-a-checked-env) alternative — never a fabricated lowering (G2). An
+/// **all-zero mask** is the DN-63 FLAG-14 empty-candidate-set case: refused here, explicitly, as
+/// an [`ElabError::Residual`] (so neither elaborated path — L0-interp nor AOT — ever silently
+/// accepts a no-candidate forage) — the L1 evaluator refuses the *identical* source with a typed
+/// [`crate::eval::L1Error::Forage`] (`ForageError::NoCandidates`); see `differential.rs`'s
+/// `forage_no_candidates_is_an_explicit_refusal_on_every_path` for the three-way consistency
+/// check.
+fn forage_reject_if_empty(site: &str, h: &crate::ast::Hypha) -> Result<(), ElabError> {
+    let Some(policy) = &h.forage else {
+        return Ok(());
+    };
+    let Expr::Lit(Literal::Bin(s)) = policy.as_ref() else {
+        return residual(
+            site,
+            "internal: `@forage(policy)` reached elaboration with a non-literal policy — the \
+             checker requires a literal binary bitmask (M-906/DN-70 D1); never a fabricated \
+             lowering (G2)",
+        );
+    };
+    let popcount = s.chars().filter(|c| *c == '1').count();
+    if popcount == 0 {
+        return residual(
+            site,
+            "`@forage(policy)` has an all-zero worker-availability bitmask — the D-lite \
+             single-node candidate set is empty (DN-63 §3.5 FLAG-14); the L1 evaluator refuses \
+             this identically with an explicit `ForageError::NoCandidates` (never a silent \
+             placement — G2/RT4)",
+        );
+    }
+    Ok(())
 }
 
 /// Reconstruct the L0 [`Value`] of a literal-pattern key (`b:1010` / `t:+0-`) produced by the
@@ -1899,6 +2090,17 @@ fn lit_key_to_value(site: &str, key: &str) -> Result<Value, ElabError> {
         .map_or_else(
             |e| residual(site, format!("malformed ternary literal key: {e}")),
             Ok,
+        )
+    } else if let Some(text) = key.strip_prefix("f:") {
+        // M-897: a float literal pattern is refused by the checker (`normalize_pattern`, ADR-040
+        // FLAG-4) before any decision tree is built, so an `f:` key reaching the L0 bridge is an
+        // internal invariant break — refused explicitly, never a silently-picked equality (G2).
+        residual(
+            site,
+            format!(
+                "internal: a float literal-pattern key `f:{text}` reached elaboration — the \
+                 checker refuses float patterns (ADR-040 FLAG-4)"
+            ),
         )
     } else {
         residual(site, format!("unrecognised literal key `{key}`"))

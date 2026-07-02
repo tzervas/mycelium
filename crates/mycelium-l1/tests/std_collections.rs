@@ -13,7 +13,7 @@
 //!   `snoc`/`reverse`/`map_get`/`set_contains`) — a structural check, not a theorem.
 //! - **`Empirical`** — the three-way differential agreement (L1-eval ≡ L0-interp ≡ AOT), validated
 //!   by trial on the programs below; not a machine-checked proof.
-//! - **`Empirical`** — the `len`-fits-`Binary{8}` bound (add_bin refuses at 256 on every path —
+//! - **`Empirical`** — the `len`-fits-`Binary{8}` bound (add_u refuses at 256 on every path —
 //!   the overflow test pins this; not a type-level proof).
 //!
 //! # Grounding
@@ -193,52 +193,52 @@ fn tail_on_cons_returns_some() {
 
 /// `len` over a two-element list → `0b0000_0010`. O(n) spine-walk; Declared.
 /// Expected (hand-computed, three-way verified): Vec::len on [1, 2] returns 2.
-/// The reference program uses `add_bin` (not a literal) to match the `Derived` provenance produced
-/// by `len`'s `add_bin` spine — a literal `0b0000_0010` has `Root` provenance and fails `assert_eq`.
-/// `len([1,2]) = add_bin(1, add_bin(1, 0))`: same ops and the same `Derived` provenance, which
+/// The reference program uses `add_u` (not a literal) to match the `Derived` provenance produced
+/// by `len`'s `add_u` spine — a literal `0b0000_0010` has `Root` provenance and fails `assert_eq`.
+/// `len([1,2]) = add_u(1, add_u(1, 0))`: same ops and the same `Derived` provenance, which
 /// `CoreValue` equality requires (a `Root`-provenance literal `0b0000_0010` would fail `assert_eq`).
 /// (Empirical basis; the three-way agreement is separately asserted above.)
 #[test]
 fn len_of_two_element_list() {
     let driver = "fn mk_two() => Vec[Binary{8}] = Cons(0b0000_0001, Cons(0b0000_0010, Nil));\nfn main() => Binary{8} = len(mk_two());";
     let src = program(driver);
-    // add_bin(1, add_bin(1, 0)) = 2 via the same op tree as len([e1, e2])
+    // add_u(1, add_u(1, 0)) = 2 via the same op tree as len([e1, e2])
     let expected =
-        "nodule ref;\nfn main() => Binary{8} = add_bin(0b0000_0001, add_bin(0b0000_0001, 0b0000_0000));";
+        "nodule ref;\nfn main() => Binary{8} = add_u(0b0000_0001, add_u(0b0000_0001, 0b0000_0000));";
     assert_three_way("len([1,2])", &src, expected);
 }
 
 /// `len` over a three-element list → `0b0000_0011`. Declared.
 /// Expected (hand-computed, three-way verified): Vec::len on [1, 2, 3] returns 3.
-/// Same provenance-matching rationale: add_bin(1, add_bin(1, add_bin(1, 0))) = 3.
+/// Same provenance-matching rationale: add_u(1, add_u(1, add_u(1, 0))) = 3.
 #[test]
 fn len_of_three_element_list() {
     let driver = "fn mk_three() => Vec[Binary{8}] = Cons(0b0000_0001, Cons(0b0000_0010, Cons(0b0000_0011, Nil)));\nfn main() => Binary{8} = len(mk_three());";
     let src = program(driver);
-    // add_bin(1, add_bin(1, add_bin(1, 0))) = 3
-    let expected = "nodule ref;\nfn main() => Binary{8} = add_bin(0b0000_0001, add_bin(0b0000_0001, add_bin(0b0000_0001, 0b0000_0000)));";
+    // add_u(1, add_u(1, add_u(1, 0))) = 3
+    let expected = "nodule ref;\nfn main() => Binary{8} = add_u(0b0000_0001, add_u(0b0000_0001, add_u(0b0000_0001, 0b0000_0000)));";
     assert_three_way("len([1,2,3])", &src, expected);
 }
 
-/// `len`-bound: the `add_bin` mechanism underlying `len`'s `Binary{8}` count refuses at 256 on ALL
+/// `len`-bound: the `add_u` mechanism underlying `len`'s `Binary{8}` count refuses at 256 on ALL
 /// three paths — never a silent wrap (G2/VR-5). Empirical (pinned by trial on the programs below).
 ///
 /// Why not test via a 256-element list: `len`'s recursion reaches the L1 evaluator's depth limit
 /// (`DEFAULT_DEPTH = 64`) long before reaching 256 elements; and the L0 interpreter does not use
 /// the same deep-worker-stack machinery, so 256-deep `fill` recursion overflows the Rust thread
 /// stack instead of being a clean `is_err()`. Both are never-silent refusals — but neither is the
-/// `add_bin` arithmetic overflow. We test the actual mechanism (add_bin overflow at `Binary{8}`
-/// boundary) directly, exactly as `enablement.rs::add_bin_overflow_refuses_on_every_path` does.
-/// The `len` connection: `len(xs)` is `add_bin(1, len(rest))` — the 256th step would compute
-/// `add_bin(0b0000_0001, 0b1111_1111) = 256` which this test pins. Empirical.
+/// `add_u` arithmetic overflow. We test the actual mechanism (add_u overflow at `Binary{8}`
+/// boundary) directly, exactly as `enablement.rs::add_u_overflow_refuses_on_every_path` does.
+/// The `len` connection: `len(xs)` is `add_u(1, len(rest))` — the 256th step would compute
+/// `add_u(0b0000_0001, 0b1111_1111) = 256` which this test pins. Empirical.
 ///
-/// Expected (hand-computed, three-way verified): Vec::len fails (add_bin overflows) on a > 255-element list.
+/// Expected (hand-computed, three-way verified): Vec::len fails (add_u overflows) on a > 255-element list.
 #[test]
-fn len_bound_add_bin_overflow_refuses_on_every_path() {
-    // add_bin(0b0000_0001, 0b1111_1111) = 256, which overflows Binary{8} — the exact operation
+fn len_bound_add_u_overflow_refuses_on_every_path() {
+    // add_u(0b0000_0001, 0b1111_1111) = 256, which overflows Binary{8} — the exact operation
     // that len would execute on its 256th element. This is the never-silent (G2) contract for
     // len's Binary{8} index width. Uses the collections nodule source as context for consistency.
-    let src = program("fn main() => Binary{8} = add_bin(0b0000_0001, 0b1111_1111);");
+    let src = program("fn main() => Binary{8} = add_u(0b0000_0001, 0b1111_1111);");
 
     let env = check_nodule(
         &parse(&src).expect("len_bound: parse must succeed (overflow is runtime, not static)"),
@@ -254,7 +254,7 @@ fn len_bound_add_bin_overflow_refuses_on_every_path() {
 
     assert!(
         Evaluator::new(&env).call("main", vec![]).is_err(),
-        "len_bound: L1-eval must refuse the add_bin overflow (never a silent wrap to 0)"
+        "len_bound: L1-eval must refuse the add_u overflow (never a silent wrap to 0)"
     );
     let node = elaborate(&env, "main").expect("len_bound: must elaborate");
     assert!(

@@ -1000,3 +1000,32 @@ fn pattern_binders_trips_its_own_depth_budget_via_a_deeply_nested_match_arm_patt
         assert_eq!(err.limit, MAX_WALK_DEPTH);
     });
 }
+
+// ---- M-904: `consume` rewrites transparently, no residual (DN-71 §4.3) --------------------
+
+#[test]
+fn consume_rewrites_transparently_through_the_slow_monomorphization_path() {
+    // A bare Substrate/consume program alone is already fully monomorphic (no generics/traits/
+    // lambdas), so `monomorphize` would take the fast pass-through (`is_already_monomorphic`) and
+    // never actually call `Mono::rewrite` on `take`'s body — that would prove nothing about the
+    // M-904 rewrite arm itself. Adding an unrelated nullary generic `id[A]` disables the fast
+    // pass-through for the whole env, forcing the real worklist-driven `Mono::run` -> `rewrite`
+    // walk over `take`'s own body when `take` is monomorphized directly.
+    let env = env("nodule d;\nfn id[A](x: A) => A = x;\n\
+         fn take(s: Substrate{Sock}) => Substrate{Sock} = consume s;");
+    // `take` itself is non-generic (no *type* params — only monomorphic value params, which
+    // `Mono::run`'s own-entry check does not gate), so monomorphizing it directly reaches the
+    // M-904 rewrite arm without needing a caller. (No v0 surface syntax can actually construct a
+    // live `Substrate` value to call `take` with — DN-71 §4.1/§8 FLAG-8 — so `take` can never be
+    // *reached* from a real program's nullary entry; this test exercises the rewrite arm in
+    // isolation, which is the most this leaf can honestly claim for the mono/elab layer.)
+    let mono_env = monomorphize(&env, "take")
+        .expect("M-904: `consume` rewrites transparently — no residual for this fragment");
+    let take = mono_env.fns.get("take").expect("take is emitted");
+    assert!(
+        matches!(&take.body, Expr::Consume(inner) if matches!(inner.as_ref(), Expr::Path(_))),
+        "the rewritten body stays a transparent Consume of the rewritten (unchanged, local-scope) \
+         operand: {:?}",
+        take.body
+    );
+}

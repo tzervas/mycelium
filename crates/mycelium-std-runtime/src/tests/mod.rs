@@ -14,7 +14,10 @@
 
 pub mod composition;
 pub mod dataflow;
+pub mod guarantee_matrix;
 pub mod network;
+pub mod policy_mech;
+pub mod r2_residual;
 pub mod rc;
 pub mod region;
 pub mod scope_region;

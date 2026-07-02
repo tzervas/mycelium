@@ -330,9 +330,10 @@ impl ModeTestConfig {
     ///
     /// Declarations are not ordered (the resolver picks the highest-specificity winner). Supply
     /// at most one per scope level (duplicates at the same scope are resolved by
-    /// `resolve_mode`'s max-specificity fold — the first duplicate found wins; in practice, the
-    /// `@certification` parser upstream rejects duplicates, so this is just the resolver's
-    /// behaviour for robustness).
+    /// `resolve_mode`'s max-specificity fold — the **last** duplicate found wins, per
+    /// `Iterator::max_by_key`'s documented tie behaviour ("if several elements are equally
+    /// maximum, the last element is returned"); in practice, the `@certification` parser
+    /// upstream rejects duplicates, so this is just the resolver's behaviour for robustness).
     ///
     /// # Guarantee tag: `Exact` (pure construction)
     /// # Fallibility: total

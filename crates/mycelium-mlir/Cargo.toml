@@ -77,6 +77,8 @@ mycelium-sched = { path = "../mycelium-sched" }
 mycelium-rt-abi = { path = "../mycelium-rt-abi" }
 
 [dev-dependencies]
+# M-961: property tests for the inject-gate verify bounds (house rule: a property test per bound).
+proptest = "1"
 # The interp↔AOT differential (M-151) drives both paths with the certified binary↔ternary swap,
 # and since M-210 validates each pair through the shared TV checker (Certificate from numerics).
 mycelium-cert = { path = "../mycelium-cert" }

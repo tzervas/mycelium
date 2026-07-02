@@ -156,7 +156,7 @@ const MATH_CASES: &[Case] = &[
         label: "badd@8: badd(3,5)=8",
         nodule: MATH_SRC,
         driver: "fn main() => Binary{8} = badd(0b0000_0011, 0b0000_0101);",
-        reference: "nodule ref;\nfn main() => Binary{8} = add_bin(0b0000_0011, 0b0000_0101);",
+        reference: "nodule ref;\nfn main() => Binary{8} = add_u(0b0000_0011, 0b0000_0101);",
     },
     Case {
         label: "badd@16: badd(256,1)=257",
@@ -164,13 +164,13 @@ const MATH_CASES: &[Case] = &[
         driver:
             "fn main() => Binary{16} = badd(0b0000_0001_0000_0000, 0b0000_0000_0000_0001);",
         reference:
-            "nodule ref;\nfn main() => Binary{16} = add_bin(0b0000_0001_0000_0000, 0b0000_0000_0000_0001);",
+            "nodule ref;\nfn main() => Binary{16} = add_u(0b0000_0001_0000_0000, 0b0000_0000_0000_0001);",
     },
     Case {
         label: "bsub@8: bsub(5,3)=2",
         nodule: MATH_SRC,
         driver: "fn main() => Binary{8} = bsub(0b0000_0101, 0b0000_0011);",
-        reference: "nodule ref;\nfn main() => Binary{8} = sub_bin(0b0000_0101, 0b0000_0011);",
+        reference: "nodule ref;\nfn main() => Binary{8} = sub_u(0b0000_0101, 0b0000_0011);",
     },
     Case {
         label: "bsub@16: bsub(256,1)=255",
@@ -178,7 +178,7 @@ const MATH_CASES: &[Case] = &[
         driver:
             "fn main() => Binary{16} = bsub(0b0000_0001_0000_0000, 0b0000_0000_0000_0001);",
         reference:
-            "nodule ref;\nfn main() => Binary{16} = sub_bin(0b0000_0001_0000_0000, 0b0000_0000_0000_0001);",
+            "nodule ref;\nfn main() => Binary{16} = sub_u(0b0000_0001_0000_0000, 0b0000_0000_0000_0001);",
     },
     // ── binary bitwise: band / bor / bxor / bnot at Binary{8} and Binary{16} ──
     Case {

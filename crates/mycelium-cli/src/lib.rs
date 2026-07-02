@@ -2,9 +2,9 @@
 //!
 //! A single front door over the Mycelium toolchain: `myc init` scaffolds a phylum, `myc build`
 //! packages it (the content-addressed spore — M-368), `myc check` type-checks it (parse + check via
-//! the L1 front-end), `myc test` runs the available verification, `myc run` is the (honestly
-//! not-yet-wired) execution entry point, and `myc --stream` parses a `;`-delimited component stream
-//! from stdin or a file (M-820 / DN-57).
+//! the L1 front-end), `myc test` runs the available verification, `myc run` executes a project
+//! (single- or **multi-nodule**, M-908/M-909) through the reference interpreter, and `myc --stream`
+//! parses a `;`-delimited component stream from stdin or a file (M-820 / DN-57).
 //!
 //! ## Error-message quality bar (DN-22 / RFC-0013)
 //! Every user-visible failure is a structured [`Report`]: a stable `code`, a human-readable
@@ -15,23 +15,31 @@
 //! ## Honesty about scope (`Declared`)
 //! `init` / `build` / `check` do real end-to-end work. `test` runs `check` and is explicit that a
 //! dedicated `.myc` unit-test *runner* does not exist yet (it does not pretend to have run tests
-//! that were never written). `run` is **not yet wired** — the project→interpreter pipeline is later
-//! work — and says so with an actionable [`Report`] instead of a stub that silently does nothing.
-//! `--stream` is a **token-driven** component splitter: it lexes the source once
-//! ([`mycelium_l1::lexer::lex`]), segments the token stream at `nodule` header tokens (`;` as
-//! `Tok::Semi` is the per-item terminator — DN-57), and parse each component slice with
-//! [`mycelium_l1::parse`]. Splitting on *tokens* (not raw text) makes it comment-/string-safe by
-//! construction: a `nodule`/`;` inside a `//` comment is never a token, so it can never mis-split
-//! (DN-57 §2). The per-component parse bounds parse state to one component at a time. **v0 I/O is
-//! whole-input-buffered** (`Declared`); true per-`;`-component incremental I/O would require a
-//! resumable L1 token-stream API that does not exist yet (flagged future work).
+//! that were never written). `run` executes a project's `.myc` sources: a **single** source follows
+//! the M-908 v0 path (parse → [`check_nodule`] → [`elaborate`](mycelium_l1::elaborate) its nullary
+//! `main`); **two or more** sources follow the M-909 multi-nodule path (see [`run`]'s doc for the
+//! full linking model). A missing `main`, a program outside the evaluation-complete fragment, or an
+//! interpreter failure are each an explicit [`Report`] — never a silent narrowing to "the first file
+//! found" and never a stub that pretends to have run (G2/VR-5). `--stream` is a **token-driven**
+//! component splitter: it lexes the source once ([`mycelium_l1::lexer::lex`]), segments the token
+//! stream at `nodule` header tokens (`;` as `Tok::Semi` is the per-item terminator — DN-57), and
+//! parse each component slice with [`mycelium_l1::parse`]. Splitting on *tokens* (not raw text) makes
+//! it comment-/string-safe by construction: a `nodule`/`;` inside a `//` comment is never a token, so
+//! it can never mis-split (DN-57 §2). The per-component parse bounds parse state to one component at
+//! a time. **v0 I/O is whole-input-buffered** (`Declared`); true per-`;`-component incremental I/O
+//! would require a resumable L1 token-stream API that does not exist yet (flagged future work).
 
+use std::collections::{BTreeMap, BTreeSet};
 use std::io::Read as StdRead;
 use std::path::{Path, PathBuf};
 
+use mycelium_l1::ast::{Item, Path as NoduleAstPath};
 use mycelium_l1::lexer::lex;
 use mycelium_l1::token::{Pos, Spanned, Tok};
-use mycelium_l1::{check_nodule, parse, ParseError};
+use mycelium_l1::{
+    check_nodule, check_phylum, elaborate, parse, CheckError, Env, Nodule, ParseError, Phylum,
+    PhylumEnv, UsePath,
+};
 use mycelium_proj::parse_manifest;
 use mycelium_spore::{build_spore, explain, Spore};
 
@@ -218,23 +226,541 @@ pub fn check_project(manifest_path: &Path) -> Result<CheckReport, Report> {
     Ok(report)
 }
 
-/// `myc run` — **not yet wired** (honest, never-silent). The project→interpreter execution pipeline
-/// is later work; this returns an actionable [`Report`] rather than a stub that silently does nothing
-/// (VR-5 / G2). The interpreter ([`mycelium_interp`](mycelium-interp)) evaluates Core IR, but the
-/// surface-project→run path is not assembled in v0.
+/// The outcome of a successful `myc run` (M-908/M-909): which source ran, which entry function was
+/// executed, and a rendering of the interpreter's result.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RunReport {
+    /// The `.myc` source file that ran, relative to the project directory. For a multi-nodule
+    /// project (M-909) this is the **entry nodule's** source file (the one declaring `main`) — the
+    /// other linked nodules are named in [`Report`]s on failure, not in this success value.
+    pub source: String,
+    /// The entry function name that was executed (v0 convention: `main`).
+    pub entry: String,
+    /// A `{:?}`-rendered form of the interpreter's result value (`Declared` — a v0 debug rendering,
+    /// not a stable/parseable format; a dedicated value-printer is follow-up work, not silently
+    /// approximated here).
+    pub rendered: String,
+}
+
+/// `myc run` — execute a project through the reference interpreter (M-908 v0 single-nodule;
+/// M-909 multi-nodule).
+///
+/// The project directory (containing `manifest_path`) is walked for `.myc` sources
+/// ([`mycelium_cli_common::walk_myc`]). **Zero** sources is refused (`myc-run-no-source`). **One**
+/// source runs the M-908 v0 path directly. **Two or more** sources run the M-909 multi-nodule path:
+///
+/// 1. **Parse** every source independently (each file is a bare `nodule <path>; …` block — a
+///    phylum-of-one in [`mycelium_l1`] terms).
+/// 2. **Link-check** the parsed nodules before any type-checking, since [`check_phylum`] itself does
+///    not guard against these (never-silent, G2 — each is a named, located [`Report`]):
+///    - **duplicate** (`myc-run-nodule-duplicate`): two files declare the same `nodule <path>;`.
+///    - **unresolved** (`myc-run-nodule-unresolved`): a `use <nodule>.<item>` (or `use <nodule>.*`)
+///      names a nodule with no corresponding file in the project.
+///    - **cyclic** (`myc-run-nodule-cyclic`): the nodule-level `use` dependency graph has a cycle. A
+///      **v0 CLI policy choice** (`Declared`), not a fundamental limit of [`check_phylum`] (which
+///      tolerates cyclic nodule refs at the type-check level via its two-pass export/coherence
+///      build) — `myc run` v0 additionally requires the *link* graph to be acyclic, matching the
+///      conservative "refuse rather than guess" posture used throughout this driver; this may be
+///      lifted once a real project-scoped linker replaces the v0 flatten-by-name scheme below.
+/// 3. Assemble the parsed nodules into one [`Phylum`] (no `phylum` header — `path: None`) and
+///    [`check_phylum`] it, which enforces cross-nodule `pub`/`use` visibility and the phylum-wide
+///    orphan rule (M-662). A check failure is `myc-check`.
+/// 4. **Find the entry nodule**: exactly one of the checked nodules must declare a nullary `main` —
+///    zero is `myc-run-no-entry`, more than one is `myc-run-entry-ambiguous` (never guesses which).
+/// 5. **Link for elaboration**: [`check_phylum`]'s per-nodule [`Env`] only carries a nodule's own
+///    declarations plus what it *directly* imports (RFC-0006 §4.3) — not the transitive closure a
+///    call chain through an imported function may need (e.g. `main` imports `helper` from nodule
+///    `B`, and `helper`'s body calls a second, *private* function of `B` that `main` never
+///    imported). Since [`check_phylum`] has already validated every cross-nodule reference in the
+///    program is legal, `myc run` v0 safely **flattens every checked nodule's `Env` into one merged
+///    `Env`** (by simple name) purely for elaboration/execution — a v0 CLI-level linking policy, not
+///    an `mycelium-l1`/`mycelium-interp` change. The one residual risk this reintroduces — two
+///    *different* nodules independently declaring an item with the same simple name — is itself
+///    checked during the merge and refused as `myc-run-nodule-fn-collision` if the declarations
+///    differ (identical entries, e.g. a name re-exported through an import, are not a conflict).
+/// 6. [`elaborate`] the entry nodule's `main` against the merged `Env` to a closed L0 Core IR node,
+///    then run it on the trusted reference interpreter ([`mycelium_interp::Interpreter`]) — same as
+///    the M-908 v0 path.
+///
+/// ## Scope (`Declared`, v0 — both single- and multi-nodule)
+/// - **Entry convention:** the executed function must be named `main` and take no arguments (the
+///   convention already used by the differential/conformance corpora) — a missing `main` is an
+///   explicit refusal, never a silent pick of some other function.
+/// - **Result fragment:** v0 observes only **representation-value** results
+///   ([`mycelium_interp::Interpreter::eval`]); an entry that evaluates to an algebraic **data**
+///   value (r3, RFC-0011) is refused rather than rendered ad hoc — a dedicated data-value printer is
+///   follow-up work.
+/// - **Swap engine:** v0 runs on the interpreter's default identity swap engine (same-representation
+///   swap only, [`mycelium_interp::Interpreter::default`]); a program invoking the certified
+///   binary↔ternary swap surfaces the interpreter's own explicit `UnsupportedSwap` error — never a
+///   silent identity substitution for a real cross-paradigm conversion.
 ///
 /// # Errors
-/// Always returns [`Report`] (`myc-run-unwired`, exit 70) — `run` has no honest success path yet.
-pub fn run(_manifest_path: &Path) -> Result<(), Report> {
-    Err(Report::new(
-        "myc-run-unwired",
-        "running a phylum is not yet wired into `myc`",
-        70,
-    )
-    .help(
-        "the project→interpreter execution pipeline is later work; today use `myc check` to \
-         type-check and `myc build` to package the spore",
-    ))
+/// [`Report`] on: no `.myc` source (`myc-run-no-source`), a parse/check failure (`myc-parse` /
+/// `myc-check`), an unlinkable multi-nodule project (`myc-run-nodule-duplicate` /
+/// `myc-run-nodule-unresolved` / `myc-run-nodule-cyclic` / `myc-run-nodule-fn-collision`), a
+/// missing/ambiguous `main` (`myc-run-no-entry` / `myc-run-entry-ambiguous`), a program outside the
+/// evaluation-complete fragment (`myc-run-residual`), or an interpreter-evaluation failure
+/// (`myc-run-eval`) — every path is an explicit, located [`Report`], never a panic (G2).
+pub fn run(manifest_path: &Path) -> Result<RunReport, Report> {
+    let (_, project_dir) = load_manifest(manifest_path)?;
+    let sources =
+        mycelium_cli_common::walk_myc(&project_dir).map_err(|e| Report::new("myc-io", e, 66))?;
+
+    match sources.as_slice() {
+        [] => Err(Report::new(
+            "myc-run-no-source",
+            format!("no `.myc` source found under {}", project_dir.display()),
+            66,
+        )
+        .help("add a `.myc` source file to the project")),
+        [single] => run_single_nodule(single, &project_dir),
+        multiple => run_multi_nodule(multiple, &project_dir),
+    }
+}
+
+/// The M-908 v0 path: exactly one `.myc` source — parse, [`check_nodule`], [`elaborate`] its
+/// nullary `main`, then run on the reference interpreter. Unchanged behavior from M-908.
+fn run_single_nodule(source_path: &Path, project_dir: &Path) -> Result<RunReport, Report> {
+    let rel = rel_to_project(source_path, project_dir);
+
+    let text = std::fs::read_to_string(source_path)
+        .map_err(|e| Report::new("myc-io", format!("{}: {e}", source_path.display()), 66))?;
+
+    let nodule = parse(&text).map_err(|ParseError { pos, message }| {
+        Report::new("myc-parse", message, 65)
+            .at(format!("{rel}:{}:{}", pos.line, pos.col))
+            .help("fix the syntax error at the indicated position")
+    })?;
+
+    let env = check_nodule(&nodule).map_err(|ce| {
+        Report::new("myc-check", ce.to_string(), 65)
+            .at(rel.clone())
+            .help("resolve the type error reported above (see `myc check`)")
+    })?;
+
+    const ENTRY: &str = "main";
+    if env.fn_decl(ENTRY).is_none() {
+        let mut available: Vec<&str> = env.fns.keys().map(String::as_str).collect();
+        available.sort_unstable();
+        let list = if available.is_empty() {
+            "(none declared)".to_owned()
+        } else {
+            available.join(", ")
+        };
+        return Err(Report::new(
+            "myc-run-no-entry",
+            format!("no nullary `{ENTRY}` function in {rel} — v0 `myc run` executes `{ENTRY}`"),
+            65,
+        )
+        .at(rel.clone())
+        .help(format!(
+            "declare a nullary `fn {ENTRY}() => …` entry point; declared function(s): {list}"
+        )));
+    }
+
+    let node = elaborate(&env, ENTRY).map_err(|ee| {
+        Report::new("myc-run-residual", ee.to_string(), 70)
+            .at(rel.clone())
+            .help(
+                "the program uses a construct outside the evaluation-complete fragment \
+                 (RFC-0007 §4.6); `myc run` v0 executes only the elaborated fragment",
+            )
+    })?;
+
+    let interp = mycelium_interp::Interpreter::default();
+    let value = interp.eval(&node).map_err(|ee| {
+        Report::new("myc-run-eval", ee.to_string(), 65)
+            .at(rel.clone())
+            .help("the program failed during interpreted evaluation — see the error above")
+    })?;
+
+    Ok(RunReport {
+        source: rel,
+        entry: ENTRY.to_owned(),
+        rendered: format!("{value:?}"),
+    })
+}
+
+/// The M-909 multi-nodule path: manifest-driven project loading, nodule linking, and end-to-end
+/// execution. See [`run`]'s doc for the full six-step model.
+fn run_multi_nodule(sources: &[PathBuf], project_dir: &Path) -> Result<RunReport, Report> {
+    // Step 1: parse every source independently — each file is a bare `nodule <path>; …` block.
+    let mut parsed: Vec<(String, Nodule)> = Vec::with_capacity(sources.len());
+    for source_path in sources {
+        let rel = rel_to_project(source_path, project_dir);
+        let text = std::fs::read_to_string(source_path)
+            .map_err(|e| Report::new("myc-io", format!("{}: {e}", source_path.display()), 66))?;
+        let nodule = parse(&text).map_err(|ParseError { pos, message }| {
+            Report::new("myc-parse", message, 65)
+                .at(format!("{rel}:{}:{}", pos.line, pos.col))
+                .help("fix the syntax error at the indicated position")
+        })?;
+        parsed.push((rel, nodule));
+    }
+
+    // Step 2: link-check before check_phylum (which does not itself guard duplicate nodule paths
+    // or cyclic `use` graphs — G2: never let those corrupt the phylum-wide export table silently).
+    check_no_duplicate_nodule_paths(&parsed)?;
+    check_use_targets_resolve(&parsed)?;
+    check_no_nodule_cycles(&parsed)?;
+
+    // Step 3: assemble one Phylum (no header — path: None) and check it as a whole.
+    let phylum = Phylum {
+        path: None,
+        nodules: parsed.iter().map(|(_, n)| n.clone()).collect(),
+    };
+    let phylum_env: PhylumEnv = check_phylum(&phylum).map_err(|ce: CheckError| {
+        Report::new("myc-check", ce.to_string(), 65)
+            .help("resolve the type error reported above (see `myc check`)")
+    })?;
+
+    // Step 4: find the single nodule declaring a nullary `main` (never guess between candidates).
+    const ENTRY: &str = "main";
+    let entry_path = find_entry_nodule(&phylum_env, &parsed)?;
+    let entry_rel = parsed
+        .iter()
+        .find(|(_, n)| &n.path == entry_path)
+        .map(|(rel, _)| rel.clone())
+        .unwrap_or_else(|| entry_path.0.join("."));
+
+    // Step 5: flatten every checked nodule's Env into one merged Env for elaboration (see `run`'s
+    // doc — this is a v0 CLI-level linking policy, not an l1/interp change). A genuine simple-name
+    // collision across two *different* nodules refuses rather than silently picking a winner.
+    let merged = merge_phylum_env(&phylum_env)?;
+
+    // Step 6: elaborate + run, same as the single-nodule path.
+    let node = elaborate(&merged, ENTRY).map_err(|ee| {
+        Report::new("myc-run-residual", ee.to_string(), 70)
+            .at(entry_rel.clone())
+            .help(
+                "the program uses a construct outside the evaluation-complete fragment \
+                 (RFC-0007 §4.6); `myc run` v0 executes only the elaborated fragment",
+            )
+    })?;
+
+    let interp = mycelium_interp::Interpreter::default();
+    let value = interp.eval(&node).map_err(|ee| {
+        Report::new("myc-run-eval", ee.to_string(), 65)
+            .at(entry_rel.clone())
+            .help("the program failed during interpreted evaluation — see the error above")
+    })?;
+
+    Ok(RunReport {
+        source: entry_rel,
+        entry: ENTRY.to_owned(),
+        rendered: format!("{value:?}"),
+    })
+}
+
+/// `path`, relative to `project_dir` (falls back to the absolute path if stripping fails — never
+/// panics, G2).
+fn rel_to_project(path: &Path, project_dir: &Path) -> String {
+    path.strip_prefix(project_dir)
+        .unwrap_or(path)
+        .display()
+        .to_string()
+}
+
+/// The dot-joined nodule path (`a.b` for `nodule a.b;`), the key `myc run`'s M-909 linker uses to
+/// identify a nodule across files.
+fn nodule_path_string(path: &NoduleAstPath) -> String {
+    path.0.join(".")
+}
+
+/// The nodule path a `use` targets: for a glob (`use a.b.*`) the whole path is the nodule; for a
+/// specific import (`use a.b.Item`) the last segment is the imported item, so the nodule is the
+/// prefix. Returns `None` for an unqualified specific `use` (a single-segment, non-glob path) — that
+/// shape is malformed on its own terms and [`check_phylum`] reports it precisely; the M-909 linker
+/// does not duplicate that diagnostic.
+fn use_target_nodule_path(up: &UsePath) -> Option<String> {
+    if up.glob {
+        Some(up.path.0.join("."))
+    } else if up.path.0.len() >= 2 {
+        Some(up.path.0[..up.path.0.len() - 1].join("."))
+    } else {
+        None
+    }
+}
+
+/// Never-silent (G2): two files declaring the same `nodule <path>;` would silently collide in
+/// [`check_phylum`]'s qualified export table (`qualify` keys by nodule path); `myc run` v0 refuses
+/// explicitly before that can happen.
+fn check_no_duplicate_nodule_paths(parsed: &[(String, Nodule)]) -> Result<(), Report> {
+    let mut seen: BTreeMap<String, String> = BTreeMap::new();
+    for (rel, nodule) in parsed {
+        let key = nodule_path_string(&nodule.path);
+        if let Some(first_rel) = seen.get(&key) {
+            return Err(Report::new(
+                "myc-run-nodule-duplicate",
+                format!(
+                    "nodule `{key}` is declared in both {first_rel} and {rel} — every nodule path \
+                     in a project must be unique"
+                ),
+                65,
+            )
+            .at(rel.clone())
+            .help("rename one of the nodules, or merge their declarations into a single nodule"));
+        }
+        seen.insert(key, rel.clone());
+    }
+    Ok(())
+}
+
+/// Never-silent (G2): a `use` naming a nodule with no corresponding file in the project is refused
+/// explicitly, rather than surfacing only as an opaque "unknown name" from [`check_phylum`].
+fn check_use_targets_resolve(parsed: &[(String, Nodule)]) -> Result<(), Report> {
+    let known: BTreeSet<String> = parsed
+        .iter()
+        .map(|(_, n)| nodule_path_string(&n.path))
+        .collect();
+    for (rel, nodule) in parsed {
+        let from = nodule_path_string(&nodule.path);
+        for item in &nodule.items {
+            let Item::Use(up) = item else { continue };
+            let Some(target) = use_target_nodule_path(up) else {
+                continue;
+            };
+            if !known.contains(&target) {
+                return Err(Report::new(
+                    "myc-run-nodule-unresolved",
+                    format!(
+                        "nodule `{from}` ({rel}) references nodule `{target}` via `use`, but no \
+                         nodule `{target}` exists in this project"
+                    ),
+                    65,
+                )
+                .at(rel.clone())
+                .help(
+                    "check the `use` path, or add the missing nodule's `.myc` source to the project",
+                ));
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Never-silent (G2), `Declared` v0 policy: `myc run` requires the nodule-level `use` dependency
+/// graph to be acyclic (see [`run`]'s doc — this is stricter than [`check_phylum`] itself needs to
+/// be, a deliberate v0 CLI simplification, not a kernel limitation).
+fn check_no_nodule_cycles(parsed: &[(String, Nodule)]) -> Result<(), Report> {
+    let known: BTreeSet<String> = parsed
+        .iter()
+        .map(|(_, n)| nodule_path_string(&n.path))
+        .collect();
+    let mut edges: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+    for (_, nodule) in parsed {
+        let from = nodule_path_string(&nodule.path);
+        let targets = edges.entry(from.clone()).or_default();
+        for item in &nodule.items {
+            let Item::Use(up) = item else { continue };
+            let Some(target) = use_target_nodule_path(up) else {
+                continue;
+            };
+            if target != from && known.contains(&target) {
+                targets.insert(target);
+            }
+        }
+    }
+
+    // 3-color DFS marks: 0 = white (unvisited), 1 = gray (on the current path), 2 = black (done).
+    let mut color: BTreeMap<String, u8> = edges.keys().cloned().map(|k| (k, 0)).collect();
+    let starts: Vec<String> = edges.keys().cloned().collect();
+    for start in starts {
+        if color.get(&start).copied() != Some(0) {
+            continue;
+        }
+        let mut path = Vec::new();
+        if let Some(cycle) = dfs_find_cycle(&start, &edges, &mut color, &mut path) {
+            let chain = cycle.join(" -> ");
+            return Err(Report::new(
+                "myc-run-nodule-cyclic",
+                format!(
+                    "cyclic nodule `use` dependency: {chain} — myc run v0 requires an acyclic \
+                     nodule graph"
+                ),
+                65,
+            )
+            .help(
+                "break the cycle by removing or restructuring the `use` that closes the loop; \
+                 myc run v0 links nodules eagerly and does not support mutually-dependent \
+                 nodules yet",
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// Depth-first cycle search over the nodule `use` graph (3-color: white/gray/black), bounded by the
+/// number of nodules in the project — recursion depth is at most the node count, never unbounded
+/// input-driven recursion.
+fn dfs_find_cycle(
+    node: &str,
+    edges: &BTreeMap<String, BTreeSet<String>>,
+    color: &mut BTreeMap<String, u8>,
+    path: &mut Vec<String>,
+) -> Option<Vec<String>> {
+    // 0 = white (unvisited), 1 = gray (on the current DFS path), 2 = black (fully explored).
+    color.insert(node.to_owned(), 1);
+    path.push(node.to_owned());
+    if let Some(targets) = edges.get(node) {
+        for t in targets {
+            match color.get(t.as_str()).copied() {
+                Some(1) => {
+                    let start_idx = path.iter().position(|p| p == t).unwrap_or(0);
+                    let mut cycle: Vec<String> = path[start_idx..].to_vec();
+                    cycle.push(t.clone());
+                    return Some(cycle);
+                }
+                Some(2) => continue,
+                _ => {
+                    if let Some(c) = dfs_find_cycle(t, edges, color, path) {
+                        return Some(c);
+                    }
+                }
+            }
+        }
+    }
+    path.pop();
+    color.insert(node.to_owned(), 2);
+    None
+}
+
+/// The single nodule declaring a nullary `main`, or an explicit refusal — zero candidates is
+/// `myc-run-no-entry`; more than one is `myc-run-entry-ambiguous` (never guesses between them, G2).
+fn find_entry_nodule<'a>(
+    phylum_env: &'a PhylumEnv,
+    parsed: &[(String, Nodule)],
+) -> Result<&'a NoduleAstPath, Report> {
+    let candidates: Vec<&NoduleAstPath> = phylum_env
+        .nodules
+        .iter()
+        .filter(|(_, env)| env.fn_decl("main").is_some())
+        .map(|(path, _)| path)
+        .collect();
+    match candidates.as_slice() {
+        [] => {
+            let nodules: Vec<String> = parsed
+                .iter()
+                .map(|(_, n)| nodule_path_string(&n.path))
+                .collect();
+            Err(Report::new(
+                "myc-run-no-entry",
+                format!(
+                    "no nodule declares a nullary `main` — v0 `myc run` executes `main`; nodules \
+                     in this project: {}",
+                    nodules.join(", ")
+                ),
+                65,
+            )
+            .help("declare a nullary `fn main() => …` in exactly one nodule of the project"))
+        }
+        [only] => Ok(only),
+        many => {
+            let names: Vec<String> = many.iter().map(|p| nodule_path_string(p)).collect();
+            Err(Report::new(
+                "myc-run-entry-ambiguous",
+                format!(
+                    "more than one nodule declares a nullary `main` ({}) — v0 `myc run` needs a \
+                     single, unambiguous entry",
+                    names.join(", ")
+                ),
+                65,
+            )
+            .help("keep a nullary `main` in exactly one nodule of the project"))
+        }
+    }
+}
+
+/// Flatten every checked nodule's [`Env`] into one merged `Env`, by simple name, for elaboration
+/// (see [`run`]'s doc, step 5). [`check_phylum`] has already validated every cross-nodule reference
+/// in the program is legal, so this merge is safe **except** for a genuine simple-name collision —
+/// two different nodules independently declaring an item with the same name but a different
+/// definition — which is refused as `myc-run-nodule-fn-collision` rather than silently picking a
+/// winner (G2). An identical re-inserted entry (e.g. a name a nodule imported, cloned verbatim into
+/// its own [`Env`] by [`check_phylum`]) is not a conflict.
+fn merge_phylum_env(phylum_env: &PhylumEnv) -> Result<Env, Report> {
+    let mut types = BTreeMap::new();
+    let mut fns = BTreeMap::new();
+    let mut totality = BTreeMap::new();
+    let mut traits = BTreeMap::new();
+    let mut instances = BTreeMap::new();
+    let mut impls = BTreeMap::new();
+    let mut lower_rules = BTreeMap::new();
+    let mut conflicts: Vec<String> = Vec::new();
+
+    for (_, env) in &phylum_env.nodules {
+        merge_map(&mut types, &env.types, String::clone, &mut conflicts);
+        merge_map(&mut fns, &env.fns, String::clone, &mut conflicts);
+        merge_map(&mut totality, &env.totality, String::clone, &mut conflicts);
+        merge_map(&mut traits, &env.traits, String::clone, &mut conflicts);
+        merge_map(&mut instances, &env.instances, fmt_pair_key, &mut conflicts);
+        merge_map(&mut impls, &env.impls, fmt_pair_key, &mut conflicts);
+        merge_map(
+            &mut lower_rules,
+            &env.lower_rules,
+            String::clone,
+            &mut conflicts,
+        );
+    }
+
+    if !conflicts.is_empty() {
+        conflicts.sort_unstable();
+        conflicts.dedup();
+        return Err(Report::new(
+            "myc-run-nodule-fn-collision",
+            format!(
+                "myc run v0 links nodules by simple name; the following name(s) are declared \
+                 differently by more than one nodule and cannot be unambiguously linked: {}",
+                conflicts.join(", ")
+            ),
+            65,
+        )
+        .help(
+            "rename one of the conflicting declarations — cross-nodule name collisions are not \
+             yet disambiguated (v0; a future project-scoped linker will lift this)",
+        ));
+    }
+
+    Ok(Env {
+        types,
+        fns,
+        totality,
+        traits,
+        instances,
+        impls,
+        lower_rules,
+    })
+}
+
+/// `(String, String)`-keyed maps (`instances`/`impls`) format their key as `left::right` for a
+/// collision report.
+fn fmt_pair_key(k: &(String, String)) -> String {
+    format!("{}::{}", k.0, k.1)
+}
+
+/// Merge `src` into `dst` by key: a new key is inserted; an existing key with an **equal** value is
+/// left alone (e.g. the same declaration re-appearing via two nodules' imports); an existing key
+/// with a **different** value is recorded (via `fmt_key`) in `conflicts` rather than silently
+/// overwritten (G2 — the caller turns a non-empty `conflicts` into an explicit [`Report`]).
+fn merge_map<K, V>(
+    dst: &mut BTreeMap<K, V>,
+    src: &BTreeMap<K, V>,
+    fmt_key: impl Fn(&K) -> String,
+    conflicts: &mut Vec<String>,
+) where
+    K: Ord + Clone,
+    V: PartialEq + Clone,
+{
+    for (k, v) in src {
+        match dst.get(k) {
+            None => {
+                dst.insert(k.clone(), v.clone());
+            }
+            Some(existing) if existing == v => {}
+            Some(_) => conflicts.push(fmt_key(k)),
+        }
+    }
 }
 
 /// The outcome of a single nodule-component parse in [`stream_parse`].

@@ -10,11 +10,12 @@
 use std::cell::Cell;
 use std::collections::{BTreeMap, BTreeSet};
 
+use crate::affine::{Tracker, UseOutcome};
 use crate::ambient::AmbientError;
 use crate::ast::{
     Arm, BaseType, DeriveDecl, Expr, FnDecl, FnSig, Hypha, ImplDecl, Item, Literal, LowerDecl,
-    Nodule, ObjectDecl, Paradigm, Param, Path, Pattern, Phylum, Scalar, Strength, TraitRef,
-    TypeDecl, TypeRef, UsePath, WidthRef,
+    Nodule, ObjectDecl, Paradigm, Param, Path, Pattern, Phylum, Scalar, Sparsity, Strength,
+    TraitRef, TypeDecl, TypeRef, UsePath, WidthRef,
 };
 
 /// The checker's **explicit expression-nesting budget** (the "banked guard 4" discipline; A4-02).
@@ -81,6 +82,24 @@ pub enum Ty {
     Ternary(Width),
     /// `Dense{d, s}`.
     Dense(u32, Scalar),
+    /// `VSA{model, dim, sparsity}` (RFC-0003 §3; M-892 — the type-level lift of the former
+    /// blanket "VSA types are deferred" refusal). The `model` is the **kernel model id**
+    /// (`"MAP-I"`, `"FHRR"`, `"BSC"`, …) — the surface ident is canonicalized by
+    /// [`vsa_kernel_model_id`] at resolution (an ident cannot carry the kernel ids' `-`).
+    /// Any model id is admissible as a type *mention* (exactly as `mycelium-core` type-checks
+    /// hypervector mentions without the algebra — ADR-008); the `vsa_*` prims are additionally
+    /// gated to their dispatch set by [`Checker::try_check_vsa_prim`]. Value construction is
+    /// injection-only until a surface hypervector form lands (the M-890 Dense posture).
+    Vsa {
+        /// The kernel model id (canonicalized — ADR-003: the name here is metadata, matching
+        /// `Repr::Vsa { model }`).
+        model: String,
+        /// Hypervector dimensionality.
+        dim: u32,
+        /// Declared sparsity (the `vsa_*` prims require `Dense` at introduction — the kernel's
+        /// Value-level ops construct dense-class results).
+        sparsity: Sparsity,
+    },
     /// A registered data type applied to type arguments — `Data("List", [Binary(8)])` is
     /// `List<Binary{8}>`; an empty argument vector is a monomorphic/nullary type (`Data("Bool", [])`).
     /// Content addressing of declarations: RFC-0007 §4.2 (parameterized declarations are one registry
@@ -96,6 +115,13 @@ pub enum Ty {
     /// `Bytes` — a first-class byte string (RFC-0032 D4; M-750). Constructed by the `0x…` literal.
     /// Guarantee: `Exact`.
     Bytes,
+    /// `Float` — the first-class scalar float, IEEE-754 binary64 (ADR-040; M-897). A nullary repr
+    /// type like [`Ty::Bytes`] (the width set is F64-only at introduction — ADR-040 FLAG-1).
+    /// Constructed by the decimal float literal (`1.5`), which denotes the **correctly-rounded**
+    /// (RNE) binary64 of its decimal text (FLAG-3). Guarantee: `Exact` as a *definition* (the
+    /// literal denotes exactly that binary64 value); the host-conversion claim is pinned
+    /// `Empirical` by the round-trip conformance corpus (ADR-040 §2.6 — VR-5, no silent upgrade).
+    Float,
     /// An **abstract type parameter** (a skolem variable) — in scope only while checking a generic
     /// declaration's constructors or a generic function's body (RFC-0007 §11.2). Two `Var`s are equal
     /// iff their names match; that structural equality is the engine of parametric checking. A
@@ -130,8 +156,17 @@ impl core::fmt::Display for Ty {
                 write!(f, ">")
             }
             Ty::Substrate(t) => write!(f, "Substrate{{{t}}}"),
+            Ty::Vsa {
+                model,
+                dim,
+                sparsity,
+            } => match sparsity {
+                Sparsity::Dense => write!(f, "VSA{{{model}, {dim}, Dense}}"),
+                Sparsity::Sparse(k) => write!(f, "VSA{{{model}, {dim}, Sparse{{{k}}}}}"),
+            },
             Ty::Seq(elem, n) => write!(f, "Seq{{{elem}, {n}}}"),
             Ty::Bytes => write!(f, "Bytes"),
+            Ty::Float => write!(f, "Float"),
             Ty::Var(v) => write!(f, "{v}"),
             // RFC-0024 §3: render as `A -> B` (right-associative). Parenthesize a function-typed
             // LHS so `(A -> B) -> C` is unambiguous in diagnostics, not `A -> B -> C` (Copilot #397).
@@ -263,11 +298,17 @@ pub fn type_head(ty: &Ty) -> Option<String> {
         Ty::Binary(_) => "Binary".to_owned(),
         Ty::Ternary(_) => "Ternary".to_owned(),
         Ty::Dense(_, _) => "Dense".to_owned(),
+        // RFC-0003 §3 (M-892): VSA keys per head like Dense (model/dim/sparsity erased — the same
+        // documented stage-1 coherence simplification as the width-erased scalar paradigms).
+        Ty::Vsa { .. } => "Vsa".to_owned(),
         Ty::Substrate(t) => format!("Substrate:{t}"),
         // RFC-0032 D3/D4: the sequence/byte-string reprs key per head (width/elem erased like the
         // scalar paradigms — a documented stage-1 coherence simplification).
         Ty::Seq(_, _) => "Seq".to_owned(),
         Ty::Bytes => "Bytes".to_owned(),
+        // ADR-040 (M-897): the scalar float is a primitive repr head like `Bytes` (F64-only at
+        // introduction, so the head carries no width — FLAG-1).
+        Ty::Float => "Float".to_owned(),
         Ty::Data(n, _) => format!("Data:{n}"),
         // `Ty::Var` and `Ty::Fn` are not legal instance heads in stage-1 — a blanket instance
         // over an abstract variable or a function type is refused explicitly (RFC-0024 §3 / RFC-0019 §4.5).
@@ -308,11 +349,15 @@ pub(crate) fn subst_ty(ty: &Ty, s: &BTreeMap<String, Ty>) -> Ty {
                 _ => ty.clone(),
             })
             .unwrap_or_else(|| ty.clone()),
+        // RFC-0003 §3 (M-892): VSA is fully concrete (model/dim/sparsity are structural
+        // constants — no abstract slot to substitute into), like Dense.
         Ty::Binary(Width::Lit(_))
         | Ty::Ternary(Width::Lit(_))
         | Ty::Dense(_, _)
+        | Ty::Vsa { .. }
         | Ty::Substrate(_)
-        | Ty::Bytes => ty.clone(),
+        | Ty::Bytes
+        | Ty::Float => ty.clone(),
     }
 }
 
@@ -341,8 +386,11 @@ pub(crate) fn has_var(ty: &Ty) -> bool {
         Ty::Binary(Width::Lit(_))
         | Ty::Ternary(Width::Lit(_))
         | Ty::Dense(_, _)
+        // M-892: VSA is fully concrete (no abstract slot), like Dense.
+        | Ty::Vsa { .. }
         | Ty::Substrate(_)
-        | Ty::Bytes => false,
+        | Ty::Bytes
+        | Ty::Float => false,
     }
 }
 
@@ -572,8 +620,9 @@ pub(crate) fn prelude() -> DataInfo {
 /// Resolve a surface [`TypeRef`] to a checked [`Ty`], with the type parameters `tyvars` in scope
 /// (RFC-0007 §11.2): a `Named(name, [])` whose `name` is a type parameter resolves to [`Ty::Var`];
 /// any other `Named` is a data type whose **arity is checked** against its declaration (`List<A>`
-/// applied to the wrong number of arguments is an explicit error, never a guess). VSA types stay a
-/// deferred refusal. The guarantee index is *allowed* and returned alongside (checked dynamically at
+/// applied to the wrong number of arguments is an explicit error, never a guess). VSA types resolve
+/// concretely as of M-892 (their surface model ident canonicalized to the kernel model id). The
+/// guarantee index is *allowed* and returned alongside (checked dynamically at
 /// stage 0 — RFC-0007 §4.3). `tyvars` is `&[]` in a monomorphic context.
 pub(crate) fn resolve_ty(
     site: &str,
@@ -595,12 +644,22 @@ pub(crate) fn resolve_ty(
             Ty::Seq(Box::new(elem_ty), *len)
         }
         BaseType::Bytes => Ty::Bytes,
-        BaseType::Vsa { .. } => {
-            return Err(CheckError::new(
-                site,
-                "VSA types are deferred in the L1 v0 prototype (no value forms yet)",
-            ))
-        }
+        // ADR-040 (M-897): the nullary scalar-float repr type (binary64 only — FLAG-1).
+        BaseType::Float => Ty::Float,
+        // RFC-0003 §3 / ADR-008 (M-892): the VSA type resolves concretely — the type-level lift
+        // of the former blanket deferral, needed so the `vsa_*` prims are typable. Any model id
+        // is admissible as a *mention* (core already type-checks hypervector mentions without
+        // the algebra); the prims gate their dispatch set separately (`try_check_vsa_prim`).
+        // The surface ident is canonicalized to the kernel model id (`MAP_I` → `MAP-I`, …).
+        BaseType::Vsa {
+            model,
+            dim,
+            sparsity,
+        } => Ty::Vsa {
+            model: vsa_kernel_model_id(model),
+            dim: *dim,
+            sparsity: sparsity.clone(),
+        },
         BaseType::Named(name, args) => {
             // A bare name that is a type parameter in scope is an abstract type variable (§11.2).
             if args.is_empty() && tyvars.iter().any(|v| v == name) {
@@ -2040,6 +2099,9 @@ fn check_lower_rule_rhs_type(
         bounds: &[],
         std_sys: false,
         depth: Cell::new(0),
+        // Not a whole-function-body walk (a `lower` rule has no value parameters — no `Substrate`
+        // binding is ever in scope here); the affine pass never needs to run (`crate::affine` docs).
+        affine: Tracker::inert(),
     };
     let mut scope: Vec<(String, Ty)> = Vec::new();
     cx.infer(&mut scope, &ld.rhs).map_err(|e| {
@@ -2564,13 +2626,15 @@ pub(crate) fn register_instances(
         let type_local = match &for_ty {
             Ty::Data(n, _) => phylum_types.contains(n.as_str()),
             // Primitive repr types are "owned by the phylum" for stage-1 (RFC-0019 §4.5) — the
-            // RFC-0032 sequence/byte-string reprs included.
+            // RFC-0032 sequence/byte-string reprs and the M-892 VSA repr included.
             Ty::Binary(_)
             | Ty::Ternary(_)
             | Ty::Dense(_, _)
+            | Ty::Vsa { .. }
             | Ty::Substrate(_)
             | Ty::Seq(_, _)
-            | Ty::Bytes => true,
+            | Ty::Bytes
+            | Ty::Float => true,
             // `Ty::Var` and `Ty::Fn` are not legal instance heads; type_head() returns None for them,
             // so this arm is unreachable in practice (the coherence key check rejects them upstream).
             // Kept for exhaustiveness — never a silent accept (G2).
@@ -2821,6 +2885,10 @@ fn check_fn_body(
         bounds: &bounds,
         std_sys,
         depth: Cell::new(0),
+        // The one whole-function-body walk — seed the active affine tracker from the parameter
+        // scope so a `Substrate`-typed parameter is already tracked as the body starts (M-903;
+        // DN-71 §4.2: a parameter pass counts as the caller's move-in).
+        affine: Tracker::seeded(&scope),
     };
     let (got, body) = cx.check(&mut scope, &fd.body, Some(&ret))?;
     if got != ret {
@@ -2919,6 +2987,12 @@ struct Cx<'a> {
     /// Live expression-nesting depth for the explicit [`MAX_CHECK_DEPTH`] budget (interior
     /// mutability so [`Self::check`] stays `&self`). Reset per body; accounted by [`DepthGuard`].
     depth: Cell<u32>,
+    /// The **affine `Substrate` use-once tracker** (M-903; DN-71 §4.2) — mirrors `scope` by index
+    /// (interior mutability, matching `depth`'s pattern, so [`Self::check`] stays `&self`). Active
+    /// (seeded from the parameter scope) only in [`check_fn_body`]; **inert** (a guaranteed no-op)
+    /// in the other two `Cx` contexts (`check_lower_rule_rhs_type`, `infer_type`) — see
+    /// `crate::affine`'s module docs for why.
+    affine: Tracker,
 }
 
 impl Cx<'_> {
@@ -3045,11 +3119,17 @@ impl Cx<'_> {
     /// (never silent — G2). The result is the moved substrate (`Substrate{tag}`), now exclusively
     /// owned by the consumer.
     ///
-    /// Guarantee `Declared` (recorded in [`crate::grade`]): v0 has **no value-level affine-usage
-    /// tracker** (only pattern-binder linearity — `check_linear`), so the *single-use* property of
-    /// `consume` is asserted by the construct, not yet checked. The type rule itself is exact — only
-    /// a `Substrate` operand is admitted — so this is honest: the type discipline is checked, the
-    /// affinity is staged.
+    /// Guarantee **`Empirical`** (M-903; DN-71 Model S §4.2/§4.4 — updated from the M-664-era
+    /// `Declared`, note that stated the pre-M-903 baseline honestly and is stale as of this
+    /// affine-tracker landing, VR-5 requires this update rather than leaving it): the *single-use*
+    /// property is now **checked**, not merely asserted — every reference to a `Substrate`-typed
+    /// binding is recorded in `self.affine` (`crate::affine::Tracker`, wired below via `use_at` at
+    /// every scope reference) and a second move on any reachable path is refused here, naming both
+    /// sites. `Empirical`, not `Proven`: the tracker's own module docs are explicit that it is a
+    /// sound-over-precise conservative approximation (verified by an exhaustive sweep, not a
+    /// mechanized soundness proof) with a known, documented loop/closure multiplicity gap closed only
+    /// by [`crate::substrate::SubstrateHandle::try_consume`]'s runtime backstop (M-903; wired into
+    /// execution by M-904, DN-71 §4.3).
     fn check_consume(
         &self,
         scope: &mut Vec<(String, Ty)>,
@@ -3095,7 +3175,35 @@ impl Cx<'_> {
             ));
         }
         let name = &p.0[0];
-        if let Some((_, ty)) = scope.iter().rev().find(|(n, _)| n == name) {
+        // `rposition` (not `.rev().find()`) so `idx` is the scope's own index — the affine tracker
+        // mirrors `scope` index-for-index (shadowing = later wins = the last/rightmost match).
+        if let Some(idx) = scope.iter().rposition(|(n, _)| n == name) {
+            let ty = &scope[idx].1;
+            // M-903 / DN-71 §4.2: a reference to a `Substrate`-typed binding is a **move** — record
+            // it in the affine tracker (a no-op for any non-`Substrate` binding, or when this `Cx`
+            // is not running the affine pass — `crate::affine` docs). A second move of the same
+            // binding on a reachable path is a never-silent double-consume refusal naming **both**
+            // sites (RFC-0013 diagnostic style: this checker has no source spans, so "site" is the
+            // binding's name plus a stable per-body use ordinal — honest, not a fabricated line/col).
+            match self.affine.use_at(idx) {
+                UseOutcome::NotAffine | UseOutcome::FirstUse => {}
+                UseOutcome::DoubleUse {
+                    tag,
+                    first_ordinal,
+                    this_ordinal,
+                } => {
+                    return self.err(format!(
+                        "double-consume: `{name}` (`Substrate{{{tag}}}`) is used again here \
+                         (reference #{this_ordinal} to `{name}` in `{site}`), but it was already \
+                         moved earlier (reference #{first_ordinal} to `{name}`) — an affine \
+                         `Substrate` value may be consumed, passed, returned, or captured **at \
+                         most once** along any execution path (DN-71 Model S §4.2; RFC-0006 LR-8). \
+                         This is a static checker refusal naming both the first move and this \
+                         violating use — never silent (G2/VR-5).",
+                        site = self.site
+                    ));
+                }
+            }
             return Ok((ty.clone(), e.clone()));
         }
         // A reference to a name brought in by ≥2 globs (and not shadowed by a local/own/explicit
@@ -3269,9 +3377,11 @@ impl Cx<'_> {
                 return self.err(format!("let `{name}`: {}", edge_mismatch("bound", w, &bty)));
             }
         }
-        scope.push((name.to_owned(), bty));
+        scope.push((name.to_owned(), bty.clone()));
+        self.affine.push(&bty);
         let r = self.check(scope, body, expected);
         scope.pop();
+        self.affine.pop();
         let (rty, body2) = r?;
         Ok((
             rty,
@@ -3368,9 +3478,14 @@ impl Cx<'_> {
             None => None,
         };
         // Check the body under the extended scope; the param shadows any same-named outer binder.
+        // (A `Substrate`-typed capture inside this body is tracked as one lexical use — sound only
+        // when the closure runs at most once; the runtime backstop covers a closure called more
+        // than once — `crate::affine` module docs, the known loop/closure limitation.)
         scope.push((param.name.clone(), param_ty.clone()));
+        self.affine.push(&param_ty);
         let r = self.check(scope, body, expected_ret.as_ref());
         scope.pop();
+        self.affine.pop();
         let (body_ty, body2) = r?;
         if let Some(er) = &expected_ret {
             if er != &body_ty {
@@ -3402,10 +3517,18 @@ impl Cx<'_> {
         if c != bool_ty {
             return self.err(format!("if-condition must be Bool, got {c}"));
         }
+        // M-903 / DN-71 §4.2: `conseq`/`alt` are mutually exclusive at runtime, so each is checked
+        // from the *same* pre-branch affine snapshot; the post-branch states are then union-merged
+        // (a slot moved in *either* branch counts as moved afterward — conservative, `crate::affine`
+        // module docs on why this is sound-over-precise for v0).
+        let pre_branch = self.affine.snapshot();
         let (t, conseq2) = self.check(scope, conseq, expected)?;
+        let post_conseq = self.affine.snapshot();
+        self.affine.restore(&pre_branch);
         // The else-branch may borrow the then-branch's type as its expected (so a bare decimal in
         // one branch can take the other's width).
         let (f, alt2) = self.check(scope, alt, expected.or(Some(&t)))?;
+        self.affine.merge_alt(post_conseq);
         if t != f {
             return self.err(format!(
                 "if-branches disagree: {}",
@@ -3527,14 +3650,72 @@ impl Cx<'_> {
         // Leading hyphae: each is its own computation with no expected type. RT1 — each is checked
         // under the same lexical scope (closed over by value), never mutating it.
         for h in leading {
+            let forage = match &h.forage {
+                Some(p) => Some(Box::new(self.check_forage_policy(scope, p)?)),
+                None => None,
+            };
             let (_ty, body2) = self.check(scope, &h.body, None)?;
-            checked.push(Hypha { body: body2 });
+            checked.push(Hypha {
+                forage,
+                body: body2,
+            });
         }
         // The final hypha carries the colony's observable (the RT2 sequentialization's last step), so
         // the `expected` type applies to it.
+        let forage = match &last.forage {
+            Some(p) => Some(Box::new(self.check_forage_policy(scope, p)?)),
+            None => None,
+        };
         let (rty, last_body2) = self.check(scope, &last.body, expected)?;
-        checked.push(Hypha { body: last_body2 });
+        checked.push(Hypha {
+            forage,
+            body: last_body2,
+        });
         Ok((rty, Expr::Colony(checked)))
+    }
+
+    /// D-lite `@forage(policy)` policy check (RFC-0008 RT3; DN-63 §3.5; M-906/DN-70 D1). The
+    /// D-lite subset narrows DN-63's open `policy: PlacementPolicy` expression sketch (§3.5) to a
+    /// **literal binary bitmask**: each set bit `i` names one local worker candidate `worker-i`
+    /// (DN-63 FLAG-13, narrowed for the subset, not resolved — the full node-level `Meta` signal
+    /// set stays open, owned by the H2 `forage` maturity work, DN-70 §5 R-6). This is a
+    /// *checker*-level narrowing, not a grammar one (`parse_hypha` accepts any expression),
+    /// because the D-lite mechanism builds a `mycelium_select::SelectionPolicy` **statically**, at
+    /// elaboration time, straight from the literal's bits (so `elaborate`/`elaborate_colony` and
+    /// the L1 evaluator can agree identically on the DN-63 FLAG-14 empty-candidate refusal — see
+    /// [`crate::elab`]'s `elab_colony` and [`crate::eval::ForageError`]). Reusing `mycelium-select`
+    /// for an *arbitrary evaluated* Mycelium policy value is exactly the DN-70 §5 R-5 mechanized
+    /// capture-and-set surface, explicitly deferred to H2. A non-literal or non-`Binary` policy is
+    /// refused here, explicitly (never silently coerced or ignored — G2).
+    ///
+    /// Guarantee: `Declared` — the literal-bitmask convention is this D-lite subset's own,
+    /// narrower-than-DN-63 choice (FLAG, per the M-906 task brief: "uses the existing
+    /// SelectionPolicy — no new mechanism"; the mechanism itself is unchanged, only its D-lite
+    /// input surface is narrowed).
+    fn check_forage_policy(
+        &self,
+        scope: &mut Vec<(String, Ty)>,
+        policy: &Expr,
+    ) -> Result<Expr, CheckError> {
+        let (ty, policy2) = self.check(scope, policy, None)?;
+        if !matches!(ty, Ty::Binary(_)) {
+            return self.err(format!(
+                "`@forage(policy)` requires a binary-bitmask policy in the D-lite subset (got \
+                 `{ty}`) — each set bit names one local worker candidate (DN-63 §3.5 FLAG-13, \
+                 narrowed; RFC-0008 RT3); the general `PlacementPolicy` expression surface is the \
+                 DN-70 §5 R-5 H2 mechanized-capture work (never-silent — G2)"
+            ));
+        }
+        if !matches!(policy2, Expr::Lit(Literal::Bin(_))) {
+            return self.err(
+                "`@forage(policy)` requires a *literal* binary-bitmask policy in the D-lite \
+                 subset (e.g. `@forage(0b101) hypha …`) — a computed `Binary` expression is not \
+                 yet supported; the general dynamic-policy surface is the DN-70 §5 R-5 H2 \
+                 mechanized `SelectionPolicy` capture-and-set work (never-silent — G2)"
+                    .to_owned(),
+            );
+        }
+        Ok(policy2)
     }
 
     /// DN-58 §A (M-667): `fuse(a, b)` — lawful binary merge over the `Fuse` semilattice instance
@@ -3569,6 +3750,10 @@ impl Cx<'_> {
             ));
         }
         // Fusibility check (Empirical for repr types; Declared for Data types with a Fuse instance).
+        // `Ty::Float` is deliberately NOT in the fusible repr set (M-897): the repr-level meet is
+        // bitwise-and, which has no lawful meaning over IEEE-754 bit patterns — a float `fuse`
+        // requires an explicit `Fuse` instance (the Data-type path below), never a silent
+        // bit-level merge (G2/VR-5).
         let fusible = matches!(
             &lty,
             Ty::Binary(_) | Ty::Ternary(_) | Ty::Dense(_, _) | Ty::Bytes | Ty::Seq(_, _)
@@ -3862,7 +4047,12 @@ impl Cx<'_> {
         // other operand (consistent with the width-preserving prims). Only when **both** operands are
         // bare decimals is there no anchor at all, and then it is refused honestly (G2 — never a default
         // width); ascribe one operand or write it explicitly.
-        if matches!(name.as_str(), "eq" | "lt") {
+        // M-767 (RFC-0033 §4.1.2; ADR-028): `lt_s` — the **signed** (two's-complement) order over
+        // `Binary{N}` — shares this width-collapsing comparison branch (same anchoring rules, same
+        // `Binary{1}` result) but is Binary-only: `lt` reads Binary operands as unsigned
+        // magnitudes, so the signed order is a distinct named op (DN-72 `_s`), while balanced
+        // ternary's `lt` order is already the signed order (no ternary `lt_s` exists).
+        if matches!(name.as_str(), "eq" | "lt" | "lt_s") {
             if args.len() != 2 {
                 return self.err(format!(
                     "`{name}` takes two operands (got {}); RFC-0032 D1",
@@ -3909,7 +4099,31 @@ impl Cx<'_> {
             }
             match (&tys[0], &tys[1]) {
                 (Ty::Binary(x), Ty::Binary(y)) if x == y => {}
+                // M-767: `lt_s` on a ternary pair refuses with the real routing — balanced
+                // ternary's D1 `lt` order IS the signed order, so a distinct ternary `lt_s`
+                // would silently duplicate it (G2: explicit teaching refusal, never two names
+                // for one order).
+                (Ty::Ternary(x), Ty::Ternary(y)) if x == y && name == "lt_s" => {
+                    return self.err(
+                        "`lt_s` is the Binary two's-complement order (RFC-0033 §4.1.2; ADR-028); \
+                         balanced ternary is inherently signed, so `lt` already orders it by \
+                         signed value — use `lt`"
+                            .to_owned(),
+                    );
+                }
                 (Ty::Ternary(x), Ty::Ternary(y)) if x == y => {}
+                // ADR-040 §2.4 (M-899): float ordering is *partial* (NaN is unordered), so
+                // floats never route through the D1 total order — refuse with the real routing
+                // (never a silently-invented order for NaN; G2).
+                (Ty::Float, Ty::Float) => {
+                    return self.err(format!(
+                        "`{name}` is the RFC-0032 D1 Binary/Ternary comparison; float ordering \
+                         is partial (NaN is unordered — ADR-040 §2.4), so floats have their own \
+                         explicit prims: use `flt_lt`/`flt_le`/`flt_gt`/`flt_ge`/`flt_eq` (any \
+                         NaN operand → false) or the named total order `flt_total_le` for \
+                         sorting/keying (M-899)"
+                    ));
+                }
                 _ => {
                     return self.err(format!(
                         "`{name}` compares two equal-width operands of the same paradigm \
@@ -3935,6 +4149,27 @@ impl Cx<'_> {
         // anchor here (the result is not the index width), so it must be written/ascribed explicitly
         // (G2 — never a default width).
         if let Some(ret) = self.try_check_seq_bytes_prim(scope, head, name, args)? {
+            return Ok(ret);
+        }
+        // RFC-0001 §4.1 / RFC-0002 §5 (M-890, `enb` Gap C): the tensor-valued dense elementwise
+        // prims. Dim + dtype live in the type (`Dense{d, s}`), so a shape/dtype mismatch is a
+        // *static* explicit refusal here — never a broadcast/coercion (G2). Not width-preserving
+        // in the `prim_family` sense (Dense has no bare-decimal encoding to anchor — RFC-0012
+        // §4.3 refuses bare decimals under a Dense ambient), so a dedicated branch, like seq/bytes.
+        if let Some(ret) = self.try_check_dense_prim(scope, head, name, args)? {
+            return Ok(ret);
+        }
+        // RFC-0003 §3/§4 / ADR-008 (M-892, `enb` Gap C): the model-dispatched VSA bind group.
+        // Model + dim live in the type (`VSA{model, dim, sparsity}`), so a model/dim mismatch is
+        // a *static* explicit refusal here — never a coercion (G2) — and an out-of-set model is
+        // a static refusal naming the dispatch set. A dedicated branch like dense/seq/bytes.
+        if let Some(ret) = self.try_check_vsa_prim(scope, head, name, args)? {
+            return Ok(ret);
+        }
+        // ADR-040 §2.5 (M-898, `enb` Gap A): the scalar-float arithmetic prims. `Float` is a
+        // nullary type (no width to anchor — every operand and the result are exactly `Float`),
+        // so a dedicated branch like dense/seq/bytes, not the width-polymorphic `prim_family`.
+        if let Some(ret) = self.try_check_float_prim(scope, head, name, args)? {
             return Ok(ret);
         }
         let Some(fam) = prim_family(name) else {
@@ -4327,11 +4562,18 @@ impl Cx<'_> {
         let elem = linear_elem_ty(self.site, self.types, tname, targs)?;
         // The accumulator type is the whole expression's type, so the `for`'s expected anchors `init`.
         let (aty, init2) = self.check(scope, init, expected)?;
-        scope.push((x.to_owned(), elem));
+        // (A `Substrate`-typed `x`/`acc` capture inside `body` is tracked as one lexical use —
+        // sound only when `body` runs at most once, which a `for` generally does not guarantee;
+        // the runtime backstop covers a repeated iteration — `crate::affine` module docs.)
+        scope.push((x.to_owned(), elem.clone()));
+        self.affine.push(&elem);
         scope.push((acc.to_owned(), aty.clone()));
+        self.affine.push(&aty);
         let r = self.check(scope, body, Some(&aty));
         scope.pop();
+        self.affine.pop();
         scope.pop();
+        self.affine.pop();
         let (bty, body2) = r?;
         if bty != aty {
             return self.err(format!(
@@ -4444,6 +4686,13 @@ impl Cx<'_> {
         let mut rows: Vec<Vec<crate::usefulness::Pat>> = Vec::new();
         let mut result: Option<Ty> = None;
         let mut arms2: Vec<crate::ast::Arm> = Vec::with_capacity(flat_arms.len());
+        // M-903 / DN-71 §4.2: every arm is a mutually exclusive alternative at runtime, so each is
+        // checked from the *same* pre-match affine snapshot; `merged` accumulates the union of every
+        // arm's post-body outcome (a slot moved in *any* arm counts as moved afterward —
+        // conservative, `crate::affine` module docs). Restored as the tracker's live state once the
+        // whole match has been checked.
+        let pre_match = self.affine.snapshot();
+        let mut merged = pre_match.clone();
         for arm in &flat_arms {
             // Normalize the pattern against the scrutinee/field types first — resolve ambient
             // bare-decimal literals to concrete ones, and rewrite nullary-ctor idents to explicit
@@ -4463,15 +4712,25 @@ impl Cx<'_> {
                      be reachable)",
                 );
             }
-            // Type the body with the pattern's binders in scope.
+            // Type the body with the pattern's binders in scope. Restore the shared pre-match affine
+            // baseline first (undoes any Moved marks a *previous* arm left on an outer binding — arms
+            // are alternatives, not a sequence), then push this arm's own binder slots (a
+            // `Substrate`-typed field capture is tracked exactly like a `let` binder — DN-71 §4.2).
             let depth = scope.len();
+            self.affine.restore(&pre_match);
             for (name, ty, _occ) in &binds {
                 scope.push((name.clone(), ty.clone()));
+                self.affine.push(ty);
             }
             let body_expected = expected.or(result.as_ref());
             let r = self.check(scope, &arm.body, body_expected);
             scope.truncate(depth);
+            self.affine.truncate(depth);
             let (bty, body2) = r?;
+            // Union-merge this arm's (now-truncated, pre-match-depth) outcome into `merged`.
+            if let (Some(m), Some(cur)) = (merged.as_mut(), self.affine.snapshot()) {
+                crate::affine::union_merge_into(m, &cur);
+            }
             match &result {
                 None => result = Some(bty),
                 Some(r) if *r != bty => {
@@ -4488,6 +4747,10 @@ impl Cx<'_> {
                 body: body2,
             });
         }
+        // Install the union-merged post-match affine state as the tracker's live state, so any
+        // `Substrate` binding moved in at least one arm is treated as moved by whatever follows this
+        // `match` (M-903 / DN-71 §4.2).
+        self.affine.restore(&merged);
         // Exhaustiveness (W7): a wildcard must not be useful — else its witness is a missing case.
         if let Some(witness) =
             crate::usefulness::useful(self.types, &rows, &[crate::usefulness::Pat::Wild], &col)
@@ -4746,9 +5009,9 @@ impl Cx<'_> {
         ))
     }
 
-    /// Type a `Seq`/`Bytes` indexing/length/slice/concat prim (RFC-0032 D3/D4; M-749/M-750/M-799), or
-    /// `Ok(None)` if `name` is not one of them (so the caller falls through to the width-preserving
-    /// prim path).
+    /// Type a `Seq`/`Bytes` indexing/length/slice/concat/eq/hash prim (RFC-0032 D3/D4; M-749/M-750/
+    /// M-799; M-912), or `Ok(None)` if `name` is not one of them (so the caller falls through to the
+    /// width-preserving prim path).
     /// The operands are checked, the receiver's repr type is verified (a non-`Seq`/`Bytes` receiver,
     /// or a wrong arity, is an explicit never-silent refusal — G2), and the result type is returned.
     fn try_check_seq_bytes_prim(
@@ -4879,7 +5142,7 @@ impl Cx<'_> {
             // has no anchor here — the result is the witness width, not the value width — so it is
             // refused, never defaulted). Whether the cast is exact (widen/identity) or fits (narrow)
             // is a runtime contract, not a static one — narrowing overflow is a never-silent runtime
-            // refusal (mirroring `add_bin`/`sub_bin`), so the static rule only fixes the result width.
+            // refusal (mirroring `add_u`/`sub_u`), so the static rule only fixes the result width.
             "width_cast" => {
                 if args.len() != 2 {
                     return arity_err(2);
@@ -4904,8 +5167,692 @@ impl Cx<'_> {
                     app_node(head, vec![v2, w2]),
                 )))
             }
+            // M-912 (`enb`, folded-in gap): `bytes_eq(a: Bytes, b: Bytes) -> Binary{1}` — byte-wise
+            // equality, flagged missing by the diag/error/recover ports (`bytes.*` had len/get/
+            // slice/concat but no equality). Both operands must be `Bytes` (a non-`Bytes` operand is
+            // an explicit static refusal — G2); the result is the realized `Bool` truth value, total
+            // over every pair (`prims.rs::prim_bytes_eq` is a straight `[u8]` comparison).
+            "bytes_eq" => {
+                if args.len() != 2 {
+                    return arity_err(2);
+                }
+                let (a, a2) = self.check(scope, &args[0], None)?;
+                if !matches!(a, Ty::Bytes) {
+                    return self.err(format!(
+                        "`bytes_eq` expects a `Bytes` first operand, got {a} (M-912)"
+                    ));
+                }
+                let (b, b2) = self.check(scope, &args[1], None)?;
+                if !matches!(b, Ty::Bytes) {
+                    return self.err(format!(
+                        "`bytes_eq` expects a `Bytes` second operand, got {b} (M-912)"
+                    ));
+                }
+                Ok(Some((
+                    Ty::Binary(Width::Lit(1)),
+                    app_node(head, vec![a2, b2]),
+                )))
+            }
+            // M-912 (`enb`): `hash_blake3(b: Bytes) -> Bytes` — the kernel's own BLAKE3
+            // content-addressing hash (M-103) surfaced as a prim: the 32-byte digest of the input
+            // byte string. The operand must be `Bytes` (a non-`Bytes` operand is an explicit static
+            // refusal — G2); total and deterministic over every `Bytes` input, so there is no
+            // runtime failure domain (unlike `bytes_get`/`bytes_slice`).
+            "hash_blake3" => {
+                if args.len() != 1 {
+                    return arity_err(1);
+                }
+                let (recv, recv2) = self.check(scope, &args[0], None)?;
+                if !matches!(recv, Ty::Bytes) {
+                    return self.err(format!(
+                        "`hash_blake3` expects a `Bytes` operand, got {recv} (M-912)"
+                    ));
+                }
+                Ok(Some((Ty::Bytes, app_node(head, vec![recv2]))))
+            }
             _ => Ok(None),
         }
+    }
+
+    /// Try to check a call to a **dense prim** (RFC-0001 §4.1 / RFC-0002 §5; M-890/M-891,
+    /// `enb` Gap C) — the tensor-valued group `dense_add`/`dense_sub`/`dense_neg`/`dense_scale`
+    /// (kernel `dense.add`/`dense.sub`/`dense.neg`/`dense.scale`, the `mycelium-dense` surface)
+    /// plus the measurement pair `dense_dot`/`dense_similarity` (kernel `dense.dot`/
+    /// `dense.similarity`, M-891). Returns `Ok(None)` if `name` is not one of them.
+    ///
+    /// Dim and dtype are part of the type (`Dense{d, s}`), so the never-silent shape contract is
+    /// **static** here: `dense_add`/`dense_sub` require two `Dense{d, s}` operands with *equal*
+    /// dim and dtype (a mismatch is an explicit refusal naming both types — never a broadcast or
+    /// re-round; G2), and the result is the same `Dense{d, s}`. `dense_neg` is unary,
+    /// dim/dtype-preserving. `dense_scale(a: Dense{d, s}, c: Dense{1, s})` takes its factor as a
+    /// **`Dense{1, s}` scalar** of the *same* dtype — the pre-Gap-A scalar form (no scalar-float
+    /// type exists until the M-895/M-896 float ADR lands; FLAGged at the kernel wrapper,
+    /// `mycelium-interp/src/prims.rs`). `dense_dot`/`dense_similarity` (M-891) take the same
+    /// equal-dim/dtype operand pair and return **`Dense{1, F64}`** — the measurement-result form:
+    /// the binary64 the kernel computed, delivered exactly (never re-rounded onto the operand
+    /// grid), carrying the kernel's `Proven` absolute accumulation bound at runtime; `F64` has no
+    /// dense op set (kernel v1 scope), so a measurement cannot silently feed back into dense
+    /// arithmetic — re-entry is an explicit runtime `UnsupportedDtype` refusal (G2). The
+    /// numeric-domain contracts (off-grid/non-finite
+    /// elements, overflow, subnormal results, approximate sources) are *runtime* refusals owned by
+    /// the kernel, not static rules — exactly as `add_u`'s overflow is (RFC-0032 D2 precedent).
+    /// A bare-decimal operand has no Dense anchor (RFC-0012 §4.3 gives Dense no bare-decimal
+    /// encoding), so it is refused by the operand check itself, never defaulted.
+    fn try_check_dense_prim(
+        &self,
+        scope: &mut Vec<(String, Ty)>,
+        head: &Expr,
+        name: &str,
+        args: &[Expr],
+    ) -> Result<Option<(Ty, Expr)>, CheckError> {
+        if !matches!(
+            name,
+            "dense_add"
+                | "dense_sub"
+                | "dense_neg"
+                | "dense_scale"
+                | "dense_dot"
+                | "dense_similarity"
+        ) {
+            return Ok(None);
+        }
+        let arity_err = |want: usize| -> Result<Option<(Ty, Expr)>, CheckError> {
+            self.err(format!(
+                "`{name}` takes {want} operand(s), got {} (RFC-0001 §4.1; M-890)",
+                args.len()
+            ))
+        };
+        // Every operand must be a concrete `Dense{d, s}`; check the first and destructure.
+        let check_dense = |scope: &mut Vec<(String, Ty)>,
+                           a: &Expr,
+                           which: &str|
+         -> Result<(u32, Scalar, Expr), CheckError> {
+            let (ty, a2) = self.check(scope, a, None)?;
+            let Ty::Dense(d, s) = ty else {
+                return Err(CheckError::new(
+                    self.site,
+                    format!(
+                        "`{name}` {which} operand must be a `Dense{{dim, scalar}}`, got {ty} \
+                         (RFC-0001 §4.1; M-890 — never a silent conversion; a cross-paradigm \
+                         edge needs an explicit `swap`)"
+                    ),
+                ));
+            };
+            Ok((d, s, a2))
+        };
+        match name {
+            "dense_add" | "dense_sub" => {
+                if args.len() != 2 {
+                    return arity_err(2);
+                }
+                let (da, sa, a2) = check_dense(scope, &args[0], "first")?;
+                let (db, sb, b2) = check_dense(scope, &args[1], "second")?;
+                if da != db || sa != sb {
+                    // The never-silent shape contract, statically: name both full types.
+                    return self.err(format!(
+                        "`{name}` operands must share one dim and dtype, got Dense{{{da}, \
+                         {sa:?}}} and Dense{{{db}, {sb:?}}} (M-890 — a shape/dtype mismatch is \
+                         an explicit refusal, never a broadcast or re-round; G2)"
+                    ));
+                }
+                Ok(Some((Ty::Dense(da, sa), app_node(head, vec![a2, b2]))))
+            }
+            "dense_dot" | "dense_similarity" => {
+                if args.len() != 2 {
+                    return arity_err(2);
+                }
+                let (da, sa, a2) = check_dense(scope, &args[0], "first")?;
+                let (db, sb, b2) = check_dense(scope, &args[1], "second")?;
+                if da != db || sa != sb {
+                    return self.err(format!(
+                        "`{name}` operands must share one dim and dtype, got Dense{{{da}, \
+                         {sa:?}}} and Dense{{{db}, {sb:?}}} (M-891 — a shape/dtype mismatch is \
+                         an explicit refusal, never a broadcast or re-round; G2)"
+                    ));
+                }
+                // The measurement-result form (M-891): Dense{1, F64} — the binary64 the kernel
+                // computed, exactly; its Proven accumulation bound rides the runtime value.
+                Ok(Some((
+                    Ty::Dense(1, Scalar::F64),
+                    app_node(head, vec![a2, b2]),
+                )))
+            }
+            "dense_neg" => {
+                if args.len() != 1 {
+                    return arity_err(1);
+                }
+                let (d, s, a2) = check_dense(scope, &args[0], "single")?;
+                Ok(Some((Ty::Dense(d, s), app_node(head, vec![a2]))))
+            }
+            "dense_scale" => {
+                if args.len() != 2 {
+                    return arity_err(2);
+                }
+                let (d, s, a2) = check_dense(scope, &args[0], "vector")?;
+                let (dc, sc, c2) = check_dense(scope, &args[1], "scale-factor")?;
+                if dc != 1 {
+                    return self.err(format!(
+                        "`dense_scale` factor must be a `Dense{{1, scalar}}` (the pre-Gap-A \
+                         scalar form), got Dense{{{dc}, {sc:?}}} (M-890)"
+                    ));
+                }
+                if sc != s {
+                    return self.err(format!(
+                        "`dense_scale` factor dtype {sc:?} must match the vector dtype {s:?} \
+                         (M-890 — never a silent re-round; G2)"
+                    ));
+                }
+                Ok(Some((Ty::Dense(d, s), app_node(head, vec![a2, c2]))))
+            }
+            _ => unreachable!("gated by the matches! above"),
+        }
+    }
+
+    /// Try to check a call to a **VSA prim** (RFC-0003 §3/§4/§5/§6; ADR-008) — the M-892 bind
+    /// group `vsa_bind`/`vsa_unbind` (binary, hypervector × hypervector) and `vsa_permute`
+    /// (hypervector × `Binary{W}` shift), kernel `vsa.bind`/`vsa.unbind`/`vsa.permute`, plus the
+    /// M-893 **certified superposition** `vsa_bundle` (`Seq{VSA{…}, N≥1}` × `Float` δ →
+    /// `VSA{…}`), kernel `vsa.bundle`, plus the M-894 **cleanup/reconstruction pair and the
+    /// capacity query** — `vsa_cleanup` (`VSA{…}` × `Seq{VSA{…}, N≥1}` → `Seq{Float, 3}`,
+    /// the `[index, confidence, margin]` decision triple), `vsa_reconstruct`
+    /// (`VSA{…}` × `VSA{…}` × `Seq{VSA{…}, N≥1}` × `Float` threshold → `Seq{Float, 3}`), and
+    /// `vsa_required_dim` (`Binary{W}` items × `Float` δ → `Binary{64}`), kernel
+    /// `vsa.cleanup`/`vsa.reconstruct`/`vsa.required_dim` (surface names `_`-joined like
+    /// `dense_add`). Returns `Ok(None)` if `name` is not one of them.
+    ///
+    /// Model + dim + sparsity live in the type (`VSA{model, dim, sparsity}`), so the static rules
+    /// are: every hypervector operand must be a `VSA` type with **one shared model + dim +
+    /// sparsity** (a mismatch is an explicit refusal, never a coercion — G2); the model must be
+    /// in the **introduction dispatch set MAP-I / FHRR / BSC** (an out-of-set model — HRR/MAP-B/
+    /// SBC mentions included — is a static refusal naming the set; widening is append-only and
+    /// mirrors the interpreter's dispatch); and the sparsity must be `Dense` at introduction
+    /// (the kernel's Value-level ops construct dense-class results — a `Sparse` claim would
+    /// diverge from the runtime value, so it is refused, not silently re-classed). `vsa_permute`'s
+    /// shift is any unsigned `Binary{W}` magnitude (rotation is cyclic — the inverse permute is
+    /// the complementary shift `dim − s`); a bare-decimal shift has no width anchor here and must
+    /// be written/ascribed explicitly (RFC-0012 §4.3 — never a default width).
+    ///
+    /// `vsa_bundle` adds two static rules of its own: the model must additionally be in the
+    /// **certified-bundle set {MAP-I}** — the only introduction-set model with a *certified*
+    /// Value-level bundle (`bundle_values_certified`, the M-131 checked-instantiation pattern);
+    /// an FHRR/BSC bundle is a **static** refusal naming the certified set (their kernel bundles
+    /// are `Empirical`-profile ops — routing them here would silently re-tag their evidence,
+    /// VR-5; surfacing them is a distinct append-only extension) — and the item count `N` lives
+    /// in the `Seq` type, so an **empty bundle (`N = 0`) is a static refusal** too (no
+    /// superposition is defined). The capacity side-condition `dim ≥ requiredDim(N, δ)` stays
+    /// **runtime** (δ is a run-time `Float`): the kernel refuses `InsufficientCapacity` naming
+    /// the required dim rather than issuing an unbacked `Proven` bound.
+    ///
+    /// The M-894 prims add their own static rules: `vsa_cleanup`/`vsa_reconstruct`'s codebook is
+    /// a `Seq{VSA{…}, N ≥ 1}` sharing the query/record's model + dim (`N` lives in the type, so
+    /// an **empty codebook is a static refusal** — nothing to clean up against); `vsa_reconstruct`
+    /// additionally restricts the model to the **reconstruct dispatch set {MAP-I, BSC}** — an
+    /// FHRR record is a *static* refusal naming the ground (FHRR's `Empirical` unbind profile is
+    /// trial-validated only for a single bind product, not a reconstruction record — VR-5; its
+    /// surfacing is an append-only extension under a reconstruction-regime profile of its own),
+    /// and its threshold is a `Float` (the RFC-0003 §6 manifest's `cleanup_threshold ∈ [0, 1]`
+    /// made an explicit operand — the domain check stays runtime, δ-style). `vsa_required_dim`'s
+    /// items ride any unsigned `Binary{W}` magnitude (like `vsa_permute`'s shift — a bare decimal
+    /// has no width anchor, RFC-0012 §4.3) and the result is the `Binary{64}` sufficient
+    /// dimension carrying the kernel's `Proven` `CapacityBound`. Both retrieval prims return the
+    /// `Seq{Float, 3}` decision triple — the retrieval is never a silent nearest-neighbour pick
+    /// (FR-S4/G2: confidence + margin are first-class results).
+    ///
+    /// The numeric-domain contracts stay **runtime**, owned by the kernel and carried through the
+    /// interpreter wrapper: alphabet violations, the FHRR unbind regime gate, non-`Exact`
+    /// operand composition, the RFC-0010 §4.4 identifiability tie, and the below-threshold
+    /// retrieval are explicit runtime refusals; per-op tags ride the runtime value
+    /// **per model** (MAP-I/BSC ops `Exact`; FHRR `unbind` `Empirical` with its trial-validated
+    /// δ bound; the certified `vsa.bundle` result `Proven` with its checked `CapacityBound`;
+    /// the M-894 decision triple carrying the query/record's own (strength, bound) pair —
+    /// VR-5, carried, never re-stamped; `mycelium-interp/src/prims.rs`).
+    fn try_check_vsa_prim(
+        &self,
+        scope: &mut Vec<(String, Ty)>,
+        head: &Expr,
+        name: &str,
+        args: &[Expr],
+    ) -> Result<Option<(Ty, Expr)>, CheckError> {
+        if !matches!(
+            name,
+            "vsa_bind"
+                | "vsa_unbind"
+                | "vsa_permute"
+                | "vsa_bundle"
+                | "vsa_cleanup"
+                | "vsa_reconstruct"
+                | "vsa_required_dim"
+        ) {
+            return Ok(None);
+        }
+        // The M-892 introduction dispatch set (must mirror `vsa_model_of` in
+        // `mycelium-interp/src/prims.rs`; widening one without the other is caught by the
+        // three-way conformance tests).
+        const VSA_PRIM_MODELS: [&str; 3] = ["MAP-I", "FHRR", "BSC"];
+        let arity_err = |want: usize| -> Result<Option<(Ty, Expr)>, CheckError> {
+            self.err(format!(
+                "`{name}` takes {want} operand(s), got {} (RFC-0003 §3; M-892)",
+                args.len()
+            ))
+        };
+        // Every hypervector operand must be a concrete `VSA{model, dim, sparsity}` whose model is
+        // in the dispatch set and whose sparsity is `Dense` (introduction scope).
+        let check_hv = |scope: &mut Vec<(String, Ty)>,
+                        a: &Expr,
+                        which: &str|
+         -> Result<(String, u32, Sparsity, Expr), CheckError> {
+            let (ty, a2) = self.check(scope, a, None)?;
+            let Ty::Vsa {
+                model,
+                dim,
+                sparsity,
+            } = ty
+            else {
+                return Err(CheckError::new(
+                    self.site,
+                    format!(
+                        "`{name}` {which} operand must be a `VSA{{model, dim, sparsity}}` \
+                         hypervector, got {ty} (RFC-0003 §3; M-892 — never a silent conversion; \
+                         a cross-paradigm edge needs an explicit `swap`)"
+                    ),
+                ));
+            };
+            if !VSA_PRIM_MODELS.contains(&model.as_str()) {
+                return Err(CheckError::new(
+                    self.site,
+                    format!(
+                        "`{name}` model {model:?} is outside the vsa prim dispatch set at \
+                         introduction (MAP-I, FHRR, BSC — M-892); the type is a legal mention, \
+                         but its algebra is not surfaced — widening the set is an append-only \
+                         extension, never a guessed algebra (G2)"
+                    ),
+                ));
+            }
+            if sparsity != Sparsity::Dense {
+                return Err(CheckError::new(
+                    self.site,
+                    format!(
+                        "`{name}` requires a `Dense`-sparsity hypervector at introduction — the \
+                         kernel's Value-level ops construct dense-class results, so a Sparse \
+                         operand type would diverge from the runtime value (M-892; refused, \
+                         never silently re-classed — G2)"
+                    ),
+                ));
+            }
+            Ok((model, dim, sparsity, a2))
+        };
+        // The M-894 codebook operand: a `Seq{VSA{model, dim, Dense}, N ≥ 1}` whose atoms share
+        // the query/record's model + dim. `N` lives in the type, so the empty codebook is a
+        // *static* refusal (nothing to clean up against — FR-S4; the runtime twin stays in the
+        // interpreter wrapper for injected values).
+        let check_codebook = |scope: &mut Vec<(String, Ty)>,
+                              a: &Expr,
+                              model: &str,
+                              dim: u32|
+         -> Result<Expr, CheckError> {
+            let (sty, s2) = self.check(scope, a, None)?;
+            let Ty::Seq(elem, n) = sty else {
+                return Err(CheckError::new(
+                    self.site,
+                    format!(
+                        "`{name}` codebook must be a `Seq{{VSA{{model, dim, sparsity}}, N}}` of \
+                         clean atoms, got {sty} (RFC-0003 §3/§6; M-894 — never a silent \
+                         conversion)"
+                    ),
+                ));
+            };
+            let Ty::Vsa {
+                model: cm,
+                dim: cd,
+                sparsity: cs,
+            } = *elem
+            else {
+                return Err(CheckError::new(
+                    self.site,
+                    format!(
+                        "`{name}` codebook atoms must be `VSA{{model, dim, sparsity}}` \
+                         hypervectors, got a Seq of {elem} (M-894 — never a silent conversion; \
+                         a cross-paradigm edge needs an explicit `swap`)"
+                    ),
+                ));
+            };
+            if cm != model || cd != dim {
+                return Err(CheckError::new(
+                    self.site,
+                    format!(
+                        "`{name}` codebook atoms must share the query's model and dim, got \
+                         VSA{{{cm}, {cd}}} atoms against a VSA{{{model}, {dim}}} query/record \
+                         (M-894 — a model or dim mismatch is an explicit refusal, never a \
+                         cross-model coercion; G2)"
+                    ),
+                ));
+            }
+            if cs != Sparsity::Dense {
+                return Err(CheckError::new(
+                    self.site,
+                    format!(
+                        "`{name}` requires `Dense`-sparsity codebook atoms at introduction — \
+                         the kernel's cleanup memory holds dense-class atoms, so a Sparse atom \
+                         type would diverge from the runtime value (M-894; refused, never \
+                         silently re-classed — G2)"
+                    ),
+                ));
+            }
+            if n == 0 {
+                return Err(CheckError::new(
+                    self.site,
+                    format!(
+                        "`{name}` requires at least one codebook atom — an empty cleanup memory \
+                         has nothing to clean up against (FR-S4; M-894 — refused statically, \
+                         never a defaulted retrieval; G2)"
+                    ),
+                ));
+            }
+            Ok(s2)
+        };
+        // Both retrieval prims return the `[index, confidence, margin]` decision triple — the
+        // retrieval decision is a first-class, inspectable value (FR-S4/G2).
+        let triple_ty = || Ty::Seq(Box::new(Ty::Float), 3);
+        match name {
+            "vsa_bind" | "vsa_unbind" => {
+                if args.len() != 2 {
+                    return arity_err(2);
+                }
+                let (ma, da, spa, a2) = check_hv(scope, &args[0], "first")?;
+                let (mb, db, _spb, b2) = check_hv(scope, &args[1], "second")?;
+                if ma != mb || da != db {
+                    // The never-silent model/shape contract, statically: name both full types.
+                    return self.err(format!(
+                        "`{name}` operands must share one model and dim, got VSA{{{ma}, {da}}} \
+                         and VSA{{{mb}, {db}}} (M-892 — a model or dim mismatch is an explicit \
+                         refusal, never a cross-model coercion; G2)"
+                    ));
+                }
+                Ok(Some((
+                    Ty::Vsa {
+                        model: ma,
+                        dim: da,
+                        sparsity: spa,
+                    },
+                    app_node(head, vec![a2, b2]),
+                )))
+            }
+            "vsa_permute" => {
+                if args.len() != 2 {
+                    return arity_err(2);
+                }
+                let (m, d, sp, a2) = check_hv(scope, &args[0], "hypervector")?;
+                let (sty, s2) = self.check(scope, &args[1], None)?;
+                let Ty::Binary(_) = sty else {
+                    return self.err(format!(
+                        "`vsa_permute` shift must be an unsigned `Binary{{W}}` magnitude, got \
+                         {sty} (M-892 — rotation is cyclic, so the inverse permute is the \
+                         complementary shift `dim − s`; a bare decimal has no width anchor here \
+                         and must be written/ascribed explicitly, RFC-0012 §4.3)"
+                    ));
+                };
+                Ok(Some((
+                    Ty::Vsa {
+                        model: m,
+                        dim: d,
+                        sparsity: sp,
+                    },
+                    app_node(head, vec![a2, s2]),
+                )))
+            }
+            "vsa_bundle" => {
+                if args.len() != 2 {
+                    return arity_err(2);
+                }
+                // First operand: `Seq{VSA{model, dim, Dense}, N ≥ 1}` — the items to superpose.
+                let (sty, s2) = self.check(scope, &args[0], None)?;
+                let Ty::Seq(elem, n) = sty else {
+                    return self.err(format!(
+                        "`vsa_bundle` first operand must be a `Seq{{VSA{{model, dim, \
+                         sparsity}}, N}}` of hypervectors to superpose, got {sty} (RFC-0003 \
+                         §4/§5; M-893 — never a silent conversion)"
+                    ));
+                };
+                let Ty::Vsa {
+                    model,
+                    dim,
+                    sparsity,
+                } = *elem
+                else {
+                    return self.err(format!(
+                        "`vsa_bundle` items must be `VSA{{model, dim, sparsity}}` \
+                         hypervectors, got a Seq of {elem} (RFC-0003 §4/§5; M-893 — never a \
+                         silent conversion; a cross-paradigm edge needs an explicit `swap`)"
+                    ));
+                };
+                if !VSA_PRIM_MODELS.contains(&model.as_str()) {
+                    return self.err(format!(
+                        "`vsa_bundle` model {model:?} is outside the vsa prim dispatch set at \
+                         introduction (MAP-I, FHRR, BSC — M-892); the type is a legal mention, \
+                         but its algebra is not surfaced — widening the set is an append-only \
+                         extension, never a guessed algebra (G2)"
+                    ));
+                }
+                // The certified-bundle set at introduction: {MAP-I} — the only model with a
+                // certified Value-level bundle (`bundle_values_certified`). FHRR/BSC kernel
+                // bundles are Empirical-profile ops; routing them through the certified prim
+                // would silently re-tag their evidence (VR-5), so the refusal is static and
+                // names the set (surfacing them is a distinct append-only extension).
+                if model != "MAP-I" {
+                    return self.err(format!(
+                        "`vsa_bundle` is the certified superposition path and its dispatch set \
+                         at introduction is the certified singleton {{MAP-I}} — model \
+                         {model:?} has no certified Value-level bundle (M-893); the FHRR/BSC \
+                         empirical-profile bundles are a distinct, append-only surfacing under \
+                         their own name, never a silent re-tag (VR-5)"
+                    ));
+                }
+                if sparsity != Sparsity::Dense {
+                    return self.err(
+                        "`vsa_bundle` requires `Dense`-sparsity hypervectors at introduction — \
+                         the kernel's Value-level ops construct dense-class results, so a \
+                         Sparse item type would diverge from the runtime value (M-893; \
+                         refused, never silently re-classed — G2)",
+                    );
+                }
+                // N lives in the Seq type, so the empty bundle is a *static* refusal here (the
+                // kernel's EmptyBundle stays as the runtime twin for injected values).
+                if n == 0 {
+                    return self.err(
+                        "`vsa_bundle` requires at least one item — no superposition is defined \
+                         over a `Seq{…, 0}` (RFC-0003 §4; M-893 — refused statically, never a \
+                         defaulted value — G2)"
+                            .to_owned(),
+                    );
+                }
+                // Second operand: the target failure probability δ, a `Float` (its (0, 1]
+                // domain and the capacity side-condition are runtime, kernel-owned refusals).
+                let (dty, d2) = self.check(scope, &args[1], Some(&Ty::Float))?;
+                if !matches!(dty, Ty::Float) {
+                    return self.err(format!(
+                        "`vsa_bundle` target failure probability δ must be a `Float`, got \
+                         {dty} (M-893 — the certified capacity bound targets an explicit δ; \
+                         never a defaulted or coerced parameter — G2)"
+                    ));
+                }
+                Ok(Some((
+                    Ty::Vsa {
+                        model,
+                        dim,
+                        sparsity,
+                    },
+                    app_node(head, vec![s2, d2]),
+                )))
+            }
+            // M-894: `vsa_cleanup(query, codebook)` — the cleanup-memory retrieval. The query may
+            // be any dispatch-set model (the arg-max procedure is model-generic — the model only
+            // supplies `similarity`); the codebook must share its model + dim. Result: the
+            // decision triple.
+            "vsa_cleanup" => {
+                if args.len() != 2 {
+                    return arity_err(2);
+                }
+                let (m, d, _sp, q2) = check_hv(scope, &args[0], "query")?;
+                let cb2 = check_codebook(scope, &args[1], &m, d)?;
+                Ok(Some((triple_ty(), app_node(head, vec![q2, cb2]))))
+            }
+            // M-894: `vsa_reconstruct(record, role, codebook, threshold)` — the RFC-0003 §6
+            // compositional role-reconstruction (unbind → cleanup → an explicit threshold). The
+            // model must be in the **reconstruct dispatch set {MAP-I, BSC}** (the self-inverse
+            // Exact unbinds): FHRR's Empirical unbind profile is trial-validated only for a
+            // single `vsa.fhrr.bind` product, which a reconstruction record is not — stretching
+            // it would be an unearned tag (VR-5), so the refusal is static and names the ground;
+            // surfacing FHRR reconstruction is a distinct append-only extension under a
+            // reconstruction-regime profile of its own.
+            "vsa_reconstruct" => {
+                if args.len() != 4 {
+                    return arity_err(4);
+                }
+                let (m, d, _sp, r2) = check_hv(scope, &args[0], "record")?;
+                if m != "MAP-I" && m != "BSC" {
+                    return self.err(format!(
+                        "`vsa_reconstruct` model {m:?} is outside the reconstruct dispatch set \
+                         at introduction ({{MAP-I, BSC}}) — FHRR's unbind tag is Empirical and \
+                         trial-validated only for a single bind product, not a reconstruction \
+                         record (M-894; VR-5 — never a stretched profile; surfacing it is a \
+                         distinct, append-only extension)"
+                    ));
+                }
+                let (mb, db, _spb, role2) = check_hv(scope, &args[1], "role")?;
+                if mb != m || db != d {
+                    return self.err(format!(
+                        "`vsa_reconstruct` record and role must share one model and dim, got \
+                         VSA{{{m}, {d}}} and VSA{{{mb}, {db}}} (M-894 — a model or dim mismatch \
+                         is an explicit refusal, never a cross-model coercion; G2)"
+                    ));
+                }
+                let cb2 = check_codebook(scope, &args[2], &m, d)?;
+                // The threshold: a `Float` — the RFC-0003 §6 manifest's `cleanup_threshold`
+                // made an explicit operand; its [0, 1] domain stays a runtime, kernel-owned
+                // refusal (δ-style — a run-time Float).
+                let (tty, t2) = self.check(scope, &args[3], Some(&Ty::Float))?;
+                if !matches!(tty, Ty::Float) {
+                    return self.err(format!(
+                        "`vsa_reconstruct` cleanup threshold must be a `Float`, got {tty} \
+                         (RFC-0003 §6; M-894 — a below-threshold retrieval is an explicit \
+                         refusal, never a defaulted or coerced threshold; G2)"
+                    ));
+                }
+                Ok(Some((
+                    triple_ty(),
+                    app_node(head, vec![r2, role2, cb2, t2]),
+                )))
+            }
+            // M-894: `vsa_required_dim(items, δ)` — the M-131 capacity-bound query. Items ride
+            // any unsigned `Binary{W}` magnitude (like `vsa_permute`'s shift — a bare decimal
+            // has no width anchor here, RFC-0012 §4.3); δ is a `Float` whose (0, 1] domain is a
+            // runtime refusal. Result: the `Binary{64}` sufficient dimension, carrying the
+            // kernel's `Proven` `CapacityBound` (the checked instantiation — inspectable).
+            "vsa_required_dim" => {
+                if args.len() != 2 {
+                    return arity_err(2);
+                }
+                let (ity, i2) = self.check(scope, &args[0], None)?;
+                let Ty::Binary(_) = ity else {
+                    return self.err(format!(
+                        "`vsa_required_dim` items must be an unsigned `Binary{{W}}` magnitude, \
+                         got {ity} (M-894 — a bare decimal has no width anchor here and must be \
+                         written/ascribed explicitly, RFC-0012 §4.3)"
+                    ));
+                };
+                let (dty, d2) = self.check(scope, &args[1], Some(&Ty::Float))?;
+                if !matches!(dty, Ty::Float) {
+                    return self.err(format!(
+                        "`vsa_required_dim` target failure probability δ must be a `Float`, \
+                         got {dty} (M-894 — the capacity theorem instantiates an explicit δ; \
+                         never a defaulted or coerced parameter — G2)"
+                    ));
+                }
+                Ok(Some((
+                    Ty::Binary(Width::Lit(64)),
+                    app_node(head, vec![i2, d2]),
+                )))
+            }
+            _ => unreachable!("gated by the matches! above"),
+        }
+    }
+
+    /// Try to check a call to a **scalar-float prim** (ADR-040 §2.4/§2.5; M-898/M-899, `enb`
+    /// Gap A) — the arithmetic group `flt_add`/`flt_sub`/`flt_mul`/`flt_div` (binary) and
+    /// `flt_neg` (unary), kernel `flt.add`/`flt.sub`/`flt.mul`/`flt.div`/`flt.neg`, plus the
+    /// comparison group `flt_lt`/`flt_le`/`flt_gt`/`flt_ge`/`flt_eq` and the named total order
+    /// `flt_total_le` (all binary), kernel `flt.lt`/…/`flt.eq`/`flt.total_le` (surface names are
+    /// `_`-joined like `dense_add`, since `.` is the path separator in the lexer). Returns
+    /// `Ok(None)` if `name` is not one of them.
+    ///
+    /// `Float` is nullary (binary64 only at introduction — ADR-040 FLAG-1), so the static rule is
+    /// the simplest of the prim branches: every operand must be exactly `Float`, and the result
+    /// is `Float` for the arithmetic ops and **`Binary{1}`** — the realized `Bool` of the
+    /// RFC-0032 D1 engineering note, exactly the `eq`/`lt` shape — for the comparison ops. A
+    /// non-`Float` operand is an explicit refusal (a cross-paradigm edge needs an
+    /// explicit `swap`; a bare decimal has no `Float` anchor — RFC-0012 §4.3 gives it none — so it
+    /// is refused, never defaulted; write a float literal `1.0`, M-897). The numeric-domain
+    /// behaviour is deliberately **not** a static rule and **not** a runtime refusal either:
+    /// arithmetic specials (overflow → ±inf, `x/0` → ±inf, `0/0` → NaN) are **in-band,
+    /// inspectable, propagating values** per the ratified ADR-040 §2.4 FLAG-2 — the ops are total
+    /// over `Float` (contrast `div_u`, whose integer div-by-zero has no in-band sentinel and
+    /// must refuse at runtime) — and **comparison NaN semantics are value semantics, not types**:
+    /// the five predicates deliver the IEEE-754 §5.11 *defined* result `false` on any NaN operand
+    /// (NaN is unordered; `flt_eq(NaN, NaN)` is false), while `flt_total_le` is the IEEE-754
+    /// §5.10 `totalOrder` — total and reflexive, NaN placed last, `−0` before `+0` (ADR-040
+    /// §2.4; M-899). Per-op tag: `Empirical` per ADR-040 §2.6, carried on the runtime value with
+    /// its zero-deviation-vs-spec bound; for `flt_total_le` the total-order *property* stays
+    /// `Empirical` until the M-511 proof debt is discharged (`mycelium-interp/src/prims.rs`).
+    fn try_check_float_prim(
+        &self,
+        scope: &mut Vec<(String, Ty)>,
+        head: &Expr,
+        name: &str,
+        args: &[Expr],
+    ) -> Result<Option<(Ty, Expr)>, CheckError> {
+        let is_cmp = matches!(
+            name,
+            "flt_lt" | "flt_le" | "flt_gt" | "flt_ge" | "flt_eq" | "flt_total_le"
+        );
+        if !is_cmp
+            && !matches!(
+                name,
+                "flt_add" | "flt_sub" | "flt_mul" | "flt_div" | "flt_neg"
+            )
+        {
+            return Ok(None);
+        }
+        let want = if name == "flt_neg" { 1 } else { 2 };
+        if args.len() != want {
+            return self.err(format!(
+                "`{name}` takes {want} operand(s), got {} (ADR-040 §2.4/§2.5; M-898/M-899)",
+                args.len()
+            ));
+        }
+        let mut rebuilt = Vec::with_capacity(want);
+        for (i, a) in args.iter().enumerate() {
+            let (ty, a2) = self.check(scope, a, Some(&Ty::Float))?;
+            if !matches!(ty, Ty::Float) {
+                let which = match (want, i) {
+                    (1, _) => "single",
+                    (_, 0) => "first",
+                    _ => "second",
+                };
+                return self.err(format!(
+                    "`{name}` {which} operand must be a `Float` (IEEE-754 binary64 — ADR-040 \
+                     §2.1), got {ty} (M-898/M-899 — never a silent conversion; a cross-paradigm \
+                     edge needs an explicit `swap`, and a bare decimal has no Float anchor — \
+                     write a float literal like `1.0`)"
+                ));
+            }
+            rebuilt.push(a2);
+        }
+        let ret = if is_cmp {
+            Ty::Binary(Width::Lit(1))
+        } else {
+            Ty::Float
+        };
+        Ok(Some((ret, app_node(head, rebuilt))))
     }
 
     /// Literal typing (Q6): a literal *is* its representation — a binary literal's width is its
@@ -4952,6 +5899,12 @@ pub(crate) fn lit_ty_of(site: &str, l: &Literal) -> Result<Ty, CheckError> {
         )),
         // RFC-0032 D4 (M-750): a `0x…` byte-string literal *is* a `Bytes` value.
         Literal::Bytes(_) => Ok(Ty::Bytes),
+        // ADR-040 (M-897): a decimal float literal types as the scalar-float repr type. The lexer
+        // already validated form + binary64 finiteness, so the literal is well-typed context-free.
+        Literal::Float(_) => Ok(Ty::Float),
+        // M-910/M-911: a `"…"` textual string literal lowers to the SAME `Repr::Bytes` value form
+        // as `Literal::Bytes` (UTF-8-encoded; KC-3 — no new value form), so it types as `Bytes` too.
+        Literal::Str(_) => Ok(Ty::Bytes),
         // A list literal is checked in `Cx::check_list` (it needs the element-expression context).
         // Reaching `lit_ty_of` means a `Literal::List` appeared where only context-free literals are
         // expected — a **pattern** position (a `Seq` pattern is not a v0 surface). An explicit
@@ -5071,6 +6024,20 @@ pub(crate) fn normalize_pattern(
             })
         }
         Pattern::Lit(lit) => {
+            // ADR-040 FLAG-4 (M-897): float literals are refused in match patterns — an explicit
+            // refusal, never a silently-chosen equality. IEEE `==` and bit-level content identity
+            // diverge on floats (`+0.0 == -0.0` but two identities; canonical NaN is one identity
+            // but `NaN != NaN`), so a literal-pattern arm would have to silently pick one of the
+            // two semantics. Float dispatch goes through the comparison prims when they land
+            // (M-899), where the choice is a named op, never a hidden pattern semantic (G2/VR-5).
+            if matches!(lit, Literal::Float(_)) {
+                return Err(CheckError::new(
+                    site,
+                    "a float literal is not a legal match pattern (ADR-040 FLAG-4: IEEE equality \
+                     and content identity diverge on floats — `-0.0`/NaN; match on the result of \
+                     an explicit comparison instead — never a silent equality choice, G2)",
+                ));
+            }
             let lty = lit_ty_of(site, lit)?;
             if lty != *expected {
                 return Err(CheckError::new(
@@ -5125,13 +6092,19 @@ pub(crate) fn infer_type(
         // re-litigating the gate — the gate is the checker's job, done once.
         std_sys: true,
         depth: Cell::new(0),
+        // Post-check re-inference over an already-validated term, invoked repeatedly over
+        // partial/overlapping fragments with a scope the elaborator threads itself — not the one
+        // whole-function-body walk, so the affine pass stays inert here (`crate::affine` docs: it
+        // would risk a false positive on a fragment that isn't the original walk, and the term
+        // already passed the real check).
+        affine: Tracker::inert(),
     };
     cx.infer(scope, e)
 }
 
 /// A canonical key for de-duplicating literal patterns (M-320): normalize away `_` separators so
-/// `0b1010` and `0b10_10` collide as the *same* literal. Only `Bin`/`Trit` reach here (the caller
-/// type-checks the literal first, which rejects `Int`/`List`).
+/// `0b1010` and `0b10_10` collide as the *same* literal. `Bin`/`Trit`/`Bytes`/`Str` reach here (the
+/// caller type-checks the literal first, which rejects `Int`/`List`).
 fn literal_key(lit: &Literal) -> String {
     match lit {
         Literal::Bin(s) => format!(
@@ -5148,6 +6121,14 @@ fn literal_key(lit: &Literal) -> String {
         Literal::Bytes(s) => {
             format!("by:{}", s.chars().filter(|c| *c != '_').collect::<String>())
         }
+        // M-910/M-911: a string literal pattern types as `Bytes` (like `Literal::Bytes` above), so
+        // it can reach here too; keyed on its decoded content (a distinct prefix — `s:` never
+        // collides with `by:`'s hex-digit alphabet).
+        Literal::Str(s) => format!("s:{s}"),
+        // M-897: float literal patterns are refused by `normalize_pattern` before keying (ADR-040
+        // FLAG-4), so this arm is unreachable in practice; a stable key (the verbatim source text,
+        // distinct `f:` prefix) keeps the function total without a silent collision (G2).
+        Literal::Float(s) => format!("f:{s}"),
         Literal::List(_) => "list".to_owned(),
     }
 }
@@ -5241,11 +6222,18 @@ fn paradigm_name(t: &Ty) -> Option<&'static str> {
         Ty::Binary(_) => Some("Binary"),
         Ty::Ternary(_) => Some("Ternary"),
         Ty::Dense(_, _) => Some("Dense"),
+        // RFC-0001 §4.1's fourth paradigm (M-892): a cross-paradigm edge involving a hypervector
+        // gets the same explicit-`swap` framing (no v0 swap engine reaches it — the refusal is
+        // the honest message, never a silent conversion).
+        Ty::Vsa { .. } => Some("VSA"),
         // `Ty::Fn` is not a representation type — it has no paradigm (RFC-0024 §3). `Seq`/`Bytes`
         // are first-class reprs but not *swap*-paradigms (no cross-paradigm swap edge), so they have
         // no paradigm name here (RFC-0032 D3/D4).
+        // `Ty::Float` likewise: a first-class repr but not a v0 swap-paradigm (no swap engine —
+        // any future float<->binary/dense conversion is an explicit certed swap, ADR-040 §5).
         Ty::Seq(_, _)
         | Ty::Bytes
+        | Ty::Float
         | Ty::Data(_, _)
         | Ty::Substrate(_)
         | Ty::Var(_)
@@ -5298,7 +6286,30 @@ impl PrimFam {
 fn prim_family(name: &str) -> Option<PrimFam> {
     Some(match name {
         // RFC-0032 D2 (M-748): width-preserving binary logical + arithmetic prims.
-        "not" | "xor" | "and" | "or" | "add_bin" | "sub_bin" => PrimFam::Binary,
+        // RFC-0033 §4.1.2/§4.1.3 (M-887, `enb` Gap B): `mul_s` — never-silent two's-complement
+        // multiply (distinct surface name from the trit-backed `mul` below, which stays balanced-
+        // ternary). M-888 adds `div_u`/`rem_u` — never-silent **unsigned** division/remainder
+        // (the signed variant rides M-767 under its own distinct name, per RFC-0033 §4.1.2's
+        // signedness-split requirement for division). M-889 adds `shl_u`/`shr_u` — never-silent
+        // **logical** left/right shift (the arithmetic/signed right shift rides M-767 likewise).
+        // M-766 adds `add_s`/`sub_s`/`neg_s` — never-silent two's-complement add/sub/neg.
+        // M-767 adds `div_s`/`rem_s`/`shr_s` — the signed (two's-complement) division/remainder
+        // (truncated toward zero, remainder sign following the dividend — SMT-LIB `bvsdiv`/
+        // `bvsrem`; the `min ÷ −1` overflow refuses explicitly) and the arithmetic
+        // (sign-extending) right shift, completing the §4.1.2 signedness split. (The signed
+        // comparison `lt_s` rides the dedicated width-collapsing comparison branch, not this
+        // width-preserving family.)
+        // **Surface naming (DN-72, ratified 2026-07-02):** every integer prim's surface name
+        // carries an explicit signedness suffix — `_u` = unsigned semantics, `_s` =
+        // signed/two's-complement (ADR-028: signedness lives in the operation, not the type).
+        // This resolved the historical `_bin`/`_tc` naming FLAG (the mixed suffixes the set
+        // accumulated as ops landed under M-748/M-887/M-888/M-889/M-766). The `bit.*`/`bin.*`
+        // *kernel*-namespace inconsistency one layer down is deliberately NOT touched — kernel
+        // names are content-addressed (DN-10 §3.4); see the DN-72 deferred FLAG.
+        "not" | "xor" | "and" | "or" | "add_u" | "sub_u" | "mul_s" | "div_u" | "rem_u"
+        | "shl_u" | "shr_u" | "add_s" | "sub_s" | "neg_s" | "div_s" | "rem_s" | "shr_s" => {
+            PrimFam::Binary
+        }
         "add" | "sub" | "mul" | "neg" => PrimFam::Ternary,
         _ => return None,
     })
@@ -5383,18 +6394,48 @@ fn encode_balanced_ternary(site: &str, v: i64, width: u32) -> Result<Literal, Ch
 #[must_use]
 pub fn prim_sig(name: &str, args: &[Ty]) -> Option<Ty> {
     match (name, args) {
-        ("not", [Ty::Binary(w)]) => Some(Ty::Binary(w.clone())),
+        // M-766: `neg_s` — the two's-complement unary negate joins `not` (unary, width-preserving).
+        ("not" | "neg_s", [Ty::Binary(w)]) => Some(Ty::Binary(w.clone())),
         ("xor", [Ty::Binary(a), Ty::Binary(b)]) if a == b => Some(Ty::Binary(a.clone())),
         // RFC-0032 D2 (M-748): width-preserving binary arithmetic/logical (never-silent overflow is
         // a runtime contract; the static signature is width-preserving like the trit arithmetic).
-        ("and" | "or" | "add_bin" | "sub_bin", [Ty::Binary(a), Ty::Binary(b)]) if a == b => {
-            Some(Ty::Binary(a.clone()))
-        }
+        // RFC-0033 §4.1.2/§4.1.3 (M-887): `mul_s` — same width-preserving shape; the never-silent
+        // two's-complement overflow bound is likewise a runtime contract (`bin.mul`'s `Overflow`).
+        // M-888: `div_u`/`rem_u` — same width-preserving shape; div-by-zero is likewise a
+        // runtime contract (`bin.div`/`bin.rem`'s `PrimType` refusal), not a static type error.
+        // M-889: `shl_u`/`shr_u` — same width-preserving shape (both operands, including the
+        // shift amount, are `Binary{N}`); an out-of-range shift amount is likewise a runtime
+        // contract (`bin.shl`/`bin.shr`'s `PrimType` refusal), not a static type error.
+        // M-766: `add_s`/`sub_s` — same width-preserving shape; the never-silent two's-complement
+        // overflow bound is likewise a runtime contract (`bin.add`/`bin.sub`'s `Overflow`).
+        // M-767: `div_s`/`rem_s`/`shr_s` — same width-preserving shape; div-by-zero, the
+        // `min ÷ −1` signed-division overflow, and an out-of-range shift amount are likewise
+        // runtime contracts, not static type errors.
+        (
+            "and" | "or" | "add_u" | "sub_u" | "mul_s" | "div_u" | "rem_u" | "shl_u" | "shr_u"
+            | "add_s" | "sub_s" | "div_s" | "rem_s" | "shr_s",
+            [Ty::Binary(a), Ty::Binary(b)],
+        ) if a == b => Some(Ty::Binary(a.clone())),
         ("add" | "sub" | "mul", [Ty::Ternary(a), Ty::Ternary(b)]) if a == b => {
             Some(Ty::Ternary(a.clone()))
         }
         ("neg", [Ty::Ternary(m)]) => Some(Ty::Ternary(m.clone())),
         _ => None,
+    }
+}
+
+/// Canonicalize a surface VSA model ident to the **kernel model id** (`Repr::Vsa { model }` —
+/// M-892). A surface ident cannot carry the `-` some kernel ids use (`MAP-I`, `MAP-B`), so the
+/// underscore spelling maps onto it; every other ident passes through **verbatim** (an unknown
+/// model is a legal type *mention* — core type-checks hypervector mentions without the algebra,
+/// ADR-008 — and the `vsa_*` prims gate their own dispatch set with an explicit refusal, so
+/// nothing here guesses). The mapping is total and append-only.
+#[must_use]
+pub fn vsa_kernel_model_id(surface: &str) -> String {
+    match surface {
+        "MAP_I" => "MAP-I".to_owned(),
+        "MAP_B" => "MAP-B".to_owned(),
+        other => other.to_owned(),
     }
 }
 
@@ -5406,13 +6447,46 @@ pub fn prim_kernel_name(name: &str) -> Option<&'static str> {
         "xor" => "bit.xor",
         // RFC-0032 D2 (M-748): surface the already-registered `bit.and`/`bit.or` + never-silent
         // binary `add`/`sub` (distinct surface names from the trit-backed `add`/`sub` below).
+        // Surface names here and below follow the DN-72 `_u`/`_s` signedness-suffix convention
+        // (ADR-028); the kernel names on the RHS are content-addressed (DN-10 §3.4) and unchanged.
         "and" => "bit.and",
         "or" => "bit.or",
-        "add_bin" => "bit.add",
-        "sub_bin" => "bit.sub",
+        "add_u" => "bit.add",
+        "sub_u" => "bit.sub",
+        // RFC-0033 §4.1.2/§4.1.3 (M-887, `enb` Gap B): never-silent two's-complement multiply —
+        // the first shared (signedness-agnostic bit-pattern) two's-complement op ADR-028 names.
+        "mul_s" => "bin.mul",
+        // RFC-0033 §4.1.2/§4.1.3 (M-888, `enb` Gap B): never-silent **unsigned** division/
+        // remainder — division must be a distinct-named op per signedness (§4.1.2); the signed
+        // reading rides M-767 under its own surface name.
+        "div_u" => "bin.div",
+        "rem_u" => "bin.rem",
+        // RFC-0033 §4.1.2/§4.1.3 (M-889, `enb` Gap B): never-silent **logical** left/right shift —
+        // the arithmetic/signed right shift rides M-767 under its own surface name.
+        "shl_u" => "bin.shl",
+        "shr_u" => "bin.shr",
+        // RFC-0033 §4.1.2/§4.1.3 (M-766, `enb` Gap B): never-silent two's-complement add/sub/neg —
+        // completes the shared set `mul_s` started. The `_s` suffix marks the signed/two's-
+        // complement reading, distinct from the *unsigned* `add_u`/`sub_u` (`bit.add`/`bit.sub`)
+        // above (DN-72; see the `prim_family` naming comment).
+        "add_s" => "bin.add",
+        "sub_s" => "bin.sub",
+        "neg_s" => "bin.neg",
+        // RFC-0033 §4.1.2/§4.1.3 (M-767, `enb` Gap B): the signedness-split signed op set — the
+        // signed truncated division/remainder and the arithmetic (sign-extending) right shift,
+        // distinct-named from their `_u` counterparts per ADR-028 (SMT-LIB `bvsdiv`/`bvudiv`,
+        // `bvashr`/`bvlshr`). The new kernel names take the `_s` spelling directly; the deferred
+        // DN-72 §5 kernel-namespace reconciliation (`bit.*` vs `bin.*`) is not prejudged here.
+        "div_s" => "bin.div_s",
+        "rem_s" => "bin.rem_s",
+        "shr_s" => "bin.shr_s",
         // RFC-0032 D1 (M-747): reduce-to-`Bool` comparison/equality (returns `Binary{1}`).
         "eq" => "cmp.eq",
         "lt" => "cmp.lt",
+        // RFC-0033 §4.1.2 (M-767): the signed (two's-complement) order over `Binary{N}` — `lt`
+        // reads Binary operands as unsigned magnitudes, so the signed order is a distinct named
+        // op (ADR-028's `bvslt`/`bvult` split); Binary-only (ternary's `lt` is already signed).
+        "lt_s" => "cmp.lt_s",
         // RFC-0032 D3/D4 (M-749/M-750): never-silent indexing/length over `Seq`/`Bytes` (the surface
         // names are `_`-joined since a `.` is the path separator in the lexer).
         "seq_len" => "seq.len",
@@ -5423,8 +6497,92 @@ pub fn prim_kernel_name(name: &str) -> Option<&'static str> {
         // M-750). Surfacing only — the kernel prims exist + are registered; this maps the surface name.
         "bytes_slice" => "bytes.slice",
         "bytes_concat" => "bytes.concat",
+        // M-912 (`enb`, folded-in gap): byte-wise equality — flagged missing by the diag/error/
+        // recover ports (`bytes.*` had len/get/slice/concat but no equality).
+        "bytes_eq" => "bytes.eq",
+        // M-912 (`enb`): the kernel's own BLAKE3 content-addressing hash (M-103;
+        // `mycelium-core::content::Canon`/`id::ContentHash`) surfaced as a prim.
+        "hash_blake3" => "hash.blake3",
         // DN-41 (M-798): never-silent `Binary` width-cast (zero-extend widen / checked narrow).
         "width_cast" => "bit.width_cast",
+        // RFC-0001 §4.1 / RFC-0002 §5 (M-890, `enb` Gap C): the tensor-valued dense elementwise
+        // group — kernel `mycelium-dense`, per-op tags carried from `DenseSpace::op_guarantee`
+        // (`dense.neg` `Exact`, the rest `Proven`; VR-5). Surface names are `_`-joined like
+        // `seq_len` (a `.` is the path separator in the lexer); typed by the dedicated
+        // `try_check_dense_prim` branch (shape/dtype in the type ⇒ static never-silent mismatch).
+        "dense_add" => "dense.add",
+        "dense_sub" => "dense.sub",
+        "dense_neg" => "dense.neg",
+        "dense_scale" => "dense.scale",
+        // M-891: the measurement pair — `Proven`, the kernel's binary64 accumulation bound
+        // (absolute/Linf; see `mycelium-interp/src/prims.rs`), result form Dense{1, F64}.
+        "dense_dot" => "dense.dot",
+        "dense_similarity" => "dense.similarity",
+        // ADR-040 §2.5 (M-898, `enb` Gap A): the scalar-float arithmetic group — IEEE-754
+        // binary64 under RNE over the nullary `Float` type (M-896/M-897), in-band specials per
+        // the ratified FLAG-2, per-op tag `Empirical` per ADR-040 §2.6. Surface names are
+        // `_`-joined like `dense_add` (a `.` is the path separator in the lexer); a distinct
+        // `flt_*` namespace because floats are their own type — the `_bin`/`_tc` signedness
+        // suffixes of the integer set don't apply (there is one float reading, not two). Typed
+        // by the dedicated `try_check_float_prim` branch (all operands `Float`, result `Float`).
+        "flt_add" => "flt.add",
+        "flt_sub" => "flt.sub",
+        "flt_mul" => "flt.mul",
+        "flt_div" => "flt.div",
+        "flt_neg" => "flt.neg",
+        // ADR-040 §2.4 (M-899, `enb` Gap A): the scalar-float comparison group — the IEEE-754
+        // §5.11 partial-order predicates (NaN explicitly unordered: any NaN operand → the
+        // *defined* value false, `flt_eq(NaN, NaN)` = false) plus the **named, opt-in total
+        // order** `flt_total_le` (IEEE-754 §5.10 `totalOrder`: −inf < … < −0 < +0 < … < +inf
+        // < NaN — reflexive, NaN placed last, the signed zeros directed). Two `Float` operands
+        // collapse to `Binary{1}` (the realized `Bool`), typed by `try_check_float_prim`. A
+        // distinct namespace from the D1 `eq`/`lt` because float ordering is *partial* — routing
+        // floats through the D1 total order would silently invent an order for NaN (G2). Tag:
+        // `Empirical` per ADR-040 §2.6; `flt_total_le`'s total-order property stays `Empirical`
+        // until the M-511 proof debt is discharged (never `Proven` without the checked theorem).
+        "flt_lt" => "flt.lt",
+        "flt_le" => "flt.le",
+        "flt_gt" => "flt.gt",
+        "flt_ge" => "flt.ge",
+        "flt_eq" => "flt.eq",
+        "flt_total_le" => "flt.total_le",
+        // RFC-0003 §3/§4 / ADR-008 (M-892, `enb` Gap C): the model-dispatched VSA bind group —
+        // kernel `mycelium-vsa`, per-model tags carried from the model's Value-level op (MAP-I/
+        // BSC ops `Exact`; FHRR `unbind` `Empirical` with its trial-validated δ — VR-5, never
+        // re-stamped; the Π-table intrinsic is the meet over the MAP-I/FHRR/BSC dispatch set).
+        // Surface names are `_`-joined like `dense_add`; typed by the dedicated
+        // `try_check_vsa_prim` branch (model + dim in the type ⇒ static never-silent mismatch;
+        // an out-of-set model is a static refusal naming the set).
+        "vsa_bind" => "vsa.bind",
+        "vsa_unbind" => "vsa.unbind",
+        "vsa_permute" => "vsa.permute",
+        // RFC-0003 §4/§5 / ADR-008 (M-893, `enb` Gap C): the certified VSA superposition —
+        // kernel `vsa.bundle` via MAP-I's `bundle_values_certified` (the M-131 checked-
+        // instantiation pattern: a `Proven` `CapacityBound` iff `dim ≥ requiredDim(m, δ)` with
+        // bipolar + distinct items checked, else an explicit refusal). Typed by the
+        // `try_check_vsa_prim` branch: `Seq{VSA{…}, N≥1}` × `Float` δ → `VSA{…}`, with the
+        // certified-singleton {MAP-I} dispatch and the empty bundle refused *statically* (N is
+        // in the type); FHRR/BSC bundles are Empirical-profile kernel ops — statically refused
+        // here naming the certified set, an append-only future surfacing (VR-5).
+        "vsa_bundle" => "vsa.bundle",
+        // RFC-0003 §3/§5/§6 / ADR-008 (M-894, `enb` Gap C): the cleanup/reconstruction pair +
+        // the capacity-bound query. `vsa.cleanup` (query × codebook) and `vsa.reconstruct`
+        // (record × role × codebook × threshold) return the `Seq{Float, 3}` `[index, confidence,
+        // margin]` decision triple — retrieval is never a silent nearest-neighbour pick
+        // (FR-S4/G2), a tie is the RFC-0010 §4.4 identifiability refusal, and the query/record's
+        // own (strength, bound) pair carries through (a certified bundle record re-discloses its
+        // `Proven` `CapacityBound` — the disclosed bound is the value's own; VR-5).
+        // `vsa.required_dim` (items × δ → `Binary{64}`) surfaces the M-131
+        // `requiredDim`/`proven_capacity_bound` checked instantiation, its result carrying the
+        // kernel's `Proven` `CapacityBound`. Typed by `try_check_vsa_prim`: cleanup dispatches
+        // the full MAP-I/FHRR/BSC set (the arg-max is model-generic); reconstruct the
+        // self-inverse {MAP-I, BSC} (FHRR statically refused naming its unbind profile's
+        // regime); the factor decode (`reconstruct_factors`, RFC-0009/0010) is deliberately not
+        // surfaced here — its RFC-0005 selector's mandatory EXPLAIN has no prim-surface carrier
+        // yet — a distinct append-only surfacing under its own name.
+        "vsa_cleanup" => "vsa.cleanup",
+        "vsa_reconstruct" => "vsa.reconstruct",
+        "vsa_required_dim" => "vsa.required_dim",
         "add" => "trit.add",
         "sub" => "trit.sub",
         "mul" => "trit.mul",

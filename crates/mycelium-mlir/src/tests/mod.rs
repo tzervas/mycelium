@@ -5,6 +5,8 @@ mod accel;
 mod bitnet;
 mod dense_codegen;
 mod dialect;
+mod inject_gate_tests;
+mod inject_policy_tests;
 mod inject_tests;
 mod jit;
 mod llvm;

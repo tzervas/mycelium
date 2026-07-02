@@ -76,6 +76,39 @@ consideration. Extended per wave.
 | Rust→Mycelium transpiler PoC + surface-feature backlog | `crates/mycelium-transpile` (syn AST-walk → best-effort `.myc` + never-silent gap report; batch/dir mode) | reads a Rust crate's `src/`, emits the expressible fraction + a structured `{file,line,rust_construct,reason,category}` gap report; diffed against the `.myc` twin. **Union over 6 core-lib crates: 43/346 ≈ 12.4% expressible** (`Empirical`); per-crate 0–32%. Faithful DN-41 `width_cast` emission for unsigned `Binary` widening (std-cmp 3.6%→12.6%). Re-ranked backlog: unsupported **types** #1 (36% — String/text, usize/isize, char, closures, **signed ints** = ADR-028 sign-free consequence), macros #2 (22%), trait-bounded generics #3 | `syn`/`quote`/`serde` (scoped to the transpiler crate only, KC-3 — not the kernel/self-hosting surface) | **Acceleration tooling, not a port target** — the DN-34 *mechanism* for the bulk rewrite + the first-class **prioritized surface-feature backlog** (DN-34 §8.3/§8.5) grounding E18-1's `needs-design` work. **Grounded finding:** `std.option`/`std.result` have no Rust source — already self-hosted (M-715/M-649), so the transpiler's scope is the Rust-backed remainder (DN-34 §8.6). Measured cost: PoC ~0.85–0.95M + hardening; converts the assessment's `Declared` rows to `Empirical` (§5a). Still a spike: DN-34 Draft; full phase gated on surface maturity | M-873 (DN-34 §8) |
 | *(license audit gate, M-743)* | `scripts/checks/license-first-party.sh` | MIT-only first-party license enforcement | n/a | **Not applicable** — a project-tooling/CI gate script, not Mycelium-language-implementation logic; outside this ledger's scope (nothing here for the self-hosting effort to reproduce) | M-743 |
 
+### `opp`-wave stdlib nodule ports — measured transpiler-assist % (M-935)
+
+The Phase-I `opp` wave (E29-1) ported nine Rust-reference nodules to self-hosted `.myc`
+(`lib/std/`, differential-tested Rust-ref ≡ `.myc`, M-926…M-934). For each, the **transpiler-assist
+%** below is the fraction of the landed `.myc` port that the `mycelium-transpile` PoC (M-873)
+could mechanically emit from the Rust reference — the rest was hand-written. All values are
+**`Empirical`** (measured against the landed port, not projected). They are low by design: much of
+each nodule is either genuinely new self-hosted surface or, for the D1-kernel-boundary nodules, a
+thin re-export/mint layer whose Rust half stays Rust (see the note below), so there is little
+Rust body for the transpiler to convert.
+
+| Nodule (`.myc`) | Rust reference | Transpiler-assist % (`Empirical`) | Tracking |
+|---|---|---|---|
+| `std.diag` (`lib/std/diag.myc`) | `crates/mycelium-diag` / `mycelium-std-diag` | ~0% | M-926 |
+| `std.core` (`lib/std/core.myc`) | `crates/mycelium-core` / `mycelium-std-core` | ~13.6% | M-927 |
+| `std.select` (`lib/std/select.myc`) | `crates/mycelium-select` / `mycelium-std-select` | ~0% | M-928 |
+| `std.swaps` (`lib/std/swap.myc`) | `crates/mycelium-std-swap` | ~9.1% | M-929 |
+| `std.recover` (`lib/std/recover.myc`) | `crates/mycelium-std-recover` | ~3.4% | M-930 |
+| `std.error` (`lib/std/error.myc`) | `crates/mycelium-std-error` | ~3.4% | M-931 |
+| `std.testing` (`lib/std/testing.myc`) | `crates/mycelium-std-testing` | ~18% | M-932 |
+| `std.ternary` (`lib/std/ternary.myc`) | `crates/mycelium-std-ternary` | ~10% | M-933 |
+| `std.spores` (`lib/std/spore.myc`) | `crates/mycelium-std-spore` | ~0% | M-934 |
+
+**D1-kernel-boundary halves stay Rust (never-silent, G2).** Five of the nine — `std.diag`,
+`std.core`, `std.select`, `std.swaps`, `std.spores` — sit on the D1 kernel boundary: their
+self-hosted `.myc` is a thin surface over kernel facilities that remain Rust-hosted (the diag/core/
+select/swap/spore **re-export** surfaces, and the content-address/`hash`-**minting** primitives). The
+`.myc` port covers the surface; the kernel half is deliberately not ported and is not counted as
+"expressible" — which is why the four re-export/mint nodules (`diag`/`select`/`spores` ~0%,
+`swaps` ~9.1%, `core` re-export portion) score low. This is the same KC-3 trusted-base boundary the
+MLIR/Dense-VSA rows above record: a self-hosted stdlib still keeps its kernel-mint/kernel-re-export
+half in the host until the kernel itself self-hosts.
+
 ### Forward items (not yet landed — tracked for when they do)
 
 | Component | Status | What it will add to this ledger when it lands |

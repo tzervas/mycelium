@@ -13,7 +13,7 @@
 //!
 //! # Honesty tags
 //! - **`Exact`** — `byte_len` (delegates to `bytes_len`), `is_ascii_byte`/`is_cont_byte` (total via
-//!   `lt`+match), the `width_cast`/`lt`/`and`/`or`/`add_bin` bit ops the decode is assembled from.
+//!   `lt`+match), the `width_cast`/`lt`/`and`/`or`/`add_u` bit ops the decode is assembled from.
 //! - **`Declared`** — `byte_at` (Option bounds-check contract), `decode_ascii`/`decode_one`
 //!   (never-silent type-level contracts; structural composition of Exact parts, not machine-proven).
 //! - **`Empirical`** — the three-way differential agreement (L1-eval ≡ L0-interp ≡ AOT),
@@ -24,7 +24,7 @@
 //!   access via `lt(width_cast(i, bytes_len(b)), bytes_len(b))` — the `width_cast` widen bridges the
 //!   `Binary{8}` index to the `Binary{32}` length, the gap wave-n1 flagged.
 //! - FLAG-text-2: **CLOSED** (DN-41 / M-798). `decode_one` returns the full `Binary{32}` codepoint
-//!   (1/2/3/4-byte UTF-8); `width_cast` lifts the masked payloads, shifts are repeated `add_bin`
+//!   (1/2/3/4-byte UTF-8); `width_cast` lifts the masked payloads, shifts are repeated `add_u`
 //!   doublings (no shift prim). `decode_ascii` is retained as the `Binary{8}` 1-byte fast path.
 //! - **UTF-8 validity layer (M-717 remainder): CLOSED.** `decode_one` now rejects overlong encodings,
 //!   surrogate-range codepoints (U+D800–DFFF), and codepoints > U+10FFFF via the `reject_two/three/four`

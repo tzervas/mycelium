@@ -34,6 +34,10 @@
 //! primitive that carries to the self-hosted frontend.
 #![forbid(unsafe_code)]
 
+/// The static affine **use-once** tracker for `Substrate` bindings (M-903; DN-71 Model S §4.2) —
+/// piggybacked on [`checkty::Cx`]'s own scope, not a parallel analysis (KC-3/DRY). Internal to the
+/// frontend; not part of the public surface.
+mod affine;
 pub mod ambient;
 pub mod ast;
 pub mod checkty;
@@ -49,6 +53,12 @@ pub mod lexer;
 pub mod mono;
 pub mod nodule;
 pub mod parse;
+/// The `Substrate` v0 value form (M-902; DN-71 Model S §4.1) — an interpreter-level opaque affine
+/// handle at the L1 evaluator level. No new L0 node / no `Repr` growth (KC-3). The affine use-once
+/// **runtime backstop** now lives here too (M-903 — [`substrate::SubstrateHandle::try_consume`]);
+/// the primary enforcement is the static pass ([`affine`]) run by [`checkty::check_nodule`]. The
+/// `consume` **lowering** (real execution through existing paths) is still M-904.
+pub mod substrate;
 pub mod token;
 pub mod totality;
 pub(crate) mod usefulness;
@@ -66,11 +76,12 @@ pub use checkty::{
 };
 pub use elab::{elaborate, elaborate_colony, elaborate_lower_rule, elaborate_reclaim, ElabError};
 pub use error::ParseError;
-pub use eval::{Evaluator, L1Error, L1Value};
+pub use eval::{Evaluator, ForageDecision, ForageError, L1Error, L1Value};
 pub use mono::{
     monomorphize, monomorphize_with_selections, ClosureSpecialization, InstanceSelection,
     MonoSelections,
 };
 pub use nodule::{parse_nodule_header, NoduleHeader, NoduleHeaderError};
 pub use parse::{parse, parse_phylum};
+pub use substrate::{ReleaseEvent, SubstrateError, SubstrateHandle, SubstrateProvenance};
 pub use totality::Totality;

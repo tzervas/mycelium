@@ -144,20 +144,20 @@ fn width_generic_identity_ternary_6() {
 
 // ── Width-generic delegation (wraps a prim) ─────────────────────────────────────────────────────
 
-/// `fn add_n<N>(a: Binary{N}, b: Binary{N}) -> Binary{N} = add_bin(a, b)` — at Binary{8}.
+/// `fn add_n<N>(a: Binary{N}, b: Binary{N}) -> Binary{N} = add_u(a, b)` — at Binary{8}.
 /// `Empirical`: three-way agreement — each path agrees with the reference 3+5=8.
 #[test]
 fn width_generic_add_binary_8() {
-    let src = "nodule d;\nfn add_n{N}(a: Binary{N}, b: Binary{N}) => Binary{N} = add_bin(a, b);\nfn main() => Binary{8} = add_n(0b0000_0011, 0b0000_0101);";
+    let src = "nodule d;\nfn add_n{N}(a: Binary{N}, b: Binary{N}) => Binary{N} = add_u(a, b);\nfn main() => Binary{8} = add_n(0b0000_0011, 0b0000_0101);";
     let (r, p) = bin(8, 3 + 5); // 3 + 5 = 8
     assert_three_way("add_n<8>", src, &r, &p);
 }
 
-/// `fn add_n<N>(a: Binary{N}, b: Binary{N}) -> Binary{N} = add_bin(a, b)` — at Binary{16}.
+/// `fn add_n<N>(a: Binary{N}, b: Binary{N}) -> Binary{N} = add_u(a, b)` — at Binary{16}.
 /// `Empirical`: three-way agreement — each path agrees with the reference 1+2=3.
 #[test]
 fn width_generic_add_binary_16() {
-    let src = "nodule d;\nfn add_n{N}(a: Binary{N}, b: Binary{N}) => Binary{N} = add_bin(a, b);\nfn main() => Binary{16} = add_n(0b0000_0000_0000_0001, 0b0000_0000_0000_0010);";
+    let src = "nodule d;\nfn add_n{N}(a: Binary{N}, b: Binary{N}) => Binary{N} = add_u(a, b);\nfn main() => Binary{16} = add_n(0b0000_0000_0000_0001, 0b0000_0000_0000_0010);";
     let (r, p) = bin(16, 1 + 2); // 1 + 2 = 3
     assert_three_way("add_n<16>", src, &r, &p);
 }
@@ -223,7 +223,7 @@ fn width_generic_delegation_binary_16() {
 /// abstract width before monomorphizing to N=8. `Empirical`: three-way agreement on the fixed point.
 #[test]
 fn width_generic_recursive_binary_8() {
-    let src = "nodule d;\nfn rec_id{N}(x: Binary{N}, n: Binary{8}) => Binary{N} = match eq(n, 0b0000_0000) { 0b1 => x, _ => rec_id(x, sub_bin(n, 0b0000_0001)) };\nfn main() => Binary{8} = rec_id(0b0110_0110, 0b0000_0011);";
+    let src = "nodule d;\nfn rec_id{N}(x: Binary{N}, n: Binary{8}) => Binary{N} = match eq(n, 0b0000_0000) { 0b1 => x, _ => rec_id(x, sub_u(n, 0b0000_0001)) };\nfn main() => Binary{8} = rec_id(0b0110_0110, 0b0000_0011);";
     let (r, p) = bin(8, 0b0110_0110);
     assert_three_way("rec_id<8>", src, &r, &p);
 }
@@ -231,7 +231,7 @@ fn width_generic_recursive_binary_8() {
 /// The same recursive width-generic fn at Binary{16} — the recursion is width-polymorphic. `Empirical`.
 #[test]
 fn width_generic_recursive_binary_16() {
-    let src = "nodule d;\nfn rec_id{N}(x: Binary{N}, n: Binary{8}) => Binary{N} = match eq(n, 0b0000_0000) { 0b1 => x, _ => rec_id(x, sub_bin(n, 0b0000_0001)) };\nfn main() => Binary{16} = rec_id(0b1111_0000_0000_1111, 0b0000_0010);";
+    let src = "nodule d;\nfn rec_id{N}(x: Binary{N}, n: Binary{8}) => Binary{N} = match eq(n, 0b0000_0000) { 0b1 => x, _ => rec_id(x, sub_u(n, 0b0000_0001)) };\nfn main() => Binary{16} = rec_id(0b1111_0000_0000_1111, 0b0000_0010);";
     let (r, p) = bin(16, 0b1111_0000_0000_1111);
     assert_three_way("rec_id<16>", src, &r, &p);
 }

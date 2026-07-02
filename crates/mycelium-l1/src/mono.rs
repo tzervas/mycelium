@@ -49,8 +49,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::ast::{
-    Arm, BaseType, Expr, FnDecl, FnSig, Hypha, Literal, Param, Path, Pattern, Scalar, TypeRef,
-    WidthRef,
+    Arm, BaseType, Expr, FnDecl, FnSig, Hypha, Literal, Param, Path, Pattern, Scalar, Sparsity,
+    TypeRef, WidthRef,
 };
 use crate::checkty::{
     has_var, infer_type, param_subst, resolve_ty, subst_ty, type_head, unify, CtorInfo, DataInfo,
@@ -1187,7 +1187,15 @@ impl<'e> Mono<'e> {
             Expr::Colony(hyphae) => {
                 let mut out = Vec::with_capacity(hyphae.len());
                 for h in hyphae {
+                    // M-906 (DN-70 D1): rewrite the optional `@forage(policy)` literal through
+                    // monomorphization too (mirrors `body`; a literal bitmask carries no type
+                    // variables, but the rewrite keeps the pass total over every hypha field).
+                    let forage = match &h.forage {
+                        Some(p) => Some(Box::new(self.rewrite(site, scope, p, None)?)),
+                        None => None,
+                    };
                     out.push(Hypha {
+                        forage,
                         body: self.rewrite(site, scope, &h.body, None)?,
                     });
                 }
@@ -1252,13 +1260,17 @@ impl<'e> Mono<'e> {
                 "wild/FFI has no L0 form in v0 — monomorphization does not change that (M-661)",
             ),
             Expr::Spore(_) => residual(site, "`spore` is deferred (E2-5/M-260)"),
-            // M-664: `consume` of a `Substrate` has no L0 form in v0 (LR-8) — monomorphization does
-            // not change that; an explicit residual (defense in depth) mirrors the elaborator's
-            // refusal, never a fabricated artifact (G2).
-            Expr::Consume(_) => residual(
-                site,
-                "`consume` of an affine `Substrate` has no L0 form in v0 (LR-8; DN-03 §1; M-664)",
-            ),
+            // M-904 (DN-71 Model S §4.3): `consume`'s L0 form is the identity of its operand (the
+            // affine move is a checker-level fact, discharged statically at check time — DN-71 §4.2;
+            // `crate::grade` already treats `consume` as move-transparent). `Substrate{tag}` carries
+            // no type parameters (LR-8), so there is nothing here for mono to specialize — rewrite the
+            // operand and reconstruct `Consume`, mirroring the `Ascribe` transparent-wrapper case
+            // above. This lifts the former M-664 residual: the same `consume` type rule, now honestly
+            // passed through rather than staged (G2/VR-5) — matching `elab.rs`'s own M-904 arm.
+            Expr::Consume(operand) => {
+                let operand2 = self.rewrite(site, scope, operand, expected)?;
+                Ok(Expr::Consume(Box::new(operand2)))
+            }
             // RFC-0024 §4A.4 (M-704): a `lambda` lowers to a **closure-constructor application** — its
             // captured environment, snapshotted by value at this definition site (value-semantics).
             // The closure tag-sum + the `apply$<arrow>` dispatcher are emitted once per arrow at
@@ -2904,11 +2916,28 @@ pub(crate) fn mangle_ty(t: &Ty) -> String {
         Ty::Ternary(Width::Lit(m)) => format!("Ternary{m}"),
         Ty::Ternary(Width::Var(v)) => format!("TernaryVAR_{v}"),
         Ty::Dense(d, s) => format!("Dense{d}{}", scalar_tag(*s)),
+        // RFC-0003 §3 (M-892): `VSA{model, dim, sparsity}` mangles like `Seq` (the `$` separates
+        // the shape fragment from the model id, whose `-` — not an identifier char — maps to `_`;
+        // injective over the kernel model-id alphabet). `VSA{MAP-I, 256, Dense}` → `Vsa256Dn$MAP_I`.
+        Ty::Vsa {
+            model,
+            dim,
+            sparsity,
+        } => {
+            let sp = match sparsity {
+                Sparsity::Dense => "Dn".to_owned(),
+                Sparsity::Sparse(k) => format!("Sp{k}"),
+            };
+            format!("Vsa{dim}{sp}${}", model.replace('-', "_"))
+        }
         Ty::Substrate(tag) => format!("Substrate{tag}"),
         // RFC-0032 D3/D4: `Seq{T, N}` mangles to `SeqN$<elem>` (injective — the `$` separates the
         // length from the recursively-mangled element); `Bytes` is nullary.
         Ty::Seq(elem, n) => format!("Seq{n}${}", mangle_ty(elem)),
         Ty::Bytes => "Bytes".to_owned(),
+        // ADR-040 (M-897): the nullary scalar-float repr mangles like `Bytes` (a data type named
+        // `Float` mangles to `Float#` via the `#` tag below — no collision, injectivity holds).
+        Ty::Float => "Float".to_owned(),
         // A nullary data type tags its name with `#` (not a surface-identifier char — the lexer
         // never produces it), so a data type whose name happens to equal a repr mangle (e.g. a type
         // literally named `Binary8`) becomes `Binary8#` and can NEVER collide with the repr
@@ -3006,9 +3035,14 @@ pub(crate) fn mangle_ty_or_fn(t: &Ty) -> String {
 /// reprs pass through unchanged.
 fn mangle_ty_in_ty(t: &Ty) -> Ty {
     match t {
-        Ty::Binary(_) | Ty::Ternary(_) | Ty::Dense(_, _) | Ty::Substrate(_) | Ty::Bytes => {
-            t.clone()
-        }
+        Ty::Binary(_)
+        | Ty::Ternary(_)
+        | Ty::Dense(_, _)
+        // M-892: the VSA repr is a primitive — passes through unchanged.
+        | Ty::Vsa { .. }
+        | Ty::Substrate(_)
+        | Ty::Bytes
+        | Ty::Float => t.clone(),
         // RFC-0032 D3: mangle the element type (it may carry a mono'd applied data type), keeping the
         // sequence structure; primitive element reprs pass through unchanged.
         Ty::Seq(elem, n) => Ty::Seq(Box::new(mangle_ty_in_ty(elem)), *n),
@@ -3033,6 +3067,19 @@ fn ty_to_source_ref(t: &Ty) -> TypeRef {
         Ty::Ternary(Width::Lit(m)) => BaseType::Ternary(WidthRef::Lit(*m)),
         Ty::Ternary(Width::Var(v)) => BaseType::Ternary(WidthRef::Name(v.clone())),
         Ty::Dense(d, s) => BaseType::Dense(*d, *s),
+        // M-892: round-trip the VSA repr. The checked model is the canonical kernel id
+        // (`MAP-I`); `resolve_ty`'s canonicalization is idempotent on kernel ids, so threading
+        // it back through re-inference is stable (the parser itself can only produce the
+        // underscore surface spelling — this ref is checker-internal).
+        Ty::Vsa {
+            model,
+            dim,
+            sparsity,
+        } => BaseType::Vsa {
+            model: model.clone(),
+            dim: *dim,
+            sparsity: sparsity.clone(),
+        },
         Ty::Substrate(tag) => BaseType::Substrate(tag.clone()),
         // RFC-0032 D3/D4: round-trip the sequence/byte-string reprs to their surface forms.
         Ty::Seq(elem, n) => BaseType::Seq {
@@ -3040,6 +3087,8 @@ fn ty_to_source_ref(t: &Ty) -> TypeRef {
             len: *n,
         },
         Ty::Bytes => BaseType::Bytes,
+        // ADR-040 (M-897): the nullary scalar-float repr round-trips like `Bytes`.
+        Ty::Float => BaseType::Float,
         Ty::Data(n, args) => {
             BaseType::Named(n.clone(), args.iter().map(ty_to_source_ref).collect())
         }
@@ -3063,6 +3112,17 @@ fn ty_to_ref(t: &Ty) -> TypeRef {
         Ty::Ternary(Width::Lit(m)) => BaseType::Ternary(WidthRef::Lit(*m)),
         Ty::Ternary(Width::Var(v)) => BaseType::Ternary(WidthRef::Name(v.clone())),
         Ty::Dense(d, s) => BaseType::Dense(*d, *s),
+        // M-892: round-trip the VSA repr (kernel model id — idempotent under re-resolution;
+        // see `ty_to_source_ref`).
+        Ty::Vsa {
+            model,
+            dim,
+            sparsity,
+        } => BaseType::Vsa {
+            model: model.clone(),
+            dim: *dim,
+            sparsity: sparsity.clone(),
+        },
         Ty::Substrate(tag) => BaseType::Substrate(tag.clone()),
         // RFC-0032 D3/D4: round-trip the sequence/byte-string reprs (the element type is mono'd to a
         // concrete surface form via the same `ty_to_ref`).
@@ -3071,6 +3131,8 @@ fn ty_to_ref(t: &Ty) -> TypeRef {
             len: *n,
         },
         Ty::Bytes => BaseType::Bytes,
+        // ADR-040 (M-897): the nullary scalar-float repr round-trips like `Bytes`.
+        Ty::Float => BaseType::Float,
         // A mono'd data type is nullary (its arguments are baked into its mangled name).
         Ty::Data(n, args) if args.is_empty() => BaseType::Named(n.clone(), vec![]),
         Ty::Data(_, _) => BaseType::Named(mangle_ty(t), vec![]),

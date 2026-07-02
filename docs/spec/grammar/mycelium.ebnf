@@ -41,7 +41,20 @@
  *   tier       — execution-mode hint (RFC-0004 ExecutionMode): `@tier(compiled|interpreted) fn …`
  *                  → `tier_fn_item` below (non-semantic, NFR-7; never a behavioural switch)
  *
- * RESERVED, NOT YET ACTIVE (DN-03 §4; RFC-0008 §4.5): the remaining SIX runtime-vocabulary names
+ * ACTIVE, D-LITE SUBSET (M-906; DN-70 D1; DN-63 §3.5; RFC-0008 §4.6 R2 usability subset — kickoff
+ * `enb`): `forage` LEFT the reserved-not-active set with M-906 — but only its **D-lite** surface:
+ *   forage     — adaptive placement policy (RFC-0008 RT3): `@forage(policy) hypha …` →
+ *                  the `hypha` production below. `policy` is a **literal binary bitmask** (each
+ *                  set bit names one local worker candidate; the D-lite mechanism is the existing
+ *                  RFC-0005 `SelectionPolicy` — no new mechanism, DN-70). Semantics-free (RT3):
+ *                  placement never changes the observable, only the mandatory EXPLAIN trail. An
+ *                  all-zero mask is the DN-63 FLAG-14 empty-candidate-set case — an explicit
+ *                  `ForageError::NoCandidates` refusal, never a silent hang. **Multi-node**
+ *                  placement (an arbitrary dynamic policy expression, real network nodes) is an
+ *                  explicit residual, tracked on M-828's H2 remainder (DN-70 §5 R-6) — not covered
+ *                  by this grammar entry.
+ *
+ * RESERVED, NOT YET ACTIVE (DN-03 §4; RFC-0008 §4.5): the remaining FIVE runtime-vocabulary names
  * are reserved keywords — they lex as keywords (never silent identifiers, G2) but no production
  * consumes them, so they cannot open a program or appear in identifier position at this language
  * version (see conformance/reject/12). They activate when their runtime-model constructs land
@@ -50,7 +63,6 @@
  *   graft      — capability contract with infrastructure (RFC-0008 RT4)
  *   cyst       — durable checkpoint / dormant resumable form (RFC-0008 RT2)
  *   xloc       — explicit value movement / trans-locate
- *   forage     — adaptive placement policy (RFC-0008 RT3)
  *   backbone   — priority transport path (RFC-0008 RT3)
  *
  * This is v0 — it covers the L1-facing core (RFC-0006 §3 L1); abstraction/recursion typing,
@@ -217,6 +229,10 @@ base_type      ::= 'Binary'  '{' Int '}'
                  | 'Substrate' '{' Ident '}'                  /* affine external resource (LR-8) */
                  | 'Seq'     '{' type_ref ',' Int '}'         /* indexed homogeneous sequence (RFC-0032 D3) */
                  | 'Bytes'                                    /* first-class byte string (RFC-0032 D4) */
+                 | 'Float'                                    /* first-class scalar float, IEEE-754 binary64
+                                                               * only at introduction (ADR-040 FLAG-1; M-897) —
+                                                               * nullary like Bytes; a later width extends the
+                                                               * surface append-only under its own decision */
                  | '(' type_ref ',' type_ref (',' type_ref)* ')'  /* tuple/product type (M-826, arity >= 2);
                                                                    * desugars to a synthetic single-ctor data
                                                                    * type (KC-3 — no new L0 node) */
@@ -299,12 +315,15 @@ consume_expr   ::= 'consume' app_expr
  * no free `hypha` production. Deterministic R1 fragment only (RFC-0008 §4.6 R1); the reference
  * semantics is the spawn-order sequentialization (RT2), so the colony's observable value is its
  * children run in order, and the colony yields the LAST hypha's value — wiring a join-result product
- * of all hyphae's values (now expressible via the v0 tuple type, M-826) is later work). The
- * arbitration/placement RT3 constructs (select/
- * merge, `forage`) are separate. The runtime realization is `mycelium-mlir::runtime`
- * (`Scope`/`Colony`/`Task`, M-357), a performance path validated against the RT2 sequentialization. */
+ * of all hyphae's values (now expressible via the v0 tuple type, M-826) is later work). The runtime
+ * realization is `mycelium-mlir::runtime` (`Scope`/`Colony`/`Task`, M-357), a performance path
+ * validated against the RT2 sequentialization.
+ *
+ * `hypha` optionally carries a leading `@forage(policy)` placement-policy annotation (M-906;
+ * DN-70 D1; RFC-0008 RT3; D-lite — see the ACTIVE, D-LITE SUBSET note above), the same
+ * '@' attribute-before-construct shape as `@tier(mode) fn …` (DN-58 §C / `tier_fn_item` below). */
 colony_expr    ::= 'colony' '{' hypha (',' hypha)* ','? '}'
-hypha          ::= 'hypha' app_expr
+hypha          ::= ('@' 'forage' '(' expr ')')? 'hypha' app_expr
 
 /* fuse: lawful binary merge (DN-58 §A / M-667; RFC-0008 RT6). Homogeneous operands; the
  * checker verifies a `Fuse` semilattice instance exists for the operand type. Result type = operand
@@ -373,7 +392,7 @@ path           ::= Ident ('.' Ident)*
  * names its paradigm; a bare Int has no representation family on its own (Q6) UNLESS an ambient is
  * in scope, in which case it adopts the ambient paradigm and takes its width from the checked
  * context, else an explicit UnresolvedWidth (RFC-0012 §4.3; M-344). */
-literal        ::= BinLit | TritLit | BytesLit | Int | ListLit
+literal        ::= BinLit | TritLit | BytesLit | StrLit | FloatLit | Int | ListLit
 ListLit        ::= '[' (expr (',' expr)*)? ']'       /* constructs a Seq{T, N} (RFC-0032 D3) */
 
 /* Terminals (lexer). */
@@ -382,6 +401,29 @@ BytesLit       ::= '0x' HexDigit (HexDigit | '_')*   /* even hex-digit count req
 HexDigit       ::= [0-9a-fA-F]
 TritLit        ::= '0t' Trit+                        /* MSB-first balanced trits (RFC-0037 D4; the `<…>` form is retired, `<` is operator-only) */
 Trit           ::= '+' | '0' | '-'
+
+/* StrLit: a textual string literal (M-910/M-911, kickoff `enb` Phase-I H1) — ergonomic, not
+ * expressive: an explicit, MINIMAL escape set (`\n \t \\ \" \0 \r`), no raw newline/CR inside the
+ * literal (use `\n`), and deliberately no `\xNN` (it would let a "textual" literal inject a
+ * non-UTF-8 byte; left for a follow-up with its own justification). Lowers to the SAME
+ * `Repr::Bytes` value form as BytesLit (UTF-8-encoded; KC-3 — no new L0 node). An unterminated
+ * literal or an unknown escape is a never-silent lex error (G2), never a silent truncation. */
+StrLit         ::= '"' (StrChar | EscapeSeq)* '"'
+StrChar        ::= [^"\\\n\r]                        /* any char but the closing quote, a backslash,
+                                                       * or a raw newline/CR */
+EscapeSeq      ::= '\' ('n' | 't' | '\\' | '"' | '0' | 'r')
+/* FloatLit: a decimal float literal (ADR-040; M-897) — it denotes the CORRECTLY-ROUNDED
+ * (round-to-nearest-even) IEEE-754 binary64 value of its decimal text (ADR-040 FLAG-3; the
+ * documented, EXPLAIN-able conversion — erroring on inexact decimals would reject nearly all real
+ * literals). Int-disambiguation is structural: digits become a float ONLY when followed by a `.`
+ * WITH a digit behind it (so `1.` stays Int `1` + `.` — the path/field glyph — and there is no
+ * leading-dot `.5` form), and/or an `e|E` exponent with at least one digit. Never-silent (G2): an
+ * exponent with no digits (`1e`, `1e+`) and a literal whose rounded binary64 value is not finite
+ * (`1e999` — beyond ~1.8e308) are explicit lex errors, mirroring Int's out-of-range refusal — a
+ * literal is a CONVERSION boundary (ADR-040 §2.4), so out-of-range never silently lands on ±inf. */
+FloatLit       ::= [0-9]+ '.' [0-9]+ Exponent?
+                 | [0-9]+ Exponent
+Exponent       ::= ('e' | 'E') ('+' | '-')? [0-9]+
 Int            ::= '-'? [0-9]+
 Ident          ::= (Letter | '_') (Letter | [0-9] | '_')*
 Letter         ::= [a-zA-Z]

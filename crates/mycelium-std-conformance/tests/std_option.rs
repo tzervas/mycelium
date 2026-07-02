@@ -1,10 +1,11 @@
 //! Differential tests for `std.option` (M-715) — the self-hosted `Option<A>` core nodule.
 //!
-//! Sibling of `std_result.rs`: the nodule source is loaded verbatim via `include_str!` (the single
-//! source of truth), then a typed driver `fn` is appended to pin the generic parameter `A` to
-//! `Binary{8}`. Without explicit pinning the monomorphizer emits a never-silent `Residual`
-//! (undetermined type parameter — G2), so every driver carries the full `Option<Binary{8}>` type to
-//! the call site via explicitly-typed helpers (`mk_some`, `mk_none`).
+//! Sibling of `std_result.rs`: both share the [`harness`] fixture (M-925). The nodule source is
+//! loaded verbatim via `include_str!` (the single source of truth; the path is a macro literal, so
+//! the load itself stays local to this file), then a typed driver `fn` is appended to pin the
+//! generic parameter `A` to `Binary{8}`. Without explicit pinning the monomorphizer emits a
+//! never-silent `Residual` (undetermined type parameter — G2), so every driver carries the full
+//! `Option<Binary{8}>` type to the call site via explicitly-typed helpers (`mk_some`, `mk_none`).
 //!
 //! # Honesty tags
 //! - **`Exact`** — the `Some`/`None` constructors and the total Bool discriminators `is_some`/
@@ -14,11 +15,7 @@
 //! - **`Empirical`** — the three-way differential agreement (L1-eval ≡ L0-interp ≡ AOT), validated
 //!   by trial on the programs below; not a machine-checked proof.
 
-use mycelium_cert::{check_core, BinaryTernarySwapEngine, CheckVerdict};
-use mycelium_core::GuaranteeStrength;
-use mycelium_interp::{Interpreter, PrimRegistry};
-use mycelium_l1::elab::build_registry;
-use mycelium_l1::{check_nodule, elaborate, monomorphize, parse, Evaluator};
+mod harness;
 
 /// The std.option nodule source, loaded at compile time — the single source of truth.
 const OPTION_SRC: &str = include_str!(concat!(
@@ -30,87 +27,17 @@ const OPTION_SRC: &str = include_str!(concat!(
 /// `mk_some` / `mk_none` helpers with explicit `Option<Binary{8}>` return types so the monomorphizer
 /// can determine `A` from the call site.
 fn program(driver: &str) -> String {
-    format!("{OPTION_SRC}\n{driver}")
+    harness::program(OPTION_SRC, driver)
 }
 
 /// Run the three-way differential on `src` — L1-eval(mono) ≡ elaborate→L0-interp ≡ AOT — and assert
 /// all three paths agree AND equal the `expected` reference value.
 ///
 /// Honesty: differential agreement is `Empirical` (trials); the type-level contract is `Declared`.
+/// Thin re-export of the shared [`harness::assert_three_way`] so the per-case bodies below stay
+/// unchanged.
 fn assert_three_way(label: &str, src: &str, expected_src: &str) {
-    let interp = Interpreter::new(
-        PrimRegistry::with_builtins(),
-        Box::new(BinaryTernarySwapEngine),
-    );
-    let prims = PrimRegistry::with_builtins();
-    let engine = BinaryTernarySwapEngine;
-
-    let env = check_nodule(&parse(src).unwrap_or_else(|e| panic!("{label}: parse failed: {e}")))
-        .unwrap_or_else(|e| panic!("{label}: check failed: {e}"));
-
-    let mono =
-        monomorphize(&env, "main").unwrap_or_else(|e| panic!("{label}: monomorphize failed: {e}"));
-
-    assert!(
-        mono.fns.values().all(|fd| fd.sig.params.is_empty())
-            && mono.types.values().all(|d| d.params.is_empty())
-            && mono.traits.is_empty()
-            && mono.instances.is_empty()
-            && mono.impls.is_empty(),
-        "{label}: monomorphized env must be closed (no generics/traits)"
-    );
-
-    let registry =
-        build_registry(&mono).unwrap_or_else(|e| panic!("{label}: build_registry failed: {e}"));
-
-    let l1_val = Evaluator::new(&mono)
-        .call("main", vec![])
-        .unwrap_or_else(|e| panic!("{label}: L1-eval failed: {e}"));
-    let l1_core = l1_val
-        .to_core(&mono, &registry)
-        .unwrap_or_else(|| panic!("{label}: L1 result is outside the r3 data fragment"));
-
-    let node = elaborate(&env, "main").unwrap_or_else(|e| panic!("{label}: elaborate failed: {e}"));
-    let l0_core = interp
-        .eval_core(&node)
-        .unwrap_or_else(|e| panic!("{label}: L0-interp failed: {e}"));
-
-    let aot_core = mycelium_mlir::run_core(&node, &prims, &engine)
-        .unwrap_or_else(|e| panic!("{label}: AOT run_core failed: {e}"));
-
-    assert_eq!(
-        l1_core, l0_core,
-        "{label}: L1-eval(mono) vs elaborate→L0-interp diverged"
-    );
-    assert_eq!(l0_core, aot_core, "{label}: L0-interp vs AOT diverged");
-
-    for (x, y, pair) in [
-        (&l1_core, &l0_core, "L1↔interp"),
-        (&l0_core, &aot_core, "interp↔AOT"),
-    ] {
-        assert_eq!(
-            check_core(x, y),
-            CheckVerdict::Validated {
-                strength: GuaranteeStrength::Exact
-            },
-            "{label}: the shared checker must validate the {pair} pair"
-        );
-    }
-
-    let ref_env = check_nodule(
-        &parse(expected_src).unwrap_or_else(|e| panic!("{label}: ref parse failed: {e}")),
-    )
-    .unwrap_or_else(|e| panic!("{label}: ref check failed: {e}"));
-    let ref_node = elaborate(&ref_env, "main")
-        .unwrap_or_else(|e| panic!("{label}: ref elaborate failed: {e}"));
-    let expected = interp
-        .eval_core(&ref_node)
-        .unwrap_or_else(|e| panic!("{label}: ref eval failed: {e}"));
-
-    assert_eq!(
-        l1_core, expected,
-        "{label}: result does not match expected reference value"
-    );
+    harness::assert_three_way(label, src, expected_src);
 }
 
 // ── is_some / is_none ──────────────────────────────────────────────────────────────────────────────

@@ -539,6 +539,12 @@ pub enum BaseType {
     /// `Bytes` — a first-class byte string (RFC-0032 D4; M-750). A **nullary** repr keyword (no
     /// descriptor). The surface literal `0x…` constructs one.
     Bytes,
+    /// `Float` — the first-class scalar float (ADR-040; M-897). A **nullary** repr keyword like
+    /// [`BaseType::Bytes`]: the width set is IEEE-754 binary64 only at introduction (ADR-040
+    /// FLAG-1), so `Float` names exactly `Repr::Float{width: F64}`. The surface literal `1.5`
+    /// constructs one. A later width extends the surface append-only under its own decision —
+    /// never by silently widening this keyword (VR-5).
+    Float,
     /// A named type or type variable, with optional type arguments.
     Named(String, Vec<TypeRef>),
     /// A **paradigm-less repr** `{ <params> }` (RFC-0012 §4.2). Produced only by the parser; the
@@ -826,6 +832,16 @@ pub struct Arm {
 /// the computation produces (RT1: values move, state is never shared).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Hypha {
+    /// An optional `@forage(policy)` placement-policy annotation (RFC-0008 RT3; DN-63 §3.5;
+    /// D-lite, M-906/DN-70 D1). `None` = no explicit policy — the hypha places on the trivial
+    /// implicit single-candidate set (the current node). `Some` names a **literal binary bitmask**
+    /// expression (D-lite narrows DN-63's open `policy: PlacementPolicy` expression surface to a
+    /// checkable literal — see [`crate::checkty::Cx::check_forage_policy`] doc comment; the
+    /// general dynamic-expression policy surface is the DN-70 §5 R-5 H2 mechanized
+    /// `SelectionPolicy` capture-and-set work). Each set bit `i` names one local worker candidate
+    /// `worker-i`; an all-zero mask is the DN-63 FLAG-14 empty-candidate-set case
+    /// (`ForageError::NoCandidates`, refused never-silently — see [`crate::eval::ForageError`]).
+    pub forage: Option<Box<Expr>>,
     /// The spawned computation (an application/expression over immutable values).
     pub body: Expr,
 }
@@ -887,6 +903,22 @@ pub enum Literal {
     /// Elaborates to a [`mycelium_core::Repr::Bytes`] value. The lexer is the never-silent gate
     /// that only ever builds an even-hex-digit, non-empty string (G2), so the stored text is valid.
     Bytes(String),
+    /// A textual string literal `"…"` (the **decoded** content — escapes already resolved by the
+    /// lexer; M-910/M-911, kickoff `enb` Phase-I H1). Elaborates to the **same**
+    /// [`mycelium_core::Repr::Bytes`] value form as [`Literal::Bytes`] (UTF-8-encoded; KC-3 — no
+    /// new L0 node), so it types as `Ty::Bytes` too. The lexer is the never-silent gate for escape
+    /// validity/termination (its `lex_string` scanner), so the stored text is valid.
+    Str(String),
+    /// A decimal float literal (`1.5`, `0.0`, `1e10`, `2.5e-3`; ADR-040 / M-897, kickoff `enb`
+    /// Phase-I H1 Gap A), carrying the **source text verbatim** (like [`Literal::Bin`]/
+    /// [`Literal::Trit`]). It denotes the **correctly-rounded** (RNE) IEEE-754 binary64 value of
+    /// its decimal text (ADR-040 FLAG-3 — the documented, `EXPLAIN`-able conversion posture);
+    /// elaboration performs that single conversion and lowers to the **existing**
+    /// [`mycelium_core::Repr::Float`]/`Payload::Float` value form landed by M-896 (KC-3 — no new
+    /// L0 node). Types as `Ty::Float`. The lexer is the never-silent gate (G2): form, exponent
+    /// digits, and binary64 finiteness are validated there, so the stored text is a valid, finite
+    /// literal.
+    Float(String),
 }
 
 impl Literal {
@@ -904,5 +936,21 @@ impl Literal {
     #[must_use]
     pub fn ternary(trits: impl Into<String>) -> Self {
         Literal::Trit(trits.into())
+    }
+
+    /// A string literal from its **decoded** content. Additive alias for [`Literal::Str`]; like the
+    /// variant it stores the content verbatim (post-escape-decoding — the lexer is the never-silent
+    /// gate that only ever builds well-terminated, validly-escaped ones; see [`Literal::binary`]).
+    #[must_use]
+    pub fn string(content: impl Into<String>) -> Self {
+        Literal::Str(content.into())
+    }
+
+    /// A float literal from its verbatim decimal source text (ADR-040 / M-897). Additive alias for
+    /// [`Literal::Float`]; stores the text verbatim, no validation (the lexer is the never-silent
+    /// gate that only ever builds well-formed, finite ones; see [`Literal::binary`]).
+    #[must_use]
+    pub fn float(text: impl Into<String>) -> Self {
+        Literal::Float(text.into())
     }
 }

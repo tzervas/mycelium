@@ -150,97 +150,30 @@ pub static MATRIX: &[GaugeRow] = &[
         strength: GuaranteeStrength::Exact,
         basis: "StealPolicy::select_victim is a total, deterministic function of its inputs; every decision is an inspectable StealDecision record (M-861 / RFC-0008 RT3)",
     },
+    // ── M-963: mechanized SelectionPolicy capture/set + the R2 residual ledger (DN-78 §3) ──
+    GaugeRow {
+        operation: "PolicySlot::set transition record (reified setter)",
+        strength: GuaranteeStrength::Exact,
+        basis: "every set appends exactly one PolicySetRecord with a per-slot monotonic seq and the outgoing policy's ref; by construction, never a silent override (G2 / M-963 / DN-78 B-2)",
+    },
+    GaugeRow {
+        operation: "PolicySlot::select without an active policy (explicit refusal)",
+        strength: GuaranteeStrength::Exact,
+        basis: "fail-closed: NoActivePolicy is returned deterministically when no policy is set — no built-in silent default (G2 / ADR-006 / M-963)",
+    },
+    GaugeRow {
+        operation: "Policy capture resolution (unknown ref is an explicit error)",
+        strength: GuaranteeStrength::Exact,
+        basis: "fail-closed by construction: UnknownPolicyRef/RefMismatch are explicit; a returned capture satisfies policy_ref() == requested, checked not assumed (G2 / ADR-006 / M-963)",
+    },
+    GaugeRow {
+        operation: "Policy capture replay reaches the recorded decision",
+        strength: GuaranteeStrength::Empirical,
+        basis: "record-vs-replay differential property-tested over randomized policies/inputs; RFC-0005 select determinism has no mechanized theorem, so not Proven (VR-5 / M-963 / M-964)",
+    },
+    GaugeRow {
+        operation: "Deferred-construct refusal (R2 residual ledger)",
+        strength: GuaranteeStrength::Exact,
+        basis: "require() on every deferred item returns an explicit typed error naming construct + prerequisite + tracker; one ledger row per item, enforced by test (G2 / M-963 / DN-78 B-3)",
+    },
 ];
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use mycelium_core::GuaranteeStrength;
-
-    #[test]
-    fn matrix_non_empty() {
-        assert!(!MATRIX.is_empty(), "guarantee matrix must have entries");
-    }
-
-    #[test]
-    fn task_purity_is_declared_not_higher() {
-        let row = MATRIX
-            .iter()
-            .find(|r| r.operation == "Task purity contract")
-            .expect("Task purity row must exist");
-        assert_eq!(
-            row.strength,
-            GuaranteeStrength::Declared,
-            "Task purity must not be upgraded beyond Declared without a checked basis (VR-5)"
-        );
-        // Mutant witness: changing strength to Empirical would make this test fail,
-        // correctly catching an ungrounded tag upgrade.
-    }
-
-    #[test]
-    fn kahn_determinism_is_empirical_not_proven() {
-        for row in MATRIX {
-            if row.operation.contains("Kahn") {
-                assert_ne!(
-                    row.strength,
-                    GuaranteeStrength::Proven,
-                    "Kahn-determinism must not be Proven without a checked theorem (VR-5): op={}",
-                    row.operation
-                );
-                assert_ne!(
-                    row.strength,
-                    GuaranteeStrength::Exact,
-                    "Kahn-determinism must not be Exact — it is Empirical (ADR-020 §4): op={}",
-                    row.operation
-                );
-            }
-        }
-        // Mutant witness: setting any Kahn row to Proven would make this test fail.
-    }
-
-    #[test]
-    fn no_reserved_vocabulary_in_operation_names() {
-        // RFC-0008 §4.5 reserved vocabulary — must not appear in v0 public API.
-        let reserved = [
-            "hypha", "fuse", "xloc", "cyst", "graft", "forage", "backbone", "mesh", "tier",
-            "reclaim",
-        ];
-        for row in MATRIX {
-            for word in &reserved {
-                assert!(
-                    !row.operation.contains(word),
-                    "Reserved vocabulary '{}' must not appear in v0 guarantee matrix (ADR-020 §5): op={}",
-                    word,
-                    row.operation
-                );
-            }
-        }
-    }
-
-    #[test]
-    fn test_new_channel_ops_are_exact() {
-        // The four new bounded-channel operation rows are all Exact (deterministic by
-        // construction). We match them by their known operation name prefixes, which are
-        // distinct from the pre-existing Empirical rows (Kahn, Deadlock, Colony, etc.).
-        // Mutant witness: changing any of these four rows to Empirical would make this test
-        // fail, correctly catching an ungrounded tag downgrade for a deterministic operation.
-        let exact_channel_op_prefixes = [
-            "Network::channel (construction)",
-            "Network::channel zero-capacity check",
-            "Sender::try_send FIFO",
-            "Receiver::try_recv FIFO",
-        ];
-        for prefix in &exact_channel_op_prefixes {
-            let row = MATRIX
-                .iter()
-                .find(|r| r.operation.starts_with(prefix))
-                .unwrap_or_else(|| panic!("guarantee matrix missing row starting with '{prefix}'"));
-            assert_eq!(
-                row.strength,
-                GuaranteeStrength::Exact,
-                "bounded-channel op '{}' must be Exact (ADR-020 §4)",
-                row.operation
-            );
-        }
-    }
-}

@@ -434,3 +434,175 @@ fn names_len_and_is_empty_reflect_actual_count() {
         "after 2 binds: is_empty=false (not true constant)"
     );
 }
+
+// --- ADR-040 §3 (M-896): scalar-float identity + the NO-REHASH address-stability regression ------
+
+use crate::repr::{FloatWidth, SparsityClass};
+use crate::value::{Trit, CANONICAL_NAN_BITS};
+
+fn val(repr: Repr, payload: Payload) -> Value {
+    Value::new(repr, payload, Meta::exact(Provenance::Root)).expect("well-formed")
+}
+
+fn float_val(x: f64) -> Value {
+    val(
+        Repr::Float {
+            width: FloatWidth::F64,
+        },
+        Payload::Float(x),
+    )
+}
+
+/// **The content-address note made checkable — NO rehash occurred (ADR-040 §3; RFC-0033 §7).**
+/// These digests were computed on the pre-`Repr::Float` base (dev @ 942770c, 2026-07-02) for one
+/// representative value of every pre-existing payload form, a composite node, and a prim
+/// operation hash. Adding the `Float` arm to the prefix-tagged `Canon` encoder must leave every
+/// one of them byte-identical — the frozen-tag append-only guarantee. A failing run here means an
+/// existing identity shifted: a rehash was spent, which ADR-040 defers to E20-1. `Exact` (a pinned
+/// equality over fixed inputs).
+#[test]
+fn adding_float_spent_no_rehash_existing_addresses_stable() {
+    let binary = val(
+        Repr::Binary { width: 8 },
+        Payload::Bits(vec![true, false, true, true, false, false, true, false]),
+    );
+    assert_eq!(
+        binary.content_hash().as_str(),
+        "blake3:9c2cfd3d03f00ca309eb0be84d4c948569ae4ad1cacdee052b5fe3f528170bc0"
+    );
+
+    let ternary = val(
+        Repr::Ternary { trits: 4 },
+        Payload::Trits(vec![Trit::Neg, Trit::Zero, Trit::Pos, Trit::Zero]),
+    );
+    assert_eq!(
+        ternary.content_hash().as_str(),
+        "blake3:86d53f1cf885cc00c8e772879c96f83984a4ff72bd5f7840332bcbe83866f1d5"
+    );
+
+    // NOTE the raw-bits NaN in this Dense payload: the existing `Canon::f64` paths are NOT
+    // canonicalized by M-896 (ADR-040 FLAG-5 — the uniform rule rides the E20-1 settlement), so
+    // this digest pins that they were left untouched.
+    let dense = val(
+        Repr::Dense {
+            dim: 3,
+            dtype: ScalarKind::F64,
+        },
+        Payload::Scalars(vec![1.5, -0.0, f64::from_bits(0x7ff8_0000_0000_0000)]),
+    );
+    assert_eq!(
+        dense.content_hash().as_str(),
+        "blake3:44b8877cfa8568cf751a4c5b91725334d2d57b6d5673e2deaf2eb420599ea93e"
+    );
+
+    let vsa = val(
+        Repr::Vsa {
+            model: "MAP-I".to_owned(),
+            dim: 4,
+            sparsity: SparsityClass::Sparse { max_active: 2 },
+        },
+        Payload::Hypervector(vec![0.25, -1.0, 0.0, 2.0]),
+    );
+    assert_eq!(
+        vsa.content_hash().as_str(),
+        "blake3:87156d3912732cdf3305d9891ee80fbd04155f0c764fe635228c1771f45d281b"
+    );
+
+    let elem = Repr::Binary { width: 2 };
+    let seq = val(
+        Repr::Seq {
+            elem: Box::new(elem.clone()),
+            len: 2,
+        },
+        Payload::Seq(vec![
+            val(elem.clone(), Payload::Bits(vec![true, false])),
+            val(elem, Payload::Bits(vec![false, true])),
+        ]),
+    );
+    assert_eq!(
+        seq.content_hash().as_str(),
+        "blake3:76953731fd6aaa0e319911bd90bfc67f63dfd92fdad960f160ac4aa7f1523b2d"
+    );
+
+    let bytes = val(Repr::Bytes, Payload::Bytes(vec![0xde, 0xad, 0xbe, 0xef]));
+    assert_eq!(
+        bytes.content_hash().as_str(),
+        "blake3:43a189a6d443e741f41503f07a563693907f3132660bb9833c22c9c6e96f4681"
+    );
+
+    let node = Node::Let {
+        id: "x".to_owned(),
+        bound: Box::new(Node::Const(val(
+            Repr::Binary { width: 8 },
+            Payload::Bits(vec![true, false, true, true, false, false, true, false]),
+        ))),
+        body: Box::new(Node::Op {
+            prim: "band".to_owned(),
+            args: vec![Node::Var("x".to_owned()), Node::Var("x".to_owned())],
+        }),
+    };
+    assert_eq!(
+        node.content_hash().as_str(),
+        "blake3:08792f5cde75d318ddcc90f15d62b124dc2645d590c69a3fb4be2f08688762e3"
+    );
+
+    assert_eq!(
+        crate::content::operation_hash("band").as_str(),
+        "blake3:20e9c439d4a46280150a666b91603efeb76348926b5dc60dc139b88f5788c7b9"
+    );
+}
+
+/// Every NaN is ONE content address (ADR-040 §2.3): quiet/signaling, any payload, either sign —
+/// all collide with the canonical quiet NaN. Identity never forks on platform NaN bits.
+#[test]
+fn every_nan_is_one_content_address() {
+    let canonical = float_val(f64::from_bits(CANONICAL_NAN_BITS)).content_hash();
+    for bits in [
+        0x7ff8_0000_0000_0001_u64, // quiet, non-zero payload
+        0xfff8_0000_0000_0000,     // quiet, sign bit set
+        0x7ff0_0000_0000_0001,     // signaling
+        0xfff7_ffff_ffff_ffff,     // signaling, sign bit set, max payload
+    ] {
+        assert_eq!(
+            float_val(f64::from_bits(bits)).content_hash(),
+            canonical,
+            "NaN bits {bits:#018x} forked identity"
+        );
+    }
+}
+
+/// `+0.0` and `-0.0` are TWO content addresses (ADR-040 §2.3: observably distinct values are never
+/// aliased), even though they are IEEE-equal.
+#[test]
+fn signed_zeros_are_two_content_addresses() {
+    assert_ne!(
+        float_val(0.0).content_hash(),
+        float_val(-0.0).content_hash()
+    );
+}
+
+/// The scalar float is a DISTINCT identity from every same-bits encoding in another paradigm —
+/// no implicit scalar↔rank-0-tensor identification (ADR-040 §5): `Float(1.5)` ≠ `Dense{1,F64}[1.5]`.
+#[test]
+fn float_identity_distinct_from_dense_dim1() {
+    let dense1 = val(
+        Repr::Dense {
+            dim: 1,
+            dtype: ScalarKind::F64,
+        },
+        Payload::Scalars(vec![1.5]),
+    );
+    assert_ne!(float_val(1.5).content_hash(), dense1.content_hash());
+}
+
+/// Distinct finite floats get distinct addresses; identical floats collide (determinism).
+#[test]
+fn float_addresses_are_deterministic_and_injective_on_bits() {
+    assert_eq!(float_val(1.5).content_hash(), float_val(1.5).content_hash());
+    assert_ne!(float_val(1.5).content_hash(), float_val(2.5).content_hash());
+    // The specials are in-band, inspectable — and distinct identities (ADR-040 §2.4).
+    assert_ne!(
+        float_val(f64::INFINITY).content_hash(),
+        float_val(f64::NEG_INFINITY).content_hash()
+    );
+}

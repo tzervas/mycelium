@@ -22,6 +22,8 @@ use std::collections::HashMap;
 
 use mycelium_core::{CertMode, ContentHash, Meta, Payload, Provenance, Repr, Value};
 
+use crate::inject_gate::{Admission, InjectMode};
+
 use crate::inject::{recompile_closure, Image, InjectError, Resolution};
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -48,6 +50,14 @@ fn h(s: &str) -> ContentHash {
     ContentHash::parse(&format!("blake3:{s}")).unwrap()
 }
 
+/// The default (loose, unsigned) interpreted resolution — the I1 G2-tag on the dev path (M-961).
+fn interpreted_loose_unsigned() -> Resolution {
+    Resolution::Interpreted {
+        inject_mode: InjectMode::Loose,
+        admission: Admission::Unsigned,
+    }
+}
+
 // ─── pre-existing tests (extracted from inject.rs inline #[cfg(test)]) ────────
 
 #[test]
@@ -55,8 +65,8 @@ fn defined_definition_resolves_to_interpreted_and_calls() {
     // No toolchain needed: an interpret-only definition dispatches to the interpreter.
     let mut img = Image::new();
     let prog = not_prog(vec![true, false, true, true]);
-    let hash = img.define(prog);
-    assert_eq!(img.resolve(&hash), Resolution::Interpreted);
+    let hash = img.define(prog).expect("loose image admits unsigned");
+    assert_eq!(img.resolve(&hash), interpreted_loose_unsigned());
     let v = img.call(&hash).expect("interpreted call runs");
     assert_eq!(v.payload(), &Payload::Bits(vec![false, true, false, false]));
 }
@@ -151,7 +161,7 @@ fn dispatch_key_is_independent_of_cert_mode() {
         };
         // Use `Image::define` to get the canonical dispatch key (the same path as production).
         let mut img = Image::new();
-        let key = img.define(prog);
+        let key = img.define(prog).expect("loose image admits unsigned");
         keys.push(key);
     }
 
@@ -179,8 +189,10 @@ fn dispatch_key_is_independent_of_cert_mode() {
 fn define_is_idempotent_same_node_same_key() {
     let mut img = Image::new();
     let prog = not_prog(vec![true, true]);
-    let h1 = img.define(prog.clone());
-    let h2 = img.define(prog);
+    let h1 = img
+        .define(prog.clone())
+        .expect("loose image admits unsigned");
+    let h2 = img.define(prog).expect("loose image admits unsigned");
     assert_eq!(h1, h2, "same definition must yield the same key every time");
     assert_eq!(img.defined_count(), 1, "no duplicate registration");
 }
