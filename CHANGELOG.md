@@ -8,6 +8,57 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-07-01: M-873 follow-on — transpiler hardening: width_cast emission, batch mode, 8-twin union backlog)
+
+- **Faithful `width_cast` conversion emission (DN-41).** `mycelium-transpile` now emits unsigned
+  `Binary` widening `impl` bodies as the **real** `width_cast(self, <Binary{M} witness>)` prim (witness
+  = a synthesized all-zero `BinLit` of `M` bits; grammar/RFC-0020-confirmed width-from-content; DN-41 §3
+  makes the witness bits unused). Raised **std-cmp 3.6%→12.6%** (10 conversion `impl`s became genuine
+  emissions). Honestly still gapped: **signed** widening (ADR-028 sign-free `Binary` — a real semantic
+  gap), `bool`-`Self` widening (no witness), and all **narrowing** (DN-41 fallible/`Result`, no single-
+  `= expr` form). The principle: emit a body **iff** it maps to a *confirmed real* surface, else gap it.
+- **Directory/batch CLI mode** — `mycelium-transpile <crate-src-dir> <out>` transpiles a whole crate's
+  `src/` (skips tests), emitting per-file `.myc`/`.gap.json` + combined `summary.json`/`union.gap.json`.
+- **Union surface-feature backlog across 6 core-lib crates** (`fixtures/UNION-BACKLOG.md`,
+  `union-backlog.json`): grand union **43/346 ≈ 12.4%** expressible (`Empirical`). Re-ranked demand data
+  — **unsupported *types* #1 (36%: `String`/`text`, `usize`/`isize`, `char`, closures, and signed ints —
+  an ADR-028 sign-free consequence)**, macros #2 (22%), trait-bounded generics #3 (12%). Recorded in
+  DN-34 §8.5.
+- **Grounded self-hosting finding (DN-34 §8.6):** `std.option`/`std.result` have **no Rust source**
+  (authored directly in Mycelium — M-715/M-649); excluded from the corpus, never substituted (VR-5/G2).
+- **Honest artifact parity fix:** regenerated the single-file `std-cmp` fixtures (they were stale after
+  `width_cast` landed — now 14 emitted / 20 `width_cast` lines, matching the batch output + the code).
+- 16/16 tests green (fmt/clippy clean). **Flagged for integration:** the `cargo-public-api` baseline
+  still can't be generated in-env (tool absent) — deferred, not fabricated.
+
+### Added (2026-07-01: M-873 — Rust→Mycelium transpiler PoC + prioritized surface-feature backlog)
+
+- **`crates/mycelium-transpile` (new, PoC — kickoff `trx`, DN-34 §8).** A `syn`-based Rust→Mycelium
+  transpiler spike: it reads one Rust crate's AST and emits (a) a best-effort `.myc` for the
+  expressible fraction and (b) a **never-silent, structured gap report**
+  (`{file, line, rust_construct, reason, category}` JSON) for everything it cannot faithfully express.
+  Built on an **exhaustive dispatch** whose fallback arm always records a gap — *not* an allowlist
+  (the seed `py2rust` analyzer was an allowlist with a silent pass-through; DN-34 §8.1 corrects the
+  seed posture with measured specifics). New deps (`syn`/`quote`/`serde`) are scoped to this crate
+  only (KC-3, not the kernel). 7/7 tests green (`fmt`/`clippy -D warnings` clean); fixtures
+  (`fixtures/std-cmp.{myc,gap.json}`) checked in as evidence.
+- **First `Empirical` transpiler data (converts DN-34 §6-Q6 + assessment §5a from `Declared`).** Run
+  on `mycelium-std-cmp` and diffed against `lib/std/cmp.myc`: **4 of 111 non-test top-level items
+  expressible ≈ 3.6%** against the current surface *without* macro expansion (a lower bound); the
+  dominant blocker is **macro-generated code (~55% of gaps)**, so the highest-leverage next step is
+  transpiler-side **macro expansion**. Measured PoC cost **~0.85–0.95M tokens** — at/below the low end
+  of the `Declared` "first spike ~1–3M" estimate.
+- **Prioritized surface-feature backlog (first-class output, DN-34 §8.3).** The union of gaps, ranked
+  by measured demand on `std-cmp` — macros → conversion/`as`-cast op bodies → trait definitions →
+  trait-bounded generics → payload-carrying enum variants → derive attrs → named-field structs — as
+  the real, demand-grounded input to E18-1's `needs-design` work.
+- **Transparency (G2/VR-5).** The emitted `.myc` is tagged `Declared`/unvalidated (no Mycelium
+  parser/checker confirms it); the diff extraction is a `Declared` heuristic. A review pass
+  reclassified 12 numeric-widening `impl` blocks that had a fabricated `from(self)` body from
+  *emitted* to *gapped* — the emitter now flags any body it cannot faithfully lower rather than
+  inventing one (DN-34 §8.2). Assessment doc + self-hosting port ledger updated with the measured
+  rate; DN-34 stays **Draft** (a spike, not the gated full phase).
+
 ### Added (2026-07-01: M-872 — remote registry name@version immutability + dogfooding effort/usage assessment)
 
 - **Remote spore publish now enforces `name@version` immutability (M-872).** `publish_remote` gained a
