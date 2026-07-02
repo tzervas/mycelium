@@ -5156,12 +5156,17 @@ impl Cx<'_> {
         }
     }
 
-    /// Try to check a call to a **VSA prim** (RFC-0003 §3/§4/§5; ADR-008) — the M-892 bind group
-    /// `vsa_bind`/`vsa_unbind` (binary, hypervector × hypervector) and `vsa_permute`
+    /// Try to check a call to a **VSA prim** (RFC-0003 §3/§4/§5/§6; ADR-008) — the M-892 bind
+    /// group `vsa_bind`/`vsa_unbind` (binary, hypervector × hypervector) and `vsa_permute`
     /// (hypervector × `Binary{W}` shift), kernel `vsa.bind`/`vsa.unbind`/`vsa.permute`, plus the
     /// M-893 **certified superposition** `vsa_bundle` (`Seq{VSA{…}, N≥1}` × `Float` δ →
-    /// `VSA{…}`), kernel `vsa.bundle` (surface names `_`-joined like `dense_add`). Returns
-    /// `Ok(None)` if `name` is not one of them.
+    /// `VSA{…}`), kernel `vsa.bundle`, plus the M-894 **cleanup/reconstruction pair and the
+    /// capacity query** — `vsa_cleanup` (`VSA{…}` × `Seq{VSA{…}, N≥1}` → `Seq{Float, 3}`,
+    /// the `[index, confidence, margin]` decision triple), `vsa_reconstruct`
+    /// (`VSA{…}` × `VSA{…}` × `Seq{VSA{…}, N≥1}` × `Float` threshold → `Seq{Float, 3}`), and
+    /// `vsa_required_dim` (`Binary{W}` items × `Float` δ → `Binary{64}`), kernel
+    /// `vsa.cleanup`/`vsa.reconstruct`/`vsa.required_dim` (surface names `_`-joined like
+    /// `dense_add`). Returns `Ok(None)` if `name` is not one of them.
     ///
     /// Model + dim + sparsity live in the type (`VSA{model, dim, sparsity}`), so the static rules
     /// are: every hypervector operand must be a `VSA` type with **one shared model + dim +
@@ -5186,11 +5191,28 @@ impl Cx<'_> {
     /// **runtime** (δ is a run-time `Float`): the kernel refuses `InsufficientCapacity` naming
     /// the required dim rather than issuing an unbacked `Proven` bound.
     ///
+    /// The M-894 prims add their own static rules: `vsa_cleanup`/`vsa_reconstruct`'s codebook is
+    /// a `Seq{VSA{…}, N ≥ 1}` sharing the query/record's model + dim (`N` lives in the type, so
+    /// an **empty codebook is a static refusal** — nothing to clean up against); `vsa_reconstruct`
+    /// additionally restricts the model to the **reconstruct dispatch set {MAP-I, BSC}** — an
+    /// FHRR record is a *static* refusal naming the ground (FHRR's `Empirical` unbind profile is
+    /// trial-validated only for a single bind product, not a reconstruction record — VR-5; its
+    /// surfacing is an append-only extension under a reconstruction-regime profile of its own),
+    /// and its threshold is a `Float` (the RFC-0003 §6 manifest's `cleanup_threshold ∈ [0, 1]`
+    /// made an explicit operand — the domain check stays runtime, δ-style). `vsa_required_dim`'s
+    /// items ride any unsigned `Binary{W}` magnitude (like `vsa_permute`'s shift — a bare decimal
+    /// has no width anchor, RFC-0012 §4.3) and the result is the `Binary{64}` sufficient
+    /// dimension carrying the kernel's `Proven` `CapacityBound`. Both retrieval prims return the
+    /// `Seq{Float, 3}` decision triple — the retrieval is never a silent nearest-neighbour pick
+    /// (FR-S4/G2: confidence + margin are first-class results).
+    ///
     /// The numeric-domain contracts stay **runtime**, owned by the kernel and carried through the
-    /// interpreter wrapper: alphabet violations, the FHRR unbind regime gate, and non-`Exact`
-    /// operand composition are explicit runtime refusals; per-op tags ride the runtime value
+    /// interpreter wrapper: alphabet violations, the FHRR unbind regime gate, non-`Exact`
+    /// operand composition, the RFC-0010 §4.4 identifiability tie, and the below-threshold
+    /// retrieval are explicit runtime refusals; per-op tags ride the runtime value
     /// **per model** (MAP-I/BSC ops `Exact`; FHRR `unbind` `Empirical` with its trial-validated
-    /// δ bound; the certified `vsa.bundle` result `Proven` with its checked `CapacityBound` —
+    /// δ bound; the certified `vsa.bundle` result `Proven` with its checked `CapacityBound`;
+    /// the M-894 decision triple carrying the query/record's own (strength, bound) pair —
     /// VR-5, carried, never re-stamped; `mycelium-interp/src/prims.rs`).
     fn try_check_vsa_prim(
         &self,
@@ -5201,7 +5223,13 @@ impl Cx<'_> {
     ) -> Result<Option<(Ty, Expr)>, CheckError> {
         if !matches!(
             name,
-            "vsa_bind" | "vsa_unbind" | "vsa_permute" | "vsa_bundle"
+            "vsa_bind"
+                | "vsa_unbind"
+                | "vsa_permute"
+                | "vsa_bundle"
+                | "vsa_cleanup"
+                | "vsa_reconstruct"
+                | "vsa_required_dim"
         ) {
             return Ok(None);
         }
@@ -5261,6 +5289,78 @@ impl Cx<'_> {
             }
             Ok((model, dim, sparsity, a2))
         };
+        // The M-894 codebook operand: a `Seq{VSA{model, dim, Dense}, N ≥ 1}` whose atoms share
+        // the query/record's model + dim. `N` lives in the type, so the empty codebook is a
+        // *static* refusal (nothing to clean up against — FR-S4; the runtime twin stays in the
+        // interpreter wrapper for injected values).
+        let check_codebook = |scope: &mut Vec<(String, Ty)>,
+                              a: &Expr,
+                              model: &str,
+                              dim: u32|
+         -> Result<Expr, CheckError> {
+            let (sty, s2) = self.check(scope, a, None)?;
+            let Ty::Seq(elem, n) = sty else {
+                return Err(CheckError::new(
+                    self.site,
+                    format!(
+                        "`{name}` codebook must be a `Seq{{VSA{{model, dim, sparsity}}, N}}` of \
+                         clean atoms, got {sty} (RFC-0003 §3/§6; M-894 — never a silent \
+                         conversion)"
+                    ),
+                ));
+            };
+            let Ty::Vsa {
+                model: cm,
+                dim: cd,
+                sparsity: cs,
+            } = *elem
+            else {
+                return Err(CheckError::new(
+                    self.site,
+                    format!(
+                        "`{name}` codebook atoms must be `VSA{{model, dim, sparsity}}` \
+                         hypervectors, got a Seq of {elem} (M-894 — never a silent conversion; \
+                         a cross-paradigm edge needs an explicit `swap`)"
+                    ),
+                ));
+            };
+            if cm != model || cd != dim {
+                return Err(CheckError::new(
+                    self.site,
+                    format!(
+                        "`{name}` codebook atoms must share the query's model and dim, got \
+                         VSA{{{cm}, {cd}}} atoms against a VSA{{{model}, {dim}}} query/record \
+                         (M-894 — a model or dim mismatch is an explicit refusal, never a \
+                         cross-model coercion; G2)"
+                    ),
+                ));
+            }
+            if cs != Sparsity::Dense {
+                return Err(CheckError::new(
+                    self.site,
+                    format!(
+                        "`{name}` requires `Dense`-sparsity codebook atoms at introduction — \
+                         the kernel's cleanup memory holds dense-class atoms, so a Sparse atom \
+                         type would diverge from the runtime value (M-894; refused, never \
+                         silently re-classed — G2)"
+                    ),
+                ));
+            }
+            if n == 0 {
+                return Err(CheckError::new(
+                    self.site,
+                    format!(
+                        "`{name}` requires at least one codebook atom — an empty cleanup memory \
+                         has nothing to clean up against (FR-S4; M-894 — refused statically, \
+                         never a defaulted retrieval; G2)"
+                    ),
+                ));
+            }
+            Ok(s2)
+        };
+        // Both retrieval prims return the `[index, confidence, margin]` decision triple — the
+        // retrieval decision is a first-class, inspectable value (FR-S4/G2).
+        let triple_ty = || Ty::Seq(Box::new(Ty::Float), 3);
         match name {
             "vsa_bind" | "vsa_unbind" => {
                 if args.len() != 2 {
@@ -5390,6 +5490,95 @@ impl Cx<'_> {
                         sparsity,
                     },
                     app_node(head, vec![s2, d2]),
+                )))
+            }
+            // M-894: `vsa_cleanup(query, codebook)` — the cleanup-memory retrieval. The query may
+            // be any dispatch-set model (the arg-max procedure is model-generic — the model only
+            // supplies `similarity`); the codebook must share its model + dim. Result: the
+            // decision triple.
+            "vsa_cleanup" => {
+                if args.len() != 2 {
+                    return arity_err(2);
+                }
+                let (m, d, _sp, q2) = check_hv(scope, &args[0], "query")?;
+                let cb2 = check_codebook(scope, &args[1], &m, d)?;
+                Ok(Some((triple_ty(), app_node(head, vec![q2, cb2]))))
+            }
+            // M-894: `vsa_reconstruct(record, role, codebook, threshold)` — the RFC-0003 §6
+            // compositional role-reconstruction (unbind → cleanup → an explicit threshold). The
+            // model must be in the **reconstruct dispatch set {MAP-I, BSC}** (the self-inverse
+            // Exact unbinds): FHRR's Empirical unbind profile is trial-validated only for a
+            // single `vsa.fhrr.bind` product, which a reconstruction record is not — stretching
+            // it would be an unearned tag (VR-5), so the refusal is static and names the ground;
+            // surfacing FHRR reconstruction is a distinct append-only extension under a
+            // reconstruction-regime profile of its own.
+            "vsa_reconstruct" => {
+                if args.len() != 4 {
+                    return arity_err(4);
+                }
+                let (m, d, _sp, r2) = check_hv(scope, &args[0], "record")?;
+                if m != "MAP-I" && m != "BSC" {
+                    return self.err(format!(
+                        "`vsa_reconstruct` model {m:?} is outside the reconstruct dispatch set \
+                         at introduction ({{MAP-I, BSC}}) — FHRR's unbind tag is Empirical and \
+                         trial-validated only for a single bind product, not a reconstruction \
+                         record (M-894; VR-5 — never a stretched profile; surfacing it is a \
+                         distinct, append-only extension)"
+                    ));
+                }
+                let (mb, db, _spb, role2) = check_hv(scope, &args[1], "role")?;
+                if mb != m || db != d {
+                    return self.err(format!(
+                        "`vsa_reconstruct` record and role must share one model and dim, got \
+                         VSA{{{m}, {d}}} and VSA{{{mb}, {db}}} (M-894 — a model or dim mismatch \
+                         is an explicit refusal, never a cross-model coercion; G2)"
+                    ));
+                }
+                let cb2 = check_codebook(scope, &args[2], &m, d)?;
+                // The threshold: a `Float` — the RFC-0003 §6 manifest's `cleanup_threshold`
+                // made an explicit operand; its [0, 1] domain stays a runtime, kernel-owned
+                // refusal (δ-style — a run-time Float).
+                let (tty, t2) = self.check(scope, &args[3], Some(&Ty::Float))?;
+                if !matches!(tty, Ty::Float) {
+                    return self.err(format!(
+                        "`vsa_reconstruct` cleanup threshold must be a `Float`, got {tty} \
+                         (RFC-0003 §6; M-894 — a below-threshold retrieval is an explicit \
+                         refusal, never a defaulted or coerced threshold; G2)"
+                    ));
+                }
+                Ok(Some((
+                    triple_ty(),
+                    app_node(head, vec![r2, role2, cb2, t2]),
+                )))
+            }
+            // M-894: `vsa_required_dim(items, δ)` — the M-131 capacity-bound query. Items ride
+            // any unsigned `Binary{W}` magnitude (like `vsa_permute`'s shift — a bare decimal
+            // has no width anchor here, RFC-0012 §4.3); δ is a `Float` whose (0, 1] domain is a
+            // runtime refusal. Result: the `Binary{64}` sufficient dimension, carrying the
+            // kernel's `Proven` `CapacityBound` (the checked instantiation — inspectable).
+            "vsa_required_dim" => {
+                if args.len() != 2 {
+                    return arity_err(2);
+                }
+                let (ity, i2) = self.check(scope, &args[0], None)?;
+                let Ty::Binary(_) = ity else {
+                    return self.err(format!(
+                        "`vsa_required_dim` items must be an unsigned `Binary{{W}}` magnitude, \
+                         got {ity} (M-894 — a bare decimal has no width anchor here and must be \
+                         written/ascribed explicitly, RFC-0012 §4.3)"
+                    ));
+                };
+                let (dty, d2) = self.check(scope, &args[1], Some(&Ty::Float))?;
+                if !matches!(dty, Ty::Float) {
+                    return self.err(format!(
+                        "`vsa_required_dim` target failure probability δ must be a `Float`, \
+                         got {dty} (M-894 — the capacity theorem instantiates an explicit δ; \
+                         never a defaulted or coerced parameter — G2)"
+                    ));
+                }
+                Ok(Some((
+                    Ty::Binary(Width::Lit(64)),
+                    app_node(head, vec![i2, d2]),
                 )))
             }
             _ => unreachable!("gated by the matches! above"),
@@ -6172,6 +6361,24 @@ pub fn prim_kernel_name(name: &str) -> Option<&'static str> {
         // in the type); FHRR/BSC bundles are Empirical-profile kernel ops — statically refused
         // here naming the certified set, an append-only future surfacing (VR-5).
         "vsa_bundle" => "vsa.bundle",
+        // RFC-0003 §3/§5/§6 / ADR-008 (M-894, `enb` Gap C): the cleanup/reconstruction pair +
+        // the capacity-bound query. `vsa.cleanup` (query × codebook) and `vsa.reconstruct`
+        // (record × role × codebook × threshold) return the `Seq{Float, 3}` `[index, confidence,
+        // margin]` decision triple — retrieval is never a silent nearest-neighbour pick
+        // (FR-S4/G2), a tie is the RFC-0010 §4.4 identifiability refusal, and the query/record's
+        // own (strength, bound) pair carries through (a certified bundle record re-discloses its
+        // `Proven` `CapacityBound` — the disclosed bound is the value's own; VR-5).
+        // `vsa.required_dim` (items × δ → `Binary{64}`) surfaces the M-131
+        // `requiredDim`/`proven_capacity_bound` checked instantiation, its result carrying the
+        // kernel's `Proven` `CapacityBound`. Typed by `try_check_vsa_prim`: cleanup dispatches
+        // the full MAP-I/FHRR/BSC set (the arg-max is model-generic); reconstruct the
+        // self-inverse {MAP-I, BSC} (FHRR statically refused naming its unbind profile's
+        // regime); the factor decode (`reconstruct_factors`, RFC-0009/0010) is deliberately not
+        // surfaced here — its RFC-0005 selector's mandatory EXPLAIN has no prim-surface carrier
+        // yet — a distinct append-only surfacing under its own name.
+        "vsa_cleanup" => "vsa.cleanup",
+        "vsa_reconstruct" => "vsa.reconstruct",
+        "vsa_required_dim" => "vsa.required_dim",
         "add" => "trit.add",
         "sub" => "trit.sub",
         "mul" => "trit.mul",
