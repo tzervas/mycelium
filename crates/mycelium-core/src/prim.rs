@@ -190,13 +190,19 @@ impl PrimTable {
     /// `Dense{1, F64}` measurement carrying the kernel's proven binary64 accumulation bound),
     /// and the **scalar-float arithmetic group**
     /// (`flt.add`/`flt.sub`/`flt.mul`/`flt.div`/`flt.neg`, ADR-040 §2.5, M-898 — `enb` Gap A;
-    /// IEEE-754 binary64 under RNE over `Repr::Float`, in-band specials per the ratified FLAG-2).
+    /// IEEE-754 binary64 under RNE over `Repr::Float`, in-band specials per the ratified FLAG-2),
+    /// and the **scalar-float comparison group**
+    /// (`flt.lt`/`flt.le`/`flt.gt`/`flt.ge`/`flt.eq` — the IEEE-754 §5.11 partial-order
+    /// predicates, NaN explicitly unordered — plus the named opt-in total order `flt.total_le`
+    /// (IEEE-754 §5.10 `totalOrder`), ADR-040 §2.4, M-899 — `enb` Gap A; the total-order
+    /// *property* stays `Empirical` until the M-511 proof debt is discharged).
     /// Every entry is `intrinsic = Exact` **except** `dense.add`/`dense.sub`/`dense.scale`/
     /// `dense.dot`/`dense.similarity` (`Proven`, carried from the kernel's per-op tag) and the
     /// `flt.*` group (`Empirical` — the ratified ADR-040 §2.6 host-conformance posture; see the
-    /// entry comment); all are width-`Uniform` **except** `cmp.eq`/`cmp.lt` and
-    /// `dense.dot`/`dense.similarity`, which are width-`Collapse` (operand width → `Binary{1}` /
-    /// operand dim → a dim-1 measurement). This is the single source of truth the
+    /// entry comment); all are width-`Uniform` **except** `cmp.eq`/`cmp.lt`,
+    /// `dense.dot`/`dense.similarity`, and the `flt.*` comparison group, which are
+    /// width-`Collapse` (operand width → `Binary{1}` / operand dim → a dim-1 measurement /
+    /// two `Float` scalars → a `Binary{1}` truth value). This is the single source of truth the
     /// `mycelium-interp` intrinsic and the `mycelium-l1` surface table are checked against.
     #[must_use]
     pub fn builtins() -> Self {
@@ -418,6 +424,52 @@ impl PrimTable {
         t.insert("flt.mul", flt(vec![Any, Any]));
         t.insert("flt.div", flt(vec![Any, Any]));
         t.insert("flt.neg", flt(vec![Any]));
+        // ADR-040 §2.4 (M-899, `enb` Gap A): the **scalar-float comparison group** — two `Float`
+        // operands reduce to a `Binary{1}` truth value (`WidthRel::Collapse`, the `cmp.eq`/
+        // `cmp.lt` shape; the realized `Bool` of RFC-0032 D1's engineering note).
+        //
+        // **Explicit NaN semantics — the ADR-040 §2.4 partial order.** `flt.lt`/`flt.le`/
+        // `flt.gt`/`flt.ge`/`flt.eq` are the IEEE-754 §5.11 quiet comparison *predicates*: float
+        // ordering is **partial**, and a comparison involving NaN is the *defined* predicate
+        // value **false** on every predicate (`flt.eq(NaN, NaN) = false` — NaN ≠ NaN). "False"
+        // from `flt.lt` asserts "no `<` relation holds", never "≥": the no-order case is
+        // explicitly *observable* from the predicate set itself (`¬le(a,b) ∧ ¬gt(a,b)` ⟺
+        // unordered; `¬eq(x,x)` ⟺ NaN), so nothing is silently funneled into an ordering (G2 —
+        // the §2.4 "never a silent false-as-less-than" clause; the `Option`-shaped three-way
+        // `partial_cmp` is the `std.cmp` surface built *on* these predicates, cmp.md Q1, not a
+        // kernel prim). **`flt.total_le` is the named, opt-in total order** — IEEE-754 §5.10
+        // `totalOrder(a, b)` (a precedes-or-equals b): `−inf < … < −0 < +0 < … < +inf < NaN`
+        // (the canonical positive quiet NaN of §2.3 sorts *last*, and `total_le` is reflexive on
+        // NaN where `flt.le` is not; `−0`/`+0` are *distinct* under it where `flt.eq` calls them
+        // equal — the FLAG-4 identity-vs-equality seam, made orderable *by name*, never
+        // silently). Sorting/keying routes through `flt.total_le` explicitly — imposing a total
+        // order silently is exactly what cmp.md Q1 rejects.
+        //
+        // **Intrinsic — `Empirical`, per the ratified ADR-040 §2.6 (VR-5, never upgraded):**
+        // partial-order behavior is `Empirical` (property-tested, NaN cases in conformance —
+        // the host-`f64`-operators-implement-IEEE-§5.11 claim rests on the `Declared` Rust
+        // platform statement, pinned by the reference corpus in `mycelium-interp`), and the
+        // `totalOrder` total-order *property* (totality/antisymmetry/transitivity) **stays
+        // `Empirical` until a proof lands — the M-511 proof debt, load-bearing here and NOT
+        // claimed `Proven`** (no checked side-condition theorem exists yet).
+        //
+        // Paradigm note: operands are the same documented `Any` escape hatch as the arithmetic
+        // group above (no first-class `Float` paradigm yet); the result genuinely IS `Binary{1}`,
+        // so `result: Binary` is precise, not a hatch.
+        let flt_cmp = || PrimDecl {
+            sig: PrimSig {
+                operands: vec![Any, Any],
+                result: Binary,
+                width: WidthRel::Collapse,
+            },
+            intrinsic: GuaranteeStrength::Empirical,
+        };
+        t.insert("flt.lt", flt_cmp());
+        t.insert("flt.le", flt_cmp());
+        t.insert("flt.gt", flt_cmp());
+        t.insert("flt.ge", flt_cmp());
+        t.insert("flt.eq", flt_cmp());
+        t.insert("flt.total_le", flt_cmp());
         t
     }
 
