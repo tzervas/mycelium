@@ -1,7 +1,8 @@
 //! White-box tests for [`crate::binary`]. Extracted from the logic file as-touched by M-887 (test
 //! layout rule, M-797) — the pre-existing codec tests plus the new [`crate::binary::mul`] coverage.
 //! M-888 adds the unsigned [`crate::binary::div_rem`] coverage. M-889 adds the logical
-//! [`crate::binary::shl`]/[`crate::binary::shr`] coverage.
+//! [`crate::binary::shl`]/[`crate::binary::shr`] coverage. M-766 adds the shared two's-complement
+//! [`crate::binary::add`]/[`crate::binary::sub`]/[`crate::binary::neg`] coverage.
 
 use crate::binary::*;
 
@@ -405,6 +406,263 @@ fn shift_matches_native_oracle() {
                         "shr {v}>>{k} at n={n}"
                     );
                 }
+            }
+        }
+    }
+}
+
+// ---- M-766: `add`/`sub`/`neg` — the shared two's-complement set's genuinely-missing members ------
+
+#[test]
+fn add_worked_examples() {
+    // 3 + 4 = 7, in range at Binary{8}.
+    let a = int_to_bits(3, 8).unwrap();
+    let b = int_to_bits(4, 8).unwrap();
+    assert_eq!(add(&a, &b), int_to_bits(7, 8));
+
+    // -3 + 4 = 1.
+    let a = int_to_bits(-3, 8).unwrap();
+    let b = int_to_bits(4, 8).unwrap();
+    assert_eq!(add(&a, &b), int_to_bits(1, 8));
+
+    // -3 + -4 = -7.
+    let a = int_to_bits(-3, 8).unwrap();
+    let b = int_to_bits(-4, 8).unwrap();
+    assert_eq!(add(&a, &b), int_to_bits(-7, 8));
+
+    // 0 + anything = anything.
+    let zero = int_to_bits(0, 8).unwrap();
+    let x = int_to_bits(-100, 8).unwrap();
+    assert_eq!(add(&zero, &x), int_to_bits(-100, 8));
+}
+
+/// The genuine gap `add` closes relative to `bit.add`: `5 + 3 = 8` is unsigned-in-range at
+/// `Binary{4}` (`[0,15]`) but signed-out-of-range (`B_4 = [-8,7]`) — `add` refuses it, honoring the
+/// two's-complement/signed domain `bit.add`'s unsigned overflow criterion would silently miss.
+#[test]
+fn add_refuses_where_unsigned_addition_would_not() {
+    let a = int_to_bits(5, 4).unwrap();
+    let b = int_to_bits(3, 4).unwrap();
+    assert_eq!(
+        add(&a, &b),
+        None,
+        "5 + 3 at Binary{{4}} is signed-out-of-range B_4 = [-8,7]"
+    );
+}
+
+#[test]
+fn add_overflow_and_in_range_boundary() {
+    // 127 + 1 = 128, out of B_8 ([-128, 127]).
+    let a = int_to_bits(127, 8).unwrap();
+    let b = int_to_bits(1, 8).unwrap();
+    assert_eq!(add(&a, &b), None);
+
+    // -128 + 0 = -128, exactly the low boundary, in range.
+    let a = int_to_bits(-128, 8).unwrap();
+    let b = int_to_bits(0, 8).unwrap();
+    assert_eq!(add(&a, &b), int_to_bits(-128, 8));
+
+    // -128 + -1 = -129, out of range (the low-boundary overflow).
+    let a = int_to_bits(-128, 8).unwrap();
+    let b = int_to_bits(-1, 8).unwrap();
+    assert_eq!(add(&a, &b), None);
+}
+
+#[test]
+fn add_rejects_unequal_widths() {
+    let a = int_to_bits(1, 4).unwrap();
+    let b = int_to_bits(1, 8).unwrap();
+    assert_eq!(add(&a, &b), None);
+}
+
+#[test]
+fn add_rejects_over_cap_width() {
+    let a = vec![false; TC_MAX_WIDTH + 1];
+    let b = vec![false; TC_MAX_WIDTH + 1];
+    assert_eq!(add(&a, &b), None);
+    let a64 = vec![false; TC_MAX_WIDTH];
+    let b64 = vec![false; TC_MAX_WIDTH];
+    assert_eq!(add(&a64, &b64), int_to_bits(0, 64));
+}
+
+#[test]
+fn add_n0_is_trivially_zero() {
+    assert_eq!(add(&[], &[]), Some(Vec::new()));
+}
+
+/// **Oracle property test (the overflow bound):** `add` agrees with an `i128` oracle for every pair
+/// at small widths — in range it equals the exact sum's encoding, out of range it is `None`.
+#[test]
+fn add_matches_integer_oracle() {
+    for n in 1u32..=8 {
+        let lo = -(1i64 << (n - 1));
+        let hi = (1i64 << (n - 1)) - 1;
+        for x in lo..=hi {
+            for y in lo..=hi {
+                let a = int_to_bits(x, n).unwrap();
+                let b = int_to_bits(y, n).unwrap();
+                let got = add(&a, &b);
+                let expected = i128::from(x) + i128::from(y);
+                if expected >= i128::from(lo) && expected <= i128::from(hi) {
+                    let expected_i64 = expected as i64;
+                    assert_eq!(got, int_to_bits(expected_i64, n), "add {x}+{y} at n={n}");
+                } else {
+                    assert_eq!(got, None, "add {x}+{y} should overflow at n={n}");
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn sub_worked_examples() {
+    // 7 - 4 = 3, in range at Binary{8}.
+    let a = int_to_bits(7, 8).unwrap();
+    let b = int_to_bits(4, 8).unwrap();
+    assert_eq!(sub(&a, &b), int_to_bits(3, 8));
+
+    // -3 - 4 = -7.
+    let a = int_to_bits(-3, 8).unwrap();
+    let b = int_to_bits(4, 8).unwrap();
+    assert_eq!(sub(&a, &b), int_to_bits(-7, 8));
+
+    // 4 - (-3) = 7.
+    let a = int_to_bits(4, 8).unwrap();
+    let b = int_to_bits(-3, 8).unwrap();
+    assert_eq!(sub(&a, &b), int_to_bits(7, 8));
+
+    // anything - itself = 0.
+    let x = int_to_bits(-100, 8).unwrap();
+    assert_eq!(sub(&x, &x), int_to_bits(0, 8));
+}
+
+/// The genuine gap `sub` closes relative to `bit.sub`: `-8 - 1 = -9` has no unsigned borrow-out at
+/// `Binary{4}` in the way `bit.sub` checks it (both operands' unsigned magnitudes: `8 - 1 = 7`, no
+/// borrow), but is signed-out-of-range (`B_4 = [-8,7]`) — `sub` refuses it explicitly.
+#[test]
+fn sub_overflow_and_in_range_boundary() {
+    // -128 - 1 = -129, out of B_8 ([-128, 127]).
+    let a = int_to_bits(-128, 8).unwrap();
+    let b = int_to_bits(1, 8).unwrap();
+    assert_eq!(sub(&a, &b), None);
+
+    // 127 - (-1) = 128, out of range (the high-boundary overflow).
+    let a = int_to_bits(127, 8).unwrap();
+    let b = int_to_bits(-1, 8).unwrap();
+    assert_eq!(sub(&a, &b), None);
+
+    // -128 - 0 = -128, exactly the low boundary, in range.
+    let a = int_to_bits(-128, 8).unwrap();
+    let b = int_to_bits(0, 8).unwrap();
+    assert_eq!(sub(&a, &b), int_to_bits(-128, 8));
+}
+
+#[test]
+fn sub_rejects_unequal_widths() {
+    let a = int_to_bits(1, 4).unwrap();
+    let b = int_to_bits(1, 8).unwrap();
+    assert_eq!(sub(&a, &b), None);
+}
+
+#[test]
+fn sub_rejects_over_cap_width() {
+    let a = vec![false; TC_MAX_WIDTH + 1];
+    let b = vec![false; TC_MAX_WIDTH + 1];
+    assert_eq!(sub(&a, &b), None);
+    let a64 = vec![false; TC_MAX_WIDTH];
+    let b64 = vec![false; TC_MAX_WIDTH];
+    assert_eq!(sub(&a64, &b64), int_to_bits(0, 64));
+}
+
+#[test]
+fn sub_n0_is_trivially_zero() {
+    assert_eq!(sub(&[], &[]), Some(Vec::new()));
+}
+
+/// **Oracle property test (the overflow bound):** `sub` agrees with an `i128` oracle for every pair
+/// at small widths.
+#[test]
+fn sub_matches_integer_oracle() {
+    for n in 1u32..=8 {
+        let lo = -(1i64 << (n - 1));
+        let hi = (1i64 << (n - 1)) - 1;
+        for x in lo..=hi {
+            for y in lo..=hi {
+                let a = int_to_bits(x, n).unwrap();
+                let b = int_to_bits(y, n).unwrap();
+                let got = sub(&a, &b);
+                let expected = i128::from(x) - i128::from(y);
+                if expected >= i128::from(lo) && expected <= i128::from(hi) {
+                    let expected_i64 = expected as i64;
+                    assert_eq!(got, int_to_bits(expected_i64, n), "sub {x}-{y} at n={n}");
+                } else {
+                    assert_eq!(got, None, "sub {x}-{y} should overflow at n={n}");
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn neg_worked_examples() {
+    let three = int_to_bits(3, 8).unwrap();
+    assert_eq!(neg(&three), int_to_bits(-3, 8));
+
+    let neg_three = int_to_bits(-3, 8).unwrap();
+    assert_eq!(neg(&neg_three), int_to_bits(3, 8));
+
+    let zero = int_to_bits(0, 8).unwrap();
+    assert_eq!(neg(&zero), int_to_bits(0, 8));
+}
+
+/// The classic two's-complement negate-overflow edge: `B_n`'s minimum value `-2^(n-1)` has no
+/// positive counterpart in `B_n` — an explicit `None`, never a silent wrap back to itself.
+#[test]
+fn neg_min_value_overflows() {
+    let min8 = int_to_bits(-128, 8).unwrap();
+    assert_eq!(
+        neg(&min8),
+        None,
+        "-(-128) = 128 does not fit B_8 = [-128, 127]"
+    );
+
+    let min4 = int_to_bits(-8, 4).unwrap();
+    assert_eq!(neg(&min4), None, "-(-8) = 8 does not fit B_4 = [-8, 7]");
+
+    // The maximum value negates fine (it is not the boundary case).
+    let max8 = int_to_bits(127, 8).unwrap();
+    assert_eq!(neg(&max8), int_to_bits(-127, 8));
+}
+
+#[test]
+fn neg_rejects_over_cap_width() {
+    let a = vec![false; TC_MAX_WIDTH + 1];
+    assert_eq!(neg(&a), None);
+    let a64 = vec![false; TC_MAX_WIDTH];
+    assert_eq!(neg(&a64), int_to_bits(0, 64));
+}
+
+#[test]
+fn neg_n0_is_trivially_zero() {
+    assert_eq!(neg(&[]), Some(Vec::new()));
+}
+
+/// **Oracle property test (the overflow bound):** `neg` agrees with an `i128` oracle for every value
+/// at small widths — in range it equals the exact negation's encoding, the `MIN` value is `None`.
+#[test]
+fn neg_matches_integer_oracle() {
+    for n in 1u32..=8 {
+        let lo = -(1i64 << (n - 1));
+        let hi = (1i64 << (n - 1)) - 1;
+        for x in lo..=hi {
+            let a = int_to_bits(x, n).unwrap();
+            let got = neg(&a);
+            let expected = -i128::from(x);
+            if expected >= i128::from(lo) && expected <= i128::from(hi) {
+                let expected_i64 = expected as i64;
+                assert_eq!(got, int_to_bits(expected_i64, n), "neg {x} at n={n}");
+            } else {
+                assert_eq!(got, None, "neg {x} should overflow at n={n}");
             }
         }
     }

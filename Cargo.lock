@@ -327,6 +327,7 @@ name = "mycelium-interp"
 version = "0.0.0"
 dependencies = [
  "mycelium-core",
+ "mycelium-dense",
  "mycelium-numerics",
  "mycelium-sched",
 ]
@@ -337,12 +338,14 @@ version = "0.0.0"
 dependencies = [
  "mycelium-cert",
  "mycelium-core",
+ "mycelium-dense",
  "mycelium-interp",
  "mycelium-mlir",
  "mycelium-numerics",
  "mycelium-stack",
  "mycelium-std-diag",
  "mycelium-std-error",
+ "mycelium-std-recover",
  "mycelium-std-ternary",
 ]
 

@@ -29,6 +29,7 @@ use mycelium_core::{
     binary, operation_hash, ternary, Bound, GuaranteeStrength, Meta, Payload, Provenance, Repr,
     Trit, Value,
 };
+use mycelium_dense::{DenseError, DenseSpace};
 use mycelium_numerics::{compose_error_bound, ErrorOp};
 
 use crate::EvalError;
@@ -77,9 +78,16 @@ impl PrimRegistry {
     /// `enb` Gap-B prim; sets the registry pattern the sibling Gap-B/C prims mirror), the
     /// never-silent **unsigned** `Binary` division/remainder (`bin.div`/`bin.rem`, RFC-0033
     /// §4.1.2/§4.1.3, M-888 — div-by-zero is an explicit refusal; the signed variant rides M-767),
-    /// and the never-silent **logical** `Binary` left/right shift (`bin.shl`/`bin.shr`, RFC-0033
+    /// the never-silent **logical** `Binary` left/right shift (`bin.shl`/`bin.shr`, RFC-0033
     /// §4.1.2/§4.1.3, M-889 — a shift amount `>= N` is an explicit refusal; the arithmetic/signed
-    /// variant rides M-767).
+    /// variant rides M-767), and the never-silent two's-complement `add`/`sub`/`neg`
+    /// (`bin.add`/`bin.sub`/`bin.neg`, RFC-0033 §4.1.2/§4.1.3, M-766 — completes the shared
+    /// two's-complement set `bin.mul` started; distinct from `bit.add`/`bit.sub`'s unsigned overflow
+    /// criterion), and the **dense elementwise group**
+    /// (`dense.add`/`dense.sub`/`dense.neg`/`dense.scale`, RFC-0001 §4.1/RFC-0002 §5, M-890 —
+    /// `enb` Gap C; the first tensor-valued prims, delegating to the `mycelium-dense` kernel and
+    /// carrying its per-op guarantee tags unchanged — `dense.neg` `Exact`, the rest `Proven`; see
+    /// the module note at the dense section below).
     #[must_use]
     pub fn with_builtins() -> Self {
         let mut r = PrimRegistry::empty();
@@ -106,6 +114,11 @@ impl PrimRegistry {
         // RFC-0033 §4.1.2/§4.1.3 (M-889, `enb` Gap B): never-silent logical left/right shift.
         r.register("bin.shl", prim_bin_shl);
         r.register("bin.shr", prim_bin_shr);
+        // RFC-0033 §4.1.2/§4.1.3 (M-766, `enb` Gap B): never-silent two's-complement add/sub/neg —
+        // completes the shared two's-complement op set `bin.mul` started.
+        r.register("bin.add", prim_bin_add);
+        r.register("bin.sub", prim_bin_sub);
+        r.register("bin.neg", prim_bin_neg);
         // DN-41 (M-798): never-silent width-cast (zero-extend widen / checked narrow) over `Binary`.
         r.register("bit.width_cast", prim_width_cast);
         // RFC-0032 D3 (M-749): never-silent indexed-sequence access over `Repr::Seq`.
@@ -121,6 +134,13 @@ impl PrimRegistry {
         // the non-`Binary` reprs have no committed canonical meet in v0 (DN-58 §A.6 F-A3), so only the
         // `Binary` meet is a built-in here. (RFC-0008 RT6; RFC-0027 §10.6 provenance shape.)
         r.register("fuse_join:binary", prim_fuse_join_binary);
+        // RFC-0001 §4.1 / RFC-0002 §5 (M-890, `enb` Gap C): the dense elementwise group — the
+        // first *tensor-valued* prims. The kernel (`mycelium-dense`) constructs the result with
+        // its honest per-op tag/bound; the wrappers carry it through unchanged (VR-5).
+        r.register("dense.add", prim_dense_add);
+        r.register("dense.sub", prim_dense_sub);
+        r.register("dense.neg", prim_dense_neg);
+        r.register("dense.scale", prim_dense_scale);
         r
     }
 
@@ -751,6 +771,126 @@ fn prim_bin_shr(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
     )
 }
 
+// --- RFC-0033 §4.1.2/§4.1.3 (M-766, `enb` Gap B): never-silent two's-complement add/sub/neg --------
+//
+// `bin.add`/`bin.sub`/`bin.neg` complete the *shared* two's-complement arithmetic set `bin.mul`
+// (M-887) started (ADR-028: `add`/`sub`/`mul`/`neg` are bit-identical across the signed/unsigned
+// reading of the operands, so they MAY be a single named op each). They read equal-width `Binary{N}`
+// operands under the two's-complement (**signed**) interpretation, exactly mirroring `bin.mul`.
+//
+// **Inventory (verified against the registry before landing these, per the M-766 task text —
+// "reconcile against the kpr-landed add/sub").** The pre-existing `bit.add`/`bit.sub` (kpr/E19-1,
+// RFC-0032 D2, registered above) are a **different, unsigned-committed** family: their overflow
+// criterion is the unsigned carry/borrow-out, which *under-refuses* relative to the signed range
+// `B_n` — e.g. at `Binary{4}`, `5 + 3 = 8` is unsigned-in-range `[0,15]` but signed-out-of-range
+// `B_4 = [-8,7]`, so `bit.add` would accept a sum a signed/two's-complement caller must not silently
+// receive. They therefore do **not** satisfy the RFC-0033 §4.1.2 shared two's-complement `add`/`sub`
+// this task names, and `bin.add`/`bin.sub` are genuinely missing (not a re-land of E19-1's work).
+// `bin.neg` has no pre-existing counterpart to reconcile against (negation is inherently a signed
+// concept) — it is unambiguously the shared set's missing fourth member.
+//
+// Never-silent: an out-of-range sum/difference/negation is an explicit [`EvalError::Overflow`],
+// never a wrap (RFC-0033 §4.1.3; G2) — the same posture as `bin.mul`.
+//
+// **Width cap (current scope).** Mirrors `bin.mul`: [`binary::add`]/[`binary::sub`]/[`binary::neg`]
+// are exact for `n ≤ `[`binary::TC_MAX_WIDTH`]`; a wider operand refuses with an explicit
+// [`EvalError::PrimType`] naming the cap.
+
+/// Shared arity/width validation + kernel dispatch for the two's-complement `bin.add`/`bin.sub`
+/// prims (M-766): checks arity 2, extracts equal-width `Binary` operand bits (width mismatch/
+/// over-cap → [`EvalError::PrimType`]), and calls `op` (`None` — the exact result does not fit
+/// `B_n` — → an explicit [`EvalError::Overflow`], never a silent wrap).
+fn bin_add_sub(
+    prim: &str,
+    args: &[&Value],
+    op: fn(&[bool], &[bool]) -> Option<Vec<bool>>,
+) -> Result<Vec<bool>, EvalError> {
+    expect_arity(prim, args, 2)?;
+    let a = as_bits(prim, args[0])?;
+    let b = as_bits(prim, args[1])?;
+    if a.len() != b.len() {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!("width mismatch: {} vs {} bits", a.len(), b.len()),
+        });
+    }
+    if a.len() > binary::TC_MAX_WIDTH {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!(
+                "width {} exceeds the {}-bit two's-complement arithmetic cap (M-766 scope)",
+                a.len(),
+                binary::TC_MAX_WIDTH
+            ),
+        });
+    }
+    op(a, b).ok_or_else(|| EvalError::Overflow {
+        prim: prim.to_owned(),
+    })
+}
+
+/// `bin.add : (Binary{N}, Binary{N}) → Binary{N}` — never-silent two's-complement add (RFC-0033
+/// §4.1.2/§4.1.3, M-766). Equal-width operands, `N ≤ `[`binary::TC_MAX_WIDTH`]`; a width mismatch or
+/// an over-cap width is an explicit [`EvalError::PrimType`], and an out-of-range sum is an explicit
+/// [`EvalError::Overflow`] — never a silent wrap (G2). Distinct from `bit.add` (RFC-0032 D2), whose
+/// unsigned carry-out overflow criterion under-refuses relative to the signed domain `B_N` (see the
+/// module-level inventory note above).
+fn prim_bin_add(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    let out = bin_add_sub(prim, args, binary::add)?;
+    compose_result(
+        prim,
+        args,
+        args[0].repr().clone(),
+        Payload::Bits(out),
+        ApproxRule::Refuse,
+    )
+}
+
+/// `bin.sub : (Binary{N}, Binary{N}) → Binary{N}` — never-silent two's-complement subtract
+/// (RFC-0033 §4.1.2/§4.1.3, M-766). Same never-silent contract as [`prim_bin_add`]; distinct from
+/// `bit.sub`'s unsigned borrow-out overflow criterion for the same reason.
+fn prim_bin_sub(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    let out = bin_add_sub(prim, args, binary::sub)?;
+    compose_result(
+        prim,
+        args,
+        args[0].repr().clone(),
+        Payload::Bits(out),
+        ApproxRule::Refuse,
+    )
+}
+
+/// `bin.neg : Binary{N} → Binary{N}` — never-silent two's-complement negate (RFC-0033
+/// §4.1.2/§4.1.3, M-766): the shared op set's genuinely-missing member (unlike `add`/`sub`/`mul`,
+/// there is no pre-existing unsigned "negate" to reconcile against). An over-cap width is an
+/// explicit [`EvalError::PrimType`]; negating `B_N`'s minimum value `-2^(N-1)` (which has no positive
+/// two's-complement counterpart in `B_N`) is an explicit [`EvalError::Overflow`] — never a silent
+/// wrap (G2), the classic two's-complement negate-overflow case.
+fn prim_bin_neg(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 1)?;
+    let a = as_bits(prim, args[0])?;
+    if a.len() > binary::TC_MAX_WIDTH {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!(
+                "width {} exceeds the {}-bit two's-complement arithmetic cap (M-766 scope)",
+                a.len(),
+                binary::TC_MAX_WIDTH
+            ),
+        });
+    }
+    let out = binary::neg(a).ok_or_else(|| EvalError::Overflow {
+        prim: prim.to_owned(),
+    })?;
+    compose_result(
+        prim,
+        args,
+        args[0].repr().clone(),
+        Payload::Bits(out),
+        ApproxRule::Refuse,
+    )
+}
+
 // --- DN-41 (M-798): never-silent `Binary` width-cast -------------------------------------------
 //
 // `bit.width_cast(value: Binary{N}, into: Binary{M}) -> Binary{M}` re-widths an unsigned `Binary`
@@ -1089,4 +1229,156 @@ fn prim_fuse_join_binary(prim: &str, args: &[&Value]) -> Result<Value, EvalError
     }
     let out: Vec<bool> = a.iter().zip(b).map(|(&x, &y)| x & y).collect();
     fuse_join_result(prim, args, args[0].repr().clone(), Payload::Bits(out))
+}
+
+// --- RFC-0001 §4.1 / RFC-0002 §5 (M-890, `enb` Gap C): the dense elementwise group ---------------
+//
+// `dense.add`/`dense.sub`/`dense.neg`/`dense.scale` surface the `mycelium-dense` kernel
+// (`add_values`/`sub_values`/`neg_value`/`scale_value`) as prims — the first **tensor-valued**
+// prims (operands/results are `Repr::Dense{dim, dtype}` values), and a distinct `dense.*`
+// namespace: nothing here touches the integer `bin.*`/`bit.*` conventions.
+//
+// **Registry pattern for the tensor-valued prims (the rest of Gap C — M-891 dot/similarity,
+// M-892..M-894 VSA — mirrors this):** unlike the scalar `bin.*`/`bit.*` prims (kernel codec over
+// raw bits → wrapper builds the result via [`compose_result`], whose intrinsic is `Exact`), a
+// tensor kernel op **constructs the full result `Value` itself** — payload *and* `Meta` (the
+// `Derived{op, inputs}` provenance, the per-op guarantee from `DenseSpace::op_guarantee`, and the
+// `Proven` ops' `Bound{Error{eps, Rel}, ProvenThm{citation}}` from `op_rel_eps`). The wrapper
+// therefore does NOT re-derive or re-compose the tag: it binds the space off the first operand's
+// `Repr`, delegates, **carries the kernel's tag through unchanged** (VR-5: the table/`Π` intrinsic
+// mirrors `op_guarantee`, guarded by `tests/prims.rs`), and maps each [`DenseError`] onto the
+// interpreter's never-silent error surface:
+//   - `Overflow` → [`EvalError::Overflow`] (a result outside the dtype's finite range);
+//   - `ApproximateSource` → [`EvalError::ApproxCompositionUnsupported`] (composing an approximate
+//     input's own bound with the op ε has no defined rule yet — M-204/M-211; refused, never
+//     fabricated);
+//   - everything else (dim/dtype/shape mismatch, non-dense operand, off-grid/non-finite payloads,
+//     subnormal results outside the cited theorem's side-conditions) → [`EvalError::PrimType`]
+//     carrying the kernel's own message — an explicit refusal, never a broadcast/coercion (G2).
+//
+// **`dense.scale`'s scalar operand (pre-Gap-A form — FLAG).** The kernel takes the factor as an
+// `f64`, but no scalar-float value form exists yet (that is `enb` Gap A, M-895/M-896, design-gated
+// behind the float ADR). The only float-bearing value form today is `Dense` itself, so the factor
+// is passed as a **`Dense{1, dtype}` value** (same dtype as the vector; must be `Exact` and
+// on-grid — the kernel re-checks the grid via `ScalarOffGrid`). When the scalar-float form lands,
+// surfacing a true-scalar variant is a maintainer decision (a new distinct op or a migration) —
+// FLAGged in the M-890 report, not silently pre-empted here.
+
+/// Bind the [`DenseSpace`] a dense prim operates in off its **first operand's** `Repr` (the space
+/// anchor); the kernel then enforces every other operand agrees (dim/dtype mismatch → explicit
+/// error, never a broadcast). A non-`Dense` first operand or an unsupported dtype (`F16`/`F64`,
+/// the kernel's v1 scope) is an explicit [`EvalError::PrimType`].
+fn dense_space_of(prim: &str, v: &Value) -> Result<DenseSpace, EvalError> {
+    let Repr::Dense { dim, dtype } = *v.repr() else {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!("expected a Dense operand, got {:?}", v.repr()),
+        });
+    };
+    DenseSpace::new(dim, dtype).map_err(|e| map_dense_err(prim, e))
+}
+
+/// Map a kernel [`DenseError`] onto the interpreter's never-silent error surface (see the module
+/// note above for the variant-by-variant rationale). Every arm is explicit; nothing is coerced.
+fn map_dense_err(prim: &str, e: DenseError) -> EvalError {
+    match e {
+        DenseError::Overflow { .. } => EvalError::Overflow {
+            prim: prim.to_owned(),
+        },
+        DenseError::ApproximateSource => EvalError::ApproxCompositionUnsupported {
+            prim: prim.to_owned(),
+        },
+        // Shape/dtype/payload-contract refusals: the kernel's Display already names the offense
+        // (dim mismatch with expected/got, off-grid element index, subnormal index, …).
+        other => EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: other.to_string(),
+        },
+    }
+}
+
+/// `dense.add : (Dense{d, s}, Dense{d, s}) → Dense{d, s}` — elementwise addition (M-890).
+/// **`Proven`**, carried from the kernel: per-element relative ε (`op_rel_eps`) under the
+/// round-to-nearest theorem with checked side-conditions; a dim/dtype mismatch is an explicit
+/// refusal, never a broadcast (G2).
+fn prim_dense_add(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 2)?;
+    let space = dense_space_of(prim, args[0])?;
+    space
+        .add_values(args[0], args[1])
+        .map_err(|e| map_dense_err(prim, e))
+}
+
+/// `dense.sub : (Dense{d, s}, Dense{d, s}) → Dense{d, s}` — elementwise subtraction (M-890).
+/// Same **`Proven`** carried tag and never-silent shape contract as [`prim_dense_add`].
+fn prim_dense_sub(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 2)?;
+    let space = dense_space_of(prim, args[0])?;
+    space
+        .sub_values(args[0], args[1])
+        .map_err(|e| map_dense_err(prim, e))
+}
+
+/// `dense.neg : Dense{d, s} → Dense{d, s}` — elementwise negation (M-890). **`Exact`**, carried
+/// from the kernel: the dtype grids are symmetric, so negation never rounds.
+fn prim_dense_neg(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 1)?;
+    let space = dense_space_of(prim, args[0])?;
+    space.neg_value(args[0]).map_err(|e| map_dense_err(prim, e))
+}
+
+/// `dense.scale : (Dense{d, s}, Dense{1, s}) → Dense{d, s}` — scalar multiplication (M-890).
+/// **`Proven`**, carried from the kernel. The factor rides a `Dense{1, s}` value (the pre-Gap-A
+/// scalar form — see the module note): it must be the **same dtype** as the vector, dim exactly 1,
+/// and `Exact` (an approximate factor has no defined composition rule — refused, never fabricated);
+/// the kernel re-checks the factor is finite and on-grid (`ScalarOffGrid`).
+fn prim_dense_scale(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 2)?;
+    let space = dense_space_of(prim, args[0])?;
+    let factor = args[1];
+    let Repr::Dense { dim: 1, dtype } = *factor.repr() else {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!(
+                "the scale factor must be a Dense{{1, dtype}} scalar (the pre-Gap-A scalar form), \
+                 got {:?}",
+                factor.repr()
+            ),
+        });
+    };
+    if dtype != space.dtype {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!(
+                "the scale factor dtype {dtype:?} must match the vector dtype {:?} — never a \
+                 silent re-round",
+                space.dtype
+            ),
+        });
+    }
+    if factor.meta().guarantee() != GuaranteeStrength::Exact {
+        // Composing the factor's own bound with the op ε has no defined rule (M-204/M-211) —
+        // the same honest refusal the kernel makes for an approximate vector operand.
+        return Err(EvalError::ApproxCompositionUnsupported {
+            prim: prim.to_owned(),
+        });
+    }
+    let Payload::Scalars(xs) = factor.payload() else {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: "the scale factor's payload is not scalar data".to_owned(),
+        });
+    };
+    let [c] = xs.as_slice() else {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!(
+                "the Dense{{1}} scale factor must carry exactly one element, got {}",
+                xs.len()
+            ),
+        });
+    };
+    space
+        .scale_value(args[0], *c)
+        .map_err(|e| map_dense_err(prim, e))
 }

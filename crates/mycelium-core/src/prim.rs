@@ -11,13 +11,20 @@
 //! an inspectable, EXPLAIN-able registry entry (G2/SC-3), not a black box.
 //!
 //! # Scope (honesty)
-//! Every v0 builtin is `intrinsic = Exact` (the exact, elementwise/arithmetic fragment). The table
-//! stores that intrinsic *as data* so a future non-`Exact` prim (e.g. a VSA `bundle`, RFC-0003 §5)
-//! is a registry entry carrying its own honest tag — but *how* a non-`Exact` prim's bound-basis is
-//! stored with the declaration (a cited theorem vs an empirical fit, with its [`crate::BoundBasis`])
-//! is the **RP-7** spike (DN-10 §3.6), deliberately *not* settled here. v0's all-`Exact` table is
-//! sound (the prim set is closed and small), so this migration is a *uniformity/inspectability* gain
-//! (VR-5: not a correctness fix, not dishonest meanwhile).
+//! Nearly every builtin is `intrinsic = Exact` (the exact, elementwise/arithmetic fragment). The
+//! table stores that intrinsic *as data* so a non-`Exact` prim is a registry entry carrying its own
+//! honest tag — and the **dense elementwise group** (`dense.add`/`dense.sub`/`dense.scale`, M-890,
+//! `enb` Gap C) is the first to use that capacity: their intrinsic is **`Proven`**, carried
+//! verbatim from the kernel's per-op tag (`mycelium-dense`'s `DenseSpace::op_guarantee` — the
+//! round-to-nearest relative-error theorem with per-element *checked* side-conditions; `dense.neg`
+//! stays `Exact`, negation never rounds). *How* a non-`Exact` prim's bound-basis is stored **with
+//! the declaration** (a cited theorem vs an empirical fit, with its [`crate::BoundBasis`]) is the
+//! **RP-7** spike (DN-10 §3.6), deliberately *not* settled here — the declaration stores the
+//! *strength* only, and the checked basis (theorem citation + per-element ε) rides the runtime
+//! result `Value`'s `Meta`, attached by the kernel itself (`mycelium-dense::DenseSpace`), never
+//! fabricated at the table level (VR-5). This crate cannot depend on `mycelium-dense` (dependency
+//! direction), so the table↔kernel tag consistency is guarded by a test in `mycelium-interp`
+//! (which sees both).
 //!
 //! The migration preserves `Π`-lookup semantics exactly: for every prim `p`,
 //! `Π_new(hash(p)) = Π_old(name(p))` (DN-10 §3.4) — guarded by the `Π_new == Π_old` equivalence
@@ -166,13 +173,20 @@ impl PrimTable {
     /// comparison prims (`cmp.eq`/`cmp.lt`, RFC-0032 D1), the never-silent binary arithmetic
     /// (`bit.add`/`bit.sub`, RFC-0032 D2), the never-silent two's-complement multiply
     /// (`bin.mul`, RFC-0033 §4.1.2/§4.1.3, M-887 — the first Gap-B `enb` prim), the never-silent
-    /// **unsigned** division/remainder (`bin.div`/`bin.rem`, RFC-0033 §4.1.2/§4.1.3, M-888), and the
+    /// **unsigned** division/remainder (`bin.div`/`bin.rem`, RFC-0033 §4.1.2/§4.1.3, M-888), the
     /// never-silent **logical** left/right shift (`bin.shl`/`bin.shr`, RFC-0033 §4.1.2/§4.1.3,
-    /// M-889 — the signed/arithmetic variants ride M-767 under distinct names). Every entry is
-    /// `intrinsic = Exact`; all are width-`Uniform`
-    /// **except** `cmp.eq`/`cmp.lt`, which are width-`Collapse` (operand width → `Binary{1}`). This is
-    /// the single source of truth the `mycelium-interp` intrinsic and the `mycelium-l1` surface table
-    /// are checked against.
+    /// M-889 — the signed/arithmetic variants ride M-767 under distinct names), and the never-silent
+    /// two's-complement `add`/`sub`/`neg` (`bin.add`/`bin.sub`/`bin.neg`, RFC-0033 §4.1.2/§4.1.3,
+    /// M-766 — completes the shared two's-complement op set `add`/`sub`/`mul`/`neg`; distinct from
+    /// the pre-existing unsigned `bit.add`/`bit.sub`, which under-refuse relative to the signed
+    /// domain), and the **dense elementwise group**
+    /// (`dense.add`/`dense.sub`/`dense.neg`/`dense.scale`, RFC-0001 §4.1/RFC-0002 §5, M-890 —
+    /// `enb` Gap C; the first *tensor-valued* prims, and the first non-`Exact` intrinsics — see
+    /// the crate-level Scope note). Every entry is `intrinsic = Exact` **except**
+    /// `dense.add`/`dense.sub`/`dense.scale` (`Proven`, carried from the kernel's per-op tag);
+    /// all are width-`Uniform` **except** `cmp.eq`/`cmp.lt`, which are width-`Collapse` (operand
+    /// width → `Binary{1}`). This is the single source of truth the `mycelium-interp` intrinsic
+    /// and the `mycelium-l1` surface table are checked against.
     #[must_use]
     pub fn builtins() -> Self {
         use PrimParadigm::{Any, Binary, Ternary};
@@ -237,6 +251,16 @@ impl PrimTable {
         // (sign-extending) right shift is the distinct signed op M-767 lands under its own name.
         t.insert("bin.shl", exact(vec![Binary, Binary], Binary));
         t.insert("bin.shr", exact(vec![Binary, Binary], Binary));
+        // RFC-0033 §4.1.2/§4.1.3 (M-766, `enb` Gap B): never-silent two's-complement `add`/`sub`/
+        // `neg` — completes the *shared* two's-complement arithmetic set `bin.mul` (M-887) started.
+        // Distinct from the pre-existing `bit.add`/`bit.sub` (RFC-0032 D2, unsigned-committed
+        // overflow criterion — verified insufficient for the signed domain: e.g. `Binary{4}`'s
+        // `5 + 3 = 8` is unsigned-in-range `[0,15]` but signed-out-of-range `B_4 = [-8,7]`).
+        // `intrinsic = Exact` (total/decidable over the in-range domain; an out-of-range sum/
+        // difference/negation is a runtime, not intrinsic, refusal — same posture as `bin.mul`).
+        t.insert("bin.add", exact(vec![Binary, Binary], Binary));
+        t.insert("bin.sub", exact(vec![Binary, Binary], Binary));
+        t.insert("bin.neg", exact(vec![Binary], Binary));
         // DN-41 (M-798): never-silent `Binary` width-cast (zero-extend widen / checked narrow).
         // `intrinsic = Exact` (the widen/identity/in-range-narrow result equals the unsigned value
         // exactly; a lossy narrow is a never-silent *runtime* refusal, not a non-Exact intrinsic).
@@ -276,6 +300,43 @@ impl PrimTable {
         // resolved `Fuse::join` call (DN-58 §A.5) — and the non-`Binary` reprs have no committed meet
         // (DN-58 §A.6 F-A3), so this is the only `fuse_join:*` kernel prim.
         t.insert("fuse_join:binary", exact(vec![Binary, Binary], Binary));
+        // RFC-0001 §4.1 / RFC-0002 §5 (M-890, `enb` Gap C): the **dense elementwise group** —
+        // the first *tensor-valued* prims (operands/results are `Repr::Dense{dim, dtype}` values).
+        // Kernel: `mycelium-dense`'s `add_values`/`sub_values`/`neg_value`/`scale_value`.
+        //
+        // **Intrinsic tags — carried from the kernel, never upgraded (VR-5).** These mirror
+        // `DenseSpace::op_guarantee` verbatim: `neg` is `Exact` (the dtype grids are symmetric —
+        // negation never rounds); `add`/`sub`/`scale` are **`Proven`** — the round-to-nearest
+        // relative-error theorem (Higham 2002, Thm 2.2) with side-conditions *checked per element*
+        // by the kernel (exact on-grid inputs; finite, zero-or-normal, non-overflowing results —
+        // a violated side-condition is an explicit runtime refusal, never a bound the theorem does
+        // not cover). Per RP-7 (still open — see the crate Scope note) the declaration stores the
+        // *strength* only; the checked basis (citation + per-element ε) rides the runtime result
+        // `Value`, attached by the kernel. Consistency with `DenseSpace::op_guarantee` is guarded
+        // by a `mycelium-interp` test (this crate cannot see `mycelium-dense`).
+        //
+        // **Paradigm/width-model note (FLAG — same escape hatch as the seq/bytes prims above):**
+        // `PrimParadigm` has no first-class `Dense` paradigm and `WidthRel` no dim relation, so
+        // the operands/results are typed `Any`/`Uniform` here as the nearest tags. The real
+        // never-silent typing — `Dense{d, s}` operands with *equal* dim + dtype (shape mismatch is
+        // an explicit refusal, never a broadcast), and `dense.scale`'s scalar operand as a
+        // `Dense{1, s}` (the only float-bearing value form pre-Gap-A; see `prims.rs` in
+        // `mycelium-interp`) — is enforced by the kernel + interpreter prim and the L1 checker. A
+        // first-class `Dense` paradigm in `PrimParadigm` is a deliberate, RFC-unpinned extension
+        // left for the surface-typing work (it ripples into content-addressing), exactly as for
+        // `Seq`/`Bytes`.
+        let dense_proven = |operands: Vec<PrimParadigm>| PrimDecl {
+            sig: PrimSig {
+                operands,
+                result: Any,
+                width: WidthRel::Uniform,
+            },
+            intrinsic: GuaranteeStrength::Proven,
+        };
+        t.insert("dense.add", dense_proven(vec![Any, Any]));
+        t.insert("dense.sub", dense_proven(vec![Any, Any]));
+        t.insert("dense.neg", exact(vec![Any], Any));
+        t.insert("dense.scale", dense_proven(vec![Any, Any]));
         t
     }
 

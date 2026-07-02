@@ -678,3 +678,288 @@ fn bin_shift_matches_native_oracle_at_width6() {
         }
     }
 }
+
+// ── M-890 (`enb` Gap C): the dense elementwise prim group ───────────────────────────────────────
+//
+// `dense.add`/`dense.sub`/`dense.neg`/`dense.scale` — the first tensor-valued prims. The kernel
+// (`mycelium-dense`) constructs the result `Value` with its honest per-op tag; the wrapper carries
+// it through unchanged (VR-5). These tests pin: (1) the Π-table intrinsic ↔ kernel `op_guarantee`
+// consistency (the cross-crate guard `mycelium-core` cannot host), (2) accept-path payloads +
+// carried tags/bounds, (3) the never-silent reject surface (shape/dtype mismatch, overflow,
+// approximate sources, malformed scale factors), and (4) the per-element relative-error bound
+// against an exact f64 oracle (the cheap property the `Proven` tag discloses).
+
+use mycelium_core::{Bound, BoundBasis, BoundKind, NormKind, PrimTable, ScalarKind};
+use mycelium_dense::{DenseOp, DenseSpace};
+
+/// A `Dense{n, F32}` value from on-grid elements (test fixture).
+fn dense_f32(xs: Vec<f64>) -> Value {
+    let n = u32::try_from(xs.len()).expect("test dims are small");
+    DenseSpace::new(n, ScalarKind::F32)
+        .expect("F32 is a supported dtype")
+        .value(xs)
+        .expect("fixture elements are finite and on-grid")
+}
+
+/// The Π-table intrinsic must equal the kernel's per-op tag — the VR-5 "carried, never upgraded"
+/// contract, guarded here because `mycelium-core` (Π) cannot depend on `mycelium-dense` (kernel).
+#[test]
+fn dense_prim_table_intrinsics_match_the_kernel_op_guarantees() {
+    let table = PrimTable::builtins();
+    for (name, op) in [
+        ("dense.add", DenseOp::Add),
+        ("dense.sub", DenseOp::Sub),
+        ("dense.neg", DenseOp::Neg),
+        ("dense.scale", DenseOp::Scale),
+    ] {
+        assert_eq!(
+            table.intrinsic(name),
+            Some(DenseSpace::op_guarantee(op)),
+            "{name}: the Π intrinsic must be carried verbatim from DenseSpace::op_guarantee"
+        );
+    }
+}
+
+#[test]
+fn dense_add_carries_the_kernel_proven_tag_and_bound() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("dense.add").expect("dense.add registered");
+    let a = dense_f32(vec![1.5, 2.5]);
+    let b = dense_f32(vec![0.25, -1.0]);
+    let y = f("dense.add", &[&a, &b]).expect("in-range add");
+    assert_eq!(y.payload(), &Payload::Scalars(vec![1.75, 1.5]));
+    // The tag is the KERNEL's, carried unchanged: Proven + the per-element relative ε under a
+    // ProvenThm basis (never re-derived by compose_result, whose intrinsic is Exact).
+    assert_eq!(
+        y.meta().guarantee(),
+        mycelium_core::GuaranteeStrength::Proven
+    );
+    let space = DenseSpace::new(2, ScalarKind::F32).unwrap();
+    match y.meta().bound() {
+        Some(Bound {
+            kind: BoundKind::Error { eps, norm },
+            basis: BoundBasis::ProvenThm { .. },
+        }) => {
+            assert_eq!(
+                *eps,
+                space.op_rel_eps(),
+                "ε must be the kernel's op_rel_eps"
+            );
+            assert_eq!(*norm, NormKind::Rel);
+        }
+        other => panic!("expected the kernel's ProvenThm Error bound, got {other:?}"),
+    }
+    // Provenance is the kernel's Derived{op: hash("dense.add"), inputs}.
+    match y.meta().provenance() {
+        Provenance::Derived { op, inputs } => {
+            assert_eq!(op, &mycelium_core::operation_hash("dense.add"));
+            assert_eq!(inputs, &vec![a.content_hash(), b.content_hash()]);
+        }
+        other => panic!("expected Derived provenance, got {other:?}"),
+    }
+}
+
+#[test]
+fn dense_sub_and_neg_accept_paths() {
+    let reg = PrimRegistry::with_builtins();
+    let sub = reg.get("dense.sub").expect("dense.sub registered");
+    let neg = reg.get("dense.neg").expect("dense.neg registered");
+    let a = dense_f32(vec![1.5, 2.5]);
+    let b = dense_f32(vec![0.5, -1.0]);
+    let d = sub("dense.sub", &[&a, &b]).expect("in-range sub");
+    assert_eq!(d.payload(), &Payload::Scalars(vec![1.0, 3.5]));
+    assert_eq!(
+        d.meta().guarantee(),
+        mycelium_core::GuaranteeStrength::Proven
+    );
+    // neg is Exact (the grids are symmetric — never rounds) with no bound.
+    let n = neg("dense.neg", &[&a]).expect("neg is total over on-grid inputs");
+    assert_eq!(n.payload(), &Payload::Scalars(vec![-1.5, -2.5]));
+    assert_eq!(
+        n.meta().guarantee(),
+        mycelium_core::GuaranteeStrength::Exact
+    );
+    assert!(n.meta().bound().is_none(), "Exact results carry no bound");
+}
+
+#[test]
+fn dense_scale_takes_a_dense1_factor() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("dense.scale").expect("dense.scale registered");
+    let a = dense_f32(vec![1.5, -2.0]);
+    let c = dense_f32(vec![2.0]); // the pre-Gap-A scalar form: Dense{1, same dtype}
+    let y = f("dense.scale", &[&a, &c]).expect("on-grid scale");
+    assert_eq!(y.payload(), &Payload::Scalars(vec![3.0, -4.0]));
+    assert_eq!(
+        y.meta().guarantee(),
+        mycelium_core::GuaranteeStrength::Proven
+    );
+}
+
+#[test]
+fn dense_shape_mismatch_is_never_silent() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("dense.add").expect("dense.add registered");
+    let a = dense_f32(vec![1.0, 2.0]);
+    let b3 = dense_f32(vec![1.0, 2.0, 3.0]);
+    // Dim mismatch → explicit PrimType naming expected/got — never a broadcast (G2).
+    let err = f("dense.add", &[&a, &b3]).expect_err("dim mismatch must refuse");
+    match err {
+        EvalError::PrimType { prim, why } => {
+            assert_eq!(prim, "dense.add");
+            assert!(
+                why.contains("dimension mismatch"),
+                "the refusal must name the shape mismatch: {why}"
+            );
+        }
+        other => panic!("expected PrimType, got {other:?}"),
+    }
+    // Dtype mismatch → explicit PrimType, never a re-round.
+    let bf = DenseSpace::new(2, ScalarKind::Bf16)
+        .unwrap()
+        .value(vec![1.5, -2.0])
+        .unwrap();
+    assert!(
+        matches!(f("dense.add", &[&a, &bf]), Err(EvalError::PrimType { .. })),
+        "dtype mismatch must be an explicit refusal"
+    );
+    // A non-Dense operand → explicit PrimType.
+    let bits = byte([true; 8]);
+    assert!(
+        matches!(
+            f("dense.add", &[&bits, &a]),
+            Err(EvalError::PrimType { .. })
+        ),
+        "a non-Dense first operand must be an explicit refusal"
+    );
+    assert!(
+        matches!(
+            f("dense.add", &[&a, &bits]),
+            Err(EvalError::PrimType { .. })
+        ),
+        "a non-Dense second operand must be an explicit refusal"
+    );
+    // Wrong arity → explicit PrimType.
+    assert!(matches!(
+        f("dense.add", &[&a]),
+        Err(EvalError::PrimType { .. })
+    ));
+}
+
+#[test]
+fn dense_overflow_and_approx_sources_refuse_explicitly() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("dense.add").expect("dense.add registered");
+    // Overflow: f32::MAX + f32::MAX exceeds the dtype's finite range → EvalError::Overflow.
+    let max = dense_f32(vec![f64::from(f32::MAX)]);
+    assert!(
+        matches!(
+            f("dense.add", &[&max, &max]),
+            Err(EvalError::Overflow { .. })
+        ),
+        "an out-of-range result must be an explicit Overflow, never ±Inf"
+    );
+    // An approximate source has no defined composition rule (M-204/M-211) →
+    // ApproxCompositionUnsupported — carried from the kernel's ApproximateSource refusal.
+    let a = dense_f32(vec![1.0, 2.0]);
+    let approx = f("dense.add", &[&a, &dense_f32(vec![0.5, 0.5])]).expect("a Proven value");
+    assert!(
+        matches!(
+            f("dense.add", &[&a, &approx]),
+            Err(EvalError::ApproxCompositionUnsupported { .. })
+        ),
+        "an approximate (Proven) source must refuse — no composition rule yet"
+    );
+}
+
+#[test]
+fn dense_scale_factor_contract_is_never_silent() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("dense.scale").expect("dense.scale registered");
+    let a = dense_f32(vec![1.5, -2.0]);
+    // A non-Dense{1} factor (wrong dim) → explicit PrimType.
+    let c2 = dense_f32(vec![2.0, 2.0]);
+    assert!(
+        matches!(
+            f("dense.scale", &[&a, &c2]),
+            Err(EvalError::PrimType { .. })
+        ),
+        "a Dense{{2}} factor must refuse — the scalar form is Dense{{1}}"
+    );
+    // A non-Dense factor → explicit PrimType.
+    let bits = byte([false; 8]);
+    assert!(matches!(
+        f("dense.scale", &[&a, &bits]),
+        Err(EvalError::PrimType { .. })
+    ));
+    // A factor of the wrong dtype → explicit PrimType (never a silent re-round).
+    let cbf = DenseSpace::new(1, ScalarKind::Bf16)
+        .unwrap()
+        .value(vec![2.0])
+        .unwrap();
+    assert!(matches!(
+        f("dense.scale", &[&a, &cbf]),
+        Err(EvalError::PrimType { .. })
+    ));
+    // An approximate factor → ApproxCompositionUnsupported (no defined composition rule).
+    let one = dense_f32(vec![1.0]);
+    let approx_c = reg.get("dense.add").unwrap()("dense.add", &[&one, &one]).expect("Proven");
+    assert!(matches!(
+        f("dense.scale", &[&a, &approx_c]),
+        Err(EvalError::ApproxCompositionUnsupported { .. })
+    ));
+}
+
+/// **Property test (the disclosed bound):** over an on-grid corpus, each `dense.add`/`dense.sub`
+/// result element differs from the exact `f64` oracle by at most the disclosed per-element
+/// relative ε (`op_rel_eps` — the very bound the carried `Proven` tag claims), and
+/// `dense.neg` is an exact involution (`neg(neg(x)) == x`, the `Exact` claim). Loop-corpus style,
+/// mirroring `bin_mul_matches_integer_oracle_at_width6`.
+#[test]
+fn dense_elementwise_results_respect_the_disclosed_relative_bound() {
+    let reg = PrimRegistry::with_builtins();
+    let add = reg.get("dense.add").unwrap();
+    let sub = reg.get("dense.sub").unwrap();
+    let neg = reg.get("dense.neg").unwrap();
+    let space = DenseSpace::new(4, ScalarKind::F32).unwrap();
+    let eps = space.op_rel_eps();
+    // On-grid f32 corpus spanning magnitudes and signs (all exactly representable in f32).
+    let corpus: [[f64; 4]; 4] = [
+        [1.5, -0.625, 1024.0, -3.25],
+        [0.25, 7.5, -0.03125, 2048.0],
+        [-1.0, 0.5, 100.5, -0.75],
+        [3.0, -12.25, 0.125, 640.0],
+    ];
+    for xs in &corpus {
+        for ys in &corpus {
+            let a = dense_f32(xs.to_vec());
+            let b = dense_f32(ys.to_vec());
+            for (prim, f, oracle) in [
+                ("dense.add", add, (|x, y| x + y) as fn(f64, f64) -> f64),
+                ("dense.sub", sub, (|x, y| x - y) as fn(f64, f64) -> f64),
+            ] {
+                let y = f(prim, &[&a, &b]).expect("corpus results are in range");
+                let Payload::Scalars(out) = y.payload() else {
+                    panic!("{prim} must return Payload::Scalars")
+                };
+                for (i, (&got, (&x, &yv))) in out.iter().zip(xs.iter().zip(ys)).enumerate() {
+                    let exact = oracle(x, yv);
+                    // |got − exact| ≤ ε·|exact|: the per-element relative bound the Proven tag
+                    // discloses (exact == 0 ⇒ got must be exactly 0 — no absolute slack).
+                    assert!(
+                        (got - exact).abs() <= eps * exact.abs(),
+                        "{prim} element {i}: |{got} − {exact}| exceeds ε·|exact| (ε = {eps})"
+                    );
+                }
+            }
+            // Exact involution: neg(neg(a)) == a, payload-identical (the Exact claim).
+            let n1 = neg("dense.neg", &[&a]).expect("neg is total");
+            let n2 = neg("dense.neg", &[&n1]).expect("neg is total");
+            assert_eq!(
+                n2.payload(),
+                a.payload(),
+                "dense.neg must be an exact involution"
+            );
+        }
+    }
+}

@@ -26,6 +26,10 @@ mycelium-stack = { path = "../mycelium-stack" }
 # through the M-210 shared TV checker.
 mycelium-mlir = { path = "../mycelium-mlir" }
 mycelium-numerics = { path = "../mycelium-numerics" }
+# M-890 (kickoff `enb`, Gap C): the dense elementwise prim group's conformance/three-way tests
+# build their `Dense` input values through the kernel's own constructor (`DenseSpace::value`) —
+# the only dense value-construction form until a surface literal lands (Gap A). Test scope only.
+mycelium-dense = { path = "../mycelium-dense" }
 # M-931 (kickoff opp, RFC-0031 D6): the retained Rust oracle for std_error.rs's differential — the
 # .myc port of std.error is checked against mycelium-std-error's public combinator surface. Test
 # scope only (D6: the crate is not retired, and this port does not make it a runtime dependency).
@@ -39,3 +43,6 @@ mycelium-std-diag = { path = "../mycelium-std-diag" }
 # packed-byte values) compares the `.myc` port against mycelium-std-ternary's public API live at
 # test time. Test scope only (D6: the crate is not retired).
 mycelium-std-ternary = { path = "../mycelium-std-ternary" }
+# M-930 (kickoff `opp`, RFC-0031 D6): the retained Rust oracle for the `std.recover` port
+# (`tests/std_recover.rs`) — test scope only; the crate is not retired.
+mycelium-std-recover = { path = "../mycelium-std-recover" }

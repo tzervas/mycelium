@@ -13,6 +13,10 @@ workspace = true
 
 [dependencies]
 mycelium-core = { path = "../mycelium-core" }
+# The Dense paradigm kernel: the dense elementwise prim group (`dense.*`, M-890) delegates to
+# `DenseSpace` — the kernel constructs the result `Value` with its honest per-op tag/bound and the
+# prim wrapper carries it through unchanged (VR-5). Downward-only dep (DN-66: dense sits on core).
+mycelium-dense = { path = "../mycelium-dense" }
 # The verified-numerics kernels: composing an approximate input's bound honestly (M-204; ADR-010).
 mycelium-numerics = { path = "../mycelium-numerics" }
 # The work-stealing OS-thread Scheduler (M-709/M-861), relocated below mycelium-interp (E25) so
