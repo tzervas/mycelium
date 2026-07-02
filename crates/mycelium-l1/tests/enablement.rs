@@ -542,6 +542,93 @@ fn div_bin_width_mismatch_refuses_statically() {
     );
 }
 
+// ── M-889 (`enb` Gap B): never-silent logical left/right shift ──────────────────────────────────
+//
+// `shl_bin`/`shr_bin` (kernel `bin.shl`/`bin.shr`) are the third Gap-B prim pair of the RFC-0033
+// §4.1.2/§4.1.3 shared shift op set — the **logical** (unsigned) reading, landed first per the
+// signedness-split requirement (§4.1.2), mirroring `div_bin`/`rem_bin`. Both operands are
+// `Binary{N}` (the shift amount is itself read as an unsigned `N`-bit bitvector); a shift amount
+// `>= N` refuses explicitly on every path, never UB, a wrapped shift amount, or a silently-zeroed
+// result (G2/VR-5). The arithmetic/signed right shift rides M-767 under its own distinct name.
+
+#[test]
+fn shl_bin_and_shr_bin_worked_examples() {
+    // 1 << 3 = 8.
+    assert_three_way(
+        "shl_bin 1<<3",
+        "nodule d;\nfn main() => Binary{8} = shl_bin(0b0000_0001, 0b0000_0011);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("00001000".chars().map(|c| c == '1').collect()),
+    );
+    // 8 >> 3 = 1.
+    assert_three_way(
+        "shr_bin 8>>3",
+        "nodule d;\nfn main() => Binary{8} = shr_bin(0b0000_1000, 0b0000_0011);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("00000001".chars().map(|c| c == '1').collect()),
+    );
+    // Logical (zero-filling) right shift: 0b1000_0000 >> 4 = 0b0000_1000, never sign-extended.
+    assert_three_way(
+        "shr_bin logical zero-fill",
+        "nodule d;\nfn main() => Binary{8} = shr_bin(0b1000_0000, 0b0000_0100);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("00001000".chars().map(|c| c == '1').collect()),
+    );
+    // Shift by 0 is the identity.
+    assert_three_way(
+        "shl_bin by 0 is identity",
+        "nodule d;\nfn main() => Binary{8} = shl_bin(0b1010_1010, 0b0000_0000);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("10101010".chars().map(|c| c == '1').collect()),
+    );
+}
+
+/// A shift amount `>= width` (`8 << 8`/`8 >> 8` at `Binary{8}`) is an explicit refusal on **all
+/// three** paths — never UB, a silently wrapped shift amount, or a silently-zeroed result. (The
+/// program type-checks: an out-of-range shift amount is a runtime contract, like `div_bin`'s
+/// div-by-zero.)
+#[test]
+fn shl_bin_and_shr_bin_out_of_range_shift_refuse_on_every_path() {
+    for src in [
+        "nodule d;\nfn main() => Binary{8} = shl_bin(0b0000_0001, 0b0000_1000);",
+        "nodule d;\nfn main() => Binary{8} = shr_bin(0b0000_0001, 0b0000_1000);",
+    ] {
+        let env = check_nodule(&parse(src).expect("parses")).expect("checks");
+
+        let interp = Interpreter::new(
+            PrimRegistry::with_builtins(),
+            Box::new(mycelium_cert::BinaryTernarySwapEngine),
+        );
+        let prims = PrimRegistry::with_builtins();
+        let engine = mycelium_cert::BinaryTernarySwapEngine;
+
+        assert!(
+            Evaluator::new(&env).call("main", vec![]).is_err(),
+            "L1-eval must refuse an out-of-range shift amount (never UB/wrap/silent): {src}"
+        );
+        let node = elaborate(&env, "main").expect("in fragment");
+        assert!(
+            interp.eval(&node).is_err(),
+            "L0-interp must refuse an out-of-range shift amount: {src}"
+        );
+        assert!(
+            mycelium_mlir::run(&node, &prims, &engine).is_err(),
+            "AOT must refuse an out-of-range shift amount: {src}"
+        );
+    }
+}
+
+/// A width/paradigm mismatch (`Binary{8}` vs `Binary{1}`) is a **static** never-silent refusal —
+/// caught at check time, mirroring `div_bin`'s width-preserving contract.
+#[test]
+fn shl_bin_width_mismatch_refuses_statically() {
+    let src = "nodule d;\nfn main() => Binary{8} = shl_bin(0b0000_0001, 0b0);";
+    assert!(
+        check_nodule(&parse(src).expect("parses")).is_err(),
+        "a width-mismatched shl_bin must be a static type error, never a silent coercion"
+    );
+}
+
 // ── M-749: indexed-sequence prims — prim-level differential (L0-interp ≡ AOT) ────────────────────
 //
 // `Repr::Seq` has no `.myc` surface literal yet (lexer/parser wiring deferred — FLAGGED in the

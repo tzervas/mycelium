@@ -74,9 +74,12 @@ impl PrimRegistry {
     /// M-749), never-silent byte-string access
     /// (`bytes.len`/`bytes.get`/`bytes.slice`/`bytes.concat`, RFC-0032 D4, M-750), the never-silent
     /// two's-complement `Binary` multiply (`bin.mul`, RFC-0033 §4.1.2/§4.1.3, M-887 — the first
-    /// `enb` Gap-B prim; sets the registry pattern the sibling Gap-B/C prims mirror), and the
+    /// `enb` Gap-B prim; sets the registry pattern the sibling Gap-B/C prims mirror), the
     /// never-silent **unsigned** `Binary` division/remainder (`bin.div`/`bin.rem`, RFC-0033
-    /// §4.1.2/§4.1.3, M-888 — div-by-zero is an explicit refusal; the signed variant rides M-767).
+    /// §4.1.2/§4.1.3, M-888 — div-by-zero is an explicit refusal; the signed variant rides M-767),
+    /// and the never-silent **logical** `Binary` left/right shift (`bin.shl`/`bin.shr`, RFC-0033
+    /// §4.1.2/§4.1.3, M-889 — a shift amount `>= N` is an explicit refusal; the arithmetic/signed
+    /// variant rides M-767).
     #[must_use]
     pub fn with_builtins() -> Self {
         let mut r = PrimRegistry::empty();
@@ -100,6 +103,9 @@ impl PrimRegistry {
         // RFC-0033 §4.1.2/§4.1.3 (M-888, `enb` Gap B): never-silent unsigned division/remainder.
         r.register("bin.div", prim_bin_div);
         r.register("bin.rem", prim_bin_rem);
+        // RFC-0033 §4.1.2/§4.1.3 (M-889, `enb` Gap B): never-silent logical left/right shift.
+        r.register("bin.shl", prim_bin_shl);
+        r.register("bin.shr", prim_bin_shr);
         // DN-41 (M-798): never-silent width-cast (zero-extend widen / checked narrow) over `Binary`.
         r.register("bit.width_cast", prim_width_cast);
         // RFC-0032 D3 (M-749): never-silent indexed-sequence access over `Repr::Seq`.
@@ -658,6 +664,89 @@ fn prim_bin_rem(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
         args,
         args[0].repr().clone(),
         Payload::Bits(r),
+        ApproxRule::Refuse,
+    )
+}
+
+// --- RFC-0033 §4.1.2/§4.1.3 (M-889, `enb` Gap B): never-silent logical shift ---------------------
+//
+// `bin.shl`/`bin.shr` are the third Gap-B prim pair of the RFC-0033 arithmetic set — the
+// signedness-split `shift` op set (§4.1.2). This lands the **logical** (unsigned) reading first —
+// bits shifted off either end are dropped, zero bits are shifted in, never a wrap/rotate — mirroring
+// how [`bin_div_rem`] lands the unsigned division reading first. The **arithmetic** (sign-extending)
+// right shift is the distinct signed op M-767 lands under its own name (§4.1.2's signedness-split
+// requirement applies to `shift` exactly as it does to `div`).
+//
+// Both operands are `Binary{N}`: the value and the shift amount (itself read as an unsigned `N`-bit
+// bitvector via [`binary::bits_to_uint`], never through the two's-complement
+// [`binary::bits_to_int`]). A shift amount `>= N` is an explicit [`EvalError::PrimType`] refusal —
+// never UB, a silently wrapped/modulo shift amount, or a silently-zeroed result (RFC-0033 §4.1.3;
+// G2) — the same refusal *shape* as [`bin_div_rem`]'s div-by-zero (a value-precondition violation
+// on an operand, not an out-of-range *result*, so `PrimType` rather than `Overflow`).
+//
+// **Width cap (current scope).** Mirrors `bin.mul`/`bin.div`: [`binary::shl`]/[`binary::shr`] are
+// exact for `n ≤ `[`binary::SHIFT_MAX_WIDTH`]`; a wider operand refuses with an explicit
+// [`EvalError::PrimType`] naming the cap.
+
+/// Shared arity/width validation + kernel dispatch for `bin.shl`/`bin.shr`: checks arity 2,
+/// extracts equal-width `Binary` operand bits (width mismatch/over-cap → [`EvalError::PrimType`]),
+/// and calls `op` (`None` — a shift amount `>= N` — → an explicit [`EvalError::PrimType`], never a
+/// panic).
+fn bin_shift(
+    prim: &str,
+    args: &[&Value],
+    op: fn(&[bool], &[bool]) -> Option<Vec<bool>>,
+) -> Result<Vec<bool>, EvalError> {
+    expect_arity(prim, args, 2)?;
+    let a = as_bits(prim, args[0])?;
+    let shift = as_bits(prim, args[1])?;
+    if a.len() != shift.len() {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!("width mismatch: {} vs {} bits", a.len(), shift.len()),
+        });
+    }
+    if a.len() > binary::SHIFT_MAX_WIDTH {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!(
+                "width {} exceeds the {}-bit logical shift cap (M-889 scope)",
+                a.len(),
+                binary::SHIFT_MAX_WIDTH
+            ),
+        });
+    }
+    op(a, shift).ok_or_else(|| EvalError::PrimType {
+        prim: prim.to_owned(),
+        why: format!("shift amount >= width ({} bits)", a.len()),
+    })
+}
+
+/// `bin.shl : (Binary{N}, Binary{N}) → Binary{N}` — never-silent **logical** left shift
+/// (RFC-0033 §4.1.2/§4.1.3, M-889). Equal-width operands, `N ≤ `[`binary::SHIFT_MAX_WIDTH`]`; a
+/// width mismatch, an over-cap width, or a shift amount `>= N` is an explicit
+/// [`EvalError::PrimType`] — never UB or a silent wrap/rotate (G2).
+fn prim_bin_shl(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    let out = bin_shift(prim, args, binary::shl)?;
+    compose_result(
+        prim,
+        args,
+        args[0].repr().clone(),
+        Payload::Bits(out),
+        ApproxRule::Refuse,
+    )
+}
+
+/// `bin.shr : (Binary{N}, Binary{N}) → Binary{N}` — never-silent **logical** (zero-filling) right
+/// shift (RFC-0033 §4.1.2/§4.1.3, M-889). Same never-silent contract as [`prim_bin_shl`]; the
+/// **arithmetic**/sign-extending right shift is the distinct signed op M-767 lands separately.
+fn prim_bin_shr(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    let out = bin_shift(prim, args, binary::shr)?;
+    compose_result(
+        prim,
+        args,
+        args[0].repr().clone(),
+        Payload::Bits(out),
         ApproxRule::Refuse,
     )
 }
