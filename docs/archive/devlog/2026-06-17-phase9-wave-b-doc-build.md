@@ -1,11 +1,11 @@
 # Devlog — 2026-06-17 · Phase 9 Wave B: building the doc pipeline the design promised
 
-> **What this is** (see [the Capture note](../notes/Narrative-Capture-and-Authoring.md)): the
+> **What this is** (see [the Capture note](../../notes/Narrative-Capture-and-Authoring.md)): the
 > *narrative* layer — the messy middle the RFCs smooth over. Append-only, informal, honest. The
 > RFCs/ADRs/DNs remain the source of truth; this is the *story* of how it actually got built. Fittingly,
 > this entry is itself ingestible by the pipeline it describes (a `devlog` document in the doc-IR).
 
-**Theme.** Wave A ratified the design ([Narrative-Authoring-Pipeline](../spec/Narrative-Authoring-Pipeline.md),
+**Theme.** Wave A ratified the design ([Narrative-Authoring-Pipeline](../../spec/Narrative-Authoring-Pipeline.md),
 Accepted); the 2026-06-16 devlog deliberately *resisted building it*. Wave B is the inverse mandate:
 **build M-363 for real** — the doc-IR generator + multi-format emitter, and flip the dormant §4.1 lint
 to active — without guessing, without a half-build, and green-and-real like the Wave-A gates.
@@ -58,5 +58,5 @@ consent and an EXPLAIN — automates `gh auth refresh` (changing scopes is a sta
 silent — G2). One implementation in the engine; both wrappers route through it.
 
 Refs: `crates/mycelium-doc/` (the pipeline + `myc-doc`); `scripts/checks/myc-doc.sh` (the gate);
-[Narrative-Authoring-Pipeline](../spec/Narrative-Authoring-Pipeline.md) (the contract); `tools/github/
+[Narrative-Authoring-Pipeline](../../spec/Narrative-Authoring-Pipeline.md) (the contract); `tools/github/
 gh-issues-sync.py` (the hardened engine); issue M-363 (#134). No kernel change (KC-3); no new dependency.
