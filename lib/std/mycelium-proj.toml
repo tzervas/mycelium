@@ -12,7 +12,10 @@ lang        = "mycelium-0"
 [surface]
 # M-719: std.iter added to the frozen export surface — iter.myc is a self-hosted, differential-tested
 # nodule (std_iter.rs, 8/8 ops three-way) and belongs in the API-freeze list alongside the others.
-exports     = ["std.result", "std.option", "std.cmp", "std.iter", "std.collections", "std.math", "std.text", "std.fmt"]
+# Phase-I `opp` wave (E29-1, M-926…M-934): nine Rust-reference nodules ported to self-hosted `.myc`
+# and added to the export surface — std.core, std.diag, std.error, std.recover, std.select,
+# std.spores, std.swaps, std.ternary, std.testing (transpiler-assist % recorded in the port ledger).
+exports     = ["std.result", "std.option", "std.cmp", "std.iter", "std.collections", "std.math", "std.text", "std.fmt", "std.core", "std.diag", "std.error", "std.recover", "std.select", "std.spores", "std.swaps", "std.ternary", "std.testing"]
 
 [toolchain]
 format      = "mycfmt-0"
