@@ -423,6 +423,148 @@ fn lower_rule_rhs_single_consume_of_a_helper_acquired_substrate_checks() {
     assert!(e.lower_rules.contains_key("Good"));
 }
 
+// ---- DN-54 §10 Model A attachment enactment (M-973): derive-site sibling-impl injection --------
+//
+// The DN-81 §10 ratified attachment model: an item-shaped `lower Name[T] = impl Trait for T { … }`
+// rule, instantiated at each `derive Name for C` site, injects a concrete sibling `impl` BEFORE the
+// instance + method-body passes — so coherence/orphan (`register_instances`) and the M-919 active
+// affine tracker (`check_impl_methods`) cover it BY CONSTRUCTION. The DN-81 §10.4 correction makes
+// the affine coverage a *deliberate* wiring deliverable (Pass-3e-before-Pass-3b, i.e. inject before
+// the method-body pass), proven — not self-attested — by the derive-site double-consume reject test.
+
+/// **Accept + injection:** an item-shaped rule derived for a concrete type injects a real sibling
+/// `impl` that is registered as an instance (enters the coherence pass) and carries `derive`
+/// provenance (OQ-A / DN-81 §6.5). The whole program checks.
+#[test]
+fn derive_item_rule_injects_a_checked_sibling_impl() {
+    let e = env("nodule d;\n\
+         trait Eq2 { fn eq2(x: Binary{8}) => Bool; };\n\
+         lower MkEq[T] = impl Eq2 for T { fn eq2(x: Binary{8}) => Bool = True; };\n\
+         derive MkEq for Binary{8};");
+    // The derived impl is registered as a real trait instance — it went through `register_instances`
+    // exactly like a hand-written `impl Eq2 for Binary{8}` (coherence by construction).
+    assert!(
+        e.instances.keys().any(|(tr, _)| tr == "Eq2"),
+        "derived impl must register as an `Eq2` instance; instances = {:?}",
+        e.instances.keys().collect::<Vec<_>>()
+    );
+    // Provenance (OQ-A): the injected impl records the rule it came from — distinguishable from a
+    // hand-written impl (`Declared`, carried honestly — DN-81 §6.5).
+    assert!(
+        e.derived_provenance
+            .values()
+            .any(|(rule, _)| rule == "MkEq"),
+        "derived impl must carry `(rule=MkEq, …)` provenance; got {:?}",
+        e.derived_provenance
+    );
+}
+
+/// **The load-bearing proof (DN-81 §10.4):** a derived impl whose method body double-consumes a
+/// `Substrate` is refused, never-silently, citing DN-71 — the derive-site twin of
+/// `lower_rule_rhs_double_consume_of_a_helper_acquired_substrate_is_refused`. This is the evidence
+/// the affine wiring actually landed (the injected impl's body flows through `check_fn_body`'s active
+/// M-919 tracker) and did **not** silently no-op: if the sibling injection ran *after* the method
+/// body pass (or bypassed it), this double-consume would type-check silently. It does not.
+#[test]
+fn derive_site_double_consume_of_a_substrate_is_refused() {
+    let err = check_err(
+        "nodule d @std-sys;\n\
+         fn make() => Substrate{Sock} !{ffi} = wild { host_call() };\n\
+         fn take(s: Substrate{Sock}) => Bool = True;\n\
+         trait Drain { fn drain(x: Binary{8}) => Bool !{ffi}; };\n\
+         lower MkDrain[T] = impl Drain for T { \
+         fn drain(x: Binary{8}) => Bool !{ffi} = let s = make() in let _ = take(s) in take(s); };\n\
+         derive MkDrain for Binary{8};",
+    );
+    assert!(
+        err.message.contains("double-consume"),
+        "the derived impl's method body must be affine-checked (DN-81 §10.4 deliberate wiring), \
+         firing the DN-71 double-consume refusal; got: {}",
+        err.message
+    );
+    assert!(
+        err.message.contains("DN-71"),
+        "the double-consume diagnostic must cite DN-71 by name; got: {}",
+        err.message
+    );
+}
+
+/// **Content-key de-dup (ADR-003 / DN-54 §10.3):** two *identical* `derive`s of the same rule at the
+/// same type collapse to a single injected impl — a no-op duplicate, not a coherence conflict. The
+/// program checks (no overlapping-instance error), proving the dedup by content key `(trait, head)`.
+#[test]
+fn identical_derives_dedup_and_do_not_conflict() {
+    let e = env("nodule d;\n\
+         trait Eq2 { fn eq2(x: Binary{8}) => Bool; };\n\
+         lower MkEq[T] = impl Eq2 for T { fn eq2(x: Binary{8}) => Bool = True; };\n\
+         derive MkEq for Binary{8};\n\
+         derive MkEq for Binary{8};");
+    // Exactly one `Eq2` instance survives — the duplicate was de-duped, not double-registered.
+    assert_eq!(
+        e.instances.keys().filter(|(tr, _)| tr == "Eq2").count(),
+        1,
+        "identical derives must dedup to one instance; instances = {:?}",
+        e.instances.keys().collect::<Vec<_>>()
+    );
+}
+
+/// **Coherence by construction (DN-54 §10.2 crit. 3–4 / RFC-0019 §4.5):** a derived impl that
+/// collides with a **hand-written** impl on the same `(trait, head)` is refused as an
+/// overlapping-instance / global-uniqueness violation — never-silently — because the injected impl
+/// enters the *same* `register_instances` coherence pass. (The orphan arm of that pass is proven
+/// non-vacuous by the `register_instances`-direct orphan tests above; a resolvable derive in a
+/// phylum-of-one is, by the M-662 resolvability property, never itself an orphan — so coherence
+/// entry is demonstrated here via the overlap arm, the constructible case.)
+#[test]
+fn derived_impl_colliding_with_a_handwritten_impl_is_refused() {
+    let err = check_err(
+        "nodule d;\n\
+         trait Eq2 { fn eq2(x: Binary{8}) => Bool; };\n\
+         impl Eq2 for Binary{8} { fn eq2(x: Binary{8}) => Bool = False; };\n\
+         lower MkEq[T] = impl Eq2 for T { fn eq2(x: Binary{8}) => Bool = True; };\n\
+         derive MkEq for Binary{8};",
+    );
+    assert!(
+        err.message.contains("overlapping") || err.message.contains("coherence"),
+        "a derived impl overlapping a hand-written one must be a never-silent coherence refusal; \
+         got: {}",
+        err.message
+    );
+}
+
+/// **OQ-B parser (DN-54 §10.1(b)):** an item-shaped RHS parses as an `impl` template. Confirm the
+/// rule registers with an item-shaped RHS (the `impl_rhs()` accessor is `Some`), so the surface
+/// really did accept `lower Name[T] = impl … for T`.
+#[test]
+fn item_shaped_lower_rule_parses_and_registers() {
+    let e = env("nodule d;\n\
+         trait Eq2 { fn eq2(x: Binary{8}) => Bool; };\n\
+         lower MkEq[T] = impl Eq2 for T { fn eq2(x: Binary{8}) => Bool = True; };");
+    let rule = e.lower_rules.get("MkEq").expect("rule registered");
+    assert!(
+        rule.impl_rhs().is_some(),
+        "the rule must carry an item-shaped (`impl … for …`) RHS"
+    );
+}
+
+/// A `derive` of an **item-shaped** rule whose parameter arity is not exactly one is a never-silent
+/// refusal (Model-A sibling injection binds the single derive target to one rule param; multi-param
+/// is OQ-C future — G2). A nullary item rule cannot bind the `derive` target.
+#[test]
+fn derive_of_a_nullary_item_rule_is_refused() {
+    let err = check_err(
+        "nodule d;\n\
+         trait Eq2 { fn eq2(x: Binary{8}) => Bool; };\n\
+         lower MkEq = impl Eq2 for Binary{8} { fn eq2(x: Binary{8}) => Bool = True; };\n\
+         derive MkEq for Binary{8};",
+    );
+    assert!(
+        err.message.contains("type parameter") || err.message.contains("parameter"),
+        "a derive of a non-single-param item rule must be refused never-silently; got: {}",
+        err.message
+    );
+}
+
 // ---- DN-54 §4.2 cross-rule acyclicity (M-812-cont) ------------------------------------------
 
 /// §4.2: a `lower` rule whose RHS references **itself** is refused (the trivial cycle) — the
