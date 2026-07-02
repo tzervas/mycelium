@@ -170,6 +170,19 @@ pub fn lit_value(site: &str, l: &Literal) -> Result<Value, ElabError> {
                 Ok,
             )
         }
+        // M-910/M-911 (kickoff `enb` Phase-I H1): a `"…"` textual string literal lowers to the
+        // SAME `Repr::Bytes`/`Payload::Bytes` value form as `Literal::Bytes` above (KC-3 — no new
+        // L0 node) — its decoded content, UTF-8-encoded. The lexer already decoded the escape set
+        // and validated termination, so the encode is total.
+        Literal::Str(s) => Value::new(
+            Repr::Bytes,
+            Payload::Bytes(s.as_bytes().to_vec()),
+            Meta::exact(Provenance::Root),
+        )
+        .map_or_else(
+            |e| residual(site, format!("malformed string literal: {e}")),
+            Ok,
+        ),
         Literal::Int(_) => residual(
             site,
             "a bare integer literal has no representation family (Q6)",

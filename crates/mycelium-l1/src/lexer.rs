@@ -207,6 +207,9 @@ impl Lexer {
                 '0' if self.peek2() == Some('x') => self.lex_hex_bytes(pos)?,
                 // `0t…` is a balanced-ternary literal (RFC-0037 D4), lexed whole like `0b…`/`0x…`.
                 '0' if self.peek2() == Some('t') => self.lex_trit(pos)?,
+                // `"…"` is a textual string literal (M-910/M-911, kickoff `enb`): scanned whole,
+                // with its minimal escape set decoded inline (see `lex_string`).
+                '"' => self.lex_string(pos)?,
                 c if c.is_ascii_digit() => self.lex_int(pos)?,
                 c if is_ident_start(c) => self.lex_ident(),
                 other => {
@@ -363,6 +366,97 @@ impl Lexer {
             ));
         }
         Ok(Tok::TritLit(trits))
+    }
+
+    /// Lex a textual string literal `"…"` (M-910, kickoff `enb` Phase-I H1): scan to the closing
+    /// `"`, decoding the **explicit, minimal escape set** inline — `\n \t \\ \" \0 \r` (ergonomic,
+    /// not expressive; `\xNN` is deliberately NOT included — it would let a literal inject a
+    /// non-UTF-8 byte into what is otherwise always-valid-UTF-8 text, so it is left for a follow-up
+    /// with its own justification). `Tok::StrLit` carries the **decoded** content, mirroring
+    /// [`Self::lex_hex_bytes`]'s "the lexer is the never-silent gate" role: escape errors are lexer
+    /// errors, not deferred to elaboration.
+    ///
+    /// Never-silent (G2): an **unterminated** literal — EOF or a raw newline/CR reached before the
+    /// closing `"` (raw newlines are not allowed inside a string; use `\n`), a **trailing `\`**
+    /// before EOF, or an **unknown escape** (`\q`, say) — is an explicit [`ParseError`] naming the
+    /// offending position; never a silently-truncated or half-escaped token.
+    fn lex_string(&mut self, pos: Pos) -> Result<Tok, ParseError> {
+        self.bump(); // opening '"'
+        let mut out = String::new();
+        loop {
+            match self.peek() {
+                None => {
+                    return Err(ParseError::new(
+                        pos,
+                        "unterminated string literal (no closing `\"` before end of file)"
+                            .to_owned(),
+                    ));
+                }
+                Some('\n' | '\r') => {
+                    return Err(ParseError::new(
+                        pos,
+                        "unterminated string literal (a raw newline/carriage-return is not \
+                         allowed inside \"…\" — use \\n)"
+                            .to_owned(),
+                    ));
+                }
+                Some('"') => {
+                    self.bump();
+                    break;
+                }
+                Some('\\') => {
+                    let esc_pos = self.pos();
+                    self.bump(); // consume '\'
+                    match self.peek() {
+                        Some('n') => {
+                            out.push('\n');
+                            self.bump();
+                        }
+                        Some('t') => {
+                            out.push('\t');
+                            self.bump();
+                        }
+                        Some('\\') => {
+                            out.push('\\');
+                            self.bump();
+                        }
+                        Some('"') => {
+                            out.push('"');
+                            self.bump();
+                        }
+                        Some('0') => {
+                            out.push('\0');
+                            self.bump();
+                        }
+                        Some('r') => {
+                            out.push('\r');
+                            self.bump();
+                        }
+                        Some(other) => {
+                            return Err(ParseError::new(
+                                esc_pos,
+                                format!(
+                                    "unknown escape sequence `\\{other}` in string literal \
+                                     (supported: \\n \\t \\\\ \\\" \\0 \\r)"
+                                ),
+                            ));
+                        }
+                        None => {
+                            return Err(ParseError::new(
+                                esc_pos,
+                                "unterminated string literal (trailing `\\` before end of file)"
+                                    .to_owned(),
+                            ));
+                        }
+                    }
+                }
+                Some(c) => {
+                    out.push(c);
+                    self.bump();
+                }
+            }
+        }
+        Ok(Tok::StrLit(out))
     }
 
     fn lex_binary(&mut self, pos: Pos) -> Result<Tok, ParseError> {

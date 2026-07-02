@@ -471,10 +471,13 @@ impl<'e> Evaluator<'e> {
             .ok_or(L1Error::DepthExceeded { limit: self.depth })?;
         match e {
             // RFC-0032 D4 (M-750): `0x…` byte-string literals share the `lit_value` lowering with the
-            // binary/ternary repr literals (all are context-free repr literals).
-            Expr::Lit(l @ (Literal::Bin(_) | Literal::Trit(_) | Literal::Bytes(_))) => Ok(
-                L1Value::Repr(lit_value(site, l).map_err(|e| unsupported(site, &e))?),
-            ),
+            // binary/ternary repr literals (all are context-free repr literals). M-910/M-911: `"…"`
+            // string literals join the same group (they lower to the same `Repr::Bytes` form).
+            Expr::Lit(
+                l @ (Literal::Bin(_) | Literal::Trit(_) | Literal::Bytes(_) | Literal::Str(_)),
+            ) => Ok(L1Value::Repr(
+                lit_value(site, l).map_err(|e| unsupported(site, &e))?,
+            )),
             // RFC-0032 D3 (M-749): a list literal `[e1, …]` evaluates to a `Repr::Seq` value. Each
             // element is evaluated to a repr value; the element repr (from the first) anchors the
             // descriptor. The checker has already verified homogeneity; the `Value::new`

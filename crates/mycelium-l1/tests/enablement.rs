@@ -35,6 +35,13 @@
 //!   decode is written in `.myc` over these byte prims (per RFC-0032 D4) and is not exercised here.
 //! - **Never-silent surface rejects** (G2): a **heterogeneous** list literal and an **odd-hex** `0x…`
 //!   literal are explicit refusals at check/parse time — pinned by the `*_rejects` tests below.
+//! - **M-910/M-911** (kickoff `enb` Phase-I H1) — the **`.myc` surface is now wired** for a textual
+//!   string literal `"…"` (lexer/parser/checker/elaborator): it lowers to the SAME `Repr::Bytes`
+//!   value form as the `0x…` literal (KC-3 — no new L0 node), so it is a legal operand to the SAME
+//!   `bytes_get`/`bytes_len` prims exercised by M-750 above. The full three-way differential runs
+//!   in the `string_literal_*_surface_three_way` tests below; the explicit, minimal escape set
+//!   (`\n \t \\ \" \0 \r`) and its never-silent termination/escape errors are pinned by the
+//!   `string_*_reject` tests.
 
 use mycelium_core::{
     Bound, BoundBasis, BoundKind, GuaranteeStrength, Meta, Node, NormKind, Payload, Provenance,
@@ -948,5 +955,112 @@ fn bytes_empty_hex_reject() {
     assert!(
         err.to_string().contains("no hex digits"),
         "the refusal must name the empty-hex cause: {err}"
+    );
+}
+
+// ── M-910/M-911 surface: textual string literal `"…"` — full three-way differential ──────────────
+//
+// `"…"` lowers to the SAME `Repr::Bytes`/`Payload::Bytes` value form as the `0x…` literal above
+// (UTF-8-encoded; KC-3 — no new L0 node), so it types as `Bytes` and is a legal operand to the
+// SAME `bytes_get`/`bytes_len` prims exercised above. The escape set is explicit and minimal:
+// `\n \t \\ \" \0 \r` (ergonomic, not expressive — `\xNN` is deliberately not included, see the
+// lexer's `lex_string` doc). Escape/termination errors are the lexer's never-silent gate (G2).
+
+/// `"Hello"` round-trips as the identical `Repr::Bytes` value the `0x48_65_6c_6c_6f` literal
+/// produces above — the direct evidence that the two literal forms share one value form.
+#[test]
+fn string_literal_surface_three_way() {
+    let expected_payload = Payload::Bytes(vec![0x48, 0x65, 0x6c, 0x6c, 0x6f]);
+    assert_three_way(
+        "string literal \"Hello\"",
+        "nodule d;\nfn main() => Bytes = \"Hello\";",
+        &Repr::Bytes,
+        &expected_payload,
+    );
+}
+
+/// The empty string literal `""` is a legal, zero-length `Bytes` value on all three paths.
+#[test]
+fn string_literal_empty_surface_three_way() {
+    assert_three_way(
+        "empty string literal",
+        "nodule d;\nfn main() => Bytes = \"\";",
+        &Repr::Bytes,
+        &Payload::Bytes(vec![]),
+    );
+}
+
+/// Every escape in the minimal set decodes to its target byte in the elaborated value, on all
+/// three paths — `"\n\t\\\"\0\r"` is the 6-byte sequence `0A 09 5C 22 00 0D`.
+#[test]
+fn string_literal_escape_set_surface_three_way() {
+    assert_three_way(
+        "string literal escape set",
+        "nodule d;\nfn main() => Bytes = \"\\n\\t\\\\\\\"\\0\\r\";",
+        &Repr::Bytes,
+        &Payload::Bytes(vec![0x0A, 0x09, 0x5C, 0x22, 0x00, 0x0D]),
+    );
+}
+
+/// `bytes_get("Hello", i)` over the surface is the indexed byte on all three paths — proof that a
+/// string literal is a legal operand to the existing `Bytes` prims (RFC-0032 D4), not a distinct
+/// surface type.
+#[test]
+fn string_literal_bytes_get_surface_three_way() {
+    // "Hello"[1] == 'e' == 0x65.
+    let want: Vec<bool> = (0..8).rev().map(|k| (0x65u8 >> k) & 1 == 1).collect();
+    assert_three_way(
+        "bytes_get over a string literal, index 1",
+        "nodule d;\nfn main() => Binary{8} = bytes_get(\"Hello\", 0b0000_0001);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits(want),
+    );
+}
+
+/// `bytes_len("Hello")` over the surface is `Binary{32}(5)` on all three paths.
+#[test]
+fn string_literal_bytes_len_surface_three_way() {
+    let (r, p) = b32(5);
+    assert_three_way(
+        "bytes_len over a string literal",
+        "nodule d;\nfn main() => Binary{32} = bytes_len(\"Hello\");",
+        &r,
+        &p,
+    );
+}
+
+/// Never-silent (G2): an unterminated string literal (no closing `"` before EOF) is a lex/parse
+/// refusal — never a silent truncation.
+#[test]
+fn string_unterminated_reject() {
+    let src = "nodule d\nfn main() => Bytes = \"abc";
+    let err = parse(src).expect_err("an unterminated string literal must be a parse error");
+    assert!(
+        err.to_string().contains("unterminated"),
+        "the refusal must name the unterminated cause: {err}"
+    );
+}
+
+/// Never-silent (G2): an unknown escape sequence (`\q`) is a lex/parse refusal — never a silently
+/// dropped backslash or a silently-literal escape char.
+#[test]
+fn string_unknown_escape_reject() {
+    let src = "nodule d\nfn main() => Bytes = \"a\\qb\"";
+    let err = parse(src).expect_err("an unknown escape sequence must be a parse error");
+    assert!(
+        err.to_string().contains("unknown escape"),
+        "the refusal must name the unknown-escape cause: {err}"
+    );
+}
+
+/// Never-silent (G2): a raw newline inside `"…"` is a lex/parse refusal — a multi-line string is
+/// not part of the minimal surface (use `\n`).
+#[test]
+fn string_raw_newline_reject() {
+    let src = "nodule d\nfn main() => Bytes = \"a\nb\"";
+    let err = parse(src).expect_err("a raw newline inside a string literal must be a parse error");
+    assert!(
+        err.to_string().contains("unterminated"),
+        "the refusal must name the unterminated (raw-newline) cause: {err}"
     );
 }

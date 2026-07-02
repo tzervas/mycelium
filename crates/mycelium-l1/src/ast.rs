@@ -887,6 +887,12 @@ pub enum Literal {
     /// Elaborates to a [`mycelium_core::Repr::Bytes`] value. The lexer is the never-silent gate
     /// that only ever builds an even-hex-digit, non-empty string (G2), so the stored text is valid.
     Bytes(String),
+    /// A textual string literal `"…"` (the **decoded** content — escapes already resolved by the
+    /// lexer; M-910/M-911, kickoff `enb` Phase-I H1). Elaborates to the **same**
+    /// [`mycelium_core::Repr::Bytes`] value form as [`Literal::Bytes`] (UTF-8-encoded; KC-3 — no
+    /// new L0 node), so it types as `Ty::Bytes` too. The lexer is the never-silent gate for escape
+    /// validity/termination (its `lex_string` scanner), so the stored text is valid.
+    Str(String),
 }
 
 impl Literal {
@@ -904,5 +910,13 @@ impl Literal {
     #[must_use]
     pub fn ternary(trits: impl Into<String>) -> Self {
         Literal::Trit(trits.into())
+    }
+
+    /// A string literal from its **decoded** content. Additive alias for [`Literal::Str`]; like the
+    /// variant it stores the content verbatim (post-escape-decoding — the lexer is the never-silent
+    /// gate that only ever builds well-terminated, validly-escaped ones; see [`Literal::binary`]).
+    #[must_use]
+    pub fn string(content: impl Into<String>) -> Self {
+        Literal::Str(content.into())
     }
 }
