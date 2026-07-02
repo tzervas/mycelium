@@ -11,7 +11,6 @@
 
 use mycelium_core::{CleanupShape, DecodeProcedure, InitStrategy, ReconInfo, ReconMode, Value};
 
-use crate::decode_select::{reconstruct_factors_auto, DecodeMethod, DecodeSelection};
 use crate::resonator::{self, Cleanup, Factorization, Init, ResonatorParams};
 use crate::{CleanupMemory, Match, VsaError, VsaModel, MAPI_RESONATOR_PROFILE};
 
@@ -112,7 +111,12 @@ pub fn reconstruct_factors<M: VsaModel>(
 /// A non-`Resonator` procedure (or a missing iteration budget) is the wrong decode for this executor
 /// — an explicit [`VsaError::NotCompositional`]. Absent params take the recommended MAP-I defaults;
 /// the numeric ranges were already checked by `ReconInfo::new`, so this only translates.
-fn resonator_params_from_manifest(manifest: &ReconInfo) -> Result<ResonatorParams, VsaError> {
+///
+/// `pub` for the RFC-0010 selected-decode layer in `mycelium-vsa-decode` (M-971): that crate hosts
+/// `reconstruct_factors_selected`, which was relocated out of this module so `mycelium-vsa` no
+/// longer depends on `mycelium-select` (breaking the interp↔vsa↔select cycle — DN-68). It reuses
+/// this manifest→params translation verbatim rather than duplicating it (DRY).
+pub fn resonator_params_from_manifest(manifest: &ReconInfo) -> Result<ResonatorParams, VsaError> {
     let decode = manifest.decode();
     let iteration_budget = match (decode.procedure, decode.iteration_budget) {
         (DecodeProcedure::Resonator, Some(b)) => b,
@@ -139,41 +143,12 @@ fn resonator_params_from_manifest(manifest: &ReconInfo) -> Result<ResonatorParam
     Ok(params)
 }
 
-/// Value-level **auto-selected** factor decode (RFC-0010): like [`reconstruct_factors`], but routes
-/// the decode **methodology** through the RFC-0005 selector instead of always running the resonator.
-/// It reads the same `Resonator` manifest (the resonator arm uses its params), resolves the record's
-/// hypervector, then calls [`reconstruct_factors_auto`] — so a request small enough to enumerate is
-/// upgraded to a brute-force **`Exact`** decode (even one *outside* the resonator's `{F, ∏kᵢ, d}`
-/// regime, e.g. `F=4` — brute force is exact for any factor count), an in-regime request runs the
-/// **`Empirical`** resonator, and anything else is an explicit [`VsaError::DecodeRefused`].
+/// Resolve a record `Value` to its hypervector payload slice, checking the model id and dimension
+/// match (an explicit [`VsaError::NotThisModel`] otherwise, never a silent reinterpretation — G2).
 ///
-/// The returned [`DecodeSelection`] carries the chosen method, the mandatory EXPLAIN, the recovered
-/// factors, and the **guarantee tag read off the chosen arm** (RFC-0010 §4.4) — only ever `Exact` or
-/// `Empirical`, never `Proven` (the recon `≤Empirical` ceiling is untouched; brute force is genuinely
-/// `Exact`, a strengthening, not an upgrade past the ceiling). `enum_budget` is the caller's tractable
-/// enumeration size (e.g. [`DEFAULT_ENUM_BUDGET`](crate::DEFAULT_ENUM_BUDGET)); `forced` pins an arm
-/// but cannot escape the honesty floor (RFC-0010 §4.5). Unlike [`reconstruct_factors`], this does
-/// **not** pre-gate on the resonator profile — the selector decides, so brute-forceable out-of-regime
-/// instances are still recovered (exactly), never refused for being outside the *resonator's* regime.
-pub fn reconstruct_factors_selected<M: VsaModel>(
-    model: &M,
-    manifest: &ReconInfo,
-    record: &Value,
-    codebooks: &[CleanupMemory],
-    enum_budget: u128,
-    forced: Option<DecodeMethod>,
-) -> Result<DecodeSelection, VsaError> {
-    if manifest.model() != model.model_id() {
-        return Err(VsaError::NotThisModel {
-            expected: model.model_id(),
-        });
-    }
-    let params = resonator_params_from_manifest(manifest)?;
-    let s = hv_payload(model, manifest.dim(), record)?;
-    reconstruct_factors_auto(model, s, codebooks, &params, enum_budget, forced)
-}
-
-fn hv_payload<'a, M: VsaModel>(model: &M, dim: u32, v: &'a Value) -> Result<&'a [f64], VsaError> {
+/// `pub` for the same reason as [`resonator_params_from_manifest`]: the relocated RFC-0010
+/// selected-decode layer (`mycelium-vsa-decode`, M-971) reuses this payload resolver verbatim.
+pub fn hv_payload<'a, M: VsaModel>(model: &M, dim: u32, v: &'a Value) -> Result<&'a [f64], VsaError> {
     match (v.repr(), v.payload()) {
         (
             mycelium_core::Repr::Vsa {
