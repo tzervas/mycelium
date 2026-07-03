@@ -991,7 +991,9 @@ fn generic_corpus() -> Vec<&'static str> {
         //     `Fuse::join` call — an ordinary inlined trait-method call that runs three-way. `Flag`'s
         //     `join` is the absorbing-`On` OR (a commutative/associative/idempotent join-semilattice);
         //     `fuse(On, Off)` = `join(On, Off)` = `On`. This is the user-merge case the brief targets.
-        "nodule d;\ntrait Fuse[A] { fn join(a: A, b: A) => A; };\ntype Flag = Off | On;\nimpl Fuse[Flag] for Flag { fn join(a: Flag, b: Flag) => Flag = match a { On => On, Off => b }; };\nfn main() => Flag = fuse(On, Off);",
+        //     `Fuse` is now a **built-in prelude trait** (M-965 F-A1) — no `trait Fuse` declaration
+        //     needed — and its `join` here is exhaustively law-checked at `impl` time (M-965 F-A2).
+        "nodule d;\ntype Flag = Off | On;\nimpl Fuse[Flag] for Flag { fn join(a: Flag, b: Flag) => Flag = match a { On => On, Off => b }; };\nfn main() => Flag = fuse(On, Off);",
         // --- M-826: tuple/product type round-trip through monomorphization (KC-3 / three-way diff) ---
         // (9) 2-tuple `fst` — checks, monos, and all three paths agree on `Nat` result.
         //     Tuple$2<Nat, Nat> monomorphizes to Tuple$2[Nat] (a closed type); `fst` extracts field 0.
@@ -1674,9 +1676,12 @@ fn fuse_repr_differential_three_way_empirical() {
 /// L1 evaluator runs on the **monomorphized** env (it has no trait dispatch — `eval_app`); `elaborate`
 /// (which monomorphizes internally) and the AOT env-machine run the same resolved call. The broader
 /// `generic_corpus` test exercises this shape in the uniform harness; this names the DoD value.
+/// `Fuse` is a **built-in prelude trait** (M-965 F-A1 — no `trait Fuse` declaration here), and its
+/// three semilattice laws are exhaustively checked at `impl` time over `Flag`'s finite domain
+/// (M-965 F-A2) — this fixture's `join` passes all three (it is exactly two-element OR).
 #[test]
 fn fuse_data_differential_three_way_empirical() {
-    let src = "nodule d;\ntrait Fuse[A] { fn join(a: A, b: A) => A; };\ntype Flag = Off | On;\nimpl Fuse[Flag] for Flag { fn join(a: Flag, b: Flag) => Flag = match a { On => On, Off => b }; };\nfn main() => Flag = fuse(On, Off);";
+    let src = "nodule d;\ntype Flag = Off | On;\nimpl Fuse[Flag] for Flag { fn join(a: Flag, b: Flag) => Flag = match a { On => On, Off => b }; };\nfn main() => Flag = fuse(On, Off);";
     let env = check_nodule(&parse(src).expect("data fuse parses")).expect("data fuse type-checks");
 
     // The mono'd env desugars `fuse(On, Off)` to the resolved `join` call — the form L1-eval runs.

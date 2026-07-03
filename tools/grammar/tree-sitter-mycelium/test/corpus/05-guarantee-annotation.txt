@@ -1,0 +1,35 @@
+============================================================
+05 guarantee annotation
+============================================================
+
+nodule numerics;
+
+fn certified(x: Dense{768, F32}) => Dense{768, BF16} @ Proven =
+    swap(x, to: Dense{768, BF16}, policy: bf16_round);
+
+------------------------------------------------------------
+
+(source_file
+  (nodule_header
+    name: (identifier))
+  (fn_item
+    name: (identifier)
+    (params
+      (param
+        name: (identifier)
+        type: (type_ref
+          (repr_type
+            (int_literal)
+            (scalar_type)))))
+    return_type: (type_ref
+      (repr_type
+        (int_literal)
+        (scalar_type))
+      strength: (strength))
+    body: (swap_expr
+      value: (identifier)
+      to: (type_ref
+        (repr_type
+          (int_literal)
+          (scalar_type)))
+      policy: (identifier))))

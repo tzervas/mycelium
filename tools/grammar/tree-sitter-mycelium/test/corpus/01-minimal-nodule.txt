@@ -1,0 +1,19 @@
+============================================================
+01 minimal nodule
+============================================================
+
+nodule signals.demo;
+
+use core.binary;
+
+------------------------------------------------------------
+
+(source_file
+  (nodule_header
+    name: (path
+      (identifier)
+      (identifier)))
+  (use_item
+    path: (path
+      (identifier)
+      (identifier))))

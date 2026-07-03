@@ -694,10 +694,84 @@ the maintainer folds them into §8 at ratification, or supersedes this resolutio
 
 ---
 
+## 11. M-923 surface-lowering landing (2026-07-02) — partial, honestly recorded (append-only)
+
+*Status stays as recorded in the header (`propose Enacted, pending maintainer final nod`) — this
+leaf does **not** step it to `Enacted`; the §8/§10.7 checklist is not yet fully discharged (below).
+Per DN-74 Option A's D3, M-923 was directed to land (i) the `Ty::Fn`-field surface lowering,
+(ii) the §5.1 three-way differential, (iii) a program-level never-silent no-match case, then
+(iv) step `Enacted` only once genuinely complete. (i)–(iii) landed, with one honest narrowing on
+(ii) and new cross-crate evidence not anticipated when D3 was written — recorded here, not buried.*
+
+**(i) Surface lowering — landed.** `mycelium-l1`'s `field_spec` (`crates/mycelium-l1/src/elab.rs`)
+now maps a concrete `Ty::Fn(param, ret)` field to `FieldSpec::Fn { arity: 1, sig }`, resolving each
+leaf through a new `ty_to_field_ty_ref` helper (a generic/unresolved leaf still stages, narrower than
+the prior blanket `None`). The former staged `Residual` for this fragment is gone for concrete
+signatures — never silently, per G2.
+
+**New evidence: the standard `elaborate` entry cannot reach `FieldSpec::Fn` at all.** Verified while
+implementing (not anticipated in the DN-74 dossier): `mono.rs`'s closure defunctionalization
+(RFC-0024 §4A/M-704) unconditionally rewrites *every* reachable `Ty::Fn` field into a closure
+tag-sum `Ty::Data` reference before `build_registry` ever runs, and `elaborate` always monomorphizes
+first — so `field_spec`'s new arm is unreachable through that entry (defunctionalization already
+produces a closed, executing term for every such field — the pre-existing `closures.rs` differential
+verifies this, unaffected by this leaf). Making `FieldSpec::Fn` reachable from a real,
+parsed-and-checked program therefore added `elaborate_direct` (`crates/mycelium-l1/src/elab.rs`) — an
+additive sibling of `elaborate` that skips the `mono.rs` pre-pass; `elaborate`'s own behavior and
+NFR-7's existing differential corpus are unchanged. `mono.rs`'s defunctionalization scope itself is
+untouched (out of this leaf's owned files) — a named follow-on if the surface is ever meant to route
+generically-dispatched dictionaries through `FieldSpec::Fn` instead of defunctionalization.
+
+**(ii) Three-way differential — closed where forms close, honestly narrowed for AOT.** The M-923
+test corpus (`crates/mycelium-l1/tests/fieldspec_fn_lowering.rs`) builds a real `.myc` program (two
+record types, same field arity, **different** `Fn` signatures — the exact §10.1 `MkDict_Eq8`/
+`MkDict_Eq16` shape) and dispatches through a `match`-projected field holding an ordinary named
+top-level function (never a `lambda` — this variant's own §2.1 design: no captured environment).
+**L1-eval ≡ elaborate_direct→L0-interp agree** (`Empirical`, green). **AOT refuses explicitly**
+(`EvalError::FunctionResult`) rather than closing: `mycelium-mlir`'s env-machine reifies every
+`Construct` field to a `CoreValue` immediately at construction time, and `CoreValue` is `Repr | Data`
+only — no function-value variant exists to hold an unapplied `Fn`-typed field's value at all. This is
+exactly the disposition §5.1 named as acceptable ("the AOT path may be partially stubbed at this
+stage"): recorded as an explicit, never-silent refusal, not a silent divergence, and not attempted to
+be closed here — closing it needs a `CoreValue`/`Datum` (or AOT-local) representation for a
+function-valued field, a `mycelium-core`/`mycelium-mlir` architecture change outside this leaf's
+scope.
+
+**One necessary cross-crate fix, flagged.** `mycelium-interp`'s `guarantee_of_value` (not in this
+leaf's originally-scoped file set) lacked a `Node::Lam` arm — a pre-existing latent gap (the
+guarantee-meet step had never seen a `Lam`-valued `Construct` field, since `FieldSpec::Fn` was dead
+code end-to-end before this leaf), not a new relaxation: a `Lam` was already a valid `Step::Value`
+normal form. Added `Node::Lam { .. } => Ok(GuaranteeStrength::Exact)` (a closed lambda term carries
+no representational approximation to summarize — the meet identity). Minimal, mechanical, and
+required for (ii) to run at all; flagged for reviewer attention as an out-of-scope-file touch.
+
+**(iii) Never-silent cross-typed no-match — landed, program-registry-driven.** A value built under
+`Dict8`'s `CtorRef` (from this program's own, `field_spec`-built registry — not a hand-rolled
+`mycelium-core` `DeclSpec`), matched against `Dict16`'s `CtorRef`: an explicit
+`EvalError::NonExhaustiveMatch` on **both** L0-interp and AOT (AOT reaches the `Match` step here
+since the adversarial fixture's field payload is a plain `Binary` constant, not a `Lam` — the AOT
+gap above is specific to constructing an `Fn`-valued field, not to matching on one). Necessarily
+hand-assembled (a well-typed surface program cannot express a cross-typed match arm — the checker
+already refuses it), so this exercises the kernel's rejection of an out-of-band/adversarial term,
+lifted from "`mycelium-core`'s isolated unit tests" to "this program's own registry."
+
+**(iv) `Enacted` status — not stepped; the residual, stated plainly.** Outstanding before a future
+`Enacted` transition: the AOT closure above (a real architecture gap, not a formality); the
+orchestrator-owned §8 items (`docs/adr/README.md` index — FLAG-5; the RFC-0019 changelog pointer);
+and the full-workspace `just check` (this leaf ran change-scoped `cargo fmt`/`clippy -D warnings`/
+`cargo test` for `mycelium-l1`, `mycelium-interp`, `mycelium-mlir` green — not the release-tier
+full sweep). None of these block the primitive-set-closure freeze condition DN-74 already decided
+(that decision rests on the kernel encoding, §2 above, not on this surface lowering); they block only
+this ADR's own `Enacted` bar. Tag: `Empirical` for (i)–(iii) as landed (test-run green, re-verified
+2026-07-02); the AOT gap and the orchestrator-owned items are `Exact` (verified absent/incomplete).
+
+---
+
 ## Changelog
 
 | Date | Status | Note |
 |---|---|---|
+| 2026-07-02 | **propose `Enacted`** (unchanged — M-923 partial landing recorded, not a status step) | **M-923 (surface lowering) landed (i)–(iii) of DN-74 Option A's D3, honestly narrowed on AOT — see new §11 (append-only).** `field_spec` now produces `FieldSpec::Fn` for concrete `Ty::Fn` fields; `elaborate_direct` (new, additive) makes it reachable from a real program (the standard `elaborate` cannot reach it — `mono.rs` always defunctionalizes first, new evidence). Three-way differential: L1-eval ≡ L0-interp green (`Empirical`); AOT refuses explicitly (`EvalError::FunctionResult` — no `CoreValue` function-value variant exists yet), recorded per §5.1's own "AOT may be partially stubbed" allowance, not silently papered over. Never-silent cross-typed no-match: landed, program-registry-driven (`crates/mycelium-l1/tests/fieldspec_fn_lowering.rs`). One necessary cross-crate fix flagged: `mycelium-interp::guarantee_of_value` gained a `Node::Lam` arm (pre-existing latent gap, not a relaxation). Status **stays** `propose Enacted, pending maintainer final nod`: the AOT closure gap and the orchestrator-owned §8 items (docs/adr/README.md index, RFC-0019 changelog pointer) remain open — `Enacted` requires them genuinely discharged, not asserted (VR-5/G2). |
 | 2026-06-28 | **propose `Enacted`** (FLAG-1 resolved+implemented; pending maintainer final nod) | **FLAG-1 RESOLVED AND IMPLEMENTED (r4v + ADR-033 integration wave, M-810):** `FieldSpec::Fn { sig: FnSig }` with `FieldTyRef` per param + return type landed in `mycelium-core`. `encode_decl` encodes full signature injectively (`FIELD_FN` / `FN_SIG_*` / `FTR_*` tags). `cargo test -p mycelium-core` 233+11 green. Distinct-hash property test + no-match differential pass. Soundness tag: **`Empirical`** (trial-tested; NOT `Proven` — VR-5). → Propose `Enacted` pending maintainer final nod. |
 | 2026-06-28 | **Accepted** (FLAG-1 resolved-pending-implementation) | **FLAG-1 resolution ratified (in-session): Path A — full function signature (params + return) encoded in `FieldSpec::Fn` dispatch hash.** FLAG-1 moves from "open" to resolved-pending-implementation (§6 + §10 record the analysis). Implementation: `FieldSpec::Fn { arity }` → `FieldSpec::Fn { sig: FnSig }` with `FieldTyRef` per param + return (sub-task M-810). → Enacted gated solely on landing the full-sig encoding. Soundness tag stays `Declared` (VR-5). |
 | 2026-06-28 | **Accepted** (unchanged) | **FLAG-1 resolution proposed** (new §10): analyzed both candidate paths and **recommend Path A (type-carrying hash — `FieldSpec::Fn { arity, sig }`)** over Path B (arity-only machine-checked argument). Stated the soundness hole precisely (§10.1: same-arity-different-type fn fields collide on content identity → kernel cannot reject a type-confused dictionary projection, a silent G2 violation). Showed Path A *is* kernel-encodable — every signature leaf bottoms out in `Repr` (already `Canon::repr`-injective) or `Data(hash)`, recursion well-founded — correcting §7.1's over-strong "would conflate a type registry" claim. Showed Path B **cannot** be established: its single-producer side-condition is structurally false at the L0 trusted-input boundary, and adopting it would move the type-checking elaborator into the *trusted* core (inverting KC-3). Tagged the resolution **`Declared`-with-argument, NOT `Proven`** (unmechanized — VR-5); named the test/proof upgrade path. **Status stays `Accepted`** — this is a proposal pending maintainer ratification → then `Enacted` (append-only #3; §6 FLAG-1 left intact; §8 DoD not rewritten — deltas noted in §10.7). Resolves G4+G5 of the ratification map / DN-56 kernel-freeze condition #3 **only once ratified**. FLAGs raised (cannot edit): Doc-Index, CHANGELOG, issues.yaml, DN-56, `docs/adr/README.md` index — all orchestrator/owner-owned. (VR-5; G2; KC-3.) |

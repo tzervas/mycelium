@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-54 |
-| **Status** | **Accepted** (2026-06-27, ratified by maintainer, R5 gate) — **implemented (Rust-first, surface + structural checks); KC-3 + IL-grammar + RHS-elaboration pending — pending ratification** (2026-06-28; M-812 in `mycelium-l1`). **What landed:** the `lower Name[params] = <rhs>` definition surface and `derive Name for T` use-site surface are **active** keywords (parse + AST `Item::Lower`/`Item::Derive` + `LowerDecl`/`DeriveDecl`), and the checker performs the **structural** validations (§4.2/§4.6 partial): `lower`-rule **name uniqueness**, **param-name uniqueness**, and `derive` **rule-name resolution** — all **never-silent** (`CheckError`, G2). The rule is registered in `Env::lower_rules`. **What is NOT yet implemented (deferred to M-812-cont; held `Declared`, VR-5):** (1) the **RHS elaboration to L0** — `crate::elab` does not yet read `Env::lower_rules`, so a `derive` currently emits **no L0 term** (an honest never-silent residual, *not* a fabricated accept — pinned by `tests/checkty.rs::lower_derive_items_add_no_l0_to_an_unrelated_entry`); (2) the **§4.1 IL-grammar RHS type-check** (infer-type the RHS, reject `wild`/mutation/ill-formed terms); (3) the **§6 KC-3 kernel-growth guard** (the elaborated RHS must lower to existing L0 nodes only); (4) **§4.2 cross-rule acyclicity** (only same-nodule name-uniqueness is enforced today); (5) the **§7 verification discipline** (differential / hygiene / round-trip harness). Guards (2)/(3) are only *meaningful* once (1) lands — landing them now would be vacuous no-ops (VR-5: no upgrade past basis). → **Enacted** still gated on the §6/§7 verification harness (DN-38 §7) **and** these completions. Prior: **Proposed** (2026-06-27). |
+| **Status** | **Accepted** (2026-06-27, ratified by maintainer, R5 gate) — **implemented (Rust-first, surface + structural checks); KC-3 + IL-grammar + RHS-elaboration pending — pending ratification** (2026-06-28; M-812 in `mycelium-l1`). **What landed:** the `lower Name[params] = <rhs>` definition surface and `derive Name for T` use-site surface are **active** keywords (parse + AST `Item::Lower`/`Item::Derive` + `LowerDecl`/`DeriveDecl`), and the checker performs the **structural** validations (§4.2/§4.6 partial): `lower`-rule **name uniqueness**, **param-name uniqueness**, and `derive` **rule-name resolution** — all **never-silent** (`CheckError`, G2). The rule is registered in `Env::lower_rules`. **What is NOT yet implemented (deferred to M-812-cont; held `Declared`, VR-5):** (1) the **RHS elaboration to L0** — `crate::elab` does not yet read `Env::lower_rules`, so a `derive` currently emits **no L0 term** (an honest never-silent residual, *not* a fabricated accept — pinned by `tests/checkty.rs::lower_derive_items_add_no_l0_to_an_unrelated_entry`); (2) the **§4.1 IL-grammar RHS type-check** (infer-type the RHS, reject `wild`/mutation/ill-formed terms); (3) the **§6 KC-3 kernel-growth guard** (the elaborated RHS must lower to existing L0 nodes only); (4) **§4.2 cross-rule acyclicity** (only same-nodule name-uniqueness is enforced today); (5) the **§7 verification discipline** (differential / hygiene / round-trip harness). Guards (2)/(3) are only *meaningful* once (1) lands — landing them now would be vacuous no-ops (VR-5: no upgrade past basis). → **Enacted** still gated on the §6/§7 verification harness (DN-38 §7) **and** these completions. Prior: **Proposed** (2026-06-27). **UPDATE (2026-07-02, freeze close-out — supersedes the "NOT yet implemented" list above; DN-54 stays `Accepted`):** all five deferred completions have since **landed** (`Empirical`, verified by **DN-75** completion audit + the M-959 reject-ledger family-8 rows): (1) RHS elaboration to L0 (M-812-cont, merge `29b0aed`) + (2) §4.1 IL-grammar RHS type-check (`check_lower_rule_rhs_type`) + (3) §6 KC-3 kernel-growth guard + (4) §4.2 cross-rule acyclicity (`check_lower_rule_acyclicity`) + (5) §7 verification discipline are all active in `crates/mycelium-l1`, with the DN-71 Model-S affine tracker (M-919) and the DN-54 §10 attachment model (Model A, DN-81/M-973) wired through. This condition (DN-56 §5.4 "lowering surface closed") is scored **GREEN** in DN-76 §5A. The note's status is held at `Accepted` (the DN-39/§7 harness lives in-tree; a separate `Enacted` advance is left as a deliberate follow-up, not folded into this editorial). |
 | **Feeds** | The generative-lowering row of the DN-38 §6 Lowering Map; the `derive` + `reveal` RFC track; the grammar wave (DN-31/RFC-0037); the verification harness (DN-20 tiers); KC-3 invariant tracking. |
 | **Date** | June 27, 2026 |
 | **Decides** | *Design proposal (all `Declared`; no code):* (1) the **extension-definition surface** — how a user declares a generative-lowering rule written in Mycelium lexicon with an explicit L0/surface RHS; (2) **inspectability-by-construction** — why there is no opaque step; (3) the **checker** — what the compiler enforces on every user-defined lowering; (4) the **verification discipline** — the same §6 differential + hygiene + round-trip the built-in lowerings hold to; (5) the **KC-3 invariant** — user extensions add no kernel node. |
@@ -839,3 +839,125 @@ entry by offering a grounded, ratifiable design position.
   for the implementing RFC. **DN-54 remains `Accepted`; no status advanced.** All new claims are
   `Declared` (design pass — VR-5). CHANGELOG / Doc-Index / issues.yaml reconciled by the
   integrating parent. (Append-only; VR-5; G2.)
+- **2026-07-02 — Extension-checker enactment of DN-71 Model S (M-919); status held at `Accepted`
+  (partial — VR-5), one FLAG raised.** Kickoff `grm`, task M-919, following the DN-75 (M-917)
+  completion audit and the DN-71 (M-901) affine-consume-model sign-off. Two distinct findings:
+  1. **A real coverage gap in the extension-checker, found and closed.** `check_lower_rule_rhs_type`
+     (`crates/mycelium-l1/src/checkty.rs`) ran the RHS type-check with a permanently **inert** affine
+     tracker, reasoned only from "a `lower` rule has no value parameters, so no `Substrate` binding
+     is ever in scope" (`crates/mycelium-l1/src/affine.rs` module docs, pre-fix). That reasoning
+     missed DN-54 §3.3's own permission for a rule's RHS to call other already-checked top-level
+     `fn`s — nothing restricts those callees' return types, so a `let s = acquire() in …` inside a
+     `lower` rule's RHS can legally bind a real `Substrate{tag}` value (`acquire`'s own body having
+     used `wild` in an `@std-sys` nodule). A reproduction confirmed the gap **non-vacuously**: a
+     same-rule double-consume of such a helper-acquired `Substrate` type-checked silently under the
+     inert tracker. **Fixed**: the tracker is now seeded **active** (`Tracker::seeded(&[])`, an empty
+     initial scope — a rule has no value parameters to seed from, but every subsequent
+     `let`/lambda/match binder in the RHS walk is tracked exactly as `check_fn_body` tracks one, so
+     DN-71 Model S §4.2's double-consume refusal now fires inside a `lower` rule's RHS too, citing
+     DN-71 by name). Reject-case conformance:
+     `lower_rule_rhs_double_consume_of_a_helper_acquired_substrate_is_refused`; the accept-side
+     regression guard: `lower_rule_rhs_single_consume_of_a_helper_acquired_substrate_checks`
+     (both `crates/mycelium-l1/src/tests/checkty.rs`). `cargo test -p mycelium-l1` green (all
+     suites); `cargo fmt` + `clippy -D warnings -A unsafe_code` clean. Guarantee: the double-consume
+     check itself is `Empirical` (M-903's own tag, unchanged); this fix only extends its *coverage*
+     to a checker context that previously bypassed it — no tag is upgraded past its basis (VR-5).
+  2. **FLAG — the M-918/M-919 `issues.yaml` framing conflates two different constructs; DN-54 §10's
+     own subject remains genuinely unresolved.** `tools/github/issues.yaml`'s M-918 entry records
+     the DN-54 §10 **derive-site attachment** question ("consumption model") as "RESOLVED: DN-71
+     Model S". Reading DN-71 itself (its own §3 and §7) refutes that framing: DN-71 Model S is the
+     **affine `Substrate`/`consume` execution model** (an interpreter-level opaque handle with
+     static use-once checking) — a construct DN-71 §3 explicitly distinguishes from DN-54 §10's
+     **attachment model** (where a `derive`'s generated L0 lives — Model A sibling-injection vs.
+     Model B registry, §10.3–§10.5). DN-71 §7 states plainly these "are two different constructs
+     sharing the word 'consume'" and even recommends M-918 be renamed to "attachment model" to stop
+     the collision — the opposite of treating them as one resolved model. No maintainer ratification
+     of DN-54 §10's attachment model (Model A vs. B) was found anywhere in the corpus (checked:
+     `docs/planning/Blocked-Decisions-Ratification-Map.md`, `git log --all` for "attachment"/"Model
+     A", `docs/notes/DN-76-*`) — DN-76 line 144 still lists it as a live **maintainer gate**
+     (`grm M-918/M-919`), unresolved. So: **item 1 above genuinely satisfies "enact DN-71 Model S in
+     the extension-checker"** (the literal M-919 DoD text), but it does **not** resolve DN-54 §10's
+     own attachment-model question, and the `issues.yaml` M-918 entry's "MET BY: DN-71 Model S"
+     wording should be corrected by the orchestrator (issues.yaml is orchestrator-owned; not edited
+     here — G2, flagged not guessed). The DN-75 residual ledger's R-1/R-2/R-3/R-4 (attachment model,
+     §4.4/§4.5/§4.6-row-6 downstream obligations, §7 corpus/DN-20 tiering, `certified`-mode
+     round-trip) are **all still open** — none are touched by this task.
+  3. **Editorial correction carried forward from DN-75 FLAG E-1** (docs/notes/DN-75, §4): the
+     2026-06-29 changelog entry's claim that `lower_derive_items_add_no_l0_to_an_unrelated_entry`
+     was "replaced" is imprecise — that test was retained and repurposed as a live isolation guard
+     (`crates/mycelium-l1/src/tests/checkty.rs`, still present). Recorded here per E-1's routing
+     (a one-line clarification, no history rewrite).
+  **DN-54 status: held at `Accepted` (honest partial — VR-5), NOT stepped to `Enacted`.** Per house
+  rule #3 and DN-54 §9's own gate, `Enacted` requires §10's attachment model to be ratified and
+  implemented plus the DN-75 residuals (R-1 through R-4) closed; none of that happened in this task.
+  What *did* land is real and verified (item 1), but it is a checker-coverage fix for the
+  already-Accepted affine `Substrate` construct, not a completion of DN-54's own open design
+  question. CHANGELOG / Doc-Index / issues.yaml / docs/api-index reconciled by the integrating
+  parent (FLAGged, not edited here). (Append-only; VR-5; G2.)
+- **2026-07-02 — §10 attachment model ENACTED (Rust-first): Model A sibling-impl injection (M-973);
+  status held at `Accepted` (honest partial — VR-5).** Kickoff `grm`, epic E30-1, following the DN-81
+  (M-972 / M-972b) attachment-model dossier whose §10-corrected recommendation — **Model A
+  (sibling-item injection)** — the orchestrator accepted. Enacts the DN-54 §10.3 attachment model in
+  the `mycelium-l1` frontend. **Landed (all Rust-first, `mycelium-l1`):**
+  1. **Item-shaped `lower`-rule RHS (OQ-B / §10.1(b)).** A `lower Name[T] = impl Trait for T { … }`
+     rule now parses (`parse_lower_item_rhs`, trait-instance form only — the §3.2 minimum; `type`
+     aliases and standalone `fn` items stay out of v1, YAGNI/G2), carried by a new `LowerRhs::{Expr,
+     Impl}` AST enum. The v0 expression-shaped form is unchanged.
+  2. **`elaborate_derive_as_sibling` (§6.2 / §10.3 Model A).** In the checker, a `derive Name for C`
+     whose rule is item-shaped is instantiated — the single rule type-parameter is substituted by the
+     concrete target `C` throughout the `impl` template (`subst_type_param_in_*`, structural and
+     Swap-free) — and the resulting concrete `impl` is **injected as a sibling item** into the nodule
+     **before** the instance-registration (Pass 2b) and method-body (Pass 3b) passes. De-dup is by the
+     ADR-003 content key `(trait, type_head)`: two identical `derive`s collapse to one (a no-op
+     duplicate, §10.3); a genuine conflict is left to `register_instances` to refuse as an
+     overlapping-instance coherence violation (never silent).
+  3. **Deliberate affine wiring (the load-bearing DN-81 §10.4 fix — NOT inherited).** Because the
+     sibling is injected before Pass 3b (the DN-81 §10.4 option-(a) reordering), the derived impl's
+     method bodies flow through `check_impl_methods` → `check_fn_body`'s **active** M-919 affine
+     tracker, so a derive-site double-consume of a `Substrate` is refused, never-silently, citing
+     DN-71 — proven (not self-attested) by the red-then-green reject test
+     `derive_site_double_consume_of_a_substrate_is_refused` (the derive-site twin of M-919's rule-RHS
+     test). This closes the skeptic-identified gap DN-81 §10 records: affine coverage for derived-impl
+     bodies is a *deliberate* wiring deliverable, and it is now wired + tested.
+  4. **Coherence / orphan by construction (OQ-D / §10.2 crit. 3–4 / RFC-0019 §4.5).** The injected
+     impl enters the **existing** `register_instances` pass, so global-uniqueness and the phylum-wide
+     orphan rule cover it with no new code path — a derived impl colliding with a hand-written one is a
+     never-silent coherence refusal (tested). (The orphan *arm* is proven non-vacuous by the
+     pre-existing `register_instances`-direct tests; a resolvable derive in a phylum-of-one is never
+     itself an orphan by the M-662 resolvability property, so coherence entry is demonstrated via the
+     constructible overlap arm.)
+  5. **Provenance (OQ-A / §6.5 / RFC-0001 §4.3).** `Env::derived_provenance` records `(rule_name,
+     for_ty)` per injected impl, keyed by the coherence key — a derived impl is distinguishable from a
+     hand-written one (`Declared`; ADR-003 content-addressing is the substantive identity, this map is
+     the human-facing origin label — carried honestly, never upgraded).
+  6. **FLAG-6 (DN-81 §10.5) fixed.** The stale `Cx::affine` field doc (`checkty.rs`) that read the
+     tracker is "inert in `check_lower_rule_rhs_type`" is corrected — M-919 made it active there.
+  **Guarantee posture (VR-5, honest).** The substitution + injection + coherence routing are
+  `Declared` (structural); the affine coverage of derived bodies is `Empirical` (earned by the
+  red-then-green reject test, not self-attested); KC-3 holds by construction (the elaborator's codomain
+  is the frozen `mycelium_core::Node` enum, and the §4.6 `wild`-refusal covers the derived impl's
+  method bodies too). Tests: six new cases in `crates/mycelium-l1/src/tests/checkty.rs`; all
+  `mycelium-l1` suites green; `cargo fmt` + `clippy -D warnings -A unsafe_code` clean.
+  **Status held at `Accepted` (partial — NOT stepped to `Enacted`).** This closes DN-75 residual
+  **R-1** (attachment model chosen + enacted; item-shaped RHS; parametric-instantiation path) and the
+  §4.4 content-addressed-dedup half of **R-2**. **Residuals that keep `Enacted` gated (VR-5, named not
+  buried):** the §4.5 `reveal`-exercisability of a derived impl (rides the DN-38 §5 inspector track,
+  not landed here), the §7.1/§7.2 **generated-corpus differential** for the item-shaped derive path
+  (R-3 — the injected impls are checked/coherent/affine-covered, but no `observe(surface) ==
+  observe(lower)` differential harness over derived output is added here), **R-4** (certified-mode
+  `delaborate ∘ lower = id` + `Proven`-per-run TV witness, gated on ADR-032), OQ-C (mixed
+  expr-and-item / multi-param rules — a multi-param item rule derive is a never-silent refusal in v1),
+  OQ-E (effect annotation interaction beyond the exact-match conformance already enforced), and the
+  §9 ratification gate itself. Per house rule #3, `Enacted` is the integrating parent's step through
+  `Accepted`, only once these close and the maintainer ratifies. **FLAGs (for the orchestrator; not
+  edited here — G2):** (a) this leaf touched **`ast.rs`** (the `LowerRhs` enum + accessors) and
+  **`ambient.rs`** (`print_lower_decl` for the item form) — two `mycelium-l1` frontend files outside
+  the task's explicit 4-file (`checkty`/`elab`/`parse`/`mono`) OWN enumeration, necessary because
+  item-shaped RHS cannot be represented without extending `LowerDecl` (disclosed, not silent). (b) The
+  kickoff frames this as closing "DN-56 condition 3 (lowering surface closed)", but **DN-56's own text
+  numbers the lowering-surface-closed condition as #4** (its §2 item 4 / status-line #4); this work
+  **substantially advances** that condition (the attachment model — the last structural hole in the
+  derive lowering surface — is filled) but does **not** fully close it (the R-2 `reveal` + R-3 §7
+  harness residuals above remain). DN-56 is orchestrator-owned; the closure call + the #3-vs-#4
+  numbering is left to the integrating parent. CHANGELOG / Doc-Index / issues.yaml / docs/api-index
+  reconciled by the integrating parent (FLAGged, not edited here). (Append-only; VR-5; G2.)

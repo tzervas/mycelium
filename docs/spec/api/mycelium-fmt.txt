@@ -23,6 +23,27 @@ impl core::marker::Unpin for mycelium_fmt::FmtError
 impl core::marker::UnsafeUnpin for mycelium_fmt::FmtError
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_fmt::FmtError
 impl core::panic::unwind_safe::UnwindSafe for mycelium_fmt::FmtError
+pub enum mycelium_fmt::Style
+pub mycelium_fmt::Style::Compact
+pub mycelium_fmt::Style::Readable
+impl core::clone::Clone for mycelium_fmt::Style
+pub fn mycelium_fmt::Style::clone(&self) -> mycelium_fmt::Style
+impl core::cmp::Eq for mycelium_fmt::Style
+impl core::cmp::PartialEq for mycelium_fmt::Style
+pub fn mycelium_fmt::Style::eq(&self, &mycelium_fmt::Style) -> bool
+impl core::default::Default for mycelium_fmt::Style
+pub fn mycelium_fmt::Style::default() -> mycelium_fmt::Style
+impl core::fmt::Debug for mycelium_fmt::Style
+pub fn mycelium_fmt::Style::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_fmt::Style
+impl core::marker::StructuralPartialEq for mycelium_fmt::Style
+impl core::marker::Freeze for mycelium_fmt::Style
+impl core::marker::Send for mycelium_fmt::Style
+impl core::marker::Sync for mycelium_fmt::Style
+impl core::marker::Unpin for mycelium_fmt::Style
+impl core::marker::UnsafeUnpin for mycelium_fmt::Style
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_fmt::Style
+impl core::panic::unwind_safe::UnwindSafe for mycelium_fmt::Style
 pub struct mycelium_fmt::Formatted
 pub mycelium_fmt::Formatted::changed: bool
 pub mycelium_fmt::Formatted::notes: alloc::vec::Vec<alloc::string::String>
@@ -49,3 +70,5 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_fmt::Formatted
 pub const mycelium_fmt::MYCFMT_VERSION: &str
 pub fn mycelium_fmt::flatten_source(&str, core::option::Option<&str>) -> core::result::Result<mycelium_fmt::Formatted, mycelium_fmt::FmtError>
 pub fn mycelium_fmt::format_source(&str, core::option::Option<&str>) -> core::result::Result<mycelium_fmt::Formatted, mycelium_fmt::FmtError>
+pub fn mycelium_fmt::format_source_readable(&str, core::option::Option<&str>) -> core::result::Result<mycelium_fmt::Formatted, mycelium_fmt::FmtError>
+pub fn mycelium_fmt::format_source_styled(&str, core::option::Option<&str>, mycelium_fmt::Style) -> core::result::Result<mycelium_fmt::Formatted, mycelium_fmt::FmtError>

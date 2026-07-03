@@ -1,0 +1,46 @@
+============================================================
+09 colony hypha
+============================================================
+
+nodule signals;
+
+fn compute(x: Binary{8}) => Binary{8} = not(x);
+
+fn run() => Binary{8} =
+    colony { @forage(0b01) hypha compute(0b0000_0001), hypha compute(0b0000_0010) };
+
+------------------------------------------------------------
+
+(source_file
+  (nodule_header
+    name: (identifier))
+  (fn_item
+    name: (identifier)
+    (params
+      (param
+        name: (identifier)
+        type: (type_ref
+          (repr_type
+            (int_literal)))))
+    return_type: (type_ref
+      (repr_type
+        (int_literal)))
+    body: (call_expr
+      function: (identifier)
+      (identifier)))
+  (fn_item
+    name: (identifier)
+    return_type: (type_ref
+      (repr_type
+        (int_literal)))
+    body: (colony_expr
+      (hypha
+        (forage_attribute
+          policy: (bin_literal))
+        value: (call_expr
+          function: (identifier)
+          (bin_literal)))
+      (hypha
+        value: (call_expr
+          function: (identifier)
+          (bin_literal))))))

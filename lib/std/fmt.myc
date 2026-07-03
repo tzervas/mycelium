@@ -37,7 +37,14 @@ type HexPair = HP(Binary{8}, Binary{8});
 // necessary; unreachable for well-formed nibbles, never-silent for malformed ones). The `lt` prim
 // returns Binary{1}; we use a match { 0b1 => …, _ => … } bridge.
 fn hex_digit(nibble: Binary{8}) => Binary{8} =
-  match lt(nibble, 0b0000_1010) { 0b1 => add_u(nibble, 0b0011_0000), _ => match lt(nibble, 0b0001_0000) { 0b1 => add_u(nibble, 0b0101_0111), _ => 0b0011_1111 } };
+  match lt(nibble, 0b0000_1010) {
+    0b1 => add_u(nibble, 0b0011_0000),
+    _ =>
+      match lt(nibble, 0b0001_0000) {
+        0b1 => add_u(nibble, 0b0101_0111),
+        _ => 0b0011_1111
+      }
+  };
 
 // ── nibble_lo ─────────────────────────────────────────────────────────────────────────────────────
 // nibble_lo: extract the low 4 bits of `x` (bits 0..3) as a Binary{8} value in 0..15.
@@ -55,7 +62,35 @@ fn nibble_lo(x: Binary{8}) => Binary{8} =
 // produces exactly one leaf via the 4-branch binary search (Exact). Each leaf returns the nibble
 // value (masked 0x00 → nibble 0, 0x10 → nibble 1, …, 0xf0 → nibble 15) as a Binary{8} constant.
 fn nibble_hi(x: Binary{8}) => Binary{8} =
-  let m = and(x, 0b1111_0000) in match lt(m, 0b1000_0000) { 0b1 => match lt(m, 0b0100_0000) { 0b1 => match lt(m, 0b0010_0000) { 0b1 => match lt(m, 0b0001_0000) { 0b1 => 0b0000_0000, _ => 0b0000_0001 }, _ => match lt(m, 0b0011_0000) { 0b1 => 0b0000_0010, _ => 0b0000_0011 } }, _ => match lt(m, 0b0110_0000) { 0b1 => match lt(m, 0b0101_0000) { 0b1 => 0b0000_0100, _ => 0b0000_0101 }, _ => match lt(m, 0b0111_0000) { 0b1 => 0b0000_0110, _ => 0b0000_0111 } } }, _ => match lt(m, 0b1100_0000) { 0b1 => match lt(m, 0b1010_0000) { 0b1 => match lt(m, 0b1001_0000) { 0b1 => 0b0000_1000, _ => 0b0000_1001 }, _ => match lt(m, 0b1011_0000) { 0b1 => 0b0000_1010, _ => 0b0000_1011 } }, _ => match lt(m, 0b1110_0000) { 0b1 => match lt(m, 0b1101_0000) { 0b1 => 0b0000_1100, _ => 0b0000_1101 }, _ => match lt(m, 0b1111_0000) { 0b1 => 0b0000_1110, _ => 0b0000_1111 } } } };
+  let m = and(x, 0b1111_0000) in
+  match lt(m, 0b1000_0000) {
+    0b1 =>
+      match lt(m, 0b0100_0000) {
+        0b1 =>
+          match lt(m, 0b0010_0000) {
+            0b1 => match lt(m, 0b0001_0000) { 0b1 => 0b0000_0000, _ => 0b0000_0001 },
+            _ => match lt(m, 0b0011_0000) { 0b1 => 0b0000_0010, _ => 0b0000_0011 }
+          },
+        _ =>
+          match lt(m, 0b0110_0000) {
+            0b1 => match lt(m, 0b0101_0000) { 0b1 => 0b0000_0100, _ => 0b0000_0101 },
+            _ => match lt(m, 0b0111_0000) { 0b1 => 0b0000_0110, _ => 0b0000_0111 }
+          }
+      },
+    _ =>
+      match lt(m, 0b1100_0000) {
+        0b1 =>
+          match lt(m, 0b1010_0000) {
+            0b1 => match lt(m, 0b1001_0000) { 0b1 => 0b0000_1000, _ => 0b0000_1001 },
+            _ => match lt(m, 0b1011_0000) { 0b1 => 0b0000_1010, _ => 0b0000_1011 }
+          },
+        _ =>
+          match lt(m, 0b1110_0000) {
+            0b1 => match lt(m, 0b1101_0000) { 0b1 => 0b0000_1100, _ => 0b0000_1101 },
+            _ => match lt(m, 0b1111_0000) { 0b1 => 0b0000_1110, _ => 0b0000_1111 }
+          }
+      }
+  };
 
 // ── to_hex ────────────────────────────────────────────────────────────────────────────────────────
 // to_hex: encode a Binary{8} byte as a HexPair of two ASCII hex-digit bytes (high nibble first,

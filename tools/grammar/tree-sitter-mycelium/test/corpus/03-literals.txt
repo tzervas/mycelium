@@ -1,0 +1,68 @@
+============================================================
+03 literals
+============================================================
+
+nodule literals;
+
+fn samples() => List[Ternary{6}] =
+    [ 0t+0--0+, 0t000000, 0t------ ];
+
+fn hexy() => Bytes = 0x48_65_6c_6c_6f;
+
+fn bits() => Binary{8} = 0b0000_0001;
+
+fn f() => Float = 1.5e-3;
+
+fn n() => Binary{8} = 42;
+
+fn s() => Bytes = "hi\n\t\"\\";
+
+------------------------------------------------------------
+
+(source_file
+  (nodule_header
+    name: (identifier))
+  (fn_item
+    name: (identifier)
+    return_type: (type_ref
+      (named_type
+        name: (identifier)
+        (type_args
+          (type_ref
+            (repr_type
+              (int_literal))))))
+    body: (list_literal
+      (trit_literal)
+      (trit_literal)
+      (trit_literal)))
+  (fn_item
+    name: (identifier)
+    return_type: (type_ref
+      (repr_type))
+    body: (bytes_literal))
+  (fn_item
+    name: (identifier)
+    return_type: (type_ref
+      (repr_type
+        (int_literal)))
+    body: (bin_literal))
+  (fn_item
+    name: (identifier)
+    return_type: (type_ref
+      (repr_type))
+    body: (float_literal))
+  (fn_item
+    name: (identifier)
+    return_type: (type_ref
+      (repr_type
+        (int_literal)))
+    body: (int_literal))
+  (fn_item
+    name: (identifier)
+    return_type: (type_ref
+      (repr_type))
+    body: (string_literal
+      (escape_sequence)
+      (escape_sequence)
+      (escape_sequence)
+      (escape_sequence))))
