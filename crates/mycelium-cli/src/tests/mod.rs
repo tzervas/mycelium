@@ -2,3 +2,4 @@
 // Logic files carry no `#[cfg(test)]` blocks — tests live here, one submodule per source module.
 mod lib_root;
 mod stream;
+mod unbounded;
