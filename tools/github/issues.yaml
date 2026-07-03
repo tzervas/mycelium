@@ -11327,6 +11327,15 @@ issues:
       its checklist. Freeze is NOT a `flp` prerequisite (roadmap §2b) — it gives the public a
       stable baseline, not a gating one. Model: Opus.
 
+      User stories:
+      - As the maintainer, I want the freeze to be one deliberate, condition-gated act, so that
+        "the kernel is stable" is a checked declaration a public release can stand on.
+
+      Definition of Done:
+      - Executed ONLY after the four-condition scorecard is green (recorded); DN-56 status
+        advanced append-only; the post-freeze diff policy (DN-39-only) stated; CHANGELOG logs
+        the act.
+
   - id: M-976
     title: "Shape-Dispatched Readable mycfmt — flat-spine + house-style knob + width 100"
     milestone: "Phase 5 — Self-Hosting & Core Library"
@@ -11361,15 +11370,6 @@ issues:
       (frontend lowering onto the frozen kernel — freeze-safe, DN-56 §6); behavior-neutral by AST
       identity (Empirical). lib/std static tables (matrix() etc.) now read each-item-closed [...].
       Resolves DN-82 FLAG-976-1. Assignee: tzervas.
-      User stories:
-      - As the maintainer, I want the freeze to be one deliberate, condition-gated act, so that
-        "the kernel is stable" is a checked declaration a public release can stand on.
-
-      Definition of Done:
-      - Executed ONLY after the four-condition scorecard is green (recorded); DN-56 status
-        advanced append-only; the post-freeze diff policy (DN-39-only) stated; CHANGELOG logs
-        the act.
-
   - id: M-970
     title: "mycelium-fmt: render_expr_canonical drops the @forage(policy) Hypha annotation"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"

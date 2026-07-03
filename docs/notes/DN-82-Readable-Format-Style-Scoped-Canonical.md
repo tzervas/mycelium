@@ -236,7 +236,7 @@ Per the maintainer's 2026-07-03 directive to *pursue the list-literal source cha
 is **resolved by RFC-0040 (M-977)**: a `[e1, …, en]` literal checked against a **cons-list-shaped**
 user ADT (structurally: two ctors — a nullary nil + a recursive `Cons(A, Self)`) **desugars** to the
 `Cons` chain in `checkty::check_list`. It is **behaviour-neutral by construction** — the desugared fn
-body is the **byte-for-byte identical AST** as the hand-written chain (proven by
+body is the **byte-for-byte identical AST** as the hand-written chain (`Empirical`, established by
 `mycelium-l1/tests/list_literal.rs`; the full `mycelium-l1` + conformance + `std-*` suites green,
 1854 tests). The `lib/std` static tables (`matrix()` in core/diag/spore/swap/recover/testing,
 `guarantee_matrix()` in select, `modes_all()` in testing) now read as the **maintainer's ideal** —

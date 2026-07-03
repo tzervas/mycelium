@@ -118,7 +118,7 @@ pub enum SpineInner {
 /// Presentation tunables for the readable layout (M-976 / DN-82). All fields are **presentation-only**
 /// and identity-preserving (C1/C2) — a `LayoutCfg` never changes the surface AST, only whitespace.
 ///
-/// `width` defaults to [`READABLE_WIDTH`] (88 — the already-shipped `Declared` threshold); it is the
+/// `width` defaults to [`READABLE_WIDTH`] (100 — rustfmt-aligned `Declared` threshold); it is the
 /// SOLE inline-vs-break trigger (R0). `spine_inner` selects the house style for same-head chains
 /// (R1). [`LayoutCfg::default`] is the compact default the `lib/std` canonical form uses.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
