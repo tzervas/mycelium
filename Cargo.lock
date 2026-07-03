@@ -722,6 +722,7 @@ dependencies = [
 name = "mycelium-transpile"
 version = "0.0.0"
 dependencies = [
+ "mycelium-workstack",
  "proc-macro2",
  "proptest",
  "quote",

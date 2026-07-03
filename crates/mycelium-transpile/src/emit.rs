@@ -10,7 +10,7 @@
 //! **Guarantee: `Declared`.** All emitted text is heuristic, unvalidated by any Mycelium
 //! parser/typechecker (see crate docs).
 
-use crate::gap::{Category, GapReason};
+use crate::gap::{guarded, Category, GapReason};
 use crate::map::{map_type, tokens_to_string};
 use syn::{
     Attribute, Block, Expr, Fields, FnArg, GenericArgument, GenericParam, Generics, ImplItem,
@@ -338,6 +338,14 @@ fn render_fn_sig(name: &str, sig: &MappedSig) -> String {
 // ---------------------------------------------------------------------------------------------
 
 pub fn emit_block_as_expr(block: &Block, self_ty: Option<&str>) -> Result<String, GapReason> {
+    guarded(|| emit_block_as_expr_inner(block, self_ty))
+}
+
+/// The recursion-guarded body of [`emit_block_as_expr`] (RFC-0041 §4.7 W1 — see
+/// `crate::gap::guarded`). Every recursive call back into a guarded entry point uses the *public*
+/// wrapper name (`emit_expr`, `emit_block_as_expr` is not itself re-entered here), so each
+/// recursion step consumes one budget frame.
+fn emit_block_as_expr_inner(block: &Block, self_ty: Option<&str>) -> Result<String, GapReason> {
     let stmts = &block.stmts;
     if stmts.is_empty() {
         return Err(GapReason::new(
@@ -402,7 +410,19 @@ pub fn emit_block_as_expr(block: &Block, self_ty: Option<&str>) -> Result<String
 /// Translate one Rust expression. Exhaustive `match` over `syn::Expr` (itself `#[non_exhaustive]`
 /// — the trailing `_` arm is therefore also the forward-compatibility catch-all); every arm not
 /// explicitly handled falls to that final arm, which returns `Err`, never emits a placeholder.
+///
+/// **RFC-0041 §4.7 (W1):** guarded by the crate-wide recursion budget (`crate::gap::guarded`) —
+/// mutually recurses with [`emit_block_as_expr`]/[`map_pattern`] over unbounded/attacker-controlled
+/// input depth (e.g. deeply-parenthesized `Expr::Paren`), so each call consumes one budget frame
+/// and refuses with a `Category::RecursionBudget` gap rather than risking a host-stack overflow.
 pub fn emit_expr(expr: &Expr, self_ty: Option<&str>) -> Result<String, GapReason> {
+    guarded(|| emit_expr_inner(expr, self_ty))
+}
+
+/// The recursion-guarded body of [`emit_expr`] (see [`emit_expr`]'s docs / `crate::gap::guarded`).
+/// Recursive calls within this match use the public `emit_expr` name so each nested call re-enters
+/// the guard.
+fn emit_expr_inner(expr: &Expr, self_ty: Option<&str>) -> Result<String, GapReason> {
     match expr {
         Expr::Path(p) if p.qself.is_none() => {
             // Declared mapping decision: a qualified path (`Type::Variant`, UFCS calls) is
@@ -597,7 +617,18 @@ pub fn emit_expr(expr: &Expr, self_ty: Option<&str>) -> Result<String, GapReason
 }
 
 /// Translate one Rust pattern. Exhaustive `match` over `syn::Pat`; fallback arm errors.
+///
+/// **RFC-0041 §4.7 (W1):** guarded by the crate-wide recursion budget (`crate::gap::guarded`) —
+/// self-recurses over unbounded/attacker-controlled pattern nesting (e.g. `Pat::Paren`/`Pat::Or`/
+/// `Pat::TupleStruct`), so each call consumes one budget frame and refuses with a
+/// `Category::RecursionBudget` gap rather than risking a host-stack overflow.
 pub fn map_pattern(pat: &Pat) -> Result<String, GapReason> {
+    guarded(|| map_pattern_inner(pat))
+}
+
+/// The recursion-guarded body of [`map_pattern`]. Recursive calls use the public `map_pattern`
+/// name so each nested call re-enters the guard.
+fn map_pattern_inner(pat: &Pat) -> Result<String, GapReason> {
     match pat {
         Pat::Wild(_) => Ok("_".to_string()),
         Pat::Ident(pi) if pi.by_ref.is_none() && pi.subpat.is_none() => Ok(pi.ident.to_string()),
