@@ -152,6 +152,31 @@ fn head_ctors(matrix: &[Vec<Pat>]) -> BTreeSet<String> {
 /// this walk into an unbounded host-stack overflow (SIGABRT) is now refused **never-silently** with a
 /// [`BudgetError::DepthExceeded`] at the [`RecursionBudget::DEFAULT_DEPTH_LIMIT`] ceiling. The caller
 /// ([`crate::checkty::Cx::check_match`]) maps that into its [`crate::checkty::CheckError`] surface.
+///
+/// **RFC-0041 §4.7 (W6): the wide-tuple asymmetry — DOCUMENTED, not converted (Empirical, VR-5).**
+/// This walk consumes the query's columns left-to-right, holding one live [`DepthGuard`] per column so
+/// the reassembled witness (`rebuild_ctor`/`prepend` on return) has the query's original width. An
+/// N-field tuple/ctor therefore recurses ~N deep on its **arity** spine — data-shaped width, **not**
+/// genuine control nesting (which the parser's `MAX_EXPR_DEPTH`/checker's `MAX_CHECK_DEPTH` already
+/// bound to 4096). Tuple/ctor arity is *not* charged against those nesting caps (grammar siblings
+/// enter/leave the parser's depth budget; `comma_separated` imposes no field-count cap), so a
+/// wide-arity pattern is **surface-reachable end-to-end**: a real `object W(f0, …, f_{N-1})` matched
+/// by `W(x0, …, x_{N-1})` reaches this walk with width N. **Measured boundary:** at **N ≥ 4095** the
+/// arity spine exhausts the depth budget and this returns [`BudgetError::DepthExceeded`] — a *false*
+/// refusal (the pattern is shallow, only wide). W1's structural twin `check_list` **converted** the
+/// analogous large-**list-literal** spine to a flat work-step loop (`checkty::check_list`), because a
+/// large list literal is a *mundane, realistic* input (lookup tables, embedded data). A **4095-field
+/// product type** is by contrast *pathological* — absent from any realistic corpus — and the W6 plan
+/// (§7) conditions this twin's conversion on "**residual frontend conversion if profiling demands**,"
+/// which it does not. Crucially the current behavior is **already safe and never-silent** (a clean
+/// `DepthExceeded`, verified not a SIGABRT on the production 256 MiB deep stack), so the DoD's "no
+/// input SIGABRTs any pass" bar holds; the residual is a *precision* defect (a shallow-but-wide
+/// pattern refused as if deep), not a safety one. Per §4.7's explicit fork we therefore **document the
+/// wide-tuple asymmetry** rather than force a high-risk byte-identical iterative rewrite of this
+/// trusted branching Maranget walk (KISS/YAGNI/KC-3). The boundary is test-witnessed
+/// (`tests::usefulness::w6_wide_arity_*`); a future conversion would flip the refusing case to accept.
+/// **FLAG (W6 → orchestrator/maintainer):** if 4095-arity is deemed "realistic enough" to warrant the
+/// conversion, this is the seam — convert the width spine to iteration charging `charge_steps`.
 pub(crate) fn useful(
     types: &BTreeMap<String, DataInfo>,
     matrix: &[Vec<Pat>],

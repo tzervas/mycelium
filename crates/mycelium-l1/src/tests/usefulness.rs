@@ -206,3 +206,58 @@ fn specialize_lit_is_identical_across_row_types_and_keeps_payload() {
         vec![1, 2]
     );
 }
+
+/// A registry with a `Wide` type whose sole constructor `W` has `n` `Nat` fields (RFC-0041 §4.7 W6).
+fn wide_registry(n: usize) -> std::collections::BTreeMap<String, DataInfo> {
+    let mut m = nat_registry();
+    m.insert(
+        "Wide".to_owned(),
+        DataInfo {
+            name: "Wide".to_owned(),
+            params: vec![],
+            ctors: vec![CtorInfo {
+                name: "W".to_owned(),
+                fields: vec![Ty::Data("Nat".to_owned(), vec![]); n],
+            }],
+        },
+    );
+    m
+}
+
+/// **RFC-0041 §4.7 (W6): the wide-tuple asymmetry, test-witnessed (documented, not converted).**
+/// The Maranget usefulness walk consumes one column per recursion level, so a constructor of **arity
+/// N** drives ~N levels on its data-shaped *width* spine (not genuine control nesting). Just under the
+/// depth ceiling it still accepts; at/over it the width spine false-refuses with a **clean,
+/// never-silent** [`mycelium_workstack::BudgetError::DepthExceeded`] — verified *not* a host-stack
+/// overflow (the walk runs on the production 256 MiB deep stack, mirrored here via
+/// [`mycelium_stack::with_deep_stack`]). This pins the documented asymmetry: a future §4.7 conversion
+/// of the width spine to a work-step loop would flip the refusing case from `Err` to `Ok`. Data-driven
+/// per the test-layout rule: each case is `(arity, accepts?)`.
+#[test]
+fn w6_wide_arity_useful_boundary_is_never_silent() {
+    // (arity, expect_accept): 4094 is within the 4096 depth budget (arity spine ≈ N+1); 4095 exceeds.
+    for (n, accept) in [(4094usize, true), (4095usize, false)] {
+        mycelium_stack::with_deep_stack(|| {
+            let t = wide_registry(n);
+            let q = vec![Pat::Ctor("W".to_owned(), vec![Pat::Wild; n])];
+            let col = vec![Ty::Data("Wide".to_owned(), vec![])];
+            // Empty prior matrix ⇒ the pattern is trivially useful — so an accept is `Ok(Some(_))`.
+            let r = useful(&t, &[], &q, &col);
+            if accept {
+                assert!(
+                    matches!(r, Ok(Some(_))),
+                    "arity {n} is within budget and must accept (be useful), got {r:?}"
+                );
+            } else {
+                assert!(
+                    matches!(
+                        r,
+                        Err(mycelium_workstack::BudgetError::DepthExceeded { limit: 4096 })
+                    ),
+                    "arity {n} exceeds the depth budget and must refuse never-silently \
+                     (clean DepthExceeded, not a SIGABRT), got {r:?}"
+                );
+            }
+        });
+    }
+}
