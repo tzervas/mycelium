@@ -35,7 +35,8 @@ mycelium/
 ├── fuzz/                      ← cargo-fuzz durability targets (standalone nightly workspace; WS8/M-654)
 ├── proofs/                    ← Z3/SMT2 + Liquid-Haskell proof artifacts
 ├── scripts/                   ← the check tooling (scripts/checks/* behind `just check`)
-├── tools/                     ← GitHub issue bootstrap, LLM harness, Termux setup
+├── editors/                   ← editor integrations (VS Code/Cursor extension — `mycelium-language`; M-924/lang-tooling)
+├── tools/                     ← GitHub issue bootstrap, LLM harness, Termux setup, grammar artifacts
 └── xtask/                     ← cargo-xtask repo-automation entrypoint
 ```
 
