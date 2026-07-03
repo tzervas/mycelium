@@ -32,7 +32,26 @@
 use mycelium_core::{
     Alt, GuaranteeStrength, Node, Payload, Repr, ScalarKind, SparsityClass, Trit, Value,
 };
-use mycelium_workstack::{ensure_sufficient_stack, RecursionBudget};
+use mycelium_workstack::{ensure_sufficient_stack, BudgetError, ProcessArena, RecursionBudget};
+
+/// RFC-0041 §4.2/§9 process-wide arena ceiling this projection reserves against before rendering.
+/// **Declared** — an asserted operational default, not a measured bound: every concurrent
+/// [`llm_canonical`] call (LSP re-analyses over untrusted editor buffers, per §5 untrusted-input
+/// coverage) charges the *same* process-global counter
+/// ([`mycelium_workstack::current_process_bytes`]), so the sum across concurrent renders — not just
+/// one render's own size — is what this ceiling bounds. Each consuming crate declares its own
+/// operational default (consumer-side wiring, mirroring the per-invocation `RecursionBudget`
+/// pattern); a single shared constant is a follow-up centralization item, not introduced silently
+/// here (`docs/notes/W7-arena-coverage-audit.md`).
+const PROCESS_ARENA_CEILING_BYTES: u64 = 256 * 1024 * 1024;
+
+/// A conservative, **Declared** (not measured) per-node byte estimate for the rendered s-expression,
+/// used only to *size the pre-render reservation* — never to bound the actual output. An
+/// under-estimate would only under-charge the arena (never cause a false refusal); this constant is
+/// picked generously relative to the shortest possible per-node rendering (a bare variable name or
+/// `(const ...)`) so the reservation stays a conservative upper bound in practice, without being
+/// `Proven`.
+const ESTIMATED_BYTES_PER_NODE: u64 = 64;
 
 /// Render a closed Core IR [`Node`] as the `LlmCanonical` s-expression surface (RFC-0021 §4.6).
 /// **Total** over every node kind (enforced by the exhaustive `match`) and **deterministic** (a pure
@@ -45,10 +64,73 @@ use mycelium_workstack::{ensure_sufficient_stack, RecursionBudget};
 /// now renders on the grown worker stack instead of a SIGABRT that would crash the language server.
 /// The budget's depth ceiling is not yet consulted by the W1 host-stack grow (that lands in W2); this
 /// call site exists so W2's fine-grained guard swaps in with **no signature change** here.
-#[must_use]
-pub fn llm_canonical(node: &Node) -> String {
+///
+/// **RFC-0041 §4.2/§9 W7 (process-arena coverage).** This projection allocates a `String` proportional
+/// to the node count — the process-wide arena hole the §9 DoD names (`docs/notes/W7-arena-coverage-audit.md`
+/// item 1): an editor buffer is untrusted, and many concurrent LSP re-analyses could otherwise sum past
+/// any single-pass ceiling. **Signature change (contained):** `llm_canonical` was infallible (`String`)
+/// before this wave; it is now `Result<String, BudgetError>` so an over-ceiling reservation refuses
+/// never-silently (G2) instead of proceeding unbounded. This is a **local, contained** change — the
+/// function is `pub` but not re-exported at the crate root, and every call site is inside this crate
+/// (tests) — not a ripple into the trusted base (mycelium-interp/mycelium-mlir).
+///
+/// # Errors
+/// [`BudgetError::OutOfBudget`] (`kind = Bytes`) when the pre-render reservation would push the
+/// process-wide arena total over its ceiling.
+pub fn llm_canonical(node: &Node) -> Result<String, BudgetError> {
+    let arena = ProcessArena::new(PROCESS_ARENA_CEILING_BYTES);
+    llm_canonical_with_arena(node, &arena)
+}
+
+/// [`llm_canonical`], parameterized over an explicit [`ProcessArena`] (`pub(crate)`, so this crate's
+/// own tests can inject a tiny-ceiling arena and witness a real refusal — production callers always
+/// go through [`llm_canonical`], which supplies the crate's declared default ceiling).
+pub(crate) fn llm_canonical_with_arena(
+    node: &Node,
+    arena: &ProcessArena,
+) -> Result<String, BudgetError> {
     let budget = RecursionBudget::with_depth_default(u64::MAX, u64::MAX);
-    ensure_sufficient_stack(&budget, || render_node(node))
+    ensure_sufficient_stack(&budget, || {
+        // Pre-flight estimate: computed on the same grown worker stack as the render itself, since a
+        // pathologically deep `Node` would overflow an un-guarded count just as readily as the render.
+        let estimate = node_count(node).saturating_mul(ESTIMATED_BYTES_PER_NODE);
+        let _reservation = arena.reserve(estimate)?;
+        Ok(render_node(node))
+    })
+}
+
+/// Total node count over the same 11-node grammar `render_node` matches — the pre-flight sizing basis
+/// for the arena reservation above. `Exact` (a deterministic structural count); the *bytes-per-node*
+/// multiplier applied to it is the `Declared` part, not this count itself.
+fn node_count(n: &Node) -> u64 {
+    1 + match n {
+        Node::Const(_) | Node::Var(_) => 0,
+        Node::Let { bound, body, .. } => node_count(bound) + node_count(body),
+        Node::Op { args, .. } | Node::Construct { args, .. } => {
+            args.iter().map(node_count).sum::<u64>()
+        }
+        Node::Swap { src, .. } => node_count(src),
+        Node::Match {
+            scrutinee,
+            alts,
+            default,
+        } => {
+            node_count(scrutinee)
+                + alts.iter().map(alt_node_count).sum::<u64>()
+                + default.as_deref().map_or(0, node_count)
+        }
+        Node::Lam { body, .. } | Node::Fix { body, .. } => node_count(body),
+        Node::App { func, arg } => node_count(func) + node_count(arg),
+        Node::FixGroup { defs, body } => {
+            defs.iter().map(|(_, d)| node_count(d)).sum::<u64>() + node_count(body)
+        }
+    }
+}
+
+fn alt_node_count(a: &Alt) -> u64 {
+    match a {
+        Alt::Ctor { body, .. } | Alt::Lit { body, .. } => node_count(body),
+    }
 }
 
 fn render_node(n: &Node) -> String {

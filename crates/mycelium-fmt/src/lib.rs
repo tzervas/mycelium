@@ -58,13 +58,31 @@ use mycelium_l1::lexer::{lex_with_comments, Comment};
 use mycelium_l1::token::{Spanned, Tok};
 use mycelium_l1::{expand_to_source, parse, parse_phylum};
 use mycelium_proj::{parse_header, Deprecated, StructuredHeader};
-use mycelium_workstack::{ensure_sufficient_stack, RecursionBudget};
+use mycelium_workstack::{ensure_sufficient_stack, BudgetError, ProcessArena, RecursionBudget};
 use std::collections::HashMap;
 
 /// The formatter spelling/version this build implements. The `[toolchain].format` pin (M-359) is a
 /// **hard pin** (M-364 §10.3): a mismatch is refused, never formatted with rules the project didn't ask
 /// for (G2).
 pub const MYCFMT_VERSION: &str = "mycfmt-0";
+
+/// RFC-0041 §4.2/§9 process-wide arena ceiling `mycfmt`'s render family reserves against before
+/// rendering. **Declared** — an asserted operational default, not a measured bound: a `.myc` source
+/// is untrusted input (a vendored/spore-resolved dependency, or a CI run over an untrusted PR diff —
+/// RFC-0041 §5 untrusted-input coverage), and every concurrent format call (batch `mycfmt --check`
+/// over a project, or a future LSP format-on-save) charges the *same* process-global counter
+/// ([`mycelium_workstack::current_process_bytes`]), so the sum across concurrent renders is what
+/// this ceiling bounds. Each consuming crate declares its own operational default (consumer-side
+/// wiring); a single shared constant across the workspace is a follow-up centralization item, not
+/// introduced silently here (`docs/notes/W7-arena-coverage-audit.md`).
+const PROCESS_ARENA_CEILING_BYTES: u64 = 256 * 1024 * 1024;
+
+/// A conservative, **Declared** (not measured) multiplier on the input source length, used only to
+/// *size the pre-render reservation* — never to bound the actual output. The readable layout can
+/// expand a compact source somewhat (re-indentation, wrapped segments, re-emitted comments); this
+/// multiplier is generous relative to observed expansion so the reservation stays a conservative
+/// upper bound in practice, without being `Proven`.
+const RENDER_BYTES_PER_SRC_BYTE: u64 = 4;
 
 /// The default target line width for the **readable** layout style (M-974; retuned M-976). Purely a
 /// *presentation* heuristic: a construct whose compact single-line rendering, placed at its indent
@@ -182,6 +200,12 @@ pub enum FmtError {
     Header(String),
     /// A construct outside the round-trip-safe v0 scope, or a `[toolchain].format` pin mismatch (exit 4).
     OutOfScope(String),
+    /// **RFC-0041 §4.2/§9 (W7 process-arena coverage).** The pre-render reservation against the
+    /// shared process-wide memory arena would exceed its ceiling (exit 5) — refused rather than let
+    /// this render's memory join an unbounded concurrent sum with other in-flight passes (batch
+    /// `mycfmt` runs, a future LSP format-on-save). Never a partial rewrite (G2), same as every other
+    /// `FmtError` variant.
+    OutOfBudget(BudgetError),
 }
 
 impl FmtError {
@@ -192,6 +216,7 @@ impl FmtError {
             FmtError::Parse(_) => 2,
             FmtError::Header(_) => 3,
             FmtError::OutOfScope(_) => 4,
+            FmtError::OutOfBudget(_) => 5,
         }
     }
 }
@@ -202,11 +227,21 @@ impl std::fmt::Display for FmtError {
             FmtError::Parse(m) => write!(f, "parse-error: {m}"),
             FmtError::Header(m) => write!(f, "header-error: {m}"),
             FmtError::OutOfScope(m) => write!(f, "refused: {m}"),
+            FmtError::OutOfBudget(e) => {
+                write!(f, "refused (RFC-0041 §4.2 process-arena ceiling): {e}")
+            }
         }
     }
 }
 
-impl std::error::Error for FmtError {}
+impl std::error::Error for FmtError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            FmtError::OutOfBudget(e) => Some(e),
+            FmtError::Parse(_) | FmtError::Header(_) | FmtError::OutOfScope(_) => None,
+        }
+    }
+}
 
 /// Does `src` open with a `phylum` header — i.e. is the first significant line (after leading blank or
 /// `//`-comment lines) the reserved `phylum` keyword at a word boundary? Lets mycfmt refuse a *malformed*
@@ -292,13 +327,36 @@ pub fn format_source_styled(
 /// style- and cfg-independent, so all configurations emit the same surface AST (C1) from the same
 /// input. For `Style::Compact` the `cfg` is inert (the compact path renders item bodies inline).
 ///
+/// **RFC-0041 §4.2/§9 W7 (process-arena coverage).** Delegates to
+/// [`format_source_styled_cfg_with_arena`] with the crate's declared default ceiling
+/// ([`PROCESS_ARENA_CEILING_BYTES`]) — see that function for the reservation.
+///
 /// # Errors
-/// See [`format_source`].
+/// See [`format_source`], plus [`FmtError::OutOfBudget`] if the pre-render reservation would exceed
+/// the process-wide arena ceiling.
 pub fn format_source_styled_cfg(
     src: &str,
     pin: Option<&str>,
     style: Style,
     cfg: LayoutCfg,
+) -> Result<Formatted, FmtError> {
+    let arena = ProcessArena::new(PROCESS_ARENA_CEILING_BYTES);
+    format_source_styled_cfg_with_arena(src, pin, style, cfg, &arena)
+}
+
+/// [`format_source_styled_cfg`], parameterized over an explicit [`ProcessArena`] (`pub(crate)`, so
+/// this crate's own tests can inject a tiny-ceiling arena and witness a real refusal — production
+/// callers always go through [`format_source_styled_cfg`], which supplies the crate's declared
+/// default ceiling).
+///
+/// # Errors
+/// See [`format_source_styled_cfg`].
+pub(crate) fn format_source_styled_cfg_with_arena(
+    src: &str,
+    pin: Option<&str>,
+    style: Style,
+    cfg: LayoutCfg,
+    arena: &ProcessArena,
 ) -> Result<Formatted, FmtError> {
     // Hard pin (M-364 §10.3): never format with rules the project did not pin.
     if let Some(p) = pin {
@@ -381,6 +439,13 @@ pub fn format_source_styled_cfg(
         }
     }
 
+    // RFC-0041 §4.2/§9 (W7): reserve against the shared process-wide arena before the render-family
+    // call below — `src` is untrusted input (§5), so this bounds the *concurrent sum* of in-flight
+    // renders' estimated cost, not just this one call's. Held for the render's duration; released on
+    // drop at the end of this function.
+    let estimate = (src.len() as u64).saturating_mul(RENDER_BYTES_PER_SRC_BYTE);
+    let _arena_reservation = arena.reserve(estimate).map_err(FmtError::OutOfBudget)?;
+
     // Render the body: items with their leading/trailing comments interleaved.
     let (body, body_notes) = render_body_with_comments(&nodule, &plan, style, cfg)?;
     out.push_str(&body);
@@ -451,12 +516,33 @@ pub fn format_source_styled_cfg(
 /// **Scope:** the same v0 scope as `format_source` — single-nodule sources only; a phylum /
 /// multi-nodule source is an explicit `OutOfScope` refusal, never a partial rewrite (G2).
 ///
+/// **RFC-0041 §4.2/§9 W7 (process-arena coverage).** Delegates to
+/// [`flatten_source_with_arena`] with the crate's declared default ceiling
+/// ([`PROCESS_ARENA_CEILING_BYTES`]) — see that function for the reservation.
+///
 /// # Errors
 /// [`FmtError::Parse`] (unparsable), [`FmtError::Header`] (malformed `// nodule:` / `// @key:`
-/// header — structurally invalid, not just metadata), or [`FmtError::OutOfScope`] (a pin
-/// mismatch, a phylum/multi-nodule source, or a body that does not round-trip).  On any error
-/// nothing is written (G2).
+/// header — structurally invalid, not just metadata), [`FmtError::OutOfScope`] (a pin
+/// mismatch, a phylum/multi-nodule source, or a body that does not round-trip), or
+/// [`FmtError::OutOfBudget`] (the pre-render reservation would exceed the process-wide arena
+/// ceiling).  On any error nothing is written (G2).
 pub fn flatten_source(src: &str, pin: Option<&str>) -> Result<Formatted, FmtError> {
+    let arena = ProcessArena::new(PROCESS_ARENA_CEILING_BYTES);
+    flatten_source_with_arena(src, pin, &arena)
+}
+
+/// [`flatten_source`], parameterized over an explicit [`ProcessArena`] (`pub(crate)`, so this
+/// crate's own tests can inject a tiny-ceiling arena and witness a real refusal — production
+/// callers always go through [`flatten_source`], which supplies the crate's declared default
+/// ceiling).
+///
+/// # Errors
+/// See [`flatten_source`].
+pub(crate) fn flatten_source_with_arena(
+    src: &str,
+    pin: Option<&str>,
+    arena: &ProcessArena,
+) -> Result<Formatted, FmtError> {
     // Hard pin: same guard as format_source.
     if let Some(p) = pin {
         if p != MYCFMT_VERSION {
@@ -485,6 +571,11 @@ pub fn flatten_source(src: &str, pin: Option<&str>) -> Result<Formatted, FmtErro
 
     // Parse the nodule body (raw parse — preserves `default paradigm`/`with paradigm`).
     let nodule = parse(src).map_err(|e| FmtError::Parse(e.to_string()))?;
+
+    // RFC-0041 §4.2/§9 (W7): reserve against the shared process-wide arena before the render below —
+    // see `format_source_styled_cfg_with_arena`'s identical comment.
+    let estimate = (src.len() as u64).saturating_mul(RENDER_BYTES_PER_SRC_BYTE);
+    let _arena_reservation = arena.reserve(estimate).map_err(FmtError::OutOfBudget)?;
 
     // Render the flat form directly from AST (no comments, no multiline layout).
     let out = render_flat(&nodule);

@@ -37,11 +37,16 @@ fn deep_let(n: usize) -> Node {
 /// Closed hole: `render_node` (`crates/mycelium-lsp/src/project.rs`), reached via the public
 /// [`llm_canonical`] (RFC-0021 §4.6 `LlmCanonical` projection), now runs on the grown host stack.
 ///
-/// **Honesty (VR-5):** `llm_canonical` returns a plain `String` — infallible by signature, so this
-/// asserts **clean completion** (a well-formed, non-empty render), not a `Result` refusal the way a
-/// fallible entry point could assert. The W1 fix is "never a host-stack abort", not "reject deep
-/// input" — routing this projection through a depth-refusal budget is later work (W2+, §4.2/§7); the
-/// census here documents exactly that scope.
+/// **Honesty (VR-5):** at W1, `llm_canonical` returned a plain `String` — infallible by signature —
+/// so this test asserted only **clean completion**, never a `Result` refusal. **RFC-0041 §4.2/§9 W7
+/// (process-arena coverage, `docs/notes/W7-arena-coverage-audit.md`):** `llm_canonical` is now
+/// `Result<String, BudgetError>` — it charges the shared process-wide arena before rendering — but
+/// this 20,000-deep fixture's estimated cost (~1.3 MB) sits well under the crate's declared default
+/// ceiling (256 MiB), so it still renders successfully; the arena wiring never changes this test's
+/// depth-safety claim. The W1 fix is "never a host-stack abort", not "reject deep input" — a
+/// *depth*-refusal budget for this projection remains later work (§4.7); the census here documents
+/// exactly that scope. A synthetic *arena* refusal (a tiny injected ceiling) is covered separately by
+/// `src/tests/project.rs::large_synthetic_input_trips_out_of_budget`.
 ///
 /// **FLAG (test-harness artifact, out of scope for this leaf):** `Node`'s `Drop` glue is itself
 /// recursive (one frame per nesting level, compiler-generated for the `Box<Node>` fields), so
@@ -68,7 +73,8 @@ fn render_node_deep_let_chain() {
     ensure_sufficient_stack(&budget, || {
         let n = 20_000;
         let deep = deep_let(n);
-        let rendered = llm_canonical(&deep);
+        let rendered = llm_canonical(&deep)
+            .expect("20k-deep chain's estimated cost stays well under the 256 MiB default ceiling");
 
         // Clean completion: the process did not abort, and the render is well-formed — one
         // `(let [xI …` opener per nesting level (`deep_let` nests right-to-left, so the outermost
