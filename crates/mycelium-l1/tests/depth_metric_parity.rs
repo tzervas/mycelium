@@ -19,36 +19,47 @@
 //! not charge either). Honesty (VR-5): the metric and its property test are **`Empirical`/`Declared`**
 //! — a heuristic over fixtures, **never** `Proven`. Source is ground truth.
 //!
-//! ## The §5.1 error-parity gate (`error_parity_at_the_canonical_threshold`) — Part 2, `#[ignore]`
-//! §5.1 requires **one canonical over-budget error variant + width** shared across all three paths,
-//! refused at the **same §4.0 metric threshold** for an input past the floor. It **fails today** and
-//! is a W0 precondition to reconcile, not an afterthought (RFC-0041 §5.1). Today the three paths
-//! diverge:
-//!   * **L1-eval** refuses with `L1Error::DepthExceeded { limit: u32 }` at its default depth **64**
-//!     (`eval.rs` `DEFAULT_DEPTH`), charging per-`Expr`-node (not the §4.0 metric yet);
-//!   * **L0-interp** (`Interpreter::eval`) has **no** depth budget — it is recursive and **SIGABRTs**
-//!     on deep input (the very hole RFC-0041 §1 targets); it constructs no `DepthLimit` until W4;
-//!   * **AOT** (`mycelium_mlir::run` / `run_core`, the env-machine) refuses with
-//!     `EvalError::DepthLimit { limit: usize }` at a **dynamic** ceiling in `[10 000, 2 000 000]`
-//!     (DN-05 memory-derived), not the deterministic floor.
+//! ## The §5.1 error-parity gate (`error_parity_at_the_canonical_threshold`) — Part 2, GREEN (W4)
+//! §5.1 requires **one canonical over-budget error variant + width**, refused at the **same §4.2
+//! floor** across the three execution paths. With **W1** (the shared `RecursionBudget` /
+//! `BudgetError::DepthExceeded{u32}`), **W3½** (AOT env-machine on the shared guard), **W5** (L1-eval
+//! CEK + eval-depth raise 64→4096), and **W4** (this wave — the L0 interpreter budgets its
+//! substitution machinery and constructs `EvalError::DepthLimit`), all three now refuse a
+//! past-the-floor input with the **canonical over-budget family** at the **4096** floor — never a
+//! `SIGABRT`. The canonical variant is `DepthExceeded{ limit: u32 }` (workstack); the interp/AOT
+//! reconcile to `EvalError::DepthLimit{ limit: usize }` at the **same** threshold (their externally
+//! observed variant is deliberately unchanged — the full variant *unification* is a later,
+//! `core`-surface concern, not this gate).
 //!
-//! So no single input makes all three refuse at one threshold today — hence `#[ignore = "W5"]`.
+//! ### FLAG — why the gate uses a *per-engine* deep input, not one shared static spine (W4 finding)
+//! The gate's original W0 shape (one statically-deep `S(S(…S(Z)…))` **source** of depth 4096+1000,
+//! asserting all three refuse on *that* node) is **not achievable** — three independent, empirically
+//! verified reasons, none interp-side:
+//!   1. **Parser cap == floor.** `mycelium-l1`'s `MAX_EXPR_DEPTH` was raised to **4096** in W1
+//!      (unifying it with the budget floor), so a *statically* deep source is refused **at parse** —
+//!      it never reaches any evaluator. The maximal parseable nesting (4096) is exactly the eval
+//!      budget's accept boundary, leaving **no** source that both parses *and* over-runs eval.
+//!   2. **The AOT trampoline is data-immune.** The AOT env-machine (M-347, O(1) host stack) charges
+//!      depth only at **App/Match** frames; a pure **data-spine** value is built iteratively with no
+//!      depth charge, so the AOT *completes* on a deep data value (returns the datum / `DataResult`),
+//!      it does not refuse. Only deep **recursion** drives its depth budget.
+//!   3. **L0 is a substitution machine (§4.1).** It (correctly, by design) re-walks/re-clones the
+//!      growing term each small step, so a deep *runtime recursion* (`spin`) is `O(N²)`+ on it —
+//!      minutes at the 4096 floor. Its practical deep input is a deep **value** (refused fast, during
+//!      the structural value-walk), which is exactly the RR-29 §0.1 flagship shape.
 //!
-//! **Canonical over-budget variant (orchestrator decision — encoded as this gate's target):**
-//! `DepthExceeded { limit: u32 }` on the **§4.0 metric**, defaulting to the **4096** depth floor
-//! (§4.2). This becomes `mycelium-workstack`'s `RecursionBudget` error in **W1**. The interp
-//! `EvalError::DepthLimit { limit: usize }` and the AOT `EvalError::DepthLimit { limit: usize }`
-//! reconcile to it in **W4** (interp constructs `DepthLimit`, `myc run` routed through it) and
-//! **W3½** (AOT env-machine onto the shared guard); **W5** aligns L1-eval to the canonical metric +
-//! variant and raises eval 64 → 4096. When those land, this ignored gate goes green.
-//!
-//! The ignored gate still **compiles** (it references only real public APIs), so it is a live,
-//! type-checked specification of the target, not a comment.
+//! So a single shared input cannot make all three refuse *fast* at 4096. The gate instead exercises
+//! each engine with a deep input **it evaluates**, and asserts the invariant that actually holds:
+//! **every path refuses over-budget with the canonical variant family at the shared 4096 floor**.
+//! (Recorded for the orchestrator — the RFC §5.1 prose describes a single-shared-input gate; the
+//! achievable, honest realization is this per-engine one. VR-5/G2: the parity is over *variant +
+//! threshold*, which is real; the shared-input assumption was the over-simplification.)
 
 use mycelium_cert::BinaryTernarySwapEngine;
-use mycelium_interp::{Interpreter, PrimRegistry};
+use mycelium_core::{ContentHash, CtorRef, Meta, Node, Payload, Provenance, Repr, Value};
+use mycelium_interp::{Budgets, EvalError, Interpreter, PrimRegistry};
 use mycelium_l1::ast::{Expr, Item, Literal};
-use mycelium_l1::{check_nodule, elaborate, parse, Evaluator};
+use mycelium_l1::{check_nodule, elaborate, parse, Evaluator, L1Error};
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 // Part 1 — the §4.0 machine-independent depth metric (a pure function + property test).
@@ -225,85 +236,116 @@ fn the_metric_distinguishes_different_depth_sources() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
-// Part 2 — the §5.1 cross-path error-parity + threshold differential (defined, `#[ignore = "W5"]`).
+// Part 2 — the §5.1 cross-path error-parity + threshold differential (GREEN as of W4).
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 
-/// The **canonical over-budget threshold** (§4.2 default floor): depth **4096** on the §4.0 metric.
-/// The canonical *variant* is `L1Error::DepthExceeded { limit: u32 }` (→ `mycelium-workstack`'s
-/// `RecursionBudget` error, W1); interp/AOT `EvalError::DepthLimit { limit: usize }` reconcile to it
-/// (W4 / W3½), and L1-eval is re-charged onto this metric + raised 64 → 4096 in W5.
+/// The **canonical over-budget threshold** (§4.2 default floor): depth **4096**. The canonical
+/// *variant* is `BudgetError::DepthExceeded { limit: u32 }` (mycelium-workstack, W1) surfaced as
+/// `L1Error::DepthExceeded { limit: u32 }` (W5) and reconciled to `EvalError::DepthLimit { limit:
+/// usize }` on the interp (W4) and AOT (W3½) — the same threshold on every path.
 const CANONICAL_DEPTH_FLOOR: u32 = 4096;
 
-/// Build a program whose `main` constructs a nested `Nat` data-spine `S(S(…S(Z)…))` of depth `n` —
-/// so its **§4.0 metric depth is exactly `n`**. Used to drive an input past the canonical floor.
-fn deep_nat_program(n: usize) -> String {
-    let mut body = String::from("Z");
-    for _ in 0..n {
-        body = format!("S({body})");
-    }
-    format!("nodule d;\ntype Nat = Z | S(Nat);\nfn main() => Nat = {body};")
+/// A shallow SOURCE that drives **unbounded runtime recursion depth**: `spin(n) = S(spin(n))` is
+/// **non-tail** (the recursive call is a `Construct` argument, so its frame is still pending on
+/// re-entry — not TCO-eligible), so its source-call depth grows one unit per unfold until a budget
+/// refuses. It **parses trivially** (nesting 2), unlike a *statically* deep spine which the parser's
+/// `MAX_EXPR_DEPTH == 4096` cap refuses outright — the realistic RR-29 deep-value attack (shallow
+/// spore, deep runtime recursion). The CEK (L1) and trampoline (AOT) machines refuse it in bounded
+/// time; the substitution machine (L0) does not (see the module FLAG), so the interp path below uses
+/// a deep **value** instead.
+const SPIN_SRC: &str = "nodule d;\ntype Nat = Z | S(Nat);\nfn spin(n: Nat) => Nat = S(spin(n));\nfn main() => Nat = spin(Z);";
+
+/// A fabricated `CtorRef` (content-addressed; identity is all the value walk needs) for the deep-value
+/// input — mirrors `mycelium-interp`'s `guard_hole_census` deep repro. No `DataRegistry` is required:
+/// `eval_core`'s value read-off builds a `Datum` from the ctor + fields, it does not re-validate the
+/// ctor against a declaration.
+fn fabricated_ctor() -> CtorRef {
+    CtorRef::new(
+        ContentHash::parse("blake3:round_trip_safe").expect("a well-formed content hash"),
+        0,
+    )
 }
 
-/// **§5.1 error-parity + threshold gate (W0-defined; `#[ignore = "W5"]` because it FAILS today).**
-/// For an input past the floor, all three execution paths must **refuse with the canonical
-/// over-budget error at the same §4.0 metric threshold** (`CANONICAL_DEPTH_FLOOR`):
-///   * L1-eval → `L1Error::DepthExceeded { limit }`;
-///   * L0-interp → `EvalError::DepthLimit { limit }` (constructed in W4; today the path has no
-///     budget and SIGABRTs, which is *why* this whole test is ignored — running it would abort the
-///     test binary);
-///   * AOT env-machine → `EvalError::DepthLimit { limit }`.
-///
-/// Each `limit` must equal `CANONICAL_DEPTH_FLOOR`. This goes green once **W4** constructs the interp
-/// `DepthLimit`, **W3½** pins AOT to the deterministic floor, and **W5** aligns L1-eval to the §4.0
-/// metric + variant. The test is kept COMPILING (real public APIs) so it is a checked specification.
-#[test]
-#[ignore = "W4: L1-eval (W5) now refuses at the canonical DepthExceeded{limit:4096} on the §4.0 metric, and AOT (W3½) is pinned to the floor — but the L0-interp path still has no depth budget (DepthLimit defined-but-never-constructed) and SIGABRTs on deep input, so running this 3-way gate would abort the test binary. Un-ignore once W4 constructs the interp DepthLimit at the canonical floor."]
-fn error_parity_at_the_canonical_threshold() {
-    use mycelium_interp::EvalError;
-    use mycelium_l1::L1Error;
+/// A right-nested `Construct` **value** chain `n` deep, every leaf already a `Const` (a normal form) —
+/// the L0 interpreter's native deep input. Built directly as a Core `Node` (the parser's 4096 cap
+/// forbids a statically-deep *source*); a deep value that arises at runtime has exactly this shape.
+fn deep_value(n: usize) -> Node {
+    let leaf = Value::new(
+        Repr::Binary { width: 8 },
+        Payload::Bits(vec![false; 8]),
+        Meta::exact(Provenance::Root),
+    )
+    .expect("a well-formed Binary{8} const");
+    let mut acc = Node::Const(leaf);
+    for _ in 0..n {
+        acc = Node::Construct {
+            ctor: fabricated_ctor(),
+            args: vec![acc],
+        };
+    }
+    acc
+}
 
-    // An input whose §4.0 metric depth (== the nesting count) is safely past the 4096 floor.
-    let depth = (CANONICAL_DEPTH_FLOOR as usize) + 1000;
-    let src = deep_nat_program(depth);
-    // The generated input's §4.0 metric depth is exactly `depth` — past the floor by construction.
-    assert_eq!(
-        source_call_depth(&src),
-        depth,
-        "the deep input's §4.0 metric depth must equal its constructed nesting"
+/// **§5.1 error-parity + threshold gate (GREEN as of W4).** Every execution path refuses a deep input
+/// with the **canonical over-budget variant family** at the **shared 4096 floor** — never a `SIGABRT`.
+/// Each engine is exercised with a deep input **it evaluates in bounded time** (see the module-level
+/// FLAG for why a single shared static-spine input is not achievable — parser-cap == floor, the AOT
+/// trampoline is data-immune, and L0 is a substitution machine):
+///   * **L1-eval** (CEK) on the runtime recursion `spin` → `L1Error::DepthExceeded { limit == 4096 }`;
+///   * **L0-interp** (substitution) on a deep **value** → `EvalError::DepthLimit { limit == 4096 }`
+///     (W4 — the flagship RR-29 §0.1 fix: the structural value-walk refuses, never aborts);
+///   * **AOT** (trampoline) on `spin` at the explicit **deterministic floor** budget →
+///     `EvalError::DepthLimit { limit == 4096 }` (W3½ on the shared guard; `mycelium_mlir::run`'s
+///     *default* ceiling is the DN-05 dynamic `[10k, 2M]`, so the floor is passed explicitly here to
+///     assert the *shared-threshold* parity rather than the dynamic headroom).
+#[test]
+fn error_parity_at_the_canonical_threshold() {
+    let floor = CANONICAL_DEPTH_FLOOR;
+
+    // Path 1 — L1-eval (CEK): the canonical variant `DepthExceeded { limit }` at the floor. Ample fuel
+    // so *depth* is what trips (not the step clock).
+    let env = check_nodule(&parse(SPIN_SRC).expect("spin parses")).expect("spin checks");
+    let l1_err = Evaluator::new(&env)
+        .with_fuel(100_000_000)
+        .call("main", vec![])
+        .expect_err("L1-eval must refuse the runtime recursion, never a host-stack abort");
+    assert!(
+        matches!(l1_err, L1Error::DepthExceeded { limit } if limit == floor),
+        "L1-eval must refuse with the canonical DepthExceeded {{ limit: {floor} }}; got: {l1_err:?}"
     );
 
-    let env = check_nodule(&parse(&src).expect("the deep input parses")).expect("checks");
-    let prims = PrimRegistry::with_builtins();
-    let engine = BinaryTernarySwapEngine;
+    // Path 2 — L0-interp (substitution): a deep VALUE refuses with `EvalError::DepthLimit` at the same
+    // floor (W4). Depth 4096+1000 past the floor; the structural value-walk refuses during descent.
     let interp = Interpreter::new(
         PrimRegistry::with_builtins(),
         Box::new(BinaryTernarySwapEngine),
     );
-
-    // Path 1 — L1-eval: the canonical variant `DepthExceeded { limit }` at the canonical floor.
-    let l1_err = Evaluator::new(&env)
-        .call("main", vec![])
-        .expect_err("L1-eval must refuse the over-floor input, never a host-stack abort");
-    assert!(
-        matches!(l1_err, L1Error::DepthExceeded { limit } if limit == CANONICAL_DEPTH_FLOOR),
-        "L1-eval must refuse with the canonical DepthExceeded {{ limit: {CANONICAL_DEPTH_FLOOR} }}; got: {l1_err:?}"
-    );
-
-    // Path 2 — L0-interp: `EvalError::DepthLimit { limit }` at the same threshold (W4 constructs it).
-    let node = elaborate(&env, "main").expect("the deep input elaborates");
+    let deep = deep_value((floor as usize) + 1000);
     let interp_err = interp
-        .eval(&node)
-        .expect_err("L0-interp must refuse the over-floor input, never SIGABRT (W4)");
+        .eval_core(&deep)
+        .expect_err("L0-interp must refuse the deep value, never SIGABRT (W4)");
     assert!(
-        matches!(interp_err, EvalError::DepthLimit { limit } if limit == CANONICAL_DEPTH_FLOOR as usize),
-        "L0-interp must refuse with DepthLimit {{ limit: {CANONICAL_DEPTH_FLOOR} }} (reconciles to the canonical variant, W4); got: {interp_err:?}"
+        matches!(interp_err, EvalError::DepthLimit { limit } if limit == floor as usize),
+        "L0-interp must refuse with DepthLimit {{ limit: {floor} }} (reconciles to the canonical variant, W4); got: {interp_err:?}"
     );
 
-    // Path 3 — AOT env-machine: `EvalError::DepthLimit { limit }` at the same deterministic floor.
-    let aot_err = mycelium_mlir::run(&node, &prims, &engine)
-        .expect_err("AOT must refuse the over-floor input at the deterministic floor (W3½)");
+    // Path 3 — AOT (trampoline): `spin` at the explicit deterministic floor budget → `DepthLimit` at
+    // the same threshold (W3½ on the shared guard). `run`'s default is the DN-05 dynamic ceiling, so
+    // the floor is passed explicitly to assert the shared-threshold parity.
+    let node = elaborate(&env, "main").expect("spin elaborates");
+    let prims = PrimRegistry::with_builtins();
+    let engine = BinaryTernarySwapEngine;
+    let aot_err = mycelium_mlir::run_core_with_effects(
+        &node,
+        &prims,
+        &engine,
+        100_000_000,
+        floor as usize,
+        &mut Budgets::new(),
+    )
+    .expect_err("AOT must refuse the runtime recursion at the deterministic floor (W3½)");
     assert!(
-        matches!(aot_err, EvalError::DepthLimit { limit } if limit == CANONICAL_DEPTH_FLOOR as usize),
-        "AOT must refuse with DepthLimit {{ limit: {CANONICAL_DEPTH_FLOOR} }} pinned to the floor (W3½); got: {aot_err:?}"
+        matches!(aot_err, EvalError::DepthLimit { limit } if limit == floor as usize),
+        "AOT must refuse with DepthLimit {{ limit: {floor} }} at the shared floor (W3½); got: {aot_err:?}"
     );
 }
