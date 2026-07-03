@@ -2334,6 +2334,17 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_cli::RunOptions",
+      "kind": "struct",
+      "crate": "mycelium-cli",
+      "module": "mycelium_cli",
+      "file": "crates/mycelium-cli/src/lib.rs",
+      "line": 248,
+      "summary": "Options that tune a `myc run` (or `myc build`) invocation beyond `--config` (RFC-0041 §5 /",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_cli::RunReport",
       "kind": "struct",
       "crate": "mycelium-cli",
@@ -2389,6 +2400,17 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_cli::corpus_context",
+      "kind": "fn",
+      "crate": "mycelium-cli",
+      "module": "mycelium_cli",
+      "file": "crates/mycelium-cli/src/lib.rs",
+      "line": 328,
+      "summary": "Whether the process is running under a **conformance-corpus / CI** context that must refuse",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_cli::init",
       "kind": "fn",
       "crate": "mycelium-cli",
@@ -2396,6 +2418,17 @@
       "file": "crates/mycelium-cli/src/lib.rs",
       "line": 120,
       "summary": "`myc init <name>` — scaffold a new phylum named `name` under `parent`, returning the created",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_cli::reject_unbounded_in_corpus",
+      "kind": "fn",
+      "crate": "mycelium-cli",
+      "module": "mycelium_cli",
+      "file": "crates/mycelium-cli/src/lib.rs",
+      "line": 306,
+      "summary": "The conformance-corpus / CI guard (RFC-0041 §5): a corpus/CI run is the **deterministic** path, so",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -2422,6 +2455,17 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_cli::run_with_options",
+      "kind": "fn",
+      "crate": "mycelium-cli",
+      "module": "mycelium_cli",
+      "file": "crates/mycelium-cli/src/lib.rs",
+      "line": 402,
+      "summary": "[`run`] with an explicit [`RunOptions`] (RFC-0041 §5) — the entry the `myc` driver calls so a",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_cli::stream_parse",
       "kind": "fn",
       "crate": "mycelium-cli",
@@ -2429,6 +2473,17 @@
       "file": "crates/mycelium-cli/src/lib.rs",
       "line": 944,
       "summary": "`myc --stream` — parse a `;`-delimited Mycelium component stream from `reader` (M-820 / DN-57).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_cli::unbounded_banner",
+      "kind": "fn",
+      "crate": "mycelium-cli",
+      "module": "mycelium_cli",
+      "file": "crates/mycelium-cli/src/lib.rs",
+      "line": 279,
+      "summary": "The never-silent stderr banner printed when `--unbounded` is engaged (G2 — an explicit escape",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -6664,6 +6719,17 @@
       "file": "crates/mycelium-interp/src/lib.rs",
       "line": 453,
       "summary": "Perform exactly one small-step reduction on `node` (the `⟶` relation above).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_interp::Interpreter::with_depth",
+      "kind": "fn",
+      "crate": "mycelium-interp",
+      "module": "mycelium_interp::Interpreter",
+      "file": "crates/mycelium-interp/src/lib.rs",
+      "line": 423,
+      "summary": "Override the shared [`RecursionBudget`] **depth ceiling** on the §4.0 metric (RFC-0041 W7 —",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -30354,6 +30420,22 @@
       "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
     },
     {
+      "symbol": "mycelium_cli::RunOptions::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_cli::RunOptions::default",
+      "reason": "definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_cli::RunOptions::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_cli::RunOptions::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
       "symbol": "mycelium_cli::RunReport::clone",
       "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
     },
@@ -33424,6 +33506,10 @@
     {
       "symbol": "mycelium_fmt::FmtError::fmt",
       "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_fmt::FmtError::source",
+      "reason": "definition not found via regex heuristic (kind='fn', name='source') — possibly macro-generated or cfg-gated"
     },
     {
       "symbol": "mycelium_fmt::Formatted::clone",
@@ -37536,6 +37622,10 @@
     {
       "symbol": "mycelium_mir_passes::eval::RcError::fmt",
       "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mir_passes::eval::RcError::from",
+      "reason": "definition not found via regex heuristic (kind='fn', name='from') — possibly macro-generated or cfg-gated"
     },
     {
       "symbol": "mycelium_mir_passes::rc_ir::Mode::clone",

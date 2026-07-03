@@ -239,15 +239,20 @@
 | `mycelium_cli::Report::help` | fn | `crates/mycelium-cli/src/lib.rs:85` | Attach an actionable `help:` line. |
 | `mycelium_cli::Report::new` | fn | `crates/mycelium-cli/src/lib.rs:66` | A report with a code, message and exit code (no location/help). |
 | `mycelium_cli::Report::render` | fn | `crates/mycelium-cli/src/lib.rs:92` | Render the multi-line, structured form (no trailing newline). |
+| `mycelium_cli::RunOptions` | struct | `crates/mycelium-cli/src/lib.rs:248` | Options that tune a `myc run` (or `myc build`) invocation beyond `--config` (RFC-0041 §5 / |
 | `mycelium_cli::RunReport` | struct | `crates/mycelium-cli/src/lib.rs:232` | The outcome of a successful `myc run` (M-908/M-909): which source ran, which entry function was |
 | `mycelium_cli::StreamComponent` | type | `crates/mycelium-cli/src/lib.rs:897` | The outcome of a single nodule-component parse in [`stream_parse`]. |
 | `mycelium_cli::StreamReport` | struct | `crates/mycelium-cli/src/lib.rs:1149` | The result of [`stream_parse`] summarised for the CLI. |
 | `mycelium_cli::build` | fn | `crates/mycelium-cli/src/lib.rs:153` | `myc build` — build the content-addressed spore for the project at `manifest_path`, returning the |
 | `mycelium_cli::check_project` | fn | `crates/mycelium-cli/src/lib.rs:190` | `myc check` — parse and type-check every `.myc` source under the project directory containing |
+| `mycelium_cli::corpus_context` | fn | `crates/mycelium-cli/src/lib.rs:328` | Whether the process is running under a **conformance-corpus / CI** context that must refuse |
 | `mycelium_cli::init` | fn | `crates/mycelium-cli/src/lib.rs:120` | `myc init <name>` — scaffold a new phylum named `name` under `parent`, returning the created |
+| `mycelium_cli::reject_unbounded_in_corpus` | fn | `crates/mycelium-cli/src/lib.rs:306` | The conformance-corpus / CI guard (RFC-0041 §5): a corpus/CI run is the **deterministic** path, so |
 | `mycelium_cli::run` | fn | `crates/mycelium-cli/src/lib.rs:392` | `myc run` — execute a project through the reference interpreter (M-908 v0 single-nodule; |
 | `mycelium_cli::run_stream_parse` | fn | `crates/mycelium-cli/src/lib.rs:1175` | Drive [`stream_parse`] and collect results into a [`StreamReport`]. |
+| `mycelium_cli::run_with_options` | fn | `crates/mycelium-cli/src/lib.rs:402` | [`run`] with an explicit [`RunOptions`] (RFC-0041 §5) — the entry the `myc` driver calls so a |
 | `mycelium_cli::stream_parse` | fn | `crates/mycelium-cli/src/lib.rs:944` | `myc --stream` — parse a `;`-delimited Mycelium component stream from `reader` (M-820 / DN-57). |
+| `mycelium_cli::unbounded_banner` | fn | `crates/mycelium-cli/src/lib.rs:279` | The never-silent stderr banner printed when `--unbounded` is engaged (G2 — an explicit escape |
 
 ## mycelium-cli-common
 
@@ -668,6 +673,7 @@
 | `mycelium_interp::Interpreter::new` | fn | `crates/mycelium-interp/src/lib.rs:393` | Build an interpreter with a custom prim registry and swap engine (e.g. |
 | `mycelium_interp::Interpreter::prim_names` | fn | `crates/mycelium-interp/src/lib.rs:439` | The registered primitive names (for tooling/EXPLAIN). |
 | `mycelium_interp::Interpreter::step` | fn | `crates/mycelium-interp/src/lib.rs:453` | Perform exactly one small-step reduction on `node` (the `⟶` relation above). |
+| `mycelium_interp::Interpreter::with_depth` | fn | `crates/mycelium-interp/src/lib.rs:423` | Override the shared [`RecursionBudget`] **depth ceiling** on the §4.0 metric (RFC-0041 W7 — |
 | `mycelium_interp::Interpreter::with_fuel` | fn | `crates/mycelium-interp/src/lib.rs:404` | Override the step budget. |
 | `mycelium_interp::ParallelPlan` | enum | `crates/mycelium-interp/src/parallel.rs:133` | The **reified, EXPLAIN-able** decision of what (if anything) [`Interpreter::eval_core_parallel`] |
 | `mycelium_interp::PrimRegistry` | struct | `crates/mycelium-interp/src/prims.rs:57` | The name→implementation table the interpreter dispatches `Op` nodes through. |
@@ -3416,6 +3422,10 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_cli::Report::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_cli::Report::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_cli::Report::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_cli::RunOptions::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_cli::RunOptions::default` | definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated |
+| `mycelium_cli::RunOptions::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_cli::RunOptions::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_cli::RunReport::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_cli::RunReport::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_cli::RunReport::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
@@ -4184,6 +4194,7 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_fmt::FmtError::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_fmt::FmtError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_fmt::FmtError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_fmt::FmtError::source` | definition not found via regex heuristic (kind='fn', name='source') — possibly macro-generated or cfg-gated |
 | `mycelium_fmt::Formatted::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_fmt::Formatted::default` | definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated |
 | `mycelium_fmt::Formatted::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
@@ -5212,6 +5223,7 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_mir_passes::eval::RcError::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_mir_passes::eval::RcError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_mir_passes::eval::RcError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mir_passes::eval::RcError::from` | definition not found via regex heuristic (kind='fn', name='from') — possibly macro-generated or cfg-gated |
 | `mycelium_mir_passes::rc_ir::Mode::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_mir_passes::rc_ir::Mode::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_mir_passes::rc_ir::Mode::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
