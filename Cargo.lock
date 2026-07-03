@@ -347,6 +347,7 @@ dependencies = [
  "mycelium-numerics",
  "mycelium-select",
  "mycelium-stack",
+ "mycelium-workstack",
 ]
 
 [[package]]

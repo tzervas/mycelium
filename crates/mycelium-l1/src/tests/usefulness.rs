@@ -32,7 +32,11 @@ fn complete_flat_match_is_exhaustive() {
     let t = nat_registry();
     // rows: Z, S(_) — a wildcard `_` is then not useful ⇒ exhaustive.
     let rows = vec![vec![ctor("Z", vec![])], vec![ctor("S", vec![Pat::Wild])]];
-    assert!(useful(&t, &rows, &[Pat::Wild], &[Ty::Data("Nat".into(), vec![])]).is_none());
+    assert!(
+        useful(&t, &rows, &[Pat::Wild], &[Ty::Data("Nat".into(), vec![])])
+            .expect("within the recursion budget")
+            .is_none()
+    );
 }
 
 #[test]
@@ -40,8 +44,9 @@ fn missing_case_yields_a_witness() {
     let t = nat_registry();
     // rows: only Z — `_` is useful, witness is the missing `S(_)`.
     let rows = vec![vec![ctor("Z", vec![])]];
-    let w =
-        useful(&t, &rows, &[Pat::Wild], &[Ty::Data("Nat".into(), vec![])]).expect("non-exhaustive");
+    let w = useful(&t, &rows, &[Pat::Wild], &[Ty::Data("Nat".into(), vec![])])
+        .expect("within the recursion budget")
+        .expect("non-exhaustive");
     assert_eq!(render(&w[0]), "S(_)");
 }
 
@@ -53,8 +58,9 @@ fn nested_missing_case_is_found_with_a_deep_witness() {
         vec![ctor("Z", vec![])],
         vec![ctor("S", vec![ctor("Z", vec![])])],
     ];
-    let w =
-        useful(&t, &rows, &[Pat::Wild], &[Ty::Data("Nat".into(), vec![])]).expect("non-exhaustive");
+    let w = useful(&t, &rows, &[Pat::Wild], &[Ty::Data("Nat".into(), vec![])])
+        .expect("within the recursion budget")
+        .expect("non-exhaustive");
     assert_eq!(render(&w[0]), "S(S(_))");
 }
 
@@ -67,7 +73,11 @@ fn nested_cover_is_exhaustive() {
         vec![ctor("S", vec![ctor("Z", vec![])])],
         vec![ctor("S", vec![ctor("S", vec![Pat::Wild])])],
     ];
-    assert!(useful(&t, &rows, &[Pat::Wild], &[Ty::Data("Nat".into(), vec![])]).is_none());
+    assert!(
+        useful(&t, &rows, &[Pat::Wild], &[Ty::Data("Nat".into(), vec![])])
+            .expect("within the recursion budget")
+            .is_none()
+    );
 }
 
 #[test]
@@ -76,7 +86,9 @@ fn redundant_arm_is_not_useful() {
     // After Z and S(_), the arm S(Z) is redundant (already covered) ⇒ not useful.
     let prior = vec![vec![ctor("Z", vec![])], vec![ctor("S", vec![Pat::Wild])]];
     let row = vec![ctor("S", vec![ctor("Z", vec![])])];
-    assert!(useful(&t, &prior, &row, &[Ty::Data("Nat".into(), vec![])]).is_none());
+    assert!(useful(&t, &prior, &row, &[Ty::Data("Nat".into(), vec![])])
+        .expect("within the recursion budget")
+        .is_none());
 }
 
 #[test]
@@ -85,7 +97,11 @@ fn literal_column_needs_a_default() {
     // A Binary{1} column with literal rows 0b0, 0b1 but no default is still non-exhaustive: the
     // value domain is never enumerated (M-320), so `_` stays useful.
     let rows = vec![vec![Pat::Lit("b:0".into())], vec![Pat::Lit("b:1".into())]];
-    assert!(useful(&t, &rows, &[Pat::Wild], &[Ty::Binary(Width::Lit(1))]).is_some());
+    assert!(
+        useful(&t, &rows, &[Pat::Wild], &[Ty::Binary(Width::Lit(1))])
+            .expect("within the recursion budget")
+            .is_some()
+    );
     // With a default, `_` is no longer useful.
     let with_default = vec![vec![Pat::Lit("b:0".into())], vec![Pat::Wild]];
     assert!(useful(
@@ -94,6 +110,7 @@ fn literal_column_needs_a_default() {
         &[Pat::Wild],
         &[Ty::Binary(Width::Lit(1))]
     )
+    .expect("within the recursion budget")
     .is_none());
 }
 
