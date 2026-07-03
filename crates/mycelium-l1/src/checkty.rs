@@ -3554,6 +3554,48 @@ struct Cx<'a> {
     affine: Tracker,
 }
 
+/// RFC-0040 (M-977): if `expected` is a **cons-list-shaped** user ADT, return its `(nil, cons)`
+/// constructor names — the trigger for desugaring a `[…]` literal into a right-nested `Cons` chain
+/// (see [`Cx::check_list`]). "Cons-list-shaped" is a purely *structural* recognition, requiring no
+/// annotation: the type is a `Ty::Data(name, _)` whose declaration has **exactly two** constructors —
+/// one **nullary** (the "nil": `Nil`/`GLNil`/`TNil`/`BNil`/…) and one **binary** whose SECOND field is
+/// the recursive `Self` type `Data(name, …)` (the "cons": `Cons(A, Self)`). This matches every
+/// `lib/std` list type (`Vec`, `Trits`, `ByteList`, `GRowList`, …) uniformly. A type not of this shape
+/// yields `None`, so the `Seq{T,N}` and no-context paths are untouched (never a silent reinterpret).
+fn cons_list_ctors(
+    types: &std::collections::BTreeMap<String, DataInfo>,
+    expected: &Ty,
+) -> Option<(String, String)> {
+    let Ty::Data(name, _args) = expected else {
+        return None;
+    };
+    let di = types.get(name)?;
+    if di.ctors.len() != 2 {
+        return None;
+    }
+    let mut nil: Option<String> = None;
+    let mut cons: Option<String> = None;
+    for c in &di.ctors {
+        match c.fields.len() {
+            0 => nil = Some(c.name.clone()),
+            2 => {
+                // The cons ctor's SECOND field must be the recursive Self reference `Data(name, …)`
+                // at the type's own arity — that is what makes this a linked list, not a pair.
+                if let Ty::Data(fname, fargs) = &c.fields[1] {
+                    if fname == name && fargs.len() == di.params.len() {
+                        cons = Some(c.name.clone());
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    match (nil, cons) {
+        (Some(n), Some(c)) => Some((n, c)),
+        _ => None,
+    }
+}
+
 impl Cx<'_> {
     fn err<T>(&self, msg: impl Into<String>) -> Result<T, CheckError> {
         Err(CheckError::new(self.site, msg))
@@ -5529,6 +5571,26 @@ impl Cx<'_> {
         elems: &[Expr],
         expected: Option<&Ty>,
     ) -> Result<(Ty, Expr), CheckError> {
+        // RFC-0040 (M-977): a `[e1, …, en]` literal checked against a **cons-list-shaped** user ADT
+        // (exactly two constructors — one nullary "nil" and one binary `Cons(A, Self)` "cons")
+        // DESUGARS to the right-nested `Cons(e1, Cons(…, Nil))` chain and is checked as that chain.
+        // The desugared expression IS the hand-written chain (same surface AST after desugaring), so
+        // elaboration/eval/AOT see byte-for-byte the current representation — behaviour-neutral by
+        // construction (the three-property gate: flatten ≡ lower ≡ semantics unchanged). The Seq
+        // literal path (below) is unchanged: `Seq{T, N}` is a distinct expected type, so there is no
+        // ambiguity. When there is NO expected type, a bare `[…]` still infers a `Seq` as before.
+        if let Some(exp) = expected {
+            if let Some((nil_ctor, cons_ctor)) = cons_list_ctors(self.types, exp) {
+                let mut acc = Expr::Path(Path(vec![nil_ctor]));
+                for e in elems.iter().rev() {
+                    acc = Expr::App {
+                        head: Box::new(Expr::Path(Path(vec![cons_ctor.clone()]))),
+                        args: vec![e.clone(), acc],
+                    };
+                }
+                return self.check(scope, &acc, expected);
+            }
+        }
         // The expected element type + length, when checking against a `Seq{T, N}`.
         let expected_elem: Option<Ty> = match expected {
             Some(Ty::Seq(elem, _)) => Some((**elem).clone()),

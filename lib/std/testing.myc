@@ -524,7 +524,7 @@ fn mode_eq(a: CertMode, b: CertMode) => Bool =
 
 // modes_all: CertMode::ALL — every tier, weakest first. Exact.
 fn modes_all() => Vec[CertMode] =
-  Cons(Fast, Cons(Balanced, Cons(Certified, Nil)));
+  [Fast, Balanced, Certified];
 
 // scope_specificity: mirrors CertScope::specificity (Global 0 < Phylum 1 < Nodule 2). Exact.
 fn scope_specificity(sc: CertScope) => Binary{8} =
@@ -852,12 +852,7 @@ fn row_is_green() => MatrixRow =
 
 // matrix: the full 5-row table, in guarantee_matrix.rs::MATRIX order.
 fn matrix() => Vec[MatrixRow] =
-  Cons(row_for_all(),
-  Cons(row_golden(),
-  Cons(row_differential(),
-  Cons(row_summarize(),
-  Cons(row_is_green(),
-  Nil)))));
+  [row_for_all(), row_golden(), row_differential(), row_summarize(), row_is_green()];
 
 // ── structural checks (the typed analogs of guarantee_matrix.rs::tests) ─────────────────────────
 // all_rows_exact: every harness op's tag is Exact-as-mechanism (spec §4; accidentally tagging a

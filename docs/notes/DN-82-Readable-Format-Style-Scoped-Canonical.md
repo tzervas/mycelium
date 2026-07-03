@@ -229,3 +229,31 @@ no list literal, flagged (not hidden) to the representation track.
   tripping write, and the `mycelium-l1` `std_*` + `mycelium-std-conformance` + every touched
   `mycelium-std-*` eval crate are green after the reformat (L0-interp ≡ L1-eval ≡ AOT). This is trials
   evidence (C1/C2 + the differential suites), not a theorem — VR-5: stated at its supportable strength. ✔
+
+### 7.6 FLAG-976-1 RESOLVED → RFC-0040 (the each-item-closed ideal, now shipped)
+
+Per the maintainer's 2026-07-03 directive to *pursue the list-literal source change now*, FLAG-976-1
+is **resolved by RFC-0040 (M-977)**: a `[e1, …, en]` literal checked against a **cons-list-shaped**
+user ADT (structurally: two ctors — a nullary nil + a recursive `Cons(A, Self)`) **desugars** to the
+`Cons` chain in `checkty::check_list`. It is **behaviour-neutral by construction** — the desugared fn
+body is the **byte-for-byte identical AST** as the hand-written chain (proven by
+`mycelium-l1/tests/list_literal.rs`; the full `mycelium-l1` + conformance + `std-*` suites green,
+1854 tests). The `lib/std` static tables (`matrix()` in core/diag/spore/swap/recover/testing,
+`guarantee_matrix()` in select, `modes_all()` in testing) now read as the **maintainer's ideal** —
+each item closed on its own line, comma-separated, one terminal `;`, **no closer run**:
+
+```mycelium
+fn matrix() => Vec[GuaranteeRow] =
+  [
+    row_value_repr_meta(),
+    row_corevalue_datum(),
+    …
+    row_provenance_of()
+  ];
+```
+
+This is a *surface-semantics* extension only — **no grammar/parser/L0 change** (the `[…]` already
+parsed to `Literal::List`; only its type-directed elaboration changed). It lands as a **separate PR
+from the behaviour-neutral M-976 formatter work** (it is a kernel-typechecker change, so it must not
+be conflated with the whitespace-only renderer). FLAG-976-2 (a variadic `all_of([…])`/`concat([…])`
+for the `bool_and`/`cat` pyramids) remains a distinct, deferred RFC — unaddressed here.

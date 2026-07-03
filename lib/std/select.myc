@@ -572,8 +572,9 @@ fn matrix_all_exact(rs: GRowList) => Bool =
 // guarantee_matrix: the loaded matrix — 4 rows (the ported ops), all GExact, EXPLAIN-able = yes
 // for every selection op; `build` constructs a policy and is not itself a selection.
 fn guarantee_matrix() => GRowList =
-  GLCons(GR("build", GExact, True, "none", ExplainNotApplicable),
-  GLCons(GR("select", GExact, True, "none", ExplainYes),
-  GLCons(GR("explain", GExact, True, "none", ExplainYes),
-  GLCons(GR("select_with_override", GExact, True, "none", ExplainYes),
-  GLNil))));
+  [
+    GR("build", GExact, True, "none", ExplainNotApplicable),
+    GR("select", GExact, True, "none", ExplainYes),
+    GR("explain", GExact, True, "none", ExplainYes),
+    GR("select_with_override", GExact, True, "none", ExplainYes)
+  ];

@@ -697,18 +697,19 @@ type Vec[A] = Nil | Cons(A, Vec[A]);
 
 // matrix: the full 11-row table, in the same order as guarantee_matrix.rs::MATRIX.
 fn matrix() => Vec[MatrixRow] =
-  Cons(row_handle(),
-  Cons(row_recover_bridge(),
-  Cons(row_fallback(),
-  Cons(row_retry(),
-  Cons(row_escalate(),
-  Cons(row_cleanup(),
-  Cons(row_on(),
-  Cons(row_policy_ref(),
-  Cons(row_action_for(),
-  Cons(row_consume(),
-  Cons(row_check_effects(),
-  Nil)))))))))));
+  [
+    row_handle(),
+    row_recover_bridge(),
+    row_fallback(),
+    row_retry(),
+    row_escalate(),
+    row_cleanup(),
+    row_on(),
+    row_policy_ref(),
+    row_action_for(),
+    row_consume(),
+    row_check_effects()
+  ];
 
 // matrix_len: the row count as Binary{8} (11 rows fits trivially). O(n) spine-walk.
 fn matrix_len(xs: Vec[MatrixRow]) => Binary{8} =

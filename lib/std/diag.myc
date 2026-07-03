@@ -300,21 +300,22 @@ type Vec[A] = Nil | Cons(A, Vec[A]);
 
 // matrix: the full 14-row table, in the same order as guarantee_matrix.rs::MATRIX.
 fn matrix() => Vec[MatrixRow] =
-  Cons(row_present(),
-  Cons(row_content_id(),
-  Cons(row_to_human(),
-  Cons(row_to_json(),
-  Cons(row_from_json(),
-  Cons(row_resolve_class(),
-  Cons(row_register_class(),
-  Cons(row_on_policy(),
-  Cons(row_policy_ref(),
-  Cons(row_from_file(),
-  Cons(row_resolve_route(),
-  Cons(row_sink(),
-  Cons(row_guarantee_of(),
-  Cons(row_audit_of(),
-  Nil))))))))))))));
+  [
+    row_present(),
+    row_content_id(),
+    row_to_human(),
+    row_to_json(),
+    row_from_json(),
+    row_resolve_class(),
+    row_register_class(),
+    row_on_policy(),
+    row_policy_ref(),
+    row_from_file(),
+    row_resolve_route(),
+    row_sink(),
+    row_guarantee_of(),
+    row_audit_of()
+  ];
 
 // ── Structural checks over the matrix (the .myc analogs of guarantee_matrix.rs::tests) ───────────
 // Every check below is Empirical (trials, std_diag.rs three-way differential) over Declared data.

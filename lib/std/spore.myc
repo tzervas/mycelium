@@ -709,22 +709,23 @@ fn row_explain_deploy() => MatrixRow =
 
 // matrix: the full 15-row table, in the same order as guarantee_matrix.rs::MATRIX.
 fn matrix() => Vec[MatrixRow] =
-  Cons(row_build(),
-  Cons(row_build_value(),
-  Cons(row_identity(),
-  Cons(row_explain(),
-  Cons(row_manifest_of(),
-  Cons(row_validate(),
-  Cons(row_manifest_hash(),
-  Cons(row_mode(),
-  Cons(row_declared_strength(),
-  Cons(row_reconstruct(),
-  Cons(row_deploy(),
-  Cons(row_germinate(),
-  Cons(row_verify_hash_canonical(),
-  Cons(row_no_opaque(),
-  Cons(row_explain_deploy(),
-  Nil)))))))))))))));
+  [
+    row_build(),
+    row_build_value(),
+    row_identity(),
+    row_explain(),
+    row_manifest_of(),
+    row_validate(),
+    row_manifest_hash(),
+    row_mode(),
+    row_declared_strength(),
+    row_reconstruct(),
+    row_deploy(),
+    row_germinate(),
+    row_verify_hash_canonical(),
+    row_no_opaque(),
+    row_explain_deploy()
+  ];
 
 // matrix_len: the row count as Binary{8} (15 rows fits trivially). O(n) spine-walk. Exact.
 fn matrix_len(xs: Vec[MatrixRow]) => Binary{8} =

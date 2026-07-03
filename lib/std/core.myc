@@ -175,16 +175,17 @@ type Vec[A] = Nil | Cons(A, Vec[A]);
 
 // matrix: the full 9-row table, in the same order as mycelium_std_core::GUARANTEE_MATRIX.
 fn matrix() => Vec[GuaranteeRow] =
-  Cons(row_value_repr_meta(),
-  Cons(row_corevalue_datum(),
-  Cons(row_guarantee_strength(),
-  Cons(row_bound_boundbasis(),
-  Cons(row_repr_of(),
-  Cons(row_meta_of(),
-  Cons(row_guarantee_of(),
-  Cons(row_bound_of(),
-  Cons(row_provenance_of(),
-  Nil)))))))));
+  [
+    row_value_repr_meta(),
+    row_corevalue_datum(),
+    row_guarantee_strength(),
+    row_bound_boundbasis(),
+    row_repr_of(),
+    row_meta_of(),
+    row_guarantee_of(),
+    row_bound_of(),
+    row_provenance_of()
+  ];
 
 // ── Structural checks over the matrix (the .myc analogs of lib.rs::tests) ───────────────────────
 // Every check below is Empirical (trials, std_core.rs three-way differential vs the live Rust
