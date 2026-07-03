@@ -12,9 +12,28 @@
 //! `mycelium-core` change** (KC-3): this is a pure frontend rewrite over the checked `Env`; the
 //! kernel/registry path is untouched.
 //!
-//! It is **not** a tag-changing pass (VR-5 / S1). Totality (and any grade) are **recomputed** over
-//! the specialized function set, never fabricated — a specialization's verdict equals its source's
-//! because the rewrite is structural. [`subst_ty`] is Swap-free; mono never inserts a `Swap`.
+//! It is **not** a tag-changing pass (VR-5 / S1). Totality is **recomputed** over the specialized
+//! function set, never fabricated — a specialization's verdict equals its source's because the
+//! rewrite is structural. [`subst_ty`] is Swap-free; mono never inserts a `Swap`.
+//!
+//! ## Per-instantiation guarantee-tag context (M-844 / M-967; RFC-0018 §4 / RFC-0019 §4.4)
+//! Static guarantee grading ([`crate::grade::check_guarantees`]) runs **before** mono, over the
+//! still-generic, checked `Env` (`checkty.rs`'s Pass 3d) — so the lattice `Exact ⊐ Proven ⊐
+//! Empirical ⊐ Declared` is enforced exactly once, against each *declaration's* own written `@ g`
+//! annotations, never re-derived or re-validated here (KC-3: no second grading pass). Mono's job
+//! w.r.t. tags is narrower and purely custodial: when a declaration is specialized into a mangled
+//! copy, that copy's signature (and any inline ascription in its rewritten body) must carry
+//! **exactly its own source declaration's** `@ g` annotations — not the emitted-fresh
+//! [`TypeRef::unguaranteed`] every reconstructed `Ty → TypeRef` round-trip otherwise produces.
+//! Before M-967 every mono'd signature/ascription silently lost its `@ g` this way — a **silent
+//! downgrade to "no annotation"**, never an upgrade, but still a transparency violation (a later
+//! `EXPLAIN`/audit reader could no longer see what the source actually declared). Two call sites of
+//! one generic reaching *different* trait instances (`emit_method`, keyed by `(trait, for_ty)`) is
+//! the concrete case DN-64 OQ-S asks about: each instance's method has its **own** `@ g` on its own
+//! declaration, so once threaded through, the two mangled specializations naturally carry two
+//! **distinct** tags — never merged (each is its own `FnDecl`, keyed by its own mangled name) and
+//! never bled into each other (mono never reads one instantiation's tag while emitting another).
+//! [`ty_to_ref_tagged`] is the one helper every signature/ascription reconstruction routes through.
 //!
 //! # Honest identity fragmentation (NOT "one body, one hash")
 //! The mangled-name scheme **is** the honest record: `first_or` specialized at `Binary{8}` and at
@@ -50,7 +69,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use crate::ast::{
     Arm, BaseType, Expr, FnDecl, FnSig, Hypha, Literal, Param, Path, Pattern, Scalar, Sparsity,
-    TypeRef, WidthRef,
+    Strength, TypeRef, WidthRef,
 };
 use crate::checkty::{
     has_var, infer_type, param_subst, resolve_ty, subst_ty, type_head, unify, CtorInfo, DataInfo,
@@ -720,13 +739,18 @@ impl<'e> Mono<'e> {
                 dyn_param_map.insert(p.name.clone(), arrow.clone());
                 new_params.push(Param {
                     name: p.name.clone(),
-                    ty: ty_to_ref(&Ty::Data(arrow.clone(), vec![])),
+                    // M-967: the closure param's own source `@ g` (if any) still threads through —
+                    // only its *base type* becomes the synthetic closure tag-sum.
+                    ty: ty_to_ref_tagged(&Ty::Data(arrow.clone(), vec![]), p.ty.guarantee),
                 });
                 continue;
             }
+            // M-967/M-844: this parameter's own `@ g` (from `p.ty`, the source declaration being
+            // specialized) is threaded onto the emitted concrete type — the per-instantiation tag
+            // context, never a fresh unguaranteed type (VR-5 / DN-64 OQ-S).
             new_params.push(Param {
                 name: p.name.clone(),
-                ty: ty_to_ref(&cty),
+                ty: ty_to_ref_tagged(&cty, p.ty.guarantee),
             });
         }
         let ret_cty = self.concrete_ty(name, &tyvars, &subst, &fd.sig.ret)?;
@@ -753,7 +777,9 @@ impl<'e> Mono<'e> {
             name: mangled.clone(),
             params: vec![], // monomorphic: no type parameters remain
             value_params: new_params,
-            ret: ty_to_ref(&ret_cty),
+            // M-967/M-844: the source's own declared return `@ g` threads onto this instantiation's
+            // return type — this specialization's own tag context, not a fresh unguaranteed one.
+            ret: ty_to_ref_tagged(&ret_cty, fd.sig.ret.guarantee),
             effects: fd.sig.effects.clone(),
             effect_budgets: fd.sig.effect_budgets.clone(),
         };
@@ -925,9 +951,13 @@ impl<'e> Mono<'e> {
             let cty = self.concrete_ty(method, &[], &empty, &p.ty)?;
             self.enqueue_tys_in(&cty);
             scope.push((p.name.clone(), cty.clone()));
+            // M-967/M-844: this instance method's own declared `@ g` (from its `impl` block, which
+            // may differ from another instance of the same trait/method) threads onto its
+            // specialization — the per-instance tag context (DN-64 OQ-S), never merged with a
+            // sibling instance's tag and never dropped to unguaranteed.
             new_params.push(Param {
                 name: p.name.clone(),
-                ty: ty_to_ref(&cty),
+                ty: ty_to_ref_tagged(&cty, p.ty.guarantee),
             });
         }
         let ret_cty = self.concrete_ty(method, &[], &empty, &md.sig.ret)?;
@@ -943,7 +973,9 @@ impl<'e> Mono<'e> {
                     name: mangled.clone(),
                     params: vec![],
                     value_params: new_params,
-                    ret: ty_to_ref(&ret_cty),
+                    // M-967/M-844: this instance method's own declared return `@ g` threads onto its
+                    // specialization's return type.
+                    ret: ty_to_ref_tagged(&ret_cty, md.sig.ret.guarantee),
                     effects: md.sig.effects.clone(),
                     effect_budgets: md.sig.effect_budgets.clone(),
                 },
@@ -1154,8 +1186,12 @@ impl<'e> Mono<'e> {
                 Ok(Expr::Let {
                     name: name.clone(),
                     // The ascription, if present, is now concrete (mono erases type params); keep it
-                    // for fidelity (the elaborator ignores the type part — it re-infers).
-                    ty: want.as_ref().map(ty_to_ref),
+                    // for fidelity (the elaborator ignores the type part — it re-infers). M-967: its
+                    // own `@ g` (from the source `ty`) threads onto the rewritten ascription too —
+                    // never silently dropped.
+                    ty: want
+                        .as_ref()
+                        .map(|w| ty_to_ref_tagged(w, ty.as_ref().and_then(|t| t.guarantee))),
                     bound: Box::new(bound2),
                     body: Box::new(body2),
                 })
@@ -1201,7 +1237,11 @@ impl<'e> Mono<'e> {
             Expr::Ascribe(inner, t) => {
                 let want = self.concrete_ty(site, &[], &BTreeMap::new(), t)?;
                 let inner2 = self.rewrite(site, scope, inner, Some(&want))?;
-                Ok(Expr::Ascribe(Box::new(inner2), ty_to_ref(&want)))
+                // M-967: the ascription's own `@ g` threads onto the rewritten concrete type.
+                Ok(Expr::Ascribe(
+                    Box::new(inner2),
+                    ty_to_ref_tagged(&want, t.guarantee),
+                ))
             }
             Expr::Colony(hyphae) => {
                 let mut out = Vec::with_capacity(hyphae.len());
@@ -3162,4 +3202,18 @@ fn ty_to_ref(t: &Ty) -> TypeRef {
         Ty::Fn(a, r) => BaseType::Fn(Box::new(ty_to_ref(a)), Box::new(ty_to_ref(r))),
     };
     TypeRef::unguaranteed(base)
+}
+
+/// Like [`ty_to_ref`], but attaches `guarantee` — the **source declaration's own** `@ g` (M-844 /
+/// M-967; RFC-0018 §4). Every call site passes the guarantee straight off the *original* (still
+/// abstract/generic) [`TypeRef`] being specialized (e.g. `p.ty.guarantee`, `fd.sig.ret.guarantee`)
+/// — never derived from the concrete `Ty` (which carries none) and never merged/averaged across
+/// instantiations (each call builds one fresh `TypeRef` for one specialization). This is the sole
+/// per-instantiation guarantee-tag threading point: a monomorphized copy's signature/ascription
+/// keeps exactly what its own source wrote — no silent loss (the pre-M-967 `ty_to_ref` blanking),
+/// no silent merge across instantiations, and no upgrade past the source's own annotation (VR-5).
+fn ty_to_ref_tagged(t: &Ty, guarantee: Option<Strength>) -> TypeRef {
+    let mut r = ty_to_ref(t);
+    r.guarantee = guarantee;
+    r
 }
