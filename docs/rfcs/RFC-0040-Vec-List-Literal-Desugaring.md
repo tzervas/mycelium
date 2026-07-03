@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0040 |
-| **Status** | **Accepted** (2026-07-03) — *Proposed → Accepted: Rust-first implemented and green in `crates/mycelium-l1` (checkty desugaring + `lib/std` `[…]` adoption), the full `mycelium-l1` + `mycelium-std-conformance` + `mycelium-std-*` suites green (1854 tests, behaviour-neutrality by AST identity — see §5). Ratification `Accepted → Enacted` is the maintainer's (VR-5: implemented, not yet ratified). Minted under the maintainer's explicit 2026-07-03 directive to "pursue the list-literal source change now" (resolving DN-82 FLAG-976-1).* |
+| **Status** | **Accepted** (2026-07-03) — *Proposed → Accepted: Rust-first implemented and green in `crates/mycelium-l1` (checkty desugaring + `lib/std` `[…]` adoption), the full `mycelium-l1` + `mycelium-std-conformance` + `mycelium-std-*` suites green (1854 tests, behaviour-neutrality by AST identity — see §5). Ratification `Accepted → Enacted` is the maintainer's (VR-5: implemented, not yet ratified). Minted under the maintainer's explicit 2026-07-03 directive to "pursue the list-literal source change now" (resolving DN-82 FLAG-976-1). **Ratified `Proposed → Accepted` by the maintainer 2026-07-03** — the "accept the default recommendations" directive (the type-directed list literal was the accepted default) IS the ratification act, confirmed explicitly at the terminal PR review (RFC-0039 Proposed→Accepted precedent). `Enacted` remains the maintainer's later call.* |
 | **Type** | Normative — surface **semantics** extension (type-directed elaboration); **no grammar/parser/L0 change** |
 | **Date** | 2026-07-03 |
 | **Task** | M-977 |
