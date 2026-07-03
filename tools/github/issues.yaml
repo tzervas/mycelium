@@ -11327,6 +11327,40 @@ issues:
       its checklist. Freeze is NOT a `flp` prerequisite (roadmap §2b) — it gives the public a
       stable baseline, not a gating one. Model: Opus.
 
+  - id: M-976
+    title: "Shape-Dispatched Readable mycfmt — flat-spine + house-style knob + width 100"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:tooling, priority:P2, status:done]
+    epic: E31-1
+    depends_on: []
+    landed_date: 2026-07-03
+    landed_basis: "PR #1055 (formatter) + width-100 retune; DN-82 §7; assignee tzervas"
+    doc_refs:
+      - corpus:DN-82
+      - src:crates/mycelium-fmt/src/lib.rs
+    body: |
+      Post-freeze presentation-only (whitespace) Readable formatter (R0-R6): flat-spine for
+      right-nested same-head chains (kills the Cons pyramid + closer-wall), rustfmt-block for
+      wide-flat calls, one indent per real nesting; house-style knob (LayoutCfg/SpineInner
+      InlineWhenFits|AlwaysExpand, --expand-spine); default width 88->100 (rustfmt-aligned).
+      lib/std re-rendered. Behavior-neutral (Empirical: C1/C2). Kernel untouched. Assignee: tzervas.
+  - id: M-977
+    title: "Vec list-literal [...] desugaring — the each-item-closed ideal (RFC-0040)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:done]
+    epic: E31-1
+    depends_on: [M-976]
+    landed_date: 2026-07-03
+    landed_basis: "PR #1056; RFC-0040; assignee tzervas"
+    doc_refs:
+      - corpus:RFC-0040
+      - src:crates/mycelium-l1/src/checkty.rs
+    body: |
+      Type-directed elaboration: [e1,...,en] against a cons-list-shaped Vec[T] desugars to the Cons
+      chain (re-checked as it); Seq{T,N} + non-list ADTs untouched. No grammar/parser/L0 change
+      (frontend lowering onto the frozen kernel — freeze-safe, DN-56 §6); behavior-neutral by AST
+      identity (Empirical). lib/std static tables (matrix() etc.) now read each-item-closed [...].
+      Resolves DN-82 FLAG-976-1. Assignee: tzervas.
       User stories:
       - As the maintainer, I want the freeze to be one deliberate, condition-gated act, so that
         "the kernel is stable" is a checked declaration a public release can stand on.
