@@ -43,8 +43,8 @@ the normative oracle `docs/spec/grammar/mycelium.ebnf` + the L1 lexer/parser:
   retired `->` renders `invalid.deprecated`.
 - **Types:** repr types + the RFC-0037 D2-b short aliases (`bin`/`tern`/`emb`/`hvec`, M-915),
   ambient `{…}` reprs, tuples, generics `[…]`, guarantee annotations `T @ Strength`, and
-  right-associative function types `A => B` (implemented in parse.rs; flagged as a pending
-  `mycelium.ebnf` addition).
+  right-associative function types `A => B` (implemented in parse.rs; added to `mycelium.ebnf`'s
+  `type_ref` production, M-924).
 - **Declarations & expressions** (tree-sitter): nodule/phylum headers (+`@std-sys`), use/type/
   trait/impl/object/`via`/lower/derive/fn (+`@tier`), effects `!{…}`, let/if/match (or-patterns)/
   for/swap/with/wild/spore/consume/colony+hypha (+`@forage`)/fuse/reclaim/lambda, and the full

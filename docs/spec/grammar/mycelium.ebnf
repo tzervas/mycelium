@@ -221,7 +221,15 @@ lambda_expr    ::= 'lambda' '(' params? ')' '=>' expr
 effects        ::= '!' '{' (Ident (',' Ident)*)? '}'
 
 /* Types. A guarantee-annotated type carries its honesty tag as a type-level index (LR-6). */
-type_ref       ::= base_type ('@' strength)?
+/* RFC-0024 §3 (M-924 gap-fix): a `type_ref` may itself be a first-class FUNCTION TYPE
+ * `A => B` — right-associative (`A => B => C` parses as `A => (B => C)`, mirroring
+ * `lambda`/`match`-arm currying), matching `parse_type_ref_guarded` in
+ * `crates/mycelium-l1/src/parse.rs`. `@ strength` (below) binds tighter than `=>`: `A @ Exact =>
+ * B` parses as `(A @ Exact) => B`, since the LHS `base_type ('@' strength)?` atom is parsed
+ * before the optional trailing `=> type_ref` is consumed. `->` is RETIRED as the function-type
+ * arrow (RFC-0037 D4) — the parser emits a never-silent teaching-reject diagnostic on `->` here,
+ * it is not silently accepted as an alias. */
+type_ref       ::= base_type ('@' strength)? ('=>' type_ref)?
 /* RFC-0037 D2-b (M-915): `bin`/`tern`/`emb`/`hvec` are short repr-keyword aliases for
  * `Binary`/`Ternary`/`Dense`/`VSA` — they elaborate identically (the same AST node either way; no
  * new BaseType variant). `vec` was considered and REJECTED (DN-02) — it collides with
