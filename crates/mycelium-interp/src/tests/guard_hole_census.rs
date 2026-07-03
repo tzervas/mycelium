@@ -94,7 +94,7 @@ fn eval_core_deep_subst_via_let_refuses_cleanly() {
 /// §4.7/§7 W1 is expected to route this through the shared work-step budget, at which point the
 /// signature (or an internal budget check reachable from callers) gains an explicit refusal path.
 #[test]
-#[ignore = "W1"] // RFC-0041 §4.7/§7 W1.
+#[ignore = "W4"] // RFC-0041 §7 W4: mycelium-interp is the L0 trusted base — deferred W1→W4 (interp wave; maintainer checkpoint).
 fn is_pure_deep_recursion() {
     let deep = deep_construct(200_000);
     let _ = is_pure(&deep);
@@ -105,7 +105,7 @@ fn is_pure_deep_recursion() {
 /// **Honesty (FLAG, VR-5):** same infallible-signature caveat as `is_pure` above — `plan_parallel`
 /// returns a `ParallelPlan` struct, not a `Result`.
 #[test]
-#[ignore = "W1"] // RFC-0041 §4.7/§7 W1.
+#[ignore = "W4"] // RFC-0041 §7 W4: mycelium-interp is the L0 trusted base — deferred W1→W4 (interp wave; maintainer checkpoint).
 fn plan_parallel_deep_recursion() {
     let deep = deep_construct(200_000);
     let _ = plan_parallel(&deep);
