@@ -344,6 +344,7 @@ dependencies = [
  "mycelium-numerics",
  "mycelium-sched",
  "mycelium-vsa",
+ "mycelium-workstack",
 ]
 
 [[package]]
