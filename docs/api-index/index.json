@@ -6475,7 +6475,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp",
       "file": "crates/mycelium-interp/src/parallel.rs",
-      "line": 91,
+      "line": 120,
       "summary": "The head node of a parallelized top-level batch — the \"independent pure elements\" M-862 fans out.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6563,7 +6563,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 142,
+      "line": 143,
       "summary": "Why evaluation could not proceed (always explicit — the interpreter is never silent; SC-3/G2).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6585,7 +6585,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 332,
+      "line": 363,
       "summary": "The reference interpreter: a primitive registry + a swap engine.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6596,7 +6596,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::Interpreter",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 542,
+      "line": 589,
       "summary": "Evaluate `node` to a **representation** value by iterating step to a normal",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6607,7 +6607,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::Interpreter",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 554,
+      "line": 601,
       "summary": "Evaluate `node` to a [`CoreValue`] — a representation value **or** a data value (the r3 data",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6618,7 +6618,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::Interpreter",
       "file": "crates/mycelium-interp/src/parallel.rs",
-      "line": 173,
+      "line": 202,
       "summary": "Evaluate `node` to a [`CoreValue`] with the **same result** as [`Interpreter::eval_core`],",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6629,7 +6629,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::Interpreter",
       "file": "crates/mycelium-interp/src/parallel.rs",
-      "line": 185,
+      "line": 214,
       "summary": "Evaluate `node` to a representation [`crate::Value`], mirroring [`Interpreter::eval`] — see",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6640,7 +6640,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::Interpreter",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 354,
+      "line": 385,
       "summary": "Build an interpreter with a custom prim registry and swap engine (e.g.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6651,7 +6651,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::Interpreter",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 371,
+      "line": 402,
       "summary": "The registered primitive names (for tooling/EXPLAIN).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6662,7 +6662,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::Interpreter",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 379,
+      "line": 416,
       "summary": "Perform exactly one small-step reduction on `node` (the `⟶` relation above).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6673,7 +6673,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::Interpreter",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 364,
+      "line": 395,
       "summary": "Override the step budget.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6684,7 +6684,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp",
       "file": "crates/mycelium-interp/src/parallel.rs",
-      "line": 104,
+      "line": 133,
       "summary": "The **reified, EXPLAIN-able** decision of what (if anything) [`Interpreter::eval_core_parallel`]",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6717,7 +6717,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 132,
+      "line": 133,
       "summary": "The result of one small-step attempt on a node.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6849,7 +6849,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp",
       "file": "crates/mycelium-interp/src/parallel.rs",
-      "line": 59,
+      "line": 60,
       "summary": "Whether `node` is a **provably pure** (effect-free) Core IR fragment — the structural,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6871,7 +6871,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp",
       "file": "crates/mycelium-interp/src/parallel.rs",
-      "line": 131,
+      "line": 160,
       "summary": "Compute the [`ParallelPlan`] for `node` — the explicit, side-effect-free decision procedure",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -33230,6 +33230,14 @@
       "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
     },
     {
+      "symbol": "mycelium_doc::ir::Node::drop",
+      "reason": "definition not found via regex heuristic (kind='fn', name='drop') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_doc::ir::Node::drop",
+      "reason": "definition not found via regex heuristic (kind='fn', name='drop') — possibly macro-generated or cfg-gated"
+    },
+    {
       "symbol": "mycelium_doc::ir::Node::eq",
       "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
     },
@@ -33518,6 +33526,10 @@
       "reason": "definition not found via regex heuristic (kind='fn', name='from') — possibly macro-generated or cfg-gated"
     },
     {
+      "symbol": "mycelium_interp::EvalError::from",
+      "reason": "definition not found via regex heuristic (kind='fn', name='from') — possibly macro-generated or cfg-gated"
+    },
+    {
       "symbol": "mycelium_interp::Interpreter::clone",
       "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
     },
@@ -33703,7 +33715,7 @@
     },
     {
       "symbol": "mycelium_interp::parallel::BatchHead",
-      "reason": "dedup-alias: same definition as `mycelium_interp::BatchHead` at crates/mycelium-interp/src/parallel.rs:91 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_interp::BatchHead` at crates/mycelium-interp/src/parallel.rs:120 — one canonical row kept"
     },
     {
       "symbol": "mycelium_interp::parallel::BatchHead::clone",
@@ -33731,7 +33743,7 @@
     },
     {
       "symbol": "mycelium_interp::parallel::ParallelPlan",
-      "reason": "dedup-alias: same definition as `mycelium_interp::ParallelPlan` at crates/mycelium-interp/src/parallel.rs:104 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_interp::ParallelPlan` at crates/mycelium-interp/src/parallel.rs:133 — one canonical row kept"
     },
     {
       "symbol": "mycelium_interp::parallel::ParallelPlan::clone",
@@ -33759,11 +33771,11 @@
     },
     {
       "symbol": "mycelium_interp::parallel::is_pure",
-      "reason": "dedup-alias: same definition as `mycelium_interp::is_pure` at crates/mycelium-interp/src/parallel.rs:59 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_interp::is_pure` at crates/mycelium-interp/src/parallel.rs:60 — one canonical row kept"
     },
     {
       "symbol": "mycelium_interp::parallel::plan_parallel",
-      "reason": "dedup-alias: same definition as `mycelium_interp::plan_parallel` at crates/mycelium-interp/src/parallel.rs:131 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_interp::plan_parallel` at crates/mycelium-interp/src/parallel.rs:160 — one canonical row kept"
     },
     {
       "symbol": "mycelium_interp::prims::PrimRegistry",

@@ -221,6 +221,23 @@ inputs as a W0 gate**: for an input past the floor, all three paths must refuse 
 at the same metric threshold. This gate **fails today** — reconciling the existing divergence is a W0
 precondition, not an afterthought.
 
+**W4 amendment (append-only, 2026-07-03 — evidence-driven correction of the "single input" premise).**
+The W0→W4 gate as written assumed **one statically-deep source** refused identically by all three paths;
+implementing W4 proved that empirically unachievable, for three independent reasons: (i) the **parser cap
+now equals the eval floor** (W1 raised `MAX_EXPR_DEPTH` to 4096), so a statically-deep *source* is refused
+**at parse**, before any evaluator sees it; (ii) the **AOT trampoline is data-spine-immune** — it charges
+depth only at App/Match frames, and its default ceiling is the DN-05 dynamic `[10k,2M]`, not the floor; (iii)
+**L0 is a substitution machine** — runtime recursion re-walks/re-clones the term each step (`O(N²)+`), so its
+practical deep input is a deep *value*, not a runtime `spin`. The gate is therefore satisfied by the parity
+that **actually holds**: every path refuses over-budget with the canonical variant **family** at the shared
+4096 floor, each exercised with a per-path bounded-time input (L1-eval `spin` → `DepthExceeded{4096}`;
+L0-interp deep value → `DepthLimit{4096}`; AOT `spin` at the explicit floor → `DepthLimit{4096}`).
+**Residual:** literal single-*variant* unification is partial — L1 surfaces `DepthExceeded{u32}` while
+L0/AOT surface the pre-existing `DepthLimit{usize}` (the canonical `DepthExceeded` is the budget-crate
+type; the interp/AOT paths map from it but keep `DepthLimit` as their observable). Full convergence would
+change the `mycelium-interp`/`mycelium-mlir` error enums (a trusted-base/AOT observable change) — a
+maintainer-decision follow-up, not a W4 blocker (the never-silent + shared-threshold contract holds).
+
 ## 6. Freeze compatibility (KC-3 / DN-56) — a defined within-freeze hardening channel (resolves §11 High freeze6)
 Converting the evaluators' recursion strategy adds **no L0 node/prim/surface** — an implementation swap
 behind the frozen semantics boundary (DN-56 §6 governs the kernel *surface*, unchanged; RR-29 §1.4/§0.4).
@@ -241,6 +258,14 @@ Each wave lands differential-green (M-210 **+** the §5.1 error-parity gate) and
 before merge. **Shared-file owners** (resolves §11 Med wave39): root `Cargo.toml` + `.cargo/mutants.toml` are
 **integrator-owned** — waves FLAG edits, the integrator applies them (feed-as-ready). **Ordering edges are
 in the table**, not just prose (resolves §11 High wave35).
+
+**Status (2026-07-03):** **W0, W1, W2, W3½, W3+W5, and W4 landed — only W6 remains.** W4 = the L0
+reference interpreter (`mycelium-interp`) budgeted: `step`/`subst`/etc. charge the shared
+`RecursionBudget` (L0 stays a substitution machine, §4.1), **`EvalError::DepthLimit` is now constructed**,
+and **the flagship RR-29 §0.1 `myc run` SIGABRT is closed** — a deep value refuses with `DepthLimit{4096}`.
+`parallel::is_pure` is iterative. **The §5.1 error-parity gate is GREEN** (un-ignored) — see the §5.1 W4
+amendment for the evidence-driven "single input → per-path bounded input" correction and the partial
+single-variant-unification residual. Independently adversarially reviewed. W4 `Enacted`; RFC stays Accepted.
 
 **Status (2026-07-03):** **W0, W1, W2, W3½, and the W3+W5 pair landed** (maintainer-approved past the
 checkpoint). W3 = frozen-core iterative destruction (`Node`/`Datum`/`CoreValue` iterative
@@ -352,6 +377,15 @@ implementation. **4 Critical + 15 High source-confirmed** objections, all resolv
 
 ## Meta — changelog
 
+- **2026-07-03 — W4 landed (L0 interp budgeted work-stack; the flagship SIGABRT closed; M-979).**
+  `mycelium-interp` (`step`/`subst`/`node_to_core_value`/`guarantee_of_value`/`select_arm`) charges the
+  shared `RecursionBudget` (L0 stays a substitution machine, §4.1; `subst` fallible; `eval_core` on the
+  grown stack); **`EvalError::DepthLimit` constructed** via `From<BudgetError>`, so a deep value refuses
+  `DepthLimit{4096}` instead of SIGABRT-ing `myc run` (RR-29 §0.1 closed). `parallel::is_pure` iterative.
+  **§5.1 error-parity gate GREEN** — rewritten per the §5.1 W4 amendment (the "single statically-deep
+  input" premise was empirically unachievable: parser-cap==floor, AOT data-immunity, L0 `O(N²)`), asserting
+  the real per-path bounded-input parity at the shared floor; partial single-variant residual noted.
+  Independently adversarially reviewed. Only W6 remains. W4 `Enacted`; RFC stays Accepted. (VR-5/G2.)
 - **2026-07-03 — W3+W5 landed (frozen-core iterative destruction + L1-eval CEK; M-979).** Maintainer-
   approved past the checkpoint. W3: `mycelium-core` `Node`/`Datum`/`CoreValue` iterative
   `Drop`/`Clone`/`PartialEq`/`Canon` via the DN-56 §6 within-freeze channel (bit-identical vs a recursive

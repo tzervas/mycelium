@@ -11,6 +11,35 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### RFC-0041 W4 — L0 reference-interpreter budgeted work-stack; the flagship `myc run` SIGABRT closed (2026-07-03: M-979)
+
+Closes RR-29 §0.1 — the remotely-reachable flagship bug: a crafted deep-but-fuel-cheap `.myc` value
+**SIGABRT-ed `myc run`** (the trusted L0 interpreter, reachable via a hostile spore). It now **refuses
+cleanly with `EvalError::DepthLimit{4096}`**. `#![forbid(unsafe_code)]` intact.
+
+- **Budgeted the substitution machinery** (`mycelium-interp`): `step`/`subst`/`node_to_core_value`/
+  `guarantee_of_value`/`select_arm` thread the shared `RecursionBudget`, charging one `DepthGuard` per
+  structural descent (siblings don't accumulate). Per §4.1 the L0 machine **stays a substitution
+  machine** — only budget + guard threaded in (`subst` became fallible); `eval_core` runs on the
+  growable deep stack (`ensure_sufficient_stack`).
+- **Constructed `EvalError::DepthLimit`** (defined-but-never-built until now) via `From<BudgetError>`
+  (canonical `DepthExceeded{u32}` → `DepthLimit{usize}` at the same threshold). `myc run` is fixed with
+  no CLI change; W3's iterative `Node::clone` composes so the front-door deep clone no longer aborts.
+- **`parallel::is_pure` made iterative** (explicit work-stack, O(1) host stack) — closes its own W4
+  census hole; the four W4-tagged census tests are un-ignored (deep value/subst → `DepthLimit`;
+  `is_pure`/`plan_parallel` complete without aborting).
+- **§5.1 error-parity gate GREEN** (un-ignored). **Evidence-driven finding (VR-5):** the RFC's original
+  "one statically-deep source refused identically by all three paths" premise proved *empirically
+  unachievable* — the parser cap now equals the eval floor (a deep *source* is refused at parse), the
+  AOT trampoline is data-spine-immune, and L0 substitution is `O(N²)` on runtime recursion. The gate was
+  rewritten to assert the parity that **actually holds** — every path refuses over-budget with the
+  canonical variant *family* at the shared 4096 floor, each exercised with a bounded-time input (L1 on
+  `spin` → `DepthExceeded{4096}`; L0 on a deep value → `DepthLimit{4096}`; AOT on `spin` at the explicit
+  floor → `DepthLimit{4096}`). **Residual flagged:** literal single-*variant* unification is partial (L1
+  `DepthExceeded` vs L0/AOT `DepthLimit`); full convergence would change the interp/AOT error enums
+  (trusted-base observable) — a maintainer-decision follow-up. Independently adversarially reviewed.
+  RFC-0041 stays **Accepted**; W4 `Enacted`. **Only W6 remains.**
+
 ### RFC-0041 W3+W5 — frozen-core iterative destruction, L1-eval CEK machine, TCO, eval raise (2026-07-03: M-979)
 
 The coordinated frozen-core/reference-machine pair (maintainer-approved past the checkpoint). Kills the
