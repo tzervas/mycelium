@@ -11,6 +11,7 @@
 //!   * a data-spine literal — a `Cons`/list literal `[e₀, …, e_{N-1}]` — has data-spine depth **N**,
 //!     charged by element uniformly (RFC-0040 desugars it to an N-long `Cons` chain);
 //!   * a flat, non-recursive body is depth 0/1.
+//!
 //! [`source_call_depth`] is a **pure** syntactic function of the *surface AST* (parse-only, no
 //! type-checking, no cross-function inlining): it measures the maximum call-chain nesting within a
 //! function body. It is therefore a **static** approximation of the runtime charge — cross-function
@@ -30,6 +31,7 @@
 //!   * **AOT** (`mycelium_mlir::run` / `run_core`, the env-machine) refuses with
 //!     `EvalError::DepthLimit { limit: usize }` at a **dynamic** ceiling in `[10 000, 2 000 000]`
 //!     (DN-05 memory-derived), not the deterministic floor.
+//!
 //! So no single input makes all three refuse at one threshold today — hence `#[ignore = "W5"]`.
 //!
 //! **Canonical over-budget variant (orchestrator decision — encoded as this gate's target):**
@@ -250,6 +252,7 @@ fn deep_nat_program(n: usize) -> String {
 ///     budget and SIGABRTs, which is *why* this whole test is ignored — running it would abort the
 ///     test binary);
 ///   * AOT env-machine → `EvalError::DepthLimit { limit }`.
+///
 /// Each `limit` must equal `CANONICAL_DEPTH_FLOOR`. This goes green once **W4** constructs the interp
 /// `DepthLimit`, **W3½** pins AOT to the deterministic floor, and **W5** aligns L1-eval to the §4.0
 /// metric + variant. The test is kept COMPILING (real public APIs) so it is a checked specification.
