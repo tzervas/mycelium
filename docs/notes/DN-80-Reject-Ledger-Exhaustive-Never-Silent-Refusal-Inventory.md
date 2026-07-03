@@ -105,10 +105,10 @@ just brings it into the cross-stratum ledger so a reader has one place to look.
 
 `CheckError` (`crates/mycelium-l1/src/error.rs:181`) is `{ site: String, message: String }` — a
 free-text refusal, not a closed reason-code enum. There is therefore no 1:1 enum to ledger; instead
-this table groups the **217** distinct checker-facing construction/call sites (audited below) into
+this table groups the **220** distinct checker-facing construction/call sites (audited below) into
 **41 construct families**, each a coherent "the kernel refuses to accept X" category with a
 representative reason and surface alternative. The per-family site count is exact (grep-derived,
-reproduced by the regression guard in §8) and **sums to exactly 217** — the completeness check for
+reproduced by the regression guard in §8) and **sums to exactly 220** — the completeness check for
 this stratum.
 
 **Audited totals (dev `7b933a3`, 2026-07-02; re-audited thrice vs the original `41ec4fe` audit — (a)
@@ -116,15 +116,18 @@ this stratum.
 extension-checker work; (b) M-965's `Fuse` law-checker: `+2` `checkty.rs` family-5
 `Fuse`-redeclaration refusals and a new `crates/mycelium-l1/src/fuse.rs` audited file carrying `4`
 definition-time semilattice-law rejects, ledgered as new family 40; (c) M-966's `+1` `checkty.rs`
-family-6 `via`-delegation ambiguity refusal):**
+family-6 `via`-delegation ambiguity refusal; (d) RFC-0041 W1 (M-979, 2026-07-03) `+3` recursion-depth
+`BudgetError` → `CheckError` refusals — `+1` `checkty.rs` direct construction and `+1` `checkty.rs`
+`self.err(` (the shared `Cx::match_budget_err` mapping), `+1` `grade.rs` — the resource-exhaustion
+reject category the never-silent depth budget adds):**
 
 | File | Pattern | Raw match count | Non-plumbing reject sites |
 |---|---|---|---|
-| `crates/mycelium-l1/src/checkty.rs` | `CheckError::new(` / `CheckError::at(` | 102 | 101 (one match, line ~3000, is the shared `Cx::err` helper's own body — plumbing, not a distinct construct) |
-| `crates/mycelium-l1/src/checkty.rs` | `self.err(` | 110 | 110 |
-| `crates/mycelium-l1/src/grade.rs` | `CheckError::at(` | 2 | 2 |
+| `crates/mycelium-l1/src/checkty.rs` | `CheckError::new(` / `CheckError::at(` | 103 | 102 (one match, line ~3000, is the shared `Cx::err` helper's own body — plumbing, not a distinct construct) |
+| `crates/mycelium-l1/src/checkty.rs` | `self.err(` | 111 | 111 |
+| `crates/mycelium-l1/src/grade.rs` | `CheckError::at(` | 3 | 3 |
 | `crates/mycelium-l1/src/fuse.rs` | `CheckError::new(` | 4 | 4 |
-| **Total** | | **218** | **217** |
+| **Total** | | **221** | **220** |
 
 | # | Construct family | Representative reason | Surface alternative | Grounding | Sites |
 |---|---|---|---|---|---|

@@ -40,6 +40,14 @@ a grown stack) instead of SIGABRT-ing. Ran as scaffold-first + a disjoint 6-leaf
 - **Scoping correction (never-silent, G2):** two W0-census holes touch the trusted base — `write_canon`
   (frozen `mycelium-core`) and `is_pure`/`plan_parallel` (`mycelium-interp`) — so they were **deferred
   off W1** (re-tagged W3 / W4) to land with the maintainer checkpoint, not in the frontend wave.
+- **Honest scope of the infallible-pass fix (VR-5/G2):** passes with infallible signatures
+  (`fmt`/`lsp`/`doc` render, `count_occurrences`) are *grown onto the 256 MiB worker* — this **raises
+  the overflow threshold, it is not yet a hard never-silent refusal** (input past ~256 MiB still
+  aborts). Their memory-ceiling `OutOfBudget` refusal lands in **W2** (fine-grained grow + the real
+  ceiling). The *fallible* passes (`l1` checker, `transpile`, `mir` `emit_owned`) already refuse
+  never-silently at 4096 this wave. Also: W1's coarse `ensure_sufficient_stack` spawns a 256 MiB
+  worker thread per top-level call (a transitional cost + concurrency memory-pressure vector) — W2's
+  in-place `stacker` removes the spawn.
 - **Residual guard holes surfaced by the swarm** (tracked, not silently closed): the recursive-`Drop`
   bomb on deep fixtures (the W3 class — `mycelium-doc::ir::Node` is a **new** member found this wave);
   `mycelium-mir-passes` `eval(&RcNode)` / `emit_elided` / `emit_reuse` and the `count_occurrences`

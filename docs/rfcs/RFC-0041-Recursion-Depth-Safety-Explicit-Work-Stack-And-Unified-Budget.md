@@ -242,18 +242,19 @@ before merge. **Shared-file owners** (resolves §11 Med wave39): root `Cargo.tom
 **integrator-owned** — waves FLAG edits, the integrator applies them (feed-as-ready). **Ordering edges are
 in the table**, not just prose (resolves §11 High wave35).
 
-**Status (2026-07-03):** **W0 + W1 landed.** W0 = the safety-net gates (§4.0 metric test, §5.1
-error-parity differential `#[ignore="W5"]`, the RR-29 guard-hole census, depth-structured fuzz, mutants
-+ unsafe-audit scope). W1 = the **`mycelium-workstack`** budget crate (`RecursionBudget` on the metric +
-memory ceiling + `ProcessArena` + the canonical `BudgetError::DepthExceeded{u32}` + the
-`ensure_sufficient_stack` W1 passthrough) **and** the frontend guard-hole wiring (`mycelium-l1` checker
-+ the `check_list` data-vs-control iteration fix + parser 256→4096; `fmt`/`lsp`/`transpile`/`doc`/
-`mir-passes`) — the 14 frontend census tests un-ignored + green. **Scoping correction (G2):** `write_canon`
-(frozen core) + `is_pure`/`plan_parallel` (interp trusted base) re-tagged off W1 to W3/W4 (maintainer
-checkpoint). **W1 residuals** (tracked, not silent): the recursive-`Drop` bomb on deep fixtures (W3 class;
-`mycelium-doc::ir::Node` is a newly-found member), `mir-passes` `eval(&RcNode)`/`emit_elided`/`emit_reuse`
-+ `count_occurrences` O(N²) (W2), `syn`'s own unbudgeted recursion (third-party, dev-tool). **W2–W6
-pending**; W3/W4/W5 gated on the maintainer frozen-core checkpoint.
+**Status (2026-07-03):** **W0 and W1 landed.** W0 = the safety-net gates (§4.0 metric test, §5.1
+error-parity differential `#[ignore="W5"]`, the RR-29 guard-hole census, depth-structured fuzz, and the
+mutants/unsafe-audit scope). W1 = the **`mycelium-workstack`** budget crate (`RecursionBudget` on the
+metric, a memory ceiling, a `ProcessArena`, the canonical `BudgetError::DepthExceeded{u32}`, and the
+`ensure_sufficient_stack` W1 passthrough) **plus** the frontend guard-hole wiring (`mycelium-l1` checker,
+the `check_list` data-vs-control iteration fix, the parser 256→4096 raise, and
+`fmt`/`lsp`/`transpile`/`doc`/`mir-passes`) — the 14 frontend census tests un-ignored and green.
+**Scoping correction (G2):** `write_canon` (frozen core) and `is_pure`/`plan_parallel` (interp trusted
+base) were re-tagged off W1 to W3/W4 (maintainer checkpoint). **W1 residuals** (tracked, not silent): the
+recursive-`Drop` bomb on deep fixtures (W3 class; `mycelium-doc::ir::Node` is a newly-found member); in
+`mir-passes`, `eval(&RcNode)`/`emit_elided`/`emit_reuse` and the `count_occurrences` O(N²) re-walk (W2);
+and `syn`'s own unbudgeted recursion (third-party, dev-tool). **W2–W6 pending**; W3/W4/W5 gated on the
+maintainer frozen-core checkpoint.
 
 | Wave | Scope | Depends on | Gate |
 |---|---|---|---|
@@ -319,15 +320,16 @@ implementation. **4 Critical + 15 High source-confirmed** objections, all resolv
 
 ## Meta — changelog
 
-- **2026-07-03 — W1 landed (budget crate + frontend wiring; M-979).** The `mycelium-workstack` leaf
-  crate (`RecursionBudget` on the §4.0 metric + memory ceiling + `ProcessArena` + canonical
-  `BudgetError::DepthExceeded{u32}` + `ensure_sufficient_stack` W1 passthrough + the §4.2 invariant fn;
-  `#![forbid(unsafe_code)]`, DN-68 downward-only, consumer-side charge) and the frontend guard-hole
-  wiring (`mycelium-l1` checker + `check_list` iteration fix + parser 256→4096; `fmt`/`lsp`/`transpile`/
-  `doc`/`mir-passes`). 14 frontend census tests un-ignored + green; full `just check` green (differential
-  + census; error-parity stays `#[ignore="W5"]`). Trusted-base holes (`write_canon`, `is_pure`/
-  `plan_parallel`) re-tagged off W1 → W3/W4 (maintainer checkpoint). Residuals tracked (Drop bomb incl.
-  new `doc::ir::Node`; `mir` `eval(&RcNode)`/O(N²); `syn`). W1 `Enacted` for the frontend scope; RFC stays
+- **2026-07-03 — W1 landed (budget crate and frontend wiring; M-979).** The `mycelium-workstack` leaf
+  crate (`RecursionBudget` on the §4.0 metric, a memory ceiling, a `ProcessArena`, the canonical
+  `BudgetError::DepthExceeded{u32}`, the `ensure_sufficient_stack` W1 passthrough, and the §4.2 invariant
+  fn; `#![forbid(unsafe_code)]`, DN-68 downward-only, consumer-side charge) and the frontend guard-hole
+  wiring (`mycelium-l1` checker, the `check_list` iteration fix, the parser 256→4096 raise, and
+  `fmt`/`lsp`/`transpile`/`doc`/`mir-passes`). 14 frontend census tests un-ignored and green; full
+  `just check` green (differential and census; error-parity stays `#[ignore="W5"]`). Trusted-base holes
+  (`write_canon`, `is_pure`/`plan_parallel`) re-tagged off W1 to W3/W4 (maintainer checkpoint). Residuals
+  tracked (Drop bomb incl. new `doc::ir::Node`; `mir` `eval(&RcNode)` and O(N²); `syn`). W1 `Enacted` for
+  the frontend scope; RFC stays
   Accepted. (VR-5/G2 — Empirical/Declared, no Proven.)
 - **2026-07-03 — W0 landed (Phase-4 safety net; M-979).** First wave, no behavior change / no
   frozen-core edits: the §4.0 metric property test, the §5.1 error-parity differential
