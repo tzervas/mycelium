@@ -11,6 +11,33 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Kernel freeze declared (2026-07-02: M-969 — the closing act of Phase-I)
+
+**The Mycelium kernel is declared frozen** (`core 1.0.0`-class). This is the deliberate closing act
+of Phase-I: a `Declared` decision resting on `Empirical` evidence (VR-5 — *not* a claim of a
+theorem-proven-complete kernel), gated on all five DN-56 §5 conditions being checked green.
+
+- **The gate (DN-56 §5, all five green):** census / never-silent floor (W5) · reject-ledger (DN-80 +
+  the M-959 regression guard, 9/9) · primitive set closed (Π = 38 prims; ADR-033 FLAG-1 dispositioned
+  IN via DN-74; `vsa.*` + Gap-E landed) · lowering surface closed (RFC-0037 Enacted; the DN-54
+  `lower`/`derive` extension surface checked; DN-71/DN-73/DN-74 resolved; the DN-54 §10 attachment
+  model enacted, Model A / M-973; grammar baseline M-924) · KC-3 completeness review **passed** (run
+  via the DN-39 machinery, 2026-07-02).
+- **Independently scored:** the four previously-open conditions were re-verified against `integration`
+  by an independent assessment (guarding against completion bias — house rule #4) and recorded in
+  **DN-76 §5A: 4 of 4 green**. DN-56 advanced `Accepted → Enacted` (append-only, stepping through
+  Accepted — house rule #3).
+- **Post-freeze diff policy:** the frozen kernel (the `mycelium-core` trusted base + the L1 ten-node
+  calculus + the ratified Π) changes **only** via a **DN-39 default-DENY promotion**; any other kernel
+  change is a `core 2.0.0` event. Every future language feature is a frontend lowering over the frozen
+  kernel — a black box is *unexpressible* by construction.
+- **What it does not claim (VR-5):** not a proof of bug-freedom or census-completeness — the
+  census/KC-3 verdicts are `Empirical` (no gap *found*, not *proven* absent). It is a checked,
+  auditable declaration that the kernel is a stable fixed base a public release can stand on.
+
+Basis: DN-56 §9 + Changelog; DN-76 §5A. Held for the maintainer, unchanged by the freeze: the public
+flip, tag cuts, and the DN-83 stability-window decision.
+
 ### Added / Changed / Fixed (2026-07-02: `grm`/`frz` — lowering-surface close-out, mycfmt readable, transparency fixes)
 
 The `grm` (grammar/lowering) and `frz` (kernel-freeze) lanes' Phase-I H2 kernel work. This closes
