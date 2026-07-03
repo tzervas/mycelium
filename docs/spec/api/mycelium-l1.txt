@@ -263,6 +263,23 @@ impl core::marker::Unpin for mycelium_l1::ast::Literal
 impl core::marker::UnsafeUnpin for mycelium_l1::ast::Literal
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::ast::Literal
 impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::Literal
+pub enum mycelium_l1::ast::LowerRhs
+pub mycelium_l1::ast::LowerRhs::Expr(mycelium_l1::ast::Expr)
+pub mycelium_l1::ast::LowerRhs::Impl(mycelium_l1::ast::ImplDecl)
+impl core::clone::Clone for mycelium_l1::ast::LowerRhs
+pub fn mycelium_l1::ast::LowerRhs::clone(&self) -> mycelium_l1::ast::LowerRhs
+impl core::cmp::PartialEq for mycelium_l1::ast::LowerRhs
+pub fn mycelium_l1::ast::LowerRhs::eq(&self, &mycelium_l1::ast::LowerRhs) -> bool
+impl core::fmt::Debug for mycelium_l1::ast::LowerRhs
+pub fn mycelium_l1::ast::LowerRhs::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::ast::LowerRhs
+impl core::marker::Freeze for mycelium_l1::ast::LowerRhs
+impl core::marker::Send for mycelium_l1::ast::LowerRhs
+impl core::marker::Sync for mycelium_l1::ast::LowerRhs
+impl core::marker::Unpin for mycelium_l1::ast::LowerRhs
+impl core::marker::UnsafeUnpin for mycelium_l1::ast::LowerRhs
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::ast::LowerRhs
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::LowerRhs
 pub enum mycelium_l1::ast::Paradigm
 pub mycelium_l1::ast::Paradigm::Binary
 pub mycelium_l1::ast::Paradigm::Dense
@@ -585,7 +602,10 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::InherentImplDecl
 pub struct mycelium_l1::ast::LowerDecl
 pub mycelium_l1::ast::LowerDecl::name: alloc::string::String
 pub mycelium_l1::ast::LowerDecl::params: alloc::vec::Vec<alloc::string::String>
-pub mycelium_l1::ast::LowerDecl::rhs: mycelium_l1::ast::Expr
+pub mycelium_l1::ast::LowerDecl::rhs: mycelium_l1::ast::LowerRhs
+impl mycelium_l1::ast::LowerDecl
+pub fn mycelium_l1::ast::LowerDecl::expr_rhs(&self) -> core::option::Option<&mycelium_l1::ast::Expr>
+pub fn mycelium_l1::ast::LowerDecl::impl_rhs(&self) -> core::option::Option<&mycelium_l1::ast::ImplDecl>
 impl core::clone::Clone for mycelium_l1::ast::LowerDecl
 pub fn mycelium_l1::ast::LowerDecl::clone(&self) -> mycelium_l1::ast::LowerDecl
 impl core::cmp::PartialEq for mycelium_l1::ast::LowerDecl
@@ -937,6 +957,7 @@ impl core::marker::UnsafeUnpin for mycelium_l1::checkty::DataInfo
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::checkty::DataInfo
 impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::checkty::DataInfo
 pub struct mycelium_l1::checkty::Env
+pub mycelium_l1::checkty::Env::derived_provenance: alloc::collections::btree::map::BTreeMap<(alloc::string::String, alloc::string::String), (alloc::string::String, alloc::string::String)>
 pub mycelium_l1::checkty::Env::fns: alloc::collections::btree::map::BTreeMap<alloc::string::String, mycelium_l1::ast::FnDecl>
 pub mycelium_l1::checkty::Env::impls: alloc::collections::btree::map::BTreeMap<(alloc::string::String, alloc::string::String), alloc::vec::Vec<mycelium_l1::ast::FnDecl>>
 pub mycelium_l1::checkty::Env::instances: alloc::collections::btree::map::BTreeMap<(alloc::string::String, alloc::string::String), mycelium_l1::checkty::InstanceInfo>
@@ -944,6 +965,7 @@ pub mycelium_l1::checkty::Env::lower_rules: alloc::collections::btree::map::BTre
 pub mycelium_l1::checkty::Env::totality: alloc::collections::btree::map::BTreeMap<alloc::string::String, mycelium_l1::totality::Totality>
 pub mycelium_l1::checkty::Env::traits: alloc::collections::btree::map::BTreeMap<alloc::string::String, mycelium_l1::checkty::TraitInfo>
 pub mycelium_l1::checkty::Env::types: alloc::collections::btree::map::BTreeMap<alloc::string::String, mycelium_l1::checkty::DataInfo>
+pub mycelium_l1::checkty::Env::via_provenance: alloc::collections::btree::map::BTreeMap<(alloc::string::String, alloc::string::String), (u32, alloc::string::String)>
 impl mycelium_l1::checkty::Env
 pub fn mycelium_l1::checkty::Env::ctor(&self, &str) -> core::option::Option<(&mycelium_l1::checkty::DataInfo, usize)>
 pub fn mycelium_l1::checkty::Env::fn_decl(&self, &str) -> core::option::Option<&mycelium_l1::ast::FnDecl>
@@ -1055,6 +1077,7 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::elab::ElabError
 pub fn mycelium_l1::elab::build_registry(&mycelium_l1::checkty::Env) -> core::result::Result<mycelium_core::data::DataRegistry, mycelium_l1::elab::ElabError>
 pub fn mycelium_l1::elab::elaborate(&mycelium_l1::checkty::Env, &str) -> core::result::Result<mycelium_core::node::Node, mycelium_l1::elab::ElabError>
 pub fn mycelium_l1::elab::elaborate_colony(&mycelium_l1::checkty::Env, &str) -> core::result::Result<alloc::vec::Vec<mycelium_core::node::Node>, mycelium_l1::elab::ElabError>
+pub fn mycelium_l1::elab::elaborate_direct(&mycelium_l1::checkty::Env, &str) -> core::result::Result<mycelium_core::node::Node, mycelium_l1::elab::ElabError>
 pub fn mycelium_l1::elab::elaborate_lower_rule(&mycelium_l1::checkty::Env, &str) -> core::result::Result<mycelium_core::node::Node, mycelium_l1::elab::ElabError>
 pub fn mycelium_l1::elab::elaborate_reclaim(&mycelium_l1::checkty::Env, &str) -> core::result::Result<(mycelium_core::node::Node, mycelium_core::node::Node), mycelium_l1::elab::ElabError>
 pub fn mycelium_l1::elab::lit_value(&str, &mycelium_l1::ast::Literal) -> core::result::Result<mycelium_core::value::Value, mycelium_l1::elab::ElabError>
@@ -1153,6 +1176,7 @@ pub mycelium_l1::eval::L1Value::Data
 pub mycelium_l1::eval::L1Value::Data::ctor: alloc::string::String
 pub mycelium_l1::eval::L1Value::Data::fields: alloc::vec::Vec<mycelium_l1::eval::L1Value>
 pub mycelium_l1::eval::L1Value::Data::ty: alloc::string::String
+pub mycelium_l1::eval::L1Value::Fn(alloc::string::String)
 pub mycelium_l1::eval::L1Value::Repr(mycelium_core::value::Value)
 pub mycelium_l1::eval::L1Value::Substrate(mycelium_l1::substrate::SubstrateHandle)
 impl mycelium_l1::eval::L1Value
@@ -1531,6 +1555,7 @@ pub mycelium_l1::token::Tok::Backbone
 pub mycelium_l1::token::Tok::Bang
 pub mycelium_l1::token::Tok::BangEq
 pub mycelium_l1::token::Tok::BinLit(alloc::string::String)
+pub mycelium_l1::token::Tok::BinShort
 pub mycelium_l1::token::Tok::Binary
 pub mycelium_l1::token::Tok::Bytes
 pub mycelium_l1::token::Tok::BytesLit(alloc::string::String)
@@ -1545,6 +1570,7 @@ pub mycelium_l1::token::Tok::Dense
 pub mycelium_l1::token::Tok::Derive
 pub mycelium_l1::token::Tok::Dot
 pub mycelium_l1::token::Tok::Else
+pub mycelium_l1::token::Tok::EmbShort
 pub mycelium_l1::token::Tok::Eof
 pub mycelium_l1::token::Tok::Eq
 pub mycelium_l1::token::Tok::EqEq
@@ -1557,6 +1583,7 @@ pub mycelium_l1::token::Tok::Forage
 pub mycelium_l1::token::Tok::Fuse
 pub mycelium_l1::token::Tok::Graft
 pub mycelium_l1::token::Tok::Grow
+pub mycelium_l1::token::Tok::HvecShort
 pub mycelium_l1::token::Tok::Hypha
 pub mycelium_l1::token::Tok::Ident(alloc::string::String)
 pub mycelium_l1::token::Tok::If
@@ -1602,6 +1629,7 @@ pub mycelium_l1::token::Tok::StrLit(alloc::string::String)
 pub mycelium_l1::token::Tok::Strength(mycelium_l1::token::StrengthTok)
 pub mycelium_l1::token::Tok::Substrate
 pub mycelium_l1::token::Tok::Swap
+pub mycelium_l1::token::Tok::TernShort
 pub mycelium_l1::token::Tok::Ternary
 pub mycelium_l1::token::Tok::Thaw
 pub mycelium_l1::token::Tok::Then
@@ -1841,6 +1869,7 @@ pub mycelium_l1::L1Value::Data
 pub mycelium_l1::L1Value::Data::ctor: alloc::string::String
 pub mycelium_l1::L1Value::Data::fields: alloc::vec::Vec<mycelium_l1::eval::L1Value>
 pub mycelium_l1::L1Value::Data::ty: alloc::string::String
+pub mycelium_l1::L1Value::Fn(alloc::string::String)
 pub mycelium_l1::L1Value::Repr(mycelium_core::value::Value)
 pub mycelium_l1::L1Value::Substrate(mycelium_l1::substrate::SubstrateHandle)
 impl mycelium_l1::eval::L1Value
@@ -2001,6 +2030,7 @@ impl core::marker::UnsafeUnpin for mycelium_l1::mono::ClosureSpecialization
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::mono::ClosureSpecialization
 impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::mono::ClosureSpecialization
 pub struct mycelium_l1::Env
+pub mycelium_l1::Env::derived_provenance: alloc::collections::btree::map::BTreeMap<(alloc::string::String, alloc::string::String), (alloc::string::String, alloc::string::String)>
 pub mycelium_l1::Env::fns: alloc::collections::btree::map::BTreeMap<alloc::string::String, mycelium_l1::ast::FnDecl>
 pub mycelium_l1::Env::impls: alloc::collections::btree::map::BTreeMap<(alloc::string::String, alloc::string::String), alloc::vec::Vec<mycelium_l1::ast::FnDecl>>
 pub mycelium_l1::Env::instances: alloc::collections::btree::map::BTreeMap<(alloc::string::String, alloc::string::String), mycelium_l1::checkty::InstanceInfo>
@@ -2008,6 +2038,7 @@ pub mycelium_l1::Env::lower_rules: alloc::collections::btree::map::BTreeMap<allo
 pub mycelium_l1::Env::totality: alloc::collections::btree::map::BTreeMap<alloc::string::String, mycelium_l1::totality::Totality>
 pub mycelium_l1::Env::traits: alloc::collections::btree::map::BTreeMap<alloc::string::String, mycelium_l1::checkty::TraitInfo>
 pub mycelium_l1::Env::types: alloc::collections::btree::map::BTreeMap<alloc::string::String, mycelium_l1::checkty::DataInfo>
+pub mycelium_l1::Env::via_provenance: alloc::collections::btree::map::BTreeMap<(alloc::string::String, alloc::string::String), (u32, alloc::string::String)>
 impl mycelium_l1::checkty::Env
 pub fn mycelium_l1::checkty::Env::ctor(&self, &str) -> core::option::Option<(&mycelium_l1::checkty::DataInfo, usize)>
 pub fn mycelium_l1::checkty::Env::fn_decl(&self, &str) -> core::option::Option<&mycelium_l1::ast::FnDecl>
@@ -2331,6 +2362,7 @@ pub fn mycelium_l1::check_phylum(&mycelium_l1::ast::Phylum) -> core::result::Res
 pub fn mycelium_l1::check_phylum_matured(&mycelium_l1::ast::Phylum, bool) -> core::result::Result<mycelium_l1::checkty::PhylumEnv, mycelium_l1::checkty::CheckError>
 pub fn mycelium_l1::elaborate(&mycelium_l1::checkty::Env, &str) -> core::result::Result<mycelium_core::node::Node, mycelium_l1::elab::ElabError>
 pub fn mycelium_l1::elaborate_colony(&mycelium_l1::checkty::Env, &str) -> core::result::Result<alloc::vec::Vec<mycelium_core::node::Node>, mycelium_l1::elab::ElabError>
+pub fn mycelium_l1::elaborate_direct(&mycelium_l1::checkty::Env, &str) -> core::result::Result<mycelium_core::node::Node, mycelium_l1::elab::ElabError>
 pub fn mycelium_l1::elaborate_lower_rule(&mycelium_l1::checkty::Env, &str) -> core::result::Result<mycelium_core::node::Node, mycelium_l1::elab::ElabError>
 pub fn mycelium_l1::elaborate_reclaim(&mycelium_l1::checkty::Env, &str) -> core::result::Result<(mycelium_core::node::Node, mycelium_core::node::Node), mycelium_l1::elab::ElabError>
 pub fn mycelium_l1::expand_phylum_to_source(&mycelium_l1::ast::Phylum) -> alloc::string::String
