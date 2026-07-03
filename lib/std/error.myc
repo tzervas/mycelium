@@ -124,11 +124,21 @@ fn filter[A](o: Option[A], predicate: A => Bool) => Option[A] =
 // this combinator is honestly a structural peek, not an effect-tracked one (no RFC-0016 C6
 // obligation to discharge since `.myc` has no closure-effect surface yet — captured, not faked).
 fn inspect[A, E, B](r: Result[A, E], f: A => B) => Result[A, E] =
-  match r { Ok(x) => let peeked = f(x) in Ok(x), Err(e) => Err(e) };
+  match r {
+    Ok(x) =>
+      let peeked = f(x) in
+      Ok(x),
+    Err(e) => Err(e)
+  };
 
 // inspect_err: peek the Err side; the value and propagation are unchanged (mirror of inspect).
 fn inspect_err[A, E, B](r: Result[A, E], f: E => B) => Result[A, E] =
-  match r { Ok(x) => Ok(x), Err(e) => let peeked = f(e) in Err(e) };
+  match r {
+    Ok(x) => Ok(x),
+    Err(e) =>
+      let peeked = f(e) in
+      Err(e)
+  };
 
 // ── convert between Option and Result (no information lost silently) ───────────────────────────
 // ok_or: None becomes Err(err) — names the absence explicitly (never a silent drop).

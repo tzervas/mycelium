@@ -308,15 +308,12 @@ type PolicyError = NoCandidates | IndexOutOfRange(Binary{8});
 fn first_bad_choose(rs: RuleList, n: Binary{8}) => Option[Binary{8}] =
   match rs {
     RLNil => None,
-    RLCons(r, t) =>
-      match r {
-        When(_, a) =>
-          match a {
-            ACheapest => first_bad_choose(t, n),
-            AChoose(ci) =>
-              match lt(ci, n) { 0b1 => first_bad_choose(t, n), _ => Some(ci) }
-          }
+    RLCons(r, t) => match r {
+      When(_, a) => match a {
+        ACheapest => first_bad_choose(t, n),
+        AChoose(ci) => match lt(ci, n) { 0b1 => first_bad_choose(t, n), _ => Some(ci) }
       }
+    }
   };
 
 // build: validate totality up front — at least one candidate, the default arm and every
@@ -331,15 +328,13 @@ fn build(
 ) => Result[SelectionPolicy, PolicyError] =
   match cands {
     CLNil => Err(NoCandidates),
-    CLCons(_, _) =>
-      match lt(dflt, cand_len(cands)) {
-        0b0 => Err(IndexOutOfRange(dflt)),
-        _ =>
-          match first_bad_choose(rules, cand_len(cands)) {
-            Some(bad) => Err(IndexOutOfRange(bad)),
-            None => Ok(SPol(name, cands, rules, dflt))
-          }
+    CLCons(_, _) => match lt(dflt, cand_len(cands)) {
+      0b0 => Err(IndexOutOfRange(dflt)),
+      _ => match first_bad_choose(rules, cand_len(cands)) {
+        Some(bad) => Err(IndexOutOfRange(bad)),
+        None => Ok(SPol(name, cands, rules, dflt))
       }
+    }
   };
 
 // ── the mandatory EXPLAIN record (M-221; RFC-0005 §2.2/§4) ──────────────────────────────────────
@@ -429,14 +424,12 @@ type MatchHit = Hit(Binary{8}, Action);
 fn find_rule(rs: RuleList, i: Inputs, idx: Binary{8}) => Option[MatchHit] =
   match rs {
     RLNil => None,
-    RLCons(r, t) =>
-      match r {
-        When(p, a) =>
-          match eval_pred(p, i) {
-            True => Some(Hit(idx, a)),
-            False => find_rule(t, i, add_u(idx, 0b0000_0001))
-          }
+    RLCons(r, t) => match r {
+      When(p, a) => match eval_pred(p, i) {
+        True => Some(Hit(idx, a)),
+        False => find_rule(t, i, add_u(idx, 0b0000_0001))
       }
+    }
   };
 
 // cheapest_from: index of the minimum-cost line over `ks`, seeded with the best so far; ties
@@ -450,11 +443,10 @@ fn cheapest_from(
 ) => Binary{8} =
   match ks {
     KNil => best_i,
-    KCons(l, t) =>
-      match lt(line_cost(l), best_c) {
-        0b1 => cheapest_from(t, i, line_cost(l), add_u(i, 0b0000_0001)),
-        _ => cheapest_from(t, best_i, best_c, add_u(i, 0b0000_0001))
-      }
+    KCons(l, t) => match lt(line_cost(l), best_c) {
+      0b1 => cheapest_from(t, i, line_cost(l), add_u(i, 0b0000_0001)),
+      _ => cheapest_from(t, best_i, best_c, add_u(i, 0b0000_0001))
+    }
   };
 
 // cheapest_of: index of the minimum-cost candidate. The CLNil arm yields index 0, which every
@@ -494,32 +486,27 @@ fn run_select(
   forced: Option[Binary{8}]
 ) => Result[Selected, SelectError] =
   match forced {
-    Some(fi) =>
-      match lt(fi, cand_len(pol_cands(pol))) {
-        0b1 => finish(pol_name(pol), i, pol_cands(pol), None, fi, True),
-        _ => Err(OverrideOutOfRange(fi, cand_len(pol_cands(pol))))
+    Some(fi) => match lt(fi, cand_len(pol_cands(pol))) {
+      0b1 => finish(pol_name(pol), i, pol_cands(pol), None, fi, True),
+      _ => Err(OverrideOutOfRange(fi, cand_len(pol_cands(pol))))
+    },
+    None => match find_rule(pol_rules(pol), i, 0b0000_0000) {
+      Some(h) => match h {
+        Hit(ri, a) => match a {
+          AChoose(ci) => finish(pol_name(pol), i, pol_cands(pol), Some(ri), ci, False),
+          ACheapest =>
+            finish(
+              pol_name(pol),
+              i,
+              pol_cands(pol),
+              Some(ri),
+              cheapest_of(pol_cands(pol)),
+              False
+            )
+        }
       },
-    None =>
-      match find_rule(pol_rules(pol), i, 0b0000_0000) {
-        Some(h) =>
-          match h {
-            Hit(ri, a) =>
-              match a {
-                AChoose(ci) =>
-                  finish(pol_name(pol), i, pol_cands(pol), Some(ri), ci, False),
-                ACheapest =>
-                  finish(
-                    pol_name(pol),
-                    i,
-                    pol_cands(pol),
-                    Some(ri),
-                    cheapest_of(pol_cands(pol)),
-                    False
-                  )
-              }
-          },
-        None => finish(pol_name(pol), i, pol_cands(pol), None, pol_dflt(pol), False)
-      }
+      None => finish(pol_name(pol), i, pol_cands(pol), None, pol_dflt(pol), False)
+    }
   };
 
 // select: evaluate the decision table and return the chosen candidate WITH its mandatory
@@ -591,13 +578,8 @@ fn matrix_all_exact(rs: GRowList) => Bool =
 // guarantee_matrix: the loaded matrix — 4 rows (the ported ops), all GExact, EXPLAIN-able = yes
 // for every selection op; `build` constructs a policy and is not itself a selection.
 fn guarantee_matrix() => GRowList =
-  GLCons(
-    GR("build", GExact, True, "none", ExplainNotApplicable),
-    GLCons(
-      GR("select", GExact, True, "none", ExplainYes),
-      GLCons(
-        GR("explain", GExact, True, "none", ExplainYes),
-        GLCons(GR("select_with_override", GExact, True, "none", ExplainYes), GLNil)
-      )
-    )
-  );
+  GLCons(GR("build", GExact, True, "none", ExplainNotApplicable),
+  GLCons(GR("select", GExact, True, "none", ExplainYes),
+  GLCons(GR("explain", GExact, True, "none", ExplainYes),
+  GLCons(GR("select_with_override", GExact, True, "none", ExplainYes),
+  GLNil))));

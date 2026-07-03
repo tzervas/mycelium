@@ -206,19 +206,14 @@ type Vec[A] = Nil | Cons(A, Vec[A]);
 
 // matrix: the full 7-row table, in the same order as lib.rs::GUARANTEE_MATRIX.
 fn matrix() => Vec[MatrixRow] =
-  Cons(
-    row_bin_to_tern(),
-    Cons(
-      row_tern_to_bin(),
-      Cons(
-        row_f32_to_bf16(),
-        Cons(
-          row_dense_to_vsa(),
-          Cons(row_vsa_to_dense(), Cons(row_check_swap(), Cons(row_explain(), Nil)))
-        )
-      )
-    )
-  );
+  Cons(row_bin_to_tern(),
+  Cons(row_tern_to_bin(),
+  Cons(row_f32_to_bf16(),
+  Cons(row_dense_to_vsa(),
+  Cons(row_vsa_to_dense(),
+  Cons(row_check_swap(),
+  Cons(row_explain(),
+  Nil)))))));
 
 // ── Structural checks over the matrix (the .myc port of lib.rs::assert_matrix_invariants) ────────
 // The Rust source PANICS on violation (a test-time assert); this port returns an explicit Bool —
@@ -283,13 +278,10 @@ fn nonfallible_no_cert_kind(xs: Vec[MatrixRow]) => Bool =
 // checkable value. (The Rust "cert_kind must be 'Bijective' or 'Bounded'" arm is discharged by the
 // CertKind type — unrepresentable, see the CertKind doc.)
 fn matrix_invariants_hold() => Bool =
-  bool_and(
-    all_ops_nonempty(matrix()),
-    bool_and(
-      bijective_implies_exact(matrix()),
-      bool_and(bounded_never_exact(matrix()), nonfallible_no_cert_kind(matrix()))
-    )
-  );
+  bool_and(all_ops_nonempty(matrix()),
+  bool_and(bijective_implies_exact(matrix()),
+  bool_and(bounded_never_exact(matrix()),
+  nonfallible_no_cert_kind(matrix()))));
 
 // ── The bijective swap class, through the language's own construct (S1/WF2) ──────────────────────
 // The `.myc` form of lib.rs::bin_to_tern/tern_to_bin at the RFC-0002 §5 legal pairs (8,6) and
