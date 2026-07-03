@@ -376,8 +376,7 @@ fn costs_of(cs: CandList) => CostList =
 // index + candidate, and the override state. Deterministic and re-derivable from
 // (policy, inputs) alone.
 //   Expl(policy_name, inputs, costs, matched_rule, chosen_index, chosen, overridden)
-type Explanation =
-    Expl(Bytes, Inputs, CostList, Option[Binary{8}], Binary{8}, Cand, Bool);
+type Explanation = Expl(Bytes, Inputs, CostList, Option[Binary{8}], Binary{8}, Cand, Bool);
 
 // Explanation field accessors. Total, Exact.
 fn expl_policy_name(e: Explanation) => Bytes =
@@ -435,12 +434,7 @@ fn find_rule(rs: RuleList, i: Inputs, idx: Binary{8}) => Option[MatchHit] =
 // cheapest_from: index of the minimum-cost line over `ks`, seeded with the best so far; ties
 // break to the LOWEST index (strict `lt` — deterministic, kernel `cheapest` verbatim). Total,
 // Exact.
-fn cheapest_from(
-  ks: CostList,
-  best_i: Binary{8},
-  best_c: Binary{16},
-  i: Binary{8}
-) => Binary{8} =
+fn cheapest_from(ks: CostList, best_i: Binary{8}, best_c: Binary{16}, i: Binary{8}) => Binary{8} =
   match ks {
     KNil => best_i,
     KCons(l, t) => match lt(line_cost(l), best_c) {

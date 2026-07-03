@@ -172,29 +172,23 @@ fn bytes_eq_from(a: Bytes, b: Bytes, i: Binary{32}, n: Binary{32}) => Bool =
     _ => match eq(bytes_get(a, i), bytes_get(b, i)) {
       0b1 => match eq(add_u(i, b32_one()), n) {
         0b1 => True,
-        _ =>
-          match eq(bytes_get(a, add_u(i, b32_one())), bytes_get(b, add_u(i, b32_one()))) {
-            0b1 => match eq(add_u(i, b32_two()), n) {
-              0b1 => True,
-              _ => match eq(
-                      bytes_get(a, add_u(i, b32_two())),
-                      bytes_get(b, add_u(i, b32_two()))
-                    ) {
-                0b1 => match eq(add_u(i, b32_three()), n) {
-                  0b1 => True,
-                  _ => match eq(
-                          bytes_get(a, add_u(i, b32_three())),
-                          bytes_get(b, add_u(i, b32_three()))
-                        ) {
+        _ => match eq(bytes_get(a, add_u(i, b32_one())), bytes_get(b, add_u(i, b32_one()))) {
+          0b1 => match eq(add_u(i, b32_two()), n) {
+            0b1 => True,
+            _ => match eq(bytes_get(a, add_u(i, b32_two())), bytes_get(b, add_u(i, b32_two()))) {
+              0b1 => match eq(add_u(i, b32_three()), n) {
+                0b1 => True,
+                _ =>
+                  match eq(bytes_get(a, add_u(i, b32_three())), bytes_get(b, add_u(i, b32_three()))) {
                     0b1 => bytes_eq_from(a, b, add_u(i, b32_four()), n),
                     _ => False
                   }
-                },
-                _ => False
-              }
-            },
-            _ => False
-          }
+              },
+              _ => False
+            }
+          },
+          _ => False
+        }
       },
       _ => False
     }
@@ -300,19 +294,12 @@ type Basis = ProvenThm(Bytes) | EmpiricalFit(Binary{32}, Bytes) | UserDeclared;
 // basis_strength: the honest strength a basis implies (the basis IS the evidence class —
 // kernel BoundBasis::strength, mirrored exactly; VR-5). Exact.
 fn basis_strength(b: Basis) => Guarantee =
-  match b {
-    ProvenThm(_) => GProven,
-    EmpiricalFit(_, _) => GEmpirical,
-    UserDeclared => GDeclared
-  };
+  match b { ProvenThm(_) => GProven, EmpiricalFit(_, _) => GEmpirical, UserDeclared => GDeclared };
 
 // exceeds_empirical_ceiling: True iff the basis implies a strength STRONGER than Empirical
 // (rank < 2 — i.e. Exact or Proven): the FR-C2 probabilistic-regrowth ceiling test. Exact.
 fn exceeds_empirical_ceiling(b: Basis) => Bool =
-  match lt(strength_rank(basis_strength(b)), strength_rank(GEmpirical)) {
-    0b1 => True,
-    _ => False
-  };
+  match lt(strength_rank(basis_strength(b)), strength_rank(GEmpirical)) { 0b1 => True, _ => False };
 
 // resonator_over_strength: the FR-C2 violation predicate — a Resonator decode whose basis
 // exceeds the Empirical ceiling. A Cleanup decode has no resonator ceiling. Exact.
@@ -335,8 +322,7 @@ fn malformed_display(e: MalformedManifest) => Bytes =
 // hashes, carried — FLAG-spore-2), decode procedure, and the bound's Basis (its {ε,δ} scalars
 // are FLAG-spore-4). Construction goes through manifest_new (validates at build time) or
 // manifest_validate (the deserialized-carry-in re-check).
-type ReconManifest =
-    Manifest(ReconMode, Bytes, Binary{32}, Vec[Bytes], DecodeProcedure, Basis);
+type ReconManifest = Manifest(ReconMode, Bytes, Binary{32}, Vec[Bytes], DecodeProcedure, Basis);
 
 // manifest_new: build + validate a manifest. Ports the EXPRESSIBLE kernel checks (FLAG-spore-5):
 // model nonempty, dim >= 1, codebooks nonempty, and the FR-C2 ceiling — every kernel refusal
@@ -371,10 +357,11 @@ fn manifest_new(
 // are open, so this check is genuinely reachable here. Exact.
 fn manifest_validate(m: ReconManifest) => Result[ReconManifest, MalformedManifest] =
   match m {
-    Manifest(_, _, _, _, dec, basis) => match resonator_over_strength(dec, basis) {
-      True => Err(ResonatorOverStrength),
-      False => Ok(m)
-    }
+    Manifest(_, _, _, _, dec, basis) =>
+      match resonator_over_strength(dec, basis) {
+        True => Err(ResonatorOverStrength),
+        False => Ok(m)
+      }
   };
 
 // ── manifest accessors (Exact; total) ───────────────────────────────────────────────────────────
@@ -408,10 +395,7 @@ type RegrowthResult[T] = Regrown(T, Basis);
 // FR-C2/VR-5 probabilistic-regrowth ceiling) with the explicit ResonatorOverStrength — never a
 // silent accept. This makes an over-strength regrowth unrepresentable through this constructor
 // (the ceiling holds by construction, not by comment). Exact.
-fn regrowth_new[T](
-  payload: T,
-  basis: Basis
-) => Result[RegrowthResult[T], MalformedManifest] =
+fn regrowth_new[T](payload: T, basis: Basis) => Result[RegrowthResult[T], MalformedManifest] =
   match exceeds_empirical_ceiling(basis) {
     True => Err(ResonatorOverStrength),
     False => Ok(Regrown(payload, basis))
@@ -463,10 +447,7 @@ fn detect_opaque_step(target: DeployTarget) => Option[Bytes] =
 // surface_is_ambiguous: more than one exported surface symbol (the v0 ambiguity condition for
 // an InMemory target with no entry-point selector). Exact.
 fn surface_is_ambiguous(xs: Vec[Bytes]) => Bool =
-  match xs {
-    Nil => False,
-    Cons(_, rest) => match rest { Nil => False, Cons(_, _) => True }
-  };
+  match xs { Nil => False, Cons(_, rest) => match rest { Nil => False, Cons(_, _) => True } };
 
 // germinate_checked: steps 3–5 of the oracle's germinate — hash canonicality (C4/ADR-003;
 // mismatch → the named DeployHashMismatch, both hashes carried; a non-mismatch SporeErr from
@@ -644,14 +625,7 @@ fn row_validate() => MatrixRow =
   );
 
 fn row_manifest_hash() => MatrixRow =
-  Row(
-    "manifest_hash",
-    "Exact (deterministic)",
-    "total",
-    "none",
-    False,
-    "total — no failure mode"
-  );
+  Row("manifest_hash", "Exact (deterministic)", "total", "none", False, "total — no failure mode");
 
 fn row_mode() => MatrixRow =
   Row(
@@ -762,19 +736,12 @@ fn matrix_len(xs: Vec[MatrixRow]) => Binary{8} =
 fn all_never_silent_nonempty(xs: Vec[MatrixRow]) => Bool =
   match xs {
     Nil => True,
-    Cons(r, rest) =>
-      bool_and(
-        nonempty(row_never_silent(r)),
-        all_never_silent_nonempty(rest)
-      )
+    Cons(r, rest) => bool_and(nonempty(row_never_silent(r)), all_never_silent_nonempty(rest))
   };
 
 // every_row_has_nonempty_op_and_guarantee (basic completeness).
 fn all_ops_nonempty(xs: Vec[MatrixRow]) => Bool =
-  match xs {
-    Nil => True,
-    Cons(r, rest) => bool_and(nonempty(row_op(r)), all_ops_nonempty(rest))
-  };
+  match xs { Nil => True, Cons(r, rest) => bool_and(nonempty(row_op(r)), all_ops_nonempty(rest)) };
 
 fn all_guarantees_nonempty(xs: Vec[MatrixRow]) => Bool =
   match xs {

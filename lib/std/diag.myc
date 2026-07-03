@@ -65,11 +65,7 @@ type Fallibility = Total | Explicit;
 
 // ── Explainable ──────────────────────────────────────────────────────────────────────────────────
 // Mirrors `guarantee_matrix::Explainable`: the op's C3 EXPLAIN classification.
-type Explainable =
-    IsExplainRecord
-  | ContentAddressedHandle
-  | NotApplicable
-  | ClosedVocabulary;
+type Explainable = IsExplainRecord | ContentAddressedHandle | NotApplicable | ClosedVocabulary;
 
 // ── MatrixRow ────────────────────────────────────────────────────────────────────────────────────
 // Mirrors `guarantee_matrix::MatrixRow` field-for-field, in the same order:
@@ -134,10 +130,7 @@ fn bool_and(a: Bool, b: Bool) => Bool =
 // nonempty: True iff `b` has at least one byte. Delegates to the Exact `bytes_len` prim; the
 // zero-comparison is the Exact `eq` prim at Binary{32} (the width `bytes_len` returns). Total (Exact).
 fn nonempty(b: Bytes) => Bool =
-  match eq(bytes_len(b), 0b0000_0000_0000_0000_0000_0000_0000_0000) {
-    0b1 => False,
-    _ => True
-  };
+  match eq(bytes_len(b), 0b0000_0000_0000_0000_0000_0000_0000_0000) { 0b1 => False, _ => True };
 
 // ── The 14 rows (hand-transcribed verbatim from guarantee_matrix.rs::MATRIX, RFC-0016 §4.5) ───────
 // Each Rust multi-line `\`-continued literal is flattened to the single logical string it denotes
@@ -332,21 +325,14 @@ fn matrix_len(xs: Vec[MatrixRow]) => Binary{8} =
 
 // all_exact: True iff every row's guarantee is Exact (guarantee_matrix.rs::all_diag_ops_are_exact).
 fn all_exact(xs: Vec[MatrixRow]) => Bool =
-  match xs {
-    Nil => True,
-    Cons(r, rest) => bool_and(is_exact(row_guarantee(r)), all_exact(rest))
-  };
+  match xs { Nil => True, Cons(r, rest) => bool_and(is_exact(row_guarantee(r)), all_exact(rest)) };
 
 // all_never_silent_nonempty: True iff every row states a non-empty never_silent_property
 // (guarantee_matrix.rs::every_row_states_never_silent_property).
 fn all_never_silent_nonempty(xs: Vec[MatrixRow]) => Bool =
   match xs {
     Nil => True,
-    Cons(r, rest) =>
-      bool_and(
-        nonempty(row_never_silent(r)),
-        all_never_silent_nonempty(rest)
-      )
+    Cons(r, rest) => bool_and(nonempty(row_never_silent(r)), all_never_silent_nonempty(rest))
   };
 
 // all_effects_nonempty: True iff every row states its effects (guarantee_matrix.rs::every_row_states_effects).
@@ -363,10 +349,7 @@ fn explicit_ops_have_error_set(xs: Vec[MatrixRow]) => Bool =
     Nil => True,
     Cons(r, rest) =>
       bool_and(
-        match is_explicit(row_fallibility(r)) {
-          True => nonempty(row_error_set(r)),
-          False => True
-        },
+        match is_explicit(row_fallibility(r)) { True => nonempty(row_error_set(r)), False => True },
         explicit_ops_have_error_set(rest)
       )
   };

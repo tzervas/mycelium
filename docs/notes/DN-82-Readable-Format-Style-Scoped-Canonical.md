@@ -173,8 +173,17 @@ A `LayoutCfg { width, spine_inner }` is exposed (`format_source_readable_cfg`; `
   canonical); an overflowing one blocks per R2.
 - **`AlwaysExpand` (expanded house style).** The spine STILL stays flat (each link at one indent, no
   pyramid), but every inner nested call is broken onto its own lines. Both kill the pyramid; they
-  differ only in inner-call density, and BOTH are behaviour-neutral (C1/C2). `width` defaults to 88
-  and is not re-tuned (R0 stays the single threshold — VR-5: no re-tuning without a checked basis).
+  differ only in inner-call density, and BOTH are behaviour-neutral (C1/C2).
+
+**Width retune — 88 → 100 (`READABLE_WIDTH`, M-976 maintainer decision).** The earlier `88` was
+Black's Python default — an arbitrary import that misleadingly ties a value-semantics systems language
+to a Python formatter. The default is now **`100`**, `rustfmt`'s `max_width` default — *the formatter
+the Mycelium Rust kernel already uses* — so the single R0 threshold is grounded in the project's own
+toolchain, not borrowed. It stays `Declared` (a readability heuristic, not a proven bound) and is
+overridable per call via `LayoutCfg::width`. The `lib/std` corpus was re-rendered at 100 (more inline,
+net a further −249 lines) with every behaviour crate still green; the 10 spec samples (§7.1) remain the
+oracle **at their defining width 88** (the acceptance test pins `width: 88` explicitly, validating the
+R0–R6 rules against the exact fixtures independent of the retuned default).
 
 ### 7.3 Seq ≠ Vec — why the flat spine is the honest fix, not a `[…]` rewrite
 
@@ -210,11 +219,12 @@ no list literal, flagged (not hidden) to the representation track.
 - **R0–R6 + the house-style knob implemented** in `crates/mycelium-fmt` (`render_expr_readable` split
   into a fit-check + `render_expr_broken`; `same_head_chain` / `render_spine` helpers; `LayoutCfg` /
   `SpineInner`; `--expand-spine` CLI). ✔
-- **Acceptance oracle green.** All 10 canonical samples reproduce their `after` byte-for-byte in the
-  compact style; an `AlwaysExpand` case and structural shape invariants (flat links, single coalesced
-  closer run, shallow tree, lone R2 closer) pass. ✔
-- **`lib/std` re-rendered** (`mycfmt --write --readable`, 13 of 17 nodules changed, net −303 lines);
-  the `myc-fmt` gate stays green under the same `--readable` scoping. ✔
+- **Acceptance oracle green.** All 10 canonical samples reproduce their `after` byte-for-byte (the
+  oracle pins width 88, its defining width); an `AlwaysExpand` case and structural shape invariants
+  (flat links, single coalesced closer run, shallow tree, lone R2 closer) pass. ✔
+- **`lib/std` re-rendered at the retuned default width 100** (`mycfmt --write --readable`; net −249
+  lines versus the prior corpus — more inline at 100); the `myc-fmt` gate stays green under the same
+  `--readable` scoping. ✔
 - **Behaviour-neutral (`Empirical`, NOT `Proven`).** The C1 identity guard refused any non-round-
   tripping write, and the `mycelium-l1` `std_*` + `mycelium-std-conformance` + every touched
   `mycelium-std-*` eval crate are green after the reformat (L0-interp ≡ L1-eval ≡ AOT). This is trials

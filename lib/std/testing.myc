@@ -137,19 +137,11 @@ type Guarantee = GExact | GProven | GEmpirical | GDeclared;
 
 // ── verdicts (spec §3; the honesty crux C1/G2) ──────────────────────────────────────────────────
 // SkipReason — a Skipped verdict ALWAYS carries a reason; never an absent or unnamed skip.
-type SkipReason =
-    Ignored
-  | UnmetPrecondition
-  | NeedsRecord
-  | BackendUnavailable
-  | ToolMissing;
+type SkipReason = Ignored | UnmetPrecondition | NeedsRecord | BackendUnavailable | ToolMissing;
 
 // UndetReason — ran but could not decide; distinct from both Pass and Skipped. A non-decision is
 // never a Pass (C1/G2).
-type UndetReason =
-    OracleUnavailable
-  | BudgetExhaustedInconclusive
-  | NonDeterministicInput;
+type UndetReason = OracleUnavailable | BudgetExhaustedInconclusive | NonDeterministicInput;
 
 // FailRecord — the structured failure record: FRec(payload, seed, trial, context). The payload
 // (generic F) is the REIFIED counterexample/diff value substituting Rust's Debug-formatted
@@ -160,11 +152,7 @@ type FailRecord[F] = FRec(F, Binary{64}, Binary{8}, Bytes);
 // Verdict — the outcome sum. Skipped and Undetermined are FIRST-CLASS variants, not flavours of
 // Pass (the honesty crux): the aggregator below keeps their counts distinct, so "green" can never
 // silently include "did not actually check".
-type Verdict[V] =
-    Pass
-  | Fail(FailRecord[V])
-  | Skipped(SkipReason)
-  | Undetermined(UndetReason);
+type Verdict[V] = Pass | Fail(FailRecord[V]) | Skipped(SkipReason) | Undetermined(UndetReason);
 
 // Summary — the aggregated outcome: Counts(passed, failed, skipped, undetermined). skipped and
 // undetermined are DISTINCT from passed (C1/G2). Counts are Binary{8} (see the width substitution
@@ -237,8 +225,7 @@ type EffectsClass = EffNone | EffIo | EffPerBackend;
 // MatrixRow — Row(op, tag, fallibility_class, fallibility_prose, effects_class, effects_prose,
 // explainable). Row DATA is Declared (hand-transcribed from guarantee_matrix.rs::MATRIX); the
 // structural checks below are Empirical over it (std_testing.rs three-way + live Rust oracle).
-type MatrixRow =
-    Row(Bytes, Guarantee, FallibilityClass, Bytes, EffectsClass, Bytes, Bool);
+type MatrixRow = Row(Bytes, Guarantee, FallibilityClass, Bytes, EffectsClass, Bytes, Bool);
 
 // ── shared helpers (Exact — total, match-defined, finite domain) ────────────────────────────────
 // bin_eq: Bool projection of the Exact `eq` prim at Binary{8}.
@@ -289,19 +276,10 @@ fn rng_new(seed: Binary{64}) => Binary{64} =
 fn rng_next(state: Binary{64}) => Binary{64} =
   let a = xor(
     state,
-    shl_u(
-      state,
-      0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00001101
-    )
+    shl_u(state, 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00001101)
   ) in
-  let b = xor(
-    a,
-    shr_u(a, 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000111)
-  ) in
-  xor(
-    b,
-    shl_u(b, 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00010001)
-  );
+  let b = xor(a, shr_u(a, 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000111)) in
+  xor(b, shl_u(b, 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00010001));
 
 // rng_next_u32: the high 32 bits of the next draw, as Binary{32} — mirrors Rust's
 // `(next_u64() >> 32) as u32`. The narrow is in-range by construction (the high 32 bits are zero
@@ -339,11 +317,7 @@ fn budget_min() => Budget =
 fn find_failing[T](candidates: Vec[T], prop: T => Bool) => Option[T] =
   match candidates {
     Nil => None,
-    Cons(c, rest) =>
-      match prop(c) {
-        False => Some(c),
-        True => find_failing(rest, prop)
-      }
+    Cons(c, rest) => match prop(c) { False => Some(c), True => find_failing(rest, prop) }
   };
 
 // shrink_loop: descend through shrink candidates keeping the smallest still-failing value; the
@@ -359,14 +333,7 @@ fn shrink_loop[T](
     0b1 => best,
     _ => match find_failing(candidates, prop) {
       None => best,
-      Some(c) =>
-        shrink_loop(
-          c,
-          shrink(c),
-          shrink,
-          prop,
-          sub_u(steps, 0b00000000_00000001)
-        )
+      Some(c) => shrink_loop(c, shrink(c), shrink, prop, sub_u(steps, 0b00000000_00000001))
     }
   };
 
@@ -407,12 +374,7 @@ fn for_all_loop[T](
             ),
           False =>
             Fail(
-              FRec(
-                shrink_to_minimal(input, shrink, prop),
-                seed,
-                trial,
-                "for_all property violated"
-              )
+              FRec(shrink_to_minimal(input, shrink, prop), seed, trial, "for_all property violated")
             )
         }
       }
@@ -432,16 +394,7 @@ fn for_all[T](
   budget: Budget,
   prop: T => Bool
 ) => Verdict[T] =
-  for_all_loop(
-    gen,
-    shrink,
-    prop,
-    rng_new(seed),
-    seed,
-    budget_trials(budget),
-    0b0000_0000,
-    False
-  );
+  for_all_loop(gen, shrink, prop, rng_new(seed), seed, budget_trials(budget), 0b0000_0000, False);
 
 // ── golden / snapshot harness (spec §3; C1: a missing baseline is NEVER auto-accepted) ──────────
 // golden: compare `produced` against the stored baseline. A missing baseline or a name-code
@@ -460,10 +413,7 @@ fn golden{N}(
       GB(bname, expected) => match eq(bname, name) {
         0b1 => match eq(expected, produced) {
           0b1 => Pass,
-          _ =>
-            Fail(
-              FRec(GFail(name, expected, produced), zero64(), 0b0000_0000, "golden")
-            )
+          _ => Fail(FRec(GFail(name, expected, produced), zero64(), 0b0000_0000, "golden"))
         },
         _ => Skipped(NeedsRecord)
       }
@@ -626,9 +576,7 @@ fn modes_out_of_scope(s: ModeScope) => Vec[CertMode] =
 
 // scope_count: the number of modes in scope (0..=3). Exact.
 fn scope_count(s: ModeScope) => Binary{8} =
-  match s {
-    MScope(f, b, c) => add_u(bool_to_bin(f), add_u(bool_to_bin(b), bool_to_bin(c)))
-  };
+  match s { MScope(f, b, c) => add_u(bool_to_bin(f), add_u(bool_to_bin(b), bool_to_bin(c))) };
 
 // scope_is_empty: an empty scope is surfaced explicitly, not silently ignored (C1/G2). Exact.
 fn scope_is_empty(s: ModeScope) => Bool =
@@ -637,16 +585,18 @@ fn scope_is_empty(s: ModeScope) => Bool =
 // scope_union / scope_intersect: composable derived scopes. Exact.
 fn scope_union(a: ModeScope, b: ModeScope) => ModeScope =
   match a {
-    MScope(f1, b1, c1) => match b {
-      MScope(f2, b2, c2) => MScope(bool_or(f1, f2), bool_or(b1, b2), bool_or(c1, c2))
-    }
+    MScope(f1, b1, c1) =>
+      match b {
+        MScope(f2, b2, c2) => MScope(bool_or(f1, f2), bool_or(b1, b2), bool_or(c1, c2))
+      }
   };
 
 fn scope_intersect(a: ModeScope, b: ModeScope) => ModeScope =
   match a {
-    MScope(f1, b1, c1) => match b {
-      MScope(f2, b2, c2) => MScope(bool_and(f1, f2), bool_and(b1, b2), bool_and(c1, c2))
-    }
+    MScope(f1, b1, c1) =>
+      match b {
+        MScope(f2, b2, c2) => MScope(bool_and(f1, f2), bool_and(b1, b2), bool_and(c1, c2))
+      }
   };
 
 // from_resolved_mode: the resolver→scope bridge — "the modes at or above the resolved depth":
@@ -718,9 +668,7 @@ fn config_with_granular(cfg: ModeTestConfig, m: CertMode) => ModeTestConfig =
 // (never ambient, G2). A granular override reports source None (above the lattice), exactly as
 // in Rust. Exact.
 fn config_provenance(cfg: ModeTestConfig) => ResolvedMode =
-  match cfg {
-    MTC(decls, g) => match g { Some(m) => RMode(m, None), None => resolve_decls(decls) }
-  };
+  match cfg { MTC(decls, g) => match g { Some(m) => RMode(m, None), None => resolve_decls(decls) } };
 
 // config_resolve: the effective ModeScope (provenance → from_resolved_mode — the canonical
 // shared mapping). Exact.
@@ -745,11 +693,7 @@ fn mode_list_eq(xs: Vec[CertMode], ys: Vec[CertMode]) => Bool =
     Nil => match ys { Nil => True, Cons(_, _) => False },
     Cons(x, xrest) => match ys {
       Nil => False,
-      Cons(y, yrest) =>
-        match mode_eq(x, y) {
-          True => mode_list_eq(xrest, yrest),
-          False => False
-        }
+      Cons(y, yrest) => match mode_eq(x, y) { True => mode_list_eq(xrest, yrest), False => False }
     }
   };
 
@@ -819,10 +763,7 @@ fn mode_scope_violation(s: ModeScope, pred: CertMode => Bool) => Option[ModeViol
 
 // mode_negative_violation: the negative-only half — the property must be ABSENT outside scope
 // (the "invariant fires where it doesn't apply" check). Exact.
-fn mode_negative_violation(
-  s: ModeScope,
-  pred: CertMode => Bool
-) => Option[ModeViolation] =
+fn mode_negative_violation(s: ModeScope, pred: CertMode => Bool) => Option[ModeViolation] =
   scope_check_walk(s, pred, modes_all(), True);
 
 // ── guarantee matrix (spec §4) — the table as CHECKED DATA ──────────────────────────────────────

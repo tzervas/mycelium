@@ -128,9 +128,7 @@ type PolicyWitness = ByPolicy | NoPolicy;
 // tag for a retry success, GExact for a clean OOk pass-through (FR-R3). `cleanup_overrun` (spec
 // §7-Q4): True means a cleanup_then_propagate cleanup was SKIPPED on budget overrun — recorded,
 // not swallowed; the original error propagates regardless.
-type Resolution[T, E] =
-    Recovered(T, Guarantee, PolicyWitness)
-  | Propagated(E, PolicyWitness, Bool);
+type Resolution[T, E] = Recovered(T, Guarantee, PolicyWitness) | Propagated(E, PolicyWitness, Bool);
 
 // AttemptOut — the product substitution for the Rust attempt thunk's
 // `(Outcome<T, E>, GuaranteeStrength)` tuple: the re-attempt's outcome plus that value's honest
@@ -267,11 +265,7 @@ fn resolution_witness[T, E](r: Resolution[T, E]) => PolicyWitness =
 fn registry_contains(reg: ClassRegistry, c: ClassName) => Bool =
   match reg {
     RegNil => False,
-    RegCons(x, rest) =>
-      match class_eq(x, c) {
-        True => True,
-        False => registry_contains(rest, c)
-      }
+    RegCons(x, rest) => match class_eq(x, c) { True => True, False => registry_contains(rest, c) }
   };
 
 // register: idempotent insert (registering the same name twice is a no-op) — Exact.
@@ -296,13 +290,7 @@ fn budget_kind(eb: EffectBudget) => EffectKind =
 
 // budget_amount: the budget's scalar ceiling (mirrors EffectBudget::amount) — Exact.
 fn budget_amount(eb: EffectBudget) => Binary{8} =
-  match eb {
-    Attempts(n) => n,
-    Depth(n) => n,
-    AllocBytes(n) => n,
-    Fuel(n) => n,
-    Ops(n) => n
-  };
+  match eb { Attempts(n) => n, Depth(n) => n, AllocBytes(n) => n, Fuel(n) => n, Ops(n) => n };
 
 // budget_set: declare (or reset) a budget for its effect kind (mirrors Budgets::set/with) —
 // functional update; Exact.
@@ -354,11 +342,7 @@ fn budget_consume(
 fn effect_member(xs: EffectList, k: EffectKind) => Bool =
   match xs {
     ENil => False,
-    ECons(x, rest) =>
-      match effect_eq(x, k) {
-        True => True,
-        False => effect_member(rest, k)
-      }
+    ECons(x, rest) => match effect_eq(x, k) { True => True, False => effect_member(rest, k) }
   };
 
 // effect_insert: set-insert (no-op when already present) — the dedup that keeps EffectList a
@@ -369,10 +353,7 @@ fn effect_insert(xs: EffectList, k: EffectKind) => EffectList =
 // check_effects: every performed effect must be in the declared set; the FIRST undeclared one is
 // an explicit Err(Undeclared) (I3 — no unknown side effects). This CHECKS that declared effects
 // compose — it never INFERS one. Exact (static check; no accuracy semantics).
-fn check_effects(
-  declared: EffectList,
-  performed: EffectList
-) => Result[Unit, UndeclaredEffect] =
+fn check_effects(declared: EffectList, performed: EffectList) => Result[Unit, UndeclaredEffect] =
   match performed {
     ENil => Ok(U),
     ECons(k, rest) => match effect_member(declared, k) {
@@ -431,11 +412,7 @@ fn on[T](
 fn action_for[T](p: Policy[T], c: ClassName) => Option[RecoveryAction[T]] =
   match p {
     PNil => None,
-    PRule(pc, pa, rest) =>
-      match class_eq(pc, c) {
-        True => Some(pa),
-        False => action_for(rest, c)
-      }
+    PRule(pc, pa, rest) => match class_eq(pc, c) { True => Some(pa), False => action_for(rest, c) }
   };
 
 fn policy_is_empty[T](p: Policy[T]) => Bool =
@@ -591,10 +568,7 @@ fn is_expl_policy_ref(x: Explainable) => Bool =
 // nonempty: True iff `b` has at least one byte (bytes_len is the Exact prim at Binary{32};
 // std.diag precedent).
 fn nonempty(b: Bytes) => Bool =
-  match eq(bytes_len(b), 0b0000_0000_0000_0000_0000_0000_0000_0000) {
-    0b1 => False,
-    _ => True
-  };
+  match eq(bytes_len(b), 0b0000_0000_0000_0000_0000_0000_0000_0000) { 0b1 => False, _ => True };
 
 // ── the 11 rows (hand-transcribed verbatim from guarantee_matrix.rs::MATRIX) ────────────────────
 fn row_handle() => MatrixRow =
@@ -747,19 +721,12 @@ fn matrix_len(xs: Vec[MatrixRow]) => Binary{8} =
 fn all_never_silent_nonempty(xs: Vec[MatrixRow]) => Bool =
   match xs {
     Nil => True,
-    Cons(r, rest) =>
-      bool_and(
-        nonempty(row_never_silent(r)),
-        all_never_silent_nonempty(rest)
-      )
+    Cons(r, rest) => bool_and(nonempty(row_never_silent(r)), all_never_silent_nonempty(rest))
   };
 
 // driver_rows_are_total: the handle/recover bridge rows are Total (total over budgets — I1/I4).
 fn driver_rows_are_total() => Bool =
-  bool_and(
-    is_total(row_fallibility(row_handle())),
-    is_total(row_fallibility(row_recover_bridge()))
-  );
+  bool_and(is_total(row_fallibility(row_handle())), is_total(row_fallibility(row_recover_bridge())));
 
 // driver_rows_are_policy_ref_explainable: both driver rows carry PolicyRef for EXPLAIN (C3).
 fn driver_rows_are_policy_ref_explainable() => Bool =

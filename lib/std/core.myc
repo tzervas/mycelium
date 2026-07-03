@@ -168,13 +168,7 @@ fn row_bound_of() => GuaranteeRow =
   Row("bound_of", GExact, "Option<&Bound> (None when no meta/bound)", "none", True);
 
 fn row_provenance_of() => GuaranteeRow =
-  Row(
-    "provenance_of",
-    GExact,
-    "Option<&Provenance> (None for algebraic data)",
-    "none",
-    True
-  );
+  Row("provenance_of", GExact, "Option<&Provenance> (None for algebraic data)", "none", True);
 
 // ── Vec (local, self-contained; mirrors std.diag/std.collections' cons-list convention) ─────────
 type Vec[A] = Nil | Cons(A, Vec[A]);
@@ -204,10 +198,7 @@ fn matrix_len(xs: Vec[GuaranteeRow]) => Binary{8} =
 // lib.rs::tests::matrix_is_all_exact_and_effect_free ("a Proven/Empirical tag here would itself
 // violate VR-5").
 fn all_exact(xs: Vec[GuaranteeRow]) => Bool =
-  match xs {
-    Nil => True,
-    Cons(r, rest) => bool_and(is_exact(row_tag(r)), all_exact(rest))
-  };
+  match xs { Nil => True, Cons(r, rest) => bool_and(is_exact(row_tag(r)), all_exact(rest)) };
 
 // all_effects_none: True iff every row's effects field is EXACTLY "none" — the other half of
 // lib.rs::tests::matrix_is_all_exact_and_effect_free, ported at FULL content fidelity (see
