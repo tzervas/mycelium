@@ -414,6 +414,8 @@ pub fn mycelium_doc::ir::Node::eq(&self, &mycelium_doc::ir::Node) -> bool
 impl core::fmt::Debug for mycelium_doc::ir::Node
 pub fn mycelium_doc::ir::Node::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::marker::StructuralPartialEq for mycelium_doc::ir::Node
+impl core::ops::drop::Drop for mycelium_doc::ir::Node
+pub fn mycelium_doc::ir::Node::drop(&mut self)
 impl serde_core::ser::Serialize for mycelium_doc::ir::Node
 pub fn mycelium_doc::ir::Node::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
 impl core::marker::Freeze for mycelium_doc::ir::Node
@@ -769,6 +771,8 @@ pub fn mycelium_doc::ir::Node::eq(&self, &mycelium_doc::ir::Node) -> bool
 impl core::fmt::Debug for mycelium_doc::ir::Node
 pub fn mycelium_doc::ir::Node::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::marker::StructuralPartialEq for mycelium_doc::ir::Node
+impl core::ops::drop::Drop for mycelium_doc::ir::Node
+pub fn mycelium_doc::ir::Node::drop(&mut self)
 impl serde_core::ser::Serialize for mycelium_doc::ir::Node
 pub fn mycelium_doc::ir::Node::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
 impl core::marker::Freeze for mycelium_doc::ir::Node
