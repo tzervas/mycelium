@@ -10686,7 +10686,7 @@ issues:
   - id: M-915
     title: "RFC-0037 D2-b short repr keywords — lexer + grammar + mycfmt + conformance"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P1, status:blocked]
+    labels: [phase:5, type:feature, area:language, priority:P1, status:done]
     epic: E30-1
     depends_on: []
     doc_refs:
@@ -10711,7 +10711,7 @@ issues:
   - id: M-916
     title: "RFC-0025 operator wiring follow-on — verify wired inventory, land only the residual"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P1, status:blocked]
+    labels: [phase:5, type:feature, area:language, priority:P1, status:done]
     epic: E30-1
     depends_on: [M-915]
     doc_refs:
@@ -10781,6 +10781,17 @@ issues:
       here: the table's depends_on (M-917, audit input) is mooted by the ratified decision, so it
       is dropped (transparency over literal fidelity — G2). Model: Sonnet (not spawned).
 
+      CORRECTION (2026-07-02, integration reconcile — house rule #4 grounding): the title/mint
+      CONFLATED two DISTINCT constructs. DN-71 "Model S" is the **Substrate/consume affine
+      execution model** (ratified via `enb` M-901; enacted in the extension-checker by M-919). It
+      is NOT the DN-54 §10 **attachment model** (how derived/lowered sibling items attach), which
+      is a separate decision — resolved as **Model A (sibling-item injection)** in the DN-81
+      dossier and enacted by M-973. So "DN-54 derive-site consumption-model = DN-71 Model S" was
+      wrong: derive-site *attachment* (DN-54 §10 / DN-81 / M-973) and *affine-consume* (DN-71 §7 /
+      M-901 / M-919) are different constructs that merely both touch the lower/derive surface. Both
+      are now landed; this record is corrected, not re-scoped (the work M-918 tracked — no separate
+      grm consume-model fork — still stands; only the DN-71↔DN-54§10 equation is retracted).
+
       User stories:
       - As the maintainer, I want the consume-model choice laid out with tradeoffs, so that I
         ratify a grounded design, not a default. (Satisfied by DN-71 Model S.)
@@ -10793,7 +10804,7 @@ issues:
   - id: M-919
     title: "Enact DN-71 Model S in the extension-checker + step DN-54's status honestly"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P1, status:blocked]
+    labels: [phase:5, type:feature, area:language, priority:P1, status:done]
     epic: E30-1
     depends_on: [M-918]
     doc_refs:
@@ -10845,7 +10856,7 @@ issues:
   - id: M-921
     title: "Post-decision tuple follow-through — implement only the ratified delta (or record no-delta)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P1, status:blocked]
+    labels: [phase:5, type:feature, area:language, priority:P1, status:done]
     epic: E30-1
     depends_on: [M-920]
     doc_refs:
@@ -10896,7 +10907,7 @@ issues:
   - id: M-923
     title: "Post-decision FLAG-1 implementation — Fn-typed record-field lowering or ledgered refusal"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P1, status:blocked]
+    labels: [phase:5, type:feature, area:language, priority:P1, status:done]
     epic: E30-1
     depends_on: [M-922]
     doc_refs:
@@ -10920,7 +10931,7 @@ issues:
   - id: M-924
     title: "Stability close-out — regenerate grammar artifacts + record baseline + propose window"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:chore, area:language, priority:P2, status:todo]
+    labels: [phase:5, type:chore, area:language, priority:P2, status:done]
     epic: E30-1
     depends_on: [M-915, M-916, M-919, M-921, M-923]
     doc_refs:
@@ -10945,7 +10956,7 @@ issues:
   - id: E31-1
     title: "E31-1 (epic) — Phase-I H2: Rust-reference closeout + kernel-freeze"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:epic, area:language, priority:P1, status:todo]
+    labels: [phase:5, type:epic, area:language, priority:P1, status:done]
     epic: E31
     depends_on: [M-958, M-959, M-960, M-961, M-962, M-963, M-964, M-965, M-966, M-967, M-968, M-969]
     doc_refs:
@@ -11196,7 +11207,7 @@ issues:
   - id: M-965
     title: "Fuse prelude + semilattice-law checker (F-A1/F-A2) — laws checked, violations refuse"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P2, status:blocked]
+    labels: [phase:5, type:feature, area:language, priority:P2, status:done]
     epic: E31-1
     depends_on: [E30-1]
     doc_refs:
@@ -11220,7 +11231,7 @@ issues:
   - id: M-966
     title: "via delegation trait-registry ordering — deterministic, EXPLAIN-able resolution"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P2, status:blocked]
+    labels: [phase:5, type:feature, area:language, priority:P2, status:done]
     epic: E31-1
     depends_on: [M-965]
     doc_refs:
@@ -11243,7 +11254,7 @@ issues:
   - id: M-967
     title: "Per-instantiation guarantee-tag context through monomorphization (executes M-844)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P2, status:blocked]
+    labels: [phase:5, type:feature, area:language, priority:P2, status:done]
     epic: E31-1
     depends_on: [M-966]
     doc_refs:
