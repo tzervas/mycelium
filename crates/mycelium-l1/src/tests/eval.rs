@@ -354,6 +354,7 @@ fn an_ungranted_wild_host_op_is_an_explicit_refusal() {
         impls: std::collections::BTreeMap::new(),
         lower_rules: std::collections::BTreeMap::new(),
         derived_provenance: std::collections::BTreeMap::new(),
+        via_provenance: std::collections::BTreeMap::new(),
     };
     let err = Evaluator::new(&env).call("main", vec![]).unwrap_err();
     assert!(

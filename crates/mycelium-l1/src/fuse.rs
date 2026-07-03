@@ -206,8 +206,10 @@ fn check_laws_over_domain(
         impls: impls.clone(),
         lower_rules: BTreeMap::new(),
         // M-973 (DN-54 §10) added `derived_provenance` to `Env` after this leaf branched; the
-        // law-probe scratch env has no derives, so an empty map is correct (mirrors mono.rs).
+        // law-probe scratch env has no derives, so an empty map is correct (mirrors mono.rs). M-966
+        // added `via_provenance` similarly — the scratch env has no `via` delegation either.
         derived_provenance: BTreeMap::new(),
+        via_provenance: BTreeMap::new(),
     };
     let evaluator = Evaluator::new(&scratch);
     let site = format!("impl Fuse[{for_ty}] for {for_ty}");

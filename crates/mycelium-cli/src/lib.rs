@@ -690,6 +690,8 @@ fn merge_phylum_env(phylum_env: &PhylumEnv) -> Result<Env, Report> {
     // DN-54 §10 Model A derive-site provenance (M-973): keyed by the same `(trait, head)` coherence
     // key as `instances`/`impls`, so it merges the same pub-key way across the phylum's nodules.
     let mut derived_provenance = BTreeMap::new();
+    // `via`-delegation EXPLAIN provenance (M-966): keyed the same way, merges identically.
+    let mut via_provenance = BTreeMap::new();
     let mut conflicts: Vec<String> = Vec::new();
 
     for (_, env) in &phylum_env.nodules {
@@ -708,6 +710,12 @@ fn merge_phylum_env(phylum_env: &PhylumEnv) -> Result<Env, Report> {
         merge_map(
             &mut derived_provenance,
             &env.derived_provenance,
+            fmt_pair_key,
+            &mut conflicts,
+        );
+        merge_map(
+            &mut via_provenance,
+            &env.via_provenance,
             fmt_pair_key,
             &mut conflicts,
         );
@@ -740,6 +748,7 @@ fn merge_phylum_env(phylum_env: &PhylumEnv) -> Result<Env, Report> {
         impls,
         lower_rules,
         derived_provenance,
+        via_provenance,
     })
 }
 
