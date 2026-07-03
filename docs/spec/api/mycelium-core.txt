@@ -468,7 +468,6 @@ impl core::convert::From<mycelium_core::value::Value> for mycelium_core::datum::
 pub fn mycelium_core::datum::CoreValue::from(mycelium_core::value::Value) -> Self
 impl core::fmt::Debug for mycelium_core::datum::CoreValue
 pub fn mycelium_core::datum::CoreValue::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl core::marker::StructuralPartialEq for mycelium_core::datum::CoreValue
 impl core::marker::Freeze for mycelium_core::datum::CoreValue
 impl core::marker::Send for mycelium_core::datum::CoreValue
 impl core::marker::Sync for mycelium_core::datum::CoreValue
@@ -492,7 +491,8 @@ impl core::convert::From<mycelium_core::datum::Datum> for mycelium_core::datum::
 pub fn mycelium_core::datum::CoreValue::from(mycelium_core::datum::Datum) -> Self
 impl core::fmt::Debug for mycelium_core::datum::Datum
 pub fn mycelium_core::datum::Datum::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl core::marker::StructuralPartialEq for mycelium_core::datum::Datum
+impl core::ops::drop::Drop for mycelium_core::datum::Datum
+pub fn mycelium_core::datum::Datum::drop(&mut self)
 impl core::marker::Freeze for mycelium_core::datum::Datum
 impl core::marker::Send for mycelium_core::datum::Datum
 impl core::marker::Sync for mycelium_core::datum::Datum
@@ -922,7 +922,8 @@ impl core::cmp::PartialEq for mycelium_core::node::Node
 pub fn mycelium_core::node::Node::eq(&self, &mycelium_core::node::Node) -> bool
 impl core::fmt::Debug for mycelium_core::node::Node
 pub fn mycelium_core::node::Node::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl core::marker::StructuralPartialEq for mycelium_core::node::Node
+impl core::ops::drop::Drop for mycelium_core::node::Node
+pub fn mycelium_core::node::Node::drop(&mut self)
 impl core::marker::Freeze for mycelium_core::node::Node
 impl core::marker::Send for mycelium_core::node::Node
 impl core::marker::Sync for mycelium_core::node::Node
@@ -1677,7 +1678,6 @@ impl core::convert::From<mycelium_core::value::Value> for mycelium_core::datum::
 pub fn mycelium_core::datum::CoreValue::from(mycelium_core::value::Value) -> Self
 impl core::fmt::Debug for mycelium_core::datum::CoreValue
 pub fn mycelium_core::datum::CoreValue::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl core::marker::StructuralPartialEq for mycelium_core::datum::CoreValue
 impl core::marker::Freeze for mycelium_core::datum::CoreValue
 impl core::marker::Send for mycelium_core::datum::CoreValue
 impl core::marker::Sync for mycelium_core::datum::CoreValue
@@ -1892,7 +1892,8 @@ impl core::cmp::PartialEq for mycelium_core::node::Node
 pub fn mycelium_core::node::Node::eq(&self, &mycelium_core::node::Node) -> bool
 impl core::fmt::Debug for mycelium_core::node::Node
 pub fn mycelium_core::node::Node::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl core::marker::StructuralPartialEq for mycelium_core::node::Node
+impl core::ops::drop::Drop for mycelium_core::node::Node
+pub fn mycelium_core::node::Node::drop(&mut self)
 impl core::marker::Freeze for mycelium_core::node::Node
 impl core::marker::Send for mycelium_core::node::Node
 impl core::marker::Sync for mycelium_core::node::Node
@@ -2455,7 +2456,8 @@ impl core::convert::From<mycelium_core::datum::Datum> for mycelium_core::datum::
 pub fn mycelium_core::datum::CoreValue::from(mycelium_core::datum::Datum) -> Self
 impl core::fmt::Debug for mycelium_core::datum::Datum
 pub fn mycelium_core::datum::Datum::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl core::marker::StructuralPartialEq for mycelium_core::datum::Datum
+impl core::ops::drop::Drop for mycelium_core::datum::Datum
+pub fn mycelium_core::datum::Datum::drop(&mut self)
 impl core::marker::Freeze for mycelium_core::datum::Datum
 impl core::marker::Send for mycelium_core::datum::Datum
 impl core::marker::Sync for mycelium_core::datum::Datum

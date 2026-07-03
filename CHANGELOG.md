@@ -11,6 +11,52 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### RFC-0041 W3+W5 — frozen-core iterative destruction, L1-eval CEK machine, TCO, eval raise (2026-07-03: M-979)
+
+The coordinated frozen-core/reference-machine pair (maintainer-approved past the checkpoint). Kills the
+deep-recursion `SIGABRT` on the kernel value types and the L1 evaluator, and raises eval's depth budget
+to the workspace default. `#![forbid(unsafe_code)]` holds throughout — safe `Box`/`Vec` + `mem::{replace,
+take}` only.
+
+- **W3 — frozen-core iterative destruction (`mycelium-core`, via the DN-56 §6 within-freeze channel).**
+  `Node`/`Datum`/`CoreValue` gain manual **iterative** `Drop`/`Clone`/`PartialEq` and iterative
+  `Canon::node`/`content_hash` (a single shared heterogeneous `Datum↔CoreValue` worklist; `mem::replace`
+  take-loops), so a deep spine no longer overflows on destruction/clone/hash — including on the refusal
+  path and the caller stack. **Within-freeze bar met:** Clone/PartialEq/hash are **bit-identical** to the
+  derived forms (witnessed against a recursive reference oracle across all variants and binder scopes);
+  M-210 3-way differential green; mutation-witnessed (100k-deep construct/destruct/clone/unwind, incl. an
+  alternating `Datum↔CoreValue↔Value` chain); only recursion→iteration transforms, no new
+  type/variant/field. The **doc-IR `mycelium-doc::ir::Node`** member gets the same iterative `Drop` (a
+  tooling crate — no freeze channel; the W1 `mem::forget` test workarounds are removed).
+- **W5 — L1 evaluator → CEK machine (`mycelium-l1`).** The 7-fn recursive eval SCC is now one explicit
+  `Vec<Frame>` work-stack (O(1) host stack), reifying the interleaved post-child work (scope push/pop,
+  `release_if_abandoned`/`ReleaseEvent`, guarantee asserts) as continuation frames; error paths unwind
+  the work-stack running each frame's cleanup (never-silent, G2). `L1Value` gains iterative `Drop`/`Clone`
+  (a deep `Cons` value no longer SIGABRTs — witnessed at 200k). **TCO** is applied **only** under the
+  no-pending-post-work precondition (no `sig.ret.guarantee` index and no Substrate-typed param — so a
+  Substrate release / return-guarantee assert is never silently skipped; both mandatory witness tests
+  pass, and only *direct* tail calls are elided — a safe under-approximation), with a bounded EXPLAIN
+  ring buffer of elided calls. **`DEFAULT_DEPTH` raised 64 → 4096** on the shared budget.
+- **Honest deviations / residuals (VR-5/G2 — flagged for maintainer, not silenced):**
+  1. **Zero-alloc-in-`Drop` not achieved.** The RFC (§4.5) wanted an alloc-free iterative `Drop`; that
+     needs either a new next-pointer field (barred by the within-freeze bar) or `unsafe` pointer-reversal
+     (barred by `forbid(unsafe_code)`), so the iterative Drops use an empty-start `Vec` worklist. This
+     trades a *certain* multi-MB stack-overflow abort for a small alloc that fails only under genuine
+     OOM-during-deep-unwind — a net safety gain, but the OOM-unwind edge remains. **Maintainer call:**
+     accept the tradeoff, or relax a constraint (a contained `unsafe` leaf, or a DN-39 review to add a
+     next-pointer field).
+  2. **`Value`/`Repr` deliberately not converted (deferred to a coordinated W3b).** Deep `Seq` values are
+     *construction-gated* (`Value::new`/`check_well_formed`/serde all recurse on `Seq.elem`), so a deep
+     `Value` cannot be built — its recursive `Drop` is unreachable, and converting only its
+     Drop/Clone/eq/hash would be un-mutation-witnessable on the most identity-critical frozen type. W3b
+     makes the *construction* path iterative together with destruction.
+  3. Pre-existing `content_hash` `O(depth²)` for deeply-nested-*binder* terms (de Bruijn linear scan);
+     the L1-eval per-node-vs-source-call metric residual (§4.0, W5-documented); `PartialEq` stays derived
+     where no deep-compare path exists. All tracked.
+- **§5.1 error-parity gate stays `#[ignore]`** — the L1-eval path now refuses with `DepthExceeded{4096}`,
+  but the cross-path gate needs **W4** (the L0 interp still has no budget). RFC-0041 stays **Accepted**;
+  W3+W5 `Enacted` for their scope.
+
 ### RFC-0041 W3½ — AOT env-machine extraction onto the shared budget (2026-07-03: M-979)
 
 Fourth RFC-0041 wave and the **last before the frozen-core checkpoint** — a **behavior-preserving**
