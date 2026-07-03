@@ -1152,8 +1152,14 @@ impl Elab<'_> {
             Expr::Lit(Literal::List(elems)) => {
                 let mut vals = Vec::with_capacity(elems.len());
                 for el in elems {
-                    match self.expr(stack, scope, el)? {
-                        Node::Const(v) => vals.push(v),
+                    // `mycelium_core::Node` now has a manual `Drop` (RFC-0041 §4.5 iterative
+                    // destruction), so a by-value field move-out of a `Node` is E0509 — bind, match
+                    // by-ref, and `clone` the constant `Value` (shallow by construction). This is the
+                    // W3↔W5 E0509 coupling the RFC flags; W5's eval rewrite may prefer a
+                    // `mem::replace` here to avoid the clone.
+                    let reduced = self.expr(stack, scope, el)?;
+                    match &reduced {
+                        Node::Const(v) => vals.push(v.clone()),
                         _ => return residual(
                             site,
                             "a list literal element did not reduce to a constant — the v0 `Seq` \

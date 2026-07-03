@@ -242,6 +242,18 @@ before merge. **Shared-file owners** (resolves §11 Med wave39): root `Cargo.tom
 **integrator-owned** — waves FLAG edits, the integrator applies them (feed-as-ready). **Ordering edges are
 in the table**, not just prose (resolves §11 High wave35).
 
+**Status (2026-07-03):** **W0, W1, W2, W3½, and the W3+W5 pair landed** (maintainer-approved past the
+checkpoint). W3 = frozen-core iterative destruction (`Node`/`Datum`/`CoreValue` iterative
+`Drop`/`Clone`/`PartialEq`/`Canon` via the DN-56 §6 within-freeze channel — bit-identical observable,
+mutation-witnessed, `forbid(unsafe)` intact; plus `doc::ir::Node`). W5 = the L1-eval CEK `Vec<Frame>`
+machine (O(1) host stack, cleanup-on-unwind), iterative `L1Value`, TCO under the no-pending-post-work
+precondition (release/assert never skipped — witness tests pass), and `DEFAULT_DEPTH` 64→4096. Honest
+deviations flagged for maintainer: zero-alloc-in-Drop not achievable under safe-Rust + no-new-field
+(empty-start `Vec` worklist used — OOM-unwind edge remains); `Value`/`Repr` deferred to a coordinated
+W3b (deep values are construction-gated, thus unbuildable); pre-existing `content_hash` O(depth²) for
+deep binders. **Remaining: W4** (L0 interp — closes the `myc run` SIGABRT and turns the §5.1 error-parity
+gate green), then **W6**.
+
 **Status (2026-07-03):** **W0, W1, W2, and W3½ landed — the full pre-checkpoint set.** W3½ = a
 behavior-preserving extraction: the AOT `Vec<Frame>` env-machine (`mycelium-mlir`) now charges the
 shared `mycelium_workstack::RecursionBudget` (both frame-push sites, `DepthGuard` per frame) and grows
@@ -340,6 +352,18 @@ implementation. **4 Critical + 15 High source-confirmed** objections, all resolv
 
 ## Meta — changelog
 
+- **2026-07-03 — W3+W5 landed (frozen-core iterative destruction + L1-eval CEK; M-979).** Maintainer-
+  approved past the checkpoint. W3: `mycelium-core` `Node`/`Datum`/`CoreValue` iterative
+  `Drop`/`Clone`/`PartialEq`/`Canon` via the DN-56 §6 within-freeze channel (bit-identical vs a recursive
+  oracle, mutation-witnessed at 100k, M-210 green, `forbid(unsafe)` intact, Box-owned invariant confirmed,
+  E0509 blast radius = 3 sites total); `doc::ir::Node` iterative Drop. W5: the L1-eval 7-fn SCC → CEK
+  `Vec<Frame>` machine (O(1) host stack, error-path cleanup), iterative `L1Value`, TCO under the
+  no-pending-post-work precondition (both mandatory witnesses pass), EXPLAIN ring buffer, `DEFAULT_DEPTH`
+  64→4096. Deviations flagged (VR-5): zero-alloc-Drop not achievable in safe Rust w/o a new field (empty
+  `Vec` worklist — OOM-unwind edge); `Value`/`Repr` → coordinated W3b (deep values construction-gated);
+  `content_hash` O(depth²) for deep binders (pre-existing). Independently adversarially reviewed for
+  memory safety before landing. §5.1 error-parity still `#[ignore]` (needs W4). W3+W5 `Enacted`; RFC stays
+  Accepted. (VR-5/G2.)
 - **2026-07-03 — W3½ landed (AOT env-machine extraction; M-979).** Behavior-preserving: the AOT
   `Vec<Frame>` env-machine (`mycelium-mlir` `aot.rs`) charges the shared
   `mycelium_workstack::RecursionBudget` at both frame-push sites (`DepthGuard` per frame) and grows via

@@ -11457,6 +11457,20 @@ issues:
       W4 (L0-interp substitution work-stack, myc run, construct DepthLimit), W5 (L1-eval CEK + TCO + eval
       64->4096). W6 = data-spine iteration. These three touch the frozen trusted base / swap the reference
       machine — held for maintainer eyes.
+      CHECKPOINT PASSED (maintainer approved 2026-07-03): canonical variant DepthExceeded{u32} confirmed;
+      ordering W3+W5 pair -> W4 -> W6.
+      W3+W5 LANDED (2026-07-03, to dev): W3 = mycelium-core Node/Datum/CoreValue iterative Drop/Clone/
+      PartialEq/Canon via within-freeze channel (bit-identical vs recursive oracle, mutation-witnessed 100k,
+      M-210 green, forbid(unsafe) intact, Box-owned invariant confirmed) + doc::ir::Node iterative Drop.
+      W5 = L1-eval SCC->CEK Vec<Frame> machine (O(1) host stack, error-path cleanup) + iterative L1Value +
+      TCO no-pending-post-work precondition (both witnesses pass) + EXPLAIN ring-buffer + DEFAULT_DEPTH
+      64->4096. E0509 blast radius = 3 sites total (elab.rs, eval.rs for-fold, one mlir test). Independently
+      adversarially reviewed for memory safety before landing. DEVIATIONS FLAGGED (maintainer decisions):
+      (1) zero-alloc-in-Drop not achievable in safe Rust w/o new field (empty Vec worklist; OOM-unwind edge
+      remains) — accept tradeoff or relax a constraint; (2) Value/Repr deferred to coordinated W3b (deep
+      values construction-gated, unbuildable); (3) content_hash O(depth^2) deep-binder (pre-existing).
+      error-parity #[ignore] until W4 (interp still no budget). NEXT: W4 (L0-interp, closes myc run SIGABRT +
+      turns error-parity green with W5), then W6, then M-740 unblocks.
       DN-84 design (D), CONFIRMED by the maintainer (DN-84 §11 correction, 2026-07-03) as the
       solve-NOW track: get the complexity of the problem and solution fully figured out and solved
       in the Rust reference era, BEFORE the M-740 .myc port has to absorb the shape (the dogfooded

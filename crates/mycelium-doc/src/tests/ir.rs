@@ -140,10 +140,10 @@ fn the_model_indexes_every_anchor() {
 /// the `mycelium-doc/tests/guard_hole_census.rs::node_walk_deep_chain` black-box repro, at a size that
 /// stays fast for the unit-test tier.
 ///
-/// Uses `mem::forget` on the built chain rather than letting it drop: `Node`'s derived recursive
-/// `Drop` overflows the stack on a deep chain independently of `walk` (confirmed empirically down to
-/// n=50,000 — a distinct, untracked hole flagged in the census test's doc comment, out of this leaf's
-/// scope). Forgetting keeps this test isolated to the `walk` fix it regresses.
+/// **W3 regression, same fixture:** `Node` previously had a derived, recursive `Drop` that overflowed
+/// the stack on this same deep chain independently of `walk` (confirmed empirically down to
+/// n=50,000), worked around here with `std::mem::forget`. `Node` now has a hand-written iterative
+/// `impl Drop` (`src/ir.rs`, RFC-0041 §4.5's doc-IR member), so `acc` is let drop normally below.
 #[test]
 fn walk_does_not_overflow_on_a_deep_chain() {
     let mut acc = Node::new(
@@ -167,5 +167,32 @@ fn walk_does_not_overflow_on_a_deep_chain() {
     let mut count = 0usize;
     acc.walk(&mut |_n| count += 1);
     assert_eq!(count, 50_001);
-    std::mem::forget(acc);
+    // `acc` drops here — iterative `Drop` (W3), no stack overflow, no `mem::forget` needed.
+}
+
+/// W3-new: the `Node` chain drops normally (no `mem::forget`) even at the census-scale 200,000 depth,
+/// isolated from the `walk` fixture above so a regression in `Drop` specifically (not `walk`) fails
+/// this test — the in-crate unit-test companion to
+/// `mycelium-doc/tests/guard_hole_census.rs::node_walk_deep_chain`'s black-box repro.
+#[test]
+fn deep_chain_drops_iteratively_without_overflow() {
+    let mut acc = Node::new(
+        "leaf",
+        None,
+        Some(Level::Minimal),
+        prov(),
+        Payload::Section,
+        vec![],
+    );
+    for i in 0..200_000 {
+        acc = Node::new(
+            format!("n{i}"),
+            None,
+            Some(Level::Minimal),
+            prov(),
+            Payload::Section,
+            vec![acc],
+        );
+    }
+    drop(acc);
 }
