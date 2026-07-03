@@ -53,6 +53,7 @@ KERNEL_CRATES=(
   crates/mycelium-numerics/src/lib.rs
   crates/mycelium-vsa/src/lib.rs
   crates/mycelium-stack/src/lib.rs
+  crates/mycelium-workstack/src/lib.rs
 )
 
 kernel_ok=1

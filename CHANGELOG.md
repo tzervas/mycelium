@@ -11,6 +11,35 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### RFC-0041 W2 — host-stack grow, startup assertion, frame baseline (2026-07-03: M-979)
+
+Third RFC-0041 wave — the host-stack **grow** infrastructure and the never-silent no-grow refusal.
+Introduces the workspace's first *new* unsafe **dependency** while authoring **no** unsafe (the
+stack-switching unsafe stays contained upstream in `stacker`/`psm`, called via their safe API — ADR-014).
+
+- **`mycelium-stack` fine-grained grow** (still `#![forbid(unsafe_code)]`): `stacker = "=0.1.24"`
+  (exact-pinned; pulls `psm 0.1.31`), an `ensure_sufficient_stack`/`grow` wrapper (stride-1, rustc's
+  pattern), a **runtime** growth-availability probe (`remaining_stack`, not a cargo feature — §4.3), and
+  `growable_ceiling_honors_floor` — which **refuses to start with an explicit error** on a no-grow target
+  (wasm; `psm` is a silent no-op there) whenever the fixed ceiling would fall below `floor × frame`,
+  never a silent SIGABRT below the floor (§4.3, G2).
+- **`mycelium-workstack`**: `ensure_sufficient_stack`'s body now routes through the runtime-gated grow
+  layered on the deep-worker base (signature unchanged; non-regressing — a bare top-level grow would
+  reintroduce the deep-input SIGABRT); a `check_startup` gate wiring `assert_mem_ceiling_honors_floor`
+  with `MAX_FRAME_BYTES = 384` (the §4.2 determinism invariant).
+- **Frame-size CI baseline** (§4.2, the ADR-041 lesson): pins `size_of` of the machine value structs
+  (`CoreValue`/`Node`/`L1Value`, all 240 B) at or below `MAX_FRAME_BYTES` so a toolchain frame-size bump
+  fails CI, not production (in `mycelium-l1/tests/`; the private AOT `Frame` = 328 B, which sets the
+  baseline, is a tracked residual pin for `mycelium-mlir`).
+- **Supply chain**: `THIRD-PARTY-LICENSES.md` regenerated (stacker/psm plus their transitive tree; both
+  MIT/Apache-2.0, first-party stays MIT); `mycelium-workstack` added to the unsafe-per-use audit; the
+  cargo-geiger baseline remains a documented placeholder (tool absent in-env) — noted in `about.toml`.
+- **Honest scope (VR-5/G2):** W2 lands the grow *infrastructure* and the never-silent no-grow *refusal*.
+  The per-recursion-point stride-1 grow (replacing the coarse worker) is consumer-side wiring that lands
+  as the evaluators convert (W3½/W4/W5); the W1 infallible-pass memory-DoS bound still awaits
+  arena-charging. Both tracked, not silenced. RFC-0041 stays **Accepted**; W2 `Enacted` for the
+  grow/startup scope.
+
 ### RFC-0041 W1 — budget crate + frontend guard wiring (2026-07-03: M-979)
 
 Second wave of RFC-0041 — the first **behavior-changing** one. Introduces the shared budget core and

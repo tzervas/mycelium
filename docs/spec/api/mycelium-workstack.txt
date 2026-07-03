@@ -47,6 +47,28 @@ impl core::marker::Unpin for mycelium_workstack::BudgetKind
 impl core::marker::UnsafeUnpin for mycelium_workstack::BudgetKind
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_workstack::BudgetKind
 impl core::panic::unwind_safe::UnwindSafe for mycelium_workstack::BudgetKind
+pub enum mycelium_workstack::StartupError
+pub mycelium_workstack::StartupError::HostStack(mycelium_stack::StackError)
+pub mycelium_workstack::StartupError::MemCeiling(mycelium_workstack::BudgetError)
+impl core::clone::Clone for mycelium_workstack::StartupError
+pub fn mycelium_workstack::StartupError::clone(&self) -> mycelium_workstack::StartupError
+impl core::cmp::Eq for mycelium_workstack::StartupError
+impl core::cmp::PartialEq for mycelium_workstack::StartupError
+pub fn mycelium_workstack::StartupError::eq(&self, &mycelium_workstack::StartupError) -> bool
+impl core::error::Error for mycelium_workstack::StartupError
+pub fn mycelium_workstack::StartupError::source(&self) -> core::option::Option<&(dyn core::error::Error + 'static)>
+impl core::fmt::Debug for mycelium_workstack::StartupError
+pub fn mycelium_workstack::StartupError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_workstack::StartupError
+pub fn mycelium_workstack::StartupError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_workstack::StartupError
+impl core::marker::Freeze for mycelium_workstack::StartupError
+impl core::marker::Send for mycelium_workstack::StartupError
+impl core::marker::Sync for mycelium_workstack::StartupError
+impl core::marker::Unpin for mycelium_workstack::StartupError
+impl core::marker::UnsafeUnpin for mycelium_workstack::StartupError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_workstack::StartupError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_workstack::StartupError
 pub struct mycelium_workstack::ArenaReservation<'a>
 impl mycelium_workstack::ArenaReservation<'_>
 pub const fn mycelium_workstack::ArenaReservation<'_>::bytes(&self) -> u64
@@ -114,6 +136,10 @@ impl core::marker::Unpin for mycelium_workstack::RecursionBudget
 impl core::marker::UnsafeUnpin for mycelium_workstack::RecursionBudget
 impl !core::panic::unwind_safe::RefUnwindSafe for mycelium_workstack::RecursionBudget
 impl core::panic::unwind_safe::UnwindSafe for mycelium_workstack::RecursionBudget
+pub const mycelium_workstack::DEPTH_FLOOR: u32
+pub const mycelium_workstack::HOST_STACK_BYTES_PER_FRAME: u64
+pub const mycelium_workstack::MAX_FRAME_BYTES: u64
 pub fn mycelium_workstack::assert_mem_ceiling_honors_floor(u64, u32, u64) -> core::result::Result<(), mycelium_workstack::BudgetError>
+pub fn mycelium_workstack::check_startup(&mycelium_workstack::RecursionBudget) -> core::result::Result<(), mycelium_workstack::StartupError>
 pub fn mycelium_workstack::current_process_bytes() -> u64
 pub fn mycelium_workstack::ensure_sufficient_stack<R, F>(&mycelium_workstack::RecursionBudget, F) -> R where F: core::ops::function::FnOnce() -> R + core::marker::Send, R: core::marker::Send
