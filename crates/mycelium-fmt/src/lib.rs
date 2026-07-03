@@ -65,14 +65,20 @@ use std::collections::HashMap;
 /// for (G2).
 pub const MYCFMT_VERSION: &str = "mycfmt-0";
 
-/// The target line width for the **readable** layout style (M-974). Purely a *presentation* heuristic:
-/// a construct whose compact single-line rendering, placed at its indent column, would exceed this
-/// width is broken across lines (line breaks after commas / `|`); a shorter construct stays inline.
-/// This is `Declared` — a readability threshold, not a proven bound. It is **functionally inert**: the
-/// readable output re-parses to the *same* surface AST as the compact output (the C1/C2 guards enforce
-/// it), so the width choice never changes any parse/elaborate/eval behavior — machines ingest the
-/// flattened stream / full file either way.
-const READABLE_WIDTH: usize = 88;
+/// The default target line width for the **readable** layout style (M-974; retuned M-976). Purely a
+/// *presentation* heuristic: a construct whose compact single-line rendering, placed at its indent
+/// column, would exceed this width is broken across lines (line breaks after commas / `|`); a shorter
+/// construct stays inline. This is `Declared` — a readability threshold, not a proven bound. It is
+/// **functionally inert**: the readable output re-parses to the *same* surface AST as the compact
+/// output (the C1/C2 guards enforce it), so the width choice never changes any parse/elaborate/eval
+/// behavior — machines ingest the flattened stream / full file either way.
+///
+/// **Why 100 (M-976).** The earlier 88 was Black's Python default — an arbitrary import with a
+/// misleading association for a value-semantics systems language. 100 is **`rustfmt`'s `max_width`
+/// default** — the formatter the Mycelium Rust kernel itself already uses — so the threshold is
+/// *grounded in the project's own toolchain*, not borrowed. It is overridable per call via
+/// [`LayoutCfg::width`]; the shipped default is the single threshold (R0).
+const READABLE_WIDTH: usize = 100;
 
 /// The layout style a format pass emits (M-974). Both styles are **identity-preserving projections**
 /// (RFC-0001 §4.6/§4.8) — they differ only in *presentation*, never in the surface AST (C1). The
@@ -88,6 +94,48 @@ pub enum Style {
     /// The human-readable multi-line form (M-974/DN-82): long segments wrap after commas / `|`,
     /// nested structure indents, short segments stay inline (the [`READABLE_WIDTH`] heuristic).
     Readable,
+}
+
+/// How a right-nested same-head chain (Cons/GLCons/TCons/bool_and/cat …) lays out its per-link
+/// **inner** (non-recursive / leading) arguments under the Shape-Dispatched Readable rules (M-976 /
+/// DN-82). BOTH styles keep the spine **flat** — every link at ONE fixed indent, the terminal on
+/// its own line, all closers coalesced (R1/R5) — so both kill the deepening-Cons pyramid; they
+/// differ ONLY in whether a fitting inner call stays inline.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum SpineInner {
+    /// **Compact (default).** A leading argument that fits under [`LayoutCfg::width`] at its column
+    /// stays inline (the confirmed-good canonical rendering of `matrix()`/`guarantee_matrix()`); an
+    /// overflowing leading arg blocks per R2, spine indent unchanged.
+    #[default]
+    InlineWhenFits,
+    /// **Expanded house style.** The spine STILL stays flat (each link at one indent, no pyramid),
+    /// but every inner nested call is broken onto its own lines (block-indented per R2) even when it
+    /// would fit. Both styles are behavior-neutral (C1/C2); this one trades density for
+    /// per-argument column comparability.
+    AlwaysExpand,
+}
+
+/// Presentation tunables for the readable layout (M-976 / DN-82). All fields are **presentation-only**
+/// and identity-preserving (C1/C2) — a `LayoutCfg` never changes the surface AST, only whitespace.
+///
+/// `width` defaults to [`READABLE_WIDTH`] (88 — the already-shipped `Declared` threshold); it is the
+/// SOLE inline-vs-break trigger (R0). `spine_inner` selects the house style for same-head chains
+/// (R1). [`LayoutCfg::default`] is the compact default the `lib/std` canonical form uses.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct LayoutCfg {
+    /// The single break threshold (R0). Chars, not bytes, measured at a node's own indent.
+    pub width: usize,
+    /// Same-head-chain inner-argument layout (R1): compact (default) vs expanded house style.
+    pub spine_inner: SpineInner,
+}
+
+impl Default for LayoutCfg {
+    fn default() -> Self {
+        Self {
+            width: READABLE_WIDTH,
+            spine_inner: SpineInner::InlineWhenFits,
+        }
+    }
 }
 
 /// A successful format result.
@@ -204,7 +252,24 @@ pub fn format_source(src: &str, pin: Option<&str>) -> Result<Formatted, FmtError
 /// [`FmtError::OutOfScope`] (pin mismatch, unplaceable comment, or a body that does not round-trip).
 /// On any error nothing is rewritten (G2).
 pub fn format_source_readable(src: &str, pin: Option<&str>) -> Result<Formatted, FmtError> {
-    format_source_styled(src, pin, Style::Readable)
+    format_source_readable_cfg(src, pin, LayoutCfg::default())
+}
+
+/// Format `src` into its human-readable canonical form with an explicit [`LayoutCfg`] (M-976/DN-82):
+/// same as [`format_source_readable`] but the caller picks the Shape-Dispatched Readable house-style
+/// knob (`spine_inner`: compact `InlineWhenFits` default vs the `AlwaysExpand` house style) and the
+/// break width. Both configurations are **presentation-only and functionally inert** — the output
+/// re-parses to the same surface AST (the same C1/C2 guards apply), so the knob never changes any
+/// parse/elaborate/eval behavior.
+///
+/// # Errors
+/// Identical to [`format_source_readable`].
+pub fn format_source_readable_cfg(
+    src: &str,
+    pin: Option<&str>,
+    cfg: LayoutCfg,
+) -> Result<Formatted, FmtError> {
+    format_source_styled_cfg(src, pin, Style::Readable, cfg)
 }
 
 /// Shared implementation of [`format_source`] (Compact) and [`format_source_readable`] (Readable).
@@ -217,6 +282,22 @@ pub fn format_source_styled(
     src: &str,
     pin: Option<&str>,
     style: Style,
+) -> Result<Formatted, FmtError> {
+    format_source_styled_cfg(src, pin, style, LayoutCfg::default())
+}
+
+/// Shared implementation with an explicit [`LayoutCfg`] (M-976). The `cfg` selects only *presentation*
+/// (the same-head-chain house style + break width); every scope/identity/header guard is
+/// style- and cfg-independent, so all configurations emit the same surface AST (C1) from the same
+/// input. For `Style::Compact` the `cfg` is inert (the compact path renders item bodies inline).
+///
+/// # Errors
+/// See [`format_source`].
+pub fn format_source_styled_cfg(
+    src: &str,
+    pin: Option<&str>,
+    style: Style,
+    cfg: LayoutCfg,
 ) -> Result<Formatted, FmtError> {
     // Hard pin (M-364 §10.3): never format with rules the project did not pin.
     if let Some(p) = pin {
@@ -300,7 +381,7 @@ pub fn format_source_styled(
     }
 
     // Render the body: items with their leading/trailing comments interleaved.
-    let (body, body_notes) = render_body_with_comments(&nodule, &plan, style)?;
+    let (body, body_notes) = render_body_with_comments(&nodule, &plan, style, cfg)?;
     out.push_str(&body);
     notes.extend(body_notes);
     notes.push("re-printed the body in canonical surface form".to_owned());
@@ -1250,6 +1331,7 @@ fn render_body_with_comments(
     nodule: &Nodule,
     plan: &CommentPlan,
     style: Style,
+    cfg: LayoutCfg,
 ) -> Result<(String, Vec<String>), FmtError> {
     let mut out = String::new();
     let mut notes = Vec::new();
@@ -1282,7 +1364,7 @@ fn render_body_with_comments(
         }
 
         // Render the item itself.
-        let item_text = render_item_with_comments(item, item_idx, plan, style, &mut notes)?;
+        let item_text = render_item_with_comments(item, item_idx, plan, style, cfg, &mut notes)?;
         out.push_str(&item_text);
     }
 
@@ -1309,18 +1391,26 @@ fn render_item_with_comments(
     item_idx: usize,
     plan: &CommentPlan,
     style: Style,
+    cfg: LayoutCfg,
     notes: &mut Vec<String>,
 ) -> Result<String, FmtError> {
     match item {
         Item::Fn(fd) => {
             let fn_trailing = plan.fn_trailing.get(&item_idx);
             let arm_map = plan.arm_trailing.get(&item_idx);
-            render_fn_decl_with_comments(fd, fn_trailing.map(String::as_str), arm_map, style, notes)
+            render_fn_decl_with_comments(
+                fd,
+                fn_trailing.map(String::as_str),
+                arm_map,
+                style,
+                cfg,
+                notes,
+            )
         }
         Item::Impl(id) => {
             // An impl can contain fns; delegate to render_impl which can attach arm comments
             // (currently: arm comments in impl methods are treated the same as top-level fns).
-            render_impl_with_comments(id, item_idx, plan, style, notes)
+            render_impl_with_comments(id, item_idx, plan, style, cfg, notes)
         }
         // Other items (use, default, type, trait) are rendered via expand_to_source on a
         // synthetic single-item nodule-like string, or more simply: we re-implement the trivial
@@ -1396,6 +1486,7 @@ fn render_fn_decl_with_comments(
     fn_trailing: Option<&str>,
     arm_map: Option<&HashMap<usize, String>>,
     style: Style,
+    cfg: LayoutCfg,
     notes: &mut Vec<String>,
 ) -> Result<String, FmtError> {
     let pub_prefix = if fd.vis.is_pub() { "pub " } else { "" };
@@ -1430,8 +1521,9 @@ fn render_fn_decl_with_comments(
         ));
         render_expr_with_arm_comments(&fd.body, amap)?
     } else if style == Style::Readable {
-        // M-974: readable body layout — long segments break, short ones stay inline.
-        render_expr_readable(&fd.body, 2)
+        // M-974/M-976: readable body layout — long segments break, short ones stay inline;
+        // same-head chains render as a flat spine (R1) per `cfg.spine_inner`.
+        render_expr_readable(&fd.body, 2, cfg)
     } else {
         render_expr_canonical(&fd.body)
     };
@@ -1495,6 +1587,7 @@ fn render_impl_with_comments(
     item_idx: usize,
     plan: &CommentPlan,
     style: Style,
+    cfg: LayoutCfg,
     notes: &mut Vec<String>,
 ) -> Result<String, FmtError> {
     let args = if id.trait_args.is_empty() {
@@ -1513,7 +1606,7 @@ fn render_impl_with_comments(
     for method in &id.methods {
         // Each method is itself a component; `render_fn_decl_with_comments` already appends the
         // method's mandatory `;` (DN-57 §3, M-818).
-        let method_text = render_fn_decl_with_comments(method, None, arm_map, style, notes)?;
+        let method_text = render_fn_decl_with_comments(method, None, arm_map, style, cfg, notes)?;
         for line in method_text.lines() {
             s.push_str("  ");
             s.push_str(line);
@@ -1685,45 +1778,168 @@ fn render_expr_canonical(e: &Expr) -> String {
 // style is a presentation projection, functionally inert.
 // ================================================================================================
 
-/// Does `compact` (a single-line rendering) fit on one line when placed at column `indent`?
-/// The readability decision is `Declared` — a width threshold, not a proven bound.
-fn fits_readable(compact: &str, indent: usize) -> bool {
-    !compact.contains('\n') && indent + compact.chars().count() <= READABLE_WIDTH
+/// Does `compact` (a single-line rendering) fit on one line when placed at column `indent`, against
+/// `width` (M-976: [`LayoutCfg::width`], default [`READABLE_WIDTH`])? One threshold governs EVERY
+/// construct (R0) — chars (not bytes), measured at the node's own indent. The readability decision is
+/// `Declared` — a width threshold, not a proven bound.
+fn fits_w(compact: &str, indent: usize, width: usize) -> bool {
+    !compact.contains('\n') && indent + compact.chars().count() <= width
 }
 
-/// Render an expression in the human-readable multi-line style (M-974).
+/// A right-nested same-head chain (R1): `App{head:H, [..lead, App{head:H, ..}]}` repeated ≥ 2 deep.
+/// Returns `(head-render, leading-args-per-link in order, terminal, depth)`. Detects
+/// Cons/GLCons/TCons/bool_and/cat and any right-fold-encoded variadic uniformly — all are `App` with
+/// a `Path` head; there is no separate `Cons` node. Reads ONLY the AST, so C2 holds by construction.
+fn same_head_chain(e: &Expr) -> Option<(String, Vec<Vec<&Expr>>, &Expr, usize)> {
+    let head_s = match e {
+        Expr::App { head, args } if !args.is_empty() => render_expr_canonical(head),
+        _ => return None,
+    };
+    let mut node = e;
+    let mut links: Vec<Vec<&Expr>> = Vec::new();
+    let terminal: &Expr;
+    loop {
+        let Expr::App { head, args } = node else {
+            return None;
+        };
+        if args.is_empty() || render_expr_canonical(head) != head_s {
+            return None;
+        }
+        let (lead, last) = args.split_at(args.len() - 1);
+        let last = &last[0];
+        links.push(lead.iter().collect());
+        match last {
+            Expr::App { head: h2, args: a2 }
+                if !a2.is_empty() && render_expr_canonical(h2) == head_s =>
+            {
+                node = last; // continue unrolling the chain
+            }
+            _ => {
+                terminal = last; // first non-same-head last-arg = the chain terminal
+                break;
+            }
+        }
+    }
+    let depth = links.len();
+    if depth >= 2 {
+        Some((head_s, links, terminal, depth))
+    } else {
+        None
+    }
+}
+
+/// Does this arm body force its arm (and hence the enclosing match) open regardless of width (R4c)?
+/// True iff the body is (or, through an ascription, wraps) a top-level `let … in …` — the
+/// twice-flagged buried-binding pathology (inspect/inspect_err).
+fn arm_body_has_top_let(body: &Expr) -> bool {
+    match body {
+        Expr::Let { .. } => true,
+        Expr::Ascribe(inner, _) => arm_body_has_top_let(inner),
+        _ => false,
+    }
+}
+
+/// Does `e` have to break even though its compact render fits (R4c)? A `match` whose any arm body
+/// forces open cannot render inline — the forced arm break propagates up to the match node.
+fn expr_forces_break(e: &Expr) -> bool {
+    match e {
+        Expr::Match { arms, .. } => arms.iter().any(|a| arm_body_has_top_let(&a.body)),
+        _ => false,
+    }
+}
+
+/// Render one inner (leading / non-recursive) argument of a same-head spine link, honoring the
+/// house-style knob (R1 / [`SpineInner`]). `InlineWhenFits` keeps a fitting call inline (and lets an
+/// overflowing one block per R2); `AlwaysExpand` force-breaks every nested call onto its own lines
+/// while the spine stays flat.
+fn render_spine_inner_arg(a: &Expr, indent: usize, cfg: LayoutCfg) -> String {
+    match cfg.spine_inner {
+        SpineInner::AlwaysExpand if matches!(a, Expr::App { args, .. } if !args.is_empty()) => {
+            render_expr_broken(a, indent, cfg)
+        }
+        _ => render_expr_readable(a, indent, cfg),
+    }
+}
+
+/// R1 flat spine + R5 coalesced closers. Every link sits at ONE fixed indent (`indent`, never +2 per
+/// link); the terminal begins the final line; all `depth` closers collapse into a single horizontal
+/// run on that line. The FIRST line carries no pad (indent contract); the caller places it at
+/// `indent`.
+fn render_spine(
+    head_s: &str,
+    links: &[Vec<&Expr>],
+    terminal: &Expr,
+    depth: usize,
+    indent: usize,
+    cfg: LayoutCfg,
+) -> String {
+    let pad = " ".repeat(indent);
+    let mut lines: Vec<String> = Vec::with_capacity(depth + 1);
+    for (li, lead) in links.iter().enumerate() {
+        let lead_s: Vec<String> = lead
+            .iter()
+            .map(|a| render_spine_inner_arg(a, indent, cfg))
+            .collect();
+        let link = format!("{head_s}({},", lead_s.join(", "));
+        if li == 0 {
+            lines.push(link); // indent contract: first line unpadded
+        } else {
+            lines.push(format!("{pad}{link}"));
+        }
+    }
+    let term_s = render_spine_inner_arg(terminal, indent, cfg);
+    let closers = ")".repeat(depth);
+    lines.push(format!("{pad}{term_s}{closers}"));
+    lines.join("\n")
+}
+
+/// Render an expression in the human-readable multi-line style (M-974/M-976).
 ///
 /// **Indent contract:** the returned string's FIRST line carries no leading indentation — the
 /// caller places it at column `indent`; any continuation lines are *absolutely* indented as if the
-/// first line began at column `indent`. The layout is a "fits-or-breaks" heuristic: a node whose
-/// compact single-line render fits within [`READABLE_WIDTH`] at `indent` stays inline; otherwise it
-/// breaks. Because the AST — not the input text — drives every decision, the render is idempotent
-/// by construction (C2).
-fn render_expr_readable(e: &Expr, indent: usize) -> String {
-    use mycelium_l1::ast::Literal;
+/// first line began at column `indent`. A node whose compact single-line render fits within
+/// [`LayoutCfg::width`] at `indent` — AND is not forced open (R4c) — stays inline; otherwise it
+/// breaks per the shape-dispatched rules ([`render_expr_broken`]). AST-driven, so idempotent (C2).
+fn render_expr_readable(e: &Expr, indent: usize, cfg: LayoutCfg) -> String {
     let compact = render_expr_canonical(e);
-    if fits_readable(&compact, indent) {
+    if fits_w(&compact, indent, cfg.width) && !expr_forces_break(e) {
         return compact;
     }
+    render_expr_broken(e, indent, cfg)
+}
+
+/// The break layouts (Shape-Dispatched Readable, M-976). Dispatch order (R6): (1) same-head chain →
+/// R1 spine + R5 closers; (2) else App → R2 wide-flat block; (3) match/if → R3 tree; (4) let → R4
+/// binding; (5) tuple/list/ascription → per-kind; (6) compact fallback. Assumes the node must break
+/// (the caller verified `!fits || forces_break`); every layout is whitespace-only, so C1/C2 hold.
+fn render_expr_broken(e: &Expr, indent: usize, cfg: LayoutCfg) -> String {
+    use mycelium_l1::ast::Literal;
+    let compact = render_expr_canonical(e);
     let pad = " ".repeat(indent);
     let inner = indent + 2;
     let ipad = " ".repeat(inner);
     match e {
-        // A function application with a long argument list: one argument per line, break after
-        // each comma. `head(\n  arg0,\n  arg1\n)`.
+        // R1 (dispatched FIRST, R6): a right-nested same-head chain lays out as a flat spine so a
+        // semantically-flat N-element list is never drawn as an N-deep rightward-drifting tree. R2
+        // (wide-flat block) otherwise — one arg per line at indent+2, `)` alone on its own line.
         Expr::App { head, args } if !args.is_empty() => {
-            let head_s = render_expr_readable(head, indent);
-            let arg_lines: Vec<String> = args
-                .iter()
-                .map(|a| format!("{ipad}{}", render_expr_readable(a, inner)))
-                .collect();
-            format!("{head_s}(\n{}\n{pad})", arg_lines.join(",\n"))
+            if let Some((head_s, links, terminal, depth)) = same_head_chain(e) {
+                render_spine(&head_s, &links, terminal, depth, indent, cfg)
+            } else {
+                let head_s = render_expr_readable(head, indent, cfg);
+                let arg_lines: Vec<String> = args
+                    .iter()
+                    .map(|a| format!("{ipad}{}", render_expr_readable(a, inner, cfg)))
+                    .collect();
+                format!("{head_s}(\n{}\n{pad})", arg_lines.join(",\n"))
+            }
         }
-        // A match: one arm per line. An arm whose `pat => body` fits stays on one line; an arm with
-        // a long/nested body puts the `=>` on its own line and the body on the next (indented), so
-        // deeply-nested matches stay shallow and readable rather than marching rightward.
+        // R3 genuine-tree indentation: one indent (2 sp) per REAL nesting level; a `{}`-block-former
+        // body (nested match/if) RIDES the arm line (case b) so a linear match ladder halves its
+        // depth; otherwise `=>` drops to its own line and the body renders one level deeper (case c).
+        // R4c: a let-headed arm ALWAYS breaks (body force-broken at inner+2) even when it would fit.
         Expr::Match { scrutinee, arms } => {
-            let scrut = render_expr_readable(scrutinee, indent + "match ".len());
+            let scrut = render_expr_readable(scrutinee, indent + "match ".len(), cfg);
             let arm_lines: Vec<String> = arms
                 .iter()
                 .enumerate()
@@ -1731,20 +1947,35 @@ fn render_expr_readable(e: &Expr, indent: usize) -> String {
                     let is_last = i + 1 == arms.len();
                     let comma = if is_last { "" } else { "," };
                     let patn = render_pattern(&arm.pattern);
+                    let forces = arm_body_has_top_let(&arm.body); // R4c
                     let body_compact = render_expr_canonical(&arm.body);
                     let one_line = format!("{patn} => {body_compact}{comma}");
-                    if fits_readable(&one_line, inner) {
-                        format!("{ipad}{one_line}")
-                    } else {
-                        let body = render_expr_readable(&arm.body, inner + 2);
-                        format!("{ipad}{patn} =>\n{ipad}  {body}{comma}")
+                    // Case (a): the whole arm fits on one line (and is not force-opened).
+                    if !forces && fits_w(&one_line, inner, cfg.width) {
+                        return format!("{ipad}{one_line}");
                     }
+                    // Case (b): a nested match/if body rides the arm line, its inner arms one level
+                    // below — reserving depth only for genuine nesting.
+                    if !forces && matches!(arm.body, Expr::Match { .. } | Expr::If { .. }) {
+                        let body = render_expr_readable(&arm.body, inner, cfg);
+                        let first = body.lines().next().unwrap_or("");
+                        let ride = format!("{patn} => {first}");
+                        if fits_w(&ride, inner, cfg.width) {
+                            return format!("{ipad}{patn} => {body}{comma}");
+                        }
+                    }
+                    // Case (c): `=>` on its own line; the body renders one level deeper per its kind
+                    // (a same-head-chain body reaches R1 and spines; a wide-flat body → R2 block; a
+                    // let-headed arm is force-broken here — R4c).
+                    let body = render_expr_broken(&arm.body, inner + 2, cfg);
+                    format!("{ipad}{patn} =>\n{ipad}  {body}{comma}")
                 })
                 .collect();
             format!("match {scrut} {{\n{}\n{pad}}}", arm_lines.join("\n"))
         }
-        // `let name[: ty] = bound in body` — the binding on one line (its `bound` may itself break
-        // at the `= ` column), the body on the next line at the same indent (sequential reading).
+        // R4 binding layout: structural BLOCK indent (never align-to-open-paren). The `bound` breaks
+        // at the let's OWN indent (rename-stable, matches R2's closer discipline), and the body
+        // always starts on its own line at the let-chain indent (never glued after the last `in`).
         Expr::Let {
             name,
             ty,
@@ -1756,22 +1987,22 @@ fn render_expr_readable(e: &Expr, indent: usize) -> String {
                 .map(|t| format!(": {}", render_type_ref(t)))
                 .unwrap_or_default();
             let head = format!("let {name}{ann} = ");
-            let bound_s = render_expr_readable(bound, indent + head.chars().count());
-            let body_s = render_expr_readable(body, indent);
+            let bound_s = render_expr_readable(bound, indent, cfg);
+            let body_s = render_expr_readable(body, indent, cfg);
             format!("{head}{bound_s} in\n{pad}{body_s}")
         }
         // `if cond then conseq else alt` — the three parts on their own lines.
         Expr::If { cond, conseq, alt } => {
-            let cond_s = render_expr_readable(cond, indent + "if ".len());
-            let conseq_s = render_expr_readable(conseq, inner);
-            let alt_s = render_expr_readable(alt, inner);
+            let cond_s = render_expr_readable(cond, indent + "if ".len(), cfg);
+            let conseq_s = render_expr_readable(conseq, inner, cfg);
+            let alt_s = render_expr_readable(alt, inner, cfg);
             format!("if {cond_s} then\n{ipad}{conseq_s}\n{pad}else\n{ipad}{alt_s}")
         }
         // A tuple literal with long elements: one element per line, break after each comma.
         Expr::TupleLit(elems) if !elems.is_empty() => {
             let elem_lines: Vec<String> = elems
                 .iter()
-                .map(|el| format!("{ipad}{}", render_expr_readable(el, inner)))
+                .map(|el| format!("{ipad}{}", render_expr_readable(el, inner, cfg)))
                 .collect();
             format!("(\n{}\n{pad})", elem_lines.join(",\n"))
         }
@@ -1779,7 +2010,7 @@ fn render_expr_readable(e: &Expr, indent: usize) -> String {
         Expr::Lit(Literal::List(es)) if !es.is_empty() => {
             let elem_lines: Vec<String> = es
                 .iter()
-                .map(|el| format!("{ipad}{}", render_expr_readable(el, inner)))
+                .map(|el| format!("{ipad}{}", render_expr_readable(el, inner, cfg)))
                 .collect();
             format!("[\n{}\n{pad}]", elem_lines.join(",\n"))
         }
@@ -1787,7 +2018,7 @@ fn render_expr_readable(e: &Expr, indent: usize) -> String {
         Expr::Ascribe(inner_e, t) => {
             format!(
                 "{} : {}",
-                render_expr_readable(inner_e, indent),
+                render_expr_readable(inner_e, indent, cfg),
                 render_type_ref(t)
             )
         }
