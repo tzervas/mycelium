@@ -405,7 +405,7 @@ pub mycelium_doc::ir::Node::provenance: mycelium_doc::ir::Provenance
 pub mycelium_doc::ir::Node::title: core::option::Option<alloc::string::String>
 impl mycelium_doc::ir::Node
 pub fn mycelium_doc::ir::Node::new(impl core::convert::Into<alloc::string::String>, core::option::Option<alloc::string::String>, core::option::Option<mycelium_doc::ir::Level>, mycelium_doc::ir::Provenance, mycelium_doc::ir::Payload, alloc::vec::Vec<mycelium_doc::ir::Node>) -> mycelium_doc::ir::Node
-pub fn mycelium_doc::ir::Node::walk<'a>(&'a self, &mut dyn core::ops::function::FnMut(&'a mycelium_doc::ir::Node))
+pub fn mycelium_doc::ir::Node::walk<'a>(&'a self, &mut (dyn core::ops::function::FnMut(&'a mycelium_doc::ir::Node) + core::marker::Send))
 impl core::clone::Clone for mycelium_doc::ir::Node
 pub fn mycelium_doc::ir::Node::clone(&self) -> mycelium_doc::ir::Node
 impl core::cmp::Eq for mycelium_doc::ir::Node
@@ -760,7 +760,7 @@ pub mycelium_doc::Node::provenance: mycelium_doc::ir::Provenance
 pub mycelium_doc::Node::title: core::option::Option<alloc::string::String>
 impl mycelium_doc::ir::Node
 pub fn mycelium_doc::ir::Node::new(impl core::convert::Into<alloc::string::String>, core::option::Option<alloc::string::String>, core::option::Option<mycelium_doc::ir::Level>, mycelium_doc::ir::Provenance, mycelium_doc::ir::Payload, alloc::vec::Vec<mycelium_doc::ir::Node>) -> mycelium_doc::ir::Node
-pub fn mycelium_doc::ir::Node::walk<'a>(&'a self, &mut dyn core::ops::function::FnMut(&'a mycelium_doc::ir::Node))
+pub fn mycelium_doc::ir::Node::walk<'a>(&'a self, &mut (dyn core::ops::function::FnMut(&'a mycelium_doc::ir::Node) + core::marker::Send))
 impl core::clone::Clone for mycelium_doc::ir::Node
 pub fn mycelium_doc::ir::Node::clone(&self) -> mycelium_doc::ir::Node
 impl core::cmp::Eq for mycelium_doc::ir::Node

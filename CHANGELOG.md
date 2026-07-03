@@ -11,6 +11,42 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### RFC-0041 W1 — budget crate + frontend guard wiring (2026-07-03: M-979)
+
+Second wave of RFC-0041 — the first **behavior-changing** one. Introduces the shared budget core and
+closes the frontend-tool + checker guard holes so deep input **refuses never-silently** (or renders on
+a grown stack) instead of SIGABRT-ing. Ran as scaffold-first + a disjoint 6-leaf swarm.
+
+- **New leaf crate `mycelium-workstack`** (`#![forbid(unsafe_code)]`, downward-only DN-68) — the
+  canonical home of the never-silent **`RecursionBudget`**: a depth ceiling on the §4.0 metric
+  (default 4096), a memory ceiling, a work-step (CPU) ceiling, a process-wide **`ProcessArena`** (an
+  atomic byte counter so concurrent passes can't sum past a per-process ceiling), the canonical
+  over-budget surface **`BudgetError::{DepthExceeded{limit:u32}, OutOfBudget{…}}`**, a thin
+  `ensure_sufficient_stack` guard helper (W1 delegates to the 256 MiB `with_deep_stack` worker; W2
+  swaps in fine-grained `stacker`), and the `assert_mem_ceiling_honors_floor` §4.2 invariant (checked
+  fn; wired at startup in W2). Consumer-side charging (the leaf never depends on `interp`/`core`/`l1`
+  — the §4.1 deps-cycle fix). 18 in-crate tests incl. isolation + mutant-witness; added to
+  `cargo-mutants` scope.
+- **Frontend guard holes closed** (§4.7) — each pass now wraps its outermost entry in
+  `ensure_sufficient_stack` and/or charges the budget: **`mycelium-l1`** checker
+  (`usefulness`/`decision` now return `Result<_, BudgetError>`, `grade` maps to `CheckError`) +
+  **`check_list` routed through iteration** (the data-vs-control fix — a work-step per element, O(1)
+  control depth, byte-identical checking for concrete types) + **parser `MAX_EXPR_DEPTH` 256 → 4096**
+  (verified safe on the deep-stack worker; eval's 64 held to W5); **`mycelium-fmt`** render family;
+  **`mycelium-lsp`** `render_node` (the editor-buffer priority surface); **`mycelium-transpile`** emit
+  (new `GapReason::RecursionBudget`); **`mycelium-doc`** `Node::walk`; **`mycelium-mir-passes`**
+  `emit_owned` (new `EmitError::DepthExceeded`) + `count_occurrences` (grown; the O(N²) re-walk flagged
+  as a W2 residual). The 14 frontend census tests are **un-ignored + passing**.
+- **Scoping correction (never-silent, G2):** two W0-census holes touch the trusted base — `write_canon`
+  (frozen `mycelium-core`) and `is_pure`/`plan_parallel` (`mycelium-interp`) — so they were **deferred
+  off W1** (re-tagged W3 / W4) to land with the maintainer checkpoint, not in the frontend wave.
+- **Residual guard holes surfaced by the swarm** (tracked, not silently closed): the recursive-`Drop`
+  bomb on deep fixtures (the W3 class — `mycelium-doc::ir::Node` is a **new** member found this wave);
+  `mycelium-mir-passes` `eval(&RcNode)` / `emit_elided` / `emit_reuse` and the `count_occurrences`
+  O(N²) re-walk (W2); `syn`'s own unbudgeted parser recursion (third-party, dev-tool only).
+- RFC-0041 stays **Accepted**; W1 is `Enacted` for the frontend scope. Verified: full `just check` green
+  (differential + census; the §5.1 error-parity gate stays `#[ignore="W5"]`).
+
 ### RFC-0041 W0 — recursion-depth safety net (gates + metric + census; 2026-07-03: M-979)
 
 First implementation wave of the Accepted **RFC-0041** (recursion-depth safety) — a pure **safety
