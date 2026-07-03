@@ -240,14 +240,14 @@
 | `mycelium_cli::Report::new` | fn | `crates/mycelium-cli/src/lib.rs:66` | A report with a code, message and exit code (no location/help). |
 | `mycelium_cli::Report::render` | fn | `crates/mycelium-cli/src/lib.rs:92` | Render the multi-line, structured form (no trailing newline). |
 | `mycelium_cli::RunReport` | struct | `crates/mycelium-cli/src/lib.rs:232` | The outcome of a successful `myc run` (M-908/M-909): which source ran, which entry function was |
-| `mycelium_cli::StreamComponent` | type | `crates/mycelium-cli/src/lib.rs:790` | The outcome of a single nodule-component parse in [`stream_parse`]. |
-| `mycelium_cli::StreamReport` | struct | `crates/mycelium-cli/src/lib.rs:1042` | The result of [`stream_parse`] summarised for the CLI. |
+| `mycelium_cli::StreamComponent` | type | `crates/mycelium-cli/src/lib.rs:897` | The outcome of a single nodule-component parse in [`stream_parse`]. |
+| `mycelium_cli::StreamReport` | struct | `crates/mycelium-cli/src/lib.rs:1149` | The result of [`stream_parse`] summarised for the CLI. |
 | `mycelium_cli::build` | fn | `crates/mycelium-cli/src/lib.rs:153` | `myc build` — build the content-addressed spore for the project at `manifest_path`, returning the |
 | `mycelium_cli::check_project` | fn | `crates/mycelium-cli/src/lib.rs:190` | `myc check` — parse and type-check every `.myc` source under the project directory containing |
 | `mycelium_cli::init` | fn | `crates/mycelium-cli/src/lib.rs:120` | `myc init <name>` — scaffold a new phylum named `name` under `parent`, returning the created |
-| `mycelium_cli::run` | fn | `crates/mycelium-cli/src/lib.rs:305` | `myc run` — execute a project through the reference interpreter (M-908 v0 single-nodule; |
-| `mycelium_cli::run_stream_parse` | fn | `crates/mycelium-cli/src/lib.rs:1068` | Drive [`stream_parse`] and collect results into a [`StreamReport`]. |
-| `mycelium_cli::stream_parse` | fn | `crates/mycelium-cli/src/lib.rs:837` | `myc --stream` — parse a `;`-delimited Mycelium component stream from `reader` (M-820 / DN-57). |
+| `mycelium_cli::run` | fn | `crates/mycelium-cli/src/lib.rs:392` | `myc run` — execute a project through the reference interpreter (M-908 v0 single-nodule; |
+| `mycelium_cli::run_stream_parse` | fn | `crates/mycelium-cli/src/lib.rs:1175` | Drive [`stream_parse`] and collect results into a [`StreamReport`]. |
+| `mycelium_cli::stream_parse` | fn | `crates/mycelium-cli/src/lib.rs:944` | `myc --stream` — parse a `;`-delimited Mycelium component stream from `reader` (M-820 / DN-57). |
 
 ## mycelium-cli-common
 
@@ -633,18 +633,18 @@
 
 | Symbol | Kind | File:Line | Summary |
 |---|---|---|---|
-| `mycelium_fmt::FmtError::exit_code` | fn | `crates/mycelium-fmt/src/lib.rs:190` | The CLI exit code for this refusal (contract §5). |
-| `mycelium_fmt::Formatted` | struct | `crates/mycelium-fmt/src/lib.rs:148` | A successful format result. |
-| `mycelium_fmt::LayoutCfg` | struct | `crates/mycelium-fmt/src/lib.rs:126` | Presentation tunables for the readable layout (M-976 / DN-82). |
+| `mycelium_fmt::FmtError::exit_code` | fn | `crates/mycelium-fmt/src/lib.rs:214` | The CLI exit code for this refusal (contract §5). |
+| `mycelium_fmt::Formatted` | struct | `crates/mycelium-fmt/src/lib.rs:166` | A successful format result. |
+| `mycelium_fmt::LayoutCfg` | struct | `crates/mycelium-fmt/src/lib.rs:144` | Presentation tunables for the readable layout (M-976 / DN-82). |
 | `mycelium_fmt::MYCFMT_VERSION:` | const | `crates/mycelium-fmt/src/lib.rs:67` | The formatter spelling/version this build implements. |
-| `mycelium_fmt::SpineInner` | enum | `crates/mycelium-fmt/src/lib.rs:106` | How a right-nested same-head chain (Cons/GLCons/TCons/bool_and/cat …) lays out its per-link |
-| `mycelium_fmt::Style` | enum | `crates/mycelium-fmt/src/lib.rs:91` | The layout style a format pass emits (M-974). |
-| `mycelium_fmt::flatten_source` | fn | `crates/mycelium-fmt/src/lib.rs:459` | Flatten `src` into the single-line human↔stream form (M-819; DN-57 §2). |
-| `mycelium_fmt::format_source` | fn | `crates/mycelium-fmt/src/lib.rs:235` | Format `src` into its canonical form. |
-| `mycelium_fmt::format_source_readable` | fn | `crates/mycelium-fmt/src/lib.rs:255` | Format `src` into its **human-readable** canonical form (M-974/DN-82): the inverse posture of |
-| `mycelium_fmt::format_source_readable_cfg` | fn | `crates/mycelium-fmt/src/lib.rs:268` | Format `src` into its human-readable canonical form with an explicit [`LayoutCfg`] (M-976/DN-82): |
-| `mycelium_fmt::format_source_styled` | fn | `crates/mycelium-fmt/src/lib.rs:282` | Shared implementation of [`format_source`] (Compact) and [`format_source_readable`] (Readable). |
-| `mycelium_fmt::format_source_styled_cfg` | fn | `crates/mycelium-fmt/src/lib.rs:297` | Shared implementation with an explicit [`LayoutCfg`] (M-976). |
+| `mycelium_fmt::SpineInner` | enum | `crates/mycelium-fmt/src/lib.rs:124` | How a right-nested same-head chain (Cons/GLCons/TCons/bool_and/cat …) lays out its per-link |
+| `mycelium_fmt::Style` | enum | `crates/mycelium-fmt/src/lib.rs:109` | The layout style a format pass emits (M-974). |
+| `mycelium_fmt::flatten_source` | fn | `crates/mycelium-fmt/src/lib.rs:529` | Flatten `src` into the single-line human↔stream form (M-819; DN-57 §2). |
+| `mycelium_fmt::format_source` | fn | `crates/mycelium-fmt/src/lib.rs:270` | Format `src` into its canonical form. |
+| `mycelium_fmt::format_source_readable` | fn | `crates/mycelium-fmt/src/lib.rs:290` | Format `src` into its **human-readable** canonical form (M-974/DN-82): the inverse posture of |
+| `mycelium_fmt::format_source_readable_cfg` | fn | `crates/mycelium-fmt/src/lib.rs:303` | Format `src` into its human-readable canonical form with an explicit [`LayoutCfg`] (M-976/DN-82): |
+| `mycelium_fmt::format_source_styled` | fn | `crates/mycelium-fmt/src/lib.rs:317` | Shared implementation of [`format_source`] (Compact) and [`format_source_readable`] (Readable). |
+| `mycelium_fmt::format_source_styled_cfg` | fn | `crates/mycelium-fmt/src/lib.rs:337` | Shared implementation with an explicit [`LayoutCfg`] (M-976). |
 
 ## mycelium-interp
 
@@ -661,14 +661,14 @@
 | `mycelium_interp::EvalError` | enum | `crates/mycelium-interp/src/lib.rs:143` | Why evaluation could not proceed (always explicit — the interpreter is never silent; SC-3/G2). |
 | `mycelium_interp::IdentitySwapEngine` | struct | `crates/mycelium-interp/src/swap.rs:39` | The trivial swap engine: a swap whose `target` equals the source `Repr` is the identity — exactly |
 | `mycelium_interp::Interpreter` | struct | `crates/mycelium-interp/src/lib.rs:363` | The reference interpreter: a primitive registry + a swap engine. |
-| `mycelium_interp::Interpreter::eval` | fn | `crates/mycelium-interp/src/lib.rs:589` | Evaluate `node` to a **representation** value by iterating step to a normal |
-| `mycelium_interp::Interpreter::eval_core` | fn | `crates/mycelium-interp/src/lib.rs:601` | Evaluate `node` to a [`CoreValue`] — a representation value **or** a data value (the r3 data |
+| `mycelium_interp::Interpreter::eval` | fn | `crates/mycelium-interp/src/lib.rs:626` | Evaluate `node` to a **representation** value by iterating step to a normal |
+| `mycelium_interp::Interpreter::eval_core` | fn | `crates/mycelium-interp/src/lib.rs:638` | Evaluate `node` to a [`CoreValue`] — a representation value **or** a data value (the r3 data |
 | `mycelium_interp::Interpreter::eval_core_parallel` | fn | `crates/mycelium-interp/src/parallel.rs:202` | Evaluate `node` to a [`CoreValue`] with the **same result** as [`Interpreter::eval_core`], |
 | `mycelium_interp::Interpreter::eval_parallel` | fn | `crates/mycelium-interp/src/parallel.rs:214` | Evaluate `node` to a representation [`crate::Value`], mirroring [`Interpreter::eval`] — see |
-| `mycelium_interp::Interpreter::new` | fn | `crates/mycelium-interp/src/lib.rs:385` | Build an interpreter with a custom prim registry and swap engine (e.g. |
-| `mycelium_interp::Interpreter::prim_names` | fn | `crates/mycelium-interp/src/lib.rs:402` | The registered primitive names (for tooling/EXPLAIN). |
-| `mycelium_interp::Interpreter::step` | fn | `crates/mycelium-interp/src/lib.rs:416` | Perform exactly one small-step reduction on `node` (the `⟶` relation above). |
-| `mycelium_interp::Interpreter::with_fuel` | fn | `crates/mycelium-interp/src/lib.rs:395` | Override the step budget. |
+| `mycelium_interp::Interpreter::new` | fn | `crates/mycelium-interp/src/lib.rs:393` | Build an interpreter with a custom prim registry and swap engine (e.g. |
+| `mycelium_interp::Interpreter::prim_names` | fn | `crates/mycelium-interp/src/lib.rs:439` | The registered primitive names (for tooling/EXPLAIN). |
+| `mycelium_interp::Interpreter::step` | fn | `crates/mycelium-interp/src/lib.rs:453` | Perform exactly one small-step reduction on `node` (the `⟶` relation above). |
+| `mycelium_interp::Interpreter::with_fuel` | fn | `crates/mycelium-interp/src/lib.rs:404` | Override the step budget. |
 | `mycelium_interp::ParallelPlan` | enum | `crates/mycelium-interp/src/parallel.rs:133` | The **reified, EXPLAIN-able** decision of what (if anything) [`Interpreter::eval_core_parallel`] |
 | `mycelium_interp::PrimRegistry` | struct | `crates/mycelium-interp/src/prims.rs:57` | The name→implementation table the interpreter dispatches `Op` nodes through. |
 | `mycelium_interp::RestartIntensity` | struct | `crates/mycelium-interp/src/supervise.rs:125` | **Max-restart-intensity** for `reclaim` supervision (RFC-0008 §4.7; Erlang/OTP, Research Record 05 |
@@ -1028,7 +1028,7 @@
 | `mycelium_lsp::parse_llm_canonical` | fn | `crates/mycelium-lsp/src/llm_canonical_parser.rs:94` | Parse a LlmCanonical source string into a normalized Core-IR S-expression string. |
 | `mycelium_lsp::present` | fn | `crates/mycelium-lsp/src/diagnostics/record.rs:151` | Present an explicit [`ReasonedError`] as a [`DiagnosticRecord`], optionally shaped by a policy. |
 | `mycelium_lsp::project` | mod | `crates/mycelium-lsp/src/lib.rs:20` | — |
-| `mycelium_lsp::project::llm_canonical` | fn | `crates/mycelium-lsp/src/project.rs:49` | Render a closed Core IR [`Node`] as the `LlmCanonical` s-expression surface (RFC-0021 §4.6). |
+| `mycelium_lsp::project::llm_canonical` | fn | `crates/mycelium-lsp/src/project.rs:80` | Render a closed Core IR [`Node`] as the `LlmCanonical` s-expression surface (RFC-0021 §4.6). |
 | `mycelium_lsp::publish_diagnostics_notification` | fn | `crates/mycelium-lsp/src/wire.rs:79` | Build the full `textDocument/publishDiagnostics` JSON-RPC **notification** (server → client) that |
 | `mycelium_lsp::publish_for_source` | fn | `crates/mycelium-lsp/src/sync.rs:83` | The full `textDocument/publishDiagnostics` notification for `uri`'s `text` (parse → check). |
 | `mycelium_lsp::read_message` | fn | `crates/mycelium-lsp/src/wire.rs:125` | Read one JSON-RPC message off `reader`, decoding the `Content-Length` header framing. |
@@ -1090,25 +1090,25 @@
 | `mycelium_mir_passes::corpus::standard_corpus` | fn | `crates/mycelium-mir-passes/src/corpus.rs:80` | A representative, **mixed** corpus of straight-line Core IR terms (named for the report). |
 | `mycelium_mir_passes::emit` | mod | `crates/mycelium-mir-passes/src/lib.rs:68` | — |
 | `mycelium_mir_passes::emit::EmitError` | enum | `crates/mycelium-mir-passes/src/emit.rs:40` | Why RC-emission could not lower a node. |
-| `mycelium_mir_passes::emit::borrow_occurrences` | fn | `crates/mycelium-mir-passes/src/emit.rs:582` | Count occurrences of `var` in **borrow positions** (direct `Op` argument / `Swap` source), |
-| `mycelium_mir_passes::emit::count_occurrences` | fn | `crates/mycelium-mir-passes/src/emit.rs:257` | Count the **free** consuming occurrences of `var` in `node`, respecting shadowing. |
-| `mycelium_mir_passes::emit::emit_elided` | fn | `crates/mycelium-mir-passes/src/emit.rs:369` | Lower a Core IR [`Node`] with MEM-4 Increment 1 **borrow elision** applied. |
+| `mycelium_mir_passes::emit::borrow_occurrences` | fn | `crates/mycelium-mir-passes/src/emit.rs:665` | Count occurrences of `var` in **borrow positions** (direct `Op` argument / `Swap` source), |
+| `mycelium_mir_passes::emit::count_occurrences` | fn | `crates/mycelium-mir-passes/src/emit.rs:266` | — |
+| `mycelium_mir_passes::emit::emit_elided` | fn | `crates/mycelium-mir-passes/src/emit.rs:383` | Lower a Core IR [`Node`] with MEM-4 Increment 1 **borrow elision** applied. |
 | `mycelium_mir_passes::emit::emit_owned` | fn | `crates/mycelium-mir-passes/src/emit.rs:99` | Lower a Core IR [`Node`] to the naive fully-owned [`RcNode`] (MEM-4·B0). |
-| `mycelium_mir_passes::emit::emit_reuse` | fn | `crates/mycelium-mir-passes/src/emit.rs:388` | Lower a Core IR [`Node`] with MEM-4 Increment 1 (**borrow elision**) **and** Increment 2 |
-| `mycelium_mir_passes::emit::is_fully_borrowable` | fn | `crates/mycelium-mir-passes/src/emit.rs:573` | Whether `var`'s binding is **fully borrowable** over `body`: it is used at least once and **every** |
-| `mycelium_mir_passes::emit::is_sole_owned_move` | fn | `crates/mycelium-mir-passes/src/emit.rs:561` | Whether `var`'s binding is a **sole-owned single move**: used **exactly once**, and that use is a |
+| `mycelium_mir_passes::emit::emit_reuse` | fn | `crates/mycelium-mir-passes/src/emit.rs:403` | Lower a Core IR [`Node`] with MEM-4 Increment 1 (**borrow elision**) **and** Increment 2 |
+| `mycelium_mir_passes::emit::is_fully_borrowable` | fn | `crates/mycelium-mir-passes/src/emit.rs:645` | Whether `var`'s binding is **fully borrowable** over `body`: it is used at least once and **every** |
+| `mycelium_mir_passes::emit::is_sole_owned_move` | fn | `crates/mycelium-mir-passes/src/emit.rs:620` | Whether `var`'s binding is a **sole-owned single move**: used **exactly once**, and that use is a |
 | `mycelium_mir_passes::eval` | mod | `crates/mycelium-mir-passes/src/lib.rs:69` | — |
-| `mycelium_mir_passes::eval::AllocId` | type | `crates/mycelium-mir-passes/src/eval.rs:35` | A distinct allocation identity (assigned in evaluation order). |
-| `mycelium_mir_passes::eval::Differential` | struct | `crates/mycelium-mir-passes/src/eval.rs:243` | The verdict of a differential run on one term (DN-33 §8.1 Q3). |
-| `mycelium_mir_passes::eval::Differential::dups_removed` | fn | `crates/mycelium-mir-passes/src/eval.rs:261` | `Dup`s removed by elision (≥ 0; the optimisation's effect — `Exact`, read off the IR). |
-| `mycelium_mir_passes::eval::Differential::is_semantics_preserving` | fn | `crates/mycelium-mir-passes/src/eval.rs:255` | The elision is **semantics-preserving** iff the reclamation multisets match. |
-| `mycelium_mir_passes::eval::EvalReport` | struct | `crates/mycelium-mir-passes/src/eval.rs:85` | The outcome of evaluating a term: its result allocation and the reclamation log (in order). |
-| `mycelium_mir_passes::eval::EvalReport::reclaimed_sorted` | fn | `crates/mycelium-mir-passes/src/eval.rs:96` | The reclamation log as a sorted multiset — the comparison key for [`differential`] |
-| `mycelium_mir_passes::eval::RcError` | enum | `crates/mycelium-mir-passes/src/eval.rs:39` | An RC-discipline violation detected by the evaluator (never-silent, G2). |
-| `mycelium_mir_passes::eval::count_dups` | fn | `crates/mycelium-mir-passes/src/eval.rs:268` | Count `Dup` nodes anywhere in an [`RcNode`]. |
-| `mycelium_mir_passes::eval::count_move_unique` | fn | `crates/mycelium-mir-passes/src/eval.rs:301` | Count [`RcNode::MoveUnique`] annotations (Increment 2 `rc == 1` reuse sites) anywhere in an |
-| `mycelium_mir_passes::eval::differential` | fn | `crates/mycelium-mir-passes/src/eval.rs:339` | Run the differential check: evaluate the owned and elided emissions of the **same** Core IR term |
-| `mycelium_mir_passes::eval::eval` | fn | `crates/mycelium-mir-passes/src/eval.rs:156` | Evaluate an [`RcNode`] in the abstract RC machine, returning its reclamation report. |
+| `mycelium_mir_passes::eval::AllocId` | type | `crates/mycelium-mir-passes/src/eval.rs:36` | A distinct allocation identity (assigned in evaluation order). |
+| `mycelium_mir_passes::eval::Differential` | struct | `crates/mycelium-mir-passes/src/eval.rs:295` | The verdict of a differential run on one term (DN-33 §8.1 Q3). |
+| `mycelium_mir_passes::eval::Differential::dups_removed` | fn | `crates/mycelium-mir-passes/src/eval.rs:313` | `Dup`s removed by elision (≥ 0; the optimisation's effect — `Exact`, read off the IR). |
+| `mycelium_mir_passes::eval::Differential::is_semantics_preserving` | fn | `crates/mycelium-mir-passes/src/eval.rs:307` | The elision is **semantics-preserving** iff the reclamation multisets match. |
+| `mycelium_mir_passes::eval::EvalReport` | struct | `crates/mycelium-mir-passes/src/eval.rs:115` | The outcome of evaluating a term: its result allocation and the reclamation log (in order). |
+| `mycelium_mir_passes::eval::EvalReport::reclaimed_sorted` | fn | `crates/mycelium-mir-passes/src/eval.rs:126` | The reclamation log as a sorted multiset — the comparison key for [`differential`] |
+| `mycelium_mir_passes::eval::RcError` | enum | `crates/mycelium-mir-passes/src/eval.rs:40` | An RC-discipline violation detected by the evaluator (never-silent, G2). |
+| `mycelium_mir_passes::eval::count_dups` | fn | `crates/mycelium-mir-passes/src/eval.rs:331` | — |
+| `mycelium_mir_passes::eval::count_move_unique` | fn | `crates/mycelium-mir-passes/src/eval.rs:375` | Count [`RcNode::MoveUnique`] annotations (Increment 2 `rc == 1` reuse sites) anywhere in an |
+| `mycelium_mir_passes::eval::differential` | fn | `crates/mycelium-mir-passes/src/eval.rs:421` | Run the differential check: evaluate the owned and elided emissions of the **same** Core IR term |
+| `mycelium_mir_passes::eval::eval` | fn | `crates/mycelium-mir-passes/src/eval.rs:191` | Evaluate an [`RcNode`] in the abstract RC machine, returning its reclamation report. |
 | `mycelium_mir_passes::rc_ir` | mod | `crates/mycelium-mir-passes/src/lib.rs:70` | — |
 | `mycelium_mir_passes::rc_ir::Mode` | enum | `crates/mycelium-mir-passes/src/rc_ir.rs:40` | The ownership mode of a binding (DN-33 §2 / §8.1 Q2). |
 | `mycelium_mir_passes::rc_ir::RcAlt` | enum | `crates/mycelium-mir-passes/src/rc_ir.rs:49` | One alternative of a flat [`RcNode::Match`] — mirrors `mycelium_core::Alt`. |

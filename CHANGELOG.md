@@ -11,6 +11,42 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### RFC-0041 W7 — Enacted-closure wave: the §9 DoD open items closed or honestly re-scoped (2026-07-03: M-979)
+
+Closes the maintainer-held open items from the post-implementation assessment. Determinations were made by
+the maintainer on a **Fable plan/QC assessment** of all twelve open items; the wave ran as four disjoint
+isolated-worktree leaves (per-leaf reviewed; the `mir-passes` leaf independently adversarially
+memory-safety-reviewed — no Critical/High). Held at `dev`.
+
+- **`--unbounded` implemented (Rust-first).** `myc run --unbounded` lifts the recursion budget via the new
+  additive `Interpreter::with_depth(u32::MAX)` with a never-silent stderr banner; the corpus/conformance
+  runner refuses `--unbounded` (test-guarded, exit 64). `myc build --unbounded` is interface-parity only
+  (frontend l1 ceilings are not CLI-tunable yet — tracked follow-on).
+- **`mir-passes` recursion guarded (guard-and-refuse).** `eval(&RcNode)`, `emit_elided`/`emit_reuse` charge
+  the shared `RecursionBudget` on every RcNode edge and refuse never-silently with `DepthExceeded`; the
+  public infallible counters are deep-stack-wrapped. No input SIGABRTs any `mycelium-mir-passes` pass. The
+  `count_occurrences` O(N²) work-step bound stays a documented DoS-only residual deferred to W2.
+- **Process-arena coverage closed for untrusted-reachable paths.** A coverage audit
+  (`docs/notes/W7-arena-coverage-audit.md`) found `ProcessArena` had zero consumers; the two
+  untrusted-reachable allocation-proportional passes (LSP `llm_canonical`, `fmt` render family via new
+  `FmtError::OutOfBudget`) now charge it and refuse with `OutOfBudget`. Unreachable/non-proportional passes
+  are explicitly exempt with the audit as the `Empirical` basis.
+- **Frozen-core hardening (test-only, no logic change).** A `Value`/`Repr` construction-gate census upgrades
+  "a deeply-nested `Value` is unbuildable" to `Empirical`, and a Box-owned spine tripwire fails if `Rc`/`Arc`
+  appears on the frozen `Node`/`Datum` spine. **Correction (VR-5):** §4.5's "`Value`/`Repr` … unbuildable"
+  overclaims for a bare `Repr` (constructible by a direct variant literal, no gate) — scoped to `Value`;
+  bare-`Repr` iterative destruction folds into the coordinated W3b.
+- **`with_depth` parity check** verifies the `DepthExceeded{u32}`↔`DepthLimit{usize}` family mapping at
+  arbitrary small budgets (ceilings {1,2,8,100}), not just the floor.
+
+**Amendments (append-only, RFC-0041 §7/§9):** no-alloc-in-Drop scoped to "no abort except genuine OOM during
+deep unwind" (#5); the §4.5 class scoped to constructible types with `Value`/`Repr` → W3b (#6); the arena to
+"every allocation-proportional path reachable from untrusted input" (#8); the AOT per-frame metric ruled a
+precision follow-on under the §5.1 family-parity contract (#3). TCO's direct-tail-only scope becomes an
+explicit M-740 acceptance criterion (#11); the W6 wide-tuple "document" resolution upheld (#12). With W7,
+every §9 DoD line is literally met or honestly re-scoped with a checked basis — **whole-RFC `Enacted` is
+claimable once W7 lands on `main`** (RFC stays `Accepted` until then). `#![forbid(unsafe_code)]` intact.
+
 ### RFC-0041 W6 — data-spine iteration: the wide-tuple asymmetry documented (RFC-0041 Phase-4 COMPLETE) (2026-07-03: M-979)
 
 The final wave, and an **assess-then-act** one (the RFC §4.7 explicitly permits "convert **or** document

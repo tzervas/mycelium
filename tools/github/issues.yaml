@@ -11526,6 +11526,25 @@ issues:
       User stories + Definition of Done: see DN-84 §2 + §11 (incl. the correction): the RFC lands
       adversarially-reviewed; converted passes pass the full differential + deep-nesting bound tests
       (never-silent budget errors preserved, G2); no new vulnerability class introduced.
+      W7 LANDED (2026-07-03, to dev — Enacted-closure wave): maintainer determinations made on a Fable
+      plan/QC assessment of all twelve open items; four disjoint isolated-worktree leaves (per-leaf
+      reviewed; the mir-passes leaf independently adversarially memory-safety-reviewed, no Critical/High).
+      Closed: --unbounded implemented Rust-first (myc run via Interpreter::with_depth(u32::MAX) + never-silent
+      banner + corpus-refusal test; myc build interface-parity only); mir-passes eval(&RcNode)/emit_elided/
+      emit_reuse guard-and-refuse + deep-stack-wrapped public counters (no input SIGABRTs any pass;
+      count_occurrences O(N^2) work-step deferred to W2); process-arena coverage (audit note
+      docs/notes/W7-arena-coverage-audit.md; LSP llm_canonical + fmt render family charge ProcessArena,
+      exempt set Empirical); Value construction-gate census (Empirical) + Box-owned spine tripwire (test-only);
+      with_depth family-parity check. Append-only §7/§9 amendments: no-alloc-in-Drop scoped to no-abort-except-
+      OOM-unwind (#5); §4.5 class scoped to constructible types, Value/Repr -> W3b + bare-Repr overclaim
+      correction (#6); arena scoped to untrusted-reachable allocation-proportional paths (#8); AOT per-frame
+      metric ruled a precision follow-on under §5.1 family-parity (#3); TCO direct-tail-only -> M-740
+      acceptance criterion (#11); W6 wide-tuple document upheld (#12). Follow-ons tracked (not silent):
+      content_hash O(depth^2) (#7), ~21 coarse-worker sites (#9, LSP hot path first), L1Value spine-tripwire
+      twin, MYC_CORPUS CI wiring, myc build --unbounded l1 threading. Every §9 DoD line now literally met or
+      honestly re-scoped with a checked basis; forbid(unsafe) intact. Whole-RFC Enacted claimable once W7
+      promotes dev->integration->main (HELD for maintainer). M-740 self-hosting unblocks on that promotion.
+      M-979 stays in-progress until W7 lands on main (Enacted).
   - id: M-970
     title: "mycelium-fmt: render_expr_canonical drops the @forage(policy) Hypha annotation"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"

@@ -2350,7 +2350,7 @@
       "crate": "mycelium-cli",
       "module": "mycelium_cli",
       "file": "crates/mycelium-cli/src/lib.rs",
-      "line": 790,
+      "line": 897,
       "summary": "The outcome of a single nodule-component parse in [`stream_parse`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2361,7 +2361,7 @@
       "crate": "mycelium-cli",
       "module": "mycelium_cli",
       "file": "crates/mycelium-cli/src/lib.rs",
-      "line": 1042,
+      "line": 1149,
       "summary": "The result of [`stream_parse`] summarised for the CLI.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2405,7 +2405,7 @@
       "crate": "mycelium-cli",
       "module": "mycelium_cli",
       "file": "crates/mycelium-cli/src/lib.rs",
-      "line": 305,
+      "line": 392,
       "summary": "`myc run` — execute a project through the reference interpreter (M-908 v0 single-nodule;",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2416,7 +2416,7 @@
       "crate": "mycelium-cli",
       "module": "mycelium_cli",
       "file": "crates/mycelium-cli/src/lib.rs",
-      "line": 1068,
+      "line": 1175,
       "summary": "Drive [`stream_parse`] and collect results into a [`StreamReport`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2427,7 +2427,7 @@
       "crate": "mycelium-cli",
       "module": "mycelium_cli",
       "file": "crates/mycelium-cli/src/lib.rs",
-      "line": 837,
+      "line": 944,
       "summary": "`myc --stream` — parse a `;`-delimited Mycelium component stream from `reader` (M-820 / DN-57).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6343,7 +6343,7 @@
       "crate": "mycelium-fmt",
       "module": "mycelium_fmt::FmtError",
       "file": "crates/mycelium-fmt/src/lib.rs",
-      "line": 190,
+      "line": 214,
       "summary": "The CLI exit code for this refusal (contract §5).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6354,7 +6354,7 @@
       "crate": "mycelium-fmt",
       "module": "mycelium_fmt",
       "file": "crates/mycelium-fmt/src/lib.rs",
-      "line": 148,
+      "line": 166,
       "summary": "A successful format result.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6365,7 +6365,7 @@
       "crate": "mycelium-fmt",
       "module": "mycelium_fmt",
       "file": "crates/mycelium-fmt/src/lib.rs",
-      "line": 126,
+      "line": 144,
       "summary": "Presentation tunables for the readable layout (M-976 / DN-82).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6387,7 +6387,7 @@
       "crate": "mycelium-fmt",
       "module": "mycelium_fmt",
       "file": "crates/mycelium-fmt/src/lib.rs",
-      "line": 106,
+      "line": 124,
       "summary": "How a right-nested same-head chain (Cons/GLCons/TCons/bool_and/cat …) lays out its per-link",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6398,7 +6398,7 @@
       "crate": "mycelium-fmt",
       "module": "mycelium_fmt",
       "file": "crates/mycelium-fmt/src/lib.rs",
-      "line": 91,
+      "line": 109,
       "summary": "The layout style a format pass emits (M-974).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6409,7 +6409,7 @@
       "crate": "mycelium-fmt",
       "module": "mycelium_fmt",
       "file": "crates/mycelium-fmt/src/lib.rs",
-      "line": 459,
+      "line": 529,
       "summary": "Flatten `src` into the single-line human↔stream form (M-819; DN-57 §2).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6420,7 +6420,7 @@
       "crate": "mycelium-fmt",
       "module": "mycelium_fmt",
       "file": "crates/mycelium-fmt/src/lib.rs",
-      "line": 235,
+      "line": 270,
       "summary": "Format `src` into its canonical form.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6431,7 +6431,7 @@
       "crate": "mycelium-fmt",
       "module": "mycelium_fmt",
       "file": "crates/mycelium-fmt/src/lib.rs",
-      "line": 255,
+      "line": 290,
       "summary": "Format `src` into its **human-readable** canonical form (M-974/DN-82): the inverse posture of",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6442,7 +6442,7 @@
       "crate": "mycelium-fmt",
       "module": "mycelium_fmt",
       "file": "crates/mycelium-fmt/src/lib.rs",
-      "line": 268,
+      "line": 303,
       "summary": "Format `src` into its human-readable canonical form with an explicit [`LayoutCfg`] (M-976/DN-82):",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6453,7 +6453,7 @@
       "crate": "mycelium-fmt",
       "module": "mycelium_fmt",
       "file": "crates/mycelium-fmt/src/lib.rs",
-      "line": 282,
+      "line": 317,
       "summary": "Shared implementation of [`format_source`] (Compact) and [`format_source_readable`] (Readable).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6464,7 +6464,7 @@
       "crate": "mycelium-fmt",
       "module": "mycelium_fmt",
       "file": "crates/mycelium-fmt/src/lib.rs",
-      "line": 297,
+      "line": 337,
       "summary": "Shared implementation with an explicit [`LayoutCfg`] (M-976).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6596,7 +6596,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::Interpreter",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 589,
+      "line": 626,
       "summary": "Evaluate `node` to a **representation** value by iterating step to a normal",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6607,7 +6607,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::Interpreter",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 601,
+      "line": 638,
       "summary": "Evaluate `node` to a [`CoreValue`] — a representation value **or** a data value (the r3 data",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6640,7 +6640,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::Interpreter",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 385,
+      "line": 393,
       "summary": "Build an interpreter with a custom prim registry and swap engine (e.g.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6651,7 +6651,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::Interpreter",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 402,
+      "line": 439,
       "summary": "The registered primitive names (for tooling/EXPLAIN).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6662,7 +6662,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::Interpreter",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 416,
+      "line": 453,
       "summary": "Perform exactly one small-step reduction on `node` (the `⟶` relation above).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6673,7 +6673,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::Interpreter",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 395,
+      "line": 404,
       "summary": "Override the step budget.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -10468,7 +10468,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp::project",
       "file": "crates/mycelium-lsp/src/project.rs",
-      "line": 49,
+      "line": 80,
       "summary": "Render a closed Core IR [`Node`] as the `LlmCanonical` s-expression surface (RFC-0021 §4.6).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11095,7 +11095,7 @@
       "crate": "mycelium-mir-passes",
       "module": "mycelium_mir_passes::emit",
       "file": "crates/mycelium-mir-passes/src/emit.rs",
-      "line": 582,
+      "line": 665,
       "summary": "Count occurrences of `var` in **borrow positions** (direct `Op` argument / `Swap` source),",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11106,8 +11106,8 @@
       "crate": "mycelium-mir-passes",
       "module": "mycelium_mir_passes::emit",
       "file": "crates/mycelium-mir-passes/src/emit.rs",
-      "line": 257,
-      "summary": "Count the **free** consuming occurrences of `var` in `node`, respecting shadowing.",
+      "line": 266,
+      "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -11117,7 +11117,7 @@
       "crate": "mycelium-mir-passes",
       "module": "mycelium_mir_passes::emit",
       "file": "crates/mycelium-mir-passes/src/emit.rs",
-      "line": 369,
+      "line": 383,
       "summary": "Lower a Core IR [`Node`] with MEM-4 Increment 1 **borrow elision** applied.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11139,7 +11139,7 @@
       "crate": "mycelium-mir-passes",
       "module": "mycelium_mir_passes::emit",
       "file": "crates/mycelium-mir-passes/src/emit.rs",
-      "line": 388,
+      "line": 403,
       "summary": "Lower a Core IR [`Node`] with MEM-4 Increment 1 (**borrow elision**) **and** Increment 2",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11150,7 +11150,7 @@
       "crate": "mycelium-mir-passes",
       "module": "mycelium_mir_passes::emit",
       "file": "crates/mycelium-mir-passes/src/emit.rs",
-      "line": 573,
+      "line": 645,
       "summary": "Whether `var`'s binding is **fully borrowable** over `body`: it is used at least once and **every**",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11161,7 +11161,7 @@
       "crate": "mycelium-mir-passes",
       "module": "mycelium_mir_passes::emit",
       "file": "crates/mycelium-mir-passes/src/emit.rs",
-      "line": 561,
+      "line": 620,
       "summary": "Whether `var`'s binding is a **sole-owned single move**: used **exactly once**, and that use is a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11183,7 +11183,7 @@
       "crate": "mycelium-mir-passes",
       "module": "mycelium_mir_passes::eval",
       "file": "crates/mycelium-mir-passes/src/eval.rs",
-      "line": 35,
+      "line": 36,
       "summary": "A distinct allocation identity (assigned in evaluation order).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11194,7 +11194,7 @@
       "crate": "mycelium-mir-passes",
       "module": "mycelium_mir_passes::eval",
       "file": "crates/mycelium-mir-passes/src/eval.rs",
-      "line": 243,
+      "line": 295,
       "summary": "The verdict of a differential run on one term (DN-33 §8.1 Q3).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11205,7 +11205,7 @@
       "crate": "mycelium-mir-passes",
       "module": "mycelium_mir_passes::eval::Differential",
       "file": "crates/mycelium-mir-passes/src/eval.rs",
-      "line": 261,
+      "line": 313,
       "summary": "`Dup`s removed by elision (≥ 0; the optimisation's effect — `Exact`, read off the IR).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11216,7 +11216,7 @@
       "crate": "mycelium-mir-passes",
       "module": "mycelium_mir_passes::eval::Differential",
       "file": "crates/mycelium-mir-passes/src/eval.rs",
-      "line": 255,
+      "line": 307,
       "summary": "The elision is **semantics-preserving** iff the reclamation multisets match.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11227,7 +11227,7 @@
       "crate": "mycelium-mir-passes",
       "module": "mycelium_mir_passes::eval",
       "file": "crates/mycelium-mir-passes/src/eval.rs",
-      "line": 85,
+      "line": 115,
       "summary": "The outcome of evaluating a term: its result allocation and the reclamation log (in order).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11238,7 +11238,7 @@
       "crate": "mycelium-mir-passes",
       "module": "mycelium_mir_passes::eval::EvalReport",
       "file": "crates/mycelium-mir-passes/src/eval.rs",
-      "line": 96,
+      "line": 126,
       "summary": "The reclamation log as a sorted multiset — the comparison key for [`differential`]",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11249,7 +11249,7 @@
       "crate": "mycelium-mir-passes",
       "module": "mycelium_mir_passes::eval",
       "file": "crates/mycelium-mir-passes/src/eval.rs",
-      "line": 39,
+      "line": 40,
       "summary": "An RC-discipline violation detected by the evaluator (never-silent, G2).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11260,8 +11260,8 @@
       "crate": "mycelium-mir-passes",
       "module": "mycelium_mir_passes::eval",
       "file": "crates/mycelium-mir-passes/src/eval.rs",
-      "line": 268,
-      "summary": "Count `Dup` nodes anywhere in an [`RcNode`].",
+      "line": 331,
+      "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -11271,7 +11271,7 @@
       "crate": "mycelium-mir-passes",
       "module": "mycelium_mir_passes::eval",
       "file": "crates/mycelium-mir-passes/src/eval.rs",
-      "line": 301,
+      "line": 375,
       "summary": "Count [`RcNode::MoveUnique`] annotations (Increment 2 `rc == 1` reuse sites) anywhere in an",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11282,7 +11282,7 @@
       "crate": "mycelium-mir-passes",
       "module": "mycelium_mir_passes::eval",
       "file": "crates/mycelium-mir-passes/src/eval.rs",
-      "line": 339,
+      "line": 421,
       "summary": "Run the differential check: evaluate the owned and elided emissions of the **same** Core IR term",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11293,7 +11293,7 @@
       "crate": "mycelium-mir-passes",
       "module": "mycelium_mir_passes::eval",
       "file": "crates/mycelium-mir-passes/src/eval.rs",
-      "line": 156,
+      "line": 191,
       "summary": "Evaluate an [`RcNode`] in the abstract RC machine, returning its reclamation report.",
       "guarantee_tag": null,
       "corpus_refs": []
