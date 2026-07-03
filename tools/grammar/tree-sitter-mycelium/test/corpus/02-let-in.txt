@@ -1,0 +1,31 @@
+============================================================
+02 let in
+============================================================
+
+nodule signals;
+
+fn flip(x: Binary{8}) => Binary{8} =
+    let y = not(x) in y;
+
+------------------------------------------------------------
+
+(source_file
+  (nodule_header
+    name: (identifier))
+  (fn_item
+    name: (identifier)
+    (params
+      (param
+        name: (identifier)
+        type: (type_ref
+          (repr_type
+            (int_literal)))))
+    return_type: (type_ref
+      (repr_type
+        (int_literal)))
+    body: (let_expr
+      name: (identifier)
+      value: (call_expr
+        function: (identifier)
+        (identifier))
+      body: (identifier))))

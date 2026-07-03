@@ -1,0 +1,59 @@
+{
+  "name": "mycelium-language",
+  "displayName": "Mycelium Language",
+  "description": "TextMate syntax highlighting for the Mycelium language (.myc files).",
+  "version": "0.1.0",
+  "publisher": "tzervas",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tzervas/mycelium"
+  },
+  "bugs": {
+    "url": "https://github.com/tzervas/mycelium/issues"
+  },
+  "homepage": "https://github.com/tzervas/mycelium#readme",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "keywords": [
+    "mycelium",
+    "myc",
+    "syntax",
+    "highlighting"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "mycelium",
+        "extensions": [
+          ".myc"
+        ],
+        "aliases": [
+          "Mycelium",
+          "mycelium"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "mycelium",
+        "scopeName": "source.mycelium",
+        "path": "./syntaxes/mycelium.tmLanguage.json"
+      }
+    ]
+  },
+  "scripts": {
+    "sync-grammar": "node scripts/sync-grammar.js",
+    "test": "npx vscode-tmgrammar-test -g syntaxes/mycelium.tmLanguage.json \"tests/**/*.myc\"",
+    "package": "npm run sync-grammar && npx @vscode/vsce package"
+  },
+  "devDependencies": {
+    "@vscode/vsce": "^2.32.0",
+    "vscode-tmgrammar-test": "^0.1.3"
+  }
+}

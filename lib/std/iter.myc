@@ -51,7 +51,11 @@ fn map[A, B](xs: List[A], f: A => B) => List[B] =
 // Declared; three-way agreement Empirical (M-715: the recursive re-pass of `pred` is threaded as the
 // same static specialization).
 fn filter[A](xs: List[A], pred: A => Bool) => List[A] =
-  match xs { Nil => Nil, Cons(h, rest) => match pred(h) { True => Cons(h, filter(rest, pred)), False => filter(rest, pred) } };
+  match xs {
+    Nil => Nil,
+    Cons(h, rest) =>
+      match pred(h) { True => Cons(h, filter(rest, pred)), False => filter(rest, pred) }
+  };
 
 // ── foldl ─────────────────────────────────────────────────────────────────────────────────────────
 //
@@ -85,7 +89,10 @@ fn length[A](xs: List[A]) => Binary{8} =
 // Three-way agreement Empirical (M-715: the recursive re-pass of `pred` is threaded as the same
 // static specialization). `pred` is a single named top-level fn (RFC-0024 §4; closures deferred, M-704).
 fn any[A](xs: List[A], pred: A => Bool) => Bool =
-  match xs { Nil => False, Cons(h, rest) => match pred(h) { True => True, False => any(rest, pred) } };
+  match xs {
+    Nil => False,
+    Cons(h, rest) => match pred(h) { True => True, False => any(rest, pred) }
+  };
 
 // all: True iff every element satisfies `pred`. Short-circuits at the first False (O(n) worst-case,
 // Declared). Never-silent (G2): empty → True (vacuous universal quantification — standard convention,
@@ -93,7 +100,10 @@ fn any[A](xs: List[A], pred: A => Bool) => Bool =
 // Three-way agreement Empirical (M-715: the recursive re-pass of `pred` is threaded as the same
 // static specialization). `pred` is a single named top-level fn (RFC-0024 §4; closures deferred, M-704).
 fn all[A](xs: List[A], pred: A => Bool) => Bool =
-  match xs { Nil => True, Cons(h, rest) => match pred(h) { True => all(rest, pred), False => False } };
+  match xs {
+    Nil => True,
+    Cons(h, rest) => match pred(h) { True => all(rest, pred), False => False }
+  };
 
 // ── find ──────────────────────────────────────────────────────────────────────────────────────────
 //
@@ -102,4 +112,7 @@ fn all[A](xs: List[A], pred: A => Bool) => Bool =
 // Declared; three-way agreement Empirical (M-715: the recursive re-pass of `pred` is threaded as the
 // same static specialization).
 fn find[A](xs: List[A], pred: A => Bool) => Option[A] =
-  match xs { Nil => None, Cons(h, rest) => match pred(h) { True => Some(h), False => find(rest, pred) } };
+  match xs {
+    Nil => None,
+    Cons(h, rest) => match pred(h) { True => Some(h), False => find(rest, pred) }
+  };

@@ -1,0 +1,40 @@
+{
+  "name": "tree-sitter-mycelium",
+  "version": "0.1.0",
+  "description": "Mycelium structural tree-sitter grammar (generated from tools/grammar/generate.py; RFC-0026 §3.4 / M-697)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tzervas/mycelium",
+    "directory": "tools/grammar/tree-sitter-mycelium"
+  },
+  "homepage": "https://github.com/tzervas/mycelium/tree/main/tools/grammar/tree-sitter-mycelium",
+  "license": "MIT",
+  "author": "Tyler Zervas",
+  "keywords": [
+    "parser",
+    "lexer",
+    "tree-sitter",
+    "mycelium"
+  ],
+  "files": [
+    "grammar.js",
+    "tree-sitter.json",
+    "src/**",
+    "queries/**"
+  ],
+  "devDependencies": {
+    "tree-sitter-cli": "^0.25.0"
+  },
+  "scripts": {
+    "generate": "tree-sitter generate",
+    "test": "tree-sitter test",
+    "parse": "tree-sitter parse"
+  },
+  "tree-sitter": [
+    {
+      "scope": "source.mycelium",
+      "file-types": ["myc"],
+      "injection-regex": "^(mycelium|myc)$"
+    }
+  ]
+}

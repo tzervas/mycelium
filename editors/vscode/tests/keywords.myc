@@ -1,0 +1,23 @@
+// SYNTAX TEST "source.mycelium" "keywords, types, strengths, attributes, deprecated arrow"
+
+  fn
+//^^ keyword.control.mycelium
+
+  let
+//^^^ keyword.control.mycelium
+
+  nodule
+//^^^^^^ keyword.control.mycelium
+
+  Binary bin
+//^^^^^^ storage.type.mycelium
+//       ^^^ storage.type.mycelium
+
+  Exact
+//^^^^^ storage.modifier.guarantee.mycelium
+
+  @tier
+//^^^^^ entity.other.attribute-name.mycelium
+
+  x -> y
+//  ^^ invalid.deprecated.return-arrow.mycelium

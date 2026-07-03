@@ -11,6 +11,92 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added / Changed / Fixed (2026-07-02: `grm`/`frz` — lowering-surface close-out, mycfmt readable, transparency fixes)
+
+The `grm` (grammar/lowering) and `frz` (kernel-freeze) lanes' Phase-I H2 kernel work. This closes
+the freeze's "lowering surface" condition; the kernel-freeze declaration (M-969) remains the
+strictly-last maintainer/orchestrator act. All guarantee claims stay at their checked strength
+(VR-5). Basis: PRs #1038, #1040, #1042/#1045 (reject-ledger reconciles), #1043, #1044, #1046, #1047.
+
+- **`mycfmt --readable` human-multiline style** (`crates/mycelium-fmt`, M-974/#1038). A new
+  `Style::{Compact, Readable}` + `format_source_readable`/`format_source_styled` render large
+  segments across lines (breaks after commas) at an 88-col target. **Presentation-only and proven
+  behavior-neutral** — 14/17 `lib/std` nodules reformatted with green `include_str!` round-trips.
+  **DN-82** scopes the readable canonical to `lib/std` only (not a global flip). Guarantee: the
+  behavior-neutrality is **Empirical** (differential + three-way).
+- **`Fuse` prelude and semilattice-law checker** (`crates/mycelium-l1/src/fuse.rs`, M-965/#1040).
+  A built-in `Fuse` trait plus a definition-time checker that refuses a `join` violating
+  idempotence / commutativity / associativity over a finite enumerable domain, with a concrete
+  counterexample (never-silent, G2). **Empirical** (exhaustive over the domain); a non-enumerable
+  domain is *skipped*, never silently assumed lawful (VR-5).
+- **`via` delegation — deterministic, `EXPLAIN`-able ordering** (`crates/mycelium-l1`, M-966/#1044).
+  Two `via` clauses claiming one trait are refused never-silently naming both candidate field
+  indices; `Env::via_provenance` records the chosen delegate. Also fixed a latent bug: parametric
+  `via` delegation never type-checked (the abstract method signature was not argument-substituted).
+- **Per-instantiation guarantee-tags through monomorphization** (`crates/mycelium-l1/src/mono.rs`,
+  M-967/#1046, executes M-844). **Fixes a silent-loss VR-5 bug:** mono re-emitted specialized
+  signatures via `ty_to_ref` → `TypeRef::unguaranteed`, silently dropping each source `@ g` tag on
+  every monomorphized param/return/`Let`/`Ascribe`. Now every reconstruction site threads the
+  original declaration's guarantee — no tag lost, merged, or upgraded across instantiation.
+- **LSP semantic-token classification completed** (`crates/mycelium-lsp`, M-975/#1043). `classify()`
+  is now **exhaustive over `Tok`** (a future unclassified token fails to compile, not silently
+  drops); string/float/bytes literals and the `Seq`/`Bytes`/`Float` + M-915 short repr keywords
+  classify correctly.
+- **DN-54 §10 attachment model — Accepted (Model A) and enacted** (DN-81, M-973). Sibling-item
+  injection, wired through the M-919 affine tracker (`derive_site_double_consume` red-then-green).
+- **Grammar stability close-out** (M-924/#1047). The ebnf gains the first-class function-type
+  `A => B` production (matching `parse_type_ref_guarded`) with a positive conformance fixture;
+  grammar artifacts re-verified in sync (44/44 zero-ERROR parse). **DN-83** *proposes* an
+  RFC/ADR-gated surface-grammar stability window (status Proposed — maintainer decision pending).
+- **Reject-ledger kept exhaustive** (DN-80, M-959 guard). Re-audited through the wave — parse
+  corpus 30 fixtures, check-level 217 sites across 41 families (fixture 31, family-8 lower/derive,
+  family-40 `Fuse` law, family-6 `via`) — and the regression guard **caught a real compile break**
+  (an M-965×M-973 semantically-conflicting merge that left `Env{}` missing a field) plus every
+  unledgered reject. All `Empirical` (mechanical inventory).
+
+> Also landed ad-hoc during the wave (traceable via the DN provenance above; formal `issues.yaml`
+> registration is a lightweight follow-up): M-972/M-972b (DN-81 dossier + DN-81 correction),
+> M-973 (attachment enact), M-974 (mycfmt readable), M-975 (LSP classify).
+
+### Added (2026-07-02: M-697 — language identity and full-surface syntax highlighting for `.myc`)
+
+Brought the editor grammars current with the landed corpus and packaged Mycelium for
+identification and highlighting across editors and forges. The keyword set stays **lexer-derived**
+(the `just drift-check` gate is unchanged); the grammars grew from a reserved-word scaffold to the
+full landed surface. All outward-facing publishing is **staged, not fired** — the artifacts plus a
+ready-to-file runbook are in-repo; the maintainer fires the external submissions.
+Basis: PRs #1034, #1035, #1036, #1037, #1039.
+
+- **Editor grammars v2** (`tools/grammar/`, PR #1034). `generate.py` now emits full-surface
+  tmLanguage + a **structural** tree-sitter grammar covering strings and the minimal escape set
+  (M-910), floats (ADR-040/M-897), `0b`/`0t`/`0x` literals, the RFC-0025/M-745 operator set, the
+  M-915 short repr aliases (`bin`/`tern`/`emb`/`hvec`), ambient reprs, tuples, generics `[…]`,
+  guarantee annotations `T @ Strength`, function types `A => B`, effects `!{…}`, and every landed
+  declaration/expression form. The retired `<+0->` compact-ternary pattern is removed (RFC-0037 D4);
+  the retired `->` renders `invalid.deprecated`. Bucket correction: `Float` and the short aliases
+  bucket as `type`. Guarantee: keyword sets mechanical; structural productions **Empirical** —
+  verified by parsing the full conformance accept corpus (25) plus `lib/std` (18) with zero ERROR
+  nodes, not proven equivalent to the EBNF (which stays the accept/reject oracle); two Declared
+  permissive deviations documented in-file.
+- **VS Code / Cursor extension** (`editors/vscode/`, PR #1035) — `tzervas.mycelium-language`, language
+  id `mycelium`, `scopeName: source.mycelium`, extension `.myc`; committed `.vsix`, a
+  `language-configuration.json`, and `vscode-tmgrammar-test` scope tests (2/2 green). Packaging is
+  verified; live in-editor rendering is Empirical-not-UI-tested (no GUI editor in the build env).
+- **Publishable tree-sitter package** (`tools/grammar/tree-sitter-mycelium/`, PR #1036) — committed
+  generated `src/`, a `tree-sitter.json`, and `test/corpus/` (12/12 `tree-sitter test` green;
+  42/42 parse sweep). This is the asset Linguist and Neovim/Zed/Helix/Emacs consume.
+- **Distribution runbook, Rouge lexer, and `.gitattributes`** (PR #1039). `tools/grammar/DISTRIBUTION.md`
+  is the ready-to-file runbook (Open VSX as the chosen Azure-free registry; the MS Marketplace as
+  optional; the `github-linguist/linguist` `languages.yml` entry with the collision check — `.myc`
+  is **FREE**, verified 2026-07-02; per-editor tree-sitter setup). A tested Rouge lexer draft
+  (`tools/grammar/rouge/`, exercised against `rouge` 5.0.0 over 48 real `.myc` files) stages the
+  GitLab path. The root `.gitattributes` classifies generated/vendored/binary artifacts and,
+  per the maintainer's honesty constraint, **does not** map `.myc` to any existing language —
+  "Mycelium" in the GitHub bar comes only from the gated Linguist submission.
+- **Drift-gate the downstream copy** (PR #1037 + the integration wiring). `generate.py` emits the
+  extension's `syntaxes/` tmLanguage as a drift-checked downstream copy (a missing/stale copy fails
+  the gate — G2); `.codespellrc` allowlists `rouge`/`notin`; `generate.py` gains its exec bit.
+
 ### Fixed (2026-07-02: M-971 — DN-68 acyclic-deps regression, 12 to 0 violations; dev to integration close-out)
 
 The Phase-I H1 wave (below) regressed the DN-68 acyclic-deps invariant to 12 violations; this fix

@@ -36,16 +36,26 @@ fn reverse(o: Ordering) => Ordering =
 
 // bool_eq: structural equality on Bool, match-defined (no kernel eq prim needed). Total (Exact).
 fn bool_eq(a: Bool, b: Bool) => Bool =
-  match a { True => match b { True => True, False => False }, False => match b { True => False, False => True } };
+  match a {
+    True => match b { True => True, False => False },
+    False => match b { True => False, False => True }
+  };
 
 // bool_cmp: the canonical total order on Bool with False < True. Total over Bool x Bool (Exact).
 fn bool_cmp(a: Bool, b: Bool) => Ordering =
-  match a { False => match b { False => Eq, True => Lt }, True => match b { False => Gt, True => Eq } };
+  match a {
+    False => match b { False => Eq, True => Lt },
+    True => match b { False => Gt, True => Eq }
+  };
 
 // ord_eq: structural equality on Ordering itself (a finite enum). Total (Exact). Useful for asserting
 // a comparator's result without re-matching at every call site.
 fn ord_eq(a: Ordering, b: Ordering) => Bool =
-  match a { Lt => match b { Lt => True, Eq => False, Gt => False }, Eq => match b { Lt => False, Eq => True, Gt => False }, Gt => match b { Lt => False, Eq => False, Gt => True } };
+  match a {
+    Lt => match b { Lt => True, Eq => False, Gt => False },
+    Eq => match b { Lt => False, Eq => True, Gt => False },
+    Gt => match b { Lt => False, Eq => False, Gt => True }
+  };
 
 // ── Width-generic comparison helpers over Binary{N} (M-718; supersedes the Binary{8} interim) ──────
 //
