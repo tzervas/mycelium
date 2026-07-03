@@ -280,8 +280,41 @@ all six §5 open questions (§8), with the two architecturally-significant choic
 for M-740/M-742 rather than pre-decided. Status stays **Draft** → becomes **Resolved** with M-741
 (house rule #3). M-739 is design-only: no code changed.
 
+## 9. Flag resolutions (maintainer-decided, 2026-07-03)
+
+The two architecturally-significant `[FLAG]`s raised in §7.3 / §8 are now **resolved by the
+maintainer** (2026-07-03). Recording append-only; the plan above stands, with the flagged branches
+fixed as below.
+
+1. **Stage-5 packaging (§7.3 FLAG) → the `compiler` *phylum*, with the semantic SCC as one nodule.**
+   `lib/compiler/` is a **phylum** (RFC-0006 §4.3): the semantic core SCC
+   (`checkty·elab·eval·mono·fuse·decision·usefulness·grade·affine`) is **one nodule** within it (so
+   its functions form a single nodule-wide `FixGroup` — mutual recursion for free, DN-14 row 3), and
+   the leaf stages (`token·lex·nodule·ast·parse·ambient·totality·substrate`) are **sibling nodules**
+   in the same phylum, exporting across nodule boundaries with `pub` + cross-nodule `use` (DN-14
+   row 10, `present`). This takes the phylum alternative of the flag (cleaner audit surface + explicit
+   `pub` boundaries) **and** keeps the SCC monolithic-as-a-nodule (the mechanism that makes the
+   mutual recursion expressible today). Chosen over the single-nodule-for-everything form.
+2. **Stage-6 bootstrap driver (§8 Q5 FLAG) → validate on the interpreted `myc` first, then on the
+   AOT-compiled `myc`.** The self-hosted frontend is proven on the **interpreted** `myc` runtime
+   first (the trusted reference base — Rust-host ≡ self-host L0-output differential over the corpus,
+   `Empirical`); **once that is validated**, the same `.myc` is **AOT-compiled** and the AOT build is
+   validated in turn. This deliberately exercises **both runtimes on the identical `.myc` source** and
+   asserts they agree — the stage-2 bootstrap three-way (Rust-host ≡ self-host-interpreted ≡
+   self-host-AOT) — so the port proves out the interpreter and the AOT path together, not just one.
+   The interpreted pass is the gate; the AOT pass is the follow-on confirmation, never skipped (G2).
+
+These resolutions **do not** move DN-26's status (still **Draft** → Resolved with M-741) and add no
+code; they only fix the two branch points so the M-740 wave can proceed without re-deciding mid-port.
+
 ## Meta — changelog
 
+- **2026-07-03 — §9 added: the two §7.3/§8 `[FLAG]`s resolved by the maintainer (append-only, no status
+  move).** Stage-5 packaging → the **`compiler` phylum with the semantic SCC as one nodule** (leaves as
+  sibling nodules; chosen over single-nodule-for-everything). Stage-6 bootstrap → **validate on the
+  interpreted `myc` first, then AOT-compile and validate that** — both runtimes run the identical
+  `.myc` and must agree (stage-2 three-way). Unblocks the M-740 wave without mid-port re-deciding.
+  Status stays **Draft**. (M-739/E18-1.)
 - **2026-07-03 — §7 + §8 added: concrete port order (M-739; append-only, no status move).** Filled out
   §4's advisory sketch with a **grounded** staged port order derived from the measured
   `crates/mycelium-l1/src/` dependency graph. Key finding: `checkty`/`elab`/`eval`/`mono`/`fuse`/
