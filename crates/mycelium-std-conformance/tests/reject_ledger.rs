@@ -142,15 +142,16 @@ fn checkty_direct_checkerror_construction_count_matches_the_ledger() {
     let direct_at = count_occurrences(&src, "CheckError::at(");
     let total = direct_new + direct_at;
     assert_eq!(
-        total, 102,
+        total, 103,
         "checkty.rs direct `CheckError::new(`/`CheckError::at(` construction sites: found {total}, \
-         DN-80 §4 audited 102 (dev 7b933a3, 2026-07-02; +6 vs the original ca42fd2 audit — the \
+         DN-80 §4 audited 103 (dev 7b933a3, 2026-07-02; +6 vs the original ca42fd2 audit — the \
          M-919/M-973 lower/derive extension-checker work, family 8; +2 — M-965's two `Fuse` \
          built-in-prelude redeclaration refusals, family 5; +1 — M-966's `via`-delegation \
-         ambiguity refusal, family 6) — a reject path was added or \
-         removed without updating DN-80 §4's construct-family table and this pinned count (one of \
-         the 102 is the shared `Cx::err` helper's own body at line ~3000 — plumbing, not a distinct \
-         construct; see DN-80 §4's audited-totals note)"
+         ambiguity refusal, family 6; +1 — RFC-0041 W1 (M-979, 2026-07-03) the recursion-depth \
+         `BudgetError` → `CheckError` refusal mapping, family: resource-exhaustion) — a reject path \
+         was added or removed without updating DN-80 §4's construct-family table and this pinned \
+         count (one of these is the shared `Cx::err` helper's own body at line ~3000 — plumbing, not \
+         a distinct construct; see DN-80 §4's audited-totals note)"
     );
 }
 
@@ -176,10 +177,11 @@ fn checkty_self_err_call_count_matches_the_ledger() {
     let src = read("crates/mycelium-l1/src/checkty.rs");
     let total = count_occurrences(&src, "self.err(");
     assert_eq!(
-        total, 110,
-        "checkty.rs `self.err(` call sites: found {total}, DN-80 §4 audited 110 (dev ca42fd2, \
-         2026-07-02) — a reject path was added or removed without updating DN-80 §4's \
-         construct-family table and this pinned count"
+        total, 111,
+        "checkty.rs `self.err(` call sites: found {total}, DN-80 §4 audited 111 (dev ca42fd2, \
+         2026-07-02; +1 — RFC-0041 W1 (M-979, 2026-07-03) recursion-depth `BudgetError` refusal) — \
+         a reject path was added or removed without updating DN-80 §4's construct-family table and \
+         this pinned count"
     );
 }
 
@@ -189,10 +191,11 @@ fn grade_checkerror_construction_count_matches_the_ledger() {
     let total =
         count_occurrences(&src, "CheckError::at(") + count_occurrences(&src, "CheckError::new(");
     assert_eq!(
-        total, 2,
+        total, 3,
         "grade.rs `CheckError::at(`/`CheckError::new(` construction sites: found {total}, \
-         DN-80 §4 audited 2 (dev ca42fd2, 2026-07-02) — the guarantee/grade-lattice reject family \
-         (DN-80 §4 row 39) drifted; update the ledger and this pinned count together"
+         DN-80 §4 audited 3 (dev ca42fd2, 2026-07-02; +1 — RFC-0041 W1 (M-979, 2026-07-03) the \
+         grade-pass recursion-depth `BudgetError` → `CheckError` refusal) — the guarantee/grade-lattice \
+         reject family (DN-80 §4 row 39) drifted; update the ledger and this pinned count together"
     );
 }
 

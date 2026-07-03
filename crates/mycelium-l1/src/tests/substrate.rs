@@ -279,6 +279,34 @@ fn a_never_consumed_parameter_is_released_at_scope_exit_and_the_release_is_recor
 }
 
 #[test]
+fn a_tail_call_from_a_fn_with_a_substrate_param_is_not_tco_and_still_releases() {
+    // RFC-0041 §4.6 (M-979) TCO precondition witness. A live `Substrate` parameter is PENDING
+    // post-work (its scope-exit release runs *after* the body), so a tail call from such a fn must
+    // NOT reuse its frame — else the release (+ `ReleaseEvent`) is silently skipped, a handle leak.
+    // `f` takes a `Substrate` and its body is a direct TAIL call to `g`; because `f` has a substrate
+    // param it is not TCO-eligible, its frame is kept, and the abandoned `s` is still released and
+    // recorded. (If the precondition ignored substrate params, `f`'s frame would be elided at the
+    // `g()` tail call and `s` would leak → zero release events.)
+    let env = env("nodule d;\ntype Unit = Unit;\nfn g() => Unit = Unit;\n\
+         fn f(s: Substrate{Sock}) => Unit = g();");
+    let h = a_handle("Sock");
+    let ev = Evaluator::new(&env);
+    ev.call("f", vec![L1Value::Substrate(h.clone())])
+        .expect("f evaluates");
+    assert!(
+        h.is_consumed(),
+        "the abandoned substrate param is released despite the tail call to g"
+    );
+    let events = ev.release_events();
+    assert_eq!(
+        events.len(),
+        1,
+        "the ReleaseEvent still fires — TCO must not elide a substrate-param frame: {events:?}"
+    );
+    assert_eq!(events[0].id, h.id());
+}
+
+#[test]
 fn a_let_bound_substrate_abandoned_before_the_body_ends_is_released_at_its_own_scope_exit() {
     // `let t = s in True` — `t` is bound, never used, and its own `let` scope ends before `f`
     // returns. The release must fire at `t`'s own scope exit (inside the `let`), not merely at the
@@ -329,7 +357,7 @@ fn a_substrate_nested_in_a_returned_constructor_is_not_released_it_escapes_deepl
     let out = ev
         .call("wrap", vec![L1Value::Substrate(h.clone())])
         .expect("wrap evaluates");
-    let L1Value::Data { fields, .. } = out else {
+    let L1Value::Data { ref fields, .. } = out else {
         panic!("expected a Data value");
     };
     let inner = fields[0].as_substrate().expect("field is the Substrate");

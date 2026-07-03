@@ -75,6 +75,13 @@ mycelium-sched = { path = "../mycelium-sched" }
 # `mycelium-std-runtime` normal dependency entirely — `mycelium-mlir` no longer depends on
 # `mycelium-std-runtime` at all (normal or dev).
 mycelium-rt-abi = { path = "../mycelium-rt-abi" }
+# RFC-0041 W3½ (M-979): the AOT env-machine's control-stack depth ceiling + host-stack guard are now
+# the *shared* never-silent recursion budget/guard leaf every Mycelium machine charges against — the
+# ad-hoc `stack.len() >= max_depth` ceiling is replaced by `RecursionBudget::try_enter`, and the entry
+# is wrapped in `ensure_sufficient_stack`. `mycelium-workstack` is stratum 1 (below `mycelium-mlir` at
+# 4) and already a transitive dep via `mycelium-mir-passes`, so this direct edge is downward — no
+# deps-strata change (mlir's stratum = 1 + max(deps) is unchanged, mir-passes already contributing 2).
+mycelium-workstack = { path = "../mycelium-workstack" }
 
 [dev-dependencies]
 # M-961: property tests for the inject-gate verify bounds (house rule: a property test per bound).

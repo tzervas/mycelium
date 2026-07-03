@@ -1152,8 +1152,14 @@ impl Elab<'_> {
             Expr::Lit(Literal::List(elems)) => {
                 let mut vals = Vec::with_capacity(elems.len());
                 for el in elems {
-                    match self.expr(stack, scope, el)? {
-                        Node::Const(v) => vals.push(v),
+                    // `mycelium_core::Node` now has a manual `Drop` (RFC-0041 §4.5 iterative
+                    // destruction), so a by-value field move-out of a `Node` is E0509 — bind, match
+                    // by-ref, and `clone` the constant `Value` (shallow by construction). This is the
+                    // W3↔W5 E0509 coupling the RFC flags; W5's eval rewrite may prefer a
+                    // `mem::replace` here to avoid the clone.
+                    let reduced = self.expr(stack, scope, el)?;
+                    match &reduced {
+                        Node::Const(v) => vals.push(v.clone()),
                         _ => return residual(
                             site,
                             "a list literal element did not reduce to a constant — the v0 `Seq` \
@@ -1577,7 +1583,15 @@ impl Elab<'_> {
         // 4. Compile (and re-verify Fail-free) the Maranget decision tree — the untrusted lowering.
         let arm_ix: Vec<usize> = (0..arms.len()).collect();
         let occ_root = [Vec::<usize>::new()];
-        let tree = decision::compile(&self.env.types, &matrix, &arm_ix, &occ_root, &[sty]);
+        // RFC-0041 §4.7: the decision-tree compilation is budget-charged; an over-budget match is a
+        // never-silent refusal (it already passed the checker's own compile, so this is defensive).
+        let tree = decision::compile(&self.env.types, &matrix, &arm_ix, &occ_root, &[sty])
+            .map_err(|e| ElabError::Residual {
+                site: site.clone(),
+                what: format!(
+                    "match compilation exceeded the recursion budget: {e} (RFC-0041 §4.7)"
+                ),
+            })?;
         if decision::has_reachable_fail(&tree) {
             return residual(
                 &site,

@@ -18,7 +18,15 @@ use crate::token::{Pos, ScalarTok, Spanned, StrengthTok, Tok};
 /// the M-002 oracle and must return an explicit error, never crash (A4-02/B2-01). The limit is well
 /// above any realistic L1 program and far below the host stack budget. Bounding the parser bounds
 /// the AST depth, so the downstream passes are protected transitively.
-const MAX_EXPR_DEPTH: u32 = 256;
+///
+/// **RFC-0041 §4.2/§7 (W1):** raised `256 → 4096` to unify the parser's ceiling with the shared
+/// recursion budget's `DEFAULT_DEPTH_LIMIT` ([`mycelium_workstack::RecursionBudget`]) and the
+/// checker's `MAX_CHECK_DEPTH`, so a program the checker would accept is no longer refused *earlier*
+/// by a tighter parser cap. The parser runs under the 256 MiB [`mycelium_stack::with_deep_stack`]
+/// worker (below), which physically supports far more than 4096 parser frames — so the guard still
+/// fires cleanly (an explicit `ParseError`) well before any host-stack overflow (verified by the
+/// `deeply_nested_*` regressions in `tests/check.rs`, which exceed 4096). Eval's 64 stays (W5).
+const MAX_EXPR_DEPTH: u32 = 4096;
 
 /// Parse a complete **single-`nodule`** program from source — the v0 entry point, unchanged by the
 /// phylum work (M-662). A bare `nodule <path> <item>*` parses to a [`Nodule`]; trailing content (a

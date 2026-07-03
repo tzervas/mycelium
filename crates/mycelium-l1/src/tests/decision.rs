@@ -122,7 +122,8 @@ fn flat_nat_match_compiles_and_agrees() {
         &[0, 1],
         &[vec![]],
         &[Ty::Data("Nat".into(), vec![])],
-    );
+    )
+    .expect("compiles within the RFC-0041 recursion budget");
     // Root switches on the whole scrutinee with both constructors covered → no default.
     match &tree {
         Tree::Switch {
@@ -159,7 +160,8 @@ fn nested_nat_match_compiles_and_agrees() {
         &[0, 1, 2],
         &[vec![]],
         &[Ty::Data("Nat".into(), vec![])],
-    );
+    )
+    .expect("compiles within the RFC-0041 recursion budget");
     assert_agrees(&arms, &tree, 5);
     // Spot-check the arm selection directly.
     assert_eq!(eval_tree(&tree, &nat(0)), Some(0));
@@ -186,7 +188,8 @@ fn first_matching_arm_wins_on_overlap() {
         &[0, 1, 2],
         &[vec![]],
         &[Ty::Data("Nat".into(), vec![])],
-    );
+    )
+    .expect("compiles within the RFC-0041 recursion budget");
     assert_eq!(eval_tree(&tree, &nat(1)), Some(0)); // S(Z) → first arm S(_), never the shadowed arm 1
     assert_agrees(&arms, &tree, 4);
 }
@@ -204,7 +207,8 @@ fn literal_match_with_default_compiles_and_switches_with_a_default() {
         &[0, 1],
         &[vec![]],
         &[Ty::Binary(Width::Lit(1))],
-    );
+    )
+    .expect("compiles within the RFC-0041 recursion budget");
     match &tree {
         Tree::Switch { cases, default, .. } => {
             assert_eq!(cases.len(), 1);
@@ -217,4 +221,76 @@ fn literal_match_with_default_compiles_and_switches_with_a_default() {
     }
     assert_eq!(eval_tree(&tree, &Pat::Lit("b:0".into())), Some(0));
     assert_eq!(eval_tree(&tree, &Pat::Lit("b:1".into())), Some(1)); // falls to default
+}
+
+/// A registry with a `Unit` type (one nullary ctor `U`) and a `Wide` type whose sole constructor `W`
+/// has `n` `Unit` fields (RFC-0041 §4.7 W6). `Unit` fields are non-wildcard heads, so `compile_rows`
+/// must test each column — driving the arity→depth spine (an all-wildcard `W(_,…)` would instead
+/// short-circuit to a `Leaf`).
+fn wide_unit_registry(n: usize) -> BTreeMap<String, DataInfo> {
+    let mut m = nat_registry();
+    m.insert(
+        "Unit".to_owned(),
+        DataInfo {
+            name: "Unit".to_owned(),
+            params: vec![],
+            ctors: vec![CtorInfo {
+                name: "U".to_owned(),
+                fields: vec![],
+            }],
+        },
+    );
+    m.insert(
+        "Wide".to_owned(),
+        DataInfo {
+            name: "Wide".to_owned(),
+            params: vec![],
+            ctors: vec![CtorInfo {
+                name: "W".to_owned(),
+                fields: vec![Ty::Data("Unit".to_owned(), vec![]); n],
+            }],
+        },
+    );
+    m
+}
+
+/// A modest wide-arity constructor compiles fine (well within the depth budget). Pairs with the
+/// `#[ignore]`d boundary witness below to show the arity spine is only a problem near the ceiling.
+#[test]
+fn w6_modest_wide_arity_compiles() {
+    let n = 100usize;
+    let t = wide_unit_registry(n);
+    let arms = vec![vec![Pat::Ctor("W".to_owned(), vec![ctor("U", vec![]); n])]];
+    let col = vec![Ty::Data("Wide".to_owned(), vec![])];
+    let tree = compile(&t, &arms, &[0], &[vec![]], &col)
+        .expect("a 100-field constructor compiles within the RFC-0041 recursion budget");
+    assert!(!has_reachable_fail(&tree));
+}
+
+/// **RFC-0041 §4.7 (W6): the wide-tuple asymmetry, test-witnessed for the decision-tree twin.** Like
+/// `usefulness::useful`, `compile_rows` tests one column per level, so an **arity-N** constructor with
+/// non-wildcard fields drives ~N levels of recursion on its width spine. At/over the depth ceiling it
+/// false-refuses with a **clean, never-silent** [`mycelium_workstack::BudgetError::DepthExceeded`] —
+/// verified *not* a host-stack overflow (run on the production 256 MiB deep stack via
+/// [`mycelium_stack::with_deep_stack`]). `#[ignore]`d because the copying specialization is `O(N²)` at
+/// the 4095-field boundary (seconds); run deliberately (RFC-0041 §5 census-test convention). A future
+/// §4.7 conversion of the width spine to a work-step loop would flip this `Err` to `Ok`.
+#[test]
+#[ignore = "W6: O(N^2) at the 4095-field arity boundary — documented asymmetry, run deliberately"]
+fn w6_wide_arity_compile_refuses() {
+    mycelium_stack::with_deep_stack(|| {
+        let n = 4095usize;
+        let t = wide_unit_registry(n);
+        let arms = vec![vec![Pat::Ctor("W".to_owned(), vec![ctor("U", vec![]); n])]];
+        let col = vec![Ty::Data("Wide".to_owned(), vec![])];
+        let r = compile(&t, &arms, &[0], &[vec![]], &col);
+        assert!(
+            matches!(
+                r,
+                Err(mycelium_workstack::BudgetError::DepthExceeded { limit: 4096 })
+            ),
+            "arity {n} exceeds the depth budget and must refuse never-silently \
+             (clean DepthExceeded, not a SIGABRT), got {r:?}"
+        );
+    });
 }

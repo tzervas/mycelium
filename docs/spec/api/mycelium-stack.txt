@@ -1,2 +1,33 @@
 pub mod mycelium_stack
+pub enum mycelium_stack::StackError
+pub mycelium_stack::StackError::FloorUnsatisfiableOnNoGrowTarget
+pub mycelium_stack::StackError::FloorUnsatisfiableOnNoGrowTarget::ceiling: u64
+pub mycelium_stack::StackError::FloorUnsatisfiableOnNoGrowTarget::floor: u32
+pub mycelium_stack::StackError::FloorUnsatisfiableOnNoGrowTarget::required: u64
+pub mycelium_stack::StackError::FloorUnsatisfiableOnNoGrowTarget::stack_bytes_per_frame: u64
+impl core::clone::Clone for mycelium_stack::StackError
+pub fn mycelium_stack::StackError::clone(&self) -> mycelium_stack::StackError
+impl core::cmp::Eq for mycelium_stack::StackError
+impl core::cmp::PartialEq for mycelium_stack::StackError
+pub fn mycelium_stack::StackError::eq(&self, &mycelium_stack::StackError) -> bool
+impl core::error::Error for mycelium_stack::StackError
+impl core::fmt::Debug for mycelium_stack::StackError
+pub fn mycelium_stack::StackError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_stack::StackError
+pub fn mycelium_stack::StackError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_stack::StackError
+impl core::marker::Freeze for mycelium_stack::StackError
+impl core::marker::Send for mycelium_stack::StackError
+impl core::marker::Sync for mycelium_stack::StackError
+impl core::marker::Unpin for mycelium_stack::StackError
+impl core::marker::UnsafeUnpin for mycelium_stack::StackError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_stack::StackError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_stack::StackError
+pub const mycelium_stack::DEFAULT_GROW_SEGMENT: usize
+pub const mycelium_stack::DEFAULT_RED_ZONE: usize
+pub const mycelium_stack::NO_GROW_CEILING_BYTES: u64
+pub fn mycelium_stack::ensure_sufficient_stack<R>(usize, usize, impl core::ops::function::FnOnce() -> R) -> R
+pub fn mycelium_stack::grow<R>(impl core::ops::function::FnOnce() -> R) -> R
+pub fn mycelium_stack::growable_ceiling_honors_floor(u32, u64) -> core::result::Result<(), mycelium_stack::StackError>
+pub fn mycelium_stack::stack_growth_available() -> bool
 pub fn mycelium_stack::with_deep_stack<T, F>(F) -> T where F: core::ops::function::FnOnce() -> T + core::marker::Send, T: core::marker::Send

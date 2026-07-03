@@ -32,7 +32,11 @@ fn complete_flat_match_is_exhaustive() {
     let t = nat_registry();
     // rows: Z, S(_) — a wildcard `_` is then not useful ⇒ exhaustive.
     let rows = vec![vec![ctor("Z", vec![])], vec![ctor("S", vec![Pat::Wild])]];
-    assert!(useful(&t, &rows, &[Pat::Wild], &[Ty::Data("Nat".into(), vec![])]).is_none());
+    assert!(
+        useful(&t, &rows, &[Pat::Wild], &[Ty::Data("Nat".into(), vec![])])
+            .expect("within the recursion budget")
+            .is_none()
+    );
 }
 
 #[test]
@@ -40,8 +44,9 @@ fn missing_case_yields_a_witness() {
     let t = nat_registry();
     // rows: only Z — `_` is useful, witness is the missing `S(_)`.
     let rows = vec![vec![ctor("Z", vec![])]];
-    let w =
-        useful(&t, &rows, &[Pat::Wild], &[Ty::Data("Nat".into(), vec![])]).expect("non-exhaustive");
+    let w = useful(&t, &rows, &[Pat::Wild], &[Ty::Data("Nat".into(), vec![])])
+        .expect("within the recursion budget")
+        .expect("non-exhaustive");
     assert_eq!(render(&w[0]), "S(_)");
 }
 
@@ -53,8 +58,9 @@ fn nested_missing_case_is_found_with_a_deep_witness() {
         vec![ctor("Z", vec![])],
         vec![ctor("S", vec![ctor("Z", vec![])])],
     ];
-    let w =
-        useful(&t, &rows, &[Pat::Wild], &[Ty::Data("Nat".into(), vec![])]).expect("non-exhaustive");
+    let w = useful(&t, &rows, &[Pat::Wild], &[Ty::Data("Nat".into(), vec![])])
+        .expect("within the recursion budget")
+        .expect("non-exhaustive");
     assert_eq!(render(&w[0]), "S(S(_))");
 }
 
@@ -67,7 +73,11 @@ fn nested_cover_is_exhaustive() {
         vec![ctor("S", vec![ctor("Z", vec![])])],
         vec![ctor("S", vec![ctor("S", vec![Pat::Wild])])],
     ];
-    assert!(useful(&t, &rows, &[Pat::Wild], &[Ty::Data("Nat".into(), vec![])]).is_none());
+    assert!(
+        useful(&t, &rows, &[Pat::Wild], &[Ty::Data("Nat".into(), vec![])])
+            .expect("within the recursion budget")
+            .is_none()
+    );
 }
 
 #[test]
@@ -76,7 +86,9 @@ fn redundant_arm_is_not_useful() {
     // After Z and S(_), the arm S(Z) is redundant (already covered) ⇒ not useful.
     let prior = vec![vec![ctor("Z", vec![])], vec![ctor("S", vec![Pat::Wild])]];
     let row = vec![ctor("S", vec![ctor("Z", vec![])])];
-    assert!(useful(&t, &prior, &row, &[Ty::Data("Nat".into(), vec![])]).is_none());
+    assert!(useful(&t, &prior, &row, &[Ty::Data("Nat".into(), vec![])])
+        .expect("within the recursion budget")
+        .is_none());
 }
 
 #[test]
@@ -85,7 +97,11 @@ fn literal_column_needs_a_default() {
     // A Binary{1} column with literal rows 0b0, 0b1 but no default is still non-exhaustive: the
     // value domain is never enumerated (M-320), so `_` stays useful.
     let rows = vec![vec![Pat::Lit("b:0".into())], vec![Pat::Lit("b:1".into())]];
-    assert!(useful(&t, &rows, &[Pat::Wild], &[Ty::Binary(Width::Lit(1))]).is_some());
+    assert!(
+        useful(&t, &rows, &[Pat::Wild], &[Ty::Binary(Width::Lit(1))])
+            .expect("within the recursion budget")
+            .is_some()
+    );
     // With a default, `_` is no longer useful.
     let with_default = vec![vec![Pat::Lit("b:0".into())], vec![Pat::Wild]];
     assert!(useful(
@@ -94,6 +110,7 @@ fn literal_column_needs_a_default() {
         &[Pat::Wild],
         &[Ty::Binary(Width::Lit(1))]
     )
+    .expect("within the recursion budget")
     .is_none());
 }
 
@@ -188,4 +205,59 @@ fn specialize_lit_is_identical_across_row_types_and_keeps_payload() {
         l_tagged.iter().map(|r| r.tag).collect::<Vec<_>>(),
         vec![1, 2]
     );
+}
+
+/// A registry with a `Wide` type whose sole constructor `W` has `n` `Nat` fields (RFC-0041 §4.7 W6).
+fn wide_registry(n: usize) -> std::collections::BTreeMap<String, DataInfo> {
+    let mut m = nat_registry();
+    m.insert(
+        "Wide".to_owned(),
+        DataInfo {
+            name: "Wide".to_owned(),
+            params: vec![],
+            ctors: vec![CtorInfo {
+                name: "W".to_owned(),
+                fields: vec![Ty::Data("Nat".to_owned(), vec![]); n],
+            }],
+        },
+    );
+    m
+}
+
+/// **RFC-0041 §4.7 (W6): the wide-tuple asymmetry, test-witnessed (documented, not converted).**
+/// The Maranget usefulness walk consumes one column per recursion level, so a constructor of **arity
+/// N** drives ~N levels on its data-shaped *width* spine (not genuine control nesting). Just under the
+/// depth ceiling it still accepts; at/over it the width spine false-refuses with a **clean,
+/// never-silent** [`mycelium_workstack::BudgetError::DepthExceeded`] — verified *not* a host-stack
+/// overflow (the walk runs on the production 256 MiB deep stack, mirrored here via
+/// [`mycelium_stack::with_deep_stack`]). This pins the documented asymmetry: a future §4.7 conversion
+/// of the width spine to a work-step loop would flip the refusing case from `Err` to `Ok`. Data-driven
+/// per the test-layout rule: each case is `(arity, accepts?)`.
+#[test]
+fn w6_wide_arity_useful_boundary_is_never_silent() {
+    // (arity, expect_accept): 4094 is within the 4096 depth budget (arity spine ≈ N+1); 4095 exceeds.
+    for (n, accept) in [(4094usize, true), (4095usize, false)] {
+        mycelium_stack::with_deep_stack(|| {
+            let t = wide_registry(n);
+            let q = vec![Pat::Ctor("W".to_owned(), vec![Pat::Wild; n])];
+            let col = vec![Ty::Data("Wide".to_owned(), vec![])];
+            // Empty prior matrix ⇒ the pattern is trivially useful — so an accept is `Ok(Some(_))`.
+            let r = useful(&t, &[], &q, &col);
+            if accept {
+                assert!(
+                    matches!(r, Ok(Some(_))),
+                    "arity {n} is within budget and must accept (be useful), got {r:?}"
+                );
+            } else {
+                assert!(
+                    matches!(
+                        r,
+                        Err(mycelium_workstack::BudgetError::DepthExceeded { limit: 4096 })
+                    ),
+                    "arity {n} exceeds the depth budget and must refuse never-silently \
+                     (clean DepthExceeded, not a SIGABRT), got {r:?}"
+                );
+            }
+        });
+    }
 }

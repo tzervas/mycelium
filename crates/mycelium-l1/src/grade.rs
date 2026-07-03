@@ -50,6 +50,7 @@
 
 use crate::ast::{Arm, Expr, FnDecl, Literal, Pattern, Strength};
 use crate::checkty::CheckError;
+use mycelium_workstack::RecursionBudget;
 use std::collections::BTreeMap;
 
 /// The advertised return grade of a callee (G-App result): the written `@ g`, else the modular
@@ -103,7 +104,15 @@ fn check_fn_grades(fns: &BTreeMap<String, FnDecl>, fd: &FnDecl) -> Result<(), Ch
         .iter()
         .map(|p| (p.name.clone(), param_grade(p)))
         .collect();
-    let gx = Gx { site, fns };
+    // RFC-0041 §4.7 (W1, RR-29): a fresh per-body recursion budget — the grade walk over a deep
+    // resolved body (e.g. a large list literal's desugared `Cons` chain) is charged against it and
+    // refused never-silently past the ceiling rather than overflowing the host stack (SIGABRT).
+    let budget = RecursionBudget::default();
+    let gx = Gx {
+        site,
+        fns,
+        budget: &budget,
+    };
     let body = gx.grade(&mut scope, &fd.body)?;
     let demand = ret_grade(fd);
     if !body.satisfies(demand) {
@@ -127,6 +136,9 @@ fn check_fn_grades(fns: &BTreeMap<String, FnDecl>, fd: &FnDecl) -> Result<(), Ch
 struct Gx<'a> {
     site: &'a str,
     fns: &'a BTreeMap<String, FnDecl>,
+    /// The per-body recursion budget (RFC-0041 §4.7): every [`Gx::grade`] recursion charges one
+    /// depth level, so a deep resolved body is refused never-silently rather than SIGABRTing.
+    budget: &'a RecursionBudget,
 }
 
 impl Gx<'_> {
@@ -135,6 +147,18 @@ impl Gx<'_> {
     /// (call arguments, ascriptions). The expression is already type-checked + resolved, so this is a
     /// pure grade computation — no type inference, no ambient resolution.
     fn grade(&self, scope: &mut Vec<(String, Strength)>, e: &Expr) -> Result<Strength, CheckError> {
+        // RFC-0041 §4.7: charge one level of grade recursion; refuse never-silently past the ceiling
+        // (a deep desugared spine — e.g. a large list literal's `Cons` chain — is bounded here, not by
+        // a host-stack overflow). The `DepthGuard` releases the level on every exit path.
+        let _g = self.budget.try_enter().map_err(|e| {
+            CheckError::at(
+                self.site,
+                format!(
+                    "guarantee grading exceeded the recursion budget: {e} — an explicit over-budget \
+                     refusal (RFC-0041 §4.7), never a host-stack overflow (G2/VR-5)"
+                ),
+            )
+        })?;
         match e {
             // A written constant is exact by construction (G-Const: the grade of its `Meta`). A list
             // literal is built from its elements, so it carries their meet (G-Con).

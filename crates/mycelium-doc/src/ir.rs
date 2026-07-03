@@ -238,6 +238,39 @@ pub struct Node {
     pub children: Vec<Node>,
 }
 
+/// Iterative destruction (RFC-0041 §4.5's doc-IR member of the iterative-destruction class).
+///
+/// The **derived** recursive `Drop` this replaces walks the `children` spine one host-stack frame
+/// per depth level, so a deep tree (confirmed empirically down to n=50,000 — `guard_hole_census.rs`,
+/// `src/tests/ir.rs::walk_does_not_overflow_on_a_deep_chain`) overflows the stack on drop, independent
+/// of (and previously un-closed by) the [`Node::walk`] host-stack guard. `mycelium-doc` is a tooling
+/// crate, not the frozen kernel/L1 core §4.5 otherwise tracks, so this lands as a normal fix (no
+/// within-freeze channel needed).
+///
+/// Mechanics: `mem::take` the drop target's `children` into an explicit worklist `Vec<Node>`, then
+/// drain it depth-first, at each step also `mem::take`-ing the popped node's own `children` onto the
+/// worklist *before* that node is allowed to drop. By the time a worklist node's implicit drop glue
+/// re-enters this `impl Drop` (recursively, once per node), its `children` is already empty — so the
+/// recursion never goes deeper than one level; the depth that used to live on the host stack now lives
+/// in the worklist `Vec` on the heap. **No observable change** (destruction-order-only): `Node` has no
+/// `Drop`-visible side effects (no external resources), only memory to reclaim, so reordering *which*
+/// sibling frees first is unobservable — only that every node frees exactly once, which this
+/// preserves. A worklist-`Vec` allocation during `drop` is acceptable here (unlike the OOM/unwind-
+/// critical kernel path in §4.5): `mycelium-doc` is a build-time tooling crate, not on the interpreter's
+/// panic/unwind hot path.
+impl Drop for Node {
+    fn drop(&mut self) {
+        let mut worklist: Vec<Node> = std::mem::take(&mut self.children);
+        while let Some(mut next) = worklist.pop() {
+            // Move this node's children onto the worklist *before* `next` is dropped at the end of
+            // the loop body, so the recursive re-entry into `Node::drop` below sees an already-empty
+            // `children` and does no further recursion.
+            worklist.extend(std::mem::take(&mut next.children));
+            // `next` drops here — its `children` is empty, so this is O(1), not recursive depth.
+        }
+    }
+}
+
 impl Node {
     /// Build a node, computing its content address from its content + children (ADR-003). Provenance
     /// is **not** hashed (metadata, not identity) so a re-flowed source line keeps the deep link
@@ -307,10 +340,32 @@ impl Node {
     }
 
     /// Depth-first pre-order visit of this node and its descendants.
-    pub fn walk<'a>(&'a self, f: &mut dyn FnMut(&'a Node)) {
+    ///
+    /// **RFC-0041 §4.7 guard-hole close (W1, RR-29).** The whole walk runs on
+    /// [`mycelium_workstack::ensure_sufficient_stack`]'s grown worker stack (a 256 MiB
+    /// lazily-committed thread), so a pathologically deep IR tree (thousands of nested sections)
+    /// walks to completion instead of overflowing the caller's host stack — `walk` stays infallible
+    /// (`()`); the fix is that it now never `SIGABRT`s. The budget passed is
+    /// `mycelium_workstack::RecursionBudget::default()` — its depth/mem/step ceilings play no role in
+    /// W1 (the guard body only grows the host stack; it does not charge against the budget), so this
+    /// closes the host-stack hole only — it does not introduce a new refusal path, and behavior is
+    /// otherwise unchanged (`Declared`: a real depth/work-step ceiling for doc-IR walks is future
+    /// work, not introduced silently here).
+    ///
+    /// The guard is applied **once**, at this public entry — the recursion itself runs through
+    /// [`walk_inner`](Self::walk_inner), which does **not** re-guard per level (guarding every
+    /// recursive step would spawn a worker thread per node: wrong and needlessly expensive).
+    pub fn walk<'a>(&'a self, f: &mut (dyn FnMut(&'a Node) + Send)) {
+        let budget = mycelium_workstack::RecursionBudget::default();
+        mycelium_workstack::ensure_sufficient_stack(&budget, move || self.walk_inner(f));
+    }
+
+    /// The unguarded recursive body of [`walk`](Self::walk). Runs entirely on the worker stack the
+    /// public entry already established.
+    fn walk_inner<'a>(&'a self, f: &mut dyn FnMut(&'a Node)) {
         f(self);
         for c in &self.children {
-            c.walk(f);
+            c.walk_inner(f);
         }
     }
 }
@@ -357,141 +412,5 @@ impl DocModel {
             .iter()
             .map(|n| n.id.as_str().to_owned())
             .collect()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn prov() -> Provenance {
-        Provenance {
-            source: "docs/x.md".to_owned(),
-            line: 1,
-        }
-    }
-
-    #[test]
-    fn identity_is_content_addressed_and_excludes_provenance() {
-        let a = Node::new(
-            "p",
-            None,
-            None,
-            Provenance {
-                source: "a.md".to_owned(),
-                line: 1,
-            },
-            Payload::Prose {
-                text: "hi".to_owned(),
-            },
-            vec![],
-        );
-        let b = Node::new(
-            "p",
-            None,
-            None,
-            Provenance {
-                source: "b.md".to_owned(),
-                line: 999,
-            },
-            Payload::Prose {
-                text: "hi".to_owned(),
-            },
-            vec![],
-        );
-        // Same projected content, different provenance → same address (provenance is not identity).
-        assert_eq!(a.id.as_str(), b.id.as_str());
-    }
-
-    #[test]
-    fn different_content_gives_a_different_address() {
-        let a = Node::new(
-            "p",
-            None,
-            None,
-            prov(),
-            Payload::Prose {
-                text: "one".to_owned(),
-            },
-            vec![],
-        );
-        let b = Node::new(
-            "p",
-            None,
-            None,
-            prov(),
-            Payload::Prose {
-                text: "two".to_owned(),
-            },
-            vec![],
-        );
-        assert_ne!(a.id.as_str(), b.id.as_str());
-    }
-
-    #[test]
-    fn a_parents_address_depends_on_its_children() {
-        let child1 = Node::new(
-            "c1",
-            None,
-            None,
-            prov(),
-            Payload::Prose {
-                text: "a".to_owned(),
-            },
-            vec![],
-        );
-        let child2 = Node::new(
-            "c2",
-            None,
-            None,
-            prov(),
-            Payload::Prose {
-                text: "b".to_owned(),
-            },
-            vec![],
-        );
-        let p1 = Node::new(
-            "s",
-            Some("S".to_owned()),
-            None,
-            prov(),
-            Payload::Section,
-            vec![child1.clone()],
-        );
-        let p2 = Node::new(
-            "s",
-            Some("S".to_owned()),
-            None,
-            prov(),
-            Payload::Section,
-            vec![child1, child2],
-        );
-        assert_ne!(p1.id.as_str(), p2.id.as_str());
-    }
-
-    #[test]
-    fn the_model_indexes_every_anchor() {
-        let doc = Node::new(
-            "doc",
-            Some("Doc".to_owned()),
-            None,
-            prov(),
-            Payload::Document {
-                source_kind: SourceKind::Spec,
-            },
-            vec![Node::new(
-                "doc-s1",
-                Some("S1".to_owned()),
-                None,
-                prov(),
-                Payload::Section,
-                vec![],
-            )],
-        );
-        let m = DocModel::new(vec![doc]);
-        assert!(m.anchors.contains_key("doc"));
-        assert!(m.anchors.contains_key("doc-s1"));
-        assert_eq!(m.all_nodes().len(), 2);
-        assert_eq!(m.id_set().len(), 2);
     }
 }
