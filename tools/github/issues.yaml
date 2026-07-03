@@ -11428,8 +11428,17 @@ issues:
       DepthExceeded{u32} on the metric), the RR-29 guard-hole census (per-crate #[ignore="Wn"]
       real-repros across 8 crates), depth-structured fuzz (interp target reproduces the known
       SIGABRT), and mutants/unsafe-audit scope (mycelium-l1, mycelium-mlir, mycelium-stack). NO
-      behavior change, NO frozen-core edits. Next: W1 (mycelium-workstack crate + frontend guard
-      wiring + parser 256->4096), W2 (grow), W3.5 (extract) — parallel where disjoint; MAINTAINER
+      behavior change, NO frozen-core edits.
+      W1 LANDED (2026-07-03, to dev): mycelium-workstack budget crate (RecursionBudget on the metric +
+      memory ceiling + ProcessArena + canonical BudgetError::DepthExceeded{u32} + ensure_sufficient_stack
+      passthrough + §4.2 invariant fn; forbid(unsafe), DN-68 downward-only) + frontend guard-hole wiring
+      (mycelium-l1 checker + check_list data-vs-control iteration fix + parser 256->4096;
+      fmt/lsp/transpile/doc/mir-passes). 14 frontend census tests un-ignored+green. Scoping correction
+      (G2): write_canon (frozen core) + is_pure/plan_parallel (interp) re-tagged W1->W3/W4 (checkpoint).
+      Residuals tracked: recursive-Drop bomb incl NEW mycelium-doc::ir::Node member (W3); mir-passes
+      eval(&RcNode)/emit_elided/emit_reuse + count_occurrences O(N^2) (W2); syn native recursion (3rd-party).
+      Next: W2 (grow: fine-grained stacker + startup mem-ceiling assertion + frame-size CI baseline +
+      pin stacker/psm), W3.5 (extract AOT env-machine loop) — parallel where disjoint; MAINTAINER
       CHECKPOINT before W3 (frozen-core iterative Drop) + W4/W5 (L0/L1 machine conversion).
       DN-84 design (D), CONFIRMED by the maintainer (DN-84 §11 correction, 2026-07-03) as the
       solve-NOW track: get the complexity of the problem and solution fully figured out and solved

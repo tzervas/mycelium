@@ -38,6 +38,12 @@ pub enum Category {
     /// from the impl's trait-generic argument (never guessed — VR-5). Distinct from the general
     /// `Impl`/`Other` buckets so the union-backlog can rank "conversion-op gaps" on their own.
     Conversion,
+    /// RFC-0041 §4.7/§5.1 (W1): a recursive mapping/emit function (`emit_expr`/`emit_block_as_expr`/
+    /// `map_pattern`/`map_type`) refused because the input's nesting exceeded the shared
+    /// [`mycelium_workstack::RecursionBudget`]'s depth ceiling — a never-silent refusal in place of
+    /// an unguarded host-stack overflow (RR-29 guard-hole inventory). Distinct from `Other` so a
+    /// pathological-depth refusal is distinguishable from an ordinary unmapped Rust construct.
+    RecursionBudget,
     Other,
 }
 
@@ -57,6 +63,7 @@ impl Category {
             Category::PayloadVariant => "PayloadVariant",
             Category::TestItem => "TestItem",
             Category::Conversion => "Conversion",
+            Category::RecursionBudget => "RecursionBudget",
             Category::Other => "Other",
         }
     }
@@ -149,4 +156,68 @@ impl GapReport {
         }
         m
     }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+// RFC-0041 §4.7/§5.1 (W1) — the shared recursion-budget guard for `emit.rs`/`map.rs`'s mutual/self
+// recursion over the `syn` AST (RR-29 guard-hole inventory).
+//
+// `emit_expr`/`emit_block_as_expr`/`map_pattern` (mutually recursive, `emit.rs`) and `map_type`
+// (self-recursive, `map.rs`) previously recursed on unbounded attacker/user-controlled input depth
+// with no guard: Rust's default stack-overflow handler aborts the process directly (never through
+// panic/unwind, so `catch_unwind` cannot help) — a `SIGABRT`, not a `Result`. This crate-wide,
+// per-thread [`mycelium_workstack::RecursionBudget`] closes that hole: every recursive function
+// enters one guarded frame via [`guarded`] at its own call site (not just the outermost public
+// entry), so a pathological/attacker-controlled AST depth refuses with a
+// `Category::RecursionBudget` [`GapReason`] once the shared depth ceiling
+// ([`mycelium_workstack::RecursionBudget::DEFAULT_DEPTH_LIMIT`] = 4096) is reached — never a panic,
+// abort, or silent drop (G2).
+//
+// One budget instance is shared across `emit.rs` and `map.rs` (rather than one per function) —
+// simpler, and correct because the mutually-/self-recursive groups never run *concurrently* within
+// a single transpile pass on one thread: each call chain fully unwinds (every [`DepthGuard`] drops)
+// before the next top-level item's chain begins, so a shared counter never conflates two unrelated
+// passes.
+thread_local! {
+    static RECURSION_BUDGET: mycelium_workstack::RecursionBudget =
+        mycelium_workstack::RecursionBudget::default();
+}
+
+/// Map a recursion-budget refusal onto this crate's own never-silent [`GapReason`] surface
+/// (RFC-0041 §5.1's canonical `BudgetError` reconciles here). `DepthExceeded` is the variant this
+/// crate can actually hit (depth-only guarding, W1); `OutOfBudget` is mapped too for completeness
+/// even though this crate does not currently charge bytes/work-steps.
+fn budget_err_to_gap(e: mycelium_workstack::BudgetError) -> GapReason {
+    match e {
+        mycelium_workstack::BudgetError::DepthExceeded { limit } => GapReason::new(
+            Category::RecursionBudget,
+            format!(
+                "recursion depth budget exceeded (limit {limit} source-call frames) — refused \
+                 before a host-stack overflow, per RFC-0041 §4.7/§5.1 (RR-29 guard-hole close, W1)"
+            ),
+        ),
+        mycelium_workstack::BudgetError::OutOfBudget {
+            kind,
+            limit,
+            requested,
+        } => GapReason::new(
+            Category::RecursionBudget,
+            format!(
+                "{} budget exhausted (needed {requested}, ceiling {limit})",
+                kind.label()
+            ),
+        ),
+    }
+}
+
+/// Run `body` guarded by one entered depth frame of the crate-wide [`RECURSION_BUDGET`] (RFC-0041
+/// §4.7, W1). Call this at the top of every mutually-/self-recursive function in `emit.rs`/`map.rs`
+/// (not just the outermost public entry) so each recursion step consumes budget and a
+/// pathological-depth input refuses cleanly with a `Category::RecursionBudget` gap instead of
+/// risking a host-stack-overflow `SIGABRT`.
+pub(crate) fn guarded<R>(body: impl FnOnce() -> Result<R, GapReason>) -> Result<R, GapReason> {
+    RECURSION_BUDGET.with(|budget| {
+        let _guard = budget.try_enter().map_err(budget_err_to_gap)?;
+        body()
+    })
 }

@@ -1,0 +1,119 @@
+pub mod mycelium_workstack
+pub enum mycelium_workstack::BudgetError
+pub mycelium_workstack::BudgetError::DepthExceeded
+pub mycelium_workstack::BudgetError::DepthExceeded::limit: u32
+pub mycelium_workstack::BudgetError::OutOfBudget
+pub mycelium_workstack::BudgetError::OutOfBudget::kind: mycelium_workstack::BudgetKind
+pub mycelium_workstack::BudgetError::OutOfBudget::limit: u64
+pub mycelium_workstack::BudgetError::OutOfBudget::requested: u64
+impl core::clone::Clone for mycelium_workstack::BudgetError
+pub fn mycelium_workstack::BudgetError::clone(&self) -> mycelium_workstack::BudgetError
+impl core::cmp::Eq for mycelium_workstack::BudgetError
+impl core::cmp::PartialEq for mycelium_workstack::BudgetError
+pub fn mycelium_workstack::BudgetError::eq(&self, &mycelium_workstack::BudgetError) -> bool
+impl core::error::Error for mycelium_workstack::BudgetError
+impl core::fmt::Debug for mycelium_workstack::BudgetError
+pub fn mycelium_workstack::BudgetError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_workstack::BudgetError
+pub fn mycelium_workstack::BudgetError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_workstack::BudgetError
+impl core::marker::Freeze for mycelium_workstack::BudgetError
+impl core::marker::Send for mycelium_workstack::BudgetError
+impl core::marker::Sync for mycelium_workstack::BudgetError
+impl core::marker::Unpin for mycelium_workstack::BudgetError
+impl core::marker::UnsafeUnpin for mycelium_workstack::BudgetError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_workstack::BudgetError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_workstack::BudgetError
+pub enum mycelium_workstack::BudgetKind
+pub mycelium_workstack::BudgetKind::Bytes
+pub mycelium_workstack::BudgetKind::WorkSteps
+impl mycelium_workstack::BudgetKind
+pub const fn mycelium_workstack::BudgetKind::label(self) -> &'static str
+impl core::clone::Clone for mycelium_workstack::BudgetKind
+pub fn mycelium_workstack::BudgetKind::clone(&self) -> mycelium_workstack::BudgetKind
+impl core::cmp::Eq for mycelium_workstack::BudgetKind
+impl core::cmp::PartialEq for mycelium_workstack::BudgetKind
+pub fn mycelium_workstack::BudgetKind::eq(&self, &mycelium_workstack::BudgetKind) -> bool
+impl core::fmt::Debug for mycelium_workstack::BudgetKind
+pub fn mycelium_workstack::BudgetKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_workstack::BudgetKind
+pub fn mycelium_workstack::BudgetKind::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::Copy for mycelium_workstack::BudgetKind
+impl core::marker::StructuralPartialEq for mycelium_workstack::BudgetKind
+impl core::marker::Freeze for mycelium_workstack::BudgetKind
+impl core::marker::Send for mycelium_workstack::BudgetKind
+impl core::marker::Sync for mycelium_workstack::BudgetKind
+impl core::marker::Unpin for mycelium_workstack::BudgetKind
+impl core::marker::UnsafeUnpin for mycelium_workstack::BudgetKind
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_workstack::BudgetKind
+impl core::panic::unwind_safe::UnwindSafe for mycelium_workstack::BudgetKind
+pub struct mycelium_workstack::ArenaReservation<'a>
+impl mycelium_workstack::ArenaReservation<'_>
+pub const fn mycelium_workstack::ArenaReservation<'_>::bytes(&self) -> u64
+impl core::ops::drop::Drop for mycelium_workstack::ArenaReservation<'_>
+pub fn mycelium_workstack::ArenaReservation<'_>::drop(&mut self)
+impl<'a> core::fmt::Debug for mycelium_workstack::ArenaReservation<'a>
+pub fn mycelium_workstack::ArenaReservation<'a>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<'a> core::marker::Freeze for mycelium_workstack::ArenaReservation<'a>
+impl<'a> core::marker::Send for mycelium_workstack::ArenaReservation<'a>
+impl<'a> core::marker::Sync for mycelium_workstack::ArenaReservation<'a>
+impl<'a> core::marker::Unpin for mycelium_workstack::ArenaReservation<'a>
+impl<'a> core::marker::UnsafeUnpin for mycelium_workstack::ArenaReservation<'a>
+impl<'a> core::panic::unwind_safe::RefUnwindSafe for mycelium_workstack::ArenaReservation<'a>
+impl<'a> core::panic::unwind_safe::UnwindSafe for mycelium_workstack::ArenaReservation<'a>
+pub struct mycelium_workstack::DepthGuard<'a>
+impl core::ops::drop::Drop for mycelium_workstack::DepthGuard<'_>
+pub fn mycelium_workstack::DepthGuard<'_>::drop(&mut self)
+impl<'a> core::fmt::Debug for mycelium_workstack::DepthGuard<'a>
+pub fn mycelium_workstack::DepthGuard<'a>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<'a> core::marker::Freeze for mycelium_workstack::DepthGuard<'a>
+impl<'a> !core::marker::Send for mycelium_workstack::DepthGuard<'a>
+impl<'a> !core::marker::Sync for mycelium_workstack::DepthGuard<'a>
+impl<'a> core::marker::Unpin for mycelium_workstack::DepthGuard<'a>
+impl<'a> core::marker::UnsafeUnpin for mycelium_workstack::DepthGuard<'a>
+impl<'a> !core::panic::unwind_safe::RefUnwindSafe for mycelium_workstack::DepthGuard<'a>
+impl<'a> !core::panic::unwind_safe::UnwindSafe for mycelium_workstack::DepthGuard<'a>
+pub struct mycelium_workstack::ProcessArena
+impl mycelium_workstack::ProcessArena
+pub const fn mycelium_workstack::ProcessArena::ceiling_bytes(&self) -> u64
+pub const fn mycelium_workstack::ProcessArena::new(u64) -> Self
+pub fn mycelium_workstack::ProcessArena::reserve(&self, u64) -> core::result::Result<mycelium_workstack::ArenaReservation<'_>, mycelium_workstack::BudgetError>
+impl core::clone::Clone for mycelium_workstack::ProcessArena
+pub fn mycelium_workstack::ProcessArena::clone(&self) -> mycelium_workstack::ProcessArena
+impl core::fmt::Debug for mycelium_workstack::ProcessArena
+pub fn mycelium_workstack::ProcessArena::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_workstack::ProcessArena
+impl core::marker::Send for mycelium_workstack::ProcessArena
+impl core::marker::Sync for mycelium_workstack::ProcessArena
+impl core::marker::Unpin for mycelium_workstack::ProcessArena
+impl core::marker::UnsafeUnpin for mycelium_workstack::ProcessArena
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_workstack::ProcessArena
+impl core::panic::unwind_safe::UnwindSafe for mycelium_workstack::ProcessArena
+pub struct mycelium_workstack::RecursionBudget
+impl mycelium_workstack::RecursionBudget
+pub const mycelium_workstack::RecursionBudget::DEFAULT_DEPTH_LIMIT: u32
+pub fn mycelium_workstack::RecursionBudget::charge_bytes(&self, u64) -> core::result::Result<(), mycelium_workstack::BudgetError>
+pub fn mycelium_workstack::RecursionBudget::charge_steps(&self, u64) -> core::result::Result<(), mycelium_workstack::BudgetError>
+pub fn mycelium_workstack::RecursionBudget::current_bytes(&self) -> u64
+pub fn mycelium_workstack::RecursionBudget::current_depth(&self) -> u32
+pub fn mycelium_workstack::RecursionBudget::current_steps(&self) -> u64
+pub const fn mycelium_workstack::RecursionBudget::depth_limit(&self) -> u32
+pub const fn mycelium_workstack::RecursionBudget::mem_limit_bytes(&self) -> u64
+pub const fn mycelium_workstack::RecursionBudget::new(u32, u64, u64) -> Self
+pub fn mycelium_workstack::RecursionBudget::try_enter(&self) -> core::result::Result<mycelium_workstack::DepthGuard<'_>, mycelium_workstack::BudgetError>
+pub const fn mycelium_workstack::RecursionBudget::with_depth_default(u64, u64) -> Self
+pub const fn mycelium_workstack::RecursionBudget::work_step_limit(&self) -> u64
+impl core::default::Default for mycelium_workstack::RecursionBudget
+pub fn mycelium_workstack::RecursionBudget::default() -> Self
+impl core::fmt::Debug for mycelium_workstack::RecursionBudget
+pub fn mycelium_workstack::RecursionBudget::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl !core::marker::Freeze for mycelium_workstack::RecursionBudget
+impl core::marker::Send for mycelium_workstack::RecursionBudget
+impl !core::marker::Sync for mycelium_workstack::RecursionBudget
+impl core::marker::Unpin for mycelium_workstack::RecursionBudget
+impl core::marker::UnsafeUnpin for mycelium_workstack::RecursionBudget
+impl !core::panic::unwind_safe::RefUnwindSafe for mycelium_workstack::RecursionBudget
+impl core::panic::unwind_safe::UnwindSafe for mycelium_workstack::RecursionBudget
+pub fn mycelium_workstack::assert_mem_ceiling_honors_floor(u64, u32, u64) -> core::result::Result<(), mycelium_workstack::BudgetError>
+pub fn mycelium_workstack::current_process_bytes() -> u64
+pub fn mycelium_workstack::ensure_sufficient_stack<R, F>(&mycelium_workstack::RecursionBudget, F) -> R where F: core::ops::function::FnOnce() -> R + core::marker::Send, R: core::marker::Send

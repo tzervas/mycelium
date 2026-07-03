@@ -214,8 +214,8 @@ dist-verify:
 # `just mutants` = the trusted base + the recursion-depth guards; override the args to scope, e.g.
 # `just mutants -p mycelium-cert`. Needs cargo-mutants (`cargo install --locked cargo-mutants`).
 # mycelium-l1 + mycelium-mlir added for the RFC-0041 depth/budget guards (W0 durability gate; RR-29 §4
-# — a remove-guard mutant must not survive). mycelium-workstack joins the set once it exists (W1).
-mutants *ARGS="-p mycelium-core -p mycelium-cert -p mycelium-interp -p mycelium-numerics -p mycelium-l1 -p mycelium-mlir":
+# — a remove-guard mutant must not survive). mycelium-workstack is the budget/guard core (W1).
+mutants *ARGS="-p mycelium-core -p mycelium-cert -p mycelium-interp -p mycelium-numerics -p mycelium-l1 -p mycelium-mlir -p mycelium-workstack":
     @cargo mutants {{ARGS}}
 # cargo-fuzz targets (libFuzzer). Needs NIGHTLY: `rustup toolchain install nightly` +
 # `cargo install --locked cargo-fuzz`. Targets live in fuzz/fuzz_targets/. `just fuzz <target> [secs]`

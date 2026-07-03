@@ -122,7 +122,8 @@ fn flat_nat_match_compiles_and_agrees() {
         &[0, 1],
         &[vec![]],
         &[Ty::Data("Nat".into(), vec![])],
-    );
+    )
+    .expect("compiles within the RFC-0041 recursion budget");
     // Root switches on the whole scrutinee with both constructors covered → no default.
     match &tree {
         Tree::Switch {
@@ -159,7 +160,8 @@ fn nested_nat_match_compiles_and_agrees() {
         &[0, 1, 2],
         &[vec![]],
         &[Ty::Data("Nat".into(), vec![])],
-    );
+    )
+    .expect("compiles within the RFC-0041 recursion budget");
     assert_agrees(&arms, &tree, 5);
     // Spot-check the arm selection directly.
     assert_eq!(eval_tree(&tree, &nat(0)), Some(0));
@@ -186,7 +188,8 @@ fn first_matching_arm_wins_on_overlap() {
         &[0, 1, 2],
         &[vec![]],
         &[Ty::Data("Nat".into(), vec![])],
-    );
+    )
+    .expect("compiles within the RFC-0041 recursion budget");
     assert_eq!(eval_tree(&tree, &nat(1)), Some(0)); // S(Z) → first arm S(_), never the shadowed arm 1
     assert_agrees(&arms, &tree, 4);
 }
@@ -204,7 +207,8 @@ fn literal_match_with_default_compiles_and_switches_with_a_default() {
         &[0, 1],
         &[vec![]],
         &[Ty::Binary(Width::Lit(1))],
-    );
+    )
+    .expect("compiles within the RFC-0041 recursion budget");
     match &tree {
         Tree::Switch { cases, default, .. } => {
             assert_eq!(cases.len(), 1);

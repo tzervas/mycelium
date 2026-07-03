@@ -33,16 +33,21 @@ fn deep_list_source(n: usize) -> String {
 }
 
 #[test]
-#[ignore = "W1"] // RFC-0041 §4.7/§7 W1: check_list closes via mycelium-workstack's shared budget.
 fn check_list_deep_list_literal_refuses_cleanly() {
-    // Hole: `checkty::check_list` (crates/mycelium-l1/src/checkty.rs:5568).
+    // Hole: `checkty::check_list` (crates/mycelium-l1/src/checkty.rs:5568). RFC-0041 §4.7 (W1):
+    // `check_list` now routes the list's DATA-spine through iteration + a work-step charge (not a
+    // control-depth `try_enter` per element), so it no longer refuses a large list *as if* it were
+    // n-deep control recursion — a large list is checked without abort, bounded by the work-step
+    // budget. The desugared `Cons` chain is still n-deep DATA, so the *grade* pass (its own §4.7 depth
+    // budget) is what refuses this 50_000-deep spine — cleanly (`CheckError`), never a SIGABRT. So the
+    // end-to-end contract is a clean explicit refusal, not a crash (and no longer a control-depth
+    // false-refusal from `check_list` itself).
     let src = deep_list_source(50_000);
     let nodule = parse(&src).expect("the SOURCE is not deeply nested (flat list) — parses fine");
     let result = check_nodule(&nodule);
     assert!(
         result.is_err(),
-        "expected an explicit over-budget refusal (RFC-0041 DepthExceeded/OutOfBudget), not \
-         success or a SIGABRT"
+        "expected an explicit over-budget refusal (RFC-0041 §4.7), not success or a SIGABRT"
     );
 }
 
@@ -69,7 +74,6 @@ fn wide_arity_match_source(n: usize) -> String {
 }
 
 #[test]
-#[ignore = "W1"] // RFC-0041 §4.7/§7 W1.
 fn usefulness_wide_arity_match_refuses_cleanly() {
     // Hole: `usefulness::useful` (crates/mycelium-l1/src/usefulness.rs:147) — exhaustiveness
     // checking over the wide-arity constructor pattern above.
@@ -83,7 +87,6 @@ fn usefulness_wide_arity_match_refuses_cleanly() {
 }
 
 #[test]
-#[ignore = "W1"] // RFC-0041 §4.7/§7 W1.
 fn decision_wide_arity_match_refuses_cleanly() {
     // Hole: `decision::compile_rows` (crates/mycelium-l1/src/decision.rs:113) — decision-tree
     // compilation over the SAME wide-arity match construct as the `usefulness` test above (both
@@ -99,7 +102,6 @@ fn decision_wide_arity_match_refuses_cleanly() {
 }
 
 #[test]
-#[ignore = "W1"] // RFC-0041 §4.7/§7 W1.
 fn grade_deep_list_literal_with_annotation_refuses_cleanly() {
     // Hole: `grade::Gx::grade` (crates/mycelium-l1/src/grade.rs:137). `check_guarantees`
     // (checkty.rs:2205, invoked from `check_and_resolve`/`check_nodule`) walks the RESOLVED
@@ -119,25 +121,25 @@ fn grade_deep_list_literal_with_annotation_refuses_cleanly() {
 }
 
 /// **Documented near-miss, not an open hole.** `parse_type_ref` (`crates/mycelium-l1/src/parse.rs`)
-/// is ALREADY depth-guarded today (`MAX_EXPR_DEPTH = 256`, parse.rs:21/1465-1469) — a crafted
-/// `A -> A -> … -> A` chain past 256 already refuses cleanly, right now, with no wave needed. It is
-/// included in the census (RFC-0041 §4.7 "convert `parse_type_ref` to an explicit stack only if
-/// profiling after a raise demands it") purely to TRACK the wave that raises the shared budget
-/// (parser 256→4096, §4.2/§7 W1) — the guard must keep firing cleanly at the new cap too.
+/// is depth-guarded via the shared `MAX_EXPR_DEPTH` budget — a crafted `A -> A -> … -> A` chain past
+/// the cap refuses cleanly (an explicit `ParseError`, never a SIGABRT). RFC-0041 §4.2/§7 (W1) RAISED
+/// that cap `256 → 4096` (parse.rs:21) to unify it with the shared recursion budget; this test tracks
+/// that raise — the guard must keep firing cleanly at the **new** cap, so the crafted chain now
+/// exceeds 4096 (the parser runs under the 256 MiB deep worker stack, which supports far more than
+/// 4096 parser frames, so the guard fires well before any host-stack overflow).
 ///
-/// **Honesty (VR-5):** unlike every other test in this file, this one is expected to already PASS
-/// if un-ignored today — it is not a SIGABRT repro. Kept `#[ignore]` for census-set uniformity
-/// (grep-ability: `grep -rn 'ignore = "W' …`), not because it is unsafe to run.
+/// **Honesty (VR-5):** unlike the SIGABRT repros in this file, this one always refuses cleanly (it is
+/// a guarded near-miss, not an open hole) — kept in the census for uniformity and to pin the raised
+/// cap's guard behaviour.
 #[test]
-#[ignore = "W1"] // tracks the 256->4096 raise (RFC-0041 §4.2/§7); already refuses cleanly at 256.
 fn parse_type_ref_near_miss_guard_fires_at_cap() {
-    let chain = "Binary{8} -> ".repeat(400); // > 256 `->` hops — past today's cap
+    let chain = "Binary{8} -> ".repeat(5000); // > 4096 `->` hops — past the raised cap (RFC-0041 W1)
     let src = format!("nodule d;\nfn f(g: {chain}Binary{{8}}) => Binary{{8}} = g;\n");
     let result = parse(&src);
     assert!(
         result.is_err(),
-        "parse_type_ref is guarded today (256 cap) — a crafted chain past it must already refuse \
-         cleanly, never SIGABRT (this is the near-miss the census tracks, not an open hole)"
+        "parse_type_ref is guarded (raised 4096 cap, RFC-0041 §4.2/§7) — a crafted chain past it must \
+         refuse cleanly, never SIGABRT (the near-miss the census tracks, not an open hole)"
     );
 }
 

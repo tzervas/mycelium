@@ -310,6 +310,7 @@ dependencies = [
  "mycelium-core",
  "mycelium-l1",
  "mycelium-proj",
+ "mycelium-workstack",
  "serde",
  "serde_json",
 ]
@@ -321,6 +322,7 @@ dependencies = [
  "mycelium-cli-common",
  "mycelium-l1",
  "mycelium-proj",
+ "mycelium-workstack",
 ]
 
 [[package]]
@@ -347,6 +349,7 @@ dependencies = [
  "mycelium-numerics",
  "mycelium-select",
  "mycelium-stack",
+ "mycelium-workstack",
 ]
 
 [[package]]
@@ -370,6 +373,7 @@ dependencies = [
  "mycelium-l1",
  "mycelium-proj",
  "mycelium-select",
+ "mycelium-workstack",
  "serde",
  "serde_json",
 ]
@@ -379,6 +383,7 @@ name = "mycelium-mir-passes"
 version = "0.0.0"
 dependencies = [
  "mycelium-core",
+ "mycelium-workstack",
 ]
 
 [[package]]
@@ -722,6 +727,7 @@ dependencies = [
 name = "mycelium-transpile"
 version = "0.0.0"
 dependencies = [
+ "mycelium-workstack",
  "proc-macro2",
  "proptest",
  "quote",
@@ -746,6 +752,13 @@ dependencies = [
  "mycelium-core",
  "mycelium-select",
  "mycelium-vsa",
+]
+
+[[package]]
+name = "mycelium-workstack"
+version = "0.0.0"
+dependencies = [
+ "mycelium-stack",
 ]
 
 [[package]]

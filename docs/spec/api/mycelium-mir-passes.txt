@@ -124,12 +124,16 @@ pub fn mycelium_mir_passes::corpus::measure_standard() -> core::result::Result<m
 pub fn mycelium_mir_passes::corpus::standard_corpus() -> alloc::vec::Vec<(&'static str, mycelium_core::node::Node)>
 pub mod mycelium_mir_passes::emit
 pub enum mycelium_mir_passes::emit::EmitError
+pub mycelium_mir_passes::emit::EmitError::DepthExceeded
+pub mycelium_mir_passes::emit::EmitError::DepthExceeded::limit: u32
 pub mycelium_mir_passes::emit::EmitError::UnsupportedNode(&'static str)
 impl core::clone::Clone for mycelium_mir_passes::emit::EmitError
 pub fn mycelium_mir_passes::emit::EmitError::clone(&self) -> mycelium_mir_passes::emit::EmitError
 impl core::cmp::Eq for mycelium_mir_passes::emit::EmitError
 impl core::cmp::PartialEq for mycelium_mir_passes::emit::EmitError
 pub fn mycelium_mir_passes::emit::EmitError::eq(&self, &mycelium_mir_passes::emit::EmitError) -> bool
+impl core::convert::From<mycelium_workstack::BudgetError> for mycelium_mir_passes::emit::EmitError
+pub fn mycelium_mir_passes::emit::EmitError::from(mycelium_workstack::BudgetError) -> Self
 impl core::error::Error for mycelium_mir_passes::emit::EmitError
 impl core::fmt::Debug for mycelium_mir_passes::emit::EmitError
 pub fn mycelium_mir_passes::emit::EmitError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result

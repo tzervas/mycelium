@@ -168,9 +168,10 @@ fn deep_operator_nesting_is_refused_not_crashed() {
     // refused with an explicit depth error, never drive a host-stack overflow. Both the prefix
     // recursion (parse_unary) and the precedence recursion (parse_binexpr) participate in the
     // shared MAX_EXPR_DEPTH budget.
-    let prefix = "!".repeat(2000);
+    // RFC-0041 §4.2/§7 (W1): MAX_EXPR_DEPTH raised 256 → 4096, so exceed 4096 to trip the guard.
+    let prefix = "!".repeat(5000);
     let src = format!("nodule d;\nfn main() => Binary{{8}} = {prefix}0b0000_0000;");
-    let err = parse(&src).expect_err("a 2000-deep prefix chain must be refused");
+    let err = parse(&src).expect_err("a 5000-deep prefix chain must be refused");
     assert!(
         err.message.contains("refusing to recurse"),
         "got: {}",

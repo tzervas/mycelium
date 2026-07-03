@@ -42,11 +42,12 @@ fn deep_construct(n: usize) -> Node {
 ///
 /// **Honesty (FLAG, VR-5):** `format` returns a plain `String` — infallible today, so this test
 /// cannot assert a "clean refusal". It constructs the real repro (the call itself, if unignored on a
-/// large enough `n`, is the SIGABRT) and documents that RFC-0041 §4.7/§7 W1 is expected to route
-/// this dump/debug renderer through the shared work-step budget — via the §6 within-freeze
-/// behavior-preserving-hardening channel, since `write_canon` lives in the frozen core.
+/// large enough `n`, is the SIGABRT) and documents that this dump/debug renderer is expected to be
+/// routed through the shared work-step budget — via the §6 within-freeze behavior-preserving-hardening
+/// channel, since `write_canon` lives in the **frozen core**. Deferred from W1 to the frozen-core wave
+/// (W3) precisely because that edit requires the maintainer checkpoint (a trusted-base change).
 #[test]
-#[ignore = "W1"] // RFC-0041 §4.7/§7 W1 (+ §6 within-freeze channel: write_canon is frozen-core).
+#[ignore = "W3"] // RFC-0041 §6 within-freeze channel: write_canon is frozen mycelium-core — deferred W1→W3 (maintainer checkpoint before trusted-base edits).
 fn write_canon_deep_construct_chain() {
     let deep = deep_construct(200_000);
     let _ = format(&deep);
