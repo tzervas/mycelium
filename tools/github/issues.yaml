@@ -11372,6 +11372,32 @@ issues:
       identity (Empirical). lib/std static tables (matrix() etc.) now read each-item-closed [...].
       Resolves DN-82 FLAG-976-1. Assignee: tzervas.
       User stories + Definition of Done: see RFC-0040 §2 (use case) + §5 (DoD) — as a lib/std author, I want a Vec list literal so static tables read each-item-closed.
+  - id: M-978
+    title: "Dynamic host-stack growth + unified tunable recursion-depth budget (DN-84)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:core-ir, priority:P2, status:needs-design]
+    epic: E31-1
+    depends_on: [M-977]
+    doc_refs:
+      - corpus:DN-84
+      - src:crates/mycelium-stack/src/lib.rs
+      - src:crates/mycelium-l1/src/parse.rs
+    body: |
+      Harden the recursive frontend passes to be crash-proof (no host-stack SIGABRT) with an
+      essentially-unbounded, cleanly-handled nesting capability, per DN-84. Direction (advisory,
+      DN-84 §7): (1) wire the already-documented mycelium-stack grow-on-demand feature
+      (stacker::maybe_grow — safe API, unsafe contained in the leaf, KC-3/ADR-014 intact) so the
+      host stack is never the binding limit; (2) unify the scattered per-pass depth constants
+      (parser 256, eval 64, ambient/elab/totality/checkty 4096) into one coherent, deterministic,
+      tunable budget — the kernel-resident portable primitive that ports to .myc (boot10); (3) keep
+      the budget deterministic (fixed default, opt-in raise) so accept/reject is a function of
+      (source, budget) only, never the machine (G2 + corpus determinism + self-hosting portability);
+      (4) treat data-shaped depth (RFC-0040 list/table literal Cons chains — size-driven, not logic)
+      separately from control depth: lower it iteratively / route through grow-on-demand so large
+      generated data is bounded by memory, never a recursion guard. Motivated by the ADR-041
+      near-miss (a toolchain frame-size change turned a 256-deep guard into a SIGABRT). Lands via its
+      own RFC/ADR when ratified; DN-84 stays Draft until then.
+      User stories + Definition of Done: see DN-84 §2 (stories) + §7 (recommended direction / criteria).
   - id: M-970
     title: "mycelium-fmt: render_expr_canonical drops the @forage(policy) Hypha annotation"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
