@@ -35,4 +35,10 @@ ignore = true
 #   3. be reflected in `scripts/checks/geiger-baseline.sh`'s baseline (`--update`, after review) so
 #      the new unsafe usage (contained to the `stacker`/`psm` leaf per ADR-014/KC-3, never in
 #      Mycelium-authored source) is a recorded decision, not a silent drift.
-# W0 (this file's author) deliberately does NOT add stacker/psm here — that is W2's scope.
+# W0 (this file's author) deliberately did NOT add stacker/psm here — that was W2's scope.
+# W2 UPDATE (2026-07-03): stacker 0.1.24 (exact-pinned) + psm 0.1.31 (transitive) are now real deps of
+# mycelium-stack (called via stacker's SAFE api; mycelium-stack stays #![forbid(unsafe_code)] — the
+# stack-switching unsafe is contained upstream in stacker/psm, ADR-014/KC-3). THIRD-PARTY-LICENSES.md
+# regenerated (both MIT/Apache-2.0 upstream; first-party stays MIT). The cargo-geiger baseline is still
+# a PLACEHOLDER (cargo-geiger not installed in-env) — run `scripts/checks/geiger-baseline.sh --update`
+# once it is available to record stacker/psm's contained unsafe as a reviewed decision (not silent).

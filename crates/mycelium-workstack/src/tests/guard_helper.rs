@@ -1,6 +1,8 @@
-//! `ensure_sufficient_stack` (W1 passthrough to the 256 MiB deep worker): it returns `f`'s value, and a
-//! genuinely deep recursion that would overflow a default thread stack runs without a crash — so the
-//! *budget*, not a host overflow, is what bounds a pathological input.
+//! `ensure_sufficient_stack` (W2: the deep worker base + the runtime-gated grow backstop, RFC-0041
+//! §4.3): it returns `f`'s value, and a genuinely deep recursion that would overflow a default thread
+//! stack runs without a crash — so the *budget*, not a host overflow, is what bounds a pathological
+//! input. The W2 body swap preserves this W1 guarantee (the worker base is retained); these tests are
+//! the regression guard that the swap did not weaken it.
 
 use crate::{ensure_sufficient_stack, RecursionBudget};
 

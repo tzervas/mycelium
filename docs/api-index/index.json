@@ -17228,12 +17228,100 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_stack::DEFAULT_GROW_SEGMENT:",
+      "kind": "const",
+      "crate": "mycelium-stack",
+      "module": "mycelium_stack",
+      "file": "crates/mycelium-stack/src/lib.rs",
+      "line": 76,
+      "summary": "The default new-segment size the fine-grained grow allocates on each grow event.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_stack::DEFAULT_RED_ZONE:",
+      "kind": "const",
+      "crate": "mycelium-stack",
+      "module": "mycelium_stack",
+      "file": "crates/mycelium-stack/src/lib.rs",
+      "line": 71,
+      "summary": "The default red zone for the fine-grained grow: the minimum remaining stack (bytes) below which",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_stack::NO_GROW_CEILING_BYTES:",
+      "kind": "const",
+      "crate": "mycelium-stack",
+      "module": "mycelium_stack",
+      "file": "crates/mycelium-stack/src/lib.rs",
+      "line": 86,
+      "summary": "The conservative physical usable-stack ceiling **assumed on a no-grow target** (e.g.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_stack::StackError",
+      "kind": "enum",
+      "crate": "mycelium-stack",
+      "module": "mycelium_stack",
+      "file": "crates/mycelium-stack/src/lib.rs",
+      "line": 152,
+      "summary": "The never-silent host-stack refusal surface (RFC-0041 §4.3).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_stack::ensure_sufficient_stack",
+      "kind": "fn",
+      "crate": "mycelium-stack",
+      "module": "mycelium_stack",
+      "file": "crates/mycelium-stack/src/lib.rs",
+      "line": 125,
+      "summary": "Fine-grained runtime-gated stack grow (RFC-0041 §4.3): ensure at least `red_zone` bytes of stack",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_stack::grow",
+      "kind": "fn",
+      "crate": "mycelium-stack",
+      "module": "mycelium_stack",
+      "file": "crates/mycelium-stack/src/lib.rs",
+      "line": 131,
+      "summary": "Fine-grained grow with the fixed generous defaults ([`DEFAULT_RED_ZONE`] / [`DEFAULT_GROW_SEGMENT`]).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_stack::growable_ceiling_honors_floor",
+      "kind": "fn",
+      "crate": "mycelium-stack",
+      "module": "mycelium_stack",
+      "file": "crates/mycelium-stack/src/lib.rs",
+      "line": 210,
+      "summary": "Check that the host stack can hold the depth floor — refusing never-silently when it cannot and",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_stack::stack_growth_available",
+      "kind": "fn",
+      "crate": "mycelium-stack",
+      "module": "mycelium_stack",
+      "file": "crates/mycelium-stack/src/lib.rs",
+      "line": 143,
+      "summary": "Whether on-demand stack growth is available on the current target **at runtime** (RFC-0041 §4.3).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_stack::with_deep_stack",
       "kind": "fn",
       "crate": "mycelium-stack",
       "module": "mycelium_stack",
       "file": "crates/mycelium-stack/src/lib.rs",
-      "line": 61,
+      "line": 98,
       "summary": "Run `f` on a worker thread with a large explicit stack ([`DEEP_STACK_BYTES`]) and return its value.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27650,7 +27738,7 @@
       "crate": "mycelium-workstack",
       "module": "mycelium_workstack",
       "file": "crates/mycelium-workstack/src/lib.rs",
-      "line": 376,
+      "line": 382,
       "summary": "An RAII reservation of process-wide bytes, from [`ProcessArena::reserve`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27661,7 +27749,7 @@
       "crate": "mycelium-workstack",
       "module": "mycelium_workstack",
       "file": "crates/mycelium-workstack/src/lib.rs",
-      "line": 75,
+      "line": 81,
       "summary": "The canonical, never-silent over-budget error (RFC-0041 §5.1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27672,8 +27760,19 @@
       "crate": "mycelium-workstack",
       "module": "mycelium_workstack",
       "file": "crates/mycelium-workstack/src/lib.rs",
-      "line": 53,
+      "line": 59,
       "summary": "Which non-depth resource a [`BudgetError::OutOfBudget`] refused on.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_workstack::DEPTH_FLOOR:",
+      "kind": "const",
+      "crate": "mycelium-workstack",
+      "module": "mycelium_workstack",
+      "file": "crates/mycelium-workstack/src/lib.rs",
+      "line": 443,
+      "summary": "The **depth floor** every execution machine honors (RFC-0041 §4.4): the global default depth ceiling",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -27683,8 +27782,30 @@
       "crate": "mycelium-workstack",
       "module": "mycelium_workstack",
       "file": "crates/mycelium-workstack/src/lib.rs",
-      "line": 285,
+      "line": 291,
       "summary": "The RAII depth reservation returned by [`RecursionBudget::try_enter`].",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_workstack::HOST_STACK_BYTES_PER_FRAME:",
+      "kind": "const",
+      "crate": "mycelium-workstack",
+      "module": "mycelium_workstack",
+      "file": "crates/mycelium-workstack/src/lib.rs",
+      "line": 465,
+      "summary": "The conservative **per-recursion-frame host-stack cost** (bytes) used for the §4.3 host-stack floor",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_workstack::MAX_FRAME_BYTES:",
+      "kind": "const",
+      "crate": "mycelium-workstack",
+      "module": "mycelium_workstack",
+      "file": "crates/mycelium-workstack/src/lib.rs",
+      "line": 457,
+      "summary": "The §4.2 **frame-size baseline**: the pinned maximum `size_of` (bytes) of the three execution",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -27694,7 +27815,7 @@
       "crate": "mycelium-workstack",
       "module": "mycelium_workstack",
       "file": "crates/mycelium-workstack/src/lib.rs",
-      "line": 320,
+      "line": 326,
       "summary": "The process-wide memory arena (§4.2).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27705,7 +27826,7 @@
       "crate": "mycelium-workstack",
       "module": "mycelium_workstack::ProcessArena",
       "file": "crates/mycelium-workstack/src/lib.rs",
-      "line": 344,
+      "line": 350,
       "summary": "Reserve `bytes` against the process-wide ceiling.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27716,7 +27837,7 @@
       "crate": "mycelium-workstack",
       "module": "mycelium_workstack",
       "file": "crates/mycelium-workstack/src/lib.rs",
-      "line": 134,
+      "line": 140,
       "summary": "A per-invocation recursion budget: a depth ceiling on the §4.0 metric plus memory and work-step",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27727,7 +27848,7 @@
       "crate": "mycelium-workstack",
       "module": "mycelium_workstack::RecursionBudget",
       "file": "crates/mycelium-workstack/src/lib.rs",
-      "line": 146,
+      "line": 152,
       "summary": "The global default depth ceiling on the §4.0 metric (RFC-0041 §4.2).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27738,7 +27859,7 @@
       "crate": "mycelium-workstack",
       "module": "mycelium_workstack::RecursionBudget",
       "file": "crates/mycelium-workstack/src/lib.rs",
-      "line": 196,
+      "line": 202,
       "summary": "Charge `n` bytes against the memory ceiling.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27749,7 +27870,7 @@
       "crate": "mycelium-workstack",
       "module": "mycelium_workstack::RecursionBudget",
       "file": "crates/mycelium-workstack/src/lib.rs",
-      "line": 211,
+      "line": 217,
       "summary": "Charge `n` node-visit work steps against the work-step (CPU) ceiling.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27760,7 +27881,7 @@
       "crate": "mycelium-workstack",
       "module": "mycelium_workstack::RecursionBudget",
       "file": "crates/mycelium-workstack/src/lib.rs",
-      "line": 262,
+      "line": 268,
       "summary": "The cumulative bytes charged so far.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27771,7 +27892,7 @@
       "crate": "mycelium-workstack",
       "module": "mycelium_workstack::RecursionBudget",
       "file": "crates/mycelium-workstack/src/lib.rs",
-      "line": 257,
+      "line": 263,
       "summary": "The current live depth (inspectable — house rule #2 / `EXPLAIN`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27782,7 +27903,7 @@
       "crate": "mycelium-workstack",
       "module": "mycelium_workstack::RecursionBudget",
       "file": "crates/mycelium-workstack/src/lib.rs",
-      "line": 267,
+      "line": 273,
       "summary": "The cumulative work steps charged so far.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27793,8 +27914,19 @@
       "crate": "mycelium-workstack",
       "module": "mycelium_workstack::RecursionBudget",
       "file": "crates/mycelium-workstack/src/lib.rs",
-      "line": 179,
+      "line": 185,
       "summary": "Try to enter one source-call/β frame (the §4.0 metric unit).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_workstack::StartupError",
+      "kind": "enum",
+      "crate": "mycelium-workstack",
+      "module": "mycelium_workstack",
+      "file": "crates/mycelium-workstack/src/lib.rs",
+      "line": 500,
+      "summary": "The never-silent **startup refusal** surface (RFC-0041 §4.2/§4.3): the one error [`check_startup`]",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -27804,8 +27936,19 @@
       "crate": "mycelium-workstack",
       "module": "mycelium_workstack",
       "file": "crates/mycelium-workstack/src/lib.rs",
-      "line": 431,
+      "line": 478,
       "summary": "Check the §4.2 **determinism invariant**: the memory ceiling must be at least `depth_floor`",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_workstack::check_startup",
+      "kind": "fn",
+      "crate": "mycelium-workstack",
+      "module": "mycelium_workstack",
+      "file": "crates/mycelium-workstack/src/lib.rs",
+      "line": 552,
+      "summary": "The **startup gate** (RFC-0041 §4.2/§4.3): before any execution machine runs deep input, assert both",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -27815,7 +27958,7 @@
       "crate": "mycelium-workstack",
       "module": "mycelium_workstack",
       "file": "crates/mycelium-workstack/src/lib.rs",
-      "line": 309,
+      "line": 315,
       "summary": "The current process-wide reserved-byte total (inspectable — house rule #2 / `EXPLAIN`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27826,7 +27969,7 @@
       "crate": "mycelium-workstack",
       "module": "mycelium_workstack",
       "file": "crates/mycelium-workstack/src/lib.rs",
-      "line": 410,
+      "line": 428,
       "summary": "Run `f` on a host stack large enough that the [`RecursionBudget`] — not a host-stack overflow —",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -42090,6 +42233,22 @@
       "reason": "dedup-alias: same definition as `mycelium_spore::resolve_remote` at crates/mycelium-spore/src/remote.rs:1261 — one canonical row kept"
     },
     {
+      "symbol": "mycelium_stack::StackError::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_stack::StackError::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_stack::StackError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_stack::StackError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
       "symbol": "mycelium_std_cmp::Bf16Bits::clone",
       "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
     },
@@ -50136,6 +50295,26 @@
     {
       "symbol": "mycelium_workstack::RecursionBudget::work_step_limit",
       "reason": "definition not found via regex heuristic (kind='fn', name='work_step_limit') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_workstack::StartupError::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_workstack::StartupError::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_workstack::StartupError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_workstack::StartupError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_workstack::StartupError::source",
+      "reason": "definition not found via regex heuristic (kind='fn', name='source') — possibly macro-generated or cfg-gated"
     },
     {
       "symbol": "u128::myc_cmp",

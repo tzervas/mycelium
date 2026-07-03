@@ -242,6 +242,15 @@ before merge. **Shared-file owners** (resolves §11 Med wave39): root `Cargo.tom
 **integrator-owned** — waves FLAG edits, the integrator applies them (feed-as-ready). **Ordering edges are
 in the table**, not just prose (resolves §11 High wave35).
 
+**Status (2026-07-03):** **W0, W1, and W2 landed.** W2 = the host-stack **grow** infrastructure:
+`mycelium-stack` gains a fine-grained runtime-gated `stacker` grow (exact-pinned `=0.1.24`; still
+`#![forbid(unsafe_code)]` — no authored unsafe, the switch is contained upstream) with a never-silent
+no-grow refusal (`growable_ceiling_honors_floor`, wasm-safe); `mycelium-workstack` routes
+`ensure_sufficient_stack` through it (layered on the worker base, non-regressing) and adds the
+`check_startup` `mem_ceiling ≥ floor × MAX_FRAME_BYTES(384)` gate; a frame-size CI baseline pins the
+value structs. Honest scope: the *per-recursion-point* stride-1 grow is consumer-side wiring for
+W3½/W4/W5; the AOT `Frame` in-crate pin is a tracked residual. W2 `Enacted` for the grow/startup scope.
+
 **Status (2026-07-03):** **W0 and W1 landed.** W0 = the safety-net gates (§4.0 metric test, §5.1
 error-parity differential `#[ignore="W5"]`, the RR-29 guard-hole census, depth-structured fuzz, and the
 mutants/unsafe-audit scope). W1 = the **`mycelium-workstack`** budget crate (`RecursionBudget` on the
@@ -320,6 +329,16 @@ implementation. **4 Critical + 15 High source-confirmed** objections, all resolv
 
 ## Meta — changelog
 
+- **2026-07-03 — W2 landed (host-stack grow; M-979).** `mycelium-stack` gains a fine-grained,
+  runtime-gated `stacker` grow (exact-pinned `=0.1.24`, `psm 0.1.31`; still `#![forbid(unsafe_code)]` —
+  the switch is contained upstream, ADR-014) with a never-silent no-grow refusal
+  (`growable_ceiling_honors_floor`); `mycelium-workstack` routes `ensure_sufficient_stack` through it
+  (layered on the worker base — non-regressing) and adds `check_startup` (`mem_ceiling ≥ floor ×
+  MAX_FRAME_BYTES`) plus a frame-size CI baseline (relocated to `mycelium-l1/tests/` — a workstack
+  dev-dep back-edge would have closed a normal+dev cycle the acyclic gate rejects). Supply chain
+  (THIRD-PARTY regen, unsafe-audit, geiger placeholder) reconciled. Honest scope: per-recursion-point
+  grow is W3½/W4/W5 consumer wiring; the AOT `Frame` pin is a tracked residual. W2 `Enacted` (grow scope);
+  RFC stays Accepted. (VR-5/G2.)
 - **2026-07-03 — W1 landed (budget crate and frontend wiring; M-979).** The `mycelium-workstack` leaf
   crate (`RecursionBudget` on the §4.0 metric, a memory ceiling, a `ProcessArena`, the canonical
   `BudgetError::DepthExceeded{u32}`, the `ensure_sufficient_stack` W1 passthrough, and the §4.2 invariant

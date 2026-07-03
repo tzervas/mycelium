@@ -1693,7 +1693,15 @@
 
 | Symbol | Kind | File:Line | Summary |
 |---|---|---|---|
-| `mycelium_stack::with_deep_stack` | fn | `crates/mycelium-stack/src/lib.rs:61` | Run `f` on a worker thread with a large explicit stack ([`DEEP_STACK_BYTES`]) and return its value. |
+| `mycelium_stack::DEFAULT_GROW_SEGMENT:` | const | `crates/mycelium-stack/src/lib.rs:76` | The default new-segment size the fine-grained grow allocates on each grow event. |
+| `mycelium_stack::DEFAULT_RED_ZONE:` | const | `crates/mycelium-stack/src/lib.rs:71` | The default red zone for the fine-grained grow: the minimum remaining stack (bytes) below which |
+| `mycelium_stack::NO_GROW_CEILING_BYTES:` | const | `crates/mycelium-stack/src/lib.rs:86` | The conservative physical usable-stack ceiling **assumed on a no-grow target** (e.g. |
+| `mycelium_stack::StackError` | enum | `crates/mycelium-stack/src/lib.rs:152` | The never-silent host-stack refusal surface (RFC-0041 §4.3). |
+| `mycelium_stack::ensure_sufficient_stack` | fn | `crates/mycelium-stack/src/lib.rs:125` | Fine-grained runtime-gated stack grow (RFC-0041 §4.3): ensure at least `red_zone` bytes of stack |
+| `mycelium_stack::grow` | fn | `crates/mycelium-stack/src/lib.rs:131` | Fine-grained grow with the fixed generous defaults ([`DEFAULT_RED_ZONE`] / [`DEFAULT_GROW_SEGMENT`]). |
+| `mycelium_stack::growable_ceiling_honors_floor` | fn | `crates/mycelium-stack/src/lib.rs:210` | Check that the host stack can hold the depth floor — refusing never-silently when it cannot and |
+| `mycelium_stack::stack_growth_available` | fn | `crates/mycelium-stack/src/lib.rs:143` | Whether on-demand stack growth is available on the current target **at runtime** (RFC-0041 §4.3). |
+| `mycelium_stack::with_deep_stack` | fn | `crates/mycelium-stack/src/lib.rs:98` | Run `f` on a worker thread with a large explicit stack ([`DEEP_STACK_BYTES`]) and return its value. |
 
 ## mycelium-std-cmp
 
@@ -2790,23 +2798,28 @@
 
 | Symbol | Kind | File:Line | Summary |
 |---|---|---|---|
-| `mycelium_workstack::ArenaReservation` | struct | `crates/mycelium-workstack/src/lib.rs:376` | An RAII reservation of process-wide bytes, from [`ProcessArena::reserve`]. |
-| `mycelium_workstack::BudgetError` | enum | `crates/mycelium-workstack/src/lib.rs:75` | The canonical, never-silent over-budget error (RFC-0041 §5.1). |
-| `mycelium_workstack::BudgetKind` | enum | `crates/mycelium-workstack/src/lib.rs:53` | Which non-depth resource a [`BudgetError::OutOfBudget`] refused on. |
-| `mycelium_workstack::DepthGuard` | struct | `crates/mycelium-workstack/src/lib.rs:285` | The RAII depth reservation returned by [`RecursionBudget::try_enter`]. |
-| `mycelium_workstack::ProcessArena` | struct | `crates/mycelium-workstack/src/lib.rs:320` | The process-wide memory arena (§4.2). |
-| `mycelium_workstack::ProcessArena::reserve` | fn | `crates/mycelium-workstack/src/lib.rs:344` | Reserve `bytes` against the process-wide ceiling. |
-| `mycelium_workstack::RecursionBudget` | struct | `crates/mycelium-workstack/src/lib.rs:134` | A per-invocation recursion budget: a depth ceiling on the §4.0 metric plus memory and work-step |
-| `mycelium_workstack::RecursionBudget::DEFAULT_DEPTH_LIMIT:` | const | `crates/mycelium-workstack/src/lib.rs:146` | The global default depth ceiling on the §4.0 metric (RFC-0041 §4.2). |
-| `mycelium_workstack::RecursionBudget::charge_bytes` | fn | `crates/mycelium-workstack/src/lib.rs:196` | Charge `n` bytes against the memory ceiling. |
-| `mycelium_workstack::RecursionBudget::charge_steps` | fn | `crates/mycelium-workstack/src/lib.rs:211` | Charge `n` node-visit work steps against the work-step (CPU) ceiling. |
-| `mycelium_workstack::RecursionBudget::current_bytes` | fn | `crates/mycelium-workstack/src/lib.rs:262` | The cumulative bytes charged so far. |
-| `mycelium_workstack::RecursionBudget::current_depth` | fn | `crates/mycelium-workstack/src/lib.rs:257` | The current live depth (inspectable — house rule #2 / `EXPLAIN`). |
-| `mycelium_workstack::RecursionBudget::current_steps` | fn | `crates/mycelium-workstack/src/lib.rs:267` | The cumulative work steps charged so far. |
-| `mycelium_workstack::RecursionBudget::try_enter` | fn | `crates/mycelium-workstack/src/lib.rs:179` | Try to enter one source-call/β frame (the §4.0 metric unit). |
-| `mycelium_workstack::assert_mem_ceiling_honors_floor` | fn | `crates/mycelium-workstack/src/lib.rs:431` | Check the §4.2 **determinism invariant**: the memory ceiling must be at least `depth_floor` |
-| `mycelium_workstack::current_process_bytes` | fn | `crates/mycelium-workstack/src/lib.rs:309` | The current process-wide reserved-byte total (inspectable — house rule #2 / `EXPLAIN`). |
-| `mycelium_workstack::ensure_sufficient_stack` | fn | `crates/mycelium-workstack/src/lib.rs:410` | Run `f` on a host stack large enough that the [`RecursionBudget`] — not a host-stack overflow — |
+| `mycelium_workstack::ArenaReservation` | struct | `crates/mycelium-workstack/src/lib.rs:382` | An RAII reservation of process-wide bytes, from [`ProcessArena::reserve`]. |
+| `mycelium_workstack::BudgetError` | enum | `crates/mycelium-workstack/src/lib.rs:81` | The canonical, never-silent over-budget error (RFC-0041 §5.1). |
+| `mycelium_workstack::BudgetKind` | enum | `crates/mycelium-workstack/src/lib.rs:59` | Which non-depth resource a [`BudgetError::OutOfBudget`] refused on. |
+| `mycelium_workstack::DEPTH_FLOOR:` | const | `crates/mycelium-workstack/src/lib.rs:443` | The **depth floor** every execution machine honors (RFC-0041 §4.4): the global default depth ceiling |
+| `mycelium_workstack::DepthGuard` | struct | `crates/mycelium-workstack/src/lib.rs:291` | The RAII depth reservation returned by [`RecursionBudget::try_enter`]. |
+| `mycelium_workstack::HOST_STACK_BYTES_PER_FRAME:` | const | `crates/mycelium-workstack/src/lib.rs:465` | The conservative **per-recursion-frame host-stack cost** (bytes) used for the §4.3 host-stack floor |
+| `mycelium_workstack::MAX_FRAME_BYTES:` | const | `crates/mycelium-workstack/src/lib.rs:457` | The §4.2 **frame-size baseline**: the pinned maximum `size_of` (bytes) of the three execution |
+| `mycelium_workstack::ProcessArena` | struct | `crates/mycelium-workstack/src/lib.rs:326` | The process-wide memory arena (§4.2). |
+| `mycelium_workstack::ProcessArena::reserve` | fn | `crates/mycelium-workstack/src/lib.rs:350` | Reserve `bytes` against the process-wide ceiling. |
+| `mycelium_workstack::RecursionBudget` | struct | `crates/mycelium-workstack/src/lib.rs:140` | A per-invocation recursion budget: a depth ceiling on the §4.0 metric plus memory and work-step |
+| `mycelium_workstack::RecursionBudget::DEFAULT_DEPTH_LIMIT:` | const | `crates/mycelium-workstack/src/lib.rs:152` | The global default depth ceiling on the §4.0 metric (RFC-0041 §4.2). |
+| `mycelium_workstack::RecursionBudget::charge_bytes` | fn | `crates/mycelium-workstack/src/lib.rs:202` | Charge `n` bytes against the memory ceiling. |
+| `mycelium_workstack::RecursionBudget::charge_steps` | fn | `crates/mycelium-workstack/src/lib.rs:217` | Charge `n` node-visit work steps against the work-step (CPU) ceiling. |
+| `mycelium_workstack::RecursionBudget::current_bytes` | fn | `crates/mycelium-workstack/src/lib.rs:268` | The cumulative bytes charged so far. |
+| `mycelium_workstack::RecursionBudget::current_depth` | fn | `crates/mycelium-workstack/src/lib.rs:263` | The current live depth (inspectable — house rule #2 / `EXPLAIN`). |
+| `mycelium_workstack::RecursionBudget::current_steps` | fn | `crates/mycelium-workstack/src/lib.rs:273` | The cumulative work steps charged so far. |
+| `mycelium_workstack::RecursionBudget::try_enter` | fn | `crates/mycelium-workstack/src/lib.rs:185` | Try to enter one source-call/β frame (the §4.0 metric unit). |
+| `mycelium_workstack::StartupError` | enum | `crates/mycelium-workstack/src/lib.rs:500` | The never-silent **startup refusal** surface (RFC-0041 §4.2/§4.3): the one error [`check_startup`] |
+| `mycelium_workstack::assert_mem_ceiling_honors_floor` | fn | `crates/mycelium-workstack/src/lib.rs:478` | Check the §4.2 **determinism invariant**: the memory ceiling must be at least `depth_floor` |
+| `mycelium_workstack::check_startup` | fn | `crates/mycelium-workstack/src/lib.rs:552` | The **startup gate** (RFC-0041 §4.2/§4.3): before any execution machine runs deep input, assert both |
+| `mycelium_workstack::current_process_bytes` | fn | `crates/mycelium-workstack/src/lib.rs:315` | The current process-wide reserved-byte total (inspectable — house rule #2 / `EXPLAIN`). |
+| `mycelium_workstack::ensure_sufficient_stack` | fn | `crates/mycelium-workstack/src/lib.rs:428` | Run `f` on a host stack large enough that the [`RecursionBudget`] — not a host-stack overflow — |
 
 ## Flagged items
 
@@ -6378,6 +6391,10 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_spore::remote::RemoteResolved::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_spore::remote::publish_remote` | dedup-alias: same definition as `mycelium_spore::publish_remote` at crates/mycelium-spore/src/remote.rs:1171 — one canonical row kept |
 | `mycelium_spore::remote::resolve_remote` | dedup-alias: same definition as `mycelium_spore::resolve_remote` at crates/mycelium-spore/src/remote.rs:1261 — one canonical row kept |
+| `mycelium_stack::StackError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_stack::StackError::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_stack::StackError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_stack::StackError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_std_cmp::Bf16Bits::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_std_cmp::Bf16Bits::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_std_cmp::Bf16Bits::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
@@ -8390,6 +8407,11 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_workstack::RecursionBudget::new` | definition not found via regex heuristic (kind='fn', name='new') — possibly macro-generated or cfg-gated |
 | `mycelium_workstack::RecursionBudget::with_depth_default` | definition not found via regex heuristic (kind='fn', name='with_depth_default') — possibly macro-generated or cfg-gated |
 | `mycelium_workstack::RecursionBudget::work_step_limit` | definition not found via regex heuristic (kind='fn', name='work_step_limit') — possibly macro-generated or cfg-gated |
+| `mycelium_workstack::StartupError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_workstack::StartupError::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_workstack::StartupError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_workstack::StartupError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_workstack::StartupError::source` | definition not found via regex heuristic (kind='fn', name='source') — possibly macro-generated or cfg-gated |
 | `u128::myc_cmp` | definition not found via regex heuristic (kind='fn', name='myc_cmp') — possibly macro-generated or cfg-gated |
 | `u128::myc_eq` | definition not found via regex heuristic (kind='fn', name='myc_eq') — possibly macro-generated or cfg-gated |
 | `u128::myc_ge` | definition not found via regex heuristic (kind='fn', name='myc_ge') — possibly macro-generated or cfg-gated |

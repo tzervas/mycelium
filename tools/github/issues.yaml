@@ -11437,8 +11437,15 @@ issues:
       (G2): write_canon (frozen core) + is_pure/plan_parallel (interp) re-tagged W1->W3/W4 (checkpoint).
       Residuals tracked: recursive-Drop bomb incl NEW mycelium-doc::ir::Node member (W3); mir-passes
       eval(&RcNode)/emit_elided/emit_reuse + count_occurrences O(N^2) (W2); syn native recursion (3rd-party).
-      Next: W2 (grow: fine-grained stacker + startup mem-ceiling assertion + frame-size CI baseline +
-      pin stacker/psm), W3.5 (extract AOT env-machine loop) — parallel where disjoint; MAINTAINER
+      W2 LANDED (2026-07-03, to dev): mycelium-stack fine-grained runtime-gated stacker grow (exact-pin
+      =0.1.24 + psm 0.1.31; stays forbid-unsafe — switch contained upstream, ADR-014) + never-silent
+      no-grow refusal (growable_ceiling_honors_floor, wasm-safe); workstack ensure_sufficient_stack body
+      swap (layered on worker, non-regressing) + check_startup (mem_ceiling>=floor*MAX_FRAME_BYTES=384) +
+      frame-size CI baseline (in mycelium-l1/tests; a workstack dev-dep would close a normal+dev cycle the
+      acyclic gate rejects). Supply chain reconciled (THIRD-PARTY regen, unsafe-audit, geiger placeholder).
+      Honest residuals: per-recursion-point grow = W3.5/W4/W5 consumer wiring; AOT Frame in-crate pin
+      pending (mlir); W1 infallible-pass memory-DoS bound awaits arena-charging; O(N^2) re-walks (mono/mir).
+      Next: W3.5 (extract AOT env-machine loop onto shared guard/budget, behavior-preserving), then MAINTAINER
       CHECKPOINT before W3 (frozen-core iterative Drop) + W4/W5 (L0/L1 machine conversion).
       DN-84 design (D), CONFIRMED by the maintainer (DN-84 §11 correction, 2026-07-03) as the
       solve-NOW track: get the complexity of the problem and solution fully figured out and solved

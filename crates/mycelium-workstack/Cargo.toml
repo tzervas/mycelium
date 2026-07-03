@@ -15,3 +15,10 @@ workspace = true
 # Downward-only (DN-68): std + the host-stack adapter leaf ONLY. Never `mycelium-interp`/`-core`/`-l1`
 # — those are UPWARD; the leaf exposes counters/limits and the charge happens consumer-side (§4.1).
 mycelium-stack = { path = "../mycelium-stack" }
+
+# NOTE: this crate is a strict downward-only leaf (DN-68) with NO dev-dependencies either — a
+# `[dev-dependencies]` back-edge onto an upward machine crate (e.g. mycelium-l1) closes a
+# normal+dev cycle that the acyclic-deps gate rejects (cargo tolerates dev-cycles; our gate does
+# not). The §4.2 frame-size baseline that needs `size_of` of the machine value/frame structs
+# therefore lives DOWNSTREAM (mycelium-l1/tests/frame_size_baseline.rs for the public value structs;
+# an in-crate mycelium-mlir test for the private AOT `Frame`), importing `MAX_FRAME_BYTES` from here.
