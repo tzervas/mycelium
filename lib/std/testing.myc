@@ -288,19 +288,16 @@ fn rng_new(seed: Binary{64}) => Binary{64} =
 // same state always yields the same output (C4/RT3).
 fn rng_next(state: Binary{64}) => Binary{64} =
   let a = xor(
-            state,
-            shl_u(
-              state,
-              0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00001101
-            )
-          ) in
+    state,
+    shl_u(
+      state,
+      0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00001101
+    )
+  ) in
   let b = xor(
-            a,
-            shr_u(
-              a,
-              0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000111
-            )
-          ) in
+    a,
+    shr_u(a, 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000111)
+  ) in
   xor(
     b,
     shl_u(b, 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00010001)
@@ -343,7 +340,10 @@ fn find_failing[T](candidates: Vec[T], prop: T => Bool) => Option[T] =
   match candidates {
     Nil => None,
     Cons(c, rest) =>
-      match prop(c) { False => Some(c), True => find_failing(rest, prop) }
+      match prop(c) {
+        False => Some(c),
+        True => find_failing(rest, prop)
+      }
   };
 
 // shrink_loop: descend through shrink candidates keeping the smallest still-failing value; the
@@ -357,12 +357,17 @@ fn shrink_loop[T](
 ) => T =
   match eq(steps, 0b00000000_00000000) {
     0b1 => best,
-    _ =>
-      match find_failing(candidates, prop) {
-        None => best,
-        Some(c) =>
-          shrink_loop(c, shrink(c), shrink, prop, sub_u(steps, 0b00000000_00000001))
-      }
+    _ => match find_failing(candidates, prop) {
+      None => best,
+      Some(c) =>
+        shrink_loop(
+          c,
+          shrink(c),
+          shrink,
+          prop,
+          sub_u(steps, 0b00000000_00000001)
+        )
+    }
   };
 
 // shrink_to_minimal: shrink a failing value to a minimal counterexample (spec §3). The result is
@@ -385,36 +390,33 @@ fn for_all_loop[T](
 ) => Verdict[T] =
   match eq(remaining, 0b0000_0000) {
     0b1 => match generated_any { True => Pass, False => Skipped(NeedsRecord) },
-    _ =>
-      match gen(state) {
-        Stepped(drawn, state2) =>
-          match drawn {
-            None => match generated_any { True => Pass, False => Skipped(NeedsRecord) },
-            Some(input) =>
-              match prop(input) {
-                True =>
-                  for_all_loop(
-                    gen,
-                    shrink,
-                    prop,
-                    state2,
-                    seed,
-                    sub_u(remaining, 0b0000_0001),
-                    add_u(trial, 0b0000_0001),
-                    True
-                  ),
-                False =>
-                  Fail(
-                    FRec(
-                      shrink_to_minimal(input, shrink, prop),
-                      seed,
-                      trial,
-                      "for_all property violated"
-                    )
-                  )
-              }
-          }
+    _ => match gen(state) {
+      Stepped(drawn, state2) => match drawn {
+        None => match generated_any { True => Pass, False => Skipped(NeedsRecord) },
+        Some(input) => match prop(input) {
+          True =>
+            for_all_loop(
+              gen,
+              shrink,
+              prop,
+              state2,
+              seed,
+              sub_u(remaining, 0b0000_0001),
+              add_u(trial, 0b0000_0001),
+              True
+            ),
+          False =>
+            Fail(
+              FRec(
+                shrink_to_minimal(input, shrink, prop),
+                seed,
+                trial,
+                "for_all property violated"
+              )
+            )
+        }
       }
+    }
   };
 
 // for_all: run a property over `budget` generated inputs. Returns the first failure (shrunk to a
@@ -454,26 +456,18 @@ fn golden{N}(
 ) => Verdict[GoldenFail[Binary{N}]] =
   match baseline {
     None => Skipped(NeedsRecord),
-    Some(gb) =>
-      match gb {
-        GB(bname, expected) =>
-          match eq(bname, name) {
-            0b1 =>
-              match eq(expected, produced) {
-                0b1 => Pass,
-                _ =>
-                  Fail(
-                    FRec(
-                      GFail(name, expected, produced),
-                      zero64(),
-                      0b0000_0000,
-                      "golden"
-                    )
-                  )
-              },
-            _ => Skipped(NeedsRecord)
-          }
+    Some(gb) => match gb {
+      GB(bname, expected) => match eq(bname, name) {
+        0b1 => match eq(expected, produced) {
+          0b1 => Pass,
+          _ =>
+            Fail(
+              FRec(GFail(name, expected, produced), zero64(), 0b0000_0000, "golden")
+            )
+        },
+        _ => Skipped(NeedsRecord)
       }
+    }
   };
 
 // ── differential / oracle harness (M-151/M-210 pattern; NFR-7) ──────────────────────────────────
@@ -535,13 +529,12 @@ fn bump_undetermined(s: Summary) => Summary =
 fn summarize[V](vs: Vec[Verdict[V]]) => Summary =
   match vs {
     Nil => Counts(0b0000_0000, 0b0000_0000, 0b0000_0000, 0b0000_0000),
-    Cons(v, rest) =>
-      match v {
-        Pass => bump_pass(summarize(rest)),
-        Fail(_) => bump_fail(summarize(rest)),
-        Skipped(_) => bump_skipped(summarize(rest)),
-        Undetermined(_) => bump_undetermined(summarize(rest))
-      }
+    Cons(v, rest) => match v {
+      Pass => bump_pass(summarize(rest)),
+      Fail(_) => bump_fail(summarize(rest)),
+      Skipped(_) => bump_skipped(summarize(rest)),
+      Undetermined(_) => bump_undetermined(summarize(rest))
+    }
   };
 
 // is_green: True iff there are no failures. Skipped/undetermined counts are SURFACED in the
@@ -618,11 +611,10 @@ fn scope_contains(s: ModeScope, m: CertMode) => Bool =
 fn scope_filter(s: ModeScope, ms: Vec[CertMode], want: Bool) => Vec[CertMode] =
   match ms {
     Nil => Nil,
-    Cons(m, rest) =>
-      match bool_eq(scope_contains(s, m), want) {
-        True => Cons(m, scope_filter(s, rest, want)),
-        False => scope_filter(s, rest, want)
-      }
+    Cons(m, rest) => match bool_eq(scope_contains(s, m), want) {
+      True => Cons(m, scope_filter(s, rest, want)),
+      False => scope_filter(s, rest, want)
+    }
   };
 
 // modes_in_scope / modes_out_of_scope: the membership split (0..=3 elements each). Exact.
@@ -645,31 +637,27 @@ fn scope_is_empty(s: ModeScope) => Bool =
 // scope_union / scope_intersect: composable derived scopes. Exact.
 fn scope_union(a: ModeScope, b: ModeScope) => ModeScope =
   match a {
-    MScope(f1, b1, c1) =>
-      match b {
-        MScope(f2, b2, c2) => MScope(bool_or(f1, f2), bool_or(b1, b2), bool_or(c1, c2))
-      }
+    MScope(f1, b1, c1) => match b {
+      MScope(f2, b2, c2) => MScope(bool_or(f1, f2), bool_or(b1, b2), bool_or(c1, c2))
+    }
   };
 
 fn scope_intersect(a: ModeScope, b: ModeScope) => ModeScope =
   match a {
-    MScope(f1, b1, c1) =>
-      match b {
-        MScope(f2, b2, c2) =>
-          MScope(bool_and(f1, f2), bool_and(b1, b2), bool_and(c1, c2))
-      }
+    MScope(f1, b1, c1) => match b {
+      MScope(f2, b2, c2) => MScope(bool_and(f1, f2), bool_and(b1, b2), bool_and(c1, c2))
+    }
   };
 
 // from_resolved_mode: the resolver→scope bridge — "the modes at or above the resolved depth":
 // Fast → ALL_MODES, Balanced → NON_FAST, Certified → CERTIFIED_ONLY. Exact.
 fn from_resolved_mode(r: ResolvedMode) => ModeScope =
   match r {
-    RMode(m, _) =>
-      match m {
-        Fast => scope_all_modes(),
-        Balanced => scope_non_fast(),
-        Certified => scope_certified_only()
-      }
+    RMode(m, _) => match m {
+      Fast => scope_all_modes(),
+      Balanced => scope_non_fast(),
+      Certified => scope_certified_only()
+    }
   };
 
 // ── ModeTestConfig — the configurable per-test scope (FLAG-testing-7) ───────────────────────────
@@ -692,20 +680,17 @@ fn decl_beats(new_d: CertDecl, cur: CertDecl) => Bool =
 // resolve_fold: the left-to-right max-specificity fold. Exact.
 fn resolve_fold(decls: Vec[CertDecl], acc: Option[CertDecl]) => ResolvedMode =
   match decls {
-    Nil =>
-      match acc {
-        None => RMode(Fast, None),
-        Some(w) => match w { Decl(sc, m) => RMode(m, Some(sc)) }
-      },
-    Cons(d, rest) =>
-      match acc {
-        None => resolve_fold(rest, Some(d)),
-        Some(w) =>
-          match decl_beats(d, w) {
-            True => resolve_fold(rest, Some(d)),
-            False => resolve_fold(rest, Some(w))
-          }
+    Nil => match acc {
+      None => RMode(Fast, None),
+      Some(w) => match w { Decl(sc, m) => RMode(m, Some(sc)) }
+    },
+    Cons(d, rest) => match acc {
+      None => resolve_fold(rest, Some(d)),
+      Some(w) => match decl_beats(d, w) {
+        True => resolve_fold(rest, Some(d)),
+        False => resolve_fold(rest, Some(w))
       }
+    }
   };
 
 // resolve_decls: the reimplemented most-specific-wins resolution (mycelium_proj::resolve_mode's
@@ -758,12 +743,14 @@ fn visited_all(v: ModeVisit) => Bool =
 fn mode_list_eq(xs: Vec[CertMode], ys: Vec[CertMode]) => Bool =
   match xs {
     Nil => match ys { Nil => True, Cons(_, _) => False },
-    Cons(x, xrest) =>
-      match ys {
-        Nil => False,
-        Cons(y, yrest) =>
-          match mode_eq(x, y) { True => mode_list_eq(xrest, yrest), False => False }
-      }
+    Cons(x, xrest) => match ys {
+      Nil => False,
+      Cons(y, yrest) =>
+        match mode_eq(x, y) {
+          True => mode_list_eq(xrest, yrest),
+          False => False
+        }
+    }
   };
 
 // matches_scope: True iff exactly the in-scope modes were visited (no more, no fewer). Exact.
@@ -785,11 +772,12 @@ fn for_each_mode[B](f: CertMode => B) => Vec[B] =
 fn visit_apply[B](s: ModeScope, ms: Vec[CertMode], f: CertMode => B) => Vec[CertMode] =
   match ms {
     Nil => Nil,
-    Cons(m, rest) =>
-      match scope_contains(s, m) {
-        True => let peeked = f(m) in Cons(m, visit_apply(s, rest, f)),
-        False => visit_apply(s, rest, f)
-      }
+    Cons(m, rest) => match scope_contains(s, m) {
+      True =>
+        let peeked = f(m) in
+        Cons(m, visit_apply(s, rest, f)),
+      False => visit_apply(s, rest, f)
+    }
   };
 
 // for_each_mode_in: run `f` for each mode IN scope, returning the never-silent visited/skipped
@@ -808,23 +796,19 @@ fn scope_check_walk(
 ) => Option[ModeViolation] =
   match ms {
     Nil => None,
-    Cons(m, rest) =>
-      match pred(m) {
-        True =>
-          match scope_contains(s, m) {
-            True => scope_check_walk(s, pred, rest, neg_only),
-            False => Some(NegativeFires(m))
-          },
-        False =>
-          match scope_contains(s, m) {
-            True =>
-              match neg_only {
-                True => scope_check_walk(s, pred, rest, neg_only),
-                False => Some(PositiveAbsent(m))
-              },
-            False => scope_check_walk(s, pred, rest, neg_only)
-          }
+    Cons(m, rest) => match pred(m) {
+      True => match scope_contains(s, m) {
+        True => scope_check_walk(s, pred, rest, neg_only),
+        False => Some(NegativeFires(m))
+      },
+      False => match scope_contains(s, m) {
+        True => match neg_only {
+          True => scope_check_walk(s, pred, rest, neg_only),
+          False => Some(PositiveAbsent(m))
+        },
+        False => scope_check_walk(s, pred, rest, neg_only)
       }
+    }
   };
 
 // mode_scope_violation: the decision core of assert_mode_scope — the FIRST violation of either
@@ -927,13 +911,12 @@ fn row_is_green() => MatrixRow =
 
 // matrix: the full 5-row table, in guarantee_matrix.rs::MATRIX order.
 fn matrix() => Vec[MatrixRow] =
-  Cons(
-    row_for_all(),
-    Cons(
-      row_golden(),
-      Cons(row_differential(), Cons(row_summarize(), Cons(row_is_green(), Nil)))
-    )
-  );
+  Cons(row_for_all(),
+  Cons(row_golden(),
+  Cons(row_differential(),
+  Cons(row_summarize(),
+  Cons(row_is_green(),
+  Nil)))));
 
 // ── structural checks (the typed analogs of guarantee_matrix.rs::tests) ─────────────────────────
 // all_rows_exact: every harness op's tag is Exact-as-mechanism (spec §4; accidentally tagging a
@@ -954,19 +937,11 @@ fn all_rows_explainable(xs: Vec[MatrixRow]) => Bool =
 // only_golden_and_differential_declare_io: the spec §4 effects discipline, read off the typed
 // column (no substring matching).
 fn only_golden_and_differential_declare_io() => Bool =
-  bool_and(
-    declares_io(row_effects_class(row_golden())),
-    bool_and(
-      declares_io(row_effects_class(row_differential())),
-      bool_and(
-        bool_not(declares_io(row_effects_class(row_for_all()))),
-        bool_and(
-          bool_not(declares_io(row_effects_class(row_summarize()))),
-          bool_not(declares_io(row_effects_class(row_is_green())))
-        )
-      )
-    )
-  );
+  bool_and(declares_io(row_effects_class(row_golden())),
+  bool_and(declares_io(row_effects_class(row_differential())),
+  bool_and(bool_not(declares_io(row_effects_class(row_for_all()))),
+  bool_and(bool_not(declares_io(row_effects_class(row_summarize()))),
+  bool_not(declares_io(row_effects_class(row_is_green())))))));
 
 // aggregator_rows_are_total: summarize/is_green are total functions over verdicts (spec §4).
 fn aggregator_rows_are_total() => Bool =

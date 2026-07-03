@@ -268,7 +268,10 @@ fn registry_contains(reg: ClassRegistry, c: ClassName) => Bool =
   match reg {
     RegNil => False,
     RegCons(x, rest) =>
-      match class_eq(x, c) { True => True, False => registry_contains(rest, c) }
+      match class_eq(x, c) {
+        True => True,
+        False => registry_contains(rest, c)
+      }
   };
 
 // register: idempotent insert (registering the same name twice is a no-op) — Exact.
@@ -306,11 +309,10 @@ fn budget_amount(eb: EffectBudget) => Binary{8} =
 fn budget_set(b: Budgets, eb: EffectBudget) => Budgets =
   match b {
     BNil => BEntry(budget_kind(eb), budget_amount(eb), BNil),
-    BEntry(bk, rem, rest) =>
-      match effect_eq(bk, budget_kind(eb)) {
-        True => BEntry(bk, budget_amount(eb), rest),
-        False => BEntry(bk, rem, budget_set(rest, eb))
-      }
+    BEntry(bk, rem, rest) => match effect_eq(bk, budget_kind(eb)) {
+      True => BEntry(bk, budget_amount(eb), rest),
+      False => BEntry(bk, rem, budget_set(rest, eb))
+    }
   };
 
 // budget_remaining: the remaining budget for a kind; None if none was declared — Exact.
@@ -318,7 +320,10 @@ fn budget_remaining(b: Budgets, k: EffectKind) => Option[Binary{8}] =
   match b {
     BNil => None,
     BEntry(bk, rem, rest) =>
-      match effect_eq(bk, k) { True => Some(rem), False => budget_remaining(rest, k) }
+      match effect_eq(bk, k) {
+        True => Some(rem),
+        False => budget_remaining(rest, k)
+      }
   };
 
 // budget_consume: consume `amount` of `k`'s budget. An overrun — INCLUDING consuming an effect
@@ -333,19 +338,16 @@ fn budget_consume(
 ) => Result[Budgets, EffectBudgetExhausted] =
   match b {
     BNil => Err(Exhausted(k, amount, 0b0000_0000)),
-    BEntry(bk, rem, rest) =>
-      match effect_eq(bk, k) {
-        True =>
-          match lt(rem, amount) {
-            0b1 => Err(Exhausted(k, amount, rem)),
-            _ => Ok(BEntry(bk, sub_u(rem, amount), rest))
-          },
-        False =>
-          match budget_consume(rest, k, amount) {
-            Ok(rest2) => Ok(BEntry(bk, rem, rest2)),
-            Err(x) => Err(x)
-          }
+    BEntry(bk, rem, rest) => match effect_eq(bk, k) {
+      True => match lt(rem, amount) {
+        0b1 => Err(Exhausted(k, amount, rem)),
+        _ => Ok(BEntry(bk, sub_u(rem, amount), rest))
+      },
+      False => match budget_consume(rest, k, amount) {
+        Ok(rest2) => Ok(BEntry(bk, rem, rest2)),
+        Err(x) => Err(x)
       }
+    }
   };
 
 // ── declared-effect discipline (I3 — manual-declare + compositional-check) ──────────────────────
@@ -353,7 +355,10 @@ fn effect_member(xs: EffectList, k: EffectKind) => Bool =
   match xs {
     ENil => False,
     ECons(x, rest) =>
-      match effect_eq(x, k) { True => True, False => effect_member(rest, k) }
+      match effect_eq(x, k) {
+        True => True,
+        False => effect_member(rest, k)
+      }
   };
 
 // effect_insert: set-insert (no-op when already present) — the dedup that keeps EffectList a
@@ -370,11 +375,10 @@ fn check_effects(
 ) => Result[Unit, UndeclaredEffect] =
   match performed {
     ENil => Ok(U),
-    ECons(k, rest) =>
-      match effect_member(declared, k) {
-        True => check_effects(declared, rest),
-        False => Err(Undeclared(k))
-      }
+    ECons(k, rest) => match effect_member(declared, k) {
+      True => check_effects(declared, rest),
+      False => Err(Undeclared(k))
+    }
   };
 
 // ── reified policy (RFC-0014 §4.4; C3 — the rule list is the inspection surface) ───────────────
@@ -385,11 +389,10 @@ fn check_effects(
 fn policy_insert[T](p: Policy[T], c: ClassName, a: RecoveryAction[T]) => Policy[T] =
   match p {
     PNil => PRule(c, a, p),
-    PRule(pc, pa, rest) =>
-      match class_eq(pc, c) {
-        True => PRule(c, a, rest),
-        False => PRule(pc, pa, policy_insert(rest, c, a))
-      }
+    PRule(pc, pa, rest) => match class_eq(pc, c) {
+      True => PRule(c, a, rest),
+      False => PRule(pc, pa, policy_insert(rest, c, a))
+    }
   };
 
 // escalate_target: the Escalate action's target class, if any (the X1 validation hook for `on`).
@@ -414,15 +417,13 @@ fn on[T](
 ) => Result[Policy[T], UnknownClass] =
   match registry_contains(reg, c) {
     False => Err(UnknownCls(c)),
-    True =>
-      match escalate_target(a) {
-        None => Ok(policy_insert(p, c, a)),
-        Some(target) =>
-          match registry_contains(reg, target) {
-            True => Ok(policy_insert(p, c, a)),
-            False => Err(UnknownCls(target))
-          }
+    True => match escalate_target(a) {
+      None => Ok(policy_insert(p, c, a)),
+      Some(target) => match registry_contains(reg, target) {
+        True => Ok(policy_insert(p, c, a)),
+        False => Err(UnknownCls(target))
       }
+    }
   };
 
 // action_for: the recovery action for a class, if any — None is explicit absence, never a silent
@@ -431,7 +432,10 @@ fn action_for[T](p: Policy[T], c: ClassName) => Option[RecoveryAction[T]] =
   match p {
     PNil => None,
     PRule(pc, pa, rest) =>
-      match class_eq(pc, c) { True => Some(pa), False => action_for(rest, c) }
+      match class_eq(pc, c) {
+        True => Some(pa),
+        False => action_for(rest, c)
+      }
   };
 
 fn policy_is_empty[T](p: Policy[T]) => Bool =
@@ -452,11 +456,10 @@ fn action_effect[T](a: RecoveryAction[T]) => Option[EffectKind] =
 fn policy_effects[T](p: Policy[T]) => EffectList =
   match p {
     PNil => ENil,
-    PRule(_, a, rest) =>
-      match action_effect(a) {
-        Some(k) => effect_insert(policy_effects(rest), k),
-        None => policy_effects(rest)
-      }
+    PRule(_, a, rest) => match action_effect(a) {
+      Some(k) => effect_insert(policy_effects(rest), k),
+      None => policy_effects(rest)
+    }
   };
 
 // ── the never-silent driver (RFC-0014 §4.2/§4.3; RFC-0016 C1) ───────────────────────────────────
@@ -472,18 +475,15 @@ fn retry_loop[T, E](
 ) => Resolution[T, E] =
   match eq(remaining, 0b0000_0000) {
     0b1 => Propagated(err, ByPolicy, False),
-    _ =>
-      match budget_consume(b, EkRetry, 0b0000_0001) {
-        Err(_) => Propagated(err, ByPolicy, False),
-        Ok(b2) =>
-          match attempt(U) {
-            Attempted(o2, tag) =>
-              match o2 {
-                OOk(v) => Recovered(v, tag, ByPolicy),
-                OErr(_) => retry_loop(sub_u(remaining, 0b0000_0001), err, b2, attempt)
-              }
-          }
+    _ => match budget_consume(b, EkRetry, 0b0000_0001) {
+      Err(_) => Propagated(err, ByPolicy, False),
+      Ok(b2) => match attempt(U) {
+        Attempted(o2, tag) => match o2 {
+          OOk(v) => Recovered(v, tag, ByPolicy),
+          OErr(_) => retry_loop(sub_u(remaining, 0b0000_0001), err, b2, attempt)
+        }
       }
+    }
   };
 
 // apply_action: apply one matched action — every arm yields Recovered or Propagated (I1).
@@ -502,11 +502,10 @@ fn apply_action[T, E](
     Fallback(v) => Recovered(v, GDeclared, ByPolicy),
     Retry(n) => retry_loop(n, err, b, attempt),
     Escalate(_) => Propagated(err, ByPolicy, False),
-    CleanupThenPropagate(ef) =>
-      match budget_consume(b, ef, 0b0000_0001) {
-        Ok(_) => Propagated(err, ByPolicy, False),
-        Err(_) => Propagated(err, ByPolicy, True)
-      }
+    CleanupThenPropagate(ef) => match budget_consume(b, ef, 0b0000_0001) {
+      Ok(_) => Propagated(err, ByPolicy, False),
+      Err(_) => Propagated(err, ByPolicy, True)
+    }
   };
 
 // handle_classified: the spine — map an Outcome through a Policy; ALWAYS yields a Resolution,
@@ -524,11 +523,10 @@ fn handle_classified[T, E](
 ) => Resolution[T, E] =
   match o {
     OOk(v) => Recovered(v, GExact, NoPolicy),
-    OErr(e) =>
-      match action_for(p, class_of(e)) {
-        None => Propagated(e, NoPolicy, False),
-        Some(a) => apply_action(a, e, b, attempt)
-      }
+    OErr(e) => match action_for(p, class_of(e)) {
+      None => Propagated(e, NoPolicy, False),
+      Some(a) => apply_action(a, e, b, attempt)
+    }
   };
 
 // recover_classified: the Result bridge — handle_classified with a Result input (the concrete
@@ -725,34 +723,18 @@ type Vec[A] = Nil | Cons(A, Vec[A]);
 
 // matrix: the full 11-row table, in the same order as guarantee_matrix.rs::MATRIX.
 fn matrix() => Vec[MatrixRow] =
-  Cons(
-    row_handle(),
-    Cons(
-      row_recover_bridge(),
-      Cons(
-        row_fallback(),
-        Cons(
-          row_retry(),
-          Cons(
-            row_escalate(),
-            Cons(
-              row_cleanup(),
-              Cons(
-                row_on(),
-                Cons(
-                  row_policy_ref(),
-                  Cons(
-                    row_action_for(),
-                    Cons(row_consume(), Cons(row_check_effects(), Nil))
-                  )
-                )
-              )
-            )
-          )
-        )
-      )
-    )
-  );
+  Cons(row_handle(),
+  Cons(row_recover_bridge(),
+  Cons(row_fallback(),
+  Cons(row_retry(),
+  Cons(row_escalate(),
+  Cons(row_cleanup(),
+  Cons(row_on(),
+  Cons(row_policy_ref(),
+  Cons(row_action_for(),
+  Cons(row_consume(),
+  Cons(row_check_effects(),
+  Nil)))))))))));
 
 // matrix_len: the row count as Binary{8} (11 rows fits trivially). O(n) spine-walk.
 fn matrix_len(xs: Vec[MatrixRow]) => Binary{8} =
@@ -766,7 +748,10 @@ fn all_never_silent_nonempty(xs: Vec[MatrixRow]) => Bool =
   match xs {
     Nil => True,
     Cons(r, rest) =>
-      bool_and(nonempty(row_never_silent(r)), all_never_silent_nonempty(rest))
+      bool_and(
+        nonempty(row_never_silent(r)),
+        all_never_silent_nonempty(rest)
+      )
   };
 
 // driver_rows_are_total: the handle/recover bridge rows are Total (total over budgets — I1/I4).
@@ -787,16 +772,8 @@ fn driver_rows_are_policy_ref_explainable() => Bool =
 // `check_effects` are FallibleConfig, `consume` is FallibleBudget, `policy_ref`/`action_for`
 // are Total (read off the typed Fallibility column, no substring needed).
 fn config_ops_fallibility_is_typed() => Bool =
-  bool_and(
-    is_fallible_config(row_fallibility(row_on())),
-    bool_and(
-      is_fallible_config(row_fallibility(row_check_effects())),
-      bool_and(
-        is_fallible_budget(row_fallibility(row_consume())),
-        bool_and(
-          is_total(row_fallibility(row_policy_ref())),
-          is_total(row_fallibility(row_action_for()))
-        )
-      )
-    )
-  );
+  bool_and(is_fallible_config(row_fallibility(row_on())),
+  bool_and(is_fallible_config(row_fallibility(row_check_effects())),
+  bool_and(is_fallible_budget(row_fallibility(row_consume())),
+  bool_and(is_total(row_fallibility(row_policy_ref())),
+  is_total(row_fallibility(row_action_for()))))));

@@ -131,7 +131,10 @@ fn slice_opt(b: Bytes, start: Binary{32}, end: Binary{32}) => Option[Bytes] =
   match lt(end, start) {
     0b1 => None,
     _ =>
-      match lt(byte_len(b), end) { 0b1 => None, _ => Some(bytes_slice(b, start, end)) }
+      match lt(byte_len(b), end) {
+        0b1 => None,
+        _ => Some(bytes_slice(b, start, end))
+      }
   };
 
 // ── is_ascii_byte ──────────────────────────────────────────────────────────────────────────────────
@@ -230,15 +233,13 @@ fn reject_three(
 ) => Result[Pair[Binary{32}, Binary{8}], Utf8Error] =
   match lt(cp, 0b0000_0000_0000_0000_0000_1000_0000_0000) {
     0b1 => Err(Overlong(lead)),
-    _ =>
-      match lt(cp, 0b0000_0000_0000_0000_1101_1000_0000_0000) {
-        0b1 => Ok(Pr(cp, 0b0000_0011)),
-        _ =>
-          match lt(cp, 0b0000_0000_0000_0000_1110_0000_0000_0000) {
-            0b1 => Err(Surrogate(lead)),
-            _ => Ok(Pr(cp, 0b0000_0011))
-          }
+    _ => match lt(cp, 0b0000_0000_0000_0000_1101_1000_0000_0000) {
+      0b1 => Ok(Pr(cp, 0b0000_0011)),
+      _ => match lt(cp, 0b0000_0000_0000_0000_1110_0000_0000_0000) {
+        0b1 => Err(Surrogate(lead)),
+        _ => Ok(Pr(cp, 0b0000_0011))
       }
+    }
   };
 
 // 4-byte: valid iff cp >= 0x10000 (else overlong) AND cp <= 0x10FFFF (else above the Unicode ceiling).
@@ -250,11 +251,10 @@ fn reject_four(
 ) => Result[Pair[Binary{32}, Binary{8}], Utf8Error] =
   match lt(cp, 0b0000_0000_0000_0001_0000_0000_0000_0000) {
     0b1 => Err(Overlong(lead)),
-    _ =>
-      match lt(0b0000_0000_0001_0000_1111_1111_1111_1111, cp) {
-        0b1 => Err(TooLarge(lead)),
-        _ => Ok(Pr(cp, 0b0000_0100))
-      }
+    _ => match lt(0b0000_0000_0001_0000_1111_1111_1111_1111, cp) {
+      0b1 => Err(TooLarge(lead)),
+      _ => Ok(Pr(cp, 0b0000_0100))
+    }
   };
 
 // ── decode_ascii ───────────────────────────────────────────────────────────────────────────────────
@@ -287,12 +287,14 @@ fn decode_two(
 ) => Result[Pair[Binary{32}, Binary{8}], Utf8Error] =
   match byte_at(b, add_u(i, 0b0000_0001)) {
     None => Err(Invalid(lead)),
-    Some(c1) =>
-      match is_cont_byte(c1) {
-        False => Err(Invalid(c1)),
-        True =>
-          reject_two(or(shl6(widen8(and(lead, 0b0001_1111))), cont_payload(c1)), lead)
-      }
+    Some(c1) => match is_cont_byte(c1) {
+      False => Err(Invalid(c1)),
+      True =>
+        reject_two(
+          or(shl6(widen8(and(lead, 0b0001_1111))), cont_payload(c1)),
+          lead
+        )
+    }
   };
 
 // 3-byte: lead 0b1110xxxx, two conts yield cp = (lead & 0x0F) << 12 | (c1 & 0x3F) << 6 | (c2 & 0x3F).
@@ -303,26 +305,23 @@ fn decode_three(
 ) => Result[Pair[Binary{32}, Binary{8}], Utf8Error] =
   match byte_at(b, add_u(i, 0b0000_0001)) {
     None => Err(Invalid(lead)),
-    Some(c1) =>
-      match is_cont_byte(c1) {
-        False => Err(Invalid(c1)),
-        True =>
-          match byte_at(b, add_u(i, 0b0000_0010)) {
-            None => Err(Invalid(c1)),
-            Some(c2) =>
-              match is_cont_byte(c2) {
-                False => Err(Invalid(c2)),
-                True =>
-                  reject_three(
-                    or(
-                      or(shl12(widen8(and(lead, 0b0000_1111))), shl6(cont_payload(c1))),
-                      cont_payload(c2)
-                    ),
-                    lead
-                  )
-              }
-          }
+    Some(c1) => match is_cont_byte(c1) {
+      False => Err(Invalid(c1)),
+      True => match byte_at(b, add_u(i, 0b0000_0010)) {
+        None => Err(Invalid(c1)),
+        Some(c2) => match is_cont_byte(c2) {
+          False => Err(Invalid(c2)),
+          True =>
+            reject_three(
+              or(
+                or(shl12(widen8(and(lead, 0b0000_1111))), shl6(cont_payload(c1))),
+                cont_payload(c2)
+              ),
+              lead
+            )
+        }
       }
+    }
   };
 
 // 4-byte: lead 0b11110xxx, three conts yield
@@ -334,40 +333,32 @@ fn decode_four(
 ) => Result[Pair[Binary{32}, Binary{8}], Utf8Error] =
   match byte_at(b, add_u(i, 0b0000_0001)) {
     None => Err(Invalid(lead)),
-    Some(c1) =>
-      match is_cont_byte(c1) {
-        False => Err(Invalid(c1)),
-        True =>
-          match byte_at(b, add_u(i, 0b0000_0010)) {
-            None => Err(Invalid(c1)),
-            Some(c2) =>
-              match is_cont_byte(c2) {
-                False => Err(Invalid(c2)),
-                True =>
-                  match byte_at(b, add_u(i, 0b0000_0011)) {
-                    None => Err(Invalid(c2)),
-                    Some(c3) =>
-                      match is_cont_byte(c3) {
-                        False => Err(Invalid(c3)),
-                        True =>
-                          reject_four(
-                            or(
-                              or(
-                                or(
-                                  shl18(widen8(and(lead, 0b0000_0111))),
-                                  shl12(cont_payload(c1))
-                                ),
-                                shl6(cont_payload(c2))
-                              ),
-                              cont_payload(c3)
-                            ),
-                            lead
-                          )
-                      }
-                  }
-              }
+    Some(c1) => match is_cont_byte(c1) {
+      False => Err(Invalid(c1)),
+      True => match byte_at(b, add_u(i, 0b0000_0010)) {
+        None => Err(Invalid(c1)),
+        Some(c2) => match is_cont_byte(c2) {
+          False => Err(Invalid(c2)),
+          True => match byte_at(b, add_u(i, 0b0000_0011)) {
+            None => Err(Invalid(c2)),
+            Some(c3) => match is_cont_byte(c3) {
+              False => Err(Invalid(c3)),
+              True =>
+                reject_four(
+                  or(
+                    or(
+                      or(shl18(widen8(and(lead, 0b0000_0111))), shl12(cont_payload(c1))),
+                      shl6(cont_payload(c2))
+                    ),
+                    cont_payload(c3)
+                  ),
+                  lead
+                )
+            }
           }
+        }
       }
+    }
   };
 
 // ── decode_one ─────────────────────────────────────────────────────────────────────────────────────
@@ -407,25 +398,20 @@ fn decode_one(
 ) => Result[Pair[Binary{32}, Binary{8}], Utf8Error] =
   match byte_at(b, i) {
     None => Err(Invalid(0b0000_0000)),
-    Some(lead) =>
-      match lt(lead, 0b1000_0000) {
-        0b1 => Ok(Pr(widen8(lead), 0b0000_0001)),
-        _ =>
-          match lt(lead, 0b1100_0000) {
-            0b1 => Err(Invalid(lead)),
-            _ =>
-              match lt(lead, 0b1110_0000) {
-                0b1 => decode_two(b, i, lead),
-                _ =>
-                  match lt(lead, 0b1111_0000) {
-                    0b1 => decode_three(b, i, lead),
-                    _ =>
-                      match lt(lead, 0b1111_1000) {
-                        0b1 => decode_four(b, i, lead),
-                        _ => Err(Invalid(lead))
-                      }
-                  }
-              }
+    Some(lead) => match lt(lead, 0b1000_0000) {
+      0b1 => Ok(Pr(widen8(lead), 0b0000_0001)),
+      _ => match lt(lead, 0b1100_0000) {
+        0b1 => Err(Invalid(lead)),
+        _ => match lt(lead, 0b1110_0000) {
+          0b1 => decode_two(b, i, lead),
+          _ => match lt(lead, 0b1111_0000) {
+            0b1 => decode_three(b, i, lead),
+            _ => match lt(lead, 0b1111_1000) {
+              0b1 => decode_four(b, i, lead),
+              _ => Err(Invalid(lead))
+            }
           }
+        }
       }
+    }
   };

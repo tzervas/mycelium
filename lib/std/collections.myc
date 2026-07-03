@@ -69,7 +69,10 @@ fn get[A](xs: Vec[A], i: Binary{8}) => Option[A] =
   match xs {
     Nil => None,
     Cons(x, rest) =>
-      match eq(i, 0b0000_0000) { 0b1 => Some(x), _ => get(rest, sub_u(i, 0b0000_0001)) }
+      match eq(i, 0b0000_0000) {
+        0b1 => Some(x),
+        _ => get(rest, sub_u(i, 0b0000_0001))
+      }
   };
 
 // snoc: append `x` at the end of `xs`. O(n) spine-walk to the tail (Declared). The spine is rebuilt

@@ -307,43 +307,21 @@ type Vec[A] = Nil | Cons(A, Vec[A]);
 
 // matrix: the full 14-row table, in the same order as guarantee_matrix.rs::MATRIX.
 fn matrix() => Vec[MatrixRow] =
-  Cons(
-    row_present(),
-    Cons(
-      row_content_id(),
-      Cons(
-        row_to_human(),
-        Cons(
-          row_to_json(),
-          Cons(
-            row_from_json(),
-            Cons(
-              row_resolve_class(),
-              Cons(
-                row_register_class(),
-                Cons(
-                  row_on_policy(),
-                  Cons(
-                    row_policy_ref(),
-                    Cons(
-                      row_from_file(),
-                      Cons(
-                        row_resolve_route(),
-                        Cons(
-                          row_sink(),
-                          Cons(row_guarantee_of(), Cons(row_audit_of(), Nil))
-                        )
-                      )
-                    )
-                  )
-                )
-              )
-            )
-          )
-        )
-      )
-    )
-  );
+  Cons(row_present(),
+  Cons(row_content_id(),
+  Cons(row_to_human(),
+  Cons(row_to_json(),
+  Cons(row_from_json(),
+  Cons(row_resolve_class(),
+  Cons(row_register_class(),
+  Cons(row_on_policy(),
+  Cons(row_policy_ref(),
+  Cons(row_from_file(),
+  Cons(row_resolve_route(),
+  Cons(row_sink(),
+  Cons(row_guarantee_of(),
+  Cons(row_audit_of(),
+  Nil))))))))))))));
 
 // ── Structural checks over the matrix (the .myc analogs of guarantee_matrix.rs::tests) ───────────
 // Every check below is Empirical (trials, std_diag.rs three-way differential) over Declared data.
@@ -365,7 +343,10 @@ fn all_never_silent_nonempty(xs: Vec[MatrixRow]) => Bool =
   match xs {
     Nil => True,
     Cons(r, rest) =>
-      bool_and(nonempty(row_never_silent(r)), all_never_silent_nonempty(rest))
+      bool_and(
+        nonempty(row_never_silent(r)),
+        all_never_silent_nonempty(rest)
+      )
   };
 
 // all_effects_nonempty: True iff every row states its effects (guarantee_matrix.rs::every_row_states_effects).
@@ -394,13 +375,9 @@ fn explicit_ops_have_error_set(xs: Vec[MatrixRow]) => Bool =
 // — present is Total, Exact, and IsExplainRecord. (The "error_set contains UNCHANGED" substring
 // assertion is FLAGged above as not portable — no bytes_eq/contains prim.)
 fn present_is_i1_crux() => Bool =
-  bool_and(
-    is_exact(row_guarantee(row_present())),
-    bool_and(
-      is_total(row_fallibility(row_present())),
-      is_explain_record(row_explainable(row_present()))
-    )
-  );
+  bool_and(is_exact(row_guarantee(row_present())),
+  bool_and(is_total(row_fallibility(row_present())),
+  is_explain_record(row_explainable(row_present()))));
 
 // content_id_and_policy_ref_are_handles: guarantee_matrix.rs::content_id_and_policy_ref_are_content_addressed_handles
 // — both rows are ContentAddressedHandle (fully portable: pure ADT equality, no substring needed).
