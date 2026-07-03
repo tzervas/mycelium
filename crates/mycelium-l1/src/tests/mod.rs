@@ -10,6 +10,7 @@ mod decision;
 mod elab;
 mod error;
 mod eval;
+mod fuse;
 mod lexer;
 mod lib_root;
 mod mono;
