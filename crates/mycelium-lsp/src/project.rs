@@ -32,13 +32,23 @@
 use mycelium_core::{
     Alt, GuaranteeStrength, Node, Payload, Repr, ScalarKind, SparsityClass, Trit, Value,
 };
+use mycelium_workstack::{ensure_sufficient_stack, RecursionBudget};
 
 /// Render a closed Core IR [`Node`] as the `LlmCanonical` s-expression surface (RFC-0021 §4.6).
 /// **Total** over every node kind (enforced by the exhaustive `match`) and **deterministic** (a pure
 /// function of the node). Preserves the honesty overlay (P2/P3).
+///
+/// **RFC-0041 §4.7 W1 (RR-29 guard-hole census):** `Node` is a post-elaboration tree that can exceed
+/// the L1 parser's 256-frame depth (an editor buffer is untrusted input), and `render_node` recurses
+/// one stack frame per nesting level. This is the LSP's **outermost public entry point** for the
+/// render, so it — and only it — wraps the recursion in [`ensure_sufficient_stack`]: a deep buffer
+/// now renders on the grown worker stack instead of a SIGABRT that would crash the language server.
+/// The budget's depth ceiling is not yet consulted by the W1 host-stack grow (that lands in W2); this
+/// call site exists so W2's fine-grained guard swaps in with **no signature change** here.
 #[must_use]
 pub fn llm_canonical(node: &Node) -> String {
-    render_node(node)
+    let budget = RecursionBudget::with_depth_default(u64::MAX, u64::MAX);
+    ensure_sufficient_stack(&budget, || render_node(node))
 }
 
 fn render_node(n: &Node) -> String {
