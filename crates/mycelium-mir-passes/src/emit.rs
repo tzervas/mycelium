@@ -253,6 +253,15 @@ fn balance_binder(var: &mycelium_core::VarId, k: usize, body: RcNode) -> RcNode 
 /// [`RecursionBudget::charge_steps`] CPU bound needs the infallible→fallible signature change).
 ///
 /// Guarantee: `Exact` — a deterministic structural count.
+//
+// FLAG(W7 residual, RFC-0041 §9): the SIGABRT/host-stack hole is CLOSED (this entry point runs the
+// traversal on the `mycelium-workstack` deep worker stack, so a deep chain completes rather than
+// aborting — see `tests/guard_hole_census.rs::count_occurrences_deep_let_chain`). What is DEFERRED is
+// the `O(N²)` re-walk (called once per binder from `emit_*`) and, relatedly, a work-step CPU bound:
+// this function is infallible (`usize`), so it cannot refuse past a `RecursionBudget::charge_steps`
+// ceiling without an infallible→fallible signature change that would ripple into
+// `is_fully_borrowable`/`is_sole_owned_move`/`borrow_occurrences` and the `emit_elided`/`emit_reuse`
+// path. That quadratic-scan/work-step fix is a W2/profiling item, not a self-DoS (SIGABRT) risk.
 #[must_use]
 pub fn count_occurrences(var: &mycelium_core::VarId, node: &Node) -> usize {
     let budget = RecursionBudget::default();
@@ -359,7 +368,12 @@ use crate::rc_ir::RcNode as N;
 /// [`RcNode::Borrow`](crate::rc_ir::RcNode::Borrow), **no** `Dup`, and a single
 /// [`RcNode::DropAfter`](crate::rc_ir::RcNode::DropAfter) reclaiming it after its reads.
 ///
-/// Returns [`EmitError::UnsupportedNode`] for `Fix`/`FixGroup` (G2 — never-silent on recursion).
+/// Returns [`EmitError::UnsupportedNode`] for `Fix`/`FixGroup` (G2 — never-silent on recursion), and
+/// [`EmitError::DepthExceeded`] if the traversal's own recursion exceeds the shared
+/// [`RecursionBudget`] depth ceiling (RFC-0041 §4.7 — the W7 guard hole in this AOT RC/ownership
+/// pass): the outermost call runs on the deep worker stack so a genuinely deep `Node` never
+/// SIGABRTs `myc build`, and each recursive step charges [`RecursionBudget::try_enter`] so a
+/// pathological input refuses cleanly at the depth ceiling.
 ///
 /// Guarantee: the elision is **semantics-preserving** — `Empirical` (the differential harness in
 /// [`crate::eval`] checks that, for a corpus of terms, the multiset of reclaimed values is identical
@@ -368,7 +382,7 @@ use crate::rc_ir::RcNode as N;
 /// that reduction stays `Declared` until measured (DN-33 §8.1 Q5).
 pub fn emit_elided(node: &Node) -> Result<RcNode, EmitError> {
     // reuse = false: borrow elision only (Increment 1).
-    emit_ann(node, &Ann::new(false))
+    emit_ann_toplevel(node, false)
 }
 
 /// Lower a Core IR [`Node`] with MEM-4 Increment 1 (**borrow elision**) **and** Increment 2
@@ -379,7 +393,8 @@ pub fn emit_elided(node: &Node) -> Result<RcNode, EmitError> {
 /// move position) has that move emitted as [`RcNode::MoveUnique`](crate::rc_ir::RcNode::MoveUnique),
 /// recording that the runtime `UniqueOwner` branch is statically guaranteed (FBIP-reuse-eligible).
 ///
-/// Returns [`EmitError::UnsupportedNode`] for `Fix`/`FixGroup` (G2).
+/// Returns [`EmitError::UnsupportedNode`] for `Fix`/`FixGroup` (G2), and [`EmitError::DepthExceeded`]
+/// on a deeper-than-ceiling `Node` (RFC-0041 §4.7 — see [`emit_elided`]).
 ///
 /// Guarantee: the reuse annotation is **semantics-preserving** and its soundness is
 /// **machine-verified** — [`crate::eval`] errors ([`crate::eval::RcError::UnsoundUnique`]) if any
@@ -387,7 +402,27 @@ pub fn emit_elided(node: &Node) -> Result<RcNode, EmitError> {
 /// verifying evaluator), not `Proven`.
 pub fn emit_reuse(node: &Node) -> Result<RcNode, EmitError> {
     // reuse = true: borrow elision + the rc==1 reuse annotation (Increment 2).
-    emit_ann(node, &Ann::new(true))
+    emit_ann_toplevel(node, true)
+}
+
+/// Shared guarded entry for the annotated (elision / reuse) emission ([`emit_elided`] /
+/// [`emit_reuse`]). Runs the traversal on the `mycelium-workstack` deep worker stack
+/// ([`ensure_sufficient_stack`]) and charges a fresh [`RecursionBudget`] at every recursive step
+/// (RFC-0041 §4.7 — the W7 guard hole in this AOT RC/ownership pass), so a deep `Node` refuses
+/// cleanly ([`EmitError::DepthExceeded`]) instead of SIGABRT-ing the host stack (G2). Mirrors
+/// [`emit_owned`]'s W1 guard.
+///
+/// The per-binder occurrence / borrow analysis routes through the `_inner` helpers (not the public
+/// [`count_occurrences`] / [`borrow_occurrences`] wrappers): this closure already runs on the deep
+/// worker stack, so re-entering a public wrapper here would needlessly spawn a fresh worker thread
+/// **per binder** (turning the already-`O(N²)` re-walk residual into an `O(N)` thread-spawn
+/// multiplier too — the same reasoning as `emit_owned_guarded`).
+fn emit_ann_toplevel(node: &Node, reuse: bool) -> Result<RcNode, EmitError> {
+    let outer = RecursionBudget::default();
+    ensure_sufficient_stack(&outer, || {
+        let budget = RecursionBudget::default();
+        emit_ann(node, &Ann::new(reuse), &budget)
+    })
 }
 
 /// Annotation context threaded through emission: the in-scope `borrowed` and `unique` variable sets
@@ -425,7 +460,17 @@ impl Ann {
 /// non-consuming [`RcNode::Borrow`]; every use of a `unique` variable becomes a sole-owner
 /// [`RcNode::MoveUnique`]; fully-borrowable `let`s are borrow-elided; sole-owned single-move `let`s
 /// are reuse-annotated (when `reuse` is enabled).
-fn emit_ann(node: &Node, ann: &Ann) -> Result<RcNode, EmitError> {
+///
+/// **RFC-0041 §4.7 (the W7 guard hole in this AOT RC/ownership pass):** every recursive step charges
+/// `budget.try_enter()` (RAII-released on return), so a pathological `Node` refuses cleanly with
+/// [`EmitError::DepthExceeded`] at the depth ceiling instead of overflowing the host stack (G2). The
+/// per-binder occurrence/borrow analysis routes through the `_inner` helpers ([`count_occurrences_inner`],
+/// [`is_fully_borrowable_inner`], [`is_sole_owned_move_inner`], [`borrow_occurrences_inner`]) — **not**
+/// the public [`ensure_sufficient_stack`]-wrapping wrappers — because this function already runs on the
+/// deep worker stack (via [`emit_ann_toplevel`]), so re-entering a wrapper here would needlessly spawn a
+/// fresh worker thread **per binder** (the same reasoning as [`emit_owned_guarded`]).
+fn emit_ann(node: &Node, ann: &Ann, budget: &RecursionBudget) -> Result<RcNode, EmitError> {
+    let _guard = budget.try_enter()?;
     match node {
         Node::Const(v) => Ok(N::Const(v.clone())),
         Node::Var(x) => Ok(if ann.borrowed.contains(x) {
@@ -436,20 +481,20 @@ fn emit_ann(node: &Node, ann: &Ann) -> Result<RcNode, EmitError> {
             N::Var(x.clone())
         }),
         Node::Let { id, bound, body } => {
-            let rc_bound = emit_ann(bound, ann)?;
-            if is_fully_borrowable(id, body) {
+            let rc_bound = emit_ann(bound, ann, budget)?;
+            if is_fully_borrowable_inner(id, body) {
                 // Borrow-elide: read `id` without consuming, reclaim with a single DropAfter.
-                let rc_body = emit_ann(body, &ann.with_borrowed(id))?;
+                let rc_body = emit_ann(body, &ann.with_borrowed(id), budget)?;
                 Ok(N::Let {
                     id: id.clone(),
                     bound: Box::new(rc_bound),
                     body: Box::new(N::drop_after(id, rc_body)),
                 })
-            } else if ann.reuse && is_sole_owned_move(id, body) {
+            } else if ann.reuse && is_sole_owned_move_inner(id, body) {
                 // Reuse-annotate (Increment 2): `id` is used exactly once, in a move position, so its
                 // reference count is statically 1 at that consume → emit it as MoveUnique. k == 1 ⇒
                 // no Dup, no Drop (the single move reclaims it).
-                let rc_body = emit_ann(body, &ann.with_unique(id))?;
+                let rc_body = emit_ann(body, &ann.with_unique(id), budget)?;
                 Ok(N::Let {
                     id: id.clone(),
                     bound: Box::new(rc_bound),
@@ -457,8 +502,8 @@ fn emit_ann(node: &Node, ann: &Ann) -> Result<RcNode, EmitError> {
                 })
             } else {
                 // Owned (naive) emission for this binding.
-                let k = count_occurrences(id, body);
-                let rc_body = emit_ann(body, ann)?;
+                let k = count_occurrences_inner(id, body);
+                let rc_body = emit_ann(body, ann, budget)?;
                 Ok(N::Let {
                     id: id.clone(),
                     bound: Box::new(rc_bound),
@@ -468,33 +513,33 @@ fn emit_ann(node: &Node, ann: &Ann) -> Result<RcNode, EmitError> {
         }
         Node::Op { prim, args } => Ok(N::Op {
             prim: prim.clone(),
-            args: emit_args_a(args, ann)?,
+            args: emit_args_a(args, ann, budget)?,
         }),
         Node::Swap {
             src,
             target,
             policy,
         } => Ok(N::Swap {
-            src: Box::new(emit_ann(src, ann)?),
+            src: Box::new(emit_ann(src, ann, budget)?),
             target: target.clone(),
             policy: policy.clone(),
         }),
         Node::Construct { ctor, args } => Ok(N::Construct {
             ctor: ctor.clone(),
-            args: emit_args_a(args, ann)?,
+            args: emit_args_a(args, ann, budget)?,
         }),
         Node::Match {
             scrutinee,
             alts,
             default,
         } => {
-            let rc_scrutinee = Box::new(emit_ann(scrutinee, ann)?);
+            let rc_scrutinee = Box::new(emit_ann(scrutinee, ann, budget)?);
             let mut rc_alts = Vec::with_capacity(alts.len());
             for alt in alts {
-                rc_alts.push(emit_alt_a(alt, ann)?);
+                rc_alts.push(emit_alt_a(alt, ann, budget)?);
             }
             let rc_default = match default {
-                Some(d) => Some(Box::new(emit_ann(d, ann)?)),
+                Some(d) => Some(Box::new(emit_ann(d, ann, budget)?)),
                 None => None,
             };
             Ok(N::Match {
@@ -505,8 +550,8 @@ fn emit_ann(node: &Node, ann: &Ann) -> Result<RcNode, EmitError> {
         }
         Node::Lam { param, body } => {
             // Lam params stay Owned (interprocedural borrowing is a later increment).
-            let k = count_occurrences(param, body);
-            let rc_body = emit_ann(body, ann)?;
+            let k = count_occurrences_inner(param, body);
+            let rc_body = emit_ann(body, ann, budget)?;
             Ok(N::Lam {
                 param: param.clone(),
                 mode: Mode::Owned,
@@ -514,28 +559,38 @@ fn emit_ann(node: &Node, ann: &Ann) -> Result<RcNode, EmitError> {
             })
         }
         Node::App { func, arg } => Ok(N::App {
-            func: Box::new(emit_ann(func, ann)?),
-            arg: Box::new(emit_ann(arg, ann)?),
+            func: Box::new(emit_ann(func, ann, budget)?),
+            arg: Box::new(emit_ann(arg, ann, budget)?),
         }),
         Node::Fix { .. } => Err(EmitError::UnsupportedNode("Fix")),
         Node::FixGroup { .. } => Err(EmitError::UnsupportedNode("FixGroup")),
     }
 }
 
-fn emit_args_a(args: &[Node], ann: &Ann) -> Result<Vec<RcNode>, EmitError> {
-    args.iter().map(|a| emit_ann(a, ann)).collect()
+/// Emit each argument of an `Op`/`Construct` under the annotation context, short-circuiting on the
+/// first error. A recursion point (RFC-0041 §4.7): each element re-enters [`emit_ann`], which charges
+/// the shared `budget`.
+fn emit_args_a(
+    args: &[Node],
+    ann: &Ann,
+    budget: &RecursionBudget,
+) -> Result<Vec<RcNode>, EmitError> {
+    args.iter().map(|a| emit_ann(a, ann, budget)).collect()
 }
 
-fn emit_alt_a(alt: &Alt, ann: &Ann) -> Result<RcAlt, EmitError> {
+/// Emit one annotated match alternative. A recursion point (RFC-0041 §4.7): its body re-enters
+/// [`emit_ann`], charging `budget`; the per-binder counts route through [`count_occurrences_inner`]
+/// (already on the deep worker stack — see [`emit_ann`]).
+fn emit_alt_a(alt: &Alt, ann: &Ann, budget: &RecursionBudget) -> Result<RcAlt, EmitError> {
     match alt {
         Alt::Ctor {
             ctor,
             binders,
             body,
         } => {
-            let rc_body = emit_ann(body, ann)?;
+            let rc_body = emit_ann(body, ann, budget)?;
             let wrapped = binders.iter().fold(rc_body, |acc, b| {
-                let k = count_occurrences(b, body);
+                let k = count_occurrences_inner(b, body);
                 balance_binder(b, k, acc)
             });
             Ok(RcAlt::Ctor {
@@ -546,7 +601,7 @@ fn emit_alt_a(alt: &Alt, ann: &Ann) -> Result<RcAlt, EmitError> {
         }
         Alt::Lit { value, body } => Ok(RcAlt::Lit {
             value: value.clone(),
-            body: emit_ann(body, ann)?,
+            body: emit_ann(body, ann, budget)?,
         }),
     }
 }
@@ -555,11 +610,24 @@ fn emit_alt_a(alt: &Alt, ann: &Ann) -> Result<RcAlt, EmitError> {
 /// **move** (not a borrow position). At such a use the reference count is statically 1, so the
 /// runtime `UniqueOwner` branch is guaranteed — the `rc == 1` reuse annotation (Increment 2) applies.
 ///
+/// Runs its structural walks on the `mycelium-workstack` deep worker stack ([`ensure_sufficient_stack`])
+/// so a deep `body` never SIGABRTs the host (RFC-0041 §4.7); the emission path calls
+/// [`is_sole_owned_move_inner`] directly (already on the deep stack) to avoid a per-binder thread spawn.
+///
 /// Guarantee: `Exact` — a deterministic structural test (conservative: only the unambiguous
 /// single-move case; multi-move last-consume is a later refinement).
 #[must_use]
 pub fn is_sole_owned_move(var: &VarId, body: &Node) -> bool {
-    count_occurrences(var, body) == 1 && borrow_occurrences(var, body) == 0
+    let budget = RecursionBudget::default();
+    ensure_sufficient_stack(&budget, || is_sole_owned_move_inner(var, body))
+}
+
+/// The deep-stack-agnostic core of [`is_sole_owned_move`] — the bare structural test, run either on
+/// the worker stack the public wrapper spawns or (from [`emit_ann`]) on the emission's existing deep
+/// stack. Uses the bare [`count_occurrences_inner`]/[`borrow_occurrences_inner`] recursions (no
+/// per-call thread spawn).
+fn is_sole_owned_move_inner(var: &VarId, body: &Node) -> bool {
+    count_occurrences_inner(var, body) == 1 && borrow_occurrences_inner(var, body) == 0
 }
 
 /// Whether `var`'s binding is **fully borrowable** over `body`: it is used at least once and **every**
@@ -567,27 +635,50 @@ pub fn is_sole_owned_move(var: &VarId, body: &Node) -> bool {
 /// never escapes (it does not flow to the result, into a `Construct`, or to an `App`/`Match`), so it
 /// can be read without consuming and reclaimed once at the end.
 ///
+/// Runs its structural walks on the deep worker stack ([`ensure_sufficient_stack`]) so a deep `body`
+/// never SIGABRTs the host (RFC-0041 §4.7); the emission path calls [`is_fully_borrowable_inner`]
+/// directly (already on the deep stack) to avoid a per-binder thread spawn.
+///
 /// Guarantee: `Exact` — a deterministic structural test (conservative: any escaping use makes it
 /// `false`, keeping the binding owned — never wrongly elided).
 #[must_use]
 pub fn is_fully_borrowable(var: &VarId, body: &Node) -> bool {
-    let total = count_occurrences(var, body);
-    total >= 1 && borrow_occurrences(var, body) == total
+    let budget = RecursionBudget::default();
+    ensure_sufficient_stack(&budget, || is_fully_borrowable_inner(var, body))
+}
+
+/// The deep-stack-agnostic core of [`is_fully_borrowable`] (see [`is_sole_owned_move_inner`]).
+fn is_fully_borrowable_inner(var: &VarId, body: &Node) -> bool {
+    let total = count_occurrences_inner(var, body);
+    total >= 1 && borrow_occurrences_inner(var, body) == total
 }
 
 /// Count occurrences of `var` in **borrow positions** (direct `Op` argument / `Swap` source),
 /// respecting shadowing. A bare `Var`, a `Construct`/`App`/`Match`/tail occurrence is **not** a
 /// borrow position (those are moves/escapes).
+///
+/// **RFC-0041 §4.7 (guard hole RR-29 sibling):** like [`count_occurrences`], the entry point wraps
+/// the traversal in [`ensure_sufficient_stack`] so a deep `node` completes on the deep worker stack
+/// rather than SIGABRTing the host. Also infallible (`usize`), so it carries the same explicitly-flagged
+/// `O(N²)`/work-step residual (see [`count_occurrences`]).
 #[must_use]
 pub fn borrow_occurrences(var: &VarId, node: &Node) -> usize {
+    let budget = RecursionBudget::default();
+    ensure_sufficient_stack(&budget, || borrow_occurrences_inner(var, node))
+}
+
+/// The recursive core of [`borrow_occurrences`], run on the deep worker stack the public entry point
+/// spawns (or, from the emission/classifier paths, on their existing deep stack) — so nested calls
+/// recurse on the *same* grown stack rather than each re-spawning a worker.
+fn borrow_occurrences_inner(var: &VarId, node: &Node) -> usize {
     match node {
         Node::Const(_) | Node::Var(_) => 0,
         Node::Let { id, bound, body } => {
-            borrow_occurrences(var, bound)
+            borrow_occurrences_inner(var, bound)
                 + if id == var {
                     0
                 } else {
-                    borrow_occurrences(var, body)
+                    borrow_occurrences_inner(var, body)
                 }
         }
         // Op args and Swap src ARE borrow positions: a direct `Var(var)` child counts; a deeper
@@ -596,41 +687,45 @@ pub fn borrow_occurrences(var: &VarId, node: &Node) -> usize {
         Node::Swap { src, .. } => arg_borrow(var, src),
         // Construct args are MOVES (stored into the data value): a direct `Var(var)` is NOT a borrow;
         // only deeper reader positions count → recurse with `borrow_occurrences` (not `arg_borrow`).
-        Node::Construct { args, .. } => args.iter().map(|a| borrow_occurrences(var, a)).sum(),
+        Node::Construct { args, .. } => args.iter().map(|a| borrow_occurrences_inner(var, a)).sum(),
         Node::Match {
             scrutinee,
             alts,
             default,
         } => {
             // The scrutinee is a move (deconstructed), not a borrow → recurse for deeper readers.
-            let mut n = borrow_occurrences(var, scrutinee);
+            let mut n = borrow_occurrences_inner(var, scrutinee);
             for alt in alts {
                 n += match alt {
                     Alt::Ctor { binders, body, .. } => {
                         if binders.iter().any(|b| b == var) {
                             0
                         } else {
-                            borrow_occurrences(var, body)
+                            borrow_occurrences_inner(var, body)
                         }
                     }
-                    Alt::Lit { body, .. } => borrow_occurrences(var, body),
+                    Alt::Lit { body, .. } => borrow_occurrences_inner(var, body),
                 };
             }
-            n + default.as_deref().map_or(0, |d| borrow_occurrences(var, d))
+            n + default
+                .as_deref()
+                .map_or(0, |d| borrow_occurrences_inner(var, d))
         }
         Node::Lam { param, body } => {
             if param == var {
                 0
             } else {
-                borrow_occurrences(var, body)
+                borrow_occurrences_inner(var, body)
             }
         }
-        Node::App { func, arg } => borrow_occurrences(var, func) + borrow_occurrences(var, arg),
+        Node::App { func, arg } => {
+            borrow_occurrences_inner(var, func) + borrow_occurrences_inner(var, arg)
+        }
         Node::Fix { name, body } => {
             if name == var {
                 0
             } else {
-                borrow_occurrences(var, body)
+                borrow_occurrences_inner(var, body)
             }
         }
         Node::FixGroup { defs, body } => {
@@ -638,9 +733,9 @@ pub fn borrow_occurrences(var: &VarId, node: &Node) -> usize {
                 0
             } else {
                 defs.iter()
-                    .map(|(_, d)| borrow_occurrences(var, d))
+                    .map(|(_, d)| borrow_occurrences_inner(var, d))
                     .sum::<usize>()
-                    + borrow_occurrences(var, body)
+                    + borrow_occurrences_inner(var, body)
             }
         }
     }
@@ -651,6 +746,6 @@ pub fn borrow_occurrences(var: &VarId, node: &Node) -> usize {
 fn arg_borrow(var: &VarId, arg: &Node) -> usize {
     match arg {
         Node::Var(x) if x == var => 1,
-        other => borrow_occurrences(var, other),
+        other => borrow_occurrences_inner(var, other),
     }
 }
