@@ -279,6 +279,79 @@ demands" (it does not). Documented residuals/deviations await maintainer determi
 amendment, this §7, the Meta changelog, the M-979 issue). M-740 self-hosting unblocks. Per-wave detail
 below (append-only).
 
+**Status (2026-07-03, W7 — Enacted-closure wave, held at `dev`):** the open §9 DoD items (i)/(ii)/(iii)
+above and the flagged deviations are resolved by the **W7 closure wave** — four disjoint isolated-worktree
+leaves (`--unbounded`+`with_depth` · `mir-passes` guards · construction-census+spine-tripwire ·
+process-arena coverage), each per-leaf reviewed; the frozen-core/trusted-base-adjacent `mir-passes` leaf
+independently adversarially memory-safety-reviewed (no Critical/High). Determinations were made by the
+maintainer on a **Fable plan/QC assessment** of all twelve open items; dispositions (append-only):
+- **(i) `--unbounded` — IMPLEMENTED (Rust-first).** `myc run` honours `--unbounded` via
+  `Interpreter::with_depth(u32::MAX)` with a never-silent stderr banner; the corpus/conformance runner
+  **refuses** it (test-guarded, exit 64). `myc build --unbounded` is **interface-parity only** (the frontend
+  `mycelium-l1` depth ceilings are not CLI-tunable without an l1 API change — a tracked follow-on), and CI
+  wiring to export the corpus signal is a tracked follow-on.
+- **(ii) `mir-passes` guards — CLOSED (guard-and-refuse).** `eval(&RcNode)`, `emit_elided`/`emit_reuse`
+  (and the shared `emit_ann` core) charge the shared `RecursionBudget` on every RcNode edge and wrap the
+  outer entry in `ensure_sufficient_stack`, refusing never-silently with `RcError`/`EmitError::DepthExceeded`
+  instead of SIGABRT-ing; the public infallible counters (`count_occurrences`/`count_dups`/`count_move_unique`)
+  are deep-stack-wrapped so no direct call SIGABRTs. Independently adversarially reviewed: no Critical/High
+  memory-safety hole. The surviving residual is `count_occurrences`' **O(N²)/infallible→fallible work-step**
+  bound — a documented DoS-only precision residual **explicitly deferred to W2** (the SIGABRT/host-stack hole
+  is closed; the parser bounds pipeline nesting at 256). No input SIGABRTs any pass in `mycelium-mir-passes`.
+- **(iii) AOT metric reconciliation — RULED a FOLLOW-ON (not DoD-blocking).** Per the ratified §5.1 W4
+  amendment the cross-path contract is variant-*family* parity at the shared floor; AOT is data-spine-immune
+  with a DN-05 ceiling far above the floor, so the per-frame-vs-source-call divergence lives only in the
+  dynamic headroom — exactly what the DoD's "documented divergence only in the dynamic headroom" permits.
+  Literal per-source-call reconciliation of the AOT `Match`-continuation charging is a precision follow-on.
+- **#5 zero-alloc-in-Drop — ACCEPTED (amended).** The iterative Drops use an empty-start `Vec` worklist; the
+  DoD no-alloc-in-Drop gate is amended to **no allocation-failure abort path except under genuine OOM during
+  deep unwind** — a strict safety improvement over the *certain* multi-MB stack-overflow abort it replaced.
+  True zero-alloc would need contained `unsafe` (ADR-014) or a frozen-type field (DN-39); deliberately not
+  taken. `Declared` residual.
+- **#6 `Value`/`Repr` — DEFERRED to W3b (amended, census-grounded).** The §4.5 full recursive class is scoped
+  to *constructible* types. A W7 construction-gate **census test** upgrades "a deeply-nested `Value` is
+  unbuildable" from `Declared` to `Empirical` (every owned-`Value` path routes through the depth-walking
+  `Value::new` gate; the wire path is 128-capped) and is the tripwire for a future ungated constructor.
+  **Correction (VR-5):** the §4.5 phrase "`Value`/`Repr` … construction-gated, thus unbuildable" is precise
+  for `Value` but **overclaims for a bare `Repr`** — `Repr::Seq { elem: Box<Repr> }` is constructible by a
+  direct variant literal with no gate, so a deep bare `Repr` is buildable in first-party Rust and its derived
+  recursive `Drop`/`Clone`/`PartialEq` would SIGABRT. Reachability is nil from untrusted input (`.myc`/
+  interpreter values exist only as gated `Value`s; the wire is 128-capped; kernel `Repr`s are shallow), so
+  this does not reopen a safety blocker — the claim is scoped to `Value`, and bare-`Repr` iterative
+  destruction is folded into the coordinated W3b.
+- **#8 process arena — CLOSED for untrusted-reachable paths (amended, audited).** A W7 coverage audit
+  (`docs/notes/W7-arena-coverage-audit.md`) found `ProcessArena` had **zero consumers** — "governs every
+  path" was unmet everywhere. The two untrusted-reachable allocation-proportional passes now charge the
+  shared `ProcessArena` and refuse never-silently with `OutOfBudget` (LSP `llm_canonical`; the `fmt` render
+  family via `FmtError::OutOfBudget`). Passes unreachable from untrusted input (`doc::ir::walk`; `transpile`
+  of trusted first-party Rust) and non-allocation-proportional passes (`mir-passes::count_occurrences`) are
+  **explicitly exempt** with the audit as the `Empirical` basis; the `mycelium-l1` checker family and the
+  trusted-base interp/mlir (fallible-surface ripple, out of scope) are tracked follow-ons. The DoD line is
+  amended to "governs every **allocation-proportional path reachable from untrusted input**; audited exempt
+  set named in the coverage note".
+- **#10 Box-owned/acyclic tripwire — ADDED.** A source-structural tripwire test fails if `Rc`/`Arc`/`Weak`
+  shared ownership appears on the frozen `Node`/`Datum` iterative-Drop spine (catches a future intern-cache
+  field — the real break vector). `mycelium-l1::L1Value` relies on the same invariant; its twin tripwire is a
+  tracked follow-on.
+- **#4 error-variant unification — ACCEPTED family-parity + mechanism check.** Full enum convergence (a
+  trusted-base observable change) is not taken; the family mapping is additionally verified at an arbitrary
+  small budget via the additive `Interpreter::with_depth` + a uniform-small-budget parity test (`Empirical` at
+  ceilings {1,2,8,100}).
+- **#11 TCO — ACCEPTED (direct-tail-only).** Scope stated; the "10k worklist" Goal is met only for
+  tail-recursive/`for`-authored code — carried as an **explicit M-740 acceptance criterion**.
+- **#12 W6 wide-tuple — "document" upheld.** A 4095-field product type is not an adversarially realistic
+  untrusted input; the refusal is already never-silent; a byte-identical rewrite of the trusted Maranget
+  passes is barred by KISS/YAGNI/KC-3.
+- **#7 `content_hash` O(depth²)** and **#9 coarse-worker sites** (all ~21 `ensure_sufficient_stack` consumers
+  still coarse; LSP `project.rs` is the hot untrusted per-keystroke priority) are **accepted as tracked
+  follow-ons** (pre-existing / non-DoD-line) — recorded, not silent.
+
+With W7, every §9 DoD line is either **literally met** or **honestly re-scoped by an append-only amendment
+with a checked basis** (no claim upgraded past its evidence — VR-5; no refusal silent — G2; no frozen-type
+field or trusted-base error-shape change spent — the §6 within-freeze channel is intact). **Whole-RFC
+`Enacted` is claimable once W7 promotes `dev → integration → main` (held for the maintainer);** the RFC stays
+`Accepted` until it lands on `main`. M-740 self-hosting unblocks on that promotion.
+
 **Status (2026-07-03):** **W0, W1, W2, W3½, W3+W5, and W4 landed — only W6 remains.** W4 = the L0
 reference interpreter (`mycelium-interp`) budgeted: `step`/`subst`/etc. charge the shared
 `RecursionBudget` (L0 stays a substitution machine, §4.1), **`EvalError::DepthLimit` is now constructed**,
@@ -371,6 +444,18 @@ AST (dissolves the class but a large retrofit — deferred to boot10); **one uni
   before the raise.
 - DN-05 amended (floor+headroom); the §6 within-freeze channel recorded (DN-56 pointer); RR-29's guard-hole
   census closed; every claim graded honestly (`Declared`/`Empirical`, no `Proven` — VR-5).
+
+**DoD closure (2026-07-03, W7 — append-only).** Each item's disposition is recorded in the §7 W7 status
+block above. Items **literally met** by W7: `--unbounded` guards + test; no input SIGABRTs any `mir-passes`
+pass; the `Value` construction-gate + Box-owned spine tripwire. Items **honestly re-scoped by amendment**
+(checked basis named): no-alloc-in-Drop → "no abort except genuine OOM during deep unwind" (#5, `Declared`);
+the full §4.5 class → *constructible* types with `Value`/`Repr` deferred to W3b, plus the bare-`Repr`
+overclaim correction (#6, census `Empirical`); the process arena → "every allocation-proportional path
+reachable from untrusted input" with an audited exempt set (#8, audit `Empirical`); the AOT metric ruled a
+precision follow-on under the §5.1 family-parity contract (#3). Tracked non-DoD follow-ons: `content_hash`
+O(depth²) (#7), the ~21 coarse-worker sites (#9, LSP hot path first), the `L1Value` spine-tripwire twin, and
+the `count_occurrences` O(N²) work-step bound. The RFC stays `Accepted`; **`Enacted` is claimable when W7
+lands on `main`.**
 
 ## 10. (reserved)
 

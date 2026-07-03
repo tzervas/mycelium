@@ -632,6 +632,7 @@ pub fn mycelium_interp::Interpreter::eval_core(&self, &mycelium_core::node::Node
 pub fn mycelium_interp::Interpreter::new(mycelium_interp::prims::PrimRegistry, alloc::boxed::Box<dyn mycelium_interp::swap::SwapEngine>) -> Self
 pub fn mycelium_interp::Interpreter::prim_names(&self) -> alloc::vec::Vec<&str>
 pub fn mycelium_interp::Interpreter::step(&self, &mycelium_core::node::Node) -> core::result::Result<mycelium_interp::Step, mycelium_interp::EvalError>
+pub fn mycelium_interp::Interpreter::with_depth(self, u32) -> Self
 pub fn mycelium_interp::Interpreter::with_fuel(self, u64) -> Self
 impl mycelium_interp::Interpreter
 pub fn mycelium_interp::Interpreter::eval_core_parallel(&self, &mycelium_core::node::Node) -> core::result::Result<mycelium_core::datum::CoreValue, mycelium_interp::EvalError>

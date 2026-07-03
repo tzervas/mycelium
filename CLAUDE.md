@@ -342,14 +342,14 @@ pre-checks and post-checks — not optional hygiene.
 
 ### 1. ID namespace collision
 **Pattern:** Orchestrator mints a new `M-xxx` / `Exx` ID from the plan without verifying the slot
-is free in `issues.yaml`. Results in a collision that must be fixed mid-wave.  
+is free in `issues.yaml`. Results in a collision that must be fixed mid-wave.
 **Mitigation:** Before assigning any new ID, grep `issues.yaml` for the candidate: `grep "id: E3-8"
 tools/github/issues.yaml`. If taken, find the next free slot. Do this before spawning epics.
 
 ### 2. Union-merge YAML duplication
 **Pattern:** `.gitattributes` applies `merge=union` to `issues.yaml` so octopus merges
 append both sides of every touched block, creating duplicate YAML keys that are syntactically
-valid but semantically wrong.  
+valid but semantically wrong.
 **Mitigation:** Immediately after every octopus merge, validate + dedup `issues.yaml`:
 `python3 -c "import yaml; yaml.safe_load(open('tools/github/issues.yaml')); print('OK')"`.
 If duplicates are present, consolidate manually into single canonical entries before any further
@@ -359,21 +359,21 @@ orchestrator-owned and never agent-edited — union merge has no benefit).
 ### 3. Tool discovery / PATH failures
 **Pattern:** Agent invokes `python3 -m ruff` but `ruff` is installed as a standalone binary at
 `~/.local/bin/ruff` (via `uv tool install`) and that path is not on `$PATH` for subprocess
-invocations.  
+invocations.
 **Mitigation:** Always prefer `just fmt` and `just check` — the justfile resolves tool paths.
 When invoking raw tools, probe first: `command -v ruff || ~/.local/bin/ruff`. The `just setup`
 recipe should verify tool paths and warn if they're not on `$PATH`.
 
 ### 4. Interactive git flags in automation
 **Pattern:** `git add -p` / `git add -i` / `git rebase -i` launch interactive pagers that block
-non-interactive agent contexts.  
+non-interactive agent contexts.
 **Mitigation:** Never use `-p`, `-i`, or `--interactive` git flags in agent context. Stage with
 explicit file paths: `git add <file1> <file2>`. The CLAUDE.md git section already says no `-i`
 for rebase; the same applies to `add`.
 
 ### 5. Agent progress opacity (appears hung)
 **Pattern:** An agent annotating N independent items (e.g. 23 std crates) sequentially emits no
-visible signals — looks identical to a stuck agent from the orchestrator's view.  
+visible signals — looks identical to a stuck agent from the orchestrator's view.
 **Mitigation:** Agents processing N ≥ 5 independent, repetitive items MUST commit in batches
 (every 5–7 items) with a `wip(batch M/N): ...` message. Orchestrator can then poll progress
 via `git log worktree-agent-<id> --oneline`. Agents may also emit a brief text status line
@@ -382,7 +382,7 @@ after each batch.
 ### 6. Orchestrator context exhaustion
 **Pattern:** A single orchestrator session accumulates the full context of Step 0 + Wave-4A
 fan-out + monitoring + integration across many large file reads, exhausting the context window
-before Wave-4B even starts.  
+before Wave-4B even starts.
 **Mitigation:** Spawn a read-only `Explore` subagent for any pre-work that requires reading > 3
 large files. Use `TaskOutput(block=false)` for progress polls (don't block). Summarize each
 phase explicitly (in-context) before starting the next. The orchestrator's context budget is the
@@ -393,7 +393,7 @@ scarcest resource in a multi-wave swarm — protect it.
 assumed (e.g. the parent merged `worktree-agent-<id>` but the agent had created and committed to
 `claude/leaf/<EPIC>-<LEAF>-…`). `git merge --no-ff <assumed-branch>` then "succeeds" by merging an
 **empty/stale** ref, so only a subset of the children's files land — and an octopus merge reports
-success regardless. The gap is invisible unless you count the result.  
+success regardless. The gap is invisible unless you count the result.
 **Mitigation:** Two cheap, mandatory guards:
 1. **Merge the ref the child reports, not an assumed name.** Every agent reports its **exact branch
    ref and SHA**; the parent merges *that* ref. Before merging, confirm the ref carries the expected
@@ -472,6 +472,29 @@ resolves the branch from the command's **worktree `cwd`** (the payload's `cwd`),
 worktree's `HEAD` — so worktree agents commit freely while real protected-branch ops still block
 (verified: leaf-commit ALLOW · dev-commit BLOCK · force-push BLOCK). Keep the per-agent commit/push
 split (the string-match variant above is unchanged).
+
+### 13. Stale-base worktree spawn — branch off the working tier, never the default branch (lesson, 2026-07-03)
+**Pattern:** an isolated-worktree agent whose base ref defaults to the **default branch** (`origin/main`)
+instead of the **working tier** (`dev`) is branched off a tip that lags `dev` by the *whole in-flight
+wave*. Because `main` only advances by the `integration → main` squash, its tip is the last release, not
+the current work. The leaf's own change is fine, but the branch — diffed against `dev` — appears to
+**revert every W-wave commit between `main` and `dev`**. Octopus-merging that ref silently backs out
+landed work; a green merge is not evidence the base was right. Observed on RFC-0041 W7: two leaves
+spawned from `origin/main` (`b0a2891`, the design squash) rather than `dev` (`a794084`); one self-healed
+by ff-ing to `dev`, one did not and had to be re-based leaf-file-by-file before merge.
+**Root discipline:** we **develop in and off `dev`**, promote **up** via PR (`dev → integration → main`),
+and **back-propagate the squashed `main` down** into `integration`/`dev` after it lands (mitigation #6) —
+**no branch is ever cut off `main` directly.**
+**Mitigation — two engineered layers (source + verify), so the footgun cannot bite silently:**
+1. **Source:** set `worktree.baseRef: head` in `.claude/settings.json` so an isolated-worktree spawn
+   branches from the session's current HEAD (the working tier you are on), not the default branch. This
+   makes a correct base the default *by construction*.
+2. **Verify (defense-in-depth twin of #7's "verify the merge landed"):** before the orchestrator merges
+   any leaf ref, assert the intended base is an ancestor of it — `scripts/checks/base-guard.sh --ref
+   <leaf-ref> --base <working-tip>` (idempotent, pure reads; never-silent — a stale base prints the
+   common ancestor and the re-base fix and exits non-zero). Wire it into the swarm/`/pr-land` pre-merge
+   step alongside `/branch-guard` and `/worktree-guard`. If it fires, re-base the leaf's *real* changes
+   onto the working tip (branch fresh and re-apply, or merge the tip in) — never merge the stale ref.
 
 ## Autonomous PR workflow — review-before-merge, no human gate
 
