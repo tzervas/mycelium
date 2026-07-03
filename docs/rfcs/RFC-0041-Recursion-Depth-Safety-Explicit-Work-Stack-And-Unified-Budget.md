@@ -68,7 +68,7 @@ under **one** budget.
 
 ## 4. The decided architecture (ratified 2026-07-03)
 
-### 4.1 Convert the evaluators to explicit work-stacks (D)
+### 4.1 Convert the evaluators to explicit work-stacks (D) — via **one extracted shared primitive**
 Rewrite the **L1 evaluator** SCC (`eval`/`eval_app`/`eval_match`/`eval_for`/`eval_wild`/
 `eval_hypha_forage`/`invoke`) and the **L0 reference interpreter** (`step`/`subst`/`node_to_core_value`/
 `guarantee_of_value`) as explicit heap **`Vec<Frame>` machines**, mirroring the already-differential-
@@ -78,6 +78,21 @@ post-child scope-restore / `release_if_abandoned` / guarantee-assert steps (RR-2
 becomes O(1) host stack; the explicit stack's depth is the budget-charged quantity. `eval_for` (already an
 iterative spine loop) is the in-tree model. **Definition of correctness:** observationally identical to the
 current recursive machine — the M-210/`mycelium-std-conformance` three-way differential stays green.
+
+**DRY (KC-3 / maintainer directive, 2026-07-03): extract the machine, don't triplicate it.** Because all
+three consumers (AOT, L0-interp, L1-eval) need the *same* explicit-work-stack shape, the AOT machine's
+generic core is **extracted into one small shared primitive** rather than reimplemented three times: a new
+leaf crate **`mycelium-workstack`** (low-tier, downward-only per the acyclic-deps invariant DN-68/`acy`;
+`#![forbid(unsafe_code)]`) providing the generic `WorkStack<Frame>` driver — push/pop, the budget +
+byte-cap charge points, TCO frame-reuse, and the never-silent `DepthExceeded`/`OutOfStackBudget` surface —
+parameterized over a per-consumer `Frame`/`Step` type. The AOT machine is **refactored onto it first**
+(behavior-preserving, differential-checked), *then* L0-interp and L1-eval are built on the same crate. The
+budget primitive (§4.2) lives here too (the kernel-resident, portable knob). **Self-hosting form:** the
+same driver is the natural first `lib/compiler/` primitive — a `compiler.workstack` `.myc` nodule — so the
+M-740 port reuses one settled contract instead of re-deriving three; the Rust crate is the transitional
+host adapter, the `.myc` nodule the portable target (mirrors the DN-84 budget-is-portable / adapter-is-host
+split). Extraction is a wave of its own (§7 W3½) so the shared core is validated once before three
+consumers depend on it.
 
 ### 4.2 One global deterministic budget + byte co-ceiling (B)
 Replace the scattered constants with **one workspace-wide `RecursionBudget`** (kernel-resident, the
@@ -178,11 +193,23 @@ merge (per the mandate). Ordering respects §4.3's hard constraint.
 | **W1 — Unified budget** | one `RecursionBudget` (depth default 4096 + byte cap); wire it through the frontend guard holes (close §4.7); raise parser 256 / eval 64 to the global default | full differential green; guard-hole tests pass |
 | **W2 — Grow-on-demand** | wire `stacker::maybe_grow` (coarse, bounded-stride) in `mycelium-stack`; no-op-platform detection (G2); startup budget≤stack assertion; supply-chain (§5) | build on all targets; no-op surfaced, not silent |
 | **W3 — Iterative Drop** | `Drop` for `Node`/`Value`/`Datum`/`L1Value` (+ untrusted-reachable `Clone`/hash) via DN-39 review | deep-chain drop test passes; identity/eq unchanged |
-| **W4 — L0-interp work-stack** | convert `mycelium-interp` `step`/`subst`/read-off to `Vec<Frame>` + construct `DepthLimit`; route `myc run` through the budget | three-way differential green; `myc run` refuses deep input, never aborts |
-| **W5 — L1-eval work-stack + TCO** | convert the eval SCC to the CEK/`Vec<Frame>` machine; TCO with EXPLAIN-able elided-frame markers | differential green; tail-recursive `.myc` at O(1) depth |
+| **W3½ — Extract `mycelium-workstack`** | extract the AOT env-machine's generic `WorkStack<Frame>` core (+ the budget primitive) into one new leaf crate (`#![forbid(unsafe_code)]`, downward-only per DN-68); **refactor the AOT machine onto it** behavior-preserving | AOT differential green on the extracted crate; one shared core before three consumers depend on it |
+| **W4 — L0-interp work-stack** | convert `mycelium-interp` `step`/`subst`/read-off onto `mycelium-workstack` + construct `DepthLimit`; route `myc run` through the budget | three-way differential green; `myc run` refuses deep input, never aborts |
+| **W5 — L1-eval work-stack + TCO** | convert the eval SCC onto `mycelium-workstack`; TCO with EXPLAIN-able elided-frame markers | differential green; tail-recursive `.myc` at O(1) depth |
 | **W6 — Data-spine iteration** | `check_list` flat-loop element check (no Cons-chain build); any remaining frontend conversion if profiling demands | large data literal bounded by memory, not budget; corpus green |
 
-M-740 pass-authoring is unblocked once W5 lands (the `.myc` iteration idiom becomes viable).
+M-740 pass-authoring is unblocked once W5 lands (the `.myc` iteration idiom becomes viable). The
+`mycelium-workstack` core (W3½) is the first `lib/compiler/` primitive the port reuses as a
+`compiler.workstack` `.myc` nodule.
+
+**Orchestration of these waves (maintainer directives, 2026-07-03).** Disjoint waves run as **parallel
+workflows in isolated worktrees**; each feeds its completed component to an **integrator via a
+feed-as-ready `pipeline()`** (no barrier — integration of a green component begins as soon as its deps are
+met, overlapping production). **Model roles:** the **Fable** orchestrator plans + QC-reviews; **leaf /
+implementation agents are Opus or Sonnet** (scoped to complexity — ADR-038). A mechanical **Fable→Opus
+safety-fallback** guards against false-positive safety flags on the biological lexicon / security lens
+(auto-retry a died/refused agent on Opus, never silent). Dependency edges that force ordering: W0 before
+all; W2 (grow-on-demand) **before** any budget raise (§4.3); W3½ **before** W4/W5; the rest parallelize.
 
 ## 8. Alternatives considered (and why not)
 
