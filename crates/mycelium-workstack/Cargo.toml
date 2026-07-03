@@ -15,3 +15,13 @@ workspace = true
 # Downward-only (DN-68): std + the host-stack adapter leaf ONLY. Never `mycelium-interp`/`-core`/`-l1`
 # — those are UPWARD; the leaf exposes counters/limits and the charge happens consumer-side (§4.1).
 mycelium-stack = { path = "../mycelium-stack" }
+
+[dev-dependencies]
+# TEST-ONLY (never a library dep — DN-68 downward-only holds for the lib): the frame-size CI baseline
+# (RFC-0041 §4.2) pins `size_of` of the machines' value/frame structs so a toolchain frame-size bump
+# fails CI, not production (the ADR-041 lesson). A dev-dependency on these UPWARD crates is a permitted
+# cargo dev-dependency back-edge (it does not affect the library's acyclic graph); the lib itself still
+# depends on nothing upward. `mycelium-mlir`'s aot `Frame`/`AotVal`/`Env` are private, so its baseline
+# is pinned in-crate (FLAGged to the integrator) — here we pin the publicly-reachable value structs.
+mycelium-core = { path = "../mycelium-core" }
+mycelium-l1 = { path = "../mycelium-l1" }

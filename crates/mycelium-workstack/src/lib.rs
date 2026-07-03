@@ -21,10 +21,16 @@
 //!   `interp`/`core`/`l1`).
 //! - **[`ProcessArena`]** — the process-wide memory ceiling (§4.2): a shared atomic byte counter every
 //!   pass charges against, so the *sum* over concurrent passes cannot exceed a per-process ceiling.
-//! - **[`ensure_sufficient_stack`]** — a thin host-stack guard helper (delegating to
-//!   [`mycelium_stack::with_deep_stack`] in W1; a fine-grained body swap in W2).
+//! - **[`ensure_sufficient_stack`]** — the host-stack guard helper. **W2 (RFC-0041 §4.3):** its body
+//!   now routes through the fine-grained **runtime-gated grow** ([`mycelium_stack::grow`]) layered on
+//!   the deep worker base, so the stack is *growable* (not capped) and callers whose internal recursion
+//!   points are not yet grow-wired stay non-regressing. The signature is unchanged (W1 consumers intact).
+//! - **[`MAX_FRAME_BYTES`]** — the §4.2 per-machine frame-size baseline: the pinned maximum `size_of` of
+//!   the three machines' value/frame structs, so a toolchain frame-size bump fails CI, not production
+//!   (the ADR-041 lesson; pinned by the `tests/frame_size_baseline.rs` gate).
 //! - **[`assert_mem_ceiling_honors_floor`]** — the §4.2 determinism invariant as a checked function
-//!   (`mem_ceiling >= depth_floor * max_frame_bytes`); *provided* here in W1, *wired at startup* in W2.
+//!   (`mem_ceiling >= depth_floor * max_frame_bytes`). **W2** wires it at startup via [`check_startup`],
+//!   together with [`mycelium_stack::growable_ceiling_honors_floor`] (the §4.3 host-stack floor check).
 //!
 //! # Architecture (DN-68: acyclic, downward-only)
 //!
@@ -401,29 +407,70 @@ impl Drop for ArenaReservation<'_> {
 /// Run `f` on a host stack large enough that the [`RecursionBudget`] — not a host-stack overflow —
 /// always bounds a pathological input.
 ///
-/// **W1 version:** delegates to [`mycelium_stack::with_deep_stack`] (the existing 256 MiB lazily-committed
-/// worker thread) — a real, correct guard, just not yet fine-grained. **W2 replaces the body** with
-/// fine-grained [`stacker::ensure_sufficient_stack`](https://docs.rs/stacker) (runtime-gated grow, keyed
-/// off `budget`'s ceilings), *without changing this signature* — so W2 is a pure body swap. The `budget`
-/// parameter is threaded now (and read by W2 to size the grow); in W1 the deep worker stack is already
-/// generous, so it is not yet consulted.
+/// **W2 body swap (RFC-0041 §4.3).** The body now routes `f` through the fine-grained **runtime-gated
+/// grow** ([`mycelium_stack::grow`], a `#![forbid(unsafe_code)]` wrapper of `stacker::maybe_grow`)
+/// layered on the deep worker base ([`mycelium_stack::with_deep_stack`]). The signature is unchanged, so
+/// every W1 consumer is untouched. What changes is the *contract*: the guarded stack is now **growable**
+/// rather than capped at the 256 MiB worker — if a pass ever recurses past even that base (deep input at
+/// a large frame size), the runtime-gated grow enlarges the stack on demand instead of a `SIGABRT`.
+///
+/// **Why keep the worker base (non-regression, honest scope).** The material "pay for the depth you use"
+/// benefit of the fine-grained grow requires the *recursion points inside `f`* to call
+/// [`mycelium_stack::ensure_sufficient_stack`] stride-1 (RFC-0041 §4.7 / W4 / W3½ — consumer wiring, not
+/// this leaf). Until those are wired, the deep worker base is what keeps a caller whose internal
+/// recursion is *not* yet grow-wired (e.g. `mir-passes::emit`, `lsp::render_node`) safe on deep input —
+/// so dropping it would regress them. The top-level `grow` here backstops the base; the per-point stride
+/// growth lands with the consumers. `budget` is threaded for that future wiring (it will size per-point
+/// growth); the growable base needs no sizing, so it is not read yet.
+///
+/// The growth is **bounded, not a memory-DoS vector**: `budget`'s depth ceiling (default 4096) refuses
+/// recursion before the stack can grow without bound.
 pub fn ensure_sufficient_stack<R, F>(budget: &RecursionBudget, f: F) -> R
 where
     F: FnOnce() -> R + Send,
     R: Send,
 {
-    // W2 reads `budget` to size the fine-grained grow; the W1 deep worker stack needs no sizing input.
+    // `budget` sizes the future per-recursion-point stride growth (§4.7); the growable base is generous
+    // and needs no sizing input, so it is threaded but not yet read.
     let _ = budget;
-    mycelium_stack::with_deep_stack(f)
+    // Deep lazily-committed worker base (non-regressing) + runtime-gated grow backstop (§4.3).
+    mycelium_stack::with_deep_stack(move || mycelium_stack::grow(f))
 }
+
+/// The **depth floor** every execution machine honors (RFC-0041 §4.4): the global default depth ceiling
+/// on the §4.0 metric. Both startup invariants ([`check_startup`]) are stated against this floor — the
+/// memory ceiling and the host stack must each be able to hold it.
+pub const DEPTH_FLOOR: u32 = RecursionBudget::DEFAULT_DEPTH_LIMIT;
+
+/// The §4.2 **frame-size baseline**: the pinned maximum `size_of` (bytes) of the three execution
+/// machines' value/frame structs — the interp/L0 `CoreValue`/`Node`, the L1 `L1Value`, and the AOT
+/// env-machine `Frame` — used as `max_frame_bytes` in the determinism invariant
+/// ([`assert_mem_ceiling_honors_floor`]). Pinning it keeps the (frame-size-dependent, machine-dependent)
+/// memory ceiling a fixed distance from the accept/reject boundary, and — via the
+/// `tests/frame_size_baseline.rs` gate — makes a **toolchain/IR frame-size bump fail CI, not production**
+/// (the ADR-041 lesson).
+///
+/// **Current measured max (64-bit): 328 bytes** — the AOT `Frame` (the value structs are 240). The
+/// baseline carries a small documented headroom over that so cross-target padding jitter does not
+/// false-trip, while a genuine field addition past it does. **On an intended frame-size change,
+/// re-measure all three machines and bump this** (the baseline test's failure message says so).
+pub const MAX_FRAME_BYTES: u64 = 384;
+
+/// The conservative **per-recursion-frame host-stack cost** (bytes) used for the §4.3 host-stack floor
+/// check ([`mycelium_stack::growable_ceiling_honors_floor`]). This is the *call-stack* cost of one guarded
+/// recursion level — **distinct from [`MAX_FRAME_BYTES`]**, which is the *heap* footprint of a value/frame
+/// struct. Set generously above the measured worst case (the L1 checker's ~10.9 KiB/frame in debug) so the
+/// no-grow floor refusal is conservative (it can only *over*-estimate the stack a floor needs, never
+/// under-estimate it into a silent overflow).
+pub const HOST_STACK_BYTES_PER_FRAME: u64 = 16 * 1024;
 
 /// Check the §4.2 **determinism invariant**: the memory ceiling must be at least `depth_floor`
 /// frames of the largest frame, `mem_ceiling >= depth_floor * max_frame_bytes`. This keeps the
 /// (frame-size-dependent, hence machine-dependent) memory limit **off** the observable accept/reject
 /// boundary within the depth floor — so the boundary stays deterministic on the one §4.0 metric.
 ///
-/// **W1 provides the function; W2 wires it at startup** (the per-machine `max_frame_bytes` census is W2),
-/// so this is *not* called at startup yet.
+/// **W2 wires it at startup** via [`check_startup`], using the [`MAX_FRAME_BYTES`] census against the
+/// [`DEPTH_FLOOR`]. The function remains callable standalone for tests/tools.
 ///
 /// # Errors
 /// [`BudgetError::OutOfBudget`] (`kind = Bytes`) when `mem_limit_bytes < depth_floor * max_frame_bytes`;
@@ -441,6 +488,72 @@ pub fn assert_mem_ceiling_honors_floor(
             requested: required,
         });
     }
+    Ok(())
+}
+
+/// The never-silent **startup refusal** surface (RFC-0041 §4.2/§4.3): the one error [`check_startup`]
+/// returns when a machine must **not** begin because a determinism/safety precondition fails. Refusing at
+/// startup with an actionable diagnostic is the explicit alternative to a mid-run surprise — an
+/// accept/reject boundary that silently depends on the memory ceiling, or a `SIGABRT` below the depth
+/// floor (G2). `Display` + `std::error::Error`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum StartupError {
+    /// The §4.2 determinism invariant failed: the configured memory ceiling is below
+    /// `DEPTH_FLOOR × MAX_FRAME_BYTES`, so the (machine-dependent) memory limit could bind *within* the
+    /// depth floor and make the accept/reject boundary non-deterministic.
+    MemCeiling(BudgetError),
+    /// The §4.3 host-stack floor is unsatisfiable: on-demand growth is unavailable on this target and
+    /// the fixed stack cannot hold the depth floor — so the machine would overflow below the floor.
+    HostStack(mycelium_stack::StackError),
+}
+
+impl std::fmt::Display for StartupError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            StartupError::MemCeiling(e) => write!(
+                f,
+                "startup refused (RFC-0041 §4.2 determinism invariant): memory ceiling cannot honor the \
+                 depth floor — {e}"
+            ),
+            StartupError::HostStack(e) => write!(
+                f,
+                "startup refused (RFC-0041 §4.3 host-stack floor): {e}"
+            ),
+        }
+    }
+}
+
+impl std::error::Error for StartupError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            StartupError::MemCeiling(e) => Some(e),
+            StartupError::HostStack(e) => Some(e),
+        }
+    }
+}
+
+/// The **startup gate** (RFC-0041 §4.2/§4.3): before any execution machine runs deep input, assert both
+/// preconditions against the workspace [`DEPTH_FLOOR`] and refuse never-silently if either fails.
+///
+/// 1. **Memory-ceiling determinism (§4.2):** `budget`'s memory ceiling must be at least
+///    `DEPTH_FLOOR × MAX_FRAME_BYTES` (via [`assert_mem_ceiling_honors_floor`]) — so the memory limit can
+///    never bind at or below the floor and perturb the accept/reject boundary.
+/// 2. **Host-stack floor (§4.3):** the host stack must be able to hold the floor — either because
+///    on-demand growth is available, or because the fixed no-grow ceiling is large enough (via
+///    [`mycelium_stack::growable_ceiling_honors_floor`], using [`HOST_STACK_BYTES_PER_FRAME`]). On a
+///    no-grow target (`wasm32`) that cannot hold the floor, this refuses rather than risk a `SIGABRT`.
+///
+/// Call once per machine at startup. It is a pure read of the passed budget plus the runtime
+/// growth-availability probe — idempotent, side-effect-free.
+///
+/// # Errors
+/// [`StartupError::MemCeiling`] if precondition 1 fails; [`StartupError::HostStack`] if precondition 2
+/// fails. Precondition 1 is checked first.
+pub fn check_startup(budget: &RecursionBudget) -> Result<(), StartupError> {
+    assert_mem_ceiling_honors_floor(budget.mem_limit_bytes(), DEPTH_FLOOR, MAX_FRAME_BYTES)
+        .map_err(StartupError::MemCeiling)?;
+    mycelium_stack::growable_ceiling_honors_floor(DEPTH_FLOOR, HOST_STACK_BYTES_PER_FRAME)
+        .map_err(StartupError::HostStack)?;
     Ok(())
 }
 
