@@ -169,44 +169,29 @@ fn nonempty(b: Bytes) => Bool =
 fn bytes_eq_from(a: Bytes, b: Bytes, i: Binary{32}, n: Binary{32}) => Bool =
   match eq(i, n) {
     0b1 => True,
-    _ =>
-      match eq(bytes_get(a, i), bytes_get(b, i)) {
-        0b1 =>
-          match eq(add_u(i, b32_one()), n) {
+    _ => match eq(bytes_get(a, i), bytes_get(b, i)) {
+      0b1 => match eq(add_u(i, b32_one()), n) {
+        0b1 => True,
+        _ => match eq(bytes_get(a, add_u(i, b32_one())), bytes_get(b, add_u(i, b32_one()))) {
+          0b1 => match eq(add_u(i, b32_two()), n) {
             0b1 => True,
-            _ =>
-              match eq(
-                      bytes_get(a, add_u(i, b32_one())),
-                      bytes_get(b, add_u(i, b32_one()))
-                    ) {
-                0b1 =>
-                  match eq(add_u(i, b32_two()), n) {
-                    0b1 => True,
-                    _ =>
-                      match eq(
-                              bytes_get(a, add_u(i, b32_two())),
-                              bytes_get(b, add_u(i, b32_two()))
-                            ) {
-                        0b1 =>
-                          match eq(add_u(i, b32_three()), n) {
-                            0b1 => True,
-                            _ =>
-                              match eq(
-                                      bytes_get(a, add_u(i, b32_three())),
-                                      bytes_get(b, add_u(i, b32_three()))
-                                    ) {
-                                0b1 => bytes_eq_from(a, b, add_u(i, b32_four()), n),
-                                _ => False
-                              }
-                          },
-                        _ => False
-                      }
-                  },
-                _ => False
-              }
+            _ => match eq(bytes_get(a, add_u(i, b32_two())), bytes_get(b, add_u(i, b32_two()))) {
+              0b1 => match eq(add_u(i, b32_three()), n) {
+                0b1 => True,
+                _ =>
+                  match eq(bytes_get(a, add_u(i, b32_three())), bytes_get(b, add_u(i, b32_three()))) {
+                    0b1 => bytes_eq_from(a, b, add_u(i, b32_four()), n),
+                    _ => False
+                  }
+              },
+              _ => False
+            }
           },
-        _ => False
-      }
+          _ => False
+        }
+      },
+      _ => False
+    }
   };
 
 // bytes_eq: whole byte-string equality composed from the D4 prims (no equality prim exists —
@@ -246,19 +231,11 @@ type SporeErr = HashMismatch(Bytes, Bytes) | PublishErr(Bytes) | IoErr(Bytes);
 fn spore_err_display(e: SporeErr) => Bytes =
   match e {
     HashMismatch(expected, found) =>
-      cat(
-        "spore-error: hash mismatch — declared ",
-        cat(
-          expected,
-          cat(
-            " but recomputed ",
-            cat(
-              found,
-              " (ADR-003 violation; deploy aborted, no partial artifact written — C1/G2)"
-            )
-          )
-        )
-      ),
+      cat("spore-error: hash mismatch — declared ",
+      cat(expected,
+      cat(" but recomputed ",
+      cat(found,
+      " (ADR-003 violation; deploy aborted, no partial artifact written — C1/G2)")))),
     PublishErr(m) => cat("spore-publish-error: ", m),
     IoErr(m) => cat("spore-io-error: ", m)
   };
@@ -317,19 +294,12 @@ type Basis = ProvenThm(Bytes) | EmpiricalFit(Binary{32}, Bytes) | UserDeclared;
 // basis_strength: the honest strength a basis implies (the basis IS the evidence class —
 // kernel BoundBasis::strength, mirrored exactly; VR-5). Exact.
 fn basis_strength(b: Basis) => Guarantee =
-  match b {
-    ProvenThm(_) => GProven,
-    EmpiricalFit(_, _) => GEmpirical,
-    UserDeclared => GDeclared
-  };
+  match b { ProvenThm(_) => GProven, EmpiricalFit(_, _) => GEmpirical, UserDeclared => GDeclared };
 
 // exceeds_empirical_ceiling: True iff the basis implies a strength STRONGER than Empirical
 // (rank < 2 — i.e. Exact or Proven): the FR-C2 probabilistic-regrowth ceiling test. Exact.
 fn exceeds_empirical_ceiling(b: Basis) => Bool =
-  match lt(strength_rank(basis_strength(b)), strength_rank(GEmpirical)) {
-    0b1 => True,
-    _ => False
-  };
+  match lt(strength_rank(basis_strength(b)), strength_rank(GEmpirical)) { 0b1 => True, _ => False };
 
 // resonator_over_strength: the FR-C2 violation predicate — a Resonator decode whose basis
 // exceeds the Empirical ceiling. A Cleanup decode has no resonator ceiling. Exact.
@@ -352,8 +322,7 @@ fn malformed_display(e: MalformedManifest) => Bytes =
 // hashes, carried — FLAG-spore-2), decode procedure, and the bound's Basis (its {ε,δ} scalars
 // are FLAG-spore-4). Construction goes through manifest_new (validates at build time) or
 // manifest_validate (the deserialized-carry-in re-check).
-type ReconManifest =
-    Manifest(ReconMode, Bytes, Binary{32}, Vec[Bytes], DecodeProcedure, Basis);
+type ReconManifest = Manifest(ReconMode, Bytes, Binary{32}, Vec[Bytes], DecodeProcedure, Basis);
 
 // manifest_new: build + validate a manifest. Ports the EXPRESSIBLE kernel checks (FLAG-spore-5):
 // model nonempty, dim >= 1, codebooks nonempty, and the FR-C2 ceiling — every kernel refusal
@@ -370,19 +339,16 @@ fn manifest_new(
 ) => Result[ReconManifest, MalformedManifest] =
   match nonempty(model) {
     False => Err(KernelWf),
-    True =>
-      match eq(dim, b32_zero()) {
-        0b1 => Err(KernelWf),
-        _ =>
-          match vec_is_empty(codebooks) {
-            True => Err(KernelWf),
-            False =>
-              match resonator_over_strength(dec, basis) {
-                True => Err(KernelWf),
-                False => Ok(Manifest(mode, model, dim, codebooks, dec, basis))
-              }
-          }
+    True => match eq(dim, b32_zero()) {
+      0b1 => Err(KernelWf),
+      _ => match vec_is_empty(codebooks) {
+        True => Err(KernelWf),
+        False => match resonator_over_strength(dec, basis) {
+          True => Err(KernelWf),
+          False => Ok(Manifest(mode, model, dim, codebooks, dec, basis))
+        }
       }
+    }
   };
 
 // manifest_validate: the carry-in path (deserialized/kernel-built manifests) — the explicit
@@ -429,10 +395,7 @@ type RegrowthResult[T] = Regrown(T, Basis);
 // FR-C2/VR-5 probabilistic-regrowth ceiling) with the explicit ResonatorOverStrength — never a
 // silent accept. This makes an over-strength regrowth unrepresentable through this constructor
 // (the ceiling holds by construction, not by comment). Exact.
-fn regrowth_new[T](
-  payload: T,
-  basis: Basis
-) => Result[RegrowthResult[T], MalformedManifest] =
+fn regrowth_new[T](payload: T, basis: Basis) => Result[RegrowthResult[T], MalformedManifest] =
   match exceeds_empirical_ceiling(basis) {
     True => Err(ResonatorOverStrength),
     False => Ok(Regrown(payload, basis))
@@ -484,10 +447,7 @@ fn detect_opaque_step(target: DeployTarget) => Option[Bytes] =
 // surface_is_ambiguous: more than one exported surface symbol (the v0 ambiguity condition for
 // an InMemory target with no entry-point selector). Exact.
 fn surface_is_ambiguous(xs: Vec[Bytes]) => Bool =
-  match xs {
-    Nil => False,
-    Cons(_, rest) => match rest { Nil => False, Cons(_, _) => True }
-  };
+  match xs { Nil => False, Cons(_, rest) => match rest { Nil => False, Cons(_, _) => True } };
 
 // germinate_checked: steps 3–5 of the oracle's germinate — hash canonicality (C4/ADR-003;
 // mismatch → the named DeployHashMismatch, both hashes carried; a non-mismatch SporeErr from
@@ -499,17 +459,15 @@ fn germinate_checked(
   target: DeployTarget
 ) => Result[DeployResult, DeployError] =
   match verify(s, recomputed) {
-    Err(e) =>
-      match e {
-        HashMismatch(expected, found) => Err(DeployHashMismatch(expected, found)),
-        PublishErr(_) => Err(MissingInput),
-        IoErr(_) => Err(MissingInput)
-      },
-    Ok(_) =>
-      match detect_opaque_step(target) {
-        Some(step) => Err(OpaqueStepDetected(step)),
-        None => Ok(Deployed(identity(s), Verification(True, True)))
-      }
+    Err(e) => match e {
+      HashMismatch(expected, found) => Err(DeployHashMismatch(expected, found)),
+      PublishErr(_) => Err(MissingInput),
+      IoErr(_) => Err(MissingInput)
+    },
+    Ok(_) => match detect_opaque_step(target) {
+      Some(step) => Err(OpaqueStepDetected(step)),
+      None => Ok(Deployed(identity(s), Verification(True, True)))
+    }
   };
 
 // germinate: the ADR-013 native germination entry point (the oracle's check order, mirrored):
@@ -525,16 +483,14 @@ fn germinate(
   target: DeployTarget
 ) => Result[DeployResult, DeployError] =
   match target {
-    Local(path) =>
-      match nonempty(path) {
-        False => Err(MissingInput),
-        True => germinate_checked(s, recomputed, target)
-      },
-    InMemory =>
-      match surface_is_ambiguous(spore_surface(s)) {
-        True => Err(AmbiguousInput(spore_surface(s))),
-        False => germinate_checked(s, recomputed, target)
-      }
+    Local(path) => match nonempty(path) {
+      False => Err(MissingInput),
+      True => germinate_checked(s, recomputed, target)
+    },
+    InMemory => match surface_is_ambiguous(spore_surface(s)) {
+      True => Err(AmbiguousInput(spore_surface(s))),
+      False => germinate_checked(s, recomputed, target)
+    }
   };
 
 // deploy_error_display: the oracle's `Display for DeployError` — byte-for-byte for
@@ -544,33 +500,23 @@ fn germinate(
 fn deploy_error_display(e: DeployError) => Option[Bytes] =
   match e {
     MissingInput =>
-      Some("deploy-error: required input is absent — no guessed default (G2 / ADR-013)"),
+      Some(
+        "deploy-error: required input is absent — no guessed default (G2 / ADR-013)"
+      ),
     AmbiguousInput(_) => None,
     DeployHashMismatch(expected, actual) =>
       Some(
-        cat(
-          "deploy-error: content-hash mismatch — declared ",
-          cat(
-            expected,
-            cat(
-              " but recomputed ",
-              cat(
-                actual,
-                " (C4 / ADR-003 violation; deploy aborted, no partial unit written — G2)"
-              )
-            )
-          )
-        )
+        cat("deploy-error: content-hash mismatch — declared ",
+        cat(expected,
+        cat(" but recomputed ",
+        cat(actual,
+        " (C4 / ADR-003 violation; deploy aborted, no partial unit written — G2)"))))
       ),
     OpaqueStepDetected(step) =>
       Some(
-        cat(
-          "deploy-error: opaque lowering step detected: \"",
-          cat(
-            step,
-            "\" (VR-4 violation; no opaque step is permitted between input and deployed unit)"
-          )
-        )
+        cat("deploy-error: opaque lowering step detected: \"",
+        cat(step,
+        "\" (VR-4 violation; no opaque step is permitted between input and deployed unit)"))
       )
   };
 
@@ -581,25 +527,13 @@ fn deploy_error_display(e: DeployError) => Option[Bytes] =
 fn explain_deployed(spore_id: Bytes, v: DeployVerification) => Bytes =
   match v {
     Verification(hash_ok, opaque_ok) =>
-      cat(
-        "deploy-result: Deployed\nspore-id (content-hash): ",
-        cat(
-          spore_id,
-          cat(
-            "\ncontent_hash_canonical: ",
-            cat(
-              bool_text(hash_ok),
-              cat(
-                " (Exact — BLAKE3 deterministic; C4/ADR-003)\nno_opaque_lowering: ",
-                cat(
-                  bool_text(opaque_ok),
-                  " (Declared — structural assertion; VR-4)\noutcome: all invariants checked; no opaque lowering step detected in pipeline"
-                )
-              )
-            )
-          )
-        )
-      )
+      cat("deploy-result: Deployed\nspore-id (content-hash): ",
+      cat(spore_id,
+      cat("\ncontent_hash_canonical: ",
+      cat(bool_text(hash_ok),
+      cat(" (Exact — BLAKE3 deterministic; C4/ADR-003)\nno_opaque_lowering: ",
+      cat(bool_text(opaque_ok),
+      " (Declared — structural assertion; VR-4)\noutcome: all invariants checked; no opaque lowering step detected in pipeline"))))))
   };
 
 // ── guarantee matrix (RFC-0016 §4.5; spec §4) — the 15-row table as CHECKED DATA ────────────────
@@ -691,14 +625,7 @@ fn row_validate() => MatrixRow =
   );
 
 fn row_manifest_hash() => MatrixRow =
-  Row(
-    "manifest_hash",
-    "Exact (deterministic)",
-    "total",
-    "none",
-    False,
-    "total — no failure mode"
-  );
+  Row("manifest_hash", "Exact (deterministic)", "total", "none", False, "total — no failure mode");
 
 fn row_mode() => MatrixRow =
   Row(
@@ -782,46 +709,23 @@ fn row_explain_deploy() => MatrixRow =
 
 // matrix: the full 15-row table, in the same order as guarantee_matrix.rs::MATRIX.
 fn matrix() => Vec[MatrixRow] =
-  Cons(
+  [
     row_build(),
-    Cons(
-      row_build_value(),
-      Cons(
-        row_identity(),
-        Cons(
-          row_explain(),
-          Cons(
-            row_manifest_of(),
-            Cons(
-              row_validate(),
-              Cons(
-                row_manifest_hash(),
-                Cons(
-                  row_mode(),
-                  Cons(
-                    row_declared_strength(),
-                    Cons(
-                      row_reconstruct(),
-                      Cons(
-                        row_deploy(),
-                        Cons(
-                          row_germinate(),
-                          Cons(
-                            row_verify_hash_canonical(),
-                            Cons(row_no_opaque(), Cons(row_explain_deploy(), Nil))
-                          )
-                        )
-                      )
-                    )
-                  )
-                )
-              )
-            )
-          )
-        )
-      )
-    )
-  );
+    row_build_value(),
+    row_identity(),
+    row_explain(),
+    row_manifest_of(),
+    row_validate(),
+    row_manifest_hash(),
+    row_mode(),
+    row_declared_strength(),
+    row_reconstruct(),
+    row_deploy(),
+    row_germinate(),
+    row_verify_hash_canonical(),
+    row_no_opaque(),
+    row_explain_deploy()
+  ];
 
 // matrix_len: the row count as Binary{8} (15 rows fits trivially). O(n) spine-walk. Exact.
 fn matrix_len(xs: Vec[MatrixRow]) => Binary{8} =
@@ -833,16 +737,12 @@ fn matrix_len(xs: Vec[MatrixRow]) => Binary{8} =
 fn all_never_silent_nonempty(xs: Vec[MatrixRow]) => Bool =
   match xs {
     Nil => True,
-    Cons(r, rest) =>
-      bool_and(nonempty(row_never_silent(r)), all_never_silent_nonempty(rest))
+    Cons(r, rest) => bool_and(nonempty(row_never_silent(r)), all_never_silent_nonempty(rest))
   };
 
 // every_row_has_nonempty_op_and_guarantee (basic completeness).
 fn all_ops_nonempty(xs: Vec[MatrixRow]) => Bool =
-  match xs {
-    Nil => True,
-    Cons(r, rest) => bool_and(nonempty(row_op(r)), all_ops_nonempty(rest))
-  };
+  match xs { Nil => True, Cons(r, rest) => bool_and(nonempty(row_op(r)), all_ops_nonempty(rest)) };
 
 fn all_guarantees_nonempty(xs: Vec[MatrixRow]) => Bool =
   match xs {
@@ -853,48 +753,22 @@ fn all_guarantees_nonempty(xs: Vec[MatrixRow]) => Bool =
 // manifest_rows_are_explainable: the 12 selecting/converting rows expose a C3 EXPLAIN artifact
 // (guarantee_matrix.rs::manifest_rows_are_explain_able, read off the typed Bool column).
 fn manifest_rows_are_explainable() => Bool =
-  bool_and(
-    row_explainable(row_build()),
-    bool_and(
-      row_explainable(row_build_value()),
-      bool_and(
-        row_explainable(row_identity()),
-        bool_and(
-          row_explainable(row_explain()),
-          bool_and(
-            row_explainable(row_manifest_of()),
-            bool_and(
-              row_explainable(row_validate()),
-              bool_and(
-                row_explainable(row_reconstruct()),
-                bool_and(
-                  row_explainable(row_deploy()),
-                  bool_and(
-                    row_explainable(row_germinate()),
-                    bool_and(
-                      row_explainable(row_verify_hash_canonical()),
-                      bool_and(
-                        row_explainable(row_no_opaque()),
-                        row_explainable(row_explain_deploy())
-                      )
-                    )
-                  )
-                )
-              )
-            )
-          )
-        )
-      )
-    )
-  );
+  bool_and(row_explainable(row_build()),
+  bool_and(row_explainable(row_build_value()),
+  bool_and(row_explainable(row_identity()),
+  bool_and(row_explainable(row_explain()),
+  bool_and(row_explainable(row_manifest_of()),
+  bool_and(row_explainable(row_validate()),
+  bool_and(row_explainable(row_reconstruct()),
+  bool_and(row_explainable(row_deploy()),
+  bool_and(row_explainable(row_germinate()),
+  bool_and(row_explainable(row_verify_hash_canonical()),
+  bool_and(row_explainable(row_no_opaque()),
+  row_explainable(row_explain_deploy()))))))))))));
 
 // accessor_rows_not_explainable: the pure-read rows (manifest_hash / mode / declared_strength)
 // have no selection/approximation needing EXPLAIN (guarantee_matrix.rs precedent).
 fn accessor_rows_not_explainable() => Bool =
-  bool_and(
-    bool_not(row_explainable(row_manifest_hash())),
-    bool_and(
-      bool_not(row_explainable(row_mode())),
-      bool_not(row_explainable(row_declared_strength()))
-    )
-  );
+  bool_and(bool_not(row_explainable(row_manifest_hash())),
+  bool_and(bool_not(row_explainable(row_mode())),
+  bool_not(row_explainable(row_declared_strength()))));

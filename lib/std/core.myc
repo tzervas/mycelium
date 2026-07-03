@@ -130,16 +130,10 @@ fn byte_is(b: Bytes, i: Binary{8}, v: Binary{8}) => Bool =
 fn effects_is_none(b: Bytes) => Bool =
   match eq(bytes_len(b), 0b0000_0000_0000_0000_0000_0000_0000_0100) {
     0b1 =>
-      bool_and(
-        byte_is(b, 0b0000_0000, 0b0110_1110),
-        bool_and(
-          byte_is(b, 0b0000_0001, 0b0110_1111),
-          bool_and(
-            byte_is(b, 0b0000_0010, 0b0110_1110),
-            byte_is(b, 0b0000_0011, 0b0110_0101)
-          )
-        )
-      ),
+      bool_and(byte_is(b, 0b0000_0000, 0b0110_1110),
+      bool_and(byte_is(b, 0b0000_0001, 0b0110_1111),
+      bool_and(byte_is(b, 0b0000_0010, 0b0110_1110),
+      byte_is(b, 0b0000_0011, 0b0110_0101)))),
     _ => False
   };
 
@@ -174,41 +168,24 @@ fn row_bound_of() => GuaranteeRow =
   Row("bound_of", GExact, "Option<&Bound> (None when no meta/bound)", "none", True);
 
 fn row_provenance_of() => GuaranteeRow =
-  Row(
-    "provenance_of",
-    GExact,
-    "Option<&Provenance> (None for algebraic data)",
-    "none",
-    True
-  );
+  Row("provenance_of", GExact, "Option<&Provenance> (None for algebraic data)", "none", True);
 
 // ── Vec (local, self-contained; mirrors std.diag/std.collections' cons-list convention) ─────────
 type Vec[A] = Nil | Cons(A, Vec[A]);
 
 // matrix: the full 9-row table, in the same order as mycelium_std_core::GUARANTEE_MATRIX.
 fn matrix() => Vec[GuaranteeRow] =
-  Cons(
+  [
     row_value_repr_meta(),
-    Cons(
-      row_corevalue_datum(),
-      Cons(
-        row_guarantee_strength(),
-        Cons(
-          row_bound_boundbasis(),
-          Cons(
-            row_repr_of(),
-            Cons(
-              row_meta_of(),
-              Cons(
-                row_guarantee_of(),
-                Cons(row_bound_of(), Cons(row_provenance_of(), Nil))
-              )
-            )
-          )
-        )
-      )
-    )
-  );
+    row_corevalue_datum(),
+    row_guarantee_strength(),
+    row_bound_boundbasis(),
+    row_repr_of(),
+    row_meta_of(),
+    row_guarantee_of(),
+    row_bound_of(),
+    row_provenance_of()
+  ];
 
 // ── Structural checks over the matrix (the .myc analogs of lib.rs::tests) ───────────────────────
 // Every check below is Empirical (trials, std_core.rs three-way differential vs the live Rust
@@ -222,10 +199,7 @@ fn matrix_len(xs: Vec[GuaranteeRow]) => Binary{8} =
 // lib.rs::tests::matrix_is_all_exact_and_effect_free ("a Proven/Empirical tag here would itself
 // violate VR-5").
 fn all_exact(xs: Vec[GuaranteeRow]) => Bool =
-  match xs {
-    Nil => True,
-    Cons(r, rest) => bool_and(is_exact(row_tag(r)), all_exact(rest))
-  };
+  match xs { Nil => True, Cons(r, rest) => bool_and(is_exact(row_tag(r)), all_exact(rest)) };
 
 // all_effects_none: True iff every row's effects field is EXACTLY "none" — the other half of
 // lib.rs::tests::matrix_is_all_exact_and_effect_free, ported at FULL content fidelity (see
@@ -241,11 +215,10 @@ fn all_effects_none(xs: Vec[GuaranteeRow]) => Bool =
 fn explainable_count(xs: Vec[GuaranteeRow]) => Binary{8} =
   match xs {
     Nil => 0b0000_0000,
-    Cons(r, rest) =>
-      match row_explainable(r) {
-        True => add_u(0b0000_0001, explainable_count(rest)),
-        False => explainable_count(rest)
-      }
+    Cons(r, rest) => match row_explainable(r) {
+      True => add_u(0b0000_0001, explainable_count(rest)),
+      False => explainable_count(rest)
+    }
   };
 
 // only_query_rows_explainable: the EXPLAIN window is exactly the value-tag/bound/provenance
@@ -253,28 +226,12 @@ fn explainable_count(xs: Vec[GuaranteeRow]) => Binary{8} =
 // (the Rust test's op-NAME list equality needs bytes_eq — the identity of each row constructor
 // carries the same information here, so nothing is lost).
 fn only_query_rows_explainable() => Bool =
-  bool_and(
-    row_explainable(row_guarantee_of()),
-    bool_and(
-      row_explainable(row_bound_of()),
-      bool_and(
-        row_explainable(row_provenance_of()),
-        bool_and(
-          bool_not(row_explainable(row_value_repr_meta())),
-          bool_and(
-            bool_not(row_explainable(row_corevalue_datum())),
-            bool_and(
-              bool_not(row_explainable(row_guarantee_strength())),
-              bool_and(
-                bool_not(row_explainable(row_bound_boundbasis())),
-                bool_and(
-                  bool_not(row_explainable(row_repr_of())),
-                  bool_not(row_explainable(row_meta_of()))
-                )
-              )
-            )
-          )
-        )
-      )
-    )
-  );
+  bool_and(row_explainable(row_guarantee_of()),
+  bool_and(row_explainable(row_bound_of()),
+  bool_and(row_explainable(row_provenance_of()),
+  bool_and(bool_not(row_explainable(row_value_repr_meta())),
+  bool_and(bool_not(row_explainable(row_corevalue_datum())),
+  bool_and(bool_not(row_explainable(row_guarantee_strength())),
+  bool_and(bool_not(row_explainable(row_bound_boundbasis())),
+  bool_and(bool_not(row_explainable(row_repr_of())),
+  bool_not(row_explainable(row_meta_of()))))))))));

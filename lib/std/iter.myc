@@ -54,7 +54,10 @@ fn filter[A](xs: List[A], pred: A => Bool) => List[A] =
   match xs {
     Nil => Nil,
     Cons(h, rest) =>
-      match pred(h) { True => Cons(h, filter(rest, pred)), False => filter(rest, pred) }
+      match pred(h) {
+        True => Cons(h, filter(rest, pred)),
+        False => filter(rest, pred)
+      }
   };
 
 // ── foldl ─────────────────────────────────────────────────────────────────────────────────────────

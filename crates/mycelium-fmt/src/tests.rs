@@ -791,3 +791,576 @@ fn styled_compact_equals_default_format() {
         );
     }
 }
+
+// ============================================================================================
+// Shape-Dispatched Readable acceptance tests (M-976 / DN-82)
+// ============================================================================================
+/// The Shape-Dispatched Readable acceptance oracle (M-976 / DN-82): the canonical
+/// `(label, unchanged, before, after)` samples drawn from real `lib/std`. Each `after` is the
+/// exact byte-for-byte target the COMPACT (default) readable style must reproduce from `before`
+/// (the `unchanged` ones assert stability — `after == before`). Data-driven: the test body is an
+/// assert over a case (house rule — the logic lives in this table, not the body).
+#[allow(clippy::type_complexity)]
+const SHAPE_DISPATCHED_SAMPLES: &[(&str, bool, &str, &str)] = &[
+    (
+        "cons-spine-matrix",
+        false,
+        r#"// matrix: the full 9-row table, in the same order as mycelium_std_core::GUARANTEE_MATRIX.
+fn matrix() => Vec[GuaranteeRow] =
+  Cons(
+    row_value_repr_meta(),
+    Cons(
+      row_corevalue_datum(),
+      Cons(
+        row_guarantee_strength(),
+        Cons(
+          row_bound_boundbasis(),
+          Cons(
+            row_repr_of(),
+            Cons(
+              row_meta_of(),
+              Cons(
+                row_guarantee_of(),
+                Cons(row_bound_of(), Cons(row_provenance_of(), Nil))
+              )
+            )
+          )
+        )
+      )
+    )
+  );"#,
+        r#"// matrix: the full 9-row table, in the same order as mycelium_std_core::GUARANTEE_MATRIX.
+fn matrix() => Vec[GuaranteeRow] =
+  Cons(row_value_repr_meta(),
+  Cons(row_corevalue_datum(),
+  Cons(row_guarantee_strength(),
+  Cons(row_bound_boundbasis(),
+  Cons(row_repr_of(),
+  Cons(row_meta_of(),
+  Cons(row_guarantee_of(),
+  Cons(row_bound_of(),
+  Cons(row_provenance_of(),
+  Nil)))))))));"#,
+    ),
+    (
+        "bool_and-spine",
+        false,
+        r#"// only_query_rows_explainable: the EXPLAIN window is exactly the value-tag/bound/provenance
+// queries — lib.rs::tests::only_query_rows_are_explainable, ported as a per-row identity check
+// (the Rust test's op-NAME list equality needs bytes_eq — the identity of each row constructor
+// carries the same information here, so nothing is lost).
+fn only_query_rows_explainable() => Bool =
+  bool_and(
+    row_explainable(row_guarantee_of()),
+    bool_and(
+      row_explainable(row_bound_of()),
+      bool_and(
+        row_explainable(row_provenance_of()),
+        bool_and(
+          bool_not(row_explainable(row_value_repr_meta())),
+          bool_and(
+            bool_not(row_explainable(row_corevalue_datum())),
+            bool_and(
+              bool_not(row_explainable(row_guarantee_strength())),
+              bool_and(
+                bool_not(row_explainable(row_bound_boundbasis())),
+                bool_and(
+                  bool_not(row_explainable(row_repr_of())),
+                  bool_not(row_explainable(row_meta_of()))
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+  );"#,
+        r#"// only_query_rows_explainable: the EXPLAIN window is exactly the value-tag/bound/provenance
+// queries — lib.rs::tests::only_query_rows_are_explainable, ported as a per-row identity check
+// (the Rust test's op-NAME list equality needs bytes_eq — the identity of each row constructor
+// carries the same information here, so nothing is lost).
+fn only_query_rows_explainable() => Bool =
+  bool_and(row_explainable(row_guarantee_of()),
+  bool_and(row_explainable(row_bound_of()),
+  bool_and(row_explainable(row_provenance_of()),
+  bool_and(bool_not(row_explainable(row_value_repr_meta())),
+  bool_and(bool_not(row_explainable(row_corevalue_datum())),
+  bool_and(bool_not(row_explainable(row_guarantee_strength())),
+  bool_and(bool_not(row_explainable(row_bound_boundbasis())),
+  bool_and(bool_not(row_explainable(row_repr_of())),
+  bool_not(row_explainable(row_meta_of()))))))))));"#,
+    ),
+    (
+        "row-wide-flat-unchanged",
+        true,
+        r#"// ── honest reporting of delivery guarantee and audit bound ─────────────────────────────────────
+fn row_guarantee_of() => MatrixRow =
+  Row(
+    "guarantee (of a Delivery)",
+    GExact,
+    Total,
+    "total — REPORTS the sink's honest strength (None for Null; <= Declared in v0); never upgrades it (RT5/VR-5)",
+    "none",
+    IsExplainRecord,
+    "reports the delivery guarantee on the lattice; the null sink honestly says None (not delivered — RT5/VR-5)"
+  );"#,
+        r#"// ── honest reporting of delivery guarantee and audit bound ─────────────────────────────────────
+fn row_guarantee_of() => MatrixRow =
+  Row(
+    "guarantee (of a Delivery)",
+    GExact,
+    Total,
+    "total — REPORTS the sink's honest strength (None for Null; <= Declared in v0); never upgrades it (RT5/VR-5)",
+    "none",
+    IsExplainRecord,
+    "reports the delivery guarantee on the lattice; the null sink honestly says None (not delivered — RT5/VR-5)"
+  );"#,
+    ),
+    (
+        "cons-spine-testing",
+        false,
+        r#"fn row_summarize() => MatrixRow =
+  Row("summarize", GExact, FalTotal, "total", EffNone, "none", True);
+
+fn row_is_green() => MatrixRow =
+  Row("is_green", GExact, FalTotal, "total", EffNone, "none", True);
+
+// matrix: the full 5-row table, in guarantee_matrix.rs::MATRIX order.
+fn matrix() => Vec[MatrixRow] =
+  Cons(
+    row_for_all(),
+    Cons(
+      row_golden(),
+      Cons(row_differential(), Cons(row_summarize(), Cons(row_is_green(), Nil)))
+    )
+  );"#,
+        r#"fn row_summarize() => MatrixRow =
+  Row("summarize", GExact, FalTotal, "total", EffNone, "none", True);
+
+fn row_is_green() => MatrixRow =
+  Row("is_green", GExact, FalTotal, "total", EffNone, "none", True);
+
+// matrix: the full 5-row table, in guarantee_matrix.rs::MATRIX order.
+fn matrix() => Vec[MatrixRow] =
+  Cons(row_for_all(),
+  Cons(row_golden(),
+  Cons(row_differential(),
+  Cons(row_summarize(),
+  Cons(row_is_green(),
+  Nil)))));"#,
+    ),
+    (
+        "nested-match-ladder",
+        false,
+        r#"// pack_tl1: 5 trits per byte; a ragged tail is None (unreachable after the alignment check; G2).
+fn pack_tl1(ts: Trits) => Option[ByteList] =
+  match ts {
+    TNil => Some(BNil),
+    TCons(t0, r0) =>
+      match r0 {
+        TNil => None,
+        TCons(t1, r1) =>
+          match r1 {
+            TNil => None,
+            TCons(t2, r2) =>
+              match r2 {
+                TNil => None,
+                TCons(t3, r3) =>
+                  match r3 {
+                    TNil => None,
+                    TCons(t4, rest) =>
+                      match pack_tl1(rest) {
+                        Some(bs) => Some(BCons(tl1_byte(t0, t1, t2, t3, t4), bs)),
+                        None => None
+                      }
+                  }
+              }
+          }
+      }
+  };"#,
+        r#"// pack_tl1: 5 trits per byte; a ragged tail is None (unreachable after the alignment check; G2).
+fn pack_tl1(ts: Trits) => Option[ByteList] =
+  match ts {
+    TNil => Some(BNil),
+    TCons(t0, r0) => match r0 {
+      TNil => None,
+      TCons(t1, r1) => match r1 {
+        TNil => None,
+        TCons(t2, r2) => match r2 {
+          TNil => None,
+          TCons(t3, r3) => match r3 {
+            TNil => None,
+            TCons(t4, rest) => match pack_tl1(rest) {
+              Some(bs) => Some(BCons(tl1_byte(t0, t1, t2, t3, t4), bs)),
+              None => None
+            }
+          }
+        }
+      }
+    }
+  };"#,
+    ),
+    (
+        "let-chain-unchanged",
+        true,
+        r#"// tl1_group: one byte back to its 5-trit group (MSB-first). The five base-3 digits come off
+// LSB-first via rem_u/div_u; a residual above 0 after five divisions means the byte value
+// was > 242 — an explicit Err(OffGrid), never a silently wrapped group (C1/G2).
+fn tl1_group(byte: Binary{8}) => Result[Trits, PackError] =
+  let d4 = tl1_decode_digit(rem_u(byte, 0b0000_0011)) in
+  let v1 = div_u(byte, 0b0000_0011) in
+  let d3 = tl1_decode_digit(rem_u(v1, 0b0000_0011)) in
+  let v2 = div_u(v1, 0b0000_0011) in
+  let d2 = tl1_decode_digit(rem_u(v2, 0b0000_0011)) in
+  let v3 = div_u(v2, 0b0000_0011) in
+  let d1 = tl1_decode_digit(rem_u(v3, 0b0000_0011)) in
+  let v4 = div_u(v3, 0b0000_0011) in
+  let d0 = tl1_decode_digit(rem_u(v4, 0b0000_0011)) in
+  match eq(div_u(v4, 0b0000_0011), 0b0000_0000) {
+    0b1 => Ok(TCons(d0, TCons(d1, TCons(d2, TCons(d3, TCons(d4, TNil)))))),
+    _ => Err(OffGrid)
+  };"#,
+        r#"// tl1_group: one byte back to its 5-trit group (MSB-first). The five base-3 digits come off
+// LSB-first via rem_u/div_u; a residual above 0 after five divisions means the byte value
+// was > 242 — an explicit Err(OffGrid), never a silently wrapped group (C1/G2).
+fn tl1_group(byte: Binary{8}) => Result[Trits, PackError] =
+  let d4 = tl1_decode_digit(rem_u(byte, 0b0000_0011)) in
+  let v1 = div_u(byte, 0b0000_0011) in
+  let d3 = tl1_decode_digit(rem_u(v1, 0b0000_0011)) in
+  let v2 = div_u(v1, 0b0000_0011) in
+  let d2 = tl1_decode_digit(rem_u(v2, 0b0000_0011)) in
+  let v3 = div_u(v2, 0b0000_0011) in
+  let d1 = tl1_decode_digit(rem_u(v3, 0b0000_0011)) in
+  let v4 = div_u(v3, 0b0000_0011) in
+  let d0 = tl1_decode_digit(rem_u(v4, 0b0000_0011)) in
+  match eq(div_u(v4, 0b0000_0011), 0b0000_0000) {
+    0b1 => Ok(TCons(d0, TCons(d1, TCons(d2, TCons(d3, TCons(d4, TNil)))))),
+    _ => Err(OffGrid)
+  };"#,
+    ),
+    (
+        "cat-spine-in-arm",
+        false,
+        r#"// explain_deployed: the Deployed-arm EXPLAIN of explain_deploy — a total, deterministic function
+// of the deployed id + verification record, byte-for-byte the oracle's rendering (VR-4/SC-3/C3:
+// it always mentions both the content-hash check and the opaque-lowering check — no silent
+// omission). The Failed arm rides deploy_error_display (FLAG-spore-6). Exact.
+fn explain_deployed(spore_id: Bytes, v: DeployVerification) => Bytes =
+  match v {
+    Verification(hash_ok, opaque_ok) =>
+      cat(
+        "deploy-result: Deployed\nspore-id (content-hash): ",
+        cat(
+          spore_id,
+          cat(
+            "\ncontent_hash_canonical: ",
+            cat(
+              bool_text(hash_ok),
+              cat(
+                " (Exact — BLAKE3 deterministic; C4/ADR-003)\nno_opaque_lowering: ",
+                cat(
+                  bool_text(opaque_ok),
+                  " (Declared — structural assertion; VR-4)\noutcome: all invariants checked; no opaque lowering step detected in pipeline"
+                )
+              )
+            )
+          )
+        )
+      )
+  };"#,
+        r#"// explain_deployed: the Deployed-arm EXPLAIN of explain_deploy — a total, deterministic function
+// of the deployed id + verification record, byte-for-byte the oracle's rendering (VR-4/SC-3/C3:
+// it always mentions both the content-hash check and the opaque-lowering check — no silent
+// omission). The Failed arm rides deploy_error_display (FLAG-spore-6). Exact.
+fn explain_deployed(spore_id: Bytes, v: DeployVerification) => Bytes =
+  match v {
+    Verification(hash_ok, opaque_ok) =>
+      cat("deploy-result: Deployed\nspore-id (content-hash): ",
+      cat(spore_id,
+      cat("\ncontent_hash_canonical: ",
+      cat(bool_text(hash_ok),
+      cat(" (Exact — BLAKE3 deterministic; C4/ADR-003)\nno_opaque_lowering: ",
+      cat(bool_text(opaque_ok),
+      " (Declared — structural assertion; VR-4)\noutcome: all invariants checked; no opaque lowering step detected in pipeline"))))))
+  };"#,
+    ),
+    (
+        "let-block-indent",
+        false,
+        r#"// rng_next: advance the state and return it — Xorshift64 (x ^= x<<13; x ^= x>>7; x ^= x<<17),
+// bit-exact vs Rust's Rng::next_u64 (whose output IS its new state). Exact: deterministic; the
+// same state always yields the same output (C4/RT3).
+fn rng_next(state: Binary{64}) => Binary{64} =
+  let a = xor(
+            state,
+            shl_u(
+              state,
+              0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00001101
+            )
+          ) in
+  let b = xor(
+            a,
+            shr_u(
+              a,
+              0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000111
+            )
+          ) in
+  xor(
+    b,
+    shl_u(b, 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00010001)
+  );"#,
+        r#"// rng_next: advance the state and return it — Xorshift64 (x ^= x<<13; x ^= x>>7; x ^= x<<17),
+// bit-exact vs Rust's Rng::next_u64 (whose output IS its new state). Exact: deterministic; the
+// same state always yields the same output (C4/RT3).
+fn rng_next(state: Binary{64}) => Binary{64} =
+  let a = xor(
+    state,
+    shl_u(
+      state,
+      0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00001101
+    )
+  ) in
+  let b = xor(
+    a,
+    shr_u(a, 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000111)
+  ) in
+  xor(
+    b,
+    shl_u(b, 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00010001)
+  );"#,
+    ),
+    (
+        "let-in-arm-forced-open",
+        false,
+        r#"fn inspect[A, E, B](r: Result[A, E], f: A => B) => Result[A, E] =
+  match r { Ok(x) => let peeked = f(x) in Ok(x), Err(e) => Err(e) };
+
+// inspect_err: peek the Err side; the value and propagation are unchanged (mirror of inspect).
+fn inspect_err[A, E, B](r: Result[A, E], f: E => B) => Result[A, E] =
+  match r { Ok(x) => Ok(x), Err(e) => let peeked = f(e) in Err(e) };"#,
+        r#"fn inspect[A, E, B](r: Result[A, E], f: A => B) => Result[A, E] =
+  match r {
+    Ok(x) =>
+      let peeked = f(x) in
+      Ok(x),
+    Err(e) => Err(e)
+  };
+
+// inspect_err: peek the Err side; the value and propagation are unchanged (mirror of inspect).
+fn inspect_err[A, E, B](r: Result[A, E], f: E => B) => Result[A, E] =
+  match r {
+    Ok(x) => Ok(x),
+    Err(e) =>
+      let peeked = f(e) in
+      Err(e)
+  };"#,
+    ),
+    (
+        "glcons-spine",
+        false,
+        r#"// guarantee_matrix: the loaded matrix — 4 rows (the ported ops), all GExact, EXPLAIN-able = yes
+// for every selection op; `build` constructs a policy and is not itself a selection.
+fn guarantee_matrix() => GRowList =
+  GLCons(
+    GR("build", GExact, True, "none", ExplainNotApplicable),
+    GLCons(
+      GR("select", GExact, True, "none", ExplainYes),
+      GLCons(
+        GR("explain", GExact, True, "none", ExplainYes),
+        GLCons(GR("select_with_override", GExact, True, "none", ExplainYes), GLNil)
+      )
+    )
+  );"#,
+        r#"// guarantee_matrix: the loaded matrix — 4 rows (the ported ops), all GExact, EXPLAIN-able = yes
+// for every selection op; `build` constructs a policy and is not itself a selection.
+fn guarantee_matrix() => GRowList =
+  GLCons(GR("build", GExact, True, "none", ExplainNotApplicable),
+  GLCons(GR("select", GExact, True, "none", ExplainYes),
+  GLCons(GR("explain", GExact, True, "none", ExplainYes),
+  GLCons(GR("select_with_override", GExact, True, "none", ExplainYes),
+  GLNil))));"#,
+    ),
+];
+
+/// Wrap a bare item body (`before`/`after` are item text with no nodule header) into a minimal
+/// nodule so it parses, format it in a given style, and return the body text (header stripped).
+fn readable_body(before: &str, cfg: LayoutCfg) -> String {
+    let src = format!("nodule d;\n{before}\n");
+    let out = format_source_readable_cfg(&src, None, cfg)
+        .expect("shape sample must format")
+        .output;
+    let prefix = "nodule d;\n\n";
+    out.strip_prefix(prefix)
+        .unwrap_or(&out)
+        .trim_end_matches('\n')
+        .to_owned()
+}
+
+/// THE ACCEPTANCE ORACLE: in the COMPACT (`InlineWhenFits`) readable style, every canonical sample's
+/// `after` is reproduced byte-for-byte from its `before` (R0–R6). The `unchanged` samples additionally
+/// assert `after == before` (the confirmed-good anchors are left exactly as-is). Every sample also
+/// round-trips (C1) and is a fixed point (C2), so the layout is behavior-neutral (`Empirical`).
+///
+/// **Width note (M-976).** The spec's `after` strings are its oracle **at width 88**; the *shipped*
+/// default is now `READABLE_WIDTH = 100` (`rustfmt`-aligned, M-976). So this oracle pins `width: 88`
+/// explicitly — it validates the R0–R6 *rules* against the spec's exact fixtures, independent of the
+/// retuned default. The 100-wide default is exercised by the `lib/std` re-render + the round-trip /
+/// wrap / shape-invariant tests, which are width-agnostic in structure.
+#[test]
+fn shape_dispatched_samples_reproduce_after_byte_for_byte() {
+    let cfg = LayoutCfg {
+        width: 88,
+        ..LayoutCfg::default()
+    };
+    for (label, unchanged, before, after) in SHAPE_DISPATCHED_SAMPLES {
+        let got = readable_body(before, cfg);
+        let want = after.trim_end_matches('\n');
+        assert_eq!(
+            &got, want,
+            "[{label}] compact readable output does not match the canonical `after`\n--- GOT ---\n{got}\n--- WANT ---\n{want}"
+        );
+        if *unchanged {
+            assert_eq!(
+                want,
+                before.trim_end_matches('\n'),
+                "[{label}] marked UNCHANGED but `after` differs from `before`"
+            );
+        }
+        // C1: the readable output re-parses to the SAME surface AST as the input.
+        let src = format!("nodule d;\n{before}\n");
+        let original = parse(&src).expect("sample src parses");
+        let formatted = format_source_readable_cfg(&src, None, cfg).unwrap().output;
+        assert_eq!(
+            parse(&formatted).expect("readable output re-parses"),
+            original,
+            "[{label}] readable changed the surface AST (C1)"
+        );
+        // C2: idempotent — a second format is byte-for-byte identical.
+        let again = format_source_readable_cfg(&formatted, None, cfg)
+            .unwrap()
+            .output;
+        assert_eq!(
+            again, formatted,
+            "[{label}] readable is not idempotent (C2)"
+        );
+    }
+}
+
+/// The `AlwaysExpand` house-style knob: the spine STILL stays flat (each `GLCons` link at one fixed
+/// indent, no pyramid) but each inner nested `GR(...)` call is broken onto its own lines. Both
+/// styles kill the pyramid; they differ only in inner-call density. Behavior-neutral (C1/C2).
+#[test]
+fn always_expand_keeps_flat_spine_and_expands_inner_calls() {
+    let before = r#"fn guarantee_matrix() => GRowList =
+  GLCons(
+    GR("build", GExact, True, "none", ExplainNotApplicable),
+    GLCons(GR("select", GExact, True, "none", ExplainYes), GLNil)
+  );"#;
+    let cfg = LayoutCfg {
+        spine_inner: SpineInner::AlwaysExpand,
+        ..LayoutCfg::default()
+    };
+    let got = readable_body(before, cfg);
+
+    // The spine is flat: every `GLCons(` link begins a line at the SAME (2-space) indent.
+    let spine_indents: Vec<usize> = got
+        .lines()
+        .filter(|l| l.trim_start().starts_with("GLCons("))
+        .map(|l| l.len() - l.trim_start().len())
+        .collect();
+    assert!(
+        spine_indents.len() >= 2,
+        "expected a flat spine of >= 2 GLCons links:\n{got}"
+    );
+    assert!(
+        spine_indents.iter().all(|&i| i == spine_indents[0]),
+        "AlwaysExpand spine links must share one indent (flat, no pyramid):\n{got}"
+    );
+    // The inner GR(...) call is EXPANDED (broken onto its own lines) — a lone `GExact,` field line.
+    assert!(
+        got.lines().any(|l| l.trim() == "GExact,"),
+        "AlwaysExpand must break each inner nested call one arg per line:\n{got}"
+    );
+    // Behavior-neutral: round-trips to the same AST as the compact style.
+    let src = format!("nodule d;\n{before}\n");
+    let compact_ast = parse(&format_source_readable(&src, None).unwrap().output).unwrap();
+    let expand_ast = parse(&format_source_readable_cfg(&src, None, cfg).unwrap().output).unwrap();
+    assert_eq!(
+        compact_ast, expand_ast,
+        "AlwaysExpand and InlineWhenFits must agree on the surface AST (behavior-neutral)"
+    );
+}
+
+/// Shape invariants (R1/R5/R3/R2) beyond byte-equality, asserted structurally.
+#[test]
+fn shape_invariants_spine_flat_closers_coalesced_tree_shallow() {
+    let cfg = LayoutCfg::default();
+
+    // R1 + R5: a Cons spine draws every link at ONE indent and coalesces ALL closers into a single
+    // horizontal run on the LAST line (never a vertical `)` wall).
+    let matrix = r#"fn matrix() => Vec[Row] =
+  Cons(row_alpha(), Cons(row_bravo(), Cons(row_charlie(), Cons(row_delta(), Cons(row_echo(), Cons(row_foxtrot(), Cons(row_golf(), Nil)))))));"#;
+    let got = readable_body(matrix, cfg);
+    let link_indents: Vec<usize> = got
+        .lines()
+        .filter(|l| l.trim_start().starts_with("Cons("))
+        .map(|l| l.len() - l.trim_start().len())
+        .collect();
+    assert!(
+        link_indents.len() >= 3,
+        "expected a multi-link spine:\n{got}"
+    );
+    assert!(
+        link_indents.iter().all(|&i| i == link_indents[0]),
+        "R1: every spine link must share one indent (no per-link pyramid):\n{got}"
+    );
+    // Exactly one line carries a `)` closer run — the terminal line — and no earlier line ends in
+    // `)` (R5: closers never form a vertical one-per-line stack).
+    let closer_lines: Vec<&str> = got
+        .lines()
+        .filter(|l| l.trim_end().trim_end_matches(';').ends_with(')'))
+        .collect();
+    assert_eq!(
+        closer_lines.len(),
+        1,
+        "R5: the coalesced closer run must appear on exactly one line:\n{got}"
+    );
+    assert!(
+        closer_lines[0].trim_start().starts_with("Nil"),
+        "R5: the single closer run rides the terminal line:\n{got}"
+    );
+
+    // R3: a genuine nested-match ladder gets ONE indent per real level (block-formers ride the arm
+    // line), so the deepest arm indent grows by 2 per level — not the +4 of the old renderer.
+    let ladder = r#"fn f(ts: T) => O =
+  match ts {
+    A => match ts {
+      B => match ts {
+        C => c,
+        _ => d
+      },
+      _ => e
+    },
+    _ => g
+  };"#;
+    let got = readable_body(ladder, cfg);
+    // The three `match … {` headers ride arm lines at increasing +2 indents (2, 4, 6 → riding).
+    let inner_arm_indents: Vec<usize> = got
+        .lines()
+        .filter(|l| l.trim() == "C => c," || l.trim() == "_ => d")
+        .map(|l| l.len() - l.trim_start().len())
+        .collect();
+    assert!(
+        inner_arm_indents.iter().all(|&i| i == 6),
+        "R3: one indent per real nesting level (deepest arms at 6, not 12):\n{got}"
+    );
+
+    // R2: a wide-flat (non-chain) call breaks one arg per line with the `)` ALONE on its own line.
+    let wide = r#"fn r() => Row =
+  Row("a-long-first-field-value-here", GExact, Total, "and-a-second-longer-field", "none", IsRec, "x");"#;
+    let got = readable_body(wide, cfg);
+    assert!(
+        got.lines().any(|l| l.trim() == ")" || l.trim() == ");"),
+        "R2: a broken wide-flat call closes with `)` alone on its own line:\n{got}"
+    );
+}

@@ -124,3 +124,136 @@ existing layout), the render is **idempotent by construction** (C2).
 - **Out of scope.** Whole-phylum readable formatting, trailing-comment reflow inside wrapped
   segments, and a configurable width (via `[toolchain]`) are future increments — captured, not
   claimed.
+
+## 7. M-976 — Shape-Dispatched Readable (flat-spine · rustfmt-block · honest-tree)
+
+> **Status addendum (2026-07-02).** DN-82 stays **Accepted**; M-976 is an append-only *refinement* of
+> the readable renderer (still whitespace-only, still C1/C2-guarded, still `Empirical` behaviour-
+> neutral), not a new decision. It supersedes nothing — it makes the §4 heuristic shape-aware so the
+> maintainer-flagged "deepening Cons pyramid" and its mirror "vertical closer wall" both disappear.
+
+### 7.1 The rule-set (R0–R6)
+
+One width threshold (`READABLE_WIDTH = 88`, the shipped `Declared` const) is the SOLE inline-vs-break
+trigger (**R0**); four AST-shape rules decide HOW a node that must break lays out, dispatched in a
+single deterministic order (**R6**: same-head chain, else App, else match/if, else let, else per-kind):
+
+- **R1 — flat spine for right-nested same-head chains.** A chain `H(a, H(b, … H(z, T)))` (Cons /
+  GLCons / TCons / bool_and / cat, depth ≥ 2) renders every link at ONE fixed indent (never +2 per
+  link), the terminal `T` beginning the final line. A semantically FLAT N-element list is no longer
+  drawn as an N-deep rightward-drifting tree; appending an item touches one line.
+- **R2 — wide-flat call → rustfmt block.** A breaking non-chain call is one argument per line at
+  indent + 2 with the `)` alone on its own line — reproducing the confirmed-good `Row(...)` anchor
+  byte-for-byte.
+- **R3 — genuine-tree indent.** `match` / `if` get one indent per REAL nesting level; a nested-match
+  body RIDES its arm line (`pat => match … {`), halving a linear guard-ladder's depth versus the old
+  +4/level.
+- **R4 — binding layout.** A `let` bound blocks at the let's OWN indent (structural, rename-stable —
+  never aligned to the `= callee(` column), and the body always starts on its own line. **R4c**: an
+  arm whose body is a top-level `let … in` always breaks open, surfacing the twice-flagged buried
+  binding.
+- **R5 — trailing-closer collapse (global invariant).** No closing delimiter is ever part of a
+  vertical one-per-line stack: a spine coalesces ALL its closers into ONE horizontal run on the
+  terminal line, and a wide-flat / tree break emits at most one `)`-line per real nesting level. So a
+  lone closer line's count equals tree DEPTH (small), never a flat list's ITEM count — the anti-wall
+  guarantee.
+
+The 10 canonical `lib/std` samples (`matrix`, `only_query_rows_explainable`, `row_guarantee_of`,
+`testing::matrix`, `pack_tl1`, `tl1_group`, `explain_deployed`, `rng_next`, `inspect`/`inspect_err`,
+`guarantee_matrix`) are the acceptance oracle: the compact style reproduces each `after` byte-for-byte
+(the `row_guarantee_of` wide-flat anchor and the `tl1_group` let-chain are asserted UNCHANGED). See
+`crates/mycelium-fmt/src/tests.rs::shape_dispatched_samples_reproduce_after_byte_for_byte`.
+
+### 7.2 The house-style knob (required)
+
+A `LayoutCfg { width, spine_inner }` is exposed (`format_source_readable_cfg`; `mycfmt --readable
+--expand-spine`). `spine_inner` picks the same-head-chain inner-argument layout:
+
+- **`InlineWhenFits` (default, compact).** A fitting inner call stays inline (the shipped `lib/std`
+  canonical); an overflowing one blocks per R2.
+- **`AlwaysExpand` (expanded house style).** The spine STILL stays flat (each link at one indent, no
+  pyramid), but every inner nested call is broken onto its own lines. Both kill the pyramid; they
+  differ only in inner-call density, and BOTH are behaviour-neutral (C1/C2).
+
+**Width retune — 88 → 100 (`READABLE_WIDTH`, M-976 maintainer decision).** The earlier `88` was
+Black's Python default — an arbitrary import that misleadingly ties a value-semantics systems language
+to a Python formatter. The default is now **`100`**, `rustfmt`'s `max_width` default — *the formatter
+the Mycelium Rust kernel already uses* — so the single R0 threshold is grounded in the project's own
+toolchain, not borrowed. It stays `Declared` (a readability heuristic, not a proven bound) and is
+overridable per call via `LayoutCfg::width`. The `lib/std` corpus was re-rendered at 100 (more inline,
+net a further −249 lines) with every behaviour crate still green; the 10 spec samples (§7.1) remain the
+oracle **at their defining width 88** (the acceptance test pins `width: 88` explicitly, validating the
+R0–R6 rules against the exact fixtures independent of the retuned default).
+
+### 7.3 Seq ≠ Vec — why the flat spine is the honest fix, not a `[…]` rewrite
+
+The each-item-fully-closed-comma-`;` ideal (`[row_a(), row_b(), …];`) is **NOT reachable by whitespace
+alone**, and the tempting source rewrite of the `matrix()` / `guarantee_matrix()` Cons chains to `[…]`
+Seq literals is **behaviour-CHANGING** — grounded end-to-end against the pipeline: the `[…]` literal
+(grammar `mycelium.ebnf`) is the RFC-0032 Seq literal — it types to `Ty::Seq(elem, len)`, elaborates
+to `Repr::Seq`, and `eval.rs` explicitly REFUSES any element that is a data-constructor value ("a v0
+Seq is built from repr elements only"). Every `matrix()` returns the user type `Vec[A] = Nil |
+Cons(A, Vec[A])` whose rows are data-constructor values, so a rewrite fails on two independent grounds:
+(1) the literal's type `Seq{Row, N}` ≠ `Vec[Row]` (signature + every `Cons`/`Nil`-pattern consumer
+changes); (2) the rows are refused at elab/eval. The **flat spine (R1) is the correct, honest fix**;
+the coalesced closer run (R5) on a spine terminal line is the irreducible residual of Cons tokens with
+no list literal, flagged (not hidden) to the representation track.
+
+### 7.4 Future-RFC FLAGs (out of scope — recommended, NOT enacted here)
+
+- **FLAG-976-1 (list-literal RFC).** A separate append-only RFC for a Cons/Nil-**desugaring** `Vec`
+  list literal (a `[a, b, c]` form that lowers to `Cons(a, Cons(b, …, Nil))` for a `Vec[A]`-shaped
+  type), OR a `Seq{T,N} → Vec[T]` bridge admitting data-constructor elements. This is the ONLY path to
+  the each-item-closed ideal that REMOVES the residual closer run — the Readable renderer already lays
+  a list literal one element per line, so the day such a literal desugars to Cons, a mechanical source
+  rewrite plus the existing formatter compose to exactly the ideal with zero further formatter change.
+  It changes typing + the lowering surface, so it REQUIRES its own decision (three-property gate:
+  flatten ≡ lower ≡ semantics unchanged).
+- **FLAG-976-2 (variadic `all_of([…])` / `concat([…])`).** Same family, lower priority: a variadic
+  conjunction / concatenation desugaring to the SAME right-fold (`bool_and` / `cat`) so the
+  `only_query_rows_explainable` and `explain_deployed` pyramids can be written flat. Until it lands,
+  R1's flat spine + R5's coalesced closer is the honest fallback.
+
+### 7.5 Definition of Done — met (M-976)
+
+- **R0–R6 + the house-style knob implemented** in `crates/mycelium-fmt` (`render_expr_readable` split
+  into a fit-check + `render_expr_broken`; `same_head_chain` / `render_spine` helpers; `LayoutCfg` /
+  `SpineInner`; `--expand-spine` CLI). ✔
+- **Acceptance oracle green.** All 10 canonical samples reproduce their `after` byte-for-byte (the
+  oracle pins width 88, its defining width); an `AlwaysExpand` case and structural shape invariants
+  (flat links, single coalesced closer run, shallow tree, lone R2 closer) pass. ✔
+- **`lib/std` re-rendered at the retuned default width 100** (`mycfmt --write --readable`; net −249
+  lines versus the prior corpus — more inline at 100); the `myc-fmt` gate stays green under the same
+  `--readable` scoping. ✔
+- **Behaviour-neutral (`Empirical`, NOT `Proven`).** The C1 identity guard refused any non-round-
+  tripping write, and the `mycelium-l1` `std_*` + `mycelium-std-conformance` + every touched
+  `mycelium-std-*` eval crate are green after the reformat (L0-interp ≡ L1-eval ≡ AOT). This is trials
+  evidence (C1/C2 + the differential suites), not a theorem — VR-5: stated at its supportable strength. ✔
+
+### 7.6 FLAG-976-1 RESOLVED → RFC-0040 (the each-item-closed ideal, now shipped)
+
+Per the maintainer's 2026-07-03 directive to *pursue the list-literal source change now*, FLAG-976-1
+is **resolved by RFC-0040 (M-977)**: a `[e1, …, en]` literal checked against a **cons-list-shaped**
+user ADT (structurally: two ctors — a nullary nil + a recursive `Cons(A, Self)`) **desugars** to the
+`Cons` chain in `checkty::check_list`. It is **behaviour-neutral by construction** — the desugared fn
+body is the **byte-for-byte identical AST** as the hand-written chain (`Empirical`, established by
+`mycelium-l1/tests/list_literal.rs`; the full `mycelium-l1` + conformance + `std-*` suites green,
+1854 tests). The `lib/std` static tables (`matrix()` in core/diag/spore/swap/recover/testing,
+`guarantee_matrix()` in select, `modes_all()` in testing) now read as the **maintainer's ideal** —
+each item closed on its own line, comma-separated, one terminal `;`, **no closer run**:
+
+```mycelium
+fn matrix() => Vec[GuaranteeRow] =
+  [
+    row_value_repr_meta(),
+    row_corevalue_datum(),
+    …
+    row_provenance_of()
+  ];
+```
+
+This is a *surface-semantics* extension only — **no grammar/parser/L0 change** (the `[…]` already
+parsed to `Literal::List`; only its type-directed elaboration changed). It lands as a **separate PR
+from the behaviour-neutral M-976 formatter work** (it is a kernel-typechecker change, so it must not
+be conflated with the whitespace-only renderer). FLAG-976-2 (a variadic `all_of([…])`/`concat([…])`
+for the `bool_and`/`cat` pyramids) remains a distinct, deferred RFC — unaddressed here.

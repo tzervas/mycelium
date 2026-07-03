@@ -113,10 +113,7 @@ fn or_else[A, E](r: Result[A, E], f: E => Result[A, E]) => Result[A, E] =
 // filter: Some(x) where predicate(x) is False becomes None — a typed transition (named absence),
 // not a silent loss (I1/C1).
 fn filter[A](o: Option[A], predicate: A => Bool) => Option[A] =
-  match o {
-    Some(x) => match predicate(x) { True => Some(x), False => None },
-    None => None
-  };
+  match o { Some(x) => match predicate(x) { True => Some(x), False => None }, None => None };
 
 // inspect: peek the Ok side; the value and sum shape are unchanged. `.myc` closures carry no
 // declared-effect annotations in HOF stage 1 (RFC-0024 §3) — unlike the Rust crate's
@@ -124,11 +121,21 @@ fn filter[A](o: Option[A], predicate: A => Bool) => Option[A] =
 // this combinator is honestly a structural peek, not an effect-tracked one (no RFC-0016 C6
 // obligation to discharge since `.myc` has no closure-effect surface yet — captured, not faked).
 fn inspect[A, E, B](r: Result[A, E], f: A => B) => Result[A, E] =
-  match r { Ok(x) => let peeked = f(x) in Ok(x), Err(e) => Err(e) };
+  match r {
+    Ok(x) =>
+      let peeked = f(x) in
+      Ok(x),
+    Err(e) => Err(e)
+  };
 
 // inspect_err: peek the Err side; the value and propagation are unchanged (mirror of inspect).
 fn inspect_err[A, E, B](r: Result[A, E], f: E => B) => Result[A, E] =
-  match r { Ok(x) => Ok(x), Err(e) => let peeked = f(e) in Err(e) };
+  match r {
+    Ok(x) => Ok(x),
+    Err(e) =>
+      let peeked = f(e) in
+      Err(e)
+  };
 
 // ── convert between Option and Result (no information lost silently) ───────────────────────────
 // ok_or: None becomes Err(err) — names the absence explicitly (never a silent drop).
