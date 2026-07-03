@@ -6343,7 +6343,7 @@
       "crate": "mycelium-fmt",
       "module": "mycelium_fmt::FmtError",
       "file": "crates/mycelium-fmt/src/lib.rs",
-      "line": 141,
+      "line": 189,
       "summary": "The CLI exit code for this refusal (contract §5).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6354,7 +6354,7 @@
       "crate": "mycelium-fmt",
       "module": "mycelium_fmt",
       "file": "crates/mycelium-fmt/src/lib.rs",
-      "line": 99,
+      "line": 147,
       "summary": "A successful format result.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6376,7 +6376,7 @@
       "crate": "mycelium-fmt",
       "module": "mycelium_fmt",
       "file": "crates/mycelium-fmt/src/lib.rs",
-      "line": 84,
+      "line": 90,
       "summary": "The layout style a format pass emits (M-974).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6387,7 +6387,7 @@
       "crate": "mycelium-fmt",
       "module": "mycelium_fmt",
       "file": "crates/mycelium-fmt/src/lib.rs",
-      "line": 377,
+      "line": 458,
       "summary": "Flatten `src` into the single-line human↔stream form (M-819; DN-57 §2).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6398,7 +6398,7 @@
       "crate": "mycelium-fmt",
       "module": "mycelium_fmt",
       "file": "crates/mycelium-fmt/src/lib.rs",
-      "line": 186,
+      "line": 234,
       "summary": "Format `src` into its canonical form.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6409,7 +6409,7 @@
       "crate": "mycelium-fmt",
       "module": "mycelium_fmt",
       "file": "crates/mycelium-fmt/src/lib.rs",
-      "line": 206,
+      "line": 254,
       "summary": "Format `src` into its **human-readable** canonical form (M-974/DN-82): the inverse posture of",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6420,7 +6420,7 @@
       "crate": "mycelium-fmt",
       "module": "mycelium_fmt",
       "file": "crates/mycelium-fmt/src/lib.rs",
-      "line": 216,
+      "line": 281,
       "summary": "Shared implementation of [`format_source`] (Compact) and [`format_source_readable`] (Readable).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8136,7 +8136,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 7014,
+      "line": 7076,
       "summary": "The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8147,7 +8147,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 6965,
+      "line": 7027,
       "summary": "The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8169,7 +8169,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 7004,
+      "line": 7066,
       "summary": "Canonicalize a surface VSA model ident to the **kernel model id** (`Repr::Vsa { model }` —",
       "guarantee_tag": null,
       "corpus_refs": []
