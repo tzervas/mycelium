@@ -3762,7 +3762,11 @@ issues:
     title: "M-740 — Port the L1 frontend (lexer/parser/checker) to Mycelium (.myc)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:feature, area:language, priority:P2, status:needs-design]
-    depends_on: [M-739, E11-1]
+    # M-978/M-979 gate the port's AUTHORING SHAPE (DN-84 §11 correction, 2026-07-03): the depth/stack
+    # architecture (explicit work-stack vs guarded recursion; the .myc iteration contract) must be
+    # settled + adversarially reviewed BEFORE the .myc passes are authored, so the dogfooded compiler
+    # implements the final shape once. Stage-1 scaffolding may proceed; pass-authoring waits on the RFC.
+    depends_on: [M-739, E11-1, M-978]
     epic: E18-1
     doc_refs:
       - corpus:DN-26
@@ -11372,6 +11376,69 @@ issues:
       identity (Empirical). lib/std static tables (matrix() etc.) now read each-item-closed [...].
       Resolves DN-82 FLAG-976-1. Assignee: tzervas.
       User stories + Definition of Done: see RFC-0040 §2 (use case) + §5 (DoD) — as a lib/std author, I want a Vec list literal so static tables read each-item-closed.
+  - id: M-978
+    title: "Dynamic host-stack growth + unified tunable recursion-depth budget (DN-84)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:core-ir, priority:P2, status:todo]
+    epic: E31-1
+    depends_on: [M-977]
+    doc_refs:
+      - corpus:DN-84
+      - src:crates/mycelium-stack/src/lib.rs
+      - src:crates/mycelium-l1/src/parse.rs
+    body: |
+      Harden the recursive frontend passes to be crash-proof (no host-stack SIGABRT) with an
+      essentially-unbounded, cleanly-handled nesting capability, per DN-84. DIRECTION DECIDED by the
+      maintainer (DN-84 §11, 2026-07-03): implement (B) — wire the already-documented mycelium-stack
+      grow-on-demand feature (stacker::maybe_grow — safe API, unsafe contained in the leaf,
+      KC-3/ADR-014 intact) so the host stack is never the binding limit — with: ONE GLOBAL
+      recursion-depth budget under a shared policy (§9.1), unifying the scattered per-pass constants
+      (parser 256, eval 64, ambient/elab/totality/checkty 4096); maybe_grow guards at COARSE
+      pass-entry points only (§9.2 — minimize per-call cost, prove no segment overrun, e.g. reserve
+      >= budget x max_frame at entry); a DETERMINISTIC default budget of 4096, tunable, with headroom
+      to a few tens of thousands as future use cases witness (§9.5) — accept/reject a function of
+      (source, budget) only, never the machine (G2 + corpus determinism + self-hosting portability);
+      plus an opt-in, non-deterministic, corpus-excluded --unbounded REPL/exploration mode (design C,
+      §9.3). Data-shaped desugaring depth (RFC-0040 Cons chains — size-driven, not logic) is routed
+      through iteration/grow-on-demand, NOT the control budget (§5). Motivated by the ADR-041 near-miss
+      (a toolchain frame-size change turned a 256-deep guard into a SIGABRT). Companion (D) track =
+      M-979. Lands via its own RFC/ADR; DN-84 stays Draft until then.
+      User stories + Definition of Done: see DN-84 §2 (stories) + §7/§11 (decided direction / criteria).
+  - id: M-979
+    title: "Explicit heap work-stack (DN-84 design D) — solve NOW: research -> plan -> adversarial review -> implement"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:core-ir, priority:P2, status:in-progress]
+    epic: E31-1
+    depends_on: [M-978]
+    doc_refs:
+      - corpus:DN-84
+      - src:crates/mycelium-l1/src/checkty.rs
+      - src:crates/mycelium-interp/src/lib.rs
+    body: |
+      DN-84 design (D), CONFIRMED by the maintainer (DN-84 §11 correction, 2026-07-03) as the
+      solve-NOW track: get the complexity of the problem and solution fully figured out and solved
+      in the Rust reference era, BEFORE the M-740 .myc port has to absorb the shape (the dogfooded
+      compiler then implements the settled contract once). Convert the deep recursive passes from
+      host-call-stack recursion to an explicit heap-allocated work-stack; (B)'s pieces (single global
+      deterministic budget, host-stack management for any pass left recursive) are supporting
+      infrastructure of this one solution, not a separate track. Which passes convert (evaluators
+      first? frontend passes stacker-guarded as transitional oracle code?) is an OUTPUT of the
+      mandated method, not pre-decided.
+      Mandated method (strict order): (1) RESEARCH — map every recursion site + shape + conversion
+      cost; the language's own iteration/TCO mechanics (what a .myc work-stack loop costs today —
+      decisive for the dogfooded form); prior decisions (RFC-0007 §4.5/4.6, DN-05, DN-56 freeze,
+      RFC-0024 defunctionalization); external prior art (rustc ensure_sufficient_stack, CEK/explicit-
+      stack interpreters, flat-AST arenas); blast radius (depth-keyed tests, DN-80 reject ledger,
+      conformance corpus). (2) PLAN — an RFC fixing the architecture (freeze-compatibility w.r.t.
+      M-969 addressed explicitly). (3) ADVERSARIAL REVIEW of the plan before code. (4) Staged
+      implementation in isolated worktrees (disjoint-by-construction waves; sonnet/opus scoped to
+      complexity per ADR-038).
+      Secure-by-design standing requirement: periodic adversarial passes over crafted-input DoS
+      (untrusted .myc at parse/LSP/spore-resolve), stacker/psm unsafe + supply-chain containment
+      (ADR-014 leaf-only), memory-exhaustion of a raised budget, and the --unbounded footgun.
+      User stories + Definition of Done: see DN-84 §2 + §11 (incl. the correction): the RFC lands
+      adversarially-reviewed; converted passes pass the full differential + deep-nesting bound tests
+      (never-silent budget errors preserved, G2); no new vulnerability class introduced.
   - id: M-970
     title: "mycelium-fmt: render_expr_canonical drops the @forage(policy) Hypha annotation"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
