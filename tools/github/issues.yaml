@@ -11478,9 +11478,23 @@ issues:
       statically-deep input" premise is unachievable (parser-cap==floor, AOT data-immune, L0 O(N^2)), so
       it asserts real per-path bounded-input parity at the shared 4096 floor. RESIDUAL: literal
       single-variant unification partial (L1 DepthExceeded vs L0/AOT DepthLimit) — full convergence would
-      change interp/mlir error enums (maintainer follow-up). Independently adversarially reviewed. NEXT:
-      W6 (data-spine iteration: usefulness/decision flat-loop; check_list already W1) — the LAST wave, then
-      M-740 self-hosting frontend port unblocks.
+      change interp/mlir error enums (maintainer follow-up). Independently adversarially reviewed.
+      W6 LANDED (2026-07-03, to dev): the §4.7 "convert-or-document" fork → DOCUMENTED the wide-tuple
+      asymmetry (evidence-based). usefulness/decision recurse on tuple/ctor ARITY; a 4095-field product
+      type false-refuses at 4096 BUT never-silently (DepthExceeded{4096} on the deep-stack worker, NOT a
+      SIGABRT — W1 guard meets the DoD), so it's a PRECISION residual on a pathological input, not safety;
+      §7 gates conversion on "if profiling demands" (does not). Docs+tests only (differential+conformance
+      byte-identical); conversion seam + boundary witness tests recorded. Maintainer may overrule → convert
+      if 4095-arity is adversarially realistic.
+      *** RFC-0041 PHASE-4 (W0-W6) IMPLEMENTATION COMPLETE (2026-07-03, all on dev @ post-#1150). ***
+      Flagship RR-29 §0.1 myc run SIGABRT CLOSED; §5.1 error-parity GREEN; all 3 machines + frozen-core
+      refuse deep input never-silently on one budget; host stack grows on demand; forbid(unsafe) intact
+      (sole unsafe = audited upstream stacker/psm). HELD AT DEV for maintainer RFC review + determinations
+      on the flagged open questions (zero-alloc-Drop, single-variant unification + with_depth, Value/Repr
+      W3b, content_hash O(depth^2), AOT RC-path holes, infallible-pass arena-charging, stride-1 grow,
+      Box-owned invariant protection, TCO scope, W6 document-vs-convert). Fable assessment memo in progress.
+      NOT promoted past dev; M-740 unblocks AFTER maintainer determinations. M-979 stays in-progress until
+      determinations resolved + DoD ratified (Value/Repr W3b deferral means §9 DoD not 100% closed yet).
       DN-84 design (D), CONFIRMED by the maintainer (DN-84 §11 correction, 2026-07-03) as the
       solve-NOW track: get the complexity of the problem and solution fully figured out and solved
       in the Rust reference era, BEFORE the M-740 .myc port has to absorb the shape (the dogfooded

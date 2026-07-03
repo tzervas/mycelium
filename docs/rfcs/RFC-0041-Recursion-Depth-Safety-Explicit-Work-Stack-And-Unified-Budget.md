@@ -259,6 +259,19 @@ before merge. **Shared-file owners** (resolves §11 Med wave39): root `Cargo.tom
 **integrator-owned** — waves FLAG edits, the integrator applies them (feed-as-ready). **Ordering edges are
 in the table**, not just prose (resolves §11 High wave35).
 
+**Status (2026-07-03): PHASE-4 COMPLETE — all seven waves (W0–W6) landed on `dev`.** The flagship
+`myc run` SIGABRT (RR-29 §0.1) is closed, the §5.1 cross-path error-parity gate is green, and all three
+execution machines (L0 interp · L1 eval · AOT) plus the frozen-core value types refuse deep input
+never-silently on one shared `RecursionBudget`, with the host stack growing on demand.
+`#![forbid(unsafe_code)]` holds across every landed crate (the sole `unsafe` is the audited upstream
+`stacker`/`psm`). **W6** = data-spine iteration: the RFC §4.7 "convert-or-document" fork was resolved to
+**document the wide-tuple asymmetry** — the `usefulness`/`decision` arity spine already refuses
+never-silently (`DepthExceeded{4096}`, not a SIGABRT) via the W1 guard, so the residual is a *precision*
+defect on a pathological 4095-field product type, not a safety one; conversion is gated on "if profiling
+demands" (it does not). Documented residuals/deviations await maintainer determinations (RFC §5.1
+amendment, this §7, the Meta changelog, the M-979 issue). M-740 self-hosting unblocks. Per-wave detail
+below (append-only).
+
 **Status (2026-07-03):** **W0, W1, W2, W3½, W3+W5, and W4 landed — only W6 remains.** W4 = the L0
 reference interpreter (`mycelium-interp`) budgeted: `step`/`subst`/etc. charge the shared
 `RecursionBudget` (L0 stays a substitution machine, §4.1), **`EvalError::DepthLimit` is now constructed**,
@@ -377,6 +390,17 @@ implementation. **4 Critical + 15 High source-confirmed** objections, all resolv
 
 ## Meta — changelog
 
+- **2026-07-03 — W6 landed; RFC-0041 Phase-4 (W0–W6) COMPLETE (M-979).** Final wave, assess-then-act:
+  the §4.7 "convert-or-document" fork resolved to **document the wide-tuple asymmetry** — `usefulness`/
+  `decision` recurse on tuple/ctor arity, a 4095-field product type false-refuses at the floor, **but** it
+  refuses **never-silently** (`DepthExceeded{4096}` on the deep-stack worker, not a SIGABRT — the W1 guard
+  meets the DoD), so it is a *precision* residual on a pathological input, not a safety one; §7 gates the
+  conversion on "if profiling demands" (it does not); a byte-identical rewrite of the trusted branching
+  Maranget passes is high-risk/zero-benefit (KISS/YAGNI/KC-3). Docs+tests only (differential + conformance
+  byte-identical); the conversion seam + boundary witness tests are recorded. Maintainer may overrule →
+  convert if 4095-arity is adversarially realistic. **All seven waves landed; the never-silent + shared-
+  budget + grow-on-demand recursion-safety contract holds end-to-end; M-740 self-hosting unblocks.** RFC
+  stays Accepted; open determinations flagged. (VR-5/G2.)
 - **2026-07-03 — W4 landed (L0 interp budgeted work-stack; the flagship SIGABRT closed; M-979).**
   `mycelium-interp` (`step`/`subst`/`node_to_core_value`/`guarantee_of_value`/`select_arm`) charges the
   shared `RecursionBudget` (L0 stays a substitution machine, §4.1; `subst` fallible; `eval_core` on the

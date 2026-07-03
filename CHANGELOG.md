@@ -11,6 +11,33 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### RFC-0041 W6 — data-spine iteration: the wide-tuple asymmetry documented (RFC-0041 Phase-4 COMPLETE) (2026-07-03: M-979)
+
+The final wave, and an **assess-then-act** one (the RFC §4.7 explicitly permits "convert **or** document
+the wide-tuple asymmetry"). **Decision: document — conversion not warranted** (evidence-based, VR-5):
+- The `usefulness::useful` / `decision::compile_rows` pattern-matrix passes recurse ~N-deep on tuple/ctor
+  **arity** (data-shaped width), and a 4095-field product type is surface-reachable and false-refuses at
+  the 4096 floor. **But** on the production 256 MiB deep-stack worker that refusal is a **clean never-silent
+  `DepthExceeded{4096}`, not a SIGABRT** — the W1 budget guard already meets the "no input SIGABRTs" DoD.
+  The residual is a *precision* defect (a shallow-but-wide pattern refused as if deeply nested), not a
+  safety one, and a 4095-field product type is pathological (unlike the realistic list literals the twin
+  `check_list` handles — converted in W1). A byte-identical iterative rewrite of the trusted *branching*
+  Maranget passes is high-risk for ~zero real benefit (KISS/YAGNI/KC-3), and §7 gates the twin's conversion
+  on "if profiling demands" — which it does not.
+- **Change is docs + tests only** (no logic change; differential + conformance byte-identical): grounded
+  `§4.7 (W6)` notes on `useful`/`compile` marking the measured boundary, the safety property, and the exact
+  conversion seam (charge `charge_steps` per column, like `check_list`) should the maintainer overrule;
+  boundary witness tests pinning the never-silent clean refusal. **Flagged for maintainer:** overrule →
+  convert only if 4095-arity is deemed adversarially realistic (§5 untrusted-input lens).
+
+**RFC-0041 Phase-4 (waves W0–W6) is COMPLETE.** All seven waves landed on the working tier: the flagship
+`myc run` SIGABRT (RR-29 §0.1) is closed, the §5.1 cross-path error-parity gate is green, the frozen-core
+value types + all three execution machines (L0 interp · L1 eval · AOT) refuse deep input never-silently on
+one shared budget, and the host stack grows on demand. `#![forbid(unsafe_code)]` holds across every landed
+crate (the only `unsafe` is the audited upstream `stacker`/`psm`). RFC-0041 stays **Accepted**; the
+per-wave `Enacted` scopes are recorded. Documented residuals/deviations await maintainer determinations
+(see the RFC §5.1 amendment, §7 status, and the M-979 issue). **M-740 self-hosting frontend port unblocks.**
+
 ### RFC-0041 W4 — L0 reference-interpreter budgeted work-stack; the flagship `myc run` SIGABRT closed (2026-07-03: M-979)
 
 Closes RR-29 §0.1 — the remotely-reachable flagship bug: a crafted deep-but-fuel-cheap `.myc` value
