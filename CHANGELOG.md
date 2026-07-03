@@ -11,6 +11,28 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Human-readable `.myc` formatting + `Vec` list literal (2026-07-03: M-976 · M-977)
+
+Post-freeze presentation + surface-ergonomics work — the kernel is untouched (both are tooling /
+frontend lowerings). All behavior-neutrality is `Empirical` (C1/C2 + AST-identity + the differential
+suites), never `Proven`.
+
+- **Shape-Dispatched Readable `mycfmt`** (M-976, `crates/mycelium-fmt`, DN-82 §7). A whitespace-only
+  Readable style that kills the deepening `Cons` pyramid and the mirror-image closing-paren wall:
+  R1 flat-spine for right-nested same-head chains, R2 rustfmt-block for wide-flat calls, R3 one indent
+  per real nesting for genuine trees, R4/R4c binding layout. A **house-style knob** — `LayoutCfg`
+  with `SpineInner::{InlineWhenFits (default), AlwaysExpand}` and `mycfmt --readable --expand-spine`
+  (compact vs expanded, both behavior-neutral). **Default width retuned 88 to 100** (rustfmt's
+  `max_width`, the value the Mycelium Rust kernel itself uses — grounded, not Black's Python 88).
+  `lib/std` re-rendered.
+- **`Vec` list literal** (M-977, **RFC-0040**, `crates/mycelium-l1`). Type-directed elaboration: a
+  `[e1, …, en]` literal against a cons-list-shaped `Vec[T]` desugars to the `Cons` chain (and is
+  re-checked as it); `Seq{T, N}` and non-list ADTs are untouched/refused. **No grammar/parser/L0
+  change** — a frontend lowering onto the frozen kernel (freeze-safe, DN-56 §6), behavior-neutral by
+  AST identity. `lib/std`'s static tables (`matrix()` etc.) now read as each-item-closed `[…]` with a
+  single terminal `;` — no closer run, no pyramid. Resolves DN-82 FLAG-976-1; the variadic
+  `all_of`/`concat` fold (FLAG-976-2) stays a deferred future RFC.
+
 ### Kernel freeze declared (2026-07-02: M-969 — the closing act of Phase-I)
 
 **The Mycelium kernel is declared frozen** (`core 1.0.0`-class). This is the deliberate closing act
