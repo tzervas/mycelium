@@ -20,7 +20,9 @@ fn run(src: &str) -> Result<L1Value, L1Error> {
 fn literals_lets_and_prims_evaluate() {
     let v = run("nodule d;\nfn main() => Binary{8} = let a = 0b1010_1010 in not(a);")
         .expect("evaluates");
-    let L1Value::Repr(v) = v else { panic!("repr") };
+    let L1Value::Repr(ref v) = v else {
+        panic!("repr")
+    };
     assert_eq!(
         v.payload(),
         &Payload::Bits(vec![false, true, false, true, false, true, false, true])
@@ -34,7 +36,9 @@ fn data_match_and_if_evaluate() {
             "nodule d;\ntype Sign = Neg | Zero | Pos;\nfn label(s: Sign) => Ternary{1} =\n  match s { Neg => 0t-, Zero => 0t0, _ => 0t+ };\nfn main() => Ternary{1} = label(Zero);",
         )
         .expect("evaluates");
-    let L1Value::Repr(v) = v else { panic!("repr") };
+    let L1Value::Repr(ref v) = v else {
+        panic!("repr")
+    };
     assert_eq!(
         v.payload(),
         &Payload::Trits(vec![mycelium_core::Trit::Zero])
@@ -98,7 +102,9 @@ fn literal_match_over_binary_selects_the_matching_arm() {
     // Mutant-witness: if eval_literal_match compared the wrong payload (or always took the
     // first arm), classify(0b1111) would not yield 0t+.
     let v = run(CLASSIFY).expect("evaluates");
-    let L1Value::Repr(v) = v else { panic!("repr") };
+    let L1Value::Repr(ref v) = v else {
+        panic!("repr")
+    };
     assert_eq!(v.payload(), &Payload::Trits(vec![mycelium_core::Trit::Pos]));
 }
 
@@ -107,7 +113,8 @@ fn literal_match_falls_through_to_the_default() {
     // Mutant-witness: if a non-matching literal arm fired anyway, classify(0b0101) would not
     // reach the `_` default 0t-.
     let src = CLASSIFY.replace("classify(0b1111)", "classify(0b0101)");
-    let L1Value::Repr(v) = run(&src).expect("evaluates") else {
+    let out = run(&src).expect("evaluates");
+    let L1Value::Repr(ref v) = out else {
         panic!("repr")
     };
     assert_eq!(v.payload(), &Payload::Trits(vec![mycelium_core::Trit::Neg]));
@@ -180,49 +187,120 @@ fn an_unproductive_recursion_is_an_explicit_fuel_exhaustion() {
 }
 
 #[test]
-fn deep_recursion_trips_the_host_stack_guard_explicitly() {
-    // With ample fuel, the depth guard refuses explicitly — never a host stack overflow.
+fn a_non_tail_recursion_trips_the_depth_guard_explicitly_never_a_crash() {
+    // RFC-0041 W5 (M-979): the evaluator is a work-stack CEK machine, so an over-deep input is a
+    // never-silent `DepthExceeded`, never a host-stack `SIGABRT`. `spin` is **non-tail** — the
+    // recursive `spin(n)` is an argument of the `S(…)` constructor, so its App frame is still
+    // pending when the recursion re-enters (not TCO-eligible), and its source-call depth grows one
+    // unit per level until it hits the ceiling. Ample fuel so *depth* is what trips (not fuel).
     let env = env(
-            "nodule d;\ntype Nat = Z | S(Nat);\nfn spin(n: Nat) => Nat = spin(n);\nfn main() => Nat = spin(Z);",
+            "nodule d;\ntype Nat = Z | S(Nat);\nfn spin(n: Nat) => Nat = S(spin(n));\nfn main() => Nat = spin(Z);",
         );
-    let err = Evaluator::new(&env).call("main", vec![]).unwrap_err();
+    let err = Evaluator::new(&env)
+        .with_fuel(100_000_000)
+        .call("main", vec![])
+        .unwrap_err();
     assert!(
-        matches!(err, L1Error::DepthExceeded { .. }),
-        "expected DepthExceeded, got {err:?}"
+        matches!(err, L1Error::DepthExceeded { limit } if limit == DEFAULT_DEPTH),
+        "expected DepthExceeded(limit=4096), got {err:?}"
     );
 }
 
 #[test]
-fn deeply_nested_expression_trips_the_depth_guard_without_any_recursive_call() {
-    // A4-03 mutant-witness: depth is charged per AST node, so a *wide-but-shallow* program —
-    // here a deep but call-free `not(not(… not(0b…) …))` nest, which makes no recursive
-    // function call at all — still hits the host-stack guard explicitly once its nesting
-    // exceeds DEFAULT_DEPTH (64). This pins the documented per-node (not per-call-frame)
-    // contract: a refactor charging depth only at `invoke` would let this nest recurse on the
-    // host stack unguarded, flipping this assertion (the depth guard would never trip) and so
-    // turning the test red — the regression we want to catch.
-    let mut expr = "0b0000_0001".to_owned();
-    for _ in 0..200 {
-        expr = format!("not({expr})");
-    }
-    let deep_env = env(&format!("nodule d;\nfn main() => Binary{{8}} = {expr};"));
-    let err = Evaluator::new(&deep_env).call("main", vec![]).unwrap_err();
+fn an_infinite_tail_recursion_is_tco_bounded_and_trips_fuel_not_depth() {
+    // RFC-0041 §4.6 (M-979): TCO. `spin(n) = spin(n)` is a **direct tail call** from a fn with no
+    // return-guarantee index and no `Substrate` param, so each iteration reuses its invoke frame —
+    // depth stays bounded and the *fuel* clock (not the depth budget) is what refuses the infinite
+    // loop. The refusal is still explicit and never a crash (the essential never-silent property);
+    // the elided frames are recorded in the EXPLAIN ring buffer (§4.6 tco32).
+    let env = env(
+            "nodule d;\ntype Nat = Z | S(Nat);\nfn spin(n: Nat) => Nat = spin(n);\nfn main() => Nat = spin(Z);",
+        );
+    let ev = Evaluator::new(&env).with_fuel(50_000);
+    let err = ev.call("main", vec![]).unwrap_err();
+    assert_eq!(
+        err,
+        L1Error::FuelExhausted,
+        "an infinite TAIL recursion is TCO-bounded → FuelExhausted, not DepthExceeded"
+    );
+    // The tail chain was actually elided (TCO ran), and its EXPLAIN trace names the looping callee.
+    let trace = ev.tco_trace();
+    assert!(trace.total_elided > 0, "TCO must have elided tail frames");
+    assert_eq!(
+        trace.per_callee.get("spin").copied(),
+        Some(trace.total_elided)
+    );
     assert!(
-        matches!(
-            err,
-            L1Error::DepthExceeded {
-                limit: DEFAULT_DEPTH
-            }
-        ),
-        "expected DepthExceeded(limit=64) from a call-free 200-deep nest, got {err:?}"
+        trace.recent.back().is_some_and(|e| e.callee == "spin"),
+        "the ring buffer must record `spin` as the most-recent elided callee"
+    );
+}
+
+#[test]
+fn a_tail_recursion_with_a_return_guarantee_is_not_tco_and_grows_depth() {
+    // RFC-0041 §4.6 (M-979) TCO precondition witness. A `@ Exact` return-guarantee index is PENDING
+    // post-work (the return-assert runs after the body), so a tail call from such a fn must NOT
+    // reuse its frame — else the assert is silently skipped (a VR-5 hazard). `g` is a direct tail
+    // recursion but carries a ret-guarantee, so it is NOT TCO-eligible: its depth grows and it
+    // refuses with `DepthExceeded` (a TCO-bounded loop would instead exhaust *fuel*). The
+    // guarantee-free twin `h` — identical but for the missing `@ Exact` — IS tail-optimised
+    // (FuelExhausted + recorded elisions), proving the ONLY difference is the precondition.
+    let env_g = env(
+        "nodule d;\nfn g(b: Binary{8}) => Binary{8} @ Exact = g(b);\n\
+         fn main() => Binary{8} = g(0b0000_0000);",
+    );
+    let ev_g = Evaluator::new(&env_g).with_fuel(100_000_000);
+    let err_g = ev_g.call("main", vec![]).unwrap_err();
+    assert!(
+        matches!(err_g, L1Error::DepthExceeded { limit } if limit == DEFAULT_DEPTH),
+        "a ret-guarantee tail recursion must NOT be TCO'd → DepthExceeded, got {err_g:?}"
     );
 
-    // And the same nest within the depth budget evaluates fine (200 nested `not`s exceed 64;
-    // a small nest does not) — confirming the guard refuses *only* genuine over-nesting.
-    let shallow = env("nodule d;\nfn main() => Binary{8} = not(not(0b0000_0001));");
-    Evaluator::new(&shallow)
+    let env_h = env("nodule d;\nfn h(b: Binary{8}) => Binary{8} = h(b);\n\
+         fn main() => Binary{8} = h(0b0000_0000);");
+    let ev_h = Evaluator::new(&env_h).with_fuel(100_000);
+    let err_h = ev_h.call("main", vec![]).unwrap_err();
+    assert_eq!(
+        err_h,
+        L1Error::FuelExhausted,
+        "the guarantee-free twin IS tail-optimised → FuelExhausted (bounded depth)"
+    );
+    assert!(
+        ev_h.tco_trace().total_elided > 0,
+        "the guarantee-free twin must show TCO elisions"
+    );
+}
+
+#[test]
+fn depth_is_charged_at_the_source_call_boundary_not_per_ast_node() {
+    // RFC-0041 §4.0 (M-979): depth is charged **once per `Expr::App` boundary** (the source-call/β
+    // metric), NOT per AST node. So a nested-application chain `not(not(… not(0b…) …))` of N calls
+    // has source-call depth N: under a small budget it refuses at exactly that budget, and a chain
+    // shallower than the budget evaluates fine. (Under the CEK machine no such nest can ever
+    // overflow the host stack — this pins the *metric*, not a host-stack guard.)
+    let nest = |n: usize| {
+        let mut expr = "0b0000_0001".to_owned();
+        for _ in 0..n {
+            expr = format!("not({expr})");
+        }
+        format!("nodule d;\nfn main() => Binary{{8}} = {expr};")
+    };
+    // 200 nested calls under a depth budget of 64 → refuses at 64 (the source-call metric).
+    let deep_env = env(&nest(200));
+    let err = Evaluator::new(&deep_env)
+        .with_depth(64)
         .call("main", vec![])
-        .expect("a shallow nest is well within the depth budget");
+        .unwrap_err();
+    assert!(
+        matches!(err, L1Error::DepthExceeded { limit: 64 }),
+        "expected DepthExceeded(limit=64) from a 200-deep App-nest under budget 64, got {err:?}"
+    );
+
+    // The same 200-deep nest is now well within the RAISED default budget (4096) — it evaluates
+    // fine, where the former per-node 64 ceiling would have refused it (the §4.0 + raise change).
+    Evaluator::new(&deep_env)
+        .call("main", vec![])
+        .expect("a 200-deep App-nest is within the default 4096 budget after the W5 raise");
 }
 
 #[test]
@@ -232,7 +310,9 @@ fn a_for_fold_evaluates_head_to_tail() {
             "nodule d;\ntype ByteList = End | More(Binary{8}, ByteList);\nfn checksum(bs: ByteList) => Binary{8} =\n    for b in bs, acc = 0b0000_0000 => xor(acc, b);\nfn main() => Binary{8} = checksum(More(0b1111_0000, More(0b0000_1111, End)));",
         )
         .expect("evaluates");
-    let L1Value::Repr(v) = v else { panic!("repr") };
+    let L1Value::Repr(ref v) = v else {
+        panic!("repr")
+    };
     assert_eq!(v.payload(), &Payload::Bits(vec![true; 8]));
 }
 
@@ -242,7 +322,9 @@ fn a_for_fold_over_nil_is_the_initial_accumulator() {
             "nodule d;\ntype ByteList = End | More(Binary{8}, ByteList);\nfn checksum(bs: ByteList) => Binary{8} =\n    for b in bs, acc = 0b1010_1010 => xor(acc, b);\nfn main() => Binary{8} = checksum(End);",
         )
         .expect("evaluates");
-    let L1Value::Repr(v) = v else { panic!("repr") };
+    let L1Value::Repr(ref v) = v else {
+        panic!("repr")
+    };
     assert_eq!(
         v.payload(),
         &Payload::Bits(vec![true, false, true, false, true, false, true, false])
@@ -282,7 +364,9 @@ fn a_long_for_fold_costs_fuel_not_host_stack() {
     let v = Evaluator::new(&env)
         .call("checksum", vec![list])
         .expect("evaluates");
-    let L1Value::Repr(v) = v else { panic!("repr") };
+    let L1Value::Repr(ref v) = v else {
+        panic!("repr")
+    };
     // 200 xors of 0b0000_0001 → even count → all zeros.
     assert_eq!(v.payload(), &Payload::Bits(vec![false; 8]));
 }
@@ -294,7 +378,9 @@ fn the_certified_swap_runs_and_a_weakening_assertion_passes() {
             "nodule d;\nfn main() => Ternary{6} @ Proven = swap(0b0000_0010, to: Ternary{6}, policy: rt);",
         )
         .expect("evaluates");
-    let L1Value::Repr(v) = v else { panic!("repr") };
+    let L1Value::Repr(ref v) = v else {
+        panic!("repr")
+    };
     assert_eq!(v.repr(), &mycelium_core::Repr::Ternary { trits: 6 });
 }
 
@@ -412,57 +498,40 @@ fn evaluator_opts_builder_sets_both_fields() {
 
 // --- M-674: deep-stack evaluation — explicit budget, never a host-stack overflow ----------
 
-/// A genuinely deep evaluation with a raised depth budget completes on the worker stack and
-/// the budget trips cleanly when exceeded — never a host-stack crash.
+/// A genuinely deep **non-tail** recursion refuses cleanly with `DepthExceeded` at exactly the
+/// configured budget — never a host-stack crash — and a raised budget lets it run deeper first.
 ///
-/// **Design (banked guard 4 + deep worker stack).**
-/// `Evaluator::call` runs the recursive `eval` pass on a 256 MiB lazily-committed worker
-/// thread (via `mycelium_stack::with_deep_stack`). The explicit `with_depth(N)` budget is
-/// therefore always the bound — not the caller's stack — so raising it for deep programs is
-/// safe. The two assertions here pin both sides of that contract in-process (a host-stack
-/// overflow aborts the process; a clean `DepthExceeded` is a normal `Err` — so the
-/// "budget trips cleanly" test *would crash the process* if the host stack overflowed first).
-///
-/// **Physical ceiling estimate (Empirical — varies with optimizer and IR shape).**
-/// The evaluator's `eval` frame carries roughly a pointer, two integers, and a few
-/// references (~2–4 KiB in a debug build). At ~4 KiB/frame the 256 MiB worker stack
-/// supports ~65,000 levels; at ~2 KiB/frame ~130,000. The default budget (64) is a
-/// ~1,000× safety margin. The test raises the budget to 4,096 — matching the checker's
-/// `MAX_CHECK_DEPTH` — and confirms both directions; 4,096 is well inside the physical
-/// ceiling at any plausible debug frame size.
+/// **Design (RFC-0041 W5 CEK machine + source-call metric).** `Evaluator::call` runs the work-stack
+/// CEK machine (control recursion is O(1) host stack), so the explicit `with_depth(N)` budget on the
+/// §4.0 source-call/β metric is *always* the bound — a deeper input is a never-silent `DepthExceeded`
+/// (a normal `Err`), never a `SIGABRT`. `build(n) = S(build(n))` is **non-tail** (the recursive call
+/// is a constructor argument), so it is *not* TCO-eligible and its source-call depth grows one unit
+/// per level until it hits the ceiling — meeting the honest-scope contract (§4.6 tco31: TCO gives
+/// tail idioms bounded depth, but a non-tail recursion still refuses at the budget). Fuel is set far
+/// above the depth so *depth* is what trips.
 #[test]
 fn raised_depth_budget_completes_on_deep_worker_stack_and_trips_cleanly_past_it() {
-    // Use mutual recursion (`spin`/`ping`) to avoid the totality checker's structural-descent
-    // optimisation and produce genuine host-call-stack depth. The program is non-terminating
-    // so we must cap fuel tightly to avoid the fuel budget being the first thing to trip.
-    // `spin` calls `ping` calls `spin` calls … — each call is two `invoke` frames and several
-    // `eval` frames (the function body, the argument expression, etc.). At depth budget 4,096
-    // that's many hundreds of recursive calls — way past a normal 2 MiB thread stack but
-    // within the 256 MiB worker stack.
-    let src = "nodule d;\ntype Nat = Z | S(Nat);\nfn spin(n: Nat) => Nat = ping(n);\nfn ping(n: Nat) => Nat = spin(n);\nfn main() => Nat = spin(Z);";
+    // A non-tail recursion: `build(n)` is an argument of the `S(…)` constructor, so its App frame is
+    // still pending when the recursion re-enters — depth grows one source-call unit per level.
+    let src = "nodule d;\ntype Nat = Z | S(Nat);\nfn build(n: Nat) => Nat = S(build(n));\nfn main() => Nat = build(Z);";
     let deep_env = env(src);
 
-    // Part A: within the raised budget — the fuel budget trips before the depth budget
-    // (proving the computation ran deep on the worker stack without overflowing the host).
-    // We use very large fuel here so it runs long enough to hit the depth budget first;
-    // actually we expect depth to trip first because mutual recursion deeply nests `eval`.
-    // Set fuel generously so the *depth* budget (4096) is what limits, not fuel.
+    // Part A: within a raised budget with fuel far above the depth — the *depth* budget (4096) is
+    // what refuses, cleanly, never a host-stack crash. (FuelExhausted would also be explicit and
+    // non-crashing, so it is accepted, but with this fuel/depth ratio depth trips first.)
     let result = Evaluator::new(&deep_env)
         .with_depth(4_096)
-        .with_fuel(10_000_000)
+        .with_fuel(100_000_000)
         .call("main", vec![]);
-    // Either DepthExceeded(4096) or FuelExhausted — both are clean explicit errors, never a
-    // crash. The important property: the process does not abort (no host-stack overflow).
     match &result {
         Err(L1Error::DepthExceeded { limit: 4_096 }) | Err(L1Error::FuelExhausted) => {}
         other => panic!(
-            "expected DepthExceeded(4096) or FuelExhausted on a deep mutual recursion with \
+            "expected DepthExceeded(4096) or FuelExhausted on a deep non-tail recursion with \
                  depth=4096, got {other:?}"
         ),
     }
 
-    // Part B: past the budget — must always be a clean DepthExceeded, never a crash.
-    // A budget of 8 on a mutual-recursive program is sure to trip the depth guard quickly.
+    // Part B: a tiny budget refuses quickly and cleanly at exactly that budget.
     let err = Evaluator::new(&deep_env)
         .with_depth(8)
         .with_fuel(10_000_000)
@@ -470,15 +539,11 @@ fn raised_depth_budget_completes_on_deep_worker_stack_and_trips_cleanly_past_it(
         .unwrap_err();
     assert!(
         matches!(err, L1Error::DepthExceeded { limit: 8 }),
-        "expected DepthExceeded(limit=8) for a tiny depth budget on mutual recursion, \
+        "expected DepthExceeded(limit=8) for a tiny depth budget on a non-tail recursion, \
              got {err:?}"
     );
 
-    // Part C: the same `spin`/`ping` program with ample budgets and a small input terminates
-    // via `DepthExceeded` — proving the evaluator does not hang on a valid raised budget, and
-    // that completing N levels of recursion before the depth budget trips is observable.
-    // (We pick depth=4 so it trips almost immediately, confirming the budget is functional
-    // even when the worker stack has headroom to spare.)
+    // Part C: an even smaller budget trips almost immediately — the budget is functional at any size.
     let err_small = Evaluator::new(&deep_env)
         .with_depth(4)
         .with_fuel(10_000_000)
@@ -518,7 +583,7 @@ fn budgeted_fn_under_budget_returns_value() {
     let v = Evaluator::new(&e)
         .call("main_under", vec![])
         .expect("under budget — must succeed");
-    let L1Value::Repr(r) = v else {
+    let L1Value::Repr(ref r) = v else {
         panic!("expected repr, got {v:?}")
     };
     assert_eq!(r.payload(), &Payload::Bits(vec![true]));
@@ -532,7 +597,7 @@ fn budgeted_fn_at_budget_returns_value() {
     let v = Evaluator::new(&e)
         .call("main_at", vec![])
         .expect("at budget — must succeed");
-    let L1Value::Repr(r) = v else {
+    let L1Value::Repr(ref r) = v else {
         panic!("expected repr, got {v:?}")
     };
     assert_eq!(r.payload(), &Payload::Bits(vec![true]));

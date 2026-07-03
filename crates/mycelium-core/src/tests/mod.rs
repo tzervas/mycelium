@@ -6,6 +6,10 @@ mod cert_mode;
 mod content;
 mod data;
 mod id;
+/// RFC-0041 §4.5 (W3) — recursion-safe iterative Drop / Clone / PartialEq / content-hash for the
+/// frozen recursive types (`Node`, `Datum`/`CoreValue`): deep-chain construct/destruct/clone/unwind
+/// without `SIGABRT`, and bit-identical hashes/eq vs a recursive reference oracle.
+mod iter_destruction;
 #[path = "lib.rs"]
 mod lib_root;
 mod lower;

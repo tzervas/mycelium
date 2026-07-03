@@ -257,7 +257,7 @@ fn deep_nat_program(n: usize) -> String {
 /// `DepthLimit`, **W3½** pins AOT to the deterministic floor, and **W5** aligns L1-eval to the §4.0
 /// metric + variant. The test is kept COMPILING (real public APIs) so it is a checked specification.
 #[test]
-#[ignore = "W5: fails today — L1 refuses at 64, interp has no budget (SIGABRTs), AOT floor is dynamic [10k,2M]; goes green when W4 constructs interp DepthLimit and W5 aligns eval to the canonical metric+variant"]
+#[ignore = "W4: L1-eval (W5) now refuses at the canonical DepthExceeded{limit:4096} on the §4.0 metric, and AOT (W3½) is pinned to the floor — but the L0-interp path still has no depth budget (DepthLimit defined-but-never-constructed) and SIGABRTs on deep input, so running this 3-way gate would abort the test binary. Un-ignore once W4 constructs the interp DepthLimit at the canonical floor."]
 fn error_parity_at_the_canonical_threshold() {
     use mycelium_interp::EvalError;
     use mycelium_l1::L1Error;

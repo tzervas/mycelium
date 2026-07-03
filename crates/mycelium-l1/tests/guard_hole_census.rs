@@ -184,10 +184,13 @@ fn deep_cons(n: usize) -> L1Value {
 /// recursive-destruction class to iterative worklists; `to_core`/`value_contains_substrate_id` are
 /// expected to gain (or be joined by) an explicit budget at the same time.
 #[test]
-#[ignore = "W3"] // RFC-0041 §4.5/§6: iterative Drop/Clone across the full recursive-destruction class.
+// RFC-0041 §4.5 (W5, M-979): `L1Value`'s `Clone`/`Drop` are now hand-written iterative worklists, so a
+// deep `Cons` chain clones + drops with O(1) host-stack recursion — no SIGABRT. Un-ignored: the
+// assertion (construct + clone + drop a 200k-deep chain without aborting) must now pass. (`to_core` /
+// `value_contains_substrate_id` remain recursive — documented above — but are not exercised here.)
 fn l1value_deep_cons_clone_drop_no_sigabrt() {
     let deep = deep_cons(200_000);
-    let cloned = deep.clone(); // compiler-derived recursive Clone glue, n-deep
-    drop(cloned); // compiler-derived recursive Drop glue, n-deep
+    let cloned = deep.clone(); // iterative Clone (RFC-0041 §4.5) — no host-stack recursion, n-deep
+    drop(cloned); // iterative Drop (RFC-0041 §4.5) — no host-stack recursion, n-deep
     drop(deep);
 }
