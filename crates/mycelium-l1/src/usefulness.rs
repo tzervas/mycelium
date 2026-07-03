@@ -22,6 +22,8 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use mycelium_workstack::{BudgetError, RecursionBudget};
+
 use crate::checkty::{DataInfo, Ty};
 
 /// A normalized pattern for the usefulness matrix. The typechecker lowers `ast::Pattern` to this:
@@ -144,16 +146,40 @@ fn head_ctors(matrix: &[Vec<Pat>]) -> BTreeSet<String> {
 /// witness value (as a pattern vector of the same width) when useful, else `None`. `col_types` gives
 /// the type of each column (parallel to `q`); it drives the complete-signature test and the lazy
 /// field-type expansion.
+///
+/// **RFC-0041 §4.7 (W1, RR-29):** the Maranget recursion is charged against a per-query
+/// [`RecursionBudget`] — a wide-arity constructor / deeply-nested pattern that would otherwise drive
+/// this walk into an unbounded host-stack overflow (SIGABRT) is now refused **never-silently** with a
+/// [`BudgetError::DepthExceeded`] at the [`RecursionBudget::DEFAULT_DEPTH_LIMIT`] ceiling. The caller
+/// ([`crate::checkty::Cx::check_match`]) maps that into its [`crate::checkty::CheckError`] surface.
 pub(crate) fn useful(
     types: &BTreeMap<String, DataInfo>,
     matrix: &[Vec<Pat>],
     q: &[Pat],
     col_types: &[Ty],
-) -> Option<Vec<Pat>> {
+) -> Result<Option<Vec<Pat>>, BudgetError> {
+    // A fresh per-query budget: each top-level `U(P, q)` is an independent walk, so its depth resets
+    // to zero (the guards release on return). The default depth ceiling (4096) is the §4.0 metric.
+    let budget = RecursionBudget::default();
+    useful_budgeted(&budget, types, matrix, q, col_types)
+}
+
+/// The budget-charged Maranget `U(P, q)` recursion (RFC-0041 §4.7). Charges one depth level per
+/// recursion point via [`RecursionBudget::try_enter`]; the [`mycelium_workstack::DepthGuard`] releases
+/// it on every exit path.
+fn useful_budgeted(
+    budget: &RecursionBudget,
+    types: &BTreeMap<String, DataInfo>,
+    matrix: &[Vec<Pat>],
+    q: &[Pat],
+    col_types: &[Ty],
+) -> Result<Option<Vec<Pat>>, BudgetError> {
+    // Charge one level of Maranget recursion; refuse never-silently past the ceiling (§4.7).
+    let _g = budget.try_enter()?;
     // Base case (no columns): useful iff no row remains (every prior row already "matched"); the
     // witness is the empty value vector.
     if q.is_empty() {
-        return matrix.is_empty().then(Vec::new);
+        return Ok(matrix.is_empty().then(Vec::new));
     }
     let head_ty = &col_types[0];
     match &q[0] {
@@ -164,13 +190,14 @@ pub(crate) fn useful(
             q2.extend_from_slice(&q[1..]);
             let mut ct2 = ctor_fields(head_ty, c, types);
             ct2.extend_from_slice(&col_types[1..]);
-            useful(types, &m2, &q2, &ct2).map(|w| rebuild_ctor(c, a, w))
+            Ok(useful_budgeted(budget, types, &m2, &q2, &ct2)?.map(|w| rebuild_ctor(c, a, w)))
         }
         Pat::Lit(k) => {
             let m2 = specialize_lit(matrix, k);
             let q2 = q[1..].to_vec();
             let ct2 = col_types[1..].to_vec();
-            useful(types, &m2, &q2, &ct2).map(|w| prepend(Pat::Lit(k.clone()), w))
+            Ok(useful_budgeted(budget, types, &m2, &q2, &ct2)?
+                .map(|w| prepend(Pat::Lit(k.clone()), w)))
         }
         Pat::Wild => match signature(head_ty, types) {
             // Finite (data) signature: complete once every constructor appears in column 0.
@@ -186,27 +213,32 @@ pub(crate) fn useful(
                         q2.extend_from_slice(&q[1..]);
                         let mut ct2 = ci.fields.clone();
                         ct2.extend_from_slice(&col_types[1..]);
-                        if let Some(w) = useful(types, &m2, &q2, &ct2) {
-                            return Some(rebuild_ctor(&ci.name, a, w));
+                        if let Some(w) = useful_budgeted(budget, types, &m2, &q2, &ct2)? {
+                            return Ok(Some(rebuild_ctor(&ci.name, a, w)));
                         }
                     }
-                    None
+                    Ok(None)
                 } else {
                     // Incomplete: recurse on the default; the witness head is a *missing* constructor.
                     let m2 = default_matrix(matrix);
-                    useful(types, &m2, &q[1..], &col_types[1..]).map(|w| {
-                        let missing = d.ctors.iter().find(|ci| !present.contains(&ci.name));
-                        let head = missing.map_or(Pat::Wild, |ci| {
-                            Pat::Ctor(ci.name.clone(), vec![Pat::Wild; ci.fields.len()])
-                        });
-                        prepend(head, w)
-                    })
+                    Ok(
+                        useful_budgeted(budget, types, &m2, &q[1..], &col_types[1..])?.map(|w| {
+                            let missing = d.ctors.iter().find(|ci| !present.contains(&ci.name));
+                            let head = missing.map_or(Pat::Wild, |ci| {
+                                Pat::Ctor(ci.name.clone(), vec![Pat::Wild; ci.fields.len()])
+                            });
+                            prepend(head, w)
+                        }),
+                    )
                 }
             }
             // Open (Binary/Ternary) domain: never complete — recurse on the default, witness `_`.
             None => {
                 let m2 = default_matrix(matrix);
-                useful(types, &m2, &q[1..], &col_types[1..]).map(|w| prepend(Pat::Wild, w))
+                Ok(
+                    useful_budgeted(budget, types, &m2, &q[1..], &col_types[1..])?
+                        .map(|w| prepend(Pat::Wild, w)),
+                )
             }
         },
     }

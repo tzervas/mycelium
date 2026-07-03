@@ -1577,7 +1577,15 @@ impl Elab<'_> {
         // 4. Compile (and re-verify Fail-free) the Maranget decision tree — the untrusted lowering.
         let arm_ix: Vec<usize> = (0..arms.len()).collect();
         let occ_root = [Vec::<usize>::new()];
-        let tree = decision::compile(&self.env.types, &matrix, &arm_ix, &occ_root, &[sty]);
+        // RFC-0041 §4.7: the decision-tree compilation is budget-charged; an over-budget match is a
+        // never-silent refusal (it already passed the checker's own compile, so this is defensive).
+        let tree = decision::compile(&self.env.types, &matrix, &arm_ix, &occ_root, &[sty])
+            .map_err(|e| ElabError::Residual {
+                site: site.clone(),
+                what: format!(
+                    "match compilation exceeded the recursion budget: {e} (RFC-0041 §4.7)"
+                ),
+            })?;
         if decision::has_reachable_fail(&tree) {
             return residual(
                 &site,
