@@ -310,6 +310,7 @@ dependencies = [
  "mycelium-core",
  "mycelium-l1",
  "mycelium-proj",
+ "mycelium-workstack",
  "serde",
  "serde_json",
 ]
