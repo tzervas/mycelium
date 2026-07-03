@@ -292,10 +292,44 @@ non-deterministic `--unbounded` REPL mode; concurrently open the (D) explicit-wo
 track for eventual implementation. Data-shaped desugaring depth (§5) is routed through
 iteration/grow-on-demand, not the control budget.
 
+**Correction (2026-07-03, maintainer — resolves the §6/§9.4 reconciliation flag).** The flagged
+"B now / D eventual" reading is **superseded**: the maintainer confirms **(D) is solved now** —
+*"now is as good a time as any; if we're making these kinds of refactors and changes, better to sort
+it out sooner rather than later — get the complexity of the problem and solution figured out and
+solve that problem first, before figuring out its implementation into the dogfooded implementation."*
+That is: the depth/stack problem is **fully worked now in the Rust reference era** — the settled
+shape is what the M-740 `.myc` port then implements once, rather than retrofitting it later. The (B)
+components that stay load-bearing under (D) — the single global deterministic budget (§9.1/§9.5) and
+host-stack management for any pass that remains host-recursive — are **supporting infrastructure of
+the one solution**, not a separate deferred track. Where (D) lands first (which passes convert, which
+keep guarded recursion) is an output of the mandated method below, not pre-decided here.
+
+**Mandated method (maintainer, 2026-07-03): research → plan → adversarial review → implement.**
+The solution is developed in that strict order: (1) a comprehensive **research** pass — map every
+recursion site, its shape, its conversion cost; the language's own iteration/TCO mechanics (what a
+`.myc` work-stack loop actually costs today — decisive for the dogfooded form); prior decisions
+(RFC-0007 §4.5/§4.6, DN-05, DN-56 freeze conditions, RFC-0024 defunctionalization); external prior
+art (rustc's `ensure_sufficient_stack`, explicit-stack/CEK interpreters, flat-AST arenas); and the
+blast radius (depth-keyed tests, DN-80 reject ledger, conformance corpus). (2) A **plan/RFC** fixing
+the architecture. (3) An **adversarial review** pass that tries to break the plan before code exists.
+(4) Only then, staged implementation in isolated worktrees (disjoint-by-construction waves).
+**Secure-by-design is a standing requirement:** the work is periodically re-examined adversarially —
+crafted-input DoS (untrusted `.myc` reaching `parse`/LSP/spore-resolve), the `stacker`/`psm` unsafe +
+supply-chain surface (must stay contained in the leaf per ADR-014), memory-exhaustion vectors of a
+raised budget, and the `--unbounded` mode as a footgun — so the hardening itself never introduces a
+new vulnerability class.
+
 ---
 
 ## Meta — changelog
 
+- **2026-07-03 — §11 correction appended (maintainer; append-only, no status move).** The B-now/
+  D-eventual reconciliation is superseded: **(D) is solved now**, before the M-740 `.myc` port absorbs
+  the shape; (B)'s budget + host-stack pieces are supporting infrastructure of the one solution.
+  Mandated method recorded: **research → plan → adversarial review → implement**, with
+  **secure-by-design periodic adversarial passes** (DoS surface, `stacker`/`psm` containment,
+  memory-exhaustion, `--unbounded` footgun). M-979 rescoped accordingly; M-740 now depends on the
+  settled design. Status stays **Draft**. (M-978/M-979.)
 - **2026-07-03 — §11 added: maintainer decisions (append-only, no status move).** §6 → **(B)** baseline
   (grow-on-demand + unified deterministic budget) with **(D)** explicit-work-stack elevated to active
   design/research now, eventual implementation; §9.1 → one **global** budget + shared policy; §9.2 →

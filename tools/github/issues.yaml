@@ -3762,7 +3762,11 @@ issues:
     title: "M-740 — Port the L1 frontend (lexer/parser/checker) to Mycelium (.myc)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:feature, area:language, priority:P2, status:needs-design]
-    depends_on: [M-739, E11-1]
+    # M-978/M-979 gate the port's AUTHORING SHAPE (DN-84 §11 correction, 2026-07-03): the depth/stack
+    # architecture (explicit work-stack vs guarded recursion; the .myc iteration contract) must be
+    # settled + adversarially reviewed BEFORE the .myc passes are authored, so the dogfooded compiler
+    # implements the final shape once. Stage-1 scaffolding may proceed; pass-authoring waits on the RFC.
+    depends_on: [M-739, E11-1, M-978]
     epic: E18-1
     doc_refs:
       - corpus:DN-26
@@ -11401,27 +11405,40 @@ issues:
       M-979. Lands via its own RFC/ADR; DN-84 stays Draft until then.
       User stories + Definition of Done: see DN-84 §2 (stories) + §7/§11 (decided direction / criteria).
   - id: M-979
-    title: "Explicit heap work-stack for the recursive frontend passes — design + research (DN-84 design D)"
+    title: "Explicit heap work-stack (DN-84 design D) — solve NOW: research -> plan -> adversarial review -> implement"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:design, area:core-ir, priority:P3, status:needs-design]
+    labels: [phase:5, type:design, area:core-ir, priority:P2, status:in-progress]
     epic: E31-1
     depends_on: [M-978]
     doc_refs:
       - corpus:DN-84
       - src:crates/mycelium-l1/src/checkty.rs
+      - src:crates/mycelium-interp/src/lib.rs
     body: |
-      DN-84 design (D), elevated by the maintainer (DN-84 §11 / §9.4, 2026-07-03) from a strictly
-      post-self-hosting perf item to an ACTIVE design + deeper-research track that begins now, with
-      eventual implementation. Convert the hot recursive frontend passes (checkty/elab/eval) from
-      host-call-stack recursion to an EXPLICIT heap-allocated work-stack, so a converted pass uses no
-      thread stack at all for its descent — the strongest robustness/perf option (removes the host
-      stack as a factor entirely, complements M-978's (B) grow-on-demand baseline rather than replacing
-      it). The .myc self-hosting rewrite (boot10/M-740) is the natural place to choose an explicit
-      work-stack shape for the ported passes. Deliverable: a research/design note (and RFC when ready)
-      covering the transform, which passes convert first, the perf model, and how the explicit stack
-      preserves the never-silent depth-budget semantics (G2). Implementation is eventual (after B lands
-      and the research supports it); this issue tracks the design/research, not a near-term port.
-      User stories + Definition of Done: see DN-84 §2 + §11 (D elevated: design/research now, implement eventual).
+      DN-84 design (D), CONFIRMED by the maintainer (DN-84 §11 correction, 2026-07-03) as the
+      solve-NOW track: get the complexity of the problem and solution fully figured out and solved
+      in the Rust reference era, BEFORE the M-740 .myc port has to absorb the shape (the dogfooded
+      compiler then implements the settled contract once). Convert the deep recursive passes from
+      host-call-stack recursion to an explicit heap-allocated work-stack; (B)'s pieces (single global
+      deterministic budget, host-stack management for any pass left recursive) are supporting
+      infrastructure of this one solution, not a separate track. Which passes convert (evaluators
+      first? frontend passes stacker-guarded as transitional oracle code?) is an OUTPUT of the
+      mandated method, not pre-decided.
+      Mandated method (strict order): (1) RESEARCH — map every recursion site + shape + conversion
+      cost; the language's own iteration/TCO mechanics (what a .myc work-stack loop costs today —
+      decisive for the dogfooded form); prior decisions (RFC-0007 §4.5/4.6, DN-05, DN-56 freeze,
+      RFC-0024 defunctionalization); external prior art (rustc ensure_sufficient_stack, CEK/explicit-
+      stack interpreters, flat-AST arenas); blast radius (depth-keyed tests, DN-80 reject ledger,
+      conformance corpus). (2) PLAN — an RFC fixing the architecture (freeze-compatibility w.r.t.
+      M-969 addressed explicitly). (3) ADVERSARIAL REVIEW of the plan before code. (4) Staged
+      implementation in isolated worktrees (disjoint-by-construction waves; sonnet/opus scoped to
+      complexity per ADR-038).
+      Secure-by-design standing requirement: periodic adversarial passes over crafted-input DoS
+      (untrusted .myc at parse/LSP/spore-resolve), stacker/psm unsafe + supply-chain containment
+      (ADR-014 leaf-only), memory-exhaustion of a raised budget, and the --unbounded footgun.
+      User stories + Definition of Done: see DN-84 §2 + §11 (incl. the correction): the RFC lands
+      adversarially-reviewed; converted passes pass the full differential + deep-nesting bound tests
+      (never-silent budget errors preserved, G2); no new vulnerability class introduced.
   - id: M-970
     title: "mycelium-fmt: render_expr_canonical drops the @forage(policy) Hypha annotation"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
