@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- **Rust** — MSRV **1.92** pinned (`rust-toolchain.toml`; ADR-007). `cargo fmt`, `cargo clippy`,
+- **Rust** — MSRV **1.96.1** pinned (`rust-toolchain.toml`; ADR-007, bumped by ADR-041). `cargo fmt`, `cargo clippy`,
   `cargo test`.
 - **Python 3.13/3.14** via **UV** — for the docs/tooling checks (`pytest`, `ruff`).
 - **`just`** — the single source of truth for the local↔CI check loop.

@@ -11,6 +11,31 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Toolchain + dependency freshness: MSRV → 1.96.1, workspace deps refreshed (2026-07-03: ADR-041)
+
+Maintainer-authorized toolchain hygiene pass. No kernel semantics change; the interpreter stays the
+trusted base (ADR-007 strategy unchanged — only the pinned version moves).
+
+- **MSRV 1.92 → 1.96.1** (**ADR-041**, Accepted 2026-07-03; amends ADR-007's pin clause only —
+  append-only, charter text preserved, house rule #3). Pins moved in lockstep: `rust-toolchain.toml`
+  (`channel`), `Cargo.toml` (`rust-version`), `CLAUDE.md`, `CONTRIBUTING.md`. Verified green on
+  `rustc 1.96.1`: `cargo build`/`clippy -D warnings`/`fmt`/`test --workspace` — **4265 tests pass**.
+- **New-toolchain lint fixes** (clippy 1.96): `unnecessary_sort_by` → `sort_by_key`
+  (`mycelium-lsp`); `manual_checked_ops` scoped-`#[allow]` on two division-oracle tests
+  (`mycelium-core`, `mycelium-interp`) — the plain `x / y` is the trusted oracle in a `y != 0` branch
+  and must stay plain.
+- **Parser deep-stack fix (G2 regression, never-silent).** `parse`/`parse_phylum` now run on the
+  managed deep stack (`mycelium_stack::with_deep_stack`, as `eval`/`ambient` already did), so the
+  explicit `MAX_EXPR_DEPTH=256` budget — not the host stack — is the binding nesting limit,
+  independent of per-toolchain frame sizes. Witness: 1.96.1's larger parser frames overflowed the
+  2 MB test stack at the guard boundary on the `type_args` path, turning an explicit refusal back into
+  a SIGABRT; the four DN-40 deep-nesting guard tests are green again (A4-02 / DN-40).
+- **Dependency refresh** (latest semver-compatible via `cargo update`; two pre-1.0 tooling bumps in
+  `xtask` verified non-breaking): `cargo_metadata` 0.18 → 0.23, `toml` 0.8 → 1.x (+ transitive
+  `thiserror` 2, `winnow` 1). Shipped/kernel crates untouched beyond the lockfile.
+- **Security (separate PR):** the VS Code extension's `@vscode/vsce` 2.32 → 3.9.2 clears Dependabot
+  #1/#2 (`markdown-it`/`linkify-it` quadratic-complexity advisories); `npm audit` clean.
+
 ### Human-readable `.myc` formatting + `Vec` list literal (2026-07-03: M-976 · M-977)
 
 Post-freeze presentation + surface-ergonomics work — the kernel is untouched (both are tooling /

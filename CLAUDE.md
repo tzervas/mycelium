@@ -60,7 +60,7 @@ canonical definitions: `docs/Glossary.md` + DN-02/03/06.
    ADR-022 §7).
 
 ## Toolchain
-- **Rust** kernel + reference interpreter — MSRV **1.92** pinned; `cargo fmt`, `cargo clippy
+- **Rust** kernel + reference interpreter — MSRV **1.96.1** pinned (ADR-041); `cargo fmt`, `cargo clippy
   -D warnings`, `cargo test`. MLIR→LLVM is the perf-path AOT; the interpreter is the trusted base.
 - **Python 3.13/3.14** via **UV** — `pytest` + codecov, **ruff** + **`ruff format`** (Black-compatible).
 - Don't silently bump committed version pins (MSRV, Python) — that's a decision (ADR), not a
