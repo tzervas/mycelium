@@ -11469,8 +11469,18 @@ issues:
       (1) zero-alloc-in-Drop not achievable in safe Rust w/o new field (empty Vec worklist; OOM-unwind edge
       remains) — accept tradeoff or relax a constraint; (2) Value/Repr deferred to coordinated W3b (deep
       values construction-gated, unbuildable); (3) content_hash O(depth^2) deep-binder (pre-existing).
-      error-parity #[ignore] until W4 (interp still no budget). NEXT: W4 (L0-interp, closes myc run SIGABRT +
-      turns error-parity green with W5), then W6, then M-740 unblocks.
+      error-parity #[ignore] until W4 (interp still no budget).
+      W4 LANDED (2026-07-03, to dev): mycelium-interp step/subst/node_to_core_value/guarantee_of_value/
+      select_arm budget the shared RecursionBudget (L0 STAYS substitution per §4.1; subst fallible;
+      eval_core on grown stack) + CONSTRUCT EvalError::DepthLimit via From<BudgetError>. FLAGSHIP RR-29
+      §0.1 CLOSED: deep value refuses DepthLimit{4096}, never SIGABRT. parallel::is_pure iterative (own
+      census hole). §5.1 ERROR-PARITY GATE GREEN (un-ignored) — rewritten per evidence: the "single
+      statically-deep input" premise is unachievable (parser-cap==floor, AOT data-immune, L0 O(N^2)), so
+      it asserts real per-path bounded-input parity at the shared 4096 floor. RESIDUAL: literal
+      single-variant unification partial (L1 DepthExceeded vs L0/AOT DepthLimit) — full convergence would
+      change interp/mlir error enums (maintainer follow-up). Independently adversarially reviewed. NEXT:
+      W6 (data-spine iteration: usefulness/decision flat-loop; check_list already W1) — the LAST wave, then
+      M-740 self-hosting frontend port unblocks.
       DN-84 design (D), CONFIRMED by the maintainer (DN-84 §11 correction, 2026-07-03) as the
       solve-NOW track: get the complexity of the problem and solution fully figured out and solved
       in the Rust reference era, BEFORE the M-740 .myc port has to absorb the shape (the dogfooded

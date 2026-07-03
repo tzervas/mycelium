@@ -650,7 +650,7 @@
 
 | Symbol | Kind | File:Line | Summary |
 |---|---|---|---|
-| `mycelium_interp::BatchHead` | enum | `crates/mycelium-interp/src/parallel.rs:91` | The head node of a parallelized top-level batch — the "independent pure elements" M-862 fans out. |
+| `mycelium_interp::BatchHead` | enum | `crates/mycelium-interp/src/parallel.rs:120` | The head node of a parallelized top-level batch — the "independent pure elements" M-862 fans out. |
 | `mycelium_interp::Budgets` | struct | `crates/mycelium-interp/src/budget.rs:146` | The **budget ledger** — one enforcement mechanism over the separate named budgets (RFC-0014 §8 |
 | `mycelium_interp::CancelToken` | struct | `crates/mycelium-interp/src/supervise.rs:33` | A **cooperative** cancellation token (RFC-0008 §4.7; structured-concurrency cancellation, RT7). |
 | `mycelium_interp::Cancelled` | struct | `crates/mycelium-interp/src/supervise.rs:75` | A task observed its [`CancelToken`] cancelled — an **explicit, additive** outcome (RFC-0014 I1), |
@@ -658,21 +658,21 @@
 | `mycelium_interp::EffectBudgetExhausted` | struct | `crates/mycelium-interp/src/budget.rs:114` | Exceeding a budget — an **explicit, graceful** structured error (RFC-0014 §4.5 I4), never a hang / |
 | `mycelium_interp::EffectKind` | enum | `crates/mycelium-interp/src/budget.rs:27` | A closed kernel of effect **kinds** (RFC-0014 §4.5 I3) plus user-declared names. |
 | `mycelium_interp::Escalation` | enum | `crates/mycelium-interp/src/supervise.rs:135` | A supervisor escalated: a restart cascade hit a bound and the supervisor itself fails (its own |
-| `mycelium_interp::EvalError` | enum | `crates/mycelium-interp/src/lib.rs:142` | Why evaluation could not proceed (always explicit — the interpreter is never silent; SC-3/G2). |
+| `mycelium_interp::EvalError` | enum | `crates/mycelium-interp/src/lib.rs:143` | Why evaluation could not proceed (always explicit — the interpreter is never silent; SC-3/G2). |
 | `mycelium_interp::IdentitySwapEngine` | struct | `crates/mycelium-interp/src/swap.rs:39` | The trivial swap engine: a swap whose `target` equals the source `Repr` is the identity — exactly |
-| `mycelium_interp::Interpreter` | struct | `crates/mycelium-interp/src/lib.rs:332` | The reference interpreter: a primitive registry + a swap engine. |
-| `mycelium_interp::Interpreter::eval` | fn | `crates/mycelium-interp/src/lib.rs:542` | Evaluate `node` to a **representation** value by iterating step to a normal |
-| `mycelium_interp::Interpreter::eval_core` | fn | `crates/mycelium-interp/src/lib.rs:554` | Evaluate `node` to a [`CoreValue`] — a representation value **or** a data value (the r3 data |
-| `mycelium_interp::Interpreter::eval_core_parallel` | fn | `crates/mycelium-interp/src/parallel.rs:173` | Evaluate `node` to a [`CoreValue`] with the **same result** as [`Interpreter::eval_core`], |
-| `mycelium_interp::Interpreter::eval_parallel` | fn | `crates/mycelium-interp/src/parallel.rs:185` | Evaluate `node` to a representation [`crate::Value`], mirroring [`Interpreter::eval`] — see |
-| `mycelium_interp::Interpreter::new` | fn | `crates/mycelium-interp/src/lib.rs:354` | Build an interpreter with a custom prim registry and swap engine (e.g. |
-| `mycelium_interp::Interpreter::prim_names` | fn | `crates/mycelium-interp/src/lib.rs:371` | The registered primitive names (for tooling/EXPLAIN). |
-| `mycelium_interp::Interpreter::step` | fn | `crates/mycelium-interp/src/lib.rs:379` | Perform exactly one small-step reduction on `node` (the `⟶` relation above). |
-| `mycelium_interp::Interpreter::with_fuel` | fn | `crates/mycelium-interp/src/lib.rs:364` | Override the step budget. |
-| `mycelium_interp::ParallelPlan` | enum | `crates/mycelium-interp/src/parallel.rs:104` | The **reified, EXPLAIN-able** decision of what (if anything) [`Interpreter::eval_core_parallel`] |
+| `mycelium_interp::Interpreter` | struct | `crates/mycelium-interp/src/lib.rs:363` | The reference interpreter: a primitive registry + a swap engine. |
+| `mycelium_interp::Interpreter::eval` | fn | `crates/mycelium-interp/src/lib.rs:589` | Evaluate `node` to a **representation** value by iterating step to a normal |
+| `mycelium_interp::Interpreter::eval_core` | fn | `crates/mycelium-interp/src/lib.rs:601` | Evaluate `node` to a [`CoreValue`] — a representation value **or** a data value (the r3 data |
+| `mycelium_interp::Interpreter::eval_core_parallel` | fn | `crates/mycelium-interp/src/parallel.rs:202` | Evaluate `node` to a [`CoreValue`] with the **same result** as [`Interpreter::eval_core`], |
+| `mycelium_interp::Interpreter::eval_parallel` | fn | `crates/mycelium-interp/src/parallel.rs:214` | Evaluate `node` to a representation [`crate::Value`], mirroring [`Interpreter::eval`] — see |
+| `mycelium_interp::Interpreter::new` | fn | `crates/mycelium-interp/src/lib.rs:385` | Build an interpreter with a custom prim registry and swap engine (e.g. |
+| `mycelium_interp::Interpreter::prim_names` | fn | `crates/mycelium-interp/src/lib.rs:402` | The registered primitive names (for tooling/EXPLAIN). |
+| `mycelium_interp::Interpreter::step` | fn | `crates/mycelium-interp/src/lib.rs:416` | Perform exactly one small-step reduction on `node` (the `⟶` relation above). |
+| `mycelium_interp::Interpreter::with_fuel` | fn | `crates/mycelium-interp/src/lib.rs:395` | Override the step budget. |
+| `mycelium_interp::ParallelPlan` | enum | `crates/mycelium-interp/src/parallel.rs:133` | The **reified, EXPLAIN-able** decision of what (if anything) [`Interpreter::eval_core_parallel`] |
 | `mycelium_interp::PrimRegistry` | struct | `crates/mycelium-interp/src/prims.rs:57` | The name→implementation table the interpreter dispatches `Op` nodes through. |
 | `mycelium_interp::RestartIntensity` | struct | `crates/mycelium-interp/src/supervise.rs:125` | **Max-restart-intensity** for `reclaim` supervision (RFC-0008 §4.7; Erlang/OTP, Research Record 05 |
-| `mycelium_interp::Step` | enum | `crates/mycelium-interp/src/lib.rs:132` | The result of one small-step attempt on a node. |
+| `mycelium_interp::Step` | enum | `crates/mycelium-interp/src/lib.rs:133` | The result of one small-step attempt on a node. |
 | `mycelium_interp::Supervisor` | struct | `crates/mycelium-interp/src/supervise.rs:179` | A `reclaim` **supervisor** (RFC-0008 §4.7; RT4/RT7): it restarts a failed child under a *bounded* |
 | `mycelium_interp::SwapEngine:` | trait | `crates/mycelium-interp/src/swap.rs:28` | Evaluates a `Swap` node. |
 | `mycelium_interp::TaskOutcome` | enum | `crates/mycelium-interp/src/supervise.rs:94` | The **explicit, additive result of running a task** (RFC-0014 I1 lifted across the task boundary, |
@@ -684,9 +684,9 @@
 | `mycelium_interp::budget::Budgets::with` | fn | `crates/mycelium-interp/src/budget.rs:161` | Builder: declare a budget. |
 | `mycelium_interp::budget::EffectBudget::amount` | fn | `crates/mycelium-interp/src/budget.rs:93` | The budget's scalar amount. |
 | `mycelium_interp::budget::EffectBudget::kind` | fn | `crates/mycelium-interp/src/budget.rs:81` | The effect kind this budget bounds. |
-| `mycelium_interp::is_pure` | fn | `crates/mycelium-interp/src/parallel.rs:59` | Whether `node` is a **provably pure** (effect-free) Core IR fragment — the structural, |
+| `mycelium_interp::is_pure` | fn | `crates/mycelium-interp/src/parallel.rs:60` | Whether `node` is a **provably pure** (effect-free) Core IR fragment — the structural, |
 | `mycelium_interp::parallel` | mod | `crates/mycelium-interp/src/lib.rs:110` | — |
-| `mycelium_interp::plan_parallel` | fn | `crates/mycelium-interp/src/parallel.rs:131` | Compute the [`ParallelPlan`] for `node` — the explicit, side-effect-free decision procedure |
+| `mycelium_interp::plan_parallel` | fn | `crates/mycelium-interp/src/parallel.rs:160` | Compute the [`ParallelPlan`] for `node` — the explicit, side-effect-free decision procedure |
 | `mycelium_interp::prims` | mod | `crates/mycelium-interp/src/lib.rs:111` | — |
 | `mycelium_interp::prims::FLT_CMP_CONFORMANCE_METHOD:` | const | `crates/mycelium-interp/src/prims.rs:1987` | The method recorded in the `EmpiricalFit` basis of every float-comparison result |
 | `mycelium_interp::prims::FLT_CMP_CONFORMANCE_TRIALS:` | const | `crates/mycelium-interp/src/prims.rs:1983` | The trial count of the M-899 IEEE comparison reference corpus (`src/tests/prims.rs`, |
@@ -4135,6 +4135,8 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_doc::ir::Node` | dedup-alias: same definition as `mycelium_doc::Node` at crates/mycelium-doc/src/ir.rs:224 — one canonical row kept |
 | `mycelium_doc::ir::Node::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::ir::Node::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_doc::ir::Node::drop` | definition not found via regex heuristic (kind='fn', name='drop') — possibly macro-generated or cfg-gated |
+| `mycelium_doc::ir::Node::drop` | definition not found via regex heuristic (kind='fn', name='drop') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::ir::Node::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::ir::Node::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::ir::Node::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
@@ -4207,6 +4209,7 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_interp::EvalError::from` | definition not found via regex heuristic (kind='fn', name='from') — possibly macro-generated or cfg-gated |
 | `mycelium_interp::EvalError::from` | definition not found via regex heuristic (kind='fn', name='from') — possibly macro-generated or cfg-gated |
 | `mycelium_interp::EvalError::from` | definition not found via regex heuristic (kind='fn', name='from') — possibly macro-generated or cfg-gated |
+| `mycelium_interp::EvalError::from` | definition not found via regex heuristic (kind='fn', name='from') — possibly macro-generated or cfg-gated |
 | `mycelium_interp::Interpreter::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_interp::Interpreter::default` | definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated |
 | `mycelium_interp::Step::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
@@ -4253,22 +4256,22 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_interp::budget::EffectKind::hash` | definition not found via regex heuristic (kind='fn', name='hash') — possibly macro-generated or cfg-gated |
 | `mycelium_interp::budget::EffectKind::partial_cmp` | definition not found via regex heuristic (kind='fn', name='partial_cmp') — possibly macro-generated or cfg-gated |
 | `mycelium_interp::budget::EffectKind::partial_cmp` | definition not found via regex heuristic (kind='fn', name='partial_cmp') — possibly macro-generated or cfg-gated |
-| `mycelium_interp::parallel::BatchHead` | dedup-alias: same definition as `mycelium_interp::BatchHead` at crates/mycelium-interp/src/parallel.rs:91 — one canonical row kept |
+| `mycelium_interp::parallel::BatchHead` | dedup-alias: same definition as `mycelium_interp::BatchHead` at crates/mycelium-interp/src/parallel.rs:120 — one canonical row kept |
 | `mycelium_interp::parallel::BatchHead::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_interp::parallel::BatchHead::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_interp::parallel::BatchHead::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_interp::parallel::BatchHead::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_interp::parallel::BatchHead::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_interp::parallel::BatchHead::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_interp::parallel::ParallelPlan` | dedup-alias: same definition as `mycelium_interp::ParallelPlan` at crates/mycelium-interp/src/parallel.rs:104 — one canonical row kept |
+| `mycelium_interp::parallel::ParallelPlan` | dedup-alias: same definition as `mycelium_interp::ParallelPlan` at crates/mycelium-interp/src/parallel.rs:133 — one canonical row kept |
 | `mycelium_interp::parallel::ParallelPlan::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_interp::parallel::ParallelPlan::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_interp::parallel::ParallelPlan::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_interp::parallel::ParallelPlan::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_interp::parallel::ParallelPlan::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_interp::parallel::ParallelPlan::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_interp::parallel::is_pure` | dedup-alias: same definition as `mycelium_interp::is_pure` at crates/mycelium-interp/src/parallel.rs:59 — one canonical row kept |
-| `mycelium_interp::parallel::plan_parallel` | dedup-alias: same definition as `mycelium_interp::plan_parallel` at crates/mycelium-interp/src/parallel.rs:131 — one canonical row kept |
+| `mycelium_interp::parallel::is_pure` | dedup-alias: same definition as `mycelium_interp::is_pure` at crates/mycelium-interp/src/parallel.rs:60 — one canonical row kept |
+| `mycelium_interp::parallel::plan_parallel` | dedup-alias: same definition as `mycelium_interp::plan_parallel` at crates/mycelium-interp/src/parallel.rs:160 — one canonical row kept |
 | `mycelium_interp::prims::PrimRegistry` | dedup-alias: same definition as `mycelium_interp::PrimRegistry` at crates/mycelium-interp/src/prims.rs:57 — one canonical row kept |
 | `mycelium_interp::prims::PrimRegistry::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_interp::prims::PrimRegistry::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |

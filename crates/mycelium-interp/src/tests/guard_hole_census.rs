@@ -8,8 +8,12 @@
 //! the call must refuse cleanly instead. White-box access via `use crate::…` (CLAUDE.md test layout).
 
 use crate::parallel::{is_pure, plan_parallel};
-use crate::Interpreter;
+use crate::{EvalError, Interpreter};
 use mycelium_core::{ContentHash, CtorRef, Meta, Node, Payload, Provenance, Repr, Value};
+
+/// The canonical depth floor (RFC-0041 §4.2) the interp's shared budget defaults to — the ceiling a
+/// deep value is refused at. `mycelium_workstack::RecursionBudget::DEFAULT_DEPTH_LIMIT` (4096).
+const DEPTH_FLOOR: usize = mycelium_workstack::RecursionBudget::DEFAULT_DEPTH_LIMIT as usize;
 
 fn byte() -> Value {
     Value::new(
@@ -59,54 +63,54 @@ fn deep_let_body(n: usize) -> Node {
 }
 
 #[test]
-#[ignore = "W4"] // RFC-0041 §7 W4: L0-interp (substitution) work-stack.
 fn eval_core_deep_construct_refuses_cleanly() {
-    // Holes: `Interpreter::step`'s `Construct` arm (recurses into non-value args) and the private
-    // `node_to_core_value` (crate::lib.rs) — both walk the deep chain via `Interpreter::eval_core`.
+    // RFC-0041 W4 (RR-29 §0.1, LANDED): holes were `Interpreter::step`'s `Construct` arm (recurses into
+    // non-value args) and the private `node_to_core_value` — both walk the deep chain via `eval_core`.
+    // Now the shared `RecursionBudget` refuses past the floor with a constructed `DepthLimit`, and the
+    // pass runs on the growable deep stack, so this is a clean refusal, never a `SIGABRT`.
     let deep = deep_construct(200_000);
-    let result = Interpreter::default().eval_core(&deep);
-    assert!(
-        result.is_err(),
-        "expected an explicit over-budget refusal (a constructed DepthLimit), not success or a \
-         SIGABRT"
+    let err = Interpreter::default()
+        .eval_core(&deep)
+        .expect_err("a 200k-deep value must refuse, not succeed or SIGABRT");
+    assert_eq!(
+        err,
+        EvalError::DepthLimit { limit: DEPTH_FLOOR },
+        "the deep-construct value walk must refuse with the canonical DepthLimit at the floor"
     );
 }
 
 #[test]
-#[ignore = "W4"] // RFC-0041 §7 W4.
 fn eval_core_deep_subst_via_let_refuses_cleanly() {
-    // Hole: the private `subst` (crate::lib.rs) — invoked from `step`'s `Let`/E-Let-Bind case,
-    // walking `body` (here `n` deep) to substitute the bound variable.
+    // RFC-0041 W4 (LANDED): hole was the private `subst`, invoked from `step`'s `Let`/E-Let-Bind case,
+    // walking `body` (here `n` deep) to substitute the bound variable. Now budget-charged → `DepthLimit`.
     let deep = deep_let_body(200_000);
-    let result = Interpreter::default().eval_core(&deep);
-    assert!(
-        result.is_err(),
-        "expected an explicit over-budget refusal (a constructed DepthLimit), not success or a \
-         SIGABRT"
+    let err = Interpreter::default()
+        .eval_core(&deep)
+        .expect_err("a 200k-deep Let-body subst must refuse, not SIGABRT");
+    assert_eq!(
+        err,
+        EvalError::DepthLimit { limit: DEPTH_FLOOR },
+        "the deep subst must refuse with the canonical DepthLimit at the floor"
     );
 }
 
-/// Hole: `parallel::is_pure` (`crates/mycelium-interp/src/parallel.rs:59`).
-///
-/// **Honesty (FLAG, VR-5):** `is_pure` returns a plain `bool` — infallible today, so this test
-/// cannot assert a "clean refusal" the way the checker/L0-interp holes above do. It constructs the
-/// real repro (the call itself is the SIGABRT on a large enough `n`) and documents that RFC-0041
-/// §4.7/§7 W1 is expected to route this through the shared work-step budget, at which point the
-/// signature (or an internal budget check reachable from callers) gains an explicit refusal path.
+/// Hole (RFC-0041 W4, LANDED): `parallel::is_pure`. `is_pure` returns a plain `bool` — it is a *pure
+/// analysis* of an already-materialized `Node`, not an evaluation of adversarial fuel, so a depth
+/// *refusal* does not fit its signature. W4 closes the SIGABRT the honest way for this case: `is_pure`
+/// is now an **explicit work-stack** traversal (O(1) host stack for any depth), so the call completes
+/// on a deep `Node` instead of overflowing. The assertion is that it returns (no crash) — a deep
+/// all-`Const` `Construct` spine is pure.
 #[test]
-#[ignore = "W4"] // RFC-0041 §7 W4: mycelium-interp is the L0 trusted base — deferred W1→W4 (interp wave; maintainer checkpoint).
 fn is_pure_deep_recursion() {
     let deep = deep_construct(200_000);
-    let _ = is_pure(&deep);
+    assert!(is_pure(&deep), "a deep Const/Construct spine is pure");
 }
 
-/// Hole: `parallel::plan_parallel` (`crates/mycelium-interp/src/parallel.rs:131`).
-///
-/// **Honesty (FLAG, VR-5):** same infallible-signature caveat as `is_pure` above — `plan_parallel`
-/// returns a `ParallelPlan` struct, not a `Result`.
+/// Hole (RFC-0041 W4, LANDED): `parallel::plan_parallel` — its only deep recursion was via `is_pure`
+/// (now iterative), so it too completes on a deep `Node` rather than a SIGABRT. A single-arg deep
+/// `Construct` is below `MIN_BATCH_WIDTH`, so the plan is `SequentialNoBatch`.
 #[test]
-#[ignore = "W4"] // RFC-0041 §7 W4: mycelium-interp is the L0 trusted base — deferred W1→W4 (interp wave; maintainer checkpoint).
 fn plan_parallel_deep_recursion() {
     let deep = deep_construct(200_000);
-    let _ = plan_parallel(&deep);
+    assert_eq!(plan_parallel(&deep), crate::ParallelPlan::SequentialNoBatch);
 }

@@ -446,6 +446,8 @@ impl core::cmp::PartialEq for mycelium_interp::EvalError
 pub fn mycelium_interp::EvalError::eq(&self, &mycelium_interp::EvalError) -> bool
 impl core::convert::From<mycelium_interp::budget::EffectBudgetExhausted> for mycelium_interp::EvalError
 pub fn mycelium_interp::EvalError::from(mycelium_interp::budget::EffectBudgetExhausted) -> Self
+impl core::convert::From<mycelium_workstack::BudgetError> for mycelium_interp::EvalError
+pub fn mycelium_interp::EvalError::from(mycelium_workstack::BudgetError) -> Self
 impl core::error::Error for mycelium_interp::EvalError
 impl core::fmt::Debug for mycelium_interp::EvalError
 pub fn mycelium_interp::EvalError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
