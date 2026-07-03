@@ -22,3 +22,17 @@ accepted = [
 # excludes unpublished workspace members so this file stays scoped to genuine third-party crates.
 [private]
 ignore = true
+
+# TODO(W2, RFC-0041 §5 / RR-29 §4): `stacker`/`psm` are NOT yet dependencies (only a commented-out
+# future `grow-on-demand` option in crates/mycelium-stack/Cargo.toml; `Cargo.lock` has no entry
+# today — confirmed W0). Both are MIT/Apache-2.0-dual-licensed, so they're already covered by the
+# `accepted` list above and need no new entry here — but when W2 actually wires them in, the
+# addition MUST (never-silent, G2):
+#   1. pin EXACT versions (no `^`/range) in the relevant Cargo.toml, matching the workspace's
+#      pinned-dependency discipline;
+#   2. regenerate THIS crate's THIRD-PARTY-LICENSES.md via `just licenses` (do not hand-edit that
+#      file — see its own header) so the notice-preservation record picks the two crates up;
+#   3. be reflected in `scripts/checks/geiger-baseline.sh`'s baseline (`--update`, after review) so
+#      the new unsafe usage (contained to the `stacker`/`psm` leaf per ADR-014/KC-3, never in
+#      Mycelium-authored source) is a recorded decision, not a silent drift.
+# W0 (this file's author) deliberately does NOT add stacker/psm here — that is W2's scope.

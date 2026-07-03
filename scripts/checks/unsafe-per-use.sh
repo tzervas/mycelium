@@ -35,11 +35,24 @@ section "Trusted-kernel crates: #![forbid(unsafe_code)] still present (RFC-0034 
 
 # The four crates whose zero-unsafe guarantee is compiler-enforced (named by DN-21 §5 F-1 /
 # ADR-014 §Consequences).  If any other crate earns this status in future, add it here.
+#
+# `mycelium-stack` (RFC-0041 §5 / RR-29 §4, W0): the L1 host-stack adapter crate — kept OUTSIDE the
+# trusted `mycelium-l1` kernel *by design* (ADR-014, KC-3) so that when W2 wires the grow-on-demand
+# `stacker`/`psm` hybrid, the ONLY `unsafe` in the whole recursion-depth-safety surface is contained
+# here. Today it is `#![forbid(unsafe_code)]` (std-only `with_deep_stack`, empty deps); RR-29 §4
+# flagged that audit-A previously EXCLUDED this crate, so ADR-014 containment rested on an
+# *unprotected* forbid line. Adding it here means an accidental removal of the forbid attribute fails
+# loudly instead of silently. When W2 lands the optional `grow-on-demand` feature (`stacker::maybe_grow`,
+# a safe API whose internal unsafe stays inside the `stacker` leaf crate), this crate's own source
+# stays unsafe-free, so this KERNEL_CRATES entry remains valid — audit-A watches this crate's own
+# `forbid` line, not its dependency graph. Audit B (per-use #[allow(unsafe_code)]) is unaffected
+# either way since `stacker`'s unsafe lives upstream, outside `crates/`.
 KERNEL_CRATES=(
   crates/mycelium-core/src/lib.rs
   crates/mycelium-cert/src/lib.rs
   crates/mycelium-numerics/src/lib.rs
   crates/mycelium-vsa/src/lib.rs
+  crates/mycelium-stack/src/lib.rs
 )
 
 kernel_ok=1
