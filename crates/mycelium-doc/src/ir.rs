@@ -238,6 +238,39 @@ pub struct Node {
     pub children: Vec<Node>,
 }
 
+/// Iterative destruction (RFC-0041 §4.5's doc-IR member of the iterative-destruction class).
+///
+/// The **derived** recursive `Drop` this replaces walks the `children` spine one host-stack frame
+/// per depth level, so a deep tree (confirmed empirically down to n=50,000 — `guard_hole_census.rs`,
+/// `src/tests/ir.rs::walk_does_not_overflow_on_a_deep_chain`) overflows the stack on drop, independent
+/// of (and previously un-closed by) the [`Node::walk`] host-stack guard. `mycelium-doc` is a tooling
+/// crate, not the frozen kernel/L1 core §4.5 otherwise tracks, so this lands as a normal fix (no
+/// within-freeze channel needed).
+///
+/// Mechanics: `mem::take` the drop target's `children` into an explicit worklist `Vec<Node>`, then
+/// drain it depth-first, at each step also `mem::take`-ing the popped node's own `children` onto the
+/// worklist *before* that node is allowed to drop. By the time a worklist node's implicit drop glue
+/// re-enters this `impl Drop` (recursively, once per node), its `children` is already empty — so the
+/// recursion never goes deeper than one level; the depth that used to live on the host stack now lives
+/// in the worklist `Vec` on the heap. **No observable change** (destruction-order-only): `Node` has no
+/// `Drop`-visible side effects (no external resources), only memory to reclaim, so reordering *which*
+/// sibling frees first is unobservable — only that every node frees exactly once, which this
+/// preserves. A worklist-`Vec` allocation during `drop` is acceptable here (unlike the OOM/unwind-
+/// critical kernel path in §4.5): `mycelium-doc` is a build-time tooling crate, not on the interpreter's
+/// panic/unwind hot path.
+impl Drop for Node {
+    fn drop(&mut self) {
+        let mut worklist: Vec<Node> = std::mem::take(&mut self.children);
+        while let Some(mut next) = worklist.pop() {
+            // Move this node's children onto the worklist *before* `next` is dropped at the end of
+            // the loop body, so the recursive re-entry into `Node::drop` below sees an already-empty
+            // `children` and does no further recursion.
+            worklist.extend(std::mem::take(&mut next.children));
+            // `next` drops here — its `children` is empty, so this is O(1), not recursive depth.
+        }
+    }
+}
+
 impl Node {
     /// Build a node, computing its content address from its content + children (ADR-003). Provenance
     /// is **not** hashed (metadata, not identity) so a re-flowed source line keeps the deep link
