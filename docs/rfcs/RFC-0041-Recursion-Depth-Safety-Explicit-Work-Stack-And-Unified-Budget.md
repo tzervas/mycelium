@@ -3,245 +3,319 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0041 |
-| **Status** | **Proposed** (2026-07-03) — authored under the maintainer's DN-84 §11 "solve (D) now" directive + the four ratifications of 2026-07-03 (RR-29 §6). Advances to **Accepted** on maintainer ratification of §4's decided architecture; `Accepted → Enacted` per-stage as each wave lands differential-green (§9). |
-| **Type** | Normative — implementation architecture for recursion-depth safety across the L1 evaluator, the L0 reference interpreter, and the frontend passes; **no new L0 node/prim, no grammar/surface change** (KC-3 / DN-56 freeze-compatible — §7). |
+| **Status** | **Proposed (Rev 2, 2026-07-03)** — authored under DN-84 §11 "solve (D) now" + the four ratifications of 2026-07-03 (RR-29 §6); **hardened by the Phase-3 adversarial review** (§11 — 4 Critical + 15 High source-confirmed objections resolved). Advances to **Accepted** on maintainer ratification; `Accepted → Enacted` per-stage as each wave lands differential-green (§9). |
+| **Type** | Normative — implementation architecture for recursion-depth safety across the L1 evaluator, the L0 reference interpreter, and the frontend passes; **no new L0 node/prim, no grammar/surface change** (KC-3 / DN-56 freeze-compatible — §6). |
 | **Date** | 2026-07-03 |
 | **Task** | M-979 (design D, solve-now) · M-978 (design B baseline) |
 | **Feeds** | DN-84 (the decided direction it implements) · M-740 (the `.myc` self-hosting port implements the settled shape once) |
-| **Grounds** | `research/29-recursion-depth-and-stack-safety-RECORD.md` (the verified evidence base) · DN-84 §4/§5/§7/§11 · DN-05 (amended §4.4) · DN-56/M-969 (freeze) · ADR-014/KC-3 (unsafe containment) · RFC-0007 §4.5/4.6 · DN-36 6(g) (TCO) |
-| **Decides** | (1) convert the **L1 evaluator + L0 reference interpreter** to explicit heap **work-stack** machines mirroring the differential-validated AOT `Vec<Frame>` env-machine; (2) one **global deterministic** recursion-depth budget (default 4096, tunable) as the never-silent ceiling across all interpreters, with a **byte** co-ceiling; (3) a deterministic **floor + dynamic headroom** reconciliation with the AOT machine (amends DN-05 append-only); (4) **iterative `Drop`** for the recursive `mycelium-core`/`mycelium-l1` value+node types (DN-39 review); (5) **TCO in the evaluators** with EXPLAIN-able elided frames; (6) frontend passes stay **guarded recursion + grow-on-demand** (`stacker::maybe_grow`), converting only `check_list`'s data-spine + the `parse_type_ref` family if a raise demands; (7) an opt-in, non-deterministic, CLI-flag-only, corpus-excluded `--unbounded` mode. |
+| **Grounds** | `research/29-recursion-depth-and-stack-safety-RECORD.md` · DN-84 §4/§5/§7/§11 · DN-05 (amended §4.4) · DN-56/M-969 (freeze) · ADR-014/KC-3 · RFC-0007 §4.5/4.6 · RFC-0014 (effect budgets) · DN-71 §8 (Substrate release) · DN-36 6(g) (TCO) |
+| **Decides** | (1) convert the **L1 evaluator + L0 reference interpreter** to explicit heap **work-stack** machines, **each keeping its own frame/loop shape** (L0 stays substitution-based) but sharing (2) one **global deterministic depth budget** on a **single machine-independent metric** (§4.0), plus a **memory ceiling** that counts the *actual* dominant heap (§4.2); (3) a deterministic **floor + dynamic headroom** reconciliation (amends DN-05); (4) **iterative destruction** (`Drop`/`Clone`/hash) across the **full** recursive `mycelium-core`/`mycelium-l1` surface via a **within-freeze behavior-preserving-hardening channel** (§6); (5) **TCO in the evaluators, guarded by a no-pending-post-work precondition** (§4.6); (6) frontend passes stay **guarded recursion + fine-grained `ensure_sufficient_stack`** + a **work-step budget**; (7) an opt-in, non-deterministic, CLI-flag-only, corpus-excluded `--unbounded` mode; (8) **extract only the shared budget + guarded-stack primitive** (`mycelium-workstack`), not one universal machine. |
 
-> **Posture (transparency / VR-5 / G2).** This RFC changes **resource behavior only** — it makes a
-> deeply-nested input a **never-silent explicit refusal** (`DepthExceeded`/`DepthLimit`/`OutOfStackBudget`)
-> instead of an uncatchable `SIGABRT`, and lets legitimate deep-but-bounded work run. It introduces **no
-> new observable value or error semantics**: the three-way differential (L1-eval ≡ L0-interp ≡ AOT,
-> NFR-7) must remain green — same values, same error *variants*, same evaluation order — with only the
-> depth/stack *resource* profile changed. No guarantee tag is upgraded; every new bound is `Declared`
-> (a structural budget) with `Empirical` differential agreement, never `Proven`.
+> **Posture (transparency / VR-5 / G2) — corrected in Rev 2.** This RFC changes **resource behavior only**:
+> a deeply-nested input becomes a **never-silent explicit refusal** instead of an uncatchable `SIGABRT`,
+> and legitimate deep-but-bounded work runs. The **honest correctness invariant** (Rev-1 over-claimed
+> "same error variants" — see §11-C2) is: **(I1)** when *all three* paths accept, they yield the **same
+> observable value**; **(I2)** each path, on an over-budget input, **refuses never-silently** (an explicit
+> error, never `SIGABRT`/hang); **(I3)** on the **same single metric** (§4.0) all three paths cross the
+> accept/reject boundary at the **same threshold** at or below the deterministic floor (§4.4), refusing
+> with **one canonical error variant** (§5.1). No new observable *value* semantics; the M-210 differential
+> plus a **new cross-path error-parity differential** (§5.1) are the checked basis. No guarantee tag is
+> upgraded; every bound is `Declared` with `Empirical` differential agreement, never `Proven`.
 
 ---
 
 ## 1. Problem
 
-Mycelium's recursive interpreters and passes overflow the host stack on deep input, turning an intended
-never-silent refusal into an uncatchable `SIGABRT` — a robustness gap **and** a DoS surface. `research/29`
-mapped it exhaustively; the load-bearing facts:
-
-- **The `myc run` engine (`mycelium-interp`) has *no* depth budget at all** — `EvalError::DepthLimit` is
-  defined but never constructed; `step()` recurses on the caller stack; the crate is not deep-stacked. A
-  crafted deep value SIGABRTs `myc run`, **remotely reachable via a hostile spore** (RR-29 §0.1, verified).
-- **A recursive-`Drop` stack bomb** on the frozen `Node`/`Value`/`Datum`/`L1Value` types overflows *on
-  destruction* — even on the refusal path, on the caller stack (RR-29 §0.2, verified).
-- **No TCO**, and the stdlib iterates by non-tail recursion, so a `.myc`-authored compiler pass can't
-  process a large worklist without burning depth (RR-29 §0.3) — hence solve this **before** M-740 ports it.
-- The scattered budgets (parser 256, eval 64, the rest 4096) and the fixed 256 MB stack (~24,600-frame
-  ceiling) are toolchain-fragile — the ADR-041 near-miss (a frame-size bump SIGABRT'd a 256-deep guard)
-  is the direct evidence.
+Recursive interpreters/passes overflow the host stack on deep input, turning an intended never-silent
+refusal into an uncatchable `SIGABRT` — a robustness gap **and** a DoS surface. `research/29` mapped it;
+load-bearing facts: **`myc run`'s L0 interpreter (`mycelium-interp`) has *no* depth budget** (`DepthLimit`
+defined-but-never-constructed; verified) — a crafted deep value SIGABRTs `myc run`, remotely reachable via
+a hostile spore; a **recursive-`Drop` stack bomb** on the frozen core overflows *on destruction*; **no
+TCO** + a non-tail stdlib idiom means a `.myc` compiler pass can't iterate large worklists without burning
+depth; and the scattered budgets (parser 256 / eval 64 / rest 4096) + the fixed 256 MB stack (~24.6k
+*checker* frames) are toolchain-fragile (the ADR-041 near-miss).
 
 ## 2. Goals / Non-goals
 
-**Goals.** No input SIGABRTs any interpreter/pass. Every over-limit is an explicit, deterministic,
-machine-independent error. A `.myc` compiler pass can iterate large worklists in bounded depth. The
-solution's *settled shape* is what M-740 implements once. Secure-by-design throughout.
+**Goals.** No input SIGABRTs any interpreter/pass (incl. on destruction and during unwind, and on
+no-grow targets). Every over-limit is an explicit, deterministic, machine-independent refusal *on a single
+metric*. Legitimate deep work runs; a `.myc` compiler pass iterates large worklists in bounded depth.
+Secure-by-design (incl. memory-DoS and CPU-DoS). The settled shape is what M-740 implements once.
 
-**Non-goals.** No new L0 node/prim or surface syntax. No change to observable values/errors/order. No
-flat-AST/arena rewrite now (RR-29 §3 — a long-horizon boot10-era option, not this RFC). No conversion of
-frontend passes wholesale (rustc declined it; RR-29 §3).
+**Non-goals.** No new L0 node/prim or surface syntax. No change to observable **values** (I1) or, above
+the floor / outside the metric, no promise of identical error variants beyond I2's never-silent guarantee.
+No flat-AST/arena rewrite now (a boot10-era option — RR-29 §3). No wholesale conversion of frontend passes.
 
-## 3. Design overview — two layers, one solution
-
-Per DN-84 §11 the two "designs" are one solution: **(D)** explicit work-stacks where it pays (the
-evaluators), **(B)** guarded recursion + grow-on-demand where conversion isn't worth it (the frontend),
-under **one** budget.
+## 3. Design overview — two layers, one budget, one metric
 
 ```
-          ┌─────────────────────────── one GLOBAL deterministic budget (§4.2) ───────────────────────────┐
- frontend │ parser · checker · elaborator · mono · ambient · totality        (B) guarded recursion       │
- (guard)  │   → charge the global budget; run on grow-on-demand host stack (stacker::maybe_grow, coarse)  │
-          ├───────────────────────────────────────────────────────────────────────────────────────────── │
- eval     │ L1 evaluator · L0 reference interpreter                          (D) explicit Vec<Frame>      │
- (convert)│   → CEK/work-stack machine mirroring AOT; TCO in tail position; O(1) host stack; byte-capped   │
-          ├───────────────────────────────────────────────────────────────────────────────────────────── │
- values   │ Node · Value · Datum · L1Value                                    iterative Drop (DN-39)       │
-          └───────────────────────────────────────────────────────────────────────────────────────────────┘
+          ┌──── ONE deterministic budget (§4.2) on ONE machine-independent metric (§4.0) ────┐
+ frontend │ parser · checker · elaborator · mono · ambient · totality   (B) guarded recursion │
+ (guard)  │   + fine-grained ensure_sufficient_stack (§4.3) + a work-step (CPU) budget (§4.2) │
+          ├──────────────────────────────────────────────────────────────────────────────────┤
+ eval     │ L1 evaluator (env)  ·  L0 reference interpreter (SUBSTITUTION — kept)  (D) convert │
+ (convert)│   each its own frame/loop; TCO guarded by no-pending-post-work (§4.6); memory-cap  │
+          ├──────────────────────────────────────────────────────────────────────────────────┤
+ destroy  │ Node · Value · Datum · CoreValue · L1Value  (+ Clone, Canon hash, unwind-reachable)│
+          │   iterative destruction across the WHOLE class (§4.5), within-freeze channel (§6)  │
+          └──────────────────────────────────────────────────────────────────────────────────┘
+ shared   │ mycelium-workstack (leaf): the depth+memory BUDGET + a guarded-stack helper ONLY —  │
+          │   NOT one universal machine; each consumer keeps its bespoke frame type (§4.1)      │
 ```
 
-## 4. The decided architecture (ratified 2026-07-03)
+## 4. The decided architecture (ratified 2026-07-03; hardened Rev 2)
 
-### 4.1 Convert the evaluators to explicit work-stacks (D) — via **one extracted shared primitive**
-Rewrite the **L1 evaluator** SCC (`eval`/`eval_app`/`eval_match`/`eval_for`/`eval_wild`/
-`eval_hypha_forage`/`invoke`) and the **L0 reference interpreter** (`step`/`subst`/`node_to_core_value`/
-`guarantee_of_value`) as explicit heap **`Vec<Frame>` machines**, mirroring the already-differential-
-validated AOT env-machine (`mycelium-mlir` `aot.rs`/`trampoline.rs`). A `Frame` reifies the
-defunctionalized continuation (what to do with a child's returned value) — including the L1 evaluator's
-post-child scope-restore / `release_if_abandoned` / guarantee-assert steps (RR-29 §1.4). Control recursion
-becomes O(1) host stack; the explicit stack's depth is the budget-charged quantity. `eval_for` (already an
-iterative spine loop) is the in-tree model. **Definition of correctness:** observationally identical to the
-current recursive machine — the M-210/`mycelium-std-conformance` three-way differential stays green.
+### 4.0 One machine-independent depth metric (NEW — resolves §11-C1)
+The budget is charged on **one metric, uniform across all three IRs and tail iterations: one unit per
+source-level call/β-reduction boundary** (a user function application or a `Fix` unfold), **not** per
+internal IR node. Rationale: L1 charges per-`Expr`-node today (eval.rs:781), L0 would charge structural
+redex nesting, AOT charges per-frame, and L0's *curried binary* `App` vs L1's *n-ary* `App` make
+`f(a,b,c)` depth-3 vs depth-1 — so aligning only the scalar (Rev 1) gives three different thresholds for
+one source. Charging at the **source-call boundary** is the one quantity all three machines share. **Gate
+(W0):** a property test asserting the *same source* hits the *same threshold* on all three paths; data-spine
+depth (a `Cons` literal) is charged by element uniformly. Tail iterations (§4.6) do **not** charge depth
+(they reuse the frame) — stated explicitly and reconciled with the differential (all three loopify tail
+calls, so all agree).
 
-**DRY (KC-3 / maintainer directive, 2026-07-03): extract the machine, don't triplicate it.** Because all
-three consumers (AOT, L0-interp, L1-eval) need the *same* explicit-work-stack shape, the AOT machine's
-generic core is **extracted into one small shared primitive** rather than reimplemented three times: a new
-leaf crate **`mycelium-workstack`** (low-tier, downward-only per the acyclic-deps invariant DN-68/`acy`;
-`#![forbid(unsafe_code)]`) providing the generic `WorkStack<Frame>` driver — push/pop, the budget +
-byte-cap charge points, TCO frame-reuse, and the never-silent `DepthExceeded`/`OutOfStackBudget` surface —
-parameterized over a per-consumer `Frame`/`Step` type. The AOT machine is **refactored onto it first**
-(behavior-preserving, differential-checked), *then* L0-interp and L1-eval are built on the same crate. The
-budget primitive (§4.2) lives here too (the kernel-resident, portable knob). **Self-hosting form:** the
-same driver is the natural first `lib/compiler/` primitive — a `compiler.workstack` `.myc` nodule — so the
-M-740 port reuses one settled contract instead of re-deriving three; the Rust crate is the transitional
-host adapter, the `.myc` nodule the portable target (mirrors the DN-84 budget-is-portable / adapter-is-host
-split). Extraction is a wave of its own (§7 W3½) so the shared core is validated once before three
-consumers depend on it.
+### 4.1 Convert the evaluators; extract only the shared *budget + guarded-stack*, not one machine (resolves §11 workstack1/3/4)
+Rewrite the **L1 evaluator** SCC and the **L0 reference interpreter** so control recursion is O(1) host
+stack. **Each keeps its own frame/loop shape** — L0 stays a **substitution** machine (fuel-loop + iterative
+`subst`/redex-search; it has no environment to reify, RR-29 §1.5), L1 an **env** machine (a `Vec<Frame>`
+CEK-style loop reifying its interleaved post-child work — §4.6). The **shared** extraction
+(`mycelium-workstack`, a `#![forbid(unsafe_code)]` leaf, downward-only per DN-68) is **only**: the
+`RecursionBudget` (depth on the §4.0 metric + the memory ceiling §4.2), the never-silent
+`DepthExceeded`/`OutOfBudget` surface, and a thin `ensure_sufficient_stack` guard helper — **not** a
+universal `WorkStack<Frame>` forcing three different machines into one abstraction. Each consumer keeps its
+bespoke `Frame`. **Deps-cycle fix (§11 workstack4):** the memory ceiling *is* RFC-0014's `Alloc`
+`EffectBudget` (interp-resident, `aot.rs:261`); the leaf exposes only **counters/limits**, and the
+**charge happens consumer-side** at each machine's frame-push/env-insert site — the leaf never depends on
+`interp`. **Common-mode risk (§11 workstack1):** because the three paths would share the budget/guard code,
+the differential can no longer cross-validate that shared core; **W0 adds dedicated in-isolation property +
+mutation tests** on the budget/guard against a synthetic frame type, and adds `mycelium-mlir` +
+`mycelium-workstack` to the mutants/fuzz scope. The `.myc` `compiler.workstack` nodule is the portable form
+M-740 reuses. **Budget home (§11 workstack7):** `mycelium-workstack` is created in **W1** (not W3½) so the
+budget lands in its final crate once; W3½ extracts only the guarded-stack *machine* refactor.
 
-### 4.2 One global deterministic budget + byte co-ceiling (B)
-Replace the scattered constants with **one workspace-wide `RecursionBudget`** (kernel-resident, the
-portable primitive that ports to `.myc`): a `depth` ceiling (**default 4096**, the sibling value; the
-parser's 256 and eval's 64 are raised to it) and a **`stack_bytes` co-ceiling** on the work-stack's own
-allocation (frame-structs, *not* cloned subtrees). Exceeding either is a never-silent
-`DepthExceeded { limit }` / `OutOfStackBudget { bytes }`. Tunable per-invocation (à la
-`Evaluator::with_depth`); default is a **fixed constant** (determinism — accept/reject is a function of
-`(source, budget)`, never the machine). Headroom to a few tens of thousands is supported by §4.3, raised
-only when a real use case witnesses the need (RR-29 §4: byte cap prevents the memory-DoS the heap stack
-would otherwise open — ~545 MB at depth 50k without a cap).
+### 4.2 One budget on the metric + a memory ceiling that counts the *real* dominant heap (resolves §11-C3/High)
+Retire the scattered constants for **one workspace `RecursionBudget`**: a `depth` ceiling on the §4.0
+metric (**default 4096**; parser 256 / eval 64 raised to it — but eval's raise is **held to W5**, §7) and a
+**memory ceiling** that counts the **actual dominant allocation**, not just frame-structs (Rev-1's
+frame-struct-only cap was theatre — §11-C3): (a) **L0 substitution duplication** — `subst` clones the value
+per `Var` occurrence (`lib.rs:695`), so `(λx.C[x,…,x]) v` duplicates `v` k× per β-step → **exponential heap
+at trivial fuel** (fuel bounds step *count*, not per-step copy size); the ceiling counts **live
+substituted-term bytes**. (b) **Captured environments** (`aot.rs` frame `Env=HashMap`; L1 `scope` Vec) —
+counted at the insert site via `F::heap_bytes()`. **Determinism invariant (§11 High obj7/det):** a startup
+assertion **`mem_ceiling ≥ depth_floor × max_frame_bytes(over ALL three machines)`** so the memory ceiling
+can **never** bind at or below the depth floor — keeping the (frame-size-dependent, hence
+machine-dependent) memory limit **off** the observable accept/reject boundary within the floor. A per-target
+`max_frame_bytes` **baseline gate** in CI trips on frame growth (so a toolchain bump fails CI, not
+production — the ADR-041 lesson). **Process-wide arena (§11 High obj11):** a shared atomic byte counter
+every work-stack charges against, refusing `OutOfBudget` when the *sum* over concurrent passes (LSP
+re-analyses, `eval_core_parallel` workers, spore batch) would exceed a per-process ceiling — the per-pass
+cap alone multiplies under concurrency. **Frontend work-step (CPU) budget (§11 High obj12):** the frontend
+carries only depth today; §4.7's `check_list` flatten *admits* large-N literals that then flow into the
+`O(N²)` re-walks (`mono::rewrite_app`, `mir count_occurrences` `emit.rs:186`) → CPU-DoS. Add a node-visit
+**work-step budget** that refuses never-silently before N grows large enough to make the un-fueled `O(N²)`
+walks a DoS (and fix/defer the named `O(N²)` re-walks before the raise). All limits deterministic (fixed
+defaults, tunable per-invocation); accept/reject a function of `(source, budget)` on the §4.0 metric.
 
-### 4.3 Grow-on-demand host stack, coarse placement (B) — **ordering constraint**
-Wire `mycelium-stack`'s documented `grow-on-demand` feature (`stacker::maybe_grow`, unsafe contained in
-the leaf — ADR-014/KC-3) at **coarse pass-entry points** (§9.2 decision). **Hard ordering (RR-29 §4):** the
-fixed 256 MB stack tops out at ~24,600 frames, so grow-on-demand **must land before** any budget raise
-above that, and a startup assertion must tie `max depth × max_frame ≤ reserved stack` when grow-on-demand
-is off. The coarse-placement segment-overrun obligation (a pass may descend the full budget between guards)
-is discharged by **bounded-stride re-check** inside the descent (preferred over `reserve ≥ budget ×
-max_frame`, which recreates the frame-size coupling that caused ADR-041). **Never-silent hazard:**
-`stacker`/`psm` is a **silent no-op on unsupported platforms** (wasm32/others) — the adapter MUST detect
-the no-op case and surface it (G2), never degrade silently to the fixed ceiling.
+### 4.3 Grow the host stack: fine-grained `ensure_sufficient_stack`, runtime-gated (resolves §11 High det14/sec19/sec20)
+Rev 1's "coarse `maybe_grow` + bounded-stride re-check" was an internal contradiction (a stride `S` is
+overrun-safe only if `red_zone ≥ S × max_frame` — the exact frame-size coupling it claimed to avoid).
+**Rev 2:** use **fine-grained `stacker::ensure_sufficient_stack`** (stride-1, rustc's pattern) with a fixed
+generous `red_zone`, at each genuine recursion point of the still-recursive guarded passes — `unsafe`
+contained in the `mycelium-workstack`/`mycelium-stack` leaf (ADR-014/KC-3). **No-grow targets (wasm32; psm
+is a silent no-op — RR-29 §3):** the startup assertion and floor-honorability are gated on **runtime
+growth-availability** (`stacker::remaining_stack` probe), **not** the cargo feature flag. Where the
+physical (post-grow) ceiling `< floor × max_frame`, the machine **refuses to start with an explicit
+diagnostic** (or surfaces a lower ceiling) — **never** a silent SIGABRT below the floor (so §4.4's "floor
+is machine-independent" holds *only where growth is available*, stated honestly). The no-op case is
+**detected and surfaced** (G2), never a silent degrade.
 
 ### 4.4 Deterministic floor + dynamic headroom (amends DN-05, append-only)
-The AOT env-machine's memory-derived ceiling (DN-05/M-349, `[10k, 2M]`) is reconciled with the
-deterministic mandate as **a deterministic floor all three paths honor** (the global default, ≤ which the
-conformance corpus stays) **plus dynamic headroom above it that the differential never exercises**. So the
-observable accept/reject boundary is machine-independent up to the floor; the AOT machine keeps its
-memory-awareness above it. DN-05 gains an append-only amendment recording this; the three-way differential
-is defined **at or below the floor**.
+The AOT machine's memory-derived ceiling (DN-05/M-349, `[10k, 2M]`) is reconciled as **a deterministic
+FLOOR all three paths honor** (the global default 4096, on the §4.0 metric; the corpus stays ≤ floor)
+**plus dynamic headroom above it the differential never exercises**. The **AOT path in the differential is
+pinned to the floor** via `run_core_with_budget`'s explicit ceiling (the dynamic `[10k,2M]` applies only
+outside the differential, as headroom); the memory ceiling and byte accounting apply to AOT too (§4.2
+invariant). So the observable boundary is deterministic up to the floor on one metric; memory-awareness
+survives above it. DN-05 gains an append-only amendment.
 
-### 4.5 Iterative `Drop` (DN-39 review)
-Hand-write iterative `Drop` (the take-and-loop pattern) for `Node`/`Value`/`Datum`/`CoreValue`
-(`mycelium-core`) and `L1Value` (`mycelium-l1`), so deep chains free without recursion — closing the
-class the budget alone cannot (a refused deep AST is still dropped, on the caller stack). Purely additive,
-**semantics-preserving** (identity/`PartialEq`/content-hash untouched). Lands via a **DN-39 promotion
-review** (ratified disposition): the freeze currently protects a semantics already **unsound** for deep
-input (`SIGABRT` ≠ never-silent), so this **restores** the guarantee the freeze assumes — it is
-behavior-preserving hardening, not a semantic change. (Deep `Clone`/content-hash walks get the same
-iterative treatment where they run on untrusted-reachable paths.)
+### 4.5 Iterative destruction across the FULL recursive class (resolves §11 High freeze8, Med freeze9/10, Low freeze11)
+Rev 1 under-counted ("one frozen-core edit"). The **complete** recursive-destruction surface, all made
+iterative: derived **`Drop`** *and* derived **`Clone`** (the front-door `let mut current = node.clone()`
+at `lib.rs:555` SIGABRTs *before* `step` runs — so `myc run` still aborts after W4 unless Clone is fixed),
+**`Canon::node`/`content_hash`**, and **`PartialEq`**, over `Node`/`Value`/`Datum`/`CoreValue`/`L1Value` —
+**plus the unwind-reachable types** (`Frame`, captured `Env`, checker `Ty`, elaborator intermediates): a
+deep guarded pass that panics unwinds ~budget-deep dropping frame locals, so any still-recursive reachable
+type re-overflows → **double-panic abort** (the very SIGABRT we set out to kill). Mechanics: a **single
+shared heterogeneous worklist** across the cross-recursive `Datum↔CoreValue↔Value`/`Node` cluster
+(a per-type worklist re-recurses at each type hop); **`mem::replace`/`take`-based moves** — because `impl
+Drop` **forbids by-value field move-outs (E0509)**, every owned destructure (e.g. `eval_for`'s
+`let L1Value::Data{..} = spine` at `eval.rs:1154`) is converted to by-ref + `mem::replace`; the iterative
+`Drop` **avoids allocation during unwind** (intrusive next-pointer / preallocated scratch — a `Vec::alloc`
+inside `Drop` during OOM/unwind is itself an abort). **Recorded precondition (Low freeze11):** iterative
+`Drop` is double-free-safe *only* under the **Box-owned / acyclic / no-shared-spine** invariant (holds
+today); a future `Rc`/`Arc` intern cache on the spine **invalidates** it — noted as a checked precondition.
+**Honesty:** this is **not** "purely additive" — it couples to the W5 eval-SCC rewrite (E0509 blast radius)
+and lands **coordinated with W5**, not before it (§7).
 
-### 4.6 TCO in the evaluators, EXPLAIN-able (in scope)
-Tail-position calls in the L1/L0 evaluators reuse the current frame (loop, not recurse), so tail-recursive
-`.myc` (and the future self-hosted passes) run in O(1) depth. **Transparency requirement (no black
-boxes):** elided tail frames are **not silently dropped** — they are recorded as a **counted marker**
-(an EXPLAIN-able "N tail frames elided" entry), preserving auditability the way CPython/JVM's TCO refusal
-protected tracebacks (RR-29 §3). Non-tail nesting still charges the budget.
+### 4.6 TCO guarded by a no-pending-post-work precondition (resolves §11-C4, Med tco31/32)
+TCO in the evaluators — **but a "tail" call in Mycelium is not truly tail**: `invoke` runs
+`release_if_abandoned` (Substrate release + `ReleaseEvent`, DN-71 §8/G2) and the **return-guarantee assert**
+*after* the body (`eval.rs:636-642`). Naive frame-reuse would **silently skip** both — leaking a Substrate
+handle (missing `ReleaseEvent`) and accepting a value with a weaker guarantee than the callee's `@Proven`
+return demands (a VR-5 violation). **Checked precondition:** apply frame-reuse **only** when the caller's
+`invoke` frame has **no pending post-work** — no `sig.ret.guarantee` index and no Substrate-typed params;
+otherwise keep the frame and charge depth. **Witness tests:** a tail call from a fn with a return-guarantee
+index, and from a fn with a Substrate param, must NOT be TCO'd (assert the release/assert still fire).
+**Honest scope (tco31):** TCO gives non-tail stdlib idioms (`map`/`filter`/`reverse`) bounded-depth
+**safety**, not unbounded **success** — a 10k non-tail recursion still refuses at 4096; meeting the "10k
+worklist" Goal requires the stdlib be authored **tail-recursive or via `for`** (an explicit dependency for
+M-740). **EXPLAIN marker (tco32):** the elided-frame record is **not** a bare count — it carries per-callee
+identity + iteration count, and a **bounded ring buffer of the last K elided calls**, so a deep tail chain
+that errors yields an actionable trace (house rule #2 in substance, not just letter).
 
-### 4.7 Frontend: guard + grow, convert only if needed
-Parser/checker/elaborator/mono/ambient/totality stay **guarded recursion** on the grow-on-demand stack
-(rustc's validated choice). **Close the guard holes** RR-29 §1 found: `usefulness`/`decision`/`lower_tree`/
-Tarjan `strongconnect`/type-resolvers/`write_canon`/`mycelium-mir-passes`/`value_contains_substrate_id`/
-`to_core` all charge the global budget. **Route data-shaped depth through iteration** (RR-29 §5.2): make
-`check_list` (`checkty.rs:5568`) check the N elements in a flat loop against the cons field type instead of
-building+recursing the N-deep `Cons` chain — the highest-leverage single fix, so a large data literal is
-bounded by *memory*, not the control budget. Convert the `parse_type_ref` family to an explicit stack only
-if profiling after a budget raise demands it (it has the worst 5–6 frames/level ratio).
+### 4.7 Frontend: guard + grow + work-budget; close the FULL guard-hole set (resolves §11 High comp41-48)
+Frontend passes stay guarded recursion on the grown stack (§4.3) + the work-step budget (§4.2). **Close
+every guard hole RR-29 mapped** — Rev 1's list was narrower than the research (§11 High): add
+**`mycelium-lsp` `render_node` + `lint::walk`** (the named-priority editor-buffer surface, no
+`mycelium-stack` dep today), the **`mycelium-fmt` render family** (widened by the parser raise),
+**`mycelium-transpile`** + **`mycelium-doc`** IR walkers, **`is_pure`/`plan_parallel`** (`parallel.rs`),
+`write_canon` (`lower.rs:212`), `mycelium-mir-passes`, and the checker's `usefulness`/`decision`/`grade`
+(independently verify `affine`/`fuse` before waving them off) — each charges the budget or wraps in the
+guard. **`check_list` flat-loop** (route data-shaped depth through iteration, not the control budget) —
+**and apply the same treatment to its structural twin** `usefulness::useful`/`decision::compile_rows` (the
+tuple/ctor-*arity*→depth spine, surface-reachable, not bounded by the 256 nesting cap), or document the
+wide-tuple asymmetry explicitly. Convert `parse_type_ref` to an explicit stack only if profiling after a
+raise demands it. **DoD item 1 is scoped to this concrete crate list** (so "no input SIGABRTs any pass" is
+literally true, not aspirational).
 
 ## 5. Security requirements (secure-by-design, standing)
 
-Non-negotiable, part of the Definition of Done (RR-29 §4):
-- **Byte-capped work-stack** (§4.2) — the heap machine converts stack-DoS to memory-DoS; the cap closes it.
-- **Untrusted-input coverage:** the guarantee is measured against **spore-resolved remote `.myc`** and
-  **LSP editor buffers**, not just local files (RR-29 §4). The L0-interp hole (§1) is the priority fix.
-- **Durability gates (DoD preconditions, not afterthoughts):** add `mycelium-l1` (+ `mycelium-stack`) to
-  `cargo-mutants` scope with **remove-guard witness tests** (a deleted `enter_depth` / `>`-flip mutant must
-  be killed by a `deep input → DepthExceeded` test); add **depth-structured fuzz targets** (a generator
-  emitting N-deep expr/type/pattern/value nesting) over parse/check/elaborate/interp + the value walks —
-  the current 3 fuzz targets never synthesize deep nesting.
-- **`--unbounded` (§4 decision 7):** CLI-flag-**only** (never manifest/env/LSP-config), never-silent stderr
-  banner each run, **corpus-excluded**, **refused in non-interactive/CI** contexts; a test asserts the
-  corpus runner rejects it.
-- **Supply chain:** add `mycelium-stack` (+`mycelium-l1`) to `scripts/checks/unsafe-per-use.sh` audit-A so
-  the `#![forbid(unsafe_code)]` line can't be silently dropped; pin `stacker`/`psm` exact versions; record
-  in `THIRD-PARTY-LICENSES` + `about.toml`; a geiger baseline so a new unsafe dep is never silent.
-- **Keep** serde_json's default-128 limit (never introduce `disable_recursion_limit`); re-audit if any
-  binary `Value`/`Node` codec (bincode/CBOR) is ever added (RR-29 §4).
-- **Periodic adversarial re-review** (maintainer mandate): each wave re-runs the attacker lens over the
-  new surface before it lands.
+Part of the DoD (RR-29 §4 + §11 security lens):
+- **Real memory accounting + process arena + frontend work-budget** (§4.2) — closes the memory-DoS
+  (incl. L0 exponential substitution) and CPU-DoS the frame-struct cap missed.
+- **Untrusted-input coverage** measured against **spore-resolved remote `.myc`** and **LSP editor buffers**,
+  not just local files; the L0-interp hole (§1) is the priority.
+- **Durability gates (DoD preconditions):** add `mycelium-l1` **+ `mycelium-mlir` + `mycelium-workstack`**
+  to `cargo-mutants` with **remove-guard witness tests**; **depth-structured fuzz** over
+  parse/check/elaborate/interp + the value walks + the shared budget/guard in isolation; **census tests are
+  `#[ignore = "Wn"]`-tagged** (or REJECT_EXPECTED xfail) so the intentional W0→W3/W4 red window doesn't
+  block change-scoped gates (§11 Med wave40).
+- **`--unbounded`:** CLI-flag-**only** (never manifest/env/LSP-config), never-silent banner, corpus-excluded,
+  refused in CI — with a test that the corpus runner rejects it.
+- **Supply chain:** add `mycelium-stack`/`mycelium-workstack` (+`mycelium-l1`) to
+  `scripts/checks/unsafe-per-use.sh` audit-A; pin `stacker`/`psm` exact versions; THIRD-PARTY + `about.toml`;
+  a geiger baseline so a new unsafe dep is never silent.
+- **Keep** serde_json's default-128 limit; re-audit if any binary `Value`/`Node` codec is added.
+- **Periodic adversarial re-review** each wave before merge.
 
-## 6. Freeze compatibility (KC-3 / DN-56)
+### 5.1 Error parity + the differential gate (NEW — resolves §11-C2)
+Rev 1's differential compared only **success values** (`differential.rs:136`) and the paths already diverge
+`DepthLimit{usize}` vs `L1Error::DepthExceeded{u32}` vs `FuelExhausted` (`recursion_differential.rs:148`
+tolerates it). Rev 2: **pick one canonical over-budget error variant + width** shared across paths
+(reconcile `DepthLimit`/`DepthExceeded`/`FuelExhausted` first — which budget "wins" on a given input is
+part of the §4.0 metric contract), and **add a cross-path error-parity+threshold differential over deep
+inputs as a W0 gate**: for an input past the floor, all three paths must refuse with the canonical variant
+at the same metric threshold. This gate **fails today** — reconciling the existing divergence is a W0
+precondition, not an afterthought.
 
-Verified freeze-clean (RR-29 §1.4/§0.4): converting the evaluators' recursion strategy adds **no L0 node,
-no prim, no surface syntax** — it is an implementation swap **behind** the frozen semantics boundary, and
-the DN-56 §6 diff policy governs the *kernel surface* (nodes/prims/observable behavior), which is
-unchanged. The **one** frozen-core edit (iterative `Drop`, §4.5) goes through a **DN-39 review** as
-behavior-preserving hardening. Everything else lives in the unfrozen `mycelium-l1` tier or the leaf
-`mycelium-stack`. The M-740 `.myc` port then implements the settled shape once.
+## 6. Freeze compatibility (KC-3 / DN-56) — a defined within-freeze hardening channel (resolves §11 High freeze6)
+Converting the evaluators' recursion strategy adds **no L0 node/prim/surface** — an implementation swap
+behind the frozen semantics boundary (DN-56 §6 governs the kernel *surface*, unchanged; RR-29 §1.4/§0.4).
+The frozen-core **iterative-destruction** edits (§4.5) do **not** fit DN-39 (a default-DENY bar for
+*admitting a new component into the TCB*, not editing a frozen type's impls — §11 High freeze6). This RFC
+defines a scoped **within-freeze "behavior-preserving hardening" channel** with an explicit bar: **(a)** no
+observable value/error/order change (I1/I2/I3); **(b)** M-210 + error-parity differential green; **(c)**
+mutation-witnessed; **(d)** a stated line — *only* recursion→iteration destruction/traversal transforms on
+existing types, never a new type/variant/field or a semantic change (those remain DN-39-promotion or a
+`core 2.0.0` supersession). Rationale the maintainer ratified: the freeze currently protects a semantics
+**already unsound** for deep input (`SIGABRT` ≠ never-silent) — this **restores** the guarantee the freeze
+assumes. **This channel itself is a maintainer-ratified process addition (flagged for the DN-56 append-only
+pointer).**
 
-## 7. Staged implementation plan (waves — Phase 4, isolated worktrees)
+## 7. Staged implementation plan (waves — Phase 4, isolated worktrees; ownership + ordering explicit)
 
-Each wave is disjoint-by-construction, lands differential-green, and is adversarially re-reviewed before
-merge (per the mandate). Ordering respects §4.3's hard constraint.
+Each wave lands differential-green (M-210 **+** the §5.1 error-parity gate) and is adversarially re-reviewed
+before merge. **Shared-file owners** (resolves §11 Med wave39): root `Cargo.toml` + `.cargo/mutants.toml` are
+**integrator-owned** — waves FLAG edits, the integrator applies them (feed-as-ready). **Ordering edges are
+in the table**, not just prose (resolves §11 High wave35).
 
-| Wave | Scope | Gate |
-|---|---|---|
-| **W0 — Safety net** | depth-structured fuzz targets + `mycelium-l1`→mutants + remove-guard witness tests; the `DepthLimit`-never-constructed + `write_canon`/`is_pure`/Drop **guard-hole census** as failing tests | new tests red→green as waves land; no behavior change |
-| **W1 — Unified budget** | one `RecursionBudget` (depth default 4096 + byte cap); wire it through the frontend guard holes (close §4.7); raise parser 256 / eval 64 to the global default | full differential green; guard-hole tests pass |
-| **W2 — Grow-on-demand** | wire `stacker::maybe_grow` (coarse, bounded-stride) in `mycelium-stack`; no-op-platform detection (G2); startup budget≤stack assertion; supply-chain (§5) | build on all targets; no-op surfaced, not silent |
-| **W3 — Iterative Drop** | `Drop` for `Node`/`Value`/`Datum`/`L1Value` (+ untrusted-reachable `Clone`/hash) via DN-39 review | deep-chain drop test passes; identity/eq unchanged |
-| **W3½ — Extract `mycelium-workstack`** | extract the AOT env-machine's generic `WorkStack<Frame>` core (+ the budget primitive) into one new leaf crate (`#![forbid(unsafe_code)]`, downward-only per DN-68); **refactor the AOT machine onto it** behavior-preserving | AOT differential green on the extracted crate; one shared core before three consumers depend on it |
-| **W4 — L0-interp work-stack** | convert `mycelium-interp` `step`/`subst`/read-off onto `mycelium-workstack` + construct `DepthLimit`; route `myc run` through the budget | three-way differential green; `myc run` refuses deep input, never aborts |
-| **W5 — L1-eval work-stack + TCO** | convert the eval SCC onto `mycelium-workstack`; TCO with EXPLAIN-able elided-frame markers | differential green; tail-recursive `.myc` at O(1) depth |
-| **W6 — Data-spine iteration** | `check_list` flat-loop element check (no Cons-chain build); any remaining frontend conversion if profiling demands | large data literal bounded by memory, not budget; corpus green |
+| Wave | Scope | Depends on | Gate |
+|---|---|---|---|
+| **W0 — Safety net + metric + error parity** | depth-structured fuzz; `mycelium-l1`+`mlir`+`workstack`→mutants; the §4.0 metric property test; the §5.1 error-parity differential (canonical variant reconciled); guard-hole census (`#[ignore="Wn"]`-tagged) | — | new gates exist + tagged; metric test passes; error-parity gate defined |
+| **W1 — Budget crate + frontend wiring** | create `mycelium-workstack` (final home); one `RecursionBudget` (depth-on-metric + memory ceiling + work-step); wire through frontend guard holes (§4.7); **parser 256→4096** (eval's raise HELD to W5) | W0 | full differential + error-parity green; census (frontend subset) closed |
+| **W2 — Grow (fine-grained)** | `ensure_sufficient_stack` (stride-1) in the leaf; runtime grow-probe; wasm/no-grow refuse-to-start; startup `mem_ceiling ≥ floor×max_frame` assertion; frame-size CI baseline; supply-chain (§5) | W0 | builds all targets; no-op surfaced; assertion holds |
+| **W3½ — Extract guarded-stack machine** | refactor the AOT env-machine's loop onto the shared guard/budget **behavior-preserving** (budget already in W1's crate) | W1, W2 | AOT differential + error-parity green (oracle unmoved) |
+| **W3 — Iterative destruction (full class)** | iterative `Drop`+`Clone`+`Canon`+`PartialEq` over the full §4.5 set incl. unwind-reachable; E0509 move-out audit; no-alloc-in-Drop | W1; **coordinated with W5** | deep-chain construct+destruct+unwind tests; identity/eq bit-identical; within-freeze bar (§6) |
+| **W4 — L0-interp (substitution) work-stack** | iterative `step`/`subst`/read-off onto the shared budget; construct `DepthLimit`; route `myc run` through it; front-door `node.clone()` (W3) iterativized | W1, W2, W3½, (W3 Clone) | 3-way + error-parity green; `myc run` refuses deep input, never aborts |
+| **W5 — L1-eval (env) work-stack + TCO + eval raise** | eval SCC → CEK `Vec<Frame>` (reify post-child work, §4.6); TCO w/ no-pending-post-work precondition + witness tests + EXPLAIN ring-buffer; **now raise eval 64→4096** | W1, W2, W3½, W3 | differential + error-parity green; tail-safe; TCO witnesses pass |
+| **W6 — Data-spine iteration** | `check_list` + `usefulness`/`decision` flat-loop; residual frontend conversion if profiling demands | W1, W5 | large data literal bounded by memory+work-budget, not depth; corpus green |
 
-M-740 pass-authoring is unblocked once W5 lands (the `.myc` iteration idiom becomes viable). The
-`mycelium-workstack` core (W3½) is the first `lib/compiler/` primitive the port reuses as a
-`compiler.workstack` `.myc` nodule.
+Disjoint waves run as **parallel workflows in isolated worktrees**, feeding an **integrator via feed-as-ready
+`pipeline()`**. **Model roles:** **Fable** plans/QC-reviews; **leaf/impl agents = Opus/Sonnet** (ADR-038);
+mechanical **Fable→Opus safety-fallback**. **Scoped in-branch doc updates as-you-go**; the integrator
+reconciles only the shared indices. M-740 pass-authoring unblocks once W5 lands.
 
-**Orchestration of these waves (maintainer directives, 2026-07-03).** Disjoint waves run as **parallel
-workflows in isolated worktrees**; each feeds its completed component to an **integrator via a
-feed-as-ready `pipeline()`** (no barrier — integration of a green component begins as soon as its deps are
-met, overlapping production). **Model roles:** the **Fable** orchestrator plans + QC-reviews; **leaf /
-implementation agents are Opus or Sonnet** (scoped to complexity — ADR-038). A mechanical **Fable→Opus
-safety-fallback** guards against false-positive safety flags on the biological lexicon / security lens
-(auto-retry a died/refused agent on Opus, never silent). Dependency edges that force ordering: W0 before
-all; W2 (grow-on-demand) **before** any budget raise (§4.3); W3½ **before** W4/W5; the rest parallelize.
-
-## 8. Alternatives considered (and why not)
-
-- **Convert everything to explicit stacks** — rustc declined it as not worth the cost (RR-29 §3); larger,
-  riskier surface. Rejected in favor of convert-eval/guard-frontend.
-- **Guard-only (no conversion)** — leaves the evaluators depth-limited; the `.myc` port keeps burning depth
-  per element. Fails Goal "large worklist in bounded depth." Rejected.
-- **Auto-scale budget to RAM** — machine-dependent accept/reject; breaks determinism + self-hosting
-  portability (DN-84 §4). Rejected except as the corpus-excluded `--unbounded` mode.
-- **Flat/arena-index AST** — dissolves deep-Drop + deep-traversal by construction but is a large retrofit;
-  deferred to the boot10 `.myc` rewrite as the natural place to choose it (RR-29 §3).
+## 8. Alternatives considered
+Convert-everything (rustc declined it — larger/riskier); guard-only (leaves evaluators depth-limited —
+fails the worklist Goal); auto-scale-to-RAM (machine-dependent — rejected except `--unbounded`); flat/arena
+AST (dissolves the class but a large retrofit — deferred to boot10); **one universal `WorkStack<Frame>`**
+(rejected Rev 2 — L0 is substitution, not env; a shared machine is a leaky over-abstraction, §11 workstack3).
 
 ## 9. Definition of Done
+- No input SIGABRTs any pass **in the §4.7 crate list**, on construction, destruction, **or unwind**, incl.
+  spore-remote/LSP shapes and no-grow targets (verified by depth-structured fuzz + remove-guard mutants).
+- `myc run` refuses a deep value with the canonical error, never an abort (W4, incl. the front-door Clone).
+- M-210 **and** the §5.1 cross-path error-parity+threshold differential are green **at/below the floor** on
+  the §4.0 metric; documented divergence only in the dynamic headroom.
+- One deterministic budget (depth-on-metric + memory ceiling + process arena + frontend work-step) governs
+  every path; the `mem_ceiling ≥ floor×max_frame` invariant + frame-size CI baseline hold.
+- Iterative destruction lands via the §6 within-freeze channel; the full §4.5 class is proven-complete
+  (a drop/clone/unwind-depth witness per recursive type incl. an alternating-type deep chain).
+- TCO is precondition-guarded (release/assert never skipped — witness tests); tail chains have actionable
+  EXPLAIN; the non-tail-idiom scope is stated.
+- Supply-chain + `--unbounded` guards in place and tested; `O(N²)` re-walks fixed or explicitly deferred
+  before the raise.
+- DN-05 amended (floor+headroom); the §6 within-freeze channel recorded (DN-56 pointer); RR-29's guard-hole
+  census closed; every claim graded honestly (`Declared`/`Empirical`, no `Proven` — VR-5).
 
-- No input SIGABRTs any interpreter/pass, verified by the depth-structured fuzz suite (incl.
-  spore-remote-`.myc` and LSP-buffer shapes) and remove-guard mutants (all killed).
-- `myc run` refuses a deep value with an explicit `DepthLimit`, never an abort (W4).
-- The three-way differential (L1-eval ≡ L0-interp ≡ AOT) is green **at or below the deterministic floor**;
-  documented divergence only in the dynamic headroom.
-- One global deterministic budget (+ byte cap) governs every interpreter; the scattered constants are
-  retired; the accept/reject boundary is machine-independent up to the floor.
-- Iterative `Drop` lands via a merged DN-39 review; deep-chain construction *and destruction* are safe.
-- Tail-recursive `.myc` runs at O(1) depth with EXPLAIN-able elided frames.
-- Supply-chain + `--unbounded` guards (§5) in place and tested.
-- DN-05 amended (floor+headroom); DN-84 → the mechanism is enacted; RR-29's guard-hole census is closed.
-- Each of the seven guarantee/behavior claims graded honestly (`Declared` budget, `Empirical` differential;
-  no `Proven` without a checked theorem — VR-5).
+## 10. (reserved)
+
+## 11. Phase-3 adversarial review — confirmed objections & resolutions
+An 8-lens adversarial-review workflow (Opus/Sonnet leaves; ~1.15M tokens; 1 refuted) attacked Rev 1 before
+implementation. **4 Critical + 15 High source-confirmed** objections, all resolved above:
+- **C1** no common depth metric → **§4.0** (charge at source call/β boundary).
+- **C2** "same error variants" unverified + already false → **§Posture (I1–I3)** + **§5.1** error-parity gate.
+- **C3** byte cap missed the dominant memory (L0 subst duplication, captured envs) → **§4.2** real accounting
+  + process arena + frontend work-step budget.
+- **C4** TCO silently drops Substrate release + return-assert → **§4.6** no-pending-post-work precondition.
+- **High:** E0509 move-out breakage + fuller frozen-core class (Clone/Canon) → **§4.5**, coordinated with W5;
+  path-dependent byte cap → **§4.2** invariant + CI baseline; extraction common-mode + L0-is-substitution +
+  deps-cycle → **§4.1** (extract budget+guard only, consumer-side charge, isolation tests); no process arena
+  → **§4.2**; no frontend CPU budget → **§4.2**; wasm/no-grow SIGABRT + coarse-vs-stride contradiction →
+  **§4.3** (fine-grained, runtime-gated); W1-raise-before-W2-grow + eval excluded → **§7** (eval raise → W5,
+  ordering in table); census narrower than RR-29 → **§4.7**; DN-39 wrong instrument → **§6** within-freeze
+  channel.
+- **Med/Low:** continuation/scope-restore spec, cross-recursive Drop worklist, unwind-reachable + no-alloc
+  Drop, AOT bound composition, budget-crate relocation, `~24.6k` qualifier, tuple-arity twin, TCO marker
+  content + non-tail honesty, shared-file owners, census red-window tags, Box-owned Drop invariant — all
+  folded into §4.2/§4.3/§4.5/§4.6/§4.7/§7. Full attack transcript: the workflow journal (run
+  `wf_1b970eae-a75`).
 
 ## Meta — changelog
 
-- **2026-07-03 — Proposed (M-979 Phase-2).** Authored from `research/29` + the four maintainer
-  ratifications (RR-29 §6): floor+headroom budget, DN-39 Drop admission, TCO in evaluators, convert-eval/
-  guard-frontend. Decided architecture (§4), security requirements (§5), freeze compatibility (§6), a
-  seven-wave staged plan (§7), and DoD (§9). No new L0 node/prim/surface (KC-3/DN-56-clean). Status
-  **Proposed** → Accepted on ratification; per-stage Enacted as waves land differential-green. (VR-5/G2.)
+- **2026-07-03 — Rev 2: adversarial-review hardening (M-979 Phase-3).** Phase-3 review found 4 Critical +
+  15 High source-confirmed flaws in Rev 1's spec (the strategy held; the spec did not). Resolved all: a
+  single machine-independent depth **metric** (§4.0); an honest correctness invariant + **error-parity
+  differential** (§Posture/§5.1); a **real memory ceiling** (L0 subst duplication + envs) + process arena +
+  frontend work-step budget (§4.2); **TCO precondition** so Substrate release/return-assert are never
+  skipped (§4.6); **full iterative-destruction class** incl. Clone/Canon/unwind + E0509 audit, coordinated
+  with W5 (§4.5); **fine-grained runtime-gated grow** + wasm contract (§4.3); **extract budget+guard only**
+  (L0 stays substitution; deps-cycle fix) + isolation tests (§4.1); a defined **within-freeze hardening
+  channel** replacing the DN-39 mis-fit (§6); wave ordering/owners/census-tags (§7). Status stays
+  **Proposed** → Accepted on ratification. (VR-5/G2.)
+- **2026-07-03 — Rev 1 / Proposed (M-979 Phase-2).** Initial architecture from `research/29` + the four
+  maintainer ratifications; extract shared primitive; 7-wave plan. (Superseded in-place pre-ratification by
+  Rev 2 — append-only history preserved in git; this RFC is not yet Accepted.)
