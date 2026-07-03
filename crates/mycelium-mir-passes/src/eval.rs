@@ -316,6 +316,14 @@ impl Differential {
 }
 
 /// Count `Dup` nodes anywhere in an [`RcNode`].
+//
+// FLAG(W7 residual, RFC-0041 §9): this and [`count_move_unique`] are infallible `RcNode` counters in
+// the same class as `emit::count_occurrences`. On the differential path ([`differential`]) they are
+// only ever reached **after** [`eval`] has already accepted the term — and `eval` refuses any input
+// past the depth ceiling via [`RcError::DepthExceeded`] (its `?` short-circuits before these counters
+// run) — so a deep input cannot SIGABRT through the differential path. As *public* entry points they
+// share the standalone deep-input residual of `count_occurrences` (an infallible→fallible signature
+// change to add a work-step bound is deferred to W2/profiling; not a self-DoS in any current caller).
 #[must_use]
 pub fn count_dups(node: &RcNode) -> usize {
     match node {
