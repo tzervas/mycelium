@@ -11,6 +11,28 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### RFC-0041 W3½ — AOT env-machine extraction onto the shared budget (2026-07-03: M-979)
+
+Fourth RFC-0041 wave and the **last before the frozen-core checkpoint** — a **behavior-preserving**
+refactor: the AOT `Vec<Frame>` env-machine (`mycelium-mlir`) now charges the shared
+`mycelium_workstack::RecursionBudget` and grows via `ensure_sufficient_stack`, instead of its own
+ad-hoc `stack.len() >= max_depth` ceiling. The reference oracle is **unmoved**.
+
+- Both frame-push sites (`enter_apply` for App/Fix/FixGroup, and the `Match` continuation) now call
+  `RecursionBudget::try_enter`, holding the `DepthGuard` for the frame's lifetime (so
+  `budget.current_depth() == stack.len()` at every enter). `BudgetError::DepthExceeded{u32}` maps to
+  the **unchanged** `EvalError::DepthLimit{usize}` at the same limit — byte-for-byte the prior
+  threshold, so `recursion_differential.rs` and the three-way `differential.rs` stay green with **zero**
+  expected-value edits (that *is* the behavior-preserving gate).
+- The machine entry is wrapped in `ensure_sufficient_stack`; the DN-05 floor/headroom split is
+  preserved (§4.4 — the differential runs at the floor, the dynamic `[10k, 2M]` stays as headroom).
+- Resolves the W2 residual: an in-crate `size_of::<Frame>() <= MAX_FRAME_BYTES` pin (Frame ≈ 336 B with
+  the added `DepthGuard`, under the 384 baseline it set).
+- **Honest flag (VR-5):** the AOT charges **per live control-stack frame** (App *and* Match
+  continuations), not purely per §4.0 source-call boundary — this is **identical to pre-W3½ behavior**
+  (why the differentials are unmoved); the per-frame-vs-source-call reconciliation is W5's job. W3½
+  `Enacted` (AOT extraction scope); RFC stays **Accepted**.
+
 ### RFC-0041 W2 — host-stack grow, startup assertion, frame baseline (2026-07-03: M-979)
 
 Third RFC-0041 wave — the host-stack **grow** infrastructure and the never-silent no-grow refusal.
