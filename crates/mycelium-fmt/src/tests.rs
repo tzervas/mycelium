@@ -1369,3 +1369,7 @@ fn shape_invariants_spine_flat_closers_coalesced_tree_shallow() {
 // hole. Registered as a dedicated submodule (rather than appended inline) so the census stays
 // grep-able (`grep -rn 'ignore = "W' crates/`) across every crate it spans.
 mod guard_hole_census;
+
+// RFC-0041 §4.2/§9 W7 process-arena coverage (`docs/notes/W7-arena-coverage-audit.md`): the
+// render-family arena wiring — a synthetic-refusal + normal-pass pair per public entry point.
+mod arena_coverage;
