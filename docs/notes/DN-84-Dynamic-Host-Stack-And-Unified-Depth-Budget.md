@@ -4,10 +4,10 @@
 |---|---|
 | **Note** | DN-84 |
 | **Status** | **Draft** (2026-07-03) |
-| **Feeds** | M-978 (dynamic-stack-depth hardening) |
+| **Feeds** | M-978 (dynamic-stack-depth hardening) · M-979 (design D — explicit work-stack, solve-now; minted by §11) |
 | **Decides** | *Nothing normatively* — advisory design capture. Records the design space for making the recursive frontend passes **crash-proof** (no host-stack `SIGABRT`) with an **essentially unbounded, cleanly-handled** nesting capability, while preserving the never-silent honesty rule (G2), determinism, KC-3, and self-hosting portability. The actual mechanism lands via its own RFC/ADR + issue (M-978) when the direction is ratified. |
 | **Date** | 2026-07-03 |
-| **Task** | M-978 |
+| **Task** | M-978 · M-979 |
 
 > **Posture (transparency rule / VR-5).** Advisory. "Current state" claims cite the actual source
 > (`crates/mycelium-l1/src/`, `crates/mycelium-stack/`). This note **does not** claim limitless

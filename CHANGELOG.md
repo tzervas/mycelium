@@ -11,6 +11,20 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### DN-84 — dynamic host-stack + unified deterministic depth budget (2026-07-03: M-978 · M-979)
+
+New Draft design note **DN-84** capturing the direction to make the recursive frontend crash-proof
+(no host-stack `SIGABRT`) with essentially-unbounded, cleanly-handled nesting — while preserving
+never-silent (G2), determinism, KC-3, and self-hosting portability. Maintainer decisions recorded
+(§11 + correction): **design (D) — the explicit heap work-stack — is solved *now***, before the
+M-740 `.myc` port absorbs the shape; one **global** deterministic budget (default 4096, headroom to
+tens-of-thousands) + coarse-entry host-stack management as supporting infrastructure; an opt-in,
+non-deterministic, corpus-excluded `--unbounded` REPL mode. Mandated method: **research → plan →
+adversarial review → implement**, with secure-by-design periodic adversarial passes. Motivated by
+the ADR-041 near-miss (a toolchain frame-size change turned a 256-deep guard into a `SIGABRT`).
+Issues: **M-978** (direction decided → `todo`) · **M-979** (solve-now track, `in-progress`);
+**M-740** now depends on the settled design. Decides nothing normatively; status **Draft**.
+
 ### Toolchain + dependency freshness: MSRV → 1.96.1, workspace deps refreshed (2026-07-03: ADR-041)
 
 Maintainer-authorized toolchain hygiene pass. No kernel semantics change; the interpreter stays the
