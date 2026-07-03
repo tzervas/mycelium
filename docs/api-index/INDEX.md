@@ -859,7 +859,7 @@
 | `mycelium_l1::parse` | mod | `crates/mycelium-l1/src/lib.rs:59` | — |
 | `mycelium_l1::parse` | fn | `crates/mycelium-l1/src/parse.rs:27` | Parse a complete **single-`nodule`** program from source — the v0 entry point, unchanged by the |
 | `mycelium_l1::parse_nodule_header` | fn | `crates/mycelium-l1/src/nodule.rs:75` | Recognise the optional nodule header marker on the first non-blank line of `src`. |
-| `mycelium_l1::parse_phylum` | fn | `crates/mycelium-l1/src/parse.rs:49` | Parse a complete **phylum** program (M-662; RFC-0006 §4.3): an optional `phylum <path>` header |
+| `mycelium_l1::parse_phylum` | fn | `crates/mycelium-l1/src/parse.rs:56` | Parse a complete **phylum** program (M-662; RFC-0006 §4.3): an optional `phylum <path>` header |
 | `mycelium_l1::resolve` | fn | `crates/mycelium-l1/src/ambient.rs:162` | Resolve a parsed [`Nodule`] to its longhand twin (RFC-0012 §4.3/§4.4). |
 | `mycelium_l1::resolve_report` | fn | `crates/mycelium-l1/src/ambient.rs:176` | Like [`resolve`], but also returns the provenance trace ([`ResolutionNote`]s) for EXPLAIN (§4.3). |
 | `mycelium_l1::substrate` | mod | `crates/mycelium-l1/src/lib.rs:65` | The `Substrate` v0 value form (M-902; DN-71 Model S §4.1) — an interpreter-level opaque affine |
@@ -4631,7 +4631,7 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_l1::nodule::NoduleHeaderError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::nodule::parse_nodule_header` | dedup-alias: same definition as `mycelium_l1::parse_nodule_header` at crates/mycelium-l1/src/nodule.rs:75 — one canonical row kept |
 | `mycelium_l1::parse::parse` | dedup-alias: same definition as `mycelium_l1::parse` at crates/mycelium-l1/src/parse.rs:27 — one canonical row kept |
-| `mycelium_l1::parse::parse_phylum` | dedup-alias: same definition as `mycelium_l1::parse_phylum` at crates/mycelium-l1/src/parse.rs:49 — one canonical row kept |
+| `mycelium_l1::parse::parse_phylum` | dedup-alias: same definition as `mycelium_l1::parse_phylum` at crates/mycelium-l1/src/parse.rs:56 — one canonical row kept |
 | `mycelium_l1::substrate::ReleaseEvent` | dedup-alias: same definition as `mycelium_l1::ReleaseEvent` at crates/mycelium-l1/src/substrate.rs:252 — one canonical row kept |
 | `mycelium_l1::substrate::ReleaseEvent::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::substrate::ReleaseEvent::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |

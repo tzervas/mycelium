@@ -8719,7 +8719,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/parse.rs",
-      "line": 49,
+      "line": 56,
       "summary": "Parse a complete **phylum** program (M-662; RFC-0006 §4.3): an optional `phylum <path>` header",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -35004,7 +35004,7 @@
     },
     {
       "symbol": "mycelium_l1::parse::parse_phylum",
-      "reason": "dedup-alias: same definition as `mycelium_l1::parse_phylum` at crates/mycelium-l1/src/parse.rs:49 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::parse_phylum` at crates/mycelium-l1/src/parse.rs:56 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::substrate::ReleaseEvent",
