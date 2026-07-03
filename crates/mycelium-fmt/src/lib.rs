@@ -65,14 +65,20 @@ use std::collections::HashMap;
 /// for (G2).
 pub const MYCFMT_VERSION: &str = "mycfmt-0";
 
-/// The target line width for the **readable** layout style (M-974). Purely a *presentation* heuristic:
-/// a construct whose compact single-line rendering, placed at its indent column, would exceed this
-/// width is broken across lines (line breaks after commas / `|`); a shorter construct stays inline.
-/// This is `Declared` — a readability threshold, not a proven bound. It is **functionally inert**: the
-/// readable output re-parses to the *same* surface AST as the compact output (the C1/C2 guards enforce
-/// it), so the width choice never changes any parse/elaborate/eval behavior — machines ingest the
-/// flattened stream / full file either way.
-const READABLE_WIDTH: usize = 88;
+/// The default target line width for the **readable** layout style (M-974; retuned M-976). Purely a
+/// *presentation* heuristic: a construct whose compact single-line rendering, placed at its indent
+/// column, would exceed this width is broken across lines (line breaks after commas / `|`); a shorter
+/// construct stays inline. This is `Declared` — a readability threshold, not a proven bound. It is
+/// **functionally inert**: the readable output re-parses to the *same* surface AST as the compact
+/// output (the C1/C2 guards enforce it), so the width choice never changes any parse/elaborate/eval
+/// behavior — machines ingest the flattened stream / full file either way.
+///
+/// **Why 100 (M-976).** The earlier 88 was Black's Python default — an arbitrary import with a
+/// misleading association for a value-semantics systems language. 100 is **`rustfmt`'s `max_width`
+/// default** — the formatter the Mycelium Rust kernel itself already uses — so the threshold is
+/// *grounded in the project's own toolchain*, not borrowed. It is overridable per call via
+/// [`LayoutCfg::width`]; the shipped default is the single threshold (R0).
+const READABLE_WIDTH: usize = 100;
 
 /// The layout style a format pass emits (M-974). Both styles are **identity-preserving projections**
 /// (RFC-0001 §4.6/§4.8) — they differ only in *presentation*, never in the surface AST (C1). The

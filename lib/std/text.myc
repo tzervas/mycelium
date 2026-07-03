@@ -130,11 +130,7 @@ fn slice(b: Bytes, start: Binary{32}, end: Binary{32}) => Bytes =
 fn slice_opt(b: Bytes, start: Binary{32}, end: Binary{32}) => Option[Bytes] =
   match lt(end, start) {
     0b1 => None,
-    _ =>
-      match lt(byte_len(b), end) {
-        0b1 => None,
-        _ => Some(bytes_slice(b, start, end))
-      }
+    _ => match lt(byte_len(b), end) { 0b1 => None, _ => Some(bytes_slice(b, start, end)) }
   };
 
 // ── is_ascii_byte ──────────────────────────────────────────────────────────────────────────────────
@@ -166,10 +162,7 @@ fn is_cont_byte(x: Binary{8}) => Bool =
 // is the never-silent contract). Never-silent (G2): an out-of-range index is an explicit `None`, never
 // a kernel refusal leaking through and never a silent wrap. This closes FLAG-text-1 (wave-n1).
 fn byte_at(b: Bytes, i: Binary{8}) => Option[Binary{8}] =
-  match lt(width_cast(i, bytes_len(b)), bytes_len(b)) {
-    0b1 => Some(bytes_get(b, i)),
-    _ => None
-  };
+  match lt(width_cast(i, bytes_len(b)), bytes_len(b)) { 0b1 => Some(bytes_get(b, i)), _ => None };
 
 // ── widen8 ─────────────────────────────────────────────────────────────────────────────────────────
 // widen8: zero-extend a Binary{8} value to Binary{32} (Exact widen, DN-41). The width witness is a
@@ -215,10 +208,7 @@ fn cont_payload(c: Binary{8}) => Binary{32} =
 // Guarantee: Declared (the Result wrapping is the never-silent contract; the predicate is Exact `lt`).
 // 2-byte: valid iff cp >= 0x80 (a 1-byte value here would be overlong). The 2-byte max (0x7FF) is below
 // both the surrogate gap and the ceiling, so only the overlong check applies. (0x80 = 1<<7.)
-fn reject_two(
-  cp: Binary{32},
-  lead: Binary{8}
-) => Result[Pair[Binary{32}, Binary{8}], Utf8Error] =
+fn reject_two(cp: Binary{32}, lead: Binary{8}) => Result[Pair[Binary{32}, Binary{8}], Utf8Error] =
   match lt(cp, 0b0000_0000_0000_0000_0000_0000_1000_0000) {
     0b1 => Err(Overlong(lead)),
     _ => Ok(Pr(cp, 0b0000_0010))
@@ -227,10 +217,7 @@ fn reject_two(
 // 3-byte: valid iff cp >= 0x800 (else overlong) AND cp not in 0xD800..0xDFFF (else a surrogate — not a
 // Unicode scalar value). The 3-byte max (0xFFFF) is below the ceiling, so no too-large check.
 // (0x800 = 1<<11; 0xD800 = surrogate-gap low; 0xE000 = surrogate-gap high+1.)
-fn reject_three(
-  cp: Binary{32},
-  lead: Binary{8}
-) => Result[Pair[Binary{32}, Binary{8}], Utf8Error] =
+fn reject_three(cp: Binary{32}, lead: Binary{8}) => Result[Pair[Binary{32}, Binary{8}], Utf8Error] =
   match lt(cp, 0b0000_0000_0000_0000_0000_1000_0000_0000) {
     0b1 => Err(Overlong(lead)),
     _ => match lt(cp, 0b0000_0000_0000_0000_1101_1000_0000_0000) {
@@ -245,10 +232,7 @@ fn reject_three(
 // 4-byte: valid iff cp >= 0x10000 (else overlong) AND cp <= 0x10FFFF (else above the Unicode ceiling).
 // The 4-byte min (0x10000) is above the surrogate gap, so no surrogate check.
 // (0x10000 = 1<<16; 0x10FFFF = the maximum Unicode scalar value.)
-fn reject_four(
-  cp: Binary{32},
-  lead: Binary{8}
-) => Result[Pair[Binary{32}, Binary{8}], Utf8Error] =
+fn reject_four(cp: Binary{32}, lead: Binary{8}) => Result[Pair[Binary{32}, Binary{8}], Utf8Error] =
   match lt(cp, 0b0000_0000_0000_0001_0000_0000_0000_0000) {
     0b1 => Err(Overlong(lead)),
     _ => match lt(0b0000_0000_0001_0000_1111_1111_1111_1111, cp) {
@@ -289,11 +273,7 @@ fn decode_two(
     None => Err(Invalid(lead)),
     Some(c1) => match is_cont_byte(c1) {
       False => Err(Invalid(c1)),
-      True =>
-        reject_two(
-          or(shl6(widen8(and(lead, 0b0001_1111))), cont_payload(c1)),
-          lead
-        )
+      True => reject_two(or(shl6(widen8(and(lead, 0b0001_1111))), cont_payload(c1)), lead)
     }
   };
 
@@ -392,10 +372,7 @@ fn decode_four(
 // Unicode scalar values (RFC-3629). Structural malformations (bad lead, missing/short continuation,
 // bad continuation) still surface as `Err(Invalid(byte))`. Boundary values (U+0080, U+0800, U+10000,
 // U+10FFFF) are accepted, not over-rejected (std_text.rs validity tests).
-fn decode_one(
-  b: Bytes,
-  i: Binary{8}
-) => Result[Pair[Binary{32}, Binary{8}], Utf8Error] =
+fn decode_one(b: Bytes, i: Binary{8}) => Result[Pair[Binary{32}, Binary{8}], Utf8Error] =
   match byte_at(b, i) {
     None => Err(Invalid(0b0000_0000)),
     Some(lead) => match lt(lead, 0b1000_0000) {
@@ -406,10 +383,11 @@ fn decode_one(
           0b1 => decode_two(b, i, lead),
           _ => match lt(lead, 0b1111_0000) {
             0b1 => decode_three(b, i, lead),
-            _ => match lt(lead, 0b1111_1000) {
-              0b1 => decode_four(b, i, lead),
-              _ => Err(Invalid(lead))
-            }
+            _ =>
+              match lt(lead, 0b1111_1000) {
+                0b1 => decode_four(b, i, lead),
+                _ => Err(Invalid(lead))
+              }
           }
         }
       }

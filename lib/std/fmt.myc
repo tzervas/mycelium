@@ -39,10 +39,7 @@ type HexPair = HP(Binary{8}, Binary{8});
 fn hex_digit(nibble: Binary{8}) => Binary{8} =
   match lt(nibble, 0b0000_1010) {
     0b1 => add_u(nibble, 0b0011_0000),
-    _ => match lt(nibble, 0b0001_0000) {
-      0b1 => add_u(nibble, 0b0101_0111),
-      _ => 0b0011_1111
-    }
+    _ => match lt(nibble, 0b0001_0000) { 0b1 => add_u(nibble, 0b0101_0111), _ => 0b0011_1111 }
   };
 
 // ── nibble_lo ─────────────────────────────────────────────────────────────────────────────────────

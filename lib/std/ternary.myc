@@ -180,10 +180,7 @@ type Trits = TNil | TCons(Trit, Trits);
 // a string longer than 255 digits hits add_u's never-silent carry refusal — far past the m <= 10
 // codec ceiling (FLAG-ternary-2), so unreachable through this surface's own producers.
 fn trits_len(ts: Trits) => Binary{8} =
-  match ts {
-    TNil => 0b0000_0000,
-    TCons(_, rest) => add_u(0b0000_0001, trits_len(rest))
-  };
+  match ts { TNil => 0b0000_0000, TCons(_, rest) => add_u(0b0000_0001, trits_len(rest)) };
 
 // tsnoc: append one trit at the LSB end. O(n) spine-walk (std.collections::snoc precedent).
 fn tsnoc(ts: Trits, t: Trit) => Trits =
@@ -195,20 +192,14 @@ fn tconcat(a: Trits, b: Trits) => Trits =
 
 // zeros: the m-trit all-zero string (the balanced representation of 0 at width m).
 fn zeros(m: Binary{8}) => Trits =
-  match eq(m, 0b0000_0000) {
-    0b1 => TNil,
-    _ => TCons(TZero, zeros(sub_u(m, 0b0000_0001)))
-  };
+  match eq(m, 0b0000_0000) { 0b1 => TNil, _ => TCons(TZero, zeros(sub_u(m, 0b0000_0001))) };
 
 // ttake / tdrop: the first n digits / everything after them. Total (short inputs yield what
 // exists — used only on strings whose length the callers below have already established).
 fn ttake(ts: Trits, n: Binary{8}) => Trits =
   match eq(n, 0b0000_0000) {
     0b1 => TNil,
-    _ => match ts {
-      TNil => TNil,
-      TCons(h, rest) => TCons(h, ttake(rest, sub_u(n, 0b0000_0001)))
-    }
+    _ => match ts { TNil => TNil, TCons(h, rest) => TCons(h, ttake(rest, sub_u(n, 0b0000_0001))) }
   };
 
 fn tdrop(ts: Trits, n: Binary{8}) => Trits =
@@ -233,10 +224,7 @@ fn b3x16(v: Binary{16}) => Binary{16} =
 // pow3: 3^m at Binary{16}, for m <= 10 (3^10 = 59049 <= 65535; callers gate the ceiling —
 // max_magnitude below refuses past it). Guarantee: Exact on the gated domain.
 fn pow3(m: Binary{8}) => Binary{16} =
-  match eq(m, 0b0000_0000) {
-    0b1 => 0b0000_0000_0000_0001,
-    _ => b3x16(pow3(sub_u(m, 0b0000_0001)))
-  };
+  match eq(m, 0b0000_0000) { 0b1 => 0b0000_0000_0000_0001, _ => b3x16(pow3(sub_u(m, 0b0000_0001))) };
 
 // max_magnitude: the maximum representable magnitude in m trits, (3^m - 1) / 2 — the symmetric
 // range is [-max, +max]. Guarantee: Exact. Returns None for m > 10 (3^11 overflows Binary{16}) —
@@ -299,17 +287,15 @@ fn encode_mag(u: Binary{16}, m: Binary{8}) => Option[Trits] =
     _ =>
       let r = rem_u(u, 0b0000_0000_0000_0011) in
       match eq(r, 0b0000_0000_0000_0000) {
-        0b1 =>
-          match encode_mag(div_u(u, 0b0000_0000_0000_0011), sub_u(m, 0b0000_0001)) {
-            Some(rest) => Some(tsnoc(rest, TZero)),
+        0b1 => match encode_mag(div_u(u, 0b0000_0000_0000_0011), sub_u(m, 0b0000_0001)) {
+          Some(rest) => Some(tsnoc(rest, TZero)),
+          None => None
+        },
+        _ => match eq(r, 0b0000_0000_0000_0001) {
+          0b1 => match encode_mag(div_u(u, 0b0000_0000_0000_0011), sub_u(m, 0b0000_0001)) {
+            Some(rest) => Some(tsnoc(rest, TPos)),
             None => None
           },
-        _ => match eq(r, 0b0000_0000_0000_0001) {
-          0b1 =>
-            match encode_mag(div_u(u, 0b0000_0000_0000_0011), sub_u(m, 0b0000_0001)) {
-              Some(rest) => Some(tsnoc(rest, TPos)),
-              None => None
-            },
           _ => match encode_mag(
                   div_u(add_u(u, 0b0000_0000_0000_0001), 0b0000_0000_0000_0011),
                   sub_u(m, 0b0000_0001)
@@ -329,11 +315,7 @@ fn encode_mag(u: Binary{16}, m: Binary{8}) => Option[Trits] =
 fn int_to_trits(v: SInt, m: Binary{8}) => Option[Trits] =
   match v {
     SPos(mag) => encode_mag(mag, m),
-    SNeg(mag) =>
-      match encode_mag(mag, m) {
-        Some(ts) => Some(trits_neg(ts)),
-        None => None
-      }
+    SNeg(mag) => match encode_mag(mag, m) { Some(ts) => Some(trits_neg(ts)), None => None }
   };
 
 // ── fixed-width balanced-ternary arithmetic over Trits ──────────────────────────────────────────
@@ -350,16 +332,8 @@ type TSum = TS(Trit, Trit);
 fn trit2_sum(x: Trit, y: Trit) => TSum =
   match x {
     TZero => TS(y, TZero),
-    TPos => match y {
-      TZero => TS(TPos, TZero),
-      TPos => TS(TNeg, TPos),
-      TNeg => TS(TZero, TZero)
-    },
-    TNeg => match y {
-      TZero => TS(TNeg, TZero),
-      TNeg => TS(TPos, TNeg),
-      TPos => TS(TZero, TZero)
-    }
+    TPos => match y { TZero => TS(TPos, TZero), TPos => TS(TNeg, TPos), TNeg => TS(TZero, TZero) },
+    TNeg => match y { TZero => TS(TNeg, TZero), TNeg => TS(TPos, TNeg), TPos => TS(TZero, TZero) }
   };
 
 // trit_full_add: three-digit balanced sum (x + y + carry-in). The two partial carries c1, c2
@@ -368,9 +342,10 @@ fn trit2_sum(x: Trit, y: Trit) => TSum =
 // (grounded here, not silently dropped — G2). Guarantee: Exact. Total.
 fn trit_full_add(x: Trit, y: Trit, c: Trit) => TSum =
   match trit2_sum(x, y) {
-    TS(d1, c1) => match trit2_sum(d1, c) {
-      TS(d2, c2) => match trit2_sum(c1, c2) { TS(cc, _) => TS(d2, cc) }
-    }
+    TS(d1, c1) =>
+      match trit2_sum(d1, c) {
+        TS(d2, c2) => match trit2_sum(c1, c2) { TS(cc, _) => TS(d2, cc) }
+      }
   };
 
 // TCarry — (partial sum, carry toward the MSB) from adding two equal-length tails.
@@ -386,9 +361,10 @@ fn addc(a: Trits, b: Trits) => Option[TCarry] =
       TCons(bh, bt) => match addc(at, bt) {
         None => None,
         Some(p) => match p {
-          TC(stail, cin) => match trit_full_add(ah, bh, cin) {
-            TS(d, cout) => Some(TC(TCons(d, stail), cout))
-          }
+          TC(stail, cin) =>
+            match trit_full_add(ah, bh, cin) {
+              TS(d, cout) => Some(TC(TCons(d, stail), cout))
+            }
         }
       }
     }
@@ -402,9 +378,10 @@ fn addc(a: Trits, b: Trits) => Option[TCarry] =
 fn trits_add(a: Trits, b: Trits) => Option[Trits] =
   match addc(a, b) {
     None => None,
-    Some(p) => match p {
-      TC(sum, cout) => match cout { TZero => Some(sum), TPos => None, TNeg => None }
-    }
+    Some(p) =>
+      match p {
+        TC(sum, cout) => match cout { TZero => Some(sum), TPos => None, TNeg => None }
+      }
   };
 
 // trits_sub: fixed-width subtraction a - b = trits_add(a, trits_neg(b)) — the same identity the
@@ -428,10 +405,11 @@ fn mul_go(bs: Trits, aw: Trits, acc: Trits) => Option[Trits] =
     TNil => Some(acc),
     TCons(d, rest) => match t3x(acc) {
       None => None,
-      Some(acc3) => match trits_add(acc3, term_of(d, aw)) {
-        None => None,
-        Some(acc2) => mul_go(rest, aw, acc2)
-      }
+      Some(acc3) =>
+        match trits_add(acc3, term_of(d, aw)) {
+          None => None,
+          Some(acc2) => mul_go(rest, aw, acc2)
+        }
     }
   };
 
@@ -445,11 +423,7 @@ fn trits_mul(a: Trits, b: Trits) => Option[Trits] =
   match eq(m, trits_len(b)) {
     0b1 => match mul_go(b, tconcat(zeros(m), a), zeros(add_u(m, m))) {
       None => None,
-      Some(prod) =>
-        match all_zero(ttake(prod, m)) {
-          True => Some(tdrop(prod, m)),
-          False => None
-        }
+      Some(prod) => match all_zero(ttake(prod, m)) { True => Some(tdrop(prod, m)), False => None }
     },
     _ => None
   };
@@ -484,10 +458,7 @@ type SelectionNote = ExplicitCaller;
 type ByteList = BNil | BCons(Binary{8}, ByteList);
 
 fn bytelist_len(bs: ByteList) => Binary{8} =
-  match bs {
-    BNil => 0b0000_0000,
-    BCons(_, rest) => add_u(0b0000_0001, bytelist_len(rest))
-  };
+  match bs { BNil => 0b0000_0000, BCons(_, rest) => add_u(0b0000_0001, bytelist_len(rest)) };
 
 // Packed — bytes + the inspectable Meta.physical record: MkPacked(bytes, scheme, trit_count).
 // Two packings of the same trits under different schemes are the same LOGICAL value (DN-01 —
@@ -634,11 +605,7 @@ fn unpack_tl1(bs: ByteList) => Result[Trits, PackError] =
     BNil => Ok(TNil),
     BCons(byte, rest) => match tl1_group(byte) {
       Err(e) => Err(e),
-      Ok(group) =>
-        match unpack_tl1(rest) {
-          Err(e) => Err(e),
-          Ok(tail) => Ok(tconcat(group, tail))
-        }
+      Ok(group) => match unpack_tl1(rest) { Err(e) => Err(e), Ok(tail) => Ok(tconcat(group, tail)) }
     }
   };
 
@@ -651,10 +618,7 @@ fn pack_tl2(ts: Trits) => Option[ByteList] =
   match pack_tl1(ts) { None => None, Some(bs) => Some(tl2_complement(bs)) };
 
 fn tl2_complement(bs: ByteList) => ByteList =
-  match bs {
-    BNil => BNil,
-    BCons(b, rest) => BCons(sub_u(0b1111_0010, b), tl2_complement(rest))
-  };
+  match bs { BNil => BNil, BCons(b, rest) => BCons(sub_u(0b1111_0010, b), tl2_complement(rest)) };
 
 fn unpack_tl2(bs: ByteList) => Result[Trits, PackError] =
   match bs {
@@ -663,10 +627,11 @@ fn unpack_tl2(bs: ByteList) => Result[Trits, PackError] =
       0b1 => Err(OffGrid),
       _ => match tl1_group(sub_u(0b1111_0010, byte)) {
         Err(e) => Err(e),
-        Ok(group) => match unpack_tl2(rest) {
-          Err(e) => Err(e),
-          Ok(tail) => Ok(tconcat(group, tail))
-        }
+        Ok(group) =>
+          match unpack_tl2(rest) {
+            Err(e) => Err(e),
+            Ok(tail) => Ok(tconcat(group, tail))
+          }
       }
     }
   };
@@ -681,18 +646,9 @@ fn pack(ts: Trits, s: Scheme) => Result[Packed, PackError] =
   let n = trits_len(ts) in
   match eq(rem_u(n, scheme_group_size(s)), 0b0000_0000) {
     0b1 => match s {
-      I2S => match pack_i2s(ts) {
-        Some(bs) => Ok(MkPacked(bs, I2S, n)),
-        None => Err(Misaligned)
-      },
-      Tl1 => match pack_tl1(ts) {
-        Some(bs) => Ok(MkPacked(bs, Tl1, n)),
-        None => Err(Misaligned)
-      },
-      Tl2 => match pack_tl2(ts) {
-        Some(bs) => Ok(MkPacked(bs, Tl2, n)),
-        None => Err(Misaligned)
-      }
+      I2S => match pack_i2s(ts) { Some(bs) => Ok(MkPacked(bs, I2S, n)), None => Err(Misaligned) },
+      Tl1 => match pack_tl1(ts) { Some(bs) => Ok(MkPacked(bs, Tl1, n)), None => Err(Misaligned) },
+      Tl2 => match pack_tl2(ts) { Some(bs) => Ok(MkPacked(bs, Tl2, n)), None => Err(Misaligned) }
     },
     _ => Err(Misaligned)
   };
@@ -831,9 +787,7 @@ fn row_unpack() => OpGuarantee =
   OpRow(
     "unpack",
     GExact,
-    FErrOn(
-      "OffGrid — forged/corrupt Packed only; lossless on every pack-produced value"
-    ),
+    FErrOn("OffGrid — forged/corrupt Packed only; lossless on every pack-produced value"),
     "none",
     ExplainYes
   );
@@ -874,10 +828,7 @@ fn bool_and(a: Bool, b: Bool) => Bool =
 
 // nonempty: True iff the Bytes has at least one byte (bytes_len is Exact; eq at Binary{32}).
 fn nonempty(b: Bytes) => Bool =
-  match eq(bytes_len(b), 0b0000_0000_0000_0000_0000_0000_0000_0000) {
-    0b1 => False,
-    _ => True
-  };
+  match eq(bytes_len(b), 0b0000_0000_0000_0000_0000_0000_0000_0000) { 0b1 => False, _ => True };
 
 fn is_exact_tag(t: Tag) => Bool =
   match t { GExact => True, GProven => False, GEmpirical => False, GDeclared => False };
@@ -895,18 +846,12 @@ fn row_explainable(r: OpGuarantee) => Explainable =
   match r { OpRow(_, _, _, _, x) => x };
 
 fn matrix_len(xs: Rows) => Binary{8} =
-  match xs {
-    RNil => 0b0000_0000,
-    RCons(_, rest) => add_u(0b0000_0001, matrix_len(rest))
-  };
+  match xs { RNil => 0b0000_0000, RCons(_, rest) => add_u(0b0000_0001, matrix_len(rest)) };
 
 // all_exact: every row must tag GExact (C2/VR-5 — a non-Exact row would be a dishonest
 // downgrade of an exact fact; a mutant flipping any row fails this).
 fn all_exact(xs: Rows) => Bool =
-  match xs {
-    RNil => True,
-    RCons(r, rest) => bool_and(is_exact_tag(row_tag(r)), all_exact(rest))
-  };
+  match xs { RNil => True, RCons(r, rest) => bool_and(is_exact_tag(row_tag(r)), all_exact(rest)) };
 
 // all_effects_nonempty: every row states its effects — all "none" here (C6/RFC-0014). The
 // "== none" content assertion needs a bytes_eq prim (FLAG-ternary-5); non-emptiness is portable.

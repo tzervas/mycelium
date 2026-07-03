@@ -1196,13 +1196,22 @@ fn readable_body(before: &str, cfg: LayoutCfg) -> String {
         .to_owned()
 }
 
-/// THE ACCEPTANCE ORACLE: in the COMPACT (default) readable style, every canonical sample's `after`
-/// is reproduced byte-for-byte from its `before` (R0–R6). The `unchanged` samples additionally
+/// THE ACCEPTANCE ORACLE: in the COMPACT (`InlineWhenFits`) readable style, every canonical sample's
+/// `after` is reproduced byte-for-byte from its `before` (R0–R6). The `unchanged` samples additionally
 /// assert `after == before` (the confirmed-good anchors are left exactly as-is). Every sample also
 /// round-trips (C1) and is a fixed point (C2), so the layout is behavior-neutral (`Empirical`).
+///
+/// **Width note (M-976).** The spec's `after` strings are its oracle **at width 88**; the *shipped*
+/// default is now `READABLE_WIDTH = 100` (`rustfmt`-aligned, M-976). So this oracle pins `width: 88`
+/// explicitly — it validates the R0–R6 *rules* against the spec's exact fixtures, independent of the
+/// retuned default. The 100-wide default is exercised by the `lib/std` re-render + the round-trip /
+/// wrap / shape-invariant tests, which are width-agnostic in structure.
 #[test]
 fn shape_dispatched_samples_reproduce_after_byte_for_byte() {
-    let cfg = LayoutCfg::default();
+    let cfg = LayoutCfg {
+        width: 88,
+        ..LayoutCfg::default()
+    };
     for (label, unchanged, before, after) in SHAPE_DISPATCHED_SAMPLES {
         let got = readable_body(before, cfg);
         let want = after.trim_end_matches('\n');
