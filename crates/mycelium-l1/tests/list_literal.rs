@@ -25,7 +25,7 @@ fn checked_body(src: &str) -> mycelium_l1::ast::Expr {
         .clone()
 }
 
-/// THE PROOF: a `[…]` literal against a `Vec[_]` context elaborates to the byte-identical AST as the
+/// BEHAVIOR-NEUTRALITY (`Empirical`): a `[…]` literal against a `Vec[_]` context elaborates to the byte-identical AST as the
 /// hand-written `Cons` chain — so it is behaviour-neutral by construction (same surface AST after
 /// desugaring ⇒ identical eval / elaborate / AOT).
 #[test]

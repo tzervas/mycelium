@@ -23,6 +23,27 @@ impl core::marker::Unpin for mycelium_fmt::FmtError
 impl core::marker::UnsafeUnpin for mycelium_fmt::FmtError
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_fmt::FmtError
 impl core::panic::unwind_safe::UnwindSafe for mycelium_fmt::FmtError
+pub enum mycelium_fmt::SpineInner
+pub mycelium_fmt::SpineInner::AlwaysExpand
+pub mycelium_fmt::SpineInner::InlineWhenFits
+impl core::clone::Clone for mycelium_fmt::SpineInner
+pub fn mycelium_fmt::SpineInner::clone(&self) -> mycelium_fmt::SpineInner
+impl core::cmp::Eq for mycelium_fmt::SpineInner
+impl core::cmp::PartialEq for mycelium_fmt::SpineInner
+pub fn mycelium_fmt::SpineInner::eq(&self, &mycelium_fmt::SpineInner) -> bool
+impl core::default::Default for mycelium_fmt::SpineInner
+pub fn mycelium_fmt::SpineInner::default() -> mycelium_fmt::SpineInner
+impl core::fmt::Debug for mycelium_fmt::SpineInner
+pub fn mycelium_fmt::SpineInner::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_fmt::SpineInner
+impl core::marker::StructuralPartialEq for mycelium_fmt::SpineInner
+impl core::marker::Freeze for mycelium_fmt::SpineInner
+impl core::marker::Send for mycelium_fmt::SpineInner
+impl core::marker::Sync for mycelium_fmt::SpineInner
+impl core::marker::Unpin for mycelium_fmt::SpineInner
+impl core::marker::UnsafeUnpin for mycelium_fmt::SpineInner
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_fmt::SpineInner
+impl core::panic::unwind_safe::UnwindSafe for mycelium_fmt::SpineInner
 pub enum mycelium_fmt::Style
 pub mycelium_fmt::Style::Compact
 pub mycelium_fmt::Style::Readable
@@ -67,8 +88,31 @@ impl core::marker::Unpin for mycelium_fmt::Formatted
 impl core::marker::UnsafeUnpin for mycelium_fmt::Formatted
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_fmt::Formatted
 impl core::panic::unwind_safe::UnwindSafe for mycelium_fmt::Formatted
+pub struct mycelium_fmt::LayoutCfg
+pub mycelium_fmt::LayoutCfg::spine_inner: mycelium_fmt::SpineInner
+pub mycelium_fmt::LayoutCfg::width: usize
+impl core::clone::Clone for mycelium_fmt::LayoutCfg
+pub fn mycelium_fmt::LayoutCfg::clone(&self) -> mycelium_fmt::LayoutCfg
+impl core::cmp::Eq for mycelium_fmt::LayoutCfg
+impl core::cmp::PartialEq for mycelium_fmt::LayoutCfg
+pub fn mycelium_fmt::LayoutCfg::eq(&self, &mycelium_fmt::LayoutCfg) -> bool
+impl core::default::Default for mycelium_fmt::LayoutCfg
+pub fn mycelium_fmt::LayoutCfg::default() -> Self
+impl core::fmt::Debug for mycelium_fmt::LayoutCfg
+pub fn mycelium_fmt::LayoutCfg::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_fmt::LayoutCfg
+impl core::marker::StructuralPartialEq for mycelium_fmt::LayoutCfg
+impl core::marker::Freeze for mycelium_fmt::LayoutCfg
+impl core::marker::Send for mycelium_fmt::LayoutCfg
+impl core::marker::Sync for mycelium_fmt::LayoutCfg
+impl core::marker::Unpin for mycelium_fmt::LayoutCfg
+impl core::marker::UnsafeUnpin for mycelium_fmt::LayoutCfg
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_fmt::LayoutCfg
+impl core::panic::unwind_safe::UnwindSafe for mycelium_fmt::LayoutCfg
 pub const mycelium_fmt::MYCFMT_VERSION: &str
 pub fn mycelium_fmt::flatten_source(&str, core::option::Option<&str>) -> core::result::Result<mycelium_fmt::Formatted, mycelium_fmt::FmtError>
 pub fn mycelium_fmt::format_source(&str, core::option::Option<&str>) -> core::result::Result<mycelium_fmt::Formatted, mycelium_fmt::FmtError>
 pub fn mycelium_fmt::format_source_readable(&str, core::option::Option<&str>) -> core::result::Result<mycelium_fmt::Formatted, mycelium_fmt::FmtError>
+pub fn mycelium_fmt::format_source_readable_cfg(&str, core::option::Option<&str>, mycelium_fmt::LayoutCfg) -> core::result::Result<mycelium_fmt::Formatted, mycelium_fmt::FmtError>
 pub fn mycelium_fmt::format_source_styled(&str, core::option::Option<&str>, mycelium_fmt::Style) -> core::result::Result<mycelium_fmt::Formatted, mycelium_fmt::FmtError>
+pub fn mycelium_fmt::format_source_styled_cfg(&str, core::option::Option<&str>, mycelium_fmt::Style, mycelium_fmt::LayoutCfg) -> core::result::Result<mycelium_fmt::Formatted, mycelium_fmt::FmtError>
