@@ -11416,10 +11416,13 @@ issues:
       - src:crates/mycelium-l1/src/checkty.rs
       - src:crates/mycelium-interp/src/lib.rs
     body: |
-      Phase-1 research DONE (research/29). Phase-2 RFC AUTHORED: RFC-0041 (Proposed) — decided
-      architecture with all four maintainer ratifications baked in (floor+headroom budget amending
-      DN-05; DN-39 iterative-Drop admission; TCO in evaluators; convert-eval/guard-frontend). Next:
-      Phase-3 adversarial review of RFC-0041, then Phase-4 staged implementation (7 waves W0-W6, §7).
+      Phase-1 research DONE (research/29). Phase-2 RFC AUTHORED, Phase-3 adversarially reviewed
+      (Rev 2 — 4 Critical + 15 High resolved), Phase-4-unblocking ratification DONE: RFC-0041 is
+      **Accepted** (2026-07-03, maintainer-ratified Rev 2) — decided architecture with all four
+      maintainer ratifications baked in (floor+headroom budget amending DN-05; DN-39 iterative-Drop
+      admission via the §6 within-freeze channel; TCO in evaluators; convert-eval/guard-frontend).
+      Next: Phase-4 staged implementation (7 waves W0-W6, RFC-0041 §7); `Accepted -> Enacted`
+      per-stage as each wave lands differential + error-parity green.
       DN-84 design (D), CONFIRMED by the maintainer (DN-84 §11 correction, 2026-07-03) as the
       solve-NOW track: get the complexity of the problem and solution fully figured out and solved
       in the Rust reference era, BEFORE the M-740 .myc port has to absorb the shape (the dogfooded
