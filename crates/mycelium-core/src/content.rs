@@ -363,132 +363,191 @@ impl Canon {
 
     /// Encode a node under a binder scope (innermost binder last), α-renaming bound variables to
     /// de Bruijn indices so binder *names* never reach the hash.
-    fn node(&mut self, n: &Node, scope: &mut Vec<VarId>) {
-        match n {
-            Node::Var(name) => {
-                // Innermost-first search; a bound var becomes its de Bruijn index, a free var keeps
-                // its name (a free name is part of an open term's contract, not a local detail).
-                if let Some(pos) = scope.iter().rposition(|b| b == name) {
-                    let de_bruijn = (scope.len() - 1 - pos) as u32;
-                    self.tag(tag::VAR_BOUND);
-                    self.u32(de_bruijn);
-                } else {
-                    self.tag(tag::VAR_FREE);
-                    self.str(name);
-                }
-            }
-            Node::Const(v) => {
-                self.tag(tag::CONST);
-                self.value(v);
-            }
-            Node::Let { id, bound, body } => {
-                self.tag(tag::LET);
-                // The bound expression is in the *outer* scope; the binder name itself is NOT hashed.
-                self.node(bound, scope);
-                scope.push(id.clone());
-                self.node(body, scope);
-                scope.pop();
-            }
-            Node::Op { prim, args } => {
-                self.tag(tag::OP);
-                self.str(prim); // the operator IS identity-bearing
-                self.u64(args.len() as u64);
-                for a in args {
-                    self.node(a, scope);
-                }
-            }
-            Node::Swap {
-                src,
-                target,
-                policy,
-            } => {
-                self.tag(tag::SWAP);
-                self.node(src, scope);
-                self.repr(target); // the target type is part of the static contract
-                self.str(policy.as_str()); // and so is the policy reference (RFC-0005)
-            }
-            Node::Construct { ctor, args } => {
-                self.tag(tag::CONSTRUCT);
-                self.ctor_ref(ctor); // the constructor identity (#T#i) is identity-bearing
-                self.u64(args.len() as u64);
-                for a in args {
-                    self.node(a, scope);
-                }
-            }
-            Node::Match {
-                scrutinee,
-                alts,
-                default,
-            } => {
-                self.tag(tag::MATCH);
-                self.node(scrutinee, scope);
-                self.u64(alts.len() as u64);
-                for alt in alts {
-                    match alt {
-                        Alt::Ctor {
-                            ctor,
-                            binders,
-                            body,
-                        } => {
-                            self.tag(tag::ALT_CTOR);
-                            self.ctor_ref(ctor);
-                            // Binder *names* are not hashed (α-normalised); their count + positions
-                            // are, via the de Bruijn scope the body is hashed under.
-                            self.u64(binders.len() as u64);
-                            let mark = scope.len();
-                            scope.extend(binders.iter().cloned());
-                            self.node(body, scope);
-                            scope.truncate(mark);
-                        }
-                        Alt::Lit { value, body } => {
-                            self.tag(tag::ALT_LIT);
-                            self.value(value); // the literal is identity-bearing (repr + payload)
-                            self.node(body, scope);
+    ///
+    /// **Iterative (RFC-0041 §4.5, W3):** an explicit action-worklist replaces native recursion so a
+    /// deeply-nested node spine hashes with **bounded** native stack (a recursive `node` overflows →
+    /// `SIGABRT`, which violates never-silent G2). The byte stream is **byte-for-byte identical** to
+    /// the former recursive encoding — content addresses are unchanged (bar (a); mutation-witnessed):
+    /// every immediate byte (tag / operator / length / repr / policy / literal) is emitted at exactly
+    /// the same point, and the de Bruijn scope is pushed/popped by explicit `PushScope`/`PushBinders`/
+    /// `PopTo` actions interleaved in the same order the recursion would (so each `Var` sees the same
+    /// scope). Scope holds **references** to binder names (never emitted — only used to index), so no
+    /// name is cloned.
+    fn node(&mut self, root: &Node) {
+        // An action processed LIFO. Non-`Visit` actions are the emissions/scope-ops that, in the
+        // recursion, happened *between or after* a node's children (e.g. a `Swap`'s `target`/`policy`
+        // after its `src`, or a binder scope pop after a body). To schedule a node's forward action
+        // sequence on a LIFO stack, we push it **reversed**.
+        enum Act<'a> {
+            Visit(&'a Node),
+            Tag(u8),
+            U64(u64),
+            Str(&'a str),
+            Repr(&'a Repr),
+            Value(&'a Value),
+            Ctor(&'a crate::data::CtorRef),
+            PushScope(&'a VarId),
+            PushBinders(&'a [VarId]),
+            PopTo(usize),
+        }
+
+        let mut scope: Vec<&VarId> = Vec::new();
+        let mut acts: Vec<Act<'_>> = vec![Act::Visit(root)];
+
+        while let Some(act) = acts.pop() {
+            match act {
+                Act::Tag(t) => self.tag(t),
+                Act::U64(n) => self.u64(n),
+                Act::Str(s) => self.str(s),
+                Act::Repr(r) => self.repr(r),
+                Act::Value(v) => self.value(v),
+                Act::Ctor(c) => self.ctor_ref(c),
+                Act::PushScope(name) => scope.push(name),
+                Act::PushBinders(bs) => scope.extend(bs.iter()),
+                Act::PopTo(mark) => scope.truncate(mark),
+                Act::Visit(n) => match n {
+                    Node::Var(name) => {
+                        // Innermost-first search; a bound var becomes its de Bruijn index, a free var
+                        // keeps its name (a free name is part of an open term's contract).
+                        if let Some(pos) = scope.iter().rposition(|&b| b == name) {
+                            let de_bruijn = (scope.len() - 1 - pos) as u32;
+                            self.tag(tag::VAR_BOUND);
+                            self.u32(de_bruijn);
+                        } else {
+                            self.tag(tag::VAR_FREE);
+                            self.str(name);
                         }
                     }
-                }
-                match default {
-                    Some(d) => {
-                        self.tag(tag::MATCH_DEFAULT);
-                        self.node(d, scope);
+                    Node::Const(v) => {
+                        self.tag(tag::CONST);
+                        self.value(v);
                     }
-                    None => self.tag(tag::MATCH_NO_DEFAULT),
-                }
-            }
-            Node::Lam { param, body } => {
-                // The param name is α-normalised (de Bruijn); identity is over the body structure.
-                self.tag(tag::LAM);
-                scope.push(param.clone());
-                self.node(body, scope);
-                scope.pop();
-            }
-            Node::App { func, arg } => {
-                self.tag(tag::APP);
-                self.node(func, scope);
-                self.node(arg, scope);
-            }
-            Node::Fix { name, body } => {
-                // The self-reference name is α-normalised (de Bruijn); the body sees it in scope.
-                self.tag(tag::FIX);
-                scope.push(name.clone());
-                self.node(body, scope);
-                scope.pop();
-            }
-            Node::FixGroup { defs, body } => {
-                // The group binds all member names as one frame: each name is α-normalised (de
-                // Bruijn) and in scope for every definition and the continuation. The arity is part
-                // of the hash, so groups of different sizes never collide.
-                self.tag(tag::FIXGROUP);
-                self.u64(defs.len() as u64);
-                let mark = scope.len();
-                for (name, _) in defs {
-                    scope.push(name.clone());
-                }
-                for (_, d) in defs {
-                    self.node(d, scope);
-                }
-                self.node(body, scope);
-                scope.truncate(mark);
+                    Node::Let { id, bound, body } => {
+                        // forward: LET · node(bound) · push(id) · node(body) · pop
+                        self.tag(tag::LET);
+                        let mark = scope.len();
+                        acts.push(Act::PopTo(mark));
+                        acts.push(Act::Visit(body));
+                        acts.push(Act::PushScope(id));
+                        acts.push(Act::Visit(bound));
+                    }
+                    Node::Op { prim, args } => {
+                        self.tag(tag::OP);
+                        self.str(prim); // the operator IS identity-bearing
+                        self.u64(args.len() as u64);
+                        for a in args.iter().rev() {
+                            acts.push(Act::Visit(a));
+                        }
+                    }
+                    Node::Swap {
+                        src,
+                        target,
+                        policy,
+                    } => {
+                        // forward: SWAP · node(src) · repr(target) · str(policy)
+                        self.tag(tag::SWAP);
+                        acts.push(Act::Str(policy.as_str()));
+                        acts.push(Act::Repr(target));
+                        acts.push(Act::Visit(src));
+                    }
+                    Node::Construct { ctor, args } => {
+                        self.tag(tag::CONSTRUCT);
+                        self.ctor_ref(ctor); // the constructor identity (#T#i) is identity-bearing
+                        self.u64(args.len() as u64);
+                        for a in args.iter().rev() {
+                            acts.push(Act::Visit(a));
+                        }
+                    }
+                    Node::Match {
+                        scrutinee,
+                        alts,
+                        default,
+                    } => {
+                        self.tag(tag::MATCH);
+                        // Build the forward action sequence, then push it reversed. The per-alt binder
+                        // scope pops back to the match baseline (scope is balanced across scrutinee
+                        // and each alt, so the baseline is constant — matching the recursive `mark`).
+                        let baseline = scope.len();
+                        let mut seq: Vec<Act<'_>> = Vec::new();
+                        seq.push(Act::Visit(scrutinee));
+                        seq.push(Act::U64(alts.len() as u64));
+                        for alt in alts {
+                            match alt {
+                                Alt::Ctor {
+                                    ctor,
+                                    binders,
+                                    body,
+                                } => {
+                                    seq.push(Act::Tag(tag::ALT_CTOR));
+                                    seq.push(Act::Ctor(ctor));
+                                    // Binder names are α-normalised (not hashed); count + positions
+                                    // ride the de Bruijn scope the body is hashed under.
+                                    seq.push(Act::U64(binders.len() as u64));
+                                    seq.push(Act::PushBinders(binders));
+                                    seq.push(Act::Visit(body));
+                                    seq.push(Act::PopTo(baseline));
+                                }
+                                Alt::Lit { value, body } => {
+                                    seq.push(Act::Tag(tag::ALT_LIT));
+                                    seq.push(Act::Value(value)); // literal is identity-bearing
+                                    seq.push(Act::Visit(body));
+                                }
+                            }
+                        }
+                        match default {
+                            Some(d) => {
+                                seq.push(Act::Tag(tag::MATCH_DEFAULT));
+                                seq.push(Act::Visit(d));
+                            }
+                            None => seq.push(Act::Tag(tag::MATCH_NO_DEFAULT)),
+                        }
+                        for a in seq.into_iter().rev() {
+                            acts.push(a);
+                        }
+                    }
+                    Node::Lam { param, body } => {
+                        // forward: LAM · push(param) · node(body) · pop
+                        self.tag(tag::LAM);
+                        let mark = scope.len();
+                        acts.push(Act::PopTo(mark));
+                        acts.push(Act::Visit(body));
+                        acts.push(Act::PushScope(param));
+                    }
+                    Node::App { func, arg } => {
+                        // forward: APP · node(func) · node(arg)
+                        self.tag(tag::APP);
+                        acts.push(Act::Visit(arg));
+                        acts.push(Act::Visit(func));
+                    }
+                    Node::Fix { name, body } => {
+                        // forward: FIX · push(name) · node(body) · pop
+                        self.tag(tag::FIX);
+                        let mark = scope.len();
+                        acts.push(Act::PopTo(mark));
+                        acts.push(Act::Visit(body));
+                        acts.push(Act::PushScope(name));
+                    }
+                    Node::FixGroup { defs, body } => {
+                        // forward: FIXGROUP · u64(len) · push(all names) · node(each def) · node(body)
+                        // · pop. All member names enter scope as one frame before any def/body body
+                        // is hashed (mutual recursion), matching the recursive encoder.
+                        self.tag(tag::FIXGROUP);
+                        self.u64(defs.len() as u64);
+                        let mark = scope.len();
+                        let mut seq: Vec<Act<'_>> = Vec::new();
+                        for (name, _) in defs {
+                            seq.push(Act::PushScope(name));
+                        }
+                        for (_, d) in defs {
+                            seq.push(Act::Visit(d));
+                        }
+                        seq.push(Act::Visit(body));
+                        seq.push(Act::PopTo(mark));
+                        for a in seq.into_iter().rev() {
+                            acts.push(a);
+                        }
+                    }
+                },
             }
         }
     }
@@ -514,8 +573,7 @@ impl Node {
     #[must_use]
     pub fn content_hash(&self) -> ContentHash {
         let mut c = Canon::new();
-        let mut scope = Vec::new();
-        c.node(self, &mut scope);
+        c.node(self);
         c.finish()
     }
 }
