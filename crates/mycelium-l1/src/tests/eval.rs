@@ -237,6 +237,41 @@ fn an_infinite_tail_recursion_is_tco_bounded_and_trips_fuel_not_depth() {
 }
 
 #[test]
+fn a_tail_recursion_with_a_return_guarantee_is_not_tco_and_grows_depth() {
+    // RFC-0041 §4.6 (M-979) TCO precondition witness. A `@ Exact` return-guarantee index is PENDING
+    // post-work (the return-assert runs after the body), so a tail call from such a fn must NOT
+    // reuse its frame — else the assert is silently skipped (a VR-5 hazard). `g` is a direct tail
+    // recursion but carries a ret-guarantee, so it is NOT TCO-eligible: its depth grows and it
+    // refuses with `DepthExceeded` (a TCO-bounded loop would instead exhaust *fuel*). The
+    // guarantee-free twin `h` — identical but for the missing `@ Exact` — IS tail-optimised
+    // (FuelExhausted + recorded elisions), proving the ONLY difference is the precondition.
+    let env_g = env(
+        "nodule d;\nfn g(b: Binary{8}) => Binary{8} @ Exact = g(b);\n\
+         fn main() => Binary{8} = g(0b0000_0000);",
+    );
+    let ev_g = Evaluator::new(&env_g).with_fuel(100_000_000);
+    let err_g = ev_g.call("main", vec![]).unwrap_err();
+    assert!(
+        matches!(err_g, L1Error::DepthExceeded { limit } if limit == DEFAULT_DEPTH),
+        "a ret-guarantee tail recursion must NOT be TCO'd → DepthExceeded, got {err_g:?}"
+    );
+
+    let env_h = env("nodule d;\nfn h(b: Binary{8}) => Binary{8} = h(b);\n\
+         fn main() => Binary{8} = h(0b0000_0000);");
+    let ev_h = Evaluator::new(&env_h).with_fuel(100_000);
+    let err_h = ev_h.call("main", vec![]).unwrap_err();
+    assert_eq!(
+        err_h,
+        L1Error::FuelExhausted,
+        "the guarantee-free twin IS tail-optimised → FuelExhausted (bounded depth)"
+    );
+    assert!(
+        ev_h.tco_trace().total_elided > 0,
+        "the guarantee-free twin must show TCO elisions"
+    );
+}
+
+#[test]
 fn depth_is_charged_at_the_source_call_boundary_not_per_ast_node() {
     // RFC-0041 §4.0 (M-979): depth is charged **once per `Expr::App` boundary** (the source-call/β
     // metric), NOT per AST node. So a nested-application chain `not(not(… not(0b…) …))` of N calls
