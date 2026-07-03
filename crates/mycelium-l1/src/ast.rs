@@ -236,9 +236,53 @@ pub struct LowerDecl {
     /// Empty means a nullary rule. Each name is unbound at the declaration; the checker introduces
     /// them as [`crate::checkty::Ty::Var`] while checking the RHS.
     pub params: Vec<String>,
-    /// The explicit lowered term — a typed Mycelium expression that the rule expands to when
-    /// applied via `derive Name for T`. The RHS is checked against the parameter scope.
-    pub rhs: Expr,
+    /// The rule's right-hand side — either an **expression**-shaped term (the v0 form,
+    /// `lower Name = <expr>`) or an **item**-shaped template (DN-54 §10 Model A, M-973 —
+    /// `lower Name[T] = impl Trait for T { … }`). See [`LowerRhs`].
+    pub rhs: LowerRhs,
+}
+
+/// The right-hand side of a `lower` rule (DN-54 §3.2 / §10; M-812, M-973). A rule expands either to
+/// an **expression**-shaped term or to an **item**-shaped template — the two forms the DN-54 §10.1(b)
+/// "item-not-Expr gap" identifies. The item form is what Model A (sibling-item injection, DN-81 §10)
+/// enacts: a `derive Name for T` instantiates the item template at `T` and injects the resulting
+/// concrete item as a sibling declaration (checked / coherent / affine-checked by the ordinary
+/// passes — never a second-class artifact, DN-54 §10.4).
+#[derive(Debug, Clone, PartialEq)]
+pub enum LowerRhs {
+    /// Expression-shaped RHS — the v0 landed form (`lower Name = <expr>`; DN-54 §3.2). Elaborated to
+    /// a closed L0 [`Expr`] via [`crate::elab::elaborate_lower_rule`]; no sibling item is injected.
+    Expr(Expr),
+    /// Item-shaped RHS — a trait-instance **template** parametric over the rule's type param(s)
+    /// (`lower Name[T] = impl Trait for T { … }`; DN-54 §10.1(b)/§10.3 Model A; OQ-B v1 restricts the
+    /// legal item set to `impl Trait for T`). At a `derive Name for C` use site the checker
+    /// substitutes `C` for the rule's param throughout this template and injects the resulting
+    /// concrete [`ImplDecl`] as a sibling item (M-973). Never a silent over-generalization (G2).
+    Impl(ImplDecl),
+}
+
+impl LowerDecl {
+    /// The rule's RHS as an expression, if it is expression-shaped (`None` for an item-shaped rule).
+    /// Additive Law-of-Demeter accessor so callers that only handle the v0 expression form need not
+    /// re-match [`LowerRhs`] (M-973).
+    #[must_use]
+    pub fn expr_rhs(&self) -> Option<&Expr> {
+        match &self.rhs {
+            LowerRhs::Expr(e) => Some(e),
+            LowerRhs::Impl(_) => None,
+        }
+    }
+
+    /// The rule's RHS as an item-shaped `impl` template, if it is item-shaped (`None` for an
+    /// expression-shaped rule). The template is parametric over [`Self::params`]; a `derive` site
+    /// instantiates it (M-973 / DN-54 §10 Model A).
+    #[must_use]
+    pub fn impl_rhs(&self) -> Option<&ImplDecl> {
+        match &self.rhs {
+            LowerRhs::Impl(id) => Some(id),
+            LowerRhs::Expr(_) => None,
+        }
+    }
 }
 
 /// A `derive Name for T` application (DN-54 §3.2 / DN-38 §8.1 / M-812). The checker looks up the
@@ -552,12 +596,15 @@ pub enum BaseType {
     /// enclosing ambient, or refuses (`UnresolvedAmbient`/`ParadigmShapeMismatch`). It never
     /// survives into the checker (defense-in-depth: a residual one is an explicit internal refusal).
     Ambient(AmbientParams),
-    /// **Function type** `A -> B` (RFC-0024 §3, HOF stage 1 — surface only). Single-argument
-    /// v1; right-associative; `@` binds tighter than `->` (so `A @ Exact -> B` parses as
-    /// `(A @ Exact) -> B`). The checker and mono are responsible for defunctionalization
-    /// (M-686/M-687); this variant does **not** survive past the checker in v1 (deferred —
-    /// multi-argument `(A, B) -> C` is not yet supported and is a never-silent refusal at the
-    /// parser).
+    /// **Function type** `A => B` (RFC-0024 §3/§4A.8, HOF stage 1 — surface only). Single-argument
+    /// v1; right-associative; `@` binds tighter than `=>` (so `A @ Exact => B` parses as
+    /// `(A @ Exact) => B`). The checker and mono are responsible for defunctionalization
+    /// (M-686/M-687); this variant does **not** survive past the checker in v1. **Multi-argument
+    /// function values are the curried arrow `A => B => C`** (M-822; ratified canonical by
+    /// DN-73 D1) — nested `Fn` nodes, no new mechanism. A **tuple-domain arrow** `(A, B) => C`
+    /// is a *distinct* type — this same `Fn` node with a [`BaseType::Tuple`] on the left (M-826)
+    /// — with **no implicit interconversion** to/from the curried form (DN-73 D2; a mismatch is
+    /// a never-silent type error naming both types, never a silent adaptation).
     Fn(Box<TypeRef>, Box<TypeRef>),
     /// **Tuple type** `(T, U, …)` (M-826 — v0 first-class product type; arity ≥ 2). A single
     /// parenthesized type `(T)` stays grouping, never a 1-tuple. The checker desugars each arity-N

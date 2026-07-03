@@ -186,6 +186,24 @@ const REJECT_EXPECTED: &[(&str, &str)] = &[
         "29-missing-semicolon-terminator.myc",
         "expected `;` to terminate this item",
     ),
+    (
+        // RFC-0037 D2-b / DN-02 (M-915): `vec` was explicitly REJECTED as the short repr-keyword
+        // alias for `VSA` (collides with `std.collections.Vec`) — it is never a keyword, so
+        // `vec{...}` in type position parses `vec` as a bare identifier and then fails on the
+        // unexpected `{` where the parameter list's closing `)` was expected (never a silent
+        // accept, G2).
+        "30-vec-short-alias-rejected.myc",
+        "expected `)` to close the parameter list",
+    ),
+    (
+        // M-916 (RFC-0025 §4.2, resolved by RFC-0037 D1): `<=`/`>=` are retired glyphs — no such
+        // token exists, so `a <= b` lexes as `LAngle`, `Eq` and the parser reads `a < (= b)`,
+        // failing on the `=` where a right-hand-side expression was expected (never a silent
+        // reinterpretation of the old two-char glyph, G2). The word forms `lte`/`gte` are the only
+        // valid spelling (see accept/20-operator-syntax.myc).
+        "31-old-le-ge-glyph-retired.myc",
+        "expected an expression",
+    ),
 ];
 
 #[test]

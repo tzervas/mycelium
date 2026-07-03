@@ -5,3 +5,4 @@
 mod completions;
 mod lint;
 mod project;
+mod semantic;

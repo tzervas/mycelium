@@ -1,0 +1,59 @@
+============================================================
+10 object via lower derive
+============================================================
+
+nodule composition.surface;
+
+trait Negate[A] {
+    fn negate(x: A) => A;
+};
+
+object Wrapped {
+    Box(Binary{8});
+    via 0 : Negate;
+};
+
+lower Trivial = True;
+
+derive Trivial for Binary{8};
+
+------------------------------------------------------------
+
+(source_file
+  (nodule_header
+    name: (path
+      (identifier)
+      (identifier)))
+  (trait_item
+    name: (identifier)
+    (type_params
+      (identifier))
+    (fn_sig
+      name: (identifier)
+      (params
+        (param
+          name: (identifier)
+          type: (type_ref
+            (named_type
+              name: (identifier)))))
+      return_type: (type_ref
+        (named_type
+          name: (identifier)))))
+  (object_item
+    name: (identifier)
+    (constructor
+      name: (identifier)
+      (type_ref
+        (repr_type
+          (int_literal))))
+    (via_clause
+      index: (int_literal)
+      trait: (identifier)))
+  (lower_item
+    name: (identifier)
+    body: (identifier))
+  (derive_item
+    name: (identifier)
+    type: (type_ref
+      (repr_type
+        (int_literal)))))

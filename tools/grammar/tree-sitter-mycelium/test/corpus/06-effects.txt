@@ -1,0 +1,23 @@
+============================================================
+06 effects
+============================================================
+
+nodule effects;
+
+fn wide() => Binary{8} !{io, time} = source();
+
+------------------------------------------------------------
+
+(source_file
+  (nodule_header
+    name: (identifier))
+  (fn_item
+    name: (identifier)
+    return_type: (type_ref
+      (repr_type
+        (int_literal)))
+    (effects
+      (identifier)
+      (identifier))
+    body: (call_expr
+      function: (identifier))))

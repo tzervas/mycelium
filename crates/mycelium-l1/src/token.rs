@@ -168,6 +168,36 @@ pub enum Tok {
     Dense,
     /// `VSA`.
     Vsa,
+    /// `bin` — the RFC-0037 D2-b short repr-keyword alias for [`Tok::Binary`] (DN-02 lexicon
+    /// amendment, ratified-pending-RFC-0037; DN-31 2026-06-27 kind-split revision). Reserved as a
+    /// **full keyword**, the same class as `Binary` itself — this resolves RFC-0037 §7 FLAG-3 in
+    /// favor of the reserved-keyword path (not a soft/contextual keyword): the four paradigm
+    /// repr-keywords already reserve their long forms outright, so the ergonomic alias adopts the
+    /// identical posture rather than growing a second, softer keyword class (never a silent
+    /// identifier — G2). `bin{N}` **elaborates identically** to `Binary{N}` (D2-b): the parser
+    /// produces the exact same [`crate::ast::BaseType::Binary`] for either spelling — no new AST
+    /// node, so a downstream pass can never observe which spelling was written (KC-3). `mycfmt`
+    /// therefore canonicalizes to the long form on output (the existing `Binary`/`Ternary`/`Dense`/
+    /// `VSA` rendering already in place) — a `Declared` choice that keeps the existing corpus and
+    /// its formatted output unchanged (no reformat churn), while accepting the short spelling as
+    /// input.
+    BinShort,
+    /// `tern` — the RFC-0037 D2-b short repr-keyword alias for [`Tok::Ternary`]. See
+    /// [`Tok::BinShort`] for the reserved-keyword rationale and the elaborate-identically /
+    /// canonicalize-to-long-form design (both apply identically here).
+    TernShort,
+    /// `emb` — the RFC-0037 D2-b short repr-keyword alias for [`Tok::Dense`] (mnemonic:
+    /// embeddings — DN-02 T-map note: `emb` names the primary *use* of `Dense`, not the structural
+    /// property, accepted because the intended workload is homogeneous). See [`Tok::BinShort`] for
+    /// the reserved-keyword rationale and the elaborate-identically / canonicalize-to-long-form
+    /// design.
+    EmbShort,
+    /// `hvec` — the RFC-0037 D2-b short repr-keyword alias for [`Tok::Vsa`] (mnemonic: hypervector).
+    /// `vec` was considered and explicitly **rejected** (DN-02/RFC-0037 D2-b) — it collides
+    /// conceptually with `Vec` in `lib/std/collections.myc`; `vec` is therefore NOT a keyword and
+    /// stays a plain identifier. See [`Tok::BinShort`] for the reserved-keyword rationale and the
+    /// elaborate-identically / canonicalize-to-long-form design.
+    HvecShort,
     /// `Seq` — the first-class indexed homogeneous sequence repr-type keyword (`Seq{T, N}`;
     /// RFC-0032 D3, M-749). A repr-type keyword like `Binary`/`Ternary`/`Dense`/`VSA`; its
     /// descriptor `{T, N}` carries an element type and a `u32` length. Reserved so it can never be a
@@ -438,6 +468,15 @@ pub fn keyword(word: &str) -> Option<Tok> {
         "Ternary" => Tok::Ternary,
         "Dense" => Tok::Dense,
         "VSA" => Tok::Vsa,
+        // RFC-0037 D2-b short repr-keyword aliases (DN-02 lexicon amendment): reserved full
+        // keywords, never silent identifiers (G2). `bin`/`tern`/`emb`/`hvec` elaborate identically
+        // to `Binary`/`Ternary`/`Dense`/`VSA` (see the `Tok::BinShort` doc comment). `vec` was
+        // considered and rejected (collides with `std.collections.Vec`) — it is deliberately NOT a
+        // keyword here.
+        "bin" => Tok::BinShort,
+        "tern" => Tok::TernShort,
+        "emb" => Tok::EmbShort,
+        "hvec" => Tok::HvecShort,
         // RFC-0032 D3/D4 (M-749/M-750): the sequence + byte-string repr-type keywords. Reserved so
         // they can never be silent identifiers (G2).
         "Seq" => Tok::Seq,

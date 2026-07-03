@@ -45,6 +45,10 @@ pub(crate) mod decision;
 pub mod elab;
 pub mod error;
 pub mod eval;
+/// DN-58 §A (M-965) — the `Fuse` prelude trait (F-A1) + the semilattice-law checker (F-A2), the
+/// [`checkty`] post-pass driven by [`checkty::check_nodule`]/[`checkty::check_phylum`]. Internal
+/// to the frontend, like [`grade`]; not part of the public surface.
+pub(crate) mod fuse;
 /// RFC-0018 stage-1a static guarantee grading (Design A) — the [`checkty`] post-pass that enforces
 /// the guarantee lattice `Exact ⊐ Proven ⊐ Empirical ⊐ Declared` statically. Internal to the
 /// frontend (driven by [`checkty::check_nodule`]); not part of the public surface.
@@ -74,7 +78,10 @@ pub use checkty::{
     check_and_resolve, check_nodule, check_nodule_matured, check_phylum, check_phylum_matured,
     CheckError, Env, PhylumEnv, Ty,
 };
-pub use elab::{elaborate, elaborate_colony, elaborate_lower_rule, elaborate_reclaim, ElabError};
+pub use elab::{
+    elaborate, elaborate_colony, elaborate_direct, elaborate_lower_rule, elaborate_reclaim,
+    ElabError,
+};
 pub use error::ParseError;
 pub use eval::{Evaluator, ForageDecision, ForageError, L1Error, L1Value};
 pub use mono::{

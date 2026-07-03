@@ -1,0 +1,57 @@
+============================================================
+11 function types
+============================================================
+
+nodule higher_order;
+
+fn apply(f: Binary{8} => Binary{8}, x: Binary{8}) => Binary{8} = f(x);
+
+fn curried(f: Binary{8} => Binary{8} => Binary{8}) => Binary{8} = f(0b0);
+
+------------------------------------------------------------
+
+(source_file
+  (nodule_header
+    name: (identifier))
+  (fn_item
+    name: (identifier)
+    (params
+      (param
+        name: (identifier)
+        type: (type_ref
+          (repr_type
+            (int_literal))
+          return: (type_ref
+            (repr_type
+              (int_literal)))))
+      (param
+        name: (identifier)
+        type: (type_ref
+          (repr_type
+            (int_literal)))))
+    return_type: (type_ref
+      (repr_type
+        (int_literal)))
+    body: (call_expr
+      function: (identifier)
+      (identifier)))
+  (fn_item
+    name: (identifier)
+    (params
+      (param
+        name: (identifier)
+        type: (type_ref
+          (repr_type
+            (int_literal))
+          return: (type_ref
+            (repr_type
+              (int_literal))
+            return: (type_ref
+              (repr_type
+                (int_literal)))))))
+    return_type: (type_ref
+      (repr_type
+        (int_literal)))
+    body: (call_expr
+      function: (identifier)
+      (bin_literal))))

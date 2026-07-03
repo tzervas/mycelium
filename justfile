@@ -55,6 +55,13 @@ check:
 # CI entrypoint — same as `check` (explicit alias used by .github/workflows/checks.yml).
 ci: check
 
+# Run `just check` but FAITHFULLY surface its exit code (never masked by a trailing
+# command) + a grep-able `CHECK_RESULT=PASS|FAIL exit=N` line. Use for automation /
+# background runs where `just check >log; tail log` would report tail's exit, not the
+# gate's. Log defaults to target/verify-check.log (override: `just verify <path>`).
+verify log="target/verify-check.log":
+    @bash scripts/checks/verify.sh {{log}}
+
 # Tier 2 — release / nightly / durability. The FULL workspace at HIGH proptest cases, PLUS the
 # heavy durability gates: cargo-mutants (`just mutants`) + a cargo-fuzz smoke (scripts/checks/
 # fuzz-smoke.sh, which wraps `just fuzz` skip-gracefully — a missing nightly/cargo-fuzz skips, never

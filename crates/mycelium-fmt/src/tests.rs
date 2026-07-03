@@ -514,3 +514,280 @@ fn format_source_does_not_panic_on_a_string_literal() {
         Err(e) => panic!("unexpected error (not a panic, but unexpected): {e}"),
     }
 }
+
+// ============================================================================================
+// RFC-0037 D2-b short repr-keyword aliases (M-915): `bin`/`tern`/`emb`/`hvec`
+// ============================================================================================
+
+/// `mycfmt` canonicalizes every short repr-keyword alias to its long form on output — a
+/// `Declared` design choice (see `render_type_ref`'s doc comment) that avoids reformat churn on
+/// the existing long-form corpus. Each entry is `(label, short-form src, expected long-form
+/// output)`.
+const SHORT_REPR_KEYWORD_CORPUS: &[(&str, &str, &str)] = &[
+    (
+        "bin-canonicalizes-to-binary",
+        "nodule d;\nfn f(x: bin{8}) => bin{8} = x;\n",
+        "nodule d;\n\nfn f(x: Binary{8}) => Binary{8} =\n  x;\n",
+    ),
+    (
+        "tern-canonicalizes-to-ternary",
+        "nodule d;\nfn f(x: tern{6}) => tern{6} = x;\n",
+        "nodule d;\n\nfn f(x: Ternary{6}) => Ternary{6} =\n  x;\n",
+    ),
+    (
+        "emb-canonicalizes-to-dense",
+        "nodule d;\nfn f(x: emb{768, F32}) => emb{768, F32} = x;\n",
+        "nodule d;\n\nfn f(x: Dense{768, F32}) => Dense{768, F32} =\n  x;\n",
+    ),
+    (
+        "hvec-canonicalizes-to-vsa",
+        "nodule d;\nfn f(x: hvec{MAP, 10000, Dense}) => hvec{MAP, 10000, Dense} = x;\n",
+        "nodule d;\n\nfn f(x: VSA{MAP, 10000, Dense}) => VSA{MAP, 10000, Dense} =\n  x;\n",
+    ),
+];
+
+#[test]
+fn short_repr_keywords_canonicalize_to_long_form_and_are_idempotent() {
+    for (label, short_src, expected_long) in SHORT_REPR_KEYWORD_CORPUS {
+        let formatted = format_source(short_src, None)
+            .unwrap_or_else(|e| panic!("{label}: format_source failed: {e}"));
+        assert_eq!(
+            &formatted.output, expected_long,
+            "{label}: expected canonicalization to the long form"
+        );
+
+        // C1: the short-form input and the long-form output parse to the SAME surface AST — the
+        // alias elaborates identically (D2-b), so formatting never changes program meaning.
+        let before = parse(short_src).expect(label);
+        let after = parse(&formatted.output).expect(label);
+        assert_eq!(before, after, "{label}: C1 identity across the alias swap");
+
+        // C2: formatting the already-long-form output is a byte-for-byte no-op.
+        let again = format_source(&formatted.output, None).unwrap_or_else(|e| {
+            panic!("{label}: re-format of the canonicalized output failed: {e}")
+        });
+        assert_eq!(again.output, formatted.output, "{label}: idempotent (C2)");
+        assert!(!again.changed, "{label}: re-format reported a change (C2)");
+    }
+}
+
+/// A single program mixing the short and long spellings of the same paradigm formats to ONE
+/// canonical (long-form) spelling throughout — `mycfmt` never leaves a mixed-spelling program
+/// mixed (never-silent normalization, not a partial rewrite).
+#[test]
+fn mixed_short_and_long_spellings_canonicalize_uniformly() {
+    let src = "nodule d;\nfn f(x: bin{8}) => Binary{8} = x;\n";
+    let formatted = format_source(src, None).expect("formats");
+    assert_eq!(
+        formatted.output,
+        "nodule d;\n\nfn f(x: Binary{8}) => Binary{8} =\n  x;\n"
+    );
+    let again = format_source(&formatted.output, None).expect("re-formats");
+    assert_eq!(again.output, formatted.output, "idempotent");
+}
+
+// ============================================================================================
+// `@forage(policy)` Hypha placement annotation (M-970; found by M-914's H1-capstone fixture)
+// ============================================================================================
+
+/// Round-trip corpus for a `colony { … }` expression, with and without the optional
+/// `@forage(policy)` placement annotation on a `hypha` (RFC-0008 RT3; DN-63 §3.5; M-906/DN-70
+/// D1). Each entry is `(label, src)`.
+///
+/// Guarantee tag: `Empirical` — verified by execution of this test, not a formal proof.
+const COLONY_FORAGE_ROUNDTRIP_CORPUS: &[(&str, &str)] = &[
+    (
+        "hypha-no-forage",
+        "nodule d;\nfn f() => Binary{1} = colony { hypha g() };\n",
+    ),
+    (
+        "hypha-with-forage",
+        "nodule d;\nfn f() => Binary{1} = colony { @forage(0b101) hypha g() };\n",
+    ),
+    (
+        "two-hyphae-mixed-forage",
+        "nodule d;\nfn f() => Binary{1} = colony { @forage(0b101) hypha g(), hypha h() };\n",
+    ),
+];
+
+/// `render_expr_canonical`'s `Expr::Colony` arm previously dropped `Hypha::forage` entirely
+/// (M-970, found by M-914's H1-capstone fixture): the canonical render always emitted a bare
+/// `hypha <body>`, silently erasing any `@forage(policy)` annotation. The C1 identity guard in
+/// `format_source` caught the resulting AST mismatch and refused (exit 4, `OutOfScope`) rather
+/// than emit a corrupted rewrite (G2 held) — but a `@forage`-bearing nodule could never be
+/// formatted at all. Fixed by rendering `@forage(<policy>) hypha <body>`, the exact inverse of
+/// `Parser::parse_hypha` (`crates/mycelium-l1/src/parse.rs`).
+///
+/// Mutant witness: reverting the `Expr::Colony` arm to drop `h.forage` (the pre-fix form) fails
+/// this test both ways — `format_source` on the `-with-forage` entries falls back to
+/// `Err(OutOfScope)` (C1 mismatch), and even if the guard were bypassed the
+/// `contains("@forage")` assertion would fail.
+#[test]
+fn forage_annotation_round_trips_through_canonical_render() {
+    for &(label, src) in COLONY_FORAGE_ROUNDTRIP_CORPUS {
+        let original = parse(src).unwrap_or_else(|e| panic!("{label}: source must parse: {e}"));
+        let formatted = format_source(src, None)
+            .unwrap_or_else(|e| panic!("{label}: format_source failed: {e}"));
+
+        // C1: the formatted output re-parses to the identical surface AST — `Hypha::forage`
+        // included — the exact property the pre-fix drop violated.
+        let reparsed = parse(&formatted.output)
+            .unwrap_or_else(|e| panic!("{label}: formatted output must re-parse: {e}"));
+        assert_eq!(
+            reparsed, original,
+            "{label}: C1 identity — @forage must survive formatting\nformatted: {:?}",
+            formatted.output
+        );
+
+        // The annotation must actually appear in the rendered text (not just AST-equal by
+        // accident of an unrelated bug) for every corpus entry that carries `@forage`.
+        if src.contains("@forage") {
+            assert!(
+                formatted.output.contains("@forage"),
+                "{label}: @forage must appear in the rendered output: {:?}",
+                formatted.output
+            );
+        }
+
+        // C2: idempotent.
+        let again = format_source(&formatted.output, None)
+            .unwrap_or_else(|e| panic!("{label}: re-format failed: {e}"));
+        assert_eq!(again.output, formatted.output, "{label}: idempotent (C2)");
+        assert!(!again.changed, "{label}: re-format reported a change (C2)");
+    }
+}
+
+// ============================================================================================
+// --readable (human multi-line) tests (M-974 / DN-82)
+// ============================================================================================
+
+/// Corpus for the readable-mode invariants. Each entry is `(label, src)`. The programs span the
+/// wrap-triggering constructs (long value-param lists, long sum-type variant lists, nested/long
+/// matches) and short constructs that must stay inline. Data-driven so a test body is *assert over
+/// a case* (house rule: complex test logic lives in the corpus, not the body).
+const READABLE_CORPUS: &[(&str, &str)] = &[
+    ("minimal-nodule", "nodule d;\n"),
+    (
+        "short-fn-stays-inline",
+        "nodule d;\nfn f(x: Binary{8}) => Binary{8} = x;\n",
+    ),
+    (
+        "short-type-stays-inline",
+        "nodule d;\ntype Result[A, E] = Ok(A) | Err(E);\n",
+    ),
+    (
+        "long-value-params-wrap",
+        "nodule d;\nfn finish(nm: Bytes, i: Inputs, cands: CandList, mr: Option[Binary{8}], ci: Binary{8}, ov: Bool) => Result[Selected, SelectError] = nm;\n",
+    ),
+    (
+        "long-sum-type-wraps",
+        "nodule d;\ntype Predicate = PAlways | PSrcKindIs(Kind) | PDtypeIs(ScalarKind) | PGuaranteeAtLeast(Guarantee) | PDeclaredSparse | PAnd(Predicate, Predicate) | POr(Predicate, Predicate) | PNot(Predicate);\n",
+    ),
+    (
+        "nested-match-wraps",
+        "nodule d;\nfn cls(m: Binary{8}, u: Binary{8}) => Option[Binary{8}] = match eq(m, 0b0000_0000) { 0b1 => match eq(u, 0b0000_0000) { 0b1 => Some(m), _ => None }, _ => None };\n",
+    ),
+    (
+        "long-call-args-wrap",
+        "nodule d;\nfn g(pol: Pol) => Sel = finish(pol_name(pol), inputs_of(pol), pol_cands(pol), None, first_index(pol), True);\n",
+    ),
+];
+
+/// C1 (round-trip) + C2 (idempotence) for `format_source_readable` over the corpus — the same
+/// identity/fixed-point contract as the compact form, so the readable style is proven functionally
+/// inert (presentation-only). Guarantee: `Empirical` (verified by execution).
+#[test]
+fn readable_round_trips_and_is_idempotent() {
+    for (label, src) in READABLE_CORPUS {
+        let original =
+            parse(src).unwrap_or_else(|e| panic!("[{label}] corpus src must parse: {e}"));
+        let r = format_source_readable(src, None)
+            .unwrap_or_else(|e| panic!("[{label}] readable format failed: {e}"));
+
+        // C1: the readable output re-parses to the SAME surface AST as the input.
+        let reparsed = parse(&r.output).unwrap_or_else(|e| {
+            panic!("[{label}] readable output must re-parse: {e}\n{}", r.output)
+        });
+        assert_eq!(
+            reparsed, original,
+            "[{label}] readable changed the surface AST (C1)\n{}",
+            r.output
+        );
+
+        // The readable AST must equal the COMPACT AST too — both styles are the same projection.
+        let compact = format_source(src, None).expect("compact formats");
+        assert_eq!(
+            parse(&compact.output).unwrap(),
+            parse(&r.output).unwrap(),
+            "[{label}] readable and compact must agree on the surface AST"
+        );
+
+        // C2: idempotent — a second readable format is byte-for-byte identical.
+        let again = format_source_readable(&r.output, None)
+            .unwrap_or_else(|e| panic!("[{label}] second readable format failed: {e}"));
+        assert_eq!(
+            again.output, r.output,
+            "[{label}] readable is not idempotent (C2)"
+        );
+        assert!(!again.changed, "[{label}] re-format reported a change (C2)");
+    }
+}
+
+/// The readability heuristic actually fires: a short construct stays inline (byte-identical to the
+/// compact form), while a construct longer than [`READABLE_WIDTH`] breaks across multiple lines.
+#[test]
+fn readable_wraps_long_and_keeps_short_inline() {
+    // Short: readable == compact (no line beyond the width is introduced).
+    let short = "nodule d;\ntype Result[A, E] = Ok(A) | Err(E);\n";
+    let r_short = format_source_readable(short, None).unwrap();
+    let c_short = format_source(short, None).unwrap();
+    assert_eq!(
+        r_short.output, c_short.output,
+        "a short construct must stay inline (readable == compact)"
+    );
+
+    // Long sum-type: readable differs from compact and wraps one variant per line with `|` breaks.
+    let long_type = "nodule d;\ntype Predicate = PAlways | PSrcKindIs(Kind) | PDtypeIs(ScalarKind) | PGuaranteeAtLeast(Guarantee) | PDeclaredSparse | PAnd(Predicate, Predicate) | POr(Predicate, Predicate) | PNot(Predicate);\n";
+    let r_long = format_source_readable(long_type, None).unwrap();
+    assert!(
+        r_long.output.contains("type Predicate =\n"),
+        "a long sum-type must break after `=`:\n{}",
+        r_long.output
+    );
+    assert!(
+        r_long.output.contains("\n  | PNot(Predicate);"),
+        "each subsequent variant must start a `|`-prefixed line:\n{}",
+        r_long.output
+    );
+    // Every line of the wrapped declaration is within the readable width.
+    for line in r_long.output.lines() {
+        assert!(
+            line.chars().count() <= READABLE_WIDTH,
+            "wrapped line exceeds READABLE_WIDTH: {line:?}"
+        );
+    }
+
+    // Long value-param list: readable wraps one parameter per line.
+    let long_sig = "nodule d;\nfn finish(nm: Bytes, i: Inputs, cands: CandList, mr: Option[Binary{8}], ci: Binary{8}, ov: Bool) => Result[Selected, SelectError] = nm;\n";
+    let r_sig = format_source_readable(long_sig, None).unwrap();
+    assert!(
+        r_sig.output.contains("fn finish(\n  nm: Bytes,\n"),
+        "a long value-param list must wrap one param per line:\n{}",
+        r_sig.output
+    );
+}
+
+/// `format_source_styled` with `Style::Compact` is byte-identical to `format_source` — the refactor
+/// that introduced the `style` parameter did not perturb the default (compact) path.
+#[test]
+fn styled_compact_equals_default_format() {
+    for (label, src) in READABLE_CORPUS {
+        let a = format_source(src, None).unwrap_or_else(|e| panic!("[{label}] format: {e}"));
+        let b = format_source_styled(src, None, Style::Compact)
+            .unwrap_or_else(|e| panic!("[{label}] styled-compact: {e}"));
+        assert_eq!(
+            a.output, b.output,
+            "[{label}] Style::Compact must equal the default format"
+        );
+    }
+}

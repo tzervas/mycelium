@@ -41,9 +41,9 @@
 
 use crate::ast::{
     AmbientParams, Arm, BaseType, Ctor, DeriveDecl, Expr, FnDecl, FnSig, ImplDecl,
-    InherentImplDecl, Item, Literal, LowerDecl, Nodule, ObjectDecl, Paradigm, Param, ParamKind,
-    Pattern, Phylum, Scalar, Sparsity, TraitDecl, TraitRef, TypeDecl, TypeParam, TypeRef, UsePath,
-    Vis, WidthRef,
+    InherentImplDecl, Item, Literal, LowerDecl, LowerRhs, Nodule, ObjectDecl, Paradigm, Param,
+    ParamKind, Pattern, Phylum, Scalar, Sparsity, TraitDecl, TraitRef, TypeDecl, TypeParam,
+    TypeRef, UsePath, Vis, WidthRef,
 };
 
 /// A never-silent refusal from the resolution pass (§4.3/§4.4) — always explicit, never a guess.
@@ -1357,7 +1357,15 @@ fn print_lower_decl(ld: &LowerDecl) -> String {
     } else {
         format!("[{}]", ld.params.join(", "))
     };
-    format!("lower {}{} = {}\n", ld.name, params, print_expr(&ld.rhs))
+    // The RHS is either expression-shaped (v0) or item-shaped (`impl … for …`; DN-54 §10 Model A,
+    // M-973). Render each in its surface form so the ambient round-trip stays faithful (RFC-0012).
+    let rhs = match &ld.rhs {
+        LowerRhs::Expr(e) => print_expr(e),
+        // `print_impl_decl` emits a trailing newline; trim it so the `= …\n` wrapper below is the
+        // single line terminator (the item RHS renders as a multi-line block after `=`).
+        LowerRhs::Impl(id) => print_impl_decl(id).trim_end().to_string(),
+    };
+    format!("lower {}{} = {}\n", ld.name, params, rhs)
 }
 
 /// Round-trip a `derive Name for T` declaration (DN-54 / M-812 / DN-38 §8.1).
