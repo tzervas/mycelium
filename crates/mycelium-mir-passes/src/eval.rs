@@ -316,77 +316,99 @@ impl Differential {
 }
 
 /// Count `Dup` nodes anywhere in an [`RcNode`].
+///
+/// **RFC-0041 §4.7 (guard hole RR-29 sibling):** the entry point runs the traversal on the
+/// `mycelium-workstack` deep worker stack ([`ensure_sufficient_stack`]) so a deep `RcNode` — even one
+/// built directly by an external caller, outside the [`differential`] path — completes rather than
+/// SIGABRTing the host (the "no input SIGABRTs any public pass" §9-DoD close).
 //
-// FLAG(W7 residual, RFC-0041 §9): this and [`count_move_unique`] are infallible `RcNode` counters in
-// the same class as `emit::count_occurrences`. On the differential path ([`differential`]) they are
-// only ever reached **after** [`eval`] has already accepted the term — and `eval` refuses any input
-// past the depth ceiling via [`RcError::DepthExceeded`] (its `?` short-circuits before these counters
-// run) — so a deep input cannot SIGABRT through the differential path. As *public* entry points they
-// share the standalone deep-input residual of `count_occurrences` (an infallible→fallible signature
-// change to add a work-step bound is deferred to W2/profiling; not a self-DoS in any current caller).
+// FLAG(W7 residual, RFC-0041 §9): the SIGABRT/host-stack hole is now CLOSED (deep-stack wrap above,
+// like `emit::count_occurrences`/`borrow_occurrences`). What stays DEFERRED to W2/profiling is the
+// `O(N²)`/work-step CPU bound: this and [`count_move_unique`] are infallible (`usize`), so they cannot
+// refuse past a `RecursionBudget::charge_steps` ceiling without an infallible→fallible signature change
+// (out of this leaf's scope). Not a self-DoS in any current caller.
 #[must_use]
 pub fn count_dups(node: &RcNode) -> usize {
+    let budget = RecursionBudget::default();
+    ensure_sufficient_stack(&budget, || count_dups_inner(node))
+}
+
+/// The recursive core of [`count_dups`], run on the deep worker stack the public entry point spawns
+/// — so nested calls recurse on the *same* grown stack rather than each re-spawning a worker.
+fn count_dups_inner(node: &RcNode) -> usize {
     match node {
         RcNode::Const(_) | RcNode::Var(_) | RcNode::Borrow(_) | RcNode::MoveUnique(_) => 0,
-        RcNode::Dup { body, .. } => 1 + count_dups(body),
-        RcNode::Drop { body, .. } | RcNode::DropAfter { body, .. } => count_dups(body),
-        RcNode::Let { bound, body, .. } => count_dups(bound) + count_dups(body),
+        RcNode::Dup { body, .. } => 1 + count_dups_inner(body),
+        RcNode::Drop { body, .. } | RcNode::DropAfter { body, .. } => count_dups_inner(body),
+        RcNode::Let { bound, body, .. } => count_dups_inner(bound) + count_dups_inner(body),
         RcNode::Op { args, .. } | RcNode::Construct { args, .. } => {
-            args.iter().map(count_dups).sum()
+            args.iter().map(count_dups_inner).sum()
         }
-        RcNode::Swap { src, .. } => count_dups(src),
+        RcNode::Swap { src, .. } => count_dups_inner(src),
         RcNode::Match {
             scrutinee,
             alts,
             default,
         } => {
-            count_dups(scrutinee)
+            count_dups_inner(scrutinee)
                 + alts
                     .iter()
                     .map(|a| match a {
                         crate::rc_ir::RcAlt::Ctor { body, .. }
-                        | crate::rc_ir::RcAlt::Lit { body, .. } => count_dups(body),
+                        | crate::rc_ir::RcAlt::Lit { body, .. } => count_dups_inner(body),
                     })
                     .sum::<usize>()
-                + default.as_deref().map_or(0, count_dups)
+                + default.as_deref().map_or(0, count_dups_inner)
         }
-        RcNode::Lam { body, .. } => count_dups(body),
-        RcNode::App { func, arg } => count_dups(func) + count_dups(arg),
+        RcNode::Lam { body, .. } => count_dups_inner(body),
+        RcNode::App { func, arg } => count_dups_inner(func) + count_dups_inner(arg),
     }
 }
 
 /// Count [`RcNode::MoveUnique`] annotations (Increment 2 `rc == 1` reuse sites) anywhere in an
 /// [`RcNode`] — the FBIP-reuse-eligible consume points. `Exact` (read off the IR).
+///
+/// **RFC-0041 §4.7:** deep-stack-wrapped like [`count_dups`] (see its note) — a deep external input
+/// completes on the worker stack rather than SIGABRTing; the `O(N²)`/work-step bound stays a deferred
+/// W2 residual.
 #[must_use]
 pub fn count_move_unique(node: &RcNode) -> usize {
+    let budget = RecursionBudget::default();
+    ensure_sufficient_stack(&budget, || count_move_unique_inner(node))
+}
+
+/// The recursive core of [`count_move_unique`] (see [`count_dups_inner`]).
+fn count_move_unique_inner(node: &RcNode) -> usize {
     match node {
         RcNode::Const(_) | RcNode::Var(_) | RcNode::Borrow(_) => 0,
         RcNode::MoveUnique(_) => 1,
         RcNode::Dup { body, .. } | RcNode::Drop { body, .. } | RcNode::DropAfter { body, .. } => {
-            count_move_unique(body)
+            count_move_unique_inner(body)
         }
-        RcNode::Let { bound, body, .. } => count_move_unique(bound) + count_move_unique(body),
+        RcNode::Let { bound, body, .. } => {
+            count_move_unique_inner(bound) + count_move_unique_inner(body)
+        }
         RcNode::Op { args, .. } | RcNode::Construct { args, .. } => {
-            args.iter().map(count_move_unique).sum()
+            args.iter().map(count_move_unique_inner).sum()
         }
-        RcNode::Swap { src, .. } => count_move_unique(src),
+        RcNode::Swap { src, .. } => count_move_unique_inner(src),
         RcNode::Match {
             scrutinee,
             alts,
             default,
         } => {
-            count_move_unique(scrutinee)
+            count_move_unique_inner(scrutinee)
                 + alts
                     .iter()
                     .map(|a| match a {
                         crate::rc_ir::RcAlt::Ctor { body, .. }
-                        | crate::rc_ir::RcAlt::Lit { body, .. } => count_move_unique(body),
+                        | crate::rc_ir::RcAlt::Lit { body, .. } => count_move_unique_inner(body),
                     })
                     .sum::<usize>()
-                + default.as_deref().map_or(0, count_move_unique)
+                + default.as_deref().map_or(0, count_move_unique_inner)
         }
-        RcNode::Lam { body, .. } => count_move_unique(body),
-        RcNode::App { func, arg } => count_move_unique(func) + count_move_unique(arg),
+        RcNode::Lam { body, .. } => count_move_unique_inner(body),
+        RcNode::App { func, arg } => count_move_unique_inner(func) + count_move_unique_inner(arg),
     }
 }
 

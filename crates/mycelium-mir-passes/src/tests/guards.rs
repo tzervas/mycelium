@@ -19,7 +19,7 @@ use mycelium_workstack::{ensure_sufficient_stack, RecursionBudget};
 
 use super::common::{c, let_, val, var};
 use crate::emit::{emit_elided, emit_reuse, EmitError};
-use crate::eval::{eval, RcError};
+use crate::eval::{count_dups, count_move_unique, eval, RcError};
 use crate::rc_ir::RcNode;
 
 /// The default depth ceiling every guard trips at (RFC-0041 §4.0/§4.4 metric).
@@ -36,6 +36,19 @@ fn deep_rc_let(n: usize) -> RcNode {
         body = RcNode::Let {
             id: format!("y{i}"),
             bound: Box::new(RcNode::Const(val(false))),
+            body: Box::new(body),
+        };
+    }
+    body
+}
+
+/// A right-nested [`RcNode::Dup`] chain `n` deep, innermost a constant — a deep input for the public
+/// [`count_dups`] entry point (its count is exactly `n`).
+fn deep_rc_dup(n: usize) -> RcNode {
+    let mut body = RcNode::Const(val(true));
+    for i in 0..n {
+        body = RcNode::Dup {
+            var: format!("y{i}"),
             body: Box::new(body),
         };
     }
@@ -97,6 +110,35 @@ fn emit_annotated_deep_let_chain_refuses_cleanly() {
             );
         }
     });
+}
+
+/// A depth far beyond any host default thread stack — the deep-stack wrap must carry the infallible
+/// [`count_dups`]/[`count_move_unique`] counters here (they cannot `?`-refuse, so completing without a
+/// SIGABRT *is* the closed-hole assertion). Matches the census `count_occurrences_deep_let_chain` depth.
+const VERY_DEEP: usize = 200_000;
+
+#[test]
+fn count_dups_deep_rcnode_completes_without_sigabrt() {
+    // Direct external call (not via `differential`, which would refuse deep input at `eval` first):
+    // the public entry's `ensure_sufficient_stack` wrap must let it complete rather than SIGABRT.
+    let budget = RecursionBudget::default();
+    let n = ensure_sufficient_stack(&budget, || count_dups(&deep_rc_dup(VERY_DEEP)));
+    assert_eq!(
+        n, VERY_DEEP,
+        "counts every Dup on a very deep chain, on the deep worker stack (no SIGABRT)"
+    );
+}
+
+#[test]
+fn count_move_unique_deep_rcnode_completes_without_sigabrt() {
+    // A deep `Let` chain has no `MoveUnique` sites (count 0) — the assertion is that the deep direct
+    // call *completes* on the guarded stack rather than overflowing the host stack.
+    let budget = RecursionBudget::default();
+    let n = ensure_sufficient_stack(&budget, || count_move_unique(&deep_rc_let(VERY_DEEP)));
+    assert_eq!(
+        n, 0,
+        "no MoveUnique sites; the deep direct call completes on the deep stack (no SIGABRT)"
+    );
 }
 
 #[test]
