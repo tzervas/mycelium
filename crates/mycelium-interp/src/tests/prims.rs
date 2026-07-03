@@ -472,6 +472,9 @@ fn bin_div_over_cap_width_is_never_silent() {
 /// `mycelium_core::binary`'s own `div_rem_matches_euclidean_identity_oracle` at the codec layer,
 /// one level up through the prim's dispatch + never-silent-error mapping.
 #[test]
+// The `x / y` / `x % y` in the `y != 0` branch are the trusted native oracles this test checks the
+// prim against; they must stay plain (clippy 1.96 `manual_checked_ops` would obscure the oracle).
+#[allow(clippy::manual_checked_ops)]
 fn bin_div_rem_satisfy_euclidean_identity_at_width6() {
     let reg = PrimRegistry::with_builtins();
     let div = reg.get("bin.div").expect("bin.div registered");

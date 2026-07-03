@@ -57,7 +57,7 @@ them. Full policy + the change-kind→toolchain map: `docs/notes/DN-65-…md`.
    **how it was verified**; editorial-only PRs say so.
 
 ## Toolchain (CONTRIBUTING)
-- **Rust** kernel + reference interpreter; **MSRV 1.92** pinned; `cargo fmt`, `cargo clippy
+- **Rust** kernel + reference interpreter; **MSRV 1.96.1** pinned (ADR-041); `cargo fmt`, `cargo clippy
   -D warnings`, `cargo test`. The interpreter is the trusted base; MLIR→LLVM stays on the
   perf path. (Note any local rustc/Python newer than the pin is fine to build with, but don't
   silently bump the committed MSRV / version pins — that's a decision, not a build detail.)

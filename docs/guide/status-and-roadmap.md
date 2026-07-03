@@ -105,7 +105,7 @@ the `mycelium-mlir` and `mycelium-bench` crate summaries.
 
 ## Technology stack
 
-- **Kernel + reference interpreter:** Rust (MSRV **1.92**, ADR-007). The interpreter is the
+- **Kernel + reference interpreter:** Rust (MSRV **1.96.1**, ADR-007/ADR-041). The interpreter is the
   trusted base and the reference semantics (`crates/mycelium-interp`).
 - **AOT path:** **MLIR → LLVM** (`crates/mycelium-mlir`), confined to the performance path.
   Landed: the env-machine, the **direct-LLVM** native lowering across recursion, closures,
