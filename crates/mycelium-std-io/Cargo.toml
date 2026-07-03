@@ -18,5 +18,5 @@ serde.workspace = true
 serde_json.workspace = true
 
 [dev-dependencies]
-# property tests for the round-trip bound; MSRV 1.92-compatible
+# property tests for the round-trip bound; MSRV 1.96.1-compatible (ADR-041)
 proptest = "1"
