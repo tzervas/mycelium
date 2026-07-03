@@ -749,6 +749,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "mycelium-workstack"
+version = "0.0.0"
+dependencies = [
+ "mycelium-stack",
+]
+
+[[package]]
 name = "num-traits"
 version = "0.2.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
