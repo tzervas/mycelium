@@ -127,7 +127,7 @@ explicit, *so that* the trusted base stays minimal and auditable.
 
 ### Non-functional (NFR)
 - **NFR-1 (trust)** No `unsafe` in KC-3 modules; SIMD isolated and untrusted.
-- **NFR-2 (toolchain)** Builds on **MSRV 1.92**; `cargo test`, `clippy -D warnings`,
+- **NFR-2 (toolchain)** Builds on **MSRV 1.96.1** (ADR-041); `cargo test`, `clippy -D warnings`,
   `fmt --check` all green; CI on GitHub Actions.
 - **NFR-3 (style)** PEP8/Black for any Python tooling; Rust `fmt`; SOLID/DRY/KISS/YAGNI;
   composition over inheritance.
@@ -176,13 +176,13 @@ explicit, *so that* the trusted base stays minimal and auditable.
   lifted line is attributed (NFR-6).
 - **SC-4** Content addresses are stable and unique; the identity rehash happened once
   before persistence (NFR-5/7).
-- **SC-5** Toolchain gates green on MSRV 1.92 (NFR-2); coverage does not regress.
+- **SC-5** Toolchain gates green on MSRV 1.96.1 (NFR-2); coverage does not regress.
 - **SC-6** OQ-3 is closed by reconciliation with ADR-011 (BoundBasis-Is-Universal);
   OQ-4/OQ-5 remain explicitly declared-open (not silently resolved).
 
 ## 5. Global Definition of Done
 A unit of work is **Done** when:
-1. Code compiles on **MSRV 1.92**; `cargo test`, `cargo clippy -- -D warnings`,
+1. Code compiles on **MSRV 1.96.1**; `cargo test`, `cargo clippy -- -D warnings`,
    `cargo fmt --check` pass in CI.
 2. Tests exist at the right level: **exhaustive** for finite truth tables, **property/
    fuzz** for algebraic laws and equivalence, **conformance vectors** for external
