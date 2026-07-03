@@ -383,6 +383,7 @@ name = "mycelium-mir-passes"
 version = "0.0.0"
 dependencies = [
  "mycelium-core",
+ "mycelium-workstack",
 ]
 
 [[package]]
