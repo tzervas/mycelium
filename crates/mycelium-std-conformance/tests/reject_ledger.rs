@@ -46,10 +46,10 @@ fn read(rel_path: &str) -> String {
 }
 
 // ════════════════════════════════════════════════════════════════════════════════════════════
-// §1 — Parse-level reject corpus (DN-80 Part A): exactly the 29 fixtures the ledger names.
+// §1 — Parse-level reject corpus (DN-80 Part A): exactly the 30 fixtures the ledger names.
 // ════════════════════════════════════════════════════════════════════════════════════════════
 
-/// The 29 fixture names DN-80 §3 ledgers (note: no `16-*` — a documented numbering gap, not a
+/// The 30 fixture names DN-80 §3 ledgers (note: no `16-*` — a documented numbering gap, not a
 /// hidden reject; see DN-80 row 16).
 const LEDGERED_REJECT_FIXTURES: &[&str] = &[
     "01-no-nodule-header.myc",
@@ -81,6 +81,7 @@ const LEDGERED_REJECT_FIXTURES: &[&str] = &[
     "28-object-empty-body.myc",
     "29-missing-semicolon-terminator.myc",
     "30-vec-short-alias-rejected.myc",
+    "31-old-le-ge-glyph-retired.myc",
 ];
 
 #[test]
@@ -112,12 +113,12 @@ fn parse_level_reject_corpus_matches_the_ledger() {
          update DN-80 to match the current corpus"
     );
 
-    // Belt: keep this test's own list honest against a raw count too (29, DN-80 §3/§8.1).
+    // Belt: keep this test's own list honest against a raw count too (30, DN-80 §3/§8.1).
     actual.retain(|_| true);
     assert_eq!(
         actual.len(),
-        29,
-        "expected exactly 29 reject fixtures (DN-80 §3); found {} — update DN-80 and this list",
+        30,
+        "expected exactly 30 reject fixtures (DN-80 §3); found {} — update DN-80 and this list",
         actual.len()
     );
 }
@@ -141,12 +142,30 @@ fn checkty_direct_checkerror_construction_count_matches_the_ledger() {
     let direct_at = count_occurrences(&src, "CheckError::at(");
     let total = direct_new + direct_at;
     assert_eq!(
-        total, 93,
+        total, 101,
         "checkty.rs direct `CheckError::new(`/`CheckError::at(` construction sites: found {total}, \
-         DN-80 §4 audited 93 (dev ca42fd2, 2026-07-02) — a reject path was added or removed \
-         without updating DN-80 §4's construct-family table and this pinned count (one of the 93 \
-         is the shared `Cx::err` helper's own body at line ~3000 — plumbing, not a 94th distinct \
+         DN-80 §4 audited 101 (dev 4e2c389, 2026-07-02; +6 vs the original ca42fd2 audit — the \
+         M-919/M-973 lower/derive extension-checker work, family 8; +2 — M-965's two `Fuse` \
+         built-in-prelude redeclaration refusals, family 5) — a reject path was added or \
+         removed without updating DN-80 §4's construct-family table and this pinned count (one of \
+         the 101 is the shared `Cx::err` helper's own body at line ~3000 — plumbing, not a distinct \
          construct; see DN-80 §4's audited-totals note)"
+    );
+}
+
+#[test]
+fn fuse_law_checker_checkerror_construction_count_matches_the_ledger() {
+    // fuse.rs (M-965, DN-58 §A) is the `Fuse` semilattice-**law** checker — a new audited reject
+    // file (DN-80 §4 row 40). Its four `CheckError::new(` sites are the idempotence /
+    // commutativity / associativity violations plus the probe-time eval-failure refusal.
+    let src = read("crates/mycelium-l1/src/fuse.rs");
+    let total = count_occurrences(&src, "CheckError::new(") + count_occurrences(&src, "CheckError::at(");
+    assert_eq!(
+        total, 4,
+        "fuse.rs `CheckError::new(`/`CheckError::at(` construction sites: found {total}, \
+         DN-80 §4 audited 4 (dev 4e2c389, 2026-07-02 — the Fuse semilattice-law reject family, \
+         DN-80 §4 row 40) — a law-reject path was added or removed without updating the ledger and \
+         this pinned count together"
     );
 }
 
