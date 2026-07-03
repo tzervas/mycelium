@@ -605,7 +605,8 @@ mod tests {
             prim: "bit.not".into(),
             args: vec![Node::Var("x".into())],
         };
-        let rendered = llm_canonical(&op_node);
+        let rendered =
+            llm_canonical(&op_node).expect("small fixture fits the default arena ceiling");
         let parsed = parse_llm_canonical(&rendered);
         assert!(
             parsed.is_ok(),
@@ -751,7 +752,8 @@ mod tests {
             bound: Box::new(Node::Const(byte_val)),
             body: Box::new(Node::Var("a".into())),
         };
-        let rendered = llm_canonical(&let_node);
+        let rendered =
+            llm_canonical(&let_node).expect("small fixture fits the default arena ceiling");
         let parsed = parse_llm_canonical(&rendered);
         assert!(
             parsed.is_ok(),
@@ -783,7 +785,8 @@ mod tests {
             target: Repr::Ternary { trits: 6 },
             policy: ContentHash::parse("blake3:po1icy00").unwrap(),
         };
-        let rendered = llm_canonical(&swap_node);
+        let rendered =
+            llm_canonical(&swap_node).expect("small fixture fits the default arena ceiling");
         let parsed = parse_llm_canonical(&rendered);
         assert!(
             parsed.is_ok(),
@@ -864,7 +867,7 @@ mod tests {
         ];
         assert_eq!(nodes.len(), 11, "coverage: all 11 v0 node kinds");
         for n in &nodes {
-            let rendered = llm_canonical(n);
+            let rendered = llm_canonical(n).expect("small fixture fits the default arena ceiling");
             let parsed = parse_llm_canonical(&rendered);
             assert!(
                 parsed.is_ok(),

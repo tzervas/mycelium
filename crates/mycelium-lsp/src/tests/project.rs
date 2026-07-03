@@ -108,7 +108,7 @@ fn total_over_every_node_kind() {
     // One rule per node kind; the closed v0 grammar is exactly these 11.
     assert_eq!(nodes.len(), 11, "the v0 L1 grammar is 11 node kinds");
     for n in &nodes {
-        let s = llm_canonical(n);
+        let s = llm_canonical(n).expect("small fixture fits the default arena ceiling");
         assert!(!s.is_empty(), "every node kind renders non-empty: {n:?}");
     }
 }
@@ -126,7 +126,7 @@ fn swap_is_never_elided() {
             policy: mycelium_core::ContentHash::parse("blake3:po1icy00").unwrap(),
         }),
     };
-    let s = llm_canonical(&prog);
+    let s = llm_canonical(&prog).expect("small fixture fits the default arena ceiling");
     assert!(
         s.contains("(swap!"),
         "P3: the Swap node must be rendered: {s}"
@@ -140,10 +140,13 @@ fn swap_is_never_elided() {
 #[test]
 fn guarantee_tags_survive() {
     assert!(
-        llm_canonical(&Node::Const(byte())).contains("@Exact"),
+        llm_canonical(&Node::Const(byte()))
+            .expect("small fixture fits the default arena ceiling")
+            .contains("@Exact"),
         "an Exact value renders its tag"
     );
-    let s = llm_canonical(&Node::Const(declared_dense()));
+    let s = llm_canonical(&Node::Const(declared_dense()))
+        .expect("small fixture fits the default arena ceiling");
     assert!(
         s.contains("@Declared"),
         "a Declared value renders its tag: {s}"
@@ -161,7 +164,10 @@ fn deterministic() {
         prim: "trit.add".into(),
         args: vec![Node::Const(trits()), Node::Const(trits())],
     };
-    assert_eq!(llm_canonical(&prog), llm_canonical(&prog));
+    assert_eq!(
+        llm_canonical(&prog).expect("small fixture fits the default arena ceiling"),
+        llm_canonical(&prog).expect("small fixture fits the default arena ceiling")
+    );
 }
 
 /// A large `Const` payload is summarized by length, not inlined element-wise — bounded output on
@@ -174,8 +180,65 @@ fn large_payloads_are_summarized() {
         Meta::exact(Provenance::Root),
     )
     .unwrap();
-    let s = llm_canonical(&Node::Const(wide));
+    let s =
+        llm_canonical(&Node::Const(wide)).expect("small fixture fits the default arena ceiling");
     assert!(s.contains("0b<256 bits>"), "wide binary is summarized: {s}");
     // A small value is still inlined verbatim (the byte fixture is 8 bits).
-    assert!(llm_canonical(&Node::Const(byte())).contains("0b10110010"));
+    assert!(llm_canonical(&Node::Const(byte()))
+        .expect("small fixture fits the default arena ceiling")
+        .contains("0b10110010"));
+}
+
+/// RFC-0041 §4.2/§9 (W7 process-arena coverage): a large synthetic `Node` — one deep enough that its
+/// estimated byte cost exceeds a deliberately tiny arena ceiling — refuses `OutOfBudget`
+/// never-silently, rather than proceeding to render unbounded. Uses
+/// [`crate::project::llm_canonical_with_arena`] (`pub(crate)`) to inject the tiny ceiling; production
+/// callers go through [`llm_canonical`], which supplies the crate's declared default.
+#[test]
+fn large_synthetic_input_trips_out_of_budget() {
+    use crate::project::llm_canonical_with_arena;
+    use mycelium_workstack::{BudgetError, BudgetKind, ProcessArena};
+
+    // A 5,000-deep right-nested `Let` chain: comfortably beyond a 1-byte ceiling's tolerance for the
+    // per-node estimate, and not pathologically deep for the guarded stack (this crate's guard-hole
+    // census already exercises 20,000).
+    let mut prog = Node::Const(byte());
+    for i in 0..5_000 {
+        prog = Node::Let {
+            id: format!("x{i}"),
+            bound: Box::new(Node::Const(byte())),
+            body: Box::new(prog),
+        };
+    }
+
+    let tiny_arena = ProcessArena::new(1);
+    match llm_canonical_with_arena(&prog, &tiny_arena) {
+        Err(BudgetError::OutOfBudget {
+            kind: BudgetKind::Bytes,
+            limit,
+            ..
+        }) => assert_eq!(limit, 1, "the refusal reports the configured ceiling"),
+        other => panic!("expected an explicit OutOfBudget refusal, got {other:?}"),
+    }
+}
+
+/// The normal-input twin of the test above: the same 5,000-deep chain, rendered against the crate's
+/// real declared default ceiling ([`llm_canonical`]), passes unchanged — the arena wiring never
+/// perturbs ordinary-sized input.
+#[test]
+fn normal_sized_input_passes_unchanged() {
+    let mut prog = Node::Const(byte());
+    for i in 0..5_000 {
+        prog = Node::Let {
+            id: format!("x{i}"),
+            bound: Box::new(Node::Const(byte())),
+            body: Box::new(prog),
+        };
+    }
+    let s = llm_canonical(&prog).expect("well within the default 256 MiB arena ceiling");
+    assert_eq!(
+        s.matches("(let [x").count(),
+        5_000,
+        "every binder is still rendered"
+    );
 }
