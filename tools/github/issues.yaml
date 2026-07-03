@@ -11353,6 +11353,7 @@ issues:
       wide-flat calls, one indent per real nesting; house-style knob (LayoutCfg/SpineInner
       InlineWhenFits|AlwaysExpand, --expand-spine); default width 88->100 (rustfmt-aligned).
       lib/std re-rendered. Behavior-neutral (Empirical: C1/C2). Kernel untouched. Assignee: tzervas.
+      User stories + Definition of Done: see DN-82 §7 (the R0-R6 rule-set + DoD) — as a maintainer of lib/std .myc, I want readable formatting so the source is legible without changing behavior.
   - id: M-977
     title: "Vec list-literal [...] desugaring — the each-item-closed ideal (RFC-0040)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
@@ -11370,6 +11371,7 @@ issues:
       (frontend lowering onto the frozen kernel — freeze-safe, DN-56 §6); behavior-neutral by AST
       identity (Empirical). lib/std static tables (matrix() etc.) now read each-item-closed [...].
       Resolves DN-82 FLAG-976-1. Assignee: tzervas.
+      User stories + Definition of Done: see RFC-0040 §2 (use case) + §5 (DoD) — as a lib/std author, I want a Vec list literal so static tables read each-item-closed.
   - id: M-970
     title: "mycelium-fmt: render_expr_canonical drops the @forage(policy) Hypha annotation"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"

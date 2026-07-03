@@ -9,7 +9,7 @@
 | **Task** | M-977 |
 | **Feeds** | DN-82 §7.3–7.4 (resolves FLAG-976-1 — the each-item-closed list ideal); the Shape-Dispatched Readable renderer (M-976) which already lays a `[…]` one element per line |
 | **Decides** | That a `[e1, …, en]` literal checked against a **cons-list-shaped** user ADT desugars to the right-nested `Cons(e1, Cons(…, Nil))` chain; the *structural* recogniser for "cons-list-shaped"; and that this composes with the existing RFC-0032 D3 `Seq{T,N}` literal without ambiguity |
-| **Depends on** | RFC-0032 D3 (the `[…]` `Seq{T,N}` literal — this RFC adds a *disjoint* type-directed reading, leaving Seq untouched); RFC-0007 §11 (the checker produces the elaborated body the interpreter/AOT consume); RFC-0037 §4.4 (the `[]` bracket family + layout-independence) |
+| **Depends on** | RFC-0032 D3 (the `[…]` `Seq{T,N}` literal — this RFC adds a *disjoint* type-directed reading, leaving Seq untouched); RFC-0007 §11 (the checker produces the elaborated body the interpreter/AOT consume); RFC-0037 §4.3 (D3 — the list/`Seq` bracket literal) + §4.1 (D1 — the type-arg bracket family) |
 | **Coupled with** | `crates/mycelium-l1/src/checkty.rs` (`check_list` + `cons_list_ctors`); `lib/std/*.myc` (the `matrix()`/`guarantee_matrix()`/`modes_all()` tables adopt `[…]`); `crates/mycelium-fmt` (renders `[…]` readably — unchanged) |
 
 > **Posture (transparency rule / VR-5 / G2).** The desugaring is **behaviour-neutral by construction**:
