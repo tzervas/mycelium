@@ -6371,6 +6371,17 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_fmt::Style",
+      "kind": "enum",
+      "crate": "mycelium-fmt",
+      "module": "mycelium_fmt",
+      "file": "crates/mycelium-fmt/src/lib.rs",
+      "line": 84,
+      "summary": "The layout style a format pass emits (M-974).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_fmt::flatten_source",
       "kind": "fn",
       "crate": "mycelium-fmt",
@@ -6389,6 +6400,28 @@
       "file": "crates/mycelium-fmt/src/lib.rs",
       "line": 186,
       "summary": "Format `src` into its canonical form.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_fmt::format_source_readable",
+      "kind": "fn",
+      "crate": "mycelium-fmt",
+      "module": "mycelium_fmt",
+      "file": "crates/mycelium-fmt/src/lib.rs",
+      "line": 206,
+      "summary": "Format `src` into its **human-readable** canonical form (M-974/DN-82): the inverse posture of",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_fmt::format_source_styled",
+      "kind": "fn",
+      "crate": "mycelium-fmt",
+      "module": "mycelium_fmt",
+      "file": "crates/mycelium-fmt/src/lib.rs",
+      "line": 216,
+      "summary": "Shared implementation of [`format_source`] (Compact) and [`format_source_readable`] (Readable).",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -7581,6 +7614,39 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_l1::ast::LowerDecl::expr_rhs",
+      "kind": "fn",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1::ast::LowerDecl",
+      "file": "crates/mycelium-l1/src/ast.rs",
+      "line": 269,
+      "summary": "The rule's RHS as an expression, if it is expression-shaped (`None` for an item-shaped rule).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_l1::ast::LowerDecl::impl_rhs",
+      "kind": "fn",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1::ast::LowerDecl",
+      "file": "crates/mycelium-l1/src/ast.rs",
+      "line": 280,
+      "summary": "The rule's RHS as an item-shaped `impl` template, if it is item-shaped (`None` for an",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_l1::ast::LowerRhs",
+      "kind": "enum",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1::ast",
+      "file": "crates/mycelium-l1/src/ast.rs",
+      "line": 252,
+      "summary": "The right-hand side of a `lower` rule (DN-54 §3.2 / §10; M-812, M-973).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_l1::ast::ObjectDecl",
       "kind": "struct",
       "crate": "mycelium-l1",
@@ -8182,6 +8248,17 @@
       "file": "crates/mycelium-l1/src/elab.rs",
       "line": 435,
       "summary": "**Per-hypha elaboration of a `colony` entry** for the *real-concurrency* execution path",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_l1::elaborate_direct",
+      "kind": "fn",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1",
+      "file": "crates/mycelium-l1/src/elab.rs",
+      "line": 409,
+      "summary": "**ADR-033/DN-74 (M-923):** elaborate `entry` **without** the [`crate::mono::monomorphize`]",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -32938,6 +33015,22 @@
       "reason": "definition not found via regex heuristic (kind='fn', name='from') — possibly macro-generated or cfg-gated"
     },
     {
+      "symbol": "mycelium_fmt::Style::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_fmt::Style::default",
+      "reason": "definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_fmt::Style::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_fmt::Style::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
       "symbol": "mycelium_interp::EvalError::clone",
       "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
     },
@@ -33754,6 +33847,18 @@
       "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
     },
     {
+      "symbol": "mycelium_l1::ast::LowerRhs::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::ast::LowerRhs::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::ast::LowerRhs::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
       "symbol": "mycelium_l1::ast::Nodule",
       "reason": "dedup-alias: same definition as `mycelium_l1::Nodule` at crates/mycelium-l1/src/ast.rs:74 — one canonical row kept"
     },
@@ -34332,6 +34437,10 @@
     {
       "symbol": "mycelium_l1::elab::elaborate_colony",
       "reason": "dedup-alias: same definition as `mycelium_l1::elaborate_colony` at crates/mycelium-l1/src/elab.rs:435 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_l1::elab::elaborate_direct",
+      "reason": "dedup-alias: same definition as `mycelium_l1::elaborate_direct` at crates/mycelium-l1/src/elab.rs:409 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::elab::elaborate_lower_rule",

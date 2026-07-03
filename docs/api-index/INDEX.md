@@ -636,8 +636,11 @@
 | `mycelium_fmt::FmtError::exit_code` | fn | `crates/mycelium-fmt/src/lib.rs:141` | The CLI exit code for this refusal (contract §5). |
 | `mycelium_fmt::Formatted` | struct | `crates/mycelium-fmt/src/lib.rs:99` | A successful format result. |
 | `mycelium_fmt::MYCFMT_VERSION:` | const | `crates/mycelium-fmt/src/lib.rs:66` | The formatter spelling/version this build implements. |
+| `mycelium_fmt::Style` | enum | `crates/mycelium-fmt/src/lib.rs:84` | The layout style a format pass emits (M-974). |
 | `mycelium_fmt::flatten_source` | fn | `crates/mycelium-fmt/src/lib.rs:377` | Flatten `src` into the single-line human↔stream form (M-819; DN-57 §2). |
 | `mycelium_fmt::format_source` | fn | `crates/mycelium-fmt/src/lib.rs:186` | Format `src` into its canonical form. |
+| `mycelium_fmt::format_source_readable` | fn | `crates/mycelium-fmt/src/lib.rs:206` | Format `src` into its **human-readable** canonical form (M-974/DN-82): the inverse posture of |
+| `mycelium_fmt::format_source_styled` | fn | `crates/mycelium-fmt/src/lib.rs:216` | Shared implementation of [`format_source`] (Compact) and [`format_source_readable`] (Readable). |
 
 ## mycelium-interp
 
@@ -756,6 +759,9 @@
 | `mycelium_l1::ast::Literal::string` | fn | `crates/mycelium-l1/src/ast.rs:992` | A string literal from its **decoded** content. |
 | `mycelium_l1::ast::Literal::ternary` | fn | `crates/mycelium-l1/src/ast.rs:984` | A ternary literal from its verbatim `+0-` string, MSB-first (the inner text of `<…>`). |
 | `mycelium_l1::ast::LowerDecl` | struct | `crates/mycelium-l1/src/ast.rs:232` | A user-defined generative-lowering rule: `lower Name[params] = <rhs>` (DN-54 §3.2 / M-812). |
+| `mycelium_l1::ast::LowerDecl::expr_rhs` | fn | `crates/mycelium-l1/src/ast.rs:269` | The rule's RHS as an expression, if it is expression-shaped (`None` for an item-shaped rule). |
+| `mycelium_l1::ast::LowerDecl::impl_rhs` | fn | `crates/mycelium-l1/src/ast.rs:280` | The rule's RHS as an item-shaped `impl` template, if it is item-shaped (`None` for an |
+| `mycelium_l1::ast::LowerRhs` | enum | `crates/mycelium-l1/src/ast.rs:252` | The right-hand side of a `lower` rule (DN-54 §3.2 / §10; M-812, M-973). |
 | `mycelium_l1::ast::ObjectDecl` | struct | `crates/mycelium-l1/src/ast.rs:154` | An `object Name[params] { Ctor(T1, T2); via …; impl …; fn … }` composition surface |
 | `mycelium_l1::ast::Paradigm` | enum | `crates/mycelium-l1/src/ast.rs:91` | A representation **paradigm** tag (RFC-0001 §4.2): the granularity of the RFC-0012 ambient. |
 | `mycelium_l1::ast::Param` | struct | `crates/mycelium-l1/src/ast.rs:510` | A value parameter `name: type`. |
@@ -811,6 +817,7 @@
 | `mycelium_l1::elab::type_repr` | fn | `crates/mycelium-l1/src/elab.rs:244` | Resolve a surface [`TypeRef`] to a kernel [`Repr`] (swap targets). |
 | `mycelium_l1::elaborate` | fn | `crates/mycelium-l1/src/elab.rs:365` | Elaborate the nullary function `entry` of a checked nodule to a closed L0 [`Node`]. |
 | `mycelium_l1::elaborate_colony` | fn | `crates/mycelium-l1/src/elab.rs:435` | **Per-hypha elaboration of a `colony` entry** for the *real-concurrency* execution path |
+| `mycelium_l1::elaborate_direct` | fn | `crates/mycelium-l1/src/elab.rs:409` | **ADR-033/DN-74 (M-923):** elaborate `entry` **without** the [`crate::mono::monomorphize`] |
 | `mycelium_l1::elaborate_lower_rule` | fn | `crates/mycelium-l1/src/elab.rs:566` | **Elaborate a user-defined generative-lowering rule's RHS to a closed L0 [`Node`]** (DN-54 |
 | `mycelium_l1::elaborate_reclaim` | fn | `crates/mycelium-l1/src/elab.rs:501` | **Policy + body elaboration of a `reclaim` entry** for the *real-supervision* execution path |
 | `mycelium_l1::error` | mod | `crates/mycelium-l1/src/lib.rs:46` | — |
@@ -4134,6 +4141,10 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_fmt::Formatted::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_fmt::Formatted::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_fmt::Formatted::from` | definition not found via regex heuristic (kind='fn', name='from') — possibly macro-generated or cfg-gated |
+| `mycelium_fmt::Style::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_fmt::Style::default` | definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated |
+| `mycelium_fmt::Style::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_fmt::Style::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_interp::EvalError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_interp::EvalError::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_interp::EvalError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
@@ -4338,6 +4349,9 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_l1::ast::LowerDecl::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::ast::LowerDecl::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::ast::LowerDecl::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_l1::ast::LowerRhs::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_l1::ast::LowerRhs::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_l1::ast::LowerRhs::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::ast::Nodule` | dedup-alias: same definition as `mycelium_l1::Nodule` at crates/mycelium-l1/src/ast.rs:74 — one canonical row kept |
 | `mycelium_l1::ast::Nodule::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::ast::Nodule::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
@@ -4483,6 +4497,7 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_l1::elab::ElabError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::elab::elaborate` | dedup-alias: same definition as `mycelium_l1::elaborate` at crates/mycelium-l1/src/elab.rs:365 — one canonical row kept |
 | `mycelium_l1::elab::elaborate_colony` | dedup-alias: same definition as `mycelium_l1::elaborate_colony` at crates/mycelium-l1/src/elab.rs:435 — one canonical row kept |
+| `mycelium_l1::elab::elaborate_direct` | dedup-alias: same definition as `mycelium_l1::elaborate_direct` at crates/mycelium-l1/src/elab.rs:409 — one canonical row kept |
 | `mycelium_l1::elab::elaborate_lower_rule` | dedup-alias: same definition as `mycelium_l1::elaborate_lower_rule` at crates/mycelium-l1/src/elab.rs:566 — one canonical row kept |
 | `mycelium_l1::elab::elaborate_reclaim` | dedup-alias: same definition as `mycelium_l1::elaborate_reclaim` at crates/mycelium-l1/src/elab.rs:501 — one canonical row kept |
 | `mycelium_l1::error::ParseError` | dedup-alias: same definition as `mycelium_l1::ParseError` at crates/mycelium-l1/src/error.rs:9 — one canonical row kept |
