@@ -221,6 +221,172 @@ evidence cited) and execute M-969 only on 4/4 green. This is the reading under w
 declaration is "an evidenced act, not a vibe" (M-958 user story) — and it is the only option that
 neither stalls Lane A nor upgrades condition 2 past its basis.
 
+## 5A. Re-scoring — current `integration` tip (2026-07-02, `09891ac`; M-958b) — 4 of 4 GREEN
+
+> **Posture (transparency rule / VR-5 / G2).** This section is an **independent freeze-gate
+> re-score** by a separate assessor (M-958b), deliberately not part of the wave that landed the
+> `grm`/`frz` work — its job is to catch any condition that is **not** genuinely green, not to close
+> the wave. Every verdict is **`Empirical`** — an evidence-based read of the repository at the
+> **`integration` tip `09891ac`** (PR #1048, "promote grm-frz-lang to integration"), citing the
+> artifacts inspected and the tests run. Nothing is `Proven`. The §2 scorecard (0/4 at `dev`
+> `629aa12`) **stands unchanged above** — this is an append-only re-scoring, not a rewrite (house
+> rule #3). **This section scores the gate green; it does not declare the freeze** — M-969 is a
+> maintainer-class act executed by the orchestrator, and two orchestrator-owned *hygiene* items
+> (FLAG-A/FLAG-B below) should be reconciled at the freeze close-out even though neither fails a
+> condition.
+
+| # | Condition | Verdict | Tag | One-line basis (current tip) |
+|---|---|---|---|---|
+| 1 | Reject-ledger completeness | **GREEN** | `Empirical` | DN-80 is the unified `{construct, reason, alternative}` ledger across all four reject strata (parse · check · ambient · runtime-kernel), `Accepted`; the regression guard `reject_ledger.rs` is present and **green** (9 tests, run below) |
+| 2 | Primitive set closed | **GREEN** | `Empirical` | DN-76 FLAG-1 fully resolved — `vsa.*` (M-892…894) + Gap E lift (M-902…904) all `status:done`; the 7 `vsa.*` prims are in Π (`prim.rs`) and implemented in interp; the affine tracker is active; ADR-033 FLAG-1 dispositioned by DN-74 (primitive **IN** at `Empirical`) |
+| 3 | Lowering surface closed | **GREEN** | `Empirical` | RFC-0037 Enacted; all three grm decisions resolved (DN-71/DN-73/DN-74); every grm *implementation* landed in code (merged PRs #1026/#1029/#1032/#1033 — verified ancestors of HEAD); grammar baseline in sync (`drift.sh` + `grammar.sh` green); DN-54 extension checks §4.1/§6/§7 verified **Landed** by DN-75 (Resolved) |
+| 4 | KC-3 completeness review | **GREEN** | `Empirical` | The completeness-augmented KC-3 review was **run** here (§5A.4): the completeness gate (`runnable_gate.rs`) + the reject ledger are green; the trusted-core boundary matches DN-39 §7; every Π growth since DN-39 went through a ratified gate (no silent kernel growth); default-DENY held |
+
+**Net: 4 of 4 GREEN.** The scorecard is green and **M-969 is unblocked** on its evidence. Two
+orchestrator-owned bookkeeping items (FLAG-A/FLAG-B) do **not** fail any condition but should be
+reconciled for an honest close-out (§5A.5).
+
+### 5A.1 Condition 1 — reject-ledger completeness — GREEN
+
+- **DN-80** (`docs/notes/DN-80-Reject-Ledger-Exhaustive-Never-Silent-Refusal-Inventory.md`,
+  **Accepted** 2026-07-02) is the unified `{construct, reason, alternative}` ledger DN-56 §2.2/§5.2
+  calls for, spanning the four reject strata: parse (`ParseError` — 30 fixtures), check
+  (`CheckError`), ambient (`AmbientError`), and runtime/kernel (`EvalError`/`WfError`). It closes the
+  exact gap the §2 scorecard named ("checker-level refusals explicit but not ledgered … no
+  regression guard").
+- The regression guard `crates/mycelium-std-conformance/tests/reject_ledger.rs` is present and
+  **green**: `cargo test -p mycelium-std-conformance --test reject_ledger` → **9 passed, 0 failed**
+  (parse-corpus fixture-set match; checkty/grade/fuse `CheckError` construction-count audits; and —
+  strongest — `BTreeSet` closed-enum equality over `WfError`/`EvalError`/`AmbientError` variants,
+  which catches any add/remove/rename exactly). Honesty (per the test's own header, VR-5): the
+  *count* assertions are a line/regex heuristic over source text (source is ground truth); the
+  closed-enum assertions are semantically exact.
+
+### 5A.2 Condition 2 — primitive set closed — GREEN
+
+- The §2 scorecard's **FLAG-1** (blocking green) is fully resolved. In `tools/github/issues.yaml`,
+  **M-892/M-893/M-894** (the `vsa.*` group) and **M-902/M-903/M-904** (the Gap E Substrate/consume
+  lift) are all **`status:done`** — not `todo`.
+- The prims exist in the trusted base, not just on the ledger: Π (`crates/mycelium-core/src/prim.rs`)
+  now carries the 7 `vsa.*` entries (`vsa.bind`/`unbind`/`permute`/`bundle`/`cleanup`/`reconstruct`/
+  `required_dim`, grounded in RFC-0003 §3-6 / ADR-008), registered + implemented in
+  `crates/mycelium-interp/src/prims.rs` (`r.register("vsa.bind", …)` etc.). Π totals **38** named
+  prims (`bin.*` ×11, `cmp.*` ×3, `dense.*` ×6, `flt.*` ×11, `vsa.*` ×7).
+- The Gap E lift landed in the frontend: the affine use-once tracker `crates/mycelium-l1/src/affine.rs`
+  (M-903) is **active** in the checker (`checkty.rs` — "the active M-919 affine tracker", `use
+  crate::affine::{Tracker, UseOutcome}`); `Substrate` value form + the staged-`Residual` lift are
+  present.
+- ADR-033 FLAG-1 (the last open primitive-set question) is **dispositioned** by **DN-74** (Accepted):
+  Option A — `FieldSpec::Fn` full-signature encoding is the final answer, the primitive is **IN** at
+  `Empirical` strength. So DN-56 §5.3's "no open kernel-primitive question remains" is satisfied: the
+  in/out decision is made, not pending.
+- **Residuals (deferred-with-disposition, not freeze-blocking):** (i) ADR-033's *status label* still
+  reads "propose `Enacted`, pending maintainer final nod" — a bookkeeping step, not an open prim
+  question (DN-74 already decided the primitive is IN); (ii) **M-805** (multi-kernel question,
+  RFC-0036) is a **Phase-6 P3 `capture`** item — a parked future consideration, not a Phase-5 freeze
+  blocker and not a question about the *current* frozen prim set.
+
+### 5A.3 Condition 3 — lowering surface closed — GREEN (with a ledger-hygiene FLAG-A)
+
+- **RFC-0037 is Enacted** (grammar epic landed; `mycelium.ebnf`/editor grammars/api-index
+  regenerated).
+- **The three previously-maintainer-gated grm decisions are resolved:** DN-71 (Substrate/consume
+  Model S, ratified), DN-73 (tuple type), DN-74 (ADR-033 Fn-field FLAG-1). Their decision dossiers
+  (M-917/M-918/M-920/M-922) are all `status:done`.
+- **Every grm *implementation* landed in code** (verified as ancestors of HEAD, merged into
+  `integration`): M-915 short-repr keywords (`bin`/`tern`/`emb`/`hvec` → `*Short` tokens in
+  `token.rs`); M-916 operator wiring (verified — no residual, `f48b7e7`, PR #1026); M-919 consume
+  checker (affine tracker active in `checkty.rs`); M-921 tuple delta (PR #1029, `867bf55`); M-923
+  `FieldSpec::Fn` surface lowering + program-level differential (`d0094de`, PR #1032); M-973 DN-54
+  §10 attachment Model A (`6a8df01`, PR #1033, wired through the M-919 affine tracker,
+  `derive_site_double_consume` red-then-green).
+- **Grammar baseline recorded + in sync (M-924):** `scripts/checks/drift.sh` **green** (grammar
+  artifacts + `tools/grammar/` current with the lexer `keyword()` table); `scripts/checks/grammar.sh`
+  **green** (27 accept, 30 reject fixtures well-formed).
+- **User extensions (DN-54) checked transparent-by-construction:** DN-75 (the DN-54 completion audit,
+  **Resolved**) verified against the *tree* — §4.1 RHS type-check **Landed** (`checkty.rs:2039-2070`),
+  §6 KC-3 kernel-growth guard **Landed** (`elab.rs` codomain = the closed `mycelium_core::Node`
+  enum), §7 harness **re-run green**; `elab` reads `Env::lower_rules` (`elab.rs:567`). DN-75's
+  disposition **keeps DN-54 `Accepted`** deliberately (not stepped to Enacted).
+- **Residuals the §2 scorecard §3.3 flagged (deferred-with-disposition, routed by DN-75, never
+  silent):** the DN-54 §7 re-run harness is done; R-2 (`reveal`-ability of derive output) is **gated
+  on the DN-38 §5 `reveal` track** — the by-construction argument stands (`Declared`); R-3 (§7.1
+  differential as a *generated, DN-20-tiered* corpus vs the landed fixed 4-case table) is a testing
+  refinement. None break the never-silent guarantee (the completeness gate below covers them), so
+  none is freeze-blocking.
+- **FLAG-A (ledger hygiene — orchestrator-owned `issues.yaml`, not editable here).** The issue
+  statuses for **M-915/M-916/M-919/M-921/M-923** still read **`status:blocked`** ("serial L1 lane —
+  after enb"), while the code for all five **landed** as the merged PRs cited above. The statuses are
+  **stale** — they should be stepped to `done`. This is a *bookkeeping* discrepancy, not a functional
+  gap (the lowering surface is closed in code, which is ground truth), **but** a freeze declared
+  while the tracker shows five prerequisite P1 issues "blocked" is internally inconsistent with "an
+  evidenced act, not a vibe" — so the orchestrator should reconcile these before the M-969 close-out.
+
+### 5A.4 Condition 4 — KC-3 completeness review — GREEN (review run here)
+
+The completeness-augmented DN-39 KC-3 review, run over the now-closed prim set + lowering surface:
+
+- **Completeness — every accept accounted.** The DN-50 OQ-2 standing gate
+  `crates/mycelium-l1/tests/runnable_gate.rs::every_accepted_construct_elaborates_to_ok_or_explicit_residual`
+  is **green** (`cargo test -p mycelium-l1 --test runnable_gate` → 1 passed). It is a data-driven
+  table over the DN-52 census construct categories (~19 rows — literals, ops, swaps, `let`, calls,
+  data+match, recursion, colony/hypha, generics, trait impls, fold sugar, plus the two explicit-Residual
+  cases: dense-swap target, `wild` non-host-call), each asserting `elaborate` → `Ok(node)` OR
+  `Err(ElabError::Residual{..})` — never a silent accept-but-unrunnable. `Empirical` (a representative
+  table + the three-way corpus; not an exhaustive proof over all programs — stated plainly, as the
+  test does).
+- **Completeness — every reject accounted.** The DN-80 ledger + `reject_ledger.rs` (§5A.1) close this,
+  including exact closed-enum coverage of `WfError`/`EvalError`/`AmbientError`.
+- **KC-3 minimality + auditability.** The trusted-core boundary matches **DN-39 §7** unchanged: L0
+  Core IR + the reference interpreter (`mycelium-core`/`mycelium-interp`/`mycelium-l1`) + the
+  content-addressing primitive + the guarantee lattice + the swap engine; `mycelium-spore` and the
+  AOT/MLIR path stay **outside** the TCB (verified consumers / validated-not-trusted). No boundary
+  move occurred.
+- **KC-3 growth deliberate + bounded — default-DENY held, no silent kernel growth.** Every Π/trusted-base
+  growth since DN-39 traces to a ratified gate: `flt.*` via **DN-69 PROMOTE** (the DN-39 four-clause
+  bar argued clause-by-clause) + **ADR-040** (the ADR-038 §2.6 double gate); `FieldSpec::Fn` via
+  **ADR-033** R2 maintainer sign-off + **DN-74** FLAG-1 disposition; `vsa.*` as the enactment of the
+  already-ratified **RFC-0003/ADR-008** paradigm prim set (M-892…894); `bin.*`/`dense.*` per
+  RFC-0032/DN-72. **Honest note (VR-5):** unlike `flt.*` (DN-69), the `vsa.*` surfacing did **not**
+  get a fresh standalone DN-39 promotion dossier — its basis is the prior RFC-0003/ADR-008
+  ratification, not a new KC-3 bar run; it is deliberate and never-silent, but that is the strength of
+  its basis (`Empirical`, spec-grounded), stated so it is not over-read as a fresh adjudication. User
+  extensions (DN-54) add **no** kernel growth by construction — the §6 guard fixes the elaborator's
+  codomain to the closed `mycelium_core::Node` enum, so a user `lower`/`derive` cannot introduce a new
+  L0 node.
+- **No construct silently unhandled.** `runnable_gate` (accepts) and `reject_ledger` (rejects)
+  jointly enforce "every accept → OK or explicit `Residual`; every reject → ledgered refusal" — G2
+  held throughout.
+- **Verdict: PASS.** The kernel passes the completeness-augmented KC-3 review. Tagged `Empirical`
+  (established via the two green standing gates + the boundary inspection + the ratified-growth trace;
+  **not** `Proven` — there is no mechanized proof that *no other* growth occurred, exactly as DN-39 §9
+  tags the kernel-at-large). No genuine gap was found: no construct that fails to elaborate, no silent
+  kernel growth, no unhandled case.
+
+### 5A.5 FLAGs (never guessed — G2/VR-5)
+
+- **FLAG-A (condition 3 — ledger hygiene, does NOT fail the condition; orchestrator-owned).**
+  M-915/M-916/M-919/M-921/M-923 are `status:blocked` in `issues.yaml` while their code landed
+  (merged PRs #1026/#1029/#1032/#1033 + `token.rs`/`checkty.rs`/`elab.rs`). Step them to `done`
+  before the M-969 close-out so the tracker matches the frozen reality. `issues.yaml` is read-only for
+  this leaf.
+- **FLAG-B (condition 3 — doc hygiene, does NOT fail the condition).** DN-54's *status header* still
+  lists RHS-elaboration / §4.1 / §6 as "NOT yet implemented (deferred to M-812-cont)", but DN-75's
+  audit confirms all three **Landed** on the tree. DN-75 E-1 already dispositioned this as a one-line
+  editorial for DN-54's next changelog — apply it at close-out. (DN-54 correctly stays `Accepted` per
+  DN-75.)
+- **FLAG-C (condition 2 — one nod, carried forward from §4 FLAG-2).** ADR-033's Accepted → Enacted
+  label step is still pending the maintainer's final nod. DN-74 already decided the primitive is IN,
+  so this does not gate condition 2; recorded so it is not lost under the freeze.
+- **FLAG-D (shared files, per the leaf contract).** `CHANGELOG.md`, `docs/Doc-Index.md`,
+  `docs/api-index/`, and `tools/github/issues.yaml` (M-958b close-out; the FLAG-A status steps) are
+  **untouched** by this PR and need the integrating parent's one-time reconciliation.
+
+**Bottom line (M-958b, `Empirical`): the four-condition scorecard is 4 of 4 GREEN at `integration`
+`09891ac`, so M-969 is unblocked on the evidence. FLAG-A and FLAG-B are close-out hygiene the
+orchestrator owns — reconcile them so the freeze is declared over a tracker that matches the frozen
+code. This section scores the gate; it does not declare the freeze.**
+
 ## 6. Grounding
 
 **DN-56** (the gate this scores; §5 conditions, §6 what freeze forbids, §7 the open ledger) ·
@@ -240,3 +406,4 @@ M-958/M-959/M-969), **`enb`** (Gaps A/B/C/E), **`grm`** (M-915…M-924) · repo 
 |---|---|---|
 | 2026-07-02 | **Recommended, pending orchestrator acceptance** | Authored (M-958, kickoff `frz` Lane A) as the DN-56 four-condition freeze scorecard at `dev` `629aa12`. All four conditions scored `Empirical` with cited evidence: 0/4 green (1 reject-ledger OPEN → M-959; 2 primitive set OPEN-near-green → FLAG-1 disposition + ADR-033 nod; 3 lowering surface OPEN → grm M-915…M-924; 4 KC-3 completeness review OPEN → frz Lane A, sequenced last). DN-39 default-DENY re-affirmed as holding throughout (`Empirical`). Decision delegated by the maintainer to the orchestrator (2026-07-02, `Declared`); recommendation: **Option A** — accept as the M-969 gate instrument, unblock M-959, disposition FLAG-1, execute M-969 only on 4/4 green. Not self-ratified; enacts nothing; freezes nothing. |
 | 2026-07-02 | **Accepted** | Accepted by the wave orchestrator at the integration-reconcile promotion gate, under the maintainer's 2026-07-02 delegation (`Declared`). **Option A** adopted: this scorecard is the M-969 four-condition freeze-gate instrument. Acceptance does **not** freeze the kernel — the score stands at 0/4 green, so M-969 remains gated (held/not closed). FLAG-1 disposition is carried by DN-74 (Accepted, same date). Forward transition, append-only (house rule #3); nothing frozen, no tag upgraded (VR-5/G2). |
+| 2026-07-02 | **Accepted** (re-scored; instrument status unchanged) | **Independent re-score (M-958b) at the `integration` tip `09891ac` (PR #1048): 4 of 4 GREEN** — recorded append-only in **§5A** (the §2 0/4 section stands). Condition 1 GREEN (DN-80 unified ledger + `reject_ledger.rs` 9 tests green); condition 2 GREEN (FLAG-1 fully resolved — `vsa.*` M-892…894 + Gap E M-902…904 all `done`, 7 `vsa.*` prims in Π, affine tracker active, ADR-033 FLAG-1 dispositioned IN by DN-74); condition 3 GREEN (RFC-0037 Enacted; grm decisions DN-71/DN-73/DN-74 resolved; all grm implementations landed as PRs #1026/#1029/#1032/#1033; grammar baseline in sync via `drift.sh`+`grammar.sh`; DN-54 §4.1/§6/§7 verified Landed by DN-75); condition 4 GREEN — the completeness-augmented KC-3 review was **run** (`runnable_gate.rs` + `reject_ledger.rs` green; DN-39 §7 boundary unchanged; no silent kernel growth; default-DENY held) → **PASS**. Net: **M-969 unblocked on the evidence**; the freeze is **not** declared here (orchestrator's delegated act). Non-blocking hygiene FLAGs for close-out: FLAG-A (M-915/916/919/921/923 `issues.yaml` statuses stale at `blocked` while code landed — step to `done`), FLAG-B (DN-54 status header stale re: M-812-cont completions — DN-75 E-1 editorial). All verdicts `Empirical`; nothing frozen, no tag upgraded (VR-5/G2); DN-76 stays `Accepted` (the instrument). |
