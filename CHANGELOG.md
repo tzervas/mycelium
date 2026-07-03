@@ -11,6 +11,53 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added / Changed / Fixed (2026-07-02: `grm`/`frz` — lowering-surface close-out, mycfmt readable, transparency fixes)
+
+The `grm` (grammar/lowering) and `frz` (kernel-freeze) lanes' Phase-I H2 kernel work. This closes
+the freeze's "lowering surface" condition; the kernel-freeze declaration (M-969) remains the
+strictly-last maintainer/orchestrator act. All guarantee claims stay at their checked strength
+(VR-5). Basis: PRs #1038, #1040, #1042/#1045 (reject-ledger reconciles), #1043, #1044, #1046, #1047.
+
+- **`mycfmt --readable` human-multiline style** (`crates/mycelium-fmt`, M-974/#1038). A new
+  `Style::{Compact, Readable}` + `format_source_readable`/`format_source_styled` render large
+  segments across lines (breaks after commas) at an 88-col target. **Presentation-only and proven
+  behavior-neutral** — 14/17 `lib/std` nodules reformatted with green `include_str!` round-trips.
+  **DN-82** scopes the readable canonical to `lib/std` only (not a global flip). Guarantee: the
+  behavior-neutrality is **Empirical** (differential + three-way).
+- **`Fuse` prelude and semilattice-law checker** (`crates/mycelium-l1/src/fuse.rs`, M-965/#1040).
+  A built-in `Fuse` trait plus a definition-time checker that refuses a `join` violating
+  idempotence / commutativity / associativity over a finite enumerable domain, with a concrete
+  counterexample (never-silent, G2). **Empirical** (exhaustive over the domain); a non-enumerable
+  domain is *skipped*, never silently assumed lawful (VR-5).
+- **`via` delegation — deterministic, `EXPLAIN`-able ordering** (`crates/mycelium-l1`, M-966/#1044).
+  Two `via` clauses claiming one trait are refused never-silently naming both candidate field
+  indices; `Env::via_provenance` records the chosen delegate. Also fixed a latent bug: parametric
+  `via` delegation never type-checked (the abstract method signature was not argument-substituted).
+- **Per-instantiation guarantee-tags through monomorphization** (`crates/mycelium-l1/src/mono.rs`,
+  M-967/#1046, executes M-844). **Fixes a silent-loss VR-5 bug:** mono re-emitted specialized
+  signatures via `ty_to_ref` → `TypeRef::unguaranteed`, silently dropping each source `@ g` tag on
+  every monomorphized param/return/`Let`/`Ascribe`. Now every reconstruction site threads the
+  original declaration's guarantee — no tag lost, merged, or upgraded across instantiation.
+- **LSP semantic-token classification completed** (`crates/mycelium-lsp`, M-975/#1043). `classify()`
+  is now **exhaustive over `Tok`** (a future unclassified token fails to compile, not silently
+  drops); string/float/bytes literals and the `Seq`/`Bytes`/`Float` + M-915 short repr keywords
+  classify correctly.
+- **DN-54 §10 attachment model — Accepted (Model A) and enacted** (DN-81, M-973). Sibling-item
+  injection, wired through the M-919 affine tracker (`derive_site_double_consume` red-then-green).
+- **Grammar stability close-out** (M-924/#1047). The ebnf gains the first-class function-type
+  `A => B` production (matching `parse_type_ref_guarded`) with a positive conformance fixture;
+  grammar artifacts re-verified in sync (44/44 zero-ERROR parse). **DN-83** *proposes* an
+  RFC/ADR-gated surface-grammar stability window (status Proposed — maintainer decision pending).
+- **Reject-ledger kept exhaustive** (DN-80, M-959 guard). Re-audited through the wave — parse
+  corpus 30 fixtures, check-level 217 sites across 41 families (fixture 31, family-8 lower/derive,
+  family-40 `Fuse` law, family-6 `via`) — and the regression guard **caught a real compile break**
+  (an M-965×M-973 semantically-conflicting merge that left `Env{}` missing a field) plus every
+  unledgered reject. All `Empirical` (mechanical inventory).
+
+> Also landed ad-hoc during the wave (traceable via the DN provenance above; formal `issues.yaml`
+> registration is a lightweight follow-up): M-972/M-972b (DN-81 dossier + DN-81 correction),
+> M-973 (attachment enact), M-974 (mycfmt readable), M-975 (LSP classify).
+
 ### Added (2026-07-02: M-697 — language identity and full-surface syntax highlighting for `.myc`)
 
 Brought the editor grammars current with the landed corpus and packaged Mycelium for
