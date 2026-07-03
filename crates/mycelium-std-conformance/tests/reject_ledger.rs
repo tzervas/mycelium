@@ -160,7 +160,8 @@ fn fuse_law_checker_checkerror_construction_count_matches_the_ledger() {
     // file (DN-80 §4 row 40). Its four `CheckError::new(` sites are the idempotence /
     // commutativity / associativity violations plus the probe-time eval-failure refusal.
     let src = read("crates/mycelium-l1/src/fuse.rs");
-    let total = count_occurrences(&src, "CheckError::new(") + count_occurrences(&src, "CheckError::at(");
+    let total =
+        count_occurrences(&src, "CheckError::new(") + count_occurrences(&src, "CheckError::at(");
     assert_eq!(
         total, 4,
         "fuse.rs `CheckError::new(`/`CheckError::at(` construction sites: found {total}, \
