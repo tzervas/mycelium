@@ -39,6 +39,7 @@ use mycelium_core::{
     CoreValue, Datum, GuaranteeStrength, Node, PackScheme, Payload, PhysicalLayout, Repr, Value,
 };
 use mycelium_interp::{Budgets, EffectKind, EvalError, PrimRegistry, SwapEngine};
+use mycelium_workstack::{ensure_sufficient_stack, BudgetError, DepthGuard, RecursionBudget};
 
 use crate::budget::{AutoDepthBudget, DepthBudget, DepthResolution, DEFAULT_PER_FRAME_BYTES};
 use crate::pack;
@@ -201,10 +202,28 @@ pub fn run_core_with_effects(
     max_depth: usize,
     budgets: &mut Budgets,
 ) -> Result<CoreValue, EvalError> {
-    let top = Rc::new(lower::lower_to_anf(node));
-    let mut fuel = fuel;
-    let result = eval_machine(top, Env::new(), prims, swap, &mut fuel, max_depth, budgets)?;
-    as_core(result)
+    // RFC-0041 W3½: the AOT env-machine now charges the *shared* `mycelium-workstack` recursion budget
+    // at each control-stack frame-push, so its never-silent depth ceiling and host-stack guard are the
+    // same primitives the L1/L0 machines use. `max_depth` (the DN-05 §2.4 resolved ceiling — the
+    // differential floor 4096, the dynamic `[10k,2M]` headroom outside) maps 1:1 to the budget's depth
+    // limit, so the accept/reject threshold is byte-for-byte the pre-extraction `stack.len() >= max_depth`
+    // boundary (behavior-preserving — the W3½ gate). A `max_depth` above `u32::MAX` saturates to
+    // `u32::MAX` (unreachable under the DN-05 `[10k,2M]` clamp; an explicit caller passing more gets a
+    // ceiling reported as `u32::MAX`, never a wraparound — never-silent).
+    let depth_limit = u32::try_from(max_depth).unwrap_or(u32::MAX);
+    // Grow the host stack once at entry (RFC-0041 §4.3 / §4.4). The trampoline already keeps the AOT's
+    // *object-level* recursion on the heap (O(1) host stack), so this is the shared-guard consistency
+    // wrap and a backstop for any host-recursive callee — the growth is bounded by the depth ceiling.
+    // The `RecursionBudget` is created *inside* the closure: it is `Send` but not `Sync`, so it is owned
+    // on the worker rather than borrowed across the thread boundary (mir-passes `emit` precedent).
+    let sizing = RecursionBudget::new(depth_limit, u64::MAX, u64::MAX);
+    ensure_sufficient_stack(&sizing, move || {
+        let budget = RecursionBudget::new(depth_limit, u64::MAX, u64::MAX);
+        let top = Rc::new(lower::lower_to_anf(node));
+        let mut fuel = fuel;
+        let result = eval_machine(top, Env::new(), prims, swap, &mut fuel, &budget, budgets)?;
+        as_core(result)
+    })
 }
 
 /// Run a Core IR program through the AOT path to a representation [`Value`]. Convenience over
@@ -225,11 +244,24 @@ struct Cont {
     name: Atom,
 }
 
-/// A frame on the explicit **heap** control stack — what makes the machine O(1) host stack.
+/// A frame on the explicit **heap** control stack — what makes the machine O(1) host stack. Each frame
+/// holds an RAII [`DepthGuard`] (RFC-0041 W3½): the shared [`RecursionBudget`] is charged one unit when
+/// the frame is pushed and releases it when the frame is popped/dropped, so `budget.current_depth()`
+/// tracks `stack.len()` exactly and the depth ceiling is the shared `mycelium-workstack` primitive —
+/// preserving the pre-extraction `stack.len() >= max_depth` accept/reject threshold byte-for-byte.
+struct Frame<'b> {
+    /// The per-frame depth reservation on the shared budget; released on pop/drop. Underscored because
+    /// it is held purely for its `Drop` side-effect (the release) — the drop *is* the "read".
+    _guard: DepthGuard<'b>,
+    /// What to do when this frame is resumed.
+    kind: FrameKind,
+}
+
+/// The action a resumed control-stack [`Frame`] performs.
 // `ApplyThen` carries an inlined `AotVal` (see the note on `AotVal`); the size asymmetry with
 // `Resume` is the same accepted trade-off.
 #[allow(clippy::large_enum_variant)]
-enum Frame {
+enum FrameKind {
     /// Bind the returned value to `name`, then resume `block` at `idx` in `env`.
     Resume(Cont),
     /// The returned value is a function; **apply** it to `arg`, then resume per the continuation.
@@ -237,22 +269,46 @@ enum Frame {
     ApplyThen { arg: AotVal, cont: Cont },
 }
 
+/// Map the shared budget's never-silent over-budget error to the AOT env-machine's existing observable
+/// (RFC-0041 W3½): a [`BudgetError::DepthExceeded`] becomes the **unchanged** [`EvalError::DepthLimit`]
+/// at the *same* limit, so the recursion/AOT differentials are byte-for-byte unmoved (the §5.1 canonical
+/// variant unification is W5-gated — the AOT's externally-observed error variant is deliberately *not*
+/// changed here). [`RecursionBudget::try_enter`] only ever yields `DepthExceeded` (it charges no
+/// bytes/steps), so the `OutOfBudget` arm is unreachable in this crate; it is mapped defensively to a
+/// `DepthLimit` on its own ceiling rather than panicking (never-silent, G2).
+fn depth_limit_error(e: BudgetError) -> EvalError {
+    let limit = match e {
+        BudgetError::DepthExceeded { limit } => limit,
+        BudgetError::OutOfBudget { limit, .. } => u32::try_from(limit).unwrap_or(u32::MAX),
+    };
+    EvalError::DepthLimit {
+        limit: limit as usize,
+    }
+}
+
 /// Enter an application `f arg` whose result should resume `ret`: push the right frame and return the
 /// `(block, env)` to evaluate next. Closures call their body; a `Fix` unfolds under the fuel clock
-/// (binding its name to itself) and re-applies. The depth ceiling is checked here (the only place the
-/// control stack grows on a call). Applying a non-function is an explicit refusal.
-fn enter_apply(
+/// (binding its name to itself) and re-applies. **The depth ceiling is the shared `mycelium-workstack`
+/// budget (RFC-0041 W3½):** one [`RecursionBudget::try_enter`] per frame-push — the only place the
+/// control stack grows on a call — with its [`DepthGuard`] moved into the pushed [`Frame`] for the
+/// frame's lifetime, so the accept/reject threshold is exactly the pre-extraction `stack.len() >=
+/// max_depth`. Applying a non-function is an explicit refusal.
+fn enter_apply<'b>(
     f: AotVal,
     arg: AotVal,
     ret: Cont,
-    stack: &mut Vec<Frame>,
+    stack: &mut Vec<Frame<'b>>,
     fuel: &mut u64,
-    max_depth: usize,
+    budget: &'b RecursionBudget,
     budgets: &mut Budgets,
 ) -> Result<(Rc<Anf>, Env), EvalError> {
-    if stack.len() >= max_depth {
-        return Err(EvalError::DepthLimit { limit: max_depth });
-    }
+    // The source-call/β frame charge: reserve one depth unit on the shared budget. The guard is moved
+    // into the frame we push (released on pop), so `budget.current_depth() == stack.len()` at every
+    // enter — hence `depth.get() >= depth_limit` (try_enter's refusal) is exactly the prior
+    // `stack.len() >= max_depth`. Over-budget is the never-silent `DepthExceeded`, mapped to the
+    // unchanged `EvalError::DepthLimit` (behavior-preserving; the depth check precedes the fuel/effect
+    // charges, exactly as the ad-hoc ceiling did).
+    let guard = budget.try_enter().map_err(depth_limit_error)?;
     // A declared `alloc` effect budget bounds the control-stack *memory* — charged per frame at the
     // DN-05 per-frame rate, the opt-in sibling of the depth ceiling (RFC-0014 §4.8). Absent ⇒ skip
     // (the depth ceiling is the default space guard). An overrun is the unified, graceful
@@ -262,14 +318,20 @@ fn enter_apply(
     }
     match f {
         AotVal::Closure { param, body, env } => {
-            stack.push(Frame::Resume(ret));
+            stack.push(Frame {
+                _guard: guard,
+                kind: FrameKind::Resume(ret),
+            });
             let mut call_env = env;
             call_env.insert(Atom::Named(param), arg);
             Ok((body, call_env))
         }
         AotVal::Fix { name, body, env } => {
             *fuel = fuel.checked_sub(1).ok_or(EvalError::FuelExhausted)?;
-            stack.push(Frame::ApplyThen { arg, cont: ret });
+            stack.push(Frame {
+                _guard: guard,
+                kind: FrameKind::ApplyThen { arg, cont: ret },
+            });
             let selfval = AotVal::Fix {
                 name: name.clone(),
                 body: Rc::clone(&body),
@@ -281,7 +343,10 @@ fn enter_apply(
         }
         AotVal::FixGroup { defs, which, env } => {
             *fuel = fuel.checked_sub(1).ok_or(EvalError::FuelExhausted)?;
-            stack.push(Frame::ApplyThen { arg, cont: ret });
+            stack.push(Frame {
+                _guard: guard,
+                kind: FrameKind::ApplyThen { arg, cont: ret },
+            });
             // Re-bind every member name to its own focus suspension (so a sibling call resolves the
             // whole group), then enter the focused member's body — mirrors the interpreter's
             // `FixGroup` focus unfold under the same fuel clock.
@@ -370,21 +435,23 @@ enum Step {
 /// The trampoline: iterate over blocks with an explicit control stack, so object-level recursion
 /// uses **heap**, not the host call stack (O(1) host stack — the M-347 fix). `App`/`Match` push a
 /// continuation and switch blocks; a completed block returns its result value, unwinding the stack
-/// (an `ApplyThen` frame re-applies). Deep recursion is bounded by `fuel` (time) and `max_depth`
-/// (space) — both explicit graceful errors, never an abort.
-fn eval_machine(
+/// (an `ApplyThen` frame re-applies). Deep recursion is bounded by `fuel` (time) and the shared
+/// [`RecursionBudget`]'s depth ceiling (space) — both explicit graceful errors, never an abort. Each
+/// pushed [`Frame`] holds a [`DepthGuard`] borrowed from `budget`, so `budget` must outlive `stack`
+/// (RFC-0041 W3½).
+fn eval_machine<'b>(
     top: Rc<Anf>,
     top_env: Env,
     prims: &PrimRegistry,
     swap: &dyn SwapEngine,
     fuel: &mut u64,
-    max_depth: usize,
+    budget: &'b RecursionBudget,
     budgets: &mut Budgets,
 ) -> Result<AotVal, EvalError> {
     let mut block = top;
     let mut env = top_env;
     let mut idx = 0usize;
-    let mut stack: Vec<Frame> = Vec::new();
+    let mut stack: Vec<Frame<'b>> = Vec::new();
 
     loop {
         if idx >= block.bindings().len() {
@@ -392,21 +459,30 @@ fn eval_machine(
             let val = lookup(&env, block.result())?;
             match stack.pop() {
                 None => return Ok(val),
-                Some(Frame::Resume(c)) => {
-                    let mut e = c.env;
-                    e.insert(c.name, val);
-                    block = c.block;
-                    env = e;
-                    idx = c.idx;
-                }
-                Some(Frame::ApplyThen { arg, cont }) => {
-                    // The returned value is the unfolded closure; apply it to the saved arg (its
-                    // result flows to `cont`, the frame enter_apply pushes).
-                    let (nb, ne) =
-                        enter_apply(val, arg, cont, &mut stack, fuel, max_depth, budgets)?;
-                    block = nb;
-                    env = ne;
-                    idx = 0;
+                Some(Frame { _guard, kind }) => {
+                    // Popping the frame releases its depth reservation NOW — mirroring the
+                    // pre-extraction `stack.pop()` dropping `stack.len()` by one *before* any re-enter,
+                    // so a following `enter_apply` sees the post-pop depth (the exact prior threshold
+                    // order: an `ApplyThen`'s pop-then-re-push is net-zero on depth).
+                    drop(_guard);
+                    match kind {
+                        FrameKind::Resume(c) => {
+                            let mut e = c.env;
+                            e.insert(c.name, val);
+                            block = c.block;
+                            env = e;
+                            idx = c.idx;
+                        }
+                        FrameKind::ApplyThen { arg, cont } => {
+                            // The returned value is the unfolded closure; apply it to the saved arg
+                            // (its result flows to `cont`, the frame enter_apply pushes).
+                            let (nb, ne) =
+                                enter_apply(val, arg, cont, &mut stack, fuel, budget, budgets)?;
+                            block = nb;
+                            env = ne;
+                            idx = 0;
+                        }
+                    }
                 }
             }
             continue;
@@ -485,7 +561,7 @@ fn eval_machine(
                         env: std::mem::take(&mut env),
                         name,
                     };
-                    let (nb, ne) = enter_apply(f, a, ret, &mut stack, fuel, max_depth, budgets)?;
+                    let (nb, ne) = enter_apply(f, a, ret, &mut stack, fuel, budget, budgets)?;
                     Step::Switch(nb, ne)
                 }
                 Rhs::Match {
@@ -503,15 +579,19 @@ fn eval_machine(
                         });
                     }
                     let (arm_block, arm_env) = select_arm(&cv, alts, default.as_ref(), &env)?;
-                    if stack.len() >= max_depth {
-                        return Err(EvalError::DepthLimit { limit: max_depth });
-                    }
-                    stack.push(Frame::Resume(Cont {
-                        block: Rc::clone(&block),
-                        idx: idx + 1,
-                        env: std::mem::take(&mut env),
-                        name,
-                    }));
+                    // `Match` grows the control stack by one continuation frame — charge the shared
+                    // budget here too (the pre-extraction ceiling guarded this site identically), after
+                    // `select_arm` so a `NonExhaustiveMatch` still surfaces first (order preserved).
+                    let guard = budget.try_enter().map_err(depth_limit_error)?;
+                    stack.push(Frame {
+                        _guard: guard,
+                        kind: FrameKind::Resume(Cont {
+                            block: Rc::clone(&block),
+                            idx: idx + 1,
+                            env: std::mem::take(&mut env),
+                            name,
+                        }),
+                    });
                     Step::Switch(arm_block, arm_env)
                 }
             }
@@ -579,6 +659,23 @@ mod tests {
             Meta::exact(Provenance::Root),
         )
         .unwrap()
+    }
+
+    /// RFC-0041 §4.2 / W2 residual: pin the AOT env-machine `Frame`'s heap footprint under the shared
+    /// per-machine baseline ([`mycelium_workstack::MAX_FRAME_BYTES`]). The AOT `Frame` is the largest of
+    /// the three machines' frame/value structs and *set* that 384-byte baseline (it is ~336 B here, the
+    /// pre-W3½ ~328 B plus the one-pointer [`DepthGuard`]); pinning it means a field addition that grows
+    /// it past the ceiling **fails CI here, not in production** (the ADR-041 frame-size lesson). On an
+    /// intended growth, re-measure all three machines and bump `MAX_FRAME_BYTES` (a `Declared` baseline).
+    #[test]
+    fn aot_frame_size_is_pinned_under_the_shared_baseline() {
+        let frame = std::mem::size_of::<Frame<'static>>() as u64;
+        assert!(
+            frame <= mycelium_workstack::MAX_FRAME_BYTES,
+            "AOT Frame is {frame} B, over the shared MAX_FRAME_BYTES ceiling of {} B — re-measure all \
+             three machines and bump the baseline if this growth is intended (RFC-0041 §4.2)",
+            mycelium_workstack::MAX_FRAME_BYTES
+        );
     }
 
     #[test]
