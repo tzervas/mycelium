@@ -19,6 +19,11 @@ mycelium-proj = { path = "../mycelium-proj" }
 # M-643: the shared CLI substrate (stdin-or-file `read_source`). In-workspace path dep, std-only —
 # no new external crate enters the tree (KC-3).
 mycelium-cli-common = { path = "../mycelium-cli-common" }
+# RFC-0041 W1 (§4.7 RR-29): the shared recursion-budget + guarded-stack leaf. Closes the render-family
+# guard hole (`render_expr_canonical`/`render_flat`/`render_body_with_comments` et al.) by running
+# those passes on the grown worker stack instead of the caller's — in-workspace path dep, no new
+# external crate (KC-3).
+mycelium-workstack = { path = "../mycelium-workstack" }
 
 [[bin]]
 name = "mycfmt"
