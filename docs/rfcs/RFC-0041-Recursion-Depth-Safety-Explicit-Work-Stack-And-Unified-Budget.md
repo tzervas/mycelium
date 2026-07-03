@@ -259,12 +259,19 @@ before merge. **Shared-file owners** (resolves §11 Med wave39): root `Cargo.tom
 **integrator-owned** — waves FLAG edits, the integrator applies them (feed-as-ready). **Ordering edges are
 in the table**, not just prose (resolves §11 High wave35).
 
-**Status (2026-07-03): PHASE-4 COMPLETE — all seven waves (W0–W6) landed on `dev`.** The flagship
-`myc run` SIGABRT (RR-29 §0.1) is closed, the §5.1 cross-path error-parity gate is green, and all three
-execution machines (L0 interp · L1 eval · AOT) plus the frozen-core value types refuse deep input
-never-silently on one shared `RecursionBudget`, with the host stack growing on demand.
-`#![forbid(unsafe_code)]` holds across every landed crate (the sole `unsafe` is the audited upstream
-`stacker`/`psm`). **W6** = data-spine iteration: the RFC §4.7 "convert-or-document" fork was resolved to
+**Status (2026-07-03): all seven implementation waves (W0–W6) landed on `dev`; whole-RFC `Enacted` NOT
+yet claimable (open §9 DoD items — see below).** The flagship `myc run` SIGABRT (RR-29 §0.1) is closed,
+the §5.1 cross-path error-parity gate is green, and all three execution machines (L0 interp · L1 eval ·
+AOT) plus the frozen-core value types refuse deep input never-silently on one shared `RecursionBudget`,
+with the host stack growing on demand. `#![forbid(unsafe_code)]` holds across every landed crate (the sole
+`unsafe` is the audited upstream `stacker`/`psm`). **Open §9 DoD items surfaced by the post-implementation
+assessment (2026-07-03), held for maintainer determination:** (i) the DoD-required **`--unbounded`** mode
+(decided DN-84 §9.3, §5-specced) was never scheduled and is **unimplemented**; (ii) `mir-passes`
+`eval(&RcNode)`/`emit_elided`/`emit_reuse` (a §4.7-listed crate) remain **unguarded**, so DoD §9 item 1
+("no input SIGABRTs any pass in the §4.7 list") is not literally met there; (iii) an AOT
+per-frame-vs-source-call metric reconciliation is **owed** (W3½ said "W5 reconciles"; W5 reconciled L1
+only — AOT still depth-charges `Match` continuations). Plus the flagged deviations (§5.1 amendment below,
+the residual notes, M-979). M-740 unblocks once these are determined. **W6** = data-spine iteration: the RFC §4.7 "convert-or-document" fork was resolved to
 **document the wide-tuple asymmetry** — the `usefulness`/`decision` arity spine already refuses
 never-silently (`DepthExceeded{4096}`, not a SIGABRT) via the W1 guard, so the residual is a *precision*
 defect on a pathological 4095-field product type, not a safety one; conversion is gated on "if profiling

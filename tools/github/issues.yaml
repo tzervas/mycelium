@@ -11486,7 +11486,14 @@ issues:
       §7 gates conversion on "if profiling demands" (does not). Docs+tests only (differential+conformance
       byte-identical); conversion seam + boundary witness tests recorded. Maintainer may overrule → convert
       if 4095-arity is adversarially realistic.
-      *** RFC-0041 PHASE-4 (W0-W6) IMPLEMENTATION COMPLETE (2026-07-03, all on dev @ post-#1150). ***
+      *** RFC-0041 PHASE-4: ALL 7 IMPLEMENTATION WAVES (W0-W6) LANDED (2026-07-03, dev @ post-#1150). ***
+      Whole-RFC Enacted NOT yet claimable (VR-5) — a post-implementation Fable assessment surfaced genuine
+      §9 DoD OPEN ITEMS: (i) --unbounded mode DoD-required + decided (DN-84 §9.3) but NEVER scheduled/
+      implemented (no CLI flag); (ii) mir-passes eval(&RcNode)/emit_elided/emit_reuse (a §4.7-listed crate)
+      still UNGUARDED so DoD §9 item 1 not literally met there; (iii) AOT per-frame-vs-source-call metric
+      reconciliation OWED (W3½ said W5 reconciles; W5 did L1 only). The assessment recommends closing these
+      + Value/Repr construction-gate census + Box-owned invariant tripwire test in a W6-followup; full memo
+      relayed to maintainer.
       Flagship RR-29 §0.1 myc run SIGABRT CLOSED; §5.1 error-parity GREEN; all 3 machines + frozen-core
       refuse deep input never-silently on one budget; host stack grows on demand; forbid(unsafe) intact
       (sole unsafe = audited upstream stacker/psm). HELD AT DEV for maintainer RFC review + determinations

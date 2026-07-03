@@ -30,13 +30,18 @@ the wide-tuple asymmetry"). **Decision: document — conversion not warranted** 
   boundary witness tests pinning the never-silent clean refusal. **Flagged for maintainer:** overrule →
   convert only if 4095-arity is deemed adversarially realistic (§5 untrusted-input lens).
 
-**RFC-0041 Phase-4 (waves W0–W6) is COMPLETE.** All seven waves landed on the working tier: the flagship
+**RFC-0041 Phase-4 — all seven implementation waves (W0–W6) have landed** on the working tier: the flagship
 `myc run` SIGABRT (RR-29 §0.1) is closed, the §5.1 cross-path error-parity gate is green, the frozen-core
 value types + all three execution machines (L0 interp · L1 eval · AOT) refuse deep input never-silently on
 one shared budget, and the host stack grows on demand. `#![forbid(unsafe_code)]` holds across every landed
-crate (the only `unsafe` is the audited upstream `stacker`/`psm`). RFC-0041 stays **Accepted**; the
-per-wave `Enacted` scopes are recorded. Documented residuals/deviations await maintainer determinations
-(see the RFC §5.1 amendment, §7 status, and the M-979 issue). **M-740 self-hosting frontend port unblocks.**
+crate (the only `unsafe` is the audited upstream `stacker`/`psm`). **The core recursion-safety contract
+holds end-to-end.** RFC-0041 stays **Accepted** with per-wave `Enacted` scopes; **whole-RFC `Enacted` is
+NOT yet claimable** (VR-5): a post-implementation assessment surfaced genuine **§9 DoD open items** — the
+DoD-required **`--unbounded` mode** was decided (DN-84 §9.3) but never scheduled/implemented; the
+`mir-passes` `eval(&RcNode)` recursion hole (a §4.7-listed crate) is still unguarded, so DoD §9 item 1
+isn't literally met there; and an AOT per-frame-vs-source-call metric reconciliation is owed (§4.0/§4.4).
+These, plus the flagged deviations (RFC §5.1 amendment, §7 status, M-979 issue), **await maintainer
+determinations**; M-740 self-hosting unblocks once they're resolved.
 
 ### RFC-0041 W4 — L0 reference-interpreter budgeted work-stack; the flagship `myc run` SIGABRT closed (2026-07-03: M-979)
 
