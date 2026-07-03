@@ -246,6 +246,9 @@ fn div_rem_n0_is_div_by_zero() {
 /// nonzero divisor, `a == quotient * b + remainder` holds bit-exactly and `remainder < b`; every
 /// zero-divisor pair is an explicit `None`. Mirrors `mul_matches_integer_oracle`.
 #[test]
+// The `x / y` in the `y != 0` branch is the trusted native oracle this test checks `div_rem`
+// against; it must stay plain (clippy 1.96 `manual_checked_ops` would obscure the oracle).
+#[allow(clippy::manual_checked_ops)]
 fn div_rem_matches_euclidean_identity_oracle() {
     for n in 1u32..=8 {
         let hi: u64 = (1u64 << n) - 1;

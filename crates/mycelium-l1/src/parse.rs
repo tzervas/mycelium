@@ -26,14 +26,21 @@ const MAX_EXPR_DEPTH: u32 = 256;
 /// uses [`parse_phylum`]; a [`Nodule`] *is* a phylum-of-one ([`Phylum::of_one`]).
 pub fn parse(src: &str) -> Result<Nodule, ParseError> {
     let toks = lex(src)?;
-    let mut p = Parser {
-        toks,
-        i: 0,
-        depth: 0,
-    };
-    let nodule = p.parse_nodule()?;
-    p.expect(&Tok::Eof, "end of input")?;
-    Ok(nodule)
+    // Run the recursive-descent parser on the managed deep stack (as `eval`/`ambient` do) so the
+    // explicit `MAX_EXPR_DEPTH` budget — not the host stack — is the binding limit on nesting depth,
+    // independent of per-toolchain frame sizes (A4-02 / DN-40). Regression witness: on MSRV 1.96.1
+    // (ADR-041) the larger parser frames overflowed the 2 MB test stack at the 256-deep guard
+    // boundary on the `type_args` path, turning an explicit refusal back into a SIGABRT (G2).
+    mycelium_stack::with_deep_stack(move || {
+        let mut p = Parser {
+            toks,
+            i: 0,
+            depth: 0,
+        };
+        let nodule = p.parse_nodule()?;
+        p.expect(&Tok::Eof, "end of input")?;
+        Ok(nodule)
+    })
 }
 
 /// Parse a complete **phylum** program (M-662; RFC-0006 §4.3): an optional `phylum <path>` header
@@ -48,14 +55,17 @@ pub fn parse(src: &str) -> Result<Nodule, ParseError> {
 /// `nodule` (never a panic, never a silent accept — S5/G2).
 pub fn parse_phylum(src: &str) -> Result<Phylum, ParseError> {
     let toks = lex(src)?;
-    let mut p = Parser {
-        toks,
-        i: 0,
-        depth: 0,
-    };
-    let phylum = p.parse_phylum()?;
-    p.expect(&Tok::Eof, "end of input")?;
-    Ok(phylum)
+    // Deep-stack the recursive descent — see [`parse`] (A4-02 / DN-40 / ADR-041 frame-size note).
+    mycelium_stack::with_deep_stack(move || {
+        let mut p = Parser {
+            toks,
+            i: 0,
+            depth: 0,
+        };
+        let phylum = p.parse_phylum()?;
+        p.expect(&Tok::Eof, "end of input")?;
+        Ok(phylum)
+    })
 }
 
 struct Parser {
