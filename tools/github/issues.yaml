@@ -11445,8 +11445,18 @@ issues:
       acyclic gate rejects). Supply chain reconciled (THIRD-PARTY regen, unsafe-audit, geiger placeholder).
       Honest residuals: per-recursion-point grow = W3.5/W4/W5 consumer wiring; AOT Frame in-crate pin
       pending (mlir); W1 infallible-pass memory-DoS bound awaits arena-charging; O(N^2) re-walks (mono/mir).
-      Next: W3.5 (extract AOT env-machine loop onto shared guard/budget, behavior-preserving), then MAINTAINER
-      CHECKPOINT before W3 (frozen-core iterative Drop) + W4/W5 (L0/L1 machine conversion).
+      W3.5 LANDED (2026-07-03, to dev): behavior-preserving — the AOT Vec<Frame> env-machine (mycelium-mlir
+      aot.rs) charges the shared mycelium_workstack::RecursionBudget at both frame-push sites (DepthGuard per
+      frame) + grows via ensure_sufficient_stack, replacing its ad-hoc stack.len()>=max_depth ceiling.
+      BudgetError::DepthExceeded maps to the unchanged EvalError::DepthLimit at the same threshold — the
+      recursion + three-way differentials stay green with ZERO expected-value edits (oracle unmoved). AOT Frame
+      size pin resolved (W2 residual). Honest flag: AOT charges per-frame (App+Match continuations), identical
+      to pre-W3.5 — W5 reconciles the per-frame-vs-source-call metric.
+      W0+W1+W2+W3.5 = the FULL pre-checkpoint set, all landed on dev. NEXT = MAINTAINER CHECKPOINT before
+      W3 (frozen-core iterative Drop/Clone/Canon incl new doc::ir::Node; within-freeze channel DN-56 §6),
+      W4 (L0-interp substitution work-stack, myc run, construct DepthLimit), W5 (L1-eval CEK + TCO + eval
+      64->4096). W6 = data-spine iteration. These three touch the frozen trusted base / swap the reference
+      machine — held for maintainer eyes.
       DN-84 design (D), CONFIRMED by the maintainer (DN-84 §11 correction, 2026-07-03) as the
       solve-NOW track: get the complexity of the problem and solution fully figured out and solved
       in the Rust reference era, BEFORE the M-740 .myc port has to absorb the shape (the dogfooded

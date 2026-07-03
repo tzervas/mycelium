@@ -242,6 +242,17 @@ before merge. **Shared-file owners** (resolves §11 Med wave39): root `Cargo.tom
 **integrator-owned** — waves FLAG edits, the integrator applies them (feed-as-ready). **Ordering edges are
 in the table**, not just prose (resolves §11 High wave35).
 
+**Status (2026-07-03):** **W0, W1, W2, and W3½ landed — the full pre-checkpoint set.** W3½ = a
+behavior-preserving extraction: the AOT `Vec<Frame>` env-machine (`mycelium-mlir`) now charges the
+shared `mycelium_workstack::RecursionBudget` (both frame-push sites, `DepthGuard` per frame) and grows
+via `ensure_sufficient_stack`, with `BudgetError::DepthExceeded` mapped to the unchanged
+`EvalError::DepthLimit` at the same threshold — the recursion + three-way differentials stay green with
+zero expected-value edits (oracle unmoved). The AOT `Frame` size pin (W2 residual) is resolved. Honest
+flag: the AOT still charges per-frame (App and Match continuations), identical to pre-W3½ — the
+per-frame-vs-source-call reconciliation is W5's. W3½ `Enacted` (AOT scope). **Next: the maintainer
+checkpoint before W3 (frozen-core iterative destruction), W4 (L0-interp work-stack), W5 (L1-eval CEK +
+TCO + eval raise) — all three touch the frozen trusted base / swap the reference machine.**
+
 **Status (2026-07-03):** **W0, W1, and W2 landed.** W2 = the host-stack **grow** infrastructure:
 `mycelium-stack` gains a fine-grained runtime-gated `stacker` grow (exact-pinned `=0.1.24`; still
 `#![forbid(unsafe_code)]` — no authored unsafe, the switch is contained upstream) with a never-silent
@@ -329,6 +340,16 @@ implementation. **4 Critical + 15 High source-confirmed** objections, all resolv
 
 ## Meta — changelog
 
+- **2026-07-03 — W3½ landed (AOT env-machine extraction; M-979).** Behavior-preserving: the AOT
+  `Vec<Frame>` env-machine (`mycelium-mlir` `aot.rs`) charges the shared
+  `mycelium_workstack::RecursionBudget` at both frame-push sites (`DepthGuard` per frame) and grows via
+  `ensure_sufficient_stack`, replacing its ad-hoc `stack.len() >= max_depth` ceiling.
+  `BudgetError::DepthExceeded` maps to the unchanged `EvalError::DepthLimit` at the same threshold —
+  `recursion_differential.rs` + the three-way `differential.rs` stay green with zero expected-value
+  edits (the oracle is unmoved). AOT `Frame` size pin added (W2 residual resolved). Honest flag: the AOT
+  charges per-frame (App + Match continuations), identical to pre-W3½ — W5 reconciles the metric. Last
+  pre-checkpoint wave; W3/W4/W5 are the maintainer-gated frozen-core/reference-machine waves. W3½
+  `Enacted`; RFC stays Accepted. (VR-5/G2.)
 - **2026-07-03 — W2 landed (host-stack grow; M-979).** `mycelium-stack` gains a fine-grained,
   runtime-gated `stacker` grow (exact-pinned `=0.1.24`, `psm 0.1.31`; still `#![forbid(unsafe_code)]` —
   the switch is contained upstream, ADR-014) with a never-silent no-grow refusal

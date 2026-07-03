@@ -1208,7 +1208,7 @@
 | `mycelium_mlir::accel::Path` | enum | `crates/mycelium-mlir/src/accel.rs:114` | Which execution path produced an [`AccelOutcome`]'s value — recorded so a degradation is **never |
 | `mycelium_mlir::accelerated_ternary_dot` | fn | `crates/mycelium-mlir/src/accel.rs:207` | **Run the ternary dot product `Σ digit(wᵢ)·xᵢ` through the BitNet capability gate** (M-728; |
 | `mycelium_mlir::aot` | mod | `crates/mycelium-mlir/src/lib.rs:54` | — |
-| `mycelium_mlir::aot::run_core_with_budget` | fn | `crates/mycelium-mlir/src/aot.rs:171` | [`run_core`] with **both** budgets explicit (M-347): `fuel` bounds `Fix` unfolds (time), `max_depth` |
+| `mycelium_mlir::aot::run_core_with_budget` | fn | `crates/mycelium-mlir/src/aot.rs:172` | [`run_core`] with **both** budgets explicit (M-347): `fuel` bounds `Fix` unfolds (time), `max_depth` |
 | `mycelium_mlir::bitnet` | mod | `crates/mycelium-mlir/src/lib.rs:55` | — |
 | `mycelium_mlir::bitnet::BitnetDotKernel::bind` | fn | `crates/mycelium-mlir/src/bitnet.rs:337` | **Bind once, call many** (M-682): resolve the entry point a single time into a lifetime-bound |
 | `mycelium_mlir::bitnet::BitnetDotKernel::call` | fn | `crates/mycelium-mlir/src/bitnet.rs:348` | Run the kernel over `packed_weights` and `activations`, summing the first `n` ternary products. |
@@ -1242,7 +1242,7 @@
 | `mycelium_mlir::concurrent` | mod | `crates/mycelium-mlir/src/lib.rs:61` | — |
 | `mycelium_mlir::cross_backend_gate` | fn | `crates/mycelium-mlir/src/vr4.rs:195` | Run the **VR-4 cross-backend gate** over `node`: for every backend, produce its dumpable lowering |
 | `mycelium_mlir::declared_digest64` | fn | `crates/mycelium-mlir/src/inject_gate.rs:226` | A deterministic 8-byte digest for Phase-I attestation binding (`Declared` — placeholder). |
-| `mycelium_mlir::default_depth_budget` | fn | `crates/mycelium-mlir/src/aot.rs:64` | The default depth-budget resolution — the resolved ceiling **and** its `EXPLAIN`-able basis (no |
+| `mycelium_mlir::default_depth_budget` | fn | `crates/mycelium-mlir/src/aot.rs:65` | The default depth-budget resolution — the resolved ceiling **and** its `EXPLAIN`-able basis (no |
 | `mycelium_mlir::dense_codegen` | mod | `crates/mycelium-mlir/src/lib.rs:65` | — |
 | `mycelium_mlir::dense_codegen::DenseArtifact::run` | fn | `crates/mycelium-mlir/src/dense_codegen.rs:824` | Run the artifact and read its result back. |
 | `mycelium_mlir::dense_codegen::DenseCgOp::is_value_op` | fn | `crates/mycelium-mlir/src/dense_codegen.rs:115` | Whether the op produces a Dense `Value` (vs a bare-`f64` measurement). |
@@ -1368,13 +1368,13 @@
 | `mycelium_mlir::rc_plan` | mod | `crates/mycelium-mlir/src/lib.rs:75` | — |
 | `mycelium_mlir::recompile_closure` | fn | `crates/mycelium-mlir/src/inject.rs:508` | The **recompile set** of a change, by hash reachability (ADR-017 decision 3 — no AST/file diff). |
 | `mycelium_mlir::relayout_trits` | fn | `crates/mycelium-mlir/src/pack.rs:291` | Re-materialize trits through a pack-then-read round-trip where the buffer is **packed as** |
-| `mycelium_mlir::run` | fn | `crates/mycelium-mlir/src/aot.rs:213` | Run a Core IR program through the AOT path to a representation [`Value`]. |
+| `mycelium_mlir::run` | fn | `crates/mycelium-mlir/src/aot.rs:232` | Run a Core IR program through the AOT path to a representation [`Value`]. |
 | `mycelium_mlir::run_colony` | fn | `crates/mycelium-mlir/src/runtime.rs:438` | Run an L1 `colony { hypha e1, …, hypha eN }` as **real concurrent execution**, validated equal to |
-| `mycelium_mlir::run_core` | fn | `crates/mycelium-mlir/src/aot.rs:147` | Run a Core IR program through the AOT path to a [`CoreValue`] (the full v0 calculus — repr, data, |
-| `mycelium_mlir::run_core_with_effects` | fn | `crates/mycelium-mlir/src/aot.rs:196` | [`run_core_with_budget`] with a shared **effect-budget ledger** threaded through the env-machine |
-| `mycelium_mlir::run_core_with_fuel` | fn | `crates/mycelium-mlir/src/aot.rs:156` | [`run_core`] with an explicit `Fix`-unfold (fuel) budget and the dynamically-resolved depth ceiling. |
+| `mycelium_mlir::run_core` | fn | `crates/mycelium-mlir/src/aot.rs:148` | Run a Core IR program through the AOT path to a [`CoreValue`] (the full v0 calculus — repr, data, |
+| `mycelium_mlir::run_core_with_effects` | fn | `crates/mycelium-mlir/src/aot.rs:197` | [`run_core_with_budget`] with a shared **effect-budget ledger** threaded through the env-machine |
+| `mycelium_mlir::run_core_with_fuel` | fn | `crates/mycelium-mlir/src/aot.rs:157` | [`run_core`] with an explicit `Fix`-unfold (fuel) budget and the dynamically-resolved depth ceiling. |
 | `mycelium_mlir::run_reclaim` | fn | `crates/mycelium-mlir/src/runtime.rs:611` | Run an L1 `reclaim(policy) { body }` as **real RT7 supervision**, validated equal to its sequential |
-| `mycelium_mlir::run_with_layout` | fn | `crates/mycelium-mlir/src/aot.rs:547` | Run a Core IR program through the AOT path **with a schedule-staged packing layout** (M-251; |
+| `mycelium_mlir::run_with_layout` | fn | `crates/mycelium-mlir/src/aot.rs:627` | Run a Core IR program through the AOT path **with a schedule-staged packing layout** (M-251; |
 | `mycelium_mlir::run_with_reclamation` | fn | `crates/mycelium-mlir/src/rc_plan.rs:163` | Run a Core IR program through the AOT path **and** emit its MEM-4 reclamation plan additively. |
 | `mycelium_mlir::runtime` | mod | `crates/mycelium-mlir/src/lib.rs:76` | — |
 | `mycelium_mlir::signed_message` | fn | `crates/mycelium-mlir/src/inject_cert.rs:57` | The signed message for a cert over `hash` with attestation `vr4`: |
@@ -5239,12 +5239,12 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_mlir::accel::Path::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_mlir::accel::Path::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_mlir::accel::accelerated_ternary_dot` | dedup-alias: same definition as `mycelium_mlir::accelerated_ternary_dot` at crates/mycelium-mlir/src/accel.rs:207 — one canonical row kept |
-| `mycelium_mlir::aot::default_depth_budget` | dedup-alias: same definition as `mycelium_mlir::default_depth_budget` at crates/mycelium-mlir/src/aot.rs:64 — one canonical row kept |
-| `mycelium_mlir::aot::run` | dedup-alias: same definition as `mycelium_mlir::run` at crates/mycelium-mlir/src/aot.rs:213 — one canonical row kept |
-| `mycelium_mlir::aot::run_core` | dedup-alias: same definition as `mycelium_mlir::run_core` at crates/mycelium-mlir/src/aot.rs:147 — one canonical row kept |
-| `mycelium_mlir::aot::run_core_with_effects` | dedup-alias: same definition as `mycelium_mlir::run_core_with_effects` at crates/mycelium-mlir/src/aot.rs:196 — one canonical row kept |
-| `mycelium_mlir::aot::run_core_with_fuel` | dedup-alias: same definition as `mycelium_mlir::run_core_with_fuel` at crates/mycelium-mlir/src/aot.rs:156 — one canonical row kept |
-| `mycelium_mlir::aot::run_with_layout` | dedup-alias: same definition as `mycelium_mlir::run_with_layout` at crates/mycelium-mlir/src/aot.rs:547 — one canonical row kept |
+| `mycelium_mlir::aot::default_depth_budget` | dedup-alias: same definition as `mycelium_mlir::default_depth_budget` at crates/mycelium-mlir/src/aot.rs:65 — one canonical row kept |
+| `mycelium_mlir::aot::run` | dedup-alias: same definition as `mycelium_mlir::run` at crates/mycelium-mlir/src/aot.rs:232 — one canonical row kept |
+| `mycelium_mlir::aot::run_core` | dedup-alias: same definition as `mycelium_mlir::run_core` at crates/mycelium-mlir/src/aot.rs:148 — one canonical row kept |
+| `mycelium_mlir::aot::run_core_with_effects` | dedup-alias: same definition as `mycelium_mlir::run_core_with_effects` at crates/mycelium-mlir/src/aot.rs:197 — one canonical row kept |
+| `mycelium_mlir::aot::run_core_with_fuel` | dedup-alias: same definition as `mycelium_mlir::run_core_with_fuel` at crates/mycelium-mlir/src/aot.rs:157 — one canonical row kept |
+| `mycelium_mlir::aot::run_with_layout` | dedup-alias: same definition as `mycelium_mlir::run_with_layout` at crates/mycelium-mlir/src/aot.rs:627 — one canonical row kept |
 | `mycelium_mlir::bitnet::BitnetDotKernel` | dedup-alias: same definition as `mycelium_mlir::BitnetDotKernel` at crates/mycelium-mlir/src/bitnet.rs:281 — one canonical row kept |
 | `mycelium_mlir::bitnet::BitnetDotKernel::scheme` | dedup-alias: same definition as `mycelium_mlir::bitnet::KernelLayout::scheme` at crates/mycelium-mlir/src/bitnet.rs:72 — one canonical row kept |
 | `mycelium_mlir::bitnet::BitnetDotKernel::scheme` | dedup-alias: same definition as `mycelium_mlir::bitnet::KernelLayout::scheme` at crates/mycelium-mlir/src/bitnet.rs:72 — one canonical row kept |
