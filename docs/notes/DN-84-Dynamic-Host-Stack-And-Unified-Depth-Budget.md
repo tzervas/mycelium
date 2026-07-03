@@ -89,6 +89,25 @@ stack-switching `unsafe` is internal to the `stacker` leaf, contained outside th
 depth budgets stay in the kernel (the portable, self-hosting primitive); this crate is the transitional
 Rust-host adapter."* This note builds on that stated intent.
 
+> **§3 correction (2026-07-03, append-only — M-979 Phase-1 research, `research/29`).** The table above is
+> **incomplete in a security-relevant way** and is corrected here (original preserved; VR-5/G2):
+> - **`mycelium-interp` (the L0 reference interpreter — the engine `myc run` actually executes) has NO
+>   recursion-depth budget at all.** `EvalError::DepthLimit` is **defined but never constructed**
+>   (`lib.rs:182`; only `fuel` is charged, `lib.rs:561`); `step()` recurses to term depth on the
+>   **caller's stack** (the crate has no `mycelium-stack` dependency). The `evaluator | DEFAULT_DEPTH=64`
+>   row above is the **L1** evaluator (`mycelium-l1/src/eval.rs`), **not** this L0 trusted base. A crafted
+>   deep value SIGABRTs `myc run` today — the most exploitable current hole. **[orchestrator-verified]**
+> - **Recursive-`Drop` stack bomb.** `Node`/`Value`/`Datum` (`mycelium-core`) and `L1Value`
+>   (`mycelium-l1`) use **derived recursive `Drop`**; **no manual iterative `Drop` exists in
+>   `mycelium-core`** (verified). A deep chain overflows *on destruction* — even on the never-silent
+>   refusal path, and on the **caller stack** (outside `with_deep_stack`). Grow-on-demand does not cover it.
+> - **More unguarded recursions:** `mycelium-core::lower::write_canon` (`lower.rs:212`),
+>   `mycelium-mir-passes` (AOT RC path, `emit_owned`/`eval(&RcNode)`), `mycelium-transpile`, and
+>   `grade`/`decision`/`usefulness` (the last add a *tuple/ctor-arity→depth* spine class distinct from the
+>   Cons-list one). Full inventory + evidence: **`research/29-recursion-depth-and-stack-safety-RECORD.md`**.
+>
+> These are the surfaces the M-979 RFC must cover; §11's decided direction is unchanged by the correction.
+
 ---
 
 ## 4. The core tension (why "limitless" must bend to G2 + determinism)
