@@ -2,13 +2,17 @@
 //!
 //! Classifies the lexical token stream into LSP semantic-token types and emits the protocol's
 //! relative-delta encoding. The legend is the **LSP layer of the ratified RFC-0026 §3.2 scope-name
-//! table** (Accepted): the standard, *unsuffixed* LSP token types
-//! `keyword`/`type`/`enumMember`/`number`/`operator`/`comment`/`variable` the table maps each lexer
-//! bucket to (e.g. the guarantee-strength bucket → `enumMember`, the substrate/scalar types →
-//! `type`). This is the broadest-coverage layer — it classifies comments, numbers, operators, and
-//! identifiers as well as the keyword buckets. The TextMate + tree-sitter layers of the same table
-//! are generated under `tools/grammar/` (M-731) from the same lexer `keyword()`; per §3.2 those
-//! layers cover a subset today (the tree-sitter scaffold captures only the four word buckets).
+//! table** (Accepted), **plus one additive extension** (M-975, see the [`TOKEN_TYPES`] doc): the
+//! standard, *unsuffixed* LSP token types
+//! `keyword`/`type`/`enumMember`/`number`/`operator`/`comment`/`variable`/`string` the table maps
+//! each lexer bucket to (e.g. the guarantee-strength bucket → `enumMember`, the substrate/scalar
+//! types → `type`). This is the broadest-coverage layer — it classifies comments, numbers,
+//! operators, strings, and identifiers as well as the keyword buckets, with **every** lexer token
+//! kind landing on a legend entry or the documented delimiter/`Eof` no-highlight set (M-975: the
+//! `classify` match is exhaustive, no wildcard fallthrough — see its doc comment). The TextMate +
+//! tree-sitter layers of the same table are generated under `tools/grammar/` (M-731) from the same
+//! lexer `keyword()`; per §3.2 those layers cover a subset today (the tree-sitter scaffold captures
+//! only the four word buckets).
 //!
 //! Scope and honesty (`Declared`): classification is **purely lexical/token-kind** — every
 //! identifier is `variable` because the lexer cannot tell a function name from a binding without
@@ -25,26 +29,37 @@ use crate::span::{lex_items, LexItem, LexKind};
 /// The semantic-token **type legend**, in index order. The encoded stream's `tokenType` field is an
 /// index into this list (LSP §`semanticTokens`). These are the standard LSP token types the ratified
 /// RFC-0026 §3.2 table maps each lexer bucket to (the TextMate/tree-sitter names of the same table
-/// live in `tools/grammar/`).
+/// live in `tools/grammar/`), **plus `string`** (index 8, M-975): RFC-0026 §3.2's table predates the
+/// textual-string-literal token ([`Tok::StrLit`], M-910/M-911) and has no bucket for it. `string` is
+/// still a **standard, unsuffixed** LSP semantic-token type (the same naming convention the ratified
+/// table already follows), added here **additively** (appended, not renumbering any existing index)
+/// so this classifier can honestly tag `StrLit` rather than silently dropping it (G2). This mirrors
+/// the §3.2 coverage note's own precedent: `operator`/`identifier` already ship **LSP-only**, ahead
+/// of the other layers. FLAG (Declared, not yet ratified): a future RFC-0026 amendment/supersession
+/// should fold `string` into the normative table so the TextMate/tree-sitter layers can pick it up too.
 pub const TOKEN_TYPES: &[&str] = &[
     "keyword",    // 0 — reserved words (declaration + control + runtime vocabulary)
     "type",       // 1 — substrate/representation types (Binary/Ternary/Dense/VSA/…) + scalars
     "enumMember", // 2 — guarantee-strength lattice members (Exact/Proven/Empirical/Declared)
     "function", // 3 — (reserved in the legend; lexical classification cannot assign it — see note)
     "variable", // 4 — identifiers (lexical: every name, function or binding alike)
-    "number",   // 5 — binary / balanced-ternary / integer literals
-    "operator", // 6 — arithmetic/logical/annotation operators and arrows
+    "number",   // 5 — binary / balanced-ternary / integer / byte-string / float literals
+    "operator", // 6 — arithmetic/logical/comparison/shift/annotation operators and arrows
     "comment",  // 7 — `//` line comments
+    "string",   // 8 — textual string literals (`StrLit`; M-975 legend extension, see doc above)
 ];
 
-/// LSP semantic-token type indices (into [`TOKEN_TYPES`]).
-const T_KEYWORD: u32 = 0;
-const T_TYPE: u32 = 1;
-const T_ENUM_MEMBER: u32 = 2;
-const T_VARIABLE: u32 = 4;
-const T_NUMBER: u32 = 5;
-const T_OPERATOR: u32 = 6;
-const T_COMMENT: u32 = 7;
+/// LSP semantic-token type indices (into [`TOKEN_TYPES`]). `pub(crate)` (not public API) so the
+/// in-crate test module (`src/tests/semantic.rs`) gets white-box access without exposing these to
+/// downstream crates.
+pub(crate) const T_KEYWORD: u32 = 0;
+pub(crate) const T_TYPE: u32 = 1;
+pub(crate) const T_ENUM_MEMBER: u32 = 2;
+pub(crate) const T_VARIABLE: u32 = 4;
+pub(crate) const T_NUMBER: u32 = 5;
+pub(crate) const T_OPERATOR: u32 = 6;
+pub(crate) const T_COMMENT: u32 = 7;
+pub(crate) const T_STRING: u32 = 8;
 
 /// The `legend` advertised in the server's `semanticTokensProvider` capability: the type list above
 /// and an empty modifier list (no modifiers are emitted — honest about scope).
@@ -57,15 +72,27 @@ pub fn semantic_tokens_legend() -> Value {
 }
 
 /// Classify one lexical item to its [`TOKEN_TYPES`] index, or `None` for items that carry no
-/// highlight (delimiters, `Eof`). Delimiters (`()[]{}`, `:` `,` `.` `<` `>`) are intentionally
-/// unclassified: editors colour them via the grammar, not semantic tokens.
-fn classify(kind: &LexKind) -> Option<u32> {
+/// highlight (delimiters, `Eof`). Delimiters (`()[]{}`, `:` `,` `.`) are intentionally unclassified:
+/// editors colour them via the grammar, not semantic tokens. `<`/`>` are **not** in that set — since
+/// RFC-0037 D1 moved type-argument lists to `[…]`, [`Tok::LAngle`]/[`Tok::RAngle`] are pure infix
+/// comparison operators (`lt`/`gt`), so they classify with the other operators below (never silently
+/// dropped, G2).
+///
+/// **Never-silent completeness (M-975):** every [`Tok`] variant is either matched below or falls into
+/// the documented delimiter/`Eof` `None` arm — there is no wildcard catch-all arm, so the match is
+/// exhaustive over every [`Tok`] variant the compiler knows about: a future lexer token that isn't
+/// added here fails to **compile**, rather than silently falling through unhighlighted (G2).
+///
+/// `pub(crate)` (not public API) so the in-crate test module (`src/tests/semantic.rs`) can exercise
+/// it directly.
+pub(crate) fn classify(kind: &LexKind) -> Option<u32> {
     let tok = match kind {
         LexKind::Comment => return Some(T_COMMENT),
         LexKind::Token(t) => t,
     };
     let idx = match tok {
-        // Declaration + control + runtime-vocabulary keywords.
+        // Declaration + control + runtime-vocabulary keywords (RFC-0026 §3.2: control vs.
+        // declaration keywords are deliberately NOT split — one `keyword` bucket for all of it).
         Tok::Nodule
         | Tok::Phylum
         | Tok::Colony
@@ -79,6 +106,9 @@ fn classify(kind: &LexKind) -> Option<u32> {
         | Tok::Backbone
         | Tok::Tier
         | Tok::Reclaim
+        | Tok::Consume
+        | Tok::Grow
+        | Tok::Derive
         | Tok::Use
         | Tok::Pub
         | Tok::Type
@@ -101,12 +131,25 @@ fn classify(kind: &LexKind) -> Option<u32> {
         | Tok::Wild
         | Tok::Spore
         | Tok::To
-        | Tok::Policy => T_KEYWORD,
-        // Substrate / representation types and scalars.
+        | Tok::Policy
+        | Tok::Lambda
+        | Tok::Object
+        | Tok::Via
+        | Tok::Lower => T_KEYWORD,
+        // Substrate / representation types and scalars — incl. the M-915 short repr-keywords
+        // (`bin`/`tern`/`emb`/`hvec`, which elaborate identically to their long forms) and the
+        // RFC-0032/ADR-040 first-class repr-type keywords `Seq`/`Bytes`/`Float`.
         Tok::Binary
         | Tok::Ternary
         | Tok::Dense
         | Tok::Vsa
+        | Tok::BinShort
+        | Tok::TernShort
+        | Tok::EmbShort
+        | Tok::HvecShort
+        | Tok::Seq
+        | Tok::Bytes
+        | Tok::Float
         | Tok::Substrate
         | Tok::Sparse
         | Tok::Scalar(_) => T_TYPE,
@@ -114,9 +157,17 @@ fn classify(kind: &LexKind) -> Option<u32> {
         Tok::Strength(_) => T_ENUM_MEMBER,
         // Identifiers — lexical only (no function/variable distinction available; see module note).
         Tok::Ident(_) => T_VARIABLE,
-        // Literals.
-        Tok::BinLit(_) | Tok::TritLit(_) | Tok::Int(_) => T_NUMBER,
-        // Operators / annotations / arrows.
+        // Numeric-shaped literals: binary/balanced-ternary/decimal-int (existing), plus the
+        // byte-string (`0x…`) and decimal-float literals (M-975) — all fixed-form digit literals,
+        // matching the RFC-0026 §3.2 "numeric" bucket → LSP `number`.
+        Tok::BinLit(_) | Tok::TritLit(_) | Tok::Int(_) | Tok::BytesLit(_) | Tok::FloatLit(_) => {
+            T_NUMBER
+        }
+        // A textual string literal (`"…"`) is not numeric — it gets its own `string` legend entry
+        // (M-975; see the [`TOKEN_TYPES`] doc comment for why this extends beyond the current
+        // RFC-0026 §3.2 table).
+        Tok::StrLit(_) => T_STRING,
+        // Operators / annotations / arrows / comparisons / shifts.
         Tok::Plus
         | Tok::Minus
         | Tok::Star
@@ -134,9 +185,24 @@ fn classify(kind: &LexKind) -> Option<u32> {
         | Tok::Pipe
         | Tok::PipePipe
         | Tok::At
-        | Tok::AtStdSys => T_OPERATOR,
-        // Delimiters and Eof carry no semantic-token highlight.
-        _ => return None,
+        | Tok::AtStdSys
+        | Tok::LAngle
+        | Tok::RAngle
+        | Tok::Shl
+        | Tok::Shr => T_OPERATOR,
+        // Delimiters (`()[]{}`, `:` `,` `.`) and `Eof` carry no semantic-token highlight — an
+        // explicit, documented design choice (see the function doc comment), not a silent drop.
+        Tok::LParen
+        | Tok::RParen
+        | Tok::LBrace
+        | Tok::RBrace
+        | Tok::LBracket
+        | Tok::RBracket
+        | Tok::Colon
+        | Tok::Comma
+        | Tok::Semi
+        | Tok::Dot
+        | Tok::Eof => return None,
     };
     Some(idx)
 }
@@ -178,62 +244,4 @@ pub(crate) fn encode(items: &[LexItem]) -> Vec<u32> {
         prev_col0 = col0;
     }
     data
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn legend_is_stable_and_indices_match() {
-        // The encoded stream's tokenType indices must agree with the advertised legend order.
-        let legend = semantic_tokens_legend();
-        let types = legend["tokenTypes"].as_array().unwrap();
-        assert_eq!(types[T_KEYWORD as usize], "keyword");
-        assert_eq!(types[T_TYPE as usize], "type");
-        assert_eq!(types[T_ENUM_MEMBER as usize], "enumMember");
-        assert_eq!(types[T_NUMBER as usize], "number");
-        assert_eq!(types[T_COMMENT as usize], "comment");
-        assert!(legend["tokenModifiers"].as_array().unwrap().is_empty());
-    }
-
-    #[test]
-    fn unlexable_source_is_empty_stream_not_a_panic() {
-        // G2: never-silent — an un-lexable document highlights nothing rather than fabricating.
-        let v = semantic_tokens_full("fn f() = §");
-        assert_eq!(v["data"].as_array().unwrap().len(), 0);
-    }
-
-    #[test]
-    fn keyword_type_strength_and_number_are_classified() {
-        // `fn` is a keyword, `Binary` a type, `Exact` an enumMember, `0b0` a number.
-        let src = "fn f() -> Binary{8} @ Exact = 0b0\n";
-        let data = encode(&lex_items(src));
-        assert_eq!(data.len() % 5, 0, "every token is a 5-tuple");
-        // Collect the tokenType column (index 3 of each 5-tuple).
-        let ttypes: Vec<u32> = data.chunks(5).map(|c| c[3]).collect();
-        assert!(ttypes.contains(&T_KEYWORD), "fn → keyword");
-        assert!(ttypes.contains(&T_TYPE), "Binary → type");
-        assert!(ttypes.contains(&T_ENUM_MEMBER), "Exact → enumMember");
-        assert!(ttypes.contains(&T_NUMBER), "0b0 → number");
-    }
-
-    #[test]
-    fn delta_encoding_is_relative_and_well_formed() {
-        // Two lines: the first token of line 2 must encode a positive deltaLine and an absolute
-        // (0-based) start column, not a column relative to the previous line.
-        let src = "fn a()\nfn bb()\n";
-        let data = encode(&lex_items(src));
-        // First token: deltaLine 0, deltaStartChar 0 (the `fn` at col 1).
-        assert_eq!(&data[0..2], &[0, 0]);
-        // Find the first 5-tuple with a non-zero deltaLine: it begins line 2's `fn` at abs col 0.
-        let line_break = data
-            .chunks(5)
-            .find(|c| c[0] == 1)
-            .expect("a token starts a new line");
-        assert_eq!(
-            line_break[1], 0,
-            "new-line token uses an absolute start column"
-        );
-    }
 }
