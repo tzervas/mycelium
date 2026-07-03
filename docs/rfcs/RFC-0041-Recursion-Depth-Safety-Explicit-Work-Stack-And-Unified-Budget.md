@@ -288,8 +288,8 @@ An 8-lens adversarial-review workflow (Opus/Sonnet leaves; ~1.15M tokens; 1 refu
 implementation. **4 Critical + 15 High source-confirmed** objections, all resolved above:
 - **C1** no common depth metric → **§4.0** (charge at source call/β boundary).
 - **C2** "same error variants" unverified + already false → **§Posture (I1–I3)** + **§5.1** error-parity gate.
-- **C3** byte cap missed the dominant memory (L0 subst duplication, captured envs) → **§4.2** real accounting
-  + process arena + frontend work-step budget.
+- **C3** byte cap missed the dominant memory (L0 subst duplication, captured envs) → **§4.2** real accounting,
+  process arena, and a frontend work-step budget.
 - **C4** TCO silently drops Substrate release + return-assert → **§4.6** no-pending-post-work precondition.
 - **High:** E0509 move-out breakage + fuller frozen-core class (Clone/Canon) → **§4.5**, coordinated with W5;
   path-dependent byte cap → **§4.2** invariant + CI baseline; extraction common-mode + L0-is-substitution +
