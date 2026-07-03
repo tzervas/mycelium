@@ -11336,6 +11336,42 @@ issues:
         advanced append-only; the post-freeze diff policy (DN-39-only) stated; CHANGELOG logs
         the act.
 
+  - id: M-976
+    title: "Shape-Dispatched Readable mycfmt — flat-spine + house-style knob + width 100"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:tooling, priority:P2, status:done]
+    epic: E31-1
+    depends_on: []
+    landed_date: 2026-07-03
+    landed_basis: "PR #1055 (formatter) + width-100 retune; DN-82 §7; assignee tzervas"
+    doc_refs:
+      - corpus:DN-82
+      - src:crates/mycelium-fmt/src/lib.rs
+    body: |
+      Post-freeze presentation-only (whitespace) Readable formatter (R0-R6): flat-spine for
+      right-nested same-head chains (kills the Cons pyramid + closer-wall), rustfmt-block for
+      wide-flat calls, one indent per real nesting; house-style knob (LayoutCfg/SpineInner
+      InlineWhenFits|AlwaysExpand, --expand-spine); default width 88->100 (rustfmt-aligned).
+      lib/std re-rendered. Behavior-neutral (Empirical: C1/C2). Kernel untouched. Assignee: tzervas.
+      User stories + Definition of Done: see DN-82 §7 (the R0-R6 rule-set + DoD) — as a maintainer of lib/std .myc, I want readable formatting so the source is legible without changing behavior.
+  - id: M-977
+    title: "Vec list-literal [...] desugaring — the each-item-closed ideal (RFC-0040)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:done]
+    epic: E31-1
+    depends_on: [M-976]
+    landed_date: 2026-07-03
+    landed_basis: "PR #1056; RFC-0040; assignee tzervas"
+    doc_refs:
+      - corpus:RFC-0040
+      - src:crates/mycelium-l1/src/checkty.rs
+    body: |
+      Type-directed elaboration: [e1,...,en] against a cons-list-shaped Vec[T] desugars to the Cons
+      chain (re-checked as it); Seq{T,N} + non-list ADTs untouched. No grammar/parser/L0 change
+      (frontend lowering onto the frozen kernel — freeze-safe, DN-56 §6); behavior-neutral by AST
+      identity (Empirical). lib/std static tables (matrix() etc.) now read each-item-closed [...].
+      Resolves DN-82 FLAG-976-1. Assignee: tzervas.
+      User stories + Definition of Done: see RFC-0040 §2 (use case) + §5 (DoD) — as a lib/std author, I want a Vec list literal so static tables read each-item-closed.
   - id: M-970
     title: "mycelium-fmt: render_expr_canonical drops the @forage(policy) Hypha annotation"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"

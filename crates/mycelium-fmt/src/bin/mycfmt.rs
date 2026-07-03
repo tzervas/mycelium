@@ -5,7 +5,7 @@
 //! any refusal leaves the file exactly as it was.
 //!
 //! ```text
-//! mycfmt [--check | --write] [--flatten | --readable] [--explain] [--config <mycelium-proj.toml>] <file.myc | ->...
+//! mycfmt [--check | --write] [--flatten | --readable [--expand-spine]] [--explain] [--config <mycelium-proj.toml>] <file.myc | ->...
 //! ```
 //!
 //! Exit codes (contract §5): 0 ok · 1 `--check` would reformat · 2 parse error · 3 header error ·
@@ -23,11 +23,20 @@
 //! default form) and is **presentation-only, functionally inert** (same surface AST — C1/C2). It is the
 //! canonical form the `myc-fmt` gate enforces for the human-authored stdlib (`lib/std/*.myc`).
 //! `--readable` and `--flatten` are mutually exclusive (opposite layout postures).
+//!
+//! **`--expand-spine`** (Shape-Dispatched Readable house-style knob, M-976; requires `--readable`)
+//! selects the "expanded" spine style: a right-nested same-head chain (Cons/GLCons/bool_and/cat …)
+//! STILL renders as a flat spine (each link at one indent, no pyramid), but every inner nested call
+//! is broken onto its own lines (block-indented) instead of staying inline-when-it-fits. Both are
+//! behavior-neutral (C1/C2); the default (omit the flag) is the compact `InlineWhenFits` style.
 
 use std::process::ExitCode;
 
 use mycelium_cli_common::{read_source, Args};
-use mycelium_fmt::{flatten_source, format_source, format_source_readable, Formatted};
+use mycelium_fmt::{
+    flatten_source, format_source, format_source_readable, format_source_readable_cfg, Formatted,
+    LayoutCfg, SpineInner,
+};
 use mycelium_proj::parse_manifest;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -42,7 +51,7 @@ enum Mode {
 
 fn usage() -> ExitCode {
     eprintln!(
-        "usage: mycfmt [--check | --write] [--flatten | --readable] [--explain] [--config <mycelium-proj.toml>] <file.myc | ->..."
+        "usage: mycfmt [--check | --write] [--flatten | --readable [--expand-spine]] [--explain] [--config <mycelium-proj.toml>] <file.myc | ->..."
     );
     ExitCode::from(64) // EX_USAGE
 }
@@ -51,6 +60,7 @@ fn main() -> ExitCode {
     let mut mode = Mode::Stdout;
     let mut flatten = false;
     let mut readable = false;
+    let mut expand_spine = false;
     let mut explain = false;
     let mut config: Option<String> = None;
     let mut paths: Vec<String> = Vec::new();
@@ -62,6 +72,7 @@ fn main() -> ExitCode {
             "--write" => mode = Mode::Write,
             "--flatten" => flatten = true,
             "--readable" => readable = true,
+            "--expand-spine" => expand_spine = true,
             "--explain" => explain = true,
             "--config" => match args.value() {
                 Some(p) => config = Some(p),
@@ -95,6 +106,13 @@ fn main() -> ExitCode {
         );
         return usage();
     }
+    // --expand-spine is the Readable house-style knob (M-976); it only makes sense with --readable.
+    if expand_spine && !readable {
+        eprintln!(
+            "mycfmt: --expand-spine is a --readable house-style knob (M-976) — it requires --readable"
+        );
+        return usage();
+    }
 
     // The `[toolchain].format` hard pin (M-364 §10.3), if a manifest is given/discoverable. A manifest
     // that does not parse is an explicit error — we never silently format ignoring a malformed pin (G2).
@@ -105,7 +123,15 @@ fn main() -> ExitCode {
 
     let mut worst = 0u8; // highest exit code seen
     for path in &paths {
-        let code = run_one(path, mode, flatten, readable, explain, pin.as_deref());
+        let code = run_one(
+            path,
+            mode,
+            flatten,
+            readable,
+            expand_spine,
+            explain,
+            pin.as_deref(),
+        );
         worst = worst.max(code);
     }
     ExitCode::from(worst)
@@ -165,6 +191,7 @@ fn run_one(
     mode: Mode,
     flatten: bool,
     readable: bool,
+    expand_spine: bool,
     explain: bool,
     pin: Option<&str>,
 ) -> u8 {
@@ -177,6 +204,13 @@ fn run_one(
 
     let result = if flatten {
         flatten_source(&src, pin)
+    } else if readable && expand_spine {
+        // The Readable "expanded" house style (M-976): flat spine, inner nested calls block-expanded.
+        let cfg = LayoutCfg {
+            spine_inner: SpineInner::AlwaysExpand,
+            ..LayoutCfg::default()
+        };
+        format_source_readable_cfg(&src, pin, cfg)
     } else if readable {
         format_source_readable(&src, pin)
     } else {
