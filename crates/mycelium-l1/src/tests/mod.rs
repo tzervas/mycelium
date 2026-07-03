@@ -14,6 +14,7 @@ mod fuse;
 mod lexer;
 mod lib_root;
 mod mono;
+mod mono_tag;
 mod nodule;
 mod parse;
 mod substrate;
