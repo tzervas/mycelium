@@ -11405,9 +11405,9 @@ issues:
       M-979. Lands via its own RFC/ADR; DN-84 stays Draft until then.
       User stories + Definition of Done: see DN-84 §2 (stories) + §7/§11 (decided direction / criteria).
   - id: M-979
-    title: "Explicit heap work-stack (DN-84 design D) — solve NOW: research -> plan -> adversarial review -> implement"
+    title: "Explicit heap work-stack (DN-84 design D) — RFC-0041 ACCEPTED; Phase-4 implementation (7 waves)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:design, area:core-ir, priority:P2, status:in-progress]
+    labels: [phase:5, type:feature, area:core-ir, priority:P2, status:in-progress]
     epic: E31-1
     depends_on: [M-978]
     doc_refs:

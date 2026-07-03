@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0041 |
-| **Status** | **Proposed (Rev 2, 2026-07-03)** — authored under DN-84 §11 "solve (D) now" + the four ratifications of 2026-07-03 (RR-29 §6); **hardened by the Phase-3 adversarial review** (§11 — 4 Critical + 15 High source-confirmed objections resolved). Advances to **Accepted** on maintainer ratification; `Accepted → Enacted` per-stage as each wave lands differential-green (§9). |
+| **Status** | **Accepted (Rev 2, 2026-07-03 — maintainer-ratified)**. Authored under DN-84 §11 "solve (D) now" + the four 2026-07-03 ratifications (RR-29 §6); **hardened by the Phase-3 adversarial review** (§11 — 4 Critical + 15 High source-confirmed objections resolved); **ratified `Proposed → Accepted` by the maintainer 2026-07-03** — including the §6 **within-freeze behavior-preserving-hardening channel** (a ratified DN-56 process addition), the §Posture **I1–I3 correctness invariant** (superseding Rev-1's "same error variants"), and the §4.0 **source-call-boundary depth metric**. `Accepted → Enacted` per-stage as each wave (§7) lands differential + error-parity green (§9). Prior: Proposed (Rev 1 → Rev 2, 2026-07-03). |
 | **Type** | Normative — implementation architecture for recursion-depth safety across the L1 evaluator, the L0 reference interpreter, and the frontend passes; **no new L0 node/prim, no grammar/surface change** (KC-3 / DN-56 freeze-compatible — §6). |
 | **Date** | 2026-07-03 |
 | **Task** | M-979 (design D, solve-now) · M-978 (design B baseline) |
@@ -306,6 +306,13 @@ implementation. **4 Critical + 15 High source-confirmed** objections, all resolv
 
 ## Meta — changelog
 
+- **2026-07-03 — Ratified `Proposed → Accepted` (Rev 2; maintainer).** The maintainer's "accept/ratify"
+  directive ratifies the adversarially-hardened Rev 2, **including** the three items flagged for their
+  call: the §6 **within-freeze behavior-preserving-hardening channel** (a DN-56 process addition — DN-56
+  gains an append-only pointer), the §Posture **I1–I3 correctness invariant** (dropping Rev-1's over-claimed
+  "same error variants"), and the §4.0 **source-call-boundary depth metric**. Phase-4 implementation (the
+  seven waves §7) is unblocked; `Accepted → Enacted` per-stage as each wave lands differential + error-parity
+  green. Append-only (VR-5/house rule #3).
 - **2026-07-03 — Rev 2: adversarial-review hardening (M-979 Phase-3).** Phase-3 review found 4 Critical +
   15 High source-confirmed flaws in Rev 1's spec (the strategy held; the spec did not). Resolved all: a
   single machine-independent depth **metric** (§4.0); an honest correctness invariant + **error-parity
