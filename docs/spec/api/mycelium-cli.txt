@@ -50,6 +50,26 @@ impl core::marker::Unpin for mycelium_cli::Report
 impl core::marker::UnsafeUnpin for mycelium_cli::Report
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_cli::Report
 impl core::panic::unwind_safe::UnwindSafe for mycelium_cli::Report
+pub struct mycelium_cli::RunOptions
+pub mycelium_cli::RunOptions::unbounded: bool
+impl core::clone::Clone for mycelium_cli::RunOptions
+pub fn mycelium_cli::RunOptions::clone(&self) -> mycelium_cli::RunOptions
+impl core::cmp::Eq for mycelium_cli::RunOptions
+impl core::cmp::PartialEq for mycelium_cli::RunOptions
+pub fn mycelium_cli::RunOptions::eq(&self, &mycelium_cli::RunOptions) -> bool
+impl core::default::Default for mycelium_cli::RunOptions
+pub fn mycelium_cli::RunOptions::default() -> mycelium_cli::RunOptions
+impl core::fmt::Debug for mycelium_cli::RunOptions
+pub fn mycelium_cli::RunOptions::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_cli::RunOptions
+impl core::marker::StructuralPartialEq for mycelium_cli::RunOptions
+impl core::marker::Freeze for mycelium_cli::RunOptions
+impl core::marker::Send for mycelium_cli::RunOptions
+impl core::marker::Sync for mycelium_cli::RunOptions
+impl core::marker::Unpin for mycelium_cli::RunOptions
+impl core::marker::UnsafeUnpin for mycelium_cli::RunOptions
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_cli::RunOptions
+impl core::panic::unwind_safe::UnwindSafe for mycelium_cli::RunOptions
 pub struct mycelium_cli::RunReport
 pub mycelium_cli::RunReport::entry: alloc::string::String
 pub mycelium_cli::RunReport::rendered: alloc::string::String
@@ -93,8 +113,12 @@ impl core::panic::unwind_safe::RefUnwindSafe for mycelium_cli::StreamReport
 impl core::panic::unwind_safe::UnwindSafe for mycelium_cli::StreamReport
 pub fn mycelium_cli::build(&std::path::Path) -> core::result::Result<(mycelium_spore::Spore, alloc::string::String), mycelium_cli::Report>
 pub fn mycelium_cli::check_project(&std::path::Path) -> core::result::Result<mycelium_cli::CheckReport, mycelium_cli::Report>
+pub fn mycelium_cli::corpus_context() -> bool
 pub fn mycelium_cli::init(&std::path::Path, &str) -> core::result::Result<alloc::vec::Vec<std::path::PathBuf>, mycelium_cli::Report>
+pub fn mycelium_cli::reject_unbounded_in_corpus(&mycelium_cli::RunOptions) -> core::result::Result<(), mycelium_cli::Report>
 pub fn mycelium_cli::run(&std::path::Path) -> core::result::Result<mycelium_cli::RunReport, mycelium_cli::Report>
 pub fn mycelium_cli::run_stream_parse(impl std::io::Read, &str) -> core::result::Result<mycelium_cli::StreamReport, mycelium_cli::Report>
+pub fn mycelium_cli::run_with_options(&std::path::Path, &mycelium_cli::RunOptions) -> core::result::Result<mycelium_cli::RunReport, mycelium_cli::Report>
 pub fn mycelium_cli::stream_parse(impl std::io::Read, &str) -> core::result::Result<alloc::vec::Vec<mycelium_cli::StreamComponent>, mycelium_cli::Report>
+pub fn mycelium_cli::unbounded_banner(&str) -> alloc::string::String
 pub type mycelium_cli::StreamComponent = core::result::Result<usize, mycelium_cli::Report>
