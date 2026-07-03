@@ -134,7 +134,7 @@ existing layout), the render is **idempotent by construction** (C2).
 
 ### 7.1 The rule-set (R0–R6)
 
-One width threshold (`READABLE_WIDTH = 88`, the shipped `Declared` const) is the SOLE inline-vs-break
+One width threshold (`READABLE_WIDTH = 100` (rustfmt-aligned), the shipped `Declared` const) is the SOLE inline-vs-break
 trigger (**R0**); four AST-shape rules decide HOW a node that must break lays out, dispatched in a
 single deterministic order (**R6**: same-head chain, else App, else match/if, else let, else per-kind):
 
