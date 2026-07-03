@@ -1364,3 +1364,8 @@ fn shape_invariants_spine_flat_closers_coalesced_tree_shallow() {
         "R2: a broken wide-flat call closes with `)` alone on its own line:\n{got}"
     );
 }
+
+// RFC-0041 §4.7/§5 W0 guard-hole census (RR-29): tracked failing test for this crate's render-family
+// hole. Registered as a dedicated submodule (rather than appended inline) so the census stays
+// grep-able (`grep -rn 'ignore = "W' crates/`) across every crate it spans.
+mod guard_hole_census;

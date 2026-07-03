@@ -24,7 +24,7 @@ this file, opt-in only, and never part of a distributed Mycelium artifact. See
 
 ## License overview
 
-- MIT License (`MIT`) — 65 crate(s)
+- MIT License (`MIT`) — 62 crate(s)
 - Apache License 2.0 (`Apache-2.0`) — 2 crate(s)
 - BSD 2-Clause "Simplified" License (`BSD-2-Clause`) — 1 crate(s)
 - Unicode License v3 (`Unicode-3.0`) — 1 crate(s)
@@ -155,7 +155,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 Used by:
 
-- `cc` 1.2.63 — <https://github.com/rust-lang/cc-rs>
+- `cc` 1.2.65 — <https://github.com/rust-lang/cc-rs>
 - `cfg-if` 1.0.4 — <https://github.com/rust-lang/cfg-if>
 - `find-msvc-tools` 0.1.9 — <https://github.com/rust-lang/cc-rs>
 - `wait-timeout` 0.2.1 — <https://github.com/alexcrichton/wait-timeout>
@@ -329,116 +329,11 @@ SOFTWARE.
 
 Used by:
 
-- `hashbrown` 0.17.1 — <https://github.com/rust-lang/hashbrown>
-
-```text
-Copyright (c) 2016 Amanieu d'Antras
-
-Permission is hereby granted, free of charge, to any
-person obtaining a copy of this software and associated
-documentation files (the "Software"), to deal in the
-Software without restriction, including without
-limitation the rights to use, copy, modify, merge,
-publish, distribute, sublicense, and/or sell copies of
-the Software, and to permit persons to whom the Software
-is furnished to do so, subject to the following
-conditions:
-
-The above copyright notice and this permission notice
-shall be included in all copies or substantial portions
-of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF
-ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
-TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
-PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
-SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
-IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-DEALINGS IN THE SOFTWARE.
-
-```
-
-### MIT License (`MIT`)
-
-Used by:
-
 - `proptest` 1.11.0 — <https://github.com/proptest-rs/proptest>
 - `rusty-fork` 0.3.1 — <https://github.com/altsysrq/rusty-fork>
 
 ```text
 Copyright (c) 2016 FullContact, Inc
-
-Permission is hereby granted, free of charge, to any
-person obtaining a copy of this software and associated
-documentation files (the "Software"), to deal in the
-Software without restriction, including without
-limitation the rights to use, copy, modify, merge,
-publish, distribute, sublicense, and/or sell copies of
-the Software, and to permit persons to whom the Software
-is furnished to do so, subject to the following
-conditions:
-
-The above copyright notice and this permission notice
-shall be included in all copies or substantial portions
-of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF
-ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
-TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
-PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
-SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
-IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-DEALINGS IN THE SOFTWARE.
-
-```
-
-### MIT License (`MIT`)
-
-Used by:
-
-- `indexmap` 2.14.0 — <https://github.com/indexmap-rs/indexmap>
-
-```text
-Copyright (c) 2016--2017
-
-Permission is hereby granted, free of charge, to any
-person obtaining a copy of this software and associated
-documentation files (the "Software"), to deal in the
-Software without restriction, including without
-limitation the rights to use, copy, modify, merge,
-publish, distribute, sublicense, and/or sell copies of
-the Software, and to permit persons to whom the Software
-is furnished to do so, subject to the following
-conditions:
-
-The above copyright notice and this permission notice
-shall be included in all copies or substantial portions
-of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF
-ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
-TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
-PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
-SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
-IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-DEALINGS IN THE SOFTWARE.
-
-```
-
-### MIT License (`MIT`)
-
-Used by:
-
-- `equivalent` 1.0.2 — <https://github.com/indexmap-rs/equivalent>
-
-```text
-Copyright (c) 2016--2023
 
 Permission is hereby granted, free of charge, to any
 person obtaining a copy of this software and associated
@@ -718,11 +613,11 @@ DEALINGS IN THE SOFTWARE.
 
 Used by:
 
-- `serde_spanned` 0.6.9 — <https://github.com/toml-rs/toml>
-- `toml` 0.8.23 — <https://github.com/toml-rs/toml>
-- `toml_datetime` 0.6.11 — <https://github.com/toml-rs/toml>
-- `toml_edit` 0.22.27 — <https://github.com/toml-rs/toml>
-- `toml_write` 0.1.2 — <https://github.com/toml-rs/toml>
+- `serde_spanned` 1.1.1 — <https://github.com/toml-rs/toml>
+- `toml` 1.1.2+spec-1.1.0 — <https://github.com/toml-rs/toml>
+- `toml_datetime` 1.1.1+spec-1.1.0 — <https://github.com/toml-rs/toml>
+- `toml_parser` 1.1.2+spec-1.1.0 — <https://github.com/toml-rs/toml>
+- `toml_writer` 1.1.1+spec-1.1.0 — <https://github.com/toml-rs/toml>
 
 ```text
 Copyright (c) Individual contributors
@@ -786,7 +681,7 @@ DEALINGS IN THE SOFTWARE.
 
 Used by:
 
-- `arrayvec` 0.7.6 — <https://github.com/bluss/arrayvec>
+- `arrayvec` 0.7.8 — <https://github.com/bluss/arrayvec>
 
 ```text
 Copyright (c) Ulrik Sverdrup "bluss" 2015-2023
@@ -959,23 +854,23 @@ SOFTWARE.
 Used by:
 
 - `camino` 1.2.4 — <https://github.com/camino-rs/camino>
-- `cargo-platform` 0.1.9 — <https://github.com/rust-lang/cargo>
-- `cargo_metadata` 0.18.1 — <https://github.com/oli-obk/cargo_metadata>
+- `cargo-platform` 0.3.3 — <https://github.com/rust-lang/cargo>
+- `cargo_metadata` 0.23.1 — <https://github.com/oli-obk/cargo_metadata>
 - `fastrand` 2.4.1 — <https://github.com/smol-rs/fastrand>
 - `itoa` 1.0.18 — <https://github.com/dtolnay/itoa>
 - `linux-raw-sys` 0.12.1 — <https://github.com/sunfishcode/linux-raw-sys>
 - `once_cell` 1.21.4 — <https://github.com/matklad/once_cell>
 - `proc-macro2` 1.0.106 — <https://github.com/dtolnay/proc-macro2>
-- `quote` 1.0.45 — <https://github.com/dtolnay/quote>
+- `quote` 1.0.46 — <https://github.com/dtolnay/quote>
 - `rustix` 1.1.4 — <https://github.com/bytecodealliance/rustix>
 - `semver` 1.0.28 — <https://github.com/dtolnay/semver>
 - `serde` 1.0.228 — <https://github.com/serde-rs/serde>
 - `serde_core` 1.0.228 — <https://github.com/serde-rs/serde>
 - `serde_derive` 1.0.228 — <https://github.com/serde-rs/serde>
 - `serde_json` 1.0.150 — <https://github.com/serde-rs/json>
-- `syn` 2.0.117 — <https://github.com/dtolnay/syn>
-- `thiserror-impl` 1.0.69 — <https://github.com/dtolnay/thiserror>
-- `thiserror` 1.0.69 — <https://github.com/dtolnay/thiserror>
+- `syn` 2.0.118 — <https://github.com/dtolnay/syn>
+- `thiserror-impl` 2.0.18 — <https://github.com/dtolnay/thiserror>
+- `thiserror` 2.0.18 — <https://github.com/dtolnay/thiserror>
 - `unicode-ident` 1.0.24 — <https://github.com/dtolnay/unicode-ident>
 - `wasip2` 1.0.4+wasi-0.2.12 — <https://github.com/bytecodealliance/wasi-rs>
 - `wit-bindgen` 0.57.1 — <https://github.com/bytecodealliance/wit-bindgen>
@@ -1012,7 +907,7 @@ DEALINGS IN THE SOFTWARE.
 
 Used by:
 
-- `winnow` 0.7.15 — <https://github.com/winnow-rs/winnow>
+- `winnow` 1.0.3 — <https://github.com/winnow-rs/winnow>
 
 ```text
 Permission is hereby granted, free of charge, to any person obtaining
@@ -1040,7 +935,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 Used by:
 
-- `memchr` 2.8.1 — <https://github.com/BurntSushi/memchr>
+- `memchr` 2.8.2 — <https://github.com/BurntSushi/memchr>
 
 ```text
 The MIT License (MIT)

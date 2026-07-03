@@ -11,6 +11,37 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### RFC-0041 W0 — recursion-depth safety net (gates + metric + census; 2026-07-03: M-979)
+
+First implementation wave of the Accepted **RFC-0041** (recursion-depth safety) — a pure **safety
+net**: no behavior change, no frozen-core edits. Establishes the measurement + regression
+infrastructure the consequential waves (W1–W6) land against.
+
+- **§4.0 depth metric** — a pure source-call-boundary depth function + property/mutant-witness tests
+  (`crates/mycelium-l1/tests/depth_metric_parity.rs`): one unit per user-`App`/`Fix` boundary (n-ary
+  `f(a,b,c)` is depth 1), data-spine charged by element. Passing.
+- **§5.1 error-parity differential** — a cross-path (L1-eval · L0-interp · AOT) over-budget
+  differential asserting all three refuse with the **canonical** variant at the same metric
+  threshold. Tagged **`#[ignore = "W5"]`** — it fails today (paths diverge; the L0 interp has no
+  budget), green when W4 constructs the interp budget and W5 aligns eval. Canonical over-budget
+  variant decided: **`DepthExceeded { limit: u32 }`** on the §4.0 metric (→
+  `mycelium-workstack::RecursionBudget`, W1); the interp/AOT env-machine `EvalError::DepthLimit{usize}`
+  reconciles to it in W4/W3½.
+- **Guard-hole census** — one `#[ignore = "Wn"]`-tagged real-repro test per RR-29 guard hole across
+  eight crates (`tests/guard_hole_census.rs`), each tagged with the wave that closes it (W1 frontend ·
+  W3 value-drop · W4 L0-interp · W5 eval); infallible-signature holes documented honestly (VR-5),
+  not faked.
+- **Depth-structured fuzz** — `fuzz_depth_{parse,check,interp}`; the interp target **empirically
+  reproduces** the known L0-interp `SIGABRT` (RR-29 §0.1 — a `Node::clone` stack overflow), the
+  regression net the fix waves close.
+- **Durability scope** — `mycelium-l1` + `mycelium-mlir` added to `just mutants` (the depth guards
+  were unmutated — RR-29 §4); `mycelium-stack` added to the unsafe-per-use audit-A; a cargo-geiger
+  baseline scaffold (the real baseline + `stacker`/`psm` exact-pinning deferred to W2 when they land).
+- Also unblocks two pre-existing gate failures inherited from the dep-refresh wave: regenerated
+  `THIRD-PARTY-LICENSES.md` (dep-version drift) and a `.codespellrc` skip for the generated
+  `package-lock.json` integrity-hash false-positive. RFC-0041 stays **Accepted** (each wave moves
+  `→ Enacted` only when the full cross-path differential goes green).
+
 ### DN-84 — dynamic host-stack + unified deterministic depth budget (2026-07-03: M-978 · M-979)
 
 New Draft design note **DN-84** capturing the direction to make the recursive frontend crash-proof

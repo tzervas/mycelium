@@ -11421,8 +11421,16 @@ issues:
       **Accepted** (2026-07-03, maintainer-ratified Rev 2) — decided architecture with all four
       maintainer ratifications baked in (floor+headroom budget amending DN-05; DN-39 iterative-Drop
       admission via the §6 within-freeze channel; TCO in evaluators; convert-eval/guard-frontend).
-      Next: Phase-4 staged implementation (7 waves W0-W6, RFC-0041 §7); `Accepted -> Enacted`
+      Phase-4 staged implementation (7 waves W0-W6, RFC-0041 §7); `Accepted -> Enacted`
       per-stage as each wave lands differential + error-parity green.
+      W0 LANDED (2026-07-03, to dev): the safety-net gates only — §4.0 metric property test, §5.1
+      error-parity differential (#[ignore="W5"]; canonical over-budget variant fixed as
+      DepthExceeded{u32} on the metric), the RR-29 guard-hole census (per-crate #[ignore="Wn"]
+      real-repros across 8 crates), depth-structured fuzz (interp target reproduces the known
+      SIGABRT), and mutants/unsafe-audit scope (mycelium-l1, mycelium-mlir, mycelium-stack). NO
+      behavior change, NO frozen-core edits. Next: W1 (mycelium-workstack crate + frontend guard
+      wiring + parser 256->4096), W2 (grow), W3.5 (extract) — parallel where disjoint; MAINTAINER
+      CHECKPOINT before W3 (frozen-core iterative Drop) + W4/W5 (L0/L1 machine conversion).
       DN-84 design (D), CONFIRMED by the maintainer (DN-84 §11 correction, 2026-07-03) as the
       solve-NOW track: get the complexity of the problem and solution fully figured out and solved
       in the Rust reference era, BEFORE the M-740 .myc port has to absorb the shape (the dogfooded

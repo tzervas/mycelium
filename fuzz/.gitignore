@@ -12,3 +12,6 @@ Cargo.lock
 corpus/fuzz_l1_parse/[0-9a-f][0-9a-f][0-9a-f][0-9a-f]*
 corpus/fuzz_m210_checker/[0-9a-f][0-9a-f][0-9a-f][0-9a-f]*
 corpus/fuzz_core_value_deser/[0-9a-f][0-9a-f][0-9a-f][0-9a-f]*
+corpus/fuzz_depth_parse/[0-9a-f][0-9a-f][0-9a-f][0-9a-f]*
+corpus/fuzz_depth_check/[0-9a-f][0-9a-f][0-9a-f][0-9a-f]*
+corpus/fuzz_depth_interp/[0-9a-f][0-9a-f][0-9a-f][0-9a-f]*
