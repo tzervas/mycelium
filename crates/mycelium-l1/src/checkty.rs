@@ -558,6 +558,18 @@ pub struct Env {
     /// property; ADR-003 content-addressing is the substantive identity, this map is the human-facing
     /// origin label (VR-5 — carried honestly, never upgraded).
     pub derived_provenance: BTreeMap<(String, String), (String, String)>,
+    /// **Provenance of `via`-generated forwarding impls** (DN-53 §A.3.2/§A.3.3; M-966), the `via`
+    /// analogue of [`Self::derived_provenance`]. Keyed by the same `(trait_name, type_head)`
+    /// coherence key as [`Self::instances`]; each value records `(field_idx, object_name)` — which
+    /// positional field the forwarding impl delegates through, and which `object` declared it — so
+    /// `reveal`/EXPLAIN can label the generated impl `[generated: via <field_idx> : <TraitName>]`
+    /// per DN-53 §A.3.3 (never a silent/opaque dispatch, G2). Resolution itself is deterministic by
+    /// construction: `via_decls` is an ordered `Vec` (declaration order), never a `HashMap`, and two
+    /// `via` clauses on the same object claiming the same trait are refused up front
+    /// ([`expand_object_via_decls`]) rather than silently choosing one. Empty in any nodule with no
+    /// `via` clauses. **Guarantee: `Declared`** — recorded metadata, not a checked property (VR-5 —
+    /// carried honestly, never upgraded).
+    pub via_provenance: BTreeMap<(String, String), (u32, String)>,
 }
 
 impl Env {
@@ -1731,12 +1743,47 @@ fn desugar_object_structural(od: &ObjectDecl) -> Vec<Item> {
 /// three-way differential (`tests/object_desugar.rs`) pins the agreement
 /// `observe(object) == observe(lower(object))` (DN-53 §A.3.3).
 ///
-/// Never-silent (G2): an unknown trait name or an out-of-range field index is an explicit
-/// [`CheckError`], never a silent accept.
+/// Never-silent (G2): an unknown trait name, an out-of-range field index, or **two `via` clauses on
+/// the same object delegating the same trait** (M-966 — an ambiguous choice between two delegates
+/// with no deterministic tiebreak) is an explicit [`CheckError`], never a silent accept or a
+/// silent first-match pick.
 fn expand_object_via_decls(
     od: &ObjectDecl,
     traits: &BTreeMap<String, TraitInfo>,
 ) -> Result<Vec<ImplDecl>, CheckError> {
+    // Ambiguity refusal (M-966, DN-53 §A.3.2): two `via` clauses on the *same* object that both
+    // delegate the *same* trait have no deterministic tiebreak between the two candidate delegates
+    // — refuse explicitly rather than silently picking the first-declared one (G2). This is checked
+    // before any forwarding impl is generated, over `od.via_decls` in **declaration order** (an
+    // ordered `Vec`, never a `HashMap`), so the reported candidates are stable across runs — the same
+    // ambiguous `object` always names the same two `via` clauses (`Empirical`, pinned by
+    // `tests/via_ordering.rs`).
+    let mut first_via_for_trait: BTreeMap<&str, u32> = BTreeMap::new();
+    for via in &od.via_decls {
+        if let Some(&first_idx) = first_via_for_trait.get(via.trait_name.as_str()) {
+            return Err(CheckError::new(
+                &od.name,
+                format!(
+                    "`object {}`: ambiguous `via` delegation for trait `{}` — both `via {} : {}` \
+                     and `via {} : {}` claim to provide it, and there is no deterministic tiebreak \
+                     between two delegates for the same trait (DN-53 §A.3.2; M-966). Fix: keep only \
+                     one `via` clause per trait on this object, or replace one of them with an \
+                     explicit `impl {} for {}` that picks the winner by hand — never a silent \
+                     first-match (G2).",
+                    od.name,
+                    via.trait_name,
+                    first_idx,
+                    via.trait_name,
+                    via.field_idx,
+                    via.trait_name,
+                    via.trait_name,
+                    od.name
+                ),
+            ));
+        }
+        first_via_for_trait.insert(via.trait_name.as_str(), via.field_idx);
+    }
+
     let mut via_impls: Vec<ImplDecl> = Vec::new();
     for via in &od.via_decls {
         // Look up the trait — never-silent (G2).
@@ -1789,6 +1836,24 @@ fn expand_object_via_decls(
         // where `_fN` is the delegate field at position `field_idx`.
         let mut methods: Vec<FnDecl> = Vec::new();
         for sig in &trait_info.sigs {
+            // Substitute the trait's own type params ↦ this `via` clause's trait args into the
+            // method signature (positional zip: `trait_info.params[i]` ↦ `via.trait_args[i]`),
+            // reusing the same `subst_type_param_in_sig` machinery `derive`'s Model-A sibling
+            // injection uses (M-973). Without this, the generated method's signature would carry
+            // the trait's *abstract* parameter type verbatim — but `check_impl_methods` always
+            // resolves an impl method's own signature with an EMPTY tyvar scope (an impl is
+            // expected to spell out concrete types, exactly as a hand-written
+            // `impl Trait[Binary{8}] for T { fn m(x: Binary{8}) => … }` does), so an unsubstituted
+            // abstract type would be an "unknown type" `CheckError` for *every* via-delegated
+            // parametric trait. An arity mismatch (extra/missing trait args) is left to
+            // `register_instances`'s existing arity check — never guessed at here (G2).
+            let sig = trait_info
+                .params
+                .iter()
+                .zip(via.trait_args.iter())
+                .fold(sig.clone(), |acc, (param, concrete)| {
+                    subst_type_param_in_sig(&acc, param, concrete)
+                });
             // The first value-parameter is the "self" parameter.
             let self_name = sig
                 .value_params
@@ -1817,7 +1882,7 @@ fn expand_object_via_decls(
                 vis: crate::ast::Vis::Private,
                 thaw: false,
                 tier: None,
-                sig: sig.clone(),
+                sig,
                 body,
             });
         }
@@ -1870,6 +1935,27 @@ fn check_nodule_with(
         let mut all = Vec::new();
         for od in via_objects {
             all.extend(expand_object_via_decls(od, &traits)?);
+        }
+        all
+    };
+    // EXPLAIN provenance (M-966, DN-53 §A.3.3): record which `via` clause produced each generated
+    // forwarding impl, the `via` analogue of `derived_provenance` below. The coherence key matches
+    // `register_instances`'s `(trait_name, type_head)`: for an `object`, `type_head` always resolves
+    // to `Data:<name>` (an object's own declared type name is never itself a bound type-variable —
+    // `resolve_ty`'s `Ty::Var` branch only fires for names in `tyvars`, which an object's own type
+    // name is not), so this can be built directly without a `resolve_ty` round-trip. Only reached
+    // when `expand_object_via_decls` above did **not** refuse for ambiguity, so at most one `via`
+    // entry per `(trait, object)` ever lands here (never overwritten silently).
+    let via_provenance: BTreeMap<(String, String), (u32, String)> = {
+        let mut all = BTreeMap::new();
+        for od in via_objects {
+            let head = format!("Data:{}", od.name);
+            for via in &od.via_decls {
+                all.insert(
+                    (via.trait_name.clone(), head.clone()),
+                    (via.field_idx, od.name.clone()),
+                );
+            }
         }
         all
     };
@@ -2149,6 +2235,7 @@ fn check_nodule_with(
         impls,
         lower_rules,
         derived_provenance,
+        via_provenance,
     })
 }
 
