@@ -242,6 +242,12 @@ before merge. **Shared-file owners** (resolves §11 Med wave39): root `Cargo.tom
 **integrator-owned** — waves FLAG edits, the integrator applies them (feed-as-ready). **Ordering edges are
 in the table**, not just prose (resolves §11 High wave35).
 
+**Status (2026-07-03):** **W0 landed** — the safety-net gates (§4.0 metric test, §5.1 error-parity
+differential `#[ignore="W5"]`, the RR-29 guard-hole census as `#[ignore="Wn"]` real-repros, the
+depth-structured fuzz targets, and the `just mutants` + unsafe-audit scope additions). No behavior
+change / no frozen-core edits; the census red-window is wave-tagged, not silent (§11 Med wave40).
+W1–W6 pending.
+
 | Wave | Scope | Depends on | Gate |
 |---|---|---|---|
 | **W0 — Safety net + metric + error parity** | depth-structured fuzz; `mycelium-l1`+`mlir`+`workstack`→mutants; the §4.0 metric property test; the §5.1 error-parity differential (canonical variant reconciled); guard-hole census (`#[ignore="Wn"]`-tagged) | — | new gates exist + tagged; metric test passes; error-parity gate defined |
@@ -306,6 +312,14 @@ implementation. **4 Critical + 15 High source-confirmed** objections, all resolv
 
 ## Meta — changelog
 
+- **2026-07-03 — W0 landed (Phase-4 safety net; M-979).** First wave, no behavior change / no
+  frozen-core edits: the §4.0 metric property test, the §5.1 error-parity differential
+  (`#[ignore="W5"]`; canonical over-budget variant fixed as `DepthExceeded{u32}` on the metric,
+  reconciling the interp/AOT `EvalError::DepthLimit{usize}` in W4/W3½), the RR-29 guard-hole census
+  (per-crate `#[ignore="Wn"]` real-repro tests across eight crates), depth-structured fuzz (the interp
+  target reproduces the known `SIGABRT`), and the `just mutants` / unsafe-audit scope additions
+  (`mycelium-l1`, `mycelium-mlir`, `mycelium-stack`). RFC stays **Accepted**; W1–W6 pending. Every
+  claim `Declared`/`Empirical`, no `Proven` (VR-5/G2).
 - **2026-07-03 — Ratified `Proposed → Accepted` (Rev 2; maintainer).** The maintainer's "accept/ratify"
   directive ratifies the adversarially-hardened Rev 2, **including** the three items flagged for their
   call: the §6 **within-freeze behavior-preserving-hardening channel** (a DN-56 process addition — DN-56
