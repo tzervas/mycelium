@@ -11412,9 +11412,14 @@ issues:
     depends_on: [M-978]
     doc_refs:
       - corpus:DN-84
+      - corpus:RFC-0041
       - src:crates/mycelium-l1/src/checkty.rs
       - src:crates/mycelium-interp/src/lib.rs
     body: |
+      Phase-1 research DONE (research/29). Phase-2 RFC AUTHORED: RFC-0041 (Proposed) — decided
+      architecture with all four maintainer ratifications baked in (floor+headroom budget amending
+      DN-05; DN-39 iterative-Drop admission; TCO in evaluators; convert-eval/guard-frontend). Next:
+      Phase-3 adversarial review of RFC-0041, then Phase-4 staged implementation (7 waves W0-W6, §7).
       DN-84 design (D), CONFIRMED by the maintainer (DN-84 §11 correction, 2026-07-03) as the
       solve-NOW track: get the complexity of the problem and solution fully figured out and solved
       in the Rust reference era, BEFORE the M-740 .myc port has to absorb the shape (the dogfooded
