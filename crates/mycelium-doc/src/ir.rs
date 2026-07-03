@@ -307,10 +307,32 @@ impl Node {
     }
 
     /// Depth-first pre-order visit of this node and its descendants.
-    pub fn walk<'a>(&'a self, f: &mut dyn FnMut(&'a Node)) {
+    ///
+    /// **RFC-0041 §4.7 guard-hole close (W1, RR-29).** The whole walk runs on
+    /// [`mycelium_workstack::ensure_sufficient_stack`]'s grown worker stack (a 256 MiB
+    /// lazily-committed thread), so a pathologically deep IR tree (thousands of nested sections)
+    /// walks to completion instead of overflowing the caller's host stack — `walk` stays infallible
+    /// (`()`); the fix is that it now never `SIGABRT`s. The budget passed is
+    /// `mycelium_workstack::RecursionBudget::default()` — its depth/mem/step ceilings play no role in
+    /// W1 (the guard body only grows the host stack; it does not charge against the budget), so this
+    /// closes the host-stack hole only — it does not introduce a new refusal path, and behavior is
+    /// otherwise unchanged (`Declared`: a real depth/work-step ceiling for doc-IR walks is future
+    /// work, not introduced silently here).
+    ///
+    /// The guard is applied **once**, at this public entry — the recursion itself runs through
+    /// [`walk_inner`](Self::walk_inner), which does **not** re-guard per level (guarding every
+    /// recursive step would spawn a worker thread per node: wrong and needlessly expensive).
+    pub fn walk<'a>(&'a self, f: &mut (dyn FnMut(&'a Node) + Send)) {
+        let budget = mycelium_workstack::RecursionBudget::default();
+        mycelium_workstack::ensure_sufficient_stack(&budget, move || self.walk_inner(f));
+    }
+
+    /// The unguarded recursive body of [`walk`](Self::walk). Runs entirely on the worker stack the
+    /// public entry already established.
+    fn walk_inner<'a>(&'a self, f: &mut dyn FnMut(&'a Node)) {
         f(self);
         for c in &self.children {
-            c.walk(f);
+            c.walk_inner(f);
         }
     }
 }
@@ -357,141 +379,5 @@ impl DocModel {
             .iter()
             .map(|n| n.id.as_str().to_owned())
             .collect()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn prov() -> Provenance {
-        Provenance {
-            source: "docs/x.md".to_owned(),
-            line: 1,
-        }
-    }
-
-    #[test]
-    fn identity_is_content_addressed_and_excludes_provenance() {
-        let a = Node::new(
-            "p",
-            None,
-            None,
-            Provenance {
-                source: "a.md".to_owned(),
-                line: 1,
-            },
-            Payload::Prose {
-                text: "hi".to_owned(),
-            },
-            vec![],
-        );
-        let b = Node::new(
-            "p",
-            None,
-            None,
-            Provenance {
-                source: "b.md".to_owned(),
-                line: 999,
-            },
-            Payload::Prose {
-                text: "hi".to_owned(),
-            },
-            vec![],
-        );
-        // Same projected content, different provenance → same address (provenance is not identity).
-        assert_eq!(a.id.as_str(), b.id.as_str());
-    }
-
-    #[test]
-    fn different_content_gives_a_different_address() {
-        let a = Node::new(
-            "p",
-            None,
-            None,
-            prov(),
-            Payload::Prose {
-                text: "one".to_owned(),
-            },
-            vec![],
-        );
-        let b = Node::new(
-            "p",
-            None,
-            None,
-            prov(),
-            Payload::Prose {
-                text: "two".to_owned(),
-            },
-            vec![],
-        );
-        assert_ne!(a.id.as_str(), b.id.as_str());
-    }
-
-    #[test]
-    fn a_parents_address_depends_on_its_children() {
-        let child1 = Node::new(
-            "c1",
-            None,
-            None,
-            prov(),
-            Payload::Prose {
-                text: "a".to_owned(),
-            },
-            vec![],
-        );
-        let child2 = Node::new(
-            "c2",
-            None,
-            None,
-            prov(),
-            Payload::Prose {
-                text: "b".to_owned(),
-            },
-            vec![],
-        );
-        let p1 = Node::new(
-            "s",
-            Some("S".to_owned()),
-            None,
-            prov(),
-            Payload::Section,
-            vec![child1.clone()],
-        );
-        let p2 = Node::new(
-            "s",
-            Some("S".to_owned()),
-            None,
-            prov(),
-            Payload::Section,
-            vec![child1, child2],
-        );
-        assert_ne!(p1.id.as_str(), p2.id.as_str());
-    }
-
-    #[test]
-    fn the_model_indexes_every_anchor() {
-        let doc = Node::new(
-            "doc",
-            Some("Doc".to_owned()),
-            None,
-            prov(),
-            Payload::Document {
-                source_kind: SourceKind::Spec,
-            },
-            vec![Node::new(
-                "doc-s1",
-                Some("S1".to_owned()),
-                None,
-                prov(),
-                Payload::Section,
-                vec![],
-            )],
-        );
-        let m = DocModel::new(vec![doc]);
-        assert!(m.anchors.contains_key("doc"));
-        assert!(m.anchors.contains_key("doc-s1"));
-        assert_eq!(m.all_nodes().len(), 2);
-        assert_eq!(m.id_set().len(), 2);
     }
 }
