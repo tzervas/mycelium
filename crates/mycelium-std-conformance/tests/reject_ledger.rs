@@ -142,13 +142,14 @@ fn checkty_direct_checkerror_construction_count_matches_the_ledger() {
     let direct_at = count_occurrences(&src, "CheckError::at(");
     let total = direct_new + direct_at;
     assert_eq!(
-        total, 101,
+        total, 102,
         "checkty.rs direct `CheckError::new(`/`CheckError::at(` construction sites: found {total}, \
-         DN-80 §4 audited 101 (dev 4e2c389, 2026-07-02; +6 vs the original ca42fd2 audit — the \
+         DN-80 §4 audited 102 (dev 7b933a3, 2026-07-02; +6 vs the original ca42fd2 audit — the \
          M-919/M-973 lower/derive extension-checker work, family 8; +2 — M-965's two `Fuse` \
-         built-in-prelude redeclaration refusals, family 5) — a reject path was added or \
+         built-in-prelude redeclaration refusals, family 5; +1 — M-966's `via`-delegation \
+         ambiguity refusal, family 6) — a reject path was added or \
          removed without updating DN-80 §4's construct-family table and this pinned count (one of \
-         the 101 is the shared `Cx::err` helper's own body at line ~3000 — plumbing, not a distinct \
+         the 102 is the shared `Cx::err` helper's own body at line ~3000 — plumbing, not a distinct \
          construct; see DN-80 §4's audited-totals note)"
     );
 }

@@ -105,25 +105,26 @@ just brings it into the cross-stratum ledger so a reader has one place to look.
 
 `CheckError` (`crates/mycelium-l1/src/error.rs:181`) is `{ site: String, message: String }` — a
 free-text refusal, not a closed reason-code enum. There is therefore no 1:1 enum to ledger; instead
-this table groups the **216** distinct checker-facing construction/call sites (audited below) into
+this table groups the **217** distinct checker-facing construction/call sites (audited below) into
 **41 construct families**, each a coherent "the kernel refuses to accept X" category with a
 representative reason and surface alternative. The per-family site count is exact (grep-derived,
-reproduced by the regression guard in §8) and **sums to exactly 216** — the completeness check for
+reproduced by the regression guard in §8) and **sums to exactly 217** — the completeness check for
 this stratum.
 
-**Audited totals (dev `4e2c389`, 2026-07-02; re-audited twice vs the original `41ec4fe` audit — (a)
+**Audited totals (dev `7b933a3`, 2026-07-02; re-audited thrice vs the original `41ec4fe` audit — (a)
 `+6` `checkty.rs` sites all in family 8, the M-919 DN-71 Model-S and M-973 DN-54 §10 lower/derive
 extension-checker work; (b) M-965's `Fuse` law-checker: `+2` `checkty.rs` family-5
 `Fuse`-redeclaration refusals and a new `crates/mycelium-l1/src/fuse.rs` audited file carrying `4`
-definition-time semilattice-law rejects, ledgered as new family 40):**
+definition-time semilattice-law rejects, ledgered as new family 40; (c) M-966's `+1` `checkty.rs`
+family-6 `via`-delegation ambiguity refusal):**
 
 | File | Pattern | Raw match count | Non-plumbing reject sites |
 |---|---|---|---|
-| `crates/mycelium-l1/src/checkty.rs` | `CheckError::new(` / `CheckError::at(` | 101 | 100 (one match, line ~3000, is the shared `Cx::err` helper's own body — plumbing, not a distinct construct) |
+| `crates/mycelium-l1/src/checkty.rs` | `CheckError::new(` / `CheckError::at(` | 102 | 101 (one match, line ~3000, is the shared `Cx::err` helper's own body — plumbing, not a distinct construct) |
 | `crates/mycelium-l1/src/checkty.rs` | `self.err(` | 110 | 110 |
 | `crates/mycelium-l1/src/grade.rs` | `CheckError::at(` | 2 | 2 |
 | `crates/mycelium-l1/src/fuse.rs` | `CheckError::new(` | 4 | 4 |
-| **Total** | | **217** | **216** |
+| **Total** | | **218** | **217** |
 
 | # | Construct family | Representative reason | Surface alternative | Grounding | Sites |
 |---|---|---|---|---|---|
@@ -133,7 +134,7 @@ definition-time semilattice-law rejects, ledgered as new family 40):**
 | 3 | Internal invariant guards (not user-reachable) | a defensive check on the checker's own invariants (e.g. an or-pattern reaching a pass that must have desugared it already) — never triggerable from valid input; kept as a clean refusal rather than a panic | none — these indicate a checker bug if ever hit; report it | G2 (never a panic even on "impossible" input) | 8 |
 | 4 | Import/`use`-path resolution | an empty/unqualified/unknown/private/duplicate `use` target | qualify the path, export the name, or de-duplicate the import | M-662 | 6 |
 | 5 | Duplicate declaration (type/fn/trait/ctor/method) | the same name is declared twice at one scope, or (M-965) a program redeclares the built-in prelude trait `Fuse` | rename one, remove the duplicate, or don't redeclare `Fuse` | RFC-0007/RFC-0019 (name uniqueness), DN-58 §A | 11 |
-| 6 | `object`/`via` composition rejects | the named trait isn't in scope, or the field index is out of range | bring the trait into scope; use a valid field index | DN-53 §A.3.2 | 2 |
+| 6 | `object`/`via` composition rejects | the named trait isn't in scope, the field index is out of range, or (M-966) two `via` clauses on one object claim the same trait with no deterministic tiebreak (an `EXPLAIN`-able ambiguity refused never-silently, naming both candidate field indices) | bring the trait into scope; use a valid field index; remove the ambiguous duplicate `via` clause | DN-53 §A.3.2, M-966 | 3 |
 | 7 | Totality / matured-scope rejects | a function in a `matured` scope isn't proven total | mark it `thaw fn`, or make it total | RFC-0007 §4.5, RFC-0017 §4.2 | 2 |
 | 8 | `lower`/`derive` generative-lowering rejects | a duplicate/self-recursive/cyclic `lower` rule, a `wild` block in its RHS, an RHS that fails the IL-grammar/type check, or (M-919 DN-71 Model S / M-973 DN-54 §10) a sibling-injected derive/lower rule that violates the affine-consume or attachment discipline | rename, break the cycle, remove the `wild` call, or fix the RHS/derive site | DN-54 §3/§4/§10, DN-71 | 14 |
 | 9 | Effect-system rejects | an undeclared effect is performed, or an impl's effect annotation doesn't match its trait | declare the effect, or align the annotation | RFC-0014 §4.5 | 4 |
@@ -168,7 +169,7 @@ definition-time semilattice-law rejects, ledgered as new family 40):**
 | 38 | Feature-deferred refusal (`spore`) | `spore` construction is deferred to the reconstruction-manifest work | none yet — tracked as E2-5/M-260 | E2-5/M-260 | 1 |
 | 39 | Guarantee/grade lattice rejects | a body's inferred grade doesn't satisfy its declared `@ g` demand | weaken the annotation, or strengthen the body | RFC-0018 §4.3, VR-5 | 2 |
 | 40 | `Fuse` semilattice-**law** rejects (definition-time) | a declared `Fuse` instance whose `join`, over a finite enumerable domain, violates idempotence / commutativity / associativity, or errors while being probed — refused at the `impl` site with a concrete counterexample (`Empirical`: exhaustive over the domain; a non-enumerable domain is *skipped*, never silently assumed lawful) | fix `join` to be a semilattice operation (idempotent, commutative, associative) | DN-58 §A.1/§A.4, RFC-0008 RT6, M-965 | 4 |
-| | **Total** | | | | **204** |
+| | **Total** | | | | **217** |
 
 ## 5. Part C — Ambient-resolution rejects (`AmbientError`, 5/5 variants ledgered)
 
@@ -240,7 +241,7 @@ immediately actionable):**
    bidirectional check, which stays owned by the L1 frontend.)
 2. **Check-level call-site counts.** `grep`-style counts (via regex over the read text) of
    `CheckError::new(`/`CheckError::at(` and `self.err(` in `checkty.rs`, `CheckError::at(` in
-   `grade.rs`, and `CheckError::new(` in `fuse.rs`, must equal **101 / 110 / 2 / 4** respectively
+   `grade.rs`, and `CheckError::new(` in `fuse.rs`, must equal **102 / 110 / 2 / 4** respectively
    (§4's audited totals). A mismatch — in either direction — fails with a message naming which
    file/pattern drifted and by how much, and pointing at this note to add/adjust the family rows
    before updating the pinned constant.
@@ -310,3 +311,4 @@ tip `41ec4fe` (2026-07-02).
 |---|---|---|
 | 2026-07-02 | **Accepted** | Authored (M-959, kickoff `frz`, Lane A) as the DN-56 condition-1 reject-ledger. Enumerates 29 parse-level fixtures (Part A, restating the existing self-policing corpus), 204 check-level `CheckError`/`self.err` sites grouped into 40 construct families with exact per-family counts (Part B), and three closed enums ledgered 1:1 — `AmbientError` (5), `EvalError` (17), `WfError` (7) (Parts C-E). Wires a regression guard (`crates/mycelium-std-conformance/tests/reject_ledger.rs`) that pins the audited counts/variant-sets and fails never-silently on drift. All tags `Empirical` (a checked, mechanical inventory — VR-5, never `Proven`). Read-only against the L1 frontend and `prims.rs` throughout (a concurrent M-915 leaf owns them). **Live-validated the guard's purpose during authoring:** while this leaf worked, the concurrent M-915 leaf landed fixture 30 (`30-vec-short-alias-rejected.myc`, RFC-0037 D2-b) on `dev`; pulling that tip down made `parse_level_reject_corpus_matches_the_ledger` fail immediately (an unledgered fixture) — exactly the regression it exists to catch — and this revision adds its ledger row before the count assertions were updated to 29. FLAGs: guard granularity is count-based for the free-text stratum (§8), shared files untouched (orchestrator to reconcile), `PrimType` ledgered as one family (not per-prim). |
 | 2026-07-02 | **Accepted** | Reconcile: the concurrent `grm` wave (M-916, RFC-0037 D1) landed reject fixture `31-old-le-ge-glyph-retired.myc` on `dev` without a ledger row, so `parse_level_reject_corpus_matches_the_ledger` failed never-silently — exactly the drift the guard exists to catch. Adds the §3 row 31 (the retired two-char `<=`/`>=` glyphs → word-canonical `lte`/`gte`), bumps the §3 header + §8.1 corpus-size to 30, and updates the guard's pinned fixture list + count (29 → 30) in the same commit. **Also re-audits Part B:** the M-919 (DN-71 Model S) and M-973 (DN-54 §10 attachment Model A) lower/derive extension-checker work landed **6 net new** `checkty.rs` `CheckError` sites (verified: 8 added, 2 refactored-out, all in `check_nodule_with`/`check_lower_*` — family 8), so `checkty.rs` direct total goes 93 → 99, family 8's site count 8 → 14, §4 grand total 204 → 210, and §8.2's pinned `93/110/2` → `99/110/2`. `self.err` (110), grade (2), and all closed enums (Parts C–E) unchanged. **And absorbs M-965's `Fuse` law-checker (landed on `dev` concurrently):** `+2` `checkty.rs` family-5 `Fuse`-redeclaration refusals (checkty direct 99 → 101, family 5 count 9 → 11) and a **new audited file** `crates/mycelium-l1/src/fuse.rs` with `4` definition-time semilattice-law rejects (idempotence/commutativity/associativity/probe-eval-failure) ledgered as **new family 40**; §4 grand total 210 → 216, family count 40 → 41, §8.2 pinned `99/110/2` → `101/110/2/4`, and the guard gains a `fuse.rs` count assertion so the new reject path is guarded like the rest. Tags remain `Empirical` (mechanical re-count, VR-5). |
+| 2026-07-02 | **Accepted** | Reconcile: M-966 (`via`-delegation deterministic ordering) landed on `dev` adding **1** `checkty.rs` `CheckError` site — the `via` ambiguity refusal (two `via` clauses claiming one trait). → family 6 count 2 → 3, `checkty.rs` direct total 101 → 102, §4 grand total 216 → 217, §8.2 pinned `101/110/2/4` → `102/110/2/4`, guard pinned count updated. Also corrected the family-table Total row (was stale at 204 since the first re-audit — the guard pins only the per-file totals, not the family sum, so it went uncaught; now 217, matching the audited non-plumbing total). Tags remain `Empirical`. |
