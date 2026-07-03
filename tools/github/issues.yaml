@@ -11375,7 +11375,7 @@ issues:
   - id: M-978
     title: "Dynamic host-stack growth + unified tunable recursion-depth budget (DN-84)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:design, area:core-ir, priority:P2, status:needs-design]
+    labels: [phase:5, type:design, area:core-ir, priority:P2, status:todo]
     epic: E31-1
     depends_on: [M-977]
     doc_refs:
@@ -11384,20 +11384,44 @@ issues:
       - src:crates/mycelium-l1/src/parse.rs
     body: |
       Harden the recursive frontend passes to be crash-proof (no host-stack SIGABRT) with an
-      essentially-unbounded, cleanly-handled nesting capability, per DN-84. Direction (advisory,
-      DN-84 §7): (1) wire the already-documented mycelium-stack grow-on-demand feature
-      (stacker::maybe_grow — safe API, unsafe contained in the leaf, KC-3/ADR-014 intact) so the
-      host stack is never the binding limit; (2) unify the scattered per-pass depth constants
-      (parser 256, eval 64, ambient/elab/totality/checkty 4096) into one coherent, deterministic,
-      tunable budget — the kernel-resident portable primitive that ports to .myc (boot10); (3) keep
-      the budget deterministic (fixed default, opt-in raise) so accept/reject is a function of
+      essentially-unbounded, cleanly-handled nesting capability, per DN-84. DIRECTION DECIDED by the
+      maintainer (DN-84 §11, 2026-07-03): implement (B) — wire the already-documented mycelium-stack
+      grow-on-demand feature (stacker::maybe_grow — safe API, unsafe contained in the leaf,
+      KC-3/ADR-014 intact) so the host stack is never the binding limit — with: ONE GLOBAL
+      recursion-depth budget under a shared policy (§9.1), unifying the scattered per-pass constants
+      (parser 256, eval 64, ambient/elab/totality/checkty 4096); maybe_grow guards at COARSE
+      pass-entry points only (§9.2 — minimize per-call cost, prove no segment overrun, e.g. reserve
+      >= budget x max_frame at entry); a DETERMINISTIC default budget of 4096, tunable, with headroom
+      to a few tens of thousands as future use cases witness (§9.5) — accept/reject a function of
       (source, budget) only, never the machine (G2 + corpus determinism + self-hosting portability);
-      (4) treat data-shaped depth (RFC-0040 list/table literal Cons chains — size-driven, not logic)
-      separately from control depth: lower it iteratively / route through grow-on-demand so large
-      generated data is bounded by memory, never a recursion guard. Motivated by the ADR-041
-      near-miss (a toolchain frame-size change turned a 256-deep guard into a SIGABRT). Lands via its
-      own RFC/ADR when ratified; DN-84 stays Draft until then.
-      User stories + Definition of Done: see DN-84 §2 (stories) + §7 (recommended direction / criteria).
+      plus an opt-in, non-deterministic, corpus-excluded --unbounded REPL/exploration mode (design C,
+      §9.3). Data-shaped desugaring depth (RFC-0040 Cons chains — size-driven, not logic) is routed
+      through iteration/grow-on-demand, NOT the control budget (§5). Motivated by the ADR-041 near-miss
+      (a toolchain frame-size change turned a 256-deep guard into a SIGABRT). Companion (D) track =
+      M-979. Lands via its own RFC/ADR; DN-84 stays Draft until then.
+      User stories + Definition of Done: see DN-84 §2 (stories) + §7/§11 (decided direction / criteria).
+  - id: M-979
+    title: "Explicit heap work-stack for the recursive frontend passes — design + research (DN-84 design D)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:core-ir, priority:P3, status:needs-design]
+    epic: E31-1
+    depends_on: [M-978]
+    doc_refs:
+      - corpus:DN-84
+      - src:crates/mycelium-l1/src/checkty.rs
+    body: |
+      DN-84 design (D), elevated by the maintainer (DN-84 §11 / §9.4, 2026-07-03) from a strictly
+      post-self-hosting perf item to an ACTIVE design + deeper-research track that begins now, with
+      eventual implementation. Convert the hot recursive frontend passes (checkty/elab/eval) from
+      host-call-stack recursion to an EXPLICIT heap-allocated work-stack, so a converted pass uses no
+      thread stack at all for its descent — the strongest robustness/perf option (removes the host
+      stack as a factor entirely, complements M-978's (B) grow-on-demand baseline rather than replacing
+      it). The .myc self-hosting rewrite (boot10/M-740) is the natural place to choose an explicit
+      work-stack shape for the ported passes. Deliverable: a research/design note (and RFC when ready)
+      covering the transform, which passes convert first, the perf model, and how the explicit stack
+      preserves the never-silent depth-budget semantics (G2). Implementation is eventual (after B lands
+      and the research supports it); this issue tracks the design/research, not a near-term port.
+      User stories + Definition of Done: see DN-84 §2 + §11 (D elevated: design/research now, implement eventual).
   - id: M-970
     title: "mycelium-fmt: render_expr_canonical drops the @forage(policy) Hypha annotation"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"

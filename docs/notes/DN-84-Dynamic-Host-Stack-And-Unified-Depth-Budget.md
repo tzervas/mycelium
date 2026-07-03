@@ -249,8 +249,60 @@ direction for M-978's RFC/ADR to ratify.
 
 ---
 
+## 11. Maintainer decisions (2026-07-03)
+
+The design space (§6) and open questions (§9) are now **decided by the maintainer**. Recorded
+append-only; these fix the direction the follow-on RFC/ADR implements. DN-84 remains **Draft** (the
+mechanism still lands via that RFC/ADR); this section is the ratified *direction*, not the
+implementation.
+
+- **§6 direction → (B) is the baseline, with (D) elevated to active design/research.** Implement
+  **(B)** — grow-on-demand host stack (`stacker::maybe_grow`) + a unified deterministic budget — as
+  the mechanism. **(D)** (explicit heap work-stack) is **planned for eventual implementation**, backed
+  by **deeper research**, and its **design work begins now** (§9.4) rather than being deferred strictly
+  to post-self-hosting. *Reconciliation of §6 ("D eventual") with §9.4 ("D now"): **B is implemented
+  now; D's design + research are active now; D's implementation is the eventual target.** Flagged for
+  confirmation — if the intent was "implement D now instead of B," this note is corrected.*
+- **§9.1 budget shape → one global budget + a shared policy.** A single workspace-wide recursion-depth
+  budget governs all passes, under one documented policy (not seven independent constants). This is the
+  kernel-resident, portable primitive that ports to `.myc` (boot10).
+- **§9.2 `maybe_grow` placement → coarse pass-entry points only.** Guards go at the pass entries
+  (`parse`/`check`/`elab`/`eval`/…), **not** at every `enter_depth` call — minimizing per-call cost —
+  while still guaranteeing no stack segment is ever overrun (each pass reserves/grows enough headroom
+  for its whole descent up to the global budget). *Design obligation for the RFC: prove the coarse
+  placement cannot overrun a segment between guards (e.g. reserve ≥ `budget × max_frame` at entry, or
+  re-check at a bounded stride).*
+- **§9.3 `--unbounded` mode → yes, opt-in, non-deterministic, REPL/exploration only.** Design **(C)**
+  ships as an explicitly opt-in, **clearly-flagged non-deterministic** interactive mode for REPL/
+  exploration — **excluded from the conformance corpus** and never the default (so determinism/G2 hold
+  for the normal path; the mode's machine-dependence is surfaced, never silent).
+- **§9.4 design (D) → begin now.** The explicit heap-allocated work-stack is **not** treated as a
+  strictly-post-self-hosting perf item; its design + deeper research start now (see §6 reconciliation).
+  The `.myc` self-hosting rewrite (boot10) is the natural place to choose an explicit-work-stack shape
+  for the ported passes.
+- **§9.5 budget default → 4096 for now, headroom to tens of thousands.** Keep **4096** as the default
+  control-depth budget (ample for authored logic). Future use cases *may* want to scale to a **few tens
+  of thousands** deep — the tunable knob (§7.2) plus grow-on-demand (§7.1) must comfortably support that
+  range without a redesign; the exact ceiling stays demand-driven (raise when a real witnessing use case
+  appears, never speculatively).
+
+**Net decided direction:** implement (B) with a single global deterministic budget (default 4096,
+tunable, growable to tens-of-thousands) + coarse-placed grow-on-demand guards + an opt-in
+non-deterministic `--unbounded` REPL mode; concurrently open the (D) explicit-work-stack design/research
+track for eventual implementation. Data-shaped desugaring depth (§5) is routed through
+iteration/grow-on-demand, not the control budget.
+
+---
+
 ## Meta — changelog
 
+- **2026-07-03 — §11 added: maintainer decisions (append-only, no status move).** §6 → **(B)** baseline
+  (grow-on-demand + unified deterministic budget) with **(D)** explicit-work-stack elevated to active
+  design/research now, eventual implementation; §9.1 → one **global** budget + shared policy; §9.2 →
+  `maybe_grow` at **coarse pass-entry points only**; §9.3 → **yes** to an opt-in non-deterministic
+  `--unbounded` REPL mode (corpus-excluded); §9.4 → begin **(D)** now; §9.5 → default **4096**, headroom
+  to tens-of-thousands, demand-driven. B/D "now vs eventual" reconciliation flagged for confirmation.
+  Status stays **Draft** (feeds M-978's RFC/ADR). (M-978.)
 - **2026-07-03 — Draft created (M-978).** Captures the design space for crash-proof, essentially-
   unbounded nesting via (B) grow-on-demand host stack + a unified deterministic tunable depth budget,
   with the honest tension (§4: "limitless" bends to G2 + determinism + self-hosting portability) made
