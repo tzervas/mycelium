@@ -329,7 +329,7 @@ fn a_substrate_nested_in_a_returned_constructor_is_not_released_it_escapes_deepl
     let out = ev
         .call("wrap", vec![L1Value::Substrate(h.clone())])
         .expect("wrap evaluates");
-    let L1Value::Data { fields, .. } = out else {
+    let L1Value::Data { ref fields, .. } = out else {
         panic!("expected a Data value");
     };
     let inner = fields[0].as_substrate().expect("field is the Substrate");
