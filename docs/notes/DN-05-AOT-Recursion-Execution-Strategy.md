@@ -213,3 +213,13 @@ AOT env-machine is a bounded-depth differential path — stated, not hidden.
   MiB ⇒ ≈ 183k). A property test bounds the derivation (`[floor, ceil]`, monotone in headroom) for all
   inputs incl. saturation. The trusted interpreter is unchanged; the three-way differential holds
   (NFR-7). Per-frame cost is `Declared`/over-counted (VR-5), not `Proven`. Append-only.
+- **2026-07-03 — Amendment: deterministic FLOOR + dynamic HEADROOM (RFC-0041 §4.4 / M-979; append-only).**
+  The dynamic memory-derived `DepthBudget` above makes the AOT machine's depth ceiling **machine-dependent**,
+  which — on its own — lets the *same* program diverge accept/reject by machine on the AOT leg of the
+  three-way differential (RR-29 §5). RFC-0041 reconciles this with DN-84's determinism mandate: all three
+  execution paths honor **one deterministic FLOOR** (the global `RecursionBudget` default, 4096; the
+  conformance corpus stays at or below it), and the AOT machine keeps its dynamic ceiling **only as HEADROOM
+  above the floor**, which the differential never exercises. So the observable accept/reject boundary is
+  deterministic up to the floor; memory-awareness survives above it. The three-way differential is defined
+  **at or below the floor**. This does not change M-347/M-349's mechanism — it scopes where the dynamic
+  ceiling is observable. Enacted with RFC-0041 W1. Append-only (VR-5/G2).
