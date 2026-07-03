@@ -4,3 +4,4 @@
 mod guard_hole_census;
 mod parallel;
 mod prims;
+mod with_depth_parity;

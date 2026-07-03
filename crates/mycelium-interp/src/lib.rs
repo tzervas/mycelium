@@ -364,6 +364,13 @@ pub struct Interpreter {
     prims: PrimRegistry,
     swap: Arc<dyn SwapEngine>,
     fuel: u64,
+    /// The shared [`RecursionBudget`] depth ceiling on the §4.0 metric (RFC-0041 W4/W7). Defaults to
+    /// the global floor [`RecursionBudget::DEFAULT_DEPTH_LIMIT`] (4096) — [`Default`]/[`new`](Self::new)
+    /// preserve the established behavior exactly. Tunable per-invocation via
+    /// [`with_depth`](Self::with_depth): the additive constructor that lets a caller verify the
+    /// budget→[`EvalError::DepthLimit`] mapping at an *arbitrary* ceiling (not only the floor), and that
+    /// backs the CLI `--unbounded` escape hatch by setting it to [`u32::MAX`] (RFC-0041 §5 / DN-84 §9.3).
+    depth_limit: u32,
 }
 
 impl Default for Interpreter {
@@ -372,6 +379,7 @@ impl Default for Interpreter {
             prims: PrimRegistry::with_builtins(),
             swap: Arc::new(IdentitySwapEngine),
             fuel: DEFAULT_FUEL,
+            depth_limit: RecursionBudget::DEFAULT_DEPTH_LIMIT,
         }
     }
 }
@@ -387,6 +395,7 @@ impl Interpreter {
             prims,
             swap: Arc::from(swap),
             fuel: DEFAULT_FUEL,
+            depth_limit: RecursionBudget::DEFAULT_DEPTH_LIMIT,
         }
     }
 
@@ -395,6 +404,34 @@ impl Interpreter {
     pub fn with_fuel(mut self, fuel: u64) -> Self {
         self.fuel = fuel;
         self
+    }
+
+    /// Override the shared [`RecursionBudget`] **depth ceiling** on the §4.0 metric (RFC-0041 W7 —
+    /// additive; the error enum and every observable are unchanged). The default is the global floor
+    /// [`RecursionBudget::DEFAULT_DEPTH_LIMIT`] (4096); this lets a caller run the substitution machine
+    /// under an *arbitrary* ceiling.
+    ///
+    /// Two uses (both never-silent, G2): (1) a **uniform-mapping check** — a small `depth_limit` (e.g.
+    /// 8) proves a controlled-depth value refuses with [`EvalError::DepthLimit`] at *exactly* that
+    /// ceiling, confirming the budget→error mapping is uniform across the range, not merely
+    /// floor-verified; (2) the CLI **`--unbounded`** escape hatch (RFC-0041 §5 / DN-84 §9.3) passes
+    /// [`u32::MAX`] to lift the deterministic ceiling for opt-in, non-deterministic REPL/exploration —
+    /// a machine-dependent mode excluded from the conformance corpus. Even at [`u32::MAX`] the refusal
+    /// stays never-silent: the growable deep stack ([`eval`](Self::eval)) makes memory, not a host-stack
+    /// `SIGABRT`, the binding limit.
+    #[must_use]
+    pub fn with_depth(mut self, depth_limit: u32) -> Self {
+        self.depth_limit = depth_limit;
+        self
+    }
+
+    /// A fresh shared [`RecursionBudget`] sized to this interpreter's [`depth_limit`](Self::with_depth),
+    /// with the memory/work-step ceilings left effectively unbounded (as [`RecursionBudget::default`]
+    /// does — the real memory ceiling is a startup/process-arena concern, §4.2, not this per-eval knob).
+    /// A default interpreter yields a budget identical to [`RecursionBudget::default`], so the
+    /// established behavior is preserved exactly.
+    fn budget(&self) -> RecursionBudget {
+        RecursionBudget::new(self.depth_limit, u64::MAX, u64::MAX)
     }
 
     /// The registered primitive names (for tooling/EXPLAIN).
@@ -414,7 +451,7 @@ impl Interpreter {
     /// [`eval`](Self::eval)/[`eval_core`](Self::eval_core), which additionally run on the growable deep
     /// stack (§4.3); a bare `step` charges the budget but is not itself stack-wrapped.
     pub fn step(&self, node: &Node) -> Result<Step, EvalError> {
-        self.step_budgeted(node, &RecursionBudget::default())
+        self.step_budgeted(node, &self.budget())
     }
 
     /// The budgeted small-step relation (RFC-0041 §4.1): identical to [`step`](Self::step) but charging
@@ -606,9 +643,9 @@ impl Interpreter {
         // closure: it is `Send` but not `Sync` (interior `Cell` charge state), so it is owned on the
         // worker rather than borrowed across the thread boundary — the AOT `run_core` precedent. The
         // outer `sizing` budget is only read on the caller thread to size the guard.
-        let sizing = RecursionBudget::default();
+        let sizing = self.budget();
         ensure_sufficient_stack(&sizing, move || {
-            let budget = RecursionBudget::default();
+            let budget = self.budget();
             self.eval_core_budgeted(node, &budget)
         })
     }
