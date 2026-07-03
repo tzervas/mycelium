@@ -28,6 +28,7 @@
 use std::collections::HashMap;
 
 use mycelium_core::VarId;
+use mycelium_workstack::{ensure_sufficient_stack, BudgetError, RecursionBudget};
 
 use crate::rc_ir::RcNode;
 
@@ -53,6 +54,16 @@ pub enum RcError {
     },
     /// A node outside the straight-line fragment (e.g. `App`/`Match`/`Construct`/`Lam`).
     UnsupportedNode(&'static str),
+    /// The evaluator's own [`RcNode`]-traversal recursion (over `Let`'s `bound`/`body`, `Op`
+    /// arguments, `Dup`/`Drop`/`DropAfter` wrappers, …) exceeded the shared
+    /// [`mycelium_workstack::RecursionBudget`] depth ceiling (RFC-0041 §4.7 — the W7 guard hole in
+    /// this AOT RC/ownership pass). Refused cleanly here rather than overflowing the host stack and
+    /// SIGABRT-ing `myc build` (G2); reconciles with the `emit`-side [`crate::emit::EmitError::DepthExceeded`]
+    /// and the interp/AOT `DepthLimit` family.
+    DepthExceeded {
+        /// The depth ceiling (recursion frames) that was reached.
+        limit: u32,
+    },
 }
 
 impl std::fmt::Display for RcError {
@@ -74,11 +85,30 @@ impl std::fmt::Display for RcError {
                     "RC-evaluator does not support `{k}` (straight-line fragment only)"
                 )
             }
+            RcError::DepthExceeded { limit } => write!(
+                f,
+                "RC-evaluator's own IR-traversal recursion exceeded the depth budget (limit \
+                 {limit} frames) — refusing rather than overflowing the host stack (RFC-0041 §4.7, G2)"
+            ),
         }
     }
 }
 
 impl std::error::Error for RcError {}
+
+impl From<BudgetError> for RcError {
+    /// [`eval`] only ever charges the depth guard ([`RecursionBudget::try_enter`]), so in practice
+    /// this always sees [`BudgetError::DepthExceeded`]; the `OutOfBudget` arm is handled defensively
+    /// (never a silent drop of the ceiling, G2) should a future increment add byte/step charging.
+    fn from(err: BudgetError) -> Self {
+        match err {
+            BudgetError::DepthExceeded { limit } => RcError::DepthExceeded { limit },
+            BudgetError::OutOfBudget { limit, .. } => RcError::DepthExceeded {
+                limit: u32::try_from(limit).unwrap_or(u32::MAX),
+            },
+        }
+    }
+}
 
 /// The outcome of evaluating a term: its result allocation and the reclamation log (in order).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -152,14 +182,27 @@ impl Machine {
 /// Evaluate an [`RcNode`] in the abstract RC machine, returning its reclamation report.
 ///
 /// Errors (never-silent) on an unbound variable, a use-after-free, a double-free, or a node outside
-/// the straight-line fragment.
+/// the straight-line fragment — and, per RFC-0041 §4.7 (the W7 guard hole in this AOT RC/ownership
+/// pass), on [`RcError::DepthExceeded`] if the traversal's own recursion exceeds the shared
+/// [`RecursionBudget`] depth ceiling. The outermost call runs on the deep worker stack
+/// ([`ensure_sufficient_stack`]) so a genuinely deep input never SIGABRTs `myc build`, and every
+/// recursive step charges [`RecursionBudget::try_enter`] so a pathological input refuses cleanly at
+/// the depth ceiling instead of exhausting even the deep worker stack.
 pub fn eval(node: &RcNode) -> Result<EvalReport, RcError> {
-    let mut m = Machine::new();
-    let env = HashMap::new();
-    let result = go(node, &env, &mut m)?;
-    Ok(EvalReport {
-        result,
-        reclaimed: m.reclaimed,
+    // The outer budget is not consulted for sizing (the deep worker stack is generous); the real
+    // depth guard is the budget created and charged inside the closure, entirely on the worker
+    // thread (mirrors `emit::emit_owned` and `mycelium-workstack`'s own precedent: `RecursionBudget`
+    // is `Send` but not `Sync`, so it is owned inside `f`, not borrowed across the thread boundary).
+    let outer = RecursionBudget::default();
+    ensure_sufficient_stack(&outer, || {
+        let budget = RecursionBudget::default();
+        let mut m = Machine::new();
+        let env = HashMap::new();
+        let result = go(node, &env, &mut m, &budget)?;
+        Ok(EvalReport {
+            result,
+            reclaimed: m.reclaimed,
+        })
     })
 }
 
@@ -169,7 +212,16 @@ fn lookup(env: &HashMap<VarId, AllocId>, x: &VarId) -> Result<AllocId, RcError> 
         .ok_or_else(|| RcError::UnboundVar(x.clone()))
 }
 
-fn go(node: &RcNode, env: &HashMap<VarId, AllocId>, m: &mut Machine) -> Result<AllocId, RcError> {
+/// The guarded recursive core of [`eval`]: identical accounting, but every recursive step charges
+/// `budget.try_enter()` (RAII-released on return) so the depth ceiling — not a host-stack overflow —
+/// always bounds a pathological input (RFC-0041 §4.7).
+fn go(
+    node: &RcNode,
+    env: &HashMap<VarId, AllocId>,
+    m: &mut Machine,
+    budget: &RecursionBudget,
+) -> Result<AllocId, RcError> {
+    let _guard = budget.try_enter()?;
     match node {
         RcNode::Const(_) => Ok(m.alloc()),
         RcNode::Var(x) => {
@@ -201,34 +253,34 @@ fn go(node: &RcNode, env: &HashMap<VarId, AllocId>, m: &mut Machine) -> Result<A
         RcNode::Dup { var, body } => {
             let a = lookup(env, var)?;
             m.dup(a);
-            go(body, env, m)
+            go(body, env, m, budget)
         }
         RcNode::Drop { var, body } => {
             let a = lookup(env, var)?;
             m.dec(a, var)?;
-            go(body, env, m)
+            go(body, env, m, budget)
         }
         RcNode::DropAfter { var, body } => {
             // Evaluate the body (its reads of `var` happen here), THEN reclaim `var`.
-            let r = go(body, env, m)?;
+            let r = go(body, env, m, budget)?;
             let a = lookup(env, var)?;
             m.dec(a, var)?;
             Ok(r)
         }
         RcNode::Let { id, bound, body } => {
-            let a = go(bound, env, m)?;
+            let a = go(bound, env, m, budget)?;
             let mut e2 = env.clone();
             e2.insert(id.clone(), a);
-            go(body, &e2, m)
+            go(body, &e2, m, budget)
         }
         RcNode::Op { args, .. } => {
             for arg in args {
-                go(arg, env, m)?;
+                go(arg, env, m, budget)?;
             }
             Ok(m.alloc()) // the primitive produces a fresh result
         }
         RcNode::Swap { src, .. } => {
-            go(src, env, m)?;
+            go(src, env, m, budget)?;
             Ok(m.alloc())
         }
         RcNode::Construct { .. } => Err(RcError::UnsupportedNode("Construct")),

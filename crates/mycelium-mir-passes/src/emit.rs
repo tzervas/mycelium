@@ -359,7 +359,12 @@ use crate::rc_ir::RcNode as N;
 /// [`RcNode::Borrow`](crate::rc_ir::RcNode::Borrow), **no** `Dup`, and a single
 /// [`RcNode::DropAfter`](crate::rc_ir::RcNode::DropAfter) reclaiming it after its reads.
 ///
-/// Returns [`EmitError::UnsupportedNode`] for `Fix`/`FixGroup` (G2 — never-silent on recursion).
+/// Returns [`EmitError::UnsupportedNode`] for `Fix`/`FixGroup` (G2 — never-silent on recursion), and
+/// [`EmitError::DepthExceeded`] if the traversal's own recursion exceeds the shared
+/// [`RecursionBudget`] depth ceiling (RFC-0041 §4.7 — the W7 guard hole in this AOT RC/ownership
+/// pass): the outermost call runs on the deep worker stack so a genuinely deep `Node` never
+/// SIGABRTs `myc build`, and each recursive step charges [`RecursionBudget::try_enter`] so a
+/// pathological input refuses cleanly at the depth ceiling.
 ///
 /// Guarantee: the elision is **semantics-preserving** — `Empirical` (the differential harness in
 /// [`crate::eval`] checks that, for a corpus of terms, the multiset of reclaimed values is identical
@@ -368,7 +373,7 @@ use crate::rc_ir::RcNode as N;
 /// that reduction stays `Declared` until measured (DN-33 §8.1 Q5).
 pub fn emit_elided(node: &Node) -> Result<RcNode, EmitError> {
     // reuse = false: borrow elision only (Increment 1).
-    emit_ann(node, &Ann::new(false))
+    emit_ann_toplevel(node, false)
 }
 
 /// Lower a Core IR [`Node`] with MEM-4 Increment 1 (**borrow elision**) **and** Increment 2
@@ -379,7 +384,8 @@ pub fn emit_elided(node: &Node) -> Result<RcNode, EmitError> {
 /// move position) has that move emitted as [`RcNode::MoveUnique`](crate::rc_ir::RcNode::MoveUnique),
 /// recording that the runtime `UniqueOwner` branch is statically guaranteed (FBIP-reuse-eligible).
 ///
-/// Returns [`EmitError::UnsupportedNode`] for `Fix`/`FixGroup` (G2).
+/// Returns [`EmitError::UnsupportedNode`] for `Fix`/`FixGroup` (G2), and [`EmitError::DepthExceeded`]
+/// on a deeper-than-ceiling `Node` (RFC-0041 §4.7 — see [`emit_elided`]).
 ///
 /// Guarantee: the reuse annotation is **semantics-preserving** and its soundness is
 /// **machine-verified** — [`crate::eval`] errors ([`crate::eval::RcError::UnsoundUnique`]) if any
@@ -387,7 +393,27 @@ pub fn emit_elided(node: &Node) -> Result<RcNode, EmitError> {
 /// verifying evaluator), not `Proven`.
 pub fn emit_reuse(node: &Node) -> Result<RcNode, EmitError> {
     // reuse = true: borrow elision + the rc==1 reuse annotation (Increment 2).
-    emit_ann(node, &Ann::new(true))
+    emit_ann_toplevel(node, true)
+}
+
+/// Shared guarded entry for the annotated (elision / reuse) emission ([`emit_elided`] /
+/// [`emit_reuse`]). Runs the traversal on the `mycelium-workstack` deep worker stack
+/// ([`ensure_sufficient_stack`]) and charges a fresh [`RecursionBudget`] at every recursive step
+/// (RFC-0041 §4.7 — the W7 guard hole in this AOT RC/ownership pass), so a deep `Node` refuses
+/// cleanly ([`EmitError::DepthExceeded`]) instead of SIGABRT-ing the host stack (G2). Mirrors
+/// [`emit_owned`]'s W1 guard.
+///
+/// The per-binder occurrence / borrow analysis routes through the `_inner` helpers (not the public
+/// [`count_occurrences`] / [`borrow_occurrences`] wrappers): this closure already runs on the deep
+/// worker stack, so re-entering a public wrapper here would needlessly spawn a fresh worker thread
+/// **per binder** (turning the already-`O(N²)` re-walk residual into an `O(N)` thread-spawn
+/// multiplier too — the same reasoning as `emit_owned_guarded`).
+fn emit_ann_toplevel(node: &Node, reuse: bool) -> Result<RcNode, EmitError> {
+    let outer = RecursionBudget::default();
+    ensure_sufficient_stack(&outer, || {
+        let budget = RecursionBudget::default();
+        emit_ann(node, &Ann::new(reuse), &budget)
+    })
 }
 
 /// Annotation context threaded through emission: the in-scope `borrowed` and `unique` variable sets
