@@ -142,13 +142,30 @@ fn checkty_direct_checkerror_construction_count_matches_the_ledger() {
     let direct_at = count_occurrences(&src, "CheckError::at(");
     let total = direct_new + direct_at;
     assert_eq!(
-        total, 99,
+        total, 101,
         "checkty.rs direct `CheckError::new(`/`CheckError::at(` construction sites: found {total}, \
-         DN-80 §4 audited 99 (dev c9d982e, 2026-07-02; +6 vs the original ca42fd2 audit — the \
-         M-919/M-973 lower/derive extension-checker work, family 8) — a reject path was added or \
+         DN-80 §4 audited 101 (dev 4e2c389, 2026-07-02; +6 vs the original ca42fd2 audit — the \
+         M-919/M-973 lower/derive extension-checker work, family 8; +2 — M-965's two `Fuse` \
+         built-in-prelude redeclaration refusals, family 5) — a reject path was added or \
          removed without updating DN-80 §4's construct-family table and this pinned count (one of \
-         the 99 is the shared `Cx::err` helper's own body at line ~3000 — plumbing, not a distinct \
+         the 101 is the shared `Cx::err` helper's own body at line ~3000 — plumbing, not a distinct \
          construct; see DN-80 §4's audited-totals note)"
+    );
+}
+
+#[test]
+fn fuse_law_checker_checkerror_construction_count_matches_the_ledger() {
+    // fuse.rs (M-965, DN-58 §A) is the `Fuse` semilattice-**law** checker — a new audited reject
+    // file (DN-80 §4 row 40). Its four `CheckError::new(` sites are the idempotence /
+    // commutativity / associativity violations plus the probe-time eval-failure refusal.
+    let src = read("crates/mycelium-l1/src/fuse.rs");
+    let total = count_occurrences(&src, "CheckError::new(") + count_occurrences(&src, "CheckError::at(");
+    assert_eq!(
+        total, 4,
+        "fuse.rs `CheckError::new(`/`CheckError::at(` construction sites: found {total}, \
+         DN-80 §4 audited 4 (dev 4e2c389, 2026-07-02 — the Fuse semilattice-law reject family, \
+         DN-80 §4 row 40) — a law-reject path was added or removed without updating the ledger and \
+         this pinned count together"
     );
 }
 
