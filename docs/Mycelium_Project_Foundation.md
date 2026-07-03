@@ -396,6 +396,9 @@ Designing the LSP protocol surface early is high-leverage: it is the channel thr
 *Decision:* Implement the kernel + the **reference-semantics interpreter** in Rust (MSRV 1.92), kept as the trusted base. AOT path = **MLIR → LLVM** (a `ternary` dialect first), confined to the performance path so its complexity does not infect the trusted base (RFC-0004 §2). Build the **VSA submodule** in Rust (port torchhd's op set as reference; reuse the `balanced-ternary` crate). Probes/experiments and the LLM harness in Python (3.13/3.14, UV, pytest, codecov).
 *Consequences:* MLIR adds an FFI boundary and a large C++ dependency (RR-11), accepted for multi-substrate fit + forward-ternary path; the immature Rust VSA ecosystem means building the submodule (RR-14).
 *Grounding:* Area 5 (Rust/affine); **T1.5**, **T2.6**.
+<!-- MSRV pointer (2026-07-03, append-only): the "MSRV 1.92" in the Decision above is **superseded by
+ADR-041 → MSRV 1.96.1**. ADR-007's decision text is preserved verbatim (house rule #3); read the pin as
+"MSRV 1.96.1 (ADR-041)". The kernel-in-Rust / MLIR→LLVM / Python-tooling strategy is otherwise unchanged. -->
 
 **ADR-008 · VSA is in core semantics but packaged as an optional submodule**
 *Status:* Accepted.

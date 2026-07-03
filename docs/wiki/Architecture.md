@@ -1,6 +1,6 @@
 # Architecture
 
-Mycelium is a Rust workspace of **50 crates** (MSRV-pinned Rust 1.92, ADR-007) plus the
+Mycelium is a Rust workspace of **50 crates** (MSRV-pinned Rust 1.96.1, ADR-007/ADR-041) plus the
 Mycelium-language surface that lowers onto them. The public surface of each crate is gated by a
 committed API baseline (`docs/spec/api/`, KC-3). This page is the conceptual map; the
 [Crate Index](Crate-Index.md) lists every crate with a link to its README.

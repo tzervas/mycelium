@@ -11,7 +11,7 @@ proof artifacts and the LLM-leverage experiment.
 
 ## The Rust workspace — 50 crates (+ `xtask`)
 
-The kernel and tooling live in `crates/` under MSRV-pinned Rust 1.92 (ADR-007). The public
+The kernel and tooling live in `crates/` under MSRV-pinned Rust 1.96.1 (ADR-007/ADR-041). The public
 surface is gated by a committed API baseline (`docs/spec/api/`, KC-3). **Every crate now carries its
 own `README.md`** (linked below) for a 30-second orientation; this map is synthesised from them.
 Grouped by role:
