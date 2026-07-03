@@ -6360,6 +6360,17 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_fmt::LayoutCfg",
+      "kind": "struct",
+      "crate": "mycelium-fmt",
+      "module": "mycelium_fmt",
+      "file": "crates/mycelium-fmt/src/lib.rs",
+      "line": 125,
+      "summary": "Presentation tunables for the readable layout (M-976 / DN-82).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_fmt::MYCFMT_VERSION:",
       "kind": "const",
       "crate": "mycelium-fmt",
@@ -6367,6 +6378,17 @@
       "file": "crates/mycelium-fmt/src/lib.rs",
       "line": 66,
       "summary": "The formatter spelling/version this build implements.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_fmt::SpineInner",
+      "kind": "enum",
+      "crate": "mycelium-fmt",
+      "module": "mycelium_fmt",
+      "file": "crates/mycelium-fmt/src/lib.rs",
+      "line": 105,
+      "summary": "How a right-nested same-head chain (Cons/GLCons/TCons/bool_and/cat …) lays out its per-link",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -6415,6 +6437,17 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_fmt::format_source_readable_cfg",
+      "kind": "fn",
+      "crate": "mycelium-fmt",
+      "module": "mycelium_fmt",
+      "file": "crates/mycelium-fmt/src/lib.rs",
+      "line": 267,
+      "summary": "Format `src` into its human-readable canonical form with an explicit [`LayoutCfg`] (M-976/DN-82):",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_fmt::format_source_styled",
       "kind": "fn",
       "crate": "mycelium-fmt",
@@ -6422,6 +6455,17 @@
       "file": "crates/mycelium-fmt/src/lib.rs",
       "line": 281,
       "summary": "Shared implementation of [`format_source`] (Compact) and [`format_source_readable`] (Readable).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_fmt::format_source_styled_cfg",
+      "kind": "fn",
+      "crate": "mycelium-fmt",
+      "module": "mycelium_fmt",
+      "file": "crates/mycelium-fmt/src/lib.rs",
+      "line": 296,
+      "summary": "Shared implementation with an explicit [`LayoutCfg`] (M-976).",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -33013,6 +33057,38 @@
     {
       "symbol": "mycelium_fmt::Formatted::from",
       "reason": "definition not found via regex heuristic (kind='fn', name='from') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_fmt::LayoutCfg::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_fmt::LayoutCfg::default",
+      "reason": "definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_fmt::LayoutCfg::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_fmt::LayoutCfg::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_fmt::SpineInner::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_fmt::SpineInner::default",
+      "reason": "definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_fmt::SpineInner::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_fmt::SpineInner::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
     },
     {
       "symbol": "mycelium_fmt::Style::clone",

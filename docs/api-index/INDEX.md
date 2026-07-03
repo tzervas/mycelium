@@ -635,12 +635,16 @@
 |---|---|---|---|
 | `mycelium_fmt::FmtError::exit_code` | fn | `crates/mycelium-fmt/src/lib.rs:189` | The CLI exit code for this refusal (contract §5). |
 | `mycelium_fmt::Formatted` | struct | `crates/mycelium-fmt/src/lib.rs:147` | A successful format result. |
+| `mycelium_fmt::LayoutCfg` | struct | `crates/mycelium-fmt/src/lib.rs:125` | Presentation tunables for the readable layout (M-976 / DN-82). |
 | `mycelium_fmt::MYCFMT_VERSION:` | const | `crates/mycelium-fmt/src/lib.rs:66` | The formatter spelling/version this build implements. |
+| `mycelium_fmt::SpineInner` | enum | `crates/mycelium-fmt/src/lib.rs:105` | How a right-nested same-head chain (Cons/GLCons/TCons/bool_and/cat …) lays out its per-link |
 | `mycelium_fmt::Style` | enum | `crates/mycelium-fmt/src/lib.rs:90` | The layout style a format pass emits (M-974). |
 | `mycelium_fmt::flatten_source` | fn | `crates/mycelium-fmt/src/lib.rs:458` | Flatten `src` into the single-line human↔stream form (M-819; DN-57 §2). |
 | `mycelium_fmt::format_source` | fn | `crates/mycelium-fmt/src/lib.rs:234` | Format `src` into its canonical form. |
 | `mycelium_fmt::format_source_readable` | fn | `crates/mycelium-fmt/src/lib.rs:254` | Format `src` into its **human-readable** canonical form (M-974/DN-82): the inverse posture of |
+| `mycelium_fmt::format_source_readable_cfg` | fn | `crates/mycelium-fmt/src/lib.rs:267` | Format `src` into its human-readable canonical form with an explicit [`LayoutCfg`] (M-976/DN-82): |
 | `mycelium_fmt::format_source_styled` | fn | `crates/mycelium-fmt/src/lib.rs:281` | Shared implementation of [`format_source`] (Compact) and [`format_source_readable`] (Readable). |
+| `mycelium_fmt::format_source_styled_cfg` | fn | `crates/mycelium-fmt/src/lib.rs:296` | Shared implementation with an explicit [`LayoutCfg`] (M-976). |
 
 ## mycelium-interp
 
@@ -4141,6 +4145,14 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_fmt::Formatted::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_fmt::Formatted::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_fmt::Formatted::from` | definition not found via regex heuristic (kind='fn', name='from') — possibly macro-generated or cfg-gated |
+| `mycelium_fmt::LayoutCfg::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_fmt::LayoutCfg::default` | definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated |
+| `mycelium_fmt::LayoutCfg::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_fmt::LayoutCfg::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_fmt::SpineInner::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_fmt::SpineInner::default` | definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated |
+| `mycelium_fmt::SpineInner::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_fmt::SpineInner::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_fmt::Style::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_fmt::Style::default` | definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated |
 | `mycelium_fmt::Style::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
