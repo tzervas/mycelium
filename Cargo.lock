@@ -409,6 +409,7 @@ dependencies = [
  "mycelium-sched",
  "mycelium-select",
  "mycelium-vsa",
+ "mycelium-workstack",
  "proptest",
 ]
 
