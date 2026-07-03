@@ -473,6 +473,29 @@ worktree's `HEAD` — so worktree agents commit freely while real protected-bran
 (verified: leaf-commit ALLOW · dev-commit BLOCK · force-push BLOCK). Keep the per-agent commit/push
 split (the string-match variant above is unchanged).
 
+### 13. Stale-base worktree spawn — branch off the working tier, never the default branch (lesson, 2026-07-03)
+**Pattern:** an isolated-worktree agent whose base ref defaults to the **default branch** (`origin/main`)
+instead of the **working tier** (`dev`) is branched off a tip that lags `dev` by the *whole in-flight
+wave*. Because `main` only advances by the `integration → main` squash, its tip is the last release, not
+the current work. The leaf's own change is fine, but the branch — diffed against `dev` — appears to
+**revert every W-wave commit between `main` and `dev`**. Octopus-merging that ref silently backs out
+landed work; a green merge is not evidence the base was right. Observed on RFC-0041 W7: two leaves
+spawned from `origin/main` (`b0a2891`, the design squash) rather than `dev` (`a794084`); one self-healed
+by ff-ing to `dev`, one did not and had to be re-based leaf-file-by-file before merge.
+**Root discipline:** we **develop in and off `dev`**, promote **up** via PR (`dev → integration → main`),
+and **back-propagate the squashed `main` down** into `integration`/`dev` after it lands (mitigation #6) —
+**no branch is ever cut off `main` directly.**
+**Mitigation — two engineered layers (source + verify), so the footgun cannot bite silently:**
+1. **Source:** set `worktree.baseRef: head` in `.claude/settings.json` so an isolated-worktree spawn
+   branches from the session's current HEAD (the working tier you are on), not the default branch. This
+   makes a correct base the default *by construction*.
+2. **Verify (defense-in-depth twin of #7's "verify the merge landed"):** before the orchestrator merges
+   any leaf ref, assert the intended base is an ancestor of it — `scripts/checks/base-guard.sh --ref
+   <leaf-ref> --base <working-tip>` (idempotent, pure reads; never-silent — a stale base prints the
+   common ancestor and the re-base fix and exits non-zero). Wire it into the swarm/`/pr-land` pre-merge
+   step alongside `/branch-guard` and `/worktree-guard`. If it fires, re-base the leaf's *real* changes
+   onto the working tip (branch fresh and re-apply, or merge the tip in) — never merge the stale ref.
+
 ## Autonomous PR workflow — review-before-merge, no human gate
 
 The merge gate is the agent's, not a human's. A parent (orchestrator/epic) **merges its children
