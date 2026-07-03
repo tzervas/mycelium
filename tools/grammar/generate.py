@@ -224,12 +224,12 @@ def render_tmlanguage(buckets: dict[str, list[str]]) -> str:
         # lex error — rendered `invalid.illegal` (never silently styled as a good escape, G2).
         {
             "name": "string.quoted.double.mycelium",
-            "begin": "\"",
-            "end": "\"|$",
+            "begin": '"',
+            "end": '"|$',
             "patterns": [
                 {
                     "name": "constant.character.escape.mycelium",
-                    "match": "\\\\[nt\\\\\"0r]",
+                    "match": '\\\\[nt\\\\"0r]',
                 },
                 {"name": "invalid.illegal.escape.mycelium", "match": "\\\\."},
             ],
@@ -662,7 +662,7 @@ def render_highlights_scm(buckets: dict[str, list[str]]) -> str:
         "; attributes + markers",
         "(std_sys_marker) @attribute",
         "(tier_attribute) @attribute",
-        "(forage_attribute \"@\" @attribute \"forage\" @attribute)",
+        '(forage_attribute "@" @attribute "forage" @attribute)',
         "",
     ]
     lines.append("; keyword buckets (lexer-derived, G2)")
@@ -719,7 +719,9 @@ def generate_extra(buckets: dict[str, list[str]]) -> dict[str, str]:
     return {rel: render(buckets) for rel, render in EXTRA_COPIES.items()}
 
 
-def write(out_dir: Path, rendered: dict[str, str], extra: dict[str, str] | None = None) -> None:
+def write(
+    out_dir: Path, rendered: dict[str, str], extra: dict[str, str] | None = None
+) -> None:
     for rel, content in rendered.items():
         path = out_dir / rel
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -730,7 +732,9 @@ def write(out_dir: Path, rendered: dict[str, str], extra: dict[str, str] | None 
         path.write_text(content, encoding="utf-8")
 
 
-def check(out_dir: Path, rendered: dict[str, str], extra: dict[str, str] | None = None) -> int:
+def check(
+    out_dir: Path, rendered: dict[str, str], extra: dict[str, str] | None = None
+) -> int:
     """Drift gate: committed artifacts (+ downstream copies) must match a fresh regeneration.
 
     Exit 2 on any drift (G2). A downstream copy that is MISSING is drift too (never-silent): once
@@ -796,7 +800,12 @@ def self_test(buckets: dict[str, list[str]]) -> int:
         missing = sorted(
             w
             for w in all_words
-            if f"'{w}'" not in content and f'"{w}"' not in content and f"|{w}" not in content and f"({w}" not in content and f"{w}|" not in content and f"{w})" not in content
+            if f"'{w}'" not in content
+            and f'"{w}"' not in content
+            and f"|{w}" not in content
+            and f"({w}" not in content
+            and f"{w}|" not in content
+            and f"{w})" not in content
         )
         if missing:
             failures.append(f"{rel}: lexer keywords missing from artifact: {missing}")
