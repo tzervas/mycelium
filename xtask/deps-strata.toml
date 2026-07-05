@@ -75,7 +75,9 @@ mycelium-interp = 2
 mycelium-l1 = 4
 mycelium-lint = 7
 mycelium-lsp = 6
-mycelium-mir-passes = 1
+# RFC-0041 W1 (M-979): bumped 1 -> 2 — now depends on mycelium-workstack (stratum 1) for the
+# recursion-depth budget, so 1 + max(mycelium-core 0, mycelium-workstack 1) = 2.
+mycelium-mir-passes = 2
 mycelium-mlir = 4
 mycelium-numerics = 1
 mycelium-proj = 5
@@ -114,7 +116,10 @@ mycelium-std-testing = 6
 mycelium-std-text = 2
 mycelium-std-time = 2
 mycelium-std-vsa = 3
-mycelium-transpile = 0
+# RFC-0041 W1 (M-979): bumped 0 -> 2 — was a leaf (no workspace deps); now depends on
+# mycelium-workstack (stratum 1), so 1 + max(mycelium-workstack 1) = 2. Nothing depends on
+# mycelium-transpile, so this bump does not cascade.
+mycelium-transpile = 2
 # M-971: 2 -> 1. Shed the `mycelium-select` dep (the RFC-0010 decode-selection layer relocated to
 # mycelium-vsa-decode), so mycelium-vsa now depends only on mycelium-core (stratum 0) -> stratum 1.
 # This is what makes `mycelium-interp (2) -> mycelium-vsa (1)` downward again and removes the
@@ -123,6 +128,9 @@ mycelium-vsa = 1
 # M-971: the RFC-0010 decode-methodology selection seam, extracted UP out of mycelium-vsa. Depends on
 # mycelium-vsa (1) + mycelium-select (1) + mycelium-core (0) -> 1 + max(1,1,0) = 2.
 mycelium-vsa-decode = 2
+# RFC-0041 W1 (M-979): the shared recursion-depth budget/guard leaf. Depends only on mycelium-stack
+# (stratum 0), so 1 + max(0) = 1 — below every consumer (l1 4, mir-passes 2, transpile 2, fmt/lsp/doc 6).
+mycelium-workstack = 1
 xtask = 5
 
 # ---------------------------------------------------------------------------------------------
@@ -187,6 +195,9 @@ mycelium-transpile = "core"
 mycelium-vsa = "core"
 # M-971: the RFC-0010 decode-selection seam (extracted out of mycelium-vsa) — runtime substrate.
 mycelium-vsa-decode = "core"
+# RFC-0041 W1 (M-979): the recursion-depth budget/guard leaf — core infrastructure (like
+# mycelium-stack), depended on by both core (l1, mir-passes) and tools (fmt, lsp, doc).
+mycelium-workstack = "core"
 xtask = "tools"
 
 # ---------------------------------------------------------------------------------------------

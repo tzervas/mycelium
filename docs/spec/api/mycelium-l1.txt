@@ -1190,6 +1190,8 @@ pub fn mycelium_l1::eval::L1Value::eq(&self, &mycelium_l1::eval::L1Value) -> boo
 impl core::fmt::Debug for mycelium_l1::eval::L1Value
 pub fn mycelium_l1::eval::L1Value::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::marker::StructuralPartialEq for mycelium_l1::eval::L1Value
+impl core::ops::drop::Drop for mycelium_l1::eval::L1Value
+pub fn mycelium_l1::eval::L1Value::drop(&mut self)
 impl core::marker::Freeze for mycelium_l1::eval::L1Value
 impl core::marker::Send for mycelium_l1::eval::L1Value
 impl core::marker::Sync for mycelium_l1::eval::L1Value
@@ -1203,6 +1205,7 @@ pub fn mycelium_l1::eval::Evaluator<'e>::call(&self, &str, alloc::vec::Vec<mycel
 pub fn mycelium_l1::eval::Evaluator<'e>::forage_decisions(&self) -> alloc::vec::Vec<mycelium_l1::eval::ForageDecision>
 pub fn mycelium_l1::eval::Evaluator<'e>::new(&'e mycelium_l1::checkty::Env) -> Self
 pub fn mycelium_l1::eval::Evaluator<'e>::release_events(&self) -> alloc::vec::Vec<mycelium_l1::substrate::ReleaseEvent>
+pub fn mycelium_l1::eval::Evaluator<'e>::tco_trace(&self) -> mycelium_l1::eval::TcoTrace
 pub fn mycelium_l1::eval::Evaluator<'e>::with_depth(self, u32) -> Self
 pub fn mycelium_l1::eval::Evaluator<'e>::with_engines(self, mycelium_interp::prims::PrimRegistry, alloc::boxed::Box<(dyn mycelium_interp::swap::SwapEngine + core::marker::Send + core::marker::Sync)>) -> Self
 pub fn mycelium_l1::eval::Evaluator<'e>::with_fuel(self, u64) -> Self
@@ -1255,6 +1258,47 @@ impl core::marker::Unpin for mycelium_l1::eval::ForageDecision
 impl core::marker::UnsafeUnpin for mycelium_l1::eval::ForageDecision
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::eval::ForageDecision
 impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::eval::ForageDecision
+pub struct mycelium_l1::eval::TcoElision
+pub mycelium_l1::eval::TcoElision::callee: alloc::string::String
+pub mycelium_l1::eval::TcoElision::iteration: u64
+impl core::clone::Clone for mycelium_l1::eval::TcoElision
+pub fn mycelium_l1::eval::TcoElision::clone(&self) -> mycelium_l1::eval::TcoElision
+impl core::cmp::Eq for mycelium_l1::eval::TcoElision
+impl core::cmp::PartialEq for mycelium_l1::eval::TcoElision
+pub fn mycelium_l1::eval::TcoElision::eq(&self, &mycelium_l1::eval::TcoElision) -> bool
+impl core::fmt::Debug for mycelium_l1::eval::TcoElision
+pub fn mycelium_l1::eval::TcoElision::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::eval::TcoElision
+impl core::marker::Freeze for mycelium_l1::eval::TcoElision
+impl core::marker::Send for mycelium_l1::eval::TcoElision
+impl core::marker::Sync for mycelium_l1::eval::TcoElision
+impl core::marker::Unpin for mycelium_l1::eval::TcoElision
+impl core::marker::UnsafeUnpin for mycelium_l1::eval::TcoElision
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::eval::TcoElision
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::eval::TcoElision
+pub struct mycelium_l1::eval::TcoTrace
+pub mycelium_l1::eval::TcoTrace::per_callee: alloc::collections::btree::map::BTreeMap<alloc::string::String, u64>
+pub mycelium_l1::eval::TcoTrace::recent: alloc::collections::vec_deque::VecDeque<mycelium_l1::eval::TcoElision>
+pub mycelium_l1::eval::TcoTrace::total_elided: u64
+impl mycelium_l1::eval::TcoTrace
+pub const mycelium_l1::eval::TcoTrace::RING_CAP: usize
+impl core::clone::Clone for mycelium_l1::eval::TcoTrace
+pub fn mycelium_l1::eval::TcoTrace::clone(&self) -> mycelium_l1::eval::TcoTrace
+impl core::cmp::Eq for mycelium_l1::eval::TcoTrace
+impl core::cmp::PartialEq for mycelium_l1::eval::TcoTrace
+pub fn mycelium_l1::eval::TcoTrace::eq(&self, &mycelium_l1::eval::TcoTrace) -> bool
+impl core::default::Default for mycelium_l1::eval::TcoTrace
+pub fn mycelium_l1::eval::TcoTrace::default() -> mycelium_l1::eval::TcoTrace
+impl core::fmt::Debug for mycelium_l1::eval::TcoTrace
+pub fn mycelium_l1::eval::TcoTrace::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::eval::TcoTrace
+impl core::marker::Freeze for mycelium_l1::eval::TcoTrace
+impl core::marker::Send for mycelium_l1::eval::TcoTrace
+impl core::marker::Sync for mycelium_l1::eval::TcoTrace
+impl core::marker::Unpin for mycelium_l1::eval::TcoTrace
+impl core::marker::UnsafeUnpin for mycelium_l1::eval::TcoTrace
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::eval::TcoTrace
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::eval::TcoTrace
 pub fn mycelium_l1::eval::strength_of(mycelium_l1::ast::Strength) -> mycelium_core::guarantee::GuaranteeStrength
 pub mod mycelium_l1::lexer
 pub struct mycelium_l1::lexer::Comment
@@ -1883,6 +1927,8 @@ pub fn mycelium_l1::eval::L1Value::eq(&self, &mycelium_l1::eval::L1Value) -> boo
 impl core::fmt::Debug for mycelium_l1::eval::L1Value
 pub fn mycelium_l1::eval::L1Value::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::marker::StructuralPartialEq for mycelium_l1::eval::L1Value
+impl core::ops::drop::Drop for mycelium_l1::eval::L1Value
+pub fn mycelium_l1::eval::L1Value::drop(&mut self)
 impl core::marker::Freeze for mycelium_l1::eval::L1Value
 impl core::marker::Send for mycelium_l1::eval::L1Value
 impl core::marker::Sync for mycelium_l1::eval::L1Value
@@ -2063,6 +2109,7 @@ pub fn mycelium_l1::eval::Evaluator<'e>::call(&self, &str, alloc::vec::Vec<mycel
 pub fn mycelium_l1::eval::Evaluator<'e>::forage_decisions(&self) -> alloc::vec::Vec<mycelium_l1::eval::ForageDecision>
 pub fn mycelium_l1::eval::Evaluator<'e>::new(&'e mycelium_l1::checkty::Env) -> Self
 pub fn mycelium_l1::eval::Evaluator<'e>::release_events(&self) -> alloc::vec::Vec<mycelium_l1::substrate::ReleaseEvent>
+pub fn mycelium_l1::eval::Evaluator<'e>::tco_trace(&self) -> mycelium_l1::eval::TcoTrace
 pub fn mycelium_l1::eval::Evaluator<'e>::with_depth(self, u32) -> Self
 pub fn mycelium_l1::eval::Evaluator<'e>::with_engines(self, mycelium_interp::prims::PrimRegistry, alloc::boxed::Box<(dyn mycelium_interp::swap::SwapEngine + core::marker::Send + core::marker::Sync)>) -> Self
 pub fn mycelium_l1::eval::Evaluator<'e>::with_fuel(self, u64) -> Self

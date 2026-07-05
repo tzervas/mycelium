@@ -27,12 +27,20 @@
 //!   worker stack is the transitional Rust-host adapter; the explicit budget is the portable
 //!   primitive that will carry to the self-hosted Mycelium frontend (RFC-0007 §4.5/§4.6).
 
+use std::collections::{BTreeMap, VecDeque};
+use std::mem;
+
 use mycelium_cert::BinaryTernarySwapEngine;
 use mycelium_core::{CoreValue, DataRegistry, Datum, GuaranteeStrength, Value};
 use mycelium_interp::{
     Budgets, EffectBudget, EffectBudgetExhausted, EvalError as KernelError, PrimRegistry,
     SwapEngine,
 };
+// RFC-0041 W5 (M-979): the shared never-silent recursion budget the CEK work-stack charges at each
+// source-call/β boundary (§4.0 metric). The canonical `BudgetError::DepthExceeded` maps to
+// [`L1Error::DepthExceeded`] at the same threshold (§5.1); `DepthGuard` is the RAII depth
+// reservation held for the lifetime of a live source-call frame on the explicit work-stack.
+use mycelium_workstack::{BudgetError, DepthGuard, RecursionBudget};
 // M-906 (DN-70 D1; RFC-0008 RT3): `@forage`'s D-lite placement decision reuses the existing
 // RFC-0005 `SelectionPolicy` machinery verbatim — no new mechanism (DN-70).
 use mycelium_select::{
@@ -46,7 +54,18 @@ use crate::elab::{lit_value, policy_name_ref, type_repr, ElabError};
 /// An L1 runtime value: an L0 representation value, or a constructed datum. Data values are
 /// immutable and acyclic by construction — a `Construct` value can only contain values that
 /// existed before it (RFC-0007 §4.7).
-#[derive(Debug, Clone, PartialEq)]
+///
+/// **Iterative destruction (RFC-0041 §4.5, M-979).** `Clone` and `Drop` are **hand-written and
+/// iterative** — a derived recursive `Clone`/`Drop` walks the `Data.fields` spine on the *host*
+/// stack, so a deep `Cons`/`Nat` value (the exact shape the depth budget now permits up to 4096
+/// deep) would `SIGABRT` on clone or on drop, turning an intended never-silent refusal into an
+/// uncatchable abort (the very hole RFC-0041 closes). Both walk an explicit heap worklist instead,
+/// so control recursion is O(1) host stack for any value depth (`PartialEq` stays derived — no
+/// code path compares deep `L1Value`s, which go through [`L1Value::to_core`] for the differential;
+/// a deep-compare iterativisation is a tracked §4.5 residual). Because `impl Drop` forbids by-value
+/// field move-outs (E0509), every owned `Data` destructure in the evaluator is by-ref +
+/// `mem::replace`/`take` (e.g. the `for`-fold spine step).
+#[derive(Debug, PartialEq)]
 pub enum L1Value {
     /// An L0 value (`repr + payload + Meta`).
     Repr(Value),
@@ -81,6 +100,103 @@ pub enum L1Value {
     /// (RFC-0024 §4A/M-704); this variant is reachable only when `Evaluator` runs directly on a
     /// checked-but-**not**-monomorphized `Env` (mirroring [`crate::elab::elaborate_direct`]).
     Fn(String),
+}
+
+/// **Iterative `Clone` (RFC-0041 §4.5).** A derived `Clone` recurses through `Data.fields` on the
+/// host stack (SIGABRT on a deep value). This clones bottom-up over an explicit heap worklist: the
+/// only nesting is `Data.fields`, so a two-pass fold (push child requests, then rebuild parents from
+/// already-cloned children) reconstructs the whole value with O(1) host-stack recursion. Non-`Data`
+/// variants clone shallowly (their payloads carry no nested `L1Value`).
+impl Clone for L1Value {
+    fn clone(&self) -> L1Value {
+        // Fast path: a non-`Data` value has no nested `L1Value`, so a shallow field clone suffices
+        // and never recurses.
+        let L1Value::Data { .. } = self else {
+            return match self {
+                L1Value::Repr(v) => L1Value::Repr(v.clone()),
+                L1Value::Substrate(h) => L1Value::Substrate(h.clone()),
+                L1Value::Fn(n) => L1Value::Fn(n.clone()),
+                // Unreachable (the `else` only binds non-`Data`), but exhaustive + never-silent.
+                L1Value::Data { .. } => unreachable!("guarded by the let-else above"),
+            };
+        };
+        // A work item: either descend into a `Data` node (cloning its shell + scheduling its
+        // fields), or emit a finished (already-cloned) subtree into the parent's field buffer.
+        enum Task<'a> {
+            // Visit `src`, pushing an `Assemble` marker then each field as a fresh `Descend`.
+            Descend(&'a L1Value),
+            // Reassemble a `Data{ty,ctor}` from the top `nfields` finished values on `done`.
+            Assemble {
+                ty: String,
+                ctor: String,
+                nfields: usize,
+            },
+        }
+        let mut work: Vec<Task<'_>> = vec![Task::Descend(self)];
+        let mut done: Vec<L1Value> = Vec::new();
+        while let Some(task) = work.pop() {
+            match task {
+                Task::Descend(L1Value::Data { ty, ctor, fields }) => {
+                    // Assemble runs after every field's `Descend` has emitted into `done`.
+                    work.push(Task::Assemble {
+                        ty: ty.clone(),
+                        ctor: ctor.clone(),
+                        nfields: fields.len(),
+                    });
+                    // LIFO: push fields in reverse so they are cloned left-to-right into `done`.
+                    for f in fields.iter().rev() {
+                        work.push(Task::Descend(f));
+                    }
+                }
+                Task::Descend(leaf) => done.push(match leaf {
+                    L1Value::Repr(v) => L1Value::Repr(v.clone()),
+                    L1Value::Substrate(h) => L1Value::Substrate(h.clone()),
+                    L1Value::Fn(n) => L1Value::Fn(n.clone()),
+                    L1Value::Data { .. } => unreachable!("handled by the Data arm above"),
+                }),
+                Task::Assemble { ty, ctor, nfields } => {
+                    // The last `nfields` items on `done` are this node's finished children.
+                    let at = done.len() - nfields;
+                    let fields = done.split_off(at);
+                    done.push(L1Value::Data { ty, ctor, fields });
+                }
+            }
+        }
+        // Exactly one finished value remains — the clone of `self`.
+        done.pop()
+            .expect("the worklist assembles exactly one root value")
+    }
+}
+
+/// **Iterative `Drop` (RFC-0041 §4.5).** A derived recursive `Drop` walks `Data.fields` on the host
+/// stack — a deep value SIGABRTs *on destruction* (RFC-0041 §1's recursive-`Drop` stack bomb). This
+/// dismantles the value over an explicit heap worklist: each `Data`'s fields are moved out (leaving
+/// an empty `Vec`) before the node itself drops, so no node's `Drop` ever recurses.
+///
+/// **Allocation (honest scope).** The worklist buffer is seeded by *stealing* the root's existing
+/// `fields` `Vec` (`mem::take` — no new allocation for the buffer itself); it may grow while draining
+/// a wide subtree. This kills the host-stack SIGABRT (the safety goal, G2) for any depth; a strictly
+/// zero-allocation intrusive form (§4.5's "intrusive next-pointer / preallocated scratch") is a
+/// tracked residual, sound today only under the Box-owned / acyclic / no-shared-spine invariant
+/// `L1Value` already holds. Non-`Data` values and empty `Data` drop with no allocation at all.
+impl Drop for L1Value {
+    fn drop(&mut self) {
+        // Steal our own fields into the worklist (reusing the existing allocation). A non-`Data` or
+        // already-empty `Data` allocates nothing and returns immediately.
+        let mut stack: Vec<L1Value> = match self {
+            L1Value::Data { fields, .. } if !fields.is_empty() => mem::take(fields),
+            _ => return,
+        };
+        while let Some(mut v) = stack.pop() {
+            if let L1Value::Data { fields, .. } = &mut v {
+                // Move this node's children onto the worklist, so `v` drops with empty fields
+                // (shallow — no recursion).
+                stack.append(fields);
+            }
+            // `v` drops here: its own `Drop` re-enters, but its `fields` are now empty, so it takes
+            // the `_ => return` fast path — no host-stack recursion.
+        }
+    }
 }
 
 impl L1Value {
@@ -341,7 +457,16 @@ const DEFAULT_FUEL: u64 = 1_000_000;
 /// it to 4,096 (matching the checker) is safe with ample headroom. An in-process measurement
 /// of the *clean-DepthExceeded* property is the regression guard; the physical ceiling estimate
 /// is `Empirical` (frame size varies with the Rust optimizer and the IR structure).
-pub(crate) const DEFAULT_DEPTH: u32 = 64;
+///
+/// **RFC-0041 W5 (M-979): raised 64 → 4096, and the metric changed.** The evaluator is now an
+/// explicit heap **work-stack CEK machine** ([`Evaluator::run_machine`]), so control recursion is
+/// O(1) host stack for *any* depth — the depth budget is no longer a host-stack guard but the
+/// **semantic** source-call/β ceiling on the §4.0 metric (charged once per `Expr::App` boundary via
+/// the shared [`mycelium_workstack::RecursionBudget`], **not** per AST node). The default is the
+/// workspace floor [`RecursionBudget::DEFAULT_DEPTH_LIMIT`] (4096), reconciling the L1 path with the
+/// interp/AOT paths at one threshold + one canonical variant (§5.1). Tail calls without pending
+/// post-work reuse their frame (TCO, §4.6), so a tail-recursive loop runs in bounded depth.
+pub(crate) const DEFAULT_DEPTH: u32 = RecursionBudget::DEFAULT_DEPTH_LIMIT;
 
 /// The tunable **budgets** of an [`Evaluator`] — the step (`fuel`) and recursion-depth guards — as
 /// a single options struct, an alternative to threading the fluent [`Evaluator::with_fuel`] /
@@ -387,13 +512,63 @@ impl EvaluatorOpts {
     }
 }
 
+/// One elided tail-call frame recorded by the TCO EXPLAIN trail (RFC-0041 §4.6 tco32) — the
+/// per-callee identity + the running iteration count at the moment the frame was reused. Not a bare
+/// count (house rule #2 in substance, not just letter): a deep tail chain that later errors yields
+/// an actionable "who was looping, how many times" trace.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TcoElision {
+    /// The callee whose invoke frame was reused (the tail-called function's name).
+    pub callee: String,
+    /// The 1-based count of consecutive elisions for this callee at the time of this record.
+    pub iteration: u64,
+}
+
+/// The bounded EXPLAIN record of tail-call optimization (RFC-0041 §4.6 tco32): total elided frames,
+/// a per-callee iteration tally, and a **ring buffer of the last [`TcoTrace::RING_CAP`] elisions** —
+/// so an over-budget error at the end of a deep tail chain is diagnosable (which callee, how deep)
+/// without retaining an unbounded trace. Inspectable via [`Evaluator::tco_trace`] (never a black
+/// box — house rule #2).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct TcoTrace {
+    /// The total number of tail-call frames elided across every [`Evaluator::call`] so far.
+    pub total_elided: u64,
+    /// Per-callee elision counts (identity + iteration count — §4.6 tco32).
+    pub per_callee: BTreeMap<String, u64>,
+    /// The last [`Self::RING_CAP`] elisions, newest at the back (the bounded ring buffer).
+    pub recent: VecDeque<TcoElision>,
+}
+
+impl TcoTrace {
+    /// The ring-buffer capacity: the number of most-recent elisions retained for the actionable
+    /// trace. Bounded so a deep tail chain cannot grow the trace without limit (§4.6 tco32).
+    pub const RING_CAP: usize = 32;
+
+    /// Record one elided tail frame for `callee`: bump the totals and push onto the bounded ring.
+    fn record(&mut self, callee: &str) {
+        self.total_elided = self.total_elided.saturating_add(1);
+        let iteration = {
+            let c = self.per_callee.entry(callee.to_owned()).or_insert(0);
+            *c = c.saturating_add(1);
+            *c
+        };
+        if self.recent.len() == Self::RING_CAP {
+            self.recent.pop_front();
+        }
+        self.recent.push_back(TcoElision {
+            callee: callee.to_owned(),
+            iteration,
+        });
+    }
+}
+
 /// The L1 evaluator over a checked [`Env`]. Construction wires the same trusted engines the
 /// L0 paths use: the built-in prim registry and the certified binary↔ternary swap engine
 /// (M-120/M-210) — override with [`Evaluator::with_engines`] for tests or extensions.
 ///
-/// [`Evaluator::call`] runs the recursive pass on a deep worker stack (see [`DEFAULT_DEPTH`]);
-/// the swap engine must be `Send + Sync` so `&Evaluator` can be shared across the scoped worker
-/// thread (all built-in engines are `Copy`, hence `Send + Sync`).
+/// [`Evaluator::call`] runs the [work-stack CEK machine](Self::run_machine) on a deep worker stack
+/// (see [`DEFAULT_DEPTH`]); the swap engine must be `Send + Sync` so `&Evaluator` can be shared
+/// across the scoped worker thread (all built-in engines are `Copy`, hence `Send + Sync`).
 pub struct Evaluator<'e> {
     env: &'e Env,
     prims: PrimRegistry,
@@ -412,6 +587,11 @@ pub struct Evaluator<'e> {
     /// box — house rule 2). Same [`std::sync::Mutex`]-not-`RefCell` pattern as [`Self::releases`]
     /// (`Evaluator` stays `Sync`; the lock is only ever held for a single `Vec::push`/clone).
     forage_trail: std::sync::Mutex<Vec<ForageDecision>>,
+    /// The RFC-0041 §4.6 (tco32) **tail-call EXPLAIN trail** — the bounded record of every frame the
+    /// CEK machine elided by TCO, inspectable via [`Self::tco_trace`] (never a black box — house
+    /// rule #2). Same [`std::sync::Mutex`]-not-`RefCell` pattern as [`Self::releases`] (`Evaluator`
+    /// stays `Sync`; the lock is only ever held for a single record/clone).
+    tco_trace: std::sync::Mutex<TcoTrace>,
 }
 
 impl<'e> Evaluator<'e> {
@@ -426,6 +606,7 @@ impl<'e> Evaluator<'e> {
             depth: DEFAULT_DEPTH,
             releases: std::sync::Mutex::new(Vec::new()),
             forage_trail: std::sync::Mutex::new(Vec::new()),
+            tco_trace: std::sync::Mutex::new(TcoTrace::default()),
         }
     }
 
@@ -438,6 +619,21 @@ impl<'e> Evaluator<'e> {
     #[must_use]
     pub fn forage_decisions(&self) -> Vec<ForageDecision> {
         self.forage_trail
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .clone()
+    }
+
+    /// The [`TcoTrace`] EXPLAIN record accumulated by tail-call optimization (RFC-0041 §4.6 tco32)
+    /// across every [`Self::call`] made on this `Evaluator` so far — the bounded per-callee tally +
+    /// ring buffer of the most-recent elided tail frames, so a deep tail chain that ends in an
+    /// over-budget error yields an actionable trace (house rule #2 — never a black box). Empty iff
+    /// no tail call was ever elided. A poisoned lock (only reachable after an unrelated panic while
+    /// holding it, which this evaluator never does by design) is recovered rather than propagated
+    /// (mirrors [`Self::release_events`]).
+    #[must_use]
+    pub fn tco_trace(&self) -> TcoTrace {
+        self.tco_trace
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner)
             .clone()
@@ -544,9 +740,19 @@ impl<'e> Evaluator<'e> {
         // `&self`; this is safe because `Evaluator: Sync` (all fields are `Sync`: `&Env`,
         // `PrimRegistry` — a `BTreeMap<String, fn(…)>` — and `Box<dyn SwapEngine + Send + Sync>`).
         mycelium_stack::with_deep_stack(|| {
+            // RFC-0041 W5 (M-979): the shared source-call/β depth budget on the §4.0 metric. The L1
+            // path charges only the depth ceiling (its memory/work-step ceilings stay unbounded —
+            // wiring a real L1 memory ceiling is future §4.2 work, tracked, not silently claimed);
+            // the canonical `BudgetError::DepthExceeded { limit }` maps to `L1Error::DepthExceeded`
+            // at the same threshold (§5.1). `self.depth` is the configured ceiling (default 4096).
+            let budget = RecursionBudget::new(self.depth, u64::MAX, u64::MAX);
             let mut fuel = self.fuel;
             let mut ledger = Budgets::new();
-            self.invoke(&mut fuel, self.depth, &mut ledger, name, args)
+            // The deep worker stack still backstops the *non-control* recursions that remain on the
+            // host stack (nested-`Pattern` `try_match`, the deep-`Data` escape check, `L1Value`
+            // iterative ops) — the CEK machine removes the primary (control) host-stack consumer, so
+            // the explicit budget is what bounds a pathological input on every path (banked guard 4).
+            self.run_machine(&budget, &mut fuel, &mut ledger, name, args)
         })
     }
 
@@ -566,114 +772,1107 @@ impl<'e> Evaluator<'e> {
         }
     }
 
-    /// One function invocation: bind parameters, consume from the shared effect-budget ledger,
-    /// evaluate the body, check the return index.
+    /// **The L1 work-stack CEK machine (RFC-0041 §4.1/§4.6, M-979).** The former 7-function
+    /// recursive SCC (`invoke`/`eval`/`eval_app`/`eval_match`/`eval_for`/`eval_wild`/
+    /// `eval_hypha_forage`) is now **one iterative loop** over an explicit heap work-stack
+    /// (`Vec<Frame>`): each [`Frame`] reifies the interleaved *post-child* work (scope push/pop,
+    /// the M-904 `release_if_abandoned`, the return-guarantee assert, the swap/ascription checks) as
+    /// an explicit continuation, so control recursion is **O(1) host stack** for any input depth —
+    /// the depth budget, not the host stack, is what refuses a pathological input (never-silent, G2).
     ///
-    /// **Budget wiring (M-677 / RFC-0014 §4.5 I4):** the shared `ledger` (threaded from `call`)
-    /// is primed lazily on first encounter — each budgeted effect in `FnSig::effect_budgets` sets
-    /// the ceiling in the ledger the first time this fn is entered, then consumes 1 unit per
-    /// invocation. This models "the declared budget is the total number of times this effect may
-    /// fire across all invocations within the top-level `call`" (the v0 per-call approximation,
-    /// `Empirical`). An overrun returns `L1Error::EffectBudget` — explicit, graceful, never a hang
-    /// (G2/RFC-0014 §4.5).
-    fn invoke(
+    /// The environment is a single shared `scope: Vec<(name, value)>` with a per-function `base`
+    /// marker (each function sees only `scope[base..]`, preserving lexical scope across calls). The
+    /// depth budget is charged **once per `Expr::App` boundary** (the §4.0 source-call/β metric) via
+    /// the shared [`RecursionBudget`] — the [`DepthGuard`] is held on the work-stack for the whole
+    /// App (its args *and*, for a user call, the invoked body), so a nested call chain grows depth
+    /// exactly as the metric predicts and refuses at the ceiling with the canonical
+    /// [`L1Error::DepthExceeded`] (§5.1). Tail calls with no pending post-work reuse their frame
+    /// (TCO — [`Self::enter_call`]).
+    fn run_machine<'b>(
         &self,
+        budget: &'b RecursionBudget,
         fuel: &mut u64,
-        depth: u32,
         ledger: &mut Budgets,
         name: &str,
         args: Vec<L1Value>,
     ) -> Result<L1Value, L1Error> {
-        let Some(fd) = self.env.fns.get(name) else {
-            return Err(L1Error::Stuck {
+        let mut regs: Regs<'e, 'b> = Regs {
+            site: "",
+            base: 0,
+            scope: Vec::new(),
+            stack: Vec::new(),
+        };
+        // Charge the top-level source-call frame, then set up its invocation (params, effect ledger,
+        // the return-guarantee `InvokePost`). A refusal here is the never-silent depth ceiling.
+        let guard = match budget.try_enter() {
+            Ok(g) => g,
+            Err(e) => return Err(depth_exceeded(e)),
+        };
+        let mut ctrl = self.enter_call(fuel, ledger, &mut regs, name, args, guard);
+        loop {
+            ctrl = match ctrl {
+                Ctrl::Eval(e) => self.eval_step(budget, fuel, ledger, &mut regs, e),
+                Ctrl::Settle(settled) => match regs.stack.pop() {
+                    // The work-stack is empty — the top-level call has settled; this is the result.
+                    None => return settled,
+                    Some(frame) => {
+                        self.apply_frame(budget, fuel, ledger, &mut regs, frame, settled)
+                    }
+                },
+            };
+        }
+    }
+
+    /// One step of the machine in **Eval** mode: dispatch on `e`, either producing a value
+    /// (`Ctrl::Settle`) for a leaf, or pushing the continuation [`Frame`] for its post-child work and
+    /// descending into the first child (`Ctrl::Eval`). Every node costs one unit of fuel at entry
+    /// (the same per-node clock as the former `eval`, so an unproductive recursion is an explicit
+    /// [`L1Error::FuelExhausted`], never a hang — §4.5).
+    #[allow(clippy::too_many_lines)] // one dispatch arm per surface `Expr`; splitting would obscure it
+    fn eval_step<'b>(
+        &self,
+        budget: &'b RecursionBudget,
+        fuel: &mut u64,
+        _ledger: &mut Budgets,
+        regs: &mut Regs<'e, 'b>,
+        e: &'e Expr,
+    ) -> Ctrl<'e> {
+        // Per-node fuel (matches the former `eval` entry): a wide *and* a deep AST both cost fuel.
+        match fuel.checked_sub(1) {
+            Some(f) => *fuel = f,
+            None => return Ctrl::Settle(Err(L1Error::FuelExhausted)),
+        }
+        let site = regs.site;
+        match e {
+            // Context-free repr literals (binary/ternary/bytes/string/float) lower via `lit_value`.
+            Expr::Lit(
+                l @ (Literal::Bin(_)
+                | Literal::Trit(_)
+                | Literal::Bytes(_)
+                | Literal::Str(_)
+                | Literal::Float(_)),
+            ) => Ctrl::Settle(
+                lit_value(site, l)
+                    .map(L1Value::Repr)
+                    .map_err(|err| unsupported(site, &err)),
+            ),
+            // A list literal `[e1, …]` evaluates each element (left-to-right) to a repr, then builds
+            // a `Repr::Seq` (RFC-0032 D3). An empty `[]` has no anchoring element repr — refused.
+            Expr::Lit(Literal::List(elems)) => {
+                if elems.is_empty() {
+                    return Ctrl::Settle(Err(L1Error::Unsupported {
+                        site: site.to_owned(),
+                        what: "an empty list literal `[]` has no element repr to anchor the `Seq` \
+                               descriptor at eval (RFC-0032 D3)"
+                            .to_owned(),
+                    }));
+                }
+                regs.stack.push(Frame::ListElem {
+                    elems,
+                    idx: 0,
+                    vals: Vec::with_capacity(elems.len()),
+                });
+                Ctrl::Eval(&elems[0])
+            }
+            Expr::Lit(_) => Ctrl::Settle(Err(L1Error::Unsupported {
+                site: site.to_owned(),
+                what: "bare-integer literals have no v0 value form (Q6)".to_owned(),
+            })),
+
+            Expr::Path(p) => Ctrl::Settle(self.eval_path(regs, p)),
+
+            Expr::Let {
+                name,
+                ty,
+                bound,
+                body,
+            } => {
+                regs.stack.push(Frame::LetBound {
+                    name: name.as_str(),
+                    ty_guar: ty.as_ref().and_then(|t| t.guarantee),
+                    body,
+                });
+                Ctrl::Eval(bound)
+            }
+
+            Expr::If { cond, conseq, alt } => {
+                regs.stack.push(Frame::IfBranch { conseq, alt });
+                Ctrl::Eval(cond)
+            }
+
+            Expr::Match { scrutinee, arms } => {
+                regs.stack.push(Frame::MatchArms {
+                    arms: arms.as_slice(),
+                });
+                Ctrl::Eval(scrutinee)
+            }
+
+            Expr::For {
+                x,
+                xs,
+                acc,
+                init,
+                body,
+            } => {
+                regs.stack.push(Frame::ForAfterXs {
+                    x: x.as_str(),
+                    acc: acc.as_str(),
+                    init,
+                    body,
+                });
+                Ctrl::Eval(xs)
+            }
+
+            Expr::Swap {
+                value,
+                target,
+                policy,
+            } => {
+                regs.stack.push(Frame::SwapPost { target, policy });
+                Ctrl::Eval(value)
+            }
+
+            Expr::WithParadigm { .. } => Ctrl::Settle(Err(L1Error::Unsupported {
+                site: site.to_owned(),
+                what: "internal: a `with paradigm` block reached the evaluator — the ambient \
+                       resolution pass strips it (RFC-0012 §4.4)"
+                    .to_owned(),
+            })),
+
+            // A `wild { name(args…) }` block (the audited FFI floor — M-661/M-721; RFC-0028 §4.3):
+            // dispatch the host op through the reserved `wild:` prim namespace after evaluating its
+            // arguments left-to-right (CBV). Only the *shape* `name(args…)` / bare `name` is
+            // interpreted; any other shape is an explicit refusal (never silent — G2).
+            Expr::Wild(body) => {
+                let (opname, args): (&str, &'e [Expr]) = match body.as_ref() {
+                    Expr::App { head, args } => match head.as_ref() {
+                        Expr::Path(p) if p.0.len() == 1 => (p.0[0].as_str(), args.as_slice()),
+                        _ => {
+                            return Ctrl::Settle(Err(L1Error::Unsupported {
+                                site: site.to_owned(),
+                                what: "a v0 `wild` block body must be a host-call form \
+                                       `name(args…)` with a single, undotted host-operation name \
+                                       (RFC-0028 §4.2)"
+                                    .to_owned(),
+                            }))
+                        }
+                    },
+                    Expr::Path(p) if p.0.len() == 1 => (p.0[0].as_str(), &[]),
+                    _ => {
+                        return Ctrl::Settle(Err(L1Error::Unsupported {
+                            site: site.to_owned(),
+                            what: "a v0 `wild` block body must be a host-call form `name(args…)` \
+                                   or a bare `name` (RFC-0028 §4.2)"
+                                .to_owned(),
+                        }))
+                    }
+                };
+                let key = format!("wild:{opname}");
+                if args.is_empty() {
+                    return self.wild_dispatch(regs, key, Vec::new());
+                }
+                regs.stack.push(Frame::WildArgs {
+                    key,
+                    args,
+                    idx: 0,
+                    argv: Vec::with_capacity(args.len()),
+                });
+                Ctrl::Eval(&args[0])
+            }
+
+            Expr::Spore(_) => Ctrl::Settle(Err(L1Error::Unsupported {
+                site: site.to_owned(),
+                what: "`spore` is deferred to the reconstruction-manifest work (E2-5/M-260)"
+                    .to_owned(),
+            })),
+
+            // `consume <expr>` — the M-904 checked identity-move (DN-71 Model S §4.3).
+            Expr::Consume(operand) => {
+                regs.stack.push(Frame::ConsumePost);
+                Ctrl::Eval(operand)
+            }
+
+            Expr::Lambda { .. } => Ctrl::Settle(Err(L1Error::Unsupported {
+                site: site.to_owned(),
+                what:
+                    "internal: an `Expr::Lambda` reached the evaluator — closures are lowered by \
+                       monomorphization (RFC-0024 §4A / M-704); run eval on the monomorphized env \
+                       (never a silent accept, G2)"
+                        .to_owned(),
+            })),
+
+            // `colony { hypha e1, …, hypha eN }` (RFC-0008 §4.7; M-666): the RT2 spawn-order
+            // sequentialization — each hypha body runs in order (its `@forage` consulted first), and
+            // the colony's value is the *last* hypha's. The parser guarantees ≥ 1 hypha.
+            Expr::Colony(hyphae) => {
+                if hyphae.is_empty() {
+                    return Ctrl::Settle(Err(L1Error::Unsupported {
+                        site: site.to_owned(),
+                        what: "internal: an empty `colony` reached the evaluator — the parser \
+                               requires ≥ 1 hypha (RFC-0008 §4.7)"
+                            .to_owned(),
+                    }));
+                }
+                self.start_hypha(regs, hyphae, 0)
+            }
+
+            Expr::Ascribe(inner, t) => {
+                // A guarantee index asserts post-work; an unindexed ascription is transparent (no
+                // frame — so it stays TCO-eligible when it is the fn's tail).
+                if let Some(g) = t.guarantee {
+                    regs.stack.push(Frame::AscribePost { guar: g });
+                }
+                Ctrl::Eval(inner)
+            }
+
+            // A function/constructor/prim application: the §4.0 source-call/β boundary. Charge one
+            // depth unit (held for the whole App — args *and*, for a user call, the invoked body).
+            Expr::App { head, args } => {
+                let guard = match budget.try_enter() {
+                    Ok(g) => g,
+                    Err(err) => return Ctrl::Settle(Err(depth_exceeded(err))),
+                };
+                let Expr::Path(p) = head.as_ref() else {
+                    return Ctrl::Settle(Err(L1Error::Stuck {
+                        site: site.to_owned(),
+                        why: "v0 application head must be a name (first-order)".to_owned(),
+                    }));
+                };
+                if p.0.len() != 1 {
+                    return Ctrl::Settle(Err(L1Error::Stuck {
+                        site: site.to_owned(),
+                        why: format!("dotted call `{}`", p.0.join(".")),
+                    }));
+                }
+                let opname = p.0[0].as_str();
+                if args.is_empty() {
+                    return self.app_dispatch(fuel, _ledger, regs, opname, Vec::new(), guard);
+                }
+                regs.stack.push(Frame::AppArgs {
+                    name: opname,
+                    args: args.as_slice(),
+                    idx: 0,
+                    argv: Vec::with_capacity(args.len()),
+                    guard,
+                });
+                Ctrl::Eval(&args[0])
+            }
+
+            // `fuse(a, b)` (DN-58 §A): lawful binary merge. Evaluate both operands, then combine
+            // (repr → the `fuse_join:binary` prim; data → the user `join` fn).
+            Expr::Fuse { left, right } => {
+                regs.stack.push(Frame::FuseAfterLeft {
+                    left_expr: left,
+                    right_expr: right,
+                });
+                Ctrl::Eval(left)
+            }
+
+            // `reclaim(policy) { body }` (DN-58 §B): the sequential reference — evaluate the policy
+            // for effect, then the body (whose value is the scope's observable).
+            Expr::Reclaim { policy, body } => {
+                regs.stack.push(Frame::ReclaimBody { body });
+                Ctrl::Eval(policy)
+            }
+
+            Expr::TupleLit(_) => Ctrl::Settle(Err(L1Error::Unsupported {
+                site: site.to_owned(),
+                what: "internal: a TupleLit reached the evaluator — tuple literals are lowered by \
+                       the checker to constructor applications (M-826); run eval on a checked, \
+                       monomorphized env (never a silent accept, G2)"
+                    .to_owned(),
+            })),
+        }
+    }
+
+    /// One step of the machine in **Settle** mode: `frame` is the just-popped continuation and
+    /// `settled` is the child's `Ok(value)` / `Err`. Each frame runs its reified post-child work —
+    /// including, on the error path, its deterministic scope-exit cleanup (`release_if_abandoned`,
+    /// scope restoration), so an error unwinds the work-stack *never-silently* (G2), exactly as the
+    /// former recursive evaluator ran cleanup on both the success and error path.
+    #[allow(clippy::too_many_lines)] // one arm per continuation frame; splitting would obscure it
+    fn apply_frame<'b>(
+        &self,
+        budget: &'b RecursionBudget,
+        fuel: &mut u64,
+        ledger: &mut Budgets,
+        regs: &mut Regs<'e, 'b>,
+        frame: Frame<'e, 'b>,
+        settled: Result<L1Value, L1Error>,
+    ) -> Ctrl<'e> {
+        let site = regs.site;
+        match frame {
+            Frame::ListElem {
+                elems,
+                idx,
+                mut vals,
+            } => {
+                let v = match settled {
+                    Err(e) => return Ctrl::Settle(Err(e)),
+                    Ok(v) => v,
+                };
+                match v.as_repr() {
+                    Some(rv) => vals.push(rv.clone()),
+                    None => {
+                        return Ctrl::Settle(Err(L1Error::Unsupported {
+                            site: site.to_owned(),
+                            what: "a list literal element is not a representation value — a v0 \
+                                   `Seq` is built from repr elements only (RFC-0032 D3)"
+                                .to_owned(),
+                        }))
+                    }
+                }
+                if idx + 1 < elems.len() {
+                    let next = idx + 1;
+                    regs.stack.push(Frame::ListElem {
+                        elems,
+                        idx: next,
+                        vals,
+                    });
+                    return Ctrl::Eval(&elems[next]);
+                }
+                // All elements collected — build the `Seq` (the first repr anchors the descriptor).
+                let first = vals.first().expect("non-empty: checked at Eval time");
+                let elem = first.repr().clone();
+                let len = u32::try_from(vals.len()).unwrap_or(u32::MAX);
+                Ctrl::Settle(
+                    mycelium_core::Value::new(
+                        mycelium_core::Repr::Seq {
+                            elem: Box::new(elem),
+                            len,
+                        },
+                        mycelium_core::Payload::Seq(vals),
+                        mycelium_core::Meta::exact(mycelium_core::Provenance::Root),
+                    )
+                    .map(L1Value::Repr)
+                    .map_err(|err| L1Error::Stuck {
+                        site: site.to_owned(),
+                        why: format!("malformed sequence literal: {err}"),
+                    }),
+                )
+            }
+
+            Frame::LetBound {
+                name,
+                ty_guar,
+                body,
+            } => {
+                let bv = match settled {
+                    Err(e) => return Ctrl::Settle(Err(e)),
+                    Ok(v) => v,
+                };
+                if let Some(g) = ty_guar {
+                    if let Err(e) = self.assert_guarantee(site, &bv, g) {
+                        return Ctrl::Settle(Err(e));
+                    }
+                }
+                regs.scope.push((name.to_owned(), bv));
+                regs.stack.push(Frame::LetPop);
+                Ctrl::Eval(body)
+            }
+
+            Frame::LetPop => {
+                // The `let` binding's scope ends here (M-904): release it if it is a still-live
+                // `Substrate` that does not escape into this `let`'s own result. Runs on the success
+                // *and* error path (deterministic scope-exit release, never a silent leak — G2).
+                let popped = regs.scope.pop().expect("let binding present");
+                self.release_if_abandoned(&popped, settled.as_ref().ok());
+                Ctrl::Settle(settled)
+            }
+
+            Frame::IfBranch { conseq, alt } => match settled {
+                Err(e) => Ctrl::Settle(Err(e)),
+                Ok(c) => match c {
+                    L1Value::Data { ref ctor, .. } if ctor == "True" => Ctrl::Eval(conseq),
+                    L1Value::Data { ref ctor, .. } if ctor == "False" => Ctrl::Eval(alt),
+                    other => Ctrl::Settle(Err(L1Error::Stuck {
+                        site: site.to_owned(),
+                        why: format!("if-condition evaluated to a non-Bool: {other:?}"),
+                    })),
+                },
+            },
+
+            Frame::MatchArms { arms } => {
+                let sv = match settled {
+                    Err(e) => return Ctrl::Settle(Err(e)),
+                    Ok(v) => v,
+                };
+                // The checker verified exhaustiveness/arity (W7): the first arm whose pattern matches
+                // fires; the trailing `Stuck` is the honest never-silent fallback (G2).
+                for arm in arms {
+                    let mut binds: Vec<(String, L1Value)> = Vec::new();
+                    match self.try_match(site, &arm.pattern, &sv, &mut binds) {
+                        Err(e) => return Ctrl::Settle(Err(e)),
+                        Ok(false) => {}
+                        Ok(true) => {
+                            let mark = regs.scope.len();
+                            regs.scope.extend(binds);
+                            regs.stack.push(Frame::MatchPop { mark });
+                            return Ctrl::Eval(&arm.body);
+                        }
+                    }
+                }
+                Ctrl::Settle(Err(L1Error::Stuck {
+                    site: site.to_owned(),
+                    why: "no arm matched the scrutinee (W7 — the checker requires coverage)"
+                        .to_owned(),
+                }))
+            }
+
+            Frame::MatchPop { mark } => {
+                // Restore the scope to before the arm's binders (on both success and error).
+                regs.scope.truncate(mark);
+                Ctrl::Settle(settled)
+            }
+
+            Frame::SwapPost { target, policy } => {
+                let v = match settled {
+                    Err(e) => return Ctrl::Settle(Err(e)),
+                    Ok(v) => v,
+                };
+                let Some(src) = v.as_repr() else {
+                    return Ctrl::Settle(Err(L1Error::Stuck {
+                        site: site.to_owned(),
+                        why: "swap source is not a representation value".to_owned(),
+                    }));
+                };
+                let repr = match type_repr(site, target) {
+                    Ok(r) => r,
+                    Err(err) => return Ctrl::Settle(Err(unsupported(site, &err))),
+                };
+                let out = match self.swap.swap(src, &repr, &policy_name_ref(policy)) {
+                    Ok(o) => L1Value::Repr(o),
+                    Err(err) => return Ctrl::Settle(Err(L1Error::from(err))),
+                };
+                if let Some(g) = target.guarantee {
+                    if let Err(e) = self.assert_guarantee(site, &out, g) {
+                        return Ctrl::Settle(Err(e));
+                    }
+                }
+                Ctrl::Settle(Ok(out))
+            }
+
+            Frame::ConsumePost => {
+                let v = match settled {
+                    Err(e) => return Ctrl::Settle(Err(e)),
+                    Ok(v) => v,
+                };
+                let Some(handle) = v.as_substrate() else {
+                    return Ctrl::Settle(Err(L1Error::Stuck {
+                        site: site.to_owned(),
+                        why: "internal: `consume`'s operand evaluated to a non-Substrate value — \
+                              `check_consume`'s type rule (DN-03 §1 / LR-8) guarantees a \
+                              `Substrate{tag}` operand, so this is a staging invariant break, never \
+                              a silent move (G2)"
+                            .to_owned(),
+                    }));
+                };
+                Ctrl::Settle(handle.try_consume().map(L1Value::Substrate).map_err(|err| {
+                    L1Error::Stuck {
+                        site: site.to_owned(),
+                        why: err.to_string(),
+                    }
+                }))
+            }
+
+            Frame::AscribePost { guar } => match settled {
+                Err(e) => Ctrl::Settle(Err(e)),
+                Ok(v) => match self.assert_guarantee(site, &v, guar) {
+                    Ok(()) => Ctrl::Settle(Ok(v)),
+                    Err(e) => Ctrl::Settle(Err(e)),
+                },
+            },
+
+            Frame::FuseAfterLeft {
+                left_expr,
+                right_expr,
+            } => match settled {
+                Err(e) => Ctrl::Settle(Err(e)),
+                Ok(lv) => {
+                    regs.stack.push(Frame::FuseAfterRight {
+                        lv,
+                        left_expr,
+                        right_expr,
+                    });
+                    Ctrl::Eval(right_expr)
+                }
+            },
+
+            Frame::FuseAfterRight {
+                lv,
+                left_expr,
+                right_expr,
+            } => {
+                let rv = match settled {
+                    Err(e) => return Ctrl::Settle(Err(e)),
+                    Ok(v) => v,
+                };
+                match (&lv, &rv) {
+                    // Repr fuse = the `Binary` semilattice meet (bitwise-AND) via the shared
+                    // `fuse_join:binary` prim (the same prim the L0/AOT paths dispatch — DN-58 §A.5).
+                    (L1Value::Repr(lrepr), L1Value::Repr(rrepr)) => {
+                        let Some(f) = self.prims.get("fuse_join:binary") else {
+                            return Ctrl::Settle(Err(L1Error::Kernel(KernelError::UnknownPrim(
+                                "fuse_join:binary".to_owned(),
+                            ))));
+                        };
+                        Ctrl::Settle(
+                            f("fuse_join:binary", &[lrepr, rrepr])
+                                .map(L1Value::Repr)
+                                .map_err(L1Error::from),
+                        )
+                    }
+                    // Data type: dispatch through the user `join` fn (its Fuse instance). Preserves
+                    // the former semantics exactly by re-evaluating both operand *expressions* into
+                    // the `join(left, right)` call (a fresh source-call/β boundary — depth-charged).
+                    (L1Value::Data { .. }, _) => {
+                        let guard = match budget.try_enter() {
+                            Ok(g) => g,
+                            Err(err) => return Ctrl::Settle(Err(depth_exceeded(err))),
+                        };
+                        regs.stack.push(Frame::FuseJoinLeft { right_expr, guard });
+                        Ctrl::Eval(left_expr)
+                    }
+                    _ => Ctrl::Settle(Err(L1Error::Stuck {
+                        site: site.to_owned(),
+                        why:
+                            "`fuse` applied to mixed repr/data operands — internal type error (the \
+                              checker should have rejected this; DN-58 §A.4 — never-silent, G2)"
+                                .to_owned(),
+                    })),
+                }
+            }
+
+            Frame::FuseJoinLeft { right_expr, guard } => match settled {
+                Err(e) => Ctrl::Settle(Err(e)),
+                Ok(lv2) => {
+                    regs.stack.push(Frame::FuseJoinRight { lv2, guard });
+                    Ctrl::Eval(right_expr)
+                }
+            },
+
+            Frame::FuseJoinRight { lv2, guard } => match settled {
+                Err(e) => Ctrl::Settle(Err(e)),
+                Ok(rv2) => self.app_dispatch(fuel, ledger, regs, "join", vec![lv2, rv2], guard),
+            },
+
+            Frame::ReclaimBody { body } => match settled {
+                Err(e) => Ctrl::Settle(Err(e)),
+                Ok(_policy_value) => Ctrl::Eval(body),
+            },
+
+            Frame::ColonyForage { hyphae, idx } => match settled {
+                Err(e) => Ctrl::Settle(Err(e)),
+                Ok(pv) => match self.forage_select(site, &pv) {
+                    Err(e) => Ctrl::Settle(Err(e)),
+                    Ok(()) => {
+                        regs.stack.push(Frame::ColonyBody { hyphae, idx });
+                        Ctrl::Eval(&hyphae[idx].body)
+                    }
+                },
+            },
+
+            Frame::ColonyBody { hyphae, idx } => match settled {
+                Err(e) => Ctrl::Settle(Err(e)),
+                Ok(v) => {
+                    if idx + 1 == hyphae.len() {
+                        // The last hypha's value is the colony's observable.
+                        Ctrl::Settle(Ok(v))
+                    } else {
+                        // A leading hypha's value is discarded (sequentialized for effect only).
+                        drop(v);
+                        self.start_hypha(regs, hyphae, idx + 1)
+                    }
+                }
+            },
+
+            Frame::WildArgs {
+                key,
+                args,
+                idx,
+                mut argv,
+            } => {
+                let v = match settled {
+                    Err(e) => return Ctrl::Settle(Err(e)),
+                    Ok(v) => v,
+                };
+                argv.push(v);
+                if idx + 1 < args.len() {
+                    let next = idx + 1;
+                    regs.stack.push(Frame::WildArgs {
+                        key,
+                        args,
+                        idx: next,
+                        argv,
+                    });
+                    return Ctrl::Eval(&args[next]);
+                }
+                self.wild_dispatch(regs, key, argv)
+            }
+
+            Frame::AppArgs {
+                name,
+                args,
+                idx,
+                mut argv,
+                guard,
+            } => {
+                let v = match settled {
+                    Err(e) => return Ctrl::Settle(Err(e)),
+                    Ok(v) => v,
+                };
+                argv.push(v);
+                if idx + 1 < args.len() {
+                    let next = idx + 1;
+                    regs.stack.push(Frame::AppArgs {
+                        name,
+                        args,
+                        idx: next,
+                        argv,
+                        guard,
+                    });
+                    return Ctrl::Eval(&args[next]);
+                }
+                self.app_dispatch(fuel, ledger, regs, name, argv, guard)
+            }
+
+            Frame::InvokePost {
+                param_base,
+                saved_site,
+                saved_base,
+                ret_guar,
+                nparams,
+                tco_eligible: _,
+                guard: _,
+            } => {
+                // The function body has settled. Release this call's own parameter scope (M-904) on
+                // both the success and error path — a still-live `Substrate` param that does not
+                // escape into the call's result is released deterministically, never a silent leak.
+                for i in param_base..param_base + nparams {
+                    self.release_if_abandoned(&regs.scope[i], settled.as_ref().ok());
+                }
+                // The return-guarantee index (if any) is checked against the callee's own name
+                // (`regs.site` is still the callee here) — before we restore the caller's context.
+                let next = match settled {
+                    Err(e) => Ctrl::Settle(Err(e)),
+                    Ok(v) => match ret_guar {
+                        None => Ctrl::Settle(Ok(v)),
+                        Some(g) => match self.assert_guarantee(regs.site, &v, g) {
+                            Ok(()) => Ctrl::Settle(Ok(v)),
+                            Err(e) => Ctrl::Settle(Err(e)),
+                        },
+                    },
+                };
+                regs.scope.truncate(param_base);
+                regs.site = saved_site;
+                regs.base = saved_base;
+                // `guard` drops here — this call's depth unit is released.
+                next
+            }
+
+            Frame::ForAfterXs { x, acc, init, body } => match settled {
+                Err(e) => Ctrl::Settle(Err(e)),
+                Ok(spine) => {
+                    regs.stack.push(Frame::ForAfterInit {
+                        x,
+                        acc,
+                        body,
+                        spine,
+                    });
+                    Ctrl::Eval(init)
+                }
+            },
+
+            Frame::ForAfterInit {
+                x,
+                acc,
+                body,
+                spine,
+            } => match settled {
+                Err(e) => Ctrl::Settle(Err(e)),
+                Ok(accv) => self.for_advance(regs, fuel, x, acc, body, spine, accv),
+            },
+
+            Frame::ForStep {
+                x,
+                acc,
+                body,
+                spine,
+            } => {
+                // Remove this element's `x`/`acc` bindings (pushed before the body ran); their values
+                // drop. Match-arm/for binders are not `Substrate`-tracked (the documented v0 gap).
+                regs.scope.pop();
+                regs.scope.pop();
+                match settled {
+                    Err(e) => Ctrl::Settle(Err(e)),
+                    Ok(accv) => self.for_advance(regs, fuel, x, acc, body, spine, accv),
+                }
+            }
+        }
+    }
+
+    /// Resolve a variable/constructor/function reference in value position (the former `eval`
+    /// `Expr::Path` arm). A single-segment name resolves against the **current function's** scope
+    /// (`scope[base..]`, innermost first — so lexical scope is preserved across calls), then a
+    /// nullary constructor, then a bare top-level function value (ADR-033/DN-74). Never-silent on an
+    /// unresolved name (G2).
+    fn eval_path<'b>(&self, regs: &Regs<'e, 'b>, p: &crate::ast::Path) -> Result<L1Value, L1Error> {
+        if p.0.len() == 1 {
+            let name = &p.0[0];
+            if let Some((_, v)) = regs.scope[regs.base..]
+                .iter()
+                .rev()
+                .find(|(n, _)| n == name)
+            {
+                return Ok(v.clone());
+            }
+            if let Some((d, i)) = self.env.ctor(name) {
+                if d.ctors[i].fields.is_empty() {
+                    return Ok(L1Value::Data {
+                        ty: d.name.clone(),
+                        ctor: name.clone(),
+                        fields: vec![],
+                    });
+                }
+            }
+            if self.env.fns.contains_key(name) {
+                return Ok(L1Value::Fn(name.clone()));
+            }
+        }
+        Err(L1Error::Stuck {
+            site: regs.site.to_owned(),
+            why: format!("unresolved name `{}`", p.0.join(".")),
+        })
+    }
+
+    /// Begin one hypha's evaluation inside a `colony` (its `@forage` placement decision first, if
+    /// present, then its body). Shared by the colony's initial entry and each `ColonyBody` advance.
+    fn start_hypha<'b>(
+        &self,
+        regs: &mut Regs<'e, 'b>,
+        hyphae: &'e [Hypha],
+        idx: usize,
+    ) -> Ctrl<'e> {
+        if hyphae[idx].forage.is_some() {
+            let policy = hyphae[idx]
+                .forage
+                .as_deref()
+                .expect("checked is_some above");
+            regs.stack.push(Frame::ColonyForage { hyphae, idx });
+            Ctrl::Eval(policy)
+        } else {
+            regs.stack.push(Frame::ColonyBody { hyphae, idx });
+            Ctrl::Eval(&hyphae[idx].body)
+        }
+    }
+
+    /// Dispatch a saturated application `name(argv)` (the former `eval_app` tail): a scope-bound
+    /// function value (ADR-033/DN-74 dictionary dispatch), then a top-level function `invoke`
+    /// ([`Self::enter_call`], which applies TCO), then a saturated constructor, then a kernel prim.
+    /// `guard` is the App's depth reservation — moved into the callee's frame for a user call, or
+    /// dropped here once a constructor/prim result is built (the App boundary is complete).
+    fn app_dispatch<'b>(
+        &self,
+        fuel: &mut u64,
+        ledger: &mut Budgets,
+        regs: &mut Regs<'e, 'b>,
+        name: &str,
+        argv: Vec<L1Value>,
+        guard: DepthGuard<'b>,
+    ) -> Ctrl<'e> {
+        let site = regs.site;
+        // A scope-bound name (e.g. a match-projected dictionary field holding an `L1Value::Fn`)
+        // shadows the global namespace — checked first, exactly as the value-position `Path` arm.
+        if let Some((_, v)) = regs.scope[regs.base..]
+            .iter()
+            .rev()
+            .find(|(n, _)| n == name)
+        {
+            let L1Value::Fn(callee) = v else {
+                return Ctrl::Settle(Err(L1Error::Stuck {
+                    site: site.to_owned(),
+                    why: format!("`{name}` is bound to a non-function value and cannot be applied"),
+                }));
+            };
+            let callee = callee.clone();
+            return self.enter_call(fuel, ledger, regs, &callee, argv, guard);
+        }
+        if self.env.fns.contains_key(name) {
+            return self.enter_call(fuel, ledger, regs, name, argv, guard);
+        }
+        if let Some((d, i)) = self.env.ctor(name) {
+            if d.ctors[i].fields.len() != argv.len() {
+                return Ctrl::Settle(Err(L1Error::Stuck {
+                    site: site.to_owned(),
+                    why: format!("unsaturated constructor `{name}` (W6)"),
+                }));
+            }
+            // The App boundary is complete — `guard` drops, releasing this App's depth unit.
+            drop(guard);
+            return Ctrl::Settle(Ok(L1Value::Data {
+                ty: d.name.clone(),
+                ctor: name.to_owned(),
+                fields: argv,
+            }));
+        }
+        if let Some(kernel) = prim_kernel_name(name) {
+            let vals: Result<Vec<&Value>, L1Error> = argv
+                .iter()
+                .map(|v| {
+                    v.as_repr().ok_or_else(|| L1Error::Stuck {
+                        site: site.to_owned(),
+                        why: format!("prim `{name}` applied to a data value"),
+                    })
+                })
+                .collect();
+            let out = match vals {
+                Err(e) => Err(e),
+                Ok(vals) => match self.prims.get(kernel) {
+                    None => Err(L1Error::Kernel(KernelError::UnknownPrim(kernel.to_owned()))),
+                    Some(f) => f(kernel, &vals).map(L1Value::Repr).map_err(L1Error::from),
+                },
+            };
+            drop(guard); // prim result built — release this App's depth unit.
+            return Ctrl::Settle(out);
+        }
+        drop(guard);
+        Ctrl::Settle(Err(L1Error::Stuck {
+            site: site.to_owned(),
+            why: format!("unknown function/constructor/prim `{name}`"),
+        }))
+    }
+
+    /// Dispatch a `wild { name(args…) }` host op through the reserved `wild:` prim namespace (the
+    /// former `eval_wild` tail). All arguments must be repr values; an ungranted host op is an
+    /// explicit [`KernelError::UnknownPrim`] (never silent — G2). `wild` is not a source-call/β
+    /// boundary in the §4.0 metric (a host op never recurses), so it charges no depth.
+    fn wild_dispatch<'b>(&self, regs: &Regs<'e, 'b>, key: String, argv: Vec<L1Value>) -> Ctrl<'e> {
+        let site = regs.site;
+        // `key` is `wild:<name>`; recover the bare op name for diagnostics.
+        let opname = key.strip_prefix("wild:").unwrap_or(&key);
+        let vals: Result<Vec<&Value>, L1Error> = argv
+            .iter()
+            .map(|v| {
+                v.as_repr().ok_or_else(|| L1Error::Stuck {
+                    site: site.to_owned(),
+                    why: format!(
+                        "`wild` host op `{opname}` applied to a data value (RFC-0028 §4.4)"
+                    ),
+                })
+            })
+            .collect();
+        Ctrl::Settle(match vals {
+            Err(e) => Err(e),
+            Ok(vals) => match self.prims.get(&key) {
+                None => Err(L1Error::Kernel(KernelError::UnknownPrim(key.clone()))),
+                Some(f) => f(&key, &vals).map(L1Value::Repr).map_err(L1Error::from),
+            },
+        })
+    }
+
+    /// Begin one function invocation (the former `invoke`): arity + effect-budget checks, bind the
+    /// parameters into the shared scope, and push the [`Frame::InvokePost`] that runs the scope-exit
+    /// release + return-guarantee assert. **TCO (RFC-0041 §4.6):** if this call is a *direct tail
+    /// call* — the caller's `InvokePost` is the current top of the work-stack — and that caller frame
+    /// has **no pending post-work** (no `sig.ret.guarantee` index *and* no `Substrate`-valued
+    /// parameter, so its post-work is an observational no-op), the caller frame is **elided** and
+    /// this callee reuses its slot: the caller's depth guard drops as this callee's is installed, so
+    /// a tail-recursive loop runs in **bounded depth**. Every elision is recorded in the bounded
+    /// [`TcoTrace`] EXPLAIN ring (§4.6 tco32). `guard` is this call's already-charged depth unit.
+    fn enter_call<'b>(
+        &self,
+        _fuel: &mut u64,
+        ledger: &mut Budgets,
+        regs: &mut Regs<'e, 'b>,
+        name: &str,
+        argv: Vec<L1Value>,
+        guard: DepthGuard<'b>,
+    ) -> Ctrl<'e> {
+        let Some((fname, fd)) = self.env.fns.get_key_value(name) else {
+            return Ctrl::Settle(Err(L1Error::Stuck {
                 site: name.to_owned(),
                 why: format!("unknown function `{name}`"),
-            });
+            }));
         };
-        if fd.sig.value_params.len() != args.len() {
-            return Err(L1Error::Stuck {
+        let fname: &'e str = fname.as_str();
+        if fd.sig.value_params.len() != argv.len() {
+            return Ctrl::Settle(Err(L1Error::Stuck {
                 site: name.to_owned(),
                 why: format!(
                     "`{name}` takes {} argument(s), got {}",
                     fd.sig.value_params.len(),
-                    args.len()
+                    argv.len()
                 ),
-            });
+            }));
         }
-
-        // Prime the shared ledger for any budgeted effects declared in this fn's signature
-        // (M-677). A budget is set only if the effect has not yet been registered — so the
-        // first invocation of any fn that declares `retry(<=3)` sets the ceiling at 3 in the
-        // shared ledger; subsequent invocations of any fn declaring `retry` (with any ceiling)
-        // find it already primed and just consume. This is the v0 model: the declared ceiling
-        // is the **call-count** budget for the top-level `call` invocation (`Empirical`).
+        // Prime + consume the shared effect-budget ledger (M-677 / RFC-0014 §4.5 I4) before binding
+        // params or evaluating the body — exactly as the former `invoke`.
         for (eff_name, &ceiling) in &fd.sig.effect_budgets {
             let budget = Self::effect_name_to_budget(eff_name, ceiling);
-            // Only prime once: if already registered (remaining != None), leave it.
             if ledger.remaining(&budget.kind()).is_none() {
                 ledger.set(budget);
             }
         }
-        // Consume 1 unit per declared budgeted effect — the per-call charge (Empirical).
         for eff_name in fd.sig.effect_budgets.keys() {
             let kind = Self::effect_name_to_budget(eff_name, 0).kind();
-            ledger.consume(kind, 1).map_err(L1Error::EffectBudget)?;
+            if let Err(e) = ledger.consume(kind, 1) {
+                return Ctrl::Settle(Err(L1Error::EffectBudget(e)));
+            }
         }
 
-        let mut scope: Vec<(String, L1Value)> = fd
-            .sig
-            .value_params
-            .iter()
-            .map(|p| p.name.clone())
-            .zip(args)
-            .collect();
-        let result = self.eval(fuel, depth, ledger, name, &mut scope, &fd.body);
-        // M-904 (DN-71 §8 FLAG-4 v0 posture): this call's own parameter scope ends here — release
-        // any still-live `Substrate` param that isn't escaping into the call's own result (deep, via
-        // `value_contains_substrate_id`), on both the success and error path (deterministic, never
-        // skipped just because the body itself failed — G2).
-        let escaping = result.as_ref().ok();
-        for popped in &scope {
-            self.release_if_abandoned(popped, escaping);
+        let ret_guar = fd.sig.ret.guarantee;
+        // The precondition the frame-reuse (TCO) of *this* callee is gated on when it later makes its
+        // own tail call: no return-guarantee post-work, and no live `Substrate` parameter (whose
+        // scope-exit release would otherwise be skipped — the VR-5/leak hazard, §4.6-C4).
+        let this_tco_eligible =
+            ret_guar.is_none() && !argv.iter().any(|v| matches!(v, L1Value::Substrate(_)));
+
+        // TCO: elide the caller's frame iff it is directly on top and has no pending post-work.
+        let tail = matches!(
+            regs.stack.last(),
+            Some(Frame::InvokePost {
+                tco_eligible: true,
+                ..
+            })
+        );
+        let (param_base, saved_site, saved_base) = if tail {
+            // Pop the caller's `InvokePost` (its depth guard drops — depth released) and reuse its
+            // slot for this callee, threading the caller's *own* saved site/base so that when this
+            // callee finally returns non-tail, control returns to the caller's caller.
+            let Some(Frame::InvokePost {
+                param_base: caller_param_base,
+                saved_site: caller_saved_site,
+                saved_base: caller_saved_base,
+                ..
+            }) = regs.stack.pop()
+            else {
+                unreachable!("just matched InvokePost on top");
+            };
+            self.tco_trace
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner)
+                .record(fname);
+            regs.scope.truncate(caller_param_base);
+            (caller_param_base, caller_saved_site, caller_saved_base)
+        } else {
+            (regs.scope.len(), regs.site, regs.base)
+        };
+
+        for (p, a) in fd.sig.value_params.iter().zip(argv) {
+            regs.scope.push((p.name.clone(), a));
         }
-        let result = result?;
-        if let Some(g) = fd.sig.ret.guarantee {
-            self.assert_guarantee(name, &result, g)?;
-        }
-        Ok(result)
+        regs.stack.push(Frame::InvokePost {
+            param_base,
+            saved_site,
+            saved_base,
+            ret_guar,
+            nparams: fd.sig.value_params.len(),
+            tco_eligible: this_tco_eligible,
+            guard,
+        });
+        regs.site = fname;
+        regs.base = param_base;
+        Ctrl::Eval(&fd.body)
     }
 
-    /// Evaluate one hypha's `@forage(policy)` placement decision, if present (M-906; DN-70 D1;
-    /// RFC-0008 RT3; DN-63 §3.5), **before** its body runs. Mirrors `reclaim`'s "evaluate the
-    /// policy for its effect" sequential reference (DN-58 §B) with one real addition: the D-lite
-    /// mechanism genuinely consults `mycelium-select`'s `SelectionPolicy`/[`select_placement`]
-    /// (RFC-0005 §2 — total, deterministic, mandatory-EXPLAIN) over the **single-node** candidate
-    /// set the policy's bitmask names (DN-70 D1: "degenerate but real" — one local worker per set
-    /// bit). Placement is semantics-free (RT3: it changes performance, never `body`'s value), so
-    /// this returns `()`, not a value — the caller runs `body` unchanged afterward.
-    ///
-    /// Never-silent (DN-63 §3.5 FLAG-14 / G2): an all-zero bitmask is an explicit
-    /// [`L1Error::Forage`]`(`[`ForageError::NoCandidates`]`)`, never a fabricated placement or a
-    /// hang. `elaborate`/`elaborate_colony` refuse the *identical* source statically (see
-    /// `crate::elab::forage_reject_if_empty`), so every execution path agrees.
-    ///
-    /// Guarantee: `Declared` — the D-lite candidate set (one worker per bitmask bit,
-    /// `default_choice: 0`, no cost-differentiating rules) is a placeholder policy shape; the full
-    /// adaptive/cost-based policy surface is DN-63 FLAG-13, narrowed here, not resolved.
-    fn eval_hypha_forage(
+    /// Split a `for` spine value into its head element + tail (the former `eval_for` cons/nil
+    /// analysis). `Ok(None)` is the nil terminator; `Ok(Some((elem, rest)))` is a cons. **E0509
+    /// (RFC-0041 §4.5):** because `L1Value` now `impl`s `Drop`, the fields cannot be moved out of
+    /// `spine` by value — they are taken by-ref via `mem::take`, leaving an empty `Data` shell that
+    /// drops harmlessly.
+    fn split_spine(
         &self,
-        fuel: &mut u64,
-        depth: u32,
-        ledger: &mut Budgets,
         site: &str,
-        scope: &mut Vec<(String, L1Value)>,
-        h: &Hypha,
-    ) -> Result<(), L1Error> {
-        let Some(policy) = &h.forage else {
-            return Ok(());
+        mut spine: L1Value,
+    ) -> Result<Option<(L1Value, L1Value)>, L1Error> {
+        let L1Value::Data { ty, ctor, fields } = &mut spine else {
+            return Err(L1Error::Stuck {
+                site: site.to_owned(),
+                why: "`for` spine is not a data value".to_owned(),
+            });
         };
-        let pv = self.eval(fuel, depth, ledger, site, scope, policy)?;
-        let L1Value::Repr(v) = &pv else {
+        if fields.is_empty() {
+            return Ok(None); // a nil — the spine ends, the fold is the accumulator
+        }
+        let ty = mem::take(ty);
+        let ctor = mem::take(ctor);
+        let fields = mem::take(fields);
+        let Some(d) = self.env.types.get(&ty) else {
+            return Err(L1Error::Stuck {
+                site: site.to_owned(),
+                why: format!("`for` over unregistered type `{ty}`"),
+            });
+        };
+        let Some(ci) = d.ctors.iter().position(|c| c.name == ctor) else {
+            return Err(L1Error::Stuck {
+                site: site.to_owned(),
+                why: format!("`for` met unknown constructor `{ctor}` of `{ty}`"),
+            });
+        };
+        let mut elem = None;
+        let mut rest = None;
+        for (f, v) in d.ctors[ci].fields.iter().zip(fields) {
+            if matches!(f, crate::checkty::Ty::Data(n, _) if *n == ty) {
+                rest = Some(v);
+            } else {
+                elem = Some(v);
+            }
+        }
+        let (Some(elem), Some(rest)) = (elem, rest) else {
+            return Err(L1Error::Stuck {
+                site: site.to_owned(),
+                why: format!("`{ctor}` is not nil/cons-shaped — the checker should have refused"),
+            });
+        };
+        Ok(Some((elem, rest)))
+    }
+
+    /// Advance the `for` fold's iterative spine walk one element (the former `eval_for` loop body):
+    /// a nil terminates with the accumulator; a cons charges the per-element fuel, binds `x`/`acc`,
+    /// and evaluates the body — its value becomes the next accumulator via a [`Frame::ForStep`].
+    /// The walk is **iterative** (no host-stack recursion per element), so a long `for` costs fuel,
+    /// never depth (RFC-0007 §4.8).
+    #[allow(clippy::too_many_arguments)] // the fold threads its budgets + the form's five parts
+    fn for_advance<'b>(
+        &self,
+        regs: &mut Regs<'e, 'b>,
+        fuel: &mut u64,
+        x: &'e str,
+        acc: &'e str,
+        body: &'e Expr,
+        spine: L1Value,
+        accv: L1Value,
+    ) -> Ctrl<'e> {
+        match self.split_spine(regs.site, spine) {
+            Err(e) => Ctrl::Settle(Err(e)),
+            Ok(None) => Ctrl::Settle(Ok(accv)),
+            Ok(Some((elem, rest))) => {
+                // Each element's body evaluation is clocked (matches the former `eval_for`).
+                match fuel.checked_sub(1) {
+                    Some(f) => *fuel = f,
+                    None => return Ctrl::Settle(Err(L1Error::FuelExhausted)),
+                }
+                regs.scope.push((x.to_owned(), elem));
+                regs.scope.push((acc.to_owned(), accv));
+                regs.stack.push(Frame::ForStep {
+                    x,
+                    acc,
+                    body,
+                    spine: rest,
+                });
+                Ctrl::Eval(body)
+            }
+        }
+    }
+
+    /// Evaluate one hypha's already-computed `@forage(policy)` placement decision (the former
+    /// `eval_hypha_forage` tail, after the policy value is in hand — M-906/DN-70 D1; RFC-0008 RT3).
+    /// It consults the *real* RFC-0005 `SelectionPolicy`/[`select_placement`] machinery over the
+    /// D-lite single-node candidate set the bitmask names, records the mandatory EXPLAIN decision
+    /// (house rule #2), and is semantics-free (RT3: it changes no value). An all-zero bitmask is an
+    /// explicit [`ForageError::NoCandidates`] (never a fabricated placement — DN-63 §3.5 / G2).
+    fn forage_select(&self, site: &str, policy_value: &L1Value) -> Result<(), L1Error> {
+        let L1Value::Repr(v) = policy_value else {
             return Err(L1Error::Stuck {
                 site: site.to_owned(),
                 why: "internal: `@forage(policy)` evaluated to a non-repr value — the checker \
@@ -698,10 +1897,6 @@ impl<'e> Evaluator<'e> {
         if candidates.is_empty() {
             return Err(ForageError::NoCandidates.into());
         }
-        // A trivial, deterministic single-arm policy: no cost-differentiating rules yet (DN-63
-        // FLAG-13 stays open), so the default arm always picks the lowest-index available worker
-        // (`Action`-free — `rules: []`) — matching `StealPolicy::RoundRobin`'s "lowest index wins
-        // a tie" convention (`mycelium-sched`).
         let policy = SelectionPolicy::new(
             "forage.dlite.v0",
             candidates,
@@ -714,15 +1909,10 @@ impl<'e> Evaluator<'e> {
         .map_err(|e| L1Error::Stuck {
             site: site.to_owned(),
             why: format!(
-                "internal: `@forage` D-lite policy construction failed unexpectedly: {e} \
-                 (the caller always supplies ≥ 1 candidate and a valid cost weight)"
+                "internal: `@forage` D-lite policy construction failed unexpectedly: {e} (the \
+                 caller always supplies ≥ 1 candidate and a valid cost weight)"
             ),
         })?;
-        // `src: Bytes` is the crate's own documented "no static representation applies here"
-        // sentinel (see `mycelium_select::repr_storage_bits`'s `Repr::Bytes => 0.0` precedent) —
-        // `forage` places a *hypha* (a computation), not a value with a `Repr`, and the D-lite
-        // policy's `rules: []` never inspects `inputs` anyway (only the mandatory default arm
-        // fires), so no predicate ever reads this sentinel (honesty note, not a fabricated value).
         let inputs = SelectionInputs {
             src: mycelium_core::Repr::Bytes,
             guarantee: GuaranteeStrength::Declared,
@@ -746,493 +1936,6 @@ impl<'e> Evaluator<'e> {
                 explanation,
             });
         Ok(())
-    }
-
-    /// Big-step evaluation of `e` under `scope`. Every node costs one unit of fuel, so an
-    /// unproductive recursion is an explicit [`L1Error::FuelExhausted`], never a hang.
-    ///
-    /// **Depth is charged per AST node, not per call frame (A4-03).** `eval` recurses on the host
-    /// stack for *every* sub-expression — an operand of an `App`, the bound of a `Let`, an `if`
-    /// branch — not only at a function `invoke`. The depth budget is a *host-stack* guard (see
-    /// [`L1Error::DepthExceeded`]), so it must count exactly the recursion that consumes host
-    /// stack: a deeply **nested expression** (e.g. `not(not(… not(x) …))`) overflows the stack just
-    /// as a deep call chain does, and charging only at `invoke` would leave it unguarded. The
-    /// honest consequence is that [`DEFAULT_DEPTH`] = 64 is a *nesting* ceiling, not a call-depth
-    /// ceiling: an expression whose AST is more than ~64 nodes deep along any single path is
-    /// refused with an explicit [`L1Error::DepthExceeded`] even if it makes no recursive call.
-    /// This is a deliberate over-approximation in favor of the termination/no-crash guarantee
-    /// (S5/G2) — raise the budget via [`Evaluator::with_depth`] when a legitimately deep but
-    /// terminating expression needs it (the host stack is not the limit; see [`DEFAULT_DEPTH`]).
-    /// (`for`-folds walk their spine
-    /// iteratively and so are *not* subject to this ceiling per element — see [`Self::eval_for`].)
-    fn eval(
-        &self,
-        fuel: &mut u64,
-        depth: u32,
-        ledger: &mut Budgets,
-        site: &str,
-        scope: &mut Vec<(String, L1Value)>,
-        e: &Expr,
-    ) -> Result<L1Value, L1Error> {
-        *fuel = fuel.checked_sub(1).ok_or(L1Error::FuelExhausted)?;
-        // Per-node (not per-call-frame) on purpose: this counts host-stack recursion, which a wide
-        // *and* a deep AST both incur. See the method doc for why the per-node charge is the safe
-        // choice and what the resulting 64-node nesting ceiling means (A4-03).
-        let depth = depth
-            .checked_sub(1)
-            .ok_or(L1Error::DepthExceeded { limit: self.depth })?;
-        match e {
-            // RFC-0032 D4 (M-750): `0x…` byte-string literals share the `lit_value` lowering with the
-            // binary/ternary repr literals (all are context-free repr literals). M-910/M-911: `"…"`
-            // string literals join the same group (they lower to the same `Repr::Bytes` form).
-            // ADR-040 (M-897): decimal float literals join it too (they lower to the M-896
-            // `Repr::Float`/`Payload::Float` scalar form — KC-3, no new L0 node).
-            Expr::Lit(
-                l @ (Literal::Bin(_)
-                | Literal::Trit(_)
-                | Literal::Bytes(_)
-                | Literal::Str(_)
-                | Literal::Float(_)),
-            ) => Ok(L1Value::Repr(
-                lit_value(site, l).map_err(|e| unsupported(site, &e))?,
-            )),
-            // RFC-0032 D3 (M-749): a list literal `[e1, …]` evaluates to a `Repr::Seq` value. Each
-            // element is evaluated to a repr value; the element repr (from the first) anchors the
-            // descriptor. The checker has already verified homogeneity; the `Value::new`
-            // well-formedness check is the never-silent final guard (a heterogeneous/malformed seq is
-            // refused, never silently built — G2). A non-repr element (a data value) is an explicit
-            // refusal. An empty `[]` has no element repr at eval time (its width came from an
-            // ascription the value form does not carry) — refused, never silently defaulted.
-            Expr::Lit(Literal::List(elems)) => {
-                let mut vals = Vec::with_capacity(elems.len());
-                for el in elems {
-                    let v = self.eval(fuel, depth, ledger, site, scope, el)?;
-                    match v.as_repr() {
-                        Some(rv) => vals.push(rv.clone()),
-                        None => {
-                            return Err(L1Error::Unsupported {
-                                site: site.to_owned(),
-                                what: "a list literal element is not a representation value — a \
-                                       v0 `Seq` is built from repr elements only (RFC-0032 D3)"
-                                    .to_owned(),
-                            })
-                        }
-                    }
-                }
-                let Some(first) = vals.first() else {
-                    return Err(L1Error::Unsupported {
-                        site: site.to_owned(),
-                        what: "an empty list literal `[]` has no element repr to anchor the `Seq` \
-                               descriptor at eval (RFC-0032 D3)"
-                            .to_owned(),
-                    });
-                };
-                let elem = first.repr().clone();
-                let len = u32::try_from(vals.len()).map_or(u32::MAX, |n| n);
-                let seq = mycelium_core::Value::new(
-                    mycelium_core::Repr::Seq {
-                        elem: Box::new(elem),
-                        len,
-                    },
-                    mycelium_core::Payload::Seq(vals),
-                    mycelium_core::Meta::exact(mycelium_core::Provenance::Root),
-                )
-                .map_err(|e| L1Error::Stuck {
-                    site: site.to_owned(),
-                    why: format!("malformed sequence literal: {e}"),
-                })?;
-                Ok(L1Value::Repr(seq))
-            }
-            Expr::Lit(_) => Err(L1Error::Unsupported {
-                site: site.to_owned(),
-                what: "bare-integer literals have no v0 value form (Q6)".to_owned(),
-            }),
-
-            Expr::Path(p) => {
-                if p.0.len() == 1 {
-                    let name = &p.0[0];
-                    if let Some((_, v)) = scope.iter().rev().find(|(n, _)| n == name) {
-                        return Ok(v.clone());
-                    }
-                    if let Some((d, i)) = self.env.ctor(name) {
-                        if d.ctors[i].fields.is_empty() {
-                            return Ok(L1Value::Data {
-                                ty: d.name.clone(),
-                                ctor: name.clone(),
-                                fields: vec![],
-                            });
-                        }
-                    }
-                    // ADR-033/DN-74 (M-923): a bare reference to an ordinary top-level function in
-                    // value position is a `FieldSpec::Fn` payload (mirrors `crate::elab`'s Path arm
-                    // — see its doc comment for the full rationale + reachability note: this is
-                    // exercised when `Evaluator` runs on a checked-but-not-monomorphized `Env`,
-                    // never on the standard mono'd differential corpus, since `mono.rs`'s closure
-                    // defunctionalization already rewrites every such reference first).
-                    if self.env.fns.contains_key(name) {
-                        return Ok(L1Value::Fn(name.clone()));
-                    }
-                }
-                Err(L1Error::Stuck {
-                    site: site.to_owned(),
-                    why: format!("unresolved name `{}`", p.0.join(".")),
-                })
-            }
-
-            Expr::Let {
-                name,
-                ty,
-                bound,
-                body,
-            } => {
-                let bv = self.eval(fuel, depth, ledger, site, scope, bound)?;
-                if let Some(g) = ty.as_ref().and_then(|t| t.guarantee) {
-                    self.assert_guarantee(site, &bv, g)?;
-                }
-                scope.push((name.clone(), bv));
-                let r = self.eval(fuel, depth, ledger, site, scope, body);
-                let popped = scope.pop().expect("just pushed above");
-                // M-904 (DN-71 §8 FLAG-4 v0 posture): `name`'s binding scope ends exactly here —
-                // release it if it's a still-live `Substrate` that isn't escaping into this `let`'s
-                // own result (`r`'s `Ok` value, if any). Runs on both the success and error path
-                // (deterministic scope-exit release, never a silent leak — G2).
-                self.release_if_abandoned(&popped, r.as_ref().ok());
-                r
-            }
-
-            Expr::If { cond, conseq, alt } => {
-                let c = self.eval(fuel, depth, ledger, site, scope, cond)?;
-                match c {
-                    L1Value::Data { ref ctor, .. } if ctor == "True" => {
-                        self.eval(fuel, depth, ledger, site, scope, conseq)
-                    }
-                    L1Value::Data { ref ctor, .. } if ctor == "False" => {
-                        self.eval(fuel, depth, ledger, site, scope, alt)
-                    }
-                    other => Err(L1Error::Stuck {
-                        site: site.to_owned(),
-                        why: format!("if-condition evaluated to a non-Bool: {other:?}"),
-                    }),
-                }
-            }
-
-            Expr::Match { scrutinee, arms } => {
-                self.eval_match(fuel, depth, ledger, site, scope, scrutinee, arms)
-            }
-
-            Expr::For {
-                x,
-                xs,
-                acc,
-                init,
-                body,
-            } => self.eval_for(fuel, depth, ledger, site, scope, x, xs, acc, init, body),
-
-            Expr::Swap {
-                value,
-                target,
-                policy,
-            } => {
-                let v = self.eval(fuel, depth, ledger, site, scope, value)?;
-                let Some(src) = v.as_repr() else {
-                    return Err(L1Error::Stuck {
-                        site: site.to_owned(),
-                        why: "swap source is not a representation value".to_owned(),
-                    });
-                };
-                let repr = type_repr(site, target).map_err(|e| unsupported(site, &e))?;
-                let out = self.swap.swap(src, &repr, &policy_name_ref(policy))?;
-                let out = L1Value::Repr(out);
-                if let Some(g) = target.guarantee {
-                    self.assert_guarantee(site, &out, g)?;
-                }
-                Ok(out)
-            }
-
-            Expr::WithParadigm { .. } => Err(L1Error::Unsupported {
-                site: site.to_owned(),
-                what: "internal: a `with paradigm` block reached the evaluator — the ambient \
-                       resolution pass strips it (RFC-0012 §4.4)"
-                    .to_owned(),
-            }),
-            // A `wild` block (the audited FFI floor — M-661/M-721) executes by dispatching its
-            // host-call form through the prim registry under the reserved `wild:` namespace
-            // (RFC-0028 §4.3) — the capability handle. The default registry grants no `wild:` op, so
-            // an ungranted host op is an explicit, never-silent refusal (G2). This mirrors the
-            // elaborator's `wild → Op{wild:…}` lowering, so the L1 surface evaluator and the
-            // L0/AOT paths agree on a `wild`-backed operation (the three-way differential).
-            Expr::Wild(body) => self.eval_wild(fuel, depth, ledger, site, scope, body),
-            Expr::Spore(_) => Err(L1Error::Unsupported {
-                site: site.to_owned(),
-                what: "`spore` is deferred to the reconstruction-manifest work (E2-5/M-260)"
-                    .to_owned(),
-            }),
-            // M-904 (DN-71 Model S §4.3, maintainer-accepted 2026-07-02): `consume <expr>` executes
-            // as the **checked identity-move** through existing paths — evaluate the operand (the
-            // checker's `check_consume` type rule, DN-03 §1, guarantees it is `Substrate{tag}`-typed)
-            // and perform the affine Live→Consumed transition via `SubstrateHandle::try_consume`
-            // (M-903's runtime backstop). Under a well-typed program the static affine pass
-            // (`crate::affine`, M-903) already guarantees no reachable path double-consumes this
-            // identity, so `try_consume` succeeds here; a trip is exactly the internal-invariant-break
-            // case the backstop exists to catch — surfaced loudly as `L1Error::Stuck` (an evaluation
-            // state the checker proves unreachable), never a silent no-op or a fabricated second move
-            // (G2/VR-5). This lifts the M-664/M-903-era `Unsupported` staging refusal: `consume` no
-            // longer merely type-checks, it runs.
-            Expr::Consume(operand) => {
-                let v = self.eval(fuel, depth, ledger, site, scope, operand)?;
-                let Some(handle) = v.as_substrate() else {
-                    return Err(L1Error::Stuck {
-                        site: site.to_owned(),
-                        why: "internal: `consume`'s operand evaluated to a non-Substrate value — \
-                              `check_consume`'s type rule (DN-03 §1 / LR-8) guarantees a \
-                              `Substrate{tag}` operand, so this is a staging invariant break, never \
-                              a silent move (G2)"
-                            .to_owned(),
-                    });
-                };
-                let moved = handle.try_consume().map_err(|e| L1Error::Stuck {
-                    site: site.to_owned(),
-                    why: e.to_string(),
-                })?;
-                Ok(L1Value::Substrate(moved))
-            }
-            // RFC-0024 §4A (M-704): the L1 evaluator runs on the **monomorphized** env, where every
-            // closure has been lowered (`mono.rs`) to an ordinary `L1Value::Data` constructor value +
-            // an `apply` dispatch fn — so a raw `Expr::Lambda` never reaches eval. This arm is a
-            // **defensive, never-silent** invariant (G2): a lambda here is an internal staging bug
-            // (eval was handed an un-monomorphized env), surfaced explicitly, never a silent guess.
-            Expr::Lambda { .. } => Err(L1Error::Unsupported {
-                site: site.to_owned(),
-                what:
-                    "internal: an `Expr::Lambda` reached the evaluator — closures are lowered by \
-                       monomorphization (RFC-0024 §4A / M-704); run eval on the monomorphized env \
-                       (never a silent accept, G2)"
-                        .to_owned(),
-            }),
-
-            // `colony { hypha e1, …, hypha eN }` (RFC-0008 §4.7; M-666). The trusted base evaluates
-            // the **RT2 spawn-order sequentialization** — the reference semantics of any deterministic
-            // concurrent program (RFC-0008 §4.2/RT2): each hypha body is evaluated in spawn order,
-            // and the colony's value is the **last** hypha's (matching the type rule). This is the
-            // honest reference run — *not* a real scheduler (the trusted base stays sequential; KC-3).
-            // A real concurrent executor (`mycelium-mlir::runtime`, M-357) is a performance path
-            // validated *against* this sequentialization (the RT2 differential), never a new meaning.
-            // The parser guarantees ≥ 1 hypha; an empty list is still an explicit refusal here.
-            Expr::Colony(hyphae) => {
-                let Some((last, leading)) = hyphae.split_last() else {
-                    return Err(L1Error::Unsupported {
-                        site: site.to_owned(),
-                        what: "internal: an empty `colony` reached the evaluator — the parser \
-                               requires ≥ 1 hypha (RFC-0008 §4.7)"
-                            .to_owned(),
-                    });
-                };
-                // Evaluate each leading hypha for its (sequentialized) effect, in order; a refusal in
-                // any one propagates (never silently dropped — RT4/I1). Their values are not the
-                // colony's observable in this no-product v0 (only the last hypha's is). Each
-                // hypha's `@forage(policy)` (M-906/DN-70 D1), if present, is consulted immediately
-                // before its body runs (RT3 semantics-free placement — the decision never changes
-                // the body's value, only its EXPLAIN trail).
-                for h in leading {
-                    self.eval_hypha_forage(fuel, depth, ledger, site, scope, h)?;
-                    self.eval(fuel, depth, ledger, site, scope, &h.body)?;
-                }
-                self.eval_hypha_forage(fuel, depth, ledger, site, scope, last)?;
-                self.eval(fuel, depth, ledger, site, scope, &last.body)
-            }
-
-            Expr::Ascribe(inner, t) => {
-                let v = self.eval(fuel, depth, ledger, site, scope, inner)?;
-                if let Some(g) = t.guarantee {
-                    self.assert_guarantee(site, &v, g)?;
-                }
-                Ok(v)
-            }
-
-            Expr::App { head, args } => self.eval_app(fuel, depth, ledger, site, scope, head, args),
-
-            // DN-58 §A (M-667): `fuse(a, b)` — lawful binary merge over the `Fuse` semilattice.
-            // For repr types (Binary/Ternary/Dense/Bytes/Seq): the meet is bitwise-and (`bit.and`
-            // kernel prim) — commutative/associative/idempotent by bitwise-and semantics (Empirical).
-            // For Data types with a `Fuse` instance: delegate to the user's `join` fn (first-class
-            // call through `eval_app`). The checker has already verified type homogeneity; any type
-            // mismatch here is an internal never-silent error (G2).
-            // Guarantee: `Empirical` — three-way differential per DN-58 §A.5; semilattice laws are
-            // property-tested for repr types, not mechanized-Proven here.
-            Expr::Fuse { left, right } => {
-                let lv = self.eval(fuel, depth, ledger, site, scope, left)?;
-                let rv = self.eval(fuel, depth, ledger, site, scope, right)?;
-                match (&lv, &rv) {
-                    (L1Value::Repr(lrepr), L1Value::Repr(rrepr)) => {
-                        // Repr fuse = the `Binary` semilattice meet (bitwise-AND), via the
-                        // `fuse_join:binary` kernel prim — the *same* prim the L0/AOT paths dispatch
-                        // (DN-58 §A.5; M-817), so all three arms agree on the value **and** the
-                        // canonical `Derived{op:"fuse_join"}` provenance (RFC-0027 §10.6). A
-                        // non-`Binary` repr has no committed meet (DN-58 §A.6 F-A3): `fuse_join:binary`
-                        // refuses it never-silently via its operand check, exactly as `elab`
-                        // residuals it — a consistent refusal across paths (G2).
-                        let f = self.prims.get("fuse_join:binary").ok_or_else(|| {
-                            L1Error::Kernel(KernelError::UnknownPrim("fuse_join:binary".to_owned()))
-                        })?;
-                        Ok(L1Value::Repr(f("fuse_join:binary", &[lrepr, rrepr])?))
-                    }
-                    (L1Value::Data { ty, ctor: _, fields: _ }, _) => {
-                        // Data type: dispatch through the `join` function (user-declared Fuse impl).
-                        // The monomorphized env has `join` fn registered (the checker verified the
-                        // Fuse instance exists). If not present, a never-silent error (G2).
-                        let join_call = Expr::App {
-                            head: Box::new(Expr::Path(crate::ast::Path(vec!["join".to_owned()]))),
-                            args: vec![left.as_ref().clone(), right.as_ref().clone()],
-                        };
-                        let _ = ty; // ty is for context; the join fn is resolved by name
-                        self.eval(fuel, depth, ledger, site, scope, &join_call)
-                    }
-                    _ => Err(L1Error::Stuck {
-                        site: site.to_owned(),
-                        why: "`fuse` applied to mixed repr/data operands — internal type error \
-                              (the checker should have rejected this; DN-58 §A.4 — never-silent, G2)"
-                            .to_owned(),
-                    }),
-                }
-            }
-
-            // DN-58 §B (M-667/M-817): `reclaim(policy) { body }` — supervised scope. In the trusted
-            // base (this sequential evaluator), supervision is a runtime concern: the policy is
-            // evaluated for its effect, then the body runs directly — the **sequential reference**
-            // (exactly the `Let{_ = policy, body}` form `elab` lowers to, so L1-eval ≡ L0-interp ≡ AOT
-            // on the observable). The **real** RT7 supervision — the bounded restart cascade + the
-            // `SupervisionRecord` EXPLAIN trail — is the runtime-tier driver `mycelium_mlir::run_reclaim`
-            // (M-817; over the lazy body node from `elaborate_reclaim`), validated equal to this
-            // reference on success, the same layering the concurrent `colony` executor uses. KC-3: no
-            // L0 supervision node here. Never-silent (G2): a body failure propagates through the normal
-            // error path here, and is exactly what the supervisor restarts on there. [FLAG F-B1 →
-            // RESOLVED.] Guarantee: `Empirical` (M-713).
-            Expr::Reclaim { policy, body } => {
-                // Evaluate the policy (for its effect), then the body — the supervised scope's
-                // observable. This *is* the sequential reference the runtime supervisor is validated
-                // against (DN-58 §B).
-                let _ = self.eval(fuel, depth, ledger, site, scope, policy)?;
-                self.eval(fuel, depth, ledger, site, scope, body)
-            }
-
-            // M-826: `TupleLit` nodes are rewritten to `App { head: Path(MkTuple$N), args }` by
-            // the checker (`check_tuple_lit`) so a well-monomorphized env never contains a raw
-            // `TupleLit`. This arm is a defensive, never-silent invariant (G2): a surviving
-            // `TupleLit` here is an internal staging bug (eval was handed an un-checked expr),
-            // surfaced explicitly, never a silent accept.
-            Expr::TupleLit(_) => Err(L1Error::Unsupported {
-                site: site.to_owned(),
-                what: "internal: a TupleLit reached the evaluator — tuple literals are lowered by \
-                       the checker to constructor applications (M-826); run eval on a checked, \
-                       monomorphized env (never a silent accept, G2)"
-                    .to_owned(),
-            }),
-        }
-    }
-
-    /// Bounded iteration (RFC-0007 §4.8): walk the linearly recursive spine head-to-tail,
-    /// folding the accumulator through the body. The walk is **iterative** — a `for` over a long
-    /// list costs fuel per element (each body evaluation is clocked) but never host stack, so it
-    /// cannot trip the depth guard the way the equivalent hand-written recursion would.
-    #[allow(clippy::too_many_arguments)] // the machine threads its budgets + the form's five parts
-    fn eval_for(
-        &self,
-        fuel: &mut u64,
-        depth: u32,
-        ledger: &mut Budgets,
-        site: &str,
-        scope: &mut Vec<(String, L1Value)>,
-        x: &str,
-        xs: &Expr,
-        acc: &str,
-        init: &Expr,
-        body: &Expr,
-    ) -> Result<L1Value, L1Error> {
-        let mut spine = self.eval(fuel, depth, ledger, site, scope, xs)?;
-        let mut accv = self.eval(fuel, depth, ledger, site, scope, init)?;
-        loop {
-            let L1Value::Data { ty, ctor, fields } = spine else {
-                return Err(L1Error::Stuck {
-                    site: site.to_owned(),
-                    why: "`for` spine is not a data value".to_owned(),
-                });
-            };
-            if fields.is_empty() {
-                return Ok(accv); // a nil — the spine ends, the fold is the accumulator
-            }
-            // A cons: exactly one spine field (type == ty) and one element field (checked).
-            let Some(d) = self.env.types.get(&ty) else {
-                return Err(L1Error::Stuck {
-                    site: site.to_owned(),
-                    why: format!("`for` over unregistered type `{ty}`"),
-                });
-            };
-            let Some(ci) = d.ctors.iter().position(|c| c.name == ctor) else {
-                return Err(L1Error::Stuck {
-                    site: site.to_owned(),
-                    why: format!("`for` met unknown constructor `{ctor}` of `{ty}`"),
-                });
-            };
-            let mut elem = None;
-            let mut rest = None;
-            for (f, v) in d.ctors[ci].fields.iter().zip(fields) {
-                if matches!(f, crate::checkty::Ty::Data(n, _) if *n == ty) {
-                    rest = Some(v);
-                } else {
-                    elem = Some(v);
-                }
-            }
-            let (Some(elem), Some(rest)) = (elem, rest) else {
-                return Err(L1Error::Stuck {
-                    site: site.to_owned(),
-                    why: format!(
-                        "`{ctor}` is not nil/cons-shaped — the checker should have refused"
-                    ),
-                });
-            };
-            // Each element's body evaluation is clocked like any other expression.
-            *fuel = fuel.checked_sub(1).ok_or(L1Error::FuelExhausted)?;
-            scope.push((x.to_owned(), elem));
-            scope.push((acc.to_owned(), accv));
-            let next = self.eval(fuel, depth, ledger, site, scope, body);
-            scope.pop();
-            scope.pop();
-            accv = next?;
-            spine = rest;
-        }
-    }
-
-    /// The W7 flat-match machine (split out of [`Self::eval`] to keep the recursion frame small —
-    /// the depth guard's budget is host stack, so frame size is part of the contract).
-    #[allow(clippy::too_many_arguments)] // the machine threads its budgets + the form's parts
-    fn eval_match(
-        &self,
-        fuel: &mut u64,
-        depth: u32,
-        ledger: &mut Budgets,
-        site: &str,
-        scope: &mut Vec<(String, L1Value)>,
-        scrutinee: &Expr,
-        arms: &[crate::ast::Arm],
-    ) -> Result<L1Value, L1Error> {
-        let sv = self.eval(fuel, depth, ledger, site, scope, scrutinee)?;
-        // The checker has verified exhaustiveness, redundancy, types, and arity (W7), so the first
-        // arm whose (possibly nested) pattern matches fires. The trailing `Stuck` is unreachable for
-        // checked programs but kept as the honest never-silent fallback (G2).
-        for arm in arms {
-            let mut binds: Vec<(String, L1Value)> = Vec::new();
-            if self.try_match(site, &arm.pattern, &sv, &mut binds)? {
-                let mark = scope.len();
-                scope.extend(binds);
-                let r = self.eval(fuel, depth, ledger, site, scope, &arm.body);
-                scope.truncate(mark);
-                return r;
-            }
-        }
-        Err(L1Error::Stuck {
-            site: site.to_owned(),
-            why: "no arm matched the scrutinee (W7 — the checker requires coverage)".to_owned(),
-        })
     }
 
     /// Try to match `val` against `pat`, accumulating the pattern's binders into `binds`
@@ -1316,150 +2019,6 @@ impl<'e> Evaluator<'e> {
         }
     }
 
-    /// Execute a `wild { name(args…) }` block — the audited FFI floor (M-661/M-721; RFC-0028 §4.3).
-    /// The host operation is resolved through the prim registry under its reserved `wild:<name>` key
-    /// (the capability handle, §4.3); the registry registers no `wild:` op by default, so an
-    /// ungranted host op is an explicit [`KernelError::UnknownPrim`] (never silent — G2). The body
-    /// is the trusted/opaque escape (M-661): only its *shape* is interpreted (a host-call form
-    /// `name(args…)` or a bare `name`); any other shape is an explicit refusal. Mirrors the
-    /// elaborator's `wild → Op{wild:…}` lowering so this surface path and the L0/AOT paths agree
-    /// (the three-way differential).
-    fn eval_wild(
-        &self,
-        fuel: &mut u64,
-        depth: u32,
-        ledger: &mut Budgets,
-        site: &str,
-        scope: &mut Vec<(String, L1Value)>,
-        body: &Expr,
-    ) -> Result<L1Value, L1Error> {
-        let (name, args): (&str, &[Expr]) =
-            match body {
-                Expr::App { head, args } => match head.as_ref() {
-                    Expr::Path(p) if p.0.len() == 1 => (p.0[0].as_str(), args.as_slice()),
-                    _ => return Err(L1Error::Unsupported {
-                        site: site.to_owned(),
-                        what: "a v0 `wild` block body must be a host-call form `name(args…)` with \
-                               a single, undotted host-operation name (RFC-0028 §4.2)"
-                            .to_owned(),
-                    }),
-                },
-                Expr::Path(p) if p.0.len() == 1 => (p.0[0].as_str(), &[]),
-                _ => return Err(L1Error::Unsupported {
-                    site: site.to_owned(),
-                    what:
-                        "a v0 `wild` block body must be a host-call form `name(args…)` or a bare \
-                           `name` (RFC-0028 §4.2)"
-                            .to_owned(),
-                }),
-            };
-        let key = format!("wild:{name}");
-        // CBV: the host-call arguments evaluate left-to-right before dispatch.
-        let mut argv = Vec::with_capacity(args.len());
-        for a in args {
-            argv.push(self.eval(fuel, depth, ledger, site, scope, a)?);
-        }
-        let vals: Vec<&Value> = argv
-            .iter()
-            .map(|v| {
-                v.as_repr().ok_or_else(|| L1Error::Stuck {
-                    site: site.to_owned(),
-                    why: format!("`wild` host op `{name}` applied to a data value (RFC-0028 §4.4)"),
-                })
-            })
-            .collect::<Result<_, _>>()?;
-        let f = self
-            .prims
-            .get(&key)
-            .ok_or_else(|| L1Error::Kernel(KernelError::UnknownPrim(key.clone())))?;
-        Ok(L1Value::Repr(f(&key, &vals)?))
-    }
-
-    /// First-order application: user functions, saturated constructors (W6), and prims — split
-    /// out of [`Self::eval`] for the same frame-size reason as [`Self::eval_match`].
-    #[allow(clippy::too_many_arguments)] // the machine threads its budgets + the form's parts
-    fn eval_app(
-        &self,
-        fuel: &mut u64,
-        depth: u32,
-        ledger: &mut Budgets,
-        site: &str,
-        scope: &mut Vec<(String, L1Value)>,
-        head: &Expr,
-        args: &[Expr],
-    ) -> Result<L1Value, L1Error> {
-        let Expr::Path(p) = head else {
-            return Err(L1Error::Stuck {
-                site: site.to_owned(),
-                why: "v0 application head must be a name (first-order)".to_owned(),
-            });
-        };
-        if p.0.len() != 1 {
-            return Err(L1Error::Stuck {
-                site: site.to_owned(),
-                why: format!("dotted call `{}`", p.0.join(".")),
-            });
-        }
-        let name = &p.0[0];
-        // CBV: arguments evaluate left-to-right before any application.
-        let mut argv = Vec::with_capacity(args.len());
-        for a in args {
-            argv.push(self.eval(fuel, depth, ledger, site, scope, a)?);
-        }
-        // ADR-033/DN-74 (M-923): dynamic dispatch through a `FieldSpec::Fn` payload — `name` is a
-        // scope-bound variable (e.g. a `match`-projected dictionary field, `Mk(f) => f(x, y)`)
-        // holding an `L1Value::Fn`, not a call to a top-level function directly. Checked *before*
-        // `env.fns` (lexical scope shadows the global namespace, matching the value-position `Path`
-        // arm above) — a scope-bound name that is **not** a function value is a never-silent
-        // `Stuck` (never a silent fallthrough to some unrelated global of the same name, G2).
-        if let Some((_, v)) = scope.iter().rev().find(|(n, _)| n == name) {
-            let L1Value::Fn(callee) = v else {
-                return Err(L1Error::Stuck {
-                    site: site.to_owned(),
-                    why: format!("`{name}` is bound to a non-function value and cannot be applied"),
-                });
-            };
-            let callee = callee.clone();
-            return self.invoke(fuel, depth, ledger, &callee, argv);
-        }
-        if self.env.fns.contains_key(name) {
-            return self.invoke(fuel, depth, ledger, name, argv);
-        }
-        if let Some((d, i)) = self.env.ctor(name) {
-            if d.ctors[i].fields.len() != argv.len() {
-                return Err(L1Error::Stuck {
-                    site: site.to_owned(),
-                    why: format!("unsaturated constructor `{name}` (W6)"),
-                });
-            }
-            return Ok(L1Value::Data {
-                ty: d.name.clone(),
-                ctor: name.clone(),
-                fields: argv,
-            });
-        }
-        if let Some(kernel) = prim_kernel_name(name) {
-            let vals: Vec<&Value> = argv
-                .iter()
-                .map(|v| {
-                    v.as_repr().ok_or_else(|| L1Error::Stuck {
-                        site: site.to_owned(),
-                        why: format!("prim `{name}` applied to a data value"),
-                    })
-                })
-                .collect::<Result<_, _>>()?;
-            let f = self
-                .prims
-                .get(kernel)
-                .ok_or_else(|| L1Error::Kernel(KernelError::UnknownPrim(kernel.to_owned())))?;
-            return Ok(L1Value::Repr(f(kernel, &vals)?));
-        }
-        Err(L1Error::Stuck {
-            site: site.to_owned(),
-            why: format!("unknown function/constructor/prim `{name}`"),
-        })
-    }
-
     /// The stage-0 dynamic guarantee check (RFC-0007 §4.3): the value's actual tag must be **at
     /// least as strong** as the asserted index — an annotation may only weaken (VR-5). The check
     /// never modifies the value: a passing assertion leaves the (possibly stronger) tag in place,
@@ -1506,6 +2065,171 @@ impl<'e> Evaluator<'e> {
             }),
         }
     }
+}
+
+/// Map the shared [`RecursionBudget`]'s canonical over-budget error to the L1 evaluator's
+/// [`L1Error::DepthExceeded`] at the **same threshold** (RFC-0041 §5.1 error parity). The L1 machine
+/// charges only the depth ceiling, so [`BudgetError::OutOfBudget`] is never constructed on this path;
+/// it is mapped defensively to the same never-silent refusal (never a panic — G2).
+fn depth_exceeded(e: BudgetError) -> L1Error {
+    match e {
+        BudgetError::DepthExceeded { limit } => L1Error::DepthExceeded { limit },
+        BudgetError::OutOfBudget { .. } => L1Error::DepthExceeded { limit: 0 },
+    }
+}
+
+/// The **control** register of the L1 work-stack CEK machine (RFC-0041 §4.1): either *evaluate* an
+/// expression (descend), or *settle* a produced value / propagated error up through the continuation
+/// stack (ascend). One `enum` avoids two mutually-recursive loop functions — the whole machine is a
+/// single `match` on this.
+// `Settle` carries a value/error and `Eval` a thin ref; the machine returns `Ctrl` by value on the
+// hot path, where boxing the value would add per-step heap churn for no real win (values are moved,
+// not copied). The size gap is bounded by `L1Value`'s own (pinned) size.
+#[allow(clippy::large_enum_variant)]
+enum Ctrl<'e> {
+    /// Evaluate `e` under the current `site`/`base` context.
+    Eval(&'e Expr),
+    /// Propagate a produced value (`Ok`) or an error (`Err`) into the top continuation [`Frame`];
+    /// an `Err` unwinds the stack, running each frame's deterministic scope-exit cleanup (G2).
+    Settle(Result<L1Value, L1Error>),
+}
+
+/// The machine's mutable **registers**: the shared environment (`scope` + the current function's
+/// `base` marker — each function sees only `scope[base..]`, so lexical scope survives across calls),
+/// the current `site` (function name, for error attribution), and the explicit continuation
+/// work-stack. Bundled so the machine's step helpers thread one `&mut` instead of five.
+struct Regs<'e, 'b> {
+    /// The current function's name — the `site` of every error raised while its body runs.
+    site: &'e str,
+    /// The scope index at which the current function's parameters begin (its lexical floor).
+    base: usize,
+    /// The single shared environment: `(name, value)` bindings, innermost last.
+    scope: Vec<(String, L1Value)>,
+    /// The explicit heap continuation stack (the CEK "K").
+    stack: Vec<Frame<'e, 'b>>,
+}
+
+/// One **continuation frame** of the L1 work-stack CEK machine (RFC-0041 §4.1/§4.6): the reified
+/// *post-child* work for one partially-evaluated construct. Each variant names what to do once the
+/// child it descended into settles — the interleaved scope push/pop, `release_if_abandoned`,
+/// return-guarantee assert, swap/ascription checks, and (for `App`) the source-call depth
+/// reservation ([`DepthGuard`]) that a former recursive stack frame carried implicitly.
+#[allow(clippy::large_enum_variant)] // frames are short-lived + depth-bounded (<= budget); boxing
+                                     // every value-carrying variant would add per-frame heap churn on the eval hot path for no real win.
+enum Frame<'e, 'b> {
+    /// A list literal: `elems[idx]` just evaluated → collect its repr, evaluate the next, or build
+    /// the `Seq`.
+    ListElem {
+        elems: &'e [Expr],
+        idx: usize,
+        vals: Vec<Value>,
+    },
+    /// A `let`: the bound value just evaluated → assert its optional guarantee index, push the
+    /// binding, evaluate the body.
+    LetBound {
+        name: &'e str,
+        ty_guar: Option<Strength>,
+        body: &'e Expr,
+    },
+    /// A `let` body just evaluated → pop the binding + `release_if_abandoned` (M-904 scope-exit).
+    LetPop,
+    /// An `if` condition just evaluated → choose the consequent/alternate branch (transparent: no
+    /// value transform, so the chosen branch stays TCO-eligible).
+    IfBranch { conseq: &'e Expr, alt: &'e Expr },
+    /// A `match` scrutinee just evaluated → try the arms' patterns.
+    MatchArms { arms: &'e [crate::ast::Arm] },
+    /// A `match` arm body just evaluated → truncate the scope back to `mark` (drop the arm binders).
+    MatchPop { mark: usize },
+    /// A `swap` source just evaluated → run the certified swap + optional guarantee assert.
+    SwapPost {
+        target: &'e crate::ast::TypeRef,
+        policy: &'e crate::ast::Path,
+    },
+    /// A `consume` operand just evaluated → the checked affine Live→Consumed move.
+    ConsumePost,
+    /// An ascription's inner value just evaluated → assert the guarantee index.
+    AscribePost { guar: Strength },
+    /// `fuse`'s left operand just evaluated → evaluate the right (carrying the left value + exprs).
+    FuseAfterLeft {
+        left_expr: &'e Expr,
+        right_expr: &'e Expr,
+    },
+    /// `fuse`'s right operand just evaluated → combine (repr prim) or begin the data `join` dispatch.
+    FuseAfterRight {
+        lv: L1Value,
+        left_expr: &'e Expr,
+        right_expr: &'e Expr,
+    },
+    /// The data-`fuse` `join` call: its (re-evaluated) left operand just evaluated → evaluate right.
+    FuseJoinLeft {
+        right_expr: &'e Expr,
+        guard: DepthGuard<'b>,
+    },
+    /// The data-`fuse` `join` call: its right operand just evaluated → dispatch `join(left, right)`.
+    FuseJoinRight { lv2: L1Value, guard: DepthGuard<'b> },
+    /// A `reclaim` policy just evaluated (discarded) → evaluate the supervised body.
+    ReclaimBody { body: &'e Expr },
+    /// A `colony` hypha's `@forage` policy just evaluated → record the placement decision, then the
+    /// hypha's body.
+    ColonyForage { hyphae: &'e [Hypha], idx: usize },
+    /// A `colony` hypha's body just evaluated → the last hypha's value is the result; a leading
+    /// hypha's value is discarded and the next hypha begins.
+    ColonyBody { hyphae: &'e [Hypha], idx: usize },
+    /// A `wild` host-op argument just evaluated → collect it, evaluate the next, or dispatch the op.
+    WildArgs {
+        key: String,
+        args: &'e [Expr],
+        idx: usize,
+        argv: Vec<L1Value>,
+    },
+    /// An application argument just evaluated → collect it, evaluate the next, or dispatch the call.
+    /// Holds the App's source-call [`DepthGuard`] (charged at the App boundary, §4.0), moved into the
+    /// callee's [`Self::InvokePost`] for a user call or dropped once a ctor/prim result is built.
+    AppArgs {
+        name: &'e str,
+        args: &'e [Expr],
+        idx: usize,
+        argv: Vec<L1Value>,
+        guard: DepthGuard<'b>,
+    },
+    /// A function body just evaluated → release the call's parameter scope (M-904), assert the
+    /// return-guarantee index, and restore the caller's `site`/`base`. `tco_eligible` records whether
+    /// *this* frame may be elided when its function makes a direct tail call (no pending post-work);
+    /// `guard` is the call's depth reservation, released when this frame is dropped.
+    InvokePost {
+        param_base: usize,
+        saved_site: &'e str,
+        saved_base: usize,
+        ret_guar: Option<Strength>,
+        nparams: usize,
+        tco_eligible: bool,
+        // Held purely for its `Drop` — releasing this call's source-call depth unit when the frame
+        // is dropped (on return, TCO elision, or error unwind). Never read (RAII), hence the allow.
+        #[allow(dead_code)]
+        guard: DepthGuard<'b>,
+    },
+    /// A `for`'s spine (`xs`) just evaluated → evaluate the initial accumulator (`init`).
+    ForAfterXs {
+        x: &'e str,
+        acc: &'e str,
+        init: &'e Expr,
+        body: &'e Expr,
+    },
+    /// A `for`'s initial accumulator just evaluated → begin the iterative spine walk.
+    ForAfterInit {
+        x: &'e str,
+        acc: &'e str,
+        body: &'e Expr,
+        spine: L1Value,
+    },
+    /// A `for` body just evaluated (the next accumulator) → pop the element binders, advance the
+    /// spine to `spine` (the tail), and either finish or evaluate the body for the next element.
+    ForStep {
+        x: &'e str,
+        acc: &'e str,
+        body: &'e Expr,
+        spine: L1Value,
+    },
 }
 
 /// Forward a bridge refusal (shared with elaboration) as an explicit evaluator refusal.

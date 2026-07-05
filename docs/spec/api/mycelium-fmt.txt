@@ -1,6 +1,7 @@
 pub mod mycelium_fmt
 #[non_exhaustive] pub enum mycelium_fmt::FmtError
 pub mycelium_fmt::FmtError::Header(alloc::string::String)
+pub mycelium_fmt::FmtError::OutOfBudget(mycelium_workstack::BudgetError)
 pub mycelium_fmt::FmtError::OutOfScope(alloc::string::String)
 pub mycelium_fmt::FmtError::Parse(alloc::string::String)
 impl mycelium_fmt::FmtError
@@ -11,6 +12,7 @@ impl core::cmp::Eq for mycelium_fmt::FmtError
 impl core::cmp::PartialEq for mycelium_fmt::FmtError
 pub fn mycelium_fmt::FmtError::eq(&self, &mycelium_fmt::FmtError) -> bool
 impl core::error::Error for mycelium_fmt::FmtError
+pub fn mycelium_fmt::FmtError::source(&self) -> core::option::Option<&(dyn core::error::Error + 'static)>
 impl core::fmt::Debug for mycelium_fmt::FmtError
 pub fn mycelium_fmt::FmtError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::fmt::Display for mycelium_fmt::FmtError

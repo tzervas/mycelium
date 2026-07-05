@@ -25,7 +25,13 @@ use crate::value::Value;
 
 /// A constructed data value: a saturated constructor application (RFC-0011 §4.1, W6) with a
 /// meet-summary guarantee.
-#[derive(Debug, Clone, PartialEq)]
+///
+/// **Recursion-safety (RFC-0041 §4.5, W3):** [`Clone`], [`PartialEq`], and [`Drop`] are **manual,
+/// iterative** (below), *not* `#[derive]`d, and the content hash ([`Canon::datum`]) is iterative —
+/// a derived (recursive) form overflows the native stack (`SIGABRT`, violating never-silent G2) on a
+/// deeply-nested `Datum`↔[`CoreValue`] chain (e.g. a `S(S(S(…Z)))` numeral). All four are
+/// bit-identical to the derived forms (mutation-witnessed; §6 within-freeze hardening bar (a)).
+#[derive(Debug)]
 pub struct Datum {
     ctor: CtorRef,
     fields: Vec<CoreValue>,
@@ -86,7 +92,12 @@ impl Datum {
 
 /// A runtime value: a representation [`Value`] (one of the four paradigm kinds) or an algebraic
 /// [`Datum`]. The interpreter's normal forms (RFC-0011 §4.6).
-#[derive(Debug, Clone, PartialEq)]
+///
+/// **Recursion-safety (RFC-0041 §4.5, W3):** [`Clone`] and [`PartialEq`] are **manual, iterative**
+/// (below) over the shared `Datum`↔`CoreValue` worklist; `Drop` stays derived because a
+/// `CoreValue::Data`'s only owned recursive field is a [`Datum`], whose manual iterative `Drop`
+/// tears down the whole cluster in one bounded pass.
+#[derive(Debug)]
 pub enum CoreValue {
     /// A representation value (`repr + payload + Meta`).
     Repr(Value),
@@ -127,10 +138,12 @@ impl CoreValue {
     /// a datum's constructor+fields.
     #[must_use]
     pub fn content_hash(&self) -> ContentHash {
-        match self {
-            CoreValue::Repr(v) => v.content_hash(),
-            CoreValue::Data(d) => d.content_hash(),
-        }
+        // Route through the iterative [`Canon::core_value`] — bit-identical to the per-variant
+        // `Value`/`Datum` `content_hash` (a `Repr` hashes its repr+payload; a `Data` its
+        // ctor+fields), but recursion-safe on a deep datum spine (RFC-0041 §4.5).
+        let mut c = Canon::new();
+        c.core_value(self);
+        c.finish()
     }
 }
 
@@ -146,9 +159,159 @@ impl From<Datum> for CoreValue {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Iterative, recursion-safe Drop / Clone / PartialEq for the `Datum`↔`CoreValue` cluster
+// (RFC-0041 §4.5, W3). A `Datum` is a `Box`-owned/`Vec`-owned acyclic tree (no `Rc`/`Arc` shared
+// spine), so an explicit-worklist traversal frees/visits each node exactly once — double-free-safe.
+// **Recorded precondition (Low freeze11):** a future intern/DAG cache putting `Rc`/`Arc` on the
+// datum spine would invalidate the drop; it holds today by construction. `#![forbid(unsafe_code)]`
+// still holds — only safe `Vec` + `mem::take` take-loops are used.
+// ---------------------------------------------------------------------------
+
+/// Iterative deep clone of a [`CoreValue`] and the `Datum`s it contains, bit-identical to the
+/// derived clone (the stored datum `guarantee` summary is preserved verbatim — **not** recomputed
+/// via [`Datum::new`], which `meet`s and could differ). Expand/assemble worklist over a `CoreValue`
+/// value stack (`done.pop()` yields fields in forward declaration order).
+fn clone_core(root: &CoreValue) -> CoreValue {
+    enum Task<'a> {
+        Expand(&'a CoreValue),
+        AssembleData {
+            ctor: CtorRef,
+            guarantee: GuaranteeStrength,
+            arity: usize,
+        },
+    }
+    let mut tasks: Vec<Task<'_>> = vec![Task::Expand(root)];
+    let mut done: Vec<CoreValue> = Vec::new();
+    while let Some(task) = tasks.pop() {
+        match task {
+            Task::Expand(cv) => match cv {
+                // `Value` is bounded-depth by construction, so its derived clone is not a deep vector.
+                CoreValue::Repr(v) => done.push(CoreValue::Repr(v.clone())),
+                CoreValue::Data(d) => {
+                    tasks.push(Task::AssembleData {
+                        ctor: d.ctor.clone(),
+                        guarantee: d.guarantee,
+                        arity: d.fields.len(),
+                    });
+                    for f in &d.fields {
+                        tasks.push(Task::Expand(f));
+                    }
+                }
+            },
+            Task::AssembleData {
+                ctor,
+                guarantee,
+                arity,
+            } => {
+                let mut fields = Vec::with_capacity(arity);
+                for _ in 0..arity {
+                    fields.push(done.pop().expect("clone_core: datum field"));
+                }
+                done.push(CoreValue::Data(Datum {
+                    ctor,
+                    fields,
+                    guarantee,
+                }));
+            }
+        }
+    }
+    done.pop()
+        .expect("clone_core: exactly one root value remains")
+}
+
+/// Iterative structural equality of two [`CoreValue`]s (and their nested `Datum`s), result-identical
+/// to the derived `PartialEq` (which for a `Datum` compares `ctor`, `fields`, **and** the
+/// `guarantee` summary — all reproduced here). Bounded native stack regardless of nesting depth.
+fn eq_core(a: &CoreValue, b: &CoreValue) -> bool {
+    let mut stack: Vec<(&CoreValue, &CoreValue)> = vec![(a, b)];
+    while let Some((x, y)) = stack.pop() {
+        match (x, y) {
+            (CoreValue::Repr(v1), CoreValue::Repr(v2)) => {
+                if v1 != v2 {
+                    return false;
+                }
+            }
+            (CoreValue::Data(d1), CoreValue::Data(d2)) => {
+                if d1.ctor != d2.ctor
+                    || d1.guarantee != d2.guarantee
+                    || d1.fields.len() != d2.fields.len()
+                {
+                    return false;
+                }
+                for (p, q) in d1.fields.iter().zip(&d2.fields) {
+                    stack.push((p, q));
+                }
+            }
+            _ => return false,
+        }
+    }
+    true
+}
+
+impl Clone for Datum {
+    fn clone(&self) -> Datum {
+        // Each top-level field is cloned by the iterative `clone_core` (which absorbs all nesting
+        // depth), so this map only ranges over the datum's *breadth* — bounded native stack.
+        let fields = self.fields.iter().map(clone_core).collect();
+        Datum {
+            ctor: self.ctor.clone(),
+            fields,
+            guarantee: self.guarantee,
+        }
+    }
+}
+
+impl Clone for CoreValue {
+    fn clone(&self) -> CoreValue {
+        clone_core(self)
+    }
+}
+
+impl PartialEq for Datum {
+    fn eq(&self, other: &Datum) -> bool {
+        self.ctor == other.ctor
+            && self.guarantee == other.guarantee
+            && self.fields.len() == other.fields.len()
+            && self
+                .fields
+                .iter()
+                .zip(&other.fields)
+                .all(|(a, b)| eq_core(a, b))
+    }
+}
+
+impl PartialEq for CoreValue {
+    fn eq(&self, other: &CoreValue) -> bool {
+        eq_core(self, other)
+    }
+}
+
+impl Drop for Datum {
+    fn drop(&mut self) {
+        // Flatten the owned field cluster onto an explicit worklist; each nested `Datum` is emptied
+        // before it drops, so its re-entrant `Drop` sees empty `fields` — bounded reentrancy, never
+        // deep recursion. (`Value` leaves drop in place — bounded-depth by construction.)
+        //
+        // Allocation honesty (RFC-0041 §4.5): as with `Node::drop`, a fully alloc-free iterative
+        // drop of this non-intrusive tree in **safe** Rust is not achievable (no spare `next` field;
+        // `Drop` gets no preallocated scratch); the `Vec` starts empty (no allocation) and grows only
+        // when the cluster is actually deep — the case that otherwise *guaranteed* a `SIGABRT`.
+        let mut work: Vec<CoreValue> = std::mem::take(&mut self.fields);
+        while let Some(cv) = work.pop() {
+            if let CoreValue::Data(mut d) = cv {
+                work.extend(std::mem::take(&mut d.fields));
+                // `d` drops here as a childless shell.
+            }
+            // `CoreValue::Repr(v)` drops `v` here (bounded by construction).
+        }
+    }
+}
+
 impl Canon {
     /// Encode a [`CoreValue`]'s identity-bearing content (a representation value's repr+payload, or
     /// a datum's constructor+fields). `Meta` / the datum summary are dynamic and excluded.
+    /// Iterative for the `Data` arm (delegates to the iterative [`Canon::datum`]).
     pub(crate) fn core_value(&mut self, v: &CoreValue) {
         match v {
             CoreValue::Repr(rv) => self.value(rv),
@@ -156,14 +319,36 @@ impl Canon {
         }
     }
 
-    /// Encode a [`Datum`]: its constructor reference then each field (order significant).
+    /// Encode a [`Datum`]: its constructor reference then each field (order significant), **pre-order
+    /// and iterative** (RFC-0041 §4.5) — byte-for-byte identical to the former recursive encoding, so
+    /// content addresses are unchanged, but with bounded native-stack use on a deep datum spine.
     pub(crate) fn datum(&mut self, d: &Datum) {
+        // Emit `d`'s header, then walk the field cluster depth-first, left-to-right (`iter().rev()`
+        // pushes so the worklist pops in forward order) — reproducing the recursive pre-order stream.
+        self.datum_header(d);
+        let mut work: Vec<&CoreValue> = Vec::new();
+        for f in d.fields().iter().rev() {
+            work.push(f);
+        }
+        while let Some(cv) = work.pop() {
+            match cv {
+                CoreValue::Repr(rv) => self.value(rv),
+                CoreValue::Data(inner) => {
+                    self.datum_header(inner);
+                    for f in inner.fields().iter().rev() {
+                        work.push(f);
+                    }
+                }
+            }
+        }
+    }
+
+    /// Emit one datum's header bytes (tag · ctor-ref · field count) — the per-node prefix the
+    /// recursive `datum` encoder wrote before recursing into fields.
+    fn datum_header(&mut self, d: &Datum) {
         self.tag(crate::content::tag::DATUM);
         self.ctor_ref(d.ctor());
         self.u64(d.fields().len() as u64);
-        for f in d.fields() {
-            self.core_value(f);
-        }
     }
 }
 

@@ -58,12 +58,31 @@ use mycelium_l1::lexer::{lex_with_comments, Comment};
 use mycelium_l1::token::{Spanned, Tok};
 use mycelium_l1::{expand_to_source, parse, parse_phylum};
 use mycelium_proj::{parse_header, Deprecated, StructuredHeader};
+use mycelium_workstack::{ensure_sufficient_stack, BudgetError, ProcessArena, RecursionBudget};
 use std::collections::HashMap;
 
 /// The formatter spelling/version this build implements. The `[toolchain].format` pin (M-359) is a
 /// **hard pin** (M-364 §10.3): a mismatch is refused, never formatted with rules the project didn't ask
 /// for (G2).
 pub const MYCFMT_VERSION: &str = "mycfmt-0";
+
+/// RFC-0041 §4.2/§9 process-wide arena ceiling `mycfmt`'s render family reserves against before
+/// rendering. **Declared** — an asserted operational default, not a measured bound: a `.myc` source
+/// is untrusted input (a vendored/spore-resolved dependency, or a CI run over an untrusted PR diff —
+/// RFC-0041 §5 untrusted-input coverage), and every concurrent format call (batch `mycfmt --check`
+/// over a project, or a future LSP format-on-save) charges the *same* process-global counter
+/// ([`mycelium_workstack::current_process_bytes`]), so the sum across concurrent renders is what
+/// this ceiling bounds. Each consuming crate declares its own operational default (consumer-side
+/// wiring); a single shared constant across the workspace is a follow-up centralization item, not
+/// introduced silently here (`docs/notes/W7-arena-coverage-audit.md`).
+const PROCESS_ARENA_CEILING_BYTES: u64 = 256 * 1024 * 1024;
+
+/// A conservative, **Declared** (not measured) multiplier on the input source length, used only to
+/// *size the pre-render reservation* — never to bound the actual output. The readable layout can
+/// expand a compact source somewhat (re-indentation, wrapped segments, re-emitted comments); this
+/// multiplier is generous relative to observed expansion so the reservation stays a conservative
+/// upper bound in practice, without being `Proven`.
+const RENDER_BYTES_PER_SRC_BYTE: u64 = 4;
 
 /// The default target line width for the **readable** layout style (M-974; retuned M-976). Purely a
 /// *presentation* heuristic: a construct whose compact single-line rendering, placed at its indent
@@ -181,6 +200,12 @@ pub enum FmtError {
     Header(String),
     /// A construct outside the round-trip-safe v0 scope, or a `[toolchain].format` pin mismatch (exit 4).
     OutOfScope(String),
+    /// **RFC-0041 §4.2/§9 (W7 process-arena coverage).** The pre-render reservation against the
+    /// shared process-wide memory arena would exceed its ceiling (exit 5) — refused rather than let
+    /// this render's memory join an unbounded concurrent sum with other in-flight passes (batch
+    /// `mycfmt` runs, a future LSP format-on-save). Never a partial rewrite (G2), same as every other
+    /// `FmtError` variant.
+    OutOfBudget(BudgetError),
 }
 
 impl FmtError {
@@ -191,6 +216,7 @@ impl FmtError {
             FmtError::Parse(_) => 2,
             FmtError::Header(_) => 3,
             FmtError::OutOfScope(_) => 4,
+            FmtError::OutOfBudget(_) => 5,
         }
     }
 }
@@ -201,11 +227,21 @@ impl std::fmt::Display for FmtError {
             FmtError::Parse(m) => write!(f, "parse-error: {m}"),
             FmtError::Header(m) => write!(f, "header-error: {m}"),
             FmtError::OutOfScope(m) => write!(f, "refused: {m}"),
+            FmtError::OutOfBudget(e) => {
+                write!(f, "refused (RFC-0041 §4.2 process-arena ceiling): {e}")
+            }
         }
     }
 }
 
-impl std::error::Error for FmtError {}
+impl std::error::Error for FmtError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            FmtError::OutOfBudget(e) => Some(e),
+            FmtError::Parse(_) | FmtError::Header(_) | FmtError::OutOfScope(_) => None,
+        }
+    }
+}
 
 /// Does `src` open with a `phylum` header — i.e. is the first significant line (after leading blank or
 /// `//`-comment lines) the reserved `phylum` keyword at a word boundary? Lets mycfmt refuse a *malformed*
@@ -291,13 +327,36 @@ pub fn format_source_styled(
 /// style- and cfg-independent, so all configurations emit the same surface AST (C1) from the same
 /// input. For `Style::Compact` the `cfg` is inert (the compact path renders item bodies inline).
 ///
+/// **RFC-0041 §4.2/§9 W7 (process-arena coverage).** Delegates to
+/// [`format_source_styled_cfg_with_arena`] with the crate's declared default ceiling
+/// ([`PROCESS_ARENA_CEILING_BYTES`]) — see that function for the reservation.
+///
 /// # Errors
-/// See [`format_source`].
+/// See [`format_source`], plus [`FmtError::OutOfBudget`] if the pre-render reservation would exceed
+/// the process-wide arena ceiling.
 pub fn format_source_styled_cfg(
     src: &str,
     pin: Option<&str>,
     style: Style,
     cfg: LayoutCfg,
+) -> Result<Formatted, FmtError> {
+    let arena = ProcessArena::new(PROCESS_ARENA_CEILING_BYTES);
+    format_source_styled_cfg_with_arena(src, pin, style, cfg, &arena)
+}
+
+/// [`format_source_styled_cfg`], parameterized over an explicit [`ProcessArena`] (`pub(crate)`, so
+/// this crate's own tests can inject a tiny-ceiling arena and witness a real refusal — production
+/// callers always go through [`format_source_styled_cfg`], which supplies the crate's declared
+/// default ceiling).
+///
+/// # Errors
+/// See [`format_source_styled_cfg`].
+pub(crate) fn format_source_styled_cfg_with_arena(
+    src: &str,
+    pin: Option<&str>,
+    style: Style,
+    cfg: LayoutCfg,
+    arena: &ProcessArena,
 ) -> Result<Formatted, FmtError> {
     // Hard pin (M-364 §10.3): never format with rules the project did not pin.
     if let Some(p) = pin {
@@ -380,6 +439,13 @@ pub fn format_source_styled_cfg(
         }
     }
 
+    // RFC-0041 §4.2/§9 (W7): reserve against the shared process-wide arena before the render-family
+    // call below — `src` is untrusted input (§5), so this bounds the *concurrent sum* of in-flight
+    // renders' estimated cost, not just this one call's. Held for the render's duration; released on
+    // drop at the end of this function.
+    let estimate = (src.len() as u64).saturating_mul(RENDER_BYTES_PER_SRC_BYTE);
+    let _arena_reservation = arena.reserve(estimate).map_err(FmtError::OutOfBudget)?;
+
     // Render the body: items with their leading/trailing comments interleaved.
     let (body, body_notes) = render_body_with_comments(&nodule, &plan, style, cfg)?;
     out.push_str(&body);
@@ -450,12 +516,33 @@ pub fn format_source_styled_cfg(
 /// **Scope:** the same v0 scope as `format_source` — single-nodule sources only; a phylum /
 /// multi-nodule source is an explicit `OutOfScope` refusal, never a partial rewrite (G2).
 ///
+/// **RFC-0041 §4.2/§9 W7 (process-arena coverage).** Delegates to
+/// [`flatten_source_with_arena`] with the crate's declared default ceiling
+/// ([`PROCESS_ARENA_CEILING_BYTES`]) — see that function for the reservation.
+///
 /// # Errors
 /// [`FmtError::Parse`] (unparsable), [`FmtError::Header`] (malformed `// nodule:` / `// @key:`
-/// header — structurally invalid, not just metadata), or [`FmtError::OutOfScope`] (a pin
-/// mismatch, a phylum/multi-nodule source, or a body that does not round-trip).  On any error
-/// nothing is written (G2).
+/// header — structurally invalid, not just metadata), [`FmtError::OutOfScope`] (a pin
+/// mismatch, a phylum/multi-nodule source, or a body that does not round-trip), or
+/// [`FmtError::OutOfBudget`] (the pre-render reservation would exceed the process-wide arena
+/// ceiling).  On any error nothing is written (G2).
 pub fn flatten_source(src: &str, pin: Option<&str>) -> Result<Formatted, FmtError> {
+    let arena = ProcessArena::new(PROCESS_ARENA_CEILING_BYTES);
+    flatten_source_with_arena(src, pin, &arena)
+}
+
+/// [`flatten_source`], parameterized over an explicit [`ProcessArena`] (`pub(crate)`, so this
+/// crate's own tests can inject a tiny-ceiling arena and witness a real refusal — production
+/// callers always go through [`flatten_source`], which supplies the crate's declared default
+/// ceiling).
+///
+/// # Errors
+/// See [`flatten_source`].
+pub(crate) fn flatten_source_with_arena(
+    src: &str,
+    pin: Option<&str>,
+    arena: &ProcessArena,
+) -> Result<Formatted, FmtError> {
     // Hard pin: same guard as format_source.
     if let Some(p) = pin {
         if p != MYCFMT_VERSION {
@@ -484,6 +571,11 @@ pub fn flatten_source(src: &str, pin: Option<&str>) -> Result<Formatted, FmtErro
 
     // Parse the nodule body (raw parse — preserves `default paradigm`/`with paradigm`).
     let nodule = parse(src).map_err(|e| FmtError::Parse(e.to_string()))?;
+
+    // RFC-0041 §4.2/§9 (W7): reserve against the shared process-wide arena before the render below —
+    // see `format_source_styled_cfg_with_arena`'s identical comment.
+    let estimate = (src.len() as u64).saturating_mul(RENDER_BYTES_PER_SRC_BYTE);
+    let _arena_reservation = arena.reserve(estimate).map_err(FmtError::OutOfBudget)?;
 
     // Render the flat form directly from AST (no comments, no multiline layout).
     let out = render_flat(&nodule);
@@ -519,7 +611,20 @@ pub fn flatten_source(src: &str, pin: Option<&str>) -> Result<Formatted, FmtErro
 ///
 /// This is the layout policy for `--flatten`; it reuses the existing item renderers but
 /// collapses all whitespace so the whole program fits on one line.  No comments are emitted.
+///
+/// **RFC-0041 §4.7 (RR-29) guard-hole closure (W1).** This is [`flatten_source`]'s only render-family
+/// entry, so it wraps once, here, in [`ensure_sufficient_stack`] — every callee it reaches
+/// (`render_item_flat`, `render_impl_flat`, and transitively `render_expr_canonical`, each already
+/// self-guarded per item/method too) runs on the grown 256 MiB worker stack rather than the caller's.
+/// One worker-thread spawn per `flatten_source` call, not per recursion level (`nodule.items` is a
+/// flat loop, not itself recursive). Output is unchanged — only the stack it runs on changed.
 fn render_flat(nodule: &mycelium_l1::ast::Nodule) -> String {
+    let budget = RecursionBudget::with_depth_default(u64::MAX, u64::MAX);
+    ensure_sufficient_stack(&budget, || render_flat_inner(nodule))
+}
+
+/// The actual body of [`render_flat`] — see that function's doc comment for the guard-hole wrap.
+fn render_flat_inner(nodule: &mycelium_l1::ast::Nodule) -> String {
     let mut parts: Vec<String> = Vec::new();
 
     // Nodule header component (terminates with `;` per DN-57 §3 / M-818).
@@ -577,6 +682,9 @@ fn render_item_flat(item: &mycelium_l1::ast::Item) -> String {
             let pub_prefix = if fd.vis.is_pub() { "pub " } else { "" };
             let thaw_prefix = if fd.thaw { "thaw " } else { "" };
             let sig = render_sig_tail(&fd.sig);
+            // Guarded entry (RFC-0041 §4.7 RR-29 / W1): each item's body is its own fresh
+            // `render_expr_canonical` call, so a pathological single item is stack-safe on its own,
+            // independent of `render_flat`'s outer wrap below.
             let body = render_expr_canonical(&fd.body);
             format!("{pub_prefix}{thaw_prefix}fn {sig} = {body};")
         }
@@ -615,6 +723,7 @@ fn render_impl_flat(id: &mycelium_l1::ast::ImplDecl) -> String {
             let sig = render_sig_tail(&m.sig);
             let pub_prefix = if m.vis.is_pub() { "pub " } else { "" };
             let thaw_prefix = if m.thaw { "thaw " } else { "" };
+            // Guarded entry (RFC-0041 §4.7 RR-29 / W1) — see `render_item_flat`'s matching comment.
             let body = render_expr_canonical(&m.body);
             format!("{pub_prefix}{thaw_prefix}fn {sig} = {body};")
         })
@@ -1327,7 +1436,30 @@ fn collect_match_arm_comments(
 
 /// Render the nodule body (all items) with leading/trailing comments interleaved.
 /// Returns the rendered text and any notes for the caller.
+///
+/// **RFC-0041 §4.7 (RR-29) guard-hole closure (W1).** This is [`format_source_styled_cfg`]'s only
+/// render-family entry, so it wraps once, here, in [`ensure_sufficient_stack`] — every callee it
+/// reaches (`render_item_with_comments`, `render_fn_decl_with_comments`, `render_impl_with_comments`,
+/// the Shape-Dispatched Readable family `render_expr_readable`/`render_expr_broken`/`render_spine`,
+/// `render_expr_with_arm_comments`, and transitively `render_expr_canonical`) runs on the grown
+/// 256 MiB worker stack rather than the caller's. One worker-thread spawn per format call, not per
+/// recursion level (`nodule.items` is a flat loop over items; the per-item recursion beneath runs
+/// unwrapped on this single grown stack). Output is unchanged — only the stack it runs on changed.
 fn render_body_with_comments(
+    nodule: &Nodule,
+    plan: &CommentPlan,
+    style: Style,
+    cfg: LayoutCfg,
+) -> Result<(String, Vec<String>), FmtError> {
+    let budget = RecursionBudget::with_depth_default(u64::MAX, u64::MAX);
+    ensure_sufficient_stack(&budget, || {
+        render_body_with_comments_inner(nodule, plan, style, cfg)
+    })
+}
+
+/// The actual body of [`render_body_with_comments`] — see that function's doc comment for the
+/// guard-hole wrap.
+fn render_body_with_comments_inner(
     nodule: &Nodule,
     plan: &CommentPlan,
     style: Style,
@@ -1525,6 +1657,7 @@ fn render_fn_decl_with_comments(
         // same-head chains render as a flat spine (R1) per `cfg.spine_inner`.
         render_expr_readable(&fd.body, 2, cfg)
     } else {
+        // Guarded entry (RFC-0041 §4.7 RR-29 / W1) — see `render_item_flat`'s matching comment.
         render_expr_canonical(&fd.body)
     };
 
@@ -1626,14 +1759,36 @@ fn render_impl_with_comments(
 
 /// Render an expression in canonical form (without any comment interleaving).
 /// This mirrors `print_expr` in ambient.rs.
+///
+/// **RFC-0041 §4.7 (RR-29) guard-hole closure (W1).** This is the render family's own recursive
+/// entry: [`render_expr_canonical_inner`] recurses over `Expr` directly (`Let`/`If`/`Match`/…), and
+/// is reachable **both** from the guarded text pipeline ([`format_source_styled_cfg`] /
+/// [`flatten_source`], each wrapped once at their own outer entry below) **and** directly, by any
+/// caller that already holds an [`mycelium_l1::ast::Expr`] built some other way (bypassing
+/// `mycelium_l1::parse`'s depth guard) — the census regression
+/// (`src/tests/guard_hole_census.rs::render_expr_canonical_deep_let_chain`). So this function itself
+/// wraps once, on entry, in [`mycelium_workstack::ensure_sufficient_stack`] and delegates to the
+/// actual (unwrapped) recursive logic in [`render_expr_canonical_inner`] — every self-recursive call
+/// inside `render_expr_canonical_inner` calls itself directly (never back through this wrapper), so
+/// a single grown 256 MiB worker stack backs the whole recursive descent, not one worker thread per
+/// nesting level. Infallible (returns `String`); the budget's depth/mem/step ceilings are
+/// unbounded ([`u64::MAX`]) until W2's per-machine frame census wires real ceilings. Output is
+/// byte-identical to before this change — only the stack the recursion runs on changed.
 fn render_expr_canonical(e: &Expr) -> String {
+    let budget = RecursionBudget::with_depth_default(u64::MAX, u64::MAX);
+    ensure_sufficient_stack(&budget, || render_expr_canonical_inner(e))
+}
+
+/// The actual (unguarded) recursive descent behind [`render_expr_canonical`] — see that function's
+/// doc comment for why the wrap lives one level up, not here.
+fn render_expr_canonical_inner(e: &Expr) -> String {
     match e {
         Expr::Lit(l) => render_literal(l),
         Expr::Path(p) => p.0.join("."),
         // v0 tuple literal (M-826): `(a, b, …)`. Desugars to a synthetic `Tuple$N` constructor in
         // the checker/mono; the surface round-trips as the parenthesized, comma-separated list.
         Expr::TupleLit(elems) => {
-            let s: Vec<String> = elems.iter().map(render_expr_canonical).collect();
+            let s: Vec<String> = elems.iter().map(render_expr_canonical_inner).collect();
             format!("({})", s.join(", "))
         }
         // RFC-0037 D5 lambda. Closure semantics are deferred to M-704; this canonical render mirrors
@@ -1646,7 +1801,7 @@ fn render_expr_canonical(e: &Expr) -> String {
                 .map(|p| p.name.clone())
                 .collect::<Vec<_>>()
                 .join(", "),
-            render_expr_canonical(body)
+            render_expr_canonical_inner(body)
         ),
         Expr::Let {
             name,
@@ -1660,15 +1815,15 @@ fn render_expr_canonical(e: &Expr) -> String {
                 .unwrap_or_default();
             format!(
                 "let {name}{ann} = {} in {}",
-                render_expr_canonical(bound),
-                render_expr_canonical(body)
+                render_expr_canonical_inner(bound),
+                render_expr_canonical_inner(body)
             )
         }
         Expr::If { cond, conseq, alt } => format!(
             "if {} then {} else {}",
-            render_expr_canonical(cond),
-            render_expr_canonical(conseq),
-            render_expr_canonical(alt)
+            render_expr_canonical_inner(cond),
+            render_expr_canonical_inner(conseq),
+            render_expr_canonical_inner(alt)
         ),
         Expr::Match { scrutinee, arms } => {
             let arm_strs: Vec<String> = arms
@@ -1677,13 +1832,13 @@ fn render_expr_canonical(e: &Expr) -> String {
                     format!(
                         "{} => {}",
                         render_pattern(&a.pattern),
-                        render_expr_canonical(&a.body)
+                        render_expr_canonical_inner(&a.body)
                     )
                 })
                 .collect();
             format!(
                 "match {} {{ {} }}",
-                render_expr_canonical(scrutinee),
+                render_expr_canonical_inner(scrutinee),
                 arm_strs.join(", ")
             )
         }
@@ -1695,9 +1850,9 @@ fn render_expr_canonical(e: &Expr) -> String {
             body,
         } => format!(
             "for {x} in {}, {acc} = {} => {}",
-            render_expr_canonical(xs),
-            render_expr_canonical(init),
-            render_expr_canonical(body)
+            render_expr_canonical_inner(xs),
+            render_expr_canonical_inner(init),
+            render_expr_canonical_inner(body)
         ),
         Expr::Swap {
             value,
@@ -1705,18 +1860,18 @@ fn render_expr_canonical(e: &Expr) -> String {
             policy,
         } => format!(
             "swap({}, to: {}, policy: {})",
-            render_expr_canonical(value),
+            render_expr_canonical_inner(value),
             render_type_ref(target),
             policy.0.join(".")
         ),
         Expr::WithParadigm { paradigm, body } => {
             format!(
                 "with paradigm {paradigm} {{ {} }}",
-                render_expr_canonical(body)
+                render_expr_canonical_inner(body)
             )
         }
-        Expr::Wild(b) => format!("wild {{ {} }}", render_expr_canonical(b)),
-        Expr::Spore(b) => format!("spore({})", render_expr_canonical(b)),
+        Expr::Wild(b) => format!("wild {{ {} }}", render_expr_canonical_inner(b)),
+        Expr::Spore(b) => format!("spore({})", render_expr_canonical_inner(b)),
         Expr::Colony(hyphae) => {
             // M-970 (found by M-914): a hypha's optional `@forage(policy)` placement annotation
             // (RFC-0008 RT3; DN-63 §3.5; M-906/DN-70 D1) must round-trip through the canonical
@@ -1737,36 +1892,44 @@ fn render_expr_canonical(e: &Expr) -> String {
                     match forage {
                         Some(policy) => format!(
                             "@forage({}) hypha {}",
-                            render_expr_canonical(policy),
-                            render_expr_canonical(body)
+                            render_expr_canonical_inner(policy),
+                            render_expr_canonical_inner(body)
                         ),
-                        None => format!("hypha {}", render_expr_canonical(body)),
+                        None => format!("hypha {}", render_expr_canonical_inner(body)),
                     }
                 })
                 .collect();
             format!("colony {{ {} }}", hs.join(", "))
         }
         Expr::App { head, args } => {
-            let arg_strs: Vec<String> = args.iter().map(render_expr_canonical).collect();
-            format!("{}({})", render_expr_canonical(head), arg_strs.join(", "))
+            let arg_strs: Vec<String> = args.iter().map(render_expr_canonical_inner).collect();
+            format!(
+                "{}({})",
+                render_expr_canonical_inner(head),
+                arg_strs.join(", ")
+            )
         }
         Expr::Ascribe(inner, t) => {
-            format!("{} : {}", render_expr_canonical(inner), render_type_ref(t))
+            format!(
+                "{} : {}",
+                render_expr_canonical_inner(inner),
+                render_type_ref(t)
+            )
         }
         // DN-58 §A/§B (M-667): canonical rendering for `fuse(a, b)` and `reclaim(pol) { body }`.
         // Mirrors `print_expr` in ambient.rs.
         Expr::Fuse { left, right } => format!(
             "fuse({}, {})",
-            render_expr_canonical(left),
-            render_expr_canonical(right)
+            render_expr_canonical_inner(left),
+            render_expr_canonical_inner(right)
         ),
         Expr::Reclaim { policy, body } => format!(
             "reclaim({}) {{ {} }}",
-            render_expr_canonical(policy),
-            render_expr_canonical(body)
+            render_expr_canonical_inner(policy),
+            render_expr_canonical_inner(body)
         ),
         // `consume e` — affine move of a substrate (mirrors `print_expr` in ambient.rs).
-        Expr::Consume(b) => format!("consume {}", render_expr_canonical(b)),
+        Expr::Consume(b) => format!("consume {}", render_expr_canonical_inner(b)),
     }
 }
 
@@ -1792,7 +1955,7 @@ fn fits_w(compact: &str, indent: usize, width: usize) -> bool {
 /// a `Path` head; there is no separate `Cons` node. Reads ONLY the AST, so C2 holds by construction.
 fn same_head_chain(e: &Expr) -> Option<(String, Vec<Vec<&Expr>>, &Expr, usize)> {
     let head_s = match e {
-        Expr::App { head, args } if !args.is_empty() => render_expr_canonical(head),
+        Expr::App { head, args } if !args.is_empty() => render_expr_canonical_inner(head),
         _ => return None,
     };
     let mut node = e;
@@ -1802,7 +1965,7 @@ fn same_head_chain(e: &Expr) -> Option<(String, Vec<Vec<&Expr>>, &Expr, usize)> 
         let Expr::App { head, args } = node else {
             return None;
         };
-        if args.is_empty() || render_expr_canonical(head) != head_s {
+        if args.is_empty() || render_expr_canonical_inner(head) != head_s {
             return None;
         }
         let (lead, last) = args.split_at(args.len() - 1);
@@ -1810,7 +1973,7 @@ fn same_head_chain(e: &Expr) -> Option<(String, Vec<Vec<&Expr>>, &Expr, usize)> 
         links.push(lead.iter().collect());
         match last {
             Expr::App { head: h2, args: a2 }
-                if !a2.is_empty() && render_expr_canonical(h2) == head_s =>
+                if !a2.is_empty() && render_expr_canonical_inner(h2) == head_s =>
             {
                 node = last; // continue unrolling the chain
             }
@@ -1901,7 +2064,7 @@ fn render_spine(
 /// [`LayoutCfg::width`] at `indent` — AND is not forced open (R4c) — stays inline; otherwise it
 /// breaks per the shape-dispatched rules ([`render_expr_broken`]). AST-driven, so idempotent (C2).
 fn render_expr_readable(e: &Expr, indent: usize, cfg: LayoutCfg) -> String {
-    let compact = render_expr_canonical(e);
+    let compact = render_expr_canonical_inner(e);
     if fits_w(&compact, indent, cfg.width) && !expr_forces_break(e) {
         return compact;
     }
@@ -1914,7 +2077,7 @@ fn render_expr_readable(e: &Expr, indent: usize, cfg: LayoutCfg) -> String {
 /// (the caller verified `!fits || forces_break`); every layout is whitespace-only, so C1/C2 hold.
 fn render_expr_broken(e: &Expr, indent: usize, cfg: LayoutCfg) -> String {
     use mycelium_l1::ast::Literal;
-    let compact = render_expr_canonical(e);
+    let compact = render_expr_canonical_inner(e);
     let pad = " ".repeat(indent);
     let inner = indent + 2;
     let ipad = " ".repeat(inner);
@@ -1948,7 +2111,7 @@ fn render_expr_broken(e: &Expr, indent: usize, cfg: LayoutCfg) -> String {
                     let comma = if is_last { "" } else { "," };
                     let patn = render_pattern(&arm.pattern);
                     let forces = arm_body_has_top_let(&arm.body); // R4c
-                    let body_compact = render_expr_canonical(&arm.body);
+                    let body_compact = render_expr_canonical_inner(&arm.body);
                     let one_line = format!("{patn} => {body_compact}{comma}");
                     // Case (a): the whole arm fits on one line (and is not force-opened).
                     if !forces && fits_w(&one_line, inner, cfg.width) {
@@ -2101,11 +2264,11 @@ fn render_expr_with_arm_comments(
     match e {
         Expr::Match { scrutinee, arms } => {
             // Multiline match rendering: one arm per line, comma BEFORE any trailing comment.
-            let scrutinee_str = render_expr_canonical(scrutinee);
+            let scrutinee_str = render_expr_canonical_inner(scrutinee);
             let last_idx = arms.len().saturating_sub(1);
             let mut arm_strs = Vec::with_capacity(arms.len());
             for (arm_idx, arm) in arms.iter().enumerate() {
-                let arm_body = render_expr_canonical(&arm.body);
+                let arm_body = render_expr_canonical_inner(&arm.body);
                 let pat = render_pattern(&arm.pattern);
                 let is_last = arm_idx == last_idx;
                 // The comma (`,`) separates arms and must appear BEFORE any trailing comment
@@ -2125,7 +2288,7 @@ fn render_expr_with_arm_comments(
         // For non-match expressions, fall through to canonical rendering.
         // (arm_map entries for arm lines that are not a direct top-level match would already have
         // been refused by the comment plan builder.)
-        _ => Ok(render_expr_canonical(e)),
+        _ => Ok(render_expr_canonical_inner(e)),
     }
 }
 
@@ -2163,7 +2326,7 @@ fn render_literal(l: &mycelium_l1::ast::Literal) -> String {
         Literal::Int(i) => format!("{i}"),
         Literal::AmbientInt(p, i) => format!("{i} /* {p} (width from context) */"),
         Literal::List(es) => {
-            let s: Vec<String> = es.iter().map(render_expr_canonical).collect();
+            let s: Vec<String> = es.iter().map(render_expr_canonical_inner).collect();
             format!("[{}]", s.join(", "))
         }
         // M-910/M-911: a `"…"` textual string literal round-trips to its source form; the
