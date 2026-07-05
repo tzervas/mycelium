@@ -309,6 +309,23 @@ code; they only fix the two branch points so the M-740 wave can proceed without 
 
 ## Meta — changelog
 
+- **2026-07-05 — Stage 3 landed; two namespace findings recorded (append-only, no status move;
+  M-740).** §7.3 row 3 (`compiler.ast` + `compiler.parse`) is implemented and gated: both `parse`
+  and `parse_phylum` ported end-to-end, classification parity with the Rust oracle over the full
+  conformance corpus on both legs (accept 27/27, reject 30/30, zero divergences) plus a preorder
+  constructor-tag AST fingerprint on every accepted leg (`Empirical`; L1-eval leg only per M-981;
+  gates `compiler_stage3_ast.rs` 26/26 + `compiler_stage3.rs` 4/4). Two findings bear on this
+  plan's later stages, recorded for the §7.3 Stage-5 semcore packaging (§9 flag-1): **(a)** the
+  per-nodule constructor namespace is **flat** — bare variant names reused across *different*
+  enums collide even when none is a reserved word (ast.myc FLAG-ast-5; resolved with per-type
+  prefixes, the `collections.myc` precedent); **(b)** combining two frontend stages in one nodule
+  additionally collides the lexer's keyword-constructor family with AST constructors (parse.myc
+  FLAG-parse-2, 31 names) — so the semcore nodule, which merges nine Rust modules, must budget
+  for a systematic prefixing discipline up front. The §7.4 self-containment workaround (M-982)
+  continues to hold through Stage 3 (parse.myc carries its own token+lexer+AST copy,
+  FLAG-parse-1). Follow-ons minted: M-983 (one-eval differential-harness retrofit), M-984
+  (full lib-tree parser sweep once the M-981 economics lift). Status remains **Draft**
+  (→ Resolved with M-741). (M-740 Stage 3; E18-1; VR-5/G2.)
 - **2026-07-05 — Stage-2 naming correction recorded (append-only, no status move; M-740).** The §7.3
   Stage-2 nodule name `compiler.nodule` is **unspellable** in surface syntax: `nodule` is a reserved
   word (DN-02), so the declaration `nodule compiler.nodule;` cannot parse — the second path segment

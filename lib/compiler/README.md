@@ -106,7 +106,27 @@ reading both the Rust output and the self-hosted output for the same input.
       append-only changelog). Every source-length-bounded recursion is direct-tail (the RFC-0041
       §7 W7 amendment-11 TCO acceptance criterion); the non-tail recursions are bounded by a
       name's segment count, never by source length.
-- [ ] **Stage 3** — `compiler.ast` + `compiler.parse` (AST differential + full conformance corpus)
+- [x] **Stage 3** — `compiler.ast` + `compiler.parse` (AST differential + full conformance corpus).
+      Landed (`lib/compiler/ast.myc`, `lib/compiler/parse.myc`; gates:
+      `crates/mycelium-l1/tests/compiler_stage3_ast.rs` 26/26 +
+      `crates/mycelium-l1/tests/compiler_stage3.rs` 4/4). `compiler.ast`: the full `ast.rs`
+      vocabulary — 36 types / 102 constructors + helper impls, FLAG-ast-1..8 (incl. FLAG-ast-5,
+      the flat per-nodule constructor namespace: variant names reused across different enums
+      collide even when not keywords — per-type prefixes, `collections.myc` precedent).
+      `compiler.parse`: all ~91 `parse.rs` functions accounted for, **both `parse` and
+      `parse_phylum`** end-to-end (source text → AST; self-contained token+lexer+AST copy per
+      M-982, FLAG-parse-1); every match one constructor level deep (M-980 — zero checker panics);
+      `MAX_EXPR_DEPTH`=4096 preserved; token-stream-bounded loops direct-tail (RFC-0041 §7 W7
+      amendment 11). Differential: classification parity with the Rust oracle over the full
+      corpus on both legs (accept 27/27, reject 30/30, zero divergences) + a preorder
+      per-constructor-tag fingerprint (tags 1–109, `rotl(7)`-XOR, node count, leaf mixing;
+      hand-locked Rust mirror) on every accepted leg + a 6-file real-stdlib subset leg (full-tree
+      sweep → M-984). Harness: args-in/verdict-out — ONE elaboration, one `Evaluator::call` per
+      file/leg (~8× cheaper than per-driver programs; Stage-1/2 retrofit → M-983). New finding
+      FLAG-parse-2: lexer-keyword-ctor × AST-ctor flat-namespace collision (31 names) whenever
+      two frontend stages share a nodule — bears on Stage-5 semcore packaging. L1-eval leg only
+      (M-981); message/position fidelity not compared (FLAG-parse-8); lib-leg fuel sized to 200M
+      (default 1M — flagged, maintainer call).
 - [ ] **Stage 4** — `compiler.ambient` + `compiler.totality` + `compiler.substrate` (leaf differentials)
 - [ ] **Stage 5** — `compiler.semcore` (L0-output differential; `cargo-mutants` witness)
 - [ ] **Stage 6 / M-742** — `just bootstrap`: interpreted-first then AOT, stage-2 three-way

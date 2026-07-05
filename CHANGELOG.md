@@ -11,6 +11,45 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### M-740 Stage 3 — self-hosted AST vocabulary + parser (2026-07-05)
+
+`boot10` (E18-1) wave 3, per the DN-26 §7.3 stage map: Stage 3 lands `compiler.ast`
+(`lib/compiler/ast.myc`) and `compiler.parse` (`lib/compiler/parse.myc`) — the `.myc` port of
+`crates/mycelium-l1/src/ast.rs` and `parse.rs`, with the corpus-wide parser differential.
+
+- **`compiler.ast`:** the full surface-AST vocabulary (36 types / 102 constructors, the small
+  helper impls). FLAG-ast-1..8 in-file: `String`→`Bytes`, `u32`→`Binary{32}`, lossless
+  `i64`→`Binary{64}`; recursive types need no `Box` (two-pass shell-then-resolve registration,
+  verified before authoring); keyword renames reuse token.myc spellings; **FLAG-ast-5 is a new
+  collision class** — the per-nodule constructor namespace is flat, so bare variant names reused
+  across *different* enums collide even when none is a keyword (per-type prefixes, the
+  `collections.myc` precedent); `BTreeMap`→ordered assoc-list; `WidthRef` `Display` and
+  `#[non_exhaustive]` not ported (flagged, never silent). Gate `compiler_stage3_ast.rs` 26/26:
+  parse+`check_nodule`, a 103-row ported-constructor inventory (`Declared`/audited), and a
+  per-variant L1-eval construct-and-classify exercise.
+- **`compiler.parse`:** all ~91 `parse.rs` functions accounted for; **both `parse` and
+  `parse_phylum` ported end-to-end** (source text → AST, self-contained token+lexer+AST copy per
+  M-982, FLAG-parse-1). Every match destructures exactly one constructor level (the M-980
+  discipline — zero checker panics across 4,405 lines); `MAX_EXPR_DEPTH`=4096 preserved; every
+  token-stream-bounded loop is direct-tail (the RFC-0041 §7 W7 amendment-11 TCO acceptance
+  criterion).
+- **The gate** (`crates/mycelium-l1/tests/compiler_stage3.rs`, 4/4 green, `Empirical`):
+  classification parity vs the live Rust oracle over the **full conformance corpus on both legs**
+  (accept 27/27 — 26 via `parse`, the phylum-headed file via `parse_phylum` with `parse` refusing
+  it on both sides; reject 30/30; zero divergences), a preorder per-constructor-tag AST
+  fingerprint (tag table 1–109, `rotl(7)`-XOR mix, node count, `Bytes`-length/`u32` leaf mixing;
+  hand-locked Rust mirror walk) on every accepted leg, and a 6-file real-stdlib subset leg —
+  171s wall via the args-in/verdict-out one-eval harness, ~8× cheaper than the per-driver shape
+  (retrofit of the Stage-1/2 gates minted as **M-983**; the full lib-tree sweep, post-M-981
+  economics, as **M-984**).
+- **New finding (FLAG-parse-2):** the lexer-keyword-ctor × AST-ctor flat-namespace collision
+  (31 `T`-prefix names) surfaces whenever two frontend stages share one nodule — recorded
+  append-only in DN-26 for the Stage-5 semcore packaging.
+- **Honest narrowings (VR-5, flagged in-file):** L1-eval leg only — no three-way at this scale
+  (M-981); error message/position fidelity not compared (classification only, FLAG-parse-8);
+  eval fuel sized to 200M for the lib leg (evaluator default 1M — flagged as a maintainer call,
+  not decided). The Stage-1 lexer narrowings carry over verbatim with the lexer copy.
+
 ### M-740 Stage 2 — self-hosted nodule-header recogniser (2026-07-05)
 
 `boot10` (E18-1) continues per the DN-26 §7.3 stage map: Stage 2 lands the `compiler.nodule_header`

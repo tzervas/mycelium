@@ -575,8 +575,7 @@ mod fp {
 
     pub fn fingerprint_nodule(n: &Nodule) -> Fp {
         let fp = Fp { hash: 0, count: 0 };
-        let fp = nodule(fp, n);
-        fp
+        nodule(fp, n)
     }
 
     fn nodule(fp: Fp, n: &Nodule) -> Fp {
@@ -595,7 +594,7 @@ mod fp {
             None => tag(fp, 109),
             Some(p) => path(fp, p),
         };
-        ph.nodules.iter().fold(fp, |fp, n| nodule(fp, n))
+        ph.nodules.iter().fold(fp, nodule)
     }
 }
 

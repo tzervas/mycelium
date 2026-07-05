@@ -3843,6 +3843,34 @@ issues:
       TCO acceptance criterion held: every source-length-bounded recursion is direct-tail
       (RFC-0041 s7 W7 amendment 11). Stages 3-6 remain per the lib/compiler/README.md map.
 
+      STAGE 3 LANDED (2026-07-05, in-progress): lib/compiler/ast.myc (compiler.ast — the full
+      ast.rs vocabulary: 36 types / 102 constructors + the small helper impls; FLAG-ast-1..8
+      in-file, incl. FLAG-ast-5, a NEW collision class: the per-nodule constructor namespace is
+      flat, so bare Rust variant names reused across different enums collide even when none is a
+      keyword — resolved with per-type prefixes per the collections.myc precedent) and
+      lib/compiler/parse.myc (compiler.parse — all ~91 parse.rs functions accounted for; BOTH
+      parse and parse_phylum ported end-to-end, source text -> AST, with a self-contained
+      token+lexer+AST copy per M-982, FLAG-parse-1; every match destructures exactly ONE
+      constructor level, the M-980 discipline — zero checker panics; MAX_EXPR_DEPTH=4096
+      preserved; every token-stream-bounded loop direct-tail, RFC-0041 s7 W7 amendment 11).
+      Gates green: compiler_stage3_ast.rs 26/26 (parse+check_nodule structural gate; 103-row
+      ported-constructor inventory, Declared/audited; per-variant L1-eval construct+classify) and
+      compiler_stage3.rs 4/4 (Empirical): classification parity vs the live Rust oracle over the
+      FULL conformance corpus on both legs (accept 27/27 — 26 via parse, the phylum-headed file
+      via parse_phylum with parse refusing it on both sides; reject 30/30; zero divergences) with
+      a preorder per-constructor-tag AST fingerprint (tag table 1-109, rotl(7)-XOR mix + node
+      count + Bytes-len/u32 leaf mixing; hand-locked Rust mirror walk) on every accepted leg,
+      plus a 6-file real-stdlib subset leg; 171s wall via the args-in/verdict-out one-eval
+      harness (~8x cheaper than per-driver programs — retrofit minted as M-983). Honest
+      narrowings (flagged in-file): L1-eval leg only, no three-way at this scale (M-981);
+      error message/position fidelity not compared, classification only (FLAG-parse-8); lib
+      sweep limited to the 6 smallest stdlib nodules, full-tree sweep minted as M-984; eval
+      fuel sized to 200M for the lib leg (evaluator default 1M — maintainer call whether the
+      default moves, flagged not decided). New finding FLAG-parse-2: the lexer-keyword-ctor x
+      AST-ctor flat-namespace collision (31 T-prefix names) surfaces whenever two frontend
+      stages share one nodule — DN-26 append-only note carried in the same change. Stages 4-6
+      remain per the lib/compiler/README.md map.
+
   - id: M-741
     title: "M-741 — Ratify the self-hosted toolchain as canonical (DN-14 gate at full scale)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
@@ -11711,6 +11739,66 @@ issues:
         phylum witness; the compiler.token/compiler.lex duplication is removed (lex.myc imports
         token.myc's types via use); DN-26 gets an append-only note recording the lift;
         change-scoped just check green.
+  - id: M-983
+    title: "Retrofit the Stage-1/2 differential gates to the args-in/verdict-out one-eval harness"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:refactor, area:testing, priority:P3, status:todo]
+    epic: E18-1
+    depends_on: []
+    doc_refs:
+      - src:crates/mycelium-l1/tests/compiler_stage3.rs
+      - src:crates/mycelium-l1/tests/compiler_stage1.rs
+      - src:crates/mycelium-l1/tests/compiler_stage2.rs
+    body: |
+      Minted 2026-07-05 from the M-740 Stage-3 port. The Stage-3 gate (compiler_stage3.rs)
+      elaborates the ported nodule ONCE and drives every corpus case through a single
+      Evaluator::call("stage3_verdict", args) per file/leg — the oracle's expectations travel in
+      as Bytes/Binary{32} arguments and a packed verdict code comes back. Measured ~8x cheaper
+      than the Stage-1/2 shape (a fresh per-case driver program each time): the full 57-file
+      two-leg corpus differential runs in 71.6s where the projected per-driver form was 600s+.
+      Stage 1's gate takes 213s today with the old shape. Retrofit compiler_stage1.rs and
+      compiler_stage2.rs to the one-eval harness, and make it the standing shape for the
+      Stage-4/5 gates.
+
+      User stories:
+      - As a maintainer running just check, I want the self-hosted-compiler differential gates
+        fast enough to stay change-scoped-tier-friendly, so that the port stays continuously
+        verified without pushing the gates into the nightly tier.
+
+      Definition of Done:
+      - compiler_stage1.rs and compiler_stage2.rs use the one-eval args-in/verdict-out harness;
+        identical coverage (same corpus files, same compared facts) with measurably lower wall
+        time; change-scoped just check green; the harness shape documented in the test-file doc
+        comments for Stage-4/5 reuse.
+  - id: M-984
+    title: "Full lib-tree sweep of the Stage-3 parser differential (post-AOT/M-981 economics)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:verification, area:testing, priority:P3, status:todo]
+    epic: E18-1
+    depends_on: [M-981]
+    doc_refs:
+      - src:crates/mycelium-l1/tests/compiler_stage3.rs
+      - src:lib/compiler/parse.myc
+      - corpus:DN-26
+    body: |
+      Minted 2026-07-05 from the M-740 Stage-3 port. The Stage-3 gate's real-library leg is an
+      honest documented subset: the 6 smallest stdlib nodules (result/option/math/fmt/cmp/iter),
+      because the interpreted per-file cost is ~15s at 100 lines (fuel sized to 200M) and the
+      full lib/std/ + lib/compiler/ tree would blow the gate's budget. Once the differential can
+      ride an AOT-compiled self-hosted parser (M-981's economics) — or the M-983 harness plus
+      evaluator improvements make interpreted cost negligible — widen the leg to every .myc file
+      under lib/ (classification parity + fingerprint), the same full-tree coverage the Stage-2
+      header gate already has.
+
+      User stories:
+      - As a compiler engineer, I want the self-hosted parser differentialed against the oracle
+        over every real library file, not a subset, so that corpus-blind-spot divergences are
+        caught before M-741 ratification.
+
+      Definition of Done:
+      - The Stage-3 differential covers every .myc file under lib/ on at least one leg;
+        runtime documented and acceptable for its tier; any file excluded is listed with an
+        explicit reason (G2 — never silently skipped); change-scoped just check green.
   - id: M-970
     title: "mycelium-fmt: render_expr_canonical drops the @forage(policy) Hypha annotation"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
