@@ -309,6 +309,21 @@ code; they only fix the two branch points so the M-740 wave can proceed without 
 
 ## Meta — changelog
 
+- **2026-07-05 — Stage-3 review cycle: three kernel-side findings bear on this plan's later
+  stages (append-only, no status move; M-740 / PR #1166).** The review-cycle patch converted all
+  27 source-length-bounded loops in `parse.myc` to accumulator+reverse **direct-tail shape**
+  (RFC-0041 §7 W7 amendment 11) and surfaced: **M-986** — the L1 evaluator's TCO elides only
+  bare-body self-calls (tail calls inside `match`/`let` are never elided), so **no in-language
+  loop can iterate past the 4096 depth budget today**; **M-987** — L1-eval cost is ~n³ in input
+  token count (0.6 s → 26 s → 133 s at 200 → 752 → 1,252 tokens, debug build); **M-988** — mono
+  re-inference rejects generic bare `Nil` the checker accepted. Consequence for this plan, stated
+  plainly (VR-5): until M-986/M-987 lift, the §9 flag-2 **interpreted-first** Stage-6 bootstrap
+  gate is impractical at compiler scale under L1-eval, and Stage-4/5 differential legs face the
+  same per-file cost wall the Stage-3 lib leg hit (6-file subset, M-984). This note **decides
+  nothing** — flag-2's interpreted-first intent stands; whether the lift comes from the kernel
+  TCO widening, evaluator cost work, or leaning on the AOT leg is an open M-741/M-742-adjacent
+  question, recorded here rather than silently re-planned (G2). Status remains **Draft**.
+  (M-740 Stage 3 review cycle; E18-1.)
 - **2026-07-05 — Stage 3 landed; two namespace findings recorded (append-only, no status move;
   M-740).** §7.3 row 3 (`compiler.ast` + `compiler.parse`) is implemented and gated: both `parse`
   and `parse_phylum` ported end-to-end, classification parity with the Rust oracle over the full

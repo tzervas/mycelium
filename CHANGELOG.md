@@ -50,6 +50,20 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   (M-981); error message/position fidelity not compared (classification only, FLAG-parse-8);
   eval fuel sized to 200M for the lib leg (evaluator default 1M — flagged as a maintainer call,
   not decided). The Stage-1 lexer narrowings carry over verbatim with the lexer copy.
+- **Review cycle (PR #1166):** the `/pr-review` pass caught a real HIGH — the list-building
+  loops were `Cons`-after-return (not direct-tail; reproduced at 5,000 items via
+  `DepthExceeded{4096}`). Fixed by converting all 27 source-length-bounded loops to
+  accumulator + `rev_acc` direct-tail shape (fingerprint parity re-verified, zero divergences).
+  The fix surfaced three kernel-side findings, minted not muted: **M-986** — the evaluator's
+  TCO elides only bare-body self-calls, so tail calls inside `match`/`let` are never elided
+  and *no* in-language loop can exceed the 4096 depth budget today (the source shape is the
+  ready form; its depth benefit is dormant until the kernel widens tail position — pinned by
+  loud known-gap tests); **M-987** — L1-eval cost ~n³ in token count (0.6 s / 26 s / 133 s at
+  200 / 752 / 1,252 tokens, debug); **M-988** — mono re-inference rejects generic bare `Nil`
+  the checker accepted (55 explicit ascriptions as the workaround). Also fixed: the stale
+  107-entry tag-table comments (→ 109) and the stale line count. The Stage-1 lexer's own
+  non-tail twin is **M-985** (pre-existing, never claimed, now flagged). Post-patch gate:
+  `compiler_stage3` 6/6 green.
 
 ### M-740 Stage 2 — self-hosted nodule-header recogniser (2026-07-05)
 
