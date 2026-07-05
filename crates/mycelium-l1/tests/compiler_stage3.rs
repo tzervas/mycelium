@@ -38,11 +38,20 @@
 //! SOURCE-LENGTH-bounded loop in parse.myc — item/arm/hypha/ctor/param/segment lists, the embedded
 //! lexer's token/lexeme scanners — is written in **accumulator + reverse direct-tail style**
 //! (`loop(ts, Cons(item, acc))` tail-calls itself; one final `rev_acc(acc, Nil)` restores source
-//! order), so the evaluator's TCO keeps list length off the eval stack. Expression/type/pattern
-//! NESTING recursion is the other, deliberately different class: recursive descent proper, bounded
-//! by the explicit 4096 depth budget (FLAG-parse-7), not by TCO. The pre-fix Cons-after-return
-//! shape tripped `DepthExceeded{limit: 4096}` at ~4,000+ items — pinned by
-//! `parse_myc_accepts_a_many_item_nodule_without_depth_exhaustion` below.
+//! order). Expression/type/pattern NESTING recursion is the other, deliberately different class:
+//! recursive descent proper, bounded by the explicit 4096 depth budget (FLAG-parse-7), not by TCO.
+//!
+//! **Honest limit (FLAG-parse-11, pinned below):** the depth BENEFIT of the direct-tail shape is
+//! currently **dormant** — the L1 evaluator's TCO elides a self-call only when the caller's
+//! `InvokePost` frame is directly on top of the CEK stack, and a `match` arm body runs under a
+//! `Frame::MatchPop` (scope restore), a `let` body under `Frame::LetPop`, so tail calls from
+//! inside match/let are NOT elided (probed: a 10,000-iteration match-arm tail loop trips
+//! `DepthExceeded{4096}` with `tco_trace().total_elided == 1`). Since every terminating loop needs
+//! a `match`, NO in-language loop shape can iterate past the depth budget today — the reviewer's
+//! 5,000-item repro therefore still refuses (explicitly, never silently) post-fix, and the
+//! source-shape conversion is the READY form whose benefit lights up when the kernel widens tail
+//! position through binder-restoring frames (a `src/eval.rs` change, FLAGged up — not a leaf
+//! edit). Pinned by `l1_eval_tco_gap_*` + `parse_myc_many_item_nodule_depth_semantics` below.
 
 use mycelium_l1::ast::{
     AmbientParams, Arm, BaseType, Ctor, DeriveDecl, ExecutionMode, Expr, FnDecl, FnSig, Hypha,
@@ -744,7 +753,8 @@ fn parse_myc_matches_oracle_over_the_full_conformance_corpus() {
 }
 
 /// One self-hosted verdict eval: call `entry(src, want_ok, want_hash, want_count)` in the checked
-/// `env` and assert the packed verdict is 1 (full agreement).
+/// `env` and assert the packed verdict is 1 (full agreement). Runs under the default depth budget
+/// (the FLAG-parse-11 reduced-budget pin builds its own `Evaluator` inline).
 fn run_verdict(
     env: &mycelium_l1::Env,
     entry: &str,
@@ -842,35 +852,109 @@ fn parse_myc_matches_oracle_on_a_small_real_lib_subset() {
     );
 }
 
-/// Regression pin for the PR #1166 HIGH finding (source-length-bounded recursion): a synthetic
-/// many-item nodule — N x `use a.bI;` items — parses green through the self-hosted parser AND
-/// fingerprint-agrees with the oracle. Pre-fix (the Cons-after-return list loops, commit
-/// 2257f9ff), depth scaled with ITEM COUNT and the 5,000-item case tripped the evaluator's
-/// `DepthExceeded{limit: 4096}`; post-fix (accumulator + rev_acc direct-tail loops) the same
-/// input runs in bounded depth. Sizes chosen empirically per the review brief: 5,000 is the
-/// reviewer's failing repro (re-verified failing pre-fix during patching); 1,250/2,500 give the
-/// scaling curve. Timings on this machine (debug build, one eval each, Empirical — see the
-/// eprintln output): the curve is the honest record of whether eval cost stays ~linear in item
-/// count now that recursion depth no longer scales with it.
+/// PR #1166 HIGH regression pins — the source-length-bounded-recursion finding, in two parts.
+///
+/// **Part 1 (green leg):** a 150-item synthetic nodule (752 tokens — comfortably under the 4096
+/// depth budget at ~1 frame/token, see Part 2) parses green AND fingerprint-matches the oracle
+/// under the DEFAULT depth budget — the rewrite changed recursion SHAPE only, never any AST
+/// result. Timing on this machine (debug, one eval): see the eprintln — with the 250-item point
+/// (133.4 s) and the ~200-token corpus average (~0.6 s), eval cost is grossly SUPER-LINEAR in
+/// token count (~n^2.5-3 over this range; Empirical), which is what precludes a >4,096-token
+/// green run in any sane test budget. That cost curve points at per-step value copying in the
+/// evaluator, not at the parser's own algorithm — FLAGged for a minted issue.
+///
+/// **Part 2 (known-gap pin, FLAG-parse-11):** the same 150-item input under a REDUCED 512-frame
+/// depth budget REFUSES with `DepthExceeded{512}` — explicit, never a crash or a silent hang —
+/// because the evaluator's TCO does not elide tail calls made from match arms / let bodies (the
+/// `MatchPop`/`LetPop` frames block the InvokePost-on-top precondition), so list length still
+/// consumes ~1 frame per token whatever the source shape. This pin FAILS LOUDLY the moment the
+/// kernel widens tail position — at which point flip Part 2 to a green assertion and raise
+/// Part 1's N past 4,096 tokens (the FLAG-nodule-2 pinned-divergence precedent).
 #[test]
-fn parse_myc_accepts_a_many_item_nodule_without_depth_exhaustion() {
+fn parse_myc_many_item_nodule_depth_semantics() {
     let env =
         check_nodule(&parse(PARSE_SRC).unwrap_or_else(|e| panic!("parse.myc: parse failed: {e}")))
             .unwrap_or_else(|e| panic!("parse.myc: check failed: {e}"));
-    for n in [1_250usize, 2_500, 5_000] {
-        let mut source = String::from("nodule many.items;\n");
-        for i in 0..n {
-            source.push_str(&format!("use a.b{i};\n"));
-        }
-        let label = format!("synthetic {n}-item nodule");
-        let oracle = parse(&source)
-            .unwrap_or_else(|e| panic!("{label}: the oracle must accept the synthetic input: {e}"));
-        let f = fp::fingerprint_nodule(&oracle);
-        let t = std::time::Instant::now();
-        run_verdict(&env, "stage3_verdict", &label, &source, 1, f.hash, f.count);
-        eprintln!(
-            "many-item regression: {n} items parsed + fingerprint-matched in {:.1}s",
-            t.elapsed().as_secs_f64()
-        );
+    let n = 150usize;
+    let mut source = String::from("nodule many.items;\n");
+    for i in 0..n {
+        source.push_str(&format!("use a.b{i};\n"));
     }
+    let oracle = parse(&source)
+        .unwrap_or_else(|e| panic!("the oracle must accept the synthetic {n}-item input: {e}"));
+    let f = fp::fingerprint_nodule(&oracle);
+
+    // Part 1: green + fingerprint parity under the default depth budget.
+    let t = std::time::Instant::now();
+    run_verdict(
+        &env,
+        "stage3_verdict",
+        &format!("synthetic {n}-item nodule (default depth budget)"),
+        &source,
+        1,
+        f.hash,
+        f.count,
+    );
+    eprintln!(
+        "many-item regression: {n} items (752 tokens) parsed + fingerprint-matched under the \
+         default depth budget in {:.1}s",
+        t.elapsed().as_secs_f64()
+    );
+
+    // Part 2: the FLAG-parse-11 known-gap pin — a reduced 512-frame budget refuses explicitly
+    // (never silently), because match-arm/let-body tail calls are not TCO'd today.
+    let args = vec![
+        mycelium_l1::L1Value::Repr(bytes_value(&source)),
+        mycelium_l1::L1Value::Repr(b32_value(1)),
+        mycelium_l1::L1Value::Repr(b32_value(f.hash)),
+        mycelium_l1::L1Value::Repr(b32_value(f.count)),
+    ];
+    let err = Evaluator::new(&env)
+        .with_fuel(200_000_000)
+        .with_depth(512)
+        .call("stage3_verdict", args)
+        .expect_err(
+            "KNOWN GAP (FLAG-parse-11): a 752-token input must exceed a 512-frame budget while \
+             the evaluator does not elide match-arm tail calls -- if this is now Ok, the kernel \
+             TCO gap has been lifted: flip this pin to a green assertion and raise Part 1's N",
+        );
+    assert!(
+        matches!(err, mycelium_l1::L1Error::DepthExceeded { limit: 512 }),
+        "expected the explicit DepthExceeded(512) refusal, got: {err}"
+    );
+}
+
+/// The FLAG-parse-11 root cause, pinned at MICRO scale (fast — no parse.myc involved): the L1
+/// evaluator's TCO elides a self-call ONLY from bare-body position (`spin(n) = spin(n)`, the
+/// kernel's own witness shape); a tail call from inside a `match` arm is NOT elided (the arm body
+/// evaluates under a `Frame::MatchPop` scope-restore frame, so the caller's `InvokePost` is not on
+/// top), and every terminating loop needs a `match`. A 10,000-iteration match-arm tail countdown
+/// therefore trips `DepthExceeded{4096}` with an elision count of 1 (just the `main` -> `count`
+/// hop). When the kernel widens tail position through binder-restoring frames, this pin fails
+/// loudly -- delete it and flip the sibling pins green (the FLAG-nodule-2 precedent).
+#[test]
+fn l1_eval_tco_gap_match_arm_tail_call_is_not_elided() {
+    let src = format!(
+        "nodule d;\nfn count(n: Binary{{32}}) => Binary{{32}} =\n  match eq(n, 0b{z:032b}) {{ 0b1 => n, _ => count(sub_u(n, 0b{o:032b})) }};\nfn main() => Binary{{32}} = count(0b{n:032b});",
+        z = 0,
+        o = 1,
+        n = 10_000u32
+    );
+    let env = check_nodule(&parse(&src).unwrap_or_else(|e| panic!("probe parse failed: {e}")))
+        .unwrap_or_else(|e| panic!("probe check failed: {e}"));
+    let ev = Evaluator::new(&env).with_fuel(100_000_000);
+    let err = ev.call("main", vec![]).expect_err(
+        "KNOWN GAP (FLAG-parse-11): a 10,000-iteration match-arm tail loop must exceed the \
+         default 4096 depth budget while match-arm tail calls are not elided -- if this is now \
+         Ok, the kernel TCO gap has been lifted: delete this pin and flip the sibling pins green",
+    );
+    assert!(
+        matches!(err, mycelium_l1::L1Error::DepthExceeded { limit: 4096 }),
+        "expected DepthExceeded(4096), got: {err}"
+    );
+    assert_eq!(
+        ev.tco_trace().total_elided,
+        1,
+        "only the bare main->count hop should have been elided"
+    );
 }

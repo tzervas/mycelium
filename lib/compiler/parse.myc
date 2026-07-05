@@ -93,12 +93,29 @@ nodule compiler.parse;
 // (never a nested/nested-arity mismatch). Every such loop (and every other source-length-bounded
 // recursion in this nodule, incl. the lexer copy's token/lexeme scanners) is written in
 // ACCUMULATOR + REVERSE direct-tail style — `loop(ts, Cons(item, acc))` tail-calls itself and a
-// final `rev_acc(acc, Nil)` restores source order — so the RFC-0041 SS7 W7 amendment-11 TCO
-// criterion holds for real: list length never consumes eval-stack depth (PR #1166 review fix; the
-// pre-fix Cons-after-return shape tripped DepthExceeded{4096} on a 5,000-item nodule). The ONE
-// exception is `typeparam_names_of_kind` — an ast.myc-VERBATIM mirror helper (never called on the
-// parse path; only reachable via the mirrored `fnsig_param_names` accessors) kept byte-identical
-// to the sibling nodule per the mirror discipline; converting it belongs to the ast leaf (FLAGged).
+// final `rev_acc(acc, Nil)` restores source order — the RFC-0041 SS7 W7 amendment-11 shape (PR
+// #1166 review fix; the pre-fix Cons-after-return shape ALSO did per-item work on the unwind).
+// The ONE exception is `typeparam_names_of_kind` — an ast.myc-VERBATIM mirror helper (never called
+// on the parse path; only reachable via the mirrored `fnsig_param_names` accessors) kept
+// byte-identical to the sibling nodule per the mirror discipline; converting it belongs to the ast
+// leaf (FLAGged). See FLAG-parse-11 for why the depth BENEFIT of this shape is currently dormant.
+//
+// ── FLAG-parse-11 (evaluator TCO gap — the direct-tail shape's depth benefit is DORMANT today;
+// pinned in compiler_stage3.rs, FLAGged up for a kernel-side issue). The L1 evaluator's frame-reuse
+// (RFC-0041 SS4.6) fires ONLY when the caller's `InvokePost` frame is directly on top of the CEK
+// stack at call time — and a `match` arm body evaluates under a `Frame::MatchPop` (scope-restore)
+// frame, a `let` body under a `Frame::LetPop`, so a self-call from inside ANY match arm or let
+// body is never elided (probed empirically during the PR #1166 patch cycle: a 10,000-iteration
+// `match`-arm tail loop trips DepthExceeded{4096} with tco_trace.total_elided == 1; same for a
+// let-body tail call; only the bare-body `spin(n) = spin(n)` shape elides — the exact shape the
+// kernel's own TCO witness test uses). Since every TERMINATING loop needs at least one `match`,
+// NO in-language loop can currently iterate past the depth budget, whatever its source shape —
+// this equally limits compiler.lex/compiler.nodule_header's existing loops (never previously
+// exercised past 4096 iterations by any gate). The accumulator+reverse shape here is therefore the
+// correct, ready form whose depth benefit LIGHTS UP the moment the kernel widens tail position
+// through binder-restoring frames (eagerly truncating scope before a tail call) — a
+// `crates/mycelium-l1/src/eval.rs` change this leaf must not make (KC-3 FLAG-up, not an in-wave
+// core edit).
 //
 // ── FLAG-parse-6 (effect-budget unit multiplier (`KiB`/`MiB`/`GiB`) overflow is NOT checked, unlike
 // Rust's `checked_mul`). `shl_u`'s never-silent contract only guards the SHIFT AMOUNT (refuses if
@@ -922,12 +939,12 @@ fn next_token(src: Bytes, s: St) => Result[Pair[Tok, St], PErr] =
 
 // ── run / lex ────────────────────────────────────────────────────────────────────────────────────
 fn run(src: Bytes, s: St) => Result[Vec[Spanned], PErr] =
-  run_acc(src, s, Nil);
+  run_acc(src, s, Nil : Vec[Spanned]);
 
 fn run_acc(src: Bytes, s: St, acc: Vec[Spanned]) => Result[Vec[Spanned], PErr] =
   let s1 = skip_trivia(src, s) in
   match src_peek(src, st_i(s1)) {
-    None => Ok(rev_acc(acc, Cons(Sp(Eof, st_pos(s1)), Nil))),
+    None => Ok(rev_acc(acc, Cons(Sp(Eof, st_pos(s1)), Nil : Vec[Spanned]))),
     Some(_) => match next_token(src, s1) {
       Err(e) => Err(e),
       Ok(pr) => match pr {
@@ -1783,11 +1800,11 @@ fn collect_base_name_uses(bt: BaseType, params: Vec[Bytes], acc: NameUses) => Na
   };
 
 fn typeparam_names(ps: Vec[TypeParam]) => Vec[Bytes] =
-  typeparam_names_acc(ps, Nil);
+  typeparam_names_acc(ps, Nil : Vec[Bytes]);
 
 fn typeparam_names_acc(ps: Vec[TypeParam], acc: Vec[Bytes]) => Vec[Bytes] =
   match ps {
-    Nil => rev_acc(acc, Nil),
+    Nil => rev_acc(acc, Nil : Vec[Bytes]),
     Cons(p, rest) => typeparam_names_acc(rest, Cons(typeparam_name(p), acc))
   };
 
@@ -1816,11 +1833,11 @@ fn classify_one_param(p: TypeParam, width_used: Vec[Bytes], type_used: Vec[Bytes
   };
 
 fn classify_params_list(ps: Vec[TypeParam], width_used: Vec[Bytes], type_used: Vec[Bytes]) => Result[Vec[TypeParam], PErr] =
-  classify_params_list_acc(ps, width_used, type_used, Nil);
+  classify_params_list_acc(ps, width_used, type_used, Nil : Vec[TypeParam]);
 
 fn classify_params_list_acc(ps: Vec[TypeParam], width_used: Vec[Bytes], type_used: Vec[Bytes], acc: Vec[TypeParam]) => Result[Vec[TypeParam], PErr] =
   match ps {
-    Nil => Ok(rev_acc(acc, Nil)),
+    Nil => Ok(rev_acc(acc, Nil : Vec[TypeParam])),
     Cons(p, rest) => match classify_one_param(p, width_used, type_used) {
       Err(e) => Err(e),
       Ok(p2) => classify_params_list_acc(rest, width_used, type_used, Cons(p2, acc))
@@ -2113,13 +2130,13 @@ fn parse_paren_type_tail(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Bas
 // parse_type_ref_tuple_rest: the elements after the first comma, tolerating a trailing comma before
 // `)` (mirrors the Rust `while !at(RParen) { push; if !eat(Comma) break }` loop).
 fn parse_type_ref_tuple_rest(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Vec[TypeRef], Vec[Spanned]], PErr] =
-  parse_type_ref_tuple_rest_acc(ts, depth, Nil);
+  parse_type_ref_tuple_rest_acc(ts, depth, Nil : Vec[TypeRef]);
 
 fn parse_type_ref_tuple_rest_acc(ts: Vec[Spanned], depth: Binary{32}, acc: Vec[TypeRef]) => Result[Pair[Vec[TypeRef], Vec[Spanned]], PErr] =
   match is_rparen(p_cur(ts)) {
     True => match p_expect(ts, True, "`)` to close the tuple type") {
       Err(e) => Err(e),
-      Ok(ts1) => Ok(Pr(rev_acc(acc, Nil), ts1))
+      Ok(ts1) => Ok(Pr(rev_acc(acc, Nil : Vec[TypeRef]), ts1))
     },
     False => match parse_type_ref(ts, depth) {
       Err(e) => Err(e),
@@ -2128,7 +2145,7 @@ fn parse_type_ref_tuple_rest_acc(ts: Vec[Spanned], depth: Binary{32}, acc: Vec[T
           Some(ts2) => parse_type_ref_tuple_rest_acc(ts2, depth, Cons(t, acc)),
           None => match p_expect(ts1, is_rparen(p_cur(ts1)), "`)` to close the tuple type") {
             Err(e) => Err(e),
-            Ok(ts2) => Ok(Pr(rev_acc(Cons(t, acc), Nil), ts2))
+            Ok(ts2) => Ok(Pr(rev_acc(Cons(t, acc), Nil : Vec[TypeRef]), ts2))
           }
         }
       }
@@ -2206,7 +2223,7 @@ fn parse_type_args_opt(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Vec[T
 // parse_type_ref_comma_list: NON-EMPTY "`one (, one)*`" — no trailing tolerance (ctor fields,
 // type args; FLAG-parse-5).
 fn parse_type_ref_comma_list(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Vec[TypeRef], Vec[Spanned]], PErr] =
-  parse_type_ref_comma_list_acc(ts, depth, Nil);
+  parse_type_ref_comma_list_acc(ts, depth, Nil : Vec[TypeRef]);
 
 fn parse_type_ref_comma_list_acc(ts: Vec[Spanned], depth: Binary{32}, acc: Vec[TypeRef]) => Result[Pair[Vec[TypeRef], Vec[Spanned]], PErr] =
   match parse_type_ref(ts, depth) {
@@ -2214,7 +2231,7 @@ fn parse_type_ref_comma_list_acc(ts: Vec[Spanned], depth: Binary{32}, acc: Vec[T
     Ok(pr) => match pr { Pr(t, ts1) =>
       match p_eat(ts1, is_comma(p_cur(ts1))) {
         Some(ts2) => parse_type_ref_comma_list_acc(ts2, depth, Cons(t, acc)),
-        None => Ok(Pr(rev_acc(Cons(t, acc), Nil), ts1))
+        None => Ok(Pr(rev_acc(Cons(t, acc), Nil : Vec[TypeRef]), ts1))
       }
     }
   };
@@ -2285,7 +2302,7 @@ fn parse_pattern_lit(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Pattern
 
 // parse_pattern_comma_list: NON-EMPTY, no trailing tolerance (ctor sub-patterns).
 fn parse_pattern_comma_list(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Vec[Pattern], Vec[Spanned]], PErr] =
-  parse_pattern_comma_list_acc(ts, depth, Nil);
+  parse_pattern_comma_list_acc(ts, depth, Nil : Vec[Pattern]);
 
 fn parse_pattern_comma_list_acc(ts: Vec[Spanned], depth: Binary{32}, acc: Vec[Pattern]) => Result[Pair[Vec[Pattern], Vec[Spanned]], PErr] =
   match parse_pattern(ts, depth) {
@@ -2293,7 +2310,7 @@ fn parse_pattern_comma_list_acc(ts: Vec[Spanned], depth: Binary{32}, acc: Vec[Pa
     Ok(pr) => match pr { Pr(p, ts1) =>
       match p_eat(ts1, is_comma(p_cur(ts1))) {
         Some(ts2) => parse_pattern_comma_list_acc(ts2, depth, Cons(p, acc)),
-        None => Ok(Pr(rev_acc(Cons(p, acc), Nil), ts1))
+        None => Ok(Pr(rev_acc(Cons(p, acc), Nil : Vec[Pattern]), ts1))
       }
     }
   };
@@ -2320,13 +2337,13 @@ fn parse_pattern_paren_tail(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[
   };
 
 fn parse_pattern_tuple_rest(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Vec[Pattern], Vec[Spanned]], PErr] =
-  parse_pattern_tuple_rest_acc(ts, depth, Nil);
+  parse_pattern_tuple_rest_acc(ts, depth, Nil : Vec[Pattern]);
 
 fn parse_pattern_tuple_rest_acc(ts: Vec[Spanned], depth: Binary{32}, acc: Vec[Pattern]) => Result[Pair[Vec[Pattern], Vec[Spanned]], PErr] =
   match is_rparen(p_cur(ts)) {
     True => match p_expect(ts, True, "`)` to close the tuple pattern") {
       Err(e) => Err(e),
-      Ok(ts1) => Ok(Pr(rev_acc(acc, Nil), ts1))
+      Ok(ts1) => Ok(Pr(rev_acc(acc, Nil : Vec[Pattern]), ts1))
     },
     False => match parse_pattern(ts, depth) {
       Err(e) => Err(e),
@@ -2335,7 +2352,7 @@ fn parse_pattern_tuple_rest_acc(ts: Vec[Spanned], depth: Binary{32}, acc: Vec[Pa
           Some(ts2) => parse_pattern_tuple_rest_acc(ts2, depth, Cons(p, acc)),
           None => match p_expect(ts1, is_rparen(p_cur(ts1)), "`)` to close the tuple pattern") {
             Err(e) => Err(e),
-            Ok(ts2) => Ok(Pr(rev_acc(Cons(p, acc), Nil), ts2))
+            Ok(ts2) => Ok(Pr(rev_acc(Cons(p, acc), Nil : Vec[Pattern]), ts2))
           }
         }
       }
@@ -2353,7 +2370,7 @@ fn parse_path(ts: Vec[Spanned]) => Result[Pair[Path, Vec[Spanned]], PErr] =
   };
 
 fn parse_path_rest(ts: Vec[Spanned]) => Result[Pair[Vec[Bytes], Vec[Spanned]], PErr] =
-  parse_path_rest_acc(ts, Nil);
+  parse_path_rest_acc(ts, Nil : Vec[Bytes]);
 
 fn parse_path_rest_acc(ts: Vec[Spanned], acc: Vec[Bytes]) => Result[Pair[Vec[Bytes], Vec[Spanned]], PErr] =
   match p_eat(ts, is_dot(p_cur(ts))) {
@@ -2361,18 +2378,18 @@ fn parse_path_rest_acc(ts: Vec[Spanned], acc: Vec[Bytes]) => Result[Pair[Vec[Byt
       Err(e) => Err(e),
       Ok(pr) => match pr { Pr(seg, ts2) => parse_path_rest_acc(ts2, Cons(seg, acc)) }
     },
-    None => Ok(Pr(rev_acc(acc, Nil), ts))
+    None => Ok(Pr(rev_acc(acc, Nil : Vec[Bytes]), ts))
   };
 
 // ── use (mirrors parse_use — `use a.b.c` or the glob form `use a.b.*`) ──────────────────────────
 fn parse_use_tail(ts: Vec[Spanned]) => Result[Pair[Pair[Vec[Bytes], Bool], Vec[Spanned]], PErr] =
-  parse_use_tail_acc(ts, Nil);
+  parse_use_tail_acc(ts, Nil : Vec[Bytes]);
 
 fn parse_use_tail_acc(ts: Vec[Spanned], acc: Vec[Bytes]) => Result[Pair[Pair[Vec[Bytes], Bool], Vec[Spanned]], PErr] =
   match p_eat(ts, is_dot(p_cur(ts))) {
-    None => Ok(Pr(Pr(rev_acc(acc, Nil), False), ts)),
+    None => Ok(Pr(Pr(rev_acc(acc, Nil : Vec[Bytes]), False), ts)),
     Some(ts1) => match p_eat(ts1, is_star(p_cur(ts1))) {
-      Some(ts2) => Ok(Pr(Pr(rev_acc(acc, Nil), True), ts2)),
+      Some(ts2) => Ok(Pr(Pr(rev_acc(acc, Nil : Vec[Bytes]), True), ts2)),
       None => match p_ident(ts1) {
         Err(e) => Err(e),
         Ok(pr) => match pr { Pr(seg, ts2) => parse_use_tail_acc(ts2, Cons(seg, acc)) }
@@ -2653,7 +2670,7 @@ fn parse_match(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spa
 
 // parse_arm_list: NON-EMPTY, trailing comma before `}` tolerated.
 fn parse_arm_list(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Vec[Arm], Vec[Spanned]], PErr] =
-  parse_arm_list_acc(ts, depth, Nil);
+  parse_arm_list_acc(ts, depth, Nil : Vec[Arm]);
 
 fn parse_arm_list_acc(ts: Vec[Spanned], depth: Binary{32}, acc: Vec[Arm]) => Result[Pair[Vec[Arm], Vec[Spanned]], PErr] =
   match parse_arm(ts, depth) {
@@ -2661,10 +2678,10 @@ fn parse_arm_list_acc(ts: Vec[Spanned], depth: Binary{32}, acc: Vec[Arm]) => Res
     Ok(pr) => match pr { Pr(a, ts1) =>
       match p_eat(ts1, is_comma(p_cur(ts1))) {
         Some(ts2) => match is_rbrace(p_cur(ts2)) {
-          True => Ok(Pr(rev_acc(Cons(a, acc), Nil), ts2)),
+          True => Ok(Pr(rev_acc(Cons(a, acc), Nil : Vec[Arm]), ts2)),
           False => parse_arm_list_acc(ts2, depth, Cons(a, acc))
         },
-        None => Ok(Pr(rev_acc(Cons(a, acc), Nil), ts1))
+        None => Ok(Pr(rev_acc(Cons(a, acc), Nil : Vec[Arm]), ts1))
       }
     }
   };
@@ -2684,7 +2701,7 @@ fn parse_arm(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Arm, Vec[Spanne
   };
 
 fn parse_or_pattern_rest(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Vec[Pattern], Vec[Spanned]], PErr] =
-  parse_or_pattern_rest_acc(ts, depth, Nil);
+  parse_or_pattern_rest_acc(ts, depth, Nil : Vec[Pattern]);
 
 fn parse_or_pattern_rest_acc(ts: Vec[Spanned], depth: Binary{32}, acc: Vec[Pattern]) => Result[Pair[Vec[Pattern], Vec[Spanned]], PErr] =
   match p_eat(ts, is_pipe(p_cur(ts))) {
@@ -2692,7 +2709,7 @@ fn parse_or_pattern_rest_acc(ts: Vec[Spanned], depth: Binary{32}, acc: Vec[Patte
       Err(e) => Err(e),
       Ok(pr) => match pr { Pr(p, ts2) => parse_or_pattern_rest_acc(ts2, depth, Cons(p, acc)) }
     },
-    None => Ok(Pr(rev_acc(acc, Nil), ts))
+    None => Ok(Pr(rev_acc(acc, Nil : Vec[Pattern]), ts))
   };
 
 fn parse_arm_tail(pattern: Pattern, ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Arm, Vec[Spanned]], PErr] =
@@ -2839,7 +2856,7 @@ fn parse_colony(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Sp
 
 // parse_hypha_list: NON-EMPTY, trailing comma before `}` tolerated.
 fn parse_hypha_list(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Vec[Hypha], Vec[Spanned]], PErr] =
-  parse_hypha_list_acc(ts, depth, Nil);
+  parse_hypha_list_acc(ts, depth, Nil : Vec[Hypha]);
 
 fn parse_hypha_list_acc(ts: Vec[Spanned], depth: Binary{32}, acc: Vec[Hypha]) => Result[Pair[Vec[Hypha], Vec[Spanned]], PErr] =
   match parse_hypha(ts, depth) {
@@ -2847,10 +2864,10 @@ fn parse_hypha_list_acc(ts: Vec[Spanned], depth: Binary{32}, acc: Vec[Hypha]) =>
     Ok(pr) => match pr { Pr(h, ts1) =>
       match p_eat(ts1, is_comma(p_cur(ts1))) {
         Some(ts2) => match is_rbrace(p_cur(ts2)) {
-          True => Ok(Pr(rev_acc(Cons(h, acc), Nil), ts2)),
+          True => Ok(Pr(rev_acc(Cons(h, acc), Nil : Vec[Hypha]), ts2)),
           False => parse_hypha_list_acc(ts2, depth, Cons(h, acc))
         },
-        None => Ok(Pr(rev_acc(Cons(h, acc), Nil), ts1))
+        None => Ok(Pr(rev_acc(Cons(h, acc), Nil : Vec[Hypha]), ts1))
       }
     }
   };
@@ -2917,7 +2934,7 @@ fn parse_expr_list_until(ts: Vec[Spanned], depth: Binary{32}, is_end: Bool) => R
   };
 
 fn parse_expr_comma_list(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Vec[Expr], Vec[Spanned]], PErr] =
-  parse_expr_comma_list_acc(ts, depth, Nil);
+  parse_expr_comma_list_acc(ts, depth, Nil : Vec[Expr]);
 
 fn parse_expr_comma_list_acc(ts: Vec[Spanned], depth: Binary{32}, acc: Vec[Expr]) => Result[Pair[Vec[Expr], Vec[Spanned]], PErr] =
   match parse_expr(ts, depth) {
@@ -2925,7 +2942,7 @@ fn parse_expr_comma_list_acc(ts: Vec[Spanned], depth: Binary{32}, acc: Vec[Expr]
     Ok(pr) => match pr { Pr(e, ts1) =>
       match p_eat(ts1, is_comma(p_cur(ts1))) {
         Some(ts2) => parse_expr_comma_list_acc(ts2, depth, Cons(e, acc)),
-        None => Ok(Pr(rev_acc(Cons(e, acc), Nil), ts1))
+        None => Ok(Pr(rev_acc(Cons(e, acc), Nil : Vec[Expr]), ts1))
       }
     }
   };
@@ -2974,13 +2991,13 @@ fn parse_primary_paren_tail(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[
   };
 
 fn parse_expr_tuple_rest(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Vec[Expr], Vec[Spanned]], PErr] =
-  parse_expr_tuple_rest_acc(ts, depth, Nil);
+  parse_expr_tuple_rest_acc(ts, depth, Nil : Vec[Expr]);
 
 fn parse_expr_tuple_rest_acc(ts: Vec[Spanned], depth: Binary{32}, acc: Vec[Expr]) => Result[Pair[Vec[Expr], Vec[Spanned]], PErr] =
   match is_rparen(p_cur(ts)) {
     True => match p_expect(ts, True, "`)` to close the tuple literal") {
       Err(e) => Err(e),
-      Ok(ts1) => Ok(Pr(rev_acc(acc, Nil), ts1))
+      Ok(ts1) => Ok(Pr(rev_acc(acc, Nil : Vec[Expr]), ts1))
     },
     False => match parse_expr(ts, depth) {
       Err(e) => Err(e),
@@ -2989,7 +3006,7 @@ fn parse_expr_tuple_rest_acc(ts: Vec[Spanned], depth: Binary{32}, acc: Vec[Expr]
           Some(ts2) => parse_expr_tuple_rest_acc(ts2, depth, Cons(e, acc)),
           None => match p_expect(ts1, is_rparen(p_cur(ts1)), "`)` to close the tuple literal") {
             Err(e2) => Err(e2),
-            Ok(ts2) => Ok(Pr(rev_acc(Cons(e, acc), Nil), ts2))
+            Ok(ts2) => Ok(Pr(rev_acc(Cons(e, acc), Nil : Vec[Expr]), ts2))
           }
         }
       }
@@ -3088,7 +3105,7 @@ fn parse_params_opt(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Vec[Para
   };
 
 fn parse_params_comma_list(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Vec[Param], Vec[Spanned]], PErr] =
-  parse_params_comma_list_acc(ts, depth, Nil);
+  parse_params_comma_list_acc(ts, depth, Nil : Vec[Param]);
 
 fn parse_params_comma_list_acc(ts: Vec[Spanned], depth: Binary{32}, acc: Vec[Param]) => Result[Pair[Vec[Param], Vec[Spanned]], PErr] =
   match parse_one_param(ts, depth) {
@@ -3096,7 +3113,7 @@ fn parse_params_comma_list_acc(ts: Vec[Spanned], depth: Binary{32}, acc: Vec[Par
     Ok(pr) => match pr { Pr(p, ts1) =>
       match p_eat(ts1, is_comma(p_cur(ts1))) {
         Some(ts2) => parse_params_comma_list_acc(ts2, depth, Cons(p, acc)),
-        None => Ok(Pr(rev_acc(Cons(p, acc), Nil), ts1))
+        None => Ok(Pr(rev_acc(Cons(p, acc), Nil : Vec[Param]), ts1))
       }
     }
   };
@@ -3132,7 +3149,7 @@ fn parse_type_params_opt(ts: Vec[Spanned]) => Result[Pair[Vec[Bytes], Vec[Spanne
   };
 
 fn parse_type_param_name_list(ts: Vec[Spanned]) => Result[Pair[Vec[Bytes], Vec[Spanned]], PErr] =
-  parse_type_param_name_list_acc(ts, Nil);
+  parse_type_param_name_list_acc(ts, Nil : Vec[Bytes]);
 
 fn parse_type_param_name_list_acc(ts: Vec[Spanned], acc: Vec[Bytes]) => Result[Pair[Vec[Bytes], Vec[Spanned]], PErr] =
   match parse_one_type_param_name(ts) {
@@ -3140,7 +3157,7 @@ fn parse_type_param_name_list_acc(ts: Vec[Spanned], acc: Vec[Bytes]) => Result[P
     Ok(pr) => match pr { Pr(n, ts1) =>
       match p_eat(ts1, is_comma(p_cur(ts1))) {
         Some(ts2) => parse_type_param_name_list_acc(ts2, Cons(n, acc)),
-        None => Ok(Pr(rev_acc(Cons(n, acc), Nil), ts1))
+        None => Ok(Pr(rev_acc(Cons(n, acc), Nil : Vec[Bytes]), ts1))
       }
     }
   };
@@ -3172,7 +3189,7 @@ fn parse_type_params_bounded(ts: Vec[Spanned]) => Result[Pair[Vec[TypeParam], Ve
   };
 
 fn parse_type_param_comma_list(ts: Vec[Spanned]) => Result[Pair[Vec[TypeParam], Vec[Spanned]], PErr] =
-  parse_type_param_comma_list_acc(ts, Nil);
+  parse_type_param_comma_list_acc(ts, Nil : Vec[TypeParam]);
 
 fn parse_type_param_comma_list_acc(ts: Vec[Spanned], acc: Vec[TypeParam]) => Result[Pair[Vec[TypeParam], Vec[Spanned]], PErr] =
   match parse_type_param(ts) {
@@ -3180,7 +3197,7 @@ fn parse_type_param_comma_list_acc(ts: Vec[Spanned], acc: Vec[TypeParam]) => Res
     Ok(pr) => match pr { Pr(p, ts1) =>
       match p_eat(ts1, is_comma(p_cur(ts1))) {
         Some(ts2) => parse_type_param_comma_list_acc(ts2, Cons(p, acc)),
-        None => Ok(Pr(rev_acc(Cons(p, acc), Nil), ts1))
+        None => Ok(Pr(rev_acc(Cons(p, acc), Nil : Vec[TypeParam]), ts1))
       }
     }
   };
@@ -3200,7 +3217,7 @@ fn parse_type_param(ts: Vec[Spanned]) => Result[Pair[TypeParam, Vec[Spanned]], P
   };
 
 fn parse_bound(ts: Vec[Spanned]) => Result[Pair[Vec[TraitRef], Vec[Spanned]], PErr] =
-  parse_bound_acc(ts, Nil);
+  parse_bound_acc(ts, Nil : Vec[TraitRef]);
 
 fn parse_bound_acc(ts: Vec[Spanned], acc: Vec[TraitRef]) => Result[Pair[Vec[TraitRef], Vec[Spanned]], PErr] =
   match parse_trait_ref(ts) {
@@ -3208,7 +3225,7 @@ fn parse_bound_acc(ts: Vec[Spanned], acc: Vec[TraitRef]) => Result[Pair[Vec[Trai
     Ok(pr) => match pr { Pr(t, ts1) =>
       match p_eat(ts1, is_plus(p_cur(ts1))) {
         Some(ts2) => parse_bound_acc(ts2, Cons(t, acc)),
-        None => Ok(Pr(rev_acc(Cons(t, acc), Nil), ts1))
+        None => Ok(Pr(rev_acc(Cons(t, acc), Nil : Vec[TraitRef]), ts1))
       }
     }
   };
@@ -3240,7 +3257,7 @@ fn parse_const_params_opt(ts: Vec[Spanned]) => Result[Pair[Vec[TypeParam], Vec[S
   };
 
 fn parse_const_param_comma_list(ts: Vec[Spanned]) => Result[Pair[Vec[TypeParam], Vec[Spanned]], PErr] =
-  parse_const_param_comma_list_acc(ts, Nil);
+  parse_const_param_comma_list_acc(ts, Nil : Vec[TypeParam]);
 
 fn parse_const_param_comma_list_acc(ts: Vec[Spanned], acc: Vec[TypeParam]) => Result[Pair[Vec[TypeParam], Vec[Spanned]], PErr] =
   match parse_one_const_param(ts) {
@@ -3248,7 +3265,7 @@ fn parse_const_param_comma_list_acc(ts: Vec[Spanned], acc: Vec[TypeParam]) => Re
     Ok(pr) => match pr { Pr(p, ts1) =>
       match p_eat(ts1, is_comma(p_cur(ts1))) {
         Some(ts2) => parse_const_param_comma_list_acc(ts2, Cons(p, acc)),
-        None => Ok(Pr(rev_acc(Cons(p, acc), Nil), ts1))
+        None => Ok(Pr(rev_acc(Cons(p, acc), Nil : Vec[TypeParam]), ts1))
       }
     }
   };
@@ -3324,7 +3341,7 @@ fn parse_effect_budget_tail(name: Bytes, raw: Binary{64}, budget_pos: Pos, ts: V
 // parse_effect_entries: comma-separated `eff(<=N)?` entries; a trailing comma before `}` is an
 // explicit refusal (kept strict — G2).
 fn parse_effect_entries(ts: Vec[Spanned]) => Result[Pair[Pair[Vec[Bytes], Vec[EffectBudget]], Vec[Spanned]], PErr] =
-  parse_effect_entries_acc(ts, Nil, Nil);
+  parse_effect_entries_acc(ts, Nil : Vec[Bytes], Nil : Vec[EffectBudget]);
 
 fn parse_effect_entries_acc(ts: Vec[Spanned], names: Vec[Bytes], budgets: Vec[EffectBudget]) => Result[Pair[Pair[Vec[Bytes], Vec[EffectBudget]], Vec[Spanned]], PErr] =
   match parse_one_effect_entry(ts) {
@@ -3337,7 +3354,7 @@ fn parse_effect_entries_acc(ts: Vec[Spanned], names: Vec[Bytes], budgets: Vec[Ef
           True => Err(PE(p_pos(ts2), "trailing comma before `}` in an effect annotation is not allowed (RFC-0014 SS4.5)")),
           False => parse_effect_entries_acc(ts2, names2, budgets2)
         },
-        None => Ok(Pr(Pr(rev_acc(names2, Nil), rev_acc(budgets2, Nil)), ts1))
+        None => Ok(Pr(Pr(rev_acc(names2, Nil : Vec[Bytes]), rev_acc(budgets2, Nil : Vec[EffectBudget])), ts1))
       }
     } }
   };
@@ -3375,7 +3392,7 @@ type Tr3[A, B, C] = T3(A, B, C);
 // append_typeparams: `a ++ b` via double reversal — both passes direct-tail (rev_acc), so the
 // depth is O(1) regardless of the [...]/{...} parameter-list lengths.
 fn append_typeparams(a: Vec[TypeParam], b: Vec[TypeParam]) => Vec[TypeParam] =
-  rev_acc(rev_acc(a, Nil), b);
+  rev_acc(rev_acc(a, Nil : Vec[TypeParam]), b);
 
 // ── fn signature tail + decl forms (mirrors parse_sig_tail/expect_return_arrow/parse_fn_sig/
 // parse_fn_decl/parse_tier_fn_decl) ─────────────────────────────────────────────────────────────
@@ -3535,7 +3552,7 @@ fn parse_ctor(ts: Vec[Spanned]) => Result[Pair[Ctor, Vec[Spanned]], PErr] =
   };
 
 fn parse_ctor_pipe_list(ts: Vec[Spanned]) => Result[Pair[Vec[Ctor], Vec[Spanned]], PErr] =
-  parse_ctor_pipe_list_acc(ts, Nil);
+  parse_ctor_pipe_list_acc(ts, Nil : Vec[Ctor]);
 
 fn parse_ctor_pipe_list_acc(ts: Vec[Spanned], acc: Vec[Ctor]) => Result[Pair[Vec[Ctor], Vec[Spanned]], PErr] =
   match parse_ctor(ts) {
@@ -3543,7 +3560,7 @@ fn parse_ctor_pipe_list_acc(ts: Vec[Spanned], acc: Vec[Ctor]) => Result[Pair[Vec
     Ok(pr) => match pr { Pr(c, ts1) =>
       match p_eat(ts1, is_pipe(p_cur(ts1))) {
         Some(ts2) => parse_ctor_pipe_list_acc(ts2, Cons(c, acc)),
-        None => Ok(Pr(rev_acc(Cons(c, acc), Nil), ts1))
+        None => Ok(Pr(rev_acc(Cons(c, acc), Nil : Vec[Ctor]), ts1))
       }
     }
   };
@@ -3571,11 +3588,11 @@ fn parse_type_decl(vis: Vis, ts: Vec[Spanned]) => Result[Pair[TypeDecl, Vec[Span
   };
 
 fn parse_trait_sig_list(ts: Vec[Spanned]) => Result[Pair[Vec[FnSig], Vec[Spanned]], PErr] =
-  parse_trait_sig_list_acc(ts, Nil);
+  parse_trait_sig_list_acc(ts, Nil : Vec[FnSig]);
 
 fn parse_trait_sig_list_acc(ts: Vec[Spanned], acc: Vec[FnSig]) => Result[Pair[Vec[FnSig], Vec[Spanned]], PErr] =
   match is_rbrace(p_cur(ts)) {
-    True => Ok(Pr(rev_acc(acc, Nil), ts)),
+    True => Ok(Pr(rev_acc(acc, Nil : Vec[FnSig]), ts)),
     False => match parse_fn_sig(ts) {
       Err(e) => Err(e),
       Ok(pr) => match pr { Pr(sig, ts1) =>
@@ -3617,11 +3634,11 @@ fn parse_trait_decl(vis: Vis, ts: Vec[Spanned]) => Result[Pair[TraitDecl, Vec[Sp
 // ── impl (trait-instance + inherent; M-664) ──────────────────────────────────────────────────────
 
 fn parse_impl_method_list(ts: Vec[Spanned]) => Result[Pair[Vec[FnDecl], Vec[Spanned]], PErr] =
-  parse_impl_method_list_acc(ts, Nil);
+  parse_impl_method_list_acc(ts, Nil : Vec[FnDecl]);
 
 fn parse_impl_method_list_acc(ts: Vec[Spanned], acc: Vec[FnDecl]) => Result[Pair[Vec[FnDecl], Vec[Spanned]], PErr] =
   match is_rbrace(p_cur(ts)) {
-    True => Ok(Pr(rev_acc(acc, Nil), ts)),
+    True => Ok(Pr(rev_acc(acc, Nil : Vec[FnDecl]), ts)),
     False => match is_tpub(p_cur(ts)) {
       True => Err(PE(p_pos(ts), "an `impl` method is not `pub`-gated (M-662)")),
       False => match parse_fn_decl(Private, ts) {
@@ -3713,14 +3730,14 @@ fn parse_impl_item_tail(head: BaseType, ts: Vec[Spanned]) => Result[Pair[Item, V
 // ── object composition (DN-53/M-811) ─────────────────────────────────────────────────────────────
 
 fn parse_object_body(ts: Vec[Spanned]) => Result[Pair[Tr3[Vec[ViaDecl], Vec[ImplDecl], Vec[FnDecl]], Vec[Spanned]], PErr] =
-  parse_object_body_acc(ts, Nil, Nil, Nil);
+  parse_object_body_acc(ts, Nil : Vec[ViaDecl], Nil : Vec[ImplDecl], Nil : Vec[FnDecl]);
 
 // parse_object_body_acc: the accumulator dispatcher — each member arm parses ONE member (incl. its
 // `;` terminator) then direct-tail-recurses with the member prepended; the three lists are
 // rev_acc'd back to source order once at the `}`.
 fn parse_object_body_acc(ts: Vec[Spanned], vds: Vec[ViaDecl], ims: Vec[ImplDecl], fs: Vec[FnDecl]) => Result[Pair[Tr3[Vec[ViaDecl], Vec[ImplDecl], Vec[FnDecl]], Vec[Spanned]], PErr] =
   match is_rbrace(p_cur(ts)) {
-    True => Ok(Pr(T3(rev_acc(vds, Nil), rev_acc(ims, Nil), rev_acc(fs, Nil)), ts)),
+    True => Ok(Pr(T3(rev_acc(vds, Nil : Vec[ViaDecl]), rev_acc(ims, Nil : Vec[ImplDecl]), rev_acc(fs, Nil : Vec[FnDecl])), ts)),
     False => match p_cur(ts) {
       Via => match parse_one_object_via(p_bump(ts)) {
         Err(e) => Err(e),
@@ -3949,11 +3966,11 @@ fn parse_pub_item(ts: Vec[Spanned]) => Result[Pair[Item, Vec[Spanned]], PErr] =
 // namespace has no Rust-style free-fn-vs-method separation) ─────────────────────────────────────
 
 fn parse_nodule_items(ts: Vec[Spanned]) => Result[Pair[Vec[Item], Vec[Spanned]], PErr] =
-  parse_nodule_items_acc(ts, Nil);
+  parse_nodule_items_acc(ts, Nil : Vec[Item]);
 
 fn parse_nodule_items_acc(ts: Vec[Spanned], acc: Vec[Item]) => Result[Pair[Vec[Item], Vec[Spanned]], PErr] =
   match bool_or(is_eof(p_cur(ts)), is_nodule(p_cur(ts))) {
-    True => Ok(Pr(rev_acc(acc, Nil), ts)),
+    True => Ok(Pr(rev_acc(acc, Nil : Vec[Item]), ts)),
     False => match parse_item(ts) {
       Err(e) => Err(e),
       Ok(pr) => match pr { Pr(item, ts1) =>
@@ -3989,11 +4006,11 @@ fn parse_nodule(ts: Vec[Spanned]) => Result[Pair[Nodule, Vec[Spanned]], PErr] =
   };
 
 fn parse_nodule_list(ts: Vec[Spanned]) => Result[Pair[Vec[Nodule], Vec[Spanned]], PErr] =
-  parse_nodule_list_acc(ts, Nil);
+  parse_nodule_list_acc(ts, Nil : Vec[Nodule]);
 
 fn parse_nodule_list_acc(ts: Vec[Spanned], acc: Vec[Nodule]) => Result[Pair[Vec[Nodule], Vec[Spanned]], PErr] =
   match is_nodule(p_cur(ts)) {
-    False => Ok(Pr(rev_acc(acc, Nil), ts)),
+    False => Ok(Pr(rev_acc(acc, Nil : Vec[Nodule]), ts)),
     True => match parse_nodule(ts) {
       Err(e) => Err(e),
       Ok(pr) => match pr { Pr(n, ts1) => parse_nodule_list_acc(ts1, Cons(n, acc)) }
