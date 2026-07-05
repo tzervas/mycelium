@@ -60,7 +60,30 @@ reading both the Rust output and the self-hosted output for the same input.
 
 ## Wave progress
 
-- [ ] **Stage 1** — `compiler.token` + `compiler.lex` (token-stream differential)
+- [x] **Stage 1** — `compiler.token` + `compiler.lex` (token-stream differential). Landed
+      (`lib/compiler/token.myc`, `lib/compiler/lex.myc`; gate: `crates/mycelium-l1/tests/compiler_stage1.rs`).
+      `compiler.token`: the full `Tok`/`Pos`/`Spanned`/`keyword` port, all 64 reserved words
+      classification-differentialed against the Rust oracle (`token::keyword`) 1:1. `compiler.lex`:
+      the full lexer (trivia, all punctuation/operators, identifiers+keywords, `0b`/`0x`/`0t`
+      literals, decimal `Int`, `"…"` strings) token-COUNT-differentialed against the Rust oracle
+      over **every file in the accept-corpus** (27/27), plus per-token kind/content spot-checks.
+      Two real checker findings were surfaced by this port (reported, not silently worked around;
+      full detail in the test file): (1) a combined two-level nested match pattern (e.g.
+      `Some(Scalar(SF16))`, or `Some(Sp(Ctor, _))`) panics `usefulness::useful_budgeted` when the
+      outer type has `Tok`'s ~80 variants — worked around in every test via a split-match idiom,
+      never hit by `lex`'s own logic (which only constructs `Tok`, never destructures it); (2)
+      `mycelium_interp::Interpreter::eval_core` (the L0 substitution interpreter) does not return
+      within minutes for a `lex.myc`-scale elaborated program even though L1-eval finishes in
+      well under a second, so the Stage-1 differential compares the **L1-eval** leg only (still a
+      complete "Rust-lexer ≡ self-hosted-lexer" comparison; the L0-interp/AOT cross-check used by
+      `std_*.rs`'s three-way harness is not currently feasible at this scale). Deliberate, flagged
+      scope narrowings vs. the Rust oracle: no float-literal scanning (none in the accept-corpus),
+      ASCII-only whitespace, `Int`/literal payloads carry verbatim `Bytes` rather than an eagerly
+      converted value (mirrors the Rust lexer's own deferred-conversion precedent for every OTHER
+      literal kind). `compiler.token`/`compiler.lex` are mutually self-contained (each redeclares
+      the shared types) rather than cross-nodule `use`, because cross-nodule EXECUTION (not just
+      type-checking) is still staged in `checkty.rs`'s `check_phylum` — a real, separate finding
+      from this leaf, reported upstream for M-741/a future stage to lift.
 - [ ] **Stage 2** — `compiler.nodule` (header-parse differential)
 - [ ] **Stage 3** — `compiler.ast` + `compiler.parse` (AST differential + full conformance corpus)
 - [ ] **Stage 4** — `compiler.ambient` + `compiler.totality` + `compiler.substrate` (leaf differentials)

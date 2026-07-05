@@ -3772,7 +3772,7 @@ issues:
   - id: M-740
     title: "M-740 — Port the L1 frontend (lexer/parser/checker) to Mycelium (.myc)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P2, status:needs-design]
+    labels: [phase:5, type:feature, area:language, priority:P2, status:in-progress]
     # M-978/M-979 gate the port's AUTHORING SHAPE (DN-84 §11 correction, 2026-07-03): the depth/stack
     # architecture (explicit work-stack vs guarded recursion; the .myc iteration contract) must be
     # settled + adversarially reviewed BEFORE the .myc passes are authored, so the dogfooded compiler
@@ -3814,6 +3814,18 @@ issues:
       - just check is green on the integrated branch.
       - No Rust source file in crates/mycelium-l1/src/ is deleted or modified (the Rust
         frontend remains as the reference host compiler until M-741 ratification).
+
+      STAGE 1 LANDED (2026-07-05, in-progress): lib/compiler/token.myc + lex.myc (the full
+      Tok/Pos/Spanned/keyword port, all 64 reserved words; the full lex path: trivia, punctuation/
+      operators, ident+keyword, 0b/0x/0t + decimal Int, strings) with the Stage-1 gate
+      crates/mycelium-l1/tests/compiler_stage1.rs — 9/9 green: 64-keyword classification
+      differential vs the Rust oracle 1:1 + token-count differential over ALL 27 accept-corpus
+      files + per-token kind/content spot checks. Honest narrowings (flagged in-file + README):
+      differential runs the L1-EVAL leg only (the L0 leg is impractical at this scale — M-981);
+      no float-literal scanning (none in the corpus); ASCII-only whitespace; token/lex nodules
+      self-contained rather than cross-nodule use (execution staged — M-982). Three real findings
+      minted from this stage: M-980 (usefulness nested-pattern panic), M-981 (L0 at self-hosted
+      scale), M-982 (cross-nodule execution). Stages 2-6 remain per the lib/compiler/README.md map.
 
   - id: M-741
     title: "M-741 — Ratify the self-hosted toolchain as canonical (DN-14 gate at full scale)"
@@ -11593,6 +11605,96 @@ issues:
       every path, --unbounded corpus-refused, forbid(unsafe) intact. The W7 follow-ons above stay
       tracked as open residuals (non-DoD, recorded in RFC §7/§9) — they are NOT closed by this issue.
       M-740's M-978 dependency is cleared by this promotion (M-739, needs-design, still gates it).
+  - id: M-980
+    title: "usefulness::useful_budgeted panics (bounds check) on two-level nested patterns over a wide enum"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:bug, area:language, priority:P2, status:todo]
+    epic: E18-1
+    depends_on: []
+    doc_refs:
+      - src:crates/mycelium-l1/src/usefulness.rs:209
+      - src:crates/mycelium-l1/tests/compiler_stage1.rs
+    body: |
+      Minted 2026-07-05 from the M-740 Stage-1 port (FLAG-stage1-checker-1). A combined two-level
+      nested match pattern (e.g. Some(Scalar(SF16)), or Some(Sp(Ctor, _))) panics
+      usefulness::useful_budgeted with a panic_bounds_check at usefulness.rs:209 whenever the
+      OUTER type has ~80 variants (observed with compiler.token's Tok). Bisected by the Stage-1
+      leaf: the nesting itself triggers it, not aggregation or which inner variant. A checker
+      PANIC on plausibly-valid source is a G2 (never-silent) violation — the checker must refuse
+      explicitly or accept, never crash. Workaround in the Stage-1 tests: the split-match idiom
+      (unwrap Option, then match Spanned, then match the wide enum, as three separate matches);
+      lex.myc's own logic never destructures Tok so the port is unaffected.
+
+      User stories:
+      - As a Mycelium developer, I want nested matches over wide enums to check (or refuse
+        never-silently), so that idiomatic pattern code does not crash the compiler.
+
+      Definition of Done:
+      - The panic is reproduced as a regression test (a two-level nested pattern over an
+        80-variant enum); the root cause in the usefulness matrix specialization is fixed (or the
+        input refused never-silently with an explicit diagnostic if it is a documented budget);
+        the Stage-1 split-match workaround sites are noted as un-blockable; change-scoped
+        just check green.
+  - id: M-981
+    title: "L0 reference interpreter impractical at self-hosted-compiler scale (eval_core minutes+ where L1-eval is sub-second)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:bug, area:execution, priority:P2, status:todo]
+    epic: E18-1
+    depends_on: []
+    doc_refs:
+      - src:crates/mycelium-interp/src/lib.rs
+      - src:crates/mycelium-l1/tests/compiler_stage1.rs
+      - corpus:RFC-0041
+    body: |
+      Minted 2026-07-05 from the M-740 Stage-1 port (FLAG-stage1-checker-2). For a lex.myc-scale
+      elaborated program, mycelium_interp::Interpreter::eval_core does not return within several
+      minutes even though parse/check/mono/elaborate and L1-eval all finish in well under a
+      second. This is the known L0 substitution-machine O(N^2)+ behavior (RFC-0041 §5.1 notes it
+      for deep runtime recursion) surfacing on REAL self-hosted source for the first time. It
+      narrows every self-hosting stage gate: the std_*.rs-style three-way differential
+      (L1 ≡ L0 ≡ AOT) is not currently feasible at compiler scale, so Stage 1 compares the
+      L1-eval leg only (recorded in lib/compiler/README.md — honest, but a weaker gate). The
+      Stage-6 bootstrap three-way (M-742) needs either an L0 performance fix, a bounded L0
+      sub-corpus strategy, or a ratified re-definition of the gate's legs.
+
+      User stories:
+      - As a compiler engineer, I want the trusted L0 leg of the differential to run at
+        compiler scale, so that the self-hosting stage gates keep their full three-way strength.
+
+      Definition of Done:
+      - The L0 cost profile at lex.myc scale is measured and its dominating term identified;
+        either a fix lands (keeping L0 substitution semantics per RFC-0041 §4.1) or a maintainer-
+        ratified gate re-definition records which stages run which legs (VR-5 — the narrowing is
+        decided, not silent); the Stage-1 harness is extended back to three-way if feasible.
+  - id: M-982
+    title: "Cross-nodule EXECUTION still staged (check_phylum) — self-hosted nodules must self-contain shared types"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:todo]
+    epic: E18-1
+    depends_on: [M-662]
+    doc_refs:
+      - src:crates/mycelium-l1/src/checkty.rs
+      - src:lib/compiler/token.myc
+      - corpus:DN-26
+    body: |
+      Minted 2026-07-05 from the M-740 Stage-1 port. M-662 landed cross-nodule use for
+      TYPE-CHECKING, but cross-nodule EXECUTION is still staged (per check_phylum's own doc
+      comment in checkty.rs) — a nodule cannot call another nodule's functions at runtime. DN-26
+      §7.4's layout assumed cross-nodule use executes, so compiler.token and compiler.lex ship
+      mutually self-contained (each redeclares Tok/Pos/Spanned/keyword) — correct but duplicated,
+      and the §7.3 Stage-5 semcore plan (leaves as sibling nodules feeding one SCC nodule)
+      depends on lifting this. Blocking-relevant for Stages 4-5; workaround-able (self-contain)
+      through Stage 3.
+
+      User stories:
+      - As a compiler engineer porting the frontend, I want cross-nodule calls to execute, so
+        that the phylum layout DN-26 §7.4 ratified is actually runnable without duplication.
+
+      Definition of Done:
+      - Cross-nodule function calls execute under the interpreter (and AOT) for a two-nodule
+        phylum witness; the compiler.token/compiler.lex duplication is removed (lex.myc imports
+        token.myc's types via use); DN-26 gets an append-only note recording the lift;
+        change-scoped just check green.
   - id: M-970
     title: "mycelium-fmt: render_expr_canonical drops the @forage(policy) Hypha annotation"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
