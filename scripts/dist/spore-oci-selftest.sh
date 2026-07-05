@@ -30,7 +30,7 @@ cargo build -q -p mycelium-spore --bin spore
 SPORE="$ROOT/target/debug/spore"
 
 CID=""
-cleanup() { [ -n "$CID" ] && "$RUNTIME" rm -f "$CID" >/dev/null 2>&1 || true; }
+cleanup() { if [ -n "$CID" ]; then "$RUNTIME" rm -f "$CID" >/dev/null 2>&1 || true; fi; }
 trap cleanup EXIT
 
 echo "== start throwaway registry:2 on :${REG_PORT} =="
