@@ -301,6 +301,33 @@ fn nodule_myc_matches_oracle_on_the_edge_battery() {
     }
 }
 
+/// The FLAG-nodule-2 narrowing, PINNED as a known divergence (review finding, PR #1165 — the
+/// ASCII-only trim is a real CLASSIFICATION divergence, not a cosmetic one): a leading line
+/// consisting solely of non-ASCII Unicode whitespace (NBSP, U+00A0) is blank to the Unicode-aware
+/// Rust oracle (which then finds the marker on the next line) but NOT blank to the byte-wise
+/// `.myc` port (which classifies the NBSP line itself and returns "no marker"). This test asserts
+/// the DIVERGENT pair explicitly — oracle 2 (named), port 0 (none) — so the gap is loud in the
+/// gate, and lifting the narrowing later will fail this pin and force FLAG-nodule-2's removal
+/// (G2/VR-5: a known-wrong answer is recorded, never silent).
+#[test]
+fn nodule_myc_known_divergence_non_ascii_whitespace_only_line() {
+    let input = "\u{00A0}\n// nodule: hidden.marker\n";
+    assert_eq!(
+        oracle_code(input),
+        2,
+        "oracle: an NBSP-only line is blank; the named marker on line 2 is found"
+    );
+    let driver = format!(
+        "fn main() => Binary{{32}} = ph_code(\"{}\");",
+        escape_myc_string(input)
+    );
+    assert_l1_only_u32(
+        "KNOWN divergence (FLAG-nodule-2): NBSP-only leading line hides the marker from the port",
+        &program(&driver),
+        0,
+    );
+}
+
 /// The Stage-2 gate (DN-26 §7.3): header-parse differential, Rust oracle vs self-hosted
 /// `compiler.nodule`, over EVERY real `.myc` file in the L1 conformance corpus (accept + reject)
 /// and every self-hosted nodule under `lib/` (`lib/std/`, `lib/compiler/` — including this port's

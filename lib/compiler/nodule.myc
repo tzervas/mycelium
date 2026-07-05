@@ -29,12 +29,20 @@ nodule compiler.nodule_header;
 // segments and `NoduleHeaderError`'s message are `Bytes` (the surface's textual type), not Rust
 // `String` — same information, nothing dropped.
 //
-// FLAG-nodule-2 (ASCII-only trim; the FLAG-lex-4 narrowing, same rationale). Rust's `str::trim`
-// trims the full Unicode White_Space set; `trim_start`/`trim_end` here trim exactly
-// space/tab/CR/LF. Rust's `str::lines` also strips one trailing `\r`; here the CR is removed by
-// the ASCII trim — the observable result is identical for `\r\n` sources. No conformance/lib file
-// uses non-ASCII whitespace around its first non-blank line, so the Stage-2 gate's actual input
-// never exercises the gap — but it IS a real narrowing vs the oracle, reported, not silent.
+// FLAG-nodule-2 (ASCII-only trim; the FLAG-lex-4 narrowing — but with a SHARPER failure mode
+// here). Rust's `str::trim` trims the full Unicode White_Space set; `trim_start`/`trim_end` here
+// trim exactly space/tab/CR/LF. Rust's `str::lines` also strips one trailing `\r`; here the CR is
+// removed by the ASCII trim — the observable result is identical for `\r\n` sources. The real
+// divergence (review finding, PR #1165): a leading line consisting SOLELY of non-ASCII Unicode
+// whitespace (e.g. NBSP U+00A0) is not blank to this port, so `scan_lines` stops there and
+// returns `Ok(None)` — silently missing a real marker on a later line the Unicode-aware oracle
+// WOULD find. That flips the top-level Ok(None)/Ok(Some) classification (a silent wrong answer,
+// not a loud error), which is a stronger deviation than FLAG-lex-4's cosmetic analog. It is
+// PINNED as a known divergence in the Stage-2 gate
+// (compiler_stage2.rs::nodule_myc_known_divergence_non_ascii_whitespace_only_line), so lifting
+// the narrowing will fail the pin and force this FLAG's removal. No conformance/lib file uses
+// non-ASCII whitespace around its first non-blank line, so the gate's real corpus never
+// exercises the gap — reported + pinned, never silent (G2/VR-5).
 //
 // FLAG-nodule-3 (static error messages; the FLAG-lex-7 convention). `NoduleHeaderError`'s message
 // here is a static `Bytes` per error KIND; the Rust oracle interpolates the offending name/segment

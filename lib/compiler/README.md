@@ -96,7 +96,9 @@ reading both the Rust output and the self-hosted output for the same input.
       conformance corpus (accept **and** reject) and `lib/std/` + `lib/compiler/` (66+ files). One
       THREE-WAY run (L1 ≡ L0-interp ≡ AOT) is kept at this stage's small scale; the per-file sweep
       is L1-eval-only (M-981, as in Stage 1). Honest narrowings (flagged in-file): ASCII-only trim
-      vs Rust's Unicode `str::trim` (FLAG-nodule-2, the FLAG-lex-4 analog); static error messages,
+      vs Rust's Unicode `str::trim` (FLAG-nodule-2 — a real classification divergence: a
+      non-ASCII-whitespace-only leading line hides a later marker from the port; PINNED as a
+      known-divergence test in the gate, per the PR #1165 review finding); static error messages,
       line fidelity kept (FLAG-nodule-3). **One real finding: the DN-26 §7.3 nodule name
       `compiler.nodule` is unspellable** — `nodule` is a reserved word, so the surface declaration
       `nodule compiler.nodule;` cannot parse (the FLAG-token-3 keyword-collision class at the
