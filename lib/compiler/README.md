@@ -13,7 +13,7 @@
 |---|---|---|---|
 | `compiler.token` | `token.rs`, `error.rs` | token kinds + lex errors (the small `token↔error` cycle) | 1 |
 | `compiler.lex` | `lexer.rs` | source text → token stream | 1 |
-| `compiler.nodule` | `nodule.rs` | `// nodule:` header parse (standalone) | 2 |
+| `compiler.nodule_header` | `nodule.rs` | `// nodule:` header parse (standalone) — DN-26 §7.3 named it `compiler.nodule`, which is unspellable (`nodule` is a reserved word; FLAG-nodule-5) | 2 |
 | `compiler.ast` | `ast.rs` | surface AST data types (pure, no upward deps) | 3 |
 | `compiler.parse` | `parse.rs` | token stream → AST / phylum | 3 |
 | `compiler.ambient` | `ambient.rs` | ambient-representation resolution (leaf dep of the SCC) | 4 |
@@ -84,7 +84,26 @@ reading both the Rust output and the self-hosted output for the same input.
       the shared types) rather than cross-nodule `use`, because cross-nodule EXECUTION (not just
       type-checking) is still staged in `checkty.rs`'s `check_phylum` — a real, separate finding
       from this leaf, reported upstream for M-741/a future stage to lift.
-- [ ] **Stage 2** — `compiler.nodule` (header-parse differential)
+- [x] **Stage 2** — `compiler.nodule_header` (header-parse differential). Landed
+      (`lib/compiler/nodule.myc`; gate: `crates/mycelium-l1/tests/compiler_stage2.rs`). The full
+      `nodule.rs` port: `parse_nodule_header` (first-non-blank-line scan, blank-line skipping with
+      1-based line tracking), the `//`-comment / bare-`nodule` / `nodule:<dotted>` recogniser, the
+      never-silent ill-formed-name errors (empty name, empty segment, non-identifier segment — G2),
+      and the `dotted`/`canonical` accessors. Differential vs the live Rust oracle: a 4-way
+      classification code (none/bare/named/error) plus the joined dotted name and `canonical`
+      spelling (named case) plus the 1-based error line (error case), over a 26-case synthetic edge
+      battery transcribed from the oracle's own unit tests AND every real `.myc` file in the
+      conformance corpus (accept **and** reject) and `lib/std/` + `lib/compiler/` (66+ files). One
+      THREE-WAY run (L1 ≡ L0-interp ≡ AOT) is kept at this stage's small scale; the per-file sweep
+      is L1-eval-only (M-981, as in Stage 1). Honest narrowings (flagged in-file): ASCII-only trim
+      vs Rust's Unicode `str::trim` (FLAG-nodule-2, the FLAG-lex-4 analog); static error messages,
+      line fidelity kept (FLAG-nodule-3). **One real finding: the DN-26 §7.3 nodule name
+      `compiler.nodule` is unspellable** — `nodule` is a reserved word, so the surface declaration
+      `nodule compiler.nodule;` cannot parse (the FLAG-token-3 keyword-collision class at the
+      nodule-NAME level); renamed `compiler.nodule_header` (FLAG-nodule-5, reported up for DN-26's
+      append-only changelog). Every source-length-bounded recursion is direct-tail (the RFC-0041
+      §7 W7 amendment-11 TCO acceptance criterion); the non-tail recursions are bounded by a
+      name's segment count, never by source length.
 - [ ] **Stage 3** — `compiler.ast` + `compiler.parse` (AST differential + full conformance corpus)
 - [ ] **Stage 4** — `compiler.ambient` + `compiler.totality` + `compiler.substrate` (leaf differentials)
 - [ ] **Stage 5** — `compiler.semcore` (L0-output differential; `cargo-mutants` witness)
