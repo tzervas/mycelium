@@ -23,10 +23,14 @@ cargo-fuzz = true
 libfuzzer-sys = "0.4"
 serde_json = "1"
 
-# The three crates under test — path-relative from this fuzz/ directory.
+# The crates under test — path-relative from this fuzz/ directory.
 mycelium-l1      = { path = "../crates/mycelium-l1" }
 mycelium-check   = { path = "../crates/mycelium-check" }
 mycelium-core    = { path = "../crates/mycelium-core" }
+# The L0 reference interpreter (RFC-0004 §2/ADR-009) — added for the RFC-0041 depth-structured
+# targets (fuzz_depth_interp): the one place a deeply-nested Node is reachable without going
+# through the L1 parser's MAX_EXPR_DEPTH guard at all (RR-29 §0.1).
+mycelium-interp  = { path = "../crates/mycelium-interp" }
 
 # Suppress the workspace-level lint gate: fuzz targets run on nightly and the
 # workspace clippy config is not applied here.
@@ -48,5 +52,27 @@ doc = false
 [[bin]]
 name = "fuzz_core_value_deser"
 path = "fuzz_targets/fuzz_core_value_deser.rs"
+test = false
+doc = false
+
+# RFC-0041 (RR-29 §4) depth-structured targets — synthesize DEEPLY-nested input rather than hoping
+# arbitrary bytes happen to nest, so the durability tier catches stack-overflow/SIGABRT regressions
+# on the deep-nesting class. See each target's module doc for the invariant under test.
+
+[[bin]]
+name = "fuzz_depth_parse"
+path = "fuzz_targets/fuzz_depth_parse.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_depth_check"
+path = "fuzz_targets/fuzz_depth_check.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_depth_interp"
+path = "fuzz_targets/fuzz_depth_interp.rs"
 test = false
 doc = false

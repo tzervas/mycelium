@@ -9,7 +9,7 @@ mycelium/
 ├── CONTRIBUTING.md           ← decision process, transparency rule, dev env, workflow
 ├── CLAUDE.md                 ← operating guide for Claude Code / agents (the house rules)
 ├── CHANGELOG.md              ← Keep-a-Changelog; design baseline + implementation edits
-├── Cargo.toml                ← Rust workspace (50 crates + xtask; MSRV 1.92, ADR-007)
+├── Cargo.toml                ← Rust workspace (50 crates + xtask; MSRV 1.96.1, ADR-007/ADR-041)
 ├── rust-toolchain.toml       ← pinned MSRV
 ├── justfile                  ← one source of truth for local↔CI checks (`just check`)
 ├── deny.toml                 ← cargo-deny supply-chain policy

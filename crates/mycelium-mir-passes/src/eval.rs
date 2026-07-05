@@ -28,6 +28,7 @@
 use std::collections::HashMap;
 
 use mycelium_core::VarId;
+use mycelium_workstack::{ensure_sufficient_stack, BudgetError, RecursionBudget};
 
 use crate::rc_ir::RcNode;
 
@@ -53,6 +54,16 @@ pub enum RcError {
     },
     /// A node outside the straight-line fragment (e.g. `App`/`Match`/`Construct`/`Lam`).
     UnsupportedNode(&'static str),
+    /// The evaluator's own [`RcNode`]-traversal recursion (over `Let`'s `bound`/`body`, `Op`
+    /// arguments, `Dup`/`Drop`/`DropAfter` wrappers, …) exceeded the shared
+    /// [`mycelium_workstack::RecursionBudget`] depth ceiling (RFC-0041 §4.7 — the W7 guard hole in
+    /// this AOT RC/ownership pass). Refused cleanly here rather than overflowing the host stack and
+    /// SIGABRT-ing `myc build` (G2); reconciles with the `emit`-side [`crate::emit::EmitError::DepthExceeded`]
+    /// and the interp/AOT `DepthLimit` family.
+    DepthExceeded {
+        /// The depth ceiling (recursion frames) that was reached.
+        limit: u32,
+    },
 }
 
 impl std::fmt::Display for RcError {
@@ -74,11 +85,30 @@ impl std::fmt::Display for RcError {
                     "RC-evaluator does not support `{k}` (straight-line fragment only)"
                 )
             }
+            RcError::DepthExceeded { limit } => write!(
+                f,
+                "RC-evaluator's own IR-traversal recursion exceeded the depth budget (limit \
+                 {limit} frames) — refusing rather than overflowing the host stack (RFC-0041 §4.7, G2)"
+            ),
         }
     }
 }
 
 impl std::error::Error for RcError {}
+
+impl From<BudgetError> for RcError {
+    /// [`eval`] only ever charges the depth guard ([`RecursionBudget::try_enter`]), so in practice
+    /// this always sees [`BudgetError::DepthExceeded`]; the `OutOfBudget` arm is handled defensively
+    /// (never a silent drop of the ceiling, G2) should a future increment add byte/step charging.
+    fn from(err: BudgetError) -> Self {
+        match err {
+            BudgetError::DepthExceeded { limit } => RcError::DepthExceeded { limit },
+            BudgetError::OutOfBudget { limit, .. } => RcError::DepthExceeded {
+                limit: u32::try_from(limit).unwrap_or(u32::MAX),
+            },
+        }
+    }
+}
 
 /// The outcome of evaluating a term: its result allocation and the reclamation log (in order).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -152,14 +182,27 @@ impl Machine {
 /// Evaluate an [`RcNode`] in the abstract RC machine, returning its reclamation report.
 ///
 /// Errors (never-silent) on an unbound variable, a use-after-free, a double-free, or a node outside
-/// the straight-line fragment.
+/// the straight-line fragment — and, per RFC-0041 §4.7 (the W7 guard hole in this AOT RC/ownership
+/// pass), on [`RcError::DepthExceeded`] if the traversal's own recursion exceeds the shared
+/// [`RecursionBudget`] depth ceiling. The outermost call runs on the deep worker stack
+/// ([`ensure_sufficient_stack`]) so a genuinely deep input never SIGABRTs `myc build`, and every
+/// recursive step charges [`RecursionBudget::try_enter`] so a pathological input refuses cleanly at
+/// the depth ceiling instead of exhausting even the deep worker stack.
 pub fn eval(node: &RcNode) -> Result<EvalReport, RcError> {
-    let mut m = Machine::new();
-    let env = HashMap::new();
-    let result = go(node, &env, &mut m)?;
-    Ok(EvalReport {
-        result,
-        reclaimed: m.reclaimed,
+    // The outer budget is not consulted for sizing (the deep worker stack is generous); the real
+    // depth guard is the budget created and charged inside the closure, entirely on the worker
+    // thread (mirrors `emit::emit_owned` and `mycelium-workstack`'s own precedent: `RecursionBudget`
+    // is `Send` but not `Sync`, so it is owned inside `f`, not borrowed across the thread boundary).
+    let outer = RecursionBudget::default();
+    ensure_sufficient_stack(&outer, || {
+        let budget = RecursionBudget::default();
+        let mut m = Machine::new();
+        let env = HashMap::new();
+        let result = go(node, &env, &mut m, &budget)?;
+        Ok(EvalReport {
+            result,
+            reclaimed: m.reclaimed,
+        })
     })
 }
 
@@ -169,7 +212,16 @@ fn lookup(env: &HashMap<VarId, AllocId>, x: &VarId) -> Result<AllocId, RcError> 
         .ok_or_else(|| RcError::UnboundVar(x.clone()))
 }
 
-fn go(node: &RcNode, env: &HashMap<VarId, AllocId>, m: &mut Machine) -> Result<AllocId, RcError> {
+/// The guarded recursive core of [`eval`]: identical accounting, but every recursive step charges
+/// `budget.try_enter()` (RAII-released on return) so the depth ceiling — not a host-stack overflow —
+/// always bounds a pathological input (RFC-0041 §4.7).
+fn go(
+    node: &RcNode,
+    env: &HashMap<VarId, AllocId>,
+    m: &mut Machine,
+    budget: &RecursionBudget,
+) -> Result<AllocId, RcError> {
+    let _guard = budget.try_enter()?;
     match node {
         RcNode::Const(_) => Ok(m.alloc()),
         RcNode::Var(x) => {
@@ -201,34 +253,34 @@ fn go(node: &RcNode, env: &HashMap<VarId, AllocId>, m: &mut Machine) -> Result<A
         RcNode::Dup { var, body } => {
             let a = lookup(env, var)?;
             m.dup(a);
-            go(body, env, m)
+            go(body, env, m, budget)
         }
         RcNode::Drop { var, body } => {
             let a = lookup(env, var)?;
             m.dec(a, var)?;
-            go(body, env, m)
+            go(body, env, m, budget)
         }
         RcNode::DropAfter { var, body } => {
             // Evaluate the body (its reads of `var` happen here), THEN reclaim `var`.
-            let r = go(body, env, m)?;
+            let r = go(body, env, m, budget)?;
             let a = lookup(env, var)?;
             m.dec(a, var)?;
             Ok(r)
         }
         RcNode::Let { id, bound, body } => {
-            let a = go(bound, env, m)?;
+            let a = go(bound, env, m, budget)?;
             let mut e2 = env.clone();
             e2.insert(id.clone(), a);
-            go(body, &e2, m)
+            go(body, &e2, m, budget)
         }
         RcNode::Op { args, .. } => {
             for arg in args {
-                go(arg, env, m)?;
+                go(arg, env, m, budget)?;
             }
             Ok(m.alloc()) // the primitive produces a fresh result
         }
         RcNode::Swap { src, .. } => {
-            go(src, env, m)?;
+            go(src, env, m, budget)?;
             Ok(m.alloc())
         }
         RcNode::Construct { .. } => Err(RcError::UnsupportedNode("Construct")),
@@ -264,69 +316,99 @@ impl Differential {
 }
 
 /// Count `Dup` nodes anywhere in an [`RcNode`].
+///
+/// **RFC-0041 §4.7 (guard hole RR-29 sibling):** the entry point runs the traversal on the
+/// `mycelium-workstack` deep worker stack ([`ensure_sufficient_stack`]) so a deep `RcNode` — even one
+/// built directly by an external caller, outside the [`differential`] path — completes rather than
+/// SIGABRTing the host (the "no input SIGABRTs any public pass" §9-DoD close).
+//
+// FLAG(W7 residual, RFC-0041 §9): the SIGABRT/host-stack hole is now CLOSED (deep-stack wrap above,
+// like `emit::count_occurrences`/`borrow_occurrences`). What stays DEFERRED to W2/profiling is the
+// `O(N²)`/work-step CPU bound: this and [`count_move_unique`] are infallible (`usize`), so they cannot
+// refuse past a `RecursionBudget::charge_steps` ceiling without an infallible→fallible signature change
+// (out of this leaf's scope). Not a self-DoS in any current caller.
 #[must_use]
 pub fn count_dups(node: &RcNode) -> usize {
+    let budget = RecursionBudget::default();
+    ensure_sufficient_stack(&budget, || count_dups_inner(node))
+}
+
+/// The recursive core of [`count_dups`], run on the deep worker stack the public entry point spawns
+/// — so nested calls recurse on the *same* grown stack rather than each re-spawning a worker.
+fn count_dups_inner(node: &RcNode) -> usize {
     match node {
         RcNode::Const(_) | RcNode::Var(_) | RcNode::Borrow(_) | RcNode::MoveUnique(_) => 0,
-        RcNode::Dup { body, .. } => 1 + count_dups(body),
-        RcNode::Drop { body, .. } | RcNode::DropAfter { body, .. } => count_dups(body),
-        RcNode::Let { bound, body, .. } => count_dups(bound) + count_dups(body),
+        RcNode::Dup { body, .. } => 1 + count_dups_inner(body),
+        RcNode::Drop { body, .. } | RcNode::DropAfter { body, .. } => count_dups_inner(body),
+        RcNode::Let { bound, body, .. } => count_dups_inner(bound) + count_dups_inner(body),
         RcNode::Op { args, .. } | RcNode::Construct { args, .. } => {
-            args.iter().map(count_dups).sum()
+            args.iter().map(count_dups_inner).sum()
         }
-        RcNode::Swap { src, .. } => count_dups(src),
+        RcNode::Swap { src, .. } => count_dups_inner(src),
         RcNode::Match {
             scrutinee,
             alts,
             default,
         } => {
-            count_dups(scrutinee)
+            count_dups_inner(scrutinee)
                 + alts
                     .iter()
                     .map(|a| match a {
                         crate::rc_ir::RcAlt::Ctor { body, .. }
-                        | crate::rc_ir::RcAlt::Lit { body, .. } => count_dups(body),
+                        | crate::rc_ir::RcAlt::Lit { body, .. } => count_dups_inner(body),
                     })
                     .sum::<usize>()
-                + default.as_deref().map_or(0, count_dups)
+                + default.as_deref().map_or(0, count_dups_inner)
         }
-        RcNode::Lam { body, .. } => count_dups(body),
-        RcNode::App { func, arg } => count_dups(func) + count_dups(arg),
+        RcNode::Lam { body, .. } => count_dups_inner(body),
+        RcNode::App { func, arg } => count_dups_inner(func) + count_dups_inner(arg),
     }
 }
 
 /// Count [`RcNode::MoveUnique`] annotations (Increment 2 `rc == 1` reuse sites) anywhere in an
 /// [`RcNode`] — the FBIP-reuse-eligible consume points. `Exact` (read off the IR).
+///
+/// **RFC-0041 §4.7:** deep-stack-wrapped like [`count_dups`] (see its note) — a deep external input
+/// completes on the worker stack rather than SIGABRTing; the `O(N²)`/work-step bound stays a deferred
+/// W2 residual.
 #[must_use]
 pub fn count_move_unique(node: &RcNode) -> usize {
+    let budget = RecursionBudget::default();
+    ensure_sufficient_stack(&budget, || count_move_unique_inner(node))
+}
+
+/// The recursive core of [`count_move_unique`] (see [`count_dups_inner`]).
+fn count_move_unique_inner(node: &RcNode) -> usize {
     match node {
         RcNode::Const(_) | RcNode::Var(_) | RcNode::Borrow(_) => 0,
         RcNode::MoveUnique(_) => 1,
         RcNode::Dup { body, .. } | RcNode::Drop { body, .. } | RcNode::DropAfter { body, .. } => {
-            count_move_unique(body)
+            count_move_unique_inner(body)
         }
-        RcNode::Let { bound, body, .. } => count_move_unique(bound) + count_move_unique(body),
+        RcNode::Let { bound, body, .. } => {
+            count_move_unique_inner(bound) + count_move_unique_inner(body)
+        }
         RcNode::Op { args, .. } | RcNode::Construct { args, .. } => {
-            args.iter().map(count_move_unique).sum()
+            args.iter().map(count_move_unique_inner).sum()
         }
-        RcNode::Swap { src, .. } => count_move_unique(src),
+        RcNode::Swap { src, .. } => count_move_unique_inner(src),
         RcNode::Match {
             scrutinee,
             alts,
             default,
         } => {
-            count_move_unique(scrutinee)
+            count_move_unique_inner(scrutinee)
                 + alts
                     .iter()
                     .map(|a| match a {
                         crate::rc_ir::RcAlt::Ctor { body, .. }
-                        | crate::rc_ir::RcAlt::Lit { body, .. } => count_move_unique(body),
+                        | crate::rc_ir::RcAlt::Lit { body, .. } => count_move_unique_inner(body),
                     })
                     .sum::<usize>()
-                + default.as_deref().map_or(0, count_move_unique)
+                + default.as_deref().map_or(0, count_move_unique_inner)
         }
-        RcNode::Lam { body, .. } => count_move_unique(body),
-        RcNode::App { func, arg } => count_move_unique(func) + count_move_unique(arg),
+        RcNode::Lam { body, .. } => count_move_unique_inner(body),
+        RcNode::App { func, arg } => count_move_unique_inner(func) + count_move_unique_inner(arg),
     }
 }
 

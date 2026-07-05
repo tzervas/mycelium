@@ -27,6 +27,9 @@ proc-macro2 = { version = "1", features = ["span-locations"] }
 quote = "1"
 serde.workspace = true
 serde_json.workspace = true
+# RFC-0041 §4.7 (W1): the shared never-silent recursion-budget leaf — closes the guard hole in
+# `emit_expr`/`map_type`/`map_pattern`'s mutual/self recursion over the `syn` AST (RR-29).
+mycelium-workstack = { path = "../mycelium-workstack" }
 
 [dev-dependencies]
 proptest = "1"

@@ -53,7 +53,7 @@
     "package": "npm run sync-grammar && npx @vscode/vsce package"
   },
   "devDependencies": {
-    "@vscode/vsce": "^2.32.0",
+    "@vscode/vsce": "^3.9.2",
     "vscode-tmgrammar-test": "^0.1.3"
   }
 }

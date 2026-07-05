@@ -122,6 +122,7 @@ pub mycelium_transpile::gap::Category::MacroInvocation
 pub mycelium_transpile::gap::Category::MultiStmtBody
 pub mycelium_transpile::gap::Category::Other
 pub mycelium_transpile::gap::Category::PayloadVariant
+pub mycelium_transpile::gap::Category::RecursionBudget
 pub mycelium_transpile::gap::Category::Struct
 pub mycelium_transpile::gap::Category::TestItem
 pub mycelium_transpile::gap::Category::Trait
@@ -228,6 +229,7 @@ pub mycelium_transpile::Category::MacroInvocation
 pub mycelium_transpile::Category::MultiStmtBody
 pub mycelium_transpile::Category::Other
 pub mycelium_transpile::Category::PayloadVariant
+pub mycelium_transpile::Category::RecursionBudget
 pub mycelium_transpile::Category::Struct
 pub mycelium_transpile::Category::TestItem
 pub mycelium_transpile::Category::Trait

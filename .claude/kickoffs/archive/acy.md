@@ -1,5 +1,13 @@
 # Kickoff `acy` — Phase-I H0: foundation + acyclic-deps hardening (LANDS FIRST)
 
+> **✅ LANDED (2026-07-02) — archived 2026-07-05.** H0 landed on `main` via commits `6636f56` +
+> `ba0b800` (epic E27-1); task range **M-877…M-886 + M-866** all `status:done` (verified against
+> `tools/github/issues.yaml`, 2026-07-05).
+>
+> - The acyclic downward-only dep-structure gate is wired into `just check`.
+> - `mycelium-rt-abi` extracted (the `mlir → std-runtime` ABI seam); **DN-68** authored.
+> - No open residuals tracked against this kickoff.
+>
 > **UID:** `acy` · **Basis:** **ADR-038** (Accepted, 2026-07-01 — function-first strategy) + the umbrella roadmap
 > `docs/planning/road-to-1.0.0-and-mycelium-rewrite.md` **§2 (H0)** · dep-graph survey (`Empirical`,
 > 2026-07-01, spot-verified at HEAD) · PR #864 (the `mycelium-sched` extraction precedent).

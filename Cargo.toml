@@ -1,6 +1,6 @@
 # Mycelium Rust workspace (M-091). The Rust kernel is the reference interpreter + trusted base
 # (ADR-007); MLIR->LLVM is the AOT perf path. Crates are skeletons here — types/semantics land
-# per their own issues (M-101+). MSRV is pinned to 1.92 (ADR-007); see rust-toolchain.toml.
+# per their own issues (M-101+). MSRV is pinned to 1.96.1 (ADR-007, bumped by ADR-041); see rust-toolchain.toml.
 [workspace]
 resolver = "2"
 members = [
@@ -13,6 +13,7 @@ members = [
     "crates/mycelium-select",
     "crates/mycelium-l1",
     "crates/mycelium-stack",
+    "crates/mycelium-workstack",
     "crates/mycelium-vsa",
     "crates/mycelium-vsa-decode",
     "crates/mycelium-mlir",
@@ -64,7 +65,7 @@ members = [
 
 [workspace.package]
 edition = "2021"
-rust-version = "1.92"
+rust-version = "1.96.1"
 license = "MIT"
 repository = "https://github.com/tzervas/mycelium"
 

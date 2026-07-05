@@ -33,7 +33,16 @@ pub type Prim = String;
 pub type PolicyRef = ContentHash;
 
 /// A Core IR node.
-#[derive(Debug, Clone, PartialEq)]
+///
+/// **Recursion-safety (RFC-0041 §4.5, W3):** [`Clone`], [`PartialEq`], and [`Drop`] are **manual,
+/// iterative** implementations (below the `impl Node` block), *not* `#[derive]`d — a derived
+/// (recursive) `Drop`/`Clone`/`PartialEq` overflows the native stack (`SIGABRT`, which violates the
+/// never-silent rule G2) on a deeply-nested node spine (`Let`/`App`/`Fix`/`Construct`/`Match`
+/// chains), even on the caller's ~2 MB stack outside any deep-stack worker. Only `Debug` stays
+/// derived. The content hash ([`Node::content_hash`] → `Canon::node`) is likewise iterative (see
+/// `content.rs`). This is a §6 within-freeze behavior-preserving hardening edit: no observable
+/// value/order change — clone/eq/hash are bit-identical to the derived forms (mutation-witnessed).
+#[derive(Debug)]
 pub enum Node {
     /// A constant value.
     Const(Value),
@@ -206,6 +215,539 @@ impl Node {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Iterative, recursion-safe Drop / Clone / PartialEq (RFC-0041 §4.5, W3).
+//
+// `Node` is a `Box`-owned, acyclic tree (no `Rc`/`Arc` on the spine, no shared substructure), so
+// each node is owned by exactly one parent. Under that invariant an explicit-worklist traversal is
+// double-free-safe: every node is visited (and, for `Drop`, freed) exactly once. **Recorded
+// precondition (RFC-0041 §4.5, Low freeze11): should a future interning/DAG cache put `Rc`/`Arc` on
+// the node spine, these iterative `Drop`s would double-free and MUST be revisited.** It holds today
+// by construction — the field types are `Box<Node>` / `Vec<Node>` only.
+//
+// `#![forbid(unsafe_code)]` (lib.rs) still holds: the worklists use only safe `Box`/`Vec` +
+// `std::mem::{replace, take}` take-loops; there is no `next`-pointer trick that needs `unsafe`.
+// ---------------------------------------------------------------------------
+
+/// A cheap, allocation-free placeholder swapped into a `Box<Node>` slot while its owned child is
+/// moved onto the worklist (`impl Drop` forbids by-value field move-out — E0509 — so every owned
+/// `Box<Node>` destructure is a by-ref `mem::replace`). `Var(String::new())` is a leaf and
+/// `String::new()` does not allocate.
+#[inline]
+fn drop_placeholder() -> Node {
+    Node::Var(String::new())
+}
+
+/// Move every direct **`Node` child** of `n` onto `work`, leaving `n` a childless shell (recursive
+/// `Box` slots replaced by [`drop_placeholder`], `Vec`s drained). Contained `Value`s are left to
+/// drop in place — a `Value` is bounded-depth by construction (its nested `Seq`/`Repr` are
+/// construction-gated; RFC-0041 §4.5 W3 note), so it is not a deep-recursion vector here.
+fn detach_node_children(n: &mut Node, work: &mut Vec<Node>) {
+    match n {
+        Node::Const(_) | Node::Var(_) => {}
+        Node::Let { bound, body, .. } => {
+            work.push(std::mem::replace(bound.as_mut(), drop_placeholder()));
+            work.push(std::mem::replace(body.as_mut(), drop_placeholder()));
+        }
+        Node::Op { args, .. } | Node::Construct { args, .. } => work.append(args),
+        Node::Swap { src, .. } => {
+            work.push(std::mem::replace(src.as_mut(), drop_placeholder()));
+        }
+        Node::Match {
+            scrutinee,
+            alts,
+            default,
+        } => {
+            work.push(std::mem::replace(scrutinee.as_mut(), drop_placeholder()));
+            // We own the taken `Vec<Alt>`, so its bodies may be moved out by value (no E0509 — the
+            // taken vector is a local, not a field of `self`). The alt's non-`Node` fields
+            // (`ctor`/`binders`/`value`) drop shallowly when the loop binding goes out of scope.
+            for alt in std::mem::take(alts) {
+                match alt {
+                    Alt::Ctor { body, .. } | Alt::Lit { body, .. } => work.push(body),
+                }
+            }
+            if let Some(d) = default.take() {
+                work.push(*d);
+            }
+        }
+        Node::Lam { body, .. } | Node::Fix { body, .. } => {
+            work.push(std::mem::replace(body.as_mut(), drop_placeholder()));
+        }
+        Node::App { func, arg } => {
+            work.push(std::mem::replace(func.as_mut(), drop_placeholder()));
+            work.push(std::mem::replace(arg.as_mut(), drop_placeholder()));
+        }
+        Node::FixGroup { defs, body } => {
+            for (_, b) in std::mem::take(defs) {
+                work.push(*b);
+            }
+            work.push(std::mem::replace(body.as_mut(), drop_placeholder()));
+        }
+    }
+}
+
+impl Drop for Node {
+    fn drop(&mut self) {
+        // Flatten the owned subtree onto an explicit worklist and drop each node as a childless
+        // shell — bounded native-stack use regardless of spine depth (RFC-0041 §4.5).
+        //
+        // Allocation honesty (RFC-0041 §4.5 asks for no allocation during `Drop`): a fully
+        // alloc-free iterative drop of a *heterogeneous, non-intrusive* tree in **safe** Rust is not
+        // achievable here — `Node` has no spare `next` field to thread an intrusive stack through,
+        // and `Drop::drop(&mut self)` cannot be handed a preallocated scratch buffer; the only
+        // alloc-free options (an added `next` field, or `unsafe` pointer-reversal) are both barred
+        // (a new field is out of the §6 hardening scope; `unsafe` is `forbid`den). This `Vec`
+        // worklist starts empty (`Vec::new` does not allocate) and grows only when the spine is
+        // actually deep — precisely the case that previously *guaranteed* a multi-MB stack-overflow
+        // `SIGABRT`. So the change strictly trades a certain abort for a small pointer-vector
+        // allocation that only fails under genuine OOM. (FLAGged up for the integrator.)
+        let mut work: Vec<Node> = Vec::new();
+        detach_node_children(self, &mut work);
+        while let Some(mut n) = work.pop() {
+            detach_node_children(&mut n, &mut work);
+            // `n` is now a childless shell; dropping it re-enters this `Drop`, but on an
+            // already-emptied node — bounded O(1) reentrancy (the placeholders are `Var` leaves),
+            // never a deep recursion.
+        }
+    }
+}
+
+impl Clone for Node {
+    fn clone(&self) -> Node {
+        // Iterative deep clone via an explicit expand/assemble worklist + a value stack, so the
+        // front-door `let mut current = node.clone()` no longer `SIGABRT`s on a deep spine
+        // (RFC-0041 §4.5). Convention: `Assemble` is pushed first, then each recursive child is
+        // `Expand`ed in **forward** order — so `done.pop()` yields children first-to-last.
+        enum AltMeta {
+            Ctor { ctor: CtorRef, binders: Vec<VarId> },
+            Lit { value: Value },
+        }
+        enum Frame {
+            Let {
+                id: VarId,
+            },
+            Op {
+                prim: Prim,
+                arity: usize,
+            },
+            Swap {
+                target: Repr,
+                policy: PolicyRef,
+            },
+            Construct {
+                ctor: CtorRef,
+                arity: usize,
+            },
+            Match {
+                metas: Vec<AltMeta>,
+                has_default: bool,
+            },
+            Lam {
+                param: VarId,
+            },
+            App,
+            Fix {
+                name: VarId,
+            },
+            FixGroup {
+                names: Vec<VarId>,
+            },
+        }
+        enum Task<'a> {
+            Expand(&'a Node),
+            Assemble(Frame),
+        }
+
+        let mut tasks: Vec<Task<'_>> = vec![Task::Expand(self)];
+        let mut done: Vec<Node> = Vec::new();
+
+        while let Some(task) = tasks.pop() {
+            match task {
+                Task::Expand(node) => match node {
+                    // Leaves clone directly. `Value`/`Repr` are bounded-depth by construction, so
+                    // their derived `Clone` is not a deep vector here.
+                    Node::Const(v) => done.push(Node::Const(v.clone())),
+                    Node::Var(s) => done.push(Node::Var(s.clone())),
+                    Node::Let { id, bound, body } => {
+                        tasks.push(Task::Assemble(Frame::Let { id: id.clone() }));
+                        tasks.push(Task::Expand(bound));
+                        tasks.push(Task::Expand(body));
+                    }
+                    Node::Op { prim, args } => {
+                        tasks.push(Task::Assemble(Frame::Op {
+                            prim: prim.clone(),
+                            arity: args.len(),
+                        }));
+                        for a in args {
+                            tasks.push(Task::Expand(a));
+                        }
+                    }
+                    Node::Swap {
+                        src,
+                        target,
+                        policy,
+                    } => {
+                        tasks.push(Task::Assemble(Frame::Swap {
+                            target: target.clone(),
+                            policy: policy.clone(),
+                        }));
+                        tasks.push(Task::Expand(src));
+                    }
+                    Node::Construct { ctor, args } => {
+                        tasks.push(Task::Assemble(Frame::Construct {
+                            ctor: ctor.clone(),
+                            arity: args.len(),
+                        }));
+                        for a in args {
+                            tasks.push(Task::Expand(a));
+                        }
+                    }
+                    Node::Match {
+                        scrutinee,
+                        alts,
+                        default,
+                    } => {
+                        let metas = alts
+                            .iter()
+                            .map(|a| match a {
+                                Alt::Ctor { ctor, binders, .. } => AltMeta::Ctor {
+                                    ctor: ctor.clone(),
+                                    binders: binders.clone(),
+                                },
+                                Alt::Lit { value, .. } => AltMeta::Lit {
+                                    value: value.clone(),
+                                },
+                            })
+                            .collect();
+                        tasks.push(Task::Assemble(Frame::Match {
+                            metas,
+                            has_default: default.is_some(),
+                        }));
+                        tasks.push(Task::Expand(scrutinee));
+                        for a in alts {
+                            match a {
+                                Alt::Ctor { body, .. } | Alt::Lit { body, .. } => {
+                                    tasks.push(Task::Expand(body));
+                                }
+                            }
+                        }
+                        if let Some(d) = default {
+                            tasks.push(Task::Expand(d));
+                        }
+                    }
+                    Node::Lam { param, body } => {
+                        tasks.push(Task::Assemble(Frame::Lam {
+                            param: param.clone(),
+                        }));
+                        tasks.push(Task::Expand(body));
+                    }
+                    Node::App { func, arg } => {
+                        tasks.push(Task::Assemble(Frame::App));
+                        tasks.push(Task::Expand(func));
+                        tasks.push(Task::Expand(arg));
+                    }
+                    Node::Fix { name, body } => {
+                        tasks.push(Task::Assemble(Frame::Fix { name: name.clone() }));
+                        tasks.push(Task::Expand(body));
+                    }
+                    Node::FixGroup { defs, body } => {
+                        tasks.push(Task::Assemble(Frame::FixGroup {
+                            names: defs.iter().map(|(n, _)| n.clone()).collect(),
+                        }));
+                        for (_, d) in defs {
+                            tasks.push(Task::Expand(d));
+                        }
+                        tasks.push(Task::Expand(body));
+                    }
+                },
+                Task::Assemble(frame) => {
+                    // `done.pop()` returns children in forward order (see the push convention above).
+                    let node = match frame {
+                        Frame::Let { id } => {
+                            let bound = done.pop().expect("clone: Let bound");
+                            let body = done.pop().expect("clone: Let body");
+                            Node::Let {
+                                id,
+                                bound: Box::new(bound),
+                                body: Box::new(body),
+                            }
+                        }
+                        Frame::Op { prim, arity } => {
+                            let mut args = Vec::with_capacity(arity);
+                            for _ in 0..arity {
+                                args.push(done.pop().expect("clone: Op arg"));
+                            }
+                            Node::Op { prim, args }
+                        }
+                        Frame::Swap { target, policy } => {
+                            let src = done.pop().expect("clone: Swap src");
+                            Node::Swap {
+                                src: Box::new(src),
+                                target,
+                                policy,
+                            }
+                        }
+                        Frame::Construct { ctor, arity } => {
+                            let mut args = Vec::with_capacity(arity);
+                            for _ in 0..arity {
+                                args.push(done.pop().expect("clone: Construct arg"));
+                            }
+                            Node::Construct { ctor, args }
+                        }
+                        Frame::Match { metas, has_default } => {
+                            let scrutinee = done.pop().expect("clone: Match scrutinee");
+                            let mut bodies = Vec::with_capacity(metas.len());
+                            for _ in 0..metas.len() {
+                                bodies.push(done.pop().expect("clone: Match alt body"));
+                            }
+                            let alts = metas
+                                .into_iter()
+                                .zip(bodies)
+                                .map(|(m, body)| match m {
+                                    AltMeta::Ctor { ctor, binders } => Alt::Ctor {
+                                        ctor,
+                                        binders,
+                                        body,
+                                    },
+                                    AltMeta::Lit { value } => Alt::Lit { value, body },
+                                })
+                                .collect();
+                            let default = if has_default {
+                                Some(Box::new(done.pop().expect("clone: Match default")))
+                            } else {
+                                None
+                            };
+                            Node::Match {
+                                scrutinee: Box::new(scrutinee),
+                                alts,
+                                default,
+                            }
+                        }
+                        Frame::Lam { param } => {
+                            let body = done.pop().expect("clone: Lam body");
+                            Node::Lam {
+                                param,
+                                body: Box::new(body),
+                            }
+                        }
+                        Frame::App => {
+                            let func = done.pop().expect("clone: App func");
+                            let arg = done.pop().expect("clone: App arg");
+                            Node::App {
+                                func: Box::new(func),
+                                arg: Box::new(arg),
+                            }
+                        }
+                        Frame::Fix { name } => {
+                            let body = done.pop().expect("clone: Fix body");
+                            Node::Fix {
+                                name,
+                                body: Box::new(body),
+                            }
+                        }
+                        Frame::FixGroup { names } => {
+                            let mut dbodies = Vec::with_capacity(names.len());
+                            for _ in 0..names.len() {
+                                dbodies.push(done.pop().expect("clone: FixGroup def body"));
+                            }
+                            let body = done.pop().expect("clone: FixGroup body");
+                            let defs = names
+                                .into_iter()
+                                .zip(dbodies)
+                                .map(|(n, d)| (n, Box::new(d)))
+                                .collect();
+                            Node::FixGroup {
+                                defs,
+                                body: Box::new(body),
+                            }
+                        }
+                    };
+                    done.push(node);
+                }
+            }
+        }
+        done.pop().expect("clone: exactly one root node remains")
+    }
+}
+
+impl PartialEq for Node {
+    fn eq(&self, other: &Node) -> bool {
+        // Iterative structural equality via a pair worklist. Result-identical to the derived
+        // (recursive) `PartialEq` — every field is compared and the first mismatch short-circuits;
+        // *which* mismatch is found first may differ, but the boolean result cannot (RFC-0041 §4.5,
+        // bar (a): observably identical). Bounded native stack regardless of spine depth.
+        let mut stack: Vec<(&Node, &Node)> = vec![(self, other)];
+        while let Some((a, b)) = stack.pop() {
+            match (a, b) {
+                (Node::Const(x), Node::Const(y)) => {
+                    if x != y {
+                        return false;
+                    }
+                }
+                (Node::Var(x), Node::Var(y)) => {
+                    if x != y {
+                        return false;
+                    }
+                }
+                (
+                    Node::Let {
+                        id: i1,
+                        bound: b1,
+                        body: y1,
+                    },
+                    Node::Let {
+                        id: i2,
+                        bound: b2,
+                        body: y2,
+                    },
+                ) => {
+                    if i1 != i2 {
+                        return false;
+                    }
+                    stack.push((b1, b2));
+                    stack.push((y1, y2));
+                }
+                (Node::Op { prim: p1, args: a1 }, Node::Op { prim: p2, args: a2 }) => {
+                    if p1 != p2 || a1.len() != a2.len() {
+                        return false;
+                    }
+                    for (x, y) in a1.iter().zip(a2) {
+                        stack.push((x, y));
+                    }
+                }
+                (
+                    Node::Swap {
+                        src: s1,
+                        target: t1,
+                        policy: pol1,
+                    },
+                    Node::Swap {
+                        src: s2,
+                        target: t2,
+                        policy: pol2,
+                    },
+                ) => {
+                    if t1 != t2 || pol1 != pol2 {
+                        return false;
+                    }
+                    stack.push((s1, s2));
+                }
+                (
+                    Node::Construct { ctor: c1, args: a1 },
+                    Node::Construct { ctor: c2, args: a2 },
+                ) => {
+                    if c1 != c2 || a1.len() != a2.len() {
+                        return false;
+                    }
+                    for (x, y) in a1.iter().zip(a2) {
+                        stack.push((x, y));
+                    }
+                }
+                (
+                    Node::Match {
+                        scrutinee: s1,
+                        alts: al1,
+                        default: d1,
+                    },
+                    Node::Match {
+                        scrutinee: s2,
+                        alts: al2,
+                        default: d2,
+                    },
+                ) => {
+                    if al1.len() != al2.len() {
+                        return false;
+                    }
+                    stack.push((s1, s2));
+                    for (x, y) in al1.iter().zip(al2) {
+                        match (x, y) {
+                            (
+                                Alt::Ctor {
+                                    ctor: c1,
+                                    binders: bd1,
+                                    body: bo1,
+                                },
+                                Alt::Ctor {
+                                    ctor: c2,
+                                    binders: bd2,
+                                    body: bo2,
+                                },
+                            ) => {
+                                if c1 != c2 || bd1 != bd2 {
+                                    return false;
+                                }
+                                stack.push((bo1, bo2));
+                            }
+                            (
+                                Alt::Lit {
+                                    value: v1,
+                                    body: bo1,
+                                },
+                                Alt::Lit {
+                                    value: v2,
+                                    body: bo2,
+                                },
+                            ) => {
+                                if v1 != v2 {
+                                    return false;
+                                }
+                                stack.push((bo1, bo2));
+                            }
+                            _ => return false,
+                        }
+                    }
+                    match (d1, d2) {
+                        (None, None) => {}
+                        (Some(x), Some(y)) => stack.push((x, y)),
+                        _ => return false,
+                    }
+                }
+                (
+                    Node::Lam {
+                        param: p1,
+                        body: b1,
+                    },
+                    Node::Lam {
+                        param: p2,
+                        body: b2,
+                    },
+                ) => {
+                    if p1 != p2 {
+                        return false;
+                    }
+                    stack.push((b1, b2));
+                }
+                (Node::App { func: f1, arg: a1 }, Node::App { func: f2, arg: a2 }) => {
+                    stack.push((f1, f2));
+                    stack.push((a1, a2));
+                }
+                (Node::Fix { name: n1, body: b1 }, Node::Fix { name: n2, body: b2 }) => {
+                    if n1 != n2 {
+                        return false;
+                    }
+                    stack.push((b1, b2));
+                }
+                (Node::FixGroup { defs: d1, body: b1 }, Node::FixGroup { defs: d2, body: b2 }) => {
+                    if d1.len() != d2.len() {
+                        return false;
+                    }
+                    for ((n1, x), (n2, y)) in d1.iter().zip(d2) {
+                        if n1 != n2 {
+                            return false;
+                        }
+                        stack.push((x, y));
+                    }
+                    stack.push((b1, b2));
+                }
+                // Different variants are unequal.
+                _ => return false,
+            }
+        }
+        true
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -234,8 +776,10 @@ mod tests {
                 policy,
             }),
         };
+        // `ref body` — `Node` now has a manual `Drop` (RFC-0041 §4.5), so a by-value field
+        // move-out of a `Node` is E0509; borrow instead.
         match node {
-            Node::Let { body, .. } => assert!(body.is_repr_changing()),
+            Node::Let { ref body, .. } => assert!(body.is_repr_changing()),
             _ => panic!("expected a Let"),
         }
     }

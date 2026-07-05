@@ -111,7 +111,7 @@ pub(crate) fn lex_items(src: &str) -> Vec<LexItem> {
             kind: LexKind::Comment,
         });
     }
-    raws.sort_by(|a, b| (a.line, a.col).cmp(&(b.line, b.col)));
+    raws.sort_by_key(|a| (a.line, a.col));
 
     let mut out = Vec::with_capacity(raws.len());
     for i in 0..raws.len() {

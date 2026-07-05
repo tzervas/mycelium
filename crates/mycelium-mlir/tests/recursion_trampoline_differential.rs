@@ -310,9 +310,12 @@ fn fixgroup_mutual_interp_eq_native() {
 /// non-zero. `g(1) → f(0) = 0xAA`. A wrong entry-member resolution would diverge here.
 #[test]
 fn fixgroup_entry_member_index_is_respected() {
-    let prog = match fixgroup_program() {
+    // `Node` now implements `Drop` (RFC-0041 §4.5 iterative destruction), so a field cannot be
+    // moved out of an owned `Node` by value (E0509); take `defs` by-ref via `mem::take` instead.
+    let mut base = fixgroup_program();
+    let prog = match &mut base {
         Node::FixGroup { defs, .. } => Node::FixGroup {
-            defs,
+            defs: std::mem::take(defs),
             body: Box::new(Node::App {
                 func: Box::new(Node::Var("g".into())),
                 arg: Box::new(Node::Const(byte_n(1))),
