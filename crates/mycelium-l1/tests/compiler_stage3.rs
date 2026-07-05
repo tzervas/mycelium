@@ -13,8 +13,9 @@
 //! (b) **AST structural fingerprint** on every file BOTH sides accept — a preorder-walk (rolling
 //!     hash via `rotl(7) xor tag` + node count) computed identically on both sides (the self-hosted
 //!     walker lives in `parse.myc` itself, `fingerprint_nodule`; the oracle-side mirror is
-//!     `fp::fingerprint_nodule` below, hand-kept in lock-step — same 107-entry tag table, same
-//!     per-node field-visitation order). Strong enough to catch a real shape divergence (constructor
+//!     `fp::fingerprint_nodule` below, hand-kept in lock-step — same 109-entry tag table (tags
+//!     108/109 are the `parse_phylum` leg's `Phy` / header-less-path entries), same per-node
+//!     field-visitation order). Strong enough to catch a real shape divergence (constructor
 //!     kind + argument count + identifier/literal length at every node), not a bare node count.
 //!
 //! M-981 applies as in every prior stage: only the L1-eval leg is exercised at this scale (the L0
@@ -32,6 +33,16 @@
 //! value-semantically from `self.depth` (FLAG-parse-7); error POSITION/message fidelity is not
 //! compared, only Ok/Err classification (FLAG-parse-8); `parse_phylum` is fully ported (FLAG-parse-9);
 //! effect-budget VALUES are not mixed into the fingerprint, only their names (FLAG-parse-10).
+//!
+//! **Recursion discipline (RFC-0041 §7 W7 amendment 11, PR #1166 review fix):** every
+//! SOURCE-LENGTH-bounded loop in parse.myc — item/arm/hypha/ctor/param/segment lists, the embedded
+//! lexer's token/lexeme scanners — is written in **accumulator + reverse direct-tail style**
+//! (`loop(ts, Cons(item, acc))` tail-calls itself; one final `rev_acc(acc, Nil)` restores source
+//! order), so the evaluator's TCO keeps list length off the eval stack. Expression/type/pattern
+//! NESTING recursion is the other, deliberately different class: recursive descent proper, bounded
+//! by the explicit 4096 depth budget (FLAG-parse-7), not by TCO. The pre-fix Cons-after-return
+//! shape tripped `DepthExceeded{limit: 4096}` at ~4,000+ items — pinned by
+//! `parse_myc_accepts_a_many_item_nodule_without_depth_exhaustion` below.
 
 use mycelium_l1::ast::{
     AmbientParams, Arm, BaseType, Ctor, DeriveDecl, ExecutionMode, Expr, FnDecl, FnSig, Hypha,
@@ -105,7 +116,8 @@ fn parse_myc_lexes_and_parses_a_trivial_source() {
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────
 // The oracle-side AST fingerprint mirror (`fp` module) — hand-kept in lock-step with parse.myc's
-// own `walk_*`/`fp_tag` family: SAME 107-entry tag table (1..107, sequential, no gaps), SAME
+// own `walk_*`/`fp_tag` family: SAME 109-entry tag table (1..109, sequential, no gaps; 108/109 =
+// the parse_phylum leg's Phy / header-less-path entries), SAME
 // rotl(7)-xor mixing, SAME per-node field-visitation order (occasionally NOT the natural
 // declaration order — e.g. `TypeDecl`/`TraitDecl`/`ObjectDecl` mix `name` before `vis` — reproduced
 // exactly here since only cross-side CONSISTENCY matters, not "natural" order).
@@ -828,4 +840,37 @@ fn parse_myc_matches_oracle_on_a_small_real_lib_subset() {
         subset.len(),
         started.elapsed().as_secs_f64()
     );
+}
+
+/// Regression pin for the PR #1166 HIGH finding (source-length-bounded recursion): a synthetic
+/// many-item nodule — N x `use a.bI;` items — parses green through the self-hosted parser AND
+/// fingerprint-agrees with the oracle. Pre-fix (the Cons-after-return list loops, commit
+/// 2257f9ff), depth scaled with ITEM COUNT and the 5,000-item case tripped the evaluator's
+/// `DepthExceeded{limit: 4096}`; post-fix (accumulator + rev_acc direct-tail loops) the same
+/// input runs in bounded depth. Sizes chosen empirically per the review brief: 5,000 is the
+/// reviewer's failing repro (re-verified failing pre-fix during patching); 1,250/2,500 give the
+/// scaling curve. Timings on this machine (debug build, one eval each, Empirical — see the
+/// eprintln output): the curve is the honest record of whether eval cost stays ~linear in item
+/// count now that recursion depth no longer scales with it.
+#[test]
+fn parse_myc_accepts_a_many_item_nodule_without_depth_exhaustion() {
+    let env =
+        check_nodule(&parse(PARSE_SRC).unwrap_or_else(|e| panic!("parse.myc: parse failed: {e}")))
+            .unwrap_or_else(|e| panic!("parse.myc: check failed: {e}"));
+    for n in [1_250usize, 2_500, 5_000] {
+        let mut source = String::from("nodule many.items;\n");
+        for i in 0..n {
+            source.push_str(&format!("use a.b{i};\n"));
+        }
+        let label = format!("synthetic {n}-item nodule");
+        let oracle = parse(&source)
+            .unwrap_or_else(|e| panic!("{label}: the oracle must accept the synthetic input: {e}"));
+        let f = fp::fingerprint_nodule(&oracle);
+        let t = std::time::Instant::now();
+        run_verdict(&env, "stage3_verdict", &label, &source, 1, f.hash, f.count);
+        eprintln!(
+            "many-item regression: {n} items parsed + fingerprint-matched in {:.1}s",
+            t.elapsed().as_secs_f64()
+        );
+    }
 }
