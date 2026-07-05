@@ -11,6 +11,37 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Kickoff-corpus reconciliation (2026-07-05)
+
+Post-Phase-I doc maintenance on the kickoff corpus (`.claude/kickoffs/`) plus `docs/CURRENT-STATE.md`
+— documentation only, no code changes.
+
+- **Seven kickoffs archived** (moved to `.claude/kickoffs/archive/`): the six completed — `acy`
+  (H0, commits 6636f56/ba0b800, E27-1), `enb` (H1) and `opp` (both PR #1020, 2026-07-02), `grm`
+  (H2a) and `frz` (H2 — the kernel freeze, both PR #1051, 2026-07-02), and `trx` (transpiler PoC,
+  landed 2026-07-01) — each with a prepended completion header whose task ranges were verified
+  `status:done` against `issues.yaml`; plus `rcp`, the superseded, never-executed predecessor
+  umbrella plan (replaced 2026-07-01 by ADR-038's function-first decomposition into
+  acy/enb/grm/opp/frz).
+- **`.claude/kickoffs/README.md` refreshed to 2026-07-05 truth:** a "Landings 2026-07-02 → 07-05"
+  masthead note (incl. the RFC-0041 W0–W7 promotion — RFC-0041 → Enacted, DN-84 → Resolved,
+  M-978/M-979 closed, the M-969/M-959 status lags corrected), the Phase-I table collapsed to its
+  archive pointers, six new Completed rows and the `rcp` pointer, and the scheduler plus the
+  dependency-sequencing section re-pointed (stale gates dropped; the maintainer's reserved queue
+  listed).
+- **`boot10` is the next engineering kickoff** (maintainer decision, 2026-07-05): M-740's M-978
+  gate cleared by the promotion (M-739 still gates it); two straggler leaf branches recorded for
+  rescue-first; TCO's direct-tail-only scope recorded as an M-740 acceptance criterion (RFC-0041
+  §7 W7 amendment #11); M-970 (FLAG-970 formatter bug, P3) rides the first wave as a disjoint
+  `mycelium-fmt` leaf.
+- **`dfb` RE-SHELVED** (maintainer decision, 2026-07-05) until after `boot10` and the public flip —
+  dated notes appended to the M-670/M-671 bodies in `issues.yaml` (statuses stay `blocked`, no
+  label changes); `tul` chain updated in place (M-675 done 2026-07-01, only M-676 remains, P3).
+- **`docs/CURRENT-STATE.md` stale claims fixed:** kernel FROZEN 2026-07-02 (DN-56 → Enacted on the
+  DN-76 4/4 green scorecard plus KC-3 review; it previously said 1/5 conditions met), RFC-0041 →
+  Enacted 2026-07-05 (recursion-depth safety landed, the `myc run` SIGABRT closed), DN-84 →
+  Resolved.
+
 ### RFC-0041 promotion to `main` — recursion-depth safety Enacted with this landing (2026-07-05: M-978 · M-979 · M-959 · M-969 status reconcile)
 
 The maintainer approved the full promotion (2026-07-05); the reconciled W0–W7 wave moves
