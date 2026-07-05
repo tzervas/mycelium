@@ -3843,6 +3843,52 @@ issues:
       TCO acceptance criterion held: every source-length-bounded recursion is direct-tail
       (RFC-0041 s7 W7 amendment 11). Stages 3-6 remain per the lib/compiler/README.md map.
 
+      STAGE 3 LANDED (2026-07-05, in-progress): lib/compiler/ast.myc (compiler.ast — the full
+      ast.rs vocabulary: 36 types / 102 constructors + the small helper impls; FLAG-ast-1..8
+      in-file, incl. FLAG-ast-5, a NEW collision class: the per-nodule constructor namespace is
+      flat, so bare Rust variant names reused across different enums collide even when none is a
+      keyword — resolved with per-type prefixes per the collections.myc precedent) and
+      lib/compiler/parse.myc (compiler.parse — all ~91 parse.rs functions accounted for; BOTH
+      parse and parse_phylum ported end-to-end, source text -> AST, with a self-contained
+      token+lexer+AST copy per M-982, FLAG-parse-1; every match destructures exactly ONE
+      constructor level, the M-980 discipline — zero checker panics; MAX_EXPR_DEPTH=4096
+      preserved; source-length-bounded list-building loops re-shaped accumulator+reverse
+      direct-tail in the PR #1166 review cycle after the Cons-after-return depth-ceiling
+      finding — RFC-0041 s7 W7 amendment 11; the Stage-1 lexer twin is M-985).
+      Gates green: compiler_stage3_ast.rs 26/26 (parse+check_nodule structural gate; 103-row
+      ported-constructor inventory, Declared/audited; per-variant L1-eval construct+classify) and
+      compiler_stage3.rs 4/4 (Empirical): classification parity vs the live Rust oracle over the
+      FULL conformance corpus on both legs (accept 27/27 — 26 via parse, the phylum-headed file
+      via parse_phylum with parse refusing it on both sides; reject 30/30; zero divergences) with
+      a preorder per-constructor-tag AST fingerprint (tag table 1-109, rotl(7)-XOR mix + node
+      count + Bytes-len/u32 leaf mixing; hand-locked Rust mirror walk) on every accepted leg,
+      plus a 6-file real-stdlib subset leg; 171s wall via the args-in/verdict-out one-eval
+      harness (~8x cheaper than per-driver programs — retrofit minted as M-983). Honest
+      narrowings (flagged in-file): L1-eval leg only, no three-way at this scale (M-981);
+      error message/position fidelity not compared, classification only (FLAG-parse-8); lib
+      sweep limited to the 6 smallest stdlib nodules, full-tree sweep minted as M-984; eval
+      fuel sized to 200M for the lib leg (evaluator default 1M — maintainer call whether the
+      default moves, flagged not decided). New finding FLAG-parse-2: the lexer-keyword-ctor x
+      AST-ctor flat-namespace collision (31 T-prefix names) surfaces whenever two frontend
+      stages share one nodule — DN-26 append-only note carried in the same change. Stages 4-6
+      remain per the lib/compiler/README.md map.
+
+      STAGE 3 REVIEW CYCLE (2026-07-05, PR #1166): the /pr-review pass HIGH finding (four
+      list-building loops + the embedded lexer loop were Cons-after-return, i.e. NOT direct-tail;
+      reproduced at 5,000 items with DepthExceeded{4096}) was fixed by converting all 27
+      source-length-bounded loops in parse.myc to accumulator + rev_acc direct-tail shape
+      (fingerprint parity re-verified: 57 files x 2 legs, zero divergences — the rewrite changed
+      no AST result). The fix surfaced three NEW kernel-side findings, minted rather than worked
+      around silently: M-986 (the evaluator's TCO elides only bare-body self-calls — match/let
+      tail calls are never elided, so NO in-language loop can exceed the 4096 depth budget today;
+      the direct-tail source shape is the READY form, its depth benefit dormant until the kernel
+      widens tail position), M-987 (L1-eval cost ~n^3 in token count: 0.6s/26s/133s at
+      200/752/1252 tokens), M-988 (mono re-inference rejects generic bare Nil the checker
+      accepted; 55 explicit ascriptions as the in-language workaround). Honest pins added to the
+      Stage-3 gate: the TCO-gap micro-pin and a 150-item green + with_depth(512) explicit-refusal
+      pin — both fail loudly when M-986 lifts. MEDIUM (stale 107-entry tag-table comments -> 109)
+      and LOW (stale line count) fixed. Gate after patch: compiler_stage3 6/6 green.
+
   - id: M-741
     title: "M-741 — Ratify the self-hosted toolchain as canonical (DN-14 gate at full scale)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
@@ -11710,6 +11756,207 @@ issues:
       - Cross-nodule function calls execute under the interpreter (and AOT) for a two-nodule
         phylum witness; the compiler.token/compiler.lex duplication is removed (lex.myc imports
         token.myc's types via use); DN-26 gets an append-only note recording the lift;
+        change-scoped just check green.
+  - id: M-983
+    title: "Retrofit the Stage-1/2 differential gates to the args-in/verdict-out one-eval harness"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:refactor, area:testing, priority:P3, status:todo]
+    epic: E18-1
+    depends_on: []
+    doc_refs:
+      - src:crates/mycelium-l1/tests/compiler_stage3.rs
+      - src:crates/mycelium-l1/tests/compiler_stage1.rs
+      - src:crates/mycelium-l1/tests/compiler_stage2.rs
+    body: |
+      Minted 2026-07-05 from the M-740 Stage-3 port. The Stage-3 gate (compiler_stage3.rs)
+      elaborates the ported nodule ONCE and drives every corpus case through a single
+      Evaluator::call("stage3_verdict", args) per file/leg — the oracle's expectations travel in
+      as Bytes/Binary{32} arguments and a packed verdict code comes back. Measured ~8x cheaper
+      than the Stage-1/2 shape (a fresh per-case driver program each time): the full 57-file
+      two-leg corpus differential runs in 71.6s where the projected per-driver form was 600s+.
+      Stage 1's gate takes 213s today with the old shape. Retrofit compiler_stage1.rs and
+      compiler_stage2.rs to the one-eval harness, and make it the standing shape for the
+      Stage-4/5 gates.
+
+      User stories:
+      - As a maintainer running just check, I want the self-hosted-compiler differential gates
+        fast enough to stay change-scoped-tier-friendly, so that the port stays continuously
+        verified without pushing the gates into the nightly tier.
+
+      Definition of Done:
+      - compiler_stage1.rs and compiler_stage2.rs use the one-eval args-in/verdict-out harness;
+        identical coverage (same corpus files, same compared facts) with measurably lower wall
+        time; change-scoped just check green; the harness shape documented in the test-file doc
+        comments for Stage-4/5 reuse.
+  - id: M-984
+    title: "Full lib-tree sweep of the Stage-3 parser differential (post-AOT/M-981 economics)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:verification, area:testing, priority:P3, status:todo]
+    epic: E18-1
+    depends_on: [M-981]
+    doc_refs:
+      - src:crates/mycelium-l1/tests/compiler_stage3.rs
+      - src:lib/compiler/parse.myc
+      - corpus:DN-26
+    body: |
+      Minted 2026-07-05 from the M-740 Stage-3 port. The Stage-3 gate's real-library leg is an
+      honest documented subset: the 6 smallest stdlib nodules (result/option/math/fmt/cmp/iter),
+      because the interpreted per-file cost is ~15s at 100 lines (fuel sized to 200M) and the
+      full lib/std/ + lib/compiler/ tree would blow the gate's budget. Once the differential can
+      ride an AOT-compiled self-hosted parser (M-981's economics) — or the M-983 harness plus
+      evaluator improvements make interpreted cost negligible — widen the leg to every .myc file
+      under lib/ (classification parity + fingerprint), the same full-tree coverage the Stage-2
+      header gate already has.
+
+      User stories:
+      - As a compiler engineer, I want the self-hosted parser differentialed against the oracle
+        over every real library file, not a subset, so that corpus-blind-spot divergences are
+        caught before M-741 ratification.
+
+      Definition of Done:
+      - The Stage-3 differential covers every .myc file under lib/ on at least one leg;
+        runtime documented and acceptable for its tier; any file excluded is listed with an
+        explicit reason (G2 — never silently skipped); change-scoped just check green.
+  - id: M-985
+    title: "lex.myc run loop is Cons-after-return (non-tail) — token-count depth ceiling at L1-eval"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:bug, area:language, priority:P3, status:todo]
+    epic: E18-1
+    depends_on: []
+    doc_refs:
+      - src:lib/compiler/lex.myc
+      - corpus:RFC-0041
+      - corpus:DN-26
+    body: |
+      Minted 2026-07-05 from the PR #1166 /pr-review pass (the Stage-3 HIGH finding's Stage-1
+      twin). lib/compiler/lex.myc's token-accumulation loop (run, ~L833-846) recurses once per
+      token with the Cons/Ok wrapping AFTER the recursive call returns — not tail position — so
+      Mycelium-level call depth scales with the token count of the input, and a large-enough
+      source trips the host evaluator's generic DepthExceeded guard rather than completing
+      (clean Err, no SIGABRT — RFC-0041's safety goal holds; the ceiling is a scale limit, not
+      a crash). Stage 1 never CLAIMED direct-tail for this loop (the claim was introduced by
+      Stage 2 for nodule.myc and by Stage 3 for parse.myc, where the Stage-3 loops were
+      rewritten accumulator+reverse in PR #1166 itself), but the ceiling was undocumented —
+      this issue is the G2 flag. Fix: the same accumulator+reverse direct-tail rewrite the
+      Stage-3 patch applied to parse.myc's list-building loops, plus a regression case in the
+      Stage-1 gate. Note parse.myc carries its own self-contained lexer copy (FLAG-parse-1),
+      fixed in PR #1166; this issue covers the standalone Stage-1 nodule only, so the two
+      copies stay shape-identical for the eventual M-982 deduplication.
+
+      User stories:
+      - As a compiler engineer working toward M-741 ratification, I want the self-hosted lexer
+        to scale to real-file token counts under L1-eval, so that the Stage-6 bootstrap
+        (compiler compiles itself) is not capped by an accidental recursion shape.
+
+      Definition of Done:
+      - lex.myc's source-length-bounded loops are direct-tail (accumulator+reverse), verified
+        by a synthetic large-input regression case in compiler_stage1.rs that failed on the old
+        shape; the token-stream differential stays green with zero divergences; the in-file
+        recursion-discipline note is updated to the nodule.myc-precision wording;
+        change-scoped just check green.
+  - id: M-986
+    title: "L1 evaluator TCO elides only bare-body self-calls — match/let tail calls never elided (no in-language loop can exceed the depth budget)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:bug, area:execution, priority:P2, status:todo]
+    epic: E18-1
+    depends_on: []
+    doc_refs:
+      - src:crates/mycelium-l1/src/eval.rs
+      - src:crates/mycelium-l1/tests/compiler_stage3.rs
+      - corpus:RFC-0041
+      - corpus:DN-26
+    body: |
+      Minted 2026-07-05 from the PR #1166 review-cycle patch (FLAG-parse-11). The L1 evaluator's
+      TCO elides a self-call only when the caller's InvokePost frame is directly on top of the
+      CEK stack — i.e. only from BARE-BODY position (the kernel's own spin(n)=spin(n) witness
+      shape). A tail call from inside a match arm runs under Frame::MatchPop, from a let body
+      under Frame::LetPop (scope-restore frames), so the elision precondition never holds there.
+      Probed empirically: a 10,000-iteration match-arm tail countdown trips
+      DepthExceeded{limit:4096} with tco_trace().total_elided == 1; same for let-body. Since
+      every TERMINATING loop needs a match, no in-language loop shape can iterate past the depth
+      budget today — RFC-0041 s7 W7 amendment-11's "10k worklist" goal is currently unmeetable
+      for any in-language loop (the amendment's direct-tail-only SCOPE is the right criterion;
+      the depth BENEFIT is dormant until this gap lifts). This capped the PR #1166 HIGH fix:
+      parse.myc's 27 list-building loops are now accumulator+reverse direct-tail (the READY
+      shape), but a 5,000-item source still refuses cleanly. Pinned honestly by
+      l1_eval_tco_gap_match_arm_tail_call_is_not_elided and the with_depth(512) known-gap leg of
+      parse_myc_many_item_nodule_depth_semantics (both fail loudly when the gap lifts). Fix:
+      widen tail position through binder-restoring frames (truncate the scope eagerly before a
+      tail call) in eval.rs — a kernel change, correctly FLAGged up by the leaf rather than
+      edited (KC-3). Blocking-relevant for DN-26 Stage-5/6 economics and M-984/M-985.
+
+      User stories:
+      - As a compiler engineer, I want tail calls inside match/let elided, so that the
+        self-hosted frontend's source-length-bounded loops actually run at O(1) depth and the
+        RFC-0041 10k-worklist goal is meetable in-language.
+
+      Definition of Done:
+      - Match-arm and let-body tail self-calls are elided (the two pinned tests flip: the gap
+        pin fails loudly and is updated to assert elision + a >4096-iteration green run);
+        RFC-0041's acceptance suite still green; no semantic change to non-tail programs;
+        change-scoped just check green; DN-26 gets an append-only note when the lift lands.
+  - id: M-987
+    title: "L1-eval cost super-linear (~n^3) in token count for the self-hosted parser"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:bug, area:execution, priority:P2, status:todo]
+    epic: E18-1
+    depends_on: []
+    doc_refs:
+      - src:crates/mycelium-l1/src/eval.rs
+      - src:crates/mycelium-l1/tests/compiler_stage3.rs
+      - corpus:DN-26
+    body: |
+      Minted 2026-07-05 from the PR #1166 review-cycle patch. Evaluating the self-hosted
+      parser's parse(src) under L1-eval scales super-linearly with input token count —
+      measured (debug build, one eval each): ~200 tokens = 0.6s; 752 tokens = 26.3s; 1,252
+      tokens = 133.4s (~n^3 over this range). The parser's own algorithm is linear in tokens
+      (single-pass recursive descent, accumulator lists); the blow-up points at per-step value
+      copying in the evaluator (value-semantics environment/frame copies), not the .myc source.
+      Empirical, environment-dependent numbers — the SHAPE (super-linear) is the finding. This
+      is what limits the Stage-3 differential's real-library leg to the 6 smallest stdlib files
+      (M-984) and, with M-986, what makes the DN-26 s9 flag-2 interpreted-first bootstrap gate
+      impractical at full scale today. Related: M-981 (the L0 interpreter's own scale wall —
+      this is the L1-eval analog at one level up).
+
+      User stories:
+      - As a maintainer driving the DN-26 Stage-6 bootstrap, I want L1-eval cost near-linear in
+        source size, so that the interpreted-first validation gate (s9 flag-2) stays practical
+        for compiler-scale .myc programs.
+
+      Definition of Done:
+      - The cost curve for parse.myc's parse(src) over the same three sizes is re-measured and
+        documented; the dominant super-linear term is identified and either fixed (near-linear
+        observed growth over the probe range) or explicitly characterized with a bound and an
+        append-only DN-26 note recording the accepted ceiling; M-984's full-tree sweep is
+        re-costed against the result; change-scoped just check green.
+  - id: M-988
+    title: "monomorphize re-inference fails on generic bare Nil that check_nodule accepted (checker/mono parity gap)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:bug, area:language, priority:P3, status:todo]
+    epic: E18-1
+    depends_on: []
+    doc_refs:
+      - src:crates/mycelium-l1/src/mono.rs
+      - src:lib/compiler/parse.myc
+    body: |
+      Minted 2026-07-05 from the PR #1166 review-cycle patch. monomorphize's re-inference
+      failed on generic bare-Nil call sites (loop_acc(ts, Nil) / rev_acc(acc, Nil)) that
+      check_nodule had already inferred and accepted — a checker/mono parity gap: a program
+      that type-checks green must not fail later at mono for a type the checker already knew
+      (G2-adjacent; the failure is at least explicit, and the error message prescribes the
+      workaround). Worked around in-language in parse.myc with explicit `Nil : Vec[T]`
+      ascriptions at all 55 sites (check/eval behavior unchanged). Fix: carry or re-derive the
+      checker's instantiation at mono re-inference for value-constructor literals of generic
+      type, or thread the checked types into mono, so the ascriptions become unnecessary.
+
+      User stories:
+      - As a language user, I want a program that passes the checker to pass monomorphization,
+        so that generic empty-collection literals do not need ritual ascriptions.
+
+      Definition of Done:
+      - A minimal two-fn witness (accumulator + reverse over a generic Vec with bare Nil
+        arguments) monomorphizes without ascriptions; the parse.myc ascriptions are removable
+        (removal optional, tracked as cleanup); a regression test pins the witness;
         change-scoped just check green.
   - id: M-970
     title: "mycelium-fmt: render_expr_canonical drops the @forage(policy) Hypha annotation"
