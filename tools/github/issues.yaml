@@ -11074,9 +11074,10 @@ issues:
       the regression guard crates/mycelium-std-conformance/tests/reject_ledger.rs is present and
       green (9 passed — closed-enum BTreeSet equality over WfError/EvalError/AmbientError + audited
       parse/check counts, Empirical per its own header); DN-76 §5A.1 scores condition 1 GREEN on
-      exactly this evidence. Post-freeze deltas reconciled by the M-959b/M-959c follow-ups (via
-      -ambiguity site +1). The status:todo was a bookkeeping lag — the freeze act (M-969) already
-      depended on and consumed this completion.
+      exactly this evidence. Post-freeze deltas reconciled by the M-959b/M-959c follow-up PRs
+      #1042/#1045 (the RFC-0041 W1 +3 ledger delta and the M-966 via-delegation-ambiguity +1;
+      sub-task branches of this issue — no separate issues.yaml entries). The status:todo was a
+      bookkeeping lag — the freeze act (M-969) already depended on and consumed this completion.
 
   - id: M-960
     title: "Inject-mode build-scope dossier — Phase-I-buildable subset vs deferred R&D (RFC-0038 §8)"
@@ -11580,7 +11581,7 @@ issues:
       (DepthLimit{4096} refusal), §5.1 error-parity green un-ignored, one deterministic budget on
       every path, --unbounded corpus-refused, forbid(unsafe) intact. The W7 follow-ons above stay
       tracked as open residuals (non-DoD, recorded in RFC §7/§9) — they are NOT closed by this issue.
-      M-740 (.myc frontend port) is hereby unblocked.
+      M-740's M-978 dependency is cleared by this promotion (M-739, needs-design, still gates it).
   - id: M-970
     title: "mycelium-fmt: render_expr_canonical drops the @forage(policy) Hypha annotation"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"

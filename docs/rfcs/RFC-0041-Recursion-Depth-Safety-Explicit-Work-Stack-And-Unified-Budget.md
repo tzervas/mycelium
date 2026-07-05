@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0041 |
-| **Status** | **Enacted (2026-07-05)** — the W7 promotion `dev → integration → main` executed with maintainer approval (2026-07-05); all eight waves (W0–W6 + the W7 Enacted-closure wave) landed with every §9 DoD line **literally met or honestly re-scoped by the recorded append-only §7/§9 amendments** (checked basis: §7 wave status blocks + the W7 dispositions). Tracked non-DoD follow-ons stay open (W3b bare-`Repr`, `count_occurrences` O(N²) bound, single-variant unification, AOT per-frame metric precision under the §5.1 family-parity contract, `content_hash` O(depth²)). Prior: **Accepted (Rev 2, 2026-07-03 — maintainer-ratified)** — authored under DN-84 §11 "solve (D) now" + the four 2026-07-03 ratifications (RR-29 §6); hardened by the Phase-3 adversarial review (§11 — 4 Critical + 15 High source-confirmed objections resolved); ratified `Proposed → Accepted` by the maintainer 2026-07-03, including the §6 within-freeze behavior-preserving-hardening channel (a ratified DN-56 process addition), the §Posture I1–I3 correctness invariant (superseding Rev-1's "same error variants"), and the §4.0 source-call-boundary depth metric; `Accepted → Enacted` per-stage as each wave (§7) landed differential + error-parity green (§9). Prior: Proposed (Rev 1 → Rev 2, 2026-07-03). |
+| **Status** | **Enacted (2026-07-05)** — maintainer-approved (2026-07-05) W7 promotion `dev → integration → main`, **effective with this wave's landing on `main`** (the §9 claimability condition); all eight waves (W0–W6 + the W7 Enacted-closure wave) landed with every §9 DoD line **literally met or honestly re-scoped by the recorded append-only §7/§9 amendments** (checked basis: §7 wave status blocks + the W7 dispositions). Tracked non-DoD follow-ons stay open (W3b bare-`Repr`, `count_occurrences` O(N²) bound, single-variant unification, AOT per-frame metric precision under the §5.1 family-parity contract, `content_hash` O(depth²), the geiger-baseline `--update` regeneration — the committed baseline is a disclosed W0 placeholder, never silently). Prior: **Accepted (Rev 2, 2026-07-03 — maintainer-ratified)** — authored under DN-84 §11 "solve (D) now" + the four 2026-07-03 ratifications (RR-29 §6); hardened by the Phase-3 adversarial review (§11 — 4 Critical + 15 High source-confirmed objections resolved); ratified `Proposed → Accepted` by the maintainer 2026-07-03, including the §6 within-freeze behavior-preserving-hardening channel (a ratified DN-56 process addition), the §Posture I1–I3 correctness invariant (superseding Rev-1's "same error variants"), and the §4.0 source-call-boundary depth metric; `Accepted → Enacted` per-stage as each wave (§7) landed differential + error-parity green (§9). Prior: Proposed (Rev 1 → Rev 2, 2026-07-03). |
 | **Type** | Normative — implementation architecture for recursion-depth safety across the L1 evaluator, the L0 reference interpreter, and the frontend passes; **no new L0 node/prim, no grammar/surface change** (KC-3 / DN-56 freeze-compatible — §6). |
 | **Date** | 2026-07-03 |
 | **Task** | M-979 (design D, solve-now) · M-978 (design B baseline) |
@@ -482,15 +482,17 @@ implementation. **4 Critical + 15 High source-confirmed** objections, all resolv
 
 ## Meta — changelog
 
-- **2026-07-05 — `Accepted → Enacted` (the W7 promotion landed on `main`; maintainer-approved).** The
-  maintainer approved the full promotion (2026-07-05, session review); the reconciled W0–W7 wave moved
-  `dev → integration → main`. Enactment basis (checked, VR-5): every §9 DoD line is literally met or
-  honestly re-scoped by the recorded append-only §7/§9 amendments — flagship `myc run` SIGABRT closed
-  (refuses `DepthLimit{4096}`), §5.1 error-parity green un-ignored, one deterministic budget on every
-  path, iterative destruction landed via the §6 within-freeze channel, `--unbounded` implemented +
-  corpus-refused, `#![forbid(unsafe_code)]` intact (sole unsafe = audited upstream `stacker`/`psm`).
-  Non-DoD follow-ons stay tracked (see Status). M-978/M-979 → done; DN-84 → Resolved. Append-only
-  (house rule #3).
+- **2026-07-05 — `Accepted → Enacted` (maintainer-approved W7 promotion; effective with this landing
+  on `main`).** The maintainer approved the full promotion (2026-07-05, session review); the reconciled
+  W0–W7 wave moves `dev → integration → main` by this landing — the §9 claimability condition is met
+  the moment this text reaches `main`. Enactment basis (checked, VR-5): every §9 DoD line is literally
+  met or honestly re-scoped by the recorded append-only §7/§9 amendments — flagship `myc run` SIGABRT
+  closed (refuses `DepthLimit{4096}`), §5.1 error-parity green un-ignored, one deterministic budget on
+  every path, iterative destruction landed via the §6 within-freeze channel, `--unbounded` implemented +
+  corpus-refused, `#![forbid(unsafe_code)]` intact (sole unsafe = the exact-pinned, forbid-line-guarded
+  upstream `stacker`/`psm` — no first-party dep-tree unsafe audit exists; the geiger baseline is a
+  disclosed placeholder, tracked in the Status follow-ons). Non-DoD follow-ons stay tracked (see
+  Status). M-978/M-979 → done; DN-84 → Resolved. Append-only (house rule #3).
 - **2026-07-03 — W6 landed; RFC-0041 Phase-4 (W0–W6) COMPLETE (M-979).** Final wave, assess-then-act:
   the §4.7 "convert-or-document" fork resolved to **document the wide-tuple asymmetry** — `usefulness`/
   `decision` recurse on tuple/ctor arity, a 4095-field product type false-refuses at the floor, **but** it

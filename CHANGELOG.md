@@ -11,17 +11,19 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
-### RFC-0041 promoted to `main` — recursion-depth safety Enacted (2026-07-05: M-978 · M-979 · M-959 · M-969 status reconcile)
+### RFC-0041 promotion to `main` — recursion-depth safety Enacted with this landing (2026-07-05: M-978 · M-979 · M-959 · M-969 status reconcile)
 
-The maintainer approved the full promotion (2026-07-05); the reconciled W0–W7 wave moved
-`dev → integration → main`. Status moves, all append-only with a checked basis:
+The maintainer approved the full promotion (2026-07-05); the reconciled W0–W7 wave moves
+`dev → integration → main` by this landing (RFC-0041's §9 Enacted-claimability condition is met the
+moment this entry reaches `main`). Status moves, all append-only with a checked basis:
 
 - **RFC-0041 `Accepted → Enacted`** — every §9 DoD line literally met or honestly re-scoped by the
   recorded §7/§9 amendments; the flagship `myc run` SIGABRT refuses `DepthLimit{4096}`; §5.1
   error-parity green; one deterministic budget on every path; `#![forbid(unsafe_code)]` intact.
   The W7 follow-ons (W3b bare-`Repr`, `count_occurrences` O(N²) work-step bound, single-variant
-  unification, AOT per-frame precision, `content_hash` O(depth²), coarse-worker sites) stay
-  tracked, not silent.
+  unification, AOT per-frame precision, `content_hash` O(depth²), coarse-worker sites, the
+  geiger-baseline `--update` regeneration — the committed baseline is a disclosed W0 placeholder)
+  stay tracked, not silent.
 - **DN-84 `Draft → Resolved`** — designs (B)/(C)/(D) all delivered via RFC-0041.
 - **M-979 and M-978 → done** — (D) the work-stack conversion and (B) grow-on-demand plus the unified
   budget respectively (M-978 was subsumed as RFC-0041 W1/W2/W7 rather than a separate RFC).
@@ -29,7 +31,8 @@ The maintainer approved the full promotion (2026-07-05); the reconciled W0–W7 
   2026-07-02 — commit b211cca, PR #1050→#1051 — but its issue stayed `blocked`) and **M-959 → done**
   (DN-80 Accepted plus the `reject_ledger.rs` regression guard green plus DN-76 §5A.1 condition-1
   GREEN predate the freeze; the `todo` was a lag).
-- **M-740** (the `.myc` frontend port, self-hosting capstone) is unblocked by this promotion.
+- **M-740** (the `.myc` frontend port, self-hosting capstone): its RFC-0041 blocker (M-978) is
+  cleared by this promotion; **M-739** (the DN-26 bootstrap plan, `needs-design`) still gates it.
 
 ### RFC-0041 W7 — Enacted-closure wave: the §9 DoD open items closed or honestly re-scoped (2026-07-03: M-979)
 
