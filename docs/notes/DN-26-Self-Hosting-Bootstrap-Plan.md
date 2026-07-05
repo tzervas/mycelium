@@ -309,6 +309,17 @@ code; they only fix the two branch points so the M-740 wave can proceed without 
 
 ## Meta — changelog
 
+- **2026-07-05 — Stage-2 naming correction recorded (append-only, no status move; M-740).** The §7.3
+  Stage-2 nodule name `compiler.nodule` is **unspellable** in surface syntax: `nodule` is a reserved
+  word (DN-02), so the declaration `nodule compiler.nodule;` cannot parse — the second path segment
+  lexes as the `Nodule` keyword, never an identifier (the token.myc FLAG-token-3 keyword-collision
+  class surfacing at the nodule-NAME level, discovered by the Stage-2 port itself). The stage ships
+  as **`compiler.nodule_header`** (`lib/compiler/nodule.myc`; FLAG-nodule-5 in-file). Note the
+  faithfully-preserved asymmetry: the comment-MARKER grammar (`parse_nodule_header`) accepts
+  `nodule` as a dotted-path segment — it validates raw identifier text, keyword-blind, exactly like
+  the Rust oracle — only the surface `nodule <dotted>;` declaration cannot spell it. §7.3's row is
+  not rewritten (append-only); read its `compiler.nodule` as `compiler.nodule_header`. Status
+  remains **Draft**. (M-740 Stage 2; E18-1; VR-5/G2.)
 - **2026-07-03 — §9 added: the two §7.3/§8 `[FLAG]`s resolved by the maintainer (append-only, no status
   move).** Stage-5 packaging → the **`compiler` phylum with the semantic SCC as one nodule** (leaves as
   sibling nodules; chosen over single-nodule-for-everything). Stage-6 bootstrap → **validate on the

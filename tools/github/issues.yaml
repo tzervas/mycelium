@@ -3827,6 +3827,22 @@ issues:
       minted from this stage: M-980 (usefulness nested-pattern panic), M-981 (L0 at self-hosted
       scale), M-982 (cross-nodule execution). Stages 2-6 remain per the lib/compiler/README.md map.
 
+      STAGE 2 LANDED (2026-07-05, in-progress): lib/compiler/nodule.myc (the full nodule.rs port:
+      parse_nodule_header first-non-blank-line scan with 1-based line tracking; the bare/named
+      marker recogniser; never-silent ill-formed-name errors; dotted/canonical accessors) with the
+      Stage-2 gate crates/mycelium-l1/tests/compiler_stage2.rs — 3/3 green: one three-way run
+      (L1 == L0-interp == AOT, feasible at this stage's small scale) + a 26-case synthetic edge
+      battery transcribed from the oracle's own unit tests + the header-parse differential vs the
+      live Rust oracle over EVERY .myc file in the conformance corpus (accept AND reject) and
+      lib/std/ + lib/compiler/ (66+ files; classification code + dotted name + canonical spelling +
+      error line). Honest narrowings (flagged in-file): ASCII-only trim (FLAG-nodule-2); static
+      error messages, line fidelity kept (FLAG-nodule-3); per-file sweep L1-eval-only (M-981).
+      One real finding: DN-26 §7.3's nodule name `compiler.nodule` is UNSPELLABLE — `nodule` is a
+      reserved word, so the surface declaration cannot parse; the nodule ships as
+      compiler.nodule_header (FLAG-nodule-5; DN-26 append-only note carried in the same change).
+      TCO acceptance criterion held: every source-length-bounded recursion is direct-tail
+      (RFC-0041 s7 W7 amendment 11). Stages 3-6 remain per the lib/compiler/README.md map.
+
   - id: M-741
     title: "M-741 — Ratify the self-hosted toolchain as canonical (DN-14 gate at full scale)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
