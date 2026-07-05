@@ -11048,9 +11048,10 @@ issues:
   - id: M-959
     title: "Reject-ledger completion (DN-56 condition 1) — every kernel rejection reified"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:verification, area:core-ir, priority:P1, status:todo]
+    labels: [phase:5, type:verification, area:core-ir, priority:P1, status:done]
     epic: E31-1
     depends_on: [M-958]
+    landed_date: 2026-07-05
     doc_refs:
       - corpus:DN-56
       - src:docs/notes/DN-56-Kernel-Completeness-And-Freeze-Criterion.md
@@ -11067,6 +11068,15 @@ issues:
       Definition of Done:
       - Ledger complete against the current reject set; each entry {construct, reason,
         alternative}; a regression guard fails if a reject path is added without a ledger row.
+
+      DONE (status reconciled 2026-07-05; work landed 2026-07-02, checked basis): DN-80 (the
+      exhaustive {construct, reason, alternative} ledger over the four reject strata) is Accepted;
+      the regression guard crates/mycelium-std-conformance/tests/reject_ledger.rs is present and
+      green (9 passed — closed-enum BTreeSet equality over WfError/EvalError/AmbientError + audited
+      parse/check counts, Empirical per its own header); DN-76 §5A.1 scores condition 1 GREEN on
+      exactly this evidence. Post-freeze deltas reconciled by the M-959b/M-959c follow-ups (via
+      -ambiguity site +1). The status:todo was a bookkeeping lag — the freeze act (M-969) already
+      depended on and consumed this completion.
 
   - id: M-960
     title: "Inject-mode build-scope dossier — Phase-I-buildable subset vs deferred R&D (RFC-0038 §8)"
@@ -11313,9 +11323,10 @@ issues:
   - id: M-969
     title: "THE KERNEL-FREEZE DECLARATION (DN-56; strictly last) — one condition-gated act"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:chore, area:core-ir, priority:P1, status:blocked]
+    labels: [phase:5, type:chore, area:core-ir, priority:P1, status:done]
     epic: E31-1
     depends_on: [M-958, M-959, E28-1, E30-1]
+    landed_date: 2026-07-02
     doc_refs:
       - corpus:DN-56
       - corpus:DN-39
@@ -11339,6 +11350,13 @@ issues:
       - Executed ONLY after the four-condition scorecard is green (recorded); DN-56 status
         advanced append-only; the post-freeze diff policy (DN-39-only) stated; CHANGELOG logs
         the act.
+
+      DONE (status reconciled 2026-07-05; the act was executed 2026-07-02): the kernel freeze was
+      declared per the DoD — scorecard green first (DN-76 4/4 + the M-958b re-score against current
+      integration, condition-4 KC-3 review run), DN-56 Accepted -> Enacted append-only, the
+      DN-39-only post-freeze diff policy stated, CHANGELOG logs the act ("Kernel freeze declared",
+      2026-07-02). Landed to main via PR #1050 -> #1051 (commit b211cca). The status:blocked was a
+      bookkeeping lag from the same landing.
 
   - id: M-976
     title: "Shape-Dispatched Readable mycfmt — flat-spine + house-style knob + width 100"
@@ -11379,9 +11397,10 @@ issues:
   - id: M-978
     title: "Dynamic host-stack growth + unified tunable recursion-depth budget (DN-84)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:design, area:core-ir, priority:P2, status:todo]
+    labels: [phase:5, type:design, area:core-ir, priority:P2, status:done]
     epic: E31-1
     depends_on: [M-977]
+    landed_date: 2026-07-05
     doc_refs:
       - corpus:DN-84
       - src:crates/mycelium-stack/src/lib.rs
@@ -11404,12 +11423,22 @@ issues:
       (a toolchain frame-size change turned a 256-deep guard into a SIGABRT). Companion (D) track =
       M-979. Lands via its own RFC/ADR; DN-84 stays Draft until then.
       User stories + Definition of Done: see DN-84 §2 (stories) + §7/§11 (decided direction / criteria).
+      DONE (2026-07-05): delivered via RFC-0041 (Enacted 2026-07-05), which subsumed (B) as supporting
+      infrastructure of (D) rather than a separate RFC — checked against this issue's decided scope:
+      ONE global RecursionBudget unifying the per-pass constants incl. parser 256->4096 (W1);
+      mycelium-stack fine-grained runtime-gated stacker grow, never-silent no-grow refusal, and the
+      mem_ceiling >= floor x max_frame startup assertion + frame-size CI baseline (W2 — the coarse
+      pass-entry guard discipline, §9.2); deterministic default 4096, (source, budget)-only
+      accept/reject (§9.5/G2); the opt-in corpus-excluded --unbounded mode, refused by the
+      conformance runner (design C, W7); data-shaped depth routed off the control budget (W1
+      check_list + W6). DN-84 -> Resolved in the same landing.
   - id: M-979
     title: "Explicit heap work-stack (DN-84 design D) — RFC-0041 ACCEPTED; Phase-4 implementation (7 waves)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:core-ir, priority:P2, status:in-progress]
+    labels: [phase:5, type:feature, area:core-ir, priority:P2, status:done]
     epic: E31-1
     depends_on: [M-978]
+    landed_date: 2026-07-05
     doc_refs:
       - corpus:DN-84
       - corpus:RFC-0041
@@ -11545,6 +11574,13 @@ issues:
       honestly re-scoped with a checked basis; forbid(unsafe) intact. Whole-RFC Enacted claimable once W7
       promotes dev->integration->main (HELD for maintainer). M-740 self-hosting unblocks on that promotion.
       M-979 stays in-progress until W7 lands on main (Enacted).
+      DONE (2026-07-05): the maintainer approved the full promotion (2026-07-05 session review); the
+      reconciled W0-W7 wave promoted dev -> integration -> main. RFC-0041 Accepted -> Enacted and
+      DN-84 -> Resolved in the same landing. DoD checked: flagship myc run SIGABRT closed
+      (DepthLimit{4096} refusal), §5.1 error-parity green un-ignored, one deterministic budget on
+      every path, --unbounded corpus-refused, forbid(unsafe) intact. The W7 follow-ons above stay
+      tracked as open residuals (non-DoD, recorded in RFC §7/§9) — they are NOT closed by this issue.
+      M-740 (.myc frontend port) is hereby unblocked.
   - id: M-970
     title: "mycelium-fmt: render_expr_canonical drops the @forage(policy) Hypha annotation"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
