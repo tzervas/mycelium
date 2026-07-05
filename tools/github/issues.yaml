@@ -3727,9 +3727,10 @@ issues:
   - id: M-739
     title: "M-739 — Self-hosting bootstrap plan (DN-26) + staged port order"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:design, area:language, priority:P2, status:needs-design]
+    labels: [phase:5, type:design, area:language, priority:P2, status:done]
     depends_on: [E11-1]
     epic: E18-1
+    landed_date: 2026-07-05
     doc_refs:
       - corpus:DN-26
       - corpus:DN-14
@@ -3759,6 +3760,14 @@ issues:
       - The plan is reviewed by the maintainer and recorded (not ratified normatively -- it is
         advisory planning, DN posture).
       - No code is changed by this task (design only).
+
+      DONE (2026-07-05, checked against the DoD): DN-26 §7 (concrete staged port order grounded
+      in the measured mycelium-l1 dependency graph, incl. the 9-file semantic-core SCC finding),
+      §7.4 (lib/compiler/ directory structure) and §7.3 (per-stage differential/conformance gate
+      criteria) landed via PR #1159; §9 records the two maintainer flag resolutions and §8 the §5
+      open-question resolutions — all maintainer-AUTHORED (2026-07-03 commits), which meets
+      "reviewed by the maintainer and recorded" by construction. The lib/compiler/README.md wave
+      map (scaffold, docs-only) landed via PR #1160. No code changed. M-740 is now ungated.
 
   - id: M-740
     title: "M-740 — Port the L1 frontend (lexer/parser/checker) to Mycelium (.myc)"
