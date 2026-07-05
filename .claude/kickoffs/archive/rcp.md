@@ -1,5 +1,12 @@
 # Kickoff `rcp` — Rust-reference completion + acyclic dependency graph (pre-E18-1 closeout)
 
+> **⏹ SUPERSEDED (2026-07-01) — never executed; archived 2026-07-05.** This umbrella plan was
+> replaced by **ADR-038**'s function-first decomposition into the Phase-I kickoffs
+> `acy`/`enb`/`grm`/`opp`/`frz` — this file's own revision note maps its workstreams:
+> **A→`acy` · §8a→`enb` · B–G→`frz` · grammar items→`grm`** (the opportunistic ports became `opp`).
+> The plan of record is `docs/planning/road-to-1.0.0-and-mycelium-rewrite.md`. All five successor
+> kickoffs have since **landed** (2026-07-02) and are archived alongside this file.
+>
 > **STATUS: PROPOSED — for maintainer review. Do not execute until the maintainer approves this
 > kickoff and its plan doc.** Nothing here is started; no issue statuses have been touched.
 >

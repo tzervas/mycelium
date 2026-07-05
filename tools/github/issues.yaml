@@ -2635,6 +2635,7 @@ issues:
       **✅ RP-10 research gate CLEARED (dfr, 2026-06-21).** Discharged at design-soundness — all four obligations sound vs primary specs (RFC 9110/9112, RFC 8259, WHATWG-URL), no falsification (`research/12-web-phylum-RECORD.md` §8); RFC-0022 **RATIFIED → Accepted (2026-06-21, maintainer)** — design agreed; Enacted gated on this build. **Ratified calls:** `web.server` runs on the Mycelium runtime (realization `mycelium-mlir::runtime`, no external executor); IDNA pinned at build (policy fixed — nontransitional, fail-closed); HTTP/2-3 + TLS + smuggling-model = v1 non-goals. The research dependency is discharged; the build's remaining block is **E7-1/E7-2 only** (M-657/M-659/M-666). **Build constraints (full list: `research/12-web-phylum-RECORD.md` §8.3):** never-silent located errors (byte-offset + field; no sentinel/partial); take the RFC-9112 *reject* branch at every fork (obs-fold, CL+TE, invalid request-line; CL+TE/dup-CL ⇒ explicit Err); strict CRLF + chunk-size overflow guard; a **versioned, reified IDNA/UTS-46 table** (pin a Unicode version, nontransitional, fail-not-best-effort — WHATWG leaves it unpinned); `web.json` **zero codec outside `std.io`** + non-finite-f64 refusal + decode `Empirical` (carry `no_op_is_proven_without_a_checked_theorem`); **RT2 differential** (interpreter-vs-AOT, ≥3 seeds, zero divergences, non-vacuity guard) carrying `kahn_determinism_is_empirical_not_proven`; `RouteMatch` per dispatch + ambiguity ⇒ `CheckError` at construction (a value, not a panic). Carry-forward (NOT this build's gate; §8.4): cross-peer smuggling model, HTTP/2-3, TLS, streaming backpressure, wall-clock time, RT3.
       build the `web` phylum (Rust-first `mycelium-web`): nodules web.http / web.json / web.route / web.server / web.client per RFC-0022. **BLOCKED** on E7-1 (M-657 generics, M-659 traits — the typed `Json<T>` handler surface) + E7-2 (M-666 `hypha`/`colony` — the `colony { hypha … }` server surface). v1 Rust-first; honest guarantee matrix (never `Proven` without a checked basis); never-silent throughout (G2).
       SHELVED (2026-06-23, maintainer re-sequencing): dogfooding waits behind the L1 surface-completeness wave — E7-3 (HOF), E7-4 (comment-preserving mycfmt), E7-5 (operator syntax). Building real apps is what most exercises these surface gaps; resume `dfb` once the surface is complete + ergonomic. status stays blocked.
+      RE-SHELVED (2026-07-05, maintainer decision): deferred until after boot10 (the self-hosting/comprehensive-dogfooding kickoff) and the public flip (flp Stage 1); status stays blocked; revisit at the flip milestone.
 
   # ---------------- 2026-06-21: ADK phylum (RFC-0023) ----------------
   - id: M-671
@@ -2651,6 +2652,7 @@ issues:
       **✅ RP-9 research gate SUBSTANTIALLY CLEARED (dfr, 2026-06-21).** Discharged at design-soundness — no soundness falsification (`research/13-adk-phylum-RECORD.md` §6); RFC-0023 **RATIFIED → Accepted (2026-06-21, maintainer)** — design agreed; Enacted gated on this build. Remaining block is **E7-1/E7-2 + M-670**. **✅ Concept-map repaired at ratification:** §3.7 now maps ADK 2.0's graph **Workflow Runtime** (a colony DAG, per-node RT2/RT3), routing/fan-out-fan-in/loops/retry/nested, human-in-the-loop→`cyst`, the operating-`mode` (chat/task/single-turn), and `RunConfig.max_llm_calls`→`TaskOutcome::BudgetExhausted`; §3 pinned **v2.3.0**. (Minor build cleanup: the `ToolContext`→`Context` citation.) **Build constraints (full list: `research/13-adk-phylum-RECORD.md` §6.3):** `ToolError` keeps `BadArgs|OutOfDomain|Refused|Upstream` with budget via `TaskOutcome::BudgetExhausted` (ratified — branded names canonical); type-is-schema (derive from `In`/`Out` — forecloses the ADK #4777 silent coercion); **reuse the one harness** (`GrokLlmReport` + `tools/llm-harness/`; NO second model-call path; tags `{Declared,Empirical}` verbatim); `adk.model` transport over `mycelium-web` (M-670), not a private client; **runtime = `mycelium-mlir::runtime`** (ratified, R23-Q1; migrate to std.runtime later) — determinism `Empirical` (RT2 differential), never `Proven`; Session/State = content-addressed snapshots (RT1); never-silent tool-dispatch test corpus; `is_synthetic` survives end-to-end. **Assert NO LLM-leverage result** (item 6 scoped, no verdict — DN-09 INDETERMINATE; a separate measured pass).
       build the `adk` phylum (Rust-first `mycelium-adk`): nodules adk.agent / adk.tool / adk.session / adk.runner / adk.model per RFC-0023 — a Mycelium port of Google's Agent Development Kit, with **honesty-as-differentiator** (every tool/model output tagged Declared/Empirical, never Proven). **BLOCKED** on E7-1 + E7-2 + M-670 (reuses the web phylum's HTTP/JSON for model transport). Wires to the LLM harness (reuses `GrokLlmReport`). v1 Rust-first; never-silent (G2).
       SHELVED (2026-06-23, maintainer re-sequencing): like M-670, the ADK build waits behind the L1 surface-completeness wave (E7-3 HOF + E7-4 comments + E7-5 operators) and M-670. Resume once the surface is complete. status stays blocked.
+      RE-SHELVED (2026-07-05, maintainer decision): like M-670 — deferred until after boot10 and the public flip (flp Stage 1); status stays blocked; revisit at the flip milestone.
 
   # ---------------- 2026-06-23: Wave — L1 surface completeness (HOF · comments · operators) ----------------
   # Maintainer re-sequencing (2026-06-23): complete the L1 surface (E7-3 HOF, E7-4 comment-preserving
@@ -9487,7 +9489,7 @@ issues:
       - corpus:DN-63
       - src:docs/planning/road-to-1.0.0-and-mycelium-rewrite.md
       - src:docs/spec/stdlib/self-hosting-readiness.md
-      - src:.claude/kickoffs/enb.md
+      - src:.claude/kickoffs/archive/enb.md
     body: |
       EPIC (Phase-I H1, kickoff `enb`; ADR-038 §2.2/§2.6 + roadmap §3). Close the below-grammar
       functional-usability enablers so a Mycelium program can exercise the whole ratified surface
@@ -10329,7 +10331,7 @@ issues:
       - corpus:DN-34
       - src:docs/planning/self-hosting-port-ledger.md
       - src:docs/spec/stdlib/self-hosting-readiness.md
-      - src:.claude/kickoffs/opp.md
+      - src:.claude/kickoffs/archive/opp.md
     body: |
       EPIC (Phase-I, kickoff `opp`; ADR-038 §2.2/§2.5 + roadmap §6). Port the ~9 pure/structural
       `mycelium-std-*` crates the surface can express TODAY — no H1 enabler needed — as `.myc`
@@ -10651,7 +10653,7 @@ issues:
       - corpus:DN-56
       - src:docs/planning/road-to-1.0.0-and-mycelium-rewrite.md
       - src:docs/planning/Blocked-Decisions-Ratification-Map.md
-      - src:.claude/kickoffs/grm.md
+      - src:.claude/kickoffs/archive/grm.md
     body: |
       EPIC (Phase-I H2a, kickoff `grm`; ADR-038 §2.7 + roadmap §5). Close the four grammar-
       stability items so the surface a mass port writes against is the final one: (1) the RFC-0037
@@ -10747,7 +10749,7 @@ issues:
     landed_basis: "DN-75 (DN-54 completion-audit) dossier authored; recommendation recorded. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - corpus:DN-54
-      - src:.claude/kickoffs/grm.md
+      - src:.claude/kickoffs/archive/grm.md
     body: |
       Minted 2026-07-02 (kickoff `grm`, Phase-I H2a). DN-54 completion audit — verify the
       `lwd`-landed M-812-cont checks (§4.1 RHS type-check, §4.2 cross-rule acyclicity, §6 KC-3
@@ -10972,7 +10974,7 @@ issues:
       - corpus:RFC-0027
       - corpus:DN-32
       - src:docs/planning/road-to-1.0.0-and-mycelium-rewrite.md
-      - src:.claude/kickoffs/frz.md
+      - src:.claude/kickoffs/archive/frz.md
     body: |
       EPIC (Phase-I H2, kickoff `frz`; ADR-038 §2.7 + roadmap §4/§8). Close the H2
       "Rust-reference closeout remainder" — the tag-track items that are neither H0 foundations
@@ -11090,7 +11092,7 @@ issues:
     doc_refs:
       - corpus:RFC-0038
       - corpus:DN-64
-      - src:.claude/kickoffs/frz.md
+      - src:.claude/kickoffs/archive/frz.md
     body: |
       Minted 2026-07-02 (kickoff `frz`, Phase-I H2, Lane B). Inject-mode build-scope dossier —
       from RFC-0038 §8's Accepted design, recommend the Phase-I-buildable subset (the `whole`-app
@@ -11150,7 +11152,7 @@ issues:
       - corpus:DN-63
       - corpus:RFC-0027
       - corpus:DN-32
-      - src:.claude/kickoffs/frz.md
+      - src:.claude/kickoffs/archive/frz.md
     body: |
       Minted 2026-07-02 (kickoff `frz`, Phase-I H2, Lane C). R2 remainder + memory-model
       sequencing dossier — scope the R2 vocabulary beyond `enb`'s D-lite (M-828 tail): which
@@ -11303,7 +11305,7 @@ issues:
     doc_refs:
       - corpus:RFC-0020
       - corpus:DN-64
-      - src:.claude/kickoffs/frz.md
+      - src:.claude/kickoffs/archive/frz.md
     body: |
       Minted 2026-07-02 (kickoff `frz`, Phase-I H2, Lane D). Guard-clause dossier (M-833,
       design-first) — prepare `when <cond>` guards + guarantee propagation to the guarded arm for

@@ -1,5 +1,12 @@
 # Kickoff `grm` — Phase-I H2a: the grammar-stability gate (ratification-gated; before mass porting)
 
+> **✅ LANDED (2026-07-02, PR #1051) — archived 2026-07-05.** H2a landed on `main`; task range
+> **M-915…M-924** all `status:done` (verified against `tools/github/issues.yaml`, 2026-07-05).
+>
+> - **DN-73** (tuple) and **DN-74** (ADR-033 FLAG-1) both **Accepted**; **DN-75 Resolved**.
+> - Residual: **DN-83** (the no-normative-change stability window) is **PROPOSED** — the window
+>   decision is held for the maintainer (maintainer queue).
+>
 > **UID:** `grm` · **Basis:** **ADR-038** (Accepted, 2026-07-01) + the umbrella roadmap
 > `docs/planning/road-to-1.0.0-and-mycelium-rewrite.md` **§5 (H2a)** · RFC-0037 (Enacted — its named
 > follow-ons: D2-b short repr keywords, RFC-0025 operator wiring) · DN-54 (Accepted — extension

@@ -7,9 +7,12 @@
 
 ## ⚡ RESUME HERE
 
+> **Status update (2026-07-05):** **M-675 is `done` (landed 2026-07-01)** — the idmap reconcile
+> below is complete. **Only M-676 remains** (Projects-v2 Area field; P3, deferrable/secondary).
+
 **Branch off `dev`.** Promote `dev → integration → main` per the tiered workflow.
 
-**▶ FIRST: M-675 (#354) — reconcile `tools/github/idmap.tsv` against live GitHub.** `idmap.tsv`
+**M-675 (#354) — reconcile `tools/github/idmap.tsv` against live GitHub — ✅ done (2026-07-01).** `idmap.tsv`
 (task-id → issue-number → issue-db-id) is missing every Phase-5/6/7/8 issue (E7-x, M-5xx/6xx); the
 track-a manifest appended the e7l rows but a full reconciliation needs each issue's live `issue_db_id`
 (the sub-issue-link key) **fetched from GitHub** (the GitHub MCP `list_issues`/`issue_read`, or a
@@ -25,8 +28,8 @@ token-scoped `gh-issues-sync.py --use-api`).
 ## Chain (dependency-ordered)
 | # | Issue(s) | What | Status |
 |---|---|---|---|
-| 1 | **M-675** (#354) | reconcile `idmap.tsv` ↔ live GitHub (numbers + db-ids), append-only | **active — ▶ first** |
-| 2 | **M-676** (#357) | gh-issues-sync Projects-v2 **Area** single-select under multi-value `area:*` labels — pick a deterministic, honest rule (anchor to the primary `area:*`, span recorded) so a multi-area item never silently "not set"; `--self-test` covers it | next (secondary) |
+| 1 | **M-675** (#354) | reconcile `idmap.tsv` ↔ live GitHub (numbers + db-ids), append-only | ✅ **done (2026-07-01)** |
+| 2 | **M-676** (#357) | gh-issues-sync Projects-v2 **Area** single-select under multi-value `area:*` labels — pick a deterministic, honest rule (anchor to the primary `area:*`, span recorded) so a multi-area item never silently "not set"; `--self-test` covers it | **▶ the only remaining item** (P3, deferrable) |
 
 ## Ownership / method
 - **Owns:** `tools/github/**` (`idmap.tsv`, `pr-index.json`, the sync scripts + `*.py`). **Read-only /
