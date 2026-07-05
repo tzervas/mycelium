@@ -11596,11 +11596,12 @@ issues:
   - id: M-970
     title: "mycelium-fmt: render_expr_canonical drops the @forage(policy) Hypha annotation"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
-    labels: [phase:7, type:bug, area:tooling, priority:P3, status:todo]
+    labels: [phase:7, type:bug, area:tooling, priority:P3, status:done]
     epic: E28-1
     depends_on: [M-906]
+    landed_date: 2026-07-05
     doc_refs:
-      - src:crates/mycelium-fmt/src/lib.rs:1410
+      - src:crates/mycelium-fmt/src/lib.rs
       - corpus:DN-70
     body: |
       FLAG raised by M-914 (kickoff `enb`, H1 capstone) and confirmed at integration-reconcile
@@ -11620,6 +11621,15 @@ issues:
       - `render_expr_canonical` (and the comment-aware token path, if separately affected) emit the
         `@forage(policy)` annotation; a round-trip conformance case (`format(parse(x)) preserves
         @forage`) added; guarantee tag at the supportable strength.
+
+      DONE (status reconciled 2026-07-05; the fix itself landed earlier via PR #1027, maintainer-
+      authored — the todo was a stale close-out): render_expr_canonical_inner's Colony arm
+      destructures Hypha { forage, body } and emits @forage(<policy>) hypha <body>; canonical
+      round-trip test (C1 identity + C2 idempotence over a with/without/mixed corpus) landed with
+      it. The 2026-07-05 leaf (claude/leaf/M970-forage-render) closed the residual DoD gap by
+      adding the READABLE-path round-trip witness and a hypha-with-forage FLATTEN corpus case
+      (both paths verified to delegate to the fixed canonical renderer); cargo test -p
+      mycelium-fmt 38+6 green. The stale :1410 doc_refs line pointer dropped (line drifted).
 
   - id: M-971
     title: "Phase-I wave regressed the acyclic-deps invariant — 12 violations (3 cycles + upward-tier dev-deps)"
