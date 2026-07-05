@@ -1107,7 +1107,7 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::llm_canonical_parser
 pub const mycelium_lsp::llm_canonical_parser::DEPTH_LIMIT: usize
 pub fn mycelium_lsp::llm_canonical_parser::parse_llm_canonical(&str) -> core::result::Result<alloc::string::String, mycelium_lsp::llm_canonical_parser::ParseError>
 pub mod mycelium_lsp::project
-pub fn mycelium_lsp::project::llm_canonical(&mycelium_core::node::Node) -> alloc::string::String
+pub fn mycelium_lsp::project::llm_canonical(&mycelium_core::node::Node) -> core::result::Result<alloc::string::String, mycelium_workstack::BudgetError>
 pub mod mycelium_lsp::recover
 pub use mycelium_lsp::recover::EffectBudget
 pub use mycelium_lsp::recover::EffectBudgetExhausted

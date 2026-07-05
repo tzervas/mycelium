@@ -2635,6 +2635,7 @@ issues:
       **✅ RP-10 research gate CLEARED (dfr, 2026-06-21).** Discharged at design-soundness — all four obligations sound vs primary specs (RFC 9110/9112, RFC 8259, WHATWG-URL), no falsification (`research/12-web-phylum-RECORD.md` §8); RFC-0022 **RATIFIED → Accepted (2026-06-21, maintainer)** — design agreed; Enacted gated on this build. **Ratified calls:** `web.server` runs on the Mycelium runtime (realization `mycelium-mlir::runtime`, no external executor); IDNA pinned at build (policy fixed — nontransitional, fail-closed); HTTP/2-3 + TLS + smuggling-model = v1 non-goals. The research dependency is discharged; the build's remaining block is **E7-1/E7-2 only** (M-657/M-659/M-666). **Build constraints (full list: `research/12-web-phylum-RECORD.md` §8.3):** never-silent located errors (byte-offset + field; no sentinel/partial); take the RFC-9112 *reject* branch at every fork (obs-fold, CL+TE, invalid request-line; CL+TE/dup-CL ⇒ explicit Err); strict CRLF + chunk-size overflow guard; a **versioned, reified IDNA/UTS-46 table** (pin a Unicode version, nontransitional, fail-not-best-effort — WHATWG leaves it unpinned); `web.json` **zero codec outside `std.io`** + non-finite-f64 refusal + decode `Empirical` (carry `no_op_is_proven_without_a_checked_theorem`); **RT2 differential** (interpreter-vs-AOT, ≥3 seeds, zero divergences, non-vacuity guard) carrying `kahn_determinism_is_empirical_not_proven`; `RouteMatch` per dispatch + ambiguity ⇒ `CheckError` at construction (a value, not a panic). Carry-forward (NOT this build's gate; §8.4): cross-peer smuggling model, HTTP/2-3, TLS, streaming backpressure, wall-clock time, RT3.
       build the `web` phylum (Rust-first `mycelium-web`): nodules web.http / web.json / web.route / web.server / web.client per RFC-0022. **BLOCKED** on E7-1 (M-657 generics, M-659 traits — the typed `Json<T>` handler surface) + E7-2 (M-666 `hypha`/`colony` — the `colony { hypha … }` server surface). v1 Rust-first; honest guarantee matrix (never `Proven` without a checked basis); never-silent throughout (G2).
       SHELVED (2026-06-23, maintainer re-sequencing): dogfooding waits behind the L1 surface-completeness wave — E7-3 (HOF), E7-4 (comment-preserving mycfmt), E7-5 (operator syntax). Building real apps is what most exercises these surface gaps; resume `dfb` once the surface is complete + ergonomic. status stays blocked.
+      RE-SHELVED (2026-07-05, maintainer decision): deferred until after boot10 (the self-hosting/comprehensive-dogfooding kickoff) and the public flip (flp Stage 1); status stays blocked; revisit at the flip milestone.
 
   # ---------------- 2026-06-21: ADK phylum (RFC-0023) ----------------
   - id: M-671
@@ -2651,6 +2652,7 @@ issues:
       **✅ RP-9 research gate SUBSTANTIALLY CLEARED (dfr, 2026-06-21).** Discharged at design-soundness — no soundness falsification (`research/13-adk-phylum-RECORD.md` §6); RFC-0023 **RATIFIED → Accepted (2026-06-21, maintainer)** — design agreed; Enacted gated on this build. Remaining block is **E7-1/E7-2 + M-670**. **✅ Concept-map repaired at ratification:** §3.7 now maps ADK 2.0's graph **Workflow Runtime** (a colony DAG, per-node RT2/RT3), routing/fan-out-fan-in/loops/retry/nested, human-in-the-loop→`cyst`, the operating-`mode` (chat/task/single-turn), and `RunConfig.max_llm_calls`→`TaskOutcome::BudgetExhausted`; §3 pinned **v2.3.0**. (Minor build cleanup: the `ToolContext`→`Context` citation.) **Build constraints (full list: `research/13-adk-phylum-RECORD.md` §6.3):** `ToolError` keeps `BadArgs|OutOfDomain|Refused|Upstream` with budget via `TaskOutcome::BudgetExhausted` (ratified — branded names canonical); type-is-schema (derive from `In`/`Out` — forecloses the ADK #4777 silent coercion); **reuse the one harness** (`GrokLlmReport` + `tools/llm-harness/`; NO second model-call path; tags `{Declared,Empirical}` verbatim); `adk.model` transport over `mycelium-web` (M-670), not a private client; **runtime = `mycelium-mlir::runtime`** (ratified, R23-Q1; migrate to std.runtime later) — determinism `Empirical` (RT2 differential), never `Proven`; Session/State = content-addressed snapshots (RT1); never-silent tool-dispatch test corpus; `is_synthetic` survives end-to-end. **Assert NO LLM-leverage result** (item 6 scoped, no verdict — DN-09 INDETERMINATE; a separate measured pass).
       build the `adk` phylum (Rust-first `mycelium-adk`): nodules adk.agent / adk.tool / adk.session / adk.runner / adk.model per RFC-0023 — a Mycelium port of Google's Agent Development Kit, with **honesty-as-differentiator** (every tool/model output tagged Declared/Empirical, never Proven). **BLOCKED** on E7-1 + E7-2 + M-670 (reuses the web phylum's HTTP/JSON for model transport). Wires to the LLM harness (reuses `GrokLlmReport`). v1 Rust-first; never-silent (G2).
       SHELVED (2026-06-23, maintainer re-sequencing): like M-670, the ADK build waits behind the L1 surface-completeness wave (E7-3 HOF + E7-4 comments + E7-5 operators) and M-670. Resume once the surface is complete. status stays blocked.
+      RE-SHELVED (2026-07-05, maintainer decision): like M-670 — deferred until after boot10 and the public flip (flp Stage 1); status stays blocked; revisit at the flip milestone.
 
   # ---------------- 2026-06-23: Wave — L1 surface completeness (HOF · comments · operators) ----------------
   # Maintainer re-sequencing (2026-06-23): complete the L1 surface (E7-3 HOF, E7-4 comment-preserving
@@ -3762,7 +3764,11 @@ issues:
     title: "M-740 — Port the L1 frontend (lexer/parser/checker) to Mycelium (.myc)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:feature, area:language, priority:P2, status:needs-design]
-    depends_on: [M-739, E11-1]
+    # M-978/M-979 gate the port's AUTHORING SHAPE (DN-84 §11 correction, 2026-07-03): the depth/stack
+    # architecture (explicit work-stack vs guarded recursion; the .myc iteration contract) must be
+    # settled + adversarially reviewed BEFORE the .myc passes are authored, so the dogfooded compiler
+    # implements the final shape once. Stage-1 scaffolding may proceed; pass-authoring waits on the RFC.
+    depends_on: [M-739, E11-1, M-978]
     epic: E18-1
     doc_refs:
       - corpus:DN-26
@@ -9483,7 +9489,7 @@ issues:
       - corpus:DN-63
       - src:docs/planning/road-to-1.0.0-and-mycelium-rewrite.md
       - src:docs/spec/stdlib/self-hosting-readiness.md
-      - src:.claude/kickoffs/enb.md
+      - src:.claude/kickoffs/archive/enb.md
     body: |
       EPIC (Phase-I H1, kickoff `enb`; ADR-038 §2.2/§2.6 + roadmap §3). Close the below-grammar
       functional-usability enablers so a Mycelium program can exercise the whole ratified surface
@@ -10325,7 +10331,7 @@ issues:
       - corpus:DN-34
       - src:docs/planning/self-hosting-port-ledger.md
       - src:docs/spec/stdlib/self-hosting-readiness.md
-      - src:.claude/kickoffs/opp.md
+      - src:.claude/kickoffs/archive/opp.md
     body: |
       EPIC (Phase-I, kickoff `opp`; ADR-038 §2.2/§2.5 + roadmap §6). Port the ~9 pure/structural
       `mycelium-std-*` crates the surface can express TODAY — no H1 enabler needed — as `.myc`
@@ -10647,7 +10653,7 @@ issues:
       - corpus:DN-56
       - src:docs/planning/road-to-1.0.0-and-mycelium-rewrite.md
       - src:docs/planning/Blocked-Decisions-Ratification-Map.md
-      - src:.claude/kickoffs/grm.md
+      - src:.claude/kickoffs/archive/grm.md
     body: |
       EPIC (Phase-I H2a, kickoff `grm`; ADR-038 §2.7 + roadmap §5). Close the four grammar-
       stability items so the surface a mass port writes against is the final one: (1) the RFC-0037
@@ -10743,7 +10749,7 @@ issues:
     landed_basis: "DN-75 (DN-54 completion-audit) dossier authored; recommendation recorded. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
     doc_refs:
       - corpus:DN-54
-      - src:.claude/kickoffs/grm.md
+      - src:.claude/kickoffs/archive/grm.md
     body: |
       Minted 2026-07-02 (kickoff `grm`, Phase-I H2a). DN-54 completion audit — verify the
       `lwd`-landed M-812-cont checks (§4.1 RHS type-check, §4.2 cross-rule acyclicity, §6 KC-3
@@ -10968,7 +10974,7 @@ issues:
       - corpus:RFC-0027
       - corpus:DN-32
       - src:docs/planning/road-to-1.0.0-and-mycelium-rewrite.md
-      - src:.claude/kickoffs/frz.md
+      - src:.claude/kickoffs/archive/frz.md
     body: |
       EPIC (Phase-I H2, kickoff `frz`; ADR-038 §2.7 + roadmap §4/§8). Close the H2
       "Rust-reference closeout remainder" — the tag-track items that are neither H0 foundations
@@ -11044,9 +11050,10 @@ issues:
   - id: M-959
     title: "Reject-ledger completion (DN-56 condition 1) — every kernel rejection reified"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:verification, area:core-ir, priority:P1, status:todo]
+    labels: [phase:5, type:verification, area:core-ir, priority:P1, status:done]
     epic: E31-1
     depends_on: [M-958]
+    landed_date: 2026-07-05
     doc_refs:
       - corpus:DN-56
       - src:docs/notes/DN-56-Kernel-Completeness-And-Freeze-Criterion.md
@@ -11064,6 +11071,16 @@ issues:
       - Ledger complete against the current reject set; each entry {construct, reason,
         alternative}; a regression guard fails if a reject path is added without a ledger row.
 
+      DONE (status reconciled 2026-07-05; work landed 2026-07-02, checked basis): DN-80 (the
+      exhaustive {construct, reason, alternative} ledger over the four reject strata) is Accepted;
+      the regression guard crates/mycelium-std-conformance/tests/reject_ledger.rs is present and
+      green (9 passed — closed-enum BTreeSet equality over WfError/EvalError/AmbientError + audited
+      parse/check counts, Empirical per its own header); DN-76 §5A.1 scores condition 1 GREEN on
+      exactly this evidence. Post-freeze deltas reconciled by the M-959b/M-959c follow-up PRs
+      #1042/#1045 (the RFC-0041 W1 +3 ledger delta and the M-966 via-delegation-ambiguity +1;
+      sub-task branches of this issue — no separate issues.yaml entries). The status:todo was a
+      bookkeeping lag — the freeze act (M-969) already depended on and consumed this completion.
+
   - id: M-960
     title: "Inject-mode build-scope dossier — Phase-I-buildable subset vs deferred R&D (RFC-0038 §8)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
@@ -11075,7 +11092,7 @@ issues:
     doc_refs:
       - corpus:RFC-0038
       - corpus:DN-64
-      - src:.claude/kickoffs/frz.md
+      - src:.claude/kickoffs/archive/frz.md
     body: |
       Minted 2026-07-02 (kickoff `frz`, Phase-I H2, Lane B). Inject-mode build-scope dossier —
       from RFC-0038 §8's Accepted design, recommend the Phase-I-buildable subset (the `whole`-app
@@ -11135,7 +11152,7 @@ issues:
       - corpus:DN-63
       - corpus:RFC-0027
       - corpus:DN-32
-      - src:.claude/kickoffs/frz.md
+      - src:.claude/kickoffs/archive/frz.md
     body: |
       Minted 2026-07-02 (kickoff `frz`, Phase-I H2, Lane C). R2 remainder + memory-model
       sequencing dossier — scope the R2 vocabulary beyond `enb`'s D-lite (M-828 tail): which
@@ -11288,7 +11305,7 @@ issues:
     doc_refs:
       - corpus:RFC-0020
       - corpus:DN-64
-      - src:.claude/kickoffs/frz.md
+      - src:.claude/kickoffs/archive/frz.md
     body: |
       Minted 2026-07-02 (kickoff `frz`, Phase-I H2, Lane D). Guard-clause dossier (M-833,
       design-first) — prepare `when <cond>` guards + guarantee propagation to the guarded arm for
@@ -11309,9 +11326,10 @@ issues:
   - id: M-969
     title: "THE KERNEL-FREEZE DECLARATION (DN-56; strictly last) — one condition-gated act"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:chore, area:core-ir, priority:P1, status:blocked]
+    labels: [phase:5, type:chore, area:core-ir, priority:P1, status:done]
     epic: E31-1
     depends_on: [M-958, M-959, E28-1, E30-1]
+    landed_date: 2026-07-02
     doc_refs:
       - corpus:DN-56
       - corpus:DN-39
@@ -11335,6 +11353,13 @@ issues:
       - Executed ONLY after the four-condition scorecard is green (recorded); DN-56 status
         advanced append-only; the post-freeze diff policy (DN-39-only) stated; CHANGELOG logs
         the act.
+
+      DONE (status reconciled 2026-07-05; the act was executed 2026-07-02): the kernel freeze was
+      declared per the DoD — scorecard green first (DN-76 4/4 + the M-958b re-score against current
+      integration, condition-4 KC-3 review run), DN-56 Accepted -> Enacted append-only, the
+      DN-39-only post-freeze diff policy stated, CHANGELOG logs the act ("Kernel freeze declared",
+      2026-07-02). Landed to main via PR #1050 -> #1051 (commit b211cca). The status:blocked was a
+      bookkeeping lag from the same landing.
 
   - id: M-976
     title: "Shape-Dispatched Readable mycfmt — flat-spine + house-style knob + width 100"
@@ -11372,6 +11397,193 @@ issues:
       identity (Empirical). lib/std static tables (matrix() etc.) now read each-item-closed [...].
       Resolves DN-82 FLAG-976-1. Assignee: tzervas.
       User stories + Definition of Done: see RFC-0040 §2 (use case) + §5 (DoD) — as a lib/std author, I want a Vec list literal so static tables read each-item-closed.
+  - id: M-978
+    title: "Dynamic host-stack growth + unified tunable recursion-depth budget (DN-84)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:core-ir, priority:P2, status:done]
+    epic: E31-1
+    depends_on: [M-977]
+    landed_date: 2026-07-05
+    doc_refs:
+      - corpus:DN-84
+      - src:crates/mycelium-stack/src/lib.rs
+      - src:crates/mycelium-l1/src/parse.rs
+    body: |
+      Harden the recursive frontend passes to be crash-proof (no host-stack SIGABRT) with an
+      essentially-unbounded, cleanly-handled nesting capability, per DN-84. DIRECTION DECIDED by the
+      maintainer (DN-84 §11, 2026-07-03): implement (B) — wire the already-documented mycelium-stack
+      grow-on-demand feature (stacker::maybe_grow — safe API, unsafe contained in the leaf,
+      KC-3/ADR-014 intact) so the host stack is never the binding limit — with: ONE GLOBAL
+      recursion-depth budget under a shared policy (§9.1), unifying the scattered per-pass constants
+      (parser 256, eval 64, ambient/elab/totality/checkty 4096); maybe_grow guards at COARSE
+      pass-entry points only (§9.2 — minimize per-call cost, prove no segment overrun, e.g. reserve
+      >= budget x max_frame at entry); a DETERMINISTIC default budget of 4096, tunable, with headroom
+      to a few tens of thousands as future use cases witness (§9.5) — accept/reject a function of
+      (source, budget) only, never the machine (G2 + corpus determinism + self-hosting portability);
+      plus an opt-in, non-deterministic, corpus-excluded --unbounded REPL/exploration mode (design C,
+      §9.3). Data-shaped desugaring depth (RFC-0040 Cons chains — size-driven, not logic) is routed
+      through iteration/grow-on-demand, NOT the control budget (§5). Motivated by the ADR-041 near-miss
+      (a toolchain frame-size change turned a 256-deep guard into a SIGABRT). Companion (D) track =
+      M-979. Lands via its own RFC/ADR; DN-84 stays Draft until then.
+      User stories + Definition of Done: see DN-84 §2 (stories) + §7/§11 (decided direction / criteria).
+      DONE (2026-07-05): delivered via RFC-0041 (Enacted 2026-07-05), which subsumed (B) as supporting
+      infrastructure of (D) rather than a separate RFC — checked against this issue's decided scope:
+      ONE global RecursionBudget unifying the per-pass constants incl. parser 256->4096 (W1);
+      mycelium-stack fine-grained runtime-gated stacker grow, never-silent no-grow refusal, and the
+      mem_ceiling >= floor x max_frame startup assertion + frame-size CI baseline (W2 — the coarse
+      pass-entry guard discipline, §9.2); deterministic default 4096, (source, budget)-only
+      accept/reject (§9.5/G2); the opt-in corpus-excluded --unbounded mode, refused by the
+      conformance runner (design C, W7); data-shaped depth routed off the control budget (W1
+      check_list + W6). DN-84 -> Resolved in the same landing.
+  - id: M-979
+    title: "Explicit heap work-stack (DN-84 design D) — RFC-0041 ACCEPTED; Phase-4 implementation (7 waves)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:core-ir, priority:P2, status:done]
+    epic: E31-1
+    depends_on: [M-978]
+    landed_date: 2026-07-05
+    doc_refs:
+      - corpus:DN-84
+      - corpus:RFC-0041
+      - src:crates/mycelium-l1/src/checkty.rs
+      - src:crates/mycelium-interp/src/lib.rs
+    body: |
+      Phase-1 research DONE (research/29). Phase-2 RFC AUTHORED, Phase-3 adversarially reviewed
+      (Rev 2 — 4 Critical + 15 High resolved), Phase-4-unblocking ratification DONE: RFC-0041 is
+      **Accepted** (2026-07-03, maintainer-ratified Rev 2) — decided architecture with all four
+      maintainer ratifications baked in (floor+headroom budget amending DN-05; DN-39 iterative-Drop
+      admission via the §6 within-freeze channel; TCO in evaluators; convert-eval/guard-frontend).
+      Phase-4 staged implementation (7 waves W0-W6, RFC-0041 §7); `Accepted -> Enacted`
+      per-stage as each wave lands differential + error-parity green.
+      W0 LANDED (2026-07-03, to dev): the safety-net gates only — §4.0 metric property test, §5.1
+      error-parity differential (#[ignore="W5"]; canonical over-budget variant fixed as
+      DepthExceeded{u32} on the metric), the RR-29 guard-hole census (per-crate #[ignore="Wn"]
+      real-repros across 8 crates), depth-structured fuzz (interp target reproduces the known
+      SIGABRT), and mutants/unsafe-audit scope (mycelium-l1, mycelium-mlir, mycelium-stack). NO
+      behavior change, NO frozen-core edits.
+      W1 LANDED (2026-07-03, to dev): mycelium-workstack budget crate (RecursionBudget on the metric +
+      memory ceiling + ProcessArena + canonical BudgetError::DepthExceeded{u32} + ensure_sufficient_stack
+      passthrough + §4.2 invariant fn; forbid(unsafe), DN-68 downward-only) + frontend guard-hole wiring
+      (mycelium-l1 checker + check_list data-vs-control iteration fix + parser 256->4096;
+      fmt/lsp/transpile/doc/mir-passes). 14 frontend census tests un-ignored+green. Scoping correction
+      (G2): write_canon (frozen core) + is_pure/plan_parallel (interp) re-tagged W1->W3/W4 (checkpoint).
+      Residuals tracked: recursive-Drop bomb incl NEW mycelium-doc::ir::Node member (W3); mir-passes
+      eval(&RcNode)/emit_elided/emit_reuse + count_occurrences O(N^2) (W2); syn native recursion (3rd-party).
+      W2 LANDED (2026-07-03, to dev): mycelium-stack fine-grained runtime-gated stacker grow (exact-pin
+      =0.1.24 + psm 0.1.31; stays forbid-unsafe — switch contained upstream, ADR-014) + never-silent
+      no-grow refusal (growable_ceiling_honors_floor, wasm-safe); workstack ensure_sufficient_stack body
+      swap (layered on worker, non-regressing) + check_startup (mem_ceiling>=floor*MAX_FRAME_BYTES=384) +
+      frame-size CI baseline (in mycelium-l1/tests; a workstack dev-dep would close a normal+dev cycle the
+      acyclic gate rejects). Supply chain reconciled (THIRD-PARTY regen, unsafe-audit, geiger placeholder).
+      Honest residuals: per-recursion-point grow = W3.5/W4/W5 consumer wiring; AOT Frame in-crate pin
+      pending (mlir); W1 infallible-pass memory-DoS bound awaits arena-charging; O(N^2) re-walks (mono/mir).
+      W3.5 LANDED (2026-07-03, to dev): behavior-preserving — the AOT Vec<Frame> env-machine (mycelium-mlir
+      aot.rs) charges the shared mycelium_workstack::RecursionBudget at both frame-push sites (DepthGuard per
+      frame) + grows via ensure_sufficient_stack, replacing its ad-hoc stack.len()>=max_depth ceiling.
+      BudgetError::DepthExceeded maps to the unchanged EvalError::DepthLimit at the same threshold — the
+      recursion + three-way differentials stay green with ZERO expected-value edits (oracle unmoved). AOT Frame
+      size pin resolved (W2 residual). Honest flag: AOT charges per-frame (App+Match continuations), identical
+      to pre-W3.5 — W5 reconciles the per-frame-vs-source-call metric.
+      W0+W1+W2+W3.5 = the FULL pre-checkpoint set, all landed on dev. NEXT = MAINTAINER CHECKPOINT before
+      W3 (frozen-core iterative Drop/Clone/Canon incl new doc::ir::Node; within-freeze channel DN-56 §6),
+      W4 (L0-interp substitution work-stack, myc run, construct DepthLimit), W5 (L1-eval CEK + TCO + eval
+      64->4096). W6 = data-spine iteration. These three touch the frozen trusted base / swap the reference
+      machine — held for maintainer eyes.
+      CHECKPOINT PASSED (maintainer approved 2026-07-03): canonical variant DepthExceeded{u32} confirmed;
+      ordering W3+W5 pair -> W4 -> W6.
+      W3+W5 LANDED (2026-07-03, to dev): W3 = mycelium-core Node/Datum/CoreValue iterative Drop/Clone/
+      PartialEq/Canon via within-freeze channel (bit-identical vs recursive oracle, mutation-witnessed 100k,
+      M-210 green, forbid(unsafe) intact, Box-owned invariant confirmed) + doc::ir::Node iterative Drop.
+      W5 = L1-eval SCC->CEK Vec<Frame> machine (O(1) host stack, error-path cleanup) + iterative L1Value +
+      TCO no-pending-post-work precondition (both witnesses pass) + EXPLAIN ring-buffer + DEFAULT_DEPTH
+      64->4096. E0509 blast radius = 3 sites total (elab.rs, eval.rs for-fold, one mlir test). Independently
+      adversarially reviewed for memory safety before landing. DEVIATIONS FLAGGED (maintainer decisions):
+      (1) zero-alloc-in-Drop not achievable in safe Rust w/o new field (empty Vec worklist; OOM-unwind edge
+      remains) — accept tradeoff or relax a constraint; (2) Value/Repr deferred to coordinated W3b (deep
+      values construction-gated, unbuildable); (3) content_hash O(depth^2) deep-binder (pre-existing).
+      error-parity #[ignore] until W4 (interp still no budget).
+      W4 LANDED (2026-07-03, to dev): mycelium-interp step/subst/node_to_core_value/guarantee_of_value/
+      select_arm budget the shared RecursionBudget (L0 STAYS substitution per §4.1; subst fallible;
+      eval_core on grown stack) + CONSTRUCT EvalError::DepthLimit via From<BudgetError>. FLAGSHIP RR-29
+      §0.1 CLOSED: deep value refuses DepthLimit{4096}, never SIGABRT. parallel::is_pure iterative (own
+      census hole). §5.1 ERROR-PARITY GATE GREEN (un-ignored) — rewritten per evidence: the "single
+      statically-deep input" premise is unachievable (parser-cap==floor, AOT data-immune, L0 O(N^2)), so
+      it asserts real per-path bounded-input parity at the shared 4096 floor. RESIDUAL: literal
+      single-variant unification partial (L1 DepthExceeded vs L0/AOT DepthLimit) — full convergence would
+      change interp/mlir error enums (maintainer follow-up). Independently adversarially reviewed.
+      W6 LANDED (2026-07-03, to dev): the §4.7 "convert-or-document" fork → DOCUMENTED the wide-tuple
+      asymmetry (evidence-based). usefulness/decision recurse on tuple/ctor ARITY; a 4095-field product
+      type false-refuses at 4096 BUT never-silently (DepthExceeded{4096} on the deep-stack worker, NOT a
+      SIGABRT — W1 guard meets the DoD), so it's a PRECISION residual on a pathological input, not safety;
+      §7 gates conversion on "if profiling demands" (does not). Docs+tests only (differential+conformance
+      byte-identical); conversion seam + boundary witness tests recorded. Maintainer may overrule → convert
+      if 4095-arity is adversarially realistic.
+      *** RFC-0041 PHASE-4: ALL 7 IMPLEMENTATION WAVES (W0-W6) LANDED (2026-07-03, dev @ post-#1150). ***
+      Whole-RFC Enacted NOT yet claimable (VR-5) — a post-implementation Fable assessment surfaced genuine
+      §9 DoD OPEN ITEMS: (i) --unbounded mode DoD-required + decided (DN-84 §9.3) but NEVER scheduled/
+      implemented (no CLI flag); (ii) mir-passes eval(&RcNode)/emit_elided/emit_reuse (a §4.7-listed crate)
+      still UNGUARDED so DoD §9 item 1 not literally met there; (iii) AOT per-frame-vs-source-call metric
+      reconciliation OWED (W3½ said W5 reconciles; W5 did L1 only). The assessment recommends closing these
+      + Value/Repr construction-gate census + Box-owned invariant tripwire test in a W6-followup; full memo
+      relayed to maintainer.
+      Flagship RR-29 §0.1 myc run SIGABRT CLOSED; §5.1 error-parity GREEN; all 3 machines + frozen-core
+      refuse deep input never-silently on one budget; host stack grows on demand; forbid(unsafe) intact
+      (sole unsafe = audited upstream stacker/psm). HELD AT DEV for maintainer RFC review + determinations
+      on the flagged open questions (zero-alloc-Drop, single-variant unification + with_depth, Value/Repr
+      W3b, content_hash O(depth^2), AOT RC-path holes, infallible-pass arena-charging, stride-1 grow,
+      Box-owned invariant protection, TCO scope, W6 document-vs-convert). Fable assessment memo in progress.
+      NOT promoted past dev; M-740 unblocks AFTER maintainer determinations. M-979 stays in-progress until
+      determinations resolved + DoD ratified (Value/Repr W3b deferral means §9 DoD not 100% closed yet).
+      DN-84 design (D), CONFIRMED by the maintainer (DN-84 §11 correction, 2026-07-03) as the
+      solve-NOW track: get the complexity of the problem and solution fully figured out and solved
+      in the Rust reference era, BEFORE the M-740 .myc port has to absorb the shape (the dogfooded
+      compiler then implements the settled contract once). Convert the deep recursive passes from
+      host-call-stack recursion to an explicit heap-allocated work-stack; (B)'s pieces (single global
+      deterministic budget, host-stack management for any pass left recursive) are supporting
+      infrastructure of this one solution, not a separate track. Which passes convert (evaluators
+      first? frontend passes stacker-guarded as transitional oracle code?) is an OUTPUT of the
+      mandated method, not pre-decided.
+      Mandated method (strict order): (1) RESEARCH — map every recursion site + shape + conversion
+      cost; the language's own iteration/TCO mechanics (what a .myc work-stack loop costs today —
+      decisive for the dogfooded form); prior decisions (RFC-0007 §4.5/4.6, DN-05, DN-56 freeze,
+      RFC-0024 defunctionalization); external prior art (rustc ensure_sufficient_stack, CEK/explicit-
+      stack interpreters, flat-AST arenas); blast radius (depth-keyed tests, DN-80 reject ledger,
+      conformance corpus). (2) PLAN — an RFC fixing the architecture (freeze-compatibility w.r.t.
+      M-969 addressed explicitly). (3) ADVERSARIAL REVIEW of the plan before code. (4) Staged
+      implementation in isolated worktrees (disjoint-by-construction waves; sonnet/opus scoped to
+      complexity per ADR-038).
+      Secure-by-design standing requirement: periodic adversarial passes over crafted-input DoS
+      (untrusted .myc at parse/LSP/spore-resolve), stacker/psm unsafe + supply-chain containment
+      (ADR-014 leaf-only), memory-exhaustion of a raised budget, and the --unbounded footgun.
+      User stories + Definition of Done: see DN-84 §2 + §11 (incl. the correction): the RFC lands
+      adversarially-reviewed; converted passes pass the full differential + deep-nesting bound tests
+      (never-silent budget errors preserved, G2); no new vulnerability class introduced.
+      W7 LANDED (2026-07-03, to dev — Enacted-closure wave): maintainer determinations made on a Fable
+      plan/QC assessment of all twelve open items; four disjoint isolated-worktree leaves (per-leaf
+      reviewed; the mir-passes leaf independently adversarially memory-safety-reviewed, no Critical/High).
+      Closed: --unbounded implemented Rust-first (myc run via Interpreter::with_depth(u32::MAX) + never-silent
+      banner + corpus-refusal test; myc build interface-parity only); mir-passes eval(&RcNode)/emit_elided/
+      emit_reuse guard-and-refuse + deep-stack-wrapped public counters (no input SIGABRTs any pass;
+      count_occurrences O(N^2) work-step deferred to W2); process-arena coverage (audit note
+      docs/notes/W7-arena-coverage-audit.md; LSP llm_canonical + fmt render family charge ProcessArena,
+      exempt set Empirical); Value construction-gate census (Empirical) + Box-owned spine tripwire (test-only);
+      with_depth family-parity check. Append-only §7/§9 amendments: no-alloc-in-Drop scoped to no-abort-except-
+      OOM-unwind (#5); §4.5 class scoped to constructible types, Value/Repr -> W3b + bare-Repr overclaim
+      correction (#6); arena scoped to untrusted-reachable allocation-proportional paths (#8); AOT per-frame
+      metric ruled a precision follow-on under §5.1 family-parity (#3); TCO direct-tail-only -> M-740
+      acceptance criterion (#11); W6 wide-tuple document upheld (#12). Follow-ons tracked (not silent):
+      content_hash O(depth^2) (#7), ~21 coarse-worker sites (#9, LSP hot path first), L1Value spine-tripwire
+      twin, MYC_CORPUS CI wiring, myc build --unbounded l1 threading. Every §9 DoD line now literally met or
+      honestly re-scoped with a checked basis; forbid(unsafe) intact. Whole-RFC Enacted claimable once W7
+      promotes dev->integration->main (HELD for maintainer). M-740 self-hosting unblocks on that promotion.
+      M-979 stays in-progress until W7 lands on main (Enacted).
+      DONE (2026-07-05): the maintainer approved the full promotion (2026-07-05 session review); the
+      reconciled W0-W7 wave promoted dev -> integration -> main. RFC-0041 Accepted -> Enacted and
+      DN-84 -> Resolved in the same landing. DoD checked: flagship myc run SIGABRT closed
+      (DepthLimit{4096} refusal), §5.1 error-parity green un-ignored, one deterministic budget on
+      every path, --unbounded corpus-refused, forbid(unsafe) intact. The W7 follow-ons above stay
+      tracked as open residuals (non-DoD, recorded in RFC §7/§9) — they are NOT closed by this issue.
+      M-740's M-978 dependency is cleared by this promotion (M-739, needs-design, still gates it).
   - id: M-970
     title: "mycelium-fmt: render_expr_canonical drops the @forage(policy) Hypha annotation"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"

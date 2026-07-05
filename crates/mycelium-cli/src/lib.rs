@@ -242,6 +242,93 @@ pub struct RunReport {
     pub rendered: String,
 }
 
+/// Options that tune a `myc run` (or `myc build`) invocation beyond `--config` (RFC-0041 §5 /
+/// DN-84 §9.3). Additive: [`Default`] is the ordinary, deterministic, corpus-safe behavior.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct RunOptions {
+    /// The opt-in, **non-deterministic** `--unbounded` escape hatch (RFC-0041 §5, DN-84 §9.3 —
+    /// design (C)): lift the deterministic recursion-depth ceiling for this invocation. It is
+    /// **CLI-flag-only** (never a manifest/env/LSP-config knob), engaging it prints a never-silent
+    /// banner ([`unbounded_banner`]), and it is **excluded from the conformance corpus** and refused
+    /// under a corpus/CI run ([`reject_unbounded_in_corpus`]). Machine-dependent by construction, so
+    /// never the default and never a reproducible-build input.
+    pub unbounded: bool,
+}
+
+/// The reference interpreter to execute a `myc run` under, given [`RunOptions`]. Default: the
+/// deterministic 4096-floor budget (unchanged). With `--unbounded`: the depth ceiling is lifted to
+/// [`u32::MAX`] via [`mycelium_interp::Interpreter::with_depth`] (RFC-0041 §5) — refusal then bounds
+/// on available memory/host stack, not the deterministic budget. Never-silent even so: the growable
+/// deep stack keeps it an explicit refusal, never a `SIGABRT`.
+fn interpreter_for(opts: &RunOptions) -> mycelium_interp::Interpreter {
+    let interp = mycelium_interp::Interpreter::default();
+    if opts.unbounded {
+        interp.with_depth(u32::MAX)
+    } else {
+        interp
+    }
+}
+
+/// The never-silent stderr banner printed when `--unbounded` is engaged (G2 — an explicit escape
+/// hatch is announced, never silent). `cmd` is the subcommand (`"run"` / `"build"`) so the
+/// per-command effect line is accurate: `run` actually lifts the interpreter ceiling; `build`
+/// performs no interpreted evaluation, so the flag is accepted for interface parity but does not
+/// alter its frontend passes (their depth ceilings are internal to `mycelium-l1` — a tracked
+/// follow-on). The corpus/CI refusal ([`reject_unbounded_in_corpus`]) applies to both.
+#[must_use]
+pub fn unbounded_banner(cmd: &str) -> String {
+    let mode = "myc: WARNING — `--unbounded` engaged: an opt-in, NON-DETERMINISTIC, \
+                machine-dependent escape hatch (RFC-0041 §5 / DN-84 §9.3). It is excluded from the \
+                conformance corpus and must never be used in CI or for a reproducible build.";
+    let effect = match cmd {
+        "run" => {
+            "  effect: the interpreter's deterministic recursion-depth ceiling is DISABLED for this \
+             run — a deep computation is now bounded only by available memory/host stack, not the \
+             4096 depth budget (it still refuses never-silently, never a crash)."
+        }
+        _ => {
+            "  effect: `myc build` performs no interpreted evaluation, so this flag does not alter \
+             the build's frontend passes (their depth ceilings live in `mycelium-l1`, not the CLI — \
+             a tracked follow-on). It is accepted for interface parity and still refused under a \
+             corpus/CI run."
+        }
+    };
+    format!("{mode}\n{effect}")
+}
+
+/// The conformance-corpus / CI guard (RFC-0041 §5): a corpus/CI run is the **deterministic** path, so
+/// `--unbounded` (opt-in, machine-dependent) must be **refused** there — never silently downgraded to
+/// a bounded run, never silently allowed to run non-deterministically (G2). A corpus runner (or the
+/// CLI when a corpus/CI context is signalled — see [`corpus_context`]) calls this before executing.
+///
+/// # Errors
+/// [`Report`] (`myc-unbounded-corpus`, exit 64) when `opts.unbounded` is set during a corpus/CI run.
+pub fn reject_unbounded_in_corpus(opts: &RunOptions) -> Result<(), Report> {
+    if opts.unbounded {
+        return Err(Report::new(
+            "myc-unbounded-corpus",
+            "`--unbounded` is excluded from the conformance corpus and refused in CI: it is an \
+             opt-in, non-deterministic, machine-dependent escape hatch (RFC-0041 §5 / DN-84 §9.3), \
+             so a deterministic corpus/CI run must not use it",
+            64,
+        )
+        .help(
+            "drop `--unbounded` for corpus/CI runs — it is for interactive REPL/exploration only; \
+             the corpus is the deterministic, reproducible path",
+        ));
+    }
+    Ok(())
+}
+
+/// Whether the process is running under a **conformance-corpus / CI** context that must refuse
+/// `--unbounded` (RFC-0041 §5). Signalled by the `MYC_CORPUS` environment variable being set to any
+/// non-empty value — the corpus/CI job exports it so [`reject_unbounded_in_corpus`] fires. A pure,
+/// side-effect-free read (never mutates the environment).
+#[must_use]
+pub fn corpus_context() -> bool {
+    std::env::var_os("MYC_CORPUS").is_some_and(|v| !v.is_empty())
+}
+
 /// `myc run` — execute a project through the reference interpreter (M-908 v0 single-nodule;
 /// M-909 multi-nodule).
 ///
@@ -303,6 +390,16 @@ pub struct RunReport {
 /// evaluation-complete fragment (`myc-run-residual`), or an interpreter-evaluation failure
 /// (`myc-run-eval`) — every path is an explicit, located [`Report`], never a panic (G2).
 pub fn run(manifest_path: &Path) -> Result<RunReport, Report> {
+    run_with_options(manifest_path, &RunOptions::default())
+}
+
+/// [`run`] with an explicit [`RunOptions`] (RFC-0041 §5) — the entry the `myc` driver calls so a
+/// `--unbounded` invocation threads its lifted depth ceiling into the interpreter. Behavior is
+/// identical to [`run`] when `opts` is default.
+///
+/// # Errors
+/// The same [`Report`] set as [`run`].
+pub fn run_with_options(manifest_path: &Path, opts: &RunOptions) -> Result<RunReport, Report> {
     let (_, project_dir) = load_manifest(manifest_path)?;
     let sources =
         mycelium_cli_common::walk_myc(&project_dir).map_err(|e| Report::new("myc-io", e, 66))?;
@@ -314,14 +411,19 @@ pub fn run(manifest_path: &Path) -> Result<RunReport, Report> {
             66,
         )
         .help("add a `.myc` source file to the project")),
-        [single] => run_single_nodule(single, &project_dir),
-        multiple => run_multi_nodule(multiple, &project_dir),
+        [single] => run_single_nodule(single, &project_dir, opts),
+        multiple => run_multi_nodule(multiple, &project_dir, opts),
     }
 }
 
 /// The M-908 v0 path: exactly one `.myc` source — parse, [`check_nodule`], [`elaborate`] its
-/// nullary `main`, then run on the reference interpreter. Unchanged behavior from M-908.
-fn run_single_nodule(source_path: &Path, project_dir: &Path) -> Result<RunReport, Report> {
+/// nullary `main`, then run on the reference interpreter. Behavior is unchanged from M-908 except
+/// that `opts` selects the interpreter's depth budget ([`interpreter_for`] — RFC-0041 §5).
+fn run_single_nodule(
+    source_path: &Path,
+    project_dir: &Path,
+    opts: &RunOptions,
+) -> Result<RunReport, Report> {
     let rel = rel_to_project(source_path, project_dir);
 
     let text = std::fs::read_to_string(source_path)
@@ -368,7 +470,7 @@ fn run_single_nodule(source_path: &Path, project_dir: &Path) -> Result<RunReport
             )
     })?;
 
-    let interp = mycelium_interp::Interpreter::default();
+    let interp = interpreter_for(opts);
     let value = interp.eval(&node).map_err(|ee| {
         Report::new("myc-run-eval", ee.to_string(), 65)
             .at(rel.clone())
@@ -383,8 +485,13 @@ fn run_single_nodule(source_path: &Path, project_dir: &Path) -> Result<RunReport
 }
 
 /// The M-909 multi-nodule path: manifest-driven project loading, nodule linking, and end-to-end
-/// execution. See [`run`]'s doc for the full six-step model.
-fn run_multi_nodule(sources: &[PathBuf], project_dir: &Path) -> Result<RunReport, Report> {
+/// execution. See [`run`]'s doc for the full six-step model. `opts` selects the interpreter's depth
+/// budget ([`interpreter_for`] — RFC-0041 §5).
+fn run_multi_nodule(
+    sources: &[PathBuf],
+    project_dir: &Path,
+    opts: &RunOptions,
+) -> Result<RunReport, Report> {
     // Step 1: parse every source independently — each file is a bare `nodule <path>; …` block.
     let mut parsed: Vec<(String, Nodule)> = Vec::with_capacity(sources.len());
     for source_path in sources {
@@ -439,7 +546,7 @@ fn run_multi_nodule(sources: &[PathBuf], project_dir: &Path) -> Result<RunReport
             )
     })?;
 
-    let interp = mycelium_interp::Interpreter::default();
+    let interp = interpreter_for(opts);
     let value = interp.eval(&node).map_err(|ee| {
         Report::new("myc-run-eval", ee.to_string(), 65)
             .at(entry_rel.clone())

@@ -405,7 +405,7 @@ pub mycelium_doc::ir::Node::provenance: mycelium_doc::ir::Provenance
 pub mycelium_doc::ir::Node::title: core::option::Option<alloc::string::String>
 impl mycelium_doc::ir::Node
 pub fn mycelium_doc::ir::Node::new(impl core::convert::Into<alloc::string::String>, core::option::Option<alloc::string::String>, core::option::Option<mycelium_doc::ir::Level>, mycelium_doc::ir::Provenance, mycelium_doc::ir::Payload, alloc::vec::Vec<mycelium_doc::ir::Node>) -> mycelium_doc::ir::Node
-pub fn mycelium_doc::ir::Node::walk<'a>(&'a self, &mut dyn core::ops::function::FnMut(&'a mycelium_doc::ir::Node))
+pub fn mycelium_doc::ir::Node::walk<'a>(&'a self, &mut (dyn core::ops::function::FnMut(&'a mycelium_doc::ir::Node) + core::marker::Send))
 impl core::clone::Clone for mycelium_doc::ir::Node
 pub fn mycelium_doc::ir::Node::clone(&self) -> mycelium_doc::ir::Node
 impl core::cmp::Eq for mycelium_doc::ir::Node
@@ -414,6 +414,8 @@ pub fn mycelium_doc::ir::Node::eq(&self, &mycelium_doc::ir::Node) -> bool
 impl core::fmt::Debug for mycelium_doc::ir::Node
 pub fn mycelium_doc::ir::Node::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::marker::StructuralPartialEq for mycelium_doc::ir::Node
+impl core::ops::drop::Drop for mycelium_doc::ir::Node
+pub fn mycelium_doc::ir::Node::drop(&mut self)
 impl serde_core::ser::Serialize for mycelium_doc::ir::Node
 pub fn mycelium_doc::ir::Node::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
 impl core::marker::Freeze for mycelium_doc::ir::Node
@@ -760,7 +762,7 @@ pub mycelium_doc::Node::provenance: mycelium_doc::ir::Provenance
 pub mycelium_doc::Node::title: core::option::Option<alloc::string::String>
 impl mycelium_doc::ir::Node
 pub fn mycelium_doc::ir::Node::new(impl core::convert::Into<alloc::string::String>, core::option::Option<alloc::string::String>, core::option::Option<mycelium_doc::ir::Level>, mycelium_doc::ir::Provenance, mycelium_doc::ir::Payload, alloc::vec::Vec<mycelium_doc::ir::Node>) -> mycelium_doc::ir::Node
-pub fn mycelium_doc::ir::Node::walk<'a>(&'a self, &mut dyn core::ops::function::FnMut(&'a mycelium_doc::ir::Node))
+pub fn mycelium_doc::ir::Node::walk<'a>(&'a self, &mut (dyn core::ops::function::FnMut(&'a mycelium_doc::ir::Node) + core::marker::Send))
 impl core::clone::Clone for mycelium_doc::ir::Node
 pub fn mycelium_doc::ir::Node::clone(&self) -> mycelium_doc::ir::Node
 impl core::cmp::Eq for mycelium_doc::ir::Node
@@ -769,6 +771,8 @@ pub fn mycelium_doc::ir::Node::eq(&self, &mycelium_doc::ir::Node) -> bool
 impl core::fmt::Debug for mycelium_doc::ir::Node
 pub fn mycelium_doc::ir::Node::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::marker::StructuralPartialEq for mycelium_doc::ir::Node
+impl core::ops::drop::Drop for mycelium_doc::ir::Node
+pub fn mycelium_doc::ir::Node::drop(&mut self)
 impl serde_core::ser::Serialize for mycelium_doc::ir::Node
 pub fn mycelium_doc::ir::Node::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
 impl core::marker::Freeze for mycelium_doc::ir::Node

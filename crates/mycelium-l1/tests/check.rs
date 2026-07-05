@@ -251,10 +251,12 @@ fn deeply_nested_input_is_refused_not_a_crash() {
     // the process (SIGABRT) on crafted nesting. The depth guard turns that into an explicit
     // ParseError, well before any crash. Mutant-witness: removing the MAX_EXPR_DEPTH guard in
     // parse_expr makes 2000-deep input abort instead of returning Err.
+    // RFC-0041 §4.2/§7 (W1): MAX_EXPR_DEPTH was raised 256 → 4096, so the crafted nesting must now
+    // exceed 4096 to trip the (still-firing) guard; the deep worker stack refuses cleanly, no SIGABRT.
     let deep = format!(
         "nodule d;\nfn f(x: Binary{{8}}) => Binary{{8}} = {}x{}",
-        "(".repeat(2000),
-        ")".repeat(2000)
+        "(".repeat(5000),
+        ")".repeat(5000)
     );
     let err = parse(&deep).expect_err("deep nesting must be refused, not crash");
     assert!(err.message.contains("nests deeper"), "got: {}", err.message);
@@ -274,7 +276,8 @@ fn deeply_nested_type_arrow_is_refused_not_a_crash() {
     // shared depth budget as the expression grammar, so a crafted `A -> A -> … -> A` return type
     // is refused with an explicit ParseError well before the host stack overflows (SIGABRT).
     // Mutant-witness: removing the `enter_depth` guard in `parse_type_ref` makes this abort.
-    let deep_arrow = "A => ".repeat(3000);
+    // RFC-0041 §4.2/§7 (W1): raised cap (256 → 4096) — exceed 4096 to trip the still-firing guard.
+    let deep_arrow = "A => ".repeat(5000);
     let src = format!("nodule d;\nfn f(x: Binary{{8}}) => {deep_arrow}A = x");
     let err = parse(&src).expect_err("deep `=>` type nesting must be refused, not crash");
     assert!(err.message.contains("nests deeper"), "got: {}", err.message);
@@ -292,7 +295,8 @@ fn deeply_nested_type_args_is_refused_not_a_crash() {
     // DN-40 A2 (HIGH) regression: nested type arguments `T[T[T[…]]]` recurse through
     // `parse_type_args_opt` → `parse_type_ref`, which now charges the shared budget — deep
     // (RFC-0037 square-bracket) type-arg nesting is an explicit ParseError, never a host-stack overflow.
-    let depth = 3000;
+    // RFC-0041 §4.2/§7 (W1): raised cap (256 → 4096) — exceed 4096 to trip the still-firing guard.
+    let depth = 5000;
     let nested_args = format!("{}A{}", "T[".repeat(depth), "]".repeat(depth));
     let src = format!("nodule d;\nfn f(x: Binary{{8}}) => {nested_args} = x");
     let err = parse(&src).expect_err("deep `[…]` type nesting must be refused, not crash");
@@ -305,7 +309,8 @@ fn deeply_nested_ctor_pattern_is_refused_not_a_crash() {
     // `comma_separated(Self::parse_pattern)`, which now charges the shared depth budget. Crafted
     // nesting is refused with an explicit ParseError, not a SIGABRT. Mutant-witness: removing the
     // `enter_depth` guard in `parse_pattern` makes this abort instead of returning Err.
-    let depth = 3000;
+    // RFC-0041 §4.2/§7 (W1): raised cap (256 → 4096) — exceed 4096 to trip the still-firing guard.
+    let depth = 5000;
     let nested_pat = format!("{}y{}", "C(".repeat(depth), ")".repeat(depth));
     let src =
         format!("nodule d;\nfn f(x: Binary{{8}}) => Binary{{8}} = match x {{ {nested_pat} => y }}");

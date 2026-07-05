@@ -1,5 +1,14 @@
 # Kickoff `enb` — Phase-I H1: enabler-gap closure (the critical path to usability)
 
+> **✅ LANDED (2026-07-02, PR #1020) — archived 2026-07-05.** H1 landed on `main`; task range
+> **M-887…M-914 + M-766/M-767** all `status:done` (verified against `tools/github/issues.yaml`,
+> 2026-07-05).
+>
+> - **ADR-040** (scalar float) **Enacted via DN-69** — the first DN-39 PROMOTE.
+> - **`myc run` landed** (M-908/M-909); the capstone **M-914** closed the wave.
+> - Residual: **M-970** (FLAG-970 — `mycelium-fmt` drops `@forage(policy)`) is an **open P3 bug**
+>   (`status:todo`); it rides the first `boot10` wave as a disjoint `mycelium-fmt` leaf.
+>
 > **UID:** `enb` · **Basis:** **ADR-038** (Accepted, 2026-07-01) §2.2/§2.6 + the umbrella roadmap
 > `docs/planning/road-to-1.0.0-and-mycelium-rewrite.md` **§3 (H1)** ·
 > `docs/spec/stdlib/self-hosting-readiness.md` **§0** (the 2026-07-01 below-grammar gap list,

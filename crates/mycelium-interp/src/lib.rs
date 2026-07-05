@@ -118,6 +118,7 @@ mod tests;
 use std::sync::Arc;
 
 use mycelium_core::{Alt, CoreValue, Datum, GuaranteeStrength, Node, Repr, Value, WfError};
+use mycelium_workstack::{ensure_sufficient_stack, BudgetError, DepthGuard, RecursionBudget};
 
 pub use budget::{Budgets, EffectBudget, EffectBudgetExhausted, EffectKind};
 pub use parallel::{is_pure, plan_parallel, BatchHead, ParallelPlan};
@@ -237,6 +238,36 @@ impl From<EffectBudgetExhausted> for EvalError {
     }
 }
 
+impl From<BudgetError> for EvalError {
+    /// Reconcile the shared `mycelium-workstack` over-budget surface to the interpreter's existing
+    /// never-silent `DepthLimit` (RFC-0041 W4/§5.1). The canonical [`BudgetError::DepthExceeded`]
+    /// (a `u32` ceiling on the §4.0 depth metric — W1) becomes [`EvalError::DepthLimit`] (`usize`
+    /// ceiling) at the **same threshold**, so a deep-but-fuel-cheap value refuses cleanly here exactly
+    /// as the AOT env-machine's `depth_limit_error` does (W3½). The interpreter charges **only** the
+    /// depth budget (`try_enter`), so `DepthExceeded` is the only variant it can produce; the
+    /// `OutOfBudget` arm is unreachable in this crate and is mapped defensively onto the same
+    /// `DepthLimit` channel (its ceiling reported) rather than panicking — never-silent (G2).
+    fn from(e: BudgetError) -> Self {
+        let limit = match e {
+            BudgetError::DepthExceeded { limit } => limit,
+            BudgetError::OutOfBudget { limit, .. } => u32::try_from(limit).unwrap_or(u32::MAX),
+        };
+        EvalError::DepthLimit {
+            limit: limit as usize,
+        }
+    }
+}
+
+/// Charge one structural-recursion frame against the shared [`RecursionBudget`] (RFC-0041 W4),
+/// mapping a never-silent over-budget to [`EvalError::DepthLimit`]. The returned [`DepthGuard`]
+/// releases the frame on `Drop`, so the budget's *live* depth tracks the current structural nesting
+/// — sibling descents (e.g. an `Op`/`Construct`'s argument list) do **not** accumulate, only nesting
+/// does. This is the guard the substitution machine wraps each recursive descent in so a crafted
+/// deep value refuses with `DepthLimit` at the ceiling instead of a host-stack `SIGABRT` (RR-29 §0.1).
+fn charge_depth(budget: &RecursionBudget) -> Result<DepthGuard<'_>, EvalError> {
+    budget.try_enter().map_err(EvalError::from)
+}
+
 impl core::fmt::Display for EvalError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
@@ -333,6 +364,13 @@ pub struct Interpreter {
     prims: PrimRegistry,
     swap: Arc<dyn SwapEngine>,
     fuel: u64,
+    /// The shared [`RecursionBudget`] depth ceiling on the §4.0 metric (RFC-0041 W4/W7). Defaults to
+    /// the global floor [`RecursionBudget::DEFAULT_DEPTH_LIMIT`] (4096) — [`Default`]/[`new`](Self::new)
+    /// preserve the established behavior exactly. Tunable per-invocation via
+    /// [`with_depth`](Self::with_depth): the additive constructor that lets a caller verify the
+    /// budget→[`EvalError::DepthLimit`] mapping at an *arbitrary* ceiling (not only the floor), and that
+    /// backs the CLI `--unbounded` escape hatch by setting it to [`u32::MAX`] (RFC-0041 §5 / DN-84 §9.3).
+    depth_limit: u32,
 }
 
 impl Default for Interpreter {
@@ -341,6 +379,7 @@ impl Default for Interpreter {
             prims: PrimRegistry::with_builtins(),
             swap: Arc::new(IdentitySwapEngine),
             fuel: DEFAULT_FUEL,
+            depth_limit: RecursionBudget::DEFAULT_DEPTH_LIMIT,
         }
     }
 }
@@ -356,6 +395,7 @@ impl Interpreter {
             prims,
             swap: Arc::from(swap),
             fuel: DEFAULT_FUEL,
+            depth_limit: RecursionBudget::DEFAULT_DEPTH_LIMIT,
         }
     }
 
@@ -364,6 +404,34 @@ impl Interpreter {
     pub fn with_fuel(mut self, fuel: u64) -> Self {
         self.fuel = fuel;
         self
+    }
+
+    /// Override the shared [`RecursionBudget`] **depth ceiling** on the §4.0 metric (RFC-0041 W7 —
+    /// additive; the error enum and every observable are unchanged). The default is the global floor
+    /// [`RecursionBudget::DEFAULT_DEPTH_LIMIT`] (4096); this lets a caller run the substitution machine
+    /// under an *arbitrary* ceiling.
+    ///
+    /// Two uses (both never-silent, G2): (1) a **uniform-mapping check** — a small `depth_limit` (e.g.
+    /// 8) proves a controlled-depth value refuses with [`EvalError::DepthLimit`] at *exactly* that
+    /// ceiling, confirming the budget→error mapping is uniform across the range, not merely
+    /// floor-verified; (2) the CLI **`--unbounded`** escape hatch (RFC-0041 §5 / DN-84 §9.3) passes
+    /// [`u32::MAX`] to lift the deterministic ceiling for opt-in, non-deterministic REPL/exploration —
+    /// a machine-dependent mode excluded from the conformance corpus. Even at [`u32::MAX`] the refusal
+    /// stays never-silent: the growable deep stack ([`eval`](Self::eval)) makes memory, not a host-stack
+    /// `SIGABRT`, the binding limit.
+    #[must_use]
+    pub fn with_depth(mut self, depth_limit: u32) -> Self {
+        self.depth_limit = depth_limit;
+        self
+    }
+
+    /// A fresh shared [`RecursionBudget`] sized to this interpreter's [`depth_limit`](Self::with_depth),
+    /// with the memory/work-step ceilings left effectively unbounded (as [`RecursionBudget::default`]
+    /// does — the real memory ceiling is a startup/process-arena concern, §4.2, not this per-eval knob).
+    /// A default interpreter yields a budget identical to [`RecursionBudget::default`], so the
+    /// established behavior is preserved exactly.
+    fn budget(&self) -> RecursionBudget {
+        RecursionBudget::new(self.depth_limit, u64::MAX, u64::MAX)
     }
 
     /// The registered primitive names (for tooling/EXPLAIN).
@@ -376,15 +444,31 @@ impl Interpreter {
     ///
     /// Returns [`Step::Value`] if `node` is already a `Const`, or [`Step::Next`] with the reduced
     /// term. Errors are explicit (free variable, unknown/ill-typed prim, unsupported swap).
+    ///
+    /// **RFC-0041 W4:** the single-step entry drives the substitution recursion on a fresh default
+    /// [`RecursionBudget`], so even a direct `step` on a deep node refuses with [`EvalError::DepthLimit`]
+    /// at the ceiling rather than a host-stack abort. Callers evaluating adversarial input should use
+    /// [`eval`](Self::eval)/[`eval_core`](Self::eval_core), which additionally run on the growable deep
+    /// stack (§4.3); a bare `step` charges the budget but is not itself stack-wrapped.
     pub fn step(&self, node: &Node) -> Result<Step, EvalError> {
+        self.step_budgeted(node, &self.budget())
+    }
+
+    /// The budgeted small-step relation (RFC-0041 §4.1): identical to [`step`](Self::step) but charging
+    /// the shared [`RecursionBudget`] at each structural descent. L0 keeps its substitution shape — only
+    /// the budget + guard are threaded in. One frame is charged on entry (via [`charge_depth`]) and
+    /// released when this call returns, so the budget's *live* depth equals the current structural
+    /// nesting; when a descent would exceed the ceiling the enter refuses with `DepthLimit`.
+    fn step_budgeted(&self, node: &Node, budget: &RecursionBudget) -> Result<Step, EvalError> {
+        let _frame = charge_depth(budget)?;
         match node {
             Node::Const(_) => Ok(Step::Value),
 
             Node::Var(x) => Err(EvalError::FreeVariable(x.clone())),
 
-            Node::Let { id, bound, body } => match self.step(bound)? {
+            Node::Let { id, bound, body } => match self.step_budgeted(bound, budget)? {
                 // (E-Let-Bind): bound is a value → substitute it into the body.
-                Step::Value => Ok(Step::Next(Box::new(subst(body, id, bound)))),
+                Step::Value => Ok(Step::Next(Box::new(subst(body, id, bound, budget)?))),
                 // (E-Let-Step): reduce the bound expression first (call-by-value).
                 Step::Next(bound2) => Ok(Step::Next(Box::new(Node::Let {
                     id: id.clone(),
@@ -396,7 +480,7 @@ impl Interpreter {
             Node::Op { prim, args } => {
                 // (E-Op-Arg): reduce the leftmost non-value argument, if any.
                 for (i, arg) in args.iter().enumerate() {
-                    if let Step::Next(arg2) = self.step(arg)? {
+                    if let Step::Next(arg2) = self.step_budgeted(arg, budget)? {
                         let mut next = args.clone();
                         next[i] = *arg2;
                         return Ok(Step::Next(Box::new(Node::Op {
@@ -419,7 +503,7 @@ impl Interpreter {
                 src,
                 target,
                 policy,
-            } => match self.step(src)? {
+            } => match self.step_budgeted(src, budget)? {
                 // (E-Swap-Apply): source is a value → apply σ.
                 Step::Value => {
                     let v = as_const(src)?;
@@ -437,7 +521,7 @@ impl Interpreter {
             Node::Construct { ctor, args } => {
                 // (E-Con-Arg): reduce the leftmost non-value argument, if any.
                 for (i, arg) in args.iter().enumerate() {
-                    if let Step::Next(arg2) = self.step(arg)? {
+                    if let Step::Next(arg2) = self.step_budgeted(arg, budget)? {
                         let mut next = args.clone();
                         next[i] = *arg2;
                         return Ok(Step::Next(Box::new(Node::Construct {
@@ -454,7 +538,7 @@ impl Interpreter {
                 scrutinee,
                 alts,
                 default,
-            } => match self.step(scrutinee)? {
+            } => match self.step_budgeted(scrutinee, budget)? {
                 // (E-Match-Scrut): reduce the scrutinee to a value first.
                 Step::Next(s2) => Ok(Step::Next(Box::new(Node::Match {
                     scrutinee: s2,
@@ -466,11 +550,11 @@ impl Interpreter {
                     // The Match result is met with the scrutinee's guarantee (RFC-0011 §4.6). For the
                     // reachable r3 fragment the scrutinee is Exact, so the meet is the identity; a
                     // non-Exact data scrutinee is the explicit r3 boundary (never a fabricated bound).
-                    let g = guarantee_of_value(scrutinee)?;
+                    let g = guarantee_of_value(scrutinee, budget)?;
                     if g != GuaranteeStrength::Exact {
                         return Err(EvalError::GuaranteeMeetUnsupported { scrutinee: g });
                     }
-                    let body = select_arm(scrutinee, alts, default.as_deref())?;
+                    let body = select_arm(scrutinee, alts, default.as_deref(), budget)?;
                     Ok(Step::Next(Box::new(body)))
                 }
             },
@@ -478,13 +562,13 @@ impl Interpreter {
             // (E-Lam): a lambda abstraction is a normal form (a function value).
             Node::Lam { .. } => Ok(Step::Value),
 
-            Node::App { func, arg } => match self.step(func)? {
+            Node::App { func, arg } => match self.step_budgeted(func, budget)? {
                 // (E-App-Fun): reduce the function position to a value first.
                 Step::Next(f2) => Ok(Step::Next(Box::new(Node::App {
                     func: f2,
                     arg: arg.clone(),
                 }))),
-                Step::Value => match self.step(arg)? {
+                Step::Value => match self.step_budgeted(arg, budget)? {
                     // (E-App-Arg): then reduce the argument (call-by-value).
                     Step::Next(a2) => Ok(Step::Next(Box::new(Node::App {
                         func: func.clone(),
@@ -494,7 +578,7 @@ impl Interpreter {
                     // checker proves this); applying any other value is an explicit refusal.
                     Step::Value => match func.as_ref() {
                         Node::Lam { param, body } => {
-                            Ok(Step::Next(Box::new(subst(body, param, arg))))
+                            Ok(Step::Next(Box::new(subst(body, param, arg, budget)?)))
                         }
                         _ => Err(EvalError::ApplyNonFunction),
                     },
@@ -505,7 +589,7 @@ impl Interpreter {
             // Always a redex; a non-productive recursion exhausts fuel explicitly, never hangs
             // (RFC-0007 §4.5, CakeML clock).
             Node::Fix { name, body } => {
-                let unfolded = subst(body, name, node);
+                let unfolded = subst(body, name, node, budget)?;
                 Ok(Step::Next(Box::new(unfolded)))
             }
 
@@ -523,13 +607,13 @@ impl Interpreter {
                         .map_or_else(|| (**body).clone(), |(_, d)| (**d).clone()),
                     _ => (**body).clone(),
                 };
-                let unfolded = defs.iter().fold(target, |acc, (name, _)| {
+                let unfolded = defs.iter().try_fold(target, |acc, (name, _)| {
                     let focus = Node::FixGroup {
                         defs: defs.clone(),
                         body: Box::new(Node::Var(name.clone())),
                     };
-                    subst(&acc, name, &focus)
-                });
+                    subst(&acc, name, &focus, budget)
+                })?;
                 Ok(Step::Next(Box::new(unfolded)))
             }
         }
@@ -552,11 +636,35 @@ impl Interpreter {
     /// meet-summary guarantee computed from its fields). This is the path the M-210 differential
     /// runs for matching/data, against the L1 evaluator (NFR-7).
     pub fn eval_core(&self, node: &Node) -> Result<CoreValue, EvalError> {
+        // RFC-0041 W4 (closes the RR-29 §0.1 flagship bug). Run the substitution machine on the
+        // **growable deep worker stack** (§4.3) and bound its structural recursion with the shared
+        // [`RecursionBudget`] (§4.1), so a crafted deep-but-fuel-cheap value refuses with
+        // [`EvalError::DepthLimit`] — never a host-stack `SIGABRT`. The budget is created *inside* the
+        // closure: it is `Send` but not `Sync` (interior `Cell` charge state), so it is owned on the
+        // worker rather than borrowed across the thread boundary — the AOT `run_core` precedent. The
+        // outer `sizing` budget is only read on the caller thread to size the guard.
+        let sizing = self.budget();
+        ensure_sufficient_stack(&sizing, move || {
+            let budget = self.budget();
+            self.eval_core_budgeted(node, &budget)
+        })
+    }
+
+    /// The budgeted normal-form driver (RFC-0041 W4): the O(1) fuel loop of
+    /// [`eval_core`](Self::eval_core), threading the shared [`RecursionBudget`] into every structural
+    /// recursion (`step` and the value read-off) so deep input refuses with [`EvalError::DepthLimit`]
+    /// at the budget's ceiling. Separated from `eval_core` so the fuel loop itself stays O(1) host
+    /// stack while the (already `Send`-owned) budget is threaded down.
+    fn eval_core_budgeted(
+        &self,
+        node: &Node,
+        budget: &RecursionBudget,
+    ) -> Result<CoreValue, EvalError> {
         let mut current = node.clone();
         let mut fuel = self.fuel;
         loop {
-            match self.step(&current)? {
-                Step::Value => return node_to_core_value(&current),
+            match self.step_budgeted(&current, budget)? {
+                Step::Value => return node_to_core_value(&current, budget),
                 Step::Next(next) => {
                     fuel = fuel.checked_sub(1).ok_or(EvalError::FuelExhausted)?;
                     current = *next;
@@ -569,13 +677,17 @@ impl Interpreter {
 /// Read a normal-form node off as a [`CoreValue`]: a `Const` is a representation value; a saturated
 /// `Construct` of values is a [`Datum`] (the meet-summary computed by [`Datum::new`]). Any other
 /// node is not a normal form — an explicit error, never a silent default.
-fn node_to_core_value(node: &Node) -> Result<CoreValue, EvalError> {
+fn node_to_core_value(node: &Node, budget: &RecursionBudget) -> Result<CoreValue, EvalError> {
+    // RFC-0041 W4: the read-off recurses over a (saturated `Construct`) data value's spine, so it is
+    // charged on the same shared budget as `step` — a deep VALUE read off after evaluation refuses with
+    // `DepthLimit` at the ceiling rather than a host-stack abort (the value-walk half of RR-29 §0.1).
+    let _frame = charge_depth(budget)?;
     match node {
         Node::Const(v) => Ok(CoreValue::Repr(v.clone())),
         Node::Construct { ctor, args } => {
             let fields = args
                 .iter()
-                .map(node_to_core_value)
+                .map(|a| node_to_core_value(a, budget))
                 .collect::<Result<Vec<_>, _>>()?;
             Ok(CoreValue::Data(Datum::new(ctor.clone(), fields)))
         }
@@ -601,13 +713,19 @@ fn node_to_core_value(node: &Node) -> Result<CoreValue, EvalError> {
 /// reachable. This is a pre-existing latent gap, not a new relaxation: a `Lam` was already a
 /// legitimate `Step::Value` normal form (`Node::Lam { .. } => Ok(Step::Value)` above); this only
 /// teaches the **guarantee**-meet computation the same fact `Step`-reduction already knew.
-fn guarantee_of_value(node: &Node) -> Result<GuaranteeStrength, EvalError> {
+fn guarantee_of_value(
+    node: &Node,
+    budget: &RecursionBudget,
+) -> Result<GuaranteeStrength, EvalError> {
+    // RFC-0041 W4: recurses over a data value's field spine; charged on the shared budget so a deep
+    // Match scrutinee refuses with `DepthLimit` rather than a host-stack abort.
+    let _frame = charge_depth(budget)?;
     match node {
         Node::Const(v) => Ok(v.meta().guarantee()),
         Node::Construct { args, .. } => {
             let mut g = GuaranteeStrength::Exact;
             for a in args {
-                g = g.meet(guarantee_of_value(a)?);
+                g = g.meet(guarantee_of_value(a, budget)?);
             }
             Ok(g)
         }
@@ -624,7 +742,12 @@ fn guarantee_of_value(node: &Node) -> Result<GuaranteeStrength, EvalError> {
 /// `Construct` of the same [`CtorRef`](mycelium_core::CtorRef), binding its fields left-to-right; a
 /// literal arm matches a `Const` equal on `repr+payload`. No match + no default is an explicit
 /// [`EvalError::NonExhaustiveMatch`].
-fn select_arm(scrutinee: &Node, alts: &[Alt], default: Option<&Node>) -> Result<Node, EvalError> {
+fn select_arm(
+    scrutinee: &Node,
+    alts: &[Alt],
+    default: Option<&Node>,
+    budget: &RecursionBudget,
+) -> Result<Node, EvalError> {
     for alt in alts {
         match alt {
             Alt::Ctor {
@@ -647,7 +770,7 @@ fn select_arm(scrutinee: &Node, alts: &[Alt], default: Option<&Node>) -> Result<
                         // capture-free (the same property the Const substitution relies on).
                         let mut b = body.clone();
                         for (binder, arg) in binders.iter().zip(args) {
-                            b = subst(&b, binder, arg);
+                            b = subst(&b, binder, arg, budget)?;
                         }
                         return Ok(b);
                     }
@@ -687,8 +810,20 @@ fn collect_values(args: &[Node]) -> Result<Vec<&Value>, EvalError> {
 
 /// Capture-avoiding substitution `node[var ↦ value]`. Substituends are closed `Const` values, so no
 /// renaming is ever needed; substitution stops under a binder that shadows `var`.
-fn subst(node: &Node, var: &str, value: &Node) -> Node {
-    match node {
+///
+/// **RFC-0041 W4:** this walks the *whole* term in one recursive descent (a single `step`'s
+/// `Let`/β/`Fix` unfold), so a deep term would otherwise overflow the host stack. It charges the
+/// shared [`RecursionBudget`] at every descent (via [`charge_depth`]) and is therefore fallible — a
+/// term deeper than the ceiling refuses with [`EvalError::DepthLimit`] rather than a `SIGABRT`. L0
+/// keeps its substitution shape (§4.1); only the budget + guard are threaded in.
+fn subst(
+    node: &Node,
+    var: &str,
+    value: &Node,
+    budget: &RecursionBudget,
+) -> Result<Node, EvalError> {
+    let _frame = charge_depth(budget)?;
+    Ok(match node {
         Node::Const(_) => node.clone(),
         Node::Var(x) => {
             if x == var {
@@ -699,37 +834,43 @@ fn subst(node: &Node, var: &str, value: &Node) -> Node {
         }
         Node::Let { id, bound, body } => Node::Let {
             id: id.clone(),
-            bound: Box::new(subst(bound, var, value)),
+            bound: Box::new(subst(bound, var, value, budget)?),
             // Shadowing: a re-binding of `var` blocks substitution in the body.
             body: if id == var {
                 body.clone()
             } else {
-                Box::new(subst(body, var, value))
+                Box::new(subst(body, var, value, budget)?)
             },
         },
         Node::Op { prim, args } => Node::Op {
             prim: prim.clone(),
-            args: args.iter().map(|a| subst(a, var, value)).collect(),
+            args: args
+                .iter()
+                .map(|a| subst(a, var, value, budget))
+                .collect::<Result<Vec<_>, _>>()?,
         },
         Node::Swap {
             src,
             target,
             policy,
         } => Node::Swap {
-            src: Box::new(subst(src, var, value)),
+            src: Box::new(subst(src, var, value, budget)?),
             target: target.clone(),
             policy: policy.clone(),
         },
         Node::Construct { ctor, args } => Node::Construct {
             ctor: ctor.clone(),
-            args: args.iter().map(|a| subst(a, var, value)).collect(),
+            args: args
+                .iter()
+                .map(|a| subst(a, var, value, budget))
+                .collect::<Result<Vec<_>, _>>()?,
         },
         Node::Match {
             scrutinee,
             alts,
             default,
         } => Node::Match {
-            scrutinee: Box::new(subst(scrutinee, var, value)),
+            scrutinee: Box::new(subst(scrutinee, var, value, budget)?),
             alts: alts
                 .iter()
                 .map(|alt| match alt {
@@ -737,23 +878,26 @@ fn subst(node: &Node, var: &str, value: &Node) -> Node {
                         ctor,
                         binders,
                         body,
-                    } => Alt::Ctor {
+                    } => Ok(Alt::Ctor {
                         ctor: ctor.clone(),
                         binders: binders.clone(),
                         // Shadowing: an arm binder that re-binds `var` blocks substitution in its body.
                         body: if binders.iter().any(|b| b == var) {
                             body.clone()
                         } else {
-                            subst(body, var, value)
+                            subst(body, var, value, budget)?
                         },
-                    },
-                    Alt::Lit { value: lit, body } => Alt::Lit {
+                    }),
+                    Alt::Lit { value: lit, body } => Ok(Alt::Lit {
                         value: lit.clone(),
-                        body: subst(body, var, value),
-                    },
+                        body: subst(body, var, value, budget)?,
+                    }),
                 })
-                .collect(),
-            default: default.as_ref().map(|d| Box::new(subst(d, var, value))),
+                .collect::<Result<Vec<_>, EvalError>>()?,
+            default: match default.as_ref() {
+                Some(d) => Some(Box::new(subst(d, var, value, budget)?)),
+                None => None,
+            },
         },
         // r4: a Lam/Fix binder shadows `var` in its body; App substitutes into both positions.
         Node::Lam { param, body } => Node::Lam {
@@ -761,19 +905,19 @@ fn subst(node: &Node, var: &str, value: &Node) -> Node {
             body: if param == var {
                 body.clone()
             } else {
-                Box::new(subst(body, var, value))
+                Box::new(subst(body, var, value, budget)?)
             },
         },
         Node::App { func, arg } => Node::App {
-            func: Box::new(subst(func, var, value)),
-            arg: Box::new(subst(arg, var, value)),
+            func: Box::new(subst(func, var, value, budget)?),
+            arg: Box::new(subst(arg, var, value, budget)?),
         },
         Node::Fix { name, body } => Node::Fix {
             name: name.clone(),
             body: if name == var {
                 body.clone()
             } else {
-                Box::new(subst(body, var, value))
+                Box::new(subst(body, var, value, budget)?)
             },
         },
         // A `FixGroup` binds *every* member name; substitution shadows when `var` is one of them
@@ -785,13 +929,15 @@ fn subst(node: &Node, var: &str, value: &Node) -> Node {
                 Node::FixGroup {
                     defs: defs
                         .iter()
-                        .map(|(name, d)| (name.clone(), Box::new(subst(d, var, value))))
-                        .collect(),
-                    body: Box::new(subst(body, var, value)),
+                        .map(|(name, d)| {
+                            Ok((name.clone(), Box::new(subst(d, var, value, budget)?)))
+                        })
+                        .collect::<Result<Vec<_>, EvalError>>()?,
+                    body: Box::new(subst(body, var, value, budget)?),
                 }
             }
         }
-    }
+    })
 }
 
 #[cfg(test)]
