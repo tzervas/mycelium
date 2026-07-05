@@ -31,6 +31,11 @@ mycelium-select = { path = "../mycelium-select" }
 # Host-stack management for the recursive checker/elaborator, kept OUTSIDE this trusted kernel so the
 # kernel stays `#![forbid(unsafe_code)]` (ADR-014). The kernel calls only its safe `with_deep_stack`.
 mycelium-stack = { path = "../mycelium-stack" }
+# RFC-0041 (Wave-1): the shared never-silent recursion budget the frontend's recursive checker passes
+# charge against (usefulness / decision-tree / grade / list-literal spine), so a pathological input is
+# refused with an explicit `BudgetError` — never a host-stack overflow (§4.7). Leaf crate (DN-68
+# acyclic, downward-only): depends only on `std` + `mycelium-stack`, never upward on `l1`.
+mycelium-workstack = { path = "../mycelium-workstack" }
 
 [dev-dependencies]
 # The RFC-0007 §4.6 differential: L1-eval vs elaborate→L0-interp vs elaborate→AOT, validated

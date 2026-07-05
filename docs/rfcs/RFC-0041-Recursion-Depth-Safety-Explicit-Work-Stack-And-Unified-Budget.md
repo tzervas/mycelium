@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0041 |
-| **Status** | **Accepted (Rev 2, 2026-07-03 — maintainer-ratified)**. Authored under DN-84 §11 "solve (D) now" + the four 2026-07-03 ratifications (RR-29 §6); **hardened by the Phase-3 adversarial review** (§11 — 4 Critical + 15 High source-confirmed objections resolved); **ratified `Proposed → Accepted` by the maintainer 2026-07-03** — including the §6 **within-freeze behavior-preserving-hardening channel** (a ratified DN-56 process addition), the §Posture **I1–I3 correctness invariant** (superseding Rev-1's "same error variants"), and the §4.0 **source-call-boundary depth metric**. `Accepted → Enacted` per-stage as each wave (§7) lands differential + error-parity green (§9). Prior: Proposed (Rev 1 → Rev 2, 2026-07-03). |
+| **Status** | **Enacted (2026-07-05)** — maintainer-approved (2026-07-05) W7 promotion `dev → integration → main`, **effective with this wave's landing on `main`** (the §9 claimability condition); all eight waves (W0–W6 + the W7 Enacted-closure wave) landed with every §9 DoD line **literally met or honestly re-scoped by the recorded append-only §7/§9 amendments** (checked basis: §7 wave status blocks + the W7 dispositions). Tracked non-DoD follow-ons stay open (W3b bare-`Repr`, `count_occurrences` O(N²) bound, single-variant unification, AOT per-frame metric precision under the §5.1 family-parity contract, `content_hash` O(depth²), the geiger-baseline `--update` regeneration — the committed baseline is a disclosed W0 placeholder, never silently). Prior: **Accepted (Rev 2, 2026-07-03 — maintainer-ratified)** — authored under DN-84 §11 "solve (D) now" + the four 2026-07-03 ratifications (RR-29 §6); hardened by the Phase-3 adversarial review (§11 — 4 Critical + 15 High source-confirmed objections resolved); ratified `Proposed → Accepted` by the maintainer 2026-07-03, including the §6 within-freeze behavior-preserving-hardening channel (a ratified DN-56 process addition), the §Posture I1–I3 correctness invariant (superseding Rev-1's "same error variants"), and the §4.0 source-call-boundary depth metric; `Accepted → Enacted` per-stage as each wave (§7) landed differential + error-parity green (§9). Prior: Proposed (Rev 1 → Rev 2, 2026-07-03). |
 | **Type** | Normative — implementation architecture for recursion-depth safety across the L1 evaluator, the L0 reference interpreter, and the frontend passes; **no new L0 node/prim, no grammar/surface change** (KC-3 / DN-56 freeze-compatible — §6). |
 | **Date** | 2026-07-03 |
 | **Task** | M-979 (design D, solve-now) · M-978 (design B baseline) |
@@ -221,6 +221,23 @@ inputs as a W0 gate**: for an input past the floor, all three paths must refuse 
 at the same metric threshold. This gate **fails today** — reconciling the existing divergence is a W0
 precondition, not an afterthought.
 
+**W4 amendment (append-only, 2026-07-03 — evidence-driven correction of the "single input" premise).**
+The W0→W4 gate as written assumed **one statically-deep source** refused identically by all three paths;
+implementing W4 proved that empirically unachievable, for three independent reasons: (i) the **parser cap
+now equals the eval floor** (W1 raised `MAX_EXPR_DEPTH` to 4096), so a statically-deep *source* is refused
+**at parse**, before any evaluator sees it; (ii) the **AOT trampoline is data-spine-immune** — it charges
+depth only at App/Match frames, and its default ceiling is the DN-05 dynamic `[10k,2M]`, not the floor; (iii)
+**L0 is a substitution machine** — runtime recursion re-walks/re-clones the term each step (`O(N²)+`), so its
+practical deep input is a deep *value*, not a runtime `spin`. The gate is therefore satisfied by the parity
+that **actually holds**: every path refuses over-budget with the canonical variant **family** at the shared
+4096 floor, each exercised with a per-path bounded-time input (L1-eval `spin` → `DepthExceeded{4096}`;
+L0-interp deep value → `DepthLimit{4096}`; AOT `spin` at the explicit floor → `DepthLimit{4096}`).
+**Residual:** literal single-*variant* unification is partial — L1 surfaces `DepthExceeded{u32}` while
+L0/AOT surface the pre-existing `DepthLimit{usize}` (the canonical `DepthExceeded` is the budget-crate
+type; the interp/AOT paths map from it but keep `DepthLimit` as their observable). Full convergence would
+change the `mycelium-interp`/`mycelium-mlir` error enums (a trusted-base/AOT observable change) — a
+maintainer-decision follow-up, not a W4 blocker (the never-silent + shared-threshold contract holds).
+
 ## 6. Freeze compatibility (KC-3 / DN-56) — a defined within-freeze hardening channel (resolves §11 High freeze6)
 Converting the evaluators' recursion strategy adds **no L0 node/prim/surface** — an implementation swap
 behind the frozen semantics boundary (DN-56 §6 governs the kernel *surface*, unchanged; RR-29 §1.4/§0.4).
@@ -241,6 +258,153 @@ Each wave lands differential-green (M-210 **+** the §5.1 error-parity gate) and
 before merge. **Shared-file owners** (resolves §11 Med wave39): root `Cargo.toml` + `.cargo/mutants.toml` are
 **integrator-owned** — waves FLAG edits, the integrator applies them (feed-as-ready). **Ordering edges are
 in the table**, not just prose (resolves §11 High wave35).
+
+**Status (2026-07-03): all seven implementation waves (W0–W6) landed on `dev`; whole-RFC `Enacted` NOT
+yet claimable (open §9 DoD items — see below).** The flagship `myc run` SIGABRT (RR-29 §0.1) is closed,
+the §5.1 cross-path error-parity gate is green, and all three execution machines (L0 interp · L1 eval ·
+AOT) plus the frozen-core value types refuse deep input never-silently on one shared `RecursionBudget`,
+with the host stack growing on demand. `#![forbid(unsafe_code)]` holds across every landed crate (the sole
+`unsafe` is the audited upstream `stacker`/`psm`). **Open §9 DoD items surfaced by the post-implementation
+assessment (2026-07-03), held for maintainer determination:** (i) the DoD-required **`--unbounded`** mode
+(decided DN-84 §9.3, §5-specced) was never scheduled and is **unimplemented**; (ii) `mir-passes`
+`eval(&RcNode)`/`emit_elided`/`emit_reuse` (a §4.7-listed crate) remain **unguarded**, so DoD §9 item 1
+("no input SIGABRTs any pass in the §4.7 list") is not literally met there; (iii) an AOT
+per-frame-vs-source-call metric reconciliation is **owed** (W3½ said "W5 reconciles"; W5 reconciled L1
+only — AOT still depth-charges `Match` continuations). Plus the flagged deviations (§5.1 amendment below,
+the residual notes, M-979). M-740 unblocks once these are determined. **W6** = data-spine iteration: the RFC §4.7 "convert-or-document" fork was resolved to
+**document the wide-tuple asymmetry** — the `usefulness`/`decision` arity spine already refuses
+never-silently (`DepthExceeded{4096}`, not a SIGABRT) via the W1 guard, so the residual is a *precision*
+defect on a pathological 4095-field product type, not a safety one; conversion is gated on "if profiling
+demands" (it does not). Documented residuals/deviations await maintainer determinations (RFC §5.1
+amendment, this §7, the Meta changelog, the M-979 issue). M-740 self-hosting unblocks. Per-wave detail
+below (append-only).
+
+**Status (2026-07-03, W7 — Enacted-closure wave, held at `dev`):** the open §9 DoD items (i)/(ii)/(iii)
+above and the flagged deviations are resolved by the **W7 closure wave** — four disjoint isolated-worktree
+leaves (`--unbounded`+`with_depth` · `mir-passes` guards · construction-census+spine-tripwire ·
+process-arena coverage), each per-leaf reviewed; the frozen-core/trusted-base-adjacent `mir-passes` leaf
+independently adversarially memory-safety-reviewed (no Critical/High). Determinations were made by the
+maintainer on a **Fable plan/QC assessment** of all twelve open items; dispositions (append-only):
+- **(i) `--unbounded` — IMPLEMENTED (Rust-first).** `myc run` honours `--unbounded` via
+  `Interpreter::with_depth(u32::MAX)` with a never-silent stderr banner; the corpus/conformance runner
+  **refuses** it (test-guarded, exit 64). `myc build --unbounded` is **interface-parity only** (the frontend
+  `mycelium-l1` depth ceilings are not CLI-tunable without an l1 API change — a tracked follow-on), and CI
+  wiring to export the corpus signal is a tracked follow-on.
+- **(ii) `mir-passes` guards — CLOSED (guard-and-refuse).** `eval(&RcNode)`, `emit_elided`/`emit_reuse`
+  (and the shared `emit_ann` core) charge the shared `RecursionBudget` on every RcNode edge and wrap the
+  outer entry in `ensure_sufficient_stack`, refusing never-silently with `RcError`/`EmitError::DepthExceeded`
+  instead of SIGABRT-ing; the public infallible counters (`count_occurrences`/`count_dups`/`count_move_unique`)
+  are deep-stack-wrapped so no direct call SIGABRTs. Independently adversarially reviewed: no Critical/High
+  memory-safety hole. The surviving residual is `count_occurrences`' **O(N²)/infallible→fallible work-step**
+  bound — a documented DoS-only precision residual **explicitly deferred to W2** (the SIGABRT/host-stack hole
+  is closed; the parser bounds pipeline nesting at 256). No input SIGABRTs any pass in `mycelium-mir-passes`.
+- **(iii) AOT metric reconciliation — RULED a FOLLOW-ON (not DoD-blocking).** Per the ratified §5.1 W4
+  amendment the cross-path contract is variant-*family* parity at the shared floor; AOT is data-spine-immune
+  with a DN-05 ceiling far above the floor, so the per-frame-vs-source-call divergence lives only in the
+  dynamic headroom — exactly what the DoD's "documented divergence only in the dynamic headroom" permits.
+  Literal per-source-call reconciliation of the AOT `Match`-continuation charging is a precision follow-on.
+- **#5 zero-alloc-in-Drop — ACCEPTED (amended).** The iterative Drops use an empty-start `Vec` worklist; the
+  DoD no-alloc-in-Drop gate is amended to **no allocation-failure abort path except under genuine OOM during
+  deep unwind** — a strict safety improvement over the *certain* multi-MB stack-overflow abort it replaced.
+  True zero-alloc would need contained `unsafe` (ADR-014) or a frozen-type field (DN-39); deliberately not
+  taken. `Declared` residual.
+- **#6 `Value`/`Repr` — DEFERRED to W3b (amended, census-grounded).** The §4.5 full recursive class is scoped
+  to *constructible* types. A W7 construction-gate **census test** upgrades "a deeply-nested `Value` is
+  unbuildable" from `Declared` to `Empirical` (every owned-`Value` path routes through the depth-walking
+  `Value::new` gate; the wire path is 128-capped) and is the tripwire for a future ungated constructor.
+  **Correction (VR-5):** the §4.5 phrase "`Value`/`Repr` … construction-gated, thus unbuildable" is precise
+  for `Value` but **overclaims for a bare `Repr`** — `Repr::Seq { elem: Box<Repr> }` is constructible by a
+  direct variant literal with no gate, so a deep bare `Repr` is buildable in first-party Rust and its derived
+  recursive `Drop`/`Clone`/`PartialEq` would SIGABRT. Reachability is nil from untrusted input (`.myc`/
+  interpreter values exist only as gated `Value`s; the wire is 128-capped; kernel `Repr`s are shallow), so
+  this does not reopen a safety blocker — the claim is scoped to `Value`, and bare-`Repr` iterative
+  destruction is folded into the coordinated W3b.
+- **#8 process arena — CLOSED for untrusted-reachable paths (amended, audited).** A W7 coverage audit
+  (`docs/notes/W7-arena-coverage-audit.md`) found `ProcessArena` had **zero consumers** — "governs every
+  path" was unmet everywhere. The two untrusted-reachable allocation-proportional passes now charge the
+  shared `ProcessArena` and refuse never-silently with `OutOfBudget` (LSP `llm_canonical`; the `fmt` render
+  family via `FmtError::OutOfBudget`). Passes unreachable from untrusted input (`doc::ir::walk`; `transpile`
+  of trusted first-party Rust) and non-allocation-proportional passes (`mir-passes::count_occurrences`) are
+  **explicitly exempt** with the audit as the `Empirical` basis; the `mycelium-l1` checker family and the
+  trusted-base interp/mlir (fallible-surface ripple, out of scope) are tracked follow-ons. The DoD line is
+  amended to "governs every **allocation-proportional path reachable from untrusted input**; audited exempt
+  set named in the coverage note".
+- **#10 Box-owned/acyclic tripwire — ADDED.** A source-structural tripwire test fails if `Rc`/`Arc`/`Weak`
+  shared ownership appears on the frozen `Node`/`Datum` iterative-Drop spine (catches a future intern-cache
+  field — the real break vector). `mycelium-l1::L1Value` relies on the same invariant; its twin tripwire is a
+  tracked follow-on.
+- **#4 error-variant unification — ACCEPTED family-parity + mechanism check.** Full enum convergence (a
+  trusted-base observable change) is not taken; the family mapping is additionally verified at an arbitrary
+  small budget via the additive `Interpreter::with_depth` + a uniform-small-budget parity test (`Empirical` at
+  ceilings {1,2,8,100}).
+- **#11 TCO — ACCEPTED (direct-tail-only).** Scope stated; the "10k worklist" Goal is met only for
+  tail-recursive/`for`-authored code — carried as an **explicit M-740 acceptance criterion**.
+- **#12 W6 wide-tuple — "document" upheld.** A 4095-field product type is not an adversarially realistic
+  untrusted input; the refusal is already never-silent; a byte-identical rewrite of the trusted Maranget
+  passes is barred by KISS/YAGNI/KC-3.
+- **#7 `content_hash` O(depth²)** and **#9 coarse-worker sites** (all ~21 `ensure_sufficient_stack` consumers
+  still coarse; LSP `project.rs` is the hot untrusted per-keystroke priority) are **accepted as tracked
+  follow-ons** (pre-existing / non-DoD-line) — recorded, not silent.
+
+With W7, every §9 DoD line is either **literally met** or **honestly re-scoped by an append-only amendment
+with a checked basis** (no claim upgraded past its evidence — VR-5; no refusal silent — G2; no frozen-type
+field or trusted-base error-shape change spent — the §6 within-freeze channel is intact). **Whole-RFC
+`Enacted` is claimable once W7 promotes `dev → integration → main` (held for the maintainer);** the RFC stays
+`Accepted` until it lands on `main`. M-740 self-hosting unblocks on that promotion.
+
+**Status (2026-07-03):** **W0, W1, W2, W3½, W3+W5, and W4 landed — only W6 remains.** W4 = the L0
+reference interpreter (`mycelium-interp`) budgeted: `step`/`subst`/etc. charge the shared
+`RecursionBudget` (L0 stays a substitution machine, §4.1), **`EvalError::DepthLimit` is now constructed**,
+and **the flagship RR-29 §0.1 `myc run` SIGABRT is closed** — a deep value refuses with `DepthLimit{4096}`.
+`parallel::is_pure` is iterative. **The §5.1 error-parity gate is GREEN** (un-ignored) — see the §5.1 W4
+amendment for the evidence-driven "single input → per-path bounded input" correction and the partial
+single-variant-unification residual. Independently adversarially reviewed. W4 `Enacted`; RFC stays Accepted.
+
+**Status (2026-07-03):** **W0, W1, W2, W3½, and the W3+W5 pair landed** (maintainer-approved past the
+checkpoint). W3 = frozen-core iterative destruction (`Node`/`Datum`/`CoreValue` iterative
+`Drop`/`Clone`/`PartialEq`/`Canon` via the DN-56 §6 within-freeze channel — bit-identical observable,
+mutation-witnessed, `forbid(unsafe)` intact; plus `doc::ir::Node`). W5 = the L1-eval CEK `Vec<Frame>`
+machine (O(1) host stack, cleanup-on-unwind), iterative `L1Value`, TCO under the no-pending-post-work
+precondition (release/assert never skipped — witness tests pass), and `DEFAULT_DEPTH` 64→4096. Honest
+deviations flagged for maintainer: zero-alloc-in-Drop not achievable under safe-Rust + no-new-field
+(empty-start `Vec` worklist used — OOM-unwind edge remains); `Value`/`Repr` deferred to a coordinated
+W3b (deep values are construction-gated, thus unbuildable); pre-existing `content_hash` O(depth²) for
+deep binders. **Remaining: W4** (L0 interp — closes the `myc run` SIGABRT and turns the §5.1 error-parity
+gate green), then **W6**.
+
+**Status (2026-07-03):** **W0, W1, W2, and W3½ landed — the full pre-checkpoint set.** W3½ = a
+behavior-preserving extraction: the AOT `Vec<Frame>` env-machine (`mycelium-mlir`) now charges the
+shared `mycelium_workstack::RecursionBudget` (both frame-push sites, `DepthGuard` per frame) and grows
+via `ensure_sufficient_stack`, with `BudgetError::DepthExceeded` mapped to the unchanged
+`EvalError::DepthLimit` at the same threshold — the recursion + three-way differentials stay green with
+zero expected-value edits (oracle unmoved). The AOT `Frame` size pin (W2 residual) is resolved. Honest
+flag: the AOT still charges per-frame (App and Match continuations), identical to pre-W3½ — the
+per-frame-vs-source-call reconciliation is W5's. W3½ `Enacted` (AOT scope). **Next: the maintainer
+checkpoint before W3 (frozen-core iterative destruction), W4 (L0-interp work-stack), W5 (L1-eval CEK +
+TCO + eval raise) — all three touch the frozen trusted base / swap the reference machine.**
+
+**Status (2026-07-03):** **W0, W1, and W2 landed.** W2 = the host-stack **grow** infrastructure:
+`mycelium-stack` gains a fine-grained runtime-gated `stacker` grow (exact-pinned `=0.1.24`; still
+`#![forbid(unsafe_code)]` — no authored unsafe, the switch is contained upstream) with a never-silent
+no-grow refusal (`growable_ceiling_honors_floor`, wasm-safe); `mycelium-workstack` routes
+`ensure_sufficient_stack` through it (layered on the worker base, non-regressing) and adds the
+`check_startup` `mem_ceiling ≥ floor × MAX_FRAME_BYTES(384)` gate; a frame-size CI baseline pins the
+value structs. Honest scope: the *per-recursion-point* stride-1 grow is consumer-side wiring for
+W3½/W4/W5; the AOT `Frame` in-crate pin is a tracked residual. W2 `Enacted` for the grow/startup scope.
+
+**Status (2026-07-03):** **W0 and W1 landed.** W0 = the safety-net gates (§4.0 metric test, §5.1
+error-parity differential `#[ignore="W5"]`, the RR-29 guard-hole census, depth-structured fuzz, and the
+mutants/unsafe-audit scope). W1 = the **`mycelium-workstack`** budget crate (`RecursionBudget` on the
+metric, a memory ceiling, a `ProcessArena`, the canonical `BudgetError::DepthExceeded{u32}`, and the
+`ensure_sufficient_stack` W1 passthrough) **plus** the frontend guard-hole wiring (`mycelium-l1` checker,
+the `check_list` data-vs-control iteration fix, the parser 256→4096 raise, and
+`fmt`/`lsp`/`transpile`/`doc`/`mir-passes`) — the 14 frontend census tests un-ignored and green.
+**Scoping correction (G2):** `write_canon` (frozen core) and `is_pure`/`plan_parallel` (interp trusted
+base) were re-tagged off W1 to W3/W4 (maintainer checkpoint). **W1 residuals** (tracked, not silent): the
+recursive-`Drop` bomb on deep fixtures (W3 class; `mycelium-doc::ir::Node` is a newly-found member); in
+`mir-passes`, `eval(&RcNode)`/`emit_elided`/`emit_reuse` and the `count_occurrences` O(N²) re-walk (W2);
+and `syn`'s own unbudgeted recursion (third-party, dev-tool). **W2–W6 pending**; W3/W4/W5 gated on the
+maintainer frozen-core checkpoint.
 
 | Wave | Scope | Depends on | Gate |
 |---|---|---|---|
@@ -281,6 +445,18 @@ AST (dissolves the class but a large retrofit — deferred to boot10); **one uni
 - DN-05 amended (floor+headroom); the §6 within-freeze channel recorded (DN-56 pointer); RR-29's guard-hole
   census closed; every claim graded honestly (`Declared`/`Empirical`, no `Proven` — VR-5).
 
+**DoD closure (2026-07-03, W7 — append-only).** Each item's disposition is recorded in the §7 W7 status
+block above. Items **literally met** by W7: `--unbounded` guards + test; no input SIGABRTs any `mir-passes`
+pass; the `Value` construction-gate + Box-owned spine tripwire. Items **honestly re-scoped by amendment**
+(checked basis named): no-alloc-in-Drop → "no abort except genuine OOM during deep unwind" (#5, `Declared`);
+the full §4.5 class → *constructible* types with `Value`/`Repr` deferred to W3b, plus the bare-`Repr`
+overclaim correction (#6, census `Empirical`); the process arena → "every allocation-proportional path
+reachable from untrusted input" with an audited exempt set (#8, audit `Empirical`); the AOT metric ruled a
+precision follow-on under the §5.1 family-parity contract (#3). Tracked non-DoD follow-ons: `content_hash`
+O(depth²) (#7), the ~21 coarse-worker sites (#9, LSP hot path first), the `L1Value` spine-tripwire twin, and
+the `count_occurrences` O(N²) work-step bound. The RFC stays `Accepted`; **`Enacted` is claimable when W7
+lands on `main`.**
+
 ## 10. (reserved)
 
 ## 11. Phase-3 adversarial review — confirmed objections & resolutions
@@ -306,6 +482,88 @@ implementation. **4 Critical + 15 High source-confirmed** objections, all resolv
 
 ## Meta — changelog
 
+- **2026-07-05 — `Accepted → Enacted` (maintainer-approved W7 promotion; effective with this landing
+  on `main`).** The maintainer approved the full promotion (2026-07-05, session review); the reconciled
+  W0–W7 wave moves `dev → integration → main` by this landing — the §9 claimability condition is met
+  the moment this text reaches `main`. Enactment basis (checked, VR-5): every §9 DoD line is literally
+  met or honestly re-scoped by the recorded append-only §7/§9 amendments — flagship `myc run` SIGABRT
+  closed (refuses `DepthLimit{4096}`), §5.1 error-parity green un-ignored, one deterministic budget on
+  every path, iterative destruction landed via the §6 within-freeze channel, `--unbounded` implemented +
+  corpus-refused, `#![forbid(unsafe_code)]` intact (sole unsafe = the exact-pinned, forbid-line-guarded
+  upstream `stacker`/`psm` — no first-party dep-tree unsafe audit exists; the geiger baseline is a
+  disclosed placeholder, tracked in the Status follow-ons). Non-DoD follow-ons stay tracked (see
+  Status). M-978/M-979 → done; DN-84 → Resolved. Append-only (house rule #3).
+- **2026-07-03 — W6 landed; RFC-0041 Phase-4 (W0–W6) COMPLETE (M-979).** Final wave, assess-then-act:
+  the §4.7 "convert-or-document" fork resolved to **document the wide-tuple asymmetry** — `usefulness`/
+  `decision` recurse on tuple/ctor arity, a 4095-field product type false-refuses at the floor, **but** it
+  refuses **never-silently** (`DepthExceeded{4096}` on the deep-stack worker, not a SIGABRT — the W1 guard
+  meets the DoD), so it is a *precision* residual on a pathological input, not a safety one; §7 gates the
+  conversion on "if profiling demands" (it does not); a byte-identical rewrite of the trusted branching
+  Maranget passes is high-risk/zero-benefit (KISS/YAGNI/KC-3). Docs+tests only (differential + conformance
+  byte-identical); the conversion seam + boundary witness tests are recorded. Maintainer may overrule →
+  convert if 4095-arity is adversarially realistic. **All seven waves landed; the never-silent + shared-
+  budget + grow-on-demand recursion-safety contract holds end-to-end; M-740 self-hosting unblocks.** RFC
+  stays Accepted; open determinations flagged. (VR-5/G2.)
+- **2026-07-03 — W4 landed (L0 interp budgeted work-stack; the flagship SIGABRT closed; M-979).**
+  `mycelium-interp` (`step`/`subst`/`node_to_core_value`/`guarantee_of_value`/`select_arm`) charges the
+  shared `RecursionBudget` (L0 stays a substitution machine, §4.1; `subst` fallible; `eval_core` on the
+  grown stack); **`EvalError::DepthLimit` constructed** via `From<BudgetError>`, so a deep value refuses
+  `DepthLimit{4096}` instead of SIGABRT-ing `myc run` (RR-29 §0.1 closed). `parallel::is_pure` iterative.
+  **§5.1 error-parity gate GREEN** — rewritten per the §5.1 W4 amendment (the "single statically-deep
+  input" premise was empirically unachievable: parser-cap==floor, AOT data-immunity, L0 `O(N²)`), asserting
+  the real per-path bounded-input parity at the shared floor; partial single-variant residual noted.
+  Independently adversarially reviewed. Only W6 remains. W4 `Enacted`; RFC stays Accepted. (VR-5/G2.)
+- **2026-07-03 — W3+W5 landed (frozen-core iterative destruction + L1-eval CEK; M-979).** Maintainer-
+  approved past the checkpoint. W3: `mycelium-core` `Node`/`Datum`/`CoreValue` iterative
+  `Drop`/`Clone`/`PartialEq`/`Canon` via the DN-56 §6 within-freeze channel (bit-identical vs a recursive
+  oracle, mutation-witnessed at 100k, M-210 green, `forbid(unsafe)` intact, Box-owned invariant confirmed,
+  E0509 blast radius = 3 sites total); `doc::ir::Node` iterative Drop. W5: the L1-eval 7-fn SCC → CEK
+  `Vec<Frame>` machine (O(1) host stack, error-path cleanup), iterative `L1Value`, TCO under the
+  no-pending-post-work precondition (both mandatory witnesses pass), EXPLAIN ring buffer, `DEFAULT_DEPTH`
+  64→4096. Deviations flagged (VR-5): zero-alloc-Drop not achievable in safe Rust w/o a new field (empty
+  `Vec` worklist — OOM-unwind edge); `Value`/`Repr` → coordinated W3b (deep values construction-gated);
+  `content_hash` O(depth²) for deep binders (pre-existing). Independently adversarially reviewed for
+  memory safety before landing. §5.1 error-parity still `#[ignore]` (needs W4). W3+W5 `Enacted`; RFC stays
+  Accepted. (VR-5/G2.)
+- **2026-07-03 — W3½ landed (AOT env-machine extraction; M-979).** Behavior-preserving: the AOT
+  `Vec<Frame>` env-machine (`mycelium-mlir` `aot.rs`) charges the shared
+  `mycelium_workstack::RecursionBudget` at both frame-push sites (`DepthGuard` per frame) and grows via
+  `ensure_sufficient_stack`, replacing its ad-hoc `stack.len() >= max_depth` ceiling.
+  `BudgetError::DepthExceeded` maps to the unchanged `EvalError::DepthLimit` at the same threshold —
+  `recursion_differential.rs` + the three-way `differential.rs` stay green with zero expected-value
+  edits (the oracle is unmoved). AOT `Frame` size pin added (W2 residual resolved). Honest flag: the AOT
+  charges per-frame (App + Match continuations), identical to pre-W3½ — W5 reconciles the metric. Last
+  pre-checkpoint wave; W3/W4/W5 are the maintainer-gated frozen-core/reference-machine waves. W3½
+  `Enacted`; RFC stays Accepted. (VR-5/G2.)
+- **2026-07-03 — W2 landed (host-stack grow; M-979).** `mycelium-stack` gains a fine-grained,
+  runtime-gated `stacker` grow (exact-pinned `=0.1.24`, `psm 0.1.31`; still `#![forbid(unsafe_code)]` —
+  the switch is contained upstream, ADR-014) with a never-silent no-grow refusal
+  (`growable_ceiling_honors_floor`); `mycelium-workstack` routes `ensure_sufficient_stack` through it
+  (layered on the worker base — non-regressing) and adds `check_startup` (`mem_ceiling ≥ floor ×
+  MAX_FRAME_BYTES`) plus a frame-size CI baseline (relocated to `mycelium-l1/tests/` — a workstack
+  dev-dep back-edge would have closed a normal+dev cycle the acyclic gate rejects). Supply chain
+  (THIRD-PARTY regen, unsafe-audit, geiger placeholder) reconciled. Honest scope: per-recursion-point
+  grow is W3½/W4/W5 consumer wiring; the AOT `Frame` pin is a tracked residual. W2 `Enacted` (grow scope);
+  RFC stays Accepted. (VR-5/G2.)
+- **2026-07-03 — W1 landed (budget crate and frontend wiring; M-979).** The `mycelium-workstack` leaf
+  crate (`RecursionBudget` on the §4.0 metric, a memory ceiling, a `ProcessArena`, the canonical
+  `BudgetError::DepthExceeded{u32}`, the `ensure_sufficient_stack` W1 passthrough, and the §4.2 invariant
+  fn; `#![forbid(unsafe_code)]`, DN-68 downward-only, consumer-side charge) and the frontend guard-hole
+  wiring (`mycelium-l1` checker, the `check_list` iteration fix, the parser 256→4096 raise, and
+  `fmt`/`lsp`/`transpile`/`doc`/`mir-passes`). 14 frontend census tests un-ignored and green; full
+  `just check` green (differential and census; error-parity stays `#[ignore="W5"]`). Trusted-base holes
+  (`write_canon`, `is_pure`/`plan_parallel`) re-tagged off W1 to W3/W4 (maintainer checkpoint). Residuals
+  tracked (Drop bomb incl. new `doc::ir::Node`; `mir` `eval(&RcNode)` and O(N²); `syn`). W1 `Enacted` for
+  the frontend scope; RFC stays
+  Accepted. (VR-5/G2 — Empirical/Declared, no Proven.)
+- **2026-07-03 — W0 landed (Phase-4 safety net; M-979).** First wave, no behavior change / no
+  frozen-core edits: the §4.0 metric property test, the §5.1 error-parity differential
+  (`#[ignore="W5"]`; canonical over-budget variant fixed as `DepthExceeded{u32}` on the metric,
+  reconciling the interp/AOT `EvalError::DepthLimit{usize}` in W4/W3½), the RR-29 guard-hole census
+  (per-crate `#[ignore="Wn"]` real-repro tests across eight crates), depth-structured fuzz (the interp
+  target reproduces the known `SIGABRT`), and the `just mutants` / unsafe-audit scope additions
+  (`mycelium-l1`, `mycelium-mlir`, `mycelium-stack`). RFC stays **Accepted**; W1–W6 pending. Every
+  claim `Declared`/`Empirical`, no `Proven` (VR-5/G2).
 - **2026-07-03 — Ratified `Proposed → Accepted` (Rev 2; maintainer).** The maintainer's "accept/ratify"
   directive ratifies the adversarially-hardened Rev 2, **including** the three items flagged for their
   call: the §6 **within-freeze behavior-preserving-hardening channel** (a DN-56 process addition — DN-56

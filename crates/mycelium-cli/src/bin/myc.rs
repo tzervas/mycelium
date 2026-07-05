@@ -18,17 +18,23 @@
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-use mycelium_cli::{build, check_project, init, run, run_stream_parse, Report};
+use mycelium_cli::{
+    build, check_project, corpus_context, init, reject_unbounded_in_corpus, run_stream_parse,
+    run_with_options, unbounded_banner, Report, RunOptions,
+};
 
 fn usage() -> ExitCode {
     eprintln!(
         "usage:\n  \
          myc init  <name>\n  \
-         myc build [--config <manifest>]\n  \
+         myc build [--config <manifest>] [--unbounded]\n  \
          myc check [--config <manifest>]\n  \
          myc test  [--config <manifest>]\n  \
-         myc run   [--config <manifest>]  # single- or multi-nodule (M-908/M-909)\n  \
-         myc --stream [<file>]"
+         myc run   [--config <manifest>] [--unbounded]  # single- or multi-nodule (M-908/M-909)\n  \
+         myc --stream [<file>]\n\
+         \n  \
+         --unbounded  opt-in, NON-DETERMINISTIC: lift the recursion-depth ceiling (RFC-0041 §5).\n               \
+         Machine-dependent; excluded from the conformance corpus; never for CI/reproducible builds."
     );
     ExitCode::from(64)
 }
@@ -61,10 +67,11 @@ fn main() -> ExitCode {
             },
             _ => usage(),
         },
-        "build" => with_manifest(&rest, cmd_build),
+        // `build` and `run` accept the RFC-0041 §5 `--unbounded` escape hatch; `check`/`test` do not.
+        "build" => with_run_options(&rest, "build", |m, _opts| cmd_build(m)),
         "check" => with_manifest(&rest, cmd_check),
         "test" => with_manifest(&rest, cmd_test),
-        "run" => with_manifest(&rest, |m| match run(m) {
+        "run" => with_run_options(&rest, "run", |m, opts| match run_with_options(m, opts) {
             Ok(report) => {
                 println!("{}", report.rendered);
                 eprintln!("myc: ran `{}` in {}", report.entry, report.source);
@@ -77,7 +84,9 @@ fn main() -> ExitCode {
     }
 }
 
-/// Resolve the `--config <manifest>` flag (default `mycelium-proj.toml`) and dispatch.
+/// Resolve the `--config <manifest>` flag (default `mycelium-proj.toml`) and dispatch. Used by
+/// `check`/`test`, which do **not** accept `--unbounded` (RFC-0041 §5: CLI-flag-only, and only on the
+/// execution/build drivers) — so an `--unbounded` here is an unknown flag (usage error).
 fn with_manifest(rest: &[String], f: impl FnOnce(&Path) -> ExitCode) -> ExitCode {
     let mut manifest = PathBuf::from("mycelium-proj.toml");
     let mut it = rest.iter();
@@ -91,6 +100,43 @@ fn with_manifest(rest: &[String], f: impl FnOnce(&Path) -> ExitCode) -> ExitCode
         }
     }
     f(&manifest)
+}
+
+/// Resolve `--config <manifest>` **and** the RFC-0041 §5 `--unbounded` flag for `run`/`build`, then
+/// dispatch. When `--unbounded` is engaged: (1) if a conformance-corpus / CI context is signalled
+/// ([`corpus_context`]), it is **refused** never-silently ([`reject_unbounded_in_corpus`]) — the
+/// deterministic corpus path must not run the machine-dependent mode; (2) otherwise a never-silent
+/// banner ([`unbounded_banner`]) is printed to stderr before dispatch (G2). `cmd` (`"run"`/`"build"`)
+/// tailors the banner's per-command effect line.
+fn with_run_options(
+    rest: &[String],
+    cmd: &str,
+    f: impl FnOnce(&Path, &RunOptions) -> ExitCode,
+) -> ExitCode {
+    let mut manifest = PathBuf::from("mycelium-proj.toml");
+    let mut opts = RunOptions::default();
+    let mut it = rest.iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "--config" => match it.next() {
+                Some(p) => manifest = PathBuf::from(p),
+                None => return usage(),
+            },
+            "--unbounded" => opts.unbounded = true,
+            _ => return usage(),
+        }
+    }
+    if opts.unbounded {
+        // Deterministic corpus/CI runs refuse the machine-dependent mode (never a silent downgrade).
+        if corpus_context() {
+            if let Err(r) = reject_unbounded_in_corpus(&opts) {
+                return fail(&r);
+            }
+        }
+        // Never-silent: announce the escape hatch on stderr before doing anything.
+        eprintln!("{}", unbounded_banner(cmd));
+    }
+    f(&manifest, &opts)
 }
 
 fn cmd_build(manifest: &Path) -> ExitCode {

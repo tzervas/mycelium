@@ -6,7 +6,7 @@
 //! parser or typechecker. Human-auditable: each row below carries a comment citing the grammar
 //! fact it relies on.
 
-use crate::gap::{Category, GapReason};
+use crate::gap::{guarded, Category, GapReason};
 use quote::ToTokens;
 use syn::{PathArguments, Type};
 
@@ -46,7 +46,18 @@ pub fn tokens_to_string<T: ToTokens>(node: &T) -> String {
 ///   conflating a foreign type with an unrelated local type of the same terminal name — a real
 ///   bug caught by inspecting this transpiler's own output on `std::cmp::Ordering` vs the local
 ///   `Ordering` (see the transpiler's report). Left an explicit gap rather than guessed (VR-5).
+///
+/// **RFC-0041 §4.7 (W1):** guarded by the crate-wide recursion budget (`crate::gap::guarded`) —
+/// self-recurses over unbounded/attacker-controlled type nesting (a right-nested `Type::Tuple`),
+/// so each call consumes one budget frame and refuses with a `Category::RecursionBudget` gap
+/// rather than risking a host-stack overflow.
 pub fn map_type(ty: &Type, self_ty: Option<&str>) -> Result<String, GapReason> {
+    guarded(|| map_type_inner(ty, self_ty))
+}
+
+/// The recursion-guarded body of [`map_type`]. Recursive calls use the public `map_type` name so
+/// each nested call re-enters the guard.
+fn map_type_inner(ty: &Type, self_ty: Option<&str>) -> Result<String, GapReason> {
     match ty {
         Type::Path(tp) if tp.qself.is_none() && tp.path.segments.len() > 1 => Err(GapReason::new(
             Category::Other,

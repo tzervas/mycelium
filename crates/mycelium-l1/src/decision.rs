@@ -26,6 +26,8 @@
 
 use std::collections::BTreeMap;
 
+use mycelium_workstack::{BudgetError, RecursionBudget};
+
 use crate::checkty::{DataInfo, Ty};
 use crate::usefulness::{specialize_ctor, specialize_lit, Pat};
 
@@ -92,13 +94,34 @@ impl crate::usefulness::SpecializeRow for Row {
 /// (initially `[[]]` for the single scrutinee), and `tys` each column's type (drives the
 /// complete-signature test + the field-type expansion). Assumes the match has already passed
 /// exhaustiveness/redundancy (so the first all-wildcard row is a real catch-all).
+///
+/// **RFC-0041 §4.7 (W1, RR-29):** the tree-compilation recursion is charged against a
+/// [`RecursionBudget`]; a wide-arity constructor that would drive [`compile_rows`] into an unbounded
+/// host-stack overflow (SIGABRT) is instead refused never-silently with a [`BudgetError::DepthExceeded`]
+/// at the default ceiling. The caller ([`crate::checkty::Cx::check_match`]) maps it into a `CheckError`.
+///
+/// **RFC-0041 §4.7 (W6): the wide-tuple asymmetry — DOCUMENTED, not converted (Empirical, VR-5).**
+/// [`compile_rows`] tests one column per recursion level (specialize → recurse → assemble a `Switch`),
+/// so — like its analysis twin [`crate::usefulness::useful`] — a constructor whose fields carry
+/// non-wildcard heads drives ~N levels of recursion on the tuple/ctor **arity** spine (a wide ctor
+/// with *all-wildcard* fields short-circuits to a `Leaf` and does not). This width is data-shaped, not
+/// genuine control nesting; **measured boundary N ≥ 4095** false-refuses with
+/// [`BudgetError::DepthExceeded`]. It is surface-reachable but pathological (a 4095-field product
+/// type), already **safe and never-silent** (a clean refusal, not a SIGABRT, on the production deep
+/// stack), and the W6 plan (§7) conditions the twin conversion on "residual frontend conversion **if
+/// profiling demands**" — which it does not. See the fuller rationale on
+/// [`crate::usefulness::useful`]: per §4.7's fork we **document** the asymmetry rather than force a
+/// high-risk byte-identical iterative rewrite of this trusted branching Maranget compiler
+/// (KISS/YAGNI/KC-3). Boundary test-witnessed (`tests::decision::w6_wide_arity_compile_refuses`).
+/// **FLAG (W6 → orchestrator/maintainer):** the conversion seam is the per-column recursion — a work
+/// stack charging `charge_steps` per column — if 4095-arity is deemed realistic enough to warrant it.
 pub(crate) fn compile(
     types: &BTreeMap<String, DataInfo>,
     matrix: &[Vec<Pat>],
     arms: &[usize],
     occ: &[Occurrence],
     tys: &[Ty],
-) -> Tree {
+) -> Result<Tree, BudgetError> {
     let rows: Vec<Row> = matrix
         .iter()
         .zip(arms)
@@ -107,22 +130,28 @@ pub(crate) fn compile(
             arm,
         })
         .collect();
-    compile_rows(types, &rows, occ, tys)
+    // A fresh per-compilation budget: this walk is independent of the usefulness query's budget, so
+    // its depth resets to zero here (guards release on return). Default depth ceiling (4096).
+    let budget = RecursionBudget::default();
+    compile_rows(&budget, types, &rows, occ, tys)
 }
 
 fn compile_rows(
+    budget: &RecursionBudget,
     types: &BTreeMap<String, DataInfo>,
     rows: &[Row],
     occ: &[Occurrence],
     tys: &[Ty],
-) -> Tree {
+) -> Result<Tree, BudgetError> {
+    // Charge one level of decision-tree recursion; refuse never-silently past the ceiling (§4.7).
+    let _g = budget.try_enter()?;
     // No row can match → failure (unreachable for an exhaustive match).
     let Some(first) = rows.first() else {
-        return Tree::Fail;
+        return Ok(Tree::Fail);
     };
     // The first row is all wildcards (or there are no columns) → it matches everything here: run it.
     if first.pats.iter().all(|p| matches!(p, Pat::Wild)) {
-        return Tree::Leaf(first.arm);
+        return Ok(Tree::Leaf(first.arm));
     }
     // Pick the first column with a non-wildcard head in some row (Maranget's left-to-right heuristic),
     // and rotate it to the front so the specialization helpers can work on column 0.
@@ -172,18 +201,25 @@ fn compile_rows(
                 if ctor_heads.iter().any(|(m, _)| *m == ci.name) {
                     let a = ci.fields.len();
                     let sub = compile_rows(
+                        budget,
                         types,
                         &specialize_ctor(&rows, &ci.name, a),
                         &child_occ(&occ, &occ0, a),
                         &child_tys(&tys, &ci.fields),
-                    );
+                    )?;
                     cases.push((Head::Ctor(ci.name.clone(), a), sub));
                 }
             }
         }
     }
     for k in &lit_heads {
-        let sub = compile_rows(types, &specialize_lit(&rows, k), &occ[1..], &tys[1..]);
+        let sub = compile_rows(
+            budget,
+            types,
+            &specialize_lit(&rows, k),
+            &occ[1..],
+            &tys[1..],
+        )?;
         cases.push((Head::Lit(k.clone()), sub));
     }
 
@@ -191,18 +227,19 @@ fn compile_rows(
         None
     } else {
         Some(Box::new(compile_rows(
+            budget,
             types,
             &default_rows(&rows),
             &occ[1..],
             &tys[1..],
-        )))
+        )?))
     };
 
-    Tree::Switch {
+    Ok(Tree::Switch {
         occurrence: occ0,
         cases,
         default,
-    }
+    })
 }
 
 /// Swap column `i` to the front of the rows + the parallel occurrence/type vectors (an occurrence is

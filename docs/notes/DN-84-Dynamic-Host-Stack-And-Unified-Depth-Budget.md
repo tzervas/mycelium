@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-84 |
-| **Status** | **Draft** (2026-07-03) |
+| **Status** | **Resolved** (2026-07-05) — both tracks delivered via **RFC-0041 (Enacted 2026-07-05)**: (B) grow-on-demand + one global deterministic 4096 budget (W1/W2), (C) opt-in `--unbounded` (W7), (D) explicit heap work-stack across the three machines + frozen core (W3–W6). M-978/M-979 → done. Prior: Draft (2026-07-03). |
 | **Feeds** | M-978 (dynamic-stack-depth hardening) · M-979 (design D — explicit work-stack, solve-now; minted by §11) |
 | **Decides** | *Nothing normatively* — advisory design capture. Records the design space for making the recursive frontend passes **crash-proof** (no host-stack `SIGABRT`) with an **essentially unbounded, cleanly-handled** nesting capability, while preserving the never-silent honesty rule (G2), determinism, KC-3, and self-hosting portability. The actual mechanism lands via its own RFC/ADR + issue (M-978) when the direction is ratified. |
 | **Date** | 2026-07-03 |
@@ -342,6 +342,12 @@ new vulnerability class.
 
 ## Meta — changelog
 
+- **2026-07-05 — `Draft → Resolved` (RFC-0041 Enacted; both feed-tracks closed).** The mechanism this
+  note captured landed via RFC-0041 (Enacted 2026-07-05 on the maintainer-approved W7 promotion to
+  `main`): design (B) as supporting infrastructure (W1 unified `RecursionBudget`, W2 runtime-gated
+  `stacker` grow + no-grow refusal + startup assertion), design (C) as the corpus-excluded
+  `--unbounded` mode (W7), design (D) as the explicit heap work-stack / CEK conversion (W3–W6).
+  M-978 and M-979 → done. Append-only (house rule #3).
 - **2026-07-03 — §11 correction appended (maintainer; append-only, no status move).** The B-now/
   D-eventual reconciliation is superseded: **(D) is solved now**, before the M-740 `.myc` port absorbs
   the shape; (B)'s budget + host-stack pieces are supporting infrastructure of the one solution.

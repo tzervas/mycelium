@@ -1869,7 +1869,7 @@ fn m677_budgeted_fn_under_budget_is_differential_observable_equivalent() {
     let l1_v = Evaluator::new(&env)
         .call("main", vec![])
         .expect("under budget — succeeds");
-    let L1Value::Repr(l1_repr) = l1_v else {
+    let L1Value::Repr(ref l1_repr) = l1_v else {
         panic!("expected repr value from L1-eval")
     };
 
@@ -1884,7 +1884,7 @@ fn m677_budgeted_fn_under_budget_is_differential_observable_equivalent() {
     };
 
     assert_eq!(
-        observable(&l1_repr),
+        observable(l1_repr),
         observable(&l0_repr),
         "M-677: budgeted fn under budget must agree on the observable (L1-eval == L0-interp, NFR-7)"
     );

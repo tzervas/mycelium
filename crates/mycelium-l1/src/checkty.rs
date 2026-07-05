@@ -3601,6 +3601,20 @@ impl Cx<'_> {
         Err(CheckError::new(self.site, msg))
     }
 
+    /// Map a match-analysis over-budget refusal (usefulness / decision-tree, RFC-0041 §4.7) into the
+    /// checker's never-silent [`CheckError`] surface — an explicit refusal, never a host-stack
+    /// overflow (G2/VR-5). Shared by the exhaustiveness/redundancy (`usefulness::useful`) and the
+    /// decision-tree (`decision::compile`) callsites so the mapping is written once (DRY).
+    fn match_budget_err(&self, e: mycelium_workstack::BudgetError) -> CheckError {
+        CheckError::new(
+            self.site,
+            format!(
+                "match analysis exceeded the recursion budget: {e} — an explicit over-budget refusal \
+                 (RFC-0041 §4.7), never a host-stack overflow (G2/VR-5)"
+            ),
+        )
+    }
+
     /// Enter one level of `check` recursion against the explicit [`MAX_CHECK_DEPTH`] budget
     /// (banked guard 4): charge a level, refuse with a clean [`CheckError`] past the budget (never a
     /// host-stack overflow), and return a [`DepthGuard`] that releases the level on **any** exit path.
@@ -5317,6 +5331,7 @@ impl Cx<'_> {
             self.check_linear(&binds)?;
             // Redundancy (W7): an arm covered by the earlier rows is unreachable.
             if crate::usefulness::useful(self.types, &rows, std::slice::from_ref(&pat), &col)
+                .map_err(|e| self.match_budget_err(e))?
                 .is_none()
             {
                 return self.err(
@@ -5366,6 +5381,7 @@ impl Cx<'_> {
         // Exhaustiveness (W7): a wildcard must not be useful — else its witness is a missing case.
         if let Some(witness) =
             crate::usefulness::useful(self.types, &rows, &[crate::usefulness::Pat::Wild], &col)
+                .map_err(|e| self.match_budget_err(e))?
         {
             return self.err(format!(
                 "non-exhaustive match on {sty}: missing {} (W7 — coverage is checked, never assumed)",
@@ -5379,7 +5395,8 @@ impl Cx<'_> {
         // its leaves as L0 kernel nodes awaits the RFC-0001 revision (RFC-0007 §4.6).
         let arm_ix: Vec<usize> = (0..rows.len()).collect();
         let occ = [Vec::<usize>::new()];
-        let tree = crate::decision::compile(self.types, &rows, &arm_ix, &occ, &col);
+        let tree = crate::decision::compile(self.types, &rows, &arm_ix, &occ, &col)
+            .map_err(|e| self.match_budget_err(e))?;
         if crate::decision::has_reachable_fail(&tree) {
             return self.err(
                 "internal: an exhaustive match compiled to a decision tree with a reachable Fail \
@@ -5581,6 +5598,22 @@ impl Cx<'_> {
         // ambiguity. When there is NO expected type, a bare `[…]` still infers a `Seq` as before.
         if let Some(exp) = expected {
             if let Some((nil_ctor, cons_ctor)) = cons_list_ctors(self.types, exp) {
+                // RFC-0041 §4.7 (W1, RR-29): the desugared `Cons(e1, Cons(…, Nil))` chain is `n`
+                // *data*-levels deep, so checking it via `self.check` walks it with `n` levels of
+                // genuine Rust CONTROL recursion — a 4096-element list is then wrongly refused by the
+                // control-depth budget (`MAX_CHECK_DEPTH`) as if it were 4096-deep control recursion,
+                // and an even larger one risks a host-stack overflow. Route the list's *data*-spine
+                // depth through ITERATION instead: a flat loop that charges a work-step (not a control
+                // depth level) per element (§4.7 data-vs-control fix), when `exp` is CONCRETE (the
+                // corpus). Behaviour is byte-identical to the desugared-chain check — each element is
+                // checked against the same element type, and the returned resolved `Cons` chain is the
+                // same AST (§the three-property gate). When `exp`'s element type is still ABSTRACT (a
+                // generic body — never a large in-corpus list literal), keep the exact original
+                // recursive desugar path so its checking behaviour is preserved verbatim.
+                let concrete = matches!(exp, Ty::Data(_, args) if !args.iter().any(has_var));
+                if concrete {
+                    return self.check_cons_list(scope, elems, exp, &nil_ctor, &cons_ctor);
+                }
                 let mut acc = Expr::Path(Path(vec![nil_ctor]));
                 for e in elems.iter().rev() {
                     acc = Expr::App {
@@ -5639,6 +5672,105 @@ impl Cx<'_> {
             Ty::Seq(Box::new(elem), len),
             Expr::Lit(Literal::List(rebuilt)),
         ))
+    }
+
+    /// Check a list literal `[e1, …, en]` against a **concrete** cons-list ADT (`exp`, a two-ctor
+    /// nil/`Cons(A, Self)` type — RFC-0040/M-977), routing the list's *data*-spine depth through
+    /// ITERATION rather than control recursion (RFC-0041 §4.7, the data-vs-control fix).
+    ///
+    /// The desugared value is still the right-nested `Cons(e1, Cons(…, Nil))` chain (so elaboration /
+    /// eval / AOT see byte-for-byte the RFC-0040 representation), but it is **built and checked in a
+    /// flat loop**: each element is checked against the constructor's (already fully-determined)
+    /// element type via a single, shallow `Cons(e, <typed placeholder tail>)` check — so the checker's
+    /// control-recursion depth stays O(1) per element and a large list is bounded by the work-step
+    /// budget, never refused as if it were `n`-deep control recursion. Behaviour is byte-identical to
+    /// the desugared-chain check for the concrete `exp` case (each element's expected type comes from
+    /// `exp` alone, not the tail): the produced resolved elements and the produced chain match exactly.
+    ///
+    /// Never-silent (G2/VR-5): a heterogeneous / mistyped element surfaces the same explicit
+    /// `CheckError` the desugared-chain check would (both flow through `check_app`'s constructor path).
+    fn check_cons_list(
+        &self,
+        scope: &mut Vec<(String, Ty)>,
+        elems: &[Expr],
+        exp: &Ty,
+        nil_ctor: &str,
+        cons_ctor: &str,
+    ) -> Result<(Ty, Expr), CheckError> {
+        // A per-list work-step budget (RFC-0041 §4.7): the data-spine width is charged here, NOT as
+        // control depth. The default ceiling leaves the work-step limit effectively unbounded in W1
+        // (the real memory/work-step ceilings are wired in W2 — mycelium-workstack §4.2); the charge
+        // is wired now so the never-silent bounding machinery is in place. A `Cons` head expr, rebuilt
+        // once (its `Path` is cloned per layer for the resolved chain).
+        let budget = mycelium_workstack::RecursionBudget::default();
+        let cons_head = || Expr::Path(Path(vec![cons_ctor.to_owned()]));
+        // Resolve the innermost `Nil` once (its resolved form is the chain's tail) — the same check the
+        // desugared chain performs at its deepest level.
+        let (_nil_ty, nil_expr) = self.check(
+            scope,
+            &Expr::Path(Path(vec![nil_ctor.to_owned()])),
+            Some(exp),
+        )?;
+        // A synthetic, typed placeholder for the (already-checked) `Cons` tail. Its name uses `$` so it
+        // can never collide with — or be referenced by — a surface identifier (`$` is not lexable in an
+        // ident), and it is truncated away before returning so it never leaks into the caller's scope.
+        // It is pushed onto BOTH `scope` and the affine tracker (kept index-for-index parallel — a
+        // `check_path` reference resolves its affine slot by scope index; a non-`Substrate` slot is a
+        // `Skip`, so this placeholder is affine-inert), then both are truncated back on every exit.
+        const TAIL_SLOT: &str = "$cons_list_tail$";
+        let base = scope.len();
+        let tail_ref = Expr::Path(Path(vec![TAIL_SLOT.to_owned()]));
+        scope.push((TAIL_SLOT.to_owned(), exp.clone()));
+        self.affine.push(exp);
+        let mut resolved_elems = Vec::with_capacity(elems.len());
+        let mut result_ty: Option<Ty> = None;
+        for e in elems {
+            // Charge one work-step for this element (data-spine width — never a control-depth level).
+            if let Err(be) = budget.charge_steps(1) {
+                scope.truncate(base);
+                self.affine.truncate(base);
+                return self.err(format!(
+                    "list literal exceeded the work-step budget: {be} — an explicit over-budget \
+                     refusal (RFC-0041 §4.7), never a host-stack overflow (G2/VR-5)"
+                ));
+            }
+            // One shallow `Cons(e, $tail)` check: the element is checked against the constructor's
+            // element type (fixed by `exp`), the placeholder tail supplies the recursive `Self` field
+            // at its known type. Depth is O(1), independent of the list length.
+            let layer = Expr::App {
+                head: Box::new(cons_head()),
+                args: vec![e.clone(), tail_ref.clone()],
+            };
+            let (lty, lresolved) = match self.check(scope, &layer, Some(exp)) {
+                Ok(x) => x,
+                Err(err) => {
+                    scope.truncate(base);
+                    self.affine.truncate(base);
+                    return Err(err);
+                }
+            };
+            // Extract this element's resolved form (the `Cons` app's first argument).
+            let elem_resolved = match lresolved {
+                Expr::App { mut args, .. } if !args.is_empty() => args.swap_remove(0),
+                other => other,
+            };
+            resolved_elems.push(elem_resolved);
+            result_ty = Some(lty);
+        }
+        scope.truncate(base);
+        self.affine.truncate(base);
+        // Rebuild the right-nested resolved chain `Cons(e1', Cons(…, Nil))` from the resolved elements.
+        let mut acc = nil_expr;
+        for e in resolved_elems.into_iter().rev() {
+            acc = Expr::App {
+                head: Box::new(cons_head()),
+                args: vec![e, acc],
+            };
+        }
+        // The whole-expression type is the checked ADT type (`exp` for the concrete case, exactly as
+        // the outermost `Cons` of the desugared chain would report); an empty `[]` is that `exp`.
+        let ty = result_ty.unwrap_or_else(|| exp.clone());
+        Ok((ty, acc))
     }
 
     /// Type a `Seq`/`Bytes` indexing/length/slice/concat/eq/hash prim (RFC-0032 D3/D4; M-749/M-750/

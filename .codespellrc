@@ -5,7 +5,9 @@
 # raw bytes, never prose, so it is skipped like target/ and the harness reports (M-654).
 # mutants.out / mutants.out.old is a local `cargo-mutants` run's output dir (gitignored, but codespell
 # walks the filesystem and does not honour .gitignore — it is generated logs/diffs, never prose).
-skip = .git,*.lock,node_modules,target,dist-newstyle,.venv,.tools-venv,*.svg,idmap.tsv,./tools/llm-harness/reports/*,tools/llm-harness/reports/*,./fuzz/corpus/*,fuzz/corpus/*,mutants.out,mutants.out.old,./mutants.out/*,mutants.out/*
+# *package-lock.json is a generated npm dependency lockfile (base64 integrity hashes, never prose —
+# a substring `vEw` of one SHA-512 hash false-flags as "view/vow/vex"); skipped like *.lock.
+skip = .git,*.lock,*package-lock.json,node_modules,target,dist-newstyle,.venv,.tools-venv,*.svg,idmap.tsv,./tools/llm-harness/reports/*,tools/llm-harness/reports/*,./fuzz/corpus/*,fuzz/corpus/*,mutants.out,mutants.out.old,./mutants.out/*,mutants.out/*
 # Domain terms / abbreviations codespell otherwise flags:
 # ser (Serialize abbrev), clen (Content-Length var), publisherr (PublishErr type), raison (raison
 # d'être), copyed/copys (Dockerfile COPY directive), re-used (valid hyphenation).

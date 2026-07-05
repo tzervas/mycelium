@@ -46,8 +46,9 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
-use mycelium_core::{CoreValue, Node};
+use mycelium_core::{Alt, CoreValue, Node};
 use mycelium_sched::scheduler::Scheduler;
+use mycelium_workstack::{ensure_sufficient_stack, RecursionBudget};
 
 use crate::{collect_values, node_to_core_value, EvalError, Interpreter, Step};
 
@@ -57,33 +58,61 @@ use crate::{collect_values, node_to_core_value, EvalError, Interpreter, Step};
 /// makes the **entire** fragment ineligible, never just the leaf.
 #[must_use]
 pub fn is_pure(node: &Node) -> bool {
-    match node {
-        Node::Const(_) | Node::Var(_) | Node::Lam { .. } => true,
-        // The reserved host-capability escape hatch (RFC-0028 §4.3) is the one channel a `Node::Op`
-        // can reach an arbitrary, potentially-effectful implementation through; every other prim is
-        // documented pure (`crate::prims` module docs).
-        Node::Op { prim, args } => !prim.starts_with("wild:") && args.iter().all(is_pure),
-        // A `Box<dyn SwapEngine>` is an opaque, runtime-supplied implementation (crate::swap) — its
-        // purity cannot be verified from the `Node` alone, so it is conservatively never pure.
-        Node::Swap { .. } => false,
-        Node::Let { bound, body, .. } => is_pure(bound) && is_pure(body),
-        Node::Construct { args, .. } => args.iter().all(is_pure),
-        Node::Match {
-            scrutinee,
-            alts,
-            default,
-        } => {
-            is_pure(scrutinee)
-                && alts.iter().all(|a| match a {
-                    mycelium_core::Alt::Ctor { body, .. } => is_pure(body),
-                    mycelium_core::Alt::Lit { body, .. } => is_pure(body),
-                })
-                && default.as_deref().is_none_or(is_pure)
+    // RFC-0041 W4: an **explicit work-stack** traversal — O(1) host stack for any depth, so a crafted
+    // deep `Node` cannot `SIGABRT` this pure predicate (the RR-29 guard-hole this planner owned). The
+    // semantics are byte-for-byte the prior recursive `all`-over-subtree: a single impure/opaque leaf
+    // (a `wild:` op, or any `Swap`) makes the whole fragment ineligible; a `Lam` is pure *without*
+    // descending into its unapplied body (unchanged — its body is not evaluated until applied).
+    let mut work: Vec<&Node> = vec![node];
+    while let Some(n) = work.pop() {
+        match n {
+            Node::Const(_) | Node::Var(_) | Node::Lam { .. } => {}
+            // The reserved host-capability escape hatch (RFC-0028 §4.3) is the one channel a `Node::Op`
+            // can reach an arbitrary, potentially-effectful implementation through; every other prim is
+            // documented pure (`crate::prims` module docs).
+            Node::Op { prim, args } => {
+                if prim.starts_with("wild:") {
+                    return false;
+                }
+                work.extend(args.iter());
+            }
+            // A `Box<dyn SwapEngine>` is an opaque, runtime-supplied implementation (crate::swap) — its
+            // purity cannot be verified from the `Node` alone, so it is conservatively never pure.
+            Node::Swap { .. } => return false,
+            Node::Let { bound, body, .. } => {
+                work.push(bound);
+                work.push(body);
+            }
+            Node::Construct { args, .. } => work.extend(args.iter()),
+            Node::Match {
+                scrutinee,
+                alts,
+                default,
+            } => {
+                work.push(scrutinee);
+                for a in alts {
+                    match a {
+                        Alt::Ctor { body, .. } | Alt::Lit { body, .. } => work.push(body),
+                    }
+                }
+                if let Some(d) = default.as_deref() {
+                    work.push(d);
+                }
+            }
+            Node::App { func, arg } => {
+                work.push(func);
+                work.push(arg);
+            }
+            Node::Fix { body, .. } => work.push(body),
+            Node::FixGroup { defs, body } => {
+                for (_, d) in defs {
+                    work.push(d);
+                }
+                work.push(body);
+            }
         }
-        Node::App { func, arg } => is_pure(func) && is_pure(arg),
-        Node::Fix { body, .. } => is_pure(body),
-        Node::FixGroup { defs, body } => defs.iter().all(|(_, d)| is_pure(d)) && is_pure(body),
     }
+    true
 }
 
 /// The head node of a parallelized top-level batch — the "independent pure elements" M-862 fans out.
@@ -296,7 +325,9 @@ impl Interpreter {
                     ctor: ctor.clone(),
                     args: normals,
                 };
-                node_to_core_value(&rebuilt)
+                // RFC-0041 W4: the read-off is budgeted (fresh per-batch budget — this worker owns a
+                // disjoint sub-value); a deep field spine refuses with `DepthLimit`, never a `SIGABRT`.
+                node_to_core_value(&rebuilt, &RecursionBudget::default())
             }
         }
     }
@@ -307,15 +338,21 @@ impl Interpreter {
     /// instead of reading it off — so a batch worker uses the trusted semantics verbatim, never a
     /// reimplementation. Runs entirely on one thread (no nested parallelism).
     fn eval_to_normal_node(&self, node: &Node, fuel: &AtomicU64) -> Result<Node, EvalError> {
-        let mut current = node.clone();
-        loop {
-            match self.step(&current)? {
-                Step::Value => return Ok(current),
-                Step::Next(next) => {
-                    tick(fuel)?;
-                    current = *next;
+        // RFC-0041 W4: this batch worker mirrors `eval_core`'s loop, so it runs on the growable deep
+        // worker stack too — the budgeted `step` refuses a deep sub-value with `DepthLimit` well within
+        // the stack, never a host-stack `SIGABRT` on a scheduler pool thread.
+        let sizing = RecursionBudget::default();
+        ensure_sufficient_stack(&sizing, move || {
+            let mut current = node.clone();
+            loop {
+                match self.step(&current)? {
+                    Step::Value => return Ok(current),
+                    Step::Next(next) => {
+                        tick(fuel)?;
+                        current = *next;
+                    }
                 }
             }
-        }
+        })
     }
 }
