@@ -749,7 +749,12 @@ fn run_verdict(
         mycelium_l1::L1Value::Repr(b32_value(want_hash)),
         mycelium_l1::L1Value::Repr(b32_value(want_count)),
     ];
+    // A raised step budget (default 1M): interpreting the self-hosted parser over a REAL ~100-line
+    // lib file costs a few million steps (`lib/std/fmt.myc` exhausted the default) — the budget
+    // stays finite (the non-termination guard holds, RFC-0007 §4.5/§4.6), just sized to the
+    // workload. The conformance-corpus files fit comfortably under the same ceiling.
     let verdict_val = Evaluator::new(env)
+        .with_fuel(200_000_000)
         .call(entry, args)
         .unwrap_or_else(|e| panic!("{label}: L1-eval of {entry} failed: {e}"));
     let repr = verdict_val
@@ -767,5 +772,61 @@ fn run_verdict(
          (0 = Ok/Err classification mismatch vs oracle Ok={want_ok}; \
           2 = fingerprint HASH mismatch (oracle {want_hash:#010x}); \
           3 = fingerprint NODE-COUNT mismatch (oracle {want_count}))"
+    );
+}
+
+/// The DN-26 §7.3 "plus `lib/std/*.myc` + `lib/compiler/*.myc` where runtime permits" leg —
+/// REAL self-hosted programs, not conformance fixtures. **Honest runtime narrowing (the Stage-1
+/// FLAG precedent):** L1-eval'ing the self-hosted parser over a source file costs time roughly
+/// linear in that file's token count; the conformance corpus averages ~10 lines/file, but the lib
+/// tree runs to 850+ lines (lex.myc) and 4400+ (parse.myc itself), which would multiply the gate's
+/// wall-clock severalfold. This test therefore differentials the SMALLEST six real lib files
+/// (every one under 125 lines — result/option/math/fmt/cmp/iter), classification + fingerprint,
+/// both legs each — a documented subset, never a silent skip; the full-tree sweep is deliberate
+/// follow-on work once the AOT leg (M-981) makes per-file cost negligible.
+#[test]
+fn parse_myc_matches_oracle_on_a_small_real_lib_subset() {
+    let started = std::time::Instant::now();
+    let env =
+        check_nodule(&parse(PARSE_SRC).unwrap_or_else(|e| panic!("parse.myc: parse failed: {e}")))
+            .unwrap_or_else(|e| panic!("parse.myc: check failed: {e}"));
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let subset = [
+        "lib/std/result.myc",
+        "lib/std/option.myc",
+        "lib/std/math.myc",
+        "lib/std/fmt.myc",
+        "lib/std/cmp.myc",
+        "lib/std/iter.myc",
+    ];
+    for rel in subset {
+        let source = std::fs::read_to_string(root.join(rel))
+            .unwrap_or_else(|e| panic!("cannot read {rel}: {e}"));
+        let (want_ok, want_hash, want_count) = match &parse(&source) {
+            Ok(n) => {
+                let f = fp::fingerprint_nodule(n);
+                (1u32, f.hash, f.count)
+            }
+            Err(_) => (0u32, 0u32, 0u32),
+        };
+        // Every file in this subset is a real, landed stdlib nodule — the oracle must accept it.
+        assert_eq!(
+            want_ok, 1,
+            "{rel}: expected the oracle to accept a landed stdlib nodule"
+        );
+        run_verdict(
+            &env,
+            "stage3_verdict",
+            rel,
+            &source,
+            want_ok,
+            want_hash,
+            want_count,
+        );
+    }
+    eprintln!(
+        "stage3 lib-subset differential: {} real stdlib files, classification + fingerprint, in {:.1}s",
+        subset.len(),
+        started.elapsed().as_secs_f64()
     );
 }
