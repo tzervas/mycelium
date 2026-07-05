@@ -67,5 +67,5 @@ reading both the Rust output and the self-hosted output for the same input.
 - [ ] **Stage 5** — `compiler.semcore` (L0-output differential; `cargo-mutants` witness)
 - [ ] **Stage 6 / M-742** — `just bootstrap`: interpreted-first then AOT, stage-2 three-way
 
-_This README is the M-740 wave map; it is updated as each stage lands. Grounded in DN-26 §7/§9,
-DN-14, RFC-0028, KC-3._
+*This README is the M-740 wave map; it is updated as each stage lands. Grounded in DN-26 §7/§9,
+DN-14, RFC-0028, KC-3.*
