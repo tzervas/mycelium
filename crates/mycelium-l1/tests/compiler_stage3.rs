@@ -575,9 +575,27 @@ mod fp {
 
     pub fn fingerprint_nodule(n: &Nodule) -> Fp {
         let fp = Fp { hash: 0, count: 0 };
+        let fp = nodule(fp, n);
+        fp
+    }
+
+    fn nodule(fp: Fp, n: &Nodule) -> Fp {
         let fp = path(tag(fp, 107), &n.path);
         let fp = bool_(fp, n.std_sys);
         item_list(fp, &n.items)
+    }
+
+    // The FLAG-parse-9 `parse_phylum` leg (tags 108 = Phy, 109 = header-less path None; a headed
+    // path mixes `path` directly — the same Option-mixing convention `guarantee_opt`/`tier_opt`
+    // use, mirrored from parse.myc's `walk_phylum_path_opt`).
+    pub fn fingerprint_phylum(ph: &mycelium_l1::Phylum) -> Fp {
+        let fp = Fp { hash: 0, count: 0 };
+        let fp = tag(fp, 108);
+        let fp = match &ph.path {
+            None => tag(fp, 109),
+            Some(p) => path(fp, p),
+        };
+        ph.nodules.iter().fold(fp, |fp, n| nodule(fp, n))
     }
 }
 
@@ -628,6 +646,7 @@ fn parse_myc_matches_oracle_over_the_full_conformance_corpus() {
     ];
     let mut total = 0usize;
     let mut accepted = 0usize;
+    let mut phylum_accepted = 0usize;
     for dir in dirs {
         let dir_path = root.join(dir);
         let mut files: Vec<_> = std::fs::read_dir(&dir_path)
@@ -643,44 +662,49 @@ fn parse_myc_matches_oracle_over_the_full_conformance_corpus() {
                 .unwrap_or_else(|e| panic!("cannot read {path:?}: {e}"));
             let label = format!("{dir}/{:?}", path.file_name().unwrap());
 
-            // The oracle side: classification + (on Ok) the mirror fingerprint.
-            let oracle = parse(&source);
-            let (want_ok, want_hash, want_count) = match &oracle {
+            // Leg 1 — the `parse` (single-nodule) entry: oracle classification + (on Ok) the
+            // mirror fingerprint, one eval of `stage3_verdict`.
+            let (want_ok, want_hash, want_count) = match &parse(&source) {
                 Ok(n) => {
                     let f = fp::fingerprint_nodule(n);
                     (1u32, f.hash, f.count)
                 }
                 Err(_) => (0u32, 0u32, 0u32),
             };
-
-            // The self-hosted side: ONE eval call carrying the expectations in.
-            let args = vec![
-                mycelium_l1::L1Value::Repr(bytes_value(&source)),
-                mycelium_l1::L1Value::Repr(b32_value(want_ok)),
-                mycelium_l1::L1Value::Repr(b32_value(want_hash)),
-                mycelium_l1::L1Value::Repr(b32_value(want_count)),
-            ];
-            let verdict_val = Evaluator::new(&env)
-                .call("stage3_verdict", args)
-                .unwrap_or_else(|e| panic!("{label}: L1-eval of stage3_verdict failed: {e}"));
-            let repr = verdict_val
-                .as_repr()
-                .unwrap_or_else(|| panic!("{label}: verdict must be a repr value"));
-            let verdict = match repr.payload() {
-                mycelium_core::Payload::Bits(bits) => {
-                    bits.iter().fold(0u32, |acc, &b| (acc << 1) | u32::from(b))
-                }
-                other => panic!("{label}: expected a Bits verdict payload, got {other:?}"),
-            };
-            assert_eq!(
-                verdict, 1,
-                "{label}: Stage-3 differential verdict {verdict} \
-                 (0 = Ok/Err classification mismatch vs oracle Ok={want_ok}; \
-                  2 = fingerprint HASH mismatch (oracle {want_hash:#010x}); \
-                  3 = fingerprint NODE-COUNT mismatch (oracle {want_count}))"
+            run_verdict(
+                &env,
+                "stage3_verdict",
+                &label,
+                &source,
+                want_ok,
+                want_hash,
+                want_count,
             );
             if want_ok == 1 {
                 accepted += 1;
+            }
+
+            // Leg 2 — the `parse_phylum` entry (FLAG-parse-9): same shape over the phylum AST.
+            // This is what covers `accept/19-phylum-cross-nodule.myc` (a phylum-headed fixture
+            // the single-nodule `parse` entry REJECTS on both sides — its acceptance lives here).
+            let (pwant_ok, pwant_hash, pwant_count) = match &mycelium_l1::parse_phylum(&source) {
+                Ok(ph) => {
+                    let f = fp::fingerprint_phylum(ph);
+                    (1u32, f.hash, f.count)
+                }
+                Err(_) => (0u32, 0u32, 0u32),
+            };
+            run_verdict(
+                &env,
+                "stage3_phylum_verdict",
+                &format!("{label} [phylum leg]"),
+                &source,
+                pwant_ok,
+                pwant_hash,
+                pwant_count,
+            );
+            if pwant_ok == 1 {
+                phylum_accepted += 1;
             }
             total += 1;
         }
@@ -689,14 +713,59 @@ fn parse_myc_matches_oracle_over_the_full_conformance_corpus() {
         total >= 57,
         "expected the full accept+reject corpus (~57 files), found {total}"
     );
-    assert!(
-        accepted >= 27,
-        "expected all 27 accept-corpus files to be oracle-Ok, found {accepted}"
+    // 26 of the 27 accept-corpus files are single-nodule (oracle-`parse`-Ok); the 27th,
+    // `19-phylum-cross-nodule.myc`, is phylum-headed — `parse` rejects it ON BOTH SIDES (parity
+    // held above) and its acceptance is asserted through the `parse_phylum` leg instead.
+    assert_eq!(
+        accepted, 26,
+        "expected exactly 26 accept-corpus files to be oracle-`parse`-Ok (all but the phylum fixture)"
+    );
+    assert_eq!(
+        phylum_accepted, 27,
+        "expected all 27 accept-corpus files to be oracle-`parse_phylum`-Ok (parse_phylum is a strict superset of parse)"
     );
     eprintln!(
-        "stage3 corpus differential: {total} files ({accepted} oracle-accepted, fingerprint-compared; \
-         {} oracle-rejected, classification-parity-only) in {:.1}s",
-        total - accepted,
+        "stage3 corpus differential: {total} files x 2 legs (parse: {accepted} accepted; \
+         parse_phylum: {phylum_accepted} accepted; fingerprints compared on every accepted leg, \
+         classification parity on all) in {:.1}s",
         started.elapsed().as_secs_f64()
+    );
+}
+
+/// One self-hosted verdict eval: call `entry(src, want_ok, want_hash, want_count)` in the checked
+/// `env` and assert the packed verdict is 1 (full agreement).
+fn run_verdict(
+    env: &mycelium_l1::Env,
+    entry: &str,
+    label: &str,
+    source: &str,
+    want_ok: u32,
+    want_hash: u32,
+    want_count: u32,
+) {
+    let args = vec![
+        mycelium_l1::L1Value::Repr(bytes_value(source)),
+        mycelium_l1::L1Value::Repr(b32_value(want_ok)),
+        mycelium_l1::L1Value::Repr(b32_value(want_hash)),
+        mycelium_l1::L1Value::Repr(b32_value(want_count)),
+    ];
+    let verdict_val = Evaluator::new(env)
+        .call(entry, args)
+        .unwrap_or_else(|e| panic!("{label}: L1-eval of {entry} failed: {e}"));
+    let repr = verdict_val
+        .as_repr()
+        .unwrap_or_else(|| panic!("{label}: verdict must be a repr value"));
+    let verdict = match repr.payload() {
+        mycelium_core::Payload::Bits(bits) => {
+            bits.iter().fold(0u32, |acc, &b| (acc << 1) | u32::from(b))
+        }
+        other => panic!("{label}: expected a Bits verdict payload, got {other:?}"),
+    };
+    assert_eq!(
+        verdict, 1,
+        "{label}: Stage-3 differential verdict {verdict} \
+         (0 = Ok/Err classification mismatch vs oracle Ok={want_ok}; \
+          2 = fingerprint HASH mismatch (oracle {want_hash:#010x}); \
+          3 = fingerprint NODE-COUNT mismatch (oracle {want_count}))"
     );
 }

@@ -4351,3 +4351,29 @@ fn stage3_verdict_fp(fp: Fp, want_hash: Binary{32}, want_count: Binary{32}) => B
     0b1 => match eq(fp_count(fp), want_count) { 0b1 => one32(), _ => three32() },
     _ => 0b0000_0000_0000_0000_0000_0000_0000_0010
   };
+
+// ── phylum-level fingerprint + verdict (the FLAG-parse-9 parse_phylum leg: tag 108 = Phy,
+// 109 = a header-less phylum path (None); a headed path mixes walk_path directly, the same
+// Option-mixing convention walk_guarantee_opt/walk_tier_opt use) ────────────────────────────────
+fn walk_phylum_path_opt(fp: Fp, p: Option[Path]) => Fp =
+  match p { None => fp_tag(fp, 0b0000_0000_0000_0000_0000_0000_0110_1101), Some(x) => walk_path(fp, x) };
+
+fn walk_nodule_list(fp: Fp, xs: Vec[Nodule]) => Fp =
+  match xs { Nil => fp, Cons(h, rest) => walk_nodule_list(walk_nodule(fp, h), rest) };
+
+fn walk_phylum(fp: Fp, ph: Phylum) => Fp =
+  match ph { Phy(path, nodules) => walk_nodule_list(walk_phylum_path_opt(fp_tag(fp, 0b0000_0000_0000_0000_0000_0000_0110_1100), path), nodules) };
+
+fn fingerprint_phylum(ph: Phylum) => Fp =
+  walk_phylum(FP(0b0000_0000_0000_0000_0000_0000_0000_0000, 0b0000_0000_0000_0000_0000_0000_0000_0000), ph);
+
+// stage3_phylum_verdict: the parse_phylum leg of the Stage-3 gate (same verdict codes as
+// stage3_verdict; same one-eval-per-file economy).
+fn stage3_phylum_verdict(src: Bytes, want_ok: Binary{32}, want_hash: Binary{32}, want_count: Binary{32}) => Binary{32} =
+  match parse_phylum(src) {
+    Err(_) => match eq(want_ok, zero32()) { 0b1 => one32(), _ => zero32() },
+    Ok(ph) => match eq(want_ok, one32()) {
+      0b1 => stage3_verdict_fp(fingerprint_phylum(ph), want_hash, want_count),
+      _ => zero32()
+    }
+  };
