@@ -11,6 +11,32 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### M-740 Stage 2 — self-hosted nodule-header recogniser (2026-07-05)
+
+`boot10` (E18-1) continues per the DN-26 §7.3 stage map: Stage 2 lands the `compiler.nodule_header`
+nodule (`lib/compiler/nodule.myc`), the full `.myc` port of `crates/mycelium-l1/src/nodule.rs`
+(the DN-06 §6 first-non-blank-line `// nodule[: name]` marker recogniser).
+
+- **The port:** `parse_nodule_header` (blank-line skipping, 1-based line tracking), the
+  bare/named-marker recogniser, never-silent ill-formed-name errors (empty name, empty segment,
+  non-identifier segment — G2), and the `dotted`/`canonical` accessors. Every
+  source-length-bounded recursion is direct-tail (the RFC-0041 §7 W7 amendment-11 TCO acceptance
+  criterion for M-740).
+- **The gate** (`crates/mycelium-l1/tests/compiler_stage2.rs`, 3/3 green, `Empirical`): one
+  three-way run (L1-eval ≡ L0-interp ≡ AOT — feasible at this stage's small scale, unlike Stage 1's
+  lexer, M-981) plus a 26-case synthetic edge battery transcribed from the oracle's own unit tests
+  plus the header-parse differential against the live Rust oracle over every `.myc` file in the
+  conformance corpus (accept and reject) and `lib/std/` plus `lib/compiler/` — 66+ files, comparing
+  the 4-way classification code, the joined dotted name plus `canonical` spelling (named case), and
+  the 1-based error line (error case).
+- **One real dogfooding finding (FLAG-nodule-5):** DN-26 §7.3's nodule name `compiler.nodule` is
+  unspellable — `nodule` is a reserved word, so the surface declaration `nodule compiler.nodule;`
+  cannot parse (the FLAG-token-3 keyword-collision class at the nodule-NAME level). The stage ships
+  as `compiler.nodule_header`; DN-26 carries the append-only correction note (status stays Draft).
+- **Honest narrowings (flagged in-file, VR-5):** ASCII-only trim vs Rust's Unicode `str::trim`
+  (FLAG-nodule-2, the FLAG-lex-4 analog); static error messages with line fidelity kept
+  (FLAG-nodule-3); the per-file sweep runs the L1-eval leg only (M-981, as in Stage 1).
+
 ### Kickoff-corpus reconciliation (2026-07-05)
 
 Post-Phase-I doc maintenance on the kickoff corpus (`.claude/kickoffs/`) plus `docs/CURRENT-STATE.md`
