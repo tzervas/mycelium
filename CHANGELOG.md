@@ -30,9 +30,10 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 - **`compiler.parse`:** all ~91 `parse.rs` functions accounted for; **both `parse` and
   `parse_phylum` ported end-to-end** (source text → AST, self-contained token+lexer+AST copy per
   M-982, FLAG-parse-1). Every match destructures exactly one constructor level (the M-980
-  discipline — zero checker panics across 4,405 lines); `MAX_EXPR_DEPTH`=4096 preserved; every
-  token-stream-bounded loop is direct-tail (the RFC-0041 §7 W7 amendment-11 TCO acceptance
-  criterion).
+  discipline — zero checker panics across the ~4,400-line nodule); `MAX_EXPR_DEPTH`=4096
+  preserved; the source-length-bounded loop discipline is per the RFC-0041 §7 W7 amendment-11
+  TCO acceptance criterion (see the PR #1166 review cycle below for the list-building-loop
+  re-shape that made it hold).
 - **The gate** (`crates/mycelium-l1/tests/compiler_stage3.rs`, 4/4 green, `Empirical`):
   classification parity vs the live Rust oracle over the **full conformance corpus on both legs**
   (accept 27/27 — 26 via `parse`, the phylum-headed file via `parse_phylum` with `parse` refusing

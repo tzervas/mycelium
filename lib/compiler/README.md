@@ -116,8 +116,10 @@ reading both the Rust output and the self-hosted output for the same input.
       `compiler.parse`: all ~91 `parse.rs` functions accounted for, **both `parse` and
       `parse_phylum`** end-to-end (source text → AST; self-contained token+lexer+AST copy per
       M-982, FLAG-parse-1); every match one constructor level deep (M-980 — zero checker panics);
-      `MAX_EXPR_DEPTH`=4096 preserved; token-stream-bounded loops direct-tail (RFC-0041 §7 W7
-      amendment 11). Differential: classification parity with the Rust oracle over the full
+      `MAX_EXPR_DEPTH`=4096 preserved; source-length-bounded list-building loops re-shaped to
+      accumulator+reverse direct-tail in the PR #1166 review cycle after a Cons-after-return
+      depth-ceiling finding (RFC-0041 §7 W7 amendment 11; the Stage-1 lexer's own twin is
+      flagged as M-985, not silently carried). Differential: classification parity with the Rust oracle over the full
       corpus on both legs (accept 27/27, reject 30/30, zero divergences) + a preorder
       per-constructor-tag fingerprint (tags 1–109, `rotl(7)`-XOR, node count, leaf mixing;
       hand-locked Rust mirror) on every accepted leg + a 6-file real-stdlib subset leg (full-tree

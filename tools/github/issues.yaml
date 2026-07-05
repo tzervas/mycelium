@@ -3852,7 +3852,9 @@ issues:
       parse and parse_phylum ported end-to-end, source text -> AST, with a self-contained
       token+lexer+AST copy per M-982, FLAG-parse-1; every match destructures exactly ONE
       constructor level, the M-980 discipline — zero checker panics; MAX_EXPR_DEPTH=4096
-      preserved; every token-stream-bounded loop direct-tail, RFC-0041 s7 W7 amendment 11).
+      preserved; source-length-bounded list-building loops re-shaped accumulator+reverse
+      direct-tail in the PR #1166 review cycle after the Cons-after-return depth-ceiling
+      finding — RFC-0041 s7 W7 amendment 11; the Stage-1 lexer twin is M-985).
       Gates green: compiler_stage3_ast.rs 26/26 (parse+check_nodule structural gate; 103-row
       ported-constructor inventory, Declared/audited; per-variant L1-eval construct+classify) and
       compiler_stage3.rs 4/4 (Empirical): classification parity vs the live Rust oracle over the
@@ -11799,6 +11801,43 @@ issues:
       - The Stage-3 differential covers every .myc file under lib/ on at least one leg;
         runtime documented and acceptable for its tier; any file excluded is listed with an
         explicit reason (G2 — never silently skipped); change-scoped just check green.
+  - id: M-985
+    title: "lex.myc run loop is Cons-after-return (non-tail) — token-count depth ceiling at L1-eval"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:bug, area:language, priority:P3, status:todo]
+    epic: E18-1
+    depends_on: []
+    doc_refs:
+      - src:lib/compiler/lex.myc
+      - corpus:RFC-0041
+      - corpus:DN-26
+    body: |
+      Minted 2026-07-05 from the PR #1166 /pr-review pass (the Stage-3 HIGH finding's Stage-1
+      twin). lib/compiler/lex.myc's token-accumulation loop (run, ~L833-846) recurses once per
+      token with the Cons/Ok wrapping AFTER the recursive call returns — not tail position — so
+      Mycelium-level call depth scales with the token count of the input, and a large-enough
+      source trips the host evaluator's generic DepthExceeded guard rather than completing
+      (clean Err, no SIGABRT — RFC-0041's safety goal holds; the ceiling is a scale limit, not
+      a crash). Stage 1 never CLAIMED direct-tail for this loop (the claim was introduced by
+      Stage 2 for nodule.myc and by Stage 3 for parse.myc, where the Stage-3 loops were
+      rewritten accumulator+reverse in PR #1166 itself), but the ceiling was undocumented —
+      this issue is the G2 flag. Fix: the same accumulator+reverse direct-tail rewrite the
+      Stage-3 patch applied to parse.myc's list-building loops, plus a regression case in the
+      Stage-1 gate. Note parse.myc carries its own self-contained lexer copy (FLAG-parse-1),
+      fixed in PR #1166; this issue covers the standalone Stage-1 nodule only, so the two
+      copies stay shape-identical for the eventual M-982 deduplication.
+
+      User stories:
+      - As a compiler engineer working toward M-741 ratification, I want the self-hosted lexer
+        to scale to real-file token counts under L1-eval, so that the Stage-6 bootstrap
+        (compiler compiles itself) is not capped by an accidental recursion shape.
+
+      Definition of Done:
+      - lex.myc's source-length-bounded loops are direct-tail (accumulator+reverse), verified
+        by a synthetic large-input regression case in compiler_stage1.rs that failed on the old
+        shape; the token-stream differential stays green with zero divergences; the in-file
+        recursion-discipline note is updated to the nodule.myc-precision wording;
+        change-scoped just check green.
   - id: M-970
     title: "mycelium-fmt: render_expr_canonical drops the @forage(policy) Hypha annotation"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
