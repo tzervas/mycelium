@@ -117,6 +117,41 @@ fn type_declarations_reads_a_multiline_enum_with_per_ctor_lines() {
 }
 
 #[test]
+fn type_declarations_drops_embedded_divider_comments_from_body_and_ctors() {
+    // The real `lib/compiler/token.myc::Tok` shape: full-line `// section divider` comments
+    // INTERLEAVED inside the multi-line type block (PR #1206 review HIGH). Comment text must
+    // reach neither the ctor list nor the type's joined `text`; line attribution stays exact.
+    let src = "type Tok =\n\
+               \x20   // structural keywords (DN-02)\n\
+               \x20   Nodule | Phylum | Colony\n\
+               \x20   // punctuation\n\
+               \x20 | FloatLit(Bytes)\n\
+               \x20 | LParen;\n";
+    let (decls, problems) = type_declarations(src);
+    assert!(problems.is_empty());
+    assert_eq!(decls.len(), 1);
+    let d = &decls[0];
+    assert_eq!(d.name, "Tok");
+    // No empty-named ctor, no comment prose spliced onto a neighbor.
+    assert_eq!(
+        d.ctors,
+        vec![
+            ("Nodule".to_owned(), "Nodule".to_owned(), 3),
+            ("Phylum".to_owned(), "Phylum".to_owned(), 3),
+            ("Colony".to_owned(), "Colony".to_owned(), 3),
+            ("FloatLit".to_owned(), "FloatLit(Bytes)".to_owned(), 5),
+            ("LParen".to_owned(), "LParen".to_owned(), 6),
+        ]
+    );
+    // The joined declaration text is comment-free too.
+    assert!(
+        !d.text.contains("//"),
+        "comment spliced into text: {}",
+        d.text
+    );
+}
+
+#[test]
 fn type_declarations_flags_an_unterminated_decl_never_silently() {
     // No terminating `;` before EOF — must be reported as a problem, not silently dropped (G2),
     // and must not crash/hang the scan.

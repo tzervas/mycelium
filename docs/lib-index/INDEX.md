@@ -2035,9 +2035,9 @@
 | `compiler.token::StrengthTok::GEmpirical` | ctor | `lib/compiler/token.myc:97` | `GEmpirical` | — | Empirical/Declared |
 | `compiler.token::StrengthTok::GExact` | ctor | `lib/compiler/token.myc:97` | `GExact` | — | Empirical/Declared |
 | `compiler.token::StrengthTok::GProven` | ctor | `lib/compiler/token.myc:97` | `GProven` | — | Empirical/Declared |
-| `compiler.token::Tok` | type | `lib/compiler/token.myc:104` | `type Tok = // structural keywords (DN-02; nodule per DN-06) Nodule \| Phylum \| Colony // runtime-vocabulary reserved words (DN-03 §4; RFC-0008 §4.5) — all reserved, not yet active \| Hypha \| Fuse \| Mesh \| Graft \| Cyst \| Xloc \| Forage \| Backbone \| Tier \| Reclaim // surface-tier reserved words (DN-03 §1) + the grow->derive reconciliation (DN-38 §8.1) \| Consume \| Grow \| Derive // conventional keywords \| Use \| Pub \| Type \| Trait \| Impl \| Fn \| Matured \| Thaw \| Let \| In \| If \| Then \| Else \| Match \| For \| Swap \| Default \| Paradigm \| With \| Wild \| Spore \| To \| Policy // RFC-0037 surface keywords \| Lambda \| Object \| Via \| Lower // repr-type keywords (Kw-prefixed where they collide — FLAG-token-3; Vsa does not collide) \| KwBinary \| KwTernary \| KwDense \| Vsa // RFC-0037 D2-b short repr-keyword aliases (none of these collide) \| BinShort \| TernShort \| EmbShort \| HvecShort \| KwSeq \| KwBytes \| KwFloat \| KwSubstrate \| KwSparse // scalar / strength keyword payloads \| Scalar(ScalarTok) \| Strength(StrengthTok) // identifiers & literals (FLAG-token-1 / FLAG-token-2: Bytes-carrying throughout) \| Ident(Bytes) \| BinLit(Bytes) \| BytesLit(Bytes) \| TritLit(Bytes) \| StrLit(Bytes) \| Int(Bytes) \| FloatLit(Bytes) // punctuation \| LParen \| RParen \| LBrace \| RBrace \| LBracket \| RBracket \| LAngle \| RAngle \| Shl \| Shr \| At \| AtStdSys \| Colon \| Comma \| Semi \| Dot \| Pipe \| Plus \| Minus \| Star \| Slash \| Percent \| Caret \| Amp \| AmpAmp \| Eq \| EqEq \| Arrow \| FatArrow \| Bang \| BangEq \| PipePipe \| Eof` | — | Empirical/Declared |
-| `compiler.token::Tok::` | ctor | `lib/compiler/token.myc:104` | `// structural keywords (DN-02; nodule per DN-06) Nodule` | — | Empirical/Declared |
-| `compiler.token::Tok::Colony` | ctor | `lib/compiler/token.myc:106` | `Colony // runtime-vocabulary reserved words (DN-03 §4; RFC-0008 §4.5) — all reserved, not yet active` | — | Empirical/Declared |
+| `compiler.token::Tok` | type | `lib/compiler/token.myc:104` | `type Tok = Nodule \| Phylum \| Colony \| Hypha \| Fuse \| Mesh \| Graft \| Cyst \| Xloc \| Forage \| Backbone \| Tier \| Reclaim \| Consume \| Grow \| Derive \| Use \| Pub \| Type \| Trait \| Impl \| Fn \| Matured \| Thaw \| Let \| In \| If \| Then \| Else \| Match \| For \| Swap \| Default \| Paradigm \| With \| Wild \| Spore \| To \| Policy \| Lambda \| Object \| Via \| Lower \| KwBinary \| KwTernary \| KwDense \| Vsa \| BinShort \| TernShort \| EmbShort \| HvecShort \| KwSeq \| KwBytes \| KwFloat \| KwSubstrate \| KwSparse \| Scalar(ScalarTok) \| Strength(StrengthTok) \| Ident(Bytes) \| BinLit(Bytes) \| BytesLit(Bytes) \| TritLit(Bytes) \| StrLit(Bytes) \| Int(Bytes) \| FloatLit(Bytes) \| LParen \| RParen \| LBrace \| RBrace \| LBracket \| RBracket \| LAngle \| RAngle \| Shl \| Shr \| At \| AtStdSys \| Colon \| Comma \| Semi \| Dot \| Pipe \| Plus \| Minus \| Star \| Slash \| Percent \| Caret \| Amp \| AmpAmp \| Eq \| EqEq \| Arrow \| FatArrow \| Bang \| BangEq \| PipePipe \| Eof` | — | Empirical/Declared |
+| `compiler.token::Tok::Colony` | ctor | `lib/compiler/token.myc:106` | `Colony` | — | Empirical/Declared |
+| `compiler.token::Tok::Nodule` | ctor | `lib/compiler/token.myc:106` | `Nodule` | — | Empirical/Declared |
 | `compiler.token::Tok::Phylum` | ctor | `lib/compiler/token.myc:106` | `Phylum` | — | Empirical/Declared |
 | `compiler.token::Tok::Backbone` | ctor | `lib/compiler/token.myc:108` | `Backbone` | — | Empirical/Declared |
 | `compiler.token::Tok::Cyst` | ctor | `lib/compiler/token.myc:108` | `Cyst` | — | Empirical/Declared |
@@ -2046,11 +2046,11 @@
 | `compiler.token::Tok::Graft` | ctor | `lib/compiler/token.myc:108` | `Graft` | — | Empirical/Declared |
 | `compiler.token::Tok::Hypha` | ctor | `lib/compiler/token.myc:108` | `Hypha` | — | Empirical/Declared |
 | `compiler.token::Tok::Mesh` | ctor | `lib/compiler/token.myc:108` | `Mesh` | — | Empirical/Declared |
-| `compiler.token::Tok::Reclaim` | ctor | `lib/compiler/token.myc:108` | `Reclaim // surface-tier reserved words (DN-03 §1) + the grow->derive reconciliation (DN-38 §8.1)` | — | Empirical/Declared |
+| `compiler.token::Tok::Reclaim` | ctor | `lib/compiler/token.myc:108` | `Reclaim` | — | Empirical/Declared |
 | `compiler.token::Tok::Tier` | ctor | `lib/compiler/token.myc:108` | `Tier` | — | Empirical/Declared |
 | `compiler.token::Tok::Xloc` | ctor | `lib/compiler/token.myc:108` | `Xloc` | — | Empirical/Declared |
 | `compiler.token::Tok::Consume` | ctor | `lib/compiler/token.myc:110` | `Consume` | — | Empirical/Declared |
-| `compiler.token::Tok::Derive` | ctor | `lib/compiler/token.myc:110` | `Derive // conventional keywords` | — | Empirical/Declared |
+| `compiler.token::Tok::Derive` | ctor | `lib/compiler/token.myc:110` | `Derive` | — | Empirical/Declared |
 | `compiler.token::Tok::Grow` | ctor | `lib/compiler/token.myc:110` | `Grow` | — | Empirical/Declared |
 | `compiler.token::Tok::Fn` | ctor | `lib/compiler/token.myc:112` | `Fn` | — | Empirical/Declared |
 | `compiler.token::Tok::Impl` | ctor | `lib/compiler/token.myc:112` | `Impl` | — | Empirical/Declared |
@@ -2070,16 +2070,16 @@
 | `compiler.token::Tok::Then` | ctor | `lib/compiler/token.myc:113` | `Then` | — | Empirical/Declared |
 | `compiler.token::Tok::Default` | ctor | `lib/compiler/token.myc:114` | `Default` | — | Empirical/Declared |
 | `compiler.token::Tok::Paradigm` | ctor | `lib/compiler/token.myc:114` | `Paradigm` | — | Empirical/Declared |
-| `compiler.token::Tok::Policy` | ctor | `lib/compiler/token.myc:114` | `Policy // RFC-0037 surface keywords` | — | Empirical/Declared |
+| `compiler.token::Tok::Policy` | ctor | `lib/compiler/token.myc:114` | `Policy` | — | Empirical/Declared |
 | `compiler.token::Tok::Spore` | ctor | `lib/compiler/token.myc:114` | `Spore` | — | Empirical/Declared |
 | `compiler.token::Tok::To` | ctor | `lib/compiler/token.myc:114` | `To` | — | Empirical/Declared |
 | `compiler.token::Tok::Wild` | ctor | `lib/compiler/token.myc:114` | `Wild` | — | Empirical/Declared |
 | `compiler.token::Tok::With` | ctor | `lib/compiler/token.myc:114` | `With` | — | Empirical/Declared |
 | `compiler.token::Tok::Lambda` | ctor | `lib/compiler/token.myc:116` | `Lambda` | — | Empirical/Declared |
-| `compiler.token::Tok::Lower` | ctor | `lib/compiler/token.myc:116` | `Lower // repr-type keywords (Kw-prefixed where they collide — FLAG-token-3; Vsa does not collide)` | — | Empirical/Declared |
+| `compiler.token::Tok::Lower` | ctor | `lib/compiler/token.myc:116` | `Lower` | — | Empirical/Declared |
 | `compiler.token::Tok::Object` | ctor | `lib/compiler/token.myc:116` | `Object` | — | Empirical/Declared |
 | `compiler.token::Tok::Via` | ctor | `lib/compiler/token.myc:116` | `Via` | — | Empirical/Declared |
-| `compiler.token::Tok::Vsa` | ctor | `lib/compiler/token.myc:117` | `Vsa // RFC-0037 D2-b short repr-keyword aliases (none of these collide)` | — | Empirical/Declared |
+| `compiler.token::Tok::Vsa` | ctor | `lib/compiler/token.myc:117` | `Vsa` | — | Empirical/Declared |
 | `compiler.token::Tok::KwBinary` | ctor | `lib/compiler/token.myc:118` | `KwBinary` | — | Empirical/Declared |
 | `compiler.token::Tok::KwDense` | ctor | `lib/compiler/token.myc:118` | `KwDense` | — | Empirical/Declared |
 | `compiler.token::Tok::KwTernary` | ctor | `lib/compiler/token.myc:118` | `KwTernary` | — | Empirical/Declared |
@@ -2090,17 +2090,17 @@
 | `compiler.token::Tok::KwBytes` | ctor | `lib/compiler/token.myc:121` | `KwBytes` | — | Empirical/Declared |
 | `compiler.token::Tok::KwFloat` | ctor | `lib/compiler/token.myc:121` | `KwFloat` | — | Empirical/Declared |
 | `compiler.token::Tok::KwSeq` | ctor | `lib/compiler/token.myc:121` | `KwSeq` | — | Empirical/Declared |
-| `compiler.token::Tok::KwSparse` | ctor | `lib/compiler/token.myc:121` | `KwSparse // scalar / strength keyword payloads` | — | Empirical/Declared |
+| `compiler.token::Tok::KwSparse` | ctor | `lib/compiler/token.myc:121` | `KwSparse` | — | Empirical/Declared |
 | `compiler.token::Tok::KwSubstrate` | ctor | `lib/compiler/token.myc:121` | `KwSubstrate` | — | Empirical/Declared |
 | `compiler.token::Tok::Scalar` | ctor | `lib/compiler/token.myc:123` | `Scalar(ScalarTok)` | — | Empirical/Declared |
-| `compiler.token::Tok::Strength` | ctor | `lib/compiler/token.myc:123` | `Strength(StrengthTok) // identifiers & literals (FLAG-token-1 / FLAG-token-2: Bytes-carrying throughout)` | — | Empirical/Declared |
+| `compiler.token::Tok::Strength` | ctor | `lib/compiler/token.myc:123` | `Strength(StrengthTok)` | — | Empirical/Declared |
 | `compiler.token::Tok::Ident` | ctor | `lib/compiler/token.myc:125` | `Ident(Bytes)` | — | Empirical/Declared |
 | `compiler.token::Tok::BinLit` | ctor | `lib/compiler/token.myc:126` | `BinLit(Bytes)` | — | Empirical/Declared |
 | `compiler.token::Tok::BytesLit` | ctor | `lib/compiler/token.myc:127` | `BytesLit(Bytes)` | — | Empirical/Declared |
 | `compiler.token::Tok::TritLit` | ctor | `lib/compiler/token.myc:128` | `TritLit(Bytes)` | — | Empirical/Declared |
 | `compiler.token::Tok::StrLit` | ctor | `lib/compiler/token.myc:129` | `StrLit(Bytes)` | — | Empirical/Declared |
 | `compiler.token::Tok::Int` | ctor | `lib/compiler/token.myc:130` | `Int(Bytes)` | — | Empirical/Declared |
-| `compiler.token::Tok::FloatLit` | ctor | `lib/compiler/token.myc:131` | `FloatLit(Bytes) // punctuation` | — | Empirical/Declared |
+| `compiler.token::Tok::FloatLit` | ctor | `lib/compiler/token.myc:131` | `FloatLit(Bytes)` | — | Empirical/Declared |
 | `compiler.token::Tok::LBrace` | ctor | `lib/compiler/token.myc:133` | `LBrace` | — | Empirical/Declared |
 | `compiler.token::Tok::LBracket` | ctor | `lib/compiler/token.myc:133` | `LBracket` | — | Empirical/Declared |
 | `compiler.token::Tok::LParen` | ctor | `lib/compiler/token.myc:133` | `LParen` | — | Empirical/Declared |

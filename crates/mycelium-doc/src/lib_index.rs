@@ -516,9 +516,14 @@ pub(crate) fn type_declarations(src: &str) -> (Vec<TypeDecl>, Vec<(String, u32, 
             continue;
         }
 
+        // Comment-only lines (the corpus's `// ── section divider ──` convention appears INSIDE
+        // multi-line type blocks, e.g. lib/compiler/token.myc::Tok) must not reach the joined
+        // body: a comment line carries no `|`, so its text would splice onto the neighboring
+        // constructor. Raw `block` lines still drive per-ctor line attribution below.
         let joined: String = block
             .iter()
             .map(|(l, _)| l.trim())
+            .filter(|l| !l.starts_with("//"))
             .collect::<Vec<_>>()
             .join(" ");
         let text = joined.trim_end_matches(';').trim().to_owned();
