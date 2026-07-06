@@ -36,7 +36,8 @@ use std::rc::Rc;
 
 use mycelium_core::lower::{self, Anf, AnfAlt, Atom, Rhs};
 use mycelium_core::{
-    CoreValue, Datum, GuaranteeStrength, Node, PackScheme, Payload, PhysicalLayout, Repr, Value,
+    CoreValue, CtorRef, Datum, GuaranteeStrength, Node, PackScheme, Payload, PhysicalLayout, Repr,
+    Value,
 };
 use mycelium_interp::{Budgets, EffectKind, EvalError, PrimRegistry, SwapEngine};
 use mycelium_workstack::{ensure_sufficient_stack, BudgetError, DepthGuard, RecursionBudget};
@@ -66,19 +67,42 @@ pub fn default_depth_budget() -> DepthResolution {
     AutoDepthBudget::default().resolve()
 }
 
-/// A value in the AOT env-machine: a fully-evaluated [`CoreValue`] (repr value or datum), or a
+/// A value in the AOT env-machine: a representation value, a **structurally-shared datum**, or a
 /// **closure** / **recursive suspension** for the r4 function fragment. Closures capture their
 /// defining environment by value (the v0 surface is first-order, so this is a finite capture). Bodies
 /// are [`Rc`]-shared so closures/continuation frames don't clone the block tree.
+///
+/// **M-994 (b) — field-level structural sharing.** A datum is an AOT-local cons cell
+/// (`Data(Rc<AotDatum>)`, where [`AotDatum`] holds `ctor` + `fields: Vec<AotVal>` + `guarantee`),
+/// **not** an inlined [`mycelium_core::Datum`]. The [`Rc`] around the node makes the whole sub-tree
+/// shared, so:
+/// - a variable reference (`lookup`'s `.cloned()`) and an environment clone are an **O(1)** refcount
+///   bump, not an O(nodes) deep clone of the whole spine; and
+/// - a `Match` arm binding a constructor field (`select_arm`) is an **O(1)** `AotVal::clone` (a
+///   refcount bump on the sub-tree), not an O(subtree) deep copy out of a `Vec<CoreValue>`.
+///
+/// This is the AOT analogue of the L1 interpreter's `Arc<Vec<..>>` on `L1Value::Data` (M-987): the
+/// frozen `mycelium_core::Datum` (its `fields: Vec<CoreValue>` is inside the DN-56 freeze) is **not**
+/// modified — the sharing lives entirely in this crate's env-machine value, and a `Datum`/`CoreValue`
+/// is materialised only at the observable boundaries ([`to_core`]: final result, `Op`/`Swap` operand).
+/// Building datums *only* from `AotVal` fields (`Construct`) means no `mycelium_core::Datum` is ever
+/// converted **into** an `AotVal`, so the sharing is closed. `guarantee` is the same meet-summary
+/// [`Datum::new`] computes — carried incrementally so it survives destructure/reconstruct unchanged.
 //
-// `CoreValue` is intentionally inlined (not boxed): it is the common case and on the hot evaluation
-// path, so boxing every value to equalise variant sizes would add an allocation per value. The size
-// asymmetry is an accepted, deliberate trade-off.
+// A repr `Value` is intentionally inlined (not boxed): it is the common leaf and on the hot path, so
+// boxing every value to equalise variant sizes would add an allocation per value. The size asymmetry
+// is an accepted, deliberate trade-off (the `Data`/function variants are pointer-sized by comparison).
 #[allow(clippy::large_enum_variant)]
 #[derive(Clone)]
 enum AotVal {
-    /// A representation value or a datum (a normal form).
-    Core(CoreValue),
+    /// A representation value (a repr normal form). Bounded-depth by construction, so an inline clone
+    /// is cheap (the deep-copy hazard (b) is the recursive `Data` spine, handled by `Rc`-sharing below).
+    Repr(Value),
+    /// A structurally-shared datum: an [`Rc`]-shared [`AotDatum`] (constructor + field values + the
+    /// meet-summary guarantee). Cloning is an O(1) `Rc` bump; the recursion-safe iterative `Drop` lives
+    /// on [`AotDatum`] (not `AotVal`), so `AotVal` stays freely movable while a deep spine still tears
+    /// down without overflowing the host stack (never-silent G2).
+    Data(Rc<AotDatum>),
     /// A lambda closure: parameter, body block, and the captured environment.
     Closure {
         param: String,
@@ -104,6 +128,134 @@ enum AotVal {
     },
 }
 
+/// The payload of an [`AotVal::Data`]: a saturated constructor, its field values, and the meet-summary
+/// guarantee (identical to what [`Datum::new`] computes). Kept behind an [`Rc`] in `AotVal` so cloning
+/// a datum is an O(1) refcount bump and destructure-binding a field is an O(1) `AotVal::clone`. The
+/// recursion-safe iterative [`Drop`] lives **here** (not on `AotVal`) so that `AotVal` carries no
+/// `Drop` and its variants stay freely movable (`Rc::try_unwrap`/pattern moves), while a deep datum
+/// spine still tears down iteratively (never-silent G2).
+struct AotDatum {
+    ctor: CtorRef,
+    fields: Vec<AotVal>,
+    guarantee: GuaranteeStrength,
+}
+
+impl AotVal {
+    /// This value's guarantee: a repr value's own `Meta.guarantee`, or a datum's carried meet-summary
+    /// (equal to what [`Datum::new`] computes). Mirrors [`CoreValue::guarantee`] — the honesty accessor
+    /// the `Match` guarantee-meet rule reads (a function has no guarantee; it is never a `Match`
+    /// scrutinee in a well-typed program, and the `Match` handler refuses one before this is reached).
+    fn guarantee(&self) -> GuaranteeStrength {
+        match self {
+            AotVal::Repr(v) => v.meta().guarantee(),
+            AotVal::Data(d) => d.guarantee,
+            // Unreachable for a well-typed scrutinee (the `Match` handler rejects a function value
+            // with `FunctionResult` first); `Exact` is the neutral element for the meet, never an
+            // upgrade (VR-5).
+            AotVal::Closure { .. } | AotVal::Fix { .. } | AotVal::FixGroup { .. } => {
+                GuaranteeStrength::Exact
+            }
+        }
+    }
+}
+
+/// Materialise an [`AotVal`] as a [`mycelium_core::CoreValue`] at an observable boundary (the final
+/// result) — the point where the env-machine's structurally-shared datum becomes a frozen-kernel
+/// `Datum`. A bare function value is the explicit [`EvalError::FunctionResult`] (a v0 entry returns a
+/// repr/data value, never a function — mirrors the interpreter). **Iterative** (an explicit
+/// task/value worklist, exactly like `mycelium_core`'s `clone_core`), so a deep datum spine converts
+/// without overflowing the host stack (never-silent G2). The rebuilt `Datum` recomputes the same
+/// meet-summary from the same fields, so the result is byte-identical to the pre-M-994 path — the
+/// differential is unmoved.
+fn to_core(v: AotVal) -> Result<CoreValue, EvalError> {
+    enum Task {
+        Expand(AotVal),
+        Assemble { ctor: CtorRef, arity: usize },
+    }
+    let mut tasks: Vec<Task> = vec![Task::Expand(v)];
+    let mut done: Vec<CoreValue> = Vec::new();
+    while let Some(task) = tasks.pop() {
+        match task {
+            Task::Expand(av) => match av {
+                AotVal::Repr(rv) => done.push(CoreValue::Repr(rv)),
+                AotVal::Data(rc) => {
+                    // Own the datum without a deep copy when uniquely owned (the common case at a
+                    // consuming boundary); a still-shared spine falls back to cloning this node's
+                    // `Vec` (O(1) per element — an `AotVal` refcount bump — deep work amortised by the
+                    // worklist). `mem::take` (not a field move) sidesteps `AotDatum`'s `Drop`.
+                    let mut d = Rc::try_unwrap(rc).unwrap_or_else(|rc| (*rc).clone());
+                    let ctor = d.ctor.clone();
+                    let fields = std::mem::take(&mut d.fields);
+                    tasks.push(Task::Assemble {
+                        ctor,
+                        arity: fields.len(),
+                    });
+                    for f in fields {
+                        tasks.push(Task::Expand(f));
+                    }
+                }
+                AotVal::Closure { .. } | AotVal::Fix { .. } | AotVal::FixGroup { .. } => {
+                    return Err(EvalError::FunctionResult)
+                }
+            },
+            Task::Assemble { ctor, arity } => {
+                let mut fields = Vec::with_capacity(arity);
+                for _ in 0..arity {
+                    fields.push(done.pop().expect("to_core: datum field underflow"));
+                }
+                // `Datum::new` recomputes the meet-summary — identical to the carried `guarantee`
+                // (same fields, same rule), so nothing is upgraded (VR-5).
+                done.push(CoreValue::Data(Datum::new(ctor, fields)));
+            }
+        }
+    }
+    Ok(done.pop().expect("to_core: exactly one root value remains"))
+}
+
+/// Clone an [`AotDatum`] shell-only (its `fields` are O(1)-cloned `AotVal`s — a `Data` field is a `Rc`
+/// bump). Used by `to_core`'s shared-spine fallback; the derived `Clone` would be identical but the
+/// manual `Drop` below forbids `#[derive(Clone)]`'s field access, so it is spelled out.
+impl Clone for AotDatum {
+    fn clone(&self) -> Self {
+        AotDatum {
+            ctor: self.ctor.clone(),
+            fields: self.fields.clone(),
+            guarantee: self.guarantee,
+        }
+    }
+}
+
+impl Drop for AotDatum {
+    /// **Iterative** teardown of a deep `Data` spine (never-silent G2), mirroring
+    /// `mycelium_core::Datum::drop`: a length-*n* list is an *n*-deep `AotDatum` chain whose derived
+    /// (recursive) drop would `SIGABRT`. Each still-uniquely-owned child `Rc<AotDatum>` is pushed onto
+    /// a worklist and its `fields` emptied before the shell drops, so re-entrant drop sees empty
+    /// `fields` — bounded reentrancy, never deep recursion. A **shared** child (`Rc` strong-count > 1)
+    /// is left for its last owner (`Rc::into_inner` yields `None`), so no double-free and no over-eager
+    /// reclaim. `#![forbid(unsafe_code)]` holds — only safe `Rc`/`Vec`/`mem::take`.
+    fn drop(&mut self) {
+        let mut work: Vec<Rc<AotDatum>> = Vec::new();
+        // Seed the worklist with this datum's own `Data` children, taking their `Rc` out.
+        for child in self.fields.drain(..) {
+            if let AotVal::Data(rc) = child {
+                work.push(rc);
+            }
+        }
+        while let Some(rc) = work.pop() {
+            // Reclaim (and descend into) the child only if we are its last owner; otherwise another
+            // owner keeps it alive and its own final drop handles it.
+            if let Some(mut d) = Rc::into_inner(rc) {
+                for grandchild in d.fields.drain(..) {
+                    if let AotVal::Data(rc) = grandchild {
+                        work.push(rc);
+                    }
+                }
+                // `d` drops here as a childless shell (its `fields` are now empty).
+            }
+        }
+    }
+}
+
 type Env = HashMap<Atom, AotVal>;
 
 fn lookup(env: &Env, a: &Atom) -> Result<AotVal, EvalError> {
@@ -113,23 +265,14 @@ fn lookup(env: &Env, a: &Atom) -> Result<AotVal, EvalError> {
     })
 }
 
-/// Coerce an [`AotVal`] to a [`CoreValue`], or an explicit refusal for a bare function value (a v0
-/// entry returns a repr/data value, never a function — mirrors the interpreter's `FunctionResult`).
-fn as_core(v: AotVal) -> Result<CoreValue, EvalError> {
-    match v {
-        AotVal::Core(cv) => Ok(cv),
-        AotVal::Closure { .. } | AotVal::Fix { .. } | AotVal::FixGroup { .. } => {
-            Err(EvalError::FunctionResult)
-        }
-    }
-}
-
 /// Coerce an [`AotVal`] to a representation [`Value`] (for an `Op`/`Swap` operand): a datum or a
-/// function in that position is a type error the checker prevents — explicit, never a guess.
+/// function in that position is a type error the checker prevents — explicit, never a guess. A repr
+/// `Value` is bounded-depth by construction, so cloning it is cheap (unlike a `Datum` spine); the
+/// deep-clone hazard (b) targets only the recursive `Data` case, handled by the shared-field machine.
 fn as_repr_value(v: AotVal) -> Result<Value, EvalError> {
     match v {
-        AotVal::Core(CoreValue::Repr(rv)) => Ok(rv),
-        AotVal::Core(CoreValue::Data(_)) => Err(EvalError::DataMalformed {
+        AotVal::Repr(rv) => Ok(rv),
+        AotVal::Data(_) => Err(EvalError::DataMalformed {
             why: "a primitive/swap operand reduced to a data value, not a representation value"
                 .to_owned(),
         }),
@@ -222,7 +365,7 @@ pub fn run_core_with_effects(
         let top = Rc::new(lower::lower_to_anf(node));
         let mut fuel = fuel;
         let result = eval_machine(top, Env::new(), prims, swap, &mut fuel, &budget, budgets)?;
-        as_core(result)
+        to_core(result)
     })
 }
 
@@ -368,7 +511,7 @@ fn enter_apply<'b>(
                 .ok_or(EvalError::FreeVariable(which))?;
             Ok((body, unfold_env))
         }
-        AotVal::Core(_) => Err(EvalError::ApplyNonFunction),
+        AotVal::Repr(_) | AotVal::Data(_) => Err(EvalError::ApplyNonFunction),
     }
 }
 
@@ -376,7 +519,7 @@ fn enter_apply<'b>(
 /// fresh [`Rc`]) and the environment to evaluate it in (constructor fields bound left-to-right). No
 /// match + no default is an explicit [`EvalError::NonExhaustiveMatch`].
 fn select_arm(
-    cv: &CoreValue,
+    scrut: &AotVal,
     alts: &[AnfAlt],
     default: Option<&Anf>,
     env: &Env,
@@ -388,28 +531,29 @@ fn select_arm(
                 binders,
                 body,
             } => {
-                if let CoreValue::Data(d) = cv {
-                    if d.ctor() == ctor {
-                        if binders.len() != d.fields().len() {
+                if let AotVal::Data(d) = scrut {
+                    if &d.ctor == ctor {
+                        if binders.len() != d.fields.len() {
                             return Err(EvalError::DataMalformed {
                                 why: format!(
                                     "constructor arm binds {} of {} field(s) (WF6/WF7)",
                                     binders.len(),
-                                    d.fields().len()
+                                    d.fields.len()
                                 ),
                             });
                         }
                         let mut arm_env = env.clone();
-                        for (binder, field) in binders.iter().zip(d.fields()) {
-                            arm_env
-                                .insert(Atom::Named(binder.clone()), AotVal::Core(field.clone()));
+                        for (binder, field) in binders.iter().zip(d.fields.iter()) {
+                            // The M-994 (b) win: binding a field is an O(1) `AotVal::clone` (a refcount
+                            // bump on the shared sub-tree), not a deep copy out of a `Vec<CoreValue>`.
+                            arm_env.insert(Atom::Named(binder.clone()), field.clone());
                         }
                         return Ok((Rc::new(body.clone()), arm_env));
                     }
                 }
             }
             AnfAlt::Lit { value, body } => {
-                if let CoreValue::Repr(rv) = cv {
+                if let AotVal::Repr(rv) = scrut {
                     if rv.repr() == value.repr() && rv.payload() == value.payload() {
                         return Ok((Rc::new(body.clone()), env.clone()));
                     }
@@ -494,7 +638,7 @@ fn eval_machine<'b>(
             let binding = &block.bindings()[idx];
             let name = binding.name.clone();
             match &binding.rhs {
-                Rhs::Const(v) => Step::Bind(name, AotVal::Core(CoreValue::Repr(v.clone()))),
+                Rhs::Const(v) => Step::Bind(name, AotVal::Repr(v.clone())),
                 Rhs::Alias(a) => Step::Bind(name, lookup(&env, a)?),
                 Rhs::Op { prim, args } => {
                     let vals: Vec<Value> = args
@@ -505,7 +649,7 @@ fn eval_machine<'b>(
                     let f = prims
                         .get(prim)
                         .ok_or_else(|| EvalError::UnknownPrim(prim.clone()))?;
-                    Step::Bind(name, AotVal::Core(CoreValue::Repr(f(prim, &refs)?)))
+                    Step::Bind(name, AotVal::Repr(f(prim, &refs)?))
                 }
                 Rhs::Swap {
                     src,
@@ -513,19 +657,35 @@ fn eval_machine<'b>(
                     policy,
                 } => {
                     let s = as_repr_value(lookup(&env, src)?)?;
-                    Step::Bind(
-                        name,
-                        AotVal::Core(CoreValue::Repr(swap.swap(&s, target, policy)?)),
-                    )
+                    Step::Bind(name, AotVal::Repr(swap.swap(&s, target, policy)?))
                 }
                 Rhs::Construct { ctor, args } => {
-                    let fields: Vec<CoreValue> = args
-                        .iter()
-                        .map(|a| as_core(lookup(&env, a)?))
-                        .collect::<Result<_, _>>()?;
+                    // Build the datum from the *shared* `AotVal` fields directly — each looked-up field
+                    // is an O(1) clone, and `Rc`-wrapping the field vector is the whole per-node cost
+                    // (no `Vec<CoreValue>` materialisation). A function-valued field is rejected here,
+                    // exactly as the former `as_core` conversion did (`FunctionResult`), preserving the
+                    // error and its timing. The carried `guarantee` is the meet-summary `Datum::new`
+                    // would compute over the same fields (byte-identical when later materialised).
+                    let mut fields: Vec<AotVal> = Vec::with_capacity(args.len());
+                    for a in args {
+                        let fv = lookup(&env, a)?;
+                        if matches!(
+                            fv,
+                            AotVal::Closure { .. } | AotVal::Fix { .. } | AotVal::FixGroup { .. }
+                        ) {
+                            return Err(EvalError::FunctionResult);
+                        }
+                        fields.push(fv);
+                    }
+                    let guarantee =
+                        GuaranteeStrength::meet_all(fields.iter().map(AotVal::guarantee));
                     Step::Bind(
                         name,
-                        AotVal::Core(CoreValue::Data(Datum::new(ctor.clone(), fields))),
+                        AotVal::Data(Rc::new(AotDatum {
+                            ctor: ctor.clone(),
+                            fields,
+                            guarantee,
+                        })),
                     )
                 }
                 Rhs::Lam { param, body } => Step::Bind(
@@ -569,16 +729,25 @@ fn eval_machine<'b>(
                     alts,
                     default,
                 } => {
-                    let cv = as_core(lookup(&env, scrutinee)?)?;
+                    // Match directly on the *shared* scrutinee `AotVal` — no `Datum` materialisation
+                    // (which would deep-copy the spine on every match, the (b) cost we removed). A
+                    // function scrutinee is the explicit `FunctionResult` (mirrors the former `as_core`
+                    // coercion, preserving that error and its ordering before the guarantee check).
+                    let scrut = lookup(&env, scrutinee)?;
+                    if matches!(
+                        scrut,
+                        AotVal::Closure { .. } | AotVal::Fix { .. } | AotVal::FixGroup { .. }
+                    ) {
+                        return Err(EvalError::FunctionResult);
+                    }
                     // r3 boundary (RFC-0011 §4.6): the guarantee-meet through Match is the identity
                     // only when the scrutinee is Exact; a non-Exact scrutinee is the explicit deferral
                     // (never a fabricated bound) — mirrors the reference interpreter.
-                    if cv.guarantee() != GuaranteeStrength::Exact {
-                        return Err(EvalError::GuaranteeMeetUnsupported {
-                            scrutinee: cv.guarantee(),
-                        });
+                    let g = scrut.guarantee();
+                    if g != GuaranteeStrength::Exact {
+                        return Err(EvalError::GuaranteeMeetUnsupported { scrutinee: g });
                     }
-                    let (arm_block, arm_env) = select_arm(&cv, alts, default.as_ref(), &env)?;
+                    let (arm_block, arm_env) = select_arm(&scrut, alts, default.as_ref(), &env)?;
                     // `Match` grows the control stack by one continuation frame — charge the shared
                     // budget here too (the pre-extraction ceiling guarded this site identically), after
                     // `select_arm` so a `NonExhaustiveMatch` still surfaces first (order preserved).
