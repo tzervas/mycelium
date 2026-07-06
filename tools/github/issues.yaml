@@ -11998,7 +11998,7 @@ issues:
   - id: M-989
     title: "/myc-dogfood — native-toolchain parity gate for the self-hosted lib/compiler path"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:tooling, priority:P2, status:todo]
+    labels: [phase:5, type:feature, area:tooling, priority:P2, status:done]
     epic: E18-1
     depends_on: []
     doc_refs:
