@@ -12225,7 +12225,7 @@ issues:
   - id: M-996
     title: "AOT env-machine TCO — elide tail frames (M-986 analog; behavior-changing, decision-gated)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:design, area:execution, priority:P3, status:needs-design]
+    labels: [phase:5, type:design, area:execution, priority:P2, status:in-progress]
     epic: E18-1
     depends_on: []
     doc_refs:
@@ -12254,6 +12254,52 @@ issues:
       - A recorded decision (DN/RFC amendment) on AOT env-machine TCO incl. the error-variant change
         and the depth-metric/family-parity implications; if accepted, implemented with the pinned
         depth-ceiling test updated intentionally + AOT differential green.
+
+      DECIDED + AUTHORIZED (maintainer/owner, 2026-07-06): implement it. Basis (recorded in DN-56
+      changelog + RFC-0041): pre-production, the freeze is a discipline gate, not a delivered-core
+      guarantee; the DepthLimit->FuelExhausted shift for divergent tail loops is approved. The
+      decisive grounds: (i) since M-994 fix (a), the same program at the same budget succeeds
+      interpreted but refuses DepthLimit on the AOT env-machine -- a live RFC-0041 §5.1 family-parity
+      violation of the ratified §4.0 metric ("tail iterations do not charge depth"); (ii) the
+      env-machine is the full-calculus AOT leg (native LLVM is subset-only), so the Stage-6 three-way
+      and the M-993 "(c) AOT fallback" require it; (iii) the shift is CONVERGENCE with the
+      interpreter's long-standing behavior (spin() has been fuel-bounded there since before fix (a));
+      the graceful-ceiling property stays pinned via a non-tail witness. Implementation in flight.
+
+  - id: M-997
+    title: "Evaluate structural sharing inside mycelium_core::Datum (core unfreeze authorized, held in reserve)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:core-ir, priority:P3, status:needs-design]
+    epic: E18-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-56
+      - src:crates/mycelium-mlir/src/aot.rs
+    body: |
+      Minted 2026-07-06. The maintainer/owner authorized pre-production kernel modifications where
+      sound (DN-56 changelog, 2026-07-06 posture clarification). The M-994/M-995 structural-sharing
+      wins were achieved WITHOUT touching the frozen `mycelium_core::Datum` (interpreter: Arc on
+      L1Value::Data.fields; AOT: an AOT-local AotVal::Data(Rc<AotDatum>) cons cell). The remaining
+      option this issue tracks: put sharing INSIDE `Datum` itself (e.g. `Rc/Arc` fields), which would
+      unify the value representation and make every `CoreValue` clone O(1) (L0 interpreter, cert,
+      select, all consumers), removing the AotDatum/to_core boundary layer.
+
+      Deliberately NOT exercised yet (the objectively-sound call, 2026-07-06): the measured wins are
+      already banked on both hot paths (interpreter 14-64x, AOT 13-35x); the to_core materialisation
+      sits only at the result boundary; L0-at-scale's real cost (M-981) is substitution semantics,
+      not clone cost alone; and enlarging the trusted-base audit surface (KC-3) without a measured
+      driver inverts the evidence-first discipline. Revisit WHEN a measured driver appears (e.g. an
+      L0-path or cert-path profile showing clone-dominated cost, or the AotDatum boundary showing up
+      in Stage-6 measurements).
+
+      User stories:
+      - As the maintainer, I want the core-representation option evaluated on evidence rather than
+        reflexively exercised, so the trusted base stays small until a measured need justifies growth.
+
+      Definition of Done:
+      - A measured profile of a real workload showing where CoreValue clone cost sits; a go/no-go
+        recommendation; if go, a DN-39 pass (new TCB surface) + the full differential/proof-suite
+        green with the change; if no-go, the evidence recorded here and the issue closed.
 
   - id: M-970
     title: "mycelium-fmt: render_expr_canonical drops the @forage(policy) Hypha annotation"
