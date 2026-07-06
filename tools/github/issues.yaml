@@ -12225,7 +12225,7 @@ issues:
   - id: M-996
     title: "AOT env-machine TCO — elide tail frames (M-986 analog; behavior-changing, decision-gated)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:design, area:execution, priority:P2, status:in-progress]
+    labels: [phase:5, type:design, area:execution, priority:P2, status:done]
     epic: E18-1
     depends_on: []
     doc_refs:
@@ -12266,6 +12266,21 @@ issues:
       interpreter's long-standing behavior (spin() has been fuel-bounded there since before fix (a));
       the graceful-ceiling property stays pinned via a non-tail witness. Implementation in flight.
 
+      LANDED (2026-07-06): machine-appropriate implementation in aot.rs::run_core — in the ANF
+      machine, tail-transparency is intrinsic to the continuation (a passthrough Resume: block
+      complete AND result() == bound name), so the elision is NOT PUSHING the frame (caller env
+      dropped eagerly); ApplyThen (Fix unfold) never elided; no Substrate-like values in the AOT
+      fragment; elided calls take no depth guard (guard-leak pinned). OBSERVABLE per the
+      no-black-boxes rule: TcoTrace{total_elided} threaded through the machine, asserted >=10,000 in
+      the deep-loop test (the user-facing EXPLAIN surface is M-998). Exactly the two authorized
+      shifts (deep-tail DepthLimit->Ok; divergent-tail DepthLimit->FuelExhausted); everything
+      terminating byte-identical (267 mlir lib tests + differentials; reverse-dependents green:
+      mycelium-l1 991/0, std-conformance 293/0); L0-interp == AOT deep-tail parity witness green.
+      Measured: count(500)@1000 DepthLimit -> Ok(0); ~36% frame-churn reduction at 30k iterations.
+      Corollary recorded (never silent): elided tail frames charge no alloc bytes under a declared
+      alloc budget (Fix frames still charge; existing overrun pin unmodified). Follow-on flagged:
+      an explicit combined L1<->AOT deep-tail case in depth_metric_parity.rs.
+
   - id: M-997
     title: "Evaluate structural sharing inside mycelium_core::Datum (core unfreeze authorized, held in reserve)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
@@ -12300,6 +12315,36 @@ issues:
       - A measured profile of a real workload showing where CoreValue clone cost sits; a go/no-go
         recommendation; if go, a DN-39 pass (new TCB surface) + the full differential/proof-suite
         green with the change; if no-go, the evidence recorded here and the issue closed.
+
+  - id: M-998
+    title: "User-facing EXPLAIN surface for AOT env-machine execution traces (TCO elision et al.)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:execution, priority:P3, status:needs-design]
+    epic: E18-1
+    depends_on: []
+    doc_refs:
+      - src:crates/mycelium-mlir/src/aot.rs
+      - corpus:RFC-0041
+    body: |
+      Minted 2026-07-06 from the M-996 landing (maintainer intent: explainability/no-black-boxes is
+      a key language differentiator). The AOT env-machine's TCO elision is now internally observable
+      (a pub(crate) TcoTrace{total_elided} threaded through run_core, surfaced via a test-only
+      traced entry point, asserted in the deep-loop test) — but `run_core` has NO public
+      stats/EXPLAIN surface to expose it to a USER, unlike the L1 interpreter (whose TcoTrace rides
+      the Evaluator). Decide and build the exposure: what an AOT execution's EXPLAIN should carry
+      (elision counts/ring, budget consumption, frame stats), on which surface (the myc CLI? the
+      spore runtime metadata? an EXPLAIN prim analog), and with what stability contract. Until then
+      the observability is test-witnessed but not user-reachable — flagged here, never silent.
+
+      User stories:
+      - As a Mycelium user running AOT-compiled programs, I want to EXPLAIN why a deep loop ran in
+        O(1) frames (or why a non-tail one hit DepthLimit), so the optimizer is inspectable rather
+        than a black box.
+
+      Definition of Done:
+      - A recorded design for the AOT EXPLAIN surface; the TCO elision counter (and any sibling
+        stats) reachable through it; a test pinning the exposure; docs updated; change-scoped just
+        check green.
 
   - id: M-970
     title: "mycelium-fmt: render_expr_canonical drops the @forage(policy) Hypha annotation"

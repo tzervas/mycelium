@@ -724,12 +724,12 @@
 | `mycelium_l1::ClosureSpecialization` | struct | `crates/mycelium-l1/src/mono.rs:483` | RFC-0024 §4A.6 (M-704; house rule #2): the EXPLAIN record of one closure lowering — which arrow, |
 | `mycelium_l1::ElabError` | enum | `crates/mycelium-l1/src/elab.rs:47` | Why a definition could not be elaborated to L0 — always explicit, never a partial artifact |
 | `mycelium_l1::Env` | struct | `crates/mycelium-l1/src/checkty.rs:519` | The checked program environment: registry + function table. |
-| `mycelium_l1::Evaluator` | struct | `crates/mycelium-l1/src/eval.rs:572` | The L1 evaluator over a checked [`Env`]. |
-| `mycelium_l1::ForageDecision` | struct | `crates/mycelium-l1/src/eval.rs:288` | One recorded `@forage(policy)` placement decision (M-906; DN-70 D1; RFC-0008 RT3) — the |
-| `mycelium_l1::ForageError` | enum | `crates/mycelium-l1/src/eval.rs:298` | Why a `@forage(policy)` placement failed — always explicit, never a silent hang or a fabricated |
+| `mycelium_l1::Evaluator` | struct | `crates/mycelium-l1/src/eval.rs:556` | The L1 evaluator over a checked [`Env`]. |
+| `mycelium_l1::ForageDecision` | struct | `crates/mycelium-l1/src/eval.rs:272` | One recorded `@forage(policy)` placement decision (M-906; DN-70 D1; RFC-0008 RT3) — the |
+| `mycelium_l1::ForageError` | enum | `crates/mycelium-l1/src/eval.rs:282` | Why a `@forage(policy)` placement failed — always explicit, never a silent hang or a fabricated |
 | `mycelium_l1::InstanceSelection` | struct | `crates/mycelium-l1/src/mono.rs:86` | A reified **instance selection** (RFC-0019 §4.4; house rule #2 — no black boxes). |
-| `mycelium_l1::L1Error` | enum | `crates/mycelium-l1/src/eval.rs:324` | Why L1 evaluation could not produce a value — always explicit (S5/G2). |
-| `mycelium_l1::L1Value` | enum | `crates/mycelium-l1/src/eval.rs:69` | An L1 runtime value: an L0 representation value, or a constructed datum. |
+| `mycelium_l1::L1Error` | enum | `crates/mycelium-l1/src/eval.rs:308` | Why L1 evaluation could not produce a value — always explicit (S5/G2). |
+| `mycelium_l1::L1Value` | enum | `crates/mycelium-l1/src/eval.rs:78` | An L1 runtime value: an L0 representation value, or a constructed datum. |
 | `mycelium_l1::MonoSelections` | struct | `crates/mycelium-l1/src/mono.rs:106` | The **EXPLAIN record** of a monomorphization (M-673): every trait-method dispatch mono resolved, |
 | `mycelium_l1::Nodule` | struct | `crates/mycelium-l1/src/ast.rs:74` | A whole program: a `nodule` header and its items. |
 | `mycelium_l1::NoduleHeader` | struct | `crates/mycelium-l1/src/nodule.rs:25` | A recognised nodule header marker (DN-06 §6). |
@@ -834,16 +834,16 @@
 | `mycelium_l1::error::ParseError::at` | fn | `crates/mycelium-l1/src/error.rs:27` | Ergonomic alias for [`ParseError::new`] taking any `impl Into<String>` message (so a `&str` |
 | `mycelium_l1::error::ParseError::new` | fn | `crates/mycelium-l1/src/error.rs:19` | Build an error at `pos`. |
 | `mycelium_l1::eval` | mod | `crates/mycelium-l1/src/lib.rs:47` | — |
-| `mycelium_l1::eval::EvaluatorOpts` | struct | `crates/mycelium-l1/src/eval.rs:479` | The tunable **budgets** of an [`Evaluator`] — the step (`fuel`) and recursion-depth guards — as |
-| `mycelium_l1::eval::EvaluatorOpts::depth` | fn | `crates/mycelium-l1/src/eval.rs:509` | Set the recursion-depth budget (builder-style), leaving `fuel` untouched. |
-| `mycelium_l1::eval::EvaluatorOpts::fuel` | fn | `crates/mycelium-l1/src/eval.rs:502` | Set the step budget (builder-style), leaving `depth` untouched. |
-| `mycelium_l1::eval::L1Value::as_repr` | fn | `crates/mycelium-l1/src/eval.rs:206` | The underlying L0 value, if this is a representation value; `None` for data or a `Substrate` |
-| `mycelium_l1::eval::L1Value::as_substrate` | fn | `crates/mycelium-l1/src/eval.rs:218` | The affine SubstrateHandle, if this is a `Substrate` |
-| `mycelium_l1::eval::L1Value::to_core` | fn | `crates/mycelium-l1/src/eval.rs:233` | Project this L1 value onto the L0 [`CoreValue`] domain, resolving each constructor's |
-| `mycelium_l1::eval::TcoElision` | struct | `crates/mycelium-l1/src/eval.rs:520` | One elided tail-call frame recorded by the TCO EXPLAIN trail (RFC-0041 §4.6 tco32) — the |
-| `mycelium_l1::eval::TcoTrace` | struct | `crates/mycelium-l1/src/eval.rs:533` | The bounded EXPLAIN record of tail-call optimization (RFC-0041 §4.6 tco32): total elided frames, |
-| `mycelium_l1::eval::TcoTrace::RING_CAP:` | const | `crates/mycelium-l1/src/eval.rs:545` | The ring-buffer capacity: the number of most-recent elisions retained for the actionable |
-| `mycelium_l1::eval::strength_of` | fn | `crates/mycelium-l1/src/eval.rs:428` | The surface strength keyword's kernel lattice point. |
+| `mycelium_l1::eval::EvaluatorOpts` | struct | `crates/mycelium-l1/src/eval.rs:463` | The tunable **budgets** of an [`Evaluator`] — the step (`fuel`) and recursion-depth guards — as |
+| `mycelium_l1::eval::EvaluatorOpts::depth` | fn | `crates/mycelium-l1/src/eval.rs:493` | Set the recursion-depth budget (builder-style), leaving `fuel` untouched. |
+| `mycelium_l1::eval::EvaluatorOpts::fuel` | fn | `crates/mycelium-l1/src/eval.rs:486` | Set the step budget (builder-style), leaving `depth` untouched. |
+| `mycelium_l1::eval::L1Value::as_repr` | fn | `crates/mycelium-l1/src/eval.rs:178` | The underlying L0 value, if this is a representation value; `None` for data or a `Substrate` |
+| `mycelium_l1::eval::L1Value::as_substrate` | fn | `crates/mycelium-l1/src/eval.rs:190` | The affine SubstrateHandle, if this is a `Substrate` |
+| `mycelium_l1::eval::L1Value::to_core` | fn | `crates/mycelium-l1/src/eval.rs:205` | Project this L1 value onto the L0 [`CoreValue`] domain, resolving each constructor's |
+| `mycelium_l1::eval::TcoElision` | struct | `crates/mycelium-l1/src/eval.rs:504` | One elided tail-call frame recorded by the TCO EXPLAIN trail (RFC-0041 §4.6 tco32) — the |
+| `mycelium_l1::eval::TcoTrace` | struct | `crates/mycelium-l1/src/eval.rs:517` | The bounded EXPLAIN record of tail-call optimization (RFC-0041 §4.6 tco32): total elided frames, |
+| `mycelium_l1::eval::TcoTrace::RING_CAP:` | const | `crates/mycelium-l1/src/eval.rs:529` | The ring-buffer capacity: the number of most-recent elisions retained for the actionable |
+| `mycelium_l1::eval::strength_of` | fn | `crates/mycelium-l1/src/eval.rs:412` | The surface strength keyword's kernel lattice point. |
 | `mycelium_l1::expand_phylum_to_source` | fn | `crates/mycelium-l1/src/ambient.rs:305` | Render a whole [`Phylum`] back to canonical surface text (M-662): the optional `phylum <path>` |
 | `mycelium_l1::expand_to_source` | fn | `crates/mycelium-l1/src/ambient.rs:244` | Render a (resolved or partly-resolved) [`Nodule`] back to canonical surface text — the M-142/LSP |
 | `mycelium_l1::lexer` | mod | `crates/mycelium-l1/src/lib.rs:56` | — |
@@ -1217,7 +1217,7 @@
 | `mycelium_mlir::accel::Path` | enum | `crates/mycelium-mlir/src/accel.rs:114` | Which execution path produced an [`AccelOutcome`]'s value — recorded so a degradation is **never |
 | `mycelium_mlir::accelerated_ternary_dot` | fn | `crates/mycelium-mlir/src/accel.rs:207` | **Run the ternary dot product `Σ digit(wᵢ)·xᵢ` through the BitNet capability gate** (M-728; |
 | `mycelium_mlir::aot` | mod | `crates/mycelium-mlir/src/lib.rs:54` | — |
-| `mycelium_mlir::aot::run_core_with_budget` | fn | `crates/mycelium-mlir/src/aot.rs:172` | [`run_core`] with **both** budgets explicit (M-347): `fuel` bounds `Fix` unfolds (time), `max_depth` |
+| `mycelium_mlir::aot::run_core_with_budget` | fn | `crates/mycelium-mlir/src/aot.rs:328` | [`run_core`] with **both** budgets explicit (M-347): `fuel` bounds `Fix` unfolds (time), `max_depth` |
 | `mycelium_mlir::bitnet` | mod | `crates/mycelium-mlir/src/lib.rs:55` | — |
 | `mycelium_mlir::bitnet::BitnetDotKernel::bind` | fn | `crates/mycelium-mlir/src/bitnet.rs:337` | **Bind once, call many** (M-682): resolve the entry point a single time into a lifetime-bound |
 | `mycelium_mlir::bitnet::BitnetDotKernel::call` | fn | `crates/mycelium-mlir/src/bitnet.rs:348` | Run the kernel over `packed_weights` and `activations`, summing the first `n` ternary products. |
@@ -1251,7 +1251,7 @@
 | `mycelium_mlir::concurrent` | mod | `crates/mycelium-mlir/src/lib.rs:61` | — |
 | `mycelium_mlir::cross_backend_gate` | fn | `crates/mycelium-mlir/src/vr4.rs:195` | Run the **VR-4 cross-backend gate** over `node`: for every backend, produce its dumpable lowering |
 | `mycelium_mlir::declared_digest64` | fn | `crates/mycelium-mlir/src/inject_gate.rs:226` | A deterministic 8-byte digest for Phase-I attestation binding (`Declared` — placeholder). |
-| `mycelium_mlir::default_depth_budget` | fn | `crates/mycelium-mlir/src/aot.rs:65` | The default depth-budget resolution — the resolved ceiling **and** its `EXPLAIN`-able basis (no |
+| `mycelium_mlir::default_depth_budget` | fn | `crates/mycelium-mlir/src/aot.rs:79` | The default depth-budget resolution — the resolved ceiling **and** its `EXPLAIN`-able basis (no |
 | `mycelium_mlir::dense_codegen` | mod | `crates/mycelium-mlir/src/lib.rs:65` | — |
 | `mycelium_mlir::dense_codegen::DenseArtifact::run` | fn | `crates/mycelium-mlir/src/dense_codegen.rs:824` | Run the artifact and read its result back. |
 | `mycelium_mlir::dense_codegen::DenseCgOp::is_value_op` | fn | `crates/mycelium-mlir/src/dense_codegen.rs:115` | Whether the op produces a Dense `Value` (vs a bare-`f64` measurement). |
@@ -1377,13 +1377,13 @@
 | `mycelium_mlir::rc_plan` | mod | `crates/mycelium-mlir/src/lib.rs:75` | — |
 | `mycelium_mlir::recompile_closure` | fn | `crates/mycelium-mlir/src/inject.rs:508` | The **recompile set** of a change, by hash reachability (ADR-017 decision 3 — no AST/file diff). |
 | `mycelium_mlir::relayout_trits` | fn | `crates/mycelium-mlir/src/pack.rs:291` | Re-materialize trits through a pack-then-read round-trip where the buffer is **packed as** |
-| `mycelium_mlir::run` | fn | `crates/mycelium-mlir/src/aot.rs:232` | Run a Core IR program through the AOT path to a representation [`Value`]. |
+| `mycelium_mlir::run` | fn | `crates/mycelium-mlir/src/aot.rs:428` | Run a Core IR program through the AOT path to a representation [`Value`]. |
 | `mycelium_mlir::run_colony` | fn | `crates/mycelium-mlir/src/runtime.rs:438` | Run an L1 `colony { hypha e1, …, hypha eN }` as **real concurrent execution**, validated equal to |
-| `mycelium_mlir::run_core` | fn | `crates/mycelium-mlir/src/aot.rs:148` | Run a Core IR program through the AOT path to a [`CoreValue`] (the full v0 calculus — repr, data, |
-| `mycelium_mlir::run_core_with_effects` | fn | `crates/mycelium-mlir/src/aot.rs:197` | [`run_core_with_budget`] with a shared **effect-budget ledger** threaded through the env-machine |
-| `mycelium_mlir::run_core_with_fuel` | fn | `crates/mycelium-mlir/src/aot.rs:157` | [`run_core`] with an explicit `Fix`-unfold (fuel) budget and the dynamically-resolved depth ceiling. |
+| `mycelium_mlir::run_core` | fn | `crates/mycelium-mlir/src/aot.rs:304` | Run a Core IR program through the AOT path to a [`CoreValue`] (the full v0 calculus — repr, data, |
+| `mycelium_mlir::run_core_with_effects` | fn | `crates/mycelium-mlir/src/aot.rs:353` | [`run_core_with_budget`] with a shared **effect-budget ledger** threaded through the env-machine |
+| `mycelium_mlir::run_core_with_fuel` | fn | `crates/mycelium-mlir/src/aot.rs:313` | [`run_core`] with an explicit `Fix`-unfold (fuel) budget and the dynamically-resolved depth ceiling. |
 | `mycelium_mlir::run_reclaim` | fn | `crates/mycelium-mlir/src/runtime.rs:611` | Run an L1 `reclaim(policy) { body }` as **real RT7 supervision**, validated equal to its sequential |
-| `mycelium_mlir::run_with_layout` | fn | `crates/mycelium-mlir/src/aot.rs:627` | Run a Core IR program through the AOT path **with a schedule-staged packing layout** (M-251; |
+| `mycelium_mlir::run_with_layout` | fn | `crates/mycelium-mlir/src/aot.rs:948` | Run a Core IR program through the AOT path **with a schedule-staged packing layout** (M-251; |
 | `mycelium_mlir::run_with_reclamation` | fn | `crates/mycelium-mlir/src/rc_plan.rs:163` | Run a Core IR program through the AOT path **and** emit its MEM-4 reclamation plan additively. |
 | `mycelium_mlir::runtime` | mod | `crates/mycelium-mlir/src/lib.rs:76` | — |
 | `mycelium_mlir::signed_message` | fn | `crates/mycelium-mlir/src/inject_cert.rs:57` | The signed message for a cert over `hash` with attestation `vr4`: |
@@ -4595,19 +4595,19 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_l1::eval::Evaluator` | definition not found via regex heuristic (kind='fn', name='Evaluator') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::eval::Evaluator` | definition not found via regex heuristic (kind='fn', name='Evaluator') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::eval::Evaluator` | definition not found via regex heuristic (kind='fn', name='Evaluator') — possibly macro-generated or cfg-gated |
-| `mycelium_l1::eval::Evaluator` | dedup-alias: same definition as `mycelium_l1::Evaluator` at crates/mycelium-l1/src/eval.rs:572 — one canonical row kept |
+| `mycelium_l1::eval::Evaluator` | dedup-alias: same definition as `mycelium_l1::Evaluator` at crates/mycelium-l1/src/eval.rs:556 — one canonical row kept |
 | `mycelium_l1::eval::EvaluatorOpts::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::eval::EvaluatorOpts::default` | definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::eval::EvaluatorOpts::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::eval::EvaluatorOpts::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_l1::eval::ForageDecision` | dedup-alias: same definition as `mycelium_l1::ForageDecision` at crates/mycelium-l1/src/eval.rs:288 — one canonical row kept |
+| `mycelium_l1::eval::ForageDecision` | dedup-alias: same definition as `mycelium_l1::ForageDecision` at crates/mycelium-l1/src/eval.rs:272 — one canonical row kept |
 | `mycelium_l1::eval::ForageDecision::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::eval::ForageDecision::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::eval::ForageDecision::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::eval::ForageDecision::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::eval::ForageDecision::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::eval::ForageDecision::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_l1::eval::ForageError` | dedup-alias: same definition as `mycelium_l1::ForageError` at crates/mycelium-l1/src/eval.rs:298 — one canonical row kept |
+| `mycelium_l1::eval::ForageError` | dedup-alias: same definition as `mycelium_l1::ForageError` at crates/mycelium-l1/src/eval.rs:282 — one canonical row kept |
 | `mycelium_l1::eval::ForageError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::eval::ForageError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::eval::ForageError::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
@@ -4616,7 +4616,7 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_l1::eval::ForageError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::eval::ForageError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::eval::ForageError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_l1::eval::L1Error` | dedup-alias: same definition as `mycelium_l1::L1Error` at crates/mycelium-l1/src/eval.rs:324 — one canonical row kept |
+| `mycelium_l1::eval::L1Error` | dedup-alias: same definition as `mycelium_l1::L1Error` at crates/mycelium-l1/src/eval.rs:308 — one canonical row kept |
 | `mycelium_l1::eval::L1Error::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::eval::L1Error::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::eval::L1Error::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
@@ -4633,7 +4633,7 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_l1::eval::L1Error::from` | definition not found via regex heuristic (kind='fn', name='from') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::eval::L1Error::from` | definition not found via regex heuristic (kind='fn', name='from') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::eval::L1Error::from` | definition not found via regex heuristic (kind='fn', name='from') — possibly macro-generated or cfg-gated |
-| `mycelium_l1::eval::L1Value` | dedup-alias: same definition as `mycelium_l1::L1Value` at crates/mycelium-l1/src/eval.rs:69 — one canonical row kept |
+| `mycelium_l1::eval::L1Value` | dedup-alias: same definition as `mycelium_l1::L1Value` at crates/mycelium-l1/src/eval.rs:78 — one canonical row kept |
 | `mycelium_l1::eval::L1Value::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::eval::L1Value::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::eval::L1Value::drop` | definition not found via regex heuristic (kind='fn', name='drop') — possibly macro-generated or cfg-gated |
@@ -5272,12 +5272,12 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_mlir::accel::Path::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_mlir::accel::Path::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_mlir::accel::accelerated_ternary_dot` | dedup-alias: same definition as `mycelium_mlir::accelerated_ternary_dot` at crates/mycelium-mlir/src/accel.rs:207 — one canonical row kept |
-| `mycelium_mlir::aot::default_depth_budget` | dedup-alias: same definition as `mycelium_mlir::default_depth_budget` at crates/mycelium-mlir/src/aot.rs:65 — one canonical row kept |
-| `mycelium_mlir::aot::run` | dedup-alias: same definition as `mycelium_mlir::run` at crates/mycelium-mlir/src/aot.rs:232 — one canonical row kept |
-| `mycelium_mlir::aot::run_core` | dedup-alias: same definition as `mycelium_mlir::run_core` at crates/mycelium-mlir/src/aot.rs:148 — one canonical row kept |
-| `mycelium_mlir::aot::run_core_with_effects` | dedup-alias: same definition as `mycelium_mlir::run_core_with_effects` at crates/mycelium-mlir/src/aot.rs:197 — one canonical row kept |
-| `mycelium_mlir::aot::run_core_with_fuel` | dedup-alias: same definition as `mycelium_mlir::run_core_with_fuel` at crates/mycelium-mlir/src/aot.rs:157 — one canonical row kept |
-| `mycelium_mlir::aot::run_with_layout` | dedup-alias: same definition as `mycelium_mlir::run_with_layout` at crates/mycelium-mlir/src/aot.rs:627 — one canonical row kept |
+| `mycelium_mlir::aot::default_depth_budget` | dedup-alias: same definition as `mycelium_mlir::default_depth_budget` at crates/mycelium-mlir/src/aot.rs:79 — one canonical row kept |
+| `mycelium_mlir::aot::run` | dedup-alias: same definition as `mycelium_mlir::run` at crates/mycelium-mlir/src/aot.rs:428 — one canonical row kept |
+| `mycelium_mlir::aot::run_core` | dedup-alias: same definition as `mycelium_mlir::run_core` at crates/mycelium-mlir/src/aot.rs:304 — one canonical row kept |
+| `mycelium_mlir::aot::run_core_with_effects` | dedup-alias: same definition as `mycelium_mlir::run_core_with_effects` at crates/mycelium-mlir/src/aot.rs:353 — one canonical row kept |
+| `mycelium_mlir::aot::run_core_with_fuel` | dedup-alias: same definition as `mycelium_mlir::run_core_with_fuel` at crates/mycelium-mlir/src/aot.rs:313 — one canonical row kept |
+| `mycelium_mlir::aot::run_with_layout` | dedup-alias: same definition as `mycelium_mlir::run_with_layout` at crates/mycelium-mlir/src/aot.rs:948 — one canonical row kept |
 | `mycelium_mlir::bitnet::BitnetDotKernel` | dedup-alias: same definition as `mycelium_mlir::BitnetDotKernel` at crates/mycelium-mlir/src/bitnet.rs:281 — one canonical row kept |
 | `mycelium_mlir::bitnet::BitnetDotKernel::scheme` | dedup-alias: same definition as `mycelium_mlir::bitnet::KernelLayout::scheme` at crates/mycelium-mlir/src/bitnet.rs:72 — one canonical row kept |
 | `mycelium_mlir::bitnet::BitnetDotKernel::scheme` | dedup-alias: same definition as `mycelium_mlir::bitnet::KernelLayout::scheme` at crates/mycelium-mlir/src/bitnet.rs:72 — one canonical row kept |
