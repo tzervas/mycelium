@@ -11934,7 +11934,7 @@ issues:
   - id: M-987
     title: "L1-eval cost super-linear (~n^3) in token count for the self-hosted parser"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:bug, area:execution, priority:P2, status:todo]
+    labels: [phase:5, type:bug, area:execution, priority:P2, status:done]
     epic: E18-1
     depends_on: []
     doc_refs:
@@ -12154,7 +12154,7 @@ issues:
   - id: M-994
     title: "Resolve the Stage-5/6 whole-program L0-output differential feasibility (M-986/M-987 wall)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:design, area:language, priority:P2, status:in-progress]
+    labels: [phase:5, type:design, area:language, priority:P2, status:done]
     epic: E18-1
     depends_on: [M-986, M-987]
     doc_refs:
