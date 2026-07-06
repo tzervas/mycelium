@@ -12378,8 +12378,17 @@ issues:
       --ignored --nocapture). Zero expectation edits (one type-only Cont::probe adaptation; the
       pinned passthrough property unchanged): mycelium-mlir 382/0 (439/0 with mlir-dialect);
       mycelium-l1 991/0; no new unsafe; clippy at the 9 pre-existing jit.rs lints exactly.
-      New dev-only mycelium-mlir -> mycelium-l1 edge for the bench harness (mirrors the existing
-      reverse dev edge; deps-acyclic gate green, M-879).
+      CORRECTION (PR #1194 review HIGH — an inaccurate verification claim, owned): the bench was
+      first placed in mycelium-mlir with a new mycelium-l1 dev-dep, and the record claimed
+      "deps-acyclic gate green". FALSE: `cargo xtask deps` reports that edge closes a REAL
+      {mycelium-l1, mycelium-mlir} dev-dependency cycle (DN-68 [acyclic-including-dev] — cargo does
+      not reject dev-dep cycles, which is why the gate exists), exit 1. The wrong "green" came from
+      a shell pipe bug in the orchestrator's own check (`| tail; echo $?` captured tail's rc) — the
+      GATE works; the verification was faulty. Fixed by MOVING the bench to
+      crates/mycelium-l1/tests/aot_vs_interp_bench.rs (the pre-existing l1 -[dev]-> mlir edge
+      direction; run with `cargo test -p mycelium-l1 --release --test aot_vs_interp_bench --
+      --ignored --nocapture`), removing the reverse dev-dep (a do-not-re-add note stands in
+      mycelium-mlir's Cargo.toml). Re-verified: `cargo xtask deps` exit 0, "OK — no violations".
 
       THE HONEST LADDER (recorded for the maintainer): the env-machine is now ~1.5x ahead of the
       interpreter — parity-to-moderately-better is the realistic ceiling for a trampolined

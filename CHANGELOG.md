@@ -31,9 +31,13 @@ landed as **four measured steps** in `aot.rs`:
 Both machines fit clean ~n² (M-995 fixed the curve; M-999 removed a ~7× constant). The **ordering
 witness** is committed (`tests/aot_vs_interp_bench.rs`, `#[ignore]`d comparative benchmark — rerun
 with `--release --ignored --nocapture`; single-trial `Empirical`, ~2–5% jitter). **Zero expectation
-edits**: `mycelium-mlir` 382/0 (439/0 with `mlir-dialect`), `mycelium-l1` 991/0, no new `unsafe`,
-deps-acyclic green (the bench's dev-only `mlir→l1` edge mirrors the existing reverse dev edge,
-M-879). **The honest ladder, recorded:** ~1.5× is the realistic band for a trampolined ANF-machine;
+edits**: `mycelium-mlir` 382/0 (439/0 with `mlir-dialect`), `mycelium-l1` 991/0, no new `unsafe`.
+**Review correction (PR #1194 HIGH, owned):** the bench's first placement (in `mycelium-mlir`, via a
+new `l1` dev-dep) closed a **real** `{l1, mlir}` dev-dependency cycle that `cargo xtask deps`
+rejects (DN-68 — the initial "deps-acyclic green" claim was a faulty verification, a shell pipe-rc
+bug, not a gate bug); fixed by **moving the bench to `crates/mycelium-l1/tests/`** (the pre-existing
+dev-edge direction) and removing the reverse edge — re-verified `xtask deps` exit 0, no violations.
+**The honest ladder, recorded:** ~1.5× is the realistic band for a trampolined ANF-machine;
 "far faster" belongs to the direct-LLVM native path, whose v0 coverage is already wide (RFC-0029:
 data, native swap, widened closures, `Fix` loop rewrite, Dense/VSA) — growing that coverage is the
 big lever. FLAG: `llvm.rs`'s stale header (says closures/recursion "deferred", contradicted by

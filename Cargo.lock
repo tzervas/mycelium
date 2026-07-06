@@ -404,7 +404,6 @@ dependencies = [
  "mycelium-core",
  "mycelium-dense",
  "mycelium-interp",
- "mycelium-l1",
  "mycelium-mir-passes",
  "mycelium-numerics",
  "mycelium-rt-abi",
