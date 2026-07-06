@@ -166,6 +166,10 @@ myc-dogfood *ARGS:
 # checked_fraction vs expressible_fraction. On-demand (NOT a `just check` gate), mirrors myc-dogfood.
 transpile-vet *ARGS:
     @bash scripts/checks/transpile-vet.sh {{ARGS}}
+# Regenerate the gen/myc-drafts/ staging tree (M-1002/M-1003): transpile→vet the port surface,
+# rebuild the manifest. Deterministic; commit the delta. On-demand (drafts are Declared, ungated).
+myc-drafts-regen:
+    @bash gen/myc-drafts/regenerate.sh
 proofs:
     @bash scripts/checks/proofs.sh
 api:

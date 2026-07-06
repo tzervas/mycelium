@@ -11,6 +11,21 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### M-1002/M-1003 — gen/myc-drafts/: the vetted draft corpus over the full boot10 port surface (2026-07-06)
+
+E33-1 wave-1 rip-through: `gen/myc-drafts/` staging tree (README honesty contract — everything
+`Declared`, never imported by `lib/`, never dogfood-gated; drafts graduate only via hand-vetted
+M-993 work), a shellcheck-clean `regenerate.sh` driver + `manifest_gen.py` aggregator (`just
+myc-drafts-regen`), and the run itself over all 17 port-surface targets (5 semcore files + 12
+unported stdlib crates): **union checked_fraction 3.7%** (759 non-test items / 46 emitted / 28
+check-clean), 51/56 emitted files myc-check-clean, zero hard transpile failures, zero silent
+holes (G2). Confirms M-991's NO-GO-as-bulk / GO-as-profiling verdict at full-surface scale;
+eval 2.4% + std-time 8.1% independently reproduce E-A's §8.8 samples (cross-validation).
+Determinism verified byte-identical (manifest + full-tree sha256 across independent runs).
+DN-34 §8.9 appended: per-target table + the ranked 812-gap residual worklist (Other/type-coverage
+322, Impl 119, Import 117, Struct 80, GenericBound 59) — the M-1006 ladder's phase-1 input.
+Kickoff `trx2` E-B (epic E33-1; wave 1 of the maintainer's two-stage breadth plan).
+
 ### M-1000/M-1001 — the transpile → myc-check vet loop + top gap-class closure; M-991 assessed (2026-07-06)
 
 The transpiler (M-873 PoC) now vets its own output against the real toolchain: `--vet` runs
