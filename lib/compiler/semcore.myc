@@ -1077,3 +1077,71 @@ fn pat_nth(v: Vec[Pat], i: Binary{32}) => Pat =
     0b1 => match v { Cons(h, _) => h, Nil => MpWild },
     _ => match v { Cons(_, t) => pat_nth(t, sub_u(i, one32())), Nil => MpWild }
   };
+
+// ── affine.rs port (the static use-once tracker for `Substrate` bindings — FLAG-semcore-6) ─────
+// Only the PURE state-transition core is ported (`slot_for_ty`, `slots_seeded`, `slots_use_at`,
+// `union_merge_into`) — the Rust `Tracker` object's inert/active split and its
+// push/pop/truncate/snapshot/restore/merge_alt checker-integration wiring are NOT ported (no
+// `Cx`-equivalent scope stack exists in this partial increment to mirror). `Vec[Slot]` IS the
+// tracker: a plain value, threaded explicitly by the caller (never mutated in place).
+
+// Slot: mirrors affine.rs::Slot (one scope slot's affine state).
+type Slot = Skip | Live(Bytes) | Moved(Bytes, Binary{32});
+
+// UseOutcome: mirrors affine.rs::UseOutcome (the outcome of recording a use at some index).
+type UseOutcome = NotAffine | FirstUse | DoubleUse(Bytes, Binary{32}, Binary{32});
+
+// slot_for_ty: the slot a fresh binding of type `ty` starts in (mirrors affine.rs::Slot::for_ty;
+// the trailing-wildcard idiom — every non-`TySubstrate` type is `Skip`).
+fn slot_for_ty(ty: Ty) => Slot =
+  match ty { TySubstrate(tag) => Live(tag), _ => Skip };
+
+// slots_seeded: one slot per entry of `tys` (mirrors affine.rs::Tracker::seeded's per-parameter
+// seeding, restated as a pure fn over the parameter TYPE list).
+fn slots_seeded(tys: Vec[Ty]) => Vec[Slot] =
+  match tys { Nil => Nil, Cons(t, rest) => Cons(slot_for_ty(t), slots_seeded(rest)) };
+
+// slots_use_at: record a use (move) of the binding at scope index `idx`, returning the UPDATED
+// slots vector paired with the outcome (mirrors affine.rs::Tracker::use_at; `ordinal` is the
+// caller's own monotonic use counter — FLAG-semcore-7, no wrapper `UseSite` type).
+fn slots_use_at(slots: Vec[Slot], idx: Binary{32}, ordinal: Binary{32}) => Pair[Vec[Slot], UseOutcome] =
+  match eq(idx, zero32()) {
+    0b1 => slots_use_here(slots, ordinal),
+    _ => match slots {
+      Nil => Pr(Nil, NotAffine),
+      Cons(s, rest) => match slots_use_at(rest, sub_u(idx, one32()), ordinal) {
+        Pr(rest2, outcome) => Pr(Cons(s, rest2), outcome)
+      }
+    }
+  };
+
+fn slots_use_here(slots: Vec[Slot], ordinal: Binary{32}) => Pair[Vec[Slot], UseOutcome] =
+  match slots {
+    Nil => Pr(Nil, NotAffine),
+    Cons(s, rest) => match s {
+      Skip => Pr(Cons(Skip, rest), NotAffine),
+      Live(tag) => Pr(Cons(Moved(tag, ordinal), rest), FirstUse),
+      Moved(tag, first) => Pr(Cons(Moved(tag, first), rest), DoubleUse(tag, first, ordinal))
+    }
+  };
+
+// merge_slot / union_merge_into: the conservative branch-merge rule (mirrors affine.rs verbatim —
+// a slot moved in EITHER alternative is moved afterward). A length mismatch between `acc` and
+// `other` is an internal-invariant violation (mirrors the Rust `debug_assert_eq!`); this total-fn
+// port stops merging at the shorter side rather than panicking (never-silent by construction — no
+// call site in this increment's differential produces mismatched snapshots).
+fn union_merge_into(acc: Vec[Slot], other: Vec[Slot]) => Vec[Slot] =
+  match acc {
+    Nil => Nil,
+    Cons(a, arest) => match other {
+      Nil => acc,
+      Cons(o, orest) => Cons(merge_slot(a, o), union_merge_into(arest, orest))
+    }
+  };
+
+fn merge_slot(a: Slot, o: Slot) => Slot =
+  match a {
+    Live(_) => match o { Moved(tag, first) => Moved(tag, first), Live(_) => a, Skip => a },
+    Moved(_, _) => a,
+    Skip => a
+  };
