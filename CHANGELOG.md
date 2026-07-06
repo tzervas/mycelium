@@ -11,7 +11,22 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
-### M-999 — the AOT env-machine now outruns the interpreter (~1.5–1.7×) (2026-07-06)
+### M-1004/M-1005 — docs/lib-index/: the api-index analogue for the self-hosted `.myc` tree (2026-07-06)
+
+Added `crates/mycelium-doc/src/lib_index.rs` (`myc-doc lib-index`) and the committed
+`docs/lib-index/{INDEX.md,index.json}`: 3313 items (26 nodules — 17 `std`, 9 `compiler`; 373
+types, 1201 constructors, 1713 fns; 0 flagged) extracted from every `lib/std/` + `lib/compiler/`
+`.myc` file, grouped by phylum/nodule, `Empirical/Declared` heuristic (source is ground truth).
+Reuses `apiref.rs`'s nodule/fn extraction rather than a parallel heuristic (DRY); building it
+surfaced and fixed four pre-existing bugs shared with the corpus doc-IR (`=>` return-arrow
+truncation, a stray trailing `;` on every nodule name, a section-divider comment misattributed as
+an item's doc summary, and multi-line-signature truncation). Drift-gated
+(`scripts/checks/lib-index.sh` via `just lib-index`, wired into `just check`; regenerate via
+`just lib-index-gen`), proven by a deliberate-drift test (corrupted a committed field → gate
+failed with `diff -r` + exit 2 → reverted → gate passed). Determinism verified byte-identical
+across independent runs. Kickoff `trx2` E-C (epic E34-1), launched same day with epics
+E32-1/E33-1 (transpiler vet loop + mass `.myc` drafts, in flight) and the M-1006 phased
+rip-through ladder (maintainer-decided breadth amendment).
 
 Closes the maintainer-flagged **performance inversion**: post-M-995/996, the AOT env-machine was
 still ~4.5× *slower* than the L1 interpreter same-profile (release, apples-to-apples — the honest

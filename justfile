@@ -169,6 +169,9 @@ api:
 # Drift gate: committed docs/api-index/ must match a fresh regeneration. Skip if python3 absent.
 doc-index:
     @bash scripts/checks/doc-index.sh
+# Drift gate: committed docs/lib-index/ must match a fresh regeneration. Skip if cargo absent.
+lib-index:
+    @bash scripts/checks/lib-index.sh
 
 # (Re)generate THIRD-PARTY-LICENSES.md from Cargo.lock via cargo-about (about.toml + about.hbs).
 # Run after any dependency bump/add/remove; commit the result. Needs cargo-about:
@@ -245,6 +248,10 @@ docs:
 # Regenerate committed agent index (docs/api-index/); commit the result after any public-API change.
 docs-index:
     python3 tools/docgen/code_index.py
+# (Re)generate committed lib-index (docs/lib-index/) from lib/*.myc (M-1004). Commit the result
+# after any change under lib/std/ or lib/compiler/.
+lib-index-gen:
+    cargo run -q -p mycelium-doc --bin myc-doc -- lib-index --repo-root . --out docs/lib-index
 # Assemble a browsable local docsite under target/docsite/ — corpus (myc-doc HTML), agent API
 # index, and rustdoc. Advisory, NOT part of `just check`. Skip-graceful: missing tools warn only.
 # WSL: cd target/docsite && python3 -m http.server 8080, then open http://localhost:8080.

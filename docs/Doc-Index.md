@@ -256,6 +256,12 @@ This index remains the map the board points back to.
 
 Regenerate with `just docs-index` (runs `tools/docgen/code_index.py`). The committed index must stay current; `just check` enforces this via a drift gate (`scripts/checks/doc-index.sh`). The orchestrator regenerates and commits the index after every octopus merge that touches a public API. See `CLAUDE.md §Auto-generated docs & the agent index` for the ownership and `doc_refs` grammar.
 
+`docs/lib-index/` — committed, auto-generated self-hosted `.myc` reference index (M-1004/M-1005; kickoff trx2 E-C, 2026-07-06), the `docs/api-index/` analogue for `lib/std/` + `lib/compiler/`:
+- `index.json` — machine-readable symbol table (phylum, nodule, kind, file:line, signature, summary, tag)
+- `INDEX.md` — grep-friendly table grouped by phylum/nodule, for agent context lookups (`docs/lib-index/INDEX.md#<nodule>` anchors)
+
+`Empirical/Declared` heuristic — source is ground truth; extraction limits (an unrecognised top-level construct, a missing nodule marker, a malformed header) appear in the `flagged` section, never silently dropped. Regenerate with `just lib-index-gen` (runs `myc-doc lib-index`, `crates/mycelium-doc/src/lib_index.rs`). The committed index must stay current; `just check` enforces this via a drift gate (`scripts/checks/lib-index.sh`, `just lib-index`). The integrating parent regenerates and commits the delta after any change under `lib/std/` or `lib/compiler/`.
+
 ### Reader guide — README topic docs (`docs/guide/`)
 
 The root `README.md` is a lean landing page; its long-form content lives in linked topic docs
