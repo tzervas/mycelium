@@ -136,3 +136,27 @@ porting + patching to close gaps, folding each phase's lessons back into the tra
 is a highly polished solution. Minted **M-1006** (under E33-1) as the phased-ladder umbrella;
 per-phase target sets are minted per wave (mitigation #1), and the ladder's outputs reconcile
 with `rwr`'s M-947…M-957 port-wave manifests at Phase-II (trx2 phases become their inputs).
+
+## Phase-1 landing record (2026-07-06 — M-1006 phase 1, PR #1226 → `dev`)
+
+The M-1006 ladder's **first phase** landed on `dev` (PR #1226; promoted `dev → integration → main`
+per the tiered workflow). Input: the DN-34 §8.9 ranked 812-gap worklist. Run as **two disjoint-file
+leaves** (map-side `src/map.rs` + emit-side `src/emit.rs`, isolated worktrees, octopus-merged) over
+the same 17 wave-1 targets, then re-vetted with the real `myc check` oracle; independently reviewed
+(APPROVE) before merge.
+
+**Landed (each grammar-grounded, never-silent — VR-5/G2):** concrete generic type-applications now
+map to `type_args` (`Head<A,…>` → `Head[A,…]`, recursive/never-partial — a whole gap sub-class
+closed); string/float/array expression literal arms (`StrLit`/`FloatLit`/`ListLit` — non-finite
+floats and un-escapable control chars refuse rather than emit garbage); sharpened `MultiStmtBody`
+diagnostics. **Measured (`Empirical`):** union `expressible_fraction` 6.06% → 6.19% (`std-io::read_all`
+unblocked via nested `Result[Vec[Binary{8}], IoError]`), `checked_fraction` flat 3.69%, `GenericBound`
+59 → 46. **M-1006-DoD residual enumeration (DN-34 §8.10):** the dominant remaining classes
+(type-coverage scalars, named-field structs/variants — KEEP GAPPED, no field-projection surface;
+imports; bounded generics; Rust built-in derives) are language-surface design (E18-1), not transpiler
+defects — the current-corpus transpiler-fixable surface is near-exhausted (stopping point recorded,
+G2). Emission `Declared`; drafts stay in `gen/myc-drafts/`, never imported by `lib/`.
+
+**M-1006 → `in-progress`.** Remaining ladder work (later phases): expand the target set beyond the
+port surface in controlled phases (per-phase minting, mitigation #1), each folding lessons back into
+the transpiler; reconcile with `rwr`'s M-947…M-957 at Phase-II.
