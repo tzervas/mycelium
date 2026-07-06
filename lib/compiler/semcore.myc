@@ -1,0 +1,1498 @@
+// nodule: compiler.semcore
+// @version: 0.1.0
+// @license: MIT
+// @authors: Tyler Zervas
+// @since: 2026-07-06
+// @updated: 2026-07-06
+// @summary: Self-hosted L1 semantic-core — a PARTIAL FIRST INCREMENT (M-740 Stage 5, increment 1;
+//   DN-26 SS7.3 row 5 / SS9 flag-1). The full semcore is a 9-file strongly-connected component
+//   (checkty/elab/eval/mono/fuse/decision/usefulness/grade/affine, ~16.7k Rust lines) that is ONE
+//   nodule by design (DN-26 SS9 flag-1). This increment lands only the TRACTABLE sub-core that
+//   depends on checkty's TYPES but not its checking LOGIC or the evaluator:
+//     IN this increment  — the type vocabulary (Ty/Width/DataInfo/CtorInfo, mirroring
+//       crates/mycelium-l1/src/checkty.rs's declarations only, none of its ~7k lines of checking
+//       logic), the Maranget usefulness/decision-tree pipeline (usefulness.rs + decision.rs, 623
+//       Rust lines), the static affine use-once tracker (affine.rs, 230 Rust lines), and the
+//       static guarantee-grading pass (grade.rs, 474 Rust lines).
+//     DEFERRED (NOT in this increment) — fuse.rs (its `check_fuse_laws` RUNS `eval::Evaluator`,
+//       which is not ported), checkty.rs's checking LOGIC (~7k lines), elab.rs, eval.rs, mono.rs
+//       (the heavy entangled core, ~15k lines total), the whole-program L0-output differential,
+//       and the `cargo-mutants` witness. These are FEASIBILITY-GATED on M-986 (the evaluator
+//       elides only bare-body tail calls — no in-language loop today exceeds the 4096-depth
+//       budget, `parse.myc`'s own FLAG-parse-11 finding) and M-987 (~n^3 L1-eval cost): a
+//       self-hosted typechecker/elaborator run INSIDE the L1 evaluator over a whole program almost
+//       certainly cannot complete at today's cost model. This is a REAL OPEN QUESTION for the
+//       maintainer (widen kernel TCO vs. reduce eval cost vs. lean on AOT) — stated plainly, never
+//       silently narrowed (G2/VR-5).
+//
+// Representation choices/deviations (each deliberate, honest, DOCUMENTED — VR-5/G2):
+//
+// FLAG-semcore-1 (self-contained; a TRIMMED copy of ast.myc's type vocabulary, not the whole
+// file — M-982). Grading (grade.rs) walks the full `Expr` family, so this nodule copies in every
+// AST type `Expr`/`FnDecl` transitively reference (Vis, Path, Paradigm, Scalar, Sparsity,
+// AmbientParams, Strength, WidthRef, ParamKind, TraitRef, TypeParam, EffectBudget, FnSig, Param,
+// TypeRef, BaseType, ExecutionMode, FnDecl, Literal, Pattern, Arm, Hypha, Expr) verbatim from
+// `lib/compiler/ast.myc` — SAME spellings, SAME field order, so it stays diffable against that
+// canonical source. Whole-program / item-level surface forms (TypeDecl, TraitDecl, ImplDecl,
+// ViaDecl, ObjectDecl, InherentImplDecl, LowerRhs, LowerDecl, DeriveDecl, Item, Nodule, Phylum,
+// UsePath, Ctor) are OMITTED — this increment grades individual `FnDecl` bodies, never a whole
+// nodule/phylum, so those forms are out of scope. Accessor helpers ast.myc defines but this file
+// never calls (e.g. `typeref_base`, `hypha_forage`, `fnsig_params`) are likewise omitted — the
+// FIELD is still declared (so the type is fully structural), only the unused accessor fn is
+// dropped. `ast.myc` remains the one canonical source; if a later increment needs a dropped
+// piece, re-copy it from there (or, once cross-nodule execution lands — FLAG-token-4's tracked
+// gap — `use compiler.ast` directly instead of copying).
+//
+// FLAG-semcore-2 (flat-namespace prefix scheme for the NEW checkty-vocabulary families). This
+// nodule's copied AST types share ONE flat constructor namespace with several BRAND NEW families
+// (`Ty`, `Width`, `DataInfo`/`CtorInfo`, `Pat`, `Head`, `Tree`, `Slot`, `UseOutcome`) — every bare
+// name was diffed against every other family and against the copied ast.myc spellings (the
+// FLAG-ast-5 discipline, generalized). Disjoint prefixes:
+//   `Ty`   (the checked type, checkty.rs::Ty — distinct from ast.myc's surface `BaseType`, whose
+//           OWN `Vsa`/`KwSubstrate` bare spellings this family must not collide with):
+//           TyBinary/TyTernary/TyDense/TyVsa/TyData/TySubstrate/TySeq/TyBytes/TyFloat/TyVar/TyFn.
+//   `Wd`   (checkty.rs::Width — distinct from ast.myc's surface `WidthRef`, whose OWN `WLit`/
+//           `WName` bare spellings this family must not collide with): WdLit/WdVar.
+//   `CI`/`DI` (CtorInfo/DataInfo record wrappers — unique, no collision).
+//   `Mp`   (usefulness.rs/decision.rs's `Pat` — the MATRIX pattern, distinct from ast.myc's own
+//           already-P-prefixed surface `Pattern` family (`PWildcard`/`PLit`/`PCtor`/…) and from
+//           `Expr::Lit`): MpWild/MpCtor/MpLit.
+//   `Hd`   (decision.rs's `Head` — distinct from `Mp`'s tags): HdCtor/HdLit.
+//   `Tree`'s own `Leaf`/`Fail`/`Switch` and affine's `Skip`/`Live`/`Moved`/`NotAffine`/`FirstUse`/
+//   `DoubleUse` are each checked against every other family here and against the full copied AST
+//   set; none collide, so they stay BARE (documented, not merely assumed).
+//
+// FLAG-semcore-3 (recursion-depth budgets restated as an explicit threaded `depth: Binary{32}`
+// parameter — the parse.myc FLAG-parse-7 / `enter_depth` convention, reused verbatim in shape).
+// Rust's `RecursionBudget`/`BudgetError` (usefulness.rs, decision.rs, grade.rs) becomes a plain
+// `depth: Binary{32}` argument threaded down through `useful_budgeted`/`compile_rows`/`grade`,
+// charged by one shared `enter_depth` at the SAME 4096 ceiling as `checkty::MAX_CHECK_DEPTH` /
+// `parse.myc::max_expr_depth`. The over-budget error is a plain `Bytes` message here, not a
+// structured `BudgetError` enum — a real (harmless) narrowing: nothing in this increment's
+// differential needs to distinguish "budget exceeded" from any other refusal kind.
+//
+// FLAG-semcore-4 (`BTreeMap<String, _>` -> ordered `Vec[Pair[Bytes, _]]` assoc list + linear
+// lookup — the ast.myc FLAG-ast-6 convention). No map primitive is available self-contained
+// (M-982); the type REGISTRY (`Vec[DataInfo]`, looked up by `types_lookup`) and the grading pass's
+// function environment (`FnEnv = Vec[Pair[Bytes, FnDecl]]`, looked up by `fnenv_lookup`) are both
+// ordered association lists. A real, documented narrowing versus a real `BTreeMap`: nothing here
+// enforces key uniqueness — the caller must not construct a duplicate-keyed list (same caveat
+// ast.myc's own `EffectBudget` narrowing already carries).
+//
+// FLAG-semcore-5 (usefulness.rs's `SpecializeRow` trait is NOT ported as a language-level
+// trait/dictionary). Rust shares ONE `specialize_ctor`/`specialize_lit` implementation across the
+// bare-matrix row (`Vec<Pat>`) and the decision-tree row (`Row`, which additionally carries an arm
+// index) via that trait (M-641, DRY). This partial increment instead has TWO small, faithfully
+// duplicated pairs — `specialize_ctor_pat`/`specialize_lit_pat` (bare `Vec[Pat]` rows, used by
+// `useful`) and `specialize_ctor_row`/`specialize_lit_row` (`DRow`-carrying rows, used by
+// `compile`) — rather than modeling a generic dictionary-passing scheme in a first increment
+// (KISS/YAGNI/KC-3). Same algorithm, same behavior, just not code-shared via a trait — a structural
+// (not semantic) narrowing.
+//
+// FLAG-semcore-6 (affine.rs's `Tracker` — a Rust `Cell`/`RefCell` interior-mutable OBJECT — is
+// restated as a plain VALUE, `Vec[Slot]`, threaded explicitly by the caller; no wrapper "Tracker"
+// type is declared at all). This is the value-semantics collapse the FLAG-semcore-3 depth-threading
+// convention already established for depth budgets, applied to affine state. The
+// inert/active split, `seeded`/`inert` constructors, and the `push`/`pop`/`truncate`/`snapshot`/
+// `restore`/`merge_alt` CHECKER-INTEGRATION wiring are NOT ported — those exist only to mirror
+// `crate::checkty::Cx`'s OWN scope stack, which this increment's un-ported checking logic does not
+// have. Only the PURE state-transition core is ported: `slot_for_ty`, `slots_seeded`,
+// `slots_use_at`, `union_merge_into` (renamed `merge_slot`/`union_merge_into` here, same names as
+// the Rust helper) — everything this increment's differential actually exercises.
+//
+// FLAG-semcore-7 (`UseSite`/`Occurrence` Rust newtypes dropped; bare `Binary{32}`/
+// `Vec[Binary{32}]` used directly). Both are already-transparent aliases on the Rust side
+// (`UseSite { ordinal: u32 }` is used only as a plain ordinal carrier; `pub(crate) type Occurrence
+// = Vec<usize>;` is a literal type alias) — a deliberate simplification, not a narrowing.
+//
+// FLAG-semcore-8 (decision.rs's column-selection heuristic simplified to scan only the FIRST row
+// for its first non-wildcard column, rather than Rust's whole-matrix scan
+// `rows.iter().any(|r| !matches!(r.pats[i], Wild))`). Still CORRECT: the caller only reaches
+// column selection after the base-case guard has already established the first row is not
+// all-wildcard, so the first row alone is guaranteed to have a non-wildcard column. This MAY
+// produce a less book-optimal tree SHAPE than the oracle's whole-matrix scan when a later row
+// would have picked a different (possibly more compact) column — a shape-fidelity narrowing, not
+// a correctness one (both trees still route every input to the same arm).
+//
+// FLAG-semcore-9 (grade.rs's whole-program `check_guarantees` driver — the `own_names`/
+// `impl_methods` iteration over the checker's resolved fn table — is NOT ported). Only the
+// per-body walk is: `grade`/`grade_expr` and its helpers (`grade_match`, `grade_app`, `meet_all`,
+// `bind_pattern`, `require`, `ret_grade`, `param_grade`), plus a thin `grade_fn_body` entry point
+// this increment's differential drives directly. The whole-program driver needs the type
+// checker's OWN resolved-fn-table wiring (own vs. imported, canonical resolved bodies) — out of
+// scope for a partial increment that ports no checkty checking logic.
+//
+// FLAG-semcore-10 (a REAL, NEWLY-SURFACED finding — Rust module-private visibility blocks a
+// live-oracle differential for THIS increment, unlike every prior Stage). `usefulness.rs`,
+// `decision.rs`, `affine.rs`, and `grade.rs` are declared `pub(crate) mod` / plain `mod` in
+// `crates/mycelium-l1/src/lib.rs` (`mod affine;`, `pub(crate) mod decision;`, `mod grade;`,
+// `pub(crate) mod usefulness;`) — UNLIKE `ast.rs`/`token.rs`/`parse.rs`/`nodule.rs` (all `pub mod`,
+// with the port-relevant items re-exported `pub`). An external integration-test crate
+// (`crates/mycelium-l1/tests/*.rs`, which `compiler_stage5_semcore.rs` is) sees only the crate's
+// PUBLIC API surface, so it CANNOT call `usefulness::useful`, `decision::compile`,
+// `affine`'s `Tracker`/`use_at`, or `grade::check_guarantees` directly — the DN-26 SS7.4 "checked
+// against the live Rust oracle" contract every prior stage's differential relies on does not hold
+// here. (Only `checkty::{Ty, Width, DataInfo, CtorInfo}` are `pub` with `pub` fields — confirmed by
+// direct inspection — so those four types alone remain externally constructible, though nothing in
+// this increment calls the pub(crate) functions that consume them.) Rust sources are READ-ONLY in
+// this leaf (no visibility change is this leaf's call to make), so
+// `crates/mycelium-l1/tests/compiler_stage5_semcore.rs` instead asserts each ported fn's verdict
+// against a HAND-DERIVED expected value, reasoned directly from the documented Maranget/affine/
+// guarantee-lattice rules for each small synthetic case (never a fabricated/guessed constant —
+// every expected value's derivation is commented at its call site). The differential is graded
+// `Empirical`, not the stronger "vs. a live oracle" posture — FLAGGED UP for the maintainer/DN-26
+// owner: lifting `usefulness`/`decision`/`affine`/`grade` to `pub` (or adding a dedicated
+// `#[cfg(test)]`-gated shim) would let a future revision restore the live-oracle differential.
+nodule compiler.semcore;
+
+// ── prelude (local; no cross-nodule import — FLAG-semcore-1 / M-982) ───────────────────────────
+type Option[A] = Some(A) | None;
+type Result[A, E] = Ok(A) | Err(E);
+type Vec[A] = Nil | Cons(A, Vec[A]);
+type Pair[A, B] = Pr(A, B);
+
+// ── copied-in AST subset (verbatim spellings from lib/compiler/ast.myc — FLAG-semcore-1) ───────
+
+// Vis: mirrors ast.myc::Vis (a field of `FnDecl`; grade never inspects its value).
+type Vis = Private | Pub;
+
+// Path: mirrors ast.myc::Path (a dotted path or bare name).
+type Path = Pth(Vec[Bytes]);
+
+fn path_segs(p: Path) => Vec[Bytes] =
+  match p { Pth(segs) => segs };
+
+// Paradigm: mirrors ast.myc::Paradigm (FLAG-ast-4 P-prefix, reused verbatim).
+type Paradigm = PBinary | PTernary | PDense | PVsa;
+
+// Scalar: mirrors ast.myc::Scalar (FLAG-ast-4 S-prefix, reused verbatim).
+type Scalar = SF16 | SBf16 | SF32 | SF64;
+
+// Sparsity: mirrors ast.myc::Sparsity (FLAG-ast-4 Sp-prefix, reused verbatim).
+type Sparsity = SpDense | SpSparse(Binary{32});
+
+// AmbientParams: mirrors ast.myc::AmbientParams (FLAG-ast-4/5 AP-prefix, reused verbatim).
+type AmbientParams =
+    APSize(Binary{32})
+  | APDense(Binary{32}, Scalar)
+  | APVsa(Bytes, Binary{32}, Sparsity);
+
+// Strength: mirrors ast.myc::Strength (the guarantee-lattice tag; FLAG-ast-4 G-prefix, reused
+// verbatim). Core to grade.rs's port — rank/meet/satisfies are all needed.
+type Strength = GExact | GProven | GEmpirical | GDeclared;
+
+fn strength_rank(s: Strength) => Binary{8} =
+  match s {
+    GDeclared => 0b0000_0000,
+    GEmpirical => 0b0000_0001,
+    GProven => 0b0000_0010,
+    GExact => 0b0000_0011
+  };
+
+// strength_meet: the weaker (less-trusted) of the two grades (mirrors ast.myc::strength_meet).
+fn strength_meet(a: Strength, b: Strength) => Strength =
+  match lt(strength_rank(b), strength_rank(a)) {
+    0b1 => b,
+    _ => a
+  };
+
+// strength_satisfies: `actual.rank() >= demand.rank()` (mirrors ast.myc::strength_satisfies).
+fn strength_satisfies(actual: Strength, demand: Strength) => Bool =
+  match lt(strength_rank(actual), strength_rank(demand)) {
+    0b1 => False,
+    _ => True
+  };
+
+// WidthRef: mirrors ast.myc::WidthRef (a SURFACE width slot — distinct from checkty's own
+// `Width` below, FLAG-semcore-2).
+type WidthRef = WLit(Binary{32}) | WName(Bytes);
+
+// ParamKind: mirrors ast.myc::ParamKind.
+type ParamKind = PkType | PkWidth;
+
+// TraitRef: mirrors ast.myc::TraitRef (a bound-position trait reference; field only, unused
+// accessors dropped per FLAG-semcore-1).
+type TraitRef = TRf(Bytes, Vec[TypeRef]);
+
+// TypeParam: mirrors ast.myc::TypeParam (field only, unused accessors dropped).
+type TypeParam = TP(Bytes, ParamKind, Vec[TraitRef]);
+
+// EffectBudget: mirrors ast.myc::EffectBudget (FLAG-ast-6; field only).
+type EffectBudget = EB(Bytes, Binary{64});
+
+// FnSig: mirrors ast.myc::FnSig field-for-field. Only the 3 accessors grade.rs actually calls are
+// kept (name, value_params, ret) — fnsig_params/fnsig_effects/fnsig_effect_budgets are unused here.
+type FnSig = FS(Bytes, Vec[TypeParam], Vec[Param], TypeRef, Vec[Bytes], Vec[EffectBudget]);
+
+fn fnsig_name(s: FnSig) => Bytes =
+  match s { FS(n, _, _, _, _, _) => n };
+
+fn fnsig_value_params(s: FnSig) => Vec[Param] =
+  match s { FS(_, _, vp, _, _, _) => vp };
+
+fn fnsig_ret(s: FnSig) => TypeRef =
+  match s { FS(_, _, _, r, _, _) => r };
+
+// Param: mirrors ast.myc::Param (a value parameter `name: type`).
+type Param = Prm(Bytes, TypeRef);
+
+fn param_name(p: Param) => Bytes =
+  match p { Prm(n, _) => n };
+
+fn param_ty(p: Param) => TypeRef =
+  match p { Prm(_, t) => t };
+
+// TypeRef / BaseType: mirror ast.myc::TypeRef / ast.myc::BaseType (mutually recursive — the
+// checker's shell-first type registration resolves this regardless of declaration order, per
+// ast.myc's own header note). Only `typeref_guarantee` is kept (grade never inspects the base).
+type TypeRef = TR(BaseType, Option[Strength]);
+
+fn typeref_guarantee(t: TypeRef) => Option[Strength] =
+  match t { TR(_, g) => g };
+
+// BaseType: mirrors ast.myc::BaseType verbatim (FLAG-ast-4/5 renames carried over unchanged —
+// `Vsa`/`KwSubstrate` here are ast.myc's OWN surface spellings, distinct from this file's NEW
+// `TyVsa`/`TySubstrate` checked-type family, FLAG-semcore-2).
+type BaseType =
+    KwBinary(WidthRef)
+  | KwTernary(WidthRef)
+  | KwDense(Binary{32}, Scalar)
+  | Vsa(Bytes, Binary{32}, Sparsity)
+  | KwSubstrate(Bytes)
+  | KwSeq(TypeRef, Binary{32})
+  | KwBytes
+  | KwFloat
+  | Named(Bytes, Vec[TypeRef])
+  | Ambient(AmbientParams)
+  | FnArrow(TypeRef, TypeRef)
+  | Tuple(Vec[TypeRef]);
+
+// ExecutionMode: mirrors ast.myc::ExecutionMode (a field of `FnDecl`; unused by grade otherwise).
+type ExecutionMode = Interpreted | Compiled;
+
+// FnDecl: mirrors ast.myc::FnDecl field-for-field. Only `sig`/`body` accessors are kept.
+type FnDecl = FD(Vis, Bool, Option[ExecutionMode], FnSig, Expr);
+
+fn fndecl_sig(f: FnDecl) => FnSig =
+  match f { FD(_, _, _, s, _) => s };
+
+fn fndecl_body(f: FnDecl) => Expr =
+  match f { FD(_, _, _, _, b) => b };
+
+// Literal: mirrors ast.myc::Literal verbatim (FLAG-ast-4/5 renames carried over — `LBytes`/
+// `LFloat`, FLAG-ast-8: no `#[non_exhaustive]` analog).
+type Literal =
+    Bin(Bytes)
+  | Trit(Bytes)
+  | Int(Binary{64})
+  | AmbientInt(Paradigm, Binary{64})
+  | List(Vec[Expr])
+  | LBytes(Bytes)
+  | Str(Bytes)
+  | LFloat(Bytes);
+
+// Pattern: mirrors ast.myc::Pattern verbatim (FLAG-ast-5 P-prefix throughout).
+type Pattern =
+    PWildcard
+  | PLit(Literal)
+  | PCtor(Bytes, Vec[Pattern])
+  | PIdent(Bytes)
+  | PTuple(Vec[Pattern])
+  | POr(Vec[Pattern]);
+
+// Arm: mirrors ast.myc::Arm (one `match` arm).
+type Arm = Ar(Pattern, Expr);
+
+fn arm_pattern(a: Arm) => Pattern =
+  match a { Ar(p, _) => p };
+
+fn arm_body(a: Arm) => Expr =
+  match a { Ar(_, b) => b };
+
+// Hypha: mirrors ast.myc::Hypha (only `body` accessor kept — grade never inspects `forage`).
+type Hypha = Hy(Option[Expr], Expr);
+
+fn hypha_body(h: Hypha) => Expr =
+  match h { Hy(_, b) => b };
+
+// Expr: mirrors ast.myc::Expr verbatim, field-for-field, same variant order.
+type Expr =
+    Let(Bytes, Option[TypeRef], Expr, Expr)
+  | If(Expr, Expr, Expr)
+  | Match(Expr, Vec[Arm])
+  | For(Bytes, Expr, Bytes, Expr, Expr)
+  | Swap(Expr, TypeRef, Path)
+  | WithParadigm(Paradigm, Expr)
+  | Wild(Expr)
+  | Spore(Expr)
+  | Consume(Expr)
+  | Colony(Vec[Hypha])
+  | Lambda(Vec[Param], Expr)
+  | App(Expr, Vec[Expr])
+  | Fuse(Expr, Expr)
+  | Reclaim(Expr, Expr)
+  | Path(Path)
+  | Lit(Literal)
+  | Ascribe(Expr, TypeRef)
+  | TupleLit(Vec[Expr]);
+
+// ── small numeric helpers (Binary{32} zero/one/depth-ceiling literals) ──────────────────────────
+fn zero32() => Binary{32} = 0b0000_0000_0000_0000_0000_0000_0000_0000;
+fn one32() => Binary{32} = 0b0000_0000_0000_0000_0000_0000_0000_0001;
+
+// max_semcore_depth: SAME 4096 ceiling as checkty::MAX_CHECK_DEPTH / parse.myc::max_expr_depth
+// (FLAG-semcore-3).
+fn max_semcore_depth() => Binary{32} = 0b0000_0000_0000_0000_0001_0000_0000_0000;
+
+// enter_depth: charge one level against the shared budget; `Err` on overflow (never a panic — the
+// parse.myc FLAG-parse-7 convention, restated for this nodule's three budgeted recursions).
+fn enter_depth(depth: Binary{32}) => Result[Binary{32}, Bytes] =
+  let d2 = add_u(depth, one32()) in
+  match lt(max_semcore_depth(), d2) {
+    0b1 => Err("semcore: recursion budget exceeded (RFC-0041 SS4.7 restated; a never-silent refusal, never a host-stack overflow -- G2/VR-5)"),
+    _ => Ok(d2)
+  };
+
+// names_contains: linear membership check over a `Vec[Bytes]` (used throughout for dedup /
+// signature-completeness checks — the FLAG-semcore-4 assoc-list convention).
+fn names_contains(names: Vec[Bytes], n: Bytes) => Bool =
+  match names {
+    Nil => False,
+    Cons(h, t) => match bytes_eq(h, n) { 0b1 => True, _ => names_contains(t, n) }
+  };
+
+// ── Ty / Width / CtorInfo / DataInfo (checkty.rs's TYPE VOCABULARY only — FLAG-semcore-2) ──────
+
+// Width: mirrors checkty.rs::Width (a `Binary{n}`/`Ternary{m}` width argument — concrete literal
+// or abstract width variable).
+type Width = WdLit(Binary{32}) | WdVar(Bytes);
+
+// Ty: mirrors checkty.rs::Ty field-for-field (11 variants; `Box<Ty>` fields carry over as plain
+// `Ty` per ast.myc's own shell-first-registration recursion note — no wrapper needed).
+type Ty =
+    TyBinary(Width)
+  | TyTernary(Width)
+  | TyDense(Binary{32}, Scalar)
+  | TyVsa(Bytes, Binary{32}, Sparsity)
+  | TyData(Bytes, Vec[Ty])
+  | TySubstrate(Bytes)
+  | TySeq(Ty, Binary{32})
+  | TyBytes
+  | TyFloat
+  | TyVar(Bytes)
+  | TyFn(Ty, Ty);
+
+// CtorInfo: mirrors checkty.rs::CtorInfo (name, field types).
+type CtorInfo = CI(Bytes, Vec[Ty]);
+
+fn ci_name(c: CtorInfo) => Bytes =
+  match c { CI(n, _) => n };
+
+fn ci_fields(c: CtorInfo) => Vec[Ty] =
+  match c { CI(_, f) => f };
+
+// DataInfo: mirrors checkty.rs::DataInfo (name, type params, ctors in declaration order).
+type DataInfo = DI(Bytes, Vec[Bytes], Vec[CtorInfo]);
+
+fn di_name(d: DataInfo) => Bytes =
+  match d { DI(n, _, _) => n };
+
+fn di_ctors(d: DataInfo) => Vec[CtorInfo] =
+  match d { DI(_, _, c) => c };
+
+// types_lookup: the FLAG-semcore-4 ordered-assoc-list lookup standing in for
+// `BTreeMap<String, DataInfo>`.
+fn types_lookup(types: Vec[DataInfo], name: Bytes) => Option[DataInfo] =
+  match types {
+    Nil => None,
+    Cons(d, rest) => match bytes_eq(di_name(d), name) {
+      0b1 => Some(d),
+      _ => types_lookup(rest, name)
+    }
+  };
+
+// ── usefulness.rs port (Maranget U(P, q) — exhaustiveness/redundancy) ───────────────────────────
+
+// Pat: mirrors usefulness.rs::Pat (the NORMALIZED matrix pattern — FLAG-semcore-2 Mp-prefix).
+type Pat = MpWild | MpCtor(Bytes, Vec[Pat]) | MpLit(Bytes);
+
+// pat_append / pat_len: small list helpers (non-tail, bounded by ONE row's arity — a handful of
+// fields, never source length; mirrors nodule.myc::join_segs's count-bounded-recursion precedent).
+fn pat_append(a: Vec[Pat], b: Vec[Pat]) => Vec[Pat] =
+  match a { Nil => b, Cons(h, t) => Cons(h, pat_append(t, b)) };
+
+fn pat_len(v: Vec[Pat]) => Binary{32} =
+  match v { Nil => zero32(), Cons(_, t) => add_u(one32(), pat_len(t)) };
+
+// ty_len: the arity-counting twin of `pat_len`, over a constructor's OWN field-type list
+// (`Vec[Ty]`, not `Vec[Pat]` — a distinct monomorphic length fn since this language's total-fn
+// discipline rules out a single generic one here, FLAG-semcore-5's KISS/YAGNI rationale extended).
+fn ty_len(v: Vec[Ty]) => Binary{32} =
+  match v { Nil => zero32(), Cons(_, t) => add_u(one32(), ty_len(t)) };
+
+// wild_n: `n` fresh wildcards (bounded by a constructor's own arity).
+fn wild_n(n: Binary{32}) => Vec[Pat] =
+  match eq(n, zero32()) {
+    0b1 => Nil,
+    _ => Cons(MpWild, wild_n(sub_u(n, one32())))
+  };
+
+// ty_append: mirrors the Rust `ct2.extend_from_slice(...)` column-type splicing.
+fn ty_append(a: Vec[Ty], b: Vec[Ty]) => Vec[Ty] =
+  match a { Nil => b, Cons(h, t) => Cons(h, ty_append(t, b)) };
+
+// ct_head / ct_tail: single-level column-type accessors (the `Nil` arm is an internal-invariant
+// edge — never hit by a well-formed call where `col_types` is parallel to the query — a harmless
+// sentinel value, not a silent behavior change to any reachable case).
+fn ct_head(ts: Vec[Ty]) => Ty =
+  match ts { Cons(h, _) => h, Nil => TyBytes };
+
+fn ct_tail(ts: Vec[Ty]) => Vec[Ty] =
+  match ts { Cons(_, t) => t, Nil => Nil };
+
+// signature: the finite constructor signature of `ty`, or `None` if its domain is open
+// (`Binary`/`Ternary` — mirrors usefulness.rs::signature; the trailing wildcard is the
+// established `_ => …` idiom over a big-variant sum type, parse.myc's own `Tok` classifiers).
+fn signature(ty: Ty, types: Vec[DataInfo]) => Option[DataInfo] =
+  match ty { TyData(n, _) => types_lookup(types, n), _ => None };
+
+// ctorinfo_fields_by_name / ctor_fields_of: the field types of constructor `c` (mirrors
+// usefulness.rs::ctor_fields; empty if not found — a well-typed matrix never misses).
+fn ctorinfo_fields_by_name(ctors: Vec[CtorInfo], c: Bytes) => Vec[Ty] =
+  match ctors {
+    Nil => Nil,
+    Cons(ci, rest) => match bytes_eq(ci_name(ci), c) {
+      0b1 => ci_fields(ci),
+      _ => ctorinfo_fields_by_name(rest, c)
+    }
+  };
+
+fn ctor_fields_of(ty: Ty, c: Bytes, types: Vec[DataInfo]) => Vec[Ty] =
+  match signature(ty, types) {
+    None => Nil,
+    Some(d) => ctorinfo_fields_by_name(di_ctors(d), c)
+  };
+
+// specialize_ctor_pat / specialize_lit_pat: mirror usefulness.rs::specialize_ctor/specialize_lit
+// over a BARE `Vec[Pat]` matrix (FLAG-semcore-5 — no shared `SpecializeRow` trait; this is the
+// `useful`-side copy, `specialize_ctor_row`/`specialize_lit_row` below is the `compile`-side one).
+fn specialize_ctor_pat(matrix: Vec[Vec[Pat]], c: Bytes, a: Binary{32}) => Vec[Vec[Pat]] =
+  match matrix {
+    Nil => Nil,
+    Cons(row, rest) => match row {
+      Nil => specialize_ctor_pat(rest, c, a),
+      Cons(first, cols) => match first {
+        MpCtor(n, subs) => match bytes_eq(n, c) {
+          0b1 => Cons(pat_append(subs, cols), specialize_ctor_pat(rest, c, a)),
+          _ => specialize_ctor_pat(rest, c, a)
+        },
+        MpWild => Cons(pat_append(wild_n(a), cols), specialize_ctor_pat(rest, c, a)),
+        MpLit(_) => specialize_ctor_pat(rest, c, a)
+      }
+    }
+  };
+
+fn specialize_lit_pat(matrix: Vec[Vec[Pat]], k: Bytes) => Vec[Vec[Pat]] =
+  match matrix {
+    Nil => Nil,
+    Cons(row, rest) => match row {
+      Nil => specialize_lit_pat(rest, k),
+      Cons(first, cols) => match first {
+        MpLit(j) => match bytes_eq(j, k) {
+          0b1 => Cons(cols, specialize_lit_pat(rest, k)),
+          _ => specialize_lit_pat(rest, k)
+        },
+        MpWild => Cons(cols, specialize_lit_pat(rest, k)),
+        MpCtor(_, _) => specialize_lit_pat(rest, k)
+      }
+    }
+  };
+
+// default_matrix: `D(P)` — rows headed by a wildcard, leading column dropped.
+fn default_matrix(matrix: Vec[Vec[Pat]]) => Vec[Vec[Pat]] =
+  match matrix {
+    Nil => Nil,
+    Cons(row, rest) => match row {
+      Nil => default_matrix(rest),
+      Cons(first, cols) => match first {
+        MpWild => Cons(cols, default_matrix(rest)),
+        MpCtor(_, _) => default_matrix(rest),
+        MpLit(_) => default_matrix(rest)
+      }
+    }
+  };
+
+// head_ctors: the (deduped) constructor names appearing in the matrix's first column.
+fn head_ctors(matrix: Vec[Vec[Pat]]) => Vec[Bytes] =
+  match matrix {
+    Nil => Nil,
+    Cons(row, rest) => match row {
+      Nil => head_ctors(rest),
+      Cons(first, _) => match first {
+        MpCtor(n, _) =>
+          let tail = head_ctors(rest) in
+          match names_contains(tail, n) { True => tail, False => Cons(n, tail) },
+        MpWild => head_ctors(rest),
+        MpLit(_) => head_ctors(rest)
+      }
+    }
+  };
+
+// ctors_all_present / find_missing_ctor: shared by usefulness AND decision's completeness checks.
+fn ctors_all_present(ctors: Vec[CtorInfo], present: Vec[Bytes]) => Bool =
+  match ctors {
+    Nil => True,
+    Cons(c, rest) => match names_contains(present, ci_name(c)) {
+      True => ctors_all_present(rest, present),
+      False => False
+    }
+  };
+
+fn find_missing_ctor(ctors: Vec[CtorInfo], present: Vec[Bytes]) => Option[CtorInfo] =
+  match ctors {
+    Nil => None,
+    Cons(c, rest) => match names_contains(present, ci_name(c)) {
+      True => find_missing_ctor(rest, present),
+      False => Some(c)
+    }
+  };
+
+// missing_head: the witness head for an incomplete column (mirrors usefulness.rs's inline
+// `missing.map_or(Pat::Wild, ...)`).
+fn missing_head(m: Option[CtorInfo]) => Pat =
+  match m { None => MpWild, Some(ci) => MpCtor(ci_name(ci), wild_n(ty_len(ci_fields(ci)))) };
+
+// pat_split_at: split a witness vector at `n` (mirrors usefulness.rs's `w.split_off(a)`).
+fn pat_split_at(w: Vec[Pat], n: Binary{32}) => Pair[Vec[Pat], Vec[Pat]] =
+  match eq(n, zero32()) {
+    0b1 => Pr(Nil, w),
+    _ => match w {
+      Nil => Pr(Nil, Nil),
+      Cons(h, t) => match pat_split_at(t, sub_u(n, one32())) {
+        Pr(hs, rest) => Pr(Cons(h, hs), rest)
+      }
+    }
+  };
+
+// rebuild_ctor / prepend: re-fold a witness whose first `a` elements are constructor `c`'s
+// sub-witnesses (mirrors usefulness.rs verbatim).
+fn rebuild_ctor(c: Bytes, a: Binary{32}, w: Vec[Pat]) => Vec[Pat] =
+  match pat_split_at(w, a) { Pr(headpats, restpats) => Cons(MpCtor(c, headpats), restpats) };
+
+fn prepend(head: Pat, rest: Vec[Pat]) => Vec[Pat] =
+  Cons(head, rest);
+
+// matrix_is_empty_to_witness: the `q.is_empty()` base case's witness (`Some([])` iff no row
+// remains).
+fn matrix_is_empty_to_witness(matrix: Vec[Vec[Pat]]) => Option[Vec[Pat]] =
+  match matrix { Nil => Some(Nil), Cons(_, _) => None };
+
+// useful: `U(P, q)` entry point — a fresh per-query budget (mirrors usefulness.rs::useful).
+fn useful(types: Vec[DataInfo], matrix: Vec[Vec[Pat]], q: Vec[Pat], col_types: Vec[Ty])
+    => Result[Option[Vec[Pat]], Bytes] =
+  useful_budgeted(zero32(), types, matrix, q, col_types);
+
+// useful_budgeted: the budget-charged recursion (mirrors usefulness.rs::useful_budgeted).
+fn useful_budgeted(depth: Binary{32}, types: Vec[DataInfo], matrix: Vec[Vec[Pat]], q: Vec[Pat],
+    col_types: Vec[Ty]) => Result[Option[Vec[Pat]], Bytes] =
+  match enter_depth(depth) {
+    Err(e) => Err(e),
+    Ok(d2) => match q {
+      Nil => Ok(matrix_is_empty_to_witness(matrix)),
+      Cons(q0, qrest) => match q0 {
+        MpCtor(c, subs) => useful_ctor(d2, types, matrix, qrest, col_types, c, subs),
+        MpLit(k) => useful_lit(d2, types, matrix, qrest, col_types, k),
+        MpWild => useful_wild(d2, types, matrix, qrest, col_types)
+      }
+    }
+  };
+
+fn useful_ctor(depth: Binary{32}, types: Vec[DataInfo], matrix: Vec[Vec[Pat]], qrest: Vec[Pat],
+    col_types: Vec[Ty], c: Bytes, subs: Vec[Pat]) => Result[Option[Vec[Pat]], Bytes] =
+  let a = pat_len(subs) in
+  let m2 = specialize_ctor_pat(matrix, c, a) in
+  let q2 = pat_append(subs, qrest) in
+  let ct2 = ty_append(ctor_fields_of(ct_head(col_types), c, types), ct_tail(col_types)) in
+  match useful_budgeted(depth, types, m2, q2, ct2) {
+    Err(e) => Err(e),
+    Ok(w) => match w {
+      None => Ok(None),
+      Some(witness) => Ok(Some(rebuild_ctor(c, a, witness)))
+    }
+  };
+
+fn useful_lit(depth: Binary{32}, types: Vec[DataInfo], matrix: Vec[Vec[Pat]], qrest: Vec[Pat],
+    col_types: Vec[Ty], k: Bytes) => Result[Option[Vec[Pat]], Bytes] =
+  let m2 = specialize_lit_pat(matrix, k) in
+  match useful_budgeted(depth, types, m2, qrest, ct_tail(col_types)) {
+    Err(e) => Err(e),
+    Ok(w) => match w {
+      None => Ok(None),
+      Some(witness) => Ok(Some(prepend(MpLit(k), witness)))
+    }
+  };
+
+fn useful_wild(depth: Binary{32}, types: Vec[DataInfo], matrix: Vec[Vec[Pat]], qrest: Vec[Pat],
+    col_types: Vec[Ty]) => Result[Option[Vec[Pat]], Bytes] =
+  match signature(ct_head(col_types), types) {
+    None => useful_wild_open(depth, types, matrix, qrest, col_types),
+    Some(d) =>
+      let present = head_ctors(matrix) in
+      match ctors_all_present(di_ctors(d), present) {
+        True => useful_wild_complete(depth, types, matrix, qrest, col_types, di_ctors(d)),
+        False => useful_wild_incomplete(depth, types, matrix, qrest, col_types, d, present)
+      }
+  };
+
+fn useful_wild_open(depth: Binary{32}, types: Vec[DataInfo], matrix: Vec[Vec[Pat]], qrest: Vec[Pat],
+    col_types: Vec[Ty]) => Result[Option[Vec[Pat]], Bytes] =
+  let m2 = default_matrix(matrix) in
+  match useful_budgeted(depth, types, m2, qrest, ct_tail(col_types)) {
+    Err(e) => Err(e),
+    Ok(w) => match w {
+      None => Ok(None),
+      Some(witness) => Ok(Some(prepend(MpWild, witness)))
+    }
+  };
+
+fn useful_wild_incomplete(depth: Binary{32}, types: Vec[DataInfo], matrix: Vec[Vec[Pat]],
+    qrest: Vec[Pat], col_types: Vec[Ty], d: DataInfo, present: Vec[Bytes])
+    => Result[Option[Vec[Pat]], Bytes] =
+  let m2 = default_matrix(matrix) in
+  match useful_budgeted(depth, types, m2, qrest, ct_tail(col_types)) {
+    Err(e) => Err(e),
+    Ok(w) => match w {
+      None => Ok(None),
+      Some(witness) =>
+        let missing = find_missing_ctor(di_ctors(d), present) in
+        Ok(Some(prepend(missing_head(missing), witness)))
+    }
+  };
+
+fn useful_wild_complete(depth: Binary{32}, types: Vec[DataInfo], matrix: Vec[Vec[Pat]],
+    qrest: Vec[Pat], col_types: Vec[Ty], ctors: Vec[CtorInfo]) => Result[Option[Vec[Pat]], Bytes] =
+  match ctors {
+    Nil => Ok(None),
+    Cons(ci, rest) =>
+      let a = ty_len(ci_fields(ci)) in
+      let m2 = specialize_ctor_pat(matrix, ci_name(ci), a) in
+      let q2 = pat_append(wild_n(a), qrest) in
+      let ct2 = ty_append(ci_fields(ci), ct_tail(col_types)) in
+      match useful_budgeted(depth, types, m2, q2, ct2) {
+        Err(e) => Err(e),
+        Ok(w) => match w {
+          Some(witness) => Ok(Some(rebuild_ctor(ci_name(ci), a, witness))),
+          None => useful_wild_complete(depth, types, matrix, qrest, col_types, rest)
+        }
+      }
+  };
+
+// render: render a witness pattern for a diagnostic (mirrors usefulness.rs::render; the b:/t:
+// literal-key rewrite is SKIPPED here — cosmetic-only, not exercised by this increment's
+// differential, which compares verdict SHAPE, not rendered text).
+fn render(p: Pat) => Bytes =
+  match p {
+    MpWild => "_",
+    MpLit(k) => k,
+    MpCtor(n, subs) => match subs {
+      Nil => n,
+      Cons(_, _) => bytes_concat(n, bytes_concat("(", bytes_concat(render_list(subs), ")")))
+    }
+  };
+
+fn render_list(subs: Vec[Pat]) => Bytes =
+  match subs {
+    Nil => "",
+    Cons(h, t) => match t {
+      Nil => render(h),
+      Cons(_, _) => bytes_concat(render(h), bytes_concat(", ", render_list(t)))
+    }
+  };
+
+// ── decision.rs port (Maranget decision-tree compilation) ───────────────────────────────────────
+
+// Head: mirrors decision.rs::Head (FLAG-semcore-2 Hd-prefix).
+type Head = HdCtor(Bytes, Binary{32}) | HdLit(Bytes);
+
+// Tree: mirrors decision.rs::Tree (no Box needed — recursion note above; `Occurrence` inlined as
+// `Vec[Binary{32}]`, FLAG-semcore-7).
+type Tree = Leaf(Binary{32}) | Fail | Switch(Vec[Binary{32}], Vec[Pair[Head, Tree]], Option[Tree]);
+
+// DRow: mirrors decision.rs::Row (a matrix row carrying its surface arm index).
+type DRow = DRw(Vec[Pat], Binary{32});
+
+fn drow_pats(r: DRow) => Vec[Pat] =
+  match r { DRw(p, _) => p };
+
+fn drow_arm(r: DRow) => Binary{32} =
+  match r { DRw(_, a) => a };
+
+// specialize_ctor_row / specialize_lit_row: the DRow-carrying twin of the `_pat` versions above
+// (FLAG-semcore-5 — no shared trait; the arm index rides through unchanged).
+fn specialize_ctor_row(rows: Vec[DRow], c: Bytes, a: Binary{32}) => Vec[DRow] =
+  match rows {
+    Nil => Nil,
+    Cons(r, rest) => match drow_pats(r) {
+      Nil => specialize_ctor_row(rest, c, a),
+      Cons(first, cols) => match first {
+        MpCtor(n, subs) => match bytes_eq(n, c) {
+          0b1 => Cons(DRw(pat_append(subs, cols), drow_arm(r)), specialize_ctor_row(rest, c, a)),
+          _ => specialize_ctor_row(rest, c, a)
+        },
+        MpWild =>
+          Cons(DRw(pat_append(wild_n(a), cols), drow_arm(r)), specialize_ctor_row(rest, c, a)),
+        MpLit(_) => specialize_ctor_row(rest, c, a)
+      }
+    }
+  };
+
+fn specialize_lit_row(rows: Vec[DRow], k: Bytes) => Vec[DRow] =
+  match rows {
+    Nil => Nil,
+    Cons(r, rest) => match drow_pats(r) {
+      Nil => specialize_lit_row(rest, k),
+      Cons(first, cols) => match first {
+        MpLit(j) => match bytes_eq(j, k) {
+          0b1 => Cons(DRw(cols, drow_arm(r)), specialize_lit_row(rest, k)),
+          _ => specialize_lit_row(rest, k)
+        },
+        MpWild => Cons(DRw(cols, drow_arm(r)), specialize_lit_row(rest, k)),
+        MpCtor(_, _) => specialize_lit_row(rest, k)
+      }
+    }
+  };
+
+// default_rows: `D(P)` over `DRow`s.
+fn default_rows(rows: Vec[DRow]) => Vec[DRow] =
+  match rows {
+    Nil => Nil,
+    Cons(r, rest) => match drow_pats(r) {
+      Nil => default_rows(rest),
+      Cons(first, cols) => match first {
+        MpWild => Cons(DRw(cols, drow_arm(r)), default_rows(rest)),
+        MpCtor(_, _) => default_rows(rest),
+        MpLit(_) => default_rows(rest)
+      }
+    }
+  };
+
+// row_all_wild: whether every column of one row is a wildcard.
+fn row_all_wild(pats: Vec[Pat]) => Bool =
+  match pats {
+    Nil => True,
+    Cons(p, rest) => match p {
+      MpWild => row_all_wild(rest),
+      MpCtor(_, _) => False,
+      MpLit(_) => False
+    }
+  };
+
+// first_nonwild_idx: the FLAG-semcore-8 simplified column-selection heuristic — the first
+// non-wildcard column of ONE row (called on the first row only, which the caller has already
+// established is not all-wild).
+fn first_nonwild_idx(pats: Vec[Pat], idx: Binary{32}) => Binary{32} =
+  match pats {
+    Nil => idx,
+    Cons(p, rest) => match p {
+      MpWild => first_nonwild_idx(rest, add_u(idx, one32())),
+      MpCtor(_, _) => idx,
+      MpLit(_) => idx
+    }
+  };
+
+// extract_occ / extract_ty / extract_pat: remove the `i`-th element, returning it paired with the
+// remainder in original relative order (the building block of "rotate column `i` to the front").
+fn extract_occ(v: Vec[Vec[Binary{32}]], i: Binary{32}) => Pair[Vec[Binary{32}], Vec[Vec[Binary{32}]]] =
+  match eq(i, zero32()) {
+    0b1 => match v { Cons(h, t) => Pr(h, t), Nil => Pr(Nil, Nil) },
+    _ => match v {
+      Cons(h, t) => match extract_occ(t, sub_u(i, one32())) { Pr(picked, rem) => Pr(picked, Cons(h, rem)) },
+      Nil => Pr(Nil, Nil)
+    }
+  };
+
+fn extract_ty(v: Vec[Ty], i: Binary{32}) => Pair[Ty, Vec[Ty]] =
+  match eq(i, zero32()) {
+    0b1 => match v { Cons(h, t) => Pr(h, t), Nil => Pr(TyBytes, Nil) },
+    _ => match v {
+      Cons(h, t) => match extract_ty(t, sub_u(i, one32())) { Pr(picked, rem) => Pr(picked, Cons(h, rem)) },
+      Nil => Pr(TyBytes, Nil)
+    }
+  };
+
+fn extract_pat(v: Vec[Pat], i: Binary{32}) => Pair[Pat, Vec[Pat]] =
+  match eq(i, zero32()) {
+    0b1 => match v { Cons(h, t) => Pr(h, t), Nil => Pr(MpWild, Nil) },
+    _ => match v {
+      Cons(h, t) => match extract_pat(t, sub_u(i, one32())) { Pr(picked, rem) => Pr(picked, Cons(h, rem)) },
+      Nil => Pr(MpWild, Nil)
+    }
+  };
+
+fn rotate_pat_to_front(v: Vec[Pat], i: Binary{32}) => Vec[Pat] =
+  match extract_pat(v, i) { Pr(picked, rem) => Cons(picked, rem) };
+
+fn rotate_rows_to_front(rows: Vec[DRow], i: Binary{32}) => Vec[DRow] =
+  match rows {
+    Nil => Nil,
+    Cons(r, rest) =>
+      Cons(DRw(rotate_pat_to_front(drow_pats(r), i), drow_arm(r)), rotate_rows_to_front(rest, i))
+  };
+
+// u32_append / occ_append / cases_append: small list-splicing helpers.
+fn u32_append(a: Vec[Binary{32}], b: Vec[Binary{32}]) => Vec[Binary{32}] =
+  match a { Nil => b, Cons(h, t) => Cons(h, u32_append(t, b)) };
+
+fn occ_append(a: Vec[Vec[Binary{32}]], b: Vec[Vec[Binary{32}]]) => Vec[Vec[Binary{32}]] =
+  match a { Nil => b, Cons(h, t) => Cons(h, occ_append(t, b)) };
+
+fn cases_append(a: Vec[Pair[Head, Tree]], b: Vec[Pair[Head, Tree]]) => Vec[Pair[Head, Tree]] =
+  match a { Nil => b, Cons(h, t) => Cons(h, cases_append(t, b)) };
+
+// child_occ: the `a` child occurrences `occ0 ++ [j]` (j = 0..a) followed by the remaining columns.
+fn child_occ(occ_rest: Vec[Vec[Binary{32}]], occ0: Vec[Binary{32}], a: Binary{32})
+    => Vec[Vec[Binary{32}]] =
+  occ_append(child_occ_acc(occ0, zero32(), a), occ_rest);
+
+fn child_occ_acc(occ0: Vec[Binary{32}], j: Binary{32}, a: Binary{32}) => Vec[Vec[Binary{32}]] =
+  match lt(j, a) {
+    0b1 => Cons(u32_append(occ0, Cons(j, Nil)), child_occ_acc(occ0, add_u(j, one32()), a)),
+    _ => Nil
+  };
+
+// gather_ctor_names / gather_lit_names: first-seen, deduped head names in column 0.
+fn gather_ctor_names(rows: Vec[DRow]) => Vec[Bytes] =
+  match rows {
+    Nil => Nil,
+    Cons(r, rest) => match drow_pats(r) {
+      Nil => gather_ctor_names(rest),
+      Cons(first, _) => match first {
+        MpCtor(n, _) =>
+          let tail = gather_ctor_names(rest) in
+          match names_contains(tail, n) { True => tail, False => Cons(n, tail) },
+        MpWild => gather_ctor_names(rest),
+        MpLit(_) => gather_ctor_names(rest)
+      }
+    }
+  };
+
+fn gather_lit_names(rows: Vec[DRow]) => Vec[Bytes] =
+  match rows {
+    Nil => Nil,
+    Cons(r, rest) => match drow_pats(r) {
+      Nil => gather_lit_names(rest),
+      Cons(first, _) => match first {
+        MpLit(k) =>
+          let tail = gather_lit_names(rest) in
+          match names_contains(tail, k) { True => tail, False => Cons(k, tail) },
+        MpWild => gather_lit_names(rest),
+        MpCtor(_, _) => gather_lit_names(rest)
+      }
+    }
+  };
+
+// signature_complete: whether `present` covers `ty0`'s whole finite signature.
+fn signature_complete(ty0: Ty, types: Vec[DataInfo], present: Vec[Bytes]) => Bool =
+  match signature(ty0, types) {
+    None => False,
+    Some(d) => ctors_all_present(di_ctors(d), present)
+  };
+
+// build_ctor_cases(_from): one `(Head::Ctor, subtree)` case per ctor of `ty0`'s signature that
+// appears in `present`, in SIGNATURE order (mirrors decision.rs::compile_rows's ctor loop).
+fn build_ctor_cases(depth: Binary{32}, types: Vec[DataInfo], rows: Vec[DRow], ty0: Ty,
+    occ0: Vec[Binary{32}], occ_rest: Vec[Vec[Binary{32}]], tys_rest: Vec[Ty], present: Vec[Bytes])
+    => Result[Vec[Pair[Head, Tree]], Bytes] =
+  match signature(ty0, types) {
+    None => Ok(Nil),
+    Some(d) => build_ctor_cases_from(depth, types, rows, occ0, occ_rest, tys_rest, di_ctors(d), present)
+  };
+
+fn build_ctor_cases_from(depth: Binary{32}, types: Vec[DataInfo], rows: Vec[DRow],
+    occ0: Vec[Binary{32}], occ_rest: Vec[Vec[Binary{32}]], tys_rest: Vec[Ty], ctors: Vec[CtorInfo],
+    present: Vec[Bytes]) => Result[Vec[Pair[Head, Tree]], Bytes] =
+  match ctors {
+    Nil => Ok(Nil),
+    Cons(ci, rest) => match names_contains(present, ci_name(ci)) {
+      False => build_ctor_cases_from(depth, types, rows, occ0, occ_rest, tys_rest, rest, present),
+      True =>
+        let a = ty_len(ci_fields(ci)) in
+        let sub_rows = specialize_ctor_row(rows, ci_name(ci), a) in
+        let sub_occ = child_occ(occ_rest, occ0, a) in
+        let sub_tys = ty_append(ci_fields(ci), tys_rest) in
+        match compile_rows(depth, types, sub_rows, sub_occ, sub_tys) {
+          Err(e) => Err(e),
+          Ok(subtree) =>
+            match build_ctor_cases_from(depth, types, rows, occ0, occ_rest, tys_rest, rest, present) {
+              Err(e) => Err(e),
+              Ok(more) => Ok(Cons(Pr(HdCtor(ci_name(ci), a), subtree), more))
+            }
+        }
+    }
+  };
+
+// build_lit_cases: one `(Head::Lit, subtree)` case per literal head, first-seen order.
+fn build_lit_cases(depth: Binary{32}, types: Vec[DataInfo], rows: Vec[DRow],
+    occ_rest: Vec[Vec[Binary{32}]], tys_rest: Vec[Ty], lits: Vec[Bytes])
+    => Result[Vec[Pair[Head, Tree]], Bytes] =
+  match lits {
+    Nil => Ok(Nil),
+    Cons(k, rest) => match compile_rows(depth, types, specialize_lit_row(rows, k), occ_rest, tys_rest) {
+      Err(e) => Err(e),
+      Ok(subtree) => match build_lit_cases(depth, types, rows, occ_rest, tys_rest, rest) {
+        Err(e) => Err(e),
+        Ok(more) => Ok(Cons(Pr(HdLit(k), subtree), more))
+      }
+    }
+  };
+
+// compile: entry point — a fresh per-compilation budget (mirrors decision.rs::compile).
+fn compile(types: Vec[DataInfo], matrix: Vec[Vec[Pat]], arms: Vec[Binary{32}],
+    occ: Vec[Vec[Binary{32}]], tys: Vec[Ty]) => Result[Tree, Bytes] =
+  compile_rows(zero32(), types, zip_rows(matrix, arms), occ, tys);
+
+fn zip_rows(matrix: Vec[Vec[Pat]], arms: Vec[Binary{32}]) => Vec[DRow] =
+  match matrix {
+    Nil => Nil,
+    Cons(pats, mrest) => match arms {
+      Nil => Nil,
+      Cons(arm, arest) => Cons(DRw(pats, arm), zip_rows(mrest, arest))
+    }
+  };
+
+// compile_rows: the budget-charged recursion (mirrors decision.rs::compile_rows).
+fn compile_rows(depth: Binary{32}, types: Vec[DataInfo], rows: Vec[DRow], occ: Vec[Vec[Binary{32}]],
+    tys: Vec[Ty]) => Result[Tree, Bytes] =
+  match enter_depth(depth) {
+    Err(e) => Err(e),
+    Ok(d2) => match rows {
+      Nil => Ok(Fail),
+      Cons(first, _) => match row_all_wild(drow_pats(first)) {
+        True => Ok(Leaf(drow_arm(first))),
+        False => compile_switch(d2, types, rows, occ, tys, first_nonwild_idx(drow_pats(first), zero32()))
+      }
+    }
+  };
+
+fn compile_switch(depth: Binary{32}, types: Vec[DataInfo], rows: Vec[DRow], occ: Vec[Vec[Binary{32}]],
+    tys: Vec[Ty], col: Binary{32}) => Result[Tree, Bytes] =
+  let rows2 = rotate_rows_to_front(rows, col) in
+  match extract_occ(occ, col) { Pr(occ0, occ_rest) =>
+  match extract_ty(tys, col) { Pr(ty0, tys_rest) =>
+    let present = gather_ctor_names(rows2) in
+    let complete = signature_complete(ty0, types, present) in
+    match build_ctor_cases(depth, types, rows2, ty0, occ0, occ_rest, tys_rest, present) {
+      Err(e) => Err(e),
+      Ok(ctor_cases) =>
+        let lits = gather_lit_names(rows2) in
+        match build_lit_cases(depth, types, rows2, occ_rest, tys_rest, lits) {
+          Err(e) => Err(e),
+          Ok(lit_cases) =>
+            let cases = cases_append(ctor_cases, lit_cases) in
+            match complete {
+              True => Ok(Switch(occ0, cases, None)),
+              False => match compile_rows(depth, types, default_rows(rows2), occ_rest, tys_rest) {
+                Err(e) => Err(e),
+                Ok(deftree) => Ok(Switch(occ0, cases, Some(deftree)))
+              }
+            }
+        }
+    }
+  }};
+
+// has_reachable_fail: whether the tree contains a reachable `Fail` (mirrors decision.rs verbatim).
+fn has_reachable_fail(t: Tree) => Bool =
+  match t {
+    Fail => True,
+    Leaf(_) => False,
+    Switch(_, cases, deft) => match cases_any_reachable_fail(cases) {
+      True => True,
+      False => match deft { None => False, Some(d) => has_reachable_fail(d) }
+    }
+  };
+
+fn cases_any_reachable_fail(cases: Vec[Pair[Head, Tree]]) => Bool =
+  match cases {
+    Nil => False,
+    Cons(c, rest) => match c {
+      Pr(_, t) => match has_reachable_fail(t) { True => True, False => cases_any_reachable_fail(rest) }
+    }
+  };
+
+// tree_eval: a small TEST-ONLY reference evaluator (mirrors decision.rs's own module-doc-mentioned
+// `eval_tree` reference — "it verifies the compiler; it does not run programs"). Walks the tree
+// against one concrete (fully-ground, no `MpWild`) value pattern, returning the arm index reached,
+// or `None` if a `Fail` is reached. Occurrence-indexed lookup into the concrete value is done via
+// `pat_at_occ` (a small ground-value navigator — NOT part of decision.rs itself, purely this
+// increment's differential-driving harness).
+fn tree_eval(t: Tree, value: Pat) => Option[Binary{32}] =
+  match t {
+    Fail => None,
+    Leaf(arm) => Some(arm),
+    Switch(occ, cases, deft) => tree_eval_switch(pat_at_occ(value, occ), cases, deft, value)
+  };
+
+fn tree_eval_switch(scrutinee: Pat, cases: Vec[Pair[Head, Tree]], deft: Option[Tree], value: Pat)
+    => Option[Binary{32}] =
+  match cases {
+    Nil => tree_eval_deft(deft, value),
+    Cons(c, rest) => match c {
+      Pr(h, sub) => match head_matches(h, scrutinee) {
+        True => tree_eval(sub, value),
+        False => tree_eval_switch(scrutinee, rest, deft, value)
+      }
+    }
+  };
+
+fn tree_eval_deft(deft: Option[Tree], value: Pat) => Option[Binary{32}] =
+  match deft { None => None, Some(d) => tree_eval(d, value) };
+
+fn head_matches(h: Head, scrutinee: Pat) => Bool =
+  match h {
+    HdCtor(n, _) => match scrutinee {
+      MpCtor(sn, _) => match bytes_eq(n, sn) { 0b1 => True, _ => False },
+      MpWild => False,
+      MpLit(_) => False
+    },
+    HdLit(k) => match scrutinee {
+      MpLit(sk) => match bytes_eq(k, sk) { 0b1 => True, _ => False },
+      MpWild => False,
+      MpCtor(_, _) => False
+    }
+  };
+
+// pat_at_occ: navigate a ground value pattern via a field-index occurrence (root = `Nil`).
+fn pat_at_occ(value: Pat, occ: Vec[Binary{32}]) => Pat =
+  match occ {
+    Nil => value,
+    Cons(i, rest) => match value {
+      MpCtor(_, subs) => pat_at_occ(pat_nth(subs, i), rest),
+      MpWild => value,
+      MpLit(_) => value
+    }
+  };
+
+fn pat_nth(v: Vec[Pat], i: Binary{32}) => Pat =
+  match eq(i, zero32()) {
+    0b1 => match v { Cons(h, _) => h, Nil => MpWild },
+    _ => match v { Cons(_, t) => pat_nth(t, sub_u(i, one32())), Nil => MpWild }
+  };
+
+// ── affine.rs port (the static use-once tracker for `Substrate` bindings — FLAG-semcore-6) ─────
+// Only the PURE state-transition core is ported (`slot_for_ty`, `slots_seeded`, `slots_use_at`,
+// `union_merge_into`) — the Rust `Tracker` object's inert/active split and its
+// push/pop/truncate/snapshot/restore/merge_alt checker-integration wiring are NOT ported (no
+// `Cx`-equivalent scope stack exists in this partial increment to mirror). `Vec[Slot]` IS the
+// tracker: a plain value, threaded explicitly by the caller (never mutated in place).
+
+// Slot: mirrors affine.rs::Slot (one scope slot's affine state).
+type Slot = Skip | Live(Bytes) | Moved(Bytes, Binary{32});
+
+// UseOutcome: mirrors affine.rs::UseOutcome (the outcome of recording a use at some index).
+type UseOutcome = NotAffine | FirstUse | DoubleUse(Bytes, Binary{32}, Binary{32});
+
+// slot_for_ty: the slot a fresh binding of type `ty` starts in (mirrors affine.rs::Slot::for_ty;
+// the trailing-wildcard idiom — every non-`TySubstrate` type is `Skip`).
+fn slot_for_ty(ty: Ty) => Slot =
+  match ty { TySubstrate(tag) => Live(tag), _ => Skip };
+
+// slots_seeded: one slot per entry of `tys` (mirrors affine.rs::Tracker::seeded's per-parameter
+// seeding, restated as a pure fn over the parameter TYPE list).
+fn slots_seeded(tys: Vec[Ty]) => Vec[Slot] =
+  match tys { Nil => Nil, Cons(t, rest) => Cons(slot_for_ty(t), slots_seeded(rest)) };
+
+// slots_use_at: record a use (move) of the binding at scope index `idx`, returning the UPDATED
+// slots vector paired with the outcome (mirrors affine.rs::Tracker::use_at; `ordinal` is the
+// caller's own monotonic use counter — FLAG-semcore-7, no wrapper `UseSite` type).
+fn slots_use_at(slots: Vec[Slot], idx: Binary{32}, ordinal: Binary{32}) => Pair[Vec[Slot], UseOutcome] =
+  match eq(idx, zero32()) {
+    0b1 => slots_use_here(slots, ordinal),
+    _ => match slots {
+      Nil => Pr(Nil, NotAffine),
+      Cons(s, rest) => match slots_use_at(rest, sub_u(idx, one32()), ordinal) {
+        Pr(rest2, outcome) => Pr(Cons(s, rest2), outcome)
+      }
+    }
+  };
+
+fn slots_use_here(slots: Vec[Slot], ordinal: Binary{32}) => Pair[Vec[Slot], UseOutcome] =
+  match slots {
+    Nil => Pr(Nil, NotAffine),
+    Cons(s, rest) => match s {
+      Skip => Pr(Cons(Skip, rest), NotAffine),
+      Live(tag) => Pr(Cons(Moved(tag, ordinal), rest), FirstUse),
+      Moved(tag, first) => Pr(Cons(Moved(tag, first), rest), DoubleUse(tag, first, ordinal))
+    }
+  };
+
+// merge_slot / union_merge_into: the conservative branch-merge rule (mirrors affine.rs verbatim —
+// a slot moved in EITHER alternative is moved afterward). A length mismatch between `acc` and
+// `other` is an internal-invariant violation (mirrors the Rust `debug_assert_eq!`); this total-fn
+// port stops merging at the shorter side rather than panicking (never-silent by construction — no
+// call site in this increment's differential produces mismatched snapshots).
+fn union_merge_into(acc: Vec[Slot], other: Vec[Slot]) => Vec[Slot] =
+  match acc {
+    Nil => Nil,
+    Cons(a, arest) => match other {
+      Nil => acc,
+      Cons(o, orest) => Cons(merge_slot(a, o), union_merge_into(arest, orest))
+    }
+  };
+
+fn merge_slot(a: Slot, o: Slot) => Slot =
+  match a {
+    Live(_) => match o { Moved(tag, first) => Moved(tag, first), Live(_) => a, Skip => a },
+    Moved(_, _) => a,
+    Skip => a
+  };
+
+// ── grade.rs port (RFC-0018 SS4.3 stage-1a static guarantee grading — FLAG-semcore-9) ───────────
+// Only the PER-BODY walk is ported: `grade`/`grade_expr` and its helpers, plus a thin
+// `grade_fn_body` entry point. `check_guarantees`'s whole-program `own_names`/`impl_methods`
+// driver is NOT ported (FLAG-semcore-9's header note).
+
+// CheckError: mirrors checkty.rs::CheckError (site, message) — the one error surface `grade`
+// needs; no checking LOGIC accompanies it (this file ports no checkty.rs logic at all).
+type CheckError = CE(Bytes, Bytes);
+
+fn ce_site(e: CheckError) => Bytes =
+  match e { CE(s, _) => s };
+
+fn ce_message(e: CheckError) => Bytes =
+  match e { CE(_, m) => m };
+
+// FnEnv: the FLAG-semcore-4 ordered-assoc-list standing in for the checker's resolved
+// `BTreeMap<String, FnDecl>` fn table.
+fn fnenv_lookup(fns: Vec[Pair[Bytes, FnDecl]], name: Bytes) => Option[FnDecl] =
+  match fns {
+    Nil => None,
+    Cons(entry, rest) => match entry {
+      Pr(n, fd) => match bytes_eq(n, name) { 0b1 => Some(fd), _ => fnenv_lookup(rest, name) }
+    }
+  };
+
+// ret_grade / param_grade: the modular-bottom defaults (mirrors grade.rs verbatim — an
+// unannotated demand/advertisement is `GDeclared`, the weakest grade).
+fn ret_grade(fd: FnDecl) => Strength =
+  match typeref_guarantee(fnsig_ret(fndecl_sig(fd))) { Some(g) => g, None => GDeclared };
+
+fn param_grade(p: Param) => Strength =
+  match typeref_guarantee(param_ty(p)) { Some(g) => g, None => GDeclared };
+
+// scope_lookup: a lexical stack of `(name, grade)`, most-recent-first (`Cons` = push; shadowing =
+// head-first scan finds the most recent binding — mirrors the Rust `scope.iter().rev().find`).
+fn scope_lookup(scope: Vec[Pair[Bytes, Strength]], name: Bytes) => Option[Strength] =
+  match scope {
+    Nil => None,
+    Cons(entry, rest) => match entry {
+      Pr(n, g) => match bytes_eq(n, name) { 0b1 => Some(g) , _ => scope_lookup(rest, name) }
+    }
+  };
+
+// require: the honesty check `have >= demand` (G-Sub; mirrors grade.rs::require, `Option`-returning
+// rather than `Result<(),_>` — no unit type needed self-contained).
+fn require(have: Strength, demand: Strength, site: Bytes, what: Bytes) => Option[CheckError] =
+  match strength_satisfies(have, demand) {
+    True => None,
+    False => Some(CE(site, bytes_concat(what, " does not satisfy the demanded guarantee (RFC-0018 SS4.3 -- VR-5/G2)")))
+  };
+
+// grade: the budgeted entry point (mirrors grade.rs::Gx::grade's per-recursion budget charge).
+fn grade(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]],
+    site: Bytes, e: Expr) => Result[Strength, CheckError] =
+  match enter_depth(depth) {
+    Err(_) => Err(CE(site, "guarantee grading exceeded the recursion budget (RFC-0041 SS4.7 restated; refused never-silently, never a host-stack overflow -- G2/VR-5)")),
+    Ok(d2) => grade_expr(d2, fns, scope, site, e)
+  };
+
+// grade_expr: the per-variant dispatch (mirrors grade.rs::Gx::grade's big `match e { ... }`,
+// field-for-field against ast.myc's `Expr` — every variant explicit, M-980 split-match idiom).
+fn grade_expr(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]],
+    site: Bytes, e: Expr) => Result[Strength, CheckError] =
+  match e {
+    Let(name, ty, bound, body) => grade_let(depth, fns, scope, site, name, ty, bound, body),
+    If(cond, conseq, alt) => grade_if(depth, fns, scope, site, cond, conseq, alt),
+    Match(scrutinee, arms) => grade_match(depth, fns, scope, site, scrutinee, arms),
+    For(x, xs, acc, init, body) => grade_for(depth, fns, scope, site, x, xs, acc, init, body),
+    Swap(value, _, _) => match grade(depth, fns, scope, site, value) {
+      Err(err) => Err(err),
+      Ok(_) => Ok(GExact)
+    },
+    WithParadigm(_, body) => grade(depth, fns, scope, site, body),
+    Wild(_) => Ok(GDeclared),
+    Spore(_) => Ok(GDeclared),
+    Consume(b) => grade(depth, fns, scope, site, b),
+    Colony(hyphae) => grade_colony(depth, fns, scope, site, hyphae),
+    Lambda(_, _) => Ok(GDeclared),
+    App(head, args) => grade_app(depth, fns, scope, site, head, args),
+    Fuse(left, right) => grade_fuse(depth, fns, scope, site, left, right),
+    Reclaim(pol, body) => grade_reclaim(depth, fns, scope, site, pol, body),
+    Path(p) => Ok(grade_path(scope, p)),
+    Lit(lit) => grade_lit(depth, fns, scope, site, lit),
+    Ascribe(inner, t) => grade_ascribe(depth, fns, scope, site, inner, t),
+    TupleLit(elems) => meet_all(depth, fns, scope, site, elems)
+  };
+
+// grade_path: G-Var — a single-segment path is a bound variable (`GExact` if unbound: a nullary
+// constructor/constant); a multi-segment path is conservatively `GExact` too (the checker already
+// refuses those; a residual one here is never reached by a well-formed body).
+fn grade_path(scope: Vec[Pair[Bytes, Strength]], p: Path) => Strength =
+  match path_segs(p) {
+    Nil => GExact,
+    Cons(seg, rest) => match rest {
+      Nil => match scope_lookup(scope, seg) { Some(g) => g, None => GExact },
+      Cons(_, _) => GExact
+    }
+  };
+
+// grade_lit: G-Const — a literal is `Exact` by construction; a list literal is the meet of its
+// elements (G-Con).
+fn grade_lit(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]],
+    site: Bytes, lit: Literal) => Result[Strength, CheckError] =
+  match lit {
+    List(es) => meet_all(depth, fns, scope, site, es),
+    Bin(_) => Ok(GExact),
+    Trit(_) => Ok(GExact),
+    Int(_) => Ok(GExact),
+    AmbientInt(_, _) => Ok(GExact),
+    LBytes(_) => Ok(GExact),
+    Str(_) => Ok(GExact),
+    LFloat(_) => Ok(GExact)
+  };
+
+// grade_let: G-Let / G-Weaken — grade the bound expr, weaken to the ascription if written, bind,
+// then take the meet with the body's grade.
+fn grade_let(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]],
+    site: Bytes, name: Bytes, ty: Option[TypeRef], bound: Expr, body: Expr)
+    => Result[Strength, CheckError] =
+  match grade(depth, fns, scope, site, bound) {
+    Err(err) => Err(err),
+    Ok(g_bound) => match let_bind_grade(ty, g_bound, site, name) {
+      Err(err) => Err(err),
+      Ok(bind) => match grade(depth, fns, Cons(Pr(name, bind), scope), site, body) {
+        Err(err) => Err(err),
+        Ok(g_body) => Ok(strength_meet(bind, g_body))
+      }
+    }
+  };
+
+fn let_bind_grade(ty: Option[TypeRef], g_bound: Strength, site: Bytes, name: Bytes)
+    => Result[Strength, CheckError] =
+  match ty {
+    None => Ok(g_bound),
+    Some(t) => match typeref_guarantee(t) {
+      None => Ok(g_bound),
+      Some(g) => match require(g_bound, g, site, bytes_concat("let-ascription for ", name)) {
+        Some(err) => Err(err),
+        None => Ok(g)
+      }
+    }
+  };
+
+// grade_if: Design A — the condition is walked (to enforce demands inside it) but does NOT
+// degrade the result; the result is the meet of both branch bodies.
+fn grade_if(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]],
+    site: Bytes, cond: Expr, conseq: Expr, alt: Expr) => Result[Strength, CheckError] =
+  match grade(depth, fns, scope, site, cond) {
+    Err(err) => Err(err),
+    Ok(_) => match grade(depth, fns, scope, site, conseq) {
+      Err(err) => Err(err),
+      Ok(t) => match grade(depth, fns, scope, site, alt) {
+        Err(err) => Err(err),
+        Ok(f) => Ok(strength_meet(t, f))
+      }
+    }
+  };
+
+// bind_pattern(s): push every variable a pattern binds at grade `g_s` (G-Match/A's field-binder
+// data-provenance rule); `POr` is unreachable post-check (the checker desugars it) — a defensive
+// no-op here (this language has no abort/panic primitive to mirror Rust's invariant-violation
+// panic, so the no-op IS the honest total-fn restatement, documented rather than silent).
+fn bind_pattern(scope: Vec[Pair[Bytes, Strength]], pat: Pattern, g_s: Strength)
+    => Vec[Pair[Bytes, Strength]] =
+  match pat {
+    PWildcard => scope,
+    PLit(_) => scope,
+    PIdent(name) => Cons(Pr(name, g_s), scope),
+    PCtor(_, subs) => bind_patterns(scope, subs, g_s),
+    PTuple(subs) => bind_patterns(scope, subs, g_s),
+    POr(_) => scope
+  };
+
+fn bind_patterns(scope: Vec[Pair[Bytes, Strength]], pats: Vec[Pattern], g_s: Strength)
+    => Vec[Pair[Bytes, Strength]] =
+  match pats {
+    Nil => scope,
+    Cons(p, rest) => bind_patterns(bind_pattern(scope, p, g_s), rest, g_s)
+  };
+
+// grade_match: G-Match/A — the scrutinee's grade does not appear in the result; the result is the
+// meet of the arm bodies (each graded under its own pattern-bound scope).
+fn grade_match(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]],
+    site: Bytes, scrutinee: Expr, arms: Vec[Arm]) => Result[Strength, CheckError] =
+  match grade(depth, fns, scope, site, scrutinee) {
+    Err(err) => Err(err),
+    Ok(g_s) => grade_arms(depth, fns, scope, site, arms, g_s)
+  };
+
+fn grade_arms(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]],
+    site: Bytes, arms: Vec[Arm], g_s: Strength) => Result[Strength, CheckError] =
+  match arms {
+    Nil => Ok(GDeclared),
+    Cons(arm, rest) =>
+      let scope2 = bind_pattern(scope, arm_pattern(arm), g_s) in
+      match grade(depth, fns, scope2, site, arm_body(arm)) {
+        Err(err) => Err(err),
+        Ok(g_arm) => match rest {
+          Nil => Ok(g_arm),
+          Cons(_, _) => match grade_arms(depth, fns, scope, site, rest, g_s) {
+            Err(err) => Err(err),
+            Ok(g_more) => Ok(strength_meet(g_arm, g_more))
+          }
+        }
+      }
+  };
+
+// grade_for: the fixpoint-avoiding fold rule — the accumulator is graded at the BOTTOM (`GDeclared`)
+// inside the body (sound without iterating to a fixpoint); the result is the meet of init/xs/body.
+fn grade_for(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]],
+    site: Bytes, x: Bytes, xs: Expr, acc: Bytes, init: Expr, body: Expr)
+    => Result[Strength, CheckError] =
+  match grade(depth, fns, scope, site, xs) {
+    Err(err) => Err(err),
+    Ok(g_xs) => match grade(depth, fns, scope, site, init) {
+      Err(err) => Err(err),
+      Ok(g_init) =>
+        let scope2 = Cons(Pr(acc, GDeclared), Cons(Pr(x, g_xs), scope)) in
+        match grade(depth, fns, scope2, site, body) {
+          Err(err) => Err(err),
+          Ok(g_body) => Ok(strength_meet(strength_meet(g_init, g_xs), g_body))
+        }
+    }
+  };
+
+// grade_colony: the colony's observable is its LAST hypha; leading hyphae are still walked (to
+// enforce demands inside them) but do not contribute to the result grade.
+fn grade_colony(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]],
+    site: Bytes, hyphae: Vec[Hypha]) => Result[Strength, CheckError] =
+  match hyphae {
+    Nil => Ok(GExact),
+    Cons(h, rest) => match rest {
+      Nil => grade(depth, fns, scope, site, hypha_body(h)),
+      Cons(_, _) => match grade(depth, fns, scope, site, hypha_body(h)) {
+        Err(err) => Err(err),
+        Ok(_) => grade_colony(depth, fns, scope, site, rest)
+      }
+    }
+  };
+
+// grade_fuse: DN-58 SSA/SSB — the meet of both operands (composition takes the weakest).
+fn grade_fuse(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]],
+    site: Bytes, left: Expr, right: Expr) => Result[Strength, CheckError] =
+  match grade(depth, fns, scope, site, left) {
+    Err(err) => Err(err),
+    Ok(lg) => match grade(depth, fns, scope, site, right) {
+      Err(err) => Err(err),
+      Ok(rg) => Ok(strength_meet(lg, rg))
+    }
+  };
+
+// grade_reclaim: DN-58 SSB — the policy expr is walked (to surface any policy-grade violation), then
+// the result is the body's grade.
+fn grade_reclaim(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]],
+    site: Bytes, pol: Expr, body: Expr) => Result[Strength, CheckError] =
+  match grade(depth, fns, scope, site, pol) {
+    Err(err) => Err(err),
+    Ok(_) => grade(depth, fns, scope, site, body)
+  };
+
+// grade_ascribe: G-Weaken — an `@ g` ascription demands the inferred grade satisfy `g`; the
+// ascribed expr then carries `g`. A bare type ascription (no `@ g`) is grade-transparent.
+fn grade_ascribe(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]],
+    site: Bytes, inner: Expr, t: TypeRef) => Result[Strength, CheckError] =
+  match grade(depth, fns, scope, site, inner) {
+    Err(err) => Err(err),
+    Ok(g_inner) => match typeref_guarantee(t) {
+      None => Ok(g_inner),
+      Some(g) => match require(g_inner, g, site, "ascription") {
+        Some(err) => Err(err),
+        None => Ok(g)
+      }
+    }
+  };
+
+// meet_all: the meet of every expression's grade (`GExact` for an empty list — the meet identity).
+fn meet_all(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]],
+    site: Bytes, es: Vec[Expr]) => Result[Strength, CheckError] =
+  match es {
+    Nil => Ok(GExact),
+    Cons(e, rest) => match grade(depth, fns, scope, site, e) {
+      Err(err) => Err(err),
+      Ok(g) => match meet_all(depth, fns, scope, site, rest) {
+        Err(err) => Err(err),
+        Ok(more) => Ok(strength_meet(g, more))
+      }
+    }
+  };
+
+// app_head_fn: resolve an `App` head to a KNOWN user function (a single-segment `Path` present in
+// `fns`), else `None` (constructor / prim / trait-method — no graded signature in stage 1a).
+fn app_head_fn(fns: Vec[Pair[Bytes, FnDecl]], head: Expr) => Option[FnDecl] =
+  match head {
+    Path(p) => match path_segs(p) {
+      Cons(seg, rest) => match rest { Nil => fnenv_lookup(fns, seg), Cons(_, _) => None },
+      Nil => None
+    },
+    _ => None
+  };
+
+// grade_app: G-App (a known callee: check each arg against its param's demand, result is the
+// callee's declared return grade) / G-Con-fallback (anything else: the conservative meet of args).
+fn grade_app(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]],
+    site: Bytes, head: Expr, args: Vec[Expr]) => Result[Strength, CheckError] =
+  match app_head_fn(fns, head) {
+    Some(fd) => grade_call(depth, fns, scope, site, fd, args),
+    None => meet_all(depth, fns, scope, site, args)
+  };
+
+fn grade_call(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]],
+    site: Bytes, fd: FnDecl, args: Vec[Expr]) => Result[Strength, CheckError] =
+  match check_args(depth, fns, scope, site, fnsig_value_params(fndecl_sig(fd)), args) {
+    Err(err) => Err(err),
+    Ok(_) => Ok(ret_grade(fd))
+  };
+
+fn check_args(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]],
+    site: Bytes, params: Vec[Param], args: Vec[Expr]) => Result[Binary{32}, CheckError] =
+  match params {
+    Nil => Ok(zero32()),
+    Cons(p, prest) => match args {
+      Nil => Ok(zero32()),
+      Cons(a, arest) => match grade(depth, fns, scope, site, a) {
+        Err(err) => Err(err),
+        Ok(g_a) => match require(g_a, param_grade(p), site, "argument") {
+          Some(err) => Err(err),
+          None => check_args(depth, fns, scope, site, prest, arest)
+        }
+      }
+    }
+  };
+
+// params_to_scope / grade_fn_body: the thin per-body entry point this increment's differential
+// drives directly (FLAG-semcore-9 — no whole-program `own_names`/`impl_methods` driver).
+fn params_to_scope(params: Vec[Param]) => Vec[Pair[Bytes, Strength]] =
+  match params {
+    Nil => Nil,
+    Cons(p, rest) => Cons(Pr(param_name(p), param_grade(p)), params_to_scope(rest))
+  };
+
+fn grade_fn_body(fns: Vec[Pair[Bytes, FnDecl]], fd: FnDecl) => Result[Strength, CheckError] =
+  let site = fnsig_name(fndecl_sig(fd)) in
+  let scope0 = params_to_scope(fnsig_value_params(fndecl_sig(fd))) in
+  match grade(zero32(), fns, scope0, site, fndecl_body(fd)) {
+    Err(err) => Err(err),
+    Ok(body_grade) => match require(body_grade, ret_grade(fd), site, "function body") {
+      Some(err) => Err(err),
+      None => Ok(body_grade)
+    }
+  };
