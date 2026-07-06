@@ -12715,7 +12715,7 @@ issues:
   - id: E34-1
     title: "E34-1 (epic) — trx2 E-C: auto-doc-gen Mycelium doc ports (the lib/ reference index)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:epic, area:tooling, priority:P2, status:in-progress]
+    labels: [phase:5, type:epic, area:tooling, priority:P2, status:done]
     epic: E34
     depends_on: [M-1004, M-1005]
     doc_refs:
@@ -12746,10 +12746,16 @@ issues:
       - M-1004 + M-1005 done; docs/lib-index/ (INDEX.md + index.json) committed, deterministic,
         regenerable via a just recipe, drift-gated in just check; honestly labeled.
 
+      DONE (2026-07-06): both children landed (see their DONE notes); index committed +
+      drift-gated in just check; INDEX.md header carries the Empirical/Declared grading.
+      Interpretation (b) -- a doc generator authored in Mycelium -- remains a candidate
+      follow-up dogfooding wave, deliberately NOT claimed by this epic (G2: recorded, not
+      silently dropped).
+
   - id: M-1004
     title: "M-1004 — .myc symbol/doc extraction + docs/lib-index/ emission (INDEX.md + index.json)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:tooling, priority:P2, status:todo]
+    labels: [phase:5, type:feature, area:tooling, priority:P2, status:done]
     epic: E34-1
     depends_on: []
     doc_refs:
@@ -12777,10 +12783,18 @@ issues:
         flagged section for extraction limits; entries carry file:line + honesty tag;
         deterministic across reruns.
 
+      DONE (2026-07-06, epic branch E34, commit 465b058; merged to the trx2 head): lib_index.rs
+      (639 ln) + `myc-doc lib-index`; 3313 items / 26 nodules (17 std + 9 compiler; 373 types,
+      1201 ctors, 1713 fns), flagged: 0 (cross-checked vs independent greps -- exact);
+      determinism byte-identical across two runs. Reused apiref.rs extraction (DRY) and fixed
+      four pre-existing bugs in it (=> arrow truncation, trailing ; on nodule names,
+      section-divider doc misattribution, multi-line signatures) with regression tests;
+      84 lib + 3 integration tests green, clippy -D warnings clean.
+
   - id: M-1005
     title: "M-1005 — lib-index drift gate + just recipe + Doc-Index registration"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:tooling, priority:P2, status:todo]
+    labels: [phase:5, type:feature, area:tooling, priority:P2, status:done]
     epic: E34-1
     depends_on: [M-1004]
     doc_refs:
@@ -12804,6 +12818,13 @@ issues:
       - just recipe + drift gate live in just check (graceful skip preserved); Doc-Index.md
         registers the artifact with its grading + ownership; CHANGELOG entry at integration;
         gate proven by a deliberate-drift test run recorded in the PR body.
+
+      DONE (2026-07-06, epic branch E34 commit ed1bd24 + the orchestrator's integration edits):
+      scripts/checks/lib-index.sh (regenerate-to-temp-and-diff, skip-graceful, mirrors
+      doc-index.sh); wired by the integrator as `just lib-index` in the all.sh gate list
+      (COMPONENT_ID 31 -- the last free 5-bit slot, space now exhausted) + `just lib-index-gen`
+      regeneration recipe; Doc-Index SS6 registration + CHANGELOG entry applied at integration.
+      Gate proven: clean run ok -> deliberate corruption failed with diff + exit 2 -> revert ok.
 
   - id: M-1006
     title: "M-1006 — Phased whole-corpus rip-through ladder (expand E-B beyond the port surface)"

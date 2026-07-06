@@ -10,7 +10,7 @@ cd "$REPO_ROOT" || exit 1
 # the user's terminal, so colors should survive.
 [[ -t 1 ]] && export MYC_FORCE_COLOR=1
 
-checks=(structured shell markdown links doc-currency doc-status schema grammar spell secrets format lint safety unsafe-per-use deps-acyclic test myc-fmt myc-check myc-sec myc-lint myc-doc myc-spore myc-dogfood proofs api doc-index deny drift license-first-party licenses)
+checks=(structured shell markdown links doc-currency doc-status schema grammar spell secrets format lint safety unsafe-per-use deps-acyclic test myc-fmt myc-check myc-sec myc-lint myc-doc myc-spore myc-dogfood proofs api doc-index lib-index deny drift license-first-party licenses)
 
 # --- Specific exit codes: which component failed, and why -------------------------------------
 # A process exit status is a single byte (0-255), so we pack it: the high 5 bits are a stable
@@ -26,7 +26,7 @@ declare -A COMPONENT_ID=(
   [grammar]=8 [spell]=9 [secrets]=10 [format]=11 [lint]=12 [safety]=13 [test]=14 [myc-fmt]=15
   [myc-check]=16 [myc-sec]=17 [myc-lint]=18 [myc-doc]=19 [myc-spore]=20 [proofs]=21 [api]=22
   [doc-index]=23 [deny]=24 [drift]=25 [unsafe-per-use]=26 [license-first-party]=27 [licenses]=28
-  [deps-acyclic]=29 [myc-dogfood]=30
+  [deps-acyclic]=29 [myc-dogfood]=30 [lib-index]=31
 )
 # REASON sub-codes (0-7): 1 = generic failure (a gate that just `exit 1`s). A gate MAY exit 2-6 to
 # name a *specific* failure mode (documented in that gate's script); 7 = an unexpected/other exit
