@@ -1,0 +1,115 @@
+#!/usr/bin/env bash
+# scripts/vsa-desktop-checks.sh — the VSA HEAVY-CHECK bundle for the maintainer's (GPU) desktop.
+#
+# WHY. Heavy VSA/GPU-bound work + the durability tier (HIGH proptest, cargo-mutants, cargo-fuzz) +
+# the z3/LiquidHaskell/Lean proof discharge are deliberately held OUT of the cloud-session
+# `just check` gate (the `/myc-dogfood` note; CLAUDE.md §Local checks) — they belong on a
+# local/teleport machine. This script COLLECTS them into one runnable bundle so they run ONCE on
+# the desktop instead of being re-run in constrained cloud sessions, and the outputs land in a
+# committable directory to push back (the M-832 / OQ-F evidence — DN-34/RFC-0003/ADR-010).
+#
+# HONESTY (VR-5 / G2). The experiment's reported rates are **Empirical** (trial-measured). The
+# emitted proof obligations are **Declared** until a solver discharges them AND the underlying
+# theorem is formally established/cited. This script never upgrades those tags — it runs the checks
+# and collects outputs; the maintainer's analysis is the verdict, not this script. Every stage
+# **skips gracefully** (never-silent) when its toolchain is absent, so a partial desktop still
+# yields a partial, honestly-labelled result set.
+#
+# USAGE (from the repo root, on the desktop):
+#   bash scripts/vsa-desktop-checks.sh                     # full bundle
+#   PROPTEST_CASES=1024 bash scripts/vsa-desktop-checks.sh # heavier property tests
+#   VSA_SKIP_MUTANTS=1 bash scripts/vsa-desktop-checks.sh  # skip cargo-mutants (the slowest stage)
+#   RESULTS_DIR=/path  bash scripts/vsa-desktop-checks.sh  # override the results location
+# Then push the results back:
+#   git add experiments/results/vsa-m832 && git commit -m "vsa: desktop heavy-check results" && git push
+
+set -uo pipefail
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/lib.sh"
+cd "$REPO_ROOT" || exit 1
+
+RESULTS_DIR="${RESULTS_DIR:-$REPO_ROOT/experiments/results/vsa-m832}"
+PROPTEST_CASES="${PROPTEST_CASES:-256}"
+mkdir -p "$RESULTS_DIR/obligations"
+
+section "VSA desktop heavy-checks — collecting into $RESULTS_DIR"
+echo "  Emission tags: experiment = Empirical (trial-measured); proof obligations = Declared until discharged (VR-5/G2)."
+
+# ── 1/4 · VSA crate durability (full tier, HIGH proptest) ──────────────────────────────────────
+section "1/4 VSA crate durability — mycelium-vsa + mycelium-std-vsa (full tier, PROPTEST_CASES=$PROPTEST_CASES)"
+if have cargo; then
+  MYC_TEST_TIER=full PROPTEST_CASES="$PROPTEST_CASES" \
+    cargo test -p mycelium-vsa -p mycelium-std-vsa 2>&1 | tee "$RESULTS_DIR/vsa-crate-tests.log"
+  ok "crate durability -> $RESULTS_DIR/vsa-crate-tests.log (Empirical)"
+else
+  skip "no cargo — VSA crate durability skipped"
+fi
+
+# ── 2/4 · M-832 GPU experiment + proof-obligation emission ─────────────────────────────────────
+section "2/4 M-832 GPU experiment — VSA multi-hop Proven-bounds (OQ-F)"
+if have uv; then
+  ( cd experiments && { uv sync --group gpu 2>/dev/null || uv sync 2>/dev/null || true; } )
+  if ( cd experiments && uv run python -c "import torch" 2>/dev/null ); then
+    ( cd experiments && uv run python -m mycelium_experiments.vsa_bounds --sweep both ) \
+      2>&1 | tee "$RESULTS_DIR/m832-sweep-gpu.log"
+    ok "GPU sweep -> $RESULTS_DIR/m832-sweep-gpu.log (Empirical)"
+  else
+    skip "torch/GPU absent — running the CPU numpy fallback (--quick, degraded coverage, still Empirical)"
+    ( cd experiments && uv run python -m mycelium_experiments.vsa_bounds --sweep both --quick --numpy-only --no-plots ) \
+      2>&1 | tee "$RESULTS_DIR/m832-sweep-cpu.log" || true
+  fi
+  ( cd experiments && uv run python -m mycelium_experiments.vsa_bounds --proof --emit-obligations --results-dir "$RESULTS_DIR/obligations" ) \
+    2>&1 | tee "$RESULTS_DIR/m832-proof-emit.log" || true
+  ok "proof obligations + PROOF-SUMMARY -> $RESULTS_DIR/obligations (Declared until discharged)"
+else
+  skip "no uv — M-832 experiment skipped (install: see experiments/README.md)"
+fi
+
+# ── 3/4 · VSA proof discharge (z3 · LiquidHaskell · Lean) ──────────────────────────────────────
+section "3/4 VSA proof discharge — proofs/vsa-multihop-bound + the emitted obligations"
+if have z3; then
+  : > "$RESULTS_DIR/proof-z3.log"
+  found=0
+  for smt in "$RESULTS_DIR"/obligations/*.smt2 proofs/vsa-multihop-bound/*.smt2; do
+    [ -e "$smt" ] || continue
+    found=1
+    { echo "== z3 $smt =="; z3 "$smt" 2>&1; echo; } >> "$RESULTS_DIR/proof-z3.log"
+  done
+  if [ "$found" = 1 ]; then
+    ok "z3 -> $RESULTS_DIR/proof-z3.log (Empirical: per-obligation solver verdict)"
+  else
+    skip "no .smt2 obligations present for z3"
+  fi
+else
+  skip "no z3 — SMT discharge skipped"
+fi
+if have cabal; then
+  ( cd proofs/vsa-multihop-bound && cabal build ) 2>&1 | tee "$RESULTS_DIR/proof-lh.log" || true
+  ok "LiquidHaskell (cabal) -> $RESULTS_DIR/proof-lh.log"
+else
+  skip "no cabal — LiquidHaskell discharge skipped"
+fi
+if have lake || have lean; then
+  ( cd proofs/vsa-multihop-bound/lean 2>/dev/null && { have lake && lake build || lean --version; } ) \
+    2>&1 | tee "$RESULTS_DIR/proof-lean.log" || true
+  ok "Lean -> $RESULTS_DIR/proof-lean.log"
+else
+  skip "no lean/lake — Lean discharge skipped"
+fi
+
+# ── 4/4 · VSA mutation durability (slowest; opt-out) ───────────────────────────────────────────
+section "4/4 VSA durability — cargo-mutants on the VSA crates (slowest stage)"
+if [ "${VSA_SKIP_MUTANTS:-0}" = 1 ]; then
+  skip "VSA_SKIP_MUTANTS=1 — cargo-mutants skipped by request"
+elif cargo mutants --version >/dev/null 2>&1; then
+  cargo mutants -p mycelium-vsa -p mycelium-std-vsa 2>&1 | tee "$RESULTS_DIR/vsa-mutants.log" || true
+  ok "cargo-mutants -> $RESULTS_DIR/vsa-mutants.log"
+else
+  skip "cargo-mutants not installed — VSA mutation testing skipped (install: cargo install cargo-mutants)"
+fi
+
+section "done — results collected in $RESULTS_DIR"
+echo "  Push back:  git add experiments/results/vsa-m832 && git commit -m 'vsa: desktop heavy-check results' && git push"
+echo "  Reminder (VR-5/G2): experiment rates are Empirical; proof obligations stay Declared until a"
+echo "  solver discharges them AND the theorem is established — this bundle collects evidence, it does not grade it."

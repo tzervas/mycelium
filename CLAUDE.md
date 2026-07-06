@@ -89,6 +89,17 @@ test is dropped — only its *case count* is tiered (low every commit, full on r
 change-scoping only ever *widens* to `--workspace` (over-test, never under-test), and `check-full`
 always runs everything.
 
+**Heavy checks run on the maintainer's desktop — don't re-run them in cloud sessions (2026-07-06).**
+The **durability tier** (`just check-full` — HIGH proptest, `cargo-mutants`, `cargo-fuzz`) and all
+**VSA/GPU-bound** work plus the **z3/LiquidHaskell/Lean proof** discharge are held out of the
+cloud-session gate and belong on a local/teleport machine (the `/myc-dogfood` note). In a
+Claude-Code-on-the-web session, run only the light tiers (`just check` / `just test-fast`) — do
+**not** re-run the heavy tier here over and over. Collect VSA-heavy work into a **dedicated PR** the
+maintainer checks out, runs on the desktop, and pushes results to: **`scripts/vsa-desktop-checks.sh`**
+bundles the VSA crate durability + the **M-832/OQ-F** GPU experiment + the proof discharge into one
+runnable, skip-graceful step, landing outputs in `experiments/results/vsa-m832/` (honesty tags kept —
+experiment `Empirical`, proof obligations `Declared` until discharged; VR-5/G2).
+
 Checks **skip gracefully** when a tool or language isn't present yet (most code doesn't exist
 yet). Never hand off a red `just check` without explaining the skip.
 
