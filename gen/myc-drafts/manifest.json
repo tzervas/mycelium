@@ -1,6 +1,6 @@
 {
   "epic": "E33-1",
-  "generated_from_commit": "69168d8541a7a31cd9465b50e43af622d1910897",
+  "generated_from_commit": "725bd89ee32fbb29bb8d67d4a9d2d61aa7c3d328",
   "kickoff": "trx2",
   "schema_version": 1,
   "targets": [
@@ -41,10 +41,10 @@
     },
     {
       "gap_category_counts": {
-        "GenericBound": 3,
+        "GenericBound": 2,
         "Impl": 3,
         "Import": 5,
-        "Other": 22,
+        "Other": 23,
         "PayloadVariant": 2,
         "ReservedWord": 2
       },
@@ -350,13 +350,12 @@
       "file_count": 5,
       "gap_category_counts": {
         "DeriveAttr": 6,
-        "GenericBound": 2,
         "Impl": 14,
         "Import": 9,
         "MacroInvocation": 3,
         "Other": 21,
         "PayloadVariant": 2,
-        "ReservedWord": 3,
+        "ReservedWord": 4,
         "Struct": 4,
         "TestItem": 5
       },
@@ -388,17 +387,17 @@
       "stats": {
         "checked_clean_items": 3,
         "checked_fraction_pct": 4.76,
-        "emitted_items": 6,
-        "expressible_fraction_pct": 9.52,
-        "gap_count": 69,
+        "emitted_items": 7,
+        "expressible_fraction_pct": 11.11,
+        "gap_count": 68,
         "non_test_items": 63,
         "total_top_level_items": 68
       },
       "status": "ok",
       "target": "stdlib/std-io",
       "vet_class_counts": {
-        "CheckError": 1,
-        "Clean": 4
+        "CheckError": 2,
+        "Clean": 3
       }
     },
     {
@@ -445,11 +444,11 @@
       "file_count": 1,
       "gap_category_counts": {
         "DeriveAttr": 4,
-        "GenericBound": 6,
+        "GenericBound": 5,
         "Impl": 4,
         "Import": 1,
         "MacroInvocation": 1,
-        "MultiStmtBody": 3,
+        "MultiStmtBody": 4,
         "Other": 11,
         "ReservedWord": 1,
         "Struct": 3,
@@ -484,10 +483,10 @@
       "file_count": 14,
       "gap_category_counts": {
         "DeriveAttr": 14,
-        "GenericBound": 13,
+        "GenericBound": 12,
         "Impl": 28,
         "Import": 28,
-        "Other": 39,
+        "Other": 40,
         "PayloadVariant": 3,
         "Struct": 22,
         "TestItem": 3,
@@ -574,11 +573,11 @@
       "file_count": 8,
       "gap_category_counts": {
         "DeriveAttr": 1,
-        "GenericBound": 6,
+        "GenericBound": 1,
         "Impl": 7,
         "Import": 7,
         "MultiStmtBody": 1,
-        "Other": 37,
+        "Other": 42,
         "PayloadVariant": 2,
         "ReservedWord": 1,
         "Struct": 2,
@@ -673,11 +672,12 @@
       "file_count": 1,
       "gap_category_counts": {
         "DeriveAttr": 3,
-        "GenericBound": 5,
+        "GenericBound": 2,
         "Impl": 9,
         "Import": 1,
         "MacroInvocation": 1,
-        "Other": 11,
+        "MultiStmtBody": 1,
+        "Other": 13,
         "PayloadVariant": 1,
         "Struct": 6,
         "TestItem": 1,

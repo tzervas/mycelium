@@ -98,9 +98,8 @@
       "expressible_pct": 11.11111111111111,
       "category_counts": {
         "DeriveAttr": 1,
-        "GenericBound": 1,
         "Impl": 3,
-        "Other": 2,
+        "Other": 3,
         "Struct": 2
       }
     },
@@ -205,10 +204,10 @@
     "expressible_pct": 12.413793103448276,
     "category_counts": {
       "DeriveAttr": 14,
-      "GenericBound": 13,
+      "GenericBound": 12,
       "Impl": 28,
       "Import": 28,
-      "Other": 39,
+      "Other": 40,
       "PayloadVariant": 3,
       "Struct": 22,
       "TestItem": 3,

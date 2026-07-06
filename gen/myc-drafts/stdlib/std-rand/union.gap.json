@@ -174,10 +174,10 @@
       "file": "crates/mycelium-std-rand/src/lib.rs",
       "line": 395,
       "col": 1,
-      "category": "GenericBound",
-      "rust_construct": "GenericBound",
+      "category": "MultiStmtBody",
+      "rust_construct": "MultiStmtBody",
       "snippet": "# [doc = \" Draw a uniformly-distributed `u64` in the half-open range `[lo, hi)`.\"] # [doc = \"\"] # [doc = \" **Guarantee: `Declared` (unbiased rejection sampling).** Same basis as [`uniform_int`].\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" - [`RandErr::EmptyRange`] if `hi <= lo` (C1).\"] pub fn uniform_u64 (g : Rng , lo : u64 , hi : u64) -> Result < (u64 , Rng) , RandErr > { if hi <= lo { return Err (RandErr :: EmptyRange) ; } let range = hi - lo ; let (v , g2) = rejection_sample_u64 (g , range) ; Ok ((lo + v , g2)) }",
-      "reason": "generic type path `Result < (u64 , Rng) , RandErr >` — type-argument mapping not confirmed",
+      "reason": "function body has a semicolon-terminated (value-discarding) statement expression before the tail — a `let`-chain body maps only simple `let x = e;` bindings plus a single trailing expression",
       "item_name": "uniform_u64"
     },
     {
@@ -187,7 +187,7 @@
       "category": "MultiStmtBody",
       "rust_construct": "MultiStmtBody",
       "snippet": "# [doc = \" Rejection-sample a `u64` in `[0, range)` using the \\\"Lemire\\\" bounded approach.\"] # [doc = \"\"] # [doc = \" This is the internal engine for [`uniform_int`] / [`uniform_u64`] / [`choice`] /\"] # [doc = \" [`shuffle`]. Termination is guaranteed in expectation (at most two draws with probability\"] # [doc = \" ≥ 0.5 each; virtually never more than a few). This function is total for all `range > 0`.\"] # [doc = \"\"] # [doc = \" Reference: D. Lemire, \\\"Fast Random Integer Generation in an Interval\\\", ACM TOMS 2019.\"] fn rejection_sample_u64 (mut g : Rng , range : u64) -> (u64 , Rng) { debug_assert ! (range > 0 , \"range must be > 0\") ; loop { let (raw , g2) = next_u64 (g) ; let m = (raw as u128) . wrapping_mul (range as u128) ; let hi = (m >> 64) as u64 ; let lo = m as u64 ; let threshold = range . wrapping_neg () % range ; if lo >= threshold { return (hi , g2) ; } g = g2 ; } }",
-      "reason": "function body has a statement that is neither a simple `let` binding nor the trailing expression",
+      "reason": "function body contains a macro-invocation statement (e.g. `debug_assert!`/`println!`) — no macro system in this grammar fragment",
       "item_name": "rejection_sample_u64"
     },
     {
@@ -363,11 +363,11 @@
   ],
   "category_counts": {
     "DeriveAttr": 4,
-    "GenericBound": 6,
+    "GenericBound": 5,
     "Impl": 4,
     "Import": 1,
     "MacroInvocation": 1,
-    "MultiStmtBody": 3,
+    "MultiStmtBody": 4,
     "Other": 11,
     "ReservedWord": 1,
     "Struct": 3,

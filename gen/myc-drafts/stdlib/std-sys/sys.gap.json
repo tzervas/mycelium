@@ -56,10 +56,10 @@
       "file": "crates/mycelium-std-sys/src/sys.rs",
       "line": 68,
       "col": 1,
-      "category": "GenericBound",
-      "rust_construct": "GenericBound",
+      "category": "Other",
+      "rust_construct": "Other",
       "snippet": "# [doc = \" \\\\[Declared\\\\] The process's command-line arguments (including arg 0), parsed to `String`s. Built on\"] # [doc = \" `args_os`: a non-UTF-8 argument is an explicit `Err(NonUtf8Arg)` naming the offending **index** —\"] # [doc = \" never a silently-dropped element (the previous `filter_map` behaviour) that would shift every\"] # [doc = \" following arg's position, and (unlike `std::env::args()`) never a *panic* (G2). The first\"] # [doc = \" non-UTF-8 arg short-circuits; callers needing the faithful, position-stable raw form should use\"] # [doc = \" `std::env::args_os` directly (this floor is the validated-UTF-8 convenience).\"] pub fn args () -> Result < Vec < String > , NonUtf8Arg > { parse_args (std :: env :: args_os ()) }",
-      "reason": "generic type path `Result < Vec < String > , NonUtf8Arg >` — type-argument mapping not confirmed",
+      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
       "item_name": "args"
     },
     {

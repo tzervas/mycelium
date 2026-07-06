@@ -12891,13 +12891,15 @@ issues:
   - id: M-1006
     title: "M-1006 — Phased whole-corpus rip-through ladder (expand E-B beyond the port surface)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:task, area:tooling, priority:P2, status:todo]
+    labels: [phase:5, type:task, area:tooling, priority:P2, status:in-progress]
     epic: E33-1
     depends_on: [M-1003]
     doc_refs:
       - corpus:DN-34
       - corpus:DN-26
       - src:.claude/kickoffs/trx2.md
+      - src:crates/mycelium-transpile/src/map.rs
+      - src:crates/mycelium-transpile/src/emit.rs
     body: |
       Minted 2026-07-06 (maintainer decision, trx2 launch clarification -- upgrades the E-B
       breadth resolution from the orchestrator's `Declared` default to a decided two-stage
@@ -12929,3 +12931,17 @@ issues:
       future sessions run light -- /transpile-vet (the instrument + its honesty rules) and
       /myc-drafts (corpus triage, lib/ graduation checklist, the 5-step ladder-phase recipe).
       Phase 1's input is the DN-34 SS8.9 812-gap ranked worklist.
+
+      PHASE-1 LANDED (2026-07-06, status -> in-progress; DN-34 SS8.10, Empirical): ran the ladder's
+      first phase over the same 17 wave-1 targets as two disjoint-file leaves (map.rs generic
+      type-application; emit.rs string/float/array literal arms + sharpened MultiStmtBody
+      diagnostics), octopus-merged and re-vetted. Union expressible 6.06% -> 6.19% (std-io read_all
+      unblocked via nested Result[Vec[Binary{8}], IoError]), checked flat 3.69%, GenericBound 59 ->
+      46. The M-1006-DoD residual enumeration is recorded (DN-34 SS8.10): the dominant remaining
+      classes (type-coverage scalars, named-field structs/variants -- KEEP GAPPED, no field-projection
+      surface; Import; bounded GenericBound; Rust built-in DeriveAttr) are language-surface design
+      (E18-1), not transpiler defects -- the current-corpus transpiler-fixable surface is near
+      exhausted (stopping point recorded, G2). Emission Declared; drafts stay in gen/myc-drafts/,
+      never imported by lib/. Remaining ladder work (later phases): expand the target set beyond the
+      port surface in controlled phases (per-phase minting, mitigation #1), each folding lessons back
+      into the transpiler; reconcile with rwr's M-947..M-957 at Phase-II.
