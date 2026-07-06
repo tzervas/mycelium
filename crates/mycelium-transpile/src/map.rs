@@ -40,6 +40,12 @@ pub fn tokens_to_string<T: ToTokens>(node: &T) -> String {
 ///   as-is via `base_type`'s `Ident type_args?` arm.
 /// - a tuple type of arity >= 2, all of whose elements map -> the grammar's tuple `type_ref` arm
 ///   (`'(' type_ref ',' type_ref (',' type_ref)* ')'`, M-826).
+/// - a single-segment named *generic application* (`Result<Duration, TimeErr>`, `Vec<u8>`,
+///   `Option<T>`), all of whose angle-bracketed arguments are themselves mappable *types* ->
+///   `Head[arg, …]` via `base_type ::= Ident type_args?` + `type_args ::= '[' type_ref (','
+///   type_ref)* ']'` (grammar lines 258 + 265; RFC-0037 D1 uses `[]`, not `<>`). Refused as a gap
+///   (never a partial emission) if the head is a reserved word, if any argument is a lifetime /
+///   const-generic / associated-type binding-or-constraint, or if any argument type itself gaps.
 /// - a *qualified* multi-segment path (`std::cmp::Ordering`, `crate::foo::Bar`) -> gap. Mycelium
 ///   `path`s are dot-joined and this module has no cross-nodule symbol table, so collapsing to
 ///   the last segment (as it did in an earlier iteration of this function) risked silently
@@ -126,13 +132,72 @@ fn map_type_inner(ty: &Type, self_ty: Option<&str>) -> Result<String, GapReason>
                     crate::reserved::guard_ident(&name, "type name")?;
                     Ok(name)
                 }
-                _ => Err(GapReason::new(
-                    Category::GenericBound,
-                    format!(
-                        "generic type path `{}` — type-argument mapping not confirmed",
-                        tokens_to_string(tp)
-                    ),
-                )),
+                // A single-segment named *generic application* (`Result<Duration, TimeErr>`,
+                // `Vec<u8>`, `Option<T>`). Confirmed surface: `base_type ::= Ident type_args?` with
+                // `type_args ::= '[' type_ref (',' type_ref)* ']'`
+                // (docs/spec/grammar/mycelium.ebnf lines 258 + 265 — RFC-0037 D1: type arguments in
+                // square brackets, not `<…>`). Every scalar/gapped builtin (`bool`/`u8`.../`String`/
+                // …) already matched an earlier arm, so a generic application is *never* mapped onto
+                // a `Bool`/`Binary{N}`/`String` head here — only ordinary named heads reach this arm
+                // (they fall through the builtin name matches, exactly as the bare-named arm above).
+                // Graded `Declared` like every row in this module (grammar-text-verified only).
+                _ => match &seg.arguments {
+                    PathArguments::AngleBracketed(ab) => {
+                        // Head maps exactly as the bare-named arm does — a reserved-word head still
+                        // gaps (never emit un-lexable text; VR-5/G2), before any argument work.
+                        crate::reserved::guard_ident(&name, "type name")?;
+                        let mut args = Vec::with_capacity(ab.args.len());
+                        for arg in &ab.args {
+                            match arg {
+                                // Recurse through the *public* `map_type` (not `_inner`) so the
+                                // recursion budget re-arms per nested application — same pattern as
+                                // the tuple arm below — and, as there, a type argument that itself
+                                // gaps propagates its own precise `GapReason` unchanged (`?`), never
+                                // a partial emission.
+                                syn::GenericArgument::Type(t) => args.push(map_type(t, self_ty)?),
+                                // A lifetime / const-generic / associated-type binding-or-constraint
+                                // (or any future non-`Type` `GenericArgument`) has no `type_ref`-
+                                // shaped `type_args` surface (line 265 admits only `type_ref`s), so
+                                // refuse the whole application rather than drop the argument (G2).
+                                other => {
+                                    return Err(GapReason::new(
+                                        Category::GenericBound,
+                                        format!(
+                                            "generic type path `{}` — type argument `{}` is not a \
+                                             type (lifetime / const-generic / associated-type \
+                                             binding-or-constraint); `type_args` admits only \
+                                             type_refs, so left an explicit gap (VR-5)",
+                                            tokens_to_string(tp),
+                                            tokens_to_string(other)
+                                        ),
+                                    ));
+                                }
+                            }
+                        }
+                        // `type_args ::= '[' type_ref (',' type_ref)* ']'` requires >= 1 type_ref;
+                        // an empty `<>` has no confirmed surface.
+                        if args.is_empty() {
+                            return Err(GapReason::new(
+                                Category::GenericBound,
+                                format!(
+                                    "generic type path `{}` — empty type-argument list has no \
+                                     confirmed `type_args` surface (requires >= 1 type_ref)",
+                                    tokens_to_string(tp)
+                                ),
+                            ));
+                        }
+                        Ok(format!("{name}[{}]", args.join(", ")))
+                    }
+                    // Non-angle-bracketed arguments (e.g. an `Fn(..)`-trait parenthesized form) —
+                    // no confirmed grammar surface; left an explicit gap.
+                    _ => Err(GapReason::new(
+                        Category::GenericBound,
+                        format!(
+                            "generic type path `{}` — type-argument mapping not confirmed",
+                            tokens_to_string(tp)
+                        ),
+                    )),
+                },
             }
         }
         Type::Tuple(t) if t.elems.is_empty() => Err(GapReason::new(

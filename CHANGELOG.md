@@ -11,6 +11,23 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### M-1006 phase-1 — transpiler hardening against the DN-34 §8.9 gap worklist (2026-07-06)
+
+First phase of the M-1006 whole-corpus rip-through ladder (kickoff `trx2` E-B, epic E33-1), run as
+two disjoint-file leaves over the same 17 wave-1 targets and octopus-merged. Three grammar-grounded
+transpiler fixes, each never-silent (`crates/mycelium-transpile`): concrete generic type-applications
+now map to `type_args` (`Head<A,…>` → `Head[A,…]`, recursive, never-partial — a whole gap sub-class
+closed); string/float/array expression literal arms (`StrLit`/`FloatLit`/`ListLit` — non-finite
+floats and un-escapable control chars refuse rather than emit garbage); and sharpened `MultiStmtBody`
+diagnostics. Measured with the real `myc check` oracle (`Empirical`): union `expressible_fraction`
+6.06% → 6.19% (`std-io::read_all` unblocked via a nested `Result[Vec[Binary{8}], IoError]`),
+`checked_fraction` flat at 3.69%, `GenericBound` gaps 59 → 46. DN-34 §8.10 records the before/after
+plus the M-1006-DoD residual enumeration: the dominant remaining classes (type-coverage scalars,
+named-field structs/variants, imports, bounded generics, Rust built-in derives) are language-surface
+design (E18-1), not transpiler defects — the current-corpus transpiler-fixable surface is
+near-exhausted (stopping point recorded, G2). Emission `Declared`; drafts stay in `gen/myc-drafts/`,
+never imported by `lib/`. `docs/notes/DN-34` §8.10; `gen/myc-drafts/` regenerated.
+
 ### Transpiler usage operationalized as skills — `/transpile-vet` + `/myc-drafts` (2026-07-06)
 
 The trx2 wave-1 process is captured as parameterized skills (the `/wave`/`/pr-land` precedent) so
