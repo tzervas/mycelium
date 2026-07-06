@@ -63,6 +63,7 @@ pass explicit `<crate-src | .rs>` targets.
 ## Layout
 
 `src/transpile.rs` (driver) · `src/emit.rs` (`.myc` emitter) · `src/map.rs` (Rust type → `type_ref`
-table) · `src/gap.rs` (the never-silent gap taxonomy) · `src/batch.rs` (directory mode) ·
-`src/vet.rs` (the M-1000 vet loop) · `src/bin/mycelium-transpile.rs` (CLI). Tests live in
-`src/tests/` per the house test-layout rule (no inline tests in logic files).
+table) · `src/gap.rs` (the never-silent gap taxonomy) · `src/reserved.rs` (the M-1001 reserved-word
+collision guard) · `src/batch.rs` (directory mode) · `src/vet.rs` (the M-1000 vet loop) ·
+`src/bin/mycelium-transpile.rs` (CLI). Tests live in `src/tests/` per the house test-layout rule (no
+inline tests in logic files).

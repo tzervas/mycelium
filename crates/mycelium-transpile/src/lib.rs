@@ -36,6 +36,7 @@ pub mod batch;
 pub mod emit;
 pub mod gap;
 pub mod map;
+pub mod reserved;
 pub mod transpile;
 pub mod vet;
 
