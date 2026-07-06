@@ -11,6 +11,17 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Transpiler usage operationalized as skills — `/transpile-vet` + `/myc-drafts` (2026-07-06)
+
+The trx2 wave-1 process is captured as parameterized skills (the `/wave`/`/pr-land` precedent) so
+future transpiler usage is lightweight — no re-orchestration: **`/transpile-vet`** (run the
+M-1000/M-1001 loop; read `checked_fraction` vs `expressible_fraction` without conflating them; the
+binding honesty rules and DN-34 append-only recording discipline; wave-1 calibration numbers) and
+**`/myc-drafts`** (deterministic corpus regeneration; manifest-first triage before porting; the
+`lib/` graduation checklist with its differential witness; the 5-step M-1006 ladder-phase recipe
+with the rwr Phase-II reconciliation guard). Registered in CLAUDE.md §Skills + the agent context;
+M-1006's body cites them as its per-phase recipe.
+
 ### M-1002/M-1003 — gen/myc-drafts/: the vetted draft corpus over the full boot10 port surface (2026-07-06)
 
 E33-1 wave-1 rip-through: `gen/myc-drafts/` staging tree (README honesty contract — everything

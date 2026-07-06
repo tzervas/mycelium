@@ -99,3 +99,5 @@ Before assigning a new M-xxx or E-xxx ID, verify the slot is free:
 - `/security-review` — secrets, supply-chain, shell/CI safety
 - `/doc-index` — regenerate and query `docs/api-index/`; check `doc_refs` grammar validity
 - `/deep-research` — fan-out multi-source research + adversarial verification (the research **follow-up** phase)
+- `/transpile-vet` — transpile Rust → vet with `myc check` → read `checked_fraction` (gap-profiling instrument, not a bulk porter)
+- `/myc-drafts` — the `gen/myc-drafts/` corpus: triage before porting, graduate drafts into `lib/`, run M-1006 ladder phases
