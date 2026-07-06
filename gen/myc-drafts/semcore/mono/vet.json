@@ -1,0 +1,19 @@
+{
+  "records": [
+    {
+      "myc_file": "gen/myc-drafts/semcore/mono/mono.myc",
+      "source_file": "crates/mycelium-l1/src/mono.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 46,
+      "emitted_items": 0
+    }
+  ],
+  "total_non_test_items": 46,
+  "total_emitted_items": 0,
+  "total_checked_clean_items": 0,
+  "class_counts": {
+    "Clean": 1
+  }
+}

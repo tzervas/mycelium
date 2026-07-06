@@ -1,0 +1,25 @@
+// nodule: std.fs
+// `FsErr` — the explicit, traceable filesystem error type (C1/G2).
+//
+// Every path, permission, or IO failure is an instance of this type carrying:
+// - the *path* that was attempted (so the caller can surface it), and
+// - an `ErrnoClass` (the classified OS errno — NEVER a bare raw code), and
+// - a one-line *why* (human-readable; satisfies G11 dual projection).
+//
+// **No sentinel, no silent clamp, no `0`-for-error.** Every failure is an explicit `FsErr`.
+// A use-after-consume of an affine handle is `UseAfterConsume` (LR-8), caught above the
+// OS floor and requiring no syscall.
+//
+// Design spec: `docs/spec/stdlib/fs.md` §3; contract: RFC-0016 §4.1 C1/C3; RFC-0013
+// (structured diagnostic record).
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.fs;
+
+// The classified OS errno — never a bare raw code (C3: no opaque error codes).
+//
+// This is the RFC-0013 "errno-class" column in the diagnostic record. Each variant
+// maps a POSIX errno *class* to a typed value; the raw OS code is preserved in the
+// `Os` variant of `FsErr` for tooling, but is *never* the primary identifier.
+type ErrnoClass = NotFound | PermDenied | AlreadyExists | NotADirectory | IsADirectory | NotEmpty | DiskFull | CrossDevice | WouldBlock | Interrupted | Loop | Other;

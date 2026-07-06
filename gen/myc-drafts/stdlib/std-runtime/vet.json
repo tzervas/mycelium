@@ -1,0 +1,137 @@
+{
+  "records": [
+    {
+      "myc_file": "gen/myc-drafts/stdlib/std-runtime/colony.myc",
+      "source_file": "crates/mycelium-std-runtime/src/colony.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 14,
+      "emitted_items": 1
+    },
+    {
+      "myc_file": "gen/myc-drafts/stdlib/std-runtime/dataflow.myc",
+      "source_file": "crates/mycelium-std-runtime/src/dataflow.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 16,
+      "emitted_items": 3
+    },
+    {
+      "myc_file": "gen/myc-drafts/stdlib/std-runtime/guarantee_matrix.myc",
+      "source_file": "crates/mycelium-std-runtime/src/guarantee_matrix.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 3,
+      "emitted_items": 0
+    },
+    {
+      "myc_file": "gen/myc-drafts/stdlib/std-runtime/lib.myc",
+      "source_file": "crates/mycelium-std-runtime/src/lib.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 13,
+      "emitted_items": 0
+    },
+    {
+      "myc_file": "gen/myc-drafts/stdlib/std-runtime/network.myc",
+      "source_file": "crates/mycelium-std-runtime/src/network.rs",
+      "class": "CheckError",
+      "exit_code": 3,
+      "diagnostic": "check-error: check error in `allocate`: unknown function/constructor/prim `fetch_add`",
+      "non_test_items": 24,
+      "emitted_items": 5
+    },
+    {
+      "myc_file": "gen/myc-drafts/stdlib/std-runtime/policy_mech.myc",
+      "source_file": "crates/mycelium-std-runtime/src/policy_mech.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 21,
+      "emitted_items": 1
+    },
+    {
+      "myc_file": "gen/myc-drafts/stdlib/std-runtime/r2_residual.myc",
+      "source_file": "crates/mycelium-std-runtime/src/r2_residual.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 9,
+      "emitted_items": 1
+    },
+    {
+      "myc_file": "gen/myc-drafts/stdlib/std-runtime/rc.myc",
+      "source_file": "crates/mycelium-std-runtime/src/rc.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 6,
+      "emitted_items": 1
+    },
+    {
+      "myc_file": "gen/myc-drafts/stdlib/std-runtime/reclamation.myc",
+      "source_file": "crates/mycelium-std-runtime/src/reclamation.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 1,
+      "emitted_items": 0
+    },
+    {
+      "myc_file": "gen/myc-drafts/stdlib/std-runtime/region.myc",
+      "source_file": "crates/mycelium-std-runtime/src/region.rs",
+      "class": "CheckError",
+      "exit_code": 3,
+      "diagnostic": "check-error: check error in `allocate`: duplicate function",
+      "non_test_items": 18,
+      "emitted_items": 4
+    },
+    {
+      "myc_file": "gen/myc-drafts/stdlib/std-runtime/scheduler.myc",
+      "source_file": "crates/mycelium-std-runtime/src/scheduler.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 1,
+      "emitted_items": 0
+    },
+    {
+      "myc_file": "gen/myc-drafts/stdlib/std-runtime/scope_region.myc",
+      "source_file": "crates/mycelium-std-runtime/src/scope_region.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 6,
+      "emitted_items": 0
+    },
+    {
+      "myc_file": "gen/myc-drafts/stdlib/std-runtime/supervision.myc",
+      "source_file": "crates/mycelium-std-runtime/src/supervision.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 1,
+      "emitted_items": 0
+    },
+    {
+      "myc_file": "gen/myc-drafts/stdlib/std-runtime/task.myc",
+      "source_file": "crates/mycelium-std-runtime/src/task.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 12,
+      "emitted_items": 2
+    }
+  ],
+  "total_non_test_items": 145,
+  "total_emitted_items": 18,
+  "total_checked_clean_items": 9,
+  "class_counts": {
+    "CheckError": 2,
+    "Clean": 12
+  }
+}

@@ -1,0 +1,27 @@
+// nodule: std.sys.host
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.sys.host;
+
+// The production [`EntropySource`] — fills entropy from the audited `std-sys` OS floor
+// (`/dev/urandom` via `std::fs`; M-723). This is the seam `std-rand` left injectable: the pure
+// `std-rand` crate never touches the OS, and this adapter supplies the real source.
+//
+// **Guarantee: `Declared`** (RFC-0016 §4.1 C2 / VR-5). The source is the kernel CSPRNG, a genuine
+// OS entropy source, but no statistical-quality theorem or corpus is checked here — so `Declared`,
+// never `Empirical`/`Proven`. **Never-silent (G2):** an unavailable source is
+// `Err(RandErr::EntropyUnavailable)`, never a silent zero-fill (the `std-sys` floor guarantees a
+// full fill or an explicit error; this adapter only maps the error type).
+type OsEntropy = OsEntropy;
+
+// The production [`ClockSource`] — reads the OS clock through the audited `std-sys` time floor
+// (`std::time::{Instant, SystemTime}`; M-723). The seam `std-time` left injectable: `std-time`
+// owns the typed/effect-declaring reading surface, this adapter supplies the real clock.
+//
+// **Guarantee: `Declared`** for every read (RFC-0016 §4.1 C2 / VR-5): an ambient, nondeterministic
+// host read with no checked bound. Effects are carried by the return types (`DeclaredTime` for the
+// monotonic/logical reads, `DeclaredTimeEntropy` for the wall read — civil time is an RT3 entropy
+// source). **Never-silent (G2):** a wall-clock read before the Unix epoch or an out-of-range tick
+// is an explicit `Err(TimeErr::…)`, never a wrap/clamp.
+type OsClock = OsClock;

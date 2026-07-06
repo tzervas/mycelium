@@ -1,0 +1,33 @@
+// nodule: std.fs
+// In-memory filesystem substrate (the testable IO abstraction layer).
+//
+// This module provides the `FsBackend` trait — a minimal seam between the `fs` API and the
+// actual storage mechanism — and an `InMemoryFs` implementation that is fully testable without
+// any OS interaction.
+//
+// # Why this exists
+// The spec (§2/§7-Q1) requires the real OS syscall floor to live in a separate `std-sys`
+// phylum (RFC-0016 §8-Q6 — now RESOLVED: the `std-sys` quarantine is the maintainer's call).
+// Until `std-sys` (M-541) lands, `fs` must be testable. The solution: a `FsBackend` trait
+// that `open`/`stat`/etc. dispatch through, with an `InMemoryFs` implementation for tests and
+// an (unimplemented, flagged) `RealFs` shim for when `std-sys` lands.
+//
+// # FLAG (std-sys / Q1)
+// The real-OS syscall floor (`RealFs`) is **deferred to `std-sys` (M-541)**. This trait is the
+// seam that will wire up to it. Until M-541 lands, `RealFs` is not implemented here — any code
+// path that would need it returns `FsErr::NotFound` or is unreachable in tests. The orchestrator
+// must wire `RealFs` at integration time.
+//
+// # FLAG (io seam / Q2)
+// The byte-transfer operations (`read`, `write`, `flush`) are owned by `std.io` (M-514). In
+// this crate we define a minimal local `ByteSink`/`ByteSource` trait just enough to make the
+// in-memory substrate testable. When M-514 lands, these local traits are replaced by M-514's
+// surface and the seam is threaded through. The local traits are private and never exported.
+//
+// Design spec: `docs/spec/stdlib/fs.md` §7-Q1/Q2; RFC-0016 §8-Q6.
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.fs;
+
+

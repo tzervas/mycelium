@@ -1,0 +1,12 @@
+// nodule: std.content
+// Explicit error types for `std.content` (C1 — never-silent; RFC-0016 §4.1).
+//
+// Every fallible operation in this crate returns a typed error or `Option`, never a sentinel
+// value. [`MalformedDigest`] is the only error variant the module produces — [`crate::parse_ref`]
+// is the only parse-fallible entry point (spec §3).
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.content;
+
+

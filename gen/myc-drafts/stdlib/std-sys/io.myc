@@ -1,0 +1,46 @@
+// nodule: std.sys
+// \[Declared\] Standard-stream I/O floor (RFC-0028 §4.5; M-722). Thin, never-silent wrappers over
+// Rust `std::io` stdin/stdout/stderr.
+//
+// This is the audited syscall floor for `std.io`'s OS contact: reading from stdin and writing to
+// stdout/stderr. Per LR-9 / RFC-0016 §8-Q6 all such contact lives in this single `std-sys` phylum,
+// so the pure `std-io` crate stays `wild`-free.
+//
+// # Honesty (VR-5)
+//
+// Every function carries the **`Declared`** guarantee tag — these are unaudited `std::io` wrappers;
+// no theorem and no measured bound backs stream semantics, buffering, or partial-write behaviour.
+// Promotion to `Empirical` requires documented coverage (e.g. a recorded round-trip property over a
+// piped fixture); `Proven` requires a checked theorem. Neither is established in v0.
+//
+// # Never-silent (G2)
+//
+// Every operation returns an explicit `Result` on failure — no byte count is silently dropped, no
+// short write is silently ignored. `write_all` propagates the OS error; the caller is never told a
+// write succeeded when it did not.
+//
+// # Bounded reads on the external edge (P3)
+//
+// [`read_to_end`] is an **unbounded, input-driven allocation**: a hostile or runaway stdin pipe
+// grows the buffer without any cap → a memory-exhaustion DoS. Its signature
+// `() -> Result<Vec<u8>, …>` cannot express a bound, so it is **trusted-only** — use it solely
+// where the producer is your own process / under your control. For **untrusted** input use
+// [`read_to_end_capped`], which is **bounded by construction** (P3) and returns an explicit
+// [`ReadCappedError::TooLarge`] on a cap-hit rather than silently truncating (G2).
+//
+// # Guarantee matrix (RFC-0016 §4.5)
+//
+// | op | signature | failure mode | tag |
+// |----|-----------|--------------|-----|
+// | `read_to_end` | `() -> Result<Vec<u8>, io::Error>` | OS read error → `Err`; **unbounded alloc (trusted-only)** | `Declared` |
+// | `read_to_end_capped` | `(usize) -> Result<Vec<u8>, ReadCappedError>` | OS read error / **cap exceeded** → `Err` (P3 bounded; never truncates, G2) | `Declared` |
+// | `read_line` | `() -> Result<String, io::Error>` | OS/UTF-8 error → `Err` | `Declared` |
+// | `write_out` | `(&[u8]) -> Result<(), io::Error>` | short/failed write → `Err` | `Declared` |
+// | `write_err` | `(&[u8]) -> Result<(), io::Error>` | short/failed write → `Err` | `Declared` |
+// | `flush_out` | `() -> Result<(), io::Error>` | OS flush error → `Err` | `Declared` |
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.sys;
+
+

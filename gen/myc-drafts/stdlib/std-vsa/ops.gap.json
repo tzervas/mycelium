@@ -1,0 +1,97 @@
+{
+  "source": "crates/mycelium-std-vsa/src/ops.rs",
+  "emitted_items": [],
+  "gaps": [
+    {
+      "file": "crates/mycelium-std-vsa/src/ops.rs",
+      "line": 19,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use mycelium_vsa :: { CleanupMemory , Match , VsaError , VsaModel } ;",
+      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/ops.rs",
+      "line": 21,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "# [doc = \" Bind two hypervectors (associate).\"] # [doc = \"\"] # [doc = \" For MAP-I/MAP-B/BSC/HRR/FHRR this is an algebraic `Exact` op; for SBC it is `Proven`\"] # [doc = \" (Bloom analysis — `matrix.rs`).  Both operands must have the same length as the model's\"] # [doc = \" `dim`; a mismatch is `Err(DimMismatch)`, never a silent coercion (C1 / G2).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \" - [`VsaError::DimMismatch`] — the operands' lengths disagree with each other or the model.\"] # [inline] pub fn bind < M : VsaModel > (model : & M , a : & [f64] , b : & [f64]) -> Result < Vec < f64 > , VsaError > { model . bind (a , b) }",
+      "reason": "type parameter `M` carries a bound — type_params/fn generics are bare identifiers only in this grammar fragment",
+      "item_name": "bind"
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/ops.rs",
+      "line": 34,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "# [doc = \" Unbind (recover a factor from a bind product).\"] # [doc = \"\"] # [doc = \" Exact for self-inverse models (MAP-I/MAP-B/BSC) and SBC (`Proven`); `Empirical` for\"] # [doc = \" HRR/FHRR (the approximate inverse is lossy — the residual weak link; RFC-0003 §4.1).  For\"] # [doc = \" HRR/FHRR the result should be cleaned up against a codebook ([`cleanup`]) to obtain a\"] # [doc = \" usable item — do not treat a raw unbind result as `Exact`.\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \" - [`VsaError::DimMismatch`] — the operands' lengths disagree with each other or the model.\"] # [inline] pub fn unbind < M : VsaModel > (model : & M , c : & [f64] , b : & [f64]) -> Result < Vec < f64 > , VsaError > { model . unbind (c , b) }",
+      "reason": "type parameter `M` carries a bound — type_params/fn generics are bare identifiers only in this grammar fragment",
+      "item_name": "unbind"
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/ops.rs",
+      "line": 48,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "# [doc = \" Bundle (superpose) a non-empty set of hypervectors.\"] # [doc = \"\"] # [doc = \" The guarantee tag depends on the model (read from `intrinsic_guarantee(Bundle)`):\"] # [doc = \" `Proven` for MAP-I/MAP-B/BSC/SBC; `Empirical` for HRR/FHRR.  A bundle over zero items is\"] # [doc = \" `Err(EmptyBundle)`, never a fabricated zero vector (C1 / G2).  MAP-B nested-bundle inputs\"] # [doc = \" yield `Err(NestedBundleUnsupported)` — reliability decays `1/2 + 1/2^r` with nesting depth\"] # [doc = \" `r`, so nesting beyond depth 1 is refused explicitly rather than silently degrading accuracy\"] # [doc = \" (RR-13).\"] # [doc = \"\"] # [doc = \" For a Value-level `Proven` bundle with a checked `CapacityBound` certificate, use the\"] # [doc = \" Value-level adapters in `mycelium-vsa` directly (e.g. `MapI::bundle_values_certified`).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \" - [`VsaError::EmptyBundle`] — zero items supplied.\"] # [doc = \" - [`VsaError::NestedBundleUnsupported`] — MAP-B input is itself a MAP-B bundle (RR-13).\"] # [doc = \" - [`VsaError::DimMismatch`] — items have differing lengths.\"] # [inline] pub fn bundle < M : VsaModel > (model : & M , items : & [& [f64]]) -> Result < Vec < f64 > , VsaError > { model . bundle (items) }",
+      "reason": "type parameter `M` carries a bound — type_params/fn generics are bare identifiers only in this grammar fragment",
+      "item_name": "bundle"
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/ops.rs",
+      "line": 69,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "# [doc = \" Permute (cyclically shift) a hypervector by `shift` positions.\"] # [doc = \"\"] # [doc = \" `Exact` for **all** models (§4.1 erratum — a fixed coordinate bijection; RFC-0003 §4.1).\"] # [doc = \" The inverse is [`unpermute`] with the same `shift`.\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \" - [`VsaError::DimMismatch`] — operand length disagrees with the model's `dim`.\"] # [inline] pub fn permute < M : VsaModel > (model : & M , a : & [f64] , shift : i64) -> Result < Vec < f64 > , VsaError > { model . permute (a , shift) }",
+      "reason": "type parameter `M` carries a bound — type_params/fn generics are bare identifiers only in this grammar fragment",
+      "item_name": "permute"
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/ops.rs",
+      "line": 81,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "# [doc = \" The inverse of [`permute`] by the same `shift` — exactly undoes the cyclic rotation.\"] # [doc = \"\"] # [doc = \" `Exact` for all models (a permutation's inverse is always exact; §4.1 erratum).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \" - [`VsaError::DimMismatch`] — operand length disagrees with the model's `dim`.\"] # [inline] pub fn unpermute < M : VsaModel > (model : & M , a : & [f64] , shift : i64) -> Result < Vec < f64 > , VsaError > { model . unpermute (a , shift) }",
+      "reason": "type parameter `M` carries a bound — type_params/fn generics are bare identifiers only in this grammar fragment",
+      "item_name": "unpermute"
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/ops.rs",
+      "line": 92,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "# [doc = \" Cosine similarity of two hypervectors in `[-1, 1]`.\"] # [doc = \"\"] # [doc = \" Deterministic (a fixed score); `Exact` — the primitive *score* is exact even when it is used\"] # [doc = \" as a *decision* input (cleanup, resonator per-slot argmax) where the *decision* is\"] # [doc = \" bounded-lossy.  See FLAG Q2 in `vsa.md §7` for the open question about a\"] # [doc = \" crosstalk-context bound when used decisionally.\"] # [doc = \"\"] # [doc = \" Returns `0.0` if either operand has zero norm (the model's documented convention).\"] # [inline] pub fn similarity < M : VsaModel > (model : & M , a : & [f64] , b : & [f64]) -> f64 { model . similarity (a , b) }",
+      "reason": "type parameter `M` carries a bound — type_params/fn generics are bare identifiers only in this grammar fragment",
+      "item_name": "similarity"
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/ops.rs",
+      "line": 105,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "# [doc = \" Role–filler binding: `bind(role, filler)`.\"] # [doc = \"\"] # [doc = \" A thin alias for [`bind`] that names the operand roles explicitly.  Same guarantee as\"] # [doc = \" `bind` for the model (see [`bind`] for the guarantee-tag breakdown).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \" See [`bind`].\"] # [inline] pub fn bind_role < M : VsaModel > (model : & M , role : & [f64] , filler : & [f64] ,) -> Result < Vec < f64 > , VsaError > { bind (model , role , filler) }",
+      "reason": "type parameter `M` carries a bound — type_params/fn generics are bare identifiers only in this grammar fragment",
+      "item_name": "bind_role"
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/ops.rs",
+      "line": 121,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "# [doc = \" Cleanup: nearest-atom indexed retrieval against an item memory.\"] # [doc = \"\"] # [doc = \" `Empirical` (bounded-lossy item memory, Clarkson Thm 16; M-132).  Returns\"] # [doc = \" `Match { label, index, confidence, margin }` so the caller can inspect and threshold the\"] # [doc = \" result — never a silent low-confidence guess (C1/C3 / G2 / FR-C2).\"] # [doc = \"\"] # [doc = \" Explicit refusals (C1 / G2):\"] # [doc = \" - `Err(BelowCleanupThreshold)` when `confidence < min_confidence` (the caller-supplied floor).\"] # [doc = \" - `Err(BelowCleanupThreshold)` when `margin < min_margin` (near-tied slots). See the FLAG in\"] # [doc = \"   the body: `mycelium-vsa::VsaError` has **no** distinct `Ambiguous` variant, so the\"] # [doc = \"   margin-shortfall case is surfaced through `BelowCleanupThreshold` (with `confidence` carrying\"] # [doc = \"   the margin and `threshold` carrying `min_margin`) — never a silent guess. A dedicated variant\"] # [doc = \"   is a kernel change (FLAG).\"] # [doc = \" - `Err(EmptyCodebook)` when the memory is empty or the query has the wrong length.\"] # [doc = \"\"] # [doc = \" Setting `min_confidence = 0.0` and `min_margin = 0.0` disables the threshold gates,\"] # [doc = \" returning the raw nearest-neighbour hit (the confidence/margin are still reported in\"] # [doc = \" `Match` for the caller to inspect).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \" - [`VsaError::EmptyCodebook`] — the memory is empty or query length disagrees with `dim`.\"] # [doc = \" - [`VsaError::BelowCleanupThreshold`] — `confidence < min_confidence`, **or** the\"] # [doc = \"   margin-shortfall case `margin < min_margin` (see the body FLAG: `VsaError` has no\"] # [doc = \"   `Ambiguous` variant, so both refusals share this variant).\"] pub fn cleanup < M : VsaModel > (codebook : & CleanupMemory , query : & [f64] , model : & M , min_confidence : f64 , min_margin : f64 ,) -> Result < Match , VsaError > { let hit = codebook . cleanup (query , model) . ok_or (VsaError :: EmptyCodebook) ? ; if hit . confidence < min_confidence { return Err (VsaError :: BelowCleanupThreshold { confidence : hit . confidence , threshold : min_confidence , }) ; } if hit . margin < min_margin { return Err (VsaError :: BelowCleanupThreshold { confidence : hit . margin , threshold : min_margin , }) ; } Ok (hit) }",
+      "reason": "type parameter `M` carries a bound — type_params/fn generics are bare identifiers only in this grammar fragment",
+      "item_name": "cleanup"
+    }
+  ],
+  "total_top_level_items": 9
+}

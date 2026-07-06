@@ -1,0 +1,90 @@
+{
+  "source": "crates/mycelium-std-sys-host/src/lib.rs",
+  "emitted_items": [
+    "OsEntropy",
+    "OsClock"
+  ],
+  "gaps": [
+    {
+      "file": "crates/mycelium-std-sys-host/src/lib.rs",
+      "line": 1,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# ! [forbid (unsafe_code)]",
+      "reason": "crate/file-level inner attributes (#![...]) are not transpiled (no nodule-header equivalent for these Rust-specific directives)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-sys-host/src/lib.rs",
+      "line": 5,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use mycelium_std_rand :: { EntropyEffect , EntropySource , RandErr } ;",
+      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-sys-host/src/lib.rs",
+      "line": 6,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use mycelium_std_time :: { ClockSource , DeclaredTime , DeclaredTimeEntropy , LogicalInstant , MonoInstant , TimeErr , WallInstant , } ;",
+      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-sys-host/src/lib.rs",
+      "line": 11,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "# [doc = \" The production [`EntropySource`] — fills entropy from the audited `std-sys` OS floor\"] # [doc = \" (`/dev/urandom` via `std::fs`; M-723). This is the seam `std-rand` left injectable: the pure\"] # [doc = \" `std-rand` crate never touches the OS, and this adapter supplies the real source.\"] # [doc = \"\"] # [doc = \" **Guarantee: `Declared`** (RFC-0016 §4.1 C2 / VR-5). The source is the kernel CSPRNG, a genuine\"] # [doc = \" OS entropy source, but no statistical-quality theorem or corpus is checked here — so `Declared`,\"] # [doc = \" never `Empirical`/`Proven`. **Never-silent (G2):** an unavailable source is\"] # [doc = \" `Err(RandErr::EntropyUnavailable)`, never a silent zero-fill (the `std-sys` floor guarantees a\"] # [doc = \" full fill or an explicit error; this adapter only maps the error type).\"] # [derive (Debug , Default , Clone , Copy)] pub struct OsEntropy ;",
+      "reason": "dropped non-doc attribute(s) on struct `OsEntropy`: # [derive (Debug , Default , Clone , Copy)]",
+      "item_name": "OsEntropy"
+    },
+    {
+      "file": "crates/mycelium-std-sys-host/src/lib.rs",
+      "line": 23,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl EntropySource for OsEntropy { fn fill_bytes (& mut self , buf : & mut [u8]) -> Result < EntropyEffect , RandErr > { mycelium_std_sys :: rand :: fill_bytes (buf) . map (| () | EntropyEffect) . map_err (| _ | RandErr :: EntropyUnavailable) } }",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fill_bytes` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence",
+      "item_name": "OsEntropy"
+    },
+    {
+      "file": "crates/mycelium-std-sys-host/src/lib.rs",
+      "line": 33,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "# [doc = \" The production [`ClockSource`] — reads the OS clock through the audited `std-sys` time floor\"] # [doc = \" (`std::time::{Instant, SystemTime}`; M-723). The seam `std-time` left injectable: `std-time`\"] # [doc = \" owns the typed/effect-declaring reading surface, this adapter supplies the real clock.\"] # [doc = \"\"] # [doc = \" **Guarantee: `Declared`** for every read (RFC-0016 §4.1 C2 / VR-5): an ambient, nondeterministic\"] # [doc = \" host read with no checked bound. Effects are carried by the return types (`DeclaredTime` for the\"] # [doc = \" monotonic/logical reads, `DeclaredTimeEntropy` for the wall read — civil time is an RT3 entropy\"] # [doc = \" source). **Never-silent (G2):** a wall-clock read before the Unix epoch or an out-of-range tick\"] # [doc = \" is an explicit `Err(TimeErr::…)`, never a wrap/clamp.\"] # [derive (Debug , Default , Clone , Copy)] pub struct OsClock ;",
+      "reason": "dropped non-doc attribute(s) on struct `OsClock`: # [derive (Debug , Default , Clone , Copy)]",
+      "item_name": "OsClock"
+    },
+    {
+      "file": "crates/mycelium-std-sys-host/src/lib.rs",
+      "line": 45,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl ClockSource for OsClock { fn mono_now (& self) -> DeclaredTime < Result < MonoInstant , TimeErr > > { DeclaredTime :: new (Ok (MonoInstant :: from_nanos (mycelium_std_sys :: time :: mono_nanos () ,))) } fn wall_now (& self) -> DeclaredTimeEntropy < Result < WallInstant , TimeErr > > { let r = match mycelium_std_sys :: time :: wall_nanos () { Ok (ns) => match i128 :: try_from (ns) { Ok (signed) => Ok (WallInstant :: from_nanos_since_epoch (signed)) , Err (_) => Err (TimeErr :: Overflow) , } , Err (_) => Err (TimeErr :: ClockUnavailable { reason : \"OS wall clock read a time before the Unix epoch\" , }) , } ; DeclaredTimeEntropy :: new (r) } fn logical_now (& self) -> DeclaredTime < LogicalInstant > { DeclaredTime :: new (LogicalInstant :: from_tick (mycelium_std_sys :: time :: mono_nanos () ,)) } }",
+      "reason": "no member of this impl block could be transpiled (3 sub-issue(s)): impl method `mono_now` signature: generic type path `DeclaredTime < Result < MonoInstant , TimeErr > >` — type-argument mapping not confirmed; impl method `wall_now` signature: generic type path `DeclaredTimeEntropy < Result < WallInstant , TimeErr > >` — type-argument mapping not confirmed; impl method `logical_now` signature: generic type path `DeclaredTime < LogicalInstant >` — type-argument mapping not confirmed",
+      "item_name": "OsClock"
+    },
+    {
+      "file": "crates/mycelium-std-sys-host/src/lib.rs",
+      "line": 82,
+      "col": 1,
+      "category": "TestItem",
+      "rust_construct": "TestItem",
+      "snippet": "# [cfg (test)] mod tests { use super :: { OsClock , OsEntropy } ; use mycelium_std_rand :: { EntropyRng , EntropySource } ; use mycelium_std_time :: ClockSource ; # [doc = \" `OsEntropy` fills from the OS floor, or — on a platform without `/dev/urandom` — fails\"] # [doc = \" explicitly (never a silent zero-fill, G2). Skips gracefully when the source is unavailable.\"] # [test] fn os_entropy_fills_or_is_explicitly_unavailable () { let mut src = OsEntropy ; let mut buf = [0u8 ; 32] ; match src . fill_bytes (& mut buf) { Ok (_) => assert ! (buf . iter () . any (|& b | b != 0) , \"entropy fill returned all-zero (smoke)\") , Err (_) => { } } } # [doc = \" `std-rand`'s `EntropyRng` seeds end-to-end from the OS floor through this adapter — the seam\"] # [doc = \" is wired. Skips gracefully when entropy is unavailable.\"] # [test] fn entropy_rng_seeds_from_os_floor () { if let Ok ((mut rng , _eff)) = EntropyRng :: new (OsEntropy) { let (a , _) = rng . next_entropy () ; let (b , _) = rng . next_entropy () ; assert ! (a != 0 || b != 0 , \"two entropy draws were both zero (smoke)\") ; } } # [doc = \" The monotonic clock read is total and non-decreasing across two reads (M-723).\"] # [test] fn os_clock_mono_is_total_and_monotonic () { let clk = OsClock ; let t1 = clk . mono_now () . into_inner () . expect (\"mono read is total (Ok)\") ; let t2 = clk . mono_now () . into_inner () . expect (\"mono read is total (Ok)\") ; assert ! (t2 . as_nanos () >= t1 . as_nanos () , \"monotonic clock went backwards\") ; } # [doc = \" The wall clock executes through the floor and yields a post-epoch instant (it is `> 0` for any\"] # [doc = \" real system time after 1970). Never-silent: a pre-epoch/overflow read would be `Err`.\"] # [test] fn os_clock_wall_now_executes () { let clk = OsClock ; if let Ok (w) = clk . wall_now () . into_inner () { assert ! (w . as_nanos_since_epoch () > 0 , \"wall clock is not after the Unix epoch\") ; } } # [doc = \" The logical read is total (the placeholder tick is always readable).\"] # [test] fn os_clock_logical_is_total () { let clk = OsClock ; let _ = clk . logical_now () . into_inner () ; } }",
+      "reason": "#[cfg(test)] item — out of scope for this PoC's transpilation surface (excluded from the expressible-fraction denominator, but recorded, never silently skipped)",
+      "item_name": "tests"
+    }
+  ],
+  "total_top_level_items": 7
+}

@@ -1,0 +1,88 @@
+// nodule: std.content
+// `std.content` — Ring 1 / Tier A capability surface (M-523).
+//
+// The identity model made into an ergonomic, read-only library. The one load-bearing promise is
+// the **canonical-hash guarantee** (ADR-003 / RFC-0001 §4.6): a value's — or a definition's —
+// identity *is* the content-addressed digest of its **normalized** structure (and
+// types-including-`Repr`, and static contract), and **metadata is not identity**.
+//
+// # What this crate is
+// A Ring-1 ergonomic wrapper over `mycelium-core`'s content-hash surface (M-103). It adds **no
+// new trusted / unsafe code** (KC-3, `#![forbid(unsafe_code)]`): all the trust lives in the
+// kernel's normalizer + digest, which this crate only *reads*.
+//
+// # What this crate is NOT
+// - **Not** hashing-for-maps (`Hash`/`Hasher` for `Map`/`Set` buckets) — that is `collections`
+//   (M-511), a non-identity hash. Keeping this split explicit is a primary obligation
+//   (RFC-0016 §4.3).
+// - **Not** packaging / deployment — `spore` (M-522, ADR-013) *consumes* our digests, but owns
+//   the artifact.
+// - **Not** representation change — `std.swap` (M-516) owns conversion; `content` is purely
+//   observational.
+//
+// # Guarantee matrix
+// Every exported op has a row in [`guarantee_matrix::MATRIX`] (RFC-0016 §4.5 / spec §4).
+// All ops are `Exact` (deterministic) and effect-free. The matrix is asserted in tests, not
+// prose-only (C2 / VR-5).
+//
+// # C1 — never-silent
+// - Total ops (`hash_of_value`, `hash_of_def`, `digest_eq`, `as_ref`, `names_of`) cannot fail.
+// - `parse_ref` returns `Err(`[`MalformedDigest`]`)` — never a coerced/zeroed digest.
+// - `resolve_name` returns `Option` — `None` is an honest "not found", never a sentinel hash.
+//
+// # C4 — content-addressed, value-semantic
+// Identical content collides; metadata is NOT identity; trivial renames do not change identity
+// (ADR-003; RFC-0001 §4.6 / §4.8).
+//
+// # Design spec
+// `docs/spec/stdlib/content.md` (M-523, #164).
+//
+// # Open questions (FLAGs carried from spec §7)
+//
+// - **(Q1)** The concrete digest algorithm (BLAKE3) is fixed by M-103 in the kernel; this crate
+//   re-exports whatever `mycelium-core` provides. The kernel spec notes BLAKE3 as the chosen
+//   algorithm (M-103 acceptance); this crate treats it as an implementation detail, not a
+//   surface commitment.
+//
+// - **(Q2)** `hash_of_value` is exposed as a total op over the kernel's `Value::content_hash`.
+//   The spec FLAGs whether non-`Exact`/mixed-paradigm composite values have a defined identity
+//   or are an explicit refusal (RFC-0001 §4.7 r3 "the interpreter refuses"). Currently the
+//   kernel's `Value::content_hash` is total, so we surface it as total.
+//   // FLAG: Q2 — if the kernel adds a refusal path for mixed-paradigm values, this op becomes
+//   // fallible (`Result<ContentHash, IdentityRefusal>`). Do not silently silentise that path.
+//
+// - **(Q3)** The `hash ↔ name` map ownership is an open question (spec §7-Q3 / RFC-0016 §8-Q2).
+//   The [`NameRegistry`] and `resolve_name` / `names_of` functions are here for now; if the
+//   resolution moves the registry to the toolchain, those two ops move out.
+//   // FLAG: Q3 — NameRegistry placement pending spec §7-Q3 resolution.
+//
+// - **(Q4)** How implicit `ContentHash` derivation may be at the call site is an open ergonomics
+//   question (spec §7-Q4 / RFC-0016 §8-Q3 — tension A). This crate is always-explicit;
+//   the per-ring ergonomics pass (M-540) may introduce implicit derivation later.
+//
+// ## Ambient Representation (RFC-0012 §8-Q3)
+//
+// This crate's public API participates in the RFC-0012 ambient-representation contract:
+// the representation choice (binary/ternary/dense/VSA) is implicit at the call site but
+// always reified, queryable, and EXPLAIN-able — never a black box (C3/SC-3).
+// [Declared per RFC-0012; direction accepted in DN-07 §8-Q3; per-ring pass scheduled as M-540.]
+//
+// **For this crate (Ring 1, Tier A):** Content-addressed operations are representation-agnostic
+// at the content level — the canonical hash of a value includes its `Repr` field as part of the
+// normalized structure (RFC-0001 §4.6), so representation is carried in the identity itself,
+// not implicit. The certificate of identity is always inspectable; metadata (including `Repr`) is
+// never stripped from the hash input (ADR-003).
+//
+// # Stability (DN-66 freeze, 2026-07-01)
+//
+// This crate's public API, as documented in `docs/spec/stdlib/content.md` (spec status:
+// Accepted (2026-06-20)) and asserted by its guarantee-matrix table, is the **frozen baseline** per
+// [DN-66](../../../docs/notes/DN-66-Stdlib-Stable-API-Freeze-And-Rust-Crate-Retirement-Status.md).
+// A future breaking change here needs a spec amendment + changelog entry, not a silent edit (G2).
+// It remains the RFC-0031 D6 differential-oracle reference; no `.myc` port of this module exists yet, so the D6 retirement trigger has not fired and no item here is `#[deprecated]`.
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.content;
+
+

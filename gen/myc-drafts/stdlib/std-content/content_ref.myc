@@ -1,0 +1,28 @@
+// nodule: std.content
+// `ContentRef` — a typed, opaque pointer that cert / policy / provenance / spore artifacts embed
+// to designate a content-addressed target (spec §3; RFC-0001 §4.6; ADR-013).
+//
+// # Design
+// A `ContentRef` wraps a [`ContentHash`] with an explicit `Kind` tag so that downstream modules
+// (cert, policy, `spore`) can distinguish *what* the hash points to without inspecting the digest
+// itself. The tag is identity-bearing metadata **about the pointer** (not the target): two
+// `ContentRef`s with the same hash but different `Kind`s compare unequal, which is the correct
+// behaviour (a cert ref and a value ref to the same digest are different roles).
+//
+// # C3 / no black boxes
+// `ContentRef` is fully inspectable: callers can read both the `Kind` and the inner
+// `ContentHash` (via [`ContentRef::kind`] and [`ContentRef::hash`]). There is no hidden decision.
+//
+// # C4 / value-semantic
+// `ContentRef` is `Clone` + `PartialEq` + `Eq`. Identical `(kind, hash)` pairs are identical
+// refs; the struct carries no identity-independent metadata.
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.content;
+
+// The role a [`ContentRef`] points to (the explicit kind tag).
+//
+// This is metadata **about the pointer**, not the pointed-to value. It lets cert / policy /
+// `spore` modules distinguish roles without parsing the digest.
+type RefKind = Value | Def | Operation | Policy | Spore | Other;
