@@ -123,3 +123,12 @@ kickoff's own recorded defaults**, graded `Declared`, and reversible by the main
 (staging+manifest · rip-through), **M-1004/M-1005** (lib-index extraction · drift gate).
 M-991 → `in-progress` (discharged by E32-1's DN-34 results record). Swarm mode: maintainer
 directive at launch — Opus/Sonnet implementation agents, orchestrator coordinates.
+
+**Maintainer confirmation (2026-07-06, same day — amends resolution 1).** The maintainer
+confirmed decisions 2–4 as resolved above, and **decided** (no longer orchestrator-`Declared`)
+E-B breadth as: **port surface first** (this wave, unchanged), **then — once refined — expand to
+the rest of the Rust corpus of the Mycelium language codebase in controlled phases**: automated
+porting + patching to close gaps, folding each phase's lessons back into the transpiler until it
+is a highly polished solution. Minted **M-1006** (under E33-1) as the phased-ladder umbrella;
+per-phase target sets are minted per wave (mitigation #1), and the ladder's outputs reconcile
+with `rwr`'s M-947…M-957 port-wave manifests at Phase-II (trx2 phases become their inputs).

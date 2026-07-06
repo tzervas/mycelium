@@ -12539,6 +12539,9 @@ issues:
       Launch scope record (orchestrator-resolved, kickoff defaults; maintainer may override):
       E-B breadth = port surface only; staging dir = gen/myc-drafts/; E-C = generated reference
       docs from `.myc` sources; rwr pull-forward confirmed per the maintainer's dated decision.
+      AMENDED same day: the maintainer confirmed all four, upgrading E-B breadth to a decided
+      two-stage plan -- port surface first, THEN phased expansion over the remaining Mycelium
+      Rust corpus (M-1006), each phase polishing the transpiler with its lessons.
 
       User stories:
       - As a compiler engineer porting semcore (M-993), I want transpiler drafts that mostly pass
@@ -12621,7 +12624,7 @@ issues:
     milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:epic, area:tooling, priority:P2, status:todo]
     epic: E33
-    depends_on: [M-1002, M-1003]
+    depends_on: [M-1002, M-1003, M-1006]
     doc_refs:
       - corpus:DN-26
       - corpus:DN-34
@@ -12646,6 +12649,12 @@ issues:
       - M-1002 + M-1003 done; gen/myc-drafts/ holds a draft per named target, each
         myc-check-clean or gap/vet-flagged; MANIFEST maps every draft to its Rust source + vet
         status; nothing under lib/ is touched.
+
+      AMENDED (2026-07-06, maintainer launch clarification): breadth is a decided two-stage
+      plan -- the port-surface pass above stands unchanged as wave 1, and the epic additionally
+      carries M-1006, the phased whole-corpus rip-through ladder (expand once refined; lessons
+      from each phase polish the transpiler). The wave-1 DoD above gates wave 1; the epic closes
+      when the ladder (M-1006) completes.
 
   - id: M-1002
     title: "M-1002 — Stand up gen/myc-drafts/ staging tree + manifest schema + batch vet driver"
@@ -12795,3 +12804,40 @@ issues:
       - just recipe + drift gate live in just check (graceful skip preserved); Doc-Index.md
         registers the artifact with its grading + ownership; CHANGELOG entry at integration;
         gate proven by a deliberate-drift test run recorded in the PR body.
+
+  - id: M-1006
+    title: "M-1006 — Phased whole-corpus rip-through ladder (expand E-B beyond the port surface)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:task, area:tooling, priority:P2, status:todo]
+    epic: E33-1
+    depends_on: [M-1003]
+    doc_refs:
+      - corpus:DN-34
+      - corpus:DN-26
+      - src:.claude/kickoffs/trx2.md
+    body: |
+      Minted 2026-07-06 (maintainer decision, trx2 launch clarification -- upgrades the E-B
+      breadth resolution from the orchestrator's `Declared` default to a decided two-stage
+      plan). After the port-surface pass (M-1003) is refined: expand the rip-through to the
+      REST of the Rust corpus of the Mycelium language codebase in CONTROLLED PHASES. Each
+      phase: select a bounded target set -> transpile -> vet (M-1000 loop) -> patch drafts to
+      close gaps -> fold the phase's lessons back into the transpiler (gap classes closed,
+      emitter fixes, taxonomy refinements) -> record the phase manifest. Iterate until the
+      transpiler is a highly polished solution. Phase target sets are minted per wave
+      (mitigation #1 -- no pre-minting the whole ladder); phase boundaries are the maintainer's
+      to confirm. Reconciliation guard: at Phase-II, this ladder's phase manifests become
+      INPUTS to rwr's M-947..M-957 port-wave manifests -- coordinate via issues.yaml
+      depends_on/body notes, never duplicate waves (the trx2 kickoff's FLAG-V2 note binds:
+      compiler self-hosting stays boot10's lane).
+
+      User stories:
+      - As the maintainer, I want each rip-through phase to both port code and harden the
+        transpiler, so that porting accelerates as the corpus is consumed and the tool converges
+        to polished.
+
+      Definition of Done:
+      - Per phase: a recorded phase manifest (target set, before/after expressible_fraction +
+        checked_fraction, drafts landed, transpiler fixes landed, lessons). Ladder: the
+        remaining Mycelium Rust corpus covered by recorded phases; the transpiler's residual
+        gap classes enumerated with counts and either closed or explicitly declared
+        out-of-scope (G2 -- the stopping point is recorded, never silent).
