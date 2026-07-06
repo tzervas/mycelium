@@ -24,6 +24,7 @@ pub mod doc_lint;
 pub mod emit;
 pub mod hash;
 pub mod ir;
+pub mod lib_index;
 
 #[cfg(test)]
 mod tests;
