@@ -289,8 +289,8 @@ fn split_lines_acc(s: Bytes, i: Binary{32}, start: Binary{32}, len: Binary{32}, 
     },
     _ => match eq(start, len) {
       // Ended exactly at a newline: no trailing partial line (mirrors Rust `str::lines`).
-      0b1 => rev_acc(acc, Nil),
-      _ => rev_acc(Cons(bytes_slice(s, start, len), acc), Nil)
+      0b1 => rev_acc(acc, Nil : Vec[Bytes]),
+      _ => rev_acc(Cons(bytes_slice(s, start, len), acc), Nil : Vec[Bytes])
     }
   };
 
@@ -425,7 +425,7 @@ fn resolve_base_type(amb: Option[Paradigm], site: Bytes, b: BaseType, depth: Bin
 
 fn resolve_typeref_list_acc(amb: Option[Paradigm], site: Bytes, xs: Vec[TypeRef], depth: Binary{32}, acc: Vec[TypeRef]) => Result[Vec[TypeRef], AmbientError] =
   match xs {
-    Nil => Ok(rev_acc(acc, Nil)),
+    Nil => Ok(rev_acc(acc, Nil : Vec[TypeRef])),
     Cons(h, rest) => match resolve_type_ref(amb, site, h, depth) {
       Err(e) => Err(e),
       Ok(h2) => resolve_typeref_list_acc(amb, site, rest, depth, Cons(h2, acc))
@@ -475,7 +475,7 @@ fn resolve_pattern(amb: Option[Paradigm], site: Bytes, p: Pattern, depth: Binary
 
 fn resolve_pattern_list_acc(amb: Option[Paradigm], site: Bytes, xs: Vec[Pattern], depth: Binary{32}, acc: Vec[Pattern]) => Result[Vec[Pattern], AmbientError] =
   match xs {
-    Nil => Ok(rev_acc(acc, Nil)),
+    Nil => Ok(rev_acc(acc, Nil : Vec[Pattern])),
     Cons(h, rest) => match resolve_pattern(amb, site, h, depth) {
       Err(e) => Err(e),
       Ok(h2) => resolve_pattern_list_acc(amb, site, rest, depth, Cons(h2, acc))
@@ -578,7 +578,7 @@ fn resolve_expr(amb: Option[Paradigm], site: Bytes, e: Expr, depth: Binary{32}) 
 
 fn resolve_expr_list_acc(amb: Option[Paradigm], site: Bytes, xs: Vec[Expr], depth: Binary{32}, acc: Vec[Expr]) => Result[Vec[Expr], AmbientError] =
   match xs {
-    Nil => Ok(rev_acc(acc, Nil)),
+    Nil => Ok(rev_acc(acc, Nil : Vec[Expr])),
     Cons(h, rest) => match resolve_expr(amb, site, h, depth) {
       Err(e) => Err(e),
       Ok(h2) => resolve_expr_list_acc(amb, site, rest, depth, Cons(h2, acc))
@@ -607,7 +607,7 @@ fn resolve_arm(amb: Option[Paradigm], site: Bytes, a: Arm, depth: Binary{32}) =>
 
 fn resolve_arm_list_acc(amb: Option[Paradigm], site: Bytes, xs: Vec[Arm], depth: Binary{32}, acc: Vec[Arm]) => Result[Vec[Arm], AmbientError] =
   match xs {
-    Nil => Ok(rev_acc(acc, Nil)),
+    Nil => Ok(rev_acc(acc, Nil : Vec[Arm])),
     Cons(h, rest) => match resolve_arm(amb, site, h, depth) {
       Err(e) => Err(e),
       Ok(h2) => resolve_arm_list_acc(amb, site, rest, depth, Cons(h2, acc))
@@ -632,7 +632,7 @@ fn resolve_hypha(amb: Option[Paradigm], site: Bytes, h: Hypha, depth: Binary{32}
 
 fn resolve_hypha_list_acc(amb: Option[Paradigm], site: Bytes, xs: Vec[Hypha], depth: Binary{32}, acc: Vec[Hypha]) => Result[Vec[Hypha], AmbientError] =
   match xs {
-    Nil => Ok(rev_acc(acc, Nil)),
+    Nil => Ok(rev_acc(acc, Nil : Vec[Hypha])),
     Cons(h, rest) => match resolve_hypha(amb, site, h, depth) {
       Err(e) => Err(e),
       Ok(h2) => resolve_hypha_list_acc(amb, site, rest, depth, Cons(h2, acc))
@@ -653,7 +653,7 @@ fn resolve_param(amb: Option[Paradigm], site: Bytes, p: Param) => Result[Param, 
 
 fn resolve_param_list_acc(amb: Option[Paradigm], site: Bytes, xs: Vec[Param], acc: Vec[Param]) => Result[Vec[Param], AmbientError] =
   match xs {
-    Nil => Ok(rev_acc(acc, Nil)),
+    Nil => Ok(rev_acc(acc, Nil : Vec[Param])),
     Cons(h, rest) => match resolve_param(amb, site, h) {
       Err(e) => Err(e),
       Ok(h2) => resolve_param_list_acc(amb, site, rest, Cons(h2, acc))
@@ -676,7 +676,7 @@ fn resolve_fn_sig(amb: Option[Paradigm], s: FnSig) => Result[FnSig, AmbientError
 
 fn resolve_fnsig_list_acc(amb: Option[Paradigm], xs: Vec[FnSig], acc: Vec[FnSig]) => Result[Vec[FnSig], AmbientError] =
   match xs {
-    Nil => Ok(rev_acc(acc, Nil)),
+    Nil => Ok(rev_acc(acc, Nil : Vec[FnSig])),
     Cons(h, rest) => match resolve_fn_sig(amb, h) {
       Err(e) => Err(e),
       Ok(h2) => resolve_fnsig_list_acc(amb, rest, Cons(h2, acc))
@@ -697,7 +697,7 @@ fn resolve_ctor(amb: Option[Paradigm], site: Bytes, c: Ctor) => Result[Ctor, Amb
 
 fn resolve_ctor_list_acc(amb: Option[Paradigm], site: Bytes, xs: Vec[Ctor], acc: Vec[Ctor]) => Result[Vec[Ctor], AmbientError] =
   match xs {
-    Nil => Ok(rev_acc(acc, Nil)),
+    Nil => Ok(rev_acc(acc, Nil : Vec[Ctor])),
     Cons(h, rest) => match resolve_ctor(amb, site, h) {
       Err(e) => Err(e),
       Ok(h2) => resolve_ctor_list_acc(amb, site, rest, Cons(h2, acc))
@@ -739,7 +739,7 @@ fn resolve_fndecl(amb: Option[Paradigm], f: FnDecl) => Result[FnDecl, AmbientErr
 
 fn resolve_fndecl_list_acc(amb: Option[Paradigm], xs: Vec[FnDecl], acc: Vec[FnDecl]) => Result[Vec[FnDecl], AmbientError] =
   match xs {
-    Nil => Ok(rev_acc(acc, Nil)),
+    Nil => Ok(rev_acc(acc, Nil : Vec[FnDecl])),
     Cons(h, rest) => match resolve_fndecl(amb, h) {
       Err(e) => Err(e),
       Ok(h2) => resolve_fndecl_list_acc(amb, rest, Cons(h2, acc))
@@ -765,7 +765,7 @@ fn resolve_impl_decl(amb: Option[Paradigm], id: ImplDecl) => Result[ImplDecl, Am
 
 fn resolve_impldecl_list_acc(amb: Option[Paradigm], xs: Vec[ImplDecl], acc: Vec[ImplDecl]) => Result[Vec[ImplDecl], AmbientError] =
   match xs {
-    Nil => Ok(rev_acc(acc, Nil)),
+    Nil => Ok(rev_acc(acc, Nil : Vec[ImplDecl])),
     Cons(h, rest) => match resolve_impl_decl(amb, h) {
       Err(e) => Err(e),
       Ok(h2) => resolve_impldecl_list_acc(amb, rest, Cons(h2, acc))
@@ -796,7 +796,7 @@ fn resolve_viadecl(amb: Option[Paradigm], site: Bytes, v: ViaDecl) => Result[Via
 
 fn resolve_viadecl_list_acc(amb: Option[Paradigm], site: Bytes, xs: Vec[ViaDecl], acc: Vec[ViaDecl]) => Result[Vec[ViaDecl], AmbientError] =
   match xs {
-    Nil => Ok(rev_acc(acc, Nil)),
+    Nil => Ok(rev_acc(acc, Nil : Vec[ViaDecl])),
     Cons(h, rest) => match resolve_viadecl(amb, site, h) {
       Err(e) => Err(e),
       Ok(h2) => resolve_viadecl_list_acc(amb, site, rest, Cons(h2, acc))
@@ -842,7 +842,7 @@ fn resolve_item(default_p: Option[Paradigm], i: Item) => Result[Option[Item], Am
 
 fn resolve_item_list_acc(default_p: Option[Paradigm], xs: Vec[Item], acc: Vec[Item]) => Result[Vec[Item], AmbientError] =
   match xs {
-    Nil => Ok(rev_acc(acc, Nil)),
+    Nil => Ok(rev_acc(acc, Nil : Vec[Item])),
     Cons(h, rest) => match resolve_item(default_p, h) {
       Err(e) => Err(e),
       Ok(mi) => match mi {
@@ -969,7 +969,7 @@ fn print_type_param_list(xs: Vec[TypeParam]) => Bytes =
 
 fn filter_type_params_acc(xs: Vec[TypeParam], acc: Vec[TypeParam]) => Vec[TypeParam] =
   match xs {
-    Nil => rev_acc(acc, Nil),
+    Nil => rev_acc(acc, Nil : Vec[TypeParam]),
     Cons(h, rest) => match h { TP(_, kind, _) => match kind {
       PkType => filter_type_params_acc(rest, Cons(h, acc)),
       PkWidth => filter_type_params_acc(rest, acc)
@@ -980,7 +980,7 @@ fn filter_type_params(xs: Vec[TypeParam]) => Vec[TypeParam] = filter_type_params
 
 fn filter_width_params_acc(xs: Vec[TypeParam], acc: Vec[TypeParam]) => Vec[TypeParam] =
   match xs {
-    Nil => rev_acc(acc, Nil),
+    Nil => rev_acc(acc, Nil : Vec[TypeParam]),
     Cons(h, rest) => match h { TP(_, kind, _) => match kind {
       PkWidth => filter_width_params_acc(rest, Cons(h, acc)),
       PkType => filter_width_params_acc(rest, acc)
