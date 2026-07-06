@@ -1,5 +1,12 @@
 # Kickoff `opp` — Phase-I opportunistic Mycelium ports (ready-now; non-gating)
 
+> **✅ LANDED (2026-07-02, PR #1020) — archived 2026-07-05.** Landed on `main`; task range
+> **M-925…M-935** all `status:done` (verified against `tools/github/issues.yaml`, 2026-07-05).
+> The 9 stdlib `.myc` ports are three-way green.
+>
+> - Residual: **`convert` deferred** to a next porting wave — recorded in the port ledger
+>   (`docs/planning/self-hosting-port-ledger.md`).
+>
 > **UID:** `opp` · **Basis:** **ADR-038** (Accepted, 2026-07-01) §2.2/§2.5 + the umbrella roadmap
 > `docs/planning/road-to-1.0.0-and-mycelium-rewrite.md` **§6** · RFC-0031 §5 **D5/D6** (the per-op
 > stability bar + oracle retention) · `docs/spec/stdlib/self-hosting-readiness.md` §0 (~19/26

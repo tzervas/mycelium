@@ -46,6 +46,13 @@ const FLATTEN_CORPUS: &[(&str, &str)] = &[
         "budgeted-effects-roundtrips",
         "nodule d;\nfn f() => Binary{8} !{retry(<=3), alloc(<=64KiB)} = 0b0000_0000;\n",
     ),
+    (
+        // M-970: `--flatten` renders each fn body via `render_expr_canonical` (see
+        // `render_item_flat`), so it inherits the `Expr::Colony`/`Hypha::forage` fix — this entry
+        // pins that the flat single-line form also preserves `@forage(policy)`.
+        "hypha-with-forage-flattens",
+        "nodule d;\nfn f() => Binary{1} = colony { @forage(0b101) hypha g() };\n",
+    ),
 ];
 
 /// Core round-trip property (M-819 / DN-57 §2):
@@ -654,6 +661,51 @@ fn forage_annotation_round_trips_through_canonical_render() {
             .unwrap_or_else(|e| panic!("{label}: re-format failed: {e}"));
         assert_eq!(again.output, formatted.output, "{label}: idempotent (C2)");
         assert!(!again.changed, "{label}: re-format reported a change (C2)");
+    }
+}
+
+/// The **readable** render path (`format_source_readable`, M-974/DN-82) shares `render_expr_canonical`
+/// for the `Expr::Colony` node: `render_expr_readable` returns the compact rendering whenever it fits
+/// (and `render_expr_broken`'s catch-all falls back to the same compact text for any node — like
+/// `Colony` — with no dedicated broken layout), so the M-970 fix is inherited rather than
+/// independently implemented. This test pins that inheritance explicitly, over the same
+/// [`COLONY_FORAGE_ROUNDTRIP_CORPUS`], so a future dedicated `Expr::Colony` broken-layout arm cannot
+/// silently regress the annotation on this path.
+#[test]
+fn forage_annotation_round_trips_through_readable_render() {
+    for &(label, src) in COLONY_FORAGE_ROUNDTRIP_CORPUS {
+        let original = parse(src).unwrap_or_else(|e| panic!("{label}: source must parse: {e}"));
+        let formatted = format_source_readable(src, None)
+            .unwrap_or_else(|e| panic!("{label}: format_source_readable failed: {e}"));
+
+        // C1: same identity guard as the canonical path.
+        let reparsed = parse(&formatted.output)
+            .unwrap_or_else(|e| panic!("{label}: readable output must re-parse: {e}"));
+        assert_eq!(
+            reparsed, original,
+            "{label}: C1 identity — @forage must survive readable formatting\nformatted: {:?}",
+            formatted.output
+        );
+
+        if src.contains("@forage") {
+            assert!(
+                formatted.output.contains("@forage"),
+                "{label}: @forage must appear in the readable-rendered output: {:?}",
+                formatted.output
+            );
+        }
+
+        // C2: idempotent.
+        let again = format_source_readable(&formatted.output, None)
+            .unwrap_or_else(|e| panic!("{label}: readable re-format failed: {e}"));
+        assert_eq!(
+            again.output, formatted.output,
+            "{label}: readable idempotent (C2)"
+        );
+        assert!(
+            !again.changed,
+            "{label}: readable re-format reported a change (C2)"
+        );
     }
 }
 

@@ -11,6 +11,196 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### M-740 Stage 5 (increment 1) — partial self-hosted `compiler.semcore` (2026-07-06)
+
+`boot10` (E18-1) wave 5, per DN-26 §7.3/§9: the **first, deliberately partial** increment of the
+semantic-core nodule `compiler.semcore` (`lib/compiler/semcore.myc`). The full semcore is a 9-file
+strongly-connected component (~16.7k Rust lines); this increment lands only the **tractable sub-core
+that depends on checkty's *types* but not its logic or the evaluator**, and defers the heavy
+entangled core — honestly, not silently.
+
+- **In this increment:** the `Ty`/`Width`/`DataInfo`/`CtorInfo`/`Pat` type vocabulary (data
+  declarations only), the Maranget **`usefulness`** (exhaustiveness/redundancy) + **`decision`**
+  (decision-tree) pipeline, the static **`affine`** use-once tracker, and **`grade`** (guarantee
+  grading). Flat-namespace prefixing (`Ty-`/`Wd-`/`Mp-`/`Hd-`) per the FLAG-ast-5/FLAG-parse-2
+  discipline. Native `myc check` reports `ok`.
+- **A true live-oracle differential** (`crates/mycelium-l1/src/tests/compiler_stage5_semcore.rs`,
+  17/17, `Empirical`): because `usefulness`/`decision`/`affine`/`grade` are `pub(crate)`, the gate is
+  an **in-crate** unit module (CLAUDE.md test-layout: white-box `use crate::…`) that calls the
+  **live Rust oracle** on the same small synthetic inputs the `.myc` encodes and compares — not
+  hand-derived expectations. The harness was perturbation-verified (a corrupted expectation fails
+  loudly). This closed the first-cut hand-derived gap (FLAG-semcore-10). Sole residual
+  **FLAG-semcore-10-b:** grade's exact `Strength` is recovered by probing the four-level lattice
+  (`Exact ⊐ Proven ⊐ Empirical ⊐ Declared`) through the live `check_guarantees`, whose finer
+  internals are private even in-crate — surfaced, not hidden. **No logic module under
+  `crates/mycelium-l1/src/` was modified and no visibility was changed** (in-crate access needs
+  neither).
+- **Deferred, feasibility-gated on M-986/M-987 (recorded as an open question, not narrowed):** the
+  heavy entangled core `checkty`/`elab`/`eval`/`mono` + `fuse` (which *runs* the evaluator), the
+  whole-program **L0-output differential**, and the `cargo-mutants` witness. Running a self-hosted
+  checker/elaborator inside the L1 evaluator over a whole program almost certainly cannot complete
+  under the current kernel (M-986: no in-language loop exceeds the 4096 depth budget; M-987: ~n³
+  eval cost). Minted: **M-993** (heavy-core port), **M-994** (the L0-differential feasibility
+  question). The lift is a maintainer decision (widen kernel TCO vs. reduce eval cost vs. lean on
+  the AOT leg), surfaced in DN-26.
+
+### M-740 Stage 4 — self-hosted SCC leaf nodules (substrate · totality · ambient) (2026-07-06)
+
+`boot10` (E18-1) wave 4, per the DN-26 §7.3 stage map: Stage 4 lands the three semantic-core
+**dependency leaves** as sibling nodules — `compiler.substrate` (`lib/compiler/substrate.myc`),
+`compiler.totality` (`totality.myc`), `compiler.ambient` (`ambient.myc`) — the `.myc` port of
+`crates/mycelium-l1/src/substrate.rs`, `totality.rs`, `ambient.rs`. Each depends only on `ast`
+(already ported) or nothing, so none pulls in the entangled core.
+
+- **Native-toolchain dogfood (new this wave):** the real `myc check` binary (`mycelium-check`)
+  reports `ok` on all three nodules — and on the five previously-landed ones (`token`/`lex`/
+  `nodule`/`ast`/`parse`) — so the self-hosted frontend is now vetted by the *actual toolchain*, a
+  second independent witness alongside the Rust differential (this is the entry point that a
+  `/myc-dogfood` gate will make repeatable; per-file today, project-level pending the M-982
+  cross-nodule-execution lift). `mycfmt` parses all eight but reports them non-canonical, and
+  *refuses* two (`lex.myc`/`parse.myc`) on the M-690 formatter limitation (trailing comment on a
+  nested match arm) — filed as a toolchain-enhancement follow-up.
+- **`compiler.substrate`** (DN-71 Model S): the deterministic surface of the affine handle —
+  `SubstrateProvenance`, a threaded-`id` `acquire`, `explain`, `ReleaseEvent`, `SubstrateError`,
+  and a value-threaded consume-once. **FLAG-substrate-1 (honest limit, not faked):** the Rust
+  `Arc<AtomicBool>` consume-flag is shared across every clone of an identity — the runtime
+  cross-alias use-once backstop; a pure-value port has no shared interior mutability, so
+  `try_consume` here enforces use-once only along a single threaded value. A hand-written `itoa`
+  fills the still-absent decimal-format prim (ast.myc FLAG-ast-7). Gate 5/5.
+- **`compiler.totality`** (RFC-0007 Foetus structural-termination checker + the shared `walk_expr`
+  traversal): `classify_all` Total/Partial over synthetic `FnDecl` sets, 6/6. FLAG-totality-1
+  `BTreeMap`/`BTreeSet`→sorted assoc-list (documented deterministic-order precondition), -2 the
+  `&mut impl FnMut` walks specialized to concrete accumulations (no HOF in the port), -3 the
+  threaded 4096 `depth` budget replacing `mycelium_stack::with_deep_stack`, -4 `Pattern::Or`'s
+  `panic!` invariant lowered to a dead `Ok` fallback (no panic prim). Split-match one-deep applied
+  even to a `Bool` inside `Ok` — the usefulness checker rejects the combined pair (a real,
+  minted-not-muted behaviour).
+- **`compiler.ambient`** (RFC-0012 ambient-representation resolution + canonical pretty-printer):
+  `resolve`/`resolve_report`/`expand_to_source`/`expand_phylum_to_source`, `MAX_AMBIENT_DEPTH`=4096,
+  the two mirror traversals over the widest AST enums. Gate 4/4: byte-for-byte `expand_to_source`
+  parity + an AST fingerprint on accepts, 5-way error-kind parity on refusals.
+  **FLAG-ambient-6 (differential scope, flagged not silent):** the gate covers 8 hand-built
+  synthetic nodules + 4 refusal fixtures and **zero raw conformance-corpus files** — a *structural*
+  limit, not the M-987 cost wall: `compiler.ambient` operates on an already-parsed `Nodule` and
+  cannot reach `compiler.parse` (cross-nodule execution staged, M-982), so a source file can't be
+  fed without an AST-serializer bridge (deferred). FLAG-ambient-2 (`resolve_report` `notes` honestly
+  empty), -3 (error message text not rendered; 5-way classification compared), -4 (no
+  `with_deep_stack` analogue).
+- **Honesty (VR-5, flagged in-file):** every differential is graded `Empirical`; all narrowings
+  carry in-file `FLAG-<nodule>-N` comments; nothing under `crates/mycelium-l1/src/` was modified
+  (the Rust frontend stays the trusted oracle until M-741).
+
+### M-740 Stage 3 — self-hosted AST vocabulary + parser (2026-07-05)
+
+`boot10` (E18-1) wave 3, per the DN-26 §7.3 stage map: Stage 3 lands `compiler.ast`
+(`lib/compiler/ast.myc`) and `compiler.parse` (`lib/compiler/parse.myc`) — the `.myc` port of
+`crates/mycelium-l1/src/ast.rs` and `parse.rs`, with the corpus-wide parser differential.
+
+- **`compiler.ast`:** the full surface-AST vocabulary (36 types / 102 constructors, the small
+  helper impls). FLAG-ast-1..8 in-file: `String`→`Bytes`, `u32`→`Binary{32}`, lossless
+  `i64`→`Binary{64}`; recursive types need no `Box` (two-pass shell-then-resolve registration,
+  verified before authoring); keyword renames reuse token.myc spellings; **FLAG-ast-5 is a new
+  collision class** — the per-nodule constructor namespace is flat, so bare variant names reused
+  across *different* enums collide even when none is a keyword (per-type prefixes, the
+  `collections.myc` precedent); `BTreeMap`→ordered assoc-list; `WidthRef` `Display` and
+  `#[non_exhaustive]` not ported (flagged, never silent). Gate `compiler_stage3_ast.rs` 26/26:
+  parse+`check_nodule`, a 103-row ported-constructor inventory (`Declared`/audited), and a
+  per-variant L1-eval construct-and-classify exercise.
+- **`compiler.parse`:** all ~91 `parse.rs` functions accounted for; **both `parse` and
+  `parse_phylum` ported end-to-end** (source text → AST, self-contained token+lexer+AST copy per
+  M-982, FLAG-parse-1). Every match destructures exactly one constructor level (the M-980
+  discipline — zero checker panics across the ~4,400-line nodule); `MAX_EXPR_DEPTH`=4096
+  preserved; the source-length-bounded loop discipline is per the RFC-0041 §7 W7 amendment-11
+  TCO acceptance criterion (see the PR #1166 review cycle below for the list-building-loop
+  re-shape that made it hold).
+- **The gate** (`crates/mycelium-l1/tests/compiler_stage3.rs`, 4/4 green, `Empirical`):
+  classification parity vs the live Rust oracle over the **full conformance corpus on both legs**
+  (accept 27/27 — 26 via `parse`, the phylum-headed file via `parse_phylum` with `parse` refusing
+  it on both sides; reject 30/30; zero divergences), a preorder per-constructor-tag AST
+  fingerprint (tag table 1–109, `rotl(7)`-XOR mix, node count, `Bytes`-length/`u32` leaf mixing;
+  hand-locked Rust mirror walk) on every accepted leg, and a 6-file real-stdlib subset leg —
+  171s wall via the args-in/verdict-out one-eval harness, ~8× cheaper than the per-driver shape
+  (retrofit of the Stage-1/2 gates minted as **M-983**; the full lib-tree sweep, post-M-981
+  economics, as **M-984**).
+- **New finding (FLAG-parse-2):** the lexer-keyword-ctor × AST-ctor flat-namespace collision
+  (31 `T`-prefix names) surfaces whenever two frontend stages share one nodule — recorded
+  append-only in DN-26 for the Stage-5 semcore packaging.
+- **Honest narrowings (VR-5, flagged in-file):** L1-eval leg only — no three-way at this scale
+  (M-981); error message/position fidelity not compared (classification only, FLAG-parse-8);
+  eval fuel sized to 200M for the lib leg (evaluator default 1M — flagged as a maintainer call,
+  not decided). The Stage-1 lexer narrowings carry over verbatim with the lexer copy.
+- **Review cycle (PR #1166):** the `/pr-review` pass caught a real HIGH — the list-building
+  loops were `Cons`-after-return (not direct-tail; reproduced at 5,000 items via
+  `DepthExceeded{4096}`). Fixed by converting all 27 source-length-bounded loops to
+  accumulator + `rev_acc` direct-tail shape (fingerprint parity re-verified, zero divergences).
+  The fix surfaced three kernel-side findings, minted not muted: **M-986** — the evaluator's
+  TCO elides only bare-body self-calls, so tail calls inside `match`/`let` are never elided
+  and *no* in-language loop can exceed the 4096 depth budget today (the source shape is the
+  ready form; its depth benefit is dormant until the kernel widens tail position — pinned by
+  loud known-gap tests); **M-987** — L1-eval cost ~n³ in token count (0.6 s / 26 s / 133 s at
+  200 / 752 / 1,252 tokens, debug); **M-988** — mono re-inference rejects generic bare `Nil`
+  the checker accepted (55 explicit ascriptions as the workaround). Also fixed: the stale
+  107-entry tag-table comments (→ 109) and the stale line count. The Stage-1 lexer's own
+  non-tail twin is **M-985** (pre-existing, never claimed, now flagged). Post-patch gate:
+  `compiler_stage3` 6/6 green.
+
+### M-740 Stage 2 — self-hosted nodule-header recogniser (2026-07-05)
+
+`boot10` (E18-1) continues per the DN-26 §7.3 stage map: Stage 2 lands the `compiler.nodule_header`
+nodule (`lib/compiler/nodule.myc`), the full `.myc` port of `crates/mycelium-l1/src/nodule.rs`
+(the DN-06 §6 first-non-blank-line `// nodule[: name]` marker recogniser).
+
+- **The port:** `parse_nodule_header` (blank-line skipping, 1-based line tracking), the
+  bare/named-marker recogniser, never-silent ill-formed-name errors (empty name, empty segment,
+  non-identifier segment — G2), and the `dotted`/`canonical` accessors. Every
+  source-length-bounded recursion is direct-tail (the RFC-0041 §7 W7 amendment-11 TCO acceptance
+  criterion for M-740).
+- **The gate** (`crates/mycelium-l1/tests/compiler_stage2.rs`, 3/3 green, `Empirical`): one
+  three-way run (L1-eval ≡ L0-interp ≡ AOT — feasible at this stage's small scale, unlike Stage 1's
+  lexer, M-981) plus a 26-case synthetic edge battery transcribed from the oracle's own unit tests
+  plus the header-parse differential against the live Rust oracle over every `.myc` file in the
+  conformance corpus (accept and reject) and `lib/std/` plus `lib/compiler/` — 66+ files, comparing
+  the 4-way classification code, the joined dotted name plus `canonical` spelling (named case), and
+  the 1-based error line (error case).
+- **One real dogfooding finding (FLAG-nodule-5):** DN-26 §7.3's nodule name `compiler.nodule` is
+  unspellable — `nodule` is a reserved word, so the surface declaration `nodule compiler.nodule;`
+  cannot parse (the FLAG-token-3 keyword-collision class at the nodule-NAME level). The stage ships
+  as `compiler.nodule_header`; DN-26 carries the append-only correction note (status stays Draft).
+- **Honest narrowings (flagged in-file, VR-5):** ASCII-only trim vs Rust's Unicode `str::trim`
+  (FLAG-nodule-2, the FLAG-lex-4 analog); static error messages with line fidelity kept
+  (FLAG-nodule-3); the per-file sweep runs the L1-eval leg only (M-981, as in Stage 1).
+
+### Kickoff-corpus reconciliation (2026-07-05)
+
+Post-Phase-I doc maintenance on the kickoff corpus (`.claude/kickoffs/`) plus `docs/CURRENT-STATE.md`
+— documentation only, no code changes.
+
+- **Seven kickoffs archived** (moved to `.claude/kickoffs/archive/`): the six completed — `acy`
+  (H0, commits 6636f56/ba0b800, E27-1), `enb` (H1) and `opp` (both PR #1020, 2026-07-02), `grm`
+  (H2a) and `frz` (H2 — the kernel freeze, both PR #1051, 2026-07-02), and `trx` (transpiler PoC,
+  landed 2026-07-01) — each with a prepended completion header whose task ranges were verified
+  `status:done` against `issues.yaml`; plus `rcp`, the superseded, never-executed predecessor
+  umbrella plan (replaced 2026-07-01 by ADR-038's function-first decomposition into
+  acy/enb/grm/opp/frz).
+- **`.claude/kickoffs/README.md` refreshed to 2026-07-05 truth:** a "Landings 2026-07-02 → 07-05"
+  masthead note (incl. the RFC-0041 W0–W7 promotion — RFC-0041 → Enacted, DN-84 → Resolved,
+  M-978/M-979 closed, the M-969/M-959 status lags corrected), the Phase-I table collapsed to its
+  archive pointers, six new Completed rows and the `rcp` pointer, and the scheduler plus the
+  dependency-sequencing section re-pointed (stale gates dropped; the maintainer's reserved queue
+  listed).
+- **`boot10` is the next engineering kickoff** (maintainer decision, 2026-07-05): M-740's M-978
+  gate cleared by the promotion (M-739 still gates it); two straggler leaf branches recorded for
+  rescue-first; TCO's direct-tail-only scope recorded as an M-740 acceptance criterion (RFC-0041
+  §7 W7 amendment #11); M-970 (FLAG-970 formatter bug, P3) rides the first wave as a disjoint
+  `mycelium-fmt` leaf.
+- **`dfb` RE-SHELVED** (maintainer decision, 2026-07-05) until after `boot10` and the public flip —
+  dated notes appended to the M-670/M-671 bodies in `issues.yaml` (statuses stay `blocked`, no
+  label changes); `tul` chain updated in place (M-675 done 2026-07-01, only M-676 remains, P3).
+- **`docs/CURRENT-STATE.md` stale claims fixed:** kernel FROZEN 2026-07-02 (DN-56 → Enacted on the
+  DN-76 4/4 green scorecard plus KC-3 review; it previously said 1/5 conditions met), RFC-0041 →
+  Enacted 2026-07-05 (recursion-depth safety landed, the `myc run` SIGABRT closed), DN-84 →
+  Resolved.
+
 ### RFC-0041 promotion to `main` — recursion-depth safety Enacted with this landing (2026-07-05: M-978 · M-979 · M-959 · M-969 status reconcile)
 
 The maintainer approved the full promotion (2026-07-05); the reconciled W0–W7 wave moves
