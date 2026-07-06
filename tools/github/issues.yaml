@@ -12064,7 +12064,7 @@ issues:
   - id: M-991
     title: "Evaluate mycelium-transpile (M-873) as a Rust->Mycelium accelerator for the heavy port stages"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:task, area:tooling, priority:P3, status:in-progress]
+    labels: [phase:5, type:task, area:tooling, priority:P3, status:done]
     epic: E18-1
     depends_on: [M-873]
     doc_refs:
@@ -12095,6 +12095,16 @@ issues:
       M-1001 gap-class closure); the E33-1 rip-through (M-1003) supplies the representative-module
       numbers. This issue's assessment DoD is discharged by E32-1's DN-34 append-only results
       record; status flips to done when that record + the go/no-go land.
+
+      DONE (2026-07-06, DN-34 SS8.7-SS8.8): the assessment landed with the vet loop. VERDICT:
+      NO-GO as an automated bulk transpiler for the 15k-line semcore port (direct
+      checked_fraction ~0-2% on semcore; the residue is irreducible language-surface/design
+      work, not boilerplate) -- GO as a never-silent, real-toolchain-vetted gap-profiling
+      instrument (the vet loop turns "hand-porting is brutal" into a ranked, checked worklist
+      of exactly which surface gaps block the port). Both graded Empirical (measured on
+      eval/fuse/std-time/std-rand/std-cmp). The documented loop + transpiler fixes shipped
+      (M-1000/M-1001); E-B's rip-through proceeds as gap-profiling, per the maintainer's
+      two-stage breadth plan (M-1006).
 
   - id: M-992
     title: "Trim catchphrasey user-facing toolchain messages (drop the redundant 'never silently dropped (G2)' tail)"
@@ -12517,7 +12527,7 @@ issues:
   - id: E32-1
     title: "E32-1 (epic) — trx2 E-A: transpiler up-to-snuff (harden mycelium-transpile + vet loop)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:epic, area:tooling, priority:P2, status:in-progress]
+    labels: [phase:5, type:epic, area:tooling, priority:P2, status:done]
     epic: E32
     depends_on: [M-1000, M-1001]
     doc_refs:
@@ -12552,10 +12562,17 @@ issues:
         crates vs the DN-34 SS8 baseline, with the numbers recorded append-only in DN-34; every
         narrowing/limitation `Declared`/flagged, never silent.
 
+      DONE (2026-07-06): both children landed (see their DONE notes); the "measurably higher"
+      bar is met against the REAL baseline the vet loop exposed (0% checked everywhere ->
+      eval 2.4% / std-time 8.1%); the honest headline is M-991's NO-GO-as-bulk / GO-as-
+      profiling verdict, recorded in DN-34 SS8.7-SS8.8. "Up-to-snuff" is hereby re-scoped by
+      evidence: snuff = a trustworthy profiling instrument, not a bulk porter (VR-5 -- the
+      claim downgraded to what the measurement supports).
+
   - id: M-1000
     title: "M-1000 — Wire the transpile -> myc-check vet loop (classify check failures into the gap report)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:tooling, priority:P2, status:todo]
+    labels: [phase:5, type:feature, area:tooling, priority:P2, status:done]
     epic: E32-1
     depends_on: []
     doc_refs:
@@ -12588,10 +12605,19 @@ issues:
         tests in the crate's src/tests/ layout; loop documented in the crate README or DN-34
         append-only.
 
+      DONE (2026-07-06, epic branch E32 commit b35866f; merged to the trx2 head): vet.rs
+      (VetClass from the 0/2/3/64/66 exit contract; unknown/signal -> ToolUnavailable, never
+      counted clean -- G2), CLI --vet writing vet.json, scripts/checks/transpile-vet.sh
+      (advisory; builds the oracle once, MYC_CHECK_CMD), crate README, DN-34 SS8.7 appended.
+      checked_fraction is file-gated (a failing file credits 0 -- honestly-conservative lower
+      bound; denominator = non-test top-level items, so checked <= expressible always).
+      31 tests green incl. a skip-graceful live-oracle witness; wired as `just transpile-vet`
+      by the integrator (on-demand, not a gate).
+
   - id: M-1001
     title: "M-1001 — Close highest-value transpiler gap classes for the port surface (macro expansion first)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:tooling, priority:P2, status:todo]
+    labels: [phase:5, type:feature, area:tooling, priority:P2, status:done]
     epic: E32-1
     depends_on: [M-1000]
     doc_refs:
@@ -12618,6 +12644,18 @@ issues:
         (at least one semcore module + one stdlib crate), before/after numbers recorded
         append-only in DN-34; every new emission path traced to a mycelium.ebnf production;
         remaining classes ranked with counts as the follow-on worklist.
+
+      DONE (2026-07-06, epic branch E32 commit c121dc1; merged to the trx2 head): the vet
+      baseline showed ALL targets at 0% checked, so the top VET-blocking classes (not SS8.3's
+      emission-ranked macros) were closed first, both flag-don't-guess: unresolved `use` ->
+      Category::Import gaps (the universal check-poison) and reserved-word collisions ->
+      Category::ReservedWord gaps (reserved.rs, a drift-guarded snapshot of the l1 lexer
+      table). checked_fraction: eval.rs 0 -> 2.4%, std-time 0 -> 8.1% (semcore + stdlib DoD
+      wins); expressible_fraction FELL where it had over-counted fake emissions (honest
+      correction). DN-34 SS8.8 appended with the ranked 673-gap residual worklist (Other/
+      type-coverage 274, Impl 93, Struct 70, Import 69, Macro 64, tail) -- the M-1006 ladder's
+      phase-1 input. Macro expansion deliberately deferred: it blocks emission, not check
+      (recorded, not silent).
 
   - id: E33-1
     title: "E33-1 (epic) — trx2 E-B: mass .myc boilerplate drafts for the port surface (gen/myc-drafts/)"
