@@ -3889,6 +3889,28 @@ issues:
       pin — both fail loudly when M-986 lifts. MEDIUM (stale 107-entry tag-table comments -> 109)
       and LOW (stale line count) fixed. Gate after patch: compiler_stage3 6/6 green.
 
+      STAGE 4 LANDED (2026-07-06, in-progress): the three semantic-core dependency LEAVES —
+      lib/compiler/substrate.myc (compiler.substrate), totality.myc (compiler.totality),
+      ambient.myc (compiler.ambient) — porting substrate.rs/totality.rs/ambient.rs. Each depends
+      only on ast (or nothing), so the entangled core is untouched. Gates: compiler_stage4_substrate
+      5/5, _totality 6/6, _ambient 4/4 (Empirical). NEW capability: the native toolchain now vets
+      the self-hosted path — `myc check` (mycelium-check) reports ok on all three AND the five prior
+      nodules (token/lex/nodule/ast/parse), a second independent witness alongside the Rust
+      differential. `mycfmt` parses all eight but they are non-canonical and it refuses two
+      (lex.myc/parse.myc) on the M-690 formatter limitation. lib/compiler/ is not yet a
+      mycelium-proj.toml root so just myc-check/myc-fmt skip it — to be lifted by a repeatable
+      dual-tooling (Rust differential + native myc) parity gate /myc-dogfood (M-989), scoped to
+      LIGHT checks (heavy VSA/GPU-bound work routes to local via session teleport). Honest limits,
+      flagged in-file: substrate's Arc<AtomicBool> cross-alias consume-once is NOT representable in
+      a pure-value port (FLAG-substrate-1, documented not faked); totality narrows BTreeMap/BTreeSet
+      to sorted assoc-lists w/ a deterministic-order precondition + specializes the &mut impl FnMut
+      walks (FLAG-totality-1/2); ambient's differential covers 8 hand-built fixtures + 4 refusals
+      but NO raw corpus files — a STRUCTURAL limit (it consumes an already-parsed Nodule, cannot
+      reach compiler.parse cross-nodule per M-982; a source file needs an AST-serializer bridge,
+      minted M-990), NOT the M-987 cost wall (FLAG-ambient-6). Stage 5 in progress: semcore.myc
+      increment 1 (type vocab + usefulness + decision + affine + grade); the heavy core
+      (checkty/elab/eval/mono/fuse) + whole-program L0 differential feasibility-gated on M-986/M-987.
+
   - id: M-741
     title: "M-741 — Ratify the self-hosted toolchain as canonical (DN-14 gate at full scale)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
@@ -11958,6 +11980,131 @@ issues:
         arguments) monomorphizes without ascriptions; the parse.myc ascriptions are removable
         (removal optional, tracked as cleanup); a regression test pins the witness;
         change-scoped just check green.
+
+  - id: M-989
+    title: "/myc-dogfood — native-toolchain parity gate for the self-hosted lib/compiler path"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:tooling, priority:P2, status:todo]
+    epic: E18-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-26
+      - src:scripts/checks/myc-check.sh
+      - src:lib/compiler/README.md
+    body: |
+      Minted 2026-07-06 from the M-740 Stage-4 wave. The self-hosted lib/compiler/*.myc files are
+      today vetted only by the Rust cargo-test differential harnesses; the native toolchain also
+      accepts them (myc check reports ok on all eight nodules) but lib/compiler/ has no
+      mycelium-proj.toml root, so the just myc-check / myc-fmt gates skip it. Persist a repeatable
+      /myc-dogfood skill + scripts/checks/myc-dogfood.sh that runs BOTH tool paths over the
+      self-hosted tree to ensure parity (two independent witnesses: the old Rust differential AND
+      the new native myc). Scope: LIGHT checks that run in the remote env — myc check is the
+      blocking core (passes today, per-file; project-level pending the M-982 cross-nodule-execution
+      lift); mycfmt / myc-lint / myc-sec run advisory (mycfmt currently refuses lex.myc/parse.myc on
+      the M-690 formatter limitation). EXCLUDE heavy VSA / GPU-bound checks — those route to the
+      maintainer's local system (session teleport, GPU-assisted), never the remote gate.
+
+      User stories:
+      - As a compiler engineer, I want the self-hosted .myc frontend gated by BOTH the Rust
+        differential and the native myc toolchain, so that parity between old and new tooling is
+        continuously proven as the port grows.
+      - As a maintainer, I want the remote gate to stay light and defer heavy VSA/GPU work to my
+        local machine, so that CI stays fast and GPU-bound checks run where the hardware is.
+
+      Definition of Done:
+      - A /myc-dogfood skill + scripts/checks/myc-dogfood.sh run myc check (blocking) over
+        lib/compiler/*.myc and report mycfmt/myc-lint/myc-sec advisory, skipping heavy VSA/GPU work
+        with a never-silent note of what was deferred.
+      - The gate is wired advisory (non-blocking on the heavy/deferred parts) and documented in
+        lib/compiler/README.md; M-690 is filed/linked as the mycfmt-enhancement follow-on.
+      - Graduation to project-level myc check (cross-nodule) is tracked against M-982.
+
+  - id: M-990
+    title: "AST-serializer bridge (Rust L1 AST -> L1 value) to feed source files through post-parse .myc passes"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P3, status:todo]
+    epic: E18-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-26
+      - src:lib/compiler/ambient.myc
+      - src:crates/mycelium-l1/tests/compiler_stage4_ambient.rs
+    body: |
+      Minted 2026-07-06 from the M-740 Stage-4 ambient leaf (FLAG-ambient-6). compiler.ambient (and
+      other post-parse passes) operate on an ALREADY-PARSED Nodule value, not source text, so their
+      differential cannot be fed raw conformance-corpus source FILES without either a self-hosted
+      parser callable in the same nodule (cross-nodule execution staged, M-982) or a Rust-side
+      AST -> L1-value serializer. Build the serializer bridge so post-parse .myc passes
+      (ambient/totality/semcore) can be differentialed over the full corpus instead of hand-built
+      fixtures. This is a STRUCTURAL gap, not the M-987 cost wall.
+
+      User stories:
+      - As a compiler engineer, I want post-parse self-hosted passes differentialed over the full
+        corpus, so that their coverage matches the parser's, not just a hand-built fixture set.
+
+      Definition of Done:
+      - A Rust helper serializes a mycelium_l1::ast::Nodule into the L1 value the self-hosted pass
+        consumes; compiler_stage4_ambient (and totality) gain a corpus leg over real .myc files;
+        the fixture-only FLAG is lifted; change-scoped just check green.
+
+  - id: M-991
+    title: "Evaluate mycelium-transpile (M-873) as a Rust->Mycelium accelerator for the heavy port stages"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:task, area:tooling, priority:P3, status:todo]
+    epic: E18-1
+    depends_on: [M-873]
+    doc_refs:
+      - corpus:DN-26
+      - src:crates/mycelium-transpile/src/lib.rs
+    body: |
+      Minted 2026-07-06 (maintainer direction, M-740 Stage-4 wave). The existing Rust->Mycelium
+      PoC (crates/mycelium-transpile, kickoff trx / M-873) emits best-effort .myc over one crate's
+      syn AST plus a structured never-silent gap report. Its output is graded Declared (heuristic
+      syn->text, never validated by a Mycelium parser/typechecker). Now that myc check accepts the
+      self-hosted files, a closed loop is available: transpile a draft -> myc check + the stage
+      differential vet it -> the gaps and check-failures feed back into BOTH the port and the
+      transpiler. Assess leverage for the Stage-5 heavy core (checkty/elab/eval/mono, ~15k lines)
+      where hand-porting is brutal; the tractable Stage-4 leaves were done by hand and do not need
+      it. Learning from applying it polishes the transpiler in turn.
+
+      User stories:
+      - As a compiler engineer, I want a transpiler-seeded draft for the heavy semcore modules that
+        I then vet with myc check + the differential, so that hand-porting 15k lines is accelerated
+        rather than done cold.
+
+      Definition of Done:
+      - A written assessment of transpile coverage vs gap on 1-2 representative semcore modules,
+        with a go/no-go recommendation; if go, a documented transpile -> vet -> fix loop and any
+        transpiler fixes the trial surfaced.
+
+  - id: M-992
+    title: "Trim catchphrasey user-facing toolchain messages (drop the redundant 'never silently dropped (G2)' tail)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:chore, area:tooling, priority:P3, status:todo]
+    epic: E18-1
+    depends_on: []
+    doc_refs:
+      - src:crates/mycelium-fmt/src/lib.rs
+      - src:crates/mycelium-fmt/src/bin/mycfmt.rs
+    body: |
+      Minted 2026-07-06 (maintainer direction). User-facing CLI/refusal messages (e.g. mycfmt's
+      "refused: line N: <reason>; refused, never silently dropped (G2)") are redundant and
+      catch-phrasey — they say "refused" twice and narrate the never-silent PRINCIPLE instead of
+      just stating the concrete reason. The never-silent guarantee (G2) is satisfied by PRINTING
+      the reason, not by announcing that it is being printed. Trim emitted, user-facing strings to a
+      concise "refused: <concrete reason>". Scope is EMITTED strings only — do NOT touch the
+      legitimate VR-5 grounding labels in doc-comments / guarantee_matrix (those are a different,
+      required thing). The pattern appears ~64x across ~30 files; the subset that reaches a user is
+      the target.
+
+      User stories:
+      - As a toolchain user, I want refusal messages to be clear and concise about the actual
+        problem, so that the signal is not buried under repeated boilerplate.
+
+      Definition of Done:
+      - Emitted user-facing refusal/CLI messages in the toolchain read "refused: <reason>" (or
+        equivalent) without the redundant "never silently dropped (G2)" tail; doc-comment grounding
+        labels are untouched; a test pins the trimmed message shape; change-scoped just check green.
   - id: M-970
     title: "mycelium-fmt: render_expr_canonical drops the @forage(policy) Hypha annotation"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
