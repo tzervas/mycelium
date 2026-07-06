@@ -86,6 +86,12 @@ mycelium-workstack = { path = "../mycelium-workstack" }
 [dev-dependencies]
 # M-961: property tests for the inject-gate verify bounds (house rule: a property test per bound).
 proptest = "1"
+# NOTE (M-999, PR #1194 review HIGH): the AOT-vs-interpreter ordering witness lives in
+# `crates/mycelium-l1/tests/aot_vs_interp_bench.rs` — NOT here. Placing it here required a
+# `mycelium-l1` dev-dependency, which closed a REAL {mycelium-l1, mycelium-mlir} dev-dependency
+# cycle that `cargo xtask deps` rejects (DN-68 [acyclic-including-dev]; cargo itself does not
+# reject dev-dep cycles, which is exactly why the gate exists). The bench uses the pre-existing
+# `mycelium-l1 -[dev]-> mycelium-mlir` edge instead; do not re-add the reverse edge.
 # The interp↔AOT differential (M-151) drives both paths with the certified binary↔ternary swap,
 # and since M-210 validates each pair through the shared TV checker (Certificate from numerics).
 mycelium-cert = { path = "../mycelium-cert" }

@@ -12346,6 +12346,69 @@ issues:
         stats) reachable through it; a test pinning the exposure; docs updated; change-scoped just
         check green.
 
+  - id: M-999
+    title: "AOT env-machine faster than the interpreter — env representation + prepared-code overhaul"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:execution, priority:P2, status:done]
+    epic: E18-1
+    depends_on: [M-995, M-996]
+    doc_refs:
+      - src:crates/mycelium-mlir/src/aot.rs
+      - src:crates/mycelium-mlir/tests/aot_vs_interp_bench.rs
+    body: |
+      Minted 2026-07-06 (maintainer requirement: the AOT path must be faster than the interpreter;
+      post-M-995/996 it was INVERTED). Apples-to-apples RELEASE baseline showed the env-machine at
+      0.22x the interpreter on the snoc shape (worse than the old cross-profile numbers implied).
+      Profiling (callgrind: ~55-60% of instructions in malloc/free/memcpy) showed the planned env
+      fix alone was NOT dominant, so the fix landed as four measured steps in aot.rs:
+      (1) Env representation: mutable top segment + Rc-frozen parent frames (O(1)-amortized
+      snapshot at closure capture; innermost-wins chain lookup; iterative EnvFrame::drop, the
+      AotDatum pattern) — alone only 0.22x -> 0.27x; (2) prepared Code mirror: the lowered ANF
+      mirrored ONCE into Rc-shared blocks (the machine had been deep-cloning Lam/Fix bodies and
+      match-arm subtrees per execution) -> 0.72x; (3) interned atoms (Rc<Atom> keys prepared once;
+      re-binding is a refcount bump, no per-step String allocs) -> parity; (4) AotVal::Repr(Rc<Value>)
+      (variable refs are refcount bumps, Const executions alloc-free, the value enum pointer-sized;
+      the old "intentionally inlined" trade-off comment superseded-by-measurement at the type)
+      -> 1.5-1.7x AHEAD.
+
+      LANDED 2026-07-06 (Empirical, release, single-trial ~2-5% jitter): snoc n=100/200/400
+      interp/AOT ratio 0.25/0.23/0.22 -> 1.60/1.54/1.68; tail count(50k) 0.71 -> 1.17-1.36. Exponent
+      fits: both machines clean ~n² (M-995 fixed the curve; M-999 removed a ~7x constant factor).
+      Ordering witness recorded: tests/aot_vs_interp_bench.rs (#[ignore]d; run with --release
+      --ignored --nocapture). Zero expectation edits (one type-only Cont::probe adaptation; the
+      pinned passthrough property unchanged): mycelium-mlir 382/0 (439/0 with mlir-dialect);
+      mycelium-l1 991/0; no new unsafe; clippy at the 9 pre-existing jit.rs lints exactly.
+      CORRECTION (PR #1194 review HIGH — an inaccurate verification claim, owned): the bench was
+      first placed in mycelium-mlir with a new mycelium-l1 dev-dep, and the record claimed
+      "deps-acyclic gate green". FALSE: `cargo xtask deps` reports that edge closes a REAL
+      {mycelium-l1, mycelium-mlir} dev-dependency cycle (DN-68 [acyclic-including-dev] — cargo does
+      not reject dev-dep cycles, which is why the gate exists), exit 1. The wrong "green" came from
+      a shell pipe bug in the orchestrator's own check (`| tail; echo $?` captured tail's rc) — the
+      GATE works; the verification was faulty. Fixed by MOVING the bench to
+      crates/mycelium-l1/tests/aot_vs_interp_bench.rs (the pre-existing l1 -[dev]-> mlir edge
+      direction; run with `cargo test -p mycelium-l1 --release --test aot_vs_interp_bench --
+      --ignored --nocapture`), removing the reverse dev-dep (a do-not-re-add note stands in
+      mycelium-mlir's Cargo.toml). Re-verified: `cargo xtask deps` exit 0, "OK — no violations".
+
+      THE HONEST LADDER (recorded for the maintainer): the env-machine is now ~1.5x ahead of the
+      interpreter — parity-to-moderately-better is the realistic ceiling for a trampolined
+      ANF-machine. "FAR faster" belongs to the direct-LLVM native path, whose coverage is already
+      wide (RFC-0029 Enacted: bit/trit ops, non-recursive data, native Swap M-852, widened closures
+      M-851, Fix/FixGroup loop rewrite M-850, Dense/VSA codegen M-853/854) with explicit refusals
+      (never-applied/match-scrutinized closures, quantized Dense, VSA cleanup/resonator loops) and
+      an operational gap (needs external llc/clang, per-program compile). Growing THAT coverage is
+      the big lever. FLAG: llvm.rs's header (~lines 1-40) still says closures/recursion are
+      "deferred" — stale, contradicted by M-850/M-851 sections in the same file; docs-sweep item.
+
+      User stories:
+      - As a Mycelium user, I want the AOT path to outperform the interpreter, so that compiling is
+        never a performance regression.
+
+      Definition of Done:
+      - Same-profile benchmark shows env-machine >= interpreter on the recorded workloads (met:
+        1.5-1.7x snoc, 1.2-1.4x tail); ordering witness committed; zero differential expectation
+        edits; suites + acyclicity gate green.
+
   - id: M-970
     title: "mycelium-fmt: render_expr_canonical drops the @forage(policy) Hypha annotation"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
