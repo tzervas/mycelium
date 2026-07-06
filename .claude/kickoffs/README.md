@@ -57,6 +57,20 @@ construction (CLAUDE.md §Swarm).
 > the same day: **`boot10` is the next engineering kickoff**, and **`dfb` is RE-SHELVED** until after
 > `boot10`/the public flip. All six completed kickoffs (`acy`/`enb`/`grm`/`opp`/`frz`/`trx`) plus the
 > superseded-never-executed `rcp` moved to [`archive/`](archive/) (2026-07-05).
+>
+> **Landings 2026-07-06 — boot10 Stages 0–5 released + the kernel-perf wave.** The self-hosted L1
+> frontend through a partial `compiler.semcore` was **squash-released to `main`** (#1186; Stages 0–5,
+> the `/myc-dogfood` dual-toolchain gate M-989, `myc check` ok on all 9 nodules). The same day, the
+> **M-994 kernel-perf wave** landed on `dev` (PRs #1189–#1194): L1 TCO widened through `match`/`let`
+> (M-986 done), O(1) `Data` clone (M-987 done, ~n³→~n², 14–64×), the AOT env-machine got structural
+> sharing (M-995), maintainer-authorized TCO (M-996, observable via `TcoTrace`), and an
+> env/prepared-code overhaul (M-999) — **the AOT env-machine now outruns the interpreter ~1.5–1.7×**
+> (ordering witness committed). Owner decisions recorded: the pre-production freeze-posture
+> clarification (DN-56 row, #1192) and the §4.6 amendment. **M-993 (semcore heavy core) is unblocked
+> → `todo`**; `trx2` (stowed, below) is its intended accelerator. **Kickoff audit (2026-07-06): no
+> newly-completed kickoffs to archive** — every current one has genuinely open work (`boot10`
+> remainder; `c10`/`rel10` maintainer-act-gated; `tul` P3; `dfb` shelved; `flp`/`rwr` planned;
+> `trx2` stowed).
 
 ## The tiers (each PR-gated; stringency rises with the tier)
 
@@ -97,7 +111,7 @@ tree**, branches **off `dev`**, merges into `dev`, then promotes `dev → integr
 | **`r10`** | T3 — runtime & concurrency execution maturity (E12-1) | `crates/mycelium-std-runtime/**` · `crates/mycelium-mlir/src/runtime.rs` | ✅ **DONE → archived** (2026-06-29): M-709/710/711/712/713 + **M-677** (declared-effect → interp budget ledger + per-effect `retry(<=3)` surface syntax wired; overrun → explicit `EffectBudgetExhausted`; KC-3, no new L0 node) all landed. **E12-1 runtime maturity complete.** |
 | **`lib10`** | T4 — standard library in Mycelium (E13-1) | `lib/std/**` · `crates/mycelium-std-*/**` | ✅ **DONE → archived** (2026-07-01): M-714…M-719 all landed. **ADR-035** (Accepted) narrows T4's bar to the DN-66 stable-API freeze + core-lib self-host slice (M-714…M-718 + M-719's freeze half) — met; the full D6 Rust-crate-retirement half is re-scoped **post-1.0** as new issue **M-867** (`status:todo`, P3). **E13-1 complete.** |
 | **`rel10`** | T8 — documentation, stability & 1.0.0 release (E17-1) | `docs/**` · `CHANGELOG.md` · stability/release scope | **in progress**; M-735/736/737 landed; remaining **M-738** (release act) is `status:blocked` **purely on the maintainer's tag-cut act** (2026-07-01) — every engineering gate row it waited on (E13-1, E15-1/E25-1, ADR-023) is now closed, and E18-1 is no longer a blocker at all (ADR-036, below) |
-| **`boot10`** | T9 — self-hosting capstone (E18-1) | `lib/std/**` · `lib/compiler/**` (new) · `crates/mycelium-l1/**` (read/differential) · self-hosting | **▶ ACTIVE — Stages 0–5 RELEASED to `main` 2026-07-06** (PR #1186 squash; DN-26 §7.3): the self-hosted L1 frontend through `compiler.token`/`lex`/`nodule_header`/`ast`/`parse` (Stages 0–3, #1166) + `substrate`/`totality`/`ambient` leaves (Stage 4, #1167) + a **partial** `compiler.semcore` (Stage 5 inc-1, #1168) with a live-oracle differential; `/myc-dogfood` gate (M-989, #1184). M-739 (DN-26 plan) `done`, M-740 `in-progress`, M-970 `done`. **Remaining:** the semcore heavy core (**M-993**, `blocked` on **M-994** — the L0-differential feasibility maintainer decision, M-986/M-987 wall) + Stage-6/M-742 bootstrap + M-741 ratification. Per ADR-036 this track gates the *public-release* milestone, not the `lang 1.0.0` tag. Accelerator follow-on stowed: **`trx2`** (below) |
+| **`boot10`** | T9 — self-hosting capstone (E18-1) | `lib/std/**` · `lib/compiler/**` (new) · `crates/mycelium-l1/**` (read/differential) · self-hosting | **▶ ACTIVE — Stages 0–5 RELEASED to `main` 2026-07-06** (PR #1186 squash; DN-26 §7.3): the self-hosted L1 frontend through `compiler.token`/`lex`/`nodule_header`/`ast`/`parse` (Stages 0–3, #1166) + `substrate`/`totality`/`ambient` leaves (Stage 4, #1167) + a **partial** `compiler.semcore` (Stage 5 inc-1, #1168) with a live-oracle differential; `/myc-dogfood` gate (M-989, #1184). M-739 (DN-26 plan) `done`, M-740 `in-progress`, M-970 `done`. **2026-07-06 (later, the kernel-perf wave):** the **M-994 feasibility wall is RESOLVED** — fix (a) widened L1 TCO (M-986 done), fix (b) made `Data` clone O(1) (M-987 done, ~n³→~n²), **M-995/M-996/M-999** carried both wins to the AOT env-machine which **now outruns the interpreter ~1.5–1.7×** (PRs #1189–#1194; owner-authorized §4.6 amendment + DN-56 posture row #1192). Interpreted-first Stage-5/6 is **practical**. **Remaining:** the semcore heavy core (**M-993**, now `todo` — the ~15k-line port itself) + Stage-6/M-742 bootstrap + M-741 ratification; the `trx2` accelerator (below) is the intended vehicle for M-993's boilerplate. Per ADR-036 this track gates the *public-release* milestone, not the `lang 1.0.0` tag |
 | **`aot10`** | T6 — native AOT full-language coverage, parallelism & 1.0.0 gating (E15-1/E25-1) | `crates/mycelium-mlir/**` | ✅ **DONE → archived** (2026-07-01): the **M-863 ratification act** lands the remainder — **M-856b** (dialect Dense/VSA), **M-860** (parallel codegen), **M-862** (parallel pure-fragment eval), **M-863** itself — all `done`; E15-1 + E25-1 both close. RFC-0029 → **Enacted**; DN-15 → **Resolved**; **ADR-034 stays Accepted** (its own `Accepted → Enacted` step is coupled to the `lang 1.0.0` tag act, M-738 — not yet run, per house rule #3) |
 
 *(T2 = `s10`, T3 = `r10`, T4 = `lib10`, T5 = `ffi10`, T6 = `aot10`, T7 = `tool10` are all **complete →
