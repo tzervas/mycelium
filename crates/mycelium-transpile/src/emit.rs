@@ -399,11 +399,29 @@ fn emit_block_as_expr_inner(block: &Block, self_ty: Option<&str>) -> Result<Stri
                 let value = emit_expr(&init.expr, self_ty)?;
                 bindings.push((name, value));
             }
-            _ => {
+            // A non-`let`, non-tail statement — name the actual kind so the gap reason is precise
+            // (never-silent, G2). syn's `Stmt` is a plain 4-variant enum (`Local` handled above).
+            Stmt::Item(_) => {
                 return Err(GapReason::new(
                     Category::MultiStmtBody,
-                    "function body has a statement that is neither a simple `let` binding nor \
-                     the trailing expression",
+                    "function body contains a nested item declaration (e.g. a local \
+                     `static`/`const`/`fn`) — this grammar fragment has no local-item production; \
+                     only simple `let x = e;` bindings plus a trailing expression map",
+                ))
+            }
+            Stmt::Macro(_) => {
+                return Err(GapReason::new(
+                    Category::MultiStmtBody,
+                    "function body contains a macro-invocation statement (e.g. \
+                     `debug_assert!`/`println!`) — no macro system in this grammar fragment",
+                ))
+            }
+            Stmt::Expr(_, _) => {
+                return Err(GapReason::new(
+                    Category::MultiStmtBody,
+                    "function body has a semicolon-terminated (value-discarding) statement \
+                     expression before the tail — a `let`-chain body maps only simple `let x = e;` \
+                     bindings plus a single trailing expression",
                 ))
             }
         }
@@ -413,6 +431,73 @@ fn emit_block_as_expr_inner(block: &Block, self_ty: Option<&str>) -> Result<Stri
         result = format!("let {name} = {value} in {result}");
     }
     Ok(result)
+}
+
+/// Re-encode a Rust string value into a Mycelium `StrLit` (grammar `literal ::= … | StrLit`,
+/// line 414; `StrLit ::= '"' (StrChar | EscapeSeq)* '"'`, line 430; M-910/M-911). `syn` hands us
+/// the *decoded* string value, so re-escape it into Mycelium's deliberately-minimal escape set
+/// (`EscapeSeq ::= '\' ('n' | 't' | '\\' | '"' | '0' | 'r')`, line 433). A control character with
+/// no Mycelium escape is a never-silent gap, not a raw-byte injection: Mycelium has no `\xNN`/
+/// `\u{..}` form (grammar §StrLit note, lines 424-428), so such a char *cannot* be faithfully
+/// represented (G2/VR-5). Every other char — including non-ASCII like `μ` — is a valid `StrChar`
+/// (`[^"\\\n\r]`, line 431) that lowers to its UTF-8 bytes (line 427), so it is emitted verbatim.
+fn myc_string_literal(value: &str) -> Result<String, GapReason> {
+    let mut out = String::with_capacity(value.len() + 2);
+    out.push('"');
+    for c in value.chars() {
+        match c {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            '\0' => out.push_str("\\0"),
+            c if c.is_control() => {
+                return Err(GapReason::new(
+                    Category::Other,
+                    format!(
+                        "string literal contains control character U+{:04X} with no Mycelium \
+                         escape — StrLit's escape set is exactly `\\n \\t \\\\ \\\" \\0 \\r` (no \
+                         `\\xNN`/`\\u{{..}}` form; grammar §StrLit/EscapeSeq, M-910/M-911), so it \
+                         cannot be faithfully represented",
+                        c as u32
+                    ),
+                ))
+            }
+            c => out.push(c),
+        }
+    }
+    out.push('"');
+    Ok(out)
+}
+
+/// Whether `digits` (a `syn::LitFloat::base10_digits()` string — the suffix already stripped and
+/// underscores removed by `syn`) is a well-formed Mycelium `FloatLit` (grammar lines 443-445:
+/// `[0-9]+ '.' [0-9]+ Exponent?` or `[0-9]+ Exponent`; `Exponent ::= ('e' | 'E') ('+' | '-')?
+/// [0-9]+`). Only an exact shape match returns `true` — a Rust-only form (a bare `1f64` → "1", a
+/// trailing-dot `2.` → "2.") returns `false` and is gapped rather than reshaped, so the emitter
+/// never synthesizes a literal the source did not already spell (VR-5). (`syn` normalizes `E`→`e`,
+/// drops a `+` exponent sign, and strips underscores, all of which stay within this grammar.)
+fn is_myc_float_literal(digits: &str) -> bool {
+    let (mantissa, exp) = match digits.find(['e', 'E']) {
+        Some(i) => (&digits[..i], Some(&digits[i + 1..])),
+        None => (digits, None),
+    };
+    if let Some(e) = exp {
+        let e = e.strip_prefix(['+', '-']).unwrap_or(e);
+        if e.is_empty() || !e.bytes().all(|b| b.is_ascii_digit()) {
+            return false;
+        }
+    }
+    let all_digits = |s: &str| !s.is_empty() && s.bytes().all(|b| b.is_ascii_digit());
+    match mantissa.split_once('.') {
+        // `[0-9]+ '.' [0-9]+` (Exponent already validated above if present).
+        Some((int, frac)) => all_digits(int) && all_digits(frac),
+        // `[0-9]+ Exponent` — a dot-less mantissa is a FloatLit *only* with an exponent (else it
+        // is an `Int`, not a float — Mycelium's structural Int/float disambiguation, grammar
+        // line 437).
+        None => exp.is_some() && all_digits(mantissa),
+    }
 }
 
 /// Translate one Rust expression. Exhaustive `match` over `syn::Expr` (itself `#[non_exhaustive]`
@@ -450,10 +535,44 @@ fn emit_expr_inner(expr: &Expr, self_ty: Option<&str>) -> Result<String, GapReas
         Expr::Lit(l) => match &l.lit {
             Lit::Bool(b) => Ok(if b.value { "True" } else { "False" }.to_string()),
             Lit::Int(i) => Ok(i.base10_digits().to_string()),
+            // A Rust string literal maps to a Mycelium `StrLit` (grammar `literal ::= … | StrLit`,
+            // line 414; M-910/M-911). `myc_string_literal` re-escapes into Mycelium's minimal
+            // escape set and gaps (never-silent) on a char it cannot faithfully represent.
+            Lit::Str(s) => myc_string_literal(&s.value()),
+            // A Rust float literal maps to a Mycelium `FloatLit` (grammar `literal ::= … | FloatLit`,
+            // line 414 / `FloatLit`, line 443; ADR-040/M-897) — but *only* when its `syn`-normalized
+            // digit string is already a well-formed FloatLit AND denotes a finite binary64 value
+            // (ADR-040 §2.4: a literal is a conversion boundary, out-of-range is a never-silent
+            // refuse, so a non-finite `1e999` never lands on ±inf). A Rust-only shape or a
+            // non-finite value is gapped rather than reshaped/forced (VR-5).
+            Lit::Float(f) => {
+                let digits = f.base10_digits();
+                if !is_myc_float_literal(digits) {
+                    Err(GapReason::new(
+                        Category::Other,
+                        format!(
+                            "float literal `{digits}` has no faithful Mycelium `FloatLit` spelling \
+                             (FloatLit is `[0-9]+ '.' [0-9]+ Exponent?` | `[0-9]+ Exponent`, no \
+                             trailing-dot/bare-suffix form — grammar line 443; ADR-040/M-897)"
+                        ),
+                    ))
+                } else if !f.base10_parse::<f64>().is_ok_and(f64::is_finite) {
+                    Err(GapReason::new(
+                        Category::Other,
+                        format!(
+                            "float literal `{digits}` is not a finite binary64 value — a literal \
+                             is a conversion boundary, so out-of-range is a never-silent refuse, \
+                             never a silent ±inf (ADR-040 §2.4 / FloatLit note, grammar line 439)"
+                        ),
+                    ))
+                } else {
+                    Ok(digits.to_string())
+                }
+            }
             _ => Err(GapReason::new(
                 Category::Other,
                 format!(
-                    "unsupported literal kind `{}` (only bool/int literals map)",
+                    "unsupported literal kind `{}` (only bool/int/string/float literals map)",
                     tokens_to_string(l)
                 ),
             )),
@@ -621,6 +740,26 @@ fn emit_expr_inner(expr: &Expr, self_ty: Option<&str>) -> Result<String, GapReas
             Category::Other,
             "single-element tuple `(x,)` has no Mycelium equivalent (tuple type requires arity \
              >= 2, M-826)",
+        )),
+        // An explicit-element array `[e1, e2, …]` maps to a Mycelium `ListLit` (grammar line 415:
+        // `ListLit ::= '[' (expr (',' expr)*)? ']'`, constructs a `Seq{T, N}` — RFC-0032 D3, the
+        // `Seq`/`Vec` list-literal surface ratified in RFC-0040 §Vec-List-Literal-Desugaring). An
+        // empty `[]` is a valid empty ListLit. Each element recurses through the guarded
+        // `emit_expr`, so a non-expressible element gaps the whole array (never a partial list).
+        Expr::Array(a) => {
+            let mut elems = Vec::with_capacity(a.elems.len());
+            for e in &a.elems {
+                elems.push(emit_expr(e, self_ty)?);
+            }
+            Ok(format!("[{}]", elems.join(", ")))
+        }
+        // An array-repeat `[x; N]` has no Mycelium surface: `ListLit` (grammar line 415) enumerates
+        // its elements and carries no repeat/count form — so this is an explicit, cited gap rather
+        // than a fabricated expansion (which would also require evaluating `N`).
+        Expr::Repeat(_) => Err(GapReason::new(
+            Category::Other,
+            "array-repeat expression `[x; N]` has no Mycelium equivalent — `ListLit ::= '[' (expr \
+             (',' expr)*)? ']'` (grammar line 415) enumerates its elements and has no repeat form",
         )),
         Expr::Block(b) if b.label.is_none() => emit_block_as_expr(&b.block, self_ty),
         _ => Err(GapReason::new(
