@@ -268,8 +268,9 @@ fn list_len(mut cv: &CoreValue) -> usize {
 fn deep_datum_builds_and_drops_without_stack_overflow() {
     const DEEP: u32 = 30_000; // > the ~4-20k native-stack overflow threshold for recursive drop
     let prog = front_cons_program(DEEP);
-    // High fuel + a depth ceiling above the loop depth (the env-machine has no TCO, so the driver
-    // recursion is DEEP-deep on the *heap* control stack — bounded, O(1) host stack per M-347).
+    // High fuel + an ample depth ceiling. (Since M-996 the env-machine HAS TCO, so the driver's
+    // tail re-entry elides and the loop no longer consumes DEEP control-stack depth; the ceiling is
+    // kept generous anyway — the property under test is the deep *datum*, not the loop's depth.)
     let result = mycelium_mlir::aot::run_core_with_budget(
         &prog,
         &PrimRegistry::with_builtins(),
