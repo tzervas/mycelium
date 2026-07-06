@@ -11,6 +11,33 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### M-995 — AOT env-machine value structural-sharing (the M-987 perf win on the AOT path) (2026-07-06)
+
+Carries the M-994 (b) win to the **AOT** (`mycelium-mlir`), since it enhances runtime performance
+drastically. The AOT env-machine (`aot.rs::run_core`) had the *same* per-reference O(nodes) deep-copy
+(`AotVal::Core` clone on every `lookup` + `Match`-arm bind) — measured **~n³ (fitted 2.98)**.
+
+- **Not a literal port:** the interpreter's `Arc`-on-`L1Value::Data.fields` can't apply — the AOT's
+  fields live in the **frozen** `mycelium_core::Datum` (DN-56). The freeze-respecting fix is an
+  **AOT-local `AotVal::Data(Rc<AotDatum>)`** cons cell with `Rc`-shared sub-trees, so a
+  reference/env-clone **and** a destructure field-bind are O(1); the frozen `Datum` is untouched, a
+  `CoreValue` is materialised only at `to_core` (iterative), and `AotDatum::Drop` is iterative
+  (deep-spine SIGABRT-safe).
+- **Measured (release, `Empirical`):** exponent 2.98 → ~2.3–2.5, **13×/21×/35×** at n=100/200/400
+  (38.6s → 1.11s at n=400). Honest caveat: a *less-clean* win than the interpreter's clean n³→n²
+  (14–64×) — the residual is the env-machine's HashMap-environment cloning per match/app (a future
+  env-rep change could recover a cleaner n²). Still a large, genuine win.
+- **Behavior-preserving:** the full `-p mycelium-mlir` suite is green (263 lib + integration incl. the
+  three-way `mlir-dialect` differentials), results **byte-identical** (`ObservationalEquiv` +
+  M-210 `Validated{Exact}`); the `aot_frame_size` pin holds; **zero new `unsafe`**. `mycelium-mlir` is
+  **not** in the DN-56 freeze scope (the AOT is the RFC-0041 perf path; the frozen `mycelium_core` type
+  is untouched) — lands via the §6 behavior-preserving channel + normal review.
+- **The (a) TCO analog is NOT here (decision-gated — M-996):** the AOT env-machine has *no* TCO, but
+  adding it is a behavior-changing new feature (a divergent tail loop moves `DepthLimit` →
+  `FuelExhausted`, breaking a pinned graceful-error test) — a maintainer decision, not a
+  behavior-preserving landing. The native LLVM path already has real O(1) TCO for the canonical
+  tail-`Fix` shape.
+
 ### M-994 fix (b) — O(1) `Data` clone via `Arc` structural sharing (M-987 ~n³→~n²; M-994 resolved) (2026-07-06)
 
 The *cost* half of M-994, completing the decision. The confirmed root of the ~n³ L1-eval cost was

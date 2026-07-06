@@ -12183,6 +12183,78 @@ issues:
       - A recorded decision (append to DN-26, or a superseding note) selecting the lift path(s) for
         the Stage-5/6 differential; M-993 and M-742 unblocked with a concrete, runnable gate spec.
 
+  - id: M-995
+    title: "AOT env-machine value structural-sharing — O(1) datum clone (M-987 analog for mycelium-mlir)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:execution, priority:P2, status:done]
+    epic: E18-1
+    depends_on: [M-987]
+    doc_refs:
+      - src:crates/mycelium-mlir/src/aot.rs
+      - corpus:RFC-0041
+    body: |
+      Minted 2026-07-06 (maintainer direction: apply the M-994 perf wins to the AOT path). The AOT
+      env-machine (`aot.rs::run_core`) had the same per-reference deep-copy as the L1 interpreter
+      pre-M-987: `AotVal::Core(CoreValue)` clone is an O(nodes) iterative deep clone, invoked on every
+      `lookup` (`env.get(a).cloned()`) AND every `Match`-arm field bind (`select_arm`) → measured ~n³
+      (fitted 2.98; 0.62/4.83/38.6s at n=100/200/400). The interpreter's literal fix (wrap
+      `L1Value::Data.fields` in `Arc`) does NOT port — the AOT's fields live in the FROZEN
+      `mycelium_core::Datum` (DN-56). The freeze-respecting fix: an AOT-local `AotVal::Data(Rc<AotDatum>)`
+      cons cell with Rc-shared sub-trees, so a reference/env-clone AND a destructure field-bind are O(1)
+      refcount bumps; the frozen `Datum` is untouched, a `CoreValue` is materialised only at `to_core`
+      (iterative, no SIGABRT), and `AotDatum::Drop` is iterative for deep-spine safety.
+
+      LANDED 2026-07-06: measured (release, Empirical) exponent 2.98 -> ~2.3-2.5, 13x/21x/35x at
+      n=100/200/400 (38.6s -> 1.11s at n=400). Behavior-preserving: full `-p mycelium-mlir` suite green
+      (263 lib + integration incl. the three-way mlir-dialect differentials), results byte-identical
+      (ObservationalEquiv + M-210 Validated{Exact}); `aot_frame_size` pin holds; zero new unsafe. Honest
+      caveat: a less-clean win than the interpreter's clean n^3->n^2 (14-64x) — the residual is the
+      env-machine's HashMap-environment cloning per match/app (a future env-rep change could recover a
+      cleaner n^2). mycelium-mlir is NOT in the DN-56 freeze scope (the freeze governs mycelium-core +
+      the L1 calculus surface; the AOT is the RFC-0041 perf path); lands via the §6 behavior-preserving
+      channel + normal review.
+
+      User stories:
+      - As a Mycelium user running AOT-compiled programs, I want value references to be O(1), so that
+        native execution of value-heavy programs is not accidentally cubic.
+
+      Definition of Done:
+      - AOT env-machine references + match-binds are O(1) (measured n^3 -> ~n^2.x); AOT differential
+        green + byte-identical; frozen types untouched; no new unsafe; change-scoped just check green.
+
+  - id: M-996
+    title: "AOT env-machine TCO — elide tail frames (M-986 analog; behavior-changing, decision-gated)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:execution, priority:P3, status:needs-design]
+    epic: E18-1
+    depends_on: []
+    doc_refs:
+      - src:crates/mycelium-mlir/src/aot.rs
+      - corpus:RFC-0041
+    body: |
+      Minted 2026-07-06 (from the M-994 AOT investigation). The AOT env-machine (`aot.rs::run_core`)
+      has NO TCO — every `App`/`Match` pushes a `Frame`, so a pure tail loop consumes ~2-3 control
+      frames per iteration and hits the graceful `DepthLimit` at the budget (confirmed: `count(500)
+      @depth=1000 -> DepthLimit{1000}`). Unlike the interpreter's M-986 (a precondition WIDENING that
+      was value-preserving for terminating programs), adding TCO to the AOT env-machine is a NEW
+      FEATURE that CHANGES observable behavior: a diverging tail loop would move from `DepthLimit` to
+      `FuelExhausted`, breaking the pinned `aot::tests::the_depth_ceiling_is_an_explicit_graceful_error`
+      (asserts exactly `DepthLimit{64}` for `spin()`). So it is NOT a behavior-preserving §6 landing —
+      it is a MAINTAINER DECISION (the AOT §5.1 family-parity + the tracked "AOT per-frame metric
+      precision" residual bear on it). Note: the native LLVM path (`llvm.rs`) ALREADY lowers the
+      canonical `λ.Match` tail-`Fix` to a real O(1) iterative loop for the supported shape — so the
+      env-machine TCO is the remaining gap, on the trampolined full-calculus path only.
+
+      User stories:
+      - As the maintainer, I want a decision on whether the AOT env-machine should elide tail frames
+        (accepting the DepthLimit->FuelExhausted error-variant shift for divergent loops), so deep AOT
+        tail loops run in O(1) control stack.
+
+      Definition of Done:
+      - A recorded decision (DN/RFC amendment) on AOT env-machine TCO incl. the error-variant change
+        and the depth-metric/family-parity implications; if accepted, implemented with the pinned
+        depth-ceiling test updated intentionally + AOT differential green.
+
   - id: M-970
     title: "mycelium-fmt: render_expr_canonical drops the @forage(policy) Hypha annotation"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
