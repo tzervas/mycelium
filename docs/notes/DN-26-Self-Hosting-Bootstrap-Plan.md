@@ -309,6 +309,28 @@ code; they only fix the two branch points so the M-740 wave can proceed without 
 
 ## Meta — changelog
 
+- **2026-07-06 — Stage 4 landed: the three SCC leaf nodules (append-only, no status move;
+  M-740).** §7.3's leaves — `compiler.substrate`/`compiler.totality`/`compiler.ambient` (the `.myc`
+  port of `substrate.rs`/`totality.rs`/`ambient.rs`) — implemented and gated (Rust differentials
+  `compiler_stage4_substrate.rs` 5/5 · `_totality.rs` 6/6 · `_ambient.rs` 4/4, `Empirical`). All
+  three depend only on `ast` (or nothing), so the entangled semantic core is untouched. **New
+  capability this wave: the native toolchain now vets the self-hosted path.** `myc check` (the real
+  `mycelium-check` binary) reports `ok` on all three new nodules *and* the five prior ones
+  (`token`/`lex`/`nodule`/`ast`/`parse`) — a second, independent witness alongside the Rust
+  differential; `mycfmt` parses all eight but reports them non-canonical and *refuses* two
+  (`lex.myc`/`parse.myc`) on the M-690 formatter limitation. `lib/compiler/` is not yet a
+  `mycelium-proj.toml` project root, so `just myc-check`/`myc-fmt` skip it — to be lifted by a
+  repeatable dual-tooling (old Rust differential + new `myc`) parity gate (`/myc-dogfood`), scoped
+  to **light** checks (heavy VSA / GPU-bound work routes to local via session teleport, never the
+  remote gate). Honest limits recorded in-file: substrate's `Arc<AtomicBool>` cross-alias
+  consume-once is **not representable** in a pure-value port (FLAG-substrate-1, documented not
+  faked); totality narrows `BTreeMap`/`BTreeSet`→sorted assoc-list with a deterministic-order
+  precondition and specializes the `&mut impl FnMut` walks (FLAG-totality-1/2); ambient's
+  differential covers 8 hand-built fixtures + 4 refusals but **no raw corpus files** — a
+  *structural* limit (it consumes an already-parsed `Nodule` and cannot reach `compiler.parse`
+  cross-nodule per M-982; a source file needs an AST-serializer bridge, deferred), **not** the
+  M-987 cost wall (FLAG-ambient-6). Status remains **Draft** (→ Resolved with M-741). (M-740
+  Stage 4; E18-1; VR-5/G2.)
 - **2026-07-05 — Stage-3 review cycle: three kernel-side findings bear on this plan's later
   stages (append-only, no status move; M-740 / PR #1166).** The review-cycle patch converted all
   27 source-length-bounded loops in `parse.myc` to accumulator+reverse **direct-tail shape**

@@ -133,8 +133,38 @@ reading both the Rust output and the self-hosted output for the same input.
       two frontend stages share a nodule — bears on Stage-5 semcore packaging. L1-eval leg only
       (M-981); message/position fidelity not compared (FLAG-parse-8); lib-leg fuel sized to 200M
       (default 1M — flagged, maintainer call).
-- [ ] **Stage 4** — `compiler.ambient` + `compiler.totality` + `compiler.substrate` (leaf differentials)
-- [ ] **Stage 5** — `compiler.semcore` (L0-output differential; `cargo-mutants` witness)
+- [x] **Stage 4** — `compiler.substrate` + `compiler.totality` + `compiler.ambient` (leaf differentials).
+      Landed (`lib/compiler/substrate.myc`, `totality.myc`, `ambient.myc`; gates
+      `crates/mycelium-l1/tests/compiler_stage4_substrate.rs` 5/5, `_totality.rs` 6/6,
+      `_ambient.rs` 4/4). All three are SCC dependency leaves (depend only on `ast`, or nothing).
+      **Native-toolchain vet:** `myc check` (the real `mycelium-check` binary) reports `ok` on all
+      three nodules — a second, independent witness alongside the Rust differential.
+      `compiler.substrate` (DN-71 Model S): the deterministic surface of the affine handle
+      (provenance / `explain` / `ReleaseEvent` / `SubstrateError` / a threaded-`id` acquire /
+      value-threaded consume-once); **FLAG-substrate-1** is the honest limit — the Rust
+      `Arc<AtomicBool>` cross-alias consume-once backstop is *not representable* in a pure-value
+      port (it enforces use-once only along one threaded value, not across aliases), documented not
+      faked; a hand-written `itoa` fills the still-absent decimal-format prim (ast.myc FLAG-ast-7).
+      `compiler.totality` (RFC-0007 Foetus checker + the shared `walk_expr`): `classify_all`
+      Total/Partial over synthetic `FnDecl` sets; FLAG-totality-1 `BTreeMap`/`BTreeSet`→sorted
+      assoc-list (deterministic-order precondition), -2 the `&mut impl FnMut` traversals specialized
+      (no HOF), -3 the 4096 `depth` budget standing in for `with_deep_stack`, -4 `Pattern::Or`'s
+      `panic!` invariant→dead `Ok` fallback. `compiler.ambient` (RFC-0012 resolution +
+      pretty-printer): `resolve`/`resolve_report`/`expand_to_source`/`expand_phylum_to_source`,
+      `MAX_AMBIENT_DEPTH`=4096, the two mirror wide-enum traversals; **FLAG-ambient-6** scopes the
+      differential honestly — 8 hand-built synthetic nodules (paradigm fills, nested override,
+      object bodies, mixed bodies) + 4 refusal fixtures, byte-for-byte `expand_to_source` parity +
+      AST-fingerprint on accepts, but **zero raw corpus files**: this is structural, not the M-987
+      wall — `compiler.ambient` consumes an already-parsed `Nodule` and cannot reach
+      `compiler.parse` (cross-nodule execution staged), so a source *file* can't be fed without an
+      AST-serializer bridge (deferred, flagged). Differentials graded `Empirical`.
+- [ ] **Stage 5** — `compiler.semcore` (L0-output differential; `cargo-mutants` witness). *In
+      progress (increment 1), landing in its own PR — not the Stage-4 change:* the tractable
+      sub-core (`Ty`/`Width`/`DataInfo`/`CtorInfo`/`Pat`
+      vocabulary + the Maranget `usefulness`+`decision` pipeline + `affine` + `grade`) with a
+      synthetic-input differential; the heavy entangled core (`checkty`/`elab`/`eval`/`mono`/`fuse`)
+      and the whole-program L0-output differential are **feasibility-gated on M-986/M-987** and
+      deferred (not silently narrowed).
 - [ ] **Stage 6 / M-742** — `just bootstrap`: interpreted-first then AOT, stage-2 three-way
 
 *This README is the M-740 wave map; it is updated as each stage lands. Grounded in DN-26 §7/§9,

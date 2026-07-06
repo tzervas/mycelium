@@ -11,6 +11,52 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### M-740 Stage 4 — self-hosted SCC leaf nodules (substrate · totality · ambient) (2026-07-06)
+
+`boot10` (E18-1) wave 4, per the DN-26 §7.3 stage map: Stage 4 lands the three semantic-core
+**dependency leaves** as sibling nodules — `compiler.substrate` (`lib/compiler/substrate.myc`),
+`compiler.totality` (`totality.myc`), `compiler.ambient` (`ambient.myc`) — the `.myc` port of
+`crates/mycelium-l1/src/substrate.rs`, `totality.rs`, `ambient.rs`. Each depends only on `ast`
+(already ported) or nothing, so none pulls in the entangled core.
+
+- **Native-toolchain dogfood (new this wave):** the real `myc check` binary (`mycelium-check`)
+  reports `ok` on all three nodules — and on the five previously-landed ones (`token`/`lex`/
+  `nodule`/`ast`/`parse`) — so the self-hosted frontend is now vetted by the *actual toolchain*, a
+  second independent witness alongside the Rust differential (this is the entry point that a
+  `/myc-dogfood` gate will make repeatable; per-file today, project-level pending the M-982
+  cross-nodule-execution lift). `mycfmt` parses all eight but reports them non-canonical, and
+  *refuses* two (`lex.myc`/`parse.myc`) on the M-690 formatter limitation (trailing comment on a
+  nested match arm) — filed as a toolchain-enhancement follow-up.
+- **`compiler.substrate`** (DN-71 Model S): the deterministic surface of the affine handle —
+  `SubstrateProvenance`, a threaded-`id` `acquire`, `explain`, `ReleaseEvent`, `SubstrateError`,
+  and a value-threaded consume-once. **FLAG-substrate-1 (honest limit, not faked):** the Rust
+  `Arc<AtomicBool>` consume-flag is shared across every clone of an identity — the runtime
+  cross-alias use-once backstop; a pure-value port has no shared interior mutability, so
+  `try_consume` here enforces use-once only along a single threaded value. A hand-written `itoa`
+  fills the still-absent decimal-format prim (ast.myc FLAG-ast-7). Gate 5/5.
+- **`compiler.totality`** (RFC-0007 Foetus structural-termination checker + the shared `walk_expr`
+  traversal): `classify_all` Total/Partial over synthetic `FnDecl` sets, 6/6. FLAG-totality-1
+  `BTreeMap`/`BTreeSet`→sorted assoc-list (documented deterministic-order precondition), -2 the
+  `&mut impl FnMut` walks specialized to concrete accumulations (no HOF in the port), -3 the
+  threaded 4096 `depth` budget replacing `mycelium_stack::with_deep_stack`, -4 `Pattern::Or`'s
+  `panic!` invariant lowered to a dead `Ok` fallback (no panic prim). Split-match one-deep applied
+  even to a `Bool` inside `Ok` — the usefulness checker rejects the combined pair (a real,
+  minted-not-muted behaviour).
+- **`compiler.ambient`** (RFC-0012 ambient-representation resolution + canonical pretty-printer):
+  `resolve`/`resolve_report`/`expand_to_source`/`expand_phylum_to_source`, `MAX_AMBIENT_DEPTH`=4096,
+  the two mirror traversals over the widest AST enums. Gate 4/4: byte-for-byte `expand_to_source`
+  parity + an AST fingerprint on accepts, 5-way error-kind parity on refusals.
+  **FLAG-ambient-6 (differential scope, flagged not silent):** the gate covers 8 hand-built
+  synthetic nodules + 4 refusal fixtures and **zero raw conformance-corpus files** — a *structural*
+  limit, not the M-987 cost wall: `compiler.ambient` operates on an already-parsed `Nodule` and
+  cannot reach `compiler.parse` (cross-nodule execution staged, M-982), so a source file can't be
+  fed without an AST-serializer bridge (deferred). FLAG-ambient-2 (`resolve_report` `notes` honestly
+  empty), -3 (error message text not rendered; 5-way classification compared), -4 (no
+  `with_deep_stack` analogue).
+- **Honesty (VR-5, flagged in-file):** every differential is graded `Empirical`; all narrowings
+  carry in-file `FLAG-<nodule>-N` comments; nothing under `crates/mycelium-l1/src/` was modified
+  (the Rust frontend stays the trusted oracle until M-741).
+
 ### M-740 Stage 3 — self-hosted AST vocabulary + parser (2026-07-05)
 
 `boot10` (E18-1) wave 3, per the DN-26 §7.3 stage map: Stage 3 lands `compiler.ast`
