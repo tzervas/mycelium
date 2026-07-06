@@ -96,3 +96,39 @@ source is ground truth).
 1. Sync off the latest `dev` tip; `just setup` (Rust) + `uv sync` (Python doc-gen).
 2. Confirm the four scope decisions above with the maintainer.
 3. E-A first (the transpiler must be up-to-snuff before E-B's mass run is worth doing); E-C parallel.
+
+## Launch record (2026-07-06 — appended at kickoff)
+
+Fired via `/kickoff trx2` on head branch `claude/trx2-kickoff-rxyzd3` (== the `dev` tip `7dde593`,
+post kernel-perf wave). The interactive scope-confirm failed mid-stream (tool error) and the
+maintainer directed "continue" — the four decisions below are **orchestrator-resolved on the
+kickoff's own recorded defaults**, graded `Declared`, and reversible by the maintainer:
+
+1. **E-B breadth = port surface only** — the kickoff's stated default. Concretely: the semcore
+   heavy core (`checkty` 7356 · `mono` 3219 · `elab` 2294 · `eval` 2263 · `fuse` 292 LOC) + the
+   12 stdlib crates with no `.myc` twin (conformance, content, dense, fs, io, numerics, rand,
+   runtime, sys, sys-host, time, vsa).
+2. **Staging dir = `gen/myc-drafts/`** (scratch tree; drafts graduate into `lib/` only when
+   hand-vetted during M-993) — keeps `Declared` drafts out of the `/myc-dogfood`-gated `lib/` tree.
+3. **E-C = interpretation (c)** — auto-generated reference docs derived from the `.myc` sources
+   (`docs/lib-index/`, the `docs/api-index/` analogue for `lib/`); (c) is the only reading
+   satisfying this kickoff's own DoD ("deterministic + regenerable, drift-gated"). (b) — a
+   generator authored in Mycelium — is noted as a candidate follow-up dogfooding wave.
+4. **Sequencing vs `rwr` = confirmed as scoped** — per the maintainer's dated re-sequencing
+   decision recorded above (2026-07-06); trx2's gap/vet/manifest outputs become inputs to `rwr`'s
+   M-947…M-957 port-wave manifests at Phase-II.
+
+**Minted** (slots verified free, mitigation #1): epics **E32-1** (E-A) · **E33-1** (E-B) ·
+**E34-1** (E-C); tasks **M-1000/M-1001** (vet loop · gap-class closure), **M-1002/M-1003**
+(staging+manifest · rip-through), **M-1004/M-1005** (lib-index extraction · drift gate).
+M-991 → `in-progress` (discharged by E32-1's DN-34 results record). Swarm mode: maintainer
+directive at launch — Opus/Sonnet implementation agents, orchestrator coordinates.
+
+**Maintainer confirmation (2026-07-06, same day — amends resolution 1).** The maintainer
+confirmed decisions 2–4 as resolved above, and **decided** (no longer orchestrator-`Declared`)
+E-B breadth as: **port surface first** (this wave, unchanged), **then — once refined — expand to
+the rest of the Rust corpus of the Mycelium language codebase in controlled phases**: automated
+porting + patching to close gaps, folding each phase's lessons back into the transpiler until it
+is a highly polished solution. Minted **M-1006** (under E33-1) as the phased-ladder umbrella;
+per-phase target sets are minted per wave (mitigation #1), and the ladder's outputs reconcile
+with `rwr`'s M-947…M-957 port-wave manifests at Phase-II (trx2 phases become their inputs).
