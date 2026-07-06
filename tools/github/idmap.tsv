@@ -499,3 +499,6 @@ M-886	946	4792049256
 # appended by gh-issues-sync.py (2 new)
 M-881	947	4792053307
 M-882	948	4792053315
+# appended via GitHub MCP (gh CLI unavailable in the repo-scoped remote session) — boot10 Stage-5 heavy core
+M-993	1183	4815896458
+M-994	1182	4815895914
