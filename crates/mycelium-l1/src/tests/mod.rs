@@ -6,6 +6,7 @@ mod affine;
 mod ambient;
 mod ast;
 mod checkty;
+mod compiler_stage5_semcore;
 mod decision;
 mod elab;
 mod error;

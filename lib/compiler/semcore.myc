@@ -122,27 +122,49 @@
 // checker's OWN resolved-fn-table wiring (own vs. imported, canonical resolved bodies) — out of
 // scope for a partial increment that ports no checkty checking logic.
 //
-// FLAG-semcore-10 (a REAL, NEWLY-SURFACED finding — Rust module-private visibility blocks a
-// live-oracle differential for THIS increment, unlike every prior Stage). `usefulness.rs`,
-// `decision.rs`, `affine.rs`, and `grade.rs` are declared `pub(crate) mod` / plain `mod` in
+// FLAG-semcore-10 — RESOLVED (was: a REAL, NEWLY-SURFACED finding — Rust module-private
+// visibility blocks a live-oracle differential for THIS increment, unlike every prior Stage).
+// Original finding, kept for the record (append-only — VR-5/G2): `usefulness.rs`, `decision.rs`,
+// `affine.rs`, and `grade.rs` are declared `pub(crate) mod` / plain `mod` in
 // `crates/mycelium-l1/src/lib.rs` (`mod affine;`, `pub(crate) mod decision;`, `mod grade;`,
 // `pub(crate) mod usefulness;`) — UNLIKE `ast.rs`/`token.rs`/`parse.rs`/`nodule.rs` (all `pub mod`,
-// with the port-relevant items re-exported `pub`). An external integration-test crate
-// (`crates/mycelium-l1/tests/*.rs`, which `compiler_stage5_semcore.rs` is) sees only the crate's
-// PUBLIC API surface, so it CANNOT call `usefulness::useful`, `decision::compile`,
-// `affine`'s `Tracker`/`use_at`, or `grade::check_guarantees` directly — the DN-26 SS7.4 "checked
-// against the live Rust oracle" contract every prior stage's differential relies on does not hold
-// here. (Only `checkty::{Ty, Width, DataInfo, CtorInfo}` are `pub` with `pub` fields — confirmed by
-// direct inspection — so those four types alone remain externally constructible, though nothing in
-// this increment calls the pub(crate) functions that consume them.) Rust sources are READ-ONLY in
-// this leaf (no visibility change is this leaf's call to make), so
-// `crates/mycelium-l1/tests/compiler_stage5_semcore.rs` instead asserts each ported fn's verdict
-// against a HAND-DERIVED expected value, reasoned directly from the documented Maranget/affine/
-// guarantee-lattice rules for each small synthetic case (never a fabricated/guessed constant —
-// every expected value's derivation is commented at its call site). The differential is graded
-// `Empirical`, not the stronger "vs. a live oracle" posture — FLAGGED UP for the maintainer/DN-26
-// owner: lifting `usefulness`/`decision`/`affine`/`grade` to `pub` (or adding a dedicated
-// `#[cfg(test)]`-gated shim) would let a future revision restore the live-oracle differential.
+// with the port-relevant items re-exported `pub`). An EXTERNAL integration-test crate
+// (`crates/mycelium-l1/tests/*.rs`, where `compiler_stage5_semcore.rs` originally lived) sees only
+// the crate's PUBLIC API surface, so it could not call `usefulness::useful`, `decision::compile`,
+// `affine`'s `Tracker`/`use_at`, or `grade::check_guarantees` directly, and fell back to a
+// HAND-DERIVED expected value per case — graded `Empirical`, weaker than every other stage's
+// live-oracle posture.
+//
+// RESOLUTION (this leaf): the gate moved IN-CRATE, from `crates/mycelium-l1/tests/
+// compiler_stage5_semcore.rs` to `crates/mycelium-l1/src/tests/compiler_stage5_semcore.rs`
+// (`#[cfg(test)] mod tests;`, the established `src/tests/*.rs` white-box convention — precedent:
+// `src/tests/{usefulness,decision,affine}.rs`). From there every `pub(crate)` item across all four
+// modules IS reachable (`crate::usefulness::useful`, `crate::decision::{compile,
+// has_reachable_fail}`, `crate::affine::{Tracker, union_merge_into}`), with ZERO visibility change
+// to the trusted logic modules — only the test module (+ its one `mod` line in `src/tests/mod.rs`)
+// was added. Every usefulness/decision/affine case now calls the real Rust oracle fn directly and
+// asserts the `.myc` port's verdict against ITS live-computed result (never a hand-typed literal).
+//
+// The grade legs needed one more step (**FLAG-semcore-10-b**, a NEW finding this leaf surfaced):
+// the only `pub(crate)` entry point into `grade.rs` is `check_guarantees`, which returns
+// `Result<(), CheckError>` — pass/fail against a function's OWN declared return demand, not the
+// raw computed `Strength`. The per-body walk that computes the raw grade (`Gx::grade`,
+// `check_fn_grades`) carries NO visibility modifier, so it stays private to `crate::grade` even
+// from this in-crate sibling test module. The exact live grade is recovered by PROBING: since
+// `Strength::satisfies` is monotone in the demand and the lattice is 4 total-ordered levels
+// (`Exact ⊐ Proven ⊐ Empirical ⊐ Declared`), re-checking the SAME body under a synthetic
+// return-demand at each level (strongest first) and taking the first the body still satisfies
+// recovers its exact grade — every bit sourced from a real `check_guarantees` call, never a
+// fabricated constant. The two demand-VIOLATION cases need no probing (the failure is internal to
+// an ascription/argument check, so `check_guarantees`'s `Err` is already the live verdict at any
+// demand). Still FLAGGED UP for the maintainer/DN-26 owner: lifting `Gx`/`check_fn_grades` to
+// `pub(crate)` would let a future revision skip the probing indirection and read the grade
+// directly — Rust sources stay READ-ONLY in this leaf, so that visibility change is not made here.
+//
+// Net result: this increment's differential is now LIVE-ORACLE end to end (usefulness/decision/
+// affine directly; grade via the documented probing indirection) — the DN-26 SS7.4 "checked
+// against the live Rust oracle" contract every prior stage's differential relies on now holds
+// here too, not merely `Empirical` hand-derivation.
 nodule compiler.semcore;
 
 // ── prelude (local; no cross-nodule import — FLAG-semcore-1 / M-982) ───────────────────────────
