@@ -1727,15 +1727,55 @@ impl<'e> Evaluator<'e> {
         let this_tco_eligible =
             ret_guar.is_none() && !argv.iter().any(|v| matches!(v, L1Value::Substrate(_)));
 
-        // TCO: elide the caller's frame iff it is directly on top and has no pending post-work.
-        let tail = matches!(
-            regs.stack.last(),
-            Some(Frame::InvokePost {
-                tco_eligible: true,
-                ..
-            })
-        );
+        // TCO (M-994 fix (a) — RFC-0041 §6 scoped amendment completing the §4.6 TCO intent; widens
+        // M-986): elide the caller's frame iff — looking THROUGH any run
+        // of binder-restoring frames (`MatchPop`/`LetPop`) — the first non-transparent frame is the
+        // caller's tco-eligible `InvokePost`. `MatchPop`/`LetPop` are observationally transparent to
+        // the *value* (they only restore scope), so a tail call made under them is still in tail
+        // position: the call's result IS the enclosing function's result. We PEEK first (no mutation)
+        // so the non-tail case is byte-for-byte the old behavior.
+        let tail = {
+            let mut i = regs.stack.len();
+            let mut found = false;
+            while i > 0 {
+                match &regs.stack[i - 1] {
+                    Frame::MatchPop { .. } | Frame::LetPop => i -= 1,
+                    Frame::InvokePost {
+                        tco_eligible: true, ..
+                    } => {
+                        found = true;
+                        break;
+                    }
+                    _ => break,
+                }
+            }
+            found
+        };
         let (param_base, saved_site, saved_base) = if tail {
+            // Commit: drain the transparent binder-restoring frames, executing each one's scope
+            // cleanup eagerly (the M-986 "truncate the scope eagerly before a tail call"), so the
+            // caller's `InvokePost` surfaces to the top. A `LetPop` still runs its M-904 scope-exit
+            // release for a let-bound `Substrate` that does not escape into the call's arguments
+            // (the only channel a value from this scope can reach the callee) — never a silent leak.
+            loop {
+                match regs.stack.last() {
+                    Some(Frame::MatchPop { mark }) => {
+                        let mark = *mark;
+                        regs.stack.pop();
+                        regs.scope.truncate(mark);
+                    }
+                    Some(Frame::LetPop) => {
+                        regs.stack.pop();
+                        let popped = regs.scope.pop().expect("let binding present");
+                        let escapes = matches!(&popped.1, L1Value::Substrate(h)
+                            if argv.iter().any(|a| value_contains_substrate_id(a, h.id())));
+                        if !escapes {
+                            self.release_if_abandoned(&popped, None);
+                        }
+                    }
+                    _ => break,
+                }
+            }
             // Pop the caller's `InvokePost` (its depth guard drops — depth released) and reuse its
             // slot for this callee, threading the caller's *own* saved site/base so that when this
             // callee finally returns non-tail, control returns to the caller's caller.

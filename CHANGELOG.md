@@ -11,6 +11,33 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### M-994 fix (a) — widen L1 evaluator TCO through tail-transparent frames (M-986 closed) (2026-07-06)
+
+Resolves the *depth* half of the M-994 decision (maintainer-approved: land (a) then (b), keep AOT as
+the fallback). The L1 evaluator's TCO precondition ("no pending post-work") was too narrow — it
+treated a `MatchPop`/`LetPop` frame above the caller's `InvokePost` as pending work, so a tail call
+inside a `match` arm or `let` body was never elided, and since every terminating loop needs a `match`,
+**no in-language loop could exceed the 4096 depth budget** (M-986).
+
+- **The fix** (`crates/mycelium-l1/src/eval.rs::enter_call`, ~47 LOC): peek *through* any run of
+  `MatchPop`/`LetPop` — observationally transparent to the value (they only restore scope) — so a tail
+  call under them is still in tail position; on commit, drain them executing each one's scope cleanup
+  eagerly (incl. the M-904 `LetPop` Substrate release for a non-escaping handle — never a silent leak).
+  The non-tail path is byte-for-byte unchanged (peek-then-commit).
+- **An append-only RFC-0041 §4.6 amendment** completing that section's ratified TCO intent (Decides
+  item 5) — not new kernel surface. Maintainer-signed-off via the §6 within-freeze channel: it shifts
+  the runs-vs-refuses frontier (so not purely §Posture-I2-behavior-preserving), but there is no L0
+  oracle for these deep loops to diverge from (L0 has no TCO), and the **M-210 differential +
+  `compiler_stage*` fingerprint parity are unchanged** — value-preserving for terminating programs.
+- **Tests:** the two M-986 known-gap pins flipped to assert the closed behavior (a 10,000-iteration
+  `match` loop now returns `Ok`, `total_elided ≥ 10000`; a 150-item nodule that refused at `depth=512`
+  now passes), plus a **non-tail self-call still refuses `DepthExceeded{4096}`** guard (proving no
+  over-elision). `compiler_stage3` 7/7; lib 367; differential 32/32 unchanged. **M-986 → done.**
+- **Still open — M-987 (~n³ cost), fix (b) next:** (a) unlocks depth but an 800-item parse now runs
+  yet is ~n³ *slow* (demonstrated live). Fix (b) — `Rc`-share `L1Value::Data` (O(1) clone; the
+  confirmed root of the cubic) — is the affordability half; it lands behavior-preserving through the
+  §6 channel. (a)+(b) together make the DN-26 §9 flag-2 interpreted-first Stage-6 gate practical.
+
 ### M-740 Stage 5 (increment 1) — partial self-hosted `compiler.semcore` (2026-07-06)
 
 `boot10` (E18-1) wave 5, per DN-26 §7.3/§9: the **first, deliberately partial** increment of the
