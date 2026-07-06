@@ -109,7 +109,7 @@ fn enumerate_finite_domain(
             .map(|c| crate::eval::L1Value::Data {
                 ty: name.clone(),
                 ctor: c.name.clone(),
-                fields: vec![],
+                fields: std::sync::Arc::new(vec![]),
             })
             .collect(),
     )

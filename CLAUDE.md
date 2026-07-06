@@ -510,6 +510,8 @@ exists, **flip the status with a checked landed-basis instead of re-implementing
 `doc_refs` pointers in the same commit); if partially done, scope the leaf to the *residual* gap only
 and say so. The issue tracker is `Declared`; the codebase is ground truth (VR-5).
 
+## Autonomous PR workflow — review-before-merge, no human gate
+
 The merge gate is the agent's, not a human's. A parent (orchestrator/epic) **merges its children
 up the tree itself** once the work is clean — but only after the discipline below. This makes the
 swarm self-driving while keeping transparency and history intact. (A maintainer may still override; if

@@ -309,6 +309,37 @@ code; they only fix the two branch points so the M-740 wave can proceed without 
 
 ## Meta — changelog
 
+- **2026-07-06 — M-994 RESOLVED: both kernel fixes landed; interpreted-first Stage-6 now practical
+  (append-only, no status move; M-740/M-994).** Following the decision below, **both** fixes are on
+  `dev`: **(a)** the RFC-0041 §4.6 TCO-precondition widening (M-986 → done — deep `match`/`let` loops
+  now exceed the 4096 budget) and **(b)** O(1) `L1Value::Data` clone via `Arc` structural sharing
+  (M-987 → done — measured ~n³→~n², p 2.96→~1.9, 14×/30×/64× at n=100/200/400; the M-210 differential
+  stayed green and UNCHANGED, so it landed through the RFC-0041 §6 behavior-preserving channel). The
+  DN-26 §9 flag-2 **interpreted-first Stage-6 gate is therefore practical** at compiler scale; (c) AOT
+  remains the fallback for inputs beyond (a)+(b)'s reach, not a substitute for the interpreted witness.
+  **M-994 → done.** The eval-side blocker on the semcore heavy-core port (**M-993**) is cleared — it
+  now depends only on the port work itself + M-741. DN-26 stays **Draft** (→ Resolved with M-741).
+  (M-994; E18-1; VR-5/G2.)
+- **2026-07-06 — M-994 DECIDED: fix the kernel (a) then (b); interpreted-first Stage-6 becomes
+  viable (append-only, no status move; M-740/M-994).** The open question recorded in the entry below
+  (the §9 flag-2 interpreted-first Stage-6 gate impractical at compiler scale under M-986/M-987) is
+  **now decided by the maintainer** (2026-07-06), on the basis of an investigation + spike: **land (a)
+  then (b), keep (c) AOT as the fallback.** **(a) — landed:** widen the L1 evaluator's TCO precondition
+  to see through tail-transparent `MatchPop`/`LetPop` frames (`eval.rs::enter_call`, ~47 LOC), an
+  append-only **RFC-0041 §4.6 amendment** completing that section's ratified TCO intent, maintainer-
+  signed-off via the §6 within-freeze channel (it shifts the runs-vs-refuses frontier, but there is no
+  L0 oracle for these deep loops to diverge from — L0 has no TCO — and the M-210 differential +
+  fingerprint parity are unchanged). This closes **M-986** (deep `match`/`let` loops now exceed the
+  4096 budget; the two pins flipped to assert the closed behavior; a non-tail self-call still refuses,
+  proving no over-elision). **(b) — next:** make `L1Value::Data` clone O(1) via `Rc` structural sharing
+  (sound: `Data` is immutable+acyclic by construction) — the confirmed root of **M-987**'s ~n³ (every
+  variable reference deep-copies an O(nodes) value); expected ~n³→~n², behavior-preserving so it lands
+  through the §6 channel proper (M-210 differential its bar). **Consequence for this plan:** (a) unlocks
+  the *depth* half and (b) the *cost* half; **together they make the §9 flag-2 interpreted-first Stage-6
+  gate practical** (the two were shown complementary — with (a) alone an 800-item parse now runs but is
+  ~n³ slow). Once both land, **M-993** (the semcore heavy-core port) is unblocked on the eval side;
+  (c) AOT stays the fallback for inputs beyond (a)+(b)'s reach, not a substitute for the interpreted
+  witness. DN-26 stays **Draft** (→ Resolved with M-741). (M-994; E18-1; VR-5/G2.)
 - **2026-07-06 — Stage 5 increment 1 landed (partial `semcore.myc`); the heavy-core L0
   differential is feasibility-gated — an OPEN QUESTION, not decided (append-only, no status move;
   M-740).** §7.3 row 5 (`compiler.semcore`, §9 flag-1's single-nodule SCC) begins as a **partial**

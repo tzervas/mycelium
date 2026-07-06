@@ -11893,7 +11893,7 @@ issues:
   - id: M-986
     title: "L1 evaluator TCO elides only bare-body self-calls — match/let tail calls never elided (no in-language loop can exceed the depth budget)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:bug, area:execution, priority:P2, status:todo]
+    labels: [phase:5, type:bug, area:execution, priority:P2, status:done]
     epic: E18-1
     depends_on: []
     doc_refs:
@@ -11934,7 +11934,7 @@ issues:
   - id: M-987
     title: "L1-eval cost super-linear (~n^3) in token count for the self-hosted parser"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:bug, area:execution, priority:P2, status:todo]
+    labels: [phase:5, type:bug, area:execution, priority:P2, status:done]
     epic: E18-1
     depends_on: []
     doc_refs:
@@ -12123,7 +12123,7 @@ issues:
   - id: M-993
     title: "Port the heavy semantic-core SCC (checkty/elab/eval/mono/fuse) to semcore.myc"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P2, status:blocked]
+    labels: [phase:5, type:feature, area:language, priority:P2, status:todo]
     epic: E18-1
     depends_on: [M-740, M-986, M-987]
     doc_refs:
@@ -12142,6 +12142,14 @@ issues:
       kernel (M-986 depth budget, M-987 ~n^3 cost). status:blocked on M-994's resolution (how the
       Stage-5/6 differential runs); the transpiler accelerator (M-991) may seed the drafts.
 
+      UNBLOCKED (2026-07-06, checked landed-basis): M-994 is RESOLVED — both kernel walls are down
+      (M-986 fix (a): deep match/let tail loops now exceed the 4096 budget; M-987 fix (b): ~n³→~n²,
+      plus M-995/M-996/M-999 carrying the wins to the AOT env-machine, which now outruns the
+      interpreter). The interpreted-first Stage-5/6 differential is practical; status blocked→todo.
+      The port work itself (the ~15k-line SCC, the FLAG-ast-5/parse-2 prefixing discipline, the
+      trx2 transpiler-accelerated boilerplate) is the remaining substance; M-741 ratification
+      follows it.
+
       User stories:
       - As a language user, I want the type-checker/elaborator/evaluator written in Mycelium, so
         that the whole frontend is auditable in the language it compiles.
@@ -12154,7 +12162,7 @@ issues:
   - id: M-994
     title: "Resolve the Stage-5/6 whole-program L0-output differential feasibility (M-986/M-987 wall)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:design, area:language, priority:P2, status:todo]
+    labels: [phase:5, type:design, area:language, priority:P2, status:done]
     epic: E18-1
     depends_on: [M-986, M-987]
     doc_refs:
@@ -12182,6 +12190,232 @@ issues:
       Definition of Done:
       - A recorded decision (append to DN-26, or a superseding note) selecting the lift path(s) for
         the Stage-5/6 differential; M-993 and M-742 unblocked with a concrete, runnable gate spec.
+
+  - id: M-995
+    title: "AOT env-machine value structural-sharing — O(1) datum clone (M-987 analog for mycelium-mlir)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:execution, priority:P2, status:done]
+    epic: E18-1
+    depends_on: [M-987]
+    doc_refs:
+      - src:crates/mycelium-mlir/src/aot.rs
+      - corpus:RFC-0041
+    body: |
+      Minted 2026-07-06 (maintainer direction: apply the M-994 perf wins to the AOT path). The AOT
+      env-machine (`aot.rs::run_core`) had the same per-reference deep-copy as the L1 interpreter
+      pre-M-987: `AotVal::Core(CoreValue)` clone is an O(nodes) iterative deep clone, invoked on every
+      `lookup` (`env.get(a).cloned()`) AND every `Match`-arm field bind (`select_arm`) → measured ~n³
+      (fitted 2.98; 0.62/4.83/38.6s at n=100/200/400). The interpreter's literal fix (wrap
+      `L1Value::Data.fields` in `Arc`) does NOT port — the AOT's fields live in the FROZEN
+      `mycelium_core::Datum` (DN-56). The freeze-respecting fix: an AOT-local `AotVal::Data(Rc<AotDatum>)`
+      cons cell with Rc-shared sub-trees, so a reference/env-clone AND a destructure field-bind are O(1)
+      refcount bumps; the frozen `Datum` is untouched, a `CoreValue` is materialised only at `to_core`
+      (iterative, no SIGABRT), and `AotDatum::Drop` is iterative for deep-spine safety.
+
+      LANDED 2026-07-06: measured (release, Empirical) exponent 2.98 -> ~2.3-2.5, 13x/21x/35x at
+      n=100/200/400 (38.6s -> 1.11s at n=400). Behavior-preserving: full `-p mycelium-mlir` suite green
+      (263 lib + integration incl. the three-way mlir-dialect differentials), results byte-identical
+      (ObservationalEquiv + M-210 Validated{Exact}); `aot_frame_size` pin holds; zero new unsafe. Honest
+      caveat: a less-clean win than the interpreter's clean n^3->n^2 (14-64x) — the residual is the
+      env-machine's HashMap-environment cloning per match/app (a future env-rep change could recover a
+      cleaner n^2). mycelium-mlir is NOT in the DN-56 freeze scope (the freeze governs mycelium-core +
+      the L1 calculus surface; the AOT is the RFC-0041 perf path); lands via the §6 behavior-preserving
+      channel + normal review.
+
+      User stories:
+      - As a Mycelium user running AOT-compiled programs, I want value references to be O(1), so that
+        native execution of value-heavy programs is not accidentally cubic.
+
+      Definition of Done:
+      - AOT env-machine references + match-binds are O(1) (measured n^3 -> ~n^2.x); AOT differential
+        green + byte-identical; frozen types untouched; no new unsafe; change-scoped just check green.
+
+  - id: M-996
+    title: "AOT env-machine TCO — elide tail frames (M-986 analog; behavior-changing, decision-gated)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:execution, priority:P2, status:done]
+    epic: E18-1
+    depends_on: []
+    doc_refs:
+      - src:crates/mycelium-mlir/src/aot.rs
+      - corpus:RFC-0041
+    body: |
+      Minted 2026-07-06 (from the M-994 AOT investigation). The AOT env-machine (`aot.rs::run_core`)
+      has NO TCO — every `App`/`Match` pushes a `Frame`, so a pure tail loop consumes ~2-3 control
+      frames per iteration and hits the graceful `DepthLimit` at the budget (confirmed: `count(500)
+      @depth=1000 -> DepthLimit{1000}`). Unlike the interpreter's M-986 (a precondition WIDENING that
+      was value-preserving for terminating programs), adding TCO to the AOT env-machine is a NEW
+      FEATURE that CHANGES observable behavior: a diverging tail loop would move from `DepthLimit` to
+      `FuelExhausted`, breaking the pinned `aot::tests::the_depth_ceiling_is_an_explicit_graceful_error`
+      (asserts exactly `DepthLimit{64}` for `spin()`). So it is NOT a behavior-preserving §6 landing —
+      it is a MAINTAINER DECISION (the AOT §5.1 family-parity + the tracked "AOT per-frame metric
+      precision" residual bear on it). Note: the native LLVM path (`llvm.rs`) ALREADY lowers the
+      canonical `λ.Match` tail-`Fix` to a real O(1) iterative loop for the supported shape — so the
+      env-machine TCO is the remaining gap, on the trampolined full-calculus path only.
+
+      User stories:
+      - As the maintainer, I want a decision on whether the AOT env-machine should elide tail frames
+        (accepting the DepthLimit->FuelExhausted error-variant shift for divergent loops), so deep AOT
+        tail loops run in O(1) control stack.
+
+      Definition of Done:
+      - A recorded decision (DN/RFC amendment) on AOT env-machine TCO incl. the error-variant change
+        and the depth-metric/family-parity implications; if accepted, implemented with the pinned
+        depth-ceiling test updated intentionally + AOT differential green.
+
+      DECIDED + AUTHORIZED (maintainer/owner, 2026-07-06): implement it. Basis (recorded in DN-56
+      changelog + RFC-0041): pre-production, the freeze is a discipline gate, not a delivered-core
+      guarantee; the DepthLimit->FuelExhausted shift for divergent tail loops is approved. The
+      decisive grounds: (i) since M-994 fix (a), the same program at the same budget succeeds
+      interpreted but refuses DepthLimit on the AOT env-machine -- a live RFC-0041 §5.1 family-parity
+      violation of the ratified §4.0 metric ("tail iterations do not charge depth"); (ii) the
+      env-machine is the full-calculus AOT leg (native LLVM is subset-only), so the Stage-6 three-way
+      and the M-993 "(c) AOT fallback" require it; (iii) the shift is CONVERGENCE with the
+      interpreter's long-standing behavior (spin() has been fuel-bounded there since before fix (a));
+      the graceful-ceiling property stays pinned via a non-tail witness. Implementation in flight.
+
+      LANDED (2026-07-06): machine-appropriate implementation in aot.rs::run_core — in the ANF
+      machine, tail-transparency is intrinsic to the continuation (a passthrough Resume: block
+      complete AND result() == bound name), so the elision is NOT PUSHING the frame (caller env
+      dropped eagerly); ApplyThen (Fix unfold) never elided; no Substrate-like values in the AOT
+      fragment; elided calls take no depth guard (guard-leak pinned). OBSERVABLE per the
+      no-black-boxes rule: TcoTrace{total_elided} threaded through the machine, asserted >=10,000 in
+      the deep-loop test (the user-facing EXPLAIN surface is M-998). Exactly the two authorized
+      shifts (deep-tail DepthLimit->Ok; divergent-tail DepthLimit->FuelExhausted); everything
+      terminating byte-identical (267 mlir lib tests + differentials; reverse-dependents green:
+      mycelium-l1 991/0, std-conformance 293/0); L0-interp == AOT deep-tail parity witness green.
+      Measured: count(500)@1000 DepthLimit -> Ok(0); ~36% frame-churn reduction at 30k iterations.
+      Corollary recorded (never silent): elided tail frames charge no alloc bytes under a declared
+      alloc budget (Fix frames still charge; existing overrun pin unmodified). Follow-on flagged:
+      an explicit combined L1<->AOT deep-tail case in depth_metric_parity.rs.
+
+  - id: M-997
+    title: "Evaluate structural sharing inside mycelium_core::Datum (core unfreeze authorized, held in reserve)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:core-ir, priority:P3, status:needs-design]
+    epic: E18-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-56
+      - src:crates/mycelium-mlir/src/aot.rs
+    body: |
+      Minted 2026-07-06. The maintainer/owner authorized pre-production kernel modifications where
+      sound (DN-56 changelog, 2026-07-06 posture clarification). The M-994/M-995 structural-sharing
+      wins were achieved WITHOUT touching the frozen `mycelium_core::Datum` (interpreter: Arc on
+      L1Value::Data.fields; AOT: an AOT-local AotVal::Data(Rc<AotDatum>) cons cell). The remaining
+      option this issue tracks: put sharing INSIDE `Datum` itself (e.g. `Rc/Arc` fields), which would
+      unify the value representation and make every `CoreValue` clone O(1) (L0 interpreter, cert,
+      select, all consumers), removing the AotDatum/to_core boundary layer.
+
+      Deliberately NOT exercised yet (the objectively-sound call, 2026-07-06): the measured wins are
+      already banked on both hot paths (interpreter 14-64x, AOT 13-35x); the to_core materialisation
+      sits only at the result boundary; L0-at-scale's real cost (M-981) is substitution semantics,
+      not clone cost alone; and enlarging the trusted-base audit surface (KC-3) without a measured
+      driver inverts the evidence-first discipline. Revisit WHEN a measured driver appears (e.g. an
+      L0-path or cert-path profile showing clone-dominated cost, or the AotDatum boundary showing up
+      in Stage-6 measurements).
+
+      User stories:
+      - As the maintainer, I want the core-representation option evaluated on evidence rather than
+        reflexively exercised, so the trusted base stays small until a measured need justifies growth.
+
+      Definition of Done:
+      - A measured profile of a real workload showing where CoreValue clone cost sits; a go/no-go
+        recommendation; if go, a DN-39 pass (new TCB surface) + the full differential/proof-suite
+        green with the change; if no-go, the evidence recorded here and the issue closed.
+
+  - id: M-998
+    title: "User-facing EXPLAIN surface for AOT env-machine execution traces (TCO elision et al.)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:execution, priority:P3, status:needs-design]
+    epic: E18-1
+    depends_on: []
+    doc_refs:
+      - src:crates/mycelium-mlir/src/aot.rs
+      - corpus:RFC-0041
+    body: |
+      Minted 2026-07-06 from the M-996 landing (maintainer intent: explainability/no-black-boxes is
+      a key language differentiator). The AOT env-machine's TCO elision is now internally observable
+      (a pub(crate) TcoTrace{total_elided} threaded through run_core, surfaced via a test-only
+      traced entry point, asserted in the deep-loop test) — but `run_core` has NO public
+      stats/EXPLAIN surface to expose it to a USER, unlike the L1 interpreter (whose TcoTrace rides
+      the Evaluator). Decide and build the exposure: what an AOT execution's EXPLAIN should carry
+      (elision counts/ring, budget consumption, frame stats), on which surface (the myc CLI? the
+      spore runtime metadata? an EXPLAIN prim analog), and with what stability contract. Until then
+      the observability is test-witnessed but not user-reachable — flagged here, never silent.
+
+      User stories:
+      - As a Mycelium user running AOT-compiled programs, I want to EXPLAIN why a deep loop ran in
+        O(1) frames (or why a non-tail one hit DepthLimit), so the optimizer is inspectable rather
+        than a black box.
+
+      Definition of Done:
+      - A recorded design for the AOT EXPLAIN surface; the TCO elision counter (and any sibling
+        stats) reachable through it; a test pinning the exposure; docs updated; change-scoped just
+        check green.
+
+  - id: M-999
+    title: "AOT env-machine faster than the interpreter — env representation + prepared-code overhaul"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:execution, priority:P2, status:done]
+    epic: E18-1
+    depends_on: [M-995, M-996]
+    doc_refs:
+      - src:crates/mycelium-mlir/src/aot.rs
+      - src:crates/mycelium-mlir/tests/aot_vs_interp_bench.rs
+    body: |
+      Minted 2026-07-06 (maintainer requirement: the AOT path must be faster than the interpreter;
+      post-M-995/996 it was INVERTED). Apples-to-apples RELEASE baseline showed the env-machine at
+      0.22x the interpreter on the snoc shape (worse than the old cross-profile numbers implied).
+      Profiling (callgrind: ~55-60% of instructions in malloc/free/memcpy) showed the planned env
+      fix alone was NOT dominant, so the fix landed as four measured steps in aot.rs:
+      (1) Env representation: mutable top segment + Rc-frozen parent frames (O(1)-amortized
+      snapshot at closure capture; innermost-wins chain lookup; iterative EnvFrame::drop, the
+      AotDatum pattern) — alone only 0.22x -> 0.27x; (2) prepared Code mirror: the lowered ANF
+      mirrored ONCE into Rc-shared blocks (the machine had been deep-cloning Lam/Fix bodies and
+      match-arm subtrees per execution) -> 0.72x; (3) interned atoms (Rc<Atom> keys prepared once;
+      re-binding is a refcount bump, no per-step String allocs) -> parity; (4) AotVal::Repr(Rc<Value>)
+      (variable refs are refcount bumps, Const executions alloc-free, the value enum pointer-sized;
+      the old "intentionally inlined" trade-off comment superseded-by-measurement at the type)
+      -> 1.5-1.7x AHEAD.
+
+      LANDED 2026-07-06 (Empirical, release, single-trial ~2-5% jitter): snoc n=100/200/400
+      interp/AOT ratio 0.25/0.23/0.22 -> 1.60/1.54/1.68; tail count(50k) 0.71 -> 1.17-1.36. Exponent
+      fits: both machines clean ~n² (M-995 fixed the curve; M-999 removed a ~7x constant factor).
+      Ordering witness recorded: tests/aot_vs_interp_bench.rs (#[ignore]d; run with --release
+      --ignored --nocapture). Zero expectation edits (one type-only Cont::probe adaptation; the
+      pinned passthrough property unchanged): mycelium-mlir 382/0 (439/0 with mlir-dialect);
+      mycelium-l1 991/0; no new unsafe; clippy at the 9 pre-existing jit.rs lints exactly.
+      CORRECTION (PR #1194 review HIGH — an inaccurate verification claim, owned): the bench was
+      first placed in mycelium-mlir with a new mycelium-l1 dev-dep, and the record claimed
+      "deps-acyclic gate green". FALSE: `cargo xtask deps` reports that edge closes a REAL
+      {mycelium-l1, mycelium-mlir} dev-dependency cycle (DN-68 [acyclic-including-dev] — cargo does
+      not reject dev-dep cycles, which is why the gate exists), exit 1. The wrong "green" came from
+      a shell pipe bug in the orchestrator's own check (`| tail; echo $?` captured tail's rc) — the
+      GATE works; the verification was faulty. Fixed by MOVING the bench to
+      crates/mycelium-l1/tests/aot_vs_interp_bench.rs (the pre-existing l1 -[dev]-> mlir edge
+      direction; run with `cargo test -p mycelium-l1 --release --test aot_vs_interp_bench --
+      --ignored --nocapture`), removing the reverse dev-dep (a do-not-re-add note stands in
+      mycelium-mlir's Cargo.toml). Re-verified: `cargo xtask deps` exit 0, "OK — no violations".
+
+      THE HONEST LADDER (recorded for the maintainer): the env-machine is now ~1.5x ahead of the
+      interpreter — parity-to-moderately-better is the realistic ceiling for a trampolined
+      ANF-machine. "FAR faster" belongs to the direct-LLVM native path, whose coverage is already
+      wide (RFC-0029 Enacted: bit/trit ops, non-recursive data, native Swap M-852, widened closures
+      M-851, Fix/FixGroup loop rewrite M-850, Dense/VSA codegen M-853/854) with explicit refusals
+      (never-applied/match-scrutinized closures, quantized Dense, VSA cleanup/resonator loops) and
+      an operational gap (needs external llc/clang, per-program compile). Growing THAT coverage is
+      the big lever. FLAG: llvm.rs's header (~lines 1-40) still says closures/recursion are
+      "deferred" — stale, contradicted by M-850/M-851 sections in the same file; docs-sweep item.
+
+      User stories:
+      - As a Mycelium user, I want the AOT path to outperform the interpreter, so that compiling is
+        never a performance regression.
+
+      Definition of Done:
+      - Same-profile benchmark shows env-machine >= interpreter on the recorded workloads (met:
+        1.5-1.7x snoc, 1.2-1.4x tail); ordering witness committed; zero differential expectation
+        edits; suites + acyclicity gate green.
 
   - id: M-970
     title: "mycelium-fmt: render_expr_canonical drops the @forage(policy) Hypha annotation"
