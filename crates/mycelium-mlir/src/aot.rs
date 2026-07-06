@@ -27,6 +27,19 @@
 //! control stack on the heap, the budget is a policy over memory, derived honestly and `EXPLAIN`-able,
 //! with a conservative static fallback. [`run_core_with_budget`] still takes an explicit ceiling.
 //!
+//! **Tail-call optimization (M-996; maintainer decision 2026-07-06).** The env-machine now applies
+//! the same ratified RFC-0041 §4.0 depth metric the L1 interpreter got in M-994 fix (a): **tail
+//! iterations do not charge depth**. A continuation that would merely pass the callee's value
+//! through unchanged (a *passthrough* [`Cont`] — see [`Cont::is_tail_passthrough`]) is **elided at
+//! push time**: no frame, no depth charge, so a `match`-driven tail countdown runs in O(1) control-
+//! stack depth on this path exactly as it does interpreted — closing the live §5.1 family-parity
+//! violation where the same program at the same budget succeeded on the interpreter but refused
+//! `DepthLimit` here. The two (maintainer-authorized) behavior shifts: a deep terminating tail loop
+//! is `DepthLimit → Ok(value)`, and a **divergent** tail loop is `DepthLimit → FuelExhausted` (fuel
+//! is the designed non-termination backstop, matching the interpreter's long-standing behavior).
+//! Non-tail calls are byte-for-byte unchanged and still refuse at the depth ceiling. Every elision
+//! is counted in the [`TcoTrace`] witness (house rule #2: never a silent optimization).
+//!
 //! **Submodule confinement (DN-21 §5 F-2):** zero `unsafe` — compiler-enforced; the crate's
 //! only `unsafe` is the dynamic-linking FFI in `jit`/`bitnet`/`specialize`.
 #![forbid(unsafe_code)]
@@ -345,6 +358,37 @@ pub fn run_core_with_effects(
     max_depth: usize,
     budgets: &mut Budgets,
 ) -> Result<CoreValue, EvalError> {
+    // The public entry discards the TCO witness (identical semantics); the traced sibling exists so
+    // the elision count is *observable* where it matters (white-box tests / diagnostics — M-996).
+    run_core_with_effects_traced(node, prims, swap, fuel, max_depth, budgets).0
+}
+
+/// [`run_core_with_effects`] plus the [`TcoTrace`] elision witness (M-996; house rule #2). Crate-
+/// internal: the white-box tests assert `total_elided` so the TCO is test-witnessed, not inferred;
+/// see the `TcoTrace` FLAG about a future user-facing EXPLAIN surface.
+pub(crate) fn run_core_with_effects_traced(
+    node: &Node,
+    prims: &PrimRegistry,
+    swap: &dyn SwapEngine,
+    fuel: u64,
+    max_depth: usize,
+    budgets: &mut Budgets,
+) -> (Result<CoreValue, EvalError>, TcoTrace) {
+    let mut tco = TcoTrace::default();
+    let result = run_core_impl(node, prims, swap, fuel, max_depth, budgets, &mut tco);
+    (result, tco)
+}
+
+/// The shared implementation behind [`run_core_with_effects`]/[`run_core_with_effects_traced`].
+fn run_core_impl(
+    node: &Node,
+    prims: &PrimRegistry,
+    swap: &dyn SwapEngine,
+    fuel: u64,
+    max_depth: usize,
+    budgets: &mut Budgets,
+    tco: &mut TcoTrace,
+) -> Result<CoreValue, EvalError> {
     // RFC-0041 W3½: the AOT env-machine now charges the *shared* `mycelium-workstack` recursion budget
     // at each control-stack frame-push, so its never-silent depth ceiling and host-stack guard are the
     // same primitives the L1/L0 machines use. `max_depth` (the DN-05 §2.4 resolved ceiling — the
@@ -364,7 +408,16 @@ pub fn run_core_with_effects(
         let budget = RecursionBudget::new(depth_limit, u64::MAX, u64::MAX);
         let top = Rc::new(lower::lower_to_anf(node));
         let mut fuel = fuel;
-        let result = eval_machine(top, Env::new(), prims, swap, &mut fuel, &budget, budgets)?;
+        let result = eval_machine(
+            top,
+            Env::new(),
+            prims,
+            swap,
+            &mut fuel,
+            &budget,
+            budgets,
+            tco,
+        )?;
         to_core(result)
     })
 }
@@ -380,11 +433,81 @@ pub fn run(node: &Node, prims: &PrimRegistry, swap: &dyn SwapEngine) -> Result<V
 }
 
 /// A continuation: where to bind a returned value and resume. The reified caller context.
-struct Cont {
+pub(crate) struct Cont {
     block: Rc<Anf>,
     idx: usize,
     env: Env,
     name: Atom,
+}
+
+impl Cont {
+    /// True iff resuming this continuation with a value is the **identity on that value** — the
+    /// tail-transparency test of the M-996 TCO (RFC-0041 §4.0/§4.6, mirroring the L1 interpreter's
+    /// M-994 fix (a)). A `Resume` of this continuation binds `name := val`, finds the block complete
+    /// (`idx` past the last binding), looks up `block.result()` — which **is** `name`, so it reads
+    /// back exactly `val` — and passes it to the next frame. That holds *unconditionally* on the Ok
+    /// path, and the Err path never resumes any frame (an error aborts the whole machine), so a
+    /// passthrough frame is observationally transparent on **both** Ok and Err.
+    ///
+    /// **Why this is the whole "peek", with no stack walk (the deliberate divergence from the L1
+    /// interpreter's shape):** the interpreter discovers a tail call by peeking *down* its stack
+    /// through already-pushed binder-restoring frames (`MatchPop`/`LetPop`) to the caller's
+    /// `InvokePost`. In this ANF machine the analogous transparent frames are exactly the
+    /// passthrough `Resume`s — and because transparency is an intrinsic, O(1)-checkable property of
+    /// the continuation *itself*, we never push a passthrough frame in the first place (the "commit"
+    /// is eliding the push, which eagerly drops the caller's saved env — the interpreter's
+    /// drain-cleanup analog). No transparent frame ever enters the stack, so no drain is needed and
+    /// the frame below is always the real (non-transparent) consumer.
+    ///
+    /// **Cross-module invariant note (PR #1193 review, MEDIUM):** under the *current*
+    /// `mycelium_core::lower::lower_to_anf` lowering, `Node::Let` always emits a trailing `Alias`
+    /// binding, so every block reachable via the public `Node` API that completes at a `Resume`
+    /// already has `result() == name` — making the second conjunct unreachable-false through that
+    /// API today. It is **kept as required defense-in-depth**: it is what makes this condition
+    /// *locally sound* rather than silently dependent on another module's lowering shape (if a
+    /// future lowering emits a block whose result is not the bound name, eliding it would return
+    /// the wrong value). Pinned directly by the white-box unit test
+    /// `tests::aot::is_tail_passthrough_requires_result_to_be_the_bound_name`.
+    pub(crate) fn is_tail_passthrough(&self) -> bool {
+        self.idx >= self.block.bindings().len() && *self.block.result() == self.name
+    }
+
+    /// Test-only constructor for the white-box `is_tail_passthrough` pin (PR #1193 review) —
+    /// builds a `Cont` with an empty env without exposing the private `Env`/`AotVal` types.
+    #[cfg(test)]
+    pub(crate) fn probe(block: Rc<Anf>, idx: usize, name: Atom) -> Self {
+        Cont {
+            block,
+            idx,
+            env: Env::new(),
+            name,
+        }
+    }
+}
+
+/// The M-996 TCO elision tally — the env-machine's **observable witness** that tail-call elision
+/// actually happened (house rule #2: an optimization that changes the depth accounting must never
+/// be a black box; the L1 interpreter's analog is `mycelium_l1::TcoTrace`/`total_elided`, RFC-0041
+/// §4.6 tco32). Deliberately minimal — a saturating counter of elided control-stack frames (tail
+/// `App` `Resume` frames plus tail-position `Match` `Resume` frames), surfaced through the
+/// crate-internal traced runner [`run_core_with_effects_traced`] so white-box tests assert elision
+/// happened rather than inferring it from depth behavior.
+///
+/// FLAG (M-996, for the integrating parent): `run_core` has **no public stats/EXPLAIN surface** to
+/// hang a user-facing trace on today (unlike `Evaluator::tco_trace`); whether to expose one (e.g. a
+/// per-callee ring like the interpreter's) is a follow-up decision, recorded here rather than
+/// silently skipped (G2/VR-5).
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct TcoTrace {
+    /// Total frames elided by TCO (saturating; diagnostic — never load-bearing for semantics).
+    pub(crate) total_elided: u64,
+}
+
+impl TcoTrace {
+    /// Record one elided frame (saturating — the witness never wraps, G2).
+    fn record(&mut self) {
+        self.total_elided = self.total_elided.saturating_add(1);
+    }
 }
 
 /// A frame on the explicit **heap** control stack — what makes the machine O(1) host stack. Each frame
@@ -392,7 +515,8 @@ struct Cont {
 /// the frame is pushed and releases it when the frame is popped/dropped, so `budget.current_depth()`
 /// tracks `stack.len()` exactly and the depth ceiling is the shared `mycelium-workstack` primitive —
 /// preserving the pre-extraction `stack.len() >= max_depth` accept/reject threshold byte-for-byte.
-struct Frame<'b> {
+// `pub(crate)` (fields private) so the in-crate white-box size pin (`src/tests/aot.rs`) can measure it.
+pub(crate) struct Frame<'b> {
     /// The per-frame depth reservation on the shared budget; released on pop/drop. Underscored because
     /// it is held purely for its `Drop` side-effect (the release) — the drop *is* the "read".
     _guard: DepthGuard<'b>,
@@ -436,6 +560,18 @@ fn depth_limit_error(e: BudgetError) -> EvalError {
 /// control stack grows on a call — with its [`DepthGuard`] moved into the pushed [`Frame`] for the
 /// frame's lifetime, so the accept/reject threshold is exactly the pre-extraction `stack.len() >=
 /// max_depth`. Applying a non-function is an explicit refusal.
+///
+/// **TCO (M-996 — the peek-then-commit at call entry, RFC-0041 §4.0/§4.6):** a closure applied with
+/// a **passthrough** `ret` ([`Cont::is_tail_passthrough`]) is a genuine tail call — the peek is the
+/// O(1) passthrough test (no mutation), the commit is *not pushing* the `Resume` frame (which
+/// eagerly drops the caller's saved env). An elided call charges **no depth and no `alloc` bytes**
+/// (§4.0: a tail iteration does not charge depth; no frame ⇒ no control-stack memory), so a tail
+/// loop runs at O(1) depth and a tail call *at* the ceiling still succeeds. A `Fix`/`FixGroup`
+/// unfold keeps its `ApplyThen` frame even in tail position — that frame does real post-work (apply
+/// the unfolded closure) — but it is popped before the follow-up closure apply, so its charge is
+/// transient and a tail `Fix` loop is **net-zero** on depth per iteration. Non-function operands
+/// (`Repr`/`Data`) keep the pre-M-996 charge-then-refuse order byte-for-byte.
+#[allow(clippy::too_many_arguments)] // the machine threads its three budgets + the TCO witness
 fn enter_apply<'b>(
     f: AotVal,
     arg: AotVal,
@@ -444,7 +580,27 @@ fn enter_apply<'b>(
     fuel: &mut u64,
     budget: &'b RecursionBudget,
     budgets: &mut Budgets,
+    tco: &mut TcoTrace,
 ) -> Result<(Rc<Anf>, Env), EvalError> {
+    // TCO peek: only a Closure apply pushes a pure-`Resume(ret)` frame, so only there can eliding
+    // the push be the identity. (`Fix`/`FixGroup` push `ApplyThen` — real post-work — and the
+    // non-function arms below must keep their charge-then-refuse order.)
+    if ret.is_tail_passthrough() && matches!(f, AotVal::Closure { .. }) {
+        let AotVal::Closure { param, body, env } = f else {
+            unreachable!("matched Closure in the tail-call peek above");
+        };
+        // Commit: elide the frame. No `try_enter` (no depth charge — §4.0), no `alloc` charge (no
+        // frame allocated). Dropping `ret` here releases the caller's saved env eagerly — the
+        // interpreter's drain-cleanup analog. NOTE (deliberate non-port of the interpreter's
+        // `LetPop` Substrate escape check): the AOT fragment's values are `Repr`/`Data`/functions —
+        // there is **no** Substrate-like affine value in `AotVal`, so an eager env drop is a plain
+        // `Rc`/`Value` release with no release-on-drain obligation to run (stated, not cargo-culted).
+        tco.record();
+        drop(ret);
+        let mut call_env = env;
+        call_env.insert(Atom::Named(param), arg);
+        return Ok((body, call_env));
+    }
     // The source-call/β frame charge: reserve one depth unit on the shared budget. The guard is moved
     // into the frame we push (released on pop), so `budget.current_depth() == stack.len()` at every
     // enter — hence `depth.get() >= depth_limit` (try_enter's refusal) is exactly the prior
@@ -582,7 +738,9 @@ enum Step {
 /// (an `ApplyThen` frame re-applies). Deep recursion is bounded by `fuel` (time) and the shared
 /// [`RecursionBudget`]'s depth ceiling (space) — both explicit graceful errors, never an abort. Each
 /// pushed [`Frame`] holds a [`DepthGuard`] borrowed from `budget`, so `budget` must outlive `stack`
-/// (RFC-0041 W3½).
+/// (RFC-0041 W3½). Tail-passthrough continuations are elided rather than pushed (TCO, M-996 — see
+/// [`enter_apply`] and the `Match` arm below), each elision recorded in `tco` (house rule #2).
+#[allow(clippy::too_many_arguments)] // the machine threads its three budgets + the TCO witness
 fn eval_machine<'b>(
     top: Rc<Anf>,
     top_env: Env,
@@ -591,6 +749,7 @@ fn eval_machine<'b>(
     fuel: &mut u64,
     budget: &'b RecursionBudget,
     budgets: &mut Budgets,
+    tco: &mut TcoTrace,
 ) -> Result<AotVal, EvalError> {
     let mut block = top;
     let mut env = top_env;
@@ -620,8 +779,9 @@ fn eval_machine<'b>(
                         FrameKind::ApplyThen { arg, cont } => {
                             // The returned value is the unfolded closure; apply it to the saved arg
                             // (its result flows to `cont`, the frame enter_apply pushes).
-                            let (nb, ne) =
-                                enter_apply(val, arg, cont, &mut stack, fuel, budget, budgets)?;
+                            let (nb, ne) = enter_apply(
+                                val, arg, cont, &mut stack, fuel, budget, budgets, tco,
+                            )?;
                             block = nb;
                             env = ne;
                             idx = 0;
@@ -721,7 +881,7 @@ fn eval_machine<'b>(
                         env: std::mem::take(&mut env),
                         name,
                     };
-                    let (nb, ne) = enter_apply(f, a, ret, &mut stack, fuel, budget, budgets)?;
+                    let (nb, ne) = enter_apply(f, a, ret, &mut stack, fuel, budget, budgets, tco)?;
                     Step::Switch(nb, ne)
                 }
                 Rhs::Match {
@@ -748,19 +908,33 @@ fn eval_machine<'b>(
                         return Err(EvalError::GuaranteeMeetUnsupported { scrutinee: g });
                     }
                     let (arm_block, arm_env) = select_arm(&scrut, alts, default.as_ref(), &env)?;
-                    // `Match` grows the control stack by one continuation frame — charge the shared
-                    // budget here too (the pre-extraction ceiling guarded this site identically), after
-                    // `select_arm` so a `NonExhaustiveMatch` still surfaces first (order preserved).
-                    let guard = budget.try_enter().map_err(depth_limit_error)?;
-                    stack.push(Frame {
-                        _guard: guard,
-                        kind: FrameKind::Resume(Cont {
-                            block: Rc::clone(&block),
-                            idx: idx + 1,
-                            env: std::mem::take(&mut env),
-                            name,
-                        }),
-                    });
+                    let cont = Cont {
+                        block: Rc::clone(&block),
+                        idx: idx + 1,
+                        env: std::mem::take(&mut env),
+                        name,
+                    };
+                    if cont.is_tail_passthrough() {
+                        // TCO (M-996): a tail-position `Match` — the arm's value IS the enclosing
+                        // block's result, so the `Resume` frame would be a pure passthrough. Elide
+                        // it: no frame, no depth charge (§4.0 — the ANF analog of the interpreter's
+                        // tail-transparent `MatchPop`; the passthrough test is checked on BOTH
+                        // settle paths — see `is_tail_passthrough`). Dropping `cont` releases the
+                        // caller env eagerly. `select_arm` still ran first, so `NonExhaustiveMatch`
+                        // and the guarantee-meet refusal surface exactly as before (order preserved).
+                        tco.record();
+                        drop(cont);
+                    } else {
+                        // `Match` grows the control stack by one continuation frame — charge the
+                        // shared budget here too (the pre-extraction ceiling guarded this site
+                        // identically), after `select_arm` so a `NonExhaustiveMatch` still surfaces
+                        // first (order preserved).
+                        let guard = budget.try_enter().map_err(depth_limit_error)?;
+                        stack.push(Frame {
+                            _guard: guard,
+                            kind: FrameKind::Resume(cont),
+                        });
+                    }
                     Step::Switch(arm_block, arm_env)
                 }
             }
@@ -812,181 +986,5 @@ pub fn run_with_layout(
                 .map_err(|e| EvalError::Swap(e.to_string()))
         }
         _ => Ok(v),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use mycelium_core::{Meta, Payload, Provenance, Repr};
-    use mycelium_interp::{EffectBudget, IdentitySwapEngine};
-
-    fn byte() -> Value {
-        Value::new(
-            Repr::Binary { width: 8 },
-            Payload::Bits(vec![true, false, true, true, false, false, true, false]),
-            Meta::exact(Provenance::Root),
-        )
-        .unwrap()
-    }
-
-    /// RFC-0041 §4.2 / W2 residual: pin the AOT env-machine `Frame`'s heap footprint under the shared
-    /// per-machine baseline ([`mycelium_workstack::MAX_FRAME_BYTES`]). The AOT `Frame` is the largest of
-    /// the three machines' frame/value structs and *set* that 384-byte baseline (it is ~336 B here, the
-    /// pre-W3½ ~328 B plus the one-pointer [`DepthGuard`]); pinning it means a field addition that grows
-    /// it past the ceiling **fails CI here, not in production** (the ADR-041 frame-size lesson). On an
-    /// intended growth, re-measure all three machines and bump `MAX_FRAME_BYTES` (a `Declared` baseline).
-    #[test]
-    fn aot_frame_size_is_pinned_under_the_shared_baseline() {
-        let frame = std::mem::size_of::<Frame<'static>>() as u64;
-        assert!(
-            frame <= mycelium_workstack::MAX_FRAME_BYTES,
-            "AOT Frame is {frame} B, over the shared MAX_FRAME_BYTES ceiling of {} B — re-measure all \
-             three machines and bump the baseline if this growth is intended (RFC-0041 §4.2)",
-            mycelium_workstack::MAX_FRAME_BYTES
-        );
-    }
-
-    #[test]
-    fn runs_a_let_op_program() {
-        // let a = byte in bit.not(a)
-        let node = Node::Let {
-            id: "a".into(),
-            bound: Box::new(Node::Const(byte())),
-            body: Box::new(Node::Op {
-                prim: "bit.not".into(),
-                args: vec![Node::Var("a".into())],
-            }),
-        };
-        let out = run(&node, &PrimRegistry::with_builtins(), &IdentitySwapEngine).unwrap();
-        let expected: Vec<bool> = match byte().payload() {
-            Payload::Bits(b) => b.iter().map(|&x| !x).collect(),
-            _ => unreachable!(),
-        };
-        assert_eq!(out.payload(), &Payload::Bits(expected));
-    }
-
-    #[test]
-    fn free_variable_is_explicit() {
-        let node = Node::Var("nope".into());
-        assert_eq!(
-            run(&node, &PrimRegistry::with_builtins(), &IdentitySwapEngine),
-            Err(EvalError::FreeVariable("nope".into()))
-        );
-    }
-
-    #[test]
-    fn applies_a_closure_in_the_env_machine() {
-        // (λx. bit.not(x)) byte  — exercises Lam capture + App + closure-body eval (M-342).
-        let node = Node::App {
-            func: Box::new(Node::Lam {
-                param: "x".into(),
-                body: Box::new(Node::Op {
-                    prim: "bit.not".into(),
-                    args: vec![Node::Var("x".into())],
-                }),
-            }),
-            arg: Box::new(Node::Const(byte())),
-        };
-        let out = run(&node, &PrimRegistry::with_builtins(), &IdentitySwapEngine).unwrap();
-        let expected: Vec<bool> = match byte().payload() {
-            Payload::Bits(b) => b.iter().map(|&x| !x).collect(),
-            _ => unreachable!(),
-        };
-        assert_eq!(out.payload(), &Payload::Bits(expected));
-    }
-
-    /// `(fix f => λx. f x) c` — unfolds forever.
-    fn spin() -> Node {
-        Node::App {
-            func: Box::new(Node::Fix {
-                name: "f".into(),
-                body: Box::new(Node::Lam {
-                    param: "x".into(),
-                    body: Box::new(Node::App {
-                        func: Box::new(Node::Var("f".into())),
-                        arg: Box::new(Node::Var("x".into())),
-                    }),
-                }),
-            }),
-            arg: Box::new(Node::Const(byte())),
-        }
-    }
-
-    #[test]
-    fn a_nonproductive_recursion_is_an_explicit_budget_error_not_an_abort() {
-        // M-347: with the trampoline the env-machine is O(1) host stack, so even at a HUGE fuel this
-        // is a graceful explicit budget error (the depth ceiling or fuel — whichever first), never a
-        // host-stack abort and never a hang. (Pre-trampoline, fuel this large overflowed the stack.)
-        let r = run_core_with_fuel(
-            &spin(),
-            &PrimRegistry::with_builtins(),
-            &IdentitySwapEngine,
-            50_000_000,
-        );
-        assert!(
-            matches!(
-                r,
-                Err(EvalError::DepthLimit { .. }) | Err(EvalError::FuelExhausted)
-            ),
-            "expected a graceful budget error, got {r:?}"
-        );
-    }
-
-    #[test]
-    fn the_depth_ceiling_is_an_explicit_graceful_error() {
-        // With a small control-stack ceiling and ample fuel, deep recursion hits the *depth* budget
-        // first — an explicit DepthLimit (the space analogue of fuel), never a host-stack abort.
-        let r = run_core_with_budget(
-            &spin(),
-            &PrimRegistry::with_builtins(),
-            &IdentitySwapEngine,
-            1_000_000, // fuel ≫ depth, so the depth ceiling bites first
-            64,
-        );
-        assert_eq!(r, Err(EvalError::DepthLimit { limit: 64 }));
-    }
-
-    #[test]
-    fn a_declared_alloc_effect_budget_overruns_gracefully_at_runtime() {
-        // RFC-0014 §4.8 (completed): the recovery `Budgets` ledger is now wired into the env-machine's
-        // budget enforcement. A declared `alloc` effect budget bounds control-stack *memory* (the
-        // opt-in sibling of the depth ceiling) and an overrun is the unified, graceful
-        // `EvalError::EffectBudget` — the runtime-path extension of the RFC-0014 I4 bounded-overrun
-        // test, on the *same* channel as `FuelExhausted`/`DepthLimit`, never an OOM/hang.
-        let frames = 10u64; // allow 10 frames' worth of alloc, then the 11th frame overruns
-        let mut budgets =
-            Budgets::new().with(EffectBudget::Bytes(frames * DEFAULT_PER_FRAME_BYTES));
-        let r = run_core_with_effects(
-            &spin(),
-            &PrimRegistry::with_builtins(),
-            &IdentitySwapEngine,
-            1_000_000, // fuel ≫ alloc budget
-            1_000_000, // depth ceiling ≫ alloc budget, so the *effect* budget bites first
-            &mut budgets,
-        );
-        match r {
-            Err(EvalError::EffectBudget(e)) => {
-                assert_eq!(e.kind, EffectKind::Alloc);
-                assert_eq!(e.requested, DEFAULT_PER_FRAME_BYTES);
-                assert_eq!(e.remaining, 0);
-            }
-            other => panic!("expected a graceful EffectBudget overrun, got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn an_absent_alloc_budget_leaves_runtime_behaviour_unchanged() {
-        // I5 (opt-in): the default empty ledger declares no `alloc` budget, so the env-machine charges
-        // nothing and the depth ceiling remains the sole space guard — identical to pre-§4.8 behaviour.
-        let r = run_core_with_effects(
-            &spin(),
-            &PrimRegistry::with_builtins(),
-            &IdentitySwapEngine,
-            1_000_000,
-            64,
-            &mut Budgets::new(),
-        );
-        assert_eq!(r, Err(EvalError::DepthLimit { limit: 64 }));
     }
 }

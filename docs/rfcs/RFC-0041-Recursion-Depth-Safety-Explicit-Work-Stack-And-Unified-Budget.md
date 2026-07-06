@@ -482,6 +482,32 @@ implementation. **4 Critical + 15 High source-confirmed** objections, all resolv
 
 ## Meta — changelog
 
+- **2026-07-06 — M-996 landed: AOT env-machine TCO — the §5.1 family-parity convergence
+  (maintainer-authorized behavior change; append-only, no status move).** Resolves the tracked
+  decision from the entry below. The AOT env-machine (`aot.rs::run_core`) now elides tail frames,
+  closing the parity gap the §4.6 interpreter amendment opened (same program, same budget:
+  interpreted Ok vs AOT `DepthLimit` — a live §5.1 violation of the §4.0 metric, on the
+  full-calculus AOT leg Stage-6's three-way requires). **Authorization basis (recorded in DN-56's
+  2026-07-06 posture row + the M-996 body):** the owner approved the two — and only two — outcome
+  shifts: deep-tail `DepthLimit → Ok`, divergent-tail `DepthLimit → FuelExhausted` (convergence with
+  the interpreter; fuel is the designed non-termination backstop; the graceful ceiling stays pinned
+  via the non-tail witness, which doubles as the no-over-elision guard). **Machine-appropriate
+  implementation:** in the ANF machine, tail-transparency is intrinsic to the continuation (a
+  passthrough `Resume` — block complete ∧ `result()` = bound name), so the elision is *not pushing*
+  the frame (caller env dropped eagerly); `ApplyThen` (`Fix` unfold) is never elided; no
+  Substrate-like values exist in the AOT fragment; elided calls take no depth guard (§4.0 —
+  guard-leak pinned). **Observable per the no-black-boxes rule:** a `TcoTrace{total_elided}` analog
+  threaded through the machine and asserted in tests (≥10,000 elisions on the 10k loop); the missing
+  *user-facing* EXPLAIN surface for AOT traces is minted as **M-998**, not silently skipped.
+  **Corollary recorded (never silent):** with a declared `alloc` budget, elided tail frames charge
+  no alloc bytes — §4.0's "no frame ⇒ no control-stack memory" applied to the alloc sibling; the
+  `Fix` frames still charge and the existing alloc-overrun pin passes unmodified. Verified: 267
+  `mycelium-mlir` lib tests + all differentials green with **no expectation edits beyond the
+  enumerated divergent-tail family**; reverse-dependents green (`mycelium-l1` 991/0 — the canonical
+  non-tail `DepthLimit{4096}` pin unmoved; `std-conformance` 293/0); L0-interp ≡ AOT deep-tail
+  parity witness green (all three machines now agree). Flagged follow-on: an explicit combined
+  L1↔AOT case in `depth_metric_parity.rs`. **M-996 → done.** RFC-0041 stays **Enacted**.
+  (M-996/M-998; E18-1-adjacent; VR-5/G2.)
 - **2026-07-06 — AOT parity for the M-994 perf wins: (b) landed via §6, (a) is a tracked decision
   (append-only, no status move; M-995/M-996).** Applying the M-994 evaluator wins to the AOT
   (`mycelium-mlir`, the perf path — **not** in the DN-56 freeze scope; the frozen `mycelium_core`

@@ -11,6 +11,43 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### M-996 — AOT env-machine TCO: tail frames elided, observably (maintainer-authorized) (2026-07-06)
+
+Completes the cross-machine convergence of the M-994 arc: the AOT env-machine
+(`aot.rs::run_core`) now elides tail frames, closing the §5.1 family-parity gap fix (a) opened
+(the same program at the same budget succeeded interpreted but refused `DepthLimit` on the AOT
+env-machine — the full-calculus AOT leg that Stage-6's three-way and the M-993 "(c) fallback" run on).
+
+- **Machine-appropriate shape (not a copy of the interpreter's):** in the ANF env-machine,
+  tail-transparency is an *intrinsic O(1) property of the continuation* — a `Resume(Cont)` whose
+  block is complete and whose `result()` is exactly the bound name is a pure passthrough (settle
+  binds, then passes the same value up unconditionally). So the "peek" is that test at push time and
+  the "commit" is **not pushing** the frame (eagerly dropping the caller's saved env — the drain
+  analog). No transparent frame ever enters the stack. `ApplyThen` (the `Fix` unfold) has real
+  post-work and is never elided. No Substrate-like affine values exist in the AOT fragment (stated,
+  not cargo-culted). Depth accounting per §4.0: elided calls never take a depth guard (a tail call
+  *at* the ceiling succeeds; a guard-leak pin proves net-zero).
+- **Observable, per the no-black-boxes rule:** a `TcoTrace { total_elided }` counter threaded through
+  the machine (the interpreter's `TcoTrace` analog), asserted in the deep-loop test
+  (`count(10_000)` @ depth 64 → `Ok(0)`, ≥10,000 elisions). A **user-facing** EXPLAIN surface for
+  AOT traces does not exist yet — minted as **M-998**, not silently skipped.
+- **Behavior shifts — exactly the two authorized (maintainer, 2026-07-06):** deep-tail
+  `DepthLimit → Ok(value)`, divergent-tail `DepthLimit → FuelExhausted` (convergence with the
+  interpreter's long-standing behavior; the graceful-ceiling property stays pinned via the **non-tail**
+  witness, which doubles as the no-over-elision guard). Everything terminating is byte-identical:
+  267 `mycelium-mlir` lib tests + all differentials green; reverse-dependents untouched and green
+  (`mycelium-l1` 991/0 incl. the canonical `DepthLimit{4096}` non-tail pin; `std-conformance` 293/0).
+  **Parity witness:** `countdown(10_000)` now agrees L0-interp ≡ AOT env-machine (same value +
+  guarantee) — with the L1 pin of the same shape, all three machines agree. An explicit combined
+  L1↔AOT deep-tail case in `depth_metric_parity.rs` is a flagged follow-on (M-996 note).
+- **Corollary, recorded not hidden:** with a *declared* `alloc` effect budget, elided tail frames
+  charge no alloc bytes — the §4.0 principle (no frame ⇒ no control-stack memory) applied to the
+  alloc sibling; a deep tail loop that would have overrun a declared ledger via its `Resume` frames
+  may now complete (the `Fix` `ApplyThen` frames still charge; the existing alloc-overrun pin passes
+  unmodified).
+- Measured (debug, `Empirical`): `count(500)` @ depth 1000 `DepthLimit{1000}` → `Ok(0)`; ~36% less
+  frame churn on a 30k-iteration loop (1.13s → 0.72s).
+
 ### M-995 — AOT env-machine value structural-sharing (the M-987 perf win on the AOT path) (2026-07-06)
 
 Carries the M-994 (b) win to the **AOT** (`mycelium-mlir`), since it enhances runtime performance
