@@ -445,8 +445,10 @@ fn is_tail_passthrough_requires_result_to_be_the_bound_name() {
     use mycelium_core::lower::{lower_to_anf, Atom};
     use std::rc::Rc;
 
-    let block = Rc::new(lower_to_anf(&Node::Const(byte())));
-    let done = block.bindings().len();
+    // M-999: the machine now runs the prepared (`Rc`-shared) mirror of the lowered ANF; the pinned
+    // passthrough property is unchanged — only the block handle type moved (`Anf` -> `Code`).
+    let block = Code::prepare(&lower_to_anf(&Node::Const(byte())));
+    let done = block.bindings_len();
     let result_name = block.result().clone();
 
     // Completed block + result IS the bound name → a genuine passthrough (elide).

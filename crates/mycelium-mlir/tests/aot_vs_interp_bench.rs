@@ -306,9 +306,12 @@ fn time_aot(prog: &Node, prims: &PrimRegistry) -> f64 {
 fn time_l1(src: &str) -> f64 {
     let nod = parse(src).unwrap_or_else(|e| panic!("parse failed: {e:?}"));
     let checked = check_nodule(&nod).unwrap_or_else(|e| panic!("check failed: {e:?}"));
-    let mono = monomorphize(&checked, "main").unwrap_or_else(|e| panic!("monomorphize failed: {e:?}"));
+    let mono =
+        monomorphize(&checked, "main").unwrap_or_else(|e| panic!("monomorphize failed: {e:?}"));
     let t0 = Instant::now();
-    let r = Evaluator::new(&mono).with_fuel(50_000_000_000).call("main", vec![]);
+    let r = Evaluator::new(&mono)
+        .with_fuel(50_000_000_000)
+        .call("main", vec![]);
     let d = t0.elapsed().as_secs_f64();
     r.unwrap_or_else(|e| panic!("L1 eval failed: {e}"));
     d
@@ -350,7 +353,10 @@ fn m999_env_machine_vs_interpreter_ordering() {
     let prims = PrimRegistry::with_builtins();
 
     println!("\n== M-999 ordering witness ({profile} build; Empirical, single trials) ==");
-    println!("  {:<14} {:>7} {:>12} {:>16} {:>12}", "workload", "n", "L1 interp", "AOT env-machine", "interp/AOT");
+    println!(
+        "  {:<14} {:>7} {:>12} {:>16} {:>12}",
+        "workload", "n", "L1 interp", "AOT env-machine", "interp/AOT"
+    );
     let mut l1_pts: Vec<(u32, f64)> = Vec::new();
     let mut aot_pts: Vec<(u32, f64)> = Vec::new();
     for &n in &sizes {
@@ -358,7 +364,11 @@ fn m999_env_machine_vs_interpreter_ordering() {
         let taot = time_aot(&aot_snoc_program(n), &prims);
         println!(
             "  {:<14} {:>7} {:>10.4} s {:>14.4} s {:>11.2}x",
-            "snoc/build", n, tl1, taot, tl1 / taot
+            "snoc/build",
+            n,
+            tl1,
+            taot,
+            tl1 / taot
         );
         l1_pts.push((n, tl1));
         aot_pts.push((n, taot));
@@ -367,7 +377,11 @@ fn m999_env_machine_vs_interpreter_ordering() {
     let taot = time_aot(&aot_count_program(count_n), &prims);
     println!(
         "  {:<14} {:>7} {:>10.4} s {:>14.4} s {:>11.2}x",
-        "tail count", count_n, tl1, taot, tl1 / taot
+        "tail count",
+        count_n,
+        tl1,
+        taot,
+        tl1 / taot
     );
     if let (Some(p1), Some(p2)) = (fit_exponent(&l1_pts), fit_exponent(&aot_pts)) {
         let (lo, hi) = (l1_pts.first().unwrap().0, l1_pts.last().unwrap().0);

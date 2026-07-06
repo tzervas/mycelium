@@ -40,17 +40,24 @@
 //! Non-tail calls are byte-for-byte unchanged and still refuse at the depth ceiling. Every elision
 //! is counted in the [`TcoTrace`] witness (house rule #2: never a silent optimization).
 //!
+//! **Environment representation (M-999).** The environment is a mutable **top segment** over an
+//! `Rc`-shared chain of **frozen frames** ([`Env`]/[`EnvFrame`]) — capture (closure/`Fix`/match
+//! arm) is an O(1)-amortized snapshot, not the former whole-`HashMap` clone, which was the
+//! measured constant-factor gap to the L1 interpreter (`tests/aot_vs_interp_bench.rs` records the
+//! before/after ordering table, `Empirical`). Lookup walks newest-first (innermost binding wins —
+//! observably the map's insert-overwrite); the frozen chain tears down iteratively (never-silent
+//! G2, like [`AotDatum`]).
+//!
 //! **Submodule confinement (DN-21 §5 F-2):** zero `unsafe` — compiler-enforced; the crate's
 //! only `unsafe` is the dynamic-linking FFI in `jit`/`bitnet`/`specialize`.
 #![forbid(unsafe_code)]
 
-use std::collections::HashMap;
 use std::rc::Rc;
 
 use mycelium_core::lower::{self, Anf, AnfAlt, Atom, Rhs};
 use mycelium_core::{
-    CoreValue, CtorRef, Datum, GuaranteeStrength, Node, PackScheme, Payload, PhysicalLayout, Repr,
-    Value,
+    ContentHash, CoreValue, CtorRef, Datum, GuaranteeStrength, Node, PackScheme, Payload,
+    PhysicalLayout, Repr, Value,
 };
 use mycelium_interp::{Budgets, EffectKind, EvalError, PrimRegistry, SwapEngine};
 use mycelium_workstack::{ensure_sufficient_stack, BudgetError, DepthGuard, RecursionBudget};
@@ -116,16 +123,17 @@ enum AotVal {
     /// on [`AotDatum`] (not `AotVal`), so `AotVal` stays freely movable while a deep spine still tears
     /// down without overflowing the host stack (never-silent G2).
     Data(Rc<AotDatum>),
-    /// A lambda closure: parameter, body block, and the captured environment.
+    /// A lambda closure: parameter, body block (a shared handle into the prepared program —
+    /// M-999), and the captured environment.
     Closure {
         param: String,
-        body: Rc<Anf>,
+        body: Rc<Code>,
         env: Env,
     },
     /// A `Fix` suspension: unfolds on application under the fuel clock.
     Fix {
         name: String,
-        body: Rc<Anf>,
+        body: Rc<Code>,
         env: Env,
     },
     /// A mutual-recursion group member (RFC-0001 r5): on application it re-binds every member name to
@@ -133,7 +141,7 @@ enum AotVal {
     /// clock — the env-machine analogue of the interpreter's `FixGroup` focus unfold.
     FixGroup {
         /// All members of the group, shared across the per-member suspensions.
-        defs: Rc<Vec<(String, Anf)>>,
+        defs: Rc<Vec<(String, Rc<Code>)>>,
         /// Which member this suspension resolves to on application.
         which: String,
         /// The environment captured at the group's binding site.
@@ -269,13 +277,288 @@ impl Drop for AotDatum {
     }
 }
 
-type Env = HashMap<Atom, AotVal>;
+/// One **frozen** segment of an environment, shared by `Rc`: the bindings captured up to some
+/// snapshot point, plus the (also frozen) parent chain below them. Frames are immutable after
+/// construction — sharing one is an O(1) refcount bump, never a copy (M-999).
+struct EnvFrame {
+    /// The segment's bindings, oldest-first (lookup scans newest-first for innermost-wins).
+    bindings: Vec<(Atom, AotVal)>,
+    /// The frozen chain this segment extends (`None` at the root).
+    parent: Option<Rc<EnvFrame>>,
+}
+
+impl Drop for EnvFrame {
+    /// **Iterative** teardown of the frozen parent *chain* (never-silent G2), mirroring
+    /// [`AotDatum`]'s drop: a chain of uniquely-owned frames would otherwise drop recursively,
+    /// one host-stack frame per env frame. Chain length is lexically bounded in practice (one
+    /// frame per capture point executed in a block — program-text, not input, sized), but the
+    /// iterative form makes that a non-assumption. Each still-uniquely-owned parent is unlinked
+    /// onto a loop before its shell drops; a **shared** parent (`Rc` strong-count > 1) is left
+    /// for its last owner. Bindings holding *nested closures* (a closure whose env holds a
+    /// closure …) still unwind by bounded reentrancy through `AotVal` — the same pre-existing
+    /// property the `HashMap` env had; this `Drop` addresses the new linear chain only.
+    fn drop(&mut self) {
+        let mut next = self.parent.take();
+        while let Some(rc) = next {
+            match Rc::into_inner(rc) {
+                // We are the last owner: unlink its parent into the loop, then let the
+                // now-chainless shell drop (its own Drop sees `parent == None` — no recursion).
+                Some(mut frame) => next = frame.parent.take(),
+                // Shared tail — another owner keeps it alive; its final drop handles it.
+                None => break,
+            }
+        }
+    }
+}
+
+/// The env-machine environment (M-999): a small **mutable top** segment (the bindings made since
+/// the last capture) over an `Rc`-shared chain of **frozen** [`EnvFrame`]s. This replaces the
+/// former `HashMap<Atom, AotVal>` whose *whole-map clone* at every closure capture, `Fix`/
+/// `FixGroup` suspension, match-arm entry, and function-value lookup was the measured constant-
+/// factor gap between the env-machine and the L1 interpreter (the M-995 report's residual;
+/// baseline in `tests/aot_vs_interp_bench.rs`):
+/// - [`Env::insert`] is a `Vec` push (amortized O(1); shadowing = later entry wins on lookup,
+///   observably identical to the map's overwrite);
+/// - [`Env::snapshot`] (capture) freezes the top segment into a shared frame — **O(1) amortized**
+///   (each binding is moved into a frozen frame at most once), where the map clone was O(live
+///   bindings) *per capture*;
+/// - [`Env::get`] scans the top newest-first, then walks the frozen chain — innermost binding
+///   wins, exactly the map-insert-overwrite semantics; cost is bounded by lexical scope size
+///   (the same discipline as the L1 interpreter's `scope: Vec<(String, L1Value)>` scan).
+#[derive(Clone, Default)]
+struct Env {
+    /// Bindings made since the last snapshot, oldest-first (mutable working segment).
+    top: Vec<(Atom, AotVal)>,
+    /// The frozen, shared tail (`None` at the root).
+    parent: Option<Rc<EnvFrame>>,
+}
+
+impl Env {
+    /// An empty environment.
+    fn new() -> Self {
+        Env::default()
+    }
+
+    /// Bind `name := val` — a push; an existing binding of the same name is *shadowed* (lookup
+    /// returns the newest), which is observably the former map's insert-overwrite.
+    fn insert(&mut self, name: Atom, val: AotVal) {
+        self.top.push((name, val));
+    }
+
+    /// The innermost binding of `a`, if any: scan the mutable top newest-first, then each frozen
+    /// frame newest-first down the chain.
+    fn get(&self, a: &Atom) -> Option<&AotVal> {
+        if let Some((_, v)) = self.top.iter().rev().find(|(n, _)| n == a) {
+            return Some(v);
+        }
+        let mut frame = self.parent.as_deref();
+        while let Some(f) = frame {
+            if let Some((_, v)) = f.bindings.iter().rev().find(|(n, _)| n == a) {
+                return Some(v);
+            }
+            frame = f.parent.as_deref();
+        }
+        None
+    }
+
+    /// Capture the current environment by value — the O(1)-amortized replacement for the former
+    /// whole-map clone. A non-empty top segment is **frozen** in place (moved into a new shared
+    /// [`EnvFrame`]; `self` keeps evaluating on a fresh empty top over that frame), then the
+    /// capture is just an `Rc` bump of the frozen chain. Every captured `Env` therefore has an
+    /// empty top, so cloning a captured value (`AotVal::Closure`/`Fix`/`FixGroup` in [`lookup`])
+    /// stays O(1) too.
+    fn snapshot(&mut self) -> Env {
+        if !self.top.is_empty() {
+            let frame = Rc::new(EnvFrame {
+                bindings: std::mem::take(&mut self.top),
+                parent: self.parent.take(),
+            });
+            self.parent = Some(frame);
+        }
+        Env {
+            top: Vec::new(),
+            parent: self.parent.clone(),
+        }
+    }
+}
 
 fn lookup(env: &Env, a: &Atom) -> Result<AotVal, EvalError> {
     env.get(a).cloned().ok_or_else(|| match a {
         Atom::Named(x) => EvalError::FreeVariable(x.clone()),
         Atom::Temp(k) => EvalError::FreeVariable(format!("%{k}")),
     })
+}
+
+/// The **prepared program** (M-999): the lowered [`Anf`] mirrored **once** at entry into an
+/// `Rc`-shared crate-local form, so every nested body a running program re-enters — a `Lam`/`Fix`
+/// body, a match arm/default, a `FixGroup` member — is an **O(1) `Rc::clone` handle**, not a deep
+/// clone of the subtree. Under the old shape the machine deep-cloned program text *per
+/// execution* (`Rc::new(body.clone())` on every closure-binding evaluation and every selected
+/// match arm — O(subtree) each, every loop iteration), which — together with the `HashMap` env
+/// clone — was the measured constant-factor loss to the L1 interpreter, whose walker borrows
+/// `&Node` and never clones code (`tests/aot_vs_interp_bench.rs`). The mirror costs one
+/// O(program-text) pass (recursive over lexical nesting, exactly like `lower_to_anf` itself,
+/// inside the same `ensure_sufficient_stack` guard); semantics are untouched — this is the same
+/// tree, shared instead of re-copied.
+pub(crate) struct Code {
+    bindings: Vec<CodeBinding>,
+    result: Atom,
+}
+
+/// One prepared binding: the lowered [`lower::Binding`] minus the `layout` field (scheduling
+/// metadata the env-machine never reads — the LLVM backend consumes it from the `Anf` directly).
+struct CodeBinding {
+    name: Atom,
+    rhs: CodeRhs,
+}
+
+/// The prepared [`Rhs`]: identical shape, with nested blocks behind [`Rc<Code>`].
+enum CodeRhs {
+    Const(Value),
+    Alias(Atom),
+    Op {
+        prim: String,
+        args: Vec<Atom>,
+    },
+    Swap {
+        src: Atom,
+        target: Repr,
+        policy: ContentHash,
+    },
+    Construct {
+        ctor: CtorRef,
+        args: Vec<Atom>,
+    },
+    App {
+        func: Atom,
+        arg: Atom,
+    },
+    Lam {
+        param: String,
+        body: Rc<Code>,
+    },
+    Fix {
+        name: String,
+        body: Rc<Code>,
+    },
+    FixGroup {
+        defs: Rc<Vec<(String, Rc<Code>)>>,
+        which: String,
+    },
+    Match {
+        scrutinee: Atom,
+        alts: Vec<CodeAlt>,
+        default: Option<Rc<Code>>,
+    },
+}
+
+/// The prepared [`AnfAlt`]: identical shape, arm bodies behind [`Rc<Code>`].
+enum CodeAlt {
+    Ctor {
+        ctor: CtorRef,
+        binders: Vec<String>,
+        body: Rc<Code>,
+    },
+    Lit {
+        value: Value,
+        body: Rc<Code>,
+    },
+}
+
+impl Code {
+    /// Mirror a lowered block into the shared form (one deep pass; see the type-level doc).
+    pub(crate) fn prepare(anf: &Anf) -> Rc<Code> {
+        let bindings = anf
+            .bindings()
+            .iter()
+            .map(|b| CodeBinding {
+                name: b.name.clone(),
+                rhs: match &b.rhs {
+                    Rhs::Const(v) => CodeRhs::Const(v.clone()),
+                    Rhs::Alias(a) => CodeRhs::Alias(a.clone()),
+                    Rhs::Op { prim, args } => CodeRhs::Op {
+                        prim: prim.clone(),
+                        args: args.clone(),
+                    },
+                    Rhs::Swap {
+                        src,
+                        target,
+                        policy,
+                    } => CodeRhs::Swap {
+                        src: src.clone(),
+                        target: target.clone(),
+                        policy: policy.clone(),
+                    },
+                    Rhs::Construct { ctor, args } => CodeRhs::Construct {
+                        ctor: ctor.clone(),
+                        args: args.clone(),
+                    },
+                    Rhs::App { func, arg } => CodeRhs::App {
+                        func: func.clone(),
+                        arg: arg.clone(),
+                    },
+                    Rhs::Lam { param, body } => CodeRhs::Lam {
+                        param: param.clone(),
+                        body: Code::prepare(body),
+                    },
+                    Rhs::Fix { name, body } => CodeRhs::Fix {
+                        name: name.clone(),
+                        body: Code::prepare(body),
+                    },
+                    Rhs::FixGroup { defs, which } => CodeRhs::FixGroup {
+                        defs: Rc::new(
+                            defs.iter()
+                                .map(|(n, d)| (n.clone(), Code::prepare(d)))
+                                .collect(),
+                        ),
+                        which: which.clone(),
+                    },
+                    Rhs::Match {
+                        scrutinee,
+                        alts,
+                        default,
+                    } => CodeRhs::Match {
+                        scrutinee: scrutinee.clone(),
+                        alts: alts
+                            .iter()
+                            .map(|alt| match alt {
+                                AnfAlt::Ctor {
+                                    ctor,
+                                    binders,
+                                    body,
+                                } => CodeAlt::Ctor {
+                                    ctor: ctor.clone(),
+                                    binders: binders.clone(),
+                                    body: Code::prepare(body),
+                                },
+                                AnfAlt::Lit { value, body } => CodeAlt::Lit {
+                                    value: value.clone(),
+                                    body: Code::prepare(body),
+                                },
+                            })
+                            .collect(),
+                        default: default.as_ref().map(Code::prepare),
+                    },
+                },
+            })
+            .collect();
+        Rc::new(Code {
+            bindings,
+            result: anf.result().clone(),
+        })
+    }
+
+    /// The number of bindings in this block (white-box test access — fields stay module-private).
+    #[cfg(test)]
+    pub(crate) fn bindings_len(&self) -> usize {
+        self.bindings.len()
+    }
+
+    /// The block's result atom (white-box test access).
+    #[cfg(test)]
+    pub(crate) fn result(&self) -> &Atom {
+        &self.result
+    }
 }
 
 /// Coerce an [`AotVal`] to a representation [`Value`] (for an `Op`/`Swap` operand): a datum or a
@@ -406,7 +689,9 @@ fn run_core_impl(
     let sizing = RecursionBudget::new(depth_limit, u64::MAX, u64::MAX);
     ensure_sufficient_stack(&sizing, move || {
         let budget = RecursionBudget::new(depth_limit, u64::MAX, u64::MAX);
-        let top = Rc::new(lower::lower_to_anf(node));
+        // Lower, then mirror ONCE into the `Rc`-shared prepared form (M-999): both passes are
+        // O(program text) and recursive over the same lexical nesting, inside this stack guard.
+        let top = Code::prepare(&lower::lower_to_anf(node));
         let mut fuel = fuel;
         let result = eval_machine(
             top,
@@ -434,7 +719,7 @@ pub fn run(node: &Node, prims: &PrimRegistry, swap: &dyn SwapEngine) -> Result<V
 
 /// A continuation: where to bind a returned value and resume. The reified caller context.
 pub(crate) struct Cont {
-    block: Rc<Anf>,
+    block: Rc<Code>,
     idx: usize,
     env: Env,
     name: Atom,
@@ -469,13 +754,13 @@ impl Cont {
     /// the wrong value). Pinned directly by the white-box unit test
     /// `tests::aot::is_tail_passthrough_requires_result_to_be_the_bound_name`.
     pub(crate) fn is_tail_passthrough(&self) -> bool {
-        self.idx >= self.block.bindings().len() && *self.block.result() == self.name
+        self.idx >= self.block.bindings.len() && self.block.result == self.name
     }
 
     /// Test-only constructor for the white-box `is_tail_passthrough` pin (PR #1193 review) —
     /// builds a `Cont` with an empty env without exposing the private `Env`/`AotVal` types.
     #[cfg(test)]
-    pub(crate) fn probe(block: Rc<Anf>, idx: usize, name: Atom) -> Self {
+    pub(crate) fn probe(block: Rc<Code>, idx: usize, name: Atom) -> Self {
         Cont {
             block,
             idx,
@@ -581,7 +866,7 @@ fn enter_apply<'b>(
     budget: &'b RecursionBudget,
     budgets: &mut Budgets,
     tco: &mut TcoTrace,
-) -> Result<(Rc<Anf>, Env), EvalError> {
+) -> Result<(Rc<Code>, Env), EvalError> {
     // TCO peek: only a Closure apply pushes a pure-`Resume(ret)` frame, so only there can eliding
     // the push be the identity. (`Fix`/`FixGroup` push `ApplyThen` — real post-work — and the
     // non-function arms below must keep their charge-then-refuse order.)
@@ -631,6 +916,8 @@ fn enter_apply<'b>(
                 _guard: guard,
                 kind: FrameKind::ApplyThen { arg, cont: ret },
             });
+            // A captured env (built by `Env::snapshot`) always has an empty top segment, so this
+            // clone — like the `FixGroup` clones below — is an O(1) `Rc` bump (M-999).
             let selfval = AotVal::Fix {
                 name: name.clone(),
                 body: Rc::clone(&body),
@@ -663,7 +950,9 @@ fn enter_apply<'b>(
             let body = defs
                 .iter()
                 .find(|(n, _)| *n == which)
-                .map(|(_, b)| Rc::new(b.clone()))
+                // M-999: the member body is already a prepared shared block — an O(1) handle,
+                // not a per-unfold deep clone of the member's subtree.
+                .map(|(_, b)| Rc::clone(b))
                 .ok_or(EvalError::FreeVariable(which))?;
             Ok((body, unfold_env))
         }
@@ -676,13 +965,13 @@ fn enter_apply<'b>(
 /// match + no default is an explicit [`EvalError::NonExhaustiveMatch`].
 fn select_arm(
     scrut: &AotVal,
-    alts: &[AnfAlt],
-    default: Option<&Anf>,
-    env: &Env,
-) -> Result<(Rc<Anf>, Env), EvalError> {
+    alts: &[CodeAlt],
+    default: Option<&Rc<Code>>,
+    env: &mut Env,
+) -> Result<(Rc<Code>, Env), EvalError> {
     for alt in alts {
         match alt {
-            AnfAlt::Ctor {
+            CodeAlt::Ctor {
                 ctor,
                 binders,
                 body,
@@ -698,27 +987,33 @@ fn select_arm(
                                 ),
                             });
                         }
-                        let mut arm_env = env.clone();
+                        // M-999: entering an arm captures the env by O(1) snapshot (formerly a
+                        // whole-map clone per match). Binder pushes shadow in the arm env only —
+                        // the caller's env (taken for the `Cont` after this returns) never sees
+                        // them, exactly as the clone-then-insert did.
+                        let mut arm_env = env.snapshot();
                         for (binder, field) in binders.iter().zip(d.fields.iter()) {
                             // The M-994 (b) win: binding a field is an O(1) `AotVal::clone` (a refcount
                             // bump on the shared sub-tree), not a deep copy out of a `Vec<CoreValue>`.
                             arm_env.insert(Atom::Named(binder.clone()), field.clone());
                         }
-                        return Ok((Rc::new(body.clone()), arm_env));
+                        // M-999: the arm body is a prepared shared block — an O(1) handle, not a
+                        // per-match deep clone of the arm's subtree.
+                        return Ok((Rc::clone(body), arm_env));
                     }
                 }
             }
-            AnfAlt::Lit { value, body } => {
+            CodeAlt::Lit { value, body } => {
                 if let AotVal::Repr(rv) = scrut {
                     if rv.repr() == value.repr() && rv.payload() == value.payload() {
-                        return Ok((Rc::new(body.clone()), env.clone()));
+                        return Ok((Rc::clone(body), env.snapshot()));
                     }
                 }
             }
         }
     }
     match default {
-        Some(d) => Ok((Rc::new(d.clone()), env.clone())),
+        Some(d) => Ok((Rc::clone(d), env.snapshot())),
         None => Err(EvalError::NonExhaustiveMatch),
     }
 }
@@ -729,7 +1024,7 @@ fn select_arm(
 #[allow(clippy::large_enum_variant)]
 enum Step {
     Bind(Atom, AotVal),
-    Switch(Rc<Anf>, Env),
+    Switch(Rc<Code>, Env),
 }
 
 /// The trampoline: iterate over blocks with an explicit control stack, so object-level recursion
@@ -742,7 +1037,7 @@ enum Step {
 /// [`enter_apply`] and the `Match` arm below), each elision recorded in `tco` (house rule #2).
 #[allow(clippy::too_many_arguments)] // the machine threads its three budgets + the TCO witness
 fn eval_machine<'b>(
-    top: Rc<Anf>,
+    top: Rc<Code>,
     top_env: Env,
     prims: &PrimRegistry,
     swap: &dyn SwapEngine,
@@ -757,9 +1052,9 @@ fn eval_machine<'b>(
     let mut stack: Vec<Frame<'b>> = Vec::new();
 
     loop {
-        if idx >= block.bindings().len() {
+        if idx >= block.bindings.len() {
             // Block complete: produce its result and resume the top control-stack frame.
-            let val = lookup(&env, block.result())?;
+            let val = lookup(&env, &block.result)?;
             match stack.pop() {
                 None => return Ok(val),
                 Some(Frame { _guard, kind }) => {
@@ -795,12 +1090,12 @@ fn eval_machine<'b>(
         // Evaluate binding `idx`. Compute an owned `Step` inside a scope that borrows `block`, so we
         // can reassign `block`/`env` afterwards without an outstanding borrow.
         let step: Step = {
-            let binding = &block.bindings()[idx];
+            let binding = &block.bindings[idx];
             let name = binding.name.clone();
             match &binding.rhs {
-                Rhs::Const(v) => Step::Bind(name, AotVal::Repr(v.clone())),
-                Rhs::Alias(a) => Step::Bind(name, lookup(&env, a)?),
-                Rhs::Op { prim, args } => {
+                CodeRhs::Const(v) => Step::Bind(name, AotVal::Repr(v.clone())),
+                CodeRhs::Alias(a) => Step::Bind(name, lookup(&env, a)?),
+                CodeRhs::Op { prim, args } => {
                     let vals: Vec<Value> = args
                         .iter()
                         .map(|a| as_repr_value(lookup(&env, a)?))
@@ -811,7 +1106,7 @@ fn eval_machine<'b>(
                         .ok_or_else(|| EvalError::UnknownPrim(prim.clone()))?;
                     Step::Bind(name, AotVal::Repr(f(prim, &refs)?))
                 }
-                Rhs::Swap {
+                CodeRhs::Swap {
                     src,
                     target,
                     policy,
@@ -819,7 +1114,7 @@ fn eval_machine<'b>(
                     let s = as_repr_value(lookup(&env, src)?)?;
                     Step::Bind(name, AotVal::Repr(swap.swap(&s, target, policy)?))
                 }
-                Rhs::Construct { ctor, args } => {
+                CodeRhs::Construct { ctor, args } => {
                     // Build the datum from the *shared* `AotVal` fields directly — each looked-up field
                     // is an O(1) clone, and `Rc`-wrapping the field vector is the whole per-node cost
                     // (no `Vec<CoreValue>` materialisation). A function-valued field is rejected here,
@@ -848,31 +1143,36 @@ fn eval_machine<'b>(
                         })),
                     )
                 }
-                Rhs::Lam { param, body } => Step::Bind(
+                // M-999: closure/suspension capture is an O(1) `Env::snapshot` (freeze + share),
+                // formerly a whole-`HashMap` clone per capture, and the body is an O(1) handle
+                // into the prepared program, formerly a per-execution deep clone of the subtree —
+                // together the measured constant-factor gap to the interpreter
+                // (`tests/aot_vs_interp_bench.rs`).
+                CodeRhs::Lam { param, body } => Step::Bind(
                     name,
                     AotVal::Closure {
                         param: param.clone(),
-                        body: Rc::new(body.clone()),
-                        env: env.clone(),
+                        body: Rc::clone(body),
+                        env: env.snapshot(),
                     },
                 ),
-                Rhs::Fix { name: fname, body } => Step::Bind(
+                CodeRhs::Fix { name: fname, body } => Step::Bind(
                     name,
                     AotVal::Fix {
                         name: fname.clone(),
-                        body: Rc::new(body.clone()),
-                        env: env.clone(),
+                        body: Rc::clone(body),
+                        env: env.snapshot(),
                     },
                 ),
-                Rhs::FixGroup { defs, which } => Step::Bind(
+                CodeRhs::FixGroup { defs, which } => Step::Bind(
                     name,
                     AotVal::FixGroup {
-                        defs: Rc::new(defs.clone()),
+                        defs: Rc::clone(defs),
                         which: which.clone(),
-                        env: env.clone(),
+                        env: env.snapshot(),
                     },
                 ),
-                Rhs::App { func, arg } => {
+                CodeRhs::App { func, arg } => {
                     let f = lookup(&env, func)?;
                     let a = lookup(&env, arg)?;
                     let ret = Cont {
@@ -884,7 +1184,7 @@ fn eval_machine<'b>(
                     let (nb, ne) = enter_apply(f, a, ret, &mut stack, fuel, budget, budgets, tco)?;
                     Step::Switch(nb, ne)
                 }
-                Rhs::Match {
+                CodeRhs::Match {
                     scrutinee,
                     alts,
                     default,
@@ -907,7 +1207,8 @@ fn eval_machine<'b>(
                     if g != GuaranteeStrength::Exact {
                         return Err(EvalError::GuaranteeMeetUnsupported { scrutinee: g });
                     }
-                    let (arm_block, arm_env) = select_arm(&scrut, alts, default.as_ref(), &env)?;
+                    let (arm_block, arm_env) =
+                        select_arm(&scrut, alts, default.as_ref(), &mut env)?;
                     let cont = Cont {
                         block: Rc::clone(&block),
                         idx: idx + 1,
