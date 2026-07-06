@@ -1,0 +1,91 @@
+{
+  "files": [
+    {
+      "file": "crates/mycelium-std-content/src/content_ref.rs",
+      "total_items": 8,
+      "non_test_items": 7,
+      "emitted": 1,
+      "gaps": 8,
+      "expressible_pct": 14.285714285714285,
+      "category_counts": {
+        "DeriveAttr": 1,
+        "Impl": 3,
+        "Import": 2,
+        "Struct": 1,
+        "TestItem": 1
+      }
+    },
+    {
+      "file": "crates/mycelium-std-content/src/error.rs",
+      "total_items": 6,
+      "non_test_items": 5,
+      "emitted": 0,
+      "gaps": 6,
+      "expressible_pct": 0.0,
+      "category_counts": {
+        "Impl": 3,
+        "Import": 1,
+        "Struct": 1,
+        "TestItem": 1
+      }
+    },
+    {
+      "file": "crates/mycelium-std-content/src/guarantee_matrix.rs",
+      "total_items": 5,
+      "non_test_items": 4,
+      "emitted": 2,
+      "gaps": 5,
+      "expressible_pct": 50.0,
+      "category_counts": {
+        "DeriveAttr": 2,
+        "Other": 1,
+        "Struct": 1,
+        "TestItem": 1
+      }
+    },
+    {
+      "file": "crates/mycelium-std-content/src/lib.rs",
+      "total_items": 17,
+      "non_test_items": 16,
+      "emitted": 0,
+      "gaps": 18,
+      "expressible_pct": 0.0,
+      "category_counts": {
+        "GenericBound": 1,
+        "Import": 5,
+        "Other": 11,
+        "TestItem": 1
+      }
+    },
+    {
+      "file": "crates/mycelium-std-content/src/name_registry.rs",
+      "total_items": 4,
+      "non_test_items": 3,
+      "emitted": 0,
+      "gaps": 4,
+      "expressible_pct": 0.0,
+      "category_counts": {
+        "Impl": 1,
+        "Import": 1,
+        "Struct": 1,
+        "TestItem": 1
+      }
+    }
+  ],
+  "totals": {
+    "total_items": 40,
+    "non_test_items": 35,
+    "emitted": 3,
+    "gaps": 41,
+    "expressible_pct": 8.571428571428571,
+    "category_counts": {
+      "DeriveAttr": 3,
+      "GenericBound": 1,
+      "Impl": 7,
+      "Import": 9,
+      "Other": 12,
+      "Struct": 4,
+      "TestItem": 5
+    }
+  }
+}

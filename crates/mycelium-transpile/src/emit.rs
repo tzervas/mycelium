@@ -12,6 +12,7 @@
 
 use crate::gap::{guarded, Category, GapReason};
 use crate::map::{map_type, tokens_to_string};
+use crate::reserved::guard_ident;
 use syn::{
     Attribute, Block, Expr, Fields, FnArg, GenericArgument, GenericParam, Generics, ImplItem,
     ItemEnum, ItemFn, ItemImpl, ItemStruct, ItemTrait, Lit, Pat, PathArguments, ReturnType,
@@ -101,6 +102,9 @@ fn plain_type_params(generics: &Generics) -> Result<Vec<String>, GapReason> {
                         ),
                     ));
                 }
+                // Same emit-verbatim exposure as fn parameters: an UNUSED type-param name never
+                // reaches map_type's guard, so guard at the declaration site too.
+                crate::reserved::guard_ident(&tp.ident.to_string(), "type parameter")?;
                 names.push(tp.ident.to_string());
             }
             GenericParam::Lifetime(lt) => {
@@ -270,6 +274,10 @@ fn map_signature(
                         ))
                     }
                 };
+                // A parameter name is emitted verbatim into `param ::= Ident ':' type_ref`, and
+                // an UNUSED param's body references never pass through Expr::Path — so the
+                // reserved-word guard must fire here, not only at use sites (PR #1207 review).
+                crate::reserved::guard_ident(&name, "fn parameter")?;
                 let ty = map_type(&pt.ty, self_ty)?;
                 params.push((name, ty));
             }
@@ -435,7 +443,9 @@ fn emit_expr_inner(expr: &Expr, self_ty: Option<&str>) -> Result<String, GapReas
                 .segments
                 .last()
                 .ok_or_else(|| GapReason::new(Category::Other, "empty path expression"))?;
-            Ok(seg.ident.to_string())
+            let name = seg.ident.to_string();
+            guard_ident(&name, "value/constructor reference")?;
+            Ok(name)
         }
         Expr::Lit(l) => match &l.lit {
             Lit::Bool(b) => Ok(if b.value { "True" } else { "False" }.to_string()),
@@ -567,6 +577,9 @@ fn emit_expr_inner(expr: &Expr, self_ty: Option<&str>) -> Result<String, GapReas
                          mapping",
                     )),
                 };
+            // M-1001: a call to a function whose name is a reserved word (e.g. a Rust `.swap()`
+            // method or a `to(..)` helper) would emit un-parseable text; gap it (VR-5/G2).
+            guard_ident(&func, "call target")?;
             let mut args = Vec::with_capacity(c.args.len());
             for a in &c.args {
                 args.push(emit_expr(a, self_ty)?);
@@ -578,6 +591,7 @@ fn emit_expr_inner(expr: &Expr, self_ty: Option<&str>) -> Result<String, GapReas
             // form (`primary ('(' args? ')')*` only) — desugar `recv.method(args)` to
             // `method(recv, args...)`, matching how `lib/std/cmp.myc`'s free functions
             // (`cmp`/`le`/`ge`/...) take the receiver as an ordinary first argument.
+            guard_ident(&m.method.to_string(), "method call")?;
             let recv = emit_expr(&m.receiver, self_ty)?;
             let mut args = vec![recv];
             for a in &m.args {
@@ -631,19 +645,26 @@ pub fn map_pattern(pat: &Pat) -> Result<String, GapReason> {
 fn map_pattern_inner(pat: &Pat) -> Result<String, GapReason> {
     match pat {
         Pat::Wild(_) => Ok("_".to_string()),
-        Pat::Ident(pi) if pi.by_ref.is_none() && pi.subpat.is_none() => Ok(pi.ident.to_string()),
+        Pat::Ident(pi) if pi.by_ref.is_none() && pi.subpat.is_none() => {
+            let name = pi.ident.to_string();
+            guard_ident(&name, "match pattern binding/constructor")?;
+            Ok(name)
+        }
         Pat::Path(pp) if pp.qself.is_none() => {
             let seg = pp
                 .path
                 .segments
                 .last()
                 .ok_or_else(|| GapReason::new(Category::Other, "empty path pattern"))?;
-            Ok(seg.ident.to_string())
+            let name = seg.ident.to_string();
+            guard_ident(&name, "match pattern constructor")?;
+            Ok(name)
         }
         Pat::TupleStruct(pts) if pts.qself.is_none() => {
             let seg = pts.path.segments.last().ok_or_else(|| {
                 GapReason::new(Category::Other, "empty tuple-struct pattern path")
             })?;
+            guard_ident(&seg.ident.to_string(), "match pattern constructor")?;
             let mut elems = Vec::with_capacity(pts.elems.len());
             for e in &pts.elems {
                 elems.push(map_pattern(e)?);
@@ -687,6 +708,7 @@ fn map_pattern_inner(pat: &Pat) -> Result<String, GapReason> {
 
 /// `enum` -> `type_item` (`type Name = C1 | C2(T1, T2) | ...;`).
 pub fn emit_enum(item: &ItemEnum) -> Result<Emitted, GapReason> {
+    guard_ident(&item.ident.to_string(), "enum type name")?;
     let type_params = plain_type_params(&item.generics)?;
     let mut sub_gaps = Vec::new();
     let non_doc = non_doc_attrs(&item.attrs);
@@ -702,6 +724,7 @@ pub fn emit_enum(item: &ItemEnum) -> Result<Emitted, GapReason> {
     }
     let mut ctors = Vec::with_capacity(item.variants.len());
     for v in &item.variants {
+        guard_ident(&v.ident.to_string(), "enum variant/constructor")?;
         if v.discriminant.is_some() {
             return Err(GapReason::new(
                 Category::Other,
@@ -769,6 +792,7 @@ pub fn emit_enum(item: &ItemEnum) -> Result<Emitted, GapReason> {
 /// `struct` -> a single-constructor `type_item`. Unit and all-positional (`Fields::Unnamed`)
 /// structs map; named-field structs/records have no grammar equivalent (KNOWN HARD GAP).
 pub fn emit_struct(item: &ItemStruct) -> Result<Emitted, GapReason> {
+    guard_ident(&item.ident.to_string(), "struct type/constructor name")?;
     let type_params = plain_type_params(&item.generics)?;
     let mut sub_gaps = Vec::new();
     let non_doc = non_doc_attrs(&item.attrs);
@@ -831,6 +855,7 @@ pub fn emit_struct(item: &ItemStruct) -> Result<Emitted, GapReason> {
 
 /// Top-level `fn` -> `fn_item`. No `self` (no enclosing impl/trait).
 pub fn emit_fn(item: &ItemFn) -> Result<Emitted, GapReason> {
+    guard_ident(&item.sig.ident.to_string(), "function name")?;
     check_fn_modifiers(&item.sig)?;
     let sig = map_signature(&item.sig.generics, &item.sig.inputs, &item.sig.output, None)?;
     let body = emit_block_as_expr(&item.block, None)?;
@@ -865,6 +890,7 @@ pub fn emit_fn(item: &ItemFn) -> Result<Emitted, GapReason> {
 /// still requires a concrete substitution the grammar has no slot for at trait-definition time,
 /// so such methods fail their signature mapping (an honest, not a fabricated, "Self" binding).
 pub fn emit_trait(item: &ItemTrait) -> Result<Emitted, GapReason> {
+    guard_ident(&item.ident.to_string(), "trait name")?;
     if !item.supertraits.is_empty() {
         return Err(GapReason::new(
             Category::Trait,
@@ -880,6 +906,7 @@ pub fn emit_trait(item: &ItemTrait) -> Result<Emitted, GapReason> {
     for ti in &item.items {
         match ti {
             TraitItem::Fn(f) => {
+                guard_ident(&f.sig.ident.to_string(), "trait method name")?;
                 if f.default.is_some() {
                     return Err(GapReason::new(
                         Category::Trait,
@@ -1010,6 +1037,7 @@ pub fn emit_impl(item: &ItemImpl) -> Result<Emitted, GapReason> {
             .segments
             .last()
             .ok_or_else(|| GapReason::new(Category::Impl, "impl trait path is empty"))?;
+        guard_ident(&seg.ident.to_string(), "impl trait name")?;
         let targs =
             match &seg.arguments {
                 PathArguments::None => Vec::new(),
@@ -1042,6 +1070,15 @@ pub fn emit_impl(item: &ItemImpl) -> Result<Emitted, GapReason> {
     for ii in &item.items {
         match ii {
             ImplItem::Fn(f) => {
+                // M-1001: a reserved-word method name would emit un-parseable `fn <keyword>`; make
+                // it a per-method sub-gap (keeping sibling methods independent), never emitted.
+                if let Err(e) = guard_ident(&f.sig.ident.to_string(), "impl method name") {
+                    sub_gaps.push(GapReason::new(
+                        e.category,
+                        format!("impl method `{}`: {}", f.sig.ident, e.reason),
+                    ));
+                    continue;
+                }
                 // DN-41 §2: `Narrow::narrow` is fallible (`Result<To, NarrowError>`) — no
                 // `= expr fn_item` body can express a Result-returning refuse in this grammar
                 // fragment, regardless of whether `Self`/the target type otherwise map. Intercept

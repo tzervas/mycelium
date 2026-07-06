@@ -1,0 +1,20 @@
+// nodule: std.runtime
+// Task, TaskCtx, Poll, SweepOrder, Deadlock — task surface (ADR-020 v0 R1).
+//
+// # Guarantee (Declared — Task purity contract)
+//
+// `Task` purity is **Declared**: the type system cannot enforce that a task body
+// has no side effects, so this is an assertion-level guarantee (VR-5: not upgraded
+// to Empirical/Proven without a checked basis).
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.runtime;
+
+// Poll result for an async task step.
+type Poll[T] = Ready(T) | Pending;
+
+// Order in which tasks are swept from a scope's run queue.
+//
+// Guarantee: **Exact** — the sweep order is deterministic given the same queue state.
+type SweepOrder = Fifo | Priority;

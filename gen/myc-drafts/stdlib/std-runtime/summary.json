@@ -1,0 +1,218 @@
+{
+  "files": [
+    {
+      "file": "crates/mycelium-std-runtime/src/colony.rs",
+      "total_items": 15,
+      "non_test_items": 14,
+      "emitted": 1,
+      "gaps": 15,
+      "expressible_pct": 7.142857142857142,
+      "category_counts": {
+        "DeriveAttr": 1,
+        "GenericBound": 6,
+        "Import": 3,
+        "Other": 2,
+        "Struct": 2,
+        "TestItem": 1
+      }
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/dataflow.rs",
+      "total_items": 16,
+      "non_test_items": 16,
+      "emitted": 3,
+      "gaps": 15,
+      "expressible_pct": 18.75,
+      "category_counts": {
+        "DeriveAttr": 2,
+        "Impl": 2,
+        "Import": 4,
+        "Other": 5,
+        "Struct": 1,
+        "Trait": 1
+      }
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/guarantee_matrix.rs",
+      "total_items": 3,
+      "non_test_items": 3,
+      "emitted": 0,
+      "gaps": 3,
+      "expressible_pct": 0.0,
+      "category_counts": {
+        "Import": 1,
+        "Other": 1,
+        "Struct": 1
+      }
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/lib.rs",
+      "total_items": 14,
+      "non_test_items": 13,
+      "emitted": 0,
+      "gaps": 15,
+      "expressible_pct": 0.0,
+      "category_counts": {
+        "Other": 14,
+        "TestItem": 1
+      }
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/network.rs",
+      "total_items": 24,
+      "non_test_items": 24,
+      "emitted": 5,
+      "gaps": 25,
+      "expressible_pct": 20.833333333333336,
+      "category_counts": {
+        "DeriveAttr": 4,
+        "GenericBound": 5,
+        "Impl": 2,
+        "Import": 5,
+        "Other": 5,
+        "Struct": 4
+      }
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/policy_mech.rs",
+      "total_items": 21,
+      "non_test_items": 21,
+      "emitted": 1,
+      "gaps": 21,
+      "expressible_pct": 4.761904761904762,
+      "category_counts": {
+        "DeriveAttr": 1,
+        "Impl": 10,
+        "Import": 2,
+        "Other": 2,
+        "PayloadVariant": 3,
+        "Struct": 3
+      }
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/r2_residual.rs",
+      "total_items": 9,
+      "non_test_items": 9,
+      "emitted": 1,
+      "gaps": 9,
+      "expressible_pct": 11.11111111111111,
+      "category_counts": {
+        "DeriveAttr": 1,
+        "GenericBound": 1,
+        "Impl": 3,
+        "Other": 2,
+        "Struct": 2
+      }
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/rc.rs",
+      "total_items": 6,
+      "non_test_items": 6,
+      "emitted": 1,
+      "gaps": 6,
+      "expressible_pct": 16.666666666666664,
+      "category_counts": {
+        "DeriveAttr": 1,
+        "GenericBound": 1,
+        "Import": 3,
+        "Struct": 1
+      }
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/reclamation.rs",
+      "total_items": 1,
+      "non_test_items": 1,
+      "emitted": 0,
+      "gaps": 1,
+      "expressible_pct": 0.0,
+      "category_counts": {
+        "Import": 1
+      }
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/region.rs",
+      "total_items": 18,
+      "non_test_items": 18,
+      "emitted": 4,
+      "gaps": 20,
+      "expressible_pct": 22.22222222222222,
+      "category_counts": {
+        "DeriveAttr": 2,
+        "Impl": 5,
+        "Import": 3,
+        "Other": 6,
+        "Struct": 4
+      }
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/scheduler.rs",
+      "total_items": 1,
+      "non_test_items": 1,
+      "emitted": 0,
+      "gaps": 1,
+      "expressible_pct": 0.0,
+      "category_counts": {
+        "Import": 1
+      }
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/scope_region.rs",
+      "total_items": 6,
+      "non_test_items": 6,
+      "emitted": 0,
+      "gaps": 6,
+      "expressible_pct": 0.0,
+      "category_counts": {
+        "Impl": 1,
+        "Import": 3,
+        "Other": 1,
+        "Struct": 1
+      }
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/supervision.rs",
+      "total_items": 1,
+      "non_test_items": 1,
+      "emitted": 0,
+      "gaps": 1,
+      "expressible_pct": 0.0,
+      "category_counts": {
+        "Import": 1
+      }
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/task.rs",
+      "total_items": 13,
+      "non_test_items": 12,
+      "emitted": 2,
+      "gaps": 13,
+      "expressible_pct": 16.666666666666664,
+      "category_counts": {
+        "DeriveAttr": 2,
+        "Impl": 5,
+        "Import": 1,
+        "Other": 1,
+        "Struct": 3,
+        "TestItem": 1
+      }
+    }
+  ],
+  "totals": {
+    "total_items": 148,
+    "non_test_items": 145,
+    "emitted": 18,
+    "gaps": 151,
+    "expressible_pct": 12.413793103448276,
+    "category_counts": {
+      "DeriveAttr": 14,
+      "GenericBound": 13,
+      "Impl": 28,
+      "Import": 28,
+      "Other": 39,
+      "PayloadVariant": 3,
+      "Struct": 22,
+      "TestItem": 3,
+      "Trait": 1
+    }
+  }
+}

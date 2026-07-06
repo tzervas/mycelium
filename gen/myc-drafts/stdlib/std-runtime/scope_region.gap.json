@@ -1,0 +1,67 @@
+{
+  "source": "crates/mycelium-std-runtime/src/scope_region.rs",
+  "emitted_items": [],
+  "gaps": [
+    {
+      "file": "crates/mycelium-std-runtime/src/scope_region.rs",
+      "line": 67,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use mycelium_core :: ContentHash ;",
+      "reason": "`use` import (single path ending `ContentHash`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/scope_region.rs",
+      "line": 69,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use crate :: reclamation :: ReclamationSink ;",
+      "reason": "`use` import (single path ending `ReclamationSink`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/scope_region.rs",
+      "line": 70,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use crate :: region :: { ClosedRegion , Region , ScopeNodeId } ;",
+      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/scope_region.rs",
+      "line": 74,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Run `body` within a freshly-opened scope region and close the region after the body returns.\"] # [doc = \"\"] # [doc = \" # Per-hypha scope-exit entry point (RFC-0027 §10.3)\"] # [doc = \"\"] # [doc = \" This is the structured-concurrency entry point for scope-exit reclamation in one hypha's body:\"] # [doc = \" \\\"run the hypha body; reclaim at hypha-exit.\\\" Each hypha owns exactly one single-threaded\"] # [doc = \" intra-hypha region (see the cross-hypha FLAG in this module's doc-comment).\"] # [doc = \"\"] # [doc = \" # What happens\"] # [doc = \"\"] # [doc = \" 1. A fresh [`Region`] is opened (`Region::new()`).\"] # [doc = \" 2. `body(&mut region)` is called. The body may call `region.defer(hash)` for every value\"] # [doc = \"    whose RC hit zero within this scope (or any scope-local allocation to be freed at exit).\"] # [doc = \" 3. **After `body` returns** (normal path), `region.close(sink)` is called unconditionally,\"] # [doc = \"    emitting one `ScopeExit` [`crate::reclamation::ReclamationRecord`] per deferred entry\"] # [doc = \"    through `sink` and returning the [`ClosedRegion`] summary.\"] # [doc = \" 4. The function returns `(body_result, closed_region)`.\"] # [doc = \"\"] # [doc = \" # Panic behaviour\"] # [doc = \"\"] # [doc = \" If `body` panics, the region is dropped as the stack unwinds. A panic is an abnormal scope\"] # [doc = \" abort; in debug builds the underlying [`Region`]'s drop-guard panics again if there are\"] # [doc = \" deferred entries, surfacing the number of lost audit records (G2 never-silent signal). This\"] # [doc = \" is intentional — do not catch the panic to silence the guard. The debug double-panic is\"] # [doc = \" the price of a G2-clean design: silent audit loss is impossible in debug builds.\"] # [doc = \"\"] # [doc = \" # Nested scopes\"] # [doc = \"\"] # [doc = \" Call `with_region` inside a `body` to nest an inner scope under an outer one. The inner scope\"] # [doc = \" closes (allocating its [`crate::region::RegionEpoch`]) before the outer body returns, so\"] # [doc = \" `inner_closed.epoch < outer_closed.epoch` by construction (monotonic counter — `Exact`).\"] # [doc = \"\"] # [doc = \" # Guarantee tags\"] # [doc = \"\"] # [doc = \" - **`close` always called (normal path):** `Exact` — unconditional call after `body`; no\"] # [doc = \"   conditional branch can skip it (enforced-by-construction).\"] # [doc = \" - **Panic path (abnormal abort):** `Exact` — drop fires; debug guard surfaces lost records.\"] # [doc = \" - **Nested epoch ordering:** `Exact` — inherited from `Region::close`'s monotonic counter.\"] # [doc = \" - **Batching perf:** `Declared` — DN-32 §6a; no Mycelium measurement.\"] # [doc = \"\"] # [doc = \" # Example\"] # [doc = \"\"] # [doc = \" ```rust,ignore\"] # [doc = \" use mycelium_std_runtime::scope_region::with_region;\"] # [doc = \" use mycelium_std_runtime::reclamation::CollectingSink;\"] # [doc = \"\"] # [doc = \" let mut sink = CollectingSink::new();\"] # [doc = \" let (result, closed) = with_region(&mut sink, |region| {\"] # [doc = \"     region.defer(some_hash);\"] # [doc = \"     42\"] # [doc = \" });\"] # [doc = \" assert_eq!(result, 42);\"] # [doc = \" assert_eq!(closed.reclaimed_count, 1);\"] # [doc = \" ```\"] pub fn with_region < R > (sink : & mut dyn ReclamationSink , body : impl FnOnce (& mut Region) -> R ,) -> (R , ClosedRegion) { let mut region = Region :: new () ; let result = body (& mut region) ; let closed = region . close (sink) ; (result , closed) }",
+      "reason": "unsupported Rust type form `& mut dyn ReclamationSink`",
+      "item_name": "with_region"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/scope_region.rs",
+      "line": 143,
+      "col": 1,
+      "category": "Struct",
+      "rust_construct": "Struct",
+      "snippet": "# [doc = \" An explicit-close scope guard wrapping a [`Region`].\"] # [doc = \"\"] # [doc = \" For callers who need to interleave deferrals with other logic between scope entry and exit\"] # [doc = \" and cannot use the closure form ([`with_region`]). Holds an open [`Region`] and exposes\"] # [doc = \" `defer`, `deferred_count`, `id`, and a **consuming** `close` that guarantees exactly one\"] # [doc = \" `Region::close` call.\"] # [doc = \"\"] # [doc = \" # Never-silent contract (G2)\"] # [doc = \"\"] # [doc = \" The caller **MUST** call [`RegionScope::close`] before the guard goes out of scope. There is\"] # [doc = \" no `Drop` impl that accepts a [`ReclamationSink`] (a sink cannot be threaded through `Drop`\"] # [doc = \" without violating KC-3 / the never-silent contract); dropping a `RegionScope` that still holds\"] # [doc = \" deferred entries causes the underlying [`Region`]'s debug-drop-panic to fire, surfacing the\"] # [doc = \" number of lost audit records. This is the same design discipline as `rc.rs`'s `RcCell` —\"] # [doc = \" explicit-close is the correct pattern; sink-bearing `Drop` is not.\"] # [doc = \"\"] # [doc = \" # Example\"] # [doc = \"\"] # [doc = \" ```rust,ignore\"] # [doc = \" use mycelium_std_runtime::scope_region::RegionScope;\"] # [doc = \" use mycelium_std_runtime::reclamation::CollectingSink;\"] # [doc = \"\"] # [doc = \" let mut sink = CollectingSink::new();\"] # [doc = \" let mut scope = RegionScope::enter();\"] # [doc = \" scope.defer(hash_a);\"] # [doc = \" // … interleaved work …\"] # [doc = \" scope.defer(hash_b);\"] # [doc = \" let closed = scope.close(&mut sink);\"] # [doc = \" assert_eq!(closed.reclaimed_count, 2);\"] # [doc = \" ```\"] # [doc = \"\"] # [doc = \" # Guarantee tags\"] # [doc = \"\"] # [doc = \" - **`close` called exactly once (on `RegionScope::close`):** `Exact` — consuming `close`\"] # [doc = \"   destructs `self`, so double-close is a compile-time type error.\"] # [doc = \" - **Dropped without `close` (debug builds):** `Exact` — underlying `Region` drop-guard panics\"] # [doc = \"   if deferred entries remain (G2 never-silent signal).\"] # [doc = \" - **`defer` / `deferred_count` / `id` accuracy:** `Exact` — delegates to `Region`; all\"] # [doc = \"   fields are exact functions of the region state.\"] # [derive (Debug)] pub struct RegionScope { # [doc = \" The open region backing this scope guard.\"] region : Region , }",
+      "reason": "struct `RegionScope` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "item_name": "RegionScope"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/scope_region.rs",
+      "line": 188,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl RegionScope { # [doc = \" Open a new scope guard, allocating a fresh [`Region`].\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — allocates a unique [`ScopeNodeId`] via the monotonic counter.\"] # [must_use] pub fn enter () -> Self { RegionScope { region : Region :: new () , } } # [doc = \" Defer a value for scope-exit reclamation.\"] # [doc = \"\"] # [doc = \" Delegates to [`Region::defer`]. The value's content identity is pushed to the deferred\"] # [doc = \" list; at [`RegionScope::close`] a `ScopeExit` record is emitted for it.\"] # [doc = \"\"] # [doc = \" Calling `defer` after `close` is impossible by type (consuming close destructs `self`).\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — delegates to `Region::defer`; the entry is pushed exactly once.\"] pub fn defer (& mut self , value_meta_hash : ContentHash) { self . region . defer (value_meta_hash) ; } # [doc = \" Number of values currently deferred in this scope.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — delegates to `Region::deferred_count`.\"] # [must_use] pub fn deferred_count (& self) -> usize { self . region . deferred_count () } # [doc = \" The unique identity of this scope's underlying [`Region`].\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — delegates to `region.id`; unique monotonic allocation.\"] # [must_use] pub fn id (& self) -> ScopeNodeId { self . region . id } # [doc = \" Close this scope guard, emitting all deferred reclamation records and returning the\"] # [doc = \" [`ClosedRegion`] summary.\"] # [doc = \"\"] # [doc = \" This is a **consuming** method — `self` is destructed, making double-close a compile-time\"] # [doc = \" type error. After `close` returns, the sink has received one `ScopeExit` record per\"] # [doc = \" deferred entry.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — delegates to [`Region::close`]; one `ScopeExit` record per deferred\"] # [doc = \" entry, emitted unconditionally (enforced-by-construction).\"] pub fn close (mut self , sink : & mut dyn ReclamationSink) -> ClosedRegion { self . region . close (sink) } }",
+      "reason": "no member of this impl block could be transpiled (5 sub-issue(s)): impl method `enter` body: unsupported expression form `RegionScope { region : Region :: new () , }`; impl method `defer` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence; impl method `deferred_count` signature: `usize` has a platform-dependent width; no fixed Binary{N} mapping; impl method `id` body: unsupported expression form `self . region . id`; impl method `close` signature: unsupported Rust type form `& mut dyn ReclamationSink`",
+      "item_name": "RegionScope"
+    }
+  ],
+  "total_top_level_items": 6
+}

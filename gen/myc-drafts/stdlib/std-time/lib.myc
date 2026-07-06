@@ -1,0 +1,124 @@
+// nodule: std.time
+// `std.time` — Ring 2 / Tier B typed clocks, durations, and instants (M-529).
+//
+// # Summary
+//
+// The value-semantic time surface: immutable [`Duration`] and three *typed* instant kinds
+// ([`MonoInstant`], [`WallInstant`], [`LogicalInstant`]), pure duration/instant arithmetic, and
+// a **typed clock-read surface** over an injectable [`ClockSource`] that declares each read's
+// effect. The **honesty crux** is a typed distinction that is structurally never silent:
+//
+// - Cross-source subtraction is a **compile-time type error** — `MonoInstant − WallInstant`
+//   does not exist; there is no method to call.
+// - A **wall-clock read is `Declared` + effectful** (`{time, entropy}`): it is never dressed up
+//   as a pure exact value (VR-5, C2). The `entropy` declared effect is the same construct `rand`
+//   uses — a deterministic fragment (RT2) cannot read it silently.
+// - **Overflow is `Err(Overflow)`, never a wrap or clamp** (C1/G2): the arithmetic is total on
+//   success and explicitly fallible on range exhaustion.
+//
+// # Design-phase positioning
+//
+// The real OS clock floor (`clock_gettime`-equivalent via `wild`/FFI, ADR-014) is deferred to
+// `std-sys` (RFC-0016 §8-Q6 / M-541). This crate implements the **pure arithmetic + the
+// declared-effect surface over an injectable [`ClockSource`]**: pass the built-in
+// [`SystemClock`] for production, a [`ManualClock`] (or any `ClockSource` impl) for
+// deterministic tests. See *FLAG notes* below.
+//
+// # Contract conformance (RFC-0016 §4.1 C1–C6)
+//
+// - **C1 never-silent (G2):** every failure is `Err(TimeErr)` — overflow, unavailable clock, or
+//   a wall-clock backward jump are explicit, propagating outcomes, never zero/clamp/wrap.
+// - **C2 honest per-op tag (VR-5):** pure arithmetic tags `Exact`; every clock read tags
+//   `Declared` and is effectful — a wall read is never upgraded to a pure value.
+// - **C3 no black boxes / EXPLAIN (SC-3/G11):** every read names its clock identity + declared
+//   effect; every refusal carries [`TimeErr`] naming the cause.
+// - **C4 value-semantic (ADR-003 / RFC-0001):** `Duration` and the three instant kinds are
+//   immutable values; arithmetic is a pure function of inputs.
+// - **C5 above the small kernel (KC-3):** no trusted code, no `unsafe`, no FFI — the real OS
+//   clock is FLAGGED to `std-sys` (§8-Q6 / M-541).
+// - **C6 declared bounded effects (RFC-0014):** clock reads carry a marker type
+//   ([`DeclaredTime`], [`DeclaredTimeEntropy`]) that names the effect on the return type, never
+//   an undeclared side effect.
+//
+// # FLAG — std-sys clock floor (§7-Q3 / RFC-0016 §8-Q6 / M-541)
+//
+// The [`SystemClock`] provided here reads `std::time::{Instant, SystemTime}` from Rust's
+// standard library. This is a **placeholder** — the final Mycelium `std-sys` phylum will
+// replace it with an audited `wild`/FFI block (`clock_gettime`-equivalent, ADR-014, LR-9).
+// Until M-541 lands, `SystemClock` is the stand-in; it is the *only* site that touches OS
+// time. The `C5 "no new trusted code"` claim narrows to "no new trusted code beyond the Rust
+// stdlib `std::time` placeholder in `SystemClock`."
+//
+// # FLAG — RFC-0008 logical clock ownership (§7-Q1 / M-521 / M-356)
+//
+// [`LogicalInstant`] is the typed reading surface for the RFC-0008 deterministic monotonic
+// counter. The **advancement** of that counter is `std.runtime`/`colony`-owned (M-521 over
+// RFC-0008 §4.7 / M-356). This crate does **not** fabricate that surface; `LogicalInstant`
+// carries a `u64` tick provided by the caller's [`ClockSource::logical_now`]. The concrete API
+// shape — per-colony/per-scope, value shape, effect classification — is deferred to M-521/M-356.
+//
+// # FLAG — effect-declaration syntax (§7-Q5 / RFC-0014)
+//
+// The `! time` / `! { time, entropy }` notation in the spec is illustrative (RFC-0014 T3.4).
+// This Rust implementation reifies the declared effect as **marker return types**:
+// [`DeclaredTime`] wraps a mono or logical read result; [`DeclaredTimeEntropy`] wraps a wall
+// read result. The marker type is the inspectable effect declaration — inspectable via its type
+// tag, not a doc comment. The shared `entropy` token must agree with `std.rand` (M-531) when
+// that crate lands (§8-Q3).
+//
+// Design spec: `docs/spec/stdlib/time.md`; contract: RFC-0016 §4.1 (C1–C6);
+// guarantee matrix: §4.5 (encoded as data, asserted in tests).
+//
+// ## Ambient Representation (RFC-0012 §8-Q3)
+//
+// This crate's public API participates in the RFC-0012 ambient-representation contract:
+// the representation choice (binary/ternary/dense/VSA) is implicit at the call site but
+// always reified, queryable, and EXPLAIN-able — never a black box (C3/SC-3).
+// [Declared per RFC-0012; direction accepted in DN-07 §8-Q3; per-ring pass scheduled as M-540.]
+//
+// **For this crate (Ring 2, Tier B):** Clock sources are representation-independent —
+// `Duration` and typed instants (`MonoInstant`, `WallInstant`, `LogicalInstant`) carry no
+// `Repr`. Cross-source instant arithmetic is a compile-time type error; typed instants prevent
+// cross-source subtraction structurally. Wall-clock reads are `Declared` + effectful; the
+// declared effect ([`DeclaredTimeEntropy`]) is the inspectable annotation, never an implicit side effect.
+//
+// # Stability (DN-66 freeze, 2026-07-01)
+//
+// This crate's public API, as documented in `docs/spec/stdlib/time.md` (spec status:
+// Accepted (2026-06-20)) and asserted by its guarantee-matrix table, is the **frozen baseline** per
+// [DN-66](../../../docs/notes/DN-66-Stdlib-Stable-API-Freeze-And-Rust-Crate-Retirement-Status.md).
+// A future breaking change here needs a spec amendment + changelog entry, not a silent edit (G2).
+// It remains the RFC-0031 D6 differential-oracle reference; no `.myc` port of this module exists yet, so the D6 retirement trigger has not fired and no item here is `#[deprecated]`.
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.time;
+
+// Declared-effect wrapper for a MONOTONIC or LOGICAL clock read (effect: `time`).
+//
+// This type is the Rust-level reification of the `! time` effect tag (RFC-0014; FLAG §7-Q5).
+// It is **not** `time`-or-entropy: MONOTONIC reads are effectful ambient reads but are *not*
+// civil-time entropy sources.  The inner value is accessible via [`DeclaredTime::into_inner`].
+type DeclaredTime[T] = DeclaredTime(T);
+
+// Declared-effect wrapper for a WALL-CLOCK read (effect: `{ time, entropy }`).
+//
+// This type is the Rust-level reification of the `! { time, entropy }` effect tag (RFC-0014;
+// FLAG §7-Q5). A wall-clock read is an **entropy source** under RT3 (RFC-0008) — nondeterminism
+// reified and named. A deterministic fragment (RT2) cannot call a function that returns this
+// type without explicitly naming the entropy effect. The `entropy` marker must agree with
+// `std.rand` (M-531) when that crate lands (FLAG §7-Q5 / §8-Q3).
+type DeclaredTimeEntropy[T] = DeclaredTimeEntropy(T);
+
+// A [`ClockSource`] backed by Rust's `std::time` — the **std-sys placeholder** (FLAG §7-Q3).
+//
+// This is not the final `std-sys` audited `wild` block; it is a usable stand-in until M-541.
+// The LOGICAL clock read returns a monotonically-increasing counter seeded from the MONOTONIC
+// clock's `Instant` (a placeholder; the real counter is M-356's runtime-owned tick).
+//
+// # FLAG — logical clock ownership (§7-Q1 / M-521 / M-356)
+//
+// `SystemClock::logical_now` returns a tick derived from the MONOTONIC clock's elapsed
+// nanoseconds as a **placeholder** only. The real logical tick is M-356's deterministic counter,
+// owned by `std.runtime`. When that API lands, `SystemClock::logical_now` will delegate to it.
+type SystemClock = SystemClock;

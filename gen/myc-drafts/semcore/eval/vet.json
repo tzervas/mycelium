@@ -1,0 +1,19 @@
+{
+  "records": [
+    {
+      "myc_file": "gen/myc-drafts/semcore/eval/eval.myc",
+      "source_file": "crates/mycelium-l1/src/eval.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 42,
+      "emitted_items": 1
+    }
+  ],
+  "total_non_test_items": 42,
+  "total_emitted_items": 1,
+  "total_checked_clean_items": 1,
+  "class_counts": {
+    "Clean": 1
+  }
+}

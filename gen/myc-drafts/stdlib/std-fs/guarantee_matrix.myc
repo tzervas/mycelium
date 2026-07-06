@@ -1,0 +1,42 @@
+// nodule: std.fs
+// `std.fs` guarantee matrix encoded as **data** (RFC-0016 §4.5; spec §4).
+//
+// Every exported operation has one row in [`MATRIX`]. The matrix is the load-bearing C2
+// deliverable (RFC-0016 §4.1 C2 / VR-5): guarantee tags are asserted in tests, not prose-only.
+//
+// # Guarantee tag justification (all `Exact`)
+// `fs` carries **no** accuracy/approximation/probability semantics — there is no ε, no δ, no
+// `BoundBasis` to resolve against (contrast `std.math` M-525). `Exact` is the *honest* tag here,
+// not an upgrade: there is no precision dimension to overclaim. The honesty of `fs` is borne
+// entirely by C1 (explicit fallibility) and C6 (declared effects) — not by a C2 precision tag.
+// Every op either performs its named filesystem effect and returns, or it returns an explicit
+// `FsErr` — there is **no** silently-degraded third outcome (spec §4 tag justification).
+//
+// # Fallibility column
+// Every io-effecting op can fail; path ops are total (Exact, `Option` for `parent`).
+//
+// # `wild`? column
+// Marks which ops bottom out in the audited OS syscall floor (ADR-014). Pure lexical path ops
+// and the UseAfterConsume catch do **not** hit the syscall floor. This column is the `wild`
+// inventory the spec §4 acceptance criterion demands.
+//
+// **FLAG (std-sys / Q1):** The in-memory substrate implementation here does NOT actually invoke
+// the `wild` syscall floor. The `wild?` column marks the *design intent* — which ops WILL hit
+// the floor when `std-sys` (M-541) is wired in. The column is correct for the target architecture;
+// the current implementation uses `InMemoryFs` which has no `unsafe` code.
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.fs;
+
+// Fallibility classification for an exported op.
+type Fallibility = Total | OptionFallible | ResultFallible;
+
+// Whether an op reaches the audited OS syscall floor.
+type Wild = Yes | No;
+
+// Whether an op has an EXPLAIN obligation (C3).
+type Explainable = Yes | NotApplicable;
+
+// Declared effects for an op (C6).
+type Effects = None | Io;

@@ -162,6 +162,14 @@ myc-spore:
 # Pass `--strict` (or MYC_DOGFOOD_STRICT=1) to fail on a core `myc check` failure.
 myc-dogfood *ARGS:
     @bash scripts/checks/myc-dogfood.sh {{ARGS}}
+# Advisory transpile→vet loop (M-1000): transpile Rust targets, myc-check each emission, report
+# checked_fraction vs expressible_fraction. On-demand (NOT a `just check` gate), mirrors myc-dogfood.
+transpile-vet *ARGS:
+    @bash scripts/checks/transpile-vet.sh {{ARGS}}
+# Regenerate the gen/myc-drafts/ staging tree (M-1002/M-1003): transpile→vet the port surface,
+# rebuild the manifest. Deterministic; commit the delta. On-demand (drafts are Declared, ungated).
+myc-drafts-regen:
+    @bash gen/myc-drafts/regenerate.sh
 proofs:
     @bash scripts/checks/proofs.sh
 api:
@@ -169,6 +177,9 @@ api:
 # Drift gate: committed docs/api-index/ must match a fresh regeneration. Skip if python3 absent.
 doc-index:
     @bash scripts/checks/doc-index.sh
+# Drift gate: committed docs/lib-index/ must match a fresh regeneration. Skip if cargo absent.
+lib-index:
+    @bash scripts/checks/lib-index.sh
 
 # (Re)generate THIRD-PARTY-LICENSES.md from Cargo.lock via cargo-about (about.toml + about.hbs).
 # Run after any dependency bump/add/remove; commit the result. Needs cargo-about:
@@ -245,6 +256,10 @@ docs:
 # Regenerate committed agent index (docs/api-index/); commit the result after any public-API change.
 docs-index:
     python3 tools/docgen/code_index.py
+# (Re)generate committed lib-index (docs/lib-index/) from lib/*.myc (M-1004). Commit the result
+# after any change under lib/std/ or lib/compiler/.
+lib-index-gen:
+    cargo run -q -p mycelium-doc --bin myc-doc -- lib-index --repo-root . --out docs/lib-index
 # Assemble a browsable local docsite under target/docsite/ — corpus (myc-doc HTML), agent API
 # index, and rustdoc. Advisory, NOT part of `just check`. Skip-graceful: missing tools warn only.
 # WSL: cd target/docsite && python3 -m http.server 8080, then open http://localhost:8080.

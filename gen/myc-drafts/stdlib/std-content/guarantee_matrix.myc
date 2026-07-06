@@ -1,0 +1,38 @@
+// nodule: std.content
+// The `std.content` guarantee matrix encoded as **data** (RFC-0016 §4.5; spec §4).
+//
+// Every exported operation has one row in [`MATRIX`]. The matrix is the load-bearing C2
+// deliverable (RFC-0016 §4.1 C2 / VR-5): guarantee tags are asserted in tests, not prose-only.
+//
+// # Guarantee tag justification (all `Exact`)
+// A content hash is a *pure function of normalized structure* (RFC-0001 §4.6 WF4). There is no
+// accuracy / precision / probability semantics anywhere in `std.content`, so the lattice floor
+// `Exact` applies directly to every op (RFC-0016 C2: "an op with no accuracy semantics … is
+// simply `Exact`"). Determinism is the substantive claim: identical normalized inputs always
+// yield the same digest; the digest never depends on names, spans, formatting, or dynamic
+// metadata (ADR-003; RFC-0001 §4.6 / §4.8).
+//
+// # Fallibility column
+// - `Total` — the op cannot fail; returning `Exact` is guaranteed for all inputs.
+// - `Fallible` — the op returns an explicit `Option` / `Result`; the error set is named.
+//
+// # Effects column
+// Every op is effect-free (C6: no IO, time, randomness, or unbounded allocation). The name
+// lookups (`resolve_name` / `names_of`) read a registry that is itself content-addressed and
+// append-only; reads are effect-free observations.
+//
+// # EXPLAIN-able column
+// `n/a` throughout — EXPLAIN / policy artifacts (C3) reify *selection / conversion /
+// approximation* decisions. `std.content` does none of those; it reports deterministic facts.
+// A digest is its own witness (the identity *is* the hash), so there is no hidden decision to
+// make inspectable. This is the honest reading of C3, not a waiver (spec §5/C3).
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.content;
+
+// Fallibility classification for an exported op.
+type Fallibility = Total | Fallible;
+
+// Whether an op has an EXPLAIN obligation (C3).
+type Explainable = Yes | NotApplicable;

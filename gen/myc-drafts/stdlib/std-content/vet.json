@@ -1,0 +1,55 @@
+{
+  "records": [
+    {
+      "myc_file": "gen/myc-drafts/stdlib/std-content/content_ref.myc",
+      "source_file": "crates/mycelium-std-content/src/content_ref.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 7,
+      "emitted_items": 1
+    },
+    {
+      "myc_file": "gen/myc-drafts/stdlib/std-content/error.myc",
+      "source_file": "crates/mycelium-std-content/src/error.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 5,
+      "emitted_items": 0
+    },
+    {
+      "myc_file": "gen/myc-drafts/stdlib/std-content/guarantee_matrix.myc",
+      "source_file": "crates/mycelium-std-content/src/guarantee_matrix.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 4,
+      "emitted_items": 2
+    },
+    {
+      "myc_file": "gen/myc-drafts/stdlib/std-content/lib.myc",
+      "source_file": "crates/mycelium-std-content/src/lib.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 16,
+      "emitted_items": 0
+    },
+    {
+      "myc_file": "gen/myc-drafts/stdlib/std-content/name_registry.myc",
+      "source_file": "crates/mycelium-std-content/src/name_registry.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 3,
+      "emitted_items": 0
+    }
+  ],
+  "total_non_test_items": 35,
+  "total_emitted_items": 3,
+  "total_checked_clean_items": 3,
+  "class_counts": {
+    "Clean": 5
+  }
+}

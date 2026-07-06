@@ -1,0 +1,67 @@
+{
+  "source": "crates/mycelium-std-content/src/error.rs",
+  "emitted_items": [],
+  "gaps": [
+    {
+      "file": "crates/mycelium-std-content/src/error.rs",
+      "line": 7,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use std :: fmt ;",
+      "reason": "`use` import (single path ending `fmt`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-content/src/error.rs",
+      "line": 9,
+      "col": 1,
+      "category": "Struct",
+      "rust_construct": "Struct",
+      "snippet": "# [doc = \" The content-address string is not well-formed (`<algo>:<digest>` shape; RFC-0001 §4.6).\"] # [doc = \"\"] # [doc = \" # C1 compliance\"] # [doc = \" [`crate::parse_ref`] returns `Err(MalformedDigest)` rather than a silently-coerced or\"] # [doc = \" zeroed digest (RFC-0016 §4.1 C1; G2 \\\"never-silent\\\").\"] # [doc = \"\"] # [doc = \" The `description` field carries a human-readable explanation of *why* the string is rejected,\"] # [doc = \" enabling callers to surface the error without stripping information (G11 dual projection).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct MalformedDigest { # [doc = \" The rejected input.\"] pub input : String , # [doc = \" Why the input was rejected (G11: a human-readable explanation for the caller to surface).\"] pub description : & 'static str , }",
+      "reason": "struct `MalformedDigest` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "item_name": "MalformedDigest"
+    },
+    {
+      "file": "crates/mycelium-std-content/src/error.rs",
+      "line": 25,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl MalformedDigest { pub (crate) fn new (input : impl Into < String > , description : & 'static str) -> Self { MalformedDigest { input : input . into () , description , } } }",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `new` signature: unsupported Rust type form `impl Into < String >`",
+      "item_name": "MalformedDigest"
+    },
+    {
+      "file": "crates/mycelium-std-content/src/error.rs",
+      "line": 34,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl fmt :: Display for MalformedDigest { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { write ! (f , \"malformed content address {:?}: {}\" , self . input , self . description) } }",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut fmt :: Formatter < '_ >`",
+      "item_name": "MalformedDigest"
+    },
+    {
+      "file": "crates/mycelium-std-content/src/error.rs",
+      "line": 44,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl std :: error :: Error for MalformedDigest { }",
+      "reason": "impl block has no items",
+      "item_name": "MalformedDigest"
+    },
+    {
+      "file": "crates/mycelium-std-content/src/error.rs",
+      "line": 46,
+      "col": 1,
+      "category": "TestItem",
+      "rust_construct": "TestItem",
+      "snippet": "# [cfg (test)] mod tests { use super :: MalformedDigest ; # [test] fn malformed_digest_display_includes_input_and_description () { let e = MalformedDigest :: new (\"bad\" , \"missing colon\") ; let s = e . to_string () ; assert ! (s . contains (\"bad\") , \"display must include the rejected input\") ; assert ! (s . contains (\"missing colon\") , \"display must include the description\") ; } # [test] fn malformed_digest_is_an_std_error () { let e = MalformedDigest :: new (\"x\" , \"test\") ; let _ : & dyn std :: error :: Error = & e ; } }",
+      "reason": "#[cfg(test)] item — out of scope for this PoC's transpilation surface (excluded from the expressible-fraction denominator, but recorded, never silently skipped)",
+      "item_name": "tests"
+    }
+  ],
+  "total_top_level_items": 6
+}

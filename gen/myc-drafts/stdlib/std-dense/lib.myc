@@ -1,0 +1,90 @@
+// nodule: std.dense
+// `std.dense` — Ring 1 / Tier A capability surface (M-518; RFC-0016 §4.1).
+//
+// An ergonomic, value-semantic surface over [`mycelium_dense`] (M-230) typed, dimension-tracked
+// dense values (`Dense{dim, dtype}` tensors / embeddings). `dim` and `dtype` are carried in the
+// [`DenseSpace`] descriptor so a shape or precision mismatch is an explicit typed error, never a
+// silent broadcast, truncation, or re-round (C1/G2).
+//
+// ## Contract (RFC-0016 §4.1 C1–C6)
+//
+// - **C1 — never-silent:** dim/dtype mismatch → [`StdDenseError`]; zero-norm cosine → explicit
+//   `Err(ZeroNorm)`; off-grid / wrong-length input → explicit `Err`; no `NaN`/sentinel escapes.
+// - **C2 — honest per-op tag:** integer ops → `Exact`; float **elementwise** (`add`/`sub`/`scale`/
+//   `hadamard`) → `Proven` (Q1 — finalized: the ADR-010 per-element IEEE backward-error
+//   instantiation, M-512 delivered); float **accumulation** (`sum`/`dot`/`l1_norm`) → `Empirical`
+//   (the `nγ_n` bound is a distinct theorem, not yet checked); `l2_norm`/`cosine` → `Empirical`
+//   (FLAG Q2 — sqrt/division composition side-conditions not yet fully checked; honest downgrade
+//   per VR-5). Tags degrade by meet; never upgrade without a checked basis.
+// - **C3 — EXPLAIN:** every float result carries a reified [`OpBound`] (ε, norm, basis string),
+//   inspectable without further processing. A `from_slice` or `cosine` failure names which check
+//   failed.
+// - **C4 — value-semantic:** all ops are pure functions; `Dense` values are immutable.
+// - **C5 — above the kernel (KC-3):** consumes `mycelium-dense` + `mycelium-core`; no new trusted
+//   code, no `unsafe`, no FFI.
+// - **C6 — declared effects:** every op here is pure (`effects: none`) except `map`, whose effects
+//   are its function argument's declared effects only.
+//
+// ## Guarantee matrix (RFC-0016 §4.5 — encoded as data, asserted in tests)
+//
+// See [`GUARANTEE_MATRIX`] and the `guarantee_matrix_*` tests.
+//
+// ## Scope boundary
+//
+// - Representation changes (`Dense{F32}→Dense{BF16}`, `Dense↔VSA`) → **`std.swap`** (M-516).
+// - The ε/δ bound algebra → **`std.numerics`** (M-512; ADR-010); this module *consumes*, never
+//   defines.
+// - Non-representation scalar conversion → **`std.cmp`/`convert`** (M-532).
+// - VSA hypervector algebra → **`std.vsa`** (M-513).
+//
+// ## Q1 (RESOLVED for elementwise; accumulation stays `Empirical`) — float `Proven` disposition
+//
+// The `Proven` tags on `add`/`sub`/`scale`/`hadamard` (float DT) are **finalized** (DN-16,
+// 2026-06-19; maintainer-ratified): they rest on the ADR-010 `ErrorBound` per-element IEEE
+// backward-error instantiation (`fl(a∘b) = (a∘b)(1+δ)`, `|δ| ≤ u` — Higham 2002, Thm 2.2), whose
+// single side-condition (operand finiteness / no overflow) is **guarded at runtime** (non-finite
+// inputs → kernel [`DenseError::NonFinite`], surfaced as [`StdDenseError::Kernel`]) and re-validated
+// by the numerics checker (M-512, delivered).
+// The accumulation ops (`sum`, `dot`, `l1_norm`) stay **`Empirical`** conservatively: the `nγ_n`
+// accumulation bound is a *distinct* theorem not yet discharged by a checked instantiation;
+// upgrade accumulation to `Proven` only when that checked accumulation theorem is delivered (VR-5).
+//
+// ## FLAG Q2 — `Empirical` for l2_norm / cosine
+//
+// `l2_norm` and `cosine` compose a bounded dot/sum-of-squares with a sqrt (and cosine adds a
+// division). The composed bound's side-conditions are guarded at runtime (`ZeroNorm` for cosine)
+// but **not yet fully checkable** through the ADR-010 affine/error kernel. Tagged `Empirical`
+// pending a checked composition from M-512. Upgrade requires a checked theorem (VR-5).
+//
+// ## FLAG Q3 — integer dtype ops (design claims; kernel pending)
+//
+// The v1 `mycelium-dense` supports only `F32`/`BF16`; integer dtype ops are specified in the
+// guarantee matrix as `Exact` design claims but are not implemented in the underlying kernel
+// (M-230 v1 scope, FLAG Q3). They will be implemented when the kernel adds integer dtype support.
+//
+// ## Ambient Representation (RFC-0012 §8-Q3)
+//
+// This crate's public API participates in the RFC-0012 ambient-representation contract:
+// the representation choice (binary/ternary/dense/VSA) is implicit at the call site but
+// always reified, queryable, and EXPLAIN-able — never a black box (C3/SC-3).
+// [Declared per RFC-0012; direction accepted in DN-07 §8-Q3; per-ring pass scheduled as M-540.]
+//
+// **For this crate (Ring 1, Tier A):** Dense operations always operate in the `Dense`
+// representation; no implicit cross-representation conversion occurs. Shape and dtype are carried
+// in the [`DenseSpace`] descriptor (never inferred), and a shape or dtype mismatch is an explicit
+// `Err`, never a silent broadcast or re-round (C1). Representation changes (`Dense{F32}→Dense{BF16}`,
+// `Dense↔VSA`) are explicit swaps in `std.swap` — never automatic.
+//
+// # Stability (DN-66 freeze, 2026-07-01)
+//
+// This crate's public API, as documented in `docs/spec/stdlib/dense.md` (spec status:
+// Accepted (2026-06-20)) and asserted by its guarantee-matrix table, is the **frozen baseline** per
+// [DN-66](../../../docs/notes/DN-66-Stdlib-Stable-API-Freeze-And-Rust-Crate-Retirement-Status.md).
+// A future breaking change here needs a spec amendment + changelog entry, not a silent edit (G2).
+// It remains the RFC-0031 D6 differential-oracle reference; no `.myc` port of this module exists yet, so the D6 retirement trigger has not fired and no item here is `#[deprecated]`.
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.dense;
+
+

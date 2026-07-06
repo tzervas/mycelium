@@ -67,10 +67,20 @@ digest is a snapshot, that table is live.
 - **`mycelium-transpile` PoC** (M-873, epic E18-1, `status:done`; DN-34 §8) — a `syn`-based
   Rust→Mycelium spike with a never-silent gap report; measured ≈12.4% grand-union surface coverage
   across 6 core-lib crates (`Empirical`, DN-34 §8.5) — feeds the surface-feature backlog, not a
-  self-hosting mechanism itself.
+  self-hosting mechanism itself. *(Refreshed 2026-07-06, kickoff `trx2` wave 1 — the 12.4% was an
+  emission metric; the new real-toolchain vet loop (M-1000/M-1001, `just transpile-vet`) measures
+  **`checked_fraction`**: union **3.7%** over the boot10 port surface. **M-991 verdict, `Empirical`:
+  NO-GO as a bulk porter, GO as a gap-profiling instrument** — DN-34 §8.7–§8.9. Companion artifacts:
+  `gen/myc-drafts/` draft corpus + manifest (E33-1), `docs/lib-index/` (the api-index analogue for
+  `lib/`, drift-gated, M-1004/M-1005), and the `/transpile-vet` + `/myc-drafts` skills.)*
 
 ## Active / next work
 
+- **`trx2` wave 1 landed (2026-07-06, this promotion)** — the M-993 semcore port now plans against
+  the DN-34 §8.9 **812-gap ranked worklist** + per-module draft scaffolds instead of porting cold;
+  the remaining trx2 work is **M-1006** (the maintainer-decided phased whole-corpus rip-through
+  ladder, per-phase minting; recipe = `/myc-drafts` §ladder-phase). Runs parallel to `boot10`'s
+  M-993 (disjoint trees).
 - **The function-first umbrella roadmap** — `docs/planning/road-to-1.0.0-and-mycelium-rewrite.md`
   (**revised 2026-07-01** from the Rust-reference-completion + acyclic-deps plan, kickoff UID `rcp`;
   a pointer stub remains at the old path, which open **PR #913** carried in its prior form) is

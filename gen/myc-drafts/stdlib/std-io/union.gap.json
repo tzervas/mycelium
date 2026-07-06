@@ -1,0 +1,706 @@
+{
+  "gaps": [
+    {
+      "file": "crates/mycelium-std-io/src/error.rs",
+      "line": 19,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use std :: fmt ;",
+      "reason": "`use` import (single path ending `fmt`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-io/src/error.rs",
+      "line": 23,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "# [doc = \" A byte offset into the input: the **locus** of a serialization failure (C1 /\"] # [doc = \" RFC-0013 I1). Named `none` (0) when the locus cannot be determined (e.g. the\"] # [doc = \" first byte of a completely empty input).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq)] pub struct ByteOffset (pub u64) ;",
+      "reason": "dropped non-doc attribute(s) on struct `ByteOffset`: # [derive (Debug , Clone , Copy , PartialEq , Eq)]",
+      "item_name": "ByteOffset"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/error.rs",
+      "line": 29,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl fmt :: Display for ByteOffset { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { write ! (f , \"byte {}\" , self . 0) } }",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut fmt :: Formatter < '_ >`",
+      "item_name": "ByteOffset"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/error.rs",
+      "line": 35,
+      "col": 1,
+      "category": "Struct",
+      "rust_construct": "Struct",
+      "snippet": "# [doc = \" A field path into a structured value, naming *where* inside a composite the\"] # [doc = \" failure was detected (C1/RFC-0013 I1). Encoded as a `/`-separated string of\"] # [doc = \" field names — e.g. `\\\"repr/width\\\"`, `\\\"meta/bound/delta\\\"`.\"] # [doc = \"\"] # [doc = \" This is the structural analogue of [`ByteOffset`] for grammar-structured failures\"] # [doc = \" where the byte position is less informative than the semantic path.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct FieldPath (pub String) ;",
+      "reason": "struct `FieldPath` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
+      "item_name": "FieldPath"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/error.rs",
+      "line": 44,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl FieldPath { # [doc = \" Construct from a static description.\"] # [must_use] pub fn from_static (s : & 'static str) -> Self { FieldPath (s . to_owned ()) } }",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `from_static` signature: unsupported Rust type form `& 'static str`",
+      "item_name": "FieldPath"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/error.rs",
+      "line": 52,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl fmt :: Display for FieldPath { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { write ! (f , \"field path {}\" , self . 0) } }",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut fmt :: Formatter < '_ >`",
+      "item_name": "FieldPath"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/error.rs",
+      "line": 60,
+      "col": 1,
+      "category": "PayloadVariant",
+      "rust_construct": "PayloadVariant",
+      "snippet": "# [doc = \" The explicit error set for (de)serialization failures (C1/RFC-0013; spec §3).\"] # [doc = \"\"] # [doc = \" Every variant carries a locus (byte offset or field path) so the caller can\"] # [doc = \" surface *where* the decode failed — never a locationless \\\"parse error\\\" (G2/C3).\"] # [doc = \" An overrun yields `BudgetExceeded`, never an OOM or a hang (C6/ADR-015).\"] # [doc = \"\"] # [doc = \" # C1 compliance\"] # [doc = \" No variant of `SerError` is a sentinel, a clamp, or a partial-result indicator.\"] # [doc = \" The presence of a `SerError` means the entire decode is rejected; the caller\"] # [doc = \" never receives a partially-filled `Value`.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum SerError { # [doc = \" The input ended before a complete value was decoded.\"] # [doc = \"\"] # [doc = \" `at` is the byte offset where the input terminated (the last byte\"] # [doc = \" successfully consumed before the truncation was detected).\"] Truncated { # [doc = \" Byte offset of the truncation.\"] at : ByteOffset , } , # [doc = \" The bytes at `at` do not conform to the wire/JSON grammar.\"] # [doc = \"\"] # [doc = \" `why` is a human-readable explanation of the grammar rule that was\"] # [doc = \" violated (G11 dual projection — machine-parseable in the tag, human-\"] # [doc = \" legible in the description).\"] Malformed { # [doc = \" Byte offset of the malformed datum.\"] at : ByteOffset , # [doc = \" Why the datum was rejected.\"] why : String , } , # [doc = \" An unrecognized `Repr`, constructor, or `Meta` tag was encountered at `path`.\"] # [doc = \"\"] # [doc = \" Carrying the rejected `tag` name enables the caller to log it and report\"] # [doc = \" it exactly (G11); an unknown tag is never silently skipped (C1/G2).\"] UnknownTag { # [doc = \" Structural path to the field that held the unknown tag.\"] path : FieldPath , # [doc = \" The unrecognized tag string.\"] tag : String , } , # [doc = \" A field decoded successfully but violates a value-model invariant (RFC-0001\"] # [doc = \" §4.3 — e.g. payload length ≠ repr width, bound delta ∉ \\\\[0,1\\\\]).\"] # [doc = \"\"] # [doc = \" The invariant name is carried in `why` so the caller can surface it.\"] OutOfDomain { # [doc = \" Structural path to the violating field.\"] path : FieldPath , # [doc = \" The violated invariant.\"] why : String , } , # [doc = \" A declared decode budget (depth limit, enumeration ceiling — ADR-015) was\"] # [doc = \" exceeded. `kind` names which budget: `\\\"depth\\\"`, `\\\"enum\\\"`, `\\\"alloc\\\"`, etc.\"] # [doc = \"\"] # [doc = \" An overrun is an explicit error, never a hang or an OOM (C6).\"] BudgetExceeded { # [doc = \" The budget kind that was exceeded (e.g. `\\\"depth\\\"`, `\\\"enum\\\"`).\"] kind : String , } , }",
+      "reason": "enum `SerError` variant `Truncated` uses named fields — `constructor ::= Ident ('(' type_ref (',' type_ref)* ')')?` has no named-field/record form",
+      "item_name": "SerError"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/error.rs",
+      "line": 121,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl fmt :: Display for SerError { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { match self { SerError :: Truncated { at } => write ! (f , \"truncated input at {at}\") , SerError :: Malformed { at , why } => write ! (f , \"malformed input at {at}: {why}\") , SerError :: UnknownTag { path , tag } => { write ! (f , \"unknown tag {tag:?} at {path}\") } SerError :: OutOfDomain { path , why } => { write ! (f , \"value out of domain at {path}: {why}\") } SerError :: BudgetExceeded { kind } => { write ! (f , \"decode budget exceeded ({kind})\") } } } }",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut fmt :: Formatter < '_ >`",
+      "item_name": "SerError"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/error.rs",
+      "line": 139,
+      "col": 1,
+      "category": "MacroInvocation",
+      "rust_construct": "MacroInvocation",
+      "snippet": "mycelium_std_core :: impl_std_error ! (SerError) ;",
+      "reason": "item-position macro invocation — no macro system in this grammar",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-io/src/error.rs",
+      "line": 143,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "# [doc = \" The number of bytes successfully read before an error.\"] # [doc = \"\"] # [doc = \" Carried by [`IoError::UnexpectedEof`] to name *how much* was read before the\"] # [doc = \" source was exhausted — enabling the caller to report precisely without\"] # [doc = \" re-reading (C1/RFC-0013 I1).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq)] pub struct ByteCount (pub u64) ;",
+      "reason": "dropped non-doc attribute(s) on struct `ByteCount`: # [derive (Debug , Clone , Copy , PartialEq , Eq)]",
+      "item_name": "ByteCount"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/error.rs",
+      "line": 151,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl fmt :: Display for ByteCount { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { write ! (f , \"{} bytes\" , self . 0) } }",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut fmt :: Formatter < '_ >`",
+      "item_name": "ByteCount"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/error.rs",
+      "line": 157,
+      "col": 1,
+      "category": "PayloadVariant",
+      "rust_construct": "PayloadVariant",
+      "snippet": "# [doc = \" The explicit error set for byte-movement failures (C1/RFC-0013; spec §3).\"] # [doc = \"\"] # [doc = \" Every variant is a declared, inspectable failure mode — never a silent partial\"] # [doc = \" read (C1) and never a hang or OOM (C6).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum IoError { # [doc = \" The source/sink closed before the requested number of bytes were moved.\"] # [doc = \"\"] # [doc = \" `read` is the count of bytes that *were* moved before the EOF — enabling\"] # [doc = \" the caller to report the shortfall precisely (RFC-0013 I1).\"] UnexpectedEof { # [doc = \" Bytes successfully read before the EOF.\"] read : ByteCount , } , # [doc = \" The underlying substrate refused the operation.\"] # [doc = \"\"] # [doc = \" `why` carries the refusal reason (G11 dual projection); for the in-memory\"] # [doc = \" substrate this is always the explicit reason the substrate declined.\"] Refused { # [doc = \" Why the operation was refused.\"] why : String , } , # [doc = \" A bounded io/alloc effect budget was exceeded (RFC-0014 §4.5 / C6).\"] # [doc = \"\"] # [doc = \" `kind` names which budget: `\\\"io\\\"`, `\\\"alloc\\\"`, etc.\"] EffectBudget { # [doc = \" The budget kind that was exceeded.\"] kind : String , } , }",
+      "reason": "enum `IoError` variant `UnexpectedEof` uses named fields — `constructor ::= Ident ('(' type_ref (',' type_ref)* ')')?` has no named-field/record form",
+      "item_name": "IoError"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/error.rs",
+      "line": 188,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl fmt :: Display for IoError { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { match self { IoError :: UnexpectedEof { read } => write ! (f , \"unexpected EOF after {read}\") , IoError :: Refused { why } => write ! (f , \"substrate refused: {why}\") , IoError :: EffectBudget { kind } => write ! (f , \"effect budget exceeded ({kind})\") , } } }",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut fmt :: Formatter < '_ >`",
+      "item_name": "IoError"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/error.rs",
+      "line": 198,
+      "col": 1,
+      "category": "MacroInvocation",
+      "rust_construct": "MacroInvocation",
+      "snippet": "mycelium_std_core :: impl_std_error ! (IoError) ;",
+      "reason": "item-position macro invocation — no macro system in this grammar",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-io/src/error.rs",
+      "line": 202,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "# [doc = \" A combined error from [`crate::io::read_value`]: either a byte-movement failure\"] # [doc = \" (`Io`) or a (de)serialization failure (`Ser`). The two failure modes are kept\"] # [doc = \" distinct so the caller can handle each class separately (C3 — no black box).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum ReadValueError { # [doc = \" A byte-movement failure occurred before or during decode.\"] Io (IoError) , # [doc = \" The bytes were read but the decode failed.\"] Ser (SerError) , }",
+      "reason": "dropped non-doc attribute(s) on enum `ReadValueError`: # [derive (Debug , Clone , PartialEq , Eq)]",
+      "item_name": "ReadValueError"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/error.rs",
+      "line": 213,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl fmt :: Display for ReadValueError { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { match self { ReadValueError :: Io (e) => write ! (f , \"io error: {e}\") , ReadValueError :: Ser (e) => write ! (f , \"serialize error: {e}\") , } } }",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut fmt :: Formatter < '_ >`",
+      "item_name": "ReadValueError"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/error.rs",
+      "line": 222,
+      "col": 1,
+      "category": "MacroInvocation",
+      "rust_construct": "MacroInvocation",
+      "snippet": "mycelium_std_core :: impl_std_error ! (ReadValueError , source = | this | { match this { ReadValueError :: Io (e) => Some (e) , ReadValueError :: Ser (e) => Some (e) , } }) ;",
+      "reason": "item-position macro invocation — no macro system in this grammar",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-io/src/error.rs",
+      "line": 232,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl From < IoError > for ReadValueError { fn from (e : IoError) -> Self { ReadValueError :: Io (e) } }",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `from` body: qualified/associated-function call `ReadValueError :: Io` — no established Mycelium surface form for a Rust conversion-op body; emitting the bare last-segment name would fabricate a call (e.g. `from(...)` is not a Mycelium builtin)",
+      "item_name": "ReadValueError"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/error.rs",
+      "line": 238,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl From < SerError > for ReadValueError { fn from (e : SerError) -> Self { ReadValueError :: Ser (e) } }",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `from` body: qualified/associated-function call `ReadValueError :: Ser` — no established Mycelium surface form for a Rust conversion-op body; emitting the bare last-segment name would fabricate a call (e.g. `from(...)` is not a Mycelium builtin)",
+      "item_name": "ReadValueError"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/error.rs",
+      "line": 246,
+      "col": 1,
+      "category": "TestItem",
+      "rust_construct": "TestItem",
+      "snippet": "# [cfg (test)] mod tests { use super :: * ; # [doc = \" `SerError::Truncated` Display includes the byte offset (RFC-0013 I1 / G11).\"] # [doc = \" Guard: a display that drops the offset makes this fail.\"] # [test] fn ser_error_truncated_display_includes_offset () { let e = SerError :: Truncated { at : ByteOffset (42) } ; let s = e . to_string () ; assert ! (s . contains (\"42\") , \"display must include the byte offset\") ; } # [doc = \" `SerError::Malformed` Display includes both the offset and the reason.\"] # [doc = \" Guard: dropping either field makes this fail.\"] # [test] fn ser_error_malformed_display_includes_offset_and_why () { let e = SerError :: Malformed { at : ByteOffset (7) , why : \"unexpected 0xFF in bit string\" . to_owned () , } ; let s = e . to_string () ; assert ! (s . contains (\"7\") , \"display must include the offset\") ; assert ! (s . contains (\"0xFF\") , \"display must include the rejection reason\") ; } # [doc = \" `SerError::UnknownTag` Display includes both the path and the tag.\"] # [doc = \" Guard: dropping either field makes this fail.\"] # [test] fn ser_error_unknown_tag_display_includes_path_and_tag () { let e = SerError :: UnknownTag { path : FieldPath :: from_static (\"repr/kind\") , tag : \"Quantum\" . to_owned () , } ; let s = e . to_string () ; assert ! (s . contains (\"repr/kind\") , \"must include the field path\") ; assert ! (s . contains (\"Quantum\") , \"must include the rejected tag\") ; } # [doc = \" `SerError::OutOfDomain` Display includes both the path and the reason.\"] # [test] fn ser_error_out_of_domain_display_includes_path_and_why () { let e = SerError :: OutOfDomain { path : FieldPath :: from_static (\"meta/bound/delta\") , why : \"delta 1.5 ∉ [0,1]\" . to_owned () , } ; let s = e . to_string () ; assert ! (s . contains (\"meta/bound/delta\") , \"must include the path\") ; assert ! (s . contains (\"1.5\") , \"must include the why\") ; } # [doc = \" `SerError::BudgetExceeded` Display includes the budget kind.\"] # [test] fn ser_error_budget_exceeded_display_includes_kind () { let e = SerError :: BudgetExceeded { kind : \"enum\" . to_owned () , } ; let s = e . to_string () ; assert ! (s . contains (\"enum\") , \"must include the budget kind\") ; } # [doc = \" `SerError` implements `std::error::Error` (compile-time check).\"] # [test] fn ser_error_is_std_error () { let e = SerError :: Truncated { at : ByteOffset (0) } ; let _ : & dyn std :: error :: Error = & e ; } # [doc = \" `IoError::UnexpectedEof` Display includes the byte count (RFC-0013 I1).\"] # [test] fn io_error_unexpected_eof_display_includes_count () { let e = IoError :: UnexpectedEof { read : ByteCount (15) , } ; let s = e . to_string () ; assert ! (s . contains (\"15\") , \"must include the byte count\") ; } # [doc = \" `IoError::Refused` Display includes the reason.\"] # [test] fn io_error_refused_display_includes_why () { let e = IoError :: Refused { why : \"substrate is consumed\" . to_owned () , } ; let s = e . to_string () ; assert ! (s . contains (\"consumed\") , \"must include the refusal reason\") ; } # [doc = \" `IoError::EffectBudget` Display includes the budget kind.\"] # [test] fn io_error_effect_budget_display_includes_kind () { let e = IoError :: EffectBudget { kind : \"alloc\" . to_owned () , } ; let s = e . to_string () ; assert ! (s . contains (\"alloc\") , \"must include the budget kind\") ; } # [doc = \" `IoError` implements `std::error::Error`.\"] # [test] fn io_error_is_std_error () { let e = IoError :: Refused { why : \"test\" . to_owned () , } ; let _ : & dyn std :: error :: Error = & e ; } # [doc = \" `ReadValueError` distinguishes the two error classes (C3).\"] # [doc = \" Guard: making From<IoError> and From<SerError> both map to the same variant\"] # [doc = \" would collapse the discrimination — this test catches that.\"] # [test] fn read_value_error_distinguishes_io_and_ser () { let io_err : ReadValueError = IoError :: Refused { why : \"test\" . to_owned () , } . into () ; let ser_err : ReadValueError = SerError :: Truncated { at : ByteOffset (0) } . into () ; assert ! (matches ! (io_err , ReadValueError :: Io (_))) ; assert ! (matches ! (ser_err , ReadValueError :: Ser (_))) ; assert_ne ! (io_err , ser_err) ; } # [doc = \" `ReadValueError` implements `std::error::Error` and exposes `source()`.\"] # [test] fn read_value_error_has_source () { let e : ReadValueError = IoError :: Refused { why : \"x\" . to_owned () , } . into () ; assert ! (std :: error :: Error :: source (& e) . is_some () , \"source() must chain to the underlying IoError\") ; } }",
+      "reason": "#[cfg(test)] item — out of scope for this PoC's transpilation surface (excluded from the expressible-fraction denominator, but recorded, never silently skipped)",
+      "item_name": "tests"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/guarantee_matrix.rs",
+      "line": 29,
+      "col": 1,
+      "category": "ReservedWord",
+      "rust_construct": "ReservedWord",
+      "snippet": "# [doc = \" Guarantee tag on the honesty lattice `Exact ⊐ Proven ⊐ Empirical ⊐ Declared`\"] # [doc = \" (RFC-0016 §4.1 C2; VR-5).\"] # [doc = \"\"] # [doc = \" All values are `'static` strings matching the lattice names so they can be\"] # [doc = \" asserted in tests without a dependency on the core lattice type from this\"] # [doc = \" matrix module.\"] # [derive (Debug , Clone , Copy , PartialEq , Eq)] pub enum GuaranteeTag { # [doc = \" No accuracy / precision / probability semantics; the operation is the\"] # [doc = \" honest floor `Exact` (RFC-0016 C2).\"] Exact , # [doc = \" The property is established by a **checked side-condition theorem** (VR-5).\"] # [doc = \" Not used in this matrix — no round-trip theorem has been checked.\"] Proven , # [doc = \" The property holds over a **generated corpus** (proptest); not `Proven`\"] # [doc = \" because no theorem with checked side-conditions exists (VR-5).\"] Empirical , # [doc = \" The property is **asserted without a checked basis**; always FLAGGED (VR-5).\"] Declared , }",
+      "reason": "enum variant/constructor `Exact` collides with a Mycelium reserved word — emitting it verbatim would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5)",
+      "item_name": "GuaranteeTag"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/guarantee_matrix.rs",
+      "line": 50,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl GuaranteeTag { # [doc = \" Human-readable name matching the lattice notation (`\\\"Exact\\\"`, etc.).\"] # [must_use] pub fn as_str (self) -> & 'static str { match self { GuaranteeTag :: Exact => \"Exact\" , GuaranteeTag :: Proven => \"Proven\" , GuaranteeTag :: Empirical => \"Empirical\" , GuaranteeTag :: Declared => \"Declared\" , } } }",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `as_str` signature: unsupported Rust type form `& 'static str`",
+      "item_name": "GuaranteeTag"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/guarantee_matrix.rs",
+      "line": 63,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "# [doc = \" Fallibility classification for an exported op (C1).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq)] pub enum Fallibility { # [doc = \" The op cannot fail for any well-formed input.\"] Total , # [doc = \" The op returns an explicit `Result` or `Option`; the error set is named in\"] # [doc = \" `error_set`.\"] Fallible , }",
+      "reason": "dropped non-doc attribute(s) on enum `Fallibility`: # [derive (Debug , Clone , Copy , PartialEq , Eq)]",
+      "item_name": "Fallibility"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/guarantee_matrix.rs",
+      "line": 73,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "# [doc = \" Whether the op surfaces an EXPLAIN artifact (C3).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq)] pub enum Explainable { # [doc = \" The op carries an RFC-0013 diagnostic record with the failure locus —\"] # [doc = \" the machine-legible EXPLAIN surface.\"] Yes , # [doc = \" The op neither selects, converts, nor approximates; there is no hidden\"] # [doc = \" decision to expose (C3 `n/a`).\"] NotApplicable , }",
+      "reason": "dropped non-doc attribute(s) on enum `Explainable`: # [derive (Debug , Clone , Copy , PartialEq , Eq)]",
+      "item_name": "Explainable"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/guarantee_matrix.rs",
+      "line": 84,
+      "col": 1,
+      "category": "Struct",
+      "rust_construct": "Struct",
+      "snippet": "# [doc = \" One row in the `std.io` + `serialize` guarantee matrix (RFC-0016 §4.5).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct MatrixRow { # [doc = \" Exported operation name.\"] pub op : & 'static str , # [doc = \" Guarantee tag (VR-5).\"] pub guarantee : GuaranteeTag , # [doc = \" Fallibility: total or fallible.\"] pub fallibility : Fallibility , # [doc = \" The explicit error set (empty string for total ops).\"] pub error_set : & 'static str , # [doc = \" Declared effects (C6): `\\\"none\\\"`, `\\\"io\\\"`, or `\\\"io + alloc(Budget)\\\"`.\"] pub effects : & 'static str , # [doc = \" Whether the op surfaces a C3 EXPLAIN artifact.\"] pub explainable : Explainable , }",
+      "reason": "struct `MatrixRow` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "item_name": "MatrixRow"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/guarantee_matrix.rs",
+      "line": 101,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" The `std.io` + `serialize` guarantee matrix.\"] # [doc = \"\"] # [doc = \" Eight rows — one per exported op (spec §4 guarantee matrix / RFC-0016 §4.5).\"] # [doc = \" Asserted in `tests` — never prose-only (C2 / VR-5).\"] pub const MATRIX : & [MatrixRow] = & [MatrixRow { op : \"serialize\" , guarantee : GuaranteeTag :: Exact , fallibility : Fallibility :: Fallible , error_set : \"Err(OutOfDomain) — non-finite f64 has no JSON form (never silent null)\" , effects : \"none\" , explainable : Explainable :: NotApplicable , } , MatrixRow { op : \"deserialize\" , guarantee : GuaranteeTag :: Empirical , fallibility : Fallibility :: Fallible , error_set : \"Err(Truncated|Malformed|UnknownTag|OutOfDomain|BudgetExceeded) @locus\" , effects : \"none\" , explainable : Explainable :: Yes , } , MatrixRow { op : \"to_json\" , guarantee : GuaranteeTag :: Exact , fallibility : Fallibility :: Fallible , error_set : \"Err(OutOfDomain) — non-finite f64 has no JSON form (never silent null)\" , effects : \"none\" , explainable : Explainable :: NotApplicable , } , MatrixRow { op : \"from_json\" , guarantee : GuaranteeTag :: Empirical , fallibility : Fallibility :: Fallible , error_set : \"Err(Malformed|UnknownTag|OutOfDomain|BudgetExceeded) @locus\" , effects : \"none\" , explainable : Explainable :: Yes , } , MatrixRow { op : \"read_all\" , guarantee : GuaranteeTag :: Exact , fallibility : Fallibility :: Fallible , error_set : \"Err(UnexpectedEof|Refused|EffectBudget)\" , effects : \"io\" , explainable : Explainable :: Yes , } , MatrixRow { op : \"read\" , guarantee : GuaranteeTag :: Exact , fallibility : Fallibility :: Fallible , error_set : \"Err(Refused|EffectBudget)\" , effects : \"io + alloc(Budget)\" , explainable : Explainable :: Yes , } , MatrixRow { op : \"write\" , guarantee : GuaranteeTag :: Exact , fallibility : Fallibility :: Fallible , error_set : \"Err(Refused|EffectBudget)\" , effects : \"io\" , explainable : Explainable :: Yes , } , MatrixRow { op : \"read_value\" , guarantee : GuaranteeTag :: Empirical , fallibility : Fallibility :: Fallible , error_set : \"Err(ReadValueError::Ser(_)|ReadValueError::Io(_)) @locus\" , effects : \"io\" , explainable : Explainable :: Yes , } ,] ;",
+      "reason": "top-level `const MATRIX` — no const item production in the grammar (`item` covers use/default/type/trait/impl/fn/object/lower/derive only)",
+      "item_name": "MATRIX"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/guarantee_matrix.rs",
+      "line": 186,
+      "col": 1,
+      "category": "TestItem",
+      "rust_construct": "TestItem",
+      "snippet": "# [cfg (test)] mod tests { use super :: { Explainable , Fallibility , GuaranteeTag , MATRIX } ; # [doc = \" Every op named in the spec §3 surface appears in the matrix exactly once.\"] # [doc = \" Guard: removing or renaming any op from MATRIX makes this fail.\"] # [test] fn matrix_contains_all_eight_exported_ops () { let expected = [\"serialize\" , \"deserialize\" , \"to_json\" , \"from_json\" , \"read_all\" , \"read\" , \"write\" , \"read_value\" ,] ; for name in & expected { assert ! (MATRIX . iter () . any (| r | r . op == * name) , \"matrix is missing op {:?} (spec §3)\" , name) ; } assert_eq ! (MATRIX . len () , expected . len () , \"matrix has unexpected extra or missing rows\") ; } # [doc = \" The `Exact` ops are exactly the five stated in spec §4 (serialize, to_json,\"] # [doc = \" read_all, read, write).  The `Empirical` ops are the three round-trip ops.\"] # [doc = \" Guard: upgrading any `Empirical` to `Proven` makes this fail (VR-5).\"] # [test] fn guarantee_tags_match_spec () { let exact_ops = [\"serialize\" , \"to_json\" , \"read_all\" , \"read\" , \"write\"] ; let empirical_ops = [\"deserialize\" , \"from_json\" , \"read_value\"] ; for op in & exact_ops { let row = MATRIX . iter () . find (| r | r . op == * op) . unwrap_or_else (| | panic ! (\"op {:?} missing from matrix\" , op)) ; assert_eq ! (row . guarantee , GuaranteeTag :: Exact , \"op {:?} must be Exact (spec §4)\" , op) ; } for op in & empirical_ops { let row = MATRIX . iter () . find (| r | r . op == * op) . unwrap_or_else (| | panic ! (\"op {:?} missing from matrix\" , op)) ; assert_eq ! (row . guarantee , GuaranteeTag :: Empirical , \"op {:?} must be Empirical (spec §4 / VR-5 — round-trip property \\\n                 established by proptest, not by a checked theorem)\" , op) ; } } # [doc = \" No op is `Proven` (VR-5 — no round-trip theorem has been checked).\"] # [doc = \" Guard: upgrading any row to `Proven` without a checked theorem makes this fail.\"] # [test] fn no_op_is_proven_without_a_checked_theorem () { for row in MATRIX { assert_ne ! (row . guarantee , GuaranteeTag :: Proven , \"op {:?} claims Proven without a checked theorem — \\\n                 downgrade to Empirical (VR-5 / spec §4.2 / §7-Q2)\" , row . op) ; } } # [doc = \" No op is `Declared` (VR-5 — an asserted-but-unchecked claim must be FLAGGED\"] # [doc = \" and is not the right tag for any op in this module).\"] # [test] fn no_op_is_declared () { for row in MATRIX { assert_ne ! (row . guarantee , GuaranteeTag :: Declared , \"op {:?} uses the Declared tag (VR-5 FLAG — must be FLAGGED explicitly)\" , row . op) ; } } # [doc = \" Fallible ops have a non-empty error set; total ops have an empty one (C1).\"] # [doc = \" Guard: setting a fallible op's error_set to \\\"\\\" makes this fail.\"] # [test] fn fallibility_and_error_set_are_consistent () { for row in MATRIX { match row . fallibility { Fallibility :: Total => assert ! (row . error_set . is_empty () , \"total op {:?} must have an empty error_set (C1)\" , row . op) , Fallibility :: Fallible => assert ! (! row . error_set . is_empty () , \"fallible op {:?} must name its error set (C1)\" , row . op) , } } } # [doc = \" The `serialize` and `to_json` ops are fallible: they refuse a `Value` carrying a non-finite\"] # [doc = \" `f64` (JSON has no such literal; `serde_json` would silently emit `null` — a lossy,\"] # [doc = \" identity-colliding encoding). Refusing is never-silent (C1/G2).\"] # [doc = \" Guard: flipping either back to `Total` (re-introducing the silent-null path) makes this fail.\"] # [test] fn serialize_and_to_json_refuse_non_finite_fallibly () { for op in & [\"serialize\" , \"to_json\"] { let row = MATRIX . iter () . find (| r | r . op == * op) . unwrap_or_else (| | panic ! (\"op {:?} missing\" , op)) ; assert_eq ! (row . fallibility , Fallibility :: Fallible , \"op {:?} must be fallible — non-finite f64 has no faithful JSON form (C1/G2)\" , op) ; } } # [doc = \" The io ops declare the `io` effect (C6).\"] # [doc = \" Guard: changing any io op's effect to \\\"none\\\" makes this fail.\"] # [test] fn io_ops_declare_io_effect () { let io_ops = [\"read_all\" , \"read\" , \"write\" , \"read_value\"] ; for op in & io_ops { let row = MATRIX . iter () . find (| r | r . op == * op) . unwrap_or_else (| | panic ! (\"op {:?} missing\" , op)) ; assert ! (row . effects . contains (\"io\") , \"op {:?} must declare the io effect (C6 / spec §4)\" , op) ; } } # [doc = \" The serialize ops are pure (no effects).\"] # [doc = \" Guard: adding an effect to serialize/deserialize/to_json/from_json makes this fail.\"] # [test] fn serialize_ops_are_pure () { let pure_ops = [\"serialize\" , \"deserialize\" , \"to_json\" , \"from_json\"] ; for op in & pure_ops { let row = MATRIX . iter () . find (| r | r . op == * op) . unwrap_or_else (| | panic ! (\"op {:?} missing\" , op)) ; assert_eq ! (row . effects , \"none\" , \"op {:?} must be pure/effect-free (C6 / spec §4)\" , op) ; } } # [doc = \" `read` declares the additional `alloc(Budget)` effect (C6/ADR-015).\"] # [test] fn read_declares_alloc_budget () { let row = MATRIX . iter () . find (| r | r . op == \"read\") . expect (\"read row\") ; assert ! (row . effects . contains (\"alloc\") , \"read must declare alloc(Budget) effect (C6/ADR-015)\") ; } # [doc = \" The three fallible decode ops carry EXPLAIN artifacts (C3 — RFC-0013 locus).\"] # [doc = \" Guard: removing EXPLAIN from any decode op makes this fail.\"] # [test] fn decode_ops_are_explainable () { let explain_ops = [\"deserialize\" , \"from_json\" , \"read_value\"] ; for op in & explain_ops { let row = MATRIX . iter () . find (| r | r . op == * op) . unwrap_or_else (| | panic ! (\"op {:?} missing\" , op)) ; assert_eq ! (row . explainable , Explainable :: Yes , \"op {:?} must be EXPLAIN-able (C3 — RFC-0013 diagnostic @locus)\" , op) ; } } # [doc = \" The serialize/io write ops are `NotApplicable` for EXPLAIN (no\"] # [doc = \" selection/conversion/approximation).\"] # [test] fn projection_ops_are_not_explainable () { let na_ops = [\"serialize\" , \"to_json\"] ; for op in & na_ops { let row = MATRIX . iter () . find (| r | r . op == * op) . unwrap_or_else (| | panic ! (\"op {:?} missing\" , op)) ; assert_eq ! (row . explainable , Explainable :: NotApplicable , \"op {:?} must be NotApplicable for EXPLAIN (C3 n/a — faithful projection)\" , op) ; } } }",
+      "reason": "#[cfg(test)] item — out of scope for this PoC's transpilation surface (excluded from the expressible-fraction denominator, but recorded, never silently skipped)",
+      "item_name": "tests"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/io.rs",
+      "line": 39,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use crate :: error :: IoError ;",
+      "reason": "`use` import (single path ending `IoError`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-io/src/io.rs",
+      "line": 43,
+      "col": 1,
+      "category": "ReservedWord",
+      "rust_construct": "ReservedWord",
+      "snippet": "# [doc = \" A declared byte-read budget (C6/RFC-0014 §4.5; ADR-015).\"] # [doc = \"\"] # [doc = \" Passed to [`read`] to cap the allocation.  An overrun yields\"] # [doc = \" [`IoError::EffectBudget`] instead of unbounded allocation (C6).\"] # [doc = \"\"] # [doc = \" The `Unbounded` variant is available for in-memory tests where an allocation\"] # [doc = \" ceiling is not meaningful; production uses of the OS-backed substrate should\"] # [doc = \" always supply `Bytes(n)` (spec §7-Q5 / RFC-0016 §8-Q3).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq)] pub enum Budget { # [doc = \" Read at most `n` bytes; any request beyond this yields\"] # [doc = \" [`IoError::EffectBudget`].\"] Bytes (u64) , # [doc = \" No cap — accept any number of bytes.  Use only in tests or when the\"] # [doc = \" caller has an out-of-band cap (e.g. the file system size).\"] Unbounded , }",
+      "reason": "enum variant/constructor `Bytes` collides with a Mycelium reserved word — emitting it verbatim would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5)",
+      "item_name": "Budget"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/io.rs",
+      "line": 63,
+      "col": 1,
+      "category": "ReservedWord",
+      "rust_construct": "ReservedWord",
+      "snippet": "# [doc = \" The in-memory substrate: a `Vec<u8>` cursor.\"] # [doc = \"\"] # [doc = \" The `substrate` is the **underlying resource** that `Source`/`Sink` wrap.  A\"] # [doc = \" [`Source`] owns a `Substrate` by-value; once consumed (by [`read_all`] or the\"] # [doc = \" last [`read`]) it cannot be re-accessed.  This is the LR-8 affine invariant at\"] # [doc = \" the type level.\"] # [doc = \"\"] # [doc = \" # FLAG: §8-Q6 — OS-backed substrate lives in `std-sys` (M-541)\"] # [doc = \" The real-OS-backed substrate (a file descriptor, a network socket) is NOT\"] # [doc = \" here.  The `std-sys` phylum will provide a constructor like\"] # [doc = \" `Substrate::from_fd(fd: OwnedFd) -> Substrate` that slots into this type.\"] # [doc = \" Until then this in-memory substrate covers all testable semantics.\"] # [derive (Debug)] pub struct Substrate { # [doc = \" The raw bytes (in-memory backing store).\"] data : Vec < u8 > , # [doc = \" Read cursor position.\"] pos : usize , }",
+      "reason": "struct type/constructor name `Substrate` collides with a Mycelium reserved word — emitting it verbatim would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5)",
+      "item_name": "Substrate"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/io.rs",
+      "line": 83,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl Substrate { # [doc = \" Construct a new in-memory substrate from a byte slice.\"] # [doc = \"\"] # [doc = \" This is the only constructor available in `std.io`; the OS-backed\"] # [doc = \" constructor is deferred to `std-sys` (FLAG §8-Q6).\"] # [must_use] pub fn from_bytes (data : impl Into < Vec < u8 > >) -> Self { Substrate { data : data . into () , pos : 0 , } } # [doc = \" How many bytes remain unread.\"] # [must_use] pub fn remaining (& self) -> usize { self . data . len () . saturating_sub (self . pos) } }",
+      "reason": "impl target type `Substrate` has no confirmed mapping (type name `Substrate` collides with a Mycelium reserved word — emitting it verbatim would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5))",
+      "item_name": "Substrate"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/io.rs",
+      "line": 105,
+      "col": 1,
+      "category": "Struct",
+      "rust_construct": "Struct",
+      "snippet": "# [doc = \" An abstract byte **source**: a `Substrate` wrapped in an affine handle.\"] # [doc = \"\"] # [doc = \" A `Source` may be read exactly once via [`read_all`] (which consumes it) or\"] # [doc = \" progressively via [`read`] (which threads the handle linearly).  A double-\"] # [doc = \" consume is a compile-time error (Rust move semantics enforce LR-8).\"] # [doc = \"\"] # [doc = \" # EXPLAIN-able selection\"] # [doc = \" The substrate backing this `Source` is visible as a field (C3 — no hidden\"] # [doc = \" resource).\"] # [derive (Debug)] pub struct Source { substrate : Substrate , }",
+      "reason": "struct `Source` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "item_name": "Source"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/io.rs",
+      "line": 119,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl Source { # [doc = \" Wrap a substrate as an affine `Source`.\"] # [doc = \"\"] # [doc = \" # Effects: none (construction is pure)\"] # [must_use] pub fn new (substrate : Substrate) -> Self { Source { substrate } } # [doc = \" Construct a `Source` directly from an in-memory byte slice (convenience\"] # [doc = \" constructor for tests).\"] # [must_use] pub fn from_bytes (data : impl Into < Vec < u8 > >) -> Self { Source :: new (Substrate :: from_bytes (data)) } # [doc = \" How many bytes remain unread.\"] # [must_use] pub fn remaining (& self) -> usize { self . substrate . remaining () } # [doc = \" Read up to `n` bytes from the substrate (internal, non-consuming helper).\"] # [doc = \"\"] # [doc = \" Returns the bytes read and the new cursor position.\"] fn read_n (& mut self , n : usize) -> Vec < u8 > { let end = (self . substrate . pos + n) . min (self . substrate . data . len ()) ; let chunk = self . substrate . data [self . substrate . pos .. end] . to_vec () ; self . substrate . pos = end ; chunk } # [doc = \" Read all remaining bytes (internal, consuming helper).\"] fn read_to_end (& mut self) -> Vec < u8 > { let bytes = self . substrate . data [self . substrate . pos ..] . to_vec () ; self . substrate . pos = self . substrate . data . len () ; bytes } }",
+      "reason": "no member of this impl block could be transpiled (5 sub-issue(s)): impl method `new` signature: type name `Substrate` collides with a Mycelium reserved word — emitting it verbatim would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5); impl method `from_bytes` signature: unsupported Rust type form `impl Into < Vec < u8 > >`; impl method `remaining` signature: `usize` has a platform-dependent width; no fixed Binary{N} mapping; impl method `read_n` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence; impl method `read_to_end` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence",
+      "item_name": "Source"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/io.rs",
+      "line": 161,
+      "col": 1,
+      "category": "Struct",
+      "rust_construct": "Struct",
+      "snippet": "# [doc = \" An abstract byte **sink**: a write target wrapped in an affine handle.\"] # [doc = \"\"] # [doc = \" A `Sink` is threaded linearly through [`write()`] calls (each call consumes the\"] # [doc = \" current handle and returns the updated one).  The affine discipline means a\"] # [doc = \" written sink cannot be silently re-used; a double-write is a compile-time error.\"] # [doc = \"\"] # [doc = \" # EXPLAIN-able selection (C3)\"] # [doc = \" The bytes written are observable via [`Sink::into_bytes`].\"] # [derive (Debug)] pub struct Sink { buffer : Vec < u8 > , }",
+      "reason": "struct `Sink` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "item_name": "Sink"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/io.rs",
+      "line": 174,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl Sink { # [doc = \" Construct an empty in-memory sink.\"] # [doc = \"\"] # [doc = \" # Effects: none (construction is pure)\"] # [must_use] pub fn new () -> Self { Sink { buffer : Vec :: new () } } # [doc = \" Consume the sink and return the bytes written into it.\"] # [doc = \"\"] # [doc = \" This finalizes the sink — it cannot be written to after this call (Rust\"] # [doc = \" move semantics enforce the affine discipline).\"] # [must_use] pub fn into_bytes (self) -> Vec < u8 > { self . buffer } # [doc = \" Append `bytes` to the internal buffer (internal, non-consuming helper).\"] fn append (& mut self , bytes : & [u8]) { self . buffer . extend_from_slice (bytes) ; } }",
+      "reason": "no member of this impl block could be transpiled (3 sub-issue(s)): impl method `new` body: unsupported expression form `Sink { buffer : Vec :: new () }`; impl method `into_bytes` signature: generic type path `Vec < u8 >` — type-argument mapping not confirmed; impl method `append` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence",
+      "item_name": "Sink"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/io.rs",
+      "line": 198,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl Default for Sink { fn default () -> Self { Sink :: new () } }",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `default`: impl method name `default` collides with a Mycelium reserved word — emitting it verbatim would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5)",
+      "item_name": "Sink"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/io.rs",
+      "line": 206,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "# [doc = \" Read all remaining bytes from `src`, consuming it exactly once (LR-8).\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Exact`\"] # [doc = \" The bytes returned are exactly the bytes the substrate delivers — neither\"] # [doc = \" reordered nor approximated.  The `Exact` tag signals no accuracy semantics\"] # [doc = \" (RFC-0016 C2: \\\"an op with no accuracy semantics is simply `Exact`\\\").\"] # [doc = \"\"] # [doc = \" # Fallibility\"] # [doc = \" - `Err(IoError::UnexpectedEof{read})` if the source has already been consumed\"] # [doc = \"   before this call (in practice, Rust move semantics prevent a double-consume\"] # [doc = \"   at the type level; this variant can only be triggered by a substrate that\"] # [doc = \"   reports zero bytes when some were expected, e.g. a racing close in the OS-\"] # [doc = \"   backed variant).\"] # [doc = \" - `Err(IoError::Refused{why})` if the substrate declines the operation.\"] # [doc = \" - `Err(IoError::EffectBudget{kind})` on an effect-budget overrun.\"] # [doc = \"\"] # [doc = \" # Effects: io (declared, C6)\"] # [doc = \" This operation reads bytes from the substrate — the `io` effect is declared\"] # [doc = \" on the signature.  (For the in-memory substrate the \\\"IO\\\" is a buffer copy, but\"] # [doc = \" the effect abstraction is preserved for composability with OS-backed substrates.)\"] pub fn read_all (src : Source) -> Result < Vec < u8 > , IoError > { let mut src = src ; Ok (src . read_to_end ()) }",
+      "reason": "generic type path `Result < Vec < u8 > , IoError >` — type-argument mapping not confirmed",
+      "item_name": "read_all"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/io.rs",
+      "line": 232,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "# [doc = \" Read up to `budget` bytes from `src`, returning the bytes and the remaining\"] # [doc = \" handle (LR-8 — linear threading).\"] # [doc = \"\"] # [doc = \" The caller receives the `Source` back so it may continue reading.  A call that\"] # [doc = \" returns an empty `Vec` has exhausted the source; subsequent calls will also\"] # [doc = \" return empty (they never error on a naturally-exhausted source).\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Exact`\"] # [doc = \" The bytes returned are exactly the bytes the substrate delivers up to the\"] # [doc = \" budget.\"] # [doc = \"\"] # [doc = \" # Fallibility\"] # [doc = \" - `Err(IoError::EffectBudget{kind: \\\"alloc\\\"})` if `budget` would require more\"] # [doc = \"   allocation than the declared `alloc(Budget)` policy (for the in-memory\"] # [doc = \"   substrate, `Unbounded` never triggers this).\"] # [doc = \" - `Err(IoError::Refused{why})` if the substrate declines.\"] # [doc = \"\"] # [doc = \" # Effects: io + alloc(Budget) (declared, C6)\"] pub fn read (src : Source , budget : Budget) -> Result < (Vec < u8 > , Source) , IoError > { let mut src = src ; let n = match budget { Budget :: Bytes (cap) => { (cap as usize) . min (src . remaining ()) } Budget :: Unbounded => src . remaining () , } ; let chunk = src . read_n (n) ; Ok ((chunk , src)) }",
+      "reason": "generic type path `Result < (Vec < u8 > , Source) , IoError >` — type-argument mapping not confirmed",
+      "item_name": "read"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/io.rs",
+      "line": 263,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Write `bytes` to `snk`, consuming the handle and returning the updated one\"] # [doc = \" (LR-8 — linear threading).\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Exact`\"] # [doc = \" The bytes written are exactly `bytes` — neither reordered nor approximated.\"] # [doc = \"\"] # [doc = \" # Fallibility\"] # [doc = \" - `Err(IoError::Refused{why})` if the substrate declines.\"] # [doc = \" - `Err(IoError::EffectBudget{kind})` on an effect-budget overrun.\"] # [doc = \"\"] # [doc = \" # Effects: io (declared, C6)\"] pub fn write (snk : Sink , bytes : & [u8]) -> Result < Sink , IoError > { let mut snk = snk ; snk . append (bytes) ; Ok (snk) }",
+      "reason": "unsupported Rust type form `& [u8]`",
+      "item_name": "write"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/io.rs",
+      "line": 280,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Deserialize a `Value` directly from `src` in the given `format`, joining the\"] # [doc = \" io and serialize halves.\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Empirical` (round-trip; composes io + deserialize; spec §4)\"] # [doc = \" The tag is the meet of `Exact` (io) and `Empirical` (deserialize) = `Empirical`.\"] # [doc = \"\"] # [doc = \" # Fallibility\"] # [doc = \" `Err(ReadValueError::Io(_))` — byte-movement failure before/during decode.\"] # [doc = \" `Err(ReadValueError::Ser(_))` — bytes read but decode failed.\"] # [doc = \"\"] # [doc = \" # Effects: io (declared, C6)\"] pub fn read_value (src : Source , format : crate :: serialize :: Format ,) -> Result < mycelium_core :: Value , crate :: error :: ReadValueError > { let bytes = read_all (src) . map_err (crate :: error :: ReadValueError :: Io) ? ; crate :: serialize :: deserialize (& bytes , format) . map_err (crate :: error :: ReadValueError :: Ser) }",
+      "reason": "qualified type path `crate :: serialize :: Format` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
+      "item_name": "read_value"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/io.rs",
+      "line": 301,
+      "col": 1,
+      "category": "TestItem",
+      "rust_construct": "TestItem",
+      "snippet": "# [cfg (test)] mod tests { use super :: * ; use crate :: error :: ByteCount ; # [test] fn substrate_remaining_starts_full () { let s = Substrate :: from_bytes (vec ! [1u8 , 2 , 3 , 4]) ; assert_eq ! (s . remaining () , 4) ; } # [doc = \" `read_all` returns all bytes from the source.\"] # [doc = \" Guard: returning fewer bytes makes this fail.\"] # [test] fn read_all_returns_all_bytes () { let data = vec ! [10u8 , 20 , 30 , 40 , 50] ; let src = Source :: from_bytes (data . clone ()) ; let bytes = read_all (src) . expect (\"read_all must succeed\") ; assert_eq ! (bytes , data , \"read_all must return exactly the source bytes\") ; } # [doc = \" `read_all` consumes the source exactly once — the handle is moved.\"] # [doc = \" This is a compile-time property (Rust move semantics), but we test the\"] # [doc = \" observable behavior: calling read_all twice on the *same data* via\"] # [doc = \" separate Sources both succeed independently.\"] # [doc = \" Guard: a double-consume bug (reuse without a new Source) would be a\"] # [doc = \" compile error, not reachable here.\"] # [test] fn read_all_consumed_once_semantics () { let data = vec ! [1u8 , 2 , 3] ; let src1 = Source :: from_bytes (data . clone ()) ; let src2 = Source :: from_bytes (data . clone ()) ; let r1 = read_all (src1) . expect (\"first source\") ; let r2 = read_all (src2) . expect (\"second source\") ; assert_eq ! (r1 , r2 , \"two separate sources of same data return same bytes\") ; } # [doc = \" `read_all` on an empty source returns an empty Vec (not an error).\"] # [test] fn read_all_empty_source_returns_empty () { let src = Source :: from_bytes (vec ! []) ; let bytes = read_all (src) . expect (\"empty source must succeed\") ; assert ! (bytes . is_empty () , \"empty source must yield empty bytes\") ; } # [doc = \" `read` with `Budget::Unbounded` returns all remaining bytes.\"] # [test] fn read_unbounded_returns_all () { let data = vec ! [1u8 , 2 , 3 , 4 , 5] ; let src = Source :: from_bytes (data . clone ()) ; let (chunk , src_rest) = read (src , Budget :: Unbounded) . expect (\"read must succeed\") ; assert_eq ! (chunk , data) ; assert_eq ! (src_rest . remaining () , 0 , \"source must be exhausted\") ; } # [doc = \" `read` with `Budget::Bytes(n)` reads at most `n` bytes.\"] # [doc = \" Guard: reading more than the budget makes this fail.\"] # [test] fn read_bounded_reads_at_most_budget () { let data = vec ! [1u8 , 2 , 3 , 4 , 5] ; let src = Source :: from_bytes (data . clone ()) ; let (chunk , _src_rest) = read (src , Budget :: Bytes (3)) . expect (\"read must succeed\") ; assert_eq ! (chunk , vec ! [1u8 , 2 , 3] , \"must read exactly 3 bytes\") ; } # [doc = \" `read` returns the handle for continuation — linear threading.\"] # [doc = \" Two consecutive reads cover all bytes.\"] # [test] fn read_linear_continuation () { let data = vec ! [10u8 , 20 , 30 , 40] ; let src = Source :: from_bytes (data . clone ()) ; let (chunk1 , src) = read (src , Budget :: Bytes (2)) . expect (\"first read\") ; let (chunk2 , src) = read (src , Budget :: Bytes (2)) . expect (\"second read\") ; assert_eq ! (chunk1 , vec ! [10u8 , 20]) ; assert_eq ! (chunk2 , vec ! [30u8 , 40]) ; assert_eq ! (src . remaining () , 0 , \"fully consumed after two reads\") ; } # [doc = \" `read` when budget exceeds remaining returns only what's available (no error).\"] # [test] fn read_budget_exceeds_remaining_returns_partial () { let data = vec ! [1u8 , 2] ; let src = Source :: from_bytes (data . clone ()) ; let (chunk , src_rest) = read (src , Budget :: Bytes (100)) . expect (\"read past end\") ; assert_eq ! (chunk , data , \"must return what's available, not 100 bytes\") ; assert_eq ! (src_rest . remaining () , 0) ; } # [doc = \" `write` appends bytes to the sink and returns the updated handle.\"] # [test] fn write_appends_bytes () { let snk = Sink :: new () ; let snk = write (snk , & [1u8 , 2 , 3]) . expect (\"first write\") ; let snk = write (snk , & [4u8 , 5]) . expect (\"second write\") ; let result = snk . into_bytes () ; assert_eq ! (result , vec ! [1u8 , 2 , 3 , 4 , 5] , \"bytes must be appended in order\") ; } # [doc = \" `write` with empty bytes is a no-op (no error).\"] # [test] fn write_empty_bytes_is_noop () { let snk = Sink :: new () ; let snk = write (snk , & []) . expect (\"write empty\") ; assert ! (snk . into_bytes () . is_empty ()) ; } # [doc = \" The bytes retrieved by `read_all` are byte-for-byte equal to the bytes\"] # [doc = \" given to `Source::from_bytes` — exactness of the byte-movement guarantee.\"] # [doc = \" Guard: any transformation inside read_all makes this fail.\"] # [test] fn read_all_is_exact () { let data : Vec < u8 > = (0u8 ..= 255) . collect () ; let src = Source :: from_bytes (data . clone ()) ; let result = read_all (src) . expect (\"read_all\") ; assert_eq ! (result , data , \"byte-movement must be exact (spec §4 / Exact tag)\") ; } # [doc = \" The bytes retrieved by `write` + `into_bytes` are byte-for-byte equal to\"] # [doc = \" the bytes given to `write`.\"] # [test] fn write_is_exact () { let data : Vec < u8 > = (0u8 ..= 255) . collect () ; let snk = Sink :: new () ; let snk = write (snk , & data) . expect (\"write\") ; let result = snk . into_bytes () ; assert_eq ! (result , data , \"byte-movement must be exact (spec §4 / Exact tag)\") ; } # [doc = \" `IoError::UnexpectedEof` carries the byte count (RFC-0013 I1 / C1).\"] # [doc = \" Guard: dropping the count from the error makes this fail.\"] # [test] fn io_error_unexpected_eof_carries_count () { let e = IoError :: UnexpectedEof { read : ByteCount (7) } ; assert ! (e . to_string () . contains (\"7\") , \"error must carry the byte count (RFC-0013 I1)\") ; } # [doc = \" `read_value` round-trips a serialized value end-to-end.\"] # [doc = \" Guard: any divergence between serialize → source → read_value makes this fail.\"] # [test] fn read_value_round_trip () { use crate :: serialize :: { serialize , Format } ; use mycelium_core :: { meta :: { Meta , Provenance } , repr :: Repr , value :: { Payload , Value } , } ; let v = Value :: new (Repr :: Binary { width : 4 } , Payload :: Bits (vec ! [true , false , true , false]) , Meta :: exact (Provenance :: Root) ,) . expect (\"well-formed value\") ; let bytes = serialize (& v , Format :: Wire) . expect (\"serialize: finite test value\") ; let src = Source :: from_bytes (bytes) ; let recovered = read_value (src , Format :: Wire) . expect (\"read_value round-trip\") ; assert_eq ! (v , recovered , \"read_value must recover the original value\") ; } # [doc = \" `read_value` on garbage bytes yields `Err(ReadValueError::Ser(_))` (C1).\"] # [test] fn read_value_garbage_bytes_yields_ser_error () { use crate :: serialize :: Format ; let src = Source :: from_bytes (b\"not valid json at all\" . to_vec ()) ; let err = read_value (src , Format :: Wire) . expect_err (\"must error on garbage\") ; assert ! (matches ! (err , crate :: error :: ReadValueError :: Ser (_)) , \"garbage bytes must yield a Ser error, not an Io error\") ; } # [doc = \" `Budget::Bytes(n)` is reified and comparable — the bound is not hidden (C3).\"] # [test] fn budget_is_reified () { let b = Budget :: Bytes (1024) ; assert_eq ! (b , Budget :: Bytes (1024)) ; assert_ne ! (b , Budget :: Unbounded) ; } }",
+      "reason": "#[cfg(test)] item — out of scope for this PoC's transpilation surface (excluded from the expressible-fraction denominator, but recorded, never silently skipped)",
+      "item_name": "tests"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 1,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# ! [forbid (unsafe_code)]",
+      "reason": "crate/file-level inner attributes (#![...]) are not transpiled (no nodule-header equivalent for these Rust-specific directives)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 109,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "pub mod error ;",
+      "reason": "`mod` declaration — Mycelium's nodule-per-file model has no nested-module construct in this grammar fragment",
+      "item_name": "error"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 110,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "pub mod guarantee_matrix ;",
+      "reason": "`mod` declaration — Mycelium's nodule-per-file model has no nested-module construct in this grammar fragment",
+      "item_name": "guarantee_matrix"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 111,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "pub mod io ;",
+      "reason": "`mod` declaration — Mycelium's nodule-per-file model has no nested-module construct in this grammar fragment",
+      "item_name": "io"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 112,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "pub mod serialize ;",
+      "reason": "`mod` declaration — Mycelium's nodule-per-file model has no nested-module construct in this grammar fragment",
+      "item_name": "serialize"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 116,
+      "col": 1,
+      "category": "TestItem",
+      "rust_construct": "TestItem",
+      "snippet": "# [cfg (test)] # [path = \"tests/mod.rs\"] mod unit_tests ;",
+      "reason": "#[cfg(test)] item — out of scope for this PoC's transpilation surface (excluded from the expressible-fraction denominator, but recorded, never silently skipped)",
+      "item_name": "unit_tests"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 123,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use error :: { ByteCount , ByteOffset , FieldPath , IoError , ReadValueError , SerError } ;",
+      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 126,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use serialize :: { deserialize , from_json , serialize , to_json , Format } ;",
+      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 129,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use io :: { read , read_all , read_value , write , Budget , Sink , Source , Substrate } ;",
+      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 132,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use guarantee_matrix :: MATRIX as GUARANTEE_MATRIX ;",
+      "reason": "`use` import (rename `MATRIX as GUARANTEE_MATRIX`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 136,
+      "col": 1,
+      "category": "TestItem",
+      "rust_construct": "TestItem",
+      "snippet": "# [cfg (test)] mod tests { use super :: * ; use mycelium_core :: { meta :: { Meta , Provenance } , repr :: Repr , value :: { Payload , Value } , } ; fn binary_value () -> Value { Value :: new (Repr :: Binary { width : 8 } , Payload :: Bits (vec ! [true , false , true , true , false , false , true , false]) , Meta :: exact (Provenance :: Root) ,) . expect (\"well-formed binary value\") } # [doc = \" The flat re-exports are usable without the sub-module path.\"] # [test] fn flat_re_exports_work () { let v = binary_value () ; let bytes = serialize (& v , Format :: Wire) . expect (\"serialize: finite test value\") ; let recovered = deserialize (& bytes , Format :: Wire) . expect (\"wire round-trip\") ; assert_eq ! (v , recovered) ; let text = to_json (& v) . expect (\"to_json: finite test value\") ; let recovered = from_json (& text) . expect (\"JSON round-trip\") ; assert_eq ! (v , recovered) ; } # [doc = \" End-to-end: serialize -> Source -> read_all -> deserialize.\"] # [test] fn io_and_serialize_end_to_end () { let v = binary_value () ; let bytes = serialize (& v , Format :: Wire) . expect (\"serialize: finite test value\") ; let src = Source :: from_bytes (bytes) ; let raw = read_all (src) . expect (\"read_all\") ; let recovered = deserialize (& raw , Format :: Wire) . expect (\"deserialize after read_all\") ; assert_eq ! (v , recovered) ; } # [doc = \" End-to-end: serialize -> Source -> read_value.\"] # [test] fn read_value_end_to_end () { let v = binary_value () ; let bytes = serialize (& v , Format :: Wire) . expect (\"serialize: finite test value\") ; let src = Source :: from_bytes (bytes) ; let recovered = read_value (src , Format :: Wire) . expect (\"read_value\") ; assert_eq ! (v , recovered) ; } # [doc = \" End-to-end: serialize -> write -> Sink -> deserialize.\"] # [test] fn write_and_serialize_end_to_end () { let v = binary_value () ; let bytes = serialize (& v , Format :: Wire) . expect (\"serialize: finite test value\") ; let snk = Sink :: new () ; let snk = write (snk , & bytes) . expect (\"write\") ; let result = snk . into_bytes () ; let recovered = deserialize (& result , Format :: Wire) . expect (\"deserialize after write\") ; assert_eq ! (v , recovered) ; } # [doc = \" The guarantee matrix has exactly 8 rows (one per exported op; spec §4).\"] # [test] fn guarantee_matrix_has_eight_rows () { assert_eq ! (GUARANTEE_MATRIX . len () , 8 , \"spec §4 guarantees eight op rows\") ; } # [doc = \" Garbage bytes yield an explicit Err, never a silent partial value.\"] # [test] fn deserialize_never_silent_on_garbage () { let result = deserialize (b\"garbage\" , Format :: Wire) ; assert ! (result . is_err () , \"garbage input must yield Err (C1/G2)\") ; } # [doc = \" Empty bytes yield Err (C1).\"] # [test] fn deserialize_never_silent_on_empty () { assert ! (deserialize (b\"\" , Format :: Wire) . is_err () , \"empty input must yield Err (C1)\") ; } # [doc = \" `serialize` does not change the content hash of the value.\"] # [test] fn serialize_is_a_projection_not_identity () { let v = binary_value () ; let h_before = v . content_hash () ; let _bytes = serialize (& v , Format :: Wire) . expect (\"serialize: finite test value\") ; assert_eq ! (v . content_hash () , h_before , \"ADR-003: projection must not change identity\") ; } # [doc = \" `read_all` exhausts the source (returns the full byte payload).\"] # [test] fn read_all_exhausts_source () { let data = vec ! [1u8 , 2 , 3] ; let src = Source :: from_bytes (data . clone ()) ; let bytes = read_all (src) . expect (\"read_all\") ; assert_eq ! (bytes , data , \"read_all must return all source bytes\") ; } # [doc = \" Chunked `read` threads the handle linearly.\"] # [test] fn read_threads_linearly () { let src = Source :: from_bytes (vec ! [1u8 , 2 , 3 , 4 , 5 , 6]) ; let (a , src) = read (src , Budget :: Bytes (2)) . expect (\"first chunk\") ; let (b , src) = read (src , Budget :: Bytes (2)) . expect (\"second chunk\") ; let (c , _src) = read (src , Budget :: Bytes (2)) . expect (\"third chunk\") ; assert_eq ! ([a , b , c] , [vec ! [1 , 2] , vec ! [3 , 4] , vec ! [5 , 6]]) ; } }",
+      "reason": "#[cfg(test)] item — out of scope for this PoC's transpilation surface (excluded from the expressible-fraction denominator, but recorded, never silently skipped)",
+      "item_name": "tests"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/serialize.rs",
+      "line": 38,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use mycelium_core :: value :: Payload ;",
+      "reason": "`use` import (single path ending `Payload`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-io/src/serialize.rs",
+      "line": 39,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use mycelium_core :: Value ;",
+      "reason": "`use` import (single path ending `Value`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-io/src/serialize.rs",
+      "line": 41,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use crate :: error :: { ByteOffset , FieldPath , SerError } ;",
+      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-io/src/serialize.rs",
+      "line": 45,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "# [doc = \" The two supported serialization formats (spec §3).\"] # [doc = \"\"] # [doc = \" Both formats share the same self-describing grammar (`[Repr] ‖ [Meta] ‖\"] # [doc = \" [payload]`), so the round-trip property holds for each independently.  The\"] # [doc = \" only difference is the byte representation: `Wire` is JSON-in-bytes (the\"] # [doc = \" same substrate used for the `Value` serde form in M-104), `Json` is the\"] # [doc = \" UTF-8 text form suitable for human/tool consumption (G11 dual projection).\"] # [doc = \"\"] # [doc = \" # EXPLAIN-able selection\"] # [doc = \" A `Format` value is the reified, inspectable selection artifact (C3): the\"] # [doc = \" choice of `Wire` vs `Json` is visible at every call site — there is no\"] # [doc = \" ambient default that silently changes the wire form (spec §7-Q5 / RFC-0016\"] # [doc = \" §8-Q3 tension A; required-explicit until the per-ring ergonomics pass M-540).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq)] pub enum Format { # [doc = \" The self-describing `[Repr] ‖ [Meta] ‖ [payload]` binary-JSON form\"] # [doc = \" (RFC-0001 §4.8).  The byte representation is a compact JSON object\"] # [doc = \" encoded as UTF-8 bytes (not a distinct binary encoding — see FLAG §8-Q6\"] # [doc = \" for a future binary wire form; the grammar is identical to `Json` but\"] # [doc = \" the container is `Vec<u8>`).\"] Wire , # [doc = \" The **one canonical JSON projection** — compact UTF-8 JSON text.\"] # [doc = \"\"] # [doc = \" `fmt.to_json` (M-533) **delegates** to this format (README §5 seam):\"] # [doc = \" one projection, two entry points.  The round-trip property is\"] # [doc = \" established here and shared — not duplicated.  (Delegation is FLAGGED\"] # [doc = \" §7-Q1 pending maintainer sign-off.)\"] Json , }",
+      "reason": "dropped non-doc attribute(s) on enum `Format`: # [derive (Debug , Clone , Copy , PartialEq , Eq)]",
+      "item_name": "Format"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/serialize.rs",
+      "line": 77,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" A `Value` carrying a non-finite `f64` (`NaN`/`±∞`) in a `Dense`/`Vsa` payload has no faithful\"] # [doc = \" JSON representation (`serde_json` would silently emit `null`), so it is refused here.\"] # [doc = \"\"] # [doc = \" Returns `Err(SerError::OutOfDomain)` naming the payload index of the first non-finite scalar;\"] # [doc = \" `Ok(())` when every scalar is finite (or the payload has no `f64`).\"] fn check_json_representable (v : & Value) -> Result < () , SerError > { let scalars : & [f64] = match v . payload () { Payload :: Scalars (s) | Payload :: Hypervector (s) => s , Payload :: Bits (_) | Payload :: Trits (_) => return Ok (()) , Payload :: Seq (elems) => { for e in elems { check_json_representable (e) ? ; } return Ok (()) ; } Payload :: Bytes (_) => return Ok (()) , Payload :: Float (_) => return Ok (()) , } ; if let Some (pos) = scalars . iter () . position (| x | ! x . is_finite ()) { return Err (SerError :: OutOfDomain { path : FieldPath :: from_static (\"payload\") , why : format ! (\"non-finite f64 at payload index {pos} has no JSON representation \\\n                 (serde_json would silently emit null, losing NaN/±∞ and colliding identity); \\\n                 refused — never-silent (C1/G2)\") , }) ; } Ok (()) }",
+      "reason": "unsupported Rust type form `& Value`",
+      "item_name": "check_json_representable"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/serialize.rs",
+      "line": 116,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Project `v` to the wire/JSON byte form for the given `format`.\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Exact` (when `Ok`)\"] # [doc = \" A faithful projection: every JSON-representable `Value` has a wire/JSON form (RFC-0001 §4.8).\"] # [doc = \" `serialize` borrows `v` immutably; it never mutates or re-keys the value, so the content hash\"] # [doc = \" is unchanged (C4/ADR-003).\"] # [doc = \"\"] # [doc = \" # Fallibility: `Err(SerError::OutOfDomain)`\"] # [doc = \" A `Value` carrying a non-finite `f64` (`NaN`/`±∞`) is refused — JSON cannot represent it and\"] # [doc = \" `serde_json` would silently emit `null` (a lossy, identity-colliding encoding). Never-silent\"] # [doc = \" (C1/G2). Every other well-formed `Value` serializes (M-104's `serde` impl is total over the\"] # [doc = \" finite domain).\"] # [doc = \"\"] # [doc = \" # Effects: none\"] # [doc = \" Pure computation over the in-memory value; no IO.\"] # [doc = \"\"] # [doc = \" # EXPLAIN-able: n/a\"] # [doc = \" A faithful projection has no hidden selection or approximation (spec §4/C3).\"] pub fn serialize (v : & Value , format : Format) -> Result < Vec < u8 > , SerError > { check_json_representable (v) ? ; let bytes = match format { Format :: Wire | Format :: Json => { serde_json :: to_vec (v) . expect (\"Value serialization is total over finite Values (M-104)\") } } ; Ok (bytes) }",
+      "reason": "unsupported Rust type form `& Value`",
+      "item_name": "serialize"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/serialize.rs",
+      "line": 148,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Recover a `Value` from `bytes` serialized in the given `format`.\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Empirical` (round-trip property; spec §4.2)\"] # [doc = \" `deserialize(serialize(v, f), f) ≡ v` holds over a generated property-test\"] # [doc = \" corpus (asserted in `#[cfg(test)]`).  The tag is **`Empirical`** — not\"] # [doc = \" `Proven` — because no injectivity/totality theorem over the closed grammar\"] # [doc = \" has been checked here (VR-5 / spec §7-Q2).\"] # [doc = \"\"] # [doc = \" # Fallibility: `Err(SerError)` with a locus (C1 — never-silent)\"] # [doc = \" Any of the five failure modes below; the error carries the **byte offset or\"] # [doc = \" field path** of the failure (RFC-0013 I1):\"] # [doc = \"\"] # [doc = \" - `Truncated{at}` — input ended before a complete value was decoded.\"] # [doc = \" - `Malformed{at, why}` — bytes do not parse (grammar violation).\"] # [doc = \" - `UnknownTag{path, tag}` — unrecognized `Repr`/ctor/`Meta` tag.\"] # [doc = \" - `OutOfDomain{path, why}` — field decodes but violates a value-model\"] # [doc = \"   invariant (e.g. payload length ≠ repr width).\"] # [doc = \" - `BudgetExceeded{kind}` — a declared decode budget overrun (ADR-015).\"] # [doc = \"\"] # [doc = \" **No partially-filled `Value` is ever returned** (C1/G2).\"] # [doc = \"\"] # [doc = \" # Effects: none\"] # [doc = \" Pure over the byte input; no IO.\"] pub fn deserialize (bytes : & [u8] , _format : Format) -> Result < Value , SerError > { serde_json :: from_slice :: < Value > (bytes) . map_err (| e | map_serde_error (e , bytes)) }",
+      "reason": "unsupported Rust type form `& [u8]`",
+      "item_name": "deserialize"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/serialize.rs",
+      "line": 181,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" The **one canonical JSON projection**: project `v` to compact UTF-8 JSON text.\"] # [doc = \"\"] # [doc = \" `fmt.to_json` (M-533) **delegates** to this function (README §5 seam; spec\"] # [doc = \" §7-Q1 FLAGGED pending maintainer sign-off).  The round-trip property\"] # [doc = \" `from_json(to_json(v)) ≡ v` is established here once and not duplicated.\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Exact` (when `Ok`)\"] # [doc = \" Faithful projection (identical to `serialize(v, Format::Json)` as `String`).\"] # [doc = \"\"] # [doc = \" # Fallibility: `Err(SerError::OutOfDomain)`\"] # [doc = \" Refuses a `Value` carrying a non-finite `f64` (same domain as [`serialize`]) — JSON cannot\"] # [doc = \" represent it and `serde_json` would silently emit `null` (C1/G2). Total over the finite domain.\"] # [doc = \"\"] # [doc = \" # Effects: none\"] pub fn to_json (v : & Value) -> Result < String , SerError > { check_json_representable (v) ? ; Ok (serde_json :: to_string (v) . expect (\"to_json is total over finite Values (M-104; non-finite excluded above)\")) }",
+      "reason": "unsupported Rust type form `& Value`",
+      "item_name": "to_json"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/serialize.rs",
+      "line": 201,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Recover a `Value` from canonical JSON text.\"] # [doc = \"\"] # [doc = \" `from_json(to_json(v)) ≡ v` (the round-trip property, `Empirical`).\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Empirical` (round-trip; spec §4.2)\"] # [doc = \"\"] # [doc = \" # Fallibility: `Err(SerError)` with a locus (C1 — never-silent)\"] # [doc = \"\"] # [doc = \" # Effects: none\"] pub fn from_json (text : & str) -> Result < Value , SerError > { serde_json :: from_str :: < Value > (text) . map_err (| e | map_serde_error_str (e , text)) }",
+      "reason": "unsupported Rust type form `& str`",
+      "item_name": "from_json"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/serialize.rs",
+      "line": 216,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Map a `serde_json::Error` (from `from_slice`) to a typed [`SerError`] with\"] # [doc = \" the best available locus information.\"] # [doc = \"\"] # [doc = \" `serde_json::Error` exposes `line()` and `column()` (1-based); we convert to\"] # [doc = \" a byte-offset approximation using the line/column and the raw input (best-effort\"] # [doc = \" — a precise byte offset would require a byte-counting deserializer, which is\"] # [doc = \" deferred to a future codec improvement; this is the honest `Empirical` floor).\"] fn map_serde_error (e : serde_json :: Error , input : & [u8]) -> SerError { let byte_offset = ByteOffset (approx_byte_offset (input , e . line () , e . column ())) ; let msg = e . to_string () ; if is_truncated_error_msg (& msg , input) { SerError :: Truncated { at : byte_offset } } else if is_unknown_tag_error (& msg) { SerError :: UnknownTag { path : FieldPath :: from_static (\"repr\") , tag : extract_unknown_tag (& msg) , } } else if is_domain_error (& msg) { SerError :: OutOfDomain { path : classify_path_from_message (& msg) , why : msg , } } else { SerError :: Malformed { at : byte_offset , why : msg , } } }",
+      "reason": "qualified type path `serde_json :: Error` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
+      "item_name": "map_serde_error"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/serialize.rs",
+      "line": 258,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Compute an approximate byte offset from a 1-based `(line, column)` pair and\"] # [doc = \" the raw input bytes.  Returns `input.len()` if the line/column is out of range\"] # [doc = \" (e.g. for truncated inputs where serde_json reports line 1/col 1 on empty).\"] fn approx_byte_offset (input : & [u8] , line : usize , col : usize) -> u64 { if input . is_empty () || line == 0 { return input . len () as u64 ; } let mut current_line = 1usize ; let mut line_start = 0usize ; for (i , & b) in input . iter () . enumerate () { if current_line == line { let col_offset = col . saturating_sub (1) ; return (line_start + col_offset) . min (input . len ()) as u64 ; } if b == b'\\n' { current_line += 1 ; line_start = i + 1 ; } } input . len () as u64 }",
+      "reason": "unsupported Rust type form `& [u8]`",
+      "item_name": "approx_byte_offset"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/serialize.rs",
+      "line": 282,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Same as [`map_serde_error`] but for string input (locus is a byte offset into\"] # [doc = \" the UTF-8 string bytes).\"] fn map_serde_error_str (e : serde_json :: Error , input : & str) -> SerError { map_serde_error (e , input . as_bytes ()) }",
+      "reason": "qualified type path `serde_json :: Error` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
+      "item_name": "map_serde_error_str"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/serialize.rs",
+      "line": 288,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Detect truncated/EOF errors: the input ended before a complete value was read.\"] fn is_truncated_error_msg (msg : & str , input : & [u8]) -> bool { let lower = msg . to_lowercase () ; input . is_empty () || lower . contains (\"eof\") || lower . contains (\"unexpected end\") }",
+      "reason": "unsupported Rust type form `& str`",
+      "item_name": "is_truncated_error_msg"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/serialize.rs",
+      "line": 296,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Detect domain errors: a field decoded successfully but violates a value-model\"] # [doc = \" invariant (reported by `Value::new` → `serde::de::Error::custom`).\"] fn is_domain_error (msg : & str) -> bool { msg . contains (\"payload\") || msg . contains (\"repr\") || msg . contains (\"guarantee\") || msg . contains (\"bound\") || msg . contains (\"invariant\") || msg . contains (\"well-formed\") || msg . contains (\"width\") }",
+      "reason": "unsupported Rust type form `& str`",
+      "item_name": "is_domain_error"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/serialize.rs",
+      "line": 309,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Detect unknown-tag errors: an unrecognized `Repr`/ctor/`Meta` discriminant.\"] fn is_unknown_tag_error (msg : & str) -> bool { msg . contains (\"unknown variant\") || msg . contains (\"unknown field\") || msg . contains (\"expected one of\") }",
+      "reason": "unsupported Rust type form `& str`",
+      "item_name": "is_unknown_tag_error"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/serialize.rs",
+      "line": 316,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Extract the unknown tag string from a `serde_json` \\\"unknown variant X\\\" message.\"] fn extract_unknown_tag (msg : & str) -> String { if let Some (start) = msg . find ('`') { if let Some (end) = msg [start + 1 ..] . find ('`') { return msg [start + 1 .. start + 1 + end] . to_owned () ; } } msg . to_owned () }",
+      "reason": "unsupported Rust type form `& str`",
+      "item_name": "extract_unknown_tag"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/serialize.rs",
+      "line": 327,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Infer a field path from the error message (best-effort; see C3).\"] fn classify_path_from_message (msg : & str) -> FieldPath { if msg . contains (\"payload\") { FieldPath :: from_static (\"payload\") } else if msg . contains (\"bound\") { FieldPath :: from_static (\"meta/bound\") } else if msg . contains (\"repr\") || msg . contains (\"width\") { FieldPath :: from_static (\"repr\") } else { FieldPath :: from_static (\"<unknown>\") } }",
+      "reason": "unsupported Rust type form `& str`",
+      "item_name": "classify_path_from_message"
+    }
+  ],
+  "category_counts": {
+    "DeriveAttr": 6,
+    "GenericBound": 2,
+    "Impl": 14,
+    "Import": 9,
+    "MacroInvocation": 3,
+    "Other": 21,
+    "PayloadVariant": 2,
+    "ReservedWord": 3,
+    "Struct": 4,
+    "TestItem": 5
+  }
+}

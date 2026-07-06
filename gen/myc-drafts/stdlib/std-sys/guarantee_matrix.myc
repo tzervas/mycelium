@@ -1,0 +1,37 @@
+// nodule: std.sys
+// The `std-sys` syscall-floor guarantee matrix encoded as **data** (RFC-0016 §4.5; M-722/M-723).
+//
+// Every exported syscall-floor operation has exactly one row in [`MATRIX`]. Until this module
+// existed the per-op tags lived only in each module's prose doc table; RFC-0016 §4.5 / VR-5 require
+// the matrix to be **data, asserted in tests, never prose-only** — that is what this module
+// supplies (closing the M-722/M-723 matrix gap).
+//
+// # Honesty (VR-5) — every row is `Declared`
+//
+// `std-sys` is the audited FFI/OS floor. **No** op here carries a checked theorem (`Proven`) or a
+// measured error corpus (`Empirical`): libm precision, OS entropy quality, filesystem semantics,
+// stream buffering, and clock resolution are all asserted-but-unchecked. So every row is
+// **`Declared`** and is FLAGGED as such — the honest floor for an unaudited host wrapper (RFC-0016
+// §4.1 C2). Promotion of any single op requires its own checked basis (documented `Empirical`
+// coverage or a `Proven` side-condition theorem); none is established in v0. The test
+// [`tests::every_row_is_declared`] is the mechanical guard against an inadvertent upgrade (VR-5).
+//
+// # Never-silent (G2) — fallibility column
+//
+// Every fallible op returns an explicit `Result`/`Option`; its error set is named in `error_set`.
+// The total ops (`mono_nanos`, `sleep_nanos`, `args`, the libm `math::*`, and `fs::exists`) cannot
+// fail for a well-formed input. `fs::exists` follows `std::path::Path::exists` semantics (an OS
+// error reads as `false`); that coalescing is noted in its row rather than hidden.
+//
+// # Effect column (C6 / RFC-0014 §4.5)
+//
+// `"io"` (stream contact) · `"fs"` (filesystem) · `"entropy"` (OS CSPRNG) · `"time"` (clock) ·
+// `"time + entropy"` (wall clock — a civil-time entropy source, RT3) · `"process"` /`"env"`
+// (process/environment) · `"none"` (pure, e.g. the libm transcendentals over their `f64` input).
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.sys;
+
+// Fallibility classification for an exported op (C1).
+type Fallibility = Total | Fallible;

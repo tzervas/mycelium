@@ -1,0 +1,24 @@
+// nodule: std.fs
+// `Path` — a pure, immutable, value-semantic filesystem path (C4/ADR-003).
+//
+// A `Path` is a content-addressable, UTF-8 immutable value. Two equal paths are the same value;
+// metadata is not part of its identity (ADR-003). Path operations are **purely lexical** — they
+// involve no syscalls (no `wild`? = no) and are total (no `effects: io`).
+//
+// # FLAG (Q3 — path model + portability)
+// The spec FLAGs whether `Path` should be a `Text` newtype, a structured component list, or an
+// OS-string that may not be UTF-8 (the classic portability hazard). Non-UTF-8 paths are a
+// never-silent concern (C1): a lossy path decode must be an explicit error, not a replacement
+// char. For now `Path` is a validated UTF-8 newtype; the separator / normalization / case-fold
+// policy is conservative (no implicit normalization). This decision is **FLAGGED** — coordinate
+// with `text`/`string` (M-524) and RFC-0016 §8-Q3 before ratification.
+//
+// # Guarantee tag: `Exact`
+// `Path::new`, `join`, `parent`, `exists_in` (lexical check only) are all pure, total, and
+// deterministic — no precision dimension, no approximation (VR-5: Exact is honest here).
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.fs;
+
+

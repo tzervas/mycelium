@@ -118,7 +118,14 @@ fn map_type_inner(ty: &Type, self_ty: Option<&str>) -> Result<String, GapReason>
                     "`String`/`str` — `Bytes` exists in base_type but is not confirmed \
                      equivalent to a UTF-8 text type",
                 )),
-                _ if matches!(seg.arguments, PathArguments::None) => Ok(name),
+                _ if matches!(seg.arguments, PathArguments::None) => {
+                    // M-1001: an ordinary named type passed through as-is — but if its name is a
+                    // Mycelium reserved word (e.g. a Rust type literally named `Binary`/`Float`), the
+                    // bare identifier would lex as a keyword and fail to parse. Gap it (never emit
+                    // un-parseable text) rather than guess a rename (VR-5/G2).
+                    crate::reserved::guard_ident(&name, "type name")?;
+                    Ok(name)
+                }
                 _ => Err(GapReason::new(
                     Category::GenericBound,
                     format!(

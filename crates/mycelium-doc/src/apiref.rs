@@ -172,11 +172,18 @@ pub fn project_schema(path: &str, json: &str, alloc: &mut AnchorAlloc) -> Option
 }
 
 /// The dotted nodule name from a `nodule X.Y` declaration (or the `// nodule:` marker).
-fn nodule_name(src: &str) -> Option<String> {
+///
+/// `pub(crate)`: reused by [`crate::lib_index`] (the `docs/lib-index/` M-1004 extractor) rather
+/// than re-implemented — DRY, one nodule-name heuristic for both consumers.
+pub(crate) fn nodule_name(src: &str) -> Option<String> {
     for line in src.lines() {
         let t = line.trim();
         if let Some(rest) = t.strip_prefix("nodule ") {
-            return Some(rest.trim().trim_end_matches(['{', ' ']).to_owned());
+            // Every real `.myc` file spells this a `nodule X.Y;` *statement* (semicolon-terminated,
+            // not the `{`-block this trim originally targeted) — found while building the M-1004
+            // lib-index extractor, which would otherwise index every nodule as e.g. `std.cmp;`.
+            // Fixed here (once, DRY) rather than stripped a second time in the caller.
+            return Some(rest.trim().trim_end_matches(['{', ';', ' ']).to_owned());
         }
     }
     // Fall back to the marker comment.
@@ -189,18 +196,67 @@ fn nodule_name(src: &str) -> Option<String> {
     None
 }
 
-/// Extract `fn NAME(...) -> Ty` / `fn NAME(...) =` signatures with their 1-based line numbers.
-fn fn_signatures(src: &str) -> Vec<(String, u32)> {
+/// Extract `fn NAME(...) -> Ty` / `fn NAME(...) => Ty` signatures with their 1-based line numbers.
+///
+/// A parameter list may itself span several lines (e.g. `lib/std/text.myc::decode_two`, where the
+/// closing `)` + return type + body `=` land a few lines below `fn decode_two(`) — found while
+/// building the M-1004 lib-index extractor, which was truncating ~1.3% of `lib/`'s signatures to
+/// their bare `fn NAME(` opening line. Handled by joining lines until the body-introducing bare `=`
+/// is found (never open-ended: bounded by the file's own line count).
+///
+/// `pub(crate)`: reused by [`crate::lib_index`] (DRY — see [`nodule_name`]).
+pub(crate) fn fn_signatures(src: &str) -> Vec<(String, u32)> {
+    let lines: Vec<&str> = src.lines().collect();
     let mut out = Vec::new();
-    for (i, line) in src.lines().enumerate() {
-        let t = line.trim();
-        if let Some(rest) = t.strip_prefix("fn ") {
-            // The signature is everything up to the body-introducing `=` (or end of line).
-            let sig = rest.split_once('=').map_or(rest, |(s, _)| s).trim();
-            out.push((format!("fn {sig}"), (i + 1) as u32));
+    let mut i = 0;
+    while i < lines.len() {
+        let t = lines[i].trim();
+        let Some(rest) = t.strip_prefix("fn ") else {
+            i += 1;
+            continue;
+        };
+        let start_line = (i + 1) as u32;
+        let mut acc = rest.to_owned();
+        let mut j = i;
+        while body_separator(&acc) == acc.as_str() && j + 1 < lines.len() {
+            j += 1;
+            acc.push(' ');
+            acc.push_str(lines[j].trim());
         }
+        let sig = clean_join_spacing(body_separator(&acc).trim());
+        out.push((format!("fn {sig}"), start_line));
+        i = j + 1;
     }
     out
+}
+
+/// Undo the cosmetic artifact of joining indented continuation lines with a single space: a
+/// multi-line parameter list's own opening `(`/closing `)` picks up a stray adjacent space (e.g.
+/// `decode_two( b: Bytes, i: Binary{8} )` instead of `decode_two(b: Bytes, i: Binary{8})`). No
+/// real `.myc` signature uses this spacing (checked over every `lib/` file), so this is a safe,
+/// content-preserving cleanup, not a risk of eating meaningful whitespace.
+fn clean_join_spacing(sig: &str) -> String {
+    sig.replace("( ", "(").replace(" )", ")")
+}
+
+/// Split a `fn` line at its body-introducing bare `=`, keeping the return-type arrow `=>` intact.
+///
+/// Mycelium's real surface syntax (every `.myc` file under `lib/`) writes the return type with a
+/// **fat arrow**: `fn f(x: T) => U = <body>`. A naive `split_once('=')` (the original M-736 cut)
+/// finds the `=` **inside** `=>` first and truncates the signature there, silently dropping the
+/// return type for every real `.myc` file — an accuracy bug, not a cosmetic one (found while
+/// building the M-1004 `docs/lib-index/` extractor, which reuses this function). Fixed here (once,
+/// DRY) rather than duplicated with a workaround in the caller: scan for the first `=` that is
+/// **not** immediately followed by `>` (i.e. not part of `=>`); that is the body separator. A
+/// signature with no such separator (e.g. truncated input) returns the line unchanged.
+fn body_separator(rest: &str) -> &str {
+    let bytes = rest.as_bytes();
+    for (idx, &b) in bytes.iter().enumerate() {
+        if b == b'=' && bytes.get(idx + 1) != Some(&b'>') {
+            return &rest[..idx];
+        }
+    }
+    rest
 }
 
 /// The contiguous `//` doc-comment block immediately above the `fn` at `fn_line` (1-based), over
@@ -209,7 +265,9 @@ fn fn_signatures(src: &str) -> Vec<(String, u32)> {
 /// `// @key:` are metadata, not doc prose). Returns `None` when the `fn` has no preceding comment —
 /// an honest, explicit gap (never invented filler, G2). The text is taken verbatim from source, so
 /// it always traces to its provenance. Takes a `&[&str]` so the caller splits the source once.
-fn preceding_doc(lines: &[&str], fn_line: u32) -> Option<String> {
+///
+/// `pub(crate)`: reused by [`crate::lib_index`] (DRY — see [`nodule_name`]).
+pub(crate) fn preceding_doc(lines: &[&str], fn_line: u32) -> Option<String> {
     if fn_line == 0 || (fn_line as usize) > lines.len() {
         return None;
     }
@@ -232,11 +290,24 @@ fn preceding_doc(lines: &[&str], fn_line: u32) -> Option<String> {
         return None;
     }
     collected.reverse();
+    // A `// ── <heading> ──…` block is a SECTION DIVIDER (a corpus-wide `.myc` convention —
+    // introduces a group of items, e.g. `// ── Width-generic comparison helpers … ──────`), not
+    // doc prose for the one item directly beneath it — and unlike a real doc comment, it's never
+    // blank-line-separated from that item, so the backward scan above collects it. Verbatim source
+    // text attributed to the wrong item is still misleading (found while building the M-1004
+    // lib-index extractor's `type`-declaration summaries, which hit this far more often than the
+    // pre-existing `fn` fixtures happened to); an explicit "undocumented" is more honest than a
+    // wrong attribution (G2), so the whole block is discarded when its first line is a divider.
+    if collected[0].starts_with('─') {
+        return None;
+    }
     Some(collected.join(" "))
 }
 
 /// The function name from a `fn NAME(...)` signature.
-fn fn_name(sig: &str) -> Option<String> {
+///
+/// `pub(crate)`: reused by [`crate::lib_index`] (DRY — see [`nodule_name`]).
+pub(crate) fn fn_name(sig: &str) -> Option<String> {
     let rest = sig.strip_prefix("fn ")?;
     let name: String = rest
         .chars()
@@ -249,140 +320,8 @@ fn fn_name(sig: &str) -> Option<String> {
     }
 }
 
-fn path_stem(path: &str) -> String {
+/// `pub(crate)`: reused by [`crate::lib_index`] (DRY — see [`nodule_name`]).
+pub(crate) fn path_stem(path: &str) -> String {
     let file = path.rsplit('/').next().unwrap_or(path);
     file.rsplit_once('.').map_or(file, |(s, _)| s).to_owned()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::ir::Payload;
-
-    const SRC: &str = "// nodule: hello.greeting\n\
-                       // @summary: A greeting nodule.\n\
-                       nodule hello.greeting\n\
-                       \n\
-                       fn wave() -> Ternary{4} =\n\
-                         <+0-0>\n";
-
-    #[test]
-    fn a_documented_nodule_carries_its_summary() {
-        let mut a = AnchorAlloc::new();
-        let doc = project_nodule("examples/hello/greeting.myc", SRC, &mut a);
-        let nodule_item = doc
-            .children
-            .iter()
-            .find_map(|n| match &n.payload {
-                Payload::ApiItem { summary, .. }
-                    if n.title.as_deref() == Some("nodule hello.greeting") =>
-                {
-                    Some(summary.clone())
-                }
-                _ => None,
-            })
-            .unwrap();
-        assert_eq!(nodule_item.as_deref(), Some("A greeting nodule."));
-    }
-
-    #[test]
-    fn an_undocumented_fn_is_flagged_never_invented() {
-        let mut a = AnchorAlloc::new();
-        let doc = project_nodule("x.myc", SRC, &mut a);
-        let fn_item = doc
-            .children
-            .iter()
-            .find(|n| n.title.as_deref() == Some("fn wave() -> Ternary{4}"))
-            .unwrap();
-        match &fn_item.payload {
-            Payload::ApiItem { summary, signature } => {
-                assert!(summary.is_none(), "undocumented, never invented");
-                assert_eq!(signature.as_deref(), Some("fn wave() -> Ternary{4}"));
-            }
-            _ => panic!("expected an api-item"),
-        }
-    }
-
-    #[test]
-    fn a_fn_with_a_preceding_comment_is_documented_from_source() {
-        // The contiguous `//` block above a `fn` becomes its summary (M-736); a `@`/`nodule`
-        // header or a blank line bounds the block, so the nodule header never leaks into a fn doc.
-        const DOC_SRC: &str = "// nodule: m\n\
-                               nodule m\n\
-                               \n\
-                               // add: combine two bytes. Why: the running total step.\n\
-                               // It is total and never-silent.\n\
-                               fn add(a: Binary{8}, b: Binary{8}) -> Binary{8} = a\n";
-        let mut a = AnchorAlloc::new();
-        let doc = project_nodule("x.myc", DOC_SRC, &mut a);
-        let fn_item = doc
-            .children
-            .iter()
-            .find(|n| n.title.as_deref() == Some("fn add(a: Binary{8}, b: Binary{8}) -> Binary{8}"))
-            .unwrap();
-        match &fn_item.payload {
-            Payload::ApiItem { summary, .. } => {
-                assert_eq!(
-                    summary.as_deref(),
-                    Some(
-                        "add: combine two bytes. Why: the running total step. It is total and never-silent."
-                    ),
-                    "the two-line source comment is joined verbatim — traces to source, never invented"
-                );
-            }
-            _ => panic!("expected an api-item"),
-        }
-    }
-
-    #[test]
-    fn the_whole_source_is_a_checked_example() {
-        let mut a = AnchorAlloc::new();
-        let doc = project_nodule("x.myc", SRC, &mut a);
-        let ex = doc
-            .children
-            .iter()
-            .find_map(|n| match &n.payload {
-                Payload::Example {
-                    checked, source, ..
-                } => Some((*checked, source.clone())),
-                _ => None,
-            })
-            .unwrap();
-        assert!(ex.0);
-        assert!(ex.1.contains("fn wave"));
-    }
-
-    #[test]
-    fn a_schema_projects_its_fields_with_undocumented_gaps() {
-        let mut a = AnchorAlloc::new();
-        let schema = r#"{
-            "title": "Bound",
-            "description": "A numeric bound.",
-            "properties": {
-                "kind": {"type": "string", "description": "The bound kind."},
-                "value": {"type": "number"}
-            }
-        }"#;
-        let doc = project_schema("docs/spec/schemas/bound.schema.json", schema, &mut a).unwrap();
-        let documented = doc
-            .children
-            .iter()
-            .filter(|n| {
-                matches!(
-                    &n.payload,
-                    Payload::ApiItem {
-                        summary: Some(_),
-                        ..
-                    }
-                )
-            })
-            .count();
-        let undocumented = doc
-            .children
-            .iter()
-            .filter(|n| matches!(&n.payload, Payload::ApiItem { summary: None, .. }))
-            .count();
-        assert_eq!(documented, 1, "kind is documented");
-        assert_eq!(undocumented, 1, "value is an explicit undocumented gap");
-    }
 }

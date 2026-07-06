@@ -673,6 +673,13 @@ Invoke with `/<name>`; they auto-engage when relevant.
 - **`/worktree-guard`** — the isolated-worktree safeguard (mitigation #11), parameterized + idempotent
   like `/branch-guard`: `--leaf` asserts a concurrent agent is isolated; default asserts the
   orchestrator's main tree is a clean pointer. Backs `scripts/checks/worktree-guard.sh`.
+- **`/transpile-vet`** — the Rust→Mycelium transpiler *with* its real-toolchain vet loop
+  (M-1000/M-1001): transpile → `myc check` each emission → read `checked_fraction` (the honest
+  number) vs `expressible_fraction`. A gap-profiling instrument, not a bulk porter (the M-991
+  verdict, DN-34 §8.7–§8.8); emissions stay `Declared` until a differential upgrades them.
+- **`/myc-drafts`** — work the committed draft corpus (`gen/myc-drafts/`, E33-1): regenerate
+  deterministically, triage a port target from the manifest before porting, graduate a draft into
+  `lib/` the hand-vetted M-993 way (differential-witnessed), and run an M-1006 ladder phase.
 
 The review skills share one rubric: `.claude/skills/_shared/review-rubric.md` (tiers, severity,
 report format). Posture is **advisory** — they recommend, they don't gate. The
