@@ -44,6 +44,21 @@ pub enum Category {
     /// an unguarded host-stack overflow (RR-29 guard-hole inventory). Distinct from `Other` so a
     /// pathological-depth refusal is distinguishable from an ordinary unmapped Rust construct.
     RecursionBudget,
+    /// M-1001: a `use` import. The transpiler has **no cross-nodule symbol table**, so it cannot
+    /// confirm the imported path resolves to a declared Mycelium nodule — and the M-1000 vet loop
+    /// confirms these imports fail `myc check` name-resolution every time (a Rust `use
+    /// extern_crate::Sym` names a crate, not a nodule). Emitting an import we cannot confirm resolves
+    /// is the same "plausible but wrong" emission `map_type`/`emit_expr` already refuse for
+    /// qualified paths/calls (DN-34 §4/§8.2), so a `use` is flagged here, not emitted (VR-5/G2).
+    /// Distinct from `Other` so the union backlog can rank import gaps on their own.
+    Import,
+    /// M-1001: a Rust identifier that is a **Mycelium reserved word** (`Exact`, `F16`, `Binary`, …
+    /// — `crate::reserved`), which emitted verbatim into constructor/pattern/type/fn position fails
+    /// to **parse** (the lexer tokenizes it as a keyword, not an `Ident`). The transpiler has no
+    /// sanctioned auto-rename (the port's per-type ctor prefixing is a human decision —
+    /// `lib/compiler/README.md` FLAG-ast-5/FLAG-parse-2), so a collision is gapped, never silently
+    /// emitted or renamed (G2/VR-5). Distinct so reserved-word collisions rank on their own.
+    ReservedWord,
     Other,
 }
 
@@ -64,6 +79,8 @@ impl Category {
             Category::TestItem => "TestItem",
             Category::Conversion => "Conversion",
             Category::RecursionBudget => "RecursionBudget",
+            Category::Import => "Import",
+            Category::ReservedWord => "ReservedWord",
             Category::Other => "Other",
         }
     }

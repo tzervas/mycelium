@@ -33,3 +33,8 @@ mycelium-workstack = { path = "../mycelium-workstack" }
 
 [dev-dependencies]
 proptest = "1"
+# M-1001 drift guard (test-only): the reserved-word snapshot in `src/reserved.rs` is a verbatim copy
+# of `mycelium-l1`'s lexer keyword table; `src/tests/reserved.rs` asserts every snapshot word is
+# still rejected by the real `mycelium_l1::token::keyword`, so a snapshot that drifts to a
+# non-reserved word (the regressing over-gap direction) is caught. Dev-only — not a runtime dep.
+mycelium-l1 = { path = "../mycelium-l1" }

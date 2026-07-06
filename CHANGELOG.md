@@ -11,6 +11,21 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### M-1000/M-1001 — the transpile → myc-check vet loop + top gap-class closure; M-991 assessed (2026-07-06)
+
+The transpiler (M-873 PoC) now vets its own output against the real toolchain: `--vet` runs
+`myc check` per emitted file and reports **`checked_fraction`** (file-gated, honestly-conservative:
+a failing file credits 0) alongside the old `expressible_fraction` — exposing that the prior
+"coverage" numbers over-counted emissions that poison the checker (all targets started at
+**0% checked**). M-1001 closed the two universal check-poisons flag-don't-guess (unresolved
+`use` → `Category::Import` gaps; Mycelium reserved-word collisions → `Category::ReservedWord`
+gaps, drift-guarded against the l1 lexer table), lifting eval.rs to 2.4% and std-time to 8.1%
+checked. **M-991 verdict (DN-34 §8.7–§8.8, append-only): NO-GO as an automated bulk transpiler
+for the semcore port (the residue is language-surface design work, not boilerplate), GO as a
+never-silent gap-profiling instrument** — the vet loop turns the port into a ranked, checked
+worklist. Advisory `just transpile-vet` wired (on-demand, not a gate). Emission stays `Declared`;
+vet verdicts are `Empirical`. Kickoff `trx2` E-A (epic E32-1).
+
 ### M-1004/M-1005 — docs/lib-index/: the api-index analogue for the self-hosted `.myc` tree (2026-07-06)
 
 Added `crates/mycelium-doc/src/lib_index.rs` (`myc-doc lib-index`) and the committed

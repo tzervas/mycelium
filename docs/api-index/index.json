@@ -6371,6 +6371,105 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_doc::lib_index",
+      "kind": "mod",
+      "crate": "mycelium-doc",
+      "module": "mycelium_doc",
+      "file": "crates/mycelium-doc/src/lib.rs",
+      "line": 27,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_doc::lib_index::Flagged",
+      "kind": "struct",
+      "crate": "mycelium-doc",
+      "module": "mycelium_doc::lib_index",
+      "file": "crates/mycelium-doc/src/lib_index.rs",
+      "line": 86,
+      "summary": "A construct the heuristic could not (or does not yet) extract — never silently dropped (G2).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_doc::lib_index::HONESTY_TAG:",
+      "kind": "const",
+      "crate": "mycelium-doc",
+      "module": "mycelium_doc::lib_index",
+      "file": "crates/mycelium-doc/src/lib_index.rs",
+      "line": 44,
+      "summary": "The top-level honesty tag (mirrors `tools/docgen/code_index.py::HONESTY_TAG`, adapted to the",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_doc::lib_index::ITEM_TAG:",
+      "kind": "const",
+      "crate": "mycelium-doc",
+      "module": "mycelium_doc::lib_index",
+      "file": "crates/mycelium-doc/src/lib_index.rs",
+      "line": 53,
+      "summary": "The per-item honesty tag every extracted row carries.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_doc::lib_index::LibIndexItem",
+      "kind": "struct",
+      "crate": "mycelium-doc",
+      "module": "mycelium_doc::lib_index",
+      "file": "crates/mycelium-doc/src/lib_index.rs",
+      "line": 60,
+      "summary": "One indexed row: a nodule marker, an `fn`, a `type`, or a `type`'s constructor.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_doc::lib_index::LibIndexReport",
+      "kind": "struct",
+      "crate": "mycelium-doc",
+      "module": "mycelium_doc::lib_index",
+      "file": "crates/mycelium-doc/src/lib_index.rs",
+      "line": 95,
+      "summary": "The full build result: every extracted item plus every flagged gap, in stable sorted order.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_doc::lib_index::build_lib_index",
+      "kind": "fn",
+      "crate": "mycelium-doc",
+      "module": "mycelium_doc::lib_index",
+      "file": "crates/mycelium-doc/src/lib_index.rs",
+      "line": 105,
+      "summary": "Build the full `docs/lib-index/` report by walking every phylum directory under `lib/`.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_doc::lib_index::write_json",
+      "kind": "fn",
+      "crate": "mycelium-doc",
+      "module": "mycelium_doc::lib_index",
+      "file": "crates/mycelium-doc/src/lib_index.rs",
+      "line": 128,
+      "summary": "Write `docs/lib-index/index.json`.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_doc::lib_index::write_markdown",
+      "kind": "fn",
+      "crate": "mycelium-doc",
+      "module": "mycelium_doc::lib_index",
+      "file": "crates/mycelium-doc/src/lib_index.rs",
+      "line": 150,
+      "summary": "Write `docs/lib-index/INDEX.md`.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_doc::lint",
       "kind": "fn",
       "crate": "mycelium-doc",
@@ -26396,7 +26495,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/gap.rs",
-      "line": 74,
+      "line": 91,
       "summary": "One construct this transpiler could not (or would not) express in Mycelium surface syntax.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26407,8 +26506,19 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/gap.rs",
-      "line": 118,
+      "line": 135,
       "summary": "The full report for one transpiled source file.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::MycChecker",
+      "kind": "struct",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile",
+      "file": "crates/mycelium-transpile/src/vet.rs",
+      "line": 313,
+      "summary": "How to invoke the `myc check` oracle: a command **prefix** (program + any leading args) to which",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -26420,6 +26530,50 @@
       "file": "crates/mycelium-transpile/src/batch.rs",
       "line": 100,
       "summary": "The combined `union.gap.json` artifact: every [`Gap`] from every file in the batch, plus the",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::VetClass",
+      "kind": "enum",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile",
+      "file": "crates/mycelium-transpile/src/vet.rs",
+      "line": 55,
+      "summary": "The classification of one `myc check` run over one emitted `.myc` file, keyed off the documented",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::VetInput",
+      "kind": "struct",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile",
+      "file": "crates/mycelium-transpile/src/vet.rs",
+      "line": 411,
+      "summary": "One file's inputs to the vet loop: the emitted `.myc` to check, its originating source label, and",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::VetRecord",
+      "kind": "struct",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile",
+      "file": "crates/mycelium-transpile/src/vet.rs",
+      "line": 116,
+      "summary": "One emitted `.myc` file's `myc check` outcome.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::VetReport",
+      "kind": "struct",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile",
+      "file": "crates/mycelium-transpile/src/vet.rs",
+      "line": 158,
+      "summary": "The aggregate vet report for a batch/single-file vet run — the `vet.json` artifact.",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -26495,7 +26649,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 23,
+      "line": 24,
       "summary": "The `.myc` text (+ any dropped sub-features, e.g.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26506,7 +26660,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 42,
+      "line": 43,
       "summary": "Extract `///`/`//!` doc-comment lines (represented by `syn` as `#[doc = \"...\"]` attributes),",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26517,7 +26671,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 340,
+      "line": 348,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26528,7 +26682,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 689,
+      "line": 710,
       "summary": "`enum` -> `type_item` (`type Name = C1 | C2(T1, T2) | ...;`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26539,7 +26693,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 418,
+      "line": 426,
       "summary": "Translate one Rust expression.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26550,7 +26704,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 833,
+      "line": 857,
       "summary": "Top-level `fn` -> `fn_item`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26561,7 +26715,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 980,
+      "line": 1007,
       "summary": "`impl` -> `impl_item` (trait-instance or inherent form).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26572,7 +26726,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 771,
+      "line": 794,
       "summary": "`struct` -> a single-constructor `type_item`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26583,7 +26737,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 867,
+      "line": 892,
       "summary": "`trait` -> `trait_item` (`trait Name { fn sig1; fn sig2; ...",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26594,7 +26748,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 72,
+      "line": 73,
       "summary": "Heuristic `#[cfg(test)]` detection (Declared: a token-text `contains(\"test\")` check, not a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26605,7 +26759,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 625,
+      "line": 639,
       "summary": "Translate one Rust pattern.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26616,7 +26770,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 62,
+      "line": 63,
       "summary": "Every non-doc attribute on an item, rendered as text — these are always dropped (KNOWN HARD",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26638,7 +26792,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::gap::Category",
       "file": "crates/mycelium-transpile/src/gap.rs",
-      "line": 51,
+      "line": 66,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26649,7 +26803,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::gap",
       "file": "crates/mycelium-transpile/src/gap.rs",
-      "line": 98,
+      "line": 115,
       "summary": "Internal helper carrying a [`Category`] + reason before a [`Gap`] is materialized with its",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26660,7 +26814,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::gap::GapReason",
       "file": "crates/mycelium-transpile/src/gap.rs",
-      "line": 104,
+      "line": 121,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26671,7 +26825,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::gap::GapReport",
       "file": "crates/mycelium-transpile/src/gap.rs",
-      "line": 152,
+      "line": 169,
       "summary": "Per-category gap counts, for reporting.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26682,7 +26836,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::gap::GapReport",
       "file": "crates/mycelium-transpile/src/gap.rs",
-      "line": 143,
+      "line": 160,
       "summary": "Fraction of non-test top-level items for which some `.myc` text was emitted.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26693,7 +26847,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::gap::GapReport",
       "file": "crates/mycelium-transpile/src/gap.rs",
-      "line": 136,
+      "line": 153,
       "summary": "`total_top_level_items` minus test items — the denominator for the expressible fraction.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26704,7 +26858,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::gap::GapReport",
       "file": "crates/mycelium-transpile/src/gap.rs",
-      "line": 128,
+      "line": 145,
       "summary": "Count of gaps tagged [`Category::TestItem`] — `#[cfg(test)]` items excluded from scope.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26743,6 +26897,50 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_transpile::reserved",
+      "kind": "mod",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile",
+      "file": "crates/mycelium-transpile/src/lib.rs",
+      "line": 39,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::reserved::RESERVED:",
+      "kind": "const",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile::reserved",
+      "file": "crates/mycelium-transpile/src/reserved.rs",
+      "line": 30,
+      "summary": "The Mycelium reserved-word set — a verbatim snapshot of `mycelium-l1`'s `token::keyword` table",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::reserved::guard_ident",
+      "kind": "fn",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile::reserved",
+      "file": "crates/mycelium-transpile/src/reserved.rs",
+      "line": 110,
+      "summary": "Guard an identifier the emitter is about to place into `.myc` surface text.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::reserved::is_reserved",
+      "kind": "fn",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile::reserved",
+      "file": "crates/mycelium-transpile/src/reserved.rs",
+      "line": 102,
+      "summary": "Whether `word` is a Mycelium reserved word (would not lex as an `Ident`).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_transpile::summarize",
       "kind": "fn",
       "crate": "mycelium-transpile",
@@ -26759,7 +26957,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/lib.rs",
-      "line": 39,
+      "line": 40,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26794,6 +26992,171 @@
       "file": "crates/mycelium-transpile/src/transpile.rs",
       "line": 31,
       "summary": "Transpile already-read source text.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::vet",
+      "kind": "mod",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile",
+      "file": "crates/mycelium-transpile/src/lib.rs",
+      "line": 41,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::vet::MAX_DIAGNOSTIC_LEN:",
+      "kind": "const",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile::vet",
+      "file": "crates/mycelium-transpile/src/vet.rs",
+      "line": 154,
+      "summary": "Cap on a stored diagnostic line's length (report-size hygiene).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::vet::MycChecker::from_env",
+      "kind": "fn",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile::vet::MycChecker",
+      "file": "crates/mycelium-transpile/src/vet.rs",
+      "line": 325,
+      "summary": "The checker configured from the environment.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::vet::MycChecker::vet_file",
+      "kind": "fn",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile::vet::MycChecker",
+      "file": "crates/mycelium-transpile/src/vet.rs",
+      "line": 354,
+      "summary": "Run `myc check` on one `.myc` file and classify the outcome.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::vet::VetClass::from_exit_code",
+      "kind": "fn",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile::vet::VetClass",
+      "file": "crates/mycelium-transpile/src/vet.rs",
+      "line": 82,
+      "summary": "Map a process exit code to a vet class.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::vet::VetClass::is_clean",
+      "kind": "fn",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile::vet::VetClass",
+      "file": "crates/mycelium-transpile/src/vet.rs",
+      "line": 95,
+      "summary": "Whether this class credits the checked numerator (only [`VetClass::Clean`] does).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::vet::VetClass::label",
+      "kind": "fn",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile::vet::VetClass",
+      "file": "crates/mycelium-transpile/src/vet.rs",
+      "line": 101,
+      "summary": "A stable `&'static str` label for per-class counting/serialization.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::vet::VetInput::from_report",
+      "kind": "fn",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile::vet::VetInput",
+      "file": "crates/mycelium-transpile/src/vet.rs",
+      "line": 420,
+      "summary": "Construct from a written `.myc` path plus the file's [`GapReport`].",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::vet::VetRecord::checked_clean_items",
+      "kind": "fn",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile::vet::VetRecord",
+      "file": "crates/mycelium-transpile/src/vet.rs",
+      "line": 143,
+      "summary": "Items this file contributes to the **checked-clean** numerator: all of its emitted items when",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::vet::VetReport::checked_fraction",
+      "kind": "fn",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile::vet::VetReport",
+      "file": "crates/mycelium-transpile/src/vet.rs",
+      "line": 199,
+      "summary": "**checked_fraction** — myc-check-clean coverage.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::vet::VetReport::clean_file_fraction",
+      "kind": "fn",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile::vet::VetReport",
+      "file": "crates/mycelium-transpile/src/vet.rs",
+      "line": 221,
+      "summary": "Companion **file-level** metric: `(clean_files, files_with_emissions)`.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::vet::VetReport::expressible_fraction",
+      "kind": "fn",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile::vet::VetReport",
+      "file": "crates/mycelium-transpile/src/vet.rs",
+      "line": 210,
+      "summary": "**expressible_fraction** — emission-only coverage, recomputed here over the *same* denominator",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::vet::VetReport::from_records",
+      "kind": "fn",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile::vet::VetReport",
+      "file": "crates/mycelium-transpile/src/vet.rs",
+      "line": 175,
+      "summary": "Aggregate a set of per-file [`VetRecord`]s into a report.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::vet::classify_run",
+      "kind": "fn",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile::vet",
+      "file": "crates/mycelium-transpile/src/vet.rs",
+      "line": 236,
+      "summary": "Build a [`VetRecord`] from one completed `myc check` run's parts.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::vet_batch",
+      "kind": "fn",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile",
+      "file": "crates/mycelium-transpile/src/vet.rs",
+      "line": 432,
+      "summary": "Vet a batch of emitted `.myc` files with `checker`, returning the aggregate [`VetReport`].",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -33490,6 +33853,54 @@
     {
       "symbol": "mycelium_doc::ir::XrefTarget::serialize",
       "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_doc::lib_index::Flagged::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_doc::lib_index::Flagged::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_doc::lib_index::Flagged::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_doc::lib_index::Flagged::serialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_doc::lib_index::LibIndexItem::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_doc::lib_index::LibIndexItem::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_doc::lib_index::LibIndexItem::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_doc::lib_index::LibIndexItem::serialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_doc::lib_index::LibIndexReport::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_doc::lib_index::LibIndexReport::default",
+      "reason": "definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_doc::lib_index::LibIndexReport::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_doc::lib_index::LibIndexReport::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
     },
     {
       "symbol": "mycelium_fmt::FmtError::clone",
@@ -49065,7 +49476,7 @@
     },
     {
       "symbol": "mycelium_transpile::gap::Gap",
-      "reason": "dedup-alias: same definition as `mycelium_transpile::Gap` at crates/mycelium-transpile/src/gap.rs:74 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_transpile::Gap` at crates/mycelium-transpile/src/gap.rs:91 — one canonical row kept"
     },
     {
       "symbol": "mycelium_transpile::gap::Gap::clone",
@@ -49101,7 +49512,7 @@
     },
     {
       "symbol": "mycelium_transpile::gap::GapReport",
-      "reason": "dedup-alias: same definition as `mycelium_transpile::GapReport` at crates/mycelium-transpile/src/gap.rs:118 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_transpile::GapReport` at crates/mycelium-transpile/src/gap.rs:135 — one canonical row kept"
     },
     {
       "symbol": "mycelium_transpile::gap::GapReport::clone",
@@ -49134,6 +49545,142 @@
     {
       "symbol": "mycelium_transpile::transpile::transpile_source",
       "reason": "dedup-alias: same definition as `mycelium_transpile::transpile_source` at crates/mycelium-transpile/src/transpile.rs:31 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_transpile::vet::MycChecker",
+      "reason": "dedup-alias: same definition as `mycelium_transpile::MycChecker` at crates/mycelium-transpile/src/vet.rs:313 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_transpile::vet::MycChecker::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::vet::MycChecker::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::vet::MycChecker::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::vet::MycChecker::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::vet::VetClass",
+      "reason": "dedup-alias: same definition as `mycelium_transpile::VetClass` at crates/mycelium-transpile/src/vet.rs:55 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_transpile::vet::VetClass::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::vet::VetClass::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::vet::VetClass::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::vet::VetClass::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::vet::VetClass::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::vet::VetClass::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::vet::VetClass::serialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::vet::VetClass::serialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::vet::VetInput",
+      "reason": "dedup-alias: same definition as `mycelium_transpile::VetInput` at crates/mycelium-transpile/src/vet.rs:411 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_transpile::vet::VetInput::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::vet::VetInput::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::vet::VetInput::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::vet::VetInput::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::vet::VetRecord",
+      "reason": "dedup-alias: same definition as `mycelium_transpile::VetRecord` at crates/mycelium-transpile/src/vet.rs:116 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_transpile::vet::VetRecord::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::vet::VetRecord::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::vet::VetRecord::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::vet::VetRecord::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::vet::VetRecord::serialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::vet::VetRecord::serialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::vet::VetReport",
+      "reason": "dedup-alias: same definition as `mycelium_transpile::VetReport` at crates/mycelium-transpile/src/vet.rs:158 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_transpile::vet::VetReport::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::vet::VetReport::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::vet::VetReport::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::vet::VetReport::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::vet::VetReport::serialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::vet::VetReport::serialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::vet::vet_batch",
+      "reason": "dedup-alias: same definition as `mycelium_transpile::vet_batch` at crates/mycelium-transpile/src/vet.rs:432 — one canonical row kept"
     },
     {
       "symbol": "mycelium_vsa::EmpiricalProfile::clone",

@@ -194,21 +194,40 @@ fn cases() -> Vec<Case> {
                 sub_gap_category: Category::DeriveAttr,
             },
         },
-        // Simple `use` import maps to `use_item`.
+        // M-1001: a `use` import is FLAGGED, not emitted — the transpiler has no cross-nodule symbol
+        // table so it cannot confirm the path resolves (the vet loop confirms such imports fail
+        // `myc check` name-resolution), and an emitted `use` poisons the whole draft's check.
         Case {
-            name: "simple_use",
+            name: "simple_use_gapped",
             rust: "use a::b::C;",
-            expect: Expect::Emitted {
-                item: "use a.b.C",
-                contains: "use a.b.C;",
+            expect: Expect::Gapped {
+                category: Category::Import,
             },
         },
-        // Grouped `use` has no confirmed equivalent.
+        // Grouped `use` is likewise an Import gap.
         Case {
             name: "grouped_use_gap",
             rust: "use a::{b, c};",
             expect: Expect::Gapped {
-                category: Category::Other,
+                category: Category::Import,
+            },
+        },
+        // M-1001: a type whose name is a Mycelium reserved word (`Float`) can't be emitted verbatim
+        // (it would lex as a keyword) — gapped ReservedWord, never renamed (VR-5/G2).
+        Case {
+            name: "reserved_type_name",
+            rust: "enum Float { A, B }",
+            expect: Expect::Gapped {
+                category: Category::ReservedWord,
+            },
+        },
+        // M-1001: a variant/constructor named a reserved word (`Exact`) — the collision that poisoned
+        // `mycelium-l1/src/eval.rs`'s parse in the §8.7 baseline.
+        Case {
+            name: "reserved_variant",
+            rust: "enum GuaranteeStrength { Exact, Loose }",
+            expect: Expect::Gapped {
+                category: Category::ReservedWord,
             },
         },
     ]

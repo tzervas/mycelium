@@ -239,39 +239,43 @@ fn dispatch_item(item: &Item) -> Outcome {
     }
 }
 
+/// `use` imports are **flagged, not emitted** (M-1001, `Category::Import`).
+///
+/// Grammar-wise `use foo.bar;` maps fine, but the transpiler has **no cross-nodule symbol table**,
+/// so it cannot confirm the imported path resolves to a declared Mycelium nodule — and the M-1000
+/// vet loop confirms these imports fail `myc check` name-resolution **every time** (a Rust `use
+/// extern_crate::Sym` names a *crate*, not a phylum nodule; even a same-crate `use crate::foo::Bar`
+/// has no sibling nodule to resolve against in the single-file emission). Emitting an import we
+/// cannot confirm resolves is exactly the "plausible but wrong" emission `map_type`/`emit_expr`
+/// already refuse for qualified paths/calls (DN-34 §4/§8.2) — and, worse, a single unresolved `use`
+/// **poisons the whole draft's `myc check`** (it was the universal `checked_fraction`-blocker in the
+/// §8.7 baseline). So it is recorded as a gap (never silently dropped, G2), never emitted. The gap's
+/// `snippet` (built by the driver) carries the original `use …;` text, so the human port still sees
+/// exactly what to import.
 fn dispatch_use(u: &syn::ItemUse) -> Outcome {
-    // Grammar: `use_item ::= 'use' path ( '.' '*' )?` — a single dotted path, optionally globbed.
-    // Aliased (`as`) and grouped (`{a, b}`) imports have no confirmed equivalent.
-    fn render(tree: &syn::UseTree, prefix: &mut Vec<String>) -> Result<String, GapReason> {
-        match tree {
-            syn::UseTree::Path(p) => {
-                prefix.push(p.ident.to_string());
-                render(&p.tree, prefix)
-            }
-            syn::UseTree::Name(n) => {
-                prefix.push(n.ident.to_string());
-                Ok(format!("use {};", prefix.join(".")))
-            }
-            syn::UseTree::Glob(_) => Ok(format!("use {}.*;", prefix.join("."))),
-            syn::UseTree::Rename(_) => Err(GapReason::new(
-                Category::Other,
-                "`use ... as ...` rename has no confirmed equivalent",
-            )),
-            syn::UseTree::Group(_) => Err(GapReason::new(
-                Category::Other,
-                "grouped `use a::{b, c}` has no confirmed equivalent (only a single path or \
-                 glob import is supported)",
-            )),
-        }
-    }
-    let mut prefix = Vec::new();
-    match render(&u.tree, &mut prefix) {
-        Ok(myc) => Outcome::Emitted(Emitted {
-            name: format!("use {}", prefix.join(".")),
-            myc,
-            sub_gaps: Vec::new(),
-        }),
-        Err(e) => Outcome::Gap(e),
+    // Describe the import shape for a precise reason (the full text is in the driver-built snippet).
+    let detail = describe_use_tree(&u.tree);
+    Outcome::Gap(GapReason::new(
+        Category::Import,
+        format!(
+            "`use` import ({detail}) — the transpiler has no cross-nodule symbol table, so it \
+             cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 \
+             vet loop confirms such imports fail `myc check` name-resolution (a Rust `use \
+             extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same \
+             flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 \
+             §4/§8.2; VR-5/G2)"
+        ),
+    ))
+}
+
+/// A short human description of a `use` tree's shape, for the gap reason.
+fn describe_use_tree(tree: &syn::UseTree) -> String {
+    match tree {
+        syn::UseTree::Path(p) => describe_use_tree(&p.tree),
+        syn::UseTree::Name(n) => format!("single path ending `{}`", n.ident),
+        syn::UseTree::Glob(_) => "glob `::*`".to_string(),
+        syn::UseTree::Rename(r) => format!("rename `{} as {}`", r.ident, r.rename),
+        syn::UseTree::Group(_) => "grouped `{{a, b}}`".to_string(),
     }
 }
 

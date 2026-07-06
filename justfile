@@ -162,6 +162,10 @@ myc-spore:
 # Pass `--strict` (or MYC_DOGFOOD_STRICT=1) to fail on a core `myc check` failure.
 myc-dogfood *ARGS:
     @bash scripts/checks/myc-dogfood.sh {{ARGS}}
+# Advisory transpile→vet loop (M-1000): transpile Rust targets, myc-check each emission, report
+# checked_fraction vs expressible_fraction. On-demand (NOT a `just check` gate), mirrors myc-dogfood.
+transpile-vet *ARGS:
+    @bash scripts/checks/transpile-vet.sh {{ARGS}}
 proofs:
     @bash scripts/checks/proofs.sh
 api:
