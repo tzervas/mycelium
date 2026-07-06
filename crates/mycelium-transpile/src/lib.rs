@@ -37,10 +37,12 @@ pub mod emit;
 pub mod gap;
 pub mod map;
 pub mod transpile;
+pub mod vet;
 
 pub use batch::{discover_rs_files, summarize, transpile_batch, BatchSummary, UnionGapReport};
 pub use gap::{Category, Gap, GapReport};
 pub use transpile::{transpile_file, transpile_source};
+pub use vet::{vet_batch, MycChecker, VetClass, VetInput, VetRecord, VetReport};
 
 #[cfg(test)]
 mod tests;

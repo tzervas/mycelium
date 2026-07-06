@@ -261,6 +261,52 @@ module written in Mycelium-lang"), with no Rust prototype to transpile. Flagged,
 (VR-5/G2). This is a real signal for the self-hosting narrative: part of the core-lib slice is
 *already* Mycelium-native, so the transpiler's job is the Rust-backed remainder, not the whole.
 
+### §8.7 The transpile → `myc check` vet loop, and the baseline it exposes (M-1000, kickoff `trx2`) — `Empirical`
+
+Everything in §8.2/§8.5 measured **`expressible_fraction`** — "some `.myc` text was emitted for the
+item". That number never ran the toolchain over the emission, so it **over-counts** by construction: an
+emitted fragment that does not parse or type-check still counts as expressible. M-1000 closes the loop.
+The transpiler now has a `--vet` mode (and `src/vet.rs` + `scripts/checks/transpile-vet.sh`) that runs
+the **real** `myc check` oracle (`crates/mycelium-check`, the per-file oracle mode
+`scripts/checks/myc-dogfood.sh` uses) over every emitted `.myc`, folds each outcome into a structured
+never-silent vet record (`vet.json`: exit class + first diagnostic), and reports a second metric:
+
+- **`checked_fraction`** — **myc-check-clean** coverage. Denominator: **non-test top-level items** (the
+  *same* denominator as `expressible_fraction`, stated, so the two are directly comparable and
+  `checked_fraction ≤ expressible_fraction` always holds). Numerator: **file-gated** — `myc check` is a
+  per-file verdict, so a file's emitted items are credited only when the file's *entire* emitted `.myc`
+  is clean; a file that fails contributes `0` (we never guess which item broke a failing file — VR-5/
+  G2). So `checked_fraction` is an honestly-conservative all-or-nothing-per-file lower bound. An oracle
+  that cannot be *run at all* (binary absent) is recorded as `ToolUnavailable` — **never** counted as
+  clean.
+
+**Guarantee:** the emitted `.myc` stays `Declared`; the vet verdict is `Empirical` (measured by the real
+toolchain — never `Proven`: the oracle's own depth is name-visibility, M-365).
+
+**Baseline the vet loop exposes (`Empirical`, measured over the current emitter, kickoff `trx2`).** The
+gap between "emitted" and "checks" is stark — the number that matters for the port is near-zero
+everywhere, because on **every** representative target at least one emitted construct poisons the whole
+file's parse/check:
+
+| Target | Kind | non-test items | `expressible_fraction` | `checked_fraction` | dominant poison |
+|---|---|---:|---:|---:|---|
+| `mycelium-l1/src/eval.rs` | semcore | 42 | 11.9% (5) | **0.0%** (0) | reserved-word patterns (`Exact`/`Proven`/…) → parse error |
+| `mycelium-l1/src/fuse.rs` | semcore | 10 | 20.0% (2) | **0.0%** (0) | emitted items are both unresolved `use`s |
+| `mycelium-std-time/src` | stdlib | 37 | 10.8% (4) | **0.0%** (0) | unresolved `use` → check error |
+| `mycelium-std-rand/src` | stdlib | 34 | 14.7% (5) | **0.0%** (0) | unresolved `use` + unknown prim (`rotate_left`) |
+| `mycelium-std-cmp/src` | pilot | 111 | 12.6% (14) | **0.0%** (0) | unresolved `use` + `impl` of undefined trait `Widen` |
+
+**The two poison classes the vet loop ranks** (which `expressible_fraction` was blind to) are
+(1) **unresolved `use` imports** — the emitter renders a Rust `use extern_crate::Sym` as
+`use extern_crate.Sym;`, but that path resolves to no Mycelium nodule (the transpiler has no
+cross-nodule symbol table), so the oracle rejects it — **universal** across the surface; and
+(2) **reserved-word collisions** — a Rust identifier that is a Mycelium reserved word (`Exact`, `F16`,
+`Binary`, …) emitted verbatim into pattern/constructor/type position fails to **parse**. These are the
+demand data M-1001 acts on, and the re-ranking is itself a finding: the highest-value lever for
+*checked* coverage is **not** §8.3's #1 (macros, which block *emission*) but the constructs that poison
+an otherwise-clean file's *check* — the vet loop measures a different thing than the emission heuristic,
+and says so.
+
 ---
 
 ## Meta — changelog
@@ -306,3 +352,14 @@ module written in Mycelium-lang"), with no Rust prototype to transpile. Flagged,
   — excluded, not substituted; VR-5/G2). All numbers `Empirical` (measured over the run). **Status
   unchanged (Draft)** — still a spike; the type-coverage + macro-expansion levers are E18-1
   `needs-design`. (Append-only; VR-5; G2.)
+- **2026-07-06 — §8.7 added: the transpile → `myc check` vet loop (M-1000, kickoff `trx2`).** Closes the
+  loop `expressible_fraction` left open — a `--vet` mode + `src/vet.rs` + `scripts/checks/transpile-vet.sh`
+  run the **real** `myc check` oracle over every emitted `.myc` and report **`checked_fraction`**
+  (myc-check-clean, file-gated, denominator = non-test items — stated) alongside the emission-only
+  figure. Records the `Empirical` baseline it exposes: `checked_fraction` is **0.0% on every
+  representative target** (semcore `eval`/`fuse`, stdlib `std-time`/`std-rand`, the `std-cmp` pilot) —
+  each poisoned by an unresolved `use` and/or a reserved-word/undefined-trait emission that fails the
+  toolchain even though `expressible_fraction` counted it. Re-ranks the backlog for *checked* coverage
+  (the poison classes, not §8.3's emission-blocking macros) as M-1001's demand data. Vet verdict
+  `Empirical`; emission stays `Declared`. **Status unchanged (Draft)** — a spike, enacts nothing.
+  (Append-only; VR-5; G2.)
