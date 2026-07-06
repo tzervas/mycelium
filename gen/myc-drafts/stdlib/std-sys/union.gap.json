@@ -1,0 +1,726 @@
+{
+  "gaps": [
+    {
+      "file": "crates/mycelium-std-sys/src/fs.rs",
+      "line": 12,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use std :: io ;",
+      "reason": "`use` import (single path ending `io`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/fs.rs",
+      "line": 13,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use std :: path :: Path ;",
+      "reason": "`use` import (single path ending `Path`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/fs.rs",
+      "line": 15,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] Read the entire contents of a file at `path`.\"] # [doc = \"\"] # [doc = \" Returns `Err` on any OS error — never-silent (G2).\"] pub fn read (path : & Path) -> Result < Vec < u8 > , io :: Error > { std :: fs :: read (path) }",
+      "reason": "unsupported Rust type form `& Path`",
+      "item_name": "read"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/fs.rs",
+      "line": 22,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] Write `contents` to a file at `path`, creating or truncating it.\"] # [doc = \"\"] # [doc = \" Returns `Err` on any OS error — never-silent (G2).\"] pub fn write (path : & Path , contents : & [u8]) -> Result < () , io :: Error > { std :: fs :: write (path , contents) }",
+      "reason": "unsupported Rust type form `& Path`",
+      "item_name": "write"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/fs.rs",
+      "line": 29,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] Check whether a path exists on the filesystem.\"] # [doc = \"\"] # [doc = \" Returns `false` on any OS error (consistent with `std::path::Path::exists`).\"] # [doc = \" If distinguishing \\\"does not exist\\\" from \\\"permission denied\\\" is required, use\"] # [doc = \" `std::fs::metadata` directly.\"] pub fn exists (path : & Path) -> bool { path . exists () }",
+      "reason": "unsupported Rust type form `& Path`",
+      "item_name": "exists"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/fs.rs",
+      "line": 38,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] Create a directory and all its parents.\"] # [doc = \"\"] # [doc = \" Returns `Err` on any OS error — never-silent (G2).\"] pub fn create_dir_all (path : & Path) -> Result < () , io :: Error > { std :: fs :: create_dir_all (path) }",
+      "reason": "unsupported Rust type form `& Path`",
+      "item_name": "create_dir_all"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/fs.rs",
+      "line": 45,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] Remove a file.\"] # [doc = \"\"] # [doc = \" Returns `Err` on any OS error — never-silent (G2).\"] pub fn remove_file (path : & Path) -> Result < () , io :: Error > { std :: fs :: remove_file (path) }",
+      "reason": "unsupported Rust type form `& Path`",
+      "item_name": "remove_file"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/fs.rs",
+      "line": 52,
+      "col": 1,
+      "category": "TestItem",
+      "rust_construct": "TestItem",
+      "snippet": "# [cfg (test)] mod tests { use super :: * ; use std :: env ; # [doc = \" Round-trip: write bytes to a temp file, read them back, verify equality.\"] # [test] fn write_read_roundtrip () { let dir = env :: temp_dir () ; let path = dir . join (\"mycelium_std_sys_fs_test_roundtrip.bin\") ; let contents : & [u8] = b\"Mycelium std-sys fs round-trip test data \\x00\\x01\\x02\\xFF\" ; let _ = remove_file (& path) ; write (& path , contents) . expect (\"write failed\") ; let read_back = read (& path) . expect (\"read failed\") ; assert_eq ! (read_back , contents , \"round-trip mismatch: wrote {contents:?}, read back {read_back:?}\") ; remove_file (& path) . expect (\"cleanup remove_file failed\") ; } # [test] fn exists_and_remove () { let dir = env :: temp_dir () ; let path = dir . join (\"mycelium_std_sys_fs_test_exists.bin\") ; let _ = remove_file (& path) ; assert ! (! exists (& path) , \"expected path to not exist before write\") ; write (& path , b\"hello\") . expect (\"write failed\") ; assert ! (exists (& path) , \"expected path to exist after write\") ; remove_file (& path) . expect (\"remove_file failed\") ; assert ! (! exists (& path) , \"expected path to not exist after remove\") ; } # [test] fn create_dir_all_creates_nested () { let dir = env :: temp_dir () . join (\"mycelium_std_sys_fs_test_nested_dir\") ; let nested = dir . join (\"a\") . join (\"b\") . join (\"c\") ; let _ = std :: fs :: remove_dir_all (& dir) ; create_dir_all (& nested) . expect (\"create_dir_all failed\") ; assert ! (nested . is_dir () , \"expected nested dir to exist\") ; let _ = std :: fs :: remove_dir_all (& dir) ; } # [test] fn read_nonexistent_is_err () { let path = env :: temp_dir () . join (\"mycelium_std_sys_fs_test_NONEXISTENT_XYZ.bin\") ; let _ = remove_file (& path) ; let result = read (& path) ; assert ! (result . is_err () , \"expected Err for nonexistent file, got Ok\") ; } }",
+      "reason": "#[cfg(test)] item — out of scope for this PoC's transpilation surface (excluded from the expressible-fraction denominator, but recorded, never silently skipped)",
+      "item_name": "tests"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/guarantee_matrix.rs",
+      "line": 31,
+      "col": 1,
+      "category": "ReservedWord",
+      "rust_construct": "ReservedWord",
+      "snippet": "# [doc = \" Guarantee tag on the honesty lattice `Exact ⊐ Proven ⊐ Empirical ⊐ Declared` (RFC-0016 §4.1 C2;\"] # [doc = \" VR-5). A standalone enum whose variants mirror the lattice names; [`GuaranteeTag::as_str`] yields\"] # [doc = \" the matching `'static` string, so rows are assertable in tests without depending on the core\"] # [doc = \" lattice type.\"] # [derive (Debug , Clone , Copy , PartialEq , Eq)] pub enum GuaranteeTag { # [doc = \" No accuracy/precision/probability semantics — the honest floor `Exact` (unused here).\"] Exact , # [doc = \" Established by a checked side-condition theorem (VR-5; unused here).\"] Proven , # [doc = \" Holds over a generated corpus (proptest); not `Proven` (VR-5; unused here).\"] Empirical , # [doc = \" Asserted without a checked basis; always FLAGGED (VR-5). Every `std-sys` floor op is this.\"] Declared , }",
+      "reason": "enum variant/constructor `Exact` collides with a Mycelium reserved word — emitting it verbatim would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5)",
+      "item_name": "GuaranteeTag"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/guarantee_matrix.rs",
+      "line": 47,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl GuaranteeTag { # [doc = \" Human-readable name matching the lattice notation (`\\\"Declared\\\"`, etc.).\"] # [must_use] pub fn as_str (self) -> & 'static str { match self { GuaranteeTag :: Exact => \"Exact\" , GuaranteeTag :: Proven => \"Proven\" , GuaranteeTag :: Empirical => \"Empirical\" , GuaranteeTag :: Declared => \"Declared\" , } } }",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `as_str` signature: unsupported Rust type form `& 'static str`",
+      "item_name": "GuaranteeTag"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/guarantee_matrix.rs",
+      "line": 60,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "# [doc = \" Fallibility classification for an exported op (C1).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq)] pub enum Fallibility { # [doc = \" The op cannot fail for any well-formed input (it has no `Result`/`Option` failure path).\"] Total , # [doc = \" The op returns an explicit `Result`/`Option`; the error set is named in `error_set`.\"] Fallible , }",
+      "reason": "dropped non-doc attribute(s) on enum `Fallibility`: # [derive (Debug , Clone , Copy , PartialEq , Eq)]",
+      "item_name": "Fallibility"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/guarantee_matrix.rs",
+      "line": 69,
+      "col": 1,
+      "category": "Struct",
+      "rust_construct": "Struct",
+      "snippet": "# [doc = \" One row in the `std-sys` syscall-floor guarantee matrix (RFC-0016 §4.5).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct MatrixRow { # [doc = \" Module-qualified exported operation name (e.g. `\\\"io::write_out\\\"`).\"] pub op : & 'static str , # [doc = \" Guarantee tag (VR-5) — `Declared` for every floor op.\"] pub guarantee : GuaranteeTag , # [doc = \" Fallibility: total or fallible.\"] pub fallibility : Fallibility , # [doc = \" The explicit error set (empty string for total ops).\"] pub error_set : & 'static str , # [doc = \" Declared effects (C6).\"] pub effects : & 'static str , }",
+      "reason": "struct `MatrixRow` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "item_name": "MatrixRow"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/guarantee_matrix.rs",
+      "line": 84,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" The `std-sys` syscall-floor guarantee matrix — one row per exported floor op.\"] # [doc = \"\"] # [doc = \" Asserted in [`tests`] — never prose-only (C2 / VR-5 / RFC-0016 §4.5).\"] pub const MATRIX : & [MatrixRow] = & [MatrixRow { op : \"io::read_to_end\" , guarantee : GuaranteeTag :: Declared , fallibility : Fallibility :: Fallible , error_set : \"Err(io::Error) — OS read error (never a silent truncation, G2); \\\n                    UNBOUNDED alloc (trusted-only — use read_to_end_capped for untrusted input)\" , effects : \"io\" , } , MatrixRow { op : \"io::read_to_end_capped\" , guarantee : GuaranteeTag :: Declared , fallibility : Fallibility :: Fallible , error_set : \"Err(ReadCappedError) — OS read error / cap exceeded \\\n                    (P3 bounded; refuses, never truncates, G2)\" , effects : \"io\" , } , MatrixRow { op : \"io::read_line\" , guarantee : GuaranteeTag :: Declared , fallibility : Fallibility :: Fallible , error_set : \"Err(io::Error) — OS read / UTF-8 error\" , effects : \"io\" , } , MatrixRow { op : \"io::write_out\" , guarantee : GuaranteeTag :: Declared , fallibility : Fallibility :: Fallible , error_set : \"Err(io::Error) — short/failed write (never silently dropped, G2)\" , effects : \"io\" , } , MatrixRow { op : \"io::write_err\" , guarantee : GuaranteeTag :: Declared , fallibility : Fallibility :: Fallible , error_set : \"Err(io::Error) — short/failed write\" , effects : \"io\" , } , MatrixRow { op : \"io::flush_out\" , guarantee : GuaranteeTag :: Declared , fallibility : Fallibility :: Fallible , error_set : \"Err(io::Error) — OS flush error\" , effects : \"io\" , } , MatrixRow { op : \"fs::read\" , guarantee : GuaranteeTag :: Declared , fallibility : Fallibility :: Fallible , error_set : \"Err(io::Error) — open/read error\" , effects : \"fs\" , } , MatrixRow { op : \"fs::write\" , guarantee : GuaranteeTag :: Declared , fallibility : Fallibility :: Fallible , error_set : \"Err(io::Error) — open/write error\" , effects : \"fs\" , } , MatrixRow { op : \"fs::exists\" , guarantee : GuaranteeTag :: Declared , fallibility : Fallibility :: Total , error_set : \"\" , effects : \"fs (std::path::Path::exists semantics — an OS error reads as false)\" , } , MatrixRow { op : \"fs::create_dir_all\" , guarantee : GuaranteeTag :: Declared , fallibility : Fallibility :: Fallible , error_set : \"Err(io::Error) — mkdir error\" , effects : \"fs\" , } , MatrixRow { op : \"fs::remove_file\" , guarantee : GuaranteeTag :: Declared , fallibility : Fallibility :: Fallible , error_set : \"Err(io::Error) — unlink error\" , effects : \"fs\" , } , MatrixRow { op : \"sys::exit\" , guarantee : GuaranteeTag :: Declared , fallibility : Fallibility :: Total , error_set : \"\" , effects : \"process (diverges — `-> !`)\" , } , MatrixRow { op : \"sys::get_env\" , guarantee : GuaranteeTag :: Declared , fallibility : Fallibility :: Fallible , error_set : \"None — unset/invalid var (never a silent empty string, G2)\" , effects : \"env\" , } , MatrixRow { op : \"sys::args\" , guarantee : GuaranteeTag :: Declared , fallibility : Fallibility :: Fallible , error_set : \"Err(NonUtf8Arg) — non-UTF-8 arg named by index (never a silent drop, G2)\" , effects : \"process\" , } , MatrixRow { op : \"rand::fill_bytes\" , guarantee : GuaranteeTag :: Declared , fallibility : Fallibility :: Fallible , error_set : \"Err(EntropyError::Unavailable) — no `/dev/urandom` / short read (never zero-fills, G2)\" , effects : \"entropy\" , } , MatrixRow { op : \"time::wall_nanos\" , guarantee : GuaranteeTag :: Declared , fallibility : Fallibility :: Fallible , error_set : \"Err(String) — clock before Unix epoch\" , effects : \"time + entropy\" , } , MatrixRow { op : \"time::mono_nanos\" , guarantee : GuaranteeTag :: Declared , fallibility : Fallibility :: Total , error_set : \"\" , effects : \"time\" , } , MatrixRow { op : \"time::sleep_nanos\" , guarantee : GuaranteeTag :: Declared , fallibility : Fallibility :: Total , error_set : \"\" , effects : \"time\" , } , MatrixRow { op : \"math::sin\" , guarantee : GuaranteeTag :: Declared , fallibility : Fallibility :: Total , error_set : \"\" , effects : \"none\" , } , MatrixRow { op : \"math::cos\" , guarantee : GuaranteeTag :: Declared , fallibility : Fallibility :: Total , error_set : \"\" , effects : \"none\" , } , MatrixRow { op : \"math::tan\" , guarantee : GuaranteeTag :: Declared , fallibility : Fallibility :: Total , error_set : \"\" , effects : \"none\" , } , MatrixRow { op : \"math::asin\" , guarantee : GuaranteeTag :: Declared , fallibility : Fallibility :: Total , error_set : \"\" , effects : \"none\" , } , MatrixRow { op : \"math::acos\" , guarantee : GuaranteeTag :: Declared , fallibility : Fallibility :: Total , error_set : \"\" , effects : \"none\" , } , MatrixRow { op : \"math::atan\" , guarantee : GuaranteeTag :: Declared , fallibility : Fallibility :: Total , error_set : \"\" , effects : \"none\" , } , MatrixRow { op : \"math::atan2\" , guarantee : GuaranteeTag :: Declared , fallibility : Fallibility :: Total , error_set : \"\" , effects : \"none\" , } , MatrixRow { op : \"math::exp\" , guarantee : GuaranteeTag :: Declared , fallibility : Fallibility :: Total , error_set : \"\" , effects : \"none\" , } , MatrixRow { op : \"math::exp2\" , guarantee : GuaranteeTag :: Declared , fallibility : Fallibility :: Total , error_set : \"\" , effects : \"none\" , } , MatrixRow { op : \"math::ln\" , guarantee : GuaranteeTag :: Declared , fallibility : Fallibility :: Total , error_set : \"\" , effects : \"none\" , } , MatrixRow { op : \"math::log2\" , guarantee : GuaranteeTag :: Declared , fallibility : Fallibility :: Total , error_set : \"\" , effects : \"none\" , } , MatrixRow { op : \"math::log10\" , guarantee : GuaranteeTag :: Declared , fallibility : Fallibility :: Total , error_set : \"\" , effects : \"none\" , } , MatrixRow { op : \"math::sqrt\" , guarantee : GuaranteeTag :: Declared , fallibility : Fallibility :: Total , error_set : \"\" , effects : \"none\" , } , MatrixRow { op : \"math::cbrt\" , guarantee : GuaranteeTag :: Declared , fallibility : Fallibility :: Total , error_set : \"\" , effects : \"none\" , } ,] ;",
+      "reason": "top-level `const MATRIX` — no const item production in the grammar (`item` covers use/default/type/trait/impl/fn/object/lower/derive only)",
+      "item_name": "MATRIX"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/guarantee_matrix.rs",
+      "line": 324,
+      "col": 1,
+      "category": "TestItem",
+      "rust_construct": "TestItem",
+      "snippet": "# [cfg (test)] mod tests { use super :: { Fallibility , GuaranteeTag , MATRIX } ; # [doc = \" Every exported syscall-floor op appears in the matrix exactly once. Guard: adding or removing\"] # [doc = \" a floor op without updating the matrix makes this fail.\"] # [test] fn matrix_covers_every_floor_op_once () { let expected = [\"io::read_to_end\" , \"io::read_to_end_capped\" , \"io::read_line\" , \"io::write_out\" , \"io::write_err\" , \"io::flush_out\" , \"fs::read\" , \"fs::write\" , \"fs::exists\" , \"fs::create_dir_all\" , \"fs::remove_file\" , \"sys::exit\" , \"sys::get_env\" , \"sys::args\" , \"rand::fill_bytes\" , \"time::wall_nanos\" , \"time::mono_nanos\" , \"time::sleep_nanos\" , \"math::sin\" , \"math::cos\" , \"math::tan\" , \"math::asin\" , \"math::acos\" , \"math::atan\" , \"math::atan2\" , \"math::exp\" , \"math::exp2\" , \"math::ln\" , \"math::log2\" , \"math::log10\" , \"math::sqrt\" , \"math::cbrt\" ,] ; for name in & expected { let n = MATRIX . iter () . filter (| r | r . op == * name) . count () ; assert_eq ! (n , 1 , \"op {name:?} must appear exactly once in MATRIX (found {n})\") ; } assert_eq ! (MATRIX . len () , expected . len () , \"MATRIX has unexpected extra/missing rows\") ; } # [doc = \" Every floor op is `Declared` (VR-5). Guard: upgrading any row to `Empirical`/`Proven`/`Exact`\"] # [doc = \" without a checked basis makes this fail — the honest floor for an unaudited host wrapper.\"] # [test] fn every_row_is_declared () { for row in MATRIX { assert_eq ! (row . guarantee , GuaranteeTag :: Declared , \"op {:?} is not Declared — std-sys is the unaudited OS floor; an upgrade needs its \\\n                 own checked Empirical/Proven basis (VR-5)\" , row . op) ; } } # [doc = \" Fallible ops name a non-empty error set; total ops have an empty one (C1 / never-silent G2).\"] # [test] fn fallibility_and_error_set_are_consistent () { for row in MATRIX { match row . fallibility { Fallibility :: Total => assert ! (row . error_set . is_empty () , \"total op {:?} must have an empty error_set (C1)\" , row . op) , Fallibility :: Fallible => assert ! (! row . error_set . is_empty () , \"fallible op {:?} must name its error set (C1 / G2)\" , row . op) , } } } # [doc = \" Every row declares a non-empty effect (C6) — the floor is the OS-contact surface, so no op is\"] # [doc = \" silently effect-free except the pure libm `math::*` ops (effect `none`).\"] # [test] fn effects_are_declared () { for row in MATRIX { assert ! (! row . effects . is_empty () , \"op {:?} must declare an effect (C6)\" , row . op) ; } let wall = MATRIX . iter () . find (| r | r . op == \"time::wall_nanos\") . expect (\"wall row\") ; assert ! (wall . effects . contains (\"entropy\") , \"time::wall_nanos must declare the entropy effect (RT3 — civil time is an entropy source)\") ; let fill = MATRIX . iter () . find (| r | r . op == \"rand::fill_bytes\") . expect (\"fill row\") ; assert_eq ! (fill . effects , \"entropy\" , \"rand::fill_bytes must declare effect `entropy`\") ; } }",
+      "reason": "#[cfg(test)] item — out of scope for this PoC's transpilation surface (excluded from the expressible-fraction denominator, but recorded, never silently skipped)",
+      "item_name": "tests"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/io.rs",
+      "line": 41,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use std :: fmt ;",
+      "reason": "`use` import (single path ending `fmt`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/io.rs",
+      "line": 42,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use std :: io :: { self , Read , Write } ;",
+      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/io.rs",
+      "line": 44,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] Read **all** of stdin to end-of-input — **UNBOUNDED, TRUSTED-ONLY**.\"] # [doc = \"\"] # [doc = \" This grows the buffer with no cap: a hostile or runaway producer can drive an arbitrarily large\"] # [doc = \" allocation (memory-exhaustion DoS). Use it **only** where the stdin producer is your own process\"] # [doc = \" or otherwise under your control. For **untrusted / external-edge** input, use the bounded\"] # [doc = \" [`read_to_end_capped`] instead (P3 — bounds at the external edge).\"] # [doc = \"\"] # [doc = \" Returns `Err` on any OS read error — never-silent (G2): a partial read that hits an error is\"] # [doc = \" reported, not truncated-and-returned.\"] pub fn read_to_end () -> Result < Vec < u8 > , io :: Error > { let mut buf = Vec :: new () ; io :: stdin () . read_to_end (& mut buf) ? ; Ok (buf) }",
+      "reason": "generic type path `Result < Vec < u8 > , io :: Error >` — type-argument mapping not confirmed",
+      "item_name": "read_to_end"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/io.rs",
+      "line": 59,
+      "col": 1,
+      "category": "PayloadVariant",
+      "rust_construct": "PayloadVariant",
+      "snippet": "# [doc = \" Error set for the bounded stdin read [`read_to_end_capped`] (closed sum — never-silent, G2).\"] # [derive (Debug)] pub enum ReadCappedError { # [doc = \" An OS read error occurred before the cap was reached.\"] Io (io :: Error) , # [doc = \" Input reached the cap: there were **more** than `cap` bytes available, so the read was\"] # [doc = \" refused rather than truncated (G2). `cap` is the byte limit that was exceeded.\"] TooLarge { # [doc = \" The byte cap that the input exceeded.\"] cap : usize , } , }",
+      "reason": "enum `ReadCappedError` variant `Io` has a field type with no confirmed mapping (qualified type path `io :: Error` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5))",
+      "item_name": "ReadCappedError"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/io.rs",
+      "line": 72,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl fmt :: Display for ReadCappedError { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { match self { ReadCappedError :: Io (e) => write ! (f , \"stdin read error: {e}\") , ReadCappedError :: TooLarge { cap } => { write ! (f , \"stdin input exceeds the {cap}-byte cap (refused, not truncated)\") } } } }",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut fmt :: Formatter < '_ >`",
+      "item_name": "ReadCappedError"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/io.rs",
+      "line": 86,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl std :: error :: Error for ReadCappedError { fn source (& self) -> Option < & (dyn std :: error :: Error + 'static) > { match self { ReadCappedError :: Io (e) => Some (e) , ReadCappedError :: TooLarge { .. } => None , } } }",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `source` signature: generic type path `Option < & (dyn std :: error :: Error + 'static) >` — type-argument mapping not confirmed",
+      "item_name": "ReadCappedError"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/io.rs",
+      "line": 95,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "impl From < io :: Error > for ReadCappedError { fn from (e : io :: Error) -> Self { ReadCappedError :: Io (e) } }",
+      "reason": "qualified type path `io :: Error` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
+      "item_name": "ReadCappedError"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/io.rs",
+      "line": 101,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] Read stdin to end-of-input, **bounded by `max` bytes** (P3 — bound at the external\"] # [doc = \" edge). The safe form for **untrusted** input: a hostile/runaway pipe cannot drive an unbounded\"] # [doc = \" allocation.\"] # [doc = \"\"] # [doc = \" Never-silent (G2): if the input would **exceed** `max` bytes, this returns\"] # [doc = \" `Err(ReadCappedError::TooLarge { cap: max })` — it never silently truncates the stream. An input\"] # [doc = \" of **exactly** `max` bytes (or fewer) succeeds and returns those bytes. OS read errors surface as\"] # [doc = \" `Err(ReadCappedError::Io(_))`.\"] # [doc = \"\"] # [doc = \" # Guarantee\"] # [doc = \"\"] # [doc = \" `Declared` — a thin bounded wrapper over `std::io`; no theorem and no measured bound backs the\"] # [doc = \" underlying stream semantics. The cap itself is exact by construction (the returned buffer length\"] # [doc = \" is always `<= max`), but the floor's overall guarantee stays `Declared` (VR-5).\"] pub fn read_to_end_capped (max : usize) -> Result < Vec < u8 > , ReadCappedError > { read_capped (io :: stdin () . lock () , max) }",
+      "reason": "`usize` has a platform-dependent width; no fixed Binary{N} mapping",
+      "item_name": "read_to_end_capped"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/io.rs",
+      "line": 119,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "# [doc = \" Core bounded read, factored over any [`Read`] so it is unit-testable without real stdin.\"] # [doc = \"\"] # [doc = \" Reads up to `max + 1` bytes via [`Read::take`]. Because `.take(max)` would *silently* stop at the\"] # [doc = \" cap (an invisible truncation — a G2 violation), we instead read one byte past the cap: if the\"] # [doc = \" result length is `> max`, the input was too large and we return [`ReadCappedError::TooLarge`]\"] # [doc = \" (explicit, never a truncated buffer). Otherwise the whole input fit within the cap and is\"] # [doc = \" returned. `max == usize::MAX` is handled without overflow (the `+ 1` saturates).\"] fn read_capped < R : Read > (r : R , max : usize) -> Result < Vec < u8 > , ReadCappedError > { let probe = (max as u64) . saturating_add (1) ; let mut buf = Vec :: new () ; r . take (probe) . read_to_end (& mut buf) ? ; if buf . len () > max { return Err (ReadCappedError :: TooLarge { cap : max }) ; } Ok (buf) }",
+      "reason": "type parameter `R` carries a bound — type_params/fn generics are bare identifiers only in this grammar fragment",
+      "item_name": "read_capped"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/io.rs",
+      "line": 140,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] Read a single line from stdin (including the trailing newline if present). Returns\"] # [doc = \" `Err` on any OS read error or invalid UTF-8 — never-silent (G2).\"] pub fn read_line () -> Result < String , io :: Error > { let mut line = String :: new () ; io :: stdin () . read_line (& mut line) ? ; Ok (line) }",
+      "reason": "generic type path `Result < String , io :: Error >` — type-argument mapping not confirmed",
+      "item_name": "read_line"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/io.rs",
+      "line": 148,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] Write all of `bytes` to stdout. Uses `write_all`, so a short write is an explicit\"] # [doc = \" `Err`, never a silently-dropped tail (G2). Does **not** flush — call [`flush_out`] when ordering\"] # [doc = \" against process exit matters.\"] pub fn write_out (bytes : & [u8]) -> Result < () , io :: Error > { io :: stdout () . write_all (bytes) }",
+      "reason": "unsupported Rust type form `& [u8]`",
+      "item_name": "write_out"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/io.rs",
+      "line": 155,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] Write all of `bytes` to stderr. Like [`write_out`]: a short write is an explicit\"] # [doc = \" `Err` (G2).\"] pub fn write_err (bytes : & [u8]) -> Result < () , io :: Error > { io :: stderr () . write_all (bytes) }",
+      "reason": "unsupported Rust type form `& [u8]`",
+      "item_name": "write_err"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/io.rs",
+      "line": 161,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] Flush stdout — surfaces any deferred OS write error explicitly (G2), so a buffered\"] # [doc = \" write lost at flush time is never silently dropped.\"] pub fn flush_out () -> Result < () , io :: Error > { io :: stdout () . flush () }",
+      "reason": "generic type path `Result < () , io :: Error >` — type-argument mapping not confirmed",
+      "item_name": "flush_out"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/io.rs",
+      "line": 167,
+      "col": 1,
+      "category": "TestItem",
+      "rust_construct": "TestItem",
+      "snippet": "# [cfg (test)] mod tests { use super :: * ; # [doc = \" The write path returns `Ok` on a normal stdout write and surfaces the byte payload faithfully\"] # [doc = \" (a smoke test — the OS stream is the ground truth; this only pins that the wrapper does not\"] # [doc = \" swallow or transform the bytes).\"] # [test] fn write_out_and_flush_succeed_on_a_normal_stream () { write_out (b\"\") . expect (\"an empty write succeeds\") ; flush_out () . expect (\"flush succeeds\") ; } # [doc = \" Never-silent (G2): `write_all` over a deliberately failing writer surfaces the error rather\"] # [doc = \" than reporting a phantom success. We exercise the same `Write::write_all` contract `write_out`\"] # [doc = \" relies on, against a sink that refuses, to pin the never-silent property structurally.\"] # [test] fn a_failing_write_is_an_explicit_error_not_a_phantom_success () { struct Refuse ; impl Write for Refuse { fn write (& mut self , _ : & [u8]) -> io :: Result < usize > { Err (io :: Error :: other (\"refused\")) } fn flush (& mut self) -> io :: Result < () > { Ok (()) } } let err = Refuse . write_all (b\"x\") . expect_err (\"a refusing writer must surface an error\") ; assert_eq ! (err . kind () , io :: ErrorKind :: Other) ; } # [doc = \" P3 / under-cap: an input shorter than the cap is returned in full.\"] # [test] fn capped_read_under_cap_returns_all_bytes () { let input : & [u8] = b\"hello\" ; let out = read_capped (input , 64) . expect (\"an under-cap read must succeed\") ; assert_eq ! (out , b\"hello\" , \"the full payload must be returned unchanged\") ; } # [doc = \" Boundary: an input of *exactly* the cap length succeeds (the cap is inclusive — `len <= max`).\"] # [test] fn capped_read_at_exactly_cap_returns_all_bytes () { let input : & [u8] = b\"abcd\" ; let out = read_capped (input , 4) . expect (\"an at-cap read must succeed\") ; assert_eq ! (out , b\"abcd\") ; } # [doc = \" Never-silent (G2): an input that EXCEEDS the cap is an explicit `TooLarge` error — never a\"] # [doc = \" silently-truncated buffer. This is the DoS-bound test (P3): we must refuse, not truncate.\"] # [test] fn capped_read_over_cap_is_explicit_error_not_silent_truncation () { let input : & [u8] = b\"abcdef\" ; match read_capped (input , 4) { Err (ReadCappedError :: TooLarge { cap }) => { assert_eq ! (cap , 4 , \"the error must cite the cap\") } other => panic ! (\"over-cap input must be TooLarge, never a truncated Ok: {other:?}\") , } } # [doc = \" Edge: a zero cap rejects any non-empty input (one byte already exceeds the cap).\"] # [test] fn capped_read_zero_cap_rejects_nonempty_input () { let input : & [u8] = b\"x\" ; assert ! (matches ! (read_capped (input , 0) , Err (ReadCappedError :: TooLarge { cap : 0 })) , \"a 1-byte input must exceed a zero cap\") ; } # [doc = \" Edge: a zero cap accepts empty input (nothing to read — the bound holds vacuously).\"] # [test] fn capped_read_zero_cap_accepts_empty_input () { let input : & [u8] = b\"\" ; let out = read_capped (input , 0) . expect (\"empty input fits a zero cap\") ; assert ! (out . is_empty ()) ; } # [doc = \" The error type names the cap in its `Display` (auditable message; G2 — the refusal is legible).\"] # [test] fn too_large_error_display_cites_the_cap () { let e = ReadCappedError :: TooLarge { cap : 128 } ; assert ! (e . to_string () . contains (\"128\") , \"TooLarge Display must cite the cap, got: {e}\") ; } # [doc = \" Never-silent (G2): an OS read error before the cap surfaces as `Io`, not a partial `Ok`.\"] # [test] fn capped_read_surfaces_os_error_not_partial_ok () { struct Boom ; impl Read for Boom { fn read (& mut self , _ : & mut [u8]) -> io :: Result < usize > { Err (io :: Error :: other (\"boom\")) } } match read_capped (Boom , 16) { Err (ReadCappedError :: Io (e)) => assert_eq ! (e . kind () , io :: ErrorKind :: Other) , other => panic ! (\"a failing reader must surface Io, not a phantom Ok: {other:?}\") , } } }",
+      "reason": "#[cfg(test)] item — out of scope for this PoC's transpilation surface (excluded from the expressible-fraction denominator, but recorded, never silently skipped)",
+      "item_name": "tests"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/lib.rs",
+      "line": 1,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# ! [forbid (unsafe_code)]",
+      "reason": "crate/file-level inner attributes (#![...]) are not transpiled (no nodule-header equivalent for these Rust-specific directives)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/lib.rs",
+      "line": 56,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "pub mod fs ;",
+      "reason": "`mod` declaration — Mycelium's nodule-per-file model has no nested-module construct in this grammar fragment",
+      "item_name": "fs"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/lib.rs",
+      "line": 57,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "pub mod guarantee_matrix ;",
+      "reason": "`mod` declaration — Mycelium's nodule-per-file model has no nested-module construct in this grammar fragment",
+      "item_name": "guarantee_matrix"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/lib.rs",
+      "line": 58,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "pub mod io ;",
+      "reason": "`mod` declaration — Mycelium's nodule-per-file model has no nested-module construct in this grammar fragment",
+      "item_name": "io"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/lib.rs",
+      "line": 59,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "pub mod math ;",
+      "reason": "`mod` declaration — Mycelium's nodule-per-file model has no nested-module construct in this grammar fragment",
+      "item_name": "math"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/lib.rs",
+      "line": 60,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "pub mod rand ;",
+      "reason": "`mod` declaration — Mycelium's nodule-per-file model has no nested-module construct in this grammar fragment",
+      "item_name": "rand"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/lib.rs",
+      "line": 61,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "pub mod sys ;",
+      "reason": "`mod` declaration — Mycelium's nodule-per-file model has no nested-module construct in this grammar fragment",
+      "item_name": "sys"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/lib.rs",
+      "line": 62,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "pub mod time ;",
+      "reason": "`mod` declaration — Mycelium's nodule-per-file model has no nested-module construct in this grammar fragment",
+      "item_name": "time"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/lib.rs",
+      "line": 67,
+      "col": 1,
+      "category": "TestItem",
+      "rust_construct": "TestItem",
+      "snippet": "# [cfg (test)] mod tests ;",
+      "reason": "#[cfg(test)] item — out of scope for this PoC's transpilation surface (excluded from the expressible-fraction denominator, but recorded, never silently skipped)",
+      "item_name": "tests"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/math.rs",
+      "line": 16,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] `sin(x)`. Delegates to Rust `f64::sin` (platform libm). Precision unaudited (M-541).\"] pub fn sin (x : f64) -> f64 { x . sin () }",
+      "reason": "`f64` — `scalar` only appears inside Dense{N,scalar}/ambient_params in the grammar, never as a bare value type; no confirmed base_type arm",
+      "item_name": "sin"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/math.rs",
+      "line": 21,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] `cos(x)`. Delegates to Rust `f64::cos` (platform libm). Precision unaudited (M-541).\"] pub fn cos (x : f64) -> f64 { x . cos () }",
+      "reason": "`f64` — `scalar` only appears inside Dense{N,scalar}/ambient_params in the grammar, never as a bare value type; no confirmed base_type arm",
+      "item_name": "cos"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/math.rs",
+      "line": 26,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] `tan(x)`. Delegates to Rust `f64::tan` (platform libm). Precision unaudited (M-541).\"] pub fn tan (x : f64) -> f64 { x . tan () }",
+      "reason": "`f64` — `scalar` only appears inside Dense{N,scalar}/ambient_params in the grammar, never as a bare value type; no confirmed base_type arm",
+      "item_name": "tan"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/math.rs",
+      "line": 31,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] `asin(x)`. Delegates to Rust `f64::asin` (platform libm). Precision unaudited (M-541).\"] pub fn asin (x : f64) -> f64 { x . asin () }",
+      "reason": "`f64` — `scalar` only appears inside Dense{N,scalar}/ambient_params in the grammar, never as a bare value type; no confirmed base_type arm",
+      "item_name": "asin"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/math.rs",
+      "line": 36,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] `acos(x)`. Delegates to Rust `f64::acos` (platform libm). Precision unaudited (M-541).\"] pub fn acos (x : f64) -> f64 { x . acos () }",
+      "reason": "`f64` — `scalar` only appears inside Dense{N,scalar}/ambient_params in the grammar, never as a bare value type; no confirmed base_type arm",
+      "item_name": "acos"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/math.rs",
+      "line": 41,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] `atan(x)`. Delegates to Rust `f64::atan` (platform libm). Precision unaudited (M-541).\"] pub fn atan (x : f64) -> f64 { x . atan () }",
+      "reason": "`f64` — `scalar` only appears inside Dense{N,scalar}/ambient_params in the grammar, never as a bare value type; no confirmed base_type arm",
+      "item_name": "atan"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/math.rs",
+      "line": 46,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] `atan2(y, x)`. Delegates to Rust `f64::atan2` (platform libm). Precision unaudited (M-541).\"] pub fn atan2 (y : f64 , x : f64) -> f64 { y . atan2 (x) }",
+      "reason": "`f64` — `scalar` only appears inside Dense{N,scalar}/ambient_params in the grammar, never as a bare value type; no confirmed base_type arm",
+      "item_name": "atan2"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/math.rs",
+      "line": 51,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] `exp(x)`. Delegates to Rust `f64::exp` (platform libm). Precision unaudited (M-541).\"] pub fn exp (x : f64) -> f64 { x . exp () }",
+      "reason": "`f64` — `scalar` only appears inside Dense{N,scalar}/ambient_params in the grammar, never as a bare value type; no confirmed base_type arm",
+      "item_name": "exp"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/math.rs",
+      "line": 56,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] `exp2(x)`. Delegates to Rust `f64::exp2` (platform libm). Precision unaudited (M-541).\"] pub fn exp2 (x : f64) -> f64 { x . exp2 () }",
+      "reason": "`f64` — `scalar` only appears inside Dense{N,scalar}/ambient_params in the grammar, never as a bare value type; no confirmed base_type arm",
+      "item_name": "exp2"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/math.rs",
+      "line": 61,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] `ln(x)`. Delegates to Rust `f64::ln` (platform libm). Precision unaudited (M-541).\"] pub fn ln (x : f64) -> f64 { x . ln () }",
+      "reason": "`f64` — `scalar` only appears inside Dense{N,scalar}/ambient_params in the grammar, never as a bare value type; no confirmed base_type arm",
+      "item_name": "ln"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/math.rs",
+      "line": 66,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] `log2(x)`. Delegates to Rust `f64::log2` (platform libm). Precision unaudited (M-541).\"] pub fn log2 (x : f64) -> f64 { x . log2 () }",
+      "reason": "`f64` — `scalar` only appears inside Dense{N,scalar}/ambient_params in the grammar, never as a bare value type; no confirmed base_type arm",
+      "item_name": "log2"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/math.rs",
+      "line": 71,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] `log10(x)`. Delegates to Rust `f64::log10` (platform libm). Precision unaudited (M-541).\"] pub fn log10 (x : f64) -> f64 { x . log10 () }",
+      "reason": "`f64` — `scalar` only appears inside Dense{N,scalar}/ambient_params in the grammar, never as a bare value type; no confirmed base_type arm",
+      "item_name": "log10"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/math.rs",
+      "line": 76,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] `sqrt(x)`. Delegates to Rust `f64::sqrt` (platform libm). Precision unaudited (M-541).\"] pub fn sqrt (x : f64) -> f64 { x . sqrt () }",
+      "reason": "`f64` — `scalar` only appears inside Dense{N,scalar}/ambient_params in the grammar, never as a bare value type; no confirmed base_type arm",
+      "item_name": "sqrt"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/math.rs",
+      "line": 81,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] `cbrt(x)`. Delegates to Rust `f64::cbrt` (platform libm). Precision unaudited (M-541).\"] pub fn cbrt (x : f64) -> f64 { x . cbrt () }",
+      "reason": "`f64` — `scalar` only appears inside Dense{N,scalar}/ambient_params in the grammar, never as a bare value type; no confirmed base_type arm",
+      "item_name": "cbrt"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/math.rs",
+      "line": 86,
+      "col": 1,
+      "category": "TestItem",
+      "rust_construct": "TestItem",
+      "snippet": "# [cfg (test)] mod tests { use super :: * ; # [doc = \" \\\\[Empirical\\\\] sin²(x) + cos²(x) ≈ 1.0 for a range of x values.\"] # [doc = \" Tagged `Empirical` — this is a measured property, not a proven theorem (VR-5).\"] # [test] fn pythagorean_identity () { let xs : & [f64] = & [0.0 , 0.1 , 0.5 , 1.0 , 1.5 , std :: f64 :: consts :: PI / 4.0 , std :: f64 :: consts :: PI / 2.0 , std :: f64 :: consts :: PI , 2.0 * std :: f64 :: consts :: PI , - 1.0 , - std :: f64 :: consts :: PI / 3.0 , 100.0 , - 100.0 ,] ; for & x in xs { let s = sin (x) ; let c = cos (x) ; let identity = s * s + c * c ; assert ! ((identity - 1.0) . abs () < 1e-10 , \"sin²({x}) + cos²({x}) = {identity}, expected 1.0 ± 1e-10\") ; } } # [test] fn tan_consistency () { let xs : & [f64] = & [0.1 , 0.5 , 1.0 , - 1.0 , 2.5] ; for & x in xs { let t = tan (x) ; let expected = sin (x) / cos (x) ; assert ! ((t - expected) . abs () < 1e-12 , \"tan({x}) = {t}, sin/cos = {expected}\") ; } } # [test] fn exp_ln_roundtrip () { let xs : & [f64] = & [0.1 , 1.0 , 2.0 , 10.0 , 0.5] ; for & x in xs { let result = ln (exp (x)) ; assert ! ((result - x) . abs () < 1e-12 , \"ln(exp({x})) = {result}, expected {x}\") ; } } # [test] fn sqrt_squared () { let xs : & [f64] = & [0.0 , 1.0 , 4.0 , 9.0 , 2.0 , 0.25] ; for & x in xs { let s = sqrt (x) ; assert ! ((s * s - x) . abs () < 1e-12 , \"sqrt({x})² = {}, expected {x}\" , s * s) ; } } }",
+      "reason": "#[cfg(test)] item — out of scope for this PoC's transpilation surface (excluded from the expressible-fraction denominator, but recorded, never silently skipped)",
+      "item_name": "tests"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/rand.rs",
+      "line": 32,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use std :: fmt ;",
+      "reason": "`use` import (single path ending `fmt`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/rand.rs",
+      "line": 33,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use std :: io :: Read as _ ;",
+      "reason": "`use` import (rename `Read as _`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/rand.rs",
+      "line": 35,
+      "col": 1,
+      "category": "PayloadVariant",
+      "rust_construct": "PayloadVariant",
+      "snippet": "# [doc = \" Errors from platform entropy operations.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum EntropyError { # [doc = \" The platform entropy source is unavailable or exhausted.\"] Unavailable (String) , }",
+      "reason": "enum `EntropyError` variant `Unavailable` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
+      "item_name": "EntropyError"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/rand.rs",
+      "line": 42,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl fmt :: Display for EntropyError { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { match self { EntropyError :: Unavailable (msg) => write ! (f , \"entropy unavailable: {msg}\") , } } }",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut fmt :: Formatter < '_ >`",
+      "item_name": "EntropyError"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/rand.rs",
+      "line": 50,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl std :: error :: Error for EntropyError { }",
+      "reason": "impl block has no items",
+      "item_name": "EntropyError"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/rand.rs",
+      "line": 52,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] Fill `buf` with bytes from the OS entropy source (`/dev/urandom`).\"] # [doc = \"\"] # [doc = \" Never-silent: returns `Err(EntropyError::Unavailable(...))` on any failure (open error,\"] # [doc = \" short read, EOF, or platform without `/dev/urandom`). Never panics. Never zero-fills\"] # [doc = \" silently (G2).\"] # [doc = \"\"] # [doc = \" # Guarantee\"] # [doc = \"\"] # [doc = \" `Declared` — source is the kernel CSPRNG via `/dev/urandom`, a genuine OS entropy source,\"] # [doc = \" but no statistical quality audit has been conducted. Promotion to `Empirical` requires\"] # [doc = \" documented trials with measured statistical quality (VR-5). Do not use for\"] # [doc = \" security-sensitive purposes until retagged.\"] # [doc = \"\"] # [doc = \" # Platform\"] # [doc = \"\"] # [doc = \" Unix/Linux/macOS only. Returns `Err(EntropyError::Unavailable(...))` on platforms that\"] # [doc = \" do not expose `/dev/urandom`. Use the `getrandom` crate (FLAG-GETRANDOM) for\"] # [doc = \" cross-platform OS entropy.\"] pub fn fill_bytes (buf : & mut [u8]) -> Result < () , EntropyError > { if buf . is_empty () { return Ok (()) ; } let mut f = std :: fs :: File :: open (\"/dev/urandom\") . map_err (| e | EntropyError :: Unavailable (format ! (\"open /dev/urandom: {e}\"))) ? ; f . read_exact (buf) . map_err (| e | EntropyError :: Unavailable (format ! (\"read /dev/urandom: {e}\"))) }",
+      "reason": "unsupported Rust type form `& mut [u8]`",
+      "item_name": "fill_bytes"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/rand.rs",
+      "line": 85,
+      "col": 1,
+      "category": "TestItem",
+      "rust_construct": "TestItem",
+      "snippet": "# [cfg (test)] mod tests { use super :: * ; # [doc = \" Skip helper: treat `EntropyError::Unavailable` as a graceful skip (the repo idiom for\"] # [doc = \" platform-absent resources — mirrors the `ToolchainMissing` skip in the mlir differential).\"] # [doc = \" Non-Unix platforms (Windows, WASI, bare-metal) return `Unavailable`; that is correct\"] # [doc = \" behaviour and must not be treated as a test failure.\"] macro_rules ! skip_if_unavailable { ($ result : expr) => { match $ result { Ok (v) => v , Err (EntropyError :: Unavailable (_)) => return , } } ; } # [test] fn fill_bytes_32_succeeds_and_fills () { let mut buf = [0u8 ; 32] ; skip_if_unavailable ! (fill_bytes (& mut buf)) ; assert_ne ! (buf , [0u8 ; 32] , \"fill_bytes returned all-zero bytes (smoke check)\") ; } # [test] fn fill_bytes_empty_ok () { let mut buf : [u8 ; 0] = [] ; let result = fill_bytes (& mut buf) ; assert ! (result . is_ok () , \"fill_bytes([]) returned Err: {result:?}\") ; } # [test] fn fill_bytes_large_succeeds () { let mut buf = vec ! [0u8 ; 4096] ; skip_if_unavailable ! (fill_bytes (& mut buf)) ; } # [doc = \" Smoke test: two successive fills succeed when the entropy source is available.\"] # [doc = \"\"] # [doc = \" This test verifies only that both calls succeed (availability) — not that the two\"] # [doc = \" buffers differ. A content-quality / non-determinism check (two buffers should differ)\"] # [doc = \" is an inherently probabilistic assertion; it belongs in a documented statistical audit\"] # [doc = \" (e.g. Diehard/TestU01 with a recorded pass/fail table), not a unit test. Honest label:\"] # [doc = \" `Declared` quality, not `Empirical` (VR-5).\"] # [test] fn fill_bytes_successive_succeed_when_available () { let mut buf1 = [0u8 ; 32] ; let mut buf2 = [0u8 ; 32] ; skip_if_unavailable ! (fill_bytes (& mut buf1)) ; skip_if_unavailable ! (fill_bytes (& mut buf2)) ; } # [test] fn entropy_error_display () { let e = EntropyError :: Unavailable (\"test reason\" . to_string ()) ; assert_eq ! (e . to_string () , \"entropy unavailable: test reason\") ; } # [doc = \" Verify the EntropyError type implements std::error::Error (required by public API).\"] # [test] fn entropy_error_is_std_error () { let e : Box < dyn std :: error :: Error > = Box :: new (EntropyError :: Unavailable (\"x\" . to_string ())) ; assert ! (e . to_string () . contains (\"entropy unavailable\")) ; } }",
+      "reason": "#[cfg(test)] item — out of scope for this PoC's transpilation surface (excluded from the expressible-fraction denominator, but recorded, never silently skipped)",
+      "item_name": "tests"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/sys.rs",
+      "line": 29,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] Terminate the process with `code`. Does not return. The exit status is the caller's\"] # [doc = \" explicit choice — never a silent `0` substituted for an error path (G2): a program that wants to\"] # [doc = \" signal failure passes a non-zero `code`.\"] pub fn exit (code : i32) -> ! { std :: process :: exit (code) }",
+      "reason": "signed integer `i32` — Binary{N} is documented unsigned-magnitude (lib/std/cmp.myc); mapping a signed type onto it would misrepresent twos-complement semantics, so this is left an explicit gap rather than guessed (VR-5)",
+      "item_name": "exit"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/sys.rs",
+      "line": 36,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] Read environment variable `name`. Returns `None` if the variable is unset **or** is\"] # [doc = \" not valid Unicode — an explicit absence, never an empty-string stand-in (G2). Use when a missing\"] # [doc = \" variable is a recoverable condition; the `None` must be handled, not assumed present.\"] # [must_use] pub fn get_env (name : & str) -> Option < String > { std :: env :: var (name) . ok () }",
+      "reason": "unsupported Rust type form `& str`",
+      "item_name": "get_env"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/sys.rs",
+      "line": 44,
+      "col": 1,
+      "category": "Struct",
+      "rust_construct": "Struct",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] A command-line argument that was not valid UTF-8, reported by its **position**\"] # [doc = \" (`index` — arg 0 is the program name) so the offending input is named, never silently dropped\"] # [doc = \" (G2). Carries the lossy [`String::from_utf8_lossy`] rendering (`lossy`) so an `EXPLAIN`/diagnostic\"] # [doc = \" can *show* the bad arg without fabricating a faithful round-trip it cannot deliver.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct NonUtf8Arg { # [doc = \" 0-based position of the offending argument (0 = program name).\"] pub index : usize , # [doc = \" `String::from_utf8_lossy` rendering of the raw argument (U+FFFD for each invalid byte).\"] pub lossy : String , }",
+      "reason": "struct `NonUtf8Arg` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "item_name": "NonUtf8Arg"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/sys.rs",
+      "line": 56,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl std :: fmt :: Display for NonUtf8Arg { fn fmt (& self , f : & mut std :: fmt :: Formatter < '_ >) -> std :: fmt :: Result { write ! (f , \"command-line argument at index {} is not valid UTF-8 (lossy: {:?})\" , self . index , self . lossy) } }",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut std :: fmt :: Formatter < '_ >`",
+      "item_name": "NonUtf8Arg"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/sys.rs",
+      "line": 66,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl std :: error :: Error for NonUtf8Arg { }",
+      "reason": "impl block has no items",
+      "item_name": "NonUtf8Arg"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/sys.rs",
+      "line": 68,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] The process's command-line arguments (including arg 0), parsed to `String`s. Built on\"] # [doc = \" `args_os`: a non-UTF-8 argument is an explicit `Err(NonUtf8Arg)` naming the offending **index** —\"] # [doc = \" never a silently-dropped element (the previous `filter_map` behaviour) that would shift every\"] # [doc = \" following arg's position, and (unlike `std::env::args()`) never a *panic* (G2). The first\"] # [doc = \" non-UTF-8 arg short-circuits; callers needing the faithful, position-stable raw form should use\"] # [doc = \" `std::env::args_os` directly (this floor is the validated-UTF-8 convenience).\"] pub fn args () -> Result < Vec < String > , NonUtf8Arg > { parse_args (std :: env :: args_os ()) }",
+      "reason": "generic type path `Result < Vec < String > , NonUtf8Arg >` — type-argument mapping not confirmed",
+      "item_name": "args"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/sys.rs",
+      "line": 78,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Core parse step factored over an iterator of [`OsString`](std::ffi::OsString) so it is\"] # [doc = \" unit-testable without real `argv`. Maps each arg through `into_string`; the first non-UTF-8 arg\"] # [doc = \" becomes an `Err(NonUtf8Arg)` naming its index (never-silent, G2) rather than being dropped.\"] pub (crate) fn parse_args (raw : impl IntoIterator < Item = std :: ffi :: OsString > ,) -> Result < Vec < String > , NonUtf8Arg > { raw . into_iter () . enumerate () . map (| (index , a) | { a . into_string () . map_err (| bad | NonUtf8Arg { index , lossy : bad . to_string_lossy () . into_owned () , }) }) . collect () }",
+      "reason": "unsupported Rust type form `impl IntoIterator < Item = std :: ffi :: OsString >`",
+      "item_name": "parse_args"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/time.rs",
+      "line": 16,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use std :: time :: { Duration , Instant , SystemTime , UNIX_EPOCH } ;",
+      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/time.rs",
+      "line": 18,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] Returns nanoseconds since the Unix epoch from the wall clock.\"] # [doc = \"\"] # [doc = \" Returns `Err` if the system time is before the epoch — never-silent (G2).\"] # [doc = \"\"] # [doc = \" # Guarantee\"] # [doc = \"\"] # [doc = \" `Declared` — backed by `std::time::SystemTime`. No audit of platform clock resolution,\"] # [doc = \" drift, or leap-second handling.\"] pub fn wall_nanos () -> Result < u128 , String > { SystemTime :: now () . duration_since (UNIX_EPOCH) . map (| d | d . as_nanos ()) . map_err (| e | e . to_string ()) }",
+      "reason": "generic type path `Result < u128 , String >` — type-argument mapping not confirmed",
+      "item_name": "wall_nanos"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/time.rs",
+      "line": 33,
+      "col": 1,
+      "category": "MultiStmtBody",
+      "rust_construct": "MultiStmtBody",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] Returns monotonic nanoseconds since an unspecified process-local epoch.\"] # [doc = \"\"] # [doc = \" Guaranteed non-decreasing within a single process run (Rust `Instant` guarantee).\"] # [doc = \" Not comparable across processes or restarts.\"] # [doc = \"\"] # [doc = \" # Guarantee\"] # [doc = \"\"] # [doc = \" `Declared` — backed by `std::time::Instant`. OS monotonic clock; no precision audit.\"] pub fn mono_nanos () -> u64 { static ORIGIN : std :: sync :: OnceLock < Instant > = std :: sync :: OnceLock :: new () ; let origin = ORIGIN . get_or_init (Instant :: now) ; u64 :: try_from (origin . elapsed () . as_nanos ()) . unwrap_or (u64 :: MAX) }",
+      "reason": "function body has a statement that is neither a simple `let` binding nor the trailing expression",
+      "item_name": "mono_nanos"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/time.rs",
+      "line": 48,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] Pause the current thread for approximately `nanos` nanoseconds.\"] # [doc = \"\"] # [doc = \" Actual sleep duration may exceed `nanos` due to OS scheduling. This is never-silent on that\"] # [doc = \" imprecision: callers must not assume precision. Use `mono_nanos()` before and after to\"] # [doc = \" measure actual elapsed duration.\"] # [doc = \"\"] # [doc = \" # Guarantee\"] # [doc = \"\"] # [doc = \" `Declared` — backed by `std::thread::sleep(Duration::from_nanos(nanos))`. No precision audit.\"] pub fn sleep_nanos (nanos : u64) { std :: thread :: sleep (Duration :: from_nanos (nanos)) ; }",
+      "reason": "function has no return type (implicit `()`) — no unit value is representable in this grammar fragment",
+      "item_name": "sleep_nanos"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/time.rs",
+      "line": 61,
+      "col": 1,
+      "category": "TestItem",
+      "rust_construct": "TestItem",
+      "snippet": "# [cfg (test)] mod tests { use super :: * ; # [test] fn wall_nanos_ok_and_nonzero () { let result = wall_nanos () ; assert ! (result . is_ok () , \"wall_nanos() returned Err: {result:?}\") ; let nanos = result . unwrap () ; assert ! (nanos > 0 , \"wall_nanos() returned 0, expected a positive timestamp\") ; } # [test] fn mono_nanos_nondecreasing () { let t0 = mono_nanos () ; std :: thread :: sleep (Duration :: from_millis (1)) ; let t1 = mono_nanos () ; assert ! (t1 >= t0 , \"mono_nanos() decreased: t0={t0}, t1={t1} (monotonicity violation)\") ; } # [test] fn sleep_nanos_does_not_panic () { sleep_nanos (1_000_000) ; } # [test] fn mono_nanos_advances_after_sleep () { let t0 = mono_nanos () ; sleep_nanos (5_000_000) ; let t1 = mono_nanos () ; assert ! (t1 > t0 , \"mono_nanos() did not advance after 5 ms sleep: t0={t0}, t1={t1}\") ; } }",
+      "reason": "#[cfg(test)] item — out of scope for this PoC's transpilation surface (excluded from the expressible-fraction denominator, but recorded, never silently skipped)",
+      "item_name": "tests"
+    }
+  ],
+  "category_counts": {
+    "DeriveAttr": 1,
+    "GenericBound": 6,
+    "Impl": 7,
+    "Import": 7,
+    "MultiStmtBody": 1,
+    "Other": 37,
+    "PayloadVariant": 2,
+    "ReservedWord": 1,
+    "Struct": 2,
+    "TestItem": 7
+  }
+}

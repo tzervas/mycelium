@@ -1,0 +1,15 @@
+// nodule: std.fs
+// `OpenOptions` — explicit, declared open intent (C1/G2 — never a silent default).
+//
+// Every field defaults to `false`. Opening an absent path without `create` is `Err(NotFound)`,
+// not a conjured file. Opening an existing file without `truncate` preserves its bytes, not a
+// silent zero-out. The mutation is the caller's **declared intent or it does not happen** — this
+// is the spec §4.4 honesty crux made structural.
+//
+// Design spec: `docs/spec/stdlib/fs.md` §3; contract: RFC-0016 §4.1 C1/G2.
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.fs;
+
+

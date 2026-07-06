@@ -1,0 +1,33 @@
+// nodule: std.runtime
+// The never-silent R2 residual ledger and refusal surface (M-963; DN-78 §3 B-3 / §4; G2).
+//
+// Every M-828-tail item that DN-78 §4 defers to a research spike or Phase II has exactly one
+// row here — construct, why deferred (the unmet prerequisite), and the tracker — plus a
+// [`require`] entry point that refuses with an explicit typed error. The deferral is thereby
+// **mechanized**: inspectable data with a regression guard (a [`DeferredR2`] variant without a
+// ledger row fails the completeness test in `src/tests/r2_residual.rs`), not prose.
+//
+// # Naming note (ADR-020 §5)
+//
+// The RFC-0008 §4.5 reserved vocabulary stays out of public **operation names** (the
+// guarantee-matrix test enforces this). This ledger *names the constructs it refuses* in its
+// **data** — a refusal must name what it refuses to be never-silent (G2) — which is the same
+// posture as the L1 parse-time teaching diagnostics. Nothing here activates a reserved
+// construct or claims one is available.
+//
+// # Guarantee tags (VR-5)
+//
+// - Refusal totality ([`require`] on every deferred item returns an explicit error, in
+//   Phase I): **`Exact`** — by construction ([`require`] is a total match; tested).
+// - Ledger completeness (one row per [`DeferredR2`] variant, tracker + basis non-empty):
+//   **`Exact`** — enforced by test over [`DeferredR2::ALL`].
+// - The *deferral decisions themselves* are `Declared` (DN-78 §4/§5 — grounded in DN-63's
+//   prerequisite analysis, no formal dependency proof).
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.runtime;
+
+// A deferred M-828-tail item (DN-78 §4). Each variant carries exactly one [`ResidualRow`] in
+// [`RESIDUALS`] (completeness is tested, not assumed).
+type DeferredR2 = MeshOverlay | GraftCapability | XlocMovement | CystCheckpoint | CaptureSetL1Surface | MultiNodePlacement;

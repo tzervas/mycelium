@@ -1,0 +1,69 @@
+{
+  "source": "crates/mycelium-std-runtime/src/rc.rs",
+  "emitted_items": [
+    "RcProbe"
+  ],
+  "gaps": [
+    {
+      "file": "crates/mycelium-std-runtime/src/rc.rs",
+      "line": 70,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use std :: rc :: Rc ;",
+      "reason": "`use` import (single path ending `Rc`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/rc.rs",
+      "line": 72,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use mycelium_core :: ContentHash ;",
+      "reason": "`use` import (single path ending `ContentHash`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/rc.rs",
+      "line": 74,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use crate :: reclamation :: { ReclamationRecord , ReclamationSink , ReclamationTrigger , ScopeId , SweepEpoch , } ;",
+      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/rc.rs",
+      "line": 80,
+      "col": 1,
+      "category": "Struct",
+      "rust_construct": "Struct",
+      "snippet": "# [doc = \" A non-atomic intra-hypha reference-counted handle to a shared immutable value.\"] # [doc = \"\"] # [doc = \" Backed by [`std::rc::Rc<T>`] for correct non-atomic reference counting within a single hypha.\"] # [doc = \"\"] # [doc = \" ## Sharing model\"] # [doc = \"\"] # [doc = \" [`clone_ref`](Self::clone_ref) produces a second handle, incrementing the refcount.\"] # [doc = \" [`drop_ref`](Self::drop_ref) decrements the count, probes the outcome, and returns\"] # [doc = \" an [`RcProbe`]. The caller **must** call `drop_ref` — `RcCell<T>` has no `Drop` impl\"] # [doc = \" that emits a `ReclamationRecord`; dropping without `drop_ref` silently leaks the audit\"] # [doc = \" record (G2 violation).\"] # [doc = \"\"] # [doc = \" ## `!Send + !Sync`\"] # [doc = \"\"] # [doc = \" Inherited from `Rc<T>`: the non-atomic refcount is safe only within one hypha.\"] # [doc = \"\"] # [doc = \" ## Immutability\"] # [doc = \"\"] # [doc = \" `T` is held immutably (LR-8 / DN-32 §2.2). There is no interior-mutation surface.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — sharing and probe logic are deterministic by construction.\"] # [derive (Debug)] pub struct RcCell < T > { inner : Rc < T > , }",
+      "reason": "struct `RcCell` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "item_name": "RcCell"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/rc.rs",
+      "line": 106,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "impl < T > RcCell < T > { # [doc = \" Allocate a new `RcCell<T>` containing `value` with an initial strong refcount of 1.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — `Rc::new` allocates exactly once.\"] # [must_use] pub fn new (value : T) -> Self { RcCell { inner : Rc :: new (value) , } } # [doc = \" Return the current strong refcount (snapshot, non-atomic).\"] # [doc = \"\"] # [doc = \" Use [`drop_ref`](Self::drop_ref) for the reclamation probe — the probe is atomic with\"] # [doc = \" the decrement. This accessor is for introspection and testing.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — reads `Rc::strong_count` at call time (intra-hypha only).\"] # [must_use] pub fn refcount (& self) -> usize { Rc :: strong_count (& self . inner) } # [doc = \" Get a reference to the shared value.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — shared reference valid for the lifetime of `&self`.\"] # [must_use] pub fn value (& self) -> & T { & self . inner } # [doc = \" Clone a handle — increment the refcount and return a new `RcCell<T>` pointing to the\"] # [doc = \" same allocation.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — `Rc::clone` increments the strong count by exactly 1.\"] # [must_use] pub fn clone_ref (& self) -> RcCell < T > { RcCell { inner : Rc :: clone (& self . inner) , } } # [doc = \" Decrement the refcount and return the [`RcProbe`] outcome, consuming this handle.\"] # [doc = \"\"] # [doc = \" ## Probe logic (evaluated on strong count BEFORE decrement)\"] # [doc = \"\"] # [doc = \" - **`strong_count == 1`** → `RcProbe::UniqueOwner(T)`: this IS the last handle.\"] # [doc = \"   Exactly one [`ReclamationRecord`] with `trigger = RcZero` is emitted via `sink`\"] # [doc = \"   (never-silent G2 / RFC-0027 §9). The owned `T` is extracted and returned.\"] # [doc = \"   `Rc::try_unwrap` is used to extract `T` from the last `Rc` without copying.\"] # [doc = \"\"] # [doc = \" - **`strong_count > 1`** → `RcProbe::Shared`: other handles remain. The `Rc` is dropped\"] # [doc = \"   (decrementing the count). No record is emitted.\"] # [doc = \"\"] # [doc = \" ## Reclamation context\"] # [doc = \"\"] # [doc = \" `scope_id`, `sweep_epoch`, and `value_meta_hash` anchor the `ReclamationRecord` in the\"] # [doc = \" RT7 scope tree and the RFC-0008 §4.3 sweep model. These are caller-supplied (KC-3 — no\"] # [doc = \" global state here); the caller is responsible for correct values.\"] # [doc = \"\"] # [doc = \" ## Never-silent contract (`Exact` within this module)\"] # [doc = \"\"] # [doc = \" When `strong_count == 1`, `sink.emit` is called exactly once. No code path through\"] # [doc = \" `UniqueOwner` can avoid this call — enforced-by-construction.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — one record emitted on last-ref; none otherwise.\"] pub fn drop_ref (self , sink : & mut dyn ReclamationSink , scope_id : ScopeId , sweep_epoch : SweepEpoch , value_meta_hash : ContentHash ,) -> RcProbe < T > { let count = Rc :: strong_count (& self . inner) ; if count == 1 { let record = ReclamationRecord :: new (scope_id , sweep_epoch , ReclamationTrigger :: RcZero , value_meta_hash ,) ; sink . emit (record) ; match Rc :: try_unwrap (self . inner) { Ok (value) => RcProbe :: UniqueOwner (value) , Err (_rc) => { panic ! (\"RcCell::drop_ref: Rc::try_unwrap failed despite strong_count==1 \\\n                         (intra-hypha invariant violated — G2)\") ; } } } else { drop (self . inner) ; RcProbe :: Shared } } }",
+      "reason": "impl block has generic parameter(s) — impl_item grammar has no generic-parameter declaration slot",
+      "item_name": "RcCell < T >"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/rc.rs",
+      "line": 215,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "# [doc = \" The outcome of an [`RcCell::drop_ref`] call — the rc-probe decision (RFC-0027 §10.1).\"] # [doc = \"\"] # [doc = \" ## Variant semantics\"] # [doc = \"\"] # [doc = \" | Variant | Condition (strong_count before decrement) | Record emitted? |\"] # [doc = \" |---|---|---|\"] # [doc = \" | `UniqueOwner(T)` | `strong_count == 1` | Yes — `ReclamationRecord(trigger = RcZero)` |\"] # [doc = \" | `Shared` | `strong_count > 1` | No |\"] # [doc = \"\"] # [doc = \" ## `UniqueOwner` is the `rc → 0` case\"] # [doc = \"\"] # [doc = \" RFC-0027 §10.1 lists `rc→0` / `rc==1` / `rc>1`. In a drop context, `rc→0` happens exactly\"] # [doc = \" when `rc` was 1 before the drop — so `UniqueOwner` IS the `rc→0` / `RcZero` event.\"] # [doc = \" The `ReclamationRecord(trigger = RcZero)` is emitted inside `drop_ref`; `UniqueOwner(T)`\"] # [doc = \" signals to the caller that reclamation occurred and the owned value is available for reuse.\"] # [doc = \"\"] # [doc = \" ## FBIP reuse\"] # [doc = \"\"] # [doc = \" When `UniqueOwner(T)` is returned, the caller may reuse the `T` value's allocation for the\"] # [doc = \" next value of compatible shape (FBIP / Perceus `rc==1` reuse — RFC-0027 §10.2). This is a\"] # [doc = \" `Declared` optimization: no Mycelium perf measurement yet (DN-32 §6a).\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — variant is a deterministic function of the refcount before decrement.\"] # [derive (Debug)] pub enum RcProbe < T > { # [doc = \" This handle was the **sole owner** (`rc == 1` before decrement / `rc → 0`).\"] # [doc = \"\"] # [doc = \" A `ReclamationRecord(trigger = RcZero)` has been emitted to the sink exactly once.\"] # [doc = \" The owned value `T` is returned; the caller may inspect it, recurse-reclaim its\"] # [doc = \" sub-values, or reuse its allocation (FBIP).\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — exactly one `ReclamationRecord(RcZero)` was emitted.\"] UniqueOwner (T) , # [doc = \" The refcount was > 1 before decrement; other handles remain.\"] # [doc = \"\"] # [doc = \" The `Rc` was dropped (count decremented). No record was emitted.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — strong_count >= 1 after decrement.\"] Shared , }",
+      "reason": "dropped non-doc attribute(s) on enum `RcProbe`: # [derive (Debug)]",
+      "item_name": "RcProbe"
+    }
+  ],
+  "total_top_level_items": 6
+}

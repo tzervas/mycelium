@@ -1,0 +1,17 @@
+{
+  "source": "crates/mycelium-std-runtime/src/reclamation.rs",
+  "emitted_items": [],
+  "gaps": [
+    {
+      "file": "crates/mycelium-std-runtime/src/reclamation.rs",
+      "line": 19,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use mycelium_rt_abi :: reclamation :: { ChannelId , CollectingSink , ExplainRecord , ReclamationRecord , ReclamationSink , ReclamationTrigger , ScopeId , SweepEpoch , } ;",
+      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    }
+  ],
+  "total_top_level_items": 1
+}

@@ -1,0 +1,17 @@
+// nodule: std.sys
+// \[Declared\] Filesystem syscall floor. Thin wrappers over Rust `std::fs`.
+//
+// Declared — no audit of OS FS semantics; wiring from `std-fs` deferred to a future wave.
+//
+// Every operation returns an explicit `Result` on failure — never-silent (G2). No silent
+// creates, no silent truncations, no silent overwrites; the OS error is propagated as-is
+// via `std::io::Error`.
+//
+// RFC-0016 §9: once `std-fs` routes its `RealFs` backend exclusively through this module,
+// the pure `std-fs` crate earns a `wild`-free badge.
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.sys;
+
+

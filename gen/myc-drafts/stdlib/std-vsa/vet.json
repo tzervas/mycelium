@@ -1,0 +1,55 @@
+{
+  "records": [
+    {
+      "myc_file": "gen/myc-drafts/stdlib/std-vsa/encoding.myc",
+      "source_file": "crates/mycelium-std-vsa/src/encoding.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 3,
+      "emitted_items": 0
+    },
+    {
+      "myc_file": "gen/myc-drafts/stdlib/std-vsa/lib.myc",
+      "source_file": "crates/mycelium-std-vsa/src/lib.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 10,
+      "emitted_items": 0
+    },
+    {
+      "myc_file": "gen/myc-drafts/stdlib/std-vsa/matrix.myc",
+      "source_file": "crates/mycelium-std-vsa/src/matrix.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 5,
+      "emitted_items": 0
+    },
+    {
+      "myc_file": "gen/myc-drafts/stdlib/std-vsa/ops.myc",
+      "source_file": "crates/mycelium-std-vsa/src/ops.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 9,
+      "emitted_items": 0
+    },
+    {
+      "myc_file": "gen/myc-drafts/stdlib/std-vsa/recon.myc",
+      "source_file": "crates/mycelium-std-vsa/src/recon.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 4,
+      "emitted_items": 0
+    }
+  ],
+  "total_non_test_items": 31,
+  "total_emitted_items": 0,
+  "total_checked_clean_items": 0,
+  "class_counts": {
+    "Clean": 5
+  }
+}

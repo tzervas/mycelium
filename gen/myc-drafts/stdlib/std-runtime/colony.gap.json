@@ -1,0 +1,159 @@
+{
+  "source": "crates/mycelium-std-runtime/src/colony.rs",
+  "emitted_items": [
+    "ScopeError"
+  ],
+  "gaps": [
+    {
+      "file": "crates/mycelium-std-runtime/src/colony.rs",
+      "line": 14,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use std :: panic ;",
+      "reason": "`use` import (single path ending `panic`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/colony.rs",
+      "line": 16,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use mycelium_core :: GuaranteeStrength ;",
+      "reason": "`use` import (single path ending `GuaranteeStrength`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/colony.rs",
+      "line": 18,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use crate :: task :: Task ;",
+      "reason": "`use` import (single path ending `Task`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/colony.rs",
+      "line": 20,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Guarantee strength for `Scope` join semantics (RT2 sequentialization differential).\"] pub const SCOPE_JOIN_STRENGTH : GuaranteeStrength = GuaranteeStrength :: Empirical ;",
+      "reason": "top-level `const SCOPE_JOIN_STRENGTH` — no const item production in the grammar (`item` covers use/default/type/trait/impl/fn/object/lower/derive only)",
+      "item_name": "SCOPE_JOIN_STRENGTH"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/colony.rs",
+      "line": 23,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Guarantee strength for `Colony` Kahn-determinism (channel-mediated communication).\"] pub const COLONY_KAHN_STRENGTH : GuaranteeStrength = GuaranteeStrength :: Empirical ;",
+      "reason": "top-level `const COLONY_KAHN_STRENGTH` — no const item production in the grammar (`item` covers use/default/type/trait/impl/fn/object/lower/derive only)",
+      "item_name": "COLONY_KAHN_STRENGTH"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/colony.rs",
+      "line": 26,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "# [doc = \" Error type for scope exits with active tasks.\"] # [derive (Debug , PartialEq , Eq)] pub enum ScopeError { # [doc = \" The scope was cancelled before all tasks completed.\"] Cancelled , # [doc = \" One or more tasks panicked; remaining tasks were cancelled (never silent — G2).\"] TasksStillRunning , }",
+      "reason": "dropped non-doc attribute(s) on enum `ScopeError`: # [derive (Debug , PartialEq , Eq)]",
+      "item_name": "ScopeError"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/colony.rs",
+      "line": 35,
+      "col": 1,
+      "category": "Struct",
+      "rust_construct": "Struct",
+      "snippet": "# [doc = \" Structured concurrency scope: all tasks complete or are cancelled before scope exit.\"] # [doc = \"\"] # [doc = \" Tasks are stored in spawn order and swept FIFO by `join_all` (**Exact** sweep guarantee).\"] # [doc = \"\"] # [doc = \" # Guarantee\"] # [doc = \" - Sweep order: **Exact** (FIFO by construction, ADR-020 §4).\"] # [doc = \" - Completion semantics: **Empirical** (RT2 sequentialization differential, ADR-020 §4).\"] # [doc = \" - A scope that exits before all tasks complete returns `Err(ScopeError::TasksStillRunning)`.\"] pub struct Scope < T , E > { tasks : Vec < Task > , cancelled : bool , _output : std :: marker :: PhantomData < T > , _error : std :: marker :: PhantomData < E > , }",
+      "reason": "struct `Scope` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "item_name": "Scope"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/colony.rs",
+      "line": 50,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "impl < T , E > std :: fmt :: Debug for Scope < T , E > { fn fmt (& self , f : & mut std :: fmt :: Formatter < '_ >) -> std :: fmt :: Result { f . debug_struct (\"Scope\") . field (\"task_count\" , & self . tasks . len ()) . field (\"cancelled\" , & self . cancelled) . finish () } }",
+      "reason": "impl block has generic parameter(s) — impl_item grammar has no generic-parameter declaration slot",
+      "item_name": "Scope < T , E >"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/colony.rs",
+      "line": 59,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "impl < T , E > Scope < T , E > { # [doc = \" Create a new empty scope.\"] # [doc = \"\"] # [doc = \" Guarantee: **Exact** (constructor, trivially correct).\"] pub fn new () -> Self { Scope { tasks : Vec :: new () , cancelled : false , _output : std :: marker :: PhantomData , _error : std :: marker :: PhantomData , } } # [doc = \" Returns the number of tasks currently queued in this scope.\"] pub fn task_count (& self) -> usize { self . tasks . len () } # [doc = \" Spawn a task into this scope.\"] # [doc = \"\"] # [doc = \" Tasks are appended in FIFO order; `join_all` will execute them in this same order.\"] # [doc = \"\"] # [doc = \" Guarantee: **Exact** (push to a `Vec` — deterministic ordering, ADR-020 §4).\"] pub fn spawn (& mut self , task : Task) { self . tasks . push (task) ; } # [doc = \" Cancel this scope. After calling `cancel`, `join_all` will return\"] # [doc = \" `Err(ScopeError::Cancelled)` without running any remaining tasks.\"] pub fn cancel (& mut self) { self . cancelled = true ; } }",
+      "reason": "impl block has generic parameter(s) — impl_item grammar has no generic-parameter declaration slot",
+      "item_name": "Scope < T , E >"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/colony.rs",
+      "line": 93,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "impl < E > Scope < () , E > { # [doc = \" Run all spawned tasks in FIFO spawn order.\"] # [doc = \"\"] # [doc = \" In v0, `Task` closures always return `()`. Returns `Ok(())` when all complete.\"] # [doc = \"\"] # [doc = \" Returns `Err(ScopeError::Cancelled)` if the scope was cancelled before `join_all`.\"] # [doc = \" Returns `Err(ScopeError::TasksStillRunning)` if any task panics (the panic is caught\"] # [doc = \" and an explicit error is returned — G2: never silent).\"] # [doc = \"\"] # [doc = \" Guarantee: **Empirical** (RT2 sequentialization differential, ADR-020 §4).\"] pub fn join_all (self) -> Result < () , ScopeError > { if self . cancelled { return Err (ScopeError :: Cancelled) ; } for task in self . tasks { match panic :: catch_unwind (panic :: AssertUnwindSafe (| | task . run ())) { Ok (()) => { } Err (_) => return Err (ScopeError :: TasksStillRunning) , } } Ok (()) } }",
+      "reason": "impl block has generic parameter(s) — impl_item grammar has no generic-parameter declaration slot",
+      "item_name": "Scope < () , E >"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/colony.rs",
+      "line": 117,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "impl < T , E > Default for Scope < T , E > { fn default () -> Self { Self :: new () } }",
+      "reason": "impl block has generic parameter(s) — impl_item grammar has no generic-parameter declaration slot",
+      "item_name": "Scope < T , E >"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/colony.rs",
+      "line": 123,
+      "col": 1,
+      "category": "Struct",
+      "rust_construct": "Struct",
+      "snippet": "# [doc = \" Colony: a group of scopes sharing a supervision tree and a `Network`.\"] # [doc = \"\"] # [doc = \" Provides a factory for `Scope<T, E>` via [`Colony::scope`].\"] # [doc = \"\"] # [doc = \" Guarantee: `Empirical` (Kahn-determinism of channel communication, ADR-020 §4).\"] # [derive (Debug)] pub struct Colony < T , E > { _output : std :: marker :: PhantomData < T > , _error : std :: marker :: PhantomData < E > , }",
+      "reason": "struct `Colony` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "item_name": "Colony"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/colony.rs",
+      "line": 134,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "impl < T , E > Colony < T , E > { # [doc = \" Create a new colony.\"] # [doc = \"\"] # [doc = \" Guarantee: **Exact** (constructor, trivially correct).\"] pub fn new () -> Self { Colony { _output : std :: marker :: PhantomData , _error : std :: marker :: PhantomData , } } # [doc = \" Create a new empty `Scope<T, E>` managed by this colony.\"] # [doc = \"\"] # [doc = \" Guarantee: **Exact** (delegates to `Scope::new`, trivially correct).\"] pub fn scope (& self) -> Scope < T , E > { Scope :: new () } }",
+      "reason": "impl block has generic parameter(s) — impl_item grammar has no generic-parameter declaration slot",
+      "item_name": "Colony < T , E >"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/colony.rs",
+      "line": 153,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "impl < T , E > Default for Colony < T , E > { fn default () -> Self { Self :: new () } }",
+      "reason": "impl block has generic parameter(s) — impl_item grammar has no generic-parameter declaration slot",
+      "item_name": "Colony < T , E >"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/colony.rs",
+      "line": 159,
+      "col": 1,
+      "category": "TestItem",
+      "rust_construct": "TestItem",
+      "snippet": "# [cfg (test)] mod tests { use super :: * ; use crate :: task :: Task ; use std :: panic ; # [doc = \" Test-only typed scope: stores closures returning `T` for FIFO-order assertions.\"] struct TypedScope < T > { closures : Vec < Box < dyn FnOnce () -> T + Send + 'static > > , cancelled : bool , } impl < T > TypedScope < T > { fn new () -> Self { TypedScope { closures : Vec :: new () , cancelled : false , } } fn spawn < F : FnOnce () -> T + Send + 'static > (& mut self , f : F) { self . closures . push (Box :: new (f)) ; } fn cancel (& mut self) { self . cancelled = true ; } } impl < T : Send + 'static > TypedScope < T > { fn join_all (self) -> Result < Vec < T > , ScopeError > { if self . cancelled { return Err (ScopeError :: Cancelled) ; } let mut out = Vec :: with_capacity (self . closures . len ()) ; for f in self . closures { match panic :: catch_unwind (panic :: AssertUnwindSafe (f)) { Ok (v) => out . push (v) , Err (_) => return Err (ScopeError :: TasksStillRunning) , } } Ok (out) } } # [test] fn test_scope_new_is_empty () { let scope : Scope < () , () > = Scope :: new () ; assert_eq ! (scope . task_count () , 0 , \"new scope must have no tasks\") ; } # [test] fn test_scope_join_empty () { let scope : TypedScope < i32 > = TypedScope :: new () ; let result = scope . join_all () . expect (\"empty scope join must succeed\") ; assert ! (result . is_empty () , \"result must be empty for zero tasks\") ; } # [test] fn test_scope_join_all_fifo () { let mut scope : TypedScope < i32 > = TypedScope :: new () ; scope . spawn (| | 1) ; scope . spawn (| | 2) ; let results = scope . join_all () . expect (\"join must succeed\") ; assert_eq ! (results . len () , 2) ; assert_eq ! (results [0] , 1 , \"first spawned task must be first in results (FIFO)\") ; assert_eq ! (results [1] , 2 , \"second spawned task must be second in results (FIFO)\") ; } # [test] fn test_scope_error_on_cancelled () { let mut scope : TypedScope < i32 > = TypedScope :: new () ; scope . cancel () ; let err = scope . join_all () . expect_err (\"cancelled scope must return Err\") ; assert_eq ! (err , ScopeError :: Cancelled , \"must return Cancelled, not TasksStillRunning\") ; } # [test] fn test_scope_spawn_with_task () { let mut scope : Scope < () , () > = Scope :: new () ; scope . spawn (Task :: new (| | { })) ; assert_eq ! (scope . task_count () , 1) ; } # [test] fn test_colony_scope_factory () { let colony : Colony < () , () > = Colony :: new () ; let scope = colony . scope () ; assert_eq ! (scope . task_count () , 0 , \"colony-created scope must start empty\") ; } }",
+      "reason": "#[cfg(test)] item — out of scope for this PoC's transpilation surface (excluded from the expressible-fraction denominator, but recorded, never silently skipped)",
+      "item_name": "tests"
+    }
+  ],
+  "total_top_level_items": 15
+}

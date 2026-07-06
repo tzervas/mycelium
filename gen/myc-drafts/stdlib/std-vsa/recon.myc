@@ -1,0 +1,31 @@
+// nodule: std.vsa
+// Reconstruction-manifest surface — ergonomic wrappers over `mycelium_vsa::recon`.
+//
+// Provides the two public decode paths the spec (vsa.md §3) names:
+//
+// 1. **[`reconstruct_role`]** — compositional reconstruction: unbind a record by a named role,
+//    then clean up against the codebook.  Requires a `CompositionalReconstruction` manifest with
+//    a `Cleanup` decode.  Fails explicitly on non-compositional manifests, unknown roles, or a
+//    below-threshold cleanup result (C1 / G2).
+//
+// 2. **[`reconstruct_factors`]** — resonator factorization: opt-in, `Empirical` ceiling, MAP-I
+//    first (then BSC per the profile); **never `Proven`** (FR-C2 / RFC-0009 §5).  Non-convergence
+//    verdicts (`BudgetExhausted`, `Oscillating`, `Stalled`, `OutsideEmpiricalProfile`,
+//    `BelowCleanupThreshold`) are explicit errors carrying the inspectable `ResonatorTrace` (C3).
+//
+// # Guarantee tags
+//
+// | Op | Tag | Note |
+// |---|---|---|
+// | `reconstruct_role` | meet of `unbind` + `cleanup` for the model | `Empirical` at most |
+// | `reconstruct_factors` | `Empirical` (MAP-I/BSC); `Declared` (sparse/HRR/FHRR) | FR-C2 |
+//
+// `reconstruct_factors` for sparse/HRR/FHRR is `Declared` (lossy/non-exact self-inverse;
+// RFC-0009 §9 Q6) — FLAG Q4: `std.vsa` v0 routes only the MAP-I/BSC validated path; the
+// `Declared` paths are deferred (RFC-0009 §10.3 deferred coverage).
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.vsa;
+
+

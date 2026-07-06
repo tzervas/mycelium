@@ -1,0 +1,59 @@
+// nodule: std.runtime
+// Network, Sender, Receiver, TrySend, TryRecv — channel surface (ADR-020 v0 R1).
+//
+// This module also carries the **third live reclamation trigger** (`ChannelClose` — RFC-0027 §9 /
+// §7.3 / G2) and the **canonical `ChannelNodeId`** that resolves the MEM-1 `ChannelId` placeholder
+// FLAG. When a `Receiver` is torn down via [`Receiver::close_with_reclaim`] while values are still
+// buffered, each in-transit value emits one `ReclamationRecord(ChannelClose)` through the supplied
+// [`ReclamationSink`] — never silently dropped (G2).
+//
+// # Guarantee (Empirical — Kahn-determinism of channel-mediated communication)
+//
+// Message ordering within a single channel is **Exact** (FIFO).
+// Cross-channel Kahn-determinism is **Empirical**: grounded in the RT2 differentials
+// (ADR-020 §4) but not yet Proven with a formal theorem.
+//
+// # Fail-closed on invalid input (G2)
+//
+// `Network::channel(0)` returns `Err(ChannelError::ZeroCapacity)` — zero-capacity channels
+// are nonsensical and are rejected at construction time, not silently converted to a
+// placeholder (ADR-020 §4 / G2: never-silent principle).
+//
+// # ChannelClose semantics (RFC-0027 §9 / §7.3 / G2)
+//
+// When a channel is torn down while values are still buffered (sent but never to be received),
+// those in-transit values' ownership is released and MUST be reclaimed. Use
+// [`Receiver::close_with_reclaim`] as the teardown path to emit one
+// `ReclamationRecord(ChannelClose)` per buffered value. **Normal drain** (via [`Receiver::try_recv`])
+// delivers values to the receiver — no reclamation needed; `close_with_reclaim` is the teardown
+// path for **undelivered** in-transit values only.
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.runtime;
+
+// The canonical channel-tier identity type (resolves the MEM-1 `ChannelId` placeholder FLAG).
+//
+// Allocated per [`Network::channel`] call via a monotonic global counter. Unique within a
+// process lifetime. Mirrors [`crate::region::ScopeNodeId`] — same pattern, same semantics,
+// different tier. Use [`ChannelNodeId::as_channel_id`] to convert to [`ChannelId`] for use in
+// [`ReclamationRecord`] fields (the stable RFC-0027 §9 type).
+//
+// Guarantee: `Exact` — monotonic, unique per allocation (atomic counter, strictly increasing).
+type ChannelNodeId = ChannelNodeId(Binary{64});
+
+impl ChannelNodeId {
+  // Allocate a fresh, unique `ChannelNodeId`.
+  //
+  // Guarantee: `Exact` — strictly greater than all previously allocated ids.
+  fn allocate() => ChannelNodeId = ChannelNodeId(fetch_add(GLOBAL_CHANNEL_ID, 1, Relaxed));
+};
+
+// Errors returned by `Network` construction operations.
+type ChannelError = ZeroCapacity;
+
+// Result of a non-blocking send attempt.
+type TrySend[V] = Sent | Full(V) | Closed(V);
+
+// Result of a non-blocking receive attempt.
+type TryRecv[V] = Received(V) | Empty | Closed;

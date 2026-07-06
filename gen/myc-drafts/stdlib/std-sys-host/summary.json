@@ -1,0 +1,33 @@
+{
+  "files": [
+    {
+      "file": "crates/mycelium-std-sys-host/src/lib.rs",
+      "total_items": 7,
+      "non_test_items": 6,
+      "emitted": 2,
+      "gaps": 8,
+      "expressible_pct": 33.33333333333333,
+      "category_counts": {
+        "DeriveAttr": 2,
+        "Impl": 2,
+        "Import": 2,
+        "Other": 1,
+        "TestItem": 1
+      }
+    }
+  ],
+  "totals": {
+    "total_items": 7,
+    "non_test_items": 6,
+    "emitted": 2,
+    "gaps": 8,
+    "expressible_pct": 33.33333333333333,
+    "category_counts": {
+      "DeriveAttr": 2,
+      "Impl": 2,
+      "Import": 2,
+      "Other": 1,
+      "TestItem": 1
+    }
+  }
+}

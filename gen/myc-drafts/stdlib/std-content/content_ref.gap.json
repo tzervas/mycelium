@@ -1,0 +1,89 @@
+{
+  "source": "crates/mycelium-std-content/src/content_ref.rs",
+  "emitted_items": [
+    "RefKind"
+  ],
+  "gaps": [
+    {
+      "file": "crates/mycelium-std-content/src/content_ref.rs",
+      "line": 19,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use crate :: error :: MalformedDigest ;",
+      "reason": "`use` import (single path ending `MalformedDigest`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-content/src/content_ref.rs",
+      "line": 20,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use mycelium_core :: ContentHash ;",
+      "reason": "`use` import (single path ending `ContentHash`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-content/src/content_ref.rs",
+      "line": 22,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "# [doc = \" The role a [`ContentRef`] points to (the explicit kind tag).\"] # [doc = \"\"] # [doc = \" This is metadata **about the pointer**, not the pointed-to value. It lets cert / policy /\"] # [doc = \" `spore` modules distinguish roles without parsing the digest.\"] # [derive (Debug , Clone , Copy , PartialEq , Eq , Hash , PartialOrd , Ord)] pub enum RefKind { # [doc = \" A content-addressed runtime value (the result of [`crate::hash_of_value`]).\"] Value , # [doc = \" A content-addressed definition / AST node (the result of [`crate::hash_of_def`]).\"] Def , # [doc = \" A primitive operation (the result of [`mycelium_core::content::operation_hash`]).\"] Operation , # [doc = \" A policy artifact (RFC-0005 policy content-hash).\"] Policy , # [doc = \" A `spore` deployable (ADR-013).\"] Spore , # [doc = \" Any other role not covered by the variants above.\"] Other , }",
+      "reason": "dropped non-doc attribute(s) on enum `RefKind`: # [derive (Debug , Clone , Copy , PartialEq , Eq , Hash , PartialOrd , Ord)]",
+      "item_name": "RefKind"
+    },
+    {
+      "file": "crates/mycelium-std-content/src/content_ref.rs",
+      "line": 42,
+      "col": 1,
+      "category": "Struct",
+      "rust_construct": "Struct",
+      "snippet": "# [doc = \" A typed, opaque content reference — a `(kind, hash)` pair that cert / policy / provenance /\"] # [doc = \" `spore` artifacts embed to designate a content-addressed target.\"] # [doc = \"\"] # [doc = \" Constructed via [`crate::as_ref`] (from a `ContentHash`) or directly via\"] # [doc = \" [`ContentRef::new`] when the kind is known at the call site.\"] # [derive (Debug , Clone , PartialEq , Eq , Hash , PartialOrd , Ord)] pub struct ContentRef { kind : RefKind , hash : ContentHash , }",
+      "reason": "struct `ContentRef` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "item_name": "ContentRef"
+    },
+    {
+      "file": "crates/mycelium-std-content/src/content_ref.rs",
+      "line": 53,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl ContentRef { # [doc = \" Build a `ContentRef` from an explicit kind and hash.\"] # [doc = \"\"] # [doc = \" This is `Exact`/total — there is no failure mode.\"] # [must_use] pub fn new (kind : RefKind , hash : ContentHash) -> Self { ContentRef { kind , hash } } # [doc = \" The role this reference designates.\"] # [must_use] pub fn kind (& self) -> RefKind { self . kind } # [doc = \" The content-addressed identity this reference points to.\"] # [must_use] pub fn hash (& self) -> & ContentHash { & self . hash } # [doc = \" Consume the ref, returning the inner [`ContentHash`].\"] # [must_use] pub fn into_hash (self) -> ContentHash { self . hash } # [doc = \" The canonical string form of this reference: `<kind-prefix>+<algo>:<digest>`.\"] # [doc = \"\"] # [doc = \" Round-trips through the [`FromStr`] impl (`s.parse::<ContentRef>()`): for any `r`,\"] # [doc = \" `r.as_str_repr().parse::<ContentRef>() == Ok(r)`. This is the \\\"machine\\\" side of the G11\"] # [doc = \" dual projection; the human side is [`kind`](Self::kind) + a name lookup via\"] # [doc = \" [`crate::names_of`].\"] # [doc = \"\"] # [doc = \" [`FromStr`]: std::str::FromStr\"] # [must_use] pub fn as_str_repr (& self) -> String { format ! (\"{}+{}\" , self . kind_prefix () , self . hash . as_str ()) } fn kind_prefix (& self) -> & 'static str { match self . kind { RefKind :: Value => \"value\" , RefKind :: Def => \"def\" , RefKind :: Operation => \"op\" , RefKind :: Policy => \"policy\" , RefKind :: Spore => \"spore\" , RefKind :: Other => \"other\" , } } }",
+      "reason": "no member of this impl block could be transpiled (6 sub-issue(s)): impl method `new` body: unsupported expression form `ContentRef { kind , hash }`; impl method `kind` body: unsupported expression form `self . kind`; impl method `hash` signature: unsupported Rust type form `& ContentHash`; impl method `into_hash` body: unsupported expression form `self . hash`; impl method `as_str_repr` signature: `String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type; impl method `kind_prefix` signature: unsupported Rust type form `& 'static str`",
+      "item_name": "ContentRef"
+    },
+    {
+      "file": "crates/mycelium-std-content/src/content_ref.rs",
+      "line": 105,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl RefKind { # [doc = \" The inverse of the kind-prefix used in [`ContentRef::as_str_repr`]; `None` for an\"] # [doc = \" unrecognised prefix (kept in lock-step with `ContentRef::kind_prefix`).\"] fn from_prefix (prefix : & str) -> Option < RefKind > { Some (match prefix { \"value\" => RefKind :: Value , \"def\" => RefKind :: Def , \"op\" => RefKind :: Operation , \"policy\" => RefKind :: Policy , \"spore\" => RefKind :: Spore , \"other\" => RefKind :: Other , _ => return None , }) } }",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `from_prefix` signature: unsupported Rust type form `& str`",
+      "item_name": "RefKind"
+    },
+    {
+      "file": "crates/mycelium-std-content/src/content_ref.rs",
+      "line": 121,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl std :: str :: FromStr for ContentRef { type Err = MalformedDigest ; # [doc = \" Parse the canonical `<kind-prefix>+<algo>:<digest>` form produced by\"] # [doc = \" [`ContentRef::as_str_repr`] — the exact inverse of that projection.\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \" Returns [`MalformedDigest`] (never a coerced value — C1/G2) when the string lacks the `+`\"] # [doc = \" separator, carries an unknown kind prefix, or its `<algo>:<digest>` tail is malformed.\"] fn from_str (s : & str) -> Result < Self , Self :: Err > { let (prefix , rest) = s . split_once ('+') . ok_or_else (| | { MalformedDigest :: new (s , \"expected `<kind-prefix>+<algo>:<digest>` (missing `+`)\") }) ? ; let kind = RefKind :: from_prefix (prefix) . ok_or_else (| | MalformedDigest :: new (s , \"unknown content-ref kind prefix\")) ? ; let hash = ContentHash :: parse (rest) . ok_or_else (| | { MalformedDigest :: new (s , \"malformed `<algo>:<digest>` content address\") }) ? ; Ok (ContentRef { kind , hash }) } }",
+      "reason": "no member of this impl block could be transpiled (2 sub-issue(s)): impl associated type `Err`; impl method `from_str` signature: unsupported Rust type form `& str`",
+      "item_name": "ContentRef"
+    },
+    {
+      "file": "crates/mycelium-std-content/src/content_ref.rs",
+      "line": 143,
+      "col": 1,
+      "category": "TestItem",
+      "rust_construct": "TestItem",
+      "snippet": "# [cfg (test)] mod tests { use super :: { ContentRef , RefKind } ; use mycelium_core :: ContentHash ; fn example_hash () -> ContentHash { ContentHash :: parse (\"blake3:abc123\") . expect (\"well-formed\") } # [test] fn str_repr_round_trips_through_from_str () { for kind in [RefKind :: Value , RefKind :: Def , RefKind :: Operation , RefKind :: Policy , RefKind :: Spore , RefKind :: Other ,] { let r = ContentRef :: new (kind , example_hash ()) ; let parsed = r . as_str_repr () . parse :: < ContentRef > () ; assert_eq ! (parsed , Ok (r) , \"round-trip must hold for {kind:?}\") ; } } # [test] fn from_str_rejects_malformed_with_explicit_error () { assert ! (\"nokind\" . parse ::< ContentRef > () . is_err () , \"missing '+' separator\") ; assert ! (\"bogus+blake3:abc123\" . parse ::< ContentRef > () . is_err () , \"unknown kind prefix\") ; assert ! (\"value+nocolon\" . parse ::< ContentRef > () . is_err () , \"malformed <algo>:<digest> tail\") ; } # [test] fn content_ref_kind_and_hash_round_trip () { let h = example_hash () ; let r = ContentRef :: new (RefKind :: Def , h . clone ()) ; assert_eq ! (r . kind () , RefKind :: Def) ; assert_eq ! (r . hash () , & h) ; } # [test] fn content_ref_equality_is_kind_and_hash () { let r1 = ContentRef :: new (RefKind :: Value , example_hash ()) ; let r2 = ContentRef :: new (RefKind :: Value , example_hash ()) ; assert_eq ! (r1 , r2) ; let r3 = ContentRef :: new (RefKind :: Def , example_hash ()) ; assert_ne ! (r1 , r3 , \"kind is part of ContentRef identity\") ; } # [test] fn as_str_repr_includes_kind_prefix_and_hash () { let r = ContentRef :: new (RefKind :: Spore , example_hash ()) ; let s = r . as_str_repr () ; assert ! (s . starts_with (\"spore+\") , \"repr must begin with the kind prefix\") ; assert ! (s . ends_with (example_hash () . as_str ()) , \"repr must end with the hash string\") ; } # [test] fn into_hash_yields_inner_hash () { let h = example_hash () ; let r = ContentRef :: new (RefKind :: Policy , h . clone ()) ; assert_eq ! (r . into_hash () , h) ; } }",
+      "reason": "#[cfg(test)] item — out of scope for this PoC's transpilation surface (excluded from the expressible-fraction denominator, but recorded, never silently skipped)",
+      "item_name": "tests"
+    }
+  ],
+  "total_top_level_items": 8
+}

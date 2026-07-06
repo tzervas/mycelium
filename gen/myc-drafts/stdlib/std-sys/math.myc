@@ -1,0 +1,21 @@
+// nodule: std.sys
+// \[Declared\] Transcendental math floor. Thin wrappers over Rust `f64` intrinsics (libm).
+//
+// All functions in this module are tagged `Declared` — the platform libm floor is unaudited;
+// no error-bound theorem backs these calls (VR-5: downgrade to stay honest, never upgrade
+// without a checked basis).
+//
+// RFC-0016 §9: once `std-sys` is the sole entry point for transcendental calls, the pure
+// `std-math` crate earns a `wild`-free badge. Wiring is deferred to a future wave; this
+// module establishes the interface.
+//
+// # Note on `unsafe`
+//
+// These functions are **not** `unsafe` — Rust's `f64` methods wrap the platform libm call
+// internally. The `Declared` tag is about *precision/auditedness*, not memory safety.
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.sys;
+
+

@@ -1,0 +1,31 @@
+// nodule: std.numerics
+// The `std.numerics` guarantee matrix — encoded as data, asserted in tests (RFC-0016 §4.5).
+//
+// Every exported helper op has exactly one row describing:
+// - Its honest guarantee tag on `Exact ⊐ Proven ⊐ Empirical ⊐ Declared` (VR-5).
+// - Its fallibility and the explicit error/refusal set (C1; RFC-0013).
+// - Its declared effects (C6 — all are `"none"` here; every helper is pure).
+// - Whether it surfaces an inspectable EXPLAIN artifact (C3; G11).
+//
+// The matrix is the **load-bearing deliverable** of the spec (spec §4 / RFC-0016 §4.5): it is
+// encoded as data so the test suite can assert invariants structurally, not just as prose.
+//
+// # Guarantee tag justification (VR-5 — spec §4)
+//
+// The honesty crux: the helpers are **structural** — they construct, attach, project, or check
+// a bound — so the **helper op itself** has no accuracy/precision semantics of its own and is
+// `Exact` (the RFC-0016 §4.1-C2 "len-style" case: no approximate numeric quantity is computed).
+// The thing that has a strength tag is the **carried `Bound`** — and its strength is **whatever
+// its `BoundBasis` supports**, set by the kernel/theorem, **never asserted by this module**.
+//
+// `declared` is the one exception: it is `Declared` (not `Exact`) because the *bound it
+// attaches* is always `UserDeclared` (M-I4), so the helper's own observable effect is a
+// strength downgrade — the tag of the output is `Declared`, so that is the row's tag.
+//
+// All helpers are pure (`effects: "none"`); C6 holds across the board.
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.numerics;
+
+

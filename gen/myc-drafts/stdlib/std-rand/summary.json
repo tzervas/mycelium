@@ -1,0 +1,43 @@
+{
+  "files": [
+    {
+      "file": "crates/mycelium-std-rand/src/lib.rs",
+      "total_items": 35,
+      "non_test_items": 34,
+      "emitted": 4,
+      "gaps": 36,
+      "expressible_pct": 11.76470588235294,
+      "category_counts": {
+        "DeriveAttr": 4,
+        "GenericBound": 6,
+        "Impl": 4,
+        "Import": 1,
+        "MacroInvocation": 1,
+        "MultiStmtBody": 3,
+        "Other": 12,
+        "Struct": 3,
+        "TestItem": 1,
+        "Trait": 1
+      }
+    }
+  ],
+  "totals": {
+    "total_items": 35,
+    "non_test_items": 34,
+    "emitted": 4,
+    "gaps": 36,
+    "expressible_pct": 11.76470588235294,
+    "category_counts": {
+      "DeriveAttr": 4,
+      "GenericBound": 6,
+      "Impl": 4,
+      "Import": 1,
+      "MacroInvocation": 1,
+      "MultiStmtBody": 3,
+      "Other": 12,
+      "Struct": 3,
+      "TestItem": 1,
+      "Trait": 1
+    }
+  }
+}
