@@ -482,6 +482,24 @@ implementation. **4 Critical + 15 High source-confirmed** objections, all resolv
 
 ## Meta — changelog
 
+- **2026-07-06 — AOT parity for the M-994 perf wins: (b) landed via §6, (a) is a tracked decision
+  (append-only, no status move; M-995/M-996).** Applying the M-994 evaluator wins to the AOT
+  (`mycelium-mlir`, the perf path — **not** in the DN-56 freeze scope; the frozen `mycelium_core`
+  types are untouched). **(b) — landed (M-995):** the AOT env-machine (`aot.rs::run_core`) had the
+  same per-reference O(nodes) deep-copy (`AotVal::Core` clone on every lookup + match-bind, measured
+  ~n³ p=2.98); fixed with an **AOT-local `AotVal::Data(Rc<AotDatum>)`** cons cell (the interpreter's
+  `Arc`-on-`Data.fields` couldn't port — those fields live in the frozen `Datum`). O(1) reference +
+  destructure; measured p 2.98→~2.3–2.5, 13×/21×/35× at n=100/200/400; iterative `to_core`/`Drop`
+  (deep-spine safe). **§6 bar met:** the AOT `-p mycelium-mlir` suite is green and results are
+  **byte-identical** (`ObservationalEquiv` + M-210 `Validated{Exact}`, the §5.1 family-parity
+  contract); `aot_frame_size` pin holds; zero new `unsafe`. Less clean than the interpreter's n³→n²
+  (the env-machine's HashMap-env clone is the residual — a future env-rep change could recover a
+  cleaner n²). **(a) — NOT landed, decision-gated (M-996):** the env-machine has no TCO, but adding it
+  is a behavior-changing new feature (a divergent tail loop shifts `DepthLimit`→`FuelExhausted`,
+  breaking the pinned graceful-error test) — a maintainer decision under the §5.1 family-parity + the
+  tracked "AOT per-frame metric precision" residual, not a §6 behavior-preserving landing (the native
+  LLVM path already has O(1) TCO for the canonical tail-`Fix`). RFC-0041 stays **Enacted**.
+  (M-995/M-996; E18-1-adjacent; VR-5/G2.)
 - **2026-07-06 — §6 within-freeze hardening: O(1) `L1Value::Data` clone via `Arc` sharing (M-994 fix
   (b); M-987 ~n³→~n²; append-only, no status move).** A clean use of the §6 behavior-preserving
   channel: `Data`'s `fields` wrapped in `Arc<Vec<L1Value>>` so a clone is a refcount bump instead of
