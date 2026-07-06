@@ -309,7 +309,10 @@ fn indent_lines(prefix: Bytes, text: Bytes) => Bytes =
   indent_lines_acc(prefix, split_lines(text), empty_bytes());
 
 fn ends_with_nl(s: Bytes) => Bool =
-  match eq(bytes_len(s), zero32()) { 0b1 => False, _ => eq(bytes_get(s, sub_u(bytes_len(s), one32())), nl_b()) };
+  match eq(bytes_len(s), zero32()) {
+    0b1 => False,
+    _ => match eq(bytes_get(s, sub_u(bytes_len(s), one32())), nl_b()) { 0b1 => True, _ => False }
+  };
 
 fn strip_suffix_nl(s: Bytes) => Bytes =
   bytes_slice(s, zero32(), sub_u(bytes_len(s), one32()));
@@ -318,7 +321,7 @@ fn strip_suffix_nl(s: Bytes) => Bytes =
 // — that output always ends in exactly one "\n" (never other trailing whitespace), so stripping just
 // that one trailing byte is the faithful equivalent here.
 fn trim_end_nl(s: Bytes) => Bytes =
-  match ends_with_nl(s) { 0b1 => strip_suffix_nl(s), _ => s };
+  match ends_with_nl(s) { True => strip_suffix_nl(s), False => s };
 
 // join_bytes_list: comma/sep-join a Vec[Bytes] (type-param name lists, `object`/`type` params).
 fn join_bytes_list(sep: Bytes, xs: Vec[Bytes]) => Bytes =
@@ -527,11 +530,11 @@ fn resolve_expr(amb: Option[Paradigm], site: Bytes, e: Expr, depth: Binary{32}) 
           }
         }
       },
-      Swap(value, target, policy) => match resolve_expr(amb, site, value, d2) {
+      Swap(value, target, pol) => match resolve_expr(amb, site, value, d2) {
         Err(er) => Err(er),
         Ok(value2) => match resolve_type_ref(amb, site, target, d2) {
           Err(er) => Err(er),
-          Ok(target2) => Ok(Swap(value2, target2, policy))
+          Ok(target2) => Ok(Swap(value2, target2, pol))
         }
       },
       // `wild` is the audited/opaque FFI escape (M-661): NOT descended into (mirrors ambient.rs's
@@ -562,11 +565,11 @@ fn resolve_expr(amb: Option[Paradigm], site: Bytes, e: Expr, depth: Binary{32}) 
           Ok(right2) => Ok(Fuse(left2, right2))
         }
       },
-      Reclaim(policy, body) => match resolve_expr(amb, site, policy, d2) {
+      Reclaim(pol, body) => match resolve_expr(amb, site, pol, d2) {
         Err(er) => Err(er),
-        Ok(policy2) => match resolve_expr(amb, site, body, d2) {
+        Ok(pol2) => match resolve_expr(amb, site, body, d2) {
           Err(er) => Err(er),
-          Ok(body2) => Ok(Reclaim(policy2, body2))
+          Ok(body2) => Ok(Reclaim(pol2, body2))
         }
       },
       TupleLit(elems) => match resolve_expr_list(amb, site, elems, d2) { Err(er) => Err(er), Ok(elems2) => Ok(TupleLit(elems2)) }
@@ -618,11 +621,11 @@ fn resolve_arm_list(amb: Option[Paradigm], site: Bytes, xs: Vec[Arm], depth: Bin
 // ambient as its body (no new ambient frame).
 fn resolve_hypha(amb: Option[Paradigm], site: Bytes, h: Hypha, depth: Binary{32}) => Result[Hypha, AmbientError] =
   match h {
-    Hy(forage, body) => match resolve_expr_opt(amb, site, forage, depth) {
+    Hy(frg, body) => match resolve_expr_opt(amb, site, frg, depth) {
       Err(e) => Err(e),
-      Ok(forage2) => match resolve_expr(amb, site, body, depth) {
+      Ok(frg2) => match resolve_expr(amb, site, body, depth) {
         Err(e) => Err(e),
-        Ok(body2) => Ok(Hy(forage2, body2))
+        Ok(body2) => Ok(Hy(frg2, body2))
       }
     }
   };
@@ -723,12 +726,12 @@ fn resolve_trait_decl(amb: Option[Paradigm], td: TraitDecl) => Result[TraitDecl,
 // ── resolver core: FnDecl / ImplDecl / InherentImplDecl / ViaDecl / ObjectDecl ─────────────────────
 fn resolve_fndecl(amb: Option[Paradigm], f: FnDecl) => Result[FnDecl, AmbientError] =
   match f {
-    FD(vis, thaw, tier, sig, body) => match resolve_fn_sig(amb, sig) {
+    FD(vis, thw, tr_opt, sig, body) => match resolve_fn_sig(amb, sig) {
       Err(e) => Err(e),
       Ok(sig2) => match sig2 {
         FS(name, _, _, _, _, _) => match resolve_expr(amb, name, body, zero32()) {
           Err(e) => Err(e),
-          Ok(body2) => Ok(FD(vis, thaw, tier, sig2, body2))
+          Ok(body2) => Ok(FD(vis, thw, tr_opt, sig2, body2))
         }
       }
     }
@@ -1039,7 +1042,7 @@ fn print_expr(e: Expr) => Bytes =
     If(cond, conseq, alt) => bytes_concat("if ", bytes_concat(print_expr(cond), bytes_concat(" then ", bytes_concat(print_expr(conseq), bytes_concat(" else ", print_expr(alt)))))),
     Match(scrutinee, arms) => bytes_concat("match ", bytes_concat(print_expr(scrutinee), bytes_concat(" { ", bytes_concat(print_arm_list(arms), " }")))),
     For(x, xs, acc, init, body) => bytes_concat("for ", bytes_concat(x, bytes_concat(" in ", bytes_concat(print_expr(xs), bytes_concat(", ", bytes_concat(acc, bytes_concat(" = ", bytes_concat(print_expr(init), bytes_concat(" => ", print_expr(body)))))))))),
-    Swap(value, target, policy) => bytes_concat("swap(", bytes_concat(print_expr(value), bytes_concat(", to: ", bytes_concat(print_type_ref(target), bytes_concat(", policy: ", bytes_concat(path_str(policy), ")")))))),
+    Swap(value, target, pol) => bytes_concat("swap(", bytes_concat(print_expr(value), bytes_concat(", to: ", bytes_concat(print_type_ref(target), bytes_concat(", policy: ", bytes_concat(path_str(pol), ")")))))),
     WithParadigm(par, body) => bytes_concat("with paradigm ", bytes_concat(paradigm_str(par), bytes_concat(" { ", bytes_concat(print_expr(body), " }")))),
     Wild(b) => bytes_concat("wild { ", bytes_concat(print_expr(b), " }")),
     Spore(b) => bytes_concat("spore(", bytes_concat(print_expr(b), ")")),
@@ -1048,7 +1051,7 @@ fn print_expr(e: Expr) => Bytes =
     Colony(hyphae) => bytes_concat("colony { ", bytes_concat(print_hypha_list(hyphae), " }")),
     App(head, args) => bytes_concat(print_expr(head), bytes_concat("(", bytes_concat(print_expr_list(args), ")"))),
     Fuse(left, right) => bytes_concat("fuse(", bytes_concat(print_expr(left), bytes_concat(", ", bytes_concat(print_expr(right), ")")))),
-    Reclaim(policy, body) => bytes_concat("reclaim(", bytes_concat(print_expr(policy), bytes_concat(") { ", bytes_concat(print_expr(body), " }")))),
+    Reclaim(pol, body) => bytes_concat("reclaim(", bytes_concat(print_expr(pol), bytes_concat(") { ", bytes_concat(print_expr(body), " }")))),
     Ascribe(inner, t) => bytes_concat(print_expr(inner), bytes_concat(" : ", print_type_ref(t))),
     TupleLit(elems) => bytes_concat("(", bytes_concat(print_expr_list(elems), ")"))
   };
@@ -1105,16 +1108,16 @@ fn print_trait_decl(td: TraitDecl) => Bytes =
   };
 
 fn print_fn_decl(f: FnDecl) => Bytes =
-  match f { FD(vis, thaw, _tier, sig, body) =>
-    bytes_concat(pub_str(vis), bytes_concat(thaw_str(thaw), bytes_concat("fn ", bytes_concat(print_sig_tail(sig), bytes_concat(" =\n  ", bytes_concat(print_expr(body), "\n"))))))
+  match f { FD(vis, thw, _tr_opt, sig, body) =>
+    bytes_concat(pub_str(vis), bytes_concat(thaw_str(thw), bytes_concat("fn ", bytes_concat(print_sig_tail(sig), bytes_concat(" =\n  ", bytes_concat(print_expr(body), "\n"))))))
   };
 
 // terminate_item: append the mandatory `;` component terminator (DN-57 §3, M-818) — replace a single
 // trailing "\n" with ";\n", else append a bare ";".
 fn terminate_item(item_text: Bytes) => Bytes =
   match ends_with_nl(item_text) {
-    0b1 => bytes_concat(strip_suffix_nl(item_text), ";\n"),
-    _ => bytes_concat(item_text, ";")
+    True => bytes_concat(strip_suffix_nl(item_text), ";\n"),
+    False => bytes_concat(item_text, ";")
   };
 
 fn print_impldecl_methods_acc(xs: Vec[FnDecl], acc: Bytes) => Bytes =
