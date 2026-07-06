@@ -1145,3 +1145,354 @@ fn merge_slot(a: Slot, o: Slot) => Slot =
     Moved(_, _) => a,
     Skip => a
   };
+
+// ── grade.rs port (RFC-0018 SS4.3 stage-1a static guarantee grading — FLAG-semcore-9) ───────────
+// Only the PER-BODY walk is ported: `grade`/`grade_expr` and its helpers, plus a thin
+// `grade_fn_body` entry point. `check_guarantees`'s whole-program `own_names`/`impl_methods`
+// driver is NOT ported (FLAG-semcore-9's header note).
+
+// CheckError: mirrors checkty.rs::CheckError (site, message) — the one error surface `grade`
+// needs; no checking LOGIC accompanies it (this file ports no checkty.rs logic at all).
+type CheckError = CE(Bytes, Bytes);
+
+fn ce_site(e: CheckError) => Bytes =
+  match e { CE(s, _) => s };
+
+fn ce_message(e: CheckError) => Bytes =
+  match e { CE(_, m) => m };
+
+// FnEnv: the FLAG-semcore-4 ordered-assoc-list standing in for the checker's resolved
+// `BTreeMap<String, FnDecl>` fn table.
+fn fnenv_lookup(fns: Vec[Pair[Bytes, FnDecl]], name: Bytes) => Option[FnDecl] =
+  match fns {
+    Nil => None,
+    Cons(entry, rest) => match entry {
+      Pr(n, fd) => match bytes_eq(n, name) { 0b1 => Some(fd), _ => fnenv_lookup(rest, name) }
+    }
+  };
+
+// ret_grade / param_grade: the modular-bottom defaults (mirrors grade.rs verbatim — an
+// unannotated demand/advertisement is `GDeclared`, the weakest grade).
+fn ret_grade(fd: FnDecl) => Strength =
+  match typeref_guarantee(fnsig_ret(fndecl_sig(fd))) { Some(g) => g, None => GDeclared };
+
+fn param_grade(p: Param) => Strength =
+  match typeref_guarantee(param_ty(p)) { Some(g) => g, None => GDeclared };
+
+// scope_lookup: a lexical stack of `(name, grade)`, most-recent-first (`Cons` = push; shadowing =
+// head-first scan finds the most recent binding — mirrors the Rust `scope.iter().rev().find`).
+fn scope_lookup(scope: Vec[Pair[Bytes, Strength]], name: Bytes) => Option[Strength] =
+  match scope {
+    Nil => None,
+    Cons(entry, rest) => match entry {
+      Pr(n, g) => match bytes_eq(n, name) { 0b1 => Some(g) , _ => scope_lookup(rest, name) }
+    }
+  };
+
+// require: the honesty check `have >= demand` (G-Sub; mirrors grade.rs::require, `Option`-returning
+// rather than `Result<(),_>` — no unit type needed self-contained).
+fn require(have: Strength, demand: Strength, site: Bytes, what: Bytes) => Option[CheckError] =
+  match strength_satisfies(have, demand) {
+    True => None,
+    False => Some(CE(site, bytes_concat(what, " does not satisfy the demanded guarantee (RFC-0018 SS4.3 -- VR-5/G2)")))
+  };
+
+// grade: the budgeted entry point (mirrors grade.rs::Gx::grade's per-recursion budget charge).
+fn grade(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]],
+    site: Bytes, e: Expr) => Result[Strength, CheckError] =
+  match enter_depth(depth) {
+    Err(_) => Err(CE(site, "guarantee grading exceeded the recursion budget (RFC-0041 SS4.7 restated; refused never-silently, never a host-stack overflow -- G2/VR-5)")),
+    Ok(d2) => grade_expr(d2, fns, scope, site, e)
+  };
+
+// grade_expr: the per-variant dispatch (mirrors grade.rs::Gx::grade's big `match e { ... }`,
+// field-for-field against ast.myc's `Expr` — every variant explicit, M-980 split-match idiom).
+fn grade_expr(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]],
+    site: Bytes, e: Expr) => Result[Strength, CheckError] =
+  match e {
+    Let(name, ty, bound, body) => grade_let(depth, fns, scope, site, name, ty, bound, body),
+    If(cond, conseq, alt) => grade_if(depth, fns, scope, site, cond, conseq, alt),
+    Match(scrutinee, arms) => grade_match(depth, fns, scope, site, scrutinee, arms),
+    For(x, xs, acc, init, body) => grade_for(depth, fns, scope, site, x, xs, acc, init, body),
+    Swap(value, _, _) => match grade(depth, fns, scope, site, value) {
+      Err(err) => Err(err),
+      Ok(_) => Ok(GExact)
+    },
+    WithParadigm(_, body) => grade(depth, fns, scope, site, body),
+    Wild(_) => Ok(GDeclared),
+    Spore(_) => Ok(GDeclared),
+    Consume(b) => grade(depth, fns, scope, site, b),
+    Colony(hyphae) => grade_colony(depth, fns, scope, site, hyphae),
+    Lambda(_, _) => Ok(GDeclared),
+    App(head, args) => grade_app(depth, fns, scope, site, head, args),
+    Fuse(left, right) => grade_fuse(depth, fns, scope, site, left, right),
+    Reclaim(pol, body) => grade_reclaim(depth, fns, scope, site, pol, body),
+    Path(p) => Ok(grade_path(scope, p)),
+    Lit(lit) => grade_lit(depth, fns, scope, site, lit),
+    Ascribe(inner, t) => grade_ascribe(depth, fns, scope, site, inner, t),
+    TupleLit(elems) => meet_all(depth, fns, scope, site, elems)
+  };
+
+// grade_path: G-Var — a single-segment path is a bound variable (`GExact` if unbound: a nullary
+// constructor/constant); a multi-segment path is conservatively `GExact` too (the checker already
+// refuses those; a residual one here is never reached by a well-formed body).
+fn grade_path(scope: Vec[Pair[Bytes, Strength]], p: Path) => Strength =
+  match path_segs(p) {
+    Nil => GExact,
+    Cons(seg, rest) => match rest {
+      Nil => match scope_lookup(scope, seg) { Some(g) => g, None => GExact },
+      Cons(_, _) => GExact
+    }
+  };
+
+// grade_lit: G-Const — a literal is `Exact` by construction; a list literal is the meet of its
+// elements (G-Con).
+fn grade_lit(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]],
+    site: Bytes, lit: Literal) => Result[Strength, CheckError] =
+  match lit {
+    List(es) => meet_all(depth, fns, scope, site, es),
+    Bin(_) => Ok(GExact),
+    Trit(_) => Ok(GExact),
+    Int(_) => Ok(GExact),
+    AmbientInt(_, _) => Ok(GExact),
+    LBytes(_) => Ok(GExact),
+    Str(_) => Ok(GExact),
+    LFloat(_) => Ok(GExact)
+  };
+
+// grade_let: G-Let / G-Weaken — grade the bound expr, weaken to the ascription if written, bind,
+// then take the meet with the body's grade.
+fn grade_let(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]],
+    site: Bytes, name: Bytes, ty: Option[TypeRef], bound: Expr, body: Expr)
+    => Result[Strength, CheckError] =
+  match grade(depth, fns, scope, site, bound) {
+    Err(err) => Err(err),
+    Ok(g_bound) => match let_bind_grade(ty, g_bound, site, name) {
+      Err(err) => Err(err),
+      Ok(bind) => match grade(depth, fns, Cons(Pr(name, bind), scope), site, body) {
+        Err(err) => Err(err),
+        Ok(g_body) => Ok(strength_meet(bind, g_body))
+      }
+    }
+  };
+
+fn let_bind_grade(ty: Option[TypeRef], g_bound: Strength, site: Bytes, name: Bytes)
+    => Result[Strength, CheckError] =
+  match ty {
+    None => Ok(g_bound),
+    Some(t) => match typeref_guarantee(t) {
+      None => Ok(g_bound),
+      Some(g) => match require(g_bound, g, site, bytes_concat("let-ascription for ", name)) {
+        Some(err) => Err(err),
+        None => Ok(g)
+      }
+    }
+  };
+
+// grade_if: Design A — the condition is walked (to enforce demands inside it) but does NOT
+// degrade the result; the result is the meet of both branch bodies.
+fn grade_if(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]],
+    site: Bytes, cond: Expr, conseq: Expr, alt: Expr) => Result[Strength, CheckError] =
+  match grade(depth, fns, scope, site, cond) {
+    Err(err) => Err(err),
+    Ok(_) => match grade(depth, fns, scope, site, conseq) {
+      Err(err) => Err(err),
+      Ok(t) => match grade(depth, fns, scope, site, alt) {
+        Err(err) => Err(err),
+        Ok(f) => Ok(strength_meet(t, f))
+      }
+    }
+  };
+
+// bind_pattern(s): push every variable a pattern binds at grade `g_s` (G-Match/A's field-binder
+// data-provenance rule); `POr` is unreachable post-check (the checker desugars it) — a defensive
+// no-op here (this language has no abort/panic primitive to mirror Rust's invariant-violation
+// panic, so the no-op IS the honest total-fn restatement, documented rather than silent).
+fn bind_pattern(scope: Vec[Pair[Bytes, Strength]], pat: Pattern, g_s: Strength)
+    => Vec[Pair[Bytes, Strength]] =
+  match pat {
+    PWildcard => scope,
+    PLit(_) => scope,
+    PIdent(name) => Cons(Pr(name, g_s), scope),
+    PCtor(_, subs) => bind_patterns(scope, subs, g_s),
+    PTuple(subs) => bind_patterns(scope, subs, g_s),
+    POr(_) => scope
+  };
+
+fn bind_patterns(scope: Vec[Pair[Bytes, Strength]], pats: Vec[Pattern], g_s: Strength)
+    => Vec[Pair[Bytes, Strength]] =
+  match pats {
+    Nil => scope,
+    Cons(p, rest) => bind_patterns(bind_pattern(scope, p, g_s), rest, g_s)
+  };
+
+// grade_match: G-Match/A — the scrutinee's grade does not appear in the result; the result is the
+// meet of the arm bodies (each graded under its own pattern-bound scope).
+fn grade_match(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]],
+    site: Bytes, scrutinee: Expr, arms: Vec[Arm]) => Result[Strength, CheckError] =
+  match grade(depth, fns, scope, site, scrutinee) {
+    Err(err) => Err(err),
+    Ok(g_s) => grade_arms(depth, fns, scope, site, arms, g_s)
+  };
+
+fn grade_arms(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]],
+    site: Bytes, arms: Vec[Arm], g_s: Strength) => Result[Strength, CheckError] =
+  match arms {
+    Nil => Ok(GDeclared),
+    Cons(arm, rest) =>
+      let scope2 = bind_pattern(scope, arm_pattern(arm), g_s) in
+      match grade(depth, fns, scope2, site, arm_body(arm)) {
+        Err(err) => Err(err),
+        Ok(g_arm) => match rest {
+          Nil => Ok(g_arm),
+          Cons(_, _) => match grade_arms(depth, fns, scope, site, rest, g_s) {
+            Err(err) => Err(err),
+            Ok(g_more) => Ok(strength_meet(g_arm, g_more))
+          }
+        }
+      }
+  };
+
+// grade_for: the fixpoint-avoiding fold rule — the accumulator is graded at the BOTTOM (`GDeclared`)
+// inside the body (sound without iterating to a fixpoint); the result is the meet of init/xs/body.
+fn grade_for(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]],
+    site: Bytes, x: Bytes, xs: Expr, acc: Bytes, init: Expr, body: Expr)
+    => Result[Strength, CheckError] =
+  match grade(depth, fns, scope, site, xs) {
+    Err(err) => Err(err),
+    Ok(g_xs) => match grade(depth, fns, scope, site, init) {
+      Err(err) => Err(err),
+      Ok(g_init) =>
+        let scope2 = Cons(Pr(acc, GDeclared), Cons(Pr(x, g_xs), scope)) in
+        match grade(depth, fns, scope2, site, body) {
+          Err(err) => Err(err),
+          Ok(g_body) => Ok(strength_meet(strength_meet(g_init, g_xs), g_body))
+        }
+    }
+  };
+
+// grade_colony: the colony's observable is its LAST hypha; leading hyphae are still walked (to
+// enforce demands inside them) but do not contribute to the result grade.
+fn grade_colony(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]],
+    site: Bytes, hyphae: Vec[Hypha]) => Result[Strength, CheckError] =
+  match hyphae {
+    Nil => Ok(GExact),
+    Cons(h, rest) => match rest {
+      Nil => grade(depth, fns, scope, site, hypha_body(h)),
+      Cons(_, _) => match grade(depth, fns, scope, site, hypha_body(h)) {
+        Err(err) => Err(err),
+        Ok(_) => grade_colony(depth, fns, scope, site, rest)
+      }
+    }
+  };
+
+// grade_fuse: DN-58 SSA/SSB — the meet of both operands (composition takes the weakest).
+fn grade_fuse(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]],
+    site: Bytes, left: Expr, right: Expr) => Result[Strength, CheckError] =
+  match grade(depth, fns, scope, site, left) {
+    Err(err) => Err(err),
+    Ok(lg) => match grade(depth, fns, scope, site, right) {
+      Err(err) => Err(err),
+      Ok(rg) => Ok(strength_meet(lg, rg))
+    }
+  };
+
+// grade_reclaim: DN-58 SSB — the policy expr is walked (to surface any policy-grade violation), then
+// the result is the body's grade.
+fn grade_reclaim(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]],
+    site: Bytes, pol: Expr, body: Expr) => Result[Strength, CheckError] =
+  match grade(depth, fns, scope, site, pol) {
+    Err(err) => Err(err),
+    Ok(_) => grade(depth, fns, scope, site, body)
+  };
+
+// grade_ascribe: G-Weaken — an `@ g` ascription demands the inferred grade satisfy `g`; the
+// ascribed expr then carries `g`. A bare type ascription (no `@ g`) is grade-transparent.
+fn grade_ascribe(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]],
+    site: Bytes, inner: Expr, t: TypeRef) => Result[Strength, CheckError] =
+  match grade(depth, fns, scope, site, inner) {
+    Err(err) => Err(err),
+    Ok(g_inner) => match typeref_guarantee(t) {
+      None => Ok(g_inner),
+      Some(g) => match require(g_inner, g, site, "ascription") {
+        Some(err) => Err(err),
+        None => Ok(g)
+      }
+    }
+  };
+
+// meet_all: the meet of every expression's grade (`GExact` for an empty list — the meet identity).
+fn meet_all(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]],
+    site: Bytes, es: Vec[Expr]) => Result[Strength, CheckError] =
+  match es {
+    Nil => Ok(GExact),
+    Cons(e, rest) => match grade(depth, fns, scope, site, e) {
+      Err(err) => Err(err),
+      Ok(g) => match meet_all(depth, fns, scope, site, rest) {
+        Err(err) => Err(err),
+        Ok(more) => Ok(strength_meet(g, more))
+      }
+    }
+  };
+
+// app_head_fn: resolve an `App` head to a KNOWN user function (a single-segment `Path` present in
+// `fns`), else `None` (constructor / prim / trait-method — no graded signature in stage 1a).
+fn app_head_fn(fns: Vec[Pair[Bytes, FnDecl]], head: Expr) => Option[FnDecl] =
+  match head {
+    Path(p) => match path_segs(p) {
+      Cons(seg, rest) => match rest { Nil => fnenv_lookup(fns, seg), Cons(_, _) => None },
+      Nil => None
+    },
+    _ => None
+  };
+
+// grade_app: G-App (a known callee: check each arg against its param's demand, result is the
+// callee's declared return grade) / G-Con-fallback (anything else: the conservative meet of args).
+fn grade_app(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]],
+    site: Bytes, head: Expr, args: Vec[Expr]) => Result[Strength, CheckError] =
+  match app_head_fn(fns, head) {
+    Some(fd) => grade_call(depth, fns, scope, site, fd, args),
+    None => meet_all(depth, fns, scope, site, args)
+  };
+
+fn grade_call(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]],
+    site: Bytes, fd: FnDecl, args: Vec[Expr]) => Result[Strength, CheckError] =
+  match check_args(depth, fns, scope, site, fnsig_value_params(fndecl_sig(fd)), args) {
+    Err(err) => Err(err),
+    Ok(_) => Ok(ret_grade(fd))
+  };
+
+fn check_args(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]],
+    site: Bytes, params: Vec[Param], args: Vec[Expr]) => Result[Binary{32}, CheckError] =
+  match params {
+    Nil => Ok(zero32()),
+    Cons(p, prest) => match args {
+      Nil => Ok(zero32()),
+      Cons(a, arest) => match grade(depth, fns, scope, site, a) {
+        Err(err) => Err(err),
+        Ok(g_a) => match require(g_a, param_grade(p), site, "argument") {
+          Some(err) => Err(err),
+          None => check_args(depth, fns, scope, site, prest, arest)
+        }
+      }
+    }
+  };
+
+// params_to_scope / grade_fn_body: the thin per-body entry point this increment's differential
+// drives directly (FLAG-semcore-9 — no whole-program `own_names`/`impl_methods` driver).
+fn params_to_scope(params: Vec[Param]) => Vec[Pair[Bytes, Strength]] =
+  match params {
+    Nil => Nil,
+    Cons(p, rest) => Cons(Pr(param_name(p), param_grade(p)), params_to_scope(rest))
+  };
+
+fn grade_fn_body(fns: Vec[Pair[Bytes, FnDecl]], fd: FnDecl) => Result[Strength, CheckError] =
+  let site = fnsig_name(fndecl_sig(fd)) in
+  let scope0 = params_to_scope(fnsig_value_params(fndecl_sig(fd))) in
+  match grade(zero32(), fns, scope0, site, fndecl_body(fd)) {
+    Err(err) => Err(err),
+    Ok(body_grade) => match require(body_grade, ret_grade(fd), site, "function body") {
+      Some(err) => Err(err),
+      None => Ok(body_grade)
+    }
+  };
