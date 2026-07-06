@@ -465,6 +465,79 @@ impl core::marker::Unpin for mycelium_doc::ir::XrefTarget
 impl core::marker::UnsafeUnpin for mycelium_doc::ir::XrefTarget
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::ir::XrefTarget
 impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::ir::XrefTarget
+pub mod mycelium_doc::lib_index
+pub struct mycelium_doc::lib_index::Flagged
+pub mycelium_doc::lib_index::Flagged::item: alloc::string::String
+pub mycelium_doc::lib_index::Flagged::reason: alloc::string::String
+impl core::clone::Clone for mycelium_doc::lib_index::Flagged
+pub fn mycelium_doc::lib_index::Flagged::clone(&self) -> mycelium_doc::lib_index::Flagged
+impl core::cmp::Eq for mycelium_doc::lib_index::Flagged
+impl core::cmp::PartialEq for mycelium_doc::lib_index::Flagged
+pub fn mycelium_doc::lib_index::Flagged::eq(&self, &mycelium_doc::lib_index::Flagged) -> bool
+impl core::fmt::Debug for mycelium_doc::lib_index::Flagged
+pub fn mycelium_doc::lib_index::Flagged::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_doc::lib_index::Flagged
+impl serde_core::ser::Serialize for mycelium_doc::lib_index::Flagged
+pub fn mycelium_doc::lib_index::Flagged::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_doc::lib_index::Flagged
+impl core::marker::Send for mycelium_doc::lib_index::Flagged
+impl core::marker::Sync for mycelium_doc::lib_index::Flagged
+impl core::marker::Unpin for mycelium_doc::lib_index::Flagged
+impl core::marker::UnsafeUnpin for mycelium_doc::lib_index::Flagged
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::lib_index::Flagged
+impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::lib_index::Flagged
+pub struct mycelium_doc::lib_index::LibIndexItem
+pub mycelium_doc::lib_index::LibIndexItem::file: alloc::string::String
+pub mycelium_doc::lib_index::LibIndexItem::kind: alloc::string::String
+pub mycelium_doc::lib_index::LibIndexItem::line: u32
+pub mycelium_doc::lib_index::LibIndexItem::nodule: alloc::string::String
+pub mycelium_doc::lib_index::LibIndexItem::phylum: alloc::string::String
+pub mycelium_doc::lib_index::LibIndexItem::signature: core::option::Option<alloc::string::String>
+pub mycelium_doc::lib_index::LibIndexItem::summary: core::option::Option<alloc::string::String>
+pub mycelium_doc::lib_index::LibIndexItem::symbol: alloc::string::String
+pub mycelium_doc::lib_index::LibIndexItem::tag: alloc::string::String
+impl core::clone::Clone for mycelium_doc::lib_index::LibIndexItem
+pub fn mycelium_doc::lib_index::LibIndexItem::clone(&self) -> mycelium_doc::lib_index::LibIndexItem
+impl core::cmp::Eq for mycelium_doc::lib_index::LibIndexItem
+impl core::cmp::PartialEq for mycelium_doc::lib_index::LibIndexItem
+pub fn mycelium_doc::lib_index::LibIndexItem::eq(&self, &mycelium_doc::lib_index::LibIndexItem) -> bool
+impl core::fmt::Debug for mycelium_doc::lib_index::LibIndexItem
+pub fn mycelium_doc::lib_index::LibIndexItem::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_doc::lib_index::LibIndexItem
+impl serde_core::ser::Serialize for mycelium_doc::lib_index::LibIndexItem
+pub fn mycelium_doc::lib_index::LibIndexItem::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_doc::lib_index::LibIndexItem
+impl core::marker::Send for mycelium_doc::lib_index::LibIndexItem
+impl core::marker::Sync for mycelium_doc::lib_index::LibIndexItem
+impl core::marker::Unpin for mycelium_doc::lib_index::LibIndexItem
+impl core::marker::UnsafeUnpin for mycelium_doc::lib_index::LibIndexItem
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::lib_index::LibIndexItem
+impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::lib_index::LibIndexItem
+pub struct mycelium_doc::lib_index::LibIndexReport
+pub mycelium_doc::lib_index::LibIndexReport::flagged: alloc::vec::Vec<mycelium_doc::lib_index::Flagged>
+pub mycelium_doc::lib_index::LibIndexReport::items: alloc::vec::Vec<mycelium_doc::lib_index::LibIndexItem>
+impl core::clone::Clone for mycelium_doc::lib_index::LibIndexReport
+pub fn mycelium_doc::lib_index::LibIndexReport::clone(&self) -> mycelium_doc::lib_index::LibIndexReport
+impl core::cmp::Eq for mycelium_doc::lib_index::LibIndexReport
+impl core::cmp::PartialEq for mycelium_doc::lib_index::LibIndexReport
+pub fn mycelium_doc::lib_index::LibIndexReport::eq(&self, &mycelium_doc::lib_index::LibIndexReport) -> bool
+impl core::default::Default for mycelium_doc::lib_index::LibIndexReport
+pub fn mycelium_doc::lib_index::LibIndexReport::default() -> mycelium_doc::lib_index::LibIndexReport
+impl core::fmt::Debug for mycelium_doc::lib_index::LibIndexReport
+pub fn mycelium_doc::lib_index::LibIndexReport::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_doc::lib_index::LibIndexReport
+impl core::marker::Freeze for mycelium_doc::lib_index::LibIndexReport
+impl core::marker::Send for mycelium_doc::lib_index::LibIndexReport
+impl core::marker::Sync for mycelium_doc::lib_index::LibIndexReport
+impl core::marker::Unpin for mycelium_doc::lib_index::LibIndexReport
+impl core::marker::UnsafeUnpin for mycelium_doc::lib_index::LibIndexReport
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::lib_index::LibIndexReport
+impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::lib_index::LibIndexReport
+pub const mycelium_doc::lib_index::HONESTY_TAG: &str
+pub const mycelium_doc::lib_index::ITEM_TAG: &str
+pub fn mycelium_doc::lib_index::build_lib_index(&std::path::Path) -> core::io::error::Result<mycelium_doc::lib_index::LibIndexReport>
+pub fn mycelium_doc::lib_index::write_json(&mycelium_doc::lib_index::LibIndexReport, &std::path::Path) -> core::io::error::Result<()>
+pub fn mycelium_doc::lib_index::write_markdown(&mycelium_doc::lib_index::LibIndexReport, &std::path::Path) -> core::io::error::Result<()>
 pub enum mycelium_doc::CheckStatus
 pub mycelium_doc::CheckStatus::Active
 pub mycelium_doc::CheckStatus::Dormant(alloc::string::String)
