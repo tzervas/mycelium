@@ -116,10 +116,10 @@
       "file": "crates/mycelium-l1/src/elab.rs",
       "line": 333,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "ReservedWord",
+      "rust_construct": "ReservedWord",
       "snippet": "# [doc = \" The v0 **policy-name reference**: a deterministic, domain-separated content address derived\"] # [doc = \" from the surface policy *name* (`policy: roundtrip`).\"] # [doc = \"\"] # [doc = \" Honesty note (Declared): RFC-0005 policy *objects* are content-addressed over their canonical\"] # [doc = \" serialization (`mycelium-select::SelectionPolicy::policy_ref`); binding surface names to\"] # [doc = \" registered policy objects is later integration work. Until it lands, this name-derived address\"] # [doc = \" keeps `Meta.policy_used` answerable and — because the evaluator and the elaborator share this\"] # [doc = \" one function — keeps every execution path's swaps on the *same* `PolicyRef`, so the NFR-7\"] # [doc = \" differential is meaningful. Domain-separated (`policy-name.v0:`) so it can never collide with\"] # [doc = \" a structural or operation hash.\"] # [must_use] pub fn policy_name_ref (policy : & Path) -> PolicyRef { operation_hash (& format ! (\"policy-name.v0:{}\" , policy . 0 . join (\".\"))) }",
-      "reason": "unsupported Rust type form `& Path`",
+      "reason": "fn parameter `policy` collides with a Mycelium reserved word — emitting it verbatim would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5)",
       "item_name": "policy_name_ref"
     },
     {

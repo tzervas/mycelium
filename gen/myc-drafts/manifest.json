@@ -1,6 +1,6 @@
 {
   "epic": "E33-1",
-  "generated_from_commit": "e075c5fbdf3f78d492b58c7abd86c28522bdb02a",
+  "generated_from_commit": "69168d8541a7a31cd9465b50e43af622d1910897",
   "kickoff": "trx2",
   "schema_version": 1,
   "targets": [
@@ -9,9 +9,9 @@
         "GenericBound": 2,
         "Impl": 12,
         "Import": 5,
-        "Other": 76,
+        "Other": 62,
         "PayloadVariant": 2,
-        "ReservedWord": 2,
+        "ReservedWord": 16,
         "Struct": 11
       },
       "kind": "semcore",
@@ -44,9 +44,9 @@
         "GenericBound": 3,
         "Impl": 3,
         "Import": 5,
-        "Other": 23,
+        "Other": 22,
         "PayloadVariant": 2,
-        "ReservedWord": 1
+        "ReservedWord": 2
       },
       "kind": "semcore",
       "note": "Destination convention (lib/compiler/README.md): this file is one of the nine mycelium-l1 semantic-core modules that hand-port into a SINGLE Mycelium nodule (compiler.semcore) for nodule-wide mutual recursion (DN-26 SCC). This transpiler emits one .myc per Rust file and does NOT perform that merge. Any emitted/gapped constructor whose name would collide with another semcore type's constructor (or a reserved word) once merged is subject to the FLAG-ast-5/FLAG-parse-2 per-type constructor-prefixing convention at hand-port time -- gapped ReservedWord items in this draft are exactly the collisions the transpiler refuses to auto-rename (VR-5/G2).",
@@ -450,7 +450,8 @@
         "Import": 1,
         "MacroInvocation": 1,
         "MultiStmtBody": 3,
-        "Other": 12,
+        "Other": 11,
+        "ReservedWord": 1,
         "Struct": 3,
         "TestItem": 1,
         "Trait": 1

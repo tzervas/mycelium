@@ -14,7 +14,8 @@
         "Import": 1,
         "MacroInvocation": 1,
         "MultiStmtBody": 3,
-        "Other": 12,
+        "Other": 11,
+        "ReservedWord": 1,
         "Struct": 3,
         "TestItem": 1,
         "Trait": 1
@@ -34,7 +35,8 @@
       "Import": 1,
       "MacroInvocation": 1,
       "MultiStmtBody": 3,
-      "Other": 12,
+      "Other": 11,
+      "ReservedWord": 1,
       "Struct": 3,
       "TestItem": 1,
       "Trait": 1

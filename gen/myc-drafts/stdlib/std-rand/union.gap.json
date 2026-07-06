@@ -234,10 +234,10 @@
       "file": "crates/mycelium-std-rand/src/lib.rs",
       "line": 527,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "ReservedWord",
+      "rust_construct": "ReservedWord",
       "snippet": "# [doc = \" Draw from an Exponential(λ) distribution using the inverse-CDF method.\"] # [doc = \"\"] # [doc = \" **Guarantee: `Empirical` (sampler-correctness measured).** Same reasoning as [`normal`].\"] # [doc = \" The inverse-CDF (`-ln(u) / λ`) is mathematically exact given a perfectly-uniform source;\"] # [doc = \" the combined `Empirical` tag reflects the `Declared`/`Empirical` quality of the underlying\"] # [doc = \" uniform draw (VR-5).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" - [`RandErr::BadParameter`] if `lambda <= 0.0` (C1).\"] pub fn exponential (g : Rng , lambda : f64) -> Result < (f64 , Rng) , RandErr > { if lambda <= 0.0 { return Err (RandErr :: BadParameter) ; } let (u , g2) = next_uniform_open (g) ; Ok ((- u . ln () / lambda , g2)) }",
-      "reason": "`f64` — `scalar` only appears inside Dense{N,scalar}/ambient_params in the grammar, never as a bare value type; no confirmed base_type arm",
+      "reason": "fn parameter `lambda` collides with a Mycelium reserved word — emitting it verbatim would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5)",
       "item_name": "exponential"
     },
     {
@@ -368,7 +368,8 @@
     "Import": 1,
     "MacroInvocation": 1,
     "MultiStmtBody": 3,
-    "Other": 12,
+    "Other": 11,
+    "ReservedWord": 1,
     "Struct": 3,
     "TestItem": 1,
     "Trait": 1
