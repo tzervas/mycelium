@@ -482,6 +482,35 @@ implementation. **4 Critical + 15 High source-confirmed** objections, all resolv
 
 ## Meta — changelog
 
+- **2026-07-06 — §4.6 amendment: widen the TCO precondition through tail-transparent frames
+  (M-994 fix (a); maintainer-approved via the §6 channel; append-only, no status move).** §4.6's TCO
+  precondition ("no pending post-work") was **too narrow**: it treated a `Frame::MatchPop`/`Frame::LetPop`
+  above the caller's `InvokePost` as pending work, so a tail call made **inside a `match` arm or `let`
+  body** was never elided — and since every terminating loop needs a `match`, **no in-language loop
+  could exceed the 4096 depth budget** (this was M-986, pinned in `compiler_stage3.rs`). The amendment
+  refines the precondition to look **through** any run of `MatchPop`/`LetPop` — which are
+  *observationally transparent to the value* (they only restore scope) — so a tail call under them is
+  still in tail position (its result **is** the enclosing function's result). Implementation
+  (`eval.rs::enter_call`, ~47 LOC): **peek** past the transparent frames (non-tail path byte-for-byte
+  unchanged), then on commit **drain** them executing each one's scope cleanup eagerly (incl. the M-904
+  `LetPop` Substrate scope-exit release for a let-bound handle that does not escape into `argv` — never
+  a silent leak). This **completes** §4.6's ratified TCO intent (Decides item 5); it is not new kernel
+  surface. **Landing channel + sign-off (§6 / DN-56 freeze):** the change is value-preserving for
+  *terminating* programs (the M-210 differential + the `compiler_stage*` fingerprint parity are all
+  **unchanged** — verified), but it **shifts the runs-vs-refuses frontier** (programs that returned
+  `DepthExceeded` now return a value), so it is not purely §Posture-I2-behavior-preserving and required
+  an **explicit maintainer sign-off** (2026-07-06, the M-994 decision) rather than the routine §6
+  channel alone. Justification recorded (checked, VR-5): recursion+`match` programs run **only** on the
+  L1-eval path (outside the L0-elaboration fragment) and the L0 reference interpreter has **no TCO**, so
+  there is **no L0 oracle for these deep loops to diverge from** — the I3 cross-path-parity exposure is
+  nil; `depth_metric_parity` (static §4.0 metric + the *non-tail* witness) stayed green. Correctness
+  guard proven: a **non-tail** self-call (`sum(n)=add_u(n, sum(n-1))`) still refuses
+  `DepthExceeded{4096}` (no over-elision). The two M-986 pins are flipped to assert the closed behavior
+  (a 10,000-iteration `match` loop now returns `Ok`; the 150-item nodule that refused at `depth=512` now
+  passes). **M-986 → done.** The complementary **M-987** (~n³ L1-eval cost) stays open — demonstrated
+  live: an 800-item parse now runs *depth*-wise but is ~n³ *slow* — and is addressed by M-994 fix (b)
+  (`Rc`-share `L1Value::Data`), which lands through this §6 behavior-preserving channel proper. RFC-0041
+  stays **Enacted** (this is an append-only §4.6 refinement). (M-994 fix (a); E18-1-adjacent; VR-5/G2.)
 - **2026-07-05 — `Accepted → Enacted` (maintainer-approved W7 promotion; effective with this landing
   on `main`).** The maintainer approved the full promotion (2026-07-05, session review); the reconciled
   W0–W7 wave moves `dev → integration → main` by this landing — the §9 claimability condition is met
