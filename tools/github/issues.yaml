@@ -12362,7 +12362,7 @@ issues:
     depends_on: [M-995, M-996]
     doc_refs:
       - src:crates/mycelium-mlir/src/aot.rs
-      - src:crates/mycelium-mlir/tests/aot_vs_interp_bench.rs
+      - src:crates/mycelium-l1/tests/aot_vs_interp_bench.rs
     body: |
       Minted 2026-07-06 (maintainer requirement: the AOT path must be faster than the interpreter;
       post-M-995/996 it was INVERTED). Apples-to-apples RELEASE baseline showed the env-machine at
