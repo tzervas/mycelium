@@ -1,0 +1,43 @@
+{
+  "files": [
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "total_items": 38,
+      "non_test_items": 37,
+      "emitted": 3,
+      "gaps": 39,
+      "expressible_pct": 8.108108108108109,
+      "category_counts": {
+        "DeriveAttr": 3,
+        "GenericBound": 5,
+        "Impl": 9,
+        "Import": 1,
+        "MacroInvocation": 1,
+        "Other": 11,
+        "PayloadVariant": 1,
+        "Struct": 6,
+        "TestItem": 1,
+        "Trait": 1
+      }
+    }
+  ],
+  "totals": {
+    "total_items": 38,
+    "non_test_items": 37,
+    "emitted": 3,
+    "gaps": 39,
+    "expressible_pct": 8.108108108108109,
+    "category_counts": {
+      "DeriveAttr": 3,
+      "GenericBound": 5,
+      "Impl": 9,
+      "Import": 1,
+      "MacroInvocation": 1,
+      "Other": 11,
+      "PayloadVariant": 1,
+      "Struct": 6,
+      "TestItem": 1,
+      "Trait": 1
+    }
+  }
+}

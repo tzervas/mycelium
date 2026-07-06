@@ -1,0 +1,73 @@
+// nodule: l1
+// **Monomorphization** (M-673; RFC-0007 §11.3 / §12.3, RFC-0019 §4.4) — the elaboration pre-pass
+// that turns a *checked* generic-and-trait `Env` into a **closed, monomorphic** `Env` the existing
+// [`crate::elab::elaborate`] / [`crate::elab::build_registry`] then lower **unchanged**.
+//
+// # What it does (and what it deliberately does not)
+// [`monomorphize`] re-walks the reachable graph from a nullary monomorphic `entry`, specializing
+// each generic function/data instantiation at its concrete type arguments and **statically
+// resolving** each unqualified trait-method call to the one coherent instance's method body
+// (re-emitted as a direct, mangled function). The result `Env` has **every `params` empty**, **no
+// reachable [`Ty::Var`]**, and **no trait-method calls** — so the L1-eval ≡ L0-interp ≡ AOT
+// differential (NFR-7) runs on a single closed L0 program for generics *and* traits. **No
+// `mycelium-core` change** (KC-3): this is a pure frontend rewrite over the checked `Env`; the
+// kernel/registry path is untouched.
+//
+// It is **not** a tag-changing pass (VR-5 / S1). Totality is **recomputed** over the specialized
+// function set, never fabricated — a specialization's verdict equals its source's because the
+// rewrite is structural. [`subst_ty`] is Swap-free; mono never inserts a `Swap`.
+//
+// ## Per-instantiation guarantee-tag context (M-844 / M-967; RFC-0018 §4 / RFC-0019 §4.4)
+// Static guarantee grading ([`crate::grade::check_guarantees`]) runs **before** mono, over the
+// still-generic, checked `Env` (`checkty.rs`'s Pass 3d) — so the lattice `Exact ⊐ Proven ⊐
+// Empirical ⊐ Declared` is enforced exactly once, against each *declaration's* own written `@ g`
+// annotations, never re-derived or re-validated here (KC-3: no second grading pass). Mono's job
+// w.r.t. tags is narrower and purely custodial: when a declaration is specialized into a mangled
+// copy, that copy's signature (and any inline ascription in its rewritten body) must carry
+// **exactly its own source declaration's** `@ g` annotations — not the emitted-fresh
+// [`TypeRef::unguaranteed`] every reconstructed `Ty → TypeRef` round-trip otherwise produces.
+// Before M-967 every mono'd signature/ascription silently lost its `@ g` this way — a **silent
+// downgrade to "no annotation"**, never an upgrade, but still a transparency violation (a later
+// `EXPLAIN`/audit reader could no longer see what the source actually declared). Two call sites of
+// one generic reaching *different* trait instances (`emit_method`, keyed by `(trait, for_ty)`) is
+// the concrete case DN-64 OQ-S asks about: each instance's method has its **own** `@ g` on its own
+// declaration, so once threaded through, the two mangled specializations naturally carry two
+// **distinct** tags — never merged (each is its own `FnDecl`, keyed by its own mangled name) and
+// never bled into each other (mono never reads one instantiation's tag while emitting another).
+// [`ty_to_ref_tagged`] is the one helper every signature/ascription reconstruction routes through.
+//
+// # Honest identity fragmentation (NOT "one body, one hash")
+// The mangled-name scheme **is** the honest record: `first_or` specialized at `Binary{8}` and at
+// `Binary{4}` become **two distinct** functions `first_or$Binary8` and `first_or$Binary4`, each
+// with its own elaboration and content hash. This is identity *fragmentation*, recorded — not
+// hidden behind a single shared body. (Cross-instantiation sharing of structurally-identical L0
+// terms would be a separate, later content-addressing concern; mono does not claim it.)
+//
+// # Mangling: injective, surface-disjoint (`$` joints, `#` nullary-data tag)
+// Names are mangled with `$` (the joint separator) and a `#` kind-tag on a nullary data type —
+// neither is a surface-identifier character (the lexer never produces them), and the elaborator's
+// fresh variables use `%` ([`crate::elab`]). So a mangled name collides with **neither** a surface
+// name, **nor** a fresh elaboration variable, **nor across the repr/data boundary**: a data type
+// whose name happens to equal a repr mangle (e.g. a type literally named `Binary8`) tags to
+// `Binary8#`, which can never equal the repr `Binary{8}` → `Binary8`. The scheme is therefore
+// **injective** over every input it sees — distinct `(decl, type-args)` (and the repr set) map to
+// distinct names, so two instantiations never silently alias to one body (G2). A unit test pins
+// this, including the adversarial repr-named data type. **Empty type arguments ⇒ the original name,
+// byte-for-byte** (the `#` tag appears only inside a composite name; a monomorphic data type is
+// still registered and referenced under its bare name) — so monomorphic code and non-generic
+// programs pass through unchanged.
+//
+// # Still a `Residual` after M-673 (never-silent — kept explicit)
+// Mono refuses, with [`ElabError::Residual`], anything still outside the fragment: an
+// **undetermined** type parameter (a `Ty::Var` the checker would not let through, defended here too
+// — never guessed), multi-parameter traits / associated types, higher-order (`A -> B`) generics
+// (the surface is first-order — there is no function type), and `wild`/FFI, `spore`, VSA, and
+// `Substrate` (which have no v0 lowering regardless of generics). The generic/trait `Residual` sites
+// in [`crate::elab`] are **kept** as defensive internal invariants (G2): after mono they should be
+// unreachable, but they never silently disappear.
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule l1;
+
+

@@ -1,0 +1,47 @@
+{
+  "source": "crates/mycelium-std-vsa/src/recon.rs",
+  "emitted_items": [],
+  "gaps": [
+    {
+      "file": "crates/mycelium-std-vsa/src/recon.rs",
+      "line": 26,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use mycelium_core :: { ReconInfo , Value } ;",
+      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/recon.rs",
+      "line": 27,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use mycelium_vsa :: { CleanupMemory , Factorization , Match , VsaError , VsaModel } ;",
+      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/recon.rs",
+      "line": 29,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "# [doc = \" Compositional reconstruction: unbind `record` by a named `role`, then clean up against\"] # [doc = \" `memory`.\"] # [doc = \"\"] # [doc = \" Requires:\"] # [doc = \" - A `CompositionalReconstruction` manifest (`Err(NotCompositional)` otherwise).\"] # [doc = \" - The manifest's recipe to name `role` (`Err(UnknownRole)` otherwise).\"] # [doc = \" - A `Cleanup` decode procedure with a threshold (`Err(NotCompositional)` otherwise).\"] # [doc = \" - The cleanup confidence to meet the manifest's threshold (`Err(BelowCleanupThreshold)`).\"] # [doc = \"\"] # [doc = \" Returns [`Match`] `{ label, index, confidence, margin }` — the recovered filler atom with its\"] # [doc = \" confidence/margin so the caller can inspect and judge the quality (C3 / G2 / FR-C2).\"] # [doc = \"\"] # [doc = \" The guarantee tag is the meet of the model's `unbind` tag and `cleanup`'s `Empirical` tag\"] # [doc = \" (weakest-wins; RFC-0001 §4.7) — at most `Empirical`, never `Proven`.\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \" - [`VsaError::NotThisModel`] — `record` or `role_atom` is not of the manifest's model.\"] # [doc = \" - [`VsaError::NotCompositional`] — the manifest does not support compositional reconstruction.\"] # [doc = \" - [`VsaError::UnknownRole`] — `role` is not in the manifest's recipe.\"] # [doc = \" - [`VsaError::EmptyCodebook`] — `memory` is empty or has the wrong dim.\"] # [doc = \" - [`VsaError::BelowCleanupThreshold`] — cleanup confidence is below the manifest threshold.\"] pub fn reconstruct_role < M : VsaModel > (model : & M , manifest : & ReconInfo , record : & Value , role : & str , role_atom : & Value , memory : & CleanupMemory ,) -> Result < Match , VsaError > { mycelium_vsa :: recon :: reconstruct_role (model , manifest , record , role , role_atom , memory) }",
+      "reason": "type parameter `M` carries a bound — type_params/fn generics are bare identifiers only in this grammar fragment",
+      "item_name": "reconstruct_role"
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/recon.rs",
+      "line": 61,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "# [doc = \" Resonator factorization: recover the unknown factor atoms of a bind product.\"] # [doc = \"\"] # [doc = \" Opt-in, **probabilistic-only** (`Empirical` ceiling for MAP-I/BSC — never `Proven`; FR-C2).\"] # [doc = \" For a `Resonator` manifest, reads the iteration budget and decode params, gates on the\"] # [doc = \" trial-validated [`MAPI_RESONATOR_PROFILE`](mycelium_vsa::MAPI_RESONATOR_PROFILE), and runs\"] # [doc = \" the resonator loop.\"] # [doc = \"\"] # [doc = \" Returns [`Factorization`] **only** on a clean `Converged` verdict clearing every per-slot\"] # [doc = \" confidence/margin threshold.  All non-convergence outcomes are explicit errors carrying the\"] # [doc = \" inspectable [`ResonatorTrace`](mycelium_vsa::ResonatorTrace) (C3 / G2 / RFC-0009 §5/§6):\"] # [doc = \" - [`VsaError::ResonatorBudgetExhausted`]\"] # [doc = \" - [`VsaError::ResonatorOscillating`]\"] # [doc = \" - [`VsaError::ResonatorStalled`]\"] # [doc = \" - [`VsaError::ResonatorBelowConfidence`]\"] # [doc = \" - [`VsaError::ResonatorBelowMargin`]\"] # [doc = \"\"] # [doc = \" # FLAG Q4 — `Declared` coverage deferred\"] # [doc = \"\"] # [doc = \" RFC-0009 §9 Q6 caps resonator factorization at `Empirical` for exact-bind models (MAP-I/BSC)\"] # [doc = \" and `Declared` for sparse/HRR/FHRR.  This function gates on the MAP-I profile and is the\"] # [doc = \" validated path; the `Declared` paths for sparse/HRR/FHRR are deferred to RFC-0009 §10.3\"] # [doc = \" (deferred coverage) and not yet exported in `std.vsa` v0 (vsa.md §7-Q4).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \" - [`VsaError::NotThisModel`] — `record` is not of the manifest's model.\"] # [doc = \" - [`VsaError::NotCompositional`] — the manifest is not a `Resonator` decode.\"] # [doc = \" - [`VsaError::OutsideEmpiricalProfile`] — the request exceeds the validated regime.\"] # [doc = \" - [`VsaError::ResonatorBudgetExhausted`] — budget reached without convergence.\"] # [doc = \" - [`VsaError::ResonatorOscillating`] — a genuine period-≥2 limit cycle.\"] # [doc = \" - [`VsaError::ResonatorStalled`] — stationary tuple plateaued below `τ_lock`.\"] # [doc = \" - [`VsaError::ResonatorBelowConfidence`] — a slot's confidence is below the threshold.\"] # [doc = \" - [`VsaError::ResonatorBelowMargin`] — a slot's margin is below the threshold.\"] pub fn reconstruct_factors < M : VsaModel > (model : & M , manifest : & ReconInfo , record : & Value , codebooks : & [CleanupMemory] ,) -> Result < Factorization , VsaError > { mycelium_vsa :: recon :: reconstruct_factors (model , manifest , record , codebooks) }",
+      "reason": "type parameter `M` carries a bound — type_params/fn generics are bare identifiers only in this grammar fragment",
+      "item_name": "reconstruct_factors"
+    }
+  ],
+  "total_top_level_items": 4
+}

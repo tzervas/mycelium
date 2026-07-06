@@ -1,0 +1,20 @@
+// nodule: std.runtime
+// `Colony<T,E>` and `Scope<T,E>` — structured concurrency surface (ADR-020 v0 R1).
+//
+// # Guarantee (Empirical — grounded in RT2 sequentialization + Kahn-determinism differentials)
+//
+// `Scope<T,E>` guarantees that all tasks spawned within a scope complete or are
+// cancelled before the scope exits. The Kahn-determinism guarantee (channel-mediated
+// communication is deterministic) is **Empirical**: grounded in the RT2 differential
+// but not yet Proven with a formal theorem.
+//
+// `Scope::join_all` sweeps tasks in FIFO order (**Exact** — deterministic given same spawn
+// order). On any task panic or explicit cancellation the scope returns early with an
+// explicit error (G2: never silent).
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.runtime;
+
+// Error type for scope exits with active tasks.
+type ScopeError = Cancelled | TasksStillRunning;

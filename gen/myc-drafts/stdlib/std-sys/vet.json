@@ -1,0 +1,82 @@
+{
+  "records": [
+    {
+      "myc_file": "gen/myc-drafts/stdlib/std-sys/fs.myc",
+      "source_file": "crates/mycelium-std-sys/src/fs.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 7,
+      "emitted_items": 0
+    },
+    {
+      "myc_file": "gen/myc-drafts/stdlib/std-sys/guarantee_matrix.myc",
+      "source_file": "crates/mycelium-std-sys/src/guarantee_matrix.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 5,
+      "emitted_items": 1
+    },
+    {
+      "myc_file": "gen/myc-drafts/stdlib/std-sys/io.myc",
+      "source_file": "crates/mycelium-std-sys/src/io.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 13,
+      "emitted_items": 0
+    },
+    {
+      "myc_file": "gen/myc-drafts/stdlib/std-sys/lib.myc",
+      "source_file": "crates/mycelium-std-sys/src/lib.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 7,
+      "emitted_items": 0
+    },
+    {
+      "myc_file": "gen/myc-drafts/stdlib/std-sys/math.myc",
+      "source_file": "crates/mycelium-std-sys/src/math.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 14,
+      "emitted_items": 0
+    },
+    {
+      "myc_file": "gen/myc-drafts/stdlib/std-sys/rand.myc",
+      "source_file": "crates/mycelium-std-sys/src/rand.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 6,
+      "emitted_items": 0
+    },
+    {
+      "myc_file": "gen/myc-drafts/stdlib/std-sys/sys.myc",
+      "source_file": "crates/mycelium-std-sys/src/sys.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 7,
+      "emitted_items": 0
+    },
+    {
+      "myc_file": "gen/myc-drafts/stdlib/std-sys/time.myc",
+      "source_file": "crates/mycelium-std-sys/src/time.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 4,
+      "emitted_items": 0
+    }
+  ],
+  "total_non_test_items": 63,
+  "total_emitted_items": 1,
+  "total_checked_clean_items": 1,
+  "class_counts": {
+    "Clean": 8
+  }
+}

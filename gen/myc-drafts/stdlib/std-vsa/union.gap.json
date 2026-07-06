@@ -1,0 +1,330 @@
+{
+  "gaps": [
+    {
+      "file": "crates/mycelium-std-vsa/src/encoding.rs",
+      "line": 17,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use mycelium_vsa :: { VsaError , VsaModel } ;",
+      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/encoding.rs",
+      "line": 19,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "# [doc = \" Sequence encoding: `bundle( permute^0(items[0]), permute^1(items[1]), … )`.\"] # [doc = \"\"] # [doc = \" Each item `i` is permuted by shift `i` to protect its position (a positional encoding),\"] # [doc = \" then the permuted items are bundled.  The guarantee tag is the meet of `bundle`'s tag\"] # [doc = \" (model-dependent) and `permute`'s tag (`Exact`), which is just the `bundle` tag — see\"] # [doc = \" `vsa.md §4` row `encode_seq`.\"] # [doc = \"\"] # [doc = \" An empty slice is `Err(EmptyBundle)` — the bundle of zero items is undefined (C1 / G2).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \" - [`VsaError::EmptyBundle`] — zero items supplied.\"] # [doc = \" - [`VsaError::NestedBundleUnsupported`] — a MAP-B input is itself a bundle (RR-13).\"] # [doc = \" - [`VsaError::DimMismatch`] — items have differing lengths.\"] pub fn encode_seq < M : VsaModel > (model : & M , items : & [& [f64]]) -> Result < Vec < f64 > , VsaError > { if items . is_empty () { return Err (VsaError :: EmptyBundle) ; } let permuted : Vec < Vec < f64 > > = items . iter () . enumerate () . map (| (i , item) | model . permute (item , i as i64)) . collect :: < Result < _ , _ > > () ? ; let refs : Vec < & [f64] > = permuted . iter () . map (Vec :: as_slice) . collect () ; model . bundle (& refs) }",
+      "reason": "type parameter `M` carries a bound — type_params/fn generics are bare identifiers only in this grammar fragment",
+      "item_name": "encode_seq"
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/encoding.rs",
+      "line": 45,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "# [doc = \" Set encoding: `bundle(items[0], items[1], …)` — superpose atoms without positional encoding.\"] # [doc = \"\"] # [doc = \" The guarantee tag equals the model's `bundle` tag (the permute identity is `Exact` and\"] # [doc = \" contributes nothing to the meet).  Useful for set/bag membership probes where order does not\"] # [doc = \" matter.\"] # [doc = \"\"] # [doc = \" An empty slice is `Err(EmptyBundle)` (C1 / G2).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \" - [`VsaError::EmptyBundle`] — zero items supplied.\"] # [doc = \" - [`VsaError::NestedBundleUnsupported`] — MAP-B nesting (RR-13).\"] # [doc = \" - [`VsaError::DimMismatch`] — items have differing lengths.\"] # [inline] pub fn encode_set < M : VsaModel > (model : & M , items : & [& [f64]]) -> Result < Vec < f64 > , VsaError > { if items . is_empty () { return Err (VsaError :: EmptyBundle) ; } model . bundle (items) }",
+      "reason": "type parameter `M` carries a bound — type_params/fn generics are bare identifiers only in this grammar fragment",
+      "item_name": "encode_set"
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/lib.rs",
+      "line": 1,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# ! [forbid (unsafe_code)]",
+      "reason": "crate/file-level inner attributes (#![...]) are not transpiled (no nodule-header equivalent for these Rust-specific directives)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/lib.rs",
+      "line": 54,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "pub mod encoding ;",
+      "reason": "`mod` declaration — Mycelium's nodule-per-file model has no nested-module construct in this grammar fragment",
+      "item_name": "encoding"
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/lib.rs",
+      "line": 55,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "pub mod matrix ;",
+      "reason": "`mod` declaration — Mycelium's nodule-per-file model has no nested-module construct in this grammar fragment",
+      "item_name": "matrix"
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/lib.rs",
+      "line": 56,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "pub mod ops ;",
+      "reason": "`mod` declaration — Mycelium's nodule-per-file model has no nested-module construct in this grammar fragment",
+      "item_name": "ops"
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/lib.rs",
+      "line": 57,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "pub mod recon ;",
+      "reason": "`mod` declaration — Mycelium's nodule-per-file model has no nested-module construct in this grammar fragment",
+      "item_name": "recon"
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/lib.rs",
+      "line": 61,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use mycelium_core :: GuaranteeStrength ;",
+      "reason": "`use` import (single path ending `GuaranteeStrength`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/lib.rs",
+      "line": 62,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use mycelium_vsa :: { CleanupMemory , Factorization , Match , ResonatorTrace , VsaError , VsaModel , VsaOp , } ;",
+      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/lib.rs",
+      "line": 66,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use encoding :: { encode_seq , encode_set } ;",
+      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/lib.rs",
+      "line": 67,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use matrix :: { OpGuarantee , GUARANTEE_MATRIX } ;",
+      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/lib.rs",
+      "line": 68,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use ops :: { bind , bind_role , bundle , cleanup , permute , similarity , unbind , unpermute } ;",
+      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/lib.rs",
+      "line": 69,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use recon :: { reconstruct_factors , reconstruct_role } ;",
+      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/matrix.rs",
+      "line": 16,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use mycelium_core :: GuaranteeStrength ;",
+      "reason": "`use` import (single path ending `GuaranteeStrength`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/matrix.rs",
+      "line": 17,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use mycelium_vsa :: VsaOp ;",
+      "reason": "`use` import (single path ending `VsaOp`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/matrix.rs",
+      "line": 19,
+      "col": 1,
+      "category": "Struct",
+      "rust_construct": "Struct",
+      "snippet": "# [doc = \" One row of the `std.vsa` guarantee matrix (RFC-0016 §4.5 / vsa.md §4).\"] # [doc = \"\"] # [doc = \" Each row covers one `(model_id, op)` pair.  The guarantee tag is read from the authoritative\"] # [doc = \" RFC-0003 §4 matrix (`mycelium_vsa::matrix_tag`), not invented here (C2 / VR-5).\"] # [derive (Debug , Clone , Copy , PartialEq)] pub struct OpGuarantee { # [doc = \" The VSA model id, e.g. `\\\"MAP-I\\\"`.\"] pub model_id : & 'static str , # [doc = \" The operation.\"] pub op : VsaOp , # [doc = \" The guarantee tag (the RFC-0003 §4 matrix entry for this pair).\"] pub tag : GuaranteeStrength , # [doc = \" Is the result EXPLAIN-able (carries an inspectable artifact such as a bound or trace)?\"] # [doc = \" `Exact` ops are `false` — they carry no bound (M-I1); all approximate ops are `true`.\"] pub explain_able : bool , }",
+      "reason": "struct `OpGuarantee` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "item_name": "OpGuarantee"
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/matrix.rs",
+      "line": 36,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" The `std.vsa` guarantee matrix (vsa.md §4), encoded as data (RFC-0016 §4.5).\"] # [doc = \"\"] # [doc = \" Rows = `(model, op)` pairs.  Tag = the RFC-0003 §4 normative entry for that pair (copied from\"] # [doc = \" `mycelium_vsa::RFC0003_MATRIX`; divergence is caught in tests).  `explain_able` = whether\"] # [doc = \" the op exposes an inspectable bound/trace artifact (C3).\"] # [doc = \"\"] # [doc = \" Notes matching the spec:\"] # [doc = \" - `bind` is `Exact` for MAP-I/MAP-B/BSC/HRR/FHRR (algebraic; §4.1 erratum) and `Proven` for\"] # [doc = \"   SBC (the Bloom analysis — `matrix.rs` `(\\\"SBC\\\", Bind, Proven)`).\"] # [doc = \" - `unbind` is `Exact` for MAP-I/MAP-B/BSC (self-inverse); `Empirical` for HRR/FHRR (the\"] # [doc = \"   residual weak link; §4.1); `Proven` for SBC.\"] # [doc = \" - `bundle` is `Proven` for MAP-I/MAP-B/BSC/SBC and `Empirical` for HRR/FHRR.\"] # [doc = \" - `permute` is `Exact` for **all** models (§4.1 erratum — a fixed coordinate bijection).\"] # [doc = \"\"] # [doc = \" # FLAG Q3 (SBC bind/bundle `Proven`)\"] # [doc = \"\"] # [doc = \" The SBC `bind` and `bundle` cells are `Proven` in the kernel matrix (`matrix.rs`), reflecting\"] # [doc = \" the Bloom / Counting-Bloom analysis cited in RFC-0003 §4/§5.  This table mirrors that cell\"] # [doc = \" faithfully.  The exact theorem constants and checked side-conditions are owned by RFC-0003 §5\"] # [doc = \" and the encoded matrix; they are **cited here, not restated** (VR-5 / vsa.md §7-Q3).\"] # [doc = \"\"] # [doc = \" # FLAG Q3 (HRR/FHRR `bundle` `Empirical`)\"] # [doc = \"\"] # [doc = \" HRR/FHRR `bundle` is `Empirical` (Gaussian/asymptotic).  The sub-Gaussian phasor upgrade to\"] # [doc = \" `Proven` (Thomas) is **not** pre-claimed here — it requires checked instantiation not yet\"] # [doc = \" discharged in this crate (VR-5 / vsa.md §7-Q3).\"] pub const GUARANTEE_MATRIX : & [OpGuarantee] = & [OpGuarantee { model_id : \"MAP-I\" , op : VsaOp :: Bind , tag : GuaranteeStrength :: Exact , explain_able : false , } , OpGuarantee { model_id : \"MAP-I\" , op : VsaOp :: Unbind , tag : GuaranteeStrength :: Exact , explain_able : false , } , OpGuarantee { model_id : \"MAP-I\" , op : VsaOp :: Bundle , tag : GuaranteeStrength :: Proven , explain_able : true , } , OpGuarantee { model_id : \"MAP-I\" , op : VsaOp :: Permute , tag : GuaranteeStrength :: Exact , explain_able : false , } , OpGuarantee { model_id : \"MAP-B\" , op : VsaOp :: Bind , tag : GuaranteeStrength :: Exact , explain_able : false , } , OpGuarantee { model_id : \"MAP-B\" , op : VsaOp :: Unbind , tag : GuaranteeStrength :: Exact , explain_able : false , } , OpGuarantee { model_id : \"MAP-B\" , op : VsaOp :: Bundle , tag : GuaranteeStrength :: Proven , explain_able : true , } , OpGuarantee { model_id : \"MAP-B\" , op : VsaOp :: Permute , tag : GuaranteeStrength :: Exact , explain_able : false , } , OpGuarantee { model_id : \"BSC\" , op : VsaOp :: Bind , tag : GuaranteeStrength :: Exact , explain_able : false , } , OpGuarantee { model_id : \"BSC\" , op : VsaOp :: Unbind , tag : GuaranteeStrength :: Exact , explain_able : false , } , OpGuarantee { model_id : \"BSC\" , op : VsaOp :: Bundle , tag : GuaranteeStrength :: Proven , explain_able : true , } , OpGuarantee { model_id : \"BSC\" , op : VsaOp :: Permute , tag : GuaranteeStrength :: Exact , explain_able : false , } , OpGuarantee { model_id : \"HRR\" , op : VsaOp :: Bind , tag : GuaranteeStrength :: Exact , explain_able : false , } , OpGuarantee { model_id : \"HRR\" , op : VsaOp :: Unbind , tag : GuaranteeStrength :: Empirical , explain_able : true , } , OpGuarantee { model_id : \"HRR\" , op : VsaOp :: Bundle , tag : GuaranteeStrength :: Empirical , explain_able : true , } , OpGuarantee { model_id : \"HRR\" , op : VsaOp :: Permute , tag : GuaranteeStrength :: Exact , explain_able : false , } , OpGuarantee { model_id : \"FHRR\" , op : VsaOp :: Bind , tag : GuaranteeStrength :: Exact , explain_able : false , } , OpGuarantee { model_id : \"FHRR\" , op : VsaOp :: Unbind , tag : GuaranteeStrength :: Empirical , explain_able : true , } , OpGuarantee { model_id : \"FHRR\" , op : VsaOp :: Bundle , tag : GuaranteeStrength :: Empirical , explain_able : true , } , OpGuarantee { model_id : \"FHRR\" , op : VsaOp :: Permute , tag : GuaranteeStrength :: Exact , explain_able : false , } , OpGuarantee { model_id : \"SBC\" , op : VsaOp :: Bind , tag : GuaranteeStrength :: Proven , explain_able : true , } , OpGuarantee { model_id : \"SBC\" , op : VsaOp :: Unbind , tag : GuaranteeStrength :: Proven , explain_able : true , } , OpGuarantee { model_id : \"SBC\" , op : VsaOp :: Bundle , tag : GuaranteeStrength :: Proven , explain_able : true , } , OpGuarantee { model_id : \"SBC\" , op : VsaOp :: Permute , tag : GuaranteeStrength :: Exact , explain_able : false , } ,] ;",
+      "reason": "top-level `const GUARANTEE_MATRIX` — no const item production in the grammar (`item` covers use/default/type/trait/impl/fn/object/lower/derive only)",
+      "item_name": "GUARANTEE_MATRIX"
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/matrix.rs",
+      "line": 222,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Look up a row in [`GUARANTEE_MATRIX`] by model id and op.  Returns `None` for an unregistered\"] # [doc = \" model — an unregistered model has no honest tag to offer (the same convention as\"] # [doc = \" `mycelium_vsa::matrix_tag`).\"] # [must_use] pub fn std_matrix_tag (model_id : & str , op : VsaOp) -> Option < GuaranteeStrength > { GUARANTEE_MATRIX . iter () . find (| r | r . model_id == model_id && r . op == op) . map (| r | r . tag) }",
+      "reason": "unsupported Rust type form `& str`",
+      "item_name": "std_matrix_tag"
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/ops.rs",
+      "line": 19,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use mycelium_vsa :: { CleanupMemory , Match , VsaError , VsaModel } ;",
+      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/ops.rs",
+      "line": 21,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "# [doc = \" Bind two hypervectors (associate).\"] # [doc = \"\"] # [doc = \" For MAP-I/MAP-B/BSC/HRR/FHRR this is an algebraic `Exact` op; for SBC it is `Proven`\"] # [doc = \" (Bloom analysis — `matrix.rs`).  Both operands must have the same length as the model's\"] # [doc = \" `dim`; a mismatch is `Err(DimMismatch)`, never a silent coercion (C1 / G2).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \" - [`VsaError::DimMismatch`] — the operands' lengths disagree with each other or the model.\"] # [inline] pub fn bind < M : VsaModel > (model : & M , a : & [f64] , b : & [f64]) -> Result < Vec < f64 > , VsaError > { model . bind (a , b) }",
+      "reason": "type parameter `M` carries a bound — type_params/fn generics are bare identifiers only in this grammar fragment",
+      "item_name": "bind"
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/ops.rs",
+      "line": 34,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "# [doc = \" Unbind (recover a factor from a bind product).\"] # [doc = \"\"] # [doc = \" Exact for self-inverse models (MAP-I/MAP-B/BSC) and SBC (`Proven`); `Empirical` for\"] # [doc = \" HRR/FHRR (the approximate inverse is lossy — the residual weak link; RFC-0003 §4.1).  For\"] # [doc = \" HRR/FHRR the result should be cleaned up against a codebook ([`cleanup`]) to obtain a\"] # [doc = \" usable item — do not treat a raw unbind result as `Exact`.\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \" - [`VsaError::DimMismatch`] — the operands' lengths disagree with each other or the model.\"] # [inline] pub fn unbind < M : VsaModel > (model : & M , c : & [f64] , b : & [f64]) -> Result < Vec < f64 > , VsaError > { model . unbind (c , b) }",
+      "reason": "type parameter `M` carries a bound — type_params/fn generics are bare identifiers only in this grammar fragment",
+      "item_name": "unbind"
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/ops.rs",
+      "line": 48,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "# [doc = \" Bundle (superpose) a non-empty set of hypervectors.\"] # [doc = \"\"] # [doc = \" The guarantee tag depends on the model (read from `intrinsic_guarantee(Bundle)`):\"] # [doc = \" `Proven` for MAP-I/MAP-B/BSC/SBC; `Empirical` for HRR/FHRR.  A bundle over zero items is\"] # [doc = \" `Err(EmptyBundle)`, never a fabricated zero vector (C1 / G2).  MAP-B nested-bundle inputs\"] # [doc = \" yield `Err(NestedBundleUnsupported)` — reliability decays `1/2 + 1/2^r` with nesting depth\"] # [doc = \" `r`, so nesting beyond depth 1 is refused explicitly rather than silently degrading accuracy\"] # [doc = \" (RR-13).\"] # [doc = \"\"] # [doc = \" For a Value-level `Proven` bundle with a checked `CapacityBound` certificate, use the\"] # [doc = \" Value-level adapters in `mycelium-vsa` directly (e.g. `MapI::bundle_values_certified`).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \" - [`VsaError::EmptyBundle`] — zero items supplied.\"] # [doc = \" - [`VsaError::NestedBundleUnsupported`] — MAP-B input is itself a MAP-B bundle (RR-13).\"] # [doc = \" - [`VsaError::DimMismatch`] — items have differing lengths.\"] # [inline] pub fn bundle < M : VsaModel > (model : & M , items : & [& [f64]]) -> Result < Vec < f64 > , VsaError > { model . bundle (items) }",
+      "reason": "type parameter `M` carries a bound — type_params/fn generics are bare identifiers only in this grammar fragment",
+      "item_name": "bundle"
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/ops.rs",
+      "line": 69,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "# [doc = \" Permute (cyclically shift) a hypervector by `shift` positions.\"] # [doc = \"\"] # [doc = \" `Exact` for **all** models (§4.1 erratum — a fixed coordinate bijection; RFC-0003 §4.1).\"] # [doc = \" The inverse is [`unpermute`] with the same `shift`.\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \" - [`VsaError::DimMismatch`] — operand length disagrees with the model's `dim`.\"] # [inline] pub fn permute < M : VsaModel > (model : & M , a : & [f64] , shift : i64) -> Result < Vec < f64 > , VsaError > { model . permute (a , shift) }",
+      "reason": "type parameter `M` carries a bound — type_params/fn generics are bare identifiers only in this grammar fragment",
+      "item_name": "permute"
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/ops.rs",
+      "line": 81,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "# [doc = \" The inverse of [`permute`] by the same `shift` — exactly undoes the cyclic rotation.\"] # [doc = \"\"] # [doc = \" `Exact` for all models (a permutation's inverse is always exact; §4.1 erratum).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \" - [`VsaError::DimMismatch`] — operand length disagrees with the model's `dim`.\"] # [inline] pub fn unpermute < M : VsaModel > (model : & M , a : & [f64] , shift : i64) -> Result < Vec < f64 > , VsaError > { model . unpermute (a , shift) }",
+      "reason": "type parameter `M` carries a bound — type_params/fn generics are bare identifiers only in this grammar fragment",
+      "item_name": "unpermute"
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/ops.rs",
+      "line": 92,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "# [doc = \" Cosine similarity of two hypervectors in `[-1, 1]`.\"] # [doc = \"\"] # [doc = \" Deterministic (a fixed score); `Exact` — the primitive *score* is exact even when it is used\"] # [doc = \" as a *decision* input (cleanup, resonator per-slot argmax) where the *decision* is\"] # [doc = \" bounded-lossy.  See FLAG Q2 in `vsa.md §7` for the open question about a\"] # [doc = \" crosstalk-context bound when used decisionally.\"] # [doc = \"\"] # [doc = \" Returns `0.0` if either operand has zero norm (the model's documented convention).\"] # [inline] pub fn similarity < M : VsaModel > (model : & M , a : & [f64] , b : & [f64]) -> f64 { model . similarity (a , b) }",
+      "reason": "type parameter `M` carries a bound — type_params/fn generics are bare identifiers only in this grammar fragment",
+      "item_name": "similarity"
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/ops.rs",
+      "line": 105,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "# [doc = \" Role–filler binding: `bind(role, filler)`.\"] # [doc = \"\"] # [doc = \" A thin alias for [`bind`] that names the operand roles explicitly.  Same guarantee as\"] # [doc = \" `bind` for the model (see [`bind`] for the guarantee-tag breakdown).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \" See [`bind`].\"] # [inline] pub fn bind_role < M : VsaModel > (model : & M , role : & [f64] , filler : & [f64] ,) -> Result < Vec < f64 > , VsaError > { bind (model , role , filler) }",
+      "reason": "type parameter `M` carries a bound — type_params/fn generics are bare identifiers only in this grammar fragment",
+      "item_name": "bind_role"
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/ops.rs",
+      "line": 121,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "# [doc = \" Cleanup: nearest-atom indexed retrieval against an item memory.\"] # [doc = \"\"] # [doc = \" `Empirical` (bounded-lossy item memory, Clarkson Thm 16; M-132).  Returns\"] # [doc = \" `Match { label, index, confidence, margin }` so the caller can inspect and threshold the\"] # [doc = \" result — never a silent low-confidence guess (C1/C3 / G2 / FR-C2).\"] # [doc = \"\"] # [doc = \" Explicit refusals (C1 / G2):\"] # [doc = \" - `Err(BelowCleanupThreshold)` when `confidence < min_confidence` (the caller-supplied floor).\"] # [doc = \" - `Err(BelowCleanupThreshold)` when `margin < min_margin` (near-tied slots). See the FLAG in\"] # [doc = \"   the body: `mycelium-vsa::VsaError` has **no** distinct `Ambiguous` variant, so the\"] # [doc = \"   margin-shortfall case is surfaced through `BelowCleanupThreshold` (with `confidence` carrying\"] # [doc = \"   the margin and `threshold` carrying `min_margin`) — never a silent guess. A dedicated variant\"] # [doc = \"   is a kernel change (FLAG).\"] # [doc = \" - `Err(EmptyCodebook)` when the memory is empty or the query has the wrong length.\"] # [doc = \"\"] # [doc = \" Setting `min_confidence = 0.0` and `min_margin = 0.0` disables the threshold gates,\"] # [doc = \" returning the raw nearest-neighbour hit (the confidence/margin are still reported in\"] # [doc = \" `Match` for the caller to inspect).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \" - [`VsaError::EmptyCodebook`] — the memory is empty or query length disagrees with `dim`.\"] # [doc = \" - [`VsaError::BelowCleanupThreshold`] — `confidence < min_confidence`, **or** the\"] # [doc = \"   margin-shortfall case `margin < min_margin` (see the body FLAG: `VsaError` has no\"] # [doc = \"   `Ambiguous` variant, so both refusals share this variant).\"] pub fn cleanup < M : VsaModel > (codebook : & CleanupMemory , query : & [f64] , model : & M , min_confidence : f64 , min_margin : f64 ,) -> Result < Match , VsaError > { let hit = codebook . cleanup (query , model) . ok_or (VsaError :: EmptyCodebook) ? ; if hit . confidence < min_confidence { return Err (VsaError :: BelowCleanupThreshold { confidence : hit . confidence , threshold : min_confidence , }) ; } if hit . margin < min_margin { return Err (VsaError :: BelowCleanupThreshold { confidence : hit . margin , threshold : min_margin , }) ; } Ok (hit) }",
+      "reason": "type parameter `M` carries a bound — type_params/fn generics are bare identifiers only in this grammar fragment",
+      "item_name": "cleanup"
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/recon.rs",
+      "line": 26,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use mycelium_core :: { ReconInfo , Value } ;",
+      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/recon.rs",
+      "line": 27,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use mycelium_vsa :: { CleanupMemory , Factorization , Match , VsaError , VsaModel } ;",
+      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/recon.rs",
+      "line": 29,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "# [doc = \" Compositional reconstruction: unbind `record` by a named `role`, then clean up against\"] # [doc = \" `memory`.\"] # [doc = \"\"] # [doc = \" Requires:\"] # [doc = \" - A `CompositionalReconstruction` manifest (`Err(NotCompositional)` otherwise).\"] # [doc = \" - The manifest's recipe to name `role` (`Err(UnknownRole)` otherwise).\"] # [doc = \" - A `Cleanup` decode procedure with a threshold (`Err(NotCompositional)` otherwise).\"] # [doc = \" - The cleanup confidence to meet the manifest's threshold (`Err(BelowCleanupThreshold)`).\"] # [doc = \"\"] # [doc = \" Returns [`Match`] `{ label, index, confidence, margin }` — the recovered filler atom with its\"] # [doc = \" confidence/margin so the caller can inspect and judge the quality (C3 / G2 / FR-C2).\"] # [doc = \"\"] # [doc = \" The guarantee tag is the meet of the model's `unbind` tag and `cleanup`'s `Empirical` tag\"] # [doc = \" (weakest-wins; RFC-0001 §4.7) — at most `Empirical`, never `Proven`.\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \" - [`VsaError::NotThisModel`] — `record` or `role_atom` is not of the manifest's model.\"] # [doc = \" - [`VsaError::NotCompositional`] — the manifest does not support compositional reconstruction.\"] # [doc = \" - [`VsaError::UnknownRole`] — `role` is not in the manifest's recipe.\"] # [doc = \" - [`VsaError::EmptyCodebook`] — `memory` is empty or has the wrong dim.\"] # [doc = \" - [`VsaError::BelowCleanupThreshold`] — cleanup confidence is below the manifest threshold.\"] pub fn reconstruct_role < M : VsaModel > (model : & M , manifest : & ReconInfo , record : & Value , role : & str , role_atom : & Value , memory : & CleanupMemory ,) -> Result < Match , VsaError > { mycelium_vsa :: recon :: reconstruct_role (model , manifest , record , role , role_atom , memory) }",
+      "reason": "type parameter `M` carries a bound — type_params/fn generics are bare identifiers only in this grammar fragment",
+      "item_name": "reconstruct_role"
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/recon.rs",
+      "line": 61,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "# [doc = \" Resonator factorization: recover the unknown factor atoms of a bind product.\"] # [doc = \"\"] # [doc = \" Opt-in, **probabilistic-only** (`Empirical` ceiling for MAP-I/BSC — never `Proven`; FR-C2).\"] # [doc = \" For a `Resonator` manifest, reads the iteration budget and decode params, gates on the\"] # [doc = \" trial-validated [`MAPI_RESONATOR_PROFILE`](mycelium_vsa::MAPI_RESONATOR_PROFILE), and runs\"] # [doc = \" the resonator loop.\"] # [doc = \"\"] # [doc = \" Returns [`Factorization`] **only** on a clean `Converged` verdict clearing every per-slot\"] # [doc = \" confidence/margin threshold.  All non-convergence outcomes are explicit errors carrying the\"] # [doc = \" inspectable [`ResonatorTrace`](mycelium_vsa::ResonatorTrace) (C3 / G2 / RFC-0009 §5/§6):\"] # [doc = \" - [`VsaError::ResonatorBudgetExhausted`]\"] # [doc = \" - [`VsaError::ResonatorOscillating`]\"] # [doc = \" - [`VsaError::ResonatorStalled`]\"] # [doc = \" - [`VsaError::ResonatorBelowConfidence`]\"] # [doc = \" - [`VsaError::ResonatorBelowMargin`]\"] # [doc = \"\"] # [doc = \" # FLAG Q4 — `Declared` coverage deferred\"] # [doc = \"\"] # [doc = \" RFC-0009 §9 Q6 caps resonator factorization at `Empirical` for exact-bind models (MAP-I/BSC)\"] # [doc = \" and `Declared` for sparse/HRR/FHRR.  This function gates on the MAP-I profile and is the\"] # [doc = \" validated path; the `Declared` paths for sparse/HRR/FHRR are deferred to RFC-0009 §10.3\"] # [doc = \" (deferred coverage) and not yet exported in `std.vsa` v0 (vsa.md §7-Q4).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \" - [`VsaError::NotThisModel`] — `record` is not of the manifest's model.\"] # [doc = \" - [`VsaError::NotCompositional`] — the manifest is not a `Resonator` decode.\"] # [doc = \" - [`VsaError::OutsideEmpiricalProfile`] — the request exceeds the validated regime.\"] # [doc = \" - [`VsaError::ResonatorBudgetExhausted`] — budget reached without convergence.\"] # [doc = \" - [`VsaError::ResonatorOscillating`] — a genuine period-≥2 limit cycle.\"] # [doc = \" - [`VsaError::ResonatorStalled`] — stationary tuple plateaued below `τ_lock`.\"] # [doc = \" - [`VsaError::ResonatorBelowConfidence`] — a slot's confidence is below the threshold.\"] # [doc = \" - [`VsaError::ResonatorBelowMargin`] — a slot's margin is below the threshold.\"] pub fn reconstruct_factors < M : VsaModel > (model : & M , manifest : & ReconInfo , record : & Value , codebooks : & [CleanupMemory] ,) -> Result < Factorization , VsaError > { mycelium_vsa :: recon :: reconstruct_factors (model , manifest , record , codebooks) }",
+      "reason": "type parameter `M` carries a bound — type_params/fn generics are bare identifiers only in this grammar fragment",
+      "item_name": "reconstruct_factors"
+    }
+  ],
+  "category_counts": {
+    "GenericBound": 12,
+    "Import": 12,
+    "Other": 7,
+    "Struct": 1
+  }
+}

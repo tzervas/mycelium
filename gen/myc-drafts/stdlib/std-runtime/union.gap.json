@@ -1,0 +1,1525 @@
+{
+  "gaps": [
+    {
+      "file": "crates/mycelium-std-runtime/src/colony.rs",
+      "line": 14,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use std :: panic ;",
+      "reason": "`use` import (single path ending `panic`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/colony.rs",
+      "line": 16,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use mycelium_core :: GuaranteeStrength ;",
+      "reason": "`use` import (single path ending `GuaranteeStrength`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/colony.rs",
+      "line": 18,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use crate :: task :: Task ;",
+      "reason": "`use` import (single path ending `Task`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/colony.rs",
+      "line": 20,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Guarantee strength for `Scope` join semantics (RT2 sequentialization differential).\"] pub const SCOPE_JOIN_STRENGTH : GuaranteeStrength = GuaranteeStrength :: Empirical ;",
+      "reason": "top-level `const SCOPE_JOIN_STRENGTH` — no const item production in the grammar (`item` covers use/default/type/trait/impl/fn/object/lower/derive only)",
+      "item_name": "SCOPE_JOIN_STRENGTH"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/colony.rs",
+      "line": 23,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Guarantee strength for `Colony` Kahn-determinism (channel-mediated communication).\"] pub const COLONY_KAHN_STRENGTH : GuaranteeStrength = GuaranteeStrength :: Empirical ;",
+      "reason": "top-level `const COLONY_KAHN_STRENGTH` — no const item production in the grammar (`item` covers use/default/type/trait/impl/fn/object/lower/derive only)",
+      "item_name": "COLONY_KAHN_STRENGTH"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/colony.rs",
+      "line": 26,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "# [doc = \" Error type for scope exits with active tasks.\"] # [derive (Debug , PartialEq , Eq)] pub enum ScopeError { # [doc = \" The scope was cancelled before all tasks completed.\"] Cancelled , # [doc = \" One or more tasks panicked; remaining tasks were cancelled (never silent — G2).\"] TasksStillRunning , }",
+      "reason": "dropped non-doc attribute(s) on enum `ScopeError`: # [derive (Debug , PartialEq , Eq)]",
+      "item_name": "ScopeError"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/colony.rs",
+      "line": 35,
+      "col": 1,
+      "category": "Struct",
+      "rust_construct": "Struct",
+      "snippet": "# [doc = \" Structured concurrency scope: all tasks complete or are cancelled before scope exit.\"] # [doc = \"\"] # [doc = \" Tasks are stored in spawn order and swept FIFO by `join_all` (**Exact** sweep guarantee).\"] # [doc = \"\"] # [doc = \" # Guarantee\"] # [doc = \" - Sweep order: **Exact** (FIFO by construction, ADR-020 §4).\"] # [doc = \" - Completion semantics: **Empirical** (RT2 sequentialization differential, ADR-020 §4).\"] # [doc = \" - A scope that exits before all tasks complete returns `Err(ScopeError::TasksStillRunning)`.\"] pub struct Scope < T , E > { tasks : Vec < Task > , cancelled : bool , _output : std :: marker :: PhantomData < T > , _error : std :: marker :: PhantomData < E > , }",
+      "reason": "struct `Scope` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "item_name": "Scope"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/colony.rs",
+      "line": 50,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "impl < T , E > std :: fmt :: Debug for Scope < T , E > { fn fmt (& self , f : & mut std :: fmt :: Formatter < '_ >) -> std :: fmt :: Result { f . debug_struct (\"Scope\") . field (\"task_count\" , & self . tasks . len ()) . field (\"cancelled\" , & self . cancelled) . finish () } }",
+      "reason": "impl block has generic parameter(s) — impl_item grammar has no generic-parameter declaration slot",
+      "item_name": "Scope < T , E >"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/colony.rs",
+      "line": 59,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "impl < T , E > Scope < T , E > { # [doc = \" Create a new empty scope.\"] # [doc = \"\"] # [doc = \" Guarantee: **Exact** (constructor, trivially correct).\"] pub fn new () -> Self { Scope { tasks : Vec :: new () , cancelled : false , _output : std :: marker :: PhantomData , _error : std :: marker :: PhantomData , } } # [doc = \" Returns the number of tasks currently queued in this scope.\"] pub fn task_count (& self) -> usize { self . tasks . len () } # [doc = \" Spawn a task into this scope.\"] # [doc = \"\"] # [doc = \" Tasks are appended in FIFO order; `join_all` will execute them in this same order.\"] # [doc = \"\"] # [doc = \" Guarantee: **Exact** (push to a `Vec` — deterministic ordering, ADR-020 §4).\"] pub fn spawn (& mut self , task : Task) { self . tasks . push (task) ; } # [doc = \" Cancel this scope. After calling `cancel`, `join_all` will return\"] # [doc = \" `Err(ScopeError::Cancelled)` without running any remaining tasks.\"] pub fn cancel (& mut self) { self . cancelled = true ; } }",
+      "reason": "impl block has generic parameter(s) — impl_item grammar has no generic-parameter declaration slot",
+      "item_name": "Scope < T , E >"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/colony.rs",
+      "line": 93,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "impl < E > Scope < () , E > { # [doc = \" Run all spawned tasks in FIFO spawn order.\"] # [doc = \"\"] # [doc = \" In v0, `Task` closures always return `()`. Returns `Ok(())` when all complete.\"] # [doc = \"\"] # [doc = \" Returns `Err(ScopeError::Cancelled)` if the scope was cancelled before `join_all`.\"] # [doc = \" Returns `Err(ScopeError::TasksStillRunning)` if any task panics (the panic is caught\"] # [doc = \" and an explicit error is returned — G2: never silent).\"] # [doc = \"\"] # [doc = \" Guarantee: **Empirical** (RT2 sequentialization differential, ADR-020 §4).\"] pub fn join_all (self) -> Result < () , ScopeError > { if self . cancelled { return Err (ScopeError :: Cancelled) ; } for task in self . tasks { match panic :: catch_unwind (panic :: AssertUnwindSafe (| | task . run ())) { Ok (()) => { } Err (_) => return Err (ScopeError :: TasksStillRunning) , } } Ok (()) } }",
+      "reason": "impl block has generic parameter(s) — impl_item grammar has no generic-parameter declaration slot",
+      "item_name": "Scope < () , E >"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/colony.rs",
+      "line": 117,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "impl < T , E > Default for Scope < T , E > { fn default () -> Self { Self :: new () } }",
+      "reason": "impl block has generic parameter(s) — impl_item grammar has no generic-parameter declaration slot",
+      "item_name": "Scope < T , E >"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/colony.rs",
+      "line": 123,
+      "col": 1,
+      "category": "Struct",
+      "rust_construct": "Struct",
+      "snippet": "# [doc = \" Colony: a group of scopes sharing a supervision tree and a `Network`.\"] # [doc = \"\"] # [doc = \" Provides a factory for `Scope<T, E>` via [`Colony::scope`].\"] # [doc = \"\"] # [doc = \" Guarantee: `Empirical` (Kahn-determinism of channel communication, ADR-020 §4).\"] # [derive (Debug)] pub struct Colony < T , E > { _output : std :: marker :: PhantomData < T > , _error : std :: marker :: PhantomData < E > , }",
+      "reason": "struct `Colony` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "item_name": "Colony"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/colony.rs",
+      "line": 134,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "impl < T , E > Colony < T , E > { # [doc = \" Create a new colony.\"] # [doc = \"\"] # [doc = \" Guarantee: **Exact** (constructor, trivially correct).\"] pub fn new () -> Self { Colony { _output : std :: marker :: PhantomData , _error : std :: marker :: PhantomData , } } # [doc = \" Create a new empty `Scope<T, E>` managed by this colony.\"] # [doc = \"\"] # [doc = \" Guarantee: **Exact** (delegates to `Scope::new`, trivially correct).\"] pub fn scope (& self) -> Scope < T , E > { Scope :: new () } }",
+      "reason": "impl block has generic parameter(s) — impl_item grammar has no generic-parameter declaration slot",
+      "item_name": "Colony < T , E >"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/colony.rs",
+      "line": 153,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "impl < T , E > Default for Colony < T , E > { fn default () -> Self { Self :: new () } }",
+      "reason": "impl block has generic parameter(s) — impl_item grammar has no generic-parameter declaration slot",
+      "item_name": "Colony < T , E >"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/colony.rs",
+      "line": 159,
+      "col": 1,
+      "category": "TestItem",
+      "rust_construct": "TestItem",
+      "snippet": "# [cfg (test)] mod tests { use super :: * ; use crate :: task :: Task ; use std :: panic ; # [doc = \" Test-only typed scope: stores closures returning `T` for FIFO-order assertions.\"] struct TypedScope < T > { closures : Vec < Box < dyn FnOnce () -> T + Send + 'static > > , cancelled : bool , } impl < T > TypedScope < T > { fn new () -> Self { TypedScope { closures : Vec :: new () , cancelled : false , } } fn spawn < F : FnOnce () -> T + Send + 'static > (& mut self , f : F) { self . closures . push (Box :: new (f)) ; } fn cancel (& mut self) { self . cancelled = true ; } } impl < T : Send + 'static > TypedScope < T > { fn join_all (self) -> Result < Vec < T > , ScopeError > { if self . cancelled { return Err (ScopeError :: Cancelled) ; } let mut out = Vec :: with_capacity (self . closures . len ()) ; for f in self . closures { match panic :: catch_unwind (panic :: AssertUnwindSafe (f)) { Ok (v) => out . push (v) , Err (_) => return Err (ScopeError :: TasksStillRunning) , } } Ok (out) } } # [test] fn test_scope_new_is_empty () { let scope : Scope < () , () > = Scope :: new () ; assert_eq ! (scope . task_count () , 0 , \"new scope must have no tasks\") ; } # [test] fn test_scope_join_empty () { let scope : TypedScope < i32 > = TypedScope :: new () ; let result = scope . join_all () . expect (\"empty scope join must succeed\") ; assert ! (result . is_empty () , \"result must be empty for zero tasks\") ; } # [test] fn test_scope_join_all_fifo () { let mut scope : TypedScope < i32 > = TypedScope :: new () ; scope . spawn (| | 1) ; scope . spawn (| | 2) ; let results = scope . join_all () . expect (\"join must succeed\") ; assert_eq ! (results . len () , 2) ; assert_eq ! (results [0] , 1 , \"first spawned task must be first in results (FIFO)\") ; assert_eq ! (results [1] , 2 , \"second spawned task must be second in results (FIFO)\") ; } # [test] fn test_scope_error_on_cancelled () { let mut scope : TypedScope < i32 > = TypedScope :: new () ; scope . cancel () ; let err = scope . join_all () . expect_err (\"cancelled scope must return Err\") ; assert_eq ! (err , ScopeError :: Cancelled , \"must return Cancelled, not TasksStillRunning\") ; } # [test] fn test_scope_spawn_with_task () { let mut scope : Scope < () , () > = Scope :: new () ; scope . spawn (Task :: new (| | { })) ; assert_eq ! (scope . task_count () , 1) ; } # [test] fn test_colony_scope_factory () { let colony : Colony < () , () > = Colony :: new () ; let scope = colony . scope () ; assert_eq ! (scope . task_count () , 0 , \"colony-created scope must start empty\") ; } }",
+      "reason": "#[cfg(test)] item — out of scope for this PoC's transpilation surface (excluded from the expressible-fraction denominator, but recorded, never silently skipped)",
+      "item_name": "tests"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/dataflow.rs",
+      "line": 29,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use std :: sync :: atomic :: { AtomicU64 , Ordering } ;",
+      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/dataflow.rs",
+      "line": 31,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use mycelium_core :: GuaranteeStrength ;",
+      "reason": "`use` import (single path ending `GuaranteeStrength`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/dataflow.rs",
+      "line": 33,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use crate :: scheduler :: Scheduler ;",
+      "reason": "`use` import (single path ending `Scheduler`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/dataflow.rs",
+      "line": 34,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use crate :: task :: Deadlock ;",
+      "reason": "`use` import (single path ending `Deadlock`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/dataflow.rs",
+      "line": 36,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Guarantee strength for deadlock detection (complete for DAG channel graphs; cyclic = open).\"] pub const DEADLOCK_DETECTION_STRENGTH : GuaranteeStrength = GuaranteeStrength :: Empirical ;",
+      "reason": "top-level `const DEADLOCK_DETECTION_STRENGTH` — no const item production in the grammar (`item` covers use/default/type/trait/impl/fn/object/lower/derive only)",
+      "item_name": "DEADLOCK_DETECTION_STRENGTH"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/dataflow.rs",
+      "line": 39,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Guarantee strength for the cooperative sweep schedule (a fixed function of the sweep direction).\"] pub const SWEEP_DETERMINISM_STRENGTH : GuaranteeStrength = GuaranteeStrength :: Exact ;",
+      "reason": "top-level `const SWEEP_DETERMINISM_STRENGTH` — no const item production in the grammar (`item` covers use/default/type/trait/impl/fn/object/lower/derive only)",
+      "item_name": "SWEEP_DETERMINISM_STRENGTH"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/dataflow.rs",
+      "line": 42,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "# [doc = \" One non-blocking step of a communicating task.\"] # [derive (Debug , Clone , Copy , PartialEq , Eq)] pub enum Step { # [doc = \" The task resolved (it will not be polled again).\"] Done , # [doc = \" The task made no terminal progress this step — typically parked on an empty/full channel.\"] # [doc = \" **Never blocks**: parking is an explicit value, so the sweep can detect a stall (G2).\"] Pending , }",
+      "reason": "dropped non-doc attribute(s) on enum `Step`: # [derive (Debug , Clone , Copy , PartialEq , Eq)]",
+      "item_name": "Step"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/dataflow.rs",
+      "line": 52,
+      "col": 1,
+      "category": "Trait",
+      "rust_construct": "Trait",
+      "snippet": "# [doc = \" A communicating task that is **swept** (polled non-blockingly) rather than run to completion.\"] # [doc = \"\"] # [doc = \" `poll` must never block: park (return [`Step::Pending`]) instead of waiting on a channel, so a\"] # [doc = \" global stall is detectable as an explicit [`Deadlock`] rather than a hung thread (G2).\"] pub trait PollTask { # [doc = \" Take one non-blocking step. Returns [`Step::Done`] when the task has resolved.\"] fn poll (& mut self) -> Step ; }",
+      "reason": "trait `PollTask` method `poll` signature has no confirmed mapping (a trait-body `Self`/`self` has no concrete referent in this grammar; `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence)",
+      "item_name": "PollTask"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/dataflow.rs",
+      "line": 61,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "# [doc = \" The order a sweep visits still-pending tasks. Two directions over the same DAG network yield the\"] # [doc = \" same completion (Kahn-determinism, RFC-0008 §4.3) — the differential a test checks.\"] # [derive (Debug , Clone , Copy , Default , PartialEq , Eq)] pub enum SweepDir { # [doc = \" Ascending task index (default).\"] # [default] Ascending , # [doc = \" Descending task index.\"] Descending , }",
+      "reason": "dropped non-doc attribute(s) on enum `SweepDir`: # [derive (Debug , Clone , Copy , Default , PartialEq , Eq)]",
+      "item_name": "SweepDir"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/dataflow.rs",
+      "line": 72,
+      "col": 1,
+      "category": "Struct",
+      "rust_construct": "Struct",
+      "snippet": "# [doc = \" A monotone progress counter for channel work — bump it on every successful `try_send`/`try_recv`\"] # [doc = \" so the sweep can tell \\\"a channel op advanced the network\\\" from \\\"nothing moved\\\" (G2).\"] # [doc = \"\"] # [doc = \" The driver reads it once per sweep; the caller increments it from inside task polls.\"] # [derive (Debug , Default)] pub struct Progress { epoch : AtomicU64 , }",
+      "reason": "struct `Progress` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "item_name": "Progress"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/dataflow.rs",
+      "line": 81,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl Progress { # [doc = \" A fresh counter at epoch 0.\"] # [must_use] pub fn new () -> Self { Progress { epoch : AtomicU64 :: new (0) , } } # [doc = \" Record one unit of channel progress (a successful send or recv).\"] pub fn bump (& self) { self . epoch . fetch_add (1 , Ordering :: SeqCst) ; } # [doc = \" The current epoch (monotone).\"] # [must_use] pub fn epoch (& self) -> u64 { self . epoch . load (Ordering :: SeqCst) } }",
+      "reason": "no member of this impl block could be transpiled (3 sub-issue(s)): impl method `new` body: unsupported expression form `Progress { epoch : AtomicU64 :: new (0) , }`; impl method `bump` signature: function has no return type (implicit `()`) — no unit value is representable in this grammar fragment; impl method `epoch` body: unsupported expression form `self . epoch`",
+      "item_name": "Progress"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/dataflow.rs",
+      "line": 102,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "fn sweep_indices (n : usize , dir : SweepDir) -> Vec < usize > { match dir { SweepDir :: Ascending => (0 .. n) . collect () , SweepDir :: Descending => (0 .. n) . rev () . collect () , } }",
+      "reason": "`usize` has a platform-dependent width; no fixed Binary{N} mapping",
+      "item_name": "sweep_indices"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/dataflow.rs",
+      "line": 109,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Sweep `tasks` cooperatively until all resolve, or return [`Deadlock`] on a no-progress sweep.\"] # [doc = \"\"] # [doc = \" `progress()` reports the monotone count of channel work done *outside* the tasks' own resolution.\"] # [doc = \" A sweep counts as progress if **either** a task resolved **or** `progress()` advanced; a full\"] # [doc = \" sweep with neither, while tasks remain pending, is an explicit [`Deadlock`] — never a hang (G2).\"] # [doc = \"\"] # [doc = \" Guarantee: schedule is **`Exact`** (a fixed function of `dir`); deadlock detection is\"] # [doc = \" **`Empirical`** (complete for DAG channel graphs — see module docs).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \" Returns [`Deadlock`] (carrying the count of still-parked tasks) when a full sweep makes no\"] # [doc = \" progress while tasks remain pending.\"] pub fn run_dataflow (tasks : & mut [Box < dyn PollTask >] , dir : SweepDir , progress : impl Fn () -> u64 ,) -> Result < () , Deadlock > { let n = tasks . len () ; let mut done = vec ! [false ; n] ; let mut remaining = n ; let order = sweep_indices (n , dir) ; while remaining > 0 { let before = progress () ; let mut advanced = false ; for & i in & order { if done [i] { continue ; } if tasks [i] . poll () == Step :: Done { done [i] = true ; remaining -= 1 ; advanced = true ; } } if ! advanced && progress () == before && remaining > 0 { return Err (Deadlock :: new (remaining)) ; } } Ok (()) }",
+      "reason": "unsupported Rust type form `& mut [Box < dyn PollTask >]`",
+      "item_name": "run_dataflow"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/dataflow.rs",
+      "line": 159,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl PollTask for AlreadyDone { fn poll (& mut self) -> Step { Step :: Done } }",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `poll` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence",
+      "item_name": "AlreadyDone"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/dataflow.rs",
+      "line": 165,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" As [`run_dataflow`], but each sweep's independent polls run **across the OS-thread pool**\"] # [doc = \" (M-709/M-864) — the \\\"checked across OS threads\\\" path (RFC-0008 §4.3 under the real scheduler).\"] # [doc = \"\"] # [doc = \" Each still-pending task is polled **at most once per sweep** on a worker thread; the tasks are\"] # [doc = \" disjoint objects (no shared mutable state but the channels, RT1), so the parallel polls are\"] # [doc = \" data-race-free. The deadlock decision is identical and order-independent: a stall is a stall in\"] # [doc = \" any sweep order, so it is surfaced as the same explicit [`Deadlock`] (G2), never a hung worker.\"] # [doc = \"\"] # [doc = \" **M-864 note:** `Scheduler::run_indexed` now requires `'static` job closures (the persistent\"] # [doc = \" pool's worker threads outlive any single call), so this sweep can no longer *borrow* `tasks[i]`\"] # [doc = \" by `&mut` across the call the way the pre-M-864 `thread::scope`-backed scheduler allowed. Each\"] # [doc = \" still-pending task is instead swapped **out** of `tasks` (taking ownership, `'static` by\"] # [doc = \" construction — only the borrow was ever the obstacle, not the boxed task itself) for the\"] # [doc = \" duration of the parallel poll, and swapped back the moment its result is in hand — the sweep's\"] # [doc = \" own book-keeping (`done`/`remaining`) and the deadlock decision are otherwise unchanged.\"] # [doc = \"\"] # [doc = \" Guarantee: deadlock detection **`Empirical`** (same basis as [`run_dataflow`], now exercised on\"] # [doc = \" real OS threads).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \" Returns [`Deadlock`] when a full parallel sweep makes no progress while tasks remain pending.\"] pub fn run_dataflow_scheduled (scheduler : & Scheduler , tasks : & mut [Box < dyn PollTask + Send >] , progress : impl Fn () -> u64 ,) -> Result < () , Deadlock > { let n = tasks . len () ; let mut done = vec ! [false ; n] ; let mut remaining = n ; while remaining > 0 { let before = progress () ; let pending : Vec < usize > = (0 .. n) . filter (| & i | ! done [i]) . collect () ; let taken : Vec < Box < dyn PollTask + Send > > = pending . iter () . map (| & i | std :: mem :: replace (& mut tasks [i] , Box :: new (AlreadyDone))) . collect () ; let jobs : Vec < _ > = taken . into_iter () . map (| mut t | { move | | { let became_done = matches ! (t . poll () , Step :: Done) ; (t , became_done) } }) . collect () ; let results = scheduler . run_indexed (jobs , None , None) ; let mut advanced = false ; for (& i , (t , became_done)) in pending . iter () . zip (results) { tasks [i] = t ; if became_done { done [i] = true ; remaining -= 1 ; advanced = true ; } } if ! advanced && progress () == before && remaining > 0 { return Err (Deadlock :: new (remaining)) ; } } Ok (()) }",
+      "reason": "unsupported Rust type form `& Scheduler`",
+      "item_name": "run_dataflow_scheduled"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/guarantee_matrix.rs",
+      "line": 6,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use mycelium_core :: GuaranteeStrength ;",
+      "reason": "`use` import (single path ending `GuaranteeStrength`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/guarantee_matrix.rs",
+      "line": 8,
+      "col": 1,
+      "category": "Struct",
+      "rust_construct": "Struct",
+      "snippet": "# [doc = \" One row in the guarantee matrix.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct GaugeRow { pub operation : & 'static str , pub strength : GuaranteeStrength , pub basis : & 'static str , }",
+      "reason": "struct `GaugeRow` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "item_name": "GaugeRow"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/guarantee_matrix.rs",
+      "line": 16,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Per-operation guarantee matrix for `std.runtime` v0.\"] # [doc = \"\"] # [doc = \" Grounding: ADR-020 §4; RFC-0008 RT2 (sequentialization + Kahn-determinism differentials).\"] pub static MATRIX : & [GaugeRow] = & [GaugeRow { operation : \"Scope::new\" , strength : GuaranteeStrength :: Exact , basis : \"constructor is trivially correct (no approximation)\" , } , GaugeRow { operation : \"Scope join semantics (all tasks complete before exit)\" , strength : GuaranteeStrength :: Empirical , basis : \"RT2 sequentialization differential; Kahn-determinism not yet Proven (ADR-020 §4)\" , } , GaugeRow { operation : \"Colony::new\" , strength : GuaranteeStrength :: Exact , basis : \"constructor is trivially correct\" , } , GaugeRow { operation : \"Colony Kahn-determinism (channel-mediated communication)\" , strength : GuaranteeStrength :: Empirical , basis : \"RT2 Kahn-determinism differential; formal proof pending (ADR-020 §4 FLAG)\" , } , GaugeRow { operation : \"Task purity contract\" , strength : GuaranteeStrength :: Declared , basis : \"asserted by caller; type system cannot enforce (VR-5: not upgraded without a checked basis)\" , } , GaugeRow { operation : \"TaskCtx::is_cancelled\" , strength : GuaranteeStrength :: Exact , basis : \"reads a boolean flag set by scope cancellation\" , } , GaugeRow { operation : \"Poll\" , strength : GuaranteeStrength :: Exact , basis : \"enum variant is the exact poll result\" , } , GaugeRow { operation : \"SweepOrder determinism\" , strength : GuaranteeStrength :: Exact , basis : \"sweep order is deterministic given the same queue state\" , } , GaugeRow { operation : \"Deadlock detection (DAG channels)\" , strength : GuaranteeStrength :: Empirical , basis : \"complete for DAG channel graphs; cyclic graphs FLAG (ADR-020 §7)\" , } , GaugeRow { operation : \"Sender::try_send / single-channel FIFO\" , strength : GuaranteeStrength :: Exact , basis : \"FIFO ordering within one channel is exact by construction\" , } , GaugeRow { operation : \"Receiver::try_recv / single-channel FIFO\" , strength : GuaranteeStrength :: Exact , basis : \"FIFO ordering within one channel is exact by construction\" , } , GaugeRow { operation : \"Network Kahn-determinism (cross-channel)\" , strength : GuaranteeStrength :: Empirical , basis : \"RT2 Kahn-determinism differential; formal proof pending (ADR-020 §4)\" , } , GaugeRow { operation : \"Network::channel (construction)\" , strength : GuaranteeStrength :: Exact , basis : \"constructor is trivially correct; backed by Arc<Mutex<VecDeque>> (ADR-020 §4)\" , } , GaugeRow { operation : \"Network::channel zero-capacity check\" , strength : GuaranteeStrength :: Exact , basis : \"fail-closed: ZeroCapacity is returned deterministically when capacity==0 (G2/ADR-020 §4)\" , } , GaugeRow { operation : \"Sender::try_send FIFO (bounded channel)\" , strength : GuaranteeStrength :: Exact , basis : \"push to VecDeque tail; FIFO ordering exact by construction (ADR-020 §4)\" , } , GaugeRow { operation : \"Receiver::try_recv FIFO (bounded channel)\" , strength : GuaranteeStrength :: Exact , basis : \"pop from VecDeque head; FIFO ordering exact by construction (ADR-020 §4)\" , } , GaugeRow { operation : \"Scheduler RT2 sequentialization differential (OS threads)\" , strength : GuaranteeStrength :: Empirical , basis : \"parallel run equals sequential reference by RT1; property-tested, not Proven (M-709)\" , } , GaugeRow { operation : \"Scheduler backpressure bound (bounded ready queue)\" , strength : GuaranteeStrength :: Exact , basis : \"ready queue ≤ capacity by construction (enqueue only while len<capacity); G2 (M-709)\" , } , GaugeRow { operation : \"Scheduler liveness (each job runs exactly once)\" , strength : GuaranteeStrength :: Empirical , basis : \"property-tested over random job sets; not Proven (M-709)\" , } , GaugeRow { operation : \"Deadlock-freedom sweep (run_dataflow no-progress)\" , strength : GuaranteeStrength :: Empirical , basis : \"no-progress sweep ⇒ explicit Deadlock (never a hang, G2); complete for DAG graphs (M-711)\" , } , GaugeRow { operation : \"Supervision cancellation propagation (structured scope)\" , strength : GuaranteeStrength :: Empirical , basis : \"cooperative cancel cascades to every child; explicit outcome per child; property-tested (M-713)\" , } , GaugeRow { operation : \"Supervision restart bound (bounded cascade)\" , strength : GuaranteeStrength :: Exact , basis : \"rate + total restart bounds enforced structurally; inherited from M-356 Supervisor (M-713)\" , } , GaugeRow { operation : \"Scheduler RT2 sequentialization differential (work-stealing)\" , strength : GuaranteeStrength :: Empirical , basis : \"parallel run equals sequential reference under stealing; result-order-only claim, unaffected by execution reordering; property-tested over randomized worker/steal configurations, not Proven (M-861)\" , } , GaugeRow { operation : \"Scheduler backpressure bound (total pending across per-worker deques)\" , strength : GuaranteeStrength :: Exact , basis : \"total pending ≤ capacity by construction under one lock guarding every deque together; G2 (M-861)\" , } , GaugeRow { operation : \"Scheduler liveness under stealing (each job runs exactly once)\" , strength : GuaranteeStrength :: Empirical , basis : \"property-tested over random job sets and random worker/steal configurations; not Proven (M-861)\" , } , GaugeRow { operation : \"Steal-victim-selection policy determinism (RT3 EXPLAIN)\" , strength : GuaranteeStrength :: Exact , basis : \"StealPolicy::select_victim is a total, deterministic function of its inputs; every decision is an inspectable StealDecision record (M-861 / RFC-0008 RT3)\" , } , GaugeRow { operation : \"PolicySlot::set transition record (reified setter)\" , strength : GuaranteeStrength :: Exact , basis : \"every set appends exactly one PolicySetRecord with a per-slot monotonic seq and the outgoing policy's ref; by construction, never a silent override (G2 / M-963 / DN-78 B-2)\" , } , GaugeRow { operation : \"PolicySlot::select without an active policy (explicit refusal)\" , strength : GuaranteeStrength :: Exact , basis : \"fail-closed: NoActivePolicy is returned deterministically when no policy is set — no built-in silent default (G2 / ADR-006 / M-963)\" , } , GaugeRow { operation : \"Policy capture resolution (unknown ref is an explicit error)\" , strength : GuaranteeStrength :: Exact , basis : \"fail-closed by construction: UnknownPolicyRef/RefMismatch are explicit; a returned capture satisfies policy_ref() == requested, checked not assumed (G2 / ADR-006 / M-963)\" , } , GaugeRow { operation : \"Policy capture replay reaches the recorded decision\" , strength : GuaranteeStrength :: Empirical , basis : \"record-vs-replay differential property-tested over randomized policies/inputs; RFC-0005 select determinism has no mechanized theorem, so not Proven (VR-5 / M-963 / M-964)\" , } , GaugeRow { operation : \"Deferred-construct refusal (R2 residual ledger)\" , strength : GuaranteeStrength :: Exact , basis : \"require() on every deferred item returns an explicit typed error naming construct + prerequisite + tracker; one ledger row per item, enforced by test (G2 / M-963 / DN-78 B-3)\" , } ,] ;",
+      "reason": "top-level `static MATRIX` — no static item production in the grammar",
+      "item_name": "MATRIX"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/lib.rs",
+      "line": 1,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# ! [forbid (unsafe_code)]",
+      "reason": "crate/file-level inner attributes (#![...]) are not transpiled (no nodule-header equivalent for these Rust-specific directives)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/lib.rs",
+      "line": 109,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "pub mod colony ;",
+      "reason": "`mod` declaration — Mycelium's nodule-per-file model has no nested-module construct in this grammar fragment",
+      "item_name": "colony"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/lib.rs",
+      "line": 110,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "pub mod dataflow ;",
+      "reason": "`mod` declaration — Mycelium's nodule-per-file model has no nested-module construct in this grammar fragment",
+      "item_name": "dataflow"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/lib.rs",
+      "line": 111,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "pub mod guarantee_matrix ;",
+      "reason": "`mod` declaration — Mycelium's nodule-per-file model has no nested-module construct in this grammar fragment",
+      "item_name": "guarantee_matrix"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/lib.rs",
+      "line": 112,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "pub mod network ;",
+      "reason": "`mod` declaration — Mycelium's nodule-per-file model has no nested-module construct in this grammar fragment",
+      "item_name": "network"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/lib.rs",
+      "line": 113,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "pub mod policy_mech ;",
+      "reason": "`mod` declaration — Mycelium's nodule-per-file model has no nested-module construct in this grammar fragment",
+      "item_name": "policy_mech"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/lib.rs",
+      "line": 114,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "pub mod r2_residual ;",
+      "reason": "`mod` declaration — Mycelium's nodule-per-file model has no nested-module construct in this grammar fragment",
+      "item_name": "r2_residual"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/lib.rs",
+      "line": 115,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "pub mod rc ;",
+      "reason": "`mod` declaration — Mycelium's nodule-per-file model has no nested-module construct in this grammar fragment",
+      "item_name": "rc"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/lib.rs",
+      "line": 116,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "pub mod reclamation ;",
+      "reason": "`mod` declaration — Mycelium's nodule-per-file model has no nested-module construct in this grammar fragment",
+      "item_name": "reclamation"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/lib.rs",
+      "line": 117,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "pub mod region ;",
+      "reason": "`mod` declaration — Mycelium's nodule-per-file model has no nested-module construct in this grammar fragment",
+      "item_name": "region"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/lib.rs",
+      "line": 118,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "pub mod scheduler ;",
+      "reason": "`mod` declaration — Mycelium's nodule-per-file model has no nested-module construct in this grammar fragment",
+      "item_name": "scheduler"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/lib.rs",
+      "line": 119,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "pub mod scope_region ;",
+      "reason": "`mod` declaration — Mycelium's nodule-per-file model has no nested-module construct in this grammar fragment",
+      "item_name": "scope_region"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/lib.rs",
+      "line": 120,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "pub mod supervision ;",
+      "reason": "`mod` declaration — Mycelium's nodule-per-file model has no nested-module construct in this grammar fragment",
+      "item_name": "supervision"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/lib.rs",
+      "line": 121,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "pub mod task ;",
+      "reason": "`mod` declaration — Mycelium's nodule-per-file model has no nested-module construct in this grammar fragment",
+      "item_name": "task"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/lib.rs",
+      "line": 123,
+      "col": 1,
+      "category": "TestItem",
+      "rust_construct": "TestItem",
+      "snippet": "# [cfg (test)] mod tests ;",
+      "reason": "#[cfg(test)] item — out of scope for this PoC's transpilation surface (excluded from the expressible-fraction denominator, but recorded, never silently skipped)",
+      "item_name": "tests"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/network.rs",
+      "line": 30,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use std :: collections :: VecDeque ;",
+      "reason": "`use` import (single path ending `VecDeque`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/network.rs",
+      "line": 31,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use std :: sync :: atomic :: { AtomicU64 , Ordering } ;",
+      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/network.rs",
+      "line": 32,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use std :: sync :: { Arc , Mutex } ;",
+      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/network.rs",
+      "line": 34,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use mycelium_core :: { ContentHash , GuaranteeStrength } ;",
+      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/network.rs",
+      "line": 36,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use crate :: reclamation :: { ChannelId , ReclamationRecord , ReclamationSink , ScopeId , SweepEpoch } ;",
+      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/network.rs",
+      "line": 38,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Guarantee strength for single-channel FIFO ordering.\"] pub const CHANNEL_FIFO_STRENGTH : GuaranteeStrength = GuaranteeStrength :: Exact ;",
+      "reason": "top-level `const CHANNEL_FIFO_STRENGTH` — no const item production in the grammar (`item` covers use/default/type/trait/impl/fn/object/lower/derive only)",
+      "item_name": "CHANNEL_FIFO_STRENGTH"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/network.rs",
+      "line": 41,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Guarantee strength for cross-channel Kahn-determinism.\"] pub const KAHN_DETERMINISM_STRENGTH : GuaranteeStrength = GuaranteeStrength :: Empirical ;",
+      "reason": "top-level `const KAHN_DETERMINISM_STRENGTH` — no const item production in the grammar (`item` covers use/default/type/trait/impl/fn/object/lower/derive only)",
+      "item_name": "KAHN_DETERMINISM_STRENGTH"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/network.rs",
+      "line": 52,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "static GLOBAL_CHANNEL_ID : AtomicU64 = AtomicU64 :: new (1) ;",
+      "reason": "top-level `static GLOBAL_CHANNEL_ID` — no static item production in the grammar",
+      "item_name": "GLOBAL_CHANNEL_ID"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/network.rs",
+      "line": 56,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "# [doc = \" The canonical channel-tier identity type (resolves the MEM-1 `ChannelId` placeholder FLAG).\"] # [doc = \"\"] # [doc = \" Allocated per [`Network::channel`] call via a monotonic global counter. Unique within a\"] # [doc = \" process lifetime. Mirrors [`crate::region::ScopeNodeId`] — same pattern, same semantics,\"] # [doc = \" different tier. Use [`ChannelNodeId::as_channel_id`] to convert to [`ChannelId`] for use in\"] # [doc = \" [`ReclamationRecord`] fields (the stable RFC-0027 §9 type).\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — monotonic, unique per allocation (atomic counter, strictly increasing).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq , Hash , PartialOrd , Ord)] pub struct ChannelNodeId (pub (crate) u64) ;",
+      "reason": "dropped non-doc attribute(s) on struct `ChannelNodeId`: # [derive (Debug , Clone , Copy , PartialEq , Eq , Hash , PartialOrd , Ord)]",
+      "item_name": "ChannelNodeId"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/network.rs",
+      "line": 67,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "impl ChannelNodeId { # [doc = \" Allocate a fresh, unique `ChannelNodeId`.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — strictly greater than all previously allocated ids.\"] fn allocate () -> Self { ChannelNodeId (GLOBAL_CHANNEL_ID . fetch_add (1 , Ordering :: Relaxed)) } # [doc = \" Convert to a [`ChannelId`] for use in [`ReclamationRecord`] fields (RFC-0027 §9).\"] # [doc = \"\"] # [doc = \" This is the canonical bridge between the channel-tier allocation identity and the\"] # [doc = \" MEM-1 record field type. The underlying `u64` is preserved losslessly.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — lossless conversion.\"] # [must_use] pub fn as_channel_id (self) -> ChannelId { ChannelId (self . 0) } # [doc = \" Return the underlying `u64` value.\"] # [must_use] pub fn as_u64 (self) -> u64 { self . 0 } }",
+      "reason": "impl method `as_channel_id` body: unsupported expression form `self . 0`",
+      "item_name": "impl ChannelNodeId"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/network.rs",
+      "line": 67,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "impl ChannelNodeId { # [doc = \" Allocate a fresh, unique `ChannelNodeId`.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — strictly greater than all previously allocated ids.\"] fn allocate () -> Self { ChannelNodeId (GLOBAL_CHANNEL_ID . fetch_add (1 , Ordering :: Relaxed)) } # [doc = \" Convert to a [`ChannelId`] for use in [`ReclamationRecord`] fields (RFC-0027 §9).\"] # [doc = \"\"] # [doc = \" This is the canonical bridge between the channel-tier allocation identity and the\"] # [doc = \" MEM-1 record field type. The underlying `u64` is preserved losslessly.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — lossless conversion.\"] # [must_use] pub fn as_channel_id (self) -> ChannelId { ChannelId (self . 0) } # [doc = \" Return the underlying `u64` value.\"] # [must_use] pub fn as_u64 (self) -> u64 { self . 0 } }",
+      "reason": "impl method `as_u64` body: unsupported expression form `self . 0`",
+      "item_name": "impl ChannelNodeId"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/network.rs",
+      "line": 95,
+      "col": 1,
+      "category": "Struct",
+      "rust_construct": "Struct",
+      "snippet": "# [doc = \" Shared mutable state behind a `Sender`/`Receiver` pair.\"] struct ChannelInner < V > { buf : VecDeque < V > , capacity : usize , closed : bool , # [doc = \" The canonical channel identity, allocated once at construction.\"] channel_id : ChannelNodeId , }",
+      "reason": "struct `ChannelInner` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "item_name": "ChannelInner"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/network.rs",
+      "line": 104,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "impl < V > ChannelInner < V > { fn new (capacity : usize , channel_id : ChannelNodeId) -> Self { ChannelInner { buf : VecDeque :: with_capacity (capacity) , capacity , closed : false , channel_id , } } }",
+      "reason": "impl block has generic parameter(s) — impl_item grammar has no generic-parameter declaration slot",
+      "item_name": "ChannelInner < V >"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/network.rs",
+      "line": 117,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "# [doc = \" Errors returned by `Network` construction operations.\"] # [derive (Debug , PartialEq , Eq)] pub enum ChannelError { # [doc = \" A zero-capacity channel is nonsensical; rejected at construction (G2: fail-closed).\"] ZeroCapacity , }",
+      "reason": "dropped non-doc attribute(s) on enum `ChannelError`: # [derive (Debug , PartialEq , Eq)]",
+      "item_name": "ChannelError"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/network.rs",
+      "line": 126,
+      "col": 1,
+      "category": "Struct",
+      "rust_construct": "Struct",
+      "snippet": "# [doc = \" A named network of typed channels within a `Colony`.\"] # [doc = \"\"] # [doc = \" Guarantee: **Empirical** (Kahn-determinism, ADR-020 §4).\"] # [derive (Debug)] pub struct Network { _priv : () , }",
+      "reason": "struct `Network` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "item_name": "Network"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/network.rs",
+      "line": 134,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl Network { # [doc = \" Create a new network.\"] # [doc = \"\"] # [doc = \" Guarantee: **Exact** (constructor, trivially correct).\"] pub fn new () -> Self { Network { _priv : () } } # [doc = \" Create a bounded FIFO channel with the given capacity.\"] # [doc = \"\"] # [doc = \" Allocates a fresh [`ChannelNodeId`] for the channel pair (monotonic, unique). Both\"] # [doc = \" `Sender` and `Receiver` share the same id, accessible via `channel_id()`.\"] # [doc = \"\"] # [doc = \" Returns `Err(ChannelError::ZeroCapacity)` if `capacity == 0` (fail-closed, G2:\"] # [doc = \" invalid input is never silently accepted — a zero-capacity channel cannot store any\"] # [doc = \" value and would make every `try_send` return `Full`, which is nonsensical).\"] # [doc = \"\"] # [doc = \" Guarantee: **Exact** (construction is deterministic; the zero-capacity check is\"] # [doc = \" deterministic — mutant witness: removing the check makes `test_channel_zero_capacity_fails`\"] # [doc = \" fail).\"] pub fn channel < V > (capacity : usize) -> Result < (Sender < V > , Receiver < V >) , ChannelError > { if capacity == 0 { return Err (ChannelError :: ZeroCapacity) ; } let channel_id = ChannelNodeId :: allocate () ; let inner = Arc :: new (Mutex :: new (ChannelInner :: new (capacity , channel_id))) ; Ok ((Sender { inner : Arc :: clone (& inner) , } , Receiver { inner } ,)) } }",
+      "reason": "no member of this impl block could be transpiled (2 sub-issue(s)): impl method `new` body: unsupported expression form `Network { _priv : () }`; impl method `channel` signature: `usize` has a platform-dependent width; no fixed Binary{N} mapping",
+      "item_name": "Network"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/network.rs",
+      "line": 170,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl Default for Network { fn default () -> Self { Self :: new () } }",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `default`: impl method name `default` collides with a Mycelium reserved word — emitting it verbatim would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5)",
+      "item_name": "Network"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/network.rs",
+      "line": 178,
+      "col": 1,
+      "category": "Struct",
+      "rust_construct": "Struct",
+      "snippet": "# [doc = \" Sending end of a typed channel.\"] # [doc = \"\"] # [doc = \" SPSC by design: `Sender<V>` is not `Clone` (ADR-020 §4 / RFC-0008 §4.3 RT1).\"] # [doc = \"\"] # [doc = \" Guarantee: **Exact** (FIFO ordering within this channel; backed by `VecDeque`).\"] pub struct Sender < V > { inner : Arc < Mutex < ChannelInner < V > > > , }",
+      "reason": "struct `Sender` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "item_name": "Sender"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/network.rs",
+      "line": 187,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "impl < V > std :: fmt :: Debug for Sender < V > { fn fmt (& self , f : & mut std :: fmt :: Formatter < '_ >) -> std :: fmt :: Result { let inner = self . inner . lock () . unwrap () ; f . debug_struct (\"Sender\") . field (\"buf_len\" , & inner . buf . len ()) . field (\"capacity\" , & inner . capacity) . field (\"closed\" , & inner . closed) . finish () } }",
+      "reason": "impl block has generic parameter(s) — impl_item grammar has no generic-parameter declaration slot",
+      "item_name": "Sender < V >"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/network.rs",
+      "line": 198,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "impl < V > Sender < V > { # [doc = \" Non-blocking send. Returns `TrySend::Sent` on success, `TrySend::Full(v)` if the\"] # [doc = \" buffer is at capacity, or `TrySend::Closed(v)` if the channel is closed.\"] # [doc = \"\"] # [doc = \" The value is **always returned on failure** — never dropped silently (G2 / ADR-020 §4).\"] # [doc = \"\"] # [doc = \" Guarantee: **Exact** (FIFO push into `VecDeque`; deterministic given the buffer state).\"] pub fn try_send (& self , value : V) -> TrySend < V > { let mut inner = self . inner . lock () . unwrap () ; if inner . closed { return TrySend :: Closed (value) ; } if inner . buf . len () >= inner . capacity { return TrySend :: Full (value) ; } inner . buf . push_back (value) ; TrySend :: Sent } # [doc = \" Close the channel from the sender side.\"] # [doc = \"\"] # [doc = \" After this, `try_recv` on a drained buffer returns `TryRecv::Closed`. Values already\"] # [doc = \" buffered are still deliverable via normal `try_recv` drain — the receiver can drain them\"] # [doc = \" normally (no reclamation needed: the values are delivered, not lost). Only use\"] # [doc = \" [`Receiver::close_with_reclaim`] for the teardown path where **undelivered** in-transit\"] # [doc = \" values must be reclaimed (RFC-0027 §9 / §7.3 / G2).\"] # [doc = \"\"] # [doc = \" Guarantee: **Exact** (sets a boolean flag, deterministic).\"] pub fn close (self) { let mut inner = self . inner . lock () . unwrap () ; inner . closed = true ; } # [doc = \" The canonical channel identity shared by this `Sender` and its paired `Receiver`.\"] # [doc = \"\"] # [doc = \" Guarantee: **Exact** — allocated once at channel construction; the same id is returned\"] # [doc = \" by both the `Sender` and `Receiver` ends.\"] # [must_use] pub fn channel_id (& self) -> ChannelNodeId { self . inner . lock () . unwrap () . channel_id } }",
+      "reason": "impl block has generic parameter(s) — impl_item grammar has no generic-parameter declaration slot",
+      "item_name": "Sender < V >"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/network.rs",
+      "line": 243,
+      "col": 1,
+      "category": "Struct",
+      "rust_construct": "Struct",
+      "snippet": "# [doc = \" Receiving end of a typed channel.\"] # [doc = \"\"] # [doc = \" Guarantee: **Exact** (FIFO ordering within this channel; backed by `VecDeque`).\"] pub struct Receiver < V > { inner : Arc < Mutex < ChannelInner < V > > > , }",
+      "reason": "struct `Receiver` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "item_name": "Receiver"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/network.rs",
+      "line": 250,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "impl < V > std :: fmt :: Debug for Receiver < V > { fn fmt (& self , f : & mut std :: fmt :: Formatter < '_ >) -> std :: fmt :: Result { let inner = self . inner . lock () . unwrap () ; f . debug_struct (\"Receiver\") . field (\"buf_len\" , & inner . buf . len ()) . field (\"capacity\" , & inner . capacity) . field (\"closed\" , & inner . closed) . finish () } }",
+      "reason": "impl block has generic parameter(s) — impl_item grammar has no generic-parameter declaration slot",
+      "item_name": "Receiver < V >"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/network.rs",
+      "line": 261,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "impl < V > Receiver < V > { # [doc = \" Non-blocking receive. Returns `TryRecv::Received(v)` if a message is buffered,\"] # [doc = \" `TryRecv::Empty` if the buffer is empty and the channel is still open, or\"] # [doc = \" `TryRecv::Closed` if the channel is closed and the buffer is drained.\"] # [doc = \"\"] # [doc = \" This is the **normal drain path** — values are delivered to the receiver, no\"] # [doc = \" reclamation is needed. For the teardown path (values in transit that will never be\"] # [doc = \" delivered), use [`Receiver::close_with_reclaim`].\"] # [doc = \"\"] # [doc = \" Guarantee: **Exact** (FIFO pop from `VecDeque`; deterministic given the buffer state).\"] pub fn try_recv (& self) -> TryRecv < V > { let mut inner = self . inner . lock () . unwrap () ; if let Some (v) = inner . buf . pop_front () { return TryRecv :: Received (v) ; } if inner . closed { TryRecv :: Closed } else { TryRecv :: Empty } } # [doc = \" The canonical channel identity shared by this `Receiver` and its paired `Sender`.\"] # [doc = \"\"] # [doc = \" Guarantee: **Exact** — allocated once at channel construction; the same id is returned\"] # [doc = \" by both the `Sender` and `Receiver` ends.\"] # [must_use] pub fn channel_id (& self) -> ChannelNodeId { self . inner . lock () . unwrap () . channel_id } # [doc = \" Teardown path: drain all buffered values, emit one `ReclamationRecord(ChannelClose)`\"] # [doc = \" per value through `sink`, then mark the channel closed.\"] # [doc = \"\"] # [doc = \" This is the **third live reclamation trigger** (RFC-0027 §9 / §7.3 / G2): when a\"] # [doc = \" receiver disconnects while values are still in transit (sent but never to be received),\"] # [doc = \" those values' ownership is released and MUST be reclaimed — one record per value, never\"] # [doc = \" silently dropped (G2 / never-silent principle).\"] # [doc = \"\"] # [doc = \" ## Distinction from normal drain\"] # [doc = \"\"] # [doc = \" - **Normal drain (`try_recv`):** values are delivered to the receiver (no loss, no\"] # [doc = \"   reclamation needed). The receiver is the intended consumer; ownership transfers normally.\"] # [doc = \" - **`close_with_reclaim` (this method):** the receiver is tearing down and will NEVER\"] # [doc = \"   deliver the buffered values. The values are undeliverable in-transit; this method\"] # [doc = \"   releases their ownership and emits a `ChannelClose` reclamation record for each.\"] # [doc = \"\"] # [doc = \" The `hash_of` closure supplies the `value_meta_hash` for each value (RFC-0027 §9 field)\"] # [doc = \" because `V` is an arbitrary type with no inherent [`ContentHash`] (KISS — never\"] # [doc = \" over-constrain `V`). The closure is called on each value before reclamation, in FIFO order.\"] # [doc = \"\"] # [doc = \" ## Returns\"] # [doc = \"\"] # [doc = \" The number of values reclaimed (= the number of `ReclamationRecord`s emitted).\"] # [doc = \"\"] # [doc = \" ## Guarantee\"] # [doc = \"\"] # [doc = \" `Exact` — one `ReclamationRecord(ChannelClose)` is emitted per buffered value,\"] # [doc = \" enforced-by-construction: the buffer is drained with `drain(..)` (exhaustive iteration),\"] # [doc = \" and `sink.emit` is called exactly once per element. The channel is marked closed after\"] # [doc = \" the drain. No value in the buffer at call time can escape without emitting a record.\"] pub fn close_with_reclaim (self , sink : & mut dyn ReclamationSink , scope_id : ScopeId , sweep_epoch : SweepEpoch , hash_of : impl Fn (& V) -> ContentHash ,) -> usize { let mut inner = self . inner . lock () . unwrap () ; let channel_id = inner . channel_id . as_channel_id () ; let values : Vec < V > = inner . buf . drain (..) . collect () ; let count = values . len () ; for value in values { let record = ReclamationRecord :: for_channel_close (scope_id , sweep_epoch , hash_of (& value) , channel_id ,) ; sink . emit (record) ; } inner . closed = true ; count } }",
+      "reason": "impl block has generic parameter(s) — impl_item grammar has no generic-parameter declaration slot",
+      "item_name": "Receiver < V >"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/network.rs",
+      "line": 358,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "# [doc = \" Result of a non-blocking send attempt.\"] # [derive (Debug , PartialEq , Eq)] pub enum TrySend < V > { # [doc = \" Message accepted into the channel buffer.\"] Sent , # [doc = \" Channel buffer full; value returned to caller (G2: never silently dropped).\"] Full (V) , # [doc = \" Channel closed; value returned to caller (G2: never silently dropped).\"] Closed (V) , }",
+      "reason": "dropped non-doc attribute(s) on enum `TrySend`: # [derive (Debug , PartialEq , Eq)]",
+      "item_name": "TrySend"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/network.rs",
+      "line": 369,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "# [doc = \" Result of a non-blocking receive attempt.\"] # [derive (Debug , PartialEq , Eq)] pub enum TryRecv < V > { # [doc = \" Message received.\"] Received (V) , # [doc = \" Channel buffer empty; no message available (sender still live).\"] Empty , # [doc = \" Channel closed (sender dropped or `close()` called) and buffer drained.\"] Closed , }",
+      "reason": "dropped non-doc attribute(s) on enum `TryRecv`: # [derive (Debug , PartialEq , Eq)]",
+      "item_name": "TryRecv"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/policy_mech.rs",
+      "line": 33,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use mycelium_core :: ContentHash ;",
+      "reason": "`use` import (single path ending `ContentHash`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/policy_mech.rs",
+      "line": 34,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use mycelium_select :: { select , Candidate , Explanation , PolicyRegistry , SelectError , SelectionInputs , SelectionPolicy , } ;",
+      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/policy_mech.rs",
+      "line": 38,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "# [doc = \" The RFC-0005 policy sites (§4: swap-target, packing; RFC-0008 RT3 adds placement as the\"] # [doc = \" third). A [`PolicySlot`] is keyed by site so a set/select is always attributed to the site\"] # [doc = \" it governs (provenance, RFC-0001 §4.3).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq)] pub enum PolicySite { # [doc = \" The RFC-0002 swap-target site.\"] SwapTarget , # [doc = \" The RFC-0004 §5 packing site.\"] Packing , # [doc = \" The RFC-0008 RT3 placement site (single-node in Phase I — DN-78 §3; the multi-node\"] # [doc = \" candidate set is deferred, see [`crate::r2_residual`]).\"] Placement , }",
+      "reason": "dropped non-doc attribute(s) on enum `PolicySite`: # [derive (Debug , Clone , Copy , PartialEq , Eq)]",
+      "item_name": "PolicySite"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/policy_mech.rs",
+      "line": 52,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl core :: fmt :: Display for PolicySite { fn fmt (& self , f : & mut core :: fmt :: Formatter < '_ >) -> core :: fmt :: Result { match self { PolicySite :: SwapTarget => write ! (f , \"swap-target\") , PolicySite :: Packing => write ! (f , \"packing\") , PolicySite :: Placement => write ! (f , \"placement\") , } } }",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut core :: fmt :: Formatter < '_ >`",
+      "item_name": "PolicySite"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/policy_mech.rs",
+      "line": 62,
+      "col": 1,
+      "category": "Struct",
+      "rust_construct": "Struct",
+      "snippet": "# [doc = \" A reified policy-set transition record (G2: a mechanized set is never a silent override —\"] # [doc = \" the transition itself is inspectable). Guarantee: **`Exact`** — every [`PolicySlot::set`]\"] # [doc = \" appends exactly one record, with a per-slot monotonic sequence number, by construction.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct PolicySetRecord { # [doc = \" The site whose active policy changed.\"] pub site : PolicySite , # [doc = \" Per-slot monotonic sequence number (0 for the first set).\"] pub seq : u64 , # [doc = \" The previous active policy's content address, `None` on the first set.\"] pub previous : Option < ContentHash > , # [doc = \" The new active policy's content address ([`SelectionPolicy::policy_ref`]).\"] pub new_policy : ContentHash , # [doc = \" The new policy's display name (for the EXPLAIN/teaching surface).\"] pub new_policy_name : String , }",
+      "reason": "struct `PolicySetRecord` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "item_name": "PolicySetRecord"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/policy_mech.rs",
+      "line": 79,
+      "col": 1,
+      "category": "PayloadVariant",
+      "rust_construct": "PayloadVariant",
+      "snippet": "# [doc = \" Why a slot operation failed — always explicit (G2), never a silent default choice.\"] # [derive (Debug , Clone , PartialEq)] pub enum SlotError { # [doc = \" Selection was requested but no policy has been set for this site. Guarantee: **`Exact`**\"] # [doc = \" — fail-closed by construction; there is no built-in fallback policy (a silent default\"] # [doc = \" would be a black box, ADR-006).\"] NoActivePolicy { # [doc = \" The site that has no active policy.\"] site : PolicySite , } , # [doc = \" The underlying RFC-0005 selection refused (e.g. an out-of-range override).\"] Select (SelectError) , }",
+      "reason": "enum `SlotError` variant `NoActivePolicy` uses named fields — `constructor ::= Ident ('(' type_ref (',' type_ref)* ')')?` has no named-field/record form",
+      "item_name": "SlotError"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/policy_mech.rs",
+      "line": 93,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl core :: fmt :: Display for SlotError { fn fmt (& self , f : & mut core :: fmt :: Formatter < '_ >) -> core :: fmt :: Result { match self { SlotError :: NoActivePolicy { site } => { write ! (f , \"no active policy is set for the {site} site — set one explicitly \\\n                     (PolicySlot::set); there is no silent default (G2/ADR-006)\") } SlotError :: Select (e) => write ! (f , \"selection refused: {e}\") , } } }",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut core :: fmt :: Formatter < '_ >`",
+      "item_name": "SlotError"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/policy_mech.rs",
+      "line": 108,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl std :: error :: Error for SlotError { }",
+      "reason": "impl block has no items",
+      "item_name": "SlotError"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/policy_mech.rs",
+      "line": 110,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl From < SelectError > for SlotError { fn from (e : SelectError) -> Self { SlotError :: Select (e) } }",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `from` body: qualified/associated-function call `SlotError :: Select` — no established Mycelium surface form for a Rust conversion-op body; emitting the bare last-segment name would fabricate a call (e.g. `from(...)` is not a Mycelium builtin)",
+      "item_name": "SlotError"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/policy_mech.rs",
+      "line": 116,
+      "col": 1,
+      "category": "Struct",
+      "rust_construct": "Struct",
+      "snippet": "# [doc = \" A runtime slot binding the **active** [`SelectionPolicy`] for one RFC-0005 site, with an\"] # [doc = \" append-only transition log and a selection trace (DN-78 §3 B-2).\"] # [doc = \"\"] # [doc = \" The slot is the mechanized *setter surface*: `set` swaps the active policy and records the\"] # [doc = \" transition; `select` decides through the active policy and records the mandatory\"] # [doc = \" [`Explanation`]. Both logs are read-only views (`transitions`/`trace`) — append-only by\"] # [doc = \" construction (no public mutation besides the appending operations).\"] # [derive (Debug)] pub struct PolicySlot { site : PolicySite , active : Option < SelectionPolicy > , transitions : Vec < PolicySetRecord > , trace : Vec < Explanation > , }",
+      "reason": "struct `PolicySlot` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "item_name": "PolicySlot"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/policy_mech.rs",
+      "line": 131,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl PolicySlot { # [doc = \" An empty slot for `site` — no active policy, no transitions, no trace.\"] # [must_use] pub fn new (site : PolicySite) -> Self { PolicySlot { site , active : None , transitions : Vec :: new () , trace : Vec :: new () , } } # [doc = \" The site this slot governs.\"] # [must_use] pub fn site (& self) -> PolicySite { self . site } # [doc = \" Set the active policy, appending a [`PolicySetRecord`] (returned by reference).\"] # [doc = \"\"] # [doc = \" Guarantee: **`Exact`** — exactly one record is appended per call, `seq` is the per-slot\"] # [doc = \" monotonic count, and `previous` is the outgoing policy's content address (`None` on the\"] # [doc = \" first set). The transition is never silent (G2).\"] pub fn set (& mut self , policy : SelectionPolicy) -> & PolicySetRecord { let record = PolicySetRecord { site : self . site , seq : self . transitions . len () as u64 , previous : self . active . as_ref () . map (SelectionPolicy :: policy_ref) , new_policy : policy . policy_ref () , new_policy_name : policy . name () . to_owned () , } ; self . active = Some (policy) ; self . transitions . push (record) ; self . transitions . last () . expect (\"push in the line above guarantees a last element\") } # [doc = \" The active policy, if one has been set. `None` is not a fallback state — selection\"] # [doc = \" through an unset slot refuses explicitly ([`SlotError::NoActivePolicy`]).\"] # [must_use] pub fn active (& self) -> Option < & SelectionPolicy > { self . active . as_ref () } # [doc = \" The append-only transition log (every `set`, in order).\"] # [must_use] pub fn transitions (& self) -> & [PolicySetRecord] { & self . transitions } # [doc = \" The selection trace: the mandatory [`Explanation`] of every selection made through this\"] # [doc = \" slot, in order — extractable for capture/diffing (DN-78 §3 B-2).\"] # [must_use] pub fn trace (& self) -> & [Explanation] { & self . trace } # [doc = \" Decide through the active policy (RFC-0005 `select`), recording the mandatory\"] # [doc = \" [`Explanation`] into the slot's trace.\"] # [doc = \"\"] # [doc = \" Errors are explicit: an unset slot is [`SlotError::NoActivePolicy`] (never a silent\"] # [doc = \" default — G2/ADR-006); an underlying selection refusal passes through as\"] # [doc = \" [`SlotError::Select`].\"] pub fn select (& mut self , inputs : & SelectionInputs , forced : Option < usize > ,) -> Result < (Candidate , Explanation) , SlotError > { let site = self . site ; let policy = self . active . as_ref () . ok_or (SlotError :: NoActivePolicy { site }) ? ; let (candidate , explanation) = select (policy , inputs , forced) ? ; self . trace . push (explanation . clone ()) ; Ok ((candidate , explanation)) } }",
+      "reason": "no member of this impl block could be transpiled (7 sub-issue(s)): impl method `new` body: unsupported expression form `PolicySlot { site , active : None , transitions : Vec :: new () , trace : Vec :: new () , }`; impl method `site` body: unsupported expression form `self . site`; impl method `set` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence; impl method `active` signature: generic type path `Option < & SelectionPolicy >` — type-argument mapping not confirmed; impl method `transitions` signature: unsupported Rust type form `& [PolicySetRecord]`; impl method `trace` signature: unsupported Rust type form `& [Explanation]`; impl method `select` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence",
+      "item_name": "PolicySlot"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/policy_mech.rs",
+      "line": 211,
+      "col": 1,
+      "category": "Struct",
+      "rust_construct": "Struct",
+      "snippet": "# [doc = \" A captured policy: the RFC-0005-conformant [`SelectionPolicy`] value that decided a recorded\"] # [doc = \" [`Explanation`], materialized for reuse/diffing (DN-78 §3 B-1). Not an opaque handle — the\"] # [doc = \" full policy value is inspectable (ADR-006).\"] # [derive (Debug , Clone , PartialEq)] pub struct CapturedPolicy { # [doc = \" The policy's content address (equal to `policy.policy_ref()` — verified at capture).\"] pub policy_ref : ContentHash , # [doc = \" The policy value itself.\"] pub policy : SelectionPolicy , }",
+      "reason": "struct `CapturedPolicy` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "item_name": "CapturedPolicy"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/policy_mech.rs",
+      "line": 222,
+      "col": 1,
+      "category": "PayloadVariant",
+      "rust_construct": "PayloadVariant",
+      "snippet": "# [doc = \" Why a capture failed — always explicit (G2), never a silent reconstruction.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum CaptureError { # [doc = \" The recorded `policy_ref` resolves to nothing in the given registry. Guarantee:\"] # [doc = \" **`Exact`** — fail-closed by construction; capture never fabricates a policy.\"] UnknownPolicyRef { # [doc = \" The unresolvable content address.\"] policy_ref : ContentHash , } , # [doc = \" The registry returned a policy whose own content address differs from the requested one\"] # [doc = \" (a corrupted registry). Never silently accepted.\"] RefMismatch { # [doc = \" The content address the capture asked for.\"] requested : ContentHash , # [doc = \" The content address the resolved policy actually hashes to.\"] resolved : ContentHash , } , }",
+      "reason": "enum `CaptureError` variant `UnknownPolicyRef` uses named fields — `constructor ::= Ident ('(' type_ref (',' type_ref)* ')')?` has no named-field/record form",
+      "item_name": "CaptureError"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/policy_mech.rs",
+      "line": 241,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl core :: fmt :: Display for CaptureError { fn fmt (& self , f : & mut core :: fmt :: Formatter < '_ >) -> core :: fmt :: Result { match self { CaptureError :: UnknownPolicyRef { policy_ref } => { write ! (f , \"policy_ref {policy_ref:?} is not in the registry — capture refuses rather \\\n                     than reconstructing a policy (G2/ADR-006)\") } CaptureError :: RefMismatch { requested , resolved , } => { write ! (f , \"registry corruption: requested {requested:?} but the stored policy hashes \\\n                     to {resolved:?}\") } } } }",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut core :: fmt :: Formatter < '_ >`",
+      "item_name": "CaptureError"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/policy_mech.rs",
+      "line": 265,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl std :: error :: Error for CaptureError { }",
+      "reason": "impl block has no items",
+      "item_name": "CaptureError"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/policy_mech.rs",
+      "line": 267,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Materialize the policy that decided `explanation` from `registry` (DN-78 §3 B-1).\"] # [doc = \"\"] # [doc = \" Guarantee: **`Exact`** for the resolution contract — an unknown ref is an explicit\"] # [doc = \" [`CaptureError::UnknownPolicyRef`] and a hash mismatch an explicit\"] # [doc = \" [`CaptureError::RefMismatch`]; a returned [`CapturedPolicy`] always satisfies\"] # [doc = \" `policy.policy_ref() == policy_ref` (checked here, not assumed).\"] pub fn capture (registry : & PolicyRegistry , explanation : & Explanation ,) -> Result < CapturedPolicy , CaptureError > { let requested = explanation . policy . clone () ; let policy = registry . get (& requested) . ok_or_else (| | CaptureError :: UnknownPolicyRef { policy_ref : requested . clone () , }) ? ; let resolved = policy . policy_ref () ; if resolved != requested { return Err (CaptureError :: RefMismatch { requested , resolved , }) ; } Ok (CapturedPolicy { policy_ref : requested , policy : policy . clone () , }) }",
+      "reason": "unsupported Rust type form `& PolicyRegistry`",
+      "item_name": "capture"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/policy_mech.rs",
+      "line": 296,
+      "col": 1,
+      "category": "PayloadVariant",
+      "rust_construct": "PayloadVariant",
+      "snippet": "# [doc = \" Why a replay failed — always explicit (G2), never a silent pass.\"] # [derive (Debug , Clone , PartialEq)] pub enum ReplayError { # [doc = \" The captured policy is not the one the record claims decided it (`policy_ref`\"] # [doc = \" mismatch) — replaying against the wrong policy would be a silent apples-to-oranges\"] # [doc = \" comparison, so it refuses up front.\"] PolicyMismatch { # [doc = \" The record's policy content address.\"] recorded : ContentHash , # [doc = \" The captured policy's content address.\"] captured : ContentHash , } , # [doc = \" Re-running the recorded inputs refused (e.g. a recorded override index that no longer\"] # [doc = \" fits the policy — impossible for a faithful capture, but never silently swallowed).\"] Select (SelectError) , # [doc = \" The replayed decision differs from the recorded one. With a validated policy and\"] # [doc = \" identical inputs this indicates non-determinism or a record from different code —\"] # [doc = \" either way it is surfaced, never absorbed.\"] Diverged { # [doc = \" The original record.\"] recorded : Box < Explanation > , # [doc = \" The replayed record that differs from it.\"] replayed : Box < Explanation > , } , }",
+      "reason": "enum `ReplayError` variant `PolicyMismatch` uses named fields — `constructor ::= Ident ('(' type_ref (',' type_ref)* ')')?` has no named-field/record form",
+      "item_name": "ReplayError"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/policy_mech.rs",
+      "line": 322,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl core :: fmt :: Display for ReplayError { fn fmt (& self , f : & mut core :: fmt :: Formatter < '_ >) -> core :: fmt :: Result { match self { ReplayError :: PolicyMismatch { recorded , captured } => write ! (f , \"replay refused: the record was decided by {recorded:?} but the captured \\\n                 policy is {captured:?}\") , ReplayError :: Select (e) => write ! (f , \"replay selection refused: {e}\") , ReplayError :: Diverged { recorded , replayed } => write ! (f , \"replay diverged: recorded chose index {} (rule {:?}), replay chose index {} \\\n                 (rule {:?})\" , recorded . chosen_index , recorded . matched_rule , replayed . chosen_index , replayed . matched_rule) , } } }",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut core :: fmt :: Formatter < '_ >`",
+      "item_name": "ReplayError"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/policy_mech.rs",
+      "line": 344,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl std :: error :: Error for ReplayError { }",
+      "reason": "impl block has no items",
+      "item_name": "ReplayError"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/policy_mech.rs",
+      "line": 346,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl From < SelectError > for ReplayError { fn from (e : SelectError) -> Self { ReplayError :: Select (e) } }",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `from` body: qualified/associated-function call `ReplayError :: Select` — no established Mycelium surface form for a Rust conversion-op body; emitting the bare last-segment name would fabricate a call (e.g. `from(...)` is not a Mycelium builtin)",
+      "item_name": "ReplayError"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/policy_mech.rs",
+      "line": 352,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Replay a recorded decision against its captured policy (DN-78 §3 B-1): re-run the recorded\"] # [doc = \" inputs — honoring the recorded override state — and require the identical [`Explanation`].\"] # [doc = \"\"] # [doc = \" Guarantee: **`Empirical`** for \\\"replay reaches the recorded decision\\\" — the record-vs-replay\"] # [doc = \" differential is property-tested over randomized policies/inputs; RFC-0005 `select` is\"] # [doc = \" deterministic (same `(policy, inputs, forced)` → same result) but that determinism carries\"] # [doc = \" no mechanized theorem, so the claim is not `Proven` (VR-5; M-964 audit). A divergence is an\"] # [doc = \" explicit [`ReplayError::Diverged`] carrying both records for inspection (G2).\"] pub fn replay (captured : & CapturedPolicy , recorded : & Explanation ,) -> Result < Explanation , ReplayError > { if captured . policy_ref != recorded . policy { return Err (ReplayError :: PolicyMismatch { recorded : recorded . policy . clone () , captured : captured . policy_ref . clone () , }) ; } let forced = recorded . overridden . then_some (recorded . chosen_index) ; let (_ , replayed) = select (& captured . policy , & recorded . inputs , forced) ? ; if replayed != * recorded { return Err (ReplayError :: Diverged { recorded : Box :: new (recorded . clone ()) , replayed : Box :: new (replayed) , }) ; } Ok (replayed) }",
+      "reason": "unsupported Rust type form `& CapturedPolicy`",
+      "item_name": "replay"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/r2_residual.rs",
+      "line": 26,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "# [doc = \" A deferred M-828-tail item (DN-78 §4). Each variant carries exactly one [`ResidualRow`] in\"] # [doc = \" [`RESIDUALS`] (completeness is tested, not assumed).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq)] pub enum DeferredR2 { # [doc = \" R-1 — the gossip/pub-sub overlay (`mesh`).\"] MeshOverlay , # [doc = \" R-2 — the external-capability contract (`graft`).\"] GraftCapability , # [doc = \" R-3 — explicit cross-node value movement (`xloc`).\"] XlocMovement , # [doc = \" R-4 — the content-addressed checkpoint (`cyst`).\"] CystCheckpoint , # [doc = \" R-5ʹ — the L1 surface syntax for the capture/set surface built in\"] # [doc = \" [`crate::policy_mech`] (the runtime-side machinery is active; the language surface is\"] # [doc = \" not).\"] CaptureSetL1Surface , # [doc = \" R-6 — `forage`/`backbone` maturity: multi-node candidate sets, the full node-signal\"] # [doc = \" inventory (DN-63 FLAG-13), real transport paths and the promotion mechanism\"] # [doc = \" (DN-63 FLAG-16).\"] MultiNodePlacement , }",
+      "reason": "dropped non-doc attribute(s) on enum `DeferredR2`: # [derive (Debug , Clone , Copy , PartialEq , Eq)]",
+      "item_name": "DeferredR2"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/r2_residual.rs",
+      "line": 48,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl DeferredR2 { # [doc = \" Every deferred item, for exhaustive iteration in tests and tooling.\"] pub const ALL : [DeferredR2 ; 6] = [DeferredR2 :: MeshOverlay , DeferredR2 :: GraftCapability , DeferredR2 :: XlocMovement , DeferredR2 :: CystCheckpoint , DeferredR2 :: CaptureSetL1Surface , DeferredR2 :: MultiNodePlacement ,] ; }",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl associated const `ALL`",
+      "item_name": "DeferredR2"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/r2_residual.rs",
+      "line": 60,
+      "col": 1,
+      "category": "Struct",
+      "rust_construct": "Struct",
+      "snippet": "# [doc = \" One ledger row: what is deferred, why, and where it is tracked (DN-78 §4; G2 — the residual\"] # [doc = \" is explicit data, not a silent gap).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq)] pub struct ResidualRow { # [doc = \" The deferred item.\"] pub item : DeferredR2 , # [doc = \" The reserved construct(s) or surface the row refuses (names the RFC-0008 §4.5\"] # [doc = \" vocabulary — see the module-level naming note).\"] pub construct : & 'static str , # [doc = \" The unmet prerequisite that makes building it now a guess (G2/VR-5).\"] pub why_deferred : & 'static str , # [doc = \" The tracking task id(s) — the residual is tracked, never dropped.\"] pub tracker : & 'static str , # [doc = \" The decision basis (DN-78 §4 row; DN-63 §).\"] pub basis : & 'static str , }",
+      "reason": "struct `ResidualRow` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "item_name": "ResidualRow"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/r2_residual.rs",
+      "line": 77,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" The residual ledger — one row per [`DeferredR2`] variant, in [`DeferredR2::ALL`] order\"] # [doc = \" (completeness and order are tested).\"] pub static RESIDUALS : & [ResidualRow] = & [ResidualRow { item : DeferredR2 :: MeshOverlay , construct : \"mesh\" , why_deferred : \"needs the DN-61 B.1 (clock) + B.2 (Byzantine) research passes, the v0 \\\n                       gossip-protocol choice (DN-63 FLAG-4), and a committed ProbabilityBound\" , tracker : \"M-913 (research) + M-828 (remainder)\" , basis : \"DN-78 §4 R-1; DN-63 §3.2/§4/§5\" , } , ResidualRow { item : DeferredR2 :: GraftCapability , construct : \"graft\" , why_deferred : \"needs the RFC-0028 §7 capability follow-on (DN-63 FLAG-10/11/12 open)\" , tracker : \"M-828\" , basis : \"DN-78 §4 R-2; DN-63 §3.4\" , } , ResidualRow { item : DeferredR2 :: XlocMovement , construct : \"xloc\" , why_deferred : \"needs mesh (carrier) and graft (capability check) at least Accepted, \\\n                       plus the wire-format swap story (DN-63 FLAG-1/2/3)\" , tracker : \"M-828\" , basis : \"DN-78 §4 R-3; DN-63 §3.1/§4\" , } , ResidualRow { item : DeferredR2 :: CystCheckpoint , construct : \"cyst\" , why_deferred : \"needs xloc (mobility) and the RFC-0027 OQ-3 reclamation-in-dormancy \\\n                       resolution (DN-63 FLAG-7/8/9)\" , tracker : \"M-828\" , basis : \"DN-78 §4 R-4; DN-63 §3.3\" , } , ResidualRow { item : DeferredR2 :: CaptureSetL1Surface , construct : \"capture/set surface syntax (rides forage per DN-63 §3.5)\" , why_deferred : \"needs the serial l1 lane and an implementation-RFC vehicle (RFC-0008 \\\n                       §4.5 status rule); the runtime-side machinery IS active (policy_mech)\" , tracker : \"M-828\" , basis : \"DN-78 §4 R-5ʹ / §3; DN-70 R-5\" , } , ResidualRow { item : DeferredR2 :: MultiNodePlacement , construct : \"forage/backbone maturity (multi-node)\" , why_deferred : \"the multi-node candidate set comes from the mesh overlay (deferred R-1); \\\n                       the promotion mechanism belongs to the backbone implementation RFC \\\n                       (M-825 resolution; DN-63 FLAG-13/FLAG-16 open)\" , tracker : \"M-828\" , basis : \"DN-78 §4 R-6; DN-63 §3.5/§3.6\" , } ,] ;",
+      "reason": "top-level `static RESIDUALS` — no static item production in the grammar",
+      "item_name": "RESIDUALS"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/r2_residual.rs",
+      "line": 130,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" The ledger row for `item`. Total by construction (a match over the variant), and the\"] # [doc = \" row's `item` field round-trips (tested).\"] # [must_use] pub fn residual_for (item : DeferredR2) -> & 'static ResidualRow { let idx = match item { DeferredR2 :: MeshOverlay => 0 , DeferredR2 :: GraftCapability => 1 , DeferredR2 :: XlocMovement => 2 , DeferredR2 :: CystCheckpoint => 3 , DeferredR2 :: CaptureSetL1Surface => 4 , DeferredR2 :: MultiNodePlacement => 5 , } ; & RESIDUALS [idx] }",
+      "reason": "unsupported Rust type form `& 'static ResidualRow`",
+      "item_name": "residual_for"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/r2_residual.rs",
+      "line": 145,
+      "col": 1,
+      "category": "Struct",
+      "rust_construct": "Struct",
+      "snippet": "# [doc = \" The explicit refusal a deferred item's [`require`] returns (G2: typed, inspectable, and\"] # [doc = \" teaching — it names the construct, the unmet prerequisite, and the tracker).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq)] pub struct R2DeferredError { # [doc = \" The item that was required.\"] pub item : DeferredR2 , # [doc = \" Its ledger row (why + tracker + basis).\"] pub row : & 'static ResidualRow , }",
+      "reason": "struct `R2DeferredError` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "item_name": "R2DeferredError"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/r2_residual.rs",
+      "line": 155,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl core :: fmt :: Display for R2DeferredError { fn fmt (& self , f : & mut core :: fmt :: Formatter < '_ >) -> core :: fmt :: Result { write ! (f , \"'{}' is not built in Phase I: {} — tracked as {} ({})\" , self . row . construct , self . row . why_deferred , self . row . tracker , self . row . basis) } }",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut core :: fmt :: Formatter < '_ >`",
+      "item_name": "R2DeferredError"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/r2_residual.rs",
+      "line": 165,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl std :: error :: Error for R2DeferredError { }",
+      "reason": "impl block has no items",
+      "item_name": "R2DeferredError"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/r2_residual.rs",
+      "line": 167,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "# [doc = \" The refusal entry point: a runtime path that would need a deferred construct calls this and\"] # [doc = \" gets an explicit typed error — never a silent no-op or fallback (G2).\"] # [doc = \"\"] # [doc = \" In Phase I this refuses for **every** [`DeferredR2`] item (guarantee: **`Exact`** — total by\"] # [doc = \" construction; tested over [`DeferredR2::ALL`]). The signature is the stable contract: when a\"] # [doc = \" construct activates through its own vehicle (DN-78 §4 trackers), its arm returns `Ok(())`\"] # [doc = \" and its ledger row is retired append-only.\"] pub fn require (item : DeferredR2) -> Result < () , R2DeferredError > { Err (R2DeferredError { item , row : residual_for (item) , }) }",
+      "reason": "generic type path `Result < () , R2DeferredError >` — type-argument mapping not confirmed",
+      "item_name": "require"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/rc.rs",
+      "line": 70,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use std :: rc :: Rc ;",
+      "reason": "`use` import (single path ending `Rc`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/rc.rs",
+      "line": 72,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use mycelium_core :: ContentHash ;",
+      "reason": "`use` import (single path ending `ContentHash`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/rc.rs",
+      "line": 74,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use crate :: reclamation :: { ReclamationRecord , ReclamationSink , ReclamationTrigger , ScopeId , SweepEpoch , } ;",
+      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/rc.rs",
+      "line": 80,
+      "col": 1,
+      "category": "Struct",
+      "rust_construct": "Struct",
+      "snippet": "# [doc = \" A non-atomic intra-hypha reference-counted handle to a shared immutable value.\"] # [doc = \"\"] # [doc = \" Backed by [`std::rc::Rc<T>`] for correct non-atomic reference counting within a single hypha.\"] # [doc = \"\"] # [doc = \" ## Sharing model\"] # [doc = \"\"] # [doc = \" [`clone_ref`](Self::clone_ref) produces a second handle, incrementing the refcount.\"] # [doc = \" [`drop_ref`](Self::drop_ref) decrements the count, probes the outcome, and returns\"] # [doc = \" an [`RcProbe`]. The caller **must** call `drop_ref` — `RcCell<T>` has no `Drop` impl\"] # [doc = \" that emits a `ReclamationRecord`; dropping without `drop_ref` silently leaks the audit\"] # [doc = \" record (G2 violation).\"] # [doc = \"\"] # [doc = \" ## `!Send + !Sync`\"] # [doc = \"\"] # [doc = \" Inherited from `Rc<T>`: the non-atomic refcount is safe only within one hypha.\"] # [doc = \"\"] # [doc = \" ## Immutability\"] # [doc = \"\"] # [doc = \" `T` is held immutably (LR-8 / DN-32 §2.2). There is no interior-mutation surface.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — sharing and probe logic are deterministic by construction.\"] # [derive (Debug)] pub struct RcCell < T > { inner : Rc < T > , }",
+      "reason": "struct `RcCell` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "item_name": "RcCell"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/rc.rs",
+      "line": 106,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "impl < T > RcCell < T > { # [doc = \" Allocate a new `RcCell<T>` containing `value` with an initial strong refcount of 1.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — `Rc::new` allocates exactly once.\"] # [must_use] pub fn new (value : T) -> Self { RcCell { inner : Rc :: new (value) , } } # [doc = \" Return the current strong refcount (snapshot, non-atomic).\"] # [doc = \"\"] # [doc = \" Use [`drop_ref`](Self::drop_ref) for the reclamation probe — the probe is atomic with\"] # [doc = \" the decrement. This accessor is for introspection and testing.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — reads `Rc::strong_count` at call time (intra-hypha only).\"] # [must_use] pub fn refcount (& self) -> usize { Rc :: strong_count (& self . inner) } # [doc = \" Get a reference to the shared value.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — shared reference valid for the lifetime of `&self`.\"] # [must_use] pub fn value (& self) -> & T { & self . inner } # [doc = \" Clone a handle — increment the refcount and return a new `RcCell<T>` pointing to the\"] # [doc = \" same allocation.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — `Rc::clone` increments the strong count by exactly 1.\"] # [must_use] pub fn clone_ref (& self) -> RcCell < T > { RcCell { inner : Rc :: clone (& self . inner) , } } # [doc = \" Decrement the refcount and return the [`RcProbe`] outcome, consuming this handle.\"] # [doc = \"\"] # [doc = \" ## Probe logic (evaluated on strong count BEFORE decrement)\"] # [doc = \"\"] # [doc = \" - **`strong_count == 1`** → `RcProbe::UniqueOwner(T)`: this IS the last handle.\"] # [doc = \"   Exactly one [`ReclamationRecord`] with `trigger = RcZero` is emitted via `sink`\"] # [doc = \"   (never-silent G2 / RFC-0027 §9). The owned `T` is extracted and returned.\"] # [doc = \"   `Rc::try_unwrap` is used to extract `T` from the last `Rc` without copying.\"] # [doc = \"\"] # [doc = \" - **`strong_count > 1`** → `RcProbe::Shared`: other handles remain. The `Rc` is dropped\"] # [doc = \"   (decrementing the count). No record is emitted.\"] # [doc = \"\"] # [doc = \" ## Reclamation context\"] # [doc = \"\"] # [doc = \" `scope_id`, `sweep_epoch`, and `value_meta_hash` anchor the `ReclamationRecord` in the\"] # [doc = \" RT7 scope tree and the RFC-0008 §4.3 sweep model. These are caller-supplied (KC-3 — no\"] # [doc = \" global state here); the caller is responsible for correct values.\"] # [doc = \"\"] # [doc = \" ## Never-silent contract (`Exact` within this module)\"] # [doc = \"\"] # [doc = \" When `strong_count == 1`, `sink.emit` is called exactly once. No code path through\"] # [doc = \" `UniqueOwner` can avoid this call — enforced-by-construction.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — one record emitted on last-ref; none otherwise.\"] pub fn drop_ref (self , sink : & mut dyn ReclamationSink , scope_id : ScopeId , sweep_epoch : SweepEpoch , value_meta_hash : ContentHash ,) -> RcProbe < T > { let count = Rc :: strong_count (& self . inner) ; if count == 1 { let record = ReclamationRecord :: new (scope_id , sweep_epoch , ReclamationTrigger :: RcZero , value_meta_hash ,) ; sink . emit (record) ; match Rc :: try_unwrap (self . inner) { Ok (value) => RcProbe :: UniqueOwner (value) , Err (_rc) => { panic ! (\"RcCell::drop_ref: Rc::try_unwrap failed despite strong_count==1 \\\n                         (intra-hypha invariant violated — G2)\") ; } } } else { drop (self . inner) ; RcProbe :: Shared } } }",
+      "reason": "impl block has generic parameter(s) — impl_item grammar has no generic-parameter declaration slot",
+      "item_name": "RcCell < T >"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/rc.rs",
+      "line": 215,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "# [doc = \" The outcome of an [`RcCell::drop_ref`] call — the rc-probe decision (RFC-0027 §10.1).\"] # [doc = \"\"] # [doc = \" ## Variant semantics\"] # [doc = \"\"] # [doc = \" | Variant | Condition (strong_count before decrement) | Record emitted? |\"] # [doc = \" |---|---|---|\"] # [doc = \" | `UniqueOwner(T)` | `strong_count == 1` | Yes — `ReclamationRecord(trigger = RcZero)` |\"] # [doc = \" | `Shared` | `strong_count > 1` | No |\"] # [doc = \"\"] # [doc = \" ## `UniqueOwner` is the `rc → 0` case\"] # [doc = \"\"] # [doc = \" RFC-0027 §10.1 lists `rc→0` / `rc==1` / `rc>1`. In a drop context, `rc→0` happens exactly\"] # [doc = \" when `rc` was 1 before the drop — so `UniqueOwner` IS the `rc→0` / `RcZero` event.\"] # [doc = \" The `ReclamationRecord(trigger = RcZero)` is emitted inside `drop_ref`; `UniqueOwner(T)`\"] # [doc = \" signals to the caller that reclamation occurred and the owned value is available for reuse.\"] # [doc = \"\"] # [doc = \" ## FBIP reuse\"] # [doc = \"\"] # [doc = \" When `UniqueOwner(T)` is returned, the caller may reuse the `T` value's allocation for the\"] # [doc = \" next value of compatible shape (FBIP / Perceus `rc==1` reuse — RFC-0027 §10.2). This is a\"] # [doc = \" `Declared` optimization: no Mycelium perf measurement yet (DN-32 §6a).\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — variant is a deterministic function of the refcount before decrement.\"] # [derive (Debug)] pub enum RcProbe < T > { # [doc = \" This handle was the **sole owner** (`rc == 1` before decrement / `rc → 0`).\"] # [doc = \"\"] # [doc = \" A `ReclamationRecord(trigger = RcZero)` has been emitted to the sink exactly once.\"] # [doc = \" The owned value `T` is returned; the caller may inspect it, recurse-reclaim its\"] # [doc = \" sub-values, or reuse its allocation (FBIP).\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — exactly one `ReclamationRecord(RcZero)` was emitted.\"] UniqueOwner (T) , # [doc = \" The refcount was > 1 before decrement; other handles remain.\"] # [doc = \"\"] # [doc = \" The `Rc` was dropped (count decremented). No record was emitted.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — strong_count >= 1 after decrement.\"] Shared , }",
+      "reason": "dropped non-doc attribute(s) on enum `RcProbe`: # [derive (Debug)]",
+      "item_name": "RcProbe"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/reclamation.rs",
+      "line": 19,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use mycelium_rt_abi :: reclamation :: { ChannelId , CollectingSink , ExplainRecord , ReclamationRecord , ReclamationSink , ReclamationTrigger , ScopeId , SweepEpoch , } ;",
+      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/region.rs",
+      "line": 67,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use std :: sync :: atomic :: { AtomicU64 , Ordering } ;",
+      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/region.rs",
+      "line": 69,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use mycelium_core :: ContentHash ;",
+      "reason": "`use` import (single path ending `ContentHash`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/region.rs",
+      "line": 71,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use crate :: reclamation :: { ReclamationRecord , ReclamationSink , ReclamationTrigger , ScopeId , SweepEpoch , } ;",
+      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/region.rs",
+      "line": 91,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "static GLOBAL_SCOPE_ID : AtomicU64 = AtomicU64 :: new (1) ;",
+      "reason": "top-level `static GLOBAL_SCOPE_ID` — no static item production in the grammar",
+      "item_name": "GLOBAL_SCOPE_ID"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/region.rs",
+      "line": 92,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "static GLOBAL_EPOCH : AtomicU64 = AtomicU64 :: new (1) ;",
+      "reason": "top-level `static GLOBAL_EPOCH` — no static item production in the grammar",
+      "item_name": "GLOBAL_EPOCH"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/region.rs",
+      "line": 96,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "# [doc = \" The canonical scope-tree identity type for the region tier (MEM-3).\"] # [doc = \"\"] # [doc = \" Allocated per [`Region::new`] via a monotonic global counter. Unique within a process\"] # [doc = \" lifetime. This is the resolved form of the `u64` placeholder that MEM-1 left in\"] # [doc = \" [`ScopeId`] with a FLAG to canonicalize here. Use [`ScopeNodeId::as_scope_id`] to convert\"] # [doc = \" to [`ScopeId`] for use in [`ReclamationRecord`] fields (the stable RFC-0027 §9 type).\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — monotonic, unique per allocation (atomic counter, strictly increasing).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq , Hash , PartialOrd , Ord)] pub struct ScopeNodeId (pub (crate) u64) ;",
+      "reason": "dropped non-doc attribute(s) on struct `ScopeNodeId`: # [derive (Debug , Clone , Copy , PartialEq , Eq , Hash , PartialOrd , Ord)]",
+      "item_name": "ScopeNodeId"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/region.rs",
+      "line": 107,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "impl ScopeNodeId { # [doc = \" Allocate a fresh, unique `ScopeNodeId`.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — strictly greater than all previously allocated ids.\"] fn allocate () -> Self { ScopeNodeId (GLOBAL_SCOPE_ID . fetch_add (1 , Ordering :: Relaxed)) } # [doc = \" Convert to a [`ScopeId`] for use in [`ReclamationRecord`] fields (RFC-0027 §9).\"] # [doc = \"\"] # [doc = \" This is the canonical bridge between the region-tier allocation identity and the\"] # [doc = \" MEM-1 record field type. The underlying `u64` is preserved losslessly.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — lossless conversion.\"] # [must_use] pub fn as_scope_id (self) -> ScopeId { ScopeId (self . 0) } # [doc = \" Return the underlying `u64` value.\"] # [must_use] pub fn as_u64 (self) -> u64 { self . 0 } }",
+      "reason": "impl method `as_scope_id` body: unsupported expression form `self . 0`",
+      "item_name": "impl ScopeNodeId"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/region.rs",
+      "line": 107,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "impl ScopeNodeId { # [doc = \" Allocate a fresh, unique `ScopeNodeId`.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — strictly greater than all previously allocated ids.\"] fn allocate () -> Self { ScopeNodeId (GLOBAL_SCOPE_ID . fetch_add (1 , Ordering :: Relaxed)) } # [doc = \" Convert to a [`ScopeId`] for use in [`ReclamationRecord`] fields (RFC-0027 §9).\"] # [doc = \"\"] # [doc = \" This is the canonical bridge between the region-tier allocation identity and the\"] # [doc = \" MEM-1 record field type. The underlying `u64` is preserved losslessly.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — lossless conversion.\"] # [must_use] pub fn as_scope_id (self) -> ScopeId { ScopeId (self . 0) } # [doc = \" Return the underlying `u64` value.\"] # [must_use] pub fn as_u64 (self) -> u64 { self . 0 } }",
+      "reason": "impl method `as_u64` body: unsupported expression form `self . 0`",
+      "item_name": "impl ScopeNodeId"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/region.rs",
+      "line": 135,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "# [doc = \" A monotonic epoch counter — one allocated per [`Region::close`] call.\"] # [doc = \"\"] # [doc = \" Ties a reclamation batch to the scheduling model's deterministic audit anchor\"] # [doc = \" (RFC-0008 §4.3). Children close before their parent and therefore receive numerically\"] # [doc = \" lower epoch values, encoding the child→root total order as a number line.\"] # [doc = \"\"] # [doc = \" This is the resolved form of the `u64` placeholder that MEM-1 left in [`SweepEpoch`]\"] # [doc = \" with a FLAG to canonicalize here. Use [`RegionEpoch::as_sweep_epoch`] to convert to\"] # [doc = \" [`SweepEpoch`] for use in [`ReclamationRecord`] fields (the stable RFC-0027 §9 type).\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — monotonic, unique per `close` call (atomic counter).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq , Hash , PartialOrd , Ord)] pub struct RegionEpoch (pub (crate) u64) ;",
+      "reason": "dropped non-doc attribute(s) on struct `RegionEpoch`: # [derive (Debug , Clone , Copy , PartialEq , Eq , Hash , PartialOrd , Ord)]",
+      "item_name": "RegionEpoch"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/region.rs",
+      "line": 149,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "impl RegionEpoch { # [doc = \" Allocate a fresh, monotonically-increasing `RegionEpoch`.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — strictly greater than all previously allocated epochs.\"] fn allocate () -> Self { RegionEpoch (GLOBAL_EPOCH . fetch_add (1 , Ordering :: Relaxed)) } # [doc = \" Convert to a [`SweepEpoch`] for use in [`ReclamationRecord`] fields (RFC-0027 §9).\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — lossless conversion.\"] # [must_use] pub fn as_sweep_epoch (self) -> SweepEpoch { SweepEpoch (self . 0) } # [doc = \" Return the underlying `u64` value.\"] # [must_use] pub fn as_u64 (self) -> u64 { self . 0 } }",
+      "reason": "impl method `as_sweep_epoch` body: unsupported expression form `self . 0`",
+      "item_name": "impl RegionEpoch"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/region.rs",
+      "line": 149,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "impl RegionEpoch { # [doc = \" Allocate a fresh, monotonically-increasing `RegionEpoch`.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — strictly greater than all previously allocated epochs.\"] fn allocate () -> Self { RegionEpoch (GLOBAL_EPOCH . fetch_add (1 , Ordering :: Relaxed)) } # [doc = \" Convert to a [`SweepEpoch`] for use in [`ReclamationRecord`] fields (RFC-0027 §9).\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — lossless conversion.\"] # [must_use] pub fn as_sweep_epoch (self) -> SweepEpoch { SweepEpoch (self . 0) } # [doc = \" Return the underlying `u64` value.\"] # [must_use] pub fn as_u64 (self) -> u64 { self . 0 } }",
+      "reason": "impl method `as_u64` body: unsupported expression form `self . 0`",
+      "item_name": "impl RegionEpoch"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/region.rs",
+      "line": 174,
+      "col": 1,
+      "category": "Struct",
+      "rust_construct": "Struct",
+      "snippet": "# [doc = \" One value deferred for scope-exit reclamation within a [`Region`].\"] # [doc = \"\"] # [doc = \" Holds the content identity of the value to be reclaimed. The `ScopeExit` trigger and\"] # [doc = \" the `scope_id`/`sweep_epoch` are supplied at close time (from the region itself), not\"] # [doc = \" at deferral time — deferral is cheap (a single `ContentHash` push, no bookkeeping).\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — the hash is stored as-is; no approximation.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct DeferredEntry { # [doc = \" Content identity of the value deferred for reclamation (RFC-0027 §9 / RFC-0001 §4.6).\"] pub value_meta_hash : ContentHash , }",
+      "reason": "struct `DeferredEntry` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "item_name": "DeferredEntry"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/region.rs",
+      "line": 187,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl DeferredEntry { # [doc = \" Create a new deferred entry for `value_meta_hash`.\"] # [must_use] pub fn new (value_meta_hash : ContentHash) -> Self { DeferredEntry { value_meta_hash } } }",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `new` body: unsupported expression form `DeferredEntry { value_meta_hash }`",
+      "item_name": "DeferredEntry"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/region.rs",
+      "line": 197,
+      "col": 1,
+      "category": "Struct",
+      "rust_construct": "Struct",
+      "snippet": "# [doc = \" A scope-exit reclamation region (DN-32 §2.3 / RFC-0027 §10.3 / MEM-3).\"] # [doc = \"\"] # [doc = \" One `Region` corresponds to one RT7 scope-tree node. It accumulates\"] # [doc = \" [`DeferredEntry`] values — values whose RC hit zero within this scope, or scope-local\"] # [doc = \" allocations — and at [`Region::close`] emits one [`ReclamationRecord`] per entry\"] # [doc = \" (trigger = `ScopeExit`) through a [`ReclamationSink`].\"] # [doc = \"\"] # [doc = \" ## Sweep order\"] # [doc = \"\"] # [doc = \" - **Parent–child TOTAL:** Close all child `Region`s before closing the parent.\"] # [doc = \"   The child's epoch will be numerically lower than the parent's (it closed first),\"] # [doc = \"   encoding the child→root ordering as a number line. The caller (the executor) is\"] # [doc = \"   responsible for this invariant; [`ScopeTree::close_ordered`] enforces it in tests.\"] # [doc = \"\"] # [doc = \" - **Siblings CONCURRENT (OQ-1 resolved, `Proven`-modulo-LR-9):** Sibling regions\"] # [doc = \"   close independently — no ordering constraint. Safe because LR-9 rules out\"] # [doc = \"   cross-sibling aliases (DN-32 §3).\"] # [doc = \"\"] # [doc = \" ## Never-silent contract (G2)\"] # [doc = \"\"] # [doc = \" Every [`DeferredEntry`] pushed via [`Region::defer`] emits exactly one\"] # [doc = \" `ReclamationRecord(ScopeExit)` when [`Region::close`] is called. A `Region` dropped\"] # [doc = \" without calling `close` while still holding deferred entries is a G2 violation; in\"] # [doc = \" debug builds [`Region::drop`] panics to surface this.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — one record per deferred entry at close (enforced-by-construction).\"] # [derive (Debug)] pub struct Region { # [doc = \" The unique identity of this region in the scope tree.\"] pub id : ScopeNodeId , # [doc = \" Deferred reclamation entries accumulated during this scope's lifetime.\"] deferred : Vec < DeferredEntry > , # [doc = \" The epoch assigned at close time. `None` until `close()` is called.\"] closed_epoch : Option < RegionEpoch > , }",
+      "reason": "struct `Region` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "item_name": "Region"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/region.rs",
+      "line": 235,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl Region { # [doc = \" Create a new, open region for a scope-tree node.\"] # [doc = \"\"] # [doc = \" Allocates a fresh [`ScopeNodeId`]. The region starts open (no epoch yet).\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — `ScopeNodeId` is unique and monotonically increasing.\"] # [must_use] pub fn new () -> Self { Region { id : ScopeNodeId :: allocate () , deferred : Vec :: new () , closed_epoch : None , } } # [doc = \" Defer a value for scope-exit reclamation.\"] # [doc = \"\"] # [doc = \" The value's content identity is pushed to the deferred list. At `close()`,\"] # [doc = \" a `ReclamationRecord(ScopeExit)` is emitted for it.\"] # [doc = \"\"] # [doc = \" Calling `defer` after `close()` is a logic error; panics in debug builds.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — the entry is pushed exactly once; no approximation.\"] pub fn defer (& mut self , value_meta_hash : ContentHash) { debug_assert ! (self . closed_epoch . is_none () , \"Region::defer called on a closed region (id={:?})\" , self . id) ; self . deferred . push (DeferredEntry :: new (value_meta_hash)) ; } # [doc = \" The number of values currently deferred in this region.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — returns the current length of the deferred list.\"] # [must_use] pub fn deferred_count (& self) -> usize { self . deferred . len () } # [doc = \" Whether this region has been closed.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — `closed_epoch.is_some()` is the canonical indicator.\"] # [must_use] pub fn is_closed (& self) -> bool { self . closed_epoch . is_some () } # [doc = \" The epoch assigned at close time, if this region has been closed.\"] # [doc = \"\"] # [doc = \" Returns `None` if the region is still open.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — the epoch is the monotonic counter value at close time.\"] # [must_use] pub fn closed_epoch (& self) -> Option < RegionEpoch > { self . closed_epoch } # [doc = \" Close this region: **batch-emit all deferred reclamations**, advance the monotonic\"] # [doc = \" epoch, and return the [`ClosedRegion`] summary.\"] # [doc = \"\"] # [doc = \" ## What happens at close (`Exact` — enforced-by-construction)\"] # [doc = \"\"] # [doc = \" 1. A fresh [`RegionEpoch`] is allocated (monotonically increasing).\"] # [doc = \" 2. For each [`DeferredEntry`] in `self.deferred` (drained in order), exactly one\"] # [doc = \"    [`ReclamationRecord`] is constructed with:\"] # [doc = \"    - `scope_id = self.id.as_scope_id()`\"] # [doc = \"    - `sweep_epoch = epoch.as_sweep_epoch()`\"] # [doc = \"    - `trigger = ReclamationTrigger::ScopeExit`  ← **the SECOND live trigger (MEM-3)**\"] # [doc = \"    - `value_meta_hash = entry.value_meta_hash`\"] # [doc = \"\"] # [doc = \"    Each record is emitted through `sink.emit(record)` (never-silent G2).\"] # [doc = \" 3. The deferred list is drained (emptied).\"] # [doc = \" 4. `self.closed_epoch` is set to the allocated epoch.\"] # [doc = \" 5. A [`ClosedRegion`] summary is returned.\"] # [doc = \"\"] # [doc = \" ## Sweep-order contract (`Declared`)\"] # [doc = \"\"] # [doc = \" The caller MUST close all child regions before calling `close()` on the parent.\"] # [doc = \" A child closed before its parent will have a numerically lower `RegionEpoch`\"] # [doc = \" (it allocated its epoch first), encoding the child→root total order.\"] # [doc = \" `Region::close` does NOT enforce this by type — it is an RT7 contract (live-executor\"] # [doc = \" wiring is downstream, FLAG).\"] # [doc = \"\"] # [doc = \" ## Calling `close` more than once panics in debug builds.\"] # [doc = \"\"] # [doc = \" Bulk-efficiency-as-perf-win: `Declared` (DN-32 §6a — no Mycelium measurement yet).\"] pub fn close (& mut self , sink : & mut dyn ReclamationSink) -> ClosedRegion { debug_assert ! (self . closed_epoch . is_none () , \"Region::close called on an already-closed region (id={:?})\" , self . id) ; let epoch = RegionEpoch :: allocate () ; let scope_id = self . id . as_scope_id () ; let sweep_epoch = epoch . as_sweep_epoch () ; let count = self . deferred . len () ; for entry in self . deferred . drain (..) { let record = ReclamationRecord :: new (scope_id , sweep_epoch , ReclamationTrigger :: ScopeExit , entry . value_meta_hash ,) ; sink . emit (record) ; } self . closed_epoch = Some (epoch) ; ClosedRegion { id : self . id , epoch , reclaimed_count : count , } } }",
+      "reason": "no member of this impl block could be transpiled (6 sub-issue(s)): impl method `new` body: unsupported expression form `Region { id : ScopeNodeId :: allocate () , deferred : Vec :: new () , closed_epoch : None , }`; impl method `defer` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence; impl method `deferred_count` signature: `usize` has a platform-dependent width; no fixed Binary{N} mapping; impl method `is_closed` body: unsupported expression form `self . closed_epoch`; impl method `closed_epoch` signature: generic type path `Option < RegionEpoch >` — type-argument mapping not confirmed; impl method `close` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence",
+      "item_name": "Region"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/region.rs",
+      "line": 358,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl Default for Region { fn default () -> Self { Region :: new () } }",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `default`: impl method name `default` collides with a Mycelium reserved word — emitting it verbatim would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5)",
+      "item_name": "Region"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/region.rs",
+      "line": 364,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl Drop for Region { # [doc = \" G2 guard: panic in debug builds if a region is dropped while still holding\"] # [doc = \" deferred entries without having been closed — that would silently lose audit records.\"] fn drop (& mut self) { # [cfg (debug_assertions)] if self . closed_epoch . is_none () && ! self . deferred . is_empty () { panic ! (\"Region (id={:?}) dropped with {} deferred entries without calling close() — \\\n                 G2 violation: audit records would be silently lost\" , self . id , self . deferred . len ()) ; } } }",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `drop` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence",
+      "item_name": "Region"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/region.rs",
+      "line": 382,
+      "col": 1,
+      "category": "Struct",
+      "rust_construct": "Struct",
+      "snippet": "# [doc = \" Summary returned by [`Region::close`] — the audit-visible outcome of a scope-exit\"] # [doc = \" reclamation batch.\"] # [doc = \"\"] # [doc = \" Carries the region's identity, the epoch assigned at close time, and the count of\"] # [doc = \" deferred entries reclaimed. Useful for supervision observability, property tests, and\"] # [doc = \" the sweep-order assertion (child epoch < parent epoch).\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — all fields are deterministic functions of the close operation.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct ClosedRegion { # [doc = \" The identity of the closed region.\"] pub id : ScopeNodeId , # [doc = \" The monotonic epoch allocated at close time.\"] pub epoch : RegionEpoch , # [doc = \" The number of deferred entries reclaimed (one `ScopeExit` record emitted per entry).\"] pub reclaimed_count : usize , }",
+      "reason": "struct `ClosedRegion` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "item_name": "ClosedRegion"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/region.rs",
+      "line": 402,
+      "col": 1,
+      "category": "Struct",
+      "rust_construct": "Struct",
+      "snippet": "# [doc = \" A minimal parent–child scope-tree for encoding and testing the sweep-order model\"] # [doc = \" (RFC-0027 §10.3 / DN-32 §3).\"] # [doc = \"\"] # [doc = \" `ScopeTree` holds one parent [`Region`] and zero or more child [`Region`]s. The correct\"] # [doc = \" close order (RT7) is: close all children before the parent. [`ScopeTree::close_ordered`]\"] # [doc = \" enforces this order. Siblings may close in any order — they are concurrent (OQ-1).\"] # [doc = \"\"] # [doc = \" This is NOT a full runtime scope tree; it is the minimal structure needed to encode and\"] # [doc = \" property-test the parent–child TOTAL and sibling-CONCURRENT ordering guarantees. Live\"] # [doc = \" executor integration is downstream (FLAG).\"] # [doc = \"\"] # [doc = \" Guarantee: `Declared` — the tree structure encodes the sweep order; epoch-ordering\"] # [doc = \" property (child < parent) is `Exact` by monotonic counter.\"] pub struct ScopeTree { # [doc = \" Child regions — independent siblings (closed before the parent, any order).\"] pub children : Vec < Region > , # [doc = \" The parent region — closed last.\"] pub parent : Region , }",
+      "reason": "struct `ScopeTree` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "item_name": "ScopeTree"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/region.rs",
+      "line": 422,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl ScopeTree { # [doc = \" Create a `ScopeTree` with `n_children` child regions under one parent.\"] # [doc = \"\"] # [doc = \" All regions start open. Siblings are independent (no ordering constraint).\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — `n_children + 1` unique `ScopeNodeId`s allocated.\"] # [must_use] pub fn new (n_children : usize) -> Self { ScopeTree { children : (0 .. n_children) . map (| _ | Region :: new ()) . collect () , parent : Region :: new () , } } # [doc = \" Close all children first (in any order — siblings are concurrent), then close the parent.\"] # [doc = \"\"] # [doc = \" Returns all [`ClosedRegion`] summaries in close order: children first, parent last.\"] # [doc = \"\"] # [doc = \" The sweep-order invariant — child epoch < parent epoch — is guaranteed by the monotonic\"] # [doc = \" counter: children allocate their epochs before the parent does.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — close order is enforced; child epoch < parent epoch by construction.\"] pub fn close_ordered (& mut self , sink : & mut dyn ReclamationSink) -> Vec < ClosedRegion > { let mut results = Vec :: with_capacity (self . children . len () + 1) ; for child in & mut self . children { results . push (child . close (sink)) ; } results . push (self . parent . close (sink)) ; results } }",
+      "reason": "no member of this impl block could be transpiled (2 sub-issue(s)): impl method `new` signature: `usize` has a platform-dependent width; no fixed Binary{N} mapping; impl method `close_ordered` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence",
+      "item_name": "ScopeTree"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/scheduler.rs",
+      "line": 23,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use mycelium_sched :: scheduler :: { Scheduler , SchedulerError , StealDecision , StealPolicy , SCHEDULER_LIVENESS_STRENGTH , SCHEDULER_RT2_STRENGTH , STEAL_POLICY_STRENGTH , } ;",
+      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/scope_region.rs",
+      "line": 67,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use mycelium_core :: ContentHash ;",
+      "reason": "`use` import (single path ending `ContentHash`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/scope_region.rs",
+      "line": 69,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use crate :: reclamation :: ReclamationSink ;",
+      "reason": "`use` import (single path ending `ReclamationSink`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/scope_region.rs",
+      "line": 70,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use crate :: region :: { ClosedRegion , Region , ScopeNodeId } ;",
+      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/scope_region.rs",
+      "line": 74,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Run `body` within a freshly-opened scope region and close the region after the body returns.\"] # [doc = \"\"] # [doc = \" # Per-hypha scope-exit entry point (RFC-0027 §10.3)\"] # [doc = \"\"] # [doc = \" This is the structured-concurrency entry point for scope-exit reclamation in one hypha's body:\"] # [doc = \" \\\"run the hypha body; reclaim at hypha-exit.\\\" Each hypha owns exactly one single-threaded\"] # [doc = \" intra-hypha region (see the cross-hypha FLAG in this module's doc-comment).\"] # [doc = \"\"] # [doc = \" # What happens\"] # [doc = \"\"] # [doc = \" 1. A fresh [`Region`] is opened (`Region::new()`).\"] # [doc = \" 2. `body(&mut region)` is called. The body may call `region.defer(hash)` for every value\"] # [doc = \"    whose RC hit zero within this scope (or any scope-local allocation to be freed at exit).\"] # [doc = \" 3. **After `body` returns** (normal path), `region.close(sink)` is called unconditionally,\"] # [doc = \"    emitting one `ScopeExit` [`crate::reclamation::ReclamationRecord`] per deferred entry\"] # [doc = \"    through `sink` and returning the [`ClosedRegion`] summary.\"] # [doc = \" 4. The function returns `(body_result, closed_region)`.\"] # [doc = \"\"] # [doc = \" # Panic behaviour\"] # [doc = \"\"] # [doc = \" If `body` panics, the region is dropped as the stack unwinds. A panic is an abnormal scope\"] # [doc = \" abort; in debug builds the underlying [`Region`]'s drop-guard panics again if there are\"] # [doc = \" deferred entries, surfacing the number of lost audit records (G2 never-silent signal). This\"] # [doc = \" is intentional — do not catch the panic to silence the guard. The debug double-panic is\"] # [doc = \" the price of a G2-clean design: silent audit loss is impossible in debug builds.\"] # [doc = \"\"] # [doc = \" # Nested scopes\"] # [doc = \"\"] # [doc = \" Call `with_region` inside a `body` to nest an inner scope under an outer one. The inner scope\"] # [doc = \" closes (allocating its [`crate::region::RegionEpoch`]) before the outer body returns, so\"] # [doc = \" `inner_closed.epoch < outer_closed.epoch` by construction (monotonic counter — `Exact`).\"] # [doc = \"\"] # [doc = \" # Guarantee tags\"] # [doc = \"\"] # [doc = \" - **`close` always called (normal path):** `Exact` — unconditional call after `body`; no\"] # [doc = \"   conditional branch can skip it (enforced-by-construction).\"] # [doc = \" - **Panic path (abnormal abort):** `Exact` — drop fires; debug guard surfaces lost records.\"] # [doc = \" - **Nested epoch ordering:** `Exact` — inherited from `Region::close`'s monotonic counter.\"] # [doc = \" - **Batching perf:** `Declared` — DN-32 §6a; no Mycelium measurement.\"] # [doc = \"\"] # [doc = \" # Example\"] # [doc = \"\"] # [doc = \" ```rust,ignore\"] # [doc = \" use mycelium_std_runtime::scope_region::with_region;\"] # [doc = \" use mycelium_std_runtime::reclamation::CollectingSink;\"] # [doc = \"\"] # [doc = \" let mut sink = CollectingSink::new();\"] # [doc = \" let (result, closed) = with_region(&mut sink, |region| {\"] # [doc = \"     region.defer(some_hash);\"] # [doc = \"     42\"] # [doc = \" });\"] # [doc = \" assert_eq!(result, 42);\"] # [doc = \" assert_eq!(closed.reclaimed_count, 1);\"] # [doc = \" ```\"] pub fn with_region < R > (sink : & mut dyn ReclamationSink , body : impl FnOnce (& mut Region) -> R ,) -> (R , ClosedRegion) { let mut region = Region :: new () ; let result = body (& mut region) ; let closed = region . close (sink) ; (result , closed) }",
+      "reason": "unsupported Rust type form `& mut dyn ReclamationSink`",
+      "item_name": "with_region"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/scope_region.rs",
+      "line": 143,
+      "col": 1,
+      "category": "Struct",
+      "rust_construct": "Struct",
+      "snippet": "# [doc = \" An explicit-close scope guard wrapping a [`Region`].\"] # [doc = \"\"] # [doc = \" For callers who need to interleave deferrals with other logic between scope entry and exit\"] # [doc = \" and cannot use the closure form ([`with_region`]). Holds an open [`Region`] and exposes\"] # [doc = \" `defer`, `deferred_count`, `id`, and a **consuming** `close` that guarantees exactly one\"] # [doc = \" `Region::close` call.\"] # [doc = \"\"] # [doc = \" # Never-silent contract (G2)\"] # [doc = \"\"] # [doc = \" The caller **MUST** call [`RegionScope::close`] before the guard goes out of scope. There is\"] # [doc = \" no `Drop` impl that accepts a [`ReclamationSink`] (a sink cannot be threaded through `Drop`\"] # [doc = \" without violating KC-3 / the never-silent contract); dropping a `RegionScope` that still holds\"] # [doc = \" deferred entries causes the underlying [`Region`]'s debug-drop-panic to fire, surfacing the\"] # [doc = \" number of lost audit records. This is the same design discipline as `rc.rs`'s `RcCell` —\"] # [doc = \" explicit-close is the correct pattern; sink-bearing `Drop` is not.\"] # [doc = \"\"] # [doc = \" # Example\"] # [doc = \"\"] # [doc = \" ```rust,ignore\"] # [doc = \" use mycelium_std_runtime::scope_region::RegionScope;\"] # [doc = \" use mycelium_std_runtime::reclamation::CollectingSink;\"] # [doc = \"\"] # [doc = \" let mut sink = CollectingSink::new();\"] # [doc = \" let mut scope = RegionScope::enter();\"] # [doc = \" scope.defer(hash_a);\"] # [doc = \" // … interleaved work …\"] # [doc = \" scope.defer(hash_b);\"] # [doc = \" let closed = scope.close(&mut sink);\"] # [doc = \" assert_eq!(closed.reclaimed_count, 2);\"] # [doc = \" ```\"] # [doc = \"\"] # [doc = \" # Guarantee tags\"] # [doc = \"\"] # [doc = \" - **`close` called exactly once (on `RegionScope::close`):** `Exact` — consuming `close`\"] # [doc = \"   destructs `self`, so double-close is a compile-time type error.\"] # [doc = \" - **Dropped without `close` (debug builds):** `Exact` — underlying `Region` drop-guard panics\"] # [doc = \"   if deferred entries remain (G2 never-silent signal).\"] # [doc = \" - **`defer` / `deferred_count` / `id` accuracy:** `Exact` — delegates to `Region`; all\"] # [doc = \"   fields are exact functions of the region state.\"] # [derive (Debug)] pub struct RegionScope { # [doc = \" The open region backing this scope guard.\"] region : Region , }",
+      "reason": "struct `RegionScope` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "item_name": "RegionScope"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/scope_region.rs",
+      "line": 188,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl RegionScope { # [doc = \" Open a new scope guard, allocating a fresh [`Region`].\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — allocates a unique [`ScopeNodeId`] via the monotonic counter.\"] # [must_use] pub fn enter () -> Self { RegionScope { region : Region :: new () , } } # [doc = \" Defer a value for scope-exit reclamation.\"] # [doc = \"\"] # [doc = \" Delegates to [`Region::defer`]. The value's content identity is pushed to the deferred\"] # [doc = \" list; at [`RegionScope::close`] a `ScopeExit` record is emitted for it.\"] # [doc = \"\"] # [doc = \" Calling `defer` after `close` is impossible by type (consuming close destructs `self`).\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — delegates to `Region::defer`; the entry is pushed exactly once.\"] pub fn defer (& mut self , value_meta_hash : ContentHash) { self . region . defer (value_meta_hash) ; } # [doc = \" Number of values currently deferred in this scope.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — delegates to `Region::deferred_count`.\"] # [must_use] pub fn deferred_count (& self) -> usize { self . region . deferred_count () } # [doc = \" The unique identity of this scope's underlying [`Region`].\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — delegates to `region.id`; unique monotonic allocation.\"] # [must_use] pub fn id (& self) -> ScopeNodeId { self . region . id } # [doc = \" Close this scope guard, emitting all deferred reclamation records and returning the\"] # [doc = \" [`ClosedRegion`] summary.\"] # [doc = \"\"] # [doc = \" This is a **consuming** method — `self` is destructed, making double-close a compile-time\"] # [doc = \" type error. After `close` returns, the sink has received one `ScopeExit` record per\"] # [doc = \" deferred entry.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — delegates to [`Region::close`]; one `ScopeExit` record per deferred\"] # [doc = \" entry, emitted unconditionally (enforced-by-construction).\"] pub fn close (mut self , sink : & mut dyn ReclamationSink) -> ClosedRegion { self . region . close (sink) } }",
+      "reason": "no member of this impl block could be transpiled (5 sub-issue(s)): impl method `enter` body: unsupported expression form `RegionScope { region : Region :: new () , }`; impl method `defer` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence; impl method `deferred_count` signature: `usize` has a platform-dependent width; no fixed Binary{N} mapping; impl method `id` body: unsupported expression form `self . region . id`; impl method `close` signature: unsupported Rust type form `& mut dyn ReclamationSink`",
+      "item_name": "RegionScope"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/supervision.rs",
+      "line": 20,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use mycelium_rt_abi :: supervision :: { run_supervised , supervise_with_restart , CancelToken , CancelTree , Cancelled , Escalation , RestartIntensity , SupervisedFailure , SupervisedRun , SupervisionAction , SupervisionRecord , Supervisor , TaskOutcome , SUPERVISION_PROPAGATION_STRENGTH , SUPERVISION_RESTART_BOUND_STRENGTH , } ;",
+      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/task.rs",
+      "line": 9,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use mycelium_core :: GuaranteeStrength ;",
+      "reason": "`use` import (single path ending `GuaranteeStrength`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/task.rs",
+      "line": 11,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Guarantee strength for the `Task` purity contract.\"] pub const TASK_PURITY_STRENGTH : GuaranteeStrength = GuaranteeStrength :: Declared ;",
+      "reason": "top-level `const TASK_PURITY_STRENGTH` — no const item production in the grammar (`item` covers use/default/type/trait/impl/fn/object/lower/derive only)",
+      "item_name": "TASK_PURITY_STRENGTH"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/task.rs",
+      "line": 14,
+      "col": 1,
+      "category": "Struct",
+      "rust_construct": "Struct",
+      "snippet": "# [doc = \" A computation that can be spawned into a `Scope`.\"] # [doc = \"\"] # [doc = \" Holds a `Box<dyn FnOnce() + Send>` closure. The caller asserts purity\"] # [doc = \" (RT1 contract, `Declared` — the type system cannot enforce no-side-effects).\"] # [doc = \"\"] # [doc = \" Guarantee: **Declared** — purity contract is asserted, not enforced by the type system.\"] # [doc = \" Out-of-scope effects are a `wild`-level concern (ADR-014).\"] pub struct Task { inner : Box < dyn FnOnce () + Send + 'static > , }",
+      "reason": "struct `Task` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "item_name": "Task"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/task.rs",
+      "line": 25,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl Task { # [doc = \" Construct a task from a closure. The caller asserts purity (Declared).\"] pub fn new < F : FnOnce () + Send + 'static > (f : F) -> Self { Task { inner : Box :: new (f) } } # [doc = \" Run the task closure exactly once.\"] # [doc = \"\"] # [doc = \" Guarantee: **Declared** (inherited from the Task purity contract).\"] pub fn run (self) { (self . inner) () ; } }",
+      "reason": "no member of this impl block could be transpiled (2 sub-issue(s)): impl method `new` signature: type parameter `F` carries a bound — type_params/fn generics are bare identifiers only in this grammar fragment; impl method `run` signature: function has no return type (implicit `()`) — no unit value is representable in this grammar fragment",
+      "item_name": "Task"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/task.rs",
+      "line": 39,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl std :: fmt :: Debug for Task { fn fmt (& self , f : & mut std :: fmt :: Formatter < '_ >) -> std :: fmt :: Result { f . debug_struct (\"Task\") . finish_non_exhaustive () } }",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut std :: fmt :: Formatter < '_ >`",
+      "item_name": "Task"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/task.rs",
+      "line": 45,
+      "col": 1,
+      "category": "Struct",
+      "rust_construct": "Struct",
+      "snippet": "# [doc = \" Context passed to a running task — carries cancellation signal and scope ref.\"] # [derive (Debug)] pub struct TaskCtx { cancelled : bool , }",
+      "reason": "struct `TaskCtx` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "item_name": "TaskCtx"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/task.rs",
+      "line": 51,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl TaskCtx { pub fn new () -> Self { TaskCtx { cancelled : false } } # [doc = \" Returns `true` if this task's scope has been cancelled.\"] pub fn is_cancelled (& self) -> bool { self . cancelled } # [doc = \" Cancel this context (used by `Scope` when cancellation is requested).\"] pub fn cancel (& mut self) { self . cancelled = true ; } }",
+      "reason": "no member of this impl block could be transpiled (3 sub-issue(s)): impl method `new` body: unsupported expression form `TaskCtx { cancelled : false }`; impl method `is_cancelled` body: unsupported expression form `self . cancelled`; impl method `cancel` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence",
+      "item_name": "TaskCtx"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/task.rs",
+      "line": 67,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl Default for TaskCtx { fn default () -> Self { Self :: new () } }",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `default`: impl method name `default` collides with a Mycelium reserved word — emitting it verbatim would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5)",
+      "item_name": "TaskCtx"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/task.rs",
+      "line": 73,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "# [doc = \" Poll result for an async task step.\"] # [derive (Debug , PartialEq , Eq)] pub enum Poll < T > { Ready (T) , Pending , }",
+      "reason": "dropped non-doc attribute(s) on enum `Poll`: # [derive (Debug , PartialEq , Eq)]",
+      "item_name": "Poll"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/task.rs",
+      "line": 80,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "# [doc = \" Order in which tasks are swept from a scope's run queue.\"] # [doc = \"\"] # [doc = \" Guarantee: **Exact** — the sweep order is deterministic given the same queue state.\"] # [derive (Debug , Clone , Copy , Default , PartialEq , Eq)] pub enum SweepOrder { # [doc = \" FIFO (default): tasks are completed in the order they were spawned.\"] # [default] Fifo , # [doc = \" Priority: tasks are swept highest-priority first.\"] Priority , }",
+      "reason": "dropped non-doc attribute(s) on enum `SweepOrder`: # [derive (Debug , Clone , Copy , Default , PartialEq , Eq)]",
+      "item_name": "SweepOrder"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/task.rs",
+      "line": 92,
+      "col": 1,
+      "category": "Struct",
+      "rust_construct": "Struct",
+      "snippet": "# [doc = \" Deadlock descriptor: returned when a scope cannot make progress.\"] # [doc = \"\"] # [doc = \" Guarantee: **Empirical** — detection is complete for the supported channel graph\"] # [doc = \" (DAG channels); cyclic graphs are an open follow-up (FLAG: ADR-020 §7).\"] # [derive (Debug , PartialEq , Eq)] pub struct Deadlock { pub task_count : usize , }",
+      "reason": "struct `Deadlock` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "item_name": "Deadlock"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/task.rs",
+      "line": 101,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl Deadlock { pub fn new (task_count : usize) -> Self { Deadlock { task_count } } }",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `new` signature: `usize` has a platform-dependent width; no fixed Binary{N} mapping",
+      "item_name": "Deadlock"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/task.rs",
+      "line": 107,
+      "col": 1,
+      "category": "TestItem",
+      "rust_construct": "TestItem",
+      "snippet": "# [cfg (test)] mod tests { use super :: * ; use std :: sync :: { Arc , Mutex } ; # [test] fn test_task_run_executes_closure () { let flag = Arc :: new (Mutex :: new (false)) ; let flag_clone = Arc :: clone (& flag) ; let task = Task :: new (move | | { * flag_clone . lock () . unwrap () = true ; }) ; task . run () ; assert ! (* flag . lock () . unwrap () , \"Task::run must execute the closure\") ; } # [test] fn test_taskctx_not_cancelled_by_default () { let ctx = TaskCtx :: new () ; assert ! (! ctx . is_cancelled () , \"a freshly constructed TaskCtx must not be cancelled\") ; } # [test] fn test_poll_ready () { let poll = Poll :: Ready (42i32) ; assert_eq ! (poll , Poll :: Ready (42) , \"Poll::Ready must contain the value\") ; } # [test] fn test_deadlock_has_count () { let dl = Deadlock :: new (3) ; assert_eq ! (dl . task_count , 3 , \"Deadlock must record the task count\") ; } # [test] fn test_sweep_order_default_is_fifo () { assert_eq ! (SweepOrder :: default () , SweepOrder :: Fifo , \"SweepOrder default must be Fifo (ADR-020 §4)\") ; } }",
+      "reason": "#[cfg(test)] item — out of scope for this PoC's transpilation surface (excluded from the expressible-fraction denominator, but recorded, never silently skipped)",
+      "item_name": "tests"
+    }
+  ],
+  "category_counts": {
+    "DeriveAttr": 14,
+    "GenericBound": 13,
+    "Impl": 28,
+    "Import": 28,
+    "Other": 39,
+    "PayloadVariant": 3,
+    "Struct": 22,
+    "TestItem": 3,
+    "Trait": 1
+  }
+}

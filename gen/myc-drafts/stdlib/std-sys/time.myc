@@ -1,0 +1,21 @@
+// nodule: std.sys
+// \[Declared\] OS clock floor. Thin wrappers over Rust `std::time`.
+//
+// Declared — no audit of platform clock resolution or monotonicity guarantees beyond
+// what Rust's standard library provides. Wiring from `std-time` deferred to a future wave.
+//
+// RFC-0016 §9: once `std-time`'s `SystemClock` routes exclusively through this module,
+// the pure `std-time` crate earns a `wild`-free badge.
+//
+// # Never-silent contract (G2)
+//
+// - `wall_nanos()` returns `Err(String)` if the system time is before the Unix epoch.
+// - `mono_nanos()` is infallible within a single process run (Rust's `Instant` guarantee).
+// - `sleep_nanos()` is infallible but imprecise — callers must not assume precision
+//   (use `mono_nanos()` before and after to measure actual elapsed time).
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.sys;
+
+

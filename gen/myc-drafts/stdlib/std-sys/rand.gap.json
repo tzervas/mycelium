@@ -1,0 +1,77 @@
+{
+  "source": "crates/mycelium-std-sys/src/rand.rs",
+  "emitted_items": [],
+  "gaps": [
+    {
+      "file": "crates/mycelium-std-sys/src/rand.rs",
+      "line": 32,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use std :: fmt ;",
+      "reason": "`use` import (single path ending `fmt`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/rand.rs",
+      "line": 33,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use std :: io :: Read as _ ;",
+      "reason": "`use` import (rename `Read as _`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/rand.rs",
+      "line": 35,
+      "col": 1,
+      "category": "PayloadVariant",
+      "rust_construct": "PayloadVariant",
+      "snippet": "# [doc = \" Errors from platform entropy operations.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum EntropyError { # [doc = \" The platform entropy source is unavailable or exhausted.\"] Unavailable (String) , }",
+      "reason": "enum `EntropyError` variant `Unavailable` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
+      "item_name": "EntropyError"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/rand.rs",
+      "line": 42,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl fmt :: Display for EntropyError { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { match self { EntropyError :: Unavailable (msg) => write ! (f , \"entropy unavailable: {msg}\") , } } }",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut fmt :: Formatter < '_ >`",
+      "item_name": "EntropyError"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/rand.rs",
+      "line": 50,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl std :: error :: Error for EntropyError { }",
+      "reason": "impl block has no items",
+      "item_name": "EntropyError"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/rand.rs",
+      "line": 52,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] Fill `buf` with bytes from the OS entropy source (`/dev/urandom`).\"] # [doc = \"\"] # [doc = \" Never-silent: returns `Err(EntropyError::Unavailable(...))` on any failure (open error,\"] # [doc = \" short read, EOF, or platform without `/dev/urandom`). Never panics. Never zero-fills\"] # [doc = \" silently (G2).\"] # [doc = \"\"] # [doc = \" # Guarantee\"] # [doc = \"\"] # [doc = \" `Declared` — source is the kernel CSPRNG via `/dev/urandom`, a genuine OS entropy source,\"] # [doc = \" but no statistical quality audit has been conducted. Promotion to `Empirical` requires\"] # [doc = \" documented trials with measured statistical quality (VR-5). Do not use for\"] # [doc = \" security-sensitive purposes until retagged.\"] # [doc = \"\"] # [doc = \" # Platform\"] # [doc = \"\"] # [doc = \" Unix/Linux/macOS only. Returns `Err(EntropyError::Unavailable(...))` on platforms that\"] # [doc = \" do not expose `/dev/urandom`. Use the `getrandom` crate (FLAG-GETRANDOM) for\"] # [doc = \" cross-platform OS entropy.\"] pub fn fill_bytes (buf : & mut [u8]) -> Result < () , EntropyError > { if buf . is_empty () { return Ok (()) ; } let mut f = std :: fs :: File :: open (\"/dev/urandom\") . map_err (| e | EntropyError :: Unavailable (format ! (\"open /dev/urandom: {e}\"))) ? ; f . read_exact (buf) . map_err (| e | EntropyError :: Unavailable (format ! (\"read /dev/urandom: {e}\"))) }",
+      "reason": "unsupported Rust type form `& mut [u8]`",
+      "item_name": "fill_bytes"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/rand.rs",
+      "line": 85,
+      "col": 1,
+      "category": "TestItem",
+      "rust_construct": "TestItem",
+      "snippet": "# [cfg (test)] mod tests { use super :: * ; # [doc = \" Skip helper: treat `EntropyError::Unavailable` as a graceful skip (the repo idiom for\"] # [doc = \" platform-absent resources — mirrors the `ToolchainMissing` skip in the mlir differential).\"] # [doc = \" Non-Unix platforms (Windows, WASI, bare-metal) return `Unavailable`; that is correct\"] # [doc = \" behaviour and must not be treated as a test failure.\"] macro_rules ! skip_if_unavailable { ($ result : expr) => { match $ result { Ok (v) => v , Err (EntropyError :: Unavailable (_)) => return , } } ; } # [test] fn fill_bytes_32_succeeds_and_fills () { let mut buf = [0u8 ; 32] ; skip_if_unavailable ! (fill_bytes (& mut buf)) ; assert_ne ! (buf , [0u8 ; 32] , \"fill_bytes returned all-zero bytes (smoke check)\") ; } # [test] fn fill_bytes_empty_ok () { let mut buf : [u8 ; 0] = [] ; let result = fill_bytes (& mut buf) ; assert ! (result . is_ok () , \"fill_bytes([]) returned Err: {result:?}\") ; } # [test] fn fill_bytes_large_succeeds () { let mut buf = vec ! [0u8 ; 4096] ; skip_if_unavailable ! (fill_bytes (& mut buf)) ; } # [doc = \" Smoke test: two successive fills succeed when the entropy source is available.\"] # [doc = \"\"] # [doc = \" This test verifies only that both calls succeed (availability) — not that the two\"] # [doc = \" buffers differ. A content-quality / non-determinism check (two buffers should differ)\"] # [doc = \" is an inherently probabilistic assertion; it belongs in a documented statistical audit\"] # [doc = \" (e.g. Diehard/TestU01 with a recorded pass/fail table), not a unit test. Honest label:\"] # [doc = \" `Declared` quality, not `Empirical` (VR-5).\"] # [test] fn fill_bytes_successive_succeed_when_available () { let mut buf1 = [0u8 ; 32] ; let mut buf2 = [0u8 ; 32] ; skip_if_unavailable ! (fill_bytes (& mut buf1)) ; skip_if_unavailable ! (fill_bytes (& mut buf2)) ; } # [test] fn entropy_error_display () { let e = EntropyError :: Unavailable (\"test reason\" . to_string ()) ; assert_eq ! (e . to_string () , \"entropy unavailable: test reason\") ; } # [doc = \" Verify the EntropyError type implements std::error::Error (required by public API).\"] # [test] fn entropy_error_is_std_error () { let e : Box < dyn std :: error :: Error > = Box :: new (EntropyError :: Unavailable (\"x\" . to_string ())) ; assert ! (e . to_string () . contains (\"entropy unavailable\")) ; } }",
+      "reason": "#[cfg(test)] item — out of scope for this PoC's transpilation surface (excluded from the expressible-fraction denominator, but recorded, never silently skipped)",
+      "item_name": "tests"
+    }
+  ],
+  "total_top_level_items": 7
+}

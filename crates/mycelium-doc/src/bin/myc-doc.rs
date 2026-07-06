@@ -4,10 +4,11 @@
 //!
 //! Usage:
 //! ```text
-//!   myc-doc build  [--repo-root .] [--out target/doc]   # project + emit every view
-//!   myc-doc book   [--repo-root .] [--out target/doc]   # + the curated chaptered book (book/)
-//!   myc-doc lint   [--repo-root .]                       # run the 8 §4.1 checks (gate)
-//!   myc-doc status                                       # print the lint's active status
+//!   myc-doc build      [--repo-root .] [--out target/doc]     # project + emit every view
+//!   myc-doc book       [--repo-root .] [--out target/doc]     # + the curated chaptered book (book/)
+//!   myc-doc lint       [--repo-root .]                        # run the 8 §4.1 checks (gate)
+//!   myc-doc status                                            # print the lint's active status
+//!   myc-doc lib-index  [--repo-root .] [--out docs/lib-index] # M-1004: docs/lib-index/ from lib/*.myc
 //! ```
 //!
 //! Exit codes (mirroring the Wave-A toolchain): `0` ok · `1` an error-severity finding · `64` usage ·
@@ -41,7 +42,13 @@ fn run(args: &[String]) -> Result<u8, (u8, String)> {
         return Err((EX_USAGE, usage()));
     };
     let mut repo_root = PathBuf::from(".");
-    let mut out = PathBuf::from("target/doc");
+    // `lib-index`'s natural output is `docs/lib-index/` (a committed artifact, like
+    // `docs/api-index/`), unlike `build`/`book`'s scratch `target/doc/` default.
+    let mut out = if cmd == "lib-index" {
+        PathBuf::from("docs/lib-index")
+    } else {
+        PathBuf::from("target/doc")
+    };
     let mut i = 1;
     while i < args.len() {
         match args[i].as_str() {
@@ -125,6 +132,22 @@ fn run(args: &[String]) -> Result<u8, (u8, String)> {
                 Ok(EX_OK)
             }
         }
+        "lib-index" => {
+            let report = mycelium_doc::lib_index::build_lib_index(&repo_root)
+                .map_err(|e| (EX_IO, format!("lib-index: {e}")))?;
+            mycelium_doc::lib_index::write_json(&report, &out)
+                .map_err(|e| (EX_IO, format!("lib-index (json): {e}")))?;
+            mycelium_doc::lib_index::write_markdown(&report, &out)
+                .map_err(|e| (EX_IO, format!("lib-index (markdown): {e}")))?;
+            println!(
+                ">> myc-doc lib-index: {} item(s) indexed, {} flagged (Empirical/Declared \
+                 heuristic — source is ground truth) → {}/{{INDEX.md,index.json}}",
+                report.items.len(),
+                report.flagged.len(),
+                out.display()
+            );
+            Ok(EX_OK)
+        }
         other => Err((EX_USAGE, format!("unknown command: {other}\n{}", usage()))),
     }
 }
@@ -160,5 +183,5 @@ fn print_report(model: &mycelium_doc::DocModel, report: &doc_lint::DocLintReport
 }
 
 fn usage() -> String {
-    "usage: myc-doc <build|book|lint|status> [--repo-root <dir>] [--out <dir>]".to_owned()
+    "usage: myc-doc <build|book|lint|status|lib-index> [--repo-root <dir>] [--out <dir>]".to_owned()
 }

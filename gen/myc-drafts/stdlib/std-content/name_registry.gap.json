@@ -1,0 +1,47 @@
+{
+  "source": "crates/mycelium-std-content/src/name_registry.rs",
+  "emitted_items": [],
+  "gaps": [
+    {
+      "file": "crates/mycelium-std-content/src/name_registry.rs",
+      "line": 23,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use mycelium_core :: { content :: Names , ContentHash } ;",
+      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-content/src/name_registry.rs",
+      "line": 25,
+      "col": 1,
+      "category": "Struct",
+      "rust_construct": "Struct",
+      "snippet": "# [doc = \" A read/write `hash ↔ name` registry (RFC-0001 §4.6 \\\"names-as-metadata\\\").\"] # [doc = \"\"] # [doc = \" Wraps the kernel's [`Names`] side-table. Names are pure metadata; binding or re-binding a name\"] # [doc = \" does not change a hash's identity. The module boundary is the spec §3 read-only surface\"] # [doc = \" (`resolve_name` / `names_of`); `bind` is exposed for constructing and populating a registry\"] # [doc = \" instance, which is a deliberate ergonomic affordance (spec §7-Q4).\"] # [doc = \"\"] # [doc = \" # FLAG: Q3\"] # [doc = \" The *ownership* of this registry (in `std.content` vs. the toolchain) is an open question\"] # [doc = \" (spec §7-Q3). See module-level docs.\"] # [derive (Debug , Clone , Default)] pub struct NameRegistry { inner : Names , }",
+      "reason": "struct `NameRegistry` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "item_name": "NameRegistry"
+    },
+    {
+      "file": "crates/mycelium-std-content/src/name_registry.rs",
+      "line": 40,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl NameRegistry { # [doc = \" Create an empty registry.\"] # [must_use] pub fn new () -> Self { NameRegistry { inner : Names :: new () , } } # [doc = \" Bind a human name to a content hash. Re-binding a different name is allowed and does not\"] # [doc = \" change identity (that is the whole point — ADR-003).\"] # [doc = \"\"] # [doc = \" Returns the previous name for that hash, if any.\"] pub fn bind (& mut self , hash : ContentHash , name : impl Into < String >) -> Option < String > { self . inner . bind (hash , name) } # [doc = \" Look up the name bound to `hash`, returning `None` when the name is unbound.\"] # [doc = \"\"] # [doc = \" # C1 compliance\"] # [doc = \" Returns `None` (an honest absence) — never a sentinel hash (RFC-0016 §4.1 C1).\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Exact`\"] # [doc = \" The result is a deterministic, pure read of the name table (RFC-0001 §4.6).\"] # [must_use] pub fn resolve_name (& self , hash : & ContentHash) -> Option < & str > { self . inner . name_of (hash) } # [doc = \" All names bound to `hash`, as a list (0 or 1 entries with the current kernel; see module\"] # [doc = \" FLAG on the one-name limitation).\"] # [doc = \"\"] # [doc = \" Returns an empty `Vec` when no name is bound — never a sentinel (C1).\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Exact`\"] # [doc = \" Deterministic pure read (RFC-0001 §4.6).\"] # [must_use] pub fn names_of (& self , hash : & ContentHash) -> Vec < String > { match self . inner . name_of (hash) { Some (n) => vec ! [n . to_owned ()] , None => vec ! [] , } } # [doc = \" Number of names currently bound in the registry.\"] # [must_use] pub fn len (& self) -> usize { self . inner . len () } # [doc = \" Whether the registry is empty.\"] # [must_use] pub fn is_empty (& self) -> bool { self . inner . is_empty () } }",
+      "reason": "no member of this impl block could be transpiled (6 sub-issue(s)): impl method `new` body: unsupported expression form `NameRegistry { inner : Names :: new () , }`; impl method `bind` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence; impl method `resolve_name` signature: unsupported Rust type form `& ContentHash`; impl method `names_of` signature: unsupported Rust type form `& ContentHash`; impl method `len` signature: `usize` has a platform-dependent width; no fixed Binary{N} mapping; impl method `is_empty` body: unsupported expression form `self . inner`",
+      "item_name": "NameRegistry"
+    },
+    {
+      "file": "crates/mycelium-std-content/src/name_registry.rs",
+      "line": 97,
+      "col": 1,
+      "category": "TestItem",
+      "rust_construct": "TestItem",
+      "snippet": "# [cfg (test)] mod tests { use super :: NameRegistry ; use mycelium_core :: ContentHash ; fn h (s : & str) -> ContentHash { ContentHash :: parse (s) . expect (\"test hash must be well-formed\") } # [test] fn resolve_name_returns_none_for_unbound_hash () { let reg = NameRegistry :: new () ; assert_eq ! (reg . resolve_name (& h (\"blake3:unbound\")) , None) ; } # [test] fn names_of_returns_empty_for_unbound_hash () { let reg = NameRegistry :: new () ; assert ! (reg . names_of (& h (\"blake3:unbound\")) . is_empty ()) ; } # [test] fn bind_and_resolve_round_trip () { let mut reg = NameRegistry :: new () ; let hash = h (\"blake3:abc\") ; assert_eq ! (reg . bind (hash . clone () , \"my_def\") , None) ; assert_eq ! (reg . resolve_name (& hash) , Some (\"my_def\")) ; assert_eq ! (reg . names_of (& hash) , vec ! [\"my_def\" . to_owned ()]) ; } # [test] fn rebind_returns_old_name_and_does_not_change_hash () { let mut reg = NameRegistry :: new () ; let hash = h (\"blake3:abc\") ; reg . bind (hash . clone () , \"first\") ; let prev = reg . bind (hash . clone () , \"second\") ; assert_eq ! (prev , Some (\"first\" . to_owned ())) ; assert_eq ! (reg . resolve_name (& hash) , Some (\"second\")) ; assert_eq ! (reg . names_of (& hash) , vec ! [\"second\" . to_owned ()]) ; } # [test] fn names_are_per_hash_not_global () { let mut reg = NameRegistry :: new () ; let h1 = h (\"blake3:aaa\") ; let h2 = h (\"blake3:bbb\") ; reg . bind (h1 . clone () , \"alpha\") ; reg . bind (h2 . clone () , \"beta\") ; assert_eq ! (reg . resolve_name (& h1) , Some (\"alpha\")) ; assert_eq ! (reg . resolve_name (& h2) , Some (\"beta\")) ; assert_eq ! (reg . len () , 2) ; } # [test] fn len_and_is_empty_track_bindings () { let mut reg = NameRegistry :: new () ; assert ! (reg . is_empty ()) ; reg . bind (h (\"blake3:x\") , \"x\") ; assert_eq ! (reg . len () , 1) ; assert ! (! reg . is_empty ()) ; } }",
+      "reason": "#[cfg(test)] item — out of scope for this PoC's transpilation surface (excluded from the expressible-fraction denominator, but recorded, never silently skipped)",
+      "item_name": "tests"
+    }
+  ],
+  "total_top_level_items": 4
+}

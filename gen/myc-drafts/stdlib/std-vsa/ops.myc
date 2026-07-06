@@ -1,0 +1,24 @@
+// nodule: std.vsa
+// Per-model operation vocabulary — the Ring-1 ergonomic surface over `VsaModel`.
+//
+// Each function is a thin, honest wrapper over the corresponding `VsaModel` method.  Its
+// guarantee tag is read from the RFC-0003 §4 matrix (via `VsaModel::intrinsic_guarantee`),
+// never invented here (C2 / VR-5).
+//
+// All errors are explicit (C1 / G2):
+// - `DimMismatch` — operand lengths disagree.
+// - `EmptyBundle` — bundle over zero items.
+// - `NestedBundleUnsupported` — MAP-B nesting beyond depth 1 (RR-13).
+// - `EmptyCodebook` — cleanup against an empty item memory.
+//
+// Approximate ops carry their inspectable artifact (C3):
+// - [`bundle`] — the `VsaModel::intrinsic_guarantee` for `Bundle` (callers may further compose
+//   with a capacity-bound certificate from `mycelium-vsa`'s Value-level adapters).
+// - [`cleanup`] — returns `Match { label, confidence, margin }` and errors on
+//   below-threshold / ambiguous results (the thresholds are caller-supplied, never hidden).
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.vsa;
+
+

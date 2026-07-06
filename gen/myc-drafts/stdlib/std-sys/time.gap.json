@@ -1,0 +1,57 @@
+{
+  "source": "crates/mycelium-std-sys/src/time.rs",
+  "emitted_items": [],
+  "gaps": [
+    {
+      "file": "crates/mycelium-std-sys/src/time.rs",
+      "line": 16,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use std :: time :: { Duration , Instant , SystemTime , UNIX_EPOCH } ;",
+      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/time.rs",
+      "line": 18,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] Returns nanoseconds since the Unix epoch from the wall clock.\"] # [doc = \"\"] # [doc = \" Returns `Err` if the system time is before the epoch — never-silent (G2).\"] # [doc = \"\"] # [doc = \" # Guarantee\"] # [doc = \"\"] # [doc = \" `Declared` — backed by `std::time::SystemTime`. No audit of platform clock resolution,\"] # [doc = \" drift, or leap-second handling.\"] pub fn wall_nanos () -> Result < u128 , String > { SystemTime :: now () . duration_since (UNIX_EPOCH) . map (| d | d . as_nanos ()) . map_err (| e | e . to_string ()) }",
+      "reason": "generic type path `Result < u128 , String >` — type-argument mapping not confirmed",
+      "item_name": "wall_nanos"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/time.rs",
+      "line": 33,
+      "col": 1,
+      "category": "MultiStmtBody",
+      "rust_construct": "MultiStmtBody",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] Returns monotonic nanoseconds since an unspecified process-local epoch.\"] # [doc = \"\"] # [doc = \" Guaranteed non-decreasing within a single process run (Rust `Instant` guarantee).\"] # [doc = \" Not comparable across processes or restarts.\"] # [doc = \"\"] # [doc = \" # Guarantee\"] # [doc = \"\"] # [doc = \" `Declared` — backed by `std::time::Instant`. OS monotonic clock; no precision audit.\"] pub fn mono_nanos () -> u64 { static ORIGIN : std :: sync :: OnceLock < Instant > = std :: sync :: OnceLock :: new () ; let origin = ORIGIN . get_or_init (Instant :: now) ; u64 :: try_from (origin . elapsed () . as_nanos ()) . unwrap_or (u64 :: MAX) }",
+      "reason": "function body has a statement that is neither a simple `let` binding nor the trailing expression",
+      "item_name": "mono_nanos"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/time.rs",
+      "line": 48,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] Pause the current thread for approximately `nanos` nanoseconds.\"] # [doc = \"\"] # [doc = \" Actual sleep duration may exceed `nanos` due to OS scheduling. This is never-silent on that\"] # [doc = \" imprecision: callers must not assume precision. Use `mono_nanos()` before and after to\"] # [doc = \" measure actual elapsed duration.\"] # [doc = \"\"] # [doc = \" # Guarantee\"] # [doc = \"\"] # [doc = \" `Declared` — backed by `std::thread::sleep(Duration::from_nanos(nanos))`. No precision audit.\"] pub fn sleep_nanos (nanos : u64) { std :: thread :: sleep (Duration :: from_nanos (nanos)) ; }",
+      "reason": "function has no return type (implicit `()`) — no unit value is representable in this grammar fragment",
+      "item_name": "sleep_nanos"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/time.rs",
+      "line": 61,
+      "col": 1,
+      "category": "TestItem",
+      "rust_construct": "TestItem",
+      "snippet": "# [cfg (test)] mod tests { use super :: * ; # [test] fn wall_nanos_ok_and_nonzero () { let result = wall_nanos () ; assert ! (result . is_ok () , \"wall_nanos() returned Err: {result:?}\") ; let nanos = result . unwrap () ; assert ! (nanos > 0 , \"wall_nanos() returned 0, expected a positive timestamp\") ; } # [test] fn mono_nanos_nondecreasing () { let t0 = mono_nanos () ; std :: thread :: sleep (Duration :: from_millis (1)) ; let t1 = mono_nanos () ; assert ! (t1 >= t0 , \"mono_nanos() decreased: t0={t0}, t1={t1} (monotonicity violation)\") ; } # [test] fn sleep_nanos_does_not_panic () { sleep_nanos (1_000_000) ; } # [test] fn mono_nanos_advances_after_sleep () { let t0 = mono_nanos () ; sleep_nanos (5_000_000) ; let t1 = mono_nanos () ; assert ! (t1 > t0 , \"mono_nanos() did not advance after 5 ms sleep: t0={t0}, t1={t1}\") ; } }",
+      "reason": "#[cfg(test)] item — out of scope for this PoC's transpilation surface (excluded from the expressible-fraction denominator, but recorded, never silently skipped)",
+      "item_name": "tests"
+    }
+  ],
+  "total_top_level_items": 5
+}

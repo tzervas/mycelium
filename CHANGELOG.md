@@ -11,7 +11,63 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
-### M-999 — the AOT env-machine now outruns the interpreter (~1.5–1.7×) (2026-07-06)
+### Transpiler usage operationalized as skills — `/transpile-vet` + `/myc-drafts` (2026-07-06)
+
+The trx2 wave-1 process is captured as parameterized skills (the `/wave`/`/pr-land` precedent) so
+future transpiler usage is lightweight — no re-orchestration: **`/transpile-vet`** (run the
+M-1000/M-1001 loop; read `checked_fraction` vs `expressible_fraction` without conflating them; the
+binding honesty rules and DN-34 append-only recording discipline; wave-1 calibration numbers) and
+**`/myc-drafts`** (deterministic corpus regeneration; manifest-first triage before porting; the
+`lib/` graduation checklist with its differential witness; the 5-step M-1006 ladder-phase recipe
+with the rwr Phase-II reconciliation guard). Registered in CLAUDE.md §Skills + the agent context;
+M-1006's body cites them as its per-phase recipe.
+
+### M-1002/M-1003 — gen/myc-drafts/: the vetted draft corpus over the full boot10 port surface (2026-07-06)
+
+E33-1 wave-1 rip-through: `gen/myc-drafts/` staging tree (README honesty contract — everything
+`Declared`, never imported by `lib/`, never dogfood-gated; drafts graduate only via hand-vetted
+M-993 work), a shellcheck-clean `regenerate.sh` driver + `manifest_gen.py` aggregator (`just
+myc-drafts-regen`), and the run itself over all 17 port-surface targets (5 semcore files + 12
+unported stdlib crates): **union checked_fraction 3.7%** (759 non-test items / 46 emitted / 28
+check-clean), 51/56 emitted files myc-check-clean, zero hard transpile failures, zero silent
+holes (G2). Confirms M-991's NO-GO-as-bulk / GO-as-profiling verdict at full-surface scale;
+eval 2.4% + std-time 8.1% independently reproduce E-A's §8.8 samples (cross-validation).
+Determinism verified byte-identical (manifest + full-tree sha256 across independent runs).
+DN-34 §8.9 appended: per-target table + the ranked 812-gap residual worklist (Other/type-coverage
+322, Impl 119, Import 117, Struct 80, GenericBound 59) — the M-1006 ladder's phase-1 input.
+Kickoff `trx2` E-B (epic E33-1; wave 1 of the maintainer's two-stage breadth plan).
+
+### M-1000/M-1001 — the transpile → myc-check vet loop + top gap-class closure; M-991 assessed (2026-07-06)
+
+The transpiler (M-873 PoC) now vets its own output against the real toolchain: `--vet` runs
+`myc check` per emitted file and reports **`checked_fraction`** (file-gated, honestly-conservative:
+a failing file credits 0) alongside the old `expressible_fraction` — exposing that the prior
+"coverage" numbers over-counted emissions that poison the checker (all targets started at
+**0% checked**). M-1001 closed the two universal check-poisons flag-don't-guess (unresolved
+`use` → `Category::Import` gaps; Mycelium reserved-word collisions → `Category::ReservedWord`
+gaps, drift-guarded against the l1 lexer table), lifting eval.rs to 2.4% and std-time to 8.1%
+checked. **M-991 verdict (DN-34 §8.7–§8.8, append-only): NO-GO as an automated bulk transpiler
+for the semcore port (the residue is language-surface design work, not boilerplate), GO as a
+never-silent gap-profiling instrument** — the vet loop turns the port into a ranked, checked
+worklist. Advisory `just transpile-vet` wired (on-demand, not a gate). Emission stays `Declared`;
+vet verdicts are `Empirical`. Kickoff `trx2` E-A (epic E32-1).
+
+### M-1004/M-1005 — docs/lib-index/: the api-index analogue for the self-hosted `.myc` tree (2026-07-06)
+
+Added `crates/mycelium-doc/src/lib_index.rs` (`myc-doc lib-index`) and the committed
+`docs/lib-index/{INDEX.md,index.json}`: 3313 items (26 nodules — 17 `std`, 9 `compiler`; 373
+types, 1201 constructors, 1713 fns; 0 flagged) extracted from every `lib/std/` + `lib/compiler/`
+`.myc` file, grouped by phylum/nodule, `Empirical/Declared` heuristic (source is ground truth).
+Reuses `apiref.rs`'s nodule/fn extraction rather than a parallel heuristic (DRY); building it
+surfaced and fixed four pre-existing bugs shared with the corpus doc-IR (`=>` return-arrow
+truncation, a stray trailing `;` on every nodule name, a section-divider comment misattributed as
+an item's doc summary, and multi-line-signature truncation). Drift-gated
+(`scripts/checks/lib-index.sh` via `just lib-index`, wired into `just check`; regenerate via
+`just lib-index-gen`), proven by a deliberate-drift test (corrupted a committed field → gate
+failed with `diff -r` + exit 2 → reverted → gate passed). Determinism verified byte-identical
+across independent runs. Kickoff `trx2` E-C (epic E34-1), launched same day with epics
+E32-1/E33-1 (transpiler vet loop + mass `.myc` drafts, in flight) and the M-1006 phased
+rip-through ladder (maintainer-decided breadth amendment).
 
 Closes the maintainer-flagged **performance inversion**: post-M-995/996, the AOT env-machine was
 still ~4.5× *slower* than the L1 interpreter same-profile (release, apples-to-apples — the honest

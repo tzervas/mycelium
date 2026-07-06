@@ -12064,7 +12064,7 @@ issues:
   - id: M-991
     title: "Evaluate mycelium-transpile (M-873) as a Rust->Mycelium accelerator for the heavy port stages"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:task, area:tooling, priority:P3, status:todo]
+    labels: [phase:5, type:task, area:tooling, priority:P3, status:done]
     epic: E18-1
     depends_on: [M-873]
     doc_refs:
@@ -12090,6 +12090,21 @@ issues:
       - A written assessment of transpile coverage vs gap on 1-2 representative semcore modules,
         with a go/no-go recommendation; if go, a documented transpile -> vet -> fix loop and any
         transpiler fixes the trial surfaced.
+
+      LAUNCHED (2026-07-06, kickoff trx2): executed + extended by epic E32-1 (M-1000 vet loop,
+      M-1001 gap-class closure); the E33-1 rip-through (M-1003) supplies the representative-module
+      numbers. This issue's assessment DoD is discharged by E32-1's DN-34 append-only results
+      record; status flips to done when that record + the go/no-go land.
+
+      DONE (2026-07-06, DN-34 SS8.7-SS8.8): the assessment landed with the vet loop. VERDICT:
+      NO-GO as an automated bulk transpiler for the 15k-line semcore port (direct
+      checked_fraction ~0-2% on semcore; the residue is irreducible language-surface/design
+      work, not boilerplate) -- GO as a never-silent, real-toolchain-vetted gap-profiling
+      instrument (the vet loop turns "hand-porting is brutal" into a ranked, checked worklist
+      of exactly which surface gaps block the port). Both graded Empirical (measured on
+      eval/fuse/std-time/std-rand/std-cmp). The documented loop + transpiler fixes shipped
+      (M-1000/M-1001); E-B's rip-through proceeds as gap-profiling, per the maintainer's
+      two-stage breadth plan (M-1006).
 
   - id: M-992
     title: "Trim catchphrasey user-facing toolchain messages (drop the redundant 'never silently dropped (G2)' tail)"
@@ -12362,7 +12377,7 @@ issues:
     depends_on: [M-995, M-996]
     doc_refs:
       - src:crates/mycelium-mlir/src/aot.rs
-      - src:crates/mycelium-mlir/tests/aot_vs_interp_bench.rs
+      - src:crates/mycelium-l1/tests/aot_vs_interp_bench.rs
     body: |
       Minted 2026-07-06 (maintainer requirement: the AOT path must be faster than the interpreter;
       post-M-995/996 it was INVERTED). Apples-to-apples RELEASE baseline showed the env-machine at
@@ -12508,3 +12523,409 @@ issues:
       cycle and the interp-to-vsa upward-stratum violation (`mycelium-vsa` stratum re-derived 2 to
       1). `cargo run -p xtask -- deps` reports 0 violations; full-workspace test/fmt/clippy/build
       and the `api` gate all green (baselines regenerated). Unblocks dev to integration promotion.
+
+  - id: E32-1
+    title: "E32-1 (epic) — trx2 E-A: transpiler up-to-snuff (harden mycelium-transpile + vet loop)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:epic, area:tooling, priority:P2, status:done]
+    epic: E32
+    depends_on: [M-1000, M-1001]
+    doc_refs:
+      - corpus:DN-34
+      - corpus:DN-26
+      - src:crates/mycelium-transpile/src/lib.rs
+      - src:.claude/kickoffs/trx2.md
+    body: |
+      EPIC (kickoff `trx2` E-A, launched 2026-07-06; executes + extends M-991). Harden the
+      Rust->Mycelium transpiler PoC (M-873, DN-34 SS8: ~12.4% grand-union expressibility,
+      `Empirical` over a `Declared` heuristic) toward useful coverage on the boot10 port surface
+      (the semcore heavy core checkty/elab/eval/mono/fuse + the 12 unported stdlib crates), and
+      wire the missing vet loop: today the transpiler NEVER validates its emitted `.myc` against
+      the real toolchain (`mycelium-check` exists but is unwired). Two lanes: M-1000 (the
+      transpile -> `myc check` -> classify loop) and M-1001 (close the highest-value gap classes,
+      macro expansion first per DN-34 SS8.3's ~55% finding). Output honesty is unchanged by
+      hardening: emitted `.myc` stays `Declared` until a differential upgrades it (VR-5/G2).
+
+      Launch scope record (orchestrator-resolved, kickoff defaults; maintainer may override):
+      E-B breadth = port surface only; staging dir = gen/myc-drafts/; E-C = generated reference
+      docs from `.myc` sources; rwr pull-forward confirmed per the maintainer's dated decision.
+      AMENDED same day: the maintainer confirmed all four, upgrading E-B breadth to a decided
+      two-stage plan -- port surface first, THEN phased expansion over the remaining Mycelium
+      Rust corpus (M-1006), each phase polishing the transpiler with its lessons.
+
+      User stories:
+      - As a compiler engineer porting semcore (M-993), I want transpiler drafts that mostly pass
+        `myc check`, so that hand-porting ~15k lines becomes fix-up work instead of cold authoring.
+
+      Definition of Done:
+      - M-1000 + M-1001 done; measurably higher `myc check`-clean emission on 2-3 representative
+        crates vs the DN-34 SS8 baseline, with the numbers recorded append-only in DN-34; every
+        narrowing/limitation `Declared`/flagged, never silent.
+
+      DONE (2026-07-06): both children landed (see their DONE notes); the "measurably higher"
+      bar is met against the REAL baseline the vet loop exposed (0% checked everywhere ->
+      eval 2.4% / std-time 8.1%); the honest headline is M-991's NO-GO-as-bulk / GO-as-
+      profiling verdict, recorded in DN-34 SS8.7-SS8.8. "Up-to-snuff" is hereby re-scoped by
+      evidence: snuff = a trustworthy profiling instrument, not a bulk porter (VR-5 -- the
+      claim downgraded to what the measurement supports).
+
+  - id: M-1000
+    title: "M-1000 — Wire the transpile -> myc-check vet loop (classify check failures into the gap report)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:tooling, priority:P2, status:done]
+    epic: E32-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-34
+      - src:crates/mycelium-transpile/src/gap.rs
+      - src:scripts/checks/myc-check.sh
+    body: |
+      Minted 2026-07-06 (kickoff trx2 E-A). The transpiler's "coverage" metric
+      (gap.rs expressible_fraction) measures only that SOME `.myc` text was emitted -- it never
+      runs the toolchain over the emission. Close the loop: after transpiling a file/crate, run
+      `myc check` (per-file oracle mode, as scripts/checks/myc-dogfood.sh does:
+      `cargo run -p mycelium-check --bin myc-check -- <file>`) on each emitted `.myc`, and fold
+      each failure back into the report as a structured vet record (exit 2 parse / 3 check, plus
+      the diagnostic), so the transpiler's accuracy is measured against the REAL toolchain. A
+      draft is then `myc-check-clean` or `gap/vet-flagged` -- never silently broken (G2). The
+      metric split must be explicit: expressible_fraction (emitted) vs checked_fraction
+      (myc-check-clean), both honestly labeled; checked_fraction is the number that matters for
+      the port.
+
+      User stories:
+      - As a compiler engineer, I want each transpiled draft vetted by `myc check` with failures
+        classified, so that I can trust "clean" drafts and see exactly why the rest fail.
+      - As the transpiler maintainer, I want check-failures folded into the gap taxonomy, so that
+        the fix worklist is driven by real toolchain rejections, not emission heuristics.
+
+      Definition of Done:
+      - A scripted transpile -> vet -> classify loop (in-crate driver + a scripts/ wrapper the
+        justfile can call) producing a per-file and union vet report; `checked_fraction` reported
+        alongside `expressible_fraction`; failures carry the myc-check exit class + diagnostic;
+        tests in the crate's src/tests/ layout; loop documented in the crate README or DN-34
+        append-only.
+
+      DONE (2026-07-06, epic branch E32 commit b35866f; merged to the trx2 head): vet.rs
+      (VetClass from the 0/2/3/64/66 exit contract; unknown/signal -> ToolUnavailable, never
+      counted clean -- G2), CLI --vet writing vet.json, scripts/checks/transpile-vet.sh
+      (advisory; builds the oracle once, MYC_CHECK_CMD), crate README, DN-34 SS8.7 appended.
+      checked_fraction is file-gated (a failing file credits 0 -- honestly-conservative lower
+      bound; denominator = non-test top-level items, so checked <= expressible always).
+      31 tests green incl. a skip-graceful live-oracle witness; wired as `just transpile-vet`
+      by the integrator (on-demand, not a gate).
+
+  - id: M-1001
+    title: "M-1001 — Close highest-value transpiler gap classes for the port surface (macro expansion first)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:tooling, priority:P2, status:done]
+    epic: E32-1
+    depends_on: [M-1000]
+    doc_refs:
+      - corpus:DN-34
+      - src:crates/mycelium-transpile/src/emit.rs
+      - src:crates/mycelium-l1/src/checkty.rs
+    body: |
+      Minted 2026-07-06 (kickoff trx2 E-A). DN-34 SS8.3: macros are the dominant gap class (62/112
+      ~55% on std-cmp); after macro handling, the surface worklist is trait impls/conversions,
+      bounded generics, payload variants, derives. Prioritize by what the port surface actually
+      needs: sample the gap/vet profile of the semcore heavy core (checkty/elab/eval/mono/fuse)
+      and the unported stdlib crates, then close the top classes. Macro expansion may use
+      `cargo expand`-style pre-expansion or targeted handling of the common macro idioms --
+      whichever is chosen, the narrowing is recorded (`Declared`) and unexpandable macros stay
+      honest gaps. Fallback arms keep returning Err(GapReason) -- never a fabricated body (the
+      DN-34 SS8 honesty-correction precedent binds).
+
+      User stories:
+      - As a compiler engineer, I want the gap classes that block the semcore/stdlib drafts closed
+        first, so that transpiler work converts directly into port acceleration.
+
+      Definition of Done:
+      - Measurably higher checked_fraction (M-1000's metric) on 2-3 representative crates
+        (at least one semcore module + one stdlib crate), before/after numbers recorded
+        append-only in DN-34; every new emission path traced to a mycelium.ebnf production;
+        remaining classes ranked with counts as the follow-on worklist.
+
+      DONE (2026-07-06, epic branch E32 commit c121dc1; merged to the trx2 head): the vet
+      baseline showed ALL targets at 0% checked, so the top VET-blocking classes (not SS8.3's
+      emission-ranked macros) were closed first, both flag-don't-guess: unresolved `use` ->
+      Category::Import gaps (the universal check-poison) and reserved-word collisions ->
+      Category::ReservedWord gaps (reserved.rs, a drift-guarded snapshot of the l1 lexer
+      table). checked_fraction: eval.rs 0 -> 2.4%, std-time 0 -> 8.1% (semcore + stdlib DoD
+      wins); expressible_fraction FELL where it had over-counted fake emissions (honest
+      correction). DN-34 SS8.8 appended with the ranked 673-gap residual worklist (Other/
+      type-coverage 274, Impl 93, Struct 70, Import 69, Macro 64, tail) -- the M-1006 ladder's
+      phase-1 input. Macro expansion deliberately deferred: it blocks emission, not check
+      (recorded, not silent).
+
+  - id: E33-1
+    title: "E33-1 (epic) — trx2 E-B: mass .myc boilerplate drafts for the port surface (gen/myc-drafts/)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:epic, area:tooling, priority:P2, status:in-progress]
+    epic: E33
+    depends_on: [M-1002, M-1003, M-1006]
+    doc_refs:
+      - corpus:DN-26
+      - corpus:DN-34
+      - src:.claude/kickoffs/trx2.md
+    body: |
+      EPIC (kickoff trx2 E-B, launched 2026-07-06; gated on E32-1's hardening). Run the hardened
+      transpiler across the targeted Rust to produce draft `.myc` STARTING POINTS in a dedicated
+      staging tree (gen/myc-drafts/ -- outside lib/ so the /myc-dogfood gate never sees Declared
+      drafts), each vetted by `myc check` and recorded in a manifest (draft -> Rust source + vet
+      status). Breadth (launch scope record): the port surface only -- the semcore heavy core
+      (checkty/elab/eval/mono/fuse, ~15.4k LOC) + the 12 stdlib crates with no `.myc` twin
+      (conformance, content, dense, fs, io, numerics, rand, runtime, sys, sys-host, time, vsa).
+      Drafts graduate into lib/ only when hand-vetted during M-993 -- never in place. All output
+      is `Declared` until a differential upgrades it (VR-5); a broken emit is flagged, never
+      silent (G2).
+
+      User stories:
+      - As a compiler engineer starting M-993, I want a vetted draft scaffold per heavy-core
+        module with its gaps enumerated, so that I start from fix-up work, not a blank file.
+
+      Definition of Done:
+      - M-1002 + M-1003 done; gen/myc-drafts/ holds a draft per named target, each
+        myc-check-clean or gap/vet-flagged; MANIFEST maps every draft to its Rust source + vet
+        status; nothing under lib/ is touched.
+
+      AMENDED (2026-07-06, maintainer launch clarification): breadth is a decided two-stage
+      plan -- the port-surface pass above stands unchanged as wave 1, and the epic additionally
+      carries M-1006, the phased whole-corpus rip-through ladder (expand once refined; lessons
+      from each phase polish the transpiler). The wave-1 DoD above gates wave 1; the epic closes
+      when the ladder (M-1006) completes.
+
+      WAVE-1 COMPLETE (2026-07-06): M-1002 + M-1003 landed (see their DONE notes) -- the wave-1
+      DoD above is met in full. Epic stays in-progress on M-1006 (the ladder), whose phase-1
+      input (the DN-34 SS8.9 812-gap ranked worklist) is now on record.
+
+  - id: M-1002
+    title: "M-1002 — Stand up gen/myc-drafts/ staging tree + manifest schema + batch vet driver"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:tooling, priority:P2, status:done]
+    epic: E33-1
+    depends_on: [M-1000]
+    doc_refs:
+      - src:crates/mycelium-transpile/src/batch.rs
+      - corpus:DN-34
+    body: |
+      Minted 2026-07-06 (kickoff trx2 E-B). Create the staging tree (gen/myc-drafts/, greenfield
+      -- nothing references it yet) with a README stating the honesty contract (everything here
+      is `Declared` draft material, never imported by lib/, never dogfood-gated), a manifest
+      schema (per draft: Rust source path + content hash, transpile stats, gap counts by
+      category, vet status + myc-check exit class, timestamp), and a batch driver that runs
+      transpile -> vet (M-1000's loop) over a target list and writes drafts + manifest
+      deterministically.
+
+      User stories:
+      - As the orchestrator, I want a manifest that says per-draft where it came from and whether
+        it checks, so that M-993 can triage drafts without re-running anything.
+
+      Definition of Done:
+      - gen/myc-drafts/README.md (honesty contract + regeneration command); manifest schema
+        implemented + documented; batch driver runs the M-1000 loop over an explicit target list;
+        deterministic output (stable ordering, no timestamps that churn diffs -- or timestamps
+        isolated to a non-diffed field).
+
+      DONE (2026-07-06, epic branch E33 tip e045408; merged to the trx2 head): README honesty
+      contract; regenerate.sh (shellcheck-clean, builds the oracle once, per-target subdirs --
+      stem-collision guard) + manifest_gen.py (ruff-clean, pure aggregation over the
+      transpiler's own artifacts); MANIFEST.md + manifest.json; determinism verified
+      byte-identical (manifest AND full-tree sha256, independent runs). No transpiler edits
+      needed; zero lib/ edits. Wired as `just myc-drafts-regen` by the integrator. Two real
+      driver hazards found + fixed in-wave (absolute-path leak in vet.json via out-dir arg;
+      graceful transpile_failed manifest row instead of a crash on a missing input).
+
+  - id: M-1003
+    title: "M-1003 — Rip-through: draft .myc scaffolds for semcore heavy core + 12 unported stdlib crates"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:task, area:tooling, priority:P2, status:done]
+    epic: E33-1
+    depends_on: [M-1001, M-1002]
+    doc_refs:
+      - corpus:DN-26
+      - src:crates/mycelium-l1/src/checkty.rs
+      - src:lib/compiler/README.md
+    body: |
+      Minted 2026-07-06 (kickoff trx2 E-B). Execute the batch run over the port surface:
+      crates/mycelium-l1/src/{checkty,elab,eval,mono,fuse}.rs (the M-993 SCC -- drafts should
+      respect the lib/compiler/README.md conventions where the transpiler can: semcore-single-
+      nodule destination, FLAG-ast-5/FLAG-parse-2 per-type constructor prefixing noted in the
+      manifest where applicable) and the 12 stdlib crates without `.myc` twins. Commit drafts +
+      manifest + union gap/vet report. The run's numbers (checked_fraction per target) are the
+      E-A hardening's real-world scorecard and feed the DN-34 append-only results record.
+
+      User stories:
+      - As a compiler engineer, I want the full port surface transpiled and vetted in one
+        recorded pass, so that the M-993 wave plans against actual per-module gap profiles.
+
+      Definition of Done:
+      - A draft (or an explicit whole-file gap record where emission fails entirely) per named
+        target in gen/myc-drafts/; manifest complete; union vet report committed; per-target
+        checked_fraction recorded append-only in DN-34; zero edits under lib/.
+
+      DONE (2026-07-06, epic branch E33 tip e045408; merged to the trx2 head): all 17 targets
+      ran clean (zero hard transpile failures -- the whole-file-gap fallback exists but was
+      only exercised synthetically); 158 committed artifacts; union: 759 non-test items, 46
+      emitted, 28 myc-check-clean -> checked_fraction 3.7% / expressible 6.1%; 51/56 emitted
+      files Clean, 5 CheckError, 0 ParseError/ToolUnavailable. eval 2.4% + std-time 8.1%
+      independently reproduce E-A's SS8.8 samples (cross-validation). DN-34 SS8.9 appended:
+      per-target table + ranked 812-gap residual worklist (Other/type-coverage 322, Impl 119,
+      Import 117, Struct 80, GenericBound 59, tail) + 5 lessons -- the M-1006 phase-1 input.
+      Confirms M-991's verdict at full-surface scale: the corpus is gap-profiling ground truth
+      + starting points, not ports (all drafts Declared).
+
+  - id: E34-1
+    title: "E34-1 (epic) — trx2 E-C: auto-doc-gen Mycelium doc ports (the lib/ reference index)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:epic, area:tooling, priority:P2, status:done]
+    epic: E34
+    depends_on: [M-1004, M-1005]
+    doc_refs:
+      - corpus:DN-26
+      - src:crates/mycelium-doc/src/apiref.rs
+      - src:tools/docgen/code_index.py
+      - src:.claude/kickoffs/trx2.md
+    body: |
+      EPIC (kickoff trx2 E-C, launched 2026-07-06). Launch scope record: of the three candidate
+      readings of "Mycelium doc ports", the orchestrator resolved interpretation (c) --
+      auto-generated reference docs derived FROM the `.myc` sources (the docs/api-index/ analogue
+      for lib/std/ + lib/compiler/) -- as the only reading satisfying the kickoff DoD
+      ("deterministic + regenerable, drift-gated"); (b) a generator authored in Mycelium is noted
+      as a possible follow-up dogfooding wave. Two reusable halves exist: mycelium-doc's
+      apiref.rs already extracts `.myc` nodule headers + fn signatures (heuristic, M-736), and
+      tools/docgen/code_index.py + scripts/checks/doc-index.sh define the committed-index +
+      drift-gate pattern. Build the lib/ index from those halves. Honesty: the index is an
+      `Empirical/Declared` heuristic; source is ground truth; flagged items never silently
+      dropped (G2).
+
+      User stories:
+      - As an agent porting semcore, I want a grep-friendly index of every `.myc` nodule's
+        symbols, so that I load targeted context instead of re-reading whole files.
+      - As the maintainer, I want the lib/ index drift-gated like docs/api-index/, so that it
+        cannot silently rot as the port grows.
+
+      Definition of Done:
+      - M-1004 + M-1005 done; docs/lib-index/ (INDEX.md + index.json) committed, deterministic,
+        regenerable via a just recipe, drift-gated in just check; honestly labeled.
+
+      DONE (2026-07-06): both children landed (see their DONE notes); index committed +
+      drift-gated in just check; INDEX.md header carries the Empirical/Declared grading.
+      Interpretation (b) -- a doc generator authored in Mycelium -- remains a candidate
+      follow-up dogfooding wave, deliberately NOT claimed by this epic (G2: recorded, not
+      silently dropped).
+
+  - id: M-1004
+    title: "M-1004 — .myc symbol/doc extraction + docs/lib-index/ emission (INDEX.md + index.json)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:tooling, priority:P2, status:done]
+    epic: E34-1
+    depends_on: []
+    doc_refs:
+      - src:crates/mycelium-doc/src/apiref.rs
+      - src:lib/compiler/README.md
+      - src:docs/api-index/INDEX.md
+    body: |
+      Minted 2026-07-06 (kickoff trx2 E-C). Extract per-nodule symbol/doc info from every `.myc`
+      under lib/std/ + lib/compiler/ (nodule header + @summary, fn signatures + preceding //
+      doc-comment blocks, type/ctor declarations where extractable) and emit docs/lib-index/
+      {INDEX.md,index.json} mirroring the docs/api-index/ shape (grep-friendly MD grouped by
+      phylum/nodule; machine JSON with file:line, summary, and an honesty tag per entry).
+      Implementation may extend mycelium-doc (apiref.rs already does header+fn extraction) or
+      add a docgen path -- prefer reusing apiref.rs over a parallel heuristic (DRY); if a second
+      extractor is unavoidable, its divergence from apiref.rs is recorded. Deterministic output;
+      extraction limits (macro-ish constructs, re-exports, cfg-analogues) go to a flagged
+      section, never dropped (G2).
+
+      User stories:
+      - As an agent, I want docs/lib-index/INDEX.md#<nodule> anchors, so that doc_refs can point
+        at .myc symbols the way api: refs point at Rust symbols.
+
+      Definition of Done:
+      - docs/lib-index/{INDEX.md,index.json} generated + committed; every lib/ nodule present;
+        flagged section for extraction limits; entries carry file:line + honesty tag;
+        deterministic across reruns.
+
+      DONE (2026-07-06, epic branch E34, commit 465b058; merged to the trx2 head): lib_index.rs
+      (639 ln) + `myc-doc lib-index`; 3313 items / 26 nodules (17 std + 9 compiler; 373 types,
+      1201 ctors, 1713 fns), flagged: 0 (cross-checked vs independent greps -- exact);
+      determinism byte-identical across two runs. Reused apiref.rs extraction (DRY) and fixed
+      four pre-existing bugs in it (=> arrow truncation, trailing ; on nodule names,
+      section-divider doc misattribution, multi-line signatures) with regression tests;
+      84 lib + 3 integration tests green, clippy -D warnings clean.
+
+  - id: M-1005
+    title: "M-1005 — lib-index drift gate + just recipe + Doc-Index registration"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:tooling, priority:P2, status:done]
+    epic: E34-1
+    depends_on: [M-1004]
+    doc_refs:
+      - src:scripts/checks/doc-index.sh
+      - src:docs/Doc-Index.md
+      - src:justfile
+    body: |
+      Minted 2026-07-06 (kickoff trx2 E-C). Wire M-1004's generator into the check surface the
+      way docs/api-index/ is wired: a just recipe to regenerate (e.g. just lib-index), a drift
+      gate in just check (regenerate-and-diff, mirroring scripts/checks/doc-index.sh -- skip
+      gracefully when the toolchain is absent), and registration in docs/Doc-Index.md (what the
+      index is, its Empirical/Declared grading, the regeneration command, the ownership rule:
+      integrator-regenerated, never hand-merged). Update .gitattributes if the union-merge set
+      must exclude it (mitigation #2 analogue).
+
+      User stories:
+      - As the integrator, I want just check to fail when docs/lib-index/ drifts from lib/, so
+        that the index stays trustworthy without manual discipline.
+
+      Definition of Done:
+      - just recipe + drift gate live in just check (graceful skip preserved); Doc-Index.md
+        registers the artifact with its grading + ownership; CHANGELOG entry at integration;
+        gate proven by a deliberate-drift test run recorded in the PR body.
+
+      DONE (2026-07-06, epic branch E34 commit ed1bd24 + the orchestrator's integration edits):
+      scripts/checks/lib-index.sh (regenerate-to-temp-and-diff, skip-graceful, mirrors
+      doc-index.sh); wired by the integrator as `just lib-index` in the all.sh gate list
+      (COMPONENT_ID 31 -- the last free 5-bit slot, space now exhausted) + `just lib-index-gen`
+      regeneration recipe; Doc-Index SS6 registration + CHANGELOG entry applied at integration.
+      Gate proven: clean run ok -> deliberate corruption failed with diff + exit 2 -> revert ok.
+
+  - id: M-1006
+    title: "M-1006 — Phased whole-corpus rip-through ladder (expand E-B beyond the port surface)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:task, area:tooling, priority:P2, status:todo]
+    epic: E33-1
+    depends_on: [M-1003]
+    doc_refs:
+      - corpus:DN-34
+      - corpus:DN-26
+      - src:.claude/kickoffs/trx2.md
+    body: |
+      Minted 2026-07-06 (maintainer decision, trx2 launch clarification -- upgrades the E-B
+      breadth resolution from the orchestrator's `Declared` default to a decided two-stage
+      plan). After the port-surface pass (M-1003) is refined: expand the rip-through to the
+      REST of the Rust corpus of the Mycelium language codebase in CONTROLLED PHASES. Each
+      phase: select a bounded target set -> transpile -> vet (M-1000 loop) -> patch drafts to
+      close gaps -> fold the phase's lessons back into the transpiler (gap classes closed,
+      emitter fixes, taxonomy refinements) -> record the phase manifest. Iterate until the
+      transpiler is a highly polished solution. Phase target sets are minted per wave
+      (mitigation #1 -- no pre-minting the whole ladder); phase boundaries are the maintainer's
+      to confirm. Reconciliation guard: at Phase-II, this ladder's phase manifests become
+      INPUTS to rwr's M-947..M-957 port-wave manifests -- coordinate via issues.yaml
+      depends_on/body notes, never duplicate waves (the trx2 kickoff's FLAG-V2 note binds:
+      compiler self-hosting stays boot10's lane).
+
+      User stories:
+      - As the maintainer, I want each rip-through phase to both port code and harden the
+        transpiler, so that porting accelerates as the corpus is consumed and the tool converges
+        to polished.
+
+      Definition of Done:
+      - Per phase: a recorded phase manifest (target set, before/after expressible_fraction +
+        checked_fraction, drafts landed, transpiler fixes landed, lessons). Ladder: the
+        remaining Mycelium Rust corpus covered by recorded phases; the transpiler's residual
+        gap classes enumerated with counts and either closed or explicitly declared
+        out-of-scope (G2 -- the stopping point is recorded, never silent).
+
+      NOTE (2026-07-06, wave-1 close-out): the per-phase recipe is operationalized as skills so
+      future sessions run light -- /transpile-vet (the instrument + its honesty rules) and
+      /myc-drafts (corpus triage, lib/ graduation checklist, the 5-step ladder-phase recipe).
+      Phase 1's input is the DN-34 SS8.9 812-gap ranked worklist.

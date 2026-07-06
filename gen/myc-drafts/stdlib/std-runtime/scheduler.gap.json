@@ -1,0 +1,17 @@
+{
+  "source": "crates/mycelium-std-runtime/src/scheduler.rs",
+  "emitted_items": [],
+  "gaps": [
+    {
+      "file": "crates/mycelium-std-runtime/src/scheduler.rs",
+      "line": 23,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use mycelium_sched :: scheduler :: { Scheduler , SchedulerError , StealDecision , StealPolicy , SCHEDULER_LIVENESS_STRENGTH , SCHEDULER_RT2_STRENGTH , STEAL_POLICY_STRENGTH , } ;",
+      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    }
+  ],
+  "total_top_level_items": 1
+}
