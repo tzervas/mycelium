@@ -12437,7 +12437,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::aot",
       "file": "crates/mycelium-mlir/src/aot.rs",
-      "line": 328,
+      "line": 652,
       "summary": "[`run_core`] with **both** budgets explicit (M-347): `fuel` bounds `Fix` unfolds (time), `max_depth`",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12811,7 +12811,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/aot.rs",
-      "line": 79,
+      "line": 101,
       "summary": "The default depth-budget resolution — the resolved ceiling **and** its `EXPLAIN`-able basis (no",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14197,7 +14197,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/aot.rs",
-      "line": 428,
+      "line": 754,
       "summary": "Run a Core IR program through the AOT path to a representation [`Value`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14219,7 +14219,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/aot.rs",
-      "line": 304,
+      "line": 628,
       "summary": "Run a Core IR program through the AOT path to a [`CoreValue`] (the full v0 calculus — repr, data,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14230,7 +14230,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/aot.rs",
-      "line": 353,
+      "line": 677,
       "summary": "[`run_core_with_budget`] with a shared **effect-budget ledger** threaded through the env-machine",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14241,7 +14241,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/aot.rs",
-      "line": 313,
+      "line": 637,
       "summary": "[`run_core`] with an explicit `Fix`-unfold (fuel) budget and the dynamically-resolved depth ceiling.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14263,7 +14263,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/aot.rs",
-      "line": 948,
+      "line": 1314,
       "summary": "Run a Core IR program through the AOT path **with a schedule-staged packing layout** (M-251;",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -37821,27 +37821,27 @@
     },
     {
       "symbol": "mycelium_mlir::aot::default_depth_budget",
-      "reason": "dedup-alias: same definition as `mycelium_mlir::default_depth_budget` at crates/mycelium-mlir/src/aot.rs:79 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_mlir::default_depth_budget` at crates/mycelium-mlir/src/aot.rs:101 — one canonical row kept"
     },
     {
       "symbol": "mycelium_mlir::aot::run",
-      "reason": "dedup-alias: same definition as `mycelium_mlir::run` at crates/mycelium-mlir/src/aot.rs:428 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_mlir::run` at crates/mycelium-mlir/src/aot.rs:754 — one canonical row kept"
     },
     {
       "symbol": "mycelium_mlir::aot::run_core",
-      "reason": "dedup-alias: same definition as `mycelium_mlir::run_core` at crates/mycelium-mlir/src/aot.rs:304 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_mlir::run_core` at crates/mycelium-mlir/src/aot.rs:628 — one canonical row kept"
     },
     {
       "symbol": "mycelium_mlir::aot::run_core_with_effects",
-      "reason": "dedup-alias: same definition as `mycelium_mlir::run_core_with_effects` at crates/mycelium-mlir/src/aot.rs:353 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_mlir::run_core_with_effects` at crates/mycelium-mlir/src/aot.rs:677 — one canonical row kept"
     },
     {
       "symbol": "mycelium_mlir::aot::run_core_with_fuel",
-      "reason": "dedup-alias: same definition as `mycelium_mlir::run_core_with_fuel` at crates/mycelium-mlir/src/aot.rs:313 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_mlir::run_core_with_fuel` at crates/mycelium-mlir/src/aot.rs:637 — one canonical row kept"
     },
     {
       "symbol": "mycelium_mlir::aot::run_with_layout",
-      "reason": "dedup-alias: same definition as `mycelium_mlir::run_with_layout` at crates/mycelium-mlir/src/aot.rs:948 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_mlir::run_with_layout` at crates/mycelium-mlir/src/aot.rs:1314 — one canonical row kept"
     },
     {
       "symbol": "mycelium_mlir::bitnet::BitnetDotKernel",

@@ -1174,7 +1174,7 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::eval::L1Error
 pub enum mycelium_l1::eval::L1Value
 pub mycelium_l1::eval::L1Value::Data
 pub mycelium_l1::eval::L1Value::Data::ctor: alloc::string::String
-pub mycelium_l1::eval::L1Value::Data::fields: alloc::vec::Vec<mycelium_l1::eval::L1Value>
+pub mycelium_l1::eval::L1Value::Data::fields: alloc::sync::Arc<alloc::vec::Vec<mycelium_l1::eval::L1Value>>
 pub mycelium_l1::eval::L1Value::Data::ty: alloc::string::String
 pub mycelium_l1::eval::L1Value::Fn(alloc::string::String)
 pub mycelium_l1::eval::L1Value::Repr(mycelium_core::value::Value)
@@ -1911,7 +1911,7 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::eval::L1Error
 pub enum mycelium_l1::L1Value
 pub mycelium_l1::L1Value::Data
 pub mycelium_l1::L1Value::Data::ctor: alloc::string::String
-pub mycelium_l1::L1Value::Data::fields: alloc::vec::Vec<mycelium_l1::eval::L1Value>
+pub mycelium_l1::L1Value::Data::fields: alloc::sync::Arc<alloc::vec::Vec<mycelium_l1::eval::L1Value>>
 pub mycelium_l1::L1Value::Data::ty: alloc::string::String
 pub mycelium_l1::L1Value::Fn(alloc::string::String)
 pub mycelium_l1::L1Value::Repr(mycelium_core::value::Value)

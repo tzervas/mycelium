@@ -12123,7 +12123,7 @@ issues:
   - id: M-993
     title: "Port the heavy semantic-core SCC (checkty/elab/eval/mono/fuse) to semcore.myc"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P2, status:blocked]
+    labels: [phase:5, type:feature, area:language, priority:P2, status:todo]
     epic: E18-1
     depends_on: [M-740, M-986, M-987]
     doc_refs:
@@ -12141,6 +12141,14 @@ issues:
       inside the L1 evaluator over a whole program almost certainly cannot complete under the current
       kernel (M-986 depth budget, M-987 ~n^3 cost). status:blocked on M-994's resolution (how the
       Stage-5/6 differential runs); the transpiler accelerator (M-991) may seed the drafts.
+
+      UNBLOCKED (2026-07-06, checked landed-basis): M-994 is RESOLVED — both kernel walls are down
+      (M-986 fix (a): deep match/let tail loops now exceed the 4096 budget; M-987 fix (b): ~n³→~n²,
+      plus M-995/M-996/M-999 carrying the wins to the AOT env-machine, which now outruns the
+      interpreter). The interpreted-first Stage-5/6 differential is practical; status blocked→todo.
+      The port work itself (the ~15k-line SCC, the FLAG-ast-5/parse-2 prefixing discipline, the
+      trx2 transpiler-accelerated boilerplate) is the remaining substance; M-741 ratification
+      follows it.
 
       User stories:
       - As a language user, I want the type-checker/elaborator/evaluator written in Mycelium, so
