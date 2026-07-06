@@ -57,10 +57,10 @@ def load_json(path: Path):
         return json.load(f)
 
 
-def pct(numer: int, denom: int) -> float:
+def pct(numerator: int, denom: int) -> float:
     if denom == 0:
         return 0.0
-    return numer / denom * 100.0
+    return numerator / denom * 100.0
 
 
 def gap_category_counts_from_gaps(gaps: list) -> dict:
