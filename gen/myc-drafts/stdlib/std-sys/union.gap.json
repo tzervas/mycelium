@@ -164,10 +164,10 @@
       "file": "crates/mycelium-std-sys/src/io.rs",
       "line": 44,
       "col": 1,
-      "category": "GenericBound",
-      "rust_construct": "GenericBound",
+      "category": "Other",
+      "rust_construct": "Other",
       "snippet": "# [doc = \" \\\\[Declared\\\\] Read **all** of stdin to end-of-input — **UNBOUNDED, TRUSTED-ONLY**.\"] # [doc = \"\"] # [doc = \" This grows the buffer with no cap: a hostile or runaway producer can drive an arbitrarily large\"] # [doc = \" allocation (memory-exhaustion DoS). Use it **only** where the stdin producer is your own process\"] # [doc = \" or otherwise under your control. For **untrusted / external-edge** input, use the bounded\"] # [doc = \" [`read_to_end_capped`] instead (P3 — bounds at the external edge).\"] # [doc = \"\"] # [doc = \" Returns `Err` on any OS read error — never-silent (G2): a partial read that hits an error is\"] # [doc = \" reported, not truncated-and-returned.\"] pub fn read_to_end () -> Result < Vec < u8 > , io :: Error > { let mut buf = Vec :: new () ; io :: stdin () . read_to_end (& mut buf) ? ; Ok (buf) }",
-      "reason": "generic type path `Result < Vec < u8 > , io :: Error >` — type-argument mapping not confirmed",
+      "reason": "qualified type path `io :: Error` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "read_to_end"
     },
     {
@@ -197,7 +197,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl std :: error :: Error for ReadCappedError { fn source (& self) -> Option < & (dyn std :: error :: Error + 'static) > { match self { ReadCappedError :: Io (e) => Some (e) , ReadCappedError :: TooLarge { .. } => None , } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `source` signature: generic type path `Option < & (dyn std :: error :: Error + 'static) >` — type-argument mapping not confirmed",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `source` signature: unsupported Rust type form `& (dyn std :: error :: Error + 'static)`",
       "item_name": "ReadCappedError"
     },
     {
@@ -234,10 +234,10 @@
       "file": "crates/mycelium-std-sys/src/io.rs",
       "line": 140,
       "col": 1,
-      "category": "GenericBound",
-      "rust_construct": "GenericBound",
+      "category": "Other",
+      "rust_construct": "Other",
       "snippet": "# [doc = \" \\\\[Declared\\\\] Read a single line from stdin (including the trailing newline if present). Returns\"] # [doc = \" `Err` on any OS read error or invalid UTF-8 — never-silent (G2).\"] pub fn read_line () -> Result < String , io :: Error > { let mut line = String :: new () ; io :: stdin () . read_line (& mut line) ? ; Ok (line) }",
-      "reason": "generic type path `Result < String , io :: Error >` — type-argument mapping not confirmed",
+      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
       "item_name": "read_line"
     },
     {
@@ -264,10 +264,10 @@
       "file": "crates/mycelium-std-sys/src/io.rs",
       "line": 161,
       "col": 1,
-      "category": "GenericBound",
-      "rust_construct": "GenericBound",
+      "category": "Other",
+      "rust_construct": "Other",
       "snippet": "# [doc = \" \\\\[Declared\\\\] Flush stdout — surfaces any deferred OS write error explicitly (G2), so a buffered\"] # [doc = \" write lost at flush time is never silently dropped.\"] pub fn flush_out () -> Result < () , io :: Error > { io :: stdout () . flush () }",
-      "reason": "generic type path `Result < () , io :: Error >` — type-argument mapping not confirmed",
+      "reason": "unit type `()` has no representable value in this grammar fragment",
       "item_name": "flush_out"
     },
     {
@@ -644,10 +644,10 @@
       "file": "crates/mycelium-std-sys/src/sys.rs",
       "line": 68,
       "col": 1,
-      "category": "GenericBound",
-      "rust_construct": "GenericBound",
+      "category": "Other",
+      "rust_construct": "Other",
       "snippet": "# [doc = \" \\\\[Declared\\\\] The process's command-line arguments (including arg 0), parsed to `String`s. Built on\"] # [doc = \" `args_os`: a non-UTF-8 argument is an explicit `Err(NonUtf8Arg)` naming the offending **index** —\"] # [doc = \" never a silently-dropped element (the previous `filter_map` behaviour) that would shift every\"] # [doc = \" following arg's position, and (unlike `std::env::args()`) never a *panic* (G2). The first\"] # [doc = \" non-UTF-8 arg short-circuits; callers needing the faithful, position-stable raw form should use\"] # [doc = \" `std::env::args_os` directly (this floor is the validated-UTF-8 convenience).\"] pub fn args () -> Result < Vec < String > , NonUtf8Arg > { parse_args (std :: env :: args_os ()) }",
-      "reason": "generic type path `Result < Vec < String > , NonUtf8Arg >` — type-argument mapping not confirmed",
+      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
       "item_name": "args"
     },
     {
@@ -674,10 +674,10 @@
       "file": "crates/mycelium-std-sys/src/time.rs",
       "line": 18,
       "col": 1,
-      "category": "GenericBound",
-      "rust_construct": "GenericBound",
+      "category": "Other",
+      "rust_construct": "Other",
       "snippet": "# [doc = \" \\\\[Declared\\\\] Returns nanoseconds since the Unix epoch from the wall clock.\"] # [doc = \"\"] # [doc = \" Returns `Err` if the system time is before the epoch — never-silent (G2).\"] # [doc = \"\"] # [doc = \" # Guarantee\"] # [doc = \"\"] # [doc = \" `Declared` — backed by `std::time::SystemTime`. No audit of platform clock resolution,\"] # [doc = \" drift, or leap-second handling.\"] pub fn wall_nanos () -> Result < u128 , String > { SystemTime :: now () . duration_since (UNIX_EPOCH) . map (| d | d . as_nanos ()) . map_err (| e | e . to_string ()) }",
-      "reason": "generic type path `Result < u128 , String >` — type-argument mapping not confirmed",
+      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
       "item_name": "wall_nanos"
     },
     {
@@ -687,7 +687,7 @@
       "category": "MultiStmtBody",
       "rust_construct": "MultiStmtBody",
       "snippet": "# [doc = \" \\\\[Declared\\\\] Returns monotonic nanoseconds since an unspecified process-local epoch.\"] # [doc = \"\"] # [doc = \" Guaranteed non-decreasing within a single process run (Rust `Instant` guarantee).\"] # [doc = \" Not comparable across processes or restarts.\"] # [doc = \"\"] # [doc = \" # Guarantee\"] # [doc = \"\"] # [doc = \" `Declared` — backed by `std::time::Instant`. OS monotonic clock; no precision audit.\"] pub fn mono_nanos () -> u64 { static ORIGIN : std :: sync :: OnceLock < Instant > = std :: sync :: OnceLock :: new () ; let origin = ORIGIN . get_or_init (Instant :: now) ; u64 :: try_from (origin . elapsed () . as_nanos ()) . unwrap_or (u64 :: MAX) }",
-      "reason": "function body has a statement that is neither a simple `let` binding nor the trailing expression",
+      "reason": "function body contains a nested item declaration (e.g. a local `static`/`const`/`fn`) — this grammar fragment has no local-item production; only simple `let x = e;` bindings plus a trailing expression map",
       "item_name": "mono_nanos"
     },
     {
@@ -713,11 +713,11 @@
   ],
   "category_counts": {
     "DeriveAttr": 1,
-    "GenericBound": 6,
+    "GenericBound": 1,
     "Impl": 7,
     "Import": 7,
     "MultiStmtBody": 1,
-    "Other": 37,
+    "Other": 42,
     "PayloadVariant": 2,
     "ReservedWord": 1,
     "Struct": 2,

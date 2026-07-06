@@ -21,11 +21,11 @@
     {
       "myc_file": "gen/myc-drafts/stdlib/std-io/io.myc",
       "source_file": "crates/mycelium-std-io/src/io.rs",
-      "class": "Clean",
-      "exit_code": 0,
-      "diagnostic": "",
+      "class": "CheckError",
+      "exit_code": 3,
+      "diagnostic": "check-error: check error in `read_all`: unknown type `Source`",
       "non_test_items": 13,
-      "emitted_items": 0
+      "emitted_items": 1
     },
     {
       "myc_file": "gen/myc-drafts/stdlib/std-io/lib.myc",
@@ -47,10 +47,10 @@
     }
   ],
   "total_non_test_items": 63,
-  "total_emitted_items": 6,
+  "total_emitted_items": 7,
   "total_checked_clean_items": 3,
   "class_counts": {
-    "CheckError": 1,
-    "Clean": 4
+    "CheckError": 2,
+    "Clean": 3
   }
 }

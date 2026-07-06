@@ -9,12 +9,13 @@
       "expressible_pct": 11.76470588235294,
       "category_counts": {
         "DeriveAttr": 4,
-        "GenericBound": 6,
+        "GenericBound": 5,
         "Impl": 4,
         "Import": 1,
         "MacroInvocation": 1,
-        "MultiStmtBody": 3,
-        "Other": 12,
+        "MultiStmtBody": 4,
+        "Other": 11,
+        "ReservedWord": 1,
         "Struct": 3,
         "TestItem": 1,
         "Trait": 1
@@ -29,12 +30,13 @@
     "expressible_pct": 11.76470588235294,
     "category_counts": {
       "DeriveAttr": 4,
-      "GenericBound": 6,
+      "GenericBound": 5,
       "Impl": 4,
       "Import": 1,
       "MacroInvocation": 1,
-      "MultiStmtBody": 3,
-      "Other": 12,
+      "MultiStmtBody": 4,
+      "Other": 11,
+      "ReservedWord": 1,
       "Struct": 3,
       "TestItem": 1,
       "Trait": 1

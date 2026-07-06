@@ -167,6 +167,83 @@ fn cases() -> Vec<Case> {
                 category: Category::MultiStmtBody,
             },
         },
+        // A string literal maps to a `StrLit` (grammar line 414/430; M-910/M-911) — reachable in
+        // an emittable body as a call argument (its type is inferred, not named). The Rust `\n`
+        // decodes to a raw newline which is re-escaped back to `\n` in the emitted StrLit.
+        Case {
+            name: "string_literal_arg_emits_strlit",
+            rust: "fn f(x: u8) -> u8 { g(x, \"hi\\n\") }",
+            expect: Expect::Emitted {
+                item: "f",
+                contains: "g(x, \"hi\\n\")",
+            },
+        },
+        // A float literal maps to a `FloatLit` (grammar line 414/443; ADR-040/M-897) when its
+        // digit string is a well-formed, finite FloatLit — reachable as a call argument.
+        Case {
+            name: "float_literal_arg_emits_floatlit",
+            rust: "fn f(x: u8) -> u8 { g(x, 1.5) }",
+            expect: Expect::Emitted {
+                item: "f",
+                contains: "g(x, 1.5)",
+            },
+        },
+        // An exponent-form float likewise maps (`syn` normalizes `E`→`e`, drops the `+`).
+        Case {
+            name: "float_exponent_arg_emits_floatlit",
+            rust: "fn f(x: u8) -> u8 { g(x, 2.5E+3) }",
+            expect: Expect::Emitted {
+                item: "f",
+                contains: "g(x, 2.5e3)",
+            },
+        },
+        // An explicit-element array maps to a `ListLit` (grammar line 415; RFC-0032 D3) —
+        // reachable as a call argument.
+        Case {
+            name: "array_literal_arg_emits_listlit",
+            rust: "fn f(x: u8) -> u8 { g(x, [x, x]) }",
+            expect: Expect::Emitted {
+                item: "f",
+                contains: "g(x, [x, x])",
+            },
+        },
+        // KNOWN HARD GAP: a string literal carrying a control char with no Mycelium escape
+        // (`\x07` bell) — StrLit has no `\xNN` form, so it is never-silently gapped, never emitted
+        // as a raw byte (G2/VR-5).
+        Case {
+            name: "string_control_char_gapped",
+            rust: "fn f(x: u8) -> u8 { g(x, \"\\x07\") }",
+            expect: Expect::Gapped {
+                category: Category::Other,
+            },
+        },
+        // KNOWN HARD GAP: a Rust-only float shape (trailing-dot `2.` → digit string "2.", empty
+        // fraction) has no faithful Mycelium FloatLit spelling — gapped rather than reshaped (VR-5).
+        Case {
+            name: "float_trailing_dot_gapped",
+            rust: "fn f(x: u8) -> u8 { g(x, 2.) }",
+            expect: Expect::Gapped {
+                category: Category::Other,
+            },
+        },
+        // KNOWN HARD GAP: a well-shaped float whose value is not finite binary64 (`1e999` → +inf)
+        // — a literal is a conversion boundary, so out-of-range is a never-silent refuse, never a
+        // silent ±inf (ADR-040 §2.4).
+        Case {
+            name: "float_non_finite_gapped",
+            rust: "fn f(x: u8) -> u8 { g(x, 1e999) }",
+            expect: Expect::Gapped {
+                category: Category::Other,
+            },
+        },
+        // KNOWN HARD GAP: an array-repeat `[x; N]` — `ListLit` has no repeat form.
+        Case {
+            name: "array_repeat_gapped",
+            rust: "fn f(x: u8) -> u8 { g(x, [x; 4]) }",
+            expect: Expect::Gapped {
+                category: Category::Other,
+            },
+        },
         // A bounded generic type parameter has no bare-identifier `type_params` mapping.
         Case {
             name: "generic_bound_gap",
@@ -379,4 +456,67 @@ fn narrow_gap_cites_dn41_and_produces_no_fabricated_myc_text() {
         "expected the narrow gap's reason to cite DN-41, got {:?}",
         report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
     );
+}
+
+/// Never-silent guard (G2/VR-5): a string literal that cannot be faithfully re-escaped (a control
+/// char with no Mycelium `\xNN`/`\u{..}` form) is gapped, and its raw byte NEVER leaks into the
+/// emitted `.myc` text — a future change that started emitting the raw control byte (or a fabricated
+/// `\x07` escape Mycelium's lexer would reject) would fail loudly here.
+#[test]
+fn string_control_char_never_leaks_raw_byte() {
+    let rust = "fn f(x: u8) -> u8 { g(x, \"\\x07\") }";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "fixture")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile: {e}"));
+    assert!(
+        report.emitted_items.is_empty(),
+        "expected the control-char string body to be fully gapped, got emitted_items={:?}",
+        report.emitted_items
+    );
+    assert!(
+        !myc.contains('\u{7}') && !myc.contains("\\x07"),
+        "gapped control-char string must never leak a raw byte or a fabricated `\\x07` escape \
+         (StrLit has no `\\xNN` form), got:\n{myc}"
+    );
+}
+
+/// The sharpened `MultiStmtBody` reason (this leaf, E33-1 M-1006 phase-1) names the *kind* of the
+/// offending interior statement — a nested item (local `static`/`const`/`fn`), a macro invocation,
+/// or a semicolon-terminated statement expression — so the gap report is precise, not generic
+/// (G2). Each is a genuinely design-blocked form (no local-item / no macro / value-discard has no
+/// grammar surface); this pins the diagnostic text, not any emission.
+#[test]
+fn multi_stmt_body_reason_names_the_statement_kind() {
+    let cases = [
+        // A local `static` item statement (the real `mono_nanos` shape).
+        (
+            "fn f(x: u8) -> u8 { static Z: u8 = 0; x }",
+            "nested item declaration",
+        ),
+        // A macro-invocation statement (the real `rejection_sample_u64` `debug_assert!` shape).
+        (
+            "fn f(x: u8) -> u8 { debug_assert!(x > 0); x }",
+            "macro-invocation statement",
+        ),
+        // A semicolon-terminated (value-discarding) statement expression.
+        (
+            "fn f(x: u8) -> u8 { g(x); x }",
+            "semicolon-terminated (value-discarding) statement expression",
+        ),
+    ];
+    for (rust, needle) in cases {
+        let (_, report) = transpile_source(rust, "fixture.rs", "fixture")
+            .unwrap_or_else(|e| panic!("failed to parse/transpile `{rust}`: {e}"));
+        assert!(
+            report
+                .gaps
+                .iter()
+                .any(|g| g.category == Category::MultiStmtBody && g.reason.contains(needle)),
+            "case `{rust}`: expected a MultiStmtBody gap whose reason mentions `{needle}`, got {:?}",
+            report
+                .gaps
+                .iter()
+                .map(|g| (g.category.as_str(), g.reason.as_str()))
+                .collect::<Vec<_>>()
+        );
+    }
 }

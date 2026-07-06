@@ -6,5 +6,6 @@ mod corpus;
 mod diff;
 mod emit;
 mod invariant;
+mod map;
 mod reserved;
 mod vet;

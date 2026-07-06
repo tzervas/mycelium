@@ -347,7 +347,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl Sink { # [doc = \" Construct an empty in-memory sink.\"] # [doc = \"\"] # [doc = \" # Effects: none (construction is pure)\"] # [must_use] pub fn new () -> Self { Sink { buffer : Vec :: new () } } # [doc = \" Consume the sink and return the bytes written into it.\"] # [doc = \"\"] # [doc = \" This finalizes the sink — it cannot be written to after this call (Rust\"] # [doc = \" move semantics enforce the affine discipline).\"] # [must_use] pub fn into_bytes (self) -> Vec < u8 > { self . buffer } # [doc = \" Append `bytes` to the internal buffer (internal, non-consuming helper).\"] fn append (& mut self , bytes : & [u8]) { self . buffer . extend_from_slice (bytes) ; } }",
-      "reason": "no member of this impl block could be transpiled (3 sub-issue(s)): impl method `new` body: unsupported expression form `Sink { buffer : Vec :: new () }`; impl method `into_bytes` signature: generic type path `Vec < u8 >` — type-argument mapping not confirmed; impl method `append` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence",
+      "reason": "no member of this impl block could be transpiled (3 sub-issue(s)): impl method `new` body: unsupported expression form `Sink { buffer : Vec :: new () }`; impl method `into_bytes` body: unsupported expression form `self . buffer`; impl method `append` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence",
       "item_name": "Sink"
     },
     {
@@ -362,22 +362,12 @@
     },
     {
       "file": "crates/mycelium-std-io/src/io.rs",
-      "line": 206,
-      "col": 1,
-      "category": "GenericBound",
-      "rust_construct": "GenericBound",
-      "snippet": "# [doc = \" Read all remaining bytes from `src`, consuming it exactly once (LR-8).\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Exact`\"] # [doc = \" The bytes returned are exactly the bytes the substrate delivers — neither\"] # [doc = \" reordered nor approximated.  The `Exact` tag signals no accuracy semantics\"] # [doc = \" (RFC-0016 C2: \\\"an op with no accuracy semantics is simply `Exact`\\\").\"] # [doc = \"\"] # [doc = \" # Fallibility\"] # [doc = \" - `Err(IoError::UnexpectedEof{read})` if the source has already been consumed\"] # [doc = \"   before this call (in practice, Rust move semantics prevent a double-consume\"] # [doc = \"   at the type level; this variant can only be triggered by a substrate that\"] # [doc = \"   reports zero bytes when some were expected, e.g. a racing close in the OS-\"] # [doc = \"   backed variant).\"] # [doc = \" - `Err(IoError::Refused{why})` if the substrate declines the operation.\"] # [doc = \" - `Err(IoError::EffectBudget{kind})` on an effect-budget overrun.\"] # [doc = \"\"] # [doc = \" # Effects: io (declared, C6)\"] # [doc = \" This operation reads bytes from the substrate — the `io` effect is declared\"] # [doc = \" on the signature.  (For the in-memory substrate the \\\"IO\\\" is a buffer copy, but\"] # [doc = \" the effect abstraction is preserved for composability with OS-backed substrates.)\"] pub fn read_all (src : Source) -> Result < Vec < u8 > , IoError > { let mut src = src ; Ok (src . read_to_end ()) }",
-      "reason": "generic type path `Result < Vec < u8 > , IoError >` — type-argument mapping not confirmed",
-      "item_name": "read_all"
-    },
-    {
-      "file": "crates/mycelium-std-io/src/io.rs",
       "line": 232,
       "col": 1,
-      "category": "GenericBound",
-      "rust_construct": "GenericBound",
+      "category": "ReservedWord",
+      "rust_construct": "ReservedWord",
       "snippet": "# [doc = \" Read up to `budget` bytes from `src`, returning the bytes and the remaining\"] # [doc = \" handle (LR-8 — linear threading).\"] # [doc = \"\"] # [doc = \" The caller receives the `Source` back so it may continue reading.  A call that\"] # [doc = \" returns an empty `Vec` has exhausted the source; subsequent calls will also\"] # [doc = \" return empty (they never error on a naturally-exhausted source).\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Exact`\"] # [doc = \" The bytes returned are exactly the bytes the substrate delivers up to the\"] # [doc = \" budget.\"] # [doc = \"\"] # [doc = \" # Fallibility\"] # [doc = \" - `Err(IoError::EffectBudget{kind: \\\"alloc\\\"})` if `budget` would require more\"] # [doc = \"   allocation than the declared `alloc(Budget)` policy (for the in-memory\"] # [doc = \"   substrate, `Unbounded` never triggers this).\"] # [doc = \" - `Err(IoError::Refused{why})` if the substrate declines.\"] # [doc = \"\"] # [doc = \" # Effects: io + alloc(Budget) (declared, C6)\"] pub fn read (src : Source , budget : Budget) -> Result < (Vec < u8 > , Source) , IoError > { let mut src = src ; let n = match budget { Budget :: Bytes (cap) => { (cap as usize) . min (src . remaining ()) } Budget :: Unbounded => src . remaining () , } ; let chunk = src . read_n (n) ; Ok ((chunk , src)) }",
-      "reason": "generic type path `Result < (Vec < u8 > , Source) , IoError >` — type-argument mapping not confirmed",
+      "reason": "match pattern constructor `Bytes` collides with a Mycelium reserved word — emitting it verbatim would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5)",
       "item_name": "read"
     },
     {
@@ -693,13 +683,12 @@
   ],
   "category_counts": {
     "DeriveAttr": 6,
-    "GenericBound": 2,
     "Impl": 14,
     "Import": 9,
     "MacroInvocation": 3,
     "Other": 21,
     "PayloadVariant": 2,
-    "ReservedWord": 3,
+    "ReservedWord": 4,
     "Struct": 4,
     "TestItem": 5
   }

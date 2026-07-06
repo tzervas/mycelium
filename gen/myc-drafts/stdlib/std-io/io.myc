@@ -41,4 +41,24 @@
 // accompanying .gap.json for every construct this pass could not express.
 nodule std.io;
 
-
+// Read all remaining bytes from `src`, consuming it exactly once (LR-8).
+//
+// # Guarantee tag: `Exact`
+// The bytes returned are exactly the bytes the substrate delivers — neither
+// reordered nor approximated.  The `Exact` tag signals no accuracy semantics
+// (RFC-0016 C2: "an op with no accuracy semantics is simply `Exact`").
+//
+// # Fallibility
+// - `Err(IoError::UnexpectedEof{read})` if the source has already been consumed
+//   before this call (in practice, Rust move semantics prevent a double-consume
+//   at the type level; this variant can only be triggered by a substrate that
+//   reports zero bytes when some were expected, e.g. a racing close in the OS-
+//   backed variant).
+// - `Err(IoError::Refused{why})` if the substrate declines the operation.
+// - `Err(IoError::EffectBudget{kind})` on an effect-budget overrun.
+//
+// # Effects: io (declared, C6)
+// This operation reads bytes from the substrate — the `io` effect is declared
+// on the signature.  (For the in-memory substrate the "IO" is a buffer copy, but
+// the effect abstraction is preserved for composability with OS-backed substrates.)
+fn read_all(src: Source) => Result[Vec[Binary{8}], IoError] = let src = src in Ok(read_to_end(src));

@@ -37,15 +37,14 @@
       "file": "crates/mycelium-std-io/src/io.rs",
       "total_items": 14,
       "non_test_items": 13,
-      "emitted": 0,
-      "gaps": 14,
-      "expressible_pct": 0.0,
+      "emitted": 1,
+      "gaps": 13,
+      "expressible_pct": 7.6923076923076925,
       "category_counts": {
-        "GenericBound": 2,
         "Impl": 4,
         "Import": 1,
         "Other": 2,
-        "ReservedWord": 2,
+        "ReservedWord": 3,
         "Struct": 2,
         "TestItem": 1
       }
@@ -80,18 +79,17 @@
   "totals": {
     "total_items": 68,
     "non_test_items": 63,
-    "emitted": 6,
-    "gaps": 69,
-    "expressible_pct": 9.523809523809524,
+    "emitted": 7,
+    "gaps": 68,
+    "expressible_pct": 11.11111111111111,
     "category_counts": {
       "DeriveAttr": 6,
-      "GenericBound": 2,
       "Impl": 14,
       "Import": 9,
       "MacroInvocation": 3,
       "Other": 21,
       "PayloadVariant": 2,
-      "ReservedWord": 3,
+      "ReservedWord": 4,
       "Struct": 4,
       "TestItem": 5
     }

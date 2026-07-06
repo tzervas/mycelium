@@ -462,6 +462,116 @@ every file; `manifest.json`'s `status` field is `"ok"` for all 17).
    standing shape of `gen/myc-drafts/regenerate.sh`/`manifest_gen.py` — flagged here so the M-1006
    ladder's driver (however it's built) inherits the same discipline rather than rediscovering it.
 
+### §8.10 M-1006 phase-1: attacking the §8.9 812-gap worklist — transpiler hardening (kickoff `trx2` E-B, epic E33-1) — `Empirical`
+
+The first phase of the **M-1006 whole-corpus rip-through ladder**. Input: §8.9's ranked residual
+worklist (812 gaps). Recipe: the `/myc-drafts` 5-step ladder phase (bounded target set → rip → patch
+the transpiler → record → feed lessons forward). Target set: the **same 17 wave-1 targets** as §8.9
+(phase-1 refines the port-surface pass before the ladder expands beyond it, per M-1006's two-stage
+plan). Run as **two disjoint-file leaves** (collision-free by construction — CLAUDE.md §Swarm): a
+map-side leaf (`crates/mycelium-transpile/src/map.rs`) and an emit-side leaf (`src/emit.rs`),
+octopus-merged and re-vetted with the real `myc check` oracle.
+
+**Baseline note (reconciles with §8.9).** These numbers are measured against a **merged-base
+regeneration** (still 812 gaps), not §8.9's `e075c5fb` snapshot directly: the wave-1
+declaration-site reserved-word guard (§8.8/M-1001), merged down from `dev` between §8.9 and this
+phase, had already reclassified 16 gaps `Other` → `ReservedWord` (`Other` 322 → 306, `ReservedWord`
+8 → 24). That is a **taxonomy refinement, not a coverage change** (total 812, `checked_fraction`
+unchanged) — recorded so the §8.10 deltas below reconcile with §8.9's table (never-silent, G2).
+
+**Transpiler fixes landed (each grammar-grounded; emission stays `Declared`):**
+
+1. **Concrete generic type-applications now map** (map.rs). A single-segment named generic
+   `Head<A, …>` maps to `Head[A, …]` via `type_args` (`docs/spec/grammar/mycelium.ebnf` §`base_type`
+   line 258 + `type_args` line 265, RFC-0037 D1 — square brackets), **only** when every angle arg is
+   itself a mappable *type* (recursing through the guarded `map_type`, so nested applications like
+   `Result<Option<u32>, E>` → `Result[Option[Binary{32}], E]` work). Lifetime/const-generic/
+   associated-binding args, qualified multi-segment paths, unmappable args, and reserved-word heads
+   all **stay gapped** (never a partial emission; VR-5). A deliberate honesty refinement over the
+   naive design: an arg that itself gaps **propagates that arg's own precise `GapReason`** (so
+   `Option<String>` gaps as the `String`-has-no-base_type reason, not a blanket `GenericBound`) —
+   matching the existing tuple-arm precedent and naming the *real* blocker (G2).
+2. **Three grammar-grounded expression literal arms** (emit.rs), each never-silent: **string →
+   `StrLit`** (§`literal`/`StrLit`; re-escapes into Mycelium's escape set, gaps a control char with
+   no Mycelium escape rather than leaking a raw byte), **float → `FloatLit`** (ADR-040 §2.4: a
+   literal is a conversion boundary — a non-finite `1e999` **refuses**, never silently ±inf; Rust-only
+   shapes like `2.` gap rather than reshape), and **array → `ListLit`** (`[x; N]` repeat gaps
+   explicitly — `ListLit` has no repeat form).
+3. **Sharpened `MultiStmtBody` diagnostics** (emit.rs) — a rejected block body now names the
+   offending statement kind (nested item / macro-statement / value-discarding stmt-expr) instead of a
+   generic reason.
+
+**Measured before → after (`Empirical`, union over all 17 targets, non-test denominator):**
+
+| Metric | Before (merged base) | After | Δ |
+|---|---:|---:|---:|
+| `expressible_fraction` (emitted / 759) | 6.06% (46) | **6.19% (47)** | **+1 item** |
+| `checked_fraction` (myc-check-clean / 759) | 3.69% (28) | 3.69% (28) | flat |
+| `GenericBound` gaps | 59 | **46** | **−13** |
+| `Other` gaps | 306 | 315 | +9 |
+| `MultiStmtBody` gaps | 4 | 6 | +2 |
+| `ReservedWord` gaps | 24 | 25 | +1 |
+| total gaps | 812 | **811** | −1 |
+
+The one newly-emitted item is `std-io/src/io.rs::read_all`, unblocked purely by the nested-generic
+mapping (`Result<Vec<u8>, IoError>` → `Result[Vec[Binary{8}], IoError]`). **`checked_fraction` is
+flat** because that item emits but is not yet `myc check`-clean (a downstream name-resolution
+blocker, a different class). The `GenericBound −13` is the honest transpiler win; the **`Other +9` /
+`MultiStmtBody +2` is the expected never-silent cascade** — once a signature's *type* maps, the item
+stops masking on the type and surfaces its *deeper* real blocker (multi-statement bodies, field
+access), which is exactly the gap-profiling instrument doing its job (the item still gaps, but now
+names the true blocker). The string/float/array arms produce **zero corpus delta** — those literals
+appear in the corpus only nested inside constructs that gap earlier, so the closes are
+*correct-but-currently-unreached*; they remove **future** false gaps (proven by fixtures + synthetic
+demos) and become live if the type-side gaps are ever closed.
+
+**Residual gap-class worklist enumerated + out-of-scope declaration (the M-1006 DoD — the stopping
+point recorded, never silent, G2).** The transpiler-fixable surface on the current corpus is now
+substantially exhausted; the dominant residue is **language-surface design, not transpiler
+boilerplate** — confirming §8.8/§8.9's M-991 verdict a third time:
+
+- **Type-coverage scalars** (`Other`, signed integers / `String`·`str` / `char` / `isize`·`usize` /
+  `f32`·`f64` / unit) — **out-of-scope for the transpiler**; each needs a kernel/grammar repr
+  decision (E18-1 `needs-design`), not an emitter change. Mapping any onto an existing arm would
+  misrepresent semantics (VR-5).
+- **Named-field structs (`Struct`, 80) + named-field variants (subset of `PayloadVariant`)** —
+  **KEEP GAPPED** (grounded design decision, this phase): the grammar's `constructor` is
+  positional-only *and there is no value field-projection surface at all* (the only field reference
+  in the whole grammar is `object_item`'s `via Int :` by-index delegation, line 192; `self.0` tuple
+  projection is itself gapped). Emitting a named-field struct as a positional constructor would drop
+  semantically-meaningful names **and** leave every `foo.a`/`self.mode` body access with no surface
+  to rewrite to (14 field-access + 1 struct-literal gaps would remain in the committed corpus) — a
+  lossy `Declared` transform producing an un-usable draft. Closing it is record/product-type design
+  (E18-1), consistent with §8.9's "language design, not a transpiler defect" label. *(A draft-only
+  positional skeleton with field names preserved as doc-comments is a possible future behind explicit
+  maintainer sign-off — deliberately not implemented, G2: recorded, not silently done.)*
+- **`Import` (117)** — correctly gapped (M-1001): no cross-nodule symbol table to confirm
+  resolution; a resolution concern for port/differential time, not transpiler emission.
+- **`GenericBound` residual (46)** — bounded generics, impl-block generic params (`impl_item` has no
+  type-params surface), and lifetimes: the §8.3/§8.5 design-open backlog.
+- **`DeriveAttr` (42)** — Rust built-in derives (`Debug`/`Clone`/…) have **no** Mycelium `lower` rule
+  for `derive_item` (line 204) to resolve `derive Name for T` against, so mapping them would emit
+  un-`myc check`-able text. Out-of-scope.
+- **`MacroInvocation` (6)** — no macro system in the grammar. **`ReservedWord` (25)** — correctly
+  gapped. **`TestItem` (33)** — out of scope by design (excluded from the denominator).
+
+**Flagged (never-silent, no change made):** `1f64` is classified by `syn` as `Lit::Int` (suffix
+stripped) and emits as Mycelium `Int 1` — a pre-existing float→int infidelity uniform with the
+existing Int-arm suffix-dropping; flagged for a maintainer note if float-literal fidelity matters,
+not silently special-cased.
+
+**Lessons (feed the next ladder phase).** (1) The type-application close is the model for the honest
+phase yield: a whole gap *sub-class* removed, unblocking nested-generic signatures corpus-wide, at
+the cost of surfacing the next-layer blockers (a net-positive information gain, flat `checked`).
+(2) The current-corpus transpiler-fixable surface is near-exhausted — the M-1006 ladder's *coverage*
+growth now depends on either expanding the target set beyond the port surface (later phases) or on
+E18-1 language-surface design closing the scalar/record classes; the transpiler alone cannot move
+`checked_fraction` much further on this corpus. Recorded so the next phase is scoped to that reality,
+not to a false "keep closing gaps" expectation.
+
+**Guarantee tags unchanged:** emission `Declared`; vet verdict `Empirical` (real `myc check`).
+**Status unchanged (Draft)** — a ladder phase, enacts nothing further.
+
 ---
 
 ## Meta — changelog
@@ -555,3 +665,20 @@ every file; `manifest.json`'s `status` field is `"ok"` for all 17).
   this wave, now the standing shape of the driver for M-1006 to inherit). Emission `Declared`, vet
   `Empirical`. **Status unchanged (Draft)** — a spike, enacts nothing further. (Append-only; VR-5;
   G2.)
+- **2026-07-06 — §8.10 added: M-1006 phase-1 transpiler hardening against the §8.9 worklist
+  (kickoff `trx2` E-B, epic E33-1).** First ladder phase over the same 17 wave-1 targets, run as two
+  disjoint-file leaves (map-side + emit-side, octopus-merged). Landed three grammar-grounded fixes:
+  concrete generic type-applications now map to `type_args` (`Head<A,…>` → `Head[A,…]`, recursive,
+  never-partial); string/float/array expression literal arms (`StrLit`/`FloatLit`/`ListLit`, each
+  never-silent — non-finite floats and un-escapable control chars refuse rather than emit garbage);
+  and sharpened `MultiStmtBody` diagnostics. Measured (`Empirical`): union `expressible_fraction`
+  6.06% → 6.19% (46 → 47 emitted; `std-io::read_all` unblocked via a nested
+  `Result[Vec[Binary{8}], IoError]`), `checked_fraction` flat at 3.69% (the new item emits but is not
+  yet myc-check-clean), `GenericBound` 59 → 46 (−13) with an honest `Other`/`MultiStmtBody` cascade
+  (deeper real blockers surface once the masking type gap is closed). Records the M-1006-DoD residual
+  enumeration + out-of-scope declaration: type-coverage scalars, named-field structs/variants (KEEP
+  GAPPED — no field-projection surface; a grounded design decision), `Import`, bounded `GenericBound`,
+  and Rust built-in `DeriveAttr` are all language-surface design (E18-1), not transpiler defects —
+  the current-corpus transpiler-fixable surface is near-exhausted (the stopping point recorded, G2).
+  Emission `Declared`, vet `Empirical`. **Status unchanged (Draft)** — a ladder phase, enacts nothing
+  further. (Append-only; VR-5; G2.)

@@ -88,10 +88,10 @@
       "file": "crates/mycelium-std-runtime/src/r2_residual.rs",
       "line": 167,
       "col": 1,
-      "category": "GenericBound",
-      "rust_construct": "GenericBound",
+      "category": "Other",
+      "rust_construct": "Other",
       "snippet": "# [doc = \" The refusal entry point: a runtime path that would need a deferred construct calls this and\"] # [doc = \" gets an explicit typed error — never a silent no-op or fallback (G2).\"] # [doc = \"\"] # [doc = \" In Phase I this refuses for **every** [`DeferredR2`] item (guarantee: **`Exact`** — total by\"] # [doc = \" construction; tested over [`DeferredR2::ALL`]). The signature is the stable contract: when a\"] # [doc = \" construct activates through its own vehicle (DN-78 §4 trackers), its arm returns `Ok(())`\"] # [doc = \" and its ledger row is retired append-only.\"] pub fn require (item : DeferredR2) -> Result < () , R2DeferredError > { Err (R2DeferredError { item , row : residual_for (item) , }) }",
-      "reason": "generic type path `Result < () , R2DeferredError >` — type-argument mapping not confirmed",
+      "reason": "unit type `()` has no representable value in this grammar fragment",
       "item_name": "require"
     }
   ],
