@@ -102,6 +102,9 @@ fn plain_type_params(generics: &Generics) -> Result<Vec<String>, GapReason> {
                         ),
                     ));
                 }
+                // Same emit-verbatim exposure as fn parameters: an UNUSED type-param name never
+                // reaches map_type's guard, so guard at the declaration site too.
+                crate::reserved::guard_ident(&tp.ident.to_string(), "type parameter")?;
                 names.push(tp.ident.to_string());
             }
             GenericParam::Lifetime(lt) => {
@@ -271,6 +274,10 @@ fn map_signature(
                         ))
                     }
                 };
+                // A parameter name is emitted verbatim into `param ::= Ident ':' type_ref`, and
+                // an UNUSED param's body references never pass through Expr::Path — so the
+                // reserved-word guard must fire here, not only at use sites (PR #1207 review).
+                crate::reserved::guard_ident(&name, "fn parameter")?;
                 let ty = map_type(&pt.ty, self_ty)?;
                 params.push((name, ty));
             }
