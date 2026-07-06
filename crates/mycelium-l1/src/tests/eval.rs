@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::ast::Strength;
 use crate::checkty::check_nodule;
 use crate::checkty::Env;
@@ -63,11 +65,11 @@ fn nested_pattern_match_evaluates() {
         L1Value::Data {
             ty: "Nat".into(),
             ctor: "S".into(),
-            fields: vec![L1Value::Data {
+            fields: Arc::new(vec![L1Value::Data {
                 ty: "Nat".into(),
                 ctor: "Z".into(),
-                fields: vec![]
-            }]
+                fields: Arc::new(vec![])
+            }])
         }
     );
 }
@@ -84,11 +86,11 @@ fn nested_match_falls_through_to_the_right_arm() {
         L1Value::Data {
             ty: "Nat".into(),
             ctor: "S".into(),
-            fields: vec![L1Value::Data {
+            fields: Arc::new(vec![L1Value::Data {
                 ty: "Nat".into(),
                 ctor: "Z".into(),
-                fields: vec![]
-            }]
+                fields: Arc::new(vec![])
+            }])
         }
     );
 }
@@ -168,7 +170,7 @@ fn structural_recursion_terminates_within_fuel() {
         L1Value::Data {
             ty: "Nat".into(),
             ctor: "Z".into(),
-            fields: vec![]
+            fields: Arc::new(vec![])
         }
     );
 }
@@ -352,13 +354,13 @@ fn a_long_for_fold_costs_fuel_not_host_stack() {
     let mut list = L1Value::Data {
         ty: "ByteList".into(),
         ctor: "End".into(),
-        fields: vec![],
+        fields: Arc::new(vec![]),
     };
     for _ in 0..200 {
         list = L1Value::Data {
             ty: "ByteList".into(),
             ctor: "More".into(),
-            fields: vec![byte(), list],
+            fields: Arc::new(vec![byte(), list]),
         };
     }
     let v = Evaluator::new(&env)
