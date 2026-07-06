@@ -243,7 +243,8 @@ as it's serial). The completed lane above is kept for the method/record.
 |---|---|---|
 | **`rel10`** | `docs/**`, `crates/mycelium-doc/**`, the release notes | docs/release; cites code read-only |
 | **`tul`** (M-676) | `tools/github/**` | PM tooling only |
-| **`boot10`** (M-739…M-742) | `lib/compiler/**` (new) + `mycelium-l1/**` (read/differential only) | **▶ ACTIVE next** (maintainer, 2026-07-05) — see the track table above (straggler-branch rescue first; M-739 gates M-740; M-970 rides the first wave) |
+| **`boot10`** (M-739…M-742) | `lib/compiler/**` (new) + `mycelium-l1/**` (read/differential only) | **▶ ACTIVE** (maintainer, 2026-07-05) — Stages 0–5(inc-1) landed 2026-07-06 (PRs #1166/#1167/#1168; `/myc-dogfood` M-989 #1184). Remaining: semcore heavy core (M-993, blocked on M-994) + Stage-6/M-742 |
+| **`trx2`** (M-991 + proposed) | `crates/mycelium-transpile/**` · `crates/mycelium-doc/**` · `tools/docgen/**` · a new `.myc`-draft staging dir | 📋 **STOWED — fire off `dev` after the boot10 release** (maintainer, 2026-07-06). Transpiler-accelerated porting + auto-doc-gen Mycelium doc ports; **pulls an early, boot10-supporting slice of `rwr`'s transpiler ladder forward** (Phase-II re-sequenced). Executes/extends M-991. See [`trx2.md`](trx2.md) — 4 scope decisions confirm at launch |
 
 *(`lib10`, `kpr`, and `aot10` — formerly listed here — landed 2026-07-01 and are now archived; see
 §Completed above.)*
