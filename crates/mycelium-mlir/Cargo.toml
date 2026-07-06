@@ -86,6 +86,13 @@ mycelium-workstack = { path = "../mycelium-workstack" }
 [dev-dependencies]
 # M-961: property tests for the inject-gate verify bounds (house rule: a property test per bound).
 proptest = "1"
+# M-999: the AOT-vs-interpreter ordering witness (`tests/aot_vs_interp_bench.rs`) runs the L1
+# interpreter (`Evaluator`) and the AOT env-machine on the *same* workloads in the *same* build
+# profile and prints the measured ratio. Dev-only, same-tier (core -> core, allowed by the M-879
+# tier rule); the mirror dev edge (`mycelium-l1` dev-depends on `mycelium-mlir`) already exists —
+# a dev "cycle" is build-acyclic (each side's tests link only the other's lib, whose normal deps
+# exclude this crate).
+mycelium-l1 = { path = "../mycelium-l1" }
 # The interp↔AOT differential (M-151) drives both paths with the certified binary↔ternary swap,
 # and since M-210 validates each pair through the shared TV checker (Certificate from numerics).
 mycelium-cert = { path = "../mycelium-cert" }
