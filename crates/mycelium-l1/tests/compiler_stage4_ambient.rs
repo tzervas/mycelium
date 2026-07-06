@@ -585,8 +585,8 @@ fn verdict_u32(
 /// Run a 0-arg `Binary{32}`-returning self-hosted entry and return its value (mirrors
 /// `run_verdict` in `compiler_stage3.rs`, specialized to `ambient.myc`'s nullary drivers).
 fn run_u32_entry(env: &mycelium_l1::Env, entry: &str) -> u32 {
-    let mono = monomorphize(env, entry)
-        .unwrap_or_else(|e| panic!("{entry}: monomorphize failed: {e}"));
+    let mono =
+        monomorphize(env, entry).unwrap_or_else(|e| panic!("{entry}: monomorphize failed: {e}"));
     let registry =
         build_registry(&mono).unwrap_or_else(|e| panic!("{entry}: build_registry failed: {e}"));
     let val = Evaluator::new(&mono)
@@ -596,9 +596,15 @@ fn run_u32_entry(env: &mycelium_l1::Env, entry: &str) -> u32 {
 }
 
 /// Run a `Binary{32}`-returning verdict entry taking `(want_ok, want_hash, want_count)`.
-fn run_verdict3(env: &mycelium_l1::Env, entry: &str, want_ok: u32, want_hash: u32, want_count: u32) -> u32 {
-    let mono = monomorphize(env, entry)
-        .unwrap_or_else(|e| panic!("{entry}: monomorphize failed: {e}"));
+fn run_verdict3(
+    env: &mycelium_l1::Env,
+    entry: &str,
+    want_ok: u32,
+    want_hash: u32,
+    want_count: u32,
+) -> u32 {
+    let mono =
+        monomorphize(env, entry).unwrap_or_else(|e| panic!("{entry}: monomorphize failed: {e}"));
     let registry =
         build_registry(&mono).unwrap_or_else(|e| panic!("{entry}: build_registry failed: {e}"));
     let args = vec![
@@ -615,8 +621,8 @@ fn run_verdict3(env: &mycelium_l1::Env, entry: &str, want_ok: u32, want_hash: u3
 
 /// Run a `Binary{32}`-returning verdict entry taking a single `Bytes` argument.
 fn run_verdict_bytes(env: &mycelium_l1::Env, entry: &str, want: &[u8]) -> u32 {
-    let mono = monomorphize(env, entry)
-        .unwrap_or_else(|e| panic!("{entry}: monomorphize failed: {e}"));
+    let mono =
+        monomorphize(env, entry).unwrap_or_else(|e| panic!("{entry}: monomorphize failed: {e}"));
     let registry =
         build_registry(&mono).unwrap_or_else(|e| panic!("{entry}: build_registry failed: {e}"));
     let args = vec![mycelium_l1::L1Value::Repr(bytes_value(want))];
