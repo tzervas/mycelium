@@ -21909,18 +21909,7 @@
       "nodule": "compiler.token",
       "file": "lib/compiler/token.myc",
       "line": 104,
-      "signature": "type Tok = // structural keywords (DN-02; nodule per DN-06) Nodule | Phylum | Colony // runtime-vocabulary reserved words (DN-03 §4; RFC-0008 §4.5) — all reserved, not yet active | Hypha | Fuse | Mesh | Graft | Cyst | Xloc | Forage | Backbone | Tier | Reclaim // surface-tier reserved words (DN-03 §1) + the grow->derive reconciliation (DN-38 §8.1) | Consume | Grow | Derive // conventional keywords | Use | Pub | Type | Trait | Impl | Fn | Matured | Thaw | Let | In | If | Then | Else | Match | For | Swap | Default | Paradigm | With | Wild | Spore | To | Policy // RFC-0037 surface keywords | Lambda | Object | Via | Lower // repr-type keywords (Kw-prefixed where they collide — FLAG-token-3; Vsa does not collide) | KwBinary | KwTernary | KwDense | Vsa // RFC-0037 D2-b short repr-keyword aliases (none of these collide) | BinShort | TernShort | EmbShort | HvecShort | KwSeq | KwBytes | KwFloat | KwSubstrate | KwSparse // scalar / strength keyword payloads | Scalar(ScalarTok) | Strength(StrengthTok) // identifiers & literals (FLAG-token-1 / FLAG-token-2: Bytes-carrying throughout) | Ident(Bytes) | BinLit(Bytes) | BytesLit(Bytes) | TritLit(Bytes) | StrLit(Bytes) | Int(Bytes) | FloatLit(Bytes) // punctuation | LParen | RParen | LBrace | RBrace | LBracket | RBracket | LAngle | RAngle | Shl | Shr | At | AtStdSys | Colon | Comma | Semi | Dot | Pipe | Plus | Minus | Star | Slash | Percent | Caret | Amp | AmpAmp | Eq | EqEq | Arrow | FatArrow | Bang | BangEq | PipePipe | Eof",
-      "summary": null,
-      "tag": "Empirical/Declared"
-    },
-    {
-      "symbol": "compiler.token::Tok::",
-      "kind": "ctor",
-      "phylum": "compiler",
-      "nodule": "compiler.token",
-      "file": "lib/compiler/token.myc",
-      "line": 104,
-      "signature": "// structural keywords (DN-02; nodule per DN-06) Nodule",
+      "signature": "type Tok = Nodule | Phylum | Colony | Hypha | Fuse | Mesh | Graft | Cyst | Xloc | Forage | Backbone | Tier | Reclaim | Consume | Grow | Derive | Use | Pub | Type | Trait | Impl | Fn | Matured | Thaw | Let | In | If | Then | Else | Match | For | Swap | Default | Paradigm | With | Wild | Spore | To | Policy | Lambda | Object | Via | Lower | KwBinary | KwTernary | KwDense | Vsa | BinShort | TernShort | EmbShort | HvecShort | KwSeq | KwBytes | KwFloat | KwSubstrate | KwSparse | Scalar(ScalarTok) | Strength(StrengthTok) | Ident(Bytes) | BinLit(Bytes) | BytesLit(Bytes) | TritLit(Bytes) | StrLit(Bytes) | Int(Bytes) | FloatLit(Bytes) | LParen | RParen | LBrace | RBrace | LBracket | RBracket | LAngle | RAngle | Shl | Shr | At | AtStdSys | Colon | Comma | Semi | Dot | Pipe | Plus | Minus | Star | Slash | Percent | Caret | Amp | AmpAmp | Eq | EqEq | Arrow | FatArrow | Bang | BangEq | PipePipe | Eof",
       "summary": null,
       "tag": "Empirical/Declared"
     },
@@ -21931,7 +21920,18 @@
       "nodule": "compiler.token",
       "file": "lib/compiler/token.myc",
       "line": 106,
-      "signature": "Colony // runtime-vocabulary reserved words (DN-03 §4; RFC-0008 §4.5) — all reserved, not yet active",
+      "signature": "Colony",
+      "summary": null,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "symbol": "compiler.token::Tok::Nodule",
+      "kind": "ctor",
+      "phylum": "compiler",
+      "nodule": "compiler.token",
+      "file": "lib/compiler/token.myc",
+      "line": 106,
+      "signature": "Nodule",
       "summary": null,
       "tag": "Empirical/Declared"
     },
@@ -22030,7 +22030,7 @@
       "nodule": "compiler.token",
       "file": "lib/compiler/token.myc",
       "line": 108,
-      "signature": "Reclaim // surface-tier reserved words (DN-03 §1) + the grow->derive reconciliation (DN-38 §8.1)",
+      "signature": "Reclaim",
       "summary": null,
       "tag": "Empirical/Declared"
     },
@@ -22074,7 +22074,7 @@
       "nodule": "compiler.token",
       "file": "lib/compiler/token.myc",
       "line": 110,
-      "signature": "Derive // conventional keywords",
+      "signature": "Derive",
       "summary": null,
       "tag": "Empirical/Declared"
     },
@@ -22294,7 +22294,7 @@
       "nodule": "compiler.token",
       "file": "lib/compiler/token.myc",
       "line": 114,
-      "signature": "Policy // RFC-0037 surface keywords",
+      "signature": "Policy",
       "summary": null,
       "tag": "Empirical/Declared"
     },
@@ -22360,7 +22360,7 @@
       "nodule": "compiler.token",
       "file": "lib/compiler/token.myc",
       "line": 116,
-      "signature": "Lower // repr-type keywords (Kw-prefixed where they collide — FLAG-token-3; Vsa does not collide)",
+      "signature": "Lower",
       "summary": null,
       "tag": "Empirical/Declared"
     },
@@ -22393,7 +22393,7 @@
       "nodule": "compiler.token",
       "file": "lib/compiler/token.myc",
       "line": 117,
-      "signature": "Vsa // RFC-0037 D2-b short repr-keyword aliases (none of these collide)",
+      "signature": "Vsa",
       "summary": null,
       "tag": "Empirical/Declared"
     },
@@ -22514,7 +22514,7 @@
       "nodule": "compiler.token",
       "file": "lib/compiler/token.myc",
       "line": 121,
-      "signature": "KwSparse // scalar / strength keyword payloads",
+      "signature": "KwSparse",
       "summary": null,
       "tag": "Empirical/Declared"
     },
@@ -22547,7 +22547,7 @@
       "nodule": "compiler.token",
       "file": "lib/compiler/token.myc",
       "line": 123,
-      "signature": "Strength(StrengthTok) // identifiers & literals (FLAG-token-1 / FLAG-token-2: Bytes-carrying throughout)",
+      "signature": "Strength(StrengthTok)",
       "summary": null,
       "tag": "Empirical/Declared"
     },
@@ -22624,7 +22624,7 @@
       "nodule": "compiler.token",
       "file": "lib/compiler/token.myc",
       "line": 131,
-      "signature": "FloatLit(Bytes) // punctuation",
+      "signature": "FloatLit(Bytes)",
       "summary": null,
       "tag": "Empirical/Declared"
     },
