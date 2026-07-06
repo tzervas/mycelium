@@ -742,7 +742,8 @@ fn emit_expr_inner(expr: &Expr, self_ty: Option<&str>) -> Result<String, GapReas
              >= 2, M-826)",
         )),
         // An explicit-element array `[e1, e2, …]` maps to a Mycelium `ListLit` (grammar line 415:
-        // `ListLit ::= '[' (expr (',' expr)*)? ']'`, constructs a `Seq{T, N}` — RFC-0032 D3). An
+        // `ListLit ::= '[' (expr (',' expr)*)? ']'`, constructs a `Seq{T, N}` — RFC-0032 D3, the
+        // `Seq`/`Vec` list-literal surface ratified in RFC-0040 §Vec-List-Literal-Desugaring). An
         // empty `[]` is a valid empty ListLit. Each element recurses through the guarded
         // `emit_expr`, so a non-expressible element gaps the whole array (never a partial list).
         Expr::Array(a) => {
