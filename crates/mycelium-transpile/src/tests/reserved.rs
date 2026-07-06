@@ -85,3 +85,38 @@ fn guard_rejects_reserved_accepts_ordinary() {
         );
     }
 }
+
+/// **Declaration-site coverage (PR #1207 review HIGH).** A reserved word used as an *unused* fn
+/// parameter name never flows through `Expr::Path`'s use-site guard, and its name is emitted
+/// verbatim into `param ::= Ident ':' type_ref` — so the guard must fire in `map_signature`
+/// itself. Repro from the review: `fn set_default(default: u32)` emitted, then failed
+/// `myc check` at parse (`expected an identifier, found Default`). Now it must be GAPPED as
+/// `ReservedWord`, never emitted.
+#[test]
+fn unused_reserved_fn_parameter_is_gapped_not_emitted() {
+    let src = "pub fn set_default(default: u32) -> u32 { 42 }\n";
+    let (myc, report) = crate::transpile::transpile_source(src, "reserved_param", "test")
+        .expect("transpile_source itself succeeds; the item is gapped");
+    assert!(
+        report.emitted_items.is_empty(),
+        "the fn must not be emitted: {myc}"
+    );
+    let gap = report
+        .gaps
+        .iter()
+        .find(|g| g.category == Category::ReservedWord)
+        .expect("a ReservedWord gap for the parameter");
+    assert!(
+        gap.reason.contains("default"),
+        "the gap names the colliding word (never silent): {}",
+        gap.reason
+    );
+}
+
+/// Same exposure for an unused generic type-parameter name (declaration-site guard in
+/// `plain_type_params`) — defensive twin of the fn-parameter case.
+#[test]
+fn reserved_type_parameter_is_gapped_not_emitted() {
+    let err = guard_ident("Binary", "type parameter").expect_err("reserved type param must gap");
+    assert_eq!(err.category, Category::ReservedWord);
+}
