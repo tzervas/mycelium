@@ -11,6 +11,34 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### M-999 — the AOT env-machine now outruns the interpreter (~1.5–1.7×) (2026-07-06)
+
+Closes the maintainer-flagged **performance inversion**: post-M-995/996, the AOT env-machine was
+still ~4.5× *slower* than the L1 interpreter same-profile (release, apples-to-apples — the honest
+baseline the old cross-profile numbers had understated). Profiling (callgrind; ~55–60% of
+instructions in malloc/free/memcpy) showed the planned env fix alone wasn't dominant, so the fix
+landed as **four measured steps** in `aot.rs`:
+
+1. **Env representation** — mutable top segment + `Rc`-frozen parent frames (O(1)-amortized capture
+   at closure creation; innermost-wins chain lookup; iterative `EnvFrame::drop`). Alone: 0.22×→0.27×.
+2. **Prepared code mirror** — the lowered ANF mirrored **once** into `Rc`-shared blocks; the machine
+   had been deep-cloning `Lam`/`Fix` bodies and match-arm subtrees *per execution*. →0.72×.
+3. **Interned atoms** — `Rc<Atom>` keys prepared once; re-binding is a refcount bump. →parity.
+4. **`AotVal::Repr(Rc<Value>)`** — variable references are refcount bumps; the value enum shrinks to
+   pointer size (the old "intentionally inlined" trade-off superseded-by-measurement, noted at the
+   type). →**1.5–1.7× ahead** on snoc (n=100/200/400), 1.2–1.4× on a 50k tail loop.
+
+Both machines fit clean ~n² (M-995 fixed the curve; M-999 removed a ~7× constant). The **ordering
+witness** is committed (`tests/aot_vs_interp_bench.rs`, `#[ignore]`d comparative benchmark — rerun
+with `--release --ignored --nocapture`; single-trial `Empirical`, ~2–5% jitter). **Zero expectation
+edits**: `mycelium-mlir` 382/0 (439/0 with `mlir-dialect`), `mycelium-l1` 991/0, no new `unsafe`,
+deps-acyclic green (the bench's dev-only `mlir→l1` edge mirrors the existing reverse dev edge,
+M-879). **The honest ladder, recorded:** ~1.5× is the realistic band for a trampolined ANF-machine;
+"far faster" belongs to the direct-LLVM native path, whose v0 coverage is already wide (RFC-0029:
+data, native swap, widened closures, `Fix` loop rewrite, Dense/VSA) — growing that coverage is the
+big lever. FLAG: `llvm.rs`'s stale header (says closures/recursion "deferred", contradicted by
+M-850/M-851 in the same file) → docs sweep.
+
 ### M-996 — AOT env-machine TCO: tail frames elided, observably (maintainer-authorized) (2026-07-06)
 
 Completes the cross-machine convergence of the M-994 arc: the AOT env-machine
