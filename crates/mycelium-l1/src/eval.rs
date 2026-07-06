@@ -137,6 +137,18 @@ impl Drop for L1Value {
         let L1Value::Data { fields, .. } = self else {
             return;
         };
+        // The iterative dismantle relies on `Arc::get_mut` succeeding for a *uniquely-owned* node.
+        // A `Weak` ref would make `get_mut` return `None` even at `strong_count == 1`, silently
+        // skipping the dismantle so this subtree drops via recursive drop-glue — quietly reopening
+        // the deep-spine SIGABRT hole RFC-0041 §6 closed. No code creates a `Weak` against `L1Value`
+        // (checked); this makes that safety invariant *checked* in debug rather than a silent
+        // convention (PR #1190 review, MEDIUM — defense-in-depth).
+        debug_assert_eq!(
+            Arc::weak_count(fields),
+            0,
+            "L1Value::Data.fields must have no Weak refs, else iterative Drop degrades to recursive \
+             drop-glue (deep-spine SIGABRT hazard; RFC-0041 §6)"
+        );
         let Some(root_fields) = Arc::get_mut(fields) else {
             return; // shared — do not dismantle; the `Arc` drop is O(1).
         };
