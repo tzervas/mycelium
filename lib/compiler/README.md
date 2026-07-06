@@ -158,13 +158,24 @@ reading both the Rust output and the self-hosted output for the same input.
       wall — `compiler.ambient` consumes an already-parsed `Nodule` and cannot reach
       `compiler.parse` (cross-nodule execution staged), so a source *file* can't be fed without an
       AST-serializer bridge (deferred, flagged). Differentials graded `Empirical`.
-- [ ] **Stage 5** — `compiler.semcore` (L0-output differential; `cargo-mutants` witness). *In
-      progress (increment 1), landing in its own PR — not the Stage-4 change:* the tractable
-      sub-core (`Ty`/`Width`/`DataInfo`/`CtorInfo`/`Pat`
-      vocabulary + the Maranget `usefulness`+`decision` pipeline + `affine` + `grade`) with a
-      synthetic-input differential; the heavy entangled core (`checkty`/`elab`/`eval`/`mono`/`fuse`)
-      and the whole-program L0-output differential are **feasibility-gated on M-986/M-987** and
-      deferred (not silently narrowed).
+- [ ] **Stage 5** — `compiler.semcore` (L0-output differential; `cargo-mutants` witness).
+      **Increment 1 landed** (`lib/compiler/semcore.myc`, partial; gate
+      `crates/mycelium-l1/src/tests/compiler_stage5_semcore.rs` 17/17): the tractable sub-core —
+      the `Ty`/`Width`/`DataInfo`/`CtorInfo`/`Pat` type vocabulary (data only) + the Maranget
+      `usefulness`+`decision` pipeline + `affine` + `grade` (all four depend on checkty's *types*,
+      not its logic or the evaluator). Native `myc check` reports `ok`. **The differential is a true
+      live-oracle test** — an **in-crate** unit module (per the CLAUDE.md test-layout rule) with
+      white-box access to the live Rust `usefulness`/`decision`/`affine`/`grade`, so each synthetic
+      case is compared against the *actual oracle*, not a hand-derived expectation (this closed the
+      first-cut FLAG-semcore-10 gap; the sole residual, **FLAG-semcore-10-b**, is that grade's exact
+      `Strength` is recovered by probing the four-level lattice through the live `check_guarantees`,
+      whose finer internals are private even in-crate). Flat-namespace prefixing `Ty-`/`Wd-`/`Mp-`/
+      `Hd-` (FLAG-ast-5/FLAG-parse-2 discipline). **Deferred (feasibility-gated on M-986/M-987, not
+      silently narrowed):** the heavy entangled core `checkty`/`elab`/`eval`/`mono` + `fuse` (which
+      *runs* the evaluator) and the whole-program L0-output differential + `cargo-mutants` witness —
+      a self-hosted checker/elaborator run inside the L1 evaluator over a whole program almost
+      certainly can't complete under the current kernel; the lift (widen kernel TCO vs. reduce eval
+      cost vs. lean on AOT) is a maintainer decision recorded in DN-26, not decided in-wave.
 - [ ] **Stage 6 / M-742** — `just bootstrap`: interpreted-first then AOT, stage-2 three-way
 
 *This README is the M-740 wave map; it is updated as each stage lands. Grounded in DN-26 §7/§9,

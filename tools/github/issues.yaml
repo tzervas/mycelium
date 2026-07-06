@@ -3907,10 +3907,23 @@ issues:
       walks (FLAG-totality-1/2); ambient's differential covers 8 hand-built fixtures + 4 refusals
       but NO raw corpus files — a STRUCTURAL limit (it consumes an already-parsed Nodule, cannot
       reach compiler.parse cross-nodule per M-982; a source file needs an AST-serializer bridge,
-      minted M-990), NOT the M-987 cost wall (FLAG-ambient-6). Stage 5 in progress in its OWN PR
-      (not this Stage-4 change): semcore.myc increment 1 (type vocab + usefulness + decision +
-      affine + grade); the heavy core (checkty/elab/eval/mono/fuse) + whole-program L0 differential
-      feasibility-gated on M-986/M-987.
+      minted M-990), NOT the M-987 cost wall (FLAG-ambient-6).
+
+      STAGE 5 INCREMENT 1 LANDED (2026-07-06, in-progress): lib/compiler/semcore.myc (partial) —
+      the tractable sub-core of the 9-file semantic SCC: Ty/Width/DataInfo/CtorInfo/Pat type vocab
+      (data only) + the Maranget usefulness+decision pipeline + affine + grade (all depend on
+      checkty's TYPES, not its logic or the evaluator). Gate
+      crates/mycelium-l1/src/tests/compiler_stage5_semcore.rs 17/17 (Empirical) — a TRUE live-oracle
+      IN-CRATE differential (white-box use crate::usefulness/decision/affine/grade vs the real Rust
+      functions on small synthetic inputs; NOT hand-derived; perturbation-verified to fail loudly),
+      resolving the first-cut FLAG-semcore-10. Native myc check = ok. No src/*.rs logic or visibility
+      changed. Residual FLAG-semcore-10-b: grade's exact Strength recovered by probing the 4-level
+      lattice via live check_guarantees (finer internals private even in-crate). DEFERRED,
+      feasibility-gated on M-986/M-987 (recorded as an OPEN QUESTION, not narrowed): the heavy core
+      checkty/elab/eval/mono + fuse (runs the evaluator), the whole-program L0-output differential,
+      and the cargo-mutants witness. Minted M-993 (heavy-core port) + M-994 (L0-differential
+      feasibility). The §9 flag-2 interpreted-first Stage-6 gate's practicality is where this bites;
+      the lift (kernel TCO widening vs eval-cost work vs AOT leg) is a maintainer decision in DN-26.
 
   - id: M-741
     title: "M-741 — Ratify the self-hosted toolchain as canonical (DN-14 gate at full scale)"
@@ -12106,6 +12119,70 @@ issues:
       - Emitted user-facing refusal/CLI messages in the toolchain read "refused: <reason>" (or
         equivalent) without the redundant "never silently dropped (G2)" tail; doc-comment grounding
         labels are untouched; a test pins the trimmed message shape; change-scoped just check green.
+
+  - id: M-993
+    title: "Port the heavy semantic-core SCC (checkty/elab/eval/mono/fuse) to semcore.myc"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:blocked]
+    epic: E18-1
+    depends_on: [M-740, M-986, M-987]
+    doc_refs:
+      - corpus:DN-26
+      - src:lib/compiler/semcore.myc
+      - src:crates/mycelium-l1/src/checkty.rs
+    body: |
+      Minted 2026-07-06 from the M-740 Stage-5 increment-1 landing. semcore.myc increment 1 ported
+      the tractable sub-core (type vocab + usefulness + decision + affine + grade). The HEAVY
+      entangled core remains: checkty.rs (~7.4k ln), mono.rs (~3.2k), elab.rs (~2.3k), eval.rs
+      (~2.2k), and fuse.rs (which RUNS eval::Evaluator to check semilattice laws). These are one
+      strongly-connected component (DN-26 §7.1) and belong in the SAME nodule (§9 flag-1), so they
+      land into semcore.myc incrementally. This is the largest single implementation task of the
+      port and is gated by the feasibility question in M-994: a self-hosted checker/elaborator run
+      inside the L1 evaluator over a whole program almost certainly cannot complete under the current
+      kernel (M-986 depth budget, M-987 ~n^3 cost). status:blocked on M-994's resolution (how the
+      Stage-5/6 differential runs); the transpiler accelerator (M-991) may seed the drafts.
+
+      User stories:
+      - As a language user, I want the type-checker/elaborator/evaluator written in Mycelium, so
+        that the whole frontend is auditable in the language it compiles.
+
+      Definition of Done:
+      - checkty/elab/eval/mono/fuse ported into semcore.myc, each with a differential appropriate to
+        the M-994 resolution (interpreted L1-eval where feasible, else the AOT leg); flat-namespace
+        prefixing preserved; native myc check ok; Empirical differential; no src/*.rs modified.
+
+  - id: M-994
+    title: "Resolve the Stage-5/6 whole-program L0-output differential feasibility (M-986/M-987 wall)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:decision, area:language, priority:P2, status:todo]
+    epic: E18-1
+    depends_on: [M-986, M-987]
+    doc_refs:
+      - corpus:DN-26
+      - src:crates/mycelium-l1/src/eval.rs
+    body: |
+      Minted 2026-07-06 from the M-740 Stage-5 increment-1 landing. DN-26 §7.3 specifies a
+      whole-program "L0-output differential" for Stage 5 and a §9 flag-2 interpreted-first Stage-6
+      bootstrap gate. Both are impractical at compiler scale under the current evaluator: M-986 (the
+      evaluator elides only bare-body tail calls, so no in-language loop exceeds the 4096 depth
+      budget) and M-987 (L1-eval cost ~n^3 in token count) mean running a self-hosted
+      checker/elaborator inside the L1 evaluator over a whole program does not complete. This is a
+      MAINTAINER DECISION, surfaced not silently re-scoped (G2/VR-5): choose the lift path so
+      Stage-5 (M-993) and Stage-6 (M-742) can proceed. Options recorded in DN-26: (a) widen the
+      kernel's tail position so match/let tail calls are elided (fixes M-986; unblocks deep
+      in-language iteration); (b) reduce evaluator cost below ~n^3 (M-987); (c) lean on the AOT leg
+      for the Stage-5/6 differential instead of interpreted-first, keeping interpreted-first only for
+      small programs. Not mutually exclusive.
+
+      User stories:
+      - As the maintainer, I want a decided path for how the self-hosted semantic core is
+        differentially validated at scale, so that Stage 5/6 has a runnable gate rather than a
+        blocked one.
+
+      Definition of Done:
+      - A recorded decision (append to DN-26, or a superseding note) selecting the lift path(s) for
+        the Stage-5/6 differential; M-993 and M-742 unblocked with a concrete, runnable gate spec.
+
   - id: M-970
     title: "mycelium-fmt: render_expr_canonical drops the @forage(policy) Hypha annotation"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"

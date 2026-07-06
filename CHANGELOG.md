@@ -11,6 +11,39 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### M-740 Stage 5 (increment 1) — partial self-hosted `compiler.semcore` (2026-07-06)
+
+`boot10` (E18-1) wave 5, per DN-26 §7.3/§9: the **first, deliberately partial** increment of the
+semantic-core nodule `compiler.semcore` (`lib/compiler/semcore.myc`). The full semcore is a 9-file
+strongly-connected component (~16.7k Rust lines); this increment lands only the **tractable sub-core
+that depends on checkty's *types* but not its logic or the evaluator**, and defers the heavy
+entangled core — honestly, not silently.
+
+- **In this increment:** the `Ty`/`Width`/`DataInfo`/`CtorInfo`/`Pat` type vocabulary (data
+  declarations only), the Maranget **`usefulness`** (exhaustiveness/redundancy) + **`decision`**
+  (decision-tree) pipeline, the static **`affine`** use-once tracker, and **`grade`** (guarantee
+  grading). Flat-namespace prefixing (`Ty-`/`Wd-`/`Mp-`/`Hd-`) per the FLAG-ast-5/FLAG-parse-2
+  discipline. Native `myc check` reports `ok`.
+- **A true live-oracle differential** (`crates/mycelium-l1/src/tests/compiler_stage5_semcore.rs`,
+  17/17, `Empirical`): because `usefulness`/`decision`/`affine`/`grade` are `pub(crate)`, the gate is
+  an **in-crate** unit module (CLAUDE.md test-layout: white-box `use crate::…`) that calls the
+  **live Rust oracle** on the same small synthetic inputs the `.myc` encodes and compares — not
+  hand-derived expectations. The harness was perturbation-verified (a corrupted expectation fails
+  loudly). This closed the first-cut hand-derived gap (FLAG-semcore-10). Sole residual
+  **FLAG-semcore-10-b:** grade's exact `Strength` is recovered by probing the four-level lattice
+  (`Exact ⊐ Proven ⊐ Empirical ⊐ Declared`) through the live `check_guarantees`, whose finer
+  internals are private even in-crate — surfaced, not hidden. **No logic module under
+  `crates/mycelium-l1/src/` was modified and no visibility was changed** (in-crate access needs
+  neither).
+- **Deferred, feasibility-gated on M-986/M-987 (recorded as an open question, not narrowed):** the
+  heavy entangled core `checkty`/`elab`/`eval`/`mono` + `fuse` (which *runs* the evaluator), the
+  whole-program **L0-output differential**, and the `cargo-mutants` witness. Running a self-hosted
+  checker/elaborator inside the L1 evaluator over a whole program almost certainly cannot complete
+  under the current kernel (M-986: no in-language loop exceeds the 4096 depth budget; M-987: ~n³
+  eval cost). Minted: **M-993** (heavy-core port), **M-994** (the L0-differential feasibility
+  question). The lift is a maintainer decision (widen kernel TCO vs. reduce eval cost vs. lean on
+  the AOT leg), surfaced in DN-26.
+
 ### M-740 Stage 4 — self-hosted SCC leaf nodules (substrate · totality · ambient) (2026-07-06)
 
 `boot10` (E18-1) wave 4, per the DN-26 §7.3 stage map: Stage 4 lands the three semantic-core

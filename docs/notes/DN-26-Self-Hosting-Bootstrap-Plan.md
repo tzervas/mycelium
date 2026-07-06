@@ -309,6 +309,29 @@ code; they only fix the two branch points so the M-740 wave can proceed without 
 
 ## Meta — changelog
 
+- **2026-07-06 — Stage 5 increment 1 landed (partial `semcore.myc`); the heavy-core L0
+  differential is feasibility-gated — an OPEN QUESTION, not decided (append-only, no status move;
+  M-740).** §7.3 row 5 (`compiler.semcore`, §9 flag-1's single-nodule SCC) begins as a **partial**
+  increment: the type vocabulary (`Ty`/`Width`/`DataInfo`/`CtorInfo`/`Pat`, data only) + the
+  Maranget `usefulness`+`decision` pipeline + `affine` + `grade` — the sub-core depending on
+  checkty's *types*, not its logic or the evaluator. Gate
+  `crates/mycelium-l1/src/tests/compiler_stage5_semcore.rs` 17/17 (`Empirical`): a **true
+  live-oracle** in-crate differential (white-box `use crate::usefulness/decision/affine/grade`
+  against the real Rust functions on small synthetic inputs — not hand-derived; perturbation-checked
+  to fail loudly). Native `myc check` = `ok`. No `crates/mycelium-l1/src/` logic or visibility was
+  changed. **This is the point where the §9 flag-2 *interpreted-first* Stage-6 gate's practicality
+  (flagged 2026-07-05) actually bites.** Deferred, feasibility-gated on M-986 (the evaluator elides
+  only bare-body tail calls → no in-language loop exceeds the 4096 depth budget) and M-987 (~n³
+  L1-eval cost): the heavy entangled core `checkty`/`elab`/`eval`/`mono`, `fuse` (which *runs* the
+  evaluator), the **whole-program L0-output differential**, and the `cargo-mutants` witness. A
+  self-hosted checker/elaborator run inside the L1 evaluator over a whole program almost certainly
+  cannot complete under the current kernel — so the DN-26 §7.3 Stage-5 "L0-output differential" as
+  specified is **not achievable at compiler scale today**. This note **decides nothing**: whether
+  the lift comes from widening the kernel's tail position (M-986), reducing eval cost (M-987), or
+  leaning on the AOT leg for the Stage-5/6 gate is a **maintainer decision**, recorded here rather
+  than silently re-scoped (G2/VR-5). Minted: **M-993** (heavy-core port), **M-994** (the
+  L0-differential-feasibility question). Status remains **Draft** (→ Resolved with M-741). (M-740
+  Stage 5 increment 1; E18-1; VR-5/G2.)
 - **2026-07-06 — Stage 4 landed: the three SCC leaf nodules (append-only, no status move;
   M-740).** §7.3's leaves — `compiler.substrate`/`compiler.totality`/`compiler.ambient` (the `.myc`
   port of `substrate.rs`/`totality.rs`/`ambient.rs`) — implemented and gated (Rust differentials
