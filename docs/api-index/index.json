@@ -7234,7 +7234,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/eval.rs",
-      "line": 572,
+      "line": 556,
       "summary": "The L1 evaluator over a checked [`Env`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7245,7 +7245,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/eval.rs",
-      "line": 288,
+      "line": 272,
       "summary": "One recorded `@forage(policy)` placement decision (M-906; DN-70 D1; RFC-0008 RT3) — the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7256,7 +7256,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/eval.rs",
-      "line": 298,
+      "line": 282,
       "summary": "Why a `@forage(policy)` placement failed — always explicit, never a silent hang or a fabricated",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7278,7 +7278,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/eval.rs",
-      "line": 324,
+      "line": 308,
       "summary": "Why L1 evaluation could not produce a value — always explicit (S5/G2).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7289,7 +7289,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/eval.rs",
-      "line": 69,
+      "line": 78,
       "summary": "An L1 runtime value: an L0 representation value, or a constructed datum.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8444,7 +8444,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::eval",
       "file": "crates/mycelium-l1/src/eval.rs",
-      "line": 479,
+      "line": 463,
       "summary": "The tunable **budgets** of an [`Evaluator`] — the step (`fuel`) and recursion-depth guards — as",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8455,7 +8455,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::eval::EvaluatorOpts",
       "file": "crates/mycelium-l1/src/eval.rs",
-      "line": 509,
+      "line": 493,
       "summary": "Set the recursion-depth budget (builder-style), leaving `fuel` untouched.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8466,7 +8466,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::eval::EvaluatorOpts",
       "file": "crates/mycelium-l1/src/eval.rs",
-      "line": 502,
+      "line": 486,
       "summary": "Set the step budget (builder-style), leaving `depth` untouched.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8477,7 +8477,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::eval::L1Value",
       "file": "crates/mycelium-l1/src/eval.rs",
-      "line": 206,
+      "line": 178,
       "summary": "The underlying L0 value, if this is a representation value; `None` for data or a `Substrate`",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8488,7 +8488,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::eval::L1Value",
       "file": "crates/mycelium-l1/src/eval.rs",
-      "line": 218,
+      "line": 190,
       "summary": "The affine SubstrateHandle, if this is a `Substrate`",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8499,7 +8499,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::eval::L1Value",
       "file": "crates/mycelium-l1/src/eval.rs",
-      "line": 233,
+      "line": 205,
       "summary": "Project this L1 value onto the L0 [`CoreValue`] domain, resolving each constructor's",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8510,7 +8510,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::eval",
       "file": "crates/mycelium-l1/src/eval.rs",
-      "line": 520,
+      "line": 504,
       "summary": "One elided tail-call frame recorded by the TCO EXPLAIN trail (RFC-0041 §4.6 tco32) — the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8521,7 +8521,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::eval",
       "file": "crates/mycelium-l1/src/eval.rs",
-      "line": 533,
+      "line": 517,
       "summary": "The bounded EXPLAIN record of tail-call optimization (RFC-0041 §4.6 tco32): total elided frames,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8532,7 +8532,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::eval::TcoTrace",
       "file": "crates/mycelium-l1/src/eval.rs",
-      "line": 545,
+      "line": 529,
       "summary": "The ring-buffer capacity: the number of most-recent elisions retained for the actionable",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8543,7 +8543,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::eval",
       "file": "crates/mycelium-l1/src/eval.rs",
-      "line": 428,
+      "line": 412,
       "summary": "The surface strength keyword's kernel lattice point.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12437,7 +12437,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::aot",
       "file": "crates/mycelium-mlir/src/aot.rs",
-      "line": 172,
+      "line": 652,
       "summary": "[`run_core`] with **both** budgets explicit (M-347): `fuel` bounds `Fix` unfolds (time), `max_depth`",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12811,7 +12811,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/aot.rs",
-      "line": 65,
+      "line": 101,
       "summary": "The default depth-budget resolution — the resolved ceiling **and** its `EXPLAIN`-able basis (no",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14197,7 +14197,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/aot.rs",
-      "line": 232,
+      "line": 754,
       "summary": "Run a Core IR program through the AOT path to a representation [`Value`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14219,7 +14219,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/aot.rs",
-      "line": 148,
+      "line": 628,
       "summary": "Run a Core IR program through the AOT path to a [`CoreValue`] (the full v0 calculus — repr, data,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14230,7 +14230,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/aot.rs",
-      "line": 197,
+      "line": 677,
       "summary": "[`run_core_with_budget`] with a shared **effect-budget ledger** threaded through the env-machine",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14241,7 +14241,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/aot.rs",
-      "line": 157,
+      "line": 637,
       "summary": "[`run_core`] with an explicit `Fix`-unfold (fuel) budget and the dynamically-resolved depth ceiling.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14263,7 +14263,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/aot.rs",
-      "line": 627,
+      "line": 1314,
       "summary": "Run a Core IR program through the AOT path **with a schedule-staged packing layout** (M-251;",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -35113,7 +35113,7 @@
     },
     {
       "symbol": "mycelium_l1::eval::Evaluator",
-      "reason": "dedup-alias: same definition as `mycelium_l1::Evaluator` at crates/mycelium-l1/src/eval.rs:572 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::Evaluator` at crates/mycelium-l1/src/eval.rs:556 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::eval::EvaluatorOpts::clone",
@@ -35133,7 +35133,7 @@
     },
     {
       "symbol": "mycelium_l1::eval::ForageDecision",
-      "reason": "dedup-alias: same definition as `mycelium_l1::ForageDecision` at crates/mycelium-l1/src/eval.rs:288 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::ForageDecision` at crates/mycelium-l1/src/eval.rs:272 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::eval::ForageDecision::clone",
@@ -35161,7 +35161,7 @@
     },
     {
       "symbol": "mycelium_l1::eval::ForageError",
-      "reason": "dedup-alias: same definition as `mycelium_l1::ForageError` at crates/mycelium-l1/src/eval.rs:298 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::ForageError` at crates/mycelium-l1/src/eval.rs:282 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::eval::ForageError::clone",
@@ -35197,7 +35197,7 @@
     },
     {
       "symbol": "mycelium_l1::eval::L1Error",
-      "reason": "dedup-alias: same definition as `mycelium_l1::L1Error` at crates/mycelium-l1/src/eval.rs:324 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::L1Error` at crates/mycelium-l1/src/eval.rs:308 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::eval::L1Error::clone",
@@ -35265,7 +35265,7 @@
     },
     {
       "symbol": "mycelium_l1::eval::L1Value",
-      "reason": "dedup-alias: same definition as `mycelium_l1::L1Value` at crates/mycelium-l1/src/eval.rs:69 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::L1Value` at crates/mycelium-l1/src/eval.rs:78 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::eval::L1Value::clone",
@@ -37821,27 +37821,27 @@
     },
     {
       "symbol": "mycelium_mlir::aot::default_depth_budget",
-      "reason": "dedup-alias: same definition as `mycelium_mlir::default_depth_budget` at crates/mycelium-mlir/src/aot.rs:65 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_mlir::default_depth_budget` at crates/mycelium-mlir/src/aot.rs:101 — one canonical row kept"
     },
     {
       "symbol": "mycelium_mlir::aot::run",
-      "reason": "dedup-alias: same definition as `mycelium_mlir::run` at crates/mycelium-mlir/src/aot.rs:232 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_mlir::run` at crates/mycelium-mlir/src/aot.rs:754 — one canonical row kept"
     },
     {
       "symbol": "mycelium_mlir::aot::run_core",
-      "reason": "dedup-alias: same definition as `mycelium_mlir::run_core` at crates/mycelium-mlir/src/aot.rs:148 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_mlir::run_core` at crates/mycelium-mlir/src/aot.rs:628 — one canonical row kept"
     },
     {
       "symbol": "mycelium_mlir::aot::run_core_with_effects",
-      "reason": "dedup-alias: same definition as `mycelium_mlir::run_core_with_effects` at crates/mycelium-mlir/src/aot.rs:197 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_mlir::run_core_with_effects` at crates/mycelium-mlir/src/aot.rs:677 — one canonical row kept"
     },
     {
       "symbol": "mycelium_mlir::aot::run_core_with_fuel",
-      "reason": "dedup-alias: same definition as `mycelium_mlir::run_core_with_fuel` at crates/mycelium-mlir/src/aot.rs:157 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_mlir::run_core_with_fuel` at crates/mycelium-mlir/src/aot.rs:637 — one canonical row kept"
     },
     {
       "symbol": "mycelium_mlir::aot::run_with_layout",
-      "reason": "dedup-alias: same definition as `mycelium_mlir::run_with_layout` at crates/mycelium-mlir/src/aot.rs:627 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_mlir::run_with_layout` at crates/mycelium-mlir/src/aot.rs:1314 — one canonical row kept"
     },
     {
       "symbol": "mycelium_mlir::bitnet::BitnetDotKernel",

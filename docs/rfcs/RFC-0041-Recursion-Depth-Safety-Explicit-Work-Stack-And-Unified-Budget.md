@@ -482,6 +482,93 @@ implementation. **4 Critical + 15 High source-confirmed** objections, all resolv
 
 ## Meta — changelog
 
+- **2026-07-06 — M-996 landed: AOT env-machine TCO — the §5.1 family-parity convergence
+  (maintainer-authorized behavior change; append-only, no status move).** Resolves the tracked
+  decision from the entry below. The AOT env-machine (`aot.rs::run_core`) now elides tail frames,
+  closing the parity gap the §4.6 interpreter amendment opened (same program, same budget:
+  interpreted Ok vs AOT `DepthLimit` — a live §5.1 violation of the §4.0 metric, on the
+  full-calculus AOT leg Stage-6's three-way requires). **Authorization basis (recorded in DN-56's
+  2026-07-06 posture row + the M-996 body):** the owner approved the two — and only two — outcome
+  shifts: deep-tail `DepthLimit → Ok`, divergent-tail `DepthLimit → FuelExhausted` (convergence with
+  the interpreter; fuel is the designed non-termination backstop; the graceful ceiling stays pinned
+  via the non-tail witness, which doubles as the no-over-elision guard). **Machine-appropriate
+  implementation:** in the ANF machine, tail-transparency is intrinsic to the continuation (a
+  passthrough `Resume` — block complete ∧ `result()` = bound name), so the elision is *not pushing*
+  the frame (caller env dropped eagerly); `ApplyThen` (`Fix` unfold) is never elided; no
+  Substrate-like values exist in the AOT fragment; elided calls take no depth guard (§4.0 —
+  guard-leak pinned). **Observable per the no-black-boxes rule:** a `TcoTrace{total_elided}` analog
+  threaded through the machine and asserted in tests (≥10,000 elisions on the 10k loop); the missing
+  *user-facing* EXPLAIN surface for AOT traces is minted as **M-998**, not silently skipped.
+  **Corollary recorded (never silent):** with a declared `alloc` budget, elided tail frames charge
+  no alloc bytes — §4.0's "no frame ⇒ no control-stack memory" applied to the alloc sibling; the
+  `Fix` frames still charge and the existing alloc-overrun pin passes unmodified. Verified: 267
+  `mycelium-mlir` lib tests + all differentials green with **no expectation edits beyond the
+  enumerated divergent-tail family**; reverse-dependents green (`mycelium-l1` 991/0 — the canonical
+  non-tail `DepthLimit{4096}` pin unmoved; `std-conformance` 293/0); L0-interp ≡ AOT deep-tail
+  parity witness green (all three machines now agree). Flagged follow-on: an explicit combined
+  L1↔AOT case in `depth_metric_parity.rs`. **M-996 → done.** RFC-0041 stays **Enacted**.
+  (M-996/M-998; E18-1-adjacent; VR-5/G2.)
+- **2026-07-06 — AOT parity for the M-994 perf wins: (b) landed via §6, (a) is a tracked decision
+  (append-only, no status move; M-995/M-996).** Applying the M-994 evaluator wins to the AOT
+  (`mycelium-mlir`, the perf path — **not** in the DN-56 freeze scope; the frozen `mycelium_core`
+  types are untouched). **(b) — landed (M-995):** the AOT env-machine (`aot.rs::run_core`) had the
+  same per-reference O(nodes) deep-copy (`AotVal::Core` clone on every lookup + match-bind, measured
+  ~n³ p=2.98); fixed with an **AOT-local `AotVal::Data(Rc<AotDatum>)`** cons cell (the interpreter's
+  `Arc`-on-`Data.fields` couldn't port — those fields live in the frozen `Datum`). O(1) reference +
+  destructure; measured p 2.98→~2.3–2.5, 13×/21×/35× at n=100/200/400; iterative `to_core`/`Drop`
+  (deep-spine safe). **§6 bar met:** the AOT `-p mycelium-mlir` suite is green and results are
+  **byte-identical** (`ObservationalEquiv` + M-210 `Validated{Exact}`, the §5.1 family-parity
+  contract); `aot_frame_size` pin holds; zero new `unsafe`. Less clean than the interpreter's n³→n²
+  (the env-machine's HashMap-env clone is the residual — a future env-rep change could recover a
+  cleaner n²). **(a) — NOT landed, decision-gated (M-996):** the env-machine has no TCO, but adding it
+  is a behavior-changing new feature (a divergent tail loop shifts `DepthLimit`→`FuelExhausted`,
+  breaking the pinned graceful-error test) — a maintainer decision under the §5.1 family-parity + the
+  tracked "AOT per-frame metric precision" residual, not a §6 behavior-preserving landing (the native
+  LLVM path already has O(1) TCO for the canonical tail-`Fix`). RFC-0041 stays **Enacted**.
+  (M-995/M-996; E18-1-adjacent; VR-5/G2.)
+- **2026-07-06 — §6 within-freeze hardening: O(1) `L1Value::Data` clone via `Arc` sharing (M-994 fix
+  (b); M-987 ~n³→~n²; append-only, no status move).** A clean use of the §6 behavior-preserving
+  channel: `Data`'s `fields` wrapped in `Arc<Vec<L1Value>>` so a clone is a refcount bump instead of
+  an O(nodes) spine rebuild (the confirmed root of M-987's ~n³ — `eval_path` deep-copies on every var
+  reference). Sound because `Data` is immutable+acyclic by construction; `Arc` (not `Rc`) because
+  `L1Value` must be `Send+Sync` behind the evaluator's `Mutex`. Derived `Clone` (the ~60-LOC iterative
+  clone deleted); `Drop` reworked to stay iterative for a uniquely-owned deep spine (`Arc::get_mut`)
+  while shared subtrees drop O(1) — the 200k-deep `guard_hole_census` no-SIGABRT invariant holds.
+  **§6 bar met (I1–I3):** the **M-210 differential (32/32) + error-parity are green and UNCHANGED**
+  (no fingerprint/error edited); identical values/errors/order. Measured (debug, `Empirical`): fitted
+  complexity p 2.96→1.86–2.01 (~n³→~n²), 14×/30×/64× speedup at n=100/200/400. With fix (a) (depth,
+  §4.6 amendment below) + (b) (cost) both landed, the DN-26 §9 flag-2 interpreted-first Stage-6 gate is
+  practical. **M-987 → done; M-994 → done.** RFC-0041 stays **Enacted**. (M-994 fix (b); E18-1-adjacent;
+  VR-5/G2.)
+- **2026-07-06 — §4.6 amendment: widen the TCO precondition through tail-transparent frames
+  (M-994 fix (a); maintainer-approved via the §6 channel; append-only, no status move).** §4.6's TCO
+  precondition ("no pending post-work") was **too narrow**: it treated a `Frame::MatchPop`/`Frame::LetPop`
+  above the caller's `InvokePost` as pending work, so a tail call made **inside a `match` arm or `let`
+  body** was never elided — and since every terminating loop needs a `match`, **no in-language loop
+  could exceed the 4096 depth budget** (this was M-986, pinned in `compiler_stage3.rs`). The amendment
+  refines the precondition to look **through** any run of `MatchPop`/`LetPop` — which are
+  *observationally transparent to the value* (they only restore scope) — so a tail call under them is
+  still in tail position (its result **is** the enclosing function's result). Implementation
+  (`eval.rs::enter_call`, ~47 LOC): **peek** past the transparent frames (non-tail path byte-for-byte
+  unchanged), then on commit **drain** them executing each one's scope cleanup eagerly (incl. the M-904
+  `LetPop` Substrate scope-exit release for a let-bound handle that does not escape into `argv` — never
+  a silent leak). This **completes** §4.6's ratified TCO intent (Decides item 5); it is not new kernel
+  surface. **Landing channel + sign-off (§6 / DN-56 freeze):** the change is value-preserving for
+  *terminating* programs (the M-210 differential + the `compiler_stage*` fingerprint parity are all
+  **unchanged** — verified), but it **shifts the runs-vs-refuses frontier** (programs that returned
+  `DepthExceeded` now return a value), so it is not purely §Posture-I2-behavior-preserving and required
+  an **explicit maintainer sign-off** (2026-07-06, the M-994 decision) rather than the routine §6
+  channel alone. Justification recorded (checked, VR-5): recursion+`match` programs run **only** on the
+  L1-eval path (outside the L0-elaboration fragment) and the L0 reference interpreter has **no TCO**, so
+  there is **no L0 oracle for these deep loops to diverge from** — the I3 cross-path-parity exposure is
+  nil; `depth_metric_parity` (static §4.0 metric + the *non-tail* witness) stayed green. Correctness
+  guard proven: a **non-tail** self-call (`sum(n)=add_u(n, sum(n-1))`) still refuses
+  `DepthExceeded{4096}` (no over-elision). The two M-986 pins are flipped to assert the closed behavior
+  (a 10,000-iteration `match` loop now returns `Ok`; the 150-item nodule that refused at `depth=512` now
+  passes). **M-986 → done.** The complementary **M-987** (~n³ L1-eval cost) stays open — demonstrated
+  live: an 800-item parse now runs *depth*-wise but is ~n³ *slow* — and is addressed by M-994 fix (b)
+  (`Rc`-share `L1Value::Data`), which lands through this §6 behavior-preserving channel proper. RFC-0041
+  stays **Enacted** (this is an append-only §4.6 refinement). (M-994 fix (a); E18-1-adjacent; VR-5/G2.)
 - **2026-07-05 — `Accepted → Enacted` (maintainer-approved W7 promotion; effective with this landing
   on `main`).** The maintainer approved the full promotion (2026-07-05, session review); the reconciled
   W0–W7 wave moves `dev → integration → main` by this landing — the §9 claimability condition is met

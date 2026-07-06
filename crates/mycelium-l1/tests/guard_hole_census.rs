@@ -156,13 +156,13 @@ fn deep_cons(n: usize) -> L1Value {
     let mut acc = L1Value::Data {
         ty: "Vec".to_owned(),
         ctor: "Nil".to_owned(),
-        fields: vec![],
+        fields: std::sync::Arc::new(vec![]),
     };
     for _ in 0..n {
         acc = L1Value::Data {
             ty: "Vec".to_owned(),
             ctor: "Cons".to_owned(),
-            fields: vec![L1Value::Repr(byte.clone()), acc],
+            fields: std::sync::Arc::new(vec![L1Value::Repr(byte.clone()), acc]),
         };
     }
     acc
@@ -184,13 +184,16 @@ fn deep_cons(n: usize) -> L1Value {
 /// recursive-destruction class to iterative worklists; `to_core`/`value_contains_substrate_id` are
 /// expected to gain (or be joined by) an explicit budget at the same time.
 #[test]
-// RFC-0041 §4.5 (W5, M-979): `L1Value`'s `Clone`/`Drop` are now hand-written iterative worklists, so a
-// deep `Cons` chain clones + drops with O(1) host-stack recursion — no SIGABRT. Un-ignored: the
-// assertion (construct + clone + drop a 200k-deep chain without aborting) must now pass. (`to_core` /
-// `value_contains_substrate_id` remain recursive — documented above — but are not exercised here.)
+// RFC-0041 §4.5 (W5, M-979) + M-994 fix (b): `L1Value::Data.fields` is now `Arc`-shared, so `Clone` is
+// a derived O(1) refcount bump (no spine walk at all — sharing is sound because `Data` is immutable +
+// acyclic), and `Drop` is a hand-written iterative worklist that dismantles a *uniquely-owned* deep
+// spine with O(1) host-stack recursion. So a deep `Cons` chain clones (O(1)) and drops (iterative) with
+// no SIGABRT. The assertion (construct + clone + drop a 200k-deep chain without aborting) passes.
+// (`to_core` / `value_contains_substrate_id` remain recursive — documented above — but are not
+// exercised here.)
 fn l1value_deep_cons_clone_drop_no_sigabrt() {
     let deep = deep_cons(200_000);
-    let cloned = deep.clone(); // iterative Clone (RFC-0041 §4.5) — no host-stack recursion, n-deep
-    drop(cloned); // iterative Drop (RFC-0041 §4.5) — no host-stack recursion, n-deep
-    drop(deep);
+    let cloned = deep.clone(); // derived O(1) `Arc` clone (M-994 fix (b)) — shares the spine, no recursion
+    drop(cloned); // shared drop is an O(1) refcount decrement (the unique owner `deep` still holds it)
+    drop(deep); // now the unique owner: iterative Drop (RFC-0041 §4.5) dismantles n-deep, no recursion
 }

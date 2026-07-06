@@ -2,6 +2,7 @@
 //! White-box access via `use crate::…::*`; logic files carry no `#[cfg(test)]` inline code.
 
 mod accel;
+mod aot;
 mod bitnet;
 mod dense_codegen;
 mod dialect;

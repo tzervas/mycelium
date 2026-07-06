@@ -115,7 +115,20 @@ fi
 # Drop comment-only lines (a `wild {` inside a `//` comment is prose, not a real site).
 wild_hits=()
 if [[ -n "$wild_raw" ]]; then
-  mapfile -t wild_hits < <(printf '%s\n' "$wild_raw" | grep -vE ':[0-9]+:[[:space:]]*//' || true)
+  # Also drop occurrences that live entirely inside a double-quoted STRING LITERAL (a `.myc`
+  # pretty-printer emitting the surface text `"wild { "` — e.g. lib/compiler/ambient.myc's
+  # `print_expr` — is rendering source, not opening a wild block; a REAL `wild` block keyword can
+  # never be inside quotes). Heuristic: strip the `file:line:` prefix, delete all `"…"` spans, and
+  # keep the hit only if the block pattern still matches the remainder (never-silent: any
+  # non-quoted `wild {` on the same line still audits).
+  mapfile -t wild_hits < <(printf '%s\n' "$wild_raw" \
+    | grep -vE ':[0-9]+:[[:space:]]*//' \
+    | awk -F: '{
+        line = $0
+        sub(/^[^:]*:[0-9]+:/, "", line)
+        gsub(/"[^"]*"/, "", line)
+        if (line ~ /(^|[^[:alnum:]_])wild[[:space:]]*\{/) print $0
+      }' || true)
 fi
 
 if [[ ${#wild_hits[@]} -eq 0 ]]; then

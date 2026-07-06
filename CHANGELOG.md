@@ -11,6 +11,155 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### M-999 — the AOT env-machine now outruns the interpreter (~1.5–1.7×) (2026-07-06)
+
+Closes the maintainer-flagged **performance inversion**: post-M-995/996, the AOT env-machine was
+still ~4.5× *slower* than the L1 interpreter same-profile (release, apples-to-apples — the honest
+baseline the old cross-profile numbers had understated). Profiling (callgrind; ~55–60% of
+instructions in malloc/free/memcpy) showed the planned env fix alone wasn't dominant, so the fix
+landed as **four measured steps** in `aot.rs`:
+
+1. **Env representation** — mutable top segment + `Rc`-frozen parent frames (O(1)-amortized capture
+   at closure creation; innermost-wins chain lookup; iterative `EnvFrame::drop`). Alone: 0.22×→0.27×.
+2. **Prepared code mirror** — the lowered ANF mirrored **once** into `Rc`-shared blocks; the machine
+   had been deep-cloning `Lam`/`Fix` bodies and match-arm subtrees *per execution*. →0.72×.
+3. **Interned atoms** — `Rc<Atom>` keys prepared once; re-binding is a refcount bump. →parity.
+4. **`AotVal::Repr(Rc<Value>)`** — variable references are refcount bumps; the value enum shrinks to
+   pointer size (the old "intentionally inlined" trade-off superseded-by-measurement, noted at the
+   type). →**1.5–1.7× ahead** on snoc (n=100/200/400), 1.2–1.4× on a 50k tail loop.
+
+Both machines fit clean ~n² (M-995 fixed the curve; M-999 removed a ~7× constant). The **ordering
+witness** is committed (`tests/aot_vs_interp_bench.rs`, `#[ignore]`d comparative benchmark — rerun
+with `--release --ignored --nocapture`; single-trial `Empirical`, ~2–5% jitter). **Zero expectation
+edits**: `mycelium-mlir` 382/0 (439/0 with `mlir-dialect`), `mycelium-l1` 991/0, no new `unsafe`.
+**Review correction (PR #1194 HIGH, owned):** the bench's first placement (in `mycelium-mlir`, via a
+new `l1` dev-dep) closed a **real** `{l1, mlir}` dev-dependency cycle that `cargo xtask deps`
+rejects (DN-68 — the initial "deps-acyclic green" claim was a faulty verification, a shell pipe-rc
+bug, not a gate bug); fixed by **moving the bench to `crates/mycelium-l1/tests/`** (the pre-existing
+dev-edge direction) and removing the reverse edge — re-verified `xtask deps` exit 0, no violations.
+**The honest ladder, recorded:** ~1.5× is the realistic band for a trampolined ANF-machine;
+"far faster" belongs to the direct-LLVM native path, whose v0 coverage is already wide (RFC-0029:
+data, native swap, widened closures, `Fix` loop rewrite, Dense/VSA) — growing that coverage is the
+big lever. FLAG: `llvm.rs`'s stale header (says closures/recursion "deferred", contradicted by
+M-850/M-851 in the same file) → docs sweep.
+
+### M-996 — AOT env-machine TCO: tail frames elided, observably (maintainer-authorized) (2026-07-06)
+
+Completes the cross-machine convergence of the M-994 arc: the AOT env-machine
+(`aot.rs::run_core`) now elides tail frames, closing the §5.1 family-parity gap fix (a) opened
+(the same program at the same budget succeeded interpreted but refused `DepthLimit` on the AOT
+env-machine — the full-calculus AOT leg that Stage-6's three-way and the M-993 "(c) fallback" run on).
+
+- **Machine-appropriate shape (not a copy of the interpreter's):** in the ANF env-machine,
+  tail-transparency is an *intrinsic O(1) property of the continuation* — a `Resume(Cont)` whose
+  block is complete and whose `result()` is exactly the bound name is a pure passthrough (settle
+  binds, then passes the same value up unconditionally). So the "peek" is that test at push time and
+  the "commit" is **not pushing** the frame (eagerly dropping the caller's saved env — the drain
+  analog). No transparent frame ever enters the stack. `ApplyThen` (the `Fix` unfold) has real
+  post-work and is never elided. No Substrate-like affine values exist in the AOT fragment (stated,
+  not cargo-culted). Depth accounting per §4.0: elided calls never take a depth guard (a tail call
+  *at* the ceiling succeeds; a guard-leak pin proves net-zero).
+- **Observable, per the no-black-boxes rule:** a `TcoTrace { total_elided }` counter threaded through
+  the machine (the interpreter's `TcoTrace` analog), asserted in the deep-loop test
+  (`count(10_000)` @ depth 64 → `Ok(0)`, ≥10,000 elisions). A **user-facing** EXPLAIN surface for
+  AOT traces does not exist yet — minted as **M-998**, not silently skipped.
+- **Behavior shifts — exactly the two authorized (maintainer, 2026-07-06):** deep-tail
+  `DepthLimit → Ok(value)`, divergent-tail `DepthLimit → FuelExhausted` (convergence with the
+  interpreter's long-standing behavior; the graceful-ceiling property stays pinned via the **non-tail**
+  witness, which doubles as the no-over-elision guard). Everything terminating is byte-identical:
+  267 `mycelium-mlir` lib tests + all differentials green; reverse-dependents untouched and green
+  (`mycelium-l1` 991/0 incl. the canonical `DepthLimit{4096}` non-tail pin; `std-conformance` 293/0).
+  **Parity witness:** `countdown(10_000)` now agrees L0-interp ≡ AOT env-machine (same value +
+  guarantee) — with the L1 pin of the same shape, all three machines agree. An explicit combined
+  L1↔AOT deep-tail case in `depth_metric_parity.rs` is a flagged follow-on (M-996 note).
+- **Corollary, recorded not hidden:** with a *declared* `alloc` effect budget, elided tail frames
+  charge no alloc bytes — the §4.0 principle (no frame ⇒ no control-stack memory) applied to the
+  alloc sibling; a deep tail loop that would have overrun a declared ledger via its `Resume` frames
+  may now complete (the `Fix` `ApplyThen` frames still charge; the existing alloc-overrun pin passes
+  unmodified).
+- Measured (debug, `Empirical`): `count(500)` @ depth 1000 `DepthLimit{1000}` → `Ok(0)`; ~36% less
+  frame churn on a 30k-iteration loop (1.13s → 0.72s).
+
+### M-995 — AOT env-machine value structural-sharing (the M-987 perf win on the AOT path) (2026-07-06)
+
+Carries the M-994 (b) win to the **AOT** (`mycelium-mlir`), since it enhances runtime performance
+drastically. The AOT env-machine (`aot.rs::run_core`) had the *same* per-reference O(nodes) deep-copy
+(`AotVal::Core` clone on every `lookup` + `Match`-arm bind) — measured **~n³ (fitted 2.98)**.
+
+- **Not a literal port:** the interpreter's `Arc`-on-`L1Value::Data.fields` can't apply — the AOT's
+  fields live in the **frozen** `mycelium_core::Datum` (DN-56). The freeze-respecting fix is an
+  **AOT-local `AotVal::Data(Rc<AotDatum>)`** cons cell with `Rc`-shared sub-trees, so a
+  reference/env-clone **and** a destructure field-bind are O(1); the frozen `Datum` is untouched, a
+  `CoreValue` is materialised only at `to_core` (iterative), and `AotDatum::Drop` is iterative
+  (deep-spine SIGABRT-safe).
+- **Measured (release, `Empirical`):** exponent 2.98 → ~2.3–2.5, **13×/21×/35×** at n=100/200/400
+  (38.6s → 1.11s at n=400). Honest caveat: a *less-clean* win than the interpreter's clean n³→n²
+  (14–64×) — the residual is the env-machine's HashMap-environment cloning per match/app (a future
+  env-rep change could recover a cleaner n²). Still a large, genuine win.
+- **Behavior-preserving:** the full `-p mycelium-mlir` suite is green (263 lib + integration incl. the
+  three-way `mlir-dialect` differentials), results **byte-identical** (`ObservationalEquiv` +
+  M-210 `Validated{Exact}`); the `aot_frame_size` pin holds; **zero new `unsafe`**. `mycelium-mlir` is
+  **not** in the DN-56 freeze scope (the AOT is the RFC-0041 perf path; the frozen `mycelium_core` type
+  is untouched) — lands via the §6 behavior-preserving channel + normal review.
+- **The (a) TCO analog is NOT here (decision-gated — M-996):** the AOT env-machine has *no* TCO, but
+  adding it is a behavior-changing new feature (a divergent tail loop moves `DepthLimit` →
+  `FuelExhausted`, breaking a pinned graceful-error test) — a maintainer decision, not a
+  behavior-preserving landing. The native LLVM path already has real O(1) TCO for the canonical
+  tail-`Fix` shape.
+
+### M-994 fix (b) — O(1) `Data` clone via `Arc` structural sharing (M-987 ~n³→~n²; M-994 resolved) (2026-07-06)
+
+The *cost* half of M-994, completing the decision. The confirmed root of the ~n³ L1-eval cost was
+that `eval_path` deep-copies an O(nodes) value on **every** variable reference (`L1Value::clone` for
+`Data` rebuilt the whole spine). Since `Data` is immutable + acyclic by construction, wrapping its
+`fields` in `Arc<Vec<L1Value>>` makes a clone a refcount bump — O(1).
+
+- **`Arc`, not `Rc`** (honest deviation): `L1Value` must be `Send + Sync` (the evaluator holds values
+  behind `Mutex`), so `Rc` fails to compile. Atomic refcounting is marginally costlier but still O(1);
+  the measured win confirms it's negligible. The hand-written iterative `Clone` (~60 LOC) is deleted
+  (now derived); `Drop` reworked to stay iterative for a *uniquely-owned* deep spine (`Arc::get_mut`),
+  while shared subtrees drop O(1) — the 200k-deep `guard_hole_census` no-SIGABRT test still passes.
+- **Measured (debug, `Empirical`), before (dev) → after:** n=100 0.393s→0.028s (14×), n=200
+  2.965s→0.100s (30×), n=400 23.94s→0.375s (64×). **Fitted complexity p: 2.96 (~n³) → 1.86–2.01
+  (~n²)** — one factor of n removed, speedup growing with n; the 1252-token case went from ~12 min
+  (extrapolated) to ~4.0s.
+- **Behavior-preserving (the §6 landing basis):** the **M-210 differential (32/32) is green and
+  UNCHANGED** — no fingerprint/error edited; all `compiler_stage*` + conformance + lib tests green.
+  Landed through the RFC-0041 §6 within-freeze hardening channel (identical values/errors/order).
+- Folded in the PR #1189 LOW DRY nit (the `LetPop` Substrate-escape check → shared
+  `substrate_escapes_into`).
+
+**M-987 → done; M-994 → done.** With (a) (depth) + (b) (cost) both landed, the DN-26 §9 flag-2
+**interpreted-first Stage-6 gate is now practical** at compiler scale; (c) AOT remains the fallback
+for inputs beyond their reach. Unblocks the eval side of the semcore heavy-core port (M-993).
+
+### M-994 fix (a) — widen L1 evaluator TCO through tail-transparent frames (M-986 closed) (2026-07-06)
+
+Resolves the *depth* half of the M-994 decision (maintainer-approved: land (a) then (b), keep AOT as
+the fallback). The L1 evaluator's TCO precondition ("no pending post-work") was too narrow — it
+treated a `MatchPop`/`LetPop` frame above the caller's `InvokePost` as pending work, so a tail call
+inside a `match` arm or `let` body was never elided, and since every terminating loop needs a `match`,
+**no in-language loop could exceed the 4096 depth budget** (M-986).
+
+- **The fix** (`crates/mycelium-l1/src/eval.rs::enter_call`, ~47 LOC): peek *through* any run of
+  `MatchPop`/`LetPop` — observationally transparent to the value (they only restore scope) — so a tail
+  call under them is still in tail position; on commit, drain them executing each one's scope cleanup
+  eagerly (incl. the M-904 `LetPop` Substrate release for a non-escaping handle — never a silent leak).
+  The non-tail path is byte-for-byte unchanged (peek-then-commit).
+- **An append-only RFC-0041 §4.6 amendment** completing that section's ratified TCO intent (Decides
+  item 5) — not new kernel surface. Maintainer-signed-off via the §6 within-freeze channel: it shifts
+  the runs-vs-refuses frontier (so not purely §Posture-I2-behavior-preserving), but there is no L0
+  oracle for these deep loops to diverge from (L0 has no TCO), and the **M-210 differential +
+  `compiler_stage*` fingerprint parity are unchanged** — value-preserving for terminating programs.
+- **Tests:** the two M-986 known-gap pins flipped to assert the closed behavior (a 10,000-iteration
+  `match` loop now returns `Ok`, `total_elided ≥ 10000`; a 150-item nodule that refused at `depth=512`
+  now passes), plus a **non-tail self-call still refuses `DepthExceeded{4096}`** guard (proving no
+  over-elision). `compiler_stage3` 7/7; lib 367; differential 32/32 unchanged. **M-986 → done.**
+- **Still open — M-987 (~n³ cost), fix (b) next:** (a) unlocks depth but an 800-item parse now runs
+  yet is ~n³ *slow* (demonstrated live). Fix (b) — `Rc`-share `L1Value::Data` (O(1) clone; the
+  confirmed root of the cubic) — is the affordability half; it lands behavior-preserving through the
+  §6 channel. (a)+(b) together make the DN-26 §9 flag-2 interpreted-first Stage-6 gate practical.
+
 ### M-740 Stage 5 (increment 1) — partial self-hosted `compiler.semcore` (2026-07-06)
 
 `boot10` (E18-1) wave 5, per DN-26 §7.3/§9: the **first, deliberately partial** increment of the

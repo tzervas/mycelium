@@ -87,7 +87,7 @@ fn as_substrate_and_as_repr_are_discriminated() {
     let dv = L1Value::Data {
         ty: "Unit".into(),
         ctor: "Unit".into(),
-        fields: vec![],
+        fields: std::sync::Arc::new(vec![]),
     };
     assert!(dv.as_substrate().is_none());
 }
