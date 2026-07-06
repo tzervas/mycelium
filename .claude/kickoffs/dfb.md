@@ -52,3 +52,12 @@ their kickoffs (`s10`, `hof`, `lwd`, `strm`) are archived (`.claude/kickoffs/arc
 gone, but M-670/M-671 remain `status:blocked` in `issues.yaml` pending an explicit maintainer call
 on resuming this dogfooding build now vs. keeping it shelved for other reasons — not decided here
 (G2 — don't guess a resume that wasn't asked for).
+
+## Maintainer decision (2026-07-05): RE-SHELVED
+
+**RE-SHELVED (2026-07-05, maintainer decision)** — this kickoff is deferred until **after `boot10`**
+(the self-hosting/comprehensive-dogfooding kickoff, named the next engineering kickoff the same day)
+**and the public flip** (`flp` Stage 1). **M-670/M-671 stay `status:blocked`** in `issues.yaml`
+(dated notes appended to both bodies, 2026-07-05); **revisit at the flip milestone**. This resolves
+the 2026-07-01 "unshelvable — awaiting maintainer decision" state above: the decision is
+**re-shelve**, not resume.

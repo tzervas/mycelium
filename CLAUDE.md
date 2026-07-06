@@ -496,7 +496,19 @@ and **back-propagate the squashed `main` down** into `integration`/`dev` after i
    step alongside `/branch-guard` and `/worktree-guard`. If it fires, re-base the leaf's *real* changes
    onto the working tip (branch fresh and re-apply, or merge the tip in) — never merge the stale ref.
 
-## Autonomous PR workflow — review-before-merge, no human gate
+### 14. Stale issue status — verify against the codebase BEFORE implementing (maintainer directive, 2026-07-05)
+**Pattern:** `issues.yaml` status lags the code (a landed fix whose close-out was missed, a `blocked`
+whose blocker already cleared). An agent assigned a `todo`/`blocked` issue then **re-implements
+already-landed work** or reports a false blocker. Observed on M-970: the `@forage(policy)` render fix
+had landed (PR #1027) while the issue stayed `todo`; only the leaf's verify-first step avoided a
+duplicate implementation. (This is the *implementation-time* twin of the reverse-coverage audits that
+catch `done`-labelled work that never landed.)
+**Mitigation (standing policy, every agent):** before implementing ANY issue, **check its claim against
+the codebase** — reproduce the bug / confirm the feature's absence (grep the source, run the cited
+test, `git log --grep <M-id>` and search the touched paths for prior landings). If the work already
+exists, **flip the status with a checked landed-basis instead of re-implementing** (and fix stale
+`doc_refs` pointers in the same commit); if partially done, scope the leaf to the *residual* gap only
+and say so. The issue tracker is `Declared`; the codebase is ground truth (VR-5).
 
 The merge gate is the agent's, not a human's. A parent (orchestrator/epic) **merges its children
 up the tree itself** once the work is clean — but only after the discipline below. This makes the

@@ -198,3 +198,23 @@ that M-739 fills out.
 - KC-3: the Rust `mycelium-core` kernel does not move to `.myc` in this wave. Do not touch
   `crates/mycelium-core/`. Flag any case where the frontend port requires a core change.
 - Append-only: DN-14 and DN-26 may only have changelog entries appended; no rewriting.
+
+---
+
+## Status note (2026-07-05): ▶ ACTIVE — the next engineering kickoff
+
+The maintainer named **`boot10` the next engineering kickoff** (2026-07-05, at the RFC-0041
+promotion). Current gate + straggler facts:
+
+- **Gate state:** the RFC-0041 W0–W7 promotion to `main` (PR #1155, RFC-0041 → **Enacted**)
+  **cleared M-740's M-978 dependency** (recursion-depth safety landed). **M-739 (the DN-26
+  bootstrap plan) is now M-740's ONLY gate.** M-739…M-742 remain `status:needs-design`.
+- **Straggler branches — rescue these FIRST** (unlanded remote work; pull the current tip down and
+  land them before starting new work): `claude/leaf/boot10-M739-dn26-port-order` (2 commits — the
+  DN-26 concrete port order plus the two maintainer flag decisions, M-739) and
+  `claude/leaf/M740-selfhost-frontend-port` (1 commit — the `lib/compiler` scaffold, `b488f505`).
+- **TCO scope is an acceptance criterion:** per **RFC-0041 §7 W7 amendment #11**, TCO's
+  **direct-tail-only** scope is an explicit **M-740 acceptance criterion**.
+- **M-970 rides the first wave:** the open P3 formatter bug (**FLAG-970** — `mycelium-fmt` drops
+  `@forage(policy)`) runs as a **disjoint `mycelium-fmt` leaf** in the first `boot10` wave.
+- Context: `dfb` was **RE-SHELVED** the same day until after `boot10` + the public flip.

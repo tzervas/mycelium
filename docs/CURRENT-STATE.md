@@ -29,10 +29,14 @@ in-progress with its only blocker being the maintainer's own release act (**M-73
 | T8 — docs/stability | E17-1 | `in-progress` — 3/4 children done (M-735/M-736/M-737); **M-738 (release act) blocked only on the maintainer's tag-cut**, not engineering |
 | T9 — self-hosting | E18-1 | `needs-design` — explicitly **not** tag-gating (ADR-036) |
 
-**Kernel freeze (DN-56 §5): 1/5 conditions met.** Condition #1 (census/never-silent floor) is
-satisfied (W5, 2026-06-27); condition #3 (primitive set closed) is contingent on **ADR-033 FLAG-1**;
-conditions #2 (reject-ledger), #4 (lowering surface closed), #5 (KC-3 completeness review) remain
-open. See `docs/notes/DN-56-Kernel-Completeness-And-Freeze-Criterion.md` §5/§7.
+**Kernel FROZEN (declared 2026-07-02) — DN-56 → Enacted.** The freeze was declared on the **DN-76
+green scorecard** (4/4 conditions plus the KC-3 completeness review; M-969, PR #1051); post-freeze
+kernel diffs are **DN-39-only**. **RFC-0041 → Enacted (2026-07-05):** recursion-depth safety landed
+via the promoted W0–W7 wave (PR #1155) — work-stack budgets everywhere, the `myc run` SIGABRT
+closed; **DN-84 → Resolved**. See
+`docs/notes/DN-56-Kernel-Completeness-And-Freeze-Criterion.md` and DN-76. *(Refreshed 2026-07-05 —
+this paragraph previously said "1/5 conditions met", a pre-freeze snapshot superseded by the
+2026-07-02 declaration.)*
 
 ## Corpus status digest
 

@@ -156,6 +156,12 @@ myc-lint:
 # Non-gating packaging smoke (M-368): `spore build` over each root; always exits 0.
 myc-spore:
     @bash scripts/checks/myc-spore.sh
+# Non-gating native-toolchain dogfood (M-989): run the real `myc` toolchain over the self-hosted
+# lib/compiler/*.myc (which the project gates skip — no mycelium-proj.toml there), as a second
+# witness alongside the Rust differential. Light checks only; heavy VSA/GPU work → local/teleport.
+# Pass `--strict` (or MYC_DOGFOOD_STRICT=1) to fail on a core `myc check` failure.
+myc-dogfood *ARGS:
+    @bash scripts/checks/myc-dogfood.sh {{ARGS}}
 proofs:
     @bash scripts/checks/proofs.sh
 api:
