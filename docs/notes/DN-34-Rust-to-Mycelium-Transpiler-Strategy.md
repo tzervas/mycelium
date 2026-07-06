@@ -261,6 +261,110 @@ module written in Mycelium-lang"), with no Rust prototype to transpile. Flagged,
 (VR-5/G2). This is a real signal for the self-hosting narrative: part of the core-lib slice is
 *already* Mycelium-native, so the transpiler's job is the Rust-backed remainder, not the whole.
 
+### §8.7 The transpile → `myc check` vet loop, and the baseline it exposes (M-1000, kickoff `trx2`) — `Empirical`
+
+Everything in §8.2/§8.5 measured **`expressible_fraction`** — "some `.myc` text was emitted for the
+item". That number never ran the toolchain over the emission, so it **over-counts** by construction: an
+emitted fragment that does not parse or type-check still counts as expressible. M-1000 closes the loop.
+The transpiler now has a `--vet` mode (and `src/vet.rs` + `scripts/checks/transpile-vet.sh`) that runs
+the **real** `myc check` oracle (`crates/mycelium-check`, the per-file oracle mode
+`scripts/checks/myc-dogfood.sh` uses) over every emitted `.myc`, folds each outcome into a structured
+never-silent vet record (`vet.json`: exit class + first diagnostic), and reports a second metric:
+
+- **`checked_fraction`** — **myc-check-clean** coverage. Denominator: **non-test top-level items** (the
+  *same* denominator as `expressible_fraction`, stated, so the two are directly comparable and
+  `checked_fraction ≤ expressible_fraction` always holds). Numerator: **file-gated** — `myc check` is a
+  per-file verdict, so a file's emitted items are credited only when the file's *entire* emitted `.myc`
+  is clean; a file that fails contributes `0` (we never guess which item broke a failing file — VR-5/
+  G2). So `checked_fraction` is an honestly-conservative all-or-nothing-per-file lower bound. An oracle
+  that cannot be *run at all* (binary absent) is recorded as `ToolUnavailable` — **never** counted as
+  clean.
+
+**Guarantee:** the emitted `.myc` stays `Declared`; the vet verdict is `Empirical` (measured by the real
+toolchain — never `Proven`: the oracle's own depth is name-visibility, M-365).
+
+**Baseline the vet loop exposes (`Empirical`, measured over the current emitter, kickoff `trx2`).** The
+gap between "emitted" and "checks" is stark — the number that matters for the port is near-zero
+everywhere, because on **every** representative target at least one emitted construct poisons the whole
+file's parse/check:
+
+| Target | Kind | non-test items | `expressible_fraction` | `checked_fraction` | dominant poison |
+|---|---|---:|---:|---:|---|
+| `mycelium-l1/src/eval.rs` | semcore | 42 | 11.9% (5) | **0.0%** (0) | reserved-word patterns (`Exact`/`Proven`/…) → parse error |
+| `mycelium-l1/src/fuse.rs` | semcore | 10 | 20.0% (2) | **0.0%** (0) | emitted items are both unresolved `use`s |
+| `mycelium-std-time/src` | stdlib | 37 | 10.8% (4) | **0.0%** (0) | unresolved `use` → check error |
+| `mycelium-std-rand/src` | stdlib | 34 | 14.7% (5) | **0.0%** (0) | unresolved `use` + unknown prim (`rotate_left`) |
+| `mycelium-std-cmp/src` | pilot | 111 | 12.6% (14) | **0.0%** (0) | unresolved `use` + `impl` of undefined trait `Widen` |
+
+**The two poison classes the vet loop ranks** (which `expressible_fraction` was blind to) are
+(1) **unresolved `use` imports** — the emitter renders a Rust `use extern_crate::Sym` as
+`use extern_crate.Sym;`, but that path resolves to no Mycelium nodule (the transpiler has no
+cross-nodule symbol table), so the oracle rejects it — **universal** across the surface; and
+(2) **reserved-word collisions** — a Rust identifier that is a Mycelium reserved word (`Exact`, `F16`,
+`Binary`, …) emitted verbatim into pattern/constructor/type position fails to **parse**. These are the
+demand data M-1001 acts on, and the re-ranking is itself a finding: the highest-value lever for
+*checked* coverage is **not** §8.3's #1 (macros, which block *emission*) but the constructs that poison
+an otherwise-clean file's *check* — the vet loop measures a different thing than the emission heuristic,
+and says so.
+
+### §8.8 Closing the top vet-blocking gap classes, and the M-991 go/no-go (M-1001, kickoff `trx2`) — `Empirical`
+
+M-1001 acts on §8.7's re-ranking: it closes the two **checked_fraction-blocking** classes the vet loop
+surfaced, both as honest flag-don't-guess corrections (the §8.2 `from(self)` precedent), not new
+emissions:
+
+1. **Unresolved `use` imports → gapped** (`Category::Import`). `dispatch_use` no longer emits a `use`
+   line: the transpiler has no cross-nodule symbol table, so it cannot confirm any imported path
+   resolves to a declared nodule, and the vet loop shows these imports fail `myc check` every time. An
+   emitted `use` was also the *universal* poison — one unresolved import fails the whole draft's check.
+   Flagging it (the gap's snippet still carries the original `use …;` for the human port) is the same
+   stance `map_type`/`emit_expr` already take on qualified paths/calls (§4/§8.2).
+2. **Reserved-word collisions → gapped** (`Category::ReservedWord`, `src/reserved.rs`). A Rust
+   identifier that is a Mycelium reserved word (`Exact`/`F16`/`Binary`/… — a verbatim snapshot of
+   `mycelium-l1`'s lexer keyword table, drift-guarded by a dev-dep test) emitted into
+   pattern/constructor/type/fn position fails to **parse**; the transpiler has no sanctioned
+   auto-rename (the port's per-type ctor prefixing is a human decision), so a collision is gapped, not
+   emitted un-parseably.
+
+**Before → after `checked_fraction` (`Empirical`, before = §8.7 baseline, after = M-1001 emitter).** Both
+representative wins go from 0 to positive — a **semcore module** and a **stdlib crate**, per the DoD:
+
+| Target | Kind | non-test | `checked` before → after | `expressible` before → after | after-state |
+|---|---|---:|---:|---:|---|
+| `mycelium-l1/src/eval.rs` | **semcore** | 42 | 0.0% → **2.4%** (1) | 11.9% → 2.4% | **Clean** — `type ForageError` checks; the 3 unresolved `use`s + the reserved-word `strength_of` body are now gaps |
+| `mycelium-std-time/src` | **stdlib** | 37 | 0.0% → **8.1%** (3) | 10.8% → 8.1% | **Clean** — 3 `type`s check; the 1 `use` is now a gap |
+| `mycelium-std-cmp/src` | pilot | 111 | 0.0% → 0.0% | 12.6% → 11.7% | still CheckError — residual: the 10 `Widen` impls fail check (`impl` for **undefined external trait**) |
+| `mycelium-std-rand/src` | stdlib | 34 | 0.0% → 0.0% | 14.7% → 11.8% | still CheckError — residual: an emitted method-call to a **non-prim** (`rotate_left`) |
+| `mycelium-l1/src/fuse.rs` | semcore | 10 | 0.0% → 0.0% | 20.0% → 0.0% | honest zero — `fuse.rs`'s only "emissions" *were* the two unresolved `use`s; the emitted nodule is now empty (and trivially clean) |
+
+The pattern is the vet-loop thesis in action: `expressible_fraction` **fell** where it was over-counting
+(the fake `use`/reserved-word emissions), `checked_fraction` **rose** where a real emission was being
+poisoned, and on the clean files the two now **coincide** — the honest signal.
+
+**Residual gap-class worklist, ranked by count** (`Empirical`, union over the l1 semcore SCC plus
+`std-time`, `std-rand`, and `std-cmp`; 673 gaps). These are the follow-on backlog for *checked*
+coverage, distinct from §8.3's *emission* ranking:
+
+| Rank | Class | Count | For `checked_fraction`, this is… |
+|---|---:|---:|---|
+| 1 | **Other** (unsupported types/exprs) | 274 | mostly type-coverage — `String`/text, **signed ints** (ADR-028 sign-free `Binary`), `usize`/`isize`, `char`, closures, references; a *language-surface* gap (§8.5 #1). |
+| 2 | **Impl** (whole-impl failures) | 93 | the `Widen`/external-trait impls that emit but fail check (`impl` for unknown trait). A synthetic trait-def was tried and **fails** (`unknown type Self` / arg-type mismatch) — a real trait-surface gap, not cheaply closeable. |
+| 3 | **Struct** (named-field/record) | 70 | no record/product-type surface (§8.3 row 7) — language design. |
+| 4 | **Import** (`use`) | 69 | **now correctly gapped (M-1001)** — resolvable only by a cross-nodule symbol table / project-mode vetting, not single-file oracle. |
+| 5 | **MacroInvocation/MacroDef** | 64 | blocks *emission*, not *check* — an un-emitted macro is absent, not a poison; hence **lower** priority for `checked_fraction` than the §8.3 ranking implied. |
+| 6 | **GenericBound** (34), **PayloadVariant** (21), **DeriveAttr** (19), **ReservedWord** (14, now gapped), **Trait** (8), **MultiStmtBody** (3) | — | the surface/design tail. |
+
+**M-991 assessment (go/no-go — this discharges M-991's DoD).** On the heavy semcore core the
+transpiler's *direct* `checked_fraction` is very low (`eval` 2.4%; most SCC modules 0% — their content is
+multi-statement bodies, external-trait impls, and reserved-word-colliding type vocabularies the current
+surface cannot express): **NO-GO as an automated bulk transpiler for the 15k-line semcore port** — the
+residue is irreducible language-surface/human design work, not boilerplate a transpiler converts cheaply
+— but **GO as a never-silent gap-profiling instrument**, because the vet loop turns "hand-porting is
+brutal" into a *ranked, real-toolchain-vetted* worklist of exactly which surface gaps block the port
+(the table above), which is the leverage §8.5 predicted and now grounds with *checked*, not merely
+*emitted*, numbers. The documented transpile → vet → fix loop is `scripts/checks/transpile-vet.sh` +
+`--vet` (§8.7).
+
 ---
 
 ## Meta — changelog
@@ -306,3 +410,27 @@ module written in Mycelium-lang"), with no Rust prototype to transpile. Flagged,
   — excluded, not substituted; VR-5/G2). All numbers `Empirical` (measured over the run). **Status
   unchanged (Draft)** — still a spike; the type-coverage + macro-expansion levers are E18-1
   `needs-design`. (Append-only; VR-5; G2.)
+- **2026-07-06 — §8.7 added: the transpile → `myc check` vet loop (M-1000, kickoff `trx2`).** Closes the
+  loop `expressible_fraction` left open — a `--vet` mode + `src/vet.rs` + `scripts/checks/transpile-vet.sh`
+  run the **real** `myc check` oracle over every emitted `.myc` and report **`checked_fraction`**
+  (myc-check-clean, file-gated, denominator = non-test items — stated) alongside the emission-only
+  figure. Records the `Empirical` baseline it exposes: `checked_fraction` is **0.0% on every
+  representative target** (semcore `eval`/`fuse`, stdlib `std-time`/`std-rand`, the `std-cmp` pilot) —
+  each poisoned by an unresolved `use` and/or a reserved-word/undefined-trait emission that fails the
+  toolchain even though `expressible_fraction` counted it. Re-ranks the backlog for *checked* coverage
+  (the poison classes, not §8.3's emission-blocking macros) as M-1001's demand data. Vet verdict
+  `Empirical`; emission stays `Declared`. **Status unchanged (Draft)** — a spike, enacts nothing.
+  (Append-only; VR-5; G2.)
+- **2026-07-06 — §8.8 added: closed the top vet-blocking gap classes + M-991 go/no-go (M-1001, kickoff
+  `trx2`).** Acts on §8.7's re-ranking: `dispatch_use` now **gaps** every `use` (`Category::Import` — no
+  cross-nodule symbol table to confirm resolution; it was the universal check-poison), and a reserved-word
+  guard (`src/reserved.rs`, a drift-guarded snapshot of `mycelium-l1`'s lexer keywords) **gaps** any Rust
+  identifier that collides with a Mycelium keyword (`Category::ReservedWord` — it would fail to parse) —
+  both honest flag-don't-guess corrections, not new emissions. Measured before → after `checked_fraction`
+  (`Empirical`): the **semcore** `eval` **0.0% → 2.4%** and the **stdlib** `std-time` **0.0% → 8.1%**
+  (both now myc-check-**Clean**), with `expressible_fraction` falling where it over-counted and the two
+  coinciding on clean files. Records the ranked residual worklist (673 gaps: `Other`/type-coverage 274,
+  external-trait `Impl` 93, `Struct` 70, …) and the **M-991 go/no-go**: **NO-GO** as a bulk semcore
+  transpiler (direct `checked_fraction` ~0–2% — the residue is language-surface design, not boilerplate),
+  **GO** as a never-silent, real-toolchain-vetted gap-profiling instrument. Emission `Declared`, vet
+  `Empirical`. **Status unchanged (Draft)** — a spike, enacts nothing. (Append-only; VR-5; G2.)
