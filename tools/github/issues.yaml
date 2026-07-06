@@ -12924,3 +12924,8 @@ issues:
         remaining Mycelium Rust corpus covered by recorded phases; the transpiler's residual
         gap classes enumerated with counts and either closed or explicitly declared
         out-of-scope (G2 -- the stopping point is recorded, never silent).
+
+      NOTE (2026-07-06, wave-1 close-out): the per-phase recipe is operationalized as skills so
+      future sessions run light -- /transpile-vet (the instrument + its honesty rules) and
+      /myc-drafts (corpus triage, lib/ graduation checklist, the 5-step ladder-phase recipe).
+      Phase 1's input is the DN-34 SS8.9 812-gap ranked worklist.
