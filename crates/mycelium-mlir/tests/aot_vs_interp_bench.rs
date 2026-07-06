@@ -42,9 +42,24 @@
 //! earlier cross-profile framing: same-profile, the interpreter beat the env-machine ~4.4x on
 //! snoc, not ~3x the raw cross-profile numbers suggested.)
 //!
-//! **AFTER** the fix — see the table appended at the end of this file's history (kept in the
-//! module doc of `aot.rs::Env` as well); re-measure with the command above rather than trusting
-//! any recorded table as ground truth.
+//! **AFTER** the M-999 representation fixes (env snapshot frames + the prepared `Rc`-shared code
+//! mirror + interned `Rc<Atom>` keys + `Rc`-shared repr values — see the `aot.rs` module doc):
+//!
+//! ```text
+//! workload            n     L1 interp   AOT env-machine   interp/AOT
+//! snoc/build        100      0.0100 s          0.0062 s        1.60x
+//! snoc/build        200      0.0348 s          0.0226 s        1.54x
+//! snoc/build        400      0.1472 s          0.0876 s        1.68x
+//! tail count      50000      0.2967 s          0.2185 s        1.36x
+//! fitted exponent (snoc, [100,400]):  L1 p = 1.94   AOT p = 1.91
+//! ```
+//!
+//! (ratio > 1 = the env-machine is FASTER — the required ordering. A second run agreed on snoc
+//! within a few percent — 1.50x/1.57x/1.60x — with more jitter on the tail loop, 1.17x; treat the
+//! tail-loop margin as ~1.2-1.4x, not a precise constant. Net AOT gain vs the BEFORE table:
+//! ~7x on snoc n=400, ~1.7x on the tail loop; the snoc exponent stays ~n² — the M-995 structural
+//! sharing already fixed the curve, M-999 removed the constant factor.) Re-measure with the
+//! command above rather than trusting this comment as ground truth.
 
 use std::time::Instant;
 
