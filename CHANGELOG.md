@@ -11,6 +11,32 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### M-994 fix (b) — O(1) `Data` clone via `Arc` structural sharing (M-987 ~n³→~n²; M-994 resolved) (2026-07-06)
+
+The *cost* half of M-994, completing the decision. The confirmed root of the ~n³ L1-eval cost was
+that `eval_path` deep-copies an O(nodes) value on **every** variable reference (`L1Value::clone` for
+`Data` rebuilt the whole spine). Since `Data` is immutable + acyclic by construction, wrapping its
+`fields` in `Arc<Vec<L1Value>>` makes a clone a refcount bump — O(1).
+
+- **`Arc`, not `Rc`** (honest deviation): `L1Value` must be `Send + Sync` (the evaluator holds values
+  behind `Mutex`), so `Rc` fails to compile. Atomic refcounting is marginally costlier but still O(1);
+  the measured win confirms it's negligible. The hand-written iterative `Clone` (~60 LOC) is deleted
+  (now derived); `Drop` reworked to stay iterative for a *uniquely-owned* deep spine (`Arc::get_mut`),
+  while shared subtrees drop O(1) — the 200k-deep `guard_hole_census` no-SIGABRT test still passes.
+- **Measured (debug, `Empirical`), before (dev) → after:** n=100 0.393s→0.028s (14×), n=200
+  2.965s→0.100s (30×), n=400 23.94s→0.375s (64×). **Fitted complexity p: 2.96 (~n³) → 1.86–2.01
+  (~n²)** — one factor of n removed, speedup growing with n; the 1252-token case went from ~12 min
+  (extrapolated) to ~4.0s.
+- **Behavior-preserving (the §6 landing basis):** the **M-210 differential (32/32) is green and
+  UNCHANGED** — no fingerprint/error edited; all `compiler_stage*` + conformance + lib tests green.
+  Landed through the RFC-0041 §6 within-freeze hardening channel (identical values/errors/order).
+- Folded in the PR #1189 LOW DRY nit (the `LetPop` Substrate-escape check → shared
+  `substrate_escapes_into`).
+
+**M-987 → done; M-994 → done.** With (a) (depth) + (b) (cost) both landed, the DN-26 §9 flag-2
+**interpreted-first Stage-6 gate is now practical** at compiler scale; (c) AOT remains the fallback
+for inputs beyond their reach. Unblocks the eval side of the semcore heavy-core port (M-993).
+
 ### M-994 fix (a) — widen L1 evaluator TCO through tail-transparent frames (M-986 closed) (2026-07-06)
 
 Resolves the *depth* half of the M-994 decision (maintainer-approved: land (a) then (b), keep AOT as

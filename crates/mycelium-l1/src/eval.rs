@@ -29,6 +29,7 @@
 
 use std::collections::{BTreeMap, VecDeque};
 use std::mem;
+use std::sync::Arc;
 
 use mycelium_cert::BinaryTernarySwapEngine;
 use mycelium_core::{CoreValue, DataRegistry, Datum, GuaranteeStrength, Value};
@@ -55,17 +56,25 @@ use crate::elab::{lit_value, policy_name_ref, type_repr, ElabError};
 /// immutable and acyclic by construction — a `Construct` value can only contain values that
 /// existed before it (RFC-0007 §4.7).
 ///
-/// **Iterative destruction (RFC-0041 §4.5, M-979).** `Clone` and `Drop` are **hand-written and
-/// iterative** — a derived recursive `Clone`/`Drop` walks the `Data.fields` spine on the *host*
-/// stack, so a deep `Cons`/`Nat` value (the exact shape the depth budget now permits up to 4096
-/// deep) would `SIGABRT` on clone or on drop, turning an intended never-silent refusal into an
-/// uncatchable abort (the very hole RFC-0041 closes). Both walk an explicit heap worklist instead,
-/// so control recursion is O(1) host stack for any value depth (`PartialEq` stays derived — no
-/// code path compares deep `L1Value`s, which go through [`L1Value::to_core`] for the differential;
-/// a deep-compare iterativisation is a tracked §4.5 residual). Because `impl Drop` forbids by-value
-/// field move-outs (E0509), every owned `Data` destructure in the evaluator is by-ref +
-/// `mem::replace`/`take` (e.g. the `for`-fold spine step).
-#[derive(Debug, PartialEq)]
+/// **`Arc` structural sharing for O(1) clone (M-994 fix (b), M-987).** A `Data` node's `fields` are
+/// held behind an [`Arc`], so cloning a `Data` value is a **refcount bump**, not an O(nodes) spine
+/// rebuild. This is sound precisely because `Data` is *immutable and acyclic by construction* (the
+/// invariant above): no code path mutates a live `Data`'s fields in place, so sharing is
+/// observationally identical to copying. `Clone` is therefore **derived** — `Arc::clone` is O(1) and
+/// `String` clones are bounded by the (short) type/ctor names, so a whole-value clone is O(1) in the
+/// node count. This removes the factor of value-size that made `eval_path`'s per-reference `v.clone()`
+/// the ~n^3 L1-eval cost (M-987); a variable reference is now O(1).
+///
+/// **Iterative destruction (RFC-0041 §4.5, M-979).** `Drop` is still **hand-written and iterative**.
+/// A derived recursive `Drop` walks the `Data.fields` spine on the *host* stack, so a deep
+/// (uniquely-owned) `Cons`/`Nat` value — the exact shape the depth budget now permits up to 4096 deep
+/// — would `SIGABRT` on destruction (RFC-0041 §1's recursive-`Drop` stack bomb). It walks an explicit
+/// heap worklist instead, so control recursion is O(1) host stack for any value depth. With `Arc`
+/// sharing the deep dismantle only happens when a node is the *last* owner ([`Arc::get_mut`] succeeds);
+/// a still-shared subtree drops in O(1) (a refcount decrement), never wrongly torn down. `PartialEq`
+/// stays derived — no code path compares deep `L1Value`s, which go through [`L1Value::to_core`] for
+/// the differential; a deep-compare iterativisation is a tracked §4.5 residual.
+#[derive(Clone, Debug, PartialEq)]
 pub enum L1Value {
     /// An L0 value (`repr + payload + Meta`).
     Repr(Value),
@@ -75,8 +84,10 @@ pub enum L1Value {
         ty: String,
         /// The constructor's name.
         ctor: String,
-        /// The constructor's field values, in declaration order.
-        fields: Vec<L1Value>,
+        /// The constructor's field values, in declaration order. Held behind an [`Arc`] so cloning a
+        /// `Data` shares the spine (O(1)) rather than deep-copying it (M-994 fix (b)) — sound because
+        /// `Data` is immutable + acyclic (never mutated in place).
+        fields: Arc<Vec<L1Value>>,
     },
     /// An affine `Substrate` handle (DN-71 Model S §4.1; M-902) — an opaque, runtime-only
     /// external-resource handle ([`crate::substrate::SubstrateHandle`]). It is **not** a repr value
@@ -102,99 +113,60 @@ pub enum L1Value {
     Fn(String),
 }
 
-/// **Iterative `Clone` (RFC-0041 §4.5).** A derived `Clone` recurses through `Data.fields` on the
-/// host stack (SIGABRT on a deep value). This clones bottom-up over an explicit heap worklist: the
-/// only nesting is `Data.fields`, so a two-pass fold (push child requests, then rebuild parents from
-/// already-cloned children) reconstructs the whole value with O(1) host-stack recursion. Non-`Data`
-/// variants clone shallowly (their payloads carry no nested `L1Value`).
-impl Clone for L1Value {
-    fn clone(&self) -> L1Value {
-        // Fast path: a non-`Data` value has no nested `L1Value`, so a shallow field clone suffices
-        // and never recurses.
-        let L1Value::Data { .. } = self else {
-            return match self {
-                L1Value::Repr(v) => L1Value::Repr(v.clone()),
-                L1Value::Substrate(h) => L1Value::Substrate(h.clone()),
-                L1Value::Fn(n) => L1Value::Fn(n.clone()),
-                // Unreachable (the `else` only binds non-`Data`), but exhaustive + never-silent.
-                L1Value::Data { .. } => unreachable!("guarded by the let-else above"),
-            };
-        };
-        // A work item: either descend into a `Data` node (cloning its shell + scheduling its
-        // fields), or emit a finished (already-cloned) subtree into the parent's field buffer.
-        enum Task<'a> {
-            // Visit `src`, pushing an `Assemble` marker then each field as a fresh `Descend`.
-            Descend(&'a L1Value),
-            // Reassemble a `Data{ty,ctor}` from the top `nfields` finished values on `done`.
-            Assemble {
-                ty: String,
-                ctor: String,
-                nfields: usize,
-            },
-        }
-        let mut work: Vec<Task<'_>> = vec![Task::Descend(self)];
-        let mut done: Vec<L1Value> = Vec::new();
-        while let Some(task) = work.pop() {
-            match task {
-                Task::Descend(L1Value::Data { ty, ctor, fields }) => {
-                    // Assemble runs after every field's `Descend` has emitted into `done`.
-                    work.push(Task::Assemble {
-                        ty: ty.clone(),
-                        ctor: ctor.clone(),
-                        nfields: fields.len(),
-                    });
-                    // LIFO: push fields in reverse so they are cloned left-to-right into `done`.
-                    for f in fields.iter().rev() {
-                        work.push(Task::Descend(f));
-                    }
-                }
-                Task::Descend(leaf) => done.push(match leaf {
-                    L1Value::Repr(v) => L1Value::Repr(v.clone()),
-                    L1Value::Substrate(h) => L1Value::Substrate(h.clone()),
-                    L1Value::Fn(n) => L1Value::Fn(n.clone()),
-                    L1Value::Data { .. } => unreachable!("handled by the Data arm above"),
-                }),
-                Task::Assemble { ty, ctor, nfields } => {
-                    // The last `nfields` items on `done` are this node's finished children.
-                    let at = done.len() - nfields;
-                    let fields = done.split_off(at);
-                    done.push(L1Value::Data { ty, ctor, fields });
-                }
-            }
-        }
-        // Exactly one finished value remains — the clone of `self`.
-        done.pop()
-            .expect("the worklist assembles exactly one root value")
-    }
-}
-
-/// **Iterative `Drop` (RFC-0041 §4.5).** A derived recursive `Drop` walks `Data.fields` on the host
-/// stack — a deep value SIGABRTs *on destruction* (RFC-0041 §1's recursive-`Drop` stack bomb). This
-/// dismantles the value over an explicit heap worklist: each `Data`'s fields are moved out (leaving
-/// an empty `Vec`) before the node itself drops, so no node's `Drop` ever recurses.
+/// **Iterative `Drop` (RFC-0041 §4.5; M-994 fix (b)).** A derived recursive `Drop` walks
+/// `Data.fields` on the host stack — a deep value SIGABRTs *on destruction* (RFC-0041 §1's
+/// recursive-`Drop` stack bomb). This dismantles the value over an explicit heap worklist: each
+/// uniquely-owned `Data`'s fields are moved out (leaving an empty `Vec`) before the node itself
+/// drops, so no node's `Drop` ever recurses.
 ///
-/// **Allocation (honest scope).** The worklist buffer is seeded by *stealing* the root's existing
-/// `fields` `Vec` (`mem::take` — no new allocation for the buffer itself); it may grow while draining
-/// a wide subtree. This kills the host-stack SIGABRT (the safety goal, G2) for any depth; a strictly
-/// zero-allocation intrusive form (§4.5's "intrusive next-pointer / preallocated scratch") is a
-/// tracked residual, sound today only under the Box-owned / acyclic / no-shared-spine invariant
-/// `L1Value` already holds. Non-`Data` values and empty `Data` drop with no allocation at all.
+/// **`Arc` sharing (M-994 fix (b)).** `Data.fields` is now `Arc<Vec<L1Value>>`, so a node's spine can
+/// be shared. The dismantle only descends into a node whose `Arc` we are the **last** owner of
+/// ([`Arc::get_mut`] returns `Some` iff `strong_count == 1` and there are no weaks — and this
+/// evaluator never creates a `Weak`): a still-shared subtree is left intact and drops in O(1) (a
+/// refcount decrement) when its owner goes. This keeps the O(1)-host-stack SIGABRT-safety for any
+/// depth *and* respects sharing — a shared tail is never wrongly torn down.
+///
+/// **Allocation (honest scope).** The worklist buffer is seeded by *stealing* the (uniquely-owned)
+/// root's existing `fields` `Vec` (`mem::take` through `Arc::get_mut` — no new allocation for the
+/// buffer itself); it may grow while draining a wide subtree. A non-`Data`, an empty `Data`, or a
+/// still-shared `Data` allocates nothing and returns immediately.
 impl Drop for L1Value {
     fn drop(&mut self) {
-        // Steal our own fields into the worklist (reusing the existing allocation). A non-`Data` or
-        // already-empty `Data` allocates nothing and returns immediately.
-        let mut stack: Vec<L1Value> = match self {
-            L1Value::Data { fields, .. } if !fields.is_empty() => mem::take(fields),
-            _ => return,
+        // Only a `Data` node we uniquely own can hold a deep spine to dismantle. If shared, the
+        // refcount decrement below is all that is needed (the spine stays alive under other owners).
+        let L1Value::Data { fields, .. } = self else {
+            return;
         };
+        // The iterative dismantle relies on `Arc::get_mut` succeeding for a *uniquely-owned* node.
+        // A `Weak` ref would make `get_mut` return `None` even at `strong_count == 1`, silently
+        // skipping the dismantle so this subtree drops via recursive drop-glue — quietly reopening
+        // the deep-spine SIGABRT hole RFC-0041 §6 closed. No code creates a `Weak` against `L1Value`
+        // (checked); this makes that safety invariant *checked* in debug rather than a silent
+        // convention (PR #1190 review, MEDIUM — defense-in-depth).
+        debug_assert_eq!(
+            Arc::weak_count(fields),
+            0,
+            "L1Value::Data.fields must have no Weak refs, else iterative Drop degrades to recursive \
+             drop-glue (deep-spine SIGABRT hazard; RFC-0041 §6)"
+        );
+        let Some(root_fields) = Arc::get_mut(fields) else {
+            return; // shared — do not dismantle; the `Arc` drop is O(1).
+        };
+        if root_fields.is_empty() {
+            return;
+        }
+        // Steal the root's fields into the worklist (reusing the existing allocation).
+        let mut stack: Vec<L1Value> = mem::take(root_fields);
         while let Some(mut v) = stack.pop() {
             if let L1Value::Data { fields, .. } = &mut v {
-                // Move this node's children onto the worklist, so `v` drops with empty fields
-                // (shallow — no recursion).
-                stack.append(fields);
+                // Move this (uniquely-owned) node's children onto the worklist, so `v` drops with an
+                // empty spine (shallow — no recursion). A shared child is left for its owner.
+                if let Some(child_fields) = Arc::get_mut(fields) {
+                    stack.append(child_fields);
+                }
             }
-            // `v` drops here: its own `Drop` re-enters, but its `fields` are now empty, so it takes
-            // the `_ => return` fast path — no host-stack recursion.
+            // `v` drops here: its own `Drop` re-enters, but its `fields` are now empty (or shared, so
+            // O(1)), so it returns immediately — no host-stack recursion.
         }
     }
 }
@@ -276,6 +248,18 @@ fn value_contains_substrate_id(v: &L1Value, id: u64) -> bool {
         // a `Substrate` (ADR-033 §2.1: no captured environment), so it never contributes an escape.
         L1Value::Repr(_) | L1Value::Fn(_) => false,
     }
+}
+
+/// Whether the `popped` scope binding is a live `Substrate` handle that **escapes** into any of the
+/// `into` values — the multi-value companion to the single-value `escaping` check inside
+/// [`Evaluator::release_if_abandoned`]. Used at the `LetPop` scope-exit in `enter_call`, where a
+/// let-bound handle can only reach the callee through the call's arguments (`argv`): if it escapes,
+/// the scope-exit release is suppressed (the callee now owns it). Factored out of the previously
+/// inlined `matches!` so the escape test lives alongside `value_contains_substrate_id` rather than
+/// being duplicated (DRY; PR #1189 nit).
+fn substrate_escapes_into(popped: &(String, L1Value), into: &[L1Value]) -> bool {
+    matches!(&popped.1, L1Value::Substrate(h)
+        if into.iter().any(|a| value_contains_substrate_id(a, h.id())))
 }
 
 /// One recorded `@forage(policy)` placement decision (M-906; DN-70 D1; RFC-0008 RT3) — the
@@ -1531,7 +1515,7 @@ impl<'e> Evaluator<'e> {
                     return Ok(L1Value::Data {
                         ty: d.name.clone(),
                         ctor: name.clone(),
-                        fields: vec![],
+                        fields: Arc::new(vec![]),
                     });
                 }
             }
@@ -1612,7 +1596,7 @@ impl<'e> Evaluator<'e> {
             return Ctrl::Settle(Ok(L1Value::Data {
                 ty: d.name.clone(),
                 ctor: name.to_owned(),
-                fields: argv,
+                fields: Arc::new(argv),
             }));
         }
         if let Some(kernel) = prim_kernel_name(name) {
@@ -1767,9 +1751,7 @@ impl<'e> Evaluator<'e> {
                     Some(Frame::LetPop) => {
                         regs.stack.pop();
                         let popped = regs.scope.pop().expect("let binding present");
-                        let escapes = matches!(&popped.1, L1Value::Substrate(h)
-                            if argv.iter().any(|a| value_contains_substrate_id(a, h.id())));
-                        if !escapes {
+                        if !substrate_escapes_into(&popped, &argv) {
                             self.release_if_abandoned(&popped, None);
                         }
                     }
@@ -1816,16 +1798,19 @@ impl<'e> Evaluator<'e> {
     }
 
     /// Split a `for` spine value into its head element + tail (the former `eval_for` cons/nil
-    /// analysis). `Ok(None)` is the nil terminator; `Ok(Some((elem, rest)))` is a cons. **E0509
-    /// (RFC-0041 §4.5):** because `L1Value` now `impl`s `Drop`, the fields cannot be moved out of
-    /// `spine` by value — they are taken by-ref via `mem::take`, leaving an empty `Data` shell that
-    /// drops harmlessly.
+    /// analysis). `Ok(None)` is the nil terminator; `Ok(Some((elem, rest)))` is a cons.
+    ///
+    /// **`Arc` sharing (M-994 fix (b)).** `Data.fields` is `Arc<Vec<L1Value>>`, so `elem`/`rest` are
+    /// *cloned* out of the (borrowed) spine rather than moved. This is cheap: the `rest` tail is a
+    /// `Data` value, so its clone is an O(1) `Arc` refcount bump (not the O(spine) deep-copy the old
+    /// `mem::take` existed to avoid); the `elem` clone is a single small element value. The spine
+    /// borrow keeps the tail alive, so no E0509 by-value move-out is needed at all.
     fn split_spine(
         &self,
         site: &str,
-        mut spine: L1Value,
+        spine: L1Value,
     ) -> Result<Option<(L1Value, L1Value)>, L1Error> {
-        let L1Value::Data { ty, ctor, fields } = &mut spine else {
+        let L1Value::Data { ty, ctor, fields } = &spine else {
             return Err(L1Error::Stuck {
                 site: site.to_owned(),
                 why: "`for` spine is not a data value".to_owned(),
@@ -1834,16 +1819,13 @@ impl<'e> Evaluator<'e> {
         if fields.is_empty() {
             return Ok(None); // a nil — the spine ends, the fold is the accumulator
         }
-        let ty = mem::take(ty);
-        let ctor = mem::take(ctor);
-        let fields = mem::take(fields);
-        let Some(d) = self.env.types.get(&ty) else {
+        let Some(d) = self.env.types.get(ty) else {
             return Err(L1Error::Stuck {
                 site: site.to_owned(),
                 why: format!("`for` over unregistered type `{ty}`"),
             });
         };
-        let Some(ci) = d.ctors.iter().position(|c| c.name == ctor) else {
+        let Some(ci) = d.ctors.iter().position(|c| c.name == *ctor) else {
             return Err(L1Error::Stuck {
                 site: site.to_owned(),
                 why: format!("`for` met unknown constructor `{ctor}` of `{ty}`"),
@@ -1851,11 +1833,11 @@ impl<'e> Evaluator<'e> {
         };
         let mut elem = None;
         let mut rest = None;
-        for (f, v) in d.ctors[ci].fields.iter().zip(fields) {
-            if matches!(f, crate::checkty::Ty::Data(n, _) if *n == ty) {
-                rest = Some(v);
+        for (f, v) in d.ctors[ci].fields.iter().zip(fields.iter()) {
+            if matches!(f, crate::checkty::Ty::Data(n, _) if *n == *ty) {
+                rest = Some(v.clone());
             } else {
-                elem = Some(v);
+                elem = Some(v.clone());
             }
         }
         let (Some(elem), Some(rest)) = (elem, rest) else {
@@ -2014,7 +1996,7 @@ impl<'e> Evaluator<'e> {
                     if ctor != n {
                         return Ok(false);
                     }
-                    for (sub, fv) in subs.iter().zip(fields) {
+                    for (sub, fv) in subs.iter().zip(fields.iter()) {
                         if !self.try_match(site, sub, fv, binds)? {
                             return Ok(false);
                         }

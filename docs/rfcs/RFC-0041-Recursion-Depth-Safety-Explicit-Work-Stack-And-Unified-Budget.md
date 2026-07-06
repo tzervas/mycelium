@@ -482,6 +482,20 @@ implementation. **4 Critical + 15 High source-confirmed** objections, all resolv
 
 ## Meta — changelog
 
+- **2026-07-06 — §6 within-freeze hardening: O(1) `L1Value::Data` clone via `Arc` sharing (M-994 fix
+  (b); M-987 ~n³→~n²; append-only, no status move).** A clean use of the §6 behavior-preserving
+  channel: `Data`'s `fields` wrapped in `Arc<Vec<L1Value>>` so a clone is a refcount bump instead of
+  an O(nodes) spine rebuild (the confirmed root of M-987's ~n³ — `eval_path` deep-copies on every var
+  reference). Sound because `Data` is immutable+acyclic by construction; `Arc` (not `Rc`) because
+  `L1Value` must be `Send+Sync` behind the evaluator's `Mutex`. Derived `Clone` (the ~60-LOC iterative
+  clone deleted); `Drop` reworked to stay iterative for a uniquely-owned deep spine (`Arc::get_mut`)
+  while shared subtrees drop O(1) — the 200k-deep `guard_hole_census` no-SIGABRT invariant holds.
+  **§6 bar met (I1–I3):** the **M-210 differential (32/32) + error-parity are green and UNCHANGED**
+  (no fingerprint/error edited); identical values/errors/order. Measured (debug, `Empirical`): fitted
+  complexity p 2.96→1.86–2.01 (~n³→~n²), 14×/30×/64× speedup at n=100/200/400. With fix (a) (depth,
+  §4.6 amendment below) + (b) (cost) both landed, the DN-26 §9 flag-2 interpreted-first Stage-6 gate is
+  practical. **M-987 → done; M-994 → done.** RFC-0041 stays **Enacted**. (M-994 fix (b); E18-1-adjacent;
+  VR-5/G2.)
 - **2026-07-06 — §4.6 amendment: widen the TCO precondition through tail-transparent frames
   (M-994 fix (a); maintainer-approved via the §6 channel; append-only, no status move).** §4.6's TCO
   precondition ("no pending post-work") was **too narrow**: it treated a `Frame::MatchPop`/`Frame::LetPop`

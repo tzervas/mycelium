@@ -309,6 +309,17 @@ code; they only fix the two branch points so the M-740 wave can proceed without 
 
 ## Meta — changelog
 
+- **2026-07-06 — M-994 RESOLVED: both kernel fixes landed; interpreted-first Stage-6 now practical
+  (append-only, no status move; M-740/M-994).** Following the decision below, **both** fixes are on
+  `dev`: **(a)** the RFC-0041 §4.6 TCO-precondition widening (M-986 → done — deep `match`/`let` loops
+  now exceed the 4096 budget) and **(b)** O(1) `L1Value::Data` clone via `Arc` structural sharing
+  (M-987 → done — measured ~n³→~n², p 2.96→~1.9, 14×/30×/64× at n=100/200/400; the M-210 differential
+  stayed green and UNCHANGED, so it landed through the RFC-0041 §6 behavior-preserving channel). The
+  DN-26 §9 flag-2 **interpreted-first Stage-6 gate is therefore practical** at compiler scale; (c) AOT
+  remains the fallback for inputs beyond (a)+(b)'s reach, not a substitute for the interpreted witness.
+  **M-994 → done.** The eval-side blocker on the semcore heavy-core port (**M-993**) is cleared — it
+  now depends only on the port work itself + M-741. DN-26 stays **Draft** (→ Resolved with M-741).
+  (M-994; E18-1; VR-5/G2.)
 - **2026-07-06 — M-994 DECIDED: fix the kernel (a) then (b); interpreted-first Stage-6 becomes
   viable (append-only, no status move; M-740/M-994).** The open question recorded in the entry below
   (the §9 flag-2 interpreted-first Stage-6 gate impractical at compiler scale under M-986/M-987) is
