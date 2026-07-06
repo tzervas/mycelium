@@ -1,0 +1,37 @@
+{
+  "source": "crates/mycelium-std-vsa/src/encoding.rs",
+  "emitted_items": [],
+  "gaps": [
+    {
+      "file": "crates/mycelium-std-vsa/src/encoding.rs",
+      "line": 17,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use mycelium_vsa :: { VsaError , VsaModel } ;",
+      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/encoding.rs",
+      "line": 19,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "# [doc = \" Sequence encoding: `bundle( permute^0(items[0]), permute^1(items[1]), … )`.\"] # [doc = \"\"] # [doc = \" Each item `i` is permuted by shift `i` to protect its position (a positional encoding),\"] # [doc = \" then the permuted items are bundled.  The guarantee tag is the meet of `bundle`'s tag\"] # [doc = \" (model-dependent) and `permute`'s tag (`Exact`), which is just the `bundle` tag — see\"] # [doc = \" `vsa.md §4` row `encode_seq`.\"] # [doc = \"\"] # [doc = \" An empty slice is `Err(EmptyBundle)` — the bundle of zero items is undefined (C1 / G2).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \" - [`VsaError::EmptyBundle`] — zero items supplied.\"] # [doc = \" - [`VsaError::NestedBundleUnsupported`] — a MAP-B input is itself a bundle (RR-13).\"] # [doc = \" - [`VsaError::DimMismatch`] — items have differing lengths.\"] pub fn encode_seq < M : VsaModel > (model : & M , items : & [& [f64]]) -> Result < Vec < f64 > , VsaError > { if items . is_empty () { return Err (VsaError :: EmptyBundle) ; } let permuted : Vec < Vec < f64 > > = items . iter () . enumerate () . map (| (i , item) | model . permute (item , i as i64)) . collect :: < Result < _ , _ > > () ? ; let refs : Vec < & [f64] > = permuted . iter () . map (Vec :: as_slice) . collect () ; model . bundle (& refs) }",
+      "reason": "type parameter `M` carries a bound — type_params/fn generics are bare identifiers only in this grammar fragment",
+      "item_name": "encode_seq"
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/encoding.rs",
+      "line": 45,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "# [doc = \" Set encoding: `bundle(items[0], items[1], …)` — superpose atoms without positional encoding.\"] # [doc = \"\"] # [doc = \" The guarantee tag equals the model's `bundle` tag (the permute identity is `Exact` and\"] # [doc = \" contributes nothing to the meet).  Useful for set/bag membership probes where order does not\"] # [doc = \" matter.\"] # [doc = \"\"] # [doc = \" An empty slice is `Err(EmptyBundle)` (C1 / G2).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \" - [`VsaError::EmptyBundle`] — zero items supplied.\"] # [doc = \" - [`VsaError::NestedBundleUnsupported`] — MAP-B nesting (RR-13).\"] # [doc = \" - [`VsaError::DimMismatch`] — items have differing lengths.\"] # [inline] pub fn encode_set < M : VsaModel > (model : & M , items : & [& [f64]]) -> Result < Vec < f64 > , VsaError > { if items . is_empty () { return Err (VsaError :: EmptyBundle) ; } model . bundle (items) }",
+      "reason": "type parameter `M` carries a bound — type_params/fn generics are bare identifiers only in this grammar fragment",
+      "item_name": "encode_set"
+    }
+  ],
+  "total_top_level_items": 3
+}

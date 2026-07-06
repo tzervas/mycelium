@@ -12660,7 +12660,7 @@ issues:
   - id: E33-1
     title: "E33-1 (epic) — trx2 E-B: mass .myc boilerplate drafts for the port surface (gen/myc-drafts/)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:epic, area:tooling, priority:P2, status:todo]
+    labels: [phase:5, type:epic, area:tooling, priority:P2, status:in-progress]
     epic: E33
     depends_on: [M-1002, M-1003, M-1006]
     doc_refs:
@@ -12694,10 +12694,14 @@ issues:
       from each phase polish the transpiler). The wave-1 DoD above gates wave 1; the epic closes
       when the ladder (M-1006) completes.
 
+      WAVE-1 COMPLETE (2026-07-06): M-1002 + M-1003 landed (see their DONE notes) -- the wave-1
+      DoD above is met in full. Epic stays in-progress on M-1006 (the ladder), whose phase-1
+      input (the DN-34 SS8.9 812-gap ranked worklist) is now on record.
+
   - id: M-1002
     title: "M-1002 — Stand up gen/myc-drafts/ staging tree + manifest schema + batch vet driver"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:tooling, priority:P2, status:todo]
+    labels: [phase:5, type:feature, area:tooling, priority:P2, status:done]
     epic: E33-1
     depends_on: [M-1000]
     doc_refs:
@@ -12722,10 +12726,19 @@ issues:
         deterministic output (stable ordering, no timestamps that churn diffs -- or timestamps
         isolated to a non-diffed field).
 
+      DONE (2026-07-06, epic branch E33 tip e045408; merged to the trx2 head): README honesty
+      contract; regenerate.sh (shellcheck-clean, builds the oracle once, per-target subdirs --
+      stem-collision guard) + manifest_gen.py (ruff-clean, pure aggregation over the
+      transpiler's own artifacts); MANIFEST.md + manifest.json; determinism verified
+      byte-identical (manifest AND full-tree sha256, independent runs). No transpiler edits
+      needed; zero lib/ edits. Wired as `just myc-drafts-regen` by the integrator. Two real
+      driver hazards found + fixed in-wave (absolute-path leak in vet.json via out-dir arg;
+      graceful transpile_failed manifest row instead of a crash on a missing input).
+
   - id: M-1003
     title: "M-1003 — Rip-through: draft .myc scaffolds for semcore heavy core + 12 unported stdlib crates"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:task, area:tooling, priority:P2, status:todo]
+    labels: [phase:5, type:task, area:tooling, priority:P2, status:done]
     epic: E33-1
     depends_on: [M-1001, M-1002]
     doc_refs:
@@ -12749,6 +12762,17 @@ issues:
       - A draft (or an explicit whole-file gap record where emission fails entirely) per named
         target in gen/myc-drafts/; manifest complete; union vet report committed; per-target
         checked_fraction recorded append-only in DN-34; zero edits under lib/.
+
+      DONE (2026-07-06, epic branch E33 tip e045408; merged to the trx2 head): all 17 targets
+      ran clean (zero hard transpile failures -- the whole-file-gap fallback exists but was
+      only exercised synthetically); 158 committed artifacts; union: 759 non-test items, 46
+      emitted, 28 myc-check-clean -> checked_fraction 3.7% / expressible 6.1%; 51/56 emitted
+      files Clean, 5 CheckError, 0 ParseError/ToolUnavailable. eval 2.4% + std-time 8.1%
+      independently reproduce E-A's SS8.8 samples (cross-validation). DN-34 SS8.9 appended:
+      per-target table + ranked 812-gap residual worklist (Other/type-coverage 322, Impl 119,
+      Import 117, Struct 80, GenericBound 59, tail) + 5 lessons -- the M-1006 phase-1 input.
+      Confirms M-991's verdict at full-surface scale: the corpus is gap-profiling ground truth
+      + starting points, not ports (all drafts Declared).
 
   - id: E34-1
     title: "E34-1 (epic) — trx2 E-C: auto-doc-gen Mycelium doc ports (the lib/ reference index)"

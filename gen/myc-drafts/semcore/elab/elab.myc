@@ -1,0 +1,37 @@
+// nodule: l1
+// **Elaboration to the L0 Core IR** (RFC-0007 §4.6, **retired by RFC-0001 r4**). The
+// evaluation-complete fragment is now the **whole v0 calculus**: representation ops (L0), data +
+// matching (r3, `Construct`/flat `Match`), and **functions + recursion** (r4/r5,
+// `Lam`/`App`/`Fix`/`FixGroup`). So a self- *or* mutually-recursive, data-building, matching program
+// elaborates to a closed L0 term. A guarantee index `@ g` is no longer a `Residual`: since RFC-0018
+// (M-663) it is **statically checked** by [`crate::grade`] and then **erased** here (a grade, like a
+// type, is a compile-time property with no L0 node — KC-3). The remaining `Residual`s are genuine
+// staging (generics/monomorphization, `wild`/FFI, `spore`) — never a partial artifact (G2).
+//
+// This module also owns the shared surface→kernel bridge the evaluator reuses, so the two
+// execution paths cannot drift on the basics: literal values ([`lit_value`]), representation
+// resolution ([`type_repr`]), and the v0 policy-name reference ([`policy_name_ref`]).
+//
+// # How a `match` lowers (RFC-0011 §4.4)
+// Nested surface patterns are compiled to the **flat** kernel `Match` by the **M-320 Maranget
+// decision tree** (`crate::decision`) — the untrusted, inspectable lowering. Each tree `Switch`
+// becomes an L0 `Match` on the occurrence's bound variable; each constructor case becomes an
+// `Alt::Ctor` binding *all* the constructor's fields (so every binder occurrence is available at
+// the leaf), and each leaf elaborates the surface arm's body with its binders mapped to those
+// field variables. `if` desugars to a `Match` on the prelude `Bool`. WF7 coverage is the checker's
+// (the tree is verified `Fail`-free before lowering — defense in depth, never silent).
+//
+// # How recursion lowers (RFC-0001 r4/r5)
+// The reachable call graph is decomposed into strongly-connected components (Tarjan), bound
+// **callee-first**. A **self-recursive singleton** is bound once as `let f = Fix(f, λparams. body)`;
+// a **mutually-recursive group** of ≥2 functions (M-343; R7-Q3) is bound as a single
+// `FixGroup{[(f, λ…), (g, λ…), …]}` whose members are all mutually in scope. A call to any recursive
+// function becomes a curried `App` on its recursion variable; every **other** call still inlines
+// (the residual non-recursive call graph is acyclic). `for` desugars to a synthesized self-recursive
+// `Fix` fold over the linear spine (RFC-0007 §4.8).
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule l1;
+
+

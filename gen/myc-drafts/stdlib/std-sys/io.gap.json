@@ -1,0 +1,147 @@
+{
+  "source": "crates/mycelium-std-sys/src/io.rs",
+  "emitted_items": [],
+  "gaps": [
+    {
+      "file": "crates/mycelium-std-sys/src/io.rs",
+      "line": 41,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use std :: fmt ;",
+      "reason": "`use` import (single path ending `fmt`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/io.rs",
+      "line": 42,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use std :: io :: { self , Read , Write } ;",
+      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/io.rs",
+      "line": 44,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] Read **all** of stdin to end-of-input — **UNBOUNDED, TRUSTED-ONLY**.\"] # [doc = \"\"] # [doc = \" This grows the buffer with no cap: a hostile or runaway producer can drive an arbitrarily large\"] # [doc = \" allocation (memory-exhaustion DoS). Use it **only** where the stdin producer is your own process\"] # [doc = \" or otherwise under your control. For **untrusted / external-edge** input, use the bounded\"] # [doc = \" [`read_to_end_capped`] instead (P3 — bounds at the external edge).\"] # [doc = \"\"] # [doc = \" Returns `Err` on any OS read error — never-silent (G2): a partial read that hits an error is\"] # [doc = \" reported, not truncated-and-returned.\"] pub fn read_to_end () -> Result < Vec < u8 > , io :: Error > { let mut buf = Vec :: new () ; io :: stdin () . read_to_end (& mut buf) ? ; Ok (buf) }",
+      "reason": "generic type path `Result < Vec < u8 > , io :: Error >` — type-argument mapping not confirmed",
+      "item_name": "read_to_end"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/io.rs",
+      "line": 59,
+      "col": 1,
+      "category": "PayloadVariant",
+      "rust_construct": "PayloadVariant",
+      "snippet": "# [doc = \" Error set for the bounded stdin read [`read_to_end_capped`] (closed sum — never-silent, G2).\"] # [derive (Debug)] pub enum ReadCappedError { # [doc = \" An OS read error occurred before the cap was reached.\"] Io (io :: Error) , # [doc = \" Input reached the cap: there were **more** than `cap` bytes available, so the read was\"] # [doc = \" refused rather than truncated (G2). `cap` is the byte limit that was exceeded.\"] TooLarge { # [doc = \" The byte cap that the input exceeded.\"] cap : usize , } , }",
+      "reason": "enum `ReadCappedError` variant `Io` has a field type with no confirmed mapping (qualified type path `io :: Error` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5))",
+      "item_name": "ReadCappedError"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/io.rs",
+      "line": 72,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl fmt :: Display for ReadCappedError { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { match self { ReadCappedError :: Io (e) => write ! (f , \"stdin read error: {e}\") , ReadCappedError :: TooLarge { cap } => { write ! (f , \"stdin input exceeds the {cap}-byte cap (refused, not truncated)\") } } } }",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut fmt :: Formatter < '_ >`",
+      "item_name": "ReadCappedError"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/io.rs",
+      "line": 86,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl std :: error :: Error for ReadCappedError { fn source (& self) -> Option < & (dyn std :: error :: Error + 'static) > { match self { ReadCappedError :: Io (e) => Some (e) , ReadCappedError :: TooLarge { .. } => None , } } }",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `source` signature: generic type path `Option < & (dyn std :: error :: Error + 'static) >` — type-argument mapping not confirmed",
+      "item_name": "ReadCappedError"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/io.rs",
+      "line": 95,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "impl From < io :: Error > for ReadCappedError { fn from (e : io :: Error) -> Self { ReadCappedError :: Io (e) } }",
+      "reason": "qualified type path `io :: Error` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
+      "item_name": "ReadCappedError"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/io.rs",
+      "line": 101,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] Read stdin to end-of-input, **bounded by `max` bytes** (P3 — bound at the external\"] # [doc = \" edge). The safe form for **untrusted** input: a hostile/runaway pipe cannot drive an unbounded\"] # [doc = \" allocation.\"] # [doc = \"\"] # [doc = \" Never-silent (G2): if the input would **exceed** `max` bytes, this returns\"] # [doc = \" `Err(ReadCappedError::TooLarge { cap: max })` — it never silently truncates the stream. An input\"] # [doc = \" of **exactly** `max` bytes (or fewer) succeeds and returns those bytes. OS read errors surface as\"] # [doc = \" `Err(ReadCappedError::Io(_))`.\"] # [doc = \"\"] # [doc = \" # Guarantee\"] # [doc = \"\"] # [doc = \" `Declared` — a thin bounded wrapper over `std::io`; no theorem and no measured bound backs the\"] # [doc = \" underlying stream semantics. The cap itself is exact by construction (the returned buffer length\"] # [doc = \" is always `<= max`), but the floor's overall guarantee stays `Declared` (VR-5).\"] pub fn read_to_end_capped (max : usize) -> Result < Vec < u8 > , ReadCappedError > { read_capped (io :: stdin () . lock () , max) }",
+      "reason": "`usize` has a platform-dependent width; no fixed Binary{N} mapping",
+      "item_name": "read_to_end_capped"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/io.rs",
+      "line": 119,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "# [doc = \" Core bounded read, factored over any [`Read`] so it is unit-testable without real stdin.\"] # [doc = \"\"] # [doc = \" Reads up to `max + 1` bytes via [`Read::take`]. Because `.take(max)` would *silently* stop at the\"] # [doc = \" cap (an invisible truncation — a G2 violation), we instead read one byte past the cap: if the\"] # [doc = \" result length is `> max`, the input was too large and we return [`ReadCappedError::TooLarge`]\"] # [doc = \" (explicit, never a truncated buffer). Otherwise the whole input fit within the cap and is\"] # [doc = \" returned. `max == usize::MAX` is handled without overflow (the `+ 1` saturates).\"] fn read_capped < R : Read > (r : R , max : usize) -> Result < Vec < u8 > , ReadCappedError > { let probe = (max as u64) . saturating_add (1) ; let mut buf = Vec :: new () ; r . take (probe) . read_to_end (& mut buf) ? ; if buf . len () > max { return Err (ReadCappedError :: TooLarge { cap : max }) ; } Ok (buf) }",
+      "reason": "type parameter `R` carries a bound — type_params/fn generics are bare identifiers only in this grammar fragment",
+      "item_name": "read_capped"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/io.rs",
+      "line": 140,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] Read a single line from stdin (including the trailing newline if present). Returns\"] # [doc = \" `Err` on any OS read error or invalid UTF-8 — never-silent (G2).\"] pub fn read_line () -> Result < String , io :: Error > { let mut line = String :: new () ; io :: stdin () . read_line (& mut line) ? ; Ok (line) }",
+      "reason": "generic type path `Result < String , io :: Error >` — type-argument mapping not confirmed",
+      "item_name": "read_line"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/io.rs",
+      "line": 148,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] Write all of `bytes` to stdout. Uses `write_all`, so a short write is an explicit\"] # [doc = \" `Err`, never a silently-dropped tail (G2). Does **not** flush — call [`flush_out`] when ordering\"] # [doc = \" against process exit matters.\"] pub fn write_out (bytes : & [u8]) -> Result < () , io :: Error > { io :: stdout () . write_all (bytes) }",
+      "reason": "unsupported Rust type form `& [u8]`",
+      "item_name": "write_out"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/io.rs",
+      "line": 155,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] Write all of `bytes` to stderr. Like [`write_out`]: a short write is an explicit\"] # [doc = \" `Err` (G2).\"] pub fn write_err (bytes : & [u8]) -> Result < () , io :: Error > { io :: stderr () . write_all (bytes) }",
+      "reason": "unsupported Rust type form `& [u8]`",
+      "item_name": "write_err"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/io.rs",
+      "line": 161,
+      "col": 1,
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] Flush stdout — surfaces any deferred OS write error explicitly (G2), so a buffered\"] # [doc = \" write lost at flush time is never silently dropped.\"] pub fn flush_out () -> Result < () , io :: Error > { io :: stdout () . flush () }",
+      "reason": "generic type path `Result < () , io :: Error >` — type-argument mapping not confirmed",
+      "item_name": "flush_out"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/io.rs",
+      "line": 167,
+      "col": 1,
+      "category": "TestItem",
+      "rust_construct": "TestItem",
+      "snippet": "# [cfg (test)] mod tests { use super :: * ; # [doc = \" The write path returns `Ok` on a normal stdout write and surfaces the byte payload faithfully\"] # [doc = \" (a smoke test — the OS stream is the ground truth; this only pins that the wrapper does not\"] # [doc = \" swallow or transform the bytes).\"] # [test] fn write_out_and_flush_succeed_on_a_normal_stream () { write_out (b\"\") . expect (\"an empty write succeeds\") ; flush_out () . expect (\"flush succeeds\") ; } # [doc = \" Never-silent (G2): `write_all` over a deliberately failing writer surfaces the error rather\"] # [doc = \" than reporting a phantom success. We exercise the same `Write::write_all` contract `write_out`\"] # [doc = \" relies on, against a sink that refuses, to pin the never-silent property structurally.\"] # [test] fn a_failing_write_is_an_explicit_error_not_a_phantom_success () { struct Refuse ; impl Write for Refuse { fn write (& mut self , _ : & [u8]) -> io :: Result < usize > { Err (io :: Error :: other (\"refused\")) } fn flush (& mut self) -> io :: Result < () > { Ok (()) } } let err = Refuse . write_all (b\"x\") . expect_err (\"a refusing writer must surface an error\") ; assert_eq ! (err . kind () , io :: ErrorKind :: Other) ; } # [doc = \" P3 / under-cap: an input shorter than the cap is returned in full.\"] # [test] fn capped_read_under_cap_returns_all_bytes () { let input : & [u8] = b\"hello\" ; let out = read_capped (input , 64) . expect (\"an under-cap read must succeed\") ; assert_eq ! (out , b\"hello\" , \"the full payload must be returned unchanged\") ; } # [doc = \" Boundary: an input of *exactly* the cap length succeeds (the cap is inclusive — `len <= max`).\"] # [test] fn capped_read_at_exactly_cap_returns_all_bytes () { let input : & [u8] = b\"abcd\" ; let out = read_capped (input , 4) . expect (\"an at-cap read must succeed\") ; assert_eq ! (out , b\"abcd\") ; } # [doc = \" Never-silent (G2): an input that EXCEEDS the cap is an explicit `TooLarge` error — never a\"] # [doc = \" silently-truncated buffer. This is the DoS-bound test (P3): we must refuse, not truncate.\"] # [test] fn capped_read_over_cap_is_explicit_error_not_silent_truncation () { let input : & [u8] = b\"abcdef\" ; match read_capped (input , 4) { Err (ReadCappedError :: TooLarge { cap }) => { assert_eq ! (cap , 4 , \"the error must cite the cap\") } other => panic ! (\"over-cap input must be TooLarge, never a truncated Ok: {other:?}\") , } } # [doc = \" Edge: a zero cap rejects any non-empty input (one byte already exceeds the cap).\"] # [test] fn capped_read_zero_cap_rejects_nonempty_input () { let input : & [u8] = b\"x\" ; assert ! (matches ! (read_capped (input , 0) , Err (ReadCappedError :: TooLarge { cap : 0 })) , \"a 1-byte input must exceed a zero cap\") ; } # [doc = \" Edge: a zero cap accepts empty input (nothing to read — the bound holds vacuously).\"] # [test] fn capped_read_zero_cap_accepts_empty_input () { let input : & [u8] = b\"\" ; let out = read_capped (input , 0) . expect (\"empty input fits a zero cap\") ; assert ! (out . is_empty ()) ; } # [doc = \" The error type names the cap in its `Display` (auditable message; G2 — the refusal is legible).\"] # [test] fn too_large_error_display_cites_the_cap () { let e = ReadCappedError :: TooLarge { cap : 128 } ; assert ! (e . to_string () . contains (\"128\") , \"TooLarge Display must cite the cap, got: {e}\") ; } # [doc = \" Never-silent (G2): an OS read error before the cap surfaces as `Io`, not a partial `Ok`.\"] # [test] fn capped_read_surfaces_os_error_not_partial_ok () { struct Boom ; impl Read for Boom { fn read (& mut self , _ : & mut [u8]) -> io :: Result < usize > { Err (io :: Error :: other (\"boom\")) } } match read_capped (Boom , 16) { Err (ReadCappedError :: Io (e)) => assert_eq ! (e . kind () , io :: ErrorKind :: Other) , other => panic ! (\"a failing reader must surface Io, not a phantom Ok: {other:?}\") , } } }",
+      "reason": "#[cfg(test)] item — out of scope for this PoC's transpilation surface (excluded from the expressible-fraction denominator, but recorded, never silently skipped)",
+      "item_name": "tests"
+    }
+  ],
+  "total_top_level_items": 14
+}

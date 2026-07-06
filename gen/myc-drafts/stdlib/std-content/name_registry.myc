@@ -1,0 +1,28 @@
+// nodule: std.content
+// `NameRegistry` — the read/write `hash ↔ name` side-table (RFC-0001 §4.6).
+//
+// Names are *metadata*, not identity (ADR-003): they live here, not in the hash. A definition's
+// [`ContentHash`] is unchanged by adding, removing, or renaming its human-readable label. The
+// registry exposes two read-only ops (`resolve_name` / `names_of`) and one write op (`bind`) for
+// building up the table — the spec's C4 guarantee holds because binding or re-binding a name
+// does not touch the hash.
+//
+// # FLAG: Q3 (spec §7-Q3)
+// Whether this registry lives behind `std.content`, behind `core`/the prelude, or behind the
+// toolchain (LSP/registry) is not yet settled. This implementation places it here as the spec
+// describes, flagged for the maintainer's ratification. If the resolution moves the map out of
+// `std.content`, these two ops (`resolve_name` / `names_of`) are removed from this crate.
+//
+// # One-name limitation (FLAG)
+// The kernel's [`mycelium_core::content::Names`] stores at most *one* name per hash. The spec
+// sketch shows `names_of` returning `List<Str>` (potentially multiple names). This crate wraps
+// the kernel's map directly (KC-3: no new trusted code) and therefore surfaces *at most one*
+// name per hash. The multi-name surface is a follow-on design question (FLAG — pending spec §7-Q3
+// resolution + a registry redesign). Until then, `names_of` returns a `Vec<String>` with 0 or 1
+// entries, which is honest and correct for the current kernel.
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.content;
+
+

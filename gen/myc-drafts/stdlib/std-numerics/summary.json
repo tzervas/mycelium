@@ -1,0 +1,53 @@
+{
+  "files": [
+    {
+      "file": "crates/mycelium-std-numerics/src/lib.rs",
+      "total_items": 24,
+      "non_test_items": 23,
+      "emitted": 1,
+      "gaps": 25,
+      "expressible_pct": 4.3478260869565215,
+      "category_counts": {
+        "DeriveAttr": 1,
+        "GenericBound": 2,
+        "Impl": 3,
+        "Import": 3,
+        "Other": 11,
+        "PayloadVariant": 1,
+        "Struct": 3,
+        "TestItem": 1
+      }
+    },
+    {
+      "file": "crates/mycelium-std-numerics/src/matrix.rs",
+      "total_items": 5,
+      "non_test_items": 4,
+      "emitted": 0,
+      "gaps": 5,
+      "expressible_pct": 0.0,
+      "category_counts": {
+        "Import": 1,
+        "Other": 2,
+        "Struct": 1,
+        "TestItem": 1
+      }
+    }
+  ],
+  "totals": {
+    "total_items": 29,
+    "non_test_items": 27,
+    "emitted": 1,
+    "gaps": 30,
+    "expressible_pct": 3.7037037037037033,
+    "category_counts": {
+      "DeriveAttr": 1,
+      "GenericBound": 2,
+      "Impl": 3,
+      "Import": 4,
+      "Other": 13,
+      "PayloadVariant": 1,
+      "Struct": 4,
+      "TestItem": 2
+    }
+  }
+}

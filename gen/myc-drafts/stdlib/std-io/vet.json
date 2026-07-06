@@ -1,0 +1,56 @@
+{
+  "records": [
+    {
+      "myc_file": "gen/myc-drafts/stdlib/std-io/error.myc",
+      "source_file": "crates/mycelium-std-io/src/error.rs",
+      "class": "CheckError",
+      "exit_code": 3,
+      "diagnostic": "check-error: check error in `ReadValueError`: unknown type `IoError`",
+      "non_test_items": 19,
+      "emitted_items": 3
+    },
+    {
+      "myc_file": "gen/myc-drafts/stdlib/std-io/guarantee_matrix.myc",
+      "source_file": "crates/mycelium-std-io/src/guarantee_matrix.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 6,
+      "emitted_items": 2
+    },
+    {
+      "myc_file": "gen/myc-drafts/stdlib/std-io/io.myc",
+      "source_file": "crates/mycelium-std-io/src/io.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 13,
+      "emitted_items": 0
+    },
+    {
+      "myc_file": "gen/myc-drafts/stdlib/std-io/lib.myc",
+      "source_file": "crates/mycelium-std-io/src/lib.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 8,
+      "emitted_items": 0
+    },
+    {
+      "myc_file": "gen/myc-drafts/stdlib/std-io/serialize.myc",
+      "source_file": "crates/mycelium-std-io/src/serialize.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 17,
+      "emitted_items": 1
+    }
+  ],
+  "total_non_test_items": 63,
+  "total_emitted_items": 6,
+  "total_checked_clean_items": 3,
+  "class_counts": {
+    "CheckError": 1,
+    "Clean": 4
+  }
+}

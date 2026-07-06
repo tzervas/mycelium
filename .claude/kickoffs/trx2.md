@@ -38,6 +38,10 @@ This is **not** greenfield, and must not duplicate/conflict with the roadmap:
   Stage-6 bootstrap (`M-742`). **`M-994`** (the whole-program L0-differential feasibility, a
   maintainer decision) still gates *vetting* the heavy-core port — `trx2` can generate the boilerplate
   regardless, but a full differential waits on M-994.
+  *[Correction, 2026-07-06 launch — this bullet was authored before the same-day kernel-perf wave:
+  **M-994 is RESOLVED/`done`** (both kernel walls down, M-986/M-987) and **M-993 is unblocked →
+  `todo`**; found stale by the PR #1205 review. The paragraph above is kept as written (the
+  stowed-time context), with this note as the current status.]*
 
 ## Work-streams (epics — propose ids at launch, do not pre-mint; mitigation #1)
 

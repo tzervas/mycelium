@@ -1,0 +1,87 @@
+{
+  "source": "crates/mycelium-std-sys/src/fs.rs",
+  "emitted_items": [],
+  "gaps": [
+    {
+      "file": "crates/mycelium-std-sys/src/fs.rs",
+      "line": 12,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use std :: io ;",
+      "reason": "`use` import (single path ending `io`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/fs.rs",
+      "line": 13,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use std :: path :: Path ;",
+      "reason": "`use` import (single path ending `Path`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/fs.rs",
+      "line": 15,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] Read the entire contents of a file at `path`.\"] # [doc = \"\"] # [doc = \" Returns `Err` on any OS error — never-silent (G2).\"] pub fn read (path : & Path) -> Result < Vec < u8 > , io :: Error > { std :: fs :: read (path) }",
+      "reason": "unsupported Rust type form `& Path`",
+      "item_name": "read"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/fs.rs",
+      "line": 22,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] Write `contents` to a file at `path`, creating or truncating it.\"] # [doc = \"\"] # [doc = \" Returns `Err` on any OS error — never-silent (G2).\"] pub fn write (path : & Path , contents : & [u8]) -> Result < () , io :: Error > { std :: fs :: write (path , contents) }",
+      "reason": "unsupported Rust type form `& Path`",
+      "item_name": "write"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/fs.rs",
+      "line": 29,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] Check whether a path exists on the filesystem.\"] # [doc = \"\"] # [doc = \" Returns `false` on any OS error (consistent with `std::path::Path::exists`).\"] # [doc = \" If distinguishing \\\"does not exist\\\" from \\\"permission denied\\\" is required, use\"] # [doc = \" `std::fs::metadata` directly.\"] pub fn exists (path : & Path) -> bool { path . exists () }",
+      "reason": "unsupported Rust type form `& Path`",
+      "item_name": "exists"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/fs.rs",
+      "line": 38,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] Create a directory and all its parents.\"] # [doc = \"\"] # [doc = \" Returns `Err` on any OS error — never-silent (G2).\"] pub fn create_dir_all (path : & Path) -> Result < () , io :: Error > { std :: fs :: create_dir_all (path) }",
+      "reason": "unsupported Rust type form `& Path`",
+      "item_name": "create_dir_all"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/fs.rs",
+      "line": 45,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] Remove a file.\"] # [doc = \"\"] # [doc = \" Returns `Err` on any OS error — never-silent (G2).\"] pub fn remove_file (path : & Path) -> Result < () , io :: Error > { std :: fs :: remove_file (path) }",
+      "reason": "unsupported Rust type form `& Path`",
+      "item_name": "remove_file"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/fs.rs",
+      "line": 52,
+      "col": 1,
+      "category": "TestItem",
+      "rust_construct": "TestItem",
+      "snippet": "# [cfg (test)] mod tests { use super :: * ; use std :: env ; # [doc = \" Round-trip: write bytes to a temp file, read them back, verify equality.\"] # [test] fn write_read_roundtrip () { let dir = env :: temp_dir () ; let path = dir . join (\"mycelium_std_sys_fs_test_roundtrip.bin\") ; let contents : & [u8] = b\"Mycelium std-sys fs round-trip test data \\x00\\x01\\x02\\xFF\" ; let _ = remove_file (& path) ; write (& path , contents) . expect (\"write failed\") ; let read_back = read (& path) . expect (\"read failed\") ; assert_eq ! (read_back , contents , \"round-trip mismatch: wrote {contents:?}, read back {read_back:?}\") ; remove_file (& path) . expect (\"cleanup remove_file failed\") ; } # [test] fn exists_and_remove () { let dir = env :: temp_dir () ; let path = dir . join (\"mycelium_std_sys_fs_test_exists.bin\") ; let _ = remove_file (& path) ; assert ! (! exists (& path) , \"expected path to not exist before write\") ; write (& path , b\"hello\") . expect (\"write failed\") ; assert ! (exists (& path) , \"expected path to exist after write\") ; remove_file (& path) . expect (\"remove_file failed\") ; assert ! (! exists (& path) , \"expected path to not exist after remove\") ; } # [test] fn create_dir_all_creates_nested () { let dir = env :: temp_dir () . join (\"mycelium_std_sys_fs_test_nested_dir\") ; let nested = dir . join (\"a\") . join (\"b\") . join (\"c\") ; let _ = std :: fs :: remove_dir_all (& dir) ; create_dir_all (& nested) . expect (\"create_dir_all failed\") ; assert ! (nested . is_dir () , \"expected nested dir to exist\") ; let _ = std :: fs :: remove_dir_all (& dir) ; } # [test] fn read_nonexistent_is_err () { let path = env :: temp_dir () . join (\"mycelium_std_sys_fs_test_NONEXISTENT_XYZ.bin\") ; let _ = remove_file (& path) ; let result = read (& path) ; assert ! (result . is_err () , \"expected Err for nonexistent file, got Ok\") ; } }",
+      "reason": "#[cfg(test)] item — out of scope for this PoC's transpilation surface (excluded from the expressible-fraction denominator, but recorded, never silently skipped)",
+      "item_name": "tests"
+    }
+  ],
+  "total_top_level_items": 8
+}

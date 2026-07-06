@@ -1,0 +1,41 @@
+// nodule: std.runtime
+// Mechanized `SelectionPolicy` capture and setting (M-963; DN-78 §3 B-1/B-2; the M-828
+// capture-and-set tail, decided under the 2026-07-02 delegation recorded in DN-78 §1).
+//
+// Two surfaces, both riding the existing RFC-0005 machinery in `mycelium-select` — **no new
+// selection mechanism** (KC-3; DN-63 §3.5 "the third application of the existing one"):
+//
+// - **Capture (B-1):** [`capture`] materializes the policy that decided a recorded
+//   [`Explanation`] back into a nameable, diffable, inspectable [`SelectionPolicy`] value via
+//   the [`PolicyRegistry`] — never an opaque handle (ADR-006). [`replay`] re-runs the recorded
+//   inputs (honoring the recorded override state) and requires the same decision; divergence
+//   is an explicit [`ReplayError::Diverged`], never a silent pass (G2).
+// - **Setting (B-2):** [`PolicySlot`] binds the active policy for one RFC-0005 site
+//   ([`PolicySite`]); every [`PolicySlot::set`] appends a [`PolicySetRecord`] to an
+//   append-only transition log — a mechanized set is never a silent override
+//   (research/27-dn64-ergonomics-rnd-RECORD.md §2.2), and EXPLAIN stays answerable afterward
+//   (the slot holds the full policy value). Selection through the slot records the mandatory
+//   [`Explanation`] into an extractable trace (the "runtime records which policy it applied"
+//   half of mechanized capture).
+//
+// # Guarantee tags (VR-5; rows in [`crate::guarantee_matrix::MATRIX`])
+//
+// - Transition-record append (one record per `set`, monotonic `seq`): **`Exact`** —
+//   by construction.
+// - Selection without an active policy is an explicit [`SlotError::NoActivePolicy`]: **`Exact`**
+//   — fail-closed by construction (G2).
+// - Capture resolution of an unknown `policy_ref` is an explicit
+//   [`CaptureError::UnknownPolicyRef`]: **`Exact`** — fail-closed by construction (G2).
+// - Replay-reaches-the-recorded-decision: **`Empirical`** — the record-vs-replay differential
+//   is property-tested (`src/tests/policy_mech.rs`); determinism grounds in RFC-0005 `select`
+//   purity but carries no mechanized theorem, so it is not `Proven` (M-964 audit, DN-78
+//   appendix).
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.runtime;
+
+// The RFC-0005 policy sites (§4: swap-target, packing; RFC-0008 RT3 adds placement as the
+// third). A [`PolicySlot`] is keyed by site so a set/select is always attributed to the site
+// it governs (provenance, RFC-0001 §4.3).
+type PolicySite = SwapTarget | Packing | Placement;

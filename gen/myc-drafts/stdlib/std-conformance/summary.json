@@ -1,0 +1,21 @@
+{
+  "files": [
+    {
+      "file": "crates/mycelium-std-conformance/src/lib.rs",
+      "total_items": 0,
+      "non_test_items": 0,
+      "emitted": 0,
+      "gaps": 0,
+      "expressible_pct": 0.0,
+      "category_counts": {}
+    }
+  ],
+  "totals": {
+    "total_items": 0,
+    "non_test_items": 0,
+    "emitted": 0,
+    "gaps": 0,
+    "expressible_pct": 0.0,
+    "category_counts": {}
+  }
+}

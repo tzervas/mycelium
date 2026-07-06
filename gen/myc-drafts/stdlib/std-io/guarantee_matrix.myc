@@ -1,0 +1,38 @@
+// nodule: std.io
+// The `std.io` + `serialize` guarantee matrix encoded as **data** (RFC-0016 §4.5).
+//
+// Every exported operation has exactly one row in [`MATRIX`].  The matrix is the
+// load-bearing C2/VR-5 deliverable: guarantee tags are asserted in tests, not
+// prose-only.
+//
+// # Tag justification summary (VR-5 — downgrade rather than overclaim)
+//
+// | Tag | Rows | Reason |
+// |---|---|---|
+// | `Exact` | `serialize`, `to_json`, `read_all`, `read`, `write` | No accuracy/precision/probability semantics (RFC-0016 C2 "no accuracy semantics → Exact"). `serialize`/`to_json` are `Exact` *when `Ok`* but **fallible**: a non-finite `f64` has no JSON form and is refused (never a silent `null`). |
+// | `Empirical` | `deserialize`, `from_json`, `read_value` | Round-trip property established by proptest corpus; no checked theorem → `Empirical`, not `Proven` (VR-5 / spec §7-Q2) |
+//
+// # Effect column (C6)
+// - `"none"` — the op is pure over its byte input; no OS facility touched.
+// - `"io"` — the op reads from or writes to a `Source`/`Sink`; the `io` effect
+//   is declared on the signature (RFC-0014 §4.5).
+// - `"io + alloc(Budget)"` — chunked `read` additionally allocates a buffer
+//   bounded by the declared `Budget` (C6/ADR-015).
+//
+// # EXPLAIN-able column (C3)
+// - `"n/a"` — `serialize`/`to_json` are faithful projections; `read_all`/`read`/
+//   `write` are pure byte-movement.  None selects, converts, or approximates, so
+//   there is no hidden decision to expose.
+// - `"yes"` — the fallible ops (`deserialize`/`from_json`/`read_value`) carry an
+//   RFC-0013 diagnostic record with the failure locus (byte offset / field path),
+//   making decode failures legible (C3/G11).
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.io;
+
+// Fallibility classification for an exported op (C1).
+type Fallibility = Total | Fallible;
+
+// Whether the op surfaces an EXPLAIN artifact (C3).
+type Explainable = Yes | NotApplicable;

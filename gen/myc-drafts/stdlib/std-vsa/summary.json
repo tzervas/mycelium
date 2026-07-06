@@ -1,0 +1,78 @@
+{
+  "files": [
+    {
+      "file": "crates/mycelium-std-vsa/src/encoding.rs",
+      "total_items": 3,
+      "non_test_items": 3,
+      "emitted": 0,
+      "gaps": 3,
+      "expressible_pct": 0.0,
+      "category_counts": {
+        "GenericBound": 2,
+        "Import": 1
+      }
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/lib.rs",
+      "total_items": 10,
+      "non_test_items": 10,
+      "emitted": 0,
+      "gaps": 11,
+      "expressible_pct": 0.0,
+      "category_counts": {
+        "Import": 6,
+        "Other": 5
+      }
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/matrix.rs",
+      "total_items": 5,
+      "non_test_items": 5,
+      "emitted": 0,
+      "gaps": 5,
+      "expressible_pct": 0.0,
+      "category_counts": {
+        "Import": 2,
+        "Other": 2,
+        "Struct": 1
+      }
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/ops.rs",
+      "total_items": 9,
+      "non_test_items": 9,
+      "emitted": 0,
+      "gaps": 9,
+      "expressible_pct": 0.0,
+      "category_counts": {
+        "GenericBound": 8,
+        "Import": 1
+      }
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/recon.rs",
+      "total_items": 4,
+      "non_test_items": 4,
+      "emitted": 0,
+      "gaps": 4,
+      "expressible_pct": 0.0,
+      "category_counts": {
+        "GenericBound": 2,
+        "Import": 2
+      }
+    }
+  ],
+  "totals": {
+    "total_items": 31,
+    "non_test_items": 31,
+    "emitted": 0,
+    "gaps": 32,
+    "expressible_pct": 0.0,
+    "category_counts": {
+      "GenericBound": 12,
+      "Import": 12,
+      "Other": 7,
+      "Struct": 1
+    }
+  }
+}

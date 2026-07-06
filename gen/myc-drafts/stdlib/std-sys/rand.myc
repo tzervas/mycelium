@@ -1,0 +1,37 @@
+// nodule: std.sys
+// \[Declared\] Platform entropy floor. Reads from `/dev/urandom` via `std::fs`.
+//
+// # Implementation
+//
+// This module provides OS entropy by opening `/dev/urandom` and using `read_exact` to fill
+// the caller's buffer. Rationale for this approach over alternatives:
+//
+// - **Pure `std::fs` / no new dependency**: the `getrandom` crate provides a cross-platform
+//   OS-entropy abstraction, but adding it would require editing the workspace `Cargo.toml`
+//   (orchestrator-owned). `/dev/urandom` is directly available via `std::fs::File` at zero
+//   additional cost, so it is strongly preferred here.
+// - **`#![forbid(unsafe_code)]` preserved**: `/dev/urandom` via `std::fs` needs no `unsafe`
+//   blocks or FFI contact. The `getrandom` path (C FFI or platform `syscall`) would require
+//   lifting that attribute — avoided.
+//
+// # Platform caveat
+//
+// `/dev/urandom` is a Unix/Linux/macOS concept. On platforms that do not expose it (Windows,
+// WASI, bare-metal `no_std` targets), `fill_bytes` returns
+// `Err(EntropyError::Unavailable(...))` **explicitly** — it never panics, never zero-fills
+// silently (G2 / never-silent fallibility). Cross-platform OS entropy (via `getrandom`) is
+// the correct long-term solution; see FLAG-GETRANDOM in the report.
+//
+// # Guarantee tag
+//
+// `[Declared]` — `/dev/urandom` is a real OS entropy source backed by the kernel CSPRNG, but
+// no statistical audit or coverage measurement has been run against this implementation.
+// Promotion to `Empirical` requires documented trials with measured statistical quality
+// (e.g. Diehard/TestU01 run + recorded pass/fail table). Do not use for security-sensitive
+// purposes without that audit (VR-5).
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.sys;
+
+

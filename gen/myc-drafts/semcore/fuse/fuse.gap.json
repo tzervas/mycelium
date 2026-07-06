@@ -1,0 +1,107 @@
+{
+  "source": "crates/mycelium-l1/src/fuse.rs",
+  "emitted_items": [],
+  "gaps": [
+    {
+      "file": "crates/mycelium-l1/src/fuse.rs",
+      "line": 46,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use std :: collections :: BTreeMap ;",
+      "reason": "`use` import (single path ending `BTreeMap`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-l1/src/fuse.rs",
+      "line": 48,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use crate :: ast :: { BaseType , FnDecl , FnSig , Param , TypeRef , Vis } ;",
+      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-l1/src/fuse.rs",
+      "line": 49,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use crate :: checkty :: { CheckError , DataInfo , Env , InstanceInfo , TraitInfo , Ty } ;",
+      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-l1/src/fuse.rs",
+      "line": 50,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use crate :: eval :: Evaluator ;",
+      "reason": "`use` import (single path ending `Evaluator`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-l1/src/fuse.rs",
+      "line": 52,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" The synthetic top-level-fn name a `Fuse` instance's `join` method is probed under while the law\"] # [doc = \" checker evaluates it. `#` cannot appear in a surface identifier (the lexer never produces it),\"] # [doc = \" so this can never collide with a real program's function name.\"] const PROBE_FN : & str = \"#fuse_law_probe#\" ;",
+      "reason": "top-level `const PROBE_FN` — no const item production in the grammar (`item` covers use/default/type/trait/impl/fn/object/lower/derive only)",
+      "item_name": "PROBE_FN"
+    },
+    {
+      "file": "crates/mycelium-l1/src/fuse.rs",
+      "line": 57,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" F-A1 — the built-in `Fuse` trait (DN-58 §A.2): `trait Fuse[T] { fn join(a: T, b: T) => T; }`.\"] # [doc = \" Hand-built in Rust (mirrors [`crate::checkty::prelude`]'s `Bool` `DataInfo`) rather than parsed\"] # [doc = \" from surface syntax, so the parameter name `T` (standing in for DN-58's proposed `Self`) is\"] # [doc = \" just an ordinary trait type-variable — no new trait-model feature.\"] # [must_use] pub (crate) fn prelude () -> TraitInfo { let t = | name : & str | TypeRef :: unguaranteed (BaseType :: Named (name . to_owned () , vec ! [])) ; TraitInfo { name : \"Fuse\" . to_owned () , params : vec ! [\"T\" . to_owned ()] , sigs : vec ! [FnSig { name : \"join\" . to_owned () , params : vec ! [] , value_params : vec ! [Param { name : \"a\" . to_owned () , ty : t (\"T\") , } , Param { name : \"b\" . to_owned () , ty : t (\"T\") , } ,] , ret : t (\"T\") , effects : vec ! [] , effect_budgets : BTreeMap :: new () , }] , } }",
+      "reason": "unsupported expression form `| name : & str | TypeRef :: unguaranteed (BaseType :: Named (name . to_owned () , vec ! []))`",
+      "item_name": "prelude"
+    },
+    {
+      "file": "crates/mycelium-l1/src/fuse.rs",
+      "line": 87,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" This trait's name — the one string every registration/lookup site must agree on (Law of\"] # [doc = \" Demeter — a single named constant beats a scattered literal `\\\"Fuse\\\"`).\"] pub (crate) const TRAIT_NAME : & str = \"Fuse\" ;",
+      "reason": "top-level `const TRAIT_NAME` — no const item production in the grammar (`item` covers use/default/type/trait/impl/fn/object/lower/derive only)",
+      "item_name": "TRAIT_NAME"
+    },
+    {
+      "file": "crates/mycelium-l1/src/fuse.rs",
+      "line": 91,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" If `ty` is a **finite, enumerable** domain in v0's sense (a registered `Data` type every one of\"] # [doc = \" whose constructors takes zero fields — the `Bool`-shape), return every value of that domain;\"] # [doc = \" `None` for anything else (an unregistered name, a type with fielded constructors, a repr type,\"] # [doc = \" an uninhabited type) — never a guess at a partial enumeration (G2).\"] fn enumerate_finite_domain (ty : & Ty , types : & BTreeMap < String , DataInfo > ,) -> Option < Vec < crate :: eval :: L1Value > > { let Ty :: Data (name , _args) = ty else { return None ; } ; let info = types . get (name) ? ; if info . ctors . is_empty () || info . ctors . iter () . any (| c | ! c . fields . is_empty ()) { return None ; } Some (info . ctors . iter () . map (| c | crate :: eval :: L1Value :: Data { ty : name . clone () , ctor : c . name . clone () , fields : std :: sync :: Arc :: new (vec ! []) , }) . collect () ,) }",
+      "reason": "unsupported Rust type form `& Ty`",
+      "item_name": "enumerate_finite_domain"
+    },
+    {
+      "file": "crates/mycelium-l1/src/fuse.rs",
+      "line": 118,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" F-A2 — the semilattice-law checker. Walks every registered instance of the [`TRAIT_NAME`]\"] # [doc = \" trait; for each whose `for_ty` is a [`enumerate_finite_domain`] domain, exhaustively checks\"] # [doc = \" idempotence, commutativity, and associativity by evaluating `join` (via a scratch\"] # [doc = \" [`Evaluator`]) over every value/pair/triple of that domain. The first law violation found is\"] # [doc = \" returned as a never-silent [`CheckError`] naming the law, a witness, and the `impl`'s site\"] # [doc = \" (G2); a non-enumerable `for_ty` is silently **skipped** — not silently *accepted as lawful*,\"] # [doc = \" just left unchecked (documented above, VR-5).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \" A [`CheckError`] naming the violated law + witness for the first unlawful `Fuse` instance\"] # [doc = \" found (site order = `BTreeMap` iteration order over `(trait, head)`, i.e. deterministic).\"] pub (crate) fn check_fuse_laws (types : & BTreeMap < String , DataInfo > , fns : & BTreeMap < String , FnDecl > , traits : & BTreeMap < String , TraitInfo > , instances : & BTreeMap < (String , String) , InstanceInfo > , impls : & BTreeMap < (String , String) , Vec < FnDecl > > ,) -> Result < () , CheckError > { for ((trait_name , head) , methods) in impls { if trait_name != TRAIT_NAME { continue ; } let Some (inst) = instances . get (& (trait_name . clone () , head . clone ())) else { continue ; } ; let Some (join) = methods . iter () . find (| m | m . sig . name == \"join\") else { continue ; } ; let Some (domain) = enumerate_finite_domain (& inst . for_ty , types) else { continue ; } ; check_laws_over_domain (& inst . for_ty , join , & domain , types , fns , traits , instances , impls ,) ? ; } Ok (()) }",
+      "reason": "unsupported Rust type form `& BTreeMap < String , DataInfo >`",
+      "item_name": "check_fuse_laws"
+    },
+    {
+      "file": "crates/mycelium-l1/src/fuse.rs",
+      "line": 171,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Exhaustively check the three semilattice laws for `join` over every value of `domain`\"] # [doc = \" (`for_ty`'s enumerated values), evaluating through a scratch [`Env`] that carries every\"] # [doc = \" already-checked registry (so `join`'s body may call ordinary top-level fns / other trait\"] # [doc = \" methods exactly as it would in the real program) plus one synthetic entry — `join` itself,\"] # [doc = \" under [`PROBE_FN`] — so [`Evaluator::call`] can invoke it directly without going through the\"] # [doc = \" generic trait-method call-resolution surface (unnecessary here: `for_ty` is already concrete,\"] # [doc = \" so there is exactly one candidate method, no ambiguity to resolve).\"] # [allow (clippy :: too_many_arguments)] fn check_laws_over_domain (for_ty : & Ty , join : & FnDecl , domain : & [crate :: eval :: L1Value] , types : & BTreeMap < String , DataInfo > , fns : & BTreeMap < String , FnDecl > , traits : & BTreeMap < String , TraitInfo > , instances : & BTreeMap < (String , String) , InstanceInfo > , impls : & BTreeMap < (String , String) , Vec < FnDecl > > ,) -> Result < () , CheckError > { let mut probe_fns = fns . clone () ; probe_fns . insert (PROBE_FN . to_owned () , FnDecl { vis : Vis :: Private , thaw : false , tier : None , sig : join . sig . clone () , body : join . body . clone () , } ,) ; let scratch = Env { types : types . clone () , fns : probe_fns , totality : BTreeMap :: new () , traits : traits . clone () , instances : instances . clone () , impls : impls . clone () , lower_rules : BTreeMap :: new () , derived_provenance : BTreeMap :: new () , via_provenance : BTreeMap :: new () , } ; let evaluator = Evaluator :: new (& scratch) ; let site = format ! (\"impl Fuse[{for_ty}] for {for_ty}\") ; let call = | a : & crate :: eval :: L1Value , b : & crate :: eval :: L1Value | -> Result < crate :: eval :: L1Value , CheckError > { evaluator . call (PROBE_FN , vec ! [a . clone () , b . clone ()]) . map_err (| e | { CheckError :: new (& site , format ! (\"could not evaluate `Fuse::join` for `{for_ty}` while checking the \\\n                         semilattice laws (DN-58 §A.4; RFC-0008 RT6): {e} — a `join` that cannot \\\n                         be evaluated over its own declared domain cannot be certified lawful \\\n                         (never-silent — G2)\") ,) }) } ; for a in domain { let got = call (a , a) ? ; if & got != a { return Err (CheckError :: new (& site , format ! (\"`Fuse::join` for `{for_ty}` violates idempotence (RFC-0008 RT6 / DN-58 §A.1): \\\n                     join({a:?}, {a:?}) = {got:?}, expected {a:?} — a semilattice-law violation is \\\n                     refused at definition, never a silent accept (G2/M-965)\") ,)) ; } } for a in domain { for b in domain { let ab = call (a , b) ? ; let ba = call (b , a) ? ; if ab != ba { return Err (CheckError :: new (& site , format ! (\"`Fuse::join` for `{for_ty}` violates commutativity (RFC-0008 RT6 / DN-58 \\\n                         §A.1): join({a:?}, {b:?}) = {ab:?} but join({b:?}, {a:?}) = {ba:?} — a \\\n                         semilattice-law violation is refused at definition, never a silent accept \\\n                         (G2/M-965)\") ,)) ; } } } for a in domain { for b in domain { for c in domain { let ab = call (a , b) ? ; let ab_c = call (& ab , c) ? ; let bc = call (b , c) ? ; let a_bc = call (a , & bc) ? ; if ab_c != a_bc { return Err (CheckError :: new (& site , format ! (\"`Fuse::join` for `{for_ty}` violates associativity (RFC-0008 RT6 / \\\n                             DN-58 §A.1): join(join({a:?}, {b:?}), {c:?}) = {ab_c:?} but \\\n                             join({a:?}, join({b:?}, {c:?})) = {a_bc:?} — a semilattice-law \\\n                             violation is refused at definition, never a silent accept (G2/M-965)\") ,)) ; } } } } Ok (()) }",
+      "reason": "unsupported Rust type form `& Ty`",
+      "item_name": "check_laws_over_domain"
+    }
+  ],
+  "total_top_level_items": 10
+}

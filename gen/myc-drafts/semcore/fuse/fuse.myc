@@ -1,0 +1,51 @@
+// nodule: l1
+// DN-58 §A (M-965; F-A1/F-A2) — the `Fuse` **prelude surface** + the **semilattice-law checker**.
+//
+// **F-A1 (prelude).** `Fuse` is now a **built-in trait** — the trait analogue of the built-in
+// `Bool` data type ([`crate::checkty::prelude`]): a nodule never has to hand-write
+// `trait Fuse[T] { fn join(a: T, b: T) => T; }` before writing `impl Fuse[T] for T { … }`.
+// [`prelude`] is the single source of the built-in [`TraitInfo`] that
+// [`crate::checkty::register_nodule_decls`] seeds every nodule's trait registry with (mirroring
+// how `register_nodule_decls` seeds `Bool` into the type registry).
+//
+// DN-58 §A.2 proposed the surface `trait Fuse { fn join(self: Self, other: Self) => Self; }` —
+// but this stage-1 trait model (RFC-0019 §4.1) has no implicit `Self` slot; every trait is
+// parameterized by an **explicit** type-variable name, and "generic over the implementing type"
+// is already the established idiom of repeating that name at the impl site
+// (`impl Tr[T] for T { … }` — see `crates/mycelium-l1/src/tests/checkty.rs`). `Fuse` reuses that
+// idiom verbatim (`impl Fuse[T] for T`) rather than inventing a new trait-model feature; this is
+// the concrete resolution of DN-58 §A.6's "trait name is open" flag (`Fuse` — matches the
+// keyword) plus the `Self`-vs-explicit-parameter question DN-58 left implicit.
+//
+// **F-A2 (law checker).** [`check_fuse_laws`] is the [`crate::checkty::check_nodule_with`]
+// post-pass that the `checkty.rs` `check_fuse` doc comment used to flag as "not yet wired". It
+// empirically verifies a declared `Fuse` instance's `join` obeys the three semilattice laws
+// (RFC-0008 RT6; DN-58 §A.1): **idempotence** (`join(a, a) = a`), **commutativity**
+// (`join(a, b) = join(b, a)`), and **associativity**
+// (`join(join(a, b), c) = join(a, join(b, c))`). A violation is an explicit, never-silent
+// [`CheckError`] naming the failed law, a concrete counterexample, and the `impl`'s site (G2) —
+// refused **here, at definition time**, never reaching production (RFC-0008 RT6's convergence
+// guarantee is only as good as the laws it assumes; this is the "caught at definition, not
+// production" checker the DN-58 §A.4 obligation calls for).
+//
+// **Honest scope (VR-5) — exhaustive, not general.** The check is **exhaustive** over a finite,
+// enumerable `for_ty` — in v0, a **nullary-constructor `Data` type** (every constructor takes zero
+// fields; the same shape as the prelude `Bool`, or a user `type Sign = Neg | Zero | Pos;`). For
+// any other `for_ty` (one with fields, a parametric/recursive type, a repr type — `Binary`/
+// `Ternary`/… are handled by `checkty::check_fuse`'s separate always-fusible repr path, never by
+// an `impl`) the domain is not finitely enumerable in v0, so [`check_fuse_laws`] **skips** the
+// check rather than sampling or guessing — it never silently claims a law holds without having
+// checked it. Widening this to a sampled/property-tested domain for composite types is the DN-58
+// §A.6 F-A3 follow-on: deferred, and named here rather than silently absent.
+//
+// Guarantee: the exhaustive-domain law verification here is `Empirical` (every value of the
+// domain is tried; this is a complete case-enumeration for a *finite* domain, not a mechanized
+// proof over an inductive definition — RFC-0008 RT6's Isabelle/HOL basis is a proof about the
+// *general* semilattice-merge construction, not automatically re-derived for each concrete
+// instance). Never `Proven` without that mechanized basis (VR-5).
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule l1;
+
+

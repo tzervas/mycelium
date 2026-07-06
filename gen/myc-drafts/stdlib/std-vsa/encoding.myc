@@ -1,0 +1,22 @@
+// nodule: std.vsa
+// Encoding utilities: compositions of the per-model vocabulary.
+//
+// Tag = meet of constituents (weakest-wins; RFC-0001 §4.7), **never upgraded**.  A sequence
+// built from `Proven` bundle and `Exact` permute is no stronger than its bundle; a set encoding
+// over `Empirical` bundle inputs stays `Empirical`.
+//
+// # Guarantee tags (compositions)
+//
+// | Op | Composition | Tag |
+// |---|---|---|
+// | `encode_seq` | `bundle` over `permute^i(item_i)` | meet(`bundle_tag`, `Exact`) = `bundle_tag` |
+// | `encode_set` | `bundle` of atoms | `bundle_tag` |
+//
+// where `bundle_tag` is `VsaModel::intrinsic_guarantee(Bundle)` for the model — `Proven` for
+// MAP-I/MAP-B/BSC/SBC, `Empirical` for HRR/FHRR.
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.vsa;
+
+

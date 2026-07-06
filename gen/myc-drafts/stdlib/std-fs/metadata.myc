@@ -1,0 +1,24 @@
+// nodule: std.fs
+// `Metadata`, `FileKind`, `Permissions` — read-only filesystem metadata values (C4/ADR-003).
+//
+// Metadata is a **value snapshot**, not an identity: two equal-bytes files may have different
+// `mtime`s, but they are the same Mycelium value. Metadata is not part of path identity (ADR-003).
+//
+// Timestamps are carried as **opaque** OS metadata (`u64` since-epoch): `fs` does not interpret
+// them into monotonic/wall distinctions — that typed distinction belongs to `std.time` (M-529).
+// Carrying an opaque `u64` is the honest narrowing: it preserves the value without overclaiming
+// that `fs` understands its clock semantics (VR-5).
+//
+// Design spec: `docs/spec/stdlib/fs.md` §3; contract: RFC-0016 §4.1 C2/C4.
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.fs;
+
+// The kind of filesystem entry.
+type FileKind = File | Directory | Symlink | Other;
+
+impl Permissions {
+  // Whether this entry is read-only for the owner (write bit not set).
+  fn is_readonly(self: Permissions) => Bool = !owner_write(self);
+};

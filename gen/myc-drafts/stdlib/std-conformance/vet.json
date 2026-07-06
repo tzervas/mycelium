@@ -1,0 +1,19 @@
+{
+  "records": [
+    {
+      "myc_file": "gen/myc-drafts/stdlib/std-conformance/lib.myc",
+      "source_file": "crates/mycelium-std-conformance/src/lib.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 0,
+      "emitted_items": 0
+    }
+  ],
+  "total_non_test_items": 0,
+  "total_emitted_items": 0,
+  "total_checked_clean_items": 0,
+  "class_counts": {
+    "Clean": 1
+  }
+}
