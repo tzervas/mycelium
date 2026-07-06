@@ -433,7 +433,7 @@ pub fn run(node: &Node, prims: &PrimRegistry, swap: &dyn SwapEngine) -> Result<V
 }
 
 /// A continuation: where to bind a returned value and resume. The reified caller context.
-struct Cont {
+pub(crate) struct Cont {
     block: Rc<Anf>,
     idx: usize,
     env: Env,
@@ -458,8 +458,30 @@ impl Cont {
     /// is eliding the push, which eagerly drops the caller's saved env — the interpreter's
     /// drain-cleanup analog). No transparent frame ever enters the stack, so no drain is needed and
     /// the frame below is always the real (non-transparent) consumer.
-    fn is_tail_passthrough(&self) -> bool {
+    ///
+    /// **Cross-module invariant note (PR #1193 review, MEDIUM):** under the *current*
+    /// `mycelium_core::lower::lower_to_anf` lowering, `Node::Let` always emits a trailing `Alias`
+    /// binding, so every block reachable via the public `Node` API that completes at a `Resume`
+    /// already has `result() == name` — making the second conjunct unreachable-false through that
+    /// API today. It is **kept as required defense-in-depth**: it is what makes this condition
+    /// *locally sound* rather than silently dependent on another module's lowering shape (if a
+    /// future lowering emits a block whose result is not the bound name, eliding it would return
+    /// the wrong value). Pinned directly by the white-box unit test
+    /// `tests::aot::is_tail_passthrough_requires_result_to_be_the_bound_name`.
+    pub(crate) fn is_tail_passthrough(&self) -> bool {
         self.idx >= self.block.bindings().len() && *self.block.result() == self.name
+    }
+
+    /// Test-only constructor for the white-box `is_tail_passthrough` pin (PR #1193 review) —
+    /// builds a `Cont` with an empty env without exposing the private `Env`/`AotVal` types.
+    #[cfg(test)]
+    pub(crate) fn probe(block: Rc<Anf>, idx: usize, name: Atom) -> Self {
+        Cont {
+            block,
+            idx,
+            env: Env::new(),
+            name,
+        }
     }
 }
 

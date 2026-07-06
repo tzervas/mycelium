@@ -432,3 +432,47 @@ fn tail_iterations_do_not_leak_depth_guards() {
         "1_000 tail iterations under a 2-frame ceiling must succeed (no guard leak), got {r:?}"
     );
 }
+
+/// PR #1193 review (MEDIUM): the `result() == name` conjunct of `Cont::is_tail_passthrough` was
+/// unreachable-false through the public `Node` API (the current `lower_to_anf` lowering's trailing
+/// `Alias` invariant guarantees it) — so a mutation dropping the conjunct survived the whole suite.
+/// This white-box pin tests the condition DIRECTLY, so the conjunct is locally witnessed rather
+/// than silently dependent on another module's lowering shape: a completed block whose result is
+/// NOT the bound name must NOT be treated as a passthrough (eliding it would return the wrong
+/// value), and pending bindings must block transparency regardless of the name.
+#[test]
+fn is_tail_passthrough_requires_result_to_be_the_bound_name() {
+    use mycelium_core::lower::{lower_to_anf, Atom};
+    use std::rc::Rc;
+
+    let block = Rc::new(lower_to_anf(&Node::Const(byte())));
+    let done = block.bindings().len();
+    let result_name = block.result().clone();
+
+    // Completed block + result IS the bound name → a genuine passthrough (elide).
+    assert!(
+        Cont::probe(Rc::clone(&block), done, result_name).is_tail_passthrough(),
+        "completed block whose result is the bound name must be tail-transparent"
+    );
+
+    // Completed block but the result is a DIFFERENT name → NOT a passthrough: resuming this
+    // continuation returns the block's own result binding, not the incoming value, so eliding it
+    // would substitute the wrong value. This is the conjunct the mutation attack found untested.
+    assert!(
+        !Cont::probe(
+            Rc::clone(&block),
+            done,
+            Atom::Named("m996_review_probe".into())
+        )
+        .is_tail_passthrough(),
+        "a completed block whose result is NOT the bound name must not be elided"
+    );
+
+    // Pending bindings → not a passthrough even with the matching name (real post-work remains).
+    if done > 0 {
+        assert!(
+            !Cont::probe(Rc::clone(&block), 0, block.result().clone()).is_tail_passthrough(),
+            "a block with pending bindings must not be elided"
+        );
+    }
+}
