@@ -586,6 +586,41 @@ fn mul_u_overflow_refuses_on_every_path() {
     );
 }
 
+// ── CU-6: width-preserving bit-manipulation counts `popcount`/`clz`/`ctz` (kernel bit.*) ─────────
+//
+// popcount/clz/ctz are kernel prims (single host instruction, not efficiently `.myc`-derivable);
+// rotate/reverse_bits ride `std.math`. Unary `Binary{N} → Binary{N}`, total (a count always fits N
+// bits), agreeing on all three paths.
+#[test]
+fn bit_manip_counts_three_way() {
+    // popcount(0b0110_1000) = 3; clz = 1; ctz = 3 (0b0000_0011, 0b0000_0001, 0b0000_0011).
+    assert_three_way(
+        "popcount",
+        "nodule d;\nfn main() => Binary{8} = popcount(0b0110_1000);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("00000011".chars().map(|c| c == '1').collect()),
+    );
+    assert_three_way(
+        "clz",
+        "nodule d;\nfn main() => Binary{8} = clz(0b0110_1000);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("00000001".chars().map(|c| c == '1').collect()),
+    );
+    assert_three_way(
+        "ctz",
+        "nodule d;\nfn main() => Binary{8} = ctz(0b0110_1000);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("00000011".chars().map(|c| c == '1').collect()),
+    );
+    // All-zero: clz = ctz = 8 (0b0000_1000), popcount = 0.
+    assert_three_way(
+        "clz all-zero is n",
+        "nodule d;\nfn main() => Binary{8} = clz(0b0000_0000);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("00001000".chars().map(|c| c == '1').collect()),
+    );
+}
+
 /// A width/paradigm mismatch (`Binary{8}` vs `Binary{1}`) is a **static** never-silent refusal —
 /// caught at check time, mirroring `add_u`/`sub_u`'s width-preserving contract.
 #[test]

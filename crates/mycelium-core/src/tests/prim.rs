@@ -128,10 +128,11 @@ fn builtins_are_present_and_resolvable() {
     // `Exact`, listed above with the rest of the `Exact` group). CU-1 added `bit.mul` (never-silent
     // unsigned multiply, RFC-0033 §4.1.2 — the `math.myc` FLAG-math-1 missing op), `Exact`. CU-2 added
     // the ADR-040 §2.5-mandated float classification predicates `flt.is_nan`/`flt.is_finite`/
-    // `flt.is_infinite` (unary `Float → Binary{1}`, `Empirical`), bringing Π to 63. (This supersedes
-    // the DN-56/DN-76 "Π = 38" figure, which predates the M-887…M-899 + CU-1/CU-2 landings — see
-    // DN-34 §8.15; those docs are FLAGged for an append-only count refresh.)
-    assert_eq!(t.entries().len(), 63);
+    // `flt.is_infinite` (unary `Float → Binary{1}`, `Empirical`). CU-6 added the bit-manipulation
+    // counts `bit.popcount`/`bit.clz`/`bit.ctz` (unary `Binary{N} → Binary{N}`, `Exact`), bringing
+    // Π to 66. (This supersedes the DN-56/DN-76 "Π = 38" figure, which predates the M-887…M-899 +
+    // CU-1/CU-2/CU-6 landings — see DN-34 §8.15; those docs are FLAGged for a count refresh.)
+    assert_eq!(t.entries().len(), 66);
 }
 
 // M-890 (`enb` Gap C): the dense elementwise group — the first non-`Exact` intrinsics in Π.
@@ -526,7 +527,7 @@ fn names_returns_registered_sorted_names() {
     // classification predicates — bringing Π to 63).
     assert_eq!(
         ns.len(),
-        63,
+        66,
         "names() count must match the builtin count: {ns:?}"
     );
     // Sorted (BTreeMap iteration is sorted).

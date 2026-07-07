@@ -207,6 +207,48 @@ pub fn mul_unsigned(a: &[bool], b: &[bool]) -> Option<Vec<bool>> {
     uint_to_bits(product as u64, n)
 }
 
+/// Encode a small count `c ∈ [0, n]` as an `n`-bit **MSB-first** unsigned value — arbitrary-width-
+/// safe. A bit-count never exceeds `n`, and every bit of its representation at position `≥ 64` is
+/// necessarily `0`, so this sidesteps the `>> ≥ 64` shift UB that [`uint_to_bits`] assumes away for
+/// its `n ≤ 64` domain — letting the width-preserving bit-manipulation ops below stay uncapped like
+/// the elementwise family (`bit.and`/`bit.not`), rather than borrowing `mul`'s arithmetic cap.
+fn count_to_bits(c: u64, n: usize) -> Vec<bool> {
+    let mut out = vec![false; n];
+    for (i, slot) in out.iter_mut().enumerate() {
+        let pos = n - 1 - i; // bit position from the LSB
+        if pos < 64 {
+            *slot = (c >> pos) & 1 == 1;
+        }
+        // pos ≥ 64 ⇒ the bit is 0 (c ≤ n, so c's set bits are all below position 64).
+    }
+    out
+}
+
+/// **Population count** of an `n`-bit bitvector — the number of `1` bits, as the `n`-bit unsigned
+/// count (CU-6; Rust `count_ones`). Total and width-preserving: `popcount ∈ [0, n]` always fits `n`
+/// bits (`n ≤ 2^n − 1` for `n ≥ 1`; `n = 0` ⇒ `0`). No signedness — a pure bit query.
+#[must_use]
+pub fn popcount(bits: &[bool]) -> Vec<bool> {
+    let c = bits.iter().filter(|&&b| b).count() as u64;
+    count_to_bits(c, bits.len())
+}
+
+/// **Count leading zeros** — the number of most-significant `0` bits before the first `1`
+/// (MSB-first), or `n` for the all-zero vector (CU-6; Rust `leading_zeros`). Total, width-preserving.
+#[must_use]
+pub fn clz(bits: &[bool]) -> Vec<bool> {
+    let c = bits.iter().take_while(|&&b| !b).count() as u64;
+    count_to_bits(c, bits.len())
+}
+
+/// **Count trailing zeros** — the number of least-significant `0` bits before the first `1`, or `n`
+/// for the all-zero vector (CU-6; Rust `trailing_zeros`). Total, width-preserving.
+#[must_use]
+pub fn ctz(bits: &[bool]) -> Vec<bool> {
+    let c = bits.iter().rev().take_while(|&&b| !b).count() as u64;
+    count_to_bits(c, bits.len())
+}
+
 /// The current [`div_rem`] operand-width cap (`n ≤ 64`) — exact via a `u64` unsigned magnitude, the
 /// same cap [`bits_to_uint`]/[`uint_to_bits`] already declare. Public so callers (the `bin.div`/
 /// `bin.rem` prims) can distinguish an over-cap *width* refusal from a *div-by-zero* refusal without
