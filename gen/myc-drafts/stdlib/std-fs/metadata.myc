@@ -26,6 +26,20 @@ type FileKind = File | Directory | Symlink | Other;
 type Permissions = Permissions(Binary{32});
 
 impl Permissions {
+  // Construct from raw Unix mode bits.
+  fn from_mode(mode: Binary{32}) => Permissions = Permissions(mode);
+  // The raw mode bits (preserved for tooling; not the primary interface — C3).
+  fn raw_mode(self: Permissions) => Binary{32} = (match self { Permissions(p0) => p0 });
+  // Whether the owner has read permission.
+  fn owner_read(self: Permissions) => Bool = (match self { Permissions(p0) => p0 }) & 256 != 0;
+  // Whether the owner has write permission.
+  fn owner_write(self: Permissions) => Bool = (match self { Permissions(p0) => p0 }) & 128 != 0;
+  // Whether the owner has execute permission.
+  fn owner_execute(self: Permissions) => Bool = (match self { Permissions(p0) => p0 }) & 64 != 0;
+  // Whether the group has read permission.
+  fn group_read(self: Permissions) => Bool = (match self { Permissions(p0) => p0 }) & 32 != 0;
+  // Whether others have read permission.
+  fn others_read(self: Permissions) => Bool = (match self { Permissions(p0) => p0 }) & 4 != 0;
   // Whether this entry is read-only for the owner (write bit not set).
   fn is_readonly(self: Permissions) => Bool = !owner_write(self);
 };
@@ -40,3 +54,14 @@ impl Permissions {
 // Timestamps are opaque `u64` (seconds since epoch). Interpretation of wall vs monotonic is
 // `std.time` (M-529), not `fs` (spec §2).
 type Metadata = Metadata(FileKind, Binary{64}, Permissions, Binary{64});
+
+impl Metadata {
+  // Construct a metadata value directly (used by the in-memory substrate).
+  fn new(kind: FileKind, size: Binary{64}, permissions: Permissions, mtime_secs: Binary{64}) => Metadata = Metadata(kind, size, permissions, mtime_secs);
+  // Whether this entry is a regular file.
+  fn is_file(self: Metadata) => Bool = (match self { Metadata(p0, _, _, _) => p0 }) == File;
+  // Whether this entry is a directory.
+  fn is_dir(self: Metadata) => Bool = (match self { Metadata(p0, _, _, _) => p0 }) == Directory;
+  // Whether this entry is a symbolic link.
+  fn is_symlink(self: Metadata) => Bool = (match self { Metadata(p0, _, _, _) => p0 }) == Symlink;
+};

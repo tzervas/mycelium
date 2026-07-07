@@ -4,7 +4,8 @@
     "FileKind",
     "Permissions",
     "impl Permissions",
-    "Metadata"
+    "Metadata",
+    "impl Metadata"
   ],
   "gaps": [
     {
@@ -41,70 +42,70 @@
       "file": "crates/mycelium-std-fs/src/metadata.rs",
       "line": 37,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "impl Permissions { # [doc = \" Construct from raw Unix mode bits.\"] # [must_use] pub fn from_mode (mode : u32) -> Self { Self { mode } } # [doc = \" The raw mode bits (preserved for tooling; not the primary interface — C3).\"] # [must_use] pub fn raw_mode (self) -> u32 { self . mode } # [doc = \" Whether the owner has read permission.\"] # [must_use] pub fn owner_read (self) -> bool { self . mode & 0o400 != 0 } # [doc = \" Whether the owner has write permission.\"] # [must_use] pub fn owner_write (self) -> bool { self . mode & 0o200 != 0 } # [doc = \" Whether the owner has execute permission.\"] # [must_use] pub fn owner_execute (self) -> bool { self . mode & 0o100 != 0 } # [doc = \" Whether the group has read permission.\"] # [must_use] pub fn group_read (self) -> bool { self . mode & 0o040 != 0 } # [doc = \" Whether others have read permission.\"] # [must_use] pub fn others_read (self) -> bool { self . mode & 0o004 != 0 } # [doc = \" Whether this entry is read-only for the owner (write bit not set).\"] # [must_use] pub fn is_readonly (self) -> bool { ! self . owner_write () } }",
-      "reason": "impl method `from_mode` body: unsupported expression form `Self { mode }`",
+      "reason": "dropped non-doc attribute(s) on method `from_mode`: # [must_use]",
       "item_name": "impl Permissions"
     },
     {
       "file": "crates/mycelium-std-fs/src/metadata.rs",
       "line": 37,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "impl Permissions { # [doc = \" Construct from raw Unix mode bits.\"] # [must_use] pub fn from_mode (mode : u32) -> Self { Self { mode } } # [doc = \" The raw mode bits (preserved for tooling; not the primary interface — C3).\"] # [must_use] pub fn raw_mode (self) -> u32 { self . mode } # [doc = \" Whether the owner has read permission.\"] # [must_use] pub fn owner_read (self) -> bool { self . mode & 0o400 != 0 } # [doc = \" Whether the owner has write permission.\"] # [must_use] pub fn owner_write (self) -> bool { self . mode & 0o200 != 0 } # [doc = \" Whether the owner has execute permission.\"] # [must_use] pub fn owner_execute (self) -> bool { self . mode & 0o100 != 0 } # [doc = \" Whether the group has read permission.\"] # [must_use] pub fn group_read (self) -> bool { self . mode & 0o040 != 0 } # [doc = \" Whether others have read permission.\"] # [must_use] pub fn others_read (self) -> bool { self . mode & 0o004 != 0 } # [doc = \" Whether this entry is read-only for the owner (write bit not set).\"] # [must_use] pub fn is_readonly (self) -> bool { ! self . owner_write () } }",
-      "reason": "impl method `raw_mode` body: unsupported expression form `self . mode`",
+      "reason": "dropped non-doc attribute(s) on method `raw_mode`: # [must_use]",
       "item_name": "impl Permissions"
     },
     {
       "file": "crates/mycelium-std-fs/src/metadata.rs",
       "line": 37,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "impl Permissions { # [doc = \" Construct from raw Unix mode bits.\"] # [must_use] pub fn from_mode (mode : u32) -> Self { Self { mode } } # [doc = \" The raw mode bits (preserved for tooling; not the primary interface — C3).\"] # [must_use] pub fn raw_mode (self) -> u32 { self . mode } # [doc = \" Whether the owner has read permission.\"] # [must_use] pub fn owner_read (self) -> bool { self . mode & 0o400 != 0 } # [doc = \" Whether the owner has write permission.\"] # [must_use] pub fn owner_write (self) -> bool { self . mode & 0o200 != 0 } # [doc = \" Whether the owner has execute permission.\"] # [must_use] pub fn owner_execute (self) -> bool { self . mode & 0o100 != 0 } # [doc = \" Whether the group has read permission.\"] # [must_use] pub fn group_read (self) -> bool { self . mode & 0o040 != 0 } # [doc = \" Whether others have read permission.\"] # [must_use] pub fn others_read (self) -> bool { self . mode & 0o004 != 0 } # [doc = \" Whether this entry is read-only for the owner (write bit not set).\"] # [must_use] pub fn is_readonly (self) -> bool { ! self . owner_write () } }",
-      "reason": "impl method `owner_read` body: unsupported expression form `self . mode`",
+      "reason": "dropped non-doc attribute(s) on method `owner_read`: # [must_use]",
       "item_name": "impl Permissions"
     },
     {
       "file": "crates/mycelium-std-fs/src/metadata.rs",
       "line": 37,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "impl Permissions { # [doc = \" Construct from raw Unix mode bits.\"] # [must_use] pub fn from_mode (mode : u32) -> Self { Self { mode } } # [doc = \" The raw mode bits (preserved for tooling; not the primary interface — C3).\"] # [must_use] pub fn raw_mode (self) -> u32 { self . mode } # [doc = \" Whether the owner has read permission.\"] # [must_use] pub fn owner_read (self) -> bool { self . mode & 0o400 != 0 } # [doc = \" Whether the owner has write permission.\"] # [must_use] pub fn owner_write (self) -> bool { self . mode & 0o200 != 0 } # [doc = \" Whether the owner has execute permission.\"] # [must_use] pub fn owner_execute (self) -> bool { self . mode & 0o100 != 0 } # [doc = \" Whether the group has read permission.\"] # [must_use] pub fn group_read (self) -> bool { self . mode & 0o040 != 0 } # [doc = \" Whether others have read permission.\"] # [must_use] pub fn others_read (self) -> bool { self . mode & 0o004 != 0 } # [doc = \" Whether this entry is read-only for the owner (write bit not set).\"] # [must_use] pub fn is_readonly (self) -> bool { ! self . owner_write () } }",
-      "reason": "impl method `owner_write` body: unsupported expression form `self . mode`",
+      "reason": "dropped non-doc attribute(s) on method `owner_write`: # [must_use]",
       "item_name": "impl Permissions"
     },
     {
       "file": "crates/mycelium-std-fs/src/metadata.rs",
       "line": 37,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "impl Permissions { # [doc = \" Construct from raw Unix mode bits.\"] # [must_use] pub fn from_mode (mode : u32) -> Self { Self { mode } } # [doc = \" The raw mode bits (preserved for tooling; not the primary interface — C3).\"] # [must_use] pub fn raw_mode (self) -> u32 { self . mode } # [doc = \" Whether the owner has read permission.\"] # [must_use] pub fn owner_read (self) -> bool { self . mode & 0o400 != 0 } # [doc = \" Whether the owner has write permission.\"] # [must_use] pub fn owner_write (self) -> bool { self . mode & 0o200 != 0 } # [doc = \" Whether the owner has execute permission.\"] # [must_use] pub fn owner_execute (self) -> bool { self . mode & 0o100 != 0 } # [doc = \" Whether the group has read permission.\"] # [must_use] pub fn group_read (self) -> bool { self . mode & 0o040 != 0 } # [doc = \" Whether others have read permission.\"] # [must_use] pub fn others_read (self) -> bool { self . mode & 0o004 != 0 } # [doc = \" Whether this entry is read-only for the owner (write bit not set).\"] # [must_use] pub fn is_readonly (self) -> bool { ! self . owner_write () } }",
-      "reason": "impl method `owner_execute` body: unsupported expression form `self . mode`",
+      "reason": "dropped non-doc attribute(s) on method `owner_execute`: # [must_use]",
       "item_name": "impl Permissions"
     },
     {
       "file": "crates/mycelium-std-fs/src/metadata.rs",
       "line": 37,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "impl Permissions { # [doc = \" Construct from raw Unix mode bits.\"] # [must_use] pub fn from_mode (mode : u32) -> Self { Self { mode } } # [doc = \" The raw mode bits (preserved for tooling; not the primary interface — C3).\"] # [must_use] pub fn raw_mode (self) -> u32 { self . mode } # [doc = \" Whether the owner has read permission.\"] # [must_use] pub fn owner_read (self) -> bool { self . mode & 0o400 != 0 } # [doc = \" Whether the owner has write permission.\"] # [must_use] pub fn owner_write (self) -> bool { self . mode & 0o200 != 0 } # [doc = \" Whether the owner has execute permission.\"] # [must_use] pub fn owner_execute (self) -> bool { self . mode & 0o100 != 0 } # [doc = \" Whether the group has read permission.\"] # [must_use] pub fn group_read (self) -> bool { self . mode & 0o040 != 0 } # [doc = \" Whether others have read permission.\"] # [must_use] pub fn others_read (self) -> bool { self . mode & 0o004 != 0 } # [doc = \" Whether this entry is read-only for the owner (write bit not set).\"] # [must_use] pub fn is_readonly (self) -> bool { ! self . owner_write () } }",
-      "reason": "impl method `group_read` body: unsupported expression form `self . mode`",
+      "reason": "dropped non-doc attribute(s) on method `group_read`: # [must_use]",
       "item_name": "impl Permissions"
     },
     {
       "file": "crates/mycelium-std-fs/src/metadata.rs",
       "line": 37,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "impl Permissions { # [doc = \" Construct from raw Unix mode bits.\"] # [must_use] pub fn from_mode (mode : u32) -> Self { Self { mode } } # [doc = \" The raw mode bits (preserved for tooling; not the primary interface — C3).\"] # [must_use] pub fn raw_mode (self) -> u32 { self . mode } # [doc = \" Whether the owner has read permission.\"] # [must_use] pub fn owner_read (self) -> bool { self . mode & 0o400 != 0 } # [doc = \" Whether the owner has write permission.\"] # [must_use] pub fn owner_write (self) -> bool { self . mode & 0o200 != 0 } # [doc = \" Whether the owner has execute permission.\"] # [must_use] pub fn owner_execute (self) -> bool { self . mode & 0o100 != 0 } # [doc = \" Whether the group has read permission.\"] # [must_use] pub fn group_read (self) -> bool { self . mode & 0o040 != 0 } # [doc = \" Whether others have read permission.\"] # [must_use] pub fn others_read (self) -> bool { self . mode & 0o004 != 0 } # [doc = \" Whether this entry is read-only for the owner (write bit not set).\"] # [must_use] pub fn is_readonly (self) -> bool { ! self . owner_write () } }",
-      "reason": "impl method `others_read` body: unsupported expression form `self . mode`",
+      "reason": "dropped non-doc attribute(s) on method `others_read`: # [must_use]",
       "item_name": "impl Permissions"
     },
     {
@@ -141,11 +142,41 @@
       "file": "crates/mycelium-std-fs/src/metadata.rs",
       "line": 112,
       "col": 1,
-      "category": "Impl",
-      "rust_construct": "Impl",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "impl Metadata { # [doc = \" Construct a metadata value directly (used by the in-memory substrate).\"] # [must_use] pub fn new (kind : FileKind , size : u64 , permissions : Permissions , mtime_secs : u64) -> Self { Self { kind , size , permissions , mtime_secs , } } # [doc = \" Whether this entry is a regular file.\"] # [must_use] pub fn is_file (& self) -> bool { self . kind == FileKind :: File } # [doc = \" Whether this entry is a directory.\"] # [must_use] pub fn is_dir (& self) -> bool { self . kind == FileKind :: Directory } # [doc = \" Whether this entry is a symbolic link.\"] # [must_use] pub fn is_symlink (& self) -> bool { self . kind == FileKind :: Symlink } }",
-      "reason": "no member of this impl block could be transpiled (4 sub-issue(s)): impl method `new` body: unsupported expression form `Self { kind , size , permissions , mtime_secs , }`; impl method `is_file` body: unsupported expression form `self . kind`; impl method `is_dir` body: unsupported expression form `self . kind`; impl method `is_symlink` body: unsupported expression form `self . kind`",
-      "item_name": "Metadata"
+      "reason": "dropped non-doc attribute(s) on method `new`: # [must_use]",
+      "item_name": "impl Metadata"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/metadata.rs",
+      "line": 112,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "impl Metadata { # [doc = \" Construct a metadata value directly (used by the in-memory substrate).\"] # [must_use] pub fn new (kind : FileKind , size : u64 , permissions : Permissions , mtime_secs : u64) -> Self { Self { kind , size , permissions , mtime_secs , } } # [doc = \" Whether this entry is a regular file.\"] # [must_use] pub fn is_file (& self) -> bool { self . kind == FileKind :: File } # [doc = \" Whether this entry is a directory.\"] # [must_use] pub fn is_dir (& self) -> bool { self . kind == FileKind :: Directory } # [doc = \" Whether this entry is a symbolic link.\"] # [must_use] pub fn is_symlink (& self) -> bool { self . kind == FileKind :: Symlink } }",
+      "reason": "dropped non-doc attribute(s) on method `is_file`: # [must_use]",
+      "item_name": "impl Metadata"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/metadata.rs",
+      "line": 112,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "impl Metadata { # [doc = \" Construct a metadata value directly (used by the in-memory substrate).\"] # [must_use] pub fn new (kind : FileKind , size : u64 , permissions : Permissions , mtime_secs : u64) -> Self { Self { kind , size , permissions , mtime_secs , } } # [doc = \" Whether this entry is a regular file.\"] # [must_use] pub fn is_file (& self) -> bool { self . kind == FileKind :: File } # [doc = \" Whether this entry is a directory.\"] # [must_use] pub fn is_dir (& self) -> bool { self . kind == FileKind :: Directory } # [doc = \" Whether this entry is a symbolic link.\"] # [must_use] pub fn is_symlink (& self) -> bool { self . kind == FileKind :: Symlink } }",
+      "reason": "dropped non-doc attribute(s) on method `is_dir`: # [must_use]",
+      "item_name": "impl Metadata"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/metadata.rs",
+      "line": 112,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "impl Metadata { # [doc = \" Construct a metadata value directly (used by the in-memory substrate).\"] # [must_use] pub fn new (kind : FileKind , size : u64 , permissions : Permissions , mtime_secs : u64) -> Self { Self { kind , size , permissions , mtime_secs , } } # [doc = \" Whether this entry is a regular file.\"] # [must_use] pub fn is_file (& self) -> bool { self . kind == FileKind :: File } # [doc = \" Whether this entry is a directory.\"] # [must_use] pub fn is_dir (& self) -> bool { self . kind == FileKind :: Directory } # [doc = \" Whether this entry is a symbolic link.\"] # [must_use] pub fn is_symlink (& self) -> bool { self . kind == FileKind :: Symlink } }",
+      "reason": "dropped non-doc attribute(s) on method `is_symlink`: # [must_use]",
+      "item_name": "impl Metadata"
     },
     {
       "file": "crates/mycelium-std-fs/src/metadata.rs",

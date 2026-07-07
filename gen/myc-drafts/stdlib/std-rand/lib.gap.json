@@ -5,7 +5,8 @@
     "EntropyEffect",
     "RngAlgo",
     "rotl64",
-    "StubEntropy"
+    "StubEntropy",
+    "impl StubEntropy"
   ],
   "gaps": [
     {
@@ -105,7 +106,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl Rng { # [doc = \" Construct an `Rng` from raw state, or `None` if the state is invalid (all-zero).\"] # [doc = \"\"] # [doc = \" This is the low-level constructor; prefer [`seed`] for user-facing construction.\"] fn from_state (state : [u64 ; 4]) -> Option < Self > { if state == [0u64 ; 4] { None } else { Some (Rng { algo : RngAlgo :: Xoshiro256PlusPlus , state , }) } } # [doc = \" The current raw state (inspectable; C3).\"] # [must_use] pub fn state (& self) -> [u64 ; 4] { self . state } # [doc = \" The algorithm this generator uses (inspectable; C3).\"] # [must_use] pub fn algo (& self) -> RngAlgo { self . algo } }",
-      "reason": "no member of this impl block could be transpiled (3 sub-issue(s)): impl method `from_state` signature: unsupported Rust type form `[u64 ; 4]`; impl method `state` signature: unsupported Rust type form `[u64 ; 4]`; impl method `algo` body: unsupported expression form `self . algo`",
+      "reason": "no member of this impl block could be transpiled (3 sub-issue(s)): impl method `from_state` signature: unsupported Rust type form `[u64 ; 4]`; impl method `state` signature: unsupported Rust type form `[u64 ; 4]`; impl method `algo` body: field projection `self.algo` on `Rng` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against)",
       "item_name": "Rng"
     },
     {
@@ -312,11 +313,11 @@
       "file": "crates/mycelium-std-rand/src/lib.rs",
       "line": 683,
       "col": 1,
-      "category": "Impl",
-      "rust_construct": "Impl",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "impl StubEntropy { # [doc = \" Build a new stub with the given starting byte.\"] # [must_use] pub fn new (start : u8) -> Self { StubEntropy { counter : start } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `new` body: unsupported expression form `StubEntropy { counter : start }`",
-      "item_name": "StubEntropy"
+      "reason": "dropped non-doc attribute(s) on method `new`: # [must_use]",
+      "item_name": "impl StubEntropy"
     },
     {
       "file": "crates/mycelium-std-rand/src/lib.rs",

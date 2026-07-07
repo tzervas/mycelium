@@ -124,6 +124,13 @@ type DeclaredTimeEntropy[T] = DeclaredTimeEntropy(T);
 // computation. A MONOTONIC clock read declares effect `time` (not `entropy`).
 type MonoInstant = MonoInstant(Binary{64});
 
+impl MonoInstant {
+  // Construct from a raw nanosecond tick (used by [`ClockSource`] implementations).
+  fn from_nanos(nanos: Binary{64}) => MonoInstant = MonoInstant(nanos);
+  // The raw nanosecond tick (canonical representation — exact, total).
+  fn as_nanos(self: MonoInstant) => Binary{64} = (match self { MonoInstant(p0) => p0 });
+};
+
 // A point on the RFC-0008 LOGICAL clock (a deterministic monotonic tick the runtime advances).
 //
 // The LOGICAL clock is the **only** time source legible to the deterministic fragment (RT2),
@@ -141,6 +148,13 @@ type MonoInstant = MonoInstant(Binary{64});
 // advancement semantics are **all deferred to M-521/M-356**. This crate provides the thin typed
 // wrapper only; the orchestrator wires it to the real runtime clock when that API lands.
 type LogicalInstant = LogicalInstant(Binary{64});
+
+impl LogicalInstant {
+  // Construct from a logical tick (used by [`ClockSource`] implementations).
+  fn from_tick(tick: Binary{64}) => LogicalInstant = LogicalInstant(tick);
+  // The raw tick value (exact, total).
+  fn as_tick(self: LogicalInstant) => Binary{64} = (match self { LogicalInstant(p0) => p0 });
+};
 
 // A [`ClockSource`] backed by Rust's `std::time` — the **std-sys placeholder** (FLAG §7-Q3).
 //

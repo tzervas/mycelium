@@ -1,6 +1,6 @@
 {
   "epic": "E33-1",
-  "generated_from_commit": "f765078158ea4fe109f84af825ef36bb836e7a0f",
+  "generated_from_commit": "cc0cf8d83bf4c7ab461c2bd0b7c74f5442aa2ef7",
   "kickoff": "trx2",
   "schema_version": 1,
   "targets": [
@@ -20,7 +20,7 @@
       "rust_sources": [
         {
           "path": "crates/mycelium-l1/src/checkty.rs",
-          "sha256": "8c68431a6ed4fa09e4006cf2456151dab9514364de371e57943b2f558c6a1ea4"
+          "sha256": "37b2083222e3c473479a025b4029b421d99c37f604ab64f9e86f5959d0783ca1"
         }
       ],
       "stats": {
@@ -293,12 +293,13 @@
     {
       "file_count": 7,
       "gap_category_counts": {
-        "DeriveAttr": 10,
-        "Impl": 12,
+        "DeriveAttr": 23,
+        "Impl": 10,
         "Import": 12,
         "MacroInvocation": 1,
+        "MultiStmtBody": 6,
         "NamedFieldDrop": 3,
-        "Other": 17,
+        "Other": 12,
         "PayloadVariant": 2,
         "Struct": 7,
         "TestItem": 7
@@ -337,19 +338,19 @@
         }
       ],
       "stats": {
-        "checked_clean_items": 6,
-        "checked_fraction_pct": 11.32,
-        "emitted_items": 10,
-        "expressible_fraction_pct": 18.87,
-        "gap_count": 71,
+        "checked_clean_items": 5,
+        "checked_fraction_pct": 9.43,
+        "emitted_items": 12,
+        "expressible_fraction_pct": 22.64,
+        "gap_count": 83,
         "non_test_items": 53,
         "total_top_level_items": 60
       },
       "status": "ok",
       "target": "stdlib/std-fs",
       "vet_class_counts": {
-        "CheckError": 1,
-        "Clean": 6
+        "CheckError": 2,
+        "Clean": 5
       }
     },
     {
@@ -450,9 +451,9 @@
     {
       "file_count": 1,
       "gap_category_counts": {
-        "DeriveAttr": 4,
+        "DeriveAttr": 5,
         "GenericBound": 5,
-        "Impl": 4,
+        "Impl": 3,
         "Import": 1,
         "MacroInvocation": 1,
         "MultiStmtBody": 4,
@@ -475,8 +476,8 @@
       "stats": {
         "checked_clean_items": 0,
         "checked_fraction_pct": 0.0,
-        "emitted_items": 5,
-        "expressible_fraction_pct": 14.71,
+        "emitted_items": 6,
+        "expressible_fraction_pct": 17.65,
         "gap_count": 36,
         "non_test_items": 34,
         "total_top_level_items": 35
@@ -490,13 +491,13 @@
     {
       "file_count": 14,
       "gap_category_counts": {
-        "DeriveAttr": 15,
+        "DeriveAttr": 21,
         "GenericBound": 12,
-        "Impl": 28,
+        "Impl": 27,
         "Import": 28,
         "MultiStmtBody": 1,
         "NamedFieldDrop": 1,
-        "Other": 39,
+        "Other": 34,
         "PayloadVariant": 3,
         "Struct": 21,
         "TestItem": 3,
@@ -564,10 +565,10 @@
         }
       ],
       "stats": {
-        "checked_clean_items": 10,
-        "checked_fraction_pct": 6.9,
-        "emitted_items": 19,
-        "expressible_fraction_pct": 13.1,
+        "checked_clean_items": 11,
+        "checked_fraction_pct": 7.59,
+        "emitted_items": 20,
+        "expressible_fraction_pct": 13.79,
         "gap_count": 152,
         "non_test_items": 145,
         "total_top_level_items": 148
@@ -682,9 +683,9 @@
     {
       "file_count": 1,
       "gap_category_counts": {
-        "DeriveAttr": 5,
+        "DeriveAttr": 9,
         "GenericBound": 2,
-        "Impl": 9,
+        "Impl": 7,
         "Import": 1,
         "MacroInvocation": 1,
         "MultiStmtBody": 1,
@@ -705,11 +706,11 @@
         }
       ],
       "stats": {
-        "checked_clean_items": 5,
-        "checked_fraction_pct": 13.51,
-        "emitted_items": 5,
-        "expressible_fraction_pct": 13.51,
-        "gap_count": 41,
+        "checked_clean_items": 7,
+        "checked_fraction_pct": 18.92,
+        "emitted_items": 7,
+        "expressible_fraction_pct": 18.92,
+        "gap_count": 43,
         "non_test_items": 37,
         "total_top_level_items": 38
       },

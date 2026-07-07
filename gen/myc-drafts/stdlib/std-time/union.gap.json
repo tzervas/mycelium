@@ -107,7 +107,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl Duration { # [doc = \" The zero span.\"] pub const ZERO : Duration = Duration { nanos : 0 } ; # [doc = \" The smallest representable (most-negative) span.\"] pub const MIN : Duration = Duration { nanos : i128 :: MIN } ; # [doc = \" The largest representable (most-positive) span.\"] pub const MAX : Duration = Duration { nanos : i128 :: MAX } ; # [doc = \" Construct from a nanosecond count (value-semantic constructor — always exact).\"] # [must_use] pub const fn from_nanos (nanos : i128) -> Self { Duration { nanos } } # [doc = \" Construct from whole seconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_secs (secs : i64) -> Result < Self , TimeErr > { let nanos = (secs as i128) . checked_mul (1_000_000_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" Construct from milliseconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_millis (millis : i64) -> Result < Self , TimeErr > { let nanos = (millis as i128) . checked_mul (1_000_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" Construct from microseconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_micros (micros : i64) -> Result < Self , TimeErr > { let nanos = (micros as i128) . checked_mul (1_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" The raw nanosecond count (exact, total — the canonical representation).\"] # [must_use] pub const fn as_nanos (self) -> i128 { self . nanos } # [doc = \" Truncating whole-second count (rounds toward zero).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" - [`TimeErr::Overflow`] when the whole-second count falls outside the `i64` range. The\"] # [doc = \"   nanosecond field is `i128` (up to [`Duration::MAX`]), so the second count can exceed\"] # [doc = \"   `i64`; it is refused rather than silently truncated (C1/G2).\"] pub const fn as_secs_trunc (self) -> Result < i64 , TimeErr > { let secs = self . nanos / 1_000_000_000 ; if secs < i64 :: MIN as i128 || secs > i64 :: MAX as i128 { return Err (TimeErr :: Overflow) ; } Ok (secs as i64) } # [doc = \" Whether this span is negative.\"] # [must_use] pub const fn is_negative (self) -> bool { self . nanos < 0 } # [doc = \" Whether this span is zero.\"] # [must_use] pub const fn is_zero (self) -> bool { self . nanos == 0 } # [doc = \" Negate the span. Returns `Err(Overflow)` for `Duration::MIN` (C1/G2).\"] # [doc = \"\"] # [doc = \" Named `checked_neg` rather than `neg` to avoid ambiguity with `std::ops::Neg`\"] # [doc = \" (which cannot be implemented here because negation is fallible — C1/G2).\"] pub fn checked_neg (self) -> Result < Duration , TimeErr > { self . nanos . checked_neg () . map (| n | Duration { nanos : n }) . ok_or (TimeErr :: Overflow) } # [doc = \" Absolute value of the span. Returns `Err(Overflow)` for `Duration::MIN` (C1/G2).\"] # [doc = \"\"] # [doc = \" Named `checked_abs` to match the `checked_*` pattern; `i128::MIN.abs()` would overflow.\"] pub fn checked_abs (self) -> Result < Duration , TimeErr > { self . nanos . checked_abs () . map (| n | Duration { nanos : n }) . ok_or (TimeErr :: Overflow) } }",
-      "reason": "no member of this impl block could be transpiled (13 sub-issue(s)): impl associated const `ZERO`; impl associated const `MIN`; impl associated const `MAX`; impl method `from_nanos` signature: signed integer `i128` — Binary{N} is documented unsigned-magnitude (lib/std/cmp.myc); mapping a signed type onto it would misrepresent twos-complement semantics, so this is left an explicit gap rather than guessed (VR-5); impl method `from_secs` signature: signed integer `i64` — Binary{N} is documented unsigned-magnitude (lib/std/cmp.myc); mapping a signed type onto it would misrepresent twos-complement semantics, so this is left an explicit gap rather than guessed (VR-5); impl method `from_millis` signature: signed integer `i64` — Binary{N} is documented unsigned-magnitude (lib/std/cmp.myc); mapping a signed type onto it would misrepresent twos-complement semantics, so this is left an explicit gap rather than guessed (VR-5); impl method `from_micros` signature: signed integer `i64` — Binary{N} is documented unsigned-magnitude (lib/std/cmp.myc); mapping a signed type onto it would misrepresent twos-complement semantics, so this is left an explicit gap rather than guessed (VR-5); impl method `as_nanos` signature: signed integer `i128` — Binary{N} is documented unsigned-magnitude (lib/std/cmp.myc); mapping a signed type onto it would misrepresent twos-complement semantics, so this is left an explicit gap rather than guessed (VR-5); impl method `as_secs_trunc` signature: signed integer `i64` — Binary{N} is documented unsigned-magnitude (lib/std/cmp.myc); mapping a signed type onto it would misrepresent twos-complement semantics, so this is left an explicit gap rather than guessed (VR-5); impl method `is_negative` body: unsupported expression form `self . nanos`; impl method `is_zero` body: unsupported expression form `self . nanos`; impl method `checked_neg` body: unsupported expression form `self . nanos`; impl method `checked_abs` body: unsupported expression form `self . nanos`",
+      "reason": "no member of this impl block could be transpiled (13 sub-issue(s)): impl associated const `ZERO`; impl associated const `MIN`; impl associated const `MAX`; impl method `from_nanos` signature: signed integer `i128` — Binary{N} is documented unsigned-magnitude (lib/std/cmp.myc); mapping a signed type onto it would misrepresent twos-complement semantics, so this is left an explicit gap rather than guessed (VR-5); impl method `from_secs` signature: signed integer `i64` — Binary{N} is documented unsigned-magnitude (lib/std/cmp.myc); mapping a signed type onto it would misrepresent twos-complement semantics, so this is left an explicit gap rather than guessed (VR-5); impl method `from_millis` signature: signed integer `i64` — Binary{N} is documented unsigned-magnitude (lib/std/cmp.myc); mapping a signed type onto it would misrepresent twos-complement semantics, so this is left an explicit gap rather than guessed (VR-5); impl method `from_micros` signature: signed integer `i64` — Binary{N} is documented unsigned-magnitude (lib/std/cmp.myc); mapping a signed type onto it would misrepresent twos-complement semantics, so this is left an explicit gap rather than guessed (VR-5); impl method `as_nanos` signature: signed integer `i128` — Binary{N} is documented unsigned-magnitude (lib/std/cmp.myc); mapping a signed type onto it would misrepresent twos-complement semantics, so this is left an explicit gap rather than guessed (VR-5); impl method `as_secs_trunc` signature: signed integer `i64` — Binary{N} is documented unsigned-magnitude (lib/std/cmp.myc); mapping a signed type onto it would misrepresent twos-complement semantics, so this is left an explicit gap rather than guessed (VR-5); impl method `is_negative` body: field projection `self.nanos` on `Duration` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against); impl method `is_zero` body: field projection `self.nanos` on `Duration` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against); impl method `checked_neg` body: field projection `self.nanos` on `Duration` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against); impl method `checked_abs` body: field projection `self.nanos` on `Duration` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against)",
       "item_name": "Duration"
     },
     {
@@ -134,11 +134,21 @@
       "file": "crates/mycelium-std-time/src/lib.rs",
       "line": 331,
       "col": 1,
-      "category": "Impl",
-      "rust_construct": "Impl",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "impl MonoInstant { # [doc = \" Construct from a raw nanosecond tick (used by [`ClockSource`] implementations).\"] # [must_use] pub const fn from_nanos (nanos : u64) -> Self { MonoInstant { nanos } } # [doc = \" The raw nanosecond tick (canonical representation — exact, total).\"] # [must_use] pub const fn as_nanos (self) -> u64 { self . nanos } }",
-      "reason": "no member of this impl block could be transpiled (2 sub-issue(s)): impl method `from_nanos` body: unsupported expression form `MonoInstant { nanos }`; impl method `as_nanos` body: unsupported expression form `self . nanos`",
-      "item_name": "MonoInstant"
+      "reason": "dropped non-doc attribute(s) on method `from_nanos`: # [must_use]",
+      "item_name": "impl MonoInstant"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 331,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "impl MonoInstant { # [doc = \" Construct from a raw nanosecond tick (used by [`ClockSource`] implementations).\"] # [must_use] pub const fn from_nanos (nanos : u64) -> Self { MonoInstant { nanos } } # [doc = \" The raw nanosecond tick (canonical representation — exact, total).\"] # [must_use] pub const fn as_nanos (self) -> u64 { self . nanos } }",
+      "reason": "dropped non-doc attribute(s) on method `as_nanos`: # [must_use]",
+      "item_name": "impl MonoInstant"
     },
     {
       "file": "crates/mycelium-std-time/src/lib.rs",
@@ -184,11 +194,21 @@
       "file": "crates/mycelium-std-time/src/lib.rs",
       "line": 399,
       "col": 1,
-      "category": "Impl",
-      "rust_construct": "Impl",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "impl LogicalInstant { # [doc = \" Construct from a logical tick (used by [`ClockSource`] implementations).\"] # [must_use] pub const fn from_tick (tick : u64) -> Self { LogicalInstant { tick } } # [doc = \" The raw tick value (exact, total).\"] # [must_use] pub const fn as_tick (self) -> u64 { self . tick } }",
-      "reason": "no member of this impl block could be transpiled (2 sub-issue(s)): impl method `from_tick` body: unsupported expression form `LogicalInstant { tick }`; impl method `as_tick` body: unsupported expression form `self . tick`",
-      "item_name": "LogicalInstant"
+      "reason": "dropped non-doc attribute(s) on method `from_tick`: # [must_use]",
+      "item_name": "impl LogicalInstant"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 399,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "impl LogicalInstant { # [doc = \" Construct from a logical tick (used by [`ClockSource`] implementations).\"] # [must_use] pub const fn from_tick (tick : u64) -> Self { LogicalInstant { tick } } # [doc = \" The raw tick value (exact, total).\"] # [must_use] pub const fn as_tick (self) -> u64 { self . tick } }",
+      "reason": "dropped non-doc attribute(s) on method `as_tick`: # [must_use]",
+      "item_name": "impl LogicalInstant"
     },
     {
       "file": "crates/mycelium-std-time/src/lib.rs",
@@ -197,7 +217,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Add two durations. Returns `Err(Overflow)` on range exhaustion — **never** wraps (C1/G2).\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Exact`** — exact integer arithmetic; fallibility is the overflow guard.\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" - [`TimeErr::Overflow`] — the result is outside the representable range.\"] pub fn duration_add (a : Duration , b : Duration) -> Result < Duration , TimeErr > { a . nanos . checked_add (b . nanos) . map (| n | Duration { nanos : n }) . ok_or (TimeErr :: Overflow) }",
-      "reason": "unsupported expression form `a . nanos`",
+      "reason": "field access on a non-`self` base — the transpiler tracks no local types, so the projection cannot be resolved to a constructor position (only `self.<field>` desugars to a `match`)",
       "item_name": "duration_add"
     },
     {
@@ -207,7 +227,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Subtract two durations (`a - b`). Returns `Err(Overflow)` on range exhaustion (C1/G2).\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Exact`** — exact integer arithmetic.\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" - [`TimeErr::Overflow`] — the result is outside the representable range.\"] pub fn duration_sub (a : Duration , b : Duration) -> Result < Duration , TimeErr > { a . nanos . checked_sub (b . nanos) . map (| n | Duration { nanos : n }) . ok_or (TimeErr :: Overflow) }",
-      "reason": "unsupported expression form `a . nanos`",
+      "reason": "field access on a non-`self` base — the transpiler tracks no local types, so the projection cannot be resolved to a constructor position (only `self.<field>` desugars to a `match`)",
       "item_name": "duration_sub"
     },
     {
@@ -412,9 +432,9 @@
     }
   ],
   "category_counts": {
-    "DeriveAttr": 5,
+    "DeriveAttr": 9,
     "GenericBound": 2,
-    "Impl": 9,
+    "Impl": 7,
     "Import": 1,
     "MacroInvocation": 1,
     "MultiStmtBody": 1,

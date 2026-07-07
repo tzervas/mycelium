@@ -126,3 +126,8 @@ fn rotl64(x: Binary{64}, k: Binary{32}) => Binary{64} = rotate_left(x, k);
 //
 // FLAG (Q4 / §8-Q6): real OS entropy is in `std-sys` (M-541). This stub is the test seam.
 type StubEntropy = StubEntropy(Binary{8});
+
+impl StubEntropy {
+  // Build a new stub with the given starting byte.
+  fn new(start: Binary{8}) => StubEntropy = StubEntropy(start);
+};

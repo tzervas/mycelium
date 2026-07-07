@@ -2,6 +2,7 @@
   "source": "crates/mycelium-std-runtime/src/task.rs",
   "emitted_items": [
     "TaskCtx",
+    "impl TaskCtx",
     "Poll",
     "SweepOrder"
   ],
@@ -80,11 +81,11 @@
       "file": "crates/mycelium-std-runtime/src/task.rs",
       "line": 51,
       "col": 1,
-      "category": "Impl",
-      "rust_construct": "Impl",
+      "category": "Other",
+      "rust_construct": "Other",
       "snippet": "impl TaskCtx { pub fn new () -> Self { TaskCtx { cancelled : false } } # [doc = \" Returns `true` if this task's scope has been cancelled.\"] pub fn is_cancelled (& self) -> bool { self . cancelled } # [doc = \" Cancel this context (used by `Scope` when cancellation is requested).\"] pub fn cancel (& mut self) { self . cancelled = true ; } }",
-      "reason": "no member of this impl block could be transpiled (3 sub-issue(s)): impl method `new` body: unsupported expression form `TaskCtx { cancelled : false }`; impl method `is_cancelled` body: unsupported expression form `self . cancelled`; impl method `cancel` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence",
-      "item_name": "TaskCtx"
+      "reason": "impl method `cancel` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence",
+      "item_name": "impl TaskCtx"
     },
     {
       "file": "crates/mycelium-std-runtime/src/task.rs",

@@ -113,7 +113,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl Progress { # [doc = \" A fresh counter at epoch 0.\"] # [must_use] pub fn new () -> Self { Progress { epoch : AtomicU64 :: new (0) , } } # [doc = \" Record one unit of channel progress (a successful send or recv).\"] pub fn bump (& self) { self . epoch . fetch_add (1 , Ordering :: SeqCst) ; } # [doc = \" The current epoch (monotone).\"] # [must_use] pub fn epoch (& self) -> u64 { self . epoch . load (Ordering :: SeqCst) } }",
-      "reason": "no member of this impl block could be transpiled (3 sub-issue(s)): impl method `new` body: unsupported expression form `Progress { epoch : AtomicU64 :: new (0) , }`; impl method `bump` signature: function has no return type (implicit `()`) — no unit value is representable in this grammar fragment; impl method `epoch` body: unsupported expression form `self . epoch`",
+      "reason": "no member of this impl block could be transpiled (3 sub-issue(s)): impl method `new` body: struct literal `Progress { .. }` — not an in-file single-ctor struct that emits (no constructor to build); impl method `bump` signature: function has no return type (implicit `()`) — no unit value is representable in this grammar fragment; impl method `epoch` body: field projection `self.epoch` on `Progress` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against)",
       "item_name": "Progress"
     },
     {
