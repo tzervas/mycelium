@@ -13,8 +13,10 @@
 > makes a large, long-horizon goal explicit **without** upgrading any guarantee: a transpiled artifact
 > stays `Declared` until a per-language differential vets it (the M-991 discipline generalized), and a
 > **binding** or a **reverse-engineered reimplementation** is *never* labeled a faithful transpile —
-> its provenance tag says exactly what it is. Nothing here is tag-gating for `lang 1.0.0` (ADR-036 —
-> the self-hosting/rewrite tracks gate the public release, not this program).
+> its provenance tag says exactly what it is. Nothing here is tag-gating for `lang 1.0.0`
+> (ADR-036 §2.1–§2.2 — not tag-gating; the public release is separately gated on **functional
+> usability** per **ADR-038**, decoupled from self-hosting/rewrite completion, which continues
+> post-public as ADR-038 Phase II).
 
 ---
 
