@@ -503,8 +503,8 @@ both sides, so derived `==` is total and identity-faithful — the honest, suffi
 `==` becomes unsound at the first float-bearing increment (`RFloat`/`RDense`/`RVsa` with a real `f64`
 payload): a `NaN` payload is unequal to itself under `==` (failing `assert_eq!` against itself), and
 signed-zero conflates bit-distinct identities. At that point the value comparison switches to
-**content-hash equality** (`CoreValue::Repr(v).content_hash()`, which normalizes `NaN` and excludes
-`Meta` — there is no `Value::content_hash`), the posture §10 originally described. Recorded here so the
+**content-hash equality** (`Value::content_hash` — `mycelium_core::content` — which excludes `Meta`
+and normalizes `NaN`; RFC-0001 §4.6), the posture §10 originally described. Recorded here so the
 switch is a planned, never-silent step (VR-5/G2).
 
 ## Meta — changelog
