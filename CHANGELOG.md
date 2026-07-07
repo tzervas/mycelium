@@ -11,6 +11,20 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### DN-85 — Multi-language transpiler front-ends strategy note (2026-07-06)
+
+New design note (Draft) capturing the maintainer's goal to extend the transpiler to ingest **Python**
+(then TypeScript, Java) alongside Rust — an accelerated path to port the Python math/sci/ML corpus.
+Grounds the **front-end-abstraction** architecture in the current `mycelium-transpile` split (`gap.rs`
++ `vet.rs` + emit are already language-neutral; only `transpile.rs`/`emit.rs`/`map.rs` are `syn`-coupled)
+and transfers the trx2 M-1006 ladder as the method. Per house rule #4 it states the boundaries
+honestly rather than affirming the vision whole: Python's dynamic typing lowers the initial ceiling
+(§4.1); the **C/CUDA library cores of numpy/scipy/pytorch are not Python source and do not transpile**
+(§4.2 — the port is two-part: transpile the Python layer + a separate Mycelium-native/FFI compute
+track); and follow-on work is bounded by Mycelium surface coverage, not transpiler polish (§4.3). Also
+records the "run the toolchain against the self-hosted `.myc` codebase" goal (§5) as a `boot10`/DN-26
+dependency. Ids proposed, not minted; decides nothing normatively. `docs/notes/DN-85`, Doc-Index registered.
+
 ### M-1006 phase-1 — transpiler hardening against the DN-34 §8.9 gap worklist (2026-07-06)
 
 First phase of the M-1006 whole-corpus rip-through ladder (kickoff `trx2` E-B, epic E33-1), run as
