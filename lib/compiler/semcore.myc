@@ -2312,6 +2312,202 @@ fn register_types(types: Vec[DataInfo], nod: Nodule) => Result[Vec[DataInfo], By
     Ok(shelled) => fill_ctors(shelled, items)
   };
 
+// ── register_traits: the TRAIT pass (checkty.rs::register_traits 3016-3083; M-1013 STEP 3) ─────────
+// Ports checkty.rs's two-pass trait registration, value-threaded over an assoc-list registry
+// `Vec[TraitInfo]` (the FLAG-semcore-4 stand-in for `BTreeMap<String, TraitInfo>`, exactly as
+// `register_types` stands in for the types map). Arm-for-arm with the oracle:
+//   * PASS 1 (`register_traits_pass1`, mirroring checkty.rs 3021-3057) — for each `Item::Trait(td)`:
+//     reject a duplicate type PARAMETER (`first_duplicate(td.params)`, 3024), a duplicate trait NAME
+//     (`traits.contains_key`, 3030), and a within-trait duplicate METHOD name (3034-3041); then check
+//     every method signature RESOLVES with the trait's params extended by the method's OWN type-param
+//     names in scope as tyvars (3042-3047), and insert `TraitInfo{name, params, sigs}` (3049-3056).
+//   * PASS 2 (`register_traits_bounds`, mirroring checkty.rs 3063-3081) — over the COMPLETE registry,
+//     so a bound may forward-reference a later trait: every method type-parameter BOUND must name a
+//     KNOWN trait (3067). An unknown bound is an explicit never-silent `Err` (G2/VR-5), never a
+//     silently-registered ill-formed requirement.
+// Registry ORDER is insertion-reversed (prepend `Cons`) vs the oracle's sorted `BTreeMap`; every
+// consumer here is order-insensitive (`traits_contains` is set-membership; the differential decodes
+// the returned `Vec` into a name-keyed map), and pass 2 returns Ok or the FIRST refusal only — so the
+// port and the oracle agree on Ok / any-refusal regardless of order. Guarantee: `Declared` (a
+// structural registry check, not a theorem — checkty.rs 3010's LR-2 tag).
+
+// TraitInfo: mirrors checkty.rs::TraitInfo (264-272) — { name, params (tyvar names), sigs (SURFACE
+// FnSigs, stored verbatim) }. Modeled as a presence-checked `Vec[TraitInfo]` keyed by name, exactly
+// as `register_types`' output is a `Vec[DataInfo]` (NOT a map).
+type TraitInfo = TrInfo(Bytes, Vec[Bytes], Vec[FnSig]);
+
+fn trinfo_name(t: TraitInfo) => Bytes =
+  match t { TrInfo(n, _, _) => n };
+
+fn trinfo_sigs(t: TraitInfo) => Vec[FnSig] =
+  match t { TrInfo(_, _, s) => s };
+
+// TraitDecl accessors: name (field 1) / params (field 2). `trd_sigs` (field 3) already exists above;
+// `td_name`/`td_params` are TypeDecl's, so TraitDecl needs its own (distinct ADT).
+fn trd_name(t: TraitDecl) => Bytes =
+  match t { TrD(_, n, _, _) => n };
+
+fn trd_params(t: TraitDecl) => Vec[Bytes] =
+  match t { TrD(_, _, p, _) => p };
+
+// FnSig type-params accessor (FS field 1) — the 3 grade accessors above (name/value_params/ret)
+// omitted it as unused; the trait pass needs it (method type-params → tyvar scope + bound checks).
+fn fnsig_type_params(s: FnSig) => Vec[TypeParam] =
+  match s { FS(_, tps, _, _, _, _) => tps };
+
+// TypeParam / TraitRef accessors (checkty.rs reads `tp.name` / `tp.kind` / `tp.bounds` / `b.name`).
+fn tp_name(t: TypeParam) => Bytes =
+  match t { TP(n, _, _) => n };
+
+fn tp_kind(t: TypeParam) => ParamKind =
+  match t { TP(_, k, _) => k };
+
+fn tp_bounds(t: TypeParam) => Vec[TraitRef] =
+  match t { TP(_, _, b) => b };
+
+fn traitref_name(r: TraitRef) => Bytes =
+  match r { TRf(n, _) => n };
+
+// fnsig_tyvar_names: mirrors FnSig::param_names (ast.rs 447-460) — the method's TYPE-kind type-param
+// names only (width params are dropped; they cannot stand in the tyvar scope, DN-42 §7). Distinct
+// from the value-parameter `param_names(Vec[Param])` above (that maps `Vec[Param]`; this filters
+// `Vec[TypeParam]` by `PkType`).
+fn fnsig_tyvar_names(s: FnSig) => Vec[Bytes] =
+  type_param_type_names(fnsig_type_params(s));
+
+fn type_param_type_names(tps: Vec[TypeParam]) => Vec[Bytes] =
+  match tps {
+    Nil => Nil,
+    Cons(tp, rest) => match tp_kind(tp) {
+      PkType => Cons(tp_name(tp), type_param_type_names(rest)),
+      _ => type_param_type_names(rest)
+    }
+  };
+
+// traits_contains: `traits.contains_key(name)` over the assoc-list registry (set membership by name).
+fn traits_contains(traits: Vec[TraitInfo], name: Bytes) => Bool =
+  match traits {
+    Nil => False,
+    Cons(tr, rest) => match bytes_eq(trinfo_name(tr), name) {
+      0b1 => True,
+      _ => traits_contains(rest, name)
+    }
+  };
+
+// check_sig_resolves: checkty.rs 3088-3099 — every value-param type, then the ret, must `resolve_ty`
+// under `tyvars`; `Ok(True)` (a unit sentinel; the resolved types + their guarantee slot are
+// discarded exactly as Rust's `resolve_ty(...)?` ignores its value) or the FIRST `Err`.
+fn check_sig_resolves(types: Vec[DataInfo], tyvars: Vec[Bytes], sig: FnSig) => Result[Bool, Bytes] =
+  match check_params_resolve(types, tyvars, fnsig_value_params(sig)) {
+    Err(e) => Err(e),
+    Ok(_) => match resolve_ty(types, tyvars, fnsig_ret(sig)) {
+      Err(e) => Err(e),
+      Ok(_) => Ok(True)
+    }
+  };
+
+fn check_params_resolve(types: Vec[DataInfo], tyvars: Vec[Bytes], params: Vec[Param]) => Result[Bool, Bytes] =
+  match params {
+    Nil => Ok(True),
+    Cons(p, rest) => match resolve_ty(types, tyvars, param_ty(p)) {
+      Err(e) => Err(e),
+      Ok(_) => check_params_resolve(types, tyvars, rest)
+    }
+  };
+
+// register_traits: the two-pass entry (checkty.rs 3016-3083). Returns the registry or the first refusal.
+fn register_traits(types: Vec[DataInfo], nod: Nodule) => Result[Vec[TraitInfo], Bytes] =
+  match register_traits_pass1(types, Nil, nodule_items(nod)) {
+    Err(e) => Err(e),
+    Ok(traits) => match register_traits_bounds(traits, traits) {
+      Err(e) => Err(e),
+      Ok(_) => Ok(traits)
+    }
+  };
+
+// PASS 1 — checkty.rs 3021-3057. Every non-Trait item is skipped (the mirror of `let Item::Trait(td)
+// = item else { continue }`); each trait's checks run in the oracle's order (dup param -> dup name ->
+// method checks -> insert).
+fn register_traits_pass1(types: Vec[DataInfo], acc: Vec[TraitInfo], items: Vec[Item]) => Result[Vec[TraitInfo], Bytes] =
+  match items {
+    Nil => Ok(acc),
+    Cons(it, rest) => match it {
+      ItTrait(td) => match first_duplicate(trd_params(td)) {
+        Some(dup) => Err(bytes_concat("duplicate type parameter `", bytes_concat(dup, bytes_concat("` in trait `", bytes_concat(trd_name(td), "`"))))),
+        None => match traits_contains(acc, trd_name(td)) {
+          True => Err("duplicate trait declaration"),
+          False => match check_trait_methods(types, trd_name(td), trd_params(td), Nil, trd_sigs(td)) {
+            Err(e) => Err(e),
+            Ok(_) => register_traits_pass1(types, Cons(TrInfo(trd_name(td), trd_params(td), trd_sigs(td)), acc), rest)
+          }
+        }
+      },
+      _ => register_traits_pass1(types, acc, rest)
+    }
+  };
+
+// check_trait_methods: the within-trait method loop (checkty.rs 3034-3048). `seen` tracks distinct
+// method names; each sig resolves with `tyvars = trait.params ++ method.param_names()` (3045-3046).
+fn check_trait_methods(types: Vec[DataInfo], trait_name: Bytes, params: Vec[Bytes], seen: Vec[Bytes], sigs: Vec[FnSig]) => Result[Bool, Bytes] =
+  match sigs {
+    Nil => Ok(True),
+    Cons(s, rest) => match names_contains(seen, fnsig_name(s)) {
+      True => Err(bytes_concat("duplicate method `", bytes_concat(fnsig_name(s), bytes_concat("` in trait `", bytes_concat(trait_name, "`"))))),
+      False => match check_sig_resolves(types, names_append(params, fnsig_tyvar_names(s)), s) {
+        Err(e) => Err(e),
+        Ok(_) => check_trait_methods(types, trait_name, params, Cons(fnsig_name(s), seen), rest)
+      }
+    }
+  };
+
+// PASS 2 — checkty.rs 3063-3081. Over the COMPLETE registry (`all`), so a bound may forward-reference
+// a later-declared trait. Every method type-parameter bound must name a KNOWN trait, else an explicit
+// refusal naming the site + the offending bound (mirroring the oracle's message shape).
+fn register_traits_bounds(all: Vec[TraitInfo], traits: Vec[TraitInfo]) => Result[Bool, Bytes] =
+  match traits {
+    Nil => Ok(True),
+    Cons(tr, rest) => match check_trait_sig_bounds(all, trinfo_name(tr), trinfo_sigs(tr)) {
+      Err(e) => Err(e),
+      Ok(_) => register_traits_bounds(all, rest)
+    }
+  };
+
+fn check_trait_sig_bounds(all: Vec[TraitInfo], trname: Bytes, sigs: Vec[FnSig]) => Result[Bool, Bytes] =
+  match sigs {
+    Nil => Ok(True),
+    Cons(s, rest) => match check_sig_tp_bounds(all, trname, fnsig_name(s), fnsig_type_params(s)) {
+      Err(e) => Err(e),
+      Ok(_) => check_trait_sig_bounds(all, trname, rest)
+    }
+  };
+
+fn check_sig_tp_bounds(all: Vec[TraitInfo], trname: Bytes, method: Bytes, tps: Vec[TypeParam]) => Result[Bool, Bytes] =
+  match tps {
+    Nil => Ok(True),
+    Cons(tp, rest) => match check_tp_bounds(all, trname, method, tp_name(tp), tp_bounds(tp)) {
+      Err(e) => Err(e),
+      Ok(_) => check_sig_tp_bounds(all, trname, method, rest)
+    }
+  };
+
+// unknown_bound_msg: the never-silent refusal text for pass 2 (checkty.rs 3068-3076) — names the site
+// (`trait <T> method <m>`) and the offending bound (`<param>: <bound>`). Built in `let`-pieces to keep
+// the concatenation legibly balanced.
+fn unknown_bound_msg(trname: Bytes, method: Bytes, pname: Bytes, bound: Bytes) => Bytes =
+  let a = bytes_concat("trait `", bytes_concat(trname, "` method `")) in
+  let b = bytes_concat(method, bytes_concat("`: unknown trait `", bound)) in
+  let c = bytes_concat("` in the bound `", bytes_concat(pname, bytes_concat(": ", bound))) in
+  bytes_concat(a, bytes_concat(b, bytes_concat(c, "` (RFC-0019 SS4.1 -- a method's type-parameter bound must name a declared trait)")));
+
+fn check_tp_bounds(all: Vec[TraitInfo], trname: Bytes, method: Bytes, pname: Bytes, bounds: Vec[TraitRef]) => Result[Bool, Bytes] =
+  match bounds {
+    Nil => Ok(True),
+    Cons(b, rest) => match traits_contains(all, traitref_name(b)) {
+      True => check_tp_bounds(all, trname, method, pname, rest),
+      False => Err(unknown_bound_msg(trname, method, pname, traitref_name(b)))
+    }
+  };
+
 // ── unify: one-sided unification, threading the FLAG-semcore-13 substitution (checkty.rs::unify) ──
 // same_ty_len: the `a1.len() == a2.len()` guard on the Data arm (a two-list structural length eq).
 fn same_ty_len(a: Vec[Ty], b: Vec[Ty]) => Bool =
