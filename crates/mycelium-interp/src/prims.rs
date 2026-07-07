@@ -139,6 +139,9 @@ impl PrimRegistry {
         r.register("bit.sub", prim_bit_sub);
         // RFC-0033 §4.1.2/§4.1.3 (M-887, `enb` Gap B): never-silent two's-complement multiply.
         r.register("bin.mul", prim_bin_mul);
+        // RFC-0033 §4.1.2 (CU-1): never-silent UNSIGNED multiply — the `bit.*` unsigned family's
+        // genuinely-missing member (math.myc FLAG-math-1), overflow-distinct from signed `bin.mul`.
+        r.register("bit.mul", prim_bit_mul);
         // RFC-0033 §4.1.2/§4.1.3 (M-888, `enb` Gap B): never-silent unsigned division/remainder.
         r.register("bin.div", prim_bin_div);
         r.register("bin.rem", prim_bin_rem);
@@ -698,6 +701,45 @@ fn prim_bin_mul(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
         });
     }
     let out = binary::mul(a, b).ok_or_else(|| EvalError::Overflow {
+        prim: prim.to_owned(),
+    })?;
+    compose_result(
+        prim,
+        args,
+        args[0].repr().clone(),
+        Payload::Bits(out),
+        ApproxRule::Refuse,
+    )
+}
+
+/// `bit.mul : (Binary{N}, Binary{N}) → Binary{N}` — never-silent **unsigned** fixed-width multiply
+/// (CU-1; RFC-0033 §4.1.2 — overflow detection is signedness-distinct ⇒ a distinct named op from the
+/// signed `bin.mul`; `lib/std/math.myc` FLAG-math-1). The unsigned counterpart of the `bit.add`/
+/// `bit.sub`/`bin.div`/`bin.rem` unsigned family: operands read as unsigned bitvectors, an out-of-
+/// `U_N` product an explicit [`EvalError::Overflow`], a width mismatch or over-`MUL_MAX_WIDTH` width an
+/// explicit [`EvalError::PrimType`] — never a silent wrap or truncation (G2). Delegates to the shared
+/// [`mycelium_core::binary::mul_unsigned`] codec.
+fn prim_bit_mul(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 2)?;
+    let a = as_bits(prim, args[0])?;
+    let b = as_bits(prim, args[1])?;
+    if a.len() != b.len() {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!("width mismatch: {} vs {} bits", a.len(), b.len()),
+        });
+    }
+    if a.len() > binary::MUL_MAX_WIDTH {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!(
+                "width {} exceeds the {}-bit multiply cap (CU-1 scope)",
+                a.len(),
+                binary::MUL_MAX_WIDTH
+            ),
+        });
+    }
+    let out = binary::mul_unsigned(a, b).ok_or_else(|| EvalError::Overflow {
         prim: prim.to_owned(),
     })?;
     compose_result(

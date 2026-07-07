@@ -278,6 +278,11 @@ impl PrimTable {
         // Exact` (total/decidable over the in-range domain; an out-of-range product is a runtime,
         // not intrinsic, refusal — same posture as `bit.add`/`bit.sub`).
         t.insert("bin.mul", exact(vec![Binary, Binary], Binary));
+        // RFC-0033 §4.1.2 (CU-1): never-silent **unsigned** `Binary` multiply — the unsigned member
+        // of the `bit.*` family (overflow-distinct from signed `bin.mul` per §4.1.2), the multiply
+        // `lib/std/math.myc` FLAG-math-1 named as missing. `intrinsic = Exact` (total/decidable over
+        // the in-`U_N`-range domain; an out-of-range product is a runtime, not intrinsic, refusal).
+        t.insert("bit.mul", exact(vec![Binary, Binary], Binary));
         // RFC-0033 §4.1.2/§4.1.3 (M-888, `enb` Gap B): never-silent **unsigned** `Binary`
         // division/remainder. Distinct-named from a future signed variant (M-767) per §4.1.2's
         // signedness-split requirement for division. `intrinsic = Exact` (total/decidable over the

@@ -524,6 +524,68 @@ fn mul_s_min_times_neg_one_refuses_on_every_path() {
     );
 }
 
+// ── CU-1 (RFC-0033 §4.1.2): never-silent UNSIGNED multiply `mul_u` (kernel `bit.mul`) ────────────
+//
+// The unsigned member of the `bit.*` family — overflow-distinct from the signed `mul_s`/`bin.mul`
+// (the `lib/std/math.myc` FLAG-math-1 missing op). Reads operands as unsigned bitvectors; an
+// out-of-`U_N` product is an explicit refusal on all three paths, never a wrap (G2/VR-5).
+
+#[test]
+fn mul_u_in_range_including_high_bit() {
+    // 3 * 4 = 12.
+    assert_three_way(
+        "mul_u small",
+        "nodule d;\nfn main() => Binary{8} = mul_u(0b0000_0011, 0b0000_0100);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("00001100".chars().map(|c| c == '1').collect()),
+    );
+    // 15 * 17 = 255 — the high boundary of U_8, in range.
+    assert_three_way(
+        "mul_u high boundary",
+        "nodule d;\nfn main() => Binary{8} = mul_u(0b0000_1111, 0b0001_0001);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("11111111".chars().map(|c| c == '1').collect()),
+    );
+    // 9 * 20 = 180 — in U_8 = [0,255] but OUT of signed B_8 = [-128,127]: the criterion that
+    // distinguishes `mul_u` from `mul_s` (which refuses this exact product).
+    assert_three_way(
+        "mul_u unsigned-only product",
+        "nodule d;\nfn main() => Binary{8} = mul_u(0b0000_1001, 0b0001_0100);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("10110100".chars().map(|c| c == '1').collect()),
+    );
+}
+
+/// `mul_u` overflow (`16 * 16 = 256`, out of `U_8 = [0, 255]`) is an explicit refusal on **all
+/// three** paths — never a silent wrap to `0`. (The program type-checks: the unsigned-overflow
+/// bound is a runtime contract, like `add_u`/`sub_u`'s.)
+#[test]
+fn mul_u_overflow_refuses_on_every_path() {
+    let src = "nodule d;\nfn main() => Binary{8} = mul_u(0b0001_0000, 0b0001_0000);";
+    let env = check_nodule(&parse(src).expect("parses")).expect("checks");
+
+    let interp = Interpreter::new(
+        PrimRegistry::with_builtins(),
+        Box::new(mycelium_cert::BinaryTernarySwapEngine),
+    );
+    let prims = PrimRegistry::with_builtins();
+    let engine = mycelium_cert::BinaryTernarySwapEngine;
+
+    assert!(
+        Evaluator::new(&env).call("main", vec![]).is_err(),
+        "L1-eval must refuse the unsigned overflow (never a silent wrap to 0)"
+    );
+    let node = elaborate(&env, "main").expect("in fragment");
+    assert!(
+        interp.eval(&node).is_err(),
+        "L0-interp must refuse the unsigned overflow"
+    );
+    assert!(
+        mycelium_mlir::run(&node, &prims, &engine).is_err(),
+        "AOT must refuse the unsigned overflow"
+    );
+}
+
 /// A width/paradigm mismatch (`Binary{8}` vs `Binary{1}`) is a **static** never-silent refusal —
 /// caught at check time, mirroring `add_u`/`sub_u`'s width-preserving contract.
 #[test]
