@@ -2597,23 +2597,46 @@ fn normalize_pattern(types: Vec[DataInfo], pat: Pattern, expected: Ty, occ: Vec[
 // Ok/Err (and Some/None) + the success payload, never the message bytes (`res_repr_eq`/`res_value_eq`/
 // `opt_*_eq` treat any `Err`==`Err` / `None`==`None`).
 //
-// FLAG-semcore-27 (`policy_name_ref`'s HASH deferred; only the wild-free PREIMAGE ported). The Rust
-// `policy_name_ref` = `operation_hash(format!("policy-name.v0:{dotted}"))` (elab.rs). The
-// domain-separated PREIMAGE (`policy-name.v0:<dotted>`) is the FRONTEND's contribution and is ported
-// wild-free (`policy_name_preimage`), differential-tested LIVE-ORACLE against the extracted
-// `elab::policy_name_preimage` (a `pub(crate)` extraction made for exactly this oracle-reachability —
-// behaviour-preserving). The preimage->`PolicyRef` step is the kernel BLAKE3 `operation_hash`:
-// re-implementing BLAKE3 byte-for-byte in wild-free `.myc` is infeasible this wave, so per DN-26 SS10's
-// "else" branch it is DEFERRED to the single materialization/kernel-hash crossing (a `wild:` hash prim,
-// or a wild-free BLAKE3 should one become cheap) — not faked (a mismatch would be never-silent: every
-// `PolicyRef` would diverge in the differential, G2). No `PolicyRef` mirror is declared this wave (it
-// is a `ContentHash` string; the ported surface stops at the preimage `Bytes`).
+// FLAG-semcore-27 (`policy_name_ref`'s HASH deferred; only the wild-free PREIMAGE ported — reworded
+// 2026-07-07, M-1012 patch: the ORIGINAL text below wrongly named BLAKE3-unavailability as the
+// blocker; corrected to the real one). The Rust `policy_name_ref` =
+// `operation_hash(&policy_name_preimage(policy))` (elab.rs), and `operation_hash`
+// (`mycelium_core::content::Canon`) = BLAKE3 over the FRAMED bytes `[0x07 PRIM-domain tag] ++
+// [u64-LE length prefix] ++ [preimage UTF-8 bytes]` (content.rs `Canon::tag`/`Canon::str`/
+// `Canon::blob`). The domain-separated PREIMAGE itself (`policy-name.v0:<dotted>`) is the FRONTEND's
+// contribution and IS ported wild-free (`policy_name_preimage`), differential-tested LIVE-ORACLE
+// against the extracted `elab::policy_name_preimage` (a `pub(crate)` extraction made for exactly this
+// oracle-reachability — behaviour-preserving).
+//
+// The REAL blocker is NOT the hash function — `hash_blake3(b: Bytes) -> Bytes` IS already a
+// wild-free, surface-callable `.myc` primitive (M-912, checkty.rs: total and deterministic over
+// every `Bytes` input). The blocker is CONSTRUCTING `operation_hash`'s raw-byte PREIMAGE to feed it:
+// the `0x07` domain-tag byte and the 8-byte little-endian length prefix are raw byte VALUES, and the
+// wild-free `.myc` surface has no byte-value-synthesis primitive (no `\xNN`/`0x..`/`ord`/`chr`/
+// `from_u8`) to construct them — the SAME gap FLAG-semcore-25 documents for `lit_value`'s `LBytes`
+// arm and FLAG-semcore-23 documents for `Payload`'s omitted variants. So `policy_name_ref` is
+// DEFERRED to the single materialization/kernel-hash crossing (a `wild:` framing-construction prim,
+// or a wild-free path once a byte-synthesis primitive lands — `hash_blake3` itself needs no `wild:`)
+// — not faked (a mismatch would be never-silent: every `PolicyRef` would diverge in the differential,
+// G2). No `PolicyRef` mirror is declared this wave (it is a `ContentHash` string; the ported surface
+// stops at the preimage `Bytes`).
 //
 // FLAG-semcore-28 (the L0-mirror structural-equality scaffolding — the FLAG-semcore-12 `ty_eq` posture,
 // extended). `scalark_eq`/.../`value_eq`/`field_spec_eq` restate the derived `PartialEq` of the mirrored
 // kernel types so the differential DRIVER (appended after this nodule in `compiler_stage5_elab.rs`) has
 // a `Bool` witness. Like `ty_eq`, they live in this logic file because the driver — plain `.myc` text
 // appended to the nodule — can only call functions declared here. Not tests; comparison utilities.
+//
+// FLAG-semcore-29 (`lit_value`'s `Bin`/`Trit` arms omit the `MAX_DIM` UPPER-bound refusal — an
+// intentional scope cut this wave, not an oversight; G2). The Rust oracle's `Value::new` runs
+// `Repr::check_well_formed` -> `dim_in_range`, which refuses BOTH `width == 0` (the lower bound,
+// PORTED below — `eq(w, zero32())`) AND `width > MAX_DIM` (`mycelium_core::repr::MAX_DIM = 2^30`,
+// repr.rs) as `WfError::DimensionTooLarge`. This port's `Bin`/`Trit` arms replicate the lower-bound
+// refusal only; a `Binary`/`Ternary` literal with more than `2^30` digits would be ACCEPTED here
+// where the Rust oracle refuses. Practical risk is negligible — the source text for such a literal
+// exceeds 1 GB, past any literal this wave's differential (or any real program) approaches — but the
+// divergence is honestly recorded rather than silently dropped (G2/VR-5); closing it is deferred to a
+// future increment that adds the `Binary{32}`-safe `> MAX_DIM` comparison.
 
 // ── L0 kernel mirror ADTs (FLAG-semcore-22; DN-26 SS10 Option A) ─────────────────────────────────
 // ScalarK: mirrors mycelium_core::ScalarKind (repr.rs).
@@ -2715,6 +2738,8 @@ fn trit_trits_at(s: Bytes, i: Binary{32}, n: Binary{32}) => Result[Vec[TritK], B
 fn trits_len(v: Vec[TritK]) => Binary{32} =
   match v { Nil => zero32(), Cons(_, t) => add_u(one32(), trits_len(t)) };
 
+// lower-bound (`width == 0`) refused below, matching `Value::new`/`check_well_formed`; the
+// `MAX_DIM` UPPER bound is NOT ported this wave (FLAG-semcore-29 — an honest, intentional cut).
 fn lit_value(l: Literal) => Result[Value, Bytes] =
   match l {
     Bin(s) => let bits = bin_bits(s) in

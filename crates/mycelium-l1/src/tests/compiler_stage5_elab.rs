@@ -433,6 +433,17 @@ fn semcore_elab_parses_and_checks() {
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 // Non-vacuity probes: WRONG comparisons must discriminate (yield False → 0).
+//
+// CONVENTION (M-1012, binding on every future self-hosting increment — the template for M-1013):
+// every `.myc` structural-equality comparator (`semcore.myc`'s `_eq` family, FLAG-semcore-28)
+// introduced by a self-hosting increment gets AT LEAST ONE non-vacuity (must-return-`False`) case
+// here, built from two mirror values that differ ONLY in the one dimension that comparator's arm
+// guards — isolating that arm specifically, not just "some" difference. `elab_witness_discriminates`
+// currently covers `scalark_eq`/`res_repr_eq`(→`repr_eq`)/`opt_fs_eq`(→`field_spec_eq`)/
+// `sparsityc_eq`/`opt_repr_eq`/`opt_ftr_eq`(→`field_ty_ref_eq`)/`res_value_eq`(→`value_eq`→
+// `payload_eq`). `meta_eq` is the one documented exception — see the trailing comment: `Meta` is
+// currently a single-inhabitant mirror (FLAG-semcore-24), so no two DIFFERING `Meta` values are
+// constructible and non-vacuity is not yet an addable property, not a coverage gap.
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 #[test]
 fn elab_witness_discriminates() {
@@ -448,6 +459,55 @@ fn elab_witness_discriminates() {
         "field_spec_wrong",
         &format!("opt_fs_eq(field_spec({}), None)", encode_ty(&bin(8))),
     );
+    // sparsity_class(Sparse(8)) = ScSparse(8); comparing against ScSparse(16) (same variant, wrong
+    // `max_active`) must be False — isolates `sparsityc_eq`'s `ScSparse`-arm `eq_u` guard.
+    assert_false(
+        "sparsity_class_wrong",
+        &format!(
+            "sparsityc_eq(sparsity_class({}), ScSparse({}))",
+            encode_sparsity(&Sparsity::Sparse(8)),
+            encode_u32(16)
+        ),
+    );
+    // ty_to_repr(Binary{8}) = Some(RBinary(8)); comparing against Some(RBinary(16)) (same variant,
+    // wrong width) must be False — isolates `opt_repr_eq`'s `Some`-arm `repr_eq` guard.
+    assert_false(
+        "ty_to_repr_wrong",
+        &format!(
+            "opt_repr_eq(ty_to_repr({}), Some(RBinary({})))",
+            encode_ty(&bin(8)),
+            encode_u32(16)
+        ),
+    );
+    // ty_to_field_ty_ref(Binary{8}) = Some(FtRepr(RBinary(8))); comparing against
+    // Some(FtRepr(RBinary(16))) must be False — isolates `opt_ftr_eq`'s `Some`-arm
+    // `field_ty_ref_eq` guard (which itself dispatches into `repr_eq`).
+    assert_false(
+        "ty_to_field_ty_ref_wrong",
+        &format!(
+            "opt_ftr_eq(ty_to_field_ty_ref({}), Some(FtRepr(RBinary({}))))",
+            encode_ty(&bin(8)),
+            encode_u32(16)
+        ),
+    );
+    // lit_value(Bin("1010")) = Ok(Val(RBinary(4), PlBits([1,0,1,0]), MtExactRoot)); comparing
+    // against a value with the SAME repr (RBinary(4)) and the SAME meta (MtExactRoot) but a
+    // DIFFERENT payload (PlBits([1,1,1,1])) must be False — isolates `res_value_eq`/`value_eq`'s
+    // `payload_eq` guard specifically: `repr_eq` and `meta_eq` both agree on this pair, so only
+    // `payload_eq`'s `PlBits`-arm `bits_eq` can be the source of the `False`. Verified by
+    // deliberately hardcoding `payload_eq`'s `PlBits` arm to `True` in `semcore.myc` and confirming
+    // this exact case FAILED (then reverting the break) — see the M-1012 patch notes/PR discussion.
+    assert_false(
+        "lit_value_payload_wrong",
+        "res_value_eq(lit_value(Bin(\"1010\")), Ok(Val(RBinary(0b0000_0000_0000_0000_0000_0000_0000_0100), PlBits(Cons(0b1, Cons(0b1, Cons(0b1, Cons(0b1, Nil))))), MtExactRoot)))",
+    );
+    // `meta_eq` is NOT exercised here (documented exception, not a coverage gap): `Meta` is
+    // mirrored as the single nullary `MtExactRoot` (FLAG-semcore-24) — the `.myc` mirror type has
+    // exactly one inhabitant this wave (`lit_value` never constructs any other Meta), so no two
+    // DIFFERING `Meta` values are constructible under the current type and `meta_eq`'s single
+    // `MtExactRoot`/`MtExactRoot` match arm cannot be driven to `False`. This is a structural
+    // property of the mirror (honestly recorded — VR-5), not a deferred test: non-vacuity for
+    // `meta_eq` becomes a real, addable case here the moment `Meta` gains a second constructor.
 }
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
@@ -558,6 +618,9 @@ fn type_repr_cases() {
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 // lit_value (LIVE — elab::lit_value): the wild-free arms (Bin/Trit/Str) + the refusals (Int/List).
 // The DEFERRED arms (LBytes/LFloat) are covered separately (they refuse; not compared to the oracle).
+// The `width == 0` LOWER-bound refusal (Bin/Trit) and `trit_of`'s Err arm are also exercised here —
+// the untested refusal branches FLAG-semcore-29 calls out (the `.myc` port replicates the LOWER
+// bound but not the `MAX_DIM` UPPER bound; see FLAG-semcore-29 in `semcore.myc` for that gap).
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 #[test]
 fn lit_value_cases() {
@@ -565,8 +628,11 @@ fn lit_value_cases() {
         Literal::Bin("1010".to_owned()),
         Literal::Bin("1010_1100".to_owned()), // separators filtered
         Literal::Bin("1".to_owned()),
+        Literal::Bin("".to_owned()), // empty -> width==0 refusal (both sides Err)
         Literal::Trit("+0-".to_owned()),
         Literal::Trit("0".to_owned()),
+        Literal::Trit("".to_owned()), // empty -> width==0 refusal (both sides Err)
+        Literal::Trit("x".to_owned()), // invalid trit char -> `trit_of`'s Err arm (both sides Err)
         Literal::Str("hello".to_owned()),
         Literal::Str("".to_owned()), // empty → Repr::Bytes, empty payload (well-formed)
         Literal::Int(0),             // → Err (no representation family)
