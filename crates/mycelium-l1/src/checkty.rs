@@ -2973,7 +2973,7 @@ fn render_effects(effects: &[String]) -> String {
     format!("!{{{}}}", effects.join(", "))
 }
 
-fn resolve_ctors(
+pub(crate) fn resolve_ctors(
     types: &BTreeMap<String, DataInfo>,
     td: &TypeDecl,
 ) -> Result<Vec<CtorInfo>, CheckError> {
@@ -3002,7 +3002,7 @@ fn resolve_ctors(
 
 /// The first value that appears more than once in `xs` (left to right), if any. Used to reject
 /// duplicate type-parameter names — an explicit error, never a silently-shadowed binding (G2).
-fn first_duplicate(xs: &[String]) -> Option<&String> {
+pub(crate) fn first_duplicate(xs: &[String]) -> Option<&String> {
     let mut seen = std::collections::BTreeSet::new();
     xs.iter().find(|x| !seen.insert((*x).clone()))
 }
