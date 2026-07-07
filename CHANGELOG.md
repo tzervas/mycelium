@@ -14,12 +14,12 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 ### M-1015 — docs/tero-index/: the whole-corpus Layer-1 citation index (DN-87 / E39-1) (2026-07-07)
 
 mycelium-tero Layer 1 lands: the api-index/lib-index deterministic-index pattern generalized over
-the WHOLE corpus, emitted to `docs/tero-index/{INDEX.md,index.json}` (5139 rows; grep-friendly
+the WHOLE corpus, emitted to `docs/tero-index/{INDEX.md,index.json}` (5140 rows; grep-friendly
 table plus machine index; never-silent `flagged` section — 6 entries, reference notes genuinely
 lacking a Status row; uniform `Empirical/Declared` tag, "source is ground truth"). Families: docs
 (RFC/ADR/DN/spec/guide/planning) with status, guarantee tag, and section anchors; research records;
 issues.yaml (+idmap) with id/title/status/epic/depends_on/doc_refs/gh-number (526 rows, grep
-cross-checked); CHANGELOG entries by date/id (82, cross-checked); skills name+description (16,
+cross-checked); CHANGELOG entries by date/id (83, cross-checked); skills name+description (16,
 cross-checked); api-index and lib-index referenced as siblings, never duplicated. Reuses
 `mycelium_doc::corpus::ingest` (no parallel markdown heuristic, no pub-surface widening); issues.yaml
 read by a purpose-built YAML-subset reader (serde_yaml is neither in-workspace nor maintained —

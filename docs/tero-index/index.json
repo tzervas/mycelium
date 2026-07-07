@@ -53115,11 +53115,11 @@
     },
     {
       "item": "docs/notes/Narrative-Capture-and-Authoring.md",
-      "reason": "note document has no `| **Status** |` metadata row — status left unset (not invented)"
+      "reason": "note document has a `| **Status** |` row but its value (**Living — initial capture**…) is not on the ratified lattice (Draft/Proposed/Accepted/Enacted/Superseded/Resolved) — status left unset (not coerced)"
     },
     {
       "item": "docs/notes/Native-Ternary-Forward-Compat.md",
-      "reason": "note document has no `| **Status** |` metadata row — status left unset (not invented)"
+      "reason": "note document has a `| **Status** |` row but its value (**Living note** (build-phase forward…) is not on the ratified lattice (Draft/Proposed/Accepted/Enacted/Superseded/Resolved) — status left unset (not coerced)"
     },
     {
       "item": "docs/notes/W7-arena-coverage-audit.md",

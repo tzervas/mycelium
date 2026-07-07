@@ -5185,7 +5185,7 @@ Constructs/sources the heuristic could not (or does not yet) place (G2: never si
 |---|---|
 | `docs/notes/Example-Programs-Reference.md` | note document has no `\| \*\*Status\*\* \|` metadata row — status left unset (not invented) |
 | `docs/notes/Lexicon-Reference.md` | note document has no `\| \*\*Status\*\* \|` metadata row — status left unset (not invented) |
-| `docs/notes/Narrative-Capture-and-Authoring.md` | note document has no `\| \*\*Status\*\* \|` metadata row — status left unset (not invented) |
-| `docs/notes/Native-Ternary-Forward-Compat.md` | note document has no `\| \*\*Status\*\* \|` metadata row — status left unset (not invented) |
+| `docs/notes/Narrative-Capture-and-Authoring.md` | note document has a `\| \*\*Status\*\* \|` row but its value (\*\*Living — initial capture\*\*…) is not on the ratified lattice (Draft/Proposed/Accepted/Enacted/Superseded/Resolved) — status left unset (not coerced) |
+| `docs/notes/Native-Ternary-Forward-Compat.md` | note document has a `\| \*\*Status\*\* \|` row but its value (\*\*Living note\*\* (build-phase forward…) is not on the ratified lattice (Draft/Proposed/Accepted/Enacted/Superseded/Resolved) — status left unset (not coerced) |
 | `docs/notes/W7-arena-coverage-audit.md` | note document has no `\| \*\*Status\*\* \|` metadata row — status left unset (not invented) |
 | `docs/notes/research-prompts.md` | note document has no `\| \*\*Status\*\* \|` metadata row — status left unset (not invented) |

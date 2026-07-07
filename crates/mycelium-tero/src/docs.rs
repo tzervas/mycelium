@@ -98,15 +98,28 @@ fn emit_doc(
     let status = leading_keyword(src, "Status", STATUS_KEYWORDS);
     let guarantee = leading_keyword(src, "Guarantee", GUARANTEE_KEYWORDS);
 
-    // A doc family that should declare a status but does not — recorded, never assumed (G2).
+    // A doc family that should declare a status but the index could not extract one — recorded,
+    // never assumed (G2). Two DISTINCT reasons: the row is genuinely absent, vs. the row is present
+    // but its value is not on the ratified lattice (Draft/Proposed/Accepted/Enacted/Superseded/
+    // Resolved). Conflating them shipped a false "no Status row" reason for `Living`-status notes.
     if status.is_none() && matches!(kind, SourceKind::Rfc | SourceKind::Adr | SourceKind::Note) {
-        flagged.push(Flagged {
-            item: rel.to_owned(),
-            reason: format!(
+        let reason = match labeled_cell(src, "Status") {
+            Some(cell) => format!(
+                "{} document has a `| **Status** |` row but its value ({}) is not on the ratified \
+                 lattice (Draft/Proposed/Accepted/Enacted/Superseded/Resolved) — status left unset \
+                 (not coerced)",
+                kind.as_str(),
+                first_words(&cell, 4),
+            ),
+            None => format!(
                 "{} document has no `| **Status** |` metadata row — status left unset (not \
                  invented)",
                 kind.as_str()
             ),
+        };
+        flagged.push(Flagged {
+            item: rel.to_owned(),
+            reason,
         });
     }
 
@@ -197,30 +210,50 @@ pub(crate) fn doc_id(rel: &str) -> Option<String> {
 /// entry that appears as a whole word in the value cell). Verbatim from source; `None` when the row
 /// or a keyword is absent.
 pub(crate) fn leading_keyword(src: &str, label: &str, keywords: &[&str]) -> Option<String> {
+    let cell = labeled_cell(src, label)?;
+    // First keyword that appears as a whole alphanumeric token, scanning the cell left-to-right.
+    let mut best: Option<(usize, &str)> = None;
+    for kw in keywords {
+        if let Some(pos) = whole_word_pos(&cell, kw) {
+            if best.is_none_or(|(p, _)| pos < p) {
+                best = Some((pos, kw));
+            }
+        }
+    }
+    best.map(|(_, kw)| kw.to_string())
+}
+
+/// The trimmed value cell of the first `| **<label>** | value |` metadata row, or `None` if no such
+/// row exists (or its value cell is empty). Distinct from [`leading_keyword`] returning `None`: this
+/// says the ROW is absent, not merely that its value carried no lattice keyword — so a "no Status
+/// row" flag is never conflated with a "Status row present but off-lattice value" one (G2).
+pub(crate) fn labeled_cell(src: &str, label: &str) -> Option<String> {
     let needle = format!("**{label}**");
     for line in src.lines() {
         let t = line.trim();
         if !t.starts_with('|') || !t.contains(&needle) {
             continue;
         }
-        // The value cell is the second column: `| **Label** | value |`.
-        let cell = t
+        return t
             .split('|')
             .nth(2)
             .map(str::trim)
-            .filter(|c| !c.is_empty())?;
-        // First keyword that appears as a whole alphanumeric token, scanning the cell left-to-right.
-        let mut best: Option<(usize, &str)> = None;
-        for kw in keywords {
-            if let Some(pos) = whole_word_pos(cell, kw) {
-                if best.is_none_or(|(p, _)| pos < p) {
-                    best = Some((pos, kw));
-                }
-            }
-        }
-        return best.map(|(_, kw)| kw.to_string());
+            .filter(|c| !c.is_empty())
+            .map(str::to_owned);
     }
     None
+}
+
+/// The first `n` whitespace-separated tokens of `s`, joined by a single space (with `…` appended if
+/// truncated) — a bounded, deterministic excerpt for a flagged-reason message (never the whole,
+/// possibly-long, markdown cell).
+fn first_words(s: &str, n: usize) -> String {
+    let toks: Vec<&str> = s.split_whitespace().collect();
+    if toks.len() <= n {
+        toks.join(" ")
+    } else {
+        format!("{}…", toks[..n].join(" "))
+    }
 }
 
 /// The byte position of `word` in `hay` as a whole token (bounded by non-alphanumeric on both

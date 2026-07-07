@@ -38,6 +38,37 @@ fn a_note_without_a_status_row_is_flagged_not_assumed() {
 }
 
 #[test]
+fn a_note_with_an_off_lattice_status_is_flagged_distinctly_from_a_missing_row() {
+    // A note whose `| **Status** |` row IS present but carries a non-lattice value (`Living`) must
+    // NOT be flagged as "no Status row" (the PR #1237 review HIGH — the two cases were conflated).
+    let root = temp_dir("flag-offlattice");
+    write_corpus(&root, false);
+    std::fs::write(
+        root.join("docs/notes/Living-Note.md"),
+        "# A living note\n\n\
+         | Field | Value |\n|---|---|\n| **Status** | **Living — initial capture** |\n\n\
+         prose\n\n## Section\n\ns\n",
+    )
+    .unwrap();
+    let report = build_tero_index(&root).unwrap();
+    // Flagged with the ROW-PRESENT reason, quoting the off-lattice value — never the missing-row one.
+    assert!(has_flag(
+        &report,
+        "Living-Note.md",
+        "not on the ratified lattice"
+    ));
+    assert!(has_flag(&report, "Living-Note.md", "Living"));
+    assert!(!has_flag(&report, "Living-Note.md", "no `| **Status** |`"));
+    // Still indexed, status unset (not coerced to a lattice value).
+    let note = report
+        .items
+        .iter()
+        .find(|i| i.file.ends_with("Living-Note.md") && i.kind == "note")
+        .unwrap();
+    assert_eq!(note.status, None);
+}
+
+#[test]
 fn a_duplicate_issue_id_is_flagged_and_both_rows_kept() {
     let root = temp_dir("flag-dup");
     write_corpus(&root, true); // defects include a duplicate M-0099
