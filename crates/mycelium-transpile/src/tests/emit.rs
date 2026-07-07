@@ -307,6 +307,38 @@ fn cases() -> Vec<Case> {
                 category: Category::ReservedWord,
             },
         },
+        // Shared-reference erasure (this leaf, ADR-003): a fn whose params are `&T` shared references
+        // now maps — the references are erased so the signature becomes value params, exactly as the
+        // hand-port renders it. This is the item-level effect that unblocks emission (the real-corpus
+        // shape: `fn digest_eq(a: &ContentHash, b: &ContentHash) -> bool`).
+        Case {
+            name: "shared_ref_params_emit",
+            rust: "fn digest_eq(a: &Ordering, b: &Ordering) -> bool { a == b }",
+            expect: Expect::Emitted {
+                item: "digest_eq",
+                contains: "fn digest_eq(a: Ordering, b: Ordering) => Bool = a == b;",
+            },
+        },
+        // NEVER-SILENT CASCADE: a fn taking `&mut T` stays gapped — a mutable reference has no
+        // value-semantic correspondence (ADR-003), so it is NOT erased. The whole fn gaps (Other),
+        // never a partial emission that silently drops the mutation.
+        Case {
+            name: "mut_ref_param_gapped",
+            rust: "fn bump(x: &mut Ordering) -> bool { true }",
+            expect: Expect::Gapped {
+                category: Category::Other,
+            },
+        },
+        // NEVER-SILENT CASCADE: a fn taking `&str` still gaps — the reference erases but the referent
+        // `str` has no confirmed base_type arm, so the honest deeper blocker surfaces (Other), never
+        // a fabricated emission.
+        Case {
+            name: "shared_ref_to_str_still_gapped",
+            rust: "fn is_err(msg: &str) -> bool { true }",
+            expect: Expect::Gapped {
+                category: Category::Other,
+            },
+        },
     ]
 }
 

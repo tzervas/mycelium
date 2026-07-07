@@ -3,11 +3,11 @@
     {
       "myc_file": "gen/myc-drafts/stdlib/std-sys/fs.myc",
       "source_file": "crates/mycelium-std-sys/src/fs.rs",
-      "class": "Clean",
-      "exit_code": 0,
-      "diagnostic": "",
+      "class": "CheckError",
+      "exit_code": 3,
+      "diagnostic": "check-error: check error in `exists`: unknown type `Path`",
       "non_test_items": 7,
-      "emitted_items": 0
+      "emitted_items": 1
     },
     {
       "myc_file": "gen/myc-drafts/stdlib/std-sys/guarantee_matrix.myc",
@@ -74,9 +74,10 @@
     }
   ],
   "total_non_test_items": 63,
-  "total_emitted_items": 1,
+  "total_emitted_items": 2,
   "total_checked_clean_items": 1,
   "class_counts": {
-    "Clean": 8
+    "CheckError": 1,
+    "Clean": 7
   }
 }

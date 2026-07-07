@@ -37,7 +37,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl core :: fmt :: Display for TimeErr { fn fmt (& self , f : & mut core :: fmt :: Formatter < '_ >) -> core :: fmt :: Result { match self { TimeErr :: Overflow => write ! (f , \"time arithmetic overflow (C1 — never wrap/clamp)\") , TimeErr :: ClockUnavailable { reason } => { write ! (f , \"clock unavailable: {reason}\") } TimeErr :: NonMonotonic { earlier_ns , later_ns , } => write ! (f , \"wall-clock backward jump (non-monotonic): \\\n                 later_ns={later_ns} < earlier_ns={earlier_ns} \\\n                 (C1 — never a silent zero/negative span)\") , } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut core :: fmt :: Formatter < '_ >`",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut core :: fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
       "item_name": "TimeErr"
     },
     {
@@ -327,7 +327,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Read the MONOTONIC clock from `source`. Declares effect `time` (not entropy).\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Declared`** — ambient read, not a pure computation (VR-5, C2).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" - [`TimeErr::ClockUnavailable`] — the platform clock is unavailable.\"] pub fn mono_now (source : & dyn ClockSource) -> DeclaredTime < Result < MonoInstant , TimeErr > > { source . mono_now () }",
-      "reason": "unsupported Rust type form `& dyn ClockSource`",
+      "reason": "unsupported Rust type form `dyn ClockSource`",
       "item_name": "mono_now"
     },
     {
@@ -337,7 +337,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Read the WALL-CLOCK from `source`. Declares effects `{ time, entropy }`.\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Declared`** — an entropy source (civil time, RT3 reified nondeterminism).\"] # [doc = \" Return type carries [`DeclaredTimeEntropy`] — the structural RT2/RT3 enforcement.\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" - [`TimeErr::ClockUnavailable`] — the platform clock is unavailable.\"] pub fn wall_now (source : & dyn ClockSource) -> DeclaredTimeEntropy < Result < WallInstant , TimeErr > > { source . wall_now () }",
-      "reason": "unsupported Rust type form `& dyn ClockSource`",
+      "reason": "unsupported Rust type form `dyn ClockSource`",
       "item_name": "wall_now"
     },
     {
@@ -347,7 +347,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Read the LOGICAL clock from `source`. Declares effect `time` only (deterministic).\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Declared`** — total (the counter is always readable in v0). The\"] # [doc = \" deterministic-fragment-legible time read (RFC-0008 §4.7 / M-356).\"] pub fn logical_now (source : & dyn ClockSource) -> DeclaredTime < LogicalInstant > { source . logical_now () }",
-      "reason": "unsupported Rust type form `& dyn ClockSource`",
+      "reason": "unsupported Rust type form `dyn ClockSource`",
       "item_name": "logical_now"
     },
     {

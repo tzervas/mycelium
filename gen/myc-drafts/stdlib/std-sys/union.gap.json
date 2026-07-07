@@ -27,7 +27,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" \\\\[Declared\\\\] Read the entire contents of a file at `path`.\"] # [doc = \"\"] # [doc = \" Returns `Err` on any OS error — never-silent (G2).\"] pub fn read (path : & Path) -> Result < Vec < u8 > , io :: Error > { std :: fs :: read (path) }",
-      "reason": "unsupported Rust type form `& Path`",
+      "reason": "qualified type path `io :: Error` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "read"
     },
     {
@@ -37,18 +37,8 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" \\\\[Declared\\\\] Write `contents` to a file at `path`, creating or truncating it.\"] # [doc = \"\"] # [doc = \" Returns `Err` on any OS error — never-silent (G2).\"] pub fn write (path : & Path , contents : & [u8]) -> Result < () , io :: Error > { std :: fs :: write (path , contents) }",
-      "reason": "unsupported Rust type form `& Path`",
+      "reason": "unsupported Rust type form `[u8]`",
       "item_name": "write"
-    },
-    {
-      "file": "crates/mycelium-std-sys/src/fs.rs",
-      "line": 29,
-      "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
-      "snippet": "# [doc = \" \\\\[Declared\\\\] Check whether a path exists on the filesystem.\"] # [doc = \"\"] # [doc = \" Returns `false` on any OS error (consistent with `std::path::Path::exists`).\"] # [doc = \" If distinguishing \\\"does not exist\\\" from \\\"permission denied\\\" is required, use\"] # [doc = \" `std::fs::metadata` directly.\"] pub fn exists (path : & Path) -> bool { path . exists () }",
-      "reason": "unsupported Rust type form `& Path`",
-      "item_name": "exists"
     },
     {
       "file": "crates/mycelium-std-sys/src/fs.rs",
@@ -57,7 +47,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" \\\\[Declared\\\\] Create a directory and all its parents.\"] # [doc = \"\"] # [doc = \" Returns `Err` on any OS error — never-silent (G2).\"] pub fn create_dir_all (path : & Path) -> Result < () , io :: Error > { std :: fs :: create_dir_all (path) }",
-      "reason": "unsupported Rust type form `& Path`",
+      "reason": "unit type `()` has no representable value in this grammar fragment",
       "item_name": "create_dir_all"
     },
     {
@@ -67,7 +57,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" \\\\[Declared\\\\] Remove a file.\"] # [doc = \"\"] # [doc = \" Returns `Err` on any OS error — never-silent (G2).\"] pub fn remove_file (path : & Path) -> Result < () , io :: Error > { std :: fs :: remove_file (path) }",
-      "reason": "unsupported Rust type form `& Path`",
+      "reason": "unit type `()` has no representable value in this grammar fragment",
       "item_name": "remove_file"
     },
     {
@@ -97,7 +87,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl GuaranteeTag { # [doc = \" Human-readable name matching the lattice notation (`\\\"Declared\\\"`, etc.).\"] # [must_use] pub fn as_str (self) -> & 'static str { match self { GuaranteeTag :: Exact => \"Exact\" , GuaranteeTag :: Proven => \"Proven\" , GuaranteeTag :: Empirical => \"Empirical\" , GuaranteeTag :: Declared => \"Declared\" , } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `as_str` signature: unsupported Rust type form `& 'static str`",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `as_str` signature: `String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
       "item_name": "GuaranteeTag"
     },
     {
@@ -187,7 +177,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl fmt :: Display for ReadCappedError { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { match self { ReadCappedError :: Io (e) => write ! (f , \"stdin read error: {e}\") , ReadCappedError :: TooLarge { cap } => { write ! (f , \"stdin input exceeds the {cap}-byte cap (refused, not truncated)\") } } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut fmt :: Formatter < '_ >`",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
       "item_name": "ReadCappedError"
     },
     {
@@ -197,7 +187,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl std :: error :: Error for ReadCappedError { fn source (& self) -> Option < & (dyn std :: error :: Error + 'static) > { match self { ReadCappedError :: Io (e) => Some (e) , ReadCappedError :: TooLarge { .. } => None , } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `source` signature: unsupported Rust type form `& (dyn std :: error :: Error + 'static)`",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `source` signature: unsupported Rust type form `(dyn std :: error :: Error + 'static)`",
       "item_name": "ReadCappedError"
     },
     {
@@ -247,7 +237,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" \\\\[Declared\\\\] Write all of `bytes` to stdout. Uses `write_all`, so a short write is an explicit\"] # [doc = \" `Err`, never a silently-dropped tail (G2). Does **not** flush — call [`flush_out`] when ordering\"] # [doc = \" against process exit matters.\"] pub fn write_out (bytes : & [u8]) -> Result < () , io :: Error > { io :: stdout () . write_all (bytes) }",
-      "reason": "unsupported Rust type form `& [u8]`",
+      "reason": "unsupported Rust type form `[u8]`",
       "item_name": "write_out"
     },
     {
@@ -257,7 +247,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" \\\\[Declared\\\\] Write all of `bytes` to stderr. Like [`write_out`]: a short write is an explicit\"] # [doc = \" `Err` (G2).\"] pub fn write_err (bytes : & [u8]) -> Result < () , io :: Error > { io :: stderr () . write_all (bytes) }",
-      "reason": "unsupported Rust type form `& [u8]`",
+      "reason": "unsupported Rust type form `[u8]`",
       "item_name": "write_err"
     },
     {
@@ -557,7 +547,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl fmt :: Display for EntropyError { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { match self { EntropyError :: Unavailable (msg) => write ! (f , \"entropy unavailable: {msg}\") , } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut fmt :: Formatter < '_ >`",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
       "item_name": "EntropyError"
     },
     {
@@ -577,7 +567,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" \\\\[Declared\\\\] Fill `buf` with bytes from the OS entropy source (`/dev/urandom`).\"] # [doc = \"\"] # [doc = \" Never-silent: returns `Err(EntropyError::Unavailable(...))` on any failure (open error,\"] # [doc = \" short read, EOF, or platform without `/dev/urandom`). Never panics. Never zero-fills\"] # [doc = \" silently (G2).\"] # [doc = \"\"] # [doc = \" # Guarantee\"] # [doc = \"\"] # [doc = \" `Declared` — source is the kernel CSPRNG via `/dev/urandom`, a genuine OS entropy source,\"] # [doc = \" but no statistical quality audit has been conducted. Promotion to `Empirical` requires\"] # [doc = \" documented trials with measured statistical quality (VR-5). Do not use for\"] # [doc = \" security-sensitive purposes until retagged.\"] # [doc = \"\"] # [doc = \" # Platform\"] # [doc = \"\"] # [doc = \" Unix/Linux/macOS only. Returns `Err(EntropyError::Unavailable(...))` on platforms that\"] # [doc = \" do not expose `/dev/urandom`. Use the `getrandom` crate (FLAG-GETRANDOM) for\"] # [doc = \" cross-platform OS entropy.\"] pub fn fill_bytes (buf : & mut [u8]) -> Result < () , EntropyError > { if buf . is_empty () { return Ok (()) ; } let mut f = std :: fs :: File :: open (\"/dev/urandom\") . map_err (| e | EntropyError :: Unavailable (format ! (\"open /dev/urandom: {e}\"))) ? ; f . read_exact (buf) . map_err (| e | EntropyError :: Unavailable (format ! (\"read /dev/urandom: {e}\"))) }",
-      "reason": "unsupported Rust type form `& mut [u8]`",
+      "reason": "`& mut [u8]` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
       "item_name": "fill_bytes"
     },
     {
@@ -607,7 +597,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" \\\\[Declared\\\\] Read environment variable `name`. Returns `None` if the variable is unset **or** is\"] # [doc = \" not valid Unicode — an explicit absence, never an empty-string stand-in (G2). Use when a missing\"] # [doc = \" variable is a recoverable condition; the `None` must be handled, not assumed present.\"] # [must_use] pub fn get_env (name : & str) -> Option < String > { std :: env :: var (name) . ok () }",
-      "reason": "unsupported Rust type form `& str`",
+      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
       "item_name": "get_env"
     },
     {
@@ -627,7 +617,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl std :: fmt :: Display for NonUtf8Arg { fn fmt (& self , f : & mut std :: fmt :: Formatter < '_ >) -> std :: fmt :: Result { write ! (f , \"command-line argument at index {} is not valid UTF-8 (lossy: {:?})\" , self . index , self . lossy) } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut std :: fmt :: Formatter < '_ >`",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut std :: fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
       "item_name": "NonUtf8Arg"
     },
     {
@@ -717,7 +707,7 @@
     "Impl": 7,
     "Import": 7,
     "MultiStmtBody": 1,
-    "Other": 42,
+    "Other": 41,
     "PayloadVariant": 2,
     "ReservedWord": 1,
     "Struct": 2,

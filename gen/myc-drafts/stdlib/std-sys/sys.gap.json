@@ -19,7 +19,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" \\\\[Declared\\\\] Read environment variable `name`. Returns `None` if the variable is unset **or** is\"] # [doc = \" not valid Unicode — an explicit absence, never an empty-string stand-in (G2). Use when a missing\"] # [doc = \" variable is a recoverable condition; the `None` must be handled, not assumed present.\"] # [must_use] pub fn get_env (name : & str) -> Option < String > { std :: env :: var (name) . ok () }",
-      "reason": "unsupported Rust type form `& str`",
+      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
       "item_name": "get_env"
     },
     {
@@ -39,7 +39,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl std :: fmt :: Display for NonUtf8Arg { fn fmt (& self , f : & mut std :: fmt :: Formatter < '_ >) -> std :: fmt :: Result { write ! (f , \"command-line argument at index {} is not valid UTF-8 (lossy: {:?})\" , self . index , self . lossy) } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut std :: fmt :: Formatter < '_ >`",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut std :: fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
       "item_name": "NonUtf8Arg"
     },
     {

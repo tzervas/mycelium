@@ -51,7 +51,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" The ledger row for `item`. Total by construction (a match over the variant), and the\"] # [doc = \" row's `item` field round-trips (tested).\"] # [must_use] pub fn residual_for (item : DeferredR2) -> & 'static ResidualRow { let idx = match item { DeferredR2 :: MeshOverlay => 0 , DeferredR2 :: GraftCapability => 1 , DeferredR2 :: XlocMovement => 2 , DeferredR2 :: CystCheckpoint => 3 , DeferredR2 :: CaptureSetL1Surface => 4 , DeferredR2 :: MultiNodePlacement => 5 , } ; & RESIDUALS [idx] }",
-      "reason": "unsupported Rust type form `& 'static ResidualRow`",
+      "reason": "unsupported expression form `RESIDUALS [idx]`",
       "item_name": "residual_for"
     },
     {
@@ -71,7 +71,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl core :: fmt :: Display for R2DeferredError { fn fmt (& self , f : & mut core :: fmt :: Formatter < '_ >) -> core :: fmt :: Result { write ! (f , \"'{}' is not built in Phase I: {} — tracked as {} ({})\" , self . row . construct , self . row . why_deferred , self . row . tracker , self . row . basis) } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut core :: fmt :: Formatter < '_ >`",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut core :: fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
       "item_name": "R2DeferredError"
     },
     {

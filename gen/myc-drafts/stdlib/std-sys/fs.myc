@@ -14,4 +14,9 @@
 // accompanying .gap.json for every construct this pass could not express.
 nodule std.sys;
 
-
+// \[Declared\] Check whether a path exists on the filesystem.
+//
+// Returns `false` on any OS error (consistent with `std::path::Path::exists`).
+// If distinguishing "does not exist" from "permission denied" is required, use
+// `std::fs::metadata` directly.
+fn exists(path: Path) => Bool = exists(path);

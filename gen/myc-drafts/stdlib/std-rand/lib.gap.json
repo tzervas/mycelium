@@ -44,7 +44,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl core :: fmt :: Display for RandErr { fn fmt (& self , f : & mut core :: fmt :: Formatter < '_ >) -> core :: fmt :: Result { match self { RandErr :: EmptyRange => f . write_str (\"empty range: hi must be > lo\") , RandErr :: BadProbability => f . write_str (\"bad probability: p must be in [0.0, 1.0]\") , RandErr :: EmptyDomain => f . write_str (\"empty domain: collection has no elements\") , RandErr :: BadParameter => f . write_str (\"bad distribution parameter (e.g. sigma > 0 for Normal, lambda > 0 for Exponential)\" ,) , RandErr :: EntropyUnavailable => { f . write_str (\"entropy source unavailable (FLAG: std-sys phylum / M-541)\") } } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut core :: fmt :: Formatter < '_ >`",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut core :: fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
       "item_name": "RandErr"
     },
     {
