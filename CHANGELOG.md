@@ -11,6 +11,37 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### DN-85 — the multi-language transpilation program + single-language full-stack goal (2026-07-06)
+
+Records (Proposed, maintainer direction) the generalization of DN-34's Rust-only transpiler into a
+**multi-source-language** program whose flagship goal is a **single-language Mycelium full stack** —
+collapse a polyglot ecosystem's application, native extensions, and compute kernels into one
+language, toolchain, and guarantee model. Sequencing: Rust (in flight, trx2) then **Python-first
+(pure Python, gated on sound type inference)** then C/C++/Fortran/Cython/CUDA as demand arises.
+Interim strategy: transpile the coverable layer and **FFI-bind** the native backend (e.g.
+PyTorch/TensorFlow C++/CUDA) until its transpiler lands. **Open-source constraint** with the honest
+provenance ladder — transpile vs. binding vs. reverse-engineered Mycelium-native reimplementation; a
+bound or reverse-engineered artifact is **never** tagged a faithful port (G2/VR-5).
+`Declared`/aspirational; not `1.0.0`-gating (ADR-036). DN-34 gains a forward-pointer; Doc-Index
+registers the note. Its **architecture companion is DN-86** (front-end abstraction + method).
+
+### DN-86 — multi-language transpiler front-ends architecture (2026-07-06)
+
+New design note (Draft), the **architecture companion to DN-85** (which holds the strategy/vision) —
+authored concurrently and reconciled to a distinct number. The front-end-abstraction shape for
+extending the transpiler to ingest **Python** (then TypeScript, Java) alongside Rust. Grounds the
+refactor in the current `mycelium-transpile` split: the `vet.rs` myc-check loop and `.myc` emitter
+are **source-agnostic**, and `gap.rs`'s *structure* is reused wholesale though its taxonomy carries
+Rust-source-shaped categories (`Trait`/`Impl`/`MacroDef`/`DeriveAttr`/…) a multi-language front-end
+must **generalize** (the honest correction to a flat "backend already language-neutral" claim); only
+`transpile.rs`/`emit.rs`/`map.rs` are `syn`-coupled. Transfers the trx2 M-1006 ladder as the method.
+Per house rule #4 states the boundaries: Python dynamic typing (§4.1); the **C/CUDA library-core
+boundary** (§4.2 — numpy/scipy/pytorch cores are compiled C/C++/CUDA, *not* Python source, so
+transpilation yields the Python layer only and the compute is a separate Mycelium-native/FFI track);
+follow-on work bounded by Mycelium surface coverage (§4.3). Records the self-hosted-`.myc` toolchain
+switch (§5) as a `boot10`/DN-26 dependency. Ids proposed (E35–E38), not minted; decides nothing
+normatively.
+
 ### M-1006 phase-1 — transpiler hardening against the DN-34 §8.9 gap worklist (2026-07-06)
 
 First phase of the M-1006 whole-corpus rip-through ladder (kickoff `trx2` E-B, epic E33-1), run as

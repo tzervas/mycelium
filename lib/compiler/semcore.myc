@@ -3,7 +3,7 @@
 // @license: MIT
 // @authors: Tyler Zervas
 // @since: 2026-07-06
-// @updated: 2026-07-06
+// @updated: 2026-07-07
 // @summary: Self-hosted L1 semantic-core — a PARTIAL FIRST INCREMENT (M-740 Stage 5, increment 1;
 //   DN-26 SS7.3 row 5 / SS9 flag-1). The full semcore is a 9-file strongly-connected component
 //   (checkty/elab/eval/mono/fuse/decision/usefulness/grade/affine, ~16.7k Rust lines) that is ONE
@@ -14,6 +14,10 @@
 //       logic), the Maranget usefulness/decision-tree pipeline (usefulness.rs + decision.rs, 623
 //       Rust lines), the static affine use-once tracker (affine.rs, 230 Rust lines), and the
 //       static guarantee-grading pass (grade.rs, 474 Rust lines).
+//     INCREMENT 2 (M-1007, appended below) — checkty.rs's four PURE type-algebra leaves
+//       (has_var / type_head / subst_ty / param_subst), the substitution primitives the checker /
+//       elaborator / monomorphizer build on. Still NONE of checkty's checking LOGIC — these are
+//       leaf `Ty`-transformers ported ahead of the entangled core (each live-oracle-differentialed).
 //     DEFERRED (NOT in this increment) — fuse.rs (its `check_fuse_laws` RUNS `eval::Evaluator`,
 //       which is not ported), checkty.rs's checking LOGIC (~7k lines), elab.rs, eval.rs, mono.rs
 //       (the heavy entangled core, ~15k lines total), the whole-program L0-output differential,
@@ -1517,4 +1521,201 @@ fn grade_fn_body(fns: Vec[Pair[Bytes, FnDecl]], fd: FnDecl) => Result[Strength, 
       Some(err) => Err(err),
       None => Ok(body_grade)
     }
+  };
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// checkty.rs TYPE ALGEBRA (M-740 Stage 5, increment 2 — M-1007). The pure type-substitution quartet.
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// Ports checkty.rs's four PURE type-algebra leaves — `has_var`, `type_head`, `subst_ty`,
+// `param_subst` (checkty.rs::has_var/type_head/subst_ty/param_subst) — the substitution primitives
+// the WHOLE checker/elaborator/monomorphizer build on (RFC-0007 SS11.2/SS11.3). All four are pure
+// functions of a `Ty` with NO dependency on checkty's checking LOGIC, the L1 evaluator, or the L0
+// IR, so they port cleanly AHEAD of the heavy entangled core (DN-26 SS7.1 SCC) and each carries a
+// LIVE-ORACLE differential (crates/mycelium-l1/src/tests/compiler_stage5_typealg.rs — the four
+// `pub`/`pub(crate)` Rust fns are reachable from an in-crate `src/tests/` module, so every case
+// asserts the `.myc` verdict against the real checkty fn's own computed result, never a hand-derived
+// constant — the FLAG-semcore-10 live-oracle posture, held here from the start).
+//
+// FLAG-semcore-11 (`BTreeMap<String, Ty>` -> ordered `Vec[Pair[Bytes, Ty]]` assoc list — the
+// FLAG-semcore-4 convention restated for the substitution environment). `subst_ty`'s Rust signature
+// takes `&BTreeMap<String, Ty>`; here it is the same ordered assoc list + linear `ty_subst_lookup`
+// the type/fn registries already use. `param_subst` BUILDS that assoc list by zipping a
+// parameter-name list with an argument-type list (mirroring `params.iter().zip(args).collect()` — a
+// length mismatch yields a partial map, exactly as the Rust doc states, never a panic). No
+// key-uniqueness is enforced (the same documented narrowing FLAG-semcore-4 already carries).
+//
+// FLAG-semcore-12 (`ty_eq` is DIFFERENTIAL-SUPPORT scaffolding, not a checkty.rs port). Rust compares
+// `Ty` via `#[derive(PartialEq, Eq)]`; there is no hand-written `ty_eq` in checkty.rs. This nodule
+// has no derived equality, so `ty_eq` (+ `width_eq`/`scalar_eq`/`sparsity_eq`/`ty_list_eq`) restates
+// that derived structural equality explicitly, field-for-field, so the `subst_ty`/`param_subst`
+// differential can compare a computed `Ty` against the live oracle's `Ty` in-language. Documented as
+// support scaffolding faithful to `Ty: PartialEq`, not a silent addition to the ported surface.
+//
+// No depth budget is threaded (unlike useful_budgeted/compile_rows — FLAG-semcore-3): every function
+// here recurses ONLY on strict sub-terms of a finite `Ty`/`Vec[Ty]` (the render/render_list
+// structural-recursion shape this nodule already uses), so termination is structural — matching the
+// Rust originals, which carry no RecursionBudget on these leaves.
+
+// ── Bool adapters over the Binary{1}-returning primitives (eq / bytes_eq) ────────────────────────
+fn eq_u(a: Binary{32}, b: Binary{32}) => Bool =
+  match eq(a, b) { 0b1 => True, _ => False };
+
+fn beq(a: Bytes, b: Bytes) => Bool =
+  match bytes_eq(a, b) { 0b1 => True, _ => False };
+
+fn and_(a: Bool, b: Bool) => Bool =
+  match a { True => b, False => False };
+
+// ── has_var: does `ty` mention any abstract type/width parameter? (checkty.rs::has_var) ──────────
+// A width-var (`Binary{N}`/`Ternary{N}`) is abstract; a concrete width-lit is not (DN-42/M-753).
+fn width_is_var(w: Width) => Bool =
+  match w { WdVar(_) => True, WdLit(_) => False };
+
+fn has_var(ty: Ty) => Bool =
+  match ty {
+    TyVar(_) => True,
+    TyData(_, args) => any_has_var(args),
+    TyFn(a, r) => match has_var(a) { True => True, False => has_var(r) },
+    TySeq(elem, _) => has_var(elem),
+    TyBinary(w) => width_is_var(w),
+    TyTernary(w) => width_is_var(w),
+    TyDense(_, _) => False,
+    TyVsa(_, _, _) => False,
+    TySubstrate(_) => False,
+    TyBytes => False,
+    TyFloat => False
+  };
+
+fn any_has_var(tys: Vec[Ty]) => Bool =
+  match tys {
+    Nil => False,
+    Cons(h, t) => match has_var(h) { True => True, False => any_has_var(t) }
+  };
+
+// ── type_head: the coherence head-key of a stage-1 type (checkty.rs::type_head) ──────────────────
+// `Var`/`Fn` are not legal instance heads -> None (RFC-0024 SS3 / RFC-0019 SS4.5); the width/elem/
+// model-erased head-keying of Binary/Ternary/Dense/Vsa/Seq is the documented stage-1 coherence
+// simplification, mirrored verbatim.
+fn type_head(ty: Ty) => Option[Bytes] =
+  match ty {
+    TyBinary(_) => Some("Binary"),
+    TyTernary(_) => Some("Ternary"),
+    TyDense(_, _) => Some("Dense"),
+    TyVsa(_, _, _) => Some("Vsa"),
+    TySubstrate(t) => Some(bytes_concat("Substrate:", t)),
+    TySeq(_, _) => Some("Seq"),
+    TyBytes => Some("Bytes"),
+    TyFloat => Some("Float"),
+    TyData(n, _) => Some(bytes_concat("Data:", n)),
+    TyVar(_) => None,
+    TyFn(_, _) => None
+  };
+
+// ── subst_ty: replace each bound `Ty::Var`/width-var by its binding in the assoc-list `s`; an
+// unbound var is left as-is (still in scope). Total; never inserts a Swap (S1). (checkty.rs::subst_ty)
+fn ty_subst_lookup(s: Vec[Pair[Bytes, Ty]], v: Bytes) => Option[Ty] =
+  match s {
+    Nil => None,
+    Cons(entry, rest) => match entry {
+      Pr(k, t) => match bytes_eq(k, v) { 0b1 => Some(t), _ => ty_subst_lookup(rest, v) }
+    }
+  };
+
+fn subst_ty(ty: Ty, s: Vec[Pair[Bytes, Ty]]) => Ty =
+  match ty {
+    TyVar(v) => match ty_subst_lookup(s, v) { Some(t) => t, None => TyVar(v) },
+    TyData(n, args) => TyData(n, subst_ty_list(args, s)),
+    TyFn(a, r) => TyFn(subst_ty(a, s), subst_ty(r, s)),
+    TySeq(elem, n) => TySeq(subst_ty(elem, s), n),
+    TyBinary(w) => subst_binary_width(w, s),
+    TyTernary(w) => subst_ternary_width(w, s),
+    TyDense(d, sc) => TyDense(d, sc),
+    TyVsa(m, dim, sp) => TyVsa(m, dim, sp),
+    TySubstrate(t) => TySubstrate(t),
+    TyBytes => TyBytes,
+    TyFloat => TyFloat
+  };
+
+fn subst_ty_list(tys: Vec[Ty], s: Vec[Pair[Bytes, Ty]]) => Vec[Ty] =
+  match tys { Nil => Nil, Cons(h, t) => Cons(subst_ty(h, s), subst_ty_list(t, s)) };
+
+// subst_binary_width / subst_ternary_width: DN-42/M-753 width-var substitution via the carrier
+// convention — a width-var binding is stored as `v -> TyBinary(WdLit(n))` regardless of paradigm; on
+// extraction we re-emit Binary or Ternary as appropriate. An unbound / unrecognised carrier is left
+// as-is (defensive; mirrors the Rust `unwrap_or_else(|| ty.clone())` + `_ => ty.clone()`).
+fn subst_binary_width(w: Width, s: Vec[Pair[Bytes, Ty]]) => Ty =
+  match w {
+    WdLit(n) => TyBinary(WdLit(n)),
+    WdVar(v) => match ty_subst_lookup(s, v) {
+      None => TyBinary(WdVar(v)),
+      Some(carrier) => match carrier {
+        TyBinary(cw) => match cw { WdLit(n) => TyBinary(WdLit(n)), WdVar(_) => TyBinary(WdVar(v)) },
+        _ => TyBinary(WdVar(v))
+      }
+    }
+  };
+
+fn subst_ternary_width(w: Width, s: Vec[Pair[Bytes, Ty]]) => Ty =
+  match w {
+    WdLit(n) => TyTernary(WdLit(n)),
+    WdVar(v) => match ty_subst_lookup(s, v) {
+      None => TyTernary(WdVar(v)),
+      Some(carrier) => match carrier {
+        TyBinary(cw) => match cw { WdLit(n) => TyTernary(WdLit(n)), WdVar(_) => TyTernary(WdVar(v)) },
+        _ => TyTernary(WdVar(v))
+      }
+    }
+  };
+
+// ── param_subst: zip a data type's declared parameter names with its concrete arguments into the
+// FLAG-semcore-11 assoc-list (checkty.rs::param_subst). A length mismatch -> a partial map.
+fn param_subst(params: Vec[Bytes], args: Vec[Ty]) => Vec[Pair[Bytes, Ty]] =
+  match params {
+    Nil => Nil,
+    Cons(p, prest) => match args {
+      Nil => Nil,
+      Cons(a, arest) => Cons(Pr(p, a), param_subst(prest, arest))
+    }
+  };
+
+// ── ty_eq: explicit structural equality restating `Ty: PartialEq` (FLAG-semcore-12 scaffolding) ──
+fn scalar_eq(a: Scalar, b: Scalar) => Bool =
+  match a {
+    SF16 => match b { SF16 => True, _ => False },
+    SBf16 => match b { SBf16 => True, _ => False },
+    SF32 => match b { SF32 => True, _ => False },
+    SF64 => match b { SF64 => True, _ => False }
+  };
+
+fn sparsity_eq(a: Sparsity, b: Sparsity) => Bool =
+  match a {
+    SpDense => match b { SpDense => True, SpSparse(_) => False },
+    SpSparse(ka) => match b { SpSparse(kb) => eq_u(ka, kb), SpDense => False }
+  };
+
+fn width_eq(a: Width, b: Width) => Bool =
+  match a {
+    WdLit(na) => match b { WdLit(nb) => eq_u(na, nb), WdVar(_) => False },
+    WdVar(va) => match b { WdVar(vb) => beq(va, vb), WdLit(_) => False }
+  };
+
+fn ty_eq(a: Ty, b: Ty) => Bool =
+  match a {
+    TyBinary(wa) => match b { TyBinary(wb) => width_eq(wa, wb), _ => False },
+    TyTernary(wa) => match b { TyTernary(wb) => width_eq(wa, wb), _ => False },
+    TyDense(da, sa) => match b { TyDense(db, sb) => and_(eq_u(da, db), scalar_eq(sa, sb)), _ => False },
+    TyVsa(ma, dima, spa) => match b { TyVsa(mb, dimb, spb) => and_(and_(beq(ma, mb), eq_u(dima, dimb)), sparsity_eq(spa, spb)), _ => False },
+    TyData(na, argsa) => match b { TyData(nb, argsb) => and_(beq(na, nb), ty_list_eq(argsa, argsb)), _ => False },
+    TySubstrate(ta) => match b { TySubstrate(tb) => beq(ta, tb), _ => False },
+    TySeq(ea, na) => match b { TySeq(eb, nb) => and_(ty_eq(ea, eb), eq_u(na, nb)), _ => False },
+    TyBytes => match b { TyBytes => True, _ => False },
+    TyFloat => match b { TyFloat => True, _ => False },
+    TyVar(va) => match b { TyVar(vb) => beq(va, vb), _ => False },
+    TyFn(aa, ra) => match b { TyFn(ab, rb) => and_(ty_eq(aa, ab), ty_eq(ra, rb)), _ => False }
+  };
+
+fn ty_list_eq(a: Vec[Ty], b: Vec[Ty]) => Bool =
+  match a {
+    Nil => match b { Nil => True, Cons(_, _) => False },
+    Cons(ha, ta) => match b { Nil => False, Cons(hb, tb) => and_(ty_eq(ha, hb), ty_list_eq(ta, tb)) }
   };
