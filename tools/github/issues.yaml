@@ -13204,3 +13204,46 @@ issues:
         appropriate leg (interpreted where feasible, else AOT -- M-994); cargo-mutants witness on the
         Rust SCC; native `myc check` ok; Empirical; no logic *.rs modified. This closes the M-993 ladder
         and gates M-741.
+
+  - id: M-1014
+    title: "M-1014 -- Optimize the heavy-check surface: safe concurrency/multicore + integration-tier scheduling (quality-first)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:infra, area:toolchain, priority:P2, status:todo]
+    depends_on: []
+    doc_refs:
+      - corpus:DN-20
+      - src:scripts/vsa-desktop-checks.sh
+      - src:justfile
+    body: |
+      Minted 2026-07-07 (maintainer directive). Standing direction for the check/test
+      infrastructure: heavier checks may run in the staging tier's promotion PRs, and the whole
+      heavy surface should be optimized with concurrency/multicore WHEREVER SAFE -- better
+      quality of evaluation, delivered fast; never quality sacrificed for speed. The 2026-07-06
+      vsa-desktop-checks episode is the motivating datum: a debug single-threaded default turned
+      a ~6-minute release workload into a 67-minute pinned-core run (fixed in PR #1229); the same
+      class of wall-clock waste likely exists elsewhere in the heavy tier.
+
+      Candidate optimizations (audit first; each carries an EQUIVALENCE ARGUMENT -- same trials,
+      same seeds/determinism, same verdicts, only wall-clock changes -- VR-5):
+      - Parallelize independent Monte-Carlo seed batches inside the heavy VSA property tests
+        (rayon over per-seed batches: deterministic per-seed, order-independent aggregation).
+      - cargo-mutants --jobs N; parallel z3 obligation discharge; cargo-nextest partitioning for
+        the durability tier (nextest is already the Tier-0/1 runner -- extend to check-full).
+      - Profile-correctness sweep: every heavy invocation runs --release unless a debug profile
+        is semantically required (the PR #1229 lesson, applied repo-wide).
+      - Integration-tier scheduling: record WHERE the heavy tier runs on dev -> staging promotion
+        (deliberate manual dispatch or a scripted step; remote CI stays manual-dispatch/advisory
+        per the standing no-auto-CI policy -- this issue does NOT change that policy).
+
+      User stories:
+      - As the maintainer, I want the durability tier to saturate the hardware it runs on, so that
+        better evaluation quality costs minutes, not hours.
+      - As an integrator, I want heavy checks schedulable at the staging promotion without
+        wall-clock pain, so that promotion quality rises without slowing the loop.
+
+      Definition of Done:
+      - An audited list of heavy checks with their current wall-clock + parallelization status;
+        each applied optimization lands with its equivalence argument (determinism/verdict
+        preservation stated and, where feasible, differentially verified); the staging-promotion
+        heavy-check scheduling recorded in the tier docs; no guarantee weakened (VR-5) and no
+        gate silently skipped (G2).
