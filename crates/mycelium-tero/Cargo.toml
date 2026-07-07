@@ -29,6 +29,13 @@ serde_json = { workspace = true }
 # the report `RwLock`). The MCP front stays synchronous std stdio (no async needed for a stdio loop).
 tokio = { workspace = true, features = ["rt-multi-thread", "macros", "net", "sync", "io-util"] }
 axum = { workspace = true }
+# M-1018 (DN-87 §2.1/§6.1): Layer 2 — the VSA semantic layer. A downward tools->core edge
+# (mycelium-tero is deps-strata tier 7; mycelium-vsa depends only on mycelium-core), tier-legal.
+# Only the MAP-I algebra + the cleanup/capacity/empirical-profile substrate is needed: encode each
+# Layer-1 row as a role-filler bind+bundle record, retrieve via cleanup. The resonator/decode-select
+# factor path (mycelium-vsa-decode) is deliberately NOT pulled in — a variable-arity role-filler
+# bundle is not an F-factor product in the resonator's validated regime (see src/vsa2/decode.rs).
+mycelium-vsa = { path = "../mycelium-vsa" }
 
 [dev-dependencies]
 # `tower::ServiceExt::oneshot` drives the axum `Router` in-process (no real socket) for the front
@@ -48,3 +55,10 @@ path = "src/bin/tero-http.rs"
 [[bin]]
 name = "tero-mcp"
 path = "src/bin/tero-mcp.rs"
+
+# M-1018: the Layer-2 eval harness. Runs the committed question set over the committed Layer-1 index,
+# compares Layer-2 (VSA) vs the Layer-1 baseline, and records the append-only gate verdict. Never
+# stamps "beats RAG": the verdict is computed + recorded honestly (Closed until a real harness win).
+[[bin]]
+name = "tero-eval"
+path = "src/bin/tero-eval.rs"
