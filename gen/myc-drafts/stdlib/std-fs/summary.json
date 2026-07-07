@@ -20,13 +20,13 @@
       "file": "crates/mycelium-std-fs/src/guarantee_matrix.rs",
       "total_items": 7,
       "non_test_items": 6,
-      "emitted": 4,
-      "gaps": 7,
-      "expressible_pct": 66.66666666666666,
+      "emitted": 5,
+      "gaps": 8,
+      "expressible_pct": 83.33333333333334,
       "category_counts": {
-        "DeriveAttr": 4,
+        "DeriveAttr": 5,
+        "NamedFieldDrop": 1,
         "Other": 1,
-        "Struct": 1,
         "TestItem": 1
       }
     },
@@ -49,14 +49,12 @@
       "file": "crates/mycelium-std-fs/src/metadata.rs",
       "total_items": 6,
       "non_test_items": 5,
-      "emitted": 2,
-      "gaps": 13,
-      "expressible_pct": 40.0,
+      "emitted": 5,
+      "gaps": 18,
+      "expressible_pct": 100.0,
       "category_counts": {
-        "DeriveAttr": 2,
-        "Impl": 1,
-        "Other": 7,
-        "Struct": 2,
+        "DeriveAttr": 15,
+        "NamedFieldDrop": 2,
         "TestItem": 1
       }
     },
@@ -64,12 +62,15 @@
       "file": "crates/mycelium-std-fs/src/options.rs",
       "total_items": 4,
       "non_test_items": 3,
-      "emitted": 0,
-      "gaps": 4,
-      "expressible_pct": 0.0,
+      "emitted": 2,
+      "gaps": 14,
+      "expressible_pct": 66.66666666666666,
       "category_counts": {
-        "Impl": 2,
-        "Struct": 1,
+        "DeriveAttr": 3,
+        "Impl": 1,
+        "MultiStmtBody": 6,
+        "NamedFieldDrop": 1,
+        "Other": 2,
         "TestItem": 1
       }
     },
@@ -77,14 +78,15 @@
       "file": "crates/mycelium-std-fs/src/path.rs",
       "total_items": 7,
       "non_test_items": 6,
-      "emitted": 0,
-      "gaps": 7,
-      "expressible_pct": 0.0,
+      "emitted": 2,
+      "gaps": 13,
+      "expressible_pct": 33.33333333333333,
       "category_counts": {
-        "Impl": 2,
+        "DeriveAttr": 2,
+        "Impl": 3,
         "Import": 1,
-        "Other": 2,
-        "Struct": 1,
+        "NamedFieldDrop": 1,
+        "Other": 5,
         "TestItem": 1
       }
     },
@@ -107,17 +109,19 @@
   "totals": {
     "total_items": 60,
     "non_test_items": 53,
-    "emitted": 7,
-    "gaps": 68,
-    "expressible_pct": 13.20754716981132,
+    "emitted": 15,
+    "gaps": 90,
+    "expressible_pct": 28.30188679245283,
     "category_counts": {
-      "DeriveAttr": 7,
-      "Impl": 12,
+      "DeriveAttr": 26,
+      "Impl": 11,
       "Import": 12,
       "MacroInvocation": 1,
-      "Other": 17,
+      "MultiStmtBody": 6,
+      "NamedFieldDrop": 5,
+      "Other": 15,
       "PayloadVariant": 2,
-      "Struct": 10,
+      "Struct": 5,
       "TestItem": 7
     }
   }

@@ -102,20 +102,20 @@
       "file": "crates/mycelium-std-runtime/src/network.rs",
       "line": 67,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "impl ChannelNodeId { # [doc = \" Allocate a fresh, unique `ChannelNodeId`.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — strictly greater than all previously allocated ids.\"] fn allocate () -> Self { ChannelNodeId (GLOBAL_CHANNEL_ID . fetch_add (1 , Ordering :: Relaxed)) } # [doc = \" Convert to a [`ChannelId`] for use in [`ReclamationRecord`] fields (RFC-0027 §9).\"] # [doc = \"\"] # [doc = \" This is the canonical bridge between the channel-tier allocation identity and the\"] # [doc = \" MEM-1 record field type. The underlying `u64` is preserved losslessly.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — lossless conversion.\"] # [must_use] pub fn as_channel_id (self) -> ChannelId { ChannelId (self . 0) } # [doc = \" Return the underlying `u64` value.\"] # [must_use] pub fn as_u64 (self) -> u64 { self . 0 } }",
-      "reason": "impl method `as_channel_id` body: unsupported expression form `self . 0`",
+      "reason": "dropped non-doc attribute(s) on method `as_channel_id`: # [must_use]",
       "item_name": "impl ChannelNodeId"
     },
     {
       "file": "crates/mycelium-std-runtime/src/network.rs",
       "line": 67,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "impl ChannelNodeId { # [doc = \" Allocate a fresh, unique `ChannelNodeId`.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — strictly greater than all previously allocated ids.\"] fn allocate () -> Self { ChannelNodeId (GLOBAL_CHANNEL_ID . fetch_add (1 , Ordering :: Relaxed)) } # [doc = \" Convert to a [`ChannelId`] for use in [`ReclamationRecord`] fields (RFC-0027 §9).\"] # [doc = \"\"] # [doc = \" This is the canonical bridge between the channel-tier allocation identity and the\"] # [doc = \" MEM-1 record field type. The underlying `u64` is preserved losslessly.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — lossless conversion.\"] # [must_use] pub fn as_channel_id (self) -> ChannelId { ChannelId (self . 0) } # [doc = \" Return the underlying `u64` value.\"] # [must_use] pub fn as_u64 (self) -> u64 { self . 0 } }",
-      "reason": "impl method `as_u64` body: unsupported expression form `self . 0`",
+      "reason": "dropped non-doc attribute(s) on method `as_u64`: # [must_use]",
       "item_name": "impl ChannelNodeId"
     },
     {
@@ -125,7 +125,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" Shared mutable state behind a `Sender`/`Receiver` pair.\"] struct ChannelInner < V > { buf : VecDeque < V > , capacity : usize , closed : bool , # [doc = \" The canonical channel identity, allocated once at construction.\"] channel_id : ChannelNodeId , }",
-      "reason": "struct `ChannelInner` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `ChannelInner` has a field type with no confirmed mapping (`usize` has a platform-dependent width; no fixed Binary{N} mapping)",
       "item_name": "ChannelInner"
     },
     {
@@ -155,7 +155,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" A named network of typed channels within a `Colony`.\"] # [doc = \"\"] # [doc = \" Guarantee: **Empirical** (Kahn-determinism, ADR-020 §4).\"] # [derive (Debug)] pub struct Network { _priv : () , }",
-      "reason": "struct `Network` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `Network` has a field type with no confirmed mapping (unit type `()` has no representable value in this grammar fragment)",
       "item_name": "Network"
     },
     {
@@ -165,7 +165,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl Network { # [doc = \" Create a new network.\"] # [doc = \"\"] # [doc = \" Guarantee: **Exact** (constructor, trivially correct).\"] pub fn new () -> Self { Network { _priv : () } } # [doc = \" Create a bounded FIFO channel with the given capacity.\"] # [doc = \"\"] # [doc = \" Allocates a fresh [`ChannelNodeId`] for the channel pair (monotonic, unique). Both\"] # [doc = \" `Sender` and `Receiver` share the same id, accessible via `channel_id()`.\"] # [doc = \"\"] # [doc = \" Returns `Err(ChannelError::ZeroCapacity)` if `capacity == 0` (fail-closed, G2:\"] # [doc = \" invalid input is never silently accepted — a zero-capacity channel cannot store any\"] # [doc = \" value and would make every `try_send` return `Full`, which is nonsensical).\"] # [doc = \"\"] # [doc = \" Guarantee: **Exact** (construction is deterministic; the zero-capacity check is\"] # [doc = \" deterministic — mutant witness: removing the check makes `test_channel_zero_capacity_fails`\"] # [doc = \" fail).\"] pub fn channel < V > (capacity : usize) -> Result < (Sender < V > , Receiver < V >) , ChannelError > { if capacity == 0 { return Err (ChannelError :: ZeroCapacity) ; } let channel_id = ChannelNodeId :: allocate () ; let inner = Arc :: new (Mutex :: new (ChannelInner :: new (capacity , channel_id))) ; Ok ((Sender { inner : Arc :: clone (& inner) , } , Receiver { inner } ,)) } }",
-      "reason": "no member of this impl block could be transpiled (2 sub-issue(s)): impl method `new` body: unsupported expression form `Network { _priv : () }`; impl method `channel` signature: `usize` has a platform-dependent width; no fixed Binary{N} mapping",
+      "reason": "no member of this impl block could be transpiled (2 sub-issue(s)): impl method `new` body: struct literal `Network { .. }` — not an in-file single-ctor struct that emits (no constructor to build); impl method `channel` signature: `usize` has a platform-dependent width; no fixed Binary{N} mapping",
       "item_name": "Network"
     },
     {
@@ -185,7 +185,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" Sending end of a typed channel.\"] # [doc = \"\"] # [doc = \" SPSC by design: `Sender<V>` is not `Clone` (ADR-020 §4 / RFC-0008 §4.3 RT1).\"] # [doc = \"\"] # [doc = \" Guarantee: **Exact** (FIFO ordering within this channel; backed by `VecDeque`).\"] pub struct Sender < V > { inner : Arc < Mutex < ChannelInner < V > > > , }",
-      "reason": "struct `Sender` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `Sender` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "Sender"
     },
     {
@@ -215,7 +215,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" Receiving end of a typed channel.\"] # [doc = \"\"] # [doc = \" Guarantee: **Exact** (FIFO ordering within this channel; backed by `VecDeque`).\"] pub struct Receiver < V > { inner : Arc < Mutex < ChannelInner < V > > > , }",
-      "reason": "struct `Receiver` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `Receiver` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "Receiver"
     },
     {

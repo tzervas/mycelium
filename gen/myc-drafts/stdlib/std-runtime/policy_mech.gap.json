@@ -41,7 +41,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl core :: fmt :: Display for PolicySite { fn fmt (& self , f : & mut core :: fmt :: Formatter < '_ >) -> core :: fmt :: Result { match self { PolicySite :: SwapTarget => write ! (f , \"swap-target\") , PolicySite :: Packing => write ! (f , \"packing\") , PolicySite :: Placement => write ! (f , \"placement\") , } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut core :: fmt :: Formatter < '_ >`",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut core :: fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
       "item_name": "PolicySite"
     },
     {
@@ -51,7 +51,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" A reified policy-set transition record (G2: a mechanized set is never a silent override —\"] # [doc = \" the transition itself is inspectable). Guarantee: **`Exact`** — every [`PolicySlot::set`]\"] # [doc = \" appends exactly one record, with a per-slot monotonic sequence number, by construction.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct PolicySetRecord { # [doc = \" The site whose active policy changed.\"] pub site : PolicySite , # [doc = \" Per-slot monotonic sequence number (0 for the first set).\"] pub seq : u64 , # [doc = \" The previous active policy's content address, `None` on the first set.\"] pub previous : Option < ContentHash > , # [doc = \" The new active policy's content address ([`SelectionPolicy::policy_ref`]).\"] pub new_policy : ContentHash , # [doc = \" The new policy's display name (for the EXPLAIN/teaching surface).\"] pub new_policy_name : String , }",
-      "reason": "struct `PolicySetRecord` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `PolicySetRecord` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "PolicySetRecord"
     },
     {
@@ -61,7 +61,7 @@
       "category": "PayloadVariant",
       "rust_construct": "PayloadVariant",
       "snippet": "# [doc = \" Why a slot operation failed — always explicit (G2), never a silent default choice.\"] # [derive (Debug , Clone , PartialEq)] pub enum SlotError { # [doc = \" Selection was requested but no policy has been set for this site. Guarantee: **`Exact`**\"] # [doc = \" — fail-closed by construction; there is no built-in fallback policy (a silent default\"] # [doc = \" would be a black box, ADR-006).\"] NoActivePolicy { # [doc = \" The site that has no active policy.\"] site : PolicySite , } , # [doc = \" The underlying RFC-0005 selection refused (e.g. an out-of-range override).\"] Select (SelectError) , }",
-      "reason": "enum `SlotError` variant `NoActivePolicy` uses named fields — `constructor ::= Ident ('(' type_ref (',' type_ref)* ')')?` has no named-field/record form",
+      "reason": "enum `SlotError` has a named-field variant referencing a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "SlotError"
     },
     {
@@ -71,7 +71,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl core :: fmt :: Display for SlotError { fn fmt (& self , f : & mut core :: fmt :: Formatter < '_ >) -> core :: fmt :: Result { match self { SlotError :: NoActivePolicy { site } => { write ! (f , \"no active policy is set for the {site} site — set one explicitly \\\n                     (PolicySlot::set); there is no silent default (G2/ADR-006)\") } SlotError :: Select (e) => write ! (f , \"selection refused: {e}\") , } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut core :: fmt :: Formatter < '_ >`",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut core :: fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
       "item_name": "SlotError"
     },
     {
@@ -101,7 +101,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" A runtime slot binding the **active** [`SelectionPolicy`] for one RFC-0005 site, with an\"] # [doc = \" append-only transition log and a selection trace (DN-78 §3 B-2).\"] # [doc = \"\"] # [doc = \" The slot is the mechanized *setter surface*: `set` swaps the active policy and records the\"] # [doc = \" transition; `select` decides through the active policy and records the mandatory\"] # [doc = \" [`Explanation`]. Both logs are read-only views (`transitions`/`trace`) — append-only by\"] # [doc = \" construction (no public mutation besides the appending operations).\"] # [derive (Debug)] pub struct PolicySlot { site : PolicySite , active : Option < SelectionPolicy > , transitions : Vec < PolicySetRecord > , trace : Vec < Explanation > , }",
-      "reason": "struct `PolicySlot` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `PolicySlot` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "PolicySlot"
     },
     {
@@ -111,7 +111,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl PolicySlot { # [doc = \" An empty slot for `site` — no active policy, no transitions, no trace.\"] # [must_use] pub fn new (site : PolicySite) -> Self { PolicySlot { site , active : None , transitions : Vec :: new () , trace : Vec :: new () , } } # [doc = \" The site this slot governs.\"] # [must_use] pub fn site (& self) -> PolicySite { self . site } # [doc = \" Set the active policy, appending a [`PolicySetRecord`] (returned by reference).\"] # [doc = \"\"] # [doc = \" Guarantee: **`Exact`** — exactly one record is appended per call, `seq` is the per-slot\"] # [doc = \" monotonic count, and `previous` is the outgoing policy's content address (`None` on the\"] # [doc = \" first set). The transition is never silent (G2).\"] pub fn set (& mut self , policy : SelectionPolicy) -> & PolicySetRecord { let record = PolicySetRecord { site : self . site , seq : self . transitions . len () as u64 , previous : self . active . as_ref () . map (SelectionPolicy :: policy_ref) , new_policy : policy . policy_ref () , new_policy_name : policy . name () . to_owned () , } ; self . active = Some (policy) ; self . transitions . push (record) ; self . transitions . last () . expect (\"push in the line above guarantees a last element\") } # [doc = \" The active policy, if one has been set. `None` is not a fallback state — selection\"] # [doc = \" through an unset slot refuses explicitly ([`SlotError::NoActivePolicy`]).\"] # [must_use] pub fn active (& self) -> Option < & SelectionPolicy > { self . active . as_ref () } # [doc = \" The append-only transition log (every `set`, in order).\"] # [must_use] pub fn transitions (& self) -> & [PolicySetRecord] { & self . transitions } # [doc = \" The selection trace: the mandatory [`Explanation`] of every selection made through this\"] # [doc = \" slot, in order — extractable for capture/diffing (DN-78 §3 B-2).\"] # [must_use] pub fn trace (& self) -> & [Explanation] { & self . trace } # [doc = \" Decide through the active policy (RFC-0005 `select`), recording the mandatory\"] # [doc = \" [`Explanation`] into the slot's trace.\"] # [doc = \"\"] # [doc = \" Errors are explicit: an unset slot is [`SlotError::NoActivePolicy`] (never a silent\"] # [doc = \" default — G2/ADR-006); an underlying selection refusal passes through as\"] # [doc = \" [`SlotError::Select`].\"] pub fn select (& mut self , inputs : & SelectionInputs , forced : Option < usize > ,) -> Result < (Candidate , Explanation) , SlotError > { let site = self . site ; let policy = self . active . as_ref () . ok_or (SlotError :: NoActivePolicy { site }) ? ; let (candidate , explanation) = select (policy , inputs , forced) ? ; self . trace . push (explanation . clone ()) ; Ok ((candidate , explanation)) } }",
-      "reason": "no member of this impl block could be transpiled (7 sub-issue(s)): impl method `new` body: unsupported expression form `PolicySlot { site , active : None , transitions : Vec :: new () , trace : Vec :: new () , }`; impl method `site` body: unsupported expression form `self . site`; impl method `set` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence; impl method `active` signature: unsupported Rust type form `& SelectionPolicy`; impl method `transitions` signature: unsupported Rust type form `& [PolicySetRecord]`; impl method `trace` signature: unsupported Rust type form `& [Explanation]`; impl method `select` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence",
+      "reason": "no member of this impl block could be transpiled (7 sub-issue(s)): impl method `new` body: struct literal `PolicySlot { .. }` — not an in-file single-ctor struct that emits (no constructor to build); impl method `site` body: field projection `self.site` on `PolicySlot` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against); impl method `set` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence; impl method `active` body: field projection `self.active` on `PolicySlot` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against); impl method `transitions` signature: unsupported Rust type form `[PolicySetRecord]`; impl method `trace` signature: unsupported Rust type form `[Explanation]`; impl method `select` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence",
       "item_name": "PolicySlot"
     },
     {
@@ -121,7 +121,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" A captured policy: the RFC-0005-conformant [`SelectionPolicy`] value that decided a recorded\"] # [doc = \" [`Explanation`], materialized for reuse/diffing (DN-78 §3 B-1). Not an opaque handle — the\"] # [doc = \" full policy value is inspectable (ADR-006).\"] # [derive (Debug , Clone , PartialEq)] pub struct CapturedPolicy { # [doc = \" The policy's content address (equal to `policy.policy_ref()` — verified at capture).\"] pub policy_ref : ContentHash , # [doc = \" The policy value itself.\"] pub policy : SelectionPolicy , }",
-      "reason": "struct `CapturedPolicy` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `CapturedPolicy` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "CapturedPolicy"
     },
     {
@@ -131,7 +131,7 @@
       "category": "PayloadVariant",
       "rust_construct": "PayloadVariant",
       "snippet": "# [doc = \" Why a capture failed — always explicit (G2), never a silent reconstruction.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum CaptureError { # [doc = \" The recorded `policy_ref` resolves to nothing in the given registry. Guarantee:\"] # [doc = \" **`Exact`** — fail-closed by construction; capture never fabricates a policy.\"] UnknownPolicyRef { # [doc = \" The unresolvable content address.\"] policy_ref : ContentHash , } , # [doc = \" The registry returned a policy whose own content address differs from the requested one\"] # [doc = \" (a corrupted registry). Never silently accepted.\"] RefMismatch { # [doc = \" The content address the capture asked for.\"] requested : ContentHash , # [doc = \" The content address the resolved policy actually hashes to.\"] resolved : ContentHash , } , }",
-      "reason": "enum `CaptureError` variant `UnknownPolicyRef` uses named fields — `constructor ::= Ident ('(' type_ref (',' type_ref)* ')')?` has no named-field/record form",
+      "reason": "enum `CaptureError` has a named-field variant referencing a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "CaptureError"
     },
     {
@@ -141,7 +141,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl core :: fmt :: Display for CaptureError { fn fmt (& self , f : & mut core :: fmt :: Formatter < '_ >) -> core :: fmt :: Result { match self { CaptureError :: UnknownPolicyRef { policy_ref } => { write ! (f , \"policy_ref {policy_ref:?} is not in the registry — capture refuses rather \\\n                     than reconstructing a policy (G2/ADR-006)\") } CaptureError :: RefMismatch { requested , resolved , } => { write ! (f , \"registry corruption: requested {requested:?} but the stored policy hashes \\\n                     to {resolved:?}\") } } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut core :: fmt :: Formatter < '_ >`",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut core :: fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
       "item_name": "CaptureError"
     },
     {
@@ -161,7 +161,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Materialize the policy that decided `explanation` from `registry` (DN-78 §3 B-1).\"] # [doc = \"\"] # [doc = \" Guarantee: **`Exact`** for the resolution contract — an unknown ref is an explicit\"] # [doc = \" [`CaptureError::UnknownPolicyRef`] and a hash mismatch an explicit\"] # [doc = \" [`CaptureError::RefMismatch`]; a returned [`CapturedPolicy`] always satisfies\"] # [doc = \" `policy.policy_ref() == policy_ref` (checked here, not assumed).\"] pub fn capture (registry : & PolicyRegistry , explanation : & Explanation ,) -> Result < CapturedPolicy , CaptureError > { let requested = explanation . policy . clone () ; let policy = registry . get (& requested) . ok_or_else (| | CaptureError :: UnknownPolicyRef { policy_ref : requested . clone () , }) ? ; let resolved = policy . policy_ref () ; if resolved != requested { return Err (CaptureError :: RefMismatch { requested , resolved , }) ; } Ok (CapturedPolicy { policy_ref : requested , policy : policy . clone () , }) }",
-      "reason": "unsupported Rust type form `& PolicyRegistry`",
+      "reason": "field access on a non-`self` base — the transpiler tracks no local types, so the projection cannot be resolved to a constructor position (only `self.<field>` desugars to a `match`)",
       "item_name": "capture"
     },
     {
@@ -171,7 +171,7 @@
       "category": "PayloadVariant",
       "rust_construct": "PayloadVariant",
       "snippet": "# [doc = \" Why a replay failed — always explicit (G2), never a silent pass.\"] # [derive (Debug , Clone , PartialEq)] pub enum ReplayError { # [doc = \" The captured policy is not the one the record claims decided it (`policy_ref`\"] # [doc = \" mismatch) — replaying against the wrong policy would be a silent apples-to-oranges\"] # [doc = \" comparison, so it refuses up front.\"] PolicyMismatch { # [doc = \" The record's policy content address.\"] recorded : ContentHash , # [doc = \" The captured policy's content address.\"] captured : ContentHash , } , # [doc = \" Re-running the recorded inputs refused (e.g. a recorded override index that no longer\"] # [doc = \" fits the policy — impossible for a faithful capture, but never silently swallowed).\"] Select (SelectError) , # [doc = \" The replayed decision differs from the recorded one. With a validated policy and\"] # [doc = \" identical inputs this indicates non-determinism or a record from different code —\"] # [doc = \" either way it is surfaced, never absorbed.\"] Diverged { # [doc = \" The original record.\"] recorded : Box < Explanation > , # [doc = \" The replayed record that differs from it.\"] replayed : Box < Explanation > , } , }",
-      "reason": "enum `ReplayError` variant `PolicyMismatch` uses named fields — `constructor ::= Ident ('(' type_ref (',' type_ref)* ')')?` has no named-field/record form",
+      "reason": "enum `ReplayError` has a named-field variant referencing a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "ReplayError"
     },
     {
@@ -181,7 +181,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl core :: fmt :: Display for ReplayError { fn fmt (& self , f : & mut core :: fmt :: Formatter < '_ >) -> core :: fmt :: Result { match self { ReplayError :: PolicyMismatch { recorded , captured } => write ! (f , \"replay refused: the record was decided by {recorded:?} but the captured \\\n                 policy is {captured:?}\") , ReplayError :: Select (e) => write ! (f , \"replay selection refused: {e}\") , ReplayError :: Diverged { recorded , replayed } => write ! (f , \"replay diverged: recorded chose index {} (rule {:?}), replay chose index {} \\\n                 (rule {:?})\" , recorded . chosen_index , recorded . matched_rule , replayed . chosen_index , replayed . matched_rule) , } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut core :: fmt :: Formatter < '_ >`",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut core :: fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
       "item_name": "ReplayError"
     },
     {
@@ -208,10 +208,10 @@
       "file": "crates/mycelium-std-runtime/src/policy_mech.rs",
       "line": 352,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "MultiStmtBody",
+      "rust_construct": "MultiStmtBody",
       "snippet": "# [doc = \" Replay a recorded decision against its captured policy (DN-78 §3 B-1): re-run the recorded\"] # [doc = \" inputs — honoring the recorded override state — and require the identical [`Explanation`].\"] # [doc = \"\"] # [doc = \" Guarantee: **`Empirical`** for \\\"replay reaches the recorded decision\\\" — the record-vs-replay\"] # [doc = \" differential is property-tested over randomized policies/inputs; RFC-0005 `select` is\"] # [doc = \" deterministic (same `(policy, inputs, forced)` → same result) but that determinism carries\"] # [doc = \" no mechanized theorem, so the claim is not `Proven` (VR-5; M-964 audit). A divergence is an\"] # [doc = \" explicit [`ReplayError::Diverged`] carrying both records for inspection (G2).\"] pub fn replay (captured : & CapturedPolicy , recorded : & Explanation ,) -> Result < Explanation , ReplayError > { if captured . policy_ref != recorded . policy { return Err (ReplayError :: PolicyMismatch { recorded : recorded . policy . clone () , captured : captured . policy_ref . clone () , }) ; } let forced = recorded . overridden . then_some (recorded . chosen_index) ; let (_ , replayed) = select (& captured . policy , & recorded . inputs , forced) ? ; if replayed != * recorded { return Err (ReplayError :: Diverged { recorded : Box :: new (recorded . clone ()) , replayed : Box :: new (replayed) , }) ; } Ok (replayed) }",
-      "reason": "unsupported Rust type form `& CapturedPolicy`",
+      "reason": "function body has a semicolon-terminated (value-discarding) statement expression before the tail — a `let`-chain body maps only simple `let x = e;` bindings plus a single trailing expression",
       "item_name": "replay"
     }
   ],

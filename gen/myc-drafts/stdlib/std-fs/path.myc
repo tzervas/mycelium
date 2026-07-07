@@ -21,4 +21,21 @@
 // accompanying .gap.json for every construct this pass could not express.
 nodule std.fs;
 
+// An immutable, content-addressable UTF-8 filesystem path (C4 / ADR-003).
+//
+// A `Path` is a **value**: two `Path`s with the same string are the same value regardless of
+// where they were constructed. Metadata (mtime, inode) is NOT part of its identity.
+//
+// # FLAG (Q3 — portability)
+// Currently backed by a `String` (UTF-8 guarantee). Non-UTF-8 OS paths are an open question
+// (spec §7-Q3 / RFC-0016 §8-Q3); a lossy decode would violate C1 — the maintainer's call.
+//
+// # PATH SEPARATOR
+// Component separator is `/`. No implicit OS-specific normalization (no `\\` on Windows).
+// This is a conservative default pending the Q3 portability decision.
+type Path = Path(Bytes);
 
+impl Path {
+  // The path as a string slice.
+  fn as_str(self: Path) => Bytes = (match self { Path(p0) => p0 });
+};

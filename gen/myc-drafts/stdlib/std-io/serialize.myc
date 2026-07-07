@@ -54,3 +54,10 @@ nodule std.io;
 // ambient default that silently changes the wire form (spec §7-Q5 / RFC-0016
 // §8-Q3 tension A; required-explicit until the per-ring ergonomics pass M-540).
 type Format = Wire | Json;
+
+// Detect domain errors: a field decoded successfully but violates a value-model
+// invariant (reported by `Value::new` → `serde::de::Error::custom`).
+fn is_domain_error(msg: Bytes) => Bool = contains(msg, "payload") || contains(msg, "repr") || contains(msg, "guarantee") || contains(msg, "bound") || contains(msg, "invariant") || contains(msg, "well-formed") || contains(msg, "width");
+
+// Detect unknown-tag errors: an unrecognized `Repr`/ctor/`Meta` discriminant.
+fn is_unknown_tag_error(msg: Bytes) => Bool = contains(msg, "unknown variant") || contains(msg, "unknown field") || contains(msg, "expected one of");

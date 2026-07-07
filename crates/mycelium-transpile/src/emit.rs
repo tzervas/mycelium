@@ -13,11 +13,81 @@
 use crate::gap::{guarded, Category, GapReason};
 use crate::map::{map_type, tokens_to_string};
 use crate::reserved::guard_ident;
+use std::cell::RefCell;
+use std::collections::{HashMap, HashSet};
 use syn::{
-    Attribute, Block, Expr, Fields, FnArg, GenericArgument, GenericParam, Generics, ImplItem,
-    ItemEnum, ItemFn, ItemImpl, ItemStruct, ItemTrait, Lit, Pat, PathArguments, ReturnType,
-    Signature, Stmt, TraitItem,
+    Attribute, Block, Expr, Fields, FieldsNamed, FnArg, GenericArgument, GenericParam, Generics,
+    ImplItem, ItemEnum, ItemFn, ItemImpl, ItemStruct, ItemTrait, Lit, Pat, PathArguments,
+    ReturnType, Signature, Stmt, TraitItem,
 };
+
+/// One struct's positional field layout — the M-1006 field-projection input (Lever 1): its field
+/// slots in declaration order, `Some(name)` for a named field, `None` for a tuple (unnamed) position.
+/// The emitted constructor's name is the struct's own type name (see [`emit_struct`]), so a
+/// `self.<field>` access desugars to `match self { <Ty>(_, x, _) => x }` at the field's position.
+type StructLayout = Vec<Option<String>>;
+
+/// Per-file emit context installed by `transpile::transpile_source` for the item loop (see
+/// [`with_emit_ctx`]): the M-1006 **resolvability set** (gates named-field-record emission) and the
+/// **struct layouts** (drives field-projection / struct-literal desugaring). Both are file-scoped
+/// analyses of the parsed items. `None` (direct `emit_*` unit tests / non-opted-in callers) disables
+/// both — a named-field record then emits unconditionally, and a `self.<field>` projection gaps for
+/// want of layout info.
+struct EmitCtx {
+    resolvable: HashSet<String>,
+    layouts: HashMap<String, StructLayout>,
+}
+
+thread_local! {
+    /// See [`EmitCtx`]. Emitting a named-field record positionally is only safe for `checked_fraction`
+    /// when every type it references *resolves in-file* (else it introduces a reference — `ContentRef`
+    /// → the out-of-corpus `ContentHash` — that poisons the file's `myc check`); field projection is
+    /// only safe when the `self` type is an *emitted* in-file struct (else the `match Ty(...)` names an
+    /// absent constructor). Both gates read this context (VR-5/G2 — never emit a reference we cannot
+    /// confirm resolves).
+    static EMIT_CTX: RefCell<Option<EmitCtx>> = const { RefCell::new(None) };
+}
+
+/// Install the per-file emit context for the duration of `f`, then clear it (RAII-free — the
+/// transpiler never unwinds across this boundary in practice; the budget thread-local in `gap.rs`
+/// takes the same shape). Used by `transpile::transpile_source`.
+pub(crate) fn with_emit_ctx<R>(
+    resolvable: HashSet<String>,
+    layouts: HashMap<String, StructLayout>,
+    f: impl FnOnce() -> R,
+) -> R {
+    EMIT_CTX.with(|c| {
+        *c.borrow_mut() = Some(EmitCtx {
+            resolvable,
+            layouts,
+        })
+    });
+    let r = f();
+    EMIT_CTX.with(|c| *c.borrow_mut() = None);
+    r
+}
+
+/// Whether a named-field record named `name` may be emitted under the M-1006 resolvability gate.
+/// Context off (`None`) ⇒ always allowed; on ⇒ allowed iff `name` is resolvable in-file.
+fn named_field_emit_allowed(name: &str) -> bool {
+    EMIT_CTX.with(|c| match &*c.borrow() {
+        None => true,
+        Some(ctx) => ctx.resolvable.contains(name),
+    })
+}
+
+/// The positional field layout of the in-file struct `name`, when known **and** the struct is
+/// resolvable (i.e. emitted — so its constructor exists to desugar against). `None` disables the
+/// field-projection / struct-literal desugaring for `name` (context off, `name` not an in-file
+/// single-ctor struct, or `name` not emitted — where a `match name(...) => …` would reference an
+/// absent ctor and poison the file's check).
+fn struct_layout(name: &str) -> Option<StructLayout> {
+    EMIT_CTX.with(|c| match &*c.borrow() {
+        None => None,
+        Some(ctx) if ctx.resolvable.contains(name) => ctx.layouts.get(name).cloned(),
+        Some(_) => None,
+    })
+}
 
 /// The `.myc` text (+ any dropped sub-features, e.g. attributes) for one successfully emitted
 /// top-level item.
@@ -762,10 +832,154 @@ fn emit_expr_inner(expr: &Expr, self_ty: Option<&str>) -> Result<String, GapReas
              (',' expr)*)? ']'` (grammar line 415) enumerates its elements and has no repeat form",
         )),
         Expr::Block(b) if b.label.is_none() => emit_block_as_expr(&b.block, self_ty),
+        // M-1006 Lever 1 — field projection `self.<field>`. The grammar has NO projection surface
+        // (`path ::= Ident ('.' Ident)*` is a namespace glyph; `self.0` cannot even lex), but reading
+        // one field of a single-constructor product has a faithful equivalent: a `match` that binds
+        // exactly that field. Only `self` has a statically-known type here (the impl's `self_ty` — the
+        // transpiler tracks no other local types), so only `self.<field>` desugars; any other base
+        // gaps. Gated (via `struct_layout`) on `self_ty` being an *emitted* in-file struct so the
+        // `Ty(...)` constructor the `match` names actually exists (never poison the file's check).
+        Expr::Field(fe) => {
+            let base_is_self = matches!(
+                &*fe.base,
+                Expr::Path(p) if p.qself.is_none() && p.path.is_ident("self")
+            );
+            if !base_is_self {
+                return Err(GapReason::new(
+                    Category::Other,
+                    "field access on a non-`self` base — the transpiler tracks no local types, so \
+                     the projection cannot be resolved to a constructor position (only \
+                     `self.<field>` desugars to a `match`)",
+                ));
+            }
+            let sty = self_ty.ok_or_else(|| {
+                GapReason::new(
+                    Category::Other,
+                    "`self` field access with no enclosing impl/trait `self` type",
+                )
+            })?;
+            let layout = struct_layout(sty).ok_or_else(|| {
+                GapReason::new(
+                    Category::Other,
+                    format!(
+                        "field projection `self.{}` on `{sty}` — not an in-file single-ctor struct \
+                         that emits (an enum / external / non-resolvable type has no constructor to \
+                         `match` against)",
+                        member_text(&fe.member)
+                    ),
+                )
+            })?;
+            let pos = match &fe.member {
+                syn::Member::Named(id) => {
+                    let n = id.to_string();
+                    layout.iter().position(|f| f.as_deref() == Some(n.as_str()))
+                }
+                syn::Member::Unnamed(idx) => {
+                    let i = idx.index as usize;
+                    (i < layout.len()).then_some(i)
+                }
+            }
+            .ok_or_else(|| {
+                GapReason::new(
+                    Category::Other,
+                    format!(
+                        "field `{}` not found on struct `{sty}`",
+                        member_text(&fe.member)
+                    ),
+                )
+            })?;
+            // Bind the accessed position to `p{pos}` (a guaranteed-valid, non-reserved ident),
+            // wildcard the rest, and return the binding. Parenthesized so it composes as a binary /
+            // application operand subexpression.
+            let bind = format!("p{pos}");
+            let pats: Vec<String> = (0..layout.len())
+                .map(|i| {
+                    if i == pos {
+                        bind.clone()
+                    } else {
+                        "_".to_string()
+                    }
+                })
+                .collect();
+            Ok(format!(
+                "(match self {{ {sty}({}) => {bind} }})",
+                pats.join(", ")
+            ))
+        }
+        // M-1006 Lever 1 — struct-literal construction `Ty { a: x, b: y }` / `Self { .. }` -> the
+        // positional constructor call `Ty(x, y)` (arguments ordered by the struct's declaration
+        // order). Gated on `Ty` being an emitted in-file struct. `..rest` (struct-update) and a
+        // partial literal have no Mycelium surface -> explicit gap (never a fabricated field).
+        Expr::Struct(se) if se.qself.is_none() => {
+            if se.rest.is_some() {
+                return Err(GapReason::new(
+                    Category::Other,
+                    "struct-update syntax `..rest` has no Mycelium equivalent (no record-update \
+                     surface)",
+                ));
+            }
+            let seg = se
+                .path
+                .segments
+                .last()
+                .ok_or_else(|| GapReason::new(Category::Other, "empty struct-literal path"))?;
+            let raw = seg.ident.to_string();
+            let sty = if raw == "Self" {
+                self_ty
+                    .ok_or_else(|| {
+                        GapReason::new(
+                            Category::Other,
+                            "`Self { .. }` with no enclosing impl/trait `self` type",
+                        )
+                    })?
+                    .to_string()
+            } else {
+                raw
+            };
+            let layout = struct_layout(&sty).ok_or_else(|| {
+                GapReason::new(
+                    Category::Other,
+                    format!(
+                        "struct literal `{sty} {{ .. }}` — not an in-file single-ctor struct that \
+                         emits (no constructor to build)"
+                    ),
+                )
+            })?;
+            let mut args = Vec::with_capacity(layout.len());
+            for (i, slot) in layout.iter().enumerate() {
+                let fv = se
+                    .fields
+                    .iter()
+                    .find(|fv| match (&fv.member, slot) {
+                        (syn::Member::Named(id), Some(name)) => id == name.as_str(),
+                        (syn::Member::Unnamed(idx), None) => idx.index as usize == i,
+                        _ => false,
+                    })
+                    .ok_or_else(|| {
+                        GapReason::new(
+                            Category::Other,
+                            format!(
+                                "struct literal `{sty}` gives no value for the field at position \
+                                 {i} — a partial constructor has no Mycelium surface (VR-5)"
+                            ),
+                        )
+                    })?;
+                args.push(emit_expr(&fv.expr, self_ty)?);
+            }
+            Ok(format!("{sty}({})", args.join(", ")))
+        }
         _ => Err(GapReason::new(
             Category::Other,
             format!("unsupported expression form `{}`", tokens_to_string(expr)),
         )),
+    }
+}
+
+/// A short human label for a `syn::Member` (`self.mode` / `self.0`), for gap-reason messages.
+fn member_text(m: &syn::Member) -> String {
+    match m {
+        syn::Member::Named(id) => id.to_string(),
+        syn::Member::Unnamed(idx) => idx.index.to_string(),
     }
 }
 
@@ -845,11 +1059,48 @@ fn map_pattern_inner(pat: &Pat) -> Result<String, GapReason> {
 // Top-level item emitters.
 // ---------------------------------------------------------------------------------------------
 
+/// Map a **named-field record** (`{ a: T, b: U }`, a `struct`'s or an enum variant's fields) to the
+/// grammar's **positional** constructor form: the field *types* become positional arguments and the
+/// field *names* are dropped. Returns `(mapped_field_types, dropped_field_names)`.
+///
+/// Mycelium's `constructor ::= Ident ('(' type_ref (',' type_ref)* ')')?`
+/// (`docs/spec/grammar/mycelium.ebnf` §`constructor`) is **positional-only** — there is no
+/// named-field/record surface — so a named-field record emits exactly like a tuple one (`Fields::
+/// Unnamed`): its product *structure* is preserved, faithfully, and the field names (surface sugar)
+/// are dropped. This is precisely how the `lib/std/*.myc` hand-ports already render a Rust record
+/// (`type GuaranteeRow = Row(Bytes, Guarantee, Bytes, Bytes, Bool);`). The caller records the dropped
+/// names as a never-silent [`Category::NamedFieldDrop`] sub-gap (G2) — they are *recorded*, not lost.
+///
+/// A field whose *type* has no confirmed mapping still **refuses the whole record** (via `on_type_gap`,
+/// propagating that field's precise reason), never a partial emission (VR-5/G2) — exactly as the
+/// positional path already does (so e.g. a `String`/slice field keeps the record a hard gap).
+fn map_named_fields_positional(
+    fields: &FieldsNamed,
+    on_type_gap: impl Fn(&str) -> GapReason,
+) -> Result<(Vec<String>, Vec<String>), GapReason> {
+    let mut tys = Vec::with_capacity(fields.named.len());
+    let mut names = Vec::with_capacity(fields.named.len());
+    for f in &fields.named {
+        let mapped = map_type(&f.ty, None).map_err(|inner| on_type_gap(&inner.reason))?;
+        tys.push(mapped);
+        names.push(
+            f.ident
+                .as_ref()
+                .map_or_else(|| "_".to_string(), ToString::to_string),
+        );
+    }
+    Ok((tys, names))
+}
+
 /// `enum` -> `type_item` (`type Name = C1 | C2(T1, T2) | ...;`).
 pub fn emit_enum(item: &ItemEnum) -> Result<Emitted, GapReason> {
     guard_ident(&item.ident.to_string(), "enum type name")?;
     let type_params = plain_type_params(&item.generics)?;
     let mut sub_gaps = Vec::new();
+    // Tracks whether any variant is a **named-field** record — the M-1006 resolvability gate applies
+    // to such an enum *after* mapping (below), so an unmappable field still surfaces its own precise
+    // reason first (an honest gap profile: "String field" is a repr gap, not a resolution gap).
+    let mut has_named_variant = false;
     let non_doc = non_doc_attrs(&item.attrs);
     if !non_doc.is_empty() {
         sub_gaps.push(GapReason::new(
@@ -893,17 +1144,52 @@ pub fn emit_enum(item: &ItemEnum) -> Result<Emitted, GapReason> {
                 }
                 ctors.push(format!("{}({})", v.ident, tys.join(", ")));
             }
-            Fields::Named(_) => {
-                return Err(GapReason::new(
-                    Category::PayloadVariant,
+            Fields::Named(fields) => {
+                // Named-field variant `Ctor { a: T, b: U }` -> positional `Ctor(T, U)` (grammar
+                // §`constructor` is positional-only). Field types kept, names dropped + recorded
+                // never-silently (G2); a field whose type gaps still refuses the whole variant
+                // (mapped here so that precise reason wins over the resolvability gate below).
+                has_named_variant = true;
+                let (tys, names) = map_named_fields_positional(fields, |inner| {
+                    GapReason::new(
+                        Category::PayloadVariant,
+                        format!(
+                            "enum `{}` variant `{}` has a field type with no confirmed mapping ({})",
+                            item.ident, v.ident, inner
+                        ),
+                    )
+                })?;
+                sub_gaps.push(GapReason::new(
+                    Category::NamedFieldDrop,
                     format!(
-                        "enum `{}` variant `{}` uses named fields — `constructor ::= Ident \
-                         ('(' type_ref (',' type_ref)* ')')?` has no named-field/record form",
-                        item.ident, v.ident
+                        "enum `{}` variant `{}` named field(s) `{}` emitted positionally as \
+                         `{}({})` — Mycelium's `constructor` is positional-only (no record \
+                         surface); product structure preserved, field names dropped",
+                        item.ident,
+                        v.ident,
+                        names.join(", "),
+                        v.ident,
+                        tys.join(", ")
                     ),
-                ))
+                ));
+                ctors.push(format!("{}({})", v.ident, tys.join(", ")));
             }
         }
+    }
+    // M-1006 resolvability gate (applied *after* mapping so an unmappable field's precise reason
+    // wins): an enum with a named-field variant only emits when it resolves in-file — otherwise
+    // emitting that variant positionally would introduce an out-of-file reference that poisons the
+    // file's `myc check`, costing its clean items. An enum with no named-field variant is unaffected.
+    if has_named_variant && !named_field_emit_allowed(&item.ident.to_string()) {
+        return Err(GapReason::new(
+            Category::PayloadVariant,
+            format!(
+                "enum `{}` has a named-field variant referencing a type not resolvable in-file — \
+                 emitting it positionally would introduce an unresolved reference that poisons the \
+                 file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
+                item.ident
+            ),
+        ));
     }
     let params_text = if type_params.is_empty() {
         String::new()
@@ -928,8 +1214,10 @@ pub fn emit_enum(item: &ItemEnum) -> Result<Emitted, GapReason> {
     })
 }
 
-/// `struct` -> a single-constructor `type_item`. Unit and all-positional (`Fields::Unnamed`)
-/// structs map; named-field structs/records have no grammar equivalent (KNOWN HARD GAP).
+/// `struct` -> a single-constructor `type_item`. Unit, all-positional (`Fields::Unnamed`), and
+/// **named-field** (`Fields::Named`, M-1006) structs all map to the positional `constructor` surface
+/// (named fields emit positionally with names dropped + recorded — see
+/// [`map_named_fields_positional`]). A field whose *type* has no mapping still refuses the struct.
 pub fn emit_struct(item: &ItemStruct) -> Result<Emitted, GapReason> {
     guard_ident(&item.ident.to_string(), "struct type/constructor name")?;
     let type_params = plain_type_params(&item.generics)?;
@@ -963,15 +1251,51 @@ pub fn emit_struct(item: &ItemStruct) -> Result<Emitted, GapReason> {
             }
             format!("{}({})", item.ident, tys.join(", "))
         }
-        Fields::Named(_) => {
-            return Err(GapReason::new(
-                Category::Struct,
+        Fields::Named(fields) => {
+            // Named-field struct `Foo { a: T, b: U }` -> positional `Foo(T, U)` (grammar
+            // §`constructor` is positional-only; matches the `lib/std/*.myc` hand-ports, e.g.
+            // `type GuaranteeRow = Row(...)`). Field types kept, names dropped + recorded
+            // never-silently (G2). Map FIRST so a field whose type has no mapping surfaces its own
+            // precise reason (a `String` repr gap, say — an honest gap profile), rather than being
+            // masked by the resolvability gate below.
+            let (tys, names) = map_named_fields_positional(fields, |inner| {
+                GapReason::new(
+                    Category::Struct,
+                    format!(
+                        "struct `{}` has a field type with no confirmed mapping ({})",
+                        item.ident, inner
+                    ),
+                )
+            })?;
+            // M-1006 resolvability gate: even when every field maps, only emit when this struct
+            // resolves in-file — otherwise the emission would introduce an out-of-file reference
+            // (e.g. a sibling-crate/kernel type) that poisons the file's `myc check`, costing its
+            // clean items. When gated out, keep the honest named-field refusal.
+            if !named_field_emit_allowed(&item.ident.to_string()) {
+                return Err(GapReason::new(
+                    Category::Struct,
+                    format!(
+                        "struct `{}` uses named fields and references a type not resolvable in-file \
+                         — emitting it positionally would introduce an unresolved reference that \
+                         poisons the file's `myc check`; left gapped under the M-1006 resolvability \
+                         gate (VR-5/G2)",
+                        item.ident
+                    ),
+                ));
+            }
+            sub_gaps.push(GapReason::new(
+                Category::NamedFieldDrop,
                 format!(
-                    "struct `{}` uses named fields — no record/product-type surface (only a \
-                     single-ctor positional shape maps to `type_item`)",
-                    item.ident
+                    "struct `{}` named field(s) `{}` emitted positionally as `{}({})` — Mycelium's \
+                     `constructor` is positional-only (no record surface); product structure \
+                     preserved, field names dropped (matches `lib/std/*.myc` hand-ports)",
+                    item.ident,
+                    names.join(", "),
+                    item.ident,
+                    tys.join(", ")
                 ),
-            ))
+            ));
+            format!("{}({})", item.ident, tys.join(", "))
         }
     };
     let params_text = if type_params.is_empty() {

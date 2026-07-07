@@ -41,7 +41,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" A non-atomic intra-hypha reference-counted handle to a shared immutable value.\"] # [doc = \"\"] # [doc = \" Backed by [`std::rc::Rc<T>`] for correct non-atomic reference counting within a single hypha.\"] # [doc = \"\"] # [doc = \" ## Sharing model\"] # [doc = \"\"] # [doc = \" [`clone_ref`](Self::clone_ref) produces a second handle, incrementing the refcount.\"] # [doc = \" [`drop_ref`](Self::drop_ref) decrements the count, probes the outcome, and returns\"] # [doc = \" an [`RcProbe`]. The caller **must** call `drop_ref` — `RcCell<T>` has no `Drop` impl\"] # [doc = \" that emits a `ReclamationRecord`; dropping without `drop_ref` silently leaks the audit\"] # [doc = \" record (G2 violation).\"] # [doc = \"\"] # [doc = \" ## `!Send + !Sync`\"] # [doc = \"\"] # [doc = \" Inherited from `Rc<T>`: the non-atomic refcount is safe only within one hypha.\"] # [doc = \"\"] # [doc = \" ## Immutability\"] # [doc = \"\"] # [doc = \" `T` is held immutably (LR-8 / DN-32 §2.2). There is no interior-mutation surface.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — sharing and probe logic are deterministic by construction.\"] # [derive (Debug)] pub struct RcCell < T > { inner : Rc < T > , }",
-      "reason": "struct `RcCell` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `RcCell` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "RcCell"
     },
     {

@@ -4,7 +4,7 @@
 |---|---|
 | **Note** | DN-34 |
 | **Status** | **Draft (advisory)** (2026-06-25) — strategy capture for a **future** phase. Records how a Rust→Mycelium transpiler would accelerate the Mycelium self-hosting rewrite (the `stdlib-and-libraries-in-Mycelium` long pole), leveraging the maintainer's existing **py2rust** + **py-rust-bridge** projects as the seed. **Enacts nothing; ships no code.** The phase is **gated on the Mycelium surface (L1/L2/L3 + stdlib API) being mature enough to be a transpilation *target*** — it is not begun now. |
-| **Feeds** | **DN-26** (Self-Hosting Bootstrap Plan — this is the *mechanism* that does the bulk of the rewrite), **DN-27** (Post-1.0.0 Repository Decomposition — the transpiled output is split into component repos), **RFC-0028** (FFI & System Interface — the Rust↔Mycelium interop the transition relies on), **M-502** (stdlib-in-Mycelium migration), **ADR-021/022 + DN-25** (the 1.0.0 gates that schedule self-hosting post-core-1.0). |
+| **Feeds** | **DN-26** (Self-Hosting Bootstrap Plan — this is the *mechanism* that does the bulk of the rewrite), **DN-27** (Post-1.0.0 Repository Decomposition — the transpiled output is split into component repos), **RFC-0028** (FFI & System Interface — the Rust↔Mycelium interop the transition relies on), **M-502** (stdlib-in-Mycelium migration), **ADR-021/022 + DN-25** (the 1.0.0 gates that schedule self-hosting post-core-1.0). **Generalized by DN-85** — this Rust→Mycelium note is the **first arm** of a multi-language transpilation program (Python/C/C++/Fortran/Cython/CUDA…) whose flagship goal is a single-language Mycelium full stack; the py2rust/py-rust-bridge seeds below are the Python-arm foreshadowing. |
 | **Date** | June 25, 2026 |
 | **Decides** | *Nothing normatively* — advisory direction capture. Records (1) that a **Rust→Mycelium transpiler** (input: the project's own Rust crates; output: Mycelium surface) is the intended **bulk-rewrite mechanism**; (2) the **maintainer's py2rust + py-rust-bridge** projects are the architectural seed (AST-walk transpilation + never-silent compatibility analysis + the FFI bridge); (3) a **construct-mapping sketch** (Rust → Mycelium) and a **never-silent "flag, don't guess" analyzer** as the load-bearing design; (4) the **phasing** — isolated branch, transpile-then-refine, output decomposed into component repos. |
 | **Task** | Self-hosting / Mycelium-rewrite phase (future; M-502 / DN-26 / DN-27) |
@@ -572,6 +572,354 @@ not to a false "keep closing gaps" expectation.
 **Guarantee tags unchanged:** emission `Declared`; vet verdict `Empirical` (real `myc check`).
 **Status unchanged (Draft)** — a ladder phase, enacts nothing further.
 
+### §8.11 M-1006 phase-1 (cont.): shared-reference type erasure — transpiler hardening (kickoff `trx2` E-B, epic E33-1) — `Empirical`
+
+The next transpiler-hardening increment of the **M-1006 ladder**, continuing §8.10's phase-1 pass
+(append-only — §8.10 already landed on the working tier; this extends it, it does not rewrite it).
+Same recipe (the `/myc-drafts` ladder phase), **same 17 wave-1 targets** as §8.9/§8.10 (phase-1
+refines the port-surface pass before the ladder expands the target set). Its **before-baseline is
+exactly §8.10's after-state** — 759 non-test items, 47 emitted (6.19%), 28 myc-check-clean (3.69%),
+811 gaps — so the deltas below chain cleanly onto §8.10 (reconfirmed by a fresh regeneration at the
+merged base).
+
+**Gap class attacked — the largest tractable sub-slice of `Other` (type-coverage).** §8.9/§8.10
+rank `Other` #1 (315 gaps), but `Other` is a grab-bag. Profiling the committed `.gap.json` corpus
+resolved it: **160 of the 315 `Other` gaps (~51%) are "unsupported Rust type form", and 156 of those
+are reference types `&T`** (150 shared `&T`/`&'a T`, 6 mutable `&mut T`) — a single, well-defined,
+grounded sub-slice, far more concrete than the scalar type-coverage residue (`String`/signed-int/
+`char`) that §8.10 declared out-of-scope for the transpiler (each of those needs a kernel/grammar
+repr decision — E18-1). References, by contrast, have a **faithful** mapping already precedented in
+the emitter.
+
+**Transpiler fix landed (grammar-grounded; emission stays `Declared`).** One arm in `map.rs`
+(`Type::Reference`): a **shared** reference `&T` / `&'a T` **erases** to its referent's mapping
+(`map_type(&r.elem)`). Grounding: Mycelium is value-semantic (ADR-003 — no reference types; the
+grammar's `base_type`/`type_ref`, `docs/spec/grammar/mycelium.ebnf` §`base_type`, has no `&` form),
+so a shared borrow and the value it borrows denote the *same* `T`. This is the **type-position
+analogue of an erasure the emitter already performs**: `emit.rs` erases `&expr` (`Expr::Reference`)
+and `&pat` (`Pat::Reference`) reference-transparently, and the hand-port itself renders Rust
+`fn cmp(&self, other: &Ordering)` as value params `fn cmp(a: Ordering, b: Ordering)`
+(`lib/std/cmp.myc`) — so `&T` → `T` is exactly how a human port writes it, not a guess. The lifetime
+is erased with the reference (no grammar surface). A referent that itself has no mapping still gaps,
+propagating its **own** precise reason (`&str` → `str` gap, `&[u8]` → slice gap) — never a partial
+emission (VR-5/G2). A **mutable** reference `&mut T` is **not** erased — in-place mutation has no
+value-semantic correspondence (the same stance the existing `&mut self` receiver gap takes), so it
+stays an explicit `Other` gap rather than silently dropping the mutation. Six new unit tests pin the
+paths (`shared_ref_params_emit`, `mut_ref_param_gapped`, `shared_ref_to_str_still_gapped`, plus the
+`map_type` corpus rows and the `mutable_reference_is_gapped_not_erased` /
+`shared_reference_to_unmapped_referent_surfaces_referent_reason` regression guards).
+
+**Measured before → after (`Empirical`, union over all 17 targets, non-test denominator 759):**
+
+| Metric | Before (= §8.10 after) | After | Δ |
+|---|---:|---:|---:|
+| `expressible_fraction` (emitted) | 6.19% (47) | **6.46% (49)** | **+2 items** |
+| `checked_fraction` (myc-check-clean) | 3.69% (28) | 3.69% (28) | flat |
+| `Other` gaps | 315 | **301** | **−14** |
+| `ReservedWord` gaps | 25 | 33 | +8 |
+| `MultiStmtBody` gaps | 6 | 10 | +4 |
+| `DeriveAttr` gaps | 42 | 43 | +1 |
+| total gaps | 811 | **810** | −1 |
+
+The two newly-emitted items are `std-content/lib.rs::digest_eq` (Rust `fn digest_eq(a: &ContentHash,
+b: &ContentHash) -> bool`, now emitting `fn digest_eq(a: ContentHash, b: ContentHash) => Bool = …`)
+and `std-sys/fs.rs::exists` (`&Path` erased). **`checked_fraction` is flat** because both emit
+faithfully yet fail `myc check` on a **name-resolution** blocker — `unknown type ContentHash` /
+`unknown type Path` (the referent types are declared in *other* nodules the single-file draft cannot
+see) — a *different* blocker class than emission, exactly as §8.10 §Lesson-2 and §8.7's original
+thesis predicted. The `Other −14` is the honest transpiler win; the **`ReservedWord +8` /
+`MultiStmtBody +4` / `DeriveAttr +1` is the expected never-silent cascade** — once a `&T` stops
+masking a signature, the item surfaces its *deeper* real blocker (a reserved-word type/ctor, a
+multi-statement body, a dropped derive), which is the gap-profiling instrument doing its job (the
+item still gaps, but now names the true blocker, refining the ranked worklist). Of the ~150 shared
+references, only these ~14 had the reference as their item's *sole* `Other`-class blocker; the rest
+sit in items with a further `Other`-class blocker (an unmappable `&str`/`&[u8]`/`&dyn T` referent, or
+another unmapped param), so erasure reclassifies within `Other` rather than removing the item's gap —
+honest, and the reason the net `Other` move is modest.
+
+**Lesson (feeds the next ladder phase).** This is a **small but honest** win, and it **confirms
+§8.10's near-exhaustion thesis a fourth time**: the largest remaining well-defined transpiler-fixable
+sub-slice (references) closes cleanly and faithfully, yet moves `checked_fraction` by **zero** —
+because the check-clean ceiling on this fixed corpus is gated by **name-resolution** (single-file
+drafts referencing types/fns declared in sibling nodules) and **language-surface design**, not by the
+transpiler's emission surface. There is no transpiler-only change that moves `checked_fraction` on
+this corpus; the value delivered is a *refined gap profile* (references removed as a masking blocker
+corpus-wide, the deeper blockers now ranked) and *more portable drafts* (references erased the way a
+hand-port writes them). The M-1006 ladder's *checked* growth must come from **expanding the target
+set** (later phases — cross-nodule project-mode vetting would resolve the `ContentHash`/`Path`-class
+name errors) or from **E18-1 language-surface design**, not from further transpiler emission arms on
+this fixed 17-target set. Recorded so the next phase is scoped to that reality (G2).
+
+**Guarantee tags unchanged:** emission `Declared`; vet verdict `Empirical` (real `myc check`).
+**Status unchanged (Draft)** — a ladder phase, enacts nothing further.
+
+### §8.12 M-1006 phase-2: cross-nodule vetting probed (null), positional named-field emission lands — transpiler hardening (kickoff `trx2` E-B, epic E33-1) — `Empirical`
+
+The next M-1006 ladder increment (append-only — extends §8.11, does not rewrite it). It executes
+§8.11's stated next lever — **make referents resolve** — but the honest result splits in two: the
+cross-nodule *vetting* half moves `checked_fraction` by **zero** on this corpus (a rigorous null,
+recorded so the ladder is not run at it again), while a pivot to **struct-emission gap-closure** delivers
+the **first `checked_fraction` move in the entire ladder** (§8.9/§8.10/§8.11 each moved `checked` by 0).
+Its before-baseline is §8.11's after-state re-measured at the current head — **760 non-test items, 49
+emitted (6.45%), 28 myc-check-clean (3.68%)** (the committed §8.11 headline read 759/49/28; a +1-item
+source drift since, so the deltas below are re-baselined at head for an apples-to-apples read).
+
+**Half 1 — cross-nodule project-mode vetting, built and probed: `checked` Δ = 0 (the honest null).**
+The `myc check` driver only ever checked each `.myc` as an isolated **phylum-of-one** (`check_nodule`),
+so every cross-nodule referent failed name-resolution — §8.11 read this as "the referents live in
+sibling nodules" and named cross-nodule vetting as the fix. The kernel already *had* the cross-resolver
+(`mycelium_l1::check_phylum`, used by `myc run`); the driver never reached it. This phase lands that path
+as **`myc-check --phylum <dir>`** (assemble the set into one `Phylum`, run `check_phylum`, never-silent on
+a duplicate nodule path; additive — the per-file oracle is unchanged) — a focused checker hotfix
+propagated to `dev`/`integration`/`main` so it is available fleet-wide. **But measuring it on the corpus
+shows the §8.11 premise was optimistic:** every check-failure references a type that is **not emitted
+anywhere** — either **out-of-phylum** (`ContentHash` is declared in `mycelium_core`, outside the 17-target
+std set) or **same-crate-but-gapped** (`Permissions`/`IoError`/`Source` — structs the transpiler could not
+emit). There are **zero in-phylum *emitted* referents to resolve**, so cross-nodule resolution has nothing
+to resolve *to*, and a whole-crate nodule-merge is strictly **net-negative** (it couples a file's
+already-clean items to a poisoning sibling: the probed `std-content`/`std-io`/`std-fs`/`std-sys`/`std-rand`
+fall from 12 clean items to 0 when merged). The `--phylum` infra is correct, witnessed by a two-nodule
+cross-resolution test, and pays off the moment referents become emittable — but it moves nothing today
+(VR-5/G2: a built, proven lever with an empirically-zero effect on this corpus, recorded as such).
+
+**Half 2 — positional named-field emission (the lever that actually moves `checked`).** The largest
+tractable emission gap on the ranked worklist is **named-field records**: 137 `Struct` + 25
+`PayloadVariant` gaps across 94 distinct types (incl. semcore `Env`/`DataInfo`/`L1Value`) gapped **solely**
+for using named fields. Mycelium's grammar (`constructor ::= Ident ('(' type_ref,* ')')?`,
+`mycelium.ebnf` §`constructor`) is **positional-only** — there is no record surface — so a Rust
+named-field `struct Foo { a: T }` / variant `V { a: T }` now emits **positionally** (`type Foo = Foo(T)`),
+field names dropped and **recorded** as a never-silent `NamedFieldDrop` sub-gap (G2). This is the exact
+shape the `lib/std/*.myc` hand-ports already use (`type GuaranteeRow = Row(Bytes, …)`), so it is a faithful
+structural mapping, not a guess — a field whose *type* has no mapping (`String`) still refuses the whole
+record with its own precise reason. Naive positional emission is **net-negative on `checked`** (−8:
+emitting `ContentRef` surfaces its out-of-corpus `ContentHash` reference, poisoning the file that held the
+clean `RefKind`). The fix is a **per-file resolvability gate**: a named-field record emits only when every
+type it references resolves in-file (builtins plus same-file emittable types), computed as a **greatest**
+fixed point over the file's type graph so recursive and mutually-recursive types resolve rather than being
+wrongly excluded. Field types are mapped *before* the gate, so the gap profile keeps "`String` field" (a
+repr gap) distinct from "out-of-file reference" (a target-set gap). The gate turns the −8 regression into a
+genuine, non-regressive gain.
+
+**Measured before → after (`Empirical`, union over all 17 targets, non-test denominator 760):**
+
+| Metric | Before (= §8.11 after, re-baselined @ head) | After | Δ |
+|---|---:|---:|---:|
+| `expressible_fraction` (emitted) | 6.45% (49) | **7.50% (57)** | **+8 items** |
+| `checked_fraction` (myc-check-clean) | 3.68% (28) | **4.34% (33)** | **+5 items** |
+| `NamedFieldDrop` notes (emitted, names dropped) | 0 | **7** | +7 |
+| `Struct` gaps | 59 | **52** | **−7** |
+| total gaps (incl. sub-gaps) | 565 | 571 | +6 |
+
+The **+5 `checked`** are exactly the records that resolve in-file — e.g. `std-fs::Permissions`
+(`{ mode: u32 }` → `type Permissions = Permissions(Binary{32})`) now emits and unblocks its file's
+`is_readonly` (previously `unknown type Permissions`). The residual is honestly two-sided: records the
+gate withholds (their fields reach an **out-of-file** referent — the `mycelium_core`/cross-crate class the
+phylum probe localized) and records still hard-gapped by a **language-surface repr gap** (`String`,
+byte-array, signed-int fields — E18-1). Emission stays `Declared`; the +5 are real `myc check`-clean items
+(`Empirical`).
+
+**Lesson (feeds the next ladder phase).** Two findings, both scoping the next phase. (1) Cross-nodule
+*resolution* is not the lever on this corpus — the referents are not emitted, so there is nothing to
+resolve; the `--phylum` infra waits on emittable referents. (2) Struct-emission **is** the lever, and it
+works **only under the resolvability gate** — which is exactly the signal that `checked`'s true ceiling is
+the **target-set boundary**: the dominant blocker is references to types *outside* the 17-target set
+(`mycelium_core` kernel types, cross-crate types). The next `checked` growth therefore comes from
+**expanding the checked set to include the referent-defining crates** (e.g. `mycelium_core` as a
+declarations layer, so `ContentHash`-class references resolve) — checked as one phylum via the landed
+`--phylum` path — plus the remaining **E18-1** repr gaps (`String`/bytes/signed-int). Not from further
+single-file emission arms alone; those are exhausted (a fifth confirmation), but named-field emission just
+showed that the *right* emission arm, gated on resolvability, does move the number.
+
+**Guarantee tags unchanged:** emission `Declared`; vet verdict `Empirical` (real `myc check` /
+`check_phylum`). **Status unchanged (Draft)** — a ladder phase, enacts nothing further.
+
+### §8.13 M-1006 phase-3: field-projection desugaring; the Binary-arithmetic emission ceiling (kickoff `trx2` E-B, epic E33-1) — `Empirical`
+
+The next ladder increment (append-only — extends §8.12). Its before-baseline is §8.12's after-state:
+**760 non-test items, 57 emitted (7.50%), 33 myc-check-clean (4.34%)**. Two faithful transpiler-only
+levers were attacked; one lands a modest gain and the other resolves — via a `tero`-grounded lookup — to
+a **language-decision ceiling**, sharpening §8.12's "target-set boundary" lesson into a concrete,
+cited next-decision.
+
+**Lever 1 — field-projection / struct-literal desugaring (landed).** The grammar has **no projection
+surface** (`path` is a namespace glyph; `self.0` cannot lex), so a `self.<field>` read in an impl body
+now desugars to a `match` on the struct's single positional constructor — `self.mode` →
+`(match self { Permissions(p0) => p0 })` — and a struct literal `Ty { a: x }` / `Self { .. }` to the
+positional ctor call `Ty(x)`. Both are the faithful equivalent (no fabrication), reusing the ctor/field
+layout the emitter already computes; gated (via the M-1006 §8.12 resolvable set, now carried alongside
+the layouts in one `EmitCtx`) on the type being an *emitted* in-file struct so the `match Ty(...)` never
+names an absent constructor. Only `self` desugars (the transpiler tracks no other local types); any
+other base gaps.
+
+**Lever 2 — `rotate_left` lowering (attempted; found not achievable — a language gap, not a transpiler
+fix).** `std-rand/lib` is held solely by `rotl64`'s `x.rotate_left(k)` (confirmed: patching that one
+body to any well-typed expression makes the whole file `myc check`-clean). The faithful lowering is the
+exact identity `(x << k) | (x >> (W − k))`. But probing the oracle, and grounding it against the
+decision corpus via **`tero`** (`docs/tero-index/` → **RFC-0033**; issues **M-887** `bin.mul`, **M-889**
+`bin.shl`/`bin.shr`, **M-766** two's-complement completion, all `done`, `src:crates/mycelium-interp/src/prims.rs`),
+shows the lowering **cannot type-check**: on `Binary{N}` the sanctioned prim set is
+`bin.{add,sub,mul,div,div_s,rem,rem_s,shl,shr,shr_s,neg}` — there is **no `bin.band`/`bin.bor`/`bin.bxor`**,
+so the bit-*or* that `rotate` needs has no prim, and rotate is inexpressible. Two adjacent findings fell
+out of the same probe, recorded for the worklist (G2): (1) the transpiler emits Rust operators verbatim
+(`x << k`, `x + y`, `x & m`), which the checker reads as bare `shl`/`add`/`band` — **not** the real
+`bin.*` prims — so essentially all emitted `Binary{N}` arithmetic/shift bodies currently fail `myc check`;
+(2) a bare integer literal (`64`) has no `Binary{N}` type, so even `64 − k` needs a typed-literal surface.
+Emitting the correct `bin.*` prim requires **operand-type inference the transpiler does not have** (it
+would need to know an operand is `Binary{N}` and its width) plus a typed-literal form — so this is a
+design/decision gap, not a faithful drop-in. **Lever 2 was therefore not implemented** (VR-5: no
+fabricated bit-or, no guessed prim).
+
+**Measured before → after (`Empirical`, union over all 17 targets, non-test denominator 760):**
+
+| Metric | Before (= §8.12 after) | After (Lever 1) | Δ |
+|---|---:|---:|---:|
+| `expressible_fraction` (emitted) | 7.50% (57) | **8.29% (63)** | **+6 items** |
+| `checked_fraction` (myc-check-clean) | 4.34% (33) | **4.61% (35)** | **+2 items** |
+
+The **+2 `checked`** are field-projection methods that resolve in an already-clean file; the gain is
+net-positive but modest, and **one target (`std-fs`) regresses by 1** — emitting more method bodies
+surfaced a *deeper* prim blocker (`group_read`'s `Binary{N}` bit-op), which then poisons its file under
+the per-file oracle. That regression is the same **file-gating coupling** §8.12 documented, and it is the
+tell that the ceiling is no longer emission but the **prim/decision surface**.
+
+**Lesson + the decisions this ladder now needs (grounded).** Transpiler-only `checked` growth is
+near-exhausted and decelerating — §8.11 +0, §8.12 +5, §8.13 +2 — each new arm now fights file-gating and
+lands on a decision gap. The remaining movers are **maintainer decisions**, each captured here with its
+evidence and the exact question, so a future wave can act (this note *records*, it does not decide):
+
+1. **`Binary{N}` arithmetic/bitwise emission (highest-leverage; blocks `std-rand`, `std-fs`, and most
+   numeric bodies).** Decide (a) whether to add `bin.band`/`bin.bor`/`bin.bxor` prims (RFC-0033 has
+   shifts + arithmetic but no bitwise-logic ops — so `&`/`|`, and thus `rotate`, are currently
+   inexpressible), and (b) whether the transpiler may do **operand-type-directed prim selection** (emit
+   `bin.shl(x,k)` / `bin.add(x,y)` from the known `Binary{N}` param types) plus a **typed integer-literal**
+   form. Cite: RFC-0033 §4.1; M-887/M-889/M-766; DN-51 (Binary width arithmetic).
+2. **String/text repr (E18-1) — the single largest bloc (~180 gaps).** `Bytes` exists but is not confirmed
+   a UTF-8 text type; `String`/`str` gap everywhere, cascading through `IoError`/`ContentHash`.
+3. **`mycelium_core` declarations target-set.** Add a headers-only `core` nodule so the out-of-corpus
+   referents resolve (`Value`×87, `GuaranteeStrength`×22, `ContentHash`×16) — checked as one phylum via
+   the landed `--phylum` path (§8.12).
+4. **Inherent-impl duplicate-name auto-rename** (`std-runtime/region`'s two `fn allocate`) — the per-type
+   prefixing the transpiler deliberately refuses (FLAG-ast-5/VR-5); sanction it or leave it a hand-port step.
+
+**Guarantee tags unchanged:** emission `Declared`; vet verdict `Empirical` (real `myc check`). **Status
+unchanged (Draft)** — a ladder phase, enacts nothing further.
+
+---
+
+### §8.14 M-1006 phase-4: String→`Bytes` lands the ladder's largest win; the operator ceiling is re-grounded to a *frozen-kernel* decision (kickoff `trx2` E-B, epic E33-1) — `Empirical`
+
+The next ladder increment (append-only — extends §8.13). Before-baseline is §8.13's after-state:
+**760 non-test items, 63 emitted (8.29%), 35 myc-check-clean (4.61%)**. This phase acts on §8.13's
+maintainer ruling ("both, parallel + coordinated; flag the kernel work"): it lands the one faithful
+transpiler lever whose grounding checked out (String→`Bytes`), and — via **verify-first oracle probes**
+before writing any code — finds the two remaining transpiler levers (operator emission, dup-name rename)
+have **zero corpus yield**, re-grounding the ceiling to the kernel/decision surface with concrete cited
+evidence.
+
+**Lever D2 — `String`/`str`/`&str` → `Bytes` (landed; resolves §8.13 decision #2).** §8.13 carried
+`String`/`str` as an open decision ("`Bytes` exists but is not confirmed a UTF-8 text type"). Grounding
+it via `tero` against **RFC-0033 §3.2** (`Repr::Bytes` is the *string/byte value with never-silent
+decode*, ratified — RFC-0033 Status Accepted; already decided by RFC-0032) resolves the hedge: `Bytes`
+**is** the dedicated UTF-8 text repr, so Rust `String`/`str`/`&str` map onto it faithfully under value
+semantics (ADR-003; `&str` erases to `str` via the §8.11 shared-reference arm, then maps). **Verify-first
+(the mandatory gate before wiring): a `Bytes`-typed record field, a `Bytes` param/return, and a `"…"`
+string literal typed `Bytes` all `myc check`-clean** — the type-position twin of the string-literal value
+emission the emitter already performs (`Lit::Str` → `StrLit`, M-910/M-911). `map_type` and its
+mirror `field_type_user_deps` updated in lockstep so a `String` field no longer withholds its struct.
+
+**Lever D3 — `Binary{N}` operator emission (probed; NOT built — zero yield).** §8.13 named this the
+highest-leverage lever. Verify-first oracle probing (real `myc check`, `Binary{32}` operands) mapped the
+actual surface before any wiring, and the result contradicts the "immediate win" framing (recorded per
+house rule #4). Two findings:
+
+*The infix operators the emitter currently writes verbatim almost all fail the checker.* They desugar to
+**bare** prim names, not the frozen `bin.*` prims:
+
+| Rust op | desugars to | `myc check` on `Binary{32}` | faithful invocable form (verified clean) |
+|---|---|---|---|
+| `+` `-` | `add` `sub` | prim exists, **rejects** `[Binary,Binary]` (T-Op) | `add_u`/`sub_u` (or `_s`) |
+| `*` | `mul` | rejects `[Binary,Binary]` | `mul_s` only — **no `mul_u`** |
+| `<<` `>>` | `shl` `shr` | **unknown prim** | `shl_u`/`shr_u` |
+| `/` `%` | `div` `rem` | **unknown prim** | `div_u`/`rem_u` (or `_s`) |
+| `&` `\|` | `band` `bor` | **unknown prim** | **none — no `band`/`bor` prim** |
+| `^` | (resolves) | `ok` | the one infix that checks |
+| `==` `<` | `eq` `lt` | returns **`Binary{1}`, not `Bool`** | (decision-gated) |
+| `!=` `>` | `ne` `gt` | **unknown prim** | (decision-gated) |
+| `&&` `\|\|` | `and` `or` | **rejects** `[Bool,Bool]` (T-Op) | (decision-gated) |
+
+*Zero corpus yield.* A grep of **every** emitted `.myc` fn body across all 17 targets finds **no body
+using any arithmetic/shift/bitwise operator** — the bodies that would use them are already gapped for
+other reasons (multi-statement blocks, method calls, unmappable receivers), so the operators never reach
+emission. Emitting the faithful surface calls (`add_u`/`shl_u`/…) would require **operand-type inference
+the transpiler does not have** (thread param/`self` `Binary{N}` widths through every `emit_expr` site) for
+**zero measured `checked` movement** on this corpus. Per YAGNI + VR-5 + the file-gating lesson, the
+inference machinery was **not built**; the finding is recorded and the real blocker is FLAGged below.
+
+**Lever D4 — inherent-impl duplicate-name rename (probed; NOT built — premise disproven).** §8.13
+estimated "+4 on `std-runtime/region`" from renaming its two `fn allocate`. Measurement disproves the
+premise: `region.myc`'s **both** `allocate` bodies (`ScopeNodeId`, `RegionEpoch`) call `fetch_add` — an
+unknown atomic prim — so the file stays poisoned regardless of the rename. The `duplicate function` error
+is a **co**-blocker, not the sole blocker; the rename yields nothing until atomics land. Recorded, not
+implemented.
+
+**Measured before → after (`Empirical`, union over all 17 targets, non-test denominator 760):**
+
+| Metric | Before (= §8.13 after) | After (D2) | Δ |
+|---|---:|---:|---:|
+| `expressible_fraction` (emitted) | 8.29% (63) | **11.45% (87)** | **+24 items** |
+| `checked_fraction` (myc-check-clean) | 4.61% (35) | **5.79% (44)** | **+9 items** |
+
+**+9 `checked`** is the **largest single-lever gain of the whole M-1006 ladder** (§8.11 +0, §8.12 +5,
+§8.13 +2, §8.14 **+9**) — String-field records unblocked across `std-content` (+2), `std-fs` (+3), and
+`std-runtime` (+2). The **+24 emitted / +9 checked** gap is the familiar **file-gating coupling**: 15 of
+the newly-emitted items (notably all of `std-io`'s +7) sit in files still poisoned by a *cross-file or
+out-of-phylum* referent, so they emit but do not check. Determinism verified (byte-identical rerun).
+
+**The re-grounded ceiling — transpiler-only levers are exhausted; the movers are kernel + phylum
+decisions.** The post-D2 poison map (from the regenerated per-file `vet.json`) shows **every** remaining
+`CheckError` file is blocked by something the transpiler cannot faithfully fix:
+
+| Blocker class | Concrete instances | Disposition |
+|---|---|---|
+| Out-of-phylum type reference | `ContentHash`, `Ty`, `Value`, `ScalarKind`, `GuaranteeTag`, `Source`, `Path` | phylum target-set (D5, below) |
+| Frozen-kernel prim absent | `band`/`bor`/`bxor` (bitwise, `rotate`), `fetch_add` (atomics) | kernel FLAG (D1, below) |
+| Decision-gated operator semantics | `ne`/`gt` unknown; `==`/`<`→`Binary{1}`≠`Bool`; `and`/`or` reject `Bool` | kernel/decision FLAG (D1) |
+| stdlib surface method absent | `to_owned`, `contains` | stdlib port (future wave) |
+
+**The decisions this ladder now needs (grounded; this note *records*, it does not decide).** §8.13's list
+is refined by this phase's evidence — decision #2 (String) is now **resolved** (D2), and #1 (operators) is
+re-grounded to a **frozen-kernel** question with a tension that must be surfaced honestly:
+
+1. **The `Binary{N}` bitwise/comparison prim gap is a *post-freeze kernel* decision, not free "prim-set
+   closure" (correcting §8.13 #1).** RFC-0033 **§4.1.2** (Status **Accepted**) mandates bitwise ops
+   ("Bitwise ops treat the value as an unsigned bitvector") — but the **frozen** kernel prim set is
+   `bin.{add,sub,mul,neg,div,div_s,rem,rem_s,shl,shr,shr_s}` (`crates/mycelium-interp/src/prims.rs`), which
+   has **no `band`/`bor`/`bxor`**. And **DN-56** is **Enacted** with **the kernel freeze declared** (M-969,
+   2026-07-02; §5.3: primitive set closed, Π = 38). So the §4.1.2 bitwise mandate is an **undischarged
+   spec obligation against an already-frozen kernel** — completing it is a **DN-39 default-DENY kernel
+   promotion** (DN-56 §6's post-freeze diff policy), *possibly* a `core 2.0.0` event, **not** the free
+   closure §8.13 assumed. Same class: the comparison prims `ne`/`gt`/`lte`/`gte`, the `==`/`<`→`Binary{1}`
+   vs `Bool` result-type question, and `and`/`or` refusing `Bool`. **DoD for the kernel task:** land
+   never-silent `bin.band`/`bin.bor`/`bin.bxor` (+ the comparison-to-`Bool` surface) with property +
+   conformance (accept/reject) green, via the DN-39 gate; that unblocks `rotate` (`std-rand`) and the
+   `Binary{N}` bit/compare bodies. **Cite:** RFC-0033 §4.1.2; DN-56 §5.3/§6 (Enacted, freeze); the landed
+   arithmetic/shift set M-887/M-889/M-766/M-767. *(Owner: kernel/Session-A — flagged up, not edited here;
+   the transpiler side lights up once the prims land, via the operand-type inference D3 deferred.)*
+2. **`mycelium_core` / kernel declarations target-set (D5 — the largest remaining transpiler-adjacent
+   lever).** The dominant residual class is out-of-phylum type references (`Value`, `ContentHash`, `Ty`,
+   `Path`, `Source`, `ScalarKind`, `GuaranteeTag`). A headers-only `core`/`compiler` nodule (decls only),
+   assembled with the target as one phylum and checked via the landed `--phylum` path (§8.12), would let
+   these resolve. Deferred from this phase (larger, and the phylum-vet wiring is not yet in the drafts
+   driver); recorded as the next wave's primary lever now that String no longer blocks the core decls that
+   carry text fields.
+3. **Inherent-impl duplicate-name auto-rename (FLAG-ast-5)** — unchanged from §8.13 #4, but now known to
+   be **co-blocked by atomics** on its only corpus instance (`std-runtime/region`), so it is *not* a
+   standalone win; bundle it with the kernel-atomics work.
+
+**Guarantee tags unchanged:** emission `Declared`; vet verdict `Empirical` (real `myc check`). **Status
+unchanged (Draft)** — a ladder phase, enacts nothing further; the kernel FLAG (#1) is *recorded for the
+DN-39/Session-A owner*, not enacted here (VR-5: no kernel edit, no prim fabricated).
+
 ---
 
 ## Meta — changelog
@@ -682,3 +1030,71 @@ not to a false "keep closing gaps" expectation.
   the current-corpus transpiler-fixable surface is near-exhausted (the stopping point recorded, G2).
   Emission `Declared`, vet `Empirical`. **Status unchanged (Draft)** — a ladder phase, enacts nothing
   further. (Append-only; VR-5; G2.)
+- **2026-07-07 — §8.11 added: M-1006 phase-1 (cont.) — shared-reference type erasure (kickoff
+  `trx2` E-B, epic E33-1).** The next transpiler-hardening increment on the same 17 wave-1 targets,
+  continuing §8.10 (append-only). Profiling resolved `Other`'s grab-bag: 156 of its 315 gaps are
+  reference types `&T` — the largest well-defined tractable sub-slice. Landed one `map.rs` arm: a
+  **shared** reference `&T`/`&'a T` **erases** to its referent's mapping (value semantics, ADR-003 —
+  no `&` in the grammar; the type-position twin of the emitter's existing `&expr`/`&pat` erasure, and
+  how the hand-port writes Rust `&Ordering` as value `Ordering`, `lib/std/cmp.myc`); a **mutable**
+  `&mut T` stays an explicit gap (mutation has no value-semantic correspondence — the `&mut self`
+  stance); an unmappable referent still gaps with its own precise reason (never a partial emission).
+  Six new unit tests. Measured (`Empirical`, union / 759): `expressible_fraction` 6.19% → **6.46%**
+  (47 → 49; `digest_eq` via `&ContentHash`, `exists` via `&Path`), `checked_fraction` **flat** at
+  3.69% (both new items emit faithfully but fail `myc check` on a name-resolution blocker — `unknown
+  type ContentHash`/`Path`, the referents live in sibling nodules — a different class than emission),
+  `Other` 315 → **301** (−14) with the expected never-silent cascade (`ReservedWord` +8, `MultiStmtBody`
+  +4, `DeriveAttr` +1 — deeper real blockers surface once a `&T` stops masking the signature); total
+  gaps 811 → 810. Lesson: a **small but honest** win that **confirms §8.10's near-exhaustion thesis a
+  fourth time** — the check-clean ceiling on this fixed corpus is gated by name-resolution and
+  language-surface design, not transpiler emission, so `checked` growth needs target-set expansion
+  (cross-nodule project-mode vetting) or E18-1, not further emission arms. Emission `Declared`, vet
+  `Empirical`. **Status unchanged (Draft)** — a ladder phase, enacts nothing further. (Append-only;
+  VR-5; G2.)
+- **2026-07-07 — §8.12 added: cross-nodule vetting probed (null) + positional named-field emission
+  (M-1006, kickoff `trx2` E33-1).** Lands `myc-check --phylum` (assemble a `.myc` set into one `Phylum`,
+  run `mycelium_l1::check_phylum`; additive; propagated as a hotfix to `dev`/`integration`/`main`), but
+  the corpus probe shows it moves `checked_fraction` by **0**: the check-failures reference types not
+  emitted anywhere (out-of-phylum `mycelium_core`, or same-crate gapped structs), so nothing in-phylum is
+  there to resolve and a whole-crate nodule-merge is net-negative. Pivots to **struct-emission
+  gap-closure**: Rust named-field `struct`s and enum variants now emit **positionally**
+  (`type Permissions = Permissions(Binary{32})`; the grammar's `constructor` is positional-only; matches
+  the `lib/std/*.myc` hand-ports), field names dropped and recorded (`NamedFieldDrop`), gated by a per-file
+  **resolvability** greatest-fixpoint so emission never introduces a poisoning out-of-file reference.
+  Union over the 17 targets (denom 760): expressible 6.45% → **7.50%** (+8 items), checked 3.68% →
+  **4.34%** (+5 items) — the **first `checked` move in the ladder** (§8.9/§8.10/§8.11 each moved it by 0).
+  Lesson: `checked`'s ceiling is the **target-set boundary** (referents in `mycelium_core`/sibling crates)
+  plus E18-1 repr gaps, so the next lever is target-set expansion checked via `--phylum`, plus E18-1.
+  Emission `Declared`, vet `Empirical`. **Status unchanged (Draft)** — a ladder phase, enacts nothing
+  further. (Append-only; VR-5; G2.)
+- **2026-07-07 — §8.13 added: field-projection desugaring + the Binary-arithmetic emission ceiling
+  (M-1006, kickoff `trx2` E33-1).** Lands **Lever 1**: a `self.<field>` read desugars to a `match` on the
+  struct's positional constructor (`self.mode` → `(match self { Ty(p0) => p0 })`) and a struct literal to
+  the positional ctor call, both gated on the type being an emitted in-file struct. Union over 17 targets
+  (denom 760): expressible 7.50% → **8.29%** (+6), checked 4.34% → **4.61%** (+2); `std-fs` regresses 1
+  (file-gating coupling). **Lever 2** (`rotate_left`) was attempted and found **not achievable**: grounded
+  via `tero`/`docs/tero-index` → RFC-0033 (M-887/M-889/M-766), the sanctioned `Binary{N}` prim set has no
+  `bin.band`/`bin.bor`/`bin.bxor`, so bit-or — and thus `rotate` — is inexpressible; separately, the
+  transpiler emits raw `<<`/`+`/`&` operators (read as unknown `shl`/`add`/`band`, not `bin.*`) and bare
+  integer literals have no `Binary{N}` type, so `Binary` arithmetic emission needs operand-type inference
+  plus a typed-literal form — a design decision, not a faithful drop-in (not implemented, VR-5). Records four
+  grounded maintainer decisions (Binary arithmetic/bitwise prims + typed literals; String/text repr E18-1;
+  `mycelium_core` declarations target-set; inherent-impl dup-name rename). Emission `Declared`, vet
+  `Empirical`. **Status unchanged (Draft)** — a ladder phase, enacts nothing further. (Append-only; VR-5;
+  G2.)
+- **2026-07-07 — §8.14 added: String→`Bytes` lands the ladder's largest win; the operator ceiling
+  re-grounds to a frozen-kernel decision (M-1006, kickoff `trx2` E33-1).** Acts on §8.13's ruling. Lands
+  **D2**: Rust `String`/`str`/`&str` → `Bytes`, grounded via `tero` to **RFC-0033 §3.2** (`Repr::Bytes` is
+  the ratified string/byte value with never-silent decode) and **verify-first** oracle-confirmed (a
+  `Bytes` field/param/return and a `"…"` literal all `myc check`-clean). Union over 17 targets (denom 760):
+  expressible 8.29% → **11.45%** (+24), checked 4.61% → **5.79%** (+9) — the **largest single-lever gain of
+  the ladder**, unblocking String-field records across `std-content`/`std-fs`/`std-runtime`; determinism
+  re-verified. **D3** (operator emission) and **D4** (dup-name rename) were **verify-first-probed and NOT
+  built** — a grep of all emitted bodies finds no operator use (D3 zero yield without speculative
+  operand-type inference), and `std-runtime/region`'s two `allocate` are co-blocked by the `fetch_add`
+  atomic (D4 premise disproven). Re-grounds §8.13 #1: the `Binary{N}` bitwise mandate (RFC-0033 §4.1.2,
+  Accepted) is **undischarged against an already-frozen kernel** (`bin.*` has no `band`/`bor`/`bxor`;
+  **DN-56** Enacted, freeze declared M-969, Π = 38), so completing it is a **DN-39 post-freeze promotion**,
+  not free closure — FLAGged as a kernel/Session-A task (not edited here). Emission `Declared`, vet
+  `Empirical`. **Status unchanged (Draft)** — a ladder phase, enacts nothing further. (Append-only; VR-5;
+  G2.)

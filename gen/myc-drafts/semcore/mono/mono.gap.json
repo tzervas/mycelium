@@ -1,6 +1,8 @@
 {
   "source": "crates/mycelium-l1/src/mono.rs",
-  "emitted_items": [],
+  "emitted_items": [
+    "mangle_ty_or_fn"
+  ],
   "gaps": [
     {
       "file": "crates/mycelium-l1/src/mono.rs",
@@ -59,7 +61,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" A reified **instance selection** (RFC-0019 §4.4; house rule #2 — no black boxes). When mono\"] # [doc = \" lowers a trait-method call to a direct call, it records *which* instance it picked: the trait, the\"] # [doc = \" concrete receiver type, and the mangled name of the emitted method function. The dispatch choice\"] # [doc = \" is thus programmatically inspectable (`EXPLAIN`-able), not hidden inside the rewrite.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct InstanceSelection { # [doc = \" The trait whose method was called.\"] pub trait_name : String , # [doc = \" The concrete receiver type the instance is `for` (the full type, not the head — e.g.\"] # [doc = \" `Binary{8}`, never just `Binary`).\"] pub for_ty : Ty , # [doc = \" The mangled name of the monomorphic function mono emitted for this instance's method (the\"] # [doc = \" direct callee the trait-method call was rewritten to — e.g. `cmp$Cmp$Binary8`).\"] pub impl_mangled : String , }",
-      "reason": "struct `InstanceSelection` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `InstanceSelection` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "InstanceSelection"
     },
     {
@@ -69,7 +71,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" The **EXPLAIN record** of a monomorphization (M-673): every trait-method dispatch mono resolved,\"] # [doc = \" keyed by the mangled callee name (which itself encodes `(method, trait, receiver)`). Populated by\"] # [doc = \" [`monomorphize_with_selections`]; queryable so the dictionary-free static resolution is a\"] # [doc = \" reified, inspectable record rather than a black box (house rule #2).\"] # [doc = \"\"] # [doc = \" Extended in M-687 (RFC-0024 §4) to also record **HOF defunctionalization specializations**\"] # [doc = \" (`hof_specs`): each static HOF specialization — the source fn, its type args, its baked-in\"] # [doc = \" function arguments, and the mangled name — is recorded for full inspectability.\"] # [derive (Debug , Clone , Default , PartialEq , Eq)] pub struct MonoSelections { by_mangled : BTreeMap < String , InstanceSelection > , # [doc = \" HOF defunctionalization records (RFC-0024 §4, M-687): keyed by the mangled HOF\"] # [doc = \" specialization name (e.g. `map$Binary8$Binary8%1:double`).\"] pub (crate) hof_specs : BTreeMap < String , HofSpecialization > , # [doc = \" RFC-0024 §4A (M-704; house rule #2): per-closure lowering records, keyed by the generated\"] # [doc = \" constructor name (`Clo$<arrow>$<n>`) — the capture set + generated apply dispatcher.\"] pub (crate) closure_specs : BTreeMap < String , ClosureSpecialization > , }",
-      "reason": "struct `MonoSelections` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `MonoSelections` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "MonoSelections"
     },
     {
@@ -79,7 +81,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl MonoSelections { # [doc = \" The selection mono made for the mangled callee `mangled`, if any. The mangled name is what a\"] # [doc = \" rewritten trait-method call now refers to, so a consumer can map a direct call back to the\"] # [doc = \" trait/instance it came from.\"] # [must_use] pub fn get (& self , mangled : & str) -> Option < & InstanceSelection > { self . by_mangled . get (mangled) } # [doc = \" Every recorded selection, in deterministic (mangled-name) order. Additive read accessor.\"] pub fn iter (& self) -> impl Iterator < Item = (& String , & InstanceSelection) > { self . by_mangled . iter () } # [doc = \" How many distinct trait-method instances were resolved (0 for a non-trait program).\"] # [must_use] pub fn len (& self) -> usize { self . by_mangled . len () } # [doc = \" Were no trait-method selections recorded? (A non-trait program monomorphizes with an empty\"] # [doc = \" record.)\"] # [must_use] pub fn is_empty (& self) -> bool { self . by_mangled . is_empty () } # [doc = \" The HOF defunctionalization record for the mangled specialization `mangled`, if any\"] # [doc = \" (RFC-0024 §4, M-687). Returns the source fn, type args, and baked-in function arguments.\"] # [must_use] pub fn hof (& self , mangled : & str) -> Option < & HofSpecialization > { self . hof_specs . get (mangled) } # [doc = \" Every recorded HOF specialization, in deterministic (mangled-name) order.\"] pub fn hof_iter (& self) -> impl Iterator < Item = (& String , & HofSpecialization) > { self . hof_specs . iter () } # [doc = \" The closure-lowering record for the generated constructor `ctor_name`, if any (RFC-0024 §4A,\"] # [doc = \" M-704) — the capture set + the generated apply dispatcher (house rule #2).\"] # [must_use] pub fn closure (& self , ctor_name : & str) -> Option < & ClosureSpecialization > { self . closure_specs . get (ctor_name) } # [doc = \" Every recorded closure lowering, in deterministic (constructor-name) order.\"] pub fn closure_iter (& self) -> impl Iterator < Item = (& String , & ClosureSpecialization) > { self . closure_specs . iter () } }",
-      "reason": "no member of this impl block could be transpiled (8 sub-issue(s)): impl method `get` signature: unsupported Rust type form `& str`; impl method `iter` signature: unsupported Rust type form `impl Iterator < Item = (& String , & InstanceSelection) >`; impl method `len` signature: `usize` has a platform-dependent width; no fixed Binary{N} mapping; impl method `is_empty` body: unsupported expression form `self . by_mangled`; impl method `hof` signature: unsupported Rust type form `& str`; impl method `hof_iter` signature: unsupported Rust type form `impl Iterator < Item = (& String , & HofSpecialization) >`; impl method `closure` signature: unsupported Rust type form `& str`; impl method `closure_iter` signature: unsupported Rust type form `impl Iterator < Item = (& String , & ClosureSpecialization) >`",
+      "reason": "no member of this impl block could be transpiled (8 sub-issue(s)): impl method `get` body: field projection `self.by_mangled` on `MonoSelections` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against); impl method `iter` signature: unsupported Rust type form `impl Iterator < Item = (& String , & InstanceSelection) >`; impl method `len` signature: `usize` has a platform-dependent width; no fixed Binary{N} mapping; impl method `is_empty` body: field projection `self.by_mangled` on `MonoSelections` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against); impl method `hof` body: field projection `self.hof_specs` on `MonoSelections` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against); impl method `hof_iter` signature: unsupported Rust type form `impl Iterator < Item = (& String , & HofSpecialization) >`; impl method `closure` body: field projection `self.closure_specs` on `MonoSelections` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against); impl method `closure_iter` signature: unsupported Rust type form `impl Iterator < Item = (& String , & ClosureSpecialization) >`",
       "item_name": "MonoSelections"
     },
     {
@@ -89,17 +91,17 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Monomorphize a checked `Env` from nullary monomorphic `entry`, returning a closed monomorphic\"] # [doc = \" `Env` the existing [`crate::elab::elaborate`] runs unchanged.\"] # [doc = \"\"] # [doc = \" On a program with **no** generics/traits this is a fast **pass-through** (a clone): monomorphic\"] # [doc = \" code is mono's identity, so the pre-M-673 differential corpus is observably unchanged (NFR-7).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \" [`ElabError::Residual`] for anything outside the monomorphizable fragment (an undetermined type\"] # [doc = \" parameter, a multi-parameter trait, a higher-order generic, …) — never silent, never a guess\"] # [doc = \" (G2/VR-5). [`ElabError::UnknownFn`] if `entry` is absent.\"] pub fn monomorphize (env : & Env , entry : & str) -> Result < Env , ElabError > { monomorphize_with_selections (env , entry) . map (| (env , _) | env) }",
-      "reason": "unsupported Rust type form `& Env`",
+      "reason": "unsupported expression form `| (env , _) | env`",
       "item_name": "monomorphize"
     },
     {
       "file": "crates/mycelium-l1/src/mono.rs",
       "line": 182,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "MultiStmtBody",
+      "rust_construct": "MultiStmtBody",
       "snippet": "# [doc = \" Like [`monomorphize`] but also returns the [`MonoSelections`] EXPLAIN record of every trait-method\"] # [doc = \" dispatch resolved (house rule #2 — the static resolution is inspectable, not a black box).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \" See [`monomorphize`].\"] pub fn monomorphize_with_selections (env : & Env , entry : & str ,) -> Result < (Env , MonoSelections) , ElabError > { if is_already_monomorphic (env) { return Ok ((env . clone () , MonoSelections :: default ())) ; } let mut m = Mono :: new (env) ; m . run (entry) ? ; m . finish () }",
-      "reason": "unsupported Rust type form `& Env`",
+      "reason": "function body has a semicolon-terminated (value-discarding) statement expression before the tail — a `let`-chain body maps only simple `let x = e;` bindings plus a single trailing expression",
       "item_name": "monomorphize_with_selections"
     },
     {
@@ -109,7 +111,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Is `env` already fully monomorphic, trait-free, **and** HOF-free? Then mono is the identity\"] # [doc = \" (the fast pass-through). True iff **no** function is generic, **no** function has a fn-typed\"] # [doc = \" value parameter (which needs defunctionalization — RFC-0024 §4, M-687), **no** data type is\"] # [doc = \" generic, and there are **no** (user) traits / instances / retained impls.\"] # [doc = \"\"] # [doc = \" **M-965 note:** every `Env` now carries the built-in `Fuse` prelude trait\"] # [doc = \" ([`crate::fuse::TRAIT_NAME`]) even when the program never mentions `fuse`/`Fuse` — mirroring how\"] # [doc = \" every `Env` already carries the built-in `Bool` prelude *type* (which doesn't break this check,\"] # [doc = \" since `Bool` happens to have empty `params`). A trait registration with **zero** instances/impls\"] # [doc = \" contributes nothing to specialize (an unimplemented trait can't be called — `check_fuse`/generic\"] # [doc = \" dispatch always requires a resolved instance), so the trait-emptiness test here is *specifically*\"] # [doc = \" \\\"no **user-declared** trait\\\" — the always-present builtin is excluded, exactly as `Bool` is\"] # [doc = \" excluded from the phylum-wide coherence view (`checkty::check_phylum_inner`'s `name != \\\"Bool\\\"`\"] # [doc = \" guard). `env.instances`/`env.impls` being empty is unaffected and still does the real work: a\"] # [doc = \" program that actually declares `impl Fuse[T] for T` has a non-empty `instances`/`impls`, which\"] # [doc = \" correctly still forces the full (specializing) pass.\"] fn is_already_monomorphic (env : & Env) -> bool { env . fns . values () . all (| fd | { fd . sig . params . is_empty () && fd . sig . value_params . iter () . all (| p | ! param_has_fn_type (& env . types , & fd . sig . param_names () , & p . ty)) && ! body_has_lambda (& fd . body) && ! body_has_fn_value (env , & fd . body) }) && env . types . values () . all (| d | d . params . is_empty ()) && env . traits . keys () . all (| name | name == crate :: fuse :: TRAIT_NAME) && env . instances . is_empty () && env . impls . is_empty () }",
-      "reason": "unsupported Rust type form `& Env`",
+      "reason": "field access on a non-`self` base — the transpiler tracks no local types, so the projection cannot be resolved to a constructor position (only `self.<field>` desugars to a `match`)",
       "item_name": "is_already_monomorphic"
     },
     {
@@ -119,7 +121,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" RFC-0024 §4A.4 (M-704): true iff `e` references a top-level **function name as a value** — a\"] # [doc = \" single-segment `Expr::Path` naming a fn, occurring **not** as an application head (an applied fn\"] # [doc = \" `f(x)` is an ordinary first-order call, not a fn value). Such a reference needs the closure\"] # [doc = \" lowering (a named-fn-as-escaping-value becomes a nullary closure constructor), so the program is\"] # [doc = \" **not** mono's fast-path identity. Over-detection is safe — it only ever widens to the full pass.\"] fn body_has_fn_value (env : & Env , e : & Expr) -> bool { match e { Expr :: Path (p) => p . 0 . len () == 1 && env . fns . contains_key (& p . 0 [0]) , Expr :: Lit (Literal :: List (elems)) => elems . iter () . any (| x | body_has_fn_value (env , x)) , Expr :: Lit (_) => false , Expr :: Let { bound , body , .. } => { body_has_fn_value (env , bound) || body_has_fn_value (env , body) } Expr :: If { cond , conseq , alt } => { body_has_fn_value (env , cond) || body_has_fn_value (env , conseq) || body_has_fn_value (env , alt) } Expr :: Match { scrutinee , arms } => { body_has_fn_value (env , scrutinee) || arms . iter () . any (| a | body_has_fn_value (env , & a . body)) } Expr :: For { xs , init , body , .. } => { body_has_fn_value (env , xs) || body_has_fn_value (env , init) || body_has_fn_value (env , body) } Expr :: Swap { value , .. } => body_has_fn_value (env , value) , Expr :: WithParadigm { body , .. } => body_has_fn_value (env , body) , Expr :: Wild (b) | Expr :: Spore (b) | Expr :: Consume (b) => body_has_fn_value (env , b) , Expr :: Colony (hyphae) => hyphae . iter () . any (| h | body_has_fn_value (env , & h . body)) , Expr :: Lambda { body , .. } => body_has_fn_value (env , body) , Expr :: App { head : _ , args } => args . iter () . any (| x | body_has_fn_value (env , x)) , Expr :: Fuse { left , right } => body_has_fn_value (env , left) || body_has_fn_value (env , right) , Expr :: Reclaim { policy , body } => { body_has_fn_value (env , policy) || body_has_fn_value (env , body) } Expr :: Ascribe (inner , _) => body_has_fn_value (env , inner) , Expr :: TupleLit (elems) => elems . iter () . any (| x | body_has_fn_value (env , x)) , } }",
-      "reason": "unsupported Rust type form `& Env`",
+      "reason": "field access on a non-`self` base — the transpiler tracks no local types, so the projection cannot be resolved to a constructor position (only `self.<field>` desugars to a `match`)",
       "item_name": "body_has_fn_value"
     },
     {
@@ -129,7 +131,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" True iff `e` contains an `Expr::Lambda` anywhere (RFC-0024 §4A, M-704) — the gate that keeps a\"] # [doc = \" closure-bearing program out of mono's fast pass-through (it needs the §4A lowering).\"] fn body_has_lambda (e : & Expr) -> bool { match e { Expr :: Lambda { .. } => true , Expr :: Lit (Literal :: List (elems)) => elems . iter () . any (body_has_lambda) , Expr :: Lit (_) | Expr :: Path (_) => false , Expr :: Let { bound , body , .. } => body_has_lambda (bound) || body_has_lambda (body) , Expr :: If { cond , conseq , alt } => { body_has_lambda (cond) || body_has_lambda (conseq) || body_has_lambda (alt) } Expr :: Match { scrutinee , arms } => { body_has_lambda (scrutinee) || arms . iter () . any (| a | body_has_lambda (& a . body)) } Expr :: For { xs , init , body , .. } => { body_has_lambda (xs) || body_has_lambda (init) || body_has_lambda (body) } Expr :: Swap { value , .. } => body_has_lambda (value) , Expr :: WithParadigm { body , .. } => body_has_lambda (body) , Expr :: Wild (b) | Expr :: Spore (b) | Expr :: Consume (b) => body_has_lambda (b) , Expr :: Colony (hyphae) => hyphae . iter () . any (| h | body_has_lambda (& h . body)) , Expr :: App { head , args } => body_has_lambda (head) || args . iter () . any (body_has_lambda) , Expr :: Fuse { left , right } => body_has_lambda (left) || body_has_lambda (right) , Expr :: Reclaim { policy , body } => body_has_lambda (policy) || body_has_lambda (body) , Expr :: Ascribe (inner , _) => body_has_lambda (inner) , Expr :: TupleLit (elems) => elems . iter () . any (body_has_lambda) , } }",
-      "reason": "unsupported Rust type form `& Expr`",
+      "reason": "unsupported match pattern form `Expr :: Lambda { .. }`",
       "item_name": "body_has_lambda"
     },
     {
@@ -139,7 +141,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" True iff the parameter type `t` resolves to (or contains) a `Ty::Fn` — meaning this parameter\"] # [doc = \" is a HOF that needs defunctionalization (RFC-0024 §4, M-687). Best-effort: a resolution failure\"] # [doc = \" is treated as \\\"not fn-typed\\\" (the full mono pass will catch it with an explicit Residual).\"] fn param_has_fn_type (types : & BTreeMap < String , crate :: checkty :: DataInfo > , tyvars : & [String] , t : & TypeRef ,) -> bool { use crate :: ast :: BaseType ; match & t . base { BaseType :: Fn (_ , _) => true , BaseType :: Named (n , args) => { if tyvars . contains (n) || types . contains_key (n . as_str ()) { return false ; } args . iter () . any (| a | param_has_fn_type (types , tyvars , a)) } _ => false , } }",
-      "reason": "unsupported Rust type form `& BTreeMap < String , crate :: checkty :: DataInfo >`",
+      "reason": "qualified type path `crate :: checkty :: DataInfo` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "param_has_fn_type"
     },
     {
@@ -149,7 +151,7 @@
       "category": "PayloadVariant",
       "rust_construct": "PayloadVariant",
       "snippet": "# [doc = \" A monomorphization work item — the unit of the dedup worklist. Deduplication is by the item's\"] # [doc = \" canonical [`item_key`] (a discriminant-tagged mangled string), so a `BTreeSet<String>` of seen\"] # [doc = \" keys guarantees each specialization is emitted **once** (dedup ⟹ the recursive walk terminates).\"] # [derive (Debug , Clone , PartialEq , Eq)] enum Item { # [doc = \" A function instance: the source fn `name` at concrete type arguments `targs` (empty for a\"] # [doc = \" monomorphic fn — which mangles to `name` unchanged), optionally specialised by resolved\"] # [doc = \" **function-argument** identities (RFC-0024 §4, M-687). `fn_args` carries `(param_index,\"] # [doc = \" callee_mangled_name)` for each value-parameter whose type is `Ty::Fn`; empty means no\"] # [doc = \" higher-order specialization. An `Item::Fn` with non-empty `fn_args` is a defunctionalized\"] # [doc = \" HOF specialization — distinct from the un-specialized (or differently-specialized) version\"] # [doc = \" of the same fn.\"] Fn { name : String , targs : Vec < Ty > , # [doc = \" Resolved width arguments in declaration order (DN-42 / M-753 step-c): one `Width::Lit`\"] # [doc = \" per width parameter of the callee. Baked into the item key so two calls at different\"] # [doc = \" widths produce distinct specializations (never a silent alias — G2/VR-5).\"] wargs : Vec < Width > , # [doc = \" `(param_index, callee_mangled_name)` for each fn-typed value parameter, sorted by\"] # [doc = \" param index (deterministic). Baked into the item key so two different function\"] # [doc = \" arguments produce two distinct specializations (never a silent alias — G2).\"] fn_args : Vec < (usize , String) > , # [doc = \" RFC-0024 §4A (M-704): `(param_index, arrow_mangle)` for each fn-typed value parameter\"] # [doc = \" that is **kept** as a dynamic closure value (it received a lambda or a dynamically-flowing\"] # [doc = \" fn value — §4's static resolution does not apply). Such a parameter stays in the emitted\"] # [doc = \" signature typed `Fn$<arrow>`; an application of it inside the body lowers to\"] # [doc = \" `apply$<arrow>(f, x)`. Sorted by index (deterministic), baked into the item key so a HOF\"] # [doc = \" specialized dynamically is distinct from its static (or un-)specialization (G2).\"] dyn_fns : Vec < (usize , String) > , } , # [doc = \" A data-type instance: the source type `name` at concrete `targs`.\"] Data { name : String , targs : Vec < Ty > } , # [doc = \" A trait-method instance: the unqualified method `method` of trait `trait_name`, resolved at the\"] # [doc = \" concrete receiver `for_ty` (the coherent instance's method, emitted as a direct fn).\"] Method { trait_name : String , method : String , for_ty : Ty , } , }",
-      "reason": "enum `Item` variant `Fn` uses named fields — `constructor ::= Ident ('(' type_ref (',' type_ref)* ')')?` has no named-field/record form",
+      "reason": "enum `Item` variant `Fn` has a field type with no confirmed mapping (`usize` has a platform-dependent width; no fixed Binary{N} mapping)",
       "item_name": "Item"
     },
     {
@@ -159,7 +161,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" The **EXPLAIN record** of a single HOF defunctionalization (RFC-0024 §4, M-687): which\"] # [doc = \" higher-order function was specialized, at which type arguments, with which function arguments\"] # [doc = \" baked in. Recorded in [`MonoSelections`] so the static dispatch is inspectable (house rule #2\"] # [doc = \" — no black boxes).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct HofSpecialization { # [doc = \" The source (polymorphic / HOF) function name.\"] pub source_fn : String , # [doc = \" The concrete type arguments (empty if the HOF was monomorphic).\"] pub targs : Vec < Ty > , # [doc = \" The resolved function argument(s): `(param_index, callee_mangled_name)`, parallel to the\"] # [doc = \" `fn_args` of the [`Item::Fn`] that triggered this specialization.\"] pub fn_args : Vec < (usize , String) > , # [doc = \" The mangled name of the emitted closed-first-order specialization.\"] pub mangled : String , }",
-      "reason": "struct `HofSpecialization` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `HofSpecialization` has a field type with no confirmed mapping (`usize` has a platform-dependent width; no fixed Binary{N} mapping)",
       "item_name": "HofSpecialization"
     },
     {
@@ -179,7 +181,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" RFC-0024 §4A.4 (M-704): one closure **tag-sum** for a single arrow type `A => B`. Accumulates a\"] # [doc = \" constructor per distinct escaping closure of that arrow (deduplicated by a content key), plus the\"] # [doc = \" arrow's concrete domain/codomain so [`Mono::finish`] can emit the sum's `DataInfo` and the\"] # [doc = \" `apply$A$B` dispatcher (`emit_data`/`emit_fn` — existing emitters; no new L0 node, KC-3).\"] # [derive (Debug , Clone)] struct ClosureSum { # [doc = \" The arrow's domain type `A` (concrete).\"] arrow_a : Ty , # [doc = \" The arrow's codomain type `B` (concrete).\"] arrow_b : Ty , # [doc = \" One constructor per distinct closure, in deterministic registration order.\"] ctors : Vec < ClosureCtor > , # [doc = \" Content-key → constructor index, for deduplication (two structurally identical closures of the\"] # [doc = \" same arrow share one constructor — the §4 identity-fragmentation discipline; G2).\"] by_key : BTreeMap < String , usize > , }",
-      "reason": "struct `ClosureSum` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `ClosureSum` has a field type with no confirmed mapping (`usize` has a platform-dependent width; no fixed Binary{N} mapping)",
       "item_name": "ClosureSum"
     },
     {
@@ -189,7 +191,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" RFC-0024 §4A.4 (M-704): one constructor of a closure tag-sum — a single escaping closure's\"] # [doc = \" captured environment + its (rewritten) body. The dispatcher arm binds the captures, binds the\"] # [doc = \" lambda's parameter to the dispatcher's argument, then evaluates the body.\"] # [derive (Debug , Clone)] struct ClosureCtor { # [doc = \" The constructor name (`Clo$<arrow>$<n>` — injective via the `$` joints; §4 mangling ground).\"] ctor_name : String , # [doc = \" The captured free variables, `(name, concrete type)`, in deterministic (first-occurrence)\"] # [doc = \" order. Empty for a captureless lambda or a bare named fn (a nullary constructor).\"] captures : Vec < (String , Ty) > , # [doc = \" The lambda's single parameter name (stage-1 single-arg — §4A.8 gates multi-arg on tuples).\"] param_name : String , # [doc = \" The (already-rewritten) lambda body. References the captures (bound by the dispatcher's match\"] # [doc = \" arm) and `param_name` (bound to the dispatcher's argument via a `Let`).\"] body : Expr , }",
-      "reason": "struct `ClosureCtor` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `ClosureCtor` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "ClosureCtor"
     },
     {
@@ -199,7 +201,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" RFC-0024 §4A.6 (M-704; house rule #2): the EXPLAIN record of one closure lowering — which arrow,\"] # [doc = \" which captured variables, which generated constructor + dispatcher. Mirrors [`HofSpecialization`].\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct ClosureSpecialization { # [doc = \" The arrow mangle (`Fn$<A>$<B>`) this closure inhabits.\"] pub arrow : String , # [doc = \" The generated constructor name (`Clo$<arrow>$<n>`).\"] pub ctor_name : String , # [doc = \" The captured free variables, `(name, type-display)`, in capture order.\"] pub captures : Vec < (String , String) > , # [doc = \" The generated apply-dispatcher's name (`apply$<A>$<B>`).\"] pub apply_fn : String , }",
-      "reason": "struct `ClosureSpecialization` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `ClosureSpecialization` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "ClosureSpecialization"
     },
     {
@@ -229,7 +231,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" RFC-0024 §4A.4 (M-704): the **field type** of a captured variable inside a closure tag-sum's\"] # [doc = \" constructor. A fn-typed capture (a closure capturing a closure) becomes its own arrow tag-sum\"] # [doc = \" `Fn$<inner>` (a nullary `Ty::Data`); everything else takes the existing mangled-nullary form\"] # [doc = \" ([`mangle_ty_in_ty`]) the registry/`field_spec` already consume.\"] fn closure_field_ty (t : & Ty) -> Ty { match t { Ty :: Fn (a , b) => Ty :: Data (mangle_arrow (a , b) , vec ! []) , _ => mangle_ty_in_ty (t) , } }",
-      "reason": "unsupported Rust type form `& Ty`",
+      "reason": "qualified/associated-function call `Ty :: Data` — no established Mycelium surface form for a Rust conversion-op body; emitting the bare last-segment name would fabricate a call (e.g. `from(...)` is not a Mycelium builtin)",
       "item_name": "closure_field_ty"
     },
     {
@@ -239,7 +241,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" RFC-0024 §4A.2 (M-704): the surface [`TypeRef`] for an `apply` dispatcher's param/return type. A\"] # [doc = \" fn-typed position (a higher-order arrow `(B => C) => D` etc.) is the closure data type\"] # [doc = \" `Fn$<inner>`; everything else round-trips via [`ty_to_ref`].\"] fn closure_param_ref (t : & Ty) -> TypeRef { match t { Ty :: Fn (a , b) => ty_to_ref (& Ty :: Data (mangle_arrow (a , b) , vec ! [])) , _ => ty_to_ref (t) , } }",
-      "reason": "unsupported Rust type form `& Ty`",
+      "reason": "qualified/associated-function call `Ty :: Data` — no established Mycelium surface form for a Rust conversion-op body; emitting the bare last-segment name would fabricate a call (e.g. `from(...)` is not a Mycelium builtin)",
       "item_name": "closure_param_ref"
     },
     {
@@ -249,7 +251,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" RFC-0024 §4A.3 (M-704): the **free-variable walk** for closure capture analysis. Collects the\"] # [doc = \" single-segment `Expr::Path` names occurring in `e` that are **not** bound by an enclosing binder\"] # [doc = \" *within* `e` (`Let`, `Match` arm patterns, `For`, inner `Lambda` params) — appended to `out` in\"] # [doc = \" **first-occurrence order** (a total deterministic order — §4A.3 / G2), each once (`seen` dedups).\"] # [doc = \" `bound` carries the names currently in scope inside `e` (seeded with the lambda's own parameter\"] # [doc = \" by the caller); a name in `bound` is local, not free. Whether a *free* name is actually\"] # [doc = \" *captured* (a local of the enclosing scope) vs. a top-level reference is decided by the caller\"] # [doc = \" against the enclosing scope (`rewrite_lambda`).\"] # [doc = \"\"] # [doc = \" This is a pure structural walk — never silent, never a guess (G2): every binder the AST exposes\"] # [doc = \" is respected, so `freevars` is invariant under α-renaming of bound variables (the §4A.9 property).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \" [`WalkDepthExceeded`] once this traversal's own recursion exceeds [`MAX_WALK_DEPTH`] (M-866,\"] # [doc = \" mirroring the totality/checker/elaborator `M-674` discipline — see [`free_vars_at`]) — a clean,\"] # [doc = \" explicit refusal rather than a host-stack overflow on a pathologically-nested `e` (G2).\"] pub (crate) fn free_vars (e : & Expr , bound : & mut BTreeSet < String > , seen : & mut BTreeSet < String > , out : & mut Vec < String > ,) -> Result < () , WalkDepthExceeded > { free_vars_at (e , bound , seen , out , 0) }",
-      "reason": "unsupported Rust type form `& Expr`",
+      "reason": "`& mut BTreeSet < String >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
       "item_name": "free_vars"
     },
     {
@@ -259,7 +261,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" The depth-tracked worker behind [`free_vars`] (M-866): `depth` counts the live nesting of this\"] # [doc = \" traversal's own recursive descent (not any semantic property of `e`), charged on entry and\"] # [doc = \" checked against [`MAX_WALK_DEPTH`] before any further recursion — mirrors\"] # [doc = \" [`crate::totality::walk_expr_at`]'s M-674 discipline (same budget, same reified-counter\"] # [doc = \" mechanism, DRY): rather than rely on the host call stack (a resource, not a semantic limit) to\"] # [doc = \" bound the walk, the pass carries this explicit budget and refuses past it with a clean\"] # [doc = \" [`WalkDepthExceeded`], never a host-stack overflow.\"] fn free_vars_at (e : & Expr , bound : & mut BTreeSet < String > , seen : & mut BTreeSet < String > , out : & mut Vec < String > , depth : u32 ,) -> Result < () , WalkDepthExceeded > { let depth = depth + 1 ; if depth > MAX_WALK_DEPTH { return Err (WalkDepthExceeded { limit : MAX_WALK_DEPTH , }) ; } match e { Expr :: Path (p) => { if p . 0 . len () == 1 { let n = & p . 0 [0] ; if ! bound . contains (n) && seen . insert (n . clone ()) { out . push (n . clone ()) ; } } } Expr :: Lit (Literal :: List (elems)) => { for el in elems { free_vars_at (el , bound , seen , out , depth) ? ; } } Expr :: Lit (_) => { } Expr :: Let { name , bound : b , body , .. } => { free_vars_at (b , bound , seen , out , depth) ? ; let was = bound . insert (name . clone ()) ; free_vars_at (body , bound , seen , out , depth) ? ; if was { bound . remove (name) ; } } Expr :: If { cond , conseq , alt } => { free_vars_at (cond , bound , seen , out , depth) ? ; free_vars_at (conseq , bound , seen , out , depth) ? ; free_vars_at (alt , bound , seen , out , depth) ? ; } Expr :: Match { scrutinee , arms } => { free_vars_at (scrutinee , bound , seen , out , depth) ? ; for arm in arms { let mut added : Vec < String > = Vec :: new () ; pattern_binders (& arm . pattern , bound , & mut added) ? ; free_vars_at (& arm . body , bound , seen , out , depth) ? ; for n in added { bound . remove (& n) ; } } } Expr :: For { x , xs , acc , init , body , } => { free_vars_at (xs , bound , seen , out , depth) ? ; free_vars_at (init , bound , seen , out , depth) ? ; let ax = bound . insert (x . clone ()) ; let aacc = bound . insert (acc . clone ()) ; free_vars_at (body , bound , seen , out , depth) ? ; if aacc { bound . remove (acc) ; } if ax { bound . remove (x) ; } } Expr :: Swap { value , .. } => free_vars_at (value , bound , seen , out , depth) ? , Expr :: WithParadigm { body , .. } => free_vars_at (body , bound , seen , out , depth) ? , Expr :: Wild (b) | Expr :: Spore (b) | Expr :: Consume (b) => { free_vars_at (b , bound , seen , out , depth) ? ; } Expr :: Colony (hyphae) => { for h in hyphae { free_vars_at (& h . body , bound , seen , out , depth) ? ; } } Expr :: Lambda { params , body } => { let mut added : Vec < String > = Vec :: new () ; for p in params { if bound . insert (p . name . clone ()) { added . push (p . name . clone ()) ; } } free_vars_at (body , bound , seen , out , depth) ? ; for n in added { bound . remove (& n) ; } } Expr :: App { head , args } => { free_vars_at (head , bound , seen , out , depth) ? ; for a in args { free_vars_at (a , bound , seen , out , depth) ? ; } } Expr :: Fuse { left , right } => { free_vars_at (left , bound , seen , out , depth) ? ; free_vars_at (right , bound , seen , out , depth) ? ; } Expr :: Reclaim { policy , body } => { free_vars_at (policy , bound , seen , out , depth) ? ; free_vars_at (body , bound , seen , out , depth) ? ; } Expr :: Ascribe (inner , _) => free_vars_at (inner , bound , seen , out , depth) ? , Expr :: TupleLit (elems) => { for el in elems { free_vars_at (el , bound , seen , out , depth) ? ; } } } Ok (()) }",
-      "reason": "unsupported Rust type form `& Expr`",
+      "reason": "`& mut BTreeSet < String >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
       "item_name": "free_vars_at"
     },
     {
@@ -269,7 +271,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Collect a pattern's binders into `bound` (inserting each newly-bound name), recording the\"] # [doc = \" newly-added names in `added` so the caller can pop them after the arm body. A `Pattern::Ident` is\"] # [doc = \" a binder; a `Pattern::Ctor` recurses into sub-patterns; `Wildcard`/`Lit` bind nothing. (A nullary\"] # [doc = \" constructor written as a bare `Ident` is conservatively treated as a binder here — over-binding\"] # [doc = \" only ever *removes* a name from the capture set, never adds a spurious capture, so it is safe for\"] # [doc = \" the free-variable analysis; the real ctor/binder distinction is the checker's, already done.)\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \" [`WalkDepthExceeded`] once this traversal's own recursion exceeds [`MAX_WALK_DEPTH`] (M-866) — a\"] # [doc = \" clean, explicit refusal rather than a host-stack overflow on a pathologically-nested pattern.\"] # [doc = \" Mirrors [`crate::totality::pattern_binders`]'s own M-674 depth-budget discipline (same value,\"] # [doc = \" same reified-counter mechanism, DRY) — the two walk distinct pass concerns (free-variable capture\"] # [doc = \" here vs. structural-descent binder tracking there) so the code is not literally shared, but the\"] # [doc = \" budget and refusal shape are kept identical for one crate-wide \\\"AST pass depth\\\" guarantee.\"] fn pattern_binders (pat : & Pattern , bound : & mut BTreeSet < String > , added : & mut Vec < String > ,) -> Result < () , WalkDepthExceeded > { pattern_binders_at (pat , bound , added , 0) }",
-      "reason": "unsupported Rust type form `& Pattern`",
+      "reason": "`& mut BTreeSet < String >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
       "item_name": "pattern_binders"
     },
     {
@@ -279,7 +281,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" The depth-tracked worker behind [`pattern_binders`] (M-866) — see [`free_vars_at`] for the\"] # [doc = \" shared discipline this mirrors.\"] fn pattern_binders_at (pat : & Pattern , bound : & mut BTreeSet < String > , added : & mut Vec < String > , depth : u32 ,) -> Result < () , WalkDepthExceeded > { let depth = depth + 1 ; if depth > MAX_WALK_DEPTH { return Err (WalkDepthExceeded { limit : MAX_WALK_DEPTH , }) ; } match pat { Pattern :: Wildcard | Pattern :: Lit (_) => { } Pattern :: Ident (n) => { if bound . insert (n . clone ()) { added . push (n . clone ()) ; } } Pattern :: Ctor (_ , subs) => { for s in subs { pattern_binders_at (s , bound , added , depth) ? ; } } Pattern :: Tuple (subs) => { for s in subs { pattern_binders_at (s , bound , added , depth) ? ; } } Pattern :: Or (_) => panic ! (\"internal: Pattern::Or reached mono::pattern_binders — or-patterns must be \\\n             desugared by the checker before any downstream pass \\\n             (invariant violation — report this)\") , } Ok (()) }",
-      "reason": "unsupported Rust type form `& Pattern`",
+      "reason": "`& mut BTreeSet < String >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
       "item_name": "pattern_binders_at"
     },
     {
@@ -289,7 +291,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" The canonical dedup key of a work item — a kind-tagged string so a function and a data type that\"] # [doc = \" happen to mangle to the same name never alias, and `Ty` needs no `Ord` (just its `Display`).\"] fn item_key (item : & Item) -> String { match item { Item :: Fn { name , targs , wargs , fn_args , dyn_fns , } => format ! (\"fn:{}\" , mangle_hof_decl (name , targs , wargs , fn_args , dyn_fns)) , Item :: Data { name , targs } => format ! (\"data:{}\" , mangle_decl (name , targs)) , Item :: Method { trait_name , method , for_ty , } => format ! (\"method:{}\" , mangle_method (method , trait_name , for_ty)) , } }",
-      "reason": "unsupported Rust type form `& Item`",
+      "reason": "unsupported match pattern form `Item :: Fn { name , targs , wargs , fn_args , dyn_fns , }`",
       "item_name": "item_key"
     },
     {
@@ -299,7 +301,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Mangle a HOF-specialization declaration name at concrete type arguments **and** fn arguments\"] # [doc = \" (RFC-0024 §4, M-687). Extends [`mangle_decl`]: after the type-argument segments (`$`-joined),\"] # [doc = \" appends fn-argument segments as `%{param_index}:{callee_mangled}` per baked-in fn parameter.\"] # [doc = \"\"] # [doc = \" The `%` separator is the elaborator's fresh-variable character (never a surface-identifier\"] # [doc = \" character), so a HOF-specialization mangled name is **disjoint** from:\"] # [doc = \" - surface names (no `$`/`#`/`%` in the Mycelium lexer)\"] # [doc = \" - trait-method mangled names (`method$Trait$ForTy` — no `%`)\"] # [doc = \" - type-only specializations (`name$TyArg…` — no `%`)\"] # [doc = \" - data-repr names (no `%`)\"] # [doc = \"\"] # [doc = \" This preserves the overall injective, surface-disjoint property of the mangling scheme (G2).\"] # [doc = \"\"] # [doc = \" **Empty `fn_args` delegates to [`mangle_decl`]** — so a fn with no HOF params produces the\"] # [doc = \" exact same mangled name as before M-687 (backward-compatible with the existing corpus).\"] pub (crate) fn mangle_hof_decl (name : & str , targs : & [Ty] , wargs : & [Width] , fn_args : & [(usize , String)] , dyn_fns : & [(usize , String)] ,) -> String { let base = mangle_decl_with_wargs (name , targs , wargs) ; if fn_args . is_empty () && dyn_fns . is_empty () { return base ; } let mut s = base ; for (idx , callee) in fn_args { s . push ('%') ; s . push_str (& idx . to_string ()) ; s . push (':') ; s . push_str (callee) ; } for (idx , arrow) in dyn_fns { s . push ('~') ; s . push_str (& idx . to_string ()) ; s . push (':') ; s . push_str (arrow) ; } s }",
-      "reason": "unsupported Rust type form `& str`",
+      "reason": "unsupported Rust type form `[Ty]`",
       "item_name": "mangle_hof_decl"
     },
     {
@@ -309,7 +311,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Mangle a declaration name at concrete type arguments **and** width arguments (DN-42 / M-753\"] # [doc = \" step-c). Width args are appended after type args using `$` joints:\"] # [doc = \" `add<N>` at N=8 → `add$Binary8`. Width::Var should never reach here.\"] fn mangle_decl_with_wargs (name : & str , targs : & [Ty] , wargs : & [Width]) -> String { let mut s = mangle_decl (name , targs) ; for w in wargs { s . push ('$') ; match w { Width :: Lit (n) => s . push_str (& format ! (\"Binary{n}\")) , Width :: Var (v) => s . push_str (& format ! (\"WVAR_{v}\")) , } } s }",
-      "reason": "unsupported Rust type form `& str`",
+      "reason": "unsupported Rust type form `[Ty]`",
       "item_name": "mangle_decl_with_wargs"
     },
     {
@@ -319,7 +321,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "fn residual < T > (site : & str , what : impl Into < String >) -> Result < T , ElabError > { Err (ElabError :: Residual { site : site . to_owned () , what : what . into () , }) }",
-      "reason": "unsupported Rust type form `& str`",
+      "reason": "unsupported Rust type form `impl Into < String >`",
       "item_name": "residual"
     },
     {
@@ -329,7 +331,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Wrap a checker [`crate::checkty::CheckError`] as an elaboration [`ElabError::Residual`] (the\"] # [doc = \" re-inference primitives return `CheckError`; mono surfaces them as residuals — never silent).\"] fn res_err (site : & str , e : crate :: checkty :: CheckError) -> ElabError { ElabError :: Residual { site : site . to_owned () , what : format ! (\"monomorphization re-inference: {e}\") , } }",
-      "reason": "unsupported Rust type form `& str`",
+      "reason": "qualified type path `crate :: checkty :: CheckError` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "res_err"
     },
     {
@@ -339,27 +341,27 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" One-sided unification (the checker's [`crate::checkty::unify`]) surfacing its failure as a\"] # [doc = \" residual. Binds the abstract `decl`'s type-vars from the concrete `actual`.\"] fn unify_into (site : & str , decl : & Ty , actual : & Ty , s : & mut BTreeMap < String , Ty > ,) -> Result < () , ElabError > { unify (site , decl , actual , s) . map_err (| e | res_err (site , e)) }",
-      "reason": "unsupported Rust type form `& str`",
+      "reason": "`& mut BTreeMap < String , Ty >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
       "item_name": "unify_into"
     },
     {
       "file": "crates/mycelium-l1/src/mono.rs",
       "line": 2968,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "ReservedWord",
+      "rust_construct": "ReservedWord",
       "snippet": "# [doc = \" Mangle a type to a flat identifier-suffix fragment (injective; `$`-free for primitives, `$`-joined\"] # [doc = \" for applied data). `Binary{8}`→`Binary8`, `Ternary{6}`→`Ternary6`, `Dense{16,F32}`→`Dense16F32`,\"] # [doc = \" `Data(\\\"List\\\",[Binary8])`→`List$Binary8`, nullary `Data(\\\"Bool\\\",[])`→`Bool`.\"] pub (crate) fn mangle_ty (t : & Ty) -> String { match t { Ty :: Binary (Width :: Lit (n)) => format ! (\"Binary{n}\") , Ty :: Binary (Width :: Var (v)) => format ! (\"BinaryVAR_{v}\") , Ty :: Ternary (Width :: Lit (m)) => format ! (\"Ternary{m}\") , Ty :: Ternary (Width :: Var (v)) => format ! (\"TernaryVAR_{v}\") , Ty :: Dense (d , s) => format ! (\"Dense{d}{}\" , scalar_tag (* s)) , Ty :: Vsa { model , dim , sparsity , } => { let sp = match sparsity { Sparsity :: Dense => \"Dn\" . to_owned () , Sparsity :: Sparse (k) => format ! (\"Sp{k}\") , } ; format ! (\"Vsa{dim}{sp}${}\" , model . replace ('-' , \"_\")) } Ty :: Substrate (tag) => format ! (\"Substrate{tag}\") , Ty :: Seq (elem , n) => format ! (\"Seq{n}${}\" , mangle_ty (elem)) , Ty :: Bytes => \"Bytes\" . to_owned () , Ty :: Float => \"Float\" . to_owned () , Ty :: Data (n , args) if args . is_empty () => format ! (\"{n}#\") , Ty :: Data (n , args) => { let mut s = n . clone () ; for a in args { s . push ('$') ; s . push_str (& mangle_ty (a)) ; } s } Ty :: Var (v) => format ! (\"VAR_{v}\") , Ty :: Fn (a , r) => format ! (\"HOF_FN_{}__TO__{}\" , mangle_ty (a) , mangle_ty (r)) , } }",
-      "reason": "unsupported Rust type form `& Ty`",
+      "reason": "match pattern constructor `Binary` collides with a Mycelium reserved word — emitting it verbatim would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5)",
       "item_name": "mangle_ty"
     },
     {
       "file": "crates/mycelium-l1/src/mono.rs",
       "line": 3027,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "ReservedWord",
+      "rust_construct": "ReservedWord",
       "snippet": "# [doc = \" The scalar tag used inside [`mangle_ty`] (`F16`/`BF16`/`F32`/`F64`).\"] fn scalar_tag (s : Scalar) -> & 'static str { match s { Scalar :: F16 => \"F16\" , Scalar :: Bf16 => \"BF16\" , Scalar :: F32 => \"F32\" , Scalar :: F64 => \"F64\" , } }",
-      "reason": "unsupported Rust type form `& 'static str`",
+      "reason": "match pattern constructor `F16` collides with a Mycelium reserved word — emitting it verbatim would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5)",
       "item_name": "scalar_tag"
     },
     {
@@ -369,7 +371,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Mangle a declaration name (fn or data type) at concrete type arguments: `name` + `\\\"$\\\" + mangle_ty`\"] # [doc = \" per argument. **Empty `targs` ⇒ the original name, byte-for-byte** — so monomorphic code and\"] # [doc = \" non-generic programs are untouched.\"] pub (crate) fn mangle_decl (name : & str , targs : & [Ty]) -> String { if targs . is_empty () { return name . to_owned () ; } let mut s = name . to_owned () ; for t in targs { s . push ('$') ; s . push_str (& mangle_ty (t)) ; } s }",
-      "reason": "unsupported Rust type form `& str`",
+      "reason": "unsupported Rust type form `[Ty]`",
       "item_name": "mangle_decl"
     },
     {
@@ -379,7 +381,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Mangle a **constructor** name at its data type's concrete arguments — same scheme as\"] # [doc = \" [`mangle_decl`] (empty `targs` ⇒ unchanged). Distinct instantiations get distinct ctor names so the\"] # [doc = \" registry / [`Env::ctor`] key stays globally unique across mono'd data types.\"] pub (crate) fn mangle_ctor (name : & str , targs : & [Ty]) -> String { mangle_decl (name , targs) }",
-      "reason": "unsupported Rust type form `& str`",
+      "reason": "unsupported Rust type form `[Ty]`",
       "item_name": "mangle_ctor"
     },
     {
@@ -389,7 +391,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Mangle a trait method to the direct monomorphic fn name `method$Trait$ForTy` — e.g.\"] # [doc = \" `cmp$Cmp$Binary8`. The receiver is mangled with [`mangle_ty`]; the name encodes (method, trait,\"] # [doc = \" receiver), which is the honest queryable identity of the resolved dispatch.\"] pub (crate) fn mangle_method (method : & str , trait_name : & str , for_ty : & Ty) -> String { format ! (\"{method}${trait_name}${}\" , mangle_ty (for_ty)) }",
-      "reason": "unsupported Rust type form `& str`",
+      "reason": "unsupported expression form `format ! (\"{method}${trait_name}${}\" , mangle_ty (for_ty))`",
       "item_name": "mangle_method"
     },
     {
@@ -399,7 +401,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" RFC-0024 §4A.4 (M-704): mangle a closure arrow type `A => B` to the tag-sum data name\"] # [doc = \" `Fn$<A>$<B>` — the same injective, surface-disjoint scheme as [`mangle_decl`] (`$` joints, the\"] # [doc = \" `#` nullary-data tag inside [`mangle_ty`]). A nested arrow recurses ([`mangle_ty_or_fn`]), so a\"] # [doc = \" closure-capturing-closure's arrow names its inner arrow's tag-sum. Distinct arrows ⇒ distinct\"] # [doc = \" names (no silent alias — G2).\"] pub (crate) fn mangle_arrow (a : & Ty , b : & Ty) -> String { format ! (\"Fn${}${}\" , mangle_ty_or_fn (a) , mangle_ty_or_fn (b)) }",
-      "reason": "unsupported Rust type form `& Ty`",
+      "reason": "unsupported expression form `format ! (\"Fn${}${}\" , mangle_ty_or_fn (a) , mangle_ty_or_fn (b))`",
       "item_name": "mangle_arrow"
     },
     {
@@ -409,57 +411,47 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" The generated dispatcher fn name for an arrow mangle `Fn$A$B` → `apply$A$B` (RFC-0024 §4A.2). The\"] # [doc = \" `Fn$`-prefix is stripped so the dispatcher and its sum share the `A$B` suffix (queryable identity).\"] pub (crate) fn apply_fn_name (arrow : & str) -> String { let suffix = arrow . strip_prefix (\"Fn$\") . unwrap_or (arrow) ; format ! (\"apply${suffix}\") }",
-      "reason": "unsupported Rust type form `& str`",
+      "reason": "unsupported expression form `format ! (\"apply${suffix}\")`",
       "item_name": "apply_fn_name"
-    },
-    {
-      "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 3082,
-      "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
-      "snippet": "# [doc = \" Like [`mangle_ty`] but mangles a `Ty::Fn` to its arrow tag-sum name (`Fn$A$B`) rather than the\"] # [doc = \" loud `HOF_FN_…` leak marker — used inside closure mangling where a fn-typed capture/codomain is a\"] # [doc = \" real, lowered closure type (RFC-0024 §4A). Non-fn types delegate to [`mangle_ty`].\"] pub (crate) fn mangle_ty_or_fn (t : & Ty) -> String { match t { Ty :: Fn (a , b) => mangle_arrow (a , b) , _ => mangle_ty (t) , } }",
-      "reason": "unsupported Rust type form `& Ty`",
-      "item_name": "mangle_ty_or_fn"
     },
     {
       "file": "crates/mycelium-l1/src/mono.rs",
       "line": 3092,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "ReservedWord",
+      "rust_construct": "ReservedWord",
       "snippet": "# [doc = \" Rewrite a concrete `Ty` so every applied data type becomes its **mangled-nullary** form\"] # [doc = \" (`Data(\\\"List$Binary8\\\", [])`), the shape `build_registry`/`field_spec` already handle. Primitive\"] # [doc = \" reprs pass through unchanged.\"] fn mangle_ty_in_ty (t : & Ty) -> Ty { match t { Ty :: Binary (_) | Ty :: Ternary (_) | Ty :: Dense (_ , _) | Ty :: Vsa { .. } | Ty :: Substrate (_) | Ty :: Bytes | Ty :: Float => t . clone () , Ty :: Seq (elem , n) => Ty :: Seq (Box :: new (mangle_ty_in_ty (elem)) , * n) , Ty :: Data (_ , args) if args . is_empty () => t . clone () , Ty :: Data (_ , _) => Ty :: Data (mangle_ty (t) , vec ! []) , Ty :: Var (v) => Ty :: Var (v . clone ()) , Ty :: Fn (_ , _) => t . clone () , } }",
-      "reason": "unsupported Rust type form `& Ty`",
+      "reason": "match pattern constructor `Binary` collides with a Mycelium reserved word — emitting it verbatim would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5)",
       "item_name": "mangle_ty_in_ty"
     },
     {
       "file": "crates/mycelium-l1/src/mono.rs",
       "line": 3117,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "ReservedWord",
+      "rust_construct": "ReservedWord",
       "snippet": "# [doc = \" Convert a concrete checked [`Ty`] back to a **source-named** surface [`TypeRef`] (no guarantee\"] # [doc = \" index) — an applied data type keeps its original name and recurses into its arguments\"] # [doc = \" (`List<Binary{8}>` → `Named(\\\"List\\\", [Binary{8}])`). Used to thread an `expected` type into\"] # [doc = \" re-inference (`infer_type`), which resolves names against the **source** env. (Contrast\"] # [doc = \" [`ty_to_ref`], which produces the *mangled-nullary* output form for the emitted env.)\"] fn ty_to_source_ref (t : & Ty) -> TypeRef { let base = match t { Ty :: Binary (Width :: Lit (n)) => BaseType :: Binary (WidthRef :: Lit (* n)) , Ty :: Binary (Width :: Var (v)) => BaseType :: Binary (WidthRef :: Name (v . clone ())) , Ty :: Ternary (Width :: Lit (m)) => BaseType :: Ternary (WidthRef :: Lit (* m)) , Ty :: Ternary (Width :: Var (v)) => BaseType :: Ternary (WidthRef :: Name (v . clone ())) , Ty :: Dense (d , s) => BaseType :: Dense (* d , * s) , Ty :: Vsa { model , dim , sparsity , } => BaseType :: Vsa { model : model . clone () , dim : * dim , sparsity : sparsity . clone () , } , Ty :: Substrate (tag) => BaseType :: Substrate (tag . clone ()) , Ty :: Seq (elem , n) => BaseType :: Seq { elem : Box :: new (ty_to_source_ref (elem)) , len : * n , } , Ty :: Bytes => BaseType :: Bytes , Ty :: Float => BaseType :: Float , Ty :: Data (n , args) => { BaseType :: Named (n . clone () , args . iter () . map (ty_to_source_ref) . collect ()) } Ty :: Var (v) => BaseType :: Named (v . clone () , vec ! []) , Ty :: Fn (a , r) => BaseType :: Fn (Box :: new (ty_to_source_ref (a)) , Box :: new (ty_to_source_ref (r))) , } ; TypeRef :: unguaranteed (base) }",
-      "reason": "unsupported Rust type form `& Ty`",
+      "reason": "match pattern constructor `Binary` collides with a Mycelium reserved word — emitting it verbatim would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5)",
       "item_name": "ty_to_source_ref"
     },
     {
       "file": "crates/mycelium-l1/src/mono.rs",
       "line": 3162,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "ReservedWord",
+      "rust_construct": "ReservedWord",
       "snippet": "# [doc = \" Convert a concrete checked [`Ty`] back to a surface [`TypeRef`] (no guarantee index) so a rewritten\"] # [doc = \" `FnDecl`/`Param`/`Ascribe` carries a concrete surface type. Mono erases type variables and bakes a\"] # [doc = \" data type's arguments into its **mangled-nullary** name, so an applied `Ty::Data(_, args!=[])`\"] # [doc = \" becomes the `Named` of its mangled name; a `Ty::Var` would be an internal error, surfaced as a\"] # [doc = \" distinctive `Named` so a leak is never silent (rather than a panic).\"] fn ty_to_ref (t : & Ty) -> TypeRef { let base = match t { Ty :: Binary (Width :: Lit (n)) => BaseType :: Binary (WidthRef :: Lit (* n)) , Ty :: Binary (Width :: Var (v)) => BaseType :: Binary (WidthRef :: Name (v . clone ())) , Ty :: Ternary (Width :: Lit (m)) => BaseType :: Ternary (WidthRef :: Lit (* m)) , Ty :: Ternary (Width :: Var (v)) => BaseType :: Ternary (WidthRef :: Name (v . clone ())) , Ty :: Dense (d , s) => BaseType :: Dense (* d , * s) , Ty :: Vsa { model , dim , sparsity , } => BaseType :: Vsa { model : model . clone () , dim : * dim , sparsity : sparsity . clone () , } , Ty :: Substrate (tag) => BaseType :: Substrate (tag . clone ()) , Ty :: Seq (elem , n) => BaseType :: Seq { elem : Box :: new (ty_to_ref (elem)) , len : * n , } , Ty :: Bytes => BaseType :: Bytes , Ty :: Float => BaseType :: Float , Ty :: Data (n , args) if args . is_empty () => BaseType :: Named (n . clone () , vec ! []) , Ty :: Data (_ , _) => BaseType :: Named (mangle_ty (t) , vec ! []) , Ty :: Var (v) => BaseType :: Named (format ! (\"VAR_{v}\") , vec ! []) , Ty :: Fn (a , r) => BaseType :: Fn (Box :: new (ty_to_ref (a)) , Box :: new (ty_to_ref (r))) , } ; TypeRef :: unguaranteed (base) }",
-      "reason": "unsupported Rust type form `& Ty`",
+      "reason": "match pattern constructor `Binary` collides with a Mycelium reserved word — emitting it verbatim would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5)",
       "item_name": "ty_to_ref"
     },
     {
       "file": "crates/mycelium-l1/src/mono.rs",
       "line": 3207,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "MultiStmtBody",
+      "rust_construct": "MultiStmtBody",
       "snippet": "# [doc = \" Like [`ty_to_ref`], but attaches `guarantee` — the **source declaration's own** `@ g` (M-844 /\"] # [doc = \" M-967; RFC-0018 §4). Every call site passes the guarantee straight off the *original* (still\"] # [doc = \" abstract/generic) [`TypeRef`] being specialized (e.g. `p.ty.guarantee`, `fd.sig.ret.guarantee`)\"] # [doc = \" — never derived from the concrete `Ty` (which carries none) and never merged/averaged across\"] # [doc = \" instantiations (each call builds one fresh `TypeRef` for one specialization). This is the sole\"] # [doc = \" per-instantiation guarantee-tag threading point: a monomorphized copy's signature/ascription\"] # [doc = \" keeps exactly what its own source wrote — no silent loss (the pre-M-967 `ty_to_ref` blanking),\"] # [doc = \" no silent merge across instantiations, and no upgrade past the source's own annotation (VR-5).\"] fn ty_to_ref_tagged (t : & Ty , guarantee : Option < Strength >) -> TypeRef { let mut r = ty_to_ref (t) ; r . guarantee = guarantee ; r }",
-      "reason": "unsupported Rust type form `& Ty`",
+      "reason": "function body has a semicolon-terminated (value-discarding) statement expression before the tail — a `let`-chain body maps only simple `let x = e;` bindings plus a single trailing expression",
       "item_name": "ty_to_ref_tagged"
     }
   ],

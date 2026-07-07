@@ -61,11 +61,17 @@ fn cases() -> Vec<Case> {
             rust: "Box<Vec<u16>>",
             expect: Ok("Box[Vec[Binary{16}]]"),
         },
-        // An unmappable *type* argument gaps the whole application — `String` has no confirmed
-        // base_type arm, and its precise inner `GapReason` (category `Other`) propagates unchanged
-        // (never a partial `Option[..]` emission). This is the tuple-arm propagation precedent.
+        // A `String` type argument now maps to `Bytes` (RFC-0033 §3.2 — DN-34 §8.14), so the whole
+        // application emits `Option[Bytes]` rather than gapping.
         Case {
             rust: "Option<String>",
+            expect: Ok("Option[Bytes]"),
+        },
+        // An unmappable *type* argument still gaps the whole application — `char` has no confirmed
+        // base_type arm, and its precise inner `GapReason` (category `Other`) propagates unchanged
+        // (never a partial `Vec[..]` emission). This is the tuple-arm propagation precedent.
+        Case {
+            rust: "Vec<char>",
             expect: Gap(Other),
         },
         // A signed-integer argument likewise propagates its own (Other) gap — Binary{N} is unsigned.
@@ -94,6 +100,55 @@ fn cases() -> Vec<Case> {
         Case {
             rust: "Seq<u8>",
             expect: Gap(Category::ReservedWord),
+        },
+        // ── Shared-reference erasure (`&T` -> mapped referent; ADR-003 value semantics, this leaf) ──
+        // A `&T` over an ordinary named type erases to that type (the real-corpus shape, e.g.
+        // `&ContentHash`/`&NameRegistry`/`&Value`).
+        Case {
+            rust: "&Ordering",
+            expect: Ok("Ordering"),
+        },
+        // The reference is erased *around* the referent's own mapping — `&u8` -> `Binary{8}` (the
+        // referent still goes through the builtin arm), proving erasure composes with the mapping.
+        Case {
+            rust: "&u8",
+            expect: Ok("Binary{8}"),
+        },
+        // An explicit lifetime is erased with the reference (lifetimes have no grammar surface).
+        Case {
+            rust: "&'a Duration",
+            expect: Ok("Duration"),
+        },
+        // Nested/double shared reference erases at every level (`&&T` -> `T`) — the recursion re-arms
+        // the budget through the public `map_type`.
+        Case {
+            rust: "&&Ordering",
+            expect: Ok("Ordering"),
+        },
+        // A shared reference to a mappable generic application composes with the generic arm
+        // (`&Vec<u8>` -> `Vec[Binary{8}]`).
+        Case {
+            rust: "&Vec<u8>",
+            expect: Ok("Vec[Binary{8}]"),
+        },
+        // `&str` erases to `str`, which now maps to `Bytes` (RFC-0033 §3.2 — §8.14): a shared
+        // reference to a text value composes with the erasure arm to emit `Bytes`.
+        Case {
+            rust: "&str",
+            expect: Ok("Bytes"),
+        },
+        // NEVER-SILENT CASCADE: a `&T` whose *referent* has no mapping still gaps — the reference is
+        // erased, then the referent's own precise reason surfaces (here `&char` -> `char` -> Other),
+        // never a partial emission. This is the honest deeper-blocker the erasure exposes (§8.10).
+        Case {
+            rust: "&char",
+            expect: Gap(Other),
+        },
+        // A `&mut T` is NOT erased (mutation has no value-semantic correspondence, ADR-003) — an
+        // explicit `Other` gap, distinct from the shared-reference erasure above.
+        Case {
+            rust: "&mut Ordering",
+            expect: Gap(Other),
         },
     ]
 }
@@ -167,4 +222,50 @@ fn qualified_generic_path_still_gapped() {
     let err = map_type(&ty("std::result::Result<u8, E>"), None)
         .expect_err("a qualified multi-segment generic path must stay gapped");
     assert_eq!(err.category, Category::Other);
+}
+
+/// `&str` erases to `str`, which now maps to `Bytes` (RFC-0033 §3.2 — DN-34 §8.14) — the
+/// type-position twin of the string-literal value emission. A regression that re-gapped `str` (or
+/// failed to erase the shared reference) would fail here.
+#[test]
+fn shared_reference_to_str_maps_to_bytes() {
+    assert_eq!(map_type(&ty("&str"), None).unwrap(), "Bytes");
+    assert_eq!(map_type(&ty("String"), None).unwrap(), "Bytes");
+    assert_eq!(map_type(&ty("str"), None).unwrap(), "Bytes");
+}
+
+/// Never-silent cascade (G2/VR-5, this leaf): a shared reference whose *referent* has no confirmed
+/// mapping gaps with the **referent's own** reason, not a reference-shaped one — the `&` is erased,
+/// then `char` surfaces as the real blocker. A future change that started emitting a partial surface
+/// for `&char` (or masked the referent behind a generic "reference" reason) would fail here.
+#[test]
+fn shared_reference_to_unmapped_referent_surfaces_referent_reason() {
+    let err = map_type(&ty("&char"), None)
+        .expect_err("`&char` must gap — its referent `char` has no confirmed base_type arm");
+    assert_eq!(err.category, Category::Other);
+    assert!(
+        err.reason.contains("char"),
+        "the gap must name the *referent* (`char`) as the blocker, not the reference: {}",
+        err.reason
+    );
+    assert!(
+        !err.reason.contains("mutable reference"),
+        "a *shared* reference must not be reported as a `&mut` gap: {}",
+        err.reason
+    );
+}
+
+/// A `&mut T` is distinctly gapped (mutation has no value-semantic correspondence, ADR-003) — the
+/// reason must cite the mutable reference / value semantics, never be silently erased to the value
+/// type the way a shared `&T` is. This pins the shared-vs-mutable asymmetry.
+#[test]
+fn mutable_reference_is_gapped_not_erased() {
+    let err = map_type(&ty("&mut Ordering"), None)
+        .expect_err("`&mut T` must gap — mutation has no value-semantic correspondence (ADR-003)");
+    assert_eq!(err.category, Category::Other);
+    assert!(
+        err.reason.contains("mutable reference") && err.reason.contains("ADR-003"),
+        "the `&mut` gap must cite the mutable-reference / value-semantics basis: {}",
+        err.reason
+    );
 }

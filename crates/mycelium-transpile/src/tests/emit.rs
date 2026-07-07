@@ -112,12 +112,90 @@ fn cases() -> Vec<Case> {
                 category: Category::MacroInvocation,
             },
         },
-        // KNOWN HARD GAP: a named-field ("record") struct — no record surface in `constructor`.
+        // M-1006 (E33-1): a named-field ("record") struct whose fields all resolve in-file now emits
+        // POSITIONALLY (field names dropped + recorded via a `NamedFieldDrop` sub-gap) — the
+        // grammar-grounded mapping the `lib/std/*.myc` hand-ports use (`type GuaranteeRow = Row(..)`).
         Case {
-            name: "struct_named_fields_gap",
-            rust: "struct Foo { x: u8 }",
+            name: "struct_named_fields_emits_positionally",
+            rust: "struct Foo { x: u8, y: bool }",
+            expect: Expect::EmittedAndGapped {
+                item: "Foo",
+                contains: "type Foo = Foo(Binary{8}, Bool)",
+                sub_gap_category: Category::NamedFieldDrop,
+            },
+        },
+        // M-1006 §8.14: a named-field struct with a `String` field now EMITS — `String` maps to
+        // `Bytes` (RFC-0033 §3.2), so the record is fully mappable and emits positionally.
+        Case {
+            name: "struct_named_field_string_maps_to_bytes",
+            rust: "struct WithText { s: String, n: u32 }",
+            expect: Expect::EmittedAndGapped {
+                item: "WithText",
+                contains: "type WithText = WithText(Bytes, Binary{32})",
+                sub_gap_category: Category::NamedFieldDrop,
+            },
+        },
+        // M-1006: a named-field struct with an UNMAPPABLE field type (`char`) still gaps — the
+        // field's own precise repr reason wins (mapped *before* the resolvability gate), so the gap
+        // profile keeps "unmappable field" distinct from "out-of-file reference".
+        Case {
+            name: "struct_named_field_unmappable_type_still_gaps",
+            rust: "struct Bad { c: char }",
             expect: Expect::Gapped {
                 category: Category::Struct,
+            },
+        },
+        // M-1006 resolvability gate: a named-field struct whose fields all MAP but reference a type
+        // not declared in this file (`Elsewhere`) is gated — emitting it would introduce an
+        // unresolved reference that poisons the file's `myc check`. Left an honest `Struct` gap.
+        Case {
+            name: "struct_named_field_out_of_file_ref_is_gated",
+            rust: "struct Ref { h: Elsewhere }",
+            expect: Expect::Gapped {
+                category: Category::Struct,
+            },
+        },
+        // M-1006 greatest-fixpoint: mutually-recursive named-field structs (`A` <-> `B`) resolve as a
+        // group and emit — a *least* fixpoint would wrongly gate both (each waits on the other). Both
+        // are declared in-file and reference only each other + builtins, so the cycle is resolvable.
+        Case {
+            name: "mutually_recursive_named_structs_resolve",
+            rust: "struct A { b: B, x: u8 }\nstruct B { a: A }",
+            expect: Expect::EmittedAndGapped {
+                item: "A",
+                contains: "type A = A(B, Binary{8})",
+                sub_gap_category: Category::NamedFieldDrop,
+            },
+        },
+        // M-1006 Lever 1: a `self.<field>` projection in an impl body desugars to a `match` on the
+        // struct's single (positional) constructor — the faithful equivalent (no projection surface in
+        // the grammar). `Perm` is resolvable (its ctor emits), so the projection is gated ON.
+        Case {
+            name: "field_projection_desugars_to_match",
+            rust: "struct Perm { mode: u8 }\nimpl Perm { fn get(self) -> u8 { self.mode } }",
+            expect: Expect::Emitted {
+                item: "impl Perm",
+                contains: "match self { Perm(p0) => p0 }",
+            },
+        },
+        // M-1006 Lever 1: struct-literal construction `Foo { mode: a }` -> the positional ctor call
+        // `Foo(a)` (fields ordered by declaration). `Self { .. }` resolves the same way in impl context.
+        Case {
+            name: "struct_literal_construction_emits_positional_ctor",
+            rust: "struct Foo { mode: u8 }\nfn mk(a: u8) -> Foo { Foo { mode: a } }",
+            expect: Expect::Emitted {
+                item: "mk",
+                contains: "Foo(a)",
+            },
+        },
+        // M-1006 Lever 1 gate: a field access on a NON-`self` base gaps — the transpiler tracks no
+        // local types, so it cannot resolve the projection to a constructor position (never a guess).
+        // (No struct is declared here, so the sole item is the gapping `peek`.)
+        Case {
+            name: "field_access_on_non_self_base_gaps",
+            rust: "fn peek(f: u8) -> u8 { f.mode }",
+            expect: Expect::Gapped {
+                category: Category::Other,
             },
         },
         // M-873 follow-on (DN-41): a numeric-widening `impl Widen<..> for ..` whose body is a
@@ -252,10 +330,33 @@ fn cases() -> Vec<Case> {
                 category: Category::GenericBound,
             },
         },
-        // A named-field enum variant is a payload-shape gap distinct from a whole-struct gap.
+        // M-1006 (E33-1): a named-field enum variant whose fields resolve now emits POSITIONALLY
+        // (`A { x: u8 }` -> `A(Binary{8})`), names dropped + recorded via a `NamedFieldDrop` sub-gap.
         Case {
-            name: "payload_variant_named_fields_gap",
-            rust: "enum Foo { A { x: u8 } }",
+            name: "payload_variant_named_fields_emits_positionally",
+            rust: "enum Foo { A { x: u8 }, B }",
+            expect: Expect::EmittedAndGapped {
+                item: "Foo",
+                contains: "type Foo = A(Binary{8}) | B",
+                sub_gap_category: Category::NamedFieldDrop,
+            },
+        },
+        // M-1006 §8.14: a named-field variant with a `String` field now EMITS — `String` maps to
+        // `Bytes` (RFC-0033 §3.2), names dropped + recorded via a `NamedFieldDrop` sub-gap.
+        Case {
+            name: "payload_variant_string_field_maps_to_bytes",
+            rust: "enum Msg { Text { s: String }, Empty }",
+            expect: Expect::EmittedAndGapped {
+                item: "Msg",
+                contains: "type Msg = Text(Bytes) | Empty",
+                sub_gap_category: Category::NamedFieldDrop,
+            },
+        },
+        // M-1006: a named-field variant with an UNMAPPABLE field type (`char`) still gaps — the
+        // variant's own precise reason wins (mapped before the resolvability gate).
+        Case {
+            name: "payload_variant_unmappable_field_still_gaps",
+            rust: "enum Bad { A { c: char } }",
             expect: Expect::Gapped {
                 category: Category::PayloadVariant,
             },
@@ -305,6 +406,49 @@ fn cases() -> Vec<Case> {
             rust: "enum GuaranteeStrength { Exact, Loose }",
             expect: Expect::Gapped {
                 category: Category::ReservedWord,
+            },
+        },
+        // Shared-reference erasure (this leaf, ADR-003): a fn whose params are `&T` shared references
+        // now maps — the references are erased so the signature becomes value params, exactly as the
+        // hand-port renders it. This is the item-level effect that unblocks emission (the real-corpus
+        // shape: `fn digest_eq(a: &ContentHash, b: &ContentHash) -> bool`).
+        Case {
+            name: "shared_ref_params_emit",
+            rust: "fn digest_eq(a: &Ordering, b: &Ordering) -> bool { a == b }",
+            expect: Expect::Emitted {
+                item: "digest_eq",
+                contains: "fn digest_eq(a: Ordering, b: Ordering) => Bool = a == b;",
+            },
+        },
+        // NEVER-SILENT CASCADE: a fn taking `&mut T` stays gapped — a mutable reference has no
+        // value-semantic correspondence (ADR-003), so it is NOT erased. The whole fn gaps (Other),
+        // never a partial emission that silently drops the mutation.
+        Case {
+            name: "mut_ref_param_gapped",
+            rust: "fn bump(x: &mut Ordering) -> bool { true }",
+            expect: Expect::Gapped {
+                category: Category::Other,
+            },
+        },
+        // M-1006 §8.14: a fn taking `&str` now emits — the reference erases to `str`, which maps to
+        // `Bytes` (RFC-0033 §3.2). The real-corpus shape `fn message(&self) -> &str` (a String/`str`
+        // accessor) is the class this unblocks.
+        Case {
+            name: "shared_ref_to_str_emits_bytes",
+            rust: "fn tag(msg: &str) -> bool { true }",
+            expect: Expect::Emitted {
+                item: "tag",
+                contains: "fn tag(msg: Bytes) => Bool = True;",
+            },
+        },
+        // NEVER-SILENT CASCADE: a fn taking `&char` still gaps — the reference erases but the referent
+        // `char` has no confirmed base_type arm, so the honest deeper blocker surfaces (Other), never
+        // a fabricated emission.
+        Case {
+            name: "shared_ref_to_unmappable_referent_still_gapped",
+            rust: "fn is_err(c: &char) -> bool { true }",
+            expect: Expect::Gapped {
+                category: Category::Other,
             },
         },
     ]
