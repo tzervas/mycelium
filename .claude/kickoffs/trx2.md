@@ -169,9 +169,9 @@ First heavy-core increment: elab.rs's pure L0 lowering helpers ported into `lib/
 under **Option A** (in-language mirror ADTs + `scalar_kind`/`sparsity_class`/`lit_value`/`type_repr`/
 `field_spec`/`ty_to_repr`/`ty_to_field_ty_ref`/`policy_name` preimage). **Wild-free.** Honest deferrals
 (FLAG-semcore-25/27/29). All `/pr-review` (aef3c202) fixes landed incl. the **non-vacuity convention**
-for all 8 `.myc` comparators (the template for M-1013). Verified on both witnesses: `stage5_elab` 11/11
-+ full `mycelium-l1` suite green + native `myc check lib/compiler/semcore.myc` ok. This sets the M-1013
-pattern; the fresh session starts at STEP 2.
+for all 8 `.myc` comparators (the template for M-1013). Verified on both witnesses: `stage5_elab` 11/11,
+the full `mycelium-l1` suite green, and native `myc check lib/compiler/semcore.myc` ok. This sets the
+M-1013 pattern; the fresh session starts at STEP 2.
 
 ### ⇒ FRESH-SESSION STEP 2 — INCORPORATE MARSHALLING (maintainer directive, 2026-07-07)
 The M-1012 differential compares two `.myc`-side mirror values with hand-written `.myc` structural
@@ -245,3 +245,60 @@ Routine `trig_01EXyj3Q` "myc-port-drive" (cron `30 */3 * * *`, fresh session per
 notifications) — executes the **M-741** ratification IFF it independently verifies all 3 DoD criteria
 with checked `Empirical` evidence (else flags on issue #444); never auto-declares 1.0.0. M-741 is
 maintainer-pre-authorized (verification-gated). The fresh session's swarm work runs alongside it.
+
+## Session-C UPDATE (2026-07-07) — M-1006 ladder to `main` + kernel prim-gap closure wave
+
+Session C (transpiler ladder, `crates/mycelium-transpile/` + `gen/myc-drafts/` + DN-34) ran to
+completion **and pivoted into a kernel prim-gap closure** once the maintainer **unfroze the kernel**.
+Full durable record: **DN-34 §8.12–§8.16** (on `main`/`dev`). This section is the current status + the
+remaining-task list for a fresh continuation.
+
+### ✅ Landed (all merged)
+- **M-1006 transpiler ladder → `main`.** §8.12 positional named-field emission + `myc check --phylum`
+  cross-nodule mode (hotfix to all three tiers); §8.13 field-projection/struct-literal desugaring;
+  **§8.14 String/str/&str → `Bytes`** (RFC-0033 §3.2) — the **largest single-lever gain of the ladder**
+  (`checked_fraction` 4.61% → **5.79%**, +9). Landed to `main` as the sole scoped `integration→main`
+  delta (PR #1267) after the big release squash; also on `dev`+`integration`.
+- **§8.15 prim-gap audit correction** (house rule #4): my §8.13/§8.14 wrongly recorded the `Binary{N}`
+  bitwise ops as *missing* — they **exist** as `bit.and/or/xor/not` (surface `and/or/xor/not`), and
+  `==`/`<`→`Binary{1}` is ratified design (RFC-0032 D1). Live prim count **Π = 59** (DN-56/DN-76 "38"
+  stale). **rotate IS expressible** (`or(shl_u,shr_u)`) — §8.13 Lever-2's "impossible" was wrong.
+- **Kernel prim-gap closure wave (kernel UNFROZEN — §8.14 correction; Π 59 → 66):**
+  **CU-1** `bit.mul` unsigned multiply (#1273) · **CU-2** `flt.is_nan/is_finite/is_infinite`
+  (ADR-040 §2.5 mandate, #1274) · **CU-6** `bit.popcount/clz/ctz` (#1275) · **CU-4** `ne/gt/cmp_s/le_s/
+  ge_s` + the CU-6 `std.math` surface `bmul/bpopcount/bclz/bctz` (#1291). Each carries never-silent
+  semantics with property and three-way (L1/L0/AOT) tests; the Π table, `checkty` surface, and
+  `prim_table` were updated in lockstep.
+- **Agent guidance:** DN-34 §8.16 wave record (#1293); **tero guidance** added to CLAUDE.md +
+  `.claude/agent-context.md` + `.claude/memory/README.md` (#1294).
+
+### ⇒ REMAINING TASKS (the updated kickoff worklist — ruled *implement-now* unless noted)
+Decision rulings already made (all the project-optimal option — performant · memory-safe · KC-3 ·
+never-silent); the approach for each is in **DN-34 §8.16**. Prim-add pattern is in the working notes
+`…/scratchpad/trx2-session-c-notes.md` (codec → prim → registry → Π table + 2 count asserts → checkty
+family/sig/kernel_name → prim_table → enablement three-way).
+
+1. **CU-3 — float↔int never-silent conversions.** Target-width prims (the `bit.width_cast`/DN-41
+   model): `flt→bin` (refuse NaN/±inf/out-of-range) + checked-exact `bin→flt` (err `|n|>2^53`); the
+   **lossy** `bin→flt` rounding is a **reified swap** carrying its bound (ADR-040 §2.4/§5, NOT a prim).
+2. **CU-5 — executable `wrapping` construct.** M-791 landed the meta/mode axis (`mycelium-core/src/
+   meta.rs` + `src/tests/wrapping.rs`) but no runtime path. Wire the named construct → modular
+   (never-refusing, `Declared`-tagged) eval over `bin.add/sub/mul`. RFC-0034 §10; no new `wrapping_*`
+   prims. (Grep `wrapping` in l1 `elab`/`checkty` for the construct's parse/elaborate handling first.)
+3. **CU-7 — arbitrary-width ternary.** `mycelium_core::ternary::BigTernary` (M-756) exists but is
+   unsurfaced (runnable ternary is fixed-width `trit.*`, ~40-trit cap). Surface the growable arithmetic
+   path RFC-0033 §4.2.2 mandates (ADR-029 Accepted); coordinate the growable-`Repr::Ternary` payload
+   with the E20-1 content-address settlement.
+4. **Transpiler operator/comparator emission** (`crates/mycelium-transpile/`). Emit `and/or/xor` (not
+   the dead `band/bor`) for `&`/`|`/`^`, and the CU-4 comparators, when operands are known `Binary{N}`
+   — the **operand-type inference** §8.13's D3 named (thread param/`self` widths through `emit.rs`).
+   Then regenerate `gen/myc-drafts/` + measure the `checked_fraction` lift.
+5. **Spec-doc sync (doc-currency follow-up).** Document the new `std.cmp` surface (`ne/gt/cmp_s/le_s/
+   ge_s`) in `docs/spec/stdlib/cmp.md` and the `std.math` surface (`bmul/bpopcount/bclz/bctz`) in
+   `docs/spec/stdlib/math.md`; add a top-level `CHANGELOG.md` entry for the prim-gap wave (integrator).
+6. **Deferred to design work (ruling: defer — no half-measures):** **CU-6 rotate/reverse**
+   (`std.math` FLAG-math-3 — needs a `bit.rotl`/`bit.rotr` prim or width-reflection; the naive
+   `or(shl_u,shr_u)` mis-handles `n=0`, a full-width `shr` refuses); **CU-8 atomics** (`fetch_add` — a
+   memory-model RFC, DN-32 §7/RFC-0027 §12); **CU-9 Dense dtype/quant** (RFC-0033 §4.3.2 — rides the
+   E20-1 content-address rehash, ADR-030; the maintainer's `vsa_checks` branch has the desktop
+   durability numbers to ground it). Mint tracked issues; do not scope partial stubs.
