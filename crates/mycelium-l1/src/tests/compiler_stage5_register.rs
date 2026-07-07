@@ -1,4 +1,4 @@
-//! M-740 Stage 5 (M-1013 STEP 3, PR-1 + PR-2; DN-26 §7.3 / §10.2) — the self-hosted
+//! M-740 Stage 5 (M-1013 STEP 3, PR-1 + PR-2 + PR-2b; DN-26 §7.3 / §10.2) — the self-hosted
 //! `compiler.semcore` port of checkty.rs's **register-family**: the constructor-resolution seam and
 //! the type-registry builder that drives it, both a LIVE-ORACLE marshalling differential.
 //!
@@ -6,12 +6,14 @@
 //!   * `first_duplicate` (checkty.rs) — the first value appearing more than once, left to right.
 //!   * `resolve_ctors` (checkty.rs) — resolve every surface `Ctor`'s field `TypeRef`s (the decl's
 //!     type params in scope) into checked `CtorInfo`s, refusing a duplicate constructor name.
-//!   * `register_types` (checkty.rs; **PR-2**) — build the `Nodule`'s type registry: a shell per
-//!     `Item::Type` (so recursive/forward field references resolve), then a `resolve_ctors` fill,
-//!     plus a **TRIMMED** M-826 tuple pre-pass (type-decl ctor-field TypeRefs only). The fn-body /
-//!     pattern / signature tuple legs are DEFERRED to PR-2b behind **FLAG-semcore-30**; the deferred
-//!     leg is never-silent — a `Tuple$N` it would have registered surfaces as an explicit
-//!     `resolve_ty` `Err`, exercised by `register_types_defers_fnbody_tuple_never_silent`.
+//!   * `register_types` (checkty.rs; **PR-2 + PR-2b**) — build the `Nodule`'s type registry: a shell
+//!     per `Item::Type` (so recursive/forward field references resolve), then a `resolve_ctors` fill,
+//!     preceded by the **FULL** M-826 tuple pre-pass — every leg the Rust oracle walks (type-decl
+//!     ctor fields, fn/trait/impl signatures, `match` patterns, and fn-body expressions), closing
+//!     **FLAG-semcore-30** (PR-2b). The never-silent floor is unchanged: any `Tuple$N` still missing
+//!     at `resolve_ty` time surfaces as an explicit `Err`, exercised by
+//!     `register_types_unreferenced_tuple_still_errs_never_silent`; the full-walk coverage is pinned
+//!     by `collect_tuple_arities_cases` and `register_types_registers_leg_tuples`.
 //!
 //! **Differential method — harness MARSHALLING (DN-26 §10.2).** Each case runs the REAL Rust
 //! `checkty::{resolve_ctors, first_duplicate}` oracle on a fixture, producing a genuine
@@ -26,14 +28,17 @@
 //! `Err`; only the `Ok` payload is a meaningful differential).
 
 use crate::ast::{
-    BaseType, Ctor, Item, Nodule, Path, Scalar, Sparsity, TypeDecl, TypeRef, Vis, WidthRef,
+    Arm, BaseType, Ctor, DeriveDecl, Expr, FnDecl, FnSig, ImplDecl, InherentImplDecl, Item,
+    Literal, LowerDecl, LowerRhs, Nodule, ObjectDecl, Paradigm, Param, Path, Pattern, Scalar,
+    Sparsity, TraitDecl, TypeDecl, TypeRef, ViaDecl, Vis, WidthRef,
 };
 use crate::checkty::{
-    first_duplicate, prelude, register_types, resolve_ctors, CtorInfo, DataInfo, Ty, Width,
+    collect_tuple_arities, first_duplicate, prelude, register_types, resolve_ctors, CtorInfo,
+    DataInfo, Ty, Width,
 };
 use crate::eval::L1Value;
 use crate::tests::marshal_support::*;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 // ── L1Value → checkty decoders (register-family output types; the marshalling inverse) ──────────────
 
@@ -552,24 +557,355 @@ fn resolve_ctors_cases() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════════════════════════
-// register_types (M-1013 STEP 3, PR-2) — the type-registry builder.
+// register_types (M-1013 STEP 3, PR-2/PR-2b) — the type-registry builder.
 // ═══════════════════════════════════════════════════════════════════════════════════════════════════
 
-// ── Nodule / Item mirror encoders (the TRIMMED input surface — non-Type items → `ItOther`) ──────────
+// ── Nodule / Item mirror encoders (the FULL input surface — every item kind, PR-2b) ─────────────────
 
 fn encode_path(p: &Path) -> String {
     format!("Pth({})", encode_names(&p.0))
 }
 
-/// A trimmed `Item`: only `Item::Type` carries data (→ `ItType(TypeDecl)`); every other item collapses
-/// to the nullary `ItOther` — exactly the `type Item = ItType(TypeDecl) | ItOther` mirror, and the
-/// structural form of the FLAG-semcore-30 deferral (a non-Type item carries no tuple arity into the
-/// trimmed pre-pass).
+/// The FULL `Item` mirror (PR-2b): every tuple-relevant item kind carries its data field-for-field;
+/// the three kinds `collect_tuple_arities_item` skips (`Use | Default | Derive` — the oracle skips
+/// `Derive` even though it holds a `for_ty`) collapse to the nullary `ItOther`.
 fn encode_item(it: &Item) -> String {
     match it {
         Item::Type(td) => format!("ItType({})", encode_type_decl(td)),
-        _ => "ItOther".to_owned(),
+        Item::Fn(fd) => format!("ItFn({})", encode_fn_decl(fd)),
+        Item::Trait(tr) => format!("ItTrait({})", encode_trait_decl(tr)),
+        Item::Impl(id) => format!("ItImpl({})", encode_impl_decl(id)),
+        Item::Object(od) => format!("ItObject({})", encode_object_decl(od)),
+        Item::Lower(ld) => format!("ItLower({})", encode_lower_decl(ld)),
+        Item::InherentImpl(iid) => format!("ItInherentImpl({})", encode_inherent_impl_decl(iid)),
+        Item::Use(_) | Item::Default(_) | Item::Derive(_) => "ItOther".to_owned(),
     }
+}
+
+// ── full-Item mirror encoders (PR-2b; the fn-body/pattern/signature legs' input surface) ─────────────
+
+fn encode_paradigm(p: Paradigm) -> &'static str {
+    match p {
+        Paradigm::Binary => "PBinary",
+        Paradigm::Ternary => "PTernary",
+        Paradigm::Dense => "PDense",
+        Paradigm::Vsa => "PVsa",
+    }
+}
+
+/// A 64-bit MSB-first binary literal (the `Binary{64}` mirror leaf — the i64 in `Int`/`AmbientInt`).
+fn encode_i64(n: i64) -> String {
+    let bits = n as u64;
+    let mut s = String::from("0b");
+    for (count, i) in (0..64).rev().enumerate() {
+        if count != 0 && count % 4 == 0 {
+            s.push('_');
+        }
+        s.push(if (bits >> i) & 1 == 1 { '1' } else { '0' });
+    }
+    s
+}
+
+fn encode_expr_list(es: &[Expr]) -> String {
+    let mut s = String::from("Nil");
+    for e in es.iter().rev() {
+        s = format!("Cons({}, {})", encode_expr(e), s);
+    }
+    s
+}
+
+fn encode_literal(l: &Literal) -> String {
+    match l {
+        Literal::Bin(s) => format!("Bin({})", encode_bytes(s)),
+        Literal::Trit(s) => format!("Trit({})", encode_bytes(s)),
+        Literal::Int(n) => format!("Int({})", encode_i64(*n)),
+        Literal::AmbientInt(p, n) => {
+            format!("AmbientInt({}, {})", encode_paradigm(*p), encode_i64(*n))
+        }
+        Literal::List(es) => format!("List({})", encode_expr_list(es)),
+        Literal::Bytes(s) => format!("LBytes({})", encode_bytes(s)),
+        Literal::Str(s) => format!("Str({})", encode_bytes(s)),
+        Literal::Float(s) => format!("LFloat({})", encode_bytes(s)),
+    }
+}
+
+fn encode_pattern(p: &Pattern) -> String {
+    match p {
+        Pattern::Wildcard => "PWildcard".to_owned(),
+        Pattern::Lit(l) => format!("PLit({})", encode_literal(l)),
+        Pattern::Ctor(n, subs) => {
+            format!("PCtor({}, {})", encode_bytes(n), encode_pattern_list(subs))
+        }
+        Pattern::Ident(n) => format!("PIdent({})", encode_bytes(n)),
+        Pattern::Tuple(subs) => format!("PTuple({})", encode_pattern_list(subs)),
+        Pattern::Or(alts) => format!("POr({})", encode_pattern_list(alts)),
+    }
+}
+
+fn encode_pattern_list(ps: &[Pattern]) -> String {
+    let mut s = String::from("Nil");
+    for p in ps.iter().rev() {
+        s = format!("Cons({}, {})", encode_pattern(p), s);
+    }
+    s
+}
+
+fn encode_arm(a: &Arm) -> String {
+    format!(
+        "Ar({}, {})",
+        encode_pattern(&a.pattern),
+        encode_expr(&a.body)
+    )
+}
+
+fn encode_arm_list(arms: &[Arm]) -> String {
+    let mut s = String::from("Nil");
+    for a in arms.iter().rev() {
+        s = format!("Cons({}, {})", encode_arm(a), s);
+    }
+    s
+}
+
+fn encode_opt_typeref(t: &Option<TypeRef>) -> String {
+    match t {
+        None => "None".to_owned(),
+        Some(t) => format!("Some({})", encode_typeref(t)),
+    }
+}
+
+/// The FULL `Expr` mirror encoder (all 18 arms), field-for-field with `semcore.myc`'s `Expr`.
+fn encode_expr(e: &Expr) -> String {
+    match e {
+        Expr::Let {
+            name,
+            ty,
+            bound,
+            body,
+        } => format!(
+            "Let({}, {}, {}, {})",
+            encode_bytes(name),
+            encode_opt_typeref(ty),
+            encode_expr(bound),
+            encode_expr(body)
+        ),
+        Expr::If { cond, conseq, alt } => format!(
+            "If({}, {}, {})",
+            encode_expr(cond),
+            encode_expr(conseq),
+            encode_expr(alt)
+        ),
+        Expr::Match { scrutinee, arms } => {
+            format!(
+                "Match({}, {})",
+                encode_expr(scrutinee),
+                encode_arm_list(arms)
+            )
+        }
+        Expr::For {
+            x,
+            xs,
+            acc,
+            init,
+            body,
+        } => format!(
+            "For({}, {}, {}, {}, {})",
+            encode_bytes(x),
+            encode_expr(xs),
+            encode_bytes(acc),
+            encode_expr(init),
+            encode_expr(body)
+        ),
+        Expr::Swap {
+            value,
+            target,
+            policy,
+        } => format!(
+            "Swap({}, {}, {})",
+            encode_expr(value),
+            encode_typeref(target),
+            encode_path(policy)
+        ),
+        Expr::WithParadigm { paradigm, body } => {
+            format!(
+                "WithParadigm({}, {})",
+                encode_paradigm(*paradigm),
+                encode_expr(body)
+            )
+        }
+        Expr::Wild(b) => format!("Wild({})", encode_expr(b)),
+        Expr::Spore(b) => format!("Spore({})", encode_expr(b)),
+        Expr::Consume(b) => format!("Consume({})", encode_expr(b)),
+        Expr::Colony(hs) => format!("Colony({})", encode_hypha_list(hs)),
+        Expr::Lambda { params, body } => {
+            format!(
+                "Lambda({}, {})",
+                encode_param_list(params),
+                encode_expr(body)
+            )
+        }
+        Expr::App { head, args } => {
+            format!("App({}, {})", encode_expr(head), encode_expr_list(args))
+        }
+        Expr::Fuse { left, right } => {
+            format!("Fuse({}, {})", encode_expr(left), encode_expr(right))
+        }
+        Expr::Reclaim { policy, body } => {
+            format!("Reclaim({}, {})", encode_expr(policy), encode_expr(body))
+        }
+        Expr::Path(p) => format!("Path({})", encode_path(p)),
+        Expr::Lit(l) => format!("Lit({})", encode_literal(l)),
+        Expr::Ascribe(inner, t) => {
+            format!("Ascribe({}, {})", encode_expr(inner), encode_typeref(t))
+        }
+        Expr::TupleLit(elems) => format!("TupleLit({})", encode_expr_list(elems)),
+    }
+}
+
+fn encode_hypha_list(hs: &[crate::ast::Hypha]) -> String {
+    let mut s = String::from("Nil");
+    for h in hs.iter().rev() {
+        let forage = match &h.forage {
+            None => "None".to_owned(),
+            Some(e) => format!("Some({})", encode_expr(e)),
+        };
+        s = format!("Cons(Hy({}, {}), {})", forage, encode_expr(&h.body), s);
+    }
+    s
+}
+
+fn encode_param(p: &Param) -> String {
+    format!("Prm({}, {})", encode_bytes(&p.name), encode_typeref(&p.ty))
+}
+
+fn encode_param_list(ps: &[Param]) -> String {
+    let mut s = String::from("Nil");
+    for p in ps.iter().rev() {
+        s = format!("Cons({}, {})", encode_param(p), s);
+    }
+    s
+}
+
+/// `FnSig` mirror. The fixtures never populate type-params / effects / effect-budgets (all empty) —
+/// and `collect_tuple_arities_sig` reads only `value_params` + `ret` regardless — so those three
+/// slots emit `Nil` (asserted empty below, so an encoder gap can never silently drop a populated one).
+fn encode_fn_sig(sig: &FnSig) -> String {
+    assert!(
+        sig.params.is_empty() && sig.effects.is_empty() && sig.effect_budgets.is_empty(),
+        "encode_fn_sig fixture invariant: type-params / effects / budgets must be empty (the tuple \
+         walk never reads them; keep fixtures within the encoded surface)"
+    );
+    format!(
+        "FS({}, Nil, {}, {}, Nil, Nil)",
+        encode_bytes(&sig.name),
+        encode_param_list(&sig.value_params),
+        encode_typeref(&sig.ret)
+    )
+}
+
+fn encode_fn_decl(fd: &FnDecl) -> String {
+    // vis / thaw / tier are not read by the tuple walk; fixtures keep them at the defaults.
+    format!(
+        "FD({}, {}, None, {}, {})",
+        encode_vis(fd.vis),
+        if fd.thaw { "True" } else { "False" },
+        encode_fn_sig(&fd.sig),
+        encode_expr(&fd.body)
+    )
+}
+
+fn encode_fn_decl_list(fds: &[FnDecl]) -> String {
+    let mut s = String::from("Nil");
+    for fd in fds.iter().rev() {
+        s = format!("Cons({}, {})", encode_fn_decl(fd), s);
+    }
+    s
+}
+
+fn encode_fn_sig_list(sigs: &[FnSig]) -> String {
+    let mut s = String::from("Nil");
+    for sig in sigs.iter().rev() {
+        s = format!("Cons({}, {})", encode_fn_sig(sig), s);
+    }
+    s
+}
+
+fn encode_trait_decl(tr: &TraitDecl) -> String {
+    format!(
+        "TrD({}, {}, {}, {})",
+        encode_vis(tr.vis),
+        encode_bytes(&tr.name),
+        encode_names(&tr.params),
+        encode_fn_sig_list(&tr.sigs)
+    )
+}
+
+fn encode_impl_decl(id: &ImplDecl) -> String {
+    format!(
+        "ImD({}, {}, {}, {})",
+        encode_bytes(&id.trait_name),
+        encode_typeref_list(&id.trait_args),
+        encode_typeref(&id.for_ty),
+        encode_fn_decl_list(&id.methods)
+    )
+}
+
+fn encode_impl_decl_list(ids: &[ImplDecl]) -> String {
+    let mut s = String::from("Nil");
+    for id in ids.iter().rev() {
+        s = format!("Cons({}, {})", encode_impl_decl(id), s);
+    }
+    s
+}
+
+fn encode_inherent_impl_decl(iid: &InherentImplDecl) -> String {
+    format!(
+        "IID({}, {})",
+        encode_typeref(&iid.for_ty),
+        encode_fn_decl_list(&iid.methods)
+    )
+}
+
+fn encode_via_decl(v: &ViaDecl) -> String {
+    format!(
+        "VD({}, {}, {})",
+        encode_u32(v.field_idx),
+        encode_bytes(&v.trait_name),
+        encode_typeref_list(&v.trait_args)
+    )
+}
+
+fn encode_via_decl_list(vs: &[ViaDecl]) -> String {
+    let mut s = String::from("Nil");
+    for v in vs.iter().rev() {
+        s = format!("Cons({}, {})", encode_via_decl(v), s);
+    }
+    s
+}
+
+fn encode_object_decl(od: &ObjectDecl) -> String {
+    format!(
+        "OD({}, {}, {}, {}, {}, {}, {})",
+        encode_vis(od.vis),
+        encode_bytes(&od.name),
+        encode_names(&od.params),
+        encode_ctor(&od.ctor),
+        encode_via_decl_list(&od.via_decls),
+        encode_impl_decl_list(&od.impls),
+        encode_fn_decl_list(&od.fns)
+    )
+}
+
+fn encode_lower_decl(ld: &LowerDecl) -> String {
+    let rhs = match &ld.rhs {
+        LowerRhs::Expr(e) => format!("LrExpr({})", encode_expr(e)),
+        LowerRhs::Impl(id) => format!("LrImpl({})", encode_impl_decl(id)),
+    };
+    format!(
+        "LD({}, {}, {})",
+        encode_bytes(&ld.name),
+        encode_names(&ld.params),
+        rhs
+    )
 }
 
 fn encode_item_list(items: &[Item]) -> String {
@@ -630,11 +966,10 @@ fn seed_bool() -> BTreeMap<String, DataInfo> {
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 // register_types (LIVE — checkty::register_types): monomorphic, cross-referencing, generic, the two
-// refusals (duplicate type name / duplicate type param), and a ctor-field TUPLE (the TRIMMED pre-pass).
-// Every fixture's only tuple usage (if any) is a ctor field, so the trimmed pre-pass matches the real
-// full pre-pass byte-for-byte; compared to the live oracle by Rust's derived `==` (Err normalized to
-// `()`). The fn-body/pattern/sig legs deferred behind FLAG-semcore-30 are covered by the never-silent
-// test below (they are the ONE place port and oracle intentionally diverge, so not an equality case).
+// refusals (duplicate type name / duplicate type param), and a ctor-field TUPLE. Compared to the live
+// oracle by Rust's derived `==` (Err normalized to `()`). The fn-body / pattern / signature tuple legs
+// (FLAG-semcore-30, now CLOSED in PR-2b) get their own equality + closure witnesses in
+// `collect_tuple_arities_cases` and `register_types_registers_leg_tuples` below.
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 #[test]
 fn register_types_cases() {
@@ -691,8 +1026,8 @@ fn register_types_cases() {
                 vec![ctor("MkP", vec![])],
             ))]),
         ),
-        // A ctor field that IS a tuple type `(A, B)` → the TRIMMED pre-pass registers Tuple$2 (a
-        // ctor-field tuple is covered by both the full and the trimmed walk, so the outputs agree).
+        // A ctor field that IS a tuple type `(A, B)` → the pre-pass registers Tuple$2 (the ctor-field
+        // leg — the one leg present since PR-2, now part of the full walk).
         (
             "ctor_field_tuple",
             nodule(vec![
@@ -729,58 +1064,371 @@ fn register_types_cases() {
     }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════════════════════════
+// collect_tuple_arities (M-1013 STEP 3, PR-2b) — the FULL M-826 tuple pre-pass, now walking EVERY leg
+// (type-decl ctor fields, fn bodies, `match` patterns, fn/trait/impl signatures, and the Object /
+// InherentImpl / Lower item kinds). LIVE differential against `checkty::collect_tuple_arities` (the
+// raw-nodule oracle), one fixture per leg. The port returns a `Vec[Binary{32}]` (order/dup-insensitive
+// — `register_tuple_arities` presence-checks); both sides normalize to a `BTreeSet<u32>` before
+// comparison. Closes FLAG-semcore-30.
+// ═══════════════════════════════════════════════════════════════════════════════════════════════════
+
+// ── fixture constructors (test bodies stay `assert over a case`) ────────────────────────────────────
+fn param(name: &str, ty: TypeRef) -> Param {
+    Param {
+        name: name.to_owned(),
+        ty,
+    }
+}
+fn fn_sig(name: &str, value_params: Vec<Param>, ret: TypeRef) -> FnSig {
+    FnSig {
+        name: name.to_owned(),
+        params: vec![],
+        value_params,
+        ret,
+        effects: vec![],
+        effect_budgets: BTreeMap::new(),
+    }
+}
+fn fn_decl(sig: FnSig, body: Expr) -> FnDecl {
+    FnDecl {
+        vis: Vis::Private,
+        thaw: false,
+        tier: None,
+        sig,
+        body,
+    }
+}
+/// A variable/path leaf expression (`a`).
+fn var(name: &str) -> Expr {
+    Expr::Path(Path(vec![name.to_owned()]))
+}
+/// A tuple `TypeRef` `(t0, t1, …)`.
+fn tup_ty(elems: Vec<TypeRef>) -> TypeRef {
+    tref(BaseType::Tuple(elems))
+}
+/// A bare named `TypeRef` `Name` (no args).
+fn nm(name: &str) -> TypeRef {
+    tref(named(name, vec![]))
+}
+/// The oracle's arities as a `BTreeSet<u32>` (order-insensitive comparison surface).
+fn oracle_arities(n: &Nodule) -> BTreeSet<u32> {
+    collect_tuple_arities(n)
+        .into_iter()
+        .map(|a| a as u32)
+        .collect()
+}
+
+#[test]
+fn collect_tuple_arities_cases() {
+    let cases: Vec<(&str, Nodule)> = vec![
+        ("empty", nodule(vec![])),
+        // Type-decl ctor field `(A, B)` — the ItType leg (re-pinned from PR-2).
+        (
+            "ctor_field",
+            nodule(vec![ty(type_decl(
+                "C",
+                &[],
+                vec![ctor("MkC", vec![tup_ty(vec![nm("A"), nm("B")])])],
+            ))]),
+        ),
+        // fn BODY: `let x = (a, b) in x` — the Expr leg (formerly deferred).
+        (
+            "fn_body_let",
+            nodule(vec![Item::Fn(fn_decl(
+                fn_sig("f", vec![], nm("A")),
+                Expr::Let {
+                    name: "x".to_owned(),
+                    ty: None,
+                    bound: Box::new(Expr::TupleLit(vec![var("a"), var("b")])),
+                    body: Box::new(var("x")),
+                },
+            ))]),
+        ),
+        // fn body NESTED tuple `(a, (b, c, d))` — arities {2, 3}.
+        (
+            "fn_body_nested",
+            nodule(vec![Item::Fn(fn_decl(
+                fn_sig("f", vec![], nm("A")),
+                Expr::TupleLit(vec![
+                    var("a"),
+                    Expr::TupleLit(vec![var("b"), var("c"), var("d")]),
+                ]),
+            ))]),
+        ),
+        // `match` PATTERN `(p, q) =>` — the Pattern leg (formerly deferred). Also exercises a literal
+        // pattern element + a literal tuple element (encode_literal / encode_i64 coverage). {2}.
+        (
+            "match_pattern_and_literals",
+            nodule(vec![Item::Fn(fn_decl(
+                fn_sig("g", vec![param("s", nm("A"))], nm("A")),
+                Expr::Match {
+                    scrutinee: Box::new(Expr::TupleLit(vec![var("a"), Expr::Lit(Literal::Int(5))])),
+                    arms: vec![Arm {
+                        pattern: Pattern::Tuple(vec![
+                            Pattern::Lit(Literal::Int(1)),
+                            Pattern::Ident("q".to_owned()),
+                        ]),
+                        body: var("q"),
+                    }],
+                },
+            ))]),
+        ),
+        // fn signature PARAM `x: (A, B, C)` — the sig leg, arity {3}.
+        (
+            "fn_sig_param",
+            nodule(vec![Item::Fn(fn_decl(
+                fn_sig(
+                    "h",
+                    vec![param("x", tup_ty(vec![nm("A"), nm("B"), nm("C")]))],
+                    nm("A"),
+                ),
+                var("x"),
+            ))]),
+        ),
+        // fn signature RETURN `=> (A, B)` — the sig leg, arity {2}.
+        (
+            "fn_ret",
+            nodule(vec![Item::Fn(fn_decl(
+                fn_sig("k", vec![], tup_ty(vec![nm("A"), nm("B")])),
+                var("x"),
+            ))]),
+        ),
+        // trait signature — the ItTrait leg, arity {2}.
+        (
+            "trait_sig",
+            nodule(vec![Item::Trait(TraitDecl {
+                vis: Vis::Private,
+                name: "Tr".to_owned(),
+                params: vec![],
+                sigs: vec![fn_sig(
+                    "t",
+                    vec![param("x", tup_ty(vec![nm("A"), nm("B")]))],
+                    nm("C"),
+                )],
+            })]),
+        ),
+        // impl — trait_args (A,B,C) {3}, for_ty (A,B) {2}, method sig (A,B,C,D) {4} ⇒ {2,3,4}.
+        (
+            "impl_leg",
+            nodule(vec![Item::Impl(ImplDecl {
+                trait_name: "Cmp".to_owned(),
+                trait_args: vec![tup_ty(vec![nm("A"), nm("B"), nm("C")])],
+                for_ty: tup_ty(vec![nm("A"), nm("B")]),
+                methods: vec![fn_decl(
+                    fn_sig(
+                        "m",
+                        vec![param("x", tup_ty(vec![nm("A"), nm("B"), nm("C"), nm("D")]))],
+                        nm("A"),
+                    ),
+                    var("x"),
+                )],
+            })]),
+        ),
+        // object — ctor field (A,B) {2}, inherent fn body (a,b,c) {3}. A `via` clause carries a 5-tuple
+        // trait-arg that the oracle DELIBERATELY skips (via_decls is not walked), so it must NOT appear
+        // ⇒ {2,3} (the dead-field faithfulness witness).
+        (
+            "object_leg",
+            nodule(vec![Item::Object(ObjectDecl {
+                vis: Vis::Private,
+                name: "O".to_owned(),
+                params: vec![],
+                ctor: ctor("MkO", vec![tup_ty(vec![nm("A"), nm("B")])]),
+                via_decls: vec![ViaDecl {
+                    field_idx: 0,
+                    trait_name: "Cmp".to_owned(),
+                    trait_args: vec![tup_ty(vec![nm("A"), nm("B"), nm("C"), nm("D"), nm("E")])],
+                }],
+                impls: vec![],
+                fns: vec![fn_decl(
+                    fn_sig("f", vec![], nm("A")),
+                    Expr::TupleLit(vec![var("a"), var("b"), var("c")]),
+                )],
+            })]),
+        ),
+        // inherent impl — for_ty (A,B) {2}, method sig (A,B,C) {3} ⇒ {2,3}.
+        (
+            "inherent_impl_leg",
+            nodule(vec![Item::InherentImpl(InherentImplDecl {
+                for_ty: tup_ty(vec![nm("A"), nm("B")]),
+                methods: vec![fn_decl(
+                    fn_sig(
+                        "m",
+                        vec![param("x", tup_ty(vec![nm("A"), nm("B"), nm("C")]))],
+                        nm("A"),
+                    ),
+                    var("x"),
+                )],
+            })]),
+        ),
+        // lower — Expr rhs `(a, b)` ⇒ {2}.
+        (
+            "lower_expr_leg",
+            nodule(vec![Item::Lower(LowerDecl {
+                name: "L".to_owned(),
+                params: vec!["T".to_owned()],
+                rhs: LowerRhs::Expr(Expr::TupleLit(vec![var("a"), var("b")])),
+            })]),
+        ),
+        // lower — Impl rhs whose method sig is (A,B,C) ⇒ {3}.
+        (
+            "lower_impl_leg",
+            nodule(vec![Item::Lower(LowerDecl {
+                name: "L2".to_owned(),
+                params: vec!["T".to_owned()],
+                rhs: LowerRhs::Impl(ImplDecl {
+                    trait_name: "Cmp".to_owned(),
+                    trait_args: vec![],
+                    for_ty: nm("T"),
+                    methods: vec![fn_decl(
+                        fn_sig(
+                            "m",
+                            vec![param("x", tup_ty(vec![nm("A"), nm("B"), nm("C")]))],
+                            nm("A"),
+                        ),
+                        var("x"),
+                    )],
+                }),
+            })]),
+        ),
+        // Use / Default / Derive — the tuple-free `ItOther` collapse. Derive's `for_ty` is a tuple
+        // `(A, B)` the ORACLE deliberately skips (`Item::Derive(_) => {}`), so the result is {}.
+        (
+            "otherkinds_free",
+            nodule(vec![
+                Item::Use(crate::ast::UsePath {
+                    path: Path(vec!["m".to_owned(), "X".to_owned()]),
+                    glob: false,
+                }),
+                Item::Default(Paradigm::Binary),
+                Item::Derive(DeriveDecl {
+                    name: "D".to_owned(),
+                    for_ty: tup_ty(vec![nm("A"), nm("B")]),
+                }),
+            ]),
+        ),
+        // Mixed: ctor field {2}, fn body {3}, a 4-arm match pattern {4} — union {2,3,4}, deduped+sorted.
+        (
+            "mixed",
+            nodule(vec![
+                ty(type_decl(
+                    "C",
+                    &[],
+                    vec![ctor("MkC", vec![tup_ty(vec![nm("A"), nm("B")])])],
+                )),
+                Item::Fn(fn_decl(
+                    fn_sig("f", vec![], nm("A")),
+                    Expr::TupleLit(vec![var("a"), var("b"), var("c")]),
+                )),
+                Item::Fn(fn_decl(
+                    fn_sig("g", vec![param("s", nm("A"))], nm("A")),
+                    Expr::Match {
+                        scrutinee: Box::new(var("s")),
+                        arms: vec![Arm {
+                            pattern: Pattern::Tuple(vec![
+                                Pattern::Ident("p".to_owned()),
+                                Pattern::Ident("q".to_owned()),
+                                Pattern::Ident("r".to_owned()),
+                                Pattern::Ident("w".to_owned()),
+                            ]),
+                            body: var("p"),
+                        }],
+                    },
+                )),
+            ]),
+        ),
+    ];
+    for (label, n) in &cases {
+        let want = oracle_arities(n);
+        assert_l1_marshal(
+            &format!("collect_tuple_arities_{label}"),
+            &format!(
+                "fn main() => Vec[Binary{{32}}] = collect_tuple_arities({}, Nil);\n",
+                encode_item_list(&n.items)
+            ),
+            |v| {
+                decode_vec(v, decode_u32)
+                    .into_iter()
+                    .collect::<BTreeSet<u32>>()
+            },
+            want,
+        );
+    }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
-// FLAG-semcore-30 DEFERRAL (never-silent). The TRIMMED tuple pre-pass walks ONLY type-decl ctor
-// fields; the fn-body / pattern / signature legs are DEFERRED to PR-2b. A tuple that appears ONLY in a
-// deferred leg (here: a non-Type item, mirror `ItOther`, standing in for a fn whose body constructs a
-// tuple) is therefore NOT pre-registered — and that omission must be never-silent: a later `resolve_ty`
-// of that tuple Errs explicitly (`resolve_tuple`'s "synthetic tuple type not registered"), rather than
-// silently yielding a wrong / missing `Tuple$N`. This is the ONE place the trimmed port intentionally
-// diverges from the real full `register_types` (which WOULD pre-register the tuple from the fn body) —
-// so it is asserted as a never-silent property, not as an equality differential. PR-2b closes the gap.
+// FLAG-semcore-30 CLOSED (M-1013 STEP 3, PR-2b). The formerly-deferred legs (fn body / `match` pattern
+// / fn signature) are now walked by `register_types`' pre-pass, so a tuple appearing ONLY in such a
+// leg IS pre-registered — matching the full Rust `register_types` byte-for-byte (Err normalized to
+// `()`). This is the register_types-level closure witness; `collect_tuple_arities_cases` above is the
+// per-leg detail.
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 #[test]
-fn register_types_defers_fnbody_tuple_never_silent() {
-    // A, B: nullary types with NO tuple ctor fields; plus an `ItOther` (the deferred-leg carrier).
-    let a = encode_type_decl(&type_decl("A", &[], vec![ctor("MkA", vec![])]));
-    let b = encode_type_decl(&type_decl("B", &[], vec![ctor("MkB", vec![])]));
-    let nod =
-        format!("Nod(Pth(Nil), False, Cons(ItType({a}), Cons(ItType({b}), Cons(ItOther, Nil))))");
-    let seed = encode_data_info_list(&[prelude()]);
+fn register_types_registers_leg_tuples() {
+    // A nodule whose ONLY tuple usages are in formerly-deferred legs: a fn body `(a, b)` {2} and a fn
+    // signature param `x: (A, B, C)` {3} — no ctor-field tuple anywhere.
+    let n = nodule(vec![
+        Item::Fn(fn_decl(
+            fn_sig("f", vec![], nm("A")),
+            Expr::TupleLit(vec![var("a"), var("b")]),
+        )),
+        Item::Fn(fn_decl(
+            fn_sig(
+                "h",
+                vec![param("x", tup_ty(vec![nm("A"), nm("B"), nm("C")]))],
+                nm("A"),
+            ),
+            var("x"),
+        )),
+    ]);
 
-    // (1) register_types SUCCEEDS and registers A (proves the Ok arm, not an early Err, was taken).
-    let a_present = decode_driver(
-        "Option[Bytes]",
+    // (1) register_types port ↔ oracle: identical registry, INCLUDING the leg-derived Tuple$2/Tuple$3.
+    let mut map = seed_bool();
+    let want = register_types(&mut map, &n).map(|()| map).map_err(|_| ());
+    assert_l1_marshal(
+        "register_types_leg_tuples",
         &format!(
-            "match register_types({seed}, {nod}) {{ Err(_) => None, \
-             Ok(types) => match types_lookup(types, {}) {{ None => None, Some(d) => Some(di_name(d)) }} }}",
-            encode_bytes("A")
+            "fn main() => Result[Vec[DataInfo], Bytes] = register_types({}, {});\n",
+            encode_data_info_list(&[prelude()]),
+            encode_nodule(&n)
         ),
-        |v| decode_option(v, decode_string),
-    );
-    assert_eq!(
-        a_present,
-        Some("A".to_owned()),
-        "register_types must succeed and register the ordinary type A"
+        |v| decode_result(v, decode_types_map),
+        want,
     );
 
-    // (2) The trimmed pre-pass did NOT register a Tuple$2 for the deferred (ItOther) leg.
-    let tuple_absent = decode_driver(
+    // (2) Direct closure witness: the fn-body tuple `(a, b)` — NOT registered under FLAG-30 — is now
+    // present as Tuple$2 in the port's registry.
+    let tuple2_present = decode_driver(
         "Option[Bytes]",
         &format!(
-            "match register_types({seed}, {nod}) {{ Err(_) => None, \
+            "match register_types({}, {}) {{ Err(_) => None, \
              Ok(types) => match types_lookup(types, {}) {{ None => None, Some(d) => Some(di_name(d)) }} }}",
+            encode_data_info_list(&[prelude()]),
+            encode_nodule(&n),
             encode_bytes("Tuple$2")
         ),
         |v| decode_option(v, decode_string),
     );
     assert_eq!(
-        tuple_absent, None,
-        "the TRIMMED pre-pass (FLAG-semcore-30) must NOT register a Tuple$2 that appears only in a \
-         deferred fn-body/pattern/sig leg"
+        tuple2_present,
+        Some("Tuple$2".to_owned()),
+        "PR-2b: a fn-body tuple must now be pre-registered (FLAG-semcore-30 closed)"
     );
+}
 
-    // (3) Never-silent: resolving `(A, B)` against the result Errs explicitly (not a silent miss).
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+// The never-silent FLOOR is unchanged by PR-2b: a tuple that appears NOWHERE in the nodule is still
+// not registered, and resolving it Errs explicitly (never a silently-missing `Tuple$N` — G2/VR-5).
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+#[test]
+fn register_types_unreferenced_tuple_still_errs_never_silent() {
+    // A, B: nullary types, NO tuple anywhere.
+    let a = encode_type_decl(&type_decl("A", &[], vec![ctor("MkA", vec![])]));
+    let b = encode_type_decl(&type_decl("B", &[], vec![ctor("MkB", vec![])]));
+    let nod = format!("Nod(Pth(Nil), False, Cons(ItType({a}), Cons(ItType({b}), Nil)))");
+    let seed = encode_data_info_list(&[prelude()]);
+
     let resolved = decode_driver(
         "Result[Pair[Ty, Option[Strength]], Bytes]",
         &format!(
@@ -796,7 +1444,6 @@ fn register_types_defers_fnbody_tuple_never_silent() {
     assert_eq!(
         resolved,
         Err(()),
-        "a deferred-leg tuple must surface as an explicit resolve_ty Err (never-silent, G2/VR-5), \
-         never a silently-missing Tuple$2"
+        "an unreferenced tuple must surface as an explicit resolve_ty Err (never-silent, G2/VR-5)"
     );
 }
