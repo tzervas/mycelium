@@ -6578,7 +6578,10 @@ impl Cx<'_> {
             name,
             "flt_lt" | "flt_le" | "flt_gt" | "flt_ge" | "flt_eq" | "flt_total_le"
         );
+        // ADR-040 §2.5 (CU-2): the mandated classification predicates — unary `Float → Binary{1}`.
+        let is_class = matches!(name, "flt_is_nan" | "flt_is_finite" | "flt_is_infinite");
         if !is_cmp
+            && !is_class
             && !matches!(
                 name,
                 "flt_add" | "flt_sub" | "flt_mul" | "flt_div" | "flt_neg"
@@ -6586,7 +6589,7 @@ impl Cx<'_> {
         {
             return Ok(None);
         }
-        let want = if name == "flt_neg" { 1 } else { 2 };
+        let want = if name == "flt_neg" || is_class { 1 } else { 2 };
         if args.len() != want {
             return self.err(format!(
                 "`{name}` takes {want} operand(s), got {} (ADR-040 §2.4/§2.5; M-898/M-899)",
@@ -6611,7 +6614,7 @@ impl Cx<'_> {
             }
             rebuilt.push(a2);
         }
-        let ret = if is_cmp {
+        let ret = if is_cmp || is_class {
             Ty::Binary(Width::Lit(1))
         } else {
             Ty::Float
@@ -7312,6 +7315,10 @@ pub fn prim_kernel_name(name: &str) -> Option<&'static str> {
         "flt_ge" => "flt.ge",
         "flt_eq" => "flt.eq",
         "flt_total_le" => "flt.total_le",
+        // ADR-040 §2.5 (CU-2): the mandated float classification predicates.
+        "flt_is_nan" => "flt.is_nan",
+        "flt_is_finite" => "flt.is_finite",
+        "flt_is_infinite" => "flt.is_infinite",
         // RFC-0003 §3/§4 / ADR-008 (M-892, `enb` Gap C): the model-dispatched VSA bind group —
         // kernel `mycelium-vsa`, per-model tags carried from the model's Value-level op (MAP-I/
         // BSC ops `Exact`; FHRR `unbind` `Empirical` with its trial-validated δ — VR-5, never

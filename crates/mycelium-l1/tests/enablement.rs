@@ -2662,6 +2662,58 @@ fn flt_cmp_ops_three_way() {
     }
 }
 
+/// CU-2 (ADR-040 §2.5): the mandated float classification predicates `flt_is_nan`/`flt_is_finite`/
+/// `flt_is_infinite` — the in-band never-silent tests for the propagating ±inf/NaN sentinels (§2.4).
+/// NaN is produced by `0/0`, +inf by `1/0` (the ratified in-band specials, §2.4/FLAG-2 — never a
+/// trap); each predicate agrees on all three paths (L1/L0/AOT), Binary{1} truth.
+#[test]
+fn flt_classification_three_way() {
+    for (label, src, expected) in [
+        (
+            "is_nan on 0/0",
+            "nodule d;\nfn main() => Binary{1} = flt_is_nan(flt_div(0.0, 0.0));",
+            true,
+        ),
+        (
+            "is_nan on finite",
+            "nodule d;\nfn main() => Binary{1} = flt_is_nan(1.5);",
+            false,
+        ),
+        (
+            "is_finite on finite",
+            "nodule d;\nfn main() => Binary{1} = flt_is_finite(1.5);",
+            true,
+        ),
+        (
+            "is_finite on +inf",
+            "nodule d;\nfn main() => Binary{1} = flt_is_finite(flt_div(1.0, 0.0));",
+            false,
+        ),
+        (
+            "is_finite on NaN",
+            "nodule d;\nfn main() => Binary{1} = flt_is_finite(flt_div(0.0, 0.0));",
+            false,
+        ),
+        (
+            "is_infinite on +inf",
+            "nodule d;\nfn main() => Binary{1} = flt_is_infinite(flt_div(1.0, 0.0));",
+            true,
+        ),
+        (
+            "is_infinite on finite",
+            "nodule d;\nfn main() => Binary{1} = flt_is_infinite(2.5);",
+            false,
+        ),
+        (
+            "is_infinite on NaN",
+            "nodule d;\nfn main() => Binary{1} = flt_is_infinite(flt_div(0.0, 0.0));",
+            false,
+        ),
+    ] {
+        assert_flt_cmp_three_way_with_tag(label, src, expected);
+    }
+}
+
 /// **NaN is unordered, end-to-end on every path (ADR-040 §2.4).** The NaN operand is produced
 /// *in-language* by `flt_div(0.0, 0.0)` (the in-band FLAG-2 special), so this is the full
 /// surface→kernel NaN story: every §5.11 predicate is `false` with NaN on either side —
