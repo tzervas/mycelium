@@ -136,3 +136,92 @@ porting + patching to close gaps, folding each phase's lessons back into the tra
 is a highly polished solution. Minted **M-1006** (under E33-1) as the phased-ladder umbrella;
 per-phase target sets are minted per wave (mitigation #1), and the ladder's outputs reconcile
 with `rwr`'s M-947…M-957 port-wave manifests at Phase-II (trx2 phases become their inputs).
+
+## Session-2 continuation (2026-07-07) — self-hosting decisions landed, M-1012 in flight
+
+The wave shifted from transpiler/tero into the **compiler self-hosting** core after the maintainer
+made the governing decisions. **This section is the durable handoff — read it first.**
+
+### Landed on `dev` this session (PRs #1237–#1247, all merged)
+- **M-1006 §8.11** (PR #1242) — transpiler shared-ref erasure `&T→T`; +2 expressible, checked flat.
+  Lesson: emission is near its ceiling on the fixed corpus; the next lever is **cross-nodule
+  project-mode vetting** (so referents resolve) or E18-1, NOT more emission arms.
+- **tero M-1016** (PR #1241) — query engine + mandatory provenance (uncited answer ⇒ typed Refusal;
+  EXPLAIN traces; Empirical latency ~630µs/query over 5141 rows).
+- **Decision records:** dossier (PR #1240); **DN-26 §10 Option A** + **ADR-042** (PR #1244);
+  **ADR-043** (PR #1247); **DN-88** (PR #1243); **DN-89** (PR #1245).
+
+### The migration lifecycle — now recorded, honor it end-to-end
+**ADR-042** (freeze new Rust; rewrite EVERYTHING incl. kernel + toolchain + **codegen backend** to
+`.myc`; zero foreign first-party langs by the DN-88 decomposition gate; `wild` only at the
+irreducible OS/HW ABI seam; DN-39 boundary unchanged — only the impl *language* changes) → **M-989
+myc-dogfood dual witness** (the "proven" gate: Rust differential + native `myc check`/`mycfmt`/
+`myc-lint`) → **ADR-043** (retire-when-proven → archive Rust to a protected legacy branch, never
+lost → remove from active tree → incremental housekeep → pure-Mycelium) → **DN-88** (decompose to
+component repos + GHCR spores + managerial re-export phyla) → **DN-89** (native AI/ML corpus:
+transpile+patch / FFI-bind / clean-room-reverse-engineer as a *convergence path* to full-native;
+ports leverage+improve, honesty-tagged). `mycelium-tero` is the sanctioned last-Rust PoC
+(M-1015→M-1018) then rewrites to `.myc` (M-1019). Open design gates: ADR-042 §6 kernel
+bootstrap/trust DN + the native-codegen-backend DN (both `needs-design`, maintainer to design).
+
+### ✅ STEP 1 DONE — M-1012 merged (PR #1246, `3e92db8f`)
+First heavy-core increment: elab.rs's pure L0 lowering helpers ported into `lib/compiler/semcore.myc`
+under **Option A** (in-language mirror ADTs + `scalar_kind`/`sparsity_class`/`lit_value`/`type_repr`/
+`field_spec`/`ty_to_repr`/`ty_to_field_ty_ref`/`policy_name` preimage). **Wild-free.** Honest deferrals
+(FLAG-semcore-25/27/29). All `/pr-review` (aef3c202) fixes landed incl. the **non-vacuity convention**
+for all 8 `.myc` comparators (the template for M-1013). Verified on both witnesses: `stage5_elab` 11/11
++ full `mycelium-l1` suite green + native `myc check lib/compiler/semcore.myc` ok. This sets the M-1013
+pattern; the fresh session starts at STEP 2.
+
+### ⇒ FRESH-SESSION STEP 2 — INCORPORATE MARSHALLING (maintainer directive, 2026-07-07)
+The M-1012 differential compares two `.myc`-side mirror values with hand-written `.myc` structural
+equality (bounded by the new mandatory non-vacuity discipline). The maintainer directs incorporating
+**harness marshalling** as the self-hosting differential method: **decode the `.myc` mirror output
+into the real `mycelium_core` type (Rust, harness-side) and compare with Rust's trusted derived `==`**
+(or compare `mycelium_core::Value` content-hashes) — eliminating the hand-written-`.myc`-eq trust
+surface. Tasks: (a) retrofit `compiler_stage5_elab.rs` to marshalling; (b) make marshalling the
+differential method for **all** M-1013 increments; (c) update DN-26 §10.1 from "documented option" to
+"adopted method." Do this EARLY — it is the trust foundation for the ~11 M-1013 increments.
+
+### ⇒ FRESH-SESSION STEP 3 — M-1013 heavy-core increments 8→14
+Per dossier §6.3 (~11–13 scoped PRs, sequential where they share `semcore.myc` regions; each verifies
+BOTH witnesses — marshalling differential + native `myc check`; leaf→dev PR each with a `/pr-review`):
+8 registration/resolution/`Env`; 9 checker `Cx` (~3.2k, sub-split 2–3 PRs; folds in the deferred
+`infer` core = M-1011's `infer_type` residual, FLAG-semcore-20); 10 elab core (consumes M-1012's L0
+mirror); 11 mono core (+ FLAG-semcore-17 `mangle_ty_in_ty`/`item_key`); **12 eval — may need the AOT
+leg, NOT the interpreter** (M-986 TCO / M-987 ~n³, dossier §7 FLAG-4); 13 fuse; 14 whole-program L0
+differential + mutants. Also worth doing as the compiler phylum matures: wire `lib/compiler/` as a
+`mycelium-proj.toml` project root so the standard `myc-check`/`myc-fmt` gates cover it first-class
+(not just myc-dogfood's per-file walk).
+
+### ⇒ FRESH-SESSION STEP 4 — dev→integration promotion (batch reconciliation)
+Delegate to an Opus integrator in an isolated worktree. Batch on dev: dossier, M-1006/§8.11, DN-88,
+M-1016, ADR-042/DN-26§10, DN-89, ADR-043, M-1012. Reconcile: status flips (**M-1007→done** [DoD says
+DONE, PR #1231], **M-1011** partial-done note [infer_type = increment 9], **M-1012→done**,
+**M-1016→done**, M-1006 stays in-progress); **mint** E40-1/M-1020 (decomposition guide, gated),
+E41-1/M-1021 (AI/ML, gated), an ADR-042 policy-tracker, + follow-on DN placeholders (kernel
+bootstrap-trust, native-codegen-backend); **Doc-Index rows for DN-88/DN-89/ADR-042/ADR-043 (ALL
+currently MISSING)** + adr/README rows for ADR-042/043; CHANGELOG for all; **api-index regen**
+(mycelium-tero's new public surface); tero/lib/doc index regen; **fix pre-existing `CHANGELOG.md:28`
+MD012 + `DN-88.md:33` MD018**; full `just check` green. Flow: reconcile→dev PR, then dev→integration PR.
+`integration→main` squash stays the terminal MAINTAINER checkpoint — do NOT auto-squash to main.
+
+### Ops lessons (this session — bake into the fresh run)
+- **DISK:** the shared root fs has a **~41G effective ceiling**; per-worktree cargo `target/` (1–3G
+  each) + the main `target/` (~15G) fill it fast, breaking BOTH git (`index.lock` ENOSPC) and cargo.
+  **Prune completed-agent worktrees + their `target/` dirs periodically** (`git worktree prune`;
+  `rm -rf .claude/worktrees/*/target`; clear the main `target/` between waves). Consider one shared
+  `CARGO_TARGET_DIR`. Multiple sessions share the volume — a sibling can refill it.
+- **Shared-tree contamination (mitigation #11):** background agents (even `isolation:"worktree"`)
+  sometimes run git in the shared main tree. Keep the orchestrator's main tree a **clean pointer**
+  (a fresh branch off `origin/dev`, never a leaf branch); `git reset --hard` / re-checkout if
+  contaminated. `dev` may be checked out in a sibling session's worktree (can't check it out twice).
+- **Incomplete agent reports:** an agent that spawns a background verify and hits its turn boundary
+  reports mid-action ("waiting for the monitor"). **Always verify the actual pushed/committed state**
+  (mitigation #7/#9) — recover uncommitted work from the worktree, commit + push it yourself.
+
+### Completion driver (already armed)
+Routine `trig_01EXyj3Q` "myc-port-drive" (cron `30 */3 * * *`, fresh session per fire, push
+notifications) — executes the **M-741** ratification IFF it independently verifies all 3 DoD criteria
+with checked `Empirical` evidence (else flags on issue #444); never auto-declares 1.0.0. M-741 is
+maintainer-pre-authorized (verification-gated). The fresh session's swarm work runs alongside it.
