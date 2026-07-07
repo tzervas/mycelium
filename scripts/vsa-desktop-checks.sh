@@ -19,6 +19,10 @@
 #   bash scripts/vsa-desktop-checks.sh                     # full bundle
 #   PROPTEST_CASES=1024 bash scripts/vsa-desktop-checks.sh # heavier property tests
 #   VSA_SKIP_MUTANTS=1 bash scripts/vsa-desktop-checks.sh  # skip cargo-mutants (the slowest stage)
+#   VSA_IGNORED_ONLY=1 bash scripts/vsa-desktop-checks.sh  # run ONLY the #[ignore] heavy instruments
+#                                                          #   (cargo --ignored --nocapture) into a SEPARATE
+#                                                          #   log and skip stages 2-4 — the follow-up run that
+#                                                          #   supplements the default (non-ignored) push
 #   RESULTS_DIR=/path  bash scripts/vsa-desktop-checks.sh  # override the results location
 # Then push the results back:
 #   git add experiments/results/vsa-m832 && git commit -m "vsa: desktop heavy-check results" && git push
@@ -31,17 +35,37 @@ cd "$REPO_ROOT" || exit 1
 
 RESULTS_DIR="${RESULTS_DIR:-$REPO_ROOT/experiments/results/vsa-m832}"
 PROPTEST_CASES="${PROPTEST_CASES:-256}"
+VSA_IGNORED_ONLY="${VSA_IGNORED_ONLY:-0}"
 mkdir -p "$RESULTS_DIR/obligations"
 
 section "VSA desktop heavy-checks — collecting into $RESULTS_DIR"
 echo "  Emission tags: experiment = Empirical (trial-measured); proof obligations = Declared until discharged (VR-5/G2)."
 
-# ── 1/4 · VSA crate durability (full tier, HIGH proptest) ──────────────────────────────────────
+# ── IGNORED-ONLY follow-up mode ────────────────────────────────────────────────────────────────
+# VSA_IGNORED_ONLY=1 runs ONLY the #[ignore]-marked heavy instruments (e.g. resonator_capacity_sweep,
+# resonator_cleanup_ablation — "run manually with --ignored --nocapture") into a SEPARATE log, then
+# exits — so a follow-up push supplements the default run's non-ignored results without overwriting.
+if [ "$VSA_IGNORED_ONLY" = 1 ]; then
+  section "IGNORED-ONLY — heavy #[ignore] instruments (mycelium-vsa + mycelium-std-vsa, --ignored --nocapture)"
+  if have cargo; then
+    MYC_TEST_TIER=full PROPTEST_CASES="$PROPTEST_CASES" \
+      cargo test -p mycelium-vsa -p mycelium-std-vsa -- --ignored --nocapture \
+      2>&1 | tee "$RESULTS_DIR/vsa-crate-tests-ignored.log"
+    ok "ignored instruments -> $RESULTS_DIR/vsa-crate-tests-ignored.log (Empirical)"
+  else
+    skip "no cargo — VSA ignored instruments skipped"
+  fi
+  section "done (ignored-only) — stages 2-4 intentionally skipped; supplement in $RESULTS_DIR/vsa-crate-tests-ignored.log"
+  echo "  Push back:  git add experiments/results/vsa-m832 && git commit -m 'vsa: ignored heavy instruments' && git push"
+  exit 0
+fi
+
+# ── 1/4 · VSA crate durability (full tier, HIGH proptest) — DEFAULT run (EXCLUDES #[ignore]) ─────
 section "1/4 VSA crate durability — mycelium-vsa + mycelium-std-vsa (full tier, PROPTEST_CASES=$PROPTEST_CASES)"
 if have cargo; then
   MYC_TEST_TIER=full PROPTEST_CASES="$PROPTEST_CASES" \
     cargo test -p mycelium-vsa -p mycelium-std-vsa 2>&1 | tee "$RESULTS_DIR/vsa-crate-tests.log"
-  ok "crate durability -> $RESULTS_DIR/vsa-crate-tests.log (Empirical)"
+  ok "crate durability -> $RESULTS_DIR/vsa-crate-tests.log (Empirical; #[ignore] instruments excluded — rerun with VSA_IGNORED_ONLY=1 for those)"
 else
   skip "no cargo — VSA crate durability skipped"
 fi

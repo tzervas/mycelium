@@ -13,6 +13,11 @@ On the desktop, from the repo root:
 bash scripts/vsa-desktop-checks.sh          # full bundle (crate durability + GPU experiment + proofs + mutants)
 # then push the results back:
 git add experiments/results/vsa-m832 && git commit -m "vsa: desktop heavy-check results" && git push
+
+# FOLLOW-UP: run ONLY the #[ignore] heavy instruments (resonator_capacity_sweep, resonator_cleanup_ablation,
+# …) that the default run skips, into a separate log, then push to supplement — stages 2-4 are skipped:
+VSA_IGNORED_ONLY=1 bash scripts/vsa-desktop-checks.sh
+git add experiments/results/vsa-m832 && git commit -m "vsa: ignored heavy instruments" && git push
 ```
 
 Prerequisites (each stage skips gracefully if absent): `cargo`, `uv` + a CUDA `torch`
@@ -23,7 +28,8 @@ Prerequisites (each stage skips gracefully if absent): `cargo`, `uv` + a CUDA `t
 
 | File / dir | Stage | Guarantee |
 |---|---|---|
-| `vsa-crate-tests.log` | `mycelium-vsa` + `mycelium-std-vsa` full-tier tests (HIGH proptest) | Empirical |
+| `vsa-crate-tests.log` | `mycelium-vsa` + `mycelium-std-vsa` full-tier tests (HIGH proptest, **excludes** `#[ignore]`) | Empirical |
+| `vsa-crate-tests-ignored.log` | the `#[ignore]` heavy instruments only (`VSA_IGNORED_ONLY=1`, `--ignored --nocapture`) — the supplemental follow-up run | Empirical |
 | `m832-sweep-gpu.log` / `m832-sweep-cpu.log` | the M-832 multi-hop sweep (GPU, or CPU numpy fallback) | Empirical |
 | `m832-proof-emit.log`, `obligations/` | emitted `PROOF-SUMMARY.md` + `.smt2`/`.hs`/`.lean` proof obligations | **Declared** (candidate) |
 | `proof-z3.log` | z3 discharge of the concrete arithmetic in the `.smt2` obligations | Empirical (per-obligation solver verdict) |
