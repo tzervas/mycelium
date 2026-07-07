@@ -309,6 +309,31 @@ code; they only fix the two branch points so the M-740 wave can proceed without 
 
 ## Meta — changelog
 
+- **2026-07-07 — Stage-5 increments 3–6 landed (the pure/leaf cluster; append-only, no status move;
+  M-993/M-1008/M-1009/M-1010/M-1011).** The tractable pure/leaf wave (E18-1) landed the four
+  parallelizable increments into `semcore.myc`, each with a live-oracle Rust differential from an
+  in-crate `src/tests/` module (no logic `*.rs` or visibility changed — only the new test modules +
+  their `mod` lines): increment 3 (M-1008 — checkty `unify`/`resolve_ty` + the synthetic-tuple
+  helpers `tuple_type_name`/`tuple_ctor_name`/`synthetic_tuple_data`, plus the `dec_u32` base-10
+  renderer; `compiler_stage5_unify.rs`, 8 tests — the never-silent unification conflict path asserted
+  `Err`); increment 4 (M-1009 — the mono name-mangling family `mangle_ty`/`scalar_tag`/`mangle_decl`/
+  `mangle_ctor`/`mangle_method`/`mangle_arrow`/`apply_fn_name`/`mangle_ty_or_fn`/
+  `mangle_decl_with_wargs`/`mangle_hof_decl`; `compiler_stage5_mangle.rs`, 7 tests — direct
+  bytes-equality vs `mono::mangle_*`, injectivity boundary exercised); increment 5 (M-1010 — mono
+  `free_vars`/`free_vars_at` + `pattern_binders`/`pattern_binders_at`; `compiler_stage5_freevars.rs`,
+  4 tests — the mutable scope/output accumulators collapsed to threaded values, shadowing preserved);
+  increment 6 (M-1011 — checkty `lit_ty_of`/`literal_key`/`normalize_pattern`;
+  `compiler_stage5_normpat.rs`, 5 tests — the normalized matrix `Pat` + binder occurrences asserted,
+  feeding the increment-1 `useful` gate transitively). Native `myc check` `ok`; 47 Stage-5 tests
+  total green. Deliberate, documented deviations (never silent — G2/VR-5): FLAG-semcore-13
+  (`unify`'s `&mut BTreeMap` → threaded assoc-list), -14 (a vestigial dead `unify` arm collapsed),
+  -15/-16 (`dec_u32` introduced in incr 3, reused in incr 4), -17 (`mangle_ty_in_ty`/`item_key`
+  DEFERRED — module-private, no reachable oracle, not ported rather than land un-witnessed), -18
+  (free-vars scope value-threading), -19 (`literal_key` `Int`/`AmbientInt` keys simplified —
+  unreachable dead arms), -20 (`infer_type` DEFERRED — a wrapper over the un-ported inference engine,
+  not a leaf), -21 (`normalize_pattern`'s binder accumulator threaded). Also folded in the two PR
+  #1231 review nits (top-level concrete arms in the typealg `has_var`/`subst_ty` cases). Status stays
+  **Draft** (→ Resolved with M-741). (M-993; E18-1; VR-5/G2.)
 - **2026-07-07 — M-993 staged port plan (§7.3 Stage-5 interior) + Stage-5 increment 2 landed
   (append-only, no status move; M-993/M-1007).** The semcore heavy-core port (M-993, now
   `in-progress`) is a multi-wave effort, not one shot: the ~14k-line SCC remainder decomposes into
