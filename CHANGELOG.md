@@ -11,6 +11,31 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### mycelium-tero (DN-87 / E39-1) — transparent memory substrate & agent knowledge API (M-1015…M-1018, 2026-07-07)
+
+The project corpus as a generated, provenance-carrying encoding, served platform-agnostically
+(`crates/mycelium-tero`) — promoted as a self-contained crate.
+
+- **M-1015 — Layer-1 deterministic corpus index.** A drift-gated `docs/tero-index/{INDEX.md,index.json}`
+  (5119 rows on this promoted tier) over docs/research/issues/changelog/skills, generalizing the
+  api-/lib-index pattern; an `Empirical/Declared` heuristic, source is ground truth (G2/VR-5).
+- **M-1016 — query engine + mandatory provenance.** `QueryEngine` over the Layer-1 report; every
+  answer carries a resolvable citation by construction (an uncited query is a typed refusal);
+  EXPLAIN-able retrieval; Empirical latency ~630µs/query.
+- **M-1017 — API fronts (MCP + HTTP, token-scoped) + skills.** One framework-agnostic core behind an
+  `axum`/`tokio` HTTP front and a stdio MCP front (byte-identical answers, a 3-way parity
+  differential); token-scoped auth (read-only default, refuse-to-start without tokens); four
+  cross-platform skills (`.claude/skills/tero-*`). **ADR-044** adopts tokio+axum (the workspace's
+  first async runtime, scoped to this tools-tier crate; no TLS pulled).
+- **M-1018 — VSA Layer-2 + Empirical eval gate.** Layer-1 rows encoded as MAP-I hypervectors
+  (role-filler bind/bundle, cleanup decode, provenance by construction) plus a committed eval
+  harness. **Gate verdict: CLOSED** — Layer-2 does not beat Layer-1 (correctness@1 0.375 vs 0.625;
+  ~26× slower latency), provenance 1.0; the system serves Layer-1 and the improved-on-RAG claim
+  stays aspiration (DN-87 §6.1). Nothing was tuned to force a pass.
+- Supply-chain: `tokio`/`axum` hoisted to `[workspace.dependencies]`, `THIRD-PARTY-LICENSES`
+  regenerated, `mycelium-tero` registered in `deps-strata` (stratum 7 / tier `tools`). Follow-on
+  **M-1020** minted: native HTTPS/TLS for the HTTP front.
+
 ### M-1006 phase-1 — transpiler hardening against the DN-34 §8.9 gap worklist (2026-07-06)
 
 First phase of the M-1006 whole-corpus rip-through ladder (kickoff `trx2` E-B, epic E33-1), run as
