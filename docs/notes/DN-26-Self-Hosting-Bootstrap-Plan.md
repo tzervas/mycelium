@@ -357,7 +357,14 @@ the L0, and DN-14 row 9's `wild` callback may prove to be that irreducible floor
 target**, not a proven-reachable state (VR-5): the materialization crossing may turn out to require
 `wild` without moving the DN-39 kernel boundary (forbidden) — the decision sets the *preference*, and the
 residual `wild`-site count is tracked toward zero, each site audited (`just safety-check`) and
-never-silent (G2). See ADR-042 §2.4 / OQ-1.
+never-silent (G2). **Horizon note (ADR-042 end-state):** this "materialize the finished L0" crossing is a
+frontend↔kernel **FFI seam only while the kernel is Rust**. Under ADR-042's end-state — the kernel itself
+rewritten to `.myc`, zero foreign first-party languages by the DN-88 decomposition gate — the crossing is
+**no longer a cross-language FFI seam**; it becomes an **internal concern of the self-hosted `.myc`
+kernel**, and its wild-vs-wild-free status folds into the kernel-rewrite / bootstrap-trust design (ADR-042
+§6 OQ-1). Per ADR-042 the only foreign residue expected in the terminal fully-native state is the
+**irreducible OS/hardware ABI seam** (syscalls, hardware intrinsics) — the one place minimal `wild` is
+expected to survive. See ADR-042 §2.4 / §3 / OQ-1.
 
 **`policy_name_ref`'s hash (dossier §4, decided with the boundary).** `policy_name_ref` produces a
 `PolicyRef` via a domain-separated content hash (`operation_hash("policy-name.v0:…")`), a narrow instance
