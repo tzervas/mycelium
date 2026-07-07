@@ -14,7 +14,7 @@
 //! finer per-row confidence would be an unchecked upgrade past the shared basis. Source is ground
 //! truth; a construct the heuristic cannot place is a [`Flagged`] entry, never a silent drop.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// The top-of-file honesty grading, mirroring `docs/api-index/INDEX.md`'s header posture verbatim
 /// in spirit (`Empirical/Declared — …; source is ground truth`). Rendered into the `INDEX.md`
@@ -68,7 +68,11 @@ pub struct SiblingIndex {
 /// Which corpus family a row was extracted from (drives grouping in `INDEX.md` + a stable primary
 /// sort key). A closed set: a source that fits none of these is out of scope and *recorded as such*
 /// (never silently indexed under the wrong family).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+///
+/// `Deserialize` (M-1016): [`crate::load::load_report`] reads a previously emitted `index.json`
+/// back into a [`TeroIndexReport`] for the query engine (the read-side twin of
+/// [`crate::emit::write_json`]'s write) rather than re-walking the corpus per query.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum Family {
     /// A markdown document under `docs/` (RFC/ADR/DN/spec/guide/planning/other) or one of its
@@ -105,7 +109,10 @@ impl Family {
 /// The family-specific fields (`epic` / `depends_on` / `doc_refs` / `gh_issue`) are populated only
 /// for the family that has them (issues) and skipped in JSON when empty — a lean, deterministic
 /// serialization.
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+///
+/// `Deserialize` (M-1016): round-trips through [`crate::emit::write_json`] /
+/// [`crate::load::load_report`] so the query engine reads the committed artifact directly.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct TeroIndexItem {
     /// A stable, globally-unique citation anchor (GitHub-style slug via `mycelium_doc::corpus`,
     /// or the source's own id for issues). Deep links + cross-platform citation hang off this.
@@ -117,7 +124,13 @@ pub struct TeroIndexItem {
     pub kind: String,
     /// The source's own id where it has one (`RFC-0034`, `ADR-032`, `DN-87`, `M-1015`, `E39-1`);
     /// `None` for a raw section/heading with no id of its own.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    ///
+    /// `#[serde(default)]` (M-1016): every emitted `index.json` omits this key when `None`
+    /// (`skip_serializing_if`), so [`crate::load::load_report`] must tolerate a missing key rather
+    /// than erroring — the write-omit and the read-default are the same "`None` is not a missing
+    /// field" contract, on both sides of the round trip. Applied to every optional/`Vec` field below
+    /// for the same reason.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
     pub id: Option<String>,
     /// The display title / heading / issue title / skill name.
     pub title: String,
@@ -127,28 +140,28 @@ pub struct TeroIndexItem {
     pub line: u32,
     /// The declared status where the source has one (a doc `Status` row's leading lattice keyword,
     /// an issue's `status:` label); `None` when the source carries none.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", default)]
     pub status: Option<String>,
     /// The guarantee tag of the cited claim where the source declares one (a doc `Guarantee` row's
     /// leading `Exact`/`Proven`/`Empirical`/`Declared`); `None` otherwise. This is the *cited*
     /// claim's tag, distinct from [`TeroIndexItem::tag`] (this row's own extraction honesty).
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", default)]
     pub guarantee_tag: Option<String>,
     /// A one-line summary, verbatim-ish from source (truncated, never invented — G2); `None` is an
     /// explicit "no summary in source" gap, not a missing field.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", default)]
     pub summary: Option<String>,
     /// Issues only: the parent epic id.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", default)]
     pub epic: Option<String>,
     /// Issues only: the `depends_on` task ids.
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub depends_on: Vec<String>,
     /// Issues only: the `doc_refs` citation strings.
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub doc_refs: Vec<String>,
     /// Issues only: the GitHub issue number, resolved from `tools/github/idmap.tsv` where present.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", default)]
     pub gh_issue: Option<String>,
     /// The extraction honesty tag ([`ITEM_TAG`]) — populated + uniform, not a placeholder.
     pub tag: String,
@@ -222,7 +235,7 @@ pub(crate) fn strip_md_links(s: &str) -> String {
 
 /// A construct/source the heuristic could not (or does not yet) place — recorded, never dropped
 /// (G2). Mirrors `lib_index::Flagged`.
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Flagged {
     /// What the flag is about (a path, an id, a `"<source> (line N)"` locator).
     pub item: String,
