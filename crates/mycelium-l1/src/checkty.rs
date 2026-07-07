@@ -7073,9 +7073,9 @@ fn prim_family(name: &str) -> Option<PrimFam> {
         // accumulated as ops landed under M-748/M-887/M-888/M-889/M-766). The `bit.*`/`bin.*`
         // *kernel*-namespace inconsistency one layer down is deliberately NOT touched — kernel
         // names are content-addressed (DN-10 §3.4); see the DN-72 deferred FLAG.
-        "not" | "xor" | "and" | "or" | "add_u" | "sub_u" | "mul_u" | "mul_s" | "div_u"
-        | "rem_u" | "shl_u" | "shr_u" | "add_s" | "sub_s" | "neg_s" | "div_s" | "rem_s"
-        | "shr_s" => PrimFam::Binary,
+        "not" | "popcount" | "clz" | "ctz" | "xor" | "and" | "or" | "add_u" | "sub_u" | "mul_u"
+        | "mul_s" | "div_u" | "rem_u" | "shl_u" | "shr_u" | "add_s" | "sub_s" | "neg_s"
+        | "div_s" | "rem_s" | "shr_s" => PrimFam::Binary,
         "add" | "sub" | "mul" | "neg" => PrimFam::Ternary,
         _ => return None,
     })
@@ -7161,7 +7161,9 @@ fn encode_balanced_ternary(site: &str, v: i64, width: u32) -> Result<Literal, Ch
 pub fn prim_sig(name: &str, args: &[Ty]) -> Option<Ty> {
     match (name, args) {
         // M-766: `neg_s` — the two's-complement unary negate joins `not` (unary, width-preserving).
-        ("not" | "neg_s", [Ty::Binary(w)]) => Some(Ty::Binary(w.clone())),
+        ("not" | "neg_s" | "popcount" | "clz" | "ctz", [Ty::Binary(w)]) => {
+            Some(Ty::Binary(w.clone()))
+        }
         ("xor", [Ty::Binary(a), Ty::Binary(b)]) if a == b => Some(Ty::Binary(a.clone())),
         // RFC-0032 D2 (M-748): width-preserving binary arithmetic/logical (never-silent overflow is
         // a runtime contract; the static signature is width-preserving like the trit arithmetic).
@@ -7210,6 +7212,10 @@ pub fn vsa_kernel_model_id(surface: &str) -> String {
 pub fn prim_kernel_name(name: &str) -> Option<&'static str> {
     Some(match name {
         "not" => "bit.not",
+        // CU-6: bit-manipulation counts (popcount/clz/ctz), unary Binary{N} -> Binary{N}.
+        "popcount" => "bit.popcount",
+        "clz" => "bit.clz",
+        "ctz" => "bit.ctz",
         "xor" => "bit.xor",
         // RFC-0032 D2 (M-748): surface the already-registered `bit.and`/`bit.or` + never-silent
         // binary `add`/`sub` (distinct surface names from the trit-backed `add`/`sub` below).

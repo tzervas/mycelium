@@ -283,6 +283,13 @@ impl PrimTable {
         // `lib/std/math.myc` FLAG-math-1 named as missing. `intrinsic = Exact` (total/decidable over
         // the in-`U_N`-range domain; an out-of-range product is a runtime, not intrinsic, refusal).
         t.insert("bit.mul", exact(vec![Binary, Binary], Binary));
+        // CU-6: width-preserving bit-manipulation counts (population count, count-leading-zeros,
+        // count-trailing-zeros) — unary `Binary{N} → Binary{N}`, `Exact` (total/decidable; a count
+        // always fits `N` bits, no runtime refusal). Kernel prims per KC-3 + performance (single host
+        // instruction, not efficiently `.myc`-derivable); rotate/reverse_bits ride `std.math`.
+        t.insert("bit.popcount", exact(vec![Binary], Binary));
+        t.insert("bit.clz", exact(vec![Binary], Binary));
+        t.insert("bit.ctz", exact(vec![Binary], Binary));
         // RFC-0033 §4.1.2/§4.1.3 (M-888, `enb` Gap B): never-silent **unsigned** `Binary`
         // division/remainder. Distinct-named from a future signed variant (M-767) per §4.1.2's
         // signedness-split requirement for division. `intrinsic = Exact` (total/decidable over the

@@ -29,6 +29,22 @@ fn surface_cases() -> Vec<(&'static str, Vec<Ty>, Ty)> {
             vec![Ty::Binary(Width::Lit(8))],
             Ty::Binary(Width::Lit(8)),
         ),
+        // CU-6: bit-manipulation counts (popcount/clz/ctz) — unary Binary{N} -> Binary{N}.
+        (
+            "popcount",
+            vec![Ty::Binary(Width::Lit(8))],
+            Ty::Binary(Width::Lit(8)),
+        ),
+        (
+            "clz",
+            vec![Ty::Binary(Width::Lit(8))],
+            Ty::Binary(Width::Lit(8)),
+        ),
+        (
+            "ctz",
+            vec![Ty::Binary(Width::Lit(8))],
+            Ty::Binary(Width::Lit(8)),
+        ),
         (
             "xor",
             vec![Ty::Binary(Width::Lit(8)), Ty::Binary(Width::Lit(8))],

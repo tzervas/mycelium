@@ -142,6 +142,12 @@ impl PrimRegistry {
         // RFC-0033 §4.1.2 (CU-1): never-silent UNSIGNED multiply — the `bit.*` unsigned family's
         // genuinely-missing member (math.myc FLAG-math-1), overflow-distinct from signed `bin.mul`.
         r.register("bit.mul", prim_bit_mul);
+        // CU-6: width-preserving bit-manipulation counts (Rust count_ones/leading_zeros/
+        // trailing_zeros) — total, signedness-free. popcount/clz/ctz as kernel prims (single host
+        // instruction, not efficiently derivable in `.myc`); rotate/reverse ride `std.math`.
+        r.register("bit.popcount", prim_bit_popcount);
+        r.register("bit.clz", prim_bit_clz);
+        r.register("bit.ctz", prim_bit_ctz);
         // RFC-0033 §4.1.2/§4.1.3 (M-888, `enb` Gap B): never-silent unsigned division/remainder.
         r.register("bin.div", prim_bin_div);
         r.register("bin.rem", prim_bin_rem);
@@ -380,6 +386,44 @@ fn prim_bit_not(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
         Payload::Bits(out),
         ApproxRule::Refuse,
     )
+}
+
+/// Shared unary bit-manipulation kernel for `bit.popcount`/`bit.clz`/`bit.ctz` (CU-6) — reads one
+/// `Binary{N}` operand, delegates to the width-preserving [`mycelium_core::binary`] count codec, and
+/// composes the `Binary{N}` count result. Total (no operand refuses — a bit-count always fits `N`
+/// bits), width-preserving, signedness-free. `count` selects the codec.
+fn bit_count(
+    prim: &str,
+    args: &[&Value],
+    count: fn(&[bool]) -> Vec<bool>,
+) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 1)?;
+    let bits = as_bits(prim, args[0])?;
+    let out = count(bits);
+    compose_result(
+        prim,
+        args,
+        args[0].repr().clone(),
+        Payload::Bits(out),
+        ApproxRule::Refuse,
+    )
+}
+
+/// `bit.popcount : (Binary{N}) → Binary{N}` — population count (CU-6; Rust `count_ones`).
+fn prim_bit_popcount(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    bit_count(prim, args, binary::popcount)
+}
+
+/// `bit.clz : (Binary{N}) → Binary{N}` — count leading zeros; `N` for all-zero (CU-6; Rust
+/// `leading_zeros`).
+fn prim_bit_clz(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    bit_count(prim, args, binary::clz)
+}
+
+/// `bit.ctz : (Binary{N}) → Binary{N}` — count trailing zeros; `N` for all-zero (CU-6; Rust
+/// `trailing_zeros`).
+fn prim_bit_ctz(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    bit_count(prim, args, binary::ctz)
 }
 
 /// Shared elementwise binary-logical kernel for `bit.and/or/xor`.

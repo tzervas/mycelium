@@ -210,6 +210,74 @@ fn mul_unsigned_matches_native_oracle_u8() {
     }
 }
 
+// ---- CU-6: popcount / clz / ctz — width-preserving bit-manipulation counts --------------------
+
+#[test]
+fn popcount_clz_ctz_worked_examples() {
+    // 0b0110_1000 (MSB-first): popcount 3, clz 1, ctz 3.
+    let x = uint_to_bits(0b0110_1000, 8).unwrap();
+    assert_eq!(popcount(&x), uint_to_bits(3, 8).unwrap());
+    assert_eq!(clz(&x), uint_to_bits(1, 8).unwrap());
+    assert_eq!(ctz(&x), uint_to_bits(3, 8).unwrap());
+
+    // 0b1000_0001: popcount 2, clz 0 (top bit set), ctz 0 (low bit set).
+    let y = uint_to_bits(0b1000_0001, 8).unwrap();
+    assert_eq!(popcount(&y), uint_to_bits(2, 8).unwrap());
+    assert_eq!(clz(&y), uint_to_bits(0, 8).unwrap());
+    assert_eq!(ctz(&y), uint_to_bits(0, 8).unwrap());
+}
+
+/// The all-zero and all-one boundary: `clz`/`ctz` of all-zero are `n` (no `1` bit); `popcount` of
+/// all-one is `n`; and `n` itself fits the `n`-bit result (`popcount(0xFF) = 8 = 0b0000_1000`).
+#[test]
+fn popcount_clz_ctz_boundaries() {
+    let zero = vec![false; 8];
+    assert_eq!(popcount(&zero), uint_to_bits(0, 8).unwrap());
+    assert_eq!(clz(&zero), uint_to_bits(8, 8).unwrap()); // all-zero ⇒ n
+    assert_eq!(ctz(&zero), uint_to_bits(8, 8).unwrap());
+    let ones = vec![true; 8];
+    assert_eq!(popcount(&ones), uint_to_bits(8, 8).unwrap()); // n set bits
+    assert_eq!(clz(&ones), uint_to_bits(0, 8).unwrap());
+    assert_eq!(ctz(&ones), uint_to_bits(0, 8).unwrap());
+}
+
+/// Exhaustive cross-check against Rust's native `u8` methods at `n = 8` — `popcount`/`clz`/`ctz`
+/// agree with `count_ones`/`leading_zeros`/`trailing_zeros` for every value (the property the prims
+/// must satisfy). Guards the MSB-first bit order and the all-zero `= n` convention.
+#[test]
+fn popcount_clz_ctz_match_native_u8() {
+    for v in 0u8..=255 {
+        let bits = uint_to_bits(u64::from(v), 8).unwrap();
+        assert_eq!(
+            popcount(&bits),
+            uint_to_bits(u64::from(v.count_ones()), 8).unwrap(),
+            "popcount {v}"
+        );
+        assert_eq!(
+            clz(&bits),
+            uint_to_bits(u64::from(v.leading_zeros()), 8).unwrap(),
+            "clz {v}"
+        );
+        assert_eq!(
+            ctz(&bits),
+            uint_to_bits(u64::from(v.trailing_zeros()), 8).unwrap(),
+            "ctz {v}"
+        );
+    }
+}
+
+/// Arbitrary-width safety: at `n = 100` (> 64), the all-zero `clz` is `100`, which the count encoder
+/// represents without hitting the `>> ≥ 64` shift UB `uint_to_bits` would.
+#[test]
+fn bit_counts_are_arbitrary_width_safe() {
+    let zero = vec![false; 100];
+    let clz100 = clz(&zero);
+    assert_eq!(clz100.len(), 100);
+    // 100 = 0b110_0100; the count occupies the low 7 bits, the rest 0.
+    assert_eq!(bits_to_uint(&clz100[93..]), 100); // low 7 bits hold 100
+    assert!(clz100[..93].iter().all(|&b| !b)); // high 93 bits all zero
+}
+
 #[test]
 fn mul_n0_is_trivially_zero() {
     assert_eq!(mul(&[], &[]), Some(Vec::new()));
