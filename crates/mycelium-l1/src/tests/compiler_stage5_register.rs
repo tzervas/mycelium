@@ -1,11 +1,17 @@
-//! M-740 Stage 5 (M-1013 STEP 3, PR-1; DN-26 §7.3 / §10.2) — the self-hosted `compiler.semcore`
-//! port of checkty.rs's leaf-most **register-family** unit: `resolve_ctors` (+ its `first_duplicate`
-//! dup-name helper), the LIVE-ORACLE marshalling differential for the constructor-resolution seam.
+//! M-740 Stage 5 (M-1013 STEP 3, PR-1 + PR-2; DN-26 §7.3 / §10.2) — the self-hosted
+//! `compiler.semcore` port of checkty.rs's **register-family**: the constructor-resolution seam and
+//! the type-registry builder that drives it, both a LIVE-ORACLE marshalling differential.
 //!
 //! Helpers ported into `lib/compiler/semcore.myc` and gated here:
 //!   * `first_duplicate` (checkty.rs) — the first value appearing more than once, left to right.
 //!   * `resolve_ctors` (checkty.rs) — resolve every surface `Ctor`'s field `TypeRef`s (the decl's
 //!     type params in scope) into checked `CtorInfo`s, refusing a duplicate constructor name.
+//!   * `register_types` (checkty.rs; **PR-2**) — build the `Nodule`'s type registry: a shell per
+//!     `Item::Type` (so recursive/forward field references resolve), then a `resolve_ctors` fill,
+//!     plus a **TRIMMED** M-826 tuple pre-pass (type-decl ctor-field TypeRefs only). The fn-body /
+//!     pattern / signature tuple legs are DEFERRED to PR-2b behind **FLAG-semcore-30**; the deferred
+//!     leg is never-silent — a `Tuple$N` it would have registered surfaces as an explicit
+//!     `resolve_ty` `Err`, exercised by `register_types_defers_fnbody_tuple_never_silent`.
 //!
 //! **Differential method — harness MARSHALLING (DN-26 §10.2).** Each case runs the REAL Rust
 //! `checkty::{resolve_ctors, first_duplicate}` oracle on a fixture, producing a genuine
@@ -19,8 +25,12 @@
 //! productions, so `decode_result`/`want.map_err(|_| ())` normalize both to `()` (any `Err` == any
 //! `Err`; only the `Ok` payload is a meaningful differential).
 
-use crate::ast::{BaseType, Ctor, Scalar, Sparsity, TypeDecl, TypeRef, Vis, WidthRef};
-use crate::checkty::{first_duplicate, resolve_ctors, CtorInfo, DataInfo, Ty, Width};
+use crate::ast::{
+    BaseType, Ctor, Item, Nodule, Path, Scalar, Sparsity, TypeDecl, TypeRef, Vis, WidthRef,
+};
+use crate::checkty::{
+    first_duplicate, prelude, register_types, resolve_ctors, CtorInfo, DataInfo, Ty, Width,
+};
 use crate::eval::L1Value;
 use crate::tests::marshal_support::*;
 use std::collections::BTreeMap;
@@ -539,4 +549,254 @@ fn resolve_ctors_cases() {
             want,
         );
     }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════════════
+// register_types (M-1013 STEP 3, PR-2) — the type-registry builder.
+// ═══════════════════════════════════════════════════════════════════════════════════════════════════
+
+// ── Nodule / Item mirror encoders (the TRIMMED input surface — non-Type items → `ItOther`) ──────────
+
+fn encode_path(p: &Path) -> String {
+    format!("Pth({})", encode_names(&p.0))
+}
+
+/// A trimmed `Item`: only `Item::Type` carries data (→ `ItType(TypeDecl)`); every other item collapses
+/// to the nullary `ItOther` — exactly the `type Item = ItType(TypeDecl) | ItOther` mirror, and the
+/// structural form of the FLAG-semcore-30 deferral (a non-Type item carries no tuple arity into the
+/// trimmed pre-pass).
+fn encode_item(it: &Item) -> String {
+    match it {
+        Item::Type(td) => format!("ItType({})", encode_type_decl(td)),
+        _ => "ItOther".to_owned(),
+    }
+}
+
+fn encode_item_list(items: &[Item]) -> String {
+    let mut s = String::from("Nil");
+    for it in items.iter().rev() {
+        s = format!("Cons({}, {})", encode_item(it), s);
+    }
+    s
+}
+
+fn encode_nodule(n: &Nodule) -> String {
+    format!(
+        "Nod({}, {}, {})",
+        encode_path(&n.path),
+        if n.std_sys { "True" } else { "False" },
+        encode_item_list(&n.items)
+    )
+}
+
+// ── L1Value decoder: the port's `Vec[DataInfo]` output → the oracle's `BTreeMap<String, DataInfo>` ───
+
+/// Decode `register_types`' returned registry (`Vec[DataInfo]`) into a `BTreeMap` keyed by type name —
+/// the order-insensitive comparison surface against `checkty::register_types`' mutated map. A duplicate
+/// key panics (never-silent): `register_types` maintains a one-entry-per-name invariant, so a dup is a
+/// real port bug, surfaced rather than silently collapsed by the `BTreeMap` insert.
+fn decode_types_map(v: &L1Value) -> BTreeMap<String, DataInfo> {
+    let mut map = BTreeMap::new();
+    for d in decode_vec(v, decode_data_info) {
+        assert!(
+            map.insert(d.name.clone(), d).is_none(),
+            "register_types port produced a duplicate type name (registry invariant broken)"
+        );
+    }
+    map
+}
+
+// ── small fixture constructors (test bodies stay `assert over a case`) ──────────────────────────────
+
+fn ty(td: TypeDecl) -> Item {
+    Item::Type(td)
+}
+
+fn nodule(items: Vec<Item>) -> Nodule {
+    Nodule {
+        path: Path(vec!["d".to_owned()]),
+        std_sys: false,
+        items,
+    }
+}
+
+/// The `Bool` prelude seed the real `register_nodule_decls` driver inserts before `register_types`
+/// (checkty.rs) — matched on both sides so the port and oracle start from the identical registry.
+fn seed_bool() -> BTreeMap<String, DataInfo> {
+    let mut map = BTreeMap::new();
+    map.insert("Bool".to_owned(), prelude());
+    map
+}
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+// register_types (LIVE — checkty::register_types): monomorphic, cross-referencing, generic, the two
+// refusals (duplicate type name / duplicate type param), and a ctor-field TUPLE (the TRIMMED pre-pass).
+// Every fixture's only tuple usage (if any) is a ctor field, so the trimmed pre-pass matches the real
+// full pre-pass byte-for-byte; compared to the live oracle by Rust's derived `==` (Err normalized to
+// `()`). The fn-body/pattern/sig legs deferred behind FLAG-semcore-30 are covered by the never-silent
+// test below (they are the ONE place port and oracle intentionally diverge, so not an equality case).
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+#[test]
+fn register_types_cases() {
+    let cases: Vec<(&str, Nodule)> = vec![
+        // Single monomorphic type.
+        (
+            "mono",
+            nodule(vec![ty(type_decl("A", &[], vec![ctor("MkA", vec![])]))]),
+        ),
+        // The second type's ctor field references the first (forward-resolved through the shells).
+        (
+            "cross_ref",
+            nodule(vec![
+                ty(type_decl("A", &[], vec![ctor("MkA", vec![])])),
+                ty(type_decl(
+                    "B",
+                    &[],
+                    vec![ctor("MkB", vec![tref(named("A", vec![]))])],
+                )),
+            ]),
+        ),
+        // Generic recursive type: List[A] = LNil | LCons(A, List[A]).
+        (
+            "generic",
+            nodule(vec![ty(type_decl(
+                "List",
+                &["A"],
+                vec![
+                    ctor("LNil", vec![]),
+                    ctor(
+                        "LCons",
+                        vec![
+                            tref(named("A", vec![])),
+                            tref(named("List", vec![tref(named("A", vec![]))])),
+                        ],
+                    ),
+                ],
+            ))]),
+        ),
+        // Duplicate type NAME → Err (both sides).
+        (
+            "dup_type_name",
+            nodule(vec![
+                ty(type_decl("A", &[], vec![ctor("MkA", vec![])])),
+                ty(type_decl("A", &[], vec![ctor("MkA2", vec![])])),
+            ]),
+        ),
+        // Duplicate type PARAM → Err (both sides).
+        (
+            "dup_type_param",
+            nodule(vec![ty(type_decl(
+                "P",
+                &["X", "X"],
+                vec![ctor("MkP", vec![])],
+            ))]),
+        ),
+        // A ctor field that IS a tuple type `(A, B)` → the TRIMMED pre-pass registers Tuple$2 (a
+        // ctor-field tuple is covered by both the full and the trimmed walk, so the outputs agree).
+        (
+            "ctor_field_tuple",
+            nodule(vec![
+                ty(type_decl("A", &[], vec![ctor("MkA", vec![])])),
+                ty(type_decl("B", &[], vec![ctor("MkB", vec![])])),
+                ty(type_decl(
+                    "C",
+                    &[],
+                    vec![ctor(
+                        "MkC",
+                        vec![tref(BaseType::Tuple(vec![
+                            tref(named("A", vec![])),
+                            tref(named("B", vec![])),
+                        ]))],
+                    )],
+                )),
+            ]),
+        ),
+    ];
+    for (label, n) in &cases {
+        let mut map = seed_bool();
+        let res = register_types(&mut map, n);
+        let want = res.map(|()| map).map_err(|_| ());
+        assert_l1_marshal(
+            &format!("register_types_{label}"),
+            &format!(
+                "fn main() => Result[Vec[DataInfo], Bytes] = register_types({}, {});\n",
+                encode_data_info_list(&[prelude()]),
+                encode_nodule(n)
+            ),
+            |v| decode_result(v, decode_types_map),
+            want,
+        );
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+// FLAG-semcore-30 DEFERRAL (never-silent). The TRIMMED tuple pre-pass walks ONLY type-decl ctor
+// fields; the fn-body / pattern / signature legs are DEFERRED to PR-2b. A tuple that appears ONLY in a
+// deferred leg (here: a non-Type item, mirror `ItOther`, standing in for a fn whose body constructs a
+// tuple) is therefore NOT pre-registered — and that omission must be never-silent: a later `resolve_ty`
+// of that tuple Errs explicitly (`resolve_tuple`'s "synthetic tuple type not registered"), rather than
+// silently yielding a wrong / missing `Tuple$N`. This is the ONE place the trimmed port intentionally
+// diverges from the real full `register_types` (which WOULD pre-register the tuple from the fn body) —
+// so it is asserted as a never-silent property, not as an equality differential. PR-2b closes the gap.
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+#[test]
+fn register_types_defers_fnbody_tuple_never_silent() {
+    // A, B: nullary types with NO tuple ctor fields; plus an `ItOther` (the deferred-leg carrier).
+    let a = encode_type_decl(&type_decl("A", &[], vec![ctor("MkA", vec![])]));
+    let b = encode_type_decl(&type_decl("B", &[], vec![ctor("MkB", vec![])]));
+    let nod =
+        format!("Nod(Pth(Nil), False, Cons(ItType({a}), Cons(ItType({b}), Cons(ItOther, Nil))))");
+    let seed = encode_data_info_list(&[prelude()]);
+
+    // (1) register_types SUCCEEDS and registers A (proves the Ok arm, not an early Err, was taken).
+    let a_present = decode_driver(
+        "Option[Bytes]",
+        &format!(
+            "match register_types({seed}, {nod}) {{ Err(_) => None, \
+             Ok(types) => match types_lookup(types, {}) {{ None => None, Some(d) => Some(di_name(d)) }} }}",
+            encode_bytes("A")
+        ),
+        |v| decode_option(v, decode_string),
+    );
+    assert_eq!(
+        a_present,
+        Some("A".to_owned()),
+        "register_types must succeed and register the ordinary type A"
+    );
+
+    // (2) The trimmed pre-pass did NOT register a Tuple$2 for the deferred (ItOther) leg.
+    let tuple_absent = decode_driver(
+        "Option[Bytes]",
+        &format!(
+            "match register_types({seed}, {nod}) {{ Err(_) => None, \
+             Ok(types) => match types_lookup(types, {}) {{ None => None, Some(d) => Some(di_name(d)) }} }}",
+            encode_bytes("Tuple$2")
+        ),
+        |v| decode_option(v, decode_string),
+    );
+    assert_eq!(
+        tuple_absent, None,
+        "the TRIMMED pre-pass (FLAG-semcore-30) must NOT register a Tuple$2 that appears only in a \
+         deferred fn-body/pattern/sig leg"
+    );
+
+    // (3) Never-silent: resolving `(A, B)` against the result Errs explicitly (not a silent miss).
+    let resolved = decode_driver(
+        "Result[Pair[Ty, Option[Strength]], Bytes]",
+        &format!(
+            "match register_types({seed}, {nod}) {{ Err(e) => Err(e), \
+             Ok(types) => resolve_ty(types, Nil, {}) }}",
+            encode_typeref(&tref(BaseType::Tuple(vec![
+                tref(named("A", vec![])),
+                tref(named("B", vec![])),
+            ])))
+        ),
+        |v| decode_result(v, |_| ()),
+    );
+    assert_eq!(
+        resolved,
+        Err(()),
+        "a deferred-leg tuple must surface as an explicit resolve_ty Err (never-silent, G2/VR-5), \
+         never a silently-missing Tuple$2"
+    );
 }
