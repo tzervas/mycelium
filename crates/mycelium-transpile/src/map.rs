@@ -254,3 +254,63 @@ fn map_type_inner(ty: &Type, self_ty: Option<&str>) -> Result<String, GapReason>
         )),
     }
 }
+
+/// For the M-1006 **resolvability fixpoint** (`transpile::resolvable_type_names`): collect the bare,
+/// single-segment **user** type names `ty` references (the ones [`map_type`] passes through *as-is* —
+/// i.e. not builtins), pushing them into `out`. Returns `false` when `ty` has **no** [`map_type`]
+/// mapping at all (an unmappable field ⇒ its record can never be resolvable — consistent with
+/// `map_type` gapping the field). Builtins (`bool`, `u8..u128`) and tuples/shared-refs/generic-apps
+/// of mappables are traversed for their nested user names but are not themselves deps.
+///
+/// This deliberately **mirrors [`map_type`]'s mappable shapes**; if the two drift, the only cost is a
+/// *missed* emission (a struct conservatively left gapped) — never an unsound one (VR-5): the gate is
+/// one-sided (it can only *withhold* an emission, so a stale mirror is safe, just less generous).
+pub(crate) fn field_type_user_deps(ty: &Type, out: &mut Vec<String>) -> bool {
+    match ty {
+        Type::Path(tp) if tp.qself.is_none() && tp.path.segments.len() == 1 => {
+            let seg = match tp.path.segments.last() {
+                Some(s) => s,
+                None => return false,
+            };
+            let name = seg.ident.to_string();
+            match name.as_str() {
+                // Builtins `map_type` maps directly — mappable, but contribute no user dep.
+                "bool" | "u8" | "u16" | "u32" | "u64" | "u128" => {
+                    matches!(seg.arguments, PathArguments::None)
+                }
+                // Shapes `map_type` gaps outright ⇒ unmappable field.
+                "Self" | "i8" | "i16" | "i32" | "i64" | "i128" | "isize" | "usize" | "f32"
+                | "f64" | "char" | "String" | "str" => false,
+                _ => {
+                    // A reserved-word type name fails to lex ⇒ `map_type` gaps it (unmappable).
+                    if crate::reserved::is_reserved(&name) {
+                        return false;
+                    }
+                    match &seg.arguments {
+                        PathArguments::None => {
+                            out.push(name);
+                            true
+                        }
+                        PathArguments::AngleBracketed(ab) => {
+                            out.push(name);
+                            !ab.args.is_empty()
+                                && ab.args.iter().all(|a| match a {
+                                    syn::GenericArgument::Type(t) => field_type_user_deps(t, out),
+                                    _ => false,
+                                })
+                        }
+                        _ => false,
+                    }
+                }
+            }
+        }
+        // Qualified multi-segment path: `map_type` gaps it (unmappable).
+        Type::Path(_) => false,
+        Type::Tuple(t) if t.elems.is_empty() => false,
+        Type::Tuple(t) if t.elems.len() >= 2 => {
+            t.elems.iter().all(|e| field_type_user_deps(e, out))
+        }
+        Type::Reference(r) if r.mutability.is_none() => field_type_user_deps(&r.elem, out),
+        _ => false,
+    }
+}

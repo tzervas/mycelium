@@ -13,11 +13,48 @@
 use crate::gap::{guarded, Category, GapReason};
 use crate::map::{map_type, tokens_to_string};
 use crate::reserved::guard_ident;
+use std::cell::RefCell;
+use std::collections::HashSet;
 use syn::{
-    Attribute, Block, Expr, Fields, FnArg, GenericArgument, GenericParam, Generics, ImplItem,
-    ItemEnum, ItemFn, ItemImpl, ItemStruct, ItemTrait, Lit, Pat, PathArguments, ReturnType,
-    Signature, Stmt, TraitItem,
+    Attribute, Block, Expr, Fields, FieldsNamed, FnArg, GenericArgument, GenericParam, Generics,
+    ImplItem, ItemEnum, ItemFn, ItemImpl, ItemStruct, ItemTrait, Lit, Pat, PathArguments,
+    ReturnType, Signature, Stmt, TraitItem,
 };
+
+thread_local! {
+    /// The M-1006 **resolvability gate** for named-field records (kickoff `trx2`, E33-1). Emitting a
+    /// named-field `struct`/enum-variant positionally is only safe for `checked_fraction` when every
+    /// type the record references *resolves in-file* — otherwise the emission introduces a reference
+    /// (`ContentRef` → the out-of-corpus `ContentHash`) that **poisons the whole file's `myc check`**
+    /// under the per-file oracle, costing the file's previously-clean items. `None` ⇒ gate off
+    /// (direct `emit_*` unit tests / non-opted-in callers): a named-field record emits
+    /// unconditionally. `Some(set)` ⇒ gate on (set by [`with_resolvable`] from
+    /// `transpile::resolvable_type_names`): a named-field record emits **iff its own name is in the
+    /// set** — i.e. it and everything it transitively references resolve in-file, so the emission can
+    /// never introduce a poisoning reference (VR-5/G2 — never emit a reference we can't confirm
+    /// resolves).
+    static RESOLVABLE: RefCell<Option<HashSet<String>>> = const { RefCell::new(None) };
+}
+
+/// Install the per-file resolvable-type set for the duration of `f`, then clear it (RAII-free — a
+/// panic would leave it set, but the transpiler never unwinds across this boundary in practice; the
+/// budget thread-local in `gap.rs` takes the same shape). Used by `transpile::transpile_source`.
+pub(crate) fn with_resolvable<R>(set: HashSet<String>, f: impl FnOnce() -> R) -> R {
+    RESOLVABLE.with(|c| *c.borrow_mut() = Some(set));
+    let r = f();
+    RESOLVABLE.with(|c| *c.borrow_mut() = None);
+    r
+}
+
+/// Whether a named-field record named `name` may be emitted under the resolvability gate (see
+/// [`RESOLVABLE`]). Gate off (`None`) ⇒ always allowed; gate on ⇒ allowed iff `name` is resolvable
+/// in-file.
+fn named_field_emit_allowed(name: &str) -> bool {
+    RESOLVABLE.with(|c| match &*c.borrow() {
+        None => true,
+        Some(set) => set.contains(name),
+    })
+}
 
 /// The `.myc` text (+ any dropped sub-features, e.g. attributes) for one successfully emitted
 /// top-level item.
@@ -845,11 +882,48 @@ fn map_pattern_inner(pat: &Pat) -> Result<String, GapReason> {
 // Top-level item emitters.
 // ---------------------------------------------------------------------------------------------
 
+/// Map a **named-field record** (`{ a: T, b: U }`, a `struct`'s or an enum variant's fields) to the
+/// grammar's **positional** constructor form: the field *types* become positional arguments and the
+/// field *names* are dropped. Returns `(mapped_field_types, dropped_field_names)`.
+///
+/// Mycelium's `constructor ::= Ident ('(' type_ref (',' type_ref)* ')')?`
+/// (`docs/spec/grammar/mycelium.ebnf` §`constructor`) is **positional-only** — there is no
+/// named-field/record surface — so a named-field record emits exactly like a tuple one (`Fields::
+/// Unnamed`): its product *structure* is preserved, faithfully, and the field names (surface sugar)
+/// are dropped. This is precisely how the `lib/std/*.myc` hand-ports already render a Rust record
+/// (`type GuaranteeRow = Row(Bytes, Guarantee, Bytes, Bytes, Bool);`). The caller records the dropped
+/// names as a never-silent [`Category::NamedFieldDrop`] sub-gap (G2) — they are *recorded*, not lost.
+///
+/// A field whose *type* has no confirmed mapping still **refuses the whole record** (via `on_type_gap`,
+/// propagating that field's precise reason), never a partial emission (VR-5/G2) — exactly as the
+/// positional path already does (so e.g. a `String`/slice field keeps the record a hard gap).
+fn map_named_fields_positional(
+    fields: &FieldsNamed,
+    on_type_gap: impl Fn(&str) -> GapReason,
+) -> Result<(Vec<String>, Vec<String>), GapReason> {
+    let mut tys = Vec::with_capacity(fields.named.len());
+    let mut names = Vec::with_capacity(fields.named.len());
+    for f in &fields.named {
+        let mapped = map_type(&f.ty, None).map_err(|inner| on_type_gap(&inner.reason))?;
+        tys.push(mapped);
+        names.push(
+            f.ident
+                .as_ref()
+                .map_or_else(|| "_".to_string(), ToString::to_string),
+        );
+    }
+    Ok((tys, names))
+}
+
 /// `enum` -> `type_item` (`type Name = C1 | C2(T1, T2) | ...;`).
 pub fn emit_enum(item: &ItemEnum) -> Result<Emitted, GapReason> {
     guard_ident(&item.ident.to_string(), "enum type name")?;
     let type_params = plain_type_params(&item.generics)?;
     let mut sub_gaps = Vec::new();
+    // Tracks whether any variant is a **named-field** record — the M-1006 resolvability gate applies
+    // to such an enum *after* mapping (below), so an unmappable field still surfaces its own precise
+    // reason first (an honest gap profile: "String field" is a repr gap, not a resolution gap).
+    let mut has_named_variant = false;
     let non_doc = non_doc_attrs(&item.attrs);
     if !non_doc.is_empty() {
         sub_gaps.push(GapReason::new(
@@ -893,17 +967,52 @@ pub fn emit_enum(item: &ItemEnum) -> Result<Emitted, GapReason> {
                 }
                 ctors.push(format!("{}({})", v.ident, tys.join(", ")));
             }
-            Fields::Named(_) => {
-                return Err(GapReason::new(
-                    Category::PayloadVariant,
+            Fields::Named(fields) => {
+                // Named-field variant `Ctor { a: T, b: U }` -> positional `Ctor(T, U)` (grammar
+                // §`constructor` is positional-only). Field types kept, names dropped + recorded
+                // never-silently (G2); a field whose type gaps still refuses the whole variant
+                // (mapped here so that precise reason wins over the resolvability gate below).
+                has_named_variant = true;
+                let (tys, names) = map_named_fields_positional(fields, |inner| {
+                    GapReason::new(
+                        Category::PayloadVariant,
+                        format!(
+                            "enum `{}` variant `{}` has a field type with no confirmed mapping ({})",
+                            item.ident, v.ident, inner
+                        ),
+                    )
+                })?;
+                sub_gaps.push(GapReason::new(
+                    Category::NamedFieldDrop,
                     format!(
-                        "enum `{}` variant `{}` uses named fields — `constructor ::= Ident \
-                         ('(' type_ref (',' type_ref)* ')')?` has no named-field/record form",
-                        item.ident, v.ident
+                        "enum `{}` variant `{}` named field(s) `{}` emitted positionally as \
+                         `{}({})` — Mycelium's `constructor` is positional-only (no record \
+                         surface); product structure preserved, field names dropped",
+                        item.ident,
+                        v.ident,
+                        names.join(", "),
+                        v.ident,
+                        tys.join(", ")
                     ),
-                ))
+                ));
+                ctors.push(format!("{}({})", v.ident, tys.join(", ")));
             }
         }
+    }
+    // M-1006 resolvability gate (applied *after* mapping so an unmappable field's precise reason
+    // wins): an enum with a named-field variant only emits when it resolves in-file — otherwise
+    // emitting that variant positionally would introduce an out-of-file reference that poisons the
+    // file's `myc check`, costing its clean items. An enum with no named-field variant is unaffected.
+    if has_named_variant && !named_field_emit_allowed(&item.ident.to_string()) {
+        return Err(GapReason::new(
+            Category::PayloadVariant,
+            format!(
+                "enum `{}` has a named-field variant referencing a type not resolvable in-file — \
+                 emitting it positionally would introduce an unresolved reference that poisons the \
+                 file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
+                item.ident
+            ),
+        ));
     }
     let params_text = if type_params.is_empty() {
         String::new()
@@ -928,8 +1037,10 @@ pub fn emit_enum(item: &ItemEnum) -> Result<Emitted, GapReason> {
     })
 }
 
-/// `struct` -> a single-constructor `type_item`. Unit and all-positional (`Fields::Unnamed`)
-/// structs map; named-field structs/records have no grammar equivalent (KNOWN HARD GAP).
+/// `struct` -> a single-constructor `type_item`. Unit, all-positional (`Fields::Unnamed`), and
+/// **named-field** (`Fields::Named`, M-1006) structs all map to the positional `constructor` surface
+/// (named fields emit positionally with names dropped + recorded — see
+/// [`map_named_fields_positional`]). A field whose *type* has no mapping still refuses the struct.
 pub fn emit_struct(item: &ItemStruct) -> Result<Emitted, GapReason> {
     guard_ident(&item.ident.to_string(), "struct type/constructor name")?;
     let type_params = plain_type_params(&item.generics)?;
@@ -963,15 +1074,51 @@ pub fn emit_struct(item: &ItemStruct) -> Result<Emitted, GapReason> {
             }
             format!("{}({})", item.ident, tys.join(", "))
         }
-        Fields::Named(_) => {
-            return Err(GapReason::new(
-                Category::Struct,
+        Fields::Named(fields) => {
+            // Named-field struct `Foo { a: T, b: U }` -> positional `Foo(T, U)` (grammar
+            // §`constructor` is positional-only; matches the `lib/std/*.myc` hand-ports, e.g.
+            // `type GuaranteeRow = Row(...)`). Field types kept, names dropped + recorded
+            // never-silently (G2). Map FIRST so a field whose type has no mapping surfaces its own
+            // precise reason (a `String` repr gap, say — an honest gap profile), rather than being
+            // masked by the resolvability gate below.
+            let (tys, names) = map_named_fields_positional(fields, |inner| {
+                GapReason::new(
+                    Category::Struct,
+                    format!(
+                        "struct `{}` has a field type with no confirmed mapping ({})",
+                        item.ident, inner
+                    ),
+                )
+            })?;
+            // M-1006 resolvability gate: even when every field maps, only emit when this struct
+            // resolves in-file — otherwise the emission would introduce an out-of-file reference
+            // (e.g. a sibling-crate/kernel type) that poisons the file's `myc check`, costing its
+            // clean items. When gated out, keep the honest named-field refusal.
+            if !named_field_emit_allowed(&item.ident.to_string()) {
+                return Err(GapReason::new(
+                    Category::Struct,
+                    format!(
+                        "struct `{}` uses named fields and references a type not resolvable in-file \
+                         — emitting it positionally would introduce an unresolved reference that \
+                         poisons the file's `myc check`; left gapped under the M-1006 resolvability \
+                         gate (VR-5/G2)",
+                        item.ident
+                    ),
+                ));
+            }
+            sub_gaps.push(GapReason::new(
+                Category::NamedFieldDrop,
                 format!(
-                    "struct `{}` uses named fields — no record/product-type surface (only a \
-                     single-ctor positional shape maps to `type_item`)",
-                    item.ident
+                    "struct `{}` named field(s) `{}` emitted positionally as `{}({})` — Mycelium's \
+                     `constructor` is positional-only (no record surface); product structure \
+                     preserved, field names dropped (matches `lib/std/*.myc` hand-ports)",
+                    item.ident,
+                    names.join(", "),
+                    item.ident,
+                    tys.join(", ")
                 ),
-            ))
+            ));
+            format!("{}({})", item.ident, tys.join(", "))
         }
     };
     let params_text = if type_params.is_empty() {

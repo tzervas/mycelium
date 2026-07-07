@@ -112,12 +112,48 @@ fn cases() -> Vec<Case> {
                 category: Category::MacroInvocation,
             },
         },
-        // KNOWN HARD GAP: a named-field ("record") struct — no record surface in `constructor`.
+        // M-1006 (E33-1): a named-field ("record") struct whose fields all resolve in-file now emits
+        // POSITIONALLY (field names dropped + recorded via a `NamedFieldDrop` sub-gap) — the
+        // grammar-grounded mapping the `lib/std/*.myc` hand-ports use (`type GuaranteeRow = Row(..)`).
         Case {
-            name: "struct_named_fields_gap",
-            rust: "struct Foo { x: u8 }",
+            name: "struct_named_fields_emits_positionally",
+            rust: "struct Foo { x: u8, y: bool }",
+            expect: Expect::EmittedAndGapped {
+                item: "Foo",
+                contains: "type Foo = Foo(Binary{8}, Bool)",
+                sub_gap_category: Category::NamedFieldDrop,
+            },
+        },
+        // M-1006: a named-field struct with an UNMAPPABLE field type (`String`) still gaps — the
+        // field's own precise repr reason wins (mapped *before* the resolvability gate), so the gap
+        // profile keeps "String field" distinct from "out-of-file reference".
+        Case {
+            name: "struct_named_field_unmappable_type_still_gaps",
+            rust: "struct Bad { s: String }",
             expect: Expect::Gapped {
                 category: Category::Struct,
+            },
+        },
+        // M-1006 resolvability gate: a named-field struct whose fields all MAP but reference a type
+        // not declared in this file (`Elsewhere`) is gated — emitting it would introduce an
+        // unresolved reference that poisons the file's `myc check`. Left an honest `Struct` gap.
+        Case {
+            name: "struct_named_field_out_of_file_ref_is_gated",
+            rust: "struct Ref { h: Elsewhere }",
+            expect: Expect::Gapped {
+                category: Category::Struct,
+            },
+        },
+        // M-1006 greatest-fixpoint: mutually-recursive named-field structs (`A` <-> `B`) resolve as a
+        // group and emit — a *least* fixpoint would wrongly gate both (each waits on the other). Both
+        // are declared in-file and reference only each other + builtins, so the cycle is resolvable.
+        Case {
+            name: "mutually_recursive_named_structs_resolve",
+            rust: "struct A { b: B, x: u8 }\nstruct B { a: A }",
+            expect: Expect::EmittedAndGapped {
+                item: "A",
+                contains: "type A = A(B, Binary{8})",
+                sub_gap_category: Category::NamedFieldDrop,
             },
         },
         // M-873 follow-on (DN-41): a numeric-widening `impl Widen<..> for ..` whose body is a
@@ -252,10 +288,22 @@ fn cases() -> Vec<Case> {
                 category: Category::GenericBound,
             },
         },
-        // A named-field enum variant is a payload-shape gap distinct from a whole-struct gap.
+        // M-1006 (E33-1): a named-field enum variant whose fields resolve now emits POSITIONALLY
+        // (`A { x: u8 }` -> `A(Binary{8})`), names dropped + recorded via a `NamedFieldDrop` sub-gap.
         Case {
-            name: "payload_variant_named_fields_gap",
-            rust: "enum Foo { A { x: u8 } }",
+            name: "payload_variant_named_fields_emits_positionally",
+            rust: "enum Foo { A { x: u8 }, B }",
+            expect: Expect::EmittedAndGapped {
+                item: "Foo",
+                contains: "type Foo = A(Binary{8}) | B",
+                sub_gap_category: Category::NamedFieldDrop,
+            },
+        },
+        // M-1006: a named-field variant with an UNMAPPABLE field type (`String`) still gaps — the
+        // variant's own precise reason wins (mapped before the resolvability gate).
+        Case {
+            name: "payload_variant_unmappable_field_still_gaps",
+            rust: "enum Bad { A { s: String } }",
             expect: Expect::Gapped {
                 category: Category::PayloadVariant,
             },
