@@ -33,8 +33,9 @@ use crate::ast::{
     Scalar, Sparsity, TraitDecl, TraitRef, TypeDecl, TypeParam, TypeRef, ViaDecl, Vis, WidthRef,
 };
 use crate::checkty::{
-    collect_tuple_arities, first_duplicate, prelude, register_traits, register_types,
-    resolve_ctors, CtorInfo, DataInfo, TraitInfo, Ty, Width,
+    collect_tuple_arities, first_duplicate, prelude, register_instances, register_traits,
+    register_types, resolve_ctors, type_head, CoherenceView, CtorInfo, DataInfo, InstanceInfo,
+    TraitInfo, Ty, Width,
 };
 use crate::eval::L1Value;
 use crate::tests::marshal_support::*;
@@ -2056,5 +2057,405 @@ fn marshal_discriminates_traits() {
     assert_ne!(
         dd_tref(&format!("TR(KwBinary(WLit({})), None)", encode_u32(8))),
         dd_tref(&format!("TR(KwBinary(WName({})), None)", encode_bytes("N")))
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════════════
+// register_instances (M-1013 STEP 3, PR-3) — the IMPL pass (registration + coherence). LIVE differential
+// against `checkty::register_instances` (checkty.rs 3116-3238): the eight checks in the oracle's exact
+// order (unknown-trait → concrete resolve → arity → head → orphan → uniqueness → method-set → insert).
+// The port returns a `Vec[InstanceInfo]`; both sides normalize to a `BTreeMap<(String,String),
+// InstanceInfo>` keyed by `(trait_name, type_head(for_ty))` (order-insensitive), `Err` → `()`.
+//
+// FLAG-semcore-33 RESOLVED: `checkty::CoherenceView.types` was widened to `pub(crate)` (matching
+// `.traits`) in the same change, so the test module now constructs an oracle `CoherenceView` with a
+// populated data-type set — the `type_local`-via-`Data` acceptance arm is a full LIVE differential
+// (`register_instances_type_local_via_data`), not a port-side-only hand-built expectation. The eleven
+// cases below drive acceptance via trait-locality or the primitive-repr arm; the Data-membership arm
+// is its own live case. (The widening is the white-box in-crate-test pattern CLAUDE.md endorses — the
+// same one PR-1 used for `resolve_ctors`/`first_duplicate`.)
+// ═══════════════════════════════════════════════════════════════════════════════════════════════════
+
+// ── fixture constructors (test bodies stay `assert over a case`) ────────────────────────────────────
+fn bytes_ty() -> TypeRef {
+    tref(BaseType::Bytes)
+}
+fn float_ty() -> TypeRef {
+    tref(BaseType::Float)
+}
+fn bin_ty(width: u32) -> TypeRef {
+    tref(BaseType::Binary(WidthRef::Lit(width)))
+}
+fn fn_ty(param_t: TypeRef, ret_t: TypeRef) -> TypeRef {
+    tref(BaseType::Fn(Box::new(param_t), Box::new(ret_t)))
+}
+/// An impl method `fn <name>() => Bytes = x`. `register_instances` reads only the method NAME
+/// (`m.sig.name`), so the value-params / return / body are inert filler, kept minimal + encodable.
+fn method(name: &str) -> FnDecl {
+    fn_decl(fn_sig(name, vec![], bytes_ty()), var("x"))
+}
+fn impl_decl(
+    trait_name: &str,
+    trait_args: Vec<TypeRef>,
+    for_ty: TypeRef,
+    methods: Vec<FnDecl>,
+) -> ImplDecl {
+    ImplDecl {
+        trait_name: trait_name.to_owned(),
+        trait_args,
+        for_ty,
+        methods,
+    }
+}
+fn it_impl(id: ImplDecl) -> Item {
+    Item::Impl(id)
+}
+/// A single-method trait `trait <name> { fn <m>(x: Bytes) => Bytes; }` — its method sig resolves against
+/// the primitive `Bytes`, so `register_traits` registers it with no seeded data type needed.
+fn trait1(name: &str, method_name: &str) -> Item {
+    it_trait(trait_decl(
+        name,
+        &[],
+        vec![fn_sig(
+            method_name,
+            vec![param("x", bytes_ty())],
+            bytes_ty(),
+        )],
+    ))
+}
+
+// ── encode a checkty::TraitInfo as the port's `TrInfo(name, params, sigs)` registry entry ────────────
+fn encode_trait_info(t: &TraitInfo) -> String {
+    format!(
+        "TrInfo({}, {}, {})",
+        encode_bytes(&t.name),
+        encode_names(&t.params),
+        encode_fn_sig_list(&t.sigs)
+    )
+}
+fn encode_trait_info_list(ts: &[TraitInfo]) -> String {
+    let mut s = String::from("Nil");
+    for t in ts.iter().rev() {
+        s = format!("Cons({}, {})", encode_trait_info(t), s);
+    }
+    s
+}
+/// `CV(traits, types)` — the CoherenceView mirror; each field a `Vec[Bytes]` name-list.
+fn encode_coherence(traits: &[&str], types: &[&str]) -> String {
+    let owned_t: Vec<String> = traits.iter().map(|s| (*s).to_owned()).collect();
+    let owned_ty: Vec<String> = types.iter().map(|s| (*s).to_owned()).collect();
+    format!(
+        "CV({}, {})",
+        encode_names(&owned_t),
+        encode_names(&owned_ty)
+    )
+}
+
+// ── decode the port's `Vec[InstanceInfo]` → the oracle's `(trait, head)`-keyed BTreeMap ──────────────
+fn decode_instance_info(v: &L1Value) -> InstanceInfo {
+    let (ctor, fields) = expect_data(v, "InstanceInfo");
+    match ctor {
+        "InstInfo" => InstanceInfo {
+            trait_name: decode_string(&fields[0]),
+            trait_args: decode_vec(&fields[1], decode_ty),
+            for_ty: decode_ty(&fields[2]),
+            methods: decode_vec(&fields[3], decode_string),
+        },
+        c => panic!("marshal decode_instance_info: unexpected ctor {c}"),
+    }
+}
+/// Decode `register_instances`' returned registry (`Vec[InstanceInfo]`) into a `BTreeMap` keyed by
+/// `(trait_name, type_head(for_ty))` — the order-insensitive comparison surface against
+/// `checkty::register_instances`' `BTreeMap`. A stored instance always has a `Some` head (it passed the
+/// type_head check); a duplicate key panics (never-silent): the port's global-uniqueness check keeps one
+/// entry per `(trait, head)`, so a dup is a real port bug, surfaced rather than silently collapsed.
+fn decode_instances_map(v: &L1Value) -> BTreeMap<(String, String), InstanceInfo> {
+    let mut map = BTreeMap::new();
+    for inst in decode_vec(v, decode_instance_info) {
+        let head = type_head(&inst.for_ty)
+            .expect("a registered instance's for_ty has a Some type_head (the uniqueness key)");
+        assert!(
+            map.insert((inst.trait_name.clone(), head), inst).is_none(),
+            "register_instances port produced a duplicate (trait, head) key (uniqueness invariant broken)"
+        );
+    }
+    map
+}
+
+#[test]
+fn register_instances_cases() {
+    // A single-method trait `Show { show }` declared so `register_traits` registers its TraitInfo.
+    let show = || trait1("Show", "show");
+    // A 2-param trait `Pair2[A,B] { m }` for the arity + multi-arg cases.
+    let pair2 = || {
+        it_trait(trait_decl(
+            "Pair2",
+            &["A", "B"],
+            vec![fn_sig("m", vec![param("x", bytes_ty())], bytes_ty())],
+        ))
+    };
+    let cases: Vec<(&str, Vec<DataInfo>, Nodule, Vec<&str>)> = vec![
+        // (1) Single valid impl (trait-local) → Ok, keyed ("Show","Binary").
+        (
+            "single_valid",
+            vec![],
+            nodule(vec![
+                show(),
+                it_impl(impl_decl("Show", vec![], bin_ty(8), vec![method("show")])),
+            ]),
+            vec!["Show"],
+        ),
+        // (2) Unknown trait `Nope` (never declared) → Err.
+        (
+            "unknown_trait",
+            vec![],
+            nodule(vec![it_impl(impl_decl("Nope", vec![], bin_ty(8), vec![]))]),
+            vec![],
+        ),
+        // (3) Arity mismatch: `Pair2` takes 2 args, impl supplies 0 → Err.
+        (
+            "arity_mismatch",
+            vec![],
+            nodule(vec![
+                pair2(),
+                it_impl(impl_decl("Pair2", vec![], bin_ty(8), vec![method("m")])),
+            ]),
+            vec!["Pair2"],
+        ),
+        // (4) Bare non-concrete head: `for (Bytes -> Bytes)` → type_head None → Err.
+        (
+            "non_concrete_head",
+            vec![],
+            nodule(vec![
+                show(),
+                it_impl(impl_decl(
+                    "Show",
+                    vec![],
+                    fn_ty(bytes_ty(), bytes_ty()),
+                    vec![method("show")],
+                )),
+            ]),
+            vec!["Show"],
+        ),
+        // (5) Orphan: trait NOT phylum-local (coh empty) and `for Foreign` NOT in coherence.types → Err.
+        (
+            "orphan",
+            vec![shell("Foreign", &[])],
+            nodule(vec![
+                show(),
+                it_impl(impl_decl(
+                    "Show",
+                    vec![],
+                    nm("Foreign"),
+                    vec![method("show")],
+                )),
+            ]),
+            vec![],
+        ),
+        // (6) Trait-local only: trait in coherence.traits, `for Foreign` (a Data NOT in coherence.types)
+        //     → Ok via the trait-locality arm, keyed ("Show","Data:Foreign").
+        (
+            "trait_local_only",
+            vec![shell("Foreign", &[])],
+            nodule(vec![
+                show(),
+                it_impl(impl_decl(
+                    "Show",
+                    vec![],
+                    nm("Foreign"),
+                    vec![method("show")],
+                )),
+            ]),
+            vec!["Show"],
+        ),
+        // (7) Type-local via primitive repr: trait NOT local, `for Binary{8}` (primitive) → Ok via the
+        //     primitive-repr arm, keyed ("Show","Binary").
+        (
+            "type_local_primitive",
+            vec![],
+            nodule(vec![
+                show(),
+                it_impl(impl_decl("Show", vec![], bin_ty(8), vec![method("show")])),
+            ]),
+            vec![],
+        ),
+        // (8) Overlapping: two impls on the same `(Show, Binary)` head (widths 8 and 16 erase) → Err.
+        (
+            "overlapping",
+            vec![],
+            nodule(vec![
+                show(),
+                it_impl(impl_decl("Show", vec![], bin_ty(8), vec![method("show")])),
+                it_impl(impl_decl("Show", vec![], bin_ty(16), vec![method("show")])),
+            ]),
+            vec!["Show"],
+        ),
+        // (9) Missing method: `Two` requires {a,b}, impl provides {a} → Err.
+        (
+            "missing_method",
+            vec![],
+            nodule(vec![
+                it_trait(trait_decl(
+                    "Two",
+                    &[],
+                    vec![
+                        fn_sig("a", vec![param("x", bytes_ty())], bytes_ty()),
+                        fn_sig("b", vec![param("y", bytes_ty())], bytes_ty()),
+                    ],
+                )),
+                it_impl(impl_decl("Two", vec![], bin_ty(8), vec![method("a")])),
+            ]),
+            vec!["Two"],
+        ),
+        // (10) Extra method: `Show` requires {show}, impl provides {show,extra} → Err.
+        (
+            "extra_method",
+            vec![],
+            nodule(vec![
+                show(),
+                it_impl(impl_decl(
+                    "Show",
+                    vec![],
+                    bin_ty(8),
+                    vec![method("show"), method("extra")],
+                )),
+            ]),
+            vec!["Show"],
+        ),
+        // (11) Multi-arg trait Ok: `Pair2[A,B]` with trait_args [Bytes, Float] (arity 2) → Ok, keyed
+        //      ("Pair2","Binary") with concrete trait_args [TyBytes, TyFloat].
+        (
+            "multi_arg_ok",
+            vec![],
+            nodule(vec![
+                pair2(),
+                it_impl(impl_decl(
+                    "Pair2",
+                    vec![bytes_ty(), float_ty()],
+                    bin_ty(8),
+                    vec![method("m")],
+                )),
+            ]),
+            vec!["Pair2"],
+        ),
+        // (12) Duplicate method: `Show` requires {show}, impl provides {show, show} → Err. The set-based
+        //      missing/extra checks both pass (provided set == required == {show}); the third arm —
+        //      `first_duplicate` over the method-name list (checkty.rs:3268-3282) — catches the repeat.
+        (
+            "duplicate_method",
+            vec![],
+            nodule(vec![
+                show(),
+                it_impl(impl_decl(
+                    "Show",
+                    vec![],
+                    bin_ty(8),
+                    vec![method("show"), method("show")],
+                )),
+            ]),
+            vec!["Show"],
+        ),
+    ];
+    for (label, shells, nod, coh_traits) in &cases {
+        let tmap = types_map(shells);
+        let traits_map = register_traits(&tmap, nod).expect("fixture traits register");
+        let traits: Vec<TraitInfo> = traits_map.values().cloned().collect();
+        let mut coh = CoherenceView::default();
+        for t in coh_traits {
+            coh.traits.insert((*t).to_owned());
+        }
+        let want = register_instances(&tmap, &traits_map, &coh, nod).map_err(|_| ());
+        assert_l1_marshal(
+            &format!("register_instances_{label}"),
+            &format!(
+                "fn main() => Result[Vec[InstanceInfo], Bytes] = register_instances({}, {}, {}, {});\n",
+                encode_data_info_list(shells),
+                encode_trait_info_list(&traits),
+                encode_coherence(coh_traits, &[]),
+                encode_nodule(nod)
+            ),
+            |v| decode_result(v, decode_instances_map),
+            want,
+        );
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+// register_instances type_local-via-Data (FLAG-semcore-33 RESOLVED) — a full LIVE differential of the
+// Data-membership orphan arm: trait NOT phylum-local, but `for Foreign` with `Foreign` IN
+// coherence.types ⇒ Ok, keyed ("Show","Data:Foreign"). Now that `CoherenceView.types` is `pub(crate)`,
+// the oracle `CoherenceView` is constructed with the populated types set and the expectation comes from
+// the REAL `checkty::register_instances`, not a hand-built value — the one acceptance arm the eleven
+// trait-locality/primitive-repr cases can't reach, now witnessed live like the rest.
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+#[test]
+fn register_instances_type_local_via_data() {
+    let shells = vec![shell("Foreign", &[])];
+    let nod = nodule(vec![
+        trait1("Show", "show"),
+        it_impl(impl_decl(
+            "Show",
+            vec![],
+            nm("Foreign"),
+            vec![method("show")],
+        )),
+    ]);
+    let tmap = types_map(&shells);
+    let traits_map = register_traits(&tmap, &nod).expect("fixture traits register");
+    let traits: Vec<TraitInfo> = traits_map.values().cloned().collect();
+    // Live oracle: trait NOT in coherence.traits, but `Foreign` IS in coherence.types ⇒ type_local ⇒ Ok.
+    let mut coh = CoherenceView::default();
+    coh.types.insert("Foreign".to_owned());
+    let want = register_instances(&tmap, &traits_map, &coh, &nod).map_err(|_| ());
+    assert_l1_marshal(
+        "register_instances_type_local_via_data",
+        &format!(
+            "fn main() => Result[Vec[InstanceInfo], Bytes] = register_instances({}, {}, {}, {});\n",
+            encode_data_info_list(&shells),
+            encode_trait_info_list(&traits),
+            encode_coherence(&[], &["Foreign"]),
+            encode_nodule(&nod)
+        ),
+        |v| decode_result(v, decode_instances_map),
+        want,
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+// Decoder non-vacuity for the InstanceInfo decoder (M-1013 STEP 2 convention): each field must
+// DISCRIMINATE — two mirror literals differing in exactly one field decode `!=`, so a decoder that
+// dropped a field is caught rather than silently collapsing distinct instances. Covers all four
+// InstanceInfo fields independently (trait_name / trait_args / for_ty / methods).
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+#[test]
+fn marshal_discriminates_instances() {
+    fn dd_inst(expr: &str) -> InstanceInfo {
+        decode_driver("InstanceInfo", expr, decode_instance_info)
+    }
+    let a = encode_bytes("A");
+    let b = encode_bytes("B");
+    let base = format!("InstInfo({a}, Nil, TyBytes, Nil)");
+    // field 0: trait_name.
+    assert_ne!(
+        dd_inst(&base),
+        dd_inst(&format!("InstInfo({b}, Nil, TyBytes, Nil)"))
+    );
+    // field 1: trait_args.
+    assert_ne!(
+        dd_inst(&base),
+        dd_inst(&format!("InstInfo({a}, Cons(TyBytes, Nil), TyBytes, Nil)"))
+    );
+    // field 2: for_ty.
+    assert_ne!(
+        dd_inst(&base),
+        dd_inst(&format!("InstInfo({a}, Nil, TyFloat, Nil)"))
+    );
+    // field 3: methods.
+    assert_ne!(
+        dd_inst(&base),
+        dd_inst(&format!(
+            "InstInfo({a}, Nil, TyBytes, Cons({}, Nil))",
+            encode_bytes("m")
+        ))
     );
 }

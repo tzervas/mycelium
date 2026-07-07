@@ -1319,7 +1319,7 @@ pub(crate) struct CoherenceView {
     /// Every trait name declared anywhere in the phylum (pub-blind).
     pub(crate) traits: BTreeSet<String>,
     /// Every data-type name declared anywhere in the phylum (pub-blind), excluding the prelude.
-    types: BTreeSet<String>,
+    pub(crate) types: BTreeSet<String>,
 }
 
 /// The **declaration-level** registries of one nodule (types/fns/traits), built before any body is
