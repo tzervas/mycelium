@@ -309,6 +309,34 @@ code; they only fix the two branch points so the M-740 wave can proceed without 
 
 ## Meta — changelog
 
+- **2026-07-07 — M-993 staged port plan (§7.3 Stage-5 interior) + Stage-5 increment 2 landed
+  (append-only, no status move; M-993/M-1007).** The semcore heavy-core port (M-993, now
+  `in-progress`) is a multi-wave effort, not one shot: the ~14k-line SCC remainder decomposes into
+  twelve dependency-respecting increments (3..14). Because the SCC is one nodule (§9 flag-1), mutual
+  recursion is free within `semcore.myc` (FixGroup), so the sequencing constraint is not "compile
+  independently" but three real gates: (a) data-model prerequisites (a cluster referencing a
+  not-yet-modeled value/IR type waits, or its wave introduces that model); (b) differential
+  feasibility (each cluster needs a reachable live Rust oracle — `pub`/`pub(crate)` from an in-crate
+  `src/tests/` module — plus encodable I/O); and (c) the M-986/M-987 kernel cost/depth walls (lifted
+  by M-994, but still acute for the whole-nodule checkty leg and the eval leg). The increments split
+  into a tractable pure/leaf cluster (parallelizable, ~200–400 Rust lines each, clean live-oracle
+  differentials) and a heavy sequential core. Tractable waves, minted under E18-1: increment 3
+  (M-1008, checkty `unify`/`resolve_ty`/tuple helpers); increment 4 (M-1009, the mono name-mangling
+  family plus a `u32`→decimal helper); increment 5 (M-1010, mono `free_vars`/`pattern_binders`);
+  increment 6 (M-1011, checkty literal/pattern typing); increment 7 (M-1012, the L0 `Value`/`Repr`
+  model plus elab pure lowering helpers — carries the §7.2 frontend/kernel-boundary `[FLAG]`,
+  `needs-design`). Heavy sequential core, tracked as M-1013 (`needs-design`, sub-decomposed as the
+  leaves land): increment 8 (checkty registration and the `Env` model), increment 9 (the
+  bidirectional checker `Cx`), increment 10 (elab AST→L0 lowering), increment 11 (mono core),
+  increment 12 (the value-semantics `eval` restatement — the acute M-994 feasibility risk, may lean
+  on the AOT leg per §9 flag-2), increment 13 (`fuse`, which runs the ported evaluator), and
+  increment 14 (the whole-program L0-output differential plus the `cargo-mutants` witness — the §7.3
+  Stage-5 gate proper, feeding M-741). Increment 2 (M-1007) landed this wave: checkty's four pure
+  type-algebra leaves (`has_var`/`type_head`/`subst_ty`/`param_subst`) into `semcore.myc`, native
+  `myc check` `ok`, a live-oracle Rust differential (`compiler_stage5_typealg.rs`, 6 tests / ~46
+  cases; no logic `*.rs` touched; documented in-file as FLAG-semcore-11/12). No `crates/mycelium-l1/
+  src/` logic or visibility changed (only the in-crate `src/tests/` module + its one `mod` line).
+  Status stays **Draft** (→ Resolved with M-741). (M-993; E18-1; VR-5/G2.)
 - **2026-07-06 — M-994 RESOLVED: both kernel fixes landed; interpreted-first Stage-6 now practical
   (append-only, no status move; M-740/M-994).** Following the decision below, **both** fixes are on
   `dev`: **(a)** the RFC-0041 §4.6 TCO-precondition widening (M-986 → done — deep `match`/`let` loops
