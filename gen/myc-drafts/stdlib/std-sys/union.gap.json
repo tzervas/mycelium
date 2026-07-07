@@ -107,7 +107,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" One row in the `std-sys` syscall-floor guarantee matrix (RFC-0016 §4.5).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct MatrixRow { # [doc = \" Module-qualified exported operation name (e.g. `\\\"io::write_out\\\"`).\"] pub op : & 'static str , # [doc = \" Guarantee tag (VR-5) — `Declared` for every floor op.\"] pub guarantee : GuaranteeTag , # [doc = \" Fallibility: total or fallible.\"] pub fallibility : Fallibility , # [doc = \" The explicit error set (empty string for total ops).\"] pub error_set : & 'static str , # [doc = \" Declared effects (C6).\"] pub effects : & 'static str , }",
-      "reason": "struct `MatrixRow` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `MatrixRow` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
       "item_name": "MatrixRow"
     },
     {
@@ -607,7 +607,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" \\\\[Declared\\\\] A command-line argument that was not valid UTF-8, reported by its **position**\"] # [doc = \" (`index` — arg 0 is the program name) so the offending input is named, never silently dropped\"] # [doc = \" (G2). Carries the lossy [`String::from_utf8_lossy`] rendering (`lossy`) so an `EXPLAIN`/diagnostic\"] # [doc = \" can *show* the bad arg without fabricating a faithful round-trip it cannot deliver.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct NonUtf8Arg { # [doc = \" 0-based position of the offending argument (0 = program name).\"] pub index : usize , # [doc = \" `String::from_utf8_lossy` rendering of the raw argument (U+FFFD for each invalid byte).\"] pub lossy : String , }",
-      "reason": "struct `NonUtf8Arg` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `NonUtf8Arg` has a field type with no confirmed mapping (`usize` has a platform-dependent width; no fixed Binary{N} mapping)",
       "item_name": "NonUtf8Arg"
     },
     {

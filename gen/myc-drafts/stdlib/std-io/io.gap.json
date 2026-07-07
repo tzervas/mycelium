@@ -51,7 +51,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" An abstract byte **source**: a `Substrate` wrapped in an affine handle.\"] # [doc = \"\"] # [doc = \" A `Source` may be read exactly once via [`read_all`] (which consumes it) or\"] # [doc = \" progressively via [`read`] (which threads the handle linearly).  A double-\"] # [doc = \" consume is a compile-time error (Rust move semantics enforce LR-8).\"] # [doc = \"\"] # [doc = \" # EXPLAIN-able selection\"] # [doc = \" The substrate backing this `Source` is visible as a field (C3 — no hidden\"] # [doc = \" resource).\"] # [derive (Debug)] pub struct Source { substrate : Substrate , }",
-      "reason": "struct `Source` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `Source` has a field type with no confirmed mapping (type name `Substrate` collides with a Mycelium reserved word — emitting it verbatim would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5))",
       "item_name": "Source"
     },
     {
@@ -71,7 +71,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" An abstract byte **sink**: a write target wrapped in an affine handle.\"] # [doc = \"\"] # [doc = \" A `Sink` is threaded linearly through [`write()`] calls (each call consumes the\"] # [doc = \" current handle and returns the updated one).  The affine discipline means a\"] # [doc = \" written sink cannot be silently re-used; a double-write is a compile-time error.\"] # [doc = \"\"] # [doc = \" # EXPLAIN-able selection (C3)\"] # [doc = \" The bytes written are observable via [`Sink::into_bytes`].\"] # [derive (Debug)] pub struct Sink { buffer : Vec < u8 > , }",
-      "reason": "struct `Sink` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `Sink` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "Sink"
     },
     {

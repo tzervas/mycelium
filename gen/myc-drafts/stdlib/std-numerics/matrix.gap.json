@@ -19,7 +19,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" One row of the `std.numerics` guarantee matrix (RFC-0016 §4.5; spec §4).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct GuaranteeRow { # [doc = \" The exported helper op name.\"] pub op : & 'static str , # [doc = \" The honest guarantee tag of the **helper op itself** (not the carried bound — see above).\"] pub tag : GuaranteeStrength , # [doc = \" Whether the op can return a `Result::Err` / `None`.\"] pub fallible : bool , # [doc = \" The explicit error/refusal set (or `\\\"total\\\"` when infallible).\"] pub error_set : & 'static str , # [doc = \" Declared effects (C6). `\\\"none\\\"` for all pure helpers.\"] pub effects : & 'static str , # [doc = \" Whether the op surfaces an inspectable EXPLAIN artifact (C3; G11).\"] pub explainable : bool , }",
-      "reason": "struct `GuaranteeRow` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `GuaranteeRow` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
       "item_name": "GuaranteeRow"
     },
     {

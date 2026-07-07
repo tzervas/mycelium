@@ -59,7 +59,7 @@
       "category": "PayloadVariant",
       "rust_construct": "PayloadVariant",
       "snippet": "# [doc = \" Why a definition could not be elaborated to L0 — always explicit, never a partial artifact\"] # [doc = \" (RFC-0007 §4.6).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum ElabError { # [doc = \" The body (or something it calls) is outside the evaluation-complete fragment; the program\"] # [doc = \" still *runs* — on the L1 fuel-guarded evaluator (RFC-0007 §4.6).\"] Residual { # [doc = \" The definition being elaborated when the refusal arose.\"] site : String , # [doc = \" Which construct fell outside the fragment, and why.\"] what : String , } , # [doc = \" The requested entry definition does not exist in the checked environment.\"] UnknownFn (String) , # [doc = \" A pass-internal AST traversal ([`crate::totality::walk_expr`], reused here for call-set\"] # [doc = \" collection over the call graph — M-641/DRY) exceeded its own explicit recursion-depth budget\"] # [doc = \" (M-674) on a pathologically-nested body. An operational resource refusal, distinct from\"] # [doc = \" [`ElabError::Residual`] (a semantic \\\"outside the fragment\\\" verdict) — refused cleanly rather\"] # [doc = \" than overflowing the host stack (banked guard 4).\"] DepthExceeded { # [doc = \" The definition being analyzed when the budget was exceeded.\"] site : String , # [doc = \" The exceeded budget.\"] limit : u32 , } , }",
-      "reason": "enum `ElabError` variant `Residual` uses named fields — `constructor ::= Ident ('(' type_ref (',' type_ref)* ')')?` has no named-field/record form",
+      "reason": "enum `ElabError` variant `Residual` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
       "item_name": "ElabError"
     },
     {
@@ -118,13 +118,23 @@
       "col": 1,
       "category": "ReservedWord",
       "rust_construct": "ReservedWord",
-      "snippet": "# [doc = \" The v0 **policy-name reference**: a deterministic, domain-separated content address derived\"] # [doc = \" from the surface policy *name* (`policy: roundtrip`).\"] # [doc = \"\"] # [doc = \" Honesty note (Declared): RFC-0005 policy *objects* are content-addressed over their canonical\"] # [doc = \" serialization (`mycelium-select::SelectionPolicy::policy_ref`); binding surface names to\"] # [doc = \" registered policy objects is later integration work. Until it lands, this name-derived address\"] # [doc = \" keeps `Meta.policy_used` answerable and — because the evaluator and the elaborator share this\"] # [doc = \" one function — keeps every execution path's swaps on the *same* `PolicyRef`, so the NFR-7\"] # [doc = \" differential is meaningful. Domain-separated (`policy-name.v0:`) so it can never collide with\"] # [doc = \" a structural or operation hash.\"] # [must_use] pub fn policy_name_ref (policy : & Path) -> PolicyRef { operation_hash (& format ! (\"policy-name.v0:{}\" , policy . 0 . join (\".\"))) }",
+      "snippet": "# [doc = \" The v0 **policy-name reference**: a deterministic, domain-separated content address derived\"] # [doc = \" from the surface policy *name* (`policy: roundtrip`).\"] # [doc = \"\"] # [doc = \" Honesty note (Declared): RFC-0005 policy *objects* are content-addressed over their canonical\"] # [doc = \" serialization (`mycelium-select::SelectionPolicy::policy_ref`); binding surface names to\"] # [doc = \" registered policy objects is later integration work. Until it lands, this name-derived address\"] # [doc = \" keeps `Meta.policy_used` answerable and — because the evaluator and the elaborator share this\"] # [doc = \" one function — keeps every execution path's swaps on the *same* `PolicyRef`, so the NFR-7\"] # [doc = \" differential is meaningful. Domain-separated (`policy-name.v0:`) so it can never collide with\"] # [doc = \" a structural or operation hash.\"] # [must_use] pub fn policy_name_ref (policy : & Path) -> PolicyRef { operation_hash (& policy_name_preimage (policy)) }",
       "reason": "fn parameter `policy` collides with a Mycelium reserved word — emitting it verbatim would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5)",
       "item_name": "policy_name_ref"
     },
     {
       "file": "crates/mycelium-l1/src/elab.rs",
       "line": 348,
+      "col": 1,
+      "category": "ReservedWord",
+      "rust_construct": "ReservedWord",
+      "snippet": "# [doc = \" The domain-separated **preimage** of [`policy_name_ref`] — `policy-name.v0:<dotted>` — before it\"] # [doc = \" is fed to the kernel content hash. Extracted (M-1012) so the self-hosted `semcore.myc` port has a\"] # [doc = \" reachable live oracle for the *wild-free* half of the reference (the frontend's name construction);\"] # [doc = \" the hashing step ([`operation_hash`], BLAKE3) is the kernel primitive the port defers to the\"] # [doc = \" materialization/kernel-hash crossing (DN-26 §10; `.myc` `FLAG-semcore-27`). Behaviour-preserving:\"] # [doc = \" `policy_name_ref` is byte-identical to its former inline form.\"] pub (crate) fn policy_name_preimage (policy : & Path) -> String { format ! (\"policy-name.v0:{}\" , policy . 0 . join (\".\")) }",
+      "reason": "fn parameter `policy` collides with a Mycelium reserved word — emitting it verbatim would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5)",
+      "item_name": "policy_name_preimage"
+    },
+    {
+      "file": "crates/mycelium-l1/src/elab.rs",
+      "line": 358,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -134,7 +144,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 353,
+      "line": 363,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -144,7 +154,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 385,
+      "line": 395,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -154,7 +164,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 418,
+      "line": 428,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -164,7 +174,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 439,
+      "line": 449,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -174,7 +184,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 485,
+      "line": 495,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -184,7 +194,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 505,
+      "line": 515,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -194,7 +204,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 530,
+      "line": 540,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -204,7 +214,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 619,
+      "line": 629,
       "col": 1,
       "category": "GenericBound",
       "rust_construct": "GenericBound",
@@ -214,7 +224,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 690,
+      "line": 700,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -224,17 +234,17 @@
     },
     {
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 707,
+      "line": 717,
       "col": 1,
       "category": "PayloadVariant",
       "rust_construct": "PayloadVariant",
       "snippet": "# [doc = \" One recursive binding the entry body is wrapped in: a self-recursive singleton (`Fix`, bound via\"] # [doc = \" `Let`) or a mutually-recursive group (`FixGroup`). Built callee-first; see [`elaborate`].\"] # [derive (Clone)] enum RecBinding { # [doc = \" A self-recursive function: its kernel variable and the `Fix` node bound to it (boxed — the\"] # [doc = \" `Group` variant is pointer-sized, so an unboxed `Node` here would unbalance the enum).\"] Single { var : String , fix : Box < Node > } , # [doc = \" A mutually-recursive group: `(member variable, curried lambda)` pairs, all mutually in scope.\"] Group (Vec < (String , Box < Node >) >) , }",
-      "reason": "enum `RecBinding` variant `Single` uses named fields — `constructor ::= Ident ('(' type_ref (',' type_ref)* ')')?` has no named-field/record form",
+      "reason": "enum `RecBinding` variant `Single` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
       "item_name": "RecBinding"
     },
     {
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 720,
+      "line": 730,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -244,7 +254,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 831,
+      "line": 841,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -254,7 +264,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 844,
+      "line": 854,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -264,7 +274,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 863,
+      "line": 873,
       "col": 1,
       "category": "MultiStmtBody",
       "rust_construct": "MultiStmtBody",
@@ -274,43 +284,33 @@
     },
     {
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 893,
+      "line": 903,
       "col": 1,
       "category": "ReservedWord",
       "rust_construct": "ReservedWord",
-      "snippet": "# [doc = \" Convert a v0 field type to a registry [`FieldSpec`]; `None` for a type with no monomorphic r3\"] # [doc = \" value form. **Stage-1 (RFC-0007 §11.3):** a **generic instantiation** (`Data` with type arguments)\"] # [doc = \" or an **abstract type parameter** ([`Ty::Var`]) has no monomorphic registry form — its elaboration\"] # [doc = \" is *staged* (monomorphization is the M-657 follow-up). Returning `None` makes [`build_registry`]\"] # [doc = \" skip the owning declaration, so any *use* of a generic value surfaces as an explicit `Residual`\"] # [doc = \" (never a silent, half-monomorphized artifact — G2/VR-5).\"] # [doc = \"\"] # [doc = \" **`Ty::Fn` (ADR-033/DN-74, M-923).** A function-typed field lowers to the kernel\"] # [doc = \" [`FieldSpec::Fn`] primitive — Path A, the type-carrying full-signature encoding DN-74 ratified\"] # [doc = \" as the final FLAG-1 disposition (2026-07-02): the parameter type and the return type are each\"] # [doc = \" resolved to a [`FieldTyRef`] and folded into an [`FnSig`], so two `Fn`-typed fields with\"] # [doc = \" different signatures hash to **distinct** content addresses (the ADR-033 §10.1 same-arity\"] # [doc = \" collision is closed at the kernel level; `crates/mycelium-core/src/data.rs` §\\\"ADR-033 FLAG-1\"] # [doc = \" Path A\\\"). Curried multi-parameter arrows (`A => B => C`, M-822) compose naturally: each `Ty::Fn`\"] # [doc = \" contributes one parameter, with the return position recursing into a nested [`FieldTyRef::Fn`]\"] # [doc = \" for the remaining arrow — no separate multi-arity encoding needed. This replaces the former\"] # [doc = \" blanket `None` (staged `Residual`) for **concrete** signatures; a signature whose param/return\"] # [doc = \" resolves through a still-open type variable, an unresolved width, or a generic `Data`\"] # [doc = \" instantiation stays honestly staged (`ty_to_field_ty_ref` returns `None` for those leaves,\"] # [doc = \" narrowing — never eliminating — the residual, G2/VR-5).\"] # [doc = \"\"] # [doc = \" **Reachability note (honest scope, DN-74 new evidence).** `crate::mono`'s closure\"] # [doc = \" defunctionalization (RFC-0024 §4A/M-704) unconditionally rewrites every reachable `Ty::Fn` field\"] # [doc = \" into a closure tag-sum `Ty::Data` reference *before* [`elaborate`] ever calls [`build_registry`]\"] # [doc = \" — so through the standard `elaborate` entry point this arm is not reached (defunctionalization\"] # [doc = \" already produces a closed, executing L0 term for every such field, verified by the existing\"] # [doc = \" closures three-way differential). This `FieldSpec::Fn` lowering is exercised through\"] # [doc = \" [`build_registry`] called directly, and through [`elaborate_direct`] (below) — the narrow,\"] # [doc = \" additive entry point that targets the kernel primitive `elaborate` cannot reach without also\"] # [doc = \" changing `mono.rs`'s defunctionalization scope (out of this leaf's owned files).\"] fn field_spec (ty : & Ty) -> Option < FieldSpec > { Some (match ty { Ty :: Binary (crate :: checkty :: Width :: Lit (n)) => FieldSpec :: Repr (Repr :: Binary { width : * n }) , Ty :: Binary (crate :: checkty :: Width :: Var (_)) => return None , Ty :: Ternary (crate :: checkty :: Width :: Lit (m)) => FieldSpec :: Repr (Repr :: Ternary { trits : * m }) , Ty :: Ternary (crate :: checkty :: Width :: Var (_)) => return None , Ty :: Dense (d , s) => FieldSpec :: Repr (Repr :: Dense { dim : * d , dtype : scalar_kind (* s) , }) , Ty :: Vsa { model , dim , sparsity , } => FieldSpec :: Repr (Repr :: Vsa { model : model . clone () , dim : * dim , sparsity : sparsity_class (sparsity) , }) , Ty :: Seq (elem , n) => FieldSpec :: Repr (Repr :: Seq { elem : Box :: new (ty_to_repr (elem) ?) , len : * n , }) , Ty :: Bytes => FieldSpec :: Repr (Repr :: Bytes) , Ty :: Float => FieldSpec :: Repr (Repr :: Float { width : FloatWidth :: F64 , }) , Ty :: Data (n , args) if args . is_empty () => FieldSpec :: Data (n . clone ()) , Ty :: Data (_ , _) | Ty :: Var (_) => return None , Ty :: Substrate (_) => return None , Ty :: Fn (param , ret) => { let param = ty_to_field_ty_ref (param) ? ; let ret = ty_to_field_ty_ref (ret) ? ; FieldSpec :: Fn { arity : 1 , sig : FnSig { arity : 1 , params : vec ! [param] , ret : Box :: new (ret) , } , } } }) }",
+      "snippet": "# [doc = \" Convert a v0 field type to a registry [`FieldSpec`]; `None` for a type with no monomorphic r3\"] # [doc = \" value form. **Stage-1 (RFC-0007 §11.3):** a **generic instantiation** (`Data` with type arguments)\"] # [doc = \" or an **abstract type parameter** ([`Ty::Var`]) has no monomorphic registry form — its elaboration\"] # [doc = \" is *staged* (monomorphization is the M-657 follow-up). Returning `None` makes [`build_registry`]\"] # [doc = \" skip the owning declaration, so any *use* of a generic value surfaces as an explicit `Residual`\"] # [doc = \" (never a silent, half-monomorphized artifact — G2/VR-5).\"] # [doc = \"\"] # [doc = \" **`Ty::Fn` (ADR-033/DN-74, M-923).** A function-typed field lowers to the kernel\"] # [doc = \" [`FieldSpec::Fn`] primitive — Path A, the type-carrying full-signature encoding DN-74 ratified\"] # [doc = \" as the final FLAG-1 disposition (2026-07-02): the parameter type and the return type are each\"] # [doc = \" resolved to a [`FieldTyRef`] and folded into an [`FnSig`], so two `Fn`-typed fields with\"] # [doc = \" different signatures hash to **distinct** content addresses (the ADR-033 §10.1 same-arity\"] # [doc = \" collision is closed at the kernel level; `crates/mycelium-core/src/data.rs` §\\\"ADR-033 FLAG-1\"] # [doc = \" Path A\\\"). Curried multi-parameter arrows (`A => B => C`, M-822) compose naturally: each `Ty::Fn`\"] # [doc = \" contributes one parameter, with the return position recursing into a nested [`FieldTyRef::Fn`]\"] # [doc = \" for the remaining arrow — no separate multi-arity encoding needed. This replaces the former\"] # [doc = \" blanket `None` (staged `Residual`) for **concrete** signatures; a signature whose param/return\"] # [doc = \" resolves through a still-open type variable, an unresolved width, or a generic `Data`\"] # [doc = \" instantiation stays honestly staged (`ty_to_field_ty_ref` returns `None` for those leaves,\"] # [doc = \" narrowing — never eliminating — the residual, G2/VR-5).\"] # [doc = \"\"] # [doc = \" **Reachability note (honest scope, DN-74 new evidence).** `crate::mono`'s closure\"] # [doc = \" defunctionalization (RFC-0024 §4A/M-704) unconditionally rewrites every reachable `Ty::Fn` field\"] # [doc = \" into a closure tag-sum `Ty::Data` reference *before* [`elaborate`] ever calls [`build_registry`]\"] # [doc = \" — so through the standard `elaborate` entry point this arm is not reached (defunctionalization\"] # [doc = \" already produces a closed, executing L0 term for every such field, verified by the existing\"] # [doc = \" closures three-way differential). This `FieldSpec::Fn` lowering is exercised through\"] # [doc = \" [`build_registry`] called directly, and through [`elaborate_direct`] (below) — the narrow,\"] # [doc = \" additive entry point that targets the kernel primitive `elaborate` cannot reach without also\"] # [doc = \" changing `mono.rs`'s defunctionalization scope (out of this leaf's owned files).\"] pub (crate) fn field_spec (ty : & Ty) -> Option < FieldSpec > { Some (match ty { Ty :: Binary (crate :: checkty :: Width :: Lit (n)) => FieldSpec :: Repr (Repr :: Binary { width : * n }) , Ty :: Binary (crate :: checkty :: Width :: Var (_)) => return None , Ty :: Ternary (crate :: checkty :: Width :: Lit (m)) => FieldSpec :: Repr (Repr :: Ternary { trits : * m }) , Ty :: Ternary (crate :: checkty :: Width :: Var (_)) => return None , Ty :: Dense (d , s) => FieldSpec :: Repr (Repr :: Dense { dim : * d , dtype : scalar_kind (* s) , }) , Ty :: Vsa { model , dim , sparsity , } => FieldSpec :: Repr (Repr :: Vsa { model : model . clone () , dim : * dim , sparsity : sparsity_class (sparsity) , }) , Ty :: Seq (elem , n) => FieldSpec :: Repr (Repr :: Seq { elem : Box :: new (ty_to_repr (elem) ?) , len : * n , }) , Ty :: Bytes => FieldSpec :: Repr (Repr :: Bytes) , Ty :: Float => FieldSpec :: Repr (Repr :: Float { width : FloatWidth :: F64 , }) , Ty :: Data (n , args) if args . is_empty () => FieldSpec :: Data (n . clone ()) , Ty :: Data (_ , _) | Ty :: Var (_) => return None , Ty :: Substrate (_) => return None , Ty :: Fn (param , ret) => { let param = ty_to_field_ty_ref (param) ? ; let ret = ty_to_field_ty_ref (ret) ? ; FieldSpec :: Fn { arity : 1 , sig : FnSig { arity : 1 , params : vec ! [param] , ret : Box :: new (ret) , } , } } }) }",
       "reason": "match pattern constructor `Binary` collides with a Mycelium reserved word — emitting it verbatim would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5)",
       "item_name": "field_spec"
     },
     {
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 977,
+      "line": 987,
       "col": 1,
       "category": "ReservedWord",
       "rust_construct": "ReservedWord",
-      "snippet": "# [doc = \" Convert a **representation** [`Ty`] to its kernel [`Repr`] — the element-type resolver for a\"] # [doc = \" `Seq{T, N}` field (RFC-0032 D3). Returns `None` for any non-representation type (a `Data`/`Var`/\"] # [doc = \" `Fn` element has no monomorphic kernel repr in stage-1), so a `Seq` of such an element is itself\"] # [doc = \" staged (`field_spec` returns `None`) rather than half-elaborated (never a silent artifact —\"] # [doc = \" G2/VR-5).\"] fn ty_to_repr (ty : & Ty) -> Option < Repr > { Some (match ty { Ty :: Binary (crate :: checkty :: Width :: Lit (n)) => Repr :: Binary { width : * n } , Ty :: Binary (crate :: checkty :: Width :: Var (_)) => return None , Ty :: Ternary (crate :: checkty :: Width :: Lit (m)) => Repr :: Ternary { trits : * m } , Ty :: Ternary (crate :: checkty :: Width :: Var (_)) => return None , Ty :: Dense (d , s) => Repr :: Dense { dim : * d , dtype : scalar_kind (* s) , } , Ty :: Vsa { model , dim , sparsity , } => Repr :: Vsa { model : model . clone () , dim : * dim , sparsity : sparsity_class (sparsity) , } , Ty :: Seq (elem , n) => Repr :: Seq { elem : Box :: new (ty_to_repr (elem) ?) , len : * n , } , Ty :: Bytes => Repr :: Bytes , Ty :: Float => Repr :: Float { width : FloatWidth :: F64 , } , Ty :: Data (_ , _) | Ty :: Var (_) | Ty :: Substrate (_) | Ty :: Fn (_ , _) => return None , }) }",
+      "snippet": "# [doc = \" Convert a **representation** [`Ty`] to its kernel [`Repr`] — the element-type resolver for a\"] # [doc = \" `Seq{T, N}` field (RFC-0032 D3). Returns `None` for any non-representation type (a `Data`/`Var`/\"] # [doc = \" `Fn` element has no monomorphic kernel repr in stage-1), so a `Seq` of such an element is itself\"] # [doc = \" staged (`field_spec` returns `None`) rather than half-elaborated (never a silent artifact —\"] # [doc = \" G2/VR-5).\"] pub (crate) fn ty_to_repr (ty : & Ty) -> Option < Repr > { Some (match ty { Ty :: Binary (crate :: checkty :: Width :: Lit (n)) => Repr :: Binary { width : * n } , Ty :: Binary (crate :: checkty :: Width :: Var (_)) => return None , Ty :: Ternary (crate :: checkty :: Width :: Lit (m)) => Repr :: Ternary { trits : * m } , Ty :: Ternary (crate :: checkty :: Width :: Var (_)) => return None , Ty :: Dense (d , s) => Repr :: Dense { dim : * d , dtype : scalar_kind (* s) , } , Ty :: Vsa { model , dim , sparsity , } => Repr :: Vsa { model : model . clone () , dim : * dim , sparsity : sparsity_class (sparsity) , } , Ty :: Seq (elem , n) => Repr :: Seq { elem : Box :: new (ty_to_repr (elem) ?) , len : * n , } , Ty :: Bytes => Repr :: Bytes , Ty :: Float => Repr :: Float { width : FloatWidth :: F64 , } , Ty :: Data (_ , _) | Ty :: Var (_) | Ty :: Substrate (_) | Ty :: Fn (_ , _) => return None , }) }",
       "reason": "match pattern constructor `Binary` collides with a Mycelium reserved word — emitting it verbatim would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5)",
       "item_name": "ty_to_repr"
     },
     {
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 1015,
+      "line": 1025,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
-      "snippet": "# [doc = \" Convert a v0 type to a [`FieldTyRef`] — the leaf type a `Fn`-typed field's signature can hold\"] # [doc = \" (ADR-033 §10.2 Path A): a `Repr` leaf (via [`ty_to_repr`]), a *monomorphic* `Data` reference (by\"] # [doc = \" build-time name — resolved to a `ContentHash` at [`DataRegistry::build`] time, exactly like a\"] # [doc = \" top-level [`FieldSpec::Data`]), or a nested [`FieldTyRef::Fn`] for a higher-order/curried\"] # [doc = \" parameter or return. `None` for anything with no monomorphic form here — a generic `Data`\"] # [doc = \" instantiation, an unresolved [`Ty::Var`]/width, or [`Ty::Substrate`] (M-923; mirrors\"] # [doc = \" [`field_spec`]'s own staging: a signature leaf that cannot resolve keeps the *owning* `Fn`\"] # [doc = \" field staged, never a half-encoded signature — G2/VR-5).\"] fn ty_to_field_ty_ref (ty : & Ty) -> Option < FieldTyRef > { Some (match ty { Ty :: Data (n , args) if args . is_empty () => FieldTyRef :: Data (n . clone ()) , Ty :: Data (_ , _) | Ty :: Var (_) | Ty :: Substrate (_) => return None , Ty :: Fn (param , ret) => { let param = ty_to_field_ty_ref (param) ? ; let ret = ty_to_field_ty_ref (ret) ? ; FieldTyRef :: Fn (Box :: new (FnSig { arity : 1 , params : vec ! [param] , ret : Box :: new (ret) , })) } _ => FieldTyRef :: Repr (ty_to_repr (ty) ?) , }) }",
+      "snippet": "# [doc = \" Convert a v0 type to a [`FieldTyRef`] — the leaf type a `Fn`-typed field's signature can hold\"] # [doc = \" (ADR-033 §10.2 Path A): a `Repr` leaf (via [`ty_to_repr`]), a *monomorphic* `Data` reference (by\"] # [doc = \" build-time name — resolved to a `ContentHash` at [`DataRegistry::build`] time, exactly like a\"] # [doc = \" top-level [`FieldSpec::Data`]), or a nested [`FieldTyRef::Fn`] for a higher-order/curried\"] # [doc = \" parameter or return. `None` for anything with no monomorphic form here — a generic `Data`\"] # [doc = \" instantiation, an unresolved [`Ty::Var`]/width, or [`Ty::Substrate`] (M-923; mirrors\"] # [doc = \" [`field_spec`]'s own staging: a signature leaf that cannot resolve keeps the *owning* `Fn`\"] # [doc = \" field staged, never a half-encoded signature — G2/VR-5).\"] pub (crate) fn ty_to_field_ty_ref (ty : & Ty) -> Option < FieldTyRef > { Some (match ty { Ty :: Data (n , args) if args . is_empty () => FieldTyRef :: Data (n . clone ()) , Ty :: Data (_ , _) | Ty :: Var (_) | Ty :: Substrate (_) => return None , Ty :: Fn (param , ret) => { let param = ty_to_field_ty_ref (param) ? ; let ret = ty_to_field_ty_ref (ret) ? ; FieldTyRef :: Fn (Box :: new (FnSig { arity : 1 , params : vec ! [param] , ret : Box :: new (ret) , })) } _ => FieldTyRef :: Repr (ty_to_repr (ty) ?) , }) }",
       "reason": "match-arm guard (`if ...`) has no Mycelium equivalent (arm grammar has no guard slot)",
       "item_name": "ty_to_field_ty_ref"
-    },
-    {
-      "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 1042,
-      "col": 1,
-      "category": "ReservedWord",
-      "rust_construct": "ReservedWord",
-      "snippet": "# [doc = \" The `Scalar` → kernel `ScalarKind` mapping (shared with [`type_repr`]).\"] fn scalar_kind (s : Scalar) -> ScalarKind { match s { Scalar :: F16 => ScalarKind :: F16 , Scalar :: Bf16 => ScalarKind :: Bf16 , Scalar :: F32 => ScalarKind :: F32 , Scalar :: F64 => ScalarKind :: F64 , } }",
-      "reason": "match pattern constructor `F16` collides with a Mycelium reserved word — emitting it verbatim would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5)",
-      "item_name": "scalar_kind"
     },
     {
       "file": "crates/mycelium-l1/src/elab.rs",
@@ -318,13 +318,23 @@
       "col": 1,
       "category": "ReservedWord",
       "rust_construct": "ReservedWord",
-      "snippet": "# [doc = \" The surface `Sparsity` → kernel `SparsityClass` mapping (M-892; shared with [`type_repr`]).\"] fn sparsity_class (sp : & Sparsity) -> SparsityClass { match sp { Sparsity :: Dense => SparsityClass :: Dense , Sparsity :: Sparse (k) => SparsityClass :: Sparse { max_active : * k } , } }",
+      "snippet": "# [doc = \" The `Scalar` → kernel `ScalarKind` mapping (shared with [`type_repr`]).\"] pub (crate) fn scalar_kind (s : Scalar) -> ScalarKind { match s { Scalar :: F16 => ScalarKind :: F16 , Scalar :: Bf16 => ScalarKind :: Bf16 , Scalar :: F32 => ScalarKind :: F32 , Scalar :: F64 => ScalarKind :: F64 , } }",
+      "reason": "match pattern constructor `F16` collides with a Mycelium reserved word — emitting it verbatim would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5)",
+      "item_name": "scalar_kind"
+    },
+    {
+      "file": "crates/mycelium-l1/src/elab.rs",
+      "line": 1062,
+      "col": 1,
+      "category": "ReservedWord",
+      "rust_construct": "ReservedWord",
+      "snippet": "# [doc = \" The surface `Sparsity` → kernel `SparsityClass` mapping (M-892; shared with [`type_repr`]).\"] pub (crate) fn sparsity_class (sp : & Sparsity) -> SparsityClass { match sp { Sparsity :: Dense => SparsityClass :: Dense , Sparsity :: Sparse (k) => SparsityClass :: Sparse { max_active : * k } , } }",
       "reason": "match pattern constructor `Dense` collides with a Mycelium reserved word — emitting it verbatim would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5)",
       "item_name": "sparsity_class"
     },
     {
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 1060,
+      "line": 1070,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -334,7 +344,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 1073,
+      "line": 1083,
       "col": 1,
       "category": "GenericBound",
       "rust_construct": "GenericBound",
@@ -344,7 +354,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 1082,
+      "line": 1092,
       "col": 1,
       "category": "Impl",
       "rust_construct": "Impl",
@@ -354,7 +364,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 2205,
+      "line": 2215,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -364,7 +374,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 2240,
+      "line": 2250,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -373,5 +383,5 @@
       "item_name": "lit_key_to_value"
     }
   ],
-  "total_top_level_items": 37
+  "total_top_level_items": 38
 }

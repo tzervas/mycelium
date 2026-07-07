@@ -32,9 +32,9 @@
       "source_file": "crates/mycelium-std-fs/src/metadata.rs",
       "class": "CheckError",
       "exit_code": 3,
-      "diagnostic": "check-error: check error in `is_readonly`: unknown type `Permissions`",
+      "diagnostic": "check-error: check error in `is_readonly`: unknown function/constructor/prim `owner_write`",
       "non_test_items": 5,
-      "emitted_items": 2
+      "emitted_items": 4
     },
     {
       "myc_file": "gen/myc-drafts/stdlib/std-fs/options.myc",
@@ -43,7 +43,7 @@
       "exit_code": 0,
       "diagnostic": "",
       "non_test_items": 3,
-      "emitted_items": 0
+      "emitted_items": 1
     },
     {
       "myc_file": "gen/myc-drafts/stdlib/std-fs/path.myc",
@@ -65,8 +65,8 @@
     }
   ],
   "total_non_test_items": 53,
-  "total_emitted_items": 7,
-  "total_checked_clean_items": 5,
+  "total_emitted_items": 10,
+  "total_checked_clean_items": 6,
   "class_counts": {
     "CheckError": 1,
     "Clean": 6

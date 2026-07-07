@@ -19,7 +19,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" A read/write `hash ↔ name` registry (RFC-0001 §4.6 \\\"names-as-metadata\\\").\"] # [doc = \"\"] # [doc = \" Wraps the kernel's [`Names`] side-table. Names are pure metadata; binding or re-binding a name\"] # [doc = \" does not change a hash's identity. The module boundary is the spec §3 read-only surface\"] # [doc = \" (`resolve_name` / `names_of`); `bind` is exposed for constructing and populating a registry\"] # [doc = \" instance, which is a deliberate ergonomic affordance (spec §7-Q4).\"] # [doc = \"\"] # [doc = \" # FLAG: Q3\"] # [doc = \" The *ownership* of this registry (in `std.content` vs. the toolchain) is an open question\"] # [doc = \" (spec §7-Q3). See module-level docs.\"] # [derive (Debug , Clone , Default)] pub struct NameRegistry { inner : Names , }",
-      "reason": "struct `NameRegistry` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `NameRegistry` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "NameRegistry"
     },
     {

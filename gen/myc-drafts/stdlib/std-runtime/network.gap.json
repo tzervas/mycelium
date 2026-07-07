@@ -125,7 +125,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" Shared mutable state behind a `Sender`/`Receiver` pair.\"] struct ChannelInner < V > { buf : VecDeque < V > , capacity : usize , closed : bool , # [doc = \" The canonical channel identity, allocated once at construction.\"] channel_id : ChannelNodeId , }",
-      "reason": "struct `ChannelInner` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `ChannelInner` has a field type with no confirmed mapping (`usize` has a platform-dependent width; no fixed Binary{N} mapping)",
       "item_name": "ChannelInner"
     },
     {
@@ -155,7 +155,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" A named network of typed channels within a `Colony`.\"] # [doc = \"\"] # [doc = \" Guarantee: **Empirical** (Kahn-determinism, ADR-020 §4).\"] # [derive (Debug)] pub struct Network { _priv : () , }",
-      "reason": "struct `Network` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `Network` has a field type with no confirmed mapping (unit type `()` has no representable value in this grammar fragment)",
       "item_name": "Network"
     },
     {
@@ -185,7 +185,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" Sending end of a typed channel.\"] # [doc = \"\"] # [doc = \" SPSC by design: `Sender<V>` is not `Clone` (ADR-020 §4 / RFC-0008 §4.3 RT1).\"] # [doc = \"\"] # [doc = \" Guarantee: **Exact** (FIFO ordering within this channel; backed by `VecDeque`).\"] pub struct Sender < V > { inner : Arc < Mutex < ChannelInner < V > > > , }",
-      "reason": "struct `Sender` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `Sender` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "Sender"
     },
     {
@@ -215,7 +215,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" Receiving end of a typed channel.\"] # [doc = \"\"] # [doc = \" Guarantee: **Exact** (FIFO ordering within this channel; backed by `VecDeque`).\"] pub struct Receiver < V > { inner : Arc < Mutex < ChannelInner < V > > > , }",
-      "reason": "struct `Receiver` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `Receiver` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "Receiver"
     },
     {

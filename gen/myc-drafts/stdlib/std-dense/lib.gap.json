@@ -39,7 +39,7 @@
       "category": "PayloadVariant",
       "rust_construct": "PayloadVariant",
       "snippet": "# [doc = \" Errors from the `std.dense` capability surface (C1/G2: explicit typed errors, never sentinels).\"] # [doc = \"\"] # [doc = \" This is a superset of [`DenseError`] (from the `mycelium-dense` kernel): it adds\"] # [doc = \" `ZeroNorm` (for `cosine` on a zero-norm vector) and wraps kernel errors transparently.\"] # [derive (Debug , Clone , PartialEq)] pub enum StdDenseError { # [doc = \" Dimension mismatch: the input slice length does not match the space's `dim`.\"] # [doc = \"\"] # [doc = \" EXPLAIN: names the expected and actual length so the caller knows which check failed (C3).\"] LenMismatch { # [doc = \" The dimension the space requires.\"] expected : usize , # [doc = \" The actual slice length.\"] got : usize , } , # [doc = \" An element is not exactly representable on the declared dtype grid.\"] # [doc = \"\"] # [doc = \" EXPLAIN: names the dtype and element index so the caller knows which grid was violated (C3).\"] OffGrid { # [doc = \" The dtype whose grid was violated.\"] dtype : ScalarKind , # [doc = \" The index of the offending element.\"] index : usize , } , # [doc = \" `cosine` called on a zero-norm vector — the result is mathematically undefined.\"] # [doc = \"\"] # [doc = \" EXPLAIN: returned explicitly; never `NaN`, never `0.0` silently (C1/G2).\"] ZeroNorm , # [doc = \" A kernel-level error from `mycelium-dense` (propagated transparently).\"] Kernel (DenseError) , }",
-      "reason": "enum `StdDenseError` variant `LenMismatch` uses named fields — `constructor ::= Ident ('(' type_ref (',' type_ref)* ')')?` has no named-field/record form",
+      "reason": "enum `StdDenseError` variant `LenMismatch` has a field type with no confirmed mapping (`usize` has a platform-dependent width; no fixed Binary{N} mapping)",
       "item_name": "StdDenseError"
     },
     {
@@ -79,7 +79,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" A reified ε-bound artifact: the inspectable record of a float op's accuracy claim (C3/EXPLAIN;\"] # [doc = \" RFC-0001 §4.3 `Bound`; SC-3/G11).\"] # [doc = \"\"] # [doc = \" Every float op returns an `OpBound` carrying:\"] # [doc = \" - `eps`: the ε-bound magnitude in the norm `norm` (a *true upper bound*, A2-01),\"] # [doc = \" - `norm`: the norm kind (`Rel` for relative, `L2` for L2, etc.),\"] # [doc = \" - `strength`: the guarantee lattice tag (`Proven`/`Empirical`),\"] # [doc = \" - `basis`: the human-readable citation or fit description — the EXPLAIN artifact.\"] # [doc = \"\"] # [doc = \" The bound is always a *true upper bound* (not a round-to-nearest approximation) as required\"] # [doc = \" by the dev-workflow banked guard (A2-01): the stored `eps` is ≥ the mathematical value.\"] # [derive (Debug , Clone , PartialEq)] pub struct OpBound { # [doc = \" Error magnitude (ε ≥ 0, finite).\"] pub eps : f64 , # [doc = \" The norm in which `eps` is expressed.\"] pub norm : NormKind , # [doc = \" The lattice tag (`Proven`/`Empirical`; never `Exact` — `OpBound` is only issued for\"] # [doc = \" approximate ops).\"] pub strength : GuaranteeStrength , # [doc = \" The EXPLAIN artifact: citation or empirical-fit description.\"] pub basis : String , }",
-      "reason": "struct `OpBound` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `OpBound` has a field type with no confirmed mapping (`f64` — `scalar` only appears inside Dense{N,scalar}/ambient_params in the grammar, never as a bare value type; no confirmed base_type arm)",
       "item_name": "OpBound"
     },
     {
@@ -99,7 +99,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" One row of the guarantee matrix (§4 of `docs/spec/stdlib/dense.md`).\"] # [doc = \"\"] # [doc = \" Encoded as a struct so the matrix is a Rust constant — asserted in tests, never prose only\"] # [doc = \" (RFC-0016 §4.5).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct GuaranteeRow { # [doc = \" Operation name (matches the spec matrix op column).\"] pub op : & 'static str , # [doc = \" The lattice tag (the weakest of intrinsic + input tags).\"] pub tag : GuaranteeStrength , # [doc = \" Whether the op returns `Result` (fallible).\"] pub fallible : bool , # [doc = \" The explicit error variants when `fallible == true` (empty for total ops).\"] pub error_variants : & 'static [& 'static str] , # [doc = \" Whether the op exposes an inspectable bound artifact (C3/EXPLAIN).\"] pub explainable : bool , # [doc = \" Declared effects beyond pure computation (\\\"none\\\" = pure).\"] pub effects : & 'static str , }",
-      "reason": "struct `GuaranteeRow` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `GuaranteeRow` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
       "item_name": "GuaranteeRow"
     },
     {
@@ -169,7 +169,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" The ergonomic Ring-1 capability surface over a typed `Dense{dim, dtype}` space (M-518).\"] # [doc = \"\"] # [doc = \" `StdDense` wraps a [`DenseSpace`] and provides:\"] # [doc = \" - Typed constructors: [`zeros`](Self::zeros), [`full`](Self::full),\"] # [doc = \"   [`from_slice`](Self::from_slice)\"] # [doc = \" - Elementwise ops: [`add`](Self::add), [`sub`](Self::sub), [`neg`](Self::neg),\"] # [doc = \"   [`hadamard`](Self::hadamard), [`scale`](Self::scale), [`map`](Self::map)\"] # [doc = \" - Reductions: [`sum`](Self::sum), [`l1_norm`](Self::l1_norm), [`l2_norm`](Self::l2_norm)\"] # [doc = \" - Similarity: [`dot`](Self::dot), [`cosine`](Self::cosine)\"] # [doc = \"\"] # [doc = \" Float ops return their result alongside an [`OpBound`] artifact (C3/EXPLAIN).\"] # [doc = \"\"] # [doc = \" ## Usage\"] # [doc = \"\"] # [doc = \" ```rust\"] # [doc = \" use mycelium_std_dense::{StdDense, ScalarKind, GuaranteeStrength};\"] # [doc = \"\"] # [doc = \" let space = StdDense::new(4, ScalarKind::F32).unwrap();\"] # [doc = \" let a = space.from_slice(&[1.0_f64, 0.0, 0.0, 0.0]).unwrap();\"] # [doc = \" let b = space.from_slice(&[0.0_f64, 1.0, 0.0, 0.0]).unwrap();\"] # [doc = \" let (result, bound) = space.add(&a, &b).unwrap();\"] # [doc = \" assert_eq!(bound.strength, GuaranteeStrength::Proven);\"] # [doc = \" ```\"] # [derive (Debug)] pub struct StdDense { space : DenseSpace , }",
-      "reason": "struct `StdDense` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `StdDense` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "StdDense"
     },
     {

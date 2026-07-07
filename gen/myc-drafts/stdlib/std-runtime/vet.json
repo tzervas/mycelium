@@ -124,12 +124,12 @@
       "exit_code": 0,
       "diagnostic": "",
       "non_test_items": 12,
-      "emitted_items": 2
+      "emitted_items": 3
     }
   ],
   "total_non_test_items": 145,
-  "total_emitted_items": 18,
-  "total_checked_clean_items": 9,
+  "total_emitted_items": 19,
+  "total_checked_clean_items": 10,
   "class_counts": {
     "CheckError": 2,
     "Clean": 12

@@ -19,7 +19,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" One row in the guarantee matrix.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct GaugeRow { pub operation : & 'static str , pub strength : GuaranteeStrength , pub basis : & 'static str , }",
-      "reason": "struct `GaugeRow` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `GaugeRow` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
       "item_name": "GaugeRow"
     },
     {

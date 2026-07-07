@@ -59,7 +59,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" A reified **instance selection** (RFC-0019 §4.4; house rule #2 — no black boxes). When mono\"] # [doc = \" lowers a trait-method call to a direct call, it records *which* instance it picked: the trait, the\"] # [doc = \" concrete receiver type, and the mangled name of the emitted method function. The dispatch choice\"] # [doc = \" is thus programmatically inspectable (`EXPLAIN`-able), not hidden inside the rewrite.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct InstanceSelection { # [doc = \" The trait whose method was called.\"] pub trait_name : String , # [doc = \" The concrete receiver type the instance is `for` (the full type, not the head — e.g.\"] # [doc = \" `Binary{8}`, never just `Binary`).\"] pub for_ty : Ty , # [doc = \" The mangled name of the monomorphic function mono emitted for this instance's method (the\"] # [doc = \" direct callee the trait-method call was rewritten to — e.g. `cmp$Cmp$Binary8`).\"] pub impl_mangled : String , }",
-      "reason": "struct `InstanceSelection` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `InstanceSelection` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
       "item_name": "InstanceSelection"
     },
     {
@@ -69,7 +69,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" The **EXPLAIN record** of a monomorphization (M-673): every trait-method dispatch mono resolved,\"] # [doc = \" keyed by the mangled callee name (which itself encodes `(method, trait, receiver)`). Populated by\"] # [doc = \" [`monomorphize_with_selections`]; queryable so the dictionary-free static resolution is a\"] # [doc = \" reified, inspectable record rather than a black box (house rule #2).\"] # [doc = \"\"] # [doc = \" Extended in M-687 (RFC-0024 §4) to also record **HOF defunctionalization specializations**\"] # [doc = \" (`hof_specs`): each static HOF specialization — the source fn, its type args, its baked-in\"] # [doc = \" function arguments, and the mangled name — is recorded for full inspectability.\"] # [derive (Debug , Clone , Default , PartialEq , Eq)] pub struct MonoSelections { by_mangled : BTreeMap < String , InstanceSelection > , # [doc = \" HOF defunctionalization records (RFC-0024 §4, M-687): keyed by the mangled HOF\"] # [doc = \" specialization name (e.g. `map$Binary8$Binary8%1:double`).\"] pub (crate) hof_specs : BTreeMap < String , HofSpecialization > , # [doc = \" RFC-0024 §4A (M-704; house rule #2): per-closure lowering records, keyed by the generated\"] # [doc = \" constructor name (`Clo$<arrow>$<n>`) — the capture set + generated apply dispatcher.\"] pub (crate) closure_specs : BTreeMap < String , ClosureSpecialization > , }",
-      "reason": "struct `MonoSelections` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `MonoSelections` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
       "item_name": "MonoSelections"
     },
     {
@@ -149,7 +149,7 @@
       "category": "PayloadVariant",
       "rust_construct": "PayloadVariant",
       "snippet": "# [doc = \" A monomorphization work item — the unit of the dedup worklist. Deduplication is by the item's\"] # [doc = \" canonical [`item_key`] (a discriminant-tagged mangled string), so a `BTreeSet<String>` of seen\"] # [doc = \" keys guarantees each specialization is emitted **once** (dedup ⟹ the recursive walk terminates).\"] # [derive (Debug , Clone , PartialEq , Eq)] enum Item { # [doc = \" A function instance: the source fn `name` at concrete type arguments `targs` (empty for a\"] # [doc = \" monomorphic fn — which mangles to `name` unchanged), optionally specialised by resolved\"] # [doc = \" **function-argument** identities (RFC-0024 §4, M-687). `fn_args` carries `(param_index,\"] # [doc = \" callee_mangled_name)` for each value-parameter whose type is `Ty::Fn`; empty means no\"] # [doc = \" higher-order specialization. An `Item::Fn` with non-empty `fn_args` is a defunctionalized\"] # [doc = \" HOF specialization — distinct from the un-specialized (or differently-specialized) version\"] # [doc = \" of the same fn.\"] Fn { name : String , targs : Vec < Ty > , # [doc = \" Resolved width arguments in declaration order (DN-42 / M-753 step-c): one `Width::Lit`\"] # [doc = \" per width parameter of the callee. Baked into the item key so two calls at different\"] # [doc = \" widths produce distinct specializations (never a silent alias — G2/VR-5).\"] wargs : Vec < Width > , # [doc = \" `(param_index, callee_mangled_name)` for each fn-typed value parameter, sorted by\"] # [doc = \" param index (deterministic). Baked into the item key so two different function\"] # [doc = \" arguments produce two distinct specializations (never a silent alias — G2).\"] fn_args : Vec < (usize , String) > , # [doc = \" RFC-0024 §4A (M-704): `(param_index, arrow_mangle)` for each fn-typed value parameter\"] # [doc = \" that is **kept** as a dynamic closure value (it received a lambda or a dynamically-flowing\"] # [doc = \" fn value — §4's static resolution does not apply). Such a parameter stays in the emitted\"] # [doc = \" signature typed `Fn$<arrow>`; an application of it inside the body lowers to\"] # [doc = \" `apply$<arrow>(f, x)`. Sorted by index (deterministic), baked into the item key so a HOF\"] # [doc = \" specialized dynamically is distinct from its static (or un-)specialization (G2).\"] dyn_fns : Vec < (usize , String) > , } , # [doc = \" A data-type instance: the source type `name` at concrete `targs`.\"] Data { name : String , targs : Vec < Ty > } , # [doc = \" A trait-method instance: the unqualified method `method` of trait `trait_name`, resolved at the\"] # [doc = \" concrete receiver `for_ty` (the coherent instance's method, emitted as a direct fn).\"] Method { trait_name : String , method : String , for_ty : Ty , } , }",
-      "reason": "enum `Item` variant `Fn` uses named fields — `constructor ::= Ident ('(' type_ref (',' type_ref)* ')')?` has no named-field/record form",
+      "reason": "enum `Item` variant `Fn` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
       "item_name": "Item"
     },
     {
@@ -159,7 +159,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" The **EXPLAIN record** of a single HOF defunctionalization (RFC-0024 §4, M-687): which\"] # [doc = \" higher-order function was specialized, at which type arguments, with which function arguments\"] # [doc = \" baked in. Recorded in [`MonoSelections`] so the static dispatch is inspectable (house rule #2\"] # [doc = \" — no black boxes).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct HofSpecialization { # [doc = \" The source (polymorphic / HOF) function name.\"] pub source_fn : String , # [doc = \" The concrete type arguments (empty if the HOF was monomorphic).\"] pub targs : Vec < Ty > , # [doc = \" The resolved function argument(s): `(param_index, callee_mangled_name)`, parallel to the\"] # [doc = \" `fn_args` of the [`Item::Fn`] that triggered this specialization.\"] pub fn_args : Vec < (usize , String) > , # [doc = \" The mangled name of the emitted closed-first-order specialization.\"] pub mangled : String , }",
-      "reason": "struct `HofSpecialization` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `HofSpecialization` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
       "item_name": "HofSpecialization"
     },
     {
@@ -179,7 +179,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" RFC-0024 §4A.4 (M-704): one closure **tag-sum** for a single arrow type `A => B`. Accumulates a\"] # [doc = \" constructor per distinct escaping closure of that arrow (deduplicated by a content key), plus the\"] # [doc = \" arrow's concrete domain/codomain so [`Mono::finish`] can emit the sum's `DataInfo` and the\"] # [doc = \" `apply$A$B` dispatcher (`emit_data`/`emit_fn` — existing emitters; no new L0 node, KC-3).\"] # [derive (Debug , Clone)] struct ClosureSum { # [doc = \" The arrow's domain type `A` (concrete).\"] arrow_a : Ty , # [doc = \" The arrow's codomain type `B` (concrete).\"] arrow_b : Ty , # [doc = \" One constructor per distinct closure, in deterministic registration order.\"] ctors : Vec < ClosureCtor > , # [doc = \" Content-key → constructor index, for deduplication (two structurally identical closures of the\"] # [doc = \" same arrow share one constructor — the §4 identity-fragmentation discipline; G2).\"] by_key : BTreeMap < String , usize > , }",
-      "reason": "struct `ClosureSum` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `ClosureSum` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
       "item_name": "ClosureSum"
     },
     {
@@ -189,7 +189,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" RFC-0024 §4A.4 (M-704): one constructor of a closure tag-sum — a single escaping closure's\"] # [doc = \" captured environment + its (rewritten) body. The dispatcher arm binds the captures, binds the\"] # [doc = \" lambda's parameter to the dispatcher's argument, then evaluates the body.\"] # [derive (Debug , Clone)] struct ClosureCtor { # [doc = \" The constructor name (`Clo$<arrow>$<n>` — injective via the `$` joints; §4 mangling ground).\"] ctor_name : String , # [doc = \" The captured free variables, `(name, concrete type)`, in deterministic (first-occurrence)\"] # [doc = \" order. Empty for a captureless lambda or a bare named fn (a nullary constructor).\"] captures : Vec < (String , Ty) > , # [doc = \" The lambda's single parameter name (stage-1 single-arg — §4A.8 gates multi-arg on tuples).\"] param_name : String , # [doc = \" The (already-rewritten) lambda body. References the captures (bound by the dispatcher's match\"] # [doc = \" arm) and `param_name` (bound to the dispatcher's argument via a `Let`).\"] body : Expr , }",
-      "reason": "struct `ClosureCtor` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `ClosureCtor` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
       "item_name": "ClosureCtor"
     },
     {
@@ -199,7 +199,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" RFC-0024 §4A.6 (M-704; house rule #2): the EXPLAIN record of one closure lowering — which arrow,\"] # [doc = \" which captured variables, which generated constructor + dispatcher. Mirrors [`HofSpecialization`].\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct ClosureSpecialization { # [doc = \" The arrow mangle (`Fn$<A>$<B>`) this closure inhabits.\"] pub arrow : String , # [doc = \" The generated constructor name (`Clo$<arrow>$<n>`).\"] pub ctor_name : String , # [doc = \" The captured free variables, `(name, type-display)`, in capture order.\"] pub captures : Vec < (String , String) > , # [doc = \" The generated apply-dispatcher's name (`apply$<A>$<B>`).\"] pub apply_fn : String , }",
-      "reason": "struct `ClosureSpecialization` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `ClosureSpecialization` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
       "item_name": "ClosureSpecialization"
     },
     {

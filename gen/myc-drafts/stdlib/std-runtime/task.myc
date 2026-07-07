@@ -11,6 +11,9 @@
 // accompanying .gap.json for every construct this pass could not express.
 nodule std.runtime;
 
+// Context passed to a running task — carries cancellation signal and scope ref.
+type TaskCtx = TaskCtx(Bool);
+
 // Poll result for an async task step.
 type Poll[T] = Ready(T) | Pending;
 

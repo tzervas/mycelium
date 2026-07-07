@@ -54,7 +54,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" One row in the `std.fs` guarantee matrix (RFC-0016 §4.5 / spec §4).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct MatrixRow { # [doc = \" The exported operation or type.\"] pub op : & 'static str , # [doc = \" Guarantee tag (all `\\\"Exact\\\"` — see module-level justification).\"] pub guarantee : & 'static str , # [doc = \" Fallibility classification.\"] pub fallibility : Fallibility , # [doc = \" The explicit error / None-case description (empty for total ops).\"] pub error_set : & 'static str , # [doc = \" Declared effects.\"] pub effects : Effects , # [doc = \" Whether the op surfaces an RFC-0013 diagnostic record.\"] pub explainable : Explainable , # [doc = \" Whether the op reaches the OS syscall floor (`wild`? column, spec §4).\"] pub wild : Wild , }",
-      "reason": "struct `MatrixRow` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `MatrixRow` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
       "item_name": "MatrixRow"
     },
     {

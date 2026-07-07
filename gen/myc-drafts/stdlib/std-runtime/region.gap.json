@@ -124,7 +124,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" One value deferred for scope-exit reclamation within a [`Region`].\"] # [doc = \"\"] # [doc = \" Holds the content identity of the value to be reclaimed. The `ScopeExit` trigger and\"] # [doc = \" the `scope_id`/`sweep_epoch` are supplied at close time (from the region itself), not\"] # [doc = \" at deferral time — deferral is cheap (a single `ContentHash` push, no bookkeeping).\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — the hash is stored as-is; no approximation.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct DeferredEntry { # [doc = \" Content identity of the value deferred for reclamation (RFC-0027 §9 / RFC-0001 §4.6).\"] pub value_meta_hash : ContentHash , }",
-      "reason": "struct `DeferredEntry` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `DeferredEntry` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "DeferredEntry"
     },
     {
@@ -144,7 +144,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" A scope-exit reclamation region (DN-32 §2.3 / RFC-0027 §10.3 / MEM-3).\"] # [doc = \"\"] # [doc = \" One `Region` corresponds to one RT7 scope-tree node. It accumulates\"] # [doc = \" [`DeferredEntry`] values — values whose RC hit zero within this scope, or scope-local\"] # [doc = \" allocations — and at [`Region::close`] emits one [`ReclamationRecord`] per entry\"] # [doc = \" (trigger = `ScopeExit`) through a [`ReclamationSink`].\"] # [doc = \"\"] # [doc = \" ## Sweep order\"] # [doc = \"\"] # [doc = \" - **Parent–child TOTAL:** Close all child `Region`s before closing the parent.\"] # [doc = \"   The child's epoch will be numerically lower than the parent's (it closed first),\"] # [doc = \"   encoding the child→root ordering as a number line. The caller (the executor) is\"] # [doc = \"   responsible for this invariant; [`ScopeTree::close_ordered`] enforces it in tests.\"] # [doc = \"\"] # [doc = \" - **Siblings CONCURRENT (OQ-1 resolved, `Proven`-modulo-LR-9):** Sibling regions\"] # [doc = \"   close independently — no ordering constraint. Safe because LR-9 rules out\"] # [doc = \"   cross-sibling aliases (DN-32 §3).\"] # [doc = \"\"] # [doc = \" ## Never-silent contract (G2)\"] # [doc = \"\"] # [doc = \" Every [`DeferredEntry`] pushed via [`Region::defer`] emits exactly one\"] # [doc = \" `ReclamationRecord(ScopeExit)` when [`Region::close`] is called. A `Region` dropped\"] # [doc = \" without calling `close` while still holding deferred entries is a G2 violation; in\"] # [doc = \" debug builds [`Region::drop`] panics to surface this.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — one record per deferred entry at close (enforced-by-construction).\"] # [derive (Debug)] pub struct Region { # [doc = \" The unique identity of this region in the scope tree.\"] pub id : ScopeNodeId , # [doc = \" Deferred reclamation entries accumulated during this scope's lifetime.\"] deferred : Vec < DeferredEntry > , # [doc = \" The epoch assigned at close time. `None` until `close()` is called.\"] closed_epoch : Option < RegionEpoch > , }",
-      "reason": "struct `Region` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `Region` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "Region"
     },
     {
@@ -184,7 +184,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" Summary returned by [`Region::close`] — the audit-visible outcome of a scope-exit\"] # [doc = \" reclamation batch.\"] # [doc = \"\"] # [doc = \" Carries the region's identity, the epoch assigned at close time, and the count of\"] # [doc = \" deferred entries reclaimed. Useful for supervision observability, property tests, and\"] # [doc = \" the sweep-order assertion (child epoch < parent epoch).\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — all fields are deterministic functions of the close operation.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct ClosedRegion { # [doc = \" The identity of the closed region.\"] pub id : ScopeNodeId , # [doc = \" The monotonic epoch allocated at close time.\"] pub epoch : RegionEpoch , # [doc = \" The number of deferred entries reclaimed (one `ScopeExit` record emitted per entry).\"] pub reclaimed_count : usize , }",
-      "reason": "struct `ClosedRegion` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `ClosedRegion` has a field type with no confirmed mapping (`usize` has a platform-dependent width; no fixed Binary{N} mapping)",
       "item_name": "ClosedRegion"
     },
     {
@@ -194,7 +194,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" A minimal parent–child scope-tree for encoding and testing the sweep-order model\"] # [doc = \" (RFC-0027 §10.3 / DN-32 §3).\"] # [doc = \"\"] # [doc = \" `ScopeTree` holds one parent [`Region`] and zero or more child [`Region`]s. The correct\"] # [doc = \" close order (RT7) is: close all children before the parent. [`ScopeTree::close_ordered`]\"] # [doc = \" enforces this order. Siblings may close in any order — they are concurrent (OQ-1).\"] # [doc = \"\"] # [doc = \" This is NOT a full runtime scope tree; it is the minimal structure needed to encode and\"] # [doc = \" property-test the parent–child TOTAL and sibling-CONCURRENT ordering guarantees. Live\"] # [doc = \" executor integration is downstream (FLAG).\"] # [doc = \"\"] # [doc = \" Guarantee: `Declared` — the tree structure encodes the sweep order; epoch-ordering\"] # [doc = \" property (child < parent) is `Exact` by monotonic counter.\"] pub struct ScopeTree { # [doc = \" Child regions — independent siblings (closed before the parent, any order).\"] pub children : Vec < Region > , # [doc = \" The parent region — closed last.\"] pub parent : Region , }",
-      "reason": "struct `ScopeTree` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `ScopeTree` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "ScopeTree"
     },
     {

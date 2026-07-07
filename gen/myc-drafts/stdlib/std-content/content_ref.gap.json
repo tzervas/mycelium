@@ -41,7 +41,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" A typed, opaque content reference — a `(kind, hash)` pair that cert / policy / provenance /\"] # [doc = \" `spore` artifacts embed to designate a content-addressed target.\"] # [doc = \"\"] # [doc = \" Constructed via [`crate::as_ref`] (from a `ContentHash`) or directly via\"] # [doc = \" [`ContentRef::new`] when the kind is known at the call site.\"] # [derive (Debug , Clone , PartialEq , Eq , Hash , PartialOrd , Ord)] pub struct ContentRef { kind : RefKind , hash : ContentHash , }",
-      "reason": "struct `ContentRef` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `ContentRef` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "ContentRef"
     },
     {

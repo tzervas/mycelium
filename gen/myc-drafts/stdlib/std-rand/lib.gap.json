@@ -4,7 +4,8 @@
     "RandErr",
     "EntropyEffect",
     "RngAlgo",
-    "rotl64"
+    "rotl64",
+    "StubEntropy"
   ],
   "gaps": [
     {
@@ -94,7 +95,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" A seeded, deterministic generator **value** (spec §3).\"] # [doc = \"\"] # [doc = \" An `Rng` is an immutable value: `{ algo, state }`. Every draw returns the output **and**\"] # [doc = \" the advanced generator as a new value — the input generator is unchanged. Same\"] # [doc = \" `(seed, draw-sequence)` ⇒ same sequence of outputs (reproducibility is value-equality;\"] # [doc = \" C4 / ADR-003).\"] # [doc = \"\"] # [doc = \" The carried algorithm tag (`algo`) is the EXPLAIN artifact (C3): callers can inspect\"] # [doc = \" which PRNG produced a draw.\"] # [doc = \"\"] # [doc = \" No ambient global RNG; no interior mutability.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct Rng { # [doc = \" The PRNG algorithm (inspectable; C3).\"] pub algo : RngAlgo , # [doc = \" The 256-bit xoshiro256++ state as four `u64` words.\"] # [doc = \"\"] # [doc = \" Invariant: not all-zero (xoshiro256++ is invalid at state `[0,0,0,0]`).\"] state : [u64 ; 4] , }",
-      "reason": "struct `Rng` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `Rng` has a field type with no confirmed mapping (unsupported Rust type form `[u64 ; 4]`)",
       "item_name": "Rng"
     },
     {
@@ -301,10 +302,10 @@
       "file": "crates/mycelium-std-rand/src/lib.rs",
       "line": 671,
       "col": 1,
-      "category": "Struct",
-      "rust_construct": "Struct",
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
       "snippet": "# [doc = \" A deterministic, injectable [`EntropySource`] for tests.\"] # [doc = \"\"] # [doc = \" Fills buffers with a fixed counter-based pattern so the test suite exercises the full\"] # [doc = \" entropy-surface code path without any OS calls. This is **not** a source of real entropy\"] # [doc = \" and must not be used outside tests.\"] # [doc = \"\"] # [doc = \" FLAG (Q4 / §8-Q6): real OS entropy is in `std-sys` (M-541). This stub is the test seam.\"] pub struct StubEntropy { # [doc = \" The current counter byte value (wraps on overflow).\"] counter : u8 , }",
-      "reason": "struct `StubEntropy` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `StubEntropy` named field(s) `counter` emitted positionally as `StubEntropy(Binary{8})` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped (matches `lib/std/*.myc` hand-ports)",
       "item_name": "StubEntropy"
     },
     {
@@ -334,7 +335,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" One row of the `std.rand` guarantee matrix (RFC-0016 §4.5; rand.md §4).\"] # [doc = \"\"] # [doc = \" Encoded as data so tests can assert invariants — never prose-only (RFC-0016 §4.5).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct MatrixRow { # [doc = \" The exported operation name (spec §3).\"] pub op : & 'static str , # [doc = \" Honest guarantee tag on `Exact ⊐ Proven ⊐ Empirical ⊐ Declared` (C2 / VR-5).\"] pub tag : GuaranteeStrength , # [doc = \" Fallibility shape: `\\\"total\\\"` or the explicit error variant(s) (C1).\"] pub fallibility : & 'static str , # [doc = \" Declared effects: `\\\"none\\\"` for pure ops, `\\\"entropy\\\"` for entropy-drawing ops (C6).\"] pub effects : & 'static str , # [doc = \" Whether the op surfaces an inspectable EXPLAIN artifact (C3).\"] pub explainable : bool , }",
-      "reason": "struct `MatrixRow` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `MatrixRow` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
       "item_name": "MatrixRow"
     },
     {

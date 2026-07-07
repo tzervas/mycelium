@@ -4,9 +4,9 @@
       "file": "crates/mycelium-std-rand/src/lib.rs",
       "total_items": 35,
       "non_test_items": 34,
-      "emitted": 4,
+      "emitted": 5,
       "gaps": 36,
-      "expressible_pct": 11.76470588235294,
+      "expressible_pct": 14.705882352941178,
       "category_counts": {
         "DeriveAttr": 4,
         "GenericBound": 5,
@@ -14,9 +14,10 @@
         "Import": 1,
         "MacroInvocation": 1,
         "MultiStmtBody": 4,
+        "NamedFieldDrop": 1,
         "Other": 11,
         "ReservedWord": 1,
-        "Struct": 3,
+        "Struct": 2,
         "TestItem": 1,
         "Trait": 1
       }
@@ -25,9 +26,9 @@
   "totals": {
     "total_items": 35,
     "non_test_items": 34,
-    "emitted": 4,
+    "emitted": 5,
     "gaps": 36,
-    "expressible_pct": 11.76470588235294,
+    "expressible_pct": 14.705882352941178,
     "category_counts": {
       "DeriveAttr": 4,
       "GenericBound": 5,
@@ -35,9 +36,10 @@
       "Import": 1,
       "MacroInvocation": 1,
       "MultiStmtBody": 4,
+      "NamedFieldDrop": 1,
       "Other": 11,
       "ReservedWord": 1,
-      "Struct": 3,
+      "Struct": 2,
       "TestItem": 1,
       "Trait": 1
     }

@@ -37,7 +37,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" A typed, opaque content reference — a `(kind, hash)` pair that cert / policy / provenance /\"] # [doc = \" `spore` artifacts embed to designate a content-addressed target.\"] # [doc = \"\"] # [doc = \" Constructed via [`crate::as_ref`] (from a `ContentHash`) or directly via\"] # [doc = \" [`ContentRef::new`] when the kind is known at the call site.\"] # [derive (Debug , Clone , PartialEq , Eq , Hash , PartialOrd , Ord)] pub struct ContentRef { kind : RefKind , hash : ContentHash , }",
-      "reason": "struct `ContentRef` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `ContentRef` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "ContentRef"
     },
     {
@@ -97,7 +97,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" The content-address string is not well-formed (`<algo>:<digest>` shape; RFC-0001 §4.6).\"] # [doc = \"\"] # [doc = \" # C1 compliance\"] # [doc = \" [`crate::parse_ref`] returns `Err(MalformedDigest)` rather than a silently-coerced or\"] # [doc = \" zeroed digest (RFC-0016 §4.1 C1; G2 \\\"never-silent\\\").\"] # [doc = \"\"] # [doc = \" The `description` field carries a human-readable explanation of *why* the string is rejected,\"] # [doc = \" enabling callers to surface the error without stripping information (G11 dual projection).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct MalformedDigest { # [doc = \" The rejected input.\"] pub input : String , # [doc = \" Why the input was rejected (G11: a human-readable explanation for the caller to surface).\"] pub description : & 'static str , }",
-      "reason": "struct `MalformedDigest` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `MalformedDigest` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
       "item_name": "MalformedDigest"
     },
     {
@@ -167,7 +167,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" One row in the guarantee matrix (RFC-0016 §4.5).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct MatrixRow { # [doc = \" The exported operation name.\"] pub op : & 'static str , # [doc = \" Guarantee tag on `Exact ⊐ Proven ⊐ Empirical ⊐ Declared` (VR-5).\"] # [doc = \" All rows are `\\\"Exact\\\"` because content hashing is deterministic (spec §4).\"] pub guarantee : & 'static str , # [doc = \" Whether the op can fail and what the explicit error set is.\"] pub fallibility : Fallibility , # [doc = \" The explicit error / none-case description (empty string for total ops).\"] pub error_set : & 'static str , # [doc = \" Declared effects (C6). Empty string means no effects.\"] pub effects : & 'static str , # [doc = \" Whether the op has a C3 EXPLAIN obligation.\"] pub explainable : Explainable , }",
-      "reason": "struct `MatrixRow` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `MatrixRow` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
       "item_name": "MatrixRow"
     },
     {
@@ -387,7 +387,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" A read/write `hash ↔ name` registry (RFC-0001 §4.6 \\\"names-as-metadata\\\").\"] # [doc = \"\"] # [doc = \" Wraps the kernel's [`Names`] side-table. Names are pure metadata; binding or re-binding a name\"] # [doc = \" does not change a hash's identity. The module boundary is the spec §3 read-only surface\"] # [doc = \" (`resolve_name` / `names_of`); `bind` is exposed for constructing and populating a registry\"] # [doc = \" instance, which is a deliberate ergonomic affordance (spec §7-Q4).\"] # [doc = \"\"] # [doc = \" # FLAG: Q3\"] # [doc = \" The *ownership* of this registry (in `std.content` vs. the toolchain) is an open question\"] # [doc = \" (spec §7-Q3). See module-level docs.\"] # [derive (Debug , Clone , Default)] pub struct NameRegistry { inner : Names , }",
-      "reason": "struct `NameRegistry` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `NameRegistry` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "NameRegistry"
     },
     {
