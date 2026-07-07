@@ -806,6 +806,122 @@ unchanged (Draft)** — a ladder phase, enacts nothing further.
 
 ---
 
+### §8.14 M-1006 phase-4: String→`Bytes` lands the ladder's largest win; the operator ceiling is re-grounded to a *frozen-kernel* decision (kickoff `trx2` E-B, epic E33-1) — `Empirical`
+
+The next ladder increment (append-only — extends §8.13). Before-baseline is §8.13's after-state:
+**760 non-test items, 63 emitted (8.29%), 35 myc-check-clean (4.61%)**. This phase acts on §8.13's
+maintainer ruling ("both, parallel + coordinated; flag the kernel work"): it lands the one faithful
+transpiler lever whose grounding checked out (String→`Bytes`), and — via **verify-first oracle probes**
+before writing any code — finds the two remaining transpiler levers (operator emission, dup-name rename)
+have **zero corpus yield**, re-grounding the ceiling to the kernel/decision surface with concrete cited
+evidence.
+
+**Lever D2 — `String`/`str`/`&str` → `Bytes` (landed; resolves §8.13 decision #2).** §8.13 carried
+`String`/`str` as an open decision ("`Bytes` exists but is not confirmed a UTF-8 text type"). Grounding
+it via `tero` against **RFC-0033 §3.2** (`Repr::Bytes` is the *string/byte value with never-silent
+decode*, ratified — RFC-0033 Status Accepted; already decided by RFC-0032) resolves the hedge: `Bytes`
+**is** the dedicated UTF-8 text repr, so Rust `String`/`str`/`&str` map onto it faithfully under value
+semantics (ADR-003; `&str` erases to `str` via the §8.11 shared-reference arm, then maps). **Verify-first
+(the mandatory gate before wiring): a `Bytes`-typed record field, a `Bytes` param/return, and a `"…"`
+string literal typed `Bytes` all `myc check`-clean** — the type-position twin of the string-literal value
+emission the emitter already performs (`Lit::Str` → `StrLit`, M-910/M-911). `map_type` and its
+mirror `field_type_user_deps` updated in lockstep so a `String` field no longer withholds its struct.
+
+**Lever D3 — `Binary{N}` operator emission (probed; NOT built — zero yield).** §8.13 named this the
+highest-leverage lever. Verify-first oracle probing (real `myc check`, `Binary{32}` operands) mapped the
+actual surface before any wiring, and the result contradicts the "immediate win" framing (recorded per
+house rule #4). Two findings:
+
+*The infix operators the emitter currently writes verbatim almost all fail the checker.* They desugar to
+**bare** prim names, not the frozen `bin.*` prims:
+
+| Rust op | desugars to | `myc check` on `Binary{32}` | faithful invocable form (verified clean) |
+|---|---|---|---|
+| `+` `-` | `add` `sub` | prim exists, **rejects** `[Binary,Binary]` (T-Op) | `add_u`/`sub_u` (or `_s`) |
+| `*` | `mul` | rejects `[Binary,Binary]` | `mul_s` only — **no `mul_u`** |
+| `<<` `>>` | `shl` `shr` | **unknown prim** | `shl_u`/`shr_u` |
+| `/` `%` | `div` `rem` | **unknown prim** | `div_u`/`rem_u` (or `_s`) |
+| `&` `\|` | `band` `bor` | **unknown prim** | **none — no `band`/`bor` prim** |
+| `^` | (resolves) | `ok` | the one infix that checks |
+| `==` `<` | `eq` `lt` | returns **`Binary{1}`, not `Bool`** | (decision-gated) |
+| `!=` `>` | `ne` `gt` | **unknown prim** | (decision-gated) |
+| `&&` `\|\|` | `and` `or` | **rejects** `[Bool,Bool]` (T-Op) | (decision-gated) |
+
+*Zero corpus yield.* A grep of **every** emitted `.myc` fn body across all 17 targets finds **no body
+using any arithmetic/shift/bitwise operator** — the bodies that would use them are already gapped for
+other reasons (multi-statement blocks, method calls, unmappable receivers), so the operators never reach
+emission. Emitting the faithful surface calls (`add_u`/`shl_u`/…) would require **operand-type inference
+the transpiler does not have** (thread param/`self` `Binary{N}` widths through every `emit_expr` site) for
+**zero measured `checked` movement** on this corpus. Per YAGNI + VR-5 + the file-gating lesson, the
+inference machinery was **not built**; the finding is recorded and the real blocker is FLAGged below.
+
+**Lever D4 — inherent-impl duplicate-name rename (probed; NOT built — premise disproven).** §8.13
+estimated "+4 on `std-runtime/region`" from renaming its two `fn allocate`. Measurement disproves the
+premise: `region.myc`'s **both** `allocate` bodies (`ScopeNodeId`, `RegionEpoch`) call `fetch_add` — an
+unknown atomic prim — so the file stays poisoned regardless of the rename. The `duplicate function` error
+is a **co**-blocker, not the sole blocker; the rename yields nothing until atomics land. Recorded, not
+implemented.
+
+**Measured before → after (`Empirical`, union over all 17 targets, non-test denominator 760):**
+
+| Metric | Before (= §8.13 after) | After (D2) | Δ |
+|---|---:|---:|---:|
+| `expressible_fraction` (emitted) | 8.29% (63) | **11.45% (87)** | **+24 items** |
+| `checked_fraction` (myc-check-clean) | 4.61% (35) | **5.79% (44)** | **+9 items** |
+
+**+9 `checked`** is the **largest single-lever gain of the whole M-1006 ladder** (§8.11 +0, §8.12 +5,
+§8.13 +2, §8.14 **+9**) — String-field records unblocked across `std-content` (+2), `std-fs` (+3), and
+`std-runtime` (+2). The **+24 emitted / +9 checked** gap is the familiar **file-gating coupling**: 15 of
+the newly-emitted items (notably all of `std-io`'s +7) sit in files still poisoned by a *cross-file or
+out-of-phylum* referent, so they emit but do not check. Determinism verified (byte-identical rerun).
+
+**The re-grounded ceiling — transpiler-only levers are exhausted; the movers are kernel + phylum
+decisions.** The post-D2 poison map (from the regenerated per-file `vet.json`) shows **every** remaining
+`CheckError` file is blocked by something the transpiler cannot faithfully fix:
+
+| Blocker class | Concrete instances | Disposition |
+|---|---|---|
+| Out-of-phylum type reference | `ContentHash`, `Ty`, `Value`, `ScalarKind`, `GuaranteeTag`, `Source`, `Path` | phylum target-set (D5, below) |
+| Frozen-kernel prim absent | `band`/`bor`/`bxor` (bitwise, `rotate`), `fetch_add` (atomics) | kernel FLAG (D1, below) |
+| Decision-gated operator semantics | `ne`/`gt` unknown; `==`/`<`→`Binary{1}`≠`Bool`; `and`/`or` reject `Bool` | kernel/decision FLAG (D1) |
+| stdlib surface method absent | `to_owned`, `contains` | stdlib port (future wave) |
+
+**The decisions this ladder now needs (grounded; this note *records*, it does not decide).** §8.13's list
+is refined by this phase's evidence — decision #2 (String) is now **resolved** (D2), and #1 (operators) is
+re-grounded to a **frozen-kernel** question with a tension that must be surfaced honestly:
+
+1. **The `Binary{N}` bitwise/comparison prim gap is a *post-freeze kernel* decision, not free "prim-set
+   closure" (correcting §8.13 #1).** RFC-0033 **§4.1.2** (Status **Accepted**) mandates bitwise ops
+   ("Bitwise ops treat the value as an unsigned bitvector") — but the **frozen** kernel prim set is
+   `bin.{add,sub,mul,neg,div,div_s,rem,rem_s,shl,shr,shr_s}` (`crates/mycelium-interp/src/prims.rs`), which
+   has **no `band`/`bor`/`bxor`**. And **DN-56** is **Enacted** with **the kernel freeze declared** (M-969,
+   2026-07-02; §5.3: primitive set closed, Π = 38). So the §4.1.2 bitwise mandate is an **undischarged
+   spec obligation against an already-frozen kernel** — completing it is a **DN-39 default-DENY kernel
+   promotion** (DN-56 §6's post-freeze diff policy), *possibly* a `core 2.0.0` event, **not** the free
+   closure §8.13 assumed. Same class: the comparison prims `ne`/`gt`/`lte`/`gte`, the `==`/`<`→`Binary{1}`
+   vs `Bool` result-type question, and `and`/`or` refusing `Bool`. **DoD for the kernel task:** land
+   never-silent `bin.band`/`bin.bor`/`bin.bxor` (+ the comparison-to-`Bool` surface) with property +
+   conformance (accept/reject) green, via the DN-39 gate; that unblocks `rotate` (`std-rand`) and the
+   `Binary{N}` bit/compare bodies. **Cite:** RFC-0033 §4.1.2; DN-56 §5.3/§6 (Enacted, freeze); the landed
+   arithmetic/shift set M-887/M-889/M-766/M-767. *(Owner: kernel/Session-A — flagged up, not edited here;
+   the transpiler side lights up once the prims land, via the operand-type inference D3 deferred.)*
+2. **`mycelium_core` / kernel declarations target-set (D5 — the largest remaining transpiler-adjacent
+   lever).** The dominant residual class is out-of-phylum type references (`Value`, `ContentHash`, `Ty`,
+   `Path`, `Source`, `ScalarKind`, `GuaranteeTag`). A headers-only `core`/`compiler` nodule (decls only),
+   assembled with the target as one phylum and checked via the landed `--phylum` path (§8.12), would let
+   these resolve. Deferred from this phase (larger, and the phylum-vet wiring is not yet in the drafts
+   driver); recorded as the next wave's primary lever now that String no longer blocks the core decls that
+   carry text fields.
+3. **Inherent-impl duplicate-name auto-rename (FLAG-ast-5)** — unchanged from §8.13 #4, but now known to
+   be **co-blocked by atomics** on its only corpus instance (`std-runtime/region`), so it is *not* a
+   standalone win; bundle it with the kernel-atomics work.
+
+**Guarantee tags unchanged:** emission `Declared`; vet verdict `Empirical` (real `myc check`). **Status
+unchanged (Draft)** — a ladder phase, enacts nothing further; the kernel FLAG (#1) is *recorded for the
+DN-39/Session-A owner*, not enacted here (VR-5: no kernel edit, no prim fabricated).
+
+---
+
 ## Meta — changelog
 
 - **2026-06-25 — Created (Draft, advisory).** Captures the **Rust→Mycelium transpiler** strategy for
@@ -961,8 +1077,24 @@ unchanged (Draft)** — a ladder phase, enacts nothing further.
   `bin.band`/`bin.bor`/`bin.bxor`, so bit-or — and thus `rotate` — is inexpressible; separately, the
   transpiler emits raw `<<`/`+`/`&` operators (read as unknown `shl`/`add`/`band`, not `bin.*`) and bare
   integer literals have no `Binary{N}` type, so `Binary` arithmetic emission needs operand-type inference
-  + a typed-literal form — a design decision, not a faithful drop-in (not implemented, VR-5). Records four
+  plus a typed-literal form — a design decision, not a faithful drop-in (not implemented, VR-5). Records four
   grounded maintainer decisions (Binary arithmetic/bitwise prims + typed literals; String/text repr E18-1;
   `mycelium_core` declarations target-set; inherent-impl dup-name rename). Emission `Declared`, vet
+  `Empirical`. **Status unchanged (Draft)** — a ladder phase, enacts nothing further. (Append-only; VR-5;
+  G2.)
+- **2026-07-07 — §8.14 added: String→`Bytes` lands the ladder's largest win; the operator ceiling
+  re-grounds to a frozen-kernel decision (M-1006, kickoff `trx2` E33-1).** Acts on §8.13's ruling. Lands
+  **D2**: Rust `String`/`str`/`&str` → `Bytes`, grounded via `tero` to **RFC-0033 §3.2** (`Repr::Bytes` is
+  the ratified string/byte value with never-silent decode) and **verify-first** oracle-confirmed (a
+  `Bytes` field/param/return and a `"…"` literal all `myc check`-clean). Union over 17 targets (denom 760):
+  expressible 8.29% → **11.45%** (+24), checked 4.61% → **5.79%** (+9) — the **largest single-lever gain of
+  the ladder**, unblocking String-field records across `std-content`/`std-fs`/`std-runtime`; determinism
+  re-verified. **D3** (operator emission) and **D4** (dup-name rename) were **verify-first-probed and NOT
+  built** — a grep of all emitted bodies finds no operator use (D3 zero yield without speculative
+  operand-type inference), and `std-runtime/region`'s two `allocate` are co-blocked by the `fetch_add`
+  atomic (D4 premise disproven). Re-grounds §8.13 #1: the `Binary{N}` bitwise mandate (RFC-0033 §4.1.2,
+  Accepted) is **undischarged against an already-frozen kernel** (`bin.*` has no `band`/`bor`/`bxor`;
+  **DN-56** Enacted, freeze declared M-969, Π = 38), so completing it is a **DN-39 post-freeze promotion**,
+  not free closure — FLAGged as a kernel/Session-A task (not edited here). Emission `Declared`, vet
   `Empirical`. **Status unchanged (Draft)** — a ladder phase, enacts nothing further. (Append-only; VR-5;
   G2.)
