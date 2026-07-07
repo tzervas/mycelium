@@ -51775,7 +51775,7 @@
       "title": "semcore Stage-5 increment 3: checkty unification + type resolution (unify/resolve_ty/tuples)",
       "file": "tools/github/issues.yaml",
       "line": 13012,
-      "status": "todo",
+      "status": "done",
       "summary": "Minted 2026-07-07 from the M-993 staged-port plan (increment 3). Ports checkty.rs's next",
       "epic": "E18-1",
       "depends_on": [
@@ -51795,8 +51795,8 @@
       "id": "M-1009",
       "title": "semcore Stage-5 increment 4: mono name-mangling family (mangle_ty/decl/ctor/method/arrow)",
       "file": "tools/github/issues.yaml",
-      "line": 13040,
-      "status": "todo",
+      "line": 13047,
+      "status": "done",
       "summary": "Minted 2026-07-07 from the M-993 staged-port plan (increment 4). Ports mono.rs's name-mangling",
       "epic": "E18-1",
       "depends_on": [
@@ -51816,8 +51816,8 @@
       "id": "M-1010",
       "title": "semcore Stage-5 increment 5: mono free-variable + binder analysis (free_vars/pattern_binders)",
       "file": "tools/github/issues.yaml",
-      "line": 13072,
-      "status": "todo",
+      "line": 13085,
+      "status": "done",
       "summary": "Minted 2026-07-07 from the M-993 staged-port plan (increment 5). Ports mono.rs's free-variable",
       "epic": "E18-1",
       "depends_on": [
@@ -51837,7 +51837,7 @@
       "id": "M-1011",
       "title": "semcore Stage-5 increment 6: checkty literal + pattern typing (lit_ty_of/normalize_pattern/infer_type)",
       "file": "tools/github/issues.yaml",
-      "line": 13100,
+      "line": 13118,
       "status": "todo",
       "summary": "Minted 2026-07-07 from the M-993 staged-port plan (increment 6). Ports checkty.rs's literal and",
       "epic": "E18-1",
@@ -51858,7 +51858,7 @@
       "id": "M-1012",
       "title": "semcore Stage-5 increment 7: L0 Value/Repr model + elab pure lowering helpers",
       "file": "tools/github/issues.yaml",
-      "line": 13127,
+      "line": 13152,
       "status": "needs-design",
       "summary": "Minted 2026-07-07 from the M-993 staged-port plan (increment 7). Ports elab.rs's PURE lowering",
       "epic": "E18-1",
@@ -51879,7 +51879,7 @@
       "id": "M-1013",
       "title": "semcore Stage-5 heavy sequential core: checkty-logic -> elab -> mono -> eval -> fuse -> L0 differential",
       "file": "tools/github/issues.yaml",
-      "line": 13160,
+      "line": 13185,
       "status": "needs-design",
       "summary": "Minted 2026-07-07 from the M-993 staged-port plan (the heavy sequential-core tracker, increments",
       "epic": "E18-1",
@@ -51905,7 +51905,7 @@
       "id": "M-1014",
       "title": "M-1014 -- Optimize the heavy-check surface: safe concurrency/multicore + integration-tier scheduling (quality-first)",
       "file": "tools/github/issues.yaml",
-      "line": 13208,
+      "line": 13233,
       "status": "todo",
       "summary": "Minted 2026-07-07 (maintainer directive). Standing direction for the check/test",
       "doc_refs": [
@@ -51922,7 +51922,7 @@
       "id": "E39-1",
       "title": "E39-1 (epic) — the transparent memory substrate & agent knowledge API (DN-87; name TBD)",
       "file": "tools/github/issues.yaml",
-      "line": 13251,
+      "line": 13276,
       "status": "in-progress",
       "summary": "EPIC (DN-87, maintainer vision 2026-07-07; kickoff `mem`, stowed). Convert the project's",
       "epic": "E39",
@@ -51947,7 +51947,7 @@
       "id": "M-1015",
       "title": "M-1015 — Corpus ingestion + the deterministic structured index (Layer 1)",
       "file": "tools/github/issues.yaml",
-      "line": 13289,
+      "line": 13314,
       "status": "done",
       "summary": "Minted 2026-07-07 (DN-87 §4). Generalize the proven deterministic-index pattern",
       "epic": "E39-1",
@@ -51968,7 +51968,7 @@
       "id": "M-1016",
       "title": "M-1016 — Query engine + mandatory provenance (EXPLAIN-able retrieval)",
       "file": "tools/github/issues.yaml",
-      "line": 13332,
+      "line": 13357,
       "status": "todo",
       "summary": "Minted 2026-07-07 (DN-87 §4/§6). The query layer over Layer 1: structured queries (by id,",
       "epic": "E39-1",
@@ -51987,7 +51987,7 @@
       "id": "M-1017",
       "title": "M-1017 — API fronts (MCP + HTTP, token-scoped) + the cross-platform skill set",
       "file": "tools/github/issues.yaml",
-      "line": 13355,
+      "line": 13380,
       "status": "todo",
       "summary": "Minted 2026-07-07 (DN-87 §2.3). One core, two thin fronts: an MCP server (native tool",
       "epic": "E39-1",
@@ -52007,7 +52007,7 @@
       "id": "M-1018",
       "title": "M-1018 — The VSA semantic layer (Layer 2) + the Empirical eval gate",
       "file": "tools/github/issues.yaml",
-      "line": 13380,
+      "line": 13405,
       "status": "todo",
       "summary": "Minted 2026-07-07 (DN-87 §2.1/§6 -- the improved-on-RAG bet, honestly gated). Encode",
       "epic": "E39-1",
@@ -52029,7 +52029,7 @@
       "id": "M-1019",
       "title": "M-1019 — The Mycelium-lang package (phase-gated dogfood milestone)",
       "file": "tools/github/issues.yaml",
-      "line": 13409,
+      "line": 13434,
       "status": "blocked",
       "summary": "Minted 2026-07-07 (DN-87 §2.2). Port the engine's core to an actual Mycelium-lang package",
       "epic": "E39-1",
@@ -52055,13 +52055,24 @@
       "tag": "Empirical/Declared"
     },
     {
+      "anchor": "cl--m-1008-m-1009-m-1010-m-1011-partial-semcore-pure-leaf-port-wave-m-993-ladder-2026-07-07",
+      "family": "changelog",
+      "kind": "entry",
+      "id": "M-1008",
+      "title": "M-1008/M-1009/M-1010 + M-1011(partial) — semcore pure-leaf port wave (M-993 ladder) (2026-07-07)",
+      "file": "CHANGELOG.md",
+      "line": 14,
+      "summary": "M-1008/M-1009/M-1010 + M-1011(partial) — semcore pure-leaf port wave (M-993 ladder) (2026-07-07)",
+      "tag": "Empirical/Declared"
+    },
+    {
       "anchor": "cl--m-1015-docs-tero-index-the-whole-corpus-layer-1-citation-index-dn-87-e39-1-2026-07-07",
       "family": "changelog",
       "kind": "entry",
       "id": "M-1015",
       "title": "M-1015 — docs/tero-index/: the whole-corpus Layer-1 citation index (DN-87 / E39-1) (2026-07-07)",
       "file": "CHANGELOG.md",
-      "line": 14,
+      "line": 29,
       "summary": "M-1015 — docs/tero-index/: the whole-corpus Layer-1 citation index (DN-87 / E39-1) (2026-07-07)",
       "tag": "Empirical/Declared"
     },
@@ -52072,7 +52083,7 @@
       "id": "DN-87",
       "title": "mycelium-tero — DN-87 named; kickoff `mem` FIRED; the scaffold lands (2026-07-07)",
       "file": "CHANGELOG.md",
-      "line": 33,
+      "line": 48,
       "summary": "mycelium-tero — DN-87 named; kickoff `mem` FIRED; the scaffold lands (2026-07-07)",
       "tag": "Empirical/Declared"
     },
@@ -52083,7 +52094,7 @@
       "id": "DN-87",
       "title": "DN-87 — the transparent memory substrate & agent knowledge API captured; E39-1 + M-1015…M-1019 minted (2026-07-07)",
       "file": "CHANGELOG.md",
-      "line": 43,
+      "line": 58,
       "summary": "DN-87 — the transparent memory substrate & agent knowledge API captured; E39-1 + M-1015…M-1019 minted (2026-07-07)",
       "tag": "Empirical/Declared"
     },
@@ -52094,7 +52105,7 @@
       "id": "DN-85",
       "title": "DN-85 — the multi-language transpilation program + single-language full-stack goal (2026-07-06)",
       "file": "CHANGELOG.md",
-      "line": 62,
+      "line": 77,
       "summary": "DN-85 — the multi-language transpilation program + single-language full-stack goal (2026-07-06)",
       "tag": "Empirical/Declared"
     },
@@ -52105,7 +52116,7 @@
       "id": "DN-86",
       "title": "DN-86 — multi-language transpiler front-ends architecture (2026-07-06)",
       "file": "CHANGELOG.md",
-      "line": 76,
+      "line": 91,
       "summary": "DN-86 — multi-language transpiler front-ends architecture (2026-07-06)",
       "tag": "Empirical/Declared"
     },
@@ -52116,7 +52127,7 @@
       "id": "M-1006",
       "title": "M-1006 phase-1 — transpiler hardening against the DN-34 §8.9 gap worklist (2026-07-06)",
       "file": "CHANGELOG.md",
-      "line": 93,
+      "line": 108,
       "summary": "M-1006 phase-1 — transpiler hardening against the DN-34 §8.9 gap worklist (2026-07-06)",
       "tag": "Empirical/Declared"
     },
@@ -52126,7 +52137,7 @@
       "kind": "entry",
       "title": "Transpiler usage operationalized as skills — `/transpile-vet` + `/myc-drafts` (2026-07-06)",
       "file": "CHANGELOG.md",
-      "line": 110,
+      "line": 125,
       "summary": "Transpiler usage operationalized as skills — `/transpile-vet` + `/myc-drafts` (2026-07-06)",
       "tag": "Empirical/Declared"
     },
@@ -52137,7 +52148,7 @@
       "id": "M-1002",
       "title": "M-1002/M-1003 — gen/myc-drafts/: the vetted draft corpus over the full boot10 port surface (2026-07-06)",
       "file": "CHANGELOG.md",
-      "line": 121,
+      "line": 136,
       "summary": "M-1002/M-1003 — gen/myc-drafts/: the vetted draft corpus over the full boot10 port surface (2026-07-06)",
       "tag": "Empirical/Declared"
     },
@@ -52148,7 +52159,7 @@
       "id": "M-1000",
       "title": "M-1000/M-1001 — the transpile → myc-check vet loop + top gap-class closure; M-991 assessed (2026-07-06)",
       "file": "CHANGELOG.md",
-      "line": 136,
+      "line": 151,
       "summary": "M-1000/M-1001 — the transpile → myc-check vet loop + top gap-class closure; M-991 assessed (2026-07-06)",
       "tag": "Empirical/Declared"
     },
@@ -52159,7 +52170,7 @@
       "id": "M-1004",
       "title": "M-1004/M-1005 — docs/lib-index/: the api-index analogue for the self-hosted `.myc` tree (2026-07-06)",
       "file": "CHANGELOG.md",
-      "line": 151,
+      "line": 166,
       "summary": "M-1004/M-1005 — docs/lib-index/: the api-index analogue for the self-hosted `.myc` tree (2026-07-06)",
       "tag": "Empirical/Declared"
     },
@@ -52170,7 +52181,7 @@
       "id": "M-996",
       "title": "M-996 — AOT env-machine TCO: tail frames elided, observably (maintainer-authorized) (2026-07-06)",
       "file": "CHANGELOG.md",
-      "line": 198,
+      "line": 213,
       "summary": "M-996 — AOT env-machine TCO: tail frames elided, observably (maintainer-authorized) (2026-07-06)",
       "tag": "Empirical/Declared"
     },
@@ -52181,7 +52192,7 @@
       "id": "M-995",
       "title": "M-995 — AOT env-machine value structural-sharing (the M-987 perf win on the AOT path) (2026-07-06)",
       "file": "CHANGELOG.md",
-      "line": 235,
+      "line": 250,
       "summary": "M-995 — AOT env-machine value structural-sharing (the M-987 perf win on the AOT path) (2026-07-06)",
       "tag": "Empirical/Declared"
     },
@@ -52192,7 +52203,7 @@
       "id": "M-994",
       "title": "M-994 fix (b) — O(1) `Data` clone via `Arc` structural sharing (M-987 ~n³→~n²; M-994 resolved) (2026-07-06)",
       "file": "CHANGELOG.md",
-      "line": 262,
+      "line": 277,
       "summary": "M-994 fix (b) — O(1) `Data` clone via `Arc` structural sharing (M-987 ~n³→~n²; M-994 resolved) (2026-07-06)",
       "tag": "Empirical/Declared"
     },
@@ -52203,7 +52214,7 @@
       "id": "M-994",
       "title": "M-994 fix (a) — widen L1 evaluator TCO through tail-transparent frames (M-986 closed) (2026-07-06)",
       "file": "CHANGELOG.md",
-      "line": 288,
+      "line": 303,
       "summary": "M-994 fix (a) — widen L1 evaluator TCO through tail-transparent frames (M-986 closed) (2026-07-06)",
       "tag": "Empirical/Declared"
     },
@@ -52214,7 +52225,7 @@
       "id": "M-740",
       "title": "M-740 Stage 5 (increment 1) — partial self-hosted `compiler.semcore` (2026-07-06)",
       "file": "CHANGELOG.md",
-      "line": 315,
+      "line": 330,
       "summary": "M-740 Stage 5 (increment 1) — partial self-hosted `compiler.semcore` (2026-07-06)",
       "tag": "Empirical/Declared"
     },
@@ -52225,7 +52236,7 @@
       "id": "M-740",
       "title": "M-740 Stage 4 — self-hosted SCC leaf nodules (substrate · totality · ambient) (2026-07-06)",
       "file": "CHANGELOG.md",
-      "line": 348,
+      "line": 363,
       "summary": "M-740 Stage 4 — self-hosted SCC leaf nodules (substrate · totality · ambient) (2026-07-06)",
       "tag": "Empirical/Declared"
     },
@@ -52236,7 +52247,7 @@
       "id": "M-740",
       "title": "M-740 Stage 3 — self-hosted AST vocabulary + parser (2026-07-05)",
       "file": "CHANGELOG.md",
-      "line": 394,
+      "line": 409,
       "summary": "M-740 Stage 3 — self-hosted AST vocabulary + parser (2026-07-05)",
       "tag": "Empirical/Declared"
     },
@@ -52247,7 +52258,7 @@
       "id": "M-740",
       "title": "M-740 Stage 2 — self-hosted nodule-header recogniser (2026-07-05)",
       "file": "CHANGELOG.md",
-      "line": 448,
+      "line": 463,
       "summary": "M-740 Stage 2 — self-hosted nodule-header recogniser (2026-07-05)",
       "tag": "Empirical/Declared"
     },
@@ -52257,7 +52268,7 @@
       "kind": "entry",
       "title": "Kickoff-corpus reconciliation (2026-07-05)",
       "file": "CHANGELOG.md",
-      "line": 474,
+      "line": 489,
       "summary": "Kickoff-corpus reconciliation (2026-07-05)",
       "tag": "Empirical/Declared"
     },
@@ -52268,7 +52279,7 @@
       "id": "RFC-0041",
       "title": "RFC-0041 promotion to `main` — recursion-depth safety Enacted with this landing (2026-07-05: M-978 · M-979 · M-959 · M-969 status reconcile)",
       "file": "CHANGELOG.md",
-      "line": 505,
+      "line": 520,
       "summary": "RFC-0041 promotion to `main` — recursion-depth safety Enacted with this landing (2026-07-05: M-978 · M-979 · M-959 · M-969 status reconcile)",
       "tag": "Empirical/Declared"
     },
@@ -52279,7 +52290,7 @@
       "id": "RFC-0041",
       "title": "RFC-0041 W7 — Enacted-closure wave: the §9 DoD open items closed or honestly re-scoped (2026-07-03: M-979)",
       "file": "CHANGELOG.md",
-      "line": 528,
+      "line": 543,
       "summary": "RFC-0041 W7 — Enacted-closure wave: the §9 DoD open items closed or honestly re-scoped (2026-07-03: M-979)",
       "tag": "Empirical/Declared"
     },
@@ -52290,7 +52301,7 @@
       "id": "RFC-0041",
       "title": "RFC-0041 W6 — data-spine iteration: the wide-tuple asymmetry documented (RFC-0041 Phase-4 COMPLETE) (2026-07-03: M-979)",
       "file": "CHANGELOG.md",
-      "line": 564,
+      "line": 579,
       "summary": "RFC-0041 W6 — data-spine iteration: the wide-tuple asymmetry documented (RFC-0041 Phase-4 COMPLETE) (2026-07-03: M-979)",
       "tag": "Empirical/Declared"
     },
@@ -52301,7 +52312,7 @@
       "id": "RFC-0041",
       "title": "RFC-0041 W4 — L0 reference-interpreter budgeted work-stack; the flagship `myc run` SIGABRT closed (2026-07-03: M-979)",
       "file": "CHANGELOG.md",
-      "line": 596,
+      "line": 611,
       "summary": "RFC-0041 W4 — L0 reference-interpreter budgeted work-stack; the flagship `myc run` SIGABRT closed (2026-07-03: M-979)",
       "tag": "Empirical/Declared"
     },
@@ -52312,7 +52323,7 @@
       "id": "RFC-0041",
       "title": "RFC-0041 W3+W5 — frozen-core iterative destruction, L1-eval CEK machine, TCO, eval raise (2026-07-03: M-979)",
       "file": "CHANGELOG.md",
-      "line": 625,
+      "line": 640,
       "summary": "RFC-0041 W3+W5 — frozen-core iterative destruction, L1-eval CEK machine, TCO, eval raise (2026-07-03: M-979)",
       "tag": "Empirical/Declared"
     },
@@ -52323,7 +52334,7 @@
       "id": "RFC-0041",
       "title": "RFC-0041 W3½ — AOT env-machine extraction onto the shared budget (2026-07-03: M-979)",
       "file": "CHANGELOG.md",
-      "line": 671,
+      "line": 686,
       "summary": "RFC-0041 W3½ — AOT env-machine extraction onto the shared budget (2026-07-03: M-979)",
       "tag": "Empirical/Declared"
     },
@@ -52334,7 +52345,7 @@
       "id": "RFC-0041",
       "title": "RFC-0041 W2 — host-stack grow, startup assertion, frame baseline (2026-07-03: M-979)",
       "file": "CHANGELOG.md",
-      "line": 693,
+      "line": 708,
       "summary": "RFC-0041 W2 — host-stack grow, startup assertion, frame baseline (2026-07-03: M-979)",
       "tag": "Empirical/Declared"
     },
@@ -52345,7 +52356,7 @@
       "id": "RFC-0041",
       "title": "RFC-0041 W1 — budget crate + frontend guard wiring (2026-07-03: M-979)",
       "file": "CHANGELOG.md",
-      "line": 722,
+      "line": 737,
       "summary": "RFC-0041 W1 — budget crate + frontend guard wiring (2026-07-03: M-979)",
       "tag": "Empirical/Declared"
     },
@@ -52356,7 +52367,7 @@
       "id": "RFC-0041",
       "title": "RFC-0041 W0 — recursion-depth safety net (gates + metric + census; 2026-07-03: M-979)",
       "file": "CHANGELOG.md",
-      "line": 766,
+      "line": 781,
       "summary": "RFC-0041 W0 — recursion-depth safety net (gates + metric + census; 2026-07-03: M-979)",
       "tag": "Empirical/Declared"
     },
@@ -52367,7 +52378,7 @@
       "id": "DN-84",
       "title": "DN-84 — dynamic host-stack + unified deterministic depth budget (2026-07-03: M-978 · M-979)",
       "file": "CHANGELOG.md",
-      "line": 797,
+      "line": 812,
       "summary": "DN-84 — dynamic host-stack + unified deterministic depth budget (2026-07-03: M-978 · M-979)",
       "tag": "Empirical/Declared"
     },
@@ -52378,7 +52389,7 @@
       "id": "ADR-041",
       "title": "Toolchain + dependency freshness: MSRV → 1.96.1, workspace deps refreshed (2026-07-03: ADR-041)",
       "file": "CHANGELOG.md",
-      "line": 811,
+      "line": 826,
       "summary": "Toolchain + dependency freshness: MSRV → 1.96.1, workspace deps refreshed (2026-07-03: ADR-041)",
       "tag": "Empirical/Declared"
     },
@@ -52389,7 +52400,7 @@
       "id": "M-976",
       "title": "Human-readable `.myc` formatting + `Vec` list literal (2026-07-03: M-976 · M-977)",
       "file": "CHANGELOG.md",
-      "line": 836,
+      "line": 851,
       "summary": "Human-readable `.myc` formatting + `Vec` list literal (2026-07-03: M-976 · M-977)",
       "tag": "Empirical/Declared"
     },
@@ -52400,7 +52411,7 @@
       "id": "M-969",
       "title": "Kernel freeze declared (2026-07-02: M-969 — the closing act of Phase-I)",
       "file": "CHANGELOG.md",
-      "line": 858,
+      "line": 873,
       "summary": "Kernel freeze declared (2026-07-02: M-969 — the closing act of Phase-I)",
       "tag": "Empirical/Declared"
     },
@@ -52410,7 +52421,7 @@
       "kind": "entry",
       "title": "Added / Changed / Fixed (2026-07-02: `grm`/`frz` — lowering-surface close-out, mycfmt readable, transparency fixes)",
       "file": "CHANGELOG.md",
-      "line": 885,
+      "line": 900,
       "summary": "Added / Changed / Fixed (2026-07-02: `grm`/`frz` — lowering-surface close-out, mycfmt readable, transparency fixes)",
       "tag": "Empirical/Declared"
     },
@@ -52421,7 +52432,7 @@
       "id": "M-697",
       "title": "Added (2026-07-02: M-697 — language identity and full-surface syntax highlighting for `.myc`)",
       "file": "CHANGELOG.md",
-      "line": 932,
+      "line": 947,
       "summary": "Added (2026-07-02: M-697 — language identity and full-surface syntax highlighting for `.myc`)",
       "tag": "Empirical/Declared"
     },
@@ -52432,7 +52443,7 @@
       "id": "M-971",
       "title": "Fixed (2026-07-02: M-971 — DN-68 acyclic-deps regression, 12 to 0 violations; dev to integration close-out)",
       "file": "CHANGELOG.md",
-      "line": 971,
+      "line": 986,
       "summary": "Fixed (2026-07-02: M-971 — DN-68 acyclic-deps regression, 12 to 0 violations; dev to integration close-out)",
       "tag": "Empirical/Declared"
     },
@@ -52442,7 +52453,7 @@
       "kind": "entry",
       "title": "Added (2026-07-02: Phase-I H1 wave — enb enablers, opp ports, grm/frz dossiers; integration close-out)",
       "file": "CHANGELOG.md",
-      "line": 998,
+      "line": 1013,
       "summary": "Added (2026-07-02: Phase-I H1 wave — enb enablers, opp ports, grm/frz dossiers; integration close-out)",
       "tag": "Empirical/Declared"
     },
@@ -52452,7 +52463,7 @@
       "kind": "entry",
       "title": "Changed (2026-07-02: Phase-I H1 wave — decision dispositions and status transitions)",
       "file": "CHANGELOG.md",
-      "line": 1041,
+      "line": 1056,
       "summary": "Changed (2026-07-02: Phase-I H1 wave — decision dispositions and status transitions)",
       "tag": "Empirical/Declared"
     },
@@ -52462,7 +52473,7 @@
       "kind": "entry",
       "title": "Added (2026-07-02: kickoff `acy` — Phase-I H0 acyclic-deps hardening, integration close-out)",
       "file": "CHANGELOG.md",
-      "line": 1069,
+      "line": 1084,
       "summary": "Added (2026-07-02: kickoff `acy` — Phase-I H0 acyclic-deps hardening, integration close-out)",
       "tag": "Empirical/Declared"
     },
@@ -52473,7 +52484,7 @@
       "id": "ADR-038",
       "title": "Changed (2026-07-01: ADR-038 ratified — Accepted; FLAG-V1/V2 resolved)",
       "file": "CHANGELOG.md",
-      "line": 1116,
+      "line": 1131,
       "summary": "Changed (2026-07-01: ADR-038 ratified — Accepted; FLAG-V1/V2 resolved)",
       "tag": "Empirical/Declared"
     },
@@ -52484,7 +52495,7 @@
       "id": "ADR-038",
       "title": "Changed (2026-07-01: ADR-038 refinement — versioning axis + execution doctrine, still Proposed)",
       "file": "CHANGELOG.md",
-      "line": 1139,
+      "line": 1154,
       "summary": "Changed (2026-07-01: ADR-038 refinement — versioning axis + execution doctrine, still Proposed)",
       "tag": "Empirical/Declared"
     },
@@ -52495,7 +52506,7 @@
       "id": "ADR-038",
       "title": "Added (2026-07-01: ADR-038 Proposed — function-first release strategy + the road-to-1.0.0 umbrella roadmap)",
       "file": "CHANGELOG.md",
-      "line": 1163,
+      "line": 1178,
       "summary": "Added (2026-07-01: ADR-038 Proposed — function-first release strategy + the road-to-1.0.0 umbrella roadmap)",
       "tag": "Empirical/Declared"
     },
@@ -52506,7 +52517,7 @@
       "id": "M-873",
       "title": "Added (2026-07-01: M-873 follow-on — transpiler hardening: width_cast emission, batch mode, 8-twin union backlog)",
       "file": "CHANGELOG.md",
-      "line": 1197,
+      "line": 1212,
       "summary": "Added (2026-07-01: M-873 follow-on — transpiler hardening: width_cast emission, batch mode, 8-twin union backlog)",
       "tag": "Empirical/Declared"
     },
@@ -52517,7 +52528,7 @@
       "id": "M-873",
       "title": "Added (2026-07-01: M-873 — Rust→Mycelium transpiler PoC + prioritized surface-feature backlog)",
       "file": "CHANGELOG.md",
-      "line": 1220,
+      "line": 1235,
       "summary": "Added (2026-07-01: M-873 — Rust→Mycelium transpiler PoC + prioritized surface-feature backlog)",
       "tag": "Empirical/Declared"
     },
@@ -52528,7 +52539,7 @@
       "id": "M-872",
       "title": "Added (2026-07-01: M-872 — remote registry name@version immutability + dogfooding effort/usage assessment)",
       "file": "CHANGELOG.md",
-      "line": 1248,
+      "line": 1263,
       "summary": "Added (2026-07-01: M-872 — remote registry name@version immutability + dogfooding effort/usage assessment)",
       "tag": "Empirical/Declared"
     },
@@ -52539,7 +52550,7 @@
       "id": "ADR-037",
       "title": "Added (2026-07-01: ADR-037 / M-871 — remote spore registry: GHCR/OCI dense-map distribution + live dogfood)",
       "file": "CHANGELOG.md",
-      "line": 1266,
+      "line": 1281,
       "summary": "Added (2026-07-01: ADR-037 / M-871 — remote spore registry: GHCR/OCI dense-map distribution + live dogfood)",
       "tag": "Empirical/Declared"
     },
@@ -52550,7 +52561,7 @@
       "id": "M-870",
       "title": "Added (2026-07-01: M-870 — third-party attributions + NOTICE generation)",
       "file": "CHANGELOG.md",
-      "line": 1300,
+      "line": 1315,
       "summary": "Added (2026-07-01: M-870 — third-party attributions + NOTICE generation)",
       "tag": "Empirical/Declared"
     },
@@ -52561,7 +52572,7 @@
       "id": "M-363",
       "title": "Added (2026-07-01: M-363 follow-up — myc-doc BOOK output + a Podman/Docker docs container)",
       "file": "CHANGELOG.md",
-      "line": 1321,
+      "line": 1336,
       "summary": "Added (2026-07-01: M-363 follow-up — myc-doc BOOK output + a Podman/Docker docs container)",
       "tag": "Empirical/Declared"
     },
@@ -52572,7 +52583,7 @@
       "id": "M-865",
       "title": "Added (2026-07-01: M-865 — harness-level parallel AOT/JIT dispatch extending M-862's pure-arg batch)",
       "file": "CHANGELOG.md",
-      "line": 1367,
+      "line": 1382,
       "summary": "Added (2026-07-01: M-865 — harness-level parallel AOT/JIT dispatch extending M-862's pure-arg batch)",
       "tag": "Empirical/Declared"
     },
@@ -52583,7 +52594,7 @@
       "id": "M-864",
       "title": "Changed (2026-07-01: M-864 — persistent bounded work-stealing pool for the Scheduler, nested-safe submission)",
       "file": "CHANGELOG.md",
-      "line": 1402,
+      "line": 1417,
       "summary": "Changed (2026-07-01: M-864 — persistent bounded work-stealing pool for the Scheduler, nested-safe submission)",
       "tag": "Empirical/Declared"
     },
@@ -52594,7 +52605,7 @@
       "id": "ADR-036",
       "title": "Added (2026-07-01: ADR-036 — dogfooding and public-release strategy ratified)",
       "file": "CHANGELOG.md",
-      "line": 1467,
+      "line": 1482,
       "summary": "Added (2026-07-01: ADR-036 — dogfooding and public-release strategy ratified)",
       "tag": "Empirical/Declared"
     },
@@ -52605,7 +52616,7 @@
       "id": "ADR-035",
       "title": "Added (2026-07-01: Phase-2 ratification — ADR-035 T4 scope amendment + RFC-0033/ADR-025..028 ratification)",
       "file": "CHANGELOG.md",
-      "line": 1487,
+      "line": 1502,
       "summary": "Added (2026-07-01: Phase-2 ratification — ADR-035 T4 scope amendment + RFC-0033/ADR-025..028 ratification)",
       "tag": "Empirical/Declared"
     },
@@ -52616,7 +52627,7 @@
       "id": "M-863",
       "title": "Changed (2026-07-01: M-863 — AOT ratification act: RFC-0029 → Enacted, DN-15 → Resolved, E15-1/E25-1/E19-1 status flips)",
       "file": "CHANGELOG.md",
-      "line": 1523,
+      "line": 1538,
       "summary": "Changed (2026-07-01: M-863 — AOT ratification act: RFC-0029 → Enacted, DN-15 → Resolved, E15-1/E25-1/E19-1 status flips)",
       "tag": "Empirical/Declared"
     },
@@ -52626,7 +52637,7 @@
       "kind": "entry",
       "title": "Added (2026-07-01: Wave-1 — native-scheduler parallelism, dialect Dense/VSA, stdlib freeze, governance gates)",
       "file": "CHANGELOG.md",
-      "line": 1560,
+      "line": 1575,
       "summary": "Added (2026-07-01: Wave-1 — native-scheduler parallelism, dialect Dense/VSA, stdlib freeze, governance gates)",
       "tag": "Empirical/Declared"
     },
@@ -52636,7 +52647,7 @@
       "kind": "entry",
       "title": "Documentation (2026-07-01: README/docs decomposition — leaner landing pages, topic-split guides, accuracy pass)",
       "file": "CHANGELOG.md",
-      "line": 1619,
+      "line": 1634,
       "summary": "Documentation (2026-07-01: README/docs decomposition — leaner landing pages, topic-split guides, accuracy pass)",
       "tag": "Empirical/Declared"
     },
@@ -52647,7 +52658,7 @@
       "id": "E25-1",
       "title": "Added (2026-06-30: E25-1 staging-tier close-out — dynamic-VSA JIT, dialect Construct/Match/Swap, unified mutant-witnessed differential)",
       "file": "CHANGELOG.md",
-      "line": 1640,
+      "line": 1655,
       "summary": "Added (2026-06-30: E25-1 staging-tier close-out — dynamic-VSA JIT, dialect Construct/Match/Swap, unified mutant-witnessed differential)",
       "tag": "Empirical/Declared"
     },
@@ -52658,7 +52669,7 @@
       "id": "E25-1",
       "title": "Added (2026-06-30: E25-1 native-AOT full-coverage increments land — recursion, closures, Swap, Dense, VSA, trit.mul dialect)",
       "file": "CHANGELOG.md",
-      "line": 1689,
+      "line": 1704,
       "summary": "Added (2026-06-30: E25-1 native-AOT full-coverage increments land — recursion, closures, Swap, Dense, VSA, trit.mul dialect)",
       "tag": "Empirical/Declared"
     },
@@ -52669,7 +52680,7 @@
       "id": "RFC-0039",
       "title": "Added (2026-06-30: RFC-0039 — Native Dense & VSA Codegen, Accepted)",
       "file": "CHANGELOG.md",
-      "line": 1783,
+      "line": 1798,
       "summary": "Added (2026-06-30: RFC-0039 — Native Dense & VSA Codegen, Accepted)",
       "tag": "Empirical/Declared"
     },
@@ -52679,7 +52690,7 @@
       "kind": "entry",
       "title": "Fixed (2026-06-30: branch-guard PreToolUse hook — worktree resolution)",
       "file": "CHANGELOG.md",
-      "line": 1802,
+      "line": 1817,
       "summary": "Fixed (2026-06-30: branch-guard PreToolUse hook — worktree resolution)",
       "tag": "Empirical/Declared"
     },
@@ -52689,7 +52700,7 @@
       "kind": "entry",
       "title": "Added (2026-06-30: concurrent-PR pattern operationalized as parameterized skills — `/wave`, `/pr-land`, `/worktree-guard`)",
       "file": "CHANGELOG.md",
-      "line": 1814,
+      "line": 1829,
       "summary": "Added (2026-06-30: concurrent-PR pattern operationalized as parameterized skills — `/wave`, `/pr-land`, `/worktree-guard`)",
       "tag": "Empirical/Declared"
     },
@@ -52700,7 +52711,7 @@
       "id": "ADR-034",
       "title": "Changed (2026-06-30: ADR-034 — native AOT re-gated INTO `lang 1.0.0`)",
       "file": "CHANGELOG.md",
-      "line": 1837,
+      "line": 1852,
       "summary": "Changed (2026-06-30: ADR-034 — native AOT re-gated INTO `lang 1.0.0`)",
       "tag": "Empirical/Declared"
     },
@@ -52711,7 +52722,7 @@
       "id": "RFC-0038",
       "title": "Changed (2026-06-29: RFC-0038 ratified — `Proposed → Accepted`)",
       "file": "CHANGELOG.md",
-      "line": 1860,
+      "line": 1875,
       "summary": "Changed (2026-06-29: RFC-0038 ratified — `Proposed → Accepted`)",
       "tag": "Empirical/Declared"
     },
@@ -52722,7 +52733,7 @@
       "id": "RFC-0038",
       "title": "Changed (2026-06-29: RFC-0038 §8.8 — colony trust topology + #772 review fixes, M-849)",
       "file": "CHANGELOG.md",
-      "line": 1871,
+      "line": 1886,
       "summary": "Changed (2026-06-29: RFC-0038 §8.8 — colony trust topology + #772 review fixes, M-849)",
       "tag": "Empirical/Declared"
     },
@@ -52733,7 +52744,7 @@
       "id": "DN-65",
       "title": "Added (2026-06-29: DN-65 — scoped-PR decomposition & per-PR toolchain scoping workflow policy, M-848)",
       "file": "CHANGELOG.md",
-      "line": 1888,
+      "line": 1903,
       "summary": "Added (2026-06-29: DN-65 — scoped-PR decomposition & per-PR toolchain scoping workflow policy, M-848)",
       "tag": "Empirical/Declared"
     },
@@ -52744,7 +52755,7 @@
       "id": "RFC-0038",
       "title": "Changed (2026-06-29: RFC-0038 §8.4–§8.7 — enforcement granularity, scope resolution, and the deviation manifest, M-847)",
       "file": "CHANGELOG.md",
-      "line": 1901,
+      "line": 1916,
       "summary": "Changed (2026-06-29: RFC-0038 §8.4–§8.7 — enforcement granularity, scope resolution, and the deviation manifest, M-847)",
       "tag": "Empirical/Declared"
     },
@@ -52755,7 +52766,7 @@
       "id": "M-832",
       "title": "Added (2026-06-29: VSA proof-discovery — all three effective-`m` models + both Lean 4 and Liquid Haskell, M-832)",
       "file": "CHANGELOG.md",
-      "line": 1918,
+      "line": 1933,
       "summary": "Added (2026-06-29: VSA proof-discovery — all three effective-`m` models + both Lean 4 and Liquid Haskell, M-832)",
       "tag": "Empirical/Declared"
     },
@@ -52766,7 +52777,7 @@
       "id": "DN-64",
       "title": "Added (2026-06-29: DN-64 §7 maintainer dispositions — RFC-0038 inject-mode security axis, research/26+27 R&D records, VSA-bounds GPU experiment, M-827…M-846)",
       "file": "CHANGELOG.md",
-      "line": 1934,
+      "line": 1949,
       "summary": "Added (2026-06-29: DN-64 §7 maintainer dispositions — RFC-0038 inject-mode security axis, research/26+27 R&D records, VSA-bounds GPU experiment, M-827…M-846)",
       "tag": "Empirical/Declared"
     },
@@ -52777,7 +52788,7 @@
       "id": "M-822",
       "title": "Added (2026-06-29: serial-lane closeout — M-822 partial application, M-826 tuple type, M-823 or-patterns + R20-Q5, M-824 DN-54 design-pass, M-825 backbone)",
       "file": "CHANGELOG.md",
-      "line": 1972,
+      "line": 1987,
       "summary": "Added (2026-06-29: serial-lane closeout — M-822 partial application, M-826 tuple type, M-823 or-patterns + R20-Q5, M-824 DN-54 design-pass, M-825 backbone)",
       "tag": "Empirical/Declared"
     },
@@ -52788,7 +52799,7 @@
       "id": "DN-64",
       "title": "Added (2026-06-29: DN-64 — language-design synthesis exploration note, research aside)",
       "file": "CHANGELOG.md",
-      "line": 2004,
+      "line": 2019,
       "summary": "Added (2026-06-29: DN-64 — language-design synthesis exploration note, research aside)",
       "tag": "Empirical/Declared"
     },
@@ -52799,7 +52810,7 @@
       "id": "DN-57",
       "title": "Changed (2026-06-29: DN-57 → Enacted — delimiter semantics surface complete)",
       "file": "CHANGELOG.md",
-      "line": 2016,
+      "line": 2031,
       "summary": "Changed (2026-06-29: DN-57 → Enacted — delimiter semantics surface complete)",
       "tag": "Empirical/Declared"
     },
@@ -52810,7 +52821,7 @@
       "id": "M-819",
       "title": "Added (2026-06-29: next-wave — M-819 `mycfmt --flatten`, M-820 `myc --stream`, M-677 effect budgets, M-668 DN-63 R2 planning)",
       "file": "CHANGELOG.md",
-      "line": 2029,
+      "line": 2044,
       "summary": "Added (2026-06-29: next-wave — M-819 `mycfmt --flatten`, M-820 `myc --stream`, M-677 effect budgets, M-668 DN-63 R2 planning)",
       "tag": "Empirical/Declared"
     },
@@ -52821,7 +52832,7 @@
       "id": "M-818",
       "title": "Changed (2026-06-29: strm — M-818 mandatory `;` component terminator (DN-57); closes M-821)",
       "file": "CHANGELOG.md",
-      "line": 2073,
+      "line": 2088,
       "summary": "Changed (2026-06-29: strm — M-818 mandatory `;` component terminator (DN-57); closes M-821)",
       "tag": "Empirical/Declared"
     },
@@ -52832,7 +52843,7 @@
       "id": "DN-54",
       "title": "Added (2026-06-29: lwd — M-812-cont DN-54 `lower`/`derive` elaboration + KC-3 kernel-growth guard)",
       "file": "CHANGELOG.md",
-      "line": 2100,
+      "line": 2115,
       "summary": "Added (2026-06-29: lwd — M-812-cont DN-54 `lower`/`derive` elaboration + KC-3 kernel-growth guard)",
       "tag": "Empirical/Declared"
     },
@@ -52843,7 +52854,7 @@
       "id": "M-704",
       "title": "Added (2026-06-29: hof — M-704 dynamic higher-order functions / closures, RFC-0024 §4A)",
       "file": "CHANGELOG.md",
-      "line": 2126,
+      "line": 2141,
       "summary": "Added (2026-06-29: hof — M-704 dynamic higher-order functions / closures, RFC-0024 §4A)",
       "tag": "Empirical/Declared"
     },
@@ -52854,7 +52865,7 @@
       "id": "RFC-0020",
       "title": "Changed (2026-06-29: s10 — RFC-0020 carve-out enactment (M-707) + RFC-0030 grammar completeness (M-706))",
       "file": "CHANGELOG.md",
-      "line": 2157,
+      "line": 2172,
       "summary": "Changed (2026-06-29: s10 — RFC-0020 carve-out enactment (M-707) + RFC-0030 grammar completeness (M-706))",
       "tag": "Empirical/Declared"
     },
@@ -52865,7 +52876,7 @@
       "id": "M-664",
       "title": "Added (2026-06-28: srf — M-664 `consume` expression + inherent `impl T { … }` blocks)",
       "file": "CHANGELOG.md",
-      "line": 2183,
+      "line": 2198,
       "summary": "Added (2026-06-28: srf — M-664 `consume` expression + inherent `impl T { … }` blocks)",
       "tag": "Empirical/Declared"
     },
@@ -52876,7 +52887,7 @@
       "id": "DN-58",
       "title": "Added (2026-06-28: prm wave — `fuse` (data) + `reclaim` EXECUTE three-way; DN-58 → Enacted, M-710/M-817 done)",
       "file": "CHANGELOG.md",
-      "line": 2213,
+      "line": 2228,
       "summary": "Added (2026-06-28: prm wave — `fuse` (data) + `reclaim` EXECUTE three-way; DN-58 → Enacted, M-710/M-817 done)",
       "tag": "Empirical/Declared"
     },
@@ -52887,7 +52898,7 @@
       "id": "DN-40",
       "title": "Changed (2026-06-28: `hrd` — DN-40 A1/A2/A3 doc-drift closure; code already landed, docs reconciled)",
       "file": "CHANGELOG.md",
-      "line": 2246,
+      "line": 2261,
       "summary": "Changed (2026-06-28: `hrd` — DN-40 A1/A2/A3 doc-drift closure; code already landed, docs reconciled)",
       "tag": "Empirical/Declared"
     },
@@ -52898,7 +52909,7 @@
       "id": "M-745",
       "title": "Added (2026-06-28: ops kickoff — M-745 angle/shift operators wired in `mycelium-l1`)",
       "file": "CHANGELOG.md",
-      "line": 2265,
+      "line": 2280,
       "summary": "Added (2026-06-28: ops kickoff — M-745 angle/shift operators wired in `mycelium-l1`)",
       "tag": "Empirical/Declared"
     },
@@ -52909,7 +52920,7 @@
       "id": "ADR-033",
       "title": "Added (2026-06-28: r4v + ADR-033 FLAG-1 integration wave — fuse/reclaim/tier L1 surface ACTIVE; ADR-033 full-sig encoding landed)",
       "file": "CHANGELOG.md",
-      "line": 2296,
+      "line": 2311,
       "summary": "Added (2026-06-28: r4v + ADR-033 FLAG-1 integration wave — fuse/reclaim/tier L1 surface ACTIVE; ADR-033 full-sig encoding landed)",
       "tag": "Empirical/Declared"
     },
@@ -52919,7 +52930,7 @@
       "kind": "entry",
       "title": "Added (2026-06-28: obj+low integration wave — `object`/`via` + `lower`/`derive` surface, Rust-first)",
       "file": "CHANGELOG.md",
-      "line": 2332,
+      "line": 2347,
       "summary": "Added (2026-06-28: obj+low integration wave — `object`/`via` + `lower`/`derive` surface, Rust-first)",
       "tag": "Empirical/Declared"
     },
@@ -52929,7 +52940,7 @@
       "kind": "entry",
       "title": "Added (2026-06-28: maintainer ratification — 8 design vehicles → Accepted, decisions recorded)",
       "file": "CHANGELOG.md",
-      "line": 2366,
+      "line": 2381,
       "summary": "Added (2026-06-28: maintainer ratification — 8 design vehicles → Accepted, decisions recorded)",
       "tag": "Empirical/Declared"
     },
@@ -52939,7 +52950,7 @@
       "kind": "entry",
       "title": "Older entries",
       "file": "CHANGELOG.md",
-      "line": 2377,
+      "line": 2392,
       "summary": "Older entries",
       "tag": "Empirical/Declared"
     },
