@@ -2,7 +2,11 @@
   "source": "crates/mycelium-std-io/src/error.rs",
   "emitted_items": [
     "ByteOffset",
+    "FieldPath",
+    "impl FieldPath",
+    "SerError",
     "ByteCount",
+    "IoError",
     "ReadValueError"
   ],
   "gaps": [
@@ -33,28 +37,28 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl fmt :: Display for ByteOffset { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { write ! (f , \"byte {}\" , self . 0) } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut fmt :: Formatter < '_ >`",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
       "item_name": "ByteOffset"
     },
     {
       "file": "crates/mycelium-std-io/src/error.rs",
       "line": 35,
       "col": 1,
-      "category": "Struct",
-      "rust_construct": "Struct",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "# [doc = \" A field path into a structured value, naming *where* inside a composite the\"] # [doc = \" failure was detected (C1/RFC-0013 I1). Encoded as a `/`-separated string of\"] # [doc = \" field names — e.g. `\\\"repr/width\\\"`, `\\\"meta/bound/delta\\\"`.\"] # [doc = \"\"] # [doc = \" This is the structural analogue of [`ByteOffset`] for grammar-structured failures\"] # [doc = \" where the byte position is less informative than the semantic path.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct FieldPath (pub String) ;",
-      "reason": "struct `FieldPath` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
+      "reason": "dropped non-doc attribute(s) on struct `FieldPath`: # [derive (Debug , Clone , PartialEq , Eq)]",
       "item_name": "FieldPath"
     },
     {
       "file": "crates/mycelium-std-io/src/error.rs",
       "line": 44,
       "col": 1,
-      "category": "Impl",
-      "rust_construct": "Impl",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "impl FieldPath { # [doc = \" Construct from a static description.\"] # [must_use] pub fn from_static (s : & 'static str) -> Self { FieldPath (s . to_owned ()) } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `from_static` signature: unsupported Rust type form `& 'static str`",
-      "item_name": "FieldPath"
+      "reason": "dropped non-doc attribute(s) on method `from_static`: # [must_use]",
+      "item_name": "impl FieldPath"
     },
     {
       "file": "crates/mycelium-std-io/src/error.rs",
@@ -63,17 +67,67 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl fmt :: Display for FieldPath { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { write ! (f , \"field path {}\" , self . 0) } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut fmt :: Formatter < '_ >`",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
       "item_name": "FieldPath"
     },
     {
       "file": "crates/mycelium-std-io/src/error.rs",
       "line": 60,
       "col": 1,
-      "category": "PayloadVariant",
-      "rust_construct": "PayloadVariant",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "# [doc = \" The explicit error set for (de)serialization failures (C1/RFC-0013; spec §3).\"] # [doc = \"\"] # [doc = \" Every variant carries a locus (byte offset or field path) so the caller can\"] # [doc = \" surface *where* the decode failed — never a locationless \\\"parse error\\\" (G2/C3).\"] # [doc = \" An overrun yields `BudgetExceeded`, never an OOM or a hang (C6/ADR-015).\"] # [doc = \"\"] # [doc = \" # C1 compliance\"] # [doc = \" No variant of `SerError` is a sentinel, a clamp, or a partial-result indicator.\"] # [doc = \" The presence of a `SerError` means the entire decode is rejected; the caller\"] # [doc = \" never receives a partially-filled `Value`.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum SerError { # [doc = \" The input ended before a complete value was decoded.\"] # [doc = \"\"] # [doc = \" `at` is the byte offset where the input terminated (the last byte\"] # [doc = \" successfully consumed before the truncation was detected).\"] Truncated { # [doc = \" Byte offset of the truncation.\"] at : ByteOffset , } , # [doc = \" The bytes at `at` do not conform to the wire/JSON grammar.\"] # [doc = \"\"] # [doc = \" `why` is a human-readable explanation of the grammar rule that was\"] # [doc = \" violated (G11 dual projection — machine-parseable in the tag, human-\"] # [doc = \" legible in the description).\"] Malformed { # [doc = \" Byte offset of the malformed datum.\"] at : ByteOffset , # [doc = \" Why the datum was rejected.\"] why : String , } , # [doc = \" An unrecognized `Repr`, constructor, or `Meta` tag was encountered at `path`.\"] # [doc = \"\"] # [doc = \" Carrying the rejected `tag` name enables the caller to log it and report\"] # [doc = \" it exactly (G11); an unknown tag is never silently skipped (C1/G2).\"] UnknownTag { # [doc = \" Structural path to the field that held the unknown tag.\"] path : FieldPath , # [doc = \" The unrecognized tag string.\"] tag : String , } , # [doc = \" A field decoded successfully but violates a value-model invariant (RFC-0001\"] # [doc = \" §4.3 — e.g. payload length ≠ repr width, bound delta ∉ \\\\[0,1\\\\]).\"] # [doc = \"\"] # [doc = \" The invariant name is carried in `why` so the caller can surface it.\"] OutOfDomain { # [doc = \" Structural path to the violating field.\"] path : FieldPath , # [doc = \" The violated invariant.\"] why : String , } , # [doc = \" A declared decode budget (depth limit, enumeration ceiling — ADR-015) was\"] # [doc = \" exceeded. `kind` names which budget: `\\\"depth\\\"`, `\\\"enum\\\"`, `\\\"alloc\\\"`, etc.\"] # [doc = \"\"] # [doc = \" An overrun is an explicit error, never a hang or an OOM (C6).\"] BudgetExceeded { # [doc = \" The budget kind that was exceeded (e.g. `\\\"depth\\\"`, `\\\"enum\\\"`).\"] kind : String , } , }",
-      "reason": "enum `SerError` variant `Truncated` uses named fields — `constructor ::= Ident ('(' type_ref (',' type_ref)* ')')?` has no named-field/record form",
+      "reason": "dropped non-doc attribute(s) on enum `SerError`: # [derive (Debug , Clone , PartialEq , Eq)]",
+      "item_name": "SerError"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/error.rs",
+      "line": 60,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" The explicit error set for (de)serialization failures (C1/RFC-0013; spec §3).\"] # [doc = \"\"] # [doc = \" Every variant carries a locus (byte offset or field path) so the caller can\"] # [doc = \" surface *where* the decode failed — never a locationless \\\"parse error\\\" (G2/C3).\"] # [doc = \" An overrun yields `BudgetExceeded`, never an OOM or a hang (C6/ADR-015).\"] # [doc = \"\"] # [doc = \" # C1 compliance\"] # [doc = \" No variant of `SerError` is a sentinel, a clamp, or a partial-result indicator.\"] # [doc = \" The presence of a `SerError` means the entire decode is rejected; the caller\"] # [doc = \" never receives a partially-filled `Value`.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum SerError { # [doc = \" The input ended before a complete value was decoded.\"] # [doc = \"\"] # [doc = \" `at` is the byte offset where the input terminated (the last byte\"] # [doc = \" successfully consumed before the truncation was detected).\"] Truncated { # [doc = \" Byte offset of the truncation.\"] at : ByteOffset , } , # [doc = \" The bytes at `at` do not conform to the wire/JSON grammar.\"] # [doc = \"\"] # [doc = \" `why` is a human-readable explanation of the grammar rule that was\"] # [doc = \" violated (G11 dual projection — machine-parseable in the tag, human-\"] # [doc = \" legible in the description).\"] Malformed { # [doc = \" Byte offset of the malformed datum.\"] at : ByteOffset , # [doc = \" Why the datum was rejected.\"] why : String , } , # [doc = \" An unrecognized `Repr`, constructor, or `Meta` tag was encountered at `path`.\"] # [doc = \"\"] # [doc = \" Carrying the rejected `tag` name enables the caller to log it and report\"] # [doc = \" it exactly (G11); an unknown tag is never silently skipped (C1/G2).\"] UnknownTag { # [doc = \" Structural path to the field that held the unknown tag.\"] path : FieldPath , # [doc = \" The unrecognized tag string.\"] tag : String , } , # [doc = \" A field decoded successfully but violates a value-model invariant (RFC-0001\"] # [doc = \" §4.3 — e.g. payload length ≠ repr width, bound delta ∉ \\\\[0,1\\\\]).\"] # [doc = \"\"] # [doc = \" The invariant name is carried in `why` so the caller can surface it.\"] OutOfDomain { # [doc = \" Structural path to the violating field.\"] path : FieldPath , # [doc = \" The violated invariant.\"] why : String , } , # [doc = \" A declared decode budget (depth limit, enumeration ceiling — ADR-015) was\"] # [doc = \" exceeded. `kind` names which budget: `\\\"depth\\\"`, `\\\"enum\\\"`, `\\\"alloc\\\"`, etc.\"] # [doc = \"\"] # [doc = \" An overrun is an explicit error, never a hang or an OOM (C6).\"] BudgetExceeded { # [doc = \" The budget kind that was exceeded (e.g. `\\\"depth\\\"`, `\\\"enum\\\"`).\"] kind : String , } , }",
+      "reason": "enum `SerError` variant `Truncated` named field(s) `at` emitted positionally as `Truncated(ByteOffset)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped",
+      "item_name": "SerError"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/error.rs",
+      "line": 60,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" The explicit error set for (de)serialization failures (C1/RFC-0013; spec §3).\"] # [doc = \"\"] # [doc = \" Every variant carries a locus (byte offset or field path) so the caller can\"] # [doc = \" surface *where* the decode failed — never a locationless \\\"parse error\\\" (G2/C3).\"] # [doc = \" An overrun yields `BudgetExceeded`, never an OOM or a hang (C6/ADR-015).\"] # [doc = \"\"] # [doc = \" # C1 compliance\"] # [doc = \" No variant of `SerError` is a sentinel, a clamp, or a partial-result indicator.\"] # [doc = \" The presence of a `SerError` means the entire decode is rejected; the caller\"] # [doc = \" never receives a partially-filled `Value`.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum SerError { # [doc = \" The input ended before a complete value was decoded.\"] # [doc = \"\"] # [doc = \" `at` is the byte offset where the input terminated (the last byte\"] # [doc = \" successfully consumed before the truncation was detected).\"] Truncated { # [doc = \" Byte offset of the truncation.\"] at : ByteOffset , } , # [doc = \" The bytes at `at` do not conform to the wire/JSON grammar.\"] # [doc = \"\"] # [doc = \" `why` is a human-readable explanation of the grammar rule that was\"] # [doc = \" violated (G11 dual projection — machine-parseable in the tag, human-\"] # [doc = \" legible in the description).\"] Malformed { # [doc = \" Byte offset of the malformed datum.\"] at : ByteOffset , # [doc = \" Why the datum was rejected.\"] why : String , } , # [doc = \" An unrecognized `Repr`, constructor, or `Meta` tag was encountered at `path`.\"] # [doc = \"\"] # [doc = \" Carrying the rejected `tag` name enables the caller to log it and report\"] # [doc = \" it exactly (G11); an unknown tag is never silently skipped (C1/G2).\"] UnknownTag { # [doc = \" Structural path to the field that held the unknown tag.\"] path : FieldPath , # [doc = \" The unrecognized tag string.\"] tag : String , } , # [doc = \" A field decoded successfully but violates a value-model invariant (RFC-0001\"] # [doc = \" §4.3 — e.g. payload length ≠ repr width, bound delta ∉ \\\\[0,1\\\\]).\"] # [doc = \"\"] # [doc = \" The invariant name is carried in `why` so the caller can surface it.\"] OutOfDomain { # [doc = \" Structural path to the violating field.\"] path : FieldPath , # [doc = \" The violated invariant.\"] why : String , } , # [doc = \" A declared decode budget (depth limit, enumeration ceiling — ADR-015) was\"] # [doc = \" exceeded. `kind` names which budget: `\\\"depth\\\"`, `\\\"enum\\\"`, `\\\"alloc\\\"`, etc.\"] # [doc = \"\"] # [doc = \" An overrun is an explicit error, never a hang or an OOM (C6).\"] BudgetExceeded { # [doc = \" The budget kind that was exceeded (e.g. `\\\"depth\\\"`, `\\\"enum\\\"`).\"] kind : String , } , }",
+      "reason": "enum `SerError` variant `Malformed` named field(s) `at, why` emitted positionally as `Malformed(ByteOffset, Bytes)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped",
+      "item_name": "SerError"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/error.rs",
+      "line": 60,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" The explicit error set for (de)serialization failures (C1/RFC-0013; spec §3).\"] # [doc = \"\"] # [doc = \" Every variant carries a locus (byte offset or field path) so the caller can\"] # [doc = \" surface *where* the decode failed — never a locationless \\\"parse error\\\" (G2/C3).\"] # [doc = \" An overrun yields `BudgetExceeded`, never an OOM or a hang (C6/ADR-015).\"] # [doc = \"\"] # [doc = \" # C1 compliance\"] # [doc = \" No variant of `SerError` is a sentinel, a clamp, or a partial-result indicator.\"] # [doc = \" The presence of a `SerError` means the entire decode is rejected; the caller\"] # [doc = \" never receives a partially-filled `Value`.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum SerError { # [doc = \" The input ended before a complete value was decoded.\"] # [doc = \"\"] # [doc = \" `at` is the byte offset where the input terminated (the last byte\"] # [doc = \" successfully consumed before the truncation was detected).\"] Truncated { # [doc = \" Byte offset of the truncation.\"] at : ByteOffset , } , # [doc = \" The bytes at `at` do not conform to the wire/JSON grammar.\"] # [doc = \"\"] # [doc = \" `why` is a human-readable explanation of the grammar rule that was\"] # [doc = \" violated (G11 dual projection — machine-parseable in the tag, human-\"] # [doc = \" legible in the description).\"] Malformed { # [doc = \" Byte offset of the malformed datum.\"] at : ByteOffset , # [doc = \" Why the datum was rejected.\"] why : String , } , # [doc = \" An unrecognized `Repr`, constructor, or `Meta` tag was encountered at `path`.\"] # [doc = \"\"] # [doc = \" Carrying the rejected `tag` name enables the caller to log it and report\"] # [doc = \" it exactly (G11); an unknown tag is never silently skipped (C1/G2).\"] UnknownTag { # [doc = \" Structural path to the field that held the unknown tag.\"] path : FieldPath , # [doc = \" The unrecognized tag string.\"] tag : String , } , # [doc = \" A field decoded successfully but violates a value-model invariant (RFC-0001\"] # [doc = \" §4.3 — e.g. payload length ≠ repr width, bound delta ∉ \\\\[0,1\\\\]).\"] # [doc = \"\"] # [doc = \" The invariant name is carried in `why` so the caller can surface it.\"] OutOfDomain { # [doc = \" Structural path to the violating field.\"] path : FieldPath , # [doc = \" The violated invariant.\"] why : String , } , # [doc = \" A declared decode budget (depth limit, enumeration ceiling — ADR-015) was\"] # [doc = \" exceeded. `kind` names which budget: `\\\"depth\\\"`, `\\\"enum\\\"`, `\\\"alloc\\\"`, etc.\"] # [doc = \"\"] # [doc = \" An overrun is an explicit error, never a hang or an OOM (C6).\"] BudgetExceeded { # [doc = \" The budget kind that was exceeded (e.g. `\\\"depth\\\"`, `\\\"enum\\\"`).\"] kind : String , } , }",
+      "reason": "enum `SerError` variant `UnknownTag` named field(s) `path, tag` emitted positionally as `UnknownTag(FieldPath, Bytes)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped",
+      "item_name": "SerError"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/error.rs",
+      "line": 60,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" The explicit error set for (de)serialization failures (C1/RFC-0013; spec §3).\"] # [doc = \"\"] # [doc = \" Every variant carries a locus (byte offset or field path) so the caller can\"] # [doc = \" surface *where* the decode failed — never a locationless \\\"parse error\\\" (G2/C3).\"] # [doc = \" An overrun yields `BudgetExceeded`, never an OOM or a hang (C6/ADR-015).\"] # [doc = \"\"] # [doc = \" # C1 compliance\"] # [doc = \" No variant of `SerError` is a sentinel, a clamp, or a partial-result indicator.\"] # [doc = \" The presence of a `SerError` means the entire decode is rejected; the caller\"] # [doc = \" never receives a partially-filled `Value`.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum SerError { # [doc = \" The input ended before a complete value was decoded.\"] # [doc = \"\"] # [doc = \" `at` is the byte offset where the input terminated (the last byte\"] # [doc = \" successfully consumed before the truncation was detected).\"] Truncated { # [doc = \" Byte offset of the truncation.\"] at : ByteOffset , } , # [doc = \" The bytes at `at` do not conform to the wire/JSON grammar.\"] # [doc = \"\"] # [doc = \" `why` is a human-readable explanation of the grammar rule that was\"] # [doc = \" violated (G11 dual projection — machine-parseable in the tag, human-\"] # [doc = \" legible in the description).\"] Malformed { # [doc = \" Byte offset of the malformed datum.\"] at : ByteOffset , # [doc = \" Why the datum was rejected.\"] why : String , } , # [doc = \" An unrecognized `Repr`, constructor, or `Meta` tag was encountered at `path`.\"] # [doc = \"\"] # [doc = \" Carrying the rejected `tag` name enables the caller to log it and report\"] # [doc = \" it exactly (G11); an unknown tag is never silently skipped (C1/G2).\"] UnknownTag { # [doc = \" Structural path to the field that held the unknown tag.\"] path : FieldPath , # [doc = \" The unrecognized tag string.\"] tag : String , } , # [doc = \" A field decoded successfully but violates a value-model invariant (RFC-0001\"] # [doc = \" §4.3 — e.g. payload length ≠ repr width, bound delta ∉ \\\\[0,1\\\\]).\"] # [doc = \"\"] # [doc = \" The invariant name is carried in `why` so the caller can surface it.\"] OutOfDomain { # [doc = \" Structural path to the violating field.\"] path : FieldPath , # [doc = \" The violated invariant.\"] why : String , } , # [doc = \" A declared decode budget (depth limit, enumeration ceiling — ADR-015) was\"] # [doc = \" exceeded. `kind` names which budget: `\\\"depth\\\"`, `\\\"enum\\\"`, `\\\"alloc\\\"`, etc.\"] # [doc = \"\"] # [doc = \" An overrun is an explicit error, never a hang or an OOM (C6).\"] BudgetExceeded { # [doc = \" The budget kind that was exceeded (e.g. `\\\"depth\\\"`, `\\\"enum\\\"`).\"] kind : String , } , }",
+      "reason": "enum `SerError` variant `OutOfDomain` named field(s) `path, why` emitted positionally as `OutOfDomain(FieldPath, Bytes)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped",
+      "item_name": "SerError"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/error.rs",
+      "line": 60,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" The explicit error set for (de)serialization failures (C1/RFC-0013; spec §3).\"] # [doc = \"\"] # [doc = \" Every variant carries a locus (byte offset or field path) so the caller can\"] # [doc = \" surface *where* the decode failed — never a locationless \\\"parse error\\\" (G2/C3).\"] # [doc = \" An overrun yields `BudgetExceeded`, never an OOM or a hang (C6/ADR-015).\"] # [doc = \"\"] # [doc = \" # C1 compliance\"] # [doc = \" No variant of `SerError` is a sentinel, a clamp, or a partial-result indicator.\"] # [doc = \" The presence of a `SerError` means the entire decode is rejected; the caller\"] # [doc = \" never receives a partially-filled `Value`.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum SerError { # [doc = \" The input ended before a complete value was decoded.\"] # [doc = \"\"] # [doc = \" `at` is the byte offset where the input terminated (the last byte\"] # [doc = \" successfully consumed before the truncation was detected).\"] Truncated { # [doc = \" Byte offset of the truncation.\"] at : ByteOffset , } , # [doc = \" The bytes at `at` do not conform to the wire/JSON grammar.\"] # [doc = \"\"] # [doc = \" `why` is a human-readable explanation of the grammar rule that was\"] # [doc = \" violated (G11 dual projection — machine-parseable in the tag, human-\"] # [doc = \" legible in the description).\"] Malformed { # [doc = \" Byte offset of the malformed datum.\"] at : ByteOffset , # [doc = \" Why the datum was rejected.\"] why : String , } , # [doc = \" An unrecognized `Repr`, constructor, or `Meta` tag was encountered at `path`.\"] # [doc = \"\"] # [doc = \" Carrying the rejected `tag` name enables the caller to log it and report\"] # [doc = \" it exactly (G11); an unknown tag is never silently skipped (C1/G2).\"] UnknownTag { # [doc = \" Structural path to the field that held the unknown tag.\"] path : FieldPath , # [doc = \" The unrecognized tag string.\"] tag : String , } , # [doc = \" A field decoded successfully but violates a value-model invariant (RFC-0001\"] # [doc = \" §4.3 — e.g. payload length ≠ repr width, bound delta ∉ \\\\[0,1\\\\]).\"] # [doc = \"\"] # [doc = \" The invariant name is carried in `why` so the caller can surface it.\"] OutOfDomain { # [doc = \" Structural path to the violating field.\"] path : FieldPath , # [doc = \" The violated invariant.\"] why : String , } , # [doc = \" A declared decode budget (depth limit, enumeration ceiling — ADR-015) was\"] # [doc = \" exceeded. `kind` names which budget: `\\\"depth\\\"`, `\\\"enum\\\"`, `\\\"alloc\\\"`, etc.\"] # [doc = \"\"] # [doc = \" An overrun is an explicit error, never a hang or an OOM (C6).\"] BudgetExceeded { # [doc = \" The budget kind that was exceeded (e.g. `\\\"depth\\\"`, `\\\"enum\\\"`).\"] kind : String , } , }",
+      "reason": "enum `SerError` variant `BudgetExceeded` named field(s) `kind` emitted positionally as `BudgetExceeded(Bytes)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped",
       "item_name": "SerError"
     },
     {
@@ -83,7 +137,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl fmt :: Display for SerError { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { match self { SerError :: Truncated { at } => write ! (f , \"truncated input at {at}\") , SerError :: Malformed { at , why } => write ! (f , \"malformed input at {at}: {why}\") , SerError :: UnknownTag { path , tag } => { write ! (f , \"unknown tag {tag:?} at {path}\") } SerError :: OutOfDomain { path , why } => { write ! (f , \"value out of domain at {path}: {why}\") } SerError :: BudgetExceeded { kind } => { write ! (f , \"decode budget exceeded ({kind})\") } } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut fmt :: Formatter < '_ >`",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
       "item_name": "SerError"
     },
     {
@@ -113,17 +167,47 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl fmt :: Display for ByteCount { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { write ! (f , \"{} bytes\" , self . 0) } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut fmt :: Formatter < '_ >`",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
       "item_name": "ByteCount"
     },
     {
       "file": "crates/mycelium-std-io/src/error.rs",
       "line": 157,
       "col": 1,
-      "category": "PayloadVariant",
-      "rust_construct": "PayloadVariant",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "# [doc = \" The explicit error set for byte-movement failures (C1/RFC-0013; spec §3).\"] # [doc = \"\"] # [doc = \" Every variant is a declared, inspectable failure mode — never a silent partial\"] # [doc = \" read (C1) and never a hang or OOM (C6).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum IoError { # [doc = \" The source/sink closed before the requested number of bytes were moved.\"] # [doc = \"\"] # [doc = \" `read` is the count of bytes that *were* moved before the EOF — enabling\"] # [doc = \" the caller to report the shortfall precisely (RFC-0013 I1).\"] UnexpectedEof { # [doc = \" Bytes successfully read before the EOF.\"] read : ByteCount , } , # [doc = \" The underlying substrate refused the operation.\"] # [doc = \"\"] # [doc = \" `why` carries the refusal reason (G11 dual projection); for the in-memory\"] # [doc = \" substrate this is always the explicit reason the substrate declined.\"] Refused { # [doc = \" Why the operation was refused.\"] why : String , } , # [doc = \" A bounded io/alloc effect budget was exceeded (RFC-0014 §4.5 / C6).\"] # [doc = \"\"] # [doc = \" `kind` names which budget: `\\\"io\\\"`, `\\\"alloc\\\"`, etc.\"] EffectBudget { # [doc = \" The budget kind that was exceeded.\"] kind : String , } , }",
-      "reason": "enum `IoError` variant `UnexpectedEof` uses named fields — `constructor ::= Ident ('(' type_ref (',' type_ref)* ')')?` has no named-field/record form",
+      "reason": "dropped non-doc attribute(s) on enum `IoError`: # [derive (Debug , Clone , PartialEq , Eq)]",
+      "item_name": "IoError"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/error.rs",
+      "line": 157,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" The explicit error set for byte-movement failures (C1/RFC-0013; spec §3).\"] # [doc = \"\"] # [doc = \" Every variant is a declared, inspectable failure mode — never a silent partial\"] # [doc = \" read (C1) and never a hang or OOM (C6).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum IoError { # [doc = \" The source/sink closed before the requested number of bytes were moved.\"] # [doc = \"\"] # [doc = \" `read` is the count of bytes that *were* moved before the EOF — enabling\"] # [doc = \" the caller to report the shortfall precisely (RFC-0013 I1).\"] UnexpectedEof { # [doc = \" Bytes successfully read before the EOF.\"] read : ByteCount , } , # [doc = \" The underlying substrate refused the operation.\"] # [doc = \"\"] # [doc = \" `why` carries the refusal reason (G11 dual projection); for the in-memory\"] # [doc = \" substrate this is always the explicit reason the substrate declined.\"] Refused { # [doc = \" Why the operation was refused.\"] why : String , } , # [doc = \" A bounded io/alloc effect budget was exceeded (RFC-0014 §4.5 / C6).\"] # [doc = \"\"] # [doc = \" `kind` names which budget: `\\\"io\\\"`, `\\\"alloc\\\"`, etc.\"] EffectBudget { # [doc = \" The budget kind that was exceeded.\"] kind : String , } , }",
+      "reason": "enum `IoError` variant `UnexpectedEof` named field(s) `read` emitted positionally as `UnexpectedEof(ByteCount)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped",
+      "item_name": "IoError"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/error.rs",
+      "line": 157,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" The explicit error set for byte-movement failures (C1/RFC-0013; spec §3).\"] # [doc = \"\"] # [doc = \" Every variant is a declared, inspectable failure mode — never a silent partial\"] # [doc = \" read (C1) and never a hang or OOM (C6).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum IoError { # [doc = \" The source/sink closed before the requested number of bytes were moved.\"] # [doc = \"\"] # [doc = \" `read` is the count of bytes that *were* moved before the EOF — enabling\"] # [doc = \" the caller to report the shortfall precisely (RFC-0013 I1).\"] UnexpectedEof { # [doc = \" Bytes successfully read before the EOF.\"] read : ByteCount , } , # [doc = \" The underlying substrate refused the operation.\"] # [doc = \"\"] # [doc = \" `why` carries the refusal reason (G11 dual projection); for the in-memory\"] # [doc = \" substrate this is always the explicit reason the substrate declined.\"] Refused { # [doc = \" Why the operation was refused.\"] why : String , } , # [doc = \" A bounded io/alloc effect budget was exceeded (RFC-0014 §4.5 / C6).\"] # [doc = \"\"] # [doc = \" `kind` names which budget: `\\\"io\\\"`, `\\\"alloc\\\"`, etc.\"] EffectBudget { # [doc = \" The budget kind that was exceeded.\"] kind : String , } , }",
+      "reason": "enum `IoError` variant `Refused` named field(s) `why` emitted positionally as `Refused(Bytes)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped",
+      "item_name": "IoError"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/error.rs",
+      "line": 157,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" The explicit error set for byte-movement failures (C1/RFC-0013; spec §3).\"] # [doc = \"\"] # [doc = \" Every variant is a declared, inspectable failure mode — never a silent partial\"] # [doc = \" read (C1) and never a hang or OOM (C6).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum IoError { # [doc = \" The source/sink closed before the requested number of bytes were moved.\"] # [doc = \"\"] # [doc = \" `read` is the count of bytes that *were* moved before the EOF — enabling\"] # [doc = \" the caller to report the shortfall precisely (RFC-0013 I1).\"] UnexpectedEof { # [doc = \" Bytes successfully read before the EOF.\"] read : ByteCount , } , # [doc = \" The underlying substrate refused the operation.\"] # [doc = \"\"] # [doc = \" `why` carries the refusal reason (G11 dual projection); for the in-memory\"] # [doc = \" substrate this is always the explicit reason the substrate declined.\"] Refused { # [doc = \" Why the operation was refused.\"] why : String , } , # [doc = \" A bounded io/alloc effect budget was exceeded (RFC-0014 §4.5 / C6).\"] # [doc = \"\"] # [doc = \" `kind` names which budget: `\\\"io\\\"`, `\\\"alloc\\\"`, etc.\"] EffectBudget { # [doc = \" The budget kind that was exceeded.\"] kind : String , } , }",
+      "reason": "enum `IoError` variant `EffectBudget` named field(s) `kind` emitted positionally as `EffectBudget(Bytes)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped",
       "item_name": "IoError"
     },
     {
@@ -133,7 +217,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl fmt :: Display for IoError { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { match self { IoError :: UnexpectedEof { read } => write ! (f , \"unexpected EOF after {read}\") , IoError :: Refused { why } => write ! (f , \"substrate refused: {why}\") , IoError :: EffectBudget { kind } => write ! (f , \"effect budget exceeded ({kind})\") , } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut fmt :: Formatter < '_ >`",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
       "item_name": "IoError"
     },
     {
@@ -163,7 +247,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl fmt :: Display for ReadValueError { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { match self { ReadValueError :: Io (e) => write ! (f , \"io error: {e}\") , ReadValueError :: Ser (e) => write ! (f , \"serialize error: {e}\") , } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut fmt :: Formatter < '_ >`",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
       "item_name": "ReadValueError"
     },
     {

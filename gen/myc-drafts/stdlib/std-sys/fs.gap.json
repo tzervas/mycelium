@@ -1,6 +1,8 @@
 {
   "source": "crates/mycelium-std-sys/src/fs.rs",
-  "emitted_items": [],
+  "emitted_items": [
+    "exists"
+  ],
   "gaps": [
     {
       "file": "crates/mycelium-std-sys/src/fs.rs",
@@ -29,7 +31,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" \\\\[Declared\\\\] Read the entire contents of a file at `path`.\"] # [doc = \"\"] # [doc = \" Returns `Err` on any OS error — never-silent (G2).\"] pub fn read (path : & Path) -> Result < Vec < u8 > , io :: Error > { std :: fs :: read (path) }",
-      "reason": "unsupported Rust type form `& Path`",
+      "reason": "qualified type path `io :: Error` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "read"
     },
     {
@@ -39,18 +41,8 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" \\\\[Declared\\\\] Write `contents` to a file at `path`, creating or truncating it.\"] # [doc = \"\"] # [doc = \" Returns `Err` on any OS error — never-silent (G2).\"] pub fn write (path : & Path , contents : & [u8]) -> Result < () , io :: Error > { std :: fs :: write (path , contents) }",
-      "reason": "unsupported Rust type form `& Path`",
+      "reason": "unsupported Rust type form `[u8]`",
       "item_name": "write"
-    },
-    {
-      "file": "crates/mycelium-std-sys/src/fs.rs",
-      "line": 29,
-      "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
-      "snippet": "# [doc = \" \\\\[Declared\\\\] Check whether a path exists on the filesystem.\"] # [doc = \"\"] # [doc = \" Returns `false` on any OS error (consistent with `std::path::Path::exists`).\"] # [doc = \" If distinguishing \\\"does not exist\\\" from \\\"permission denied\\\" is required, use\"] # [doc = \" `std::fs::metadata` directly.\"] pub fn exists (path : & Path) -> bool { path . exists () }",
-      "reason": "unsupported Rust type form `& Path`",
-      "item_name": "exists"
     },
     {
       "file": "crates/mycelium-std-sys/src/fs.rs",
@@ -59,7 +51,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" \\\\[Declared\\\\] Create a directory and all its parents.\"] # [doc = \"\"] # [doc = \" Returns `Err` on any OS error — never-silent (G2).\"] pub fn create_dir_all (path : & Path) -> Result < () , io :: Error > { std :: fs :: create_dir_all (path) }",
-      "reason": "unsupported Rust type form `& Path`",
+      "reason": "unit type `()` has no representable value in this grammar fragment",
       "item_name": "create_dir_all"
     },
     {
@@ -69,7 +61,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" \\\\[Declared\\\\] Remove a file.\"] # [doc = \"\"] # [doc = \" Returns `Err` on any OS error — never-silent (G2).\"] pub fn remove_file (path : & Path) -> Result < () , io :: Error > { std :: fs :: remove_file (path) }",
-      "reason": "unsupported Rust type form `& Path`",
+      "reason": "unit type `()` has no representable value in this grammar fragment",
       "item_name": "remove_file"
     },
     {

@@ -32,14 +32,27 @@ pub fn tokens_to_string<T: ToTokens>(node: &T) -> String {
 ///   so *signed* integers (`i8`.../`isize`) are intentionally NOT mapped here (would misrepresent
 ///   twos-complement semantics as an unsigned-magnitude representation); they are a gap.
 /// - `isize`/`usize` -> gap (platform-dependent width has no fixed `Binary{N}`).
-/// - `f32`/`f64`/`char`/`String`/`str` -> gap (no confirmed base_type arm for any of these in
-///   this grammar fragment; `scalar` only appears inside `Dense{N, scalar}`/`ambient_params`,
-///   never as a bare value type).
+/// - `f32`/`f64`/`char` -> gap (no confirmed base_type arm for any of these in this grammar
+///   fragment; `scalar` only appears inside `Dense{N, scalar}`/`ambient_params`, never as a bare
+///   value type).
+/// - `String`/`str`/`&str` -> `Bytes` (RFC-0033 §3.2: the dedicated, never-silent UTF-8 text repr;
+///   grammar `base_type` line 250; a `"…"` StrLit lowers to the same `Repr::Bytes` value form —
+///   checkty.rs:6669). Verified `myc check`-clean (DN-34 §8.14). `&str` is erased to `str` by the
+///   shared-reference arm below, then mapped.
 /// - `()` (unit) -> gap (no unit-value literal in the grammar's `literal`/`primary` productions).
 /// - an ordinary zero-argument named type (`Ordering`, a same-crate type, etc.) -> passed through
 ///   as-is via `base_type`'s `Ident type_args?` arm.
 /// - a tuple type of arity >= 2, all of whose elements map -> the grammar's tuple `type_ref` arm
 ///   (`'(' type_ref ',' type_ref (',' type_ref)* ')'`, M-826).
+/// - a **shared** reference `&T` / `&'a T` -> the referent's mapping (the reference is *erased*).
+///   Mycelium is value-semantic (ADR-003: no reference types; the grammar's `base_type`/`type_ref`
+///   has no `&` form), so a shared borrow denotes the same `T` as the value — the type-position twin
+///   of the reference-transparent erasure `emit.rs` already does on `&expr`/`&pat`, and how the
+///   hand-port writes Rust `&Ordering` params as value `Ordering` (`lib/std/cmp.myc`). A referent
+///   that itself has no mapping still gaps (its own precise reason surfaces — never a partial
+///   emission). A **mutable** reference `&mut T` is NOT erased -> gap (in-place mutation has no
+///   value-semantic correspondence — same stance as the `&mut self` receiver gap in
+///   `emit::map_signature`).
 /// - a single-segment named *generic application* (`Result<Duration, TimeErr>`, `Vec<u8>`,
 ///   `Option<T>`), all of whose angle-bracketed arguments are themselves mappable *types* ->
 ///   `Head[arg, …]` via `base_type ::= Ident type_args?` + `type_args ::= '[' type_ref (','
@@ -119,11 +132,17 @@ fn map_type_inner(ty: &Type, self_ty: Option<&str>) -> Result<String, GapReason>
                     Category::Other,
                     "`char` has no confirmed base_type arm in this grammar fragment",
                 )),
-                "String" | "str" => Err(GapReason::new(
-                    Category::Other,
-                    "`String`/`str` — `Bytes` exists in base_type but is not confirmed \
-                     equivalent to a UTF-8 text type",
-                )),
+                // RFC-0033 §3.2 (grounded via tero, DN-34 §8.14): `Bytes` is the language's
+                // *dedicated, never-silent UTF-8* text repr (grammar `base_type` line 250,
+                // "first-class byte string"; a `"…"` StrLit lowers to the same `Repr::Bytes` value
+                // form — checkty.rs:6669, M-910/M-911). So Rust `String`/`str` map onto `Bytes`
+                // faithfully: both denote an owned UTF-8 text value under value semantics (ADR-003),
+                // and the earlier "not confirmed equivalent" hedge is resolved by §3.2. Verified
+                // `myc check`-clean (a `Bytes`-typed field/param/return and a `"…"` literal all pass
+                // — DN-34 §8.14 verify-first). This is the type-position twin of the string-literal
+                // value emission `emit.rs` already performs (`Lit::Str` -> `StrLit`). Graded
+                // `Declared` like every row here (grammar-text- + oracle-verified, not proven).
+                "String" | "str" => Ok("Bytes".to_string()),
                 _ if matches!(seg.arguments, PathArguments::None) => {
                     // M-1001: an ordinary named type passed through as-is — but if its name is a
                     // Mycelium reserved word (e.g. a Rust type literally named `Binary`/`Float`), the
@@ -211,9 +230,99 @@ fn map_type_inner(ty: &Type, self_ty: Option<&str>) -> Result<String, GapReason>
             }
             Ok(format!("({})", parts.join(", ")))
         }
+        // A **shared** reference type `&T` / `&'a T` has no Mycelium reference-type surface — the
+        // grammar's `type_ref`/`base_type` (docs/spec/grammar/mycelium.ebnf §`base_type`) admits no
+        // `&` form, and Mycelium is value-semantic (ADR-003: there are no reference types). Under
+        // value semantics a shared borrow and the value it borrows denote the *same* `T`, so the
+        // reference is **erased** and its referent type mapped. This is the type-position analogue of
+        // the reference-transparent erasure `emit.rs` already performs on `&expr` (`Expr::Reference`)
+        // and `&pat` (`Pat::Reference`), and it is exactly how the hand-port renders Rust `&Ordering`
+        // params as value `Ordering` (`lib/std/cmp.myc`'s `fn cmp(a: Ordering, b: Ordering)` for the
+        // Rust `fn cmp(&self, other: &Ordering)`). The lifetime, if any, is erased with the reference
+        // (lifetimes have no grammar surface). Recurse through the *public* `map_type` so the
+        // recursion budget re-arms per level (same pattern as the tuple arm) — and a referent type
+        // that itself has no confirmed mapping propagates its own precise `GapReason` unchanged (`?`),
+        // never a partial emission (so `&str`/`&[u8]`/`&dyn T` surface their *referent's* real
+        // blocker, not the reference; VR-5/G2).
+        Type::Reference(r) if r.mutability.is_none() => map_type(&r.elem, self_ty),
+        // A **mutable** reference `&mut T` is NOT erased. In-place mutation through a `&mut` has no
+        // value-semantic correspondence (ADR-003) — the same stance the `&mut self` receiver already
+        // takes in `emit::map_signature` — so erasing it to a plain value type would silently drop
+        // the mutation. Left an explicit gap rather than a misrepresentation (VR-5/G2).
+        Type::Reference(_) => Err(GapReason::new(
+            Category::Other,
+            format!(
+                "`{}` is a mutable reference `&mut T` — in-place mutation through a borrow has no \
+                 value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it \
+                 is left an explicit gap rather than silently erased to a value type (VR-5)",
+                tokens_to_string(ty)
+            ),
+        )),
         _ => Err(GapReason::new(
             Category::Other,
             format!("unsupported Rust type form `{}`", tokens_to_string(ty)),
         )),
+    }
+}
+
+/// For the M-1006 **resolvability fixpoint** (`transpile::resolvable_type_names`): collect the bare,
+/// single-segment **user** type names `ty` references (the ones [`map_type`] passes through *as-is* —
+/// i.e. not builtins), pushing them into `out`. Returns `false` when `ty` has **no** [`map_type`]
+/// mapping at all (an unmappable field ⇒ its record can never be resolvable — consistent with
+/// `map_type` gapping the field). Builtins (`bool`, `u8..u128`) and tuples/shared-refs/generic-apps
+/// of mappables are traversed for their nested user names but are not themselves deps.
+///
+/// This deliberately **mirrors [`map_type`]'s mappable shapes**; if the two drift, the only cost is a
+/// *missed* emission (a struct conservatively left gapped) — never an unsound one (VR-5): the gate is
+/// one-sided (it can only *withhold* an emission, so a stale mirror is safe, just less generous).
+pub(crate) fn field_type_user_deps(ty: &Type, out: &mut Vec<String>) -> bool {
+    match ty {
+        Type::Path(tp) if tp.qself.is_none() && tp.path.segments.len() == 1 => {
+            let seg = match tp.path.segments.last() {
+                Some(s) => s,
+                None => return false,
+            };
+            let name = seg.ident.to_string();
+            match name.as_str() {
+                // Builtins `map_type` maps directly — mappable, but contribute no user dep.
+                // `String`/`str` now map to `Bytes` (RFC-0033 §3.2 — DN-34 §8.14), so they join the
+                // builtins here: a `String`-typed field no longer withholds its struct's emission.
+                "bool" | "u8" | "u16" | "u32" | "u64" | "u128" | "String" | "str" => {
+                    matches!(seg.arguments, PathArguments::None)
+                }
+                // Shapes `map_type` gaps outright ⇒ unmappable field.
+                "Self" | "i8" | "i16" | "i32" | "i64" | "i128" | "isize" | "usize" | "f32"
+                | "f64" | "char" => false,
+                _ => {
+                    // A reserved-word type name fails to lex ⇒ `map_type` gaps it (unmappable).
+                    if crate::reserved::is_reserved(&name) {
+                        return false;
+                    }
+                    match &seg.arguments {
+                        PathArguments::None => {
+                            out.push(name);
+                            true
+                        }
+                        PathArguments::AngleBracketed(ab) => {
+                            out.push(name);
+                            !ab.args.is_empty()
+                                && ab.args.iter().all(|a| match a {
+                                    syn::GenericArgument::Type(t) => field_type_user_deps(t, out),
+                                    _ => false,
+                                })
+                        }
+                        _ => false,
+                    }
+                }
+            }
+        }
+        // Qualified multi-segment path: `map_type` gaps it (unmappable).
+        Type::Path(_) => false,
+        Type::Tuple(t) if t.elems.is_empty() => false,
+        Type::Tuple(t) if t.elems.len() >= 2 => {
+            t.elems.iter().all(|e| field_type_user_deps(e, out))
+        }
+        Type::Reference(r) if r.mutability.is_none() => field_type_user_deps(&r.elem, out),
+        _ => false,
     }
 }

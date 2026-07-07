@@ -19,7 +19,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" One row in the guarantee matrix.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct GaugeRow { pub operation : & 'static str , pub strength : GuaranteeStrength , pub basis : & 'static str , }",
-      "reason": "struct `GaugeRow` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `GaugeRow` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "GaugeRow"
     },
     {

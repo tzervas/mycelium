@@ -1,7 +1,9 @@
 {
   "source": "crates/mycelium-std-runtime/src/r2_residual.rs",
   "emitted_items": [
-    "DeferredR2"
+    "DeferredR2",
+    "ResidualRow",
+    "R2DeferredError"
   ],
   "gaps": [
     {
@@ -28,10 +30,20 @@
       "file": "crates/mycelium-std-runtime/src/r2_residual.rs",
       "line": 60,
       "col": 1,
-      "category": "Struct",
-      "rust_construct": "Struct",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "# [doc = \" One ledger row: what is deferred, why, and where it is tracked (DN-78 §4; G2 — the residual\"] # [doc = \" is explicit data, not a silent gap).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq)] pub struct ResidualRow { # [doc = \" The deferred item.\"] pub item : DeferredR2 , # [doc = \" The reserved construct(s) or surface the row refuses (names the RFC-0008 §4.5\"] # [doc = \" vocabulary — see the module-level naming note).\"] pub construct : & 'static str , # [doc = \" The unmet prerequisite that makes building it now a guess (G2/VR-5).\"] pub why_deferred : & 'static str , # [doc = \" The tracking task id(s) — the residual is tracked, never dropped.\"] pub tracker : & 'static str , # [doc = \" The decision basis (DN-78 §4 row; DN-63 §).\"] pub basis : & 'static str , }",
-      "reason": "struct `ResidualRow` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "dropped non-doc attribute(s) on struct `ResidualRow`: # [derive (Debug , Clone , Copy , PartialEq , Eq)]",
+      "item_name": "ResidualRow"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/r2_residual.rs",
+      "line": 60,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" One ledger row: what is deferred, why, and where it is tracked (DN-78 §4; G2 — the residual\"] # [doc = \" is explicit data, not a silent gap).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq)] pub struct ResidualRow { # [doc = \" The deferred item.\"] pub item : DeferredR2 , # [doc = \" The reserved construct(s) or surface the row refuses (names the RFC-0008 §4.5\"] # [doc = \" vocabulary — see the module-level naming note).\"] pub construct : & 'static str , # [doc = \" The unmet prerequisite that makes building it now a guess (G2/VR-5).\"] pub why_deferred : & 'static str , # [doc = \" The tracking task id(s) — the residual is tracked, never dropped.\"] pub tracker : & 'static str , # [doc = \" The decision basis (DN-78 §4 row; DN-63 §).\"] pub basis : & 'static str , }",
+      "reason": "struct `ResidualRow` named field(s) `item, construct, why_deferred, tracker, basis` emitted positionally as `ResidualRow(DeferredR2, Bytes, Bytes, Bytes, Bytes)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped (matches `lib/std/*.myc` hand-ports)",
       "item_name": "ResidualRow"
     },
     {
@@ -51,17 +63,27 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" The ledger row for `item`. Total by construction (a match over the variant), and the\"] # [doc = \" row's `item` field round-trips (tested).\"] # [must_use] pub fn residual_for (item : DeferredR2) -> & 'static ResidualRow { let idx = match item { DeferredR2 :: MeshOverlay => 0 , DeferredR2 :: GraftCapability => 1 , DeferredR2 :: XlocMovement => 2 , DeferredR2 :: CystCheckpoint => 3 , DeferredR2 :: CaptureSetL1Surface => 4 , DeferredR2 :: MultiNodePlacement => 5 , } ; & RESIDUALS [idx] }",
-      "reason": "unsupported Rust type form `& 'static ResidualRow`",
+      "reason": "unsupported expression form `RESIDUALS [idx]`",
       "item_name": "residual_for"
     },
     {
       "file": "crates/mycelium-std-runtime/src/r2_residual.rs",
       "line": 145,
       "col": 1,
-      "category": "Struct",
-      "rust_construct": "Struct",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "# [doc = \" The explicit refusal a deferred item's [`require`] returns (G2: typed, inspectable, and\"] # [doc = \" teaching — it names the construct, the unmet prerequisite, and the tracker).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq)] pub struct R2DeferredError { # [doc = \" The item that was required.\"] pub item : DeferredR2 , # [doc = \" Its ledger row (why + tracker + basis).\"] pub row : & 'static ResidualRow , }",
-      "reason": "struct `R2DeferredError` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "dropped non-doc attribute(s) on struct `R2DeferredError`: # [derive (Debug , Clone , Copy , PartialEq , Eq)]",
+      "item_name": "R2DeferredError"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/r2_residual.rs",
+      "line": 145,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" The explicit refusal a deferred item's [`require`] returns (G2: typed, inspectable, and\"] # [doc = \" teaching — it names the construct, the unmet prerequisite, and the tracker).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq)] pub struct R2DeferredError { # [doc = \" The item that was required.\"] pub item : DeferredR2 , # [doc = \" Its ledger row (why + tracker + basis).\"] pub row : & 'static ResidualRow , }",
+      "reason": "struct `R2DeferredError` named field(s) `item, row` emitted positionally as `R2DeferredError(DeferredR2, ResidualRow)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped (matches `lib/std/*.myc` hand-ports)",
       "item_name": "R2DeferredError"
     },
     {
@@ -71,7 +93,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl core :: fmt :: Display for R2DeferredError { fn fmt (& self , f : & mut core :: fmt :: Formatter < '_ >) -> core :: fmt :: Result { write ! (f , \"'{}' is not built in Phase I: {} — tracked as {} ({})\" , self . row . construct , self . row . why_deferred , self . row . tracker , self . row . basis) } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut core :: fmt :: Formatter < '_ >`",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut core :: fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
       "item_name": "R2DeferredError"
     },
     {

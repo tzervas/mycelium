@@ -34,4 +34,5 @@
 // accompanying .gap.json for every construct this pass could not express.
 nodule std.sys;
 
-
+// Errors from platform entropy operations.
+type EntropyError = Unavailable(Bytes);

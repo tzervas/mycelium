@@ -51,7 +51,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" An abstract byte **source**: a `Substrate` wrapped in an affine handle.\"] # [doc = \"\"] # [doc = \" A `Source` may be read exactly once via [`read_all`] (which consumes it) or\"] # [doc = \" progressively via [`read`] (which threads the handle linearly).  A double-\"] # [doc = \" consume is a compile-time error (Rust move semantics enforce LR-8).\"] # [doc = \"\"] # [doc = \" # EXPLAIN-able selection\"] # [doc = \" The substrate backing this `Source` is visible as a field (C3 — no hidden\"] # [doc = \" resource).\"] # [derive (Debug)] pub struct Source { substrate : Substrate , }",
-      "reason": "struct `Source` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `Source` has a field type with no confirmed mapping (type name `Substrate` collides with a Mycelium reserved word — emitting it verbatim would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5))",
       "item_name": "Source"
     },
     {
@@ -71,7 +71,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" An abstract byte **sink**: a write target wrapped in an affine handle.\"] # [doc = \"\"] # [doc = \" A `Sink` is threaded linearly through [`write()`] calls (each call consumes the\"] # [doc = \" current handle and returns the updated one).  The affine discipline means a\"] # [doc = \" written sink cannot be silently re-used; a double-write is a compile-time error.\"] # [doc = \"\"] # [doc = \" # EXPLAIN-able selection (C3)\"] # [doc = \" The bytes written are observable via [`Sink::into_bytes`].\"] # [derive (Debug)] pub struct Sink { buffer : Vec < u8 > , }",
-      "reason": "struct `Sink` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `Sink` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "Sink"
     },
     {
@@ -81,7 +81,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl Sink { # [doc = \" Construct an empty in-memory sink.\"] # [doc = \"\"] # [doc = \" # Effects: none (construction is pure)\"] # [must_use] pub fn new () -> Self { Sink { buffer : Vec :: new () } } # [doc = \" Consume the sink and return the bytes written into it.\"] # [doc = \"\"] # [doc = \" This finalizes the sink — it cannot be written to after this call (Rust\"] # [doc = \" move semantics enforce the affine discipline).\"] # [must_use] pub fn into_bytes (self) -> Vec < u8 > { self . buffer } # [doc = \" Append `bytes` to the internal buffer (internal, non-consuming helper).\"] fn append (& mut self , bytes : & [u8]) { self . buffer . extend_from_slice (bytes) ; } }",
-      "reason": "no member of this impl block could be transpiled (3 sub-issue(s)): impl method `new` body: unsupported expression form `Sink { buffer : Vec :: new () }`; impl method `into_bytes` body: unsupported expression form `self . buffer`; impl method `append` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence",
+      "reason": "no member of this impl block could be transpiled (3 sub-issue(s)): impl method `new` body: struct literal `Sink { .. }` — not an in-file single-ctor struct that emits (no constructor to build); impl method `into_bytes` body: field projection `self.buffer` on `Sink` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against); impl method `append` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence",
       "item_name": "Sink"
     },
     {
@@ -111,7 +111,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Write `bytes` to `snk`, consuming the handle and returning the updated one\"] # [doc = \" (LR-8 — linear threading).\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Exact`\"] # [doc = \" The bytes written are exactly `bytes` — neither reordered nor approximated.\"] # [doc = \"\"] # [doc = \" # Fallibility\"] # [doc = \" - `Err(IoError::Refused{why})` if the substrate declines.\"] # [doc = \" - `Err(IoError::EffectBudget{kind})` on an effect-budget overrun.\"] # [doc = \"\"] # [doc = \" # Effects: io (declared, C6)\"] pub fn write (snk : Sink , bytes : & [u8]) -> Result < Sink , IoError > { let mut snk = snk ; snk . append (bytes) ; Ok (snk) }",
-      "reason": "unsupported Rust type form `& [u8]`",
+      "reason": "unsupported Rust type form `[u8]`",
       "item_name": "write"
     },
     {

@@ -27,7 +27,7 @@
       "category": "PayloadVariant",
       "rust_construct": "PayloadVariant",
       "snippet": "# [doc = \" Every explicit failure from a `std.time` operation (C1 / G2 / RFC-0013 diagnostic shape).\"] # [doc = \"\"] # [doc = \" No sentinel value, no silent zero, no wrap: every failure route surfaces here.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum TimeErr { # [doc = \" A duration or instant arithmetic operation overflowed the representable range.\"] # [doc = \"\"] # [doc = \" **Never** a wrap-around or a saturating clamp — always this error (C1/G2).\"] Overflow , # [doc = \" A MONOTONIC or WALL clock could not be read (platform unavailability, spec §7-Q3).\"] # [doc = \"\"] # [doc = \" Carries an optional human-readable reason (RFC-0013 diagnostic aid).\"] ClockUnavailable { reason : & 'static str } , # [doc = \" A WALL-clock pair difference found a *backward jump* (NTP, leap, DST).\"] # [doc = \"\"] # [doc = \" **Never** a silent zero or negative span — always this error (C1). Carries the two\"] # [doc = \" instants as opaque nanosecond values for diagnostics (RFC-0013).\"] NonMonotonic { earlier_ns : i128 , later_ns : i128 } , }",
-      "reason": "enum `TimeErr` variant `ClockUnavailable` uses named fields — `constructor ::= Ident ('(' type_ref (',' type_ref)* ')')?` has no named-field/record form",
+      "reason": "enum `TimeErr` variant `NonMonotonic` has a field type with no confirmed mapping (signed integer `i128` — Binary{N} is documented unsigned-magnitude (lib/std/cmp.myc); mapping a signed type onto it would misrepresent twos-complement semantics, so this is left an explicit gap rather than guessed (VR-5))",
       "item_name": "TimeErr"
     },
     {
@@ -37,7 +37,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl core :: fmt :: Display for TimeErr { fn fmt (& self , f : & mut core :: fmt :: Formatter < '_ >) -> core :: fmt :: Result { match self { TimeErr :: Overflow => write ! (f , \"time arithmetic overflow (C1 — never wrap/clamp)\") , TimeErr :: ClockUnavailable { reason } => { write ! (f , \"clock unavailable: {reason}\") } TimeErr :: NonMonotonic { earlier_ns , later_ns , } => write ! (f , \"wall-clock backward jump (non-monotonic): \\\n                 later_ns={later_ns} < earlier_ns={earlier_ns} \\\n                 (C1 — never a silent zero/negative span)\") , } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut core :: fmt :: Formatter < '_ >`",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut core :: fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
       "item_name": "TimeErr"
     },
     {
@@ -97,7 +97,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" A signed nanosecond span (C4 / RFC-0001 value-semantic).\"] # [doc = \"\"] # [doc = \" Represented as a signed 128-bit nanosecond count — large enough to span many millennia and\"] # [doc = \" small enough to be exact at nanosecond resolution. Arithmetic is **always checked** (C1/G2):\"] # [doc = \" an operation that would overflow returns `Err(TimeErr::Overflow)`, never a wrap or clamp.\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Exact`** for all pure arithmetic — the computation is exact integer\"] # [doc = \" arithmetic; fallibility is the never-silent overflow guard, not approximation.\"] # [doc = \"\"] # [doc = \" # FLAG — representation (§7-Q4)\"] # [doc = \"\"] # [doc = \" The signedness and resolution of `Duration` are open questions (spec §7-Q4): is it signed\"] # [doc = \" (allowing a negative span from `sub`) or unsigned-with-explicit-direction? This implementation\"] # [doc = \" uses a **signed `i128` nanoseconds** representation as the simplest honest choice — overflow\"] # [doc = \" is still `Err(Overflow)`, and a negative span is meaningful (e.g., a deadline that has\"] # [doc = \" passed). Disposition: defer final representation choice to spec ratification; overflow is\"] # [doc = \" `Err(Overflow)` regardless (C1 holds either way).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq , PartialOrd , Ord , Hash)] pub struct Duration { # [doc = \" Signed nanosecond count. `i128` gives ≈ ±292 years at nanosecond resolution.\"] nanos : i128 , }",
-      "reason": "struct `Duration` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `Duration` has a field type with no confirmed mapping (signed integer `i128` — Binary{N} is documented unsigned-magnitude (lib/std/cmp.myc); mapping a signed type onto it would misrepresent twos-complement semantics, so this is left an explicit gap rather than guessed (VR-5))",
       "item_name": "Duration"
     },
     {
@@ -107,28 +107,48 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl Duration { # [doc = \" The zero span.\"] pub const ZERO : Duration = Duration { nanos : 0 } ; # [doc = \" The smallest representable (most-negative) span.\"] pub const MIN : Duration = Duration { nanos : i128 :: MIN } ; # [doc = \" The largest representable (most-positive) span.\"] pub const MAX : Duration = Duration { nanos : i128 :: MAX } ; # [doc = \" Construct from a nanosecond count (value-semantic constructor — always exact).\"] # [must_use] pub const fn from_nanos (nanos : i128) -> Self { Duration { nanos } } # [doc = \" Construct from whole seconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_secs (secs : i64) -> Result < Self , TimeErr > { let nanos = (secs as i128) . checked_mul (1_000_000_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" Construct from milliseconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_millis (millis : i64) -> Result < Self , TimeErr > { let nanos = (millis as i128) . checked_mul (1_000_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" Construct from microseconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_micros (micros : i64) -> Result < Self , TimeErr > { let nanos = (micros as i128) . checked_mul (1_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" The raw nanosecond count (exact, total — the canonical representation).\"] # [must_use] pub const fn as_nanos (self) -> i128 { self . nanos } # [doc = \" Truncating whole-second count (rounds toward zero).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" - [`TimeErr::Overflow`] when the whole-second count falls outside the `i64` range. The\"] # [doc = \"   nanosecond field is `i128` (up to [`Duration::MAX`]), so the second count can exceed\"] # [doc = \"   `i64`; it is refused rather than silently truncated (C1/G2).\"] pub const fn as_secs_trunc (self) -> Result < i64 , TimeErr > { let secs = self . nanos / 1_000_000_000 ; if secs < i64 :: MIN as i128 || secs > i64 :: MAX as i128 { return Err (TimeErr :: Overflow) ; } Ok (secs as i64) } # [doc = \" Whether this span is negative.\"] # [must_use] pub const fn is_negative (self) -> bool { self . nanos < 0 } # [doc = \" Whether this span is zero.\"] # [must_use] pub const fn is_zero (self) -> bool { self . nanos == 0 } # [doc = \" Negate the span. Returns `Err(Overflow)` for `Duration::MIN` (C1/G2).\"] # [doc = \"\"] # [doc = \" Named `checked_neg` rather than `neg` to avoid ambiguity with `std::ops::Neg`\"] # [doc = \" (which cannot be implemented here because negation is fallible — C1/G2).\"] pub fn checked_neg (self) -> Result < Duration , TimeErr > { self . nanos . checked_neg () . map (| n | Duration { nanos : n }) . ok_or (TimeErr :: Overflow) } # [doc = \" Absolute value of the span. Returns `Err(Overflow)` for `Duration::MIN` (C1/G2).\"] # [doc = \"\"] # [doc = \" Named `checked_abs` to match the `checked_*` pattern; `i128::MIN.abs()` would overflow.\"] pub fn checked_abs (self) -> Result < Duration , TimeErr > { self . nanos . checked_abs () . map (| n | Duration { nanos : n }) . ok_or (TimeErr :: Overflow) } }",
-      "reason": "no member of this impl block could be transpiled (13 sub-issue(s)): impl associated const `ZERO`; impl associated const `MIN`; impl associated const `MAX`; impl method `from_nanos` signature: signed integer `i128` — Binary{N} is documented unsigned-magnitude (lib/std/cmp.myc); mapping a signed type onto it would misrepresent twos-complement semantics, so this is left an explicit gap rather than guessed (VR-5); impl method `from_secs` signature: signed integer `i64` — Binary{N} is documented unsigned-magnitude (lib/std/cmp.myc); mapping a signed type onto it would misrepresent twos-complement semantics, so this is left an explicit gap rather than guessed (VR-5); impl method `from_millis` signature: signed integer `i64` — Binary{N} is documented unsigned-magnitude (lib/std/cmp.myc); mapping a signed type onto it would misrepresent twos-complement semantics, so this is left an explicit gap rather than guessed (VR-5); impl method `from_micros` signature: signed integer `i64` — Binary{N} is documented unsigned-magnitude (lib/std/cmp.myc); mapping a signed type onto it would misrepresent twos-complement semantics, so this is left an explicit gap rather than guessed (VR-5); impl method `as_nanos` signature: signed integer `i128` — Binary{N} is documented unsigned-magnitude (lib/std/cmp.myc); mapping a signed type onto it would misrepresent twos-complement semantics, so this is left an explicit gap rather than guessed (VR-5); impl method `as_secs_trunc` signature: signed integer `i64` — Binary{N} is documented unsigned-magnitude (lib/std/cmp.myc); mapping a signed type onto it would misrepresent twos-complement semantics, so this is left an explicit gap rather than guessed (VR-5); impl method `is_negative` body: unsupported expression form `self . nanos`; impl method `is_zero` body: unsupported expression form `self . nanos`; impl method `checked_neg` body: unsupported expression form `self . nanos`; impl method `checked_abs` body: unsupported expression form `self . nanos`",
+      "reason": "no member of this impl block could be transpiled (13 sub-issue(s)): impl associated const `ZERO`; impl associated const `MIN`; impl associated const `MAX`; impl method `from_nanos` signature: signed integer `i128` — Binary{N} is documented unsigned-magnitude (lib/std/cmp.myc); mapping a signed type onto it would misrepresent twos-complement semantics, so this is left an explicit gap rather than guessed (VR-5); impl method `from_secs` signature: signed integer `i64` — Binary{N} is documented unsigned-magnitude (lib/std/cmp.myc); mapping a signed type onto it would misrepresent twos-complement semantics, so this is left an explicit gap rather than guessed (VR-5); impl method `from_millis` signature: signed integer `i64` — Binary{N} is documented unsigned-magnitude (lib/std/cmp.myc); mapping a signed type onto it would misrepresent twos-complement semantics, so this is left an explicit gap rather than guessed (VR-5); impl method `from_micros` signature: signed integer `i64` — Binary{N} is documented unsigned-magnitude (lib/std/cmp.myc); mapping a signed type onto it would misrepresent twos-complement semantics, so this is left an explicit gap rather than guessed (VR-5); impl method `as_nanos` signature: signed integer `i128` — Binary{N} is documented unsigned-magnitude (lib/std/cmp.myc); mapping a signed type onto it would misrepresent twos-complement semantics, so this is left an explicit gap rather than guessed (VR-5); impl method `as_secs_trunc` signature: signed integer `i64` — Binary{N} is documented unsigned-magnitude (lib/std/cmp.myc); mapping a signed type onto it would misrepresent twos-complement semantics, so this is left an explicit gap rather than guessed (VR-5); impl method `is_negative` body: field projection `self.nanos` on `Duration` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against); impl method `is_zero` body: field projection `self.nanos` on `Duration` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against); impl method `checked_neg` body: field projection `self.nanos` on `Duration` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against); impl method `checked_abs` body: field projection `self.nanos` on `Duration` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against)",
       "item_name": "Duration"
     },
     {
       "file": "crates/mycelium-std-time/src/lib.rs",
       "line": 313,
       "col": 1,
-      "category": "Struct",
-      "rust_construct": "Struct",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "# [doc = \" A point on the MONOTONIC clock (never-backward, no civil meaning).\"] # [doc = \"\"] # [doc = \" Represented as an opaque nanosecond-resolution tick count from an unspecified epoch.\"] # [doc = \" The epoch is platform-defined and has no civil meaning — **only differences between two\"] # [doc = \" `MonoInstant` values are meaningful** (`diff(a, b) → Duration`).\"] # [doc = \"\"] # [doc = \" Cross-source subtraction is a **compile-time type error**: `diff(MonoInstant, WallInstant)`\"] # [doc = \" does not exist and cannot be called accidentally (the typed distinction that is \\\"structurally\"] # [doc = \" never a silent swap\\\", spec §1).\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Declared`** — this value is an input from outside the pure fragment, not a\"] # [doc = \" computation. A MONOTONIC clock read declares effect `time` (not `entropy`).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq , PartialOrd , Ord , Hash)] pub struct MonoInstant { # [doc = \" Nanoseconds from the MONOTONIC clock's epoch (platform-defined, never civil UTC).\"] nanos : u64 , }",
-      "reason": "struct `MonoInstant` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "dropped non-doc attribute(s) on struct `MonoInstant`: # [derive (Debug , Clone , Copy , PartialEq , Eq , PartialOrd , Ord , Hash)]",
+      "item_name": "MonoInstant"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 313,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" A point on the MONOTONIC clock (never-backward, no civil meaning).\"] # [doc = \"\"] # [doc = \" Represented as an opaque nanosecond-resolution tick count from an unspecified epoch.\"] # [doc = \" The epoch is platform-defined and has no civil meaning — **only differences between two\"] # [doc = \" `MonoInstant` values are meaningful** (`diff(a, b) → Duration`).\"] # [doc = \"\"] # [doc = \" Cross-source subtraction is a **compile-time type error**: `diff(MonoInstant, WallInstant)`\"] # [doc = \" does not exist and cannot be called accidentally (the typed distinction that is \\\"structurally\"] # [doc = \" never a silent swap\\\", spec §1).\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Declared`** — this value is an input from outside the pure fragment, not a\"] # [doc = \" computation. A MONOTONIC clock read declares effect `time` (not `entropy`).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq , PartialOrd , Ord , Hash)] pub struct MonoInstant { # [doc = \" Nanoseconds from the MONOTONIC clock's epoch (platform-defined, never civil UTC).\"] nanos : u64 , }",
+      "reason": "struct `MonoInstant` named field(s) `nanos` emitted positionally as `MonoInstant(Binary{64})` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped (matches `lib/std/*.myc` hand-ports)",
       "item_name": "MonoInstant"
     },
     {
       "file": "crates/mycelium-std-time/src/lib.rs",
       "line": 331,
       "col": 1,
-      "category": "Impl",
-      "rust_construct": "Impl",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "impl MonoInstant { # [doc = \" Construct from a raw nanosecond tick (used by [`ClockSource`] implementations).\"] # [must_use] pub const fn from_nanos (nanos : u64) -> Self { MonoInstant { nanos } } # [doc = \" The raw nanosecond tick (canonical representation — exact, total).\"] # [must_use] pub const fn as_nanos (self) -> u64 { self . nanos } }",
-      "reason": "no member of this impl block could be transpiled (2 sub-issue(s)): impl method `from_nanos` body: unsupported expression form `MonoInstant { nanos }`; impl method `as_nanos` body: unsupported expression form `self . nanos`",
-      "item_name": "MonoInstant"
+      "reason": "dropped non-doc attribute(s) on method `from_nanos`: # [must_use]",
+      "item_name": "impl MonoInstant"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 331,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "impl MonoInstant { # [doc = \" Construct from a raw nanosecond tick (used by [`ClockSource`] implementations).\"] # [must_use] pub const fn from_nanos (nanos : u64) -> Self { MonoInstant { nanos } } # [doc = \" The raw nanosecond tick (canonical representation — exact, total).\"] # [must_use] pub const fn as_nanos (self) -> u64 { self . nanos } }",
+      "reason": "dropped non-doc attribute(s) on method `as_nanos`: # [must_use]",
+      "item_name": "impl MonoInstant"
     },
     {
       "file": "crates/mycelium-std-time/src/lib.rs",
@@ -137,7 +157,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" A point on the WALL-CLOCK (civil/UTC time, an entropy source).\"] # [doc = \"\"] # [doc = \" Represented as a signed nanosecond count from the Unix epoch (UTC). This is a civil-time\"] # [doc = \" value: unlike [`MonoInstant`], its clock can step backward (NTP, leap seconds, DST), so\"] # [doc = \" `diff(WallInstant, WallInstant)` may return `Err(NonMonotonic)`.\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Declared`** — a wall read declares `{ time, entropy }`. It is an entropy\"] # [doc = \" source in the sense of RT3 (RFC-0008): every read can differ, it is unpredictable, and it\"] # [doc = \" seeds. A deterministic-fragment (RT2) program cannot call `wall_now` silently — the return\"] # [doc = \" type is `DeclaredTimeEntropy<WallInstant>`, which carries the effect marker explicitly.\"] # [derive (Debug , Clone , Copy , PartialEq , Eq , PartialOrd , Ord , Hash)] pub struct WallInstant { # [doc = \" Nanoseconds from the Unix epoch (UTC), signed (can be negative for dates before 1970).\"] nanos_since_epoch : i128 , }",
-      "reason": "struct `WallInstant` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `WallInstant` has a field type with no confirmed mapping (signed integer `i128` — Binary{N} is documented unsigned-magnitude (lib/std/cmp.myc); mapping a signed type onto it would misrepresent twos-complement semantics, so this is left an explicit gap rather than guessed (VR-5))",
       "item_name": "WallInstant"
     },
     {
@@ -154,21 +174,41 @@
       "file": "crates/mycelium-std-time/src/lib.rs",
       "line": 377,
       "col": 1,
-      "category": "Struct",
-      "rust_construct": "Struct",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "# [doc = \" A point on the RFC-0008 LOGICAL clock (a deterministic monotonic tick the runtime advances).\"] # [doc = \"\"] # [doc = \" The LOGICAL clock is the **only** time source legible to the deterministic fragment (RT2),\"] # [doc = \" because its value is reproducible under RT2 sequentialization: it is not real-world entropy.\"] # [doc = \" Its advancement is owned by `std.runtime`/`colony` (M-521 over RFC-0008 §4.7 / M-356) — this\"] # [doc = \" crate exposes only the **typed reading surface** (a `u64` tick supplied by the caller's\"] # [doc = \" [`ClockSource`]).\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Declared`** — it still declares the `time` effect (a read of runtime state,\"] # [doc = \" not a pure constant), but `time` only — not `entropy`.\"] # [doc = \"\"] # [doc = \" # FLAG — concrete API ownership (§7-Q1 / M-521 / M-356)\"] # [doc = \"\"] # [doc = \" The tick shape (per-colony? per-scope?), the read's exact effect classification, and the\"] # [doc = \" advancement semantics are **all deferred to M-521/M-356**. This crate provides the thin typed\"] # [doc = \" wrapper only; the orchestrator wires it to the real runtime clock when that API lands.\"] # [derive (Debug , Clone , Copy , PartialEq , Eq , PartialOrd , Ord , Hash)] pub struct LogicalInstant { # [doc = \" The deterministic monotonic tick provided by the RFC-0008 runtime (M-356).\"] tick : u64 , }",
-      "reason": "struct `LogicalInstant` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "dropped non-doc attribute(s) on struct `LogicalInstant`: # [derive (Debug , Clone , Copy , PartialEq , Eq , PartialOrd , Ord , Hash)]",
+      "item_name": "LogicalInstant"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 377,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" A point on the RFC-0008 LOGICAL clock (a deterministic monotonic tick the runtime advances).\"] # [doc = \"\"] # [doc = \" The LOGICAL clock is the **only** time source legible to the deterministic fragment (RT2),\"] # [doc = \" because its value is reproducible under RT2 sequentialization: it is not real-world entropy.\"] # [doc = \" Its advancement is owned by `std.runtime`/`colony` (M-521 over RFC-0008 §4.7 / M-356) — this\"] # [doc = \" crate exposes only the **typed reading surface** (a `u64` tick supplied by the caller's\"] # [doc = \" [`ClockSource`]).\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Declared`** — it still declares the `time` effect (a read of runtime state,\"] # [doc = \" not a pure constant), but `time` only — not `entropy`.\"] # [doc = \"\"] # [doc = \" # FLAG — concrete API ownership (§7-Q1 / M-521 / M-356)\"] # [doc = \"\"] # [doc = \" The tick shape (per-colony? per-scope?), the read's exact effect classification, and the\"] # [doc = \" advancement semantics are **all deferred to M-521/M-356**. This crate provides the thin typed\"] # [doc = \" wrapper only; the orchestrator wires it to the real runtime clock when that API lands.\"] # [derive (Debug , Clone , Copy , PartialEq , Eq , PartialOrd , Ord , Hash)] pub struct LogicalInstant { # [doc = \" The deterministic monotonic tick provided by the RFC-0008 runtime (M-356).\"] tick : u64 , }",
+      "reason": "struct `LogicalInstant` named field(s) `tick` emitted positionally as `LogicalInstant(Binary{64})` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped (matches `lib/std/*.myc` hand-ports)",
       "item_name": "LogicalInstant"
     },
     {
       "file": "crates/mycelium-std-time/src/lib.rs",
       "line": 399,
       "col": 1,
-      "category": "Impl",
-      "rust_construct": "Impl",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "impl LogicalInstant { # [doc = \" Construct from a logical tick (used by [`ClockSource`] implementations).\"] # [must_use] pub const fn from_tick (tick : u64) -> Self { LogicalInstant { tick } } # [doc = \" The raw tick value (exact, total).\"] # [must_use] pub const fn as_tick (self) -> u64 { self . tick } }",
-      "reason": "no member of this impl block could be transpiled (2 sub-issue(s)): impl method `from_tick` body: unsupported expression form `LogicalInstant { tick }`; impl method `as_tick` body: unsupported expression form `self . tick`",
-      "item_name": "LogicalInstant"
+      "reason": "dropped non-doc attribute(s) on method `from_tick`: # [must_use]",
+      "item_name": "impl LogicalInstant"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 399,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "impl LogicalInstant { # [doc = \" Construct from a logical tick (used by [`ClockSource`] implementations).\"] # [must_use] pub const fn from_tick (tick : u64) -> Self { LogicalInstant { tick } } # [doc = \" The raw tick value (exact, total).\"] # [must_use] pub const fn as_tick (self) -> u64 { self . tick } }",
+      "reason": "dropped non-doc attribute(s) on method `as_tick`: # [must_use]",
+      "item_name": "impl LogicalInstant"
     },
     {
       "file": "crates/mycelium-std-time/src/lib.rs",
@@ -177,7 +217,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Add two durations. Returns `Err(Overflow)` on range exhaustion — **never** wraps (C1/G2).\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Exact`** — exact integer arithmetic; fallibility is the overflow guard.\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" - [`TimeErr::Overflow`] — the result is outside the representable range.\"] pub fn duration_add (a : Duration , b : Duration) -> Result < Duration , TimeErr > { a . nanos . checked_add (b . nanos) . map (| n | Duration { nanos : n }) . ok_or (TimeErr :: Overflow) }",
-      "reason": "unsupported expression form `a . nanos`",
+      "reason": "field access on a non-`self` base — the transpiler tracks no local types, so the projection cannot be resolved to a constructor position (only `self.<field>` desugars to a `match`)",
       "item_name": "duration_add"
     },
     {
@@ -187,7 +227,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Subtract two durations (`a - b`). Returns `Err(Overflow)` on range exhaustion (C1/G2).\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Exact`** — exact integer arithmetic.\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" - [`TimeErr::Overflow`] — the result is outside the representable range.\"] pub fn duration_sub (a : Duration , b : Duration) -> Result < Duration , TimeErr > { a . nanos . checked_sub (b . nanos) . map (| n | Duration { nanos : n }) . ok_or (TimeErr :: Overflow) }",
-      "reason": "unsupported expression form `a . nanos`",
+      "reason": "field access on a non-`self` base — the transpiler tracks no local types, so the projection cannot be resolved to a constructor position (only `self.<field>` desugars to a `match`)",
       "item_name": "duration_sub"
     },
     {
@@ -287,7 +327,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" A [`ClockSource`] with manually-settable time values — for deterministic tests.\"] # [doc = \"\"] # [doc = \" All three reads return the values set by the last `set_*` call (default: zero for each).\"] # [doc = \" The WALL-CLOCK read still returns `DeclaredTimeEntropy` — the effect marker is structural,\"] # [doc = \" not conditional on nondeterminism — but the value is deterministic, enabling pure test logic.\"] # [doc = \"\"] # [doc = \" # Example\"] # [doc = \"\"] # [doc = \" ```rust\"] # [doc = \" # use mycelium_std_time::{ManualClock, ClockSource, MonoInstant, WallInstant, LogicalInstant};\"] # [doc = \" let mut clock = ManualClock::default();\"] # [doc = \" clock.set_mono(MonoInstant::from_nanos(1_000_000_000));\"] # [doc = \" clock.set_wall(WallInstant::from_nanos_since_epoch(1_717_000_000_000_000_000));\"] # [doc = \" clock.set_logical(LogicalInstant::from_tick(42));\"] # [doc = \"\"] # [doc = \" let mono = clock.mono_now().into_inner().unwrap();\"] # [doc = \" assert_eq!(mono.as_nanos(), 1_000_000_000);\"] # [doc = \"\"] # [doc = \" let wall = clock.wall_now().into_inner().unwrap();\"] # [doc = \" assert_eq!(wall.as_nanos_since_epoch(), 1_717_000_000_000_000_000);\"] # [doc = \"\"] # [doc = \" let logical = clock.logical_now().into_inner();\"] # [doc = \" assert_eq!(logical.as_tick(), 42);\"] # [doc = \" ```\"] # [derive (Debug , Clone)] pub struct ManualClock { mono : MonoInstant , wall : WallInstant , logical : LogicalInstant , }",
-      "reason": "struct `ManualClock` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `ManualClock` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "ManualClock"
     },
     {
@@ -327,7 +367,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Read the MONOTONIC clock from `source`. Declares effect `time` (not entropy).\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Declared`** — ambient read, not a pure computation (VR-5, C2).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" - [`TimeErr::ClockUnavailable`] — the platform clock is unavailable.\"] pub fn mono_now (source : & dyn ClockSource) -> DeclaredTime < Result < MonoInstant , TimeErr > > { source . mono_now () }",
-      "reason": "unsupported Rust type form `& dyn ClockSource`",
+      "reason": "unsupported Rust type form `dyn ClockSource`",
       "item_name": "mono_now"
     },
     {
@@ -337,7 +377,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Read the WALL-CLOCK from `source`. Declares effects `{ time, entropy }`.\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Declared`** — an entropy source (civil time, RT3 reified nondeterminism).\"] # [doc = \" Return type carries [`DeclaredTimeEntropy`] — the structural RT2/RT3 enforcement.\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" - [`TimeErr::ClockUnavailable`] — the platform clock is unavailable.\"] pub fn wall_now (source : & dyn ClockSource) -> DeclaredTimeEntropy < Result < WallInstant , TimeErr > > { source . wall_now () }",
-      "reason": "unsupported Rust type form `& dyn ClockSource`",
+      "reason": "unsupported Rust type form `dyn ClockSource`",
       "item_name": "wall_now"
     },
     {
@@ -347,7 +387,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Read the LOGICAL clock from `source`. Declares effect `time` only (deterministic).\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Declared`** — total (the counter is always readable in v0). The\"] # [doc = \" deterministic-fragment-legible time read (RFC-0008 §4.7 / M-356).\"] pub fn logical_now (source : & dyn ClockSource) -> DeclaredTime < LogicalInstant > { source . logical_now () }",
-      "reason": "unsupported Rust type form `& dyn ClockSource`",
+      "reason": "unsupported Rust type form `dyn ClockSource`",
       "item_name": "logical_now"
     },
     {
@@ -357,7 +397,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" One row of the `std.time` guarantee matrix (RFC-0016 §4.5 / spec §4).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct GuaranteeRow { # [doc = \" The exported operation name.\"] pub op : & 'static str , # [doc = \" The honest guarantee tag on `Exact ⊐ Proven ⊐ Empirical ⊐ Declared`.\"] pub tag : GuaranteeStrength , # [doc = \" The explicit fallibility: `\\\"total\\\"`, or the `Result`/`Option` shape.\"] pub fallibility : & 'static str , # [doc = \" Declared effects: `\\\"none\\\"`, `\\\"time\\\"`, or `\\\"{ time, entropy }\\\"`.\"] pub effects : & 'static str , # [doc = \" Whether the op surfaces an inspectable EXPLAIN artifact.\"] pub explainable : bool , }",
-      "reason": "struct `GuaranteeRow` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `GuaranteeRow` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "GuaranteeRow"
     },
     {
@@ -392,15 +432,16 @@
     }
   ],
   "category_counts": {
-    "DeriveAttr": 3,
+    "DeriveAttr": 9,
     "GenericBound": 2,
-    "Impl": 9,
+    "Impl": 7,
     "Import": 1,
     "MacroInvocation": 1,
     "MultiStmtBody": 1,
+    "NamedFieldDrop": 2,
     "Other": 13,
     "PayloadVariant": 1,
-    "Struct": 6,
+    "Struct": 4,
     "TestItem": 1,
     "Trait": 1
   }

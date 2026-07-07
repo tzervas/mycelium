@@ -1,6 +1,8 @@
 {
   "source": "crates/mycelium-std-sys/src/rand.rs",
-  "emitted_items": [],
+  "emitted_items": [
+    "EntropyError"
+  ],
   "gaps": [
     {
       "file": "crates/mycelium-std-sys/src/rand.rs",
@@ -26,10 +28,10 @@
       "file": "crates/mycelium-std-sys/src/rand.rs",
       "line": 35,
       "col": 1,
-      "category": "PayloadVariant",
-      "rust_construct": "PayloadVariant",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "# [doc = \" Errors from platform entropy operations.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum EntropyError { # [doc = \" The platform entropy source is unavailable or exhausted.\"] Unavailable (String) , }",
-      "reason": "enum `EntropyError` variant `Unavailable` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
+      "reason": "dropped non-doc attribute(s) on enum `EntropyError`: # [derive (Debug , Clone , PartialEq , Eq)]",
       "item_name": "EntropyError"
     },
     {
@@ -39,7 +41,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl fmt :: Display for EntropyError { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { match self { EntropyError :: Unavailable (msg) => write ! (f , \"entropy unavailable: {msg}\") , } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut fmt :: Formatter < '_ >`",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
       "item_name": "EntropyError"
     },
     {
@@ -59,7 +61,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" \\\\[Declared\\\\] Fill `buf` with bytes from the OS entropy source (`/dev/urandom`).\"] # [doc = \"\"] # [doc = \" Never-silent: returns `Err(EntropyError::Unavailable(...))` on any failure (open error,\"] # [doc = \" short read, EOF, or platform without `/dev/urandom`). Never panics. Never zero-fills\"] # [doc = \" silently (G2).\"] # [doc = \"\"] # [doc = \" # Guarantee\"] # [doc = \"\"] # [doc = \" `Declared` — source is the kernel CSPRNG via `/dev/urandom`, a genuine OS entropy source,\"] # [doc = \" but no statistical quality audit has been conducted. Promotion to `Empirical` requires\"] # [doc = \" documented trials with measured statistical quality (VR-5). Do not use for\"] # [doc = \" security-sensitive purposes until retagged.\"] # [doc = \"\"] # [doc = \" # Platform\"] # [doc = \"\"] # [doc = \" Unix/Linux/macOS only. Returns `Err(EntropyError::Unavailable(...))` on platforms that\"] # [doc = \" do not expose `/dev/urandom`. Use the `getrandom` crate (FLAG-GETRANDOM) for\"] # [doc = \" cross-platform OS entropy.\"] pub fn fill_bytes (buf : & mut [u8]) -> Result < () , EntropyError > { if buf . is_empty () { return Ok (()) ; } let mut f = std :: fs :: File :: open (\"/dev/urandom\") . map_err (| e | EntropyError :: Unavailable (format ! (\"open /dev/urandom: {e}\"))) ? ; f . read_exact (buf) . map_err (| e | EntropyError :: Unavailable (format ! (\"read /dev/urandom: {e}\"))) }",
-      "reason": "unsupported Rust type form `& mut [u8]`",
+      "reason": "`& mut [u8]` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
       "item_name": "fill_bytes"
     },
     {

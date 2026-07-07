@@ -34,4 +34,6 @@
 // accompanying .gap.json for every construct this pass could not express.
 nodule l1;
 
-
+// Why a definition could not be elaborated to L0 — always explicit, never a partial artifact
+// (RFC-0007 §4.6).
+type ElabError = Residual(Bytes, Bytes) | UnknownFn(Bytes) | DepthExceeded(Bytes, Binary{32});

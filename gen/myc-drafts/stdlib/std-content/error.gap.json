@@ -1,6 +1,8 @@
 {
   "source": "crates/mycelium-std-content/src/error.rs",
-  "emitted_items": [],
+  "emitted_items": [
+    "MalformedDigest"
+  ],
   "gaps": [
     {
       "file": "crates/mycelium-std-content/src/error.rs",
@@ -16,10 +18,20 @@
       "file": "crates/mycelium-std-content/src/error.rs",
       "line": 9,
       "col": 1,
-      "category": "Struct",
-      "rust_construct": "Struct",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "# [doc = \" The content-address string is not well-formed (`<algo>:<digest>` shape; RFC-0001 §4.6).\"] # [doc = \"\"] # [doc = \" # C1 compliance\"] # [doc = \" [`crate::parse_ref`] returns `Err(MalformedDigest)` rather than a silently-coerced or\"] # [doc = \" zeroed digest (RFC-0016 §4.1 C1; G2 \\\"never-silent\\\").\"] # [doc = \"\"] # [doc = \" The `description` field carries a human-readable explanation of *why* the string is rejected,\"] # [doc = \" enabling callers to surface the error without stripping information (G11 dual projection).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct MalformedDigest { # [doc = \" The rejected input.\"] pub input : String , # [doc = \" Why the input was rejected (G11: a human-readable explanation for the caller to surface).\"] pub description : & 'static str , }",
-      "reason": "struct `MalformedDigest` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "dropped non-doc attribute(s) on struct `MalformedDigest`: # [derive (Debug , Clone , PartialEq , Eq)]",
+      "item_name": "MalformedDigest"
+    },
+    {
+      "file": "crates/mycelium-std-content/src/error.rs",
+      "line": 9,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" The content-address string is not well-formed (`<algo>:<digest>` shape; RFC-0001 §4.6).\"] # [doc = \"\"] # [doc = \" # C1 compliance\"] # [doc = \" [`crate::parse_ref`] returns `Err(MalformedDigest)` rather than a silently-coerced or\"] # [doc = \" zeroed digest (RFC-0016 §4.1 C1; G2 \\\"never-silent\\\").\"] # [doc = \"\"] # [doc = \" The `description` field carries a human-readable explanation of *why* the string is rejected,\"] # [doc = \" enabling callers to surface the error without stripping information (G11 dual projection).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct MalformedDigest { # [doc = \" The rejected input.\"] pub input : String , # [doc = \" Why the input was rejected (G11: a human-readable explanation for the caller to surface).\"] pub description : & 'static str , }",
+      "reason": "struct `MalformedDigest` named field(s) `input, description` emitted positionally as `MalformedDigest(Bytes, Bytes)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped (matches `lib/std/*.myc` hand-ports)",
       "item_name": "MalformedDigest"
     },
     {
@@ -39,7 +51,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl fmt :: Display for MalformedDigest { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { write ! (f , \"malformed content address {:?}: {}\" , self . input , self . description) } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut fmt :: Formatter < '_ >`",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
       "item_name": "MalformedDigest"
     },
     {

@@ -7,11 +7,11 @@
       "exit_code": 3,
       "diagnostic": "check-error: check error in `rotl64`: unknown function/constructor/prim `rotate_left`",
       "non_test_items": 34,
-      "emitted_items": 4
+      "emitted_items": 6
     }
   ],
   "total_non_test_items": 34,
-  "total_emitted_items": 4,
+  "total_emitted_items": 6,
   "total_checked_clean_items": 0,
   "class_counts": {
     "CheckError": 1

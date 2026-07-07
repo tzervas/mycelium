@@ -77,7 +77,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" A checked-theorem witness required to construct an [`Approx`] with `Proven` strength (FR-N3).\"] # [doc = \"\"] # [doc = \" The only way to obtain a `ProvenThm` is via [`ProvenThm::new`], which validates that the\"] # [doc = \" citation is non-empty (ADR-011 / `bound.schema.json`: `citation` must not be blank). The\"] # [doc = \" private `sealed::Sealed` sentinel field makes it impossible to construct `ProvenThm { .. }`\"] # [doc = \" by hand outside this crate — type-system enforcement, no `unsafe` required.\"] # [doc = \"\"] # [doc = \" # Example\"] # [doc = \"\"] # [doc = \" ```rust\"] # [doc = \" # use mycelium_std_numerics::ProvenThm;\"] # [doc = \" let thm = ProvenThm::new(\\\"ADR-010 §1 affine-arithmetic ε-composition\\\").unwrap();\"] # [doc = \" ```\"] # [doc = \"\"] # [doc = \" # Compile-time enforcement\"] # [doc = \"\"] # [doc = \" The following does **not** compile because `_seal` is private:\"] # [doc = \"\"] # [doc = \" ```compile_fail\"] # [doc = \" use mycelium_std_numerics::ProvenThm;\"] # [doc = \" // Error: field `_seal` is private\"] # [doc = \" let _ = ProvenThm { citation: \\\"my theorem\\\".to_owned(), _seal: () };\"] # [doc = \" ```\"] # [derive (Debug , Clone , PartialEq)] pub struct ProvenThm { # [doc = \" The theorem citation (non-empty — validated in [`ProvenThm::new`]).\"] pub citation : String , # [doc = \" Private sentinel — cannot be constructed outside this crate.\"] _seal : sealed :: Sealed , }",
-      "reason": "struct `ProvenThm` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `ProvenThm` has a field type with no confirmed mapping (qualified type path `sealed :: Sealed` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5))",
       "item_name": "ProvenThm"
     },
     {
@@ -107,7 +107,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl core :: fmt :: Display for NumErr { fn fmt (& self , f : & mut core :: fmt :: Formatter < '_ >) -> core :: fmt :: Result { match self { NumErr :: BadEps => write ! (f , \"eps is negative or non-finite (out-of-range ε)\") , NumErr :: BadDelta => { write ! (f , \"delta is not in [0,1] or non-finite (out-of-range δ)\") } NumErr :: NoRule => write ! (f , \"no sound ε propagation rule for this op/configuration (refuse, never fabricate)\") , NumErr :: NormMismatch => { write ! (f , \"input norms disagree — cannot combine without norm-coercion rule\") } NumErr :: Overflow => write ! (f , \"composed ε overflowed to non-finite — refused (not a vacuous bound)\") , } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut core :: fmt :: Formatter < '_ >`",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut core :: fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
       "item_name": "NumErr"
     },
     {
@@ -117,7 +117,7 @@
       "category": "PayloadVariant",
       "rust_construct": "PayloadVariant",
       "snippet": "# [doc = \" Structured verdict for the tier-i re-validation checker (spec §3 `CheckErr`; RFC-0013).\"] # [derive (Debug , Clone , PartialEq)] pub enum CheckErr { # [doc = \" The claimed bound is **tighter** than the kernel re-derivation (never a silent pass).\"] Rejected { # [doc = \" The bound the kernel re-derives (the sound floor).\"] recomputed : f64 , # [doc = \" The (too-tight) bound that was claimed.\"] claimed : f64 , } , # [doc = \" The certificate is ill-formed (bad arity, norm mismatch, non-finite magnitudes).\"] Malformed , }",
-      "reason": "enum `CheckErr` variant `Rejected` uses named fields — `constructor ::= Ident ('(' type_ref (',' type_ref)* ')')?` has no named-field/record form",
+      "reason": "enum `CheckErr` variant `Rejected` has a field type with no confirmed mapping (`f64` — `scalar` only appears inside Dense{N,scalar}/ambient_params in the grammar, never as a bare value type; no confirmed base_type arm)",
       "item_name": "CheckErr"
     },
     {
@@ -127,7 +127,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl core :: fmt :: Display for CheckErr { fn fmt (& self , f : & mut core :: fmt :: Formatter < '_ >) -> core :: fmt :: Result { match self { CheckErr :: Rejected { recomputed , claimed , } => write ! (f , \"claimed ε={claimed:.2e} is tighter than the re-derivation {recomputed:.2e} \\\n                 (rejected — not a silent pass)\") , CheckErr :: Malformed => write ! (f , \"certificate is ill-formed (malformed)\") , } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut core :: fmt :: Formatter < '_ >`",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut core :: fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
       "item_name": "CheckErr"
     },
     {
@@ -137,7 +137,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" A thin view pairing a value with its `{Bound, strength}` (RFC-0001 §4.3 `Meta`) — **not** a\"] # [doc = \" new numeric type and **no kernel change** (FR-N1 / KC-3).\"] # [doc = \"\"] # [doc = \" `Approx<T>` is the carrier that `math` (M-525) and `dense` (M-518) defer to this module\"] # [doc = \" (spec §3, §7-Q1): it is a plain value with its `Meta`-attached `{Bound, strength}`, not a\"] # [doc = \" parallel numeric type, so it composes with content-addressing (ADR-003) and adds no new\"] # [doc = \" representation kind.\"] # [doc = \"\"] # [doc = \" # Strength invariant (VR-5)\"] # [doc = \"\"] # [doc = \" `strength` is **derived** from `bound.basis` by the constructors and is never set by the\"] # [doc = \" caller directly. Invariant: `self.strength == basis_strength(&self.bound.basis)`.\"] # [doc = \"\"] # [doc = \" # Proven-strength gating (FR-N3)\"] # [doc = \"\"] # [doc = \" The [`proven`](Approx::proven) constructor is the sole `Proven`-strength path and requires a\"] # [doc = \" [`ProvenThm`] witness (private sealed token — type-level enforcement; no `unsafe` route).\"] # [derive (Debug , Clone , PartialEq)] pub struct Approx < T > { # [doc = \" The carried value.\"] pub value : T , # [doc = \" The error/probability bound certifying `value` (carries its `BoundBasis` per ADR-011).\"] pub bound : Bound , # [doc = \" The honest guarantee strength — derived from `bound.basis` by the constructors, **never**\"] # [doc = \" set independently (VR-5). Invariant: `strength == basis_strength(&bound.basis)`.\"] # [doc = \"\"] # [doc = \" **Private (the VR-5 seal):** a public field would let a caller write\"] # [doc = \" `Approx { strength: Proven, .. }` and bypass the [`ProvenThm`] witness; keeping it private\"] # [doc = \" means the only way to build an `Approx` is the basis-deriving constructors. Read it via\"] # [doc = \" [`Approx::strength`].\"] strength : GuaranteeStrength , }",
-      "reason": "struct `Approx` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `Approx` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "Approx"
     },
     {
@@ -157,7 +157,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" The `explain` artifact for an [`Approx<T>`] (C3; G11 dual human/machine projection).\"] # [doc = \"\"] # [doc = \" Projects `{kind, eps|delta, norm, basis, strength}` and **why** the bound holds: which\"] # [doc = \" `ProvenThm{citation}`, which `EmpiricalFit{trials, method}`, or the `UserDeclared`\"] # [doc = \" \\\"declared, unverified\\\" marker. `eps` is `+∞` for non-`Error` bounds (honest, never `NaN`).\"] # [derive (Debug , Clone , PartialEq)] pub struct Explanation { # [doc = \" The bound kind tag (\\\"Error\\\" / \\\"Probability\\\" / \\\"Crosstalk\\\" / \\\"Capacity\\\").\"] pub kind : String , # [doc = \" The ε magnitude, or `+∞` when the bound is not an `Error` kind (honest; never `NaN`).\"] pub eps : f64 , # [doc = \" The norm in which `eps` is expressed (defaults to `Linf` for non-`Error` kinds).\"] pub norm : NormKind , # [doc = \" The δ failure probability (or `0.0` when the bound is not a `Probability` kind).\"] pub delta : f64 , # [doc = \" The basis: which theorem, which empirical fit, or `UserDeclared`.\"] pub basis : BoundBasis , # [doc = \" The honest guarantee strength.\"] pub strength : GuaranteeStrength , # [doc = \" Human-readable one-line summary (G11 human projection).\"] pub summary : String , }",
-      "reason": "struct `Explanation` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `Explanation` has a field type with no confirmed mapping (`f64` — `scalar` only appears inside Dense{N,scalar}/ambient_params in the grammar, never as a bare value type; no confirmed base_type arm)",
       "item_name": "Explanation"
     },
     {
@@ -197,7 +197,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Compose the **δ union bound** of a slice of `Probability`-kind bounds, taking the **meet** of\"] # [doc = \" their strengths (spec §3 `union_delta`; M-202; ADR-010 §2).\"] # [doc = \"\"] # [doc = \" `P(⋃ Eᵢ) ≤ min(1, Σδᵢ)`. The sum is **outward-rounded** by the `mycelium-numerics` kernel\"] # [doc = \" so the composed δ is a true upper bound (banked guard 1 / A2-01).\"] # [doc = \"\"] # [doc = \" Returns `Err(NumErr::NoRule)` if the slice is empty (refuse, not fabricate; M-204 posture).\"] # [doc = \" Returns `Err(NumErr::BadDelta)` if any input is not a `Probability` bound or has a malformed δ.\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" - [`NumErr::NoRule`] when `bounds` is empty.\"] # [doc = \" - [`NumErr::BadDelta`] when any bound is not a `Probability` kind or has an invalid δ.\"] pub fn union_delta (bounds : & [& Bound]) -> Result < Bound , NumErr > { if bounds . is_empty () { return Err (NumErr :: NoRule) ; } let prob_bounds : Vec < ProbBound > = bounds . iter () . map (| b | match b . kind { BoundKind :: Probability { delta } => ProbBound :: new (delta) . ok_or (NumErr :: BadDelta) , _ => Err (NumErr :: BadDelta) , }) . collect :: < Result < _ , _ > > () ? ; let composed = ProbBound :: union (prob_bounds . iter ()) ; let strength = bounds . iter () . map (| b | basis_strength (& b . basis)) . fold (GuaranteeStrength :: TOP , GuaranteeStrength :: meet) ; let basis = composed_prob_basis (strength , bounds) ; Ok (Bound { kind : BoundKind :: Probability { delta : composed . delta () , } , basis , }) }",
-      "reason": "unsupported Rust type form `& [& Bound]`",
+      "reason": "unsupported Rust type form `[& Bound]`",
       "item_name": "union_delta"
     },
     {
@@ -207,7 +207,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" The single sanctioned cross-kernel inference (spec §3 `accuracy_to_probability`; ADR-010 §4).\"] # [doc = \"\"] # [doc = \" Given an `ErrorBound`-kind bound and a tolerance `tau ≥ 0`, returns a `Probability`-kind bound:\"] # [doc = \" - `eps ≤ tau` → failure probability = `acc_delta` (the accuracy confidence carries over).\"] # [doc = \" - `eps > tau` → honest worst case `δ = 1` (the bound permits a violation; never a silent tighten).\"] # [doc = \"\"] # [doc = \" `acc_delta` is the failure probability of the accuracy claim itself (e.g. from a\"] # [doc = \" `Probability`-kind companion); pass `0.0` for an accuracy bound that holds with certainty.\"] # [doc = \"\"] # [doc = \" This is the **one** legal ε↔δ mixing; no other cross-kernel inference is exposed (ADR-010 §4).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" - [`NumErr::NoRule`] when `acc` is not an `Error`-kind bound.\"] # [doc = \" - [`NumErr::BadEps`] when `acc` has a malformed ε.\"] # [doc = \" - [`NumErr::BadDelta`] when `tau < 0` or `acc_delta ∉ [0, 1]`.\"] pub fn accuracy_to_probability (acc : & Bound , tau : f64 , acc_delta : f64) -> Result < Bound , NumErr > { let (eps , norm) = match acc . kind { BoundKind :: Error { eps , norm } => (eps , norm) , _ => return Err (NumErr :: NoRule) , } ; let error_bound_val = ErrorBound :: new (eps , norm) . ok_or (NumErr :: BadEps) ? ; let prob = kern_accuracy_to_probability (error_bound_val , tau , acc_delta) . ok_or (NumErr :: BadDelta) ? ; let strength = basis_strength (& acc . basis) ; let basis = match strength { GuaranteeStrength :: Proven => BoundBasis :: ProvenThm { citation : format ! (\"ADR-010 §4 accuracy→probability: eps={eps:.2e} ≤ tau={tau:.2e} ({})\" , match & acc . basis { BoundBasis :: ProvenThm { citation } => citation . as_str () , _ => \"inherited\" , }) , } , GuaranteeStrength :: Empirical => { let (trials , method) = match & acc . basis { BoundBasis :: EmpiricalFit { trials , method } => (* trials , method . as_str ()) , _ => (0 , \"inherited\") , } ; BoundBasis :: EmpiricalFit { trials , method : format ! (\"ADR-010 §4 accuracy→probability: {method}\") , } } _ => BoundBasis :: UserDeclared , } ; Ok (Bound { kind : BoundKind :: Probability { delta : prob . delta () , } , basis , }) }",
-      "reason": "unsupported Rust type form `& Bound`",
+      "reason": "`f64` — `scalar` only appears inside Dense{N,scalar}/ambient_params in the grammar, never as a bare value type; no confirmed base_type arm",
       "item_name": "accuracy_to_probability"
     },
     {
@@ -217,7 +217,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Re-validate a claimed ε bound for `op` over `input_bounds` via the M-203 tier-i checker.\"] # [doc = \"\"] # [doc = \" - **`Ok(())`**: the claimed bound is `≥` the kernel re-derivation (sound).\"] # [doc = \" - **`Err(CheckErr::Rejected{..})`**: the claim is tighter — rejected (not a silent pass;\"] # [doc = \"   RFC-0002 §2; ADR-010 tier-i).\"] # [doc = \" - **`Err(CheckErr::Malformed)`**: the certificate cannot be re-derived (bad arity, norm\"] # [doc = \"   mismatch).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" Returns [`CheckErr`] when the claim is tighter than the re-derivation or malformed.\"] pub fn check_error (input_bounds : & [ErrorBound] , op : ErrorOp , claimed : ErrorBound ,) -> Result < () , CheckErr > { match check_error_claim (input_bounds , op , claimed) { CheckOutcome :: Valid => Ok (()) , CheckOutcome :: Rejected { recomputed , claimed , } => Err (CheckErr :: Rejected { recomputed , claimed , }) , CheckOutcome :: Malformed => Err (CheckErr :: Malformed) , } }",
-      "reason": "unsupported Rust type form `& [ErrorBound]`",
+      "reason": "unsupported Rust type form `[ErrorBound]`",
       "item_name": "check_error"
     },
     {
@@ -227,7 +227,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Re-validate a claimed δ union bound over `input_bounds` via the M-203 tier-i checker.\"] # [doc = \"\"] # [doc = \" - **`Ok(())`**: the claimed δ is `≥` the re-derivation (sound).\"] # [doc = \" - **`Err(CheckErr::Rejected{..})`**: the claim is tighter — rejected (not a silent pass).\"] # [doc = \" - **`Err(CheckErr::Malformed)`**: reserved; currently fires only on empty input.\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" Returns [`CheckErr`] when the claim is tighter or malformed.\"] pub fn check_union (input_bounds : & [ProbBound] , claimed : ProbBound) -> Result < () , CheckErr > { match check_union_claim (input_bounds , claimed) { CheckOutcome :: Valid => Ok (()) , CheckOutcome :: Rejected { recomputed , claimed , } => Err (CheckErr :: Rejected { recomputed , claimed , }) , CheckOutcome :: Malformed => Err (CheckErr :: Malformed) , } }",
-      "reason": "unsupported Rust type form `& [ProbBound]`",
+      "reason": "unsupported Rust type form `[ProbBound]`",
       "item_name": "check_union"
     },
     {
@@ -237,7 +237,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Derive an honest `BoundBasis` for a composed probability bound at the meet `strength`.\"] # [doc = \" Mirrors the `composed_basis` logic in `mycelium-numerics::cert` (spec §4.4; VR-5).\"] fn composed_prob_basis (strength : GuaranteeStrength , bases : & [& Bound]) -> BoundBasis { match strength { GuaranteeStrength :: Exact | GuaranteeStrength :: Proven => { let inputs : Vec < & str > = bases . iter () . filter_map (| b | match & b . basis { BoundBasis :: ProvenThm { citation } => Some (citation . as_str ()) , _ => None , }) . collect () ; let citation = if inputs . is_empty () { \"ADR-010 §2 union-bound δ-composition\" . to_owned () } else { format ! (\"ADR-010 §2 union-bound δ-composition over [{}]\" , inputs . join (\"; \")) } ; BoundBasis :: ProvenThm { citation } } GuaranteeStrength :: Empirical => { let trials = bases . iter () . filter_map (| b | match & b . basis { BoundBasis :: EmpiricalFit { trials , .. } => Some (* trials) , _ => None , }) . min () . unwrap_or (0) ; BoundBasis :: EmpiricalFit { trials , method : \"composed (ADR-010 §2 union-bound δ)\" . to_owned () , } } GuaranteeStrength :: Declared => BoundBasis :: UserDeclared , } }",
-      "reason": "unsupported Rust type form `& [& Bound]`",
+      "reason": "unsupported Rust type form `[& Bound]`",
       "item_name": "composed_prob_basis"
     },
     {
@@ -267,7 +267,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" One row of the `std.numerics` guarantee matrix (RFC-0016 §4.5; spec §4).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct GuaranteeRow { # [doc = \" The exported helper op name.\"] pub op : & 'static str , # [doc = \" The honest guarantee tag of the **helper op itself** (not the carried bound — see above).\"] pub tag : GuaranteeStrength , # [doc = \" Whether the op can return a `Result::Err` / `None`.\"] pub fallible : bool , # [doc = \" The explicit error/refusal set (or `\\\"total\\\"` when infallible).\"] pub error_set : & 'static str , # [doc = \" Declared effects (C6). `\\\"none\\\"` for all pure helpers.\"] pub effects : & 'static str , # [doc = \" Whether the op surfaces an inspectable EXPLAIN artifact (C3; G11).\"] pub explainable : bool , }",
-      "reason": "struct `GuaranteeRow` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `GuaranteeRow` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "GuaranteeRow"
     },
     {

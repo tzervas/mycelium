@@ -19,13 +19,14 @@
       "file": "crates/mycelium-std-content/src/error.rs",
       "total_items": 6,
       "non_test_items": 5,
-      "emitted": 0,
-      "gaps": 6,
-      "expressible_pct": 0.0,
+      "emitted": 1,
+      "gaps": 7,
+      "expressible_pct": 20.0,
       "category_counts": {
+        "DeriveAttr": 1,
         "Impl": 3,
         "Import": 1,
-        "Struct": 1,
+        "NamedFieldDrop": 1,
         "TestItem": 1
       }
     },
@@ -33,13 +34,13 @@
       "file": "crates/mycelium-std-content/src/guarantee_matrix.rs",
       "total_items": 5,
       "non_test_items": 4,
-      "emitted": 2,
-      "gaps": 5,
-      "expressible_pct": 50.0,
+      "emitted": 3,
+      "gaps": 6,
+      "expressible_pct": 75.0,
       "category_counts": {
-        "DeriveAttr": 2,
+        "DeriveAttr": 3,
+        "NamedFieldDrop": 1,
         "Other": 1,
-        "Struct": 1,
         "TestItem": 1
       }
     },
@@ -47,13 +48,14 @@
       "file": "crates/mycelium-std-content/src/lib.rs",
       "total_items": 17,
       "non_test_items": 16,
-      "emitted": 0,
+      "emitted": 2,
       "gaps": 18,
-      "expressible_pct": 0.0,
+      "expressible_pct": 12.5,
       "category_counts": {
+        "DeriveAttr": 2,
         "GenericBound": 1,
         "Import": 5,
-        "Other": 11,
+        "Other": 9,
         "TestItem": 1
       }
     },
@@ -75,16 +77,17 @@
   "totals": {
     "total_items": 40,
     "non_test_items": 35,
-    "emitted": 3,
-    "gaps": 41,
-    "expressible_pct": 8.571428571428571,
+    "emitted": 7,
+    "gaps": 43,
+    "expressible_pct": 20.0,
     "category_counts": {
-      "DeriveAttr": 3,
+      "DeriveAttr": 7,
       "GenericBound": 1,
       "Impl": 7,
       "Import": 9,
-      "Other": 12,
-      "Struct": 4,
+      "NamedFieldDrop": 2,
+      "Other": 10,
+      "Struct": 2,
       "TestItem": 5
     }
   }
