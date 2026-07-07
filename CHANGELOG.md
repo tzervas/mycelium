@@ -15,8 +15,9 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 New design note (Draft) capturing the maintainer's goal to extend the transpiler to ingest **Python**
 (then TypeScript, Java) alongside Rust — an accelerated path to port the Python math/sci/ML corpus.
-Grounds the **front-end-abstraction** architecture in the current `mycelium-transpile` split (`gap.rs`
-+ `vet.rs` + emit are already language-neutral; only `transpile.rs`/`emit.rs`/`map.rs` are `syn`-coupled)
+Grounds the **front-end-abstraction** architecture in the current `mycelium-transpile` split (the
+`gap.rs`, `vet.rs`, and emit stages are already language-neutral; only `transpile.rs`/`emit.rs`/`map.rs`
+are `syn`-coupled)
 and transfers the trx2 M-1006 ladder as the method. Per house rule #4 it states the boundaries
 honestly rather than affirming the vision whole: Python's dynamic typing lowers the initial ceiling
 (§4.1); the **C/CUDA library cores of numpy/scipy/pytorch are not Python source and do not transpile**
