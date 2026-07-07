@@ -342,7 +342,17 @@ pub fn type_repr(site: &str, t: &TypeRef) -> Result<Repr, ElabError> {
 /// a structural or operation hash.
 #[must_use]
 pub fn policy_name_ref(policy: &Path) -> PolicyRef {
-    operation_hash(&format!("policy-name.v0:{}", policy.0.join(".")))
+    operation_hash(&policy_name_preimage(policy))
+}
+
+/// The domain-separated **preimage** of [`policy_name_ref`] — `policy-name.v0:<dotted>` — before it
+/// is fed to the kernel content hash. Extracted (M-1012) so the self-hosted `semcore.myc` port has a
+/// reachable live oracle for the *wild-free* half of the reference (the frontend's name construction);
+/// the hashing step ([`operation_hash`], BLAKE3) is the kernel primitive the port defers to the
+/// materialization/kernel-hash crossing (DN-26 §10; `.myc` `FLAG-semcore-27`). Behaviour-preserving:
+/// `policy_name_ref` is byte-identical to its former inline form.
+pub(crate) fn policy_name_preimage(policy: &Path) -> String {
+    format!("policy-name.v0:{}", policy.0.join("."))
 }
 
 /// A surface name's elaboration binding: `(surface name, kernel variable, v0 type)`. The type lets
@@ -920,7 +930,7 @@ pub fn build_registry(env: &Env) -> Result<DataRegistry, ElabError> {
 /// [`build_registry`] called directly, and through [`elaborate_direct`] (below) — the narrow,
 /// additive entry point that targets the kernel primitive `elaborate` cannot reach without also
 /// changing `mono.rs`'s defunctionalization scope (out of this leaf's owned files).
-fn field_spec(ty: &Ty) -> Option<FieldSpec> {
+pub(crate) fn field_spec(ty: &Ty) -> Option<FieldSpec> {
     Some(match ty {
         Ty::Binary(crate::checkty::Width::Lit(n)) => FieldSpec::Repr(Repr::Binary { width: *n }),
         Ty::Binary(crate::checkty::Width::Var(_)) => return None, // width-var must not reach elab
@@ -979,7 +989,7 @@ fn field_spec(ty: &Ty) -> Option<FieldSpec> {
 /// `Fn` element has no monomorphic kernel repr in stage-1), so a `Seq` of such an element is itself
 /// staged (`field_spec` returns `None`) rather than half-elaborated (never a silent artifact —
 /// G2/VR-5).
-fn ty_to_repr(ty: &Ty) -> Option<Repr> {
+pub(crate) fn ty_to_repr(ty: &Ty) -> Option<Repr> {
     Some(match ty {
         Ty::Binary(crate::checkty::Width::Lit(n)) => Repr::Binary { width: *n },
         Ty::Binary(crate::checkty::Width::Var(_)) => return None, // width-var must not reach elab
@@ -1020,7 +1030,7 @@ fn ty_to_repr(ty: &Ty) -> Option<Repr> {
 /// instantiation, an unresolved [`Ty::Var`]/width, or [`Ty::Substrate`] (M-923; mirrors
 /// [`field_spec`]'s own staging: a signature leaf that cannot resolve keeps the *owning* `Fn`
 /// field staged, never a half-encoded signature — G2/VR-5).
-fn ty_to_field_ty_ref(ty: &Ty) -> Option<FieldTyRef> {
+pub(crate) fn ty_to_field_ty_ref(ty: &Ty) -> Option<FieldTyRef> {
     Some(match ty {
         Ty::Data(n, args) if args.is_empty() => FieldTyRef::Data(n.clone()),
         Ty::Data(_, _) | Ty::Var(_) | Ty::Substrate(_) => return None,
@@ -1040,7 +1050,7 @@ fn ty_to_field_ty_ref(ty: &Ty) -> Option<FieldTyRef> {
 }
 
 /// The `Scalar` → kernel `ScalarKind` mapping (shared with [`type_repr`]).
-fn scalar_kind(s: Scalar) -> ScalarKind {
+pub(crate) fn scalar_kind(s: Scalar) -> ScalarKind {
     match s {
         Scalar::F16 => ScalarKind::F16,
         Scalar::Bf16 => ScalarKind::Bf16,
@@ -1050,7 +1060,7 @@ fn scalar_kind(s: Scalar) -> ScalarKind {
 }
 
 /// The surface `Sparsity` → kernel `SparsityClass` mapping (M-892; shared with [`type_repr`]).
-fn sparsity_class(sp: &Sparsity) -> SparsityClass {
+pub(crate) fn sparsity_class(sp: &Sparsity) -> SparsityClass {
     match sp {
         Sparsity::Dense => SparsityClass::Dense,
         Sparsity::Sparse(k) => SparsityClass::Sparse { max_active: *k },
