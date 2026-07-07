@@ -201,11 +201,17 @@ fn encode_basetype(b: &BaseType) -> String {
             encode_sparsity(sparsity)
         ),
         BaseType::Substrate(t) => format!("KwSubstrate({})", encode_bytes(t)),
-        BaseType::Seq { elem, len } => format!("KwSeq({}, {})", encode_typeref(elem), encode_u32(*len)),
+        BaseType::Seq { elem, len } => {
+            format!("KwSeq({}, {})", encode_typeref(elem), encode_u32(*len))
+        }
         BaseType::Bytes => "KwBytes".to_owned(),
         BaseType::Float => "KwFloat".to_owned(),
         BaseType::Named(name, args) => {
-            format!("Named({}, {})", encode_bytes(name), encode_typeref_list(args))
+            format!(
+                "Named({}, {})",
+                encode_bytes(name),
+                encode_typeref_list(args)
+            )
         }
         BaseType::Fn(a, r) => format!("FnArrow({}, {})", encode_typeref(a), encode_typeref(r)),
         BaseType::Tuple(elems) => format!("Tuple({})", encode_typeref_list(elems)),
@@ -220,8 +226,9 @@ fn encode_literal(l: &Literal) -> String {
         Literal::Bin(s) => format!("Bin({})", encode_bytes(s)),
         Literal::Trit(s) => format!("Trit({})", encode_bytes(s)),
         Literal::Str(s) => format!("Str({})", encode_bytes(s)),
-        Literal::Int(_) => "Int(0b0000000000000000000000000000000000000000000000000000000000000000)"
-            .to_owned(),
+        Literal::Int(_) => {
+            "Int(0b0000000000000000000000000000000000000000000000000000000000000000)".to_owned()
+        }
         Literal::List(_) => "List(Nil)".to_owned(),
         other => panic!("literal {other:?} is not exercised by the increment-7 differential"),
     }
@@ -264,7 +271,11 @@ fn encode_core_repr(r: &Repr) -> String {
         Repr::Binary { width } => format!("RBinary({})", encode_u32(*width)),
         Repr::Ternary { trits } => format!("RTernary({})", encode_u32(*trits)),
         Repr::Dense { dim, dtype } => {
-            format!("RDense({}, {})", encode_u32(*dim), encode_core_scalar_kind(*dtype))
+            format!(
+                "RDense({}, {})",
+                encode_u32(*dim),
+                encode_core_scalar_kind(*dtype)
+            )
         }
         Repr::Vsa {
             model,
@@ -276,7 +287,9 @@ fn encode_core_repr(r: &Repr) -> String {
             encode_u32(*dim),
             encode_core_sparsity(sparsity)
         ),
-        Repr::Seq { elem, len } => format!("RSeq({}, {})", encode_core_repr(elem), encode_u32(*len)),
+        Repr::Seq { elem, len } => {
+            format!("RSeq({}, {})", encode_core_repr(elem), encode_u32(*len))
+        }
         Repr::Float { width } => format!("RFloat({})", encode_core_float_width(*width)),
         Repr::Bytes => "RBytes".to_owned(),
     }
@@ -335,11 +348,13 @@ fn encode_core_payload(p: &Payload) -> String {
             format!("PlTrits({s})")
         }
         Payload::Bytes(bytes) => {
-            let text =
-                String::from_utf8(bytes.clone()).expect("increment-7 Str payload fixtures are ASCII");
+            let text = String::from_utf8(bytes.clone())
+                .expect("increment-7 Str payload fixtures are ASCII");
             format!("PlBytes({})", encode_bytes(&text))
         }
-        other => panic!("payload {other:?} is outside the increment-7 wild-free subset (FLAG-semcore-23)"),
+        other => panic!(
+            "payload {other:?} is outside the increment-7 wild-free subset (FLAG-semcore-23)"
+        ),
     }
 }
 
@@ -422,10 +437,7 @@ fn semcore_elab_parses_and_checks() {
 #[test]
 fn elab_witness_discriminates() {
     // scalar_kind(F16) = SkF16; comparing against the wrong SkF32 must be False.
-    assert_false(
-        "scalar_kind_wrong",
-        "scalark_eq(scalar_kind(SF16), SkF32)",
-    );
+    assert_false("scalar_kind_wrong", "scalark_eq(scalar_kind(SF16), SkF32)");
     // type_repr(Binary{8}) = Ok(RBinary(8)); comparing against Ok(RBinary(16)) must be False.
     assert_false(
         "type_repr_wrong",
@@ -518,7 +530,7 @@ fn type_repr_cases() {
         },
         BaseType::Bytes,
         BaseType::Float,
-        BaseType::Substrate("file".to_owned()), // → Err
+        BaseType::Substrate("file".to_owned()),     // → Err
         BaseType::Named("Bool".to_owned(), vec![]), // → Err
         BaseType::Fn(
             Box::new(tref(BaseType::Binary(WidthRef::Lit(8)))),
@@ -608,9 +620,9 @@ fn ty_to_repr_cases() {
         Ty::Seq(Box::new(data("List", vec![bin(8)])), 2), // elem has no repr → None
         Ty::Bytes,
         Ty::Float,
-        data("Bool", vec![]), // → None
-        Ty::Var("A".to_owned()), // → None
-        Ty::Substrate("file".to_owned()), // → None
+        data("Bool", vec![]),                          // → None
+        Ty::Var("A".to_owned()),                       // → None
+        Ty::Substrate("file".to_owned()),              // → None
         Ty::Fn(Box::new(bin(8)), Box::new(Ty::Bytes)), // → None
     ];
     for (i, t) in cases.iter().enumerate() {
@@ -632,12 +644,12 @@ fn ty_to_repr_cases() {
 #[test]
 fn ty_to_field_ty_ref_cases() {
     let cases: Vec<Ty> = vec![
-        data("Bool", vec![]),                    // → FtData
-        data("List", vec![bin(8)]),              // generic Data → None
-        Ty::Var("A".to_owned()),                 // → None
-        Ty::Substrate("file".to_owned()),        // → None
-        bin(8),                                  // → FtRepr(RBinary(8))
-        Ty::Bytes,                               // → FtRepr(RBytes)
+        data("Bool", vec![]),                          // → FtData
+        data("List", vec![bin(8)]),                    // generic Data → None
+        Ty::Var("A".to_owned()),                       // → None
+        Ty::Substrate("file".to_owned()),              // → None
+        bin(8),                                        // → FtRepr(RBinary(8))
+        Ty::Bytes,                                     // → FtRepr(RBytes)
         Ty::Fn(Box::new(bin(8)), Box::new(Ty::Bytes)), // → FtFn(sig)
         // Nested (curried) arrow: A => (B => C).
         Ty::Fn(
@@ -679,10 +691,10 @@ fn field_spec_cases() {
         Ty::Seq(Box::new(Ty::Var("A".to_owned())), 2), // elem no repr → None
         Ty::Bytes,
         Ty::Float,
-        data("Bool", vec![]),   // → FsData
-        data("List", vec![bin(8)]), // generic → None
-        Ty::Var("A".to_owned()),    // → None
-        Ty::Substrate("file".to_owned()), // → None
+        data("Bool", vec![]),                          // → FsData
+        data("List", vec![bin(8)]),                    // generic → None
+        Ty::Var("A".to_owned()),                       // → None
+        Ty::Substrate("file".to_owned()),              // → None
         Ty::Fn(Box::new(bin(8)), Box::new(Ty::Bytes)), // → FsFn
         // Fn with an unresolvable leaf → None.
         Ty::Fn(Box::new(bin(8)), Box::new(Ty::Var("R".to_owned()))),
