@@ -3966,6 +3966,19 @@ issues:
       - The ratification is not pre-declared: the evidence (M-740 differential results) must
         exist before this task closes.
 
+      MAINTAINER PRE-AUTHORIZATION (2026-07-07, @tzervas -- recorded on GitHub issue #444):
+      "741 once its criteria are met is ratified, approved by me." The ratification act is
+      PRE-APPROVED, conditional on the DoD (a)/(b)/(c) being VERIFIABLY met with checked, cited
+      evidence (the evidence must exist first -- no pre-declaration, VR-5/G2). The two "issues to
+      resolve" are resolved: record form = append-only DN-26 entry + DN-14 -> Resolved (a new ADR
+      only if a genuinely binding decision is warranted); evidence strength = Empirical (the floor).
+      SCOPE = M-741 ONLY -- the lang 1.0.0 tag (M-738) and the public flip (flp) are NOT
+      pre-authorized and remain separate maintainer acts. The `myc-port-drive` completion driver
+      executes the ratification at the capstone IF AND ONLY IF it independently verifies all three
+      criteria hold; otherwise it flags what is missing on #444 and does not ratify. The act is
+      append-only and reversible by supersession (house rule #3) if the maintainer disagrees on
+      review. Status stays needs-design until M-993/M-740 land the evidence.
+
   - id: M-742
     title: "M-742 — Self-hosting CI gate: bootstrap + three-way differential + mutant-witnessed"
     milestone: "Phase 5 — Self-Hosting & Core Library"
