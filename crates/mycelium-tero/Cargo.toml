@@ -22,7 +22,7 @@ mycelium-doc = { path = "../mycelium-doc" }
 # no new external dependency (serde/serde_json are already vetted, in-workspace).
 serde = { workspace = true }
 serde_json = { workspace = true }
-# M-1017 (DN-87 §2.3 / ADR-046): the MCP + HTTP API fronts. The HTTP front is an `axum` app on the
+# M-1017 (DN-87 §2.3 / ADR-044): the MCP + HTTP API fronts. The HTTP front is an `axum` app on the
 # `tokio` runtime (the workspace's first async runtime — a deliberate, authorized decision for this
 # concurrent server surface). `tokio` features are the minimal set for `axum::serve` + a refreshable
 # shared report (`rt-multi-thread`/`macros` for `#[tokio::main]`, `net` for the listener, `sync` for
