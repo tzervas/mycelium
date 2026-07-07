@@ -22,7 +22,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl GuaranteeTag { # [doc = \" Human-readable name matching the lattice notation (`\\\"Exact\\\"`, etc.).\"] # [must_use] pub fn as_str (self) -> & 'static str { match self { GuaranteeTag :: Exact => \"Exact\" , GuaranteeTag :: Proven => \"Proven\" , GuaranteeTag :: Empirical => \"Empirical\" , GuaranteeTag :: Declared => \"Declared\" , } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `as_str` signature: unsupported Rust type form `& 'static str`",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `as_str` signature: `String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
       "item_name": "GuaranteeTag"
     },
     {

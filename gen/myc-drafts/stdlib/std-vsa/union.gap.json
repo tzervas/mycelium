@@ -187,7 +187,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Look up a row in [`GUARANTEE_MATRIX`] by model id and op.  Returns `None` for an unregistered\"] # [doc = \" model — an unregistered model has no honest tag to offer (the same convention as\"] # [doc = \" `mycelium_vsa::matrix_tag`).\"] # [must_use] pub fn std_matrix_tag (model_id : & str , op : VsaOp) -> Option < GuaranteeStrength > { GUARANTEE_MATRIX . iter () . find (| r | r . model_id == model_id && r . op == op) . map (| r | r . tag) }",
-      "reason": "unsupported Rust type form `& str`",
+      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
       "item_name": "std_matrix_tag"
     },
     {

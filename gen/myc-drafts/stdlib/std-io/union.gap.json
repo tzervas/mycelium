@@ -27,7 +27,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl fmt :: Display for ByteOffset { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { write ! (f , \"byte {}\" , self . 0) } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut fmt :: Formatter < '_ >`",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
       "item_name": "ByteOffset"
     },
     {
@@ -47,7 +47,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl FieldPath { # [doc = \" Construct from a static description.\"] # [must_use] pub fn from_static (s : & 'static str) -> Self { FieldPath (s . to_owned ()) } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `from_static` signature: unsupported Rust type form `& 'static str`",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `from_static` signature: `String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
       "item_name": "FieldPath"
     },
     {
@@ -57,7 +57,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl fmt :: Display for FieldPath { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { write ! (f , \"field path {}\" , self . 0) } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut fmt :: Formatter < '_ >`",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
       "item_name": "FieldPath"
     },
     {
@@ -77,7 +77,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl fmt :: Display for SerError { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { match self { SerError :: Truncated { at } => write ! (f , \"truncated input at {at}\") , SerError :: Malformed { at , why } => write ! (f , \"malformed input at {at}: {why}\") , SerError :: UnknownTag { path , tag } => { write ! (f , \"unknown tag {tag:?} at {path}\") } SerError :: OutOfDomain { path , why } => { write ! (f , \"value out of domain at {path}: {why}\") } SerError :: BudgetExceeded { kind } => { write ! (f , \"decode budget exceeded ({kind})\") } } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut fmt :: Formatter < '_ >`",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
       "item_name": "SerError"
     },
     {
@@ -107,7 +107,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl fmt :: Display for ByteCount { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { write ! (f , \"{} bytes\" , self . 0) } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut fmt :: Formatter < '_ >`",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
       "item_name": "ByteCount"
     },
     {
@@ -127,7 +127,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl fmt :: Display for IoError { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { match self { IoError :: UnexpectedEof { read } => write ! (f , \"unexpected EOF after {read}\") , IoError :: Refused { why } => write ! (f , \"substrate refused: {why}\") , IoError :: EffectBudget { kind } => write ! (f , \"effect budget exceeded ({kind})\") , } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut fmt :: Formatter < '_ >`",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
       "item_name": "IoError"
     },
     {
@@ -157,7 +157,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl fmt :: Display for ReadValueError { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { match self { ReadValueError :: Io (e) => write ! (f , \"io error: {e}\") , ReadValueError :: Ser (e) => write ! (f , \"serialize error: {e}\") , } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut fmt :: Formatter < '_ >`",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
       "item_name": "ReadValueError"
     },
     {
@@ -217,7 +217,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl GuaranteeTag { # [doc = \" Human-readable name matching the lattice notation (`\\\"Exact\\\"`, etc.).\"] # [must_use] pub fn as_str (self) -> & 'static str { match self { GuaranteeTag :: Exact => \"Exact\" , GuaranteeTag :: Proven => \"Proven\" , GuaranteeTag :: Empirical => \"Empirical\" , GuaranteeTag :: Declared => \"Declared\" , } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `as_str` signature: unsupported Rust type form `& 'static str`",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `as_str` signature: `String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
       "item_name": "GuaranteeTag"
     },
     {
@@ -377,7 +377,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Write `bytes` to `snk`, consuming the handle and returning the updated one\"] # [doc = \" (LR-8 — linear threading).\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Exact`\"] # [doc = \" The bytes written are exactly `bytes` — neither reordered nor approximated.\"] # [doc = \"\"] # [doc = \" # Fallibility\"] # [doc = \" - `Err(IoError::Refused{why})` if the substrate declines.\"] # [doc = \" - `Err(IoError::EffectBudget{kind})` on an effect-budget overrun.\"] # [doc = \"\"] # [doc = \" # Effects: io (declared, C6)\"] pub fn write (snk : Sink , bytes : & [u8]) -> Result < Sink , IoError > { let mut snk = snk ; snk . append (bytes) ; Ok (snk) }",
-      "reason": "unsupported Rust type form `& [u8]`",
+      "reason": "unsupported Rust type form `[u8]`",
       "item_name": "write"
     },
     {
@@ -557,17 +557,17 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" A `Value` carrying a non-finite `f64` (`NaN`/`±∞`) in a `Dense`/`Vsa` payload has no faithful\"] # [doc = \" JSON representation (`serde_json` would silently emit `null`), so it is refused here.\"] # [doc = \"\"] # [doc = \" Returns `Err(SerError::OutOfDomain)` naming the payload index of the first non-finite scalar;\"] # [doc = \" `Ok(())` when every scalar is finite (or the payload has no `f64`).\"] fn check_json_representable (v : & Value) -> Result < () , SerError > { let scalars : & [f64] = match v . payload () { Payload :: Scalars (s) | Payload :: Hypervector (s) => s , Payload :: Bits (_) | Payload :: Trits (_) => return Ok (()) , Payload :: Seq (elems) => { for e in elems { check_json_representable (e) ? ; } return Ok (()) ; } Payload :: Bytes (_) => return Ok (()) , Payload :: Float (_) => return Ok (()) , } ; if let Some (pos) = scalars . iter () . position (| x | ! x . is_finite ()) { return Err (SerError :: OutOfDomain { path : FieldPath :: from_static (\"payload\") , why : format ! (\"non-finite f64 at payload index {pos} has no JSON representation \\\n                 (serde_json would silently emit null, losing NaN/±∞ and colliding identity); \\\n                 refused — never-silent (C1/G2)\") , }) ; } Ok (()) }",
-      "reason": "unsupported Rust type form `& Value`",
+      "reason": "unit type `()` has no representable value in this grammar fragment",
       "item_name": "check_json_representable"
     },
     {
       "file": "crates/mycelium-std-io/src/serialize.rs",
       "line": 116,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "MultiStmtBody",
+      "rust_construct": "MultiStmtBody",
       "snippet": "# [doc = \" Project `v` to the wire/JSON byte form for the given `format`.\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Exact` (when `Ok`)\"] # [doc = \" A faithful projection: every JSON-representable `Value` has a wire/JSON form (RFC-0001 §4.8).\"] # [doc = \" `serialize` borrows `v` immutably; it never mutates or re-keys the value, so the content hash\"] # [doc = \" is unchanged (C4/ADR-003).\"] # [doc = \"\"] # [doc = \" # Fallibility: `Err(SerError::OutOfDomain)`\"] # [doc = \" A `Value` carrying a non-finite `f64` (`NaN`/`±∞`) is refused — JSON cannot represent it and\"] # [doc = \" `serde_json` would silently emit `null` (a lossy, identity-colliding encoding). Never-silent\"] # [doc = \" (C1/G2). Every other well-formed `Value` serializes (M-104's `serde` impl is total over the\"] # [doc = \" finite domain).\"] # [doc = \"\"] # [doc = \" # Effects: none\"] # [doc = \" Pure computation over the in-memory value; no IO.\"] # [doc = \"\"] # [doc = \" # EXPLAIN-able: n/a\"] # [doc = \" A faithful projection has no hidden selection or approximation (spec §4/C3).\"] pub fn serialize (v : & Value , format : Format) -> Result < Vec < u8 > , SerError > { check_json_representable (v) ? ; let bytes = match format { Format :: Wire | Format :: Json => { serde_json :: to_vec (v) . expect (\"Value serialization is total over finite Values (M-104)\") } } ; Ok (bytes) }",
-      "reason": "unsupported Rust type form `& Value`",
+      "reason": "function body has a semicolon-terminated (value-discarding) statement expression before the tail — a `let`-chain body maps only simple `let x = e;` bindings plus a single trailing expression",
       "item_name": "serialize"
     },
     {
@@ -577,7 +577,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Recover a `Value` from `bytes` serialized in the given `format`.\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Empirical` (round-trip property; spec §4.2)\"] # [doc = \" `deserialize(serialize(v, f), f) ≡ v` holds over a generated property-test\"] # [doc = \" corpus (asserted in `#[cfg(test)]`).  The tag is **`Empirical`** — not\"] # [doc = \" `Proven` — because no injectivity/totality theorem over the closed grammar\"] # [doc = \" has been checked here (VR-5 / spec §7-Q2).\"] # [doc = \"\"] # [doc = \" # Fallibility: `Err(SerError)` with a locus (C1 — never-silent)\"] # [doc = \" Any of the five failure modes below; the error carries the **byte offset or\"] # [doc = \" field path** of the failure (RFC-0013 I1):\"] # [doc = \"\"] # [doc = \" - `Truncated{at}` — input ended before a complete value was decoded.\"] # [doc = \" - `Malformed{at, why}` — bytes do not parse (grammar violation).\"] # [doc = \" - `UnknownTag{path, tag}` — unrecognized `Repr`/ctor/`Meta` tag.\"] # [doc = \" - `OutOfDomain{path, why}` — field decodes but violates a value-model\"] # [doc = \"   invariant (e.g. payload length ≠ repr width).\"] # [doc = \" - `BudgetExceeded{kind}` — a declared decode budget overrun (ADR-015).\"] # [doc = \"\"] # [doc = \" **No partially-filled `Value` is ever returned** (C1/G2).\"] # [doc = \"\"] # [doc = \" # Effects: none\"] # [doc = \" Pure over the byte input; no IO.\"] pub fn deserialize (bytes : & [u8] , _format : Format) -> Result < Value , SerError > { serde_json :: from_slice :: < Value > (bytes) . map_err (| e | map_serde_error (e , bytes)) }",
-      "reason": "unsupported Rust type form `& [u8]`",
+      "reason": "unsupported Rust type form `[u8]`",
       "item_name": "deserialize"
     },
     {
@@ -587,7 +587,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" The **one canonical JSON projection**: project `v` to compact UTF-8 JSON text.\"] # [doc = \"\"] # [doc = \" `fmt.to_json` (M-533) **delegates** to this function (README §5 seam; spec\"] # [doc = \" §7-Q1 FLAGGED pending maintainer sign-off).  The round-trip property\"] # [doc = \" `from_json(to_json(v)) ≡ v` is established here once and not duplicated.\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Exact` (when `Ok`)\"] # [doc = \" Faithful projection (identical to `serialize(v, Format::Json)` as `String`).\"] # [doc = \"\"] # [doc = \" # Fallibility: `Err(SerError::OutOfDomain)`\"] # [doc = \" Refuses a `Value` carrying a non-finite `f64` (same domain as [`serialize`]) — JSON cannot\"] # [doc = \" represent it and `serde_json` would silently emit `null` (C1/G2). Total over the finite domain.\"] # [doc = \"\"] # [doc = \" # Effects: none\"] pub fn to_json (v : & Value) -> Result < String , SerError > { check_json_representable (v) ? ; Ok (serde_json :: to_string (v) . expect (\"to_json is total over finite Values (M-104; non-finite excluded above)\")) }",
-      "reason": "unsupported Rust type form `& Value`",
+      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
       "item_name": "to_json"
     },
     {
@@ -597,7 +597,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Recover a `Value` from canonical JSON text.\"] # [doc = \"\"] # [doc = \" `from_json(to_json(v)) ≡ v` (the round-trip property, `Empirical`).\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Empirical` (round-trip; spec §4.2)\"] # [doc = \"\"] # [doc = \" # Fallibility: `Err(SerError)` with a locus (C1 — never-silent)\"] # [doc = \"\"] # [doc = \" # Effects: none\"] pub fn from_json (text : & str) -> Result < Value , SerError > { serde_json :: from_str :: < Value > (text) . map_err (| e | map_serde_error_str (e , text)) }",
-      "reason": "unsupported Rust type form `& str`",
+      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
       "item_name": "from_json"
     },
     {
@@ -617,7 +617,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Compute an approximate byte offset from a 1-based `(line, column)` pair and\"] # [doc = \" the raw input bytes.  Returns `input.len()` if the line/column is out of range\"] # [doc = \" (e.g. for truncated inputs where serde_json reports line 1/col 1 on empty).\"] fn approx_byte_offset (input : & [u8] , line : usize , col : usize) -> u64 { if input . is_empty () || line == 0 { return input . len () as u64 ; } let mut current_line = 1usize ; let mut line_start = 0usize ; for (i , & b) in input . iter () . enumerate () { if current_line == line { let col_offset = col . saturating_sub (1) ; return (line_start + col_offset) . min (input . len ()) as u64 ; } if b == b'\\n' { current_line += 1 ; line_start = i + 1 ; } } input . len () as u64 }",
-      "reason": "unsupported Rust type form `& [u8]`",
+      "reason": "unsupported Rust type form `[u8]`",
       "item_name": "approx_byte_offset"
     },
     {
@@ -637,7 +637,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Detect truncated/EOF errors: the input ended before a complete value was read.\"] fn is_truncated_error_msg (msg : & str , input : & [u8]) -> bool { let lower = msg . to_lowercase () ; input . is_empty () || lower . contains (\"eof\") || lower . contains (\"unexpected end\") }",
-      "reason": "unsupported Rust type form `& str`",
+      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
       "item_name": "is_truncated_error_msg"
     },
     {
@@ -647,7 +647,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Detect domain errors: a field decoded successfully but violates a value-model\"] # [doc = \" invariant (reported by `Value::new` → `serde::de::Error::custom`).\"] fn is_domain_error (msg : & str) -> bool { msg . contains (\"payload\") || msg . contains (\"repr\") || msg . contains (\"guarantee\") || msg . contains (\"bound\") || msg . contains (\"invariant\") || msg . contains (\"well-formed\") || msg . contains (\"width\") }",
-      "reason": "unsupported Rust type form `& str`",
+      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
       "item_name": "is_domain_error"
     },
     {
@@ -657,7 +657,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Detect unknown-tag errors: an unrecognized `Repr`/ctor/`Meta` discriminant.\"] fn is_unknown_tag_error (msg : & str) -> bool { msg . contains (\"unknown variant\") || msg . contains (\"unknown field\") || msg . contains (\"expected one of\") }",
-      "reason": "unsupported Rust type form `& str`",
+      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
       "item_name": "is_unknown_tag_error"
     },
     {
@@ -667,7 +667,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Extract the unknown tag string from a `serde_json` \\\"unknown variant X\\\" message.\"] fn extract_unknown_tag (msg : & str) -> String { if let Some (start) = msg . find ('`') { if let Some (end) = msg [start + 1 ..] . find ('`') { return msg [start + 1 .. start + 1 + end] . to_owned () ; } } msg . to_owned () }",
-      "reason": "unsupported Rust type form `& str`",
+      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
       "item_name": "extract_unknown_tag"
     },
     {
@@ -677,7 +677,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Infer a field path from the error message (best-effort; see C3).\"] fn classify_path_from_message (msg : & str) -> FieldPath { if msg . contains (\"payload\") { FieldPath :: from_static (\"payload\") } else if msg . contains (\"bound\") { FieldPath :: from_static (\"meta/bound\") } else if msg . contains (\"repr\") || msg . contains (\"width\") { FieldPath :: from_static (\"repr\") } else { FieldPath :: from_static (\"<unknown>\") } }",
-      "reason": "unsupported Rust type form `& str`",
+      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
       "item_name": "classify_path_from_message"
     }
   ],
@@ -686,7 +686,8 @@
     "Impl": 14,
     "Import": 9,
     "MacroInvocation": 3,
-    "Other": 21,
+    "MultiStmtBody": 1,
+    "Other": 20,
     "PayloadVariant": 2,
     "ReservedWord": 4,
     "Struct": 4,

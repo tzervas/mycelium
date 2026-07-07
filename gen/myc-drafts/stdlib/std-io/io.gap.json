@@ -111,7 +111,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Write `bytes` to `snk`, consuming the handle and returning the updated one\"] # [doc = \" (LR-8 — linear threading).\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Exact`\"] # [doc = \" The bytes written are exactly `bytes` — neither reordered nor approximated.\"] # [doc = \"\"] # [doc = \" # Fallibility\"] # [doc = \" - `Err(IoError::Refused{why})` if the substrate declines.\"] # [doc = \" - `Err(IoError::EffectBudget{kind})` on an effect-budget overrun.\"] # [doc = \"\"] # [doc = \" # Effects: io (declared, C6)\"] pub fn write (snk : Sink , bytes : & [u8]) -> Result < Sink , IoError > { let mut snk = snk ; snk . append (bytes) ; Ok (snk) }",
-      "reason": "unsupported Rust type form `& [u8]`",
+      "reason": "unsupported Rust type form `[u8]`",
       "item_name": "write"
     },
     {

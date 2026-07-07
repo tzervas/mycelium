@@ -85,4 +85,19 @@
 // accompanying .gap.json for every construct this pass could not express.
 nodule std.content;
 
-
+// Identity equality by digest: two content hashes are **the same identity** iff their digests
+// are equal.
+//
+// # Guarantee tag: `Exact` (deterministic)
+// Digest comparison is a pure byte-equality test; it is reflexive, symmetric, and transitive.
+//
+// # Fallibility: total
+// Comparing two digests cannot fail.
+//
+// # Effects: none
+//
+// # Note
+// This is *not* the same as structural `==` on the values themselves: two values with
+// different runtime state but the same normalized content (e.g. differing only in provenance)
+// are `digest_eq` (same identity) even if `v1 != v2` structurally (ADR-003).
+fn digest_eq(a: ContentHash, b: ContentHash) => Bool = a == b;
