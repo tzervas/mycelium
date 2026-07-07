@@ -17,8 +17,8 @@ The project corpus as a generated, provenance-carrying encoding, served platform
 (`crates/mycelium-tero`) — promoted as a self-contained crate.
 
 - **M-1015 — Layer-1 deterministic corpus index.** A drift-gated `docs/tero-index/{INDEX.md,index.json}`
-  (5141 rows) over docs/research/issues/changelog/skills, generalizing the api-/lib-index pattern; an
-  `Empirical/Declared` heuristic, source is ground truth (G2/VR-5).
+  (5119 rows on this promoted tier) over docs/research/issues/changelog/skills, generalizing the
+  api-/lib-index pattern; an `Empirical/Declared` heuristic, source is ground truth (G2/VR-5).
 - **M-1016 — query engine + mandatory provenance.** `QueryEngine` over the Layer-1 report; every
   answer carries a resolvable citation by construction (an uncited query is a typed refusal);
   EXPLAIN-able retrieval; Empirical latency ~630µs/query.

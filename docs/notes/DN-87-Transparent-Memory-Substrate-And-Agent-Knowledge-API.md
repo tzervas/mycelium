@@ -116,7 +116,9 @@ isolated worktrees, disjoint dirs by construction, shared files integrator-owned
 The improved-on-RAG gate (§6 item 1). Each M-1018 `tero-eval` run appends a verdict; history is
 never rewritten (the in-crate mirror is `crates/mycelium-tero/eval/VERDICT.md`).
 
-- **Run 1 (2026-07-07, PR #1254) — CLOSED (serving Layer-1).** Over the real 5141-row index (seed
+- **Run 1 (2026-07-07, PR #1254) — CLOSED (serving Layer-1).** Over the PR-#1254 **dev** codebook of
+  5141 rows — *frozen, not re-run for this tier promotion; the promoted integration index is 5119
+  rows (the isolated tree carries fewer corpus items)* — (seed
   `0x7E7010185EEDC0DE`, 16 questions, k=5, host x86_64-linux): correctness@1 Layer-1 **10/16
   (0.625)** vs Layer-2 6/16 (0.375); correctness@5 Layer-1 **16/16** vs Layer-2 8/16; provenance
   fidelity 1.000 both; latency Layer-1 **3.25M** ns/query vs Layer-2 85.9M (~26×). Layer-2 does not

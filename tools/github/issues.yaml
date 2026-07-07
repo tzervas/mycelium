@@ -12980,7 +12980,8 @@ issues:
         wrong answer is traceable to its source in one hop -- never an opaque embedding artifact.
 
       Definition of Done:
-      - M-1015..M-1019 done; the eval harness demonstrates the DN-87 §6 gate; the API + skills
+      - M-1015..M-1019 done (M-1020 is a P3 HTTPS follow-on, not part of the original DoD); the
+        eval harness demonstrates the DN-87 §6 gate; the API + skills
         serve at least two distinct platforms; every answer carries resolvable provenance;
         regeneration is deterministic + drift-gated; MIT headers throughout.
 
@@ -13019,7 +13020,8 @@ issues:
       DONE (2026-07-07, epic branch claude/epic/E39-m1015-corpus-index @ 1a2d7d31 + the
       integration commit): crates/mycelium-tero Layer-1 engine (reuses mycelium_doc::corpus,
       no pub widening; purpose-built YAML-subset reader, no new deps) +
-      docs/tero-index/{INDEX.md,index.json} (5140 rows / 6 honestly-flagged; families
+      docs/tero-index/{INDEX.md,index.json} (5140 rows at M-1015's original landing; 5119 on the
+      promoted integration tier / 6 honestly-flagged; families
       docs/research/issues/changelog/skills each grep-cross-checked; api-/lib-index referenced
       not duplicated) + scripts/checks/tero-index.sh drift gate (wired as `just tero-index`;
       COMPONENT_ID shares doc-index's 23 -- the 5-bit space is exhausted at 31; a 32nd unique id
