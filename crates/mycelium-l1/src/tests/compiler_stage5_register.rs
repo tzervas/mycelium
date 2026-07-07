@@ -29,12 +29,12 @@
 
 use crate::ast::{
     Arm, BaseType, Ctor, DeriveDecl, Expr, FnDecl, FnSig, ImplDecl, InherentImplDecl, Item,
-    Literal, LowerDecl, LowerRhs, Nodule, ObjectDecl, Paradigm, Param, Path, Pattern, Scalar,
-    Sparsity, TraitDecl, TypeDecl, TypeRef, ViaDecl, Vis, WidthRef,
+    Literal, LowerDecl, LowerRhs, Nodule, ObjectDecl, Paradigm, Param, ParamKind, Path, Pattern,
+    Scalar, Sparsity, TraitDecl, TraitRef, TypeDecl, TypeParam, TypeRef, ViaDecl, Vis, WidthRef,
 };
 use crate::checkty::{
-    collect_tuple_arities, first_duplicate, prelude, register_types, resolve_ctors, CtorInfo,
-    DataInfo, Ty, Width,
+    collect_tuple_arities, first_duplicate, prelude, register_traits, register_types,
+    resolve_ctors, CtorInfo, DataInfo, TraitInfo, Ty, Width,
 };
 use crate::eval::L1Value;
 use crate::tests::marshal_support::*;
@@ -121,6 +121,170 @@ fn decode_data_info(v: &L1Value) -> DataInfo {
         },
         c => panic!("marshal decode_data_info: unexpected ctor {c}"),
     }
+}
+
+// ── L1Value → SURFACE decoders (register_traits output: TraitInfo carries surface FnSig/TypeRef) ─────
+//
+// register_traits' `Vec[TraitInfo]` output stores the traits' method sigs VERBATIM as SURFACE `FnSig`s
+// (distinct from the KERNEL `KFnSig` the elab harness decodes), whose param/ret types are surface
+// `TypeRef`s. So the differential needs a surface `FnSig` / `TypeRef` decoder family — the never-silent
+// inverse of the mirror constructors, panicking on an unexpected ctor rather than mis-decoding (G2).
+
+/// `WLit(u32)` / `WName(str)` → `ast::WidthRef`.
+fn decode_widthref(v: &L1Value) -> WidthRef {
+    let (ctor, fields) = expect_data(v, "WidthRef");
+    match ctor {
+        "WLit" => WidthRef::Lit(decode_u32(&fields[0])),
+        "WName" => WidthRef::Name(decode_string(&fields[0])),
+        c => panic!("marshal decode_widthref: unexpected ctor {c}"),
+    }
+}
+
+/// The surface `BaseType` mirror (all encoded variants) → `ast::BaseType`. The never-silent inverse of
+/// `encode_basetype`; recursive on `Seq`/`Named`/`Fn`/`Tuple` via `decode_typeref`. `Ambient` is never
+/// encoded (its encoder panics), so it is not a decode arm — an unexpected ctor panics.
+fn decode_basetype(v: &L1Value) -> BaseType {
+    let (ctor, fields) = expect_data(v, "BaseType");
+    match ctor {
+        "KwBinary" => BaseType::Binary(decode_widthref(&fields[0])),
+        "KwTernary" => BaseType::Ternary(decode_widthref(&fields[0])),
+        "KwDense" => BaseType::Dense(decode_u32(&fields[0]), decode_scalar(&fields[1])),
+        "Vsa" => BaseType::Vsa {
+            model: decode_string(&fields[0]),
+            dim: decode_u32(&fields[1]),
+            sparsity: decode_sparsity(&fields[2]),
+        },
+        "KwSubstrate" => BaseType::Substrate(decode_string(&fields[0])),
+        "KwSeq" => BaseType::Seq {
+            elem: Box::new(decode_typeref(&fields[0])),
+            len: decode_u32(&fields[1]),
+        },
+        "KwBytes" => BaseType::Bytes,
+        "KwFloat" => BaseType::Float,
+        "Named" => BaseType::Named(
+            decode_string(&fields[0]),
+            decode_vec(&fields[1], decode_typeref),
+        ),
+        "FnArrow" => BaseType::Fn(
+            Box::new(decode_typeref(&fields[0])),
+            Box::new(decode_typeref(&fields[1])),
+        ),
+        "Tuple" => BaseType::Tuple(decode_vec(&fields[0], decode_typeref)),
+        c => panic!("marshal decode_basetype: unexpected ctor {c}"),
+    }
+}
+
+/// `TR(base, guarantee)` → `ast::TypeRef`. `encode_typeref` always emits `None` for the guarantee slot
+/// (every `resolve_ty` consumer discards it), so the fixtures' surface `TypeRef`s round-trip with
+/// `guarantee: None`; a `Some(_)` would panic (never-silent — it is outside the encoded surface).
+fn decode_typeref(v: &L1Value) -> TypeRef {
+    let (ctor, fields) = expect_data(v, "TypeRef");
+    match ctor {
+        "TR" => TypeRef {
+            base: decode_basetype(&fields[0]),
+            guarantee: decode_option(&fields[1], |_| {
+                panic!("marshal decode_typeref: guarantee slot is always None in this differential")
+            }),
+        },
+        c => panic!("marshal decode_typeref: unexpected ctor {c}"),
+    }
+}
+
+/// `Prm(name, ty)` → `ast::Param`.
+fn decode_param(v: &L1Value) -> Param {
+    let (ctor, fields) = expect_data(v, "Param");
+    match ctor {
+        "Prm" => Param {
+            name: decode_string(&fields[0]),
+            ty: decode_typeref(&fields[1]),
+        },
+        c => panic!("marshal decode_param: unexpected ctor {c}"),
+    }
+}
+
+/// `PkType` / `PkWidth` → `ast::ParamKind`.
+fn decode_param_kind(v: &L1Value) -> ParamKind {
+    match expect_data(v, "ParamKind").0 {
+        "PkType" => ParamKind::Type,
+        "PkWidth" => ParamKind::Width,
+        c => panic!("marshal decode_param_kind: unexpected ctor {c}"),
+    }
+}
+
+/// `TRf(name, args)` → `ast::TraitRef`.
+fn decode_trait_ref(v: &L1Value) -> TraitRef {
+    let (ctor, fields) = expect_data(v, "TraitRef");
+    match ctor {
+        "TRf" => TraitRef {
+            name: decode_string(&fields[0]),
+            args: decode_vec(&fields[1], decode_typeref),
+        },
+        c => panic!("marshal decode_trait_ref: unexpected ctor {c}"),
+    }
+}
+
+/// `TP(name, kind, bounds)` → `ast::TypeParam`.
+fn decode_type_param(v: &L1Value) -> TypeParam {
+    let (ctor, fields) = expect_data(v, "TypeParam");
+    match ctor {
+        "TP" => TypeParam {
+            name: decode_string(&fields[0]),
+            kind: decode_param_kind(&fields[1]),
+            bounds: decode_vec(&fields[2], decode_trait_ref),
+        },
+        c => panic!("marshal decode_type_param: unexpected ctor {c}"),
+    }
+}
+
+/// The SURFACE `FnSig` mirror `FS(name, type_params, value_params, ret, effects, budgets)` →
+/// `ast::FnSig`. `effects` decodes from field 4 (empty in these fixtures); `effect_budgets` reads
+/// field 5, which the fixtures keep `Nil` (`encode_fn_sig` asserts empty) — so the element decoder is
+/// never invoked and the map is empty; a populated budget would panic (never-silent, outside surface).
+fn decode_fn_sig(v: &L1Value) -> FnSig {
+    let (ctor, fields) = expect_data(v, "FnSig");
+    match ctor {
+        "FS" => FnSig {
+            name: decode_string(&fields[0]),
+            params: decode_vec(&fields[1], decode_type_param),
+            value_params: decode_vec(&fields[2], decode_param),
+            ret: decode_typeref(&fields[3]),
+            effects: decode_vec(&fields[4], decode_string),
+            effect_budgets: decode_vec(&fields[5], |_| -> (String, u64) {
+                panic!("marshal decode_fn_sig: effect budgets are empty in this differential")
+            })
+            .into_iter()
+            .collect(),
+        },
+        c => panic!("marshal decode_fn_sig: unexpected ctor {c}"),
+    }
+}
+
+/// `TrInfo(name, params, sigs)` → `checkty::TraitInfo` (the port's registry entry mirror).
+fn decode_trait_info(v: &L1Value) -> TraitInfo {
+    let (ctor, fields) = expect_data(v, "TraitInfo");
+    match ctor {
+        "TrInfo" => TraitInfo {
+            name: decode_string(&fields[0]),
+            params: decode_vec(&fields[1], decode_string),
+            sigs: decode_vec(&fields[2], decode_fn_sig),
+        },
+        c => panic!("marshal decode_trait_info: unexpected ctor {c}"),
+    }
+}
+
+/// Decode `register_traits`' returned registry (`Vec[TraitInfo]`) into a `BTreeMap` keyed by trait name
+/// — the order-insensitive comparison surface against `checkty::register_traits`' `BTreeMap`. A
+/// duplicate key panics (never-silent): the port maintains a one-entry-per-name invariant, so a dup is
+/// a real port bug, surfaced rather than silently collapsed.
+fn decode_traits_map(v: &L1Value) -> BTreeMap<String, TraitInfo> {
+    let mut map = BTreeMap::new();
+    for t in decode_vec(v, decode_trait_info) {
+        assert!(
+            map.insert(t.name.clone(), t).is_none(),
+            "register_traits port produced a duplicate trait name (registry invariant broken)"
+        );
+    }
+    map
 }
 
 // ── Rust → `.myc` fixture encoders (register-family INPUT types; built on shared primitives) ─────────
@@ -785,21 +949,67 @@ fn encode_param_list(ps: &[Param]) -> String {
     s
 }
 
-/// `FnSig` mirror. The fixtures never populate type-params / effects / effect-budgets (all empty) —
-/// and `collect_tuple_arities_sig` reads only `value_params` + `ret` regardless — so those three
-/// slots emit `Nil` (asserted empty below, so an encoder gap can never silently drop a populated one).
+/// `FnSig` mirror. Type-params ARE encoded (the register_traits differential needs bounded method
+/// type-params); `effects` / `effect_budgets` are never populated by these fixtures — those two slots
+/// emit `Nil` (asserted empty below, so an encoder gap can never silently drop a populated one). The
+/// tuple-walk fixtures keep `params` empty too, so `encode_type_param_list(&[])` = `Nil` — their
+/// encoded text is unchanged.
 fn encode_fn_sig(sig: &FnSig) -> String {
     assert!(
-        sig.params.is_empty() && sig.effects.is_empty() && sig.effect_budgets.is_empty(),
-        "encode_fn_sig fixture invariant: type-params / effects / budgets must be empty (the tuple \
-         walk never reads them; keep fixtures within the encoded surface)"
+        sig.effects.is_empty() && sig.effect_budgets.is_empty(),
+        "encode_fn_sig fixture invariant: effects / budgets must be empty (the register-family never \
+         reads them; keep fixtures within the encoded surface)"
     );
     format!(
-        "FS({}, Nil, {}, {}, Nil, Nil)",
+        "FS({}, {}, {}, {}, Nil, Nil)",
         encode_bytes(&sig.name),
+        encode_type_param_list(&sig.params),
         encode_param_list(&sig.value_params),
         encode_typeref(&sig.ret)
     )
+}
+
+/// `ParamKind` mirror (ast.rs `Type` / `Width` → `PkType` / `PkWidth`).
+fn encode_param_kind(k: &ParamKind) -> &'static str {
+    match k {
+        ParamKind::Type => "PkType",
+        ParamKind::Width => "PkWidth",
+    }
+}
+
+/// `TraitRef` mirror `TRf(name, args)` — a bound-position trait reference (ast.rs `TraitRef`).
+fn encode_trait_ref(tr: &TraitRef) -> String {
+    format!(
+        "TRf({}, {})",
+        encode_bytes(&tr.name),
+        encode_typeref_list(&tr.args)
+    )
+}
+
+fn encode_trait_ref_list(trs: &[TraitRef]) -> String {
+    let mut s = String::from("Nil");
+    for tr in trs.iter().rev() {
+        s = format!("Cons({}, {})", encode_trait_ref(tr), s);
+    }
+    s
+}
+
+/// `TypeParam` mirror `TP(name, kind, bounds)` (ast.rs `TypeParam`).
+fn encode_type_param(tp: &TypeParam) -> String {
+    format!(
+        "TP({}, {}, {})",
+        encode_bytes(&tp.name),
+        encode_param_kind(&tp.kind),
+        encode_trait_ref_list(&tp.bounds)
+    )
+}
+
+fn encode_type_param_list(tps: &[TypeParam]) -> String {
+    let mut s = String::from("Nil");
+    for tp in tps.iter().rev() {
+        s = format!("Cons({}, {})", encode_type_param(tp), s);
+    }
+    s
 }
 
 fn encode_fn_decl(fd: &FnDecl) -> String {
@@ -1445,5 +1655,406 @@ fn register_types_unreferenced_tuple_still_errs_never_silent() {
         resolved,
         Err(()),
         "an unreferenced tuple must surface as an explicit resolve_ty Err (never-silent, G2/VR-5)"
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════════════
+// register_traits (M-1013 STEP 3) — the TRAIT pass. LIVE differential against `checkty::register_traits`
+// (checkty.rs 3016-3083): the two-pass registration (per-trait checks + method-sig resolution, then the
+// forward-reference-tolerant bound-validation pass). The port returns a `Vec[TraitInfo]`; both sides
+// normalize to a name-keyed `BTreeMap<String, TraitInfo>` (order-insensitive), Err → `()`.
+// ═══════════════════════════════════════════════════════════════════════════════════════════════════
+
+// ── fixture constructors (test bodies stay `assert over a case`) ────────────────────────────────────
+fn it_trait(td: TraitDecl) -> Item {
+    Item::Trait(td)
+}
+fn trait_decl(name: &str, params: &[&str], sigs: Vec<FnSig>) -> TraitDecl {
+    TraitDecl {
+        vis: Vis::Private,
+        name: name.to_owned(),
+        params: params.iter().map(|s| (*s).to_owned()).collect(),
+        sigs,
+    }
+}
+/// An unbounded **type** parameter `T` (the §11 identity case).
+fn tparam(name: &str) -> TypeParam {
+    TypeParam {
+        name: name.to_owned(),
+        kind: ParamKind::Type,
+        bounds: vec![],
+    }
+}
+/// A **bounded** type parameter `T: b0 + b1 + …` (RFC-0019 §4.1 dictionary site).
+fn tparam_bounded(name: &str, bounds: Vec<TraitRef>) -> TypeParam {
+    TypeParam {
+        name: name.to_owned(),
+        kind: ParamKind::Type,
+        bounds,
+    }
+}
+/// A bare bound-position trait reference `Cmp` (no type args).
+fn trait_ref(name: &str) -> TraitRef {
+    TraitRef {
+        name: name.to_owned(),
+        args: vec![],
+    }
+}
+/// A method `FnSig` carrying its own type-params (`fn_sig` above always leaves them empty).
+fn fn_sig_tp(name: &str, params: Vec<TypeParam>, value_params: Vec<Param>, ret: TypeRef) -> FnSig {
+    FnSig {
+        name: name.to_owned(),
+        params,
+        value_params,
+        ret,
+        effects: vec![],
+        effect_budgets: BTreeMap::new(),
+    }
+}
+
+#[test]
+fn register_traits_cases() {
+    // `D`: a registered data type so a method value-param/return `D` resolves (the register_nodule_decls
+    // driver would have registered it via `register_types` first; here it is seeded directly).
+    let with_d = || vec![shell("D", &[])];
+    let cases: Vec<(&str, Vec<DataInfo>, Nodule)> = vec![
+        // No traits at all → an empty registry (both sides).
+        ("empty", vec![], nodule(vec![])),
+        // A non-trait item is skipped (mirror of `let Item::Trait(td) = item else { continue }`); the
+        // one trait still registers. The Fn's body/sig are irrelevant to register_traits.
+        (
+            "skips_non_trait",
+            with_d(),
+            nodule(vec![
+                Item::Fn(fn_decl(fn_sig("f", vec![], nm("D")), var("x"))),
+                it_trait(trait_decl(
+                    "Show",
+                    &[],
+                    vec![fn_sig("show", vec![param("x", nm("D"))], nm("D"))],
+                )),
+            ]),
+        ),
+        // Single trait, single method — the baseline Ok.
+        (
+            "single_ok",
+            with_d(),
+            nodule(vec![it_trait(trait_decl(
+                "Show",
+                &[],
+                vec![fn_sig("show", vec![param("x", nm("D"))], nm("D"))],
+            ))]),
+        ),
+        // Multi-method trait (distinct method names) — Ok.
+        (
+            "multi_method",
+            with_d(),
+            nodule(vec![it_trait(trait_decl(
+                "Two",
+                &[],
+                vec![
+                    fn_sig("a", vec![param("x", nm("D"))], nm("D")),
+                    fn_sig("b", vec![param("y", nm("D"))], nm("D")),
+                ],
+            ))]),
+        ),
+        // A trait type-parameter `S` in scope over its method sig (`fn id(x: S) => S`) — Ok.
+        (
+            "trait_param_in_scope",
+            vec![],
+            nodule(vec![it_trait(trait_decl(
+                "Id",
+                &["S"],
+                vec![fn_sig("id", vec![param("x", nm("S"))], nm("S"))],
+            ))]),
+        ),
+        // A method whose OWN type-param `T` extends the tyvar scope so `x: T` / `=> T` resolve — Ok.
+        // Without the `param_names()` extension (checkty.rs 3045-3046) `T` would be unknown ⇒ this
+        // would Err; the Ok/Ok parity witnesses the port performs the extension.
+        (
+            "method_tyvar_extends_scope",
+            vec![],
+            nodule(vec![it_trait(trait_decl(
+                "Gen",
+                &[],
+                vec![fn_sig_tp(
+                    "f",
+                    vec![tparam("T")],
+                    vec![param("x", nm("T"))],
+                    nm("T"),
+                )],
+            ))]),
+        ),
+        // Method type-param bound naming a KNOWN trait `A` (declared earlier) — Ok.
+        (
+            "bound_known_trait",
+            vec![],
+            nodule(vec![
+                it_trait(trait_decl("A", &[], vec![])),
+                it_trait(trait_decl(
+                    "B",
+                    &[],
+                    vec![fn_sig_tp(
+                        "f",
+                        vec![tparam_bounded("T", vec![trait_ref("A")])],
+                        vec![param("x", nm("T"))],
+                        nm("T"),
+                    )],
+                )),
+            ]),
+        ),
+        // Bound FORWARD-references a later-declared trait `Later` — Ok, precisely because bound
+        // validation is a SECOND pass over the complete registry (checkty.rs 3058-3081).
+        (
+            "bound_forward_ref",
+            vec![],
+            nodule(vec![
+                it_trait(trait_decl(
+                    "Uses",
+                    &[],
+                    vec![fn_sig_tp(
+                        "f",
+                        vec![tparam_bounded("T", vec![trait_ref("Later")])],
+                        vec![param("x", nm("T"))],
+                        nm("T"),
+                    )],
+                )),
+                it_trait(trait_decl("Later", &[], vec![])),
+            ]),
+        ),
+        // Duplicate trait type-PARAMETER → Err (checkty.rs 3024).
+        (
+            "dup_type_param",
+            vec![],
+            nodule(vec![it_trait(trait_decl("Bad", &["X", "X"], vec![]))]),
+        ),
+        // Duplicate trait NAME → Err (checkty.rs 3030).
+        (
+            "dup_trait_name",
+            with_d(),
+            nodule(vec![
+                it_trait(trait_decl(
+                    "Dup",
+                    &[],
+                    vec![fn_sig("m", vec![param("x", nm("D"))], nm("D"))],
+                )),
+                it_trait(trait_decl(
+                    "Dup",
+                    &[],
+                    vec![fn_sig("n", vec![param("y", nm("D"))], nm("D"))],
+                )),
+            ]),
+        ),
+        // Duplicate METHOD name within a trait → Err (checkty.rs 3036).
+        (
+            "dup_method",
+            with_d(),
+            nodule(vec![it_trait(trait_decl(
+                "M",
+                &[],
+                vec![
+                    fn_sig("m", vec![param("x", nm("D"))], nm("D")),
+                    fn_sig("m", vec![param("y", nm("D"))], nm("D")),
+                ],
+            ))]),
+        ),
+        // Method value-param type does not resolve (`Nope` is neither a tyvar nor a registered type) →
+        // Err (checkty.rs 3047 via check_sig_resolves / resolve_ty).
+        (
+            "unresolvable_method_type",
+            with_d(),
+            nodule(vec![it_trait(trait_decl(
+                "U",
+                &[],
+                vec![fn_sig("f", vec![param("x", nm("Nope"))], nm("D"))],
+            ))]),
+        ),
+        // Method type-param bound names an UNKNOWN trait `Nope` → Err (checkty.rs 3067, second pass).
+        (
+            "bound_unknown_trait",
+            vec![],
+            nodule(vec![it_trait(trait_decl(
+                "V",
+                &[],
+                vec![fn_sig_tp(
+                    "f",
+                    vec![tparam_bounded("T", vec![trait_ref("Nope")])],
+                    vec![param("x", nm("T"))],
+                    nm("T"),
+                )],
+            ))]),
+        ),
+    ];
+    for (label, types, n) in &cases {
+        let map = types_map(types);
+        let want = register_traits(&map, n).map_err(|_| ());
+        assert_l1_marshal(
+            &format!("register_traits_{label}"),
+            &format!(
+                "fn main() => Result[Vec[TraitInfo], Bytes] = register_traits({}, {});\n",
+                encode_data_info_list(types),
+                encode_nodule(n)
+            ),
+            |v| decode_result(v, decode_traits_map),
+            want,
+        );
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+// Decoder non-vacuity for the SURFACE-FnSig decoder family (M-1013 STEP 2 convention): each new
+// decoder arm must DISCRIMINATE on every dimension it reads — two mirror literals differing in exactly
+// one dimension must decode `!=`, so a decoder that dropped a dimension is caught, not silently
+// collapsed. Covers decode_{trait_info, fn_sig, type_param, trait_ref, param, param_kind, typeref,
+// basetype, widthref}.
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+#[test]
+fn marshal_discriminates_traits() {
+    fn dd_trinfo(expr: &str) -> TraitInfo {
+        decode_driver("TraitInfo", expr, decode_trait_info)
+    }
+    fn dd_fnsig(expr: &str) -> FnSig {
+        decode_driver("FnSig", expr, decode_fn_sig)
+    }
+    fn dd_tp(expr: &str) -> TypeParam {
+        decode_driver("TypeParam", expr, decode_type_param)
+    }
+    fn dd_tref(expr: &str) -> TypeRef {
+        decode_driver("TypeRef", expr, decode_typeref)
+    }
+
+    let b_a = encode_bytes("A");
+    let b_b = encode_bytes("B");
+    let sig_m = format!(
+        "FS({}, Nil, Nil, TR(KwBytes, None), Nil, Nil)",
+        encode_bytes("m")
+    );
+
+    // decode_trait_info: name / params / sigs.
+    assert_ne!(
+        dd_trinfo(&format!("TrInfo({b_a}, Nil, Nil)")),
+        dd_trinfo(&format!("TrInfo({b_b}, Nil, Nil)"))
+    );
+    assert_ne!(
+        dd_trinfo(&format!("TrInfo({b_a}, Nil, Nil)")),
+        dd_trinfo(&format!("TrInfo({b_a}, Cons({b_b}, Nil), Nil)"))
+    );
+    assert_ne!(
+        dd_trinfo(&format!("TrInfo({b_a}, Nil, Nil)")),
+        dd_trinfo(&format!("TrInfo({b_a}, Nil, Cons({sig_m}, Nil))"))
+    );
+
+    // decode_fn_sig: name / type_params / value_params / ret.
+    assert_ne!(
+        dd_fnsig(&format!(
+            "FS({}, Nil, Nil, TR(KwBytes, None), Nil, Nil)",
+            encode_bytes("m")
+        )),
+        dd_fnsig(&format!(
+            "FS({}, Nil, Nil, TR(KwBytes, None), Nil, Nil)",
+            encode_bytes("n")
+        ))
+    );
+    assert_ne!(
+        dd_fnsig(&format!(
+            "FS({}, Nil, Nil, TR(KwBytes, None), Nil, Nil)",
+            encode_bytes("m")
+        )),
+        dd_fnsig(&format!(
+            "FS({}, Cons(TP({}, PkType, Nil), Nil), Nil, TR(KwBytes, None), Nil, Nil)",
+            encode_bytes("m"),
+            encode_bytes("T")
+        ))
+    );
+    assert_ne!(
+        dd_fnsig(&format!(
+            "FS({}, Nil, Nil, TR(KwBytes, None), Nil, Nil)",
+            encode_bytes("m")
+        )),
+        dd_fnsig(&format!(
+            "FS({}, Nil, Cons(Prm({}, TR(KwBytes, None)), Nil), TR(KwBytes, None), Nil, Nil)",
+            encode_bytes("m"),
+            encode_bytes("x")
+        ))
+    );
+    assert_ne!(
+        dd_fnsig(&format!(
+            "FS({}, Nil, Nil, TR(KwBytes, None), Nil, Nil)",
+            encode_bytes("m")
+        )),
+        dd_fnsig(&format!(
+            "FS({}, Nil, Nil, TR(KwFloat, None), Nil, Nil)",
+            encode_bytes("m")
+        ))
+    );
+
+    // decode_type_param: name / kind / bounds.
+    assert_ne!(
+        dd_tp(&format!("TP({}, PkType, Nil)", encode_bytes("T"))),
+        dd_tp(&format!("TP({}, PkType, Nil)", encode_bytes("U")))
+    );
+    assert_ne!(
+        dd_tp(&format!("TP({}, PkType, Nil)", encode_bytes("T"))),
+        dd_tp(&format!("TP({}, PkWidth, Nil)", encode_bytes("T")))
+    );
+    assert_ne!(
+        dd_tp(&format!("TP({}, PkType, Nil)", encode_bytes("T"))),
+        dd_tp(&format!(
+            "TP({}, PkType, Cons(TRf({}, Nil), Nil))",
+            encode_bytes("T"),
+            encode_bytes("C")
+        ))
+    );
+
+    // decode_trait_ref: name / args (via the TypeParam bounds surface).
+    assert_ne!(
+        dd_tp(&format!(
+            "TP({}, PkType, Cons(TRf({}, Nil), Nil))",
+            encode_bytes("T"),
+            encode_bytes("C")
+        )),
+        dd_tp(&format!(
+            "TP({}, PkType, Cons(TRf({}, Nil), Nil))",
+            encode_bytes("T"),
+            encode_bytes("D")
+        ))
+    );
+    assert_ne!(
+        dd_tp(&format!(
+            "TP({}, PkType, Cons(TRf({}, Nil), Nil))",
+            encode_bytes("T"),
+            encode_bytes("C")
+        )),
+        dd_tp(&format!(
+            "TP({}, PkType, Cons(TRf({}, Cons(TR(KwBytes, None), Nil)), Nil))",
+            encode_bytes("T"),
+            encode_bytes("C")
+        ))
+    );
+
+    // decode_typeref / decode_basetype: variant tags + the Named name/args + Tuple + widthref.
+    assert_ne!(dd_tref("TR(KwBytes, None)"), dd_tref("TR(KwFloat, None)"));
+    assert_ne!(
+        dd_tref(&format!("TR(Named({b_a}, Nil), None)")),
+        dd_tref(&format!("TR(Named({b_b}, Nil), None)"))
+    );
+    assert_ne!(
+        dd_tref(&format!("TR(Named({b_a}, Nil), None)")),
+        dd_tref(&format!(
+            "TR(Named({b_a}, Cons(TR(KwBytes, None), Nil)), None)"
+        ))
+    );
+    assert_ne!(
+        dd_tref(&format!("TR(Named({b_a}, Nil), None)")),
+        dd_tref(&format!(
+            "TR(Tuple(Cons(TR(Named({b_a}, Nil), None), Cons(TR(Named({b_b}, Nil), None), Nil))), None)"
+        ))
+    );
+    assert_ne!(
+        dd_tref(&format!("TR(KwBinary(WLit({})), None)", encode_u32(8))),
+        dd_tref(&format!("TR(KwBinary(WLit({})), None)", encode_u32(16)))
+    );
+    assert_ne!(
+        dd_tref(&format!("TR(KwBinary(WLit({})), None)", encode_u32(8))),
+        dd_tref(&format!("TR(KwBinary(WName({})), None)", encode_bytes("N")))
     );
 }
