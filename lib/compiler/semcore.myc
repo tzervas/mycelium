@@ -1719,3 +1719,287 @@ fn ty_list_eq(a: Vec[Ty], b: Vec[Ty]) => Bool =
     Nil => match b { Nil => True, Cons(_, _) => False },
     Cons(ha, ta) => match b { Nil => False, Cons(hb, tb) => and_(ty_eq(ha, hb), ty_list_eq(ta, tb)) }
   };
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// checkty.rs TYPE ALGEBRA (M-740 Stage 5, increment 3 — M-1008). Unification + type resolution.
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// Ports checkty.rs's next type-algebra layer, building on increment 2 (M-1007):
+//   * `unify`      (checkty.rs::unify)      — one-sided unification of a declared `Ty` against a
+//     concrete `Ty`, ACCUMULATING a parameter substitution. The never-silent conflict path (a
+//     second, conflicting binding is an explicit mismatch, never a silent re-coercion — G2/VR-5).
+//   * `resolve_ty` (checkty.rs::resolve_ty) — surface `TypeRef` -> checked `Ty` (+ its guarantee).
+//   * `tuple_type_name`/`tuple_ctor_name`/`synthetic_tuple_data` (checkty.rs, M-826) — the
+//     synthetic-tuple helpers (injective `Tuple$N`/`MkTuple$N` naming + on-demand `DataInfo`).
+// Pure `Ty`-algebra (no checking logic, no evaluator); each has a reachable live Rust oracle
+// (`pub(crate)`/`pub`) for the in-crate differential (compiler_stage5_unify.rs).
+//
+// FLAG-semcore-13 (`unify`'s `&mut BTreeMap<String, Ty>` -> a THREADED
+// `Vec[Pair[Bytes, Ty]]` returned on `Ok`, the FLAG-semcore-6 value-threaded collapse over the
+// FLAG-semcore-11 assoc-list). Rust mutates `s` in place and returns `Result<(), _>`; here `unify`
+// takes the current substitution and RETURNS the extended one on `Ok` (an unchanged `s` on the
+// no-op arms). A binding is prepended (`Cons(Pr(v, t), s)`) — first-match lookup shadows, so this
+// reproduces `BTreeMap::insert`'s lookup semantics (no key-uniqueness enforced — the standing
+// FLAG-semcore-4 narrowing). The `site` string is DROPPED (error text carries no `site` prefix —
+// the same harmless narrowing FLAG-semcore-3 already takes; the differential asserts Ok/Err +
+// the resulting `Ty`/substitution, never the message bytes).
+//
+// FLAG-semcore-14 (`unify`'s vestigial `(_, Ty::Var(_)) if decl == actual` arm collapses into the
+// general `decl == actual` fallback). In Rust that arm sits AFTER `(Ty::Var(v), _)`, so it is only
+// reachable when `decl` is NON-`Var` and `actual` IS `Var` — but then `decl == actual` can never
+// hold (a non-`Var` never structurally equals a `Var`), so its guard is unsatisfiable and it
+// always falls through to the `_ if decl == actual` catch. This port omits the dead arm and lets
+// `(nonvar, TyVar)` reach the same `ty_eq(decl, actual)` fallback — a behaviour-preserving
+// collapse, documented (not a silent drop — G2).
+//
+// FLAG-semcore-15 (the decimal-render helper `dec_u32`, introduced here). Rust's
+// `format!("{n}")` renders a `usize`/`u32` as base-10 digits; semcore's existing encoders emit only
+// `0b`-literals, so `tuple_type_name`/`synthetic_tuple_data` (and, next, mono's mangling — M-1009,
+// which REUSES this helper) need a base-10 renderer. It is a bounded divmod-by-10 recursion
+// (<= 10 iterations for any `Binary{32}`, no M-986/M-987 concern) over the never-silent `div_u`/
+// `rem_u` prims, itself differential-tested against the oracle's decimal output.
+
+// ── dec_u32: render a Binary{32} as base-10 Bytes (FLAG-semcore-15; Rust `format!("{n}")`) ───────
+fn dec_digit(d: Binary{32}) => Bytes =
+  match eq(d, 0b0000_0000_0000_0000_0000_0000_0000_0000) { 0b1 => "0", _ =>
+  match eq(d, 0b0000_0000_0000_0000_0000_0000_0000_0001) { 0b1 => "1", _ =>
+  match eq(d, 0b0000_0000_0000_0000_0000_0000_0000_0010) { 0b1 => "2", _ =>
+  match eq(d, 0b0000_0000_0000_0000_0000_0000_0000_0011) { 0b1 => "3", _ =>
+  match eq(d, 0b0000_0000_0000_0000_0000_0000_0000_0100) { 0b1 => "4", _ =>
+  match eq(d, 0b0000_0000_0000_0000_0000_0000_0000_0101) { 0b1 => "5", _ =>
+  match eq(d, 0b0000_0000_0000_0000_0000_0000_0000_0110) { 0b1 => "6", _ =>
+  match eq(d, 0b0000_0000_0000_0000_0000_0000_0000_0111) { 0b1 => "7", _ =>
+  match eq(d, 0b0000_0000_0000_0000_0000_0000_0000_1000) { 0b1 => "8", _ => "9"
+  }}}}}}}}};
+
+fn ten32() => Binary{32} = 0b0000_0000_0000_0000_0000_0000_0000_1010;
+
+// Base-10 render, big-endian: n < 10 -> one digit; else render n/10 then append n%10 (<= 10 iters).
+fn dec_u32(n: Binary{32}) => Bytes =
+  match lt(n, ten32()) {
+    0b1 => dec_digit(n),
+    _ => bytes_concat(dec_u32(div_u(n, ten32())), dec_digit(rem_u(n, ten32())))
+  };
+
+// ── synthetic tuple helpers (checkty.rs::tuple_type_name/tuple_ctor_name/synthetic_tuple_data) ───
+// Injective over `n` (`$` is not a surface-identifier char), so these cannot collide with a
+// user-defined type/ctor (M-826, KC-3).
+fn tuple_type_name(n: Binary{32}) => Bytes = bytes_concat("Tuple$", dec_u32(n));
+
+fn tuple_ctor_name(n: Binary{32}) => Bytes = bytes_concat("MkTuple$", dec_u32(n));
+
+// tuple_params: the `n` type-parameter names `T0 .. T{n-1}` (Rust `(0..n).map(|i| format!("T{i}"))`).
+fn tuple_params_from(i: Binary{32}, n: Binary{32}) => Vec[Bytes] =
+  match lt(i, n) {
+    0b1 => Cons(bytes_concat("T", dec_u32(i)), tuple_params_from(add_u(i, one32()), n)),
+    _ => Nil
+  };
+
+// vars_of: one `TyVar(p)` field per parameter name (Rust `params.iter().map(|p| Ty::Var(p))`).
+fn vars_of(params: Vec[Bytes]) => Vec[Ty] =
+  match params { Nil => Nil, Cons(p, rest) => Cons(TyVar(p), vars_of(rest)) };
+
+fn synthetic_tuple_data(n: Binary{32}) => DataInfo =
+  let params = tuple_params_from(zero32(), n) in
+  DI(tuple_type_name(n), params, Cons(CI(tuple_ctor_name(n), vars_of(params)), Nil));
+
+// ── resolve_ty: surface `TypeRef` -> checked `Ty` (+ its declared guarantee). (checkty.rs) ───────
+// typeref_base: re-added here (FLAG-semcore-1 dropped it as unused; resolve_ty needs it).
+fn typeref_base(t: TypeRef) => BaseType = match t { TR(b, _) => b };
+
+fn di_params(d: DataInfo) => Vec[Bytes] =
+  match d { DI(_, p, _) => p };
+
+// resolve_widthref_*: a surface `WidthRef` (WLit/WName) becomes a checked `Width` under the given
+// paradigm (Rust's per-`BaseType::Binary/Ternary` inline `match &t.base` arms).
+fn resolve_widthref_binary(w: WidthRef) => Ty =
+  match w { WLit(n) => TyBinary(WdLit(n)), WName(v) => TyBinary(WdVar(v)) };
+
+fn resolve_widthref_ternary(w: WidthRef) => Ty =
+  match w { WLit(n) => TyTernary(WdLit(n)), WName(v) => TyTernary(WdVar(v)) };
+
+// vsa_kernel_model_id: the surface->kernel VSA model-id canonicalization (checkty.rs; M-892).
+fn vsa_kernel_model_id(surface: Bytes) => Bytes =
+  match bytes_eq(surface, "MAP_I") { 0b1 => "MAP-I", _ =>
+  match bytes_eq(surface, "MAP_B") { 0b1 => "MAP-B", _ => surface }};
+
+// tref_len / names_len: monomorphic length counters (Vec[TypeRef] / Vec[Bytes]) — the arity check.
+fn tref_len(v: Vec[TypeRef]) => Binary{32} =
+  match v { Nil => zero32(), Cons(_, t) => add_u(one32(), tref_len(t)) };
+
+fn names_len(v: Vec[Bytes]) => Binary{32} =
+  match v { Nil => zero32(), Cons(_, t) => add_u(one32(), names_len(t)) };
+
+fn args_is_empty(v: Vec[TypeRef]) => Bool =
+  match v { Nil => True, Cons(_, _) => False };
+
+fn resolve_base(types: Vec[DataInfo], tyvars: Vec[Bytes], b: BaseType) => Result[Ty, Bytes] =
+  match b {
+    KwBinary(w) => Ok(resolve_widthref_binary(w)),
+    KwTernary(w) => Ok(resolve_widthref_ternary(w)),
+    KwDense(d, sc) => Ok(TyDense(d, sc)),
+    KwSubstrate(tag) => Ok(TySubstrate(tag)),
+    KwSeq(elem, len) => match resolve_ty(types, tyvars, elem) {
+      Err(e) => Err(e),
+      Ok(pr) => match pr { Pr(ety, _) => Ok(TySeq(ety, len)) }
+    },
+    KwBytes => Ok(TyBytes),
+    KwFloat => Ok(TyFloat),
+    Vsa(model, dim, sp) => Ok(TyVsa(vsa_kernel_model_id(model), dim, sp)),
+    Named(name, args) => resolve_named(types, tyvars, name, args),
+    Ambient(_) => Err("internal: an unresolved paradigm-less repr `{...}` reached the checker -- the ambient resolution pass should have filled it (RFC-0012 SS4.3)"),
+    FnArrow(param, ret) => match resolve_ty(types, tyvars, param) {
+      Err(e) => Err(e),
+      Ok(pp) => match pp { Pr(pty, _) => match resolve_ty(types, tyvars, ret) {
+        Err(e) => Err(e),
+        Ok(pr) => match pr { Pr(rty, _) => Ok(TyFn(pty, rty)) }
+      }}
+    },
+    Tuple(elems) => resolve_tuple(types, tyvars, elems)
+  };
+
+// resolve_args: map resolve_ty over each surface arg, short-circuiting on the first Err (Rust's
+// `for a in args { resolved.push(resolve_ty(..)?.0) }`; the guarantee of each arg is discarded).
+fn resolve_args(types: Vec[DataInfo], tyvars: Vec[Bytes], args: Vec[TypeRef]) => Result[Vec[Ty], Bytes] =
+  match args {
+    Nil => Ok(Nil),
+    Cons(a, rest) => match resolve_ty(types, tyvars, a) {
+      Err(e) => Err(e),
+      Ok(pr) => match pr { Pr(aty, _) => match resolve_args(types, tyvars, rest) {
+        Err(e) => Err(e),
+        Ok(more) => Ok(Cons(aty, more))
+      }}
+    }
+  };
+
+fn resolve_named(types: Vec[DataInfo], tyvars: Vec[Bytes], name: Bytes, args: Vec[TypeRef]) => Result[Ty, Bytes] =
+  match and_(args_is_empty(args), names_contains(tyvars, name)) {
+    True => Ok(TyVar(name)),
+    False => match types_lookup(types, name) {
+      None => Err(bytes_concat("unknown type `", bytes_concat(name, "`"))),
+      Some(decl) => match eq_u(tref_len(args), names_len(di_params(decl))) {
+        False => Err(bytes_concat("`", bytes_concat(name, bytes_concat("` takes ", bytes_concat(dec_u32(names_len(di_params(decl))), bytes_concat(" type argument(s), got ", bytes_concat(dec_u32(tref_len(args)), " (RFC-0007 SS11.3)"))))))),
+        True => match resolve_args(types, tyvars, args) {
+          Err(e) => Err(e),
+          Ok(resolved) => Ok(TyData(name, resolved))
+        }
+      }
+    }
+  };
+
+fn resolve_tuple(types: Vec[DataInfo], tyvars: Vec[Bytes], elems: Vec[TypeRef]) => Result[Ty, Bytes] =
+  let tname = tuple_type_name(tref_len(elems)) in
+  match types_lookup(types, tname) {
+    None => Err(bytes_concat("internal: synthetic tuple type `", bytes_concat(tname, "` not registered -- `register_tuple_types` must run before the checker (M-826; never silent)"))),
+    Some(_) => match resolve_args(types, tyvars, elems) {
+      Err(e) => Err(e),
+      Ok(resolved) => Ok(TyData(tname, resolved))
+    }
+  };
+
+fn resolve_ty(types: Vec[DataInfo], tyvars: Vec[Bytes], t: TypeRef) => Result[Pair[Ty, Option[Strength]], Bytes] =
+  match resolve_base(types, tyvars, typeref_base(t)) {
+    Err(e) => Err(e),
+    Ok(base) => Ok(Pr(base, typeref_guarantee(t)))
+  };
+
+// ── unify: one-sided unification, threading the FLAG-semcore-13 substitution (checkty.rs::unify) ──
+// same_ty_len: the `a1.len() == a2.len()` guard on the Data arm (a two-list structural length eq).
+fn same_ty_len(a: Vec[Ty], b: Vec[Ty]) => Bool =
+  match a {
+    Nil => match b { Nil => True, Cons(_, _) => False },
+    Cons(_, ta) => match b { Nil => False, Cons(_, tb) => same_ty_len(ta, tb) }
+  };
+
+// The `_ if decl == actual` fallback (arm 8) + the `_ => Err` mismatch (arm 9), and the collapsed
+// FLAG-semcore-14 dead arm: an unhandled pair unifies iff it is already structurally equal.
+fn unify_eq_or_mismatch(decl: Ty, actual: Ty, s: Vec[Pair[Bytes, Ty]]) => Result[Vec[Pair[Bytes, Ty]], Bytes] =
+  match ty_eq(decl, actual) {
+    True => Ok(s),
+    False => Err("cannot match declared against actual type (RFC-0007 SS11.3 -- never a silent swap)")
+  };
+
+// unify_var: the `(Ty::Var(v), _)` arm — a prior binding to a DIFFERENT type is a never-silent
+// conflict; otherwise bind `v -> actual` (VR-5/G2).
+fn unify_var(v: Bytes, actual: Ty, s: Vec[Pair[Bytes, Ty]]) => Result[Vec[Pair[Bytes, Ty]], Bytes] =
+  match ty_subst_lookup(s, v) {
+    None => Ok(Cons(Pr(v, actual), s)),
+    Some(bound) => match ty_eq(bound, actual) {
+      True => Ok(Cons(Pr(v, actual), s)),
+      False => Err(bytes_concat("type parameter `", bytes_concat(v, "` would have to be two distinct types -- an ambiguous instantiation, not a guess (RFC-0007 SS11.3)")))
+    }
+  };
+
+// unify_width_carrier: the shared width-var binding logic. The carrier is ALWAYS a `TyBinary`
+// (`WdLit(n)` for a concrete width, `WdVar(v2)` for a width-var) regardless of the paradigm — the
+// DN-42/M-753 carrier convention `subst_ty` reads back. A conflicting prior binding is never-silent.
+fn unify_width_carrier(v: Bytes, carrier: Ty, s: Vec[Pair[Bytes, Ty]]) => Result[Vec[Pair[Bytes, Ty]], Bytes] =
+  match ty_subst_lookup(s, v) {
+    None => Ok(Cons(Pr(v, carrier), s)),
+    Some(bound) => match ty_eq(bound, carrier) {
+      True => Ok(Cons(Pr(v, carrier), s)),
+      False => Err(bytes_concat("width parameter `", bytes_concat(v, "` would have to be two distinct widths -- a width mismatch, not a coercion (DN-42 SS4 / VR-5)")))
+    }
+  };
+
+// unify_width: a width-var `decl` (Binary or Ternary) against an actual of the SAME paradigm. A
+// concrete-width actual binds `v -> TyBinary(WdLit(n))`; a width-var actual binds `v ->
+// TyBinary(WdVar(v2))`. Any cross-paradigm / non-width actual falls through to eq/mismatch.
+fn unify_binary_width(v: Bytes, actual: Ty, decl: Ty, s: Vec[Pair[Bytes, Ty]]) => Result[Vec[Pair[Bytes, Ty]], Bytes] =
+  match actual {
+    TyBinary(w2) => match w2 {
+      WdLit(n) => unify_width_carrier(v, TyBinary(WdLit(n)), s),
+      WdVar(v2) => unify_width_carrier(v, TyBinary(WdVar(v2)), s)
+    },
+    _ => unify_eq_or_mismatch(decl, actual, s)
+  };
+
+fn unify_ternary_width(v: Bytes, actual: Ty, decl: Ty, s: Vec[Pair[Bytes, Ty]]) => Result[Vec[Pair[Bytes, Ty]], Bytes] =
+  match actual {
+    TyTernary(w2) => match w2 {
+      WdLit(n) => unify_width_carrier(v, TyBinary(WdLit(n)), s),
+      WdVar(v2) => unify_width_carrier(v, TyBinary(WdVar(v2)), s)
+    },
+    _ => unify_eq_or_mismatch(decl, actual, s)
+  };
+
+fn unify(decl: Ty, actual: Ty, s: Vec[Pair[Bytes, Ty]]) => Result[Vec[Pair[Bytes, Ty]], Bytes] =
+  match decl {
+    TyVar(v) => unify_var(v, actual, s),
+    TyData(n1, a1) => match actual {
+      TyData(n2, a2) => match and_(beq(n1, n2), same_ty_len(a1, a2)) {
+        True => unify_list(a1, a2, s),
+        False => unify_eq_or_mismatch(decl, actual, s)
+      },
+      _ => unify_eq_or_mismatch(decl, actual, s)
+    },
+    TyFn(a1, r1) => match actual {
+      TyFn(a2, r2) => match unify(a1, a2, s) { Err(e) => Err(e), Ok(s1) => unify(r1, r2, s1) },
+      _ => unify_eq_or_mismatch(decl, actual, s)
+    },
+    TySeq(e1, n1) => match actual {
+      TySeq(e2, n2) => match eq_u(n1, n2) { True => unify(e1, e2, s), False => unify_eq_or_mismatch(decl, actual, s) },
+      _ => unify_eq_or_mismatch(decl, actual, s)
+    },
+    TyBinary(w1) => match w1 {
+      WdVar(v) => unify_binary_width(v, actual, decl, s),
+      WdLit(_) => unify_eq_or_mismatch(decl, actual, s)
+    },
+    TyTernary(w1) => match w1 {
+      WdVar(v) => unify_ternary_width(v, actual, decl, s),
+      WdLit(_) => unify_eq_or_mismatch(decl, actual, s)
+    },
+    TyDense(_, _) => unify_eq_or_mismatch(decl, actual, s),
+    TyVsa(_, _, _) => unify_eq_or_mismatch(decl, actual, s),
+    TySubstrate(_) => unify_eq_or_mismatch(decl, actual, s),
+    TyBytes => unify_eq_or_mismatch(decl, actual, s),
+    TyFloat => unify_eq_or_mismatch(decl, actual, s)
+  };
+
+fn unify_list(a1: Vec[Ty], a2: Vec[Ty], s: Vec[Pair[Bytes, Ty]]) => Result[Vec[Pair[Bytes, Ty]], Bytes] =
+  match a1 {
+    Nil => Ok(s),
+    Cons(h1, t1) => match a2 {
+      Nil => Ok(s),
+      Cons(h2, t2) => match unify(h1, h2, s) { Err(e) => Err(e), Ok(s1) => unify_list(t1, t2, s1) }
+    }
+  };

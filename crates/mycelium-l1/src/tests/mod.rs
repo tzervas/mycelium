@@ -8,6 +8,7 @@ mod ast;
 mod checkty;
 mod compiler_stage5_semcore;
 mod compiler_stage5_typealg;
+mod compiler_stage5_unify;
 mod decision;
 mod elab;
 mod error;

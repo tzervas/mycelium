@@ -328,6 +328,10 @@ fn typealg_has_var_cases() {
         },
     );
     assert_has_var("bytes_concrete", &Ty::Bytes);
+    // PR #1231 review nit: the remaining top-level concrete arms (Dense/Substrate/Float → no var).
+    assert_has_var("dense_concrete", &Ty::Dense(512, Scalar::F16));
+    assert_has_var("substrate_concrete", &Ty::Substrate("file".to_owned()));
+    assert_has_var("float_concrete", &Ty::Float);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
@@ -403,6 +407,31 @@ fn typealg_subst_ty_cases() {
         &["K", "V"],
         &[Ty::Bytes, bin(32)],
     );
+    // PR #1231 review nit: the top-level concrete arms subst_ty leaves untouched (Dense/Vsa/
+    // Substrate/concrete-width — no `Var`/width-var to replace).
+    assert_subst(
+        "dense_unchanged",
+        &Ty::Dense(256, Scalar::F32),
+        &["A"],
+        &[Ty::Bytes],
+    );
+    assert_subst(
+        "vsa_unchanged",
+        &Ty::Vsa {
+            model: "MAP-I".to_owned(),
+            dim: 256,
+            sparsity: Sparsity::Dense,
+        },
+        &["A"],
+        &[Ty::Bytes],
+    );
+    assert_subst(
+        "substrate_unchanged",
+        &Ty::Substrate("net".to_owned()),
+        &["A"],
+        &[Ty::Bytes],
+    );
+    assert_subst("concrete_width_unchanged", &bin(8), &["A"], &[Ty::Bytes]);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
