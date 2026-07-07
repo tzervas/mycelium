@@ -11,12 +11,17 @@
 //!   * `policy_name_preimage` (elab.rs, extracted this wave) — the wild-free preimage of
 //!     `policy_name_ref`; the BLAKE3 hashing step is DEFERRED (`.myc` FLAG-semcore-27).
 //!
-//! **Live-oracle posture (VR-5).** Every case calls the REAL Rust `elab::*` on a fixture; the oracle's
-//! kernel `Value`/`Repr`/`FieldSpec` is encoded as a `.myc` MIRROR literal (Option A §2.2 — the
-//! "harness-side marshalling" witness) and compared against the `.myc` port's independently-built
-//! mirror by the `.myc` structural equalities (`value_eq`/`repr_eq`/`field_spec_eq`/… — FLAG-semcore-28,
-//! the `ty_eq` posture). A mis-lowering diverges the two mirrors and fails the case. The two productions
-//! are genuinely independent (the port never calls the kernel; the oracle never calls the port).
+//! **Differential method — harness MARSHALLING (M-1013 STEP 2; DN-26 §10.2).** Every case runs the
+//! REAL Rust `elab::*` oracle on a fixture, producing a genuine `mycelium_core::{Value,Repr,FieldSpec,
+//! …}`. It then evaluates the `.myc` port helper *directly* (the driver's `main` returns the mirror
+//! value, not a `Bool`), and DECODES that `L1Value` mirror ADT back into the real `mycelium_core` type
+//! (the `decode_*` family below — the never-silent inverse of the mirror constructors). The two
+//! independently-produced kernel values are compared with **Rust's own trusted derived `==`** — no
+//! hand-written `.myc`-side `_eq` comparator on the trust path. A mis-lowering diverges the decoded
+//! value from the oracle and fails the `assert_eq!`. The two productions are genuinely independent (the
+//! port never calls the kernel; the oracle never calls the port). This SUPERSEDES the increment-7
+//! landing's `.myc`-side structural-equality comparators (the retired FLAG-semcore-28 `_eq` family);
+//! the decoder is now the trust surface, guarded by `marshal_discriminates` (its non-vacuity twin).
 //!
 //! M-981 applies: only the L1-eval leg is exercised (small synthetic fixtures, not a corpus program).
 //! `scalar_kind`/`sparsity_class` are covered exhaustively (they twin the increment-4 tags).
@@ -24,10 +29,10 @@
 use crate::ast::{BaseType, Literal, Path, Scalar, Sparsity, TypeRef, WidthRef};
 use crate::checkty::{check_nodule, Ty, Width};
 use crate::elab::{
-    build_registry, field_spec, lit_value, policy_name_preimage, scalar_kind, sparsity_class,
-    ty_to_field_ty_ref, ty_to_repr, type_repr,
+    field_spec, lit_value, policy_name_preimage, scalar_kind, sparsity_class, ty_to_field_ty_ref,
+    ty_to_repr, type_repr,
 };
-use crate::eval::Evaluator;
+use crate::eval::{Evaluator, L1Value};
 use crate::mono::monomorphize;
 use crate::parse;
 use mycelium_core::{
@@ -44,55 +49,278 @@ fn program(driver: &str) -> String {
     format!("{SEMCORE_SRC}\n{driver}")
 }
 
-/// Extract a `Binary{N}` `CoreValue`'s bits as a `u32` (MSB-first) — the established convention.
-fn core_bits_as_u32(v: &mycelium_core::CoreValue) -> u32 {
-    let repr_val = v
-        .as_repr()
-        .unwrap_or_else(|| panic!("expected a Repr CoreValue, got {v:?}"));
-    match repr_val.payload() {
-        Payload::Bits(bits) => bits.iter().fold(0u32, |acc, &b| (acc << 1) | u32::from(b)),
-        other => panic!("expected a Bits payload, got {other:?}"),
+// ── L1Value → mycelium_core decoders (M-1013 STEP 2; DN-26 §10.2 — the marshalling inverse) ────────
+//
+// Each decoder is the never-silent inverse of a mirror constructor: it walks the port's `L1Value`
+// output and rebuilds the REAL `mycelium_core` type, panicking (the harness's established failure
+// mode) on an unexpected constructor rather than silently mis-decoding (G2). A mirror ADT node comes
+// back as `L1Value::Data { ty, ctor, fields }`; a `Binary{N}`/`Bytes` leaf comes back as
+// `L1Value::Repr(Value)` (read via `as_repr()`).
+
+/// The base constructor name, with `monomorphize`'s injective mangle suffix stripped
+/// (`mono.rs` §4: names are joined with `$`, with a `#` kind-tag on nullary data). A generic ctor
+/// specializes to `Cons$Binary1`/`Some$Repr`/`Ok$Repr$Bytes`/…; the monomorphic mirror ctors
+/// (`RBinary`, `PlBits`, `Val`, …) carry no separator and pass through unchanged.
+fn base_ctor(ctor: &str) -> &str {
+    let end = ctor.find(['$', '#']).unwrap_or(ctor.len());
+    &ctor[..end]
+}
+
+/// Every mirror ADT node is an `L1Value::Data`; return its (unmangled) constructor name + fields.
+fn expect_data<'a>(v: &'a L1Value, what: &str) -> (&'a str, &'a [L1Value]) {
+    match v {
+        L1Value::Data { ctor, fields, .. } => (base_ctor(ctor), fields.as_slice()),
+        other => panic!("marshal {what}: expected a Data node, got {other:?}"),
     }
 }
 
-/// L1-eval-only assertion (the M-981 convention): parse → check → monomorphize → build_registry →
-/// eval `main` → compare the `Binary{32}` result to `expected_u32`.
-fn assert_l1_only_u32(label: &str, src: &str, expected_u32: u32) {
-    let env = check_nodule(&parse(src).unwrap_or_else(|e| panic!("{label}: parse failed: {e}")))
+/// A `Binary{32}` mirror int → `u32`, MSB-first — the exact convention `core_bits_as_u32` used.
+fn decode_u32(v: &L1Value) -> u32 {
+    match v.as_repr().map(Value::payload) {
+        Some(Payload::Bits(bits)) => bits.iter().fold(0u32, |acc, &b| (acc << 1) | u32::from(b)),
+        other => panic!("marshal decode_u32: expected a Repr(Binary) Bits leaf, got {other:?}"),
+    }
+}
+
+/// A `Binary{1}` mirror bit → `bool`.
+fn decode_bit(v: &L1Value) -> bool {
+    match v.as_repr().map(Value::payload) {
+        Some(Payload::Bits(bits)) if bits.len() == 1 => bits[0],
+        other => panic!("marshal decode_bit: expected a 1-bit Bits leaf, got {other:?}"),
+    }
+}
+
+/// A `Bytes` leaf → raw bytes.
+fn decode_bytes(v: &L1Value) -> Vec<u8> {
+    match v.as_repr().map(Value::payload) {
+        Some(Payload::Bytes(b)) => b.clone(),
+        other => panic!("marshal decode_bytes: expected a Bytes leaf, got {other:?}"),
+    }
+}
+
+/// A `Bytes` leaf → `String` (the increment-7 fixtures are ASCII).
+fn decode_string(v: &L1Value) -> String {
+    String::from_utf8(decode_bytes(v)).expect("marshal decode_string: non-UTF8 bytes")
+}
+
+/// A `.myc` `Vec[A]` (`Nil | Cons(A, Vec[A])`) → `Vec<T>`, decoding each element with `elem`.
+fn decode_vec<T>(v: &L1Value, elem: impl Fn(&L1Value) -> T) -> Vec<T> {
+    let mut out = Vec::new();
+    let mut cur = v;
+    loop {
+        let (ctor, fields) = expect_data(cur, "Vec");
+        match ctor {
+            "Nil" => return out,
+            "Cons" => {
+                out.push(elem(&fields[0]));
+                cur = &fields[1];
+            }
+            other => panic!("marshal decode_vec: unexpected ctor {other}"),
+        }
+    }
+}
+
+fn decode_scalar_kind(v: &L1Value) -> ScalarKind {
+    match expect_data(v, "ScalarK").0 {
+        "SkF16" => ScalarKind::F16,
+        "SkBf16" => ScalarKind::Bf16,
+        "SkF32" => ScalarKind::F32,
+        "SkF64" => ScalarKind::F64,
+        c => panic!("marshal decode_scalar_kind: unexpected ctor {c}"),
+    }
+}
+
+fn decode_sparsity_class(v: &L1Value) -> SparsityClass {
+    let (ctor, fields) = expect_data(v, "SparsityC");
+    match ctor {
+        "ScDense" => SparsityClass::Dense,
+        "ScSparse" => SparsityClass::Sparse {
+            max_active: decode_u32(&fields[0]),
+        },
+        c => panic!("marshal decode_sparsity_class: unexpected ctor {c}"),
+    }
+}
+
+fn decode_float_width(v: &L1Value) -> FloatWidth {
+    match expect_data(v, "FloatW").0 {
+        "FwF64" => FloatWidth::F64,
+        c => panic!("marshal decode_float_width: unexpected ctor {c}"),
+    }
+}
+
+fn decode_trit(v: &L1Value) -> Trit {
+    match expect_data(v, "TritK").0 {
+        "TkNeg" => Trit::Neg,
+        "TkZero" => Trit::Zero,
+        "TkPos" => Trit::Pos,
+        c => panic!("marshal decode_trit: unexpected ctor {c}"),
+    }
+}
+
+fn decode_repr(v: &L1Value) -> Repr {
+    let (ctor, fields) = expect_data(v, "Repr");
+    match ctor {
+        "RBinary" => Repr::Binary {
+            width: decode_u32(&fields[0]),
+        },
+        "RTernary" => Repr::Ternary {
+            trits: decode_u32(&fields[0]),
+        },
+        "RDense" => Repr::Dense {
+            dim: decode_u32(&fields[0]),
+            dtype: decode_scalar_kind(&fields[1]),
+        },
+        "RVsa" => Repr::Vsa {
+            model: decode_string(&fields[0]),
+            dim: decode_u32(&fields[1]),
+            sparsity: decode_sparsity_class(&fields[2]),
+        },
+        "RSeq" => Repr::Seq {
+            elem: Box::new(decode_repr(&fields[0])),
+            len: decode_u32(&fields[1]),
+        },
+        "RFloat" => Repr::Float {
+            width: decode_float_width(&fields[0]),
+        },
+        "RBytes" => Repr::Bytes,
+        c => panic!("marshal decode_repr: unexpected ctor {c}"),
+    }
+}
+
+fn decode_payload(v: &L1Value) -> Payload {
+    let (ctor, fields) = expect_data(v, "Payload");
+    match ctor {
+        "PlBits" => Payload::Bits(decode_vec(&fields[0], decode_bit)),
+        "PlTrits" => Payload::Trits(decode_vec(&fields[0], decode_trit)),
+        "PlBytes" => Payload::Bytes(decode_bytes(&fields[0])),
+        c => panic!("marshal decode_payload: unexpected ctor {c}"),
+    }
+}
+
+fn decode_meta(v: &L1Value) -> Meta {
+    match expect_data(v, "Meta").0 {
+        "MtExactRoot" => Meta::exact(Provenance::Root),
+        c => panic!("marshal decode_meta: unexpected ctor {c}"),
+    }
+}
+
+/// Rebuild a real `Value` through its ONLY constructor (`Value::new` runs `check_well_formed` +
+/// payload/repr matching + canonical-NaN normalization — value.rs). A `Value::new` rejection here is a
+/// real port divergence (the port built a malformed mirror), never swallowed.
+fn decode_value(v: &L1Value) -> Value {
+    let (ctor, fields) = expect_data(v, "Value");
+    match ctor {
+        "Val" => Value::new(
+            decode_repr(&fields[0]),
+            decode_payload(&fields[1]),
+            decode_meta(&fields[2]),
+        )
+        .unwrap_or_else(|e| {
+            panic!("marshal decode_value: Value::new rejected a decoded mirror (port divergence): {e:?}")
+        }),
+        c => panic!("marshal decode_value: unexpected ctor {c}"),
+    }
+}
+
+fn decode_fn_sig(v: &L1Value) -> FnSig {
+    let (ctor, fields) = expect_data(v, "KFnSig");
+    match ctor {
+        "KFS" => FnSig {
+            arity: decode_u32(&fields[0]),
+            params: decode_vec(&fields[1], decode_field_ty_ref),
+            ret: Box::new(decode_field_ty_ref(&fields[2])),
+        },
+        c => panic!("marshal decode_fn_sig: unexpected ctor {c}"),
+    }
+}
+
+fn decode_field_ty_ref(v: &L1Value) -> FieldTyRef {
+    let (ctor, fields) = expect_data(v, "FieldTyRef");
+    match ctor {
+        "FtRepr" => FieldTyRef::Repr(decode_repr(&fields[0])),
+        "FtData" => FieldTyRef::Data(decode_string(&fields[0])),
+        "FtFn" => FieldTyRef::Fn(Box::new(decode_fn_sig(&fields[0]))),
+        c => panic!("marshal decode_field_ty_ref: unexpected ctor {c}"),
+    }
+}
+
+fn decode_field_spec(v: &L1Value) -> FieldSpec {
+    let (ctor, fields) = expect_data(v, "FieldSpec");
+    match ctor {
+        "FsRepr" => FieldSpec::Repr(decode_repr(&fields[0])),
+        "FsData" => FieldSpec::Data(decode_string(&fields[0])),
+        "FsFn" => FieldSpec::Fn {
+            arity: decode_u32(&fields[0]),
+            sig: decode_fn_sig(&fields[1]),
+        },
+        c => panic!("marshal decode_field_spec: unexpected ctor {c}"),
+    }
+}
+
+fn decode_option<T>(v: &L1Value, elem: impl Fn(&L1Value) -> T) -> Option<T> {
+    let (ctor, fields) = expect_data(v, "Option");
+    match ctor {
+        "None" => None,
+        "Some" => Some(elem(&fields[0])),
+        c => panic!("marshal decode_option: unexpected ctor {c}"),
+    }
+}
+
+/// A `.myc` `Result[A, Bytes]` → `Result<T, ()>`. The `Err` arm's message differs across the two
+/// independent productions (Rust `ElabError` vs the `.myc` `Bytes` string), so it is normalized to
+/// `()` — the exact posture of the retired `res_*_eq` (any `Err` == any `Err`; only the `Ok` payload
+/// is a meaningful differential).
+fn decode_result<T>(v: &L1Value, elem: impl Fn(&L1Value) -> T) -> Result<T, ()> {
+    let (ctor, fields) = expect_data(v, "Result");
+    match ctor {
+        "Ok" => Ok(elem(&fields[0])),
+        "Err" => Err(()),
+        c => panic!("marshal decode_result: unexpected ctor {c}"),
+    }
+}
+
+// ── the marshalling assertion helper ───────────────────────────────────────────────────────────────
+
+/// Parse → check → monomorphize → eval `main` → DECODE the mirror `L1Value` → `assert_eq!` against the
+/// trusted Rust oracle value. The comparator is Rust's own derived `==` (no `.myc`-side `_eq`). No
+/// `build_registry`/`to_core` on this path — the decoder walks the `L1Value` (and its embedded
+/// `core::Value` leaves) directly.
+fn assert_l1_marshal<T: PartialEq + std::fmt::Debug>(
+    label: &str,
+    driver: &str,
+    decode: impl Fn(&L1Value) -> T,
+    want: T,
+) {
+    let src = program(driver);
+    let env = check_nodule(&parse(&src).unwrap_or_else(|e| panic!("{label}: parse failed: {e}")))
         .unwrap_or_else(|e| panic!("{label}: check failed: {e}"));
     let mono =
         monomorphize(&env, "main").unwrap_or_else(|e| panic!("{label}: monomorphize failed: {e}"));
-    let registry =
-        build_registry(&mono).unwrap_or_else(|e| panic!("{label}: build_registry failed: {e}"));
     let l1_val = Evaluator::new(&mono)
         .call("main", vec![])
         .unwrap_or_else(|e| panic!("{label}: L1-eval failed: {e}"));
-    let l1_core = l1_val
-        .to_core(&mono, &registry)
-        .unwrap_or_else(|| panic!("{label}: L1 result is outside the r3 data fragment"));
-    let got = core_bits_as_u32(&l1_core);
+    let got = decode(&l1_val);
     assert_eq!(
-        got, expected_u32,
-        "{label}: L1-eval result {got} does not match expected {expected_u32}"
+        got, want,
+        "{label}: decoded marshal {got:?} does not match oracle {want:?}"
     );
 }
 
-/// Drive a `Bool`-valued `.myc` witness expression; assert it evaluates `True` (→ 1).
-fn assert_true(label: &str, myc_bool_expr: &str) {
-    let driver =
-        format!("fn main() => Binary{{32}} =\n  match {myc_bool_expr} {{ True => one32(), False => zero32() }};\n");
-    assert_l1_only_u32(label, &program(&driver), 1);
+/// Eval a bare mirror-literal driver and decode it — the `marshal_discriminates` primitive (no oracle;
+/// used only to prove the decoder distinguishes single-dimension-distinct mirror values).
+fn decode_driver<T>(ret_ty: &str, expr: &str, decode: impl Fn(&L1Value) -> T) -> T {
+    let driver = format!("fn main() => {ret_ty} = {expr};\n");
+    let src = program(&driver);
+    let env = check_nodule(&parse(&src).unwrap_or_else(|e| panic!("decode_driver parse: {e}")))
+        .unwrap_or_else(|e| panic!("decode_driver check: {e}"));
+    let mono = monomorphize(&env, "main").unwrap_or_else(|e| panic!("decode_driver mono: {e}"));
+    let l1_val = Evaluator::new(&mono)
+        .call("main", vec![])
+        .unwrap_or_else(|e| panic!("decode_driver eval: {e}"));
+    decode(&l1_val)
 }
 
-/// Drive a `Bool`-valued `.myc` witness expression; assert it evaluates `False` (→ 0). The
-/// non-vacuity guard — proves the comparison actually discriminates.
-fn assert_false(label: &str, myc_bool_expr: &str) {
-    let driver =
-        format!("fn main() => Binary{{32}} =\n  match {myc_bool_expr} {{ True => one32(), False => zero32() }};\n");
-    assert_l1_only_u32(label, &program(&driver), 0);
-}
-
-// ── Rust → `.myc` fixture encoders (surface input types) ──────────────────────────────────────────
+// ── Rust → `.myc` fixture encoders (surface INPUT types — unchanged; build the driver's argument) ──
 
 fn encode_u32(n: u32) -> String {
     let mut s = String::from("0b");
@@ -242,172 +470,6 @@ fn encode_path(p: &Path) -> String {
     format!("Pth({s})")
 }
 
-// ── Rust → `.myc` MIRROR-literal encoders (oracle kernel outputs — Option A §2.2) ─────────────────
-
-fn encode_core_scalar_kind(s: ScalarKind) -> &'static str {
-    match s {
-        ScalarKind::F16 => "SkF16",
-        ScalarKind::Bf16 => "SkBf16",
-        ScalarKind::F32 => "SkF32",
-        ScalarKind::F64 => "SkF64",
-    }
-}
-
-fn encode_core_sparsity(sp: &SparsityClass) -> String {
-    match sp {
-        SparsityClass::Dense => "ScDense".to_owned(),
-        SparsityClass::Sparse { max_active } => format!("ScSparse({})", encode_u32(*max_active)),
-    }
-}
-
-fn encode_core_float_width(w: FloatWidth) -> &'static str {
-    match w {
-        FloatWidth::F64 => "FwF64",
-    }
-}
-
-fn encode_core_repr(r: &Repr) -> String {
-    match r {
-        Repr::Binary { width } => format!("RBinary({})", encode_u32(*width)),
-        Repr::Ternary { trits } => format!("RTernary({})", encode_u32(*trits)),
-        Repr::Dense { dim, dtype } => {
-            format!(
-                "RDense({}, {})",
-                encode_u32(*dim),
-                encode_core_scalar_kind(*dtype)
-            )
-        }
-        Repr::Vsa {
-            model,
-            dim,
-            sparsity,
-        } => format!(
-            "RVsa({}, {}, {})",
-            encode_bytes(model),
-            encode_u32(*dim),
-            encode_core_sparsity(sparsity)
-        ),
-        Repr::Seq { elem, len } => {
-            format!("RSeq({}, {})", encode_core_repr(elem), encode_u32(*len))
-        }
-        Repr::Float { width } => format!("RFloat({})", encode_core_float_width(*width)),
-        Repr::Bytes => "RBytes".to_owned(),
-    }
-}
-
-fn encode_core_fn_sig(sig: &FnSig) -> String {
-    let mut params = String::from("Nil");
-    for p in sig.params.iter().rev() {
-        params = format!("Cons({}, {})", encode_core_field_ty_ref(p), params);
-    }
-    format!(
-        "KFS({}, {}, {})",
-        encode_u32(sig.arity),
-        params,
-        encode_core_field_ty_ref(&sig.ret)
-    )
-}
-
-fn encode_core_field_ty_ref(f: &FieldTyRef) -> String {
-    match f {
-        FieldTyRef::Repr(r) => format!("FtRepr({})", encode_core_repr(r)),
-        FieldTyRef::Data(n) => format!("FtData({})", encode_bytes(n)),
-        FieldTyRef::Fn(sig) => format!("FtFn({})", encode_core_fn_sig(sig)),
-    }
-}
-
-fn encode_core_field_spec(fs: &FieldSpec) -> String {
-    match fs {
-        FieldSpec::Repr(r) => format!("FsRepr({})", encode_core_repr(r)),
-        FieldSpec::Data(n) => format!("FsData({})", encode_bytes(n)),
-        FieldSpec::Fn { arity, sig } => {
-            format!("FsFn({}, {})", encode_u32(*arity), encode_core_fn_sig(sig))
-        }
-    }
-}
-
-fn encode_core_payload(p: &Payload) -> String {
-    match p {
-        Payload::Bits(bits) => {
-            let mut s = String::from("Nil");
-            for b in bits.iter().rev() {
-                s = format!("Cons({}, {})", if *b { "0b1" } else { "0b0" }, s);
-            }
-            format!("PlBits({s})")
-        }
-        Payload::Trits(trits) => {
-            let mut s = String::from("Nil");
-            for t in trits.iter().rev() {
-                let tag = match t {
-                    Trit::Neg => "TkNeg",
-                    Trit::Zero => "TkZero",
-                    Trit::Pos => "TkPos",
-                };
-                s = format!("Cons({tag}, {s})");
-            }
-            format!("PlTrits({s})")
-        }
-        Payload::Bytes(bytes) => {
-            let text = String::from_utf8(bytes.clone())
-                .expect("increment-7 Str payload fixtures are ASCII");
-            format!("PlBytes({})", encode_bytes(&text))
-        }
-        other => panic!(
-            "payload {other:?} is outside the increment-7 wild-free subset (FLAG-semcore-23)"
-        ),
-    }
-}
-
-fn encode_core_value(v: &Value) -> String {
-    // `lit_value` always builds `Meta::exact(Provenance::Root)`; the mirror models exactly that
-    // (FLAG-semcore-24). Assert the invariant so a future Meta-varying helper cannot slip through.
-    assert_eq!(
-        v.meta(),
-        &Meta::exact(Provenance::Root),
-        "lit_value must produce exact(Root) meta (FLAG-semcore-24)"
-    );
-    format!(
-        "Val({}, {}, MtExactRoot)",
-        encode_core_repr(v.repr()),
-        encode_core_payload(v.payload())
-    )
-}
-
-fn encode_core_repr_result<E>(r: &Result<Repr, E>) -> String {
-    match r {
-        Ok(repr) => format!("Ok({})", encode_core_repr(repr)),
-        Err(_) => "Err(\"oracle-refused\")".to_owned(),
-    }
-}
-
-fn encode_core_value_result<E>(r: &Result<Value, E>) -> String {
-    match r {
-        Ok(v) => format!("Ok({})", encode_core_value(v)),
-        Err(_) => "Err(\"oracle-refused\")".to_owned(),
-    }
-}
-
-fn encode_core_opt_repr(o: &Option<Repr>) -> String {
-    match o {
-        Some(r) => format!("Some({})", encode_core_repr(r)),
-        None => "None".to_owned(),
-    }
-}
-
-fn encode_core_opt_field_spec(o: &Option<FieldSpec>) -> String {
-    match o {
-        Some(fs) => format!("Some({})", encode_core_field_spec(fs)),
-        None => "None".to_owned(),
-    }
-}
-
-fn encode_core_opt_field_ty_ref(o: &Option<FieldTyRef>) -> String {
-    match o {
-        Some(f) => format!("Some({})", encode_core_field_ty_ref(f)),
-        None => "None".to_owned(),
-    }
-}
-
 // Small fixture constructors keeping test bodies to `assert over a case`.
 fn bin(n: u32) -> Ty {
     Ty::Binary(Width::Lit(n))
@@ -432,82 +494,253 @@ fn semcore_elab_parses_and_checks() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
-// Non-vacuity probes: WRONG comparisons must discriminate (yield False → 0).
+// Decoder non-vacuity: the marshalling decoder must DISCRIMINATE on every dimension it reads.
 //
-// CONVENTION (M-1012, binding on every future self-hosting increment — the template for M-1013):
-// every `.myc` structural-equality comparator (`semcore.myc`'s `_eq` family, FLAG-semcore-28)
-// introduced by a self-hosting increment gets AT LEAST ONE non-vacuity (must-return-`False`) case
-// here, built from two mirror values that differ ONLY in the one dimension that comparator's arm
-// guards — isolating that arm specifically, not just "some" difference. `elab_witness_discriminates`
-// currently covers `scalark_eq`/`res_repr_eq`(→`repr_eq`)/`opt_fs_eq`(→`field_spec_eq`)/
-// `sparsityc_eq`/`opt_repr_eq`/`opt_ftr_eq`(→`field_ty_ref_eq`)/`res_value_eq`(→`value_eq`→
-// `payload_eq`). `meta_eq` is the one documented exception — see the trailing comment: `Meta` is
-// currently a single-inhabitant mirror (FLAG-semcore-24), so no two DIFFERING `Meta` values are
-// constructible and non-vacuity is not yet an addable property, not a coverage gap.
+// CONVENTION (M-1013 STEP 2 — the marshalling twin of M-1012's `elab_witness_discriminates`, binding
+// on every future self-hosting increment). With the differential now comparing decoded values by
+// Rust's trusted derived `==`, a WRONG port output fails `assert_eq!` by construction — the old
+// "comparator isn't vacuously True" obligation dissolves. The NEW trust surface is the `decode_*`
+// family, whose failure mode is *dropping a dimension* (mapping distinct mirror values onto the same
+// Rust value → a silent false pass). This test closes exactly that hole: for each decoder arm, decode
+// two mirror literals differing in EXACTLY ONE dimension and assert the decoded Rust values are `!=` —
+// proving the decoder actually reads that dimension. `decode_meta`/`Meta` is the one documented
+// exception (single-inhabitant `MtExactRoot`, FLAG-semcore-24: no two DIFFERING `Meta` are
+// constructible — becomes an addable case the moment `Meta` gains a second constructor).
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 #[test]
-fn elab_witness_discriminates() {
-    // scalar_kind(F16) = SkF16; comparing against the wrong SkF32 must be False.
-    assert_false("scalar_kind_wrong", "scalark_eq(scalar_kind(SF16), SkF32)");
-    // type_repr(Binary{8}) = Ok(RBinary(8)); comparing against Ok(RBinary(16)) must be False.
-    assert_false(
-        "type_repr_wrong",
-        "res_repr_eq(type_repr(TR(KwBinary(WLit(0b0000_0000_0000_0000_0000_0000_0000_1000)), None)), Ok(RBinary(0b0000_0000_0000_0000_0000_0000_0001_0000)))",
+fn marshal_discriminates() {
+    // decode_scalar_kind — the variant it selects.
+    assert_ne!(
+        decode_driver("ScalarK", "SkF16", decode_scalar_kind),
+        decode_driver("ScalarK", "SkF32", decode_scalar_kind)
     );
-    // field_spec(Binary{8}) = Some(FsRepr(RBinary(8))); comparing against None must be False.
-    assert_false(
-        "field_spec_wrong",
-        &format!("opt_fs_eq(field_spec({}), None)", encode_ty(&bin(8))),
+    // decode_float_width — single-inhabitant today (FwF64); no distinguishing pair (documented, like
+    // decode_meta) — becomes an addable case when FloatW gains a second constructor.
+
+    // decode_u32 (via RBinary width) — the integer dimension it folds.
+    assert_ne!(
+        decode_driver("Repr", &format!("RBinary({})", encode_u32(8)), decode_repr),
+        decode_driver("Repr", &format!("RBinary({})", encode_u32(16)), decode_repr)
     );
-    // sparsity_class(Sparse(8)) = ScSparse(8); comparing against ScSparse(16) (same variant, wrong
-    // `max_active`) must be False — isolates `sparsityc_eq`'s `ScSparse`-arm `eq_u` guard.
-    assert_false(
-        "sparsity_class_wrong",
-        &format!(
-            "sparsityc_eq(sparsity_class({}), ScSparse({}))",
-            encode_sparsity(&Sparsity::Sparse(8)),
-            encode_u32(16)
+    // decode_repr — the variant tag (RBinary vs RTernary at equal width).
+    assert_ne!(
+        decode_driver("Repr", &format!("RBinary({})", encode_u32(8)), decode_repr),
+        decode_driver("Repr", &format!("RTernary({})", encode_u32(8)), decode_repr)
+    );
+    // decode_scalar_kind inside RDense — the dtype field.
+    assert_ne!(
+        decode_driver(
+            "Repr",
+            &format!("RDense({}, SkF16)", encode_u32(4)),
+            decode_repr
         ),
+        decode_driver(
+            "Repr",
+            &format!("RDense({}, SkF32)", encode_u32(4)),
+            decode_repr
+        )
     );
-    // ty_to_repr(Binary{8}) = Some(RBinary(8)); comparing against Some(RBinary(16)) (same variant,
-    // wrong width) must be False — isolates `opt_repr_eq`'s `Some`-arm `repr_eq` guard.
-    assert_false(
-        "ty_to_repr_wrong",
-        &format!(
-            "opt_repr_eq(ty_to_repr({}), Some(RBinary({})))",
-            encode_ty(&bin(8)),
-            encode_u32(16)
+    // decode_sparsity_class — ScDense vs ScSparse, and the max_active field of ScSparse.
+    assert_ne!(
+        decode_driver("SparsityC", "ScDense", decode_sparsity_class),
+        decode_driver(
+            "SparsityC",
+            &format!("ScSparse({})", encode_u32(8)),
+            decode_sparsity_class
+        )
+    );
+    assert_ne!(
+        decode_driver(
+            "SparsityC",
+            &format!("ScSparse({})", encode_u32(8)),
+            decode_sparsity_class
         ),
+        decode_driver(
+            "SparsityC",
+            &format!("ScSparse({})", encode_u32(16)),
+            decode_sparsity_class
+        )
     );
-    // ty_to_field_ty_ref(Binary{8}) = Some(FtRepr(RBinary(8))); comparing against
-    // Some(FtRepr(RBinary(16))) must be False — isolates `opt_ftr_eq`'s `Some`-arm
-    // `field_ty_ref_eq` guard (which itself dispatches into `repr_eq`).
-    assert_false(
-        "ty_to_field_ty_ref_wrong",
-        &format!(
-            "opt_ftr_eq(ty_to_field_ty_ref({}), Some(FtRepr(RBinary({}))))",
-            encode_ty(&bin(8)),
-            encode_u32(16)
+    // decode_string inside RVsa — the model field (and dim, and sparsity, all read by decode_repr).
+    assert_ne!(
+        decode_driver(
+            "Repr",
+            &format!("RVsa({}, {}, ScDense)", encode_bytes("A"), encode_u32(4)),
+            decode_repr
         ),
+        decode_driver(
+            "Repr",
+            &format!("RVsa({}, {}, ScDense)", encode_bytes("B"), encode_u32(4)),
+            decode_repr
+        )
     );
-    // lit_value(Bin("1010")) = Ok(Val(RBinary(4), PlBits([1,0,1,0]), MtExactRoot)); comparing
-    // against a value with the SAME repr (RBinary(4)) and the SAME meta (MtExactRoot) but a
-    // DIFFERENT payload (PlBits([1,1,1,1])) must be False — isolates `res_value_eq`/`value_eq`'s
-    // `payload_eq` guard specifically: `repr_eq` and `meta_eq` both agree on this pair, so only
-    // `payload_eq`'s `PlBits`-arm `bits_eq` can be the source of the `False`. Verified by
-    // deliberately hardcoding `payload_eq`'s `PlBits` arm to `True` in `semcore.myc` and confirming
-    // this exact case FAILED (then reverting the break) — see the M-1012 patch notes/PR discussion.
-    assert_false(
-        "lit_value_payload_wrong",
-        "res_value_eq(lit_value(Bin(\"1010\")), Ok(Val(RBinary(0b0000_0000_0000_0000_0000_0000_0000_0100), PlBits(Cons(0b1, Cons(0b1, Cons(0b1, Cons(0b1, Nil))))), MtExactRoot)))",
+    // decode_repr RSeq — the elem field and the len field, each varied once.
+    assert_ne!(
+        decode_driver(
+            "Repr",
+            &format!("RSeq(RBytes, {})", encode_u32(2)),
+            decode_repr
+        ),
+        decode_driver(
+            "Repr",
+            &format!("RSeq(RBinary({}), {})", encode_u32(8), encode_u32(2)),
+            decode_repr
+        )
     );
-    // `meta_eq` is NOT exercised here (documented exception, not a coverage gap): `Meta` is
-    // mirrored as the single nullary `MtExactRoot` (FLAG-semcore-24) — the `.myc` mirror type has
-    // exactly one inhabitant this wave (`lit_value` never constructs any other Meta), so no two
-    // DIFFERING `Meta` values are constructible under the current type and `meta_eq`'s single
-    // `MtExactRoot`/`MtExactRoot` match arm cannot be driven to `False`. This is a structural
-    // property of the mirror (honestly recorded — VR-5), not a deferred test: non-vacuity for
-    // `meta_eq` becomes a real, addable case here the moment `Meta` gains a second constructor.
+    assert_ne!(
+        decode_driver(
+            "Repr",
+            &format!("RSeq(RBytes, {})", encode_u32(2)),
+            decode_repr
+        ),
+        decode_driver(
+            "Repr",
+            &format!("RSeq(RBytes, {})", encode_u32(3)),
+            decode_repr
+        )
+    );
+    // decode_bit inside PlBits — a single bit position (also exercises decode_vec length below).
+    assert_ne!(
+        decode_driver(
+            "Payload",
+            "PlBits(Cons(0b1, Cons(0b0, Nil)))",
+            decode_payload
+        ),
+        decode_driver(
+            "Payload",
+            "PlBits(Cons(0b1, Cons(0b1, Nil)))",
+            decode_payload
+        )
+    );
+    // decode_vec length — PlBits of different lengths.
+    assert_ne!(
+        decode_driver("Payload", "PlBits(Cons(0b1, Nil))", decode_payload),
+        decode_driver(
+            "Payload",
+            "PlBits(Cons(0b1, Cons(0b1, Nil)))",
+            decode_payload
+        )
+    );
+    // decode_trit inside PlTrits — the trit variant.
+    assert_ne!(
+        decode_driver("Payload", "PlTrits(Cons(TkPos, Nil))", decode_payload),
+        decode_driver("Payload", "PlTrits(Cons(TkNeg, Nil))", decode_payload)
+    );
+    // decode_payload — the payload variant tag (PlBits vs PlBytes).
+    assert_ne!(
+        decode_driver("Payload", "PlBytes(\"x\")", decode_payload),
+        decode_driver("Payload", "PlBytes(\"y\")", decode_payload)
+    );
+    // decode_value — two `Val` differing ONLY in payload (isolates the payload read specifically: the
+    // repr and meta agree, so a decoder that dropped the payload would collapse them — the marshalling
+    // migration of the old `lit_value_payload_wrong` probe).
+    assert_ne!(
+        decode_driver(
+            "Value",
+            &format!(
+                "Val(RBinary({}), PlBits(Cons(0b1, Nil)), MtExactRoot)",
+                encode_u32(1)
+            ),
+            decode_value
+        ),
+        decode_driver(
+            "Value",
+            &format!(
+                "Val(RBinary({}), PlBits(Cons(0b0, Nil)), MtExactRoot)",
+                encode_u32(1)
+            ),
+            decode_value
+        )
+    );
+    // decode_field_ty_ref — the variant tag (FtRepr vs FtData).
+    assert_ne!(
+        decode_driver("FieldTyRef", "FtRepr(RBytes)", decode_field_ty_ref),
+        decode_driver("FieldTyRef", "FtData(\"D\")", decode_field_ty_ref)
+    );
+    // decode_fn_sig — arity, params, and ret, each varied once (via FtFn wrapping a KFnSig).
+    assert_ne!(
+        decode_driver(
+            "FieldTyRef",
+            &format!("FtFn(KFS({}, Nil, FtRepr(RBytes)))", encode_u32(1)),
+            decode_field_ty_ref
+        ),
+        decode_driver(
+            "FieldTyRef",
+            &format!("FtFn(KFS({}, Nil, FtRepr(RBytes)))", encode_u32(2)),
+            decode_field_ty_ref
+        )
+    );
+    assert_ne!(
+        decode_driver(
+            "FieldTyRef",
+            &format!("FtFn(KFS({}, Nil, FtRepr(RBytes)))", encode_u32(1)),
+            decode_field_ty_ref
+        ),
+        decode_driver(
+            "FieldTyRef",
+            &format!(
+                "FtFn(KFS({}, Cons(FtRepr(RBytes), Nil), FtRepr(RBytes)))",
+                encode_u32(1)
+            ),
+            decode_field_ty_ref
+        )
+    );
+    assert_ne!(
+        decode_driver(
+            "FieldTyRef",
+            &format!("FtFn(KFS({}, Nil, FtRepr(RBytes)))", encode_u32(1)),
+            decode_field_ty_ref
+        ),
+        decode_driver(
+            "FieldTyRef",
+            &format!("FtFn(KFS({}, Nil, FtData(\"R\")))", encode_u32(1)),
+            decode_field_ty_ref
+        )
+    );
+    // decode_field_spec — the variant tag (FsRepr vs FsData), and the arity of FsFn.
+    assert_ne!(
+        decode_driver("FieldSpec", "FsRepr(RBytes)", decode_field_spec),
+        decode_driver("FieldSpec", "FsData(\"D\")", decode_field_spec)
+    );
+    assert_ne!(
+        decode_driver(
+            "FieldSpec",
+            &format!(
+                "FsFn({}, KFS({}, Nil, FtRepr(RBytes)))",
+                encode_u32(1),
+                encode_u32(1)
+            ),
+            decode_field_spec
+        ),
+        decode_driver(
+            "FieldSpec",
+            &format!(
+                "FsFn({}, KFS({}, Nil, FtRepr(RBytes)))",
+                encode_u32(2),
+                encode_u32(1)
+            ),
+            decode_field_spec
+        )
+    );
+    // decode_option — Some(x) vs None.
+    assert_ne!(
+        decode_driver("Option[Repr]", "Some(RBytes)", |v| decode_option(
+            v,
+            decode_repr
+        )),
+        decode_driver("Option[Repr]", "None", |v| decode_option(v, decode_repr))
+    );
+    // decode_result — Ok(x) vs Err (the only two arms; Err normalizes to `()`).
+    assert_ne!(
+        decode_driver("Result[Repr, Bytes]", "Ok(RBytes)", |v| decode_result(
+            v,
+            decode_repr
+        )),
+        decode_driver("Result[Repr, Bytes]", "Err(\"e\")", |v| decode_result(
+            v,
+            decode_repr
+        ))
+    );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
@@ -516,14 +749,14 @@ fn elab_witness_discriminates() {
 #[test]
 fn scalar_kind_cases() {
     for s in [Scalar::F16, Scalar::Bf16, Scalar::F32, Scalar::F64] {
-        let want = scalar_kind(s);
-        assert_true(
+        assert_l1_marshal(
             &format!("scalar_kind_{s:?}"),
             &format!(
-                "scalark_eq(scalar_kind({}), {})",
-                encode_scalar(s),
-                encode_core_scalar_kind(want)
+                "fn main() => ScalarK = scalar_kind({});\n",
+                encode_scalar(s)
             ),
+            decode_scalar_kind,
+            scalar_kind(s),
         );
     }
 }
@@ -540,14 +773,14 @@ fn sparsity_class_cases() {
         Sparsity::Sparse(4096),
     ];
     for (i, sp) in cases.iter().enumerate() {
-        let want = sparsity_class(sp);
-        assert_true(
+        assert_l1_marshal(
             &format!("sparsity_class_{i}"),
             &format!(
-                "sparsityc_eq(sparsity_class({}), {})",
-                encode_sparsity(sp),
-                encode_core_sparsity(&want)
+                "fn main() => SparsityC = sparsity_class({});\n",
+                encode_sparsity(sp)
             ),
+            decode_sparsity_class,
+            sparsity_class(sp),
         );
     }
 }
@@ -604,13 +837,14 @@ fn type_repr_cases() {
     for (i, base) in cases.iter().enumerate() {
         let t = tref(base.clone());
         let want = type_repr("t", &t);
-        assert_true(
+        assert_l1_marshal(
             &format!("type_repr_{i}"),
             &format!(
-                "res_repr_eq(type_repr({}), {})",
-                encode_typeref(&t),
-                encode_core_repr_result(&want)
+                "fn main() => Result[Repr, Bytes] = type_repr({});\n",
+                encode_typeref(&t)
             ),
+            |v| decode_result(v, decode_repr),
+            want.map_err(|_| ()),
         );
     }
 }
@@ -640,30 +874,35 @@ fn lit_value_cases() {
     ];
     for (i, l) in cases.iter().enumerate() {
         let want = lit_value("t", l);
-        assert_true(
+        assert_l1_marshal(
             &format!("lit_value_{i}"),
             &format!(
-                "res_value_eq(lit_value({}), {})",
-                encode_literal(l),
-                encode_core_value_result(&want)
+                "fn main() => Result[Value, Bytes] = lit_value({});\n",
+                encode_literal(l)
             ),
+            |v| decode_result(v, decode_value),
+            want.map_err(|_| ()),
         );
     }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 // lit_value DEFERRED arms (FLAG-semcore-25): the `.myc` port refuses `0x..`/float literals
-// never-silently (G2) rather than faking a value. A `.myc`-only assertion (no oracle agreement).
+// never-silently (G2) rather than faking a value. No oracle agreement — the port must return `Err`.
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 #[test]
 fn lit_value_deferred_arms_refuse() {
-    assert_true(
+    assert_l1_marshal(
         "lit_value_lbytes_refuses",
-        "match lit_value(LBytes(\"deadbeef\")) { Err(_) => True, Ok(_) => False }",
+        "fn main() => Result[Value, Bytes] = lit_value(LBytes(\"deadbeef\"));\n",
+        |v| decode_result(v, decode_value),
+        Err(()),
     );
-    assert_true(
+    assert_l1_marshal(
         "lit_value_lfloat_refuses",
-        "match lit_value(LFloat(\"1.5\")) { Err(_) => True, Ok(_) => False }",
+        "fn main() => Result[Value, Bytes] = lit_value(LFloat(\"1.5\"));\n",
+        |v| decode_result(v, decode_value),
+        Err(()),
     );
 }
 
@@ -693,13 +932,14 @@ fn ty_to_repr_cases() {
     ];
     for (i, t) in cases.iter().enumerate() {
         let want = ty_to_repr(t);
-        assert_true(
+        assert_l1_marshal(
             &format!("ty_to_repr_{i}"),
             &format!(
-                "opt_repr_eq(ty_to_repr({}), {})",
-                encode_ty(t),
-                encode_core_opt_repr(&want)
+                "fn main() => Option[Repr] = ty_to_repr({});\n",
+                encode_ty(t)
             ),
+            |v| decode_option(v, decode_repr),
+            want,
         );
     }
 }
@@ -727,13 +967,14 @@ fn ty_to_field_ty_ref_cases() {
     ];
     for (i, t) in cases.iter().enumerate() {
         let want = ty_to_field_ty_ref(t);
-        assert_true(
+        assert_l1_marshal(
             &format!("ty_to_field_ty_ref_{i}"),
             &format!(
-                "opt_ftr_eq(ty_to_field_ty_ref({}), {})",
-                encode_ty(t),
-                encode_core_opt_field_ty_ref(&want)
+                "fn main() => Option[FieldTyRef] = ty_to_field_ty_ref({});\n",
+                encode_ty(t)
             ),
+            |v| decode_option(v, decode_field_ty_ref),
+            want,
         );
     }
 }
@@ -767,20 +1008,22 @@ fn field_spec_cases() {
     ];
     for (i, t) in cases.iter().enumerate() {
         let want = field_spec(t);
-        assert_true(
+        assert_l1_marshal(
             &format!("field_spec_{i}"),
             &format!(
-                "opt_fs_eq(field_spec({}), {})",
-                encode_ty(t),
-                encode_core_opt_field_spec(&want)
+                "fn main() => Option[FieldSpec] = field_spec({});\n",
+                encode_ty(t)
             ),
+            |v| decode_option(v, decode_field_spec),
+            want,
         );
     }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 // policy_name_preimage (LIVE — elab::policy_name_preimage): the domain-separated preimage
-// (`policy-name.v0:<dotted>`). The BLAKE3 hashing step is DEFERRED (FLAG-semcore-27).
+// (`policy-name.v0:<dotted>`). The BLAKE3 hashing step is DEFERRED (FLAG-semcore-27). The oracle
+// returns a `String`; the port returns `Bytes` — decoded to a `String` and compared.
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 #[test]
 fn policy_name_preimage_cases() {
@@ -791,13 +1034,14 @@ fn policy_name_preimage_cases() {
     ];
     for (i, p) in cases.iter().enumerate() {
         let want = policy_name_preimage(p);
-        assert_true(
+        assert_l1_marshal(
             &format!("policy_name_preimage_{i}"),
             &format!(
-                "match bytes_eq(policy_name_preimage({}), {}) {{ 0b1 => True, _ => False }}",
-                encode_path(p),
-                encode_bytes(&want)
+                "fn main() => Bytes = policy_name_preimage({});\n",
+                encode_path(p)
             ),
+            decode_string,
+            want,
         );
     }
 }
