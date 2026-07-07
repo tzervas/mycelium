@@ -5,6 +5,14 @@ on that component** — it's faster than re-deriving from the corpus, and points
 crates/specs to `Read`. These are *navigational/orientation* aids (Empirical/Declared): **source +
 the normative corpus are ground truth** (CLAUDE.md, the RFC/ADR/DN, the crate). Not normative.
 
+> **For a cited answer over the whole corpus, use tero, not a manual grep.** These files are static
+> per-component orientation; the **transparent memory API** (`mycelium-tero`, DN-87/E39-1 — the
+> **`/tero-query`** skill + companions) is the *queryable* memory: a decision by id, all items of a
+> status/kind, a `depends_on`/`doc_refs` cross-ref walk, or a free-text search — each answer carrying
+> **resolvable citations** (anchor + `file:line` + guarantee tag), an uncited query refusing rather than
+> guessing. **Leverage it whenever you want the answer with its provenance in one hop.** Offline fallback:
+> grep the committed `docs/tero-index/INDEX.md`.
+
 Each file follows the same shape: **What it is · Where it lives (crates + key files) · Key types &
 operations · Key invariants (honesty) · Read-more entry points · Gotchas.**
 
