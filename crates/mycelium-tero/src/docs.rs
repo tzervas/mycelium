@@ -270,9 +270,12 @@ fn lead_summary(doc: &Node) -> Option<String> {
 }
 
 /// Collapse to a single line (first line, whitespace-squeezed) and truncate to `max` chars at a
-/// word boundary, appending `…` when cut. A faithful excerpt of source text.
+/// word boundary, appending `…` when cut. A faithful excerpt of source text; embedded markdown-link
+/// markup is reduced to its text ([`crate::model::strip_md_links`]) so a summary carries no
+/// relocated/broken relative link into `INDEX.md`.
 pub(crate) fn one_line(text: &str, max: usize) -> String {
-    let first = text.lines().next().unwrap_or(text);
+    let text = crate::model::strip_md_links(text);
+    let first = text.lines().next().unwrap_or(&text);
     let squeezed = first.split_whitespace().collect::<Vec<_>>().join(" ");
     if squeezed.chars().count() <= max {
         return squeezed;

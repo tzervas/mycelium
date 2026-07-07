@@ -171,7 +171,7 @@ impl TeroIndexItem {
             family,
             kind: kind.into(),
             id: None,
-            title: title.into(),
+            title: strip_md_links(&title.into()),
             file: file.into(),
             line,
             status: None,
@@ -184,6 +184,40 @@ impl TeroIndexItem {
             tag: ITEM_TAG.to_owned(),
         }
     }
+}
+
+/// Reduce embedded markdown-link markup `[text](target)` to just its `text`, leaving all other
+/// text verbatim. Applied to every indexed title/summary because a corpus **section heading** can
+/// itself contain a relative cross-link (e.g. `4. Guarantee matrix — [RFC-0016 §4.5](../../rfcs/…)`);
+/// copied verbatim into `docs/tero-index/INDEX.md` that relative target no longer resolves from the
+/// index's location, so the offline `links` gate (correctly) flags it as broken. Keeping the link
+/// *text* and dropping the *plumbing* is the honest projection for an index cell — the citable
+/// location is already the row's own anchor + `file:line`, not the incidental in-heading link. A
+/// bracket run that is not a well-formed link is copied through unchanged (never a lossy guess).
+pub(crate) fn strip_md_links(s: &str) -> String {
+    let bytes = s.as_bytes();
+    let mut out = String::with_capacity(s.len());
+    let mut i = 0;
+    while i < s.len() {
+        if bytes[i] == b'[' {
+            // A link is `[` text `]` `(` target `)`, all four delimiters ASCII (byte-safe finds).
+            if let Some(close) = s[i + 1..].find(']') {
+                let text_end = i + 1 + close;
+                if bytes.get(text_end + 1) == Some(&b'(') {
+                    if let Some(paren) = s[text_end + 2..].find(')') {
+                        out.push_str(&s[i + 1..text_end]); // the link text only
+                        i = text_end + 2 + paren + 1; // skip past the closing `)`
+                        continue;
+                    }
+                }
+            }
+        }
+        // Not a link start — copy one whole char (UTF-8 safe).
+        let ch = s[i..].chars().next().unwrap();
+        out.push(ch);
+        i += ch.len_utf8();
+    }
+    out
 }
 
 /// A construct/source the heuristic could not (or does not yet) place — recorded, never dropped

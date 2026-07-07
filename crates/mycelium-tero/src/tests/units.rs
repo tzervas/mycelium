@@ -5,6 +5,7 @@
 use crate::changelog::leading_id;
 use crate::docs::{doc_id, leading_keyword, one_line};
 use crate::issues::{dequote, parse_inline_list};
+use crate::model::strip_md_links;
 
 const STATUS: &[&str] = &[
     "Draft",
@@ -92,6 +93,25 @@ fn issues_dequote_strips_and_unescapes() {
         "M-1 — a \"quoted\" title"
     );
     assert_eq!(dequote("bare-scalar"), "bare-scalar");
+}
+
+#[test]
+fn strip_md_links_reduces_a_link_to_its_text_and_keeps_the_rest() {
+    // A heading with an embedded relative cross-link (the real docs/tero-index/ links-gate case).
+    assert_eq!(
+        strip_md_links("4. Guarantee matrix — [RFC-0016 §4.5](../../rfcs/RFC-0016.md) here"),
+        "4. Guarantee matrix — RFC-0016 §4.5 here"
+    );
+    // Multiple links + a unicode em dash (UTF-8 byte-safety).
+    assert_eq!(strip_md_links("see [a](x) — [b](y)"), "see a — b");
+    // A non-link bracket run is copied through unchanged (never a lossy guess).
+    assert_eq!(
+        strip_md_links("array[i] and (paren)"),
+        "array[i] and (paren)"
+    );
+    assert_eq!(strip_md_links("no links here"), "no links here");
+    // The result never contains the `](` link token (what the links gate scans for).
+    assert!(!strip_md_links("[t](u)").contains("]("));
 }
 
 #[test]

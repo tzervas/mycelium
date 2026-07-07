@@ -7577,7 +7577,7 @@
       "title": "Devlog — 2026-06-17 · Phase 9 Wave B: building the doc pipeline the design promised",
       "file": "docs/archive/devlog/2026-06-17-phase9-wave-b-doc-build.md",
       "line": 1,
-      "summary": "**What this is** (see [the Capture note](../../notes/Narrative-Capture-and-Authoring.md)): the",
+      "summary": "**What this is** (see the Capture note): the",
       "tag": "Empirical/Declared"
     },
     {
@@ -34207,7 +34207,7 @@
       "anchor": "diag--4-guarantee-matrix-the-load-bearing-deliverable-rfc-0016-4-5-rfcs-rfc-0016-core-library-and-standard-library-md",
       "family": "doc",
       "kind": "section",
-      "title": "4. Guarantee matrix (the load-bearing deliverable — [RFC-0016 §4.5](../../rfcs/RFC-0016-Core-Library-and-Standard-Library.md))",
+      "title": "4. Guarantee matrix (the load-bearing deliverable — RFC-0016 §4.5)",
       "file": "docs/spec/stdlib/diag.md",
       "line": 144,
       "tag": "Empirical/Declared"
@@ -34290,7 +34290,7 @@
       "anchor": "error--4-guarantee-matrix-the-load-bearing-deliverable-rfc-0016-4-5-rfcs-rfc-0016-core-library-and-standard-library-md",
       "family": "doc",
       "kind": "section",
-      "title": "4. Guarantee matrix (the load-bearing deliverable — [RFC-0016 §4.5](../../rfcs/RFC-0016-Core-Library-and-Standard-Library.md))",
+      "title": "4. Guarantee matrix (the load-bearing deliverable — RFC-0016 §4.5)",
       "file": "docs/spec/stdlib/error.md",
       "line": 90,
       "tag": "Empirical/Declared"
@@ -34954,7 +34954,7 @@
       "anchor": "recover--4-guarantee-matrix-the-load-bearing-deliverable-rfc-0016-4-5-rfcs-rfc-0016-core-library-and-standard-library-md",
       "family": "doc",
       "kind": "section",
-      "title": "4. Guarantee matrix (the load-bearing deliverable — [RFC-0016 §4.5](../../rfcs/RFC-0016-Core-Library-and-Standard-Library.md))",
+      "title": "4. Guarantee matrix (the load-bearing deliverable — RFC-0016 §4.5)",
       "file": "docs/spec/stdlib/recover.md",
       "line": 131,
       "tag": "Empirical/Declared"

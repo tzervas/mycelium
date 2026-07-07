@@ -45,7 +45,7 @@ pub fn index_all(
             (i + 1) as u32,
         );
         item.id = leading_id(text);
-        item.summary = Some(text.to_owned());
+        item.summary = Some(crate::model::strip_md_links(text));
         items.push(item);
     }
     Ok(())
