@@ -307,8 +307,105 @@ fixed as below.
 These resolutions **do not** move DN-26's status (still **Draft** → Resolved with M-741) and add no
 code; they only fix the two branch points so the M-740 wave can proceed without re-deciding mid-port.
 
+## 10. L0 `Value`/`Repr`/`FieldSpec` boundary decision (M-1012) — Option A (in-language mirror) adopted
+
+> **Posture (append-only; VR-5/G2).** This section records the **maintainer's decision** on the
+> architecturally-significant `[FLAG]` §7.2 named and M-1012 carried — how the self-hosted
+> `semcore.myc` elaborator represents the kernel L0 `Value`/`Repr`/`FieldSpec` types at the
+> frontend/kernel seam. It fulfils **M-1012's Definition of Done** ("a recorded decision, appended to
+> DN-26, selecting the L0 `Value`/`Repr` representation") and **unblocks M-1013** (increments 10 + 12
+> build against this model). It **decides nothing new about the kernel** and **adds no code**; like §9
+> it fixes a branch point so the port can proceed. DN-26's status is **unchanged — Draft** (→ Resolved
+> with M-741, house rule #3). Grounded in `docs/planning/semcore-l0-boundary-dossier.md` (the M-1012/
+> M-1013 decision-support dossier, `Declared` analysis + recommendation).
+
+**Decision — adopt Option A, the in-language mirror model.** The kernel L0 vocabulary
+(`mycelium_core::{Value, Repr, FieldSpec, FieldTyRef, PolicyRef, ScalarKind, SparsityClass, Payload}`)
+is declared as **plain Mycelium ADTs in `semcore.myc`**, mirroring the Rust kernel field-for-field
+(the dossier §2.1 prefix scheme, disjoint from the existing `Ty`/`Wd`/`Mp`/`Hd` families), and the pure
+lowering helpers (`lit_value`/`type_repr`/`field_spec`/`ty_to_repr`/`ty_to_field_ty_ref`/`scalar_kind`/
+`sparsity_class`) construct **those mirror values**. The self-host ≡ Rust-host differential compares the
+mirror's **canonical rendering** (serialization / content-hash) against the Rust oracle's real kernel
+value (dossier §2.2 — a genuine independent comparison, the `bytes_eq`/content-hash posture increment 4
+already uses). This is the same move `semcore.myc` already made one layer up (FLAG-semcore-1/-2 mirror
+`checkty.rs`'s `Ty`/`DataInfo`); Option A extends it one layer down to the kernel's `Value`/`Repr`. This
+takes the dossier's **§5 recommendation** ("Option A — the in-language mirror model — with the `wild`
+seam reserved for the *execution/materialization* boundary only, never for per-descriptor
+construction").
+
+**The `wild` seam is reserved for the single materialization crossing only.** The `@std-sys` + `wild`
+FFI seam (DN-14 row 9; §7.2) is used **only** to hand the *finished* L0 program to the trusted kernel to
+run it (the dossier §5 "hybrid" — one `wild:` prim that takes the serialized mirror `Node` wire form and
+asks the kernel to deserialize it into a real `mycelium_core::Node` for execution/AOT). It is **not**
+used as a per-descriptor constructor factory — Option B was declined because the `wild`/prim seam is
+`Value`-currency by construction (`Repr`/`FieldSpec` are descriptors *of* a `Value`, not `Value`s), its
+return-type story for structured non-`Value` objects is **unresolved** in the corpus (dossier §3.3.1,
+flagged G2), opaque handles would forfeit the self-hosted frontend's in-language inspectability (house
+rule #2), and comparing kernel-minted handles to the same kernel would weaken the Stage-5 differential
+toward circularity (§3.3.3). The mirror's standing drift/duplication tax (dossier §2.3/§5, the strongest
+argument *against* Option A) is **bounded** — append-only, frozen-tag, never-silent (drift ⇒ a red L0
+differential, not a wrong answer) — and is **further bounded by ADR-042** (the Rust-base freeze: freezing
+new kernel/Rust types means the mirror only ever chases a frozen, append-only target, materially
+weakening the duplication cost that would have tipped the balance toward B if the L0 vocabulary were
+expected to churn).
+
+**Wild-free-first refinement (ADR-042).** Per ADR-042's **wild-free-core goal** — `wild`/FFI minimised,
+used only where strictly necessary — **even the single materialization crossing is to be investigated
+for a wild-free path** before it is spent: prefer a safe in-language route to hand the L0 across the seam
+if one exists, and reserve `wild` for where it is genuinely irreducible (the kernel must ultimately run
+the L0, and DN-14 row 9's `wild` callback may prove to be that irreducible floor). This is a **`Declared`
+target**, not a proven-reachable state (VR-5): the materialization crossing may turn out to require
+`wild` without moving the DN-39 kernel boundary (forbidden) — the decision sets the *preference*, and the
+residual `wild`-site count is tracked toward zero, each site audited (`just safety-check`) and
+never-silent (G2). See ADR-042 §2.4 / OQ-1.
+
+**`policy_name_ref`'s hash (dossier §4, decided with the boundary).** `policy_name_ref` produces a
+`PolicyRef` via a domain-separated content hash (`operation_hash("policy-name.v0:…")`), a narrow instance
+of the same A/B question. Resolution, consistent with the wild-free-first refinement: **re-implement the
+domain-separated hash in-language** if it is cheap to match the kernel byte-for-byte (keeping `PolicyRef`
+a mirror value everywhere, no `wild`), **else** a single `wild:` hash prim — but the `PolicyRef` stays a
+mirror value in all other positions either way. The in-language re-implementation is preferred where it
+matches byte-for-byte (wild-free); a mismatch risk is never-silent (every `PolicyRef` would diverge in
+the differential, G2).
+
+**Landing order (dossier §4, boundary-independent).** The two arithmetic-free enum→enum helpers
+`scalar_kind` and `sparsity_class` land **first** — they construct no kernel value (only the small mirror
+`ScalarK`/`SparsityC` enums under Option A), so they de-risk increment 7 without prejudging anything.
+
+**FLAG carried forward — the evaluator leg likely needs the AOT path, not the interpreter (dossier §7
+FLAG-4).** Independent of this boundary pick, the self-hosted **evaluator** run *inside* the L1 evaluator
+"almost certainly cannot complete at today's cost model" (M-986 TCO gap + M-987 ~n³ eval cost; §9 flag-2;
+the M-994 epicenter). Increment 12 (eval) and increment 14 (the whole-program L0 differential) may need
+the **AOT leg** rather than the interpreted one per §9 flag-2. This firms up only as increments 8–11
+land; recorded here (not silently pre-scoped) so M-1013's `needs-design` eval-feasibility question stays
+visible (G2/VR-5). The stale-status observations in dossier §7 FLAG-5 (M-1007 `in-progress` but DONE;
+M-1011 `todo` but partially landed) are **FLAGged to the orchestrator** for reconciliation against the
+codebase (mitigation #14), not changed here.
+
+**This fulfils M-1012's DoD** (a recorded decision appended to DN-26 selecting the L0 representation) and
+**unblocks M-1013** (the elab core + eval legs now have a fixed L0 model to build against). DN-26 status
+stays **Draft**.
+
 ## Meta — changelog
 
+- **2026-07-07 — §10 added: the L0 `Value`/`Repr`/`FieldSpec` boundary decided — Option A, the
+  in-language mirror model (append-only, no status move; M-1012).** The maintainer picked the
+  frontend/kernel L0-boundary `[FLAG]` M-1012 carried (§7.2): declare the kernel L0 vocabulary as plain
+  Mycelium ADTs in `semcore.myc` (mirroring `mycelium_core` field-for-field), diffed against the Rust
+  oracle by canonical serialization/content-hash, with the `@std-sys` + `wild` seam **reserved for the
+  single "materialise the finished L0" crossing only** — never a per-descriptor constructor factory
+  (Option B declined: `Value`-currency seam, unresolved non-`Value` return-type story, opaque handles
+  forfeit in-language inspectability, differential circularity — dossier §3.3/§5). Per **ADR-042**'s
+  wild-free-core goal, **even that crossing is to be investigated for a wild-free path** (`wild` only
+  where strictly necessary; `Declared` target, not a proven state — VR-5). `policy_name_ref`'s hash
+  decided the same way (re-implement domain-separated hash in-language if byte-for-byte cheap, else one
+  `wild:` prim). `scalar_kind`/`sparsity_class` (the arithmetic-free set) land first, boundary-
+  independent. FLAG carried: the self-hosted **evaluator** leg (increments 12/14) likely needs the AOT
+  path, not the interpreter, at today's cost model (M-986/M-987; §9 flag-2). Grounded in
+  `docs/planning/semcore-l0-boundary-dossier.md` (§5 recommendation + §7 FLAGs). **Fulfils M-1012's DoD;
+  unblocks M-1013.** Stale-status observations (M-1007/M-1011, dossier §7 FLAG-5) FLAGged for
+  orchestrator reconciliation (mitigation #14), not changed here. Status stays **Draft** (→ Resolved with
+  M-741). (M-1012; E18-1; VR-5/G2.)
 - **2026-07-07 — Stage-5 increments 3–6 landed (the pure/leaf cluster; append-only, no status move;
   M-993/M-1008/M-1009/M-1010/M-1011).** The tractable pure/leaf wave (E18-1) landed the four
   parallelizable increments into `semcore.myc`, each with a live-oracle Rust differential from an
