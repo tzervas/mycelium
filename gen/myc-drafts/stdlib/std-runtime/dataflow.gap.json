@@ -103,7 +103,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" A monotone progress counter for channel work — bump it on every successful `try_send`/`try_recv`\"] # [doc = \" so the sweep can tell \\\"a channel op advanced the network\\\" from \\\"nothing moved\\\" (G2).\"] # [doc = \"\"] # [doc = \" The driver reads it once per sweep; the caller increments it from inside task polls.\"] # [derive (Debug , Default)] pub struct Progress { epoch : AtomicU64 , }",
-      "reason": "struct `Progress` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `Progress` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "Progress"
     },
     {

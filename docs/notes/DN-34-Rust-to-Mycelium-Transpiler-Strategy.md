@@ -653,6 +653,86 @@ this fixed 17-target set. Recorded so the next phase is scoped to that reality (
 **Guarantee tags unchanged:** emission `Declared`; vet verdict `Empirical` (real `myc check`).
 **Status unchanged (Draft)** — a ladder phase, enacts nothing further.
 
+### §8.12 M-1006 phase-2: cross-nodule vetting probed (null), positional named-field emission lands — transpiler hardening (kickoff `trx2` E-B, epic E33-1) — `Empirical`
+
+The next M-1006 ladder increment (append-only — extends §8.11, does not rewrite it). It executes
+§8.11's stated next lever — **make referents resolve** — but the honest result splits in two: the
+cross-nodule *vetting* half moves `checked_fraction` by **zero** on this corpus (a rigorous null,
+recorded so the ladder is not run at it again), while a pivot to **struct-emission gap-closure** delivers
+the **first `checked_fraction` move in the entire ladder** (§8.9/§8.10/§8.11 each moved `checked` by 0).
+Its before-baseline is §8.11's after-state re-measured at the current head — **760 non-test items, 49
+emitted (6.45%), 28 myc-check-clean (3.68%)** (the committed §8.11 headline read 759/49/28; a +1-item
+source drift since, so the deltas below are re-baselined at head for an apples-to-apples read).
+
+**Half 1 — cross-nodule project-mode vetting, built and probed: `checked` Δ = 0 (the honest null).**
+The `myc check` driver only ever checked each `.myc` as an isolated **phylum-of-one** (`check_nodule`),
+so every cross-nodule referent failed name-resolution — §8.11 read this as "the referents live in
+sibling nodules" and named cross-nodule vetting as the fix. The kernel already *had* the cross-resolver
+(`mycelium_l1::check_phylum`, used by `myc run`); the driver never reached it. This phase lands that path
+as **`myc-check --phylum <dir>`** (assemble the set into one `Phylum`, run `check_phylum`, never-silent on
+a duplicate nodule path; additive — the per-file oracle is unchanged) — a focused checker hotfix
+propagated to `dev`/`integration`/`main` so it is available fleet-wide. **But measuring it on the corpus
+shows the §8.11 premise was optimistic:** every check-failure references a type that is **not emitted
+anywhere** — either **out-of-phylum** (`ContentHash` is declared in `mycelium_core`, outside the 17-target
+std set) or **same-crate-but-gapped** (`Permissions`/`IoError`/`Source` — structs the transpiler could not
+emit). There are **zero in-phylum *emitted* referents to resolve**, so cross-nodule resolution has nothing
+to resolve *to*, and a whole-crate nodule-merge is strictly **net-negative** (it couples a file's
+already-clean items to a poisoning sibling: the probed `std-content`/`std-io`/`std-fs`/`std-sys`/`std-rand`
+fall from 12 clean items to 0 when merged). The `--phylum` infra is correct, witnessed by a two-nodule
+cross-resolution test, and pays off the moment referents become emittable — but it moves nothing today
+(VR-5/G2: a built, proven lever with an empirically-zero effect on this corpus, recorded as such).
+
+**Half 2 — positional named-field emission (the lever that actually moves `checked`).** The largest
+tractable emission gap on the ranked worklist is **named-field records**: 137 `Struct` + 25
+`PayloadVariant` gaps across 94 distinct types (incl. semcore `Env`/`DataInfo`/`L1Value`) gapped **solely**
+for using named fields. Mycelium's grammar (`constructor ::= Ident ('(' type_ref,* ')')?`,
+`mycelium.ebnf` §`constructor`) is **positional-only** — there is no record surface — so a Rust
+named-field `struct Foo { a: T }` / variant `V { a: T }` now emits **positionally** (`type Foo = Foo(T)`),
+field names dropped and **recorded** as a never-silent `NamedFieldDrop` sub-gap (G2). This is the exact
+shape the `lib/std/*.myc` hand-ports already use (`type GuaranteeRow = Row(Bytes, …)`), so it is a faithful
+structural mapping, not a guess — a field whose *type* has no mapping (`String`) still refuses the whole
+record with its own precise reason. Naive positional emission is **net-negative on `checked`** (−8:
+emitting `ContentRef` surfaces its out-of-corpus `ContentHash` reference, poisoning the file that held the
+clean `RefKind`). The fix is a **per-file resolvability gate**: a named-field record emits only when every
+type it references resolves in-file (builtins plus same-file emittable types), computed as a **greatest**
+fixed point over the file's type graph so recursive and mutually-recursive types resolve rather than being
+wrongly excluded. Field types are mapped *before* the gate, so the gap profile keeps "`String` field" (a
+repr gap) distinct from "out-of-file reference" (a target-set gap). The gate turns the −8 regression into a
+genuine, non-regressive gain.
+
+**Measured before → after (`Empirical`, union over all 17 targets, non-test denominator 760):**
+
+| Metric | Before (= §8.11 after, re-baselined @ head) | After | Δ |
+|---|---:|---:|---:|
+| `expressible_fraction` (emitted) | 6.45% (49) | **7.50% (57)** | **+8 items** |
+| `checked_fraction` (myc-check-clean) | 3.68% (28) | **4.34% (33)** | **+5 items** |
+| `NamedFieldDrop` notes (emitted, names dropped) | 0 | **7** | +7 |
+| `Struct` gaps | 59 | **52** | **−7** |
+| total gaps (incl. sub-gaps) | 565 | 571 | +6 |
+
+The **+5 `checked`** are exactly the records that resolve in-file — e.g. `std-fs::Permissions`
+(`{ mode: u32 }` → `type Permissions = Permissions(Binary{32})`) now emits and unblocks its file's
+`is_readonly` (previously `unknown type Permissions`). The residual is honestly two-sided: records the
+gate withholds (their fields reach an **out-of-file** referent — the `mycelium_core`/cross-crate class the
+phylum probe localized) and records still hard-gapped by a **language-surface repr gap** (`String`,
+byte-array, signed-int fields — E18-1). Emission stays `Declared`; the +5 are real `myc check`-clean items
+(`Empirical`).
+
+**Lesson (feeds the next ladder phase).** Two findings, both scoping the next phase. (1) Cross-nodule
+*resolution* is not the lever on this corpus — the referents are not emitted, so there is nothing to
+resolve; the `--phylum` infra waits on emittable referents. (2) Struct-emission **is** the lever, and it
+works **only under the resolvability gate** — which is exactly the signal that `checked`'s true ceiling is
+the **target-set boundary**: the dominant blocker is references to types *outside* the 17-target set
+(`mycelium_core` kernel types, cross-crate types). The next `checked` growth therefore comes from
+**expanding the checked set to include the referent-defining crates** (e.g. `mycelium_core` as a
+declarations layer, so `ContentHash`-class references resolve) — checked as one phylum via the landed
+`--phylum` path — plus the remaining **E18-1** repr gaps (`String`/bytes/signed-int). Not from further
+single-file emission arms alone; those are exhausted (a fifth confirmation), but named-field emission just
+showed that the *right* emission arm, gated on resolvability, does move the number.
+
+**Guarantee tags unchanged:** emission `Declared`; vet verdict `Empirical` (real `myc check` /
+`check_phylum`). **Status unchanged (Draft)** — a ladder phase, enacts nothing further.
+
 ---
 
 ## Meta — changelog
@@ -784,3 +864,19 @@ this fixed 17-target set. Recorded so the next phase is scoped to that reality (
   (cross-nodule project-mode vetting) or E18-1, not further emission arms. Emission `Declared`, vet
   `Empirical`. **Status unchanged (Draft)** — a ladder phase, enacts nothing further. (Append-only;
   VR-5; G2.)
+- **2026-07-07 — §8.12 added: cross-nodule vetting probed (null) + positional named-field emission
+  (M-1006, kickoff `trx2` E33-1).** Lands `myc-check --phylum` (assemble a `.myc` set into one `Phylum`,
+  run `mycelium_l1::check_phylum`; additive; propagated as a hotfix to `dev`/`integration`/`main`), but
+  the corpus probe shows it moves `checked_fraction` by **0**: the check-failures reference types not
+  emitted anywhere (out-of-phylum `mycelium_core`, or same-crate gapped structs), so nothing in-phylum is
+  there to resolve and a whole-crate nodule-merge is net-negative. Pivots to **struct-emission
+  gap-closure**: Rust named-field `struct`s and enum variants now emit **positionally**
+  (`type Permissions = Permissions(Binary{32})`; the grammar's `constructor` is positional-only; matches
+  the `lib/std/*.myc` hand-ports), field names dropped and recorded (`NamedFieldDrop`), gated by a per-file
+  **resolvability** greatest-fixpoint so emission never introduces a poisoning out-of-file reference.
+  Union over the 17 targets (denom 760): expressible 6.45% → **7.50%** (+8 items), checked 3.68% →
+  **4.34%** (+5 items) — the **first `checked` move in the ladder** (§8.9/§8.10/§8.11 each moved it by 0).
+  Lesson: `checked`'s ceiling is the **target-set boundary** (referents in `mycelium_core`/sibling crates)
+  plus E18-1 repr gaps, so the next lever is target-set expansion checked via `--phylum`, plus E18-1.
+  Emission `Declared`, vet `Empirical`. **Status unchanged (Draft)** — a ladder phase, enacts nothing
+  further. (Append-only; VR-5; G2.)

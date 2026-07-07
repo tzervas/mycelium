@@ -37,7 +37,7 @@
       "category": "PayloadVariant",
       "rust_construct": "PayloadVariant",
       "snippet": "# [doc = \" The explicit, traceable filesystem error (RFC-0013 diagnostic record).\"] # [doc = \"\"] # [doc = \" Every `FsErr` carries:\"] # [doc = \" - **`path`** — the path that was attempted (for the caller to surface; G11)\"] # [doc = \" - **`errno_class`** — the classified errno, never a bare code (C3)\"] # [doc = \" - **`why`** — a human-readable one-liner explaining the refusal (G11)\"] # [doc = \"\"] # [doc = \" For `UseAfterConsume` the `path` is the handle's original path (if known) and the\"] # [doc = \" errno_class is absent (the violation is caught above the OS floor — no syscall ran).\"] # [doc = \"\"] # [doc = \" # C1 — never-silent\"] # [doc = \" A caller cannot reach an `FsErr` that is empty, zeroed, or opaque. Every variant\"] # [doc = \" names the failing operation and the cause. The `Os` variant preserves the raw\"] # [doc = \" errno for tooling (the `myc-sec` `wild`-audit), but it is never the *primary*\"] # [doc = \" identifier that a caller pattern-matches on.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum FsErr { # [doc = \" The path was not found (and `create`/`create_new` was not set).\"] NotFound { path : String , why : & 'static str } , # [doc = \" Permission denied by the OS.\"] PermDenied { path : String , why : & 'static str } , # [doc = \" The path already exists (with `create_new` set, or `remove`/`rename` collision).\"] AlreadyExists { path : String , why : & 'static str } , # [doc = \" A component of the path is not a directory.\"] NotADirectory { path : String , why : & 'static str } , # [doc = \" The path is a directory where a regular file was expected.\"] IsADirectory { path : String , why : & 'static str } , # [doc = \" A directory was not empty when `remove_dir` was attempted.\"] NotEmpty { path : String , why : & 'static str } , # [doc = \" The disk or quota is full.\"] DiskFull { path : String , why : & 'static str } , # [doc = \" A cross-device rename was attempted.\"] CrossDevice { from : String , to : String , why : & 'static str , } , # [doc = \" The operation would block (non-blocking mode).\"] WouldBlock { path : String , why : & 'static str } , # [doc = \" The operation was interrupted by a signal; the caller should retry.\"] Interrupted { path : String , why : & 'static str } , # [doc = \" Too many levels of symbolic links.\"] Loop { path : String , why : & 'static str } , # [doc = \" An affine `substrate` handle was used after it was consumed (LR-8).\"] # [doc = \"\"] # [doc = \" This is caught *above* the OS floor — no syscall ran.\"] UseAfterConsume { path : String , why : & 'static str } , # [doc = \" The requested `OpenOptions` combination is invalid (e.g. `truncate` without write/append).\"] # [doc = \"\"] # [doc = \" A caller error in the *request*, not a property of the path — caught *above* the OS floor\"] # [doc = \" (no syscall ran). Distinct from `NotFound`/`PermDenied` so a caller pattern-matching on the\"] # [doc = \" variant is not misled (C3).\"] InvalidOptions { path : String , why : & 'static str } , # [doc = \" A lower-level IO failure (threaded, not swallowed — I1).\"] # [doc = \"\"] # [doc = \" This wraps a failure that came from the byte-transfer layer. The\"] # [doc = \" `errno_class` field carries the classification; `raw` is preserved\"] # [doc = \" for the `myc-sec` `wild`-audit tooling (never the primary discriminant).\"] Os { path : String , errno_class : ErrnoClass , # [doc = \" Raw OS error code (preserved for tooling; never the primary identifier — C3).\"] raw : i32 , why : & 'static str , } , }",
-      "reason": "enum `FsErr` variant `NotFound` uses named fields — `constructor ::= Ident ('(' type_ref (',' type_ref)* ')')?` has no named-field/record form",
+      "reason": "enum `FsErr` variant `NotFound` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
       "item_name": "FsErr"
     },
     {
@@ -127,7 +127,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" One row in the `std.fs` guarantee matrix (RFC-0016 §4.5 / spec §4).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct MatrixRow { # [doc = \" The exported operation or type.\"] pub op : & 'static str , # [doc = \" Guarantee tag (all `\\\"Exact\\\"` — see module-level justification).\"] pub guarantee : & 'static str , # [doc = \" Fallibility classification.\"] pub fallibility : Fallibility , # [doc = \" The explicit error / None-case description (empty for total ops).\"] pub error_set : & 'static str , # [doc = \" Declared effects.\"] pub effects : Effects , # [doc = \" Whether the op surfaces an RFC-0013 diagnostic record.\"] pub explainable : Explainable , # [doc = \" Whether the op reaches the OS syscall floor (`wild`? column, spec §4).\"] pub wild : Wild , }",
-      "reason": "struct `MatrixRow` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `MatrixRow` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
       "item_name": "MatrixRow"
     },
     {
@@ -287,7 +287,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" An affine open-file handle (LR-8: consumed exactly once).\"] # [doc = \"\"] # [doc = \" Obtained from [`Fs::open`]. Must be explicitly closed with [`Fs::close`]; any operation on a\"] # [doc = \" consumed handle returns `Err(FsErr::UseAfterConsume)`. This structural constraint closes the\"] # [doc = \" only resource-leak vector (LR-9): an unclosed handle is a leak; close errors are surfaced (C1).\"] # [doc = \"\"] # [doc = \" # FLAG (LR-8 / Rust linear types)\"] # [doc = \" Rust does not have native linear types, so the single-consumption invariant is enforced at\"] # [doc = \" runtime via a `consumed` flag. A future Mycelium-lang implementation can enforce it at\"] # [doc = \" compile time (RFC-0006 LR-8). Until then, every op checks `consumed` first.\"] # [derive (Debug)] pub struct File { handle : InMemHandle , }",
-      "reason": "struct `File` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `File` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "File"
     },
     {
@@ -307,7 +307,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" An open directory iterator handle.\"] # [doc = \"\"] # [doc = \" Produced by [`Fs::read_dir`]. Yields child paths as `String`s. This is an in-memory\"] # [doc = \" snapshot iterator; in the real-OS path it would iterate `readdir(3)` entries.\"] # [derive (Debug)] pub struct DirIter { entries : std :: vec :: IntoIter < String > , }",
-      "reason": "struct `DirIter` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `DirIter` has a field type with no confirmed mapping (qualified type path `std :: vec :: IntoIter < String >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5))",
       "item_name": "DirIter"
     },
     {
@@ -327,7 +327,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" The filesystem context: holds the substrate and exposes all effectful fs ops.\"] # [doc = \"\"] # [doc = \" All effectful operations (`open`, `stat`, `read_dir`, `create_dir`, `remove_file`,\"] # [doc = \" `remove_dir`, `rename`, `copy`) are methods on `Fs`. This makes the filesystem effect\"] # [doc = \" explicit and inspectable: a function that does not hold an `&mut Fs` cannot perform\"] # [doc = \" filesystem IO (partial C6 capability scoping — see FLAG Q5).\"] # [doc = \"\"] # [doc = \" Currently backed by `InMemoryFs`. Wire `RealFs` (M-541) when the `std-sys` phylum lands.\"] pub struct Fs { backend : InMemoryFs , }",
-      "reason": "struct `Fs` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `Fs` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "Fs"
     },
     {
@@ -364,10 +364,20 @@
       "file": "crates/mycelium-std-fs/src/metadata.rs",
       "line": 26,
       "col": 1,
-      "category": "Struct",
-      "rust_construct": "Struct",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "# [doc = \" Read/write/execute permission bits for owner, group, and others.\"] # [doc = \"\"] # [doc = \" Represented as a plain value; no implicit behavior. Stored as the Unix permission bits\"] # [doc = \" (a `u32` in `rwxrwxrwx` form) but exposed through typed accessors — no caller should\"] # [doc = \" interpret raw bits (C3: no opaque bit patterns).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq , Hash)] pub struct Permissions { # [doc = \" Raw Unix mode bits (for preservation / display). Not the primary interface.\"] mode : u32 , }",
-      "reason": "struct `Permissions` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "dropped non-doc attribute(s) on struct `Permissions`: # [derive (Debug , Clone , Copy , PartialEq , Eq , Hash)]",
+      "item_name": "Permissions"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/metadata.rs",
+      "line": 26,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" Read/write/execute permission bits for owner, group, and others.\"] # [doc = \"\"] # [doc = \" Represented as a plain value; no implicit behavior. Stored as the Unix permission bits\"] # [doc = \" (a `u32` in `rwxrwxrwx` form) but exposed through typed accessors — no caller should\"] # [doc = \" interpret raw bits (C3: no opaque bit patterns).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq , Hash)] pub struct Permissions { # [doc = \" Raw Unix mode bits (for preservation / display). Not the primary interface.\"] mode : u32 , }",
+      "reason": "struct `Permissions` named field(s) `mode` emitted positionally as `Permissions(Binary{32})` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped (matches `lib/std/*.myc` hand-ports)",
       "item_name": "Permissions"
     },
     {
@@ -454,10 +464,20 @@
       "file": "crates/mycelium-std-fs/src/metadata.rs",
       "line": 87,
       "col": 1,
-      "category": "Struct",
-      "rust_construct": "Struct",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "# [doc = \" A read-only snapshot of filesystem entry metadata (C4 / ADR-003 — metadata is a value).\"] # [doc = \"\"] # [doc = \" `Metadata` is **not** an identity: two identical-content files may have different `mtime`s.\"] # [doc = \" A path's identity is its content, not its metadata. `stat`/`exists` return this as a value\"] # [doc = \" snapshot at the time of the call; the OS may change it immediately after (TOCTOU — see spec\"] # [doc = \" §7-Q4).\"] # [doc = \"\"] # [doc = \" Timestamps are opaque `u64` (seconds since epoch). Interpretation of wall vs monotonic is\"] # [doc = \" `std.time` (M-529), not `fs` (spec §2).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct Metadata { # [doc = \" The kind of filesystem entry.\"] pub kind : FileKind , # [doc = \" The size in bytes (for files; 0 for directories and other kinds).\"] pub size : u64 , # [doc = \" The Unix permission bits.\"] pub permissions : Permissions , # [doc = \" Modification time as seconds since Unix epoch (opaque; see FLAG below).\"] # [doc = \"\"] # [doc = \" # FLAG (timestamp semantics)\"] # [doc = \" This is a raw `u64` seconds-since-epoch. Interpreting it as monotonic/wall/calendar is\"] # [doc = \" `std.time` (M-529). `fs` carries it opaquely (VR-5: no overclaim of clock semantics).\"] pub mtime_secs : u64 , }",
-      "reason": "struct `Metadata` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "dropped non-doc attribute(s) on struct `Metadata`: # [derive (Debug , Clone , PartialEq , Eq)]",
+      "item_name": "Metadata"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/metadata.rs",
+      "line": 87,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" A read-only snapshot of filesystem entry metadata (C4 / ADR-003 — metadata is a value).\"] # [doc = \"\"] # [doc = \" `Metadata` is **not** an identity: two identical-content files may have different `mtime`s.\"] # [doc = \" A path's identity is its content, not its metadata. `stat`/`exists` return this as a value\"] # [doc = \" snapshot at the time of the call; the OS may change it immediately after (TOCTOU — see spec\"] # [doc = \" §7-Q4).\"] # [doc = \"\"] # [doc = \" Timestamps are opaque `u64` (seconds since epoch). Interpretation of wall vs monotonic is\"] # [doc = \" `std.time` (M-529), not `fs` (spec §2).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct Metadata { # [doc = \" The kind of filesystem entry.\"] pub kind : FileKind , # [doc = \" The size in bytes (for files; 0 for directories and other kinds).\"] pub size : u64 , # [doc = \" The Unix permission bits.\"] pub permissions : Permissions , # [doc = \" Modification time as seconds since Unix epoch (opaque; see FLAG below).\"] # [doc = \"\"] # [doc = \" # FLAG (timestamp semantics)\"] # [doc = \" This is a raw `u64` seconds-since-epoch. Interpreting it as monotonic/wall/calendar is\"] # [doc = \" `std.time` (M-529). `fs` carries it opaquely (VR-5: no overclaim of clock semantics).\"] pub mtime_secs : u64 , }",
+      "reason": "struct `Metadata` named field(s) `kind, size, permissions, mtime_secs` emitted positionally as `Metadata(FileKind, Binary{64}, Permissions, Binary{64})` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped (matches `lib/std/*.myc` hand-ports)",
       "item_name": "Metadata"
     },
     {
@@ -484,10 +504,20 @@
       "file": "crates/mycelium-std-fs/src/options.rs",
       "line": 10,
       "col": 1,
-      "category": "Struct",
-      "rust_construct": "Struct",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "# [doc = \" Declared open intent for `open` (spec §3).\"] # [doc = \"\"] # [doc = \" All fields default `false`. Every create/truncate option is **opt-in, never a default**:\"] # [doc = \"\"] # [doc = \" | Field | When `true` |\"] # [doc = \" |---|---|\"] # [doc = \" | `read` | Allow reading through the handle |\"] # [doc = \" | `write` | Allow writing through the handle |\"] # [doc = \" | `append` | Allow appending (implies write; position always at end) |\"] # [doc = \" | `create` | Create the file if absent; open existing file if present |\"] # [doc = \" | `create_new` | Create the file, failing with `AlreadyExists` if it exists |\"] # [doc = \" | `truncate` | Zero-out the file's contents on open; requires `write` |\"] # [doc = \"\"] # [doc = \" # C1 — never-silent\"] # [doc = \" - Opening absent path, `create = false`, `create_new = false` → `Err(NotFound)` (no conjured file).\"] # [doc = \" - Opening existing path, `truncate = false` → existing bytes preserved (no silent zero-out).\"] # [doc = \" - `create_new = true` on an existing path → `Err(AlreadyExists)` (no silent overwrite).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct OpenOptions { # [doc = \" Allow reading through the handle.\"] pub read : bool , # [doc = \" Allow writing through the handle.\"] pub write : bool , # [doc = \" Append mode: writes always go to the end; position is at end.\"] pub append : bool , # [doc = \" Create the file if absent; open it if present. No-op if already exists.\"] pub create : bool , # [doc = \" Create the file; fail with `AlreadyExists` if it already exists.\"] pub create_new : bool , # [doc = \" Truncate the file's contents to zero on open. Requires `write = true`.\"] pub truncate : bool , }",
-      "reason": "struct `OpenOptions` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "dropped non-doc attribute(s) on struct `OpenOptions`: # [derive (Debug , Clone , PartialEq , Eq)]",
+      "item_name": "OpenOptions"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/options.rs",
+      "line": 10,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" Declared open intent for `open` (spec §3).\"] # [doc = \"\"] # [doc = \" All fields default `false`. Every create/truncate option is **opt-in, never a default**:\"] # [doc = \"\"] # [doc = \" | Field | When `true` |\"] # [doc = \" |---|---|\"] # [doc = \" | `read` | Allow reading through the handle |\"] # [doc = \" | `write` | Allow writing through the handle |\"] # [doc = \" | `append` | Allow appending (implies write; position always at end) |\"] # [doc = \" | `create` | Create the file if absent; open existing file if present |\"] # [doc = \" | `create_new` | Create the file, failing with `AlreadyExists` if it exists |\"] # [doc = \" | `truncate` | Zero-out the file's contents on open; requires `write` |\"] # [doc = \"\"] # [doc = \" # C1 — never-silent\"] # [doc = \" - Opening absent path, `create = false`, `create_new = false` → `Err(NotFound)` (no conjured file).\"] # [doc = \" - Opening existing path, `truncate = false` → existing bytes preserved (no silent zero-out).\"] # [doc = \" - `create_new = true` on an existing path → `Err(AlreadyExists)` (no silent overwrite).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct OpenOptions { # [doc = \" Allow reading through the handle.\"] pub read : bool , # [doc = \" Allow writing through the handle.\"] pub write : bool , # [doc = \" Append mode: writes always go to the end; position is at end.\"] pub append : bool , # [doc = \" Create the file if absent; open it if present. No-op if already exists.\"] pub create : bool , # [doc = \" Create the file; fail with `AlreadyExists` if it already exists.\"] pub create_new : bool , # [doc = \" Truncate the file's contents to zero on open. Requires `write = true`.\"] pub truncate : bool , }",
+      "reason": "struct `OpenOptions` named field(s) `read, write, append, create, create_new, truncate` emitted positionally as `OpenOptions(Bool, Bool, Bool, Bool, Bool, Bool)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped (matches `lib/std/*.myc` hand-ports)",
       "item_name": "OpenOptions"
     },
     {
@@ -537,7 +567,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" An immutable, content-addressable UTF-8 filesystem path (C4 / ADR-003).\"] # [doc = \"\"] # [doc = \" A `Path` is a **value**: two `Path`s with the same string are the same value regardless of\"] # [doc = \" where they were constructed. Metadata (mtime, inode) is NOT part of its identity.\"] # [doc = \"\"] # [doc = \" # FLAG (Q3 — portability)\"] # [doc = \" Currently backed by a `String` (UTF-8 guarantee). Non-UTF-8 OS paths are an open question\"] # [doc = \" (spec §7-Q3 / RFC-0016 §8-Q3); a lossy decode would violate C1 — the maintainer's call.\"] # [doc = \"\"] # [doc = \" # PATH SEPARATOR\"] # [doc = \" Component separator is `/`. No implicit OS-specific normalization (no `\\\\\\\\` on Windows).\"] # [doc = \" This is a conservative default pending the Q3 portability decision.\"] # [derive (Debug , Clone , PartialEq , Eq , Hash)] pub struct Path { inner : String , }",
-      "reason": "struct `Path` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `Path` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
       "item_name": "Path"
     },
     {
@@ -637,7 +667,7 @@
       "category": "PayloadVariant",
       "rust_construct": "PayloadVariant",
       "snippet": "# [doc = \" An in-memory filesystem node.\"] # [derive (Debug , Clone)] enum FsNode { File { contents : Vec < u8 > , permissions : Permissions , mtime : u64 , } , Directory { # [doc = \" Children: basename → full path. We store children as paths into the same flat map.\"] children : Vec < String > , permissions : Permissions , mtime : u64 , } , }",
-      "reason": "enum `FsNode` variant `File` uses named fields — `constructor ::= Ident ('(' type_ref (',' type_ref)* ')')?` has no named-field/record form",
+      "reason": "enum `FsNode` variant `Directory` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
       "item_name": "FsNode"
     },
     {
@@ -647,7 +677,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" An open file handle in the in-memory substrate.\"] # [derive (Debug)] pub (crate) struct InMemHandle { pub (crate) path : String , pub (crate) read : bool , pub (crate) write : bool , pub (crate) append : bool , # [doc = \" Current read/write position within the file contents.\"] pub (crate) position : usize , pub (crate) consumed : bool , }",
-      "reason": "struct `InMemHandle` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `InMemHandle` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
       "item_name": "InMemHandle"
     },
     {
@@ -657,7 +687,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" An in-memory filesystem, fully testable without OS interaction.\"] # [doc = \"\"] # [doc = \" Stores files as `Vec<u8>` in a flat map keyed by absolute path string.\"] # [doc = \" Directories are explicit nodes (not implicit from path structure).\"] # [doc = \"\"] # [doc = \" # Thread safety\"] # [doc = \" Not thread-safe. This is a test-only substrate for the design-phase implementation.\"] # [derive (Debug)] pub (crate) struct InMemoryFs { nodes : HashMap < String , FsNode > , disk_limit : Option < u64 > , used_bytes : u64 , }",
-      "reason": "struct `InMemoryFs` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `InMemoryFs` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
       "item_name": "InMemoryFs"
     },
     {
@@ -682,13 +712,14 @@
     }
   ],
   "category_counts": {
-    "DeriveAttr": 7,
+    "DeriveAttr": 10,
     "Impl": 12,
     "Import": 12,
     "MacroInvocation": 1,
+    "NamedFieldDrop": 3,
     "Other": 17,
     "PayloadVariant": 2,
-    "Struct": 10,
+    "Struct": 7,
     "TestItem": 7
   }
 }

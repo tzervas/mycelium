@@ -35,3 +35,12 @@ nodule l1;
 // Why a `@forage(policy)` placement failed — always explicit, never a silent hang or a fabricated
 // placement (RT4/G2; DN-63 §3.5 FLAG-14; M-906/DN-70 D1).
 type ForageError = NoCandidates;
+
+// The tunable **budgets** of an [`Evaluator`] — the step (`fuel`) and recursion-depth guards — as
+// a single options struct, an alternative to threading the fluent [`Evaluator::with_fuel`] /
+// [`Evaluator::with_depth`] chain. Applied via [`Evaluator::with_opts`]; the fluent setters stay.
+//
+// Only the `Copy` budget knobs live here: the *engines* (`PrimRegistry`, `Box<dyn SwapEngine>`)
+// are not part of `EvaluatorOpts` — they are not `Clone`/`Default` and stay set through
+// [`Evaluator::with_engines`], so this struct is a plain, copyable, defaultable bundle.
+type EvaluatorOpts = EvaluatorOpts(Binary{64}, Binary{32});

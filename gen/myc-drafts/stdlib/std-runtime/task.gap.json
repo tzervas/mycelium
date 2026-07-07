@@ -1,6 +1,7 @@
 {
   "source": "crates/mycelium-std-runtime/src/task.rs",
   "emitted_items": [
+    "TaskCtx",
     "Poll",
     "SweepOrder"
   ],
@@ -32,7 +33,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" A computation that can be spawned into a `Scope`.\"] # [doc = \"\"] # [doc = \" Holds a `Box<dyn FnOnce() + Send>` closure. The caller asserts purity\"] # [doc = \" (RT1 contract, `Declared` — the type system cannot enforce no-side-effects).\"] # [doc = \"\"] # [doc = \" Guarantee: **Declared** — purity contract is asserted, not enforced by the type system.\"] # [doc = \" Out-of-scope effects are a `wild`-level concern (ADR-014).\"] pub struct Task { inner : Box < dyn FnOnce () + Send + 'static > , }",
-      "reason": "struct `Task` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `Task` has a field type with no confirmed mapping (unsupported Rust type form `dyn FnOnce () + Send + 'static`)",
       "item_name": "Task"
     },
     {
@@ -59,10 +60,20 @@
       "file": "crates/mycelium-std-runtime/src/task.rs",
       "line": 45,
       "col": 1,
-      "category": "Struct",
-      "rust_construct": "Struct",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "# [doc = \" Context passed to a running task — carries cancellation signal and scope ref.\"] # [derive (Debug)] pub struct TaskCtx { cancelled : bool , }",
-      "reason": "struct `TaskCtx` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "dropped non-doc attribute(s) on struct `TaskCtx`: # [derive (Debug)]",
+      "item_name": "TaskCtx"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/task.rs",
+      "line": 45,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" Context passed to a running task — carries cancellation signal and scope ref.\"] # [derive (Debug)] pub struct TaskCtx { cancelled : bool , }",
+      "reason": "struct `TaskCtx` named field(s) `cancelled` emitted positionally as `TaskCtx(Bool)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped (matches `lib/std/*.myc` hand-ports)",
       "item_name": "TaskCtx"
     },
     {
@@ -112,7 +123,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" Deadlock descriptor: returned when a scope cannot make progress.\"] # [doc = \"\"] # [doc = \" Guarantee: **Empirical** — detection is complete for the supported channel graph\"] # [doc = \" (DAG channels); cyclic graphs are an open follow-up (FLAG: ADR-020 §7).\"] # [derive (Debug , PartialEq , Eq)] pub struct Deadlock { pub task_count : usize , }",
-      "reason": "struct `Deadlock` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `Deadlock` has a field type with no confirmed mapping (`usize` has a platform-dependent width; no fixed Binary{N} mapping)",
       "item_name": "Deadlock"
     },
     {

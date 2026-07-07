@@ -1,6 +1,6 @@
 {
   "epic": "E33-1",
-  "generated_from_commit": "c88d591d73b4c567199a18b208600e4fe1eed1c2",
+  "generated_from_commit": "f765078158ea4fe109f84af825ef36bb836e7a0f",
   "kickoff": "trx2",
   "schema_version": 1,
   "targets": [
@@ -47,7 +47,7 @@
         "MultiStmtBody": 1,
         "Other": 19,
         "PayloadVariant": 2,
-        "ReservedWord": 5
+        "ReservedWord": 6
       },
       "kind": "semcore",
       "note": "Destination convention (lib/compiler/README.md): this file is one of the nine mycelium-l1 semantic-core modules that hand-port into a SINGLE Mycelium nodule (compiler.semcore) for nodule-wide mutual recursion (DN-26 SCC). This transpiler emits one .myc per Rust file and does NOT perform that merge. Any emitted/gapped constructor whose name would collide with another semcore type's constructor (or a reserved word) once merged is subject to the FLAG-ast-5/FLAG-parse-2 per-type constructor-prefixing convention at hand-port time -- gapped ReservedWord items in this draft are exactly the collisions the transpiler refuses to auto-rename (VR-5/G2).",
@@ -55,7 +55,7 @@
       "rust_sources": [
         {
           "path": "crates/mycelium-l1/src/elab.rs",
-          "sha256": "568454a685c793fff352d24b210e3ba5ce0ce432073c2d9734e5bef46a391922"
+          "sha256": "3dc10a57f7906aedf0f3a4742b78939dc9c7f51208aa2013b337e7cc6435dd35"
         }
       ],
       "stats": {
@@ -63,9 +63,9 @@
         "checked_fraction_pct": 0.0,
         "emitted_items": 0,
         "expressible_fraction_pct": 0.0,
-        "gap_count": 37,
-        "non_test_items": 37,
-        "total_top_level_items": 37
+        "gap_count": 38,
+        "non_test_items": 38,
+        "total_top_level_items": 38
       },
       "status": "ok",
       "target": "semcore/elab",
@@ -76,14 +76,15 @@
     },
     {
       "gap_category_counts": {
-        "DeriveAttr": 1,
+        "DeriveAttr": 2,
         "GenericBound": 5,
         "Impl": 12,
         "Import": 11,
+        "NamedFieldDrop": 1,
         "Other": 5,
         "PayloadVariant": 2,
         "ReservedWord": 2,
-        "Struct": 4
+        "Struct": 3
       },
       "kind": "semcore",
       "note": "Destination convention (lib/compiler/README.md): this file is one of the nine mycelium-l1 semantic-core modules that hand-port into a SINGLE Mycelium nodule (compiler.semcore) for nodule-wide mutual recursion (DN-26 SCC). This transpiler emits one .myc per Rust file and does NOT perform that merge. Any emitted/gapped constructor whose name would collide with another semcore type's constructor (or a reserved word) once merged is subject to the FLAG-ast-5/FLAG-parse-2 per-type constructor-prefixing convention at hand-port time -- gapped ReservedWord items in this draft are exactly the collisions the transpiler refuses to auto-rename (VR-5/G2).",
@@ -95,11 +96,11 @@
         }
       ],
       "stats": {
-        "checked_clean_items": 1,
-        "checked_fraction_pct": 2.38,
-        "emitted_items": 1,
-        "expressible_fraction_pct": 2.38,
-        "gap_count": 42,
+        "checked_clean_items": 2,
+        "checked_fraction_pct": 4.76,
+        "emitted_items": 2,
+        "expressible_fraction_pct": 4.76,
+        "gap_count": 43,
         "non_test_items": 42,
         "total_top_level_items": 42
       },
@@ -292,13 +293,14 @@
     {
       "file_count": 7,
       "gap_category_counts": {
-        "DeriveAttr": 7,
+        "DeriveAttr": 10,
         "Impl": 12,
         "Import": 12,
         "MacroInvocation": 1,
+        "NamedFieldDrop": 3,
         "Other": 17,
         "PayloadVariant": 2,
-        "Struct": 10,
+        "Struct": 7,
         "TestItem": 7
       },
       "kind": "stdlib",
@@ -335,11 +337,11 @@
         }
       ],
       "stats": {
-        "checked_clean_items": 5,
-        "checked_fraction_pct": 9.43,
-        "emitted_items": 7,
-        "expressible_fraction_pct": 13.21,
-        "gap_count": 68,
+        "checked_clean_items": 6,
+        "checked_fraction_pct": 11.32,
+        "emitted_items": 10,
+        "expressible_fraction_pct": 18.87,
+        "gap_count": 71,
         "non_test_items": 53,
         "total_top_level_items": 60
       },
@@ -454,9 +456,10 @@
         "Import": 1,
         "MacroInvocation": 1,
         "MultiStmtBody": 4,
+        "NamedFieldDrop": 1,
         "Other": 11,
         "ReservedWord": 1,
-        "Struct": 3,
+        "Struct": 2,
         "TestItem": 1,
         "Trait": 1
       },
@@ -472,8 +475,8 @@
       "stats": {
         "checked_clean_items": 0,
         "checked_fraction_pct": 0.0,
-        "emitted_items": 4,
-        "expressible_fraction_pct": 11.76,
+        "emitted_items": 5,
+        "expressible_fraction_pct": 14.71,
         "gap_count": 36,
         "non_test_items": 34,
         "total_top_level_items": 35
@@ -487,14 +490,15 @@
     {
       "file_count": 14,
       "gap_category_counts": {
-        "DeriveAttr": 14,
+        "DeriveAttr": 15,
         "GenericBound": 12,
         "Impl": 28,
         "Import": 28,
         "MultiStmtBody": 1,
+        "NamedFieldDrop": 1,
         "Other": 39,
         "PayloadVariant": 3,
-        "Struct": 22,
+        "Struct": 21,
         "TestItem": 3,
         "Trait": 1
       },
@@ -560,11 +564,11 @@
         }
       ],
       "stats": {
-        "checked_clean_items": 9,
-        "checked_fraction_pct": 6.21,
-        "emitted_items": 18,
-        "expressible_fraction_pct": 12.41,
-        "gap_count": 151,
+        "checked_clean_items": 10,
+        "checked_fraction_pct": 6.9,
+        "emitted_items": 19,
+        "expressible_fraction_pct": 13.1,
+        "gap_count": 152,
         "non_test_items": 145,
         "total_top_level_items": 148
       },
@@ -678,15 +682,16 @@
     {
       "file_count": 1,
       "gap_category_counts": {
-        "DeriveAttr": 3,
+        "DeriveAttr": 5,
         "GenericBound": 2,
         "Impl": 9,
         "Import": 1,
         "MacroInvocation": 1,
         "MultiStmtBody": 1,
+        "NamedFieldDrop": 2,
         "Other": 13,
         "PayloadVariant": 1,
-        "Struct": 6,
+        "Struct": 4,
         "TestItem": 1,
         "Trait": 1
       },
@@ -700,11 +705,11 @@
         }
       ],
       "stats": {
-        "checked_clean_items": 3,
-        "checked_fraction_pct": 8.11,
-        "emitted_items": 3,
-        "expressible_fraction_pct": 8.11,
-        "gap_count": 39,
+        "checked_clean_items": 5,
+        "checked_fraction_pct": 13.51,
+        "emitted_items": 5,
+        "expressible_fraction_pct": 13.51,
+        "gap_count": 41,
         "non_test_items": 37,
         "total_top_level_items": 38
       },

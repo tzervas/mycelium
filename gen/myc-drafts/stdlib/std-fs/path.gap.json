@@ -19,7 +19,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" An immutable, content-addressable UTF-8 filesystem path (C4 / ADR-003).\"] # [doc = \"\"] # [doc = \" A `Path` is a **value**: two `Path`s with the same string are the same value regardless of\"] # [doc = \" where they were constructed. Metadata (mtime, inode) is NOT part of its identity.\"] # [doc = \"\"] # [doc = \" # FLAG (Q3 — portability)\"] # [doc = \" Currently backed by a `String` (UTF-8 guarantee). Non-UTF-8 OS paths are an open question\"] # [doc = \" (spec §7-Q3 / RFC-0016 §8-Q3); a lossy decode would violate C1 — the maintainer's call.\"] # [doc = \"\"] # [doc = \" # PATH SEPARATOR\"] # [doc = \" Component separator is `/`. No implicit OS-specific normalization (no `\\\\\\\\` on Windows).\"] # [doc = \" This is a conservative default pending the Q3 portability decision.\"] # [derive (Debug , Clone , PartialEq , Eq , Hash)] pub struct Path { inner : String , }",
-      "reason": "struct `Path` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `Path` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
       "item_name": "Path"
     },
     {

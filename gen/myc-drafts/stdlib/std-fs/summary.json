@@ -49,14 +49,14 @@
       "file": "crates/mycelium-std-fs/src/metadata.rs",
       "total_items": 6,
       "non_test_items": 5,
-      "emitted": 2,
-      "gaps": 13,
-      "expressible_pct": 40.0,
+      "emitted": 4,
+      "gaps": 15,
+      "expressible_pct": 80.0,
       "category_counts": {
-        "DeriveAttr": 2,
+        "DeriveAttr": 4,
         "Impl": 1,
+        "NamedFieldDrop": 2,
         "Other": 7,
-        "Struct": 2,
         "TestItem": 1
       }
     },
@@ -64,12 +64,13 @@
       "file": "crates/mycelium-std-fs/src/options.rs",
       "total_items": 4,
       "non_test_items": 3,
-      "emitted": 0,
-      "gaps": 4,
-      "expressible_pct": 0.0,
+      "emitted": 1,
+      "gaps": 5,
+      "expressible_pct": 33.33333333333333,
       "category_counts": {
+        "DeriveAttr": 1,
         "Impl": 2,
-        "Struct": 1,
+        "NamedFieldDrop": 1,
         "TestItem": 1
       }
     },
@@ -107,17 +108,18 @@
   "totals": {
     "total_items": 60,
     "non_test_items": 53,
-    "emitted": 7,
-    "gaps": 68,
-    "expressible_pct": 13.20754716981132,
+    "emitted": 10,
+    "gaps": 71,
+    "expressible_pct": 18.867924528301888,
     "category_counts": {
-      "DeriveAttr": 7,
+      "DeriveAttr": 10,
       "Impl": 12,
       "Import": 12,
       "MacroInvocation": 1,
+      "NamedFieldDrop": 3,
       "Other": 17,
       "PayloadVariant": 2,
-      "Struct": 10,
+      "Struct": 7,
       "TestItem": 7
     }
   }

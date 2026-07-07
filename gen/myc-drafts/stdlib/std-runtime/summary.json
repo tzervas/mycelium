@@ -184,15 +184,16 @@
       "file": "crates/mycelium-std-runtime/src/task.rs",
       "total_items": 13,
       "non_test_items": 12,
-      "emitted": 2,
-      "gaps": 13,
-      "expressible_pct": 16.666666666666664,
+      "emitted": 3,
+      "gaps": 14,
+      "expressible_pct": 25.0,
       "category_counts": {
-        "DeriveAttr": 2,
+        "DeriveAttr": 3,
         "Impl": 5,
         "Import": 1,
+        "NamedFieldDrop": 1,
         "Other": 1,
-        "Struct": 3,
+        "Struct": 2,
         "TestItem": 1
       }
     }
@@ -200,18 +201,19 @@
   "totals": {
     "total_items": 148,
     "non_test_items": 145,
-    "emitted": 18,
-    "gaps": 151,
-    "expressible_pct": 12.413793103448276,
+    "emitted": 19,
+    "gaps": 152,
+    "expressible_pct": 13.10344827586207,
     "category_counts": {
-      "DeriveAttr": 14,
+      "DeriveAttr": 15,
       "GenericBound": 12,
       "Impl": 28,
       "Import": 28,
       "MultiStmtBody": 1,
+      "NamedFieldDrop": 1,
       "Other": 39,
       "PayloadVariant": 3,
-      "Struct": 22,
+      "Struct": 21,
       "TestItem": 3,
       "Trait": 1
     }

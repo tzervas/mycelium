@@ -110,6 +110,38 @@ type DeclaredTime[T] = DeclaredTime(T);
 // `std.rand` (M-531) when that crate lands (FLAG §7-Q5 / §8-Q3).
 type DeclaredTimeEntropy[T] = DeclaredTimeEntropy(T);
 
+// A point on the MONOTONIC clock (never-backward, no civil meaning).
+//
+// Represented as an opaque nanosecond-resolution tick count from an unspecified epoch.
+// The epoch is platform-defined and has no civil meaning — **only differences between two
+// `MonoInstant` values are meaningful** (`diff(a, b) → Duration`).
+//
+// Cross-source subtraction is a **compile-time type error**: `diff(MonoInstant, WallInstant)`
+// does not exist and cannot be called accidentally (the typed distinction that is "structurally
+// never a silent swap", spec §1).
+//
+// **Guarantee tag: `Declared`** — this value is an input from outside the pure fragment, not a
+// computation. A MONOTONIC clock read declares effect `time` (not `entropy`).
+type MonoInstant = MonoInstant(Binary{64});
+
+// A point on the RFC-0008 LOGICAL clock (a deterministic monotonic tick the runtime advances).
+//
+// The LOGICAL clock is the **only** time source legible to the deterministic fragment (RT2),
+// because its value is reproducible under RT2 sequentialization: it is not real-world entropy.
+// Its advancement is owned by `std.runtime`/`colony` (M-521 over RFC-0008 §4.7 / M-356) — this
+// crate exposes only the **typed reading surface** (a `u64` tick supplied by the caller's
+// [`ClockSource`]).
+//
+// **Guarantee tag: `Declared`** — it still declares the `time` effect (a read of runtime state,
+// not a pure constant), but `time` only — not `entropy`.
+//
+// # FLAG — concrete API ownership (§7-Q1 / M-521 / M-356)
+//
+// The tick shape (per-colony? per-scope?), the read's exact effect classification, and the
+// advancement semantics are **all deferred to M-521/M-356**. This crate provides the thin typed
+// wrapper only; the orchestrator wires it to the real runtime clock when that API lands.
+type LogicalInstant = LogicalInstant(Binary{64});
+
 // A [`ClockSource`] backed by Rust's `std::time` — the **std-sys placeholder** (FLAG §7-Q3).
 //
 // This is not the final `std-sys` audited `wild` block; it is a usable stand-in until M-541.

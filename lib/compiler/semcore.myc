@@ -293,6 +293,30 @@ type BaseType =
   | FnArrow(TypeRef, TypeRef)
   | Tuple(Vec[TypeRef]);
 
+// ── register-family surface mirrors (M-1013 STEP 3, PR-1) ─────────────────────────────────────────
+// Ctor: mirrors ast.rs::Ctor (a constructor name + its positional field TypeRefs). NEW ctor `Ct`
+// (FLAG-semcore-2 prefix scheme — distinct from the surface `Kw*`/checked `Ty*` families and from the
+// `CI` checked-ctor mirror below).
+type Ctor = Ct(Bytes, Vec[TypeRef]);
+
+fn ct_name(c: Ctor) => Bytes =
+  match c { Ct(n, _) => n };
+
+fn ct_fields(c: Ctor) => Vec[TypeRef] =
+  match c { Ct(_, f) => f };
+
+// TypeDecl: mirrors ast.rs::TypeDecl field-for-field (vis, name, params, ctors — declaration order).
+type TypeDecl = TD(Vis, Bytes, Vec[Bytes], Vec[Ctor]);
+
+fn td_name(t: TypeDecl) => Bytes =
+  match t { TD(_, n, _, _) => n };
+
+fn td_params(t: TypeDecl) => Vec[Bytes] =
+  match t { TD(_, _, p, _) => p };
+
+fn td_ctors(t: TypeDecl) => Vec[Ctor] =
+  match t { TD(_, _, _, c) => c };
+
 // ExecutionMode: mirrors ast.myc::ExecutionMode (a field of `FnDecl`; unused by grade otherwise).
 type ExecutionMode = Interpreted | Compiled;
 
@@ -1900,6 +1924,177 @@ fn resolve_ty(types: Vec[DataInfo], tyvars: Vec[Bytes], t: TypeRef) => Result[Pa
   match resolve_base(types, tyvars, typeref_base(t)) {
     Err(e) => Err(e),
     Ok(base) => Ok(Pr(base, typeref_guarantee(t)))
+  };
+
+// ── first_duplicate / resolve_ctors (checkty.rs register-family; M-1013 STEP 3, PR-1) ─────────────
+// first_duplicate: the first value that appears more than once in `xs`, left to right, if any —
+// checkty.rs's dup-param/dup-name guard. Rust threads a `BTreeSet`; the port threads a `seen` list
+// (the FLAG-semcore-4 assoc-list posture) and reuses `names_contains`. Pure preimage — the CALLER
+// turns a `Some` into an explicit refusal (never silent — G2).
+fn first_duplicate(xs: Vec[Bytes]) => Option[Bytes] =
+  first_duplicate_go(Nil, xs);
+
+fn first_duplicate_go(seen: Vec[Bytes], xs: Vec[Bytes]) => Option[Bytes] =
+  match xs {
+    Nil => None,
+    Cons(x, rest) => match names_contains(seen, x) {
+      True => Some(x),
+      False => first_duplicate_go(Cons(x, seen), rest)
+    }
+  };
+
+// resolve_ctors: for each surface `Ctor`, resolve every field `TypeRef` with the decl's type params
+// in scope (reusing the `resolve_ty`/`resolve_args` family), refusing a duplicate constructor name.
+// Mirrors checkty.rs::resolve_ctors arm-for-arm: the `seen` list carries the ctor-names-to-the-left
+// for the dup check (Rust's `ctors.iter().any(..)`), and the result preserves declaration order
+// (prepend-on-return). Never-silent `Err` on a duplicate ctor and on any field-resolution failure
+// (G2/VR-5). The resolve_ty guarantee slot is discarded exactly as in Rust (`let (ty, _) = ..`).
+fn resolve_ctors(types: Vec[DataInfo], td: TypeDecl) => Result[Vec[CtorInfo], Bytes] =
+  resolve_ctors_go(types, td_params(td), Nil, td_ctors(td));
+
+fn resolve_ctors_go(types: Vec[DataInfo], tyvars: Vec[Bytes], seen: Vec[Bytes], cs: Vec[Ctor])
+    => Result[Vec[CtorInfo], Bytes] =
+  match cs {
+    Nil => Ok(Nil),
+    Cons(c, rest) => match names_contains(seen, ct_name(c)) {
+      True => Err(bytes_concat("duplicate constructor `", bytes_concat(ct_name(c), "`"))),
+      False => match resolve_args(types, tyvars, ct_fields(c)) {
+        Err(e) => Err(e),
+        Ok(fields) => match resolve_ctors_go(types, tyvars, Cons(ct_name(c), seen), rest) {
+          Err(e) => Err(e),
+          Ok(more) => Ok(Cons(CI(ct_name(c), fields), more))
+        }
+      }
+    }
+  };
+
+// ── register_types: build the type registry from a nodule (checkty.rs::register_types; M-1013 STEP 3, PR-2) ──
+// TRIMMED Nodule/Item mirrors. register_types reads ONLY `Item::Type`, so every non-Type item
+// collapses to a single `ItOther` (the FLAG-semcore-1 trimmed-copy precedent — the full item
+// vocabulary Fn/Trait/Impl/Object/Lower/InherentImpl/Use/Default/Derive is not needed for this seam,
+// and collapsing it is what makes the deferral below structural). Field-for-field with ast.rs:
+// `Nodule { path, std_sys, items }`.
+type Item = ItType(TypeDecl) | ItOther;
+type Nodule = Nod(Path, Bool, Vec[Item]);
+
+fn nodule_items(n: Nodule) => Vec[Item] =
+  match n { Nod(_, _, its) => its };
+
+// ── trimmed tuple pre-pass (checkty.rs::collect_tuple_arities — TYPE-DECL ctor-field leg ONLY) ─────
+// FLAG-semcore-30 (M-1013 STEP 3, PR-2b DEFERRAL — the maintainer's split of register_types). The
+// real M-826 pre-pass `collect_tuple_arities` walks type-decl ctor fields AND fn bodies, `match`
+// patterns, and fn/trait/impl signatures, pre-registering every synthetic `Tuple$N` referenced
+// anywhere in the nodule. THIS port walks ONLY the type-declaration ctor-field TypeRefs — the tuples
+// register_types' OWN ctor resolution (`resolve_ctors` below) references. The fn-body / pattern /
+// signature legs are DEFERRED to a dedicated PR-2b, NOT silently dropped: a `Tuple$N` needed only by
+// a deferred leg is simply not registered here, and any later `resolve_ty` of that tuple hits
+// `resolve_tuple`'s explicit "synthetic tuple type ... not registered" `Err` (never a silent wrong
+// answer — G2/VR-5). The `Item` mirror above is correspondingly trimmed (`ItOther`), so a non-Type
+// item carries NO tuple arity into this pass by construction — the deferral is structural, not a
+// forgotten branch. Arities are collected into a `Vec[Binary{32}]` (duplicates harmless — the
+// registration step below is presence-checked, standing in for Rust's `BTreeSet` + `or_insert_with`).
+fn collect_tuple_arities_typeref(t: TypeRef, acc: Vec[Binary{32}]) => Vec[Binary{32}] =
+  match typeref_base(t) {
+    Tuple(elems) => collect_tuple_arities_trefs(Cons(tref_len(elems), acc), elems),
+    KwSeq(elem, _) => collect_tuple_arities_typeref(elem, acc),
+    Named(_, args) => collect_tuple_arities_trefs(acc, args),
+    FnArrow(a, b) => collect_tuple_arities_typeref(b, collect_tuple_arities_typeref(a, acc)),
+    _ => acc
+  };
+
+fn collect_tuple_arities_trefs(acc: Vec[Binary{32}], ts: Vec[TypeRef]) => Vec[Binary{32}] =
+  match ts {
+    Nil => acc,
+    Cons(h, rest) => collect_tuple_arities_trefs(collect_tuple_arities_typeref(h, acc), rest)
+  };
+
+fn collect_tuple_arities_ctors(acc: Vec[Binary{32}], cs: Vec[Ctor]) => Vec[Binary{32}] =
+  match cs {
+    Nil => acc,
+    Cons(c, rest) => collect_tuple_arities_ctors(collect_tuple_arities_trefs(acc, ct_fields(c)), rest)
+  };
+
+// collect_tuple_arities: the TRIMMED walk — ONLY each `Item::Type`'s ctor fields (FLAG-semcore-30).
+fn collect_tuple_arities(items: Vec[Item], acc: Vec[Binary{32}]) => Vec[Binary{32}] =
+  match items {
+    Nil => acc,
+    Cons(it, rest) => match it {
+      ItType(td) => collect_tuple_arities(rest, collect_tuple_arities_ctors(acc, td_ctors(td))),
+      ItOther => collect_tuple_arities(rest, acc)
+    }
+  };
+
+// register_tuple_arities: pre-register a synthetic `Tuple$N` for each collected arity, but only if
+// absent (checkty.rs's `types.entry(tname).or_insert_with(|| synthetic_tuple_data(arity))`). A
+// duplicate arity in `arities` is a no-op the second time (the presence check dedups it).
+fn register_tuple_arities(types: Vec[DataInfo], arities: Vec[Binary{32}]) => Vec[DataInfo] =
+  match arities {
+    Nil => types,
+    Cons(n, rest) => match types_lookup(types, tuple_type_name(n)) {
+      Some(_) => register_tuple_arities(types, rest),
+      None => register_tuple_arities(Cons(synthetic_tuple_data(n), types), rest)
+    }
+  };
+
+// register_shells: Pass 1 — a shell `DI(name, params, Nil)` per `Item::Type` so recursive/forward
+// field references resolve (checkty.rs's first loop). Never-silent refusals, in Rust's exact order:
+// a duplicate type PARAMETER (`first_duplicate`) is checked FIRST, then a duplicate type NAME
+// (`types_lookup` over the accumulated registry — which includes the seeded prelude, so redeclaring
+// `Bool` collides exactly as in Rust). Non-Type items are skipped (`ItOther`).
+fn register_shells(types: Vec[DataInfo], items: Vec[Item]) => Result[Vec[DataInfo], Bytes] =
+  match items {
+    Nil => Ok(types),
+    Cons(it, rest) => match it {
+      ItOther => register_shells(types, rest),
+      ItType(td) => match first_duplicate(td_params(td)) {
+        Some(dup) => Err(bytes_concat("duplicate type parameter `", bytes_concat(dup, bytes_concat("` in `", bytes_concat(td_name(td), "`"))))),
+        None => match types_lookup(types, td_name(td)) {
+          Some(_) => Err("duplicate type declaration"),
+          None => register_shells(Cons(DI(td_name(td), td_params(td), Nil), types), rest)
+        }
+      }
+    }
+  };
+
+// types_set_ctors: replace the ctors of the (shell) entry named `name`, preserving its params —
+// checkty.rs's `types.get_mut(&td.name).expect("registered above").ctors = ctors`. `register_shells`
+// registered every `Item::Type`, so `name` is always present; a not-found (invariant-impossible)
+// entry leaves the list unchanged (the wild-free, value-threaded analogue of Rust's `.expect`: no
+// panic, no silent fabrication — G2).
+fn types_set_ctors(types: Vec[DataInfo], name: Bytes, ctors: Vec[CtorInfo]) => Vec[DataInfo] =
+  match types {
+    Nil => Nil,
+    Cons(d, rest) => match bytes_eq(di_name(d), name) {
+      0b1 => Cons(DI(name, di_params(d), ctors), rest),
+      _ => Cons(d, types_set_ctors(rest, name, ctors))
+    }
+  };
+
+// fill_ctors: Pass 2 — resolve each `Item::Type`'s ctors (all shells now present) and write them into
+// the registry (checkty.rs's second loop). Never-silent: any field-resolution or duplicate-ctor
+// failure short-circuits to `Err` (reusing PR-1's `resolve_ctors`).
+fn fill_ctors(types: Vec[DataInfo], items: Vec[Item]) => Result[Vec[DataInfo], Bytes] =
+  match items {
+    Nil => Ok(types),
+    Cons(it, rest) => match it {
+      ItOther => fill_ctors(types, rest),
+      ItType(td) => match resolve_ctors(types, td) {
+        Err(e) => Err(e),
+        Ok(ctors) => fill_ctors(types_set_ctors(types, td_name(td), ctors), rest)
+      }
+    }
+  };
+
+// register_types: the two-pass data-declaration registration, value-threaded over the assoc-list
+// registry (checkty.rs::register_types). Order matches Rust exactly: (0) the TRIMMED tuple pre-pass
+// (FLAG-semcore-30), (1) shell-register each type, (2) fill each type's ctors. Returns the mutated
+// registry or the first never-silent refusal.
+fn register_types(types: Vec[DataInfo], nod: Nodule) => Result[Vec[DataInfo], Bytes] =
+  let items = nodule_items(nod) in
+  let with_tuples = register_tuple_arities(types, collect_tuple_arities(items, Nil)) in
+  match register_shells(with_tuples, items) {
+    Err(e) => Err(e),
+    Ok(shelled) => fill_ctors(shelled, items)
   };
 
 // ── unify: one-sided unification, threading the FLAG-semcore-13 substitution (checkty.rs::unify) ──
