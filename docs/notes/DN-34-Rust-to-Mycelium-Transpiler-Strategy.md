@@ -937,6 +937,68 @@ DN-39/Session-A owner*, not enacted here (VR-5: no kernel edit, no prim fabricat
 
 ---
 
+### §8.15 A comprehensive prim-gap audit corrects §8.13/§8.14, and plans the closure (kickoff `trx2` E33-1) — `Empirical`
+
+**Why this section exists (house rule #4 — evidence over prior claims, including my own).** §8.13 and §8.14
+recorded two things as *fact* that a comprehensive, source-grounded audit of the kernel prim registry
+(`crates/mycelium-interp/src/prims.rs`, the content-addressed Π table `crates/mycelium-core/src/prim.rs`,
+and the `crates/mycelium-l1/src/checkty.rs` surface map) **disproves**. Both errors traced to the same
+root: the transpiler-emission probes tested *operator→prim spellings the emitter uses* (`band`/`bor`/`bxor`,
+infix `&`/`|`) rather than the *actual prim/surface names*. Corrected here (all re-verified by direct
+`myc check` probe):
+
+1. **The `Binary{N}` bitwise-logic ops are NOT missing (correcting §8.13 Lever-2 and §8.14 decision #1).**
+   AND/OR/XOR/NOT on `Binary{N}` exist as the prims **`bit.and`/`bit.or`/`bit.xor`/`bit.not`**
+   (`prims.rs:126-129,398-406`), surfaced as **`and`/`or`/`xor`/`not`** (`checkty.rs:7210-7217`). Verified:
+   `and(x,y)`/`or(x,y)`/`xor(x,y)`/`not(x)` on `Binary{32}` all `myc check`-clean. So the §4.1.2 bitwise
+   mandate is **already satisfied** — there is no `band`/`bor`/`bxor` gap; the transpiler simply emitted a
+   dead spelling. **`rotate` is expressible** — `or(shl_u(x,n), shr_u(x,m))` `myc check`-clean — so §8.13
+   Lever-2's "rotate is impossible, no bit-or prim" conclusion was **wrong**; the blocker was only the
+   emitter's operator names.
+2. **`==`/`<` returning `Binary{1}` (not `Bool`) is ratified design, not a gap (correcting §8.14 #1's
+   "result-type question").** `Bool` is a **stdlib ADT**, not a kernel type (`checkty.rs` `Ty` has no
+   `Bool`); a kernel prim returns a representation `Value`, so the D1 `Bool` bottoms out as `Binary{1}`
+   (`0b1`=true) and `std.cmp` lifts it (`cmp.myc:85-94`). Governing decision: **RFC-0032 D1 Q1 / M-747**.
+   Likewise `and`/`or` refusing `Bool` operands is correct (they are `Binary` bitwise prims; `Bool` logic is
+   the match-defined `.myc` `bool_and`/`bool_or`, which already exist). Neither is a gap.
+3. **Doc drift:** the live prim count is **Π = 59** (identical in both prim tables), not the **38** DN-56
+   §4/§9 and DN-76 §5A.2 still cite — those predate the M-887…M-899 landings. FLAG both for an append-only
+   Π-count refresh.
+
+**The genuine, additive, spec-mandated gaps (verified missing by probe) — the closure worklist:**
+
+| Unit | Gap | Basis (cited) | Nature |
+|---|---|---|---|
+| **CU-1** | `mul_u` unsigned multiply (kernel `bit.mul`) | RFC-0033 §4.1.2 (overflow is signedness-distinct ⇒ distinct named op); `lib/std/math.myc` FLAG-math-1 | Additive kernel prim (reuse the `bin.mul` codec; only the overflow predicate differs) |
+| **CU-2** | `flt.is_nan`/`flt.is_finite`/`flt.is_infinite` | **ADR-040 §2.5** ("classification … `is_nan`/`is_finite` at minimum") — ratified, never landed by M-898/M-899 | Additive kernel prims (host `f64` predicates → `Binary{1}`) |
+| **CU-4** | signed comparator surface `le_s`/`ge_s`/`cmp_s` + `ne`/`gt` + the ternary ordering surface | RFC-0033 §4.1.2; the `cmp.lt_s` prim already exists, unused by any `.myc` | Additive **`.myc` only** (derive from `lt_s`+`eq`, mirroring `cmp.myc`) |
+| **transpiler** | emit `and`/`or`/`xor` (not the dead `band`/`bor`), and rotate as `or(shl_u,shr_u)` | this §8.15 correction | Transpiler fix (still needs the §8.13-noted operand-type inference to select the `Binary{N}` surface) |
+
+**Deferred with grounded FLAGs (decision- or architecture-gated — captured, not decided).** CU-3 float↔int
+never-silent conversions (ADR-040 §2.4; prim-vs-swap placement open); CU-5 wrapping/saturating/overflowing
+arithmetic (RFC-0034 §10; reconcile with the landed M-791 `wrapping` construct); CU-6 bit-manipulation
+(`popcount`/`clz`/`ctz`/`rotate`/`reverse_bits`; prim-vs-`std.math` placement); CU-7 arbitrary-width ternary
+(RFC-0033 §4.2.2; `BigTernary`/M-756 exists in core but is unsurfaced — needs the growable-`Repr::Ternary`
+decision); CU-8 atomics (`fetch_add`; needs a memory-model RFC — DN-32 §7/RFC-0027 §12); CU-9 Dense
+dtype/quant (RFC-0033 §4.3.2; rides the E20-1/ADR-030 rehash). Plus the DN-72 §5 `bit.*`/`bin.*`
+unsigned-namespace-inconsistency FLAG, which CU-1 should be sequenced aware of.
+
+**A clean negative worth recording (VR-5/G2):** DN-52 §3 confirms there is **no *silent* parsable-but-not-
+runnable prim class** — every non-runnable construct is an explicit `ElabError::Residual`, and a missing prim
+is a loud `EvalError::UnknownPrim` / unknown-function `CheckError` (DN-80). So this census is **complete** and
+nothing here fails silently.
+
+**Disposition (kernel now UNFROZEN — see the §8.14 correction).** CU-1, CU-2, CU-4 and the transpiler fix are
+being closed now as scoped, tested PRs on the normal `dev → integration → main` path (never-silent semantics
+per RFC-0033, property + conformance accept/reject tests, three-way differential). The deferred units carry
+their FLAGs for a follow-on decision wave.
+
+**Guarantee tags:** new prims tagged at their supportable strength (`bit.mul` `Exact` on the unsigned codec;
+`flt.is_*` `Empirical` per ADR-040 §2.6; comparator surface `Exact` per pinned width). **Status unchanged
+(Draft).** (Append-only; VR-5; G2.)
+
+---
+
 ## Meta — changelog
 
 - **2026-06-25 — Created (Draft, advisory).** Captures the **Rust→Mycelium transpiler** strategy for
@@ -1121,3 +1183,17 @@ DN-39/Session-A owner*, not enacted here (VR-5: no kernel edit, no prim fabricat
   are unchanged (RFC-0033 §4.1.2 mandate; `prims.rs` still lacks `band`/`bor`/`bxor`); only the disposition
   flips from freeze-blocked to plannable-and-closable-now. Feeds the comprehensive kernel prim-gap closure.
   **Status unchanged (Draft).** (Append-only; VR-5; G2.)
+- **2026-07-07 — §8.15 added: prim-gap audit corrects §8.13/§8.14 + plans the closure.** A comprehensive,
+  source-grounded audit of the kernel prim registry (re-verified by direct `myc check` probe) **overturns
+  two claims §8.13/§8.14 recorded as fact** (house rule #4 — both errors traced to the transpiler probing
+  operator→prim spellings, not real prim names): (1) the `Binary{N}` bitwise-logic ops are **not missing** —
+  AND/OR/XOR/NOT exist as `bit.and`/`bit.or`/`bit.xor`/`bit.not` (surfaced `and`/`or`/`xor`/`not`), so the
+  §4.1.2 mandate is already satisfied and **`rotate` is expressible** via `or(shl_u,shr_u)` (§8.13 Lever-2's
+  "impossible" was wrong); (2) `==`/`<` → `Binary{1}` (not `Bool`) is **ratified design** (RFC-0032 D1/M-747;
+  `Bool` is a stdlib ADT the `.myc` surface lifts), not a gap. Records the live prim count **Π = 59** (DN-56/
+  DN-76 "38" is stale — FLAG). Enumerates the genuine additive gaps as the closure worklist — **CU-1** `mul_u`
+  (RFC-0033 §4.1.2), **CU-2** `flt.is_nan`/`is_finite`/`is_infinite` (ADR-040 §2.5 mandate, unlanded),
+  **CU-4** signed-comparator/`ne`/`gt`/ternary surface (`.myc`-only), plus the transpiler operator-name fix —
+  and FLAGs the decision/architecture-gated units (float↔int conv, wrapping, bit-manip placement, growable
+  ternary, atomics, Dense dtype). DN-52 confirms no *silent* gaps (all loud refusals). **Status unchanged
+  (Draft).** (Append-only; VR-5; G2.)
