@@ -133,6 +133,83 @@ fn mul_rejects_over_cap_width() {
     assert_eq!(mul(&a64, &b64), int_to_bits(0, 64));
 }
 
+// ---- CU-1: `mul_unsigned` — never-silent unsigned fixed-width multiply --------------------------
+
+#[test]
+fn mul_unsigned_worked_examples() {
+    // 3 * 4 = 12, in range at U_8 = [0, 255].
+    let a = uint_to_bits(3, 8).unwrap();
+    let b = uint_to_bits(4, 8).unwrap();
+    assert_eq!(mul_unsigned(&a, &b), uint_to_bits(12, 8));
+
+    // 15 * 17 = 255, exactly the high boundary, in range.
+    let a = uint_to_bits(15, 8).unwrap();
+    let b = uint_to_bits(17, 8).unwrap();
+    assert_eq!(mul_unsigned(&a, &b), uint_to_bits(255, 8));
+
+    // 0 * anything = 0.
+    let zero = uint_to_bits(0, 8).unwrap();
+    let x = uint_to_bits(200, 8).unwrap();
+    assert_eq!(mul_unsigned(&zero, &x), uint_to_bits(0, 8));
+}
+
+#[test]
+fn mul_unsigned_overflow_and_boundary() {
+    // 16 * 16 = 256, out of U_8 ([0, 255]) — explicit None, never a wrap to 0.
+    let a = uint_to_bits(16, 8).unwrap();
+    let b = uint_to_bits(16, 8).unwrap();
+    assert_eq!(mul_unsigned(&a, &b), None);
+
+    // 255 * 1 = 255, the high boundary, in range; 255 * 2 = 510 overflows — boundary is exact.
+    let max = uint_to_bits(255, 8).unwrap();
+    let one = uint_to_bits(1, 8).unwrap();
+    let two = uint_to_bits(2, 8).unwrap();
+    assert_eq!(mul_unsigned(&max, &one), uint_to_bits(255, 8));
+    assert_eq!(mul_unsigned(&max, &two), None);
+}
+
+/// The overflow *criterion* differs from signed [`mul`]: `9 * 20 = 180` fits `U_8 = [0,255]` but
+/// **not** `B_8 = [-128,127]`. This pins that `mul_unsigned` reads the unsigned range, not `mul`'s.
+#[test]
+fn mul_unsigned_criterion_differs_from_signed() {
+    let a = uint_to_bits(9, 8).unwrap();
+    let b = uint_to_bits(20, 8).unwrap();
+    assert_eq!(mul_unsigned(&a, &b), uint_to_bits(180, 8)); // unsigned: in range
+    assert_eq!(mul(&a, &b), None); // signed: 180 > 127, out of B_8
+}
+
+#[test]
+fn mul_unsigned_rejects_unequal_and_over_cap_widths() {
+    let a = uint_to_bits(1, 4).unwrap();
+    let b = uint_to_bits(1, 8).unwrap();
+    assert_eq!(mul_unsigned(&a, &b), None); // width mismatch
+    let over = vec![false; MUL_MAX_WIDTH + 1];
+    assert_eq!(mul_unsigned(&over, &over), None); // over-cap width
+                                                  // At the cap (n = 64), 0 * 0 = 0 is accepted.
+    let z64 = vec![false; MUL_MAX_WIDTH];
+    assert_eq!(mul_unsigned(&z64, &z64), uint_to_bits(0, 64));
+}
+
+/// Exhaustive cross-check against the native `u16` oracle at `n = 8`: for every operand pair,
+/// `mul_unsigned` returns the exact product iff it fits `U_8`, and `None` iff the native product
+/// exceeds `255` — never a silent wrap (the property `mul_u` must satisfy, checked by enumeration).
+#[test]
+fn mul_unsigned_matches_native_oracle_u8() {
+    for a in 0u16..256 {
+        for b in 0u16..256 {
+            let ab = uint_to_bits(a as u64, 8).unwrap();
+            let bb = uint_to_bits(b as u64, 8).unwrap();
+            let got = mul_unsigned(&ab, &bb);
+            let prod = a * b; // u16 holds up to 255*255 = 65025 without overflow
+            if prod <= 255 {
+                assert_eq!(got, uint_to_bits(prod as u64, 8), "{a} * {b}");
+            } else {
+                assert_eq!(got, None, "{a} * {b} should overflow U_8");
+            }
+        }
+    }
+}
+
 #[test]
 fn mul_n0_is_trivially_zero() {
     assert_eq!(mul(&[], &[]), Some(Vec::new()));

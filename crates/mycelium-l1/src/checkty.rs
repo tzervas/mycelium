@@ -7070,10 +7070,9 @@ fn prim_family(name: &str) -> Option<PrimFam> {
         // accumulated as ops landed under M-748/M-887/M-888/M-889/M-766). The `bit.*`/`bin.*`
         // *kernel*-namespace inconsistency one layer down is deliberately NOT touched — kernel
         // names are content-addressed (DN-10 §3.4); see the DN-72 deferred FLAG.
-        "not" | "xor" | "and" | "or" | "add_u" | "sub_u" | "mul_s" | "div_u" | "rem_u"
-        | "shl_u" | "shr_u" | "add_s" | "sub_s" | "neg_s" | "div_s" | "rem_s" | "shr_s" => {
-            PrimFam::Binary
-        }
+        "not" | "xor" | "and" | "or" | "add_u" | "sub_u" | "mul_u" | "mul_s" | "div_u"
+        | "rem_u" | "shl_u" | "shr_u" | "add_s" | "sub_s" | "neg_s" | "div_s" | "rem_s"
+        | "shr_s" => PrimFam::Binary,
         "add" | "sub" | "mul" | "neg" => PrimFam::Ternary,
         _ => return None,
     })
@@ -7176,8 +7175,8 @@ pub fn prim_sig(name: &str, args: &[Ty]) -> Option<Ty> {
         // `min ÷ −1` signed-division overflow, and an out-of-range shift amount are likewise
         // runtime contracts, not static type errors.
         (
-            "and" | "or" | "add_u" | "sub_u" | "mul_s" | "div_u" | "rem_u" | "shl_u" | "shr_u"
-            | "add_s" | "sub_s" | "div_s" | "rem_s" | "shr_s",
+            "and" | "or" | "add_u" | "sub_u" | "mul_u" | "mul_s" | "div_u" | "rem_u" | "shl_u"
+            | "shr_u" | "add_s" | "sub_s" | "div_s" | "rem_s" | "shr_s",
             [Ty::Binary(a), Ty::Binary(b)],
         ) if a == b => Some(Ty::Binary(a.clone())),
         ("add" | "sub" | "mul", [Ty::Ternary(a), Ty::Ternary(b)]) if a == b => {
@@ -7220,6 +7219,9 @@ pub fn prim_kernel_name(name: &str) -> Option<&'static str> {
         // RFC-0033 §4.1.2/§4.1.3 (M-887, `enb` Gap B): never-silent two's-complement multiply —
         // the first shared (signedness-agnostic bit-pattern) two's-complement op ADR-028 names.
         "mul_s" => "bin.mul",
+        // RFC-0033 §4.1.2 (CU-1): never-silent **unsigned** multiply — overflow-distinct from the
+        // signed `mul_s`/`bin.mul` (the `math.myc` FLAG-math-1 missing op).
+        "mul_u" => "bit.mul",
         // RFC-0033 §4.1.2/§4.1.3 (M-888, `enb` Gap B): never-silent **unsigned** division/
         // remainder — division must be a distinct-named op per signedness (§4.1.2); the signed
         // reading rides M-767 under its own surface name.

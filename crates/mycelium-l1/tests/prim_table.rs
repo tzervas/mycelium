@@ -81,6 +81,13 @@ fn surface_cases() -> Vec<(&'static str, Vec<Ty>, Ty)> {
             vec![Ty::Binary(Width::Lit(8)), Ty::Binary(Width::Lit(8))],
             Ty::Binary(Width::Lit(8)),
         ),
+        // RFC-0033 §4.1.2 (CU-1): never-silent UNSIGNED multiply (`bit.mul`) — overflow-distinct
+        // from the signed `mul_s`/`bin.mul`; the `math.myc` FLAG-math-1 missing op.
+        (
+            "mul_u",
+            vec![Ty::Binary(Width::Lit(8)), Ty::Binary(Width::Lit(8))],
+            Ty::Binary(Width::Lit(8)),
+        ),
         // RFC-0033 §4.1.2/§4.1.3 (M-888, `enb` Gap B): never-silent unsigned division/remainder.
         (
             "div_u",

@@ -125,8 +125,11 @@ fn builtins_are_present_and_resolvable() {
     // separately below, `vsa.required_dim`'s intrinsic is `Proven` (the M-131 checked
     // instantiation); M-912 (`enb`) added `bytes.eq` (the folded-in equality gap) and
     // `hash.blake3` (the kernel's own BLAKE3 content-addressing hash surfaced as a prim) — both
-    // `Exact`, listed above with the rest of the `Exact` group).
-    assert_eq!(t.entries().len(), 59);
+    // `Exact`, listed above with the rest of the `Exact` group). CU-1 added `bit.mul` (never-silent
+    // unsigned multiply, RFC-0033 §4.1.2 — the `math.myc` FLAG-math-1 missing op), `Exact`, bringing
+    // Π to 60. (This supersedes the DN-56/DN-76 "Π = 38" figure, which predates the M-887…M-899 +
+    // CU-1 landings — see DN-34 §8.15; those docs are FLAGged for an append-only count refresh.)
+    assert_eq!(t.entries().len(), 60);
 }
 
 // M-890 (`enb` Gap C): the dense elementwise group — the first non-`Exact` intrinsics in Π.
@@ -515,10 +518,12 @@ fn names_returns_registered_sorted_names() {
     // RFC-0003 §4/§5/M-893 vsa.bundle, the certified superposition path + RFC-0003
     // §3/§5/§6/M-894 vsa.cleanup/vsa.reconstruct/vsa.required_dim, the cleanup/reconstruction
     // pair and the capacity-bound query + M-912 bytes.eq/hash.blake3, the folded-in byte
-    // equality gap and the kernel's BLAKE3 content-addressing hash surfaced as a prim).
+    // equality gap and the kernel's BLAKE3 content-addressing hash surfaced as a prim + CU-1
+    // bit.mul, the never-silent unsigned multiply — RFC-0033 §4.1.2, the math.myc FLAG-math-1
+    // missing op — bringing Π to 60).
     assert_eq!(
         ns.len(),
-        59,
+        60,
         "names() count must match the builtin count: {ns:?}"
     );
     // Sorted (BTreeMap iteration is sorted).

@@ -172,6 +172,41 @@ pub fn mul(a: &[bool], b: &[bool]) -> Option<Vec<bool>> {
     int_to_bits(product as i64, n)
 }
 
+/// **Unsigned** fixed-width multiply of two equal-width `n`-bit unsigned bitvectors (MSB-first), for
+/// `n ≤ `[`MUL_MAX_WIDTH`]. `None` when `a.len() != b.len()`, `a.len() > MUL_MAX_WIDTH`, or the exact
+/// product does not fit `U_n = [0, 2^n − 1]` — never-silent fixed-width **unsigned** overflow
+/// (RFC-0033 §4.1.2/§4.1.3). This is the unsigned counterpart of [`mul`]: the *bits* of a truncated
+/// product would be identical either way (multiply is signedness-agnostic on the low `n` bits,
+/// ADR-028), but the **overflow criterion differs** — an unsigned product is out of range when it
+/// exceeds `2^n − 1`, distinct from [`mul`]'s signed `B_n` bound (e.g. `3 · 6 = 18` at `n = 4` is
+/// unsigned-out-of-range `> 15` yet also signed-out-of-range, whereas `5 · 1 = 5` is unsigned-in-range
+/// `[0,15]` but the signed reading of `0b0101` is `+5` — the criteria coincide only by construction of
+/// the operands). The unsigned analogue of the [`div_rem`]/[`shr`] unsigned family; the genuinely-
+/// missing unsigned multiply flagged by `lib/std/math.myc` FLAG-math-1.
+///
+/// **Implementation.** Both operands round-trip through [`bits_to_uint`] into `u64` (exact for `n ≤
+/// 64`), widen to `u128` for the multiply (`a,b ≤ 2^64 − 1 ⇒ a·b ≤ 2^128 − 2^65 + 1 < u128::MAX` — the
+/// product itself never overflows `u128`), then the exact product is range-checked against `U_n`
+/// before narrowing back through [`uint_to_bits`]. Exact, not an approximation.
+#[must_use]
+pub fn mul_unsigned(a: &[bool], b: &[bool]) -> Option<Vec<bool>> {
+    if a.len() != b.len() || a.len() > MUL_MAX_WIDTH {
+        return None;
+    }
+    let n = a.len() as u32;
+    if n == 0 {
+        return Some(Vec::new()); // U_0 = {0}; 0 * 0 = 0, trivially in range.
+    }
+    let av = u128::from(bits_to_uint(a));
+    let bv = u128::from(bits_to_uint(b));
+    let product = av * bv; // u64 * u64 ≤ 2^128 − 2^65 + 1 — never overflows u128.
+    if product >= (1u128 << n) {
+        return None; // the exact product does not fit U_n — never-silent unsigned overflow.
+    }
+    // Safe narrow: `product < 2^n ≤ 2^64` ⇒ it fits `u64` (n ≤ 64).
+    uint_to_bits(product as u64, n)
+}
+
 /// The current [`div_rem`] operand-width cap (`n ≤ 64`) — exact via a `u64` unsigned magnitude, the
 /// same cap [`bits_to_uint`]/[`uint_to_bits`] already declare. Public so callers (the `bin.div`/
 /// `bin.rem` prims) can distinguish an over-cap *width* refusal from a *div-by-zero* refusal without
