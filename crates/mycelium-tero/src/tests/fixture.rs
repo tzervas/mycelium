@@ -143,7 +143,11 @@ pub(crate) fn write_corpus(root: &Path, defects: bool) -> Expected {
     );
 
     if defects {
-        write(root, ".claude/skills/nofront/SKILL.md", "# No Frontmatter\n\nbody\n");
+        write(
+            root,
+            ".claude/skills/nofront/SKILL.md",
+            "# No Frontmatter\n\nbody\n",
+        );
         write(
             root,
             ".claude/skills/noname/SKILL.md",

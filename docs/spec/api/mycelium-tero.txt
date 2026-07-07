@@ -1,0 +1,287 @@
+pub mod mycelium_tero
+pub mod mycelium_tero::changelog
+pub fn mycelium_tero::changelog::index_all(&std::path::Path, &mut mycelium_doc::corpus::AnchorAlloc, &mut alloc::vec::Vec<mycelium_tero::model::TeroIndexItem>, &mut alloc::vec::Vec<mycelium_tero::model::Flagged>) -> core::io::error::Result<()>
+pub mod mycelium_tero::docs
+pub fn mycelium_tero::docs::index_all(&std::path::Path, &mut mycelium_doc::corpus::AnchorAlloc, &mut alloc::vec::Vec<mycelium_tero::model::TeroIndexItem>, &mut alloc::vec::Vec<mycelium_tero::model::Flagged>) -> core::io::error::Result<()>
+pub mod mycelium_tero::emit
+pub fn mycelium_tero::emit::write_json(&mycelium_tero::model::TeroIndexReport, &std::path::Path) -> core::io::error::Result<()>
+pub fn mycelium_tero::emit::write_markdown(&mycelium_tero::model::TeroIndexReport, &std::path::Path) -> core::io::error::Result<()>
+pub mod mycelium_tero::index
+pub fn mycelium_tero::index::build_tero_index(&std::path::Path) -> core::io::error::Result<mycelium_tero::model::TeroIndexReport>
+pub mod mycelium_tero::issues
+pub fn mycelium_tero::issues::index_all(&std::path::Path, &mut alloc::vec::Vec<mycelium_tero::model::TeroIndexItem>, &mut alloc::vec::Vec<mycelium_tero::model::Flagged>) -> core::io::error::Result<()>
+pub mod mycelium_tero::model
+pub enum mycelium_tero::model::Family
+pub mycelium_tero::model::Family::Changelog
+pub mycelium_tero::model::Family::Doc
+pub mycelium_tero::model::Family::Issue
+pub mycelium_tero::model::Family::Research
+pub mycelium_tero::model::Family::Skill
+impl mycelium_tero::model::Family
+pub fn mycelium_tero::model::Family::as_str(self) -> &'static str
+impl core::clone::Clone for mycelium_tero::model::Family
+pub fn mycelium_tero::model::Family::clone(&self) -> mycelium_tero::model::Family
+impl core::cmp::Eq for mycelium_tero::model::Family
+impl core::cmp::Ord for mycelium_tero::model::Family
+pub fn mycelium_tero::model::Family::cmp(&self, &mycelium_tero::model::Family) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_tero::model::Family
+pub fn mycelium_tero::model::Family::eq(&self, &mycelium_tero::model::Family) -> bool
+impl core::cmp::PartialOrd for mycelium_tero::model::Family
+pub fn mycelium_tero::model::Family::partial_cmp(&self, &mycelium_tero::model::Family) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_tero::model::Family
+pub fn mycelium_tero::model::Family::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_tero::model::Family
+impl core::marker::StructuralPartialEq for mycelium_tero::model::Family
+impl serde_core::ser::Serialize for mycelium_tero::model::Family
+pub fn mycelium_tero::model::Family::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_tero::model::Family
+impl core::marker::Send for mycelium_tero::model::Family
+impl core::marker::Sync for mycelium_tero::model::Family
+impl core::marker::Unpin for mycelium_tero::model::Family
+impl core::marker::UnsafeUnpin for mycelium_tero::model::Family
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_tero::model::Family
+impl core::panic::unwind_safe::UnwindSafe for mycelium_tero::model::Family
+pub struct mycelium_tero::model::Flagged
+pub mycelium_tero::model::Flagged::item: alloc::string::String
+pub mycelium_tero::model::Flagged::reason: alloc::string::String
+impl core::clone::Clone for mycelium_tero::model::Flagged
+pub fn mycelium_tero::model::Flagged::clone(&self) -> mycelium_tero::model::Flagged
+impl core::cmp::Eq for mycelium_tero::model::Flagged
+impl core::cmp::PartialEq for mycelium_tero::model::Flagged
+pub fn mycelium_tero::model::Flagged::eq(&self, &mycelium_tero::model::Flagged) -> bool
+impl core::fmt::Debug for mycelium_tero::model::Flagged
+pub fn mycelium_tero::model::Flagged::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_tero::model::Flagged
+impl serde_core::ser::Serialize for mycelium_tero::model::Flagged
+pub fn mycelium_tero::model::Flagged::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_tero::model::Flagged
+impl core::marker::Send for mycelium_tero::model::Flagged
+impl core::marker::Sync for mycelium_tero::model::Flagged
+impl core::marker::Unpin for mycelium_tero::model::Flagged
+impl core::marker::UnsafeUnpin for mycelium_tero::model::Flagged
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_tero::model::Flagged
+impl core::panic::unwind_safe::UnwindSafe for mycelium_tero::model::Flagged
+pub struct mycelium_tero::model::SiblingIndex
+pub mycelium_tero::model::SiblingIndex::covers: &'static str
+pub mycelium_tero::model::SiblingIndex::generator: &'static str
+pub mycelium_tero::model::SiblingIndex::name: &'static str
+pub mycelium_tero::model::SiblingIndex::path: &'static str
+impl core::clone::Clone for mycelium_tero::model::SiblingIndex
+pub fn mycelium_tero::model::SiblingIndex::clone(&self) -> mycelium_tero::model::SiblingIndex
+impl core::cmp::Eq for mycelium_tero::model::SiblingIndex
+impl core::cmp::PartialEq for mycelium_tero::model::SiblingIndex
+pub fn mycelium_tero::model::SiblingIndex::eq(&self, &mycelium_tero::model::SiblingIndex) -> bool
+impl core::fmt::Debug for mycelium_tero::model::SiblingIndex
+pub fn mycelium_tero::model::SiblingIndex::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_tero::model::SiblingIndex
+impl core::marker::StructuralPartialEq for mycelium_tero::model::SiblingIndex
+impl serde_core::ser::Serialize for mycelium_tero::model::SiblingIndex
+pub fn mycelium_tero::model::SiblingIndex::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_tero::model::SiblingIndex
+impl core::marker::Send for mycelium_tero::model::SiblingIndex
+impl core::marker::Sync for mycelium_tero::model::SiblingIndex
+impl core::marker::Unpin for mycelium_tero::model::SiblingIndex
+impl core::marker::UnsafeUnpin for mycelium_tero::model::SiblingIndex
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_tero::model::SiblingIndex
+impl core::panic::unwind_safe::UnwindSafe for mycelium_tero::model::SiblingIndex
+pub struct mycelium_tero::model::TeroIndexItem
+pub mycelium_tero::model::TeroIndexItem::anchor: alloc::string::String
+pub mycelium_tero::model::TeroIndexItem::depends_on: alloc::vec::Vec<alloc::string::String>
+pub mycelium_tero::model::TeroIndexItem::doc_refs: alloc::vec::Vec<alloc::string::String>
+pub mycelium_tero::model::TeroIndexItem::epic: core::option::Option<alloc::string::String>
+pub mycelium_tero::model::TeroIndexItem::family: mycelium_tero::model::Family
+pub mycelium_tero::model::TeroIndexItem::file: alloc::string::String
+pub mycelium_tero::model::TeroIndexItem::gh_issue: core::option::Option<alloc::string::String>
+pub mycelium_tero::model::TeroIndexItem::guarantee_tag: core::option::Option<alloc::string::String>
+pub mycelium_tero::model::TeroIndexItem::id: core::option::Option<alloc::string::String>
+pub mycelium_tero::model::TeroIndexItem::kind: alloc::string::String
+pub mycelium_tero::model::TeroIndexItem::line: u32
+pub mycelium_tero::model::TeroIndexItem::status: core::option::Option<alloc::string::String>
+pub mycelium_tero::model::TeroIndexItem::summary: core::option::Option<alloc::string::String>
+pub mycelium_tero::model::TeroIndexItem::tag: alloc::string::String
+pub mycelium_tero::model::TeroIndexItem::title: alloc::string::String
+impl mycelium_tero::model::TeroIndexItem
+pub fn mycelium_tero::model::TeroIndexItem::new(impl core::convert::Into<alloc::string::String>, mycelium_tero::model::Family, impl core::convert::Into<alloc::string::String>, impl core::convert::Into<alloc::string::String>, impl core::convert::Into<alloc::string::String>, u32) -> Self
+impl core::clone::Clone for mycelium_tero::model::TeroIndexItem
+pub fn mycelium_tero::model::TeroIndexItem::clone(&self) -> mycelium_tero::model::TeroIndexItem
+impl core::cmp::Eq for mycelium_tero::model::TeroIndexItem
+impl core::cmp::PartialEq for mycelium_tero::model::TeroIndexItem
+pub fn mycelium_tero::model::TeroIndexItem::eq(&self, &mycelium_tero::model::TeroIndexItem) -> bool
+impl core::fmt::Debug for mycelium_tero::model::TeroIndexItem
+pub fn mycelium_tero::model::TeroIndexItem::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_tero::model::TeroIndexItem
+impl serde_core::ser::Serialize for mycelium_tero::model::TeroIndexItem
+pub fn mycelium_tero::model::TeroIndexItem::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_tero::model::TeroIndexItem
+impl core::marker::Send for mycelium_tero::model::TeroIndexItem
+impl core::marker::Sync for mycelium_tero::model::TeroIndexItem
+impl core::marker::Unpin for mycelium_tero::model::TeroIndexItem
+impl core::marker::UnsafeUnpin for mycelium_tero::model::TeroIndexItem
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_tero::model::TeroIndexItem
+impl core::panic::unwind_safe::UnwindSafe for mycelium_tero::model::TeroIndexItem
+pub struct mycelium_tero::model::TeroIndexReport
+pub mycelium_tero::model::TeroIndexReport::flagged: alloc::vec::Vec<mycelium_tero::model::Flagged>
+pub mycelium_tero::model::TeroIndexReport::items: alloc::vec::Vec<mycelium_tero::model::TeroIndexItem>
+impl mycelium_tero::model::TeroIndexReport
+pub fn mycelium_tero::model::TeroIndexReport::sort(&mut self)
+impl core::clone::Clone for mycelium_tero::model::TeroIndexReport
+pub fn mycelium_tero::model::TeroIndexReport::clone(&self) -> mycelium_tero::model::TeroIndexReport
+impl core::cmp::Eq for mycelium_tero::model::TeroIndexReport
+impl core::cmp::PartialEq for mycelium_tero::model::TeroIndexReport
+pub fn mycelium_tero::model::TeroIndexReport::eq(&self, &mycelium_tero::model::TeroIndexReport) -> bool
+impl core::default::Default for mycelium_tero::model::TeroIndexReport
+pub fn mycelium_tero::model::TeroIndexReport::default() -> mycelium_tero::model::TeroIndexReport
+impl core::fmt::Debug for mycelium_tero::model::TeroIndexReport
+pub fn mycelium_tero::model::TeroIndexReport::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_tero::model::TeroIndexReport
+impl core::marker::Freeze for mycelium_tero::model::TeroIndexReport
+impl core::marker::Send for mycelium_tero::model::TeroIndexReport
+impl core::marker::Sync for mycelium_tero::model::TeroIndexReport
+impl core::marker::Unpin for mycelium_tero::model::TeroIndexReport
+impl core::marker::UnsafeUnpin for mycelium_tero::model::TeroIndexReport
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_tero::model::TeroIndexReport
+impl core::panic::unwind_safe::UnwindSafe for mycelium_tero::model::TeroIndexReport
+pub const mycelium_tero::model::HONESTY_TAG: &str
+pub const mycelium_tero::model::ITEM_TAG: &str
+pub const mycelium_tero::model::SIBLING_INDICES: &[mycelium_tero::model::SiblingIndex]
+pub mod mycelium_tero::skills
+pub fn mycelium_tero::skills::index_all(&std::path::Path, &mut mycelium_doc::corpus::AnchorAlloc, &mut alloc::vec::Vec<mycelium_tero::model::TeroIndexItem>, &mut alloc::vec::Vec<mycelium_tero::model::Flagged>) -> core::io::error::Result<()>
+pub mod mycelium_tero::walk
+pub fn mycelium_tero::walk::collect_ext(&std::path::Path, &str) -> core::io::error::Result<alloc::vec::Vec<std::path::PathBuf>>
+pub fn mycelium_tero::walk::is_excluded(&str) -> bool
+pub fn mycelium_tero::walk::repo_rel(&std::path::Path, &std::path::Path) -> alloc::string::String
+pub enum mycelium_tero::Family
+pub mycelium_tero::Family::Changelog
+pub mycelium_tero::Family::Doc
+pub mycelium_tero::Family::Issue
+pub mycelium_tero::Family::Research
+pub mycelium_tero::Family::Skill
+impl mycelium_tero::model::Family
+pub fn mycelium_tero::model::Family::as_str(self) -> &'static str
+impl core::clone::Clone for mycelium_tero::model::Family
+pub fn mycelium_tero::model::Family::clone(&self) -> mycelium_tero::model::Family
+impl core::cmp::Eq for mycelium_tero::model::Family
+impl core::cmp::Ord for mycelium_tero::model::Family
+pub fn mycelium_tero::model::Family::cmp(&self, &mycelium_tero::model::Family) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_tero::model::Family
+pub fn mycelium_tero::model::Family::eq(&self, &mycelium_tero::model::Family) -> bool
+impl core::cmp::PartialOrd for mycelium_tero::model::Family
+pub fn mycelium_tero::model::Family::partial_cmp(&self, &mycelium_tero::model::Family) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_tero::model::Family
+pub fn mycelium_tero::model::Family::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_tero::model::Family
+impl core::marker::StructuralPartialEq for mycelium_tero::model::Family
+impl serde_core::ser::Serialize for mycelium_tero::model::Family
+pub fn mycelium_tero::model::Family::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_tero::model::Family
+impl core::marker::Send for mycelium_tero::model::Family
+impl core::marker::Sync for mycelium_tero::model::Family
+impl core::marker::Unpin for mycelium_tero::model::Family
+impl core::marker::UnsafeUnpin for mycelium_tero::model::Family
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_tero::model::Family
+impl core::panic::unwind_safe::UnwindSafe for mycelium_tero::model::Family
+pub struct mycelium_tero::Flagged
+pub mycelium_tero::Flagged::item: alloc::string::String
+pub mycelium_tero::Flagged::reason: alloc::string::String
+impl core::clone::Clone for mycelium_tero::model::Flagged
+pub fn mycelium_tero::model::Flagged::clone(&self) -> mycelium_tero::model::Flagged
+impl core::cmp::Eq for mycelium_tero::model::Flagged
+impl core::cmp::PartialEq for mycelium_tero::model::Flagged
+pub fn mycelium_tero::model::Flagged::eq(&self, &mycelium_tero::model::Flagged) -> bool
+impl core::fmt::Debug for mycelium_tero::model::Flagged
+pub fn mycelium_tero::model::Flagged::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_tero::model::Flagged
+impl serde_core::ser::Serialize for mycelium_tero::model::Flagged
+pub fn mycelium_tero::model::Flagged::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_tero::model::Flagged
+impl core::marker::Send for mycelium_tero::model::Flagged
+impl core::marker::Sync for mycelium_tero::model::Flagged
+impl core::marker::Unpin for mycelium_tero::model::Flagged
+impl core::marker::UnsafeUnpin for mycelium_tero::model::Flagged
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_tero::model::Flagged
+impl core::panic::unwind_safe::UnwindSafe for mycelium_tero::model::Flagged
+pub struct mycelium_tero::SiblingIndex
+pub mycelium_tero::SiblingIndex::covers: &'static str
+pub mycelium_tero::SiblingIndex::generator: &'static str
+pub mycelium_tero::SiblingIndex::name: &'static str
+pub mycelium_tero::SiblingIndex::path: &'static str
+impl core::clone::Clone for mycelium_tero::model::SiblingIndex
+pub fn mycelium_tero::model::SiblingIndex::clone(&self) -> mycelium_tero::model::SiblingIndex
+impl core::cmp::Eq for mycelium_tero::model::SiblingIndex
+impl core::cmp::PartialEq for mycelium_tero::model::SiblingIndex
+pub fn mycelium_tero::model::SiblingIndex::eq(&self, &mycelium_tero::model::SiblingIndex) -> bool
+impl core::fmt::Debug for mycelium_tero::model::SiblingIndex
+pub fn mycelium_tero::model::SiblingIndex::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_tero::model::SiblingIndex
+impl core::marker::StructuralPartialEq for mycelium_tero::model::SiblingIndex
+impl serde_core::ser::Serialize for mycelium_tero::model::SiblingIndex
+pub fn mycelium_tero::model::SiblingIndex::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_tero::model::SiblingIndex
+impl core::marker::Send for mycelium_tero::model::SiblingIndex
+impl core::marker::Sync for mycelium_tero::model::SiblingIndex
+impl core::marker::Unpin for mycelium_tero::model::SiblingIndex
+impl core::marker::UnsafeUnpin for mycelium_tero::model::SiblingIndex
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_tero::model::SiblingIndex
+impl core::panic::unwind_safe::UnwindSafe for mycelium_tero::model::SiblingIndex
+pub struct mycelium_tero::TeroIndexItem
+pub mycelium_tero::TeroIndexItem::anchor: alloc::string::String
+pub mycelium_tero::TeroIndexItem::depends_on: alloc::vec::Vec<alloc::string::String>
+pub mycelium_tero::TeroIndexItem::doc_refs: alloc::vec::Vec<alloc::string::String>
+pub mycelium_tero::TeroIndexItem::epic: core::option::Option<alloc::string::String>
+pub mycelium_tero::TeroIndexItem::family: mycelium_tero::model::Family
+pub mycelium_tero::TeroIndexItem::file: alloc::string::String
+pub mycelium_tero::TeroIndexItem::gh_issue: core::option::Option<alloc::string::String>
+pub mycelium_tero::TeroIndexItem::guarantee_tag: core::option::Option<alloc::string::String>
+pub mycelium_tero::TeroIndexItem::id: core::option::Option<alloc::string::String>
+pub mycelium_tero::TeroIndexItem::kind: alloc::string::String
+pub mycelium_tero::TeroIndexItem::line: u32
+pub mycelium_tero::TeroIndexItem::status: core::option::Option<alloc::string::String>
+pub mycelium_tero::TeroIndexItem::summary: core::option::Option<alloc::string::String>
+pub mycelium_tero::TeroIndexItem::tag: alloc::string::String
+pub mycelium_tero::TeroIndexItem::title: alloc::string::String
+impl mycelium_tero::model::TeroIndexItem
+pub fn mycelium_tero::model::TeroIndexItem::new(impl core::convert::Into<alloc::string::String>, mycelium_tero::model::Family, impl core::convert::Into<alloc::string::String>, impl core::convert::Into<alloc::string::String>, impl core::convert::Into<alloc::string::String>, u32) -> Self
+impl core::clone::Clone for mycelium_tero::model::TeroIndexItem
+pub fn mycelium_tero::model::TeroIndexItem::clone(&self) -> mycelium_tero::model::TeroIndexItem
+impl core::cmp::Eq for mycelium_tero::model::TeroIndexItem
+impl core::cmp::PartialEq for mycelium_tero::model::TeroIndexItem
+pub fn mycelium_tero::model::TeroIndexItem::eq(&self, &mycelium_tero::model::TeroIndexItem) -> bool
+impl core::fmt::Debug for mycelium_tero::model::TeroIndexItem
+pub fn mycelium_tero::model::TeroIndexItem::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_tero::model::TeroIndexItem
+impl serde_core::ser::Serialize for mycelium_tero::model::TeroIndexItem
+pub fn mycelium_tero::model::TeroIndexItem::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_tero::model::TeroIndexItem
+impl core::marker::Send for mycelium_tero::model::TeroIndexItem
+impl core::marker::Sync for mycelium_tero::model::TeroIndexItem
+impl core::marker::Unpin for mycelium_tero::model::TeroIndexItem
+impl core::marker::UnsafeUnpin for mycelium_tero::model::TeroIndexItem
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_tero::model::TeroIndexItem
+impl core::panic::unwind_safe::UnwindSafe for mycelium_tero::model::TeroIndexItem
+pub struct mycelium_tero::TeroIndexReport
+pub mycelium_tero::TeroIndexReport::flagged: alloc::vec::Vec<mycelium_tero::model::Flagged>
+pub mycelium_tero::TeroIndexReport::items: alloc::vec::Vec<mycelium_tero::model::TeroIndexItem>
+impl mycelium_tero::model::TeroIndexReport
+pub fn mycelium_tero::model::TeroIndexReport::sort(&mut self)
+impl core::clone::Clone for mycelium_tero::model::TeroIndexReport
+pub fn mycelium_tero::model::TeroIndexReport::clone(&self) -> mycelium_tero::model::TeroIndexReport
+impl core::cmp::Eq for mycelium_tero::model::TeroIndexReport
+impl core::cmp::PartialEq for mycelium_tero::model::TeroIndexReport
+pub fn mycelium_tero::model::TeroIndexReport::eq(&self, &mycelium_tero::model::TeroIndexReport) -> bool
+impl core::default::Default for mycelium_tero::model::TeroIndexReport
+pub fn mycelium_tero::model::TeroIndexReport::default() -> mycelium_tero::model::TeroIndexReport
+impl core::fmt::Debug for mycelium_tero::model::TeroIndexReport
+pub fn mycelium_tero::model::TeroIndexReport::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_tero::model::TeroIndexReport
+impl core::marker::Freeze for mycelium_tero::model::TeroIndexReport
+impl core::marker::Send for mycelium_tero::model::TeroIndexReport
+impl core::marker::Sync for mycelium_tero::model::TeroIndexReport
+impl core::marker::Unpin for mycelium_tero::model::TeroIndexReport
+impl core::marker::UnsafeUnpin for mycelium_tero::model::TeroIndexReport
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_tero::model::TeroIndexReport
+impl core::panic::unwind_safe::UnwindSafe for mycelium_tero::model::TeroIndexReport
+pub const mycelium_tero::HONESTY_TAG: &str
+pub const mycelium_tero::ITEM_TAG: &str
+pub const mycelium_tero::SIBLING_INDICES: &[mycelium_tero::model::SiblingIndex]
+pub fn mycelium_tero::build_tero_index(&std::path::Path) -> core::io::error::Result<mycelium_tero::model::TeroIndexReport>
+pub fn mycelium_tero::crate_summary() -> &'static str

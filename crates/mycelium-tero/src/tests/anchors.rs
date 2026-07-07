@@ -26,8 +26,18 @@ fn anchors_are_unique_across_a_clean_corpus() {
 fn anchors_are_stable_across_regeneration() {
     let root = temp_dir("anchor-stable");
     write_corpus(&root, false);
-    let a: Vec<String> = build_tero_index(&root).unwrap().items.iter().map(|i| i.anchor.clone()).collect();
-    let b: Vec<String> = build_tero_index(&root).unwrap().items.iter().map(|i| i.anchor.clone()).collect();
+    let a: Vec<String> = build_tero_index(&root)
+        .unwrap()
+        .items
+        .iter()
+        .map(|i| i.anchor.clone())
+        .collect();
+    let b: Vec<String> = build_tero_index(&root)
+        .unwrap()
+        .items
+        .iter()
+        .map(|i| i.anchor.clone())
+        .collect();
     assert_eq!(a, b);
 }
 

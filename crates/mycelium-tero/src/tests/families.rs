@@ -55,26 +55,44 @@ fn fixture_extracts_status_guarantee_and_issue_fields() {
     let root = temp_dir("fields");
     write_corpus(&root, false);
     let report = build_tero_index(&root).unwrap();
-    let find = |id: &str| report.items.iter().find(|i| i.id.as_deref() == Some(id)).unwrap();
+    let find = |id: &str| {
+        report
+            .items
+            .iter()
+            .find(|i| i.id.as_deref() == Some(id))
+            .unwrap()
+    };
 
     let rfc = find("RFC-0099");
     assert_eq!(rfc.status.as_deref(), Some("Accepted"));
     assert_eq!(rfc.guarantee_tag.as_deref(), Some("Proven"));
-    assert_eq!(rfc.summary.as_deref(), Some("The lead prose that becomes the summary."));
+    assert_eq!(
+        rfc.summary.as_deref(),
+        Some("The lead prose that becomes the summary.")
+    );
 
     let dn = find("DN-99");
     assert_eq!(dn.status.as_deref(), Some("Proposed"));
     assert_eq!(dn.guarantee_tag.as_deref(), Some("Declared"));
 
-    let issue = report.items.iter().find(|i| i.anchor == "M-0099" && i.family == Family::Issue);
+    let issue = report
+        .items
+        .iter()
+        .find(|i| i.anchor == "M-0099" && i.family == Family::Issue);
     let issue = issue.unwrap();
     assert_eq!(issue.kind, "issue");
     assert_eq!(issue.status.as_deref(), Some("todo"));
     assert_eq!(issue.epic.as_deref(), Some("E99-1"));
     assert_eq!(issue.depends_on, vec!["M-0001", "M-0002"]);
-    assert_eq!(issue.doc_refs, vec!["corpus:RFC-0099", "src:crates/mycelium-tero/src/lib.rs"]);
+    assert_eq!(
+        issue.doc_refs,
+        vec!["corpus:RFC-0099", "src:crates/mycelium-tero/src/lib.rs"]
+    );
     assert_eq!(issue.gh_issue.as_deref(), Some("4242")); // from idmap.tsv
-    assert_eq!(issue.summary.as_deref(), Some("The body first line becomes the summary."));
+    assert_eq!(
+        issue.summary.as_deref(),
+        Some("The body first line becomes the summary.")
+    );
 
     let epic = report.items.iter().find(|i| i.anchor == "E99-1").unwrap();
     assert_eq!(epic.kind, "epic");
@@ -107,7 +125,11 @@ fn live_issue_count_matches_independent_grep() {
         return; // skip-graceful in a stripped checkout
     }
     let report = build_tero_index(&root).unwrap();
-    let indexed = report.items.iter().filter(|i| i.family == Family::Issue).count();
+    let indexed = report
+        .items
+        .iter()
+        .filter(|i| i.family == Family::Issue)
+        .count();
     // Independent oracle: `grep -c '^  - id:'`.
     let grepped = count_lines_starting(&issues_yaml, "  - id:");
     assert_eq!(indexed, grepped, "issue rows vs independent `- id:` count");
@@ -123,7 +145,11 @@ fn live_changelog_and_skill_counts_match_independent_greps() {
     }
     let report = build_tero_index(&root).unwrap();
 
-    let indexed_cl = report.items.iter().filter(|i| i.family == Family::Changelog).count();
+    let indexed_cl = report
+        .items
+        .iter()
+        .filter(|i| i.family == Family::Changelog)
+        .count();
     let grepped_cl =
         count_lines_starting(&changelog, "## ") + count_lines_starting(&changelog, "### ");
     assert_eq!(indexed_cl, grepped_cl, "changelog rows vs `##`+`###` count");
@@ -133,7 +159,11 @@ fn live_changelog_and_skill_counts_match_independent_greps() {
     let skills_dir = root.join(".claude/skills");
     if skills_dir.exists() {
         let files = walk_skill_files(&skills_dir);
-        let indexed_sk = report.items.iter().filter(|i| i.family == Family::Skill).count();
+        let indexed_sk = report
+            .items
+            .iter()
+            .filter(|i| i.family == Family::Skill)
+            .count();
         assert!(indexed_sk <= files, "skill rows <= SKILL.md files");
         assert!(indexed_sk > 0);
     }
@@ -144,7 +174,9 @@ fn walk_skill_files(dir: &Path) -> usize {
     let mut n = 0;
     let mut stack = vec![dir.to_path_buf()];
     while let Some(d) = stack.pop() {
-        let Ok(rd) = std::fs::read_dir(&d) else { continue };
+        let Ok(rd) = std::fs::read_dir(&d) else {
+            continue;
+        };
         for e in rd.flatten() {
             let p = e.path();
             if p.is_dir() {
@@ -165,6 +197,9 @@ fn live_regeneration_is_deterministic() {
     }
     let a = build_tero_index(&root).unwrap();
     let b = build_tero_index(&root).unwrap();
-    assert_eq!(a.items, b.items, "two live builds must be identical (determinism)");
+    assert_eq!(
+        a.items, b.items,
+        "two live builds must be identical (determinism)"
+    );
     assert_eq!(a.flagged, b.flagged);
 }

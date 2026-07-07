@@ -6,26 +6,42 @@ use crate::changelog::leading_id;
 use crate::docs::{doc_id, leading_keyword, one_line};
 use crate::issues::{dequote, parse_inline_list};
 
-const STATUS: &[&str] = &["Draft", "Proposed", "Accepted", "Enacted", "Superseded", "Resolved"];
+const STATUS: &[&str] = &[
+    "Draft",
+    "Proposed",
+    "Accepted",
+    "Enacted",
+    "Superseded",
+    "Resolved",
+];
 const GUARANTEE: &[&str] = &["Exact", "Proven", "Empirical", "Declared"];
 
 #[test]
 fn leading_keyword_takes_the_first_lattice_word_in_the_status_cell() {
     let src = "# D\n\n| Field | Value |\n|---|---|\n\
                | **Status** | **Enacted** — advanced from **Accepted** (2026) |\n";
-    assert_eq!(leading_keyword(src, "Status", STATUS).as_deref(), Some("Enacted"));
+    assert_eq!(
+        leading_keyword(src, "Status", STATUS).as_deref(),
+        Some("Enacted")
+    );
 }
 
 #[test]
 fn leading_keyword_matches_whole_words_only() {
     // "Provenance" must NOT satisfy the `Proven` guarantee keyword.
     let src = "| **Guarantee** | Provenance is recorded, tag Declared |\n";
-    assert_eq!(leading_keyword(src, "Guarantee", GUARANTEE).as_deref(), Some("Declared"));
+    assert_eq!(
+        leading_keyword(src, "Guarantee", GUARANTEE).as_deref(),
+        Some("Declared")
+    );
 }
 
 #[test]
 fn leading_keyword_is_none_without_a_row_or_keyword() {
-    assert_eq!(leading_keyword("no metadata here\n", "Status", STATUS), None);
+    assert_eq!(
+        leading_keyword("no metadata here\n", "Status", STATUS),
+        None
+    );
     assert_eq!(
         leading_keyword("| **Status** | pending review |\n", "Status", STATUS),
         None
@@ -34,8 +50,14 @@ fn leading_keyword_is_none_without_a_row_or_keyword() {
 
 #[test]
 fn doc_id_parses_decision_prefixes_only() {
-    assert_eq!(doc_id("docs/rfcs/RFC-0034-Foo.md").as_deref(), Some("RFC-0034"));
-    assert_eq!(doc_id("docs/adr/ADR-032-Bar.md").as_deref(), Some("ADR-032"));
+    assert_eq!(
+        doc_id("docs/rfcs/RFC-0034-Foo.md").as_deref(),
+        Some("RFC-0034")
+    );
+    assert_eq!(
+        doc_id("docs/adr/ADR-032-Bar.md").as_deref(),
+        Some("ADR-032")
+    );
     assert_eq!(doc_id("docs/notes/DN-87-Baz.md").as_deref(), Some("DN-87"));
     assert_eq!(doc_id("docs/spec/Some-Spec.md"), None);
     assert_eq!(doc_id("docs/guide/README.md"), None);
@@ -43,8 +65,14 @@ fn doc_id_parses_decision_prefixes_only() {
 
 #[test]
 fn changelog_leading_id_finds_the_first_corpus_id() {
-    assert_eq!(leading_id("M-996 — AOT TCO (2026-07-06)").as_deref(), Some("M-996"));
-    assert_eq!(leading_id("DN-87 — captured; E39-1 minted").as_deref(), Some("DN-87"));
+    assert_eq!(
+        leading_id("M-996 — AOT TCO (2026-07-06)").as_deref(),
+        Some("M-996")
+    );
+    assert_eq!(
+        leading_id("DN-87 — captured; E39-1 minted").as_deref(),
+        Some("DN-87")
+    );
     assert_eq!(leading_id("E21-1 landed").as_deref(), Some("E21-1"));
     assert_eq!(leading_id("Just a prose header").as_deref(), None);
 }
@@ -59,7 +87,10 @@ fn one_line_squeezes_and_truncates_with_an_ellipsis() {
 
 #[test]
 fn issues_dequote_strips_and_unescapes() {
-    assert_eq!(dequote("\"M-1 — a \\\"quoted\\\" title\""), "M-1 — a \"quoted\" title");
+    assert_eq!(
+        dequote("\"M-1 — a \\\"quoted\\\" title\""),
+        "M-1 — a \"quoted\" title"
+    );
     assert_eq!(dequote("bare-scalar"), "bare-scalar");
 }
 

@@ -73,7 +73,7 @@ fn index_tree(
 ) -> std::io::Result<()> {
     for path in collect_ext(root, "md")? {
         let rel = repo_rel(repo_root, &path);
-        if is_excluded(&rel) {
+        if is_excluded(&rel) || is_generated_index(&rel) {
             continue;
         }
         let src = std::fs::read_to_string(&path)?;
@@ -145,6 +145,18 @@ fn emit_doc(
         }
         _ => {}
     });
+}
+
+/// The committed generated-index directories — this index's **own** output (`docs/tero-index/`) and
+/// its **sibling** indices (`docs/api-index/`, `docs/lib-index/`). They are excluded from the docs
+/// walk for two reasons: (1) self-indexing `docs/tero-index/` would break the drift-gate fixpoint
+/// (regenerating changes the file that is itself being read); (2) the siblings are *referenced*, not
+/// *duplicated* (M-1015) — their symbol domains are theirs to index, linked via
+/// [`crate::model::SIBLING_INDICES`].
+fn is_generated_index(rel: &str) -> bool {
+    rel.starts_with("docs/tero-index/")
+        || rel.starts_with("docs/api-index/")
+        || rel.starts_with("docs/lib-index/")
 }
 
 /// Classify a repo-relative markdown path into its corpus family (mirrors

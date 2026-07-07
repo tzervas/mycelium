@@ -23,7 +23,11 @@ fn a_note_without_a_status_row_is_flagged_not_assumed() {
     )
     .unwrap();
     let report = build_tero_index(&root).unwrap();
-    assert!(has_flag(&report, "No-Status-Note.md", "no `| **Status** |`"));
+    assert!(has_flag(
+        &report,
+        "No-Status-Note.md",
+        "no `| **Status** |`"
+    ));
     // The note is STILL indexed (flagged, not dropped) — just with status unset.
     let note = report
         .items
@@ -63,10 +67,21 @@ fn a_skill_without_frontmatter_or_name_is_flagged_not_indexed() {
     let root = temp_dir("flag-skill");
     write_corpus(&root, true); // adds nofront + noname skills
     let report = build_tero_index(&root).unwrap();
-    assert!(has_flag(&report, "nofront/SKILL.md", "no `--- … ---` YAML frontmatter"));
+    assert!(has_flag(
+        &report,
+        "nofront/SKILL.md",
+        "no `--- … ---` YAML frontmatter"
+    ));
     assert!(has_flag(&report, "noname/SKILL.md", "no `name:`"));
     // Only the one valid skill is indexed.
-    assert_eq!(report.items.iter().filter(|i| i.family == Family::Skill).count(), 1);
+    assert_eq!(
+        report
+            .items
+            .iter()
+            .filter(|i| i.family == Family::Skill)
+            .count(),
+        1
+    );
 }
 
 #[test]
@@ -74,5 +89,9 @@ fn a_clean_corpus_has_no_flags() {
     let root = temp_dir("flag-clean");
     write_corpus(&root, false);
     let report = build_tero_index(&root).unwrap();
-    assert!(report.flagged.is_empty(), "clean fixture must be flag-free: {:?}", report.flagged);
+    assert!(
+        report.flagged.is_empty(),
+        "clean fixture must be flag-free: {:?}",
+        report.flagged
+    );
 }
