@@ -30,3 +30,13 @@ nodule std.fs;
 // - Opening existing path, `truncate = false` → existing bytes preserved (no silent zero-out).
 // - `create_new = true` on an existing path → `Err(AlreadyExists)` (no silent overwrite).
 type OpenOptions = OpenOptions(Bool, Bool, Bool, Bool, Bool, Bool);
+
+impl OpenOptions {
+  // All-false options: pure open (no create, no truncate, no write).
+  //
+  // This is the **only** constructor. Every flag must be explicitly enabled by the caller;
+  // there is no convenience constructor that secretly enables a subset of flags.
+  fn new() => OpenOptions = OpenOptions(False, False, False, False, False, False);
+  // Whether this intent requests any write capability (write or append).
+  fn wants_write(self: OpenOptions) => Bool = (match self { OpenOptions(_, p1, _, _, _, _) => p1 }) || (match self { OpenOptions(_, _, p2, _, _, _) => p2 });
+};

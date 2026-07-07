@@ -156,6 +156,37 @@ fn cases() -> Vec<Case> {
                 sub_gap_category: Category::NamedFieldDrop,
             },
         },
+        // M-1006 Lever 1: a `self.<field>` projection in an impl body desugars to a `match` on the
+        // struct's single (positional) constructor — the faithful equivalent (no projection surface in
+        // the grammar). `Perm` is resolvable (its ctor emits), so the projection is gated ON.
+        Case {
+            name: "field_projection_desugars_to_match",
+            rust: "struct Perm { mode: u8 }\nimpl Perm { fn get(self) -> u8 { self.mode } }",
+            expect: Expect::Emitted {
+                item: "impl Perm",
+                contains: "match self { Perm(p0) => p0 }",
+            },
+        },
+        // M-1006 Lever 1: struct-literal construction `Foo { mode: a }` -> the positional ctor call
+        // `Foo(a)` (fields ordered by declaration). `Self { .. }` resolves the same way in impl context.
+        Case {
+            name: "struct_literal_construction_emits_positional_ctor",
+            rust: "struct Foo { mode: u8 }\nfn mk(a: u8) -> Foo { Foo { mode: a } }",
+            expect: Expect::Emitted {
+                item: "mk",
+                contains: "Foo(a)",
+            },
+        },
+        // M-1006 Lever 1 gate: a field access on a NON-`self` base gaps — the transpiler tracks no
+        // local types, so it cannot resolve the projection to a constructor position (never a guess).
+        // (No struct is declared here, so the sole item is the gapping `peek`.)
+        Case {
+            name: "field_access_on_non_self_base_gaps",
+            rust: "fn peek(f: u8) -> u8 { f.mode }",
+            expect: Expect::Gapped {
+                category: Category::Other,
+            },
+        },
         // M-873 follow-on (DN-41): a numeric-widening `impl Widen<..> for ..` whose body is a
         // qualified associated-function call (`u16::from(self)`, the real shape of Rust's
         // widening bodies in `mycelium-std-cmp`) must never be emitted with the *fabricated*

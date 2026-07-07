@@ -81,7 +81,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl Sink { # [doc = \" Construct an empty in-memory sink.\"] # [doc = \"\"] # [doc = \" # Effects: none (construction is pure)\"] # [must_use] pub fn new () -> Self { Sink { buffer : Vec :: new () } } # [doc = \" Consume the sink and return the bytes written into it.\"] # [doc = \"\"] # [doc = \" This finalizes the sink — it cannot be written to after this call (Rust\"] # [doc = \" move semantics enforce the affine discipline).\"] # [must_use] pub fn into_bytes (self) -> Vec < u8 > { self . buffer } # [doc = \" Append `bytes` to the internal buffer (internal, non-consuming helper).\"] fn append (& mut self , bytes : & [u8]) { self . buffer . extend_from_slice (bytes) ; } }",
-      "reason": "no member of this impl block could be transpiled (3 sub-issue(s)): impl method `new` body: unsupported expression form `Sink { buffer : Vec :: new () }`; impl method `into_bytes` body: unsupported expression form `self . buffer`; impl method `append` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence",
+      "reason": "no member of this impl block could be transpiled (3 sub-issue(s)): impl method `new` body: struct literal `Sink { .. }` — not an in-file single-ctor struct that emits (no constructor to build); impl method `into_bytes` body: field projection `self.buffer` on `Sink` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against); impl method `append` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence",
       "item_name": "Sink"
     },
     {

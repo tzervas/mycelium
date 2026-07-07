@@ -8,7 +8,7 @@
 use crate::emit::{self, Emitted};
 use crate::gap::{Category, Gap, GapReason, GapReport};
 use crate::map::tokens_to_string;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::Path;
 use syn::spanned::Spanned;
@@ -74,7 +74,8 @@ pub fn transpile_source(
     // item loop so a named-field `struct`/enum variant emits only when it introduces no unresolved
     // in-file reference (which would poison the file's `myc check` and cost its clean items).
     let resolvable = resolvable_type_names(&parsed.items);
-    crate::emit::with_resolvable(resolvable, || {
+    let layouts = struct_layouts(&parsed.items);
+    crate::emit::with_emit_ctx(resolvable, layouts, || {
         for item in &parsed.items {
             let (line, col) = span_line_col(item);
             let name_hint = item_display_name(item);
@@ -234,6 +235,30 @@ fn resolvable_type_names(items: &[Item]) -> HashSet<String> {
         }
     }
     resolvable
+}
+
+/// Positional field layouts of every in-file `struct` — the M-1006 field-projection input (Lever 1),
+/// consumed via [`crate::emit::with_emit_ctx`]. Each struct maps to its field slots in declaration
+/// order (`Some(name)` named, `None` unnamed); the emitted constructor name is the struct's own type
+/// name (see `emit::emit_struct`). Only `struct`s are recorded — a `self.<field>` projection or a
+/// struct literal is meaningful only on a single-constructor product, not an enum.
+fn struct_layouts(items: &[Item]) -> HashMap<String, Vec<Option<String>>> {
+    let mut out = HashMap::new();
+    for item in items {
+        if let Item::Struct(s) = item {
+            let fields: Vec<Option<String>> = match &s.fields {
+                syn::Fields::Named(fs) => fs
+                    .named
+                    .iter()
+                    .map(|f| f.ident.as_ref().map(ToString::to_string))
+                    .collect(),
+                syn::Fields::Unnamed(fs) => fs.unnamed.iter().map(|_| None).collect(),
+                syn::Fields::Unit => Vec::new(),
+            };
+            out.insert(s.ident.to_string(), fields);
+        }
+    }
+    out
 }
 
 enum Outcome {

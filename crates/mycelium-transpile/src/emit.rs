@@ -14,45 +14,78 @@ use crate::gap::{guarded, Category, GapReason};
 use crate::map::{map_type, tokens_to_string};
 use crate::reserved::guard_ident;
 use std::cell::RefCell;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use syn::{
     Attribute, Block, Expr, Fields, FieldsNamed, FnArg, GenericArgument, GenericParam, Generics,
     ImplItem, ItemEnum, ItemFn, ItemImpl, ItemStruct, ItemTrait, Lit, Pat, PathArguments,
     ReturnType, Signature, Stmt, TraitItem,
 };
 
-thread_local! {
-    /// The M-1006 **resolvability gate** for named-field records (kickoff `trx2`, E33-1). Emitting a
-    /// named-field `struct`/enum-variant positionally is only safe for `checked_fraction` when every
-    /// type the record references *resolves in-file* — otherwise the emission introduces a reference
-    /// (`ContentRef` → the out-of-corpus `ContentHash`) that **poisons the whole file's `myc check`**
-    /// under the per-file oracle, costing the file's previously-clean items. `None` ⇒ gate off
-    /// (direct `emit_*` unit tests / non-opted-in callers): a named-field record emits
-    /// unconditionally. `Some(set)` ⇒ gate on (set by [`with_resolvable`] from
-    /// `transpile::resolvable_type_names`): a named-field record emits **iff its own name is in the
-    /// set** — i.e. it and everything it transitively references resolve in-file, so the emission can
-    /// never introduce a poisoning reference (VR-5/G2 — never emit a reference we can't confirm
-    /// resolves).
-    static RESOLVABLE: RefCell<Option<HashSet<String>>> = const { RefCell::new(None) };
+/// One struct's positional field layout — the M-1006 field-projection input (Lever 1): its field
+/// slots in declaration order, `Some(name)` for a named field, `None` for a tuple (unnamed) position.
+/// The emitted constructor's name is the struct's own type name (see [`emit_struct`]), so a
+/// `self.<field>` access desugars to `match self { <Ty>(_, x, _) => x }` at the field's position.
+type StructLayout = Vec<Option<String>>;
+
+/// Per-file emit context installed by `transpile::transpile_source` for the item loop (see
+/// [`with_emit_ctx`]): the M-1006 **resolvability set** (gates named-field-record emission) and the
+/// **struct layouts** (drives field-projection / struct-literal desugaring). Both are file-scoped
+/// analyses of the parsed items. `None` (direct `emit_*` unit tests / non-opted-in callers) disables
+/// both — a named-field record then emits unconditionally, and a `self.<field>` projection gaps for
+/// want of layout info.
+struct EmitCtx {
+    resolvable: HashSet<String>,
+    layouts: HashMap<String, StructLayout>,
 }
 
-/// Install the per-file resolvable-type set for the duration of `f`, then clear it (RAII-free — a
-/// panic would leave it set, but the transpiler never unwinds across this boundary in practice; the
-/// budget thread-local in `gap.rs` takes the same shape). Used by `transpile::transpile_source`.
-pub(crate) fn with_resolvable<R>(set: HashSet<String>, f: impl FnOnce() -> R) -> R {
-    RESOLVABLE.with(|c| *c.borrow_mut() = Some(set));
+thread_local! {
+    /// See [`EmitCtx`]. Emitting a named-field record positionally is only safe for `checked_fraction`
+    /// when every type it references *resolves in-file* (else it introduces a reference — `ContentRef`
+    /// → the out-of-corpus `ContentHash` — that poisons the file's `myc check`); field projection is
+    /// only safe when the `self` type is an *emitted* in-file struct (else the `match Ty(...)` names an
+    /// absent constructor). Both gates read this context (VR-5/G2 — never emit a reference we cannot
+    /// confirm resolves).
+    static EMIT_CTX: RefCell<Option<EmitCtx>> = const { RefCell::new(None) };
+}
+
+/// Install the per-file emit context for the duration of `f`, then clear it (RAII-free — the
+/// transpiler never unwinds across this boundary in practice; the budget thread-local in `gap.rs`
+/// takes the same shape). Used by `transpile::transpile_source`.
+pub(crate) fn with_emit_ctx<R>(
+    resolvable: HashSet<String>,
+    layouts: HashMap<String, StructLayout>,
+    f: impl FnOnce() -> R,
+) -> R {
+    EMIT_CTX.with(|c| {
+        *c.borrow_mut() = Some(EmitCtx {
+            resolvable,
+            layouts,
+        })
+    });
     let r = f();
-    RESOLVABLE.with(|c| *c.borrow_mut() = None);
+    EMIT_CTX.with(|c| *c.borrow_mut() = None);
     r
 }
 
-/// Whether a named-field record named `name` may be emitted under the resolvability gate (see
-/// [`RESOLVABLE`]). Gate off (`None`) ⇒ always allowed; gate on ⇒ allowed iff `name` is resolvable
-/// in-file.
+/// Whether a named-field record named `name` may be emitted under the M-1006 resolvability gate.
+/// Context off (`None`) ⇒ always allowed; on ⇒ allowed iff `name` is resolvable in-file.
 fn named_field_emit_allowed(name: &str) -> bool {
-    RESOLVABLE.with(|c| match &*c.borrow() {
+    EMIT_CTX.with(|c| match &*c.borrow() {
         None => true,
-        Some(set) => set.contains(name),
+        Some(ctx) => ctx.resolvable.contains(name),
+    })
+}
+
+/// The positional field layout of the in-file struct `name`, when known **and** the struct is
+/// resolvable (i.e. emitted — so its constructor exists to desugar against). `None` disables the
+/// field-projection / struct-literal desugaring for `name` (context off, `name` not an in-file
+/// single-ctor struct, or `name` not emitted — where a `match name(...) => …` would reference an
+/// absent ctor and poison the file's check).
+fn struct_layout(name: &str) -> Option<StructLayout> {
+    EMIT_CTX.with(|c| match &*c.borrow() {
+        None => None,
+        Some(ctx) if ctx.resolvable.contains(name) => ctx.layouts.get(name).cloned(),
+        Some(_) => None,
     })
 }
 
@@ -799,10 +832,154 @@ fn emit_expr_inner(expr: &Expr, self_ty: Option<&str>) -> Result<String, GapReas
              (',' expr)*)? ']'` (grammar line 415) enumerates its elements and has no repeat form",
         )),
         Expr::Block(b) if b.label.is_none() => emit_block_as_expr(&b.block, self_ty),
+        // M-1006 Lever 1 — field projection `self.<field>`. The grammar has NO projection surface
+        // (`path ::= Ident ('.' Ident)*` is a namespace glyph; `self.0` cannot even lex), but reading
+        // one field of a single-constructor product has a faithful equivalent: a `match` that binds
+        // exactly that field. Only `self` has a statically-known type here (the impl's `self_ty` — the
+        // transpiler tracks no other local types), so only `self.<field>` desugars; any other base
+        // gaps. Gated (via `struct_layout`) on `self_ty` being an *emitted* in-file struct so the
+        // `Ty(...)` constructor the `match` names actually exists (never poison the file's check).
+        Expr::Field(fe) => {
+            let base_is_self = matches!(
+                &*fe.base,
+                Expr::Path(p) if p.qself.is_none() && p.path.is_ident("self")
+            );
+            if !base_is_self {
+                return Err(GapReason::new(
+                    Category::Other,
+                    "field access on a non-`self` base — the transpiler tracks no local types, so \
+                     the projection cannot be resolved to a constructor position (only \
+                     `self.<field>` desugars to a `match`)",
+                ));
+            }
+            let sty = self_ty.ok_or_else(|| {
+                GapReason::new(
+                    Category::Other,
+                    "`self` field access with no enclosing impl/trait `self` type",
+                )
+            })?;
+            let layout = struct_layout(sty).ok_or_else(|| {
+                GapReason::new(
+                    Category::Other,
+                    format!(
+                        "field projection `self.{}` on `{sty}` — not an in-file single-ctor struct \
+                         that emits (an enum / external / non-resolvable type has no constructor to \
+                         `match` against)",
+                        member_text(&fe.member)
+                    ),
+                )
+            })?;
+            let pos = match &fe.member {
+                syn::Member::Named(id) => {
+                    let n = id.to_string();
+                    layout.iter().position(|f| f.as_deref() == Some(n.as_str()))
+                }
+                syn::Member::Unnamed(idx) => {
+                    let i = idx.index as usize;
+                    (i < layout.len()).then_some(i)
+                }
+            }
+            .ok_or_else(|| {
+                GapReason::new(
+                    Category::Other,
+                    format!(
+                        "field `{}` not found on struct `{sty}`",
+                        member_text(&fe.member)
+                    ),
+                )
+            })?;
+            // Bind the accessed position to `p{pos}` (a guaranteed-valid, non-reserved ident),
+            // wildcard the rest, and return the binding. Parenthesized so it composes as a binary /
+            // application operand subexpression.
+            let bind = format!("p{pos}");
+            let pats: Vec<String> = (0..layout.len())
+                .map(|i| {
+                    if i == pos {
+                        bind.clone()
+                    } else {
+                        "_".to_string()
+                    }
+                })
+                .collect();
+            Ok(format!(
+                "(match self {{ {sty}({}) => {bind} }})",
+                pats.join(", ")
+            ))
+        }
+        // M-1006 Lever 1 — struct-literal construction `Ty { a: x, b: y }` / `Self { .. }` -> the
+        // positional constructor call `Ty(x, y)` (arguments ordered by the struct's declaration
+        // order). Gated on `Ty` being an emitted in-file struct. `..rest` (struct-update) and a
+        // partial literal have no Mycelium surface -> explicit gap (never a fabricated field).
+        Expr::Struct(se) if se.qself.is_none() => {
+            if se.rest.is_some() {
+                return Err(GapReason::new(
+                    Category::Other,
+                    "struct-update syntax `..rest` has no Mycelium equivalent (no record-update \
+                     surface)",
+                ));
+            }
+            let seg = se
+                .path
+                .segments
+                .last()
+                .ok_or_else(|| GapReason::new(Category::Other, "empty struct-literal path"))?;
+            let raw = seg.ident.to_string();
+            let sty = if raw == "Self" {
+                self_ty
+                    .ok_or_else(|| {
+                        GapReason::new(
+                            Category::Other,
+                            "`Self { .. }` with no enclosing impl/trait `self` type",
+                        )
+                    })?
+                    .to_string()
+            } else {
+                raw
+            };
+            let layout = struct_layout(&sty).ok_or_else(|| {
+                GapReason::new(
+                    Category::Other,
+                    format!(
+                        "struct literal `{sty} {{ .. }}` — not an in-file single-ctor struct that \
+                         emits (no constructor to build)"
+                    ),
+                )
+            })?;
+            let mut args = Vec::with_capacity(layout.len());
+            for (i, slot) in layout.iter().enumerate() {
+                let fv = se
+                    .fields
+                    .iter()
+                    .find(|fv| match (&fv.member, slot) {
+                        (syn::Member::Named(id), Some(name)) => id == name.as_str(),
+                        (syn::Member::Unnamed(idx), None) => idx.index as usize == i,
+                        _ => false,
+                    })
+                    .ok_or_else(|| {
+                        GapReason::new(
+                            Category::Other,
+                            format!(
+                                "struct literal `{sty}` gives no value for the field at position \
+                                 {i} — a partial constructor has no Mycelium surface (VR-5)"
+                            ),
+                        )
+                    })?;
+                args.push(emit_expr(&fv.expr, self_ty)?);
+            }
+            Ok(format!("{sty}({})", args.join(", ")))
+        }
         _ => Err(GapReason::new(
             Category::Other,
             format!("unsupported expression form `{}`", tokens_to_string(expr)),
         )),
+    }
+}
+
+/// A short human label for a `syn::Member` (`self.mode` / `self.0`), for gap-reason messages.
+fn member_text(m: &syn::Member) -> String {
+    match m {
+        syn::Member::Named(id) => id.to_string(),
+        syn::Member::Unnamed(idx) => idx.index.to_string(),
     }
 }
 
