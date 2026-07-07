@@ -29,6 +29,16 @@
 //! model has no structured `supersedes` edge yet, so the cross-reference walk covers exactly
 //! `depends_on`/`doc_refs`).
 //!
+//! **M-1017 (the API fronts): one core, two thin fronts (DN-87 §2.3).** The engine is served
+//! platform-agnostically through one framework-agnostic request→[`Query`]→JSON-envelope
+//! core, wrapped by an **MCP** server ([`serve_mcp_stdio`], newline-delimited JSON-RPC over stdio)
+//! and an **HTTP/JSON** API ([`serve_http`], an `axum`/`tokio` app; ADR-044). Both serialize through
+//! the same core, so an answer over MCP is byte-identical to the same answer over HTTP (front
+//! parity). Access is token-scoped, read-only by default ([`TokenTable`]/[`Scope`]; DN-87 §6.4) —
+//! never-silent: a bad/absent token or too-narrow scope is an explicit refusal, and the servers
+//! refuse to start with no tokens configured. The fronts carry the engine's provenance/refusal
+//! guarantees across the wire without weakening them.
+//!
 //! Named in quiet homage to Atsushi Tero, for his contribution to science and engineering.
 
 // Internal modules — the extraction + query engines. The crate's *public* surface (KC-3 small,
@@ -39,6 +49,7 @@
 mod changelog;
 mod docs;
 mod emit;
+mod front;
 mod index;
 mod issues;
 mod load;
@@ -55,6 +66,12 @@ pub use model::{
     SIBLING_INDICES,
 };
 pub use query::{Answer, Citation, Explain, Query, QueryEngine, RankedHit, Refusal};
+
+// M-1017 — the API fronts (MCP + HTTP, token-scoped) over the M-1016 engine. One core, two thin
+// fronts (`front::core`); the auth allow-list + the HTTP server type a binary needs to construct.
+pub use front::auth::{AuthError, Scope, TokenTable, TokenTableError};
+pub use front::http::{serve_http, AppState};
+pub use front::mcp::serve_mcp_stdio;
 
 /// The program's one-line summary, used by the (future) API fronts' identify endpoint.
 #[must_use]

@@ -22,9 +22,29 @@ mycelium-doc = { path = "../mycelium-doc" }
 # no new external dependency (serde/serde_json are already vetted, in-workspace).
 serde = { workspace = true }
 serde_json = { workspace = true }
+# M-1017 (DN-87 §2.3 / ADR-046): the MCP + HTTP API fronts. The HTTP front is an `axum` app on the
+# `tokio` runtime (the workspace's first async runtime — a deliberate, authorized decision for this
+# concurrent server surface). `tokio` features are the minimal set for `axum::serve` + a refreshable
+# shared report (`rt-multi-thread`/`macros` for `#[tokio::main]`, `net` for the listener, `sync` for
+# the report `RwLock`). The MCP front stays synchronous std stdio (no async needed for a stdio loop).
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "net", "sync", "io-util"] }
+axum = { workspace = true }
 
 [dev-dependencies]
+# `tower::ServiceExt::oneshot` drives the axum `Router` in-process (no real socket) for the front
+# parity/unit tests; `tower` is already an `axum` transitive dep, pinned here only for test use.
+tower = { version = "0.5", features = ["util"] }
 
 [[bin]]
 name = "tero-index"
 path = "src/bin/tero-index.rs"
+
+# M-1017: the HTTP/JSON API front (axum + tokio). Token-scoped, read-only by default.
+[[bin]]
+name = "tero-http"
+path = "src/bin/tero-http.rs"
+
+# M-1017: the MCP (Model Context Protocol) API front over stdio. Sync std (no async needed).
+[[bin]]
+name = "tero-mcp"
+path = "src/bin/tero-mcp.rs"

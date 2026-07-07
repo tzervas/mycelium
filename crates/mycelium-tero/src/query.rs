@@ -31,6 +31,8 @@
 
 use std::collections::BTreeMap;
 
+use serde::Serialize;
+
 use crate::model::{Family, TeroIndexItem, TeroIndexReport};
 
 /// Hard cap on [`Query::CrossRef`]'s `depth` — a defence against a pathological request walking the
@@ -125,7 +127,7 @@ pub enum Query {
 /// correctly from source); `guarantee_tag` is the *cited claim's own* declared strength where the
 /// source states one (a doc's `| **Guarantee** |` row) — `None` where the source declares none,
 /// never invented.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Citation {
     /// The row's stable, globally-unique anchor (deep-link/citation key).
     pub anchor: String,
@@ -162,7 +164,7 @@ impl From<&TeroIndexItem> for Citation {
 
 /// One item's place in an [`Explain`] trace: its final rank position is implicit in
 /// [`Explain::hits`]'s order; `score`/`why` say *why* it landed there.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct RankedHit {
     /// The row's anchor (matches the corresponding [`Answer::items`] entry).
     pub anchor: String,
@@ -178,7 +180,7 @@ pub struct RankedHit {
 /// rule(s) applied (outermost first), any edges that could not be resolved within Layer 1, and a
 /// per-hit reason — "why these sources, in what order" (DN-87 §4), for every query kind, not only
 /// ranked ones.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Explain {
     /// A human-readable rendering of the query as executed (including any clamping applied).
     pub query: String,
@@ -233,7 +235,12 @@ impl Answer {
 
 /// A typed, never-silent "no answer" (DN-87 §6.2). Every variant carries enough to explain *why*
 /// nothing citable was found — a refusal is itself EXPLAIN-able, not a bare empty result.
-#[derive(Debug, Clone, PartialEq, Eq)]
+///
+/// `Serialize` (M-1017): the API fronts render a refusal as a stable, internally-tagged JSON object
+/// `{"variant":"no_match"|"unknown_anchor"|"no_text_match", …}` — the same shape over MCP and HTTP
+/// (front parity). The tag key is `variant`; the per-variant fields carry the never-silent detail.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "variant", rename_all = "snake_case")]
 pub enum Refusal {
     /// A structured lookup ([`Query::Id`]/[`Query::Status`]/[`Query::Kind`]) matched zero rows.
     NoMatch {

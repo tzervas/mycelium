@@ -163,3 +163,21 @@ pub(crate) fn write_corpus(root: &Path, defects: bool) -> Expected {
         skills: 1,    // only the valid one is indexed
     }
 }
+
+/// Build a real Layer-1 report from a hermetic, defect-free mini-corpus — the shared oracle for the
+/// M-1017 front tests (known ids: `M-0099`, `RFC-0099`, `E99-1`; statuses `todo`/`Accepted`/…).
+/// Returns the corpus root (for a `refresh` index path) and the built, canonically-sorted report.
+pub(crate) fn corpus_report(tag: &str) -> (PathBuf, crate::TeroIndexReport) {
+    let root = temp_dir(tag);
+    write_corpus(&root, false);
+    let report = crate::build_tero_index(&root).expect("fixture corpus builds");
+    (root, report)
+}
+
+/// Emit `report` as an `index.json` under `root/tero-index/` and return that file's path — for the
+/// `refresh` tests, which reload the served index from disk (`load_report`).
+pub(crate) fn emit_index(root: &Path, report: &crate::TeroIndexReport) -> PathBuf {
+    let dir = root.join("tero-index");
+    crate::write_json(report, &dir).expect("fixture index emits");
+    dir.join("index.json")
+}
