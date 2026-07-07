@@ -572,6 +572,87 @@ not to a false "keep closing gaps" expectation.
 **Guarantee tags unchanged:** emission `Declared`; vet verdict `Empirical` (real `myc check`).
 **Status unchanged (Draft)** — a ladder phase, enacts nothing further.
 
+### §8.11 M-1006 phase-1 (cont.): shared-reference type erasure — transpiler hardening (kickoff `trx2` E-B, epic E33-1) — `Empirical`
+
+The next transpiler-hardening increment of the **M-1006 ladder**, continuing §8.10's phase-1 pass
+(append-only — §8.10 already landed on the working tier; this extends it, it does not rewrite it).
+Same recipe (the `/myc-drafts` ladder phase), **same 17 wave-1 targets** as §8.9/§8.10 (phase-1
+refines the port-surface pass before the ladder expands the target set). Its **before-baseline is
+exactly §8.10's after-state** — 759 non-test items, 47 emitted (6.19%), 28 myc-check-clean (3.69%),
+811 gaps — so the deltas below chain cleanly onto §8.10 (reconfirmed by a fresh regeneration at the
+merged base).
+
+**Gap class attacked — the largest tractable sub-slice of `Other` (type-coverage).** §8.9/§8.10
+rank `Other` #1 (315 gaps), but `Other` is a grab-bag. Profiling the committed `.gap.json` corpus
+resolved it: **160 of the 315 `Other` gaps (~51%) are "unsupported Rust type form", and 156 of those
+are reference types `&T`** (150 shared `&T`/`&'a T`, 6 mutable `&mut T`) — a single, well-defined,
+grounded sub-slice, far more concrete than the scalar type-coverage residue (`String`/signed-int/
+`char`) that §8.10 declared out-of-scope for the transpiler (each of those needs a kernel/grammar
+repr decision — E18-1). References, by contrast, have a **faithful** mapping already precedented in
+the emitter.
+
+**Transpiler fix landed (grammar-grounded; emission stays `Declared`).** One arm in `map.rs`
+(`Type::Reference`): a **shared** reference `&T` / `&'a T` **erases** to its referent's mapping
+(`map_type(&r.elem)`). Grounding: Mycelium is value-semantic (ADR-003 — no reference types; the
+grammar's `base_type`/`type_ref`, `docs/spec/grammar/mycelium.ebnf` §`base_type`, has no `&` form),
+so a shared borrow and the value it borrows denote the *same* `T`. This is the **type-position
+analogue of an erasure the emitter already performs**: `emit.rs` erases `&expr` (`Expr::Reference`)
+and `&pat` (`Pat::Reference`) reference-transparently, and the hand-port itself renders Rust
+`fn cmp(&self, other: &Ordering)` as value params `fn cmp(a: Ordering, b: Ordering)`
+(`lib/std/cmp.myc`) — so `&T` → `T` is exactly how a human port writes it, not a guess. The lifetime
+is erased with the reference (no grammar surface). A referent that itself has no mapping still gaps,
+propagating its **own** precise reason (`&str` → `str` gap, `&[u8]` → slice gap) — never a partial
+emission (VR-5/G2). A **mutable** reference `&mut T` is **not** erased — in-place mutation has no
+value-semantic correspondence (the same stance the existing `&mut self` receiver gap takes), so it
+stays an explicit `Other` gap rather than silently dropping the mutation. Six new unit tests pin the
+paths (`shared_ref_params_emit`, `mut_ref_param_gapped`, `shared_ref_to_str_still_gapped`, plus the
+`map_type` corpus rows and the `mutable_reference_is_gapped_not_erased` /
+`shared_reference_to_unmapped_referent_surfaces_referent_reason` regression guards).
+
+**Measured before → after (`Empirical`, union over all 17 targets, non-test denominator 759):**
+
+| Metric | Before (= §8.10 after) | After | Δ |
+|---|---:|---:|---:|
+| `expressible_fraction` (emitted) | 6.19% (47) | **6.46% (49)** | **+2 items** |
+| `checked_fraction` (myc-check-clean) | 3.69% (28) | 3.69% (28) | flat |
+| `Other` gaps | 315 | **301** | **−14** |
+| `ReservedWord` gaps | 25 | 33 | +8 |
+| `MultiStmtBody` gaps | 6 | 10 | +4 |
+| `DeriveAttr` gaps | 42 | 43 | +1 |
+| total gaps | 811 | **810** | −1 |
+
+The two newly-emitted items are `std-content/lib.rs::digest_eq` (Rust `fn digest_eq(a: &ContentHash,
+b: &ContentHash) -> bool`, now emitting `fn digest_eq(a: ContentHash, b: ContentHash) => Bool = …`)
+and `std-sys/fs.rs::exists` (`&Path` erased). **`checked_fraction` is flat** because both emit
+faithfully yet fail `myc check` on a **name-resolution** blocker — `unknown type ContentHash` /
+`unknown type Path` (the referent types are declared in *other* nodules the single-file draft cannot
+see) — a *different* blocker class than emission, exactly as §8.10 §Lesson-2 and §8.7's original
+thesis predicted. The `Other −14` is the honest transpiler win; the **`ReservedWord +8` /
+`MultiStmtBody +4` / `DeriveAttr +1` is the expected never-silent cascade** — once a `&T` stops
+masking a signature, the item surfaces its *deeper* real blocker (a reserved-word type/ctor, a
+multi-statement body, a dropped derive), which is the gap-profiling instrument doing its job (the
+item still gaps, but now names the true blocker, refining the ranked worklist). Of the ~150 shared
+references, only these ~14 had the reference as their item's *sole* `Other`-class blocker; the rest
+sit in items with a further `Other`-class blocker (an unmappable `&str`/`&[u8]`/`&dyn T` referent, or
+another unmapped param), so erasure reclassifies within `Other` rather than removing the item's gap —
+honest, and the reason the net `Other` move is modest.
+
+**Lesson (feeds the next ladder phase).** This is a **small but honest** win, and it **confirms
+§8.10's near-exhaustion thesis a fourth time**: the largest remaining well-defined transpiler-fixable
+sub-slice (references) closes cleanly and faithfully, yet moves `checked_fraction` by **zero** —
+because the check-clean ceiling on this fixed corpus is gated by **name-resolution** (single-file
+drafts referencing types/fns declared in sibling nodules) and **language-surface design**, not by the
+transpiler's emission surface. There is no transpiler-only change that moves `checked_fraction` on
+this corpus; the value delivered is a *refined gap profile* (references removed as a masking blocker
+corpus-wide, the deeper blockers now ranked) and *more portable drafts* (references erased the way a
+hand-port writes them). The M-1006 ladder's *checked* growth must come from **expanding the target
+set** (later phases — cross-nodule project-mode vetting would resolve the `ContentHash`/`Path`-class
+name errors) or from **E18-1 language-surface design**, not from further transpiler emission arms on
+this fixed 17-target set. Recorded so the next phase is scoped to that reality (G2).
+
+**Guarantee tags unchanged:** emission `Declared`; vet verdict `Empirical` (real `myc check`).
+**Status unchanged (Draft)** — a ladder phase, enacts nothing further.
+
 ---
 
 ## Meta — changelog
@@ -682,3 +763,24 @@ not to a false "keep closing gaps" expectation.
   the current-corpus transpiler-fixable surface is near-exhausted (the stopping point recorded, G2).
   Emission `Declared`, vet `Empirical`. **Status unchanged (Draft)** — a ladder phase, enacts nothing
   further. (Append-only; VR-5; G2.)
+- **2026-07-07 — §8.11 added: M-1006 phase-1 (cont.) — shared-reference type erasure (kickoff
+  `trx2` E-B, epic E33-1).** The next transpiler-hardening increment on the same 17 wave-1 targets,
+  continuing §8.10 (append-only). Profiling resolved `Other`'s grab-bag: 156 of its 315 gaps are
+  reference types `&T` — the largest well-defined tractable sub-slice. Landed one `map.rs` arm: a
+  **shared** reference `&T`/`&'a T` **erases** to its referent's mapping (value semantics, ADR-003 —
+  no `&` in the grammar; the type-position twin of the emitter's existing `&expr`/`&pat` erasure, and
+  how the hand-port writes Rust `&Ordering` as value `Ordering`, `lib/std/cmp.myc`); a **mutable**
+  `&mut T` stays an explicit gap (mutation has no value-semantic correspondence — the `&mut self`
+  stance); an unmappable referent still gaps with its own precise reason (never a partial emission).
+  Six new unit tests. Measured (`Empirical`, union / 759): `expressible_fraction` 6.19% → **6.46%**
+  (47 → 49; `digest_eq` via `&ContentHash`, `exists` via `&Path`), `checked_fraction` **flat** at
+  3.69% (both new items emit faithfully but fail `myc check` on a name-resolution blocker — `unknown
+  type ContentHash`/`Path`, the referents live in sibling nodules — a different class than emission),
+  `Other` 315 → **301** (−14) with the expected never-silent cascade (`ReservedWord` +8, `MultiStmtBody`
+  +4, `DeriveAttr` +1 — deeper real blockers surface once a `&T` stops masking the signature); total
+  gaps 811 → 810. Lesson: a **small but honest** win that **confirms §8.10's near-exhaustion thesis a
+  fourth time** — the check-clean ceiling on this fixed corpus is gated by name-resolution and
+  language-surface design, not transpiler emission, so `checked` growth needs target-set expansion
+  (cross-nodule project-mode vetting) or E18-1, not further emission arms. Emission `Declared`, vet
+  `Empirical`. **Status unchanged (Draft)** — a ladder phase, enacts nothing further. (Append-only;
+  VR-5; G2.)
