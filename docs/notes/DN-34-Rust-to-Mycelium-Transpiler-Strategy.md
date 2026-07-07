@@ -999,6 +999,67 @@ their FLAGs for a follow-on decision wave.
 
 ---
 
+### §8.16 The prim-gap closure wave — landed, in-progress, and deferred (kickoff `trx2` E33-1) — `Empirical`
+
+The execution record for the §8.15 closure worklist, under the maintainer's **kernel-unfrozen** ruling (§8.14
+correction) and the four decision-gated rulings (all resolved to the project-optimal option — performant ·
+memory-safe · small-auditable-kernel KC-3 · never-silent). This §8.16 is the durable wave record so any
+follow-on session completes the remainder with full context (mitigation #8).
+
+**Landed (each a scoped, tested PR on `dev`; Π 59 → 66):**
+
+| Unit | What landed | Basis | PR |
+|---|---|---|---|
+| CU-1 | `bit.mul` — never-silent unsigned multiply (`mul_u` surface) | RFC-0033 §4.1.2; `math.myc` FLAG-math-1 | #1273 |
+| CU-2 | `flt.is_nan`/`flt.is_finite`/`flt.is_infinite` | ADR-040 §2.5 mandate (unlanded by M-898/M-899) | #1274 |
+| CU-6 (prims) | `bit.popcount`/`bit.clz`/`bit.ctz` (kernel — the KC-3/perf split) | Rust-driven; maintainer ruling | #1275 |
+| CU-4 | `ne`/`gt`/`cmp_s`/`le_s`/`ge_s` (`std.cmp`, derived — no new prim) | RFC-0033 §4.1.2 / RFC-0032 D1 | #1291 |
+| CU-6 (surface) | `bmul`/`bpopcount`/`bclz`/`bctz` (`std.math`); FLAG-math-1 "no binary multiply" closed | — | #1291 |
+
+Each carries never-silent semantics + property + conformance/three-way (L1/L0/AOT) tests; the Π table, the
+`checkty` surface map, and the `prim_table` cases were updated in lockstep, and the `Π = 66` count is pinned
+(the DN-56/DN-76 "38" remains stale — FLAG stands).
+
+**In progress (ruled *implement-now*, per §8.15; each a multi-file effort — the follow-on worklist):**
+
+1. **CU-3 — float↔int never-silent conversions (ruling: prims for the total directions, a swap for the lossy
+   one).** Add target-width-parameterized prims (the `bit.width_cast`/DN-41 model) — `flt→bin` (refuse on
+   NaN/±inf/out-of-range) and a checked-exact `bin→flt` (error at `|n| > 2^53`); the lossy rounding `bin→flt`
+   is a **reified swap** carrying its bound (ADR-040 §2.4/§5, not a prim). Basis: ADR-040 §2.4.
+2. **CU-5 — executable `wrapping` construct (ruling: implement the M-791 named construct, no new
+   `wrapping_*` prims).** RFC-0034 §10 ratifies `wrapping` as the named Axis-B opt-out; M-791 landed the
+   *meta/mode axis* (`mycelium-core/src/meta.rs` — there is already a `src/tests/wrapping.rs`) but not a
+   runtime evaluation path. Wire the construct to modular (never-refusing, `Declared`-tagged) evaluation
+   over `bin.add`/`sub`/`mul` at the use site. Basis: RFC-0034 §10; RFC-0032 D2 note.
+3. **CU-7 — arbitrary-width ternary (ruling: implement per ADR-029 Accepted).** `mycelium_core::ternary::
+   BigTernary` (M-756) exists but is unsurfaced; the runnable arithmetic is fixed-width `trit.*` (~40-trit
+   cap). Surface `BigTernary` as the growable arithmetic path RFC-0033 §4.2.2 mandates (coordinate the
+   growable-`Repr::Ternary` payload with the E20-1 content-address settlement).
+4. **Transpiler operator/comparator emission.** Emit `and`/`or`/`xor` (not the dead `band`/`bor`) for
+   `&`/`|`/`^`, and the CU-4 comparators, when operands are known `Binary{N}` — which re-hits the **operand-
+   type inference** §8.13's D3 named as its own chunk (thread param/`self` widths through `emit.rs`). Rotate
+   emits once a rotate prim lands (FLAG-math-3).
+
+**Deferred to dedicated design work (ruling: defer both — no half-measures):**
+
+- **CU-6 rotate/reverse (`std.math` FLAG-math-3).** `rotate_left`/`rotate_right`/`reverse_bits`/`swap_bytes`
+  are **not** a clean width-generic derivation: rotate needs the width `N` as a runtime value for `N − n`,
+  and the naive `or(shl_u, shr_u)` mis-handles `n = 0` (a full-width `shr` refuses). Gated on a dedicated
+  `bit.rotl`/`bit.rotr` prim or a width-reflection surface — never faked (VR-5).
+- **CU-8 — atomics (`fetch_add`, …).** Needs a memory-model RFC coupled to the concurrency runtime tier
+  (hypha/colony; still aspirational, ADR-012 §7.3); atomics without a memory model would be unsound
+  (DN-32 §7 / RFC-0027 §12). Mint a tracked issue + an RFC stub; do not scope a partial stub.
+- **CU-9 — Dense dtype/quant.** RFC-0033 §4.3.2 mandates the 13-dtype set; it rides the **E20-1
+  content-address rehash** (a one-way door, ADR-030). The maintainer's `vsa_checks` desktop-run branch
+  carries the heavy VSA/Dense durability numbers to ground the follow-on (held out of cloud-session gates
+  per the CLAUDE.md desktop-hold policy).
+
+**Guarantee tags:** new prims at their supportable strength (`bit.*` `Exact`; `flt.is_*` `Empirical`;
+`.myc` comparator/count surface `Exact`). **Status unchanged (Draft)** — a ladder phase; the kernel prims
+land on the normal `dev → integration → main` path (kernel unfrozen). (Append-only; VR-5; G2.)
+
+---
+
 ## Meta — changelog
 
 - **2026-06-25 — Created (Draft, advisory).** Captures the **Rust→Mycelium transpiler** strategy for
@@ -1197,3 +1258,13 @@ their FLAGs for a follow-on decision wave.
   and FLAGs the decision/architecture-gated units (float↔int conv, wrapping, bit-manip placement, growable
   ternary, atomics, Dense dtype). DN-52 confirms no *silent* gaps (all loud refusals). **Status unchanged
   (Draft).** (Append-only; VR-5; G2.)
+- **2026-07-07 — §8.16 added: the prim-gap closure wave (landed / in-progress / deferred).** The execution
+  record for §8.15's worklist under the kernel-unfrozen ruling. **Landed** (scoped, tested PRs; Π 59 → 66):
+  CU-1 `bit.mul` (#1273), CU-2 `flt.is_nan`/`is_finite`/`is_infinite` (#1274), CU-6 `bit.popcount`/`clz`/`ctz`
+  (#1275), CU-4 `ne`/`gt`/`cmp_s`/`le_s`/`ge_s` + the CU-6 `std.math` surface (#1291). **In progress**
+  (ruled implement-now): CU-3 float↔int (prims for total dirs + a swap for lossy), CU-5 executable `wrapping`
+  construct (RFC-0034 §10 / M-791), CU-7 arbitrary-width ternary (ADR-029; surface `BigTernary`), and the
+  transpiler operator/comparator emission (re-hits the D3 operand-type inference). **Deferred to design
+  work**: CU-6 rotate/reverse (FLAG-math-3 — not a clean derivation), CU-8 atomics (memory-model RFC), CU-9
+  Dense dtype (E20-1 rehash; `vsa_checks` desktop numbers ground it). **Status unchanged (Draft).**
+  (Append-only; VR-5; G2.)
