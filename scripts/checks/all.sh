@@ -10,7 +10,7 @@ cd "$REPO_ROOT" || exit 1
 # the user's terminal, so colors should survive.
 [[ -t 1 ]] && export MYC_FORCE_COLOR=1
 
-checks=(structured shell markdown links doc-currency doc-status schema grammar spell secrets format lint safety unsafe-per-use deps-acyclic test myc-fmt myc-check myc-sec myc-lint myc-doc myc-spore myc-dogfood proofs api doc-index lib-index deny drift license-first-party licenses)
+checks=(structured shell markdown links doc-currency doc-status schema grammar spell secrets format lint safety unsafe-per-use deps-acyclic test myc-fmt myc-check myc-sec myc-lint myc-doc myc-spore myc-dogfood proofs api doc-index lib-index tero-index deny drift license-first-party licenses)
 
 # --- Specific exit codes: which component failed, and why -------------------------------------
 # A process exit status is a single byte (0-255), so we pack it: the high 5 bits are a stable
@@ -27,6 +27,10 @@ declare -A COMPONENT_ID=(
   [myc-check]=16 [myc-sec]=17 [myc-lint]=18 [myc-doc]=19 [myc-spore]=20 [proofs]=21 [api]=22
   [doc-index]=23 [deny]=24 [drift]=25 [unsafe-per-use]=26 [license-first-party]=27 [licenses]=28
   [deps-acyclic]=29 [myc-dogfood]=30 [lib-index]=31
+  # The 5-bit component-id space (1-31) is exhausted, so the tero-index drift gate SHARES doc-index's
+  # id 23 — both are index-drift gates, so an exit-byte collision is semantically benign (the failure
+  # digest still names the actual gate that failed by its own script name). E39-1/DN-87.
+  [tero-index]=23
 )
 # REASON sub-codes (0-7): 1 = generic failure (a gate that just `exit 1`s). A gate MAY exit 2-6 to
 # name a *specific* failure mode (documented in that gate's script); 7 = an unexpected/other exit

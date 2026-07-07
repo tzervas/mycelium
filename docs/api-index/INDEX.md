@@ -2664,6 +2664,49 @@
 | `mycelium_std_vsa::unbind` | fn | `crates/mycelium-std-vsa/src/ops.rs:44` | Unbind (recover a factor from a bind product). |
 | `mycelium_std_vsa::unpermute` | fn | `crates/mycelium-std-vsa/src/ops.rs:88` | The inverse of [`permute`] by the same `shift` — exactly undoes the cyclic rotation. |
 
+## mycelium-tero
+
+| Symbol | Kind | File:Line | Summary |
+|---|---|---|---|
+| `mycelium_tero::Answer` | struct | `crates/mycelium-tero/src/query.rs:211` | An answer to a [`Query`]: a non-empty, ranked/ordered set of Layer-1 rows plus the [`Explain`] |
+| `mycelium_tero::Answer::citations` | fn | `crates/mycelium-tero/src/query.rs:225` | The resolvable citation for each item, same order as [`Answer::items`]. |
+| `mycelium_tero::Answer::explain` | fn | `crates/mycelium-tero/src/query.rs:231` | The EXPLAIN trace for this answer's candidate set and ordering. |
+| `mycelium_tero::Answer::items` | fn | `crates/mycelium-tero/src/query.rs:219` | The cited rows, in the answer's final order. |
+| `mycelium_tero::AppState` | struct | `crates/mycelium-tero/src/front/http.rs:51` | Shared, cheaply-cloneable server state. |
+| `mycelium_tero::AppState::new` | fn | `crates/mycelium-tero/src/front/http.rs:62` | Build server state. |
+| `mycelium_tero::AuthError` | enum | `crates/mycelium-tero/src/front/auth.rs:107` | A per-request authorization failure, mapped to a `4xx` / JSON-RPC code by the front (via |
+| `mycelium_tero::Citation` | struct | `crates/mycelium-tero/src/query.rs:131` | A resolvable citation to one Layer-1 row — the atomic unit of provenance every [`Answer`] is |
+| `mycelium_tero::Explain` | struct | `crates/mycelium-tero/src/query.rs:184` | The EXPLAIN trace for an [`Answer`]: the candidate universe, how many matched, the ordering |
+| `mycelium_tero::Family` | enum | `crates/mycelium-tero/src/model.rs:77` | Which corpus family a row was extracted from (drives grouping in `INDEX.md` + a stable primary |
+| `mycelium_tero::Flagged` | struct | `crates/mycelium-tero/src/model.rs:239` | A construct/source the heuristic could not (or does not yet) place — recorded, never dropped |
+| `mycelium_tero::HONESTY_TAG:` | const | `crates/mycelium-tero/src/model.rs:26` | The top-of-file honesty grading, mirroring `docs/api-index/INDEX.md`'s header posture verbatim |
+| `mycelium_tero::ITEM_TAG:` | const | `crates/mycelium-tero/src/model.rs:35` | The uniform per-row honesty tag. |
+| `mycelium_tero::Query` | enum | `crates/mycelium-tero/src/query.rs:93` | A structured or free-text query over the Layer-1 model (DN-87 §4: "structured queries (by id, |
+| `mycelium_tero::QueryEngine` | struct | `crates/mycelium-tero/src/query.rs:59` | A read-only query engine over a [`TeroIndexReport`] (typically loaded via |
+| `mycelium_tero::RankedHit` | struct | `crates/mycelium-tero/src/query.rs:168` | One item's place in an [`Explain`] trace: its final rank position is implicit in |
+| `mycelium_tero::Refusal` | enum | `crates/mycelium-tero/src/query.rs:244` | A typed, never-silent "no answer" (DN-87 §6.2). |
+| `mycelium_tero::SIBLING_INDICES:` | const | `crates/mycelium-tero/src/model.rs:40` | The sibling indices this one deliberately does **not** duplicate — each owns its own domain and |
+| `mycelium_tero::Scope` | enum | `crates/mycelium-tero/src/front/auth.rs:27` | The access scope a token carries. |
+| `mycelium_tero::Scope::allows` | fn | `crates/mycelium-tero/src/front/auth.rs:45` | Whether a token of `self` scope may perform an operation requiring `required` scope. |
+| `mycelium_tero::Scope::as_str` | fn | `crates/mycelium-tero/src/front/auth.rs:51` | The wire keyword (`read` / `refresh`). |
+| `mycelium_tero::SiblingIndex` | struct | `crates/mycelium-tero/src/model.rs:57` | A pointer to a sibling index (see [`SIBLING_INDICES`]). |
+| `mycelium_tero::TeroIndexItem` | struct | `crates/mycelium-tero/src/model.rs:116` | One indexed row: a citable unit of the corpus with its provenance, status/tag where the source |
+| `mycelium_tero::TeroIndexReport` | struct | `crates/mycelium-tero/src/model.rs:248` | The full build result: every extracted row plus every flagged gap, in stable sorted order. |
+| `mycelium_tero::TeroIndexReport::sort` | fn | `crates/mycelium-tero/src/model.rs:259` | Sort rows + flags into the canonical, deterministic order (the byte-identical-regeneration |
+| `mycelium_tero::TokenTable` | struct | `crates/mycelium-tero/src/front/auth.rs:140` | A runtime allow-list of `token -> scope`. |
+| `mycelium_tero::TokenTable::authorize` | fn | `crates/mycelium-tero/src/front/auth.rs:190` | Authorize a presented token for an operation requiring `required` scope. |
+| `mycelium_tero::TokenTable::from_env` | fn | `crates/mycelium-tero/src/front/auth.rs:148` | Load tokens from the environment: `TERO_TOKENS_FILE` (a path to a `token:scope` list) takes |
+| `mycelium_tero::TokenTable::is_empty` | fn | `crates/mycelium-tero/src/front/auth.rs:211` | Always `false` for a constructed table (kept for the `clippy::len_without_is_empty` lint). |
+| `mycelium_tero::TokenTable::len` | fn | `crates/mycelium-tero/src/front/auth.rs:205` | The number of configured tokens (never zero post-construction — see [`TokenTableError::Empty`]). |
+| `mycelium_tero::TokenTable::parse` | fn | `crates/mycelium-tero/src/front/auth.rs:160` | Parse a whitespace/comma-separated `token:scope` list into a table. |
+| `mycelium_tero::TokenTableError` | enum | `crates/mycelium-tero/src/front/auth.rs:71` | A configuration error building the [`TokenTable`] — surfaced at startup, never swallowed. |
+| `mycelium_tero::build_tero_index` | fn | `crates/mycelium-tero/src/index.rs:30` | Build the full tero-index report from the corpus rooted at `repo_root`. |
+| `mycelium_tero::crate_summary` | fn | `crates/mycelium-tero/src/lib.rs:82` | The program's one-line summary, used by the (future) API fronts' identify endpoint. |
+| `mycelium_tero::load_report` | fn | `crates/mycelium-tero/src/load.rs:43` | Load a `TeroIndexReport` from a previously emitted `index.json` at `path` (typically |
+| `mycelium_tero::serve_mcp_stdio` | fn | `crates/mycelium-tero/src/front/mcp.rs:70` | Run the MCP server over the process's real stdio — the entry point an MCP client launches |
+| `mycelium_tero::write_json` | fn | `crates/mycelium-tero/src/emit.rs:21` | Write `docs/tero-index/index.json`. |
+| `mycelium_tero::write_markdown` | fn | `crates/mycelium-tero/src/emit.rs:47` | Write `docs/tero-index/INDEX.md`. |
+
 ## mycelium-transpile
 
 | Symbol | Kind | File:Line | Summary |
@@ -8092,6 +8135,77 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_std_vsa::ops::unpermute` | dedup-alias: same definition as `mycelium_std_vsa::unpermute` at crates/mycelium-std-vsa/src/ops.rs:88 — one canonical row kept |
 | `mycelium_std_vsa::recon::reconstruct_factors` | dedup-alias: same definition as `mycelium_std_vsa::reconstruct_factors` at crates/mycelium-std-vsa/src/recon.rs:93 — one canonical row kept |
 | `mycelium_std_vsa::recon::reconstruct_role` | dedup-alias: same definition as `mycelium_std_vsa::reconstruct_role` at crates/mycelium-std-vsa/src/recon.rs:50 — one canonical row kept |
+| `mycelium_tero::Answer::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::Answer::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::Answer::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::AppState::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::AppState::new` | ambiguous: short name 'new' is defined in multiple modules; attributed to crates/mycelium-tero/src/front/http.rs by heuristic — verify against source (ground truth) |
+| `mycelium_tero::AuthError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::AuthError::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::AuthError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::Citation::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::Citation::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::Citation::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::Citation::from` | definition not found via regex heuristic (kind='fn', name='from') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::Citation::from` | definition not found via regex heuristic (kind='fn', name='from') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::Citation::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::Explain::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::Explain::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::Explain::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::Explain::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::Family::as_str` | ambiguous: short name 'as_str' is defined in multiple modules; attributed to crates/mycelium-tero/src/front/auth.rs by heuristic — verify against source (ground truth) |
+| `mycelium_tero::Family::as_str` | dedup-alias: same definition as `mycelium_tero::Scope::as_str` at crates/mycelium-tero/src/front/auth.rs:51 — one canonical row kept |
+| `mycelium_tero::Family::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::Family::cmp` | definition not found via regex heuristic (kind='fn', name='cmp') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::Family::deserialize` | definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::Family::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::Family::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::Family::partial_cmp` | definition not found via regex heuristic (kind='fn', name='partial_cmp') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::Family::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::Flagged::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::Flagged::deserialize` | definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::Flagged::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::Flagged::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::Flagged::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::Query::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::Query::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::Query::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::QueryEngine` | definition not found via regex heuristic (kind='fn', name='QueryEngine') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::QueryEngine` | definition not found via regex heuristic (kind='fn', name='QueryEngine') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::RankedHit::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::RankedHit::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::RankedHit::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::RankedHit::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::Refusal::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::Refusal::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::Refusal::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::Refusal::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::Refusal::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::Scope::as_str` | ambiguous: short name 'as_str' is defined in multiple modules; attributed to crates/mycelium-tero/src/front/auth.rs by heuristic — verify against source (ground truth) |
+| `mycelium_tero::Scope::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::Scope::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::Scope::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::SiblingIndex::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::SiblingIndex::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::SiblingIndex::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::SiblingIndex::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::TeroIndexItem::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::TeroIndexItem::deserialize` | definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::TeroIndexItem::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::TeroIndexItem::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::TeroIndexItem::new` | ambiguous: short name 'new' is defined in multiple modules; attributed to crates/mycelium-tero/src/front/http.rs by heuristic — verify against source (ground truth) |
+| `mycelium_tero::TeroIndexItem::new` | dedup-alias: same definition as `mycelium_tero::AppState::new` at crates/mycelium-tero/src/front/http.rs:62 — one canonical row kept |
+| `mycelium_tero::TeroIndexItem::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::TeroIndexReport::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::TeroIndexReport::default` | definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::TeroIndexReport::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::TeroIndexReport::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::TokenTable::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::TokenTable::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::TokenTableError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::TokenTableError::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::TokenTableError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_tero::TokenTableError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_transpile::batch::BatchSummary` | dedup-alias: same definition as `mycelium_transpile::BatchSummary` at crates/mycelium-transpile/src/batch.rs:91 — one canonical row kept |
 | `mycelium_transpile::batch::BatchSummary::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_transpile::batch::BatchSummary::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |

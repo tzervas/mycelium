@@ -180,6 +180,10 @@ doc-index:
 # Drift gate: committed docs/lib-index/ must match a fresh regeneration. Skip if cargo absent.
 lib-index:
     @bash scripts/checks/lib-index.sh
+# Drift gate: committed docs/tero-index/ must match a fresh regeneration from the corpus (M-1015 /
+# DN-87 §6.3 — the whole-corpus generalization of lib-index). Skip if cargo absent.
+tero-index:
+    @bash scripts/checks/tero-index.sh
 
 # (Re)generate THIRD-PARTY-LICENSES.md from Cargo.lock via cargo-about (about.toml + about.hbs).
 # Run after any dependency bump/add/remove; commit the result. Needs cargo-about:
@@ -260,6 +264,10 @@ docs-index:
 # after any change under lib/std/ or lib/compiler/.
 lib-index-gen:
     cargo run -q -p mycelium-doc --bin myc-doc -- lib-index --repo-root . --out docs/lib-index
+# (Re)generate committed tero-index (docs/tero-index/) from the whole corpus (M-1015 / DN-87). Commit
+# the result after any corpus change the index covers (docs/research/issues/changelog/skills).
+tero-index-gen:
+    cargo run -q -p mycelium-tero --bin tero-index -- --repo-root . --out docs/tero-index
 # Assemble a browsable local docsite under target/docsite/ — corpus (myc-doc HTML), agent API
 # index, and rustdoc. Advisory, NOT part of `just check`. Skip-graceful: missing tools warn only.
 # WSL: cd target/docsite && python3 -m http.server 8080, then open http://localhost:8080.
