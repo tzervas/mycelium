@@ -84,7 +84,8 @@
         "DeriveAttr": 1,
         "Impl": 10,
         "Import": 2,
-        "Other": 2,
+        "MultiStmtBody": 1,
+        "Other": 1,
         "PayloadVariant": 3,
         "Struct": 3
       }
@@ -207,7 +208,8 @@
       "GenericBound": 12,
       "Impl": 28,
       "Import": 28,
-      "Other": 40,
+      "MultiStmtBody": 1,
+      "Other": 39,
       "PayloadVariant": 3,
       "Struct": 22,
       "TestItem": 3,

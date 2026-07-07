@@ -1,6 +1,6 @@
 {
   "epic": "E33-1",
-  "generated_from_commit": "725bd89ee32fbb29bb8d67d4a9d2d61aa7c3d328",
+  "generated_from_commit": "c88d591d73b4c567199a18b208600e4fe1eed1c2",
   "kickoff": "trx2",
   "schema_version": 1,
   "targets": [
@@ -9,9 +9,9 @@
         "GenericBound": 2,
         "Impl": 12,
         "Import": 5,
-        "Other": 62,
+        "Other": 61,
         "PayloadVariant": 2,
-        "ReservedWord": 16,
+        "ReservedWord": 17,
         "Struct": 11
       },
       "kind": "semcore",
@@ -44,9 +44,10 @@
         "GenericBound": 2,
         "Impl": 3,
         "Import": 5,
-        "Other": 23,
+        "MultiStmtBody": 1,
+        "Other": 19,
         "PayloadVariant": 2,
-        "ReservedWord": 2
+        "ReservedWord": 5
       },
       "kind": "semcore",
       "note": "Destination convention (lib/compiler/README.md): this file is one of the nine mycelium-l1 semantic-core modules that hand-port into a SINGLE Mycelium nodule (compiler.semcore) for nodule-wide mutual recursion (DN-26 SCC). This transpiler emits one .myc per Rust file and does NOT perform that merge. Any emitted/gapped constructor whose name would collide with another semcore type's constructor (or a reserved word) once merged is subject to the FLAG-ast-5/FLAG-parse-2 per-type constructor-prefixing convention at hand-port time -- gapped ReservedWord items in this draft are exactly the collisions the transpiler refuses to auto-rename (VR-5/G2).",
@@ -79,9 +80,9 @@
         "GenericBound": 5,
         "Impl": 12,
         "Import": 11,
-        "Other": 6,
+        "Other": 5,
         "PayloadVariant": 2,
-        "ReservedWord": 1,
+        "ReservedWord": 2,
         "Struct": 4
       },
       "kind": "semcore",
@@ -114,8 +115,10 @@
         "GenericBound": 2,
         "Impl": 1,
         "Import": 5,
-        "Other": 31,
+        "MultiStmtBody": 1,
+        "Other": 27,
         "PayloadVariant": 1,
+        "ReservedWord": 3,
         "Struct": 6
       },
       "kind": "semcore",
@@ -203,11 +206,11 @@
     {
       "file_count": 5,
       "gap_category_counts": {
-        "DeriveAttr": 3,
+        "DeriveAttr": 4,
         "GenericBound": 1,
         "Impl": 7,
         "Import": 9,
-        "Other": 12,
+        "Other": 11,
         "Struct": 4,
         "TestItem": 5
       },
@@ -239,8 +242,8 @@
       "stats": {
         "checked_clean_items": 3,
         "checked_fraction_pct": 8.57,
-        "emitted_items": 3,
-        "expressible_fraction_pct": 8.57,
+        "emitted_items": 4,
+        "expressible_fraction_pct": 11.43,
         "gap_count": 41,
         "non_test_items": 35,
         "total_top_level_items": 40
@@ -248,7 +251,8 @@
       "status": "ok",
       "target": "stdlib/std-content",
       "vet_class_counts": {
-        "Clean": 5
+        "CheckError": 1,
+        "Clean": 4
       }
     },
     {
@@ -353,7 +357,8 @@
         "Impl": 14,
         "Import": 9,
         "MacroInvocation": 3,
-        "Other": 21,
+        "MultiStmtBody": 1,
+        "Other": 20,
         "PayloadVariant": 2,
         "ReservedWord": 4,
         "Struct": 4,
@@ -486,7 +491,8 @@
         "GenericBound": 12,
         "Impl": 28,
         "Import": 28,
-        "Other": 40,
+        "MultiStmtBody": 1,
+        "Other": 39,
         "PayloadVariant": 3,
         "Struct": 22,
         "TestItem": 3,
@@ -577,7 +583,7 @@
         "Impl": 7,
         "Import": 7,
         "MultiStmtBody": 1,
-        "Other": 42,
+        "Other": 41,
         "PayloadVariant": 2,
         "ReservedWord": 1,
         "Struct": 2,
@@ -623,16 +629,17 @@
       "stats": {
         "checked_clean_items": 1,
         "checked_fraction_pct": 1.59,
-        "emitted_items": 1,
-        "expressible_fraction_pct": 1.59,
-        "gap_count": 71,
+        "emitted_items": 2,
+        "expressible_fraction_pct": 3.17,
+        "gap_count": 70,
         "non_test_items": 63,
         "total_top_level_items": 70
       },
       "status": "ok",
       "target": "stdlib/std-sys",
       "vet_class_counts": {
-        "Clean": 8
+        "CheckError": 1,
+        "Clean": 7
       }
     },
     {

@@ -49,7 +49,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl fmt :: Display for ReadCappedError { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { match self { ReadCappedError :: Io (e) => write ! (f , \"stdin read error: {e}\") , ReadCappedError :: TooLarge { cap } => { write ! (f , \"stdin input exceeds the {cap}-byte cap (refused, not truncated)\") } } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut fmt :: Formatter < '_ >`",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
       "item_name": "ReadCappedError"
     },
     {
@@ -59,7 +59,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl std :: error :: Error for ReadCappedError { fn source (& self) -> Option < & (dyn std :: error :: Error + 'static) > { match self { ReadCappedError :: Io (e) => Some (e) , ReadCappedError :: TooLarge { .. } => None , } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `source` signature: unsupported Rust type form `& (dyn std :: error :: Error + 'static)`",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `source` signature: unsupported Rust type form `(dyn std :: error :: Error + 'static)`",
       "item_name": "ReadCappedError"
     },
     {
@@ -109,7 +109,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" \\\\[Declared\\\\] Write all of `bytes` to stdout. Uses `write_all`, so a short write is an explicit\"] # [doc = \" `Err`, never a silently-dropped tail (G2). Does **not** flush — call [`flush_out`] when ordering\"] # [doc = \" against process exit matters.\"] pub fn write_out (bytes : & [u8]) -> Result < () , io :: Error > { io :: stdout () . write_all (bytes) }",
-      "reason": "unsupported Rust type form `& [u8]`",
+      "reason": "unsupported Rust type form `[u8]`",
       "item_name": "write_out"
     },
     {
@@ -119,7 +119,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" \\\\[Declared\\\\] Write all of `bytes` to stderr. Like [`write_out`]: a short write is an explicit\"] # [doc = \" `Err` (G2).\"] pub fn write_err (bytes : & [u8]) -> Result < () , io :: Error > { io :: stderr () . write_all (bytes) }",
-      "reason": "unsupported Rust type form `& [u8]`",
+      "reason": "unsupported Rust type form `[u8]`",
       "item_name": "write_err"
     },
     {

@@ -47,7 +47,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl ContentRef { # [doc = \" Build a `ContentRef` from an explicit kind and hash.\"] # [doc = \"\"] # [doc = \" This is `Exact`/total — there is no failure mode.\"] # [must_use] pub fn new (kind : RefKind , hash : ContentHash) -> Self { ContentRef { kind , hash } } # [doc = \" The role this reference designates.\"] # [must_use] pub fn kind (& self) -> RefKind { self . kind } # [doc = \" The content-addressed identity this reference points to.\"] # [must_use] pub fn hash (& self) -> & ContentHash { & self . hash } # [doc = \" Consume the ref, returning the inner [`ContentHash`].\"] # [must_use] pub fn into_hash (self) -> ContentHash { self . hash } # [doc = \" The canonical string form of this reference: `<kind-prefix>+<algo>:<digest>`.\"] # [doc = \"\"] # [doc = \" Round-trips through the [`FromStr`] impl (`s.parse::<ContentRef>()`): for any `r`,\"] # [doc = \" `r.as_str_repr().parse::<ContentRef>() == Ok(r)`. This is the \\\"machine\\\" side of the G11\"] # [doc = \" dual projection; the human side is [`kind`](Self::kind) + a name lookup via\"] # [doc = \" [`crate::names_of`].\"] # [doc = \"\"] # [doc = \" [`FromStr`]: std::str::FromStr\"] # [must_use] pub fn as_str_repr (& self) -> String { format ! (\"{}+{}\" , self . kind_prefix () , self . hash . as_str ()) } fn kind_prefix (& self) -> & 'static str { match self . kind { RefKind :: Value => \"value\" , RefKind :: Def => \"def\" , RefKind :: Operation => \"op\" , RefKind :: Policy => \"policy\" , RefKind :: Spore => \"spore\" , RefKind :: Other => \"other\" , } } }",
-      "reason": "no member of this impl block could be transpiled (6 sub-issue(s)): impl method `new` body: unsupported expression form `ContentRef { kind , hash }`; impl method `kind` body: unsupported expression form `self . kind`; impl method `hash` signature: unsupported Rust type form `& ContentHash`; impl method `into_hash` body: unsupported expression form `self . hash`; impl method `as_str_repr` signature: `String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type; impl method `kind_prefix` signature: unsupported Rust type form `& 'static str`",
+      "reason": "no member of this impl block could be transpiled (6 sub-issue(s)): impl method `new` body: unsupported expression form `ContentRef { kind , hash }`; impl method `kind` body: unsupported expression form `self . kind`; impl method `hash` body: unsupported expression form `self . hash`; impl method `into_hash` body: unsupported expression form `self . hash`; impl method `as_str_repr` signature: `String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type; impl method `kind_prefix` signature: `String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
       "item_name": "ContentRef"
     },
     {
@@ -57,7 +57,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl RefKind { # [doc = \" The inverse of the kind-prefix used in [`ContentRef::as_str_repr`]; `None` for an\"] # [doc = \" unrecognised prefix (kept in lock-step with `ContentRef::kind_prefix`).\"] fn from_prefix (prefix : & str) -> Option < RefKind > { Some (match prefix { \"value\" => RefKind :: Value , \"def\" => RefKind :: Def , \"op\" => RefKind :: Operation , \"policy\" => RefKind :: Policy , \"spore\" => RefKind :: Spore , \"other\" => RefKind :: Other , _ => return None , }) } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `from_prefix` signature: unsupported Rust type form `& str`",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `from_prefix` signature: `String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
       "item_name": "RefKind"
     },
     {
@@ -67,7 +67,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl std :: str :: FromStr for ContentRef { type Err = MalformedDigest ; # [doc = \" Parse the canonical `<kind-prefix>+<algo>:<digest>` form produced by\"] # [doc = \" [`ContentRef::as_str_repr`] — the exact inverse of that projection.\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \" Returns [`MalformedDigest`] (never a coerced value — C1/G2) when the string lacks the `+`\"] # [doc = \" separator, carries an unknown kind prefix, or its `<algo>:<digest>` tail is malformed.\"] fn from_str (s : & str) -> Result < Self , Self :: Err > { let (prefix , rest) = s . split_once ('+') . ok_or_else (| | { MalformedDigest :: new (s , \"expected `<kind-prefix>+<algo>:<digest>` (missing `+`)\") }) ? ; let kind = RefKind :: from_prefix (prefix) . ok_or_else (| | MalformedDigest :: new (s , \"unknown content-ref kind prefix\")) ? ; let hash = ContentHash :: parse (rest) . ok_or_else (| | { MalformedDigest :: new (s , \"malformed `<algo>:<digest>` content address\") }) ? ; Ok (ContentRef { kind , hash }) } }",
-      "reason": "no member of this impl block could be transpiled (2 sub-issue(s)): impl associated type `Err`; impl method `from_str` signature: unsupported Rust type form `& str`",
+      "reason": "no member of this impl block could be transpiled (2 sub-issue(s)): impl associated type `Err`; impl method `from_str` signature: `String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
       "item_name": "ContentRef"
     },
     {
@@ -117,7 +117,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl fmt :: Display for MalformedDigest { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { write ! (f , \"malformed content address {:?}: {}\" , self . input , self . description) } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut fmt :: Formatter < '_ >`",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
       "item_name": "MalformedDigest"
     },
     {
@@ -297,7 +297,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" The content hash of a runtime *value*: its identity-bearing `Repr` + payload, with all dynamic\"] # [doc = \" [`Meta`](mycelium_core::Meta) excluded (RFC-0001 §4.6).\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Exact` (deterministic)\"] # [doc = \" A content hash is a pure function of the value's normalized structure (RFC-0001 §4.6 WF4).\"] # [doc = \" Two values with identical `Repr` + payload but different provenance/bounds **collide**\"] # [doc = \" (same hash — correct, metadata is not identity — ADR-003). Two values differing in `Repr`\"] # [doc = \" get different hashes (paradigm is identity-bearing — RFC-0001 §4.6).\"] # [doc = \"\"] # [doc = \" # Fallibility: total\"] # [doc = \" Every value has an identity; this op cannot fail. (C1: no failure mode to hide.)\"] # [doc = \"\"] # [doc = \" # Effects: none\"] # [doc = \" Pure computation; no IO, time, randomness, or allocation beyond the hash output.\"] # [doc = \"\"] # [doc = \" # FLAG: Q2\"] # [doc = \" If the kernel adds a refusal path for mixed-paradigm composite values, this signature will\"] # [doc = \" change to `Result<ContentHash, IdentityRefusal>`. See module-level FLAG Q2.\"] # [must_use] pub fn hash_of_value (v : & mycelium_core :: Value) -> ContentHash { v . content_hash () }",
-      "reason": "unsupported Rust type form `& mycelium_core :: Value`",
+      "reason": "qualified type path `mycelium_core :: Value` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "hash_of_value"
     },
     {
@@ -307,17 +307,17 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" The content hash of a definition (hash-of-AST; RFC-0001 §4.6 `hash(def)`):\"] # [doc = \" ```text\"] # [doc = \" H( normalize(structure(def)) ‖ types_with_repr(def) ‖ static_contract(def) )\"] # [doc = \" ```\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Exact` (deterministic)\"] # [doc = \" Identity is over the α-normalized structure, types-with-`Repr`, constant literals, operator\"] # [doc = \" names, and swap contracts — **never** over binder names or dynamic value metadata (ADR-003).\"] # [doc = \" Consequences (RFC-0001 §4.6 acceptance):\"] # [doc = \" - Trivial renames do **not** change the hash (α-renaming a binder is not identity).\"] # [doc = \" - Identical definitions **collide** (same hash — correct, not a bug).\"] # [doc = \" - A paradigm change **does** change the hash (types include `Repr`).\"] # [doc = \"\"] # [doc = \" # Fallibility: total\"] # [doc = \" Every definition node has a content identity; this op cannot fail. (C1.)\"] # [doc = \"\"] # [doc = \" # Effects: none\"] # [must_use] pub fn hash_of_def (d : & mycelium_core :: Node) -> ContentHash { d . content_hash () }",
-      "reason": "unsupported Rust type form `& mycelium_core :: Node`",
+      "reason": "qualified type path `mycelium_core :: Node` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "hash_of_def"
     },
     {
       "file": "crates/mycelium-std-content/src/lib.rs",
       "line": 146,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "# [doc = \" Identity equality by digest: two content hashes are **the same identity** iff their digests\"] # [doc = \" are equal.\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Exact` (deterministic)\"] # [doc = \" Digest comparison is a pure byte-equality test; it is reflexive, symmetric, and transitive.\"] # [doc = \"\"] # [doc = \" # Fallibility: total\"] # [doc = \" Comparing two digests cannot fail.\"] # [doc = \"\"] # [doc = \" # Effects: none\"] # [doc = \"\"] # [doc = \" # Note\"] # [doc = \" This is *not* the same as structural `==` on the values themselves: two values with\"] # [doc = \" different runtime state but the same normalized content (e.g. differing only in provenance)\"] # [doc = \" are `digest_eq` (same identity) even if `v1 != v2` structurally (ADR-003).\"] # [must_use] pub fn digest_eq (a : & ContentHash , b : & ContentHash) -> bool { a == b }",
-      "reason": "unsupported Rust type form `& ContentHash`",
+      "reason": "dropped non-doc attribute(s) on fn `digest_eq`: # [must_use]",
       "item_name": "digest_eq"
     },
     {
@@ -337,7 +337,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Parse a content-address string (`<algo>:<digest>`) into a [`ContentHash`].\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Exact` (deterministic)\"] # [doc = \" If the string is well-formed, the result is always the same for the same input.\"] # [doc = \"\"] # [doc = \" # Fallibility: `Err(MalformedDigest)` on bad shape (C1 — never-silent)\"] # [doc = \" A string that does not match the `<algo>:<digest>` pattern returns\"] # [doc = \" `Err(`[`MalformedDigest`]`)`, carrying:\"] # [doc = \" - the rejected input (so the caller can surface it), and\"] # [doc = \" - a description of *why* it was rejected (G11 dual projection).\"] # [doc = \"\"] # [doc = \" A zeroed / synthetic / sentinel digest is **never** returned for malformed input (C1).\"] # [doc = \"\"] # [doc = \" # Effects: none\"] pub fn parse_ref (s : & str) -> Result < ContentHash , MalformedDigest > { ContentHash :: parse (s) . ok_or_else (| | { let description = if ! s . contains (':') { \"missing ':' separator between algo and digest\" } else { let (algo , digest) = s . split_once (':') . expect (\"contains ':'\") ; if algo . is_empty () { \"algo part is empty\" } else if digest . is_empty () { \"digest part is empty\" } else if ! algo . bytes () . all (| b | b . is_ascii_lowercase () || b . is_ascii_digit ()) { \"algo must be [a-z0-9]+\" } else { \"digest must be [A-Za-z0-9_-]+\" } } ; MalformedDigest :: new (s , description) }) }",
-      "reason": "unsupported Rust type form `& str`",
+      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
       "item_name": "parse_ref"
     },
     {
@@ -357,7 +357,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" All names bound to `hash` in `registry`, as a list (0 or 1 entries with the current kernel;\"] # [doc = \" see [`name_registry`] module-level FLAG on the one-name limitation).\"] # [doc = \"\"] # [doc = \" Returns an empty `Vec` when no name is bound — **never** a sentinel (C1).\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Exact` (deterministic)\"] # [doc = \" A pure read of the name registry.\"] # [doc = \"\"] # [doc = \" # Fallibility: total (possibly empty list)\"] # [doc = \" The op cannot fail; an unbound hash yields an empty list (not an error).\"] # [doc = \"\"] # [doc = \" # Effects: none\"] # [doc = \"\"] # [doc = \" # FLAG: Q3\"] # [doc = \" See module-level FLAG Q3 on registry ownership.\"] # [must_use] pub fn names_of (registry : & NameRegistry , hash : & ContentHash) -> Vec < String > { registry . names_of (hash) }",
-      "reason": "unsupported Rust type form `& NameRegistry`",
+      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
       "item_name": "names_of"
     },
     {
@@ -397,7 +397,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl NameRegistry { # [doc = \" Create an empty registry.\"] # [must_use] pub fn new () -> Self { NameRegistry { inner : Names :: new () , } } # [doc = \" Bind a human name to a content hash. Re-binding a different name is allowed and does not\"] # [doc = \" change identity (that is the whole point — ADR-003).\"] # [doc = \"\"] # [doc = \" Returns the previous name for that hash, if any.\"] pub fn bind (& mut self , hash : ContentHash , name : impl Into < String >) -> Option < String > { self . inner . bind (hash , name) } # [doc = \" Look up the name bound to `hash`, returning `None` when the name is unbound.\"] # [doc = \"\"] # [doc = \" # C1 compliance\"] # [doc = \" Returns `None` (an honest absence) — never a sentinel hash (RFC-0016 §4.1 C1).\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Exact`\"] # [doc = \" The result is a deterministic, pure read of the name table (RFC-0001 §4.6).\"] # [must_use] pub fn resolve_name (& self , hash : & ContentHash) -> Option < & str > { self . inner . name_of (hash) } # [doc = \" All names bound to `hash`, as a list (0 or 1 entries with the current kernel; see module\"] # [doc = \" FLAG on the one-name limitation).\"] # [doc = \"\"] # [doc = \" Returns an empty `Vec` when no name is bound — never a sentinel (C1).\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Exact`\"] # [doc = \" Deterministic pure read (RFC-0001 §4.6).\"] # [must_use] pub fn names_of (& self , hash : & ContentHash) -> Vec < String > { match self . inner . name_of (hash) { Some (n) => vec ! [n . to_owned ()] , None => vec ! [] , } } # [doc = \" Number of names currently bound in the registry.\"] # [must_use] pub fn len (& self) -> usize { self . inner . len () } # [doc = \" Whether the registry is empty.\"] # [must_use] pub fn is_empty (& self) -> bool { self . inner . is_empty () } }",
-      "reason": "no member of this impl block could be transpiled (6 sub-issue(s)): impl method `new` body: unsupported expression form `NameRegistry { inner : Names :: new () , }`; impl method `bind` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence; impl method `resolve_name` signature: unsupported Rust type form `& ContentHash`; impl method `names_of` signature: unsupported Rust type form `& ContentHash`; impl method `len` signature: `usize` has a platform-dependent width; no fixed Binary{N} mapping; impl method `is_empty` body: unsupported expression form `self . inner`",
+      "reason": "no member of this impl block could be transpiled (6 sub-issue(s)): impl method `new` body: unsupported expression form `NameRegistry { inner : Names :: new () , }`; impl method `bind` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence; impl method `resolve_name` signature: `String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type; impl method `names_of` signature: `String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type; impl method `len` signature: `usize` has a platform-dependent width; no fixed Binary{N} mapping; impl method `is_empty` body: unsupported expression form `self . inner`",
       "item_name": "NameRegistry"
     },
     {
@@ -412,11 +412,11 @@
     }
   ],
   "category_counts": {
-    "DeriveAttr": 3,
+    "DeriveAttr": 4,
     "GenericBound": 1,
     "Impl": 7,
     "Import": 9,
-    "Other": 12,
+    "Other": 11,
     "Struct": 4,
     "TestItem": 5
   }

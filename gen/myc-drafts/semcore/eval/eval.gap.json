@@ -141,17 +141,17 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl L1Value { # [doc = \" The underlying L0 value, if this is a representation value; `None` for data or a `Substrate`\"] # [doc = \" handle (never-silent — neither has a repr value here, G2).\"] # [must_use] pub fn as_repr (& self) -> Option < & Value > { match self { L1Value :: Repr (v) => Some (v) , L1Value :: Data { .. } | L1Value :: Substrate (_) | L1Value :: Fn (_) => None , } } # [doc = \" The affine [`SubstrateHandle`](crate::substrate::SubstrateHandle), if this is a `Substrate`\"] # [doc = \" value; `None` otherwise (never-silent — a non-Substrate has no handle here, G2). The\"] # [doc = \" inspection window onto the opaque handle (its tag, opaque identity, and acquisition\"] # [doc = \" provenance — DN-71 §4.1; M-902).\"] # [must_use] pub fn as_substrate (& self) -> Option < & crate :: substrate :: SubstrateHandle > { match self { L1Value :: Substrate (h) => Some (h) , L1Value :: Repr (_) | L1Value :: Data { .. } | L1Value :: Fn (_) => None , } } # [doc = \" Project this L1 value onto the L0 [`CoreValue`] domain, resolving each constructor's\"] # [doc = \" name-keyed identity (`ty`/`ctor`) to its content-addressed `#T#i` [`mycelium_core::CtorRef`]\"] # [doc = \" through `registry` — the **same** registry the elaborator built (RFC-0011 §4.3). This is the\"] # [doc = \" bridge that makes the M-210 differential meaningful on the data fragment: an L1-eval result\"] # [doc = \" and an elaborate→L0-interp result become comparable *as the same L0 value* (NFR-7). The data\"] # [doc = \" guarantee is the meet-summary [`Datum::new`] computes from the fields, identical on both\"] # [doc = \" paths. Returns `None` if a constructor is not in the registry (outside the r3 fragment).\"] # [must_use] pub fn to_core (& self , env : & crate :: checkty :: Env , registry : & DataRegistry) -> Option < CoreValue > { match self { L1Value :: Repr (v) => Some (CoreValue :: Repr (v . clone ())) , L1Value :: Data { ty , ctor , fields } => { let decl = env . types . get (ty) ? ; let index = decl . ctors . iter () . position (| c | c . name == * ctor) ? ; let ctor_ref = registry . ctor_ref (ty , u32 :: try_from (index) . ok () ?) ? ; let core_fields = fields . iter () . map (| f | f . to_core (env , registry)) . collect :: < Option < Vec < _ > > > () ? ; Some (CoreValue :: Data (Datum :: new (ctor_ref , core_fields))) } L1Value :: Substrate (_) => None , L1Value :: Fn (_) => None , } } }",
-      "reason": "no member of this impl block could be transpiled (3 sub-issue(s)): impl method `as_repr` signature: unsupported Rust type form `& Value`; impl method `as_substrate` signature: unsupported Rust type form `& crate :: substrate :: SubstrateHandle`; impl method `to_core` signature: unsupported Rust type form `& crate :: checkty :: Env`",
+      "reason": "no member of this impl block could be transpiled (3 sub-issue(s)): impl method `as_repr` body: unsupported match pattern form `L1Value :: Data { .. }`; impl method `as_substrate` signature: qualified type path `crate :: substrate :: SubstrateHandle` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5); impl method `to_core` signature: qualified type path `crate :: checkty :: Env` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "L1Value"
     },
     {
       "file": "crates/mycelium-l1/src/eval.rs",
       "line": 235,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "ReservedWord",
+      "rust_construct": "ReservedWord",
       "snippet": "# [doc = \" Whether `v` transitively contains a `Substrate` handle with the given `id` — the M-904 (DN-71\"] # [doc = \" §8 FLAG-4) scope-exit-release **escape check**: a handle still reachable from a scope's own\"] # [doc = \" result (directly, or nested inside a constructed `Data` value) must never be released, even if\"] # [doc = \" it was never explicitly `consume`d. `L1Value` is finite and acyclic by construction (`Data`'s\"] # [doc = \" own doc comment — every field existed before its containing value), so this recursion always\"] # [doc = \" terminates and is a **precise** (not merely approximating) check for everything the v0 evaluator\"] # [doc = \" can construct — never a false negative that would let a live, still-reachable handle be wrongly\"] # [doc = \" released (G2).\"] fn value_contains_substrate_id (v : & L1Value , id : u64) -> bool { match v { L1Value :: Substrate (h) => h . id () == id , L1Value :: Data { fields , .. } => fields . iter () . any (| f | value_contains_substrate_id (f , id)) , L1Value :: Repr (_) | L1Value :: Fn (_) => false , } }",
-      "reason": "unsupported Rust type form `& L1Value`",
+      "reason": "match pattern constructor `Substrate` collides with a Mycelium reserved word — emitting it verbatim would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5)",
       "item_name": "value_contains_substrate_id"
     },
     {
@@ -161,7 +161,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Whether the `popped` scope binding is a live `Substrate` handle that **escapes** into any of the\"] # [doc = \" `into` values — the multi-value companion to the single-value `escaping` check inside\"] # [doc = \" [`Evaluator::release_if_abandoned`]. Used at the `LetPop` scope-exit in `enter_call`, where a\"] # [doc = \" let-bound handle can only reach the callee through the call's arguments (`argv`): if it escapes,\"] # [doc = \" the scope-exit release is suppressed (the callee now owns it). Factored out of the previously\"] # [doc = \" inlined `matches!` so the escape test lives alongside `value_contains_substrate_id` rather than\"] # [doc = \" being duplicated (DRY; PR #1189 nit).\"] fn substrate_escapes_into (popped : & (String , L1Value) , into : & [L1Value]) -> bool { matches ! (& popped . 1 , L1Value :: Substrate (h) if into . iter () . any (| a | value_contains_substrate_id (a , h . id ()))) }",
-      "reason": "unsupported Rust type form `& (String , L1Value)`",
+      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
       "item_name": "substrate_escapes_into"
     },
     {
@@ -191,7 +191,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl core :: fmt :: Display for ForageError { fn fmt (& self , f : & mut core :: fmt :: Formatter < '_ >) -> core :: fmt :: Result { match self { ForageError :: NoCandidates => write ! (f , \"`@forage` has no placement candidates (DN-63 §3.5 FLAG-14): the worker- \\\n                 availability bitmask is all-zero — an explicit refusal, never a silent placement\") , } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut core :: fmt :: Formatter < '_ >`",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut core :: fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
       "item_name": "ForageError"
     },
     {
@@ -221,7 +221,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl core :: fmt :: Display for L1Error { fn fmt (& self , f : & mut core :: fmt :: Formatter < '_ >) -> core :: fmt :: Result { match self { L1Error :: FuelExhausted => write ! (f , \"evaluation exceeded its step budget\") , L1Error :: DepthExceeded { limit } => write ! (f , \"evaluation exceeded its recursion-depth budget ({limit}) — explicit by design \\\n                 (raise with `Evaluator::with_depth`; the host stack is not the limit)\") , L1Error :: Kernel (e) => write ! (f , \"kernel refusal: {e}\") , L1Error :: GuaranteeTooWeak { site , asserted , actual , } => write ! (f , \"in `{site}`: asserted `@ {asserted:?}` but the value's tag is {actual:?} — an \\\n                 annotation may only weaken (VR-5)\") , L1Error :: Unsupported { site , what } => write ! (f , \"in `{site}`: {what}\") , L1Error :: Stuck { site , why } => write ! (f , \"in `{site}`: stuck — {why} (the typechecker should have refused this program)\") , L1Error :: EffectBudget (e) => write ! (f , \"{e}\") , L1Error :: Forage (e) => write ! (f , \"{e}\") , } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut core :: fmt :: Formatter < '_ >`",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut core :: fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
       "item_name": "L1Error"
     },
     {
@@ -421,7 +421,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Forward a bridge refusal (shared with elaboration) as an explicit evaluator refusal.\"] fn unsupported (site : & str , e : & ElabError) -> L1Error { L1Error :: Unsupported { site : site . to_owned () , what : e . to_string () , } }",
-      "reason": "unsupported Rust type form `& str`",
+      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
       "item_name": "unsupported"
     }
   ],

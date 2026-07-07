@@ -1,6 +1,8 @@
 {
   "source": "crates/mycelium-std-content/src/lib.rs",
-  "emitted_items": [],
+  "emitted_items": [
+    "digest_eq"
+  ],
   "gaps": [
     {
       "file": "crates/mycelium-std-content/src/lib.rs",
@@ -109,7 +111,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" The content hash of a runtime *value*: its identity-bearing `Repr` + payload, with all dynamic\"] # [doc = \" [`Meta`](mycelium_core::Meta) excluded (RFC-0001 §4.6).\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Exact` (deterministic)\"] # [doc = \" A content hash is a pure function of the value's normalized structure (RFC-0001 §4.6 WF4).\"] # [doc = \" Two values with identical `Repr` + payload but different provenance/bounds **collide**\"] # [doc = \" (same hash — correct, metadata is not identity — ADR-003). Two values differing in `Repr`\"] # [doc = \" get different hashes (paradigm is identity-bearing — RFC-0001 §4.6).\"] # [doc = \"\"] # [doc = \" # Fallibility: total\"] # [doc = \" Every value has an identity; this op cannot fail. (C1: no failure mode to hide.)\"] # [doc = \"\"] # [doc = \" # Effects: none\"] # [doc = \" Pure computation; no IO, time, randomness, or allocation beyond the hash output.\"] # [doc = \"\"] # [doc = \" # FLAG: Q2\"] # [doc = \" If the kernel adds a refusal path for mixed-paradigm composite values, this signature will\"] # [doc = \" change to `Result<ContentHash, IdentityRefusal>`. See module-level FLAG Q2.\"] # [must_use] pub fn hash_of_value (v : & mycelium_core :: Value) -> ContentHash { v . content_hash () }",
-      "reason": "unsupported Rust type form `& mycelium_core :: Value`",
+      "reason": "qualified type path `mycelium_core :: Value` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "hash_of_value"
     },
     {
@@ -119,17 +121,17 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" The content hash of a definition (hash-of-AST; RFC-0001 §4.6 `hash(def)`):\"] # [doc = \" ```text\"] # [doc = \" H( normalize(structure(def)) ‖ types_with_repr(def) ‖ static_contract(def) )\"] # [doc = \" ```\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Exact` (deterministic)\"] # [doc = \" Identity is over the α-normalized structure, types-with-`Repr`, constant literals, operator\"] # [doc = \" names, and swap contracts — **never** over binder names or dynamic value metadata (ADR-003).\"] # [doc = \" Consequences (RFC-0001 §4.6 acceptance):\"] # [doc = \" - Trivial renames do **not** change the hash (α-renaming a binder is not identity).\"] # [doc = \" - Identical definitions **collide** (same hash — correct, not a bug).\"] # [doc = \" - A paradigm change **does** change the hash (types include `Repr`).\"] # [doc = \"\"] # [doc = \" # Fallibility: total\"] # [doc = \" Every definition node has a content identity; this op cannot fail. (C1.)\"] # [doc = \"\"] # [doc = \" # Effects: none\"] # [must_use] pub fn hash_of_def (d : & mycelium_core :: Node) -> ContentHash { d . content_hash () }",
-      "reason": "unsupported Rust type form `& mycelium_core :: Node`",
+      "reason": "qualified type path `mycelium_core :: Node` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "hash_of_def"
     },
     {
       "file": "crates/mycelium-std-content/src/lib.rs",
       "line": 146,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "# [doc = \" Identity equality by digest: two content hashes are **the same identity** iff their digests\"] # [doc = \" are equal.\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Exact` (deterministic)\"] # [doc = \" Digest comparison is a pure byte-equality test; it is reflexive, symmetric, and transitive.\"] # [doc = \"\"] # [doc = \" # Fallibility: total\"] # [doc = \" Comparing two digests cannot fail.\"] # [doc = \"\"] # [doc = \" # Effects: none\"] # [doc = \"\"] # [doc = \" # Note\"] # [doc = \" This is *not* the same as structural `==` on the values themselves: two values with\"] # [doc = \" different runtime state but the same normalized content (e.g. differing only in provenance)\"] # [doc = \" are `digest_eq` (same identity) even if `v1 != v2` structurally (ADR-003).\"] # [must_use] pub fn digest_eq (a : & ContentHash , b : & ContentHash) -> bool { a == b }",
-      "reason": "unsupported Rust type form `& ContentHash`",
+      "reason": "dropped non-doc attribute(s) on fn `digest_eq`: # [must_use]",
       "item_name": "digest_eq"
     },
     {
@@ -149,7 +151,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Parse a content-address string (`<algo>:<digest>`) into a [`ContentHash`].\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Exact` (deterministic)\"] # [doc = \" If the string is well-formed, the result is always the same for the same input.\"] # [doc = \"\"] # [doc = \" # Fallibility: `Err(MalformedDigest)` on bad shape (C1 — never-silent)\"] # [doc = \" A string that does not match the `<algo>:<digest>` pattern returns\"] # [doc = \" `Err(`[`MalformedDigest`]`)`, carrying:\"] # [doc = \" - the rejected input (so the caller can surface it), and\"] # [doc = \" - a description of *why* it was rejected (G11 dual projection).\"] # [doc = \"\"] # [doc = \" A zeroed / synthetic / sentinel digest is **never** returned for malformed input (C1).\"] # [doc = \"\"] # [doc = \" # Effects: none\"] pub fn parse_ref (s : & str) -> Result < ContentHash , MalformedDigest > { ContentHash :: parse (s) . ok_or_else (| | { let description = if ! s . contains (':') { \"missing ':' separator between algo and digest\" } else { let (algo , digest) = s . split_once (':') . expect (\"contains ':'\") ; if algo . is_empty () { \"algo part is empty\" } else if digest . is_empty () { \"digest part is empty\" } else if ! algo . bytes () . all (| b | b . is_ascii_lowercase () || b . is_ascii_digit ()) { \"algo must be [a-z0-9]+\" } else { \"digest must be [A-Za-z0-9_-]+\" } } ; MalformedDigest :: new (s , description) }) }",
-      "reason": "unsupported Rust type form `& str`",
+      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
       "item_name": "parse_ref"
     },
     {
@@ -169,7 +171,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" All names bound to `hash` in `registry`, as a list (0 or 1 entries with the current kernel;\"] # [doc = \" see [`name_registry`] module-level FLAG on the one-name limitation).\"] # [doc = \"\"] # [doc = \" Returns an empty `Vec` when no name is bound — **never** a sentinel (C1).\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Exact` (deterministic)\"] # [doc = \" A pure read of the name registry.\"] # [doc = \"\"] # [doc = \" # Fallibility: total (possibly empty list)\"] # [doc = \" The op cannot fail; an unbound hash yields an empty list (not an error).\"] # [doc = \"\"] # [doc = \" # Effects: none\"] # [doc = \"\"] # [doc = \" # FLAG: Q3\"] # [doc = \" See module-level FLAG Q3 on registry ownership.\"] # [must_use] pub fn names_of (registry : & NameRegistry , hash : & ContentHash) -> Vec < String > { registry . names_of (hash) }",
-      "reason": "unsupported Rust type form `& NameRegistry`",
+      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
       "item_name": "names_of"
     },
     {

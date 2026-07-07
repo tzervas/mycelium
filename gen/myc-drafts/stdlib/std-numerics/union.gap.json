@@ -107,7 +107,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl core :: fmt :: Display for NumErr { fn fmt (& self , f : & mut core :: fmt :: Formatter < '_ >) -> core :: fmt :: Result { match self { NumErr :: BadEps => write ! (f , \"eps is negative or non-finite (out-of-range ε)\") , NumErr :: BadDelta => { write ! (f , \"delta is not in [0,1] or non-finite (out-of-range δ)\") } NumErr :: NoRule => write ! (f , \"no sound ε propagation rule for this op/configuration (refuse, never fabricate)\") , NumErr :: NormMismatch => { write ! (f , \"input norms disagree — cannot combine without norm-coercion rule\") } NumErr :: Overflow => write ! (f , \"composed ε overflowed to non-finite — refused (not a vacuous bound)\") , } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut core :: fmt :: Formatter < '_ >`",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut core :: fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
       "item_name": "NumErr"
     },
     {
@@ -127,7 +127,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl core :: fmt :: Display for CheckErr { fn fmt (& self , f : & mut core :: fmt :: Formatter < '_ >) -> core :: fmt :: Result { match self { CheckErr :: Rejected { recomputed , claimed , } => write ! (f , \"claimed ε={claimed:.2e} is tighter than the re-derivation {recomputed:.2e} \\\n                 (rejected — not a silent pass)\") , CheckErr :: Malformed => write ! (f , \"certificate is ill-formed (malformed)\") , } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut core :: fmt :: Formatter < '_ >`",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut core :: fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
       "item_name": "CheckErr"
     },
     {
@@ -197,7 +197,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Compose the **δ union bound** of a slice of `Probability`-kind bounds, taking the **meet** of\"] # [doc = \" their strengths (spec §3 `union_delta`; M-202; ADR-010 §2).\"] # [doc = \"\"] # [doc = \" `P(⋃ Eᵢ) ≤ min(1, Σδᵢ)`. The sum is **outward-rounded** by the `mycelium-numerics` kernel\"] # [doc = \" so the composed δ is a true upper bound (banked guard 1 / A2-01).\"] # [doc = \"\"] # [doc = \" Returns `Err(NumErr::NoRule)` if the slice is empty (refuse, not fabricate; M-204 posture).\"] # [doc = \" Returns `Err(NumErr::BadDelta)` if any input is not a `Probability` bound or has a malformed δ.\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" - [`NumErr::NoRule`] when `bounds` is empty.\"] # [doc = \" - [`NumErr::BadDelta`] when any bound is not a `Probability` kind or has an invalid δ.\"] pub fn union_delta (bounds : & [& Bound]) -> Result < Bound , NumErr > { if bounds . is_empty () { return Err (NumErr :: NoRule) ; } let prob_bounds : Vec < ProbBound > = bounds . iter () . map (| b | match b . kind { BoundKind :: Probability { delta } => ProbBound :: new (delta) . ok_or (NumErr :: BadDelta) , _ => Err (NumErr :: BadDelta) , }) . collect :: < Result < _ , _ > > () ? ; let composed = ProbBound :: union (prob_bounds . iter ()) ; let strength = bounds . iter () . map (| b | basis_strength (& b . basis)) . fold (GuaranteeStrength :: TOP , GuaranteeStrength :: meet) ; let basis = composed_prob_basis (strength , bounds) ; Ok (Bound { kind : BoundKind :: Probability { delta : composed . delta () , } , basis , }) }",
-      "reason": "unsupported Rust type form `& [& Bound]`",
+      "reason": "unsupported Rust type form `[& Bound]`",
       "item_name": "union_delta"
     },
     {
@@ -207,7 +207,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" The single sanctioned cross-kernel inference (spec §3 `accuracy_to_probability`; ADR-010 §4).\"] # [doc = \"\"] # [doc = \" Given an `ErrorBound`-kind bound and a tolerance `tau ≥ 0`, returns a `Probability`-kind bound:\"] # [doc = \" - `eps ≤ tau` → failure probability = `acc_delta` (the accuracy confidence carries over).\"] # [doc = \" - `eps > tau` → honest worst case `δ = 1` (the bound permits a violation; never a silent tighten).\"] # [doc = \"\"] # [doc = \" `acc_delta` is the failure probability of the accuracy claim itself (e.g. from a\"] # [doc = \" `Probability`-kind companion); pass `0.0` for an accuracy bound that holds with certainty.\"] # [doc = \"\"] # [doc = \" This is the **one** legal ε↔δ mixing; no other cross-kernel inference is exposed (ADR-010 §4).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" - [`NumErr::NoRule`] when `acc` is not an `Error`-kind bound.\"] # [doc = \" - [`NumErr::BadEps`] when `acc` has a malformed ε.\"] # [doc = \" - [`NumErr::BadDelta`] when `tau < 0` or `acc_delta ∉ [0, 1]`.\"] pub fn accuracy_to_probability (acc : & Bound , tau : f64 , acc_delta : f64) -> Result < Bound , NumErr > { let (eps , norm) = match acc . kind { BoundKind :: Error { eps , norm } => (eps , norm) , _ => return Err (NumErr :: NoRule) , } ; let error_bound_val = ErrorBound :: new (eps , norm) . ok_or (NumErr :: BadEps) ? ; let prob = kern_accuracy_to_probability (error_bound_val , tau , acc_delta) . ok_or (NumErr :: BadDelta) ? ; let strength = basis_strength (& acc . basis) ; let basis = match strength { GuaranteeStrength :: Proven => BoundBasis :: ProvenThm { citation : format ! (\"ADR-010 §4 accuracy→probability: eps={eps:.2e} ≤ tau={tau:.2e} ({})\" , match & acc . basis { BoundBasis :: ProvenThm { citation } => citation . as_str () , _ => \"inherited\" , }) , } , GuaranteeStrength :: Empirical => { let (trials , method) = match & acc . basis { BoundBasis :: EmpiricalFit { trials , method } => (* trials , method . as_str ()) , _ => (0 , \"inherited\") , } ; BoundBasis :: EmpiricalFit { trials , method : format ! (\"ADR-010 §4 accuracy→probability: {method}\") , } } _ => BoundBasis :: UserDeclared , } ; Ok (Bound { kind : BoundKind :: Probability { delta : prob . delta () , } , basis , }) }",
-      "reason": "unsupported Rust type form `& Bound`",
+      "reason": "`f64` — `scalar` only appears inside Dense{N,scalar}/ambient_params in the grammar, never as a bare value type; no confirmed base_type arm",
       "item_name": "accuracy_to_probability"
     },
     {
@@ -217,7 +217,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Re-validate a claimed ε bound for `op` over `input_bounds` via the M-203 tier-i checker.\"] # [doc = \"\"] # [doc = \" - **`Ok(())`**: the claimed bound is `≥` the kernel re-derivation (sound).\"] # [doc = \" - **`Err(CheckErr::Rejected{..})`**: the claim is tighter — rejected (not a silent pass;\"] # [doc = \"   RFC-0002 §2; ADR-010 tier-i).\"] # [doc = \" - **`Err(CheckErr::Malformed)`**: the certificate cannot be re-derived (bad arity, norm\"] # [doc = \"   mismatch).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" Returns [`CheckErr`] when the claim is tighter than the re-derivation or malformed.\"] pub fn check_error (input_bounds : & [ErrorBound] , op : ErrorOp , claimed : ErrorBound ,) -> Result < () , CheckErr > { match check_error_claim (input_bounds , op , claimed) { CheckOutcome :: Valid => Ok (()) , CheckOutcome :: Rejected { recomputed , claimed , } => Err (CheckErr :: Rejected { recomputed , claimed , }) , CheckOutcome :: Malformed => Err (CheckErr :: Malformed) , } }",
-      "reason": "unsupported Rust type form `& [ErrorBound]`",
+      "reason": "unsupported Rust type form `[ErrorBound]`",
       "item_name": "check_error"
     },
     {
@@ -227,7 +227,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Re-validate a claimed δ union bound over `input_bounds` via the M-203 tier-i checker.\"] # [doc = \"\"] # [doc = \" - **`Ok(())`**: the claimed δ is `≥` the re-derivation (sound).\"] # [doc = \" - **`Err(CheckErr::Rejected{..})`**: the claim is tighter — rejected (not a silent pass).\"] # [doc = \" - **`Err(CheckErr::Malformed)`**: reserved; currently fires only on empty input.\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" Returns [`CheckErr`] when the claim is tighter or malformed.\"] pub fn check_union (input_bounds : & [ProbBound] , claimed : ProbBound) -> Result < () , CheckErr > { match check_union_claim (input_bounds , claimed) { CheckOutcome :: Valid => Ok (()) , CheckOutcome :: Rejected { recomputed , claimed , } => Err (CheckErr :: Rejected { recomputed , claimed , }) , CheckOutcome :: Malformed => Err (CheckErr :: Malformed) , } }",
-      "reason": "unsupported Rust type form `& [ProbBound]`",
+      "reason": "unsupported Rust type form `[ProbBound]`",
       "item_name": "check_union"
     },
     {
@@ -237,7 +237,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Derive an honest `BoundBasis` for a composed probability bound at the meet `strength`.\"] # [doc = \" Mirrors the `composed_basis` logic in `mycelium-numerics::cert` (spec §4.4; VR-5).\"] fn composed_prob_basis (strength : GuaranteeStrength , bases : & [& Bound]) -> BoundBasis { match strength { GuaranteeStrength :: Exact | GuaranteeStrength :: Proven => { let inputs : Vec < & str > = bases . iter () . filter_map (| b | match & b . basis { BoundBasis :: ProvenThm { citation } => Some (citation . as_str ()) , _ => None , }) . collect () ; let citation = if inputs . is_empty () { \"ADR-010 §2 union-bound δ-composition\" . to_owned () } else { format ! (\"ADR-010 §2 union-bound δ-composition over [{}]\" , inputs . join (\"; \")) } ; BoundBasis :: ProvenThm { citation } } GuaranteeStrength :: Empirical => { let trials = bases . iter () . filter_map (| b | match & b . basis { BoundBasis :: EmpiricalFit { trials , .. } => Some (* trials) , _ => None , }) . min () . unwrap_or (0) ; BoundBasis :: EmpiricalFit { trials , method : \"composed (ADR-010 §2 union-bound δ)\" . to_owned () , } } GuaranteeStrength :: Declared => BoundBasis :: UserDeclared , } }",
-      "reason": "unsupported Rust type form `& [& Bound]`",
+      "reason": "unsupported Rust type form `[& Bound]`",
       "item_name": "composed_prob_basis"
     },
     {

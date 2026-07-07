@@ -72,7 +72,8 @@
       "category_counts": {
         "DeriveAttr": 1,
         "Import": 3,
-        "Other": 13
+        "MultiStmtBody": 1,
+        "Other": 12
       }
     }
   ],
@@ -87,7 +88,8 @@
       "Impl": 14,
       "Import": 9,
       "MacroInvocation": 3,
-      "Other": 21,
+      "MultiStmtBody": 1,
+      "Other": 20,
       "PayloadVariant": 2,
       "ReservedWord": 4,
       "Struct": 4,
