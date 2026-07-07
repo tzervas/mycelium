@@ -13012,7 +13012,7 @@ issues:
   - id: M-1008
     title: "semcore Stage-5 increment 3: checkty unification + type resolution (unify/resolve_ty/tuples)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P2, status:todo]
+    labels: [phase:5, type:feature, area:language, priority:P2, status:done]
     epic: E18-1
     depends_on: [M-1007]
     doc_refs:
@@ -13037,10 +13037,17 @@ issues:
       - unify/resolve_ty/tuple helpers ported into semcore.myc; native `myc check` ok; live-oracle Rust
         differential over accept + conflict cases (Empirical); no logic *.rs modified.
 
+      DONE (2026-07-07, PR #1238 @ 41e15748 + integration): unify/resolve_ty/tuple_type_name/
+      tuple_ctor_name/synthetic_tuple_data + dec_u32 ported into semcore.myc; native myc check ok;
+      live-oracle differential compiler_stage5_unify.rs (8 tests, accept + never-silent conflict Err)
+      vs the real checkty::* computed at test time; no logic *.rs touched. FLAG-semcore-13/14/15
+      (dead-arm collapse + value-threaded accumulators, review-verified behavior-preserving).
+
+
   - id: M-1009
     title: "semcore Stage-5 increment 4: mono name-mangling family (mangle_ty/decl/ctor/method/arrow)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P2, status:todo]
+    labels: [phase:5, type:feature, area:language, priority:P2, status:done]
     epic: E18-1
     depends_on: [M-740]
     doc_refs:
@@ -13069,10 +13076,16 @@ issues:
         live-oracle Rust differential (bytes equality vs mono::mangle_*) across every Ty kind + the
         injectivity-boundary cases (Empirical); no logic *.rs modified.
 
+      DONE (2026-07-07, PR #1238 @ 41e15748): the mono mangle family + dec_u32 ported; myc check ok;
+      bytes-equality differential compiler_stage5_mangle.rs (7 tests, injectivity boundary) vs
+      mono::mangle_*. mangle_ty_in_ty/item_key DEFERRED (FLAG-semcore-17 -- module-private, no reachable
+      oracle; reached by a future increment only if visibility is lifted, out of scope here). No logic *.rs touched.
+
+
   - id: M-1010
     title: "semcore Stage-5 increment 5: mono free-variable + binder analysis (free_vars/pattern_binders)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P2, status:todo]
+    labels: [phase:5, type:feature, area:language, priority:P2, status:done]
     epic: E18-1
     depends_on: [M-740]
     doc_refs:
@@ -13096,6 +13109,11 @@ issues:
       - free_vars/free_vars_at/pattern_binders/pattern_binders_at ported into semcore.myc; native
         `myc check` ok; live-oracle Rust differential over shadowing + nested-binder + capture cases
         (Empirical); no logic *.rs modified.
+
+      DONE (2026-07-07, PR #1238 @ 41e15748): free_vars (+ worker/pattern_binder_names) ported; myc
+      check ok; differential compiler_stage5_freevars.rs (4 tests, Let/Match/For/Lambda + shadowing).
+      FLAG-semcore-18 (mutable accumulators -> value-threading, review-verified equivalent). No logic *.rs touched.
+
 
   - id: M-1011
     title: "semcore Stage-5 increment 6: checkty literal + pattern typing (lit_ty_of/normalize_pattern/infer_type)"
@@ -13123,6 +13141,13 @@ issues:
       Definition of Done:
       - lit_ty_of/literal_key/normalize_pattern/infer_type ported into semcore.myc; native `myc check`
         ok; live-oracle Rust differential (Empirical); no logic *.rs modified.
+
+      PARTIAL (2026-07-07, PR #1238 @ 41e15748): the pure leaves lit_ty_of/literal_key/normalize_pattern
+      ported; myc check ok; differential compiler_stage5_normpat.rs (5 tests, every Pat arm + refusal).
+      FLAG-semcore-19/20/21. RESIDUAL keeping this status:todo: this DoD lists infer_type, which is NOT a
+      pure leaf -- it builds a Cx and calls the ~7k-line inference engine (the SCC's heart) -- so it is
+      DEFERRED to the heavy-core M-1013; M-1011 closes when infer_type lands there (per the PR #1238 review).
+
 
   - id: M-1012
     title: "semcore Stage-5 increment 7: L0 Value/Repr model + elab pure lowering helpers"

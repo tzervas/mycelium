@@ -11,6 +11,21 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### M-1008/M-1009/M-1010 + M-1011(partial) — semcore pure-leaf port wave (M-993 ladder) (2026-07-07)
+
+Four pure/leaf increments of the M-993 semcore SCC port land in `lib/compiler/semcore.myc`
+(1721 to 2541 lines), each a faithful arm-by-arm port with a live-oracle differential vs the real
+Rust function (verdicts computed at test time, discrimination probes, never hand-derived): unify /
+resolve_ty / tuple helpers (M-1008), the mono mangle family (M-1009), free_vars / pattern_binders
+(M-1010), and lit_ty_of / literal_key / normalize_pattern (M-1011). 47 stage5 differential tests
+green; native `myc check lib/compiler/semcore.myc` ok; no logic *.rs touched (only new in-crate
+test modules + an append-only DN-26 note). FLAG-semcore-13..21 document each surface-inexpressible
+deviation (dead-arm collapses, value-threaded accumulators, ordered assoc-lists), review-verified
+behavior-preserving. Honest deferrals: `infer_type` (a wrapper over the un-ported inference SCC) to
+M-1013 -- M-1011 stays `todo` on that residual; `mangle_ty_in_ty`/`item_key` (private, no oracle) to
+a later increment. M-1008/M-1009/M-1010 close; M-993 advances, not closed.
+
+
 ### M-1015 — docs/tero-index/: the whole-corpus Layer-1 citation index (DN-87 / E39-1) (2026-07-07)
 
 mycelium-tero Layer 1 lands: the api-index/lib-index deterministic-index pattern generalized over
