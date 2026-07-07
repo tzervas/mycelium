@@ -958,6 +958,7 @@ version = "0.0.0"
 dependencies = [
  "axum",
  "mycelium-doc",
+ "mycelium-vsa",
  "serde",
  "serde_json",
  "tokio",

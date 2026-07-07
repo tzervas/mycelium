@@ -49,6 +49,7 @@
 mod changelog;
 mod docs;
 mod emit;
+mod eval;
 mod front;
 mod index;
 mod issues;
@@ -56,6 +57,7 @@ mod load;
 mod model;
 mod query;
 mod skills;
+mod vsa2;
 mod walk;
 
 pub use emit::{write_json, write_markdown};
@@ -72,6 +74,17 @@ pub use query::{Answer, Citation, Explain, Query, QueryEngine, RankedHit, Refusa
 pub use front::auth::{AuthError, Scope, TokenTable, TokenTableError};
 pub use front::http::{serve_http, AppState};
 pub use front::mcp::serve_mcp_stdio;
+
+// M-1018 — Layer 2 (the VSA semantic layer) + the Empirical eval gate. The public surface is
+// deliberately minimal (KC-3): the Layer-2 index/answer/refusal/explain a consumer reads, plus the
+// eval harness + gate types the `tero-eval` binary and the honesty gate need. Layer 2 lands behind
+// the `layer2_enabled` front flag, which stays `false` until the eval gate opens (DN-87 §6.1).
+pub use eval::verdict::{
+    decide_gate, latency_classify, GateEvidence, GateVerdict, LatencyBaseline, LatencyEntry,
+    LatencyOutcome, REGRESSION_BAND,
+};
+pub use eval::{host_tag, run_eval, EvalQuestion, EvalReport, EvalSuite, SystemMetrics};
+pub use vsa2::{Layer2Answer, Layer2Explain, Layer2Index, Layer2Refusal, TERO_L2_SEED};
 
 /// The program's one-line summary, used by the (future) API fronts' identify endpoint.
 #[must_use]
