@@ -2067,15 +2067,13 @@ fn marshal_discriminates_traits() {
 // The port returns a `Vec[InstanceInfo]`; both sides normalize to a `BTreeMap<(String,String),
 // InstanceInfo>` keyed by `(trait_name, type_head(for_ty))` (order-insensitive), `Err` → `()`.
 //
-// FLAG-semcore-33 (test-harness constructability, NOT a port-expressibility gap): the oracle's
-// `checkty::CoherenceView.types` field is module-PRIVATE (only `.traits` is `pub(crate)`), so the test
-// module cannot build an oracle `CoherenceView` with a populated data-type set. The eleven cases below
-// therefore all use an EMPTY coherence-types set (every acceptance driven by trait-locality or the
-// primitive-repr arm) — the full live differential the harness can express. The one remaining acceptance
-// arm — `type_local` via a `Data` name in `coherence.types` — is covered PORT-SIDE-ONLY by
-// `register_instances_type_local_via_data_port_only` (an exact hand-built expected value), pending a
-// one-line checkty.rs change (make `CoherenceView.types` `pub(crate)` like `traits`, or add a test
-// constructor) that a later increment can use to upgrade it to a full live differential.
+// FLAG-semcore-33 RESOLVED: `checkty::CoherenceView.types` was widened to `pub(crate)` (matching
+// `.traits`) in the same change, so the test module now constructs an oracle `CoherenceView` with a
+// populated data-type set — the `type_local`-via-`Data` acceptance arm is a full LIVE differential
+// (`register_instances_type_local_via_data`), not a port-side-only hand-built expectation. The eleven
+// cases below drive acceptance via trait-locality or the primitive-repr arm; the Data-membership arm
+// is its own live case. (The widening is the white-box in-crate-test pattern CLAUDE.md endorses — the
+// same one PR-1 used for `resolve_ctors`/`first_duplicate`.)
 // ═══════════════════════════════════════════════════════════════════════════════════════════════════
 
 // ── fixture constructors (test bodies stay `assert over a case`) ────────────────────────────────────
@@ -2366,15 +2364,15 @@ fn register_instances_cases() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
-// register_instances type_local-via-Data (FLAG-semcore-33) — PORT-ONLY behavioural check. The oracle
-// input can't be constructed (`CoherenceView.types` is module-private — see the section header), so this
-// asserts the PORT's Data-membership orphan arm directly against a hand-built expected value: trait NOT
-// phylum-local, but `for Foreign` with `Foreign` IN coherence.types ⇒ Ok, keyed ("Show","Data:Foreign").
-// This is the one acceptance arm the eleven live cases can't reach; it upgrades to a full live
-// differential the moment checkty.rs exposes `CoherenceView.types` (proposed in FLAG-semcore-33).
+// register_instances type_local-via-Data (FLAG-semcore-33 RESOLVED) — a full LIVE differential of the
+// Data-membership orphan arm: trait NOT phylum-local, but `for Foreign` with `Foreign` IN
+// coherence.types ⇒ Ok, keyed ("Show","Data:Foreign"). Now that `CoherenceView.types` is `pub(crate)`,
+// the oracle `CoherenceView` is constructed with the populated types set and the expectation comes from
+// the REAL `checkty::register_instances`, not a hand-built value — the one acceptance arm the eleven
+// trait-locality/primitive-repr cases can't reach, now witnessed live like the rest.
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 #[test]
-fn register_instances_type_local_via_data_port_only() {
+fn register_instances_type_local_via_data() {
     let shells = vec![shell("Foreign", &[])];
     let nod = nodule(vec![
         trait1("Show", "show"),
@@ -2388,20 +2386,12 @@ fn register_instances_type_local_via_data_port_only() {
     let tmap = types_map(&shells);
     let traits_map = register_traits(&tmap, &nod).expect("fixture traits register");
     let traits: Vec<TraitInfo> = traits_map.values().cloned().collect();
-    // The hand-built expected registry: one instance, keyed by (trait, Data head), with the impl's one
-    // provided method name (trait NOT in coherence.traits; `Foreign` IS in coherence.types).
-    let mut expected: BTreeMap<(String, String), InstanceInfo> = BTreeMap::new();
-    expected.insert(
-        ("Show".to_owned(), "Data:Foreign".to_owned()),
-        InstanceInfo {
-            trait_name: "Show".to_owned(),
-            trait_args: vec![],
-            for_ty: Ty::Data("Foreign".to_owned(), vec![]),
-            methods: vec!["show".to_owned()],
-        },
-    );
+    // Live oracle: trait NOT in coherence.traits, but `Foreign` IS in coherence.types ⇒ type_local ⇒ Ok.
+    let mut coh = CoherenceView::default();
+    coh.types.insert("Foreign".to_owned());
+    let want = register_instances(&tmap, &traits_map, &coh, &nod).map_err(|_| ());
     assert_l1_marshal(
-        "register_instances_type_local_via_data_port_only",
+        "register_instances_type_local_via_data",
         &format!(
             "fn main() => Result[Vec[InstanceInfo], Bytes] = register_instances({}, {}, {}, {});\n",
             encode_data_info_list(&shells),
@@ -2410,7 +2400,7 @@ fn register_instances_type_local_via_data_port_only() {
             encode_nodule(&nod)
         ),
         |v| decode_result(v, decode_instances_map),
-        Ok(expected),
+        want,
     );
 }
 
