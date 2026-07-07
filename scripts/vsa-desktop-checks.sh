@@ -16,8 +16,9 @@
 # yields a partial, honestly-labelled result set.
 #
 # USAGE (from the repo root, on the desktop):
-#   bash scripts/vsa-desktop-checks.sh                     # full bundle
-#   PROPTEST_CASES=1024 bash scripts/vsa-desktop-checks.sh # heavier property tests
+#   bash scripts/vsa-desktop-checks.sh                     # full bundle (PROPTEST_CASES=64 default)
+#   PROPTEST_CASES=256 bash scripts/vsa-desktop-checks.sh  # justfile full-tier parity batch count
+#   PROPTEST_CASES=1024 bash scripts/vsa-desktop-checks.sh # heaviest documented property-test run
 #   VSA_SKIP_MUTANTS=1 bash scripts/vsa-desktop-checks.sh  # skip cargo-mutants (the slowest stage)
 #   VSA_IGNORED_ONLY=1 bash scripts/vsa-desktop-checks.sh  # run ONLY the #[ignore] heavy instruments
 #                                                          #   (cargo --ignored --nocapture) into a SEPARATE
@@ -34,7 +35,13 @@ source "$SCRIPT_DIR/lib.sh"
 cd "$REPO_ROOT" || exit 1
 
 RESULTS_DIR="${RESULTS_DIR:-$REPO_ROOT/experiments/results/vsa-m832}"
-PROPTEST_CASES="${PROPTEST_CASES:-256}"
+# Default 64 batches (each VSA proptest fn multiplies this into independent seed batches; the
+# resonator profile alone is 1,000 trials/batch at dim 4096). 64 in --release keeps the whole
+# bundle inside a desktop wall-clock envelope with far more statistical power than the old
+# 256-batch DEBUG default ever delivered; opt up (256 = justfile full-tier parity, 1024 = the
+# heaviest documented run) when you want the extra batches. (2026-07-06 fix: the original
+# 256-batch debug default pinned one core for 36+ min on resonator_profile alone.)
+PROPTEST_CASES="${PROPTEST_CASES:-64}"
 VSA_IGNORED_ONLY="${VSA_IGNORED_ONLY:-0}"
 mkdir -p "$RESULTS_DIR/obligations"
 
@@ -48,8 +55,11 @@ echo "  Emission tags: experiment = Empirical (trial-measured); proof obligation
 if [ "$VSA_IGNORED_ONLY" = 1 ]; then
   section "IGNORED-ONLY — heavy #[ignore] instruments (mycelium-vsa + mycelium-std-vsa, --ignored --nocapture)"
   if have cargo; then
-    MYC_TEST_TIER=full PROPTEST_CASES="$PROPTEST_CASES" \
-      cargo test -p mycelium-vsa -p mycelium-std-vsa -- --ignored --nocapture \
+    # --release: these are heavy numeric instruments — the debug profile is 10-50x slower here.
+    # (PROPTEST_CASES is the only live knob: no VSA test reads MYC_TEST_TIER — that var is
+    # consumed solely by scripts/checks/test.sh, so prefixing it here was an inert no-op.)
+    PROPTEST_CASES="$PROPTEST_CASES" \
+      cargo test --release -p mycelium-vsa -p mycelium-std-vsa -- --ignored --nocapture \
       2>&1 | tee "$RESULTS_DIR/vsa-crate-tests-ignored.log"
     ok "ignored instruments -> $RESULTS_DIR/vsa-crate-tests-ignored.log (Empirical)"
   else
@@ -63,8 +73,9 @@ fi
 # ── 1/4 · VSA crate durability (full tier, HIGH proptest) — DEFAULT run (EXCLUDES #[ignore]) ─────
 section "1/4 VSA crate durability — mycelium-vsa + mycelium-std-vsa (full tier, PROPTEST_CASES=$PROPTEST_CASES)"
 if have cargo; then
-  MYC_TEST_TIER=full PROPTEST_CASES="$PROPTEST_CASES" \
-    cargo test -p mycelium-vsa -p mycelium-std-vsa 2>&1 | tee "$RESULTS_DIR/vsa-crate-tests.log"
+  # --release: see the IGNORED-ONLY note — debug was the 36-min-single-core failure mode.
+  PROPTEST_CASES="$PROPTEST_CASES" \
+    cargo test --release -p mycelium-vsa -p mycelium-std-vsa 2>&1 | tee "$RESULTS_DIR/vsa-crate-tests.log"
   ok "crate durability -> $RESULTS_DIR/vsa-crate-tests.log (Empirical; #[ignore] instruments excluded — rerun with VSA_IGNORED_ONLY=1 for those)"
 else
   skip "no cargo — VSA crate durability skipped"
