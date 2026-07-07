@@ -106,6 +106,21 @@ async fn missing_and_invalid_tokens_are_401() {
 }
 
 #[tokio::test]
+async fn bearer_scheme_is_matched_case_insensitively() {
+    // RFC 7235 §2.1: the auth scheme name is case-insensitive — a `bearer` (lowercase) scheme is
+    // accepted, not treated as a missing token.
+    let st = app("http-bearer-case");
+    let req = Request::builder()
+        .method("GET")
+        .uri("/v1/identify")
+        .header(AUTHORIZATION, "bearer reader")
+        .body(Body::empty())
+        .unwrap();
+    let resp = router(Arc::clone(&st)).oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+}
+
+#[tokio::test]
 async fn read_token_calling_refresh_is_403() {
     let st = app("http-403");
     let (s, body) = call(&st, "POST", "/v1/refresh", Some("reader")).await;

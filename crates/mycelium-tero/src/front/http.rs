@@ -100,13 +100,12 @@ pub(crate) fn router(state: Arc<AppState>) -> Router {
 }
 
 /// The bearer token from an `Authorization: Bearer <token>` header, if present + well-formed.
+/// The scheme name is matched **case-insensitively** (RFC 7235 §2.1: auth-scheme names are
+/// case-insensitive, so `bearer`/`BEARER`/… are accepted), then the token is trimmed.
 fn bearer(headers: &HeaderMap) -> Option<&str> {
-    headers
-        .get(AUTHORIZATION)?
-        .to_str()
-        .ok()?
-        .strip_prefix("Bearer ")
-        .map(str::trim)
+    let value = headers.get(AUTHORIZATION)?.to_str().ok()?;
+    let (scheme, token) = value.split_once(' ')?;
+    scheme.eq_ignore_ascii_case("Bearer").then(|| token.trim())
 }
 
 /// Turn a [`FrontError`] into an HTTP `(status, json)` response.

@@ -227,7 +227,14 @@ impl Layer2Index {
         };
         let ranked = decode::rank_probe(&self.memory, &self.model, &probe, EXPLAIN_HITS);
 
-        if best.confidence < decode::L2_MIN_CONFIDENCE || best.margin < decode::L2_MIN_MARGIN {
+        // A non-finite confidence/margin (a NaN from a degenerate probe) must REFUSE, never slip
+        // through the `< floor` comparison (NaN < x is false) — never-silent (G2). Unreachable from a
+        // random-±1 bundle today (empty-term probes already refuse), but guarded so it stays a refusal.
+        if !best.confidence.is_finite()
+            || !best.margin.is_finite()
+            || best.confidence < decode::L2_MIN_CONFIDENCE
+            || best.margin < decode::L2_MIN_MARGIN
+        {
             return Err(Layer2Refusal::LowConfidence {
                 best_anchor: best.label,
                 confidence: best.confidence,
