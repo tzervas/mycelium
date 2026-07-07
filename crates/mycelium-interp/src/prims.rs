@@ -214,6 +214,11 @@ impl PrimRegistry {
         r.register("flt.ge", prim_flt_ge);
         r.register("flt.eq", prim_flt_eq);
         r.register("flt.total_le", prim_flt_total_le);
+        // ADR-040 §2.5 (CU-2): the mandated float classification predicates ("is_nan/is_finite at
+        // minimum") — the in-band never-silent tests for the propagating ±inf/NaN sentinels (§2.4).
+        r.register("flt.is_nan", prim_flt_is_nan);
+        r.register("flt.is_finite", prim_flt_is_finite);
+        r.register("flt.is_infinite", prim_flt_is_infinite);
         // RFC-0003 §3/§4 / ADR-008 (M-892, `enb` Gap C): the VSA bind group — model-dispatched
         // (MAP-I/FHRR/BSC) on the operand's `Repr::Vsa` model id. The kernel (`mycelium-vsa`)
         // constructs the result `Value` with its honest per-model tag; the wrappers carry it
@@ -2137,6 +2142,41 @@ fn prim_flt_eq(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
 fn prim_flt_total_le(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
     let (a, b) = flt_binop(prim, args)?;
     flt_cmp_result(prim, args, a.total_cmp(&b) != Ordering::Greater)
+}
+
+/// Extract the single `f64` of a unary `Float` classification prim (arity + `Repr::Float` checked,
+/// never-silent). The unary analogue of [`flt_binop`].
+fn flt_unop(prim: &str, args: &[&Value]) -> Result<f64, EvalError> {
+    expect_arity(prim, args, 1)?;
+    as_float(prim, args[0])
+}
+
+/// `flt.is_nan : (Float) → Binary{1}` — IEEE-754 §5.7.2 `isNaN`: `true` iff the operand is NaN
+/// (CU-2; **ADR-040 §2.5** mandates classification "`is_nan`/`is_finite` at minimum"). This is the
+/// in-band never-silent test for the invalid-operation sentinel (§2.4): `¬flt.eq(x, x)` and
+/// `flt.is_nan(x)` agree, but this is the direct, total predicate. Total — every float is or isn't
+/// NaN; no operand refuses. Tag `Empirical` (ADR-040 §2.6 — the float op set's strength).
+fn prim_flt_is_nan(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    let x = flt_unop(prim, args)?;
+    flt_cmp_result(prim, args, x.is_nan())
+}
+
+/// `flt.is_finite : (Float) → Binary{1}` — IEEE-754 §5.7.2 `isFinite`: `true` iff the operand is
+/// neither ±inf nor NaN (CU-2; **ADR-040 §2.5** mandate). The direct never-silent test for "is this
+/// an ordinary finite value" — the guard that distinguishes an in-range result from a propagated
+/// ±inf/NaN overflow sentinel (§2.4). Total; tag `Empirical` (ADR-040 §2.6).
+fn prim_flt_is_finite(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    let x = flt_unop(prim, args)?;
+    flt_cmp_result(prim, args, x.is_finite())
+}
+
+/// `flt.is_infinite : (Float) → Binary{1}` — IEEE-754 §5.7.2 `isInfinite`: `true` iff the operand is
+/// +inf or −inf (CU-2; the third classification predicate rounding out ADR-040 §2.5's "at minimum"
+/// pair — `is_infinite ≡ ¬is_finite ∧ ¬is_nan`, provided directly so callers need not compose it).
+/// Total; tag `Empirical` (ADR-040 §2.6).
+fn prim_flt_is_infinite(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    let x = flt_unop(prim, args)?;
+    flt_cmp_result(prim, args, x.is_infinite())
 }
 
 // --- RFC-0003 §3/§4 / ADR-008 (M-892, `enb` Gap C): the VSA bind group ---------------------------

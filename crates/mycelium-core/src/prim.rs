@@ -546,6 +546,21 @@ impl PrimTable {
         t.insert("flt.ge", flt_cmp());
         t.insert("flt.eq", flt_cmp());
         t.insert("flt.total_le", flt_cmp());
+        // ADR-040 §2.5 (CU-2): the mandated float classification predicates — unary `Float →
+        // Binary{1}` (the direct never-silent tests for the in-band ±inf/NaN sentinels, §2.4).
+        // Same `Any` operand escape hatch as the comparison group (no first-class `Float` paradigm
+        // in the sig yet); the result genuinely IS `Binary{1}`. Tag `Empirical` (ADR-040 §2.6).
+        let flt_class = || PrimDecl {
+            sig: PrimSig {
+                operands: vec![Any],
+                result: Binary,
+                width: WidthRel::Collapse,
+            },
+            intrinsic: GuaranteeStrength::Empirical,
+        };
+        t.insert("flt.is_nan", flt_class());
+        t.insert("flt.is_finite", flt_class());
+        t.insert("flt.is_infinite", flt_class());
         // RFC-0003 §3/§4 / ADR-008 (M-892, `enb` Gap C): the **VSA bind group** —
         // `vsa.bind`/`vsa.unbind`/`vsa.permute` over `Repr::Vsa{model, dim, sparsity}` values,
         // **model-dispatched** at runtime on the operand's model id across the introduction set
