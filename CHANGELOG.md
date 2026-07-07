@@ -11,6 +11,16 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### mycelium-tero — DN-87 named; kickoff `mem` FIRED; the scaffold lands (2026-07-07)
+
+The maintainer named the DN-87 program **`mycelium-tero`** — a quiet homage to **Atsushi Tero**,
+for his contribution to science and engineering (the name is sugar; the system is code). This
+entry lands the naming across the record (DN-87 title/Naming field, kickoff `mem` + kickoffs
+index → FIRED, E39-1 → `in-progress`) and the swarm pre-flight scaffold: `crates/mycelium-tero`
+(workspace-registered, buildable, tested stub carrying the DN-87 §6 binding invariants in its
+crate docs). Wave 1 = the M-1015 lane (corpus ingestion + the deterministic Layer-1 index), then
+M-1016/M-1017/M-1018 parallel per the kickoff's disjoint-lane table.
+
 ### DN-87 — the transparent memory substrate & agent knowledge API captured; E39-1 + M-1015…M-1019 minted (2026-07-07)
 
 Captures (Proposed) the maintainer's vision near-verbatim: the corpus (methodologies, decisions,

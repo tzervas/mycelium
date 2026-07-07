@@ -1,4 +1,4 @@
-# DN-87 — The Transparent Memory Substrate & Agent Knowledge API (name TBD)
+# DN-87 — mycelium-tero: The Transparent Memory Substrate & Agent Knowledge API
 
 | Field | Value |
 |---|---|
@@ -7,7 +7,7 @@
 | **Task** | epic **E39-1** + M-1015…M-1019 (minted with this note); kickoff **`mem`** (stowed) |
 | **Related** | the current agent-memory system this *supplements* (CLAUDE.md · `.claude/agent-context.md` · `docs/CURRENT-STATE.md` · `docs/api-index/` · `docs/lib-index/` · the skills); DN-85/DN-86 (the multi-language program this may eventually serve cross-platform); `mycelium-vsa` (the semantic layer's substrate); RFC-0003/RFC-0009/RFC-0010 (VSA + resonator + decode); ADR-022 §7 / CONTRIBUTING §Licensing (MIT-only) |
 | **Guarantee** | `Declared` throughout (a captured vision + resolved direction); every future retrieval-quality claim is gated `Empirical` per §6 before it is made |
-| **Naming** | **Reserved by the maintainer.** Every artifact here is name-agnostic (`mycelium-<NAME>`, `<NAME>-api`); nothing scaffolds until the name lands. |
+| **Naming** | **NAMED `mycelium-tero`** (maintainer, 2026-07-07) — a quiet homage to **Atsushi Tero**, for his contribution to science and engineering. The name is sugar; the system is code (no biology beyond terminology). *(Prior: reserved/name-agnostic until this date.)* |
 
 > **The maintainer's vision (2026-07-07, captured near-verbatim).** Automate converting the
 > project's information — the development methodologies, the intents, the language being developed,
@@ -124,3 +124,8 @@ E39-1 and its children.
   (E39-1, M-1015…M-1019, kickoff `mem`), the build pattern mapping onto the ratified swarm/PR
   discipline, and the binding honesty posture (Empirical-gated retrieval claims, mandatory
   provenance, drift-gated freshness, MIT).
+- 2026-07-07 — **Named `mycelium-tero`** (maintainer; quiet homage to Atsushi Tero, for his
+  contribution to science and engineering). Kickoff `mem` fired: the workspace-registered
+  `crates/mycelium-tero` scaffold landed with the naming PR; E39-1 → `in-progress`; wave 1 =
+  the M-1015 lane. DoD items (b)+(c) met; (a) — the §2 fork confirmations — remains with the
+  maintainer before this note moves to Resolved.

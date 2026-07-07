@@ -1,0 +1,16 @@
+[package]
+name = "mycelium-tero"
+version = "0.0.0"
+description = "mycelium-tero — the transparent memory substrate & agent knowledge API (DN-87 / E39-1): the corpus as a generated, provenance-carrying encoding (deterministic structured index + a VSA semantic layer), served platform-agnostically. Named in quiet homage to Atsushi Tero, for his contribution to science and engineering."
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+
+[dev-dependencies]

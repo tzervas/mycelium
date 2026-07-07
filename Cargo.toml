@@ -59,6 +59,7 @@ members = [
     "crates/mycelium-cli-common",
     "crates/mycelium-cli",
     "crates/mycelium-bench",
+    "crates/mycelium-tero",
     "crates/mycelium-transpile",
     "xtask",
 ]
