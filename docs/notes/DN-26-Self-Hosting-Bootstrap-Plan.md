@@ -452,7 +452,74 @@ directly (the posture this section originally described above). Either route rem
 needed at increment-7 scale (8 comparator families, each non-vacuity-cased this wave); tracked as an
 M-1013 design input, not a commitment.
 
+**→ Adopted at §10.2 (2026-07-07, M-1013 STEP 2).** The harness-marshalling option above is no longer
+merely recorded: it is the **adopted** Stage-5 differential method as of the M-1013 STEP 2 retrofit.
+This paragraph is kept as written (its increment-7-scale reasoning was accurate at landing);
+§10.2 records the adoption and supersedes its closing "not a commitment" clause.
+
+### 10.2 Marshalling adopted as the differential method (M-1013 STEP 2)
+
+> **Posture (append-only; VR-5/G2).** This subsection does not alter the Option-A decision (§10) — the
+> in-language mirror model stands. It records the maintainer's directive (2026-07-07) to **adopt harness
+> marshalling** (the option §10.1 recorded but did not commit to) as the Stage-5 differential method,
+> superseding §10.1's closing "tracked as an M-1013 design input, not a commitment." No status move
+> (DN-26 stays **Draft** → Resolved with M-741).
+
+**Adopted method — decode the port's mirror output to the real kernel type, compare with Rust's
+trusted `==`.** For each fixture: (1) the REAL Rust `elab::*` oracle runs, producing a genuine
+`mycelium_core::{Value,Repr,FieldSpec,…}`; (2) the `.myc` port helper is evaluated *directly* — the
+driver's `main` returns the mirror value itself (e.g. `fn main() => Result[Repr,Bytes] =
+type_repr(…);`), not a `Bool`; (3) a never-silent Rust **decoder** family (`decode_*` in
+`compiler_stage5_elab.rs`) walks the resulting `L1Value` mirror ADT and rebuilds the real
+`mycelium_core` type — the inverse of the mirror constructors, panicking on an unexpected constructor
+(G2); (4) the decoded value is compared to the oracle's with **Rust's own derived `==`** (`assert_eq!`).
+This **removes the hand-written `.myc`-side `_eq` family (the retired FLAG-semcore-28 comparators,
+deleted from `semcore.myc`) from the trust path entirely** — the comparator is now `mycelium_core`'s own
+`#[derive(PartialEq)]`, the very thing the mirror was hand-restating. The trust surface shrinks to the
+decoder: small, one-directional, and guarded (below).
+
+**Why now (the directive's rationale).** §10.1 bounded the old method's residual wrong-arm risk
+`Empirical` via a per-comparator non-vacuity discipline, but flagged that the hand-written `.myc` `_eq`
+family is *itself untrusted* (it restates the derived `PartialEq` by hand) and that its trust surface
+*grows* with every ported output type. Marshalling is the trust foundation for the ~11 remaining M-1013
+increments (dossier §6.3): it eliminates that growing hand-written surface up front rather than carrying
+it through the heavy core. It is therefore the differential method for **all** M-1013 increments, not
+just the increment-7 retrofit.
+
+**The migrated non-vacuity discipline — decoder discrimination.** With the comparator now Rust's trusted
+`==`, a wrong port output fails `assert_eq!` by construction, so §10.1's "the comparator isn't vacuously
+`True`" obligation dissolves. The new trust surface is the decoder, whose failure mode is *dropping a
+dimension* (mapping distinct mirror values onto one Rust value → a silent false pass). The non-vacuity
+discipline **migrates** to the decoder: for every decoder arm, decode two mirror values differing in
+exactly one dimension and assert the decoded Rust values are unequal
+(`compiler_stage5_elab.rs::marshal_discriminates`). `Meta`/`FloatW` remain the documented
+single-inhabitant exceptions (no distinguishing pair is constructible — each becomes an addable case the
+moment it gains a second constructor). This is the binding template for M-1013.
+
+**Comparison choice — derived `==` now, content-hash when floats arrive.** Every marshalling target
+except `Value` derives `Eq`; `Value` derives only `PartialEq` (its `Payload` can hold `f64`), but this
+increment's payloads are `Bits`/`Trits`/`Bytes` only and its `Meta` is the constant `exact(Root)` on
+both sides, so derived `==` is total and identity-faithful — the honest, sufficient primary. Derived
+`==` becomes unsound at the first float-bearing increment (`RFloat`/`RDense`/`RVsa` with a real `f64`
+payload): a `NaN` payload is unequal to itself under `==` (failing `assert_eq!` against itself), and
+signed-zero conflates bit-distinct identities. At that point the value comparison switches to
+**content-hash equality** (`CoreValue::Repr(v).content_hash()`, which normalizes `NaN` and excludes
+`Meta` — there is no `Value::content_hash`), the posture §10 originally described. Recorded here so the
+switch is a planned, never-silent step (VR-5/G2).
+
 ## Meta — changelog
+
+- **2026-07-07 — §10.2 added + FLAG-semcore-28 `_eq` family retired: harness MARSHALLING adopted as the
+  Stage-5 differential method (append-only, no status move; M-1013 STEP 2).** Per the maintainer's
+  directive, the differential now decodes the `.myc` port's mirror output back into the real
+  `mycelium_core` type (a never-silent Rust `decode_*` family in `compiler_stage5_elab.rs`) and compares
+  with Rust's own trusted derived `==` — removing the hand-written `.myc`-side `_eq` comparators (the
+  retired FLAG-semcore-28 family, deleted from `semcore.myc`) from the trust path. The M-1012
+  non-vacuity discipline migrates from the comparator to the decoder (`marshal_discriminates`:
+  distinct-in-one-dimension mirror values must decode to unequal Rust values). Derived `==` is primary;
+  content-hash is the recorded switch for the first float-bearing increment. Adopts §10.1's
+  recorded-not-committed option and becomes the method for all M-1013 increments (dossier §6.3). Does not
+  alter the Option-A decision. Status stays **Draft** (→ Resolved with M-741). (M-1013; E18-1; VR-5/G2.)
 
 - **2026-07-07 — §10.1 added: an "Implementation note" honestly reconciling §10's described
   differential method with the one M-1012 actually shipped (append-only, no status move; M-1012 PR
