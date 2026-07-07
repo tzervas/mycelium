@@ -2156,3 +2156,192 @@ fn mangle_hof_decl(name: Bytes, targs: Vec[Ty], wargs: Vec[Width], fa: Vec[Pair[
     True => base,
     False => bytes_concat(base, bytes_concat(hof_fn_joints(fa), hof_dyn_joints(df)))
   };
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// mono.rs FREE-VARIABLE + BINDER ANALYSIS (M-740 Stage 5, increment 5 — M-1010). Pure Expr walks.
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// Ports mono.rs's free-variable + binder analysis — `free_vars`/`free_vars_at` and
+// `pattern_binders`/`pattern_binders_at` (mono.rs) — the closure-conversion prerequisite (the
+// capture set of a lambda/defunctionalization — RFC-0024 SS4A). Pure `Expr` -> ordered name-set
+// walks depending only on the increment-1 `Expr`/`Pattern` vocabulary (INDEPENDENT of
+// M-1007/M-1008/M-1009). Live oracle: mono::free_vars (`pub(crate)`), reachable in-crate; the
+// worker `free_vars_at` and BOTH `pattern_binders`/`pattern_binders_at` are module-private but are
+// exercised TRANSITIVELY through `free_vars` (a `match` scrutinee's binders drive the capture-set
+// shadowing), so the differential (compiler_stage5_freevars.rs) still asserts every arm live.
+//
+// FLAG-semcore-18 (`&mut BTreeSet<String>` scope + `&mut Vec<String>` output -> the FLAG-semcore-6
+// value-threaded collapse). Rust threads THREE mutable accumulators: `bound` (the in-scope binder
+// set, pushed on scope entry and RESTORED on exit), `seen` (which names are already emitted), and
+// `out` (the ordered first-occurrence capture list). Here:
+//   * `bound` is a READ-ONLY scope parameter EXTENDED for a sub-scope (`ensure_bound`/`union_names`)
+//     and never returned — because Rust always restores it to its entry value by the end of each
+//     call (every `insert` is paired with its `remove`), so it is semantically an immutable
+//     environment, not accumulated state. Shadowing is preserved: an already-bound name's re-bind is
+//     a set no-op (`ensure_bound` keeps the set unchanged), exactly Rust's `insert`-returns-false arm.
+//   * `seen`/`out` DO accumulate and are threaded upward as a `Pair[Vec[Bytes], Vec[Bytes]]` return
+//     — a name emitted in one sub-walk stays emitted in the next (cross-branch de-dup), and `out`
+//     grows by append-to-END (`names_snoc`) to keep Rust's first-occurrence order.
+// `pattern_binders` becomes `pattern_binder_names` (the SET of a pattern's binder idents, the
+// FLAG-semcore-6 collapse of the `&mut bound`+`&mut added` push/pop pair — the caller unions it into
+// the arm scope). A `Pattern::Or` reaching it is a never-silent `Err` (Rust PANICS on the same
+// desugaring-invariant break; a clean refusal is the faithful, G2-preferred shape — documented).
+// The M-866 `MAX_WALK_DEPTH` (4096) budget is the SAME ceiling as `enter_depth`/max_semcore_depth
+// (FLAG-semcore-3), reused verbatim; the pattern walk charges a fresh budget from 0 as Rust's
+// `pattern_binders_at` does.
+
+// ── small name-set helpers over the FLAG-semcore-4 Vec[Bytes] ────────────────────────────────────
+// names_snoc: append a name to the END (preserves free_vars' first-occurrence order — `out.push`).
+fn names_snoc(xs: Vec[Bytes], n: Bytes) => Vec[Bytes] =
+  match xs { Nil => Cons(n, Nil), Cons(h, t) => Cons(h, names_snoc(t, n)) };
+
+// names_append: concatenate two name lists (a pattern's binder-set union across sub-patterns).
+fn names_append(a: Vec[Bytes], b: Vec[Bytes]) => Vec[Bytes] =
+  match a { Nil => b, Cons(h, t) => Cons(h, names_append(t, b)) };
+
+// ensure_bound: `bound.insert(n)` as a set op — add iff absent (an already-bound name is unchanged).
+fn ensure_bound(bound: Vec[Bytes], n: Bytes) => Vec[Bytes] =
+  match names_contains(bound, n) { True => bound, False => Cons(n, bound) };
+
+// union_names: extend `bound` by every name in `names` (the arm/lambda/for scope extension).
+fn union_names(bound: Vec[Bytes], names: Vec[Bytes]) => Vec[Bytes] =
+  match names { Nil => bound, Cons(h, t) => union_names(ensure_bound(bound, h), t) };
+
+// param_names: the value-parameter names of a lambda (Rust `params.iter().map(|p| p.name)`).
+fn param_names(params: Vec[Param]) => Vec[Bytes] =
+  match params { Nil => Nil, Cons(p, rest) => Cons(param_name(p), param_names(rest)) };
+
+// ── pattern_binder_names (mono.rs::pattern_binders/pattern_binders_at) — a pattern's binder set ──
+fn pattern_binder_names(pat: Pattern, depth: Binary{32}) => Result[Vec[Bytes], Bytes] =
+  match enter_depth(depth) {
+    Err(m) => Err(m),
+    Ok(d) => match pat {
+      PWildcard => Ok(Nil),
+      PLit(_) => Ok(Nil),
+      PIdent(n) => Ok(Cons(n, Nil)),
+      PCtor(_, subs) => pattern_binder_names_list(subs, d),
+      PTuple(subs) => pattern_binder_names_list(subs, d),
+      POr(_) => Err("internal: Pattern::Or reached pattern_binders -- or-patterns must be desugared by the checker before any downstream pass (invariant violation -- report this)")
+    }
+  };
+
+fn pattern_binder_names_list(subs: Vec[Pattern], depth: Binary{32}) => Result[Vec[Bytes], Bytes] =
+  match subs {
+    Nil => Ok(Nil),
+    Cons(h, t) => match pattern_binder_names(h, depth) {
+      Err(e) => Err(e),
+      Ok(hn) => match pattern_binder_names_list(t, depth) {
+        Err(e) => Err(e),
+        Ok(tn) => Ok(names_append(hn, tn))
+      }
+    }
+  };
+
+// ── free_vars / free_vars_at (mono.rs) — the ordered free-variable capture set ──────────────────
+// fvw: the depth-tracked worker (free_vars_at), threading (seen, out) up with `bound` read-only.
+fn fvw(e: Expr, bound: Vec[Bytes], seen: Vec[Bytes], out: Vec[Bytes], depth: Binary{32}) => Result[Pair[Vec[Bytes], Vec[Bytes]], Bytes] =
+  match enter_depth(depth) {
+    Err(m) => Err(m),
+    Ok(d) => match e {
+      Path(p) => match path_segs(p) {
+        Cons(n, rest) => match rest {
+          Nil => match names_contains(bound, n) {
+            True => Ok(Pr(seen, out)),
+            False => match names_contains(seen, n) {
+              True => Ok(Pr(seen, out)),
+              False => Ok(Pr(Cons(n, seen), names_snoc(out, n)))
+            }
+          },
+          Cons(_, _) => Ok(Pr(seen, out))
+        },
+        Nil => Ok(Pr(seen, out))
+      },
+      Lit(l) => match l {
+        List(elems) => fvw_list(elems, bound, seen, out, d),
+        _ => Ok(Pr(seen, out))
+      },
+      Let(name, _, be, body) => match fvw(be, bound, seen, out, d) {
+        Err(e2) => Err(e2),
+        Ok(p1) => match p1 { Pr(s1, o1) => fvw(body, ensure_bound(bound, name), s1, o1, d) }
+      },
+      If(cond, conseq, alt) => match fvw(cond, bound, seen, out, d) {
+        Err(e2) => Err(e2),
+        Ok(p1) => match p1 { Pr(s1, o1) => match fvw(conseq, bound, s1, o1, d) {
+          Err(e2) => Err(e2),
+          Ok(p2) => match p2 { Pr(s2, o2) => fvw(alt, bound, s2, o2, d) }
+        }}
+      },
+      Match(scrutinee, arms) => match fvw(scrutinee, bound, seen, out, d) {
+        Err(e2) => Err(e2),
+        Ok(p1) => match p1 { Pr(s1, o1) => fvw_arms(arms, bound, s1, o1, d) }
+      },
+      For(x, xs, acc, init, body) => match fvw(xs, bound, seen, out, d) {
+        Err(e2) => Err(e2),
+        Ok(p1) => match p1 { Pr(s1, o1) => match fvw(init, bound, s1, o1, d) {
+          Err(e2) => Err(e2),
+          Ok(p2) => match p2 { Pr(s2, o2) => fvw(body, ensure_bound(ensure_bound(bound, x), acc), s2, o2, d) }
+        }}
+      },
+      Swap(value, _, _) => fvw(value, bound, seen, out, d),
+      WithParadigm(_, body) => fvw(body, bound, seen, out, d),
+      Wild(b) => fvw(b, bound, seen, out, d),
+      Spore(b) => fvw(b, bound, seen, out, d),
+      Consume(b) => fvw(b, bound, seen, out, d),
+      Colony(hyphae) => fvw_hyphae(hyphae, bound, seen, out, d),
+      Lambda(params, body) => fvw(body, union_names(bound, param_names(params)), seen, out, d),
+      App(head, args) => match fvw(head, bound, seen, out, d) {
+        Err(e2) => Err(e2),
+        Ok(p1) => match p1 { Pr(s1, o1) => fvw_list(args, bound, s1, o1, d) }
+      },
+      Fuse(left, right) => match fvw(left, bound, seen, out, d) {
+        Err(e2) => Err(e2),
+        Ok(p1) => match p1 { Pr(s1, o1) => fvw(right, bound, s1, o1, d) }
+      },
+      Reclaim(pol, body) => match fvw(pol, bound, seen, out, d) {
+        Err(e2) => Err(e2),
+        Ok(p1) => match p1 { Pr(s1, o1) => fvw(body, bound, s1, o1, d) }
+      },
+      Ascribe(inner, _) => fvw(inner, bound, seen, out, d),
+      TupleLit(elems) => fvw_list(elems, bound, seen, out, d)
+    }
+  };
+
+// fvw_list: walk a Vec[Expr] left-to-right, threading (seen, out) (Lit(List)/App args/TupleLit).
+fn fvw_list(es: Vec[Expr], bound: Vec[Bytes], seen: Vec[Bytes], out: Vec[Bytes], depth: Binary{32}) => Result[Pair[Vec[Bytes], Vec[Bytes]], Bytes] =
+  match es {
+    Nil => Ok(Pr(seen, out)),
+    Cons(h, t) => match fvw(h, bound, seen, out, depth) {
+      Err(e) => Err(e),
+      Ok(p) => match p { Pr(s1, o1) => fvw_list(t, bound, s1, o1, depth) }
+    }
+  };
+
+// fvw_hyphae: walk each hypha's body (Colony) — forage clauses are not free-var positions here.
+fn fvw_hyphae(hs: Vec[Hypha], bound: Vec[Bytes], seen: Vec[Bytes], out: Vec[Bytes], depth: Binary{32}) => Result[Pair[Vec[Bytes], Vec[Bytes]], Bytes] =
+  match hs {
+    Nil => Ok(Pr(seen, out)),
+    Cons(h, t) => match fvw(hypha_body(h), bound, seen, out, depth) {
+      Err(e) => Err(e),
+      Ok(p) => match p { Pr(s1, o1) => fvw_hyphae(t, bound, s1, o1, depth) }
+    }
+  };
+
+// fvw_arms: per arm, extend `bound` by the arm pattern's binder set, walk the arm body; `bound`
+// resets to the match scope between arms (the Rust insert/remove pair, collapsed).
+fn fvw_arms(arms: Vec[Arm], bound: Vec[Bytes], seen: Vec[Bytes], out: Vec[Bytes], depth: Binary{32}) => Result[Pair[Vec[Bytes], Vec[Bytes]], Bytes] =
+  match arms {
+    Nil => Ok(Pr(seen, out)),
+    Cons(a, rest) => match pattern_binder_names(arm_pattern(a), zero32()) {
+      Err(e) => Err(e),
+      Ok(names) => match fvw(arm_body(a), union_names(bound, names), seen, out, depth) {
+        Err(e) => Err(e),
+        Ok(p) => match p { Pr(s1, o1) => fvw_arms(rest, bound, s1, o1, depth) }
+      }
+    }
+  };
+
+// free_vars: the pub entry — an empty scope/seen/out, returning the ordered capture list.
+fn free_vars(e: Expr) => Result[Vec[Bytes], Bytes] =
+  match fvw(e, Nil, Nil, Nil, zero32()) {
+    Err(msg) => Err(msg),
+    Ok(p) => match p { Pr(_, out) => Ok(out) }
+  };
