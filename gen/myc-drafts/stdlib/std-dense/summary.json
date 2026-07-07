@@ -4,13 +4,13 @@
       "file": "crates/mycelium-std-dense/src/lib.rs",
       "total_items": 21,
       "non_test_items": 20,
-      "emitted": 0,
-      "gaps": 22,
-      "expressible_pct": 0.0,
+      "emitted": 1,
+      "gaps": 21,
+      "expressible_pct": 5.0,
       "category_counts": {
         "Impl": 5,
         "Import": 2,
-        "Other": 10,
+        "Other": 9,
         "PayloadVariant": 1,
         "Struct": 3,
         "TestItem": 1
@@ -20,13 +20,13 @@
   "totals": {
     "total_items": 21,
     "non_test_items": 20,
-    "emitted": 0,
-    "gaps": 22,
-    "expressible_pct": 0.0,
+    "emitted": 1,
+    "gaps": 21,
+    "expressible_pct": 5.0,
     "category_counts": {
       "Impl": 5,
       "Import": 2,
-      "Other": 10,
+      "Other": 9,
       "PayloadVariant": 1,
       "Struct": 3,
       "TestItem": 1

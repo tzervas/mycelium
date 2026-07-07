@@ -3,20 +3,20 @@
     {
       "myc_file": "gen/myc-drafts/stdlib/std-sys/fs.myc",
       "source_file": "crates/mycelium-std-sys/src/fs.rs",
-      "class": "Clean",
-      "exit_code": 0,
-      "diagnostic": "",
+      "class": "CheckError",
+      "exit_code": 3,
+      "diagnostic": "check-error: check error in `exists`: unknown type `Path`",
       "non_test_items": 7,
-      "emitted_items": 0
+      "emitted_items": 1
     },
     {
       "myc_file": "gen/myc-drafts/stdlib/std-sys/guarantee_matrix.myc",
       "source_file": "crates/mycelium-std-sys/src/guarantee_matrix.rs",
-      "class": "Clean",
-      "exit_code": 0,
-      "diagnostic": "",
+      "class": "CheckError",
+      "exit_code": 3,
+      "diagnostic": "check-error: check error in `MatrixRow`: unknown type `GuaranteeTag`",
       "non_test_items": 5,
-      "emitted_items": 1
+      "emitted_items": 2
     },
     {
       "myc_file": "gen/myc-drafts/stdlib/std-sys/io.myc",
@@ -52,7 +52,7 @@
       "exit_code": 0,
       "diagnostic": "",
       "non_test_items": 6,
-      "emitted_items": 0
+      "emitted_items": 1
     },
     {
       "myc_file": "gen/myc-drafts/stdlib/std-sys/sys.myc",
@@ -74,9 +74,10 @@
     }
   ],
   "total_non_test_items": 63,
-  "total_emitted_items": 1,
+  "total_emitted_items": 4,
   "total_checked_clean_items": 1,
   "class_counts": {
-    "Clean": 8
+    "CheckError": 2,
+    "Clean": 6
   }
 }

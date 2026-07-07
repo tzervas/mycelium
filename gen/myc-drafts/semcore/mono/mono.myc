@@ -70,4 +70,7 @@
 // accompanying .gap.json for every construct this pass could not express.
 nodule l1;
 
-
+// Like [`mangle_ty`] but mangles a `Ty::Fn` to its arrow tag-sum name (`Fn$A$B`) rather than the
+// loud `HOF_FN_…` leak marker — used inside closure mangling where a fn-typed capture/codomain is a
+// real, lowered closure type (RFC-0024 §4A). Non-fn types delegate to [`mangle_ty`].
+fn mangle_ty_or_fn(t: Ty) => Bytes = match t { Fn(a, b) => mangle_arrow(a, b), _ => mangle_ty(t) };

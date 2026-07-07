@@ -16,7 +16,7 @@
       "exit_code": 0,
       "diagnostic": "",
       "non_test_items": 6,
-      "emitted_items": 4
+      "emitted_items": 5
     },
     {
       "myc_file": "gen/myc-drafts/stdlib/std-fs/lib.myc",
@@ -32,18 +32,18 @@
       "source_file": "crates/mycelium-std-fs/src/metadata.rs",
       "class": "CheckError",
       "exit_code": 3,
-      "diagnostic": "check-error: check error in `is_readonly`: unknown type `Permissions`",
+      "diagnostic": "check-error: check error in `group_read`: unknown function/constructor/prim `ne`",
       "non_test_items": 5,
-      "emitted_items": 2
+      "emitted_items": 5
     },
     {
       "myc_file": "gen/myc-drafts/stdlib/std-fs/options.myc",
       "source_file": "crates/mycelium-std-fs/src/options.rs",
-      "class": "Clean",
-      "exit_code": 0,
-      "diagnostic": "",
+      "class": "CheckError",
+      "exit_code": 3,
+      "diagnostic": "check-error: check error in `wants_write`: `or` does not accept argument types [Data(\"Bool\", []), Data(\"Bool\", [])] (T-Op; RFC-0007 §4.4)",
       "non_test_items": 3,
-      "emitted_items": 0
+      "emitted_items": 2
     },
     {
       "myc_file": "gen/myc-drafts/stdlib/std-fs/path.myc",
@@ -52,7 +52,7 @@
       "exit_code": 0,
       "diagnostic": "",
       "non_test_items": 6,
-      "emitted_items": 0
+      "emitted_items": 2
     },
     {
       "myc_file": "gen/myc-drafts/stdlib/std-fs/substrate.myc",
@@ -65,10 +65,10 @@
     }
   ],
   "total_non_test_items": 53,
-  "total_emitted_items": 7,
-  "total_checked_clean_items": 5,
+  "total_emitted_items": 15,
+  "total_checked_clean_items": 8,
   "class_counts": {
-    "CheckError": 1,
-    "Clean": 6
+    "CheckError": 2,
+    "Clean": 5
   }
 }

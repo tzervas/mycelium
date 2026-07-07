@@ -36,3 +36,6 @@ type Fallibility = Total | Fallible;
 
 // Whether the op surfaces an EXPLAIN artifact (C3).
 type Explainable = Yes | NotApplicable;
+
+// One row in the `std.io` + `serialize` guarantee matrix (RFC-0016 §4.5).
+type MatrixRow = MatrixRow(Bytes, GuaranteeTag, Fallibility, Bytes, Bytes, Explainable);

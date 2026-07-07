@@ -11,6 +11,15 @@
 // accompanying .gap.json for every construct this pass could not express.
 nodule std.runtime;
 
+// Context passed to a running task — carries cancellation signal and scope ref.
+type TaskCtx = TaskCtx(Bool);
+
+impl TaskCtx {
+  fn new() => TaskCtx = TaskCtx(False);
+  // Returns `true` if this task's scope has been cancelled.
+  fn is_cancelled(self: TaskCtx) => Bool = (match self { TaskCtx(p0) => p0 });
+};
+
 // Poll result for an async task step.
 type Poll[T] = Ready(T) | Pending;
 

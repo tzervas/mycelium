@@ -35,3 +35,6 @@ nodule std.sys;
 
 // Fallibility classification for an exported op (C1).
 type Fallibility = Total | Fallible;
+
+// One row in the `std-sys` syscall-floor guarantee matrix (RFC-0016 §4.5).
+type MatrixRow = MatrixRow(Bytes, GuaranteeTag, Fallibility, Bytes, Bytes);

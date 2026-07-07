@@ -84,6 +84,15 @@ impl ScopeNodeId {
   //
   // Guarantee: `Exact` — strictly greater than all previously allocated ids.
   fn allocate() => ScopeNodeId = ScopeNodeId(fetch_add(GLOBAL_SCOPE_ID, 1, Relaxed));
+  // Convert to a [`ScopeId`] for use in [`ReclamationRecord`] fields (RFC-0027 §9).
+  //
+  // This is the canonical bridge between the region-tier allocation identity and the
+  // MEM-1 record field type. The underlying `u64` is preserved losslessly.
+  //
+  // Guarantee: `Exact` — lossless conversion.
+  fn as_scope_id(self: ScopeNodeId) => ScopeId = ScopeId((match self { ScopeNodeId(p0) => p0 }));
+  // Return the underlying `u64` value.
+  fn as_u64(self: ScopeNodeId) => Binary{64} = (match self { ScopeNodeId(p0) => p0 });
 };
 
 // A monotonic epoch counter — one allocated per [`Region::close`] call.
@@ -104,4 +113,10 @@ impl RegionEpoch {
   //
   // Guarantee: `Exact` — strictly greater than all previously allocated epochs.
   fn allocate() => RegionEpoch = RegionEpoch(fetch_add(GLOBAL_EPOCH, 1, Relaxed));
+  // Convert to a [`SweepEpoch`] for use in [`ReclamationRecord`] fields (RFC-0027 §9).
+  //
+  // Guarantee: `Exact` — lossless conversion.
+  fn as_sweep_epoch(self: RegionEpoch) => SweepEpoch = SweepEpoch((match self { RegionEpoch(p0) => p0 }));
+  // Return the underlying `u64` value.
+  fn as_u64(self: RegionEpoch) => Binary{64} = (match self { RegionEpoch(p0) => p0 });
 };

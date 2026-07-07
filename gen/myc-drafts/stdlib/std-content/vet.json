@@ -16,7 +16,7 @@
       "exit_code": 0,
       "diagnostic": "",
       "non_test_items": 5,
-      "emitted_items": 0
+      "emitted_items": 1
     },
     {
       "myc_file": "gen/myc-drafts/stdlib/std-content/guarantee_matrix.myc",
@@ -25,16 +25,16 @@
       "exit_code": 0,
       "diagnostic": "",
       "non_test_items": 4,
-      "emitted_items": 2
+      "emitted_items": 3
     },
     {
       "myc_file": "gen/myc-drafts/stdlib/std-content/lib.myc",
       "source_file": "crates/mycelium-std-content/src/lib.rs",
-      "class": "Clean",
-      "exit_code": 0,
-      "diagnostic": "",
+      "class": "CheckError",
+      "exit_code": 3,
+      "diagnostic": "check-error: check error in `digest_eq`: unknown type `ContentHash`",
       "non_test_items": 16,
-      "emitted_items": 0
+      "emitted_items": 2
     },
     {
       "myc_file": "gen/myc-drafts/stdlib/std-content/name_registry.myc",
@@ -47,9 +47,10 @@
     }
   ],
   "total_non_test_items": 35,
-  "total_emitted_items": 3,
-  "total_checked_clean_items": 3,
+  "total_emitted_items": 7,
+  "total_checked_clean_items": 5,
   "class_counts": {
-    "Clean": 5
+    "CheckError": 1,
+    "Clean": 4
   }
 }

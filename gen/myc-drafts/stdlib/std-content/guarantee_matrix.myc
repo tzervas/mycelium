@@ -36,3 +36,6 @@ type Fallibility = Total | Fallible;
 
 // Whether an op has an EXPLAIN obligation (C3).
 type Explainable = Yes | NotApplicable;
+
+// One row in the guarantee matrix (RFC-0016 §4.5).
+type MatrixRow = MatrixRow(Bytes, Bytes, Fallibility, Bytes, Bytes, Explainable);

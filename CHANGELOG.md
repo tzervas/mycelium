@@ -11,6 +11,26 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### M-1006 transpiler-hardening ladder — String→`Bytes` lands the largest `checked_fraction` gain (2026-07-07)
+
+The Rust→Mycelium transpiler's `transpile → myc check → fix` gap-profiling ladder (kickoff `trx2`
+E-B, epic E33-1) advances through three increments now promoted to the staging tier. **§8.12**:
+positional named-field emission (`type Foo = Foo(T1, T2)`, names dropped as a `NamedFieldDrop`
+sub-gap) gated by a greatest-fixpoint resolvability set so a record only emits when every referenced
+type resolves in-file; plus the `myc check --phylum` cross-nodule probe. **§8.13**: `self.<field>`
+projection desugars to a `match` on the struct's positional constructor, and struct literals to the
+positional ctor call. **§8.14**: Rust `String`/`str`/`&str` map to Mycelium `Bytes` (grounded to
+RFC-0033 §3.2 — `Repr::Bytes` is the ratified never-silent UTF-8 text repr; verify-first
+`myc check`-confirmed), the **largest single-lever gain of the ladder** — union `checked_fraction`
+4.61% to **5.79%** (35 to 44 items myc-check-clean) and `expressible_fraction` 8.29% to **11.45%**
+over the 17-target draft corpus (`gen/myc-drafts/`, regenerated deterministically on this tier). Two
+further levers (operator emission, inherent-impl dup-name rename) were verify-first-probed and
+**deliberately not built** — measured zero corpus yield (house rule #4). The residual ceiling is
+re-grounded to a frozen-kernel decision: RFC-0033 §4.1.2 mandates `Binary{N}` bitwise ops but the
+Enacted/frozen kernel (DN-56, M-969) has no `bin.band`/`bin.bor`/`bin.bxor`, so completing them is a
+DN-39 post-freeze promotion (flagged, not implemented). Emission `Declared`; vet verdict `Empirical`.
+DN-34 stays **Draft** (append-only §8.12 to §8.14).
+
 ### E18-1 semcore self-hosting — Stage-5 increments (M-1007 → M-1013 PR-2) (2026-07-07)
 
 The self-hosted L1 frontend (`lib/compiler/semcore.myc`) advances through the M-993 staged-port

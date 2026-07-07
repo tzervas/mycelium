@@ -59,6 +59,17 @@ pub enum Category {
     /// `lib/compiler/README.md` FLAG-ast-5/FLAG-parse-2), so a collision is gapped, never silently
     /// emitted or renamed (G2/VR-5). Distinct so reserved-word collisions rank on their own.
     ReservedWord,
+    /// M-1006 (kickoff `trx2`, E33-1): a `struct`/enum-variant **named-field record** whose fields
+    /// all map — emitted as the grammar's **positional** `constructor` (`Ident '(' type_ref,* ')'`),
+    /// with the field *names* dropped (Mycelium's `constructor` is positional-only —
+    /// `docs/spec/grammar/mycelium.ebnf` §`constructor`; there is no record surface). This is **not**
+    /// a refusal: the item IS emitted (its product structure is preserved, faithfully, exactly as the
+    /// `lib/std/*.myc` hand-ports render a Rust record — e.g. `type GuaranteeRow = Row(Bytes, …)`),
+    /// so this rides on the item's `sub_gaps` as a never-silent fidelity note recording *which* field
+    /// names were dropped (G2). Distinct from `Struct`/`PayloadVariant` (which remain hard refusals
+    /// for a field whose *type* has no mapping) so the emitted-with-names-dropped set is countable on
+    /// its own and never conflated with an un-emitted struct.
+    NamedFieldDrop,
     Other,
 }
 
@@ -81,6 +92,7 @@ impl Category {
             Category::RecursionBudget => "RecursionBudget",
             Category::Import => "Import",
             Category::ReservedWord => "ReservedWord",
+            Category::NamedFieldDrop => "NamedFieldDrop",
             Category::Other => "Other",
         }
     }

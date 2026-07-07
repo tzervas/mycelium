@@ -71,20 +71,20 @@
       "file": "crates/mycelium-std-runtime/src/region.rs",
       "line": 107,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "impl ScopeNodeId { # [doc = \" Allocate a fresh, unique `ScopeNodeId`.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — strictly greater than all previously allocated ids.\"] fn allocate () -> Self { ScopeNodeId (GLOBAL_SCOPE_ID . fetch_add (1 , Ordering :: Relaxed)) } # [doc = \" Convert to a [`ScopeId`] for use in [`ReclamationRecord`] fields (RFC-0027 §9).\"] # [doc = \"\"] # [doc = \" This is the canonical bridge between the region-tier allocation identity and the\"] # [doc = \" MEM-1 record field type. The underlying `u64` is preserved losslessly.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — lossless conversion.\"] # [must_use] pub fn as_scope_id (self) -> ScopeId { ScopeId (self . 0) } # [doc = \" Return the underlying `u64` value.\"] # [must_use] pub fn as_u64 (self) -> u64 { self . 0 } }",
-      "reason": "impl method `as_scope_id` body: unsupported expression form `self . 0`",
+      "reason": "dropped non-doc attribute(s) on method `as_scope_id`: # [must_use]",
       "item_name": "impl ScopeNodeId"
     },
     {
       "file": "crates/mycelium-std-runtime/src/region.rs",
       "line": 107,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "impl ScopeNodeId { # [doc = \" Allocate a fresh, unique `ScopeNodeId`.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — strictly greater than all previously allocated ids.\"] fn allocate () -> Self { ScopeNodeId (GLOBAL_SCOPE_ID . fetch_add (1 , Ordering :: Relaxed)) } # [doc = \" Convert to a [`ScopeId`] for use in [`ReclamationRecord`] fields (RFC-0027 §9).\"] # [doc = \"\"] # [doc = \" This is the canonical bridge between the region-tier allocation identity and the\"] # [doc = \" MEM-1 record field type. The underlying `u64` is preserved losslessly.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — lossless conversion.\"] # [must_use] pub fn as_scope_id (self) -> ScopeId { ScopeId (self . 0) } # [doc = \" Return the underlying `u64` value.\"] # [must_use] pub fn as_u64 (self) -> u64 { self . 0 } }",
-      "reason": "impl method `as_u64` body: unsupported expression form `self . 0`",
+      "reason": "dropped non-doc attribute(s) on method `as_u64`: # [must_use]",
       "item_name": "impl ScopeNodeId"
     },
     {
@@ -101,20 +101,20 @@
       "file": "crates/mycelium-std-runtime/src/region.rs",
       "line": 149,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "impl RegionEpoch { # [doc = \" Allocate a fresh, monotonically-increasing `RegionEpoch`.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — strictly greater than all previously allocated epochs.\"] fn allocate () -> Self { RegionEpoch (GLOBAL_EPOCH . fetch_add (1 , Ordering :: Relaxed)) } # [doc = \" Convert to a [`SweepEpoch`] for use in [`ReclamationRecord`] fields (RFC-0027 §9).\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — lossless conversion.\"] # [must_use] pub fn as_sweep_epoch (self) -> SweepEpoch { SweepEpoch (self . 0) } # [doc = \" Return the underlying `u64` value.\"] # [must_use] pub fn as_u64 (self) -> u64 { self . 0 } }",
-      "reason": "impl method `as_sweep_epoch` body: unsupported expression form `self . 0`",
+      "reason": "dropped non-doc attribute(s) on method `as_sweep_epoch`: # [must_use]",
       "item_name": "impl RegionEpoch"
     },
     {
       "file": "crates/mycelium-std-runtime/src/region.rs",
       "line": 149,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "impl RegionEpoch { # [doc = \" Allocate a fresh, monotonically-increasing `RegionEpoch`.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — strictly greater than all previously allocated epochs.\"] fn allocate () -> Self { RegionEpoch (GLOBAL_EPOCH . fetch_add (1 , Ordering :: Relaxed)) } # [doc = \" Convert to a [`SweepEpoch`] for use in [`ReclamationRecord`] fields (RFC-0027 §9).\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — lossless conversion.\"] # [must_use] pub fn as_sweep_epoch (self) -> SweepEpoch { SweepEpoch (self . 0) } # [doc = \" Return the underlying `u64` value.\"] # [must_use] pub fn as_u64 (self) -> u64 { self . 0 } }",
-      "reason": "impl method `as_u64` body: unsupported expression form `self . 0`",
+      "reason": "dropped non-doc attribute(s) on method `as_u64`: # [must_use]",
       "item_name": "impl RegionEpoch"
     },
     {
@@ -124,7 +124,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" One value deferred for scope-exit reclamation within a [`Region`].\"] # [doc = \"\"] # [doc = \" Holds the content identity of the value to be reclaimed. The `ScopeExit` trigger and\"] # [doc = \" the `scope_id`/`sweep_epoch` are supplied at close time (from the region itself), not\"] # [doc = \" at deferral time — deferral is cheap (a single `ContentHash` push, no bookkeeping).\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — the hash is stored as-is; no approximation.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct DeferredEntry { # [doc = \" Content identity of the value deferred for reclamation (RFC-0027 §9 / RFC-0001 §4.6).\"] pub value_meta_hash : ContentHash , }",
-      "reason": "struct `DeferredEntry` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `DeferredEntry` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "DeferredEntry"
     },
     {
@@ -134,7 +134,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl DeferredEntry { # [doc = \" Create a new deferred entry for `value_meta_hash`.\"] # [must_use] pub fn new (value_meta_hash : ContentHash) -> Self { DeferredEntry { value_meta_hash } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `new` body: unsupported expression form `DeferredEntry { value_meta_hash }`",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `new` body: struct literal `DeferredEntry { .. }` — not an in-file single-ctor struct that emits (no constructor to build)",
       "item_name": "DeferredEntry"
     },
     {
@@ -144,7 +144,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" A scope-exit reclamation region (DN-32 §2.3 / RFC-0027 §10.3 / MEM-3).\"] # [doc = \"\"] # [doc = \" One `Region` corresponds to one RT7 scope-tree node. It accumulates\"] # [doc = \" [`DeferredEntry`] values — values whose RC hit zero within this scope, or scope-local\"] # [doc = \" allocations — and at [`Region::close`] emits one [`ReclamationRecord`] per entry\"] # [doc = \" (trigger = `ScopeExit`) through a [`ReclamationSink`].\"] # [doc = \"\"] # [doc = \" ## Sweep order\"] # [doc = \"\"] # [doc = \" - **Parent–child TOTAL:** Close all child `Region`s before closing the parent.\"] # [doc = \"   The child's epoch will be numerically lower than the parent's (it closed first),\"] # [doc = \"   encoding the child→root ordering as a number line. The caller (the executor) is\"] # [doc = \"   responsible for this invariant; [`ScopeTree::close_ordered`] enforces it in tests.\"] # [doc = \"\"] # [doc = \" - **Siblings CONCURRENT (OQ-1 resolved, `Proven`-modulo-LR-9):** Sibling regions\"] # [doc = \"   close independently — no ordering constraint. Safe because LR-9 rules out\"] # [doc = \"   cross-sibling aliases (DN-32 §3).\"] # [doc = \"\"] # [doc = \" ## Never-silent contract (G2)\"] # [doc = \"\"] # [doc = \" Every [`DeferredEntry`] pushed via [`Region::defer`] emits exactly one\"] # [doc = \" `ReclamationRecord(ScopeExit)` when [`Region::close`] is called. A `Region` dropped\"] # [doc = \" without calling `close` while still holding deferred entries is a G2 violation; in\"] # [doc = \" debug builds [`Region::drop`] panics to surface this.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — one record per deferred entry at close (enforced-by-construction).\"] # [derive (Debug)] pub struct Region { # [doc = \" The unique identity of this region in the scope tree.\"] pub id : ScopeNodeId , # [doc = \" Deferred reclamation entries accumulated during this scope's lifetime.\"] deferred : Vec < DeferredEntry > , # [doc = \" The epoch assigned at close time. `None` until `close()` is called.\"] closed_epoch : Option < RegionEpoch > , }",
-      "reason": "struct `Region` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `Region` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "Region"
     },
     {
@@ -154,7 +154,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl Region { # [doc = \" Create a new, open region for a scope-tree node.\"] # [doc = \"\"] # [doc = \" Allocates a fresh [`ScopeNodeId`]. The region starts open (no epoch yet).\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — `ScopeNodeId` is unique and monotonically increasing.\"] # [must_use] pub fn new () -> Self { Region { id : ScopeNodeId :: allocate () , deferred : Vec :: new () , closed_epoch : None , } } # [doc = \" Defer a value for scope-exit reclamation.\"] # [doc = \"\"] # [doc = \" The value's content identity is pushed to the deferred list. At `close()`,\"] # [doc = \" a `ReclamationRecord(ScopeExit)` is emitted for it.\"] # [doc = \"\"] # [doc = \" Calling `defer` after `close()` is a logic error; panics in debug builds.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — the entry is pushed exactly once; no approximation.\"] pub fn defer (& mut self , value_meta_hash : ContentHash) { debug_assert ! (self . closed_epoch . is_none () , \"Region::defer called on a closed region (id={:?})\" , self . id) ; self . deferred . push (DeferredEntry :: new (value_meta_hash)) ; } # [doc = \" The number of values currently deferred in this region.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — returns the current length of the deferred list.\"] # [must_use] pub fn deferred_count (& self) -> usize { self . deferred . len () } # [doc = \" Whether this region has been closed.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — `closed_epoch.is_some()` is the canonical indicator.\"] # [must_use] pub fn is_closed (& self) -> bool { self . closed_epoch . is_some () } # [doc = \" The epoch assigned at close time, if this region has been closed.\"] # [doc = \"\"] # [doc = \" Returns `None` if the region is still open.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — the epoch is the monotonic counter value at close time.\"] # [must_use] pub fn closed_epoch (& self) -> Option < RegionEpoch > { self . closed_epoch } # [doc = \" Close this region: **batch-emit all deferred reclamations**, advance the monotonic\"] # [doc = \" epoch, and return the [`ClosedRegion`] summary.\"] # [doc = \"\"] # [doc = \" ## What happens at close (`Exact` — enforced-by-construction)\"] # [doc = \"\"] # [doc = \" 1. A fresh [`RegionEpoch`] is allocated (monotonically increasing).\"] # [doc = \" 2. For each [`DeferredEntry`] in `self.deferred` (drained in order), exactly one\"] # [doc = \"    [`ReclamationRecord`] is constructed with:\"] # [doc = \"    - `scope_id = self.id.as_scope_id()`\"] # [doc = \"    - `sweep_epoch = epoch.as_sweep_epoch()`\"] # [doc = \"    - `trigger = ReclamationTrigger::ScopeExit`  ← **the SECOND live trigger (MEM-3)**\"] # [doc = \"    - `value_meta_hash = entry.value_meta_hash`\"] # [doc = \"\"] # [doc = \"    Each record is emitted through `sink.emit(record)` (never-silent G2).\"] # [doc = \" 3. The deferred list is drained (emptied).\"] # [doc = \" 4. `self.closed_epoch` is set to the allocated epoch.\"] # [doc = \" 5. A [`ClosedRegion`] summary is returned.\"] # [doc = \"\"] # [doc = \" ## Sweep-order contract (`Declared`)\"] # [doc = \"\"] # [doc = \" The caller MUST close all child regions before calling `close()` on the parent.\"] # [doc = \" A child closed before its parent will have a numerically lower `RegionEpoch`\"] # [doc = \" (it allocated its epoch first), encoding the child→root total order.\"] # [doc = \" `Region::close` does NOT enforce this by type — it is an RT7 contract (live-executor\"] # [doc = \" wiring is downstream, FLAG).\"] # [doc = \"\"] # [doc = \" ## Calling `close` more than once panics in debug builds.\"] # [doc = \"\"] # [doc = \" Bulk-efficiency-as-perf-win: `Declared` (DN-32 §6a — no Mycelium measurement yet).\"] pub fn close (& mut self , sink : & mut dyn ReclamationSink) -> ClosedRegion { debug_assert ! (self . closed_epoch . is_none () , \"Region::close called on an already-closed region (id={:?})\" , self . id) ; let epoch = RegionEpoch :: allocate () ; let scope_id = self . id . as_scope_id () ; let sweep_epoch = epoch . as_sweep_epoch () ; let count = self . deferred . len () ; for entry in self . deferred . drain (..) { let record = ReclamationRecord :: new (scope_id , sweep_epoch , ReclamationTrigger :: ScopeExit , entry . value_meta_hash ,) ; sink . emit (record) ; } self . closed_epoch = Some (epoch) ; ClosedRegion { id : self . id , epoch , reclaimed_count : count , } } }",
-      "reason": "no member of this impl block could be transpiled (6 sub-issue(s)): impl method `new` body: unsupported expression form `Region { id : ScopeNodeId :: allocate () , deferred : Vec :: new () , closed_epoch : None , }`; impl method `defer` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence; impl method `deferred_count` signature: `usize` has a platform-dependent width; no fixed Binary{N} mapping; impl method `is_closed` body: unsupported expression form `self . closed_epoch`; impl method `closed_epoch` body: unsupported expression form `self . closed_epoch`; impl method `close` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence",
+      "reason": "no member of this impl block could be transpiled (6 sub-issue(s)): impl method `new` body: struct literal `Region { .. }` — not an in-file single-ctor struct that emits (no constructor to build); impl method `defer` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence; impl method `deferred_count` signature: `usize` has a platform-dependent width; no fixed Binary{N} mapping; impl method `is_closed` body: field projection `self.closed_epoch` on `Region` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against); impl method `closed_epoch` body: field projection `self.closed_epoch` on `Region` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against); impl method `close` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence",
       "item_name": "Region"
     },
     {
@@ -184,7 +184,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" Summary returned by [`Region::close`] — the audit-visible outcome of a scope-exit\"] # [doc = \" reclamation batch.\"] # [doc = \"\"] # [doc = \" Carries the region's identity, the epoch assigned at close time, and the count of\"] # [doc = \" deferred entries reclaimed. Useful for supervision observability, property tests, and\"] # [doc = \" the sweep-order assertion (child epoch < parent epoch).\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — all fields are deterministic functions of the close operation.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct ClosedRegion { # [doc = \" The identity of the closed region.\"] pub id : ScopeNodeId , # [doc = \" The monotonic epoch allocated at close time.\"] pub epoch : RegionEpoch , # [doc = \" The number of deferred entries reclaimed (one `ScopeExit` record emitted per entry).\"] pub reclaimed_count : usize , }",
-      "reason": "struct `ClosedRegion` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `ClosedRegion` has a field type with no confirmed mapping (`usize` has a platform-dependent width; no fixed Binary{N} mapping)",
       "item_name": "ClosedRegion"
     },
     {
@@ -194,7 +194,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" A minimal parent–child scope-tree for encoding and testing the sweep-order model\"] # [doc = \" (RFC-0027 §10.3 / DN-32 §3).\"] # [doc = \"\"] # [doc = \" `ScopeTree` holds one parent [`Region`] and zero or more child [`Region`]s. The correct\"] # [doc = \" close order (RT7) is: close all children before the parent. [`ScopeTree::close_ordered`]\"] # [doc = \" enforces this order. Siblings may close in any order — they are concurrent (OQ-1).\"] # [doc = \"\"] # [doc = \" This is NOT a full runtime scope tree; it is the minimal structure needed to encode and\"] # [doc = \" property-test the parent–child TOTAL and sibling-CONCURRENT ordering guarantees. Live\"] # [doc = \" executor integration is downstream (FLAG).\"] # [doc = \"\"] # [doc = \" Guarantee: `Declared` — the tree structure encodes the sweep order; epoch-ordering\"] # [doc = \" property (child < parent) is `Exact` by monotonic counter.\"] pub struct ScopeTree { # [doc = \" Child regions — independent siblings (closed before the parent, any order).\"] pub children : Vec < Region > , # [doc = \" The parent region — closed last.\"] pub parent : Region , }",
-      "reason": "struct `ScopeTree` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `ScopeTree` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "ScopeTree"
     },
     {

@@ -19,7 +19,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" \\\\[Declared\\\\] Read environment variable `name`. Returns `None` if the variable is unset **or** is\"] # [doc = \" not valid Unicode — an explicit absence, never an empty-string stand-in (G2). Use when a missing\"] # [doc = \" variable is a recoverable condition; the `None` must be handled, not assumed present.\"] # [must_use] pub fn get_env (name : & str) -> Option < String > { std :: env :: var (name) . ok () }",
-      "reason": "unsupported Rust type form `& str`",
+      "reason": "qualified/associated-function call `std :: env :: var` — no established Mycelium surface form for a Rust conversion-op body; emitting the bare last-segment name would fabricate a call (e.g. `from(...)` is not a Mycelium builtin)",
       "item_name": "get_env"
     },
     {
@@ -29,7 +29,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" \\\\[Declared\\\\] A command-line argument that was not valid UTF-8, reported by its **position**\"] # [doc = \" (`index` — arg 0 is the program name) so the offending input is named, never silently dropped\"] # [doc = \" (G2). Carries the lossy [`String::from_utf8_lossy`] rendering (`lossy`) so an `EXPLAIN`/diagnostic\"] # [doc = \" can *show* the bad arg without fabricating a faithful round-trip it cannot deliver.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct NonUtf8Arg { # [doc = \" 0-based position of the offending argument (0 = program name).\"] pub index : usize , # [doc = \" `String::from_utf8_lossy` rendering of the raw argument (U+FFFD for each invalid byte).\"] pub lossy : String , }",
-      "reason": "struct `NonUtf8Arg` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `NonUtf8Arg` has a field type with no confirmed mapping (`usize` has a platform-dependent width; no fixed Binary{N} mapping)",
       "item_name": "NonUtf8Arg"
     },
     {
@@ -39,7 +39,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl std :: fmt :: Display for NonUtf8Arg { fn fmt (& self , f : & mut std :: fmt :: Formatter < '_ >) -> std :: fmt :: Result { write ! (f , \"command-line argument at index {} is not valid UTF-8 (lossy: {:?})\" , self . index , self . lossy) } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: unsupported Rust type form `& mut std :: fmt :: Formatter < '_ >`",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut std :: fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
       "item_name": "NonUtf8Arg"
     },
     {
@@ -59,7 +59,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" \\\\[Declared\\\\] The process's command-line arguments (including arg 0), parsed to `String`s. Built on\"] # [doc = \" `args_os`: a non-UTF-8 argument is an explicit `Err(NonUtf8Arg)` naming the offending **index** —\"] # [doc = \" never a silently-dropped element (the previous `filter_map` behaviour) that would shift every\"] # [doc = \" following arg's position, and (unlike `std::env::args()`) never a *panic* (G2). The first\"] # [doc = \" non-UTF-8 arg short-circuits; callers needing the faithful, position-stable raw form should use\"] # [doc = \" `std::env::args_os` directly (this floor is the validated-UTF-8 convenience).\"] pub fn args () -> Result < Vec < String > , NonUtf8Arg > { parse_args (std :: env :: args_os ()) }",
-      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
+      "reason": "qualified/associated-function call `std :: env :: args_os` — no established Mycelium surface form for a Rust conversion-op body; emitting the bare last-segment name would fabricate a call (e.g. `from(...)` is not a Mycelium builtin)",
       "item_name": "args"
     },
     {

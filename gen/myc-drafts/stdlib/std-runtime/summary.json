@@ -65,11 +65,11 @@
       "gaps": 25,
       "expressible_pct": 20.833333333333336,
       "category_counts": {
-        "DeriveAttr": 4,
+        "DeriveAttr": 6,
         "GenericBound": 5,
         "Impl": 2,
         "Import": 5,
-        "Other": 5,
+        "Other": 3,
         "Struct": 4
       }
     },
@@ -84,7 +84,8 @@
         "DeriveAttr": 1,
         "Impl": 10,
         "Import": 2,
-        "Other": 2,
+        "MultiStmtBody": 1,
+        "Other": 1,
         "PayloadVariant": 3,
         "Struct": 3
       }
@@ -93,14 +94,14 @@
       "file": "crates/mycelium-std-runtime/src/r2_residual.rs",
       "total_items": 9,
       "non_test_items": 9,
-      "emitted": 1,
-      "gaps": 9,
-      "expressible_pct": 11.11111111111111,
+      "emitted": 3,
+      "gaps": 11,
+      "expressible_pct": 33.33333333333333,
       "category_counts": {
-        "DeriveAttr": 1,
+        "DeriveAttr": 3,
         "Impl": 3,
-        "Other": 3,
-        "Struct": 2
+        "NamedFieldDrop": 2,
+        "Other": 3
       }
     },
     {
@@ -136,10 +137,10 @@
       "gaps": 20,
       "expressible_pct": 22.22222222222222,
       "category_counts": {
-        "DeriveAttr": 2,
+        "DeriveAttr": 6,
         "Impl": 5,
         "Import": 3,
-        "Other": 6,
+        "Other": 2,
         "Struct": 4
       }
     },
@@ -183,15 +184,16 @@
       "file": "crates/mycelium-std-runtime/src/task.rs",
       "total_items": 13,
       "non_test_items": 12,
-      "emitted": 2,
-      "gaps": 13,
-      "expressible_pct": 16.666666666666664,
+      "emitted": 4,
+      "gaps": 14,
+      "expressible_pct": 33.33333333333333,
       "category_counts": {
-        "DeriveAttr": 2,
-        "Impl": 5,
+        "DeriveAttr": 3,
+        "Impl": 4,
         "Import": 1,
-        "Other": 1,
-        "Struct": 3,
+        "NamedFieldDrop": 1,
+        "Other": 2,
+        "Struct": 2,
         "TestItem": 1
       }
     }
@@ -199,17 +201,19 @@
   "totals": {
     "total_items": 148,
     "non_test_items": 145,
-    "emitted": 18,
-    "gaps": 151,
-    "expressible_pct": 12.413793103448276,
+    "emitted": 22,
+    "gaps": 154,
+    "expressible_pct": 15.172413793103448,
     "category_counts": {
-      "DeriveAttr": 14,
+      "DeriveAttr": 23,
       "GenericBound": 12,
-      "Impl": 28,
+      "Impl": 27,
       "Import": 28,
-      "Other": 40,
+      "MultiStmtBody": 1,
+      "NamedFieldDrop": 3,
+      "Other": 34,
       "PayloadVariant": 3,
-      "Struct": 22,
+      "Struct": 19,
       "TestItem": 3,
       "Trait": 1
     }

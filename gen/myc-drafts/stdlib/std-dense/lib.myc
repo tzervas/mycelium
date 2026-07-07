@@ -87,4 +87,5 @@
 // accompanying .gap.json for every construct this pass could not express.
 nodule std.dense;
 
-
+// The citation string for element-wise `Proven` bounds (add/sub/scale/hadamard).
+fn elementwise_citation(dtype: ScalarKind) => Bytes = match dtype { Bf16 => to_owned("two-rounding composition (1+δ₁)(1+δ₂)−1 ≤ 2^−8 + 2^−23: native f32 op then bfloat16 round-to-nearest — Higham (2002), Thm 2.2; side-conditions checked per element (Q1 finalized; M-512-checked)"), _ => to_owned("round-to-nearest relative error ≤ u = 2^−24 for IEEE binary32 — Higham (2002), Thm 2.2; side-conditions checked per element (Q1 finalized; M-512-checked)") };

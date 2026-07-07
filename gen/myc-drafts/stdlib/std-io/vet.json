@@ -5,18 +5,18 @@
       "source_file": "crates/mycelium-std-io/src/error.rs",
       "class": "CheckError",
       "exit_code": 3,
-      "diagnostic": "check-error: check error in `ReadValueError`: unknown type `IoError`",
+      "diagnostic": "check-error: check error in `from_static`: unknown function/constructor/prim `to_owned`",
       "non_test_items": 19,
-      "emitted_items": 3
+      "emitted_items": 7
     },
     {
       "myc_file": "gen/myc-drafts/stdlib/std-io/guarantee_matrix.myc",
       "source_file": "crates/mycelium-std-io/src/guarantee_matrix.rs",
-      "class": "Clean",
-      "exit_code": 0,
-      "diagnostic": "",
+      "class": "CheckError",
+      "exit_code": 3,
+      "diagnostic": "check-error: check error in `MatrixRow`: unknown type `GuaranteeTag`",
       "non_test_items": 6,
-      "emitted_items": 2
+      "emitted_items": 3
     },
     {
       "myc_file": "gen/myc-drafts/stdlib/std-io/io.myc",
@@ -39,18 +39,18 @@
     {
       "myc_file": "gen/myc-drafts/stdlib/std-io/serialize.myc",
       "source_file": "crates/mycelium-std-io/src/serialize.rs",
-      "class": "Clean",
-      "exit_code": 0,
-      "diagnostic": "",
+      "class": "CheckError",
+      "exit_code": 3,
+      "diagnostic": "check-error: check error in `is_domain_error`: unknown function/constructor/prim `contains`",
       "non_test_items": 17,
-      "emitted_items": 1
+      "emitted_items": 3
     }
   ],
   "total_non_test_items": 63,
-  "total_emitted_items": 7,
-  "total_checked_clean_items": 3,
+  "total_emitted_items": 14,
+  "total_checked_clean_items": 0,
   "class_counts": {
-    "CheckError": 2,
-    "Clean": 3
+    "CheckError": 4,
+    "Clean": 1
   }
 }

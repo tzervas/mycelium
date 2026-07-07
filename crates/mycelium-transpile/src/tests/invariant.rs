@@ -25,8 +25,11 @@ fn corpus() -> Vec<&'static str> {
     vec![
         // All-expressible file.
         "enum Ordering { Less, Equal, Greater }\nfn is_lt(o: bool) -> bool { o }",
-        // All-gapped file (every known hard gap, several items).
-        "trait Foo { fn bar(&self) -> bool; }\nmacro_rules! m { () => {}; }\nstruct S { x: u8 }",
+        // All-gapped file (every known hard gap, several items). The struct carries a `char` field
+        // so it still gaps under M-1006: a named-field struct with all-*mappable* fields now emits
+        // positionally (and `String` maps to `Bytes` as of §8.14), so an all-gapped fixture must use
+        // a field type that has no mapping — `char` has no confirmed base_type arm.
+        "trait Foo { fn bar(&self) -> bool; }\nmacro_rules! m { () => {}; }\nstruct S { c: char }",
         // Mixed: some expressible, some gapped, in one file (mirrors the real target crate).
         "enum E { A(u8), B }\ntrait T { fn f(&self) -> bool; }\nfn g(x: bool) -> bool { x }",
         // A single unmappable-type fn (signed int) plus a working one.
