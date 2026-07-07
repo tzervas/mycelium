@@ -2003,3 +2003,156 @@ fn unify_list(a1: Vec[Ty], a2: Vec[Ty], s: Vec[Pair[Bytes, Ty]]) => Result[Vec[P
       Cons(h2, t2) => match unify(h1, h2, s) { Err(e) => Err(e), Ok(s1) => unify_list(t1, t2, s1) }
     }
   };
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// mono.rs NAME-MANGLING FAMILY (M-740 Stage 5, increment 4 — M-1009). Pure Ty->Bytes transformers.
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// Ports mono.rs's monomorphization name-mangling family: `mangle_ty`, `scalar_tag`, `mangle_decl`,
+// `mangle_ctor`, `mangle_method`, `mangle_arrow`, `apply_fn_name`, `mangle_ty_or_fn`,
+// `mangle_decl_with_wargs`, `mangle_hof_decl` (mono.rs::mangle_*). The RFC-0003 SS3 / RFC-0024 SS4A
+// injective mangling scheme — the queryable identity of every resolved instance. All are pure
+// `Ty`/name -> `Bytes` string functions depending only on the increment-1 `Ty` vocabulary
+// (INDEPENDENT of M-1007/M-1008). The mangling stays injective across the repr/data boundary (the
+// `#` nullary-data tag; the `$`/`%`/`~` joints are non-surface-identifier chars — never a silent
+// alias, G2). Live oracle: mono::mangle_* (`pub(crate)`), reachable in-crate; the string-output
+// differential is a direct `bytes_eq` comparison (compiler_stage5_mangle.rs — the cleanest witness).
+//
+// FLAG-semcore-16 (reuses `dec_u32` from increment 3 — FLAG-semcore-15). Rust's `format!("{n}")`
+// decimal render is `dec_u32` here; M-1008 introduced it (its `tuple_type_name` needed it too), so
+// this increment REUSES it rather than re-introducing it (DRY — the sequential ports share the one
+// helper; the issue framed it as M-1009's dependency because the increments were independently
+// scoped, but landed sequentially they share it).
+//
+// FLAG-semcore-17 (`mangle_ty_in_ty` and `item_key` are DEFERRED, not ported here — an honest gap,
+// never a silent one). `mangle_ty_in_ty` (a `Ty -> Ty` rewrite) is a Rust MODULE-PRIVATE `fn` with
+// NO reachable `pub(crate)` oracle, and `item_key` is likewise module-private AND depends on mono's
+// `Item` work-item type (not in this nodule's copied vocabulary). Porting either would land
+// UN-witnessable code — exactly the failure the FLAG-semcore-10 live-oracle discipline exists to
+// prevent (a port with no differential is `Declared` at best). Both are left for a later increment
+// that either lifts their visibility (a Rust-source change out of scope for this read-only leaf) or
+// reaches them through a `pub(crate)` entry point. Stated plainly (G2/VR-5), not narrowed silently.
+
+// ── small numeric literal + bytes helpers the mangling needs ─────────────────────────────────────
+fn three32() => Binary{32} = 0b0000_0000_0000_0000_0000_0000_0000_0011;
+
+// replace_dash: `model.replace('-', '_')` (the VSA kernel-model-id fragment is `$`-joined and its
+// `-` — not an identifier char — maps to `_`; injective over the model-id alphabet). O(len) over the
+// short model id via 1-char slices.
+fn replace_dash_at(s: Bytes, i: Binary{32}, n: Binary{32}) => Bytes =
+  match lt(i, n) {
+    0b1 => let ch = bytes_slice(s, i, add_u(i, one32())) in
+           bytes_concat(
+             match bytes_eq(ch, "-") { 0b1 => "_", _ => ch },
+             replace_dash_at(s, add_u(i, one32()), n)
+           ),
+    _ => ""
+  };
+
+fn replace_dash(s: Bytes) => Bytes = replace_dash_at(s, zero32(), bytes_len(s));
+
+// strip_fn_prefix: `arrow.strip_prefix("Fn$").unwrap_or(arrow)` — strip a leading "Fn$" if present.
+fn strip_fn_prefix(a: Bytes) => Bytes =
+  match lt(bytes_len(a), three32()) {
+    0b1 => a,
+    _ => match bytes_eq(bytes_slice(a, zero32(), three32()), "Fn$") {
+      0b1 => bytes_slice(a, three32(), bytes_len(a)),
+      _ => a
+    }
+  };
+
+// ── scalar_tag (mono.rs::scalar_tag) — the F16/BF16/F32/F64 tag inside mangle_ty ────────────────
+fn scalar_tag(s: Scalar) => Bytes =
+  match s { SF16 => "F16", SBf16 => "BF16", SF32 => "F32", SF64 => "F64" };
+
+// vsa_sp_tag: the VSA sparsity fragment (`Dense` -> "Dn", `Sparse(k)` -> "Sp{k}").
+fn vsa_sp_tag(sp: Sparsity) => Bytes =
+  match sp { SpDense => "Dn", SpSparse(k) => bytes_concat("Sp", dec_u32(k)) };
+
+// mangle_ty_args: the `$`-joined argument fragments of an applied data type / a decl's type args
+// (`for a in args { push('$'); push(mangle_ty(a)) }`).
+fn mangle_ty_args(args: Vec[Ty]) => Bytes =
+  match args {
+    Nil => "",
+    Cons(h, t) => bytes_concat(bytes_concat("$", mangle_ty(h)), mangle_ty_args(t))
+  };
+
+// ── mangle_ty (mono.rs::mangle_ty) — a `Ty` to a flat identifier-suffix fragment (injective) ────
+fn mangle_ty(t: Ty) => Bytes =
+  match t {
+    TyBinary(w) => match w { WdLit(n) => bytes_concat("Binary", dec_u32(n)), WdVar(v) => bytes_concat("BinaryVAR_", v) },
+    TyTernary(w) => match w { WdLit(m) => bytes_concat("Ternary", dec_u32(m)), WdVar(v) => bytes_concat("TernaryVAR_", v) },
+    TyDense(d, sc) => bytes_concat("Dense", bytes_concat(dec_u32(d), scalar_tag(sc))),
+    TyVsa(model, dim, sp) => bytes_concat("Vsa", bytes_concat(dec_u32(dim), bytes_concat(vsa_sp_tag(sp), bytes_concat("$", replace_dash(model))))),
+    TySubstrate(tag) => bytes_concat("Substrate", tag),
+    TySeq(elem, n) => bytes_concat("Seq", bytes_concat(dec_u32(n), bytes_concat("$", mangle_ty(elem)))),
+    TyBytes => "Bytes",
+    TyFloat => "Float",
+    TyData(n, args) => match args {
+      Nil => bytes_concat(n, "#"),
+      Cons(_, _) => bytes_concat(n, mangle_ty_args(args))
+    },
+    TyVar(v) => bytes_concat("VAR_", v),
+    TyFn(a, r) => bytes_concat("HOF_FN_", bytes_concat(mangle_ty(a), bytes_concat("__TO__", mangle_ty(r))))
+  };
+
+// ── mangle_decl / mangle_ctor (mono.rs) — a decl (or ctor) name at concrete type args ───────────
+// Empty targs => the original name byte-for-byte (monomorphic code untouched).
+fn mangle_decl(name: Bytes, targs: Vec[Ty]) => Bytes =
+  match targs { Nil => name, Cons(_, _) => bytes_concat(name, mangle_ty_args(targs)) };
+
+fn mangle_ctor(name: Bytes, targs: Vec[Ty]) => Bytes = mangle_decl(name, targs);
+
+// ── mangle_method (mono.rs) — a trait method to `method$Trait$ForTy` ────────────────────────────
+fn mangle_method(method: Bytes, trait_name: Bytes, for_ty: Ty) => Bytes =
+  bytes_concat(method, bytes_concat("$", bytes_concat(trait_name, bytes_concat("$", mangle_ty(for_ty)))));
+
+// ── mangle_arrow / mangle_ty_or_fn / apply_fn_name (mono.rs, RFC-0024 SS4A) ─────────────────────
+// mangle_ty_or_fn: like mangle_ty but a `Ty::Fn` becomes the arrow tag-sum `Fn$A$B` (mutually
+// recursive with mangle_arrow — a nested arrow names its inner arrow's tag-sum).
+fn mangle_ty_or_fn(t: Ty) => Bytes =
+  match t { TyFn(a, b) => mangle_arrow(a, b), _ => mangle_ty(t) };
+
+fn mangle_arrow(a: Ty, b: Ty) => Bytes =
+  bytes_concat("Fn$", bytes_concat(mangle_ty_or_fn(a), bytes_concat("$", mangle_ty_or_fn(b))));
+
+// apply_fn_name: the dispatcher name for an arrow mangle `Fn$A$B` -> `apply$A$B`.
+fn apply_fn_name(arrow: Bytes) => Bytes = bytes_concat("apply$", strip_fn_prefix(arrow));
+
+// ── mangle_decl_with_wargs / mangle_hof_decl (mono.rs, DN-42/M-753 step-c, RFC-0024 SS4) ────────
+// warg_tag: one width argument's `$`-joined fragment (`Binary{n}` for a Lit; the never-reached
+// `WVAR_{v}` marker for a Var — mono refuses undetermined params first, mirrored honestly).
+fn warg_tag(w: Width) => Bytes =
+  match w { WdLit(n) => bytes_concat("Binary", dec_u32(n)), WdVar(v) => bytes_concat("WVAR_", v) };
+
+fn warg_joints(wargs: Vec[Width]) => Bytes =
+  match wargs { Nil => "", Cons(w, rest) => bytes_concat(bytes_concat("$", warg_tag(w)), warg_joints(rest)) };
+
+fn mangle_decl_with_wargs(name: Bytes, targs: Vec[Ty], wargs: Vec[Width]) => Bytes =
+  bytes_concat(mangle_decl(name, targs), warg_joints(wargs));
+
+// pairs_is_empty: the `fn_args.is_empty() && dyn_fns.is_empty()` guard (over Vec[Pair[u32, Bytes]]).
+fn pairs_is_empty(p: Vec[Pair[Binary{32}, Bytes]]) => Bool =
+  match p { Nil => True, Cons(_, _) => False };
+
+// hof_fn_joints: the static fn-argument segments `%{idx}:{callee}` (the `%` fresh-var joint).
+fn hof_fn_joints(fa: Vec[Pair[Binary{32}, Bytes]]) => Bytes =
+  match fa {
+    Nil => "",
+    Cons(p, rest) => match p { Pr(idx, callee) =>
+      bytes_concat(bytes_concat("%", bytes_concat(dec_u32(idx), bytes_concat(":", callee))), hof_fn_joints(rest)) }
+  };
+
+// hof_dyn_joints: the dynamic (kept-closure) fn-argument segments `~{idx}:{arrow}` (the `~` joint).
+fn hof_dyn_joints(df: Vec[Pair[Binary{32}, Bytes]]) => Bytes =
+  match df {
+    Nil => "",
+    Cons(p, rest) => match p { Pr(idx, arrow) =>
+      bytes_concat(bytes_concat("~", bytes_concat(dec_u32(idx), bytes_concat(":", arrow))), hof_dyn_joints(rest)) }
+  };
+
+fn mangle_hof_decl(name: Bytes, targs: Vec[Ty], wargs: Vec[Width], fa: Vec[Pair[Binary{32}, Bytes]], df: Vec[Pair[Binary{32}, Bytes]]) => Bytes =
+  let base = mangle_decl_with_wargs(name, targs, wargs) in
+  match and_(pairs_is_empty(fa), pairs_is_empty(df)) {
+    True => base,
+    False => bytes_concat(base, bytes_concat(hof_fn_joints(fa), hof_dyn_joints(df)))
+  };
