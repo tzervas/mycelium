@@ -97,8 +97,8 @@ isolated worktrees, disjoint dirs by construction, shared files integrator-owned
 ## 6. Honesty posture (binding on the program)
 
 1. **The improved-on-RAG claim is `Empirical`-gated:** M-1018 ships an eval harness (a question set
-   drawn from real agent tasks over this corpus; graded on answer correctness + provenance fidelity
-   + latency) comparing Layer 2 against the Layer-1 baseline (and optionally a conventional
+   drawn from real agent tasks over this corpus; graded on answer correctness, provenance fidelity,
+   and latency) comparing Layer 2 against the Layer-1 baseline (and optionally a conventional
    embedding baseline). Until Layer 2 measurably beats/complements the baseline, the claim stays
    aspiration, and the system honestly serves Layer-1 answers (G2/VR-5).
 2. **Provenance is mandatory, not best-effort:** an answer without a resolvable citation is a
