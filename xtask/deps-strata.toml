@@ -116,8 +116,9 @@ mycelium-std-testing = 6
 mycelium-std-text = 2
 mycelium-std-time = 2
 mycelium-std-vsa = 3
-# M-1015/E39-1 (DN-87): mycelium-tero depends on mycelium-doc (stratum 6) + mycelium-vsa (stratum 1),
-# so 1 + max(mycelium-doc 6) = 7. A downward tools->core edge (tier-legal); nothing depends on it.
+# M-1015/E39-1 (DN-87): mycelium-tero depends on mycelium-doc (stratum 6), so 1 + max(6) = 7. A
+# downward tools->core edge (tier-legal); nothing depends on it. (M-1018's Layer-2 adds a
+# mycelium-vsa (stratum 1) edge — still 1 + max(6, 1) = 7, so the value is unchanged when it lands.)
 mycelium-tero = 7
 # RFC-0041 W1 (M-979): bumped 0 -> 2 — was a leaf (no workspace deps); now depends on
 # mycelium-workstack (stratum 1), so 1 + max(mycelium-workstack 1) = 2. Nothing depends on
