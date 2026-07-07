@@ -94,14 +94,14 @@
       "file": "crates/mycelium-std-runtime/src/r2_residual.rs",
       "total_items": 9,
       "non_test_items": 9,
-      "emitted": 1,
-      "gaps": 9,
-      "expressible_pct": 11.11111111111111,
+      "emitted": 3,
+      "gaps": 11,
+      "expressible_pct": 33.33333333333333,
       "category_counts": {
-        "DeriveAttr": 1,
+        "DeriveAttr": 3,
         "Impl": 3,
-        "Other": 3,
-        "Struct": 2
+        "NamedFieldDrop": 2,
+        "Other": 3
       }
     },
     {
@@ -201,19 +201,19 @@
   "totals": {
     "total_items": 148,
     "non_test_items": 145,
-    "emitted": 20,
-    "gaps": 152,
-    "expressible_pct": 13.793103448275861,
+    "emitted": 22,
+    "gaps": 154,
+    "expressible_pct": 15.172413793103448,
     "category_counts": {
-      "DeriveAttr": 21,
+      "DeriveAttr": 23,
       "GenericBound": 12,
       "Impl": 27,
       "Import": 28,
       "MultiStmtBody": 1,
-      "NamedFieldDrop": 1,
+      "NamedFieldDrop": 3,
       "Other": 34,
       "PayloadVariant": 3,
-      "Struct": 21,
+      "Struct": 19,
       "TestItem": 3,
       "Trait": 1
     }

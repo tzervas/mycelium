@@ -31,3 +31,11 @@ nodule std.runtime;
 // A deferred M-828-tail item (DN-78 §4). Each variant carries exactly one [`ResidualRow`] in
 // [`RESIDUALS`] (completeness is tested, not assumed).
 type DeferredR2 = MeshOverlay | GraftCapability | XlocMovement | CystCheckpoint | CaptureSetL1Surface | MultiNodePlacement;
+
+// One ledger row: what is deferred, why, and where it is tracked (DN-78 §4; G2 — the residual
+// is explicit data, not a silent gap).
+type ResidualRow = ResidualRow(DeferredR2, Bytes, Bytes, Bytes, Bytes);
+
+// The explicit refusal a deferred item's [`require`] returns (G2: typed, inspectable, and
+// teaching — it names the construct, the unmet prerequisite, and the tracker).
+type R2DeferredError = R2DeferredError(DeferredR2, ResidualRow);

@@ -51,7 +51,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" A reified policy-set transition record (G2: a mechanized set is never a silent override —\"] # [doc = \" the transition itself is inspectable). Guarantee: **`Exact`** — every [`PolicySlot::set`]\"] # [doc = \" appends exactly one record, with a per-slot monotonic sequence number, by construction.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct PolicySetRecord { # [doc = \" The site whose active policy changed.\"] pub site : PolicySite , # [doc = \" Per-slot monotonic sequence number (0 for the first set).\"] pub seq : u64 , # [doc = \" The previous active policy's content address, `None` on the first set.\"] pub previous : Option < ContentHash > , # [doc = \" The new active policy's content address ([`SelectionPolicy::policy_ref`]).\"] pub new_policy : ContentHash , # [doc = \" The new policy's display name (for the EXPLAIN/teaching surface).\"] pub new_policy_name : String , }",
-      "reason": "struct `PolicySetRecord` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
+      "reason": "struct `PolicySetRecord` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "PolicySetRecord"
     },
     {

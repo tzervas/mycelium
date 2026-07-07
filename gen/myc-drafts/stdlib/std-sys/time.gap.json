@@ -19,7 +19,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" \\\\[Declared\\\\] Returns nanoseconds since the Unix epoch from the wall clock.\"] # [doc = \"\"] # [doc = \" Returns `Err` if the system time is before the epoch — never-silent (G2).\"] # [doc = \"\"] # [doc = \" # Guarantee\"] # [doc = \"\"] # [doc = \" `Declared` — backed by `std::time::SystemTime`. No audit of platform clock resolution,\"] # [doc = \" drift, or leap-second handling.\"] pub fn wall_nanos () -> Result < u128 , String > { SystemTime :: now () . duration_since (UNIX_EPOCH) . map (| d | d . as_nanos ()) . map_err (| e | e . to_string ()) }",
-      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
+      "reason": "qualified/associated-function call `SystemTime :: now` — no established Mycelium surface form for a Rust conversion-op body; emitting the bare last-segment name would fabricate a call (e.g. `from(...)` is not a Mycelium builtin)",
       "item_name": "wall_nanos"
     },
     {

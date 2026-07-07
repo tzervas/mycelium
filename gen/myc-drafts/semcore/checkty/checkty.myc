@@ -12,4 +12,15 @@
 // accompanying .gap.json for every construct this pass could not express.
 nodule l1;
 
+// A width argument in a [`Ty::Binary`] or [`Ty::Ternary`] — either a concrete literal or an
+// abstract width parameter (DN-42 / M-753). Width variables (`Var`) are introduced in step (b)
+// and survive only during generic-fn checking; they must not reach elaboration.
+type Width = Lit(Binary{32}) | Var(Bytes);
 
+// An explicit check failure (never a silent pass or a guess — S5/G2).
+type CheckError = CheckError(Bytes, Bytes);
+
+// What introduced a performed effect, for the coverage diagnostic. `Ord` so the `(effect, source)`
+// set is deterministic (a stable first-miss). A **`Call`** is a top-level fn or trait-method call
+// (M-660); **`Wild`** is the `wild` FFI floor (M-661 — `wild` performs `ffi`).
+type EffectSource = Call(Bytes) | Wild;

@@ -336,7 +336,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" One row of the `std.rand` guarantee matrix (RFC-0016 §4.5; rand.md §4).\"] # [doc = \"\"] # [doc = \" Encoded as data so tests can assert invariants — never prose-only (RFC-0016 §4.5).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct MatrixRow { # [doc = \" The exported operation name (spec §3).\"] pub op : & 'static str , # [doc = \" Honest guarantee tag on `Exact ⊐ Proven ⊐ Empirical ⊐ Declared` (C2 / VR-5).\"] pub tag : GuaranteeStrength , # [doc = \" Fallibility shape: `\\\"total\\\"` or the explicit error variant(s) (C1).\"] pub fallibility : & 'static str , # [doc = \" Declared effects: `\\\"none\\\"` for pure ops, `\\\"entropy\\\"` for entropy-drawing ops (C6).\"] pub effects : & 'static str , # [doc = \" Whether the op surfaces an inspectable EXPLAIN artifact (C3).\"] pub explainable : bool , }",
-      "reason": "struct `MatrixRow` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
+      "reason": "struct `MatrixRow` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "MatrixRow"
     },
     {

@@ -2,7 +2,8 @@
   "source": "crates/mycelium-l1/src/eval.rs",
   "emitted_items": [
     "ForageError",
-    "EvaluatorOpts"
+    "EvaluatorOpts",
+    "TcoElision"
   ],
   "gaps": [
     {
@@ -119,10 +120,10 @@
       "file": "crates/mycelium-l1/src/eval.rs",
       "line": 55,
       "col": 1,
-      "category": "PayloadVariant",
-      "rust_construct": "PayloadVariant",
+      "category": "ReservedWord",
+      "rust_construct": "ReservedWord",
       "snippet": "# [doc = \" An L1 runtime value: an L0 representation value, or a constructed datum. Data values are\"] # [doc = \" immutable and acyclic by construction — a `Construct` value can only contain values that\"] # [doc = \" existed before it (RFC-0007 §4.7).\"] # [doc = \"\"] # [doc = \" **`Arc` structural sharing for O(1) clone (M-994 fix (b), M-987).** A `Data` node's `fields` are\"] # [doc = \" held behind an [`Arc`], so cloning a `Data` value is a **refcount bump**, not an O(nodes) spine\"] # [doc = \" rebuild. This is sound precisely because `Data` is *immutable and acyclic by construction* (the\"] # [doc = \" invariant above): no code path mutates a live `Data`'s fields in place, so sharing is\"] # [doc = \" observationally identical to copying. `Clone` is therefore **derived** — `Arc::clone` is O(1) and\"] # [doc = \" `String` clones are bounded by the (short) type/ctor names, so a whole-value clone is O(1) in the\"] # [doc = \" node count. This removes the factor of value-size that made `eval_path`'s per-reference `v.clone()`\"] # [doc = \" the ~n^3 L1-eval cost (M-987); a variable reference is now O(1).\"] # [doc = \"\"] # [doc = \" **Iterative destruction (RFC-0041 §4.5, M-979).** `Drop` is still **hand-written and iterative**.\"] # [doc = \" A derived recursive `Drop` walks the `Data.fields` spine on the *host* stack, so a deep\"] # [doc = \" (uniquely-owned) `Cons`/`Nat` value — the exact shape the depth budget now permits up to 4096 deep\"] # [doc = \" — would `SIGABRT` on destruction (RFC-0041 §1's recursive-`Drop` stack bomb). It walks an explicit\"] # [doc = \" heap worklist instead, so control recursion is O(1) host stack for any value depth. With `Arc`\"] # [doc = \" sharing the deep dismantle only happens when a node is the *last* owner ([`Arc::get_mut`] succeeds);\"] # [doc = \" a still-shared subtree drops in O(1) (a refcount decrement), never wrongly torn down. `PartialEq`\"] # [doc = \" stays derived — no code path compares deep `L1Value`s, which go through [`L1Value::to_core`] for\"] # [doc = \" the differential; a deep-compare iterativisation is a tracked §4.5 residual.\"] # [derive (Clone , Debug , PartialEq)] pub enum L1Value { # [doc = \" An L0 value (`repr + payload + Meta`).\"] Repr (Value) , # [doc = \" A saturated constructor application (W6).\"] Data { # [doc = \" The data type's name (v0 keys the registry by name; RFC-0007 §4.2).\"] ty : String , # [doc = \" The constructor's name.\"] ctor : String , # [doc = \" The constructor's field values, in declaration order. Held behind an [`Arc`] so cloning a\"] # [doc = \" `Data` shares the spine (O(1)) rather than deep-copying it (M-994 fix (b)) — sound because\"] # [doc = \" `Data` is immutable + acyclic (never mutated in place).\"] fields : Arc < Vec < L1Value > > , } , # [doc = \" An affine `Substrate` handle (DN-71 Model S §4.1; M-902) — an opaque, runtime-only\"] # [doc = \" external-resource handle ([`crate::substrate::SubstrateHandle`]). It is **not** a repr value\"] # [doc = \" and **not** algebraic data: it names an external resource (RFC-0006 LR-8), carries no\"] # [doc = \" `Repr`/`Meta`, and never lowers to L0 (no kernel node — KC-3). It lives at this evaluator\"] # [doc = \" level only, is *passed* by the ordinary value-binding machinery, and is *inspected* via its\"] # [doc = \" [`SubstrateHandle`](crate::substrate::SubstrateHandle) accessors. The affine use-once\"] # [doc = \" enforcement is M-903 (a static checker pass plus a runtime backstop) and the `consume`\"] # [doc = \" lowering — M-904, DN-71 §4.3 — now **executes** the checked move (never a silent move —\"] # [doc = \" G2/VR-5); a live, un-`consume`d handle is deterministically released at scope exit and the\"] # [doc = \" release recorded (M-904, DN-71 §8 FLAG-4's v0 posture — never a silent leak).\"] Substrate (crate :: substrate :: SubstrateHandle) , # [doc = \" A function-typed value: a reference to an ordinary top-level function, by name (ADR-033/\"] # [doc = \" DN-74, M-923 — the `FieldSpec::Fn` dictionary-dispatch payload). This is deliberately **not**\"] # [doc = \" a general closure: ADR-033 §2.1 identifies the function by its own top-level identity (no\"] # [doc = \" captured environment — a dictionary field is a content-addressed term reference), so a name\"] # [doc = \" is the whole value. Produced when a bare top-level function is referenced in value position\"] # [doc = \" (`crate::elab`'s mirror-image arm); applied by looking the name up in `env.fns` and invoking\"] # [doc = \" it (`eval_app`'s new dispatch-through-a-bound-value case). Never constructed from a `lambda`\"] # [doc = \" literal or a captured value — that remains `mono.rs`'s closure-defunctionalization territory\"] # [doc = \" (RFC-0024 §4A/M-704); this variant is reachable only when `Evaluator` runs directly on a\"] # [doc = \" checked-but-**not**-monomorphized `Env` (mirroring [`crate::elab::elaborate_direct`]).\"] Fn (String) , }",
-      "reason": "enum `L1Value` variant `Data` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
+      "reason": "enum variant/constructor `Substrate` collides with a Mycelium reserved word — emitting it verbatim would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5)",
       "item_name": "L1Value"
     },
     {
@@ -162,7 +163,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Whether the `popped` scope binding is a live `Substrate` handle that **escapes** into any of the\"] # [doc = \" `into` values — the multi-value companion to the single-value `escaping` check inside\"] # [doc = \" [`Evaluator::release_if_abandoned`]. Used at the `LetPop` scope-exit in `enter_call`, where a\"] # [doc = \" let-bound handle can only reach the callee through the call's arguments (`argv`): if it escapes,\"] # [doc = \" the scope-exit release is suppressed (the callee now owns it). Factored out of the previously\"] # [doc = \" inlined `matches!` so the escape test lives alongside `value_contains_substrate_id` rather than\"] # [doc = \" being duplicated (DRY; PR #1189 nit).\"] fn substrate_escapes_into (popped : & (String , L1Value) , into : & [L1Value]) -> bool { matches ! (& popped . 1 , L1Value :: Substrate (h) if into . iter () . any (| a | value_contains_substrate_id (a , h . id ()))) }",
-      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
+      "reason": "unsupported Rust type form `[L1Value]`",
       "item_name": "substrate_escapes_into"
     },
     {
@@ -172,7 +173,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" One recorded `@forage(policy)` placement decision (M-906; DN-70 D1; RFC-0008 RT3) — the\"] # [doc = \" mandatory RFC-0005 §2.2 EXPLAIN record, `site`-tagged (mirrors\"] # [doc = \" [`crate::substrate::ReleaseEvent`]'s `site` field — no fabricated line/column; this evaluator\"] # [doc = \" has no source spans, VR-5) so a caller can attribute each decision to the function it occurred\"] # [doc = \" in. `explanation` is [`mycelium_select::Explanation`] **verbatim** — the real RFC-0005\"] # [doc = \" mechanism's own record, not a reimplementation (DN-70 D1: \\\"no new mechanism\\\").\"] # [derive (Debug , Clone , PartialEq)] pub struct ForageDecision { # [doc = \" The function in which the `@forage`-annotated hypha spawned.\"] pub site : String , # [doc = \" The `mycelium-select` EXPLAIN record for this decision.\"] pub explanation : mycelium_select :: Explanation , }",
-      "reason": "struct `ForageDecision` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
+      "reason": "struct `ForageDecision` has a field type with no confirmed mapping (qualified type path `mycelium_select :: Explanation` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5))",
       "item_name": "ForageDecision"
     },
     {
@@ -212,7 +213,7 @@
       "category": "PayloadVariant",
       "rust_construct": "PayloadVariant",
       "snippet": "# [doc = \" Why L1 evaluation could not produce a value — always explicit (S5/G2).\"] # [derive (Debug , Clone , PartialEq)] pub enum L1Error { # [doc = \" The step budget ran out — the non-termination guard (RFC-0007 §4.5/§4.6).\"] FuelExhausted , # [doc = \" The recursion-depth budget ran out. This is the **explicit semantic ceiling** (banked guard\"] # [doc = \" 4; see [`DEFAULT_DEPTH`]): the evaluator recurses on the deep worker stack\"] # [doc = \" ([`mycelium_stack`]), so the budget — not a host-stack overflow — is always what stops a\"] # [doc = \" pathological input. Raise with [`Evaluator::with_depth`]; the host stack will not be the\"] # [doc = \" limit.\"] DepthExceeded { # [doc = \" The configured depth budget.\"] limit : u32 , } , # [doc = \" The trusted kernel (prim registry / swap engine) refused — the refusal is forwarded\"] # [doc = \" verbatim, never softened.\"] Kernel (KernelError) , # [doc = \" A dynamic guarantee-index check failed: the asserted `@ g` is *stronger* than the value's\"] # [doc = \" actual tag — an assertion may only weaken, never upgrade (VR-5; RFC-0007 §4.3).\"] GuaranteeTooWeak { # [doc = \" The function in which the assertion appears.\"] site : String , # [doc = \" The asserted strength.\"] asserted : Strength , # [doc = \" The value's actual (weaker) strength.\"] actual : GuaranteeStrength , } , # [doc = \" A construct the v0 evaluator does not support (`wild`, `spore`, bare-integer/list\"] # [doc = \" literals…) — refused with its reason, mirroring the typechecker's refusals.\"] Unsupported { # [doc = \" The function in which the construct appears.\"] site : String , # [doc = \" What was refused, and why.\"] what : String , } , # [doc = \" An evaluation state the typechecker proves unreachable (unknown name, non-exhaustive\"] # [doc = \" match, arity mismatch…). Reported explicitly rather than panicking, so a checker bug can\"] # [doc = \" never become silent misbehavior.\"] Stuck { # [doc = \" The function in which evaluation got stuck.\"] site : String , # [doc = \" What went wrong.\"] why : String , } , # [doc = \" A declared per-effect budget was exceeded (RFC-0014 §4.5 I4; M-677). The effect analogue\"] # [doc = \" of [`L1Error::FuelExhausted`]: graceful, explicit, never a hang or OOM. The budget is\"] # [doc = \" primed from `FnSig::effect_budgets` at the call site and consumed once per declared effect\"] # [doc = \" per invocation.\"] EffectBudget (EffectBudgetExhausted) , # [doc = \" A `@forage(policy)` placement decision refused (M-906; DN-70 D1; RFC-0008 RT3) — see\"] # [doc = \" [`ForageError`].\"] Forage (ForageError) , }",
-      "reason": "enum `L1Error` variant `GuaranteeTooWeak` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
+      "reason": "enum `L1Error` has a named-field variant referencing a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "L1Error"
     },
     {
@@ -339,10 +340,20 @@
       "file": "crates/mycelium-l1/src/eval.rs",
       "line": 499,
       "col": 1,
-      "category": "Struct",
-      "rust_construct": "Struct",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "# [doc = \" One elided tail-call frame recorded by the TCO EXPLAIN trail (RFC-0041 §4.6 tco32) — the\"] # [doc = \" per-callee identity + the running iteration count at the moment the frame was reused. Not a bare\"] # [doc = \" count (house rule #2 in substance, not just letter): a deep tail chain that later errors yields\"] # [doc = \" an actionable \\\"who was looping, how many times\\\" trace.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct TcoElision { # [doc = \" The callee whose invoke frame was reused (the tail-called function's name).\"] pub callee : String , # [doc = \" The 1-based count of consecutive elisions for this callee at the time of this record.\"] pub iteration : u64 , }",
-      "reason": "struct `TcoElision` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
+      "reason": "dropped non-doc attribute(s) on struct `TcoElision`: # [derive (Debug , Clone , PartialEq , Eq)]",
+      "item_name": "TcoElision"
+    },
+    {
+      "file": "crates/mycelium-l1/src/eval.rs",
+      "line": 499,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" One elided tail-call frame recorded by the TCO EXPLAIN trail (RFC-0041 §4.6 tco32) — the\"] # [doc = \" per-callee identity + the running iteration count at the moment the frame was reused. Not a bare\"] # [doc = \" count (house rule #2 in substance, not just letter): a deep tail chain that later errors yields\"] # [doc = \" an actionable \\\"who was looping, how many times\\\" trace.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct TcoElision { # [doc = \" The callee whose invoke frame was reused (the tail-called function's name).\"] pub callee : String , # [doc = \" The 1-based count of consecutive elisions for this callee at the time of this record.\"] pub iteration : u64 , }",
+      "reason": "struct `TcoElision` named field(s) `callee, iteration` emitted positionally as `TcoElision(Bytes, Binary{64})` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped (matches `lib/std/*.myc` hand-ports)",
       "item_name": "TcoElision"
     },
     {
@@ -352,7 +363,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" The bounded EXPLAIN record of tail-call optimization (RFC-0041 §4.6 tco32): total elided frames,\"] # [doc = \" a per-callee iteration tally, and a **ring buffer of the last [`TcoTrace::RING_CAP`] elisions** —\"] # [doc = \" so an over-budget error at the end of a deep tail chain is diagnosable (which callee, how deep)\"] # [doc = \" without retaining an unbounded trace. Inspectable via [`Evaluator::tco_trace`] (never a black\"] # [doc = \" box — house rule #2).\"] # [derive (Debug , Clone , Default , PartialEq , Eq)] pub struct TcoTrace { # [doc = \" The total number of tail-call frames elided across every [`Evaluator::call`] so far.\"] pub total_elided : u64 , # [doc = \" Per-callee elision counts (identity + iteration count — §4.6 tco32).\"] pub per_callee : BTreeMap < String , u64 > , # [doc = \" The last [`Self::RING_CAP`] elisions, newest at the back (the bounded ring buffer).\"] pub recent : VecDeque < TcoElision > , }",
-      "reason": "struct `TcoTrace` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
+      "reason": "struct `TcoTrace` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "TcoTrace"
     },
     {
@@ -432,7 +443,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Forward a bridge refusal (shared with elaboration) as an explicit evaluator refusal.\"] fn unsupported (site : & str , e : & ElabError) -> L1Error { L1Error :: Unsupported { site : site . to_owned () , what : e . to_string () , } }",
-      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
+      "reason": "struct literal `Unsupported { .. }` — not an in-file single-ctor struct that emits (no constructor to build)",
       "item_name": "unsupported"
     }
   ],

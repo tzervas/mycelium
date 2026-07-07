@@ -1,6 +1,8 @@
 {
   "source": "crates/mycelium-std-content/src/error.rs",
-  "emitted_items": [],
+  "emitted_items": [
+    "MalformedDigest"
+  ],
   "gaps": [
     {
       "file": "crates/mycelium-std-content/src/error.rs",
@@ -16,10 +18,20 @@
       "file": "crates/mycelium-std-content/src/error.rs",
       "line": 9,
       "col": 1,
-      "category": "Struct",
-      "rust_construct": "Struct",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "# [doc = \" The content-address string is not well-formed (`<algo>:<digest>` shape; RFC-0001 §4.6).\"] # [doc = \"\"] # [doc = \" # C1 compliance\"] # [doc = \" [`crate::parse_ref`] returns `Err(MalformedDigest)` rather than a silently-coerced or\"] # [doc = \" zeroed digest (RFC-0016 §4.1 C1; G2 \\\"never-silent\\\").\"] # [doc = \"\"] # [doc = \" The `description` field carries a human-readable explanation of *why* the string is rejected,\"] # [doc = \" enabling callers to surface the error without stripping information (G11 dual projection).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct MalformedDigest { # [doc = \" The rejected input.\"] pub input : String , # [doc = \" Why the input was rejected (G11: a human-readable explanation for the caller to surface).\"] pub description : & 'static str , }",
-      "reason": "struct `MalformedDigest` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
+      "reason": "dropped non-doc attribute(s) on struct `MalformedDigest`: # [derive (Debug , Clone , PartialEq , Eq)]",
+      "item_name": "MalformedDigest"
+    },
+    {
+      "file": "crates/mycelium-std-content/src/error.rs",
+      "line": 9,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" The content-address string is not well-formed (`<algo>:<digest>` shape; RFC-0001 §4.6).\"] # [doc = \"\"] # [doc = \" # C1 compliance\"] # [doc = \" [`crate::parse_ref`] returns `Err(MalformedDigest)` rather than a silently-coerced or\"] # [doc = \" zeroed digest (RFC-0016 §4.1 C1; G2 \\\"never-silent\\\").\"] # [doc = \"\"] # [doc = \" The `description` field carries a human-readable explanation of *why* the string is rejected,\"] # [doc = \" enabling callers to surface the error without stripping information (G11 dual projection).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct MalformedDigest { # [doc = \" The rejected input.\"] pub input : String , # [doc = \" Why the input was rejected (G11: a human-readable explanation for the caller to surface).\"] pub description : & 'static str , }",
+      "reason": "struct `MalformedDigest` named field(s) `input, description` emitted positionally as `MalformedDigest(Bytes, Bytes)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped (matches `lib/std/*.myc` hand-ports)",
       "item_name": "MalformedDigest"
     },
     {

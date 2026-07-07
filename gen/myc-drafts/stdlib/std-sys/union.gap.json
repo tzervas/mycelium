@@ -87,7 +87,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl GuaranteeTag { # [doc = \" Human-readable name matching the lattice notation (`\\\"Declared\\\"`, etc.).\"] # [must_use] pub fn as_str (self) -> & 'static str { match self { GuaranteeTag :: Exact => \"Exact\" , GuaranteeTag :: Proven => \"Proven\" , GuaranteeTag :: Empirical => \"Empirical\" , GuaranteeTag :: Declared => \"Declared\" , } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `as_str` signature: `String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `as_str` body: match pattern constructor `Exact` collides with a Mycelium reserved word — emitting it verbatim would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5)",
       "item_name": "GuaranteeTag"
     },
     {
@@ -104,10 +104,20 @@
       "file": "crates/mycelium-std-sys/src/guarantee_matrix.rs",
       "line": 69,
       "col": 1,
-      "category": "Struct",
-      "rust_construct": "Struct",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "# [doc = \" One row in the `std-sys` syscall-floor guarantee matrix (RFC-0016 §4.5).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct MatrixRow { # [doc = \" Module-qualified exported operation name (e.g. `\\\"io::write_out\\\"`).\"] pub op : & 'static str , # [doc = \" Guarantee tag (VR-5) — `Declared` for every floor op.\"] pub guarantee : GuaranteeTag , # [doc = \" Fallibility: total or fallible.\"] pub fallibility : Fallibility , # [doc = \" The explicit error set (empty string for total ops).\"] pub error_set : & 'static str , # [doc = \" Declared effects (C6).\"] pub effects : & 'static str , }",
-      "reason": "struct `MatrixRow` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
+      "reason": "dropped non-doc attribute(s) on struct `MatrixRow`: # [derive (Debug , Clone , PartialEq , Eq)]",
+      "item_name": "MatrixRow"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/guarantee_matrix.rs",
+      "line": 69,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" One row in the `std-sys` syscall-floor guarantee matrix (RFC-0016 §4.5).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct MatrixRow { # [doc = \" Module-qualified exported operation name (e.g. `\\\"io::write_out\\\"`).\"] pub op : & 'static str , # [doc = \" Guarantee tag (VR-5) — `Declared` for every floor op.\"] pub guarantee : GuaranteeTag , # [doc = \" Fallibility: total or fallible.\"] pub fallibility : Fallibility , # [doc = \" The explicit error set (empty string for total ops).\"] pub error_set : & 'static str , # [doc = \" Declared effects (C6).\"] pub effects : & 'static str , }",
+      "reason": "struct `MatrixRow` named field(s) `op, guarantee, fallibility, error_set, effects` emitted positionally as `MatrixRow(Bytes, GuaranteeTag, Fallibility, Bytes, Bytes)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped (matches `lib/std/*.myc` hand-ports)",
       "item_name": "MatrixRow"
     },
     {
@@ -227,7 +237,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" \\\\[Declared\\\\] Read a single line from stdin (including the trailing newline if present). Returns\"] # [doc = \" `Err` on any OS read error or invalid UTF-8 — never-silent (G2).\"] pub fn read_line () -> Result < String , io :: Error > { let mut line = String :: new () ; io :: stdin () . read_line (& mut line) ? ; Ok (line) }",
-      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
+      "reason": "qualified type path `io :: Error` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "read_line"
     },
     {
@@ -534,10 +544,10 @@
       "file": "crates/mycelium-std-sys/src/rand.rs",
       "line": 35,
       "col": 1,
-      "category": "PayloadVariant",
-      "rust_construct": "PayloadVariant",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "# [doc = \" Errors from platform entropy operations.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum EntropyError { # [doc = \" The platform entropy source is unavailable or exhausted.\"] Unavailable (String) , }",
-      "reason": "enum `EntropyError` variant `Unavailable` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
+      "reason": "dropped non-doc attribute(s) on enum `EntropyError`: # [derive (Debug , Clone , PartialEq , Eq)]",
       "item_name": "EntropyError"
     },
     {
@@ -597,7 +607,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" \\\\[Declared\\\\] Read environment variable `name`. Returns `None` if the variable is unset **or** is\"] # [doc = \" not valid Unicode — an explicit absence, never an empty-string stand-in (G2). Use when a missing\"] # [doc = \" variable is a recoverable condition; the `None` must be handled, not assumed present.\"] # [must_use] pub fn get_env (name : & str) -> Option < String > { std :: env :: var (name) . ok () }",
-      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
+      "reason": "qualified/associated-function call `std :: env :: var` — no established Mycelium surface form for a Rust conversion-op body; emitting the bare last-segment name would fabricate a call (e.g. `from(...)` is not a Mycelium builtin)",
       "item_name": "get_env"
     },
     {
@@ -637,7 +647,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" \\\\[Declared\\\\] The process's command-line arguments (including arg 0), parsed to `String`s. Built on\"] # [doc = \" `args_os`: a non-UTF-8 argument is an explicit `Err(NonUtf8Arg)` naming the offending **index** —\"] # [doc = \" never a silently-dropped element (the previous `filter_map` behaviour) that would shift every\"] # [doc = \" following arg's position, and (unlike `std::env::args()`) never a *panic* (G2). The first\"] # [doc = \" non-UTF-8 arg short-circuits; callers needing the faithful, position-stable raw form should use\"] # [doc = \" `std::env::args_os` directly (this floor is the validated-UTF-8 convenience).\"] pub fn args () -> Result < Vec < String > , NonUtf8Arg > { parse_args (std :: env :: args_os ()) }",
-      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
+      "reason": "qualified/associated-function call `std :: env :: args_os` — no established Mycelium surface form for a Rust conversion-op body; emitting the bare last-segment name would fabricate a call (e.g. `from(...)` is not a Mycelium builtin)",
       "item_name": "args"
     },
     {
@@ -667,7 +677,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" \\\\[Declared\\\\] Returns nanoseconds since the Unix epoch from the wall clock.\"] # [doc = \"\"] # [doc = \" Returns `Err` if the system time is before the epoch — never-silent (G2).\"] # [doc = \"\"] # [doc = \" # Guarantee\"] # [doc = \"\"] # [doc = \" `Declared` — backed by `std::time::SystemTime`. No audit of platform clock resolution,\"] # [doc = \" drift, or leap-second handling.\"] pub fn wall_nanos () -> Result < u128 , String > { SystemTime :: now () . duration_since (UNIX_EPOCH) . map (| d | d . as_nanos ()) . map_err (| e | e . to_string ()) }",
-      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
+      "reason": "qualified/associated-function call `SystemTime :: now` — no established Mycelium surface form for a Rust conversion-op body; emitting the bare last-segment name would fabricate a call (e.g. `from(...)` is not a Mycelium builtin)",
       "item_name": "wall_nanos"
     },
     {
@@ -702,15 +712,16 @@
     }
   ],
   "category_counts": {
-    "DeriveAttr": 1,
+    "DeriveAttr": 3,
     "GenericBound": 1,
     "Impl": 7,
     "Import": 7,
     "MultiStmtBody": 1,
+    "NamedFieldDrop": 1,
     "Other": 41,
-    "PayloadVariant": 2,
+    "PayloadVariant": 1,
     "ReservedWord": 1,
-    "Struct": 2,
+    "Struct": 1,
     "TestItem": 7
   }
 }

@@ -7,12 +7,12 @@
       "exit_code": 0,
       "diagnostic": "",
       "non_test_items": 38,
-      "emitted_items": 0
+      "emitted_items": 1
     }
   ],
   "total_non_test_items": 38,
-  "total_emitted_items": 0,
-  "total_checked_clean_items": 0,
+  "total_emitted_items": 1,
+  "total_checked_clean_items": 1,
   "class_counts": {
     "Clean": 1
   }

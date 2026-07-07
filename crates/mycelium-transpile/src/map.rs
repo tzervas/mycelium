@@ -32,9 +32,13 @@ pub fn tokens_to_string<T: ToTokens>(node: &T) -> String {
 ///   so *signed* integers (`i8`.../`isize`) are intentionally NOT mapped here (would misrepresent
 ///   twos-complement semantics as an unsigned-magnitude representation); they are a gap.
 /// - `isize`/`usize` -> gap (platform-dependent width has no fixed `Binary{N}`).
-/// - `f32`/`f64`/`char`/`String`/`str` -> gap (no confirmed base_type arm for any of these in
-///   this grammar fragment; `scalar` only appears inside `Dense{N, scalar}`/`ambient_params`,
-///   never as a bare value type).
+/// - `f32`/`f64`/`char` -> gap (no confirmed base_type arm for any of these in this grammar
+///   fragment; `scalar` only appears inside `Dense{N, scalar}`/`ambient_params`, never as a bare
+///   value type).
+/// - `String`/`str`/`&str` -> `Bytes` (RFC-0033 §3.2: the dedicated, never-silent UTF-8 text repr;
+///   grammar `base_type` line 250; a `"…"` StrLit lowers to the same `Repr::Bytes` value form —
+///   checkty.rs:6669). Verified `myc check`-clean (DN-34 §8.14). `&str` is erased to `str` by the
+///   shared-reference arm below, then mapped.
 /// - `()` (unit) -> gap (no unit-value literal in the grammar's `literal`/`primary` productions).
 /// - an ordinary zero-argument named type (`Ordering`, a same-crate type, etc.) -> passed through
 ///   as-is via `base_type`'s `Ident type_args?` arm.
@@ -128,11 +132,17 @@ fn map_type_inner(ty: &Type, self_ty: Option<&str>) -> Result<String, GapReason>
                     Category::Other,
                     "`char` has no confirmed base_type arm in this grammar fragment",
                 )),
-                "String" | "str" => Err(GapReason::new(
-                    Category::Other,
-                    "`String`/`str` — `Bytes` exists in base_type but is not confirmed \
-                     equivalent to a UTF-8 text type",
-                )),
+                // RFC-0033 §3.2 (grounded via tero, DN-34 §8.14): `Bytes` is the language's
+                // *dedicated, never-silent UTF-8* text repr (grammar `base_type` line 250,
+                // "first-class byte string"; a `"…"` StrLit lowers to the same `Repr::Bytes` value
+                // form — checkty.rs:6669, M-910/M-911). So Rust `String`/`str` map onto `Bytes`
+                // faithfully: both denote an owned UTF-8 text value under value semantics (ADR-003),
+                // and the earlier "not confirmed equivalent" hedge is resolved by §3.2. Verified
+                // `myc check`-clean (a `Bytes`-typed field/param/return and a `"…"` literal all pass
+                // — DN-34 §8.14 verify-first). This is the type-position twin of the string-literal
+                // value emission `emit.rs` already performs (`Lit::Str` -> `StrLit`). Graded
+                // `Declared` like every row here (grammar-text- + oracle-verified, not proven).
+                "String" | "str" => Ok("Bytes".to_string()),
                 _ if matches!(seg.arguments, PathArguments::None) => {
                     // M-1001: an ordinary named type passed through as-is — but if its name is a
                     // Mycelium reserved word (e.g. a Rust type literally named `Binary`/`Float`), the
@@ -275,12 +285,14 @@ pub(crate) fn field_type_user_deps(ty: &Type, out: &mut Vec<String>) -> bool {
             let name = seg.ident.to_string();
             match name.as_str() {
                 // Builtins `map_type` maps directly — mappable, but contribute no user dep.
-                "bool" | "u8" | "u16" | "u32" | "u64" | "u128" => {
+                // `String`/`str` now map to `Bytes` (RFC-0033 §3.2 — DN-34 §8.14), so they join the
+                // builtins here: a `String`-typed field no longer withholds its struct's emission.
+                "bool" | "u8" | "u16" | "u32" | "u64" | "u128" | "String" | "str" => {
                     matches!(seg.arguments, PathArguments::None)
                 }
                 // Shapes `map_type` gaps outright ⇒ unmappable field.
                 "Self" | "i8" | "i16" | "i32" | "i64" | "i128" | "isize" | "usize" | "f32"
-                | "f64" | "char" | "String" | "str" => false,
+                | "f64" | "char" => false,
                 _ => {
                     // A reserved-word type name fails to lex ⇒ `map_type` gaps it (unmappable).
                     if crate::reserved::is_reserved(&name) {

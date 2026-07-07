@@ -4,16 +4,15 @@
       "file": "crates/mycelium-std-io/src/error.rs",
       "total_items": 20,
       "non_test_items": 19,
-      "emitted": 3,
-      "gaps": 20,
-      "expressible_pct": 15.789473684210526,
+      "emitted": 7,
+      "gaps": 28,
+      "expressible_pct": 36.84210526315789,
       "category_counts": {
-        "DeriveAttr": 3,
-        "Impl": 9,
+        "DeriveAttr": 7,
+        "Impl": 8,
         "Import": 1,
         "MacroInvocation": 3,
-        "PayloadVariant": 2,
-        "Struct": 1,
+        "NamedFieldDrop": 8,
         "TestItem": 1
       }
     },
@@ -21,15 +20,15 @@
       "file": "crates/mycelium-std-io/src/guarantee_matrix.rs",
       "total_items": 7,
       "non_test_items": 6,
-      "emitted": 2,
-      "gaps": 7,
-      "expressible_pct": 33.33333333333333,
+      "emitted": 3,
+      "gaps": 8,
+      "expressible_pct": 50.0,
       "category_counts": {
-        "DeriveAttr": 2,
+        "DeriveAttr": 3,
         "Impl": 1,
+        "NamedFieldDrop": 1,
         "Other": 1,
         "ReservedWord": 1,
-        "Struct": 1,
         "TestItem": 1
       }
     },
@@ -66,33 +65,33 @@
       "file": "crates/mycelium-std-io/src/serialize.rs",
       "total_items": 17,
       "non_test_items": 17,
-      "emitted": 1,
-      "gaps": 17,
-      "expressible_pct": 5.88235294117647,
+      "emitted": 3,
+      "gaps": 15,
+      "expressible_pct": 17.647058823529413,
       "category_counts": {
         "DeriveAttr": 1,
         "Import": 3,
-        "MultiStmtBody": 1,
-        "Other": 12
+        "MultiStmtBody": 3,
+        "Other": 8
       }
     }
   ],
   "totals": {
     "total_items": 68,
     "non_test_items": 63,
-    "emitted": 7,
-    "gaps": 68,
-    "expressible_pct": 11.11111111111111,
+    "emitted": 14,
+    "gaps": 75,
+    "expressible_pct": 22.22222222222222,
     "category_counts": {
-      "DeriveAttr": 6,
-      "Impl": 14,
+      "DeriveAttr": 11,
+      "Impl": 13,
       "Import": 9,
       "MacroInvocation": 3,
-      "MultiStmtBody": 1,
-      "Other": 20,
-      "PayloadVariant": 2,
+      "MultiStmtBody": 3,
+      "NamedFieldDrop": 9,
+      "Other": 16,
       "ReservedWord": 4,
-      "Struct": 4,
+      "Struct": 2,
       "TestItem": 5
     }
   }

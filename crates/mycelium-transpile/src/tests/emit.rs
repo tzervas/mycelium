@@ -124,12 +124,23 @@ fn cases() -> Vec<Case> {
                 sub_gap_category: Category::NamedFieldDrop,
             },
         },
-        // M-1006: a named-field struct with an UNMAPPABLE field type (`String`) still gaps — the
+        // M-1006 §8.14: a named-field struct with a `String` field now EMITS — `String` maps to
+        // `Bytes` (RFC-0033 §3.2), so the record is fully mappable and emits positionally.
+        Case {
+            name: "struct_named_field_string_maps_to_bytes",
+            rust: "struct WithText { s: String, n: u32 }",
+            expect: Expect::EmittedAndGapped {
+                item: "WithText",
+                contains: "type WithText = WithText(Bytes, Binary{32})",
+                sub_gap_category: Category::NamedFieldDrop,
+            },
+        },
+        // M-1006: a named-field struct with an UNMAPPABLE field type (`char`) still gaps — the
         // field's own precise repr reason wins (mapped *before* the resolvability gate), so the gap
-        // profile keeps "String field" distinct from "out-of-file reference".
+        // profile keeps "unmappable field" distinct from "out-of-file reference".
         Case {
             name: "struct_named_field_unmappable_type_still_gaps",
-            rust: "struct Bad { s: String }",
+            rust: "struct Bad { c: char }",
             expect: Expect::Gapped {
                 category: Category::Struct,
             },
@@ -330,11 +341,22 @@ fn cases() -> Vec<Case> {
                 sub_gap_category: Category::NamedFieldDrop,
             },
         },
-        // M-1006: a named-field variant with an UNMAPPABLE field type (`String`) still gaps — the
+        // M-1006 §8.14: a named-field variant with a `String` field now EMITS — `String` maps to
+        // `Bytes` (RFC-0033 §3.2), names dropped + recorded via a `NamedFieldDrop` sub-gap.
+        Case {
+            name: "payload_variant_string_field_maps_to_bytes",
+            rust: "enum Msg { Text { s: String }, Empty }",
+            expect: Expect::EmittedAndGapped {
+                item: "Msg",
+                contains: "type Msg = Text(Bytes) | Empty",
+                sub_gap_category: Category::NamedFieldDrop,
+            },
+        },
+        // M-1006: a named-field variant with an UNMAPPABLE field type (`char`) still gaps — the
         // variant's own precise reason wins (mapped before the resolvability gate).
         Case {
             name: "payload_variant_unmappable_field_still_gaps",
-            rust: "enum Bad { A { s: String } }",
+            rust: "enum Bad { A { c: char } }",
             expect: Expect::Gapped {
                 category: Category::PayloadVariant,
             },
@@ -408,12 +430,23 @@ fn cases() -> Vec<Case> {
                 category: Category::Other,
             },
         },
-        // NEVER-SILENT CASCADE: a fn taking `&str` still gaps — the reference erases but the referent
-        // `str` has no confirmed base_type arm, so the honest deeper blocker surfaces (Other), never
+        // M-1006 §8.14: a fn taking `&str` now emits — the reference erases to `str`, which maps to
+        // `Bytes` (RFC-0033 §3.2). The real-corpus shape `fn message(&self) -> &str` (a String/`str`
+        // accessor) is the class this unblocks.
+        Case {
+            name: "shared_ref_to_str_emits_bytes",
+            rust: "fn tag(msg: &str) -> bool { true }",
+            expect: Expect::Emitted {
+                item: "tag",
+                contains: "fn tag(msg: Bytes) => Bool = True;",
+            },
+        },
+        // NEVER-SILENT CASCADE: a fn taking `&char` still gaps — the reference erases but the referent
+        // `char` has no confirmed base_type arm, so the honest deeper blocker surfaces (Other), never
         // a fabricated emission.
         Case {
-            name: "shared_ref_to_str_still_gapped",
-            rust: "fn is_err(msg: &str) -> bool { true }",
+            name: "shared_ref_to_unmappable_referent_still_gapped",
+            rust: "fn is_err(c: &char) -> bool { true }",
             expect: Expect::Gapped {
                 category: Category::Other,
             },

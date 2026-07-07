@@ -4,7 +4,8 @@
     "Fallibility",
     "Wild",
     "Explainable",
-    "Effects"
+    "Effects",
+    "MatrixRow"
   ],
   "gaps": [
     {
@@ -51,10 +52,20 @@
       "file": "crates/mycelium-std-fs/src/guarantee_matrix.rs",
       "line": 65,
       "col": 1,
-      "category": "Struct",
-      "rust_construct": "Struct",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "# [doc = \" One row in the `std.fs` guarantee matrix (RFC-0016 §4.5 / spec §4).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct MatrixRow { # [doc = \" The exported operation or type.\"] pub op : & 'static str , # [doc = \" Guarantee tag (all `\\\"Exact\\\"` — see module-level justification).\"] pub guarantee : & 'static str , # [doc = \" Fallibility classification.\"] pub fallibility : Fallibility , # [doc = \" The explicit error / None-case description (empty for total ops).\"] pub error_set : & 'static str , # [doc = \" Declared effects.\"] pub effects : Effects , # [doc = \" Whether the op surfaces an RFC-0013 diagnostic record.\"] pub explainable : Explainable , # [doc = \" Whether the op reaches the OS syscall floor (`wild`? column, spec §4).\"] pub wild : Wild , }",
-      "reason": "struct `MatrixRow` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
+      "reason": "dropped non-doc attribute(s) on struct `MatrixRow`: # [derive (Debug , Clone , PartialEq , Eq)]",
+      "item_name": "MatrixRow"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/guarantee_matrix.rs",
+      "line": 65,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" One row in the `std.fs` guarantee matrix (RFC-0016 §4.5 / spec §4).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct MatrixRow { # [doc = \" The exported operation or type.\"] pub op : & 'static str , # [doc = \" Guarantee tag (all `\\\"Exact\\\"` — see module-level justification).\"] pub guarantee : & 'static str , # [doc = \" Fallibility classification.\"] pub fallibility : Fallibility , # [doc = \" The explicit error / None-case description (empty for total ops).\"] pub error_set : & 'static str , # [doc = \" Declared effects.\"] pub effects : Effects , # [doc = \" Whether the op surfaces an RFC-0013 diagnostic record.\"] pub explainable : Explainable , # [doc = \" Whether the op reaches the OS syscall floor (`wild`? column, spec §4).\"] pub wild : Wild , }",
+      "reason": "struct `MatrixRow` named field(s) `op, guarantee, fallibility, error_set, effects, explainable, wild` emitted positionally as `MatrixRow(Bytes, Bytes, Fallibility, Bytes, Effects, Explainable, Wild)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped (matches `lib/std/*.myc` hand-ports)",
       "item_name": "MatrixRow"
     },
     {

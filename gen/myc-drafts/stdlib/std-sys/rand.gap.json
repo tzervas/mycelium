@@ -1,6 +1,8 @@
 {
   "source": "crates/mycelium-std-sys/src/rand.rs",
-  "emitted_items": [],
+  "emitted_items": [
+    "EntropyError"
+  ],
   "gaps": [
     {
       "file": "crates/mycelium-std-sys/src/rand.rs",
@@ -26,10 +28,10 @@
       "file": "crates/mycelium-std-sys/src/rand.rs",
       "line": 35,
       "col": 1,
-      "category": "PayloadVariant",
-      "rust_construct": "PayloadVariant",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "# [doc = \" Errors from platform entropy operations.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum EntropyError { # [doc = \" The platform entropy source is unavailable or exhausted.\"] Unavailable (String) , }",
-      "reason": "enum `EntropyError` variant `Unavailable` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
+      "reason": "dropped non-doc attribute(s) on enum `EntropyError`: # [derive (Debug , Clone , PartialEq , Eq)]",
       "item_name": "EntropyError"
     },
     {
