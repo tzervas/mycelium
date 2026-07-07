@@ -11,6 +11,20 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### DN-85 — the multi-language transpilation program + single-language full-stack goal (2026-07-06)
+
+Records (Proposed, maintainer direction) the generalization of DN-34's Rust-only transpiler into a
+**multi-source-language** program whose flagship goal is a **single-language Mycelium full stack** —
+collapse a polyglot ecosystem's application, native extensions, and compute kernels into one
+language, toolchain, and guarantee model. Sequencing: Rust (in flight, trx2) then **Python-first
+(pure Python, gated on sound type inference)** then C/C++/Fortran/Cython/CUDA as demand arises.
+Interim strategy: transpile the coverable layer and **FFI-bind** the native backend (e.g.
+PyTorch/TensorFlow C++/CUDA) until its transpiler lands. **Open-source constraint** with the honest
+provenance ladder — transpile vs. binding vs. reverse-engineered Mycelium-native reimplementation; a
+bound or reverse-engineered artifact is **never** tagged a faithful port (G2/VR-5).
+`Declared`/aspirational; not `1.0.0`-gating (ADR-036). DN-34 gains a forward-pointer; Doc-Index
+registers the note.
+
 ### M-1006 phase-1 — transpiler hardening against the DN-34 §8.9 gap worklist (2026-07-06)
 
 First phase of the M-1006 whole-corpus rip-through ladder (kickoff `trx2` E-B, epic E33-1), run as
