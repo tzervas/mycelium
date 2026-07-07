@@ -206,6 +206,26 @@ currently MISSING)** + adr/README rows for ADR-042/043; CHANGELOG for all; **api
 MD012 + `DN-88.md:33` MD018**; full `just check` green. Flow: reconcile→dev PR, then dev→integration PR.
 `integration→main` squash stays the terminal MAINTAINER checkpoint — do NOT auto-squash to main.
 
+### ⇒ PARALLELIZE ACROSS SESSIONS (maintainer directive) — disk-isolate disjoint work
+**Disjoint work that does not depend on each other should be kicked off in SEPARATE parallel
+sessions, not just parallel agents in one session** — each session gets its own environment/disk, so
+they cannot collide on the shared ~41G ceiling (the failure that broke builds this session). This is
+the **Wave-N multi-session workflow** (CLAUDE.md §Wave-N): partition by disjoint file ownership,
+one protected head branch each, cross-session continuity via `issues.yaml` `depends_on` + body notes
+(never by touching another session's files); each head self-integrates, then a final integration
+octopus-merges the heads and squash-PRs to `main`. Suggested partition of the remaining work:
+- **Session A — semcore self-hosting (critical path, SEQUENTIAL, one session):** marshalling (STEP 2)
+  → M-1013 increments 8→14. These share `lib/compiler/semcore.myc` + the differential harness and
+  build on each other, so they are NOT disjoint — keep them in one session.
+- **Session B — tero productionization (DISJOINT: `crates/mycelium-tero/`):** M-1017 (MCP + HTTP
+  fronts + skills) → M-1018 (VSA Layer-2 + the Empirical eval gate). Independent of semcore.
+- **Session C — transpiler ladder next phase (DISJOINT: `crates/mycelium-transpile/` + `gen/myc-drafts/`):**
+  M-1006's project-mode/cross-nodule vetting lever (per §8.11 — the real way to move `checked_fraction`).
+- **Integration session:** after A/B/C land on their heads, one integrator runs the dev→integration
+  promotion (STEP 4) reconciling the shared files once.
+Within each session, still use isolated worktrees per concurrent agent — but keep the *count* modest
+and prune `target/` dirs, since one env's disk is the bound.
+
 ### Ops lessons (this session — bake into the fresh run)
 - **DISK:** the shared root fs has a **~41G effective ceiling**; per-worktree cargo `target/` (1–3G
   each) + the main `target/` (~15G) fill it fast, breaking BOTH git (`index.lock` ENOSPC) and cargo.
