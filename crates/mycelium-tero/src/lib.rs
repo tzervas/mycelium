@@ -29,6 +29,16 @@
 //! model has no structured `supersedes` edge yet, so the cross-reference walk covers exactly
 //! `depends_on`/`doc_refs`).
 //!
+//! **M-1017 (the API fronts): one core, two thin fronts (DN-87 §2.3).** The engine is served
+//! platform-agnostically through one framework-agnostic request→[`Query`]→JSON-envelope
+//! core, wrapped by an **MCP** server ([`serve_mcp_stdio`], newline-delimited JSON-RPC over stdio)
+//! and an **HTTP/JSON** API ([`serve_http`], an `axum`/`tokio` app; ADR-044). Both serialize through
+//! the same core, so an answer over MCP is byte-identical to the same answer over HTTP (front
+//! parity). Access is token-scoped, read-only by default ([`TokenTable`]/[`Scope`]; DN-87 §6.4) —
+//! never-silent: a bad/absent token or too-narrow scope is an explicit refusal, and the servers
+//! refuse to start with no tokens configured. The fronts carry the engine's provenance/refusal
+//! guarantees across the wire without weakening them.
+//!
 //! Named in quiet homage to Atsushi Tero, for his contribution to science and engineering.
 
 // Internal modules — the extraction + query engines. The crate's *public* surface (KC-3 small,
@@ -39,12 +49,15 @@
 mod changelog;
 mod docs;
 mod emit;
+mod eval;
+mod front;
 mod index;
 mod issues;
 mod load;
 mod model;
 mod query;
 mod skills;
+mod vsa2;
 mod walk;
 
 pub use emit::{write_json, write_markdown};
@@ -55,6 +68,23 @@ pub use model::{
     SIBLING_INDICES,
 };
 pub use query::{Answer, Citation, Explain, Query, QueryEngine, RankedHit, Refusal};
+
+// M-1017 — the API fronts (MCP + HTTP, token-scoped) over the M-1016 engine. One core, two thin
+// fronts (`front::core`); the auth allow-list + the HTTP server type a binary needs to construct.
+pub use front::auth::{AuthError, Scope, TokenTable, TokenTableError};
+pub use front::http::{serve_http, AppState};
+pub use front::mcp::serve_mcp_stdio;
+
+// M-1018 — Layer 2 (the VSA semantic layer) + the Empirical eval gate. The public surface is
+// deliberately minimal (KC-3): the Layer-2 index/answer/refusal/explain a consumer reads, plus the
+// eval harness + gate types the `tero-eval` binary and the honesty gate need. Layer 2 lands behind
+// the `layer2_enabled` front flag, which stays `false` until the eval gate opens (DN-87 §6.1).
+pub use eval::verdict::{
+    decide_gate, latency_classify, GateEvidence, GateVerdict, LatencyBaseline, LatencyEntry,
+    LatencyOutcome, REGRESSION_BAND,
+};
+pub use eval::{host_tag, run_eval, EvalQuestion, EvalReport, EvalSuite, SystemMetrics};
+pub use vsa2::{Layer2Answer, Layer2Explain, Layer2Index, Layer2Refusal, TERO_L2_SEED};
 
 /// The program's one-line summary, used by the (future) API fronts' identify endpoint.
 #[must_use]
