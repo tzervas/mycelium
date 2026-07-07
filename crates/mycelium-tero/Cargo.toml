@@ -12,5 +12,19 @@ publish = false
 workspace = true
 
 [dependencies]
+# DRY (house rule #5): the docs/ + research/ markdown families REUSE `mycelium-doc`'s existing
+# CommonMark-subset corpus parser (`corpus::ingest` → the section tree, anchors, provenance) rather
+# than growing a second, parallel markdown heuristic (M-1015 DN-87 §2.1). Everything reused
+# (`corpus::{ingest, slugify, AnchorAlloc}`, `ir::{Node, Payload, SourceKind, Level}`) is already
+# `pub` — this crate needs NO widening of the `mycelium-doc` public surface.
+mycelium-doc = { path = "../mycelium-doc" }
+# The machine index (`docs/tero-index/index.json`) + its stable serialization. Workspace-pinned;
+# no new external dependency (serde/serde_json are already vetted, in-workspace).
+serde = { workspace = true }
+serde_json = { workspace = true }
 
 [dev-dependencies]
+
+[[bin]]
+name = "tero-index"
+path = "src/bin/tero-index.rs"
