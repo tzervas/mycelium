@@ -5,6 +5,7 @@
 | **Note** | DN-85 |
 | **Status** | **Proposed** (2026-07-06) — maintainer direction; records a program direction, ratifies no mechanism. |
 | **Feeds** | the trx2 transpiler program (DN-34 · M-991 · M-1000…M-1006) · `rwr` (Phase-II) · RFC-0028 (FFI) |
+| **Companion** | **DN-86** — *Multi-Language Transpiler Front-Ends Architecture* (the architecture/method to this note's strategy/vision; authored concurrently, reconciled to distinct numbers). |
 | **Decides** | *Nothing normatively.* Captures the maintainer's decided **direction** that the Rust→Mycelium transpiler (DN-34, Rust-only) generalizes into a **multi-source-language** program whose flagship goal is a **single-language (Mycelium) full stack**. Each concrete language frontend, its soundness gate, and its provenance policy land via their own RFC/ADR + issues when built. |
 | **Date** | 2026-07-06 |
 | **Task** | (program-level; per-language issues minted per wave — mitigation #1) |
