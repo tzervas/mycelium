@@ -905,6 +905,21 @@ re-grounded to a **frozen-kernel** question with a tension that must be surfaced
    `Binary{N}` bit/compare bodies. **Cite:** RFC-0033 §4.1.2; DN-56 §5.3/§6 (Enacted, freeze); the landed
    arithmetic/shift set M-887/M-889/M-766/M-767. *(Owner: kernel/Session-A — flagged up, not edited here;
    the transpiler side lights up once the prims land, via the operand-type inference D3 deferred.)*
+
+   > **Correction (2026-07-07, maintainer determination — supersedes the "post-freeze" framing of this
+   > decision #1).** The **kernel is UNFROZEN**: the maintainer has declared the DN-56 kernel freeze lifted
+   > (determination made a few days prior, when further kernel work was surfaced as needed). So the framing
+   > above — that completing the RFC-0033 §4.1.2 bitwise ops (and the comparison/`Bool`-logical prims) is a
+   > *DN-39 default-DENY post-freeze promotion* or a *`core 2.0.0` event* — **no longer holds**. Under the
+   > unfrozen kernel these are **ordinary kernel work**: additive, never-silent prim implementations with
+   > property + conformance tests, landed on the normal `dev → integration → main` path (no DN-39 default-DENY
+   > gate, no major-version door). The *facts* in decision #1 stand unchanged and are still the basis (VR-5):
+   > RFC-0033 §4.1.2 mandates the bitwise ops; `prims.rs` still lacks `bin.band`/`bin.bor`/`bin.bxor`; the
+   > comparison-result-type and `and`/`or`-on-`Bool` questions are still open. Only the *disposition* changes
+   > — from "blocked behind a freeze gate" to "plannable and closable now." This correction feeds the
+   > **comprehensive kernel prim-gap closure** now underway (identify every prim gap → plan → close), whose
+   > purpose is exactly to unblock the transpiler and reduce post-transpilation polish. (Append-only; VR-5; G2.)
+
 2. **`mycelium_core` / kernel declarations target-set (D5 — the largest remaining transpiler-adjacent
    lever).** The dominant residual class is out-of-phylum type references (`Value`, `ContentHash`, `Ty`,
    `Path`, `Source`, `ScalarKind`, `GuaranteeTag`). A headers-only `core`/`compiler` nodule (decls only),
@@ -1098,3 +1113,11 @@ DN-39/Session-A owner*, not enacted here (VR-5: no kernel edit, no prim fabricat
   not free closure — FLAGged as a kernel/Session-A task (not edited here). Emission `Declared`, vet
   `Empirical`. **Status unchanged (Draft)** — a ladder phase, enacts nothing further. (Append-only; VR-5;
   G2.)
+- **2026-07-07 — §8.14 correction: kernel UNFROZEN (maintainer determination).** Appends an append-only
+  correction to §8.14 decision #1: the maintainer has **lifted the DN-56 kernel freeze**, so completing the
+  RFC-0033 §4.1.2 `Binary{N}` bitwise ops (and the comparison-to-`Bool` / `and`-`or`-on-`Bool` prims) is
+  **ordinary kernel work** on the normal `dev → integration → main` path — **not** a DN-39 default-DENY
+  post-freeze promotion nor a `core 2.0.0` event, as the pre-correction framing assumed. The grounded facts
+  are unchanged (RFC-0033 §4.1.2 mandate; `prims.rs` still lacks `band`/`bor`/`bxor`); only the disposition
+  flips from freeze-blocked to plannable-and-closable-now. Feeds the comprehensive kernel prim-gap closure.
+  **Status unchanged (Draft).** (Append-only; VR-5; G2.)
