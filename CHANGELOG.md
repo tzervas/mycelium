@@ -11,6 +11,23 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### M-1013 STEP 2 — semcore Stage-5 differential retrofit to harness marshalling (2026-07-07)
+
+The Stage-5 self-hosting differential (`compiler_stage5_elab.rs`) switches from comparing the `.myc`
+port's mirror output against the Rust oracle by hand-written `.myc` structural-equality comparators
+(the FLAG-semcore-28 `_eq` family, now deleted from `semcore.myc`) to HARNESS MARSHALLING: a
+never-silent Rust `decode_*` family rebuilds the real `mycelium_core` type from the port's `L1Value`
+output and compares it with Rust's own trusted derived `==`. This removes the hand-mirrored
+comparators from the trust path -- the comparator is now `mycelium_core`'s own
+`#[derive(PartialEq)]`, the very thing the mirror was hand-restating. The M-1012 non-vacuity
+discipline migrates from the comparator to the decoder (`marshal_discriminates`: mirror values
+distinct in one dimension must decode to unequal Rust values). Derived `==` is the primary comparison
+for this Bits/Trits/Bytes subset; content-hash is the recorded switch for the first float-bearing
+increment. Both witnesses green: `stage5_elab` 11/11 with the full `mycelium-l1` suite, and native
+`myc check lib/compiler/semcore.myc` ok. DN-26 §10.2 records marshalling as the adopted method
+(append-only) -- the trust foundation for the remaining M-1013 increments. No logic `*.rs` changed.
+(M-1013; E18-1; VR-5/G2.)
+
 ### M-1008/M-1009/M-1010 + M-1011(partial) — semcore pure-leaf port wave (M-993 ladder) (2026-07-07)
 
 Four pure/leaf increments of the M-993 semcore SCC port land in `lib/compiler/semcore.myc`
@@ -24,7 +41,6 @@ deviation (dead-arm collapses, value-threaded accumulators, ordered assoc-lists)
 behavior-preserving. Honest deferrals: `infer_type` (a wrapper over the un-ported inference SCC) to
 M-1013 -- M-1011 stays `todo` on that residual; `mangle_ty_in_ty`/`item_key` (private, no oracle) to
 a later increment. M-1008/M-1009/M-1010 close; M-993 advances, not closed.
-
 
 ### M-1015 — docs/tero-index/: the whole-corpus Layer-1 citation index (DN-87 / E39-1) (2026-07-07)
 

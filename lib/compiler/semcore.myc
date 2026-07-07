@@ -2621,11 +2621,16 @@ fn normalize_pattern(types: Vec[DataInfo], pat: Pattern, expected: Ty, occ: Vec[
 // G2). No `PolicyRef` mirror is declared this wave (it is a `ContentHash` string; the ported surface
 // stops at the preimage `Bytes`).
 //
-// FLAG-semcore-28 (the L0-mirror structural-equality scaffolding — the FLAG-semcore-12 `ty_eq` posture,
-// extended). `scalark_eq`/.../`value_eq`/`field_spec_eq` restate the derived `PartialEq` of the mirrored
-// kernel types so the differential DRIVER (appended after this nodule in `compiler_stage5_elab.rs`) has
-// a `Bool` witness. Like `ty_eq`, they live in this logic file because the driver — plain `.myc` text
-// appended to the nodule — can only call functions declared here. Not tests; comparison utilities.
+// FLAG-semcore-28 (RETIRED, M-1013 STEP 2 — DN-26 SS10.2). The increment-7 landing carried an
+// L0-mirror structural-equality scaffolding (`scalark_eq`/.../`value_eq`/`field_spec_eq`) so the
+// differential driver had an in-`.myc` `Bool` witness. That hand-written comparator family restated
+// `mycelium_core`'s derived `PartialEq` BY HAND — an untrusted, growing surface. It is REMOVED: the
+// differential now compares by HARNESS MARSHALLING (decode the port's mirror output back into the real
+// `mycelium_core` type and compare with Rust's own trusted derived `==` — `compiler_stage5_elab.rs`'s
+// `decode_*` family). The driver no longer calls any `.myc`-side `_eq`, so none is declared here. This
+// removes the hand-mirrored comparators from the trust path (DN-26 SS10.2). Note: `ty_eq` (above,
+// FLAG-semcore-12) is DIFFERENT — it is live CHECK logic called by real elaboration paths, not a
+// differential comparator, and stays.
 //
 // FLAG-semcore-29 (`lit_value`'s `Bin`/`Trit` arms omit the `MAX_DIM` UPPER-bound refusal — an
 // intentional scope cut this wave, not an oversight; G2). The Rust oracle's `Value::new` runs
@@ -2868,105 +2873,12 @@ fn join_dot(segs: Vec[Bytes]) => Bytes =
 fn policy_name_preimage(p: Path) => Bytes =
   bytes_concat("policy-name.v0:", join_dot(path_segs(p)));
 
-// ── L0-mirror structural equality (FLAG-semcore-28 -- the FLAG-semcore-12 `ty_eq` posture) ───────
-fn scalark_eq(a: ScalarK, b: ScalarK) => Bool =
-  match a {
-    SkF16 => match b { SkF16 => True, _ => False },
-    SkBf16 => match b { SkBf16 => True, _ => False },
-    SkF32 => match b { SkF32 => True, _ => False },
-    SkF64 => match b { SkF64 => True, _ => False }
-  };
-
-fn sparsityc_eq(a: SparsityC, b: SparsityC) => Bool =
-  match a {
-    ScDense => match b { ScDense => True, ScSparse(_) => False },
-    ScSparse(ka) => match b { ScSparse(kb) => eq_u(ka, kb), ScDense => False }
-  };
-
-fn floatw_eq(a: FloatW, b: FloatW) => Bool =
-  match a { FwF64 => match b { FwF64 => True } };
-
-fn repr_eq(a: Repr, b: Repr) => Bool =
-  match a {
-    RBinary(na) => match b { RBinary(nb) => eq_u(na, nb), _ => False },
-    RTernary(ma) => match b { RTernary(mb) => eq_u(ma, mb), _ => False },
-    RDense(da, sa) => match b { RDense(db, sb) => and_(eq_u(da, db), scalark_eq(sa, sb)), _ => False },
-    RVsa(ma, dima, spa) => match b { RVsa(mb, dimb, spb) => and_(and_(beq(ma, mb), eq_u(dima, dimb)), sparsityc_eq(spa, spb)), _ => False },
-    RSeq(ea, na) => match b { RSeq(eb, nb) => and_(repr_eq(ea, eb), eq_u(na, nb)), _ => False },
-    RFloat(wa) => match b { RFloat(wb) => floatw_eq(wa, wb), _ => False },
-    RBytes => match b { RBytes => True, _ => False }
-  };
-
-fn tritk_eq(a: TritK, b: TritK) => Bool =
-  match a {
-    TkNeg => match b { TkNeg => True, _ => False },
-    TkZero => match b { TkZero => True, _ => False },
-    TkPos => match b { TkPos => True, _ => False }
-  };
-
-fn bit_eq(a: Binary{1}, b: Binary{1}) => Bool =
-  match a { 0b0 => match b { 0b0 => True, _ => False }, _ => match b { 0b1 => True, _ => False } };
-
-fn bits_eq(a: Vec[Binary{1}], b: Vec[Binary{1}]) => Bool =
-  match a {
-    Nil => match b { Nil => True, Cons(_, _) => False },
-    Cons(ha, ta) => match b { Nil => False, Cons(hb, tb) => and_(bit_eq(ha, hb), bits_eq(ta, tb)) }
-  };
-
-fn trits_eq(a: Vec[TritK], b: Vec[TritK]) => Bool =
-  match a {
-    Nil => match b { Nil => True, Cons(_, _) => False },
-    Cons(ha, ta) => match b { Nil => False, Cons(hb, tb) => and_(tritk_eq(ha, hb), trits_eq(ta, tb)) }
-  };
-
-fn payload_eq(a: Payload, b: Payload) => Bool =
-  match a {
-    PlBits(ba) => match b { PlBits(bb) => bits_eq(ba, bb), _ => False },
-    PlTrits(ta) => match b { PlTrits(tb) => trits_eq(ta, tb), _ => False },
-    PlBytes(ya) => match b { PlBytes(yb) => beq(ya, yb), _ => False }
-  };
-
-fn meta_eq(a: Meta, b: Meta) => Bool =
-  match a { MtExactRoot => match b { MtExactRoot => True } };
-
-fn value_eq(a: Value, b: Value) => Bool =
-  match a { Val(ra, pa, ma) => match b { Val(rb, pb, mb) => and_(and_(repr_eq(ra, rb), payload_eq(pa, pb)), meta_eq(ma, mb)) } };
-
-fn field_ty_ref_eq(a: FieldTyRef, b: FieldTyRef) => Bool =
-  match a {
-    FtRepr(ra) => match b { FtRepr(rb) => repr_eq(ra, rb), _ => False },
-    FtData(na) => match b { FtData(nb) => beq(na, nb), _ => False },
-    FtFn(sa) => match b { FtFn(sb) => kfnsig_eq(sa, sb), _ => False }
-  };
-
-fn ftr_list_eq(a: Vec[FieldTyRef], b: Vec[FieldTyRef]) => Bool =
-  match a {
-    Nil => match b { Nil => True, Cons(_, _) => False },
-    Cons(ha, ta) => match b { Nil => False, Cons(hb, tb) => and_(field_ty_ref_eq(ha, hb), ftr_list_eq(ta, tb)) }
-  };
-
-fn kfnsig_eq(a: KFnSig, b: KFnSig) => Bool =
-  match a { KFS(ara, pa, reta) => match b { KFS(arb, pb, retb) => and_(and_(eq_u(ara, arb), ftr_list_eq(pa, pb)), field_ty_ref_eq(reta, retb)) } };
-
-fn field_spec_eq(a: FieldSpec, b: FieldSpec) => Bool =
-  match a {
-    FsRepr(ra) => match b { FsRepr(rb) => repr_eq(ra, rb), _ => False },
-    FsData(na) => match b { FsData(nb) => beq(na, nb), _ => False },
-    FsFn(ara, sa) => match b { FsFn(arb, sb) => and_(eq_u(ara, arb), kfnsig_eq(sa, sb)), _ => False }
-  };
-
-// Option/Result witnesses for the fallible helpers (FLAG-semcore-26: Err==Err, None==None).
-fn opt_repr_eq(a: Option[Repr], b: Option[Repr]) => Bool =
-  match a { None => match b { None => True, Some(_) => False }, Some(ra) => match b { Some(rb) => repr_eq(ra, rb), None => False } };
-
-fn opt_fs_eq(a: Option[FieldSpec], b: Option[FieldSpec]) => Bool =
-  match a { None => match b { None => True, Some(_) => False }, Some(fa) => match b { Some(fb) => field_spec_eq(fa, fb), None => False } };
-
-fn opt_ftr_eq(a: Option[FieldTyRef], b: Option[FieldTyRef]) => Bool =
-  match a { None => match b { None => True, Some(_) => False }, Some(fa) => match b { Some(fb) => field_ty_ref_eq(fa, fb), None => False } };
-
-fn res_repr_eq(a: Result[Repr, Bytes], b: Result[Repr, Bytes]) => Bool =
-  match a { Err(_) => match b { Err(_) => True, Ok(_) => False }, Ok(ra) => match b { Ok(rb) => repr_eq(ra, rb), Err(_) => False } };
-
-fn res_value_eq(a: Result[Value, Bytes], b: Result[Value, Bytes]) => Bool =
-  match a { Err(_) => match b { Err(_) => True, Ok(_) => False }, Ok(va) => match b { Ok(vb) => value_eq(va, vb), Err(_) => False } };
+// (FLAG-semcore-28 RETIRED — M-1013 STEP 2, DN-26 SS10.2.) The L0-mirror structural-equality
+// comparator family (`scalark_eq`/`repr_eq`/`payload_eq`/`value_eq`/`field_spec_eq`/`opt_*_eq`/
+// `res_*_eq`, ~100 lines) that lived here is REMOVED. The Stage-5 differential no longer needs an
+// in-`.myc` `Bool` witness: it now decodes the port's mirror output back into the real
+// `mycelium_core` type and compares with Rust's own trusted derived `==` (harness marshalling —
+// `crates/mycelium-l1/src/tests/compiler_stage5_elab.rs`'s `decode_*` family). This retires the
+// hand-mirrored comparators from the trust path. The live CHECK-logic equalities used by real
+// elaboration paths (`ty_eq`/`scalar_eq`/`sparsity_eq`/`width_eq`/`ty_list_eq`, FLAG-semcore-12) are
+// a DIFFERENT family, earlier in this nodule, and are unaffected.
