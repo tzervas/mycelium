@@ -23,6 +23,7 @@ skip = .git,*.lock,*package-lock.json,node_modules,target,dist-newstyle,.venv,.t
 # not renamable; used by editors/vscode).
 # deques (work-stealing deques — standard CS term; mycelium-sched/DN-67/issues.yaml), nd/thw/lits
 # (identifier fragments in the self-hosted lib/compiler/*.myc ports + their Rust test mirrors —
-# split-match helper names and prefixed constructors, never prose).
-ignore-words-list = crate,crates,iff,ist,nin,ba,te,fo,mor,ans,od,implementor,implementors,referenced,effekt,inout,ser,clen,publisherr,raison,copyed,copys,re-use,re-used,re-uses,ot,theses,forin,symantics,generat,disjointness,toom,pre-emptive,re-declare,olt,unparseable,rouge,notin,retuned,deques,nd,thw,lits
+# split-match helper names and prefixed constructors, never prose). bloc (a "bloc" of gaps — the
+# political/grouping sense, not "block"; DN-34). numer (short for numerator; mycelium-tero verdict.rs).
+ignore-words-list = crate,crates,iff,ist,nin,ba,te,fo,mor,ans,od,implementor,implementors,referenced,effekt,inout,ser,clen,publisherr,raison,copyed,copys,re-use,re-used,re-uses,ot,theses,forin,symantics,generat,disjointness,toom,pre-emptive,re-declare,olt,unparseable,rouge,notin,retuned,deques,nd,thw,lits,bloc,numer
 quiet-level = 3
