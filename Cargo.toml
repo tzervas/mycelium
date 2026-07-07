@@ -59,6 +59,7 @@ members = [
     "crates/mycelium-cli-common",
     "crates/mycelium-cli",
     "crates/mycelium-bench",
+    "crates/mycelium-tero",
     "crates/mycelium-transpile",
     "xtask",
 ]
@@ -74,6 +75,13 @@ repository = "https://github.com/tzervas/mycelium"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 blake3 = "1"
+# M-1017 (DN-87 §2.3 / ADR-044): the async runtime + web framework behind the `mycelium-tero` HTTP
+# front. The FIRST async runtime in the workspace — a deliberate, maintainer-authorized decision (the
+# HTTP API is a genuinely concurrent, multi-client server surface, unlike every prior crate). Consumers
+# add the feature set they need (`tokio = { workspace = true, features = [...] }`). Plain HTTP only —
+# no TLS/`rustls`/`ring` pulled (the token-scoped floor binds 127.0.0.1; TLS is the reverse-proxy's job).
+tokio = { version = "1" }
+axum = { version = "0.8" }
 
 [workspace.lints.rust]
 # ADR-014: `unsafe` is permitted-but-warned (not forbidden). Plain `cargo build`/`cargo test`
