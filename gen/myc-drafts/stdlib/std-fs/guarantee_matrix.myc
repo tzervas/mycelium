@@ -40,3 +40,6 @@ type Explainable = Yes | NotApplicable;
 
 // Declared effects for an op (C6).
 type Effects = None | Io;
+
+// One row in the `std.fs` guarantee matrix (RFC-0016 §4.5 / spec §4).
+type MatrixRow = MatrixRow(Bytes, Bytes, Fallibility, Bytes, Effects, Explainable, Wild);

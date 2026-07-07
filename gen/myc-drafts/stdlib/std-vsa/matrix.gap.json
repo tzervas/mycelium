@@ -29,7 +29,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" One row of the `std.vsa` guarantee matrix (RFC-0016 §4.5 / vsa.md §4).\"] # [doc = \"\"] # [doc = \" Each row covers one `(model_id, op)` pair.  The guarantee tag is read from the authoritative\"] # [doc = \" RFC-0003 §4 matrix (`mycelium_vsa::matrix_tag`), not invented here (C2 / VR-5).\"] # [derive (Debug , Clone , Copy , PartialEq)] pub struct OpGuarantee { # [doc = \" The VSA model id, e.g. `\\\"MAP-I\\\"`.\"] pub model_id : & 'static str , # [doc = \" The operation.\"] pub op : VsaOp , # [doc = \" The guarantee tag (the RFC-0003 §4 matrix entry for this pair).\"] pub tag : GuaranteeStrength , # [doc = \" Is the result EXPLAIN-able (carries an inspectable artifact such as a bound or trace)?\"] # [doc = \" `Exact` ops are `false` — they carry no bound (M-I1); all approximate ops are `true`.\"] pub explain_able : bool , }",
-      "reason": "struct `OpGuarantee` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `OpGuarantee` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "OpGuarantee"
     },
     {
@@ -49,7 +49,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Look up a row in [`GUARANTEE_MATRIX`] by model id and op.  Returns `None` for an unregistered\"] # [doc = \" model — an unregistered model has no honest tag to offer (the same convention as\"] # [doc = \" `mycelium_vsa::matrix_tag`).\"] # [must_use] pub fn std_matrix_tag (model_id : & str , op : VsaOp) -> Option < GuaranteeStrength > { GUARANTEE_MATRIX . iter () . find (| r | r . model_id == model_id && r . op == op) . map (| r | r . tag) }",
-      "reason": "unsupported Rust type form `& str`",
+      "reason": "unsupported expression form `| r | r . model_id == model_id && r . op == op`",
       "item_name": "std_matrix_tag"
     }
   ],

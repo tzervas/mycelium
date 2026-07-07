@@ -3,17 +3,17 @@
     {
       "myc_file": "gen/myc-drafts/stdlib/std-dense/lib.myc",
       "source_file": "crates/mycelium-std-dense/src/lib.rs",
-      "class": "Clean",
-      "exit_code": 0,
-      "diagnostic": "",
+      "class": "CheckError",
+      "exit_code": 3,
+      "diagnostic": "check-error: check error in `elementwise_citation`: unknown type `ScalarKind`",
       "non_test_items": 20,
-      "emitted_items": 0
+      "emitted_items": 1
     }
   ],
   "total_non_test_items": 20,
-  "total_emitted_items": 0,
+  "total_emitted_items": 1,
   "total_checked_clean_items": 0,
   "class_counts": {
-    "Clean": 1
+    "CheckError": 1
   }
 }

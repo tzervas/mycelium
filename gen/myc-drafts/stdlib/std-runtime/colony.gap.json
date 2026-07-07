@@ -71,7 +71,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" Structured concurrency scope: all tasks complete or are cancelled before scope exit.\"] # [doc = \"\"] # [doc = \" Tasks are stored in spawn order and swept FIFO by `join_all` (**Exact** sweep guarantee).\"] # [doc = \"\"] # [doc = \" # Guarantee\"] # [doc = \" - Sweep order: **Exact** (FIFO by construction, ADR-020 §4).\"] # [doc = \" - Completion semantics: **Empirical** (RT2 sequentialization differential, ADR-020 §4).\"] # [doc = \" - A scope that exits before all tasks complete returns `Err(ScopeError::TasksStillRunning)`.\"] pub struct Scope < T , E > { tasks : Vec < Task > , cancelled : bool , _output : std :: marker :: PhantomData < T > , _error : std :: marker :: PhantomData < E > , }",
-      "reason": "struct `Scope` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `Scope` has a field type with no confirmed mapping (qualified type path `std :: marker :: PhantomData < T >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5))",
       "item_name": "Scope"
     },
     {
@@ -121,7 +121,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" Colony: a group of scopes sharing a supervision tree and a `Network`.\"] # [doc = \"\"] # [doc = \" Provides a factory for `Scope<T, E>` via [`Colony::scope`].\"] # [doc = \"\"] # [doc = \" Guarantee: `Empirical` (Kahn-determinism of channel communication, ADR-020 §4).\"] # [derive (Debug)] pub struct Colony < T , E > { _output : std :: marker :: PhantomData < T > , _error : std :: marker :: PhantomData < E > , }",
-      "reason": "struct `Colony` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `Colony` has a field type with no confirmed mapping (qualified type path `std :: marker :: PhantomData < T >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5))",
       "item_name": "Colony"
     },
     {
