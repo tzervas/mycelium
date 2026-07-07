@@ -1,4 +1,4 @@
-//! M-740 Stage 5 (M-1013 STEP 3, PR-1 + PR-2; DN-26 §7.3 / §10.2) — the self-hosted
+//! M-740 Stage 5 (M-1013 STEP 3, PR-1 + PR-2 + PR-2b; DN-26 §7.3 / §10.2) — the self-hosted
 //! `compiler.semcore` port of checkty.rs's **register-family**: the constructor-resolution seam and
 //! the type-registry builder that drives it, both a LIVE-ORACLE marshalling differential.
 //!
@@ -6,12 +6,14 @@
 //!   * `first_duplicate` (checkty.rs) — the first value appearing more than once, left to right.
 //!   * `resolve_ctors` (checkty.rs) — resolve every surface `Ctor`'s field `TypeRef`s (the decl's
 //!     type params in scope) into checked `CtorInfo`s, refusing a duplicate constructor name.
-//!   * `register_types` (checkty.rs; **PR-2**) — build the `Nodule`'s type registry: a shell per
-//!     `Item::Type` (so recursive/forward field references resolve), then a `resolve_ctors` fill,
-//!     plus a **TRIMMED** M-826 tuple pre-pass (type-decl ctor-field TypeRefs only). The fn-body /
-//!     pattern / signature tuple legs are DEFERRED to PR-2b behind **FLAG-semcore-30**; the deferred
-//!     leg is never-silent — a `Tuple$N` it would have registered surfaces as an explicit
-//!     `resolve_ty` `Err`, exercised by `register_types_defers_fnbody_tuple_never_silent`.
+//!   * `register_types` (checkty.rs; **PR-2 + PR-2b**) — build the `Nodule`'s type registry: a shell
+//!     per `Item::Type` (so recursive/forward field references resolve), then a `resolve_ctors` fill,
+//!     preceded by the **FULL** M-826 tuple pre-pass — every leg the Rust oracle walks (type-decl
+//!     ctor fields, fn/trait/impl signatures, `match` patterns, and fn-body expressions), closing
+//!     **FLAG-semcore-30** (PR-2b). The never-silent floor is unchanged: any `Tuple$N` still missing
+//!     at `resolve_ty` time surfaces as an explicit `Err`, exercised by
+//!     `register_types_unreferenced_tuple_still_errs_never_silent`; the full-walk coverage is pinned
+//!     by `collect_tuple_arities_cases` and `register_types_registers_leg_tuples`.
 //!
 //! **Differential method — harness MARSHALLING (DN-26 §10.2).** Each case runs the REAL Rust
 //! `checkty::{resolve_ctors, first_duplicate}` oracle on a fixture, producing a genuine
@@ -1024,8 +1026,8 @@ fn register_types_cases() {
                 vec![ctor("MkP", vec![])],
             ))]),
         ),
-        // A ctor field that IS a tuple type `(A, B)` → the TRIMMED pre-pass registers Tuple$2 (a
-        // ctor-field tuple is covered by both the full and the trimmed walk, so the outputs agree).
+        // A ctor field that IS a tuple type `(A, B)` → the pre-pass registers Tuple$2 (the ctor-field
+        // leg — the one leg present since PR-2, now part of the full walk).
         (
             "ctor_field_tuple",
             nodule(vec![
