@@ -3470,6 +3470,22 @@ def self_test():
     assert _proj["field_label_map"]["Area"].get("multi") == "primary", (
         "project.json Area rule must set multi:primary for M-676"
     )
+    # End-to-end under the SHIPPED rule (M-676 acceptance): the real project.json Area rule + its
+    # declared option order anchor a multi-area item to its primary with NO "not set" punt. This
+    # pins the acceptance criterion ("a dry-run shows no 'Area: ... — not set' punts for items
+    # carrying at least one area label") as a permanent regression guard, not just the mechanics.
+    _order = {
+        f["name"]: [o["name"] for o in f.get("options", [])] for f in _proj["fields"]
+    }
+    e2e_vals, e2e_flags, e2e_infos = label_to_field_values(
+        {"area:toolchain", "area:core-ir", "area:language"},
+        _proj["field_label_map"],
+        _order,
+    )
+    # core-ir is earliest in the declared Area order → it is the primary; span recorded; no punt.
+    assert e2e_vals.get("Area") == "core-ir", e2e_vals
+    assert not any("not set" in f for f in e2e_flags), e2e_flags
+    assert any("core-ir" in i and "span recorded" in i for i in e2e_infos), e2e_infos
 
     desired_fields = [
         {
