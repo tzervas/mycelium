@@ -6,6 +6,7 @@
 //! ```text
 //! myc-check [--expect-main <ret-type>] <file.myc | ->          # oracle (single file)
 //! myc-check --project <dir> | --config <mycelium-proj.toml> [--explain]   # whole project (CI gate)
+//! myc-check --phylum <dir> [--json]                            # whole-phylum cross-nodule check (M-1006)
 //! ```
 //!
 //! Exit codes: 0 ok · 2 parse error · 3 check error · 5 project-resolution error · 64 usage · 66 I/O.
@@ -13,7 +14,9 @@
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-use mycelium_check::{check_project, check_sources, FindingKind, Report};
+use mycelium_check::{
+    check_phylum_dir, check_project, check_sources, FindingKind, PhylumReport, Report,
+};
 use mycelium_cli_common::{read_source, Args};
 use mycelium_l1::ast::{Item, TypeRef};
 use mycelium_l1::{check_nodule, parse};
@@ -21,7 +24,8 @@ use mycelium_l1::{check_nodule, parse};
 fn usage() -> ExitCode {
     eprintln!(
         "usage: myc-check [--expect-main <ret-type>] <file.myc | ->\n       \
-         myc-check --project <dir> | --config <mycelium-proj.toml> [--explain]"
+         myc-check --project <dir> | --config <mycelium-proj.toml> [--explain]\n       \
+         myc-check --phylum <dir> [--json]     # whole-phylum cross-nodule check (M-1006)"
     );
     ExitCode::from(64)
 }
@@ -30,7 +34,9 @@ fn main() -> ExitCode {
     let mut expect_main: Option<String> = None;
     let mut project: Option<String> = None;
     let mut config: Option<String> = None;
+    let mut phylum: Option<String> = None;
     let mut explain = false;
+    let mut json = false;
     let mut path: Option<String> = None;
 
     let mut args = Args::from_env();
@@ -48,10 +54,28 @@ fn main() -> ExitCode {
                 Some(p) => config = Some(p),
                 None => return usage(),
             },
+            "--phylum" => match args.value() {
+                Some(p) => phylum = Some(p),
+                None => return usage(),
+            },
             "--explain" => explain = true,
+            "--json" => json = true,
             _ if path.is_none() => path = Some(a),
             _ => return usage(),
         }
+    }
+
+    // Phylum mode (explicit) — the whole-phylum cross-nodule check (M-1006). Mutually exclusive with
+    // the oracle/project inputs; combining is a usage error (never a silent precedence pick; G2).
+    if let Some(dir) = phylum.as_deref() {
+        if path.is_some() || expect_main.is_some() || project.is_some() || config.is_some() {
+            return usage();
+        }
+        return run_phylum(Path::new(dir), json);
+    }
+    // `--json` is only meaningful in --phylum mode — never silently ignored elsewhere (G2).
+    if json {
+        return usage();
     }
 
     // Project mode (explicit) — the whole-phylum CI gate.
@@ -89,6 +113,96 @@ fn run_project(dir: &Path, explain: bool) -> ExitCode {
             eprintln!("myc-check: {e}");
             ExitCode::from(5)
         }
+    }
+}
+
+/// Phylum mode (M-1006): check every `.myc` under `dir` **as one cross-resolving phylum**, exit
+/// non-zero on any refusal. Emits a stable one-line `--json` object (for the transpiler vet loop) or
+/// a human summary.
+fn run_phylum(dir: &Path, json: bool) -> ExitCode {
+    match check_phylum_dir(dir) {
+        Ok(report) => {
+            if json {
+                println!("{}", phylum_report_json(&report));
+            } else {
+                print_phylum_report(&report);
+            }
+            ExitCode::from(report.exit_code())
+        }
+        Err(e) => {
+            eprintln!("myc-check: {e}");
+            ExitCode::from(5)
+        }
+    }
+}
+
+/// The stable `--phylum --json` contract: ONE line, one JSON object. `error` is `null` on success or
+/// `{"kind":"parse|duplicate|check","site":..,"message":..}`; `nodules` holds one
+/// `{"nodule":..,"class":"Clean"}` per nodule (only when clean — never a fabricated verdict, VR-5).
+fn phylum_report_json(report: &PhylumReport) -> String {
+    let error = match &report.error {
+        None => "null".to_owned(),
+        Some(e) => format!(
+            "{{\"kind\":\"{}\",\"site\":\"{}\",\"message\":\"{}\"}}",
+            e.kind.as_str(),
+            json_escape(&e.site),
+            json_escape(&e.message),
+        ),
+    };
+    let nodules: Vec<String> = report
+        .nodules
+        .iter()
+        .map(|n| {
+            format!(
+                "{{\"nodule\":\"{}\",\"class\":\"{}\"}}",
+                json_escape(&n.nodule),
+                json_escape(n.class),
+            )
+        })
+        .collect();
+    format!(
+        "{{\"mode\":\"phylum\",\"ok\":{},\"files_checked\":{},\"error\":{},\"nodules\":[{}]}}",
+        report.ok,
+        report.files_checked,
+        error,
+        nodules.join(","),
+    )
+}
+
+/// Minimal JSON string escaping (no serde dep): quote `"`/`\`, the common control escapes, and any
+/// remaining control char as `\uXXXX` — so the `--json` line is always one well-formed line.
+fn json_escape(s: &str) -> String {
+    let mut out = String::with_capacity(s.len() + 2);
+    for c in s.chars() {
+        match c {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            c if (c as u32) < 0x20 => out.push_str(&format!("\\u{:04x}", c as u32)),
+            c => out.push(c),
+        }
+    }
+    out
+}
+
+/// The human summary for `--phylum` (non-`--json`): the single refusal line if any, else the clean
+/// line. Never a silent empty pass (G2).
+fn print_phylum_report(report: &PhylumReport) {
+    match &report.error {
+        Some(e) => {
+            let at = if e.site.is_empty() {
+                String::new()
+            } else {
+                format!(" at `{}`", e.site)
+            };
+            eprintln!("myc-check: {}-error{at}: {}", e.kind.as_str(), e.message);
+        }
+        None => println!(
+            "ok: {} nodule(s) checked as one phylum, no findings",
+            report.nodules.len()
+        ),
     }
 }
 
