@@ -2345,3 +2345,197 @@ fn free_vars(e: Expr) => Result[Vec[Bytes], Bytes] =
     Err(msg) => Err(msg),
     Ok(p) => match p { Pr(_, out) => Ok(out) }
   };
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// checkty.rs LITERAL + PATTERN TYPING (M-740 Stage 5, increment 6 — M-1011). The checker's leaves.
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// Ports checkty.rs's literal + pattern typing leaves: `lit_ty_of` (a literal's `Ty`), `literal_key`
+// (the M-320 canonical de-dup key), and `normalize_pattern` (a surface `Pattern` -> the normalized
+// matrix `Pat` + its binder set — the bridge to the increment-1 usefulness/decision pipeline).
+// Depends on increment 3 (`resolve_ty`'s siblings `param_subst`/`subst_ty` — M-1007/M-1008) and the
+// increment-1 `Pat` family + `tuple_ctor_name` (M-1008). Live oracle: checkty::normalize_pattern
+// (`pub(crate)`), reachable in-crate; `lit_ty_of` is `pub(crate)` and `literal_key` is module-private
+// (exercised TRANSITIVELY through `normalize_pattern`, whose `Pat::Lit` arm keys via it). The
+// normalize_pattern differential connects to the already-ported `useful` matrix (a normalized `Pat`
+// feeds `useful` — tightening the increment-1 gate transitively).
+//
+// FLAG-semcore-19 (`literal_key`'s `Int`/`AmbientInt` arms are rendered with the correct distinct
+// PREFIX but a SIMPLIFIED body — the integer/paradigm value is NOT decimal-rendered). Both are
+// UNREACHABLE through the type-checked `normalize_pattern` path (`lit_ty_of` refuses `Int`/
+// `AmbientInt` before any keying — a bare integer has no repr family, an ambient int is resolved
+// first), and `literal_key` is module-private (no direct differential), so a full i64-signed-decimal
+// + `Paradigm`-Display render would be untested dead code (YAGNI/KISS). The reachable arms
+// (`Bin`/`Trit`/`LBytes`/`Str`) are faithful byte-for-byte; `LFloat`/`List` too. A documented
+// narrowing, never a silent one (the same "a stable key keeps the fn total" rationale Rust's own
+// `Bytes`/`List` arms carry — G2/VR-5).
+//
+// FLAG-semcore-20 (`infer_type` is DEFERRED — not a leaf). checkty.rs::infer_type constructs a full
+// `Cx` and calls `cx.infer` — the ENTIRE ~7k-line inference engine (DN-26 SS7.1 SCC), which this
+// increment (and the whole Stage-5 partial port) explicitly does NOT port (the increment-1 header's
+// DEFERRED list). It is a thin wrapper over the deferred core, NOT a pure leaf, so it is honestly
+// left out rather than faux-ported over an un-ported `infer`. Stated plainly (G2/VR-5).
+//
+// FLAG-semcore-21 (`normalize_pattern`'s `&mut Vec<(String, Ty, Vec<usize>)>` binder accumulator ->
+// a THREADED `Vec[Bind]` returned alongside the `Pat` — the FLAG-semcore-6 collapse). Each binder is
+// a `Bnd(name, ty, occ)` triple (`occ` = the field-index path from the scrutinee root — the
+// elaborator's occurrence). `binds` is threaded through the ctor-field walk and returned; `site` is
+// dropped and the tuple-pattern error-message remap is omitted (cosmetic — the FLAG-semcore-13
+// site-drop rationale). An unregistered scrutinee data type is a never-silent `Err` (Rust `.expect()`
+// PANICS — a clean refusal is the faithful, G2-preferred shape).
+
+// ── Bind: a pattern binder (name, its concrete type, its occurrence path) ────────────────────────
+type Bind = Bnd(Bytes, Ty, Vec[Binary{32}]);
+
+fn snoc_bind(xs: Vec[Bind], b: Bind) => Vec[Bind] =
+  match xs { Nil => Cons(b, Nil), Cons(h, t) => Cons(h, snoc_bind(t, b)) };
+
+// ── byte-scanning helpers for lit_ty_of / literal_key ────────────────────────────────────────────
+fn is_bindigit(ch: Bytes) => Bool =
+  match bytes_eq(ch, "0") { 0b1 => True, _ => match bytes_eq(ch, "1") { 0b1 => True, _ => False } };
+
+// count_bindigits: `s.chars().filter(|c| *c == '0' || *c == '1').count()` (the binary literal width).
+fn count_bindigits_at(s: Bytes, i: Binary{32}, n: Binary{32}) => Binary{32} =
+  match lt(i, n) {
+    0b1 => let ch = bytes_slice(s, i, add_u(i, one32())) in
+           add_u(match is_bindigit(ch) { True => one32(), False => zero32() }, count_bindigits_at(s, add_u(i, one32()), n)),
+    _ => zero32()
+  };
+
+fn count_bindigits(s: Bytes) => Binary{32} = count_bindigits_at(s, zero32(), bytes_len(s));
+
+// filter_bindigits: the 0/1 chars of `s` concatenated (the `literal_key` `b:` body).
+fn filter_bindigits_at(s: Bytes, i: Binary{32}, n: Binary{32}) => Bytes =
+  match lt(i, n) {
+    0b1 => let ch = bytes_slice(s, i, add_u(i, one32())) in
+           bytes_concat(match is_bindigit(ch) { True => ch, False => "" }, filter_bindigits_at(s, add_u(i, one32()), n)),
+    _ => ""
+  };
+
+fn filter_bindigits(s: Bytes) => Bytes = filter_bindigits_at(s, zero32(), bytes_len(s));
+
+// filter_no_underscore: `s.chars().filter(|c| *c != '_')` (the `literal_key` `by:` body).
+fn filter_no_us_at(s: Bytes, i: Binary{32}, n: Binary{32}) => Bytes =
+  match lt(i, n) {
+    0b1 => let ch = bytes_slice(s, i, add_u(i, one32())) in
+           bytes_concat(match bytes_eq(ch, "_") { 0b1 => "", _ => ch }, filter_no_us_at(s, add_u(i, one32()), n)),
+    _ => ""
+  };
+
+fn filter_no_underscore(s: Bytes) => Bytes = filter_no_us_at(s, zero32(), bytes_len(s));
+
+// ── lit_ty_of (checkty.rs::lit_ty_of) — a context-free literal's Ty (never-silent on Int/List) ──
+fn lit_ty_of(l: Literal) => Result[Ty, Bytes] =
+  match l {
+    Bin(s) => let n = count_bindigits(s) in
+              match eq(n, zero32()) { 0b1 => Err("empty binary literal"), _ => Ok(TyBinary(WdLit(n))) },
+    Trit(s) => match eq(bytes_len(s), zero32()) { 0b1 => Err("empty ternary literal"), _ => Ok(TyTernary(WdLit(bytes_len(s)))) },
+    Int(_) => Err("a bare integer literal has no representation family (no cross-family defaulting, Q6) -- write a binary/ternary literal, declare a `default paradigm` (RFC-0012), or ascribe a Dense element"),
+    AmbientInt(_, _) => Err("internal: an unresolved ambient bare decimal reached `lit_ty_of` -- the checker resolves its width from context first (RFC-0012 SS4.3)"),
+    LBytes(_) => Ok(TyBytes),
+    LFloat(_) => Ok(TyFloat),
+    Str(_) => Ok(TyBytes),
+    List(_) => Err("a list/sequence pattern is not supported in the v0 surface (RFC-0032 D3 -- `[...]` is a constructor literal, not a pattern)")
+  };
+
+// ── literal_key (checkty.rs::literal_key) — a canonical de-dup key (M-320) ───────────────────────
+fn literal_key(l: Literal) => Bytes =
+  match l {
+    Bin(s) => bytes_concat("b:", filter_bindigits(s)),
+    Trit(s) => bytes_concat("t:", s),
+    Int(_) => "i:",
+    AmbientInt(_, _) => "amb:",
+    List(_) => "list",
+    LBytes(s) => bytes_concat("by:", filter_no_underscore(s)),
+    Str(s) => bytes_concat("s:", s),
+    LFloat(s) => bytes_concat("f:", s)
+  };
+
+// ── normalize_pattern (checkty.rs::normalize_pattern) — surface Pattern -> matrix Pat + binders ──
+// ctor_lookup: find a constructor by name in a data type's ctor list (Rust `d.ctors.iter().find`).
+fn ctor_lookup(ctors: Vec[CtorInfo], name: Bytes) => Option[CtorInfo] =
+  match ctors {
+    Nil => None,
+    Cons(c, rest) => match bytes_eq(ci_name(c), name) { 0b1 => Some(c), _ => ctor_lookup(rest, name) }
+  };
+
+// pat_count: the arity of a sub-pattern list (Vec[Pattern] length).
+fn pat_count(v: Vec[Pattern]) => Binary{32} =
+  match v { Nil => zero32(), Cons(_, t) => add_u(one32(), pat_count(t)) };
+
+fn is_float_lit(l: Literal) => Bool = match l { LFloat(_) => True, _ => False };
+
+fn normalize_lit(lit: Literal, expected: Ty, binds: Vec[Bind]) => Result[Pair[Pat, Vec[Bind]], Bytes] =
+  match is_float_lit(lit) {
+    True => Err("a float literal is not a legal match pattern (ADR-040 FLAG-4: IEEE equality and content identity diverge on floats; match on the result of an explicit comparison instead -- never a silent equality choice, G2)"),
+    False => match lit_ty_of(lit) {
+      Err(e) => Err(e),
+      Ok(lty) => match ty_eq(lty, expected) {
+        False => Err("literal pattern has a type distinct from the scrutinee (W7: a literal arm must match the scrutinee's repr and width)"),
+        True => Ok(Pr(MpLit(literal_key(lit)), binds))
+      }
+    }
+  };
+
+fn normalize_ident(types: Vec[DataInfo], n: Bytes, expected: Ty, occ: Vec[Binary{32}], binds: Vec[Bind]) => Result[Pair[Pat, Vec[Bind]], Bytes] =
+  match expected {
+    TyData(tn, _) => match types_lookup(types, tn) {
+      None => Err(bytes_concat("internal: unregistered scrutinee data type `", bytes_concat(tn, "` (never silent -- G2)"))),
+      Some(d) => match ctor_lookup(di_ctors(d), n) {
+        None => Ok(Pr(MpWild, snoc_bind(binds, Bnd(n, expected, occ)))),
+        Some(c) => match ci_fields(c) {
+          Nil => Ok(Pr(MpCtor(n, Nil), binds)),
+          Cons(_, _) => Err(bytes_concat("constructor pattern `", bytes_concat(n, "` must bind its field(s) (W7)")))
+        }
+      }
+    },
+    _ => Ok(Pr(MpWild, snoc_bind(binds, Bnd(n, expected, occ))))
+  };
+
+fn normalize_fields(types: Vec[DataInfo], subs: Vec[Pattern], fields: Vec[Ty], s: Vec[Pair[Bytes, Ty]], occ: Vec[Binary{32}], i: Binary{32}, binds: Vec[Bind]) => Result[Pair[Vec[Pat], Vec[Bind]], Bytes] =
+  match subs {
+    Nil => Ok(Pr(Nil, binds)),
+    Cons(sub, srest) => match fields {
+      Nil => Ok(Pr(Nil, binds)),
+      Cons(fty, frest) =>
+        let child = u32_append(occ, Cons(i, Nil)) in
+        let fty2 = subst_ty(fty, s) in
+        match normalize_pattern(types, sub, fty2, child, binds) {
+          Err(e) => Err(e),
+          Ok(pr) => match pr { Pr(p, binds2) =>
+            match normalize_fields(types, srest, frest, s, occ, add_u(i, one32()), binds2) {
+              Err(e) => Err(e),
+              Ok(pr2) => match pr2 { Pr(rest_pats, binds3) => Ok(Pr(Cons(p, rest_pats), binds3)) }
+            }
+          }
+        }
+    }
+  };
+
+fn normalize_ctor(types: Vec[DataInfo], n: Bytes, subs: Vec[Pattern], expected: Ty, occ: Vec[Binary{32}], binds: Vec[Bind]) => Result[Pair[Pat, Vec[Bind]], Bytes] =
+  match expected {
+    TyData(tn, targs) => match types_lookup(types, tn) {
+      None => Err(bytes_concat("internal: unregistered scrutinee data type `", bytes_concat(tn, "` (never silent -- G2)"))),
+      Some(d) => match ctor_lookup(di_ctors(d), n) {
+        None => Err(bytes_concat("`", bytes_concat(n, bytes_concat("` is not a constructor of ", tn)))),
+        Some(c) => match eq_u(pat_count(subs), ty_len(ci_fields(c))) {
+          False => Err(bytes_concat("pattern `", bytes_concat(n, "` does not bind exactly the constructor's arity (W7)"))),
+          True => let s = param_subst(di_params(d), targs) in
+                  match normalize_fields(types, subs, ci_fields(c), s, occ, zero32(), binds) {
+                    Err(e) => Err(e),
+                    Ok(pr) => match pr { Pr(outpats, binds2) => Ok(Pr(MpCtor(n, outpats), binds2)) }
+                  }
+        }
+      }
+    },
+    _ => Err(bytes_concat("constructor pattern `", bytes_concat(n, "` on a non-data scrutinee -- match a literal or `_`")))
+  };
+
+fn normalize_pattern(types: Vec[DataInfo], pat: Pattern, expected: Ty, occ: Vec[Binary{32}], binds: Vec[Bind]) => Result[Pair[Pat, Vec[Bind]], Bytes] =
+  match pat {
+    PWildcard => Ok(Pr(MpWild, binds)),
+    PIdent(n) => normalize_ident(types, n, expected, occ, binds),
+    PCtor(n, subs) => normalize_ctor(types, n, subs, expected, occ, binds),
+    PTuple(subs) => normalize_ctor(types, tuple_ctor_name(pat_count(subs)), subs, expected, occ, binds),
+    PLit(lit) => normalize_lit(lit, expected, binds),
+    POr(_) => Err("internal: Pattern::Or reached normalize_pattern -- or-patterns must be desugared in check_match before any downstream pass (invariant violation -- report this)")
+  };
