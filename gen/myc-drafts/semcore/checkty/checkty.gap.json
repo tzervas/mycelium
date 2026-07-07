@@ -129,7 +129,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" An explicit check failure (never a silent pass or a guess — S5/G2).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct CheckError { # [doc = \" Which function (or item) the error is in, when known.\"] pub site : String , # [doc = \" What went wrong.\"] pub message : String , }",
-      "reason": "struct `CheckError` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `CheckError` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
       "item_name": "CheckError"
     },
     {
@@ -179,7 +179,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" One constructor of a registered data type.\"] # [derive (Debug , Clone , PartialEq)] pub struct CtorInfo { # [doc = \" Constructor name.\"] pub name : String , # [doc = \" Field types.\"] pub fields : Vec < Ty > , }",
-      "reason": "struct `CtorInfo` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `CtorInfo` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
       "item_name": "CtorInfo"
     },
     {
@@ -189,7 +189,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" A registered data type. **Stage-1 (RFC-0007 §11):** `params` are the type parameters (empty for a\"] # [doc = \" monomorphic type); a constructor's [`CtorInfo::fields`] may reference them as [`Ty::Var`]. The\"] # [doc = \" fields are stored *abstractly* (over the parameters) — [`subst_ty`] instantiates them at concrete\"] # [doc = \" type arguments when a value is constructed or matched.\"] # [derive (Debug , Clone , PartialEq)] pub struct DataInfo { # [doc = \" Type name.\"] pub name : String , # [doc = \" Type parameters, in declaration order (empty for a monomorphic type). `List<A>` ⇒ `[\\\"A\\\"]`.\"] pub params : Vec < String > , # [doc = \" Constructors, in declaration order (the index is the `#type#i` of RFC-0007 §4.2). Field types\"] # [doc = \" are abstract over `params` (may contain [`Ty::Var`]).\"] pub ctors : Vec < CtorInfo > , }",
-      "reason": "struct `DataInfo` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `DataInfo` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
       "item_name": "DataInfo"
     },
     {
@@ -199,7 +199,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" A registered **trait** (RFC-0019 §4.2; LR-2). Stage-1 is single-parameter, but the structure\"] # [doc = \" carries `params: Vec<String>` uniformly (the trait's type-variable names, in scope as `Ty::Var`\"] # [doc = \" while its method signatures are checked). The method `sigs` are stored as their surface\"] # [doc = \" [`FnSig`]s; an `impl`'s methods are checked against the trait's sigs with `params ↦ trait_args`.\"] # [derive (Debug , Clone , PartialEq)] pub struct TraitInfo { # [doc = \" Trait name.\"] pub name : String , # [doc = \" Type-parameter names (single-parameter in stage-1; abstract over the method sigs).\"] pub params : Vec < String > , # [doc = \" The required method signatures, in declaration order.\"] pub sigs : Vec < FnSig > , }",
-      "reason": "struct `TraitInfo` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `TraitInfo` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
       "item_name": "TraitInfo"
     },
     {
@@ -209,7 +209,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" A registered **instance** `impl Trait<args> for T` (RFC-0019 §4.5). Keyed in [`Env::instances`]\"] # [doc = \" by `(trait_name, type_head(for_ty))`; the full `for_ty`/`trait_args` are kept for `EXPLAIN` and\"] # [doc = \" the staged dictionary lowering (M-673).\"] # [derive (Debug , Clone , PartialEq)] pub struct InstanceInfo { # [doc = \" The trait this instances.\"] pub trait_name : String , # [doc = \" The (concrete) trait arguments.\"] pub trait_args : Vec < Ty > , # [doc = \" The (concrete) type the instance is for.\"] pub for_ty : Ty , # [doc = \" The provided method names (a non-silent record of what the dictionary supplies).\"] pub methods : Vec < String > , }",
-      "reason": "struct `InstanceInfo` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `InstanceInfo` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
       "item_name": "InstanceInfo"
     },
     {
@@ -269,7 +269,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" The checked program environment: registry + function table. Built by [`check_nodule`]; the\"] # [doc = \" evaluator and elaborator consume it (so nothing runs unchecked).\"] # [derive (Debug , Clone)] pub struct Env { # [doc = \" Data registry, keyed by type name.\"] pub types : BTreeMap < String , DataInfo > , # [doc = \" Function table, keyed by name.\"] pub fns : BTreeMap < String , FnDecl > , # [doc = \" Per-function totality classification (RFC-0007 §4.5), filled by the totality checker.\"] pub totality : BTreeMap < String , crate :: totality :: Totality > , # [doc = \" Trait registry (RFC-0019 §4.2; LR-2), keyed by trait name. A trait is a **registry entry**,\"] # [doc = \" never a kernel node (KC-3). Stored for `EXPLAIN` and for the staged dictionary lowering\"] # [doc = \" (M-673).\"] pub traits : BTreeMap < String , TraitInfo > , # [doc = \" Instance registry (RFC-0019 §4.5; the **coherence** key), keyed by `(trait_name, type_head)`.\"] # [doc = \" Head-granular keying is the stage-1 coherence discipline — at most one instance per\"] # [doc = \" `(trait, type-head)` (global uniqueness). Stored for instance resolution + the staged\"] # [doc = \" dictionary lowering (M-673).\"] pub instances : BTreeMap < (String , String) , InstanceInfo > , # [doc = \" **Retained impl-method bodies** (M-673), keyed `(trait_name, type_head(for_ty))` — parallel to\"] # [doc = \" [`Self::instances`] (head-granular: at most one instance per key by coherence). Each value is\"] # [doc = \" the instance's **resolved** method `FnDecl`s (ambient literals + ctor/binder patterns\"] # [doc = \" normalized — the same canonical form a top-level fn carries). [`InstanceInfo::methods`] keeps\"] # [doc = \" only the method *names* (a non-silent record of the dictionary slots); to **monomorphize** a\"] # [doc = \" trait-method call to a direct call (`crate::mono`) the elaborator needs the method *bodies*, so\"] # [doc = \" they are retained here additively (rather than mutating [`InstanceInfo`], whose `PartialEq` /\"] # [doc = \" equality sites stay untouched). Empty when a nodule declares no `impl`s — a non-trait program is\"] # [doc = \" byte-identical to the pre-M-673 `Env`.\"] pub impls : BTreeMap < (String , String) , Vec < FnDecl > > , # [doc = \" **User-defined generative-lowering rules** (DN-54 / M-812), keyed by rule name.\"] # [doc = \" Populated by `check_nodule_with` from every `lower Name[params] = <rhs>` declaration in the\"] # [doc = \" nodule; looked up by `derive Name for T` application during elaboration ([`crate::elab`]).\"] # [doc = \" Empty in any nodule that declares no `lower` rules. Acyclicity (DN-54 §4.2) and KC-3 (RHS\"] # [doc = \" must lower to existing L0 nodes, never grow the kernel) are both enforced at check time —\"] # [doc = \" never-silent (G2).\"] pub lower_rules : BTreeMap < String , LowerDecl > , # [doc = \" **Provenance of `derive`-generated sibling impls** (DN-54 §10.6 OQ-A / DN-81 §6.5 / RFC-0001\"] # [doc = \" §4.3; M-973). Keyed by the same `(trait_name, type_head)` coherence key as [`Self::instances`],\"] # [doc = \" each value records the `(rule_name, for_ty_render)` a Model-A sibling injection came from — so\"] # [doc = \" a derived impl is distinguishable from a hand-written one (`reveal`/EXPLAIN provenance), and\"] # [doc = \" Model A retains Model B's one intrinsic edge (DN-81 §5.3 Objection 2). Empty in any nodule with\"] # [doc = \" no `derive` sites. **Guarantee: `Declared`** — this is recorded metadata, not a checked\"] # [doc = \" property; ADR-003 content-addressing is the substantive identity, this map is the human-facing\"] # [doc = \" origin label (VR-5 — carried honestly, never upgraded).\"] pub derived_provenance : BTreeMap < (String , String) , (String , String) > , # [doc = \" **Provenance of `via`-generated forwarding impls** (DN-53 §A.3.2/§A.3.3; M-966), the `via`\"] # [doc = \" analogue of [`Self::derived_provenance`]. Keyed by the same `(trait_name, type_head)`\"] # [doc = \" coherence key as [`Self::instances`]; each value records `(field_idx, object_name)` — which\"] # [doc = \" positional field the forwarding impl delegates through, and which `object` declared it — so\"] # [doc = \" `reveal`/EXPLAIN can label the generated impl `[generated: via <field_idx> : <TraitName>]`\"] # [doc = \" per DN-53 §A.3.3 (never a silent/opaque dispatch, G2). Resolution itself is deterministic by\"] # [doc = \" construction: `via_decls` is an ordered `Vec` (declaration order), never a `HashMap`, and two\"] # [doc = \" `via` clauses on the same object claiming the same trait are refused up front\"] # [doc = \" ([`expand_object_via_decls`]) rather than silently choosing one. Empty in any nodule with no\"] # [doc = \" `via` clauses. **Guarantee: `Declared`** — recorded metadata, not a checked property (VR-5 —\"] # [doc = \" carried honestly, never upgraded).\"] pub via_provenance : BTreeMap < (String , String) , (u32 , String) > , }",
-      "reason": "struct `Env` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `Env` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
       "item_name": "Env"
     },
     {
@@ -399,7 +399,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" The checked environments of a whole **phylum** (M-662): one [`Env`] per nodule, paired with the\"] # [doc = \" nodule's path. The product of [`check_phylum`]. For a phylum-of-one this holds the single nodule's\"] # [doc = \" `Env` (so [`check_nodule`] just unwraps it) — additive, backward-compatible.\"] # [derive (Debug , Clone)] pub struct PhylumEnv { # [doc = \" One `(nodule path, checked Env)` per nodule, in source order.\"] pub nodules : Vec < (Path , Env) > , }",
-      "reason": "struct `PhylumEnv` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `PhylumEnv` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "PhylumEnv"
     },
     {
@@ -419,7 +419,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" The **phylum-wide export table** (M-662): the `pub` items of every nodule, keyed by **qualified\"] # [doc = \" name** (`nodule.path` + `.` + item name, e.g. `\\\"std.collections.List\\\"`). This is the *import\"] # [doc = \" registry* — the **only-`pub`** view a `use` resolves against (RFC-0006 §4.3). It is kept strictly\"] # [doc = \" separate from the pub-blind coherence view (below): conflating the two would let a `use` import a\"] # [doc = \" private name or let the orphan rule miss a private declaration (a bug — the two views answer\"] # [doc = \" different questions).\"] # [derive (Debug , Default)] struct Exports { # [doc = \" Exported data types, by qualified name.\"] types : BTreeMap < String , DataInfo > , # [doc = \" Exported functions, by qualified name.\"] fns : BTreeMap < String , FnDecl > , # [doc = \" Exported traits, by qualified name.\"] traits : BTreeMap < String , TraitInfo > , # [doc = \" **All** declared simple names per nodule-prefix, with their `pub`-ness — used to distinguish\"] # [doc = \" \\\"no such name\\\" from \\\"exists but private\\\" in a `use` refusal (G2 — an honest, helpful\"] # [doc = \" diagnostic). Keyed by qualified name → `is_pub`.\"] declared : BTreeMap < String , bool > , }",
-      "reason": "struct `Exports` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `Exports` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
       "item_name": "Exports"
     },
     {
@@ -429,7 +429,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" The resolved imports available to **one** nodule while its bodies are checked (M-662): the\"] # [doc = \" imported `pub` declarations, merged by **simple name** at the documented precedence (own decls\"] # [doc = \" shadow explicit `use` shadow glob), plus the set of names that a **glob-vs-glob collision** left\"] # [doc = \" **ambiguous** (importable only by an explicit `use`). The ambiguous set is consulted at every\"] # [doc = \" unresolved-name site so a *reference* to an ambiguous glob name is a never-silent `CheckError`,\"] # [doc = \" never a silent winner (G2).\"] # [derive (Debug , Default , Clone)] struct NoduleImports { # [doc = \" Imported data types, by simple name.\"] types : BTreeMap < String , DataInfo > , # [doc = \" Imported functions, by simple name.\"] fns : BTreeMap < String , FnDecl > , # [doc = \" Imported traits, by simple name.\"] traits : BTreeMap < String , TraitInfo > , # [doc = \" Names brought in by **two or more** globs (and not resolved by an explicit `use` or a local\"] # [doc = \" decl): a *reference* to one of these is the never-silent glob-vs-glob ambiguity error.\"] ambiguous : BTreeSet < String > , }",
-      "reason": "struct `NoduleImports` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `NoduleImports` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
       "item_name": "NoduleImports"
     },
     {
@@ -519,7 +519,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" The pub-blind **coherence view** for the phylum-wide orphan rule (M-662; RFC-0019 §4.5): the set\"] # [doc = \" of **all** trait names and **all** data-type names declared by **any** nodule of the phylum,\"] # [doc = \" regardless of `pub`. Distinct from the [`Exports`] (pub-only) import registry — an `impl` is legal\"] # [doc = \" iff its trait OR its `for`-type head is declared *somewhere* in the phylum, and that visibility is\"] # [doc = \" pub-blind (coherence is enforcement authority, not the `pub` namespace).\"] # [derive (Debug , Default)] pub (crate) struct CoherenceView { # [doc = \" Every trait name declared anywhere in the phylum (pub-blind).\"] pub (crate) traits : BTreeSet < String > , # [doc = \" Every data-type name declared anywhere in the phylum (pub-blind), excluding the prelude.\"] types : BTreeSet < String > , }",
-      "reason": "struct `CoherenceView` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `CoherenceView` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
       "item_name": "CoherenceView"
     },
     {
@@ -529,7 +529,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" The **declaration-level** registries of one nodule (types/fns/traits), built before any body is\"] # [doc = \" checked (M-662). The phylum builds its two cross-nodule views from these, then re-uses them as the\"] # [doc = \" per-nodule base when checking that nodule's bodies (so registration runs once per nodule — DRY).\"] struct NoduleRegs { types : BTreeMap < String , DataInfo > , fns : BTreeMap < String , FnDecl > , traits : BTreeMap < String , TraitInfo > , }",
-      "reason": "struct `NoduleRegs` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `NoduleRegs` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
       "item_name": "NoduleRegs"
     },
     {

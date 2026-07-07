@@ -32,7 +32,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" One row in the guarantee matrix (RFC-0016 §4.5).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct MatrixRow { # [doc = \" The exported operation name.\"] pub op : & 'static str , # [doc = \" Guarantee tag on `Exact ⊐ Proven ⊐ Empirical ⊐ Declared` (VR-5).\"] # [doc = \" All rows are `\\\"Exact\\\"` because content hashing is deterministic (spec §4).\"] pub guarantee : & 'static str , # [doc = \" Whether the op can fail and what the explicit error set is.\"] pub fallibility : Fallibility , # [doc = \" The explicit error / none-case description (empty string for total ops).\"] pub error_set : & 'static str , # [doc = \" Declared effects (C6). Empty string means no effects.\"] pub effects : & 'static str , # [doc = \" Whether the op has a C3 EXPLAIN obligation.\"] pub explainable : Explainable , }",
-      "reason": "struct `MatrixRow` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `MatrixRow` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
       "item_name": "MatrixRow"
     },
     {

@@ -117,3 +117,12 @@ type EntropyEffect = EntropyEffect;
 type RngAlgo = Xoshiro256PlusPlus;
 
 fn rotl64(x: Binary{64}, k: Binary{32}) => Binary{64} = rotate_left(x, k);
+
+// A deterministic, injectable [`EntropySource`] for tests.
+//
+// Fills buffers with a fixed counter-based pattern so the test suite exercises the full
+// entropy-surface code path without any OS calls. This is **not** a source of real entropy
+// and must not be used outside tests.
+//
+// FLAG (Q4 / §8-Q6): real OS entropy is in `std-sys` (M-541). This stub is the test seam.
+type StubEntropy = StubEntropy(Binary{8});

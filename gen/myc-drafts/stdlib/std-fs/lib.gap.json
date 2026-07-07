@@ -139,7 +139,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" An affine open-file handle (LR-8: consumed exactly once).\"] # [doc = \"\"] # [doc = \" Obtained from [`Fs::open`]. Must be explicitly closed with [`Fs::close`]; any operation on a\"] # [doc = \" consumed handle returns `Err(FsErr::UseAfterConsume)`. This structural constraint closes the\"] # [doc = \" only resource-leak vector (LR-9): an unclosed handle is a leak; close errors are surfaced (C1).\"] # [doc = \"\"] # [doc = \" # FLAG (LR-8 / Rust linear types)\"] # [doc = \" Rust does not have native linear types, so the single-consumption invariant is enforced at\"] # [doc = \" runtime via a `consumed` flag. A future Mycelium-lang implementation can enforce it at\"] # [doc = \" compile time (RFC-0006 LR-8). Until then, every op checks `consumed` first.\"] # [derive (Debug)] pub struct File { handle : InMemHandle , }",
-      "reason": "struct `File` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `File` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "File"
     },
     {
@@ -159,7 +159,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" An open directory iterator handle.\"] # [doc = \"\"] # [doc = \" Produced by [`Fs::read_dir`]. Yields child paths as `String`s. This is an in-memory\"] # [doc = \" snapshot iterator; in the real-OS path it would iterate `readdir(3)` entries.\"] # [derive (Debug)] pub struct DirIter { entries : std :: vec :: IntoIter < String > , }",
-      "reason": "struct `DirIter` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `DirIter` has a field type with no confirmed mapping (qualified type path `std :: vec :: IntoIter < String >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5))",
       "item_name": "DirIter"
     },
     {
@@ -179,7 +179,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" The filesystem context: holds the substrate and exposes all effectful fs ops.\"] # [doc = \"\"] # [doc = \" All effectful operations (`open`, `stat`, `read_dir`, `create_dir`, `remove_file`,\"] # [doc = \" `remove_dir`, `rename`, `copy`) are methods on `Fs`. This makes the filesystem effect\"] # [doc = \" explicit and inspectable: a function that does not hold an `&mut Fs` cannot perform\"] # [doc = \" filesystem IO (partial C6 capability scoping — see FLAG Q5).\"] # [doc = \"\"] # [doc = \" Currently backed by `InMemoryFs`. Wire `RealFs` (M-541) when the `std-sys` phylum lands.\"] pub struct Fs { backend : InMemoryFs , }",
-      "reason": "struct `Fs` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `Fs` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "Fs"
     },
     {

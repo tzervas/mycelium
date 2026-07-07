@@ -12,4 +12,21 @@
 // accompanying .gap.json for every construct this pass could not express.
 nodule std.fs;
 
-
+// Declared open intent for `open` (spec §3).
+//
+// All fields default `false`. Every create/truncate option is **opt-in, never a default**:
+//
+// | Field | When `true` |
+// |---|---|
+// | `read` | Allow reading through the handle |
+// | `write` | Allow writing through the handle |
+// | `append` | Allow appending (implies write; position always at end) |
+// | `create` | Create the file if absent; open existing file if present |
+// | `create_new` | Create the file, failing with `AlreadyExists` if it exists |
+// | `truncate` | Zero-out the file's contents on open; requires `write` |
+//
+// # C1 — never-silent
+// - Opening absent path, `create = false`, `create_new = false` → `Err(NotFound)` (no conjured file).
+// - Opening existing path, `truncate = false` → existing bytes preserved (no silent zero-out).
+// - `create_new = true` on an existing path → `Err(AlreadyExists)` (no silent overwrite).
+type OpenOptions = OpenOptions(Bool, Bool, Bool, Bool, Bool, Bool);

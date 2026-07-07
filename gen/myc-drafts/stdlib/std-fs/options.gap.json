@@ -1,15 +1,27 @@
 {
   "source": "crates/mycelium-std-fs/src/options.rs",
-  "emitted_items": [],
+  "emitted_items": [
+    "OpenOptions"
+  ],
   "gaps": [
     {
       "file": "crates/mycelium-std-fs/src/options.rs",
       "line": 10,
       "col": 1,
-      "category": "Struct",
-      "rust_construct": "Struct",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "# [doc = \" Declared open intent for `open` (spec §3).\"] # [doc = \"\"] # [doc = \" All fields default `false`. Every create/truncate option is **opt-in, never a default**:\"] # [doc = \"\"] # [doc = \" | Field | When `true` |\"] # [doc = \" |---|---|\"] # [doc = \" | `read` | Allow reading through the handle |\"] # [doc = \" | `write` | Allow writing through the handle |\"] # [doc = \" | `append` | Allow appending (implies write; position always at end) |\"] # [doc = \" | `create` | Create the file if absent; open existing file if present |\"] # [doc = \" | `create_new` | Create the file, failing with `AlreadyExists` if it exists |\"] # [doc = \" | `truncate` | Zero-out the file's contents on open; requires `write` |\"] # [doc = \"\"] # [doc = \" # C1 — never-silent\"] # [doc = \" - Opening absent path, `create = false`, `create_new = false` → `Err(NotFound)` (no conjured file).\"] # [doc = \" - Opening existing path, `truncate = false` → existing bytes preserved (no silent zero-out).\"] # [doc = \" - `create_new = true` on an existing path → `Err(AlreadyExists)` (no silent overwrite).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct OpenOptions { # [doc = \" Allow reading through the handle.\"] pub read : bool , # [doc = \" Allow writing through the handle.\"] pub write : bool , # [doc = \" Append mode: writes always go to the end; position is at end.\"] pub append : bool , # [doc = \" Create the file if absent; open it if present. No-op if already exists.\"] pub create : bool , # [doc = \" Create the file; fail with `AlreadyExists` if it already exists.\"] pub create_new : bool , # [doc = \" Truncate the file's contents to zero on open. Requires `write = true`.\"] pub truncate : bool , }",
-      "reason": "struct `OpenOptions` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "dropped non-doc attribute(s) on struct `OpenOptions`: # [derive (Debug , Clone , PartialEq , Eq)]",
+      "item_name": "OpenOptions"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/options.rs",
+      "line": 10,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" Declared open intent for `open` (spec §3).\"] # [doc = \"\"] # [doc = \" All fields default `false`. Every create/truncate option is **opt-in, never a default**:\"] # [doc = \"\"] # [doc = \" | Field | When `true` |\"] # [doc = \" |---|---|\"] # [doc = \" | `read` | Allow reading through the handle |\"] # [doc = \" | `write` | Allow writing through the handle |\"] # [doc = \" | `append` | Allow appending (implies write; position always at end) |\"] # [doc = \" | `create` | Create the file if absent; open existing file if present |\"] # [doc = \" | `create_new` | Create the file, failing with `AlreadyExists` if it exists |\"] # [doc = \" | `truncate` | Zero-out the file's contents on open; requires `write` |\"] # [doc = \"\"] # [doc = \" # C1 — never-silent\"] # [doc = \" - Opening absent path, `create = false`, `create_new = false` → `Err(NotFound)` (no conjured file).\"] # [doc = \" - Opening existing path, `truncate = false` → existing bytes preserved (no silent zero-out).\"] # [doc = \" - `create_new = true` on an existing path → `Err(AlreadyExists)` (no silent overwrite).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct OpenOptions { # [doc = \" Allow reading through the handle.\"] pub read : bool , # [doc = \" Allow writing through the handle.\"] pub write : bool , # [doc = \" Append mode: writes always go to the end; position is at end.\"] pub append : bool , # [doc = \" Create the file if absent; open it if present. No-op if already exists.\"] pub create : bool , # [doc = \" Create the file; fail with `AlreadyExists` if it already exists.\"] pub create_new : bool , # [doc = \" Truncate the file's contents to zero on open. Requires `write = true`.\"] pub truncate : bool , }",
+      "reason": "struct `OpenOptions` named field(s) `read, write, append, create, create_new, truncate` emitted positionally as `OpenOptions(Bool, Bool, Bool, Bool, Bool, Bool)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped (matches `lib/std/*.myc` hand-ports)",
       "item_name": "OpenOptions"
     },
     {

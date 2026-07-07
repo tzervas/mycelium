@@ -8,6 +8,7 @@
 use crate::emit::{self, Emitted};
 use crate::gap::{Category, Gap, GapReason, GapReport};
 use crate::map::tokens_to_string;
+use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
 use syn::spanned::Spanned;
@@ -68,69 +69,76 @@ pub fn transpile_source(
     let total = parsed.items.len();
     let mut body_chunks = Vec::new();
 
-    for item in &parsed.items {
-        let (line, col) = span_line_col(item);
-        let name_hint = item_display_name(item);
-        let snippet = tokens_to_string(item);
+    // M-1006 (E33-1): the per-file resolvability set gating named-field-record emission (see
+    // `emit::with_resolvable`). Computed once over this file's declarations, then installed for the
+    // item loop so a named-field `struct`/enum variant emits only when it introduces no unresolved
+    // in-file reference (which would poison the file's `myc check` and cost its clean items).
+    let resolvable = resolvable_type_names(&parsed.items);
+    crate::emit::with_resolvable(resolvable, || {
+        for item in &parsed.items {
+            let (line, col) = span_line_col(item);
+            let name_hint = item_display_name(item);
+            let snippet = tokens_to_string(item);
 
-        match dispatch_item(item) {
-            Outcome::Emitted(Emitted {
-                name,
-                myc,
-                sub_gaps,
-            }) => {
-                body_chunks.push(myc);
-                emitted_items.push(name.clone());
-                for sg in sub_gaps {
+            match dispatch_item(item) {
+                Outcome::Emitted(Emitted {
+                    name,
+                    myc,
+                    sub_gaps,
+                }) => {
+                    body_chunks.push(myc);
+                    emitted_items.push(name.clone());
+                    for sg in sub_gaps {
+                        gaps.push(Gap {
+                            file: file_label.to_string(),
+                            line,
+                            col,
+                            category: sg.category,
+                            // `rust_construct` mirrors `category` (the finer, per-failure-reason
+                            // taxonomy from `gap.rs`), not the coarse `syn::Item` kind an earlier
+                            // iteration used (`Impl`/`Fn`/`Struct`/...) — that coarser string
+                            // collapsed e.g. every failing `impl` method to the same "Impl" label
+                            // regardless of *why* it failed, hiding exactly the distinction the gap
+                            // report exists to surface (G2: the report is the ground truth the
+                            // surface-feature backlog is synthesized from, so its categories must be
+                            // the real ones, not a re-derived approximation of them).
+                            rust_construct: sg.category.as_str().to_string(),
+                            snippet: snippet.clone(),
+                            reason: sg.reason,
+                            item_name: Some(name.clone()),
+                        });
+                    }
+                }
+                Outcome::Gap(reason) => {
                     gaps.push(Gap {
                         file: file_label.to_string(),
                         line,
                         col,
-                        category: sg.category,
-                        // `rust_construct` mirrors `category` (the finer, per-failure-reason
-                        // taxonomy from `gap.rs`), not the coarse `syn::Item` kind an earlier
-                        // iteration used (`Impl`/`Fn`/`Struct`/...) — that coarser string
-                        // collapsed e.g. every failing `impl` method to the same "Impl" label
-                        // regardless of *why* it failed, hiding exactly the distinction the gap
-                        // report exists to surface (G2: the report is the ground truth the
-                        // surface-feature backlog is synthesized from, so its categories must be
-                        // the real ones, not a re-derived approximation of them).
-                        rust_construct: sg.category.as_str().to_string(),
-                        snippet: snippet.clone(),
-                        reason: sg.reason,
-                        item_name: Some(name.clone()),
+                        category: reason.category,
+                        rust_construct: reason.category.as_str().to_string(),
+                        snippet,
+                        reason: reason.reason,
+                        item_name: name_hint,
+                    });
+                }
+                Outcome::TestExcluded => {
+                    gaps.push(Gap {
+                        file: file_label.to_string(),
+                        line,
+                        col,
+                        category: Category::TestItem,
+                        rust_construct: Category::TestItem.as_str().to_string(),
+                        snippet,
+                        reason: "#[cfg(test)] item — out of scope for this PoC's transpilation \
+                              surface (excluded from the expressible-fraction denominator, \
+                              but recorded, never silently skipped)"
+                            .to_string(),
+                        item_name: name_hint,
                     });
                 }
             }
-            Outcome::Gap(reason) => {
-                gaps.push(Gap {
-                    file: file_label.to_string(),
-                    line,
-                    col,
-                    category: reason.category,
-                    rust_construct: reason.category.as_str().to_string(),
-                    snippet,
-                    reason: reason.reason,
-                    item_name: name_hint,
-                });
-            }
-            Outcome::TestExcluded => {
-                gaps.push(Gap {
-                    file: file_label.to_string(),
-                    line,
-                    col,
-                    category: Category::TestItem,
-                    rust_construct: Category::TestItem.as_str().to_string(),
-                    snippet,
-                    reason: "#[cfg(test)] item — out of scope for this PoC's transpilation \
-                              surface (excluded from the expressible-fraction denominator, \
-                              but recorded, never silently skipped)"
-                        .to_string(),
-                    item_name: name_hint,
-                });
-            }
         }
-    }
+    });
 
     let myc_text = render_nodule(nodule_path, &body_chunks, &parsed.attrs);
     let report = GapReport {
@@ -140,6 +148,92 @@ pub fn transpile_source(
         total_top_level_items: total,
     };
     Ok((myc_text, report))
+}
+
+/// Compute the set of type names that are **resolvable in this file** — the M-1006 (E33-1) gate for
+/// named-field-record emission (consumed via [`crate::emit::with_resolvable`]). A declared
+/// `struct`/`enum` is resolvable iff every field type (across all variants, for an enum) *maps* AND
+/// every **user** type it references is itself a resolvable in-file type. A reference to a type not
+/// declared in this file (e.g. a sibling-crate/kernel type such as `ContentHash`) is never
+/// resolvable, so a record depending on it stays gapped rather than emitting a reference that would
+/// poison the file's `myc check` (VR-5/G2). Builtins are handled by `map_type` and are not deps.
+///
+/// This is a **greatest** fixed point (start with every mappable declared type, then iteratively
+/// drop any whose deps aren't all resolvable) so **recursive and mutually-recursive** types — a
+/// self-referential `type Nat = Z | S(Nat)`, an `FsNode`/`ScopeTree` cycle — are correctly kept
+/// resolvable (a least fixed point would wrongly exclude every cycle).
+fn resolvable_type_names(items: &[Item]) -> HashSet<String> {
+    // Each declared type -> its user-type deps, or `None` if any field is unmappable (that type can
+    // then never be resolvable — consistent with `map_type` gapping the field).
+    fn collect_field_deps(fields: &syn::Fields, acc: &mut Option<Vec<String>>) {
+        let field_iter = match fields {
+            syn::Fields::Unit => return,
+            syn::Fields::Named(fs) => fs.named.iter(),
+            syn::Fields::Unnamed(fs) => fs.unnamed.iter(),
+        };
+        for f in field_iter {
+            match acc.as_mut() {
+                None => return,
+                Some(v) => {
+                    if !crate::map::field_type_user_deps(&f.ty, v) {
+                        *acc = None;
+                        return;
+                    }
+                }
+            }
+        }
+    }
+    let mut deps: Vec<(String, Option<Vec<String>>)> = Vec::new();
+    for item in items {
+        match item {
+            Item::Struct(s) => {
+                let mut acc = Some(Vec::new());
+                collect_field_deps(&s.fields, &mut acc);
+                deps.push((s.ident.to_string(), acc));
+            }
+            Item::Enum(e) => {
+                let mut acc = Some(Vec::new());
+                for v in &e.variants {
+                    collect_field_deps(&v.fields, &mut acc);
+                    if acc.is_none() {
+                        break;
+                    }
+                }
+                deps.push((e.ident.to_string(), acc));
+            }
+            _ => {}
+        }
+    }
+    // Greatest fixed point: seed with every mappable declared type, then drop any whose deps are not
+    // all still in the set (an external/unmapped dep, or one already dropped — cascading out).
+    let mut resolvable: HashSet<String> = deps
+        .iter()
+        .filter(|(_, d)| d.is_some())
+        .map(|(n, _)| n.clone())
+        .collect();
+    loop {
+        let mut changed = false;
+        let mut to_drop: Vec<String> = Vec::new();
+        for (name, d) in &deps {
+            if !resolvable.contains(name) {
+                continue;
+            }
+            // `d` is `Some` for every name still in `resolvable` (seeded from `is_some`).
+            if let Some(ds) = d {
+                if ds.iter().any(|dep| !resolvable.contains(dep)) {
+                    to_drop.push(name.clone());
+                }
+            }
+        }
+        for name in to_drop {
+            resolvable.remove(&name);
+            changed = true;
+        }
+        if !changed {
+            break;
+        }
+    }
+    resolvable
 }
 
 enum Outcome {

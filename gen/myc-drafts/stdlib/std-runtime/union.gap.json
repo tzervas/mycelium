@@ -67,7 +67,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" Structured concurrency scope: all tasks complete or are cancelled before scope exit.\"] # [doc = \"\"] # [doc = \" Tasks are stored in spawn order and swept FIFO by `join_all` (**Exact** sweep guarantee).\"] # [doc = \"\"] # [doc = \" # Guarantee\"] # [doc = \" - Sweep order: **Exact** (FIFO by construction, ADR-020 §4).\"] # [doc = \" - Completion semantics: **Empirical** (RT2 sequentialization differential, ADR-020 §4).\"] # [doc = \" - A scope that exits before all tasks complete returns `Err(ScopeError::TasksStillRunning)`.\"] pub struct Scope < T , E > { tasks : Vec < Task > , cancelled : bool , _output : std :: marker :: PhantomData < T > , _error : std :: marker :: PhantomData < E > , }",
-      "reason": "struct `Scope` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `Scope` has a field type with no confirmed mapping (qualified type path `std :: marker :: PhantomData < T >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5))",
       "item_name": "Scope"
     },
     {
@@ -117,7 +117,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" Colony: a group of scopes sharing a supervision tree and a `Network`.\"] # [doc = \"\"] # [doc = \" Provides a factory for `Scope<T, E>` via [`Colony::scope`].\"] # [doc = \"\"] # [doc = \" Guarantee: `Empirical` (Kahn-determinism of channel communication, ADR-020 §4).\"] # [derive (Debug)] pub struct Colony < T , E > { _output : std :: marker :: PhantomData < T > , _error : std :: marker :: PhantomData < E > , }",
-      "reason": "struct `Colony` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `Colony` has a field type with no confirmed mapping (qualified type path `std :: marker :: PhantomData < T >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5))",
       "item_name": "Colony"
     },
     {
@@ -247,7 +247,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" A monotone progress counter for channel work — bump it on every successful `try_send`/`try_recv`\"] # [doc = \" so the sweep can tell \\\"a channel op advanced the network\\\" from \\\"nothing moved\\\" (G2).\"] # [doc = \"\"] # [doc = \" The driver reads it once per sweep; the caller increments it from inside task polls.\"] # [derive (Debug , Default)] pub struct Progress { epoch : AtomicU64 , }",
-      "reason": "struct `Progress` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `Progress` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "Progress"
     },
     {
@@ -317,7 +317,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" One row in the guarantee matrix.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct GaugeRow { pub operation : & 'static str , pub strength : GuaranteeStrength , pub basis : & 'static str , }",
-      "reason": "struct `GaugeRow` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `GaugeRow` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
       "item_name": "GaugeRow"
     },
     {
@@ -597,7 +597,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" Shared mutable state behind a `Sender`/`Receiver` pair.\"] struct ChannelInner < V > { buf : VecDeque < V > , capacity : usize , closed : bool , # [doc = \" The canonical channel identity, allocated once at construction.\"] channel_id : ChannelNodeId , }",
-      "reason": "struct `ChannelInner` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `ChannelInner` has a field type with no confirmed mapping (`usize` has a platform-dependent width; no fixed Binary{N} mapping)",
       "item_name": "ChannelInner"
     },
     {
@@ -627,7 +627,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" A named network of typed channels within a `Colony`.\"] # [doc = \"\"] # [doc = \" Guarantee: **Empirical** (Kahn-determinism, ADR-020 §4).\"] # [derive (Debug)] pub struct Network { _priv : () , }",
-      "reason": "struct `Network` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `Network` has a field type with no confirmed mapping (unit type `()` has no representable value in this grammar fragment)",
       "item_name": "Network"
     },
     {
@@ -657,7 +657,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" Sending end of a typed channel.\"] # [doc = \"\"] # [doc = \" SPSC by design: `Sender<V>` is not `Clone` (ADR-020 §4 / RFC-0008 §4.3 RT1).\"] # [doc = \"\"] # [doc = \" Guarantee: **Exact** (FIFO ordering within this channel; backed by `VecDeque`).\"] pub struct Sender < V > { inner : Arc < Mutex < ChannelInner < V > > > , }",
-      "reason": "struct `Sender` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `Sender` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "Sender"
     },
     {
@@ -687,7 +687,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" Receiving end of a typed channel.\"] # [doc = \"\"] # [doc = \" Guarantee: **Exact** (FIFO ordering within this channel; backed by `VecDeque`).\"] pub struct Receiver < V > { inner : Arc < Mutex < ChannelInner < V > > > , }",
-      "reason": "struct `Receiver` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `Receiver` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "Receiver"
     },
     {
@@ -777,7 +777,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" A reified policy-set transition record (G2: a mechanized set is never a silent override —\"] # [doc = \" the transition itself is inspectable). Guarantee: **`Exact`** — every [`PolicySlot::set`]\"] # [doc = \" appends exactly one record, with a per-slot monotonic sequence number, by construction.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct PolicySetRecord { # [doc = \" The site whose active policy changed.\"] pub site : PolicySite , # [doc = \" Per-slot monotonic sequence number (0 for the first set).\"] pub seq : u64 , # [doc = \" The previous active policy's content address, `None` on the first set.\"] pub previous : Option < ContentHash > , # [doc = \" The new active policy's content address ([`SelectionPolicy::policy_ref`]).\"] pub new_policy : ContentHash , # [doc = \" The new policy's display name (for the EXPLAIN/teaching surface).\"] pub new_policy_name : String , }",
-      "reason": "struct `PolicySetRecord` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `PolicySetRecord` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
       "item_name": "PolicySetRecord"
     },
     {
@@ -787,7 +787,7 @@
       "category": "PayloadVariant",
       "rust_construct": "PayloadVariant",
       "snippet": "# [doc = \" Why a slot operation failed — always explicit (G2), never a silent default choice.\"] # [derive (Debug , Clone , PartialEq)] pub enum SlotError { # [doc = \" Selection was requested but no policy has been set for this site. Guarantee: **`Exact`**\"] # [doc = \" — fail-closed by construction; there is no built-in fallback policy (a silent default\"] # [doc = \" would be a black box, ADR-006).\"] NoActivePolicy { # [doc = \" The site that has no active policy.\"] site : PolicySite , } , # [doc = \" The underlying RFC-0005 selection refused (e.g. an out-of-range override).\"] Select (SelectError) , }",
-      "reason": "enum `SlotError` variant `NoActivePolicy` uses named fields — `constructor ::= Ident ('(' type_ref (',' type_ref)* ')')?` has no named-field/record form",
+      "reason": "enum `SlotError` has a named-field variant referencing a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "SlotError"
     },
     {
@@ -827,7 +827,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" A runtime slot binding the **active** [`SelectionPolicy`] for one RFC-0005 site, with an\"] # [doc = \" append-only transition log and a selection trace (DN-78 §3 B-2).\"] # [doc = \"\"] # [doc = \" The slot is the mechanized *setter surface*: `set` swaps the active policy and records the\"] # [doc = \" transition; `select` decides through the active policy and records the mandatory\"] # [doc = \" [`Explanation`]. Both logs are read-only views (`transitions`/`trace`) — append-only by\"] # [doc = \" construction (no public mutation besides the appending operations).\"] # [derive (Debug)] pub struct PolicySlot { site : PolicySite , active : Option < SelectionPolicy > , transitions : Vec < PolicySetRecord > , trace : Vec < Explanation > , }",
-      "reason": "struct `PolicySlot` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `PolicySlot` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "PolicySlot"
     },
     {
@@ -847,7 +847,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" A captured policy: the RFC-0005-conformant [`SelectionPolicy`] value that decided a recorded\"] # [doc = \" [`Explanation`], materialized for reuse/diffing (DN-78 §3 B-1). Not an opaque handle — the\"] # [doc = \" full policy value is inspectable (ADR-006).\"] # [derive (Debug , Clone , PartialEq)] pub struct CapturedPolicy { # [doc = \" The policy's content address (equal to `policy.policy_ref()` — verified at capture).\"] pub policy_ref : ContentHash , # [doc = \" The policy value itself.\"] pub policy : SelectionPolicy , }",
-      "reason": "struct `CapturedPolicy` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `CapturedPolicy` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "CapturedPolicy"
     },
     {
@@ -857,7 +857,7 @@
       "category": "PayloadVariant",
       "rust_construct": "PayloadVariant",
       "snippet": "# [doc = \" Why a capture failed — always explicit (G2), never a silent reconstruction.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum CaptureError { # [doc = \" The recorded `policy_ref` resolves to nothing in the given registry. Guarantee:\"] # [doc = \" **`Exact`** — fail-closed by construction; capture never fabricates a policy.\"] UnknownPolicyRef { # [doc = \" The unresolvable content address.\"] policy_ref : ContentHash , } , # [doc = \" The registry returned a policy whose own content address differs from the requested one\"] # [doc = \" (a corrupted registry). Never silently accepted.\"] RefMismatch { # [doc = \" The content address the capture asked for.\"] requested : ContentHash , # [doc = \" The content address the resolved policy actually hashes to.\"] resolved : ContentHash , } , }",
-      "reason": "enum `CaptureError` variant `UnknownPolicyRef` uses named fields — `constructor ::= Ident ('(' type_ref (',' type_ref)* ')')?` has no named-field/record form",
+      "reason": "enum `CaptureError` has a named-field variant referencing a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "CaptureError"
     },
     {
@@ -897,7 +897,7 @@
       "category": "PayloadVariant",
       "rust_construct": "PayloadVariant",
       "snippet": "# [doc = \" Why a replay failed — always explicit (G2), never a silent pass.\"] # [derive (Debug , Clone , PartialEq)] pub enum ReplayError { # [doc = \" The captured policy is not the one the record claims decided it (`policy_ref`\"] # [doc = \" mismatch) — replaying against the wrong policy would be a silent apples-to-oranges\"] # [doc = \" comparison, so it refuses up front.\"] PolicyMismatch { # [doc = \" The record's policy content address.\"] recorded : ContentHash , # [doc = \" The captured policy's content address.\"] captured : ContentHash , } , # [doc = \" Re-running the recorded inputs refused (e.g. a recorded override index that no longer\"] # [doc = \" fits the policy — impossible for a faithful capture, but never silently swallowed).\"] Select (SelectError) , # [doc = \" The replayed decision differs from the recorded one. With a validated policy and\"] # [doc = \" identical inputs this indicates non-determinism or a record from different code —\"] # [doc = \" either way it is surfaced, never absorbed.\"] Diverged { # [doc = \" The original record.\"] recorded : Box < Explanation > , # [doc = \" The replayed record that differs from it.\"] replayed : Box < Explanation > , } , }",
-      "reason": "enum `ReplayError` variant `PolicyMismatch` uses named fields — `constructor ::= Ident ('(' type_ref (',' type_ref)* ')')?` has no named-field/record form",
+      "reason": "enum `ReplayError` has a named-field variant referencing a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "ReplayError"
     },
     {
@@ -967,7 +967,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" One ledger row: what is deferred, why, and where it is tracked (DN-78 §4; G2 — the residual\"] # [doc = \" is explicit data, not a silent gap).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq)] pub struct ResidualRow { # [doc = \" The deferred item.\"] pub item : DeferredR2 , # [doc = \" The reserved construct(s) or surface the row refuses (names the RFC-0008 §4.5\"] # [doc = \" vocabulary — see the module-level naming note).\"] pub construct : & 'static str , # [doc = \" The unmet prerequisite that makes building it now a guess (G2/VR-5).\"] pub why_deferred : & 'static str , # [doc = \" The tracking task id(s) — the residual is tracked, never dropped.\"] pub tracker : & 'static str , # [doc = \" The decision basis (DN-78 §4 row; DN-63 §).\"] pub basis : & 'static str , }",
-      "reason": "struct `ResidualRow` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `ResidualRow` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
       "item_name": "ResidualRow"
     },
     {
@@ -997,7 +997,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" The explicit refusal a deferred item's [`require`] returns (G2: typed, inspectable, and\"] # [doc = \" teaching — it names the construct, the unmet prerequisite, and the tracker).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq)] pub struct R2DeferredError { # [doc = \" The item that was required.\"] pub item : DeferredR2 , # [doc = \" Its ledger row (why + tracker + basis).\"] pub row : & 'static ResidualRow , }",
-      "reason": "struct `R2DeferredError` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `R2DeferredError` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "R2DeferredError"
     },
     {
@@ -1067,7 +1067,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" A non-atomic intra-hypha reference-counted handle to a shared immutable value.\"] # [doc = \"\"] # [doc = \" Backed by [`std::rc::Rc<T>`] for correct non-atomic reference counting within a single hypha.\"] # [doc = \"\"] # [doc = \" ## Sharing model\"] # [doc = \"\"] # [doc = \" [`clone_ref`](Self::clone_ref) produces a second handle, incrementing the refcount.\"] # [doc = \" [`drop_ref`](Self::drop_ref) decrements the count, probes the outcome, and returns\"] # [doc = \" an [`RcProbe`]. The caller **must** call `drop_ref` — `RcCell<T>` has no `Drop` impl\"] # [doc = \" that emits a `ReclamationRecord`; dropping without `drop_ref` silently leaks the audit\"] # [doc = \" record (G2 violation).\"] # [doc = \"\"] # [doc = \" ## `!Send + !Sync`\"] # [doc = \"\"] # [doc = \" Inherited from `Rc<T>`: the non-atomic refcount is safe only within one hypha.\"] # [doc = \"\"] # [doc = \" ## Immutability\"] # [doc = \"\"] # [doc = \" `T` is held immutably (LR-8 / DN-32 §2.2). There is no interior-mutation surface.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — sharing and probe logic are deterministic by construction.\"] # [derive (Debug)] pub struct RcCell < T > { inner : Rc < T > , }",
-      "reason": "struct `RcCell` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `RcCell` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "RcCell"
     },
     {
@@ -1217,7 +1217,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" One value deferred for scope-exit reclamation within a [`Region`].\"] # [doc = \"\"] # [doc = \" Holds the content identity of the value to be reclaimed. The `ScopeExit` trigger and\"] # [doc = \" the `scope_id`/`sweep_epoch` are supplied at close time (from the region itself), not\"] # [doc = \" at deferral time — deferral is cheap (a single `ContentHash` push, no bookkeeping).\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — the hash is stored as-is; no approximation.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct DeferredEntry { # [doc = \" Content identity of the value deferred for reclamation (RFC-0027 §9 / RFC-0001 §4.6).\"] pub value_meta_hash : ContentHash , }",
-      "reason": "struct `DeferredEntry` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `DeferredEntry` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "DeferredEntry"
     },
     {
@@ -1237,7 +1237,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" A scope-exit reclamation region (DN-32 §2.3 / RFC-0027 §10.3 / MEM-3).\"] # [doc = \"\"] # [doc = \" One `Region` corresponds to one RT7 scope-tree node. It accumulates\"] # [doc = \" [`DeferredEntry`] values — values whose RC hit zero within this scope, or scope-local\"] # [doc = \" allocations — and at [`Region::close`] emits one [`ReclamationRecord`] per entry\"] # [doc = \" (trigger = `ScopeExit`) through a [`ReclamationSink`].\"] # [doc = \"\"] # [doc = \" ## Sweep order\"] # [doc = \"\"] # [doc = \" - **Parent–child TOTAL:** Close all child `Region`s before closing the parent.\"] # [doc = \"   The child's epoch will be numerically lower than the parent's (it closed first),\"] # [doc = \"   encoding the child→root ordering as a number line. The caller (the executor) is\"] # [doc = \"   responsible for this invariant; [`ScopeTree::close_ordered`] enforces it in tests.\"] # [doc = \"\"] # [doc = \" - **Siblings CONCURRENT (OQ-1 resolved, `Proven`-modulo-LR-9):** Sibling regions\"] # [doc = \"   close independently — no ordering constraint. Safe because LR-9 rules out\"] # [doc = \"   cross-sibling aliases (DN-32 §3).\"] # [doc = \"\"] # [doc = \" ## Never-silent contract (G2)\"] # [doc = \"\"] # [doc = \" Every [`DeferredEntry`] pushed via [`Region::defer`] emits exactly one\"] # [doc = \" `ReclamationRecord(ScopeExit)` when [`Region::close`] is called. A `Region` dropped\"] # [doc = \" without calling `close` while still holding deferred entries is a G2 violation; in\"] # [doc = \" debug builds [`Region::drop`] panics to surface this.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — one record per deferred entry at close (enforced-by-construction).\"] # [derive (Debug)] pub struct Region { # [doc = \" The unique identity of this region in the scope tree.\"] pub id : ScopeNodeId , # [doc = \" Deferred reclamation entries accumulated during this scope's lifetime.\"] deferred : Vec < DeferredEntry > , # [doc = \" The epoch assigned at close time. `None` until `close()` is called.\"] closed_epoch : Option < RegionEpoch > , }",
-      "reason": "struct `Region` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `Region` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "Region"
     },
     {
@@ -1277,7 +1277,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" Summary returned by [`Region::close`] — the audit-visible outcome of a scope-exit\"] # [doc = \" reclamation batch.\"] # [doc = \"\"] # [doc = \" Carries the region's identity, the epoch assigned at close time, and the count of\"] # [doc = \" deferred entries reclaimed. Useful for supervision observability, property tests, and\"] # [doc = \" the sweep-order assertion (child epoch < parent epoch).\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — all fields are deterministic functions of the close operation.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct ClosedRegion { # [doc = \" The identity of the closed region.\"] pub id : ScopeNodeId , # [doc = \" The monotonic epoch allocated at close time.\"] pub epoch : RegionEpoch , # [doc = \" The number of deferred entries reclaimed (one `ScopeExit` record emitted per entry).\"] pub reclaimed_count : usize , }",
-      "reason": "struct `ClosedRegion` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `ClosedRegion` has a field type with no confirmed mapping (`usize` has a platform-dependent width; no fixed Binary{N} mapping)",
       "item_name": "ClosedRegion"
     },
     {
@@ -1287,7 +1287,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" A minimal parent–child scope-tree for encoding and testing the sweep-order model\"] # [doc = \" (RFC-0027 §10.3 / DN-32 §3).\"] # [doc = \"\"] # [doc = \" `ScopeTree` holds one parent [`Region`] and zero or more child [`Region`]s. The correct\"] # [doc = \" close order (RT7) is: close all children before the parent. [`ScopeTree::close_ordered`]\"] # [doc = \" enforces this order. Siblings may close in any order — they are concurrent (OQ-1).\"] # [doc = \"\"] # [doc = \" This is NOT a full runtime scope tree; it is the minimal structure needed to encode and\"] # [doc = \" property-test the parent–child TOTAL and sibling-CONCURRENT ordering guarantees. Live\"] # [doc = \" executor integration is downstream (FLAG).\"] # [doc = \"\"] # [doc = \" Guarantee: `Declared` — the tree structure encodes the sweep order; epoch-ordering\"] # [doc = \" property (child < parent) is `Exact` by monotonic counter.\"] pub struct ScopeTree { # [doc = \" Child regions — independent siblings (closed before the parent, any order).\"] pub children : Vec < Region > , # [doc = \" The parent region — closed last.\"] pub parent : Region , }",
-      "reason": "struct `ScopeTree` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `ScopeTree` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "ScopeTree"
     },
     {
@@ -1357,7 +1357,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" An explicit-close scope guard wrapping a [`Region`].\"] # [doc = \"\"] # [doc = \" For callers who need to interleave deferrals with other logic between scope entry and exit\"] # [doc = \" and cannot use the closure form ([`with_region`]). Holds an open [`Region`] and exposes\"] # [doc = \" `defer`, `deferred_count`, `id`, and a **consuming** `close` that guarantees exactly one\"] # [doc = \" `Region::close` call.\"] # [doc = \"\"] # [doc = \" # Never-silent contract (G2)\"] # [doc = \"\"] # [doc = \" The caller **MUST** call [`RegionScope::close`] before the guard goes out of scope. There is\"] # [doc = \" no `Drop` impl that accepts a [`ReclamationSink`] (a sink cannot be threaded through `Drop`\"] # [doc = \" without violating KC-3 / the never-silent contract); dropping a `RegionScope` that still holds\"] # [doc = \" deferred entries causes the underlying [`Region`]'s debug-drop-panic to fire, surfacing the\"] # [doc = \" number of lost audit records. This is the same design discipline as `rc.rs`'s `RcCell` —\"] # [doc = \" explicit-close is the correct pattern; sink-bearing `Drop` is not.\"] # [doc = \"\"] # [doc = \" # Example\"] # [doc = \"\"] # [doc = \" ```rust,ignore\"] # [doc = \" use mycelium_std_runtime::scope_region::RegionScope;\"] # [doc = \" use mycelium_std_runtime::reclamation::CollectingSink;\"] # [doc = \"\"] # [doc = \" let mut sink = CollectingSink::new();\"] # [doc = \" let mut scope = RegionScope::enter();\"] # [doc = \" scope.defer(hash_a);\"] # [doc = \" // … interleaved work …\"] # [doc = \" scope.defer(hash_b);\"] # [doc = \" let closed = scope.close(&mut sink);\"] # [doc = \" assert_eq!(closed.reclaimed_count, 2);\"] # [doc = \" ```\"] # [doc = \"\"] # [doc = \" # Guarantee tags\"] # [doc = \"\"] # [doc = \" - **`close` called exactly once (on `RegionScope::close`):** `Exact` — consuming `close`\"] # [doc = \"   destructs `self`, so double-close is a compile-time type error.\"] # [doc = \" - **Dropped without `close` (debug builds):** `Exact` — underlying `Region` drop-guard panics\"] # [doc = \"   if deferred entries remain (G2 never-silent signal).\"] # [doc = \" - **`defer` / `deferred_count` / `id` accuracy:** `Exact` — delegates to `Region`; all\"] # [doc = \"   fields are exact functions of the region state.\"] # [derive (Debug)] pub struct RegionScope { # [doc = \" The open region backing this scope guard.\"] region : Region , }",
-      "reason": "struct `RegionScope` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `RegionScope` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "RegionScope"
     },
     {
@@ -1407,7 +1407,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" A computation that can be spawned into a `Scope`.\"] # [doc = \"\"] # [doc = \" Holds a `Box<dyn FnOnce() + Send>` closure. The caller asserts purity\"] # [doc = \" (RT1 contract, `Declared` — the type system cannot enforce no-side-effects).\"] # [doc = \"\"] # [doc = \" Guarantee: **Declared** — purity contract is asserted, not enforced by the type system.\"] # [doc = \" Out-of-scope effects are a `wild`-level concern (ADR-014).\"] pub struct Task { inner : Box < dyn FnOnce () + Send + 'static > , }",
-      "reason": "struct `Task` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `Task` has a field type with no confirmed mapping (unsupported Rust type form `dyn FnOnce () + Send + 'static`)",
       "item_name": "Task"
     },
     {
@@ -1434,10 +1434,20 @@
       "file": "crates/mycelium-std-runtime/src/task.rs",
       "line": 45,
       "col": 1,
-      "category": "Struct",
-      "rust_construct": "Struct",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "# [doc = \" Context passed to a running task — carries cancellation signal and scope ref.\"] # [derive (Debug)] pub struct TaskCtx { cancelled : bool , }",
-      "reason": "struct `TaskCtx` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "dropped non-doc attribute(s) on struct `TaskCtx`: # [derive (Debug)]",
+      "item_name": "TaskCtx"
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/task.rs",
+      "line": 45,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" Context passed to a running task — carries cancellation signal and scope ref.\"] # [derive (Debug)] pub struct TaskCtx { cancelled : bool , }",
+      "reason": "struct `TaskCtx` named field(s) `cancelled` emitted positionally as `TaskCtx(Bool)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped (matches `lib/std/*.myc` hand-ports)",
       "item_name": "TaskCtx"
     },
     {
@@ -1487,7 +1497,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" Deadlock descriptor: returned when a scope cannot make progress.\"] # [doc = \"\"] # [doc = \" Guarantee: **Empirical** — detection is complete for the supported channel graph\"] # [doc = \" (DAG channels); cyclic graphs are an open follow-up (FLAG: ADR-020 §7).\"] # [derive (Debug , PartialEq , Eq)] pub struct Deadlock { pub task_count : usize , }",
-      "reason": "struct `Deadlock` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `Deadlock` has a field type with no confirmed mapping (`usize` has a platform-dependent width; no fixed Binary{N} mapping)",
       "item_name": "Deadlock"
     },
     {
@@ -1512,14 +1522,15 @@
     }
   ],
   "category_counts": {
-    "DeriveAttr": 14,
+    "DeriveAttr": 15,
     "GenericBound": 12,
     "Impl": 28,
     "Import": 28,
     "MultiStmtBody": 1,
+    "NamedFieldDrop": 1,
     "Other": 39,
     "PayloadVariant": 3,
-    "Struct": 22,
+    "Struct": 21,
     "TestItem": 3,
     "Trait": 1
   }

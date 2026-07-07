@@ -31,7 +31,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" One ledger row: what is deferred, why, and where it is tracked (DN-78 §4; G2 — the residual\"] # [doc = \" is explicit data, not a silent gap).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq)] pub struct ResidualRow { # [doc = \" The deferred item.\"] pub item : DeferredR2 , # [doc = \" The reserved construct(s) or surface the row refuses (names the RFC-0008 §4.5\"] # [doc = \" vocabulary — see the module-level naming note).\"] pub construct : & 'static str , # [doc = \" The unmet prerequisite that makes building it now a guess (G2/VR-5).\"] pub why_deferred : & 'static str , # [doc = \" The tracking task id(s) — the residual is tracked, never dropped.\"] pub tracker : & 'static str , # [doc = \" The decision basis (DN-78 §4 row; DN-63 §).\"] pub basis : & 'static str , }",
-      "reason": "struct `ResidualRow` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `ResidualRow` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
       "item_name": "ResidualRow"
     },
     {
@@ -61,7 +61,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" The explicit refusal a deferred item's [`require`] returns (G2: typed, inspectable, and\"] # [doc = \" teaching — it names the construct, the unmet prerequisite, and the tracker).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq)] pub struct R2DeferredError { # [doc = \" The item that was required.\"] pub item : DeferredR2 , # [doc = \" Its ledger row (why + tracker + basis).\"] pub row : & 'static ResidualRow , }",
-      "reason": "struct `R2DeferredError` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `R2DeferredError` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "R2DeferredError"
     },
     {

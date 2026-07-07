@@ -49,7 +49,7 @@
       "category": "PayloadVariant",
       "rust_construct": "PayloadVariant",
       "snippet": "# [doc = \" An in-memory filesystem node.\"] # [derive (Debug , Clone)] enum FsNode { File { contents : Vec < u8 > , permissions : Permissions , mtime : u64 , } , Directory { # [doc = \" Children: basename → full path. We store children as paths into the same flat map.\"] children : Vec < String > , permissions : Permissions , mtime : u64 , } , }",
-      "reason": "enum `FsNode` variant `File` uses named fields — `constructor ::= Ident ('(' type_ref (',' type_ref)* ')')?` has no named-field/record form",
+      "reason": "enum `FsNode` variant `Directory` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
       "item_name": "FsNode"
     },
     {
@@ -59,7 +59,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" An open file handle in the in-memory substrate.\"] # [derive (Debug)] pub (crate) struct InMemHandle { pub (crate) path : String , pub (crate) read : bool , pub (crate) write : bool , pub (crate) append : bool , # [doc = \" Current read/write position within the file contents.\"] pub (crate) position : usize , pub (crate) consumed : bool , }",
-      "reason": "struct `InMemHandle` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `InMemHandle` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
       "item_name": "InMemHandle"
     },
     {
@@ -69,7 +69,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" An in-memory filesystem, fully testable without OS interaction.\"] # [doc = \"\"] # [doc = \" Stores files as `Vec<u8>` in a flat map keyed by absolute path string.\"] # [doc = \" Directories are explicit nodes (not implicit from path structure).\"] # [doc = \"\"] # [doc = \" # Thread safety\"] # [doc = \" Not thread-safe. This is a test-only substrate for the design-phase implementation.\"] # [derive (Debug)] pub (crate) struct InMemoryFs { nodes : HashMap < String , FsNode > , disk_limit : Option < u64 > , used_bytes : u64 , }",
-      "reason": "struct `InMemoryFs` uses named fields — no record/product-type surface (only a single-ctor positional shape maps to `type_item`)",
+      "reason": "struct `InMemoryFs` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
       "item_name": "InMemoryFs"
     },
     {
