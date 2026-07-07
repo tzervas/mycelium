@@ -61,7 +61,7 @@
       "exit_code": 0,
       "diagnostic": "",
       "non_test_items": 9,
-      "emitted_items": 1
+      "emitted_items": 3
     },
     {
       "myc_file": "gen/myc-drafts/stdlib/std-runtime/rc.myc",
@@ -128,8 +128,8 @@
     }
   ],
   "total_non_test_items": 145,
-  "total_emitted_items": 20,
-  "total_checked_clean_items": 11,
+  "total_emitted_items": 22,
+  "total_checked_clean_items": 13,
   "class_counts": {
     "CheckError": 2,
     "Clean": 12

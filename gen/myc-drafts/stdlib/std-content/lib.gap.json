@@ -1,7 +1,8 @@
 {
   "source": "crates/mycelium-std-content/src/lib.rs",
   "emitted_items": [
-    "digest_eq"
+    "digest_eq",
+    "names_of"
   ],
   "gaps": [
     {
@@ -151,7 +152,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Parse a content-address string (`<algo>:<digest>`) into a [`ContentHash`].\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Exact` (deterministic)\"] # [doc = \" If the string is well-formed, the result is always the same for the same input.\"] # [doc = \"\"] # [doc = \" # Fallibility: `Err(MalformedDigest)` on bad shape (C1 — never-silent)\"] # [doc = \" A string that does not match the `<algo>:<digest>` pattern returns\"] # [doc = \" `Err(`[`MalformedDigest`]`)`, carrying:\"] # [doc = \" - the rejected input (so the caller can surface it), and\"] # [doc = \" - a description of *why* it was rejected (G11 dual projection).\"] # [doc = \"\"] # [doc = \" A zeroed / synthetic / sentinel digest is **never** returned for malformed input (C1).\"] # [doc = \"\"] # [doc = \" # Effects: none\"] pub fn parse_ref (s : & str) -> Result < ContentHash , MalformedDigest > { ContentHash :: parse (s) . ok_or_else (| | { let description = if ! s . contains (':') { \"missing ':' separator between algo and digest\" } else { let (algo , digest) = s . split_once (':') . expect (\"contains ':'\") ; if algo . is_empty () { \"algo part is empty\" } else if digest . is_empty () { \"digest part is empty\" } else if ! algo . bytes () . all (| b | b . is_ascii_lowercase () || b . is_ascii_digit ()) { \"algo must be [a-z0-9]+\" } else { \"digest must be [A-Za-z0-9_-]+\" } } ; MalformedDigest :: new (s , description) }) }",
-      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
+      "reason": "qualified/associated-function call `ContentHash :: parse` — no established Mycelium surface form for a Rust conversion-op body; emitting the bare last-segment name would fabricate a call (e.g. `from(...)` is not a Mycelium builtin)",
       "item_name": "parse_ref"
     },
     {
@@ -168,10 +169,10 @@
       "file": "crates/mycelium-std-content/src/lib.rs",
       "line": 242,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "# [doc = \" All names bound to `hash` in `registry`, as a list (0 or 1 entries with the current kernel;\"] # [doc = \" see [`name_registry`] module-level FLAG on the one-name limitation).\"] # [doc = \"\"] # [doc = \" Returns an empty `Vec` when no name is bound — **never** a sentinel (C1).\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Exact` (deterministic)\"] # [doc = \" A pure read of the name registry.\"] # [doc = \"\"] # [doc = \" # Fallibility: total (possibly empty list)\"] # [doc = \" The op cannot fail; an unbound hash yields an empty list (not an error).\"] # [doc = \"\"] # [doc = \" # Effects: none\"] # [doc = \"\"] # [doc = \" # FLAG: Q3\"] # [doc = \" See module-level FLAG Q3 on registry ownership.\"] # [must_use] pub fn names_of (registry : & NameRegistry , hash : & ContentHash) -> Vec < String > { registry . names_of (hash) }",
-      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
+      "reason": "dropped non-doc attribute(s) on fn `names_of`: # [must_use]",
       "item_name": "names_of"
     },
     {

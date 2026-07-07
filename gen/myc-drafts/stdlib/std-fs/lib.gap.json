@@ -149,7 +149,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl File { # [doc = \" The original path this handle was opened for (for diagnostics).\"] # [must_use] pub fn path (& self) -> & str { & self . handle . path } # [doc = \" Whether this handle has been consumed.\"] # [must_use] pub fn is_consumed (& self) -> bool { self . handle . consumed } }",
-      "reason": "no member of this impl block could be transpiled (2 sub-issue(s)): impl method `path` signature: `String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type; impl method `is_consumed` body: field access on a non-`self` base — the transpiler tracks no local types, so the projection cannot be resolved to a constructor position (only `self.<field>` desugars to a `match`)",
+      "reason": "no member of this impl block could be transpiled (2 sub-issue(s)): impl method `path` body: field access on a non-`self` base — the transpiler tracks no local types, so the projection cannot be resolved to a constructor position (only `self.<field>` desugars to a `match`); impl method `is_consumed` body: field access on a non-`self` base — the transpiler tracks no local types, so the projection cannot be resolved to a constructor position (only `self.<field>` desugars to a `match`)",
       "item_name": "File"
     },
     {

@@ -1,18 +1,20 @@
 {
   "epic": "E33-1",
-  "generated_from_commit": "cc0cf8d83bf4c7ab461c2bd0b7c74f5442aa2ef7",
+  "generated_from_commit": "4c9a1ee7cd9297b2f57ec8fbcace0875bc4280f6",
   "kickoff": "trx2",
   "schema_version": 1,
   "targets": [
     {
       "gap_category_counts": {
+        "DeriveAttr": 3,
         "GenericBound": 2,
         "Impl": 12,
         "Import": 5,
-        "Other": 61,
-        "PayloadVariant": 2,
-        "ReservedWord": 17,
-        "Struct": 11
+        "MultiStmtBody": 2,
+        "NamedFieldDrop": 1,
+        "Other": 54,
+        "ReservedWord": 22,
+        "Struct": 10
       },
       "kind": "semcore",
       "note": "Destination convention (lib/compiler/README.md): this file is one of the nine mycelium-l1 semantic-core modules that hand-port into a SINGLE Mycelium nodule (compiler.semcore) for nodule-wide mutual recursion (DN-26 SCC). This transpiler emits one .myc per Rust file and does NOT perform that merge. Any emitted/gapped constructor whose name would collide with another semcore type's constructor (or a reserved word) once merged is subject to the FLAG-ast-5/FLAG-parse-2 per-type constructor-prefixing convention at hand-port time -- gapped ReservedWord items in this draft are exactly the collisions the transpiler refuses to auto-rename (VR-5/G2).",
@@ -24,11 +26,11 @@
         }
       ],
       "stats": {
-        "checked_clean_items": 0,
-        "checked_fraction_pct": 0.0,
-        "emitted_items": 0,
-        "expressible_fraction_pct": 0.0,
-        "gap_count": 110,
+        "checked_clean_items": 3,
+        "checked_fraction_pct": 2.73,
+        "emitted_items": 3,
+        "expressible_fraction_pct": 2.73,
+        "gap_count": 111,
         "non_test_items": 110,
         "total_top_level_items": 110
       },
@@ -41,12 +43,14 @@
     },
     {
       "gap_category_counts": {
+        "DeriveAttr": 1,
         "GenericBound": 2,
         "Impl": 3,
         "Import": 5,
-        "MultiStmtBody": 1,
-        "Other": 19,
-        "PayloadVariant": 2,
+        "MultiStmtBody": 4,
+        "NamedFieldDrop": 2,
+        "Other": 16,
+        "PayloadVariant": 1,
         "ReservedWord": 6
       },
       "kind": "semcore",
@@ -59,11 +63,11 @@
         }
       ],
       "stats": {
-        "checked_clean_items": 0,
-        "checked_fraction_pct": 0.0,
-        "emitted_items": 0,
-        "expressible_fraction_pct": 0.0,
-        "gap_count": 38,
+        "checked_clean_items": 1,
+        "checked_fraction_pct": 2.63,
+        "emitted_items": 1,
+        "expressible_fraction_pct": 2.63,
+        "gap_count": 40,
         "non_test_items": 38,
         "total_top_level_items": 38
       },
@@ -76,15 +80,15 @@
     },
     {
       "gap_category_counts": {
-        "DeriveAttr": 2,
+        "DeriveAttr": 3,
         "GenericBound": 5,
         "Impl": 12,
         "Import": 11,
-        "NamedFieldDrop": 1,
+        "NamedFieldDrop": 2,
         "Other": 5,
-        "PayloadVariant": 2,
-        "ReservedWord": 2,
-        "Struct": 3
+        "PayloadVariant": 1,
+        "ReservedWord": 3,
+        "Struct": 2
       },
       "kind": "semcore",
       "note": "Destination convention (lib/compiler/README.md): this file is one of the nine mycelium-l1 semantic-core modules that hand-port into a SINGLE Mycelium nodule (compiler.semcore) for nodule-wide mutual recursion (DN-26 SCC). This transpiler emits one .myc per Rust file and does NOT perform that merge. Any emitted/gapped constructor whose name would collide with another semcore type's constructor (or a reserved word) once merged is subject to the FLAG-ast-5/FLAG-parse-2 per-type constructor-prefixing convention at hand-port time -- gapped ReservedWord items in this draft are exactly the collisions the transpiler refuses to auto-rename (VR-5/G2).",
@@ -96,11 +100,11 @@
         }
       ],
       "stats": {
-        "checked_clean_items": 2,
-        "checked_fraction_pct": 4.76,
-        "emitted_items": 2,
-        "expressible_fraction_pct": 4.76,
-        "gap_count": 43,
+        "checked_clean_items": 3,
+        "checked_fraction_pct": 7.14,
+        "emitted_items": 3,
+        "expressible_fraction_pct": 7.14,
+        "gap_count": 44,
         "non_test_items": 42,
         "total_top_level_items": 42
       },
@@ -116,10 +120,10 @@
         "GenericBound": 2,
         "Impl": 1,
         "Import": 5,
-        "MultiStmtBody": 1,
-        "Other": 27,
+        "MultiStmtBody": 2,
+        "Other": 23,
         "PayloadVariant": 1,
-        "ReservedWord": 3,
+        "ReservedWord": 5,
         "Struct": 6
       },
       "kind": "semcore",
@@ -134,18 +138,18 @@
       "stats": {
         "checked_clean_items": 0,
         "checked_fraction_pct": 0.0,
-        "emitted_items": 0,
-        "expressible_fraction_pct": 0.0,
-        "gap_count": 46,
+        "emitted_items": 1,
+        "expressible_fraction_pct": 2.17,
+        "gap_count": 45,
         "non_test_items": 46,
         "total_top_level_items": 46
       },
       "status": "ok",
       "target": "semcore/mono",
       "vet_class_counts": {
-        "Clean": 1
+        "CheckError": 1
       },
-      "vet_diagnostic": ""
+      "vet_diagnostic": "check-error: check error in `mangle_ty_or_fn`: unknown type `Ty`"
     },
     {
       "gap_category_counts": {
@@ -207,12 +211,13 @@
     {
       "file_count": 5,
       "gap_category_counts": {
-        "DeriveAttr": 4,
+        "DeriveAttr": 7,
         "GenericBound": 1,
         "Impl": 7,
         "Import": 9,
-        "Other": 11,
-        "Struct": 4,
+        "NamedFieldDrop": 2,
+        "Other": 10,
+        "Struct": 2,
         "TestItem": 5
       },
       "kind": "stdlib",
@@ -241,11 +246,11 @@
         }
       ],
       "stats": {
-        "checked_clean_items": 3,
-        "checked_fraction_pct": 8.57,
-        "emitted_items": 4,
-        "expressible_fraction_pct": 11.43,
-        "gap_count": 41,
+        "checked_clean_items": 5,
+        "checked_fraction_pct": 14.29,
+        "emitted_items": 7,
+        "expressible_fraction_pct": 20.0,
+        "gap_count": 43,
         "non_test_items": 35,
         "total_top_level_items": 40
       },
@@ -261,7 +266,7 @@
       "gap_category_counts": {
         "Impl": 5,
         "Import": 2,
-        "Other": 10,
+        "Other": 9,
         "PayloadVariant": 1,
         "Struct": 3,
         "TestItem": 1
@@ -278,30 +283,30 @@
       "stats": {
         "checked_clean_items": 0,
         "checked_fraction_pct": 0.0,
-        "emitted_items": 0,
-        "expressible_fraction_pct": 0.0,
-        "gap_count": 22,
+        "emitted_items": 1,
+        "expressible_fraction_pct": 5.0,
+        "gap_count": 21,
         "non_test_items": 20,
         "total_top_level_items": 21
       },
       "status": "ok",
       "target": "stdlib/std-dense",
       "vet_class_counts": {
-        "Clean": 1
+        "CheckError": 1
       }
     },
     {
       "file_count": 7,
       "gap_category_counts": {
-        "DeriveAttr": 23,
-        "Impl": 10,
+        "DeriveAttr": 26,
+        "Impl": 11,
         "Import": 12,
         "MacroInvocation": 1,
         "MultiStmtBody": 6,
-        "NamedFieldDrop": 3,
-        "Other": 12,
+        "NamedFieldDrop": 5,
+        "Other": 15,
         "PayloadVariant": 2,
-        "Struct": 7,
+        "Struct": 5,
         "TestItem": 7
       },
       "kind": "stdlib",
@@ -338,11 +343,11 @@
         }
       ],
       "stats": {
-        "checked_clean_items": 5,
-        "checked_fraction_pct": 9.43,
-        "emitted_items": 12,
-        "expressible_fraction_pct": 22.64,
-        "gap_count": 83,
+        "checked_clean_items": 8,
+        "checked_fraction_pct": 15.09,
+        "emitted_items": 15,
+        "expressible_fraction_pct": 28.3,
+        "gap_count": 90,
         "non_test_items": 53,
         "total_top_level_items": 60
       },
@@ -356,15 +361,15 @@
     {
       "file_count": 5,
       "gap_category_counts": {
-        "DeriveAttr": 6,
-        "Impl": 14,
+        "DeriveAttr": 11,
+        "Impl": 13,
         "Import": 9,
         "MacroInvocation": 3,
-        "MultiStmtBody": 1,
-        "Other": 20,
-        "PayloadVariant": 2,
+        "MultiStmtBody": 3,
+        "NamedFieldDrop": 9,
+        "Other": 16,
         "ReservedWord": 4,
-        "Struct": 4,
+        "Struct": 2,
         "TestItem": 5
       },
       "kind": "stdlib",
@@ -393,19 +398,19 @@
         }
       ],
       "stats": {
-        "checked_clean_items": 3,
-        "checked_fraction_pct": 4.76,
-        "emitted_items": 7,
-        "expressible_fraction_pct": 11.11,
-        "gap_count": 68,
+        "checked_clean_items": 0,
+        "checked_fraction_pct": 0.0,
+        "emitted_items": 14,
+        "expressible_fraction_pct": 22.22,
+        "gap_count": 75,
         "non_test_items": 63,
         "total_top_level_items": 68
       },
       "status": "ok",
       "target": "stdlib/std-io",
       "vet_class_counts": {
-        "CheckError": 2,
-        "Clean": 3
+        "CheckError": 4,
+        "Clean": 1
       }
     },
     {
@@ -491,15 +496,15 @@
     {
       "file_count": 14,
       "gap_category_counts": {
-        "DeriveAttr": 21,
+        "DeriveAttr": 23,
         "GenericBound": 12,
         "Impl": 27,
         "Import": 28,
         "MultiStmtBody": 1,
-        "NamedFieldDrop": 1,
+        "NamedFieldDrop": 3,
         "Other": 34,
         "PayloadVariant": 3,
-        "Struct": 21,
+        "Struct": 19,
         "TestItem": 3,
         "Trait": 1
       },
@@ -565,11 +570,11 @@
         }
       ],
       "stats": {
-        "checked_clean_items": 11,
-        "checked_fraction_pct": 7.59,
-        "emitted_items": 20,
-        "expressible_fraction_pct": 13.79,
-        "gap_count": 152,
+        "checked_clean_items": 13,
+        "checked_fraction_pct": 8.97,
+        "emitted_items": 22,
+        "expressible_fraction_pct": 15.17,
+        "gap_count": 154,
         "non_test_items": 145,
         "total_top_level_items": 148
       },
@@ -583,15 +588,16 @@
     {
       "file_count": 8,
       "gap_category_counts": {
-        "DeriveAttr": 1,
+        "DeriveAttr": 3,
         "GenericBound": 1,
         "Impl": 7,
         "Import": 7,
         "MultiStmtBody": 1,
+        "NamedFieldDrop": 1,
         "Other": 41,
-        "PayloadVariant": 2,
+        "PayloadVariant": 1,
         "ReservedWord": 1,
-        "Struct": 2,
+        "Struct": 1,
         "TestItem": 7
       },
       "kind": "stdlib",
@@ -634,17 +640,17 @@
       "stats": {
         "checked_clean_items": 1,
         "checked_fraction_pct": 1.59,
-        "emitted_items": 2,
-        "expressible_fraction_pct": 3.17,
-        "gap_count": 70,
+        "emitted_items": 4,
+        "expressible_fraction_pct": 6.35,
+        "gap_count": 71,
         "non_test_items": 63,
         "total_top_level_items": 70
       },
       "status": "ok",
       "target": "stdlib/std-sys",
       "vet_class_counts": {
-        "CheckError": 1,
-        "Clean": 7
+        "CheckError": 2,
+        "Clean": 6
       }
     },
     {

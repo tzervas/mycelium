@@ -34,21 +34,21 @@
       "file": "crates/mycelium-std-io/src/error.rs",
       "line": 35,
       "col": 1,
-      "category": "Struct",
-      "rust_construct": "Struct",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "# [doc = \" A field path into a structured value, naming *where* inside a composite the\"] # [doc = \" failure was detected (C1/RFC-0013 I1). Encoded as a `/`-separated string of\"] # [doc = \" field names — e.g. `\\\"repr/width\\\"`, `\\\"meta/bound/delta\\\"`.\"] # [doc = \"\"] # [doc = \" This is the structural analogue of [`ByteOffset`] for grammar-structured failures\"] # [doc = \" where the byte position is less informative than the semantic path.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct FieldPath (pub String) ;",
-      "reason": "struct `FieldPath` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
+      "reason": "dropped non-doc attribute(s) on struct `FieldPath`: # [derive (Debug , Clone , PartialEq , Eq)]",
       "item_name": "FieldPath"
     },
     {
       "file": "crates/mycelium-std-io/src/error.rs",
       "line": 44,
       "col": 1,
-      "category": "Impl",
-      "rust_construct": "Impl",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "impl FieldPath { # [doc = \" Construct from a static description.\"] # [must_use] pub fn from_static (s : & 'static str) -> Self { FieldPath (s . to_owned ()) } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `from_static` signature: `String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
-      "item_name": "FieldPath"
+      "reason": "dropped non-doc attribute(s) on method `from_static`: # [must_use]",
+      "item_name": "impl FieldPath"
     },
     {
       "file": "crates/mycelium-std-io/src/error.rs",
@@ -64,10 +64,60 @@
       "file": "crates/mycelium-std-io/src/error.rs",
       "line": 60,
       "col": 1,
-      "category": "PayloadVariant",
-      "rust_construct": "PayloadVariant",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "# [doc = \" The explicit error set for (de)serialization failures (C1/RFC-0013; spec §3).\"] # [doc = \"\"] # [doc = \" Every variant carries a locus (byte offset or field path) so the caller can\"] # [doc = \" surface *where* the decode failed — never a locationless \\\"parse error\\\" (G2/C3).\"] # [doc = \" An overrun yields `BudgetExceeded`, never an OOM or a hang (C6/ADR-015).\"] # [doc = \"\"] # [doc = \" # C1 compliance\"] # [doc = \" No variant of `SerError` is a sentinel, a clamp, or a partial-result indicator.\"] # [doc = \" The presence of a `SerError` means the entire decode is rejected; the caller\"] # [doc = \" never receives a partially-filled `Value`.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum SerError { # [doc = \" The input ended before a complete value was decoded.\"] # [doc = \"\"] # [doc = \" `at` is the byte offset where the input terminated (the last byte\"] # [doc = \" successfully consumed before the truncation was detected).\"] Truncated { # [doc = \" Byte offset of the truncation.\"] at : ByteOffset , } , # [doc = \" The bytes at `at` do not conform to the wire/JSON grammar.\"] # [doc = \"\"] # [doc = \" `why` is a human-readable explanation of the grammar rule that was\"] # [doc = \" violated (G11 dual projection — machine-parseable in the tag, human-\"] # [doc = \" legible in the description).\"] Malformed { # [doc = \" Byte offset of the malformed datum.\"] at : ByteOffset , # [doc = \" Why the datum was rejected.\"] why : String , } , # [doc = \" An unrecognized `Repr`, constructor, or `Meta` tag was encountered at `path`.\"] # [doc = \"\"] # [doc = \" Carrying the rejected `tag` name enables the caller to log it and report\"] # [doc = \" it exactly (G11); an unknown tag is never silently skipped (C1/G2).\"] UnknownTag { # [doc = \" Structural path to the field that held the unknown tag.\"] path : FieldPath , # [doc = \" The unrecognized tag string.\"] tag : String , } , # [doc = \" A field decoded successfully but violates a value-model invariant (RFC-0001\"] # [doc = \" §4.3 — e.g. payload length ≠ repr width, bound delta ∉ \\\\[0,1\\\\]).\"] # [doc = \"\"] # [doc = \" The invariant name is carried in `why` so the caller can surface it.\"] OutOfDomain { # [doc = \" Structural path to the violating field.\"] path : FieldPath , # [doc = \" The violated invariant.\"] why : String , } , # [doc = \" A declared decode budget (depth limit, enumeration ceiling — ADR-015) was\"] # [doc = \" exceeded. `kind` names which budget: `\\\"depth\\\"`, `\\\"enum\\\"`, `\\\"alloc\\\"`, etc.\"] # [doc = \"\"] # [doc = \" An overrun is an explicit error, never a hang or an OOM (C6).\"] BudgetExceeded { # [doc = \" The budget kind that was exceeded (e.g. `\\\"depth\\\"`, `\\\"enum\\\"`).\"] kind : String , } , }",
-      "reason": "enum `SerError` variant `Malformed` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
+      "reason": "dropped non-doc attribute(s) on enum `SerError`: # [derive (Debug , Clone , PartialEq , Eq)]",
+      "item_name": "SerError"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/error.rs",
+      "line": 60,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" The explicit error set for (de)serialization failures (C1/RFC-0013; spec §3).\"] # [doc = \"\"] # [doc = \" Every variant carries a locus (byte offset or field path) so the caller can\"] # [doc = \" surface *where* the decode failed — never a locationless \\\"parse error\\\" (G2/C3).\"] # [doc = \" An overrun yields `BudgetExceeded`, never an OOM or a hang (C6/ADR-015).\"] # [doc = \"\"] # [doc = \" # C1 compliance\"] # [doc = \" No variant of `SerError` is a sentinel, a clamp, or a partial-result indicator.\"] # [doc = \" The presence of a `SerError` means the entire decode is rejected; the caller\"] # [doc = \" never receives a partially-filled `Value`.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum SerError { # [doc = \" The input ended before a complete value was decoded.\"] # [doc = \"\"] # [doc = \" `at` is the byte offset where the input terminated (the last byte\"] # [doc = \" successfully consumed before the truncation was detected).\"] Truncated { # [doc = \" Byte offset of the truncation.\"] at : ByteOffset , } , # [doc = \" The bytes at `at` do not conform to the wire/JSON grammar.\"] # [doc = \"\"] # [doc = \" `why` is a human-readable explanation of the grammar rule that was\"] # [doc = \" violated (G11 dual projection — machine-parseable in the tag, human-\"] # [doc = \" legible in the description).\"] Malformed { # [doc = \" Byte offset of the malformed datum.\"] at : ByteOffset , # [doc = \" Why the datum was rejected.\"] why : String , } , # [doc = \" An unrecognized `Repr`, constructor, or `Meta` tag was encountered at `path`.\"] # [doc = \"\"] # [doc = \" Carrying the rejected `tag` name enables the caller to log it and report\"] # [doc = \" it exactly (G11); an unknown tag is never silently skipped (C1/G2).\"] UnknownTag { # [doc = \" Structural path to the field that held the unknown tag.\"] path : FieldPath , # [doc = \" The unrecognized tag string.\"] tag : String , } , # [doc = \" A field decoded successfully but violates a value-model invariant (RFC-0001\"] # [doc = \" §4.3 — e.g. payload length ≠ repr width, bound delta ∉ \\\\[0,1\\\\]).\"] # [doc = \"\"] # [doc = \" The invariant name is carried in `why` so the caller can surface it.\"] OutOfDomain { # [doc = \" Structural path to the violating field.\"] path : FieldPath , # [doc = \" The violated invariant.\"] why : String , } , # [doc = \" A declared decode budget (depth limit, enumeration ceiling — ADR-015) was\"] # [doc = \" exceeded. `kind` names which budget: `\\\"depth\\\"`, `\\\"enum\\\"`, `\\\"alloc\\\"`, etc.\"] # [doc = \"\"] # [doc = \" An overrun is an explicit error, never a hang or an OOM (C6).\"] BudgetExceeded { # [doc = \" The budget kind that was exceeded (e.g. `\\\"depth\\\"`, `\\\"enum\\\"`).\"] kind : String , } , }",
+      "reason": "enum `SerError` variant `Truncated` named field(s) `at` emitted positionally as `Truncated(ByteOffset)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped",
+      "item_name": "SerError"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/error.rs",
+      "line": 60,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" The explicit error set for (de)serialization failures (C1/RFC-0013; spec §3).\"] # [doc = \"\"] # [doc = \" Every variant carries a locus (byte offset or field path) so the caller can\"] # [doc = \" surface *where* the decode failed — never a locationless \\\"parse error\\\" (G2/C3).\"] # [doc = \" An overrun yields `BudgetExceeded`, never an OOM or a hang (C6/ADR-015).\"] # [doc = \"\"] # [doc = \" # C1 compliance\"] # [doc = \" No variant of `SerError` is a sentinel, a clamp, or a partial-result indicator.\"] # [doc = \" The presence of a `SerError` means the entire decode is rejected; the caller\"] # [doc = \" never receives a partially-filled `Value`.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum SerError { # [doc = \" The input ended before a complete value was decoded.\"] # [doc = \"\"] # [doc = \" `at` is the byte offset where the input terminated (the last byte\"] # [doc = \" successfully consumed before the truncation was detected).\"] Truncated { # [doc = \" Byte offset of the truncation.\"] at : ByteOffset , } , # [doc = \" The bytes at `at` do not conform to the wire/JSON grammar.\"] # [doc = \"\"] # [doc = \" `why` is a human-readable explanation of the grammar rule that was\"] # [doc = \" violated (G11 dual projection — machine-parseable in the tag, human-\"] # [doc = \" legible in the description).\"] Malformed { # [doc = \" Byte offset of the malformed datum.\"] at : ByteOffset , # [doc = \" Why the datum was rejected.\"] why : String , } , # [doc = \" An unrecognized `Repr`, constructor, or `Meta` tag was encountered at `path`.\"] # [doc = \"\"] # [doc = \" Carrying the rejected `tag` name enables the caller to log it and report\"] # [doc = \" it exactly (G11); an unknown tag is never silently skipped (C1/G2).\"] UnknownTag { # [doc = \" Structural path to the field that held the unknown tag.\"] path : FieldPath , # [doc = \" The unrecognized tag string.\"] tag : String , } , # [doc = \" A field decoded successfully but violates a value-model invariant (RFC-0001\"] # [doc = \" §4.3 — e.g. payload length ≠ repr width, bound delta ∉ \\\\[0,1\\\\]).\"] # [doc = \"\"] # [doc = \" The invariant name is carried in `why` so the caller can surface it.\"] OutOfDomain { # [doc = \" Structural path to the violating field.\"] path : FieldPath , # [doc = \" The violated invariant.\"] why : String , } , # [doc = \" A declared decode budget (depth limit, enumeration ceiling — ADR-015) was\"] # [doc = \" exceeded. `kind` names which budget: `\\\"depth\\\"`, `\\\"enum\\\"`, `\\\"alloc\\\"`, etc.\"] # [doc = \"\"] # [doc = \" An overrun is an explicit error, never a hang or an OOM (C6).\"] BudgetExceeded { # [doc = \" The budget kind that was exceeded (e.g. `\\\"depth\\\"`, `\\\"enum\\\"`).\"] kind : String , } , }",
+      "reason": "enum `SerError` variant `Malformed` named field(s) `at, why` emitted positionally as `Malformed(ByteOffset, Bytes)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped",
+      "item_name": "SerError"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/error.rs",
+      "line": 60,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" The explicit error set for (de)serialization failures (C1/RFC-0013; spec §3).\"] # [doc = \"\"] # [doc = \" Every variant carries a locus (byte offset or field path) so the caller can\"] # [doc = \" surface *where* the decode failed — never a locationless \\\"parse error\\\" (G2/C3).\"] # [doc = \" An overrun yields `BudgetExceeded`, never an OOM or a hang (C6/ADR-015).\"] # [doc = \"\"] # [doc = \" # C1 compliance\"] # [doc = \" No variant of `SerError` is a sentinel, a clamp, or a partial-result indicator.\"] # [doc = \" The presence of a `SerError` means the entire decode is rejected; the caller\"] # [doc = \" never receives a partially-filled `Value`.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum SerError { # [doc = \" The input ended before a complete value was decoded.\"] # [doc = \"\"] # [doc = \" `at` is the byte offset where the input terminated (the last byte\"] # [doc = \" successfully consumed before the truncation was detected).\"] Truncated { # [doc = \" Byte offset of the truncation.\"] at : ByteOffset , } , # [doc = \" The bytes at `at` do not conform to the wire/JSON grammar.\"] # [doc = \"\"] # [doc = \" `why` is a human-readable explanation of the grammar rule that was\"] # [doc = \" violated (G11 dual projection — machine-parseable in the tag, human-\"] # [doc = \" legible in the description).\"] Malformed { # [doc = \" Byte offset of the malformed datum.\"] at : ByteOffset , # [doc = \" Why the datum was rejected.\"] why : String , } , # [doc = \" An unrecognized `Repr`, constructor, or `Meta` tag was encountered at `path`.\"] # [doc = \"\"] # [doc = \" Carrying the rejected `tag` name enables the caller to log it and report\"] # [doc = \" it exactly (G11); an unknown tag is never silently skipped (C1/G2).\"] UnknownTag { # [doc = \" Structural path to the field that held the unknown tag.\"] path : FieldPath , # [doc = \" The unrecognized tag string.\"] tag : String , } , # [doc = \" A field decoded successfully but violates a value-model invariant (RFC-0001\"] # [doc = \" §4.3 — e.g. payload length ≠ repr width, bound delta ∉ \\\\[0,1\\\\]).\"] # [doc = \"\"] # [doc = \" The invariant name is carried in `why` so the caller can surface it.\"] OutOfDomain { # [doc = \" Structural path to the violating field.\"] path : FieldPath , # [doc = \" The violated invariant.\"] why : String , } , # [doc = \" A declared decode budget (depth limit, enumeration ceiling — ADR-015) was\"] # [doc = \" exceeded. `kind` names which budget: `\\\"depth\\\"`, `\\\"enum\\\"`, `\\\"alloc\\\"`, etc.\"] # [doc = \"\"] # [doc = \" An overrun is an explicit error, never a hang or an OOM (C6).\"] BudgetExceeded { # [doc = \" The budget kind that was exceeded (e.g. `\\\"depth\\\"`, `\\\"enum\\\"`).\"] kind : String , } , }",
+      "reason": "enum `SerError` variant `UnknownTag` named field(s) `path, tag` emitted positionally as `UnknownTag(FieldPath, Bytes)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped",
+      "item_name": "SerError"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/error.rs",
+      "line": 60,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" The explicit error set for (de)serialization failures (C1/RFC-0013; spec §3).\"] # [doc = \"\"] # [doc = \" Every variant carries a locus (byte offset or field path) so the caller can\"] # [doc = \" surface *where* the decode failed — never a locationless \\\"parse error\\\" (G2/C3).\"] # [doc = \" An overrun yields `BudgetExceeded`, never an OOM or a hang (C6/ADR-015).\"] # [doc = \"\"] # [doc = \" # C1 compliance\"] # [doc = \" No variant of `SerError` is a sentinel, a clamp, or a partial-result indicator.\"] # [doc = \" The presence of a `SerError` means the entire decode is rejected; the caller\"] # [doc = \" never receives a partially-filled `Value`.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum SerError { # [doc = \" The input ended before a complete value was decoded.\"] # [doc = \"\"] # [doc = \" `at` is the byte offset where the input terminated (the last byte\"] # [doc = \" successfully consumed before the truncation was detected).\"] Truncated { # [doc = \" Byte offset of the truncation.\"] at : ByteOffset , } , # [doc = \" The bytes at `at` do not conform to the wire/JSON grammar.\"] # [doc = \"\"] # [doc = \" `why` is a human-readable explanation of the grammar rule that was\"] # [doc = \" violated (G11 dual projection — machine-parseable in the tag, human-\"] # [doc = \" legible in the description).\"] Malformed { # [doc = \" Byte offset of the malformed datum.\"] at : ByteOffset , # [doc = \" Why the datum was rejected.\"] why : String , } , # [doc = \" An unrecognized `Repr`, constructor, or `Meta` tag was encountered at `path`.\"] # [doc = \"\"] # [doc = \" Carrying the rejected `tag` name enables the caller to log it and report\"] # [doc = \" it exactly (G11); an unknown tag is never silently skipped (C1/G2).\"] UnknownTag { # [doc = \" Structural path to the field that held the unknown tag.\"] path : FieldPath , # [doc = \" The unrecognized tag string.\"] tag : String , } , # [doc = \" A field decoded successfully but violates a value-model invariant (RFC-0001\"] # [doc = \" §4.3 — e.g. payload length ≠ repr width, bound delta ∉ \\\\[0,1\\\\]).\"] # [doc = \"\"] # [doc = \" The invariant name is carried in `why` so the caller can surface it.\"] OutOfDomain { # [doc = \" Structural path to the violating field.\"] path : FieldPath , # [doc = \" The violated invariant.\"] why : String , } , # [doc = \" A declared decode budget (depth limit, enumeration ceiling — ADR-015) was\"] # [doc = \" exceeded. `kind` names which budget: `\\\"depth\\\"`, `\\\"enum\\\"`, `\\\"alloc\\\"`, etc.\"] # [doc = \"\"] # [doc = \" An overrun is an explicit error, never a hang or an OOM (C6).\"] BudgetExceeded { # [doc = \" The budget kind that was exceeded (e.g. `\\\"depth\\\"`, `\\\"enum\\\"`).\"] kind : String , } , }",
+      "reason": "enum `SerError` variant `OutOfDomain` named field(s) `path, why` emitted positionally as `OutOfDomain(FieldPath, Bytes)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped",
+      "item_name": "SerError"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/error.rs",
+      "line": 60,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" The explicit error set for (de)serialization failures (C1/RFC-0013; spec §3).\"] # [doc = \"\"] # [doc = \" Every variant carries a locus (byte offset or field path) so the caller can\"] # [doc = \" surface *where* the decode failed — never a locationless \\\"parse error\\\" (G2/C3).\"] # [doc = \" An overrun yields `BudgetExceeded`, never an OOM or a hang (C6/ADR-015).\"] # [doc = \"\"] # [doc = \" # C1 compliance\"] # [doc = \" No variant of `SerError` is a sentinel, a clamp, or a partial-result indicator.\"] # [doc = \" The presence of a `SerError` means the entire decode is rejected; the caller\"] # [doc = \" never receives a partially-filled `Value`.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum SerError { # [doc = \" The input ended before a complete value was decoded.\"] # [doc = \"\"] # [doc = \" `at` is the byte offset where the input terminated (the last byte\"] # [doc = \" successfully consumed before the truncation was detected).\"] Truncated { # [doc = \" Byte offset of the truncation.\"] at : ByteOffset , } , # [doc = \" The bytes at `at` do not conform to the wire/JSON grammar.\"] # [doc = \"\"] # [doc = \" `why` is a human-readable explanation of the grammar rule that was\"] # [doc = \" violated (G11 dual projection — machine-parseable in the tag, human-\"] # [doc = \" legible in the description).\"] Malformed { # [doc = \" Byte offset of the malformed datum.\"] at : ByteOffset , # [doc = \" Why the datum was rejected.\"] why : String , } , # [doc = \" An unrecognized `Repr`, constructor, or `Meta` tag was encountered at `path`.\"] # [doc = \"\"] # [doc = \" Carrying the rejected `tag` name enables the caller to log it and report\"] # [doc = \" it exactly (G11); an unknown tag is never silently skipped (C1/G2).\"] UnknownTag { # [doc = \" Structural path to the field that held the unknown tag.\"] path : FieldPath , # [doc = \" The unrecognized tag string.\"] tag : String , } , # [doc = \" A field decoded successfully but violates a value-model invariant (RFC-0001\"] # [doc = \" §4.3 — e.g. payload length ≠ repr width, bound delta ∉ \\\\[0,1\\\\]).\"] # [doc = \"\"] # [doc = \" The invariant name is carried in `why` so the caller can surface it.\"] OutOfDomain { # [doc = \" Structural path to the violating field.\"] path : FieldPath , # [doc = \" The violated invariant.\"] why : String , } , # [doc = \" A declared decode budget (depth limit, enumeration ceiling — ADR-015) was\"] # [doc = \" exceeded. `kind` names which budget: `\\\"depth\\\"`, `\\\"enum\\\"`, `\\\"alloc\\\"`, etc.\"] # [doc = \"\"] # [doc = \" An overrun is an explicit error, never a hang or an OOM (C6).\"] BudgetExceeded { # [doc = \" The budget kind that was exceeded (e.g. `\\\"depth\\\"`, `\\\"enum\\\"`).\"] kind : String , } , }",
+      "reason": "enum `SerError` variant `BudgetExceeded` named field(s) `kind` emitted positionally as `BudgetExceeded(Bytes)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped",
       "item_name": "SerError"
     },
     {
@@ -114,10 +164,40 @@
       "file": "crates/mycelium-std-io/src/error.rs",
       "line": 157,
       "col": 1,
-      "category": "PayloadVariant",
-      "rust_construct": "PayloadVariant",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "# [doc = \" The explicit error set for byte-movement failures (C1/RFC-0013; spec §3).\"] # [doc = \"\"] # [doc = \" Every variant is a declared, inspectable failure mode — never a silent partial\"] # [doc = \" read (C1) and never a hang or OOM (C6).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum IoError { # [doc = \" The source/sink closed before the requested number of bytes were moved.\"] # [doc = \"\"] # [doc = \" `read` is the count of bytes that *were* moved before the EOF — enabling\"] # [doc = \" the caller to report the shortfall precisely (RFC-0013 I1).\"] UnexpectedEof { # [doc = \" Bytes successfully read before the EOF.\"] read : ByteCount , } , # [doc = \" The underlying substrate refused the operation.\"] # [doc = \"\"] # [doc = \" `why` carries the refusal reason (G11 dual projection); for the in-memory\"] # [doc = \" substrate this is always the explicit reason the substrate declined.\"] Refused { # [doc = \" Why the operation was refused.\"] why : String , } , # [doc = \" A bounded io/alloc effect budget was exceeded (RFC-0014 §4.5 / C6).\"] # [doc = \"\"] # [doc = \" `kind` names which budget: `\\\"io\\\"`, `\\\"alloc\\\"`, etc.\"] EffectBudget { # [doc = \" The budget kind that was exceeded.\"] kind : String , } , }",
-      "reason": "enum `IoError` variant `Refused` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
+      "reason": "dropped non-doc attribute(s) on enum `IoError`: # [derive (Debug , Clone , PartialEq , Eq)]",
+      "item_name": "IoError"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/error.rs",
+      "line": 157,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" The explicit error set for byte-movement failures (C1/RFC-0013; spec §3).\"] # [doc = \"\"] # [doc = \" Every variant is a declared, inspectable failure mode — never a silent partial\"] # [doc = \" read (C1) and never a hang or OOM (C6).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum IoError { # [doc = \" The source/sink closed before the requested number of bytes were moved.\"] # [doc = \"\"] # [doc = \" `read` is the count of bytes that *were* moved before the EOF — enabling\"] # [doc = \" the caller to report the shortfall precisely (RFC-0013 I1).\"] UnexpectedEof { # [doc = \" Bytes successfully read before the EOF.\"] read : ByteCount , } , # [doc = \" The underlying substrate refused the operation.\"] # [doc = \"\"] # [doc = \" `why` carries the refusal reason (G11 dual projection); for the in-memory\"] # [doc = \" substrate this is always the explicit reason the substrate declined.\"] Refused { # [doc = \" Why the operation was refused.\"] why : String , } , # [doc = \" A bounded io/alloc effect budget was exceeded (RFC-0014 §4.5 / C6).\"] # [doc = \"\"] # [doc = \" `kind` names which budget: `\\\"io\\\"`, `\\\"alloc\\\"`, etc.\"] EffectBudget { # [doc = \" The budget kind that was exceeded.\"] kind : String , } , }",
+      "reason": "enum `IoError` variant `UnexpectedEof` named field(s) `read` emitted positionally as `UnexpectedEof(ByteCount)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped",
+      "item_name": "IoError"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/error.rs",
+      "line": 157,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" The explicit error set for byte-movement failures (C1/RFC-0013; spec §3).\"] # [doc = \"\"] # [doc = \" Every variant is a declared, inspectable failure mode — never a silent partial\"] # [doc = \" read (C1) and never a hang or OOM (C6).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum IoError { # [doc = \" The source/sink closed before the requested number of bytes were moved.\"] # [doc = \"\"] # [doc = \" `read` is the count of bytes that *were* moved before the EOF — enabling\"] # [doc = \" the caller to report the shortfall precisely (RFC-0013 I1).\"] UnexpectedEof { # [doc = \" Bytes successfully read before the EOF.\"] read : ByteCount , } , # [doc = \" The underlying substrate refused the operation.\"] # [doc = \"\"] # [doc = \" `why` carries the refusal reason (G11 dual projection); for the in-memory\"] # [doc = \" substrate this is always the explicit reason the substrate declined.\"] Refused { # [doc = \" Why the operation was refused.\"] why : String , } , # [doc = \" A bounded io/alloc effect budget was exceeded (RFC-0014 §4.5 / C6).\"] # [doc = \"\"] # [doc = \" `kind` names which budget: `\\\"io\\\"`, `\\\"alloc\\\"`, etc.\"] EffectBudget { # [doc = \" The budget kind that was exceeded.\"] kind : String , } , }",
+      "reason": "enum `IoError` variant `Refused` named field(s) `why` emitted positionally as `Refused(Bytes)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped",
+      "item_name": "IoError"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/error.rs",
+      "line": 157,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" The explicit error set for byte-movement failures (C1/RFC-0013; spec §3).\"] # [doc = \"\"] # [doc = \" Every variant is a declared, inspectable failure mode — never a silent partial\"] # [doc = \" read (C1) and never a hang or OOM (C6).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum IoError { # [doc = \" The source/sink closed before the requested number of bytes were moved.\"] # [doc = \"\"] # [doc = \" `read` is the count of bytes that *were* moved before the EOF — enabling\"] # [doc = \" the caller to report the shortfall precisely (RFC-0013 I1).\"] UnexpectedEof { # [doc = \" Bytes successfully read before the EOF.\"] read : ByteCount , } , # [doc = \" The underlying substrate refused the operation.\"] # [doc = \"\"] # [doc = \" `why` carries the refusal reason (G11 dual projection); for the in-memory\"] # [doc = \" substrate this is always the explicit reason the substrate declined.\"] Refused { # [doc = \" Why the operation was refused.\"] why : String , } , # [doc = \" A bounded io/alloc effect budget was exceeded (RFC-0014 §4.5 / C6).\"] # [doc = \"\"] # [doc = \" `kind` names which budget: `\\\"io\\\"`, `\\\"alloc\\\"`, etc.\"] EffectBudget { # [doc = \" The budget kind that was exceeded.\"] kind : String , } , }",
+      "reason": "enum `IoError` variant `EffectBudget` named field(s) `kind` emitted positionally as `EffectBudget(Bytes)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped",
       "item_name": "IoError"
     },
     {
@@ -217,7 +297,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl GuaranteeTag { # [doc = \" Human-readable name matching the lattice notation (`\\\"Exact\\\"`, etc.).\"] # [must_use] pub fn as_str (self) -> & 'static str { match self { GuaranteeTag :: Exact => \"Exact\" , GuaranteeTag :: Proven => \"Proven\" , GuaranteeTag :: Empirical => \"Empirical\" , GuaranteeTag :: Declared => \"Declared\" , } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `as_str` signature: `String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `as_str` body: match pattern constructor `Exact` collides with a Mycelium reserved word — emitting it verbatim would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5)",
       "item_name": "GuaranteeTag"
     },
     {
@@ -244,10 +324,20 @@
       "file": "crates/mycelium-std-io/src/guarantee_matrix.rs",
       "line": 84,
       "col": 1,
-      "category": "Struct",
-      "rust_construct": "Struct",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "# [doc = \" One row in the `std.io` + `serialize` guarantee matrix (RFC-0016 §4.5).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct MatrixRow { # [doc = \" Exported operation name.\"] pub op : & 'static str , # [doc = \" Guarantee tag (VR-5).\"] pub guarantee : GuaranteeTag , # [doc = \" Fallibility: total or fallible.\"] pub fallibility : Fallibility , # [doc = \" The explicit error set (empty string for total ops).\"] pub error_set : & 'static str , # [doc = \" Declared effects (C6): `\\\"none\\\"`, `\\\"io\\\"`, or `\\\"io + alloc(Budget)\\\"`.\"] pub effects : & 'static str , # [doc = \" Whether the op surfaces a C3 EXPLAIN artifact.\"] pub explainable : Explainable , }",
-      "reason": "struct `MatrixRow` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
+      "reason": "dropped non-doc attribute(s) on struct `MatrixRow`: # [derive (Debug , Clone , PartialEq , Eq)]",
+      "item_name": "MatrixRow"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/guarantee_matrix.rs",
+      "line": 84,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" One row in the `std.io` + `serialize` guarantee matrix (RFC-0016 §4.5).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct MatrixRow { # [doc = \" Exported operation name.\"] pub op : & 'static str , # [doc = \" Guarantee tag (VR-5).\"] pub guarantee : GuaranteeTag , # [doc = \" Fallibility: total or fallible.\"] pub fallibility : Fallibility , # [doc = \" The explicit error set (empty string for total ops).\"] pub error_set : & 'static str , # [doc = \" Declared effects (C6): `\\\"none\\\"`, `\\\"io\\\"`, or `\\\"io + alloc(Budget)\\\"`.\"] pub effects : & 'static str , # [doc = \" Whether the op surfaces a C3 EXPLAIN artifact.\"] pub explainable : Explainable , }",
+      "reason": "struct `MatrixRow` named field(s) `op, guarantee, fallibility, error_set, effects, explainable` emitted positionally as `MatrixRow(Bytes, GuaranteeTag, Fallibility, Bytes, Bytes, Explainable)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped (matches `lib/std/*.myc` hand-ports)",
       "item_name": "MatrixRow"
     },
     {
@@ -584,10 +674,10 @@
       "file": "crates/mycelium-std-io/src/serialize.rs",
       "line": 181,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "MultiStmtBody",
+      "rust_construct": "MultiStmtBody",
       "snippet": "# [doc = \" The **one canonical JSON projection**: project `v` to compact UTF-8 JSON text.\"] # [doc = \"\"] # [doc = \" `fmt.to_json` (M-533) **delegates** to this function (README §5 seam; spec\"] # [doc = \" §7-Q1 FLAGGED pending maintainer sign-off).  The round-trip property\"] # [doc = \" `from_json(to_json(v)) ≡ v` is established here once and not duplicated.\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Exact` (when `Ok`)\"] # [doc = \" Faithful projection (identical to `serialize(v, Format::Json)` as `String`).\"] # [doc = \"\"] # [doc = \" # Fallibility: `Err(SerError::OutOfDomain)`\"] # [doc = \" Refuses a `Value` carrying a non-finite `f64` (same domain as [`serialize`]) — JSON cannot\"] # [doc = \" represent it and `serde_json` would silently emit `null` (C1/G2). Total over the finite domain.\"] # [doc = \"\"] # [doc = \" # Effects: none\"] pub fn to_json (v : & Value) -> Result < String , SerError > { check_json_representable (v) ? ; Ok (serde_json :: to_string (v) . expect (\"to_json is total over finite Values (M-104; non-finite excluded above)\")) }",
-      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
+      "reason": "function body has a semicolon-terminated (value-discarding) statement expression before the tail — a `let`-chain body maps only simple `let x = e;` bindings plus a single trailing expression",
       "item_name": "to_json"
     },
     {
@@ -597,7 +687,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Recover a `Value` from canonical JSON text.\"] # [doc = \"\"] # [doc = \" `from_json(to_json(v)) ≡ v` (the round-trip property, `Empirical`).\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Empirical` (round-trip; spec §4.2)\"] # [doc = \"\"] # [doc = \" # Fallibility: `Err(SerError)` with a locus (C1 — never-silent)\"] # [doc = \"\"] # [doc = \" # Effects: none\"] pub fn from_json (text : & str) -> Result < Value , SerError > { serde_json :: from_str :: < Value > (text) . map_err (| e | map_serde_error_str (e , text)) }",
-      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
+      "reason": "qualified/associated-function call `serde_json :: from_str :: < Value >` — no established Mycelium surface form for a Rust conversion-op body; emitting the bare last-segment name would fabricate a call (e.g. `from(...)` is not a Mycelium builtin)",
       "item_name": "from_json"
     },
     {
@@ -637,37 +727,17 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Detect truncated/EOF errors: the input ended before a complete value was read.\"] fn is_truncated_error_msg (msg : & str , input : & [u8]) -> bool { let lower = msg . to_lowercase () ; input . is_empty () || lower . contains (\"eof\") || lower . contains (\"unexpected end\") }",
-      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
+      "reason": "unsupported Rust type form `[u8]`",
       "item_name": "is_truncated_error_msg"
-    },
-    {
-      "file": "crates/mycelium-std-io/src/serialize.rs",
-      "line": 296,
-      "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
-      "snippet": "# [doc = \" Detect domain errors: a field decoded successfully but violates a value-model\"] # [doc = \" invariant (reported by `Value::new` → `serde::de::Error::custom`).\"] fn is_domain_error (msg : & str) -> bool { msg . contains (\"payload\") || msg . contains (\"repr\") || msg . contains (\"guarantee\") || msg . contains (\"bound\") || msg . contains (\"invariant\") || msg . contains (\"well-formed\") || msg . contains (\"width\") }",
-      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
-      "item_name": "is_domain_error"
-    },
-    {
-      "file": "crates/mycelium-std-io/src/serialize.rs",
-      "line": 309,
-      "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
-      "snippet": "# [doc = \" Detect unknown-tag errors: an unrecognized `Repr`/ctor/`Meta` discriminant.\"] fn is_unknown_tag_error (msg : & str) -> bool { msg . contains (\"unknown variant\") || msg . contains (\"unknown field\") || msg . contains (\"expected one of\") }",
-      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
-      "item_name": "is_unknown_tag_error"
     },
     {
       "file": "crates/mycelium-std-io/src/serialize.rs",
       "line": 316,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "MultiStmtBody",
+      "rust_construct": "MultiStmtBody",
       "snippet": "# [doc = \" Extract the unknown tag string from a `serde_json` \\\"unknown variant X\\\" message.\"] fn extract_unknown_tag (msg : & str) -> String { if let Some (start) = msg . find ('`') { if let Some (end) = msg [start + 1 ..] . find ('`') { return msg [start + 1 .. start + 1 + end] . to_owned () ; } } msg . to_owned () }",
-      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
+      "reason": "function body has a semicolon-terminated (value-discarding) statement expression before the tail — a `let`-chain body maps only simple `let x = e;` bindings plus a single trailing expression",
       "item_name": "extract_unknown_tag"
     },
     {
@@ -677,20 +747,20 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Infer a field path from the error message (best-effort; see C3).\"] fn classify_path_from_message (msg : & str) -> FieldPath { if msg . contains (\"payload\") { FieldPath :: from_static (\"payload\") } else if msg . contains (\"bound\") { FieldPath :: from_static (\"meta/bound\") } else if msg . contains (\"repr\") || msg . contains (\"width\") { FieldPath :: from_static (\"repr\") } else { FieldPath :: from_static (\"<unknown>\") } }",
-      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
+      "reason": "qualified/associated-function call `FieldPath :: from_static` — no established Mycelium surface form for a Rust conversion-op body; emitting the bare last-segment name would fabricate a call (e.g. `from(...)` is not a Mycelium builtin)",
       "item_name": "classify_path_from_message"
     }
   ],
   "category_counts": {
-    "DeriveAttr": 6,
-    "Impl": 14,
+    "DeriveAttr": 11,
+    "Impl": 13,
     "Import": 9,
     "MacroInvocation": 3,
-    "MultiStmtBody": 1,
-    "Other": 20,
-    "PayloadVariant": 2,
+    "MultiStmtBody": 3,
+    "NamedFieldDrop": 9,
+    "Other": 16,
     "ReservedWord": 4,
-    "Struct": 4,
+    "Struct": 2,
     "TestItem": 5
   }
 }

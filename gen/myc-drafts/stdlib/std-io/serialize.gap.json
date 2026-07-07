@@ -1,7 +1,9 @@
 {
   "source": "crates/mycelium-std-io/src/serialize.rs",
   "emitted_items": [
-    "Format"
+    "Format",
+    "is_domain_error",
+    "is_unknown_tag_error"
   ],
   "gaps": [
     {
@@ -78,10 +80,10 @@
       "file": "crates/mycelium-std-io/src/serialize.rs",
       "line": 181,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "MultiStmtBody",
+      "rust_construct": "MultiStmtBody",
       "snippet": "# [doc = \" The **one canonical JSON projection**: project `v` to compact UTF-8 JSON text.\"] # [doc = \"\"] # [doc = \" `fmt.to_json` (M-533) **delegates** to this function (README §5 seam; spec\"] # [doc = \" §7-Q1 FLAGGED pending maintainer sign-off).  The round-trip property\"] # [doc = \" `from_json(to_json(v)) ≡ v` is established here once and not duplicated.\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Exact` (when `Ok`)\"] # [doc = \" Faithful projection (identical to `serialize(v, Format::Json)` as `String`).\"] # [doc = \"\"] # [doc = \" # Fallibility: `Err(SerError::OutOfDomain)`\"] # [doc = \" Refuses a `Value` carrying a non-finite `f64` (same domain as [`serialize`]) — JSON cannot\"] # [doc = \" represent it and `serde_json` would silently emit `null` (C1/G2). Total over the finite domain.\"] # [doc = \"\"] # [doc = \" # Effects: none\"] pub fn to_json (v : & Value) -> Result < String , SerError > { check_json_representable (v) ? ; Ok (serde_json :: to_string (v) . expect (\"to_json is total over finite Values (M-104; non-finite excluded above)\")) }",
-      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
+      "reason": "function body has a semicolon-terminated (value-discarding) statement expression before the tail — a `let`-chain body maps only simple `let x = e;` bindings plus a single trailing expression",
       "item_name": "to_json"
     },
     {
@@ -91,7 +93,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Recover a `Value` from canonical JSON text.\"] # [doc = \"\"] # [doc = \" `from_json(to_json(v)) ≡ v` (the round-trip property, `Empirical`).\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Empirical` (round-trip; spec §4.2)\"] # [doc = \"\"] # [doc = \" # Fallibility: `Err(SerError)` with a locus (C1 — never-silent)\"] # [doc = \"\"] # [doc = \" # Effects: none\"] pub fn from_json (text : & str) -> Result < Value , SerError > { serde_json :: from_str :: < Value > (text) . map_err (| e | map_serde_error_str (e , text)) }",
-      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
+      "reason": "qualified/associated-function call `serde_json :: from_str :: < Value >` — no established Mycelium surface form for a Rust conversion-op body; emitting the bare last-segment name would fabricate a call (e.g. `from(...)` is not a Mycelium builtin)",
       "item_name": "from_json"
     },
     {
@@ -131,37 +133,17 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Detect truncated/EOF errors: the input ended before a complete value was read.\"] fn is_truncated_error_msg (msg : & str , input : & [u8]) -> bool { let lower = msg . to_lowercase () ; input . is_empty () || lower . contains (\"eof\") || lower . contains (\"unexpected end\") }",
-      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
+      "reason": "unsupported Rust type form `[u8]`",
       "item_name": "is_truncated_error_msg"
-    },
-    {
-      "file": "crates/mycelium-std-io/src/serialize.rs",
-      "line": 296,
-      "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
-      "snippet": "# [doc = \" Detect domain errors: a field decoded successfully but violates a value-model\"] # [doc = \" invariant (reported by `Value::new` → `serde::de::Error::custom`).\"] fn is_domain_error (msg : & str) -> bool { msg . contains (\"payload\") || msg . contains (\"repr\") || msg . contains (\"guarantee\") || msg . contains (\"bound\") || msg . contains (\"invariant\") || msg . contains (\"well-formed\") || msg . contains (\"width\") }",
-      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
-      "item_name": "is_domain_error"
-    },
-    {
-      "file": "crates/mycelium-std-io/src/serialize.rs",
-      "line": 309,
-      "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
-      "snippet": "# [doc = \" Detect unknown-tag errors: an unrecognized `Repr`/ctor/`Meta` discriminant.\"] fn is_unknown_tag_error (msg : & str) -> bool { msg . contains (\"unknown variant\") || msg . contains (\"unknown field\") || msg . contains (\"expected one of\") }",
-      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
-      "item_name": "is_unknown_tag_error"
     },
     {
       "file": "crates/mycelium-std-io/src/serialize.rs",
       "line": 316,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "MultiStmtBody",
+      "rust_construct": "MultiStmtBody",
       "snippet": "# [doc = \" Extract the unknown tag string from a `serde_json` \\\"unknown variant X\\\" message.\"] fn extract_unknown_tag (msg : & str) -> String { if let Some (start) = msg . find ('`') { if let Some (end) = msg [start + 1 ..] . find ('`') { return msg [start + 1 .. start + 1 + end] . to_owned () ; } } msg . to_owned () }",
-      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
+      "reason": "function body has a semicolon-terminated (value-discarding) statement expression before the tail — a `let`-chain body maps only simple `let x = e;` bindings plus a single trailing expression",
       "item_name": "extract_unknown_tag"
     },
     {
@@ -171,7 +153,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Infer a field path from the error message (best-effort; see C3).\"] fn classify_path_from_message (msg : & str) -> FieldPath { if msg . contains (\"payload\") { FieldPath :: from_static (\"payload\") } else if msg . contains (\"bound\") { FieldPath :: from_static (\"meta/bound\") } else if msg . contains (\"repr\") || msg . contains (\"width\") { FieldPath :: from_static (\"repr\") } else { FieldPath :: from_static (\"<unknown>\") } }",
-      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
+      "reason": "qualified/associated-function call `FieldPath :: from_static` — no established Mycelium surface form for a Rust conversion-op body; emitting the bare last-segment name would fabricate a call (e.g. `from(...)` is not a Mycelium builtin)",
       "item_name": "classify_path_from_message"
     }
   ],

@@ -99,7 +99,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" \\\\[Declared\\\\] Read a single line from stdin (including the trailing newline if present). Returns\"] # [doc = \" `Err` on any OS read error or invalid UTF-8 — never-silent (G2).\"] pub fn read_line () -> Result < String , io :: Error > { let mut line = String :: new () ; io :: stdin () . read_line (& mut line) ? ; Ok (line) }",
-      "reason": "`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type",
+      "reason": "qualified type path `io :: Error` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "read_line"
     },
     {

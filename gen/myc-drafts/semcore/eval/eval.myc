@@ -44,3 +44,9 @@ type ForageError = NoCandidates;
 // are not part of `EvaluatorOpts` — they are not `Clone`/`Default` and stay set through
 // [`Evaluator::with_engines`], so this struct is a plain, copyable, defaultable bundle.
 type EvaluatorOpts = EvaluatorOpts(Binary{64}, Binary{32});
+
+// One elided tail-call frame recorded by the TCO EXPLAIN trail (RFC-0041 §4.6 tco32) — the
+// per-callee identity + the running iteration count at the moment the frame was reused. Not a bare
+// count (house rule #2 in substance, not just letter): a deep tail chain that later errors yields
+// an actionable "who was looping, how many times" trace.
+type TcoElision = TcoElision(Bytes, Binary{64});

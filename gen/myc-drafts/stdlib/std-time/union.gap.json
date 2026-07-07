@@ -27,7 +27,7 @@
       "category": "PayloadVariant",
       "rust_construct": "PayloadVariant",
       "snippet": "# [doc = \" Every explicit failure from a `std.time` operation (C1 / G2 / RFC-0013 diagnostic shape).\"] # [doc = \"\"] # [doc = \" No sentinel value, no silent zero, no wrap: every failure route surfaces here.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum TimeErr { # [doc = \" A duration or instant arithmetic operation overflowed the representable range.\"] # [doc = \"\"] # [doc = \" **Never** a wrap-around or a saturating clamp — always this error (C1/G2).\"] Overflow , # [doc = \" A MONOTONIC or WALL clock could not be read (platform unavailability, spec §7-Q3).\"] # [doc = \"\"] # [doc = \" Carries an optional human-readable reason (RFC-0013 diagnostic aid).\"] ClockUnavailable { reason : & 'static str } , # [doc = \" A WALL-clock pair difference found a *backward jump* (NTP, leap, DST).\"] # [doc = \"\"] # [doc = \" **Never** a silent zero or negative span — always this error (C1). Carries the two\"] # [doc = \" instants as opaque nanosecond values for diagnostics (RFC-0013).\"] NonMonotonic { earlier_ns : i128 , later_ns : i128 } , }",
-      "reason": "enum `TimeErr` variant `ClockUnavailable` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
+      "reason": "enum `TimeErr` variant `NonMonotonic` has a field type with no confirmed mapping (signed integer `i128` — Binary{N} is documented unsigned-magnitude (lib/std/cmp.myc); mapping a signed type onto it would misrepresent twos-complement semantics, so this is left an explicit gap rather than guessed (VR-5))",
       "item_name": "TimeErr"
     },
     {
@@ -397,7 +397,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" One row of the `std.time` guarantee matrix (RFC-0016 §4.5 / spec §4).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct GuaranteeRow { # [doc = \" The exported operation name.\"] pub op : & 'static str , # [doc = \" The honest guarantee tag on `Exact ⊐ Proven ⊐ Empirical ⊐ Declared`.\"] pub tag : GuaranteeStrength , # [doc = \" The explicit fallibility: `\\\"total\\\"`, or the `Result`/`Option` shape.\"] pub fallibility : & 'static str , # [doc = \" Declared effects: `\\\"none\\\"`, `\\\"time\\\"`, or `\\\"{ time, entropy }\\\"`.\"] pub effects : & 'static str , # [doc = \" Whether the op surfaces an inspectable EXPLAIN artifact.\"] pub explainable : bool , }",
-      "reason": "struct `GuaranteeRow` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
+      "reason": "struct `GuaranteeRow` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "GuaranteeRow"
     },
     {

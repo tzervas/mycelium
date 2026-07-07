@@ -101,3 +101,20 @@ nodule std.content;
 // different runtime state but the same normalized content (e.g. differing only in provenance)
 // are `digest_eq` (same identity) even if `v1 != v2` structurally (ADR-003).
 fn digest_eq(a: ContentHash, b: ContentHash) => Bool = a == b;
+
+// All names bound to `hash` in `registry`, as a list (0 or 1 entries with the current kernel;
+// see [`name_registry`] module-level FLAG on the one-name limitation).
+//
+// Returns an empty `Vec` when no name is bound — **never** a sentinel (C1).
+//
+// # Guarantee tag: `Exact` (deterministic)
+// A pure read of the name registry.
+//
+// # Fallibility: total (possibly empty list)
+// The op cannot fail; an unbound hash yields an empty list (not an error).
+//
+// # Effects: none
+//
+// # FLAG: Q3
+// See module-level FLAG Q3 on registry ownership.
+fn names_of(registry: NameRegistry, hash: ContentHash) => Vec[Bytes] = names_of(registry, hash);

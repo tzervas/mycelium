@@ -2,7 +2,8 @@
   "source": "crates/mycelium-std-content/src/guarantee_matrix.rs",
   "emitted_items": [
     "Fallibility",
-    "Explainable"
+    "Explainable",
+    "MatrixRow"
   ],
   "gaps": [
     {
@@ -29,10 +30,20 @@
       "file": "crates/mycelium-std-content/src/guarantee_matrix.rs",
       "line": 47,
       "col": 1,
-      "category": "Struct",
-      "rust_construct": "Struct",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "# [doc = \" One row in the guarantee matrix (RFC-0016 §4.5).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct MatrixRow { # [doc = \" The exported operation name.\"] pub op : & 'static str , # [doc = \" Guarantee tag on `Exact ⊐ Proven ⊐ Empirical ⊐ Declared` (VR-5).\"] # [doc = \" All rows are `\\\"Exact\\\"` because content hashing is deterministic (spec §4).\"] pub guarantee : & 'static str , # [doc = \" Whether the op can fail and what the explicit error set is.\"] pub fallibility : Fallibility , # [doc = \" The explicit error / none-case description (empty string for total ops).\"] pub error_set : & 'static str , # [doc = \" Declared effects (C6). Empty string means no effects.\"] pub effects : & 'static str , # [doc = \" Whether the op has a C3 EXPLAIN obligation.\"] pub explainable : Explainable , }",
-      "reason": "struct `MatrixRow` has a field type with no confirmed mapping (`String`/`str` — `Bytes` exists in base_type but is not confirmed equivalent to a UTF-8 text type)",
+      "reason": "dropped non-doc attribute(s) on struct `MatrixRow`: # [derive (Debug , Clone , PartialEq , Eq)]",
+      "item_name": "MatrixRow"
+    },
+    {
+      "file": "crates/mycelium-std-content/src/guarantee_matrix.rs",
+      "line": 47,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" One row in the guarantee matrix (RFC-0016 §4.5).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct MatrixRow { # [doc = \" The exported operation name.\"] pub op : & 'static str , # [doc = \" Guarantee tag on `Exact ⊐ Proven ⊐ Empirical ⊐ Declared` (VR-5).\"] # [doc = \" All rows are `\\\"Exact\\\"` because content hashing is deterministic (spec §4).\"] pub guarantee : & 'static str , # [doc = \" Whether the op can fail and what the explicit error set is.\"] pub fallibility : Fallibility , # [doc = \" The explicit error / none-case description (empty string for total ops).\"] pub error_set : & 'static str , # [doc = \" Declared effects (C6). Empty string means no effects.\"] pub effects : & 'static str , # [doc = \" Whether the op has a C3 EXPLAIN obligation.\"] pub explainable : Explainable , }",
+      "reason": "struct `MatrixRow` named field(s) `op, guarantee, fallibility, error_set, effects, explainable` emitted positionally as `MatrixRow(Bytes, Bytes, Fallibility, Bytes, Bytes, Explainable)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped (matches `lib/std/*.myc` hand-ports)",
       "item_name": "MatrixRow"
     },
     {
