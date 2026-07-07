@@ -208,6 +208,208 @@ pub fn check_project(dir: &Path) -> Result<Report, ResolveError> {
     Ok(check_sources(&sources))
 }
 
+// ---------------------------------------------------------------------------------------------------
+// Phylum-check mode (M-1006) — check a set of `.myc` files as **one cross-resolving phylum**, not as
+// isolated phyla-of-one. `check_sources`/`check_project` above run [`check_nodule`] per file, so a
+// cross-nodule `use a.Foo;` cannot resolve (each file is a phylum-of-one). This mode assembles the
+// files into a single `Phylum` and runs [`mycelium_l1::check_phylum`], the kernel's cross-nodule
+// resolver — additive, alongside (never replacing) the per-file modes above.
+//
+// Honesty (VR-5/G2): `check_phylum` is **all-or-nothing** — it returns either the whole `PhylumEnv`
+// or one `CheckError`. On success every nodule is reported `Clean`; on failure we report that single
+// `CheckError` faithfully and fabricate **no** per-nodule verdicts we cannot know. A parse failure or
+// a duplicate `nodule` path is refused **before** assembly (never a silent collision in the
+// phylum-wide export table). The guarantee is `Empirical` (real toolchain).
+
+/// What kind of refusal blocked a phylum from checking clean.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PhylumErrorKind {
+    /// A source failed to parse — the phylum cannot be assembled from an unparseable nodule.
+    Parse,
+    /// Two nodules declared the same dotted `nodule` path — an ambiguous phylum export table (G2).
+    Duplicate,
+    /// The assembled phylum failed [`mycelium_l1::check_phylum`] (a cross-nodule type/name refusal).
+    Check,
+}
+
+impl PhylumErrorKind {
+    /// The stable lowercase tag used in the `--json` contract (`"parse"`/`"duplicate"`/`"check"`).
+    #[must_use]
+    pub fn as_str(self) -> &'static str {
+        match self {
+            PhylumErrorKind::Parse => "parse",
+            PhylumErrorKind::Duplicate => "duplicate",
+            PhylumErrorKind::Check => "check",
+        }
+    }
+}
+
+/// The single refusal that blocked a phylum (all-or-nothing — there is at most one).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PhylumError {
+    /// Which class of refusal.
+    pub kind: PhylumErrorKind,
+    /// Where it occurred — a file label (parse) or a nodule path (duplicate/check site).
+    pub site: String,
+    /// The author-facing message.
+    pub message: String,
+}
+
+/// A per-nodule verdict, emitted **only** when the whole phylum checked clean (never fabricated).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NoduleVerdict {
+    /// The nodule's dotted path (`a`, `core.binary`).
+    pub nodule: String,
+    /// The verdict class — currently always `"Clean"` (only emitted on a clean phylum).
+    pub class: &'static str,
+}
+
+/// The result of checking a set of sources **as one phylum**.
+#[derive(Debug, Clone)]
+pub struct PhylumReport {
+    /// Whether the whole phylum checked clean.
+    pub ok: bool,
+    /// How many sources were assembled into the phylum.
+    pub files_checked: usize,
+    /// The single blocking refusal, if any (`None` iff `ok`).
+    pub error: Option<PhylumError>,
+    /// One `Clean` verdict per nodule — populated **only** when `ok` (VR-5: never a guessed verdict).
+    pub nodules: Vec<NoduleVerdict>,
+}
+
+impl PhylumReport {
+    /// The CI exit code: 0 if clean, 2 for a parse error, 3 for a check/duplicate refusal.
+    #[must_use]
+    pub fn exit_code(&self) -> u8 {
+        match &self.error {
+            None => 0,
+            Some(e) => match e.kind {
+                PhylumErrorKind::Parse => 2,
+                PhylumErrorKind::Check | PhylumErrorKind::Duplicate => 3,
+            },
+        }
+    }
+}
+
+/// Check an explicit set of `(path, contents)` sources **as one cross-resolving phylum** (the
+/// FS-free core, mirroring [`check_sources`]'s shape so it is unit-testable). See the module note
+/// above for the honesty contract.
+///
+/// Steps: parse each source (any parse failure → an explicit `Parse` refusal — the phylum cannot be
+/// assembled), guard against duplicate `nodule` paths (a `Duplicate` refusal — never a silent export
+/// collision, G2), assemble one `Phylum { path: None, .. }`, and run [`mycelium_l1::check_phylum`]
+/// (all-or-nothing: `Clean` verdicts on success, one faithful `Check` refusal on failure).
+#[must_use]
+pub fn check_phylum_sources(sources: &[(String, String)]) -> PhylumReport {
+    let files_checked = sources.len();
+
+    // 1. Parse each source. Any parse failure refuses the whole phylum (never a silent partial).
+    let mut nodules: Vec<mycelium_l1::Nodule> = Vec::with_capacity(files_checked);
+    for (file, src) in sources {
+        match parse(src) {
+            Ok(nodule) => nodules.push(nodule),
+            Err(e) => {
+                return PhylumReport {
+                    ok: false,
+                    files_checked,
+                    error: Some(PhylumError {
+                        kind: PhylumErrorKind::Parse,
+                        site: file.clone(),
+                        message: e.to_string(),
+                    }),
+                    nodules: Vec::new(),
+                };
+            }
+        }
+    }
+
+    // 2. Never-silent duplicate-nodule-path guard (mirrors mycelium-cli's
+    // `check_no_duplicate_nodule_paths`): `check_phylum` keys its export table by nodule path and
+    // would otherwise let a second nodule of the same path collide silently (G2).
+    let mut seen: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+    for nodule in &nodules {
+        let key = nodule.path.0.join(".");
+        if !seen.insert(key.clone()) {
+            return PhylumReport {
+                ok: false,
+                files_checked,
+                error: Some(PhylumError {
+                    kind: PhylumErrorKind::Duplicate,
+                    site: key.clone(),
+                    message: format!(
+                        "nodule `{key}` is declared more than once — every nodule path in a phylum \
+                         must be unique"
+                    ),
+                }),
+                nodules: Vec::new(),
+            };
+        }
+    }
+
+    // 3. Assemble one header-less phylum and check it as a whole.
+    let phylum = mycelium_l1::Phylum {
+        path: None,
+        nodules,
+    };
+    match mycelium_l1::check_phylum(&phylum) {
+        Ok(_) => {
+            let verdicts = phylum
+                .nodules
+                .iter()
+                .map(|n| NoduleVerdict {
+                    nodule: n.path.0.join("."),
+                    class: "Clean",
+                })
+                .collect();
+            PhylumReport {
+                ok: true,
+                files_checked,
+                error: None,
+                nodules: verdicts,
+            }
+        }
+        // All-or-nothing: report the one CheckError faithfully; do NOT guess which nodules are clean.
+        Err(ce) => PhylumReport {
+            ok: false,
+            files_checked,
+            error: Some(PhylumError {
+                kind: PhylumErrorKind::Check,
+                site: ce.site,
+                message: ce.message,
+            }),
+            nodules: Vec::new(),
+        },
+    }
+}
+
+/// Resolve and check every `.myc` under `dir` **as one phylum** (the FS wrapper over
+/// [`check_phylum_sources`], mirroring [`check_project`]'s discovery/read path).
+///
+/// # Errors
+/// [`ResolveError`] when there are no `.myc` sources, or a source cannot be read (missing/ambiguous
+/// input; G2 — never a silent empty pass).
+pub fn check_phylum_dir(dir: &Path) -> Result<PhylumReport, ResolveError> {
+    let files = collect_myc(dir)?;
+    if files.is_empty() {
+        return Err(ResolveError(format!(
+            "no `.myc` sources under {} — nothing to check (a clean exit here would be a silent pass; G2)",
+            dir.display()
+        )));
+    }
+    let mut sources = Vec::with_capacity(files.len());
+    for f in files {
+        let src = std::fs::read_to_string(&f)
+            .map_err(|e| ResolveError(format!("{}: {e}", f.display())))?;
+        let rel = f
+            .strip_prefix(dir)
+            .unwrap_or(&f)
+            .to_string_lossy()
+            .replace('\\', "/");
+        sources.push((rel, src));
+    }
+    Ok(check_phylum_sources(&sources))
+}
+
 /// Collect every `.myc` under `dir` (recursively), sorted; skipping hidden entries and `target/`.
 fn collect_myc(dir: &Path) -> Result<Vec<PathBuf>, ResolveError> {
     let mut out = Vec::new();
@@ -320,5 +522,95 @@ mod tests {
         let r = Report::default().with_finding(f).with_files_checked(1);
         assert_eq!(r.findings.len(), 1);
         assert_eq!(r.files_checked, 1);
+    }
+
+    // --- Phylum-check mode (M-1006) -------------------------------------------------------------
+
+    #[test]
+    fn phylum_cross_nodule_reference_resolves() {
+        // Nodule `a` exports `helper` (`pub fn`); nodule `b` imports it (`use a.*`) and calls it. As
+        // one phylum this resolves (RFC-0006 §4.3, mirrors the l1 `cross_nodule_program_runs_three_way`).
+        let a = (
+            "a.myc".to_owned(),
+            "nodule a;\npub fn helper(x: Binary{8}) => Binary{8} = not(x);\n".to_owned(),
+        );
+        let b = (
+            "b.myc".to_owned(),
+            "nodule b;\nuse a.*;\nfn g(x: Binary{8}) => Binary{8} = helper(x);\n".to_owned(),
+        );
+        let report = check_phylum_sources(&[a, b.clone()]);
+        assert!(
+            report.ok,
+            "phylum should resolve `a.helper`: {:?}",
+            report.error
+        );
+        assert_eq!(report.exit_code(), 0);
+        assert_eq!(report.nodules.len(), 2);
+        assert!(report.nodules.iter().all(|v| v.class == "Clean"));
+
+        // Witness that the phylum path is what makes it resolve: the SAME `b.myc` checked in
+        // isolation (a phylum-of-one, the per-file path) FAILS — `a.helper` is unresolved there.
+        let isolated = check_sources(&[b]);
+        assert!(
+            !isolated.is_ok(),
+            "b.myc must NOT resolve `a.*` in isolation (proves the phylum lever): {:?}",
+            isolated.findings
+        );
+        assert_eq!(isolated.exit_code(), 3);
+    }
+
+    #[test]
+    fn phylum_duplicate_nodule_path_is_refused() {
+        // Two nodules both declare `nodule a;` — an ambiguous export table, refused never-silently (G2)
+        // BEFORE reaching check_phylum.
+        let report = check_phylum_sources(&[
+            (
+                "x.myc".to_owned(),
+                "nodule a;\npub fn helper(x: Binary{8}) => Binary{8} = not(x);\n".to_owned(),
+            ),
+            (
+                "y.myc".to_owned(),
+                "nodule a;\npub fn other(x: Binary{8}) => Binary{8} = x;\n".to_owned(),
+            ),
+        ]);
+        assert!(!report.ok);
+        assert_eq!(
+            report.error.as_ref().map(|e| e.kind),
+            Some(PhylumErrorKind::Duplicate),
+            "{:?}",
+            report.error
+        );
+        assert_eq!(report.exit_code(), 3);
+    }
+
+    #[test]
+    fn phylum_parse_error_is_reported() {
+        // Missing `;` after the nodule header — an unparseable nodule; the phylum cannot be assembled.
+        let report = check_phylum_sources(&[(
+            "bad.myc".to_owned(),
+            "nodule a\npub fn helper(x: Binary{8}) => Binary{8} = not(x);\n".to_owned(),
+        )]);
+        assert!(!report.ok);
+        let e = report.error.as_ref().expect("a parse refusal");
+        assert_eq!(e.kind, PhylumErrorKind::Parse);
+        assert_eq!(e.site, "bad.myc", "parse site is the file label");
+        assert_eq!(report.exit_code(), 2);
+    }
+
+    #[test]
+    fn phylum_check_error_is_reported() {
+        // A single nodule with a real check error (an unresolved call) — check_phylum refuses.
+        let report = check_phylum_sources(&[(
+            "c.myc".to_owned(),
+            "nodule a;\nfn f() => Binary{8} = nope(0b0);\n".to_owned(),
+        )]);
+        assert!(!report.ok);
+        assert_eq!(
+            report.error.as_ref().map(|e| e.kind),
+            Some(PhylumErrorKind::Check),
+            "{:?}",
+            report.error
+        );
+        assert_eq!(report.exit_code(), 3);
     }
 }
