@@ -2338,6 +2338,23 @@ fn register_instances_cases() {
             ]),
             vec!["Pair2"],
         ),
+        // (12) Duplicate method: `Show` requires {show}, impl provides {show, show} → Err. The set-based
+        //      missing/extra checks both pass (provided set == required == {show}); the third arm —
+        //      `first_duplicate` over the method-name list (checkty.rs:3268-3282) — catches the repeat.
+        (
+            "duplicate_method",
+            vec![],
+            nodule(vec![
+                show(),
+                it_impl(impl_decl(
+                    "Show",
+                    vec![],
+                    bin_ty(8),
+                    vec![method("show"), method("show")],
+                )),
+            ]),
+            vec!["Show"],
+        ),
     ];
     for (label, shells, nod, coh_traits) in &cases {
         let tmap = types_map(shells);
