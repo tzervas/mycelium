@@ -26,99 +26,26 @@
 //! M-981 applies: only the L1-eval leg is exercised (small synthetic fixtures, not a corpus program).
 //! `scalar_kind`/`sparsity_class` are covered exhaustively (they twin the increment-4 tags).
 
-use crate::ast::{BaseType, Literal, Path, Scalar, Sparsity, TypeRef, WidthRef};
+use crate::ast::{BaseType, Literal, Path, Scalar, Sparsity, WidthRef};
 use crate::checkty::{check_nodule, Ty, Width};
 use crate::elab::{
     field_spec, lit_value, policy_name_preimage, scalar_kind, sparsity_class, ty_to_field_ty_ref,
     ty_to_repr, type_repr,
 };
-use crate::eval::{Evaluator, L1Value};
-use crate::mono::monomorphize;
+use crate::eval::L1Value;
 use crate::parse;
+use crate::tests::marshal_support::*;
 use mycelium_core::{
     FieldSpec, FieldTyRef, FloatWidth, FnSig, Meta, Payload, Provenance, Repr, ScalarKind,
     SparsityClass, Trit, Value,
 };
 
-const SEMCORE_SRC: &str = include_str!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../lib/compiler/semcore.myc"
-));
-
-fn program(driver: &str) -> String {
-    format!("{SEMCORE_SRC}\n{driver}")
-}
-
-// ── L1Value → mycelium_core decoders (M-1013 STEP 2; DN-26 §10.2 — the marshalling inverse) ────────
-//
-// Each decoder is the never-silent inverse of a mirror constructor: it walks the port's `L1Value`
-// output and rebuilds the REAL `mycelium_core` type, panicking (the harness's established failure
-// mode) on an unexpected constructor rather than silently mis-decoding (G2). A mirror ADT node comes
-// back as `L1Value::Data { ty, ctor, fields }`; a `Binary{N}`/`Bytes` leaf comes back as
-// `L1Value::Repr(Value)` (read via `as_repr()`).
-
-/// The base constructor name, with `monomorphize`'s injective mangle suffix stripped
-/// (`mono.rs` §4: names are joined with `$`, with a `#` kind-tag on nullary data). A generic ctor
-/// specializes to `Cons$Binary1`/`Some$Repr`/`Ok$Repr$Bytes`/…; the monomorphic mirror ctors
-/// (`RBinary`, `PlBits`, `Val`, …) carry no separator and pass through unchanged.
-fn base_ctor(ctor: &str) -> &str {
-    let end = ctor.find(['$', '#']).unwrap_or(ctor.len());
-    &ctor[..end]
-}
-
-/// Every mirror ADT node is an `L1Value::Data`; return its (unmangled) constructor name + fields.
-fn expect_data<'a>(v: &'a L1Value, what: &str) -> (&'a str, &'a [L1Value]) {
-    match v {
-        L1Value::Data { ctor, fields, .. } => (base_ctor(ctor), fields.as_slice()),
-        other => panic!("marshal {what}: expected a Data node, got {other:?}"),
-    }
-}
-
-/// A `Binary{32}` mirror int → `u32`, MSB-first — the exact convention `core_bits_as_u32` used.
-fn decode_u32(v: &L1Value) -> u32 {
-    match v.as_repr().map(Value::payload) {
-        Some(Payload::Bits(bits)) => bits.iter().fold(0u32, |acc, &b| (acc << 1) | u32::from(b)),
-        other => panic!("marshal decode_u32: expected a Repr(Binary) Bits leaf, got {other:?}"),
-    }
-}
-
-/// A `Binary{1}` mirror bit → `bool`.
-fn decode_bit(v: &L1Value) -> bool {
-    match v.as_repr().map(Value::payload) {
-        Some(Payload::Bits(bits)) if bits.len() == 1 => bits[0],
-        other => panic!("marshal decode_bit: expected a 1-bit Bits leaf, got {other:?}"),
-    }
-}
-
-/// A `Bytes` leaf → raw bytes.
-fn decode_bytes(v: &L1Value) -> Vec<u8> {
-    match v.as_repr().map(Value::payload) {
-        Some(Payload::Bytes(b)) => b.clone(),
-        other => panic!("marshal decode_bytes: expected a Bytes leaf, got {other:?}"),
-    }
-}
-
-/// A `Bytes` leaf → `String` (the increment-7 fixtures are ASCII).
-fn decode_string(v: &L1Value) -> String {
-    String::from_utf8(decode_bytes(v)).expect("marshal decode_string: non-UTF8 bytes")
-}
-
-/// A `.myc` `Vec[A]` (`Nil | Cons(A, Vec[A])`) → `Vec<T>`, decoding each element with `elem`.
-fn decode_vec<T>(v: &L1Value, elem: impl Fn(&L1Value) -> T) -> Vec<T> {
-    let mut out = Vec::new();
-    let mut cur = v;
-    loop {
-        let (ctor, fields) = expect_data(cur, "Vec");
-        match ctor {
-            "Nil" => return out,
-            "Cons" => {
-                out.push(elem(&fields[0]));
-                cur = &fields[1];
-            }
-            other => panic!("marshal decode_vec: unexpected ctor {other}"),
-        }
-    }
-}
+// The generic marshalling primitives (`SEMCORE_SRC`/`program`, `base_ctor`/`expect_data`, the leaf +
+// polymorphic-wrapper decoders `decode_u32`/`decode_bit`/`decode_bytes`/`decode_string`/`decode_vec`/
+// `decode_option`/`decode_result`, the `assert_l1_marshal`/`decode_driver` runners, and the surface
+// encoders) now live in the shared `marshal_support` module (M-1013 STEP 3, extracted behaviour-
+// preserving). Only the `mycelium_core`-specific decoders (this port's `elab::*` output types) and its
+// type-specific encoders/fixtures stay here.
 
 fn decode_scalar_kind(v: &L1Value) -> ScalarKind {
     match expect_data(v, "ScalarK").0 {
@@ -257,198 +184,6 @@ fn decode_field_spec(v: &L1Value) -> FieldSpec {
     }
 }
 
-fn decode_option<T>(v: &L1Value, elem: impl Fn(&L1Value) -> T) -> Option<T> {
-    let (ctor, fields) = expect_data(v, "Option");
-    match ctor {
-        "None" => None,
-        "Some" => Some(elem(&fields[0])),
-        c => panic!("marshal decode_option: unexpected ctor {c}"),
-    }
-}
-
-/// A `.myc` `Result[A, Bytes]` → `Result<T, ()>`. The `Err` arm's message differs across the two
-/// independent productions (Rust `ElabError` vs the `.myc` `Bytes` string), so it is normalized to
-/// `()` — the exact posture of the retired `res_*_eq` (any `Err` == any `Err`; only the `Ok` payload
-/// is a meaningful differential).
-fn decode_result<T>(v: &L1Value, elem: impl Fn(&L1Value) -> T) -> Result<T, ()> {
-    let (ctor, fields) = expect_data(v, "Result");
-    match ctor {
-        "Ok" => Ok(elem(&fields[0])),
-        "Err" => Err(()),
-        c => panic!("marshal decode_result: unexpected ctor {c}"),
-    }
-}
-
-// ── the marshalling assertion helper ───────────────────────────────────────────────────────────────
-
-/// Parse → check → monomorphize → eval `main` → DECODE the mirror `L1Value` → `assert_eq!` against the
-/// trusted Rust oracle value. The comparator is Rust's own derived `==` (no `.myc`-side `_eq`). No
-/// `build_registry`/`to_core` on this path — the decoder walks the `L1Value` (and its embedded
-/// `core::Value` leaves) directly.
-fn assert_l1_marshal<T: PartialEq + std::fmt::Debug>(
-    label: &str,
-    driver: &str,
-    decode: impl Fn(&L1Value) -> T,
-    want: T,
-) {
-    let src = program(driver);
-    let env = check_nodule(&parse(&src).unwrap_or_else(|e| panic!("{label}: parse failed: {e}")))
-        .unwrap_or_else(|e| panic!("{label}: check failed: {e}"));
-    let mono =
-        monomorphize(&env, "main").unwrap_or_else(|e| panic!("{label}: monomorphize failed: {e}"));
-    let l1_val = Evaluator::new(&mono)
-        .call("main", vec![])
-        .unwrap_or_else(|e| panic!("{label}: L1-eval failed: {e}"));
-    let got = decode(&l1_val);
-    assert_eq!(
-        got, want,
-        "{label}: decoded marshal {got:?} does not match oracle {want:?}"
-    );
-}
-
-/// Eval a bare mirror-literal driver and decode it — the `marshal_discriminates` primitive (no oracle;
-/// used only to prove the decoder distinguishes single-dimension-distinct mirror values).
-fn decode_driver<T>(ret_ty: &str, expr: &str, decode: impl Fn(&L1Value) -> T) -> T {
-    let driver = format!("fn main() => {ret_ty} = {expr};\n");
-    let src = program(&driver);
-    let env = check_nodule(&parse(&src).unwrap_or_else(|e| panic!("decode_driver parse: {e}")))
-        .unwrap_or_else(|e| panic!("decode_driver check: {e}"));
-    let mono = monomorphize(&env, "main").unwrap_or_else(|e| panic!("decode_driver mono: {e}"));
-    let l1_val = Evaluator::new(&mono)
-        .call("main", vec![])
-        .unwrap_or_else(|e| panic!("decode_driver eval: {e}"));
-    decode(&l1_val)
-}
-
-// ── Rust → `.myc` fixture encoders (surface INPUT types — unchanged; build the driver's argument) ──
-
-fn encode_u32(n: u32) -> String {
-    let mut s = String::from("0b");
-    for (count, i) in (0..32).rev().enumerate() {
-        if count != 0 && count % 4 == 0 {
-            s.push('_');
-        }
-        s.push(if (n >> i) & 1 == 1 { '1' } else { '0' });
-    }
-    s
-}
-
-fn encode_bytes(s: &str) -> String {
-    format!("{s:?}")
-}
-
-fn encode_scalar(s: Scalar) -> &'static str {
-    match s {
-        Scalar::F16 => "SF16",
-        Scalar::Bf16 => "SBf16",
-        Scalar::F32 => "SF32",
-        Scalar::F64 => "SF64",
-    }
-}
-
-fn encode_sparsity(sp: &Sparsity) -> String {
-    match sp {
-        Sparsity::Dense => "SpDense".to_owned(),
-        Sparsity::Sparse(k) => format!("SpSparse({})", encode_u32(*k)),
-    }
-}
-
-fn encode_width(w: &Width) -> String {
-    match w {
-        Width::Lit(n) => format!("WdLit({})", encode_u32(*n)),
-        Width::Var(v) => format!("WdVar({})", encode_bytes(v)),
-    }
-}
-
-fn encode_widthref(w: &WidthRef) -> String {
-    match w {
-        WidthRef::Lit(n) => format!("WLit({})", encode_u32(*n)),
-        WidthRef::Name(v) => format!("WName({})", encode_bytes(v)),
-    }
-}
-
-fn encode_ty(t: &Ty) -> String {
-    match t {
-        Ty::Binary(w) => format!("TyBinary({})", encode_width(w)),
-        Ty::Ternary(w) => format!("TyTernary({})", encode_width(w)),
-        Ty::Dense(d, s) => format!("TyDense({}, {})", encode_u32(*d), encode_scalar(*s)),
-        Ty::Vsa {
-            model,
-            dim,
-            sparsity,
-        } => format!(
-            "TyVsa({}, {}, {})",
-            encode_bytes(model),
-            encode_u32(*dim),
-            encode_sparsity(sparsity)
-        ),
-        Ty::Data(n, args) => format!("TyData({}, {})", encode_bytes(n), encode_ty_list(args)),
-        Ty::Substrate(t) => format!("TySubstrate({})", encode_bytes(t)),
-        Ty::Seq(elem, n) => format!("TySeq({}, {})", encode_ty(elem), encode_u32(*n)),
-        Ty::Bytes => "TyBytes".to_owned(),
-        Ty::Float => "TyFloat".to_owned(),
-        Ty::Var(v) => format!("TyVar({})", encode_bytes(v)),
-        Ty::Fn(a, r) => format!("TyFn({}, {})", encode_ty(a), encode_ty(r)),
-    }
-}
-
-fn encode_ty_list(ts: &[Ty]) -> String {
-    let mut s = String::from("Nil");
-    for t in ts.iter().rev() {
-        s = format!("Cons({}, {})", encode_ty(t), s);
-    }
-    s
-}
-
-fn encode_typeref(t: &TypeRef) -> String {
-    // The surface guarantee slot is never inspected by `type_repr`; always emit `None`.
-    format!("TR({}, None)", encode_basetype(&t.base))
-}
-
-fn encode_typeref_list(ts: &[TypeRef]) -> String {
-    let mut s = String::from("Nil");
-    for t in ts.iter().rev() {
-        s = format!("Cons({}, {})", encode_typeref(t), s);
-    }
-    s
-}
-
-fn encode_basetype(b: &BaseType) -> String {
-    match b {
-        BaseType::Binary(w) => format!("KwBinary({})", encode_widthref(w)),
-        BaseType::Ternary(w) => format!("KwTernary({})", encode_widthref(w)),
-        BaseType::Dense(d, s) => format!("KwDense({}, {})", encode_u32(*d), encode_scalar(*s)),
-        BaseType::Vsa {
-            model,
-            dim,
-            sparsity,
-        } => format!(
-            "Vsa({}, {}, {})",
-            encode_bytes(model),
-            encode_u32(*dim),
-            encode_sparsity(sparsity)
-        ),
-        BaseType::Substrate(t) => format!("KwSubstrate({})", encode_bytes(t)),
-        BaseType::Seq { elem, len } => {
-            format!("KwSeq({}, {})", encode_typeref(elem), encode_u32(*len))
-        }
-        BaseType::Bytes => "KwBytes".to_owned(),
-        BaseType::Float => "KwFloat".to_owned(),
-        BaseType::Named(name, args) => {
-            format!(
-                "Named({}, {})",
-                encode_bytes(name),
-                encode_typeref_list(args)
-            )
-        }
-        BaseType::Fn(a, r) => format!("FnArrow({}, {})", encode_typeref(a), encode_typeref(r)),
-        BaseType::Tuple(elems) => format!("Tuple({})", encode_typeref_list(elems)),
-        BaseType::Ambient(_) => {
-            panic!("Ambient BaseType is not exercised by the increment-7 differential")
-        }
-    }
-}
-
 fn encode_literal(l: &Literal) -> String {
     match l {
         Literal::Bin(s) => format!("Bin({})", encode_bytes(s)),
@@ -476,12 +211,6 @@ fn bin(n: u32) -> Ty {
 }
 fn data(n: &str, args: Vec<Ty>) -> Ty {
     Ty::Data(n.to_owned(), args)
-}
-fn tref(base: BaseType) -> TypeRef {
-    TypeRef {
-        base,
-        guarantee: None,
-    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────────

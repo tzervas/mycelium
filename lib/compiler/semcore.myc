@@ -293,6 +293,30 @@ type BaseType =
   | FnArrow(TypeRef, TypeRef)
   | Tuple(Vec[TypeRef]);
 
+// ── register-family surface mirrors (M-1013 STEP 3, PR-1) ─────────────────────────────────────────
+// Ctor: mirrors ast.rs::Ctor (a constructor name + its positional field TypeRefs). NEW ctor `Ct`
+// (FLAG-semcore-2 prefix scheme — distinct from the surface `Kw*`/checked `Ty*` families and from the
+// `CI` checked-ctor mirror below).
+type Ctor = Ct(Bytes, Vec[TypeRef]);
+
+fn ct_name(c: Ctor) => Bytes =
+  match c { Ct(n, _) => n };
+
+fn ct_fields(c: Ctor) => Vec[TypeRef] =
+  match c { Ct(_, f) => f };
+
+// TypeDecl: mirrors ast.rs::TypeDecl field-for-field (vis, name, params, ctors — declaration order).
+type TypeDecl = TD(Vis, Bytes, Vec[Bytes], Vec[Ctor]);
+
+fn td_name(t: TypeDecl) => Bytes =
+  match t { TD(_, n, _, _) => n };
+
+fn td_params(t: TypeDecl) => Vec[Bytes] =
+  match t { TD(_, _, p, _) => p };
+
+fn td_ctors(t: TypeDecl) => Vec[Ctor] =
+  match t { TD(_, _, _, c) => c };
+
 // ExecutionMode: mirrors ast.myc::ExecutionMode (a field of `FnDecl`; unused by grade otherwise).
 type ExecutionMode = Interpreted | Compiled;
 
@@ -1900,6 +1924,48 @@ fn resolve_ty(types: Vec[DataInfo], tyvars: Vec[Bytes], t: TypeRef) => Result[Pa
   match resolve_base(types, tyvars, typeref_base(t)) {
     Err(e) => Err(e),
     Ok(base) => Ok(Pr(base, typeref_guarantee(t)))
+  };
+
+// ── first_duplicate / resolve_ctors (checkty.rs register-family; M-1013 STEP 3, PR-1) ─────────────
+// first_duplicate: the first value that appears more than once in `xs`, left to right, if any —
+// checkty.rs's dup-param/dup-name guard. Rust threads a `BTreeSet`; the port threads a `seen` list
+// (the FLAG-semcore-4 assoc-list posture) and reuses `names_contains`. Pure preimage — the CALLER
+// turns a `Some` into an explicit refusal (never silent — G2).
+fn first_duplicate(xs: Vec[Bytes]) => Option[Bytes] =
+  first_duplicate_go(Nil, xs);
+
+fn first_duplicate_go(seen: Vec[Bytes], xs: Vec[Bytes]) => Option[Bytes] =
+  match xs {
+    Nil => None,
+    Cons(x, rest) => match names_contains(seen, x) {
+      True => Some(x),
+      False => first_duplicate_go(Cons(x, seen), rest)
+    }
+  };
+
+// resolve_ctors: for each surface `Ctor`, resolve every field `TypeRef` with the decl's type params
+// in scope (reusing the `resolve_ty`/`resolve_args` family), refusing a duplicate constructor name.
+// Mirrors checkty.rs::resolve_ctors arm-for-arm: the `seen` list carries the ctor-names-to-the-left
+// for the dup check (Rust's `ctors.iter().any(..)`), and the result preserves declaration order
+// (prepend-on-return). Never-silent `Err` on a duplicate ctor and on any field-resolution failure
+// (G2/VR-5). The resolve_ty guarantee slot is discarded exactly as in Rust (`let (ty, _) = ..`).
+fn resolve_ctors(types: Vec[DataInfo], td: TypeDecl) => Result[Vec[CtorInfo], Bytes] =
+  resolve_ctors_go(types, td_params(td), Nil, td_ctors(td));
+
+fn resolve_ctors_go(types: Vec[DataInfo], tyvars: Vec[Bytes], seen: Vec[Bytes], cs: Vec[Ctor])
+    => Result[Vec[CtorInfo], Bytes] =
+  match cs {
+    Nil => Ok(Nil),
+    Cons(c, rest) => match names_contains(seen, ct_name(c)) {
+      True => Err(bytes_concat("duplicate constructor `", bytes_concat(ct_name(c), "`"))),
+      False => match resolve_args(types, tyvars, ct_fields(c)) {
+        Err(e) => Err(e),
+        Ok(fields) => match resolve_ctors_go(types, tyvars, Cons(ct_name(c), seen), rest) {
+          Err(e) => Err(e),
+          Ok(more) => Ok(Cons(CI(ct_name(c), fields), more))
+        }
+      }
+    }
   };
 
 // ── unify: one-sided unification, threading the FLAG-semcore-13 substitution (checkty.rs::unify) ──
