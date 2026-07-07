@@ -733,6 +733,77 @@ showed that the *right* emission arm, gated on resolvability, does move the numb
 **Guarantee tags unchanged:** emission `Declared`; vet verdict `Empirical` (real `myc check` /
 `check_phylum`). **Status unchanged (Draft)** — a ladder phase, enacts nothing further.
 
+### §8.13 M-1006 phase-3: field-projection desugaring; the Binary-arithmetic emission ceiling (kickoff `trx2` E-B, epic E33-1) — `Empirical`
+
+The next ladder increment (append-only — extends §8.12). Its before-baseline is §8.12's after-state:
+**760 non-test items, 57 emitted (7.50%), 33 myc-check-clean (4.34%)**. Two faithful transpiler-only
+levers were attacked; one lands a modest gain and the other resolves — via a `tero`-grounded lookup — to
+a **language-decision ceiling**, sharpening §8.12's "target-set boundary" lesson into a concrete,
+cited next-decision.
+
+**Lever 1 — field-projection / struct-literal desugaring (landed).** The grammar has **no projection
+surface** (`path` is a namespace glyph; `self.0` cannot lex), so a `self.<field>` read in an impl body
+now desugars to a `match` on the struct's single positional constructor — `self.mode` →
+`(match self { Permissions(p0) => p0 })` — and a struct literal `Ty { a: x }` / `Self { .. }` to the
+positional ctor call `Ty(x)`. Both are the faithful equivalent (no fabrication), reusing the ctor/field
+layout the emitter already computes; gated (via the M-1006 §8.12 resolvable set, now carried alongside
+the layouts in one `EmitCtx`) on the type being an *emitted* in-file struct so the `match Ty(...)` never
+names an absent constructor. Only `self` desugars (the transpiler tracks no other local types); any
+other base gaps.
+
+**Lever 2 — `rotate_left` lowering (attempted; found not achievable — a language gap, not a transpiler
+fix).** `std-rand/lib` is held solely by `rotl64`'s `x.rotate_left(k)` (confirmed: patching that one
+body to any well-typed expression makes the whole file `myc check`-clean). The faithful lowering is the
+exact identity `(x << k) | (x >> (W − k))`. But probing the oracle, and grounding it against the
+decision corpus via **`tero`** (`docs/tero-index/` → **RFC-0033**; issues **M-887** `bin.mul`, **M-889**
+`bin.shl`/`bin.shr`, **M-766** two's-complement completion, all `done`, `src:crates/mycelium-interp/src/prims.rs`),
+shows the lowering **cannot type-check**: on `Binary{N}` the sanctioned prim set is
+`bin.{add,sub,mul,div,div_s,rem,rem_s,shl,shr,shr_s,neg}` — there is **no `bin.band`/`bin.bor`/`bin.bxor`**,
+so the bit-*or* that `rotate` needs has no prim, and rotate is inexpressible. Two adjacent findings fell
+out of the same probe, recorded for the worklist (G2): (1) the transpiler emits Rust operators verbatim
+(`x << k`, `x + y`, `x & m`), which the checker reads as bare `shl`/`add`/`band` — **not** the real
+`bin.*` prims — so essentially all emitted `Binary{N}` arithmetic/shift bodies currently fail `myc check`;
+(2) a bare integer literal (`64`) has no `Binary{N}` type, so even `64 − k` needs a typed-literal surface.
+Emitting the correct `bin.*` prim requires **operand-type inference the transpiler does not have** (it
+would need to know an operand is `Binary{N}` and its width) plus a typed-literal form — so this is a
+design/decision gap, not a faithful drop-in. **Lever 2 was therefore not implemented** (VR-5: no
+fabricated bit-or, no guessed prim).
+
+**Measured before → after (`Empirical`, union over all 17 targets, non-test denominator 760):**
+
+| Metric | Before (= §8.12 after) | After (Lever 1) | Δ |
+|---|---:|---:|---:|
+| `expressible_fraction` (emitted) | 7.50% (57) | **8.29% (63)** | **+6 items** |
+| `checked_fraction` (myc-check-clean) | 4.34% (33) | **4.61% (35)** | **+2 items** |
+
+The **+2 `checked`** are field-projection methods that resolve in an already-clean file; the gain is
+net-positive but modest, and **one target (`std-fs`) regresses by 1** — emitting more method bodies
+surfaced a *deeper* prim blocker (`group_read`'s `Binary{N}` bit-op), which then poisons its file under
+the per-file oracle. That regression is the same **file-gating coupling** §8.12 documented, and it is the
+tell that the ceiling is no longer emission but the **prim/decision surface**.
+
+**Lesson + the decisions this ladder now needs (grounded).** Transpiler-only `checked` growth is
+near-exhausted and decelerating — §8.11 +0, §8.12 +5, §8.13 +2 — each new arm now fights file-gating and
+lands on a decision gap. The remaining movers are **maintainer decisions**, each captured here with its
+evidence and the exact question, so a future wave can act (this note *records*, it does not decide):
+
+1. **`Binary{N}` arithmetic/bitwise emission (highest-leverage; blocks `std-rand`, `std-fs`, and most
+   numeric bodies).** Decide (a) whether to add `bin.band`/`bin.bor`/`bin.bxor` prims (RFC-0033 has
+   shifts + arithmetic but no bitwise-logic ops — so `&`/`|`, and thus `rotate`, are currently
+   inexpressible), and (b) whether the transpiler may do **operand-type-directed prim selection** (emit
+   `bin.shl(x,k)` / `bin.add(x,y)` from the known `Binary{N}` param types) plus a **typed integer-literal**
+   form. Cite: RFC-0033 §4.1; M-887/M-889/M-766; DN-51 (Binary width arithmetic).
+2. **String/text repr (E18-1) — the single largest bloc (~180 gaps).** `Bytes` exists but is not confirmed
+   a UTF-8 text type; `String`/`str` gap everywhere, cascading through `IoError`/`ContentHash`.
+3. **`mycelium_core` declarations target-set.** Add a headers-only `core` nodule so the out-of-corpus
+   referents resolve (`Value`×87, `GuaranteeStrength`×22, `ContentHash`×16) — checked as one phylum via
+   the landed `--phylum` path (§8.12).
+4. **Inherent-impl duplicate-name auto-rename** (`std-runtime/region`'s two `fn allocate`) — the per-type
+   prefixing the transpiler deliberately refuses (FLAG-ast-5/VR-5); sanction it or leave it a hand-port step.
+
+**Guarantee tags unchanged:** emission `Declared`; vet verdict `Empirical` (real `myc check`). **Status
+unchanged (Draft)** — a ladder phase, enacts nothing further.
+
 ---
 
 ## Meta — changelog
@@ -880,3 +951,18 @@ showed that the *right* emission arm, gated on resolvability, does move the numb
   plus E18-1 repr gaps, so the next lever is target-set expansion checked via `--phylum`, plus E18-1.
   Emission `Declared`, vet `Empirical`. **Status unchanged (Draft)** — a ladder phase, enacts nothing
   further. (Append-only; VR-5; G2.)
+- **2026-07-07 — §8.13 added: field-projection desugaring + the Binary-arithmetic emission ceiling
+  (M-1006, kickoff `trx2` E33-1).** Lands **Lever 1**: a `self.<field>` read desugars to a `match` on the
+  struct's positional constructor (`self.mode` → `(match self { Ty(p0) => p0 })`) and a struct literal to
+  the positional ctor call, both gated on the type being an emitted in-file struct. Union over 17 targets
+  (denom 760): expressible 7.50% → **8.29%** (+6), checked 4.34% → **4.61%** (+2); `std-fs` regresses 1
+  (file-gating coupling). **Lever 2** (`rotate_left`) was attempted and found **not achievable**: grounded
+  via `tero`/`docs/tero-index` → RFC-0033 (M-887/M-889/M-766), the sanctioned `Binary{N}` prim set has no
+  `bin.band`/`bin.bor`/`bin.bxor`, so bit-or — and thus `rotate` — is inexpressible; separately, the
+  transpiler emits raw `<<`/`+`/`&` operators (read as unknown `shl`/`add`/`band`, not `bin.*`) and bare
+  integer literals have no `Binary{N}` type, so `Binary` arithmetic emission needs operand-type inference
+  + a typed-literal form — a design decision, not a faithful drop-in (not implemented, VR-5). Records four
+  grounded maintainer decisions (Binary arithmetic/bitwise prims + typed literals; String/text repr E18-1;
+  `mycelium_core` declarations target-set; inherent-impl dup-name rename). Emission `Declared`, vet
+  `Empirical`. **Status unchanged (Draft)** — a ladder phase, enacts nothing further. (Append-only; VR-5;
+  G2.)
