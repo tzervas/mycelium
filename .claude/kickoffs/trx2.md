@@ -302,3 +302,105 @@ family/sig/kernel_name → prim_table → enablement three-way).
    memory-model RFC, DN-32 §7/RFC-0027 §12); **CU-9 Dense dtype/quant** (RFC-0033 §4.3.2 — rides the
    E20-1 content-address rehash, ADR-030; the maintainer's `vsa_checks` branch has the desktop
    durability numbers to ground it). Mint tracked issues; do not scope partial stubs.
+
+## Session-A continuation (2026-07-07) — M-1013 increment-8 registration family COMPLETE on `dev`
+
+Session A (semcore self-hosting critical path — `lib/compiler/semcore.myc` + the `mycelium-l1`
+differential harness) continued STEP 2 → STEP 3. **This is the durable Session-A handoff — read it
+first, then the RESUME POINT below.** Working branch this session: `claude/trx2-inc-ladder`
+(a clean pointer off `dev`; the main tree, never a leaf branch).
+
+### ✅ Landed on `dev` this session (all leaf→dev PRs, `--no-ff`, both witnesses green, `/pr-review`'d)
+- **STEP 2 marshalling** was landed in the PRIOR Session-A window (PR #1253) and promoted to `main`
+  in that window's release (#1265). Marshalling is the ADOPTED Stage-5 differential method
+  (DN-26 §10.2): decode the `.myc` port's `L1Value` mirror into the real `mycelium_core` type and
+  compare against the live Rust oracle. **This is the trust foundation for every increment below.**
+- **inc-8 PR-2b — full `collect_tuple_arities` walk (PR #1272, merge `bc4d59f4`).** All legs (type-decl
+  ctor fields, fn/trait/impl signatures, `match` patterns, fn-body expressions). **Closed
+  FLAG-semcore-30** (the PR-2 trimmed-walk deferral). Un-collapsed the `Item` mirror to the full
+  8-variant vocab. Bundled a **justfile de-confliction fix** (removed duplicate `tero-index`/
+  `tero-index-gen` recipes a prior sync-down auto-merge had introduced, which made `just` abort).
+- **inc-8 `register_traits` (PR #1292, merge `53f46ab1`).** Two-pass trait registry (dup type-param/
+  name/method refusals + per-method `check_sig_resolves` + forward-ref-tolerant bound validation).
+  Added the **surface `FnSig` decoder** family (distinct from the elab harness's kernel-`KFS` decoder).
+  13 live-differential fixtures.
+- **inc-8 `register_instances` (PR #1295, merge `88efee0e`).** Full 8-check impl/instance registration +
+  coherence (unknown-trait, concrete resolve, arity, `type_head`, phylum-wide pub-blind orphan rule,
+  global uniqueness, exact method-set match). Added `CoherenceView`/`InstanceInfo` mirrors (reusing the
+  existing `Ty` marshalling). 13 live fixtures (incl. dup-method). **Resolved FLAG-semcore-33** by
+  widening `checkty::CoherenceView.types` to `pub(crate)` (the white-box in-crate-test pattern, same as
+  PR-1's `resolve_ctors` widening), upgrading the Data-orphan arm from port-only to a full live
+  differential.
+
+**Net:** the **trait/instance registration family is COMPLETE** on `dev` — `register_types` (prior
+window) + `register_traits` + `register_instances` + the full `collect_tuple_arities` pre-pass, every
+piece live-differential-witnessed against the real `checkty` oracle. No open FLAGs in this slice.
+Current `dev` tip at handoff: `88efee0e` (moves under concurrent sibling sessions — a snapshot).
+
+### ⇒ RESUME POINT (next Session-A) — `resolve_imports`, then increments 9→14
+Next increment-8 piece is **`resolve_imports`** (`checkty.rs::resolve_imports` 1423-1532) — the M-662
+per-nodule `use`-import resolution. **It is notably heavier than the register-family and carries a
+design decision — scope it verify-first (mitigation #14) before spawning a leaf:**
+- Needs an **`Exports`** mirror (`declared: name→is_pub`, plus `types`/`fns`/`traits` maps) and a
+  **`NoduleImports`** mirror (`types`/`fns`/`traits` by simple name + an `ambiguous` set).
+- Needs the `Item` mirror **un-collapsed further** to carry **`ItUse(UsePath{path, glob})`** (PR-2b
+  collapsed `Use` into `ItOther`); keep `collect_tuple_arities_item`'s `ItUse => acc` arm faithful
+  (Use is tuple-free).
+- Needs **path-string helpers**: join segments with `.`, `direct_child(prefix, qual)` (single trailing
+  segment), `split_last_seg(path)`. String work in the port (has `bytes_concat`; needs split/segment
+  logic).
+- The logic: globs first (lowest precedence) → explicit `use`s (shadow globs); dup-explicit refusal;
+  glob-vs-glob → `ambiguous` (never a silent winner); unknown-name vs exists-but-private distinct
+  refusals. All never-silent (G2).
+- **⚑ DESIGN DECISION (flag, don't guess):** the oracle's `NoduleImports` carries full `DataInfo`/
+  `FnDecl`/`TraitInfo` payloads (via `insert_export`), but the *resolution logic* is purely name-based
+  (globs/precedence/dup/ambiguity). Option (a) marshal `NoduleImports` fully (needs a surface
+  `decode_fn_decl` — not yet built); option (b) project to `(simple→qual bindings, ambiguous set)` and
+  compare that — captures ALL resolution behavior without the payload-copy marshalling. **Recommend (b)**
+  (the payloads are the source `Exports`' own already-tested decls; the increment's contract is the
+  binding/precedence/ambiguity behavior). Confirm at scope time.
+
+Then increments **9** (checker `Cx` ~3.2k — MUST sub-split 2-3 PRs; folds M-1011 `infer_type` residual,
+FLAG-semcore-20) → **10** (elab core, consumes M-1012 L0 mirror) → **11** (mono, +FLAG-semcore-17) →
+**12** (eval — may need the AOT leg, dossier §7 FLAG-4) → **13** (fuse) → **14** (whole-program
+differential + mutants). Pattern for every increment: verify-first vs the oracle → Opus leaf in an
+isolated worktree (2 files: `semcore.myc` + `compiler_stage5_*.rs`) → orchestrator re-verifies BOTH
+witnesses → `/pr-review` agent → leaf→dev `--no-ff` merge.
+
+### ⇒ HELD: dev→integration→main promotion of the register-family slice (maintainer decision, 2026-07-07)
+The completed register-family slice is a **coherent, promotable unit**, but the maintainer directed
+**HALT before promoting** — do NOT run the round-trip this session. When resumed (maintainer or next
+session), promote it the **curated scoped-slice** way (DN-65 + last window's #1260/#1265 precedent),
+because `integration`/`main` carry concurrent sibling work and a full-`dev` promotion would drag
+unrelated in-flight changes:
+- Branch off `integration`; `git checkout origin/dev --` the semcore slice files (`semcore.myc` + the
+  `compiler_stage5_*.rs` test files + `marshal_support.rs` + the `checkty.rs` `pub(crate)` widenings +
+  `justfile` de-confliction); confirm each differs from `integration` only by the slice.
+- Hand-author the close-out on the shared release surface: **CHANGELOG** (one consolidated block for
+  PR-2b + register_traits + register_instances + FLAG-30/33), **DN-26** stays coherent Draft, and the
+  **issues.yaml E18-1 status flips** (see below — but the maintainer's PM sync script owns `issues.yaml`;
+  coordinate, don't collide).
+- Verify on the integration base (stricter tier): full `just check` + both witnesses + fmt/clippy/
+  doc_refs. dev→integration `--no-ff`; **`integration→main` squash is HELD as the terminal maintainer
+  checkpoint** (maintainer's explicit choice this session — do NOT auto-squash to main).
+
+### Status deltas for the maintainer's PM sync script (I did NOT edit `issues.yaml` — it's script-owned)
+- **M-1013** (semcore heavy-core increments) — `in-progress`. Done: increment-8 PR-1 (`resolve_ctors`),
+  PR-2 (`register_types`), PR-2b (full `collect_tuple_arities`, FLAG-30 closed), `register_traits`,
+  `register_instances` (FLAG-33 resolved). Remaining: `resolve_imports` (+ any `Env` assembly) then
+  increments 9→14.
+- FLAGs: **FLAG-semcore-30 CLOSED** (PR-2b), **FLAG-semcore-33 RESOLVED** (register_instances PR).
+- **Fast-follow (non-gating):** an oracle gap `/pr-review` surfaced — `checkty::collect_tuple_arities_expr`
+  treats `Expr::Lit` as a leaf, so a `TupleLit` nested inside a `Literal::List` (`[(1,2)]`) is walked by
+  neither the Rust oracle nor the port. Degrades safely (unregistered `Tuple$N` → explicit
+  `resolve_tuple` Err). Worth a follow-up against `checkty.rs` (the port is faithfully inheriting it).
+
+### Ops carried forward (Session-A specifics)
+- Both witnesses before every land: `cargo test -p mycelium-l1` (the `compiler_stage5_register`/`_elab`
+  differentials) + `just myc-dogfood --strict` (`myc check semcore.myc`). clippy `--no-deps` (mycelium-mlir
+  unsafe warnings are pre-existing/exempt, ADR-014). `--no-verify` sanctioned (external hooks unreachable);
+  gates run out-of-band. Commit msg via `-F <file>` (heredocs/backticks trip the branch-guard parser);
+  split `git commit`/`git push` (no `&&`). Force-push PROHIBITED; leaf→dev `--no-ff`; only `main` squashes.
+- The GitHub-created merge commits + inherited sibling-session commits on `dev` show as **Unverified**
+  (`noreply@github.com`) — NOT ours to rewrite (would need a forbidden force-push to protected `dev`).
+  Our own commits carry `noreply@anthropic.com`; the stop-hook flags are expected and inert.
