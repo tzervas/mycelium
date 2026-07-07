@@ -61,11 +61,17 @@ fn cases() -> Vec<Case> {
             rust: "Box<Vec<u16>>",
             expect: Ok("Box[Vec[Binary{16}]]"),
         },
-        // An unmappable *type* argument gaps the whole application — `String` has no confirmed
-        // base_type arm, and its precise inner `GapReason` (category `Other`) propagates unchanged
-        // (never a partial `Option[..]` emission). This is the tuple-arm propagation precedent.
+        // A `String` type argument now maps to `Bytes` (RFC-0033 §3.2 — DN-34 §8.14), so the whole
+        // application emits `Option[Bytes]` rather than gapping.
         Case {
             rust: "Option<String>",
+            expect: Ok("Option[Bytes]"),
+        },
+        // An unmappable *type* argument still gaps the whole application — `char` has no confirmed
+        // base_type arm, and its precise inner `GapReason` (category `Other`) propagates unchanged
+        // (never a partial `Vec[..]` emission). This is the tuple-arm propagation precedent.
+        Case {
+            rust: "Vec<char>",
             expect: Gap(Other),
         },
         // A signed-integer argument likewise propagates its own (Other) gap — Binary{N} is unsigned.
@@ -125,11 +131,17 @@ fn cases() -> Vec<Case> {
             rust: "&Vec<u8>",
             expect: Ok("Vec[Binary{8}]"),
         },
-        // NEVER-SILENT CASCADE: a `&T` whose *referent* has no mapping still gaps — the reference is
-        // erased, then the referent's own precise reason surfaces (here `&str` -> `str` -> Other),
-        // never a partial emission. This is the honest deeper-blocker the erasure exposes (§8.10).
+        // `&str` erases to `str`, which now maps to `Bytes` (RFC-0033 §3.2 — §8.14): a shared
+        // reference to a text value composes with the erasure arm to emit `Bytes`.
         Case {
             rust: "&str",
+            expect: Ok("Bytes"),
+        },
+        // NEVER-SILENT CASCADE: a `&T` whose *referent* has no mapping still gaps — the reference is
+        // erased, then the referent's own precise reason surfaces (here `&char` -> `char` -> Other),
+        // never a partial emission. This is the honest deeper-blocker the erasure exposes (§8.10).
+        Case {
+            rust: "&char",
             expect: Gap(Other),
         },
         // A `&mut T` is NOT erased (mutation has no value-semantic correspondence, ADR-003) — an
@@ -212,18 +224,28 @@ fn qualified_generic_path_still_gapped() {
     assert_eq!(err.category, Category::Other);
 }
 
+/// `&str` erases to `str`, which now maps to `Bytes` (RFC-0033 §3.2 — DN-34 §8.14) — the
+/// type-position twin of the string-literal value emission. A regression that re-gapped `str` (or
+/// failed to erase the shared reference) would fail here.
+#[test]
+fn shared_reference_to_str_maps_to_bytes() {
+    assert_eq!(map_type(&ty("&str"), None).unwrap(), "Bytes");
+    assert_eq!(map_type(&ty("String"), None).unwrap(), "Bytes");
+    assert_eq!(map_type(&ty("str"), None).unwrap(), "Bytes");
+}
+
 /// Never-silent cascade (G2/VR-5, this leaf): a shared reference whose *referent* has no confirmed
 /// mapping gaps with the **referent's own** reason, not a reference-shaped one — the `&` is erased,
-/// then `str` surfaces as the real blocker. A future change that started emitting a partial surface
-/// for `&str` (or masked the referent behind a generic "reference" reason) would fail here.
+/// then `char` surfaces as the real blocker. A future change that started emitting a partial surface
+/// for `&char` (or masked the referent behind a generic "reference" reason) would fail here.
 #[test]
 fn shared_reference_to_unmapped_referent_surfaces_referent_reason() {
-    let err = map_type(&ty("&str"), None)
-        .expect_err("`&str` must gap — its referent `str` has no confirmed base_type arm");
+    let err = map_type(&ty("&char"), None)
+        .expect_err("`&char` must gap — its referent `char` has no confirmed base_type arm");
     assert_eq!(err.category, Category::Other);
     assert!(
-        err.reason.contains("String") || err.reason.contains("str"),
-        "the gap must name the *referent* (`str`) as the blocker, not the reference: {}",
+        err.reason.contains("char"),
+        "the gap must name the *referent* (`char`) as the blocker, not the reference: {}",
         err.reason
     );
     assert!(
