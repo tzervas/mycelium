@@ -29,8 +29,8 @@
 
 **Proposed / `Declared`**, advisory (DN-17 posture: a planning capture, not a ratified decision).
 This note **enacts nothing** — no repo is created, no CI is wired, no `mycelium-proj.toml` is split,
-no code changes as a result of it. It **supersedes no existing decision** (append-only, house rule
-#3): it **builds on** ADR-013 (spore = deployable unit), ADR-037 (GHCR/OCI is the binding v0 registry
+no code changes as a result of it. It **supersedes no existing decision** (append-only, house
+rule #3): it **builds on** ADR-013 (spore = deployable unit), ADR-037 (GHCR/OCI is the binding v0 registry
 backend), DN-28 (the content-hash-DAG + fetch-and-verify distribution model), and the
 Spore-Build-and-Publish-Contract (`mycelium-proj.toml` → spore) — none of which this note redecides —
 and it **refines** DN-27 (the original decomposition capture), which stays `Draft` and unedited.

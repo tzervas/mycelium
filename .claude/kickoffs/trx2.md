@@ -302,3 +302,51 @@ family/sig/kernel_name → prim_table → enablement three-way).
    memory-model RFC, DN-32 §7/RFC-0027 §12); **CU-9 Dense dtype/quant** (RFC-0033 §4.3.2 — rides the
    E20-1 content-address rehash, ADR-030; the maintainer's `vsa_checks` branch has the desktop
    durability numbers to ground it). Mint tracked issues; do not scope partial stubs.
+
+## Session-3 LAUNCH PAD (2026-07-07 pm) — parallelize A/B/C in ONE Sonnet-swarm session
+
+The maintainer will run **one session that parallelizes all three lanes with Sonnet agents.** This is
+the single entry point: the base facts, the one landmine to respect, and where each lane's detailed
+worklist lives. Read it, then dispatch one agent per lane.
+
+### Base (branch off `dev`)
+`main` = `dff9debe` — the big `integration → main` release squash (`9c6ca6e9`) landed the whole wave
+(self-hosting Stage 2–5, RFC-0041, eval/AOT perf, the transpiler vet loop, **and the full
+`mycelium-tero` M-1015…M-1018**), then back-propagated into `integration` (#1268) + `dev` (#1269).
+`dev` (currently `0c18d526`, moving fast) contains all of `main` + the in-flight waves — **branch every
+lane off the latest `dev` tip** (re-fetch first; it moves between waves).
+
+### ⚠ THE LANDMINE — `dev`'s `issues.yaml` is STALE vs the landed code (mitigation #2 + #14) · VERIFY-FIRST
+The back-prop merges **kept `dev`'s side of `issues.yaml`**, so the tracker disagrees with the code that
+is actually on `dev`. Confirmed drift (code present, tracker wrong): tero **M-1016/17/18 = `todo`** (they
+are `done` on `main`) and **M-1020 absent** on `dev` (present `todo` on `main`); semcore **M-1012 =
+`needs-design`** though its elab port is in `dev:lib/compiler/semcore.myc`. **Ground truth is the
+codebase (VR-5).** Every agent reproduces/confirms an issue against the source before implementing — do
+NOT re-implement landed work (mitigation #14). The integrator does **one `issues.yaml` reconciliation
+pass** (sync `dev` statuses to reality + pull `main`'s M-1020 row down) in the next dev→integration batch.
+
+### The three lanes (dispatch one isolated-worktree Sonnet agent each)
+- **Lane A — semcore self-hosting** (`lib/compiler/semcore.myc` + the differential harness). **Critical
+  path, SEQUENTIAL — keep it to ONE agent.** Worklist = the **Session-2 continuation** above: **STEP 2**
+  (adopt harness *marshalling* as the differential method) **then STEP 3** M-1013 increments **8→14**.
+  M-993 is the heavy-core umbrella. These share `semcore.myc` regions, so no intra-lane parallelism.
+- **Lane B — tero** (`crates/mycelium-tero/`). **✅ COMPLETE** — M-1015…M-1018 are on `main` (Layer-1
+  index, query+provenance, MCP+HTTP fronts + 4 `.claude/skills/tero-*`, VSA Layer-2 + the eval gate;
+  **Gate Run 1 = CLOSED**, serves Layer-1 — DN-87 §6.1; the Run-1 numbers are **frozen**, do NOT re-run
+  for a promotion). **Remaining is small — at most one agent, or skip:** **M-1020** native HTTPS/TLS for
+  the HTTP front (`todo`, P3, unblocked — a rustls-backed axum-tls path; runtime cert+key never
+  committed; the plain-HTTP `127.0.0.1` floor stays default; extend auth+parity tests; amend ADR-044);
+  **M-1019** the tero `.myc` package is still **`blocked` on M-993** (not actionable until Lane A lands).
+- **Lane C — transpiler ladder + kernel prim-gaps** (`crates/mycelium-transpile/`, `gen/myc-drafts/`,
+  `mycelium-core` prims, `std.math`/`std.cmp` surfaces). Worklist = the **Session-C UPDATE** section
+  directly above (M-1006 ladder + CU-1/2/4/6 already landed; remaining **CU-3** float↔int conversions,
+  **CU-5** executable `wrapping`, **CU-7** arbitrary-width ternary, the **transpiler operator/comparator
+  emission** with operand-type inference, and the **spec-doc sync**; CU-6/8/9 deferred to design).
+
+### Swarm shape (maintainer directive)
+One orchestrator, **Sonnet agents**, one **isolated worktree per lane** (mitigation #11), disjoint dirs
+→ collision-free. Keep the concurrent count modest and prune `target/` between waves (the ~41G disk
+ceiling is the bound — Ops lessons above). The orchestrator owns the shared collision surface
+(`issues.yaml` incl. the reconciliation pass, `CHANGELOG`, `Doc-Index`, `docs/api-index/`); leaves FLAG
+up. Promote leaf→`dev` via `/pr-land`; `dev→integration` is the batch close-out; `integration→main`
+stays the terminal **maintainer** checkpoint.
