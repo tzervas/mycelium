@@ -1,9 +1,10 @@
-# Kickoff `mem` — The Transparent Memory Substrate & Agent Knowledge API (DN-87; name TBD)
+# Kickoff `mem` — mycelium-tero: The Transparent Memory Substrate & Agent Knowledge API (DN-87)
 
 > **Base: `dev`.** Branch off the current `dev` tip, one isolated worktree per concurrent agent,
 > merge to `dev`, promote `dev → integration → main` per the tiered workflow. Fire in a **fresh
-> session** via `/kickoff mem`. **STOWED — fires when the maintainer delivers the project's name**
-> (naming is maintainer-reserved; the crate cannot scaffold nameless — DN-87 §Naming).
+> session** via `/kickoff mem`. **▶ FIRED 2026-07-07 — named `mycelium-tero`** by the maintainer
+> (a quiet homage to Atsushi Tero, for his contribution to science and engineering — the name is
+> sugar; the system is code). Scaffold landed with the naming PR; wave 1 = the M-1015 lane.
 
 ## Mission
 
@@ -23,10 +24,10 @@ agent-reviewed) worked up the tree `dev → integration → main`.
 
 | Lane | Issue | Owns (disjoint) |
 |---|---|---|
-| L1 index | **M-1015** | `crates/mycelium-<NAME>/**` (core) · `tools/<NAME>/**` (Python ingestion) |
+| L1 index | **M-1015** | `crates/mycelium-tero/**` (core) · `tools/tero/**` (Python ingestion) |
 | Query+provenance | **M-1016** | the crate's query modules (after M-1015's skeleton lands) |
-| API+skills | **M-1017** | `crates/<NAME>-api/**` (or a bin) · `.claude/skills/<NAME>-*/**` |
-| VSA layer+eval | **M-1018** | the crate's vsa modules + `experiments/<NAME>-eval/**` |
+| API+skills | **M-1017** | `crates/tero-api/**` (or a bin) · `.claude/skills/tero-*/**` |
+| VSA layer+eval | **M-1018** | the crate's vsa modules + `experiments/tero-eval/**` |
 | .myc package | **M-1019** | `lib/` target — **blocked on M-993 by design**, not wave-1 |
 
 Sequencing: M-1015 first (the skeleton every lane builds on) → M-1016/M-1017/M-1018 parallel
@@ -44,7 +45,7 @@ CHANGELOG, Doc-Index, `issues.yaml`, api-index regen).
 
 ## First steps
 
-1. Receive the name → scaffold `crates/mycelium-<NAME>` (workspace-registered, buildable stub) →
+1. Receive the name → scaffold `crates/mycelium-tero` (workspace-registered, buildable stub) →
    commit + push the scaffold before fanning out (swarm pre-flight).
 2. Confirm DN-87 §2 resolutions stand; flip DN-87's naming field; E39-1 → `in-progress`.
 3. Fan out the M-1015 lane; the rest per the sequencing above.
