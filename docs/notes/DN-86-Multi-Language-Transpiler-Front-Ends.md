@@ -1,10 +1,10 @@
-# DN-85 — Multi-Language Transpiler Front-Ends (Python · TypeScript · Java)
+# DN-86 — Multi-Language Transpiler Front-Ends (Python · TypeScript · Java)
 
 | Field | Value |
 |---|---|
 | **Status** | **Draft** — strategy note; decides nothing normatively (feeds a future epic + RFC/ADR) |
 | **Task** | proposed **E35** (front-end abstraction) + per-language epics; ids **proposed, not minted** (mitigation #1) |
-| **Related** | DN-34 (Rust→Mycelium transpiler strategy — the parent), M-991/M-1000/M-1006 (the trx2 ladder), `rwr` (the Phase-II rewrite this feeds), DN-26 (self-hosting) |
+| **Related** | **DN-85** (the strategy/vision companion — this note is its *architecture*; the two were authored concurrently and reconciled to distinct numbers), DN-34 (Rust→Mycelium transpiler strategy — the parent), M-991/M-1000/M-1006 (the trx2 ladder), `rwr` (the Phase-II rewrite this feeds), DN-26 (self-hosting) |
 | **Grounding** | `crates/mycelium-transpile/**` (the current architecture), DN-34 §8.7–§8.10 (the M-991 gap-profiling-instrument verdict, `Empirical`) |
 | **Guarantee** | `Empirical`/`Declared` per-claim; the whole note is `Declared` (a proposal) until an epic + RFC ratify it |
 
@@ -24,16 +24,24 @@ coupling to Rust's `syn` parser is concentrated, not pervasive (`Empirical`, gre
 
 - **Front-end (Rust-specific):** `transpile.rs` (item dispatch over `syn::Item`, 16 `syn::` sites),
   `emit.rs` (construct → `.myc` text, 10 sites), `map.rs` (type mapping, 2 sites).
-- **Backend (already language-neutral):** `gap.rs` (the never-silent `GapReport` taxonomy — its
-  categories are *about the Mycelium target surface*, not the Rust source), and `vet.rs` (the
-  `myc check` vet loop — measures `checked_fraction` against the real toolchain, source-agnostic).
+- **Backend (largely reusable — vet + emit source-agnostic, taxonomy generalized):** `vet.rs` (the
+  `myc check` vet loop — measures `checked_fraction` against the real toolchain) and the `.myc`
+  emitter are **source-agnostic** (they only ever see the normalized IR + the Mycelium target).
+  `gap.rs`'s `GapReport` *structure* (never-silent category + reason + location) is reused wholesale,
+  **but** several of its current categories are **Rust-source-shaped** (`Trait`/`Impl`/`MacroDef`/
+  `DeriveAttr`/`WhereClause`/`AssocConst`/…, `Empirical` from the `enum Category` variants) — so a
+  multi-language front-end **generalizes the category set** (adds/renames per source language) rather
+  than inheriting it verbatim. Honest split: "language-neutral" holds for *vet + emit*; the gap
+  taxonomy is *reusable-but-not-yet-source-neutral*.
 
-So a multi-language transpiler is a **front-end abstraction**, not a rewrite: define a small
-**normalized source IR** (the subset of constructs the emitter already understands — items, types,
-expressions, patterns, blocks) that each language front-end (`syn` for Rust; `ast`/RustPython/
-tree-sitter for Python; the TS compiler API/tree-sitter for TS; JavaParser/tree-sitter for Java)
-lowers into, and keep `gap.rs` + `vet.rs` + the `.myc` emitter **shared**. Each front-end owns only
-*parse + lower-to-IR*; the gap-profiling + vet + emit machinery is reused verbatim. **The trx2
+So a multi-language transpiler is a **front-end abstraction + a taxonomy generalization**, not a
+ground-up rewrite: define a small **normalized source IR** (the subset of constructs the emitter
+already understands — items, types, expressions, patterns, blocks) that each language front-end
+(`syn` for Rust; `ast`/RustPython/tree-sitter for Python; the TS compiler API/tree-sitter for TS;
+JavaParser/tree-sitter for Java) lowers into, and keep `vet.rs` + the `.myc` emitter **shared** with
+`gap.rs`'s structure shared and its category set generalized per §1. Each front-end owns only
+*parse + lower-to-IR*; the vet + emit machinery is reused verbatim (the gap taxonomy generalized).
+**The trx2
 M-1006 ladder (per-module rip → vet → patch the transpiler → record) transfers directly** — it is
 the correct method here and needs no reinvention.
 
