@@ -13,8 +13,7 @@
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use mycelium_tero::build_tero_index;
-use mycelium_tero::emit::{write_json, write_markdown};
+use mycelium_tero::{build_tero_index, write_json, write_markdown};
 
 const EX_OK: u8 = 0;
 const EX_USAGE: u8 = 64;

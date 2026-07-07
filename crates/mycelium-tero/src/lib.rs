@@ -2,11 +2,11 @@
 //!
 //! **M-1015 (this crate's first landed engine): Layer 1 — the deterministic, drift-gated structured
 //! index over the WHOLE corpus.** It generalizes the proven `docs/api-index/` + `docs/lib-index/`
-//! pattern (a grep-friendly [`INDEX.md`](emit) beside a machine [`index.json`](emit), a never-silent
-//! `flagged` section, a uniform `Empirical/Declared` honesty tag) from one source language to every
-//! corpus family: docs ([`docs`]), the issue tracker ([`issues`]), the changelog ([`changelog`]),
-//! research records ([`docs`]), and the agent skills ([`skills`]) — emitted to `docs/tero-index/`.
-//! The `api-index`/`lib-index` outputs are *referenced* as sibling indices, never duplicated.
+//! pattern (a grep-friendly `INDEX.md` beside a machine `index.json`, a never-silent `flagged`
+//! section, a uniform `Empirical/Declared` honesty tag) from one source language to every corpus
+//! family — docs (RFC/ADR/DN/spec/guide/planning), research records, the issue tracker, the
+//! changelog, and the agent skills — emitted to `docs/tero-index/`. The `api-index`/`lib-index`
+//! outputs are *referenced* as sibling indices ([`SIBLING_INDICES`]), never duplicated.
 //!
 //! DRY (house rule #5): the markdown *structure* is parsed by `mycelium_doc::corpus::ingest` (the
 //! existing CommonMark-subset corpus parser), not a second heuristic; this crate adds only the
@@ -21,15 +21,20 @@
 //!
 //! Named in quiet homage to Atsushi Tero, for his contribution to science and engineering.
 
-pub mod changelog;
-pub mod docs;
-pub mod emit;
-pub mod index;
-pub mod issues;
-pub mod model;
-pub mod skills;
-pub mod walk;
+// Internal modules — the extraction engine. The crate's *public* surface (KC-3 small, auditable
+// kernel; YAGNI) is deliberately just the three re-exports below: the whole-corpus build, the two
+// artifact writers, and the model types a downstream consumer (M-1016 query / M-1017 API) needs.
+// The per-family extractors and filesystem plumbing stay crate-internal.
+mod changelog;
+mod docs;
+mod emit;
+mod index;
+mod issues;
+mod model;
+mod skills;
+mod walk;
 
+pub use emit::{write_json, write_markdown};
 pub use index::build_tero_index;
 pub use model::{
     Family, Flagged, SiblingIndex, TeroIndexItem, TeroIndexReport, HONESTY_TAG, ITEM_TAG,
