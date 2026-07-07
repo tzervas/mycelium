@@ -2508,6 +2508,241 @@ fn check_tp_bounds(all: Vec[TraitInfo], trname: Bytes, method: Bytes, pname: Byt
     }
   };
 
+// ── register_instances: the IMPL pass — registration + coherence (checkty.rs::register_instances ──
+// 3116-3238; M-1013 STEP 3, PR-3). Ports checkty.rs's impl-registration/coherence pass, value-threaded
+// over an assoc-list instance registry `Vec[InstanceInfo]` (the FLAG-semcore-4 stand-in for
+// `BTreeMap<(String,String), InstanceInfo>` keyed by `(trait_name, type_head(for_ty))`, exactly as
+// `register_types`/`register_traits` stand in for their maps). Arm-for-arm with the oracle, in the
+// EXACT order (checkty.rs 3131-3235): for each `Item::Impl(id)` --
+//   (1) the trait must EXIST in `traits` (3135-3143) else "unknown trait";
+//   (2) resolve `for_ty` and each `trait_arg` CONCRETELY (empty tyvars -- 3146-3150);
+//   (3) ARITY: `trait_args.len() == tr.params.len()` (3152-3163) else refuse;
+//   (4) `type_head(for_ty)` must be `Some` (3165-3174) else "bare type variable is not a legal head";
+//   (5) ORPHAN rule -- phylum-wide, pub-blind (M-662; 3175-3209): legal iff `trait_local`
+//       (coherence.traits has the trait) OR `type_local` (for_ty is a `Data` in coherence.types, OR a
+//       primitive repr -- Binary/Ternary/Dense/Vsa/Substrate/Seq/Bytes/Float -> true; Var/Fn -> false),
+//       else orphan refusal;
+//   (6) GLOBAL UNIQUENESS: `(trait_name, head)` must be free (3210-3224) else overlapping-instance;
+//   (7) `check_impl_method_set` -- the impl's method-name SET must EXACTLY match the trait's required
+//       sig names (3225-3226 / 3243-3284): a missing OR extra method (and a duplicate) is refused;
+//   (8) insert `InstanceInfo{trait_name, trait_args, for_ty, methods = id.methods.map(m.sig.name)}`.
+// Every refusal is never-silent (G2/VR-5), mirroring the oracle's site + reason. Registry ORDER is
+// insertion-reversed (prepend `Cons`) vs the oracle's sorted `BTreeMap`; every consumer is
+// order-insensitive (uniqueness is a `(trait, head)` membership scan; the differential decodes the
+// returned `Vec` into a `(trait, head)`-keyed map), and the loop returns `Ok` or the FIRST refusal
+// only -- so port and oracle agree on Ok / any-refusal regardless of order. Guarantee: `Declared` --
+// the coherence argument is Declared-with-argument per RFC-0019/LR-2 (checkty.rs 3101-3102's tag),
+// NOT machine-checked; the port keeps the oracle's tag (never upgraded -- VR-5).
+
+// InstanceInfo: mirrors checkty.rs::InstanceInfo (277-286) -- { trait_name, trait_args (concrete Ty),
+// for_ty (concrete Ty), methods (provided method names) }. Modeled as a presence-checked
+// `Vec[InstanceInfo]` keyed by `(trait_name, type_head(for_ty))`, exactly as the other register-family
+// outputs are Vecs (NOT maps).
+type InstanceInfo = InstInfo(Bytes, Vec[Ty], Ty, Vec[Bytes]);
+
+fn instinfo_trait_name(i: InstanceInfo) => Bytes =
+  match i { InstInfo(n, _, _, _) => n };
+
+fn instinfo_for_ty(i: InstanceInfo) => Ty =
+  match i { InstInfo(_, _, f, _) => f };
+
+// CoherenceView: mirrors checkty.rs::CoherenceView (1318-1323) -- the pub-blind phylum-wide name view
+// the orphan rule reads: (all trait names, all data-type names), each a `Vec[Bytes]` name-list (the
+// FLAG-semcore-4 assoc-list stand-in for the oracle's two `BTreeSet<String>`; membership via
+// `names_contains`).
+type CoherenceView = CV(Vec[Bytes], Vec[Bytes]);
+
+fn cv_traits(c: CoherenceView) => Vec[Bytes] =
+  match c { CV(t, _) => t };
+
+fn cv_types(c: CoherenceView) => Vec[Bytes] =
+  match c { CV(_, t) => t };
+
+// ImplDecl trait-name accessor (ImD field 1) -- the register-family tuple pre-pass read only
+// args/for_ty/methods; the impl pass needs the trait name (lookup + instance key + messages).
+fn imd_trait_name(i: ImplDecl) => Bytes =
+  match i { ImD(n, _, _, _) => n };
+
+// TraitInfo params accessor (TrInfo field 2) -- the trait pass registered it; the arity check reads it.
+fn trinfo_params(t: TraitInfo) => Vec[Bytes] =
+  match t { TrInfo(_, p, _) => p };
+
+// traits_lookup: `traits.get(name)` over the assoc-list registry (the ENTRY, not just membership --
+// register_instances needs the `TraitInfo` for the arity + method-set checks).
+fn traits_lookup(traits: Vec[TraitInfo], name: Bytes) => Option[TraitInfo] =
+  match traits {
+    Nil => None,
+    Cons(tr, rest) => match bytes_eq(trinfo_name(tr), name) {
+      0b1 => Some(tr),
+      _ => traits_lookup(rest, name)
+    }
+  };
+
+// impl_method_names / trait_required_names: the impl's provided method NAMES (`m.sig.name`, i.e.
+// `fnsig_name(fndecl_sig(m))`) and the trait's required method NAMES (`s.name` over the trait's sigs) --
+// the two name-sets `check_impl_method_set` compares (checkty.rs 3245-3248).
+fn impl_method_names(id: ImplDecl) => Vec[Bytes] =
+  method_sig_names(imd_methods(id));
+
+fn method_sig_names(ms: Vec[FnDecl]) => Vec[Bytes] =
+  match ms {
+    Nil => Nil,
+    Cons(m, rest) => Cons(fnsig_name(fndecl_sig(m)), method_sig_names(rest))
+  };
+
+fn trait_required_names(sigs: Vec[FnSig]) => Vec[Bytes] =
+  match sigs {
+    Nil => Nil,
+    Cons(s, rest) => Cons(fnsig_name(s), trait_required_names(rest))
+  };
+
+// check_impl_method_set: the impl's method SET must EXACTLY match the trait's requirement SET
+// (checkty.rs::check_impl_method_set 3243-3284). In the oracle's ORDER: (a) every required name is
+// provided (else "missing method"); (b) every provided name is required (else "has method ... not in
+// trait"); (c) no provided name appears twice (else "provides ... more than once"). All three are
+// explicit never-silent refusals (G2) -- never a silently-filled or silently-dropped method.
+fn check_impl_method_set(tr: TraitInfo, id: ImplDecl) => Result[Bool, Bytes] =
+  let required = trait_required_names(trinfo_sigs(tr)) in
+  let provided = impl_method_names(id) in
+  match check_methods_present(trinfo_name(tr), required, provided) {
+    Err(e) => Err(e),
+    Ok(_) => match check_methods_no_extra(trinfo_name(tr), required, provided) {
+      Err(e) => Err(e),
+      Ok(_) => match first_duplicate(provided) {
+        Some(dup) => Err(bytes_concat("impl of `", bytes_concat(trinfo_name(tr), bytes_concat("` provides method `", bytes_concat(dup, "` more than once"))))),
+        None => Ok(True)
+      }
+    }
+  };
+
+// (a) every required method name must be present in `provided` (checkty.rs 3249-3256).
+fn check_methods_present(trname: Bytes, required: Vec[Bytes], provided: Vec[Bytes]) => Result[Bool, Bytes] =
+  match required {
+    Nil => Ok(True),
+    Cons(need, rest) => match names_contains(provided, need) {
+      True => check_methods_present(trname, rest, provided),
+      False => Err(bytes_concat("impl of `", bytes_concat(trname, bytes_concat("` is missing method `", bytes_concat(need, "`")))))
+    }
+  };
+
+// (b) every provided method name must be required -- no extra methods (checkty.rs 3257-3267).
+fn check_methods_no_extra(trname: Bytes, required: Vec[Bytes], provided: Vec[Bytes]) => Result[Bool, Bytes] =
+  match provided {
+    Nil => Ok(True),
+    Cons(have, rest) => match names_contains(required, have) {
+      True => check_methods_no_extra(trname, required, rest),
+      False => Err(bytes_concat("impl of `", bytes_concat(trname, bytes_concat("` has method `", bytes_concat(have, bytes_concat("` not in trait `", bytes_concat(trname, "`")))))))
+    }
+  };
+
+// type_local: the orphan rule's `type_local` arm (checkty.rs 3182-3198), matching the `for_ty` variant
+// EXACTLY as the oracle -- a `Data` head is local iff its name is in coherence.types; every primitive
+// repr (Binary/Ternary/Dense/Vsa/Substrate/Seq/Bytes/Float) is phylum-owned (always true); `Var`/`Fn`
+// are not legal heads (false -- kept for exhaustiveness, never a silent accept, G2; `type_head` refuses
+// them upstream so these two arms are unreachable in practice).
+fn type_local(coherence_types: Vec[Bytes], for_ty: Ty) => Bool =
+  match for_ty {
+    TyData(n, _) => names_contains(coherence_types, n),
+    TyBinary(_) => True,
+    TyTernary(_) => True,
+    TyDense(_, _) => True,
+    TyVsa(_, _, _) => True,
+    TySubstrate(_) => True,
+    TySeq(_, _) => True,
+    TyBytes => True,
+    TyFloat => True,
+    TyVar(_) => False,
+    TyFn(_, _) => False
+  };
+
+// orphan_ok: legal iff trait_local OR type_local (checkty.rs 3181-3199).
+fn orphan_ok(coherence: CoherenceView, trait_name: Bytes, for_ty: Ty) => Bool =
+  match names_contains(cv_traits(coherence), trait_name) {
+    True => True,
+    False => type_local(cv_types(coherence), for_ty)
+  };
+
+// instance_head_eq: does `for_ty`'s head equal `head`? A stored instance always has a `Some` head (it
+// passed the type_head check), so the `None` arm is an unreachable-in-practice `False` -- never a
+// silent match (G2).
+fn instance_head_eq(for_ty: Ty, head: Bytes) => Bool =
+  match type_head(for_ty) {
+    Some(h) => beq(h, head),
+    None => False
+  };
+
+// instances_contains_key: `instances.contains_key((trait_name, head))` over the assoc-list registry --
+// the global-uniqueness scan (checkty.rs 3213-3214). The stored `(trait, head)` is recomputed from the
+// instance's `for_ty` (the registry keeps the full for_ty, not the erased head).
+fn instances_contains_key(acc: Vec[InstanceInfo], trait_name: Bytes, head: Bytes) => Bool =
+  match acc {
+    Nil => False,
+    Cons(inst, rest) => match and_(beq(instinfo_trait_name(inst), trait_name), instance_head_eq(instinfo_for_ty(inst), head)) {
+      True => True,
+      False => instances_contains_key(rest, trait_name, head)
+    }
+  };
+
+// register_instances: the two-level loop (checkty.rs 3130-3237). Returns the instance registry or the
+// FIRST refusal. `register_one_instance` threads the accumulated registry so the uniqueness scan sees
+// earlier-registered instances (the oracle's growing `BTreeMap`).
+fn register_instances(types: Vec[DataInfo], traits: Vec[TraitInfo], coherence: CoherenceView, nod: Nodule) => Result[Vec[InstanceInfo], Bytes] =
+  register_instances_go(types, traits, coherence, Nil, nodule_items(nod));
+
+fn register_instances_go(types: Vec[DataInfo], traits: Vec[TraitInfo], coherence: CoherenceView, acc: Vec[InstanceInfo], items: Vec[Item]) => Result[Vec[InstanceInfo], Bytes] =
+  match items {
+    Nil => Ok(acc),
+    Cons(it, rest) => match it {
+      ItImpl(id) => match register_one_instance(types, traits, coherence, acc, id) {
+        Err(e) => Err(e),
+        Ok(acc2) => register_instances_go(types, traits, coherence, acc2, rest)
+      },
+      _ => register_instances_go(types, traits, coherence, acc, rest)
+    }
+  };
+
+// register_one_instance: the per-impl body (checkty.rs 3132-3235) -- the eight checks in the oracle's
+// EXACT order. `resolve_ty`'s guarantee slot is discarded (`let (for_ty, _) = ..`), matching the oracle.
+fn register_one_instance(types: Vec[DataInfo], traits: Vec[TraitInfo], coherence: CoherenceView, acc: Vec[InstanceInfo], id: ImplDecl) => Result[Vec[InstanceInfo], Bytes] =
+  match traits_lookup(traits, imd_trait_name(id)) {
+    None => Err(bytes_concat("`impl` for unknown trait `", bytes_concat(imd_trait_name(id), "` (RFC-0019 SS4.5)"))),
+    Some(tr) => match resolve_ty(types, Nil, imd_for_ty(id)) {
+      Err(e) => Err(e),
+      Ok(forpr) => match forpr { Pr(for_ty, _) =>
+        match resolve_args(types, Nil, imd_trait_args(id)) {
+          Err(e) => Err(e),
+          Ok(trait_args) => match eq_u(ty_len(trait_args), names_len(trinfo_params(tr))) {
+            False => Err(arity_mismatch_msg(trinfo_name(tr), names_len(trinfo_params(tr)), ty_len(trait_args))),
+            True => match type_head(for_ty) {
+              None => Err("an `impl ... for` a bare type variable / function type is not a legal instance head in stage-1 (no blanket instances -- RFC-0019 SS4.5); the `for` type must be concrete"),
+              Some(head) => match orphan_ok(coherence, imd_trait_name(id), for_ty) {
+                False => Err(orphan_msg(imd_trait_name(id))),
+                True => match instances_contains_key(acc, imd_trait_name(id), head) {
+                  True => Err(overlapping_msg(imd_trait_name(id), head)),
+                  False => match check_impl_method_set(tr, id) {
+                    Err(e) => Err(e),
+                    Ok(_) => Ok(Cons(InstInfo(imd_trait_name(id), trait_args, for_ty, impl_method_names(id)), acc))
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  };
+
+// The three never-silent refusal messages, mirroring the oracle's site + reason wording (checkty.rs
+// 3152-3163 / 3199-3209 / 3214-3224). Built in `bytes_concat` pieces (the file's established idiom).
+fn arity_mismatch_msg(trname: Bytes, want: Binary{32}, got: Binary{32}) => Bytes =
+  bytes_concat("trait `", bytes_concat(trname, bytes_concat("` takes ", bytes_concat(dec_u32(want), bytes_concat(" type argument(s), but this `impl` supplies ", bytes_concat(dec_u32(got), " (RFC-0019 SS4.5)"))))));
+
+fn orphan_msg(trname: Bytes) => Bytes =
+  bytes_concat("orphan instance: `impl ", bytes_concat(trname, " for ...` -- neither the trait nor the `for` type is declared in any nodule of this phylum (RFC-0019 SS4.5 orphan rule, phylum-wide; M-662)"));
+
+fn overlapping_msg(trname: Bytes, head: Bytes) => Bytes =
+  bytes_concat("overlapping instance -- coherence/global-uniqueness violation (RFC-0019 SS4.5): a second `impl ", bytes_concat(trname, bytes_concat(" for` a `", bytes_concat(head, "` type. Stage-1 keys per (trait, type-head), so two instances on the same head conflict"))));
+
 // ── unify: one-sided unification, threading the FLAG-semcore-13 substitution (checkty.rs::unify) ──
 // same_ty_len: the `a1.len() == a2.len()` guard on the Data arm (a two-list structural length eq).
 fn same_ty_len(a: Vec[Ty], b: Vec[Ty]) => Bool =
