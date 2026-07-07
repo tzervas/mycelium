@@ -101,3 +101,30 @@ fn max{N}(a: Binary{N}, b: Binary{N}) => Binary{N} =
 // min<N>: the smaller of a and b; returns a when equal (irrelevant tie-break, as max). Exact.
 fn min{N}(a: Binary{N}, b: Binary{N}) => Binary{N} =
   match cmp(a, b) { Lt => a, Eq => a, Gt => b };
+
+// ── CU-4: the missing surface completeness (RFC-0033 §4.1.2 / RFC-0032 D1) ─────────────────────────
+// RFC-0032 D1 makes `eq`/`lt` the minimal comparison *prim* basis; everything else is derived here.
+// These close the surface gaps the transpiler needs (signed ordering + `ne`/`gt`) — all Exact,
+// total over Binary{N} x Binary{N}, no new kernel prim (the `lt_s` prim already exists, unused).
+
+// ne<N>: True iff a != b — the negation of `eq` (Exact; total).
+fn ne{N}(a: Binary{N}, b: Binary{N}) => Bool =
+  match eq(a, b) { 0b1 => False, _ => True };
+
+// gt<N>: True iff a > b (unsigned) — a projection of cmp (Exact; total).
+fn gt{N}(a: Binary{N}, b: Binary{N}) => Bool =
+  match cmp(a, b) { Gt => True, Lt => False, Eq => False };
+
+// cmp_s<N>: SIGNED three-way comparison — two's-complement ordering (RFC-0033 §4.1.2: ordering is
+// signedness-distinct). Uses the `lt_s` prim (signed less-than) + `eq` (bit-identity, signedness-
+// agnostic). Total, Exact for every concrete N.
+fn cmp_s{N}(a: Binary{N}, b: Binary{N}) => Ordering =
+  match eq(a, b) { 0b1 => Eq, _ => match lt_s(a, b) { 0b1 => Lt, _ => Gt } };
+
+// le_s<N>: True iff a <= b under the SIGNED (two's-complement) ordering — projection of cmp_s. Exact.
+fn le_s{N}(a: Binary{N}, b: Binary{N}) => Bool =
+  match cmp_s(a, b) { Lt => True, Eq => True, Gt => False };
+
+// ge_s<N>: True iff a >= b under the SIGNED ordering — projection of cmp_s. Exact.
+fn ge_s{N}(a: Binary{N}, b: Binary{N}) => Bool =
+  match cmp_s(a, b) { Lt => False, Eq => True, Gt => True };
