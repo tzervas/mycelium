@@ -13247,3 +13247,167 @@ issues:
         preservation stated and, where feasible, differentially verified); the staging-promotion
         heavy-check scheduling recorded in the tier docs; no guarantee weakened (VR-5) and no
         gate silently skipped (G2).
+
+  - id: E39-1
+    title: "E39-1 (epic) — the transparent memory substrate & agent knowledge API (DN-87; name TBD)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:epic, area:tooling, priority:P2, status:todo]
+    epic: E39
+    depends_on: [M-1015, M-1016, M-1017, M-1018, M-1019]
+    doc_refs:
+      - corpus:DN-87
+      - src:.claude/kickoffs/mem.md
+      - src:docs/api-index/INDEX.md
+    body: |
+      EPIC (DN-87, maintainer vision 2026-07-07; kickoff `mem`, stowed). Convert the project's
+      corpus (methodologies, decisions, intents, language docs, tracker state) into an optimized,
+      GENERATED, TRANSPARENT encoding that supplements the human-friendly format -- search/access
+      akin to but improved upon RAG -- exposed as a secure, platform-agnostic API (MCP + HTTP)
+      any agent platform can use, with an optimized skill set on top. Hybrid two-layer substrate:
+      a deterministic structured index (the api-index/lib-index pattern generalized -- the floor)
+      + a VSA semantic layer on Mycelium's own hypervector substrate (the improved-on-RAG bet,
+      Empirical-gated per DN-87 §6). Rust core + Python ingestion for v0; the Mycelium-lang
+      package is phase-gated (M-1019). MIT-only. NAMING IS THE MAINTAINER'S -- the build wave
+      fires when the name lands; everything here is name-agnostic until then.
+
+      User stories:
+      - As an agent (Claude Code, Grok, any platform), I want cited answers about this project's
+        decisions and methods in one query, so that I load context instead of re-reading the corpus.
+      - As the maintainer, I want the encoding transparent and provenance-carrying, so that a
+        wrong answer is traceable to its source in one hop -- never an opaque embedding artifact.
+
+      Definition of Done:
+      - M-1015..M-1019 done; the eval harness demonstrates the DN-87 §6 gate; the API + skills
+        serve at least two distinct platforms; every answer carries resolvable provenance;
+        regeneration is deterministic + drift-gated; MIT headers throughout.
+
+  - id: M-1015
+    title: "M-1015 — Corpus ingestion + the deterministic structured index (Layer 1)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:feature, area:tooling, priority:P2, status:todo]
+    epic: E39-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-87
+      - src:tools/docgen/code_index.py
+      - src:crates/mycelium-doc/src/lib_index.rs
+    body: |
+      Minted 2026-07-07 (DN-87 §4). Generalize the proven deterministic-index pattern
+      (api-index/lib-index: committed, grep-friendly MD + machine JSON, drift-gated, flagged
+      section for extraction limits) over the WHOLE corpus: docs/ (RFC/ADR/DN/specs/guides),
+      tools/github/issues.yaml (+idmap), CHANGELOG, research/ records, .claude/skills, and the
+      existing api-/lib-index outputs (referenced, not duplicated). Rust crate core
+      (mycelium-<NAME>, name pending) + Python ingestion glue where it genuinely fits. Entries
+      carry: source ref (file:line/id), kind, status, guarantee tag of the cited claim where one
+      exists, and stable anchors for cross-platform citation.
+
+      User stories:
+      - As an agent, I want one queryable index over decisions/issues/docs with stable anchors,
+        so that a cross-cutting question is one lookup, not a dozen file reads.
+
+      Definition of Done:
+      - Deterministic regeneration (byte-identical across runs at a commit); committed artifact +
+        drift gate (skip-graceful) wired the doc-index way; extraction limits in a flagged
+        section (G2); every corpus family above covered or its exclusion recorded.
+
+  - id: M-1016
+    title: "M-1016 — Query engine + mandatory provenance (EXPLAIN-able retrieval)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:feature, area:tooling, priority:P2, status:todo]
+    epic: E39-1
+    depends_on: [M-1015]
+    doc_refs:
+      - corpus:DN-87
+    body: |
+      Minted 2026-07-07 (DN-87 §4/§6). The query layer over Layer 1: structured queries (by id,
+      status, kind, cross-reference walk) + text search, every answer carrying resolvable
+      citations and the guarantee tag of what it cites. An answer without a resolvable citation
+      is a REFUSAL, not an answer (never-silent applied to retrieval). Retrieval decisions are
+      EXPLAIN-able (why these sources, in what order).
+
+      User stories:
+      - As the maintainer, I want a wrong answer traceable to its source in one hop, so that the
+        memory system can be audited exactly like the corpus it encodes.
+
+      Definition of Done:
+      - Query API (in-crate) with citation-mandatory answers; refusal path tested; EXPLAIN output
+        for ranking; latency measured and recorded (Empirical) on the real corpus.
+
+  - id: M-1017
+    title: "M-1017 — API fronts (MCP + HTTP, token-scoped) + the cross-platform skill set"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:feature, area:tooling, priority:P2, status:todo]
+    epic: E39-1
+    depends_on: [M-1016]
+    doc_refs:
+      - corpus:DN-87
+      - src:.claude/skills/doc-index/SKILL.md
+    body: |
+      Minted 2026-07-07 (DN-87 §2.3). One core, two thin fronts: an MCP server (native tool
+      ergonomics for MCP-speaking platforms) and a plain versioned HTTP/JSON API (the universal
+      floor -- Grok, curl, anything). Token-scoped auth, read-only by default; no secret material
+      served (the gitleaks gate runs over generated artifacts). On top: the optimized skill set
+      (query, cite, explain, refresh) so agents access it intuitively rather than raw.
+
+      User stories:
+      - As any agent platform, I want the same answers over MCP or HTTP with the same citations,
+        so that the memory extension is genuinely platform-agnostic.
+
+      Definition of Done:
+      - Both fronts serve the M-1016 engine with parity (differential-tested answers); auth
+        enforced + tested; skills documented + registered; a second-platform smoke (non-Claude)
+        recorded.
+
+  - id: M-1018
+    title: "M-1018 — The VSA semantic layer (Layer 2) + the Empirical eval gate"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:feature, area:tooling, priority:P2, status:todo]
+    epic: E39-1
+    depends_on: [M-1015, M-1016]
+    doc_refs:
+      - corpus:DN-87
+      - corpus:RFC-0003
+      - corpus:RFC-0009
+    body: |
+      Minted 2026-07-07 (DN-87 §2.1/§6 -- the improved-on-RAG bet, honestly gated). Encode
+      facts/relations from Layer 1 as hypervector structures on mycelium-vsa (bind/bundle;
+      retrieval via resonator/cleanup decode with EXPLAIN-able traces). Ships WITH its eval
+      harness: a question set drawn from real agent tasks over this corpus, graded on answer
+      correctness + provenance fidelity + latency, comparing Layer 2 vs the Layer-1 baseline
+      (optionally + a conventional embedding baseline). THE GATE: until Layer 2 measurably
+      beats/complements the baseline, the improved-on-RAG claim stays aspiration and the system
+      serves Layer-1 answers (G2/VR-5). A Layer-2 answer always names its Layer-1 evidence.
+
+      User stories:
+      - As the maintainer, I want the novel retrieval claim proven on a graded harness before it
+        is made, so that the memory system's own honesty matches the language's.
+
+      Definition of Done:
+      - Layer-2 encode/decode lands; the harness + question set committed; the comparison numbers
+        recorded (Empirical, with denominators + seed discipline); the gate verdict recorded
+        append-only in DN-87; provenance preserved through Layer 2.
+
+  - id: M-1019
+    title: "M-1019 — The Mycelium-lang package (phase-gated dogfood milestone)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:feature, area:tooling, priority:P3, status:blocked]
+    epic: E39-1
+    depends_on: [M-1017, M-993]
+    doc_refs:
+      - corpus:DN-87
+      - corpus:DN-26
+      - src:lib/compiler/README.md
+    body: |
+      Minted 2026-07-07 (DN-87 §2.2). Port the engine's core to an actual Mycelium-lang package
+      once the toolchain is truly developed enough to host it -- phase-gated on boot10/M-993
+      maturity and served by the DN-85/M-1006 transpiler ladder (the Rust core is deliberately a
+      ladder target). status:blocked on M-993 by design; unblocking is a checked decision, not a
+      date. The dogfood milestone: Mycelium's memory system written in Mycelium.
+
+      User stories:
+      - As the maintainer, I want the memory substrate itself to become Mycelium code when the
+        language can carry it, so that the flagship dogfood loop closes.
+
+      Definition of Done:
+      - The core query/encode path runs as a .myc package with a differential vs the Rust engine
+        (Empirical); the gate that unblocked this issue is cited in its landed-basis note.

@@ -11,6 +11,25 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### DN-87 — the transparent memory substrate & agent knowledge API captured; E39-1 + M-1015…M-1019 minted (2026-07-07)
+
+Captures (Proposed) the maintainer's vision near-verbatim: the corpus (methodologies, decisions,
+intents, language docs, tracker state) converted into a **generated, transparent,
+provenance-carrying encoding** that *supplements* the human-friendly format — search/access
+**improved upon RAG**, with that claim explicitly `Empirical`-gated behind M-1018's graded eval
+harness — exposed as a **secure, platform-agnostic API** (MCP + HTTP, token-scoped) plus an
+optimized skill set usable by Claude Code, Grok, and any other platform. Hybrid substrate:
+the deterministic structured-index pattern generalized corpus-wide (Layer 1, the floor) + a **VSA
+semantic layer** on `mycelium-vsa` with `EXPLAIN`-able resonator retrieval (Layer 2, the
+improved-on-RAG bet). v0 = Rust core + Python ingestion; the **Mycelium-lang package** is a
+phase-gated dogfood milestone (M-1019 ⟂ M-993). Mandatory provenance — an uncited answer is a
+refusal (G2); deterministic, drift-gated regeneration; MIT-only by house rule, with the
+maintainer's contribute-to-society intent recorded. Epic **E39-1** + **M-1015…M-1019** minted
+(E35–E38 left to DN-86's proposal); kickoff **`mem`** stowed — **the build wave (the fractal-swarm
+/ concurrent-PR shape) fires when the maintainer names the project**. Four design forks
+orchestrator-resolved (`Declared`, maintainer-overridable) after the interactive confirm failed —
+the session's standing pattern.
+
 ### DN-85 — the multi-language transpilation program + single-language full-stack goal (2026-07-06)
 
 Records (Proposed, maintainer direction) the generalization of DN-34's Rust-only transpiler into a
