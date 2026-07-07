@@ -393,8 +393,80 @@ codebase (mitigation #14), not changed here.
 **unblocks M-1013** (the elab core + eval legs now have a fixed L0 model to build against). DN-26 status
 stays **Draft**.
 
+### 10.1 Implementation note (M-1012) — the differential method actually adopted
+
+> **Posture (append-only; VR-5/G2).** This subsection does not alter the Option-A decision above — the
+> in-language mirror model stands as decided, unchanged. It corrects and HONESTLY records the specific
+> comparison **method** the M-1012 landing (increment 7, `compiler_stage5_elab.rs`) actually implements,
+> which differs from this section's original phrasing above ("the mirror's canonical rendering
+> (serialization / content-hash) against the Rust oracle's real kernel value"). That phrasing described
+> a *target posture*; the shipped differential reached the same independence goal by a simpler route.
+> Downgrading a `Declared`-but-inaccurate description to an accurate one is what VR-5 requires — never
+> silently leaving the corpus saying something the code doesn't do.
+
+**Method actually implemented — source-text encoding + `.myc`-side structural equality, not
+serialization/content-hash.** For each fixture: (1) the REAL Rust oracle (`elab::lit_value`/
+`type_repr`/`field_spec`/`ty_to_repr`/`ty_to_field_ty_ref`/…) runs on the fixture, producing a genuine
+`mycelium_core::{Value,Repr,FieldSpec,…}`; (2) that Rust value is encoded — by a small family of Rust
+`encode_core_*` functions living in the test file, never by `serde` or a content-hash — directly to
+**`.myc` SOURCE TEXT**: a literal expression in the mirror ADTs (e.g.
+`Ok(Val(RBinary(4), PlBits(Cons(0b1, …)), MtExactRoot))`); (3) that literal is spliced into a driver
+program alongside a call to the `.myc` port's own helper (e.g. `lit_value(Bin("1010"))`), evaluated
+independently; (4) BOTH `.myc`-side values are compared by hand-written `.myc` structural-equality
+functions (`value_eq`/`repr_eq`/`payload_eq`/… — FLAG-semcore-28) evaluated **inside the L1
+interpreter**, yielding a `Bool`; (5) the Rust harness (`assert_l1_only_u32`) asserts that `Bool` against
+the expected `True`/`False`. No canonical rendering, serialization, or content-hash of either side is
+computed at any step — the comparison is a plain in-language structural equality over two
+independently-constructed mirror values.
+
+**Trust properties (honestly bounded, not assumed).**
+
+- **WF7 (checked-exhaustive `match`, RFC-0011 §4.3 / RFC-0001) guards the MISSING-variant class.**
+  Every `_eq` comparator is a flat `match` over a mirror ADT, and the `.myc` checker refuses to compile
+  a `match` that omits a constructor of the scrutinee's type (no silent fallthrough is expressible). A
+  comparator that forgot to handle an entire `Repr`/`Payload` variant is a compile-time error, not a
+  silently-wrong differential — this class is bounded `Proven` (checked by the compiler, not merely
+  argued).
+- **WF7 does NOT guard the PRESENT-but-WRONG-arm class** (an arm that compiles, covers its constructor,
+  but compares the wrong field or is miswired to always agree) — that residual risk is exactly what the
+  M-1012 patch's non-vacuity discipline (`compiler_stage5_elab.rs::elab_witness_discriminates` — every
+  introduced `_eq` comparator gets at least one must-return-`False` case, isolating the one dimension its
+  arm guards) exists to bound. The two mechanisms are complementary, at different strengths: WF7 bounds
+  the missing-arm class structurally (`Proven`); the non-vacuity discipline bounds the wrong-arm class
+  empirically (`Empirical` — a finite, isolating case set, not an exhaustive proof over every possible
+  wrong wiring).
+- The `.myc`-side comparators are themselves hand-written, not derived — they restate BY HAND the Rust
+  kernel's derived `PartialEq` (FLAG-semcore-28). Their correctness is bounded by this differential's own
+  case coverage, not independently checked against `mycelium_core`'s real `PartialEq` impls.
+
+**Future option, recorded not adopted (an M-1013+ design input).** As ported output types grow
+(recursive `Value::Seq`, `Hypervector`/dense payloads, a non-trivial `Meta`), the hand-written
+`.myc`-side `_eq` family's trust surface grows with it — each new variant needs its own hand-verified
+comparator arm plus a non-vacuity case. A heavier alternative for later, larger increments, kept here as
+a documented option rather than adopted now: **harness marshalling** — decode the `.myc` mirror's
+OUTPUT back into the real `mycelium_core::Value`/`Repr`/… (a `wild:` or `@std-sys` decode step, or a
+pure-Rust decoder over the mirror's `.myc`-side rendering) and compare it to the Rust oracle's value
+using Rust's own trusted `#[derive(PartialEq)]` — or compare `mycelium_core::Value` content-hashes
+directly (the posture this section originally described above). Either route removes the hand-written
+`.myc`-side `_eq` family from the trust path entirely, at the cost of a decode/marshalling seam. Not
+needed at increment-7 scale (8 comparator families, each non-vacuity-cased this wave); tracked as an
+M-1013 design input, not a commitment.
+
 ## Meta — changelog
 
+- **2026-07-07 — §10.1 added: an "Implementation note" honestly reconciling §10's described
+  differential method with the one M-1012 actually shipped (append-only, no status move; M-1012 PR
+  review patch).** §10's original text described the differential as comparing "canonical rendering
+  (serialization/content-hash)" against the Rust oracle; the increment-7 landing
+  (`compiler_stage5_elab.rs`) instead encodes the Rust oracle's value to `.myc` SOURCE TEXT and
+  compares it to the port's own value with hand-written `.myc` structural-equality functions
+  (`value_eq`/`repr_eq`/… — FLAG-semcore-28), evaluated in the L1 interpreter — no serialization or
+  content-hash step anywhere. §10.1 records the actual method, its trust properties (WF7
+  match-exhaustiveness bounds the missing-variant class `Proven`; the M-1012 patch's mandatory
+  non-vacuity discipline bounds the wrong-arm class `Empirical`), and documents **harness
+  marshalling** (decode to real `mycelium_core` types + Rust's derived `==`, or content-hash
+  comparison) as a recorded-not-adopted option for heavier M-1013 increments. Does not alter the
+  Option-A decision. Status stays **Draft** (→ Resolved with M-741). (M-1012; E18-1; VR-5/G2.)
 - **2026-07-07 — §10 added: the L0 `Value`/`Repr`/`FieldSpec` boundary decided — Option A, the
   in-language mirror model (append-only, no status move; M-1012).** The maintainer picked the
   frontend/kernel L0-boundary `[FLAG]` M-1012 carried (§7.2): declare the kernel L0 vocabulary as plain

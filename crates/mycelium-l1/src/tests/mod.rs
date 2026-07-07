@@ -6,6 +6,7 @@ mod affine;
 mod ambient;
 mod ast;
 mod checkty;
+mod compiler_stage5_elab;
 mod compiler_stage5_freevars;
 mod compiler_stage5_mangle;
 mod compiler_stage5_normpat;

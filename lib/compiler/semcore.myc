@@ -2539,3 +2539,434 @@ fn normalize_pattern(types: Vec[DataInfo], pat: Pattern, expected: Ty, occ: Vec[
     PLit(lit) => normalize_lit(lit, expected, binds),
     POr(_) => Err("internal: Pattern::Or reached normalize_pattern -- or-patterns must be desugared in check_match before any downstream pass (invariant violation -- report this)")
   };
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// elab.rs PURE L0 LOWERING HELPERS (M-740 Stage 5, increment 7 — M-1012; DN-26 SS7.3 row 5 / SS10).
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// The FIRST wave to cross the frontend/kernel L0 seam (DN-26 SS7.2). Every prior increment (1..6)
+// ported only frontend-internal `Ty`-algebra / `Bytes` transformers; these helpers construct the
+// KERNEL L0 vocabulary (`mycelium_core::{Value, Repr, FieldSpec, FieldTyRef, ScalarKind,
+// SparsityClass, Payload}`). Per the maintainer's ratified decision (DN-26 SS10 — Option A, the
+// in-language mirror model), that vocabulary is declared as plain Mycelium ADTs here (mirroring the
+// Rust kernel field-for-field) and the differential compares the mirror against the live Rust oracle
+// (`compiler_stage5_elab.rs`) by structural equality (the FLAG-semcore-12 `ty_eq` posture, one layer
+// down). This wave is ENTIRELY `wild`-FREE: pure lowering = mirror construction, no kernel FFI
+// (ADR-042 wild-free-core goal; the single "materialize the finished L0" crossing DN-26 SS10 reserves
+// `wild` for is NOT in this wave).
+//
+// FLAG-semcore-22 (the L0 kernel MIRROR ADTs — DN-26 SS10 Option A). `ScalarK`/`SparsityC`/`FloatW`/
+// `Repr`/`TritK`/`Payload`/`Meta`/`Value`/`FieldTyRef`/`KFnSig`/`FieldSpec` mirror
+// `crates/mycelium-core/src/{repr,value,data,node}.rs` field-for-field. Disjoint prefixes (the
+// FLAG-semcore-2 scheme, extended): `Sk` (ScalarKind), `Sc` (SparsityClass — distinct from surface
+// `Sparsity`'s `Sp`), `Fw` (FloatWidth), `R` (Repr), `Tk` (Trit), `Pl` (Payload — distinct from the
+// surface `Pattern` `P`- and `Paradigm` `P`-families, FLAG-semcore-23), `Mt` (Meta), `Val` (Value),
+// `Ft` (FieldTyRef), `KFS` (the KERNEL FnSig — spelled `KFnSig`/`KFS` because the SURFACE `FnSig`/`FS`
+// mirror is already present, FLAG-semcore-1), `Fs` (FieldSpec). Every bare tag was diffed against
+// every prior family here (verified disjoint). This is exactly the FLAG-semcore-1/-2 move that mirrors
+// `checkty.rs`'s `Ty`/`DataInfo`, extended from the frontend `Ty` to the kernel `Value`/`Repr`.
+//
+// FLAG-semcore-23 (`Payload` mirror declares only the wild-free-CONSTRUCTIBLE variants this wave
+// uses — `PlBits`/`PlTrits`/`PlBytes`). `Payload::{Scalars,Hypervector,Float,Seq}` are OMITTED:
+// `Scalars`/`Hypervector`/`Float` need the deferred `Float` model (FLAG-semcore-25) and `Seq` needs a
+// recursive `Value`; no ported helper constructs them (the FLAG-semcore-1 "declare structural, omit
+// unused" precedent). `mycelium_core::Payload::Bytes(Vec<u8>)` is mirrored as `PlBytes(Bytes)` — the
+// `.myc` `Bytes` primitive IS the byte-vector (isomorphic); this also SIDESTEPS the absent
+// byte-value-synthesis primitive (there is no `ord`/`chr`/`from_u8` in the wild-free surface, so an
+// element-wise `Vec[Binary{8}]` cannot be built from arbitrary content — a real surface limit, not a
+// modelling choice).
+//
+// FLAG-semcore-24 (`Meta` mirrored MINIMALLY as the single nullary `MtExactRoot`). `lit_value`
+// constructs exactly one Meta, `Meta::exact(Provenance::Root)`; Meta is NOT identity-bearing for
+// content-addressing (content.rs hashes neither provenance nor dynamic value metadata), and no ported
+// helper varies it. Full Meta (provenance/measured-sparsity/realized-bounds/policy_used) is deferred
+// until a helper that constructs a non-trivial Meta lands. `Value` stays field-faithful (the
+// `(repr, payload, meta)` triple — `Val(Repr, Payload, Meta)`).
+//
+// FLAG-semcore-25 (`lit_value`'s `LBytes` and `LFloat` arms DEFERRED — not faked, G2/VR-5). `LBytes`
+// (hex -> byte-vector) needs the byte-value-synthesis primitive the wild-free surface lacks (see
+// FLAG-semcore-23); `LFloat` needs correctly-rounded decimal->binary64 (`f64::from_str`), infeasible
+// to match byte-for-byte in wild-free `.myc` this wave (the same class as the FLAG-semcore-27 hash
+// defer). Both arms return an explicit never-silent `Err` naming the deferral (an honest refusal, not
+// a wrong value). The `Bin`/`Trit`/`Str` arms + the `Int`/`AmbientInt`/`List` refusals ARE ported
+// faithfully, with real payloads. Under ADR-042's wild-free-core goal these two arms are the residual
+// `wild`-candidates for this helper — tracked, never silently defaulted.
+//
+// FLAG-semcore-26 (the fallible helpers narrow `Result<_, ElabError>` to `Result[_, Bytes]` — the
+// FLAG-semcore-3/-13 precedent). The structured `ElabError` (Residual/UnknownFn/DepthExceeded, with
+// its `site`) becomes a plain `Bytes` reason; the `site` argument is DROPPED. The differential asserts
+// Ok/Err (and Some/None) + the success payload, never the message bytes (`res_repr_eq`/`res_value_eq`/
+// `opt_*_eq` treat any `Err`==`Err` / `None`==`None`).
+//
+// FLAG-semcore-27 (`policy_name_ref`'s HASH deferred; only the wild-free PREIMAGE ported — reworded
+// 2026-07-07, M-1012 patch: the ORIGINAL text below wrongly named BLAKE3-unavailability as the
+// blocker; corrected to the real one). The Rust `policy_name_ref` =
+// `operation_hash(&policy_name_preimage(policy))` (elab.rs), and `operation_hash`
+// (`mycelium_core::content::Canon`) = BLAKE3 over the FRAMED bytes `[0x07 PRIM-domain tag] ++
+// [u64-LE length prefix] ++ [preimage UTF-8 bytes]` (content.rs `Canon::tag`/`Canon::str`/
+// `Canon::blob`). The domain-separated PREIMAGE itself (`policy-name.v0:<dotted>`) is the FRONTEND's
+// contribution and IS ported wild-free (`policy_name_preimage`), differential-tested LIVE-ORACLE
+// against the extracted `elab::policy_name_preimage` (a `pub(crate)` extraction made for exactly this
+// oracle-reachability — behaviour-preserving).
+//
+// The REAL blocker is NOT the hash function — `hash_blake3(b: Bytes) -> Bytes` IS already a
+// wild-free, surface-callable `.myc` primitive (M-912, checkty.rs: total and deterministic over
+// every `Bytes` input). The blocker is CONSTRUCTING `operation_hash`'s raw-byte PREIMAGE to feed it:
+// the `0x07` domain-tag byte and the 8-byte little-endian length prefix are raw byte VALUES, and the
+// wild-free `.myc` surface has no byte-value-synthesis primitive (no `\xNN`/`0x..`/`ord`/`chr`/
+// `from_u8`) to construct them — the SAME gap FLAG-semcore-25 documents for `lit_value`'s `LBytes`
+// arm and FLAG-semcore-23 documents for `Payload`'s omitted variants. So `policy_name_ref` is
+// DEFERRED to the single materialization/kernel-hash crossing (a `wild:` framing-construction prim,
+// or a wild-free path once a byte-synthesis primitive lands — `hash_blake3` itself needs no `wild:`)
+// — not faked (a mismatch would be never-silent: every `PolicyRef` would diverge in the differential,
+// G2). No `PolicyRef` mirror is declared this wave (it is a `ContentHash` string; the ported surface
+// stops at the preimage `Bytes`).
+//
+// FLAG-semcore-28 (the L0-mirror structural-equality scaffolding — the FLAG-semcore-12 `ty_eq` posture,
+// extended). `scalark_eq`/.../`value_eq`/`field_spec_eq` restate the derived `PartialEq` of the mirrored
+// kernel types so the differential DRIVER (appended after this nodule in `compiler_stage5_elab.rs`) has
+// a `Bool` witness. Like `ty_eq`, they live in this logic file because the driver — plain `.myc` text
+// appended to the nodule — can only call functions declared here. Not tests; comparison utilities.
+//
+// FLAG-semcore-29 (`lit_value`'s `Bin`/`Trit` arms omit the `MAX_DIM` UPPER-bound refusal — an
+// intentional scope cut this wave, not an oversight; G2). The Rust oracle's `Value::new` runs
+// `Repr::check_well_formed` -> `dim_in_range`, which refuses BOTH `width == 0` (the lower bound,
+// PORTED below — `eq(w, zero32())`) AND `width > MAX_DIM` (`mycelium_core::repr::MAX_DIM = 2^30`,
+// repr.rs) as `WfError::DimensionTooLarge`. This port's `Bin`/`Trit` arms replicate the lower-bound
+// refusal only; a `Binary`/`Ternary` literal with more than `2^30` digits would be ACCEPTED here
+// where the Rust oracle refuses. Practical risk is negligible — the source text for such a literal
+// exceeds 1 GB, past any literal this wave's differential (or any real program) approaches — but the
+// divergence is honestly recorded rather than silently dropped (G2/VR-5); closing it is deferred to a
+// future increment that adds the `Binary{32}`-safe `> MAX_DIM` comparison.
+
+// ── L0 kernel mirror ADTs (FLAG-semcore-22; DN-26 SS10 Option A) ─────────────────────────────────
+// ScalarK: mirrors mycelium_core::ScalarKind (repr.rs).
+type ScalarK = SkF16 | SkBf16 | SkF32 | SkF64;
+
+// SparsityC: mirrors mycelium_core::SparsityClass (repr.rs). Sparse carries the max_active passthrough.
+type SparsityC = ScDense | ScSparse(Binary{32});
+
+// FloatW: mirrors mycelium_core::FloatWidth (repr.rs) — F64-only at introduction (ADR-040 FLAG-1).
+type FloatW = FwF64;
+
+// Repr: mirrors mycelium_core::Repr (repr.rs), the four closed paradigm kinds + Seq/Float/Bytes.
+type Repr =
+    RBinary(Binary{32})
+  | RTernary(Binary{32})
+  | RDense(Binary{32}, ScalarK)
+  | RVsa(Bytes, Binary{32}, SparsityC)
+  | RSeq(Repr, Binary{32})
+  | RFloat(FloatW)
+  | RBytes;
+
+// TritK: mirrors mycelium_core::Trit (value.rs).
+type TritK = TkNeg | TkZero | TkPos;
+
+// Payload: mirrors mycelium_core::Payload (value.rs) — the wild-free-constructible subset only
+// (FLAG-semcore-23). `PlBytes(Bytes)` holds the byte-vector directly (the `.myc` Bytes primitive).
+type Payload = PlBits(Vec[Binary{1}]) | PlTrits(Vec[TritK]) | PlBytes(Bytes);
+
+// Meta: mirrors mycelium_core::Meta minimally (FLAG-semcore-24) — the single `exact(Root)` form.
+type Meta = MtExactRoot;
+
+// Value: mirrors mycelium_core::Value (value.rs) — the (repr, payload, meta) triple.
+type Value = Val(Repr, Payload, Meta);
+
+// KFnSig: mirrors mycelium_core::FnSig (data.rs) — (arity, params, ret). Spelled `KFnSig`/`KFS` to
+// avoid the SURFACE `FnSig`/`FS` mirror already present (FLAG-semcore-22).
+type KFnSig = KFS(Binary{32}, Vec[FieldTyRef], FieldTyRef);
+
+// FieldTyRef: mirrors mycelium_core::FieldTyRef (data.rs).
+type FieldTyRef = FtRepr(Repr) | FtData(Bytes) | FtFn(KFnSig);
+
+// FieldSpec: mirrors mycelium_core::FieldSpec (data.rs).
+type FieldSpec = FsRepr(Repr) | FsData(Bytes) | FsFn(Binary{32}, KFnSig);
+
+// ── the pure lowering helpers (elab.rs), in dependency order (DN-26 SS10 landing order) ──────────
+
+// scalar_kind (elab.rs:1043) — Scalar -> ScalarKind. Boundary-independent (lands first, DN-26 SS10);
+// its tag twin `scalar_tag` (mono.rs) already landed increment 4.
+fn scalar_kind(s: Scalar) => ScalarK =
+  match s { SF16 => SkF16, SBf16 => SkBf16, SF32 => SkF32, SF64 => SkF64 };
+
+// sparsity_class (elab.rs:1053) — Sparsity -> SparsityClass (the Sparse arm is a bare max_active
+// passthrough). Boundary-independent; its tag twin `vsa_sp_tag` already landed increment 4.
+fn sparsity_class(sp: Sparsity) => SparsityC =
+  match sp { SpDense => ScDense, SpSparse(k) => ScSparse(k) };
+
+// lit_value (elab.rs:102) — a representation literal's L0 Value. Bin/Trit/Str + refusals ported
+// faithfully; LBytes/LFloat DEFERRED (FLAG-semcore-25). Never-silent on every fallible arm (G2).
+// bin_bits: filter the digit/`_` string to its 0/1 bits, MSB-first (Rust
+// `chars().filter(|c| c=='0'||c=='1').map(|c| c=='1')`).
+fn bin_bits_at(s: Bytes, i: Binary{32}, n: Binary{32}) => Vec[Binary{1}] =
+  match lt(i, n) {
+    0b1 => let ch = bytes_slice(s, i, add_u(i, one32())) in
+           match bytes_eq(ch, "0") {
+             0b1 => Cons(0b0, bin_bits_at(s, add_u(i, one32()), n)),
+             _ => match bytes_eq(ch, "1") {
+               0b1 => Cons(0b1, bin_bits_at(s, add_u(i, one32()), n)),
+               _ => bin_bits_at(s, add_u(i, one32()), n)
+             }
+           },
+    _ => Nil
+  };
+
+fn bin_bits(s: Bytes) => Vec[Binary{1}] = bin_bits_at(s, zero32(), bytes_len(s));
+
+fn bits_len(v: Vec[Binary{1}]) => Binary{32} =
+  match v { Nil => zero32(), Cons(_, t) => add_u(one32(), bits_len(t)) };
+
+// trit_of: one wire glyph -> a trit; every non-{+,0,-} char is an explicit error (Rust maps EVERY
+// char, no filtering — a stray char is a never-silent residual, G2).
+fn trit_of(ch: Bytes) => Result[TritK, Bytes] =
+  match bytes_eq(ch, "+") { 0b1 => Ok(TkPos), _ =>
+  match bytes_eq(ch, "0") { 0b1 => Ok(TkZero), _ =>
+  match bytes_eq(ch, "-") { 0b1 => Ok(TkNeg), _ =>
+  Err(bytes_concat("lit_value: non-trit char in ternary literal: ", ch)) }}};
+
+fn trit_trits_at(s: Bytes, i: Binary{32}, n: Binary{32}) => Result[Vec[TritK], Bytes] =
+  match lt(i, n) {
+    0b1 => match trit_of(bytes_slice(s, i, add_u(i, one32()))) {
+             Err(e) => Err(e),
+             Ok(t) => match trit_trits_at(s, add_u(i, one32()), n) {
+               Err(e) => Err(e),
+               Ok(rest) => Ok(Cons(t, rest))
+             }
+           },
+    _ => Ok(Nil)
+  };
+
+fn trits_len(v: Vec[TritK]) => Binary{32} =
+  match v { Nil => zero32(), Cons(_, t) => add_u(one32(), trits_len(t)) };
+
+// lower-bound (`width == 0`) refused below, matching `Value::new`/`check_well_formed`; the
+// `MAX_DIM` UPPER bound is NOT ported this wave (FLAG-semcore-29 — an honest, intentional cut).
+fn lit_value(l: Literal) => Result[Value, Bytes] =
+  match l {
+    Bin(s) => let bits = bin_bits(s) in
+              let w = bits_len(bits) in
+              match eq(w, zero32()) {
+                0b1 => Err("lit_value: empty binary literal (Binary{0} is malformed -- Value::new refuses; G2)"),
+                _ => Ok(Val(RBinary(w), PlBits(bits), MtExactRoot))
+              },
+    Trit(s) => match trit_trits_at(s, zero32(), bytes_len(s)) {
+                 Err(e) => Err(e),
+                 Ok(trits) => let w = trits_len(trits) in
+                              match eq(w, zero32()) {
+                                0b1 => Err("lit_value: empty ternary literal (Ternary{0} is malformed -- Value::new refuses; G2)"),
+                                _ => Ok(Val(RTernary(w), PlTrits(trits), MtExactRoot))
+                              }
+               },
+    Str(s) => Ok(Val(RBytes, PlBytes(s), MtExactRoot)),
+    LBytes(_) => Err("lit_value: `0x..` byte-string literal DEFERRED this wave (FLAG-semcore-25 -- hex->byte-vector needs a byte-value-synthesis primitive absent from the wild-free surface; not faked -- G2)"),
+    LFloat(_) => Err("lit_value: decimal float literal DEFERRED this wave (FLAG-semcore-25 -- needs correctly-rounded decimal->binary64, infeasible byte-for-byte in wild-free `.myc`; not faked -- G2)"),
+    Int(_) => Err("a bare integer literal has no representation family (Q6)"),
+    AmbientInt(_, _) => Err("internal: an unresolved ambient bare decimal reached elaboration -- the checker resolves its width before the L0 bridge runs (RFC-0012 SS4.3)"),
+    List(_) => Err("internal: a list literal reached `lit_value` -- it lowers through `expr_inner` (the element expressions need elaboration; RFC-0032 D3)")
+  };
+
+// type_repr (elab.rs:244) — surface `TypeRef` -> kernel `Repr` (swap targets). Only representation
+// types resolve; named/data/Substrate/Fn/Tuple/Ambient/width-var are explicit refusals. Note the Vsa
+// arm canonicalizes the surface model id (`vsa_kernel_model_id`) -- matching the Rust oracle, and
+// DISTINCT from `field_spec`/`ty_to_repr` below (whose checked `Ty` already carries the canonical id).
+fn type_repr(t: TypeRef) => Result[Repr, Bytes] =
+  match typeref_base(t) {
+    KwBinary(w) => match w {
+      WLit(n) => Ok(RBinary(n)),
+      WName(v) => Err(bytes_concat("width variable reached elaboration (must be monomorphized first -- DN-42/M-753): ", v))
+    },
+    KwTernary(w) => match w {
+      WLit(m) => Ok(RTernary(m)),
+      WName(v) => Err(bytes_concat("width variable reached elaboration (must be monomorphized first -- DN-42/M-753): ", v))
+    },
+    KwDense(d, s) => Ok(RDense(d, scalar_kind(s))),
+    Vsa(model, dim, sp) => Ok(RVsa(vsa_kernel_model_id(model), dim, sparsity_class(sp))),
+    KwSeq(elem, len) => match type_repr(elem) {
+      Ok(r) => Ok(RSeq(r, len)),
+      Err(e) => Err(e)
+    },
+    KwBytes => Ok(RBytes),
+    KwFloat => Ok(RFloat(FwF64)),
+    KwSubstrate(tag) => Err(bytes_concat("Substrate is not a representation type: ", tag)),
+    Named(name, _) => Err(bytes_concat("`", bytes_concat(name, "` is not a representation type -- no kernel Repr"))),
+    Ambient(_) => Err("internal: an unresolved paradigm-less repr `{..}` reached elaboration (the ambient resolution pass fills it first -- RFC-0012 SS4.3)"),
+    FnArrow(_, _) => Err("function types (`A -> B`) are not a representation type and cannot be a swap target (RFC-0024 SS3)"),
+    Tuple(_) => Err("tuple types are not a representation type and cannot be a swap target (M-826; G2)")
+  };
+
+// ty_to_repr (elab.rs:982) — a representation checked `Ty` -> kernel `Repr`; `None` for any
+// non-representation type (never a half-elaborated artifact -- G2/VR-5). Vsa uses the model DIRECTLY
+// (the checked `Ty` already holds the canonical kernel id -- no re-canonicalization, matching Rust).
+fn ty_to_repr(ty: Ty) => Option[Repr] =
+  match ty {
+    TyBinary(w) => match w { WdLit(n) => Some(RBinary(n)), WdVar(_) => None },
+    TyTernary(w) => match w { WdLit(m) => Some(RTernary(m)), WdVar(_) => None },
+    TyDense(d, s) => Some(RDense(d, scalar_kind(s))),
+    TyVsa(model, dim, sp) => Some(RVsa(model, dim, sparsity_class(sp))),
+    TySeq(elem, n) => match ty_to_repr(elem) { Some(r) => Some(RSeq(r, n)), None => None },
+    TyBytes => Some(RBytes),
+    TyFloat => Some(RFloat(FwF64)),
+    TyData(_, _) => None,
+    TyVar(_) => None,
+    TySubstrate(_) => None,
+    TyFn(_, _) => None
+  };
+
+// ty_to_field_ty_ref (elab.rs:1023) — a v0 `Ty` -> a `FieldTyRef` signature leaf: a monomorphic
+// `Data` reference, a nested `Fn` signature, or (the `_` arm) a `Repr` leaf via `ty_to_repr`. `None`
+// for anything with no monomorphic form (mirrors `field_spec`'s staging -- G2/VR-5).
+fn ty_to_field_ty_ref(ty: Ty) => Option[FieldTyRef] =
+  match ty {
+    TyData(n, args) => match args { Nil => Some(FtData(n)), Cons(_, _) => None },
+    TyVar(_) => None,
+    TySubstrate(_) => None,
+    TyFn(param, ret) => match ty_to_field_ty_ref(param) {
+      None => None,
+      Some(p2) => match ty_to_field_ty_ref(ret) {
+        None => None,
+        Some(r2) => Some(FtFn(KFS(one32(), Cons(p2, Nil), r2)))
+      }
+    },
+    _ => match ty_to_repr(ty) { Some(r) => Some(FtRepr(r)), None => None }
+  };
+
+// field_spec (elab.rs:923) — a checked `Ty` field -> a build-time `FieldSpec`; `None` when the field
+// has no monomorphic kernel form (a width-var, a generic `Data`, a `Var`, a `Substrate`, or an
+// unresolvable `Fn` signature leaf) -- staged, never half-encoded (G2/VR-5).
+fn field_spec(ty: Ty) => Option[FieldSpec] =
+  match ty {
+    TyBinary(w) => match w { WdLit(n) => Some(FsRepr(RBinary(n))), WdVar(_) => None },
+    TyTernary(w) => match w { WdLit(m) => Some(FsRepr(RTernary(m))), WdVar(_) => None },
+    TyDense(d, s) => Some(FsRepr(RDense(d, scalar_kind(s)))),
+    TyVsa(model, dim, sp) => Some(FsRepr(RVsa(model, dim, sparsity_class(sp)))),
+    TySeq(elem, n) => match ty_to_repr(elem) { Some(r) => Some(FsRepr(RSeq(r, n))), None => None },
+    TyBytes => Some(FsRepr(RBytes)),
+    TyFloat => Some(FsRepr(RFloat(FwF64))),
+    TyData(n, args) => match args { Nil => Some(FsData(n)), Cons(_, _) => None },
+    TyVar(_) => None,
+    TySubstrate(_) => None,
+    TyFn(param, ret) => match ty_to_field_ty_ref(param) {
+      None => None,
+      Some(p2) => match ty_to_field_ty_ref(ret) {
+        None => None,
+        Some(r2) => Some(FsFn(one32(), KFS(one32(), Cons(p2, Nil), r2)))
+      }
+    }
+  };
+
+// policy_name_preimage (elab.rs:344 preimage) — the domain-separated PREIMAGE of `policy_name_ref`
+// (`policy-name.v0:<dotted>`). The hashing step is DEFERRED (FLAG-semcore-27). `join_dot` restates
+// `policy.0.join(".")`.
+fn join_dot(segs: Vec[Bytes]) => Bytes =
+  match segs {
+    Nil => "",
+    Cons(h, t) => match t {
+      Nil => h,
+      Cons(_, _) => bytes_concat(h, bytes_concat(".", join_dot(t)))
+    }
+  };
+
+fn policy_name_preimage(p: Path) => Bytes =
+  bytes_concat("policy-name.v0:", join_dot(path_segs(p)));
+
+// ── L0-mirror structural equality (FLAG-semcore-28 -- the FLAG-semcore-12 `ty_eq` posture) ───────
+fn scalark_eq(a: ScalarK, b: ScalarK) => Bool =
+  match a {
+    SkF16 => match b { SkF16 => True, _ => False },
+    SkBf16 => match b { SkBf16 => True, _ => False },
+    SkF32 => match b { SkF32 => True, _ => False },
+    SkF64 => match b { SkF64 => True, _ => False }
+  };
+
+fn sparsityc_eq(a: SparsityC, b: SparsityC) => Bool =
+  match a {
+    ScDense => match b { ScDense => True, ScSparse(_) => False },
+    ScSparse(ka) => match b { ScSparse(kb) => eq_u(ka, kb), ScDense => False }
+  };
+
+fn floatw_eq(a: FloatW, b: FloatW) => Bool =
+  match a { FwF64 => match b { FwF64 => True } };
+
+fn repr_eq(a: Repr, b: Repr) => Bool =
+  match a {
+    RBinary(na) => match b { RBinary(nb) => eq_u(na, nb), _ => False },
+    RTernary(ma) => match b { RTernary(mb) => eq_u(ma, mb), _ => False },
+    RDense(da, sa) => match b { RDense(db, sb) => and_(eq_u(da, db), scalark_eq(sa, sb)), _ => False },
+    RVsa(ma, dima, spa) => match b { RVsa(mb, dimb, spb) => and_(and_(beq(ma, mb), eq_u(dima, dimb)), sparsityc_eq(spa, spb)), _ => False },
+    RSeq(ea, na) => match b { RSeq(eb, nb) => and_(repr_eq(ea, eb), eq_u(na, nb)), _ => False },
+    RFloat(wa) => match b { RFloat(wb) => floatw_eq(wa, wb), _ => False },
+    RBytes => match b { RBytes => True, _ => False }
+  };
+
+fn tritk_eq(a: TritK, b: TritK) => Bool =
+  match a {
+    TkNeg => match b { TkNeg => True, _ => False },
+    TkZero => match b { TkZero => True, _ => False },
+    TkPos => match b { TkPos => True, _ => False }
+  };
+
+fn bit_eq(a: Binary{1}, b: Binary{1}) => Bool =
+  match a { 0b0 => match b { 0b0 => True, _ => False }, _ => match b { 0b1 => True, _ => False } };
+
+fn bits_eq(a: Vec[Binary{1}], b: Vec[Binary{1}]) => Bool =
+  match a {
+    Nil => match b { Nil => True, Cons(_, _) => False },
+    Cons(ha, ta) => match b { Nil => False, Cons(hb, tb) => and_(bit_eq(ha, hb), bits_eq(ta, tb)) }
+  };
+
+fn trits_eq(a: Vec[TritK], b: Vec[TritK]) => Bool =
+  match a {
+    Nil => match b { Nil => True, Cons(_, _) => False },
+    Cons(ha, ta) => match b { Nil => False, Cons(hb, tb) => and_(tritk_eq(ha, hb), trits_eq(ta, tb)) }
+  };
+
+fn payload_eq(a: Payload, b: Payload) => Bool =
+  match a {
+    PlBits(ba) => match b { PlBits(bb) => bits_eq(ba, bb), _ => False },
+    PlTrits(ta) => match b { PlTrits(tb) => trits_eq(ta, tb), _ => False },
+    PlBytes(ya) => match b { PlBytes(yb) => beq(ya, yb), _ => False }
+  };
+
+fn meta_eq(a: Meta, b: Meta) => Bool =
+  match a { MtExactRoot => match b { MtExactRoot => True } };
+
+fn value_eq(a: Value, b: Value) => Bool =
+  match a { Val(ra, pa, ma) => match b { Val(rb, pb, mb) => and_(and_(repr_eq(ra, rb), payload_eq(pa, pb)), meta_eq(ma, mb)) } };
+
+fn field_ty_ref_eq(a: FieldTyRef, b: FieldTyRef) => Bool =
+  match a {
+    FtRepr(ra) => match b { FtRepr(rb) => repr_eq(ra, rb), _ => False },
+    FtData(na) => match b { FtData(nb) => beq(na, nb), _ => False },
+    FtFn(sa) => match b { FtFn(sb) => kfnsig_eq(sa, sb), _ => False }
+  };
+
+fn ftr_list_eq(a: Vec[FieldTyRef], b: Vec[FieldTyRef]) => Bool =
+  match a {
+    Nil => match b { Nil => True, Cons(_, _) => False },
+    Cons(ha, ta) => match b { Nil => False, Cons(hb, tb) => and_(field_ty_ref_eq(ha, hb), ftr_list_eq(ta, tb)) }
+  };
+
+fn kfnsig_eq(a: KFnSig, b: KFnSig) => Bool =
+  match a { KFS(ara, pa, reta) => match b { KFS(arb, pb, retb) => and_(and_(eq_u(ara, arb), ftr_list_eq(pa, pb)), field_ty_ref_eq(reta, retb)) } };
+
+fn field_spec_eq(a: FieldSpec, b: FieldSpec) => Bool =
+  match a {
+    FsRepr(ra) => match b { FsRepr(rb) => repr_eq(ra, rb), _ => False },
+    FsData(na) => match b { FsData(nb) => beq(na, nb), _ => False },
+    FsFn(ara, sa) => match b { FsFn(arb, sb) => and_(eq_u(ara, arb), kfnsig_eq(sa, sb)), _ => False }
+  };
+
+// Option/Result witnesses for the fallible helpers (FLAG-semcore-26: Err==Err, None==None).
+fn opt_repr_eq(a: Option[Repr], b: Option[Repr]) => Bool =
+  match a { None => match b { None => True, Some(_) => False }, Some(ra) => match b { Some(rb) => repr_eq(ra, rb), None => False } };
+
+fn opt_fs_eq(a: Option[FieldSpec], b: Option[FieldSpec]) => Bool =
+  match a { None => match b { None => True, Some(_) => False }, Some(fa) => match b { Some(fb) => field_spec_eq(fa, fb), None => False } };
+
+fn opt_ftr_eq(a: Option[FieldTyRef], b: Option[FieldTyRef]) => Bool =
+  match a { None => match b { None => True, Some(_) => False }, Some(fa) => match b { Some(fb) => field_ty_ref_eq(fa, fb), None => False } };
+
+fn res_repr_eq(a: Result[Repr, Bytes], b: Result[Repr, Bytes]) => Bool =
+  match a { Err(_) => match b { Err(_) => True, Ok(_) => False }, Ok(ra) => match b { Ok(rb) => repr_eq(ra, rb), Err(_) => False } };
+
+fn res_value_eq(a: Result[Value, Bytes], b: Result[Value, Bytes]) => Bool =
+  match a { Err(_) => match b { Err(_) => True, Ok(_) => False }, Ok(va) => match b { Ok(vb) => value_eq(va, vb), Err(_) => False } };
