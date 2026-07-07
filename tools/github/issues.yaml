@@ -13289,13 +13289,16 @@ issues:
   - id: M-1015
     title: "M-1015 — Corpus ingestion + the deterministic structured index (Layer 1)"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:feature, area:tooling, priority:P2, status:todo]
+    labels: [phase:8, type:feature, area:tooling, priority:P2, status:done]
     epic: E39-1
     depends_on: []
     doc_refs:
       - corpus:DN-87
       - src:tools/docgen/code_index.py
       - src:crates/mycelium-doc/src/lib_index.rs
+      - src:crates/mycelium-tero/src/index.rs
+      - src:docs/tero-index/INDEX.md
+      - src:scripts/checks/tero-index.sh
     body: |
       Minted 2026-07-07 (DN-87 §4). Generalize the proven deterministic-index pattern
       (api-index/lib-index: committed, grep-friendly MD + machine JSON, drift-gated, flagged
@@ -13314,6 +13317,17 @@ issues:
       - Deterministic regeneration (byte-identical across runs at a commit); committed artifact +
         drift gate (skip-graceful) wired the doc-index way; extraction limits in a flagged
         section (G2); every corpus family above covered or its exclusion recorded.
+
+      DONE (2026-07-07, epic branch claude/epic/E39-m1015-corpus-index @ 1a2d7d31 + the
+      integration commit): crates/mycelium-tero Layer-1 engine (reuses mycelium_doc::corpus,
+      no pub widening; purpose-built YAML-subset reader, no new deps) +
+      docs/tero-index/{INDEX.md,index.json} (5139 rows / 6 honestly-flagged; families
+      docs/research/issues/changelog/skills each grep-cross-checked; api-/lib-index referenced
+      not duplicated) + scripts/checks/tero-index.sh drift gate (wired as `just tero-index`;
+      COMPONENT_ID shares doc-index's 23 -- the 5-bit space is exhausted at 31; a 32nd unique id
+      needs a byte-scheme redesign, an open deliberate decision) + docs/spec/api/mycelium-tero.txt
+      baseline. Deterministic two-run byte-identical (incl. the self-referential fixpoint fix);
+      27 tests; change-scoped gates green. DoD met.
 
   - id: M-1016
     title: "M-1016 — Query engine + mandatory provenance (EXPLAIN-able retrieval)"
