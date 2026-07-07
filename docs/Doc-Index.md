@@ -265,6 +265,12 @@ Regenerate with `just docs-index` (runs `tools/docgen/code_index.py`). The commi
 
 `Empirical/Declared` heuristic — source is ground truth; extraction limits (an unrecognised top-level construct, a missing nodule marker, a malformed header) appear in the `flagged` section, never silently dropped. Regenerate with `just lib-index-gen` (runs `myc-doc lib-index`, `crates/mycelium-doc/src/lib_index.rs`). The committed index must stay current; `just check` enforces this via a drift gate (`scripts/checks/lib-index.sh`, `just lib-index`). The integrating parent regenerates and commits the delta after any change under `lib/std/` or `lib/compiler/`.
 
+`docs/tero-index/` — committed, auto-generated **whole-corpus Layer-1 citation index** (M-1015; DN-87 / E39-1 / `mycelium-tero`, 2026-07-07) — the same pattern generalized over docs (RFC/ADR/DN/spec/guide/planning, with status + guarantee tag + section anchors), research records, `tools/github/issues.yaml` (+idmap gh-numbers), `CHANGELOG.md` entries, and the skills:
+- `index.json` — machine-readable rows (stable anchor, kind, file:line, status/tag where the source declares one, verbatim-ish summary)
+- `INDEX.md` — grep-friendly table for agent context lookups
+
+`Empirical/Declared` heuristic — source is ground truth; unextractable constructs go to the `flagged` section, never dropped. `docs/api-index/` and `docs/lib-index/` are referenced as sibling indices, never duplicated. Regenerate with `just tero-index-gen` (runs `crates/mycelium-tero`'s `tero-index` bin); drift-gated in `just check` (`scripts/checks/tero-index.sh`, `just tero-index`). Integrator-regenerated, never hand-merged.
+
 ### Reader guide — README topic docs (`docs/guide/`)
 
 The root `README.md` is a lean landing page; its long-form content lives in linked topic docs
