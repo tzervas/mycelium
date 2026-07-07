@@ -26,10 +26,15 @@ struct Payload {
 }
 
 /// Load a `TeroIndexReport` from a previously emitted `index.json` at `path` (typically
-/// `docs/tero-index/index.json`). The loaded report preserves the file's row order, which — for
-/// every `index.json` this crate itself emits — is already the canonical `(family, file, line,
-/// anchor)` sort [`TeroIndexReport::sort`] establishes; [`crate::query::QueryEngine`] relies on that
-/// invariant (checked in debug builds) rather than re-sorting on every load.
+/// `docs/tero-index/index.json`). Unconditionally re-canonicalizes row order via
+/// [`TeroIndexReport::sort`] after deserializing — **never trusts the file's order** — so
+/// [`crate::query::QueryEngine`]'s `order_by = "canonical index order"` claim holds for *any*
+/// validly-shaped `index.json`, not only ones this crate itself just emitted. `QueryEngine::new`'s
+/// `debug_assert` on sortedness is a dev-only cheap invariant check on top of this, not the
+/// enforcement mechanism: a release build that skipped it must not silently serve stale/shuffled
+/// order (G2) — for every source this crate does emit, `index.json` is already canonical, so the
+/// re-sort is a no-op there and only does real work for a hand-edited or otherwise out-of-order
+/// file.
 ///
 /// # Errors
 /// Any filesystem error reading `path`, or a JSON shape that does not match
@@ -39,8 +44,10 @@ pub fn load_report(path: &Path) -> std::io::Result<TeroIndexReport> {
     let src = std::fs::read_to_string(path)?;
     let payload: Payload = serde_json::from_str(&src)
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
-    Ok(TeroIndexReport {
+    let mut report = TeroIndexReport {
         items: payload.items,
         flagged: payload.flagged,
-    })
+    };
+    report.sort();
+    Ok(report)
 }
