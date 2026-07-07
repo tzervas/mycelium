@@ -6,6 +6,7 @@ use crate::*;
 
 mod anchors;
 mod determinism;
+mod eval_gate;
 mod families;
 mod fixture;
 mod flagged;
@@ -21,6 +22,9 @@ mod query_latency;
 mod query_structured;
 mod query_text;
 mod units;
+mod vsa2_decode;
+mod vsa2_encode;
+mod vsa2_explain;
 
 #[test]
 fn summary_names_the_crate_and_its_dn() {
