@@ -25,6 +25,7 @@ mod repr;
 /// types (`Node`/`Alt`, `Datum`/`CoreValue`): fails if `Rc`/`Arc` shared ownership appears on the
 /// value spine, which would silently break the double-free-safe teardown (DN-56 §6 within-freeze).
 mod spine_ownership_tripwire;
+mod ternary;
 mod value;
 /// RFC-0041 §4.5 (W7, item #6) — construction-gate census for `Value`/`Repr`: grounds (Empirical) that
 /// a deeply-nested `Value` is unbuildable (every path routes through the depth-walking `Value::new`

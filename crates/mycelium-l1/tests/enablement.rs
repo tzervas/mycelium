@@ -4668,3 +4668,76 @@ fn conversion_prims_reject_wrong_paradigm_statically() {
         );
     }
 }
+
+// ── CU-7 (RFC-0033 §4.2.2 / ADR-029): the fixed-width `trit.*` arithmetic is ALREADY arbitrary-
+// width — a verify-first correction ────────────────────────────────────────────────────────────
+//
+// **Recon finding (mitigation #14 — verify against the codebase before implementing).** The trx2
+// kickoff notes describe the runnable `trit.add`/`trit.sub`/`trit.mul`/`trit.neg` prims as capped
+// at "~40 trits" and attribute that cap to `mycelium_core::ternary` being "i64-internal". Reading
+// the actual kernel (`crates/mycelium-core/src/ternary/mod.rs::add`/`mul`) shows this is **not
+// accurate for the arithmetic itself**: `add` is a digit-wise ripple-carry adder and `mul` a
+// shifted-accumulation multiplier, both operating directly on `&[Trit]` with **no `i64` in the
+// algorithm** — overflow is detected structurally (a nonzero final carry / nonzero high digits),
+// not via an integer-range check. The **only** `i64`-capped pieces are the *conversion* utilities
+// `max_magnitude`/`trits_to_int`/`int_to_trits` (used for decimal-literal encoding and test
+// oracles), which are a genuinely different concern from the arithmetic RFC-0033 §4.2.2 names. The
+// lexer's `0t…` trit-literal ([`crates/mycelium-l1/src/lexer.rs::lex_trit`]) likewise has no width
+// cap (RFC-0037 D4). So **any width reachable via a trit-glyph literal already gets arbitrary-width
+// arithmetic today** — RFC-0033 §4.2.2's fixed-width-side mandate is met by the *existing* code,
+// zero-risk, and this three-way locks it in at 80 trits (double the assumed cap) so it can never
+// silently regress.
+//
+// **What CU-7 does NOT cover (correctly deferred, not guessed).** A genuinely **growable** Ternary
+// value form — no fixed `N`, an arbitrary-precision "BigInt"-shaped surface type built on
+// `BigTernary` — is explicitly **out of scope**: RFC-0033's own Accepted-status changelog entry
+// states "the value-model growth beyond the already-landed V0 `BigTernary` (M-754…M-757) is a
+// post-1.0 wave" and couples it to the **content-address one-way doors** (the V1–V5 kernel
+// implementation, M-760…M-784, deferred to post-1.0). Surfacing that growable form would touch the
+// E20-1 content-address rehash this leaf was told to FLAG rather than guess (G2/VR-5) — see the
+// CU-7 leaf report.
+
+/// MSB-first `Trit` vector from a glyph string (`+`/`0`/`-`), mirroring [`bits`]'s Binary analogue.
+fn trits(s: &str) -> Vec<mycelium_core::Trit> {
+    s.chars()
+        .map(|c| match c {
+            '+' => mycelium_core::Trit::Pos,
+            '-' => mycelium_core::Trit::Neg,
+            '0' => mycelium_core::Trit::Zero,
+            _ => panic!("trit glyph must be one of +/0/-, got {c:?}"),
+        })
+        .collect()
+}
+
+/// `add` at `Ternary{80}` — double the kickoff notes' assumed "~40-trit cap" — three-way. Operands
+/// are all-zero except their low two digits (`+0` = 3, `0+` = 1); the sum `3 + 1 = 4` is `++` in
+/// the low two digits (`4 = 1·3 + 1·1`).
+#[test]
+fn trit_add_beyond_the_claimed_40_trit_cap_three_way() {
+    let zeros = "0".repeat(78);
+    let a = format!("0t{zeros}+0"); // 80 trits, value 3
+    let b = format!("0t{zeros}0+"); // 80 trits, value 1
+    let expected_digits = format!("{zeros}++"); // 80 trits, value 4
+    assert_three_way(
+        "trit add beyond the assumed 40-trit cap",
+        &format!("nodule d;\nfn main() => Ternary{{80}} = add({a}, {b});"),
+        &Repr::Ternary { trits: 80 },
+        &Payload::Trits(trits(&expected_digits)),
+    );
+}
+
+/// `mul` at `Ternary{80}` three-way — the shifted-accumulation multiplier is likewise structural
+/// (no `i64`), so it holds at this width too. `3 · 3 = 9`; balanced-ternary `9 = 1·9 + 0·3 + 0·1`
+/// → low three digits `+00`.
+#[test]
+fn trit_mul_beyond_the_claimed_40_trit_cap_three_way() {
+    let zeros = "0".repeat(77);
+    let a = format!("0t{zeros}0+0"); // 80 trits, value 3
+    let expected_digits = format!("{zeros}+00"); // 80 trits, value 9
+    assert_three_way(
+        "trit mul beyond the assumed 40-trit cap",
+        &format!("nodule d;\nfn main() => Ternary{{80}} = mul({a}, {a});"),
+        &Repr::Ternary { trits: 80 },
+        &Payload::Trits(trits(&expected_digits)),
+    );
+}
