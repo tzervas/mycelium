@@ -1297,3 +1297,37 @@ Closes the transpiler-side half of §8.16 item 4. `&`/`|` now emit `and`/`or` (n
   env (a review-found HIGH mis-fire on shadowed names fixed by env invalidation); `prim_map.rs`
   forward-maps the kernel surface (`flt_is_*` wired, `wrapping_*` PENDING-BACKEND); `f64`→`Float`
   `map_type` fix. Emission `Declared`; vet `Empirical`. **Status unchanged (Draft).** (Append-only; VR-5; G2.)
+- **2026-07-08 — §8.18 added: `Expr::Cast` emitter arm — the faithful width-widen slice, everything
+  else flagged (trx2 A1).** Adds the previously-missing `Expr::Cast` arm to `emit_expr_inner`
+  (`crates/mycelium-transpile/src/emit.rs`); before this, every Rust `x as T` fell through to the
+  generic `Category::Other` "unsupported expression form" sink. **Fidelity is the governing
+  constraint** (house rule #2/#4, VR-5): Rust `as` is lossy/wrapping/saturating/rounding by design,
+  Mycelium's conversion prims are checked/refusing by design, so a checked prim is emitted **only**
+  where it matches Rust `as` exactly, and every other cast is a never-silent gap with a specific,
+  honest reason rather than an unfaithful emission. **Verify-first findings** (the whole point):
+  DN-41 `bit.width_cast` narrowing is a **checked narrow** — `prim_width_cast`
+  (`crates/mycelium-interp/src/prims.rs`) refuses with `EvalError::Overflow` on any set dropped high
+  bit — which does **not** match Rust's **wrapping** truncation; and the CU-3 `flt.to_bin`/`bin.to_flt`
+  prims refuse/err where Rust `as` saturates/rounds (ADR-040 §2.4). **Four dispatch outcomes:** (1)
+  `Binary{N} as Binary{M}` with `M >= N` (unsigned widen/identity) emits the faithful
+  `width_cast(<value>, <M-bit zero BinLit>)` — `width_cast` zero-extends (ADR-028 sign-free), matching
+  Rust unsigned widening exactly; (2) `Binary{N} as Binary{M}` with `M < N` (narrow) gaps
+  `FLAG-cast-narrow-fidelity` (no never-refusing wrapping-truncate prim exists yet); (3) any
+  float-crossing cast (Binary↔Float, Float↔Float) gaps `PENDING-DESIGN(CU-3-fidelity)` — the faithful
+  form is the reified lossy swap (ADR-040 §2.4/§5, explicitly NOT a prim), not emittable yet, matching
+  `prim_map.rs` §CU-3's existing exclusion (no confirmed prim name); (4) an unknown-operand cast (the
+  operand is not a bare in-scope identifier whose type `expr_env_type` resolves) refuses rather than
+  guesses (VR-5). **`checked_fraction` before→after: unchanged (0.00pp)** on both the default vet
+  target set and the full 17-target `gen/myc-drafts/` corpus — the qualifying casts present are all
+  narrow / signed-target / field-operand (correctly gapped), with no unsigned-widen-of-a-bare-identifier
+  cast in the corpus, and the file-gated metric cannot partially clean an already-gapped file. The
+  arm's real accuracy effect is witnessed on cast-bearing input (a widen/identity probe): **0% →
+  100.0% `checked_fraction`**, `myc check`-clean (verified against the real oracle). The corpus win is
+  in transparency: two `std-time` casts (`later.nanos as i128`, `later.tick as i128`) moved from the
+  generic sink to the precise operand-unknown fidelity reason. Data-driven `expr_cast_fidelity` test
+  matrix pins all four outcomes at the gap-reason level plus an end-to-end widen fixture case;
+  change-scoped `cargo fmt`/`clippy -D warnings`/`test -p mycelium-transpile` green. FLAGs raised:
+  `FLAG-cast-narrow-fidelity` (Rust wrapping-truncate has no faithful prim), `PENDING-DESIGN(CU-3-fidelity)`
+  (the lossy-swap cast surface/name is undecided — a design question, not a prim_map wiring gap; the
+  Session-4 "flip the prim_map CU-3 row" framing was wrong — CU-3 has no prim_map row by design).
+  Emission `Declared`; vet `Empirical`. **Status unchanged (Draft).** (Append-only; VR-5; G2.)
