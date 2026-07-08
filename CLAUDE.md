@@ -72,9 +72,10 @@ One source of truth (`just`); pre-commit and CI route through the same recipes.
 ```
 just            # list recipes
 just setup      # best-effort install of the check tools (uv tool / npx / pip / cargo-nextest)
-just test-fast  # Tier 0 (pre-commit): change-scoped crates' unit/regression tests — fastest
-just check      # Tier 1 (default; = `just ci`): change-scoped tests (LOW proptest cases) + all gates
-just check-full # Tier 2 (release/durability): full workspace, HIGH proptest cases, mutants + fuzz
+just test-fast    # Tier 0 (pre-commit): change-scoped crates' unit/regression tests — fastest
+just check-canary # Canary (per-promotion): ALL gates + Tier-0 tests — no reverse-dep/proptest balloon
+just check        # Tier 1 (default; = `just ci`): change-scoped tests (LOW proptest cases) + all gates
+just check-full   # Tier 2 (release/durability): full workspace, HIGH proptest cases, mutants + fuzz
 just fmt        # auto-format (rust + python)
 just hooks      # install the pre-commit hooks
 ```
@@ -88,6 +89,17 @@ HIGH proptest cases, `cargo-mutants` + `cargo-fuzz` smoke). **Transparency (VR-5
 test is dropped — only its *case count* is tiered (low every commit, full on release); the
 change-scoping only ever *widens* to `--workspace` (over-test, never under-test), and `check-full`
 always runs everything.
+
+**Canary tier + the per-promotion gate policy (maintainer directive, 2026-07-08).** `just check` is
+change-scoped, but a touch to a **base crate** (`mycelium-core`/`-l1`) pulls in *every*
+reverse-dependent crate's tests — ballooning to a near-whole-workspace, **multi-hour** run. So a
+per-promotion gate does **not** run the full sweep. Use **`just check-canary`** (every always-on gate
+plus Tier-0 change-scoped tests, no reverse-dep/proptest balloon — minutes, not hours) for **leaf→dev and
+dev→integration**; run **`just check`** (Tier-1, selective/stringent) for **integration→main**; keep
+**`just check-full`** (HIGH proptest, mutants, fuzz, VSA/GPU) **periodic + desktop-held**, never a
+per-promotion blocker — and accelerate it (multicore/GPU) per **M-1014**. The canary is a *complete
+gate signal* with *bounded tests*, never a dropped-coverage tier (VR-5): the heavy statistical power
+still runs, just periodically on the desktop, not on every promotion.
 
 **Heavy checks run on the maintainer's desktop — don't re-run them in cloud sessions (2026-07-06).**
 The **durability tier** (`just check-full` — HIGH proptest, `cargo-mutants`, `cargo-fuzz`) and all
