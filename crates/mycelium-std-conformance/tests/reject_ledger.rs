@@ -177,11 +177,13 @@ fn checkty_self_err_call_count_matches_the_ledger() {
     let src = read("crates/mycelium-l1/src/checkty.rs");
     let total = count_occurrences(&src, "self.err(");
     assert_eq!(
-        total, 111,
-        "checkty.rs `self.err(` call sites: found {total}, DN-80 §4 audited 111 (dev ca42fd2, \
-         2026-07-02; +1 — RFC-0041 W1 (M-979, 2026-07-03) recursion-depth `BudgetError` refusal) — \
-         a reject path was added or removed without updating DN-80 §4's construct-family table and \
-         this pinned count"
+        total, 116,
+        "checkty.rs `self.err(` call sites: found {total}, DN-80 §4 audited 116 (dev ca42fd2, \
+         2026-07-02; +1 — RFC-0041 W1 (M-979, 2026-07-03) recursion-depth `BudgetError` refusal; \
+         +5 — trx2 Lane C CU-3 (2026-07-08) the never-silent Binary↔Float conversion prims \
+         `bin_to_flt`/`flt_to_bin` — arity, operand-type, and DN-41 width-witness refusals, \
+         ADR-040 §2.4) — a reject path was added or removed without updating DN-80 §4's \
+         construct-family table and this pinned count"
     );
 }
 
