@@ -7,8 +7,8 @@
 > baked in as *optional, tunable* capabilities** (`fast` by default · `certified` on request)
 > rather than a tax on every line.
 
-**Status:** design + **Rust-first implementation underway.** The design corpus spans Foundation,
-RFC-0001…0039, ADR-001…034, DN-01 onward — per-document status (Draft / Proposed / Accepted /
+**Status:** design + **Rust-first implementation underway, now expanding into Mycelium self-hosting.**
+The design corpus spans Foundation, RFC-0001…0041, ADR-001…044, DN-01…89 — per-document status (Draft / Proposed / Accepted /
 Enacted / Resolved) is in [`docs/Doc-Index.md`](docs/Doc-Index.md). The Rust workspace has
 **57 crates** (+ `xtask`) <!-- doc-currency:crate-count --> — a trusted reference interpreter,
 explicit representation **swaps** (certified at the `certified` mode), the selection-policy
@@ -28,6 +28,14 @@ in-progress piece.
 > now **first-class goals** alongside the transparent-swap thesis. The "honesty rule" is reframed
 > as the **transparency & auditability rule** (mechanism unchanged — see
 > [Guarantees & verification](docs/guide/guarantees-and-verification.md)).
+>
+> **Direction note (ADR-042 / ADR-043, Accepted 2026-07-07).** The project has committed to **full
+> Mycelium self-hosting**: freeze the Rust base and progressively rewrite **everything — kernel,
+> toolchain, and codegen backend included — to Mycelium** ("zero foreign first-party languages"),
+> retiring each Rust component **only once proven** by a dual witness (the Rust differential plus the
+> native `myc` toolchain) and archiving it to a protected legacy branch (never lost). This is the
+> direction, actively underway (see status below), not a completed migration — every claim stays
+> tagged to its checked basis (VR-5).
 
 ---
 
@@ -36,7 +44,7 @@ in-progress piece.
 - [Why this exists, and the core ideas](docs/guide/why-and-design.md)
 - [Guarantees & verification](docs/guide/guarantees-and-verification.md) — the
   `Exact ⊐ Proven ⊐ Empirical ⊐ Declared` lattice and the split verification regime
-- [Workspace map](docs/guide/workspace-map.md) — all 50 crates, the proof artifacts, the
+- [Workspace map](docs/guide/workspace-map.md) — all 57 crates, the proof artifacts, the
   LLM-leverage experiment
 - [How Mycelium compares](docs/guide/comparisons.md) — vs. typed systems languages, ML/array
   languages, VSA/HDC libraries, verification-oriented languages
@@ -84,11 +92,13 @@ Full detail: [Why & design](docs/guide/why-and-design.md). Repository layout at 
 ## Quickstart
 
 ```sh
-just            # list recipes
-just setup      # best-effort install of the check tools
-just check      # the FULL suite — exactly what CI runs (build · clippy · test · docs · proofs · supply-chain)
-just fmt        # auto-format (Rust + Python)
-just docs-index # regenerate docs/api-index/ after a public-API change
+just              # list recipes
+just setup        # best-effort install of the check tools
+just check-canary # fast per-promotion gate — all gates + change-scoped Tier-0 tests
+just check        # Tier-1 CI gate — change-scoped tests (+ reverse-deps, LOW proptest) + all gates
+just check-full   # Tier-2 durability sweep (full workspace, HIGH proptest, mutants, fuzz) — periodic/desktop
+just fmt          # auto-format (Rust + Python)
+just docs-index   # regenerate docs/api-index/ after a public-API change
 ```
 
 Checks **skip gracefully** when a tool isn't present. Remote CI
@@ -112,8 +122,12 @@ Rust-first standard library (25/25 crate specs `Accepted`). Full crate-by-crate 
 [Workspace map](docs/guide/workspace-map.md). Full honest status (including what's still open on
 the AOT full-coverage gate, ADR-034): [Status & roadmap](docs/guide/status-and-roadmap.md).
 
-**Not yet established:** self-hosting (the Mycelium-lang stdlib migration) — post-1.0/1.x scope.
-Surface-language ratification is likewise scoped to a tracked `1.x`.
+**In progress (the committed direction — ADR-042/ADR-043):** full Mycelium self-hosting. The
+compiler **frontend port is underway** in [`lib/compiler/*.myc`](lib/compiler/) — lexer, parser,
+AST, and the semantic core (via the boot10 / M-993 port ladder), each dual-witnessed by the Rust
+differential **and** the native `myc check` (M-989). Full **kernel + stdlib + backend** self-hosting,
+and surface-language ratification, remain in progress toward the `1.0`/`1.x` capstone — landed
+increments are graded `Empirical`, not-yet-discharged obligations stay `Declared` (VR-5).
 
 ---
 
