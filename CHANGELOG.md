@@ -11,6 +11,27 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### trx2 Lane C — CU-3/5/7 kernel prims + transpiler operand-gated emission and forward-mapped prim table (2026-07-08)
+
+Two scoped leaf→`dev` PRs close §8.16's in-progress worklist (DN-34 §8.17). Kernel (PR #1300, Π
+66 to 68): CU-3 adds two never-silent Binary/Float conversion prims — `bin.to_flt` (checked-exact,
+refuses `|n| > 2^53`) and `flt.to_bin` (width-witness shape, refuses NaN/inf/negative/fractional/
+out-of-width), unsigned-magnitude (ADR-028), `Empirical` (ADR-040 §2.6), with full three-way
+(L1/L0/AOT, AOT leg ran) tests; the lossy `bin to flt` rounding stays a reified swap (FLAG-cu3-lossy-
+swap). CU-5 wires the `wrapping` eval-mode dispatch over `bin.add`/`sub`/`mul` (RFC-0034 §10; no new
+prims), runtime half only — no `wrapping { }` parser surface yet (FLAG-cu5-surface-syntax). CU-7 is a
+verify-first correction (mitigation #14): the assumed "40-trit cap on `trit.*`" was inaccurate —
+`ternary::add`/`mul` are already arbitrary-width (digit-serial over `&[Trit]`), pinned by a width-80
+three-way test; the growable value form stays gated on E20-1 (FLAG-cu7-e20-1-gate). Transpiler (PR
+#1299, `checked_fraction` 5.79 to 7.76 percent, +15 items): `&`/`|` now emit `and`/`or` and `!=`/`>`
+compose from the `eq`/`lt` prims (a house-rule-#4 correction — `ne`/`gt` are non-`pub` functions, not
+prims) when both operands resolve to a known `Binary{N}` via a new type environment (a review-found
+HIGH bug where the gate mis-fired on shadowed/pattern-bound names was fixed by env invalidation); a
+new `prim_map.rs` forward-maps the known kernel surface with `flt_is_*` wired and `wrapping_*`
+PENDING-BACKEND (mapped, never emitted); and a stale `f64` to `Float` `map_type` fix unblocked
+`std-sys`'s libm wrappers. Emission stays `Declared`; vet figures `Empirical`. (trx2 E32-1/E33-1;
+DN-34 §8.17; VR-5/G2.)
+
 ### M-1013 STEP 2 — semcore Stage-5 differential retrofit to harness marshalling (2026-07-07)
 
 The Stage-5 self-hosting differential (`compiler_stage5_elab.rs`) switches from comparing the `.myc`
