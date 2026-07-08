@@ -23,7 +23,7 @@ prims), runtime half only — no `wrapping { }` parser surface yet (FLAG-cu5-sur
 verify-first correction (mitigation #14): the assumed "40-trit cap on `trit.*`" was inaccurate —
 `ternary::add`/`mul` are already arbitrary-width (digit-serial over `&[Trit]`), pinned by a width-80
 three-way test; the growable value form stays gated on E20-1 (FLAG-cu7-e20-1-gate). Transpiler (PR
-1299, `checked_fraction` 5.79 to 7.76 percent, +15 items): `&`/`|` now emit `and`/`or` and `!=`/`>`
+no. 1299, `checked_fraction` 5.79 to 7.76 percent, +15 items): `&`/`|` now emit `and`/`or` and `!=`/`>`
 compose from the `eq`/`lt` prims (a house-rule-#4 correction — `ne`/`gt` are non-`pub` functions, not
 prims) when both operands resolve to a known `Binary{N}` via a new type environment (a review-found
 HIGH bug where the gate mis-fired on shadowed/pattern-bound names was fixed by env invalidation); a
@@ -31,6 +31,75 @@ new `prim_map.rs` forward-maps the known kernel surface with `flt_is_*` wired an
 PENDING-BACKEND (mapped, never emitted); and a stale `f64` to `Float` `map_type` fix unblocked
 `std-sys`'s libm wrappers. Emission stays `Declared`; vet figures `Empirical`. (trx2 E32-1/E33-1;
 DN-34 §8.17; VR-5/G2.)
+
+### M-1006 transpiler-hardening ladder — String→`Bytes` lands the largest `checked_fraction` gain (2026-07-07)
+
+The Rust→Mycelium transpiler's `transpile → myc check → fix` gap-profiling ladder (kickoff `trx2`
+E-B, epic E33-1) advances through three increments now promoted to the staging tier. **§8.12**:
+positional named-field emission (`type Foo = Foo(T1, T2)`, names dropped as a `NamedFieldDrop`
+sub-gap) gated by a greatest-fixpoint resolvability set so a record only emits when every referenced
+type resolves in-file; plus the `myc check --phylum` cross-nodule probe. **§8.13**: `self.<field>`
+projection desugars to a `match` on the struct's positional constructor, and struct literals to the
+positional ctor call. **§8.14**: Rust `String`/`str`/`&str` map to Mycelium `Bytes` (grounded to
+RFC-0033 §3.2 — `Repr::Bytes` is the ratified never-silent UTF-8 text repr; verify-first
+`myc check`-confirmed), the **largest single-lever gain of the ladder** — union `checked_fraction`
+4.61% to **5.79%** (35 to 44 items myc-check-clean) and `expressible_fraction` 8.29% to **11.45%**
+over the 17-target draft corpus (`gen/myc-drafts/`, regenerated deterministically on this tier). Two
+further levers (operator emission, inherent-impl dup-name rename) were verify-first-probed and
+**deliberately not built** — measured zero corpus yield (house rule #4). The residual ceiling is
+re-grounded to a frozen-kernel decision: RFC-0033 §4.1.2 mandates `Binary{N}` bitwise ops but the
+Enacted/frozen kernel (DN-56, M-969) has no `bin.band`/`bin.bor`/`bin.bxor`, so completing them is a
+DN-39 post-freeze promotion (flagged, not implemented). Emission `Declared`; vet verdict `Empirical`.
+DN-34 stays **Draft** (append-only §8.12 to §8.14).
+
+### E18-1 semcore self-hosting — Stage-5 increments (M-1007 → M-1013 PR-2) (2026-07-07)
+
+The self-hosted L1 frontend (`lib/compiler/semcore.myc`) advances through the M-993 staged-port
+ladder. Each increment carries a live-oracle Rust differential in an in-crate `src/tests/` module (no
+logic `.rs` changed beyond `pub(crate)` widenings that expose the real functions as test oracles):
+M-1007 type algebra; M-1008 `unify`/`resolve_ty` + synthetic-tuple helpers; M-1009 the mono
+name-mangling family; M-1010 `free_vars`/pattern-binder analysis; M-1011 `lit_ty_of`/`literal_key`/
+`normalize_pattern` (its `infer_type` residual deferred to the heavy core); M-1012 the L0
+`Value`/`Repr`/`FieldSpec` mirror ADTs plus the pure elab lowering helpers under DN-26 §10 Option A;
+then the M-1013 heavy-core opening — **STEP 2** adopts **harness marshalling** as the Stage-5
+differential method (decode the port's mirror output into the real `mycelium_core` type and compare
+with Rust's trusted derived `==`, retiring the hand-written `.myc` `_eq` comparators; DN-26 §10.2);
+**PR-1** ports `resolve_ctors`/`first_duplicate`; **PR-2** ports `register_types` (trimmed tuple
+pre-pass, with the fn-body/pattern/sig legs deferred behind the never-silent FLAG-semcore-30). Both
+witnesses stay green: the Rust marshalling differential (`cargo test -p mycelium-l1`) and the native
+toolchain (`just myc-dogfood --strict` → `myc check lib/compiler/semcore.myc`). Every
+surface-inexpressible deviation carries a `FLAG-semcore-*` note (G2/VR-5). DN-26 stays **Draft**
+(→ Resolved with M-741). (E18-1; M-1007/M-1008/M-1009/M-1010/M-1011/M-1012/M-1013.)
+
+### mycelium-tero (DN-87 / E39-1) — transparent memory substrate & agent knowledge API (M-1015…M-1018, 2026-07-07)
+
+The project corpus as a generated, provenance-carrying encoding, served platform-agnostically
+(`crates/mycelium-tero`) — promoted as a self-contained crate.
+
+- **M-1015 — Layer-1 deterministic corpus index.** A drift-gated `docs/tero-index/{INDEX.md,index.json}`
+  (5119 rows on this promoted tier) over docs/research/issues/changelog/skills, generalizing the
+  api-/lib-index pattern; an `Empirical/Declared` heuristic, source is ground truth (G2/VR-5).
+- **M-1016 — query engine + mandatory provenance.** `QueryEngine` over the Layer-1 report; every
+  answer carries a resolvable citation by construction (an uncited query is a typed refusal);
+  EXPLAIN-able retrieval; Empirical latency ~630µs/query.
+- **M-1017 — API fronts (MCP + HTTP, token-scoped) + skills.** One framework-agnostic core behind an
+  `axum`/`tokio` HTTP front and a stdio MCP front (byte-identical answers, a 3-way parity
+  differential); token-scoped auth (read-only default, refuse-to-start without tokens); four
+  cross-platform skills (`.claude/skills/tero-*`). **ADR-044** adopts tokio+axum (the workspace's
+  first async runtime, scoped to this tools-tier crate; no TLS pulled).
+- **M-1018 — VSA Layer-2 + Empirical eval gate.** Layer-1 rows encoded as MAP-I hypervectors
+  (role-filler bind/bundle, cleanup decode, provenance by construction) plus a committed eval
+  harness. **Gate verdict: CLOSED** — Layer-2 does not beat Layer-1 (correctness@1 0.375 vs 0.625;
+  ~26× slower latency), provenance 1.0; the system serves Layer-1 and the improved-on-RAG claim
+  stays aspiration (DN-87 §6.1). Nothing was tuned to force a pass.
+- Supply-chain: `tokio`/`axum` hoisted to `[workspace.dependencies]`, `THIRD-PARTY-LICENSES`
+  regenerated, `mycelium-tero` registered in `deps-strata` (stratum 7 / tier `tools`). Follow-on
+  **M-1020** minted: native HTTPS/TLS for the HTTP front.
+
+*Note: the three entries above are the staging tier's already-curated/condensed summaries of the same
+promoted work the wave continues to describe in granular form below (M-1013 STEP 2 through the DN-87
+entries, and M-1006 phase-1); preserved here per the append-only union rule (never drop either side)
+even though they narrate overlapping content — a follow-up editorial pass may consolidate.*
 
 ### M-1013 STEP 2 — semcore Stage-5 differential retrofit to harness marshalling (2026-07-07)
 
