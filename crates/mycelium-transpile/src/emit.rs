@@ -296,6 +296,21 @@ pub(crate) fn binary_width(ty_text: &str) -> Option<u32> {
         .and_then(|digits| digits.parse::<u32>().ok())
 }
 
+/// True iff `ty` is a bare (single-segment, no-generic) Rust float type `f32`/`f64`. Used by the
+/// [`Expr::Cast`] fidelity gate to recognize a **cast target** that is a float **at the syn level**,
+/// before (and independent of) [`map_type`] — because `map_type` maps `f64 -> Float` but *gaps*
+/// `f32`, yet BOTH make the cast a float-crossing `as` whose faithful form is the reified lossy
+/// swap, not a checked prim (CU-3, ADR-040 §2.4/§5). A non-path / qualified / generic / non-float
+/// path type is not a float here (never a guess — VR-5).
+fn type_is_float(ty: &syn::Type) -> bool {
+    matches!(ty, syn::Type::Path(tp)
+    if tp.qself.is_none()
+        && tp.path.segments.last().is_some_and(|s| {
+            matches!(s.arguments, PathArguments::None)
+                && matches!(s.ident.to_string().as_str(), "f32" | "f64")
+        }))
+}
+
 /// Synthesize an all-zero `BinLit` witness of exactly `width` bits, grouped in nibbles
 /// (`0b0000_0000_0000_0000` for width 16) matching the corpus's own `BinLit` style (e.g.
 /// `lib/std/text.myc`'s `0b0000_0000_0000_0000_0000_0000_1000_0000`). The witness's bits are
@@ -1206,6 +1221,108 @@ fn emit_expr_inner(expr: &Expr, self_ty: Option<&str>, env: &TypeEnv) -> Result<
                 args.push(emit_expr(&fv.expr, self_ty, env)?);
             }
             Ok(format!("{sty}({})", args.join(", ")))
+        }
+        // A Rust `as` cast (`syn::Expr::Cast`). Rust `as` is **lossy / wrapping / saturating /
+        // rounding by design**; Mycelium's conversion prims are **checked / refusing by design**, so
+        // fidelity — not opportunistic emission — governs this arm: a checked prim is emitted **only**
+        // where it matches Rust's `as` semantics *exactly*, and every other cast is a never-silent gap
+        // rather than an unfaithful emission (G2/VR-5; trx2 A1, DN-34 §8.18).
+        //
+        // The one decidable-faithful slice is **`Binary{N} as Binary{M}` widening/identity** (`M >=
+        // N`): DN-41's `bit.width_cast` zero-extends on the MSB side (verified `prim_width_cast`,
+        // `mycelium-interp/src/prims.rs`), and `Binary` is sign-free unsigned magnitude (ADR-028), so
+        // that exactly matches Rust's unsigned widening/identity. **Narrowing** (`M < N`) is NOT
+        // faithful: Rust `as` narrowing **wraps** (keeps the low `M` bits), but `width_cast` **refuses**
+        // (`EvalError::Overflow`) on any set dropped high bit — a *checked* narrow, not a wrapping one.
+        // No never-refusing wrapping-truncate prim exists yet, so a narrow is FLAGged, never emitted.
+        // Any **float-crossing** cast (`Binary{N} as Float`, `Float as Binary{N}`, `Float as Float`)
+        // is CU-3 territory: the CU-3 kernel prims are checked/refusing where Rust `as` rounds/
+        // saturates (`flt.to_bin` refuses out-of-range vs Rust's saturation; `bin.to_flt` errs
+        // `|n| > 2^53` vs Rust's rounding — ADR-040 §2.4), so the faithful form is the reified **lossy
+        // swap** (ADR-040 §2.4/§5, explicitly *not* a prim), which the transpiler cannot emit yet — an
+        // explicit `PENDING-DESIGN(CU-3-fidelity)` gap (`prim_map.rs` §CU-3 records the same exclusion:
+        // no confirmed prim name, `as` has no `Call`/`MethodCall` shape to key on).
+        Expr::Cast(c) => {
+            // The operand's Mycelium type — decidable ONLY for a bare in-scope identifier (the only
+            // shape `expr_env_type` answers without guessing; `None` for a call/field/literal/etc.).
+            let operand_ty = expr_env_type(&c.expr, env);
+            let operand_is_float = operand_ty.as_deref() == Some("Float");
+            let operand_width = operand_ty.as_deref().and_then(binary_width);
+            // The target's width iff it is an *unsigned* integer (`u8..u128` -> `Binary{M}`); signed /
+            // platform-width / non-int targets yield `None` here (their own `map_type` gap is not
+            // surfaced — the fidelity dispatch below produces the honest, cast-specific reason instead).
+            let target_width = map_type(&c.ty, self_ty)
+                .ok()
+                .as_deref()
+                .and_then(binary_width);
+            // A float on *either* side (target `f32`/`f64` at the syn level, or a `Float` operand) makes
+            // this a CU-3 float-crossing cast regardless of the other side's mapping.
+            let target_is_float = type_is_float(&c.ty);
+
+            if target_is_float || operand_is_float {
+                // CU-3: no faithful prim — the lossy swap is the correct form and is not emittable yet.
+                Err(GapReason::new(
+                    Category::Other,
+                    format!(
+                        "PENDING-DESIGN(CU-3-fidelity): cast `{}` crosses the Binary/Float boundary — \
+                         Rust `as` is lossy here (float->int *saturates*, int->float *rounds*), but the \
+                         CU-3 kernel prims are checked/refusing (`flt.to_bin` refuses out-of-range; \
+                         `bin.to_flt` errs |n| > 2^53 — ADR-040 §2.4), so no faithful prim exists. The \
+                         faithful form is the reified lossy swap (ADR-040 §2.4/§5, NOT a prim), which \
+                         the transpiler cannot emit yet — explicit gap (G2/VR-5)",
+                        tokens_to_string(expr)
+                    ),
+                ))
+            } else if operand_ty.is_none() {
+                // Operand type unknown (not a bare in-scope identifier) — never guess it (VR-5).
+                Err(GapReason::new(
+                    Category::Other,
+                    format!(
+                        "cast `{}` — operand type unknown: `as` fidelity requires a known operand type, \
+                         but the operand is not a bare in-scope identifier whose type this transpiler \
+                         can resolve without guessing (no general expression-typing pass; VR-5)",
+                        tokens_to_string(expr)
+                    ),
+                ))
+            } else if let (Some(n), Some(m)) = (operand_width, target_width) {
+                // `Binary{N} as Binary{M}` — the decidable int->int slice.
+                if m >= n {
+                    // Widen / identity: `width_cast` zero-extends (unsigned), matching Rust exactly.
+                    // Faithful + `myc check`-clean (DN-41 §3; reuses the `try_width_cast_widen_body`
+                    // witness form `width_cast(<value>, <M-bit zero BinLit>)`).
+                    let operand = emit_expr(&c.expr, self_ty, env)?;
+                    Ok(format!("width_cast({operand}, {})", zero_bin_literal(m)))
+                } else {
+                    // Narrow: Rust wraps (low `M` bits); `width_cast` REFUSES on overflow. Emitting it
+                    // would be UNFAITHFUL, and no never-refusing wrapping-truncate prim exists yet.
+                    Err(GapReason::new(
+                        Category::Other,
+                        format!(
+                            "FLAG-cast-narrow-fidelity: cast `{}` narrows Binary{{{n}}} -> Binary{{{m}}}, \
+                             but Rust `as` narrowing WRAPS (keeps the low {m} bits) while DN-41 \
+                             `bit.width_cast` REFUSES on a set dropped high bit (checked narrow, \
+                             `prim_width_cast` -> Overflow). No faithful never-refusing wrapping-truncate \
+                             prim exists yet, so this is an explicit gap, never an unfaithful \
+                             checked-narrow emission (G2/VR-5)",
+                            tokens_to_string(expr)
+                        ),
+                    ))
+                }
+            } else {
+                // Operand known but not `Binary{N}` (e.g. `Bool`, a user type), or the target is not an
+                // unsigned-int `Binary{M}` (signed int / pointer / user type) and no float is involved.
+                // No faithful, decidable cast form — explicit gap rather than a guess (VR-5).
+                Err(GapReason::new(
+                    Category::Other,
+                    format!(
+                        "cast `{}` has no faithful, decidable Mycelium form — the operand is not a known \
+                         `Binary{{N}}` value and/or the target is not an unsigned `Binary{{M}}` integer \
+                         (signed integers, pointers, and user types have no confirmed `as`-cast surface); \
+                         left an explicit gap rather than a guessed conversion (VR-5)",
+                        tokens_to_string(expr)
+                    ),
+                ))
+            }
         }
         _ => Err(GapReason::new(
             Category::Other,
