@@ -266,6 +266,10 @@ fn walk_expr_at(e: &Expr, f: &mut impl FnMut(&Expr), depth: u32) -> Result<(), W
         // M-664: `consume <expr>` wraps a real value expression — walk it transparently so any
         // calls inside the operand are still seen by the call-set/totality collectors.
         Expr::Consume(b) => walk_expr_at(b, f, depth)?,
+        // RFC-0034 §10.1 (CU-5): `wrapping { … }` wraps a real `Binary` arithmetic expression — walk
+        // it transparently (its enclosed add/sub/mul are ordinary prim applications; the checker
+        // guarantees no calls/recursion inside, so this is conservative-correct either way).
+        Expr::Wrapping(b) => walk_expr_at(b, f, depth)?,
         // A `lambda` body is deferred (M-704; never executes in v0), but walk it transparently so
         // any calls inside are still seen by the call-set/totality collectors (conservative).
         Expr::Lambda { body, .. } => walk_expr_at(body, f, depth)?,
@@ -498,6 +502,9 @@ fn descend_walk(
         // M-664: `consume <expr>` introduces no binders; walk the operand transparently so a
         // recursive call inside it is still subject to the structural-descent check.
         Expr::Consume(b) => descend_walk(b, pos, param, smaller, ok, depth)?,
+        // RFC-0034 §10.1 (CU-5): `wrapping { … }` introduces no binders; walk its arithmetic body
+        // transparently, mirroring the uniform opacity/descent invariant (VR-5).
+        Expr::Wrapping(b) => descend_walk(b, pos, param, smaller, ok, depth)?,
         // A `lambda` introduces its own parameter binders and is a deferred form (M-704); walk its
         // body transparently (it adds no recursive-descent of the enclosing fn's parameter).
         Expr::Lambda { body, .. } => descend_walk(body, pos, param, smaller, ok, depth)?,

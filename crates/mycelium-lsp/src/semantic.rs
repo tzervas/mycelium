@@ -130,6 +130,7 @@ pub(crate) fn classify(kind: &LexKind) -> Option<u32> {
         | Tok::With
         | Tok::Wild
         | Tok::Spore
+        | Tok::Wrapping
         | Tok::To
         | Tok::Policy
         | Tok::Lambda
