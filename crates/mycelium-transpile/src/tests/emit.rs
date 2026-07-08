@@ -451,6 +451,127 @@ fn cases() -> Vec<Case> {
                 category: Category::Other,
             },
         },
+        // ── trx2 Lane C Deliverable 1: operand-type-gated operator emission ─────────────────────
+        // (verify-first, mitigation #14 — every surface name below was confirmed against the real
+        // built `target/debug/myc`/`target/debug/myc-check` toolchain; see this module's
+        // `binop_operand_gated_forms_check_clean` live-oracle test for the `myc check`-clean
+        // proof, and `emit.rs`'s `Expr::Binary` arm doc for the full citation trail.)
+        //
+        // Both operands are known `Binary{16}` params (from `MappedSig::params` via `sig_type_env`)
+        // -> `&`/`|` rewrite to the bare-call prim forms `and`/`or` (the glyph desugar target
+        // `band`/`bor` is NOT a prim — `myc check`-confirmed to fail with no import).
+        Case {
+            name: "bitand_known_binary_emits_and_call",
+            rust: "fn f(a: u16, b: u16) -> u16 { a & b }",
+            expect: Expect::Emitted {
+                item: "f",
+                contains: "and(a, b)",
+            },
+        },
+        Case {
+            name: "bitor_known_binary_emits_or_call",
+            rust: "fn f(a: u16, b: u16) -> u16 { a | b }",
+            expect: Expect::Emitted {
+                item: "f",
+                contains: "or(a, b)",
+            },
+        },
+        // `^` is already the correct prim name after the parser's glyph desugar (`Tok::Caret` ->
+        // word `"xor"`, which IS a bare-call prim) — left as the unchanged glyph; no rewrite.
+        Case {
+            name: "bitxor_known_binary_stays_glyph",
+            rust: "fn f(a: u16, b: u16) -> u16 { a ^ b }",
+            expect: Expect::Emitted {
+                item: "f",
+                contains: "a ^ b",
+            },
+        },
+        // `!=`/`>` desugar to `ne`/`gt`, which are non-`pub` `lib/std/cmp.myc` functions, not
+        // prims — a bare `ne(a,b)`/`gt(a,b)` call fails identically to the glyph (both parse to the
+        // same `Expr::App`). The verified fix composes them from the `eq`/`lt` prims directly
+        // (exactly `cmp.myc`'s own `ne{N}`/`gt{N}` derivation), which DOES check clean with no
+        // import.
+        Case {
+            name: "ne_known_binary_composes_from_eq",
+            rust: "fn f(a: u16, b: u16) -> bool { a != b }",
+            expect: Expect::Emitted {
+                item: "f",
+                contains: "(match eq(a, b) { 0b1 => False, _ => True })",
+            },
+        },
+        Case {
+            name: "gt_known_binary_composes_from_eq_and_lt",
+            rust: "fn f(a: u16, b: u16) -> bool { a > b }",
+            expect: Expect::Emitted {
+                item: "f",
+                contains: "(match eq(a, b) { 0b1 => False, _ => match lt(a, b) { 0b1 => False, \
+                            _ => True } })",
+            },
+        },
+        // `==`/`<` are RFC-0032 D1's ratified glyphs — unchanged by this deliverable even though
+        // both operands here are known `Binary{16}` (the operand-gate only fires for the
+        // `& | != >` arms).
+        Case {
+            name: "eq_lt_known_binary_stay_glyphs",
+            rust: "fn f(a: u16, b: u16) -> bool { a == b }",
+            expect: Expect::Emitted {
+                item: "f",
+                contains: "a == b",
+            },
+        },
+        // Non-`Binary{N}` operand (a `bool` param, mapped to `Bool` — never a `Binary{N}` text per
+        // `map_type`) keeps the CURRENT (pre-deliverable) emission unchanged: still the bare glyph,
+        // not a call. Proves the gate is genuinely operand-typed, not unconditional.
+        Case {
+            name: "bitand_non_binary_operand_keeps_glyph",
+            rust: "fn f(a: bool, b: bool) -> bool { a & b }",
+            expect: Expect::Emitted {
+                item: "f",
+                contains: "a & b",
+            },
+        },
+        Case {
+            name: "gt_non_binary_operand_keeps_glyph",
+            rust: "fn f(a: bool, b: bool) -> bool { a > b }",
+            expect: Expect::Emitted {
+                item: "f",
+                contains: "a > b",
+            },
+        },
+        // One operand unknown (a call result, not a bare in-scope identifier) — the gate requires
+        // BOTH operands resolved, so this also keeps the glyph (never a half-composed emission).
+        Case {
+            name: "ne_one_operand_unresolved_keeps_glyph",
+            rust: "fn f(a: u16, b: u16) -> bool { a != g(b) }",
+            expect: Expect::Emitted {
+                item: "f",
+                contains: "a != g(b)",
+            },
+        },
+        // A `let`-aliased local of a known `Binary{N}` param is itself recognized as known (the
+        // `Stmt::Local` env-extension case (a): "RHS is a bare param already in the env").
+        Case {
+            name: "let_alias_of_known_binary_extends_env",
+            rust: "fn f(a: u16, b: u16) -> bool { let c = a; c > b }",
+            expect: Expect::Emitted {
+                item: "f",
+                contains: "match eq(c, b) { 0b1 => False, _ => match lt(c, b) { 0b1 => False, \
+                            _ => True } }",
+            },
+        },
+        // An impl method's `self` parameter is threaded into the env too (via `sig_type_env`
+        // already covering the `Receiver` arm's `("self", ty)` entry from `map_signature`) — a
+        // `Binary{N}`-mapped `Self` type (here `u16` -> `Binary{16}`) participates in the same
+        // operand gate. Uses a non-`Widen` trait name so `try_width_cast_widen_body`'s DN-41
+        // special-case (which bypasses this body-emission path entirely) never intercepts it.
+        Case {
+            name: "impl_method_self_known_binary_participates_in_gate",
+            rust: "impl Foo for u16 { fn m(self, b: u16) -> u16 { self & b } }",
+            expect: Expect::Emitted {
+                item: "impl Foo for Binary{16}",
+                contains: "and(self, b)",
+            },
+        },
     ]
 }
 
@@ -663,4 +784,89 @@ fn multi_stmt_body_reason_names_the_statement_kind() {
                 .collect::<Vec<_>>()
         );
     }
+}
+
+/// The `myc-check` binary from `cargo build -p mycelium-check --bin myc-check`, or `None` when it
+/// hasn't been built (mirrors `src/tests/vet.rs`'s identical helper — kept as a small local
+/// duplicate rather than a cross-test-module import, since `src/tests/mod.rs` has no shared-util
+/// module and this is the only other call site).
+fn find_myc_check() -> Option<std::path::PathBuf> {
+    if let Ok(cmd) = std::env::var("MYC_CHECK_CMD") {
+        if let Some(first) = cmd.split_whitespace().next() {
+            let p = std::path::PathBuf::from(first);
+            if p.exists() {
+                return Some(p);
+            }
+        }
+    }
+    let built =
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/debug/myc-check");
+    built.exists().then_some(built)
+}
+
+/// **The verify-first proof** (mitigation #14) for trx2 Lane C Deliverable 1: every operand-gated
+/// rewrite in `Expr::Binary` (`and`/`or` for `&`/`|`, the `eq`/`lt`-composed forms for `!=`/`>`) is
+/// run through the REAL `myc-check` oracle here, not just asserted as a substring match (the
+/// `emit_fixture_corpus` cases above prove the *text*; this proves the text actually **type-checks**
+/// with zero imports — the property the whole deliverable is for). Skips gracefully (never fails)
+/// when `myc-check` is not built, exactly like `src/tests/vet.rs`'s `live_myc_check_classifies_clean_and_broken`.
+#[test]
+fn binop_operand_gated_forms_check_clean() {
+    let Some(bin) = find_myc_check() else {
+        eprintln!(
+            "emit: live oracle test skipped — no runnable myc-check (set MYC_CHECK_CMD or build \
+             `cargo build -p mycelium-check --bin myc-check`). The fixture-corpus text assertions \
+             above still cover the emitted shape."
+        );
+        return;
+    };
+
+    let dir = std::env::temp_dir().join(format!(
+        "mycelium-transpile-emit-binop-oracle-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0)
+    ));
+    std::fs::create_dir_all(&dir).expect("temp dir");
+
+    // Every rewrite this deliverable makes, in ONE nodule (mirrors the real driver: one file, no
+    // cross-nodule imports) — `and`/`or`/`eq`/`lt` must all resolve as bare-call prims with no
+    // `use`, and the composed `!=`/`>` match expressions must type as `Bool`.
+    let rust_snippets = [
+        "fn f_and(a: u16, b: u16) -> u16 { a & b }",
+        "fn f_or(a: u16, b: u16) -> u16 { a | b }",
+        "fn f_ne(a: u16, b: u16) -> bool { a != b }",
+        "fn f_gt(a: u16, b: u16) -> bool { a > b }",
+        // `^` (unchanged glyph) rides along as a negative control — it must ALSO check clean
+        // (it already did before this deliverable; this pins that it still does).
+        "fn f_xor(a: u16, b: u16) -> u16 { a ^ b }",
+    ];
+    for (i, rust) in rust_snippets.iter().enumerate() {
+        let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
+            .unwrap_or_else(|e| panic!("failed to parse/transpile `{rust}`: {e}"));
+        assert!(
+            !report.emitted_items.is_empty(),
+            "case {i} (`{rust}`) failed to emit at all: gaps={:?}",
+            report.gaps
+        );
+        let path = dir.join(format!("case_{i}.myc"));
+        std::fs::write(&path, &myc).expect("write case .myc");
+
+        let checker = crate::vet::MycChecker {
+            command: vec![bin.display().to_string()],
+            cwd: None,
+        };
+        let rec = checker.vet_file(&path, "fixture.rs", 1, 1);
+        assert_eq!(
+            rec.class,
+            crate::vet::VetClass::Clean,
+            "case {i} (`{rust}`) must check CLEAN with the real myc-check oracle — emitted:\n{myc}\n\
+             diagnostic={:?}",
+            rec.diagnostic
+        );
+    }
+
+    let _ = std::fs::remove_dir_all(&dir);
 }
