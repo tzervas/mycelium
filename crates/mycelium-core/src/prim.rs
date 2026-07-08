@@ -278,6 +278,18 @@ impl PrimTable {
         // Exact` (total/decidable over the in-range domain; an out-of-range product is a runtime,
         // not intrinsic, refusal — same posture as `bit.add`/`bit.sub`).
         t.insert("bin.mul", exact(vec![Binary, Binary], Binary));
+        // RFC-0033 §4.1.2 (CU-1): never-silent **unsigned** `Binary` multiply — the unsigned member
+        // of the `bit.*` family (overflow-distinct from signed `bin.mul` per §4.1.2), the multiply
+        // `lib/std/math.myc` FLAG-math-1 named as missing. `intrinsic = Exact` (total/decidable over
+        // the in-`U_N`-range domain; an out-of-range product is a runtime, not intrinsic, refusal).
+        t.insert("bit.mul", exact(vec![Binary, Binary], Binary));
+        // CU-6: width-preserving bit-manipulation counts (population count, count-leading-zeros,
+        // count-trailing-zeros) — unary `Binary{N} → Binary{N}`, `Exact` (total/decidable; a count
+        // always fits `N` bits, no runtime refusal). Kernel prims per KC-3 + performance (single host
+        // instruction, not efficiently `.myc`-derivable); rotate/reverse_bits ride `std.math`.
+        t.insert("bit.popcount", exact(vec![Binary], Binary));
+        t.insert("bit.clz", exact(vec![Binary], Binary));
+        t.insert("bit.ctz", exact(vec![Binary], Binary));
         // RFC-0033 §4.1.2/§4.1.3 (M-888, `enb` Gap B): never-silent **unsigned** `Binary`
         // division/remainder. Distinct-named from a future signed variant (M-767) per §4.1.2's
         // signedness-split requirement for division. `intrinsic = Exact` (total/decidable over the
@@ -541,6 +553,56 @@ impl PrimTable {
         t.insert("flt.ge", flt_cmp());
         t.insert("flt.eq", flt_cmp());
         t.insert("flt.total_le", flt_cmp());
+        // ADR-040 §2.5 (CU-2): the mandated float classification predicates — unary `Float →
+        // Binary{1}` (the direct never-silent tests for the in-band ±inf/NaN sentinels, §2.4).
+        // Same `Any` operand escape hatch as the comparison group (no first-class `Float` paradigm
+        // in the sig yet); the result genuinely IS `Binary{1}`. Tag `Empirical` (ADR-040 §2.6).
+        let flt_class = || PrimDecl {
+            sig: PrimSig {
+                operands: vec![Any],
+                result: Binary,
+                width: WidthRel::Collapse,
+            },
+            intrinsic: GuaranteeStrength::Empirical,
+        };
+        t.insert("flt.is_nan", flt_class());
+        t.insert("flt.is_finite", flt_class());
+        t.insert("flt.is_infinite", flt_class());
+        // ADR-040 §2.4 (CU-3): never-silent Binary↔Float conversions — the "target-width prim"
+        // shape of `bit.width_cast` (DN-41), crossing the Binary/Float paradigms. `bin.to_flt`
+        // is **checked-exact** (refuses when the Binary operand's unsigned magnitude exceeds
+        // `2^53`, binary64's exact-integer bound); `flt.to_bin` refuses on NaN/±inf/negative/
+        // fractional/out-of-target-width, mirroring `bit.width_cast`'s witness-operand shape
+        // (`value: Float, into: Binary{M}) -> Binary{M}`, `M` read from the second operand's
+        // width only). The **lossy** rounding `flt(bin(n))` direction for `|n| > 2^53` is
+        // explicitly out of scope — a reified *swap* carrying its bound (ADR-040 §2.4/§5), not a
+        // prim (see the CU-3 leaf report FLAG).
+        //
+        // **Paradigm/width-model note (FLAG — the same escape hatch as the `flt.*` group above):**
+        // `PrimParadigm` has no first-class `Float` paradigm, so both operands/results are typed
+        // `Any` here; the real never-silent typing (the unsigned-magnitude reading, the checked-
+        // exact `2^53` bound, `flt.to_bin`'s width-witness) is enforced by the interpreter prims
+        // (`prims.rs::{prim_bin_to_flt,prim_flt_to_bin}`) and the L1 checker
+        // (`checkty.rs::try_check_float_prim`). Width `Uniform` is the nearest tag (no
+        // first-class width-*change* relation exists yet — the same width-model FLAG as
+        // `bit.width_cast`); `flt.to_bin`'s real result width is its witness operand's width.
+        //
+        // **Intrinsic `Empirical` (ADR-040 §2.6 — "Conversions: range/exactness checks Empirical
+        // via property tests on the documented bounds (2^53, target-range edges)"), NOT `Exact`.**
+        // Unlike `bit.width_cast` (a pure bit-pattern re-width with no float involved, hence
+        // `Exact`), both conversions here cross into `Repr::Float` territory and inherit the same
+        // ADR-040 §2.6 host-conformance posture the `flt.*` arithmetic/comparison groups carry —
+        // pinned by the same `empirical_flt_result` composition path (`mycelium-interp`).
+        let empirical = |operands: Vec<PrimParadigm>, result: PrimParadigm| PrimDecl {
+            sig: PrimSig {
+                operands,
+                result,
+                width: WidthRel::Uniform,
+            },
+            intrinsic: GuaranteeStrength::Empirical,
+        };
+        t.insert("bin.to_flt", empirical(vec![Any], Any));
+        t.insert("flt.to_bin", empirical(vec![Any, Any], Any));
         // RFC-0003 §3/§4 / ADR-008 (M-892, `enb` Gap C): the **VSA bind group** —
         // `vsa.bind`/`vsa.unbind`/`vsa.permute` over `Repr::Vsa{model, dim, sparsity}` values,
         // **model-dispatched** at runtime on the operand's model id across the introduction set

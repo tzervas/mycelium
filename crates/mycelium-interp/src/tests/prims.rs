@@ -4086,3 +4086,274 @@ fn bytes_eq_reject_surface_is_never_silent() {
         "arity 3 must refuse"
     );
 }
+
+// --- ADR-040 §2.4 (CU-3): never-silent Binary↔Float conversions --------------------------------
+
+/// An arbitrary-width `Binary{N}` value from an MSB-first bit vector (an `Exact` root value,
+/// mirroring [`byte`]/[`b8`] but width-generic — CU-3's conversions exercise widths beyond 8).
+fn binv(bits: Vec<bool>) -> Value {
+    let width = u32::try_from(bits.len()).expect("test widths fit u32");
+    Value::new(
+        Repr::Binary { width },
+        Payload::Bits(bits),
+        Meta::exact(Provenance::Root),
+    )
+    .unwrap()
+}
+
+/// `bin.to_flt` round-trips every in-range unsigned magnitude at `Binary{8}` — checked-exact,
+/// `Empirical` tag with the shared zero-deviation bound (ADR-040 §2.6).
+#[test]
+fn bin_to_flt_round_trips_in_range_magnitudes() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("bin.to_flt").expect("bin.to_flt registered");
+    for v in 0u8..=255 {
+        let bits: Vec<bool> = (0..8).rev().map(|i| (v >> i) & 1 == 1).collect();
+        let a = binv(bits);
+        let y = f("bin.to_flt", &[&a]).expect("in-range conversion");
+        assert_eq!(
+            y.repr(),
+            &Repr::Float {
+                width: FloatWidth::F64
+            }
+        );
+        assert_eq!(y.payload(), &Payload::Float(f64::from(v)));
+        assert_eq!(y.meta().guarantee(), GuaranteeStrength::Empirical);
+    }
+}
+
+/// `bin.to_flt` refuses a magnitude past the binary64 exact-integer bound (`2^53`) — never a
+/// silent lossy round (ADR-040 §2.4/§5: the lossy direction is a reified swap, not this prim).
+#[test]
+fn bin_to_flt_refuses_past_the_exact_bound() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("bin.to_flt").expect("bin.to_flt registered");
+    // 2^53 (54 bits, MSB set, rest zero) — the exact boundary, still in range.
+    let mut at_bound = vec![false; 54];
+    at_bound[0] = true;
+    let a = binv(at_bound);
+    assert!(f("bin.to_flt", &[&a]).is_ok(), "2^53 must be in range");
+
+    // 2^54 — one bit past, out of range.
+    let mut past_bound = vec![false; 55];
+    past_bound[0] = true;
+    let b = binv(past_bound);
+    assert!(
+        matches!(f("bin.to_flt", &[&b]), Err(EvalError::Overflow { .. })),
+        "2^54 exceeds the exact-integer bound — must refuse, never round"
+    );
+}
+
+/// `bin.to_flt` refuses a non-`Binary` operand and the wrong arity — never-silent (G2).
+#[test]
+fn bin_to_flt_reject_surface_is_never_silent() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("bin.to_flt").expect("bin.to_flt registered");
+    let a = binv(vec![true; 8]);
+    let non_binary = fv(1.0);
+    assert!(
+        matches!(
+            f("bin.to_flt", &[&non_binary]),
+            Err(EvalError::PrimType { .. })
+        ),
+        "a non-Binary operand must refuse"
+    );
+    assert!(
+        matches!(f("bin.to_flt", &[]), Err(EvalError::PrimType { .. })),
+        "arity 0 must refuse"
+    );
+    assert!(
+        matches!(f("bin.to_flt", &[&a, &a]), Err(EvalError::PrimType { .. })),
+        "arity 2 must refuse"
+    );
+}
+
+/// `flt.to_bin` round-trips every non-negative integer-valued `Float` that fits an 8-bit witness
+/// — the width witness's bits are ignored, only its `Binary{M}` width is read (mirrors
+/// `bit.width_cast`'s DN-41 shape).
+#[test]
+fn flt_to_bin_round_trips_in_range_integers() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("flt.to_bin").expect("flt.to_bin registered");
+    let witness = binv(vec![false; 8]); // Binary{8} — only the width (8) matters.
+    for v in 0u8..=255 {
+        let x = fv(f64::from(v));
+        let y = f("flt.to_bin", &[&x, &witness]).expect("in-range conversion");
+        assert_eq!(y.repr(), &Repr::Binary { width: 8 });
+        let bits: Vec<bool> = (0..8).rev().map(|i| (v >> i) & 1 == 1).collect();
+        assert_eq!(y.payload(), &Payload::Bits(bits));
+        assert_eq!(y.meta().guarantee(), GuaranteeStrength::Empirical);
+    }
+}
+
+/// `flt.to_bin` refuses NaN, ±inf, a negative value, and a nonzero fractional part — never a
+/// silent coercion (ADR-040 §2.4; G2).
+#[test]
+fn flt_to_bin_refuses_the_never_silent_domain() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("flt.to_bin").expect("flt.to_bin registered");
+    let witness = binv(vec![false; 8]);
+    for bad in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY, -1.0, 1.5] {
+        let x = fv(bad);
+        assert!(
+            matches!(
+                f("flt.to_bin", &[&x, &witness]),
+                Err(EvalError::PrimType { .. })
+            ),
+            "flt.to_bin({bad}) must refuse (NaN/±inf/negative/fractional)"
+        );
+    }
+}
+
+/// `flt.to_bin` refuses a magnitude that does not fit the witness's target width — never a silent
+/// truncation (ADR-040 §2.4/DN-41).
+#[test]
+fn flt_to_bin_refuses_out_of_target_width() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("flt.to_bin").expect("flt.to_bin registered");
+    let witness8 = binv(vec![false; 8]);
+    let x = fv(256.0); // one past Binary{8}'s unsigned range [0, 255].
+    assert!(
+        matches!(
+            f("flt.to_bin", &[&x, &witness8]),
+            Err(EvalError::Overflow { .. })
+        ),
+        "256 does not fit Binary{{8}} — must refuse, never truncate"
+    );
+}
+
+/// `flt.to_bin` refuses a non-`Float` value operand and the wrong arity — never-silent (G2).
+#[test]
+fn flt_to_bin_reject_surface_is_never_silent() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("flt.to_bin").expect("flt.to_bin registered");
+    let witness = binv(vec![false; 8]);
+    let non_float = binv(vec![true; 8]);
+    assert!(
+        matches!(
+            f("flt.to_bin", &[&non_float, &witness]),
+            Err(EvalError::PrimType { .. })
+        ),
+        "a non-Float value operand must refuse"
+    );
+    assert!(
+        matches!(
+            f("flt.to_bin", &[&fv(1.0)]),
+            Err(EvalError::PrimType { .. })
+        ),
+        "arity 1 must refuse"
+    );
+}
+
+/// Chained composition: converting the result of `flt.add` (an `Empirical` zero-deviation value)
+/// through `flt.to_bin` succeeds and stays `Empirical` — the same composability rule the `flt.*`
+/// arithmetic group uses ([`crate::prims::flt_result`]'s zero-deviation contract), never a
+/// fabricated `Exact` upgrade (VR-5).
+#[test]
+fn flt_to_bin_composes_over_a_prior_flt_op_result() {
+    let reg = PrimRegistry::with_builtins();
+    let add = reg.get("flt.add").expect("flt.add registered");
+    let to_bin = reg.get("flt.to_bin").expect("flt.to_bin registered");
+    let witness = binv(vec![false; 8]);
+    let sum = add("flt.add", &[&fv(3.0), &fv(4.0)]).expect("exact dyadic sum");
+    assert_eq!(sum.meta().guarantee(), GuaranteeStrength::Empirical);
+    let y = to_bin("flt.to_bin", &[&sum, &witness]).expect("7.0 fits Binary{8}");
+    assert_eq!(y.payload(), &Payload::Bits(bits("0000_0111")));
+    assert_eq!(y.meta().guarantee(), GuaranteeStrength::Empirical);
+}
+
+// --- RFC-0034 §10 (CU-5): the executable `wrapping` construct — eval-mode dispatch -------------
+//
+// `eval_wrapping` is **not** registered in `PrimRegistry` (no new `wrapping_*` prim name — RFC-0034
+// §10's mode is dispatched here over the existing `bin.add`/`bin.sub`/`bin.mul`, per the CU-5 task
+// ruling). These tests call it directly, as the future surface `wrapping { … }` construct's
+// lowering will once `mycelium-l1`'s parser/elaborator gain that surface (FLAGged: absent today).
+
+/// `eval_wrapping` over `bin.add`/`bin.sub`/`bin.mul` wraps modulo `2^n` exactly where the
+/// non-wrapping prims refuse — tagged `Declared` with the [`WrappingOpt`] marker attached
+/// (RFC-0034 §10), never the non-wrapping `Exact`/refuse contract.
+#[test]
+fn eval_wrapping_wraps_where_the_non_wrapping_prims_refuse() {
+    let reg = PrimRegistry::with_builtins();
+    let add = reg.get("bin.add").expect("bin.add registered");
+    let sub = reg.get("bin.sub").expect("bin.sub registered");
+    let mul = reg.get("bin.mul").expect("bin.mul registered");
+
+    // 127 + 1 = 128, out of B_8 = [-128, 127]: `bin.add` refuses, `eval_wrapping` wraps to -128.
+    let a = binv(bits("0111_1111")); // 127
+    let b = binv(bits("0000_0001")); // 1
+    assert!(
+        add("bin.add", &[&a, &b]).is_err(),
+        "bin.add must refuse 127 + 1 (never-silent)"
+    );
+    let y = eval_wrapping("bin.add", &[&a, &b]).expect("wrapping never refuses on range");
+    assert_eq!(
+        y.payload(),
+        &Payload::Bits(bits("1000_0000")), // -128
+        "127 + 1 must wrap to -128 (RFC-0034 §10)"
+    );
+    assert_eq!(y.meta().guarantee(), GuaranteeStrength::Declared);
+    assert!(
+        y.meta().wrapping_opt().is_some(),
+        "the WrappingOpt marker must be attached (RFC-0034 §10; M-791)"
+    );
+
+    // -128 - 1 = -129, out of range: `bin.sub` refuses, wraps to 127.
+    let lo = binv(bits("1000_0000")); // -128
+    let one = binv(bits("0000_0001")); // 1
+    assert!(sub("bin.sub", &[&lo, &one]).is_err());
+    let y = eval_wrapping("bin.sub", &[&lo, &one]).expect("wrapping never refuses on range");
+    assert_eq!(y.payload(), &Payload::Bits(bits("0111_1111"))); // 127
+    assert_eq!(y.meta().guarantee(), GuaranteeStrength::Declared);
+
+    // 16 * 16 = 256 = 2^8, out of B_8: `bin.mul` refuses, wraps to 0.
+    let sixteen = binv(bits("0001_0000"));
+    assert!(mul("bin.mul", &[&sixteen, &sixteen]).is_err());
+    let y = eval_wrapping("bin.mul", &[&sixteen, &sixteen]).expect("wrapping never refuses");
+    assert_eq!(y.payload(), &Payload::Bits(bits("0000_0000")));
+    assert_eq!(y.meta().guarantee(), GuaranteeStrength::Declared);
+}
+
+/// `eval_wrapping` still agrees with the non-wrapping prim on an **in-range** result — wrapping
+/// only opts out of the *range* refusal, never the arithmetic itself.
+#[test]
+fn eval_wrapping_agrees_with_the_non_wrapping_result_when_in_range() {
+    let reg = PrimRegistry::with_builtins();
+    let add = reg.get("bin.add").expect("bin.add registered");
+    let a = binv(bits("0000_0011")); // 3
+    let b = binv(bits("0000_0100")); // 4
+    let non_wrapping = add("bin.add", &[&a, &b]).expect("3 + 4 = 7 is in range");
+    let wrapping = eval_wrapping("bin.add", &[&a, &b]).expect("wrapping never refuses");
+    assert_eq!(non_wrapping.payload(), wrapping.payload());
+    assert_eq!(non_wrapping.meta().guarantee(), GuaranteeStrength::Exact);
+    assert_eq!(wrapping.meta().guarantee(), GuaranteeStrength::Declared);
+}
+
+/// `eval_wrapping` refuses a structural mismatch (unequal widths) and an unsupported prim name —
+/// `wrapping` only opts out of the range refusal, never the shape contract (G2).
+#[test]
+fn eval_wrapping_rejects_structural_mismatches_and_unsupported_prims() {
+    let a8 = binv(vec![false; 8]);
+    let a4 = binv(vec![false; 4]);
+    assert!(
+        matches!(
+            eval_wrapping("bin.add", &[&a8, &a4]),
+            Err(EvalError::PrimType { .. })
+        ),
+        "unequal widths must refuse"
+    );
+    assert!(
+        matches!(
+            eval_wrapping("bit.xor", &[&a8, &a8]),
+            Err(EvalError::PrimType { .. })
+        ),
+        "eval_wrapping only supports bin.add/bin.sub/bin.mul (RFC-0034 §10 — no new prims)"
+    );
+    assert!(
+        matches!(
+            eval_wrapping("bin.add", &[&a8]),
+            Err(EvalError::PrimType { .. })
+        ),
+        "arity 1 must refuse"
+    );
+}

@@ -18,4 +18,44 @@
 // accompanying .gap.json for every construct this pass could not express.
 nodule std.sys;
 
+// \[Declared\] `sin(x)`. Delegates to Rust `f64::sin` (platform libm). Precision unaudited (M-541).
+fn sin(x: Float) => Float = sin(x);
 
+// \[Declared\] `cos(x)`. Delegates to Rust `f64::cos` (platform libm). Precision unaudited (M-541).
+fn cos(x: Float) => Float = cos(x);
+
+// \[Declared\] `tan(x)`. Delegates to Rust `f64::tan` (platform libm). Precision unaudited (M-541).
+fn tan(x: Float) => Float = tan(x);
+
+// \[Declared\] `asin(x)`. Delegates to Rust `f64::asin` (platform libm). Precision unaudited (M-541).
+fn asin(x: Float) => Float = asin(x);
+
+// \[Declared\] `acos(x)`. Delegates to Rust `f64::acos` (platform libm). Precision unaudited (M-541).
+fn acos(x: Float) => Float = acos(x);
+
+// \[Declared\] `atan(x)`. Delegates to Rust `f64::atan` (platform libm). Precision unaudited (M-541).
+fn atan(x: Float) => Float = atan(x);
+
+// \[Declared\] `atan2(y, x)`. Delegates to Rust `f64::atan2` (platform libm). Precision unaudited (M-541).
+fn atan2(y: Float, x: Float) => Float = atan2(y, x);
+
+// \[Declared\] `exp(x)`. Delegates to Rust `f64::exp` (platform libm). Precision unaudited (M-541).
+fn exp(x: Float) => Float = exp(x);
+
+// \[Declared\] `exp2(x)`. Delegates to Rust `f64::exp2` (platform libm). Precision unaudited (M-541).
+fn exp2(x: Float) => Float = exp2(x);
+
+// \[Declared\] `ln(x)`. Delegates to Rust `f64::ln` (platform libm). Precision unaudited (M-541).
+fn ln(x: Float) => Float = ln(x);
+
+// \[Declared\] `log2(x)`. Delegates to Rust `f64::log2` (platform libm). Precision unaudited (M-541).
+fn log2(x: Float) => Float = log2(x);
+
+// \[Declared\] `log10(x)`. Delegates to Rust `f64::log10` (platform libm). Precision unaudited (M-541).
+fn log10(x: Float) => Float = log10(x);
+
+// \[Declared\] `sqrt(x)`. Delegates to Rust `f64::sqrt` (platform libm). Precision unaudited (M-541).
+fn sqrt(x: Float) => Float = sqrt(x);
+
+// \[Declared\] `cbrt(x)`. Delegates to Rust `f64::cbrt` (platform libm). Precision unaudited (M-541).
+fn cbrt(x: Float) => Float = cbrt(x);

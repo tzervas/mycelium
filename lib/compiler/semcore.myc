@@ -1968,31 +1968,98 @@ fn resolve_ctors_go(types: Vec[DataInfo], tyvars: Vec[Bytes], seen: Vec[Bytes], 
     }
   };
 
-// ── register_types: build the type registry from a nodule (checkty.rs::register_types; M-1013 STEP 3, PR-2) ──
-// TRIMMED Nodule/Item mirrors. register_types reads ONLY `Item::Type`, so every non-Type item
-// collapses to a single `ItOther` (the FLAG-semcore-1 trimmed-copy precedent — the full item
-// vocabulary Fn/Trait/Impl/Object/Lower/InherentImpl/Use/Default/Derive is not needed for this seam,
-// and collapsing it is what makes the deferral below structural). Field-for-field with ast.rs:
-// `Nodule { path, std_sys, items }`.
-type Item = ItType(TypeDecl) | ItOther;
+// ── register_types: build the type registry from a nodule (checkty.rs::register_types; M-1013 STEP 3, PR-2/PR-2b) ──
+// FULL Nodule/Item mirrors (PR-2b, closing FLAG-semcore-30). `register_types`' OWN two-pass
+// registration reads only `Item::Type`, but the M-826 tuple pre-pass `collect_tuple_arities` walks the
+// tuple-relevant CONTENT of every item kind (fn bodies, `match` patterns, fn/trait/impl signatures), so
+// the mirror carries those variants field-for-field. Each variant mirrors `ast.rs::Item` verbatim; the
+// three item kinds `collect_tuple_arities_item` skips (`Use(_) | Default(_) | Derive(_) => {}` — note
+// the oracle skips `Derive` even though `DeriveDecl` carries a `for_ty`, so it collapses faithfully)
+// share the single tuple-free `ItOther`. Field-for-field with ast.rs: `Nodule { path, std_sys, items }`.
+//
+// Object/InherentImpl reach `collect_tuple_arities` only when `register_types` is driven on a RAW
+// nodule (as the marshalling differential does); the real `check_phylum` pipeline structurally
+// desugars them to `Type + Impl + Fn` items in a Phase-0 pass BEFORE registration (checkty.rs
+// `check_phylum_inner`), so in production their tuples arrive via the desugared items. Porting the arms
+// anyway keeps the port arm-for-arm faithful to `collect_tuple_arities` itself (never a silent gap — a
+// raw-nodule caller gets exactly the oracle's answer).
+type TraitDecl = TrD(Vis, Bytes, Vec[Bytes], Vec[FnSig]);
+
+fn trd_sigs(t: TraitDecl) => Vec[FnSig] =
+  match t { TrD(_, _, _, s) => s };
+
+type ImplDecl = ImD(Bytes, Vec[TypeRef], TypeRef, Vec[FnDecl]);
+
+fn imd_trait_args(i: ImplDecl) => Vec[TypeRef] =
+  match i { ImD(_, a, _, _) => a };
+
+fn imd_for_ty(i: ImplDecl) => TypeRef =
+  match i { ImD(_, _, f, _) => f };
+
+fn imd_methods(i: ImplDecl) => Vec[FnDecl] =
+  match i { ImD(_, _, _, m) => m };
+
+type InherentImplDecl = IID(TypeRef, Vec[FnDecl]);
+
+fn iid_for_ty(i: InherentImplDecl) => TypeRef =
+  match i { IID(f, _) => f };
+
+fn iid_methods(i: InherentImplDecl) => Vec[FnDecl] =
+  match i { IID(_, m) => m };
+
+// ViaDecl: mirrors ast.rs::ViaDecl field-for-field (field_idx, trait_name, trait_args). No accessor —
+// `collect_tuple_arities_item`'s Object arm does NOT walk `via_decls` (a dead field, kept only so
+// `ObjectDecl` is field-for-field faithful; the oracle skips it too).
+type ViaDecl = VD(Binary{32}, Bytes, Vec[TypeRef]);
+
+type ObjectDecl = OD(Vis, Bytes, Vec[Bytes], Ctor, Vec[ViaDecl], Vec[ImplDecl], Vec[FnDecl]);
+
+fn od_ctor(o: ObjectDecl) => Ctor =
+  match o { OD(_, _, _, c, _, _, _) => c };
+
+fn od_impls(o: ObjectDecl) => Vec[ImplDecl] =
+  match o { OD(_, _, _, _, _, i, _) => i };
+
+fn od_fns(o: ObjectDecl) => Vec[FnDecl] =
+  match o { OD(_, _, _, _, _, _, f) => f };
+
+// LowerRhs / LowerDecl: mirror ast.rs::LowerRhs / ast.rs::LowerDecl (DN-54 §10). Only `rhs` grades.
+type LowerRhs = LrExpr(Expr) | LrImpl(ImplDecl);
+
+type LowerDecl = LD(Bytes, Vec[Bytes], LowerRhs);
+
+fn ld_rhs(l: LowerDecl) => LowerRhs =
+  match l { LD(_, _, r) => r };
+
+type Item =
+    ItType(TypeDecl)
+  | ItFn(FnDecl)
+  | ItTrait(TraitDecl)
+  | ItImpl(ImplDecl)
+  | ItObject(ObjectDecl)
+  | ItLower(LowerDecl)
+  | ItInherentImpl(InherentImplDecl)
+  | ItOther;
 type Nodule = Nod(Path, Bool, Vec[Item]);
 
 fn nodule_items(n: Nodule) => Vec[Item] =
   match n { Nod(_, _, its) => its };
 
-// ── trimmed tuple pre-pass (checkty.rs::collect_tuple_arities — TYPE-DECL ctor-field leg ONLY) ─────
-// FLAG-semcore-30 (M-1013 STEP 3, PR-2b DEFERRAL — the maintainer's split of register_types). The
-// real M-826 pre-pass `collect_tuple_arities` walks type-decl ctor fields AND fn bodies, `match`
-// patterns, and fn/trait/impl signatures, pre-registering every synthetic `Tuple$N` referenced
-// anywhere in the nodule. THIS port walks ONLY the type-declaration ctor-field TypeRefs — the tuples
-// register_types' OWN ctor resolution (`resolve_ctors` below) references. The fn-body / pattern /
-// signature legs are DEFERRED to a dedicated PR-2b, NOT silently dropped: a `Tuple$N` needed only by
-// a deferred leg is simply not registered here, and any later `resolve_ty` of that tuple hits
-// `resolve_tuple`'s explicit "synthetic tuple type ... not registered" `Err` (never a silent wrong
-// answer — G2/VR-5). The `Item` mirror above is correspondingly trimmed (`ItOther`), so a non-Type
-// item carries NO tuple arity into this pass by construction — the deferral is structural, not a
-// forgotten branch. Arities are collected into a `Vec[Binary{32}]` (duplicates harmless — the
-// registration step below is presence-checked, standing in for Rust's `BTreeSet` + `or_insert_with`).
+// ── M-826 tuple pre-pass (checkty.rs::collect_tuple_arities — FULL walk, all legs) ─────────────────
+// FLAG-semcore-30 CLOSED (M-1013 STEP 3, PR-2b). The pre-pass now walks EVERY leg the Rust oracle
+// does, arm-for-arm: type-decl ctor fields, fn bodies (the `Expr` walk), `match` patterns (the
+// `Pattern` walk), and fn/trait/impl signatures (the `FnSig` walk) — pre-registering every synthetic
+// `Tuple$N` referenced anywhere in the nodule, so a tuple used ONLY in (say) a fn body or a `match`
+// arm is registered before `resolve_ty` needs it. The never-silent floor is unchanged: any `Tuple$N`
+// still missing at `resolve_ty` time is `resolve_tuple`'s explicit "synthetic tuple type ... not
+// registered" `Err` (G2/VR-5). Arities are collected into a `Vec[Binary{32}]` (duplicates harmless —
+// `register_tuple_arities` below is presence-checked, standing in for Rust's `BTreeSet` +
+// `or_insert_with`; order-insensitive by the same token, so the threaded acc's order is irrelevant).
+// No depth guard (matching the oracle: this is a pre-order SCAN, not evaluation — checkty.rs §793).
+//
+// `_typeref` / `_trefs` / `_ctors` (below) are unchanged from PR-2 — already arm-for-arm faithful to
+// checkty.rs::collect_tuple_arities_typeref and its list folds; the new `_sig` / `_pattern` / `_expr`
+// / `_item` legs reuse them.
 fn collect_tuple_arities_typeref(t: TypeRef, acc: Vec[Binary{32}]) => Vec[Binary{32}] =
   match typeref_base(t) {
     Tuple(elems) => collect_tuple_arities_trefs(Cons(tref_len(elems), acc), elems),
@@ -2014,14 +2081,160 @@ fn collect_tuple_arities_ctors(acc: Vec[Binary{32}], cs: Vec[Ctor]) => Vec[Binar
     Cons(c, rest) => collect_tuple_arities_ctors(collect_tuple_arities_trefs(acc, ct_fields(c)), rest)
   };
 
-// collect_tuple_arities: the TRIMMED walk — ONLY each `Item::Type`'s ctor fields (FLAG-semcore-30).
+// expr_len / pattern_len: monomorphic length counters (Vec[Expr] / Vec[Pattern]) — the tuple-literal /
+// tuple-pattern arity (mirrors Rust's `elems.len()` / `subs.len()`; the tref_len/pat_len twins).
+fn expr_len(v: Vec[Expr]) => Binary{32} =
+  match v { Nil => zero32(), Cons(_, t) => add_u(one32(), expr_len(t)) };
+
+fn pattern_len(v: Vec[Pattern]) => Binary{32} =
+  match v { Nil => zero32(), Cons(_, t) => add_u(one32(), pattern_len(t)) };
+
+// ── signature leg (checkty.rs::collect_tuple_arities_sig): each value-param type, then the return type.
+fn collect_tuple_arities_params(acc: Vec[Binary{32}], ps: Vec[Param]) => Vec[Binary{32}] =
+  match ps {
+    Nil => acc,
+    Cons(p, rest) => collect_tuple_arities_params(collect_tuple_arities_typeref(param_ty(p), acc), rest)
+  };
+
+fn collect_tuple_arities_sig(acc: Vec[Binary{32}], sig: FnSig) => Vec[Binary{32}] =
+  collect_tuple_arities_typeref(fnsig_ret(sig), collect_tuple_arities_params(acc, fnsig_value_params(sig)));
+
+fn collect_tuple_arities_sigs(acc: Vec[Binary{32}], sigs: Vec[FnSig]) => Vec[Binary{32}] =
+  match sigs {
+    Nil => acc,
+    Cons(s, rest) => collect_tuple_arities_sigs(collect_tuple_arities_sig(acc, s), rest)
+  };
+
+// ── pattern leg (checkty.rs::collect_tuple_arities_pattern): a `PTuple` of arity N needs `Tuple$N`
+// registered even when never constructed (M-826 self-review M1 — a destructured-only tuple). Recurses
+// through ctor sub-patterns and or-pattern alternatives; PWildcard/PLit/PIdent are leaves.
+fn collect_tuple_arities_pattern(acc: Vec[Binary{32}], p: Pattern) => Vec[Binary{32}] =
+  match p {
+    PTuple(subs) => collect_tuple_arities_patterns(Cons(pattern_len(subs), acc), subs),
+    PCtor(_, subs) => collect_tuple_arities_patterns(acc, subs),
+    POr(alts) => collect_tuple_arities_patterns(acc, alts),
+    PWildcard => acc,
+    PLit(_) => acc,
+    PIdent(_) => acc
+  };
+
+fn collect_tuple_arities_patterns(acc: Vec[Binary{32}], ps: Vec[Pattern]) => Vec[Binary{32}] =
+  match ps {
+    Nil => acc,
+    Cons(p, rest) => collect_tuple_arities_patterns(collect_tuple_arities_pattern(acc, p), rest)
+  };
+
+// collect_tuple_arities_opt_typeref: the `if let Some(t) = ty` guard on the `Let` arm's ascription.
+fn collect_tuple_arities_opt_typeref(acc: Vec[Binary{32}], oty: Option[TypeRef]) => Vec[Binary{32}] =
+  match oty { None => acc, Some(t) => collect_tuple_arities_typeref(t, acc) };
+
+// ── expression leg (checkty.rs::collect_tuple_arities_expr): all 18 `Expr` variants, arm-for-arm.
+// `TupleLit(elems)` inserts arity `elems.len()`; every other arm recurses into its sub-exprs / sub-types
+// exactly as the oracle. `Path`/`Lit` are leaves — note the oracle does NOT recurse into `Lit`, so a
+// tuple nested in a `List` literal is a leaf here too (faithful to checkty.rs §1007; VR-5, not "fixed").
+fn collect_tuple_arities_expr(acc: Vec[Binary{32}], e: Expr) => Vec[Binary{32}] =
+  match e {
+    TupleLit(elems) => collect_tuple_arities_exprs(Cons(expr_len(elems), acc), elems),
+    Let(_, oty, bound, body) =>
+      collect_tuple_arities_expr(
+        collect_tuple_arities_expr(collect_tuple_arities_opt_typeref(acc, oty), bound),
+        body),
+    If(cond, conseq, alt) =>
+      collect_tuple_arities_expr(
+        collect_tuple_arities_expr(collect_tuple_arities_expr(acc, cond), conseq),
+        alt),
+    Match(scrut, arms) => collect_tuple_arities_arms(collect_tuple_arities_expr(acc, scrut), arms),
+    For(_, xs, _, init, body) =>
+      collect_tuple_arities_expr(
+        collect_tuple_arities_expr(collect_tuple_arities_expr(acc, xs), init),
+        body),
+    Swap(value, _, _) => collect_tuple_arities_expr(acc, value),
+    WithParadigm(_, body) => collect_tuple_arities_expr(acc, body),
+    Wild(b) => collect_tuple_arities_expr(acc, b),
+    Spore(b) => collect_tuple_arities_expr(acc, b),
+    Consume(b) => collect_tuple_arities_expr(acc, b),
+    Colony(hs) => collect_tuple_arities_hyphae(acc, hs),
+    Lambda(ps, body) => collect_tuple_arities_expr(collect_tuple_arities_params(acc, ps), body),
+    App(head, args) => collect_tuple_arities_exprs(collect_tuple_arities_expr(acc, head), args),
+    Fuse(l, r) => collect_tuple_arities_expr(collect_tuple_arities_expr(acc, l), r),
+    Reclaim(pol, body) => collect_tuple_arities_expr(collect_tuple_arities_expr(acc, pol), body),
+    Path(_) => acc,
+    Lit(_) => acc,
+    Ascribe(inner, t) => collect_tuple_arities_typeref(t, collect_tuple_arities_expr(acc, inner))
+  };
+
+fn collect_tuple_arities_exprs(acc: Vec[Binary{32}], es: Vec[Expr]) => Vec[Binary{32}] =
+  match es {
+    Nil => acc,
+    Cons(e, rest) => collect_tuple_arities_exprs(collect_tuple_arities_expr(acc, e), rest)
+  };
+
+fn collect_tuple_arities_arm(acc: Vec[Binary{32}], a: Arm) => Vec[Binary{32}] =
+  collect_tuple_arities_expr(collect_tuple_arities_pattern(acc, arm_pattern(a)), arm_body(a));
+
+fn collect_tuple_arities_arms(acc: Vec[Binary{32}], arms: Vec[Arm]) => Vec[Binary{32}] =
+  match arms {
+    Nil => acc,
+    Cons(a, rest) => collect_tuple_arities_arms(collect_tuple_arities_arm(acc, a), rest)
+  };
+
+fn collect_tuple_arities_hyphae(acc: Vec[Binary{32}], hs: Vec[Hypha]) => Vec[Binary{32}] =
+  match hs {
+    Nil => acc,
+    Cons(h, rest) => collect_tuple_arities_hyphae(collect_tuple_arities_expr(acc, hypha_body(h)), rest)
+  };
+
+// ── fn-decl + impl legs (the sig+body pair, and the trait_args+for_ty+methods bundle reused by the
+// Impl / Object / Lower(Impl) arms) — checkty.rs::collect_tuple_arities_item's shared inner loops.
+fn collect_tuple_arities_fndecl(acc: Vec[Binary{32}], fd: FnDecl) => Vec[Binary{32}] =
+  collect_tuple_arities_expr(collect_tuple_arities_sig(acc, fndecl_sig(fd)), fndecl_body(fd));
+
+fn collect_tuple_arities_fndecls(acc: Vec[Binary{32}], fds: Vec[FnDecl]) => Vec[Binary{32}] =
+  match fds {
+    Nil => acc,
+    Cons(fd, rest) => collect_tuple_arities_fndecls(collect_tuple_arities_fndecl(acc, fd), rest)
+  };
+
+fn collect_tuple_arities_impl(acc: Vec[Binary{32}], id: ImplDecl) => Vec[Binary{32}] =
+  collect_tuple_arities_fndecls(
+    collect_tuple_arities_typeref(imd_for_ty(id), collect_tuple_arities_trefs(acc, imd_trait_args(id))),
+    imd_methods(id));
+
+fn collect_tuple_arities_impls(acc: Vec[Binary{32}], ids: Vec[ImplDecl]) => Vec[Binary{32}] =
+  match ids {
+    Nil => acc,
+    Cons(id, rest) => collect_tuple_arities_impls(collect_tuple_arities_impl(acc, id), rest)
+  };
+
+// collect_tuple_arities_item: checkty.rs::collect_tuple_arities_item, arm-for-arm. `ItOther` (Use /
+// Default / Derive) is the oracle's `=> {}` no-op. Object/InherentImpl are pre-desugared in the real
+// pipeline (see the mirror header above) but ported faithfully for a raw-nodule caller.
+fn collect_tuple_arities_item(acc: Vec[Binary{32}], it: Item) => Vec[Binary{32}] =
+  match it {
+    ItType(td) => collect_tuple_arities_ctors(acc, td_ctors(td)),
+    ItFn(fd) => collect_tuple_arities_fndecl(acc, fd),
+    ItTrait(tr) => collect_tuple_arities_sigs(acc, trd_sigs(tr)),
+    ItImpl(id) => collect_tuple_arities_impl(acc, id),
+    ItObject(od) =>
+      collect_tuple_arities_fndecls(
+        collect_tuple_arities_impls(
+          collect_tuple_arities_trefs(acc, ct_fields(od_ctor(od))),
+          od_impls(od)),
+        od_fns(od)),
+    ItLower(ld) => match ld_rhs(ld) {
+      LrExpr(e) => collect_tuple_arities_expr(acc, e),
+      LrImpl(id) => collect_tuple_arities_impl(acc, id)
+    },
+    ItInherentImpl(iid) =>
+      collect_tuple_arities_fndecls(collect_tuple_arities_typeref(iid_for_ty(iid), acc), iid_methods(iid)),
+    ItOther => acc
+  };
+
+// collect_tuple_arities: the FULL walk — every item's tuple-relevant content (checkty.rs §793).
 fn collect_tuple_arities(items: Vec[Item], acc: Vec[Binary{32}]) => Vec[Binary{32}] =
   match items {
     Nil => acc,
-    Cons(it, rest) => match it {
-      ItType(td) => collect_tuple_arities(rest, collect_tuple_arities_ctors(acc, td_ctors(td))),
-      ItOther => collect_tuple_arities(rest, acc)
-    }
+    Cons(it, rest) => collect_tuple_arities(rest, collect_tuple_arities_item(acc, it))
   };
 
 // register_tuple_arities: pre-register a synthetic `Tuple$N` for each collected arity, but only if
@@ -2040,19 +2253,21 @@ fn register_tuple_arities(types: Vec[DataInfo], arities: Vec[Binary{32}]) => Vec
 // field references resolve (checkty.rs's first loop). Never-silent refusals, in Rust's exact order:
 // a duplicate type PARAMETER (`first_duplicate`) is checked FIRST, then a duplicate type NAME
 // (`types_lookup` over the accumulated registry — which includes the seeded prelude, so redeclaring
-// `Bool` collides exactly as in Rust). Non-Type items are skipped (`ItOther`).
+// `Bool` collides exactly as in Rust). EVERY non-Type item is skipped — the faithful mirror of the
+// oracle's `if let Item::Type(td) = item` (only a type declaration declares a data type; the
+// un-trimmed Fn/Trait/Impl/Object/Lower/InherentImpl/`ItOther` kinds are all non-declarations here).
 fn register_shells(types: Vec[DataInfo], items: Vec[Item]) => Result[Vec[DataInfo], Bytes] =
   match items {
     Nil => Ok(types),
     Cons(it, rest) => match it {
-      ItOther => register_shells(types, rest),
       ItType(td) => match first_duplicate(td_params(td)) {
         Some(dup) => Err(bytes_concat("duplicate type parameter `", bytes_concat(dup, bytes_concat("` in `", bytes_concat(td_name(td), "`"))))),
         None => match types_lookup(types, td_name(td)) {
           Some(_) => Err("duplicate type declaration"),
           None => register_shells(Cons(DI(td_name(td), td_params(td), Nil), types), rest)
         }
-      }
+      },
+      _ => register_shells(types, rest)
     }
   };
 
@@ -2077,18 +2292,18 @@ fn fill_ctors(types: Vec[DataInfo], items: Vec[Item]) => Result[Vec[DataInfo], B
   match items {
     Nil => Ok(types),
     Cons(it, rest) => match it {
-      ItOther => fill_ctors(types, rest),
       ItType(td) => match resolve_ctors(types, td) {
         Err(e) => Err(e),
         Ok(ctors) => fill_ctors(types_set_ctors(types, td_name(td), ctors), rest)
-      }
+      },
+      _ => fill_ctors(types, rest)
     }
   };
 
 // register_types: the two-pass data-declaration registration, value-threaded over the assoc-list
-// registry (checkty.rs::register_types). Order matches Rust exactly: (0) the TRIMMED tuple pre-pass
-// (FLAG-semcore-30), (1) shell-register each type, (2) fill each type's ctors. Returns the mutated
-// registry or the first never-silent refusal.
+// registry (checkty.rs::register_types). Order matches Rust exactly: (0) the FULL M-826 tuple pre-pass
+// (all legs — FLAG-semcore-30 CLOSED, PR-2b), (1) shell-register each type, (2) fill each type's ctors.
+// Returns the mutated registry or the first never-silent refusal.
 fn register_types(types: Vec[DataInfo], nod: Nodule) => Result[Vec[DataInfo], Bytes] =
   let items = nodule_items(nod) in
   let with_tuples = register_tuple_arities(types, collect_tuple_arities(items, Nil)) in
@@ -2096,6 +2311,437 @@ fn register_types(types: Vec[DataInfo], nod: Nodule) => Result[Vec[DataInfo], By
     Err(e) => Err(e),
     Ok(shelled) => fill_ctors(shelled, items)
   };
+
+// ── register_traits: the TRAIT pass (checkty.rs::register_traits 3016-3083; M-1013 STEP 3) ─────────
+// Ports checkty.rs's two-pass trait registration, value-threaded over an assoc-list registry
+// `Vec[TraitInfo]` (the FLAG-semcore-4 stand-in for `BTreeMap<String, TraitInfo>`, exactly as
+// `register_types` stands in for the types map). Arm-for-arm with the oracle:
+//   * PASS 1 (`register_traits_pass1`, mirroring checkty.rs 3021-3057) — for each `Item::Trait(td)`:
+//     reject a duplicate type PARAMETER (`first_duplicate(td.params)`, 3024), a duplicate trait NAME
+//     (`traits.contains_key`, 3030), and a within-trait duplicate METHOD name (3034-3041); then check
+//     every method signature RESOLVES with the trait's params extended by the method's OWN type-param
+//     names in scope as tyvars (3042-3047), and insert `TraitInfo{name, params, sigs}` (3049-3056).
+//   * PASS 2 (`register_traits_bounds`, mirroring checkty.rs 3063-3081) — over the COMPLETE registry,
+//     so a bound may forward-reference a later trait: every method type-parameter BOUND must name a
+//     KNOWN trait (3067). An unknown bound is an explicit never-silent `Err` (G2/VR-5), never a
+//     silently-registered ill-formed requirement.
+// Registry ORDER is insertion-reversed (prepend `Cons`) vs the oracle's sorted `BTreeMap`; every
+// consumer here is order-insensitive (`traits_contains` is set-membership; the differential decodes
+// the returned `Vec` into a name-keyed map), and pass 2 returns Ok or the FIRST refusal only — so the
+// port and the oracle agree on Ok / any-refusal regardless of order. Guarantee: `Declared` (a
+// structural registry check, not a theorem — checkty.rs 3010's LR-2 tag).
+
+// TraitInfo: mirrors checkty.rs::TraitInfo (264-272) — { name, params (tyvar names), sigs (SURFACE
+// FnSigs, stored verbatim) }. Modeled as a presence-checked `Vec[TraitInfo]` keyed by name, exactly
+// as `register_types`' output is a `Vec[DataInfo]` (NOT a map).
+type TraitInfo = TrInfo(Bytes, Vec[Bytes], Vec[FnSig]);
+
+fn trinfo_name(t: TraitInfo) => Bytes =
+  match t { TrInfo(n, _, _) => n };
+
+fn trinfo_sigs(t: TraitInfo) => Vec[FnSig] =
+  match t { TrInfo(_, _, s) => s };
+
+// TraitDecl accessors: name (field 1) / params (field 2). `trd_sigs` (field 3) already exists above;
+// `td_name`/`td_params` are TypeDecl's, so TraitDecl needs its own (distinct ADT).
+fn trd_name(t: TraitDecl) => Bytes =
+  match t { TrD(_, n, _, _) => n };
+
+fn trd_params(t: TraitDecl) => Vec[Bytes] =
+  match t { TrD(_, _, p, _) => p };
+
+// FnSig type-params accessor (FS field 1) — the 3 grade accessors above (name/value_params/ret)
+// omitted it as unused; the trait pass needs it (method type-params → tyvar scope + bound checks).
+fn fnsig_type_params(s: FnSig) => Vec[TypeParam] =
+  match s { FS(_, tps, _, _, _, _) => tps };
+
+// TypeParam / TraitRef accessors (checkty.rs reads `tp.name` / `tp.kind` / `tp.bounds` / `b.name`).
+fn tp_name(t: TypeParam) => Bytes =
+  match t { TP(n, _, _) => n };
+
+fn tp_kind(t: TypeParam) => ParamKind =
+  match t { TP(_, k, _) => k };
+
+fn tp_bounds(t: TypeParam) => Vec[TraitRef] =
+  match t { TP(_, _, b) => b };
+
+fn traitref_name(r: TraitRef) => Bytes =
+  match r { TRf(n, _) => n };
+
+// fnsig_tyvar_names: mirrors FnSig::param_names (ast.rs 447-460) — the method's TYPE-kind type-param
+// names only (width params are dropped; they cannot stand in the tyvar scope, DN-42 §7). Distinct
+// from the value-parameter `param_names(Vec[Param])` above (that maps `Vec[Param]`; this filters
+// `Vec[TypeParam]` by `PkType`).
+fn fnsig_tyvar_names(s: FnSig) => Vec[Bytes] =
+  type_param_type_names(fnsig_type_params(s));
+
+fn type_param_type_names(tps: Vec[TypeParam]) => Vec[Bytes] =
+  match tps {
+    Nil => Nil,
+    Cons(tp, rest) => match tp_kind(tp) {
+      PkType => Cons(tp_name(tp), type_param_type_names(rest)),
+      _ => type_param_type_names(rest)
+    }
+  };
+
+// traits_contains: `traits.contains_key(name)` over the assoc-list registry (set membership by name).
+fn traits_contains(traits: Vec[TraitInfo], name: Bytes) => Bool =
+  match traits {
+    Nil => False,
+    Cons(tr, rest) => match bytes_eq(trinfo_name(tr), name) {
+      0b1 => True,
+      _ => traits_contains(rest, name)
+    }
+  };
+
+// check_sig_resolves: checkty.rs 3088-3099 — every value-param type, then the ret, must `resolve_ty`
+// under `tyvars`; `Ok(True)` (a unit sentinel; the resolved types + their guarantee slot are
+// discarded exactly as Rust's `resolve_ty(...)?` ignores its value) or the FIRST `Err`.
+fn check_sig_resolves(types: Vec[DataInfo], tyvars: Vec[Bytes], sig: FnSig) => Result[Bool, Bytes] =
+  match check_params_resolve(types, tyvars, fnsig_value_params(sig)) {
+    Err(e) => Err(e),
+    Ok(_) => match resolve_ty(types, tyvars, fnsig_ret(sig)) {
+      Err(e) => Err(e),
+      Ok(_) => Ok(True)
+    }
+  };
+
+fn check_params_resolve(types: Vec[DataInfo], tyvars: Vec[Bytes], params: Vec[Param]) => Result[Bool, Bytes] =
+  match params {
+    Nil => Ok(True),
+    Cons(p, rest) => match resolve_ty(types, tyvars, param_ty(p)) {
+      Err(e) => Err(e),
+      Ok(_) => check_params_resolve(types, tyvars, rest)
+    }
+  };
+
+// register_traits: the two-pass entry (checkty.rs 3016-3083). Returns the registry or the first refusal.
+fn register_traits(types: Vec[DataInfo], nod: Nodule) => Result[Vec[TraitInfo], Bytes] =
+  match register_traits_pass1(types, Nil, nodule_items(nod)) {
+    Err(e) => Err(e),
+    Ok(traits) => match register_traits_bounds(traits, traits) {
+      Err(e) => Err(e),
+      Ok(_) => Ok(traits)
+    }
+  };
+
+// PASS 1 — checkty.rs 3021-3057. Every non-Trait item is skipped (the mirror of `let Item::Trait(td)
+// = item else { continue }`); each trait's checks run in the oracle's order (dup param -> dup name ->
+// method checks -> insert).
+fn register_traits_pass1(types: Vec[DataInfo], acc: Vec[TraitInfo], items: Vec[Item]) => Result[Vec[TraitInfo], Bytes] =
+  match items {
+    Nil => Ok(acc),
+    Cons(it, rest) => match it {
+      ItTrait(td) => match first_duplicate(trd_params(td)) {
+        Some(dup) => Err(bytes_concat("duplicate type parameter `", bytes_concat(dup, bytes_concat("` in trait `", bytes_concat(trd_name(td), "`"))))),
+        None => match traits_contains(acc, trd_name(td)) {
+          True => Err("duplicate trait declaration"),
+          False => match check_trait_methods(types, trd_name(td), trd_params(td), Nil, trd_sigs(td)) {
+            Err(e) => Err(e),
+            Ok(_) => register_traits_pass1(types, Cons(TrInfo(trd_name(td), trd_params(td), trd_sigs(td)), acc), rest)
+          }
+        }
+      },
+      _ => register_traits_pass1(types, acc, rest)
+    }
+  };
+
+// check_trait_methods: the within-trait method loop (checkty.rs 3034-3048). `seen` tracks distinct
+// method names; each sig resolves with `tyvars = trait.params ++ method.param_names()` (3045-3046).
+fn check_trait_methods(types: Vec[DataInfo], trait_name: Bytes, params: Vec[Bytes], seen: Vec[Bytes], sigs: Vec[FnSig]) => Result[Bool, Bytes] =
+  match sigs {
+    Nil => Ok(True),
+    Cons(s, rest) => match names_contains(seen, fnsig_name(s)) {
+      True => Err(bytes_concat("duplicate method `", bytes_concat(fnsig_name(s), bytes_concat("` in trait `", bytes_concat(trait_name, "`"))))),
+      False => match check_sig_resolves(types, names_append(params, fnsig_tyvar_names(s)), s) {
+        Err(e) => Err(e),
+        Ok(_) => check_trait_methods(types, trait_name, params, Cons(fnsig_name(s), seen), rest)
+      }
+    }
+  };
+
+// PASS 2 — checkty.rs 3063-3081. Over the COMPLETE registry (`all`), so a bound may forward-reference
+// a later-declared trait. Every method type-parameter bound must name a KNOWN trait, else an explicit
+// refusal naming the site + the offending bound (mirroring the oracle's message shape).
+fn register_traits_bounds(all: Vec[TraitInfo], traits: Vec[TraitInfo]) => Result[Bool, Bytes] =
+  match traits {
+    Nil => Ok(True),
+    Cons(tr, rest) => match check_trait_sig_bounds(all, trinfo_name(tr), trinfo_sigs(tr)) {
+      Err(e) => Err(e),
+      Ok(_) => register_traits_bounds(all, rest)
+    }
+  };
+
+fn check_trait_sig_bounds(all: Vec[TraitInfo], trname: Bytes, sigs: Vec[FnSig]) => Result[Bool, Bytes] =
+  match sigs {
+    Nil => Ok(True),
+    Cons(s, rest) => match check_sig_tp_bounds(all, trname, fnsig_name(s), fnsig_type_params(s)) {
+      Err(e) => Err(e),
+      Ok(_) => check_trait_sig_bounds(all, trname, rest)
+    }
+  };
+
+fn check_sig_tp_bounds(all: Vec[TraitInfo], trname: Bytes, method: Bytes, tps: Vec[TypeParam]) => Result[Bool, Bytes] =
+  match tps {
+    Nil => Ok(True),
+    Cons(tp, rest) => match check_tp_bounds(all, trname, method, tp_name(tp), tp_bounds(tp)) {
+      Err(e) => Err(e),
+      Ok(_) => check_sig_tp_bounds(all, trname, method, rest)
+    }
+  };
+
+// unknown_bound_msg: the never-silent refusal text for pass 2 (checkty.rs 3068-3076) — names the site
+// (`trait <T> method <m>`) and the offending bound (`<param>: <bound>`). Built in `let`-pieces to keep
+// the concatenation legibly balanced.
+fn unknown_bound_msg(trname: Bytes, method: Bytes, pname: Bytes, bound: Bytes) => Bytes =
+  let a = bytes_concat("trait `", bytes_concat(trname, "` method `")) in
+  let b = bytes_concat(method, bytes_concat("`: unknown trait `", bound)) in
+  let c = bytes_concat("` in the bound `", bytes_concat(pname, bytes_concat(": ", bound))) in
+  bytes_concat(a, bytes_concat(b, bytes_concat(c, "` (RFC-0019 SS4.1 -- a method's type-parameter bound must name a declared trait)")));
+
+fn check_tp_bounds(all: Vec[TraitInfo], trname: Bytes, method: Bytes, pname: Bytes, bounds: Vec[TraitRef]) => Result[Bool, Bytes] =
+  match bounds {
+    Nil => Ok(True),
+    Cons(b, rest) => match traits_contains(all, traitref_name(b)) {
+      True => check_tp_bounds(all, trname, method, pname, rest),
+      False => Err(unknown_bound_msg(trname, method, pname, traitref_name(b)))
+    }
+  };
+
+// ── register_instances: the IMPL pass — registration + coherence (checkty.rs::register_instances ──
+// 3116-3238; M-1013 STEP 3, PR-3). Ports checkty.rs's impl-registration/coherence pass, value-threaded
+// over an assoc-list instance registry `Vec[InstanceInfo]` (the FLAG-semcore-4 stand-in for
+// `BTreeMap<(String,String), InstanceInfo>` keyed by `(trait_name, type_head(for_ty))`, exactly as
+// `register_types`/`register_traits` stand in for their maps). Arm-for-arm with the oracle, in the
+// EXACT order (checkty.rs 3131-3235): for each `Item::Impl(id)` --
+//   (1) the trait must EXIST in `traits` (3135-3143) else "unknown trait";
+//   (2) resolve `for_ty` and each `trait_arg` CONCRETELY (empty tyvars -- 3146-3150);
+//   (3) ARITY: `trait_args.len() == tr.params.len()` (3152-3163) else refuse;
+//   (4) `type_head(for_ty)` must be `Some` (3165-3174) else "bare type variable is not a legal head";
+//   (5) ORPHAN rule -- phylum-wide, pub-blind (M-662; 3175-3209): legal iff `trait_local`
+//       (coherence.traits has the trait) OR `type_local` (for_ty is a `Data` in coherence.types, OR a
+//       primitive repr -- Binary/Ternary/Dense/Vsa/Substrate/Seq/Bytes/Float -> true; Var/Fn -> false),
+//       else orphan refusal;
+//   (6) GLOBAL UNIQUENESS: `(trait_name, head)` must be free (3210-3224) else overlapping-instance;
+//   (7) `check_impl_method_set` -- the impl's method-name SET must EXACTLY match the trait's required
+//       sig names (3225-3226 / 3243-3284): a missing OR extra method (and a duplicate) is refused;
+//   (8) insert `InstanceInfo{trait_name, trait_args, for_ty, methods = id.methods.map(m.sig.name)}`.
+// Every refusal is never-silent (G2/VR-5), mirroring the oracle's site + reason. Registry ORDER is
+// insertion-reversed (prepend `Cons`) vs the oracle's sorted `BTreeMap`; every consumer is
+// order-insensitive (uniqueness is a `(trait, head)` membership scan; the differential decodes the
+// returned `Vec` into a `(trait, head)`-keyed map), and the loop returns `Ok` or the FIRST refusal
+// only -- so port and oracle agree on Ok / any-refusal regardless of order. Guarantee: `Declared` --
+// the coherence argument is Declared-with-argument per RFC-0019/LR-2 (checkty.rs 3101-3102's tag),
+// NOT machine-checked; the port keeps the oracle's tag (never upgraded -- VR-5).
+
+// InstanceInfo: mirrors checkty.rs::InstanceInfo (277-286) -- { trait_name, trait_args (concrete Ty),
+// for_ty (concrete Ty), methods (provided method names) }. Modeled as a presence-checked
+// `Vec[InstanceInfo]` keyed by `(trait_name, type_head(for_ty))`, exactly as the other register-family
+// outputs are Vecs (NOT maps).
+type InstanceInfo = InstInfo(Bytes, Vec[Ty], Ty, Vec[Bytes]);
+
+fn instinfo_trait_name(i: InstanceInfo) => Bytes =
+  match i { InstInfo(n, _, _, _) => n };
+
+fn instinfo_for_ty(i: InstanceInfo) => Ty =
+  match i { InstInfo(_, _, f, _) => f };
+
+// CoherenceView: mirrors checkty.rs::CoherenceView (1318-1323) -- the pub-blind phylum-wide name view
+// the orphan rule reads: (all trait names, all data-type names), each a `Vec[Bytes]` name-list (the
+// FLAG-semcore-4 assoc-list stand-in for the oracle's two `BTreeSet<String>`; membership via
+// `names_contains`).
+type CoherenceView = CV(Vec[Bytes], Vec[Bytes]);
+
+fn cv_traits(c: CoherenceView) => Vec[Bytes] =
+  match c { CV(t, _) => t };
+
+fn cv_types(c: CoherenceView) => Vec[Bytes] =
+  match c { CV(_, t) => t };
+
+// ImplDecl trait-name accessor (ImD field 1) -- the register-family tuple pre-pass read only
+// args/for_ty/methods; the impl pass needs the trait name (lookup + instance key + messages).
+fn imd_trait_name(i: ImplDecl) => Bytes =
+  match i { ImD(n, _, _, _) => n };
+
+// TraitInfo params accessor (TrInfo field 2) -- the trait pass registered it; the arity check reads it.
+fn trinfo_params(t: TraitInfo) => Vec[Bytes] =
+  match t { TrInfo(_, p, _) => p };
+
+// traits_lookup: `traits.get(name)` over the assoc-list registry (the ENTRY, not just membership --
+// register_instances needs the `TraitInfo` for the arity + method-set checks).
+fn traits_lookup(traits: Vec[TraitInfo], name: Bytes) => Option[TraitInfo] =
+  match traits {
+    Nil => None,
+    Cons(tr, rest) => match bytes_eq(trinfo_name(tr), name) {
+      0b1 => Some(tr),
+      _ => traits_lookup(rest, name)
+    }
+  };
+
+// impl_method_names / trait_required_names: the impl's provided method NAMES (`m.sig.name`, i.e.
+// `fnsig_name(fndecl_sig(m))`) and the trait's required method NAMES (`s.name` over the trait's sigs) --
+// the two name-sets `check_impl_method_set` compares (checkty.rs 3245-3248).
+fn impl_method_names(id: ImplDecl) => Vec[Bytes] =
+  method_sig_names(imd_methods(id));
+
+fn method_sig_names(ms: Vec[FnDecl]) => Vec[Bytes] =
+  match ms {
+    Nil => Nil,
+    Cons(m, rest) => Cons(fnsig_name(fndecl_sig(m)), method_sig_names(rest))
+  };
+
+fn trait_required_names(sigs: Vec[FnSig]) => Vec[Bytes] =
+  match sigs {
+    Nil => Nil,
+    Cons(s, rest) => Cons(fnsig_name(s), trait_required_names(rest))
+  };
+
+// check_impl_method_set: the impl's method SET must EXACTLY match the trait's requirement SET
+// (checkty.rs::check_impl_method_set 3243-3284). In the oracle's ORDER: (a) every required name is
+// provided (else "missing method"); (b) every provided name is required (else "has method ... not in
+// trait"); (c) no provided name appears twice (else "provides ... more than once"). All three are
+// explicit never-silent refusals (G2) -- never a silently-filled or silently-dropped method.
+fn check_impl_method_set(tr: TraitInfo, id: ImplDecl) => Result[Bool, Bytes] =
+  let required = trait_required_names(trinfo_sigs(tr)) in
+  let provided = impl_method_names(id) in
+  match check_methods_present(trinfo_name(tr), required, provided) {
+    Err(e) => Err(e),
+    Ok(_) => match check_methods_no_extra(trinfo_name(tr), required, provided) {
+      Err(e) => Err(e),
+      Ok(_) => match first_duplicate(provided) {
+        Some(dup) => Err(bytes_concat("impl of `", bytes_concat(trinfo_name(tr), bytes_concat("` provides method `", bytes_concat(dup, "` more than once"))))),
+        None => Ok(True)
+      }
+    }
+  };
+
+// (a) every required method name must be present in `provided` (checkty.rs 3249-3256).
+fn check_methods_present(trname: Bytes, required: Vec[Bytes], provided: Vec[Bytes]) => Result[Bool, Bytes] =
+  match required {
+    Nil => Ok(True),
+    Cons(need, rest) => match names_contains(provided, need) {
+      True => check_methods_present(trname, rest, provided),
+      False => Err(bytes_concat("impl of `", bytes_concat(trname, bytes_concat("` is missing method `", bytes_concat(need, "`")))))
+    }
+  };
+
+// (b) every provided method name must be required -- no extra methods (checkty.rs 3257-3267).
+fn check_methods_no_extra(trname: Bytes, required: Vec[Bytes], provided: Vec[Bytes]) => Result[Bool, Bytes] =
+  match provided {
+    Nil => Ok(True),
+    Cons(have, rest) => match names_contains(required, have) {
+      True => check_methods_no_extra(trname, required, rest),
+      False => Err(bytes_concat("impl of `", bytes_concat(trname, bytes_concat("` has method `", bytes_concat(have, bytes_concat("` not in trait `", bytes_concat(trname, "`")))))))
+    }
+  };
+
+// type_local: the orphan rule's `type_local` arm (checkty.rs 3182-3198), matching the `for_ty` variant
+// EXACTLY as the oracle -- a `Data` head is local iff its name is in coherence.types; every primitive
+// repr (Binary/Ternary/Dense/Vsa/Substrate/Seq/Bytes/Float) is phylum-owned (always true); `Var`/`Fn`
+// are not legal heads (false -- kept for exhaustiveness, never a silent accept, G2; `type_head` refuses
+// them upstream so these two arms are unreachable in practice).
+fn type_local(coherence_types: Vec[Bytes], for_ty: Ty) => Bool =
+  match for_ty {
+    TyData(n, _) => names_contains(coherence_types, n),
+    TyBinary(_) => True,
+    TyTernary(_) => True,
+    TyDense(_, _) => True,
+    TyVsa(_, _, _) => True,
+    TySubstrate(_) => True,
+    TySeq(_, _) => True,
+    TyBytes => True,
+    TyFloat => True,
+    TyVar(_) => False,
+    TyFn(_, _) => False
+  };
+
+// orphan_ok: legal iff trait_local OR type_local (checkty.rs 3181-3199).
+fn orphan_ok(coherence: CoherenceView, trait_name: Bytes, for_ty: Ty) => Bool =
+  match names_contains(cv_traits(coherence), trait_name) {
+    True => True,
+    False => type_local(cv_types(coherence), for_ty)
+  };
+
+// instance_head_eq: does `for_ty`'s head equal `head`? A stored instance always has a `Some` head (it
+// passed the type_head check), so the `None` arm is an unreachable-in-practice `False` -- never a
+// silent match (G2).
+fn instance_head_eq(for_ty: Ty, head: Bytes) => Bool =
+  match type_head(for_ty) {
+    Some(h) => beq(h, head),
+    None => False
+  };
+
+// instances_contains_key: `instances.contains_key((trait_name, head))` over the assoc-list registry --
+// the global-uniqueness scan (checkty.rs 3213-3214). The stored `(trait, head)` is recomputed from the
+// instance's `for_ty` (the registry keeps the full for_ty, not the erased head).
+fn instances_contains_key(acc: Vec[InstanceInfo], trait_name: Bytes, head: Bytes) => Bool =
+  match acc {
+    Nil => False,
+    Cons(inst, rest) => match and_(beq(instinfo_trait_name(inst), trait_name), instance_head_eq(instinfo_for_ty(inst), head)) {
+      True => True,
+      False => instances_contains_key(rest, trait_name, head)
+    }
+  };
+
+// register_instances: the two-level loop (checkty.rs 3130-3237). Returns the instance registry or the
+// FIRST refusal. `register_one_instance` threads the accumulated registry so the uniqueness scan sees
+// earlier-registered instances (the oracle's growing `BTreeMap`).
+fn register_instances(types: Vec[DataInfo], traits: Vec[TraitInfo], coherence: CoherenceView, nod: Nodule) => Result[Vec[InstanceInfo], Bytes] =
+  register_instances_go(types, traits, coherence, Nil, nodule_items(nod));
+
+fn register_instances_go(types: Vec[DataInfo], traits: Vec[TraitInfo], coherence: CoherenceView, acc: Vec[InstanceInfo], items: Vec[Item]) => Result[Vec[InstanceInfo], Bytes] =
+  match items {
+    Nil => Ok(acc),
+    Cons(it, rest) => match it {
+      ItImpl(id) => match register_one_instance(types, traits, coherence, acc, id) {
+        Err(e) => Err(e),
+        Ok(acc2) => register_instances_go(types, traits, coherence, acc2, rest)
+      },
+      _ => register_instances_go(types, traits, coherence, acc, rest)
+    }
+  };
+
+// register_one_instance: the per-impl body (checkty.rs 3132-3235) -- the eight checks in the oracle's
+// EXACT order. `resolve_ty`'s guarantee slot is discarded (`let (for_ty, _) = ..`), matching the oracle.
+fn register_one_instance(types: Vec[DataInfo], traits: Vec[TraitInfo], coherence: CoherenceView, acc: Vec[InstanceInfo], id: ImplDecl) => Result[Vec[InstanceInfo], Bytes] =
+  match traits_lookup(traits, imd_trait_name(id)) {
+    None => Err(bytes_concat("`impl` for unknown trait `", bytes_concat(imd_trait_name(id), "` (RFC-0019 SS4.5)"))),
+    Some(tr) => match resolve_ty(types, Nil, imd_for_ty(id)) {
+      Err(e) => Err(e),
+      Ok(forpr) => match forpr { Pr(for_ty, _) =>
+        match resolve_args(types, Nil, imd_trait_args(id)) {
+          Err(e) => Err(e),
+          Ok(trait_args) => match eq_u(ty_len(trait_args), names_len(trinfo_params(tr))) {
+            False => Err(arity_mismatch_msg(trinfo_name(tr), names_len(trinfo_params(tr)), ty_len(trait_args))),
+            True => match type_head(for_ty) {
+              None => Err("an `impl ... for` a bare type variable / function type is not a legal instance head in stage-1 (no blanket instances -- RFC-0019 SS4.5); the `for` type must be concrete"),
+              Some(head) => match orphan_ok(coherence, imd_trait_name(id), for_ty) {
+                False => Err(orphan_msg(imd_trait_name(id))),
+                True => match instances_contains_key(acc, imd_trait_name(id), head) {
+                  True => Err(overlapping_msg(imd_trait_name(id), head)),
+                  False => match check_impl_method_set(tr, id) {
+                    Err(e) => Err(e),
+                    Ok(_) => Ok(Cons(InstInfo(imd_trait_name(id), trait_args, for_ty, impl_method_names(id)), acc))
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  };
+
+// The three never-silent refusal messages, mirroring the oracle's site + reason wording (checkty.rs
+// 3152-3163 / 3199-3209 / 3214-3224). Built in `bytes_concat` pieces (the file's established idiom).
+fn arity_mismatch_msg(trname: Bytes, want: Binary{32}, got: Binary{32}) => Bytes =
+  bytes_concat("trait `", bytes_concat(trname, bytes_concat("` takes ", bytes_concat(dec_u32(want), bytes_concat(" type argument(s), but this `impl` supplies ", bytes_concat(dec_u32(got), " (RFC-0019 SS4.5)"))))));
+
+fn orphan_msg(trname: Bytes) => Bytes =
+  bytes_concat("orphan instance: `impl ", bytes_concat(trname, " for ...` -- neither the trait nor the `for` type is declared in any nodule of this phylum (RFC-0019 SS4.5 orphan rule, phylum-wide; M-662)"));
+
+fn overlapping_msg(trname: Bytes, head: Bytes) => Bytes =
+  bytes_concat("overlapping instance -- coherence/global-uniqueness violation (RFC-0019 SS4.5): a second `impl ", bytes_concat(trname, bytes_concat(" for` a `", bytes_concat(head, "` type. Stage-1 keys per (trait, type-head), so two instances on the same head conflict"))));
 
 // ── unify: one-sided unification, threading the FLAG-semcore-13 substitution (checkty.rs::unify) ──
 // same_ty_len: the `a1.len() == a2.len()` guard on the Data arm (a two-list structural length eq).

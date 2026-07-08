@@ -125,8 +125,17 @@ fn builtins_are_present_and_resolvable() {
     // separately below, `vsa.required_dim`'s intrinsic is `Proven` (the M-131 checked
     // instantiation); M-912 (`enb`) added `bytes.eq` (the folded-in equality gap) and
     // `hash.blake3` (the kernel's own BLAKE3 content-addressing hash surfaced as a prim) — both
-    // `Exact`, listed above with the rest of the `Exact` group).
-    assert_eq!(t.entries().len(), 59);
+    // `Exact`, listed above with the rest of the `Exact` group). CU-1 added `bit.mul` (never-silent
+    // unsigned multiply, RFC-0033 §4.1.2 — the `math.myc` FLAG-math-1 missing op), `Exact`. CU-2 added
+    // the ADR-040 §2.5-mandated float classification predicates `flt.is_nan`/`flt.is_finite`/
+    // `flt.is_infinite` (unary `Float → Binary{1}`, `Empirical`). CU-6 added the bit-manipulation
+    // counts `bit.popcount`/`bit.clz`/`bit.ctz` (unary `Binary{N} → Binary{N}`, `Exact`), bringing
+    // Π to 66. CU-3 (ADR-040 §2.4) added the never-silent Binary↔Float conversions `bin.to_flt`
+    // (checked-exact, `Exact`) and `flt.to_bin` (the width-witness shape, `Exact`), bringing Π to
+    // 68. (This supersedes the DN-56/DN-76 "Π = 38" figure, which predates the M-887…M-899 +
+    // CU-1/CU-2/CU-3/CU-6 landings — see DN-34 §8.15/§8.16; those docs are FLAGged for a count
+    // refresh.)
+    assert_eq!(t.entries().len(), 68);
 }
 
 // M-890 (`enb` Gap C): the dense elementwise group — the first non-`Exact` intrinsics in Π.
@@ -515,10 +524,15 @@ fn names_returns_registered_sorted_names() {
     // RFC-0003 §4/§5/M-893 vsa.bundle, the certified superposition path + RFC-0003
     // §3/§5/§6/M-894 vsa.cleanup/vsa.reconstruct/vsa.required_dim, the cleanup/reconstruction
     // pair and the capacity-bound query + M-912 bytes.eq/hash.blake3, the folded-in byte
-    // equality gap and the kernel's BLAKE3 content-addressing hash surfaced as a prim).
+    // equality gap and the kernel's BLAKE3 content-addressing hash surfaced as a prim + CU-1
+    // bit.mul, the never-silent unsigned multiply — RFC-0033 §4.1.2, the math.myc FLAG-math-1
+    // missing op + CU-2 flt.is_nan/flt.is_finite/flt.is_infinite, the ADR-040 §2.5-mandated float
+    // classification predicates + CU-6 bit.popcount/bit.clz/bit.ctz — bringing Π to 66 + CU-3
+    // bin.to_flt/flt.to_bin, the never-silent Binary↔Float conversions (ADR-040 §2.4) — bringing
+    // Π to 68).
     assert_eq!(
         ns.len(),
-        59,
+        68,
         "names() count must match the builtin count: {ns:?}"
     );
     // Sorted (BTreeMap iteration is sorted).

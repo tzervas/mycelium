@@ -524,6 +524,103 @@ fn mul_s_min_times_neg_one_refuses_on_every_path() {
     );
 }
 
+// ── CU-1 (RFC-0033 §4.1.2): never-silent UNSIGNED multiply `mul_u` (kernel `bit.mul`) ────────────
+//
+// The unsigned member of the `bit.*` family — overflow-distinct from the signed `mul_s`/`bin.mul`
+// (the `lib/std/math.myc` FLAG-math-1 missing op). Reads operands as unsigned bitvectors; an
+// out-of-`U_N` product is an explicit refusal on all three paths, never a wrap (G2/VR-5).
+
+#[test]
+fn mul_u_in_range_including_high_bit() {
+    // 3 * 4 = 12.
+    assert_three_way(
+        "mul_u small",
+        "nodule d;\nfn main() => Binary{8} = mul_u(0b0000_0011, 0b0000_0100);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("00001100".chars().map(|c| c == '1').collect()),
+    );
+    // 15 * 17 = 255 — the high boundary of U_8, in range.
+    assert_three_way(
+        "mul_u high boundary",
+        "nodule d;\nfn main() => Binary{8} = mul_u(0b0000_1111, 0b0001_0001);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("11111111".chars().map(|c| c == '1').collect()),
+    );
+    // 9 * 20 = 180 — in U_8 = [0,255] but OUT of signed B_8 = [-128,127]: the criterion that
+    // distinguishes `mul_u` from `mul_s` (which refuses this exact product).
+    assert_three_way(
+        "mul_u unsigned-only product",
+        "nodule d;\nfn main() => Binary{8} = mul_u(0b0000_1001, 0b0001_0100);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("10110100".chars().map(|c| c == '1').collect()),
+    );
+}
+
+/// `mul_u` overflow (`16 * 16 = 256`, out of `U_8 = [0, 255]`) is an explicit refusal on **all
+/// three** paths — never a silent wrap to `0`. (The program type-checks: the unsigned-overflow
+/// bound is a runtime contract, like `add_u`/`sub_u`'s.)
+#[test]
+fn mul_u_overflow_refuses_on_every_path() {
+    let src = "nodule d;\nfn main() => Binary{8} = mul_u(0b0001_0000, 0b0001_0000);";
+    let env = check_nodule(&parse(src).expect("parses")).expect("checks");
+
+    let interp = Interpreter::new(
+        PrimRegistry::with_builtins(),
+        Box::new(mycelium_cert::BinaryTernarySwapEngine),
+    );
+    let prims = PrimRegistry::with_builtins();
+    let engine = mycelium_cert::BinaryTernarySwapEngine;
+
+    assert!(
+        Evaluator::new(&env).call("main", vec![]).is_err(),
+        "L1-eval must refuse the unsigned overflow (never a silent wrap to 0)"
+    );
+    let node = elaborate(&env, "main").expect("in fragment");
+    assert!(
+        interp.eval(&node).is_err(),
+        "L0-interp must refuse the unsigned overflow"
+    );
+    assert!(
+        mycelium_mlir::run(&node, &prims, &engine).is_err(),
+        "AOT must refuse the unsigned overflow"
+    );
+}
+
+// ── CU-6: width-preserving bit-manipulation counts `popcount`/`clz`/`ctz` (kernel bit.*) ─────────
+//
+// popcount/clz/ctz are kernel prims (single host instruction, not efficiently `.myc`-derivable);
+// rotate/reverse_bits ride `std.math`. Unary `Binary{N} → Binary{N}`, total (a count always fits N
+// bits), agreeing on all three paths.
+#[test]
+fn bit_manip_counts_three_way() {
+    // popcount(0b0110_1000) = 3; clz = 1; ctz = 3 (0b0000_0011, 0b0000_0001, 0b0000_0011).
+    assert_three_way(
+        "popcount",
+        "nodule d;\nfn main() => Binary{8} = popcount(0b0110_1000);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("00000011".chars().map(|c| c == '1').collect()),
+    );
+    assert_three_way(
+        "clz",
+        "nodule d;\nfn main() => Binary{8} = clz(0b0110_1000);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("00000001".chars().map(|c| c == '1').collect()),
+    );
+    assert_three_way(
+        "ctz",
+        "nodule d;\nfn main() => Binary{8} = ctz(0b0110_1000);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("00000011".chars().map(|c| c == '1').collect()),
+    );
+    // All-zero: clz = ctz = 8 (0b0000_1000), popcount = 0.
+    assert_three_way(
+        "clz all-zero is n",
+        "nodule d;\nfn main() => Binary{8} = clz(0b0000_0000);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("00001000".chars().map(|c| c == '1').collect()),
+    );
+}
+
 /// A width/paradigm mismatch (`Binary{8}` vs `Binary{1}`) is a **static** never-silent refusal —
 /// caught at check time, mirroring `add_u`/`sub_u`'s width-preserving contract.
 #[test]
@@ -2600,6 +2697,58 @@ fn flt_cmp_ops_three_way() {
     }
 }
 
+/// CU-2 (ADR-040 §2.5): the mandated float classification predicates `flt_is_nan`/`flt_is_finite`/
+/// `flt_is_infinite` — the in-band never-silent tests for the propagating ±inf/NaN sentinels (§2.4).
+/// NaN is produced by `0/0`, +inf by `1/0` (the ratified in-band specials, §2.4/FLAG-2 — never a
+/// trap); each predicate agrees on all three paths (L1/L0/AOT), Binary{1} truth.
+#[test]
+fn flt_classification_three_way() {
+    for (label, src, expected) in [
+        (
+            "is_nan on 0/0",
+            "nodule d;\nfn main() => Binary{1} = flt_is_nan(flt_div(0.0, 0.0));",
+            true,
+        ),
+        (
+            "is_nan on finite",
+            "nodule d;\nfn main() => Binary{1} = flt_is_nan(1.5);",
+            false,
+        ),
+        (
+            "is_finite on finite",
+            "nodule d;\nfn main() => Binary{1} = flt_is_finite(1.5);",
+            true,
+        ),
+        (
+            "is_finite on +inf",
+            "nodule d;\nfn main() => Binary{1} = flt_is_finite(flt_div(1.0, 0.0));",
+            false,
+        ),
+        (
+            "is_finite on NaN",
+            "nodule d;\nfn main() => Binary{1} = flt_is_finite(flt_div(0.0, 0.0));",
+            false,
+        ),
+        (
+            "is_infinite on +inf",
+            "nodule d;\nfn main() => Binary{1} = flt_is_infinite(flt_div(1.0, 0.0));",
+            true,
+        ),
+        (
+            "is_infinite on finite",
+            "nodule d;\nfn main() => Binary{1} = flt_is_infinite(2.5);",
+            false,
+        ),
+        (
+            "is_infinite on NaN",
+            "nodule d;\nfn main() => Binary{1} = flt_is_infinite(flt_div(0.0, 0.0));",
+            false,
+        ),
+    ] {
+        assert_flt_cmp_three_way_with_tag(label, src, expected);
+    }
+}
+
 /// **NaN is unordered, end-to-end on every path (ADR-040 §2.4).** The NaN operand is produced
 /// *in-language* by `flt_div(0.0, 0.0)` (the in-band FLAG-2 special), so this is the full
 /// surface→kernel NaN story: every §5.11 predicate is `false` with NaN on either side —
@@ -4360,4 +4509,235 @@ fn vsa_cleanup_reconstruct_conformance_reject() {
             "the refusal must name the offense.\n  src: {src}\n  want: {needle}\n  got: {msg}"
         );
     }
+}
+
+// ── CU-3 (ADR-040 §2.4): never-silent Binary↔Float conversions ─────────────────────────────────
+//
+// `bin_to_flt` (kernel `bin.to_flt`) is checked-exact `Binary{N} -> Float`; `flt_to_bin` (kernel
+// `flt.to_bin`) is `(Float, Binary{M}) -> Binary{M}`, the second operand a **width witness** —
+// exactly `width_cast`'s DN-41 shape (only the witness's width is read, its bits are ignored).
+// Both refuse rather than silently round/truncate on every path (G2/VR-5); the **lossy** rounding
+// `bin→flt` direction for magnitudes past the binary64 exact-integer bound (`2^53`) is explicitly
+// out of scope — a reified swap, not a prim (see the CU-3 leaf report FLAG).
+
+/// Assert `src` refuses on **all three** paths (L1-eval, L0-interp, AOT) — never a silent
+/// success on any path (G2). Mirrors the manual pattern `mul_u_overflow_refuses_on_every_path`
+/// uses, factored once for the CU-3 refusal cases below.
+fn assert_refuses_on_every_path(label: &str, src: &str) {
+    let env = check_nodule(&parse(src).unwrap_or_else(|e| panic!("{label}: parse failed: {e}")))
+        .unwrap_or_else(|e| panic!("{label}: check failed: {e}"));
+    let interp = Interpreter::new(
+        PrimRegistry::with_builtins(),
+        Box::new(mycelium_cert::BinaryTernarySwapEngine),
+    );
+    let prims = PrimRegistry::with_builtins();
+    let engine = mycelium_cert::BinaryTernarySwapEngine;
+
+    assert!(
+        Evaluator::new(&env).call("main", vec![]).is_err(),
+        "{label}: L1-eval must refuse (never-silent, ADR-040 §2.4)"
+    );
+    let node = elaborate(&env, "main").expect("in fragment");
+    assert!(
+        interp.eval(&node).is_err(),
+        "{label}: L0-interp must refuse (never-silent, ADR-040 §2.4)"
+    );
+    assert!(
+        mycelium_mlir::run(&node, &prims, &engine).is_err(),
+        "{label}: AOT must refuse (never-silent, ADR-040 §2.4)"
+    );
+}
+
+/// `bin_to_flt` round-trips small in-range magnitudes to `Float`, bit-exact on all three paths.
+#[test]
+fn bin_to_flt_round_trips_three_way() {
+    assert_three_way(
+        "bin_to_flt 0",
+        "nodule d;\nfn main() => Float = bin_to_flt(0b0000_0000);",
+        &Repr::Float {
+            width: FloatWidth::F64,
+        },
+        &Payload::Float(0.0),
+    );
+    assert_three_way(
+        "bin_to_flt 255",
+        "nodule d;\nfn main() => Float = bin_to_flt(0b1111_1111);",
+        &Repr::Float {
+            width: FloatWidth::F64,
+        },
+        &Payload::Float(255.0),
+    );
+}
+
+/// `bin_to_flt` refuses a magnitude past the binary64 exact-integer bound (`2^53`) on every
+/// path — never a silent lossy round (ADR-040 §2.4/§5: the lossy direction is a reified swap,
+/// not this prim).
+#[test]
+fn bin_to_flt_refuses_past_the_exact_bound_on_every_path() {
+    // 2^54 as a 55-bit Binary literal (MSB `1`, the rest `0`) exceeds FLOAT_EXACT_MAX = 2^53.
+    let lit: String = std::iter::once('1')
+        .chain(std::iter::repeat_n('0', 54))
+        .collect();
+    assert_refuses_on_every_path(
+        "bin_to_flt past 2^53",
+        &format!("nodule d;\nfn main() => Float = bin_to_flt(0b{lit});"),
+    );
+}
+
+/// `flt_to_bin` round-trips small in-range integers back to `Binary{M}` — the target width read
+/// from the witness operand only (its bits are ignored, exactly `width_cast`'s DN-41 shape).
+#[test]
+fn flt_to_bin_round_trips_three_way() {
+    assert_three_way(
+        "flt_to_bin 0",
+        "nodule d;\nfn main() => Binary{8} = flt_to_bin(0.0, 0b0000_0000);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("00000000".chars().map(|c| c == '1').collect()),
+    );
+    assert_three_way(
+        "flt_to_bin 255",
+        "nodule d;\nfn main() => Binary{8} = flt_to_bin(255.0, 0b0000_0000);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("11111111".chars().map(|c| c == '1').collect()),
+    );
+    // The witness's own value/bits are ignored — only its width matters.
+    assert_three_way(
+        "flt_to_bin witness bits ignored",
+        "nodule d;\nfn main() => Binary{8} = flt_to_bin(7.0, 0b1111_1111);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("00000111".chars().map(|c| c == '1').collect()),
+    );
+}
+
+/// `flt_to_bin` refuses NaN, ±inf, a negative value, and a nonzero fractional part on every path
+/// — never a silent coercion (ADR-040 §2.4; G2).
+#[test]
+fn flt_to_bin_refuses_the_never_silent_domain_on_every_path() {
+    assert_refuses_on_every_path(
+        "flt_to_bin NaN",
+        "nodule d;\nfn main() => Binary{8} = flt_to_bin(flt_div(0.0, 0.0), 0b0000_0000);",
+    );
+    assert_refuses_on_every_path(
+        "flt_to_bin +inf",
+        "nodule d;\nfn main() => Binary{8} = flt_to_bin(flt_div(1.0, 0.0), 0b0000_0000);",
+    );
+    assert_refuses_on_every_path(
+        "flt_to_bin negative",
+        "nodule d;\nfn main() => Binary{8} = flt_to_bin(flt_neg(1.0), 0b0000_0000);",
+    );
+    assert_refuses_on_every_path(
+        "flt_to_bin fractional",
+        "nodule d;\nfn main() => Binary{8} = flt_to_bin(1.5, 0b0000_0000);",
+    );
+}
+
+/// `flt_to_bin` refuses a magnitude that does not fit the witness's target width on every path —
+/// never a silent truncation (ADR-040 §2.4/DN-41).
+#[test]
+fn flt_to_bin_refuses_out_of_target_width_on_every_path() {
+    assert_refuses_on_every_path(
+        "flt_to_bin 256 does not fit Binary{8}",
+        "nodule d;\nfn main() => Binary{8} = flt_to_bin(256.0, 0b0000_0000);",
+    );
+}
+
+/// A non-`Binary` `bin_to_flt` operand, and a non-`Float` `flt_to_bin` value operand, are
+/// **static** never-silent refusals — caught at check time, never a runtime coercion.
+#[test]
+fn conversion_prims_reject_wrong_paradigm_statically() {
+    for (src, needle) in [
+        (
+            "nodule d;\nfn main() => Float = bin_to_flt(1.5);",
+            "must be a concrete `Binary{N}`",
+        ),
+        (
+            "nodule d;\nfn main() => Binary{8} = flt_to_bin(0b0000_0001, 0b0000_0000);",
+            "must be a `Float`",
+        ),
+        (
+            "nodule d;\nfn main() => Binary{8} = flt_to_bin(1.0, 1.0);",
+            "width witness must be a concrete `Binary{M}`",
+        ),
+    ] {
+        let err =
+            check_nodule(&parse(src).expect("parses")).expect_err(&format!("must reject: {src}"));
+        let msg = err.to_string();
+        assert!(
+            msg.contains(needle),
+            "the refusal must name the offense.\n  src: {src}\n  want: {needle}\n  got: {msg}"
+        );
+    }
+}
+
+// ── CU-7 (RFC-0033 §4.2.2 / ADR-029): the fixed-width `trit.*` arithmetic is ALREADY arbitrary-
+// width — a verify-first correction ────────────────────────────────────────────────────────────
+//
+// **Recon finding (mitigation #14 — verify against the codebase before implementing).** The trx2
+// kickoff notes describe the runnable `trit.add`/`trit.sub`/`trit.mul`/`trit.neg` prims as capped
+// at "~40 trits" and attribute that cap to `mycelium_core::ternary` being "i64-internal". Reading
+// the actual kernel (`crates/mycelium-core/src/ternary/mod.rs::add`/`mul`) shows this is **not
+// accurate for the arithmetic itself**: `add` is a digit-wise ripple-carry adder and `mul` a
+// shifted-accumulation multiplier, both operating directly on `&[Trit]` with **no `i64` in the
+// algorithm** — overflow is detected structurally (a nonzero final carry / nonzero high digits),
+// not via an integer-range check. The **only** `i64`-capped pieces are the *conversion* utilities
+// `max_magnitude`/`trits_to_int`/`int_to_trits` (used for decimal-literal encoding and test
+// oracles), which are a genuinely different concern from the arithmetic RFC-0033 §4.2.2 names. The
+// lexer's `0t…` trit-literal ([`crates/mycelium-l1/src/lexer.rs::lex_trit`]) likewise has no width
+// cap (RFC-0037 D4). So **any width reachable via a trit-glyph literal already gets arbitrary-width
+// arithmetic today** — RFC-0033 §4.2.2's fixed-width-side mandate is met by the *existing* code,
+// zero-risk, and this three-way locks it in at 80 trits (double the assumed cap) so it can never
+// silently regress.
+//
+// **What CU-7 does NOT cover (correctly deferred, not guessed).** A genuinely **growable** Ternary
+// value form — no fixed `N`, an arbitrary-precision "BigInt"-shaped surface type built on
+// `BigTernary` — is explicitly **out of scope**: RFC-0033's own Accepted-status changelog entry
+// states "the value-model growth beyond the already-landed V0 `BigTernary` (M-754…M-757) is a
+// post-1.0 wave" and couples it to the **content-address one-way doors** (the V1–V5 kernel
+// implementation, M-760…M-784, deferred to post-1.0). Surfacing that growable form would touch the
+// E20-1 content-address rehash this leaf was told to FLAG rather than guess (G2/VR-5) — see the
+// CU-7 leaf report.
+
+/// MSB-first `Trit` vector from a glyph string (`+`/`0`/`-`), mirroring [`bits`]'s Binary analogue.
+fn trits(s: &str) -> Vec<mycelium_core::Trit> {
+    s.chars()
+        .map(|c| match c {
+            '+' => mycelium_core::Trit::Pos,
+            '-' => mycelium_core::Trit::Neg,
+            '0' => mycelium_core::Trit::Zero,
+            _ => panic!("trit glyph must be one of +/0/-, got {c:?}"),
+        })
+        .collect()
+}
+
+/// `add` at `Ternary{80}` — double the kickoff notes' assumed "~40-trit cap" — three-way. Operands
+/// are all-zero except their low two digits (`+0` = 3, `0+` = 1); the sum `3 + 1 = 4` is `++` in
+/// the low two digits (`4 = 1·3 + 1·1`).
+#[test]
+fn trit_add_beyond_the_claimed_40_trit_cap_three_way() {
+    let zeros = "0".repeat(78);
+    let a = format!("0t{zeros}+0"); // 80 trits, value 3
+    let b = format!("0t{zeros}0+"); // 80 trits, value 1
+    let expected_digits = format!("{zeros}++"); // 80 trits, value 4
+    assert_three_way(
+        "trit add beyond the assumed 40-trit cap",
+        &format!("nodule d;\nfn main() => Ternary{{80}} = add({a}, {b});"),
+        &Repr::Ternary { trits: 80 },
+        &Payload::Trits(trits(&expected_digits)),
+    );
+}
+
+/// `mul` at `Ternary{80}` three-way — the shifted-accumulation multiplier is likewise structural
+/// (no `i64`), so it holds at this width too. `3 · 3 = 9`; balanced-ternary `9 = 1·9 + 0·3 + 0·1`
+/// → low three digits `+00`.
+#[test]
+fn trit_mul_beyond_the_claimed_40_trit_cap_three_way() {
+    let zeros = "0".repeat(77);
+    let a = format!("0t{zeros}0+0"); // 80 trits, value 3
+    let expected_digits = format!("{zeros}+00"); // 80 trits, value 9
+    assert_three_way(
+        "trit mul beyond the assumed 40-trit cap",
+        &format!("nodule d;\nfn main() => Ternary{{80}} = mul({a}, {a});"),
+        &Repr::Ternary { trits: 80 },
+        &Payload::Trits(trits(&expected_digits)),
+    );
 }

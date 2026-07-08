@@ -194,10 +194,10 @@
       "file": "crates/mycelium-std-rand/src/lib.rs",
       "line": 437,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "MultiStmtBody",
+      "rust_construct": "MultiStmtBody",
       "snippet": "# [doc = \" Draw a `bool` from a Bernoulli distribution with success probability `p`.\"] # [doc = \"\"] # [doc = \" **Guarantee: `Declared` (construction argument).** The bit is `true` with probability `p`,\"] # [doc = \" by the discrete threshold argument: map the `[0,1)` uniform draw to `true` iff the value\"] # [doc = \" falls below `p`. The claim is `Declared` — this is the standard textbook construction, not\"] # [doc = \" a formally-proven bound (VR-5).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" - [`RandErr::BadProbability`] if `p ∉ [0.0, 1.0]` (C1).\"] pub fn bernoulli (g : Rng , p : f64) -> Result < (bool , Rng) , RandErr > { if ! (0.0 ..= 1.0) . contains (& p) { return Err (RandErr :: BadProbability) ; } let (raw , g2) = next_u64 (g) ; let u = (raw as f64) * (1.0_f64 / u64 :: MAX as f64) ; Ok ((p >= 1.0 || u < p , g2)) }",
-      "reason": "`f64` — `scalar` only appears inside Dense{N,scalar}/ambient_params in the grammar, never as a bare value type; no confirmed base_type arm",
+      "reason": "function body has a semicolon-terminated (value-discarding) statement expression before the tail — a `let`-chain body maps only simple `let x = e;` bindings plus a single trailing expression",
       "item_name": "bernoulli"
     },
     {
@@ -224,10 +224,10 @@
       "file": "crates/mycelium-std-rand/src/lib.rs",
       "line": 504,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "MultiStmtBody",
+      "rust_construct": "MultiStmtBody",
       "snippet": "# [doc = \" Draw from a Normal(μ, σ) distribution using the Box–Muller transform.\"] # [doc = \"\"] # [doc = \" **Guarantee: `Empirical` (sampler-correctness measured).** The Box–Muller method produces\"] # [doc = \" a *mathematically exact* Normal draw given a perfectly-uniform `[0,1)` source; in\"] # [doc = \" floating-point the result carries floating-point rounding, the underlying uniform quality\"] # [doc = \" is `Declared`/`Empirical` (VR-5), and the combined correctness claim is `Empirical`.\"] # [doc = \" The exact bias/error magnitude is **not fabricated here** — it is owned by\"] # [doc = \" `std.numerics` (M-512 / FLAG Q3).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" - [`RandErr::BadParameter`] if `sigma <= 0.0` (C1).\"] pub fn normal (g : Rng , mu : f64 , sigma : f64) -> Result < (f64 , Rng) , RandErr > { if sigma <= 0.0 { return Err (RandErr :: BadParameter) ; } let (u1 , g2) = next_uniform_open (g) ; let (u2 , g3) = next_uniform_open (g2) ; let z = (- 2.0 * u1 . ln ()) . sqrt () * (2.0 * std :: f64 :: consts :: PI * u2) . cos () ; Ok ((mu + sigma * z , g3)) }",
-      "reason": "`f64` — `scalar` only appears inside Dense{N,scalar}/ambient_params in the grammar, never as a bare value type; no confirmed base_type arm",
+      "reason": "function body has a semicolon-terminated (value-discarding) statement expression before the tail — a `let`-chain body maps only simple `let x = e;` bindings plus a single trailing expression",
       "item_name": "normal"
     },
     {
@@ -244,10 +244,10 @@
       "file": "crates/mycelium-std-rand/src/lib.rs",
       "line": 546,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "MultiStmtBody",
+      "rust_construct": "MultiStmtBody",
       "snippet": "# [doc = \" Draw a `f64` strictly in the open interval `(0, 1)` (avoids `ln(0)`/`ln(1)=0` in samplers).\"] # [doc = \"\"] # [doc = \" This is an internal helper for samplers that need a strictly-interior uniform draw.\"] # [doc = \" `raw | 1` excludes the low endpoint 0. The high endpoint needs care too: `u64::MAX as f64`\"] # [doc = \" rounds up to 2^64 and `raw as f64` can round to 2^64 for `raw` near `u64::MAX`, so the naive\"] # [doc = \" product can reach exactly `1.0`. We clamp to the largest f64 strictly below 1 so the result is\"] # [doc = \" genuinely in `(0, 1)` — otherwise `exponential` could emit `-ln(1)/λ = 0` and the stated\"] # [doc = \" interval would be false (the distortion is sub-ULP and confined to ~2^-53 of draws).\"] fn next_uniform_open (g : Rng) -> (f64 , Rng) { let (raw , g2) = next_u64 (g) ; let v = ((raw | 1) as f64) * (1.0_f64 / u64 :: MAX as f64) ; let v = v . min (1.0 - f64 :: EPSILON / 2.0) ; (v , g2) }",
-      "reason": "`f64` — `scalar` only appears inside Dense{N,scalar}/ambient_params in the grammar, never as a bare value type; no confirmed base_type arm",
+      "reason": "`let` binding uses an unsupported pattern (only simple `let x = e;` is supported)",
       "item_name": "next_uniform_open"
     },
     {
@@ -367,9 +367,9 @@
     "Impl": 3,
     "Import": 1,
     "MacroInvocation": 1,
-    "MultiStmtBody": 4,
+    "MultiStmtBody": 7,
     "NamedFieldDrop": 1,
-    "Other": 11,
+    "Other": 8,
     "ReservedWord": 1,
     "Struct": 2,
     "TestItem": 1,

@@ -133,6 +133,151 @@ fn mul_rejects_over_cap_width() {
     assert_eq!(mul(&a64, &b64), int_to_bits(0, 64));
 }
 
+// ---- CU-1: `mul_unsigned` — never-silent unsigned fixed-width multiply --------------------------
+
+#[test]
+fn mul_unsigned_worked_examples() {
+    // 3 * 4 = 12, in range at U_8 = [0, 255].
+    let a = uint_to_bits(3, 8).unwrap();
+    let b = uint_to_bits(4, 8).unwrap();
+    assert_eq!(mul_unsigned(&a, &b), uint_to_bits(12, 8));
+
+    // 15 * 17 = 255, exactly the high boundary, in range.
+    let a = uint_to_bits(15, 8).unwrap();
+    let b = uint_to_bits(17, 8).unwrap();
+    assert_eq!(mul_unsigned(&a, &b), uint_to_bits(255, 8));
+
+    // 0 * anything = 0.
+    let zero = uint_to_bits(0, 8).unwrap();
+    let x = uint_to_bits(200, 8).unwrap();
+    assert_eq!(mul_unsigned(&zero, &x), uint_to_bits(0, 8));
+}
+
+#[test]
+fn mul_unsigned_overflow_and_boundary() {
+    // 16 * 16 = 256, out of U_8 ([0, 255]) — explicit None, never a wrap to 0.
+    let a = uint_to_bits(16, 8).unwrap();
+    let b = uint_to_bits(16, 8).unwrap();
+    assert_eq!(mul_unsigned(&a, &b), None);
+
+    // 255 * 1 = 255, the high boundary, in range; 255 * 2 = 510 overflows — boundary is exact.
+    let max = uint_to_bits(255, 8).unwrap();
+    let one = uint_to_bits(1, 8).unwrap();
+    let two = uint_to_bits(2, 8).unwrap();
+    assert_eq!(mul_unsigned(&max, &one), uint_to_bits(255, 8));
+    assert_eq!(mul_unsigned(&max, &two), None);
+}
+
+/// The overflow *criterion* differs from signed [`mul`]: `9 * 20 = 180` fits `U_8 = [0,255]` but
+/// **not** `B_8 = [-128,127]`. This pins that `mul_unsigned` reads the unsigned range, not `mul`'s.
+#[test]
+fn mul_unsigned_criterion_differs_from_signed() {
+    let a = uint_to_bits(9, 8).unwrap();
+    let b = uint_to_bits(20, 8).unwrap();
+    assert_eq!(mul_unsigned(&a, &b), uint_to_bits(180, 8)); // unsigned: in range
+    assert_eq!(mul(&a, &b), None); // signed: 180 > 127, out of B_8
+}
+
+#[test]
+fn mul_unsigned_rejects_unequal_and_over_cap_widths() {
+    let a = uint_to_bits(1, 4).unwrap();
+    let b = uint_to_bits(1, 8).unwrap();
+    assert_eq!(mul_unsigned(&a, &b), None); // width mismatch
+    let over = vec![false; MUL_MAX_WIDTH + 1];
+    assert_eq!(mul_unsigned(&over, &over), None); // over-cap width
+                                                  // At the cap (n = 64), 0 * 0 = 0 is accepted.
+    let z64 = vec![false; MUL_MAX_WIDTH];
+    assert_eq!(mul_unsigned(&z64, &z64), uint_to_bits(0, 64));
+}
+
+/// Exhaustive cross-check against the native `u16` oracle at `n = 8`: for every operand pair,
+/// `mul_unsigned` returns the exact product iff it fits `U_8`, and `None` iff the native product
+/// exceeds `255` — never a silent wrap (the property `mul_u` must satisfy, checked by enumeration).
+#[test]
+fn mul_unsigned_matches_native_oracle_u8() {
+    for a in 0u16..256 {
+        for b in 0u16..256 {
+            let ab = uint_to_bits(a as u64, 8).unwrap();
+            let bb = uint_to_bits(b as u64, 8).unwrap();
+            let got = mul_unsigned(&ab, &bb);
+            let prod = a * b; // u16 holds up to 255*255 = 65025 without overflow
+            if prod <= 255 {
+                assert_eq!(got, uint_to_bits(prod as u64, 8), "{a} * {b}");
+            } else {
+                assert_eq!(got, None, "{a} * {b} should overflow U_8");
+            }
+        }
+    }
+}
+
+// ---- CU-6: popcount / clz / ctz — width-preserving bit-manipulation counts --------------------
+
+#[test]
+fn popcount_clz_ctz_worked_examples() {
+    // 0b0110_1000 (MSB-first): popcount 3, clz 1, ctz 3.
+    let x = uint_to_bits(0b0110_1000, 8).unwrap();
+    assert_eq!(popcount(&x), uint_to_bits(3, 8).unwrap());
+    assert_eq!(clz(&x), uint_to_bits(1, 8).unwrap());
+    assert_eq!(ctz(&x), uint_to_bits(3, 8).unwrap());
+
+    // 0b1000_0001: popcount 2, clz 0 (top bit set), ctz 0 (low bit set).
+    let y = uint_to_bits(0b1000_0001, 8).unwrap();
+    assert_eq!(popcount(&y), uint_to_bits(2, 8).unwrap());
+    assert_eq!(clz(&y), uint_to_bits(0, 8).unwrap());
+    assert_eq!(ctz(&y), uint_to_bits(0, 8).unwrap());
+}
+
+/// The all-zero and all-one boundary: `clz`/`ctz` of all-zero are `n` (no `1` bit); `popcount` of
+/// all-one is `n`; and `n` itself fits the `n`-bit result (`popcount(0xFF) = 8 = 0b0000_1000`).
+#[test]
+fn popcount_clz_ctz_boundaries() {
+    let zero = vec![false; 8];
+    assert_eq!(popcount(&zero), uint_to_bits(0, 8).unwrap());
+    assert_eq!(clz(&zero), uint_to_bits(8, 8).unwrap()); // all-zero ⇒ n
+    assert_eq!(ctz(&zero), uint_to_bits(8, 8).unwrap());
+    let ones = vec![true; 8];
+    assert_eq!(popcount(&ones), uint_to_bits(8, 8).unwrap()); // n set bits
+    assert_eq!(clz(&ones), uint_to_bits(0, 8).unwrap());
+    assert_eq!(ctz(&ones), uint_to_bits(0, 8).unwrap());
+}
+
+/// Exhaustive cross-check against Rust's native `u8` methods at `n = 8` — `popcount`/`clz`/`ctz`
+/// agree with `count_ones`/`leading_zeros`/`trailing_zeros` for every value (the property the prims
+/// must satisfy). Guards the MSB-first bit order and the all-zero `= n` convention.
+#[test]
+fn popcount_clz_ctz_match_native_u8() {
+    for v in 0u8..=255 {
+        let bits = uint_to_bits(u64::from(v), 8).unwrap();
+        assert_eq!(
+            popcount(&bits),
+            uint_to_bits(u64::from(v.count_ones()), 8).unwrap(),
+            "popcount {v}"
+        );
+        assert_eq!(
+            clz(&bits),
+            uint_to_bits(u64::from(v.leading_zeros()), 8).unwrap(),
+            "clz {v}"
+        );
+        assert_eq!(
+            ctz(&bits),
+            uint_to_bits(u64::from(v.trailing_zeros()), 8).unwrap(),
+            "ctz {v}"
+        );
+    }
+}
+
+/// Arbitrary-width safety: at `n = 100` (> 64), the all-zero `clz` is `100`, which the count encoder
+/// represents without hitting the `>> ≥ 64` shift UB `uint_to_bits` would.
+#[test]
+fn bit_counts_are_arbitrary_width_safe() {
+    let zero = vec![false; 100];
+    let clz100 = clz(&zero);
+    assert_eq!(clz100.len(), 100);
+    // 100 = 0b110_0100; the count occupies the low 7 bits, the rest 0.
+    assert_eq!(bits_to_uint(&clz100[93..]), 100); // low 7 bits hold 100
+    assert!(clz100[..93].iter().all(|&b| !b)); // high 93 bits all zero
+}
+
 #[test]
 fn mul_n0_is_trivially_zero() {
     assert_eq!(mul(&[], &[]), Some(Vec::new()));
@@ -907,4 +1052,245 @@ fn cmp_signed_matches_the_value_order_oracle() {
             }
         }
     }
+}
+
+// --- ADR-040 §2.4 (CU-3): never-silent Binary↔Float conversions --------------------------------
+
+/// **Oracle property test (round-trip):** exhaustively at small widths, `checked_uint_to_f64` ∘
+/// `uint_to_bits` agrees with the plain `f64` cast oracle for every in-range unsigned magnitude —
+/// every such magnitude is far below `FLOAT_EXACT_MAX`, so the conversion never refuses here.
+#[test]
+fn checked_uint_to_f64_matches_the_oracle_and_round_trips() {
+    for n in 0u32..=16 {
+        let hi: u64 = if n == 0 { 0 } else { (1u64 << n) - 1 };
+        for v in 0..=hi {
+            let bits = uint_to_bits(v, n).unwrap();
+            assert_eq!(
+                checked_uint_to_f64(&bits),
+                Some(v as f64),
+                "checked_uint_to_f64({v}) at n={n} must match the f64 cast oracle"
+            );
+        }
+    }
+}
+
+/// The exact-integer boundary: `2^53` round-trips exactly; `2^53 + 1` refuses (never a silent
+/// lossy round — ADR-040 §2.4).
+#[test]
+fn checked_uint_to_f64_exact_boundary() {
+    let at_bound = uint_to_bits(FLOAT_EXACT_MAX, 54).unwrap();
+    assert_eq!(checked_uint_to_f64(&at_bound), Some(FLOAT_EXACT_MAX as f64));
+
+    let past_bound = uint_to_bits(FLOAT_EXACT_MAX + 1, 54).unwrap();
+    assert_eq!(
+        checked_uint_to_f64(&past_bound),
+        None,
+        "2^53 + 1 exceeds binary64 exact-integer representability — must refuse, never round"
+    );
+}
+
+/// An over-cap width (`> FLOAT_CONV_MAX_WIDTH`) refuses regardless of the encoded magnitude —
+/// never a silent truncation of the width check itself.
+#[test]
+fn checked_uint_to_f64_rejects_over_cap_width() {
+    let bits = vec![false; FLOAT_CONV_MAX_WIDTH + 1];
+    assert_eq!(checked_uint_to_f64(&bits), None);
+}
+
+/// **Oracle property test (round-trip):** every non-negative integer magnitude at small target
+/// widths converts to `Binary{M}` and back to the identical `f64`/magnitude pair via
+/// `checked_f64_to_uint` — the never-silent `flt→bin` direction's total domain.
+#[test]
+fn checked_f64_to_uint_matches_the_oracle_and_round_trips() {
+    for m in 0u32..=16 {
+        let hi: u64 = if m == 0 { 0 } else { (1u64 << m) - 1 };
+        for v in 0..=hi {
+            assert_eq!(
+                checked_f64_to_uint(v as f64, m),
+                Some(v),
+                "checked_f64_to_uint({v}) at m={m} must match the oracle"
+            );
+        }
+        // One past the target width's range refuses (never a silent truncation).
+        assert_eq!(
+            checked_f64_to_uint((hi + 1) as f64, m),
+            None,
+            "{}(+1) does not fit Binary{{{m}}} — must refuse",
+            hi + 1
+        );
+    }
+}
+
+/// Never-silent domain refusals: NaN, ±inf, a negative value, and a nonzero fractional part all
+/// refuse — never a silent coercion/truncation (ADR-040 §2.4; G2).
+#[test]
+fn checked_f64_to_uint_refuses_the_never_silent_domain() {
+    for bad in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY, -1.0, 1.5, -0.5] {
+        assert_eq!(
+            checked_f64_to_uint(bad, 8),
+            None,
+            "checked_f64_to_uint({bad}) must refuse (NaN/±inf/negative/fractional)"
+        );
+    }
+    // `-0.0` is the one signed-zero edge that legitimately succeeds: it equals the integer 0.
+    assert_eq!(checked_f64_to_uint(-0.0, 8), Some(0));
+}
+
+/// The exact-integer boundary mirrors [`checked_uint_to_f64_exact_boundary`]: `2^53` succeeds (at
+/// a wide-enough target width); `2^54` (the next exactly-representable power of two beyond the
+/// bound — `2^53 + 1` is not itself an expressible `f64` literal, since binary64 cannot represent
+/// odd integers past `2^53`) refuses.
+#[test]
+fn checked_f64_to_uint_exact_boundary() {
+    assert_eq!(
+        checked_f64_to_uint(FLOAT_EXACT_MAX as f64, 54),
+        Some(FLOAT_EXACT_MAX)
+    );
+    assert_eq!(
+        checked_f64_to_uint((FLOAT_EXACT_MAX as f64) * 2.0, 64),
+        None,
+        "2^54 exceeds binary64 exact-integer representability (> 2^53) — must refuse"
+    );
+}
+
+/// An over-cap target width (`> FLOAT_CONV_MAX_WIDTH`) refuses regardless of the value.
+#[test]
+fn checked_f64_to_uint_rejects_over_cap_width() {
+    assert_eq!(
+        checked_f64_to_uint(1.0, (FLOAT_CONV_MAX_WIDTH + 1) as u32),
+        None
+    );
+}
+
+// --- RFC-0034 §10 (CU-5): the executable `wrapping` construct — modular two's-complement -------
+
+/// **Oracle property test:** exhaustively at small widths, `wrapping_add`/`wrapping_sub` equal
+/// the exact integer sum/difference reduced modulo `2^n` into `B_n` (never `None` on range) — the
+/// modular-reduction oracle any two's-complement wraparound implementation must match.
+#[test]
+fn wrapping_add_sub_match_the_modular_oracle() {
+    for n in 1u32..=8 {
+        let lo = -(1i64 << (n - 1));
+        let hi = (1i64 << (n - 1)) - 1;
+        let modulus = 1i128 << n;
+        for x in lo..=hi {
+            for y in lo..=hi {
+                let a = int_to_bits(x, n).unwrap();
+                let b = int_to_bits(y, n).unwrap();
+
+                let sum = i128::from(x) + i128::from(y);
+                let wrapped_sum = sum.rem_euclid(modulus)
+                    - if sum.rem_euclid(modulus) >= (modulus / 2) {
+                        modulus
+                    } else {
+                        0
+                    };
+                assert_eq!(
+                    wrapping_add(&a, &b),
+                    int_to_bits(wrapped_sum as i64, n),
+                    "wrapping_add {x}+{y} at n={n} must equal the modular reduction"
+                );
+
+                let diff = i128::from(x) - i128::from(y);
+                let wrapped_diff = diff.rem_euclid(modulus)
+                    - if diff.rem_euclid(modulus) >= (modulus / 2) {
+                        modulus
+                    } else {
+                        0
+                    };
+                assert_eq!(
+                    wrapping_sub(&a, &b),
+                    int_to_bits(wrapped_diff as i64, n),
+                    "wrapping_sub {x}-{y} at n={n} must equal the modular reduction"
+                );
+            }
+        }
+    }
+}
+
+/// **Oracle property test:** `wrapping_mul` equals the exact product reduced modulo `2^n`.
+#[test]
+fn wrapping_mul_matches_the_modular_oracle() {
+    for n in 1u32..=8 {
+        let lo = -(1i64 << (n - 1));
+        let hi = (1i64 << (n - 1)) - 1;
+        let modulus = 1i128 << n;
+        for x in lo..=hi {
+            for y in lo..=hi {
+                let a = int_to_bits(x, n).unwrap();
+                let b = int_to_bits(y, n).unwrap();
+                let product = i128::from(x) * i128::from(y);
+                let m = product.rem_euclid(modulus);
+                let wrapped = m - if m >= (modulus / 2) { modulus } else { 0 };
+                assert_eq!(
+                    wrapping_mul(&a, &b),
+                    int_to_bits(wrapped as i64, n),
+                    "wrapping_mul {x}*{y} at n={n} must equal the modular reduction"
+                );
+            }
+        }
+    }
+}
+
+/// Worked examples pinning the genuine wraparound: `add`/`sub`/`mul` refuse exactly where
+/// `wrapping_add`/`wrapping_sub`/`wrapping_mul` instead produce the modular result — the CU-5
+/// contrast that makes `wrapping` meaningfully different from the non-wrapping ops.
+#[test]
+fn wrapping_worked_examples_where_the_non_wrapping_ops_refuse() {
+    // B_8 = [-128, 127]. 127 + 1 = 128, out of range: `add` refuses, `wrapping_add` wraps to -128.
+    let a = int_to_bits(127, 8).unwrap();
+    let b = int_to_bits(1, 8).unwrap();
+    assert_eq!(add(&a, &b), None, "127 + 1 must refuse (non-wrapping)");
+    assert_eq!(
+        wrapping_add(&a, &b),
+        int_to_bits(-128, 8),
+        "127 + 1 must wrap to -128 (RFC-0034 §10)"
+    );
+
+    // -128 - 1 = -129, out of range: `sub` refuses, `wrapping_sub` wraps to 127.
+    let lo = int_to_bits(-128, 8).unwrap();
+    let one = int_to_bits(1, 8).unwrap();
+    assert_eq!(sub(&lo, &one), None, "-128 - 1 must refuse (non-wrapping)");
+    assert_eq!(
+        wrapping_sub(&lo, &one),
+        int_to_bits(127, 8),
+        "-128 - 1 must wrap to 127 (RFC-0034 §10)"
+    );
+
+    // 16 * 16 = 256, out of range at n=8 (B_8 max is 127): `mul` refuses, `wrapping_mul` wraps to 0.
+    let sixteen = int_to_bits(16, 8).unwrap();
+    assert_eq!(
+        mul(&sixteen, &sixteen),
+        None,
+        "16 * 16 must refuse (non-wrapping)"
+    );
+    assert_eq!(
+        wrapping_mul(&sixteen, &sixteen),
+        int_to_bits(0, 8),
+        "16 * 16 = 256 = 2^8 must wrap to 0 (RFC-0034 §10)"
+    );
+}
+
+/// Structural mismatches (unequal widths, an over-cap width) still refuse — `wrapping` only opts
+/// out of the *range* refusal, never the shape contract (G2).
+#[test]
+fn wrapping_rejects_structural_mismatches() {
+    let a4 = int_to_bits(1, 4).unwrap();
+    let b8 = int_to_bits(1, 8).unwrap();
+    assert_eq!(wrapping_add(&a4, &b8), None, "unequal widths must refuse");
+    assert_eq!(wrapping_sub(&a4, &b8), None, "unequal widths must refuse");
+    assert_eq!(wrapping_mul(&a4, &b8), None, "unequal widths must refuse");
+
+    let over_cap = vec![false; TC_MAX_WIDTH + 1];
+    assert_eq!(
+        wrapping_add(&over_cap, &over_cap),
+        None,
+        "an over-cap width must refuse"
+    );
+    let over_mul_cap = vec![false; MUL_MAX_WIDTH + 1];
+    assert_eq!(
+        wrapping_mul(&over_mul_cap, &over_mul_cap),
+        None,
+        "an over-cap width must refuse"
+    );
 }

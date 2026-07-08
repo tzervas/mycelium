@@ -1,6 +1,6 @@
 {
   "epic": "E33-1",
-  "generated_from_commit": "9c6ca6e9491a51b62a11b7cc82c95483eb04732a",
+  "generated_from_commit": "876cb730016e772fbaa5fa3213a839a50ac2120f",
   "kickoff": "trx2",
   "schema_version": 1,
   "targets": [
@@ -22,7 +22,7 @@
       "rust_sources": [
         {
           "path": "crates/mycelium-l1/src/checkty.rs",
-          "sha256": "37b2083222e3c473479a025b4029b421d99c37f604ab64f9e86f5959d0783ca1"
+          "sha256": "bfd270e0cc29e0094e29c7c6767d7f8c2f5aa02f33259d7e0604d77dc905d6ca"
         }
       ],
       "stats": {
@@ -266,7 +266,8 @@
       "gap_category_counts": {
         "Impl": 5,
         "Import": 2,
-        "Other": 9,
+        "MultiStmtBody": 1,
+        "Other": 8,
         "PayloadVariant": 1,
         "Struct": 3,
         "TestItem": 1
@@ -416,12 +417,13 @@
     {
       "file_count": 2,
       "gap_category_counts": {
-        "DeriveAttr": 1,
+        "DeriveAttr": 2,
         "GenericBound": 2,
         "Impl": 3,
         "Import": 4,
-        "Other": 13,
-        "PayloadVariant": 1,
+        "MultiStmtBody": 3,
+        "NamedFieldDrop": 1,
+        "Other": 10,
         "Struct": 4,
         "TestItem": 2
       },
@@ -439,11 +441,11 @@
         }
       ],
       "stats": {
-        "checked_clean_items": 1,
-        "checked_fraction_pct": 3.7,
-        "emitted_items": 1,
-        "expressible_fraction_pct": 3.7,
-        "gap_count": 30,
+        "checked_clean_items": 2,
+        "checked_fraction_pct": 7.41,
+        "emitted_items": 2,
+        "expressible_fraction_pct": 7.41,
+        "gap_count": 31,
         "non_test_items": 27,
         "total_top_level_items": 29
       },
@@ -461,9 +463,9 @@
         "Impl": 3,
         "Import": 1,
         "MacroInvocation": 1,
-        "MultiStmtBody": 4,
+        "MultiStmtBody": 7,
         "NamedFieldDrop": 1,
-        "Other": 11,
+        "Other": 8,
         "ReservedWord": 1,
         "Struct": 2,
         "TestItem": 1,
@@ -594,7 +596,7 @@
         "Import": 7,
         "MultiStmtBody": 1,
         "NamedFieldDrop": 1,
-        "Other": 41,
+        "Other": 27,
         "PayloadVariant": 1,
         "ReservedWord": 1,
         "Struct": 1,
@@ -638,11 +640,11 @@
         }
       ],
       "stats": {
-        "checked_clean_items": 1,
-        "checked_fraction_pct": 1.59,
-        "emitted_items": 4,
-        "expressible_fraction_pct": 6.35,
-        "gap_count": 71,
+        "checked_clean_items": 15,
+        "checked_fraction_pct": 23.81,
+        "emitted_items": 18,
+        "expressible_fraction_pct": 28.57,
+        "gap_count": 57,
         "non_test_items": 63,
         "total_top_level_items": 70
       },
