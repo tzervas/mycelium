@@ -33,7 +33,8 @@ code lands incrementally per the phase plan.
 
 | What | Where |
 |------|-------|
-| **Cited memory (tero)** | `docs/tero-index/INDEX.md` — the queryable corpus index (DN-87/E39-1); prefer **`/tero-query`** for cross-cutting answers-with-provenance, grep the INDEX.md as the offline fallback. Use it to ground a claim in one hop instead of re-reading the corpus |
+| **Cited memory (tero)** | `docs/tero-index/INDEX.md` — the queryable corpus index (DN-87/E39-1); prefer **`/tero-query`** for cross-cutting answers-with-provenance, grep the INDEX.md as the offline fallback. Use it to ground a claim in one hop instead of re-reading the corpus. The `tero-mcp-lite` server (`packages/tero-mcp-lite/`) is registered via the repo-root `.mcp.json`, so the `mcp__tero__*` tools are usable directly in-session |
+| **Portable MCP packages** | `packages/` — `tero-mcp-lite/` (the registered `tero` MCP server) + `GROK-HANDOFF.md` + `BACKLOG.md` |
 | **Symbol index** (navigational aid) | `docs/api-index/INDEX.md` — grep-friendly; `index.json` for machine |
 | **Doc index** | `docs/Doc-Index.md` — canonical map of all spec/RFC/ADR/DN status |
 | **Task tracking** | `tools/github/issues.yaml` — M-xxx IDs + status + doc_refs |
@@ -107,4 +108,5 @@ Before assigning a new M-xxx or E-xxx ID, verify the slot is free:
   returns a typed refusal, never a silent empty. Companions: `/tero-cite` (provenance only), `/tero-explain`
   (why-these-sources trace), `/tero-refresh` (reload the served index after `just tero-index`). Prefer it
   over grepping the corpus by hand when you want the answer **with** its citation; offline fallback is
-  grepping the committed `docs/tero-index/INDEX.md`.
+  grepping the committed `docs/tero-index/INDEX.md`. The `mcp__tero__*` tools are already live in-session
+  via the repo-root `.mcp.json` (`packages/tero-mcp-lite/`) — no manual server start needed.

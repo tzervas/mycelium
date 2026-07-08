@@ -525,3 +525,47 @@ Sonnet swarm; one isolated worktree per disjoint lane (transpiler vs core/kernel
 **canary gate per promotion (NOT the full sweep)**; orchestrator owns the shared collision surface;
 `integration→main` stays the terminal maintainer checkpoint (this session's release was
 maintainer-authorized). Persist intent to disc before compaction (mitigation #8).
+
+## Session-6 LAUNCH PAD (2026-07-08) — NEXT MISSION: Phase B, unblock full Rust→Mycelium transpilation
+
+This section stows the **next mission** (not executed this session — a worklist for the next
+kickoff/session to pick up). It is **Phase B** of the ADR-042 self-hosting mission: with the
+transpiler ladder + kernel prim-gap closure (Session-4) landed on `main`, the next-highest-leverage
+work is **closing the design gates that block the transpiler's remaining emission gaps**, then
+widening the emission ceiling and pushing the semcore heavy-core port forward.
+
+### Grounding — what landed since Session-4/5
+This session (the parallel session that produced this doc-currency PR) landed **DN-90…94** (design
+work-ups for the deferred CU gates) and **`docs/planning/deferred-design-CU-gates.md`** (D1–D6 issue
+specs for the gates once ratified), plus **`packages/`** (the portable `tero-mcp-lite` MCP server +
+`GROK-HANDOFF.md` + `BACKLOG.md`, registered via the repo-root `.mcp.json` — see the `/tero-query`
+skill bullet above). DN-91 in particular records that Lane A1 (DN-34 §8.18) landed the transpiler's
+`Expr::Cast` arm but had to gap **every float-crossing cast** with `PENDING-DESIGN(CU-3-fidelity)` and
+every narrow cast with `FLAG-cast-narrow-fidelity`, pending exactly the design DN-91 works up.
+
+### Worklist (multi-wave programme — stow only, do NOT execute this session)
+1. **Ratify + implement the design gates DN-90…94** — esp. **DN-91 (CU-3 lossy-swap)**, which is the
+   gate that unblocks the transpiler's gapped float↔int conversions and narrows the `Expr::Cast`
+   emission gap (A1 gapped it pending exactly this design). Also **DN-92** (CU-6 bit-rotation surface,
+   `rotate`) and **DN-93** (the E20-1 content-address rehash settlement). DN-90 (the unified
+   arbitrary-large-values/sizes strategy) and DN-94 (atomics/memory-model direction) round out the
+   gate set. The issue specs for these once ratified live in
+   **`docs/planning/deferred-design-CU-gates.md`** (D1–D6) — mint the tracked `M-xxx`/`E*` ids from
+   there (mitigation #1: verify the slot is free first).
+2. **Transpiler emission ceiling** — cross-nodule/project-mode vetting so referents resolve across
+   nodule boundaries, deeper operand-type inference, and the newly-decidable emission arms that open up
+   once the DN-91 gate lands (DN-34 §8.11–§8.18 is the ladder record to extend).
+3. **Semcore heavy-core port** (M-993/M-1013: `checkty`/`elab`/`eval`/`mono`/`fuse`) on the
+   **marshalling-differential method** (DN-26 §10.2 — decode the `.myc` mirror into the real
+   `mycelium_core` type and compare against the live Rust oracle; the adopted trust foundation since
+   Session-A's STEP 2). See the Session-A/Session-3 sections above for the increment ladder and its
+   resume point.
+4. **Kernel/core completeness** — the remaining prim/surface gaps the port work surfaces as it goes
+   (the CU-6/CU-8/CU-9 deferred-design items from Session-4's worklist feed into this, once their
+   design gates are ratified per item 1).
+
+**Sequencing note:** this is a multi-wave programme, not a single session's work. **Start with the
+gate-ratification + `Expr::Cast` unblock (item 1, DN-91 specifically) — it is the highest-leverage
+first move**, since it directly resolves an existing FLAG on already-landed transpiler code and
+unblocks measurable `checked_fraction` gains on the next transpile-and-vet pass, before widening into
+items 2–4.
