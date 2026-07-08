@@ -137,26 +137,321 @@ is a highly polished solution. Minted **M-1006** (under E33-1) as the phased-lad
 per-phase target sets are minted per wave (mitigation #1), and the ladder's outputs reconcile
 with `rwr`'s M-947…M-957 port-wave manifests at Phase-II (trx2 phases become their inputs).
 
-## Phase-1 landing record (2026-07-06 — M-1006 phase 1, PR #1226 → `dev`)
+## Session-2 continuation (2026-07-07) — self-hosting decisions landed, M-1012 in flight
 
-The M-1006 ladder's **first phase** landed on `dev` (PR #1226; promoted `dev → integration → main`
-per the tiered workflow). Input: the DN-34 §8.9 ranked 812-gap worklist. Run as **two disjoint-file
-leaves** (map-side `src/map.rs` + emit-side `src/emit.rs`, isolated worktrees, octopus-merged) over
-the same 17 wave-1 targets, then re-vetted with the real `myc check` oracle; independently reviewed
-(APPROVE) before merge.
+The wave shifted from transpiler/tero into the **compiler self-hosting** core after the maintainer
+made the governing decisions. **This section is the durable handoff — read it first.**
 
-**Landed (each grammar-grounded, never-silent — VR-5/G2):** concrete generic type-applications now
-map to `type_args` (`Head<A,…>` → `Head[A,…]`, recursive/never-partial — a whole gap sub-class
-closed); string/float/array expression literal arms (`StrLit`/`FloatLit`/`ListLit` — non-finite
-floats and un-escapable control chars refuse rather than emit garbage); sharpened `MultiStmtBody`
-diagnostics. **Measured (`Empirical`):** union `expressible_fraction` 6.06% → 6.19% (`std-io::read_all`
-unblocked via nested `Result[Vec[Binary{8}], IoError]`), `checked_fraction` flat 3.69%, `GenericBound`
-59 → 46. **M-1006-DoD residual enumeration (DN-34 §8.10):** the dominant remaining classes
-(type-coverage scalars, named-field structs/variants — KEEP GAPPED, no field-projection surface;
-imports; bounded generics; Rust built-in derives) are language-surface design (E18-1), not transpiler
-defects — the current-corpus transpiler-fixable surface is near-exhausted (stopping point recorded,
-G2). Emission `Declared`; drafts stay in `gen/myc-drafts/`, never imported by `lib/`.
+### Landed on `dev` this session (PRs #1237–#1247, all merged)
+- **M-1006 §8.11** (PR #1242) — transpiler shared-ref erasure `&T→T`; +2 expressible, checked flat.
+  Lesson: emission is near its ceiling on the fixed corpus; the next lever is **cross-nodule
+  project-mode vetting** (so referents resolve) or E18-1, NOT more emission arms.
+- **tero M-1016** (PR #1241) — query engine + mandatory provenance (uncited answer ⇒ typed Refusal;
+  EXPLAIN traces; Empirical latency ~630µs/query over 5141 rows).
+- **Decision records:** dossier (PR #1240); **DN-26 §10 Option A** + **ADR-042** (PR #1244);
+  **ADR-043** (PR #1247); **DN-88** (PR #1243); **DN-89** (PR #1245).
 
-**M-1006 → `in-progress`.** Remaining ladder work (later phases): expand the target set beyond the
-port surface in controlled phases (per-phase minting, mitigation #1), each folding lessons back into
-the transpiler; reconcile with `rwr`'s M-947…M-957 at Phase-II.
+### The migration lifecycle — now recorded, honor it end-to-end
+**ADR-042** (freeze new Rust; rewrite EVERYTHING incl. kernel + toolchain + **codegen backend** to
+`.myc`; zero foreign first-party langs by the DN-88 decomposition gate; `wild` only at the
+irreducible OS/HW ABI seam; DN-39 boundary unchanged — only the impl *language* changes) → **M-989
+myc-dogfood dual witness** (the "proven" gate: Rust differential + native `myc check`/`mycfmt`/
+`myc-lint`) → **ADR-043** (retire-when-proven → archive Rust to a protected legacy branch, never
+lost → remove from active tree → incremental housekeep → pure-Mycelium) → **DN-88** (decompose to
+component repos + GHCR spores + managerial re-export phyla) → **DN-89** (native AI/ML corpus:
+transpile+patch / FFI-bind / clean-room-reverse-engineer as a *convergence path* to full-native;
+ports leverage+improve, honesty-tagged). `mycelium-tero` is the sanctioned last-Rust PoC
+(M-1015→M-1018) then rewrites to `.myc` (M-1019). Open design gates: ADR-042 §6 kernel
+bootstrap/trust DN + the native-codegen-backend DN (both `needs-design`, maintainer to design).
+
+### ✅ STEP 1 DONE — M-1012 merged (PR #1246, `3e92db8f`)
+First heavy-core increment: elab.rs's pure L0 lowering helpers ported into `lib/compiler/semcore.myc`
+under **Option A** (in-language mirror ADTs + `scalar_kind`/`sparsity_class`/`lit_value`/`type_repr`/
+`field_spec`/`ty_to_repr`/`ty_to_field_ty_ref`/`policy_name` preimage). **Wild-free.** Honest deferrals
+(FLAG-semcore-25/27/29). All `/pr-review` (aef3c202) fixes landed incl. the **non-vacuity convention**
+for all 8 `.myc` comparators (the template for M-1013). Verified on both witnesses: `stage5_elab` 11/11,
+the full `mycelium-l1` suite green, and native `myc check lib/compiler/semcore.myc` ok. This sets the
+M-1013 pattern; the fresh session starts at STEP 2.
+
+### ⇒ FRESH-SESSION STEP 2 — INCORPORATE MARSHALLING (maintainer directive, 2026-07-07)
+The M-1012 differential compares two `.myc`-side mirror values with hand-written `.myc` structural
+equality (bounded by the new mandatory non-vacuity discipline). The maintainer directs incorporating
+**harness marshalling** as the self-hosting differential method: **decode the `.myc` mirror output
+into the real `mycelium_core` type (Rust, harness-side) and compare with Rust's trusted derived `==`**
+(or compare `mycelium_core::Value` content-hashes) — eliminating the hand-written-`.myc`-eq trust
+surface. Tasks: (a) retrofit `compiler_stage5_elab.rs` to marshalling; (b) make marshalling the
+differential method for **all** M-1013 increments; (c) update DN-26 §10.1 from "documented option" to
+"adopted method." Do this EARLY — it is the trust foundation for the ~11 M-1013 increments.
+
+### ⇒ FRESH-SESSION STEP 3 — M-1013 heavy-core increments 8→14
+Per dossier §6.3 (~11–13 scoped PRs, sequential where they share `semcore.myc` regions; each verifies
+BOTH witnesses — marshalling differential + native `myc check`; leaf→dev PR each with a `/pr-review`):
+8 registration/resolution/`Env`; 9 checker `Cx` (~3.2k, sub-split 2–3 PRs; folds in the deferred
+`infer` core = M-1011's `infer_type` residual, FLAG-semcore-20); 10 elab core (consumes M-1012's L0
+mirror); 11 mono core (+ FLAG-semcore-17 `mangle_ty_in_ty`/`item_key`); **12 eval — may need the AOT
+leg, NOT the interpreter** (M-986 TCO / M-987 ~n³, dossier §7 FLAG-4); 13 fuse; 14 whole-program L0
+differential + mutants. Also worth doing as the compiler phylum matures: wire `lib/compiler/` as a
+`mycelium-proj.toml` project root so the standard `myc-check`/`myc-fmt` gates cover it first-class
+(not just myc-dogfood's per-file walk).
+
+### ⇒ FRESH-SESSION STEP 4 — dev→integration promotion (batch reconciliation)
+Delegate to an Opus integrator in an isolated worktree. Batch on dev: dossier, M-1006/§8.11, DN-88,
+M-1016, ADR-042/DN-26§10, DN-89, ADR-043, M-1012. Reconcile: status flips (**M-1007→done** [DoD says
+DONE, PR #1231], **M-1011** partial-done note [infer_type = increment 9], **M-1012→done**,
+**M-1016→done**, M-1006 stays in-progress); **mint** E40-1/M-1020 (decomposition guide, gated),
+E41-1/M-1021 (AI/ML, gated), an ADR-042 policy-tracker, + follow-on DN placeholders (kernel
+bootstrap-trust, native-codegen-backend); **Doc-Index rows for DN-88/DN-89/ADR-042/ADR-043 (ALL
+currently MISSING)** + adr/README rows for ADR-042/043; CHANGELOG for all; **api-index regen**
+(mycelium-tero's new public surface); tero/lib/doc index regen; **fix pre-existing `CHANGELOG.md:28`
+MD012 + `DN-88.md:33` MD018**; full `just check` green. Flow: reconcile→dev PR, then dev→integration PR.
+`integration→main` squash stays the terminal MAINTAINER checkpoint — do NOT auto-squash to main.
+
+### ⇒ PARALLELIZE ACROSS SESSIONS (maintainer directive) — disk-isolate disjoint work
+**Disjoint work that does not depend on each other should be kicked off in SEPARATE parallel
+sessions, not just parallel agents in one session** — each session gets its own environment/disk, so
+they cannot collide on the shared ~41G ceiling (the failure that broke builds this session). This is
+the **Wave-N multi-session workflow** (CLAUDE.md §Wave-N): partition by disjoint file ownership,
+one protected head branch each, cross-session continuity via `issues.yaml` `depends_on` + body notes
+(never by touching another session's files); each head self-integrates, then a final integration
+octopus-merges the heads and squash-PRs to `main`. Suggested partition of the remaining work:
+- **Session A — semcore self-hosting (critical path, SEQUENTIAL, one session):** marshalling (STEP 2)
+  → M-1013 increments 8→14. These share `lib/compiler/semcore.myc` + the differential harness and
+  build on each other, so they are NOT disjoint — keep them in one session.
+- **Session B — tero productionization (DISJOINT: `crates/mycelium-tero/`):** M-1017 (MCP + HTTP
+  fronts + skills) → M-1018 (VSA Layer-2 + the Empirical eval gate). Independent of semcore.
+- **Session C — transpiler ladder next phase (DISJOINT: `crates/mycelium-transpile/` + `gen/myc-drafts/`):**
+  M-1006's project-mode/cross-nodule vetting lever (per §8.11 — the real way to move `checked_fraction`).
+- **Integration session:** after A/B/C land on their heads, one integrator runs the dev→integration
+  promotion (STEP 4) reconciling the shared files once.
+Within each session, still use isolated worktrees per concurrent agent — but keep the *count* modest
+and prune `target/` dirs, since one env's disk is the bound.
+
+### Ops lessons (this session — bake into the fresh run)
+- **DISK:** the shared root fs has a **~41G effective ceiling**; per-worktree cargo `target/` (1–3G
+  each) + the main `target/` (~15G) fill it fast, breaking BOTH git (`index.lock` ENOSPC) and cargo.
+  **Prune completed-agent worktrees + their `target/` dirs periodically** (`git worktree prune`;
+  `rm -rf .claude/worktrees/*/target`; clear the main `target/` between waves). Consider one shared
+  `CARGO_TARGET_DIR`. Multiple sessions share the volume — a sibling can refill it.
+- **Shared-tree contamination (mitigation #11):** background agents (even `isolation:"worktree"`)
+  sometimes run git in the shared main tree. Keep the orchestrator's main tree a **clean pointer**
+  (a fresh branch off `origin/dev`, never a leaf branch); `git reset --hard` / re-checkout if
+  contaminated. `dev` may be checked out in a sibling session's worktree (can't check it out twice).
+- **Incomplete agent reports:** an agent that spawns a background verify and hits its turn boundary
+  reports mid-action ("waiting for the monitor"). **Always verify the actual pushed/committed state**
+  (mitigation #7/#9) — recover uncommitted work from the worktree, commit + push it yourself.
+
+### Completion driver (already armed)
+Routine `trig_01EXyj3Q` "myc-port-drive" (cron `30 */3 * * *`, fresh session per fire, push
+notifications) — executes the **M-741** ratification IFF it independently verifies all 3 DoD criteria
+with checked `Empirical` evidence (else flags on issue #444); never auto-declares 1.0.0. M-741 is
+maintainer-pre-authorized (verification-gated). The fresh session's swarm work runs alongside it.
+
+## Session-C UPDATE (2026-07-07) — M-1006 ladder to `main` + kernel prim-gap closure wave
+
+Session C (transpiler ladder, `crates/mycelium-transpile/` + `gen/myc-drafts/` + DN-34) ran to
+completion **and pivoted into a kernel prim-gap closure** once the maintainer **unfroze the kernel**.
+Full durable record: **DN-34 §8.12–§8.16** (on `main`/`dev`). This section is the current status + the
+remaining-task list for a fresh continuation.
+
+### ✅ Landed (all merged)
+- **M-1006 transpiler ladder → `main`.** §8.12 positional named-field emission + `myc check --phylum`
+  cross-nodule mode (hotfix to all three tiers); §8.13 field-projection/struct-literal desugaring;
+  **§8.14 String/str/&str → `Bytes`** (RFC-0033 §3.2) — the **largest single-lever gain of the ladder**
+  (`checked_fraction` 4.61% → **5.79%**, +9). Landed to `main` as the sole scoped `integration→main`
+  delta (PR #1267) after the big release squash; also on `dev`+`integration`.
+- **§8.15 prim-gap audit correction** (house rule #4): my §8.13/§8.14 wrongly recorded the `Binary{N}`
+  bitwise ops as *missing* — they **exist** as `bit.and/or/xor/not` (surface `and/or/xor/not`), and
+  `==`/`<`→`Binary{1}` is ratified design (RFC-0032 D1). Live prim count **Π = 59** (DN-56/DN-76 "38"
+  stale). **rotate IS expressible** (`or(shl_u,shr_u)`) — §8.13 Lever-2's "impossible" was wrong.
+- **Kernel prim-gap closure wave (kernel UNFROZEN — §8.14 correction; Π 59 → 66):**
+  **CU-1** `bit.mul` unsigned multiply (#1273) · **CU-2** `flt.is_nan/is_finite/is_infinite`
+  (ADR-040 §2.5 mandate, #1274) · **CU-6** `bit.popcount/clz/ctz` (#1275) · **CU-4** `ne/gt/cmp_s/le_s/
+  ge_s` + the CU-6 `std.math` surface `bmul/bpopcount/bclz/bctz` (#1291). Each carries never-silent
+  semantics with property and three-way (L1/L0/AOT) tests; the Π table, `checkty` surface, and
+  `prim_table` were updated in lockstep.
+- **Agent guidance:** DN-34 §8.16 wave record (#1293); **tero guidance** added to CLAUDE.md +
+  `.claude/agent-context.md` + `.claude/memory/README.md` (#1294).
+
+### ⇒ REMAINING TASKS (the updated kickoff worklist — ruled *implement-now* unless noted)
+Decision rulings already made (all the project-optimal option — performant · memory-safe · KC-3 ·
+never-silent); the approach for each is in **DN-34 §8.16**. Prim-add pattern is in the working notes
+`…/scratchpad/trx2-session-c-notes.md` (codec → prim → registry → Π table + 2 count asserts → checkty
+family/sig/kernel_name → prim_table → enablement three-way).
+
+1. **CU-3 — float↔int never-silent conversions.** Target-width prims (the `bit.width_cast`/DN-41
+   model): `flt→bin` (refuse NaN/±inf/out-of-range) + checked-exact `bin→flt` (err `|n|>2^53`); the
+   **lossy** `bin→flt` rounding is a **reified swap** carrying its bound (ADR-040 §2.4/§5, NOT a prim).
+2. **CU-5 — executable `wrapping` construct.** M-791 landed the meta/mode axis (`mycelium-core/src/
+   meta.rs` + `src/tests/wrapping.rs`) but no runtime path. Wire the named construct → modular
+   (never-refusing, `Declared`-tagged) eval over `bin.add/sub/mul`. RFC-0034 §10; no new `wrapping_*`
+   prims. (Grep `wrapping` in l1 `elab`/`checkty` for the construct's parse/elaborate handling first.)
+3. **CU-7 — arbitrary-width ternary.** `mycelium_core::ternary::BigTernary` (M-756) exists but is
+   unsurfaced (runnable ternary is fixed-width `trit.*`, ~40-trit cap). Surface the growable arithmetic
+   path RFC-0033 §4.2.2 mandates (ADR-029 Accepted); coordinate the growable-`Repr::Ternary` payload
+   with the E20-1 content-address settlement.
+4. **Transpiler operator/comparator emission** (`crates/mycelium-transpile/`). Emit `and/or/xor` (not
+   the dead `band/bor`) for `&`/`|`/`^`, and the CU-4 comparators, when operands are known `Binary{N}`
+   — the **operand-type inference** §8.13's D3 named (thread param/`self` widths through `emit.rs`).
+   Then regenerate `gen/myc-drafts/` + measure the `checked_fraction` lift.
+5. **Spec-doc sync (doc-currency follow-up).** Document the new `std.cmp` surface (`ne/gt/cmp_s/le_s/
+   ge_s`) in `docs/spec/stdlib/cmp.md` and the `std.math` surface (`bmul/bpopcount/bclz/bctz`) in
+   `docs/spec/stdlib/math.md`; add a top-level `CHANGELOG.md` entry for the prim-gap wave (integrator).
+6. **Deferred to design work (ruling: defer — no half-measures):** **CU-6 rotate/reverse**
+   (`std.math` FLAG-math-3 — needs a `bit.rotl`/`bit.rotr` prim or width-reflection; the naive
+   `or(shl_u,shr_u)` mis-handles `n=0`, a full-width `shr` refuses); **CU-8 atomics** (`fetch_add` — a
+   memory-model RFC, DN-32 §7/RFC-0027 §12); **CU-9 Dense dtype/quant** (RFC-0033 §4.3.2 — rides the
+   E20-1 content-address rehash, ADR-030; the maintainer's `vsa_checks` branch has the desktop
+   durability numbers to ground it). Mint tracked issues; do not scope partial stubs.
+
+## Session-A continuation (2026-07-07) — M-1013 increment-8 registration family COMPLETE on `dev`
+
+Session A (semcore self-hosting critical path — `lib/compiler/semcore.myc` + the `mycelium-l1`
+differential harness) continued STEP 2 → STEP 3. **This is the durable Session-A handoff — read it
+first, then the RESUME POINT below.** Working branch this session: `claude/trx2-inc-ladder`
+(a clean pointer off `dev`; the main tree, never a leaf branch).
+
+### ✅ Landed on `dev` this session (all leaf→dev PRs, `--no-ff`, both witnesses green, `/pr-review`'d)
+- **STEP 2 marshalling** was landed in the PRIOR Session-A window (PR #1253) and promoted to `main`
+  in that window's release (#1265). Marshalling is the ADOPTED Stage-5 differential method
+  (DN-26 §10.2): decode the `.myc` port's `L1Value` mirror into the real `mycelium_core` type and
+  compare against the live Rust oracle. **This is the trust foundation for every increment below.**
+- **inc-8 PR-2b — full `collect_tuple_arities` walk (PR #1272, merge `bc4d59f4`).** All legs (type-decl
+  ctor fields, fn/trait/impl signatures, `match` patterns, fn-body expressions). **Closed
+  FLAG-semcore-30** (the PR-2 trimmed-walk deferral). Un-collapsed the `Item` mirror to the full
+  8-variant vocab. Bundled a **justfile de-confliction fix** (removed duplicate `tero-index`/
+  `tero-index-gen` recipes a prior sync-down auto-merge had introduced, which made `just` abort).
+- **inc-8 `register_traits` (PR #1292, merge `53f46ab1`).** Two-pass trait registry (dup type-param/
+  name/method refusals + per-method `check_sig_resolves` + forward-ref-tolerant bound validation).
+  Added the **surface `FnSig` decoder** family (distinct from the elab harness's kernel-`KFS` decoder).
+  13 live-differential fixtures.
+- **inc-8 `register_instances` (PR #1295, merge `88efee0e`).** Full 8-check impl/instance registration +
+  coherence (unknown-trait, concrete resolve, arity, `type_head`, phylum-wide pub-blind orphan rule,
+  global uniqueness, exact method-set match). Added `CoherenceView`/`InstanceInfo` mirrors (reusing the
+  existing `Ty` marshalling). 13 live fixtures (incl. dup-method). **Resolved FLAG-semcore-33** by
+  widening `checkty::CoherenceView.types` to `pub(crate)` (the white-box in-crate-test pattern, same as
+  PR-1's `resolve_ctors` widening), upgrading the Data-orphan arm from port-only to a full live
+  differential.
+
+**Net:** the **trait/instance registration family is COMPLETE** on `dev` — `register_types` (prior
+window) + `register_traits` + `register_instances` + the full `collect_tuple_arities` pre-pass, every
+piece live-differential-witnessed against the real `checkty` oracle. No open FLAGs in this slice.
+Current `dev` tip at handoff: `88efee0e` (moves under concurrent sibling sessions — a snapshot).
+
+### ⇒ RESUME POINT (next Session-A) — `resolve_imports`, then increments 9→14
+Next increment-8 piece is **`resolve_imports`** (`checkty.rs::resolve_imports` 1423-1532) — the M-662
+per-nodule `use`-import resolution. **It is notably heavier than the register-family and carries a
+design decision — scope it verify-first (mitigation #14) before spawning a leaf:**
+- Needs an **`Exports`** mirror (`declared: name→is_pub`, plus `types`/`fns`/`traits` maps) and a
+  **`NoduleImports`** mirror (`types`/`fns`/`traits` by simple name + an `ambiguous` set).
+- Needs the `Item` mirror **un-collapsed further** to carry **`ItUse(UsePath{path, glob})`** (PR-2b
+  collapsed `Use` into `ItOther`); keep `collect_tuple_arities_item`'s `ItUse => acc` arm faithful
+  (Use is tuple-free).
+- Needs **path-string helpers**: join segments with `.`, `direct_child(prefix, qual)` (single trailing
+  segment), `split_last_seg(path)`. String work in the port (has `bytes_concat`; needs split/segment
+  logic).
+- The logic: globs first (lowest precedence) → explicit `use`s (shadow globs); dup-explicit refusal;
+  glob-vs-glob → `ambiguous` (never a silent winner); unknown-name vs exists-but-private distinct
+  refusals. All never-silent (G2).
+- **⚑ DESIGN DECISION (flag, don't guess):** the oracle's `NoduleImports` carries full `DataInfo`/
+  `FnDecl`/`TraitInfo` payloads (via `insert_export`), but the *resolution logic* is purely name-based
+  (globs/precedence/dup/ambiguity). Option (a) marshal `NoduleImports` fully (needs a surface
+  `decode_fn_decl` — not yet built); option (b) project to `(simple→qual bindings, ambiguous set)` and
+  compare that — captures ALL resolution behavior without the payload-copy marshalling. **Recommend (b)**
+  (the payloads are the source `Exports`' own already-tested decls; the increment's contract is the
+  binding/precedence/ambiguity behavior). Confirm at scope time.
+
+Then increments **9** (checker `Cx` ~3.2k — MUST sub-split 2-3 PRs; folds M-1011 `infer_type` residual,
+FLAG-semcore-20) → **10** (elab core, consumes M-1012 L0 mirror) → **11** (mono, +FLAG-semcore-17) →
+**12** (eval — may need the AOT leg, dossier §7 FLAG-4) → **13** (fuse) → **14** (whole-program
+differential + mutants). Pattern for every increment: verify-first vs the oracle → Opus leaf in an
+isolated worktree (2 files: `semcore.myc` + `compiler_stage5_*.rs`) → orchestrator re-verifies BOTH
+witnesses → `/pr-review` agent → leaf→dev `--no-ff` merge.
+
+### ⇒ HELD: dev→integration→main promotion of the register-family slice (maintainer decision, 2026-07-07)
+The completed register-family slice is a **coherent, promotable unit**, but the maintainer directed
+**HALT before promoting** — do NOT run the round-trip this session. When resumed (maintainer or next
+session), promote it the **curated scoped-slice** way (DN-65 + last window's #1260/#1265 precedent),
+because `integration`/`main` carry concurrent sibling work and a full-`dev` promotion would drag
+unrelated in-flight changes:
+- Branch off `integration`; `git checkout origin/dev --` the semcore slice files (`semcore.myc` + the
+  `compiler_stage5_*.rs` test files + `marshal_support.rs` + the `checkty.rs` `pub(crate)` widenings +
+  `justfile` de-confliction); confirm each differs from `integration` only by the slice.
+- Hand-author the close-out on the shared release surface: **CHANGELOG** (one consolidated block for
+  PR-2b + register_traits + register_instances + FLAG-30/33), **DN-26** stays coherent Draft, and the
+  **issues.yaml E18-1 status flips** (see below — but the maintainer's PM sync script owns `issues.yaml`;
+  coordinate, don't collide).
+- Verify on the integration base (stricter tier): full `just check` + both witnesses + fmt/clippy/
+  doc_refs. dev→integration `--no-ff`; **`integration→main` squash is HELD as the terminal maintainer
+  checkpoint** (maintainer's explicit choice this session — do NOT auto-squash to main).
+
+### Status deltas for the maintainer's PM sync script (I did NOT edit `issues.yaml` — it's script-owned)
+- **M-1013** (semcore heavy-core increments) — `in-progress`. Done: increment-8 PR-1 (`resolve_ctors`),
+  PR-2 (`register_types`), PR-2b (full `collect_tuple_arities`, FLAG-30 closed), `register_traits`,
+  `register_instances` (FLAG-33 resolved). Remaining: `resolve_imports` (+ any `Env` assembly) then
+  increments 9→14.
+- FLAGs: **FLAG-semcore-30 CLOSED** (PR-2b), **FLAG-semcore-33 RESOLVED** (register_instances PR).
+- **Fast-follow (non-gating):** an oracle gap `/pr-review` surfaced — `checkty::collect_tuple_arities_expr`
+  treats `Expr::Lit` as a leaf, so a `TupleLit` nested inside a `Literal::List` (`[(1,2)]`) is walked by
+  neither the Rust oracle nor the port. Degrades safely (unregistered `Tuple$N` → explicit
+  `resolve_tuple` Err). Worth a follow-up against `checkty.rs` (the port is faithfully inheriting it).
+
+### Ops carried forward (Session-A specifics)
+- Both witnesses before every land: `cargo test -p mycelium-l1` (the `compiler_stage5_register`/`_elab`
+  differentials) + `just myc-dogfood --strict` (`myc check semcore.myc`). clippy `--no-deps` (mycelium-mlir
+  unsafe warnings are pre-existing/exempt, ADR-014). `--no-verify` sanctioned (external hooks unreachable);
+  gates run out-of-band. Commit msg via `-F <file>` (heredocs/backticks trip the branch-guard parser);
+  split `git commit`/`git push` (no `&&`). Force-push PROHIBITED; leaf→dev `--no-ff`; only `main` squashes.
+- The GitHub-created merge commits + inherited sibling-session commits on `dev` show as **Unverified**
+  (`noreply@github.com`) — NOT ours to rewrite (would need a forbidden force-push to protected `dev`).
+  Our own commits carry `noreply@anthropic.com`; the stop-hook flags are expected and inert.
+
+## Session-3 LAUNCH PAD (2026-07-07 pm) — parallelize A/B/C in ONE Sonnet-swarm session
+
+The maintainer will run **one session that parallelizes all three lanes with Sonnet agents.** This is
+the single entry point: the base facts, the one landmine, and where each lane's detailed worklist lives
+(the per-session sections above). Read it, then dispatch one agent per lane.
+
+### Base (branch off `dev`)
+`main` = `dff9debe` — the big `integration → main` release squash (`9c6ca6e9`) landed the whole wave
+(self-hosting Stage 2–5, RFC-0041, eval/AOT perf, the transpiler vet loop, **and the full
+`mycelium-tero` M-1015…M-1018**), then back-propagated into `integration` (#1268) + `dev` (#1269).
+`dev` (~`555e56b9` and **moving every wave** — Session A/C land continuously) contains all of `main` +
+the in-flight work. **Re-fetch and branch every lane off the LATEST `dev` tip.**
+
+### ⚠ THE LANDMINE — `dev`'s `issues.yaml` is STALE vs the landed code (mitigation #2 + #14) · VERIFY-FIRST
+The back-prop merges **kept `dev`'s side of `issues.yaml`**, so the tracker disagrees with the code that
+is actually on `dev`. Confirmed drift (code present, tracker wrong): tero **M-1016/17/18 = `todo`** (they
+are `done` on `main`) and **M-1020 absent** on `dev` (present `todo` on `main`); semcore **M-1012 =
+`needs-design`** though its elab port is in `dev:lib/compiler/semcore.myc`. **Ground truth is the
+codebase (VR-5).** Every agent reproduces/confirms an issue against the source before implementing — do
+NOT re-implement landed work (mitigation #14). The integrator does **one `issues.yaml` reconciliation
+pass** (sync `dev` statuses to reality + pull `main`'s M-1020 row down) in the next dev→integration batch.
+
+### The three lanes (dispatch one isolated-worktree Sonnet agent each)
+- **Lane A — semcore self-hosting** (`lib/compiler/semcore.myc` + the differential harness). **Critical
+  path, SEQUENTIAL — keep it to ONE agent.** Worklist = the **Session-A continuation** section directly
+  above: STEP 2 marshalling is the ADOPTED differential method, and inc-8's **register-family is
+  COMPLETE**; **resume at its RESUME POINT — `resolve_imports`** (verify-first; a design decision is
+  flagged there — recommend option (b)) **then increments 9→14** (checker `Cx` → elab → mono → eval →
+  fuse → whole-program differential). The completed register-family slice's **dev→integration→main
+  promotion is HELD for the maintainer** (do not auto-promote). Shares `semcore.myc` → no intra-lane parallelism.
+- **Lane B — tero** (`crates/mycelium-tero/`). **✅ COMPLETE** — M-1015…M-1018 are on `main` (Layer-1
+  index, query+provenance, MCP+HTTP fronts + 4 `.claude/skills/tero-*`, VSA Layer-2 + the eval gate;
+  **Gate Run 1 = CLOSED**, serves Layer-1 — DN-87 §6.1; the Run-1 numbers are **frozen**, do NOT re-run
+  for a promotion). **Remaining is small — at most one agent, or skip:** **M-1020** native HTTPS/TLS for
+  the HTTP front (`todo`, P3, unblocked — a rustls-backed axum-tls path; runtime cert+key never
+  committed; the plain-HTTP `127.0.0.1` floor stays default; extend auth+parity tests; amend ADR-044);
+  **M-1019** the tero `.myc` package is still **`blocked` on M-993** (not actionable until Lane A lands).
+- **Lane C — transpiler ladder + kernel prim-gaps** (`crates/mycelium-transpile/`, `gen/myc-drafts/`,
+  `mycelium-core` prims, `std.math`/`std.cmp` surfaces). Worklist = the **Session-C UPDATE** section
+  above (M-1006 ladder + CU-1/2/4/6 already landed; remaining **CU-3** float↔int conversions, **CU-5**
+  executable `wrapping`, **CU-7** arbitrary-width ternary, the **transpiler operator/comparator
+  emission** with operand-type inference, and the **spec-doc sync**; CU-6/8/9 deferred to design).
+
+### Swarm shape (maintainer directive)
+One orchestrator, **Sonnet agents**, one **isolated worktree per lane** (mitigation #11), disjoint dirs
+→ collision-free. Keep the concurrent count modest and prune `target/` between waves (the ~41G disk
+ceiling is the bound — Ops lessons above). The orchestrator owns the shared collision surface
+(`issues.yaml` incl. the reconciliation pass, `CHANGELOG`, `Doc-Index`, `docs/api-index/`); leaves FLAG
+up. Promote leaf→`dev` via `/pr-land`; `dev→integration` is the batch close-out; `integration→main`
+stays the terminal **maintainer** checkpoint.

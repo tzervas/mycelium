@@ -21,7 +21,7 @@ consumes is [`project.json`](project.json). The reconciler is `gh-issues-sync.py
 |---|---|---|
 | **Status** | single-select | `Todo`, `In Progress`, `In Review`, `Blocked`, `Done` |
 | **Phase** | single-select | `Phase 0` … `Phase 8` (the live milestone set) |
-| **Area** | single-select | `core-ir`, `swap`, `vsa`, `execution`, `numerics`, `selection`, `toolchain`, `project`, `language` |
+| **Area** | single-select | `core-ir`, `swap`, `vsa`, `execution`, `numerics`, `selection`, `toolchain`, `project`, `language`, `stdlib`, `release`, `spec` |
 | **Priority** | single-select | `P0`, `P1`, `P2`, `P3` |
 | **Estimate** | single-select (optional) | `S`, `M`, `L` |
 
@@ -34,7 +34,15 @@ the missing `In Review` / `Blocked` options rather than creating a second Status
 Each item's labels set its single-select fields, idempotently (a value is written only when it
 drifts):
 - `phase:N` → **Phase** = `Phase N`
-- `area:X` → **Area** = `X`
+- `area:X` → **Area** = `X`. **Multi-area (M-676):** an item may legitimately carry **several**
+  `area:*` labels; the single-select Area field then **anchors to the PRIMARY area** — the value
+  earliest in the field's declared option order (the **Area** row above; an alphabetical tie-break
+  for any value outside that order) — and records the full span as an informational note. An item
+  carrying at least one area label is therefore **never** left `Area: … — not set` (G2); this
+  mirrors the primary-task milestone anchor (#353), maintainer-ratified 2026-06-23. Switch Area to
+  a multi-select field if a board needs every area surfaced. Fields **without** a `multi` policy
+  (Phase/Priority) still flag a genuine two-value conflict as unset — two of those is a real
+  conflict, not legitimate multi-membership.
 - `priority:PN` → **Priority** = `PN`
 - `status:blocked` → **Status** = `Blocked`; `status:done` → **Status** = `Done`
   (`status:needs-design` has no Status option — it is **reported as unmapped, never guessed**, and

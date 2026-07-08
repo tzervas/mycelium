@@ -27,6 +27,62 @@ use syn::{
 /// `self.<field>` access desugars to `match self { <Ty>(_, x, _) => x }` at the field's position.
 type StructLayout = Vec<Option<String>>;
 
+/// A name -> mapped-type-text environment threaded through the expression emitters (M-1000/M-1001
+/// follow-on, trx2 Lane C Deliverable 1): maps a **local name in scope** (a fn/method parameter,
+/// `self`, or a `let`-bound local whose type is trivially known — see the `Stmt::Local` handling in
+/// [`emit_block_as_expr_inner`]) to its [`map_type`]-produced type-ref text (e.g. `"Binary{16}"`,
+/// `"Bool"`). Populated at a body's two entry points ([`emit_fn`]/[`emit_impl`]) from the already-
+/// mapped [`MappedSig::params`] (which already carries `(name, mapped_type_text)` — no re-mapping
+/// needed), so this environment is Declared-grade in exactly the same sense the rest of this module
+/// is: a heuristic textual record, not a real type-checker's substitution. It exists so
+/// `Expr::Binary`'s operator emission (see the `and`/`or`/`ne`/`gt` cases below) can tell, **without
+/// ever guessing**, when an operand is a *known* `Binary{N}` value — the gate that decides between
+/// the WORD/prim-composed surface (real, myc-check-clean per the verify-first probes cited below) and
+/// the glyph fallback (unchanged, still Declared-heuristic). A name absent from the map is simply
+/// "not known" — never treated as "known to be something else" (VR-5: absence, not a wrong guess).
+pub(crate) type TypeEnv = HashMap<String, String>;
+
+/// If `e` is a **bare, single-segment identifier** naming a local whose type is present in `env`,
+/// return that local's mapped type text (a clone of the `env` entry) — `None` for any other
+/// expression shape (a call, a field access, a literal, …) or for a name not in scope. Deliberately
+/// narrow: the transpiler has no general expression-typing pass, so only the one case it can decide
+/// *without guessing* — "this exact identifier's declared parameter/local type is known" — is
+/// answered; everything else is simply absent (VR-5).
+pub(crate) fn expr_env_type(e: &Expr, env: &TypeEnv) -> Option<String> {
+    match e {
+        Expr::Path(p) if p.qself.is_none() && p.path.segments.len() == 1 => {
+            let name = p.path.segments.last()?.ident.to_string();
+            env.get(&name).cloned()
+        }
+        _ => None,
+    }
+}
+
+/// [`expr_env_type`] narrowed to the `Binary{N}` case (via [`binary_width`]) — the gate
+/// `Expr::Binary`'s `&`/`|`/`!=`/`>` emission below reads directly.
+fn expr_env_binary_width(e: &Expr, env: &TypeEnv) -> Option<u32> {
+    expr_env_type(e, env).and_then(|t| binary_width(&t))
+}
+
+/// If `e` is a struct-literal expression (`Ty { .. }` / `Self { .. }`) naming an **in-file struct
+/// that actually emits** (the same [`struct_layout`] resolvability gate `Expr::Struct`'s own
+/// emission arm already uses — see that arm's docs), return that struct's type name as the local's
+/// known type text. `None` for every other expression shape, an unresolvable `Self`, or a struct
+/// that itself does not resolve/emit (never records a type this module cannot back up — VR-5).
+fn known_struct_literal_ty(e: &Expr, self_ty: Option<&str>) -> Option<String> {
+    let Expr::Struct(se) = e else { return None };
+    if se.qself.is_some() || se.rest.is_some() {
+        return None;
+    }
+    let raw = se.path.segments.last()?.ident.to_string();
+    let sty = if raw == "Self" {
+        self_ty?.to_string()
+    } else {
+        raw
+    };
+    struct_layout(&sty).map(|_| sty)
+}
+
 /// Per-file emit context installed by `transpile::transpile_source` for the item loop (see
 /// [`with_emit_ctx`]): the M-1006 **resolvability set** (gates named-field-record emission) and the
 /// **struct layouts** (drives field-projection / struct-literal desugaring). Both are file-scoped
@@ -233,7 +289,7 @@ fn plain_type_params(generics: &Generics) -> Result<Vec<String>, GapReason> {
 /// Parse a `map_type`-produced `Binary{N}` type-ref string back to its width `N`. Only matches
 /// the exact `Binary{<digits>}` shape `map_type` emits for unsigned integers — never a guess for
 /// any other text (e.g. `Bool`, a bare ident) that happens to not match.
-fn binary_width(ty_text: &str) -> Option<u32> {
+pub(crate) fn binary_width(ty_text: &str) -> Option<u32> {
     ty_text
         .strip_prefix("Binary{")
         .and_then(|rest| rest.strip_suffix('}'))
@@ -300,6 +356,17 @@ struct MappedSig {
     params: Vec<(String, String)>,
     ret: String,
     type_params: Vec<String>,
+}
+
+/// Build the body's initial [`TypeEnv`] from a mapped signature's `params` — the two body-emission
+/// entry points ([`emit_fn`]/[`emit_impl`]) call this once, before descending into the body, so
+/// `Expr::Binary`'s operand-type gate can see every fn/method parameter's already-mapped type text
+/// with **no re-mapping** (`MappedSig::params` already carries `(name, mapped_type_text)` —
+/// `map_signature`'s doc). For a method, `self` is already present in `params` (the `FnArg::Receiver`
+/// arm of `map_signature` pushes `("self".to_string(), ty)`), so this one function covers both the
+/// free-fn and impl-method cases without a separate `self`-insertion step.
+fn sig_type_env(sig: &MappedSig) -> TypeEnv {
+    sig.params.iter().cloned().collect()
 }
 
 /// Map a fn signature's generics/params/return type. `self_ty` is `Some(name)` inside an
@@ -415,15 +482,23 @@ fn render_fn_sig(name: &str, sig: &MappedSig) -> String {
 // MultiStmtBody gap — a KNOWN HARD GAP named in the kickoff brief.
 // ---------------------------------------------------------------------------------------------
 
-pub fn emit_block_as_expr(block: &Block, self_ty: Option<&str>) -> Result<String, GapReason> {
-    guarded(|| emit_block_as_expr_inner(block, self_ty))
+pub fn emit_block_as_expr(
+    block: &Block,
+    self_ty: Option<&str>,
+    env: &TypeEnv,
+) -> Result<String, GapReason> {
+    guarded(|| emit_block_as_expr_inner(block, self_ty, env))
 }
 
 /// The recursion-guarded body of [`emit_block_as_expr`] (RFC-0041 §4.7 W1 — see
 /// `crate::gap::guarded`). Every recursive call back into a guarded entry point uses the *public*
 /// wrapper name (`emit_expr`, `emit_block_as_expr` is not itself re-entered here), so each
 /// recursion step consumes one budget frame.
-fn emit_block_as_expr_inner(block: &Block, self_ty: Option<&str>) -> Result<String, GapReason> {
+fn emit_block_as_expr_inner(
+    block: &Block,
+    self_ty: Option<&str>,
+    env: &TypeEnv,
+) -> Result<String, GapReason> {
     let stmts = &block.stmts;
     if stmts.is_empty() {
         return Err(GapReason::new(
@@ -443,6 +518,13 @@ fn emit_block_as_expr_inner(block: &Block, self_ty: Option<&str>) -> Result<Stri
         }
     };
     let mut bindings = Vec::with_capacity(lets.len());
+    // The type environment as extended by the `let`-chain processed so far (trx2 Lane C
+    // Deliverable 1) — starts as a clone of the caller's `env` (the fn/method's own
+    // params + `self`) and gains one entry per local **only** when that local's type is
+    // trivially known (see the two cases below); every other local is simply absent from
+    // `local_env`, never guessed (VR-5), so `Expr::Binary`'s operand-type gate treats it
+    // exactly like any other not-known expression.
+    let mut local_env = env.clone();
     for s in lets {
         match s {
             Stmt::Local(local) => {
@@ -466,7 +548,32 @@ fn emit_block_as_expr_inner(block: &Block, self_ty: Option<&str>) -> Result<Stri
                         "`let ... else` has no Mycelium equivalent",
                     ));
                 }
-                let value = emit_expr(&init.expr, self_ty)?;
+                let value = emit_expr(&init.expr, self_ty, &local_env)?;
+                // Extend `local_env` for this name only when the RHS's type is trivially known —
+                // never a type-inference pass, just the two shapes this module can decide without
+                // guessing (VR-5): (a) the RHS is itself a bare identifier already in scope (copy
+                // its known type verbatim — a `let`-alias), or (b) the RHS is a struct literal of
+                // an in-file struct that actually emits (the same `struct_layout` gate
+                // `Expr::Struct`'s own emission already uses, so this never records a type for a
+                // struct that itself gapped). Any other RHS shape (a call, an arithmetic
+                // expression, a literal, …) leaves `name` absent from `local_env` — absence, not a
+                // wrong guess. Critically, when `name` **shadows** an existing binding and the new
+                // RHS's type is *not* known, the stale prior entry for `name` must be `remove`d —
+                // otherwise a shadow (e.g. `let x = a; let x = true;`) would leave the *old*
+                // binding's type in `local_env`, and `Expr::Binary`'s operand-type gate could then
+                // mis-fire on the shadowed `x` using a type that no longer applies to it (VR-5: a
+                // stale entry is exactly as wrong as a fabricated one — never guess, never keep a
+                // guess past its basis).
+                match expr_env_type(&init.expr, &local_env)
+                    .or_else(|| known_struct_literal_ty(&init.expr, self_ty))
+                {
+                    Some(ty) => {
+                        local_env.insert(name.clone(), ty);
+                    }
+                    None => {
+                        local_env.remove(&name);
+                    }
+                }
                 bindings.push((name, value));
             }
             // A non-`let`, non-tail statement — name the actual kind so the gap reason is precise
@@ -496,7 +603,7 @@ fn emit_block_as_expr_inner(block: &Block, self_ty: Option<&str>) -> Result<Stri
             }
         }
     }
-    let mut result = emit_expr(tail_expr, self_ty)?;
+    let mut result = emit_expr(tail_expr, self_ty, &local_env)?;
     for (name, value) in bindings.into_iter().rev() {
         result = format!("let {name} = {value} in {result}");
     }
@@ -578,14 +685,14 @@ fn is_myc_float_literal(digits: &str) -> bool {
 /// mutually recurses with [`emit_block_as_expr`]/[`map_pattern`] over unbounded/attacker-controlled
 /// input depth (e.g. deeply-parenthesized `Expr::Paren`), so each call consumes one budget frame
 /// and refuses with a `Category::RecursionBudget` gap rather than risking a host-stack overflow.
-pub fn emit_expr(expr: &Expr, self_ty: Option<&str>) -> Result<String, GapReason> {
-    guarded(|| emit_expr_inner(expr, self_ty))
+pub fn emit_expr(expr: &Expr, self_ty: Option<&str>, env: &TypeEnv) -> Result<String, GapReason> {
+    guarded(|| emit_expr_inner(expr, self_ty, env))
 }
 
 /// The recursion-guarded body of [`emit_expr`] (see [`emit_expr`]'s docs / `crate::gap::guarded`).
 /// Recursive calls within this match use the public `emit_expr` name so each nested call re-enters
 /// the guard.
-fn emit_expr_inner(expr: &Expr, self_ty: Option<&str>) -> Result<String, GapReason> {
+fn emit_expr_inner(expr: &Expr, self_ty: Option<&str>, env: &TypeEnv) -> Result<String, GapReason> {
     match expr {
         Expr::Path(p) if p.qself.is_none() => {
             // Declared mapping decision: a qualified path (`Type::Variant`, UFCS calls) is
@@ -660,13 +767,13 @@ fn emit_expr_inner(expr: &Expr, self_ty: Option<&str>) -> Result<String, GapReas
                     "`if let` has no Mycelium equivalent in this grammar fragment",
                 ));
             }
-            let cond = emit_expr(&e.cond, self_ty)?;
-            let then_ = emit_block_as_expr(&e.then_branch, self_ty)?;
-            let else_ = emit_expr(&else_branch.1, self_ty)?;
+            let cond = emit_expr(&e.cond, self_ty, env)?;
+            let then_ = emit_block_as_expr(&e.then_branch, self_ty, env)?;
+            let else_ = emit_expr(&else_branch.1, self_ty, env)?;
             Ok(format!("if {cond} then {then_} else {else_}"))
         }
         Expr::Match(m) => {
-            let scrutinee = emit_expr(&m.expr, self_ty)?;
+            let scrutinee = emit_expr(&m.expr, self_ty, env)?;
             let mut arms = Vec::with_capacity(m.arms.len());
             for arm in &m.arms {
                 if arm.guard.is_some() {
@@ -677,24 +784,110 @@ fn emit_expr_inner(expr: &Expr, self_ty: Option<&str>) -> Result<String, GapReas
                     ));
                 }
                 let pat = map_pattern(&arm.pat)?;
-                let body = emit_expr(&arm.body, self_ty)?;
+                // A match arm's pattern can **bind** names that shadow an outer local of the same
+                // name with a completely different (and possibly narrower/wider) type — e.g. an
+                // enum payload field bound by the pattern is not the outer parameter it shadows.
+                // `env` must never let `Expr::Binary`'s operand-type gate keep firing on such a
+                // name using the *outer* type, so strip every name this arm's pattern binds from a
+                // per-arm copy of `env` before emitting the arm body (VR-5: absence, never a stale
+                // guess — see `collect_pattern_bound_names`'s docs for why this is conservative).
+                let arm_env = if env.is_empty() {
+                    env.clone()
+                } else {
+                    let mut bound = HashSet::new();
+                    collect_pattern_bound_names(&arm.pat, &mut bound);
+                    if bound.is_empty() {
+                        env.clone()
+                    } else {
+                        let mut e = env.clone();
+                        for name in &bound {
+                            e.remove(name);
+                        }
+                        e
+                    }
+                };
+                let body = emit_expr(&arm.body, self_ty, &arm_env)?;
                 arms.push(format!("{pat} => {body}"));
             }
             Ok(format!("match {scrutinee} {{ {} }}", arms.join(", ")))
         }
         Expr::Binary(b) => {
             use syn::BinOp;
-            let lhs = emit_expr(&b.left, self_ty)?;
-            let rhs = emit_expr(&b.right, self_ty)?;
+            let lhs = emit_expr(&b.left, self_ty, env)?;
+            let rhs = emit_expr(&b.right, self_ty, env)?;
+            // trx2 Lane C Deliverable 1 — operand-type-gated operator emission (VERIFY-FIRST,
+            // mitigation #14; every claim below is a *measured* `myc check` result over the built
+            // `target/debug/myc`, not a doc-derived guess — see the crate's `src/tests/emit.rs`
+            // `binop_operand_gated` fixtures for the same probes committed as regression tests).
+            //
+            // The kernel's real bitwise/comparison surface (`crates/mycelium-l1/src/checkty.rs`
+            // `prim_kernel_name`/`prim_sig`, `Π`) registers `and`/`or`/`xor`/`not`/`eq`/`lt` as
+            // BARE-CALL builtin prims resolvable with **no import** (checkty.rs:7214-7264) — but
+            // the PARSER's glyph→word desugar table (`crates/mycelium-l1/src/parse.rs::infix_op`)
+            // does NOT send every glyph to its matching prim name: `&` desugars to word `"band"`
+            // and `|` to `"bor"` (parse.rs:2383/2385) — names that exist ONLY as ordinary
+            // `lib/std/math.myc` functions (`band`/`bor`, wrapping `and`/`or`), not as prims, so a
+            // glyph emission with no `use std.math.band;` import (this transpiler emits one
+            // import-less nodule — see `emit_expr`'s `Expr::Path` doc) fails `myc check` with
+            // "unknown function/constructor/prim `band`"/`"bor"` — confirmed empirically. `^`
+            // (BitXor) is the one glyph that already desugars to the CORRECT prim name (`"xor"`,
+            // parse.rs:2384) and checks clean as-is — left unchanged below.
+            //
+            // `!=`/`>` are a *different* shape of the same problem, one level deeper: they desugar
+            // to words `"ne"`/`"gt"` (parse.rs:2390/2392), but `ne`/`gt` are not prims at all —
+            // they are ordinary (and, as committed today, non-`pub`) functions in
+            // `lib/std/cmp.myc` (§CU-4). Confirmed empirically: `ne(a, b)`/`gt(a, b)` as a BARE
+            // CALL fails identically to the `!=`/`>` glyphs ("unknown function/constructor/prim
+            // `ne`"/`"gt"`) — because a glyph and its desugar-target word call parse to the exact
+            // same `Expr::App` node (parse.rs's `op_call` doc: "`a + b` and `add(a, b)` are
+            // structurally identical after parsing"), so respelling the *emitted text* from `!=`
+            // to `ne(a, b)` changes NOTHING about whether it checks — both fail exactly alike, with
+            // or without importing `std.cmp` (whose `ne`/`gt`/`cmp`/... are not `pub` in the
+            // committed corpus, so even a real `use std.cmp.ne;` import would additionally fail).
+            // This directly **contradicts** an initial-brief assumption that a `ne`/`gt` word-call
+            // spelling would newly check-clean (VR-5/house-rule-#4: surfacing the disconfirming
+            // finding, not implementing an assumption the codebase doesn't support). Emitting the
+            // bare identifier form was therefore rejected as a no-op change.
+            //
+            // The real, verified fix for `!=`/`>`: compose them from the two comparison prims that
+            // ARE bare-call-resolvable with no import (`eq`/`lt`, confirmed above) — exactly the
+            // derivation `lib/std/cmp.myc`'s own `ne{N}`/`gt{N}` bodies use (cmp.myc:111-116:
+            // `ne(a,b) = match eq(a,b) { 0b1 => False, _ => True }`; `gt(a,b) = match cmp(a,b) {
+            // Gt=>True,... }`, and `cmp` itself is `match eq(a,b) {0b1=>Eq, _=>match lt(a,b)
+            // {0b1=>Lt, _=>Gt}}` — so `gt` unfolds to "not eq, and not lt"). This is a faithful,
+            // prim-composed body, not a fabrication — the same idiom this module already uses for
+            // `try_width_cast_widen_body`'s synthesized `width_cast` call. Verified `myc
+            // check`-clean end-to-end (both cases, no import) via the committed regression tests
+            // below.
+            //
+            // Every case here is gated on **both operands resolving to a known `Binary{N}`** via
+            // `expr_env_binary_width` (only a bare identifier already in `env` can ever resolve —
+            // never a guess, VR-5); an unresolved operand keeps the prior, unchanged glyph
+            // emission (Declared heuristic, exactly as before this deliverable).
+            let both_known_binary = expr_env_binary_width(&b.left, env).is_some()
+                && expr_env_binary_width(&b.right, env).is_some();
             match &b.op {
+                // RFC-0032 D1 (ratified): `==`/`<` glyphs are the canonical surface for `eq`/`lt`
+                // — left unchanged (not part of this deliverable's operand-gated rewrite).
                 BinOp::Eq(_) => Ok(format!("{lhs} == {rhs}")),
-                BinOp::Ne(_) => Ok(format!("{lhs} != {rhs}")),
                 BinOp::Lt(_) => Ok(format!("{lhs} < {rhs}")),
+                BinOp::Ne(_) if both_known_binary => Ok(format!(
+                    "(match eq({lhs}, {rhs}) {{ 0b1 => False, _ => True }})"
+                )),
+                BinOp::Ne(_) => Ok(format!("{lhs} != {rhs}")),
+                BinOp::Gt(_) if both_known_binary => Ok(format!(
+                    "(match eq({lhs}, {rhs}) {{ 0b1 => False, _ => match lt({lhs}, {rhs}) {{ 0b1 \
+                     => False, _ => True }} }})"
+                )),
                 BinOp::Gt(_) => Ok(format!("{lhs} > {rhs}")),
                 BinOp::And(_) => Ok(format!("{lhs} && {rhs}")),
                 BinOp::Or(_) => Ok(format!("{lhs} || {rhs}")),
+                BinOp::BitAnd(_) if both_known_binary => Ok(format!("and({lhs}, {rhs})")),
                 BinOp::BitAnd(_) => Ok(format!("{lhs} & {rhs}")),
+                BinOp::BitOr(_) if both_known_binary => Ok(format!("or({lhs}, {rhs})")),
                 BinOp::BitOr(_) => Ok(format!("{lhs} | {rhs}")),
+                // `^` already desugars to the correct prim name (`"xor"`, parse.rs:2384) — no
+                // rewrite needed; confirmed `myc check`-clean as a bare glyph.
                 BinOp::BitXor(_) => Ok(format!("{lhs} ^ {rhs}")),
                 BinOp::Shl(_) => Ok(format!("{lhs} << {rhs}")),
                 BinOp::Shr(_) => Ok(format!("{lhs} >> {rhs}")),
@@ -704,6 +897,9 @@ fn emit_expr_inner(expr: &Expr, self_ty: Option<&str>) -> Result<String, GapReas
                 BinOp::Div(_) => Ok(format!("{lhs} / {rhs}")),
                 BinOp::Rem(_) => Ok(format!("{lhs} % {rhs}")),
                 // RFC-0025 §4.1: `<=`/`>=` glyphs are RETIRED; word forms `lte`/`gte` instead.
+                // (Pre-existing: `lte`/`gte` have the identical not-a-prim/non-`pub`-stdlib-fn
+                // gap `ne`/`gt` had — out of scope for this deliverable, which only covers
+                // `& | ^ != >`; left unchanged.)
                 BinOp::Le(_) => Ok(format!("lte({lhs}, {rhs})")),
                 BinOp::Ge(_) => Ok(format!("gte({lhs}, {rhs})")),
                 other => Err(GapReason::new(
@@ -716,7 +912,7 @@ fn emit_expr_inner(expr: &Expr, self_ty: Option<&str>) -> Result<String, GapReas
             }
         }
         Expr::Unary(u) => {
-            let operand = emit_expr(&u.expr, self_ty)?;
+            let operand = emit_expr(&u.expr, self_ty, env)?;
             match &u.op {
                 syn::UnOp::Neg(_) => Ok(format!("-{operand}")),
                 syn::UnOp::Not(_) => Ok(format!("!{operand}")),
@@ -771,34 +967,77 @@ fn emit_expr_inner(expr: &Expr, self_ty: Option<&str>) -> Result<String, GapReas
             guard_ident(&func, "call target")?;
             let mut args = Vec::with_capacity(c.args.len());
             for a in &c.args {
-                args.push(emit_expr(a, self_ty)?);
+                args.push(emit_expr(a, self_ty, env)?);
             }
             Ok(format!("{func}({})", args.join(", ")))
         }
         Expr::MethodCall(m) => {
+            // trx2 Lane C Deliverable 2 — forward-mapped kernel prim surface (`crate::prim_map`).
+            // Consulted BEFORE the generic desugar below so a confirmed row wins; gated on the
+            // receiver's *known* type (never a guess — VR-5) so an unrelated Rust type's
+            // same-named method never triggers a wrong/misleading mapping. A row whose gate
+            // doesn't match (receiver type unknown or doesn't match) falls straight through to the
+            // unchanged generic desugar, exactly as if no row existed.
+            let method_name = m.method.to_string();
+            if let Some(row) = crate::prim_map::lookup(&method_name) {
+                let receiver_ty = expr_env_type(&m.receiver, env);
+                if crate::prim_map::receiver_gate_matches(row.receiver_gate, receiver_ty.as_deref())
+                {
+                    if !row.wired {
+                        // PENDING-BACKEND: the mapping is known (a decided ruling — see
+                        // `crate::prim_map` module docs for each row's citation) but the kernel/
+                        // grammar backend is not landed — always an explicit gap, NEVER an
+                        // emission (VR-5/G2: a forward-declared mapping is documentation, not a
+                        // fabricated success).
+                        return Err(GapReason::new(
+                            row.pending_category,
+                            format!(
+                                "PENDING-BACKEND({}): {} forward-mapped, backend unwired — gated \
+                                 off (VR-5/G2). {}",
+                                row.slug, row.myc_prim, row.citation
+                            ),
+                        ));
+                    }
+                    let recv = emit_expr(&m.receiver, self_ty, env)?;
+                    let mut args = vec![recv];
+                    for a in &m.args {
+                        args.push(emit_expr(a, self_ty, env)?);
+                    }
+                    let call = format!("{}({})", row.myc_prim, args.join(", "));
+                    return Ok(if row.bridge_binary1_to_bool {
+                        // The prim's own return is `Binary{1}`; Rust's method returns `bool` ->
+                        // bridge to `Bool` the same proven way `Expr::Binary`'s `!=`/`>` composition
+                        // does (see that arm's doc) — a bare call would fail `myc check`'s
+                        // `Binary{1}` vs `Bool` mismatch (confirmed empirically).
+                        format!("(match {call} {{ 0b1 => True, _ => False }})")
+                    } else {
+                        call
+                    });
+                }
+            }
             // Declared mapping decision: the grammar's `app_expr` has no postfix method-call
             // form (`primary ('(' args? ')')*` only) — desugar `recv.method(args)` to
             // `method(recv, args...)`, matching how `lib/std/cmp.myc`'s free functions
             // (`cmp`/`le`/`ge`/...) take the receiver as an ordinary first argument.
-            guard_ident(&m.method.to_string(), "method call")?;
-            let recv = emit_expr(&m.receiver, self_ty)?;
+            guard_ident(&method_name, "method call")?;
+            let recv = emit_expr(&m.receiver, self_ty, env)?;
             let mut args = vec![recv];
             for a in &m.args {
-                args.push(emit_expr(a, self_ty)?);
+                args.push(emit_expr(a, self_ty, env)?);
             }
-            Ok(format!("{}({})", m.method, args.join(", ")))
+            Ok(format!("{method_name}({})", args.join(", ")))
         }
-        Expr::Paren(p) => Ok(format!("({})", emit_expr(&p.expr, self_ty)?)),
+        Expr::Paren(p) => Ok(format!("({})", emit_expr(&p.expr, self_ty, env)?)),
         Expr::Reference(r) => {
             // Declared simplification: Mycelium is value-semantic (ADR-003) with no reference
             // type in this grammar fragment — `&expr`/`&mut expr` is treated as
             // reference-transparent and erased to its inner expression.
-            emit_expr(&r.expr, self_ty)
+            emit_expr(&r.expr, self_ty, env)
         }
         Expr::Tuple(t) if t.elems.len() >= 2 => {
             let mut parts = Vec::with_capacity(t.elems.len());
             for e in &t.elems {
-                parts.push(emit_expr(e, self_ty)?);
+                parts.push(emit_expr(e, self_ty, env)?);
             }
             Ok(format!("({})", parts.join(", ")))
         }
@@ -819,7 +1058,7 @@ fn emit_expr_inner(expr: &Expr, self_ty: Option<&str>) -> Result<String, GapReas
         Expr::Array(a) => {
             let mut elems = Vec::with_capacity(a.elems.len());
             for e in &a.elems {
-                elems.push(emit_expr(e, self_ty)?);
+                elems.push(emit_expr(e, self_ty, env)?);
             }
             Ok(format!("[{}]", elems.join(", ")))
         }
@@ -831,7 +1070,7 @@ fn emit_expr_inner(expr: &Expr, self_ty: Option<&str>) -> Result<String, GapReas
             "array-repeat expression `[x; N]` has no Mycelium equivalent — `ListLit ::= '[' (expr \
              (',' expr)*)? ']'` (grammar line 415) enumerates its elements and has no repeat form",
         )),
-        Expr::Block(b) if b.label.is_none() => emit_block_as_expr(&b.block, self_ty),
+        Expr::Block(b) if b.label.is_none() => emit_block_as_expr(&b.block, self_ty, env),
         // M-1006 Lever 1 — field projection `self.<field>`. The grammar has NO projection surface
         // (`path ::= Ident ('.' Ident)*` is a namespace glyph; `self.0` cannot even lex), but reading
         // one field of a single-constructor product has a faithful equivalent: a `match` that binds
@@ -964,7 +1203,7 @@ fn emit_expr_inner(expr: &Expr, self_ty: Option<&str>) -> Result<String, GapReas
                             ),
                         )
                     })?;
-                args.push(emit_expr(&fv.expr, self_ty)?);
+                args.push(emit_expr(&fv.expr, self_ty, env)?);
             }
             Ok(format!("{sty}({})", args.join(", ")))
         }
@@ -980,6 +1219,54 @@ fn member_text(m: &syn::Member) -> String {
     match m {
         syn::Member::Named(id) => id.to_string(),
         syn::Member::Unnamed(idx) => idx.index.to_string(),
+    }
+}
+
+/// Collect every identifier a match-arm pattern **binds** into `out` — the `Expr::Match` operand-
+/// type-env fix (see that arm's docs): a pattern-bound name (e.g. an enum payload field, `Wrap::A(x)`
+/// binding `x`) can carry a completely different type than any outer local of the same name it
+/// shadows, so every such name must be invalidated in a per-arm `env` copy before the arm body is
+/// emitted — otherwise `Expr::Binary`'s operand-type gate could mis-fire on the *outer* type of a
+/// name the pattern just rebound. Deliberately conservative and purely structural (no attempt to
+/// determine *what* a bound name's type is, only *that* it is bound — VR-5: never guess, and here
+/// over-invalidating is the safe direction; a name incorrectly stripped just falls back to the
+/// prior, unchanged default emission, never a wrong `Binary{N}`-gated one). Only called on patterns
+/// `map_pattern` has already accepted (so recursion depth is already budget-bounded by that call —
+/// see `crate::gap::guarded`), but every shape below is still handled defensively, including
+/// `Pat::Struct` (not itself accepted by `map_pattern` today, but future-proofed here so a later
+/// pattern-shape addition can never silently reintroduce this gap).
+fn collect_pattern_bound_names(pat: &Pat, out: &mut HashSet<String>) {
+    match pat {
+        Pat::Ident(pi) => {
+            out.insert(pi.ident.to_string());
+            if let Some((_, sub)) = &pi.subpat {
+                collect_pattern_bound_names(sub, out);
+            }
+        }
+        Pat::TupleStruct(pts) => {
+            for e in &pts.elems {
+                collect_pattern_bound_names(e, out);
+            }
+        }
+        Pat::Tuple(pt) => {
+            for e in &pt.elems {
+                collect_pattern_bound_names(e, out);
+            }
+        }
+        Pat::Struct(ps) => {
+            for f in &ps.fields {
+                collect_pattern_bound_names(&f.pat, out);
+            }
+        }
+        Pat::Or(po) => {
+            for c in &po.cases {
+                collect_pattern_bound_names(c, out);
+            }
+        }
+        Pat::Paren(pp) => collect_pattern_bound_names(&pp.pat, out),
+        Pat::Reference(pr) => collect_pattern_bound_names(&pr.pat, out),
+        // `Pat::Wild`/`Pat::Path`/`Pat::Lit`/everything else binds no name.
+        _ => {}
     }
 }
 
@@ -1321,7 +1608,7 @@ pub fn emit_fn(item: &ItemFn) -> Result<Emitted, GapReason> {
     guard_ident(&item.sig.ident.to_string(), "function name")?;
     check_fn_modifiers(&item.sig)?;
     let sig = map_signature(&item.sig.generics, &item.sig.inputs, &item.sig.output, None)?;
-    let body = emit_block_as_expr(&item.block, None)?;
+    let body = emit_block_as_expr(&item.block, None, &sig_type_env(&sig))?;
     let mut sub_gaps = Vec::new();
     let non_doc = non_doc_attrs(&item.attrs);
     if !non_doc.is_empty() {
@@ -1582,7 +1869,11 @@ pub fn emit_impl(item: &ItemImpl) -> Result<Emitted, GapReason> {
                     Ok(sig) => {
                         let body_result = match &width_cast_body {
                             Some(body) => Ok(body.clone()),
-                            None => emit_block_as_expr(&f.block, Some(&self_ty_text)),
+                            None => emit_block_as_expr(
+                                &f.block,
+                                Some(&self_ty_text),
+                                &sig_type_env(&sig),
+                            ),
                         };
                         match body_result {
                             Ok(body) => {

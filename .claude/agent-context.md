@@ -33,6 +33,7 @@ code lands incrementally per the phase plan.
 
 | What | Where |
 |------|-------|
+| **Cited memory (tero)** | `docs/tero-index/INDEX.md` — the queryable corpus index (DN-87/E39-1); prefer **`/tero-query`** for cross-cutting answers-with-provenance, grep the INDEX.md as the offline fallback. Use it to ground a claim in one hop instead of re-reading the corpus |
 | **Symbol index** (navigational aid) | `docs/api-index/INDEX.md` — grep-friendly; `index.json` for machine |
 | **Doc index** | `docs/Doc-Index.md` — canonical map of all spec/RFC/ADR/DN status |
 | **Task tracking** | `tools/github/issues.yaml` — M-xxx IDs + status + doc_refs |
@@ -101,3 +102,9 @@ Before assigning a new M-xxx or E-xxx ID, verify the slot is free:
 - `/deep-research` — fan-out multi-source research + adversarial verification (the research **follow-up** phase)
 - `/transpile-vet` — transpile Rust → vet with `myc check` → read `checked_fraction` (gap-profiling instrument, not a bulk porter)
 - `/myc-drafts` — the `gen/myc-drafts/` corpus: triage before porting, graduate drafts into `lib/`, run M-1006 ladder phases
+- **`/tero-query`** — the **transparent memory API** (DN-87/E39-1): cited, provenance-carrying answers about
+  decisions/issues/docs/changelog over MCP or HTTP. **Leverage it for memory + context** — an uncited query
+  returns a typed refusal, never a silent empty. Companions: `/tero-cite` (provenance only), `/tero-explain`
+  (why-these-sources trace), `/tero-refresh` (reload the served index after `just tero-index`). Prefer it
+  over grepping the corpus by hand when you want the answer **with** its citation; offline fallback is
+  grepping the committed `docs/tero-index/INDEX.md`.

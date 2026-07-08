@@ -119,7 +119,9 @@ mycelium-std-vsa = 3
 # M-1015/M-1017 (DN-87 / E39-1): the transparent memory substrate & agent knowledge API. Depends on
 # mycelium-doc (stratum 6) for the CommonMark corpus parse, so 1 + max(mycelium-doc 6) = 7. (Its
 # M-1018 VSA dep — mycelium-vsa 1 — is far below, so it will not raise this; the vsa-decode/resonator
-# factor path is deliberately NOT a dep, per crates/mycelium-tero/Cargo.toml.)
+# factor path is deliberately NOT a dep, per crates/mycelium-tero/Cargo.toml.) Registered here now:
+# tero landed at M-1015 without a strata entry (a pre-existing gap this
+# closes) — every crate must be in the map or the checker reports it (G2).
 mycelium-tero = 7
 # RFC-0041 W1 (M-979): bumped 0 -> 2 — was a leaf (no workspace deps); now depends on
 # mycelium-workstack (stratum 1), so 1 + max(mycelium-workstack 1) = 2. Nothing depends on

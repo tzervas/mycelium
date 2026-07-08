@@ -2384,10 +2384,13 @@ issues:
   - id: M-676
     title: "M-676 — tooling: gh-issues-sync Projects-v2 Area/multi-value field handling (secondary)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:infra, area:project, priority:P3, status:needs-design]
+    labels: [phase:5, type:infra, area:project, priority:P3, status:done]
     depends_on: []
+    landed_date: 2026-07-06
+    landed_basis: "Verified per mitigation #14 (verify-first): the deterministic rule was already implemented + self-tested; git -S locates the engine+config multi:'primary' at the #1022 merge. Engine: gh-issues-sync.py label_to_field_values honours a field_label_map rule carrying multi:'primary' — a multi-area item anchors to the PRIMARY area (value earliest in the field's declared project.json option order; alphabetical tie-break for any value outside it) and records the full span as a never-silent info, so the 'multiple area:* labels — not set' branch is never taken for Area (G2). Config: project.json field_label_map.Area carries multi:'primary' (config-to-engine wiring asserted by --self-test). Wiring: reconcile_project builds field_option_order from project.json fields, passes it to label_to_field_values, and prints infos non-silently. Tests: --self-test covers the primary anchor + span, the preserved default flag path (Phase/Priority two-value conflict), single-area unaffected, out-of-order alphabetical tie-break, and the project.json multi:'primary' assertion (exits 0). Corpus check: an offline dry-run-equivalent over all 512 area-bearing issues.yaml items yields 0 'Area: ... — not set' punts. This close-out (branch claude/tul-m676-projects-v2-area) documents the rule in the project-v2-spec.md companion (Label-to-field mapping section) and refreshes the stale Area option list to the 12 project.json options, then flips status. Acceptance met: deterministic Area value for multi-area items; --self-test covers the rule; no 'not set' punt for any item with at least one area label. FLAG: the CHANGELOG.md 'Added' entry is deferred to the integrating parent (CHANGELOG is orchestrator-owned, not tul-owned)."
     doc_refs: [src:tools/github/gh-issues-sync.py, src:tools/github/project-v2-spec.md]
     body: |
+      DONE (2026-07-06): the deterministic, honest multi-area rule is implemented + self-tested. The Projects-v2 **Area** single-select anchors a multi-`area:*` item to its PRIMARY area — the value earliest in the field's declared `project.json` option order (alphabetical tie-break for any value outside it) — and records the full span as a never-silent `info`, so an item carrying at least one area label is never left `Area: … — not set` (G2), mirroring the #353 primary-task milestone anchor. `project.json` `field_label_map.Area` carries `multi: primary`; `label_to_field_values` + `reconcile_project` implement and print it (`field_option_order` built from `project.json` `fields`); `--self-test` covers the primary anchor, span, preserved default flag path (Phase/Priority), single-area, and out-of-order tie-break (exits 0); an offline dry-run over all 512 area-bearing items shows 0 "not set" punts. This close-out documents the rule in `project-v2-spec.md` (the companion doc had not described it) and refreshes the stale Area option list to the 12 `project.json` options. Verified per mitigation #14 (code already landed; `git -S` locates it at the #1022 merge). — Original task:
       SECONDARY / nice-to-have (maintainer-flagged 2026-06-22). When a PR/issue carries multiple `area:*` labels, the Projects-v2 **Area** single-select field is left "not set" (`! #NNN: Area: multiple area:* labels [...] — not set`). Decide + implement a deterministic, honest rule for the single-select field under multi-value labels — likely anchor to the PRIMARY area (first/declared `area:*`, mirroring the primary-task milestone fix landed in #353) with the span recorded, or a dedicated multi-select field. Low priority — does NOT block the language/dogfooding work (E7-1 chain + dfb).
       Acceptance: a multi-`area:*` item gets a deterministic Area field value (never a silent skip); `--self-test` covers the rule; a dry-run shows no "Area: ... — not set" punts for items carrying at least one area label.
   - id: M-660
@@ -3962,6 +3965,19 @@ issues:
         compiler.
       - The ratification is not pre-declared: the evidence (M-740 differential results) must
         exist before this task closes.
+
+      MAINTAINER PRE-AUTHORIZATION (2026-07-07, @tzervas -- recorded on GitHub issue #444):
+      "741 once its criteria are met is ratified, approved by me." The ratification act is
+      PRE-APPROVED, conditional on the DoD (a)/(b)/(c) being VERIFIABLY met with checked, cited
+      evidence (the evidence must exist first -- no pre-declaration, VR-5/G2). The two "issues to
+      resolve" are resolved: record form = append-only DN-26 entry + DN-14 -> Resolved (a new ADR
+      only if a genuinely binding decision is warranted); evidence strength = Empirical (the floor).
+      SCOPE = M-741 ONLY -- the lang 1.0.0 tag (M-738) and the public flip (flp) are NOT
+      pre-authorized and remain separate maintainer acts. The `myc-port-drive` completion driver
+      executes the ratification at the capstone IF AND ONLY IF it independently verifies all three
+      criteria hold; otherwise it flags what is missing on #444 and does not ratify. The act is
+      append-only and reversible by supersession (house rule #3) if the maintainer disagrees on
+      review. Status stays needs-design until M-993/M-740 land the evidence.
 
   - id: M-742
     title: "M-742 — Self-hosting CI gate: bootstrap + three-way differential + mutant-witnessed"
@@ -12138,7 +12154,7 @@ issues:
   - id: M-993
     title: "Port the heavy semantic-core SCC (checkty/elab/eval/mono/fuse) to semcore.myc"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P2, status:todo]
+    labels: [phase:5, type:feature, area:language, priority:P2, status:in-progress]
     epic: E18-1
     depends_on: [M-740, M-986, M-987]
     doc_refs:
@@ -12173,6 +12189,29 @@ issues:
       - checkty/elab/eval/mono/fuse ported into semcore.myc, each with a differential appropriate to
         the M-994 resolution (interpreted L1-eval where feasible, else the AOT leg); flat-namespace
         prefixing preserved; native myc check ok; Empirical differential; no src/*.rs modified.
+
+      STAGED PORT PLAN + increment 2 landed (2026-07-07, status todo->in-progress; Empirical). This is
+      a MULTI-WAVE port, not one shot (the ~14k-line remainder decomposes into 12 dependency-respecting
+      increments 3..14, recorded in DN-26's changelog addendum). The SCC is ONE nodule (DN-26 SS9
+      flag-1), so mutual recursion is free WITHIN semcore.myc (FixGroup); the sequencing constraint is
+      therefore NOT "compile independently" but three real gates -- (a) data-model prerequisites (a
+      cluster referencing a not-yet-modeled value/IR type waits, or its wave introduces that model);
+      (b) differential feasibility (each cluster needs a reachable live Rust oracle -- pub/pub(crate)
+      from an in-crate src/tests/ module -- and encodable I/O); (c) the M-986/M-987 kernel cost/depth
+      walls (now lifted by M-994, but still the acute risk for the whole-nodule checkty leg and the
+      eval leg). Increments split into the TRACTABLE pure/leaf cluster (largely parallelizable, each
+      ~200-400 Rust lines, clean live-oracle differentials) and the HEAVY sequential core.
+      INCREMENT 2 (M-1007, LANDED this PR): checkty.rs's four pure type-algebra leaves
+      (has_var/type_head/subst_ty/param_subst) -- the substitution primitives the whole checker/elab/
+      mono build on -- into semcore.myc, native `myc check` ok, live-oracle Rust differential
+      (crates/mycelium-l1/src/tests/compiler_stage5_typealg.rs, 6 tests / ~46 cases; no logic *.rs
+      touched). Sub-issues minted under E18-1 for the next tractable waves: M-1008 (unify + resolve_ty
+      + tuple helpers), M-1009 (mono name-mangling family), M-1010 (mono free-vars/binders), M-1011
+      (checkty literal/pattern typing), M-1012 (Value/Repr L0 model + elab pure lowering helpers), and
+      M-1013 (the heavy sequential-core tracker: checkty checking core -> elab -> mono -> eval -> fuse
+      -> the whole-program L0-output differential + cargo-mutants witness -- to be sub-decomposed as
+      the leaf waves land, not pre-fragmented). M-993 stays in-progress until the ladder completes;
+      M-741 ratification follows the whole-program L0 differential (M-1013's terminal gate).
 
   - id: M-994
     title: "Resolve the Stage-5/6 whole-program L0-output differential feasibility (M-986/M-987 wall)"
@@ -12946,12 +12985,313 @@ issues:
       port surface in controlled phases (per-phase minting, mitigation #1), each folding lessons back
       into the transpiler; reconcile with rwr's M-947..M-957 at Phase-II.
 
+  - id: M-1007
+    title: "semcore Stage-5 increment 2: checkty type algebra (has_var/type_head/subst_ty/param_subst)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:in-progress]
+    epic: E18-1
+    depends_on: [M-740]
+    doc_refs:
+      - corpus:DN-26
+      - src:lib/compiler/semcore.myc
+      - src:crates/mycelium-l1/src/checkty.rs
+      - src:crates/mycelium-l1/src/tests/compiler_stage5_typealg.rs
+    body: |
+      Minted 2026-07-07 from the M-993 staged-port plan (increment 2 of the semcore SCC ladder). Ports
+      checkty.rs's four PURE type-algebra leaves into lib/compiler/semcore.myc: has_var (does a Ty
+      mention an abstract type/width variable?), type_head (the stage-1 coherence head-key), subst_ty
+      (type-/width-variable substitution), param_subst (build the parameter->argument substitution
+      map). These are the substitution primitives the WHOLE checker/elaborator/monomorphizer build on
+      (RFC-0007 SS11.2/SS11.3), and all four are pure Ty-transformers with NO dependency on checkty's
+      checking LOGIC, the L1 evaluator, or the L0 IR -- so they port ahead of the heavy entangled core.
+      Representation choices are DOCUMENTED in-file (FLAG-semcore-11: BTreeMap->assoc list, the
+      FLAG-semcore-4 convention; FLAG-semcore-12: ty_eq is differential-support scaffolding faithful to
+      Ty: PartialEq, not a checkty.rs port). No depth budget is threaded (structural recursion on finite
+      Ty/Vec[Ty], the render/render_list shape). LANDED this PR (to dev; closes at integration tier).
+
+      User stories:
+      - As a compiler engineer auditing the frontend, I want the type-substitution algebra written in
+        Mycelium, so that the primitives the whole checker builds on are readable in the language they
+        compile.
+
+      Definition of Done:
+      - has_var/type_head/subst_ty/param_subst ported into semcore.myc; native `myc check` ok; a
+        LIVE-ORACLE Rust differential (crates/mycelium-l1/src/tests/compiler_stage5_typealg.rs) asserts
+        each .myc verdict against the real checkty fn's own computed result across all arm classes
+        (Empirical); no logic *.rs modified (only the in-crate test module + its one mod line).
+      - DONE (2026-07-07): all above met -- 6 tests / ~46 live-oracle cases green; `myc check` ok;
+        increment-1 differential (compiler_stage5_semcore 17/17) unregressed.
+
+  - id: M-1008
+    title: "semcore Stage-5 increment 3: checkty unification + type resolution (unify/resolve_ty/tuples)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:done]
+    epic: E18-1
+    depends_on: [M-1007]
+    doc_refs:
+      - corpus:DN-26
+      - src:lib/compiler/semcore.myc
+      - src:crates/mycelium-l1/src/checkty.rs
+    body: |
+      Minted 2026-07-07 from the M-993 staged-port plan (increment 3). Ports checkty.rs's next
+      type-algebra layer, building on increment 2 (M-1007): unify (one-sided unification of a declared
+      Ty against a concrete Ty, accumulating a parameter substitution -- checkty.rs::unify),
+      resolve_ty (surface TypeRef -> checked Ty resolution), and the synthetic-tuple helpers
+      (tuple_type_name/tuple_ctor_name/synthetic_tuple_data). Pure Ty-algebra (no checking logic, no
+      evaluator); each has a reachable live Rust oracle (pub(crate)) for an in-crate differential. The
+      unify differential must exercise the never-silent conflict path (a second, conflicting binding is
+      an explicit mismatch, never a silent re-coercion -- G2/VR-5).
+
+      User stories:
+      - As a compiler engineer, I want unification and type resolution in Mycelium, so that the
+        inference engine's core is auditable in-language.
+
+      Definition of Done:
+      - unify/resolve_ty/tuple helpers ported into semcore.myc; native `myc check` ok; live-oracle Rust
+        differential over accept + conflict cases (Empirical); no logic *.rs modified.
+
+      DONE (2026-07-07, PR #1238 @ 41e15748 + integration): unify/resolve_ty/tuple_type_name/
+      tuple_ctor_name/synthetic_tuple_data + dec_u32 ported into semcore.myc; native myc check ok;
+      live-oracle differential compiler_stage5_unify.rs (8 tests, accept + never-silent conflict Err)
+      vs the real checkty::* computed at test time; no logic *.rs touched. FLAG-semcore-13/14/15
+      (dead-arm collapse + value-threaded accumulators, review-verified behavior-preserving).
+
+
+  - id: M-1009
+    title: "semcore Stage-5 increment 4: mono name-mangling family (mangle_ty/decl/ctor/method/arrow)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:done]
+    epic: E18-1
+    depends_on: [M-740]
+    doc_refs:
+      - corpus:DN-26
+      - src:lib/compiler/semcore.myc
+      - src:crates/mycelium-l1/src/mono.rs
+    body: |
+      Minted 2026-07-07 from the M-993 staged-port plan (increment 4). Ports mono.rs's name-mangling
+      family: mangle_ty, scalar_tag, mangle_decl, mangle_ctor, mangle_method, mangle_arrow,
+      apply_fn_name, mangle_ty_or_fn, mangle_ty_in_ty, mangle_decl_with_wargs, mangle_hof_decl. Pure
+      Ty->Bytes string functions (RFC-0003 SS3 / RFC-0024 SS4A injective mangling); depends only on the
+      increment-1 Ty vocabulary, so INDEPENDENT of M-1007/M-1008 (parallelizable). The one new
+      dependency is a u32->decimal-Bytes render helper (Rust `format!("{n}")` produces decimal, unlike
+      semcore's existing 0b-literal encoders) -- a bounded divmod-by-10 loop (<=10 iters, no M-986/M-987
+      concern), itself differential-tested against the oracle. Live oracle: mono::mangle_* (pub(crate)),
+      reachable in-crate; the string-output differential is a direct bytes_eq comparison (the cleanest
+      witness kind). The mangling must stay injective across the repr/data boundary (the `#` nullary-data
+      tag; never a silent alias -- G2).
+
+      User stories:
+      - As a compiler engineer, I want the monomorphization name-mangling in Mycelium, so that the
+        queryable identity of every resolved instance is auditable in-language.
+
+      Definition of Done:
+      - the mangle family + the decimal-render helper ported into semcore.myc; native `myc check` ok;
+        live-oracle Rust differential (bytes equality vs mono::mangle_*) across every Ty kind + the
+        injectivity-boundary cases (Empirical); no logic *.rs modified.
+
+      DONE (2026-07-07, PR #1238 @ 41e15748): the mono mangle family + dec_u32 ported; myc check ok;
+      bytes-equality differential compiler_stage5_mangle.rs (7 tests, injectivity boundary) vs
+      mono::mangle_*. mangle_ty_in_ty/item_key DEFERRED (FLAG-semcore-17 -- module-private, no reachable
+      oracle; reached by a future increment only if visibility is lifted, out of scope here). No logic *.rs touched.
+
+
+  - id: M-1010
+    title: "semcore Stage-5 increment 5: mono free-variable + binder analysis (free_vars/pattern_binders)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:done]
+    epic: E18-1
+    depends_on: [M-740]
+    doc_refs:
+      - corpus:DN-26
+      - src:lib/compiler/semcore.myc
+      - src:crates/mycelium-l1/src/mono.rs
+    body: |
+      Minted 2026-07-07 from the M-993 staged-port plan (increment 5). Ports mono.rs's free-variable
+      and binder analysis: free_vars, free_vars_at, pattern_binders, pattern_binders_at, item_key. Pure
+      Expr->name-set walks (the closure-conversion prerequisite -- RFC-0024 SS4A). Depends only on the
+      increment-1 Expr vocabulary, so INDEPENDENT of M-1007/M-1008/M-1009 (parallelizable). The Rust
+      `&mut BTreeSet<String>` accumulator + bound-scope set map onto the FLAG-semcore-4 sorted assoc-list
+      convention (a value threaded explicitly, the FLAG-semcore-6 collapse). Live oracle: mono::free_vars
+      / pattern_binders (pub(crate)), reachable in-crate.
+
+      User stories:
+      - As a compiler engineer, I want closure free-variable analysis in Mycelium, so that
+        defunctionalization's capture set is auditable in-language.
+
+      Definition of Done:
+      - free_vars/free_vars_at/pattern_binders/pattern_binders_at ported into semcore.myc; native
+        `myc check` ok; live-oracle Rust differential over shadowing + nested-binder + capture cases
+        (Empirical); no logic *.rs modified.
+
+      DONE (2026-07-07, PR #1238 @ 41e15748): free_vars (+ worker/pattern_binder_names) ported; myc
+      check ok; differential compiler_stage5_freevars.rs (4 tests, Let/Match/For/Lambda + shadowing).
+      FLAG-semcore-18 (mutable accumulators -> value-threading, review-verified equivalent). No logic *.rs touched.
+
+
+  - id: M-1011
+    title: "semcore Stage-5 increment 6: checkty literal + pattern typing (lit_ty_of/normalize_pattern/infer_type)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:todo]
+    epic: E18-1
+    depends_on: [M-1008]
+    doc_refs:
+      - corpus:DN-26
+      - src:lib/compiler/semcore.myc
+      - src:crates/mycelium-l1/src/checkty.rs
+    body: |
+      Minted 2026-07-07 from the M-993 staged-port plan (increment 6). Ports checkty.rs's literal and
+      pattern typing leaves: lit_ty_of (a literal's Ty), literal_key, normalize_pattern (surface
+      Pattern -> normalized matrix Pat -- the bridge to the increment-1 usefulness/decision pipeline),
+      infer_type (the small synthesis leaf). Depends on increment 3 (M-1008 resolve_ty). Pure; live
+      oracle (pub(crate)) reachable in-crate. normalize_pattern's differential should connect to the
+      already-ported usefulness matrix (a normalized Pat feeds `useful`), tightening the increment-1
+      gate transitively.
+
+      User stories:
+      - As a compiler engineer, I want literal + pattern typing in Mycelium, so that the checker's leaf
+        judgements (and the bridge to exhaustiveness) are auditable in-language.
+
+      Definition of Done:
+      - lit_ty_of/literal_key/normalize_pattern/infer_type ported into semcore.myc; native `myc check`
+        ok; live-oracle Rust differential (Empirical); no logic *.rs modified.
+
+      PARTIAL (2026-07-07, PR #1238 @ 41e15748): the pure leaves lit_ty_of/literal_key/normalize_pattern
+      ported; myc check ok; differential compiler_stage5_normpat.rs (5 tests, every Pat arm + refusal).
+      FLAG-semcore-19/20/21. RESIDUAL keeping this status:todo: this DoD lists infer_type, which is NOT a
+      pure leaf -- it builds a Cx and calls the ~7k-line inference engine (the SCC's heart) -- so it is
+      DEFERRED to the heavy-core M-1013; M-1011 closes when infer_type lands there (per the PR #1238 review).
+
+
+  - id: M-1012
+    title: "semcore Stage-5 increment 7: L0 Value/Repr model + elab pure lowering helpers"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:language, priority:P2, status:needs-design]
+    epic: E18-1
+    depends_on: [M-1008]
+    doc_refs:
+      - corpus:DN-26
+      - src:lib/compiler/semcore.myc
+      - src:crates/mycelium-l1/src/elab.rs
+    body: |
+      Minted 2026-07-07 from the M-993 staged-port plan (increment 7). Ports elab.rs's PURE lowering
+      helpers -- lit_value, type_repr, scalar_kind, sparsity_class, field_spec, ty_to_repr,
+      ty_to_field_ty_ref, policy_name_ref -- which produce mycelium_core::{Value, Repr, FieldSpec}, i.e.
+      KERNEL L0 types. This is the FIRST wave to touch the frontend/kernel seam (DN-26 SS7.2), so it
+      carries an architecturally-significant FLAG: how to represent the L0 Value/Repr in-language --
+      (a) an in-language mirror model of Value/Repr (diffable against the kernel types), or (b) reach the
+      kernel constructors through the @std-sys + wild FFI seam (DN-14 row 9, executes). status:needs-design
+      until the maintainer picks the boundary; the pure ARITHMETIC-free helpers (scalar_kind/
+      sparsity_class) can land first under either choice. This decision also fixes the L0 Node model that
+      increment 8 (elab core, M-1013) and the eval leg depend on.
+
+      User stories:
+      - As the maintainer, I want the frontend/kernel L0-value boundary decided before the elaborator's
+        lowering is ported, so that the self-hosted elaborator's output model is chosen once, not
+        re-litigated per wave.
+
+      Definition of Done:
+      - a recorded decision (append to DN-26) selecting the L0 Value/Repr representation (mirror model vs
+        wild FFI seam); the pure elab lowering helpers ported into semcore.myc under that choice; native
+        `myc check` ok; live-oracle differential where a value can be materialised for comparison
+        (Empirical); no logic *.rs modified. FLAGGED, not pre-decided (G2/VR-5).
+
+  - id: M-1013
+    title: "semcore Stage-5 heavy sequential core: checkty-logic -> elab -> mono -> eval -> fuse -> L0 differential"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:needs-design]
+    epic: E18-1
+    depends_on: [M-1009, M-1010, M-1011, M-1012, M-994]
+    doc_refs:
+      - corpus:DN-26
+      - src:lib/compiler/semcore.myc
+      - src:crates/mycelium-l1/src/checkty.rs
+      - src:crates/mycelium-l1/src/eval.rs
+    body: |
+      Minted 2026-07-07 from the M-993 staged-port plan (the heavy sequential-core tracker, increments
+      8..14). Once the tractable pure/leaf waves (M-1007..M-1012) land, the remaining, mutually-dependent
+      bulk is ported in this dependency order (each a scoped PR into dev, sub-decomposed as it is worked
+      -- NOT pre-fragmented here, since each sub-wave's split depends on the prior wave's data model):
+        8. checkty checking core A -- declaration registration + resolution (register_types/traits/
+           instances, resolve_imports, the Env model). ~1.5k Rust lines. Pure; M-987 whole-nodule cost.
+        9. checkty checking core B -- the bidirectional checker (Cx, check_fn_body, check_bounds, effect
+           coverage, totality integration). ~3.5k Rust lines; the heart of checkty; may itself split.
+       10. elab core -- AST->L0 lowering (elaborate, Elab, build_registry, recursive_sccs [Tarjan],
+           elab_fn_lam), producing the in-language L0 Node. ~2k Rust lines. Depends on increment 7's
+           L0-model decision (M-1012).
+       11. mono core -- monomorphization + defunctionalization (monomorphize, Mono, HOF/closure
+           specialization). ~2.5k Rust lines. Depends on M-1009 (mangling) + M-1010 (free-vars) + elab.
+       12. eval -- the L1 evaluator restated in value semantics (L1Value, Evaluator, the Frame/Ctrl/Regs
+           stack machine, fuel/depth, to_core). ~2k Rust lines. THE hardest wave and the acute M-986/
+           M-987 feasibility risk (the M-994 epicenter); may lean on the AOT leg per DN-26 SS9 flag-2.
+       13. fuse -- check_fuse_laws (RUNS the ported evaluator; enumerate_finite_domain). ~292 Rust lines;
+           small but gated on eval (increment 12).
+       14. the whole-program L0-output differential (Rust-host == self-host over the conformance corpus)
+           + the cargo-mutants witness -- the DN-26 SS7.3 Stage-5 gate proper; operationalizes M-994's
+           interpreted-first-then-AOT decision (SS9 flag-2). Feeds M-741 ratification + M-742 (Stage-6).
+      status:needs-design because the eval feasibility path (interpreted vs AOT for a self-hosted
+      evaluator run inside the L1 evaluator) is a live M-994-adjacent question that firms up only as
+      increments 8..11 land; recorded here rather than silently pre-scoped (G2/VR-5).
+
+      User stories:
+      - As a language user, I want the type-checker/elaborator/evaluator written in Mycelium, so that the
+        whole frontend is auditable in the language it compiles (the M-993 parent story, at scale).
+
+      Definition of Done:
+      - checkty checking logic + elab + mono + eval + fuse ported into semcore.myc; the whole-program
+        L0-output differential green (Rust-host == self-host) over the conformance corpus with the
+        appropriate leg (interpreted where feasible, else AOT -- M-994); cargo-mutants witness on the
+        Rust SCC; native `myc check` ok; Empirical; no logic *.rs modified. This closes the M-993 ladder
+        and gates M-741.
+
+  - id: M-1014
+    title: "M-1014 -- Optimize the heavy-check surface: safe concurrency/multicore + integration-tier scheduling (quality-first)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:infra, area:toolchain, priority:P2, status:todo]
+    depends_on: []
+    doc_refs:
+      - corpus:DN-20
+      - src:scripts/vsa-desktop-checks.sh
+      - src:justfile
+    body: |
+      Minted 2026-07-07 (maintainer directive). Standing direction for the check/test
+      infrastructure: heavier checks may run in the staging tier's promotion PRs, and the whole
+      heavy surface should be optimized with concurrency/multicore WHEREVER SAFE -- better
+      quality of evaluation, delivered fast; never quality sacrificed for speed. The 2026-07-06
+      vsa-desktop-checks episode is the motivating datum: a debug single-threaded default turned
+      a ~6-minute release workload into a 67-minute pinned-core run (fixed in PR #1229); the same
+      class of wall-clock waste likely exists elsewhere in the heavy tier.
+
+      Candidate optimizations (audit first; each carries an EQUIVALENCE ARGUMENT -- same trials,
+      same seeds/determinism, same verdicts, only wall-clock changes -- VR-5):
+      - Parallelize independent Monte-Carlo seed batches inside the heavy VSA property tests
+        (rayon over per-seed batches: deterministic per-seed, order-independent aggregation).
+      - cargo-mutants --jobs N; parallel z3 obligation discharge; cargo-nextest partitioning for
+        the durability tier (nextest is already the Tier-0/1 runner -- extend to check-full).
+      - Profile-correctness sweep: every heavy invocation runs --release unless a debug profile
+        is semantically required (the PR #1229 lesson, applied repo-wide).
+      - Integration-tier scheduling: record WHERE the heavy tier runs on dev -> staging promotion
+        (deliberate manual dispatch or a scripted step; remote CI stays manual-dispatch/advisory
+        per the standing no-auto-CI policy -- this issue does NOT change that policy).
+
+      User stories:
+      - As the maintainer, I want the durability tier to saturate the hardware it runs on, so that
+        better evaluation quality costs minutes, not hours.
+      - As an integrator, I want heavy checks schedulable at the staging promotion without
+        wall-clock pain, so that promotion quality rises without slowing the loop.
+
+      Definition of Done:
+      - An audited list of heavy checks with their current wall-clock + parallelization status;
+        each applied optimization lands with its equivalence argument (determinism/verdict
+        preservation stated and, where feasible, differentially verified); the staging-promotion
+        heavy-check scheduling recorded in the tier docs; no guarantee weakened (VR-5) and no
+        gate silently skipped (G2).
+
   - id: E39-1
     title: "E39-1 (epic) — the transparent memory substrate & agent knowledge API (DN-87; name TBD)"
     milestone: "Phase 8 — Toolchain & Release Engineering"
     labels: [phase:8, type:epic, area:tooling, priority:P2, status:in-progress]
     epic: E39
-    depends_on: [M-1015, M-1016, M-1017, M-1018, M-1019, M-1020]
+    depends_on: [M-1015, M-1016, M-1017, M-1018, M-1019]
     doc_refs:
       - corpus:DN-87
       - src:.claude/kickoffs/mem.md
@@ -12980,8 +13320,7 @@ issues:
         wrong answer is traceable to its source in one hop -- never an opaque embedding artifact.
 
       Definition of Done:
-      - M-1015..M-1019 done (M-1020 is a P3 HTTPS follow-on, not part of the original DoD); the
-        eval harness demonstrates the DN-87 §6 gate; the API + skills
+      - M-1015..M-1019 done; the eval harness demonstrates the DN-87 §6 gate; the API + skills
         serve at least two distinct platforms; every answer carries resolvable provenance;
         regeneration is deterministic + drift-gated; MIT headers throughout.
 
@@ -13020,8 +13359,7 @@ issues:
       DONE (2026-07-07, epic branch claude/epic/E39-m1015-corpus-index @ 1a2d7d31 + the
       integration commit): crates/mycelium-tero Layer-1 engine (reuses mycelium_doc::corpus,
       no pub widening; purpose-built YAML-subset reader, no new deps) +
-      docs/tero-index/{INDEX.md,index.json} (5140 rows at M-1015's original landing; 5119 on the
-      promoted integration tier / 6 honestly-flagged; families
+      docs/tero-index/{INDEX.md,index.json} (5140 rows / 6 honestly-flagged; families
       docs/research/issues/changelog/skills each grep-cross-checked; api-/lib-index referenced
       not duplicated) + scripts/checks/tero-index.sh drift gate (wired as `just tero-index`;
       COMPONENT_ID shares doc-index's 23 -- the 5-bit space is exhausted at 31; a 32nd unique id
@@ -13032,7 +13370,7 @@ issues:
   - id: M-1016
     title: "M-1016 — Query engine + mandatory provenance (EXPLAIN-able retrieval)"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:feature, area:tooling, priority:P2, status:done]
+    labels: [phase:8, type:feature, area:tooling, priority:P2, status:todo]
     epic: E39-1
     depends_on: [M-1015]
     doc_refs:
@@ -13052,15 +13390,10 @@ issues:
       - Query API (in-crate) with citation-mandatory answers; refusal path tested; EXPLAIN output
         for ranking; latency measured and recorded (Empirical) on the real corpus.
 
-      DONE (2026-07-07, PR #1241 @ 84d416b): the query engine landed -- QueryEngine over the Layer-1
-      report; every Answer carries >=1 resolvable Citation by construction (an uncited query is a
-      typed Refusal); EXPLAIN traces for every query kind; Empirical latency ~630us/query over 5141
-      rows. DoD met.
-
   - id: M-1017
     title: "M-1017 — API fronts (MCP + HTTP, token-scoped) + the cross-platform skill set"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:feature, area:tooling, priority:P2, status:done]
+    labels: [phase:8, type:feature, area:tooling, priority:P2, status:todo]
     epic: E39-1
     depends_on: [M-1016]
     doc_refs:
@@ -13082,16 +13415,10 @@ issues:
         enforced + tested; skills documented + registered; a second-platform smoke (non-Claude)
         recorded.
 
-      DONE (2026-07-07, PR #1254): both fronts land -- an axum/tokio HTTP front + a stdio MCP front
-      over one framework-agnostic core (front parity, a 3-way engine/HTTP/MCP differential); token-
-      scoped auth (read-only default, refuse-to-start without tokens); 4 cross-platform skills
-      (.claude/skills/tero-{query,cite,explain,refresh}); a non-Claude raw-TCP (curl-equivalent)
-      smoke recorded. First async runtime in the workspace, per ADR-044. DoD met.
-
   - id: M-1018
     title: "M-1018 — The VSA semantic layer (Layer 2) + the Empirical eval gate"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:feature, area:tooling, priority:P2, status:done]
+    labels: [phase:8, type:feature, area:tooling, priority:P2, status:todo]
     epic: E39-1
     depends_on: [M-1015, M-1016]
     doc_refs:
@@ -13116,14 +13443,6 @@ issues:
       - Layer-2 encode/decode lands; the harness + question set committed; the comparison numbers
         recorded (Empirical, with denominators + seed discipline); the gate verdict recorded
         append-only in DN-87; provenance preserved through Layer 2.
-
-      DONE (2026-07-07, PR #1254): Layer-2 encode/decode on mycelium-vsa (MAP-I d=4096, role-filler
-      bind/bundle, CleanupMemory keyed by anchor -- provenance by construction) + the committed eval
-      harness (tero-eval, eval/questions.json, 16 questions, seed 0x7E7010185EEDC0DE). GATE VERDICT:
-      CLOSED -- Layer-2 does not beat Layer-1 (correctness@1 0.375 vs 0.625; ~26x slower), provenance
-      1.0; the system serves Layer-1 and the improved-on-RAG claim stays aspiration (G2/VR-5). The
-      append-only record is crates/mycelium-tero/eval/VERDICT.md; the DN-87 §6.1 verdict is appended
-      in this promotion. DoD met.
 
   - id: M-1019
     title: "M-1019 — The Mycelium-lang package (phase-gated dogfood milestone)"
