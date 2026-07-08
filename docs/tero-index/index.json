@@ -3592,6 +3592,321 @@
       "tag": "Empirical/Declared"
     },
     {
+      "anchor": "adr-042-rust-base-freeze-mycelium-first-expansion",
+      "family": "doc",
+      "kind": "adr",
+      "id": "ADR-042",
+      "title": "ADR-042 — Rust-Base Freeze Now, Full Mycelium Self-Hosting (Kernel Included) by Decomposition (\"zero foreign first-party languages\")",
+      "file": "docs/adr/ADR-042-Rust-Base-Freeze-Mycelium-First-Expansion.md",
+      "line": 1,
+      "status": "Accepted",
+      "summary": "**Posture (transparency rule / VR-5 / house rule #4).** This ADR records *governance/posture* from the",
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "adr-042-rust-base-freeze-mycelium-first-expansion--1-context",
+      "family": "doc",
+      "kind": "section",
+      "title": "1. Context",
+      "file": "docs/adr/ADR-042-Rust-Base-Freeze-Mycelium-First-Expansion.md",
+      "line": 26,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "adr-042-rust-base-freeze-mycelium-first-expansion--2-decision",
+      "family": "doc",
+      "kind": "section",
+      "title": "2. Decision",
+      "file": "docs/adr/ADR-042-Rust-Base-Freeze-Mycelium-First-Expansion.md",
+      "line": 56,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "adr-042-rust-base-freeze-mycelium-first-expansion--2-decision--2-1-two-horizons-freeze-now-full-mycelium-kernel-included-by-decomposition",
+      "family": "doc",
+      "kind": "section",
+      "title": "2.1 Two horizons — freeze now, full Mycelium (kernel included) by decomposition",
+      "file": "docs/adr/ADR-042-Rust-Base-Freeze-Mycelium-First-Expansion.md",
+      "line": 58,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "adr-042-rust-base-freeze-mycelium-first-expansion--2-decision--2-2-dn-39-preserved-precisely-boundary-vs-implementation-language",
+      "family": "doc",
+      "kind": "section",
+      "title": "2.2 DN-39 preserved precisely — boundary vs implementation language",
+      "file": "docs/adr/ADR-042-Rust-Base-Freeze-Mycelium-First-Expansion.md",
+      "line": 85,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "adr-042-rust-base-freeze-mycelium-first-expansion--2-decision--2-3-mycelium-first-expansion-the-rationale-and-tooling-across-the-two-horizons",
+      "family": "doc",
+      "kind": "section",
+      "title": "2.3 Mycelium-first expansion — the rationale, and tooling across the two horizons",
+      "file": "docs/adr/ADR-042-Rust-Base-Freeze-Mycelium-First-Expansion.md",
+      "line": 102,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "adr-042-rust-base-freeze-mycelium-first-expansion--2-decision--2-4-wild-free-myc-kernel-is-the-goal",
+      "family": "doc",
+      "kind": "section",
+      "title": "2.4 Wild-free `.myc` kernel is the goal",
+      "file": "docs/adr/ADR-042-Rust-Base-Freeze-Mycelium-First-Expansion.md",
+      "line": 124,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "adr-042-rust-base-freeze-mycelium-first-expansion--3-consequences",
+      "family": "doc",
+      "kind": "section",
+      "title": "3. Consequences",
+      "file": "docs/adr/ADR-042-Rust-Base-Freeze-Mycelium-First-Expansion.md",
+      "line": 144,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "adr-042-rust-base-freeze-mycelium-first-expansion--4-tensions-surfaced-per-house-rule-4",
+      "family": "doc",
+      "kind": "section",
+      "title": "4. Tensions surfaced (per house rule #4)",
+      "file": "docs/adr/ADR-042-Rust-Base-Freeze-Mycelium-First-Expansion.md",
+      "line": 188,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "adr-042-rust-base-freeze-mycelium-first-expansion--5-definition-of-done",
+      "family": "doc",
+      "kind": "section",
+      "title": "5. Definition of Done",
+      "file": "docs/adr/ADR-042-Rust-Base-Freeze-Mycelium-First-Expansion.md",
+      "line": 207,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "adr-042-rust-base-freeze-mycelium-first-expansion--6-open-questions",
+      "family": "doc",
+      "kind": "section",
+      "title": "6. Open questions",
+      "file": "docs/adr/ADR-042-Rust-Base-Freeze-Mycelium-First-Expansion.md",
+      "line": 235,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "adr-042-rust-base-freeze-mycelium-first-expansion--7-alternatives-considered",
+      "family": "doc",
+      "kind": "section",
+      "title": "7. Alternatives considered",
+      "file": "docs/adr/ADR-042-Rust-Base-Freeze-Mycelium-First-Expansion.md",
+      "line": 262,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "adr-042-rust-base-freeze-mycelium-first-expansion--8-grounding-honesty",
+      "family": "doc",
+      "kind": "section",
+      "title": "8. Grounding / honesty",
+      "file": "docs/adr/ADR-042-Rust-Base-Freeze-Mycelium-First-Expansion.md",
+      "line": 279,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "adr-042-rust-base-freeze-mycelium-first-expansion--meta-changelog",
+      "family": "doc",
+      "kind": "section",
+      "title": "Meta — changelog",
+      "file": "docs/adr/ADR-042-Rust-Base-Freeze-Mycelium-First-Expansion.md",
+      "line": 298,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "adr-043-rust-retirement-and-legacy-archival",
+      "family": "doc",
+      "kind": "adr",
+      "id": "ADR-043",
+      "title": "ADR-043 — Rust Retirement & Legacy Archival",
+      "file": "docs/adr/ADR-043-Rust-Retirement-And-Legacy-Archival.md",
+      "line": 1,
+      "status": "Accepted",
+      "summary": "**Posture (transparency rule / VR-5 / house rule #4).** This ADR records *process/policy* from the",
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "adr-043-rust-retirement-and-legacy-archival--1-context",
+      "family": "doc",
+      "kind": "section",
+      "title": "1. Context",
+      "file": "docs/adr/ADR-043-Rust-Retirement-And-Legacy-Archival.md",
+      "line": 23,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "adr-043-rust-retirement-and-legacy-archival--2-decision",
+      "family": "doc",
+      "kind": "section",
+      "title": "2. Decision",
+      "file": "docs/adr/ADR-043-Rust-Retirement-And-Legacy-Archival.md",
+      "line": 41,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "adr-043-rust-retirement-and-legacy-archival--2-decision--2-1-retire-when-proven-gate-vr-5-g2",
+      "family": "doc",
+      "kind": "section",
+      "title": "2.1 Retire-when-proven gate (VR-5/G2)",
+      "file": "docs/adr/ADR-043-Rust-Retirement-And-Legacy-Archival.md",
+      "line": 43,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "adr-043-rust-retirement-and-legacy-archival--2-decision--2-2-archive-branch-never-lose-the-rust",
+      "family": "doc",
+      "kind": "section",
+      "title": "2.2 Archive branch — never lose the Rust",
+      "file": "docs/adr/ADR-043-Rust-Retirement-And-Legacy-Archival.md",
+      "line": 66,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "adr-043-rust-retirement-and-legacy-archival--2-decision--2-3-remove-from-the-active-tree-housekeep",
+      "family": "doc",
+      "kind": "section",
+      "title": "2.3 Remove from the active tree + housekeep",
+      "file": "docs/adr/ADR-043-Rust-Retirement-And-Legacy-Archival.md",
+      "line": 88,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "adr-043-rust-retirement-and-legacy-archival--2-decision--2-4-end-state",
+      "family": "doc",
+      "kind": "section",
+      "title": "2.4 End state",
+      "file": "docs/adr/ADR-043-Rust-Retirement-And-Legacy-Archival.md",
+      "line": 112,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "adr-043-rust-retirement-and-legacy-archival--3-consequences",
+      "family": "doc",
+      "kind": "section",
+      "title": "3. Consequences",
+      "file": "docs/adr/ADR-043-Rust-Retirement-And-Legacy-Archival.md",
+      "line": 120,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "adr-043-rust-retirement-and-legacy-archival--4-alternatives-considered",
+      "family": "doc",
+      "kind": "section",
+      "title": "4. Alternatives considered",
+      "file": "docs/adr/ADR-043-Rust-Retirement-And-Legacy-Archival.md",
+      "line": 144,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "adr-043-rust-retirement-and-legacy-archival--5-open-questions-flags",
+      "family": "doc",
+      "kind": "section",
+      "title": "5. Open questions / FLAGs",
+      "file": "docs/adr/ADR-043-Rust-Retirement-And-Legacy-Archival.md",
+      "line": 162,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "adr-043-rust-retirement-and-legacy-archival--6-user-stories-definition-of-done",
+      "family": "doc",
+      "kind": "section",
+      "title": "6. User stories + Definition of Done",
+      "file": "docs/adr/ADR-043-Rust-Retirement-And-Legacy-Archival.md",
+      "line": 192,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "adr-043-rust-retirement-and-legacy-archival--7-grounding-honesty",
+      "family": "doc",
+      "kind": "section",
+      "title": "7. Grounding / honesty",
+      "file": "docs/adr/ADR-043-Rust-Retirement-And-Legacy-Archival.md",
+      "line": 242,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "adr-043-rust-retirement-and-legacy-archival--meta-changelog",
+      "family": "doc",
+      "kind": "section",
+      "title": "Meta — changelog",
+      "file": "docs/adr/ADR-043-Rust-Retirement-And-Legacy-Archival.md",
+      "line": 265,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "adr-044-async-runtime-for-tero-http-front",
+      "family": "doc",
+      "kind": "adr",
+      "id": "ADR-044",
+      "title": "ADR-044 — Async Runtime (tokio + axum) for the mycelium-tero HTTP Front",
+      "file": "docs/adr/ADR-044-Async-Runtime-For-Tero-HTTP-Front.md",
+      "line": 1,
+      "status": "Accepted",
+      "summary": "**Posture (transparency rule / VR-5).** This ADR records a *decision*, maintainer-authorized. The",
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "adr-044-async-runtime-for-tero-http-front--1-why-this-decision",
+      "family": "doc",
+      "kind": "section",
+      "title": "1. Why this decision",
+      "file": "docs/adr/ADR-044-Async-Runtime-For-Tero-HTTP-Front.md",
+      "line": 19,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "adr-044-async-runtime-for-tero-http-front--2-scope-confined-by-construction",
+      "family": "doc",
+      "kind": "section",
+      "title": "2. Scope — confined by construction",
+      "file": "docs/adr/ADR-044-Async-Runtime-For-Tero-HTTP-Front.md",
+      "line": 34,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "adr-044-async-runtime-for-tero-http-front--3-supply-chain-consequences-recorded-never-silent-g2",
+      "family": "doc",
+      "kind": "section",
+      "title": "3. Supply-chain consequences (recorded, never silent — G2)",
+      "file": "docs/adr/ADR-044-Async-Runtime-For-Tero-HTTP-Front.md",
+      "line": 46,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "adr-044-async-runtime-for-tero-http-front--4-alternatives-considered",
+      "family": "doc",
+      "kind": "section",
+      "title": "4. Alternatives considered",
+      "file": "docs/adr/ADR-044-Async-Runtime-For-Tero-HTTP-Front.md",
+      "line": 56,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "adr-044-async-runtime-for-tero-http-front--5-definition-of-done",
+      "family": "doc",
+      "kind": "section",
+      "title": "5. Definition of Done",
+      "file": "docs/adr/ADR-044-Async-Runtime-For-Tero-HTTP-Front.md",
+      "line": 66,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "adr-044-async-runtime-for-tero-http-front--changelog",
+      "family": "doc",
+      "kind": "section",
+      "title": "Changelog",
+      "file": "docs/adr/ADR-044-Async-Runtime-For-Tero-HTTP-Front.md",
+      "line": 74,
+      "tag": "Empirical/Declared"
+    },
+    {
       "anchor": "readme",
       "family": "doc",
       "kind": "adr",
@@ -3635,7 +3950,7 @@
       "kind": "section",
       "title": "Template",
       "file": "docs/adr/README.md",
-      "line": 52,
+      "line": 53,
       "tag": "Empirical/Declared"
     },
     {
@@ -14072,12 +14387,39 @@
       "tag": "Empirical/Declared"
     },
     {
+      "anchor": "dn-26-self-hosting-bootstrap-plan--10-l0-value-repr-fieldspec-boundary-decision-m-1012-option-a-in-language-mirror-adopted",
+      "family": "doc",
+      "kind": "section",
+      "title": "10. L0 `Value`/`Repr`/`FieldSpec` boundary decision (M-1012) — Option A (in-language mirror) adopted",
+      "file": "docs/notes/DN-26-Self-Hosting-Bootstrap-Plan.md",
+      "line": 310,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-26-self-hosting-bootstrap-plan--10-l0-value-repr-fieldspec-boundary-decision-m-1012-option-a-in-language-mirror-adopted--10-1-implementation-note-m-1012-the-differential-method-actually-adopted",
+      "family": "doc",
+      "kind": "section",
+      "title": "10.1 Implementation note (M-1012) — the differential method actually adopted",
+      "file": "docs/notes/DN-26-Self-Hosting-Bootstrap-Plan.md",
+      "line": 396,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-26-self-hosting-bootstrap-plan--10-l0-value-repr-fieldspec-boundary-decision-m-1012-option-a-in-language-mirror-adopted--10-2-marshalling-adopted-as-the-differential-method-m-1013-step-2",
+      "family": "doc",
+      "kind": "section",
+      "title": "10.2 Marshalling adopted as the differential method (M-1013 STEP 2)",
+      "file": "docs/notes/DN-26-Self-Hosting-Bootstrap-Plan.md",
+      "line": 460,
+      "tag": "Empirical/Declared"
+    },
+    {
       "anchor": "dn-26-self-hosting-bootstrap-plan--meta-changelog",
       "family": "doc",
       "kind": "section",
       "title": "Meta — changelog",
       "file": "docs/notes/DN-26-Self-Hosting-Bootstrap-Plan.md",
-      "line": 310,
+      "line": 510,
       "tag": "Empirical/Declared"
     },
     {
@@ -15014,12 +15356,75 @@
       "tag": "Empirical/Declared"
     },
     {
+      "anchor": "dn-34-rust-to-mycelium-transpiler-strategy--8-poc-results-the-first-code-spike-m-873-kickoff-trx-2026-07-01-empirical--8-11-m-1006-phase-1-cont-shared-reference-type-erasure-transpiler-hardening-kickoff-trx2-e-b-epic-e33-1-empirical",
+      "family": "doc",
+      "kind": "section",
+      "title": "§8.11 M-1006 phase-1 (cont.): shared-reference type erasure — transpiler hardening (kickoff `trx2` E-B, epic E33-1) — `Empirical`",
+      "file": "docs/notes/DN-34-Rust-to-Mycelium-Transpiler-Strategy.md",
+      "line": 575,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-34-rust-to-mycelium-transpiler-strategy--8-poc-results-the-first-code-spike-m-873-kickoff-trx-2026-07-01-empirical--8-12-m-1006-phase-2-cross-nodule-vetting-probed-null-positional-named-field-emission-lands-transpiler-hardening-kickoff-trx2-e-b-epic-e33-1-empirical",
+      "family": "doc",
+      "kind": "section",
+      "title": "§8.12 M-1006 phase-2: cross-nodule vetting probed (null), positional named-field emission lands — transpiler hardening (kickoff `trx2` E-B, epic E33-1) — `Empirical`",
+      "file": "docs/notes/DN-34-Rust-to-Mycelium-Transpiler-Strategy.md",
+      "line": 656,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-34-rust-to-mycelium-transpiler-strategy--8-poc-results-the-first-code-spike-m-873-kickoff-trx-2026-07-01-empirical--8-13-m-1006-phase-3-field-projection-desugaring-the-binary-arithmetic-emission-ceiling-kickoff-trx2-e-b-epic-e33-1-empirical",
+      "family": "doc",
+      "kind": "section",
+      "title": "§8.13 M-1006 phase-3: field-projection desugaring; the Binary-arithmetic emission ceiling (kickoff `trx2` E-B, epic E33-1) — `Empirical`",
+      "file": "docs/notes/DN-34-Rust-to-Mycelium-Transpiler-Strategy.md",
+      "line": 736,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-34-rust-to-mycelium-transpiler-strategy--8-poc-results-the-first-code-spike-m-873-kickoff-trx-2026-07-01-empirical--8-14-m-1006-phase-4-string-bytes-lands-the-ladder-s-largest-win-the-operator-ceiling-is-re-grounded-to-a-frozen-kernel-decision-kickoff-trx2-e-b-epic-e33-1-empirical",
+      "family": "doc",
+      "kind": "section",
+      "title": "§8.14 M-1006 phase-4: String→`Bytes` lands the ladder's largest win; the operator ceiling is re-grounded to a *frozen-kernel* decision (kickoff `trx2` E-B, epic E33-1) — `Empirical`",
+      "file": "docs/notes/DN-34-Rust-to-Mycelium-Transpiler-Strategy.md",
+      "line": 809,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-34-rust-to-mycelium-transpiler-strategy--8-poc-results-the-first-code-spike-m-873-kickoff-trx-2026-07-01-empirical--8-15-a-comprehensive-prim-gap-audit-corrects-8-13-8-14-and-plans-the-closure-kickoff-trx2-e33-1-empirical",
+      "family": "doc",
+      "kind": "section",
+      "title": "§8.15 A comprehensive prim-gap audit corrects §8.13/§8.14, and plans the closure (kickoff `trx2` E33-1) — `Empirical`",
+      "file": "docs/notes/DN-34-Rust-to-Mycelium-Transpiler-Strategy.md",
+      "line": 940,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-34-rust-to-mycelium-transpiler-strategy--8-poc-results-the-first-code-spike-m-873-kickoff-trx-2026-07-01-empirical--8-16-the-prim-gap-closure-wave-landed-in-progress-and-deferred-kickoff-trx2-e33-1-empirical",
+      "family": "doc",
+      "kind": "section",
+      "title": "§8.16 The prim-gap closure wave — landed, in-progress, and deferred (kickoff `trx2` E33-1) — `Empirical`",
+      "file": "docs/notes/DN-34-Rust-to-Mycelium-Transpiler-Strategy.md",
+      "line": 1002,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-34-rust-to-mycelium-transpiler-strategy--8-poc-results-the-first-code-spike-m-873-kickoff-trx-2026-07-01-empirical--8-17-lane-c-closure-cu-3-5-7-kernel-prims-the-transpiler-s-operand-gated-emission-and-forward-mapped-prim-table-kickoff-trx2-e33-1-e32-1-empirical",
+      "family": "doc",
+      "kind": "section",
+      "title": "§8.17 Lane C closure — CU-3/5/7 kernel prims + the transpiler's operand-gated emission and forward-mapped prim table (kickoff `trx2` E33-1/E32-1) — `Empirical`",
+      "file": "docs/notes/DN-34-Rust-to-Mycelium-Transpiler-Strategy.md",
+      "line": 1061,
+      "tag": "Empirical/Declared"
+    },
+    {
       "anchor": "dn-34-rust-to-mycelium-transpiler-strategy--meta-changelog",
       "family": "doc",
       "kind": "section",
       "title": "Meta — changelog",
       "file": "docs/notes/DN-34-Rust-to-Mycelium-Transpiler-Strategy.md",
-      "line": 577,
+      "line": 1081,
       "tag": "Empirical/Declared"
     },
     {
@@ -22186,6 +22591,284 @@
       "tag": "Empirical/Declared"
     },
     {
+      "anchor": "dn-88-component-repo-decomposition-and-managerial-re-export-topology",
+      "family": "doc",
+      "kind": "note",
+      "id": "DN-88",
+      "title": "DN-88 — Component-Repo Decomposition & the Managerial Re-Export Topology (Post-Dogfood, GHCR Spores)",
+      "file": "docs/notes/DN-88-Component-Repo-Decomposition-And-Managerial-Re-Export-Topology.md",
+      "line": 1,
+      "status": "Proposed",
+      "guarantee_tag": "Declared",
+      "summary": "**The maintainer's vision (2026-07-07, captured near-verbatim).** Once the entire Rust codebase is",
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-88-component-repo-decomposition-and-managerial-re-export-topology--1-status-posture",
+      "family": "doc",
+      "kind": "section",
+      "title": "1. Status / posture",
+      "file": "docs/notes/DN-88-Component-Repo-Decomposition-And-Managerial-Re-Export-Topology.md",
+      "line": 28,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-88-component-repo-decomposition-and-managerial-re-export-topology--2-goal",
+      "family": "doc",
+      "kind": "section",
+      "title": "2. Goal",
+      "file": "docs/notes/DN-88-Component-Repo-Decomposition-And-Managerial-Re-Export-Topology.md",
+      "line": 51,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-88-component-repo-decomposition-and-managerial-re-export-topology--3-precondition-the-two-stage-production-ready-gate",
+      "family": "doc",
+      "kind": "section",
+      "title": "3. Precondition — the two-stage production-ready gate",
+      "file": "docs/notes/DN-88-Component-Repo-Decomposition-And-Managerial-Re-Export-Topology.md",
+      "line": 75,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-88-component-repo-decomposition-and-managerial-re-export-topology--4-the-managerial-re-export-pattern",
+      "family": "doc",
+      "kind": "section",
+      "title": "4. The managerial re-export pattern",
+      "file": "docs/notes/DN-88-Component-Repo-Decomposition-And-Managerial-Re-Export-Topology.md",
+      "line": 117,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-88-component-repo-decomposition-and-managerial-re-export-topology--4-the-managerial-re-export-pattern--4-1-worked-exemplar-the-stdlib",
+      "family": "doc",
+      "kind": "section",
+      "title": "4.1 Worked exemplar — the stdlib",
+      "file": "docs/notes/DN-88-Component-Repo-Decomposition-And-Managerial-Re-Export-Topology.md",
+      "line": 127,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-88-component-repo-decomposition-and-managerial-re-export-topology--4-the-managerial-re-export-pattern--4-2-does-the-re-export-mechanism-exist-today-flag-checked",
+      "family": "doc",
+      "kind": "section",
+      "title": "4.2 Does the re-export mechanism exist today? — FLAG, checked",
+      "file": "docs/notes/DN-88-Component-Repo-Decomposition-And-Managerial-Re-Export-Topology.md",
+      "line": 155,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-88-component-repo-decomposition-and-managerial-re-export-topology--4-the-managerial-re-export-pattern--4-3-generalizing-beyond-stdlib",
+      "family": "doc",
+      "kind": "section",
+      "title": "4.3 Generalizing beyond stdlib",
+      "file": "docs/notes/DN-88-Component-Repo-Decomposition-And-Managerial-Re-Export-Topology.md",
+      "line": 181,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-88-component-repo-decomposition-and-managerial-re-export-topology--5-component-repo-mapping-criteria-method",
+      "family": "doc",
+      "kind": "section",
+      "title": "5. Component→repo mapping criteria + method",
+      "file": "docs/notes/DN-88-Component-Repo-Decomposition-And-Managerial-Re-Export-Topology.md",
+      "line": 197,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-88-component-repo-decomposition-and-managerial-re-export-topology--6-workflow-plan",
+      "family": "doc",
+      "kind": "section",
+      "title": "6. Workflow plan",
+      "file": "docs/notes/DN-88-Component-Repo-Decomposition-And-Managerial-Re-Export-Topology.md",
+      "line": 248,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-88-component-repo-decomposition-and-managerial-re-export-topology--7-user-stories-definition-of-done",
+      "family": "doc",
+      "kind": "section",
+      "title": "7. User stories + Definition of Done",
+      "file": "docs/notes/DN-88-Component-Repo-Decomposition-And-Managerial-Re-Export-Topology.md",
+      "line": 277,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-88-component-repo-decomposition-and-managerial-re-export-topology--8-open-questions-flags-for-the-maintainer",
+      "family": "doc",
+      "kind": "section",
+      "title": "8. Open questions / FLAGs for the maintainer",
+      "file": "docs/notes/DN-88-Component-Repo-Decomposition-And-Managerial-Re-Export-Topology.md",
+      "line": 307,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-88-component-repo-decomposition-and-managerial-re-export-topology--meta-changelog",
+      "family": "doc",
+      "kind": "section",
+      "title": "Meta — changelog",
+      "file": "docs/notes/DN-88-Component-Repo-Decomposition-And-Managerial-Re-Export-Topology.md",
+      "line": 337,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-89-native-ai-ml-library-ecosystem",
+      "family": "doc",
+      "kind": "note",
+      "id": "DN-89",
+      "title": "DN-89 — A Native AI/ML Library Ecosystem for Mycelium (Post-Self-Hosting)",
+      "file": "docs/notes/DN-89-Native-AI-ML-Library-Ecosystem.md",
+      "line": 1,
+      "status": "Proposed",
+      "guarantee_tag": "Declared",
+      "summary": "**The maintainer's vision (assembled from several clarifications, captured near-verbatim).** Once",
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-89-native-ai-ml-library-ecosystem--1-status-posture",
+      "family": "doc",
+      "kind": "section",
+      "title": "1. Status / posture",
+      "file": "docs/notes/DN-89-Native-AI-ML-Library-Ecosystem.md",
+      "line": 31,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-89-native-ai-ml-library-ecosystem--2-goal",
+      "family": "doc",
+      "kind": "section",
+      "title": "2. Goal",
+      "file": "docs/notes/DN-89-Native-AI-ML-Library-Ecosystem.md",
+      "line": 97,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-89-native-ai-ml-library-ecosystem--3-the-three-porting-mechanisms",
+      "family": "doc",
+      "kind": "section",
+      "title": "3. The three porting mechanisms",
+      "file": "docs/notes/DN-89-Native-AI-ML-Library-Ecosystem.md",
+      "line": 111,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-89-native-ai-ml-library-ecosystem--3-the-three-porting-mechanisms--3-1-mechanism-1-transpile-patch-a-bridge",
+      "family": "doc",
+      "kind": "section",
+      "title": "3.1 Mechanism 1 — Transpile + patch (a BRIDGE)",
+      "file": "docs/notes/DN-89-Native-AI-ML-Library-Ecosystem.md",
+      "line": 119,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-89-native-ai-ml-library-ecosystem--3-the-three-porting-mechanisms--3-2-mechanism-2-ffi-bindings-a-bridge-explicitly-interim",
+      "family": "doc",
+      "kind": "section",
+      "title": "3.2 Mechanism 2 — FFI bindings (a BRIDGE, explicitly INTERIM)",
+      "file": "docs/notes/DN-89-Native-AI-ML-Library-Ecosystem.md",
+      "line": 140,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-89-native-ai-ml-library-ecosystem--3-the-three-porting-mechanisms--3-3-mechanism-3-clean-room-reverse-engineering-ai-accelerated-a-new-native-implementation",
+      "family": "doc",
+      "kind": "section",
+      "title": "3.3 Mechanism 3 — Clean-room reverse-engineering, AI-accelerated (a NEW NATIVE IMPLEMENTATION)",
+      "file": "docs/notes/DN-89-Native-AI-ML-Library-Ecosystem.md",
+      "line": 160,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-89-native-ai-ml-library-ecosystem--3-the-three-porting-mechanisms--3-4-licensing-posture-per-mechanism-cited",
+      "family": "doc",
+      "kind": "section",
+      "title": "3.4 Licensing posture (per mechanism, cited)",
+      "file": "docs/notes/DN-89-Native-AI-ML-Library-Ecosystem.md",
+      "line": 183,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-89-native-ai-ml-library-ecosystem--4-the-convergence-path-bridges-to-full-native",
+      "family": "doc",
+      "kind": "section",
+      "title": "4. The convergence path — bridges to full-native",
+      "file": "docs/notes/DN-89-Native-AI-ML-Library-Ecosystem.md",
+      "line": 204,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-89-native-ai-ml-library-ecosystem--5-port-quality-principle-leverage-and-improve-never-verbatim-clones",
+      "family": "doc",
+      "kind": "section",
+      "title": "5. Port-quality principle — leverage and improve, never verbatim clones",
+      "file": "docs/notes/DN-89-Native-AI-ML-Library-Ecosystem.md",
+      "line": 243,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-89-native-ai-ml-library-ecosystem--6-clean-room-protocol-mechanism-3",
+      "family": "doc",
+      "kind": "section",
+      "title": "6. Clean-room protocol (mechanism 3)",
+      "file": "docs/notes/DN-89-Native-AI-ML-Library-Ecosystem.md",
+      "line": 273,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-89-native-ai-ml-library-ecosystem--7-target-library-landscape-criteria-not-a-mapping-mitigation-1",
+      "family": "doc",
+      "kind": "section",
+      "title": "7. Target library landscape (criteria, not a mapping — mitigation #1)",
+      "file": "docs/notes/DN-89-Native-AI-ML-Library-Ecosystem.md",
+      "line": 312,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-89-native-ai-ml-library-ecosystem--8-interpreter-aot-parity",
+      "family": "doc",
+      "kind": "section",
+      "title": "8. Interpreter/AOT parity",
+      "file": "docs/notes/DN-89-Native-AI-ML-Library-Ecosystem.md",
+      "line": 349,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-89-native-ai-ml-library-ecosystem--9-leveraging-mycelium-s-differentiators-declared-aspirational",
+      "family": "doc",
+      "kind": "section",
+      "title": "9. Leveraging Mycelium's differentiators (`Declared`/aspirational)",
+      "file": "docs/notes/DN-89-Native-AI-ML-Library-Ecosystem.md",
+      "line": 379,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-89-native-ai-ml-library-ecosystem--10-user-stories-definition-of-done",
+      "family": "doc",
+      "kind": "section",
+      "title": "10. User stories + Definition of Done",
+      "file": "docs/notes/DN-89-Native-AI-ML-Library-Ecosystem.md",
+      "line": 411,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-89-native-ai-ml-library-ecosystem--11-open-questions-flags",
+      "family": "doc",
+      "kind": "section",
+      "title": "11. Open questions / FLAGs",
+      "file": "docs/notes/DN-89-Native-AI-ML-Library-Ecosystem.md",
+      "line": 451,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-89-native-ai-ml-library-ecosystem--meta-changelog",
+      "family": "doc",
+      "kind": "section",
+      "title": "Meta — changelog",
+      "file": "docs/notes/DN-89-Native-AI-ML-Library-Ecosystem.md",
+      "line": 479,
+      "tag": "Empirical/Declared"
+    },
+    {
       "anchor": "example-programs-reference",
       "family": "doc",
       "kind": "note",
@@ -24207,6 +24890,170 @@
       "title": "How this feeds the self-hosting effort",
       "file": "docs/planning/self-hosting-port-ledger.md",
       "line": 121,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "semcore-l0-boundary-dossier",
+      "family": "doc",
+      "kind": "other",
+      "title": "semcore L0 boundary — decision dossier (M-1012 / M-1013)",
+      "file": "docs/planning/semcore-l0-boundary-dossier.md",
+      "line": 1,
+      "status": "Accepted",
+      "summary": "**Transparency (VR-5).** Every LOC figure below carries its source: numbers tagged **measured**",
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "semcore-l0-boundary-dossier--1-the-question-and-why-it-must-be-decided-before-the-elab-core-and-eval",
+      "family": "doc",
+      "kind": "section",
+      "title": "1. The question, and why it must be decided before the elab core and eval",
+      "file": "docs/planning/semcore-l0-boundary-dossier.md",
+      "line": 22,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "semcore-l0-boundary-dossier--2-option-a-the-in-language-mirror-model",
+      "family": "doc",
+      "kind": "section",
+      "title": "2. Option A — the in-language mirror model",
+      "file": "docs/planning/semcore-l0-boundary-dossier.md",
+      "line": 52,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "semcore-l0-boundary-dossier--2-option-a-the-in-language-mirror-model--2-1-what-the-mirror-types-look-like",
+      "family": "doc",
+      "kind": "section",
+      "title": "2.1 What the mirror types look like",
+      "file": "docs/planning/semcore-l0-boundary-dossier.md",
+      "line": 58,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "semcore-l0-boundary-dossier--2-option-a-the-in-language-mirror-model--2-2-how-the-differential-stays-honest",
+      "family": "doc",
+      "kind": "section",
+      "title": "2.2 How the differential stays honest",
+      "file": "docs/planning/semcore-l0-boundary-dossier.md",
+      "line": 89,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "semcore-l0-boundary-dossier--2-option-a-the-in-language-mirror-model--2-3-maintenance-cost-stated-plainly",
+      "family": "doc",
+      "kind": "section",
+      "title": "2.3 Maintenance cost (stated plainly)",
+      "file": "docs/planning/semcore-l0-boundary-dossier.md",
+      "line": 109,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "semcore-l0-boundary-dossier--2-option-a-the-in-language-mirror-model--2-4-composition-with-the-flag-semcore-4-11-conventions",
+      "family": "doc",
+      "kind": "section",
+      "title": "2.4 Composition with the FLAG-semcore-4/-11 conventions",
+      "file": "docs/planning/semcore-l0-boundary-dossier.md",
+      "line": 131,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "semcore-l0-boundary-dossier--3-option-b-the-std-sys-wild-ffi-seam",
+      "family": "doc",
+      "kind": "section",
+      "title": "3. Option B — the `@std-sys` + `wild` FFI seam",
+      "file": "docs/planning/semcore-l0-boundary-dossier.md",
+      "line": 142,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "semcore-l0-boundary-dossier--3-option-b-the-std-sys-wild-ffi-seam--3-1-what-the-ffi-surface-would-be",
+      "family": "doc",
+      "kind": "section",
+      "title": "3.1 What the FFI surface would be",
+      "file": "docs/planning/semcore-l0-boundary-dossier.md",
+      "line": 149,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "semcore-l0-boundary-dossier--3-option-b-the-std-sys-wild-ffi-seam--3-2-what-executes-buys",
+      "family": "doc",
+      "kind": "section",
+      "title": "3.2 What \"executes\" buys",
+      "file": "docs/planning/semcore-l0-boundary-dossier.md",
+      "line": 159,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "semcore-l0-boundary-dossier--3-option-b-the-std-sys-wild-ffi-seam--3-3-what-it-costs-stated-plainly-this-is-the-load-bearing-part",
+      "family": "doc",
+      "kind": "section",
+      "title": "3.3 What it costs (stated plainly — this is the load-bearing part)",
+      "file": "docs/planning/semcore-l0-boundary-dossier.md",
+      "line": 168,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "semcore-l0-boundary-dossier--4-the-arithmetic-free-subset-that-lands-under-either-choice",
+      "family": "doc",
+      "kind": "section",
+      "title": "4. The arithmetic-free subset that lands under **either** choice",
+      "file": "docs/planning/semcore-l0-boundary-dossier.md",
+      "line": 205,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "semcore-l0-boundary-dossier--5-recommendation",
+      "family": "doc",
+      "kind": "section",
+      "title": "5. Recommendation",
+      "file": "docs/planning/semcore-l0-boundary-dossier.md",
+      "line": 231,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "semcore-l0-boundary-dossier--6-m-1013-sub-wave-decomposition-increments-8-14",
+      "family": "doc",
+      "kind": "section",
+      "title": "6. M-1013 sub-wave decomposition (increments 8..14)",
+      "file": "docs/planning/semcore-l0-boundary-dossier.md",
+      "line": 281,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "semcore-l0-boundary-dossier--6-m-1013-sub-wave-decomposition-increments-8-14--6-1-measured-rust-line-counts-vs-the-issue-s-declared-estimates",
+      "family": "doc",
+      "kind": "section",
+      "title": "6.1 Measured Rust line counts vs the issue's `Declared` estimates",
+      "file": "docs/planning/semcore-l0-boundary-dossier.md",
+      "line": 283,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "semcore-l0-boundary-dossier--6-m-1013-sub-wave-decomposition-increments-8-14--6-2-dependency-order-and-which-waves-are-pure-vs-pull-in-the-deferred-infer-scc",
+      "family": "doc",
+      "kind": "section",
+      "title": "6.2 Dependency order, and which waves are pure vs pull in the deferred `infer` SCC",
+      "file": "docs/planning/semcore-l0-boundary-dossier.md",
+      "line": 308,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "semcore-l0-boundary-dossier--6-m-1013-sub-wave-decomposition-increments-8-14--6-3-proposed-pr-sized-split-dn-65-1-2k-soft-rule-several-increments-must-sub-split",
+      "family": "doc",
+      "kind": "section",
+      "title": "6.3 Proposed PR-sized split (DN-65 ≈1–2k soft rule) — several increments must sub-split",
+      "file": "docs/planning/semcore-l0-boundary-dossier.md",
+      "line": 334,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "semcore-l0-boundary-dossier--7-open-questions-flags-for-the-maintainer",
+      "family": "doc",
+      "kind": "section",
+      "title": "7. Open questions / FLAGs for the maintainer",
+      "file": "docs/planning/semcore-l0-boundary-dossier.md",
+      "line": 368,
       "tag": "Empirical/Declared"
     },
     {
@@ -49671,6 +50518,7 @@
         "src:docs/spec/stdlib/self-hosting-readiness.md",
         "src:.claude/kickoffs/archive/enb.md"
       ],
+      "gh_issue": "1065",
       "tag": "Empirical/Declared"
     },
     {
@@ -49688,6 +50536,7 @@
         "corpus:RFC-0033",
         "src:crates/mycelium-interp/src/prims.rs"
       ],
+      "gh_issue": "1062",
       "tag": "Empirical/Declared"
     },
     {
@@ -49708,6 +50557,7 @@
         "corpus:RFC-0033",
         "src:crates/mycelium-interp/src/prims.rs"
       ],
+      "gh_issue": "1063",
       "tag": "Empirical/Declared"
     },
     {
@@ -49728,6 +50578,7 @@
         "corpus:RFC-0033",
         "src:crates/mycelium-interp/src/prims.rs"
       ],
+      "gh_issue": "1064",
       "tag": "Empirical/Declared"
     },
     {
@@ -49748,6 +50599,7 @@
         "corpus:RFC-0033",
         "src:crates/mycelium-interp/src/prims.rs"
       ],
+      "gh_issue": "1066",
       "tag": "Empirical/Declared"
     },
     {
@@ -49770,6 +50622,7 @@
         "corpus:ADR-028",
         "src:crates/mycelium-interp/src/prims.rs"
       ],
+      "gh_issue": "1067",
       "tag": "Empirical/Declared"
     },
     {
@@ -49794,6 +50647,7 @@
         "src:crates/mycelium-dense/src/lib.rs",
         "src:crates/mycelium-interp/src/prims.rs"
       ],
+      "gh_issue": "1068",
       "tag": "Empirical/Declared"
     },
     {
@@ -49814,6 +50668,7 @@
         "src:crates/mycelium-dense/src/lib.rs",
         "src:crates/mycelium-interp/src/prims.rs"
       ],
+      "gh_issue": "1070",
       "tag": "Empirical/Declared"
     },
     {
@@ -49834,6 +50689,7 @@
         "src:crates/mycelium-vsa/src/lib.rs",
         "src:crates/mycelium-interp/src/prims.rs"
       ],
+      "gh_issue": "1069",
       "tag": "Empirical/Declared"
     },
     {
@@ -49854,6 +50710,7 @@
         "src:crates/mycelium-vsa/src/lib.rs",
         "src:crates/mycelium-interp/src/prims.rs"
       ],
+      "gh_issue": "1071",
       "tag": "Empirical/Declared"
     },
     {
@@ -49874,6 +50731,7 @@
         "src:crates/mycelium-vsa/src/lib.rs",
         "src:crates/mycelium-interp/src/prims.rs"
       ],
+      "gh_issue": "1072",
       "tag": "Empirical/Declared"
     },
     {
@@ -49894,6 +50752,7 @@
         "corpus:ADR-030",
         "corpus:ADR-031"
       ],
+      "gh_issue": "1073",
       "tag": "Empirical/Declared"
     },
     {
@@ -49915,6 +50774,7 @@
         "corpus:DN-39",
         "src:crates/mycelium-core/src/content.rs"
       ],
+      "gh_issue": "1074",
       "tag": "Empirical/Declared"
     },
     {
@@ -49934,6 +50794,7 @@
       "doc_refs": [
         "src:docs/spec/grammar/mycelium.ebnf"
       ],
+      "gh_issue": "1075",
       "tag": "Empirical/Declared"
     },
     {
@@ -49953,6 +50814,7 @@
       "doc_refs": [
         "src:crates/mycelium-interp/src/prims.rs"
       ],
+      "gh_issue": "1076",
       "tag": "Empirical/Declared"
     },
     {
@@ -49972,6 +50834,7 @@
       "doc_refs": [
         "src:crates/mycelium-interp/src/prims.rs"
       ],
+      "gh_issue": "1077",
       "tag": "Empirical/Declared"
     },
     {
@@ -49992,6 +50855,7 @@
       "doc_refs": [
         "src:docs/spec/stdlib/self-hosting-readiness.md"
       ],
+      "gh_issue": "1078",
       "tag": "Empirical/Declared"
     },
     {
@@ -50008,6 +50872,7 @@
       "doc_refs": [
         "corpus:DN-54"
       ],
+      "gh_issue": "1079",
       "tag": "Empirical/Declared"
     },
     {
@@ -50027,6 +50892,7 @@
       "doc_refs": [
         "corpus:DN-54"
       ],
+      "gh_issue": "1080",
       "tag": "Empirical/Declared"
     },
     {
@@ -50046,6 +50912,7 @@
       "doc_refs": [
         "corpus:DN-54"
       ],
+      "gh_issue": "1081",
       "tag": "Empirical/Declared"
     },
     {
@@ -50065,6 +50932,7 @@
       "doc_refs": [
         "corpus:DN-54"
       ],
+      "gh_issue": "1082",
       "tag": "Empirical/Declared"
     },
     {
@@ -50082,6 +50950,7 @@
         "corpus:DN-63",
         "corpus:ADR-038"
       ],
+      "gh_issue": "1083",
       "tag": "Empirical/Declared"
     },
     {
@@ -50101,6 +50970,7 @@
       "doc_refs": [
         "corpus:DN-63"
       ],
+      "gh_issue": "1084",
       "tag": "Empirical/Declared"
     },
     {
@@ -50120,6 +50990,7 @@
       "doc_refs": [
         "corpus:DN-63"
       ],
+      "gh_issue": "1085",
       "tag": "Empirical/Declared"
     },
     {
@@ -50136,6 +51007,7 @@
       "doc_refs": [
         "src:crates/mycelium-cli/src/lib.rs"
       ],
+      "gh_issue": "1086",
       "tag": "Empirical/Declared"
     },
     {
@@ -50155,6 +51027,7 @@
       "doc_refs": [
         "src:crates/mycelium-cli/src/lib.rs"
       ],
+      "gh_issue": "1087",
       "tag": "Empirical/Declared"
     },
     {
@@ -50171,6 +51044,7 @@
       "doc_refs": [
         "src:docs/spec/grammar/mycelium.ebnf"
       ],
+      "gh_issue": "1088",
       "tag": "Empirical/Declared"
     },
     {
@@ -50190,6 +51064,7 @@
       "doc_refs": [
         "src:docs/spec/grammar/mycelium.ebnf"
       ],
+      "gh_issue": "1089",
       "tag": "Empirical/Declared"
     },
     {
@@ -50211,6 +51086,7 @@
         "src:crates/mycelium-core/src/content.rs",
         "src:crates/mycelium-interp/src/prims.rs"
       ],
+      "gh_issue": "1090",
       "tag": "Empirical/Declared"
     },
     {
@@ -50227,6 +51103,7 @@
       "doc_refs": [
         "corpus:ADR-038"
       ],
+      "gh_issue": "1091",
       "tag": "Empirical/Declared"
     },
     {
@@ -50257,6 +51134,7 @@
         "corpus:ADR-038",
         "src:docs/spec/stdlib/self-hosting-readiness.md"
       ],
+      "gh_issue": "1092",
       "tag": "Empirical/Declared"
     },
     {
@@ -50291,6 +51169,7 @@
         "src:docs/spec/stdlib/self-hosting-readiness.md",
         "src:.claude/kickoffs/archive/opp.md"
       ],
+      "gh_issue": "1093",
       "tag": "Empirical/Declared"
     },
     {
@@ -50309,6 +51188,7 @@
         "src:crates/mycelium-std-conformance/tests/std_result.rs",
         "src:crates/mycelium-std-conformance/tests/std_option.rs"
       ],
+      "gh_issue": "1094",
       "tag": "Empirical/Declared"
     },
     {
@@ -50330,6 +51210,7 @@
         "src:crates/mycelium-std-diag/src/lib.rs",
         "src:docs/planning/self-hosting-port-ledger.md"
       ],
+      "gh_issue": "1095",
       "tag": "Empirical/Declared"
     },
     {
@@ -50350,6 +51231,7 @@
         "corpus:RFC-0031",
         "src:crates/mycelium-std-core/src/lib.rs"
       ],
+      "gh_issue": "1096",
       "tag": "Empirical/Declared"
     },
     {
@@ -50370,6 +51252,7 @@
         "corpus:RFC-0031",
         "src:crates/mycelium-std-select/src/lib.rs"
       ],
+      "gh_issue": "1097",
       "tag": "Empirical/Declared"
     },
     {
@@ -50390,6 +51273,7 @@
         "corpus:RFC-0031",
         "src:crates/mycelium-std-swap/src/lib.rs"
       ],
+      "gh_issue": "1098",
       "tag": "Empirical/Declared"
     },
     {
@@ -50410,6 +51294,7 @@
         "corpus:RFC-0031",
         "src:crates/mycelium-std-recover/src/lib.rs"
       ],
+      "gh_issue": "1099",
       "tag": "Empirical/Declared"
     },
     {
@@ -50430,6 +51315,7 @@
         "corpus:RFC-0031",
         "src:crates/mycelium-std-error/src/lib.rs"
       ],
+      "gh_issue": "1100",
       "tag": "Empirical/Declared"
     },
     {
@@ -50450,6 +51336,7 @@
         "corpus:RFC-0031",
         "src:crates/mycelium-std-testing/src/lib.rs"
       ],
+      "gh_issue": "1101",
       "tag": "Empirical/Declared"
     },
     {
@@ -50470,6 +51357,7 @@
         "corpus:RFC-0031",
         "src:crates/mycelium-std-ternary/src/lib.rs"
       ],
+      "gh_issue": "1102",
       "tag": "Empirical/Declared"
     },
     {
@@ -50495,6 +51383,7 @@
         "corpus:RFC-0031",
         "src:crates/mycelium-std-spore/src/lib.rs"
       ],
+      "gh_issue": "1103",
       "tag": "Empirical/Declared"
     },
     {
@@ -50524,6 +51413,7 @@
         "src:docs/planning/dogfooding-effort-and-usage-assessment.md",
         "src:docs/spec/stdlib/self-hosting-readiness.md"
       ],
+      "gh_issue": "1104",
       "tag": "Empirical/Declared"
     },
     {
@@ -50561,6 +51451,7 @@
         "src:docs/planning/Blocked-Decisions-Ratification-Map.md",
         "src:.claude/kickoffs/archive/grm.md"
       ],
+      "gh_issue": "1105",
       "tag": "Empirical/Declared"
     },
     {
@@ -50579,6 +51470,7 @@
         "src:crates/mycelium-l1/src/lexer.rs",
         "src:docs/spec/grammar/mycelium.ebnf"
       ],
+      "gh_issue": "1106",
       "tag": "Empirical/Declared"
     },
     {
@@ -50600,6 +51492,7 @@
         "corpus:RFC-0037",
         "src:crates/mycelium-l1/src/lexer.rs"
       ],
+      "gh_issue": "1107",
       "tag": "Empirical/Declared"
     },
     {
@@ -50617,6 +51510,7 @@
         "corpus:DN-54",
         "src:.claude/kickoffs/archive/grm.md"
       ],
+      "gh_issue": "1108",
       "tag": "Empirical/Declared"
     },
     {
@@ -50634,6 +51528,7 @@
         "corpus:DN-54",
         "src:docs/notes/DN-71-Substrate-Consume-Execution-Model-Confirm-Memo.md"
       ],
+      "gh_issue": "1109",
       "tag": "Empirical/Declared"
     },
     {
@@ -50655,6 +51550,7 @@
         "src:docs/notes/DN-71-Substrate-Consume-Execution-Model-Confirm-Memo.md",
         "src:crates/mycelium-l1/src/checkty.rs"
       ],
+      "gh_issue": "1110",
       "tag": "Empirical/Declared"
     },
     {
@@ -50672,6 +51568,7 @@
         "corpus:RFC-0024",
         "src:docs/planning/Blocked-Decisions-Ratification-Map.md"
       ],
+      "gh_issue": "1111",
       "tag": "Empirical/Declared"
     },
     {
@@ -50692,6 +51589,7 @@
         "corpus:RFC-0024",
         "src:crates/mycelium-l1/src/ast.rs"
       ],
+      "gh_issue": "1112",
       "tag": "Empirical/Declared"
     },
     {
@@ -50710,6 +51608,7 @@
         "corpus:DN-56",
         "src:docs/planning/Blocked-Decisions-Ratification-Map.md"
       ],
+      "gh_issue": "1113",
       "tag": "Empirical/Declared"
     },
     {
@@ -50730,6 +51629,7 @@
         "corpus:ADR-033",
         "src:crates/mycelium-l1/src/checkty.rs"
       ],
+      "gh_issue": "1114",
       "tag": "Empirical/Declared"
     },
     {
@@ -50755,6 +51655,7 @@
         "src:docs/spec/grammar/mycelium.ebnf",
         "src:docs/planning/road-to-1.0.0-and-mycelium-rewrite.md"
       ],
+      "gh_issue": "1115",
       "tag": "Empirical/Declared"
     },
     {
@@ -50793,6 +51694,7 @@
         "src:docs/planning/road-to-1.0.0-and-mycelium-rewrite.md",
         "src:.claude/kickoffs/archive/frz.md"
       ],
+      "gh_issue": "1116",
       "tag": "Empirical/Declared"
     },
     {
@@ -50811,6 +51713,7 @@
         "corpus:DN-39",
         "src:docs/notes/DN-56-Kernel-Completeness-And-Freeze-Criterion.md"
       ],
+      "gh_issue": "1117",
       "tag": "Empirical/Declared"
     },
     {
@@ -50831,6 +51734,7 @@
         "corpus:DN-56",
         "src:docs/notes/DN-56-Kernel-Completeness-And-Freeze-Criterion.md"
       ],
+      "gh_issue": "1118",
       "tag": "Empirical/Declared"
     },
     {
@@ -50849,6 +51753,7 @@
         "corpus:DN-64",
         "src:.claude/kickoffs/archive/frz.md"
       ],
+      "gh_issue": "1119",
       "tag": "Empirical/Declared"
     },
     {
@@ -50870,6 +51775,7 @@
         "src:crates/mycelium-sec/Cargo.toml",
         "src:crates/mycelium-interp/src/prims.rs"
       ],
+      "gh_issue": "1120",
       "tag": "Empirical/Declared"
     },
     {
@@ -50889,6 +51795,7 @@
         "corpus:DN-32",
         "src:.claude/kickoffs/archive/frz.md"
       ],
+      "gh_issue": "1121",
       "tag": "Empirical/Declared"
     },
     {
@@ -50909,6 +51816,7 @@
         "corpus:DN-63",
         "src:crates/mycelium-std-runtime/Cargo.toml"
       ],
+      "gh_issue": "1122",
       "tag": "Empirical/Declared"
     },
     {
@@ -50926,6 +51834,7 @@
         "corpus:DN-63",
         "src:crates/mycelium-std-runtime/Cargo.toml"
       ],
+      "gh_issue": "1123",
       "tag": "Empirical/Declared"
     },
     {
@@ -50946,6 +51855,7 @@
         "corpus:ADR-038",
         "src:crates/mycelium-l1/src/checkty.rs"
       ],
+      "gh_issue": "1124",
       "tag": "Empirical/Declared"
     },
     {
@@ -50966,6 +51876,7 @@
         "corpus:ADR-038",
         "src:crates/mycelium-l1/src/elab.rs"
       ],
+      "gh_issue": "1125",
       "tag": "Empirical/Declared"
     },
     {
@@ -50987,6 +51898,7 @@
         "corpus:RFC-0018",
         "src:crates/mycelium-l1/src/elab.rs"
       ],
+      "gh_issue": "1126",
       "tag": "Empirical/Declared"
     },
     {
@@ -51005,6 +51917,7 @@
         "corpus:DN-64",
         "src:.claude/kickoffs/archive/frz.md"
       ],
+      "gh_issue": "1127",
       "tag": "Empirical/Declared"
     },
     {
@@ -51029,6 +51942,7 @@
         "corpus:DN-39",
         "src:docs/notes/DN-56-Kernel-Completeness-And-Freeze-Criterion.md"
       ],
+      "gh_issue": "1128",
       "tag": "Empirical/Declared"
     },
     {
@@ -51046,6 +51960,7 @@
         "corpus:DN-82",
         "src:crates/mycelium-fmt/src/lib.rs"
       ],
+      "gh_issue": "1129",
       "tag": "Empirical/Declared"
     },
     {
@@ -51066,6 +51981,7 @@
         "corpus:RFC-0040",
         "src:crates/mycelium-l1/src/checkty.rs"
       ],
+      "gh_issue": "1130",
       "tag": "Empirical/Declared"
     },
     {
@@ -51087,6 +52003,7 @@
         "src:crates/mycelium-stack/src/lib.rs",
         "src:crates/mycelium-l1/src/parse.rs"
       ],
+      "gh_issue": "1152",
       "tag": "Empirical/Declared"
     },
     {
@@ -51109,6 +52026,7 @@
         "src:crates/mycelium-l1/src/checkty.rs",
         "src:crates/mycelium-interp/src/lib.rs"
       ],
+      "gh_issue": "1151",
       "tag": "Empirical/Declared"
     },
     {
@@ -51126,6 +52044,7 @@
         "src:crates/mycelium-l1/src/usefulness.rs:209",
         "src:crates/mycelium-l1/tests/compiler_stage1.rs"
       ],
+      "gh_issue": "1174",
       "tag": "Empirical/Declared"
     },
     {
@@ -51144,6 +52063,7 @@
         "src:crates/mycelium-l1/tests/compiler_stage1.rs",
         "corpus:RFC-0041"
       ],
+      "gh_issue": "1169",
       "tag": "Empirical/Declared"
     },
     {
@@ -51165,6 +52085,7 @@
         "src:lib/compiler/token.myc",
         "corpus:DN-26"
       ],
+      "gh_issue": "1172",
       "tag": "Empirical/Declared"
     },
     {
@@ -51183,6 +52104,7 @@
         "src:crates/mycelium-l1/tests/compiler_stage1.rs",
         "src:crates/mycelium-l1/tests/compiler_stage2.rs"
       ],
+      "gh_issue": "1171",
       "tag": "Empirical/Declared"
     },
     {
@@ -51204,6 +52126,7 @@
         "src:lib/compiler/parse.myc",
         "corpus:DN-26"
       ],
+      "gh_issue": "1170",
       "tag": "Empirical/Declared"
     },
     {
@@ -51222,6 +52145,7 @@
         "corpus:RFC-0041",
         "corpus:DN-26"
       ],
+      "gh_issue": "1173",
       "tag": "Empirical/Declared"
     },
     {
@@ -51241,6 +52165,7 @@
         "corpus:RFC-0041",
         "corpus:DN-26"
       ],
+      "gh_issue": "1175",
       "tag": "Empirical/Declared"
     },
     {
@@ -51259,6 +52184,7 @@
         "src:crates/mycelium-l1/tests/compiler_stage3.rs",
         "corpus:DN-26"
       ],
+      "gh_issue": "1176",
       "tag": "Empirical/Declared"
     },
     {
@@ -51276,6 +52202,7 @@
         "src:crates/mycelium-l1/src/mono.rs",
         "src:lib/compiler/parse.myc"
       ],
+      "gh_issue": "1178",
       "tag": "Empirical/Declared"
     },
     {
@@ -51294,6 +52221,7 @@
         "src:scripts/checks/myc-check.sh",
         "src:lib/compiler/README.md"
       ],
+      "gh_issue": "1177",
       "tag": "Empirical/Declared"
     },
     {
@@ -51312,6 +52240,7 @@
         "src:lib/compiler/ambient.myc",
         "src:crates/mycelium-l1/tests/compiler_stage4_ambient.rs"
       ],
+      "gh_issue": "1179",
       "tag": "Empirical/Declared"
     },
     {
@@ -51332,6 +52261,7 @@
         "corpus:DN-26",
         "src:crates/mycelium-transpile/src/lib.rs"
       ],
+      "gh_issue": "1180",
       "tag": "Empirical/Declared"
     },
     {
@@ -51349,6 +52279,7 @@
         "src:crates/mycelium-fmt/src/lib.rs",
         "src:crates/mycelium-fmt/src/bin/mycfmt.rs"
       ],
+      "gh_issue": "1181",
       "tag": "Empirical/Declared"
     },
     {
@@ -51415,6 +52346,7 @@
         "src:crates/mycelium-mlir/src/aot.rs",
         "corpus:RFC-0041"
       ],
+      "gh_issue": "1203",
       "tag": "Empirical/Declared"
     },
     {
@@ -51432,6 +52364,7 @@
         "src:crates/mycelium-mlir/src/aot.rs",
         "corpus:RFC-0041"
       ],
+      "gh_issue": "1201",
       "tag": "Empirical/Declared"
     },
     {
@@ -51449,6 +52382,7 @@
         "corpus:DN-56",
         "src:crates/mycelium-mlir/src/aot.rs"
       ],
+      "gh_issue": "1204",
       "tag": "Empirical/Declared"
     },
     {
@@ -51466,6 +52400,7 @@
         "src:crates/mycelium-mlir/src/aot.rs",
         "corpus:RFC-0041"
       ],
+      "gh_issue": "1200",
       "tag": "Empirical/Declared"
     },
     {
@@ -51487,6 +52422,7 @@
         "src:crates/mycelium-mlir/src/aot.rs",
         "src:crates/mycelium-l1/tests/aot_vs_interp_bench.rs"
       ],
+      "gh_issue": "1202",
       "tag": "Empirical/Declared"
     },
     {
@@ -51507,6 +52443,7 @@
         "src:crates/mycelium-fmt/src/lib.rs",
         "corpus:DN-70"
       ],
+      "gh_issue": "1131",
       "tag": "Empirical/Declared"
     },
     {
@@ -51531,6 +52468,7 @@
         "src:crates/mycelium-std-conformance/src/lib.rs",
         "src:crates/mycelium-vsa-decode/src/lib.rs"
       ],
+      "gh_issue": "1132",
       "tag": "Empirical/Declared"
     },
     {
@@ -51554,6 +52492,7 @@
         "src:crates/mycelium-transpile/src/lib.rs",
         "src:.claude/kickoffs/trx2.md"
       ],
+      "gh_issue": "1217",
       "tag": "Empirical/Declared"
     },
     {
@@ -51572,6 +52511,7 @@
         "src:crates/mycelium-transpile/src/gap.rs",
         "src:scripts/checks/myc-check.sh"
       ],
+      "gh_issue": "1216",
       "tag": "Empirical/Declared"
     },
     {
@@ -51593,6 +52533,7 @@
         "src:crates/mycelium-transpile/src/emit.rs",
         "src:crates/mycelium-l1/src/checkty.rs"
       ],
+      "gh_issue": "1219",
       "tag": "Empirical/Declared"
     },
     {
@@ -51616,6 +52557,7 @@
         "corpus:DN-34",
         "src:.claude/kickoffs/trx2.md"
       ],
+      "gh_issue": "1218",
       "tag": "Empirical/Declared"
     },
     {
@@ -51636,6 +52578,7 @@
         "src:crates/mycelium-transpile/src/batch.rs",
         "corpus:DN-34"
       ],
+      "gh_issue": "1220",
       "tag": "Empirical/Declared"
     },
     {
@@ -51658,6 +52601,7 @@
         "src:crates/mycelium-l1/src/checkty.rs",
         "src:lib/compiler/README.md"
       ],
+      "gh_issue": "1221",
       "tag": "Empirical/Declared"
     },
     {
@@ -51681,6 +52625,7 @@
         "src:tools/docgen/code_index.py",
         "src:.claude/kickoffs/trx2.md"
       ],
+      "gh_issue": "1223",
       "tag": "Empirical/Declared"
     },
     {
@@ -51699,6 +52644,7 @@
         "src:lib/compiler/README.md",
         "src:docs/api-index/INDEX.md"
       ],
+      "gh_issue": "1222",
       "tag": "Empirical/Declared"
     },
     {
@@ -51720,6 +52666,7 @@
         "src:docs/Doc-Index.md",
         "src:justfile"
       ],
+      "gh_issue": "1224",
       "tag": "Empirical/Declared"
     },
     {
@@ -51743,6 +52690,7 @@
         "src:crates/mycelium-transpile/src/map.rs",
         "src:crates/mycelium-transpile/src/emit.rs"
       ],
+      "gh_issue": "1225",
       "tag": "Empirical/Declared"
     },
     {
@@ -51765,6 +52713,7 @@
         "src:crates/mycelium-l1/src/checkty.rs",
         "src:crates/mycelium-l1/src/tests/compiler_stage5_typealg.rs"
       ],
+      "gh_issue": "1277",
       "tag": "Empirical/Declared"
     },
     {
@@ -51786,6 +52735,7 @@
         "src:lib/compiler/semcore.myc",
         "src:crates/mycelium-l1/src/checkty.rs"
       ],
+      "gh_issue": "1279",
       "tag": "Empirical/Declared"
     },
     {
@@ -51807,6 +52757,7 @@
         "src:lib/compiler/semcore.myc",
         "src:crates/mycelium-l1/src/mono.rs"
       ],
+      "gh_issue": "1280",
       "tag": "Empirical/Declared"
     },
     {
@@ -51828,6 +52779,7 @@
         "src:lib/compiler/semcore.myc",
         "src:crates/mycelium-l1/src/mono.rs"
       ],
+      "gh_issue": "1278",
       "tag": "Empirical/Declared"
     },
     {
@@ -51849,6 +52801,7 @@
         "src:lib/compiler/semcore.myc",
         "src:crates/mycelium-l1/src/checkty.rs"
       ],
+      "gh_issue": "1282",
       "tag": "Empirical/Declared"
     },
     {
@@ -51870,6 +52823,7 @@
         "src:lib/compiler/semcore.myc",
         "src:crates/mycelium-l1/src/elab.rs"
       ],
+      "gh_issue": "1281",
       "tag": "Empirical/Declared"
     },
     {
@@ -51896,6 +52850,7 @@
         "src:crates/mycelium-l1/src/checkty.rs",
         "src:crates/mycelium-l1/src/eval.rs"
       ],
+      "gh_issue": "1283",
       "tag": "Empirical/Declared"
     },
     {
@@ -51913,6 +52868,7 @@
         "src:scripts/vsa-desktop-checks.sh",
         "src:justfile"
       ],
+      "gh_issue": "1284",
       "tag": "Empirical/Declared"
     },
     {
@@ -51938,6 +52894,7 @@
         "src:.claude/kickoffs/mem.md",
         "src:docs/api-index/INDEX.md"
       ],
+      "gh_issue": "1287",
       "tag": "Empirical/Declared"
     },
     {
@@ -51959,6 +52916,7 @@
         "src:docs/tero-index/INDEX.md",
         "src:scripts/checks/tero-index.sh"
       ],
+      "gh_issue": "1285",
       "tag": "Empirical/Declared"
     },
     {
@@ -51978,6 +52936,7 @@
       "doc_refs": [
         "corpus:DN-87"
       ],
+      "gh_issue": "1286",
       "tag": "Empirical/Declared"
     },
     {
@@ -51998,6 +52957,7 @@
         "corpus:DN-87",
         "src:.claude/skills/doc-index/SKILL.md"
       ],
+      "gh_issue": "1288",
       "tag": "Empirical/Declared"
     },
     {
@@ -52020,6 +52980,7 @@
         "corpus:RFC-0003",
         "corpus:RFC-0009"
       ],
+      "gh_issue": "1289",
       "tag": "Empirical/Declared"
     },
     {
@@ -52042,6 +53003,27 @@
         "corpus:DN-26",
         "src:lib/compiler/README.md"
       ],
+      "gh_issue": "1290",
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "M-1020",
+      "family": "issue",
+      "kind": "issue",
+      "id": "M-1020",
+      "title": "M-1020 — Native HTTPS/TLS for the tero HTTP front",
+      "file": "tools/github/issues.yaml",
+      "line": 13472,
+      "status": "todo",
+      "summary": "Minted 2026-07-07 (maintainer directive -- \"extending to support https soon is ideal\"). The",
+      "epic": "E39-1",
+      "depends_on": [
+        "M-1017"
+      ],
+      "doc_refs": [
+        "corpus:DN-87",
+        "corpus:ADR-044"
+      ],
       "tag": "Empirical/Declared"
     },
     {
@@ -52055,13 +53037,67 @@
       "tag": "Empirical/Declared"
     },
     {
+      "anchor": "cl--trx2-lane-c-cu-3-5-7-kernel-prims-transpiler-operand-gated-emission-and-forward-mapped-prim-table-2026-07-08",
+      "family": "changelog",
+      "kind": "entry",
+      "title": "trx2 Lane C — CU-3/5/7 kernel prims + transpiler operand-gated emission and forward-mapped prim table (2026-07-08)",
+      "file": "CHANGELOG.md",
+      "line": 14,
+      "summary": "trx2 Lane C — CU-3/5/7 kernel prims + transpiler operand-gated emission and forward-mapped prim table (2026-07-08)",
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "cl--m-1006-transpiler-hardening-ladder-string-bytes-lands-the-largest-checked-fraction-gain-2026-07-07",
+      "family": "changelog",
+      "kind": "entry",
+      "id": "M-1006",
+      "title": "M-1006 transpiler-hardening ladder — String→`Bytes` lands the largest `checked_fraction` gain (2026-07-07)",
+      "file": "CHANGELOG.md",
+      "line": 35,
+      "summary": "M-1006 transpiler-hardening ladder — String→`Bytes` lands the largest `checked_fraction` gain (2026-07-07)",
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "cl--e18-1-semcore-self-hosting-stage-5-increments-m-1007-m-1013-pr-2-2026-07-07",
+      "family": "changelog",
+      "kind": "entry",
+      "id": "E18-1",
+      "title": "E18-1 semcore self-hosting — Stage-5 increments (M-1007 → M-1013 PR-2) (2026-07-07)",
+      "file": "CHANGELOG.md",
+      "line": 55,
+      "summary": "E18-1 semcore self-hosting — Stage-5 increments (M-1007 → M-1013 PR-2) (2026-07-07)",
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "cl--mycelium-tero-dn-87-e39-1-transparent-memory-substrate-agent-knowledge-api-m-1015-m-1018-2026-07-07",
+      "family": "changelog",
+      "kind": "entry",
+      "id": "DN-87",
+      "title": "mycelium-tero (DN-87 / E39-1) — transparent memory substrate & agent knowledge API (M-1015…M-1018, 2026-07-07)",
+      "file": "CHANGELOG.md",
+      "line": 74,
+      "summary": "mycelium-tero (DN-87 / E39-1) — transparent memory substrate & agent knowledge API (M-1015…M-1018, 2026-07-07)",
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "cl--m-1013-step-2-semcore-stage-5-differential-retrofit-to-harness-marshalling-2026-07-07",
+      "family": "changelog",
+      "kind": "entry",
+      "id": "M-1013",
+      "title": "M-1013 STEP 2 — semcore Stage-5 differential retrofit to harness marshalling (2026-07-07)",
+      "file": "CHANGELOG.md",
+      "line": 104,
+      "summary": "M-1013 STEP 2 — semcore Stage-5 differential retrofit to harness marshalling (2026-07-07)",
+      "tag": "Empirical/Declared"
+    },
+    {
       "anchor": "cl--m-1008-m-1009-m-1010-m-1011-partial-semcore-pure-leaf-port-wave-m-993-ladder-2026-07-07",
       "family": "changelog",
       "kind": "entry",
       "id": "M-1008",
       "title": "M-1008/M-1009/M-1010 + M-1011(partial) — semcore pure-leaf port wave (M-993 ladder) (2026-07-07)",
       "file": "CHANGELOG.md",
-      "line": 14,
+      "line": 121,
       "summary": "M-1008/M-1009/M-1010 + M-1011(partial) — semcore pure-leaf port wave (M-993 ladder) (2026-07-07)",
       "tag": "Empirical/Declared"
     },
@@ -52072,7 +53108,7 @@
       "id": "M-1015",
       "title": "M-1015 — docs/tero-index/: the whole-corpus Layer-1 citation index (DN-87 / E39-1) (2026-07-07)",
       "file": "CHANGELOG.md",
-      "line": 29,
+      "line": 135,
       "summary": "M-1015 — docs/tero-index/: the whole-corpus Layer-1 citation index (DN-87 / E39-1) (2026-07-07)",
       "tag": "Empirical/Declared"
     },
@@ -52083,7 +53119,7 @@
       "id": "DN-87",
       "title": "mycelium-tero — DN-87 named; kickoff `mem` FIRED; the scaffold lands (2026-07-07)",
       "file": "CHANGELOG.md",
-      "line": 48,
+      "line": 154,
       "summary": "mycelium-tero — DN-87 named; kickoff `mem` FIRED; the scaffold lands (2026-07-07)",
       "tag": "Empirical/Declared"
     },
@@ -52094,7 +53130,7 @@
       "id": "DN-87",
       "title": "DN-87 — the transparent memory substrate & agent knowledge API captured; E39-1 + M-1015…M-1019 minted (2026-07-07)",
       "file": "CHANGELOG.md",
-      "line": 58,
+      "line": 164,
       "summary": "DN-87 — the transparent memory substrate & agent knowledge API captured; E39-1 + M-1015…M-1019 minted (2026-07-07)",
       "tag": "Empirical/Declared"
     },
@@ -52105,7 +53141,7 @@
       "id": "DN-85",
       "title": "DN-85 — the multi-language transpilation program + single-language full-stack goal (2026-07-06)",
       "file": "CHANGELOG.md",
-      "line": 77,
+      "line": 183,
       "summary": "DN-85 — the multi-language transpilation program + single-language full-stack goal (2026-07-06)",
       "tag": "Empirical/Declared"
     },
@@ -52116,7 +53152,7 @@
       "id": "DN-86",
       "title": "DN-86 — multi-language transpiler front-ends architecture (2026-07-06)",
       "file": "CHANGELOG.md",
-      "line": 91,
+      "line": 197,
       "summary": "DN-86 — multi-language transpiler front-ends architecture (2026-07-06)",
       "tag": "Empirical/Declared"
     },
@@ -52127,7 +53163,7 @@
       "id": "M-1006",
       "title": "M-1006 phase-1 — transpiler hardening against the DN-34 §8.9 gap worklist (2026-07-06)",
       "file": "CHANGELOG.md",
-      "line": 108,
+      "line": 214,
       "summary": "M-1006 phase-1 — transpiler hardening against the DN-34 §8.9 gap worklist (2026-07-06)",
       "tag": "Empirical/Declared"
     },
@@ -52137,7 +53173,7 @@
       "kind": "entry",
       "title": "Transpiler usage operationalized as skills — `/transpile-vet` + `/myc-drafts` (2026-07-06)",
       "file": "CHANGELOG.md",
-      "line": 125,
+      "line": 231,
       "summary": "Transpiler usage operationalized as skills — `/transpile-vet` + `/myc-drafts` (2026-07-06)",
       "tag": "Empirical/Declared"
     },
@@ -52148,7 +53184,7 @@
       "id": "M-1002",
       "title": "M-1002/M-1003 — gen/myc-drafts/: the vetted draft corpus over the full boot10 port surface (2026-07-06)",
       "file": "CHANGELOG.md",
-      "line": 136,
+      "line": 242,
       "summary": "M-1002/M-1003 — gen/myc-drafts/: the vetted draft corpus over the full boot10 port surface (2026-07-06)",
       "tag": "Empirical/Declared"
     },
@@ -52159,7 +53195,7 @@
       "id": "M-1000",
       "title": "M-1000/M-1001 — the transpile → myc-check vet loop + top gap-class closure; M-991 assessed (2026-07-06)",
       "file": "CHANGELOG.md",
-      "line": 151,
+      "line": 257,
       "summary": "M-1000/M-1001 — the transpile → myc-check vet loop + top gap-class closure; M-991 assessed (2026-07-06)",
       "tag": "Empirical/Declared"
     },
@@ -52170,7 +53206,7 @@
       "id": "M-1004",
       "title": "M-1004/M-1005 — docs/lib-index/: the api-index analogue for the self-hosted `.myc` tree (2026-07-06)",
       "file": "CHANGELOG.md",
-      "line": 166,
+      "line": 272,
       "summary": "M-1004/M-1005 — docs/lib-index/: the api-index analogue for the self-hosted `.myc` tree (2026-07-06)",
       "tag": "Empirical/Declared"
     },
@@ -52181,7 +53217,7 @@
       "id": "M-996",
       "title": "M-996 — AOT env-machine TCO: tail frames elided, observably (maintainer-authorized) (2026-07-06)",
       "file": "CHANGELOG.md",
-      "line": 213,
+      "line": 319,
       "summary": "M-996 — AOT env-machine TCO: tail frames elided, observably (maintainer-authorized) (2026-07-06)",
       "tag": "Empirical/Declared"
     },
@@ -52192,7 +53228,7 @@
       "id": "M-995",
       "title": "M-995 — AOT env-machine value structural-sharing (the M-987 perf win on the AOT path) (2026-07-06)",
       "file": "CHANGELOG.md",
-      "line": 250,
+      "line": 356,
       "summary": "M-995 — AOT env-machine value structural-sharing (the M-987 perf win on the AOT path) (2026-07-06)",
       "tag": "Empirical/Declared"
     },
@@ -52203,7 +53239,7 @@
       "id": "M-994",
       "title": "M-994 fix (b) — O(1) `Data` clone via `Arc` structural sharing (M-987 ~n³→~n²; M-994 resolved) (2026-07-06)",
       "file": "CHANGELOG.md",
-      "line": 277,
+      "line": 383,
       "summary": "M-994 fix (b) — O(1) `Data` clone via `Arc` structural sharing (M-987 ~n³→~n²; M-994 resolved) (2026-07-06)",
       "tag": "Empirical/Declared"
     },
@@ -52214,7 +53250,7 @@
       "id": "M-994",
       "title": "M-994 fix (a) — widen L1 evaluator TCO through tail-transparent frames (M-986 closed) (2026-07-06)",
       "file": "CHANGELOG.md",
-      "line": 303,
+      "line": 409,
       "summary": "M-994 fix (a) — widen L1 evaluator TCO through tail-transparent frames (M-986 closed) (2026-07-06)",
       "tag": "Empirical/Declared"
     },
@@ -52225,7 +53261,7 @@
       "id": "M-740",
       "title": "M-740 Stage 5 (increment 1) — partial self-hosted `compiler.semcore` (2026-07-06)",
       "file": "CHANGELOG.md",
-      "line": 330,
+      "line": 436,
       "summary": "M-740 Stage 5 (increment 1) — partial self-hosted `compiler.semcore` (2026-07-06)",
       "tag": "Empirical/Declared"
     },
@@ -52236,7 +53272,7 @@
       "id": "M-740",
       "title": "M-740 Stage 4 — self-hosted SCC leaf nodules (substrate · totality · ambient) (2026-07-06)",
       "file": "CHANGELOG.md",
-      "line": 363,
+      "line": 469,
       "summary": "M-740 Stage 4 — self-hosted SCC leaf nodules (substrate · totality · ambient) (2026-07-06)",
       "tag": "Empirical/Declared"
     },
@@ -52247,7 +53283,7 @@
       "id": "M-740",
       "title": "M-740 Stage 3 — self-hosted AST vocabulary + parser (2026-07-05)",
       "file": "CHANGELOG.md",
-      "line": 409,
+      "line": 515,
       "summary": "M-740 Stage 3 — self-hosted AST vocabulary + parser (2026-07-05)",
       "tag": "Empirical/Declared"
     },
@@ -52258,7 +53294,7 @@
       "id": "M-740",
       "title": "M-740 Stage 2 — self-hosted nodule-header recogniser (2026-07-05)",
       "file": "CHANGELOG.md",
-      "line": 463,
+      "line": 569,
       "summary": "M-740 Stage 2 — self-hosted nodule-header recogniser (2026-07-05)",
       "tag": "Empirical/Declared"
     },
@@ -52268,7 +53304,7 @@
       "kind": "entry",
       "title": "Kickoff-corpus reconciliation (2026-07-05)",
       "file": "CHANGELOG.md",
-      "line": 489,
+      "line": 595,
       "summary": "Kickoff-corpus reconciliation (2026-07-05)",
       "tag": "Empirical/Declared"
     },
@@ -52279,7 +53315,7 @@
       "id": "RFC-0041",
       "title": "RFC-0041 promotion to `main` — recursion-depth safety Enacted with this landing (2026-07-05: M-978 · M-979 · M-959 · M-969 status reconcile)",
       "file": "CHANGELOG.md",
-      "line": 520,
+      "line": 626,
       "summary": "RFC-0041 promotion to `main` — recursion-depth safety Enacted with this landing (2026-07-05: M-978 · M-979 · M-959 · M-969 status reconcile)",
       "tag": "Empirical/Declared"
     },
@@ -52290,7 +53326,7 @@
       "id": "RFC-0041",
       "title": "RFC-0041 W7 — Enacted-closure wave: the §9 DoD open items closed or honestly re-scoped (2026-07-03: M-979)",
       "file": "CHANGELOG.md",
-      "line": 543,
+      "line": 649,
       "summary": "RFC-0041 W7 — Enacted-closure wave: the §9 DoD open items closed or honestly re-scoped (2026-07-03: M-979)",
       "tag": "Empirical/Declared"
     },
@@ -52301,7 +53337,7 @@
       "id": "RFC-0041",
       "title": "RFC-0041 W6 — data-spine iteration: the wide-tuple asymmetry documented (RFC-0041 Phase-4 COMPLETE) (2026-07-03: M-979)",
       "file": "CHANGELOG.md",
-      "line": 579,
+      "line": 685,
       "summary": "RFC-0041 W6 — data-spine iteration: the wide-tuple asymmetry documented (RFC-0041 Phase-4 COMPLETE) (2026-07-03: M-979)",
       "tag": "Empirical/Declared"
     },
@@ -52312,7 +53348,7 @@
       "id": "RFC-0041",
       "title": "RFC-0041 W4 — L0 reference-interpreter budgeted work-stack; the flagship `myc run` SIGABRT closed (2026-07-03: M-979)",
       "file": "CHANGELOG.md",
-      "line": 611,
+      "line": 717,
       "summary": "RFC-0041 W4 — L0 reference-interpreter budgeted work-stack; the flagship `myc run` SIGABRT closed (2026-07-03: M-979)",
       "tag": "Empirical/Declared"
     },
@@ -52323,7 +53359,7 @@
       "id": "RFC-0041",
       "title": "RFC-0041 W3+W5 — frozen-core iterative destruction, L1-eval CEK machine, TCO, eval raise (2026-07-03: M-979)",
       "file": "CHANGELOG.md",
-      "line": 640,
+      "line": 746,
       "summary": "RFC-0041 W3+W5 — frozen-core iterative destruction, L1-eval CEK machine, TCO, eval raise (2026-07-03: M-979)",
       "tag": "Empirical/Declared"
     },
@@ -52334,7 +53370,7 @@
       "id": "RFC-0041",
       "title": "RFC-0041 W3½ — AOT env-machine extraction onto the shared budget (2026-07-03: M-979)",
       "file": "CHANGELOG.md",
-      "line": 686,
+      "line": 792,
       "summary": "RFC-0041 W3½ — AOT env-machine extraction onto the shared budget (2026-07-03: M-979)",
       "tag": "Empirical/Declared"
     },
@@ -52345,7 +53381,7 @@
       "id": "RFC-0041",
       "title": "RFC-0041 W2 — host-stack grow, startup assertion, frame baseline (2026-07-03: M-979)",
       "file": "CHANGELOG.md",
-      "line": 708,
+      "line": 814,
       "summary": "RFC-0041 W2 — host-stack grow, startup assertion, frame baseline (2026-07-03: M-979)",
       "tag": "Empirical/Declared"
     },
@@ -52356,7 +53392,7 @@
       "id": "RFC-0041",
       "title": "RFC-0041 W1 — budget crate + frontend guard wiring (2026-07-03: M-979)",
       "file": "CHANGELOG.md",
-      "line": 737,
+      "line": 843,
       "summary": "RFC-0041 W1 — budget crate + frontend guard wiring (2026-07-03: M-979)",
       "tag": "Empirical/Declared"
     },
@@ -52367,7 +53403,7 @@
       "id": "RFC-0041",
       "title": "RFC-0041 W0 — recursion-depth safety net (gates + metric + census; 2026-07-03: M-979)",
       "file": "CHANGELOG.md",
-      "line": 781,
+      "line": 887,
       "summary": "RFC-0041 W0 — recursion-depth safety net (gates + metric + census; 2026-07-03: M-979)",
       "tag": "Empirical/Declared"
     },
@@ -52378,7 +53414,7 @@
       "id": "DN-84",
       "title": "DN-84 — dynamic host-stack + unified deterministic depth budget (2026-07-03: M-978 · M-979)",
       "file": "CHANGELOG.md",
-      "line": 812,
+      "line": 918,
       "summary": "DN-84 — dynamic host-stack + unified deterministic depth budget (2026-07-03: M-978 · M-979)",
       "tag": "Empirical/Declared"
     },
@@ -52389,7 +53425,7 @@
       "id": "ADR-041",
       "title": "Toolchain + dependency freshness: MSRV → 1.96.1, workspace deps refreshed (2026-07-03: ADR-041)",
       "file": "CHANGELOG.md",
-      "line": 826,
+      "line": 932,
       "summary": "Toolchain + dependency freshness: MSRV → 1.96.1, workspace deps refreshed (2026-07-03: ADR-041)",
       "tag": "Empirical/Declared"
     },
@@ -52400,7 +53436,7 @@
       "id": "M-976",
       "title": "Human-readable `.myc` formatting + `Vec` list literal (2026-07-03: M-976 · M-977)",
       "file": "CHANGELOG.md",
-      "line": 851,
+      "line": 957,
       "summary": "Human-readable `.myc` formatting + `Vec` list literal (2026-07-03: M-976 · M-977)",
       "tag": "Empirical/Declared"
     },
@@ -52411,7 +53447,7 @@
       "id": "M-969",
       "title": "Kernel freeze declared (2026-07-02: M-969 — the closing act of Phase-I)",
       "file": "CHANGELOG.md",
-      "line": 873,
+      "line": 979,
       "summary": "Kernel freeze declared (2026-07-02: M-969 — the closing act of Phase-I)",
       "tag": "Empirical/Declared"
     },
@@ -52421,7 +53457,7 @@
       "kind": "entry",
       "title": "Added / Changed / Fixed (2026-07-02: `grm`/`frz` — lowering-surface close-out, mycfmt readable, transparency fixes)",
       "file": "CHANGELOG.md",
-      "line": 900,
+      "line": 1006,
       "summary": "Added / Changed / Fixed (2026-07-02: `grm`/`frz` — lowering-surface close-out, mycfmt readable, transparency fixes)",
       "tag": "Empirical/Declared"
     },
@@ -52432,7 +53468,7 @@
       "id": "M-697",
       "title": "Added (2026-07-02: M-697 — language identity and full-surface syntax highlighting for `.myc`)",
       "file": "CHANGELOG.md",
-      "line": 947,
+      "line": 1053,
       "summary": "Added (2026-07-02: M-697 — language identity and full-surface syntax highlighting for `.myc`)",
       "tag": "Empirical/Declared"
     },
@@ -52443,7 +53479,7 @@
       "id": "M-971",
       "title": "Fixed (2026-07-02: M-971 — DN-68 acyclic-deps regression, 12 to 0 violations; dev to integration close-out)",
       "file": "CHANGELOG.md",
-      "line": 986,
+      "line": 1092,
       "summary": "Fixed (2026-07-02: M-971 — DN-68 acyclic-deps regression, 12 to 0 violations; dev to integration close-out)",
       "tag": "Empirical/Declared"
     },
@@ -52453,7 +53489,7 @@
       "kind": "entry",
       "title": "Added (2026-07-02: Phase-I H1 wave — enb enablers, opp ports, grm/frz dossiers; integration close-out)",
       "file": "CHANGELOG.md",
-      "line": 1013,
+      "line": 1119,
       "summary": "Added (2026-07-02: Phase-I H1 wave — enb enablers, opp ports, grm/frz dossiers; integration close-out)",
       "tag": "Empirical/Declared"
     },
@@ -52463,7 +53499,7 @@
       "kind": "entry",
       "title": "Changed (2026-07-02: Phase-I H1 wave — decision dispositions and status transitions)",
       "file": "CHANGELOG.md",
-      "line": 1056,
+      "line": 1162,
       "summary": "Changed (2026-07-02: Phase-I H1 wave — decision dispositions and status transitions)",
       "tag": "Empirical/Declared"
     },
@@ -52473,7 +53509,7 @@
       "kind": "entry",
       "title": "Added (2026-07-02: kickoff `acy` — Phase-I H0 acyclic-deps hardening, integration close-out)",
       "file": "CHANGELOG.md",
-      "line": 1084,
+      "line": 1190,
       "summary": "Added (2026-07-02: kickoff `acy` — Phase-I H0 acyclic-deps hardening, integration close-out)",
       "tag": "Empirical/Declared"
     },
@@ -52484,7 +53520,7 @@
       "id": "ADR-038",
       "title": "Changed (2026-07-01: ADR-038 ratified — Accepted; FLAG-V1/V2 resolved)",
       "file": "CHANGELOG.md",
-      "line": 1131,
+      "line": 1237,
       "summary": "Changed (2026-07-01: ADR-038 ratified — Accepted; FLAG-V1/V2 resolved)",
       "tag": "Empirical/Declared"
     },
@@ -52495,7 +53531,7 @@
       "id": "ADR-038",
       "title": "Changed (2026-07-01: ADR-038 refinement — versioning axis + execution doctrine, still Proposed)",
       "file": "CHANGELOG.md",
-      "line": 1154,
+      "line": 1260,
       "summary": "Changed (2026-07-01: ADR-038 refinement — versioning axis + execution doctrine, still Proposed)",
       "tag": "Empirical/Declared"
     },
@@ -52506,7 +53542,7 @@
       "id": "ADR-038",
       "title": "Added (2026-07-01: ADR-038 Proposed — function-first release strategy + the road-to-1.0.0 umbrella roadmap)",
       "file": "CHANGELOG.md",
-      "line": 1178,
+      "line": 1284,
       "summary": "Added (2026-07-01: ADR-038 Proposed — function-first release strategy + the road-to-1.0.0 umbrella roadmap)",
       "tag": "Empirical/Declared"
     },
@@ -52517,7 +53553,7 @@
       "id": "M-873",
       "title": "Added (2026-07-01: M-873 follow-on — transpiler hardening: width_cast emission, batch mode, 8-twin union backlog)",
       "file": "CHANGELOG.md",
-      "line": 1212,
+      "line": 1318,
       "summary": "Added (2026-07-01: M-873 follow-on — transpiler hardening: width_cast emission, batch mode, 8-twin union backlog)",
       "tag": "Empirical/Declared"
     },
@@ -52528,7 +53564,7 @@
       "id": "M-873",
       "title": "Added (2026-07-01: M-873 — Rust→Mycelium transpiler PoC + prioritized surface-feature backlog)",
       "file": "CHANGELOG.md",
-      "line": 1235,
+      "line": 1341,
       "summary": "Added (2026-07-01: M-873 — Rust→Mycelium transpiler PoC + prioritized surface-feature backlog)",
       "tag": "Empirical/Declared"
     },
@@ -52539,7 +53575,7 @@
       "id": "M-872",
       "title": "Added (2026-07-01: M-872 — remote registry name@version immutability + dogfooding effort/usage assessment)",
       "file": "CHANGELOG.md",
-      "line": 1263,
+      "line": 1369,
       "summary": "Added (2026-07-01: M-872 — remote registry name@version immutability + dogfooding effort/usage assessment)",
       "tag": "Empirical/Declared"
     },
@@ -52550,7 +53586,7 @@
       "id": "ADR-037",
       "title": "Added (2026-07-01: ADR-037 / M-871 — remote spore registry: GHCR/OCI dense-map distribution + live dogfood)",
       "file": "CHANGELOG.md",
-      "line": 1281,
+      "line": 1387,
       "summary": "Added (2026-07-01: ADR-037 / M-871 — remote spore registry: GHCR/OCI dense-map distribution + live dogfood)",
       "tag": "Empirical/Declared"
     },
@@ -52561,7 +53597,7 @@
       "id": "M-870",
       "title": "Added (2026-07-01: M-870 — third-party attributions + NOTICE generation)",
       "file": "CHANGELOG.md",
-      "line": 1315,
+      "line": 1421,
       "summary": "Added (2026-07-01: M-870 — third-party attributions + NOTICE generation)",
       "tag": "Empirical/Declared"
     },
@@ -52572,7 +53608,7 @@
       "id": "M-363",
       "title": "Added (2026-07-01: M-363 follow-up — myc-doc BOOK output + a Podman/Docker docs container)",
       "file": "CHANGELOG.md",
-      "line": 1336,
+      "line": 1442,
       "summary": "Added (2026-07-01: M-363 follow-up — myc-doc BOOK output + a Podman/Docker docs container)",
       "tag": "Empirical/Declared"
     },
@@ -52583,7 +53619,7 @@
       "id": "M-865",
       "title": "Added (2026-07-01: M-865 — harness-level parallel AOT/JIT dispatch extending M-862's pure-arg batch)",
       "file": "CHANGELOG.md",
-      "line": 1382,
+      "line": 1488,
       "summary": "Added (2026-07-01: M-865 — harness-level parallel AOT/JIT dispatch extending M-862's pure-arg batch)",
       "tag": "Empirical/Declared"
     },
@@ -52594,7 +53630,7 @@
       "id": "M-864",
       "title": "Changed (2026-07-01: M-864 — persistent bounded work-stealing pool for the Scheduler, nested-safe submission)",
       "file": "CHANGELOG.md",
-      "line": 1417,
+      "line": 1523,
       "summary": "Changed (2026-07-01: M-864 — persistent bounded work-stealing pool for the Scheduler, nested-safe submission)",
       "tag": "Empirical/Declared"
     },
@@ -52605,7 +53641,7 @@
       "id": "ADR-036",
       "title": "Added (2026-07-01: ADR-036 — dogfooding and public-release strategy ratified)",
       "file": "CHANGELOG.md",
-      "line": 1482,
+      "line": 1588,
       "summary": "Added (2026-07-01: ADR-036 — dogfooding and public-release strategy ratified)",
       "tag": "Empirical/Declared"
     },
@@ -52616,7 +53652,7 @@
       "id": "ADR-035",
       "title": "Added (2026-07-01: Phase-2 ratification — ADR-035 T4 scope amendment + RFC-0033/ADR-025..028 ratification)",
       "file": "CHANGELOG.md",
-      "line": 1502,
+      "line": 1608,
       "summary": "Added (2026-07-01: Phase-2 ratification — ADR-035 T4 scope amendment + RFC-0033/ADR-025..028 ratification)",
       "tag": "Empirical/Declared"
     },
@@ -52627,7 +53663,7 @@
       "id": "M-863",
       "title": "Changed (2026-07-01: M-863 — AOT ratification act: RFC-0029 → Enacted, DN-15 → Resolved, E15-1/E25-1/E19-1 status flips)",
       "file": "CHANGELOG.md",
-      "line": 1538,
+      "line": 1644,
       "summary": "Changed (2026-07-01: M-863 — AOT ratification act: RFC-0029 → Enacted, DN-15 → Resolved, E15-1/E25-1/E19-1 status flips)",
       "tag": "Empirical/Declared"
     },
@@ -52637,7 +53673,7 @@
       "kind": "entry",
       "title": "Added (2026-07-01: Wave-1 — native-scheduler parallelism, dialect Dense/VSA, stdlib freeze, governance gates)",
       "file": "CHANGELOG.md",
-      "line": 1575,
+      "line": 1681,
       "summary": "Added (2026-07-01: Wave-1 — native-scheduler parallelism, dialect Dense/VSA, stdlib freeze, governance gates)",
       "tag": "Empirical/Declared"
     },
@@ -52647,7 +53683,7 @@
       "kind": "entry",
       "title": "Documentation (2026-07-01: README/docs decomposition — leaner landing pages, topic-split guides, accuracy pass)",
       "file": "CHANGELOG.md",
-      "line": 1634,
+      "line": 1740,
       "summary": "Documentation (2026-07-01: README/docs decomposition — leaner landing pages, topic-split guides, accuracy pass)",
       "tag": "Empirical/Declared"
     },
@@ -52658,7 +53694,7 @@
       "id": "E25-1",
       "title": "Added (2026-06-30: E25-1 staging-tier close-out — dynamic-VSA JIT, dialect Construct/Match/Swap, unified mutant-witnessed differential)",
       "file": "CHANGELOG.md",
-      "line": 1655,
+      "line": 1761,
       "summary": "Added (2026-06-30: E25-1 staging-tier close-out — dynamic-VSA JIT, dialect Construct/Match/Swap, unified mutant-witnessed differential)",
       "tag": "Empirical/Declared"
     },
@@ -52669,7 +53705,7 @@
       "id": "E25-1",
       "title": "Added (2026-06-30: E25-1 native-AOT full-coverage increments land — recursion, closures, Swap, Dense, VSA, trit.mul dialect)",
       "file": "CHANGELOG.md",
-      "line": 1704,
+      "line": 1810,
       "summary": "Added (2026-06-30: E25-1 native-AOT full-coverage increments land — recursion, closures, Swap, Dense, VSA, trit.mul dialect)",
       "tag": "Empirical/Declared"
     },
@@ -52680,7 +53716,7 @@
       "id": "RFC-0039",
       "title": "Added (2026-06-30: RFC-0039 — Native Dense & VSA Codegen, Accepted)",
       "file": "CHANGELOG.md",
-      "line": 1798,
+      "line": 1904,
       "summary": "Added (2026-06-30: RFC-0039 — Native Dense & VSA Codegen, Accepted)",
       "tag": "Empirical/Declared"
     },
@@ -52690,7 +53726,7 @@
       "kind": "entry",
       "title": "Fixed (2026-06-30: branch-guard PreToolUse hook — worktree resolution)",
       "file": "CHANGELOG.md",
-      "line": 1817,
+      "line": 1923,
       "summary": "Fixed (2026-06-30: branch-guard PreToolUse hook — worktree resolution)",
       "tag": "Empirical/Declared"
     },
@@ -52700,7 +53736,7 @@
       "kind": "entry",
       "title": "Added (2026-06-30: concurrent-PR pattern operationalized as parameterized skills — `/wave`, `/pr-land`, `/worktree-guard`)",
       "file": "CHANGELOG.md",
-      "line": 1829,
+      "line": 1935,
       "summary": "Added (2026-06-30: concurrent-PR pattern operationalized as parameterized skills — `/wave`, `/pr-land`, `/worktree-guard`)",
       "tag": "Empirical/Declared"
     },
@@ -52711,7 +53747,7 @@
       "id": "ADR-034",
       "title": "Changed (2026-06-30: ADR-034 — native AOT re-gated INTO `lang 1.0.0`)",
       "file": "CHANGELOG.md",
-      "line": 1852,
+      "line": 1958,
       "summary": "Changed (2026-06-30: ADR-034 — native AOT re-gated INTO `lang 1.0.0`)",
       "tag": "Empirical/Declared"
     },
@@ -52722,7 +53758,7 @@
       "id": "RFC-0038",
       "title": "Changed (2026-06-29: RFC-0038 ratified — `Proposed → Accepted`)",
       "file": "CHANGELOG.md",
-      "line": 1875,
+      "line": 1981,
       "summary": "Changed (2026-06-29: RFC-0038 ratified — `Proposed → Accepted`)",
       "tag": "Empirical/Declared"
     },
@@ -52733,7 +53769,7 @@
       "id": "RFC-0038",
       "title": "Changed (2026-06-29: RFC-0038 §8.8 — colony trust topology + #772 review fixes, M-849)",
       "file": "CHANGELOG.md",
-      "line": 1886,
+      "line": 1992,
       "summary": "Changed (2026-06-29: RFC-0038 §8.8 — colony trust topology + #772 review fixes, M-849)",
       "tag": "Empirical/Declared"
     },
@@ -52744,7 +53780,7 @@
       "id": "DN-65",
       "title": "Added (2026-06-29: DN-65 — scoped-PR decomposition & per-PR toolchain scoping workflow policy, M-848)",
       "file": "CHANGELOG.md",
-      "line": 1903,
+      "line": 2009,
       "summary": "Added (2026-06-29: DN-65 — scoped-PR decomposition & per-PR toolchain scoping workflow policy, M-848)",
       "tag": "Empirical/Declared"
     },
@@ -52755,7 +53791,7 @@
       "id": "RFC-0038",
       "title": "Changed (2026-06-29: RFC-0038 §8.4–§8.7 — enforcement granularity, scope resolution, and the deviation manifest, M-847)",
       "file": "CHANGELOG.md",
-      "line": 1916,
+      "line": 2022,
       "summary": "Changed (2026-06-29: RFC-0038 §8.4–§8.7 — enforcement granularity, scope resolution, and the deviation manifest, M-847)",
       "tag": "Empirical/Declared"
     },
@@ -52766,7 +53802,7 @@
       "id": "M-832",
       "title": "Added (2026-06-29: VSA proof-discovery — all three effective-`m` models + both Lean 4 and Liquid Haskell, M-832)",
       "file": "CHANGELOG.md",
-      "line": 1933,
+      "line": 2039,
       "summary": "Added (2026-06-29: VSA proof-discovery — all three effective-`m` models + both Lean 4 and Liquid Haskell, M-832)",
       "tag": "Empirical/Declared"
     },
@@ -52777,7 +53813,7 @@
       "id": "DN-64",
       "title": "Added (2026-06-29: DN-64 §7 maintainer dispositions — RFC-0038 inject-mode security axis, research/26+27 R&D records, VSA-bounds GPU experiment, M-827…M-846)",
       "file": "CHANGELOG.md",
-      "line": 1949,
+      "line": 2055,
       "summary": "Added (2026-06-29: DN-64 §7 maintainer dispositions — RFC-0038 inject-mode security axis, research/26+27 R&D records, VSA-bounds GPU experiment, M-827…M-846)",
       "tag": "Empirical/Declared"
     },
@@ -52788,7 +53824,7 @@
       "id": "M-822",
       "title": "Added (2026-06-29: serial-lane closeout — M-822 partial application, M-826 tuple type, M-823 or-patterns + R20-Q5, M-824 DN-54 design-pass, M-825 backbone)",
       "file": "CHANGELOG.md",
-      "line": 1987,
+      "line": 2093,
       "summary": "Added (2026-06-29: serial-lane closeout — M-822 partial application, M-826 tuple type, M-823 or-patterns + R20-Q5, M-824 DN-54 design-pass, M-825 backbone)",
       "tag": "Empirical/Declared"
     },
@@ -52799,7 +53835,7 @@
       "id": "DN-64",
       "title": "Added (2026-06-29: DN-64 — language-design synthesis exploration note, research aside)",
       "file": "CHANGELOG.md",
-      "line": 2019,
+      "line": 2125,
       "summary": "Added (2026-06-29: DN-64 — language-design synthesis exploration note, research aside)",
       "tag": "Empirical/Declared"
     },
@@ -52810,7 +53846,7 @@
       "id": "DN-57",
       "title": "Changed (2026-06-29: DN-57 → Enacted — delimiter semantics surface complete)",
       "file": "CHANGELOG.md",
-      "line": 2031,
+      "line": 2137,
       "summary": "Changed (2026-06-29: DN-57 → Enacted — delimiter semantics surface complete)",
       "tag": "Empirical/Declared"
     },
@@ -52821,7 +53857,7 @@
       "id": "M-819",
       "title": "Added (2026-06-29: next-wave — M-819 `mycfmt --flatten`, M-820 `myc --stream`, M-677 effect budgets, M-668 DN-63 R2 planning)",
       "file": "CHANGELOG.md",
-      "line": 2044,
+      "line": 2150,
       "summary": "Added (2026-06-29: next-wave — M-819 `mycfmt --flatten`, M-820 `myc --stream`, M-677 effect budgets, M-668 DN-63 R2 planning)",
       "tag": "Empirical/Declared"
     },
@@ -52832,7 +53868,7 @@
       "id": "M-818",
       "title": "Changed (2026-06-29: strm — M-818 mandatory `;` component terminator (DN-57); closes M-821)",
       "file": "CHANGELOG.md",
-      "line": 2088,
+      "line": 2194,
       "summary": "Changed (2026-06-29: strm — M-818 mandatory `;` component terminator (DN-57); closes M-821)",
       "tag": "Empirical/Declared"
     },
@@ -52843,7 +53879,7 @@
       "id": "DN-54",
       "title": "Added (2026-06-29: lwd — M-812-cont DN-54 `lower`/`derive` elaboration + KC-3 kernel-growth guard)",
       "file": "CHANGELOG.md",
-      "line": 2115,
+      "line": 2221,
       "summary": "Added (2026-06-29: lwd — M-812-cont DN-54 `lower`/`derive` elaboration + KC-3 kernel-growth guard)",
       "tag": "Empirical/Declared"
     },
@@ -52854,7 +53890,7 @@
       "id": "M-704",
       "title": "Added (2026-06-29: hof — M-704 dynamic higher-order functions / closures, RFC-0024 §4A)",
       "file": "CHANGELOG.md",
-      "line": 2141,
+      "line": 2247,
       "summary": "Added (2026-06-29: hof — M-704 dynamic higher-order functions / closures, RFC-0024 §4A)",
       "tag": "Empirical/Declared"
     },
@@ -52865,7 +53901,7 @@
       "id": "RFC-0020",
       "title": "Changed (2026-06-29: s10 — RFC-0020 carve-out enactment (M-707) + RFC-0030 grammar completeness (M-706))",
       "file": "CHANGELOG.md",
-      "line": 2172,
+      "line": 2278,
       "summary": "Changed (2026-06-29: s10 — RFC-0020 carve-out enactment (M-707) + RFC-0030 grammar completeness (M-706))",
       "tag": "Empirical/Declared"
     },
@@ -52876,7 +53912,7 @@
       "id": "M-664",
       "title": "Added (2026-06-28: srf — M-664 `consume` expression + inherent `impl T { … }` blocks)",
       "file": "CHANGELOG.md",
-      "line": 2198,
+      "line": 2304,
       "summary": "Added (2026-06-28: srf — M-664 `consume` expression + inherent `impl T { … }` blocks)",
       "tag": "Empirical/Declared"
     },
@@ -52887,7 +53923,7 @@
       "id": "DN-58",
       "title": "Added (2026-06-28: prm wave — `fuse` (data) + `reclaim` EXECUTE three-way; DN-58 → Enacted, M-710/M-817 done)",
       "file": "CHANGELOG.md",
-      "line": 2228,
+      "line": 2334,
       "summary": "Added (2026-06-28: prm wave — `fuse` (data) + `reclaim` EXECUTE three-way; DN-58 → Enacted, M-710/M-817 done)",
       "tag": "Empirical/Declared"
     },
@@ -52898,7 +53934,7 @@
       "id": "DN-40",
       "title": "Changed (2026-06-28: `hrd` — DN-40 A1/A2/A3 doc-drift closure; code already landed, docs reconciled)",
       "file": "CHANGELOG.md",
-      "line": 2261,
+      "line": 2367,
       "summary": "Changed (2026-06-28: `hrd` — DN-40 A1/A2/A3 doc-drift closure; code already landed, docs reconciled)",
       "tag": "Empirical/Declared"
     },
@@ -52909,7 +53945,7 @@
       "id": "M-745",
       "title": "Added (2026-06-28: ops kickoff — M-745 angle/shift operators wired in `mycelium-l1`)",
       "file": "CHANGELOG.md",
-      "line": 2280,
+      "line": 2386,
       "summary": "Added (2026-06-28: ops kickoff — M-745 angle/shift operators wired in `mycelium-l1`)",
       "tag": "Empirical/Declared"
     },
@@ -52920,7 +53956,7 @@
       "id": "ADR-033",
       "title": "Added (2026-06-28: r4v + ADR-033 FLAG-1 integration wave — fuse/reclaim/tier L1 surface ACTIVE; ADR-033 full-sig encoding landed)",
       "file": "CHANGELOG.md",
-      "line": 2311,
+      "line": 2417,
       "summary": "Added (2026-06-28: r4v + ADR-033 FLAG-1 integration wave — fuse/reclaim/tier L1 surface ACTIVE; ADR-033 full-sig encoding landed)",
       "tag": "Empirical/Declared"
     },
@@ -52930,7 +53966,7 @@
       "kind": "entry",
       "title": "Added (2026-06-28: obj+low integration wave — `object`/`via` + `lower`/`derive` surface, Rust-first)",
       "file": "CHANGELOG.md",
-      "line": 2347,
+      "line": 2453,
       "summary": "Added (2026-06-28: obj+low integration wave — `object`/`via` + `lower`/`derive` surface, Rust-first)",
       "tag": "Empirical/Declared"
     },
@@ -52940,7 +53976,7 @@
       "kind": "entry",
       "title": "Added (2026-06-28: maintainer ratification — 8 design vehicles → Accepted, decisions recorded)",
       "file": "CHANGELOG.md",
-      "line": 2381,
+      "line": 2487,
       "summary": "Added (2026-06-28: maintainer ratification — 8 design vehicles → Accepted, decisions recorded)",
       "tag": "Empirical/Declared"
     },
@@ -52950,7 +53986,7 @@
       "kind": "entry",
       "title": "Older entries",
       "file": "CHANGELOG.md",
-      "line": 2392,
+      "line": 2498,
       "summary": "Older entries",
       "tag": "Empirical/Declared"
     },
@@ -53072,6 +54108,46 @@
       "file": ".claude/skills/security-review/SKILL.md",
       "line": 1,
       "summary": "Security review for the Mycelium repo, scaled to the change. Covers secrets, supply-chain (pinned deps, no curl|bash, lockfile integrity), shell/CI safety, input handling, and — for code — the usual…",
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "sk--tero-cite",
+      "family": "skill",
+      "kind": "skill",
+      "title": "tero-cite",
+      "file": ".claude/skills/tero-cite/SKILL.md",
+      "line": 1,
+      "summary": "Get the resolvable citations for a mycelium-tero query — provenance only (anchor + file:line + the cited claim's guarantee tag), without the full item bodies. The provenance-first view of the…",
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "sk--tero-explain",
+      "family": "skill",
+      "kind": "skill",
+      "title": "tero-explain",
+      "file": ".claude/skills/tero-explain/SKILL.md",
+      "line": 1,
+      "summary": "Get the EXPLAIN trace for a mycelium-tero query — why these sources, in what order: the candidate count, the ordering rule(s) applied, a per-hit reason, and any cross-reference edges that could not be…",
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "sk--tero-query",
+      "family": "skill",
+      "kind": "skill",
+      "title": "tero-query",
+      "file": ".claude/skills/tero-query/SKILL.md",
+      "line": 1,
+      "summary": "Query the mycelium-tero transparent memory API (DN-87 / E39-1) for cited answers about this project's decisions, issues, docs, changelog, and skills — over MCP or HTTP, from any agent platform. Every…",
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "sk--tero-refresh",
+      "family": "skill",
+      "kind": "skill",
+      "title": "tero-refresh",
+      "file": ".claude/skills/tero-refresh/SKILL.md",
+      "line": 1,
+      "summary": "Reload the mycelium-tero memory API's served index from disk after the committed docs/tero-index/index.json has been regenerated — the freshness operation of the transparent memory API (DN-87 /…",
       "tag": "Empirical/Declared"
     },
     {
