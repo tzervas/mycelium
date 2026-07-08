@@ -1338,6 +1338,19 @@ impl Elab<'_> {
             // artifact (G2).
             Expr::Wild(body) => self.elab_wild(stack, scope, body),
             Expr::Spore(_) => residual(site, "`spore` is deferred (E2-5/M-260)"),
+            // RFC-0034 §10/§10.1 (CU-5): `wrapping { … }` is **live through the L1 tree-walking
+            // evaluator** (`crate::eval`, which elects `eval_wrapping` for the enclosed ops), but its
+            // **Core-IR lowering is staged**: `mycelium_core::Node` has no wrapping-mode marker and the
+            // `mycelium-interp` small-step machine's `Node::Op` dispatch does not yet elect
+            // `eval_wrapping`. Rather than emit a Core `Op` the interpreter would reject (or a new L0
+            // node — KC-3 forbids), refuse here **never-silently** (G2) — disclosed, never faked as
+            // wired. Wiring the Core path is a `mycelium-interp` follow-on (FLAG-cu5-core-interp-emit).
+            Expr::Wrapping(_) => residual(
+                site,
+                "`wrapping { … }` evaluates through the L1 interpreter but has no Core-IR lowering yet \
+                 — the `mycelium-interp` `Node::Op` dispatch does not elect `eval_wrapping` (RFC-0034 \
+                 §10.1; a follow-on). Staged, never silent (G2/KC-3).",
+            ),
             // M-904 (DN-71 Model S §4.3, maintainer-accepted 2026-07-02): `consume <expr>` lowers as
             // the **observational-identity move** through existing paths — the affine obligation is
             // discharged statically at check time (M-903's tracker), and `consume` is already

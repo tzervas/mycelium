@@ -7300,7 +7300,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 483,
+      "line": 485,
       "summary": "RFC-0024 §4A.6 (M-704; house rule #2): the EXPLAIN record of one closure lowering — which arrow,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7619,7 +7619,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 867,
+      "line": 886,
       "summary": "A `match` arm.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7729,7 +7729,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 881,
+      "line": 900,
       "summary": "One `hypha <expr>` spawn inside a [`Expr::Colony`] block — a single concurrent execution unit",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7773,7 +7773,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast::Literal",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 976,
+      "line": 995,
       "summary": "A binary literal from its verbatim digit/`_` string (the `…` of `0b…`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7784,7 +7784,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast::Literal",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 1000,
+      "line": 1019,
       "summary": "A float literal from its verbatim decimal source text (ADR-040 / M-897).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7795,7 +7795,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast::Literal",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 992,
+      "line": 1011,
       "summary": "A string literal from its **decoded** content.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7806,7 +7806,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast::Literal",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 984,
+      "line": 1003,
       "summary": "A ternary literal from its verbatim `+0-` string, MSB-first (the inner text of `<…>`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7916,7 +7916,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 898,
+      "line": 917,
       "summary": "A pattern.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8345,7 +8345,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 7260,
+      "line": 7338,
       "summary": "The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8356,7 +8356,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 7209,
+      "line": 7287,
       "summary": "The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8378,7 +8378,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 7250,
+      "line": 7328,
       "summary": "Canonicalize a surface VSA model ident to the **kernel model id** (`Repr::Vsa { model }` —",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8730,7 +8730,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::mono",
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 392,
+      "line": 394,
       "summary": "The **EXPLAIN record** of a single HOF defunctionalization (RFC-0024 §4, M-687): which",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -9082,7 +9082,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::token",
       "file": "crates/mycelium-l1/src/token.rs",
-      "line": 374,
+      "line": 380,
       "summary": "Scalar-kind keyword payload.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -9093,7 +9093,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::token",
       "file": "crates/mycelium-l1/src/token.rs",
-      "line": 400,
+      "line": 406,
       "summary": "A token with its starting position.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -9104,7 +9104,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::token",
       "file": "crates/mycelium-l1/src/token.rs",
-      "line": 387,
+      "line": 393,
       "summary": "Guarantee-strength keyword payload.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -9126,7 +9126,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::token",
       "file": "crates/mycelium-l1/src/token.rs",
-      "line": 409,
+      "line": 415,
       "summary": "Resolve an identifier-shaped lexeme to its keyword token, or `None` if it is a plain identifier.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -10864,7 +10864,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp",
       "file": "crates/mycelium-lsp/src/semantic.rs",
-      "line": 220,
+      "line": 221,
       "summary": "Build the `textDocument/semanticTokens/full` result for `src`: the LSP relative-delta encoding",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27518,7 +27518,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 485,
+      "line": 500,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27529,7 +27529,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 1383,
+      "line": 1500,
       "summary": "`enum` -> `type_item` (`type Name = C1 | C2(T1, T2) | ...;`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27540,7 +27540,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 688,
+      "line": 703,
       "summary": "Translate one Rust expression.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27551,7 +27551,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 1607,
+      "line": 1724,
       "summary": "Top-level `fn` -> `fn_item`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27562,7 +27562,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 1757,
+      "line": 1874,
       "summary": "`impl` -> `impl_item` (trait-instance or inherent form).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27573,7 +27573,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 1508,
+      "line": 1625,
       "summary": "`struct` -> a single-constructor `type_item`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27584,7 +27584,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 1642,
+      "line": 1759,
       "summary": "`trait` -> `trait_item` (`trait Name { fn sig1; fn sig2; ...",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27606,7 +27606,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 1279,
+      "line": 1396,
       "summary": "Translate one Rust pattern.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -36599,7 +36599,7 @@
     },
     {
       "symbol": "mycelium_l1::mono::ClosureSpecialization",
-      "reason": "dedup-alias: same definition as `mycelium_l1::ClosureSpecialization` at crates/mycelium-l1/src/mono.rs:483 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::ClosureSpecialization` at crates/mycelium-l1/src/mono.rs:485 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::mono::ClosureSpecialization::clone",
@@ -38679,7 +38679,7 @@
     },
     {
       "symbol": "mycelium_lsp::semantic::semantic_tokens_full",
-      "reason": "dedup-alias: same definition as `mycelium_lsp::semantic_tokens_full` at crates/mycelium-lsp/src/semantic.rs:220 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_lsp::semantic_tokens_full` at crates/mycelium-lsp/src/semantic.rs:221 — one canonical row kept"
     },
     {
       "symbol": "mycelium_lsp::semantic::semantic_tokens_legend",

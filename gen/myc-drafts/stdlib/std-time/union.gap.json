@@ -267,7 +267,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Compute the signed duration between two MONOTONIC instants (`later − earlier`).\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Exact`**, total. Both instants are on the same MONOTONIC clock source; the\"] # [doc = \" result is always representable because `u64::MAX - u64::MIN < i128::MAX`.\"] # [doc = \"\"] # [doc = \" Cross-source differences (e.g., `MonoInstant − WallInstant`) **do not exist** as a function —\"] # [doc = \" the typed distinction is enforced at compile time (spec §1 / RFC-0016 §4.4).\"] # [must_use] pub fn mono_diff (later : MonoInstant , earlier : MonoInstant) -> Duration { let span = (later . nanos as i128) - (earlier . nanos as i128) ; Duration { nanos : span } }",
-      "reason": "unsupported expression form `later . nanos as i128`",
+      "reason": "cast `later . nanos as i128` — operand type unknown: `as` fidelity requires a known operand type, but the operand is not a bare in-scope identifier whose type this transpiler can resolve without guessing (no general expression-typing pass; VR-5)",
       "item_name": "mono_diff"
     },
     {
@@ -287,7 +287,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Compute the duration between two LOGICAL instants (`later − earlier`).\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Exact`**, total. The LOGICAL clock is monotonic by construction (runtime-\"] # [doc = \" owned; RFC-0008 §4.7 / M-356), so this is always well-defined. The tick difference fits in\"] # [doc = \" `i128` for any pair of `u64` values.\"] # [must_use] pub fn logical_diff (later : LogicalInstant , earlier : LogicalInstant) -> Duration { let span = (later . tick as i128) - (earlier . tick as i128) ; Duration { nanos : span } }",
-      "reason": "unsupported expression form `later . tick as i128`",
+      "reason": "cast `later . tick as i128` — operand type unknown: `as` fidelity requires a known operand type, but the operand is not a bare in-scope identifier whose type this transpiler can resolve without guessing (no general expression-typing pass; VR-5)",
       "item_name": "logical_diff"
     },
     {
