@@ -23,7 +23,7 @@ prims), runtime half only — no `wrapping { }` parser surface yet (FLAG-cu5-sur
 verify-first correction (mitigation #14): the assumed "40-trit cap on `trit.*`" was inaccurate —
 `ternary::add`/`mul` are already arbitrary-width (digit-serial over `&[Trit]`), pinned by a width-80
 three-way test; the growable value form stays gated on E20-1 (FLAG-cu7-e20-1-gate). Transpiler (PR
-#1299, `checked_fraction` 5.79 to 7.76 percent, +15 items): `&`/`|` now emit `and`/`or` and `!=`/`>`
+no. 1299, `checked_fraction` 5.79 to 7.76 percent, +15 items): `&`/`|` now emit `and`/`or` and `!=`/`>`
 compose from the `eq`/`lt` prims (a house-rule-#4 correction — `ne`/`gt` are non-`pub` functions, not
 prims) when both operands resolve to a known `Binary{N}` via a new type environment (a review-found
 HIGH bug where the gate mis-fired on shadowed/pattern-bound names was fixed by env invalidation); a
@@ -96,10 +96,10 @@ The project corpus as a generated, provenance-carrying encoding, served platform
   regenerated, `mycelium-tero` registered in `deps-strata` (stratum 7 / tier `tools`). Follow-on
   **M-1020** minted: native HTTPS/TLS for the HTTP front.
 
-_Note: the three entries above are integration's already-curated/condensed summaries of the same
-promoted work dev continues to describe in granular form below (M-1013 STEP 2 through the DN-87
+*Note: the three entries above are the staging tier's already-curated/condensed summaries of the same
+promoted work the wave continues to describe in granular form below (M-1013 STEP 2 through the DN-87
 entries, and M-1006 phase-1); preserved here per the append-only union rule (never drop either side)
-even though they narrate overlapping content — a follow-up editorial pass may consolidate._
+even though they narrate overlapping content — a follow-up editorial pass may consolidate.*
 
 ### M-1013 STEP 2 — semcore Stage-5 differential retrofit to harness marshalling (2026-07-07)
 
