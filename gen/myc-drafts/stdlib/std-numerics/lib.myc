@@ -63,3 +63,6 @@ nodule std.numerics;
 //
 // Every failure mode is an explicit variant — no silent coercion, no fabricated default.
 type NumErr = BadEps | BadDelta | NoRule | NormMismatch | Overflow;
+
+// Structured verdict for the tier-i re-validation checker (spec §3 `CheckErr`; RFC-0013).
+type CheckErr = Rejected(Float, Float) | Malformed;
