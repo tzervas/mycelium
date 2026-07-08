@@ -556,3 +556,150 @@ pub fn cmp_signed(a: &[bool], b: &[bool]) -> Option<Ordering> {
     // Flip the sign bit (negatives sort below non-negatives), then MSB-first lexicographic.
     Some((!a[0], &a[1..]).cmp(&(!b[0], &b[1..])))
 }
+
+// --- ADR-040 §2.4 (CU-3): never-silent Binary↔Float conversions -------------------------------
+//
+// `checked_uint_to_f64`/`checked_f64_to_uint` are the kernel codecs behind `mycelium-interp`'s
+// `bin.to_flt`/`flt.to_bin` prims (RFC-0033/ADR-040; the "target-width prim" shape of
+// `bit.width_cast`, DN-41). Both directions read `Binary` as the **unsigned** magnitude
+// ([`bits_to_uint`]/[`uint_to_bits`], not the two's-complement [`bits_to_int`]/[`int_to_bits`]) —
+// `Binary` is sign-free (ADR-028: signedness is a property of the *op*), mirroring how
+// `bit.width_cast` already treats it, rather than the *signed* two's-complement reading `bin.mul`/
+// `bin.add` use. A signed variant (paralleling `bit.mul` vs `bin.mul`) is a natural, undecided
+// follow-on left for a future CU — flagged, never guessed (G2/VR-5).
+//
+// **Never-silent, in both directions:**
+// - `bin → flt` is **checked-exact**: refuses (`None`) when the magnitude exceeds
+//   [`FLOAT_EXACT_MAX`] (`2^53`, binary64's exact-integer bound — ADR-040 §2.4). The **lossy**
+//   rounding conversion for magnitudes beyond that bound is explicitly **out of scope here** — it
+//   is a reified *swap* carrying its rounding bound (ADR-040 §2.4/§5), not a prim; this module adds
+//   no such swap (see the CU-3 leaf report FLAG).
+// - `flt → bin` refuses (`None`) on NaN, ±inf, a negative value (no unsigned `Binary`
+//   representation), a nonzero fractional part (dropping it would be a silent truncation — G2), or
+//   an integer magnitude that does not fit the target `Binary{M}` width. Never a silent
+//   round/truncate-by-default (ADR-040 §2.4).
+
+/// The current [`checked_uint_to_f64`]/[`checked_f64_to_uint`] operand-width cap (`n ≤ 64`),
+/// mirroring [`MUL_MAX_WIDTH`]/[`TC_MAX_WIDTH`] — the same `u64` exactness bound [`bits_to_uint`]/
+/// [`uint_to_bits`] already declare.
+pub const FLOAT_CONV_MAX_WIDTH: usize = 64;
+
+/// The largest non-negative integer magnitude IEEE-754 binary64 represents **exactly** — every
+/// integer in `[0, 2^53]` has an exact binary64 encoding; `2^53 + 1` does not (ADR-040 §2.4, the
+/// classic "a double loses integer precision past `2^53`" bound).
+pub const FLOAT_EXACT_MAX: u64 = 1u64 << 53;
+
+/// `Binary{N} → Float`, checked-exact (ADR-040 §2.4; CU-3). Reads `bits` as the **unsigned**
+/// magnitude ([`bits_to_uint`], sign-free per ADR-028); `None` when `bits.len()` exceeds
+/// [`FLOAT_CONV_MAX_WIDTH`] or the magnitude exceeds [`FLOAT_EXACT_MAX`] — never a silent lossy
+/// round (that direction is a reified swap, not this prim; see the module note above).
+#[must_use]
+pub fn checked_uint_to_f64(bits: &[bool]) -> Option<f64> {
+    if bits.len() > FLOAT_CONV_MAX_WIDTH {
+        return None;
+    }
+    let magnitude = bits_to_uint(bits);
+    if magnitude > FLOAT_EXACT_MAX {
+        return None;
+    }
+    // Exact: `magnitude <= 2^53` is losslessly representable in binary64 (ADR-040 §2.4).
+    Some(magnitude as f64)
+}
+
+/// `Float → Binary{M}`, never-silent (ADR-040 §2.4; CU-3). `None` when `value` is NaN, ±inf,
+/// negative (`Binary` is unsigned/sign-free — ADR-028), has a nonzero fractional part (never a
+/// silent truncation — G2), its magnitude exceeds [`FLOAT_EXACT_MAX`] (so the value itself is not a
+/// binary64-exact integer — no cast could be trusted), or does not fit the unsigned `m`-bit target
+/// (`m` capped at [`FLOAT_CONV_MAX_WIDTH`], mirroring the reverse direction).
+#[must_use]
+pub fn checked_f64_to_uint(value: f64, m: u32) -> Option<u64> {
+    if (m as usize) > FLOAT_CONV_MAX_WIDTH
+        || !value.is_finite()
+        || value < 0.0
+        || value.fract() != 0.0
+        || value > FLOAT_EXACT_MAX as f64
+    {
+        return None;
+    }
+    // Exact: `value` is a non-negative integer `<= 2^53` here, within `u64`'s exact range.
+    let magnitude = value as u64;
+    if m < 64 && magnitude >= (1u64 << m) {
+        return None; // does not fit the unsigned m-bit target — never a silent truncation.
+    }
+    Some(magnitude)
+}
+
+// --- RFC-0034 §10 (CU-5): the executable `wrapping` construct — modular two's-complement --------
+//
+// `wrapping_add`/`wrapping_sub`/`wrapping_mul` are the kernel codecs behind the *named, explicit*
+// Axis-B `wrapping` opt-out (M-791 landed the `Meta`/`WrappingOpt` marker; this closes the
+// evaluation half — see `mycelium-interp`'s `eval_wrapping` for the op-layer wiring). They share
+// [`add`]/[`sub`]/[`mul`]'s exact two's-complement operand contract (equal-width, `n ≤
+// TC_MAX_WIDTH`/`MUL_MAX_WIDTH`) but **never refuse on range** — a sum/difference/product outside
+// `B_n` wraps modulo `2^n` instead of returning `None`, the *declared*, explicitly-opted-into
+// semantics RFC-0034 §10 names. Reduction still refuses (`None`) on a structural mismatch (unequal
+// widths, an over-cap width) — the same never-silent posture as the non-wrapping ops for a
+// **malformed call**, distinct from the *declared* range opt-out.
+
+/// Reduce `value` modulo `2^n` and encode it as the `n`-bit two's-complement bit pattern
+/// (MSB-first) — the wrapping/modular reduction. Unlike [`int_to_bits`], this never refuses: every
+/// `i128` value maps to exactly one `n`-bit pattern. `n == 0` maps everything to the empty pattern
+/// (`B_0 = {0}`).
+fn wrap_to_bits(value: i128, n: u32) -> Vec<bool> {
+    if n == 0 {
+        return Vec::new();
+    }
+    let n = n as usize;
+    let modulus = 1i128 << n;
+    let u = value.rem_euclid(modulus);
+    let mut bits = vec![false; n];
+    for (i, slot) in bits.iter_mut().enumerate() {
+        *slot = (u >> (n - 1 - i)) & 1 == 1;
+    }
+    bits
+}
+
+/// Two's-complement fixed-width **wrapping** add (RFC-0034 §10; CU-5): the sum reduced modulo
+/// `2^n` into `B_n` instead of refusing out-of-range (contrast [`add`]). `None` only on a
+/// structural mismatch — `a.len() != b.len()` or an over-[`TC_MAX_WIDTH`] width — never on range.
+#[must_use]
+pub fn wrapping_add(a: &[bool], b: &[bool]) -> Option<Vec<bool>> {
+    if a.len() != b.len() || a.len() > TC_MAX_WIDTH {
+        return None;
+    }
+    let n = a.len() as u32;
+    let av = i128::from(bits_to_int(a));
+    let bv = i128::from(bits_to_int(b));
+    Some(wrap_to_bits(av + bv, n)) // never overflows i128 — |av|,|bv| <= 2^63.
+}
+
+/// Two's-complement fixed-width **wrapping** subtract (`a − b`, RFC-0034 §10; CU-5). Same
+/// structural-only refusal contract as [`wrapping_add`]; the difference wraps modulo `2^n` rather
+/// than refusing out-of-range (contrast [`sub`]).
+#[must_use]
+pub fn wrapping_sub(a: &[bool], b: &[bool]) -> Option<Vec<bool>> {
+    if a.len() != b.len() || a.len() > TC_MAX_WIDTH {
+        return None;
+    }
+    let n = a.len() as u32;
+    let av = i128::from(bits_to_int(a));
+    let bv = i128::from(bits_to_int(b));
+    Some(wrap_to_bits(av - bv, n)) // never overflows i128 — |av|,|bv| <= 2^63.
+}
+
+/// Two's-complement fixed-width **wrapping** multiply (RFC-0034 §10; CU-5). Same structural-only
+/// refusal contract as [`wrapping_add`] (mirroring [`mul`]'s `MUL_MAX_WIDTH` cap); the product
+/// wraps modulo `2^n` rather than refusing out-of-range (contrast [`mul`]).
+#[must_use]
+pub fn wrapping_mul(a: &[bool], b: &[bool]) -> Option<Vec<bool>> {
+    if a.len() != b.len() || a.len() > MUL_MAX_WIDTH {
+        return None;
+    }
+    let n = a.len() as u32;
+    if n == 0 {
+        return Some(Vec::new()); // B_0 = {0}; 0 * 0 = 0, trivially in range.
+    }
+    let av = i128::from(bits_to_int(a));
+    let bv = i128::from(bits_to_int(b));
+    Some(wrap_to_bits(av * bv, n)) // never overflows i128 — see `mul`'s doc comment.
+}

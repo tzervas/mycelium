@@ -6574,6 +6574,54 @@ impl Cx<'_> {
         name: &str,
         args: &[Expr],
     ) -> Result<Option<(Ty, Expr)>, CheckError> {
+        // ADR-040 §2.4 (CU-3): the never-silent Binary↔Float conversions. Mixed-paradigm operands
+        // (unlike the uniform-Float shape the rest of this function checks below), so a dedicated
+        // pre-branch — `flt_to_bin` mirrors `width_cast`'s witness-operand shape (DN-41): the
+        // second operand's `Binary{M}` *width* is the result width, its bits unused.
+        if name == "bin_to_flt" {
+            if args.len() != 1 {
+                return self.err(format!(
+                    "`bin_to_flt` takes 1 operand, got {} (ADR-040 §2.4; CU-3)",
+                    args.len()
+                ));
+            }
+            let (vty, v2) = self.check(scope, &args[0], None)?;
+            if !matches!(vty, Ty::Binary(_)) {
+                return self.err(format!(
+                    "`bin_to_flt` operand must be a concrete `Binary{{N}}`, got {vty} (ADR-040 \
+                     §2.4 — a checked-exact conversion; never a default width)"
+                ));
+            }
+            return Ok(Some((Ty::Float, app_node(head, vec![v2]))));
+        }
+        if name == "flt_to_bin" {
+            if args.len() != 2 {
+                return self.err(format!(
+                    "`flt_to_bin` takes 2 operands, got {} (ADR-040 §2.4; CU-3)",
+                    args.len()
+                ));
+            }
+            let (vty, v2) = self.check(scope, &args[0], Some(&Ty::Float))?;
+            if !matches!(vty, Ty::Float) {
+                return self.err(format!(
+                    "`flt_to_bin` first (value) operand must be a `Float` (IEEE-754 binary64 — \
+                     ADR-040 §2.1), got {vty} (never a silent conversion; write a float literal \
+                     like `1.0`)"
+                ));
+            }
+            let (wty, w2) = self.check(scope, &args[1], None)?;
+            let Ty::Binary(Width::Lit(m)) = wty else {
+                return self.err(format!(
+                    "`flt_to_bin` width witness must be a concrete `Binary{{M}}` (only its width \
+                     is used), got {wty} (ADR-040 §2.4, the DN-41 witness shape; a width-variable \
+                     witness is refused)"
+                ));
+            };
+            return Ok(Some((
+                Ty::Binary(Width::Lit(m)),
+                app_node(head, vec![v2, w2]),
+            )));
+        }
         let is_cmp = matches!(
             name,
             "flt_lt" | "flt_le" | "flt_gt" | "flt_ge" | "flt_eq" | "flt_total_le"
@@ -7325,6 +7373,13 @@ pub fn prim_kernel_name(name: &str) -> Option<&'static str> {
         "flt_is_nan" => "flt.is_nan",
         "flt_is_finite" => "flt.is_finite",
         "flt_is_infinite" => "flt.is_infinite",
+        // ADR-040 §2.4 (CU-3): the never-silent Binary↔Float conversions — the "target-width
+        // prim" shape of `width_cast` (DN-41). `bin_to_flt` is checked-exact (unary,
+        // `Binary{N} -> Float`); `flt_to_bin` reads its target width off a witness operand
+        // (`Float, Binary{M} -> Binary{M}`), exactly like `width_cast`. Typed by the dedicated
+        // mixed-paradigm pre-branch in `try_check_float_prim` (not the uniform-Float loop below).
+        "bin_to_flt" => "bin.to_flt",
+        "flt_to_bin" => "flt.to_bin",
         // RFC-0003 §3/§4 / ADR-008 (M-892, `enb` Gap C): the model-dispatched VSA bind group —
         // kernel `mycelium-vsa`, per-model tags carried from the model's Value-level op (MAP-I/
         // BSC ops `Exact`; FHRR `unbind` `Empirical` with its trial-validated δ — VR-5, never

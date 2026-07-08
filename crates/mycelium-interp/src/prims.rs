@@ -27,7 +27,7 @@ use std::collections::BTreeMap;
 
 use mycelium_core::{
     binary, operation_hash, ternary, Bound, BoundBasis, BoundKind, FloatWidth, GuaranteeStrength,
-    Meta, NormKind, Payload, Provenance, Repr, Trit, Value,
+    Meta, NormKind, Payload, Provenance, Repr, Trit, Value, WrappingOpt,
 };
 use mycelium_dense::{DenseError, DenseSpace};
 use mycelium_numerics::{compose_error_bound, ErrorOp};
@@ -225,6 +225,11 @@ impl PrimRegistry {
         r.register("flt.is_nan", prim_flt_is_nan);
         r.register("flt.is_finite", prim_flt_is_finite);
         r.register("flt.is_infinite", prim_flt_is_infinite);
+        // ADR-040 §2.4 (CU-3): never-silent Binary↔Float conversions — the "target-width prim"
+        // shape of `bit.width_cast` (DN-41). `bin.to_flt` is checked-exact; `flt.to_bin` reads its
+        // target width off a witness operand, exactly as `bit.width_cast` does.
+        r.register("bin.to_flt", prim_bin_to_flt);
+        r.register("flt.to_bin", prim_flt_to_bin);
         // RFC-0003 §3/§4 / ADR-008 (M-892, `enb` Gap C): the VSA bind group — model-dispatched
         // (MAP-I/FHRR/BSC) on the operand's `Repr::Vsa` model id. The kernel (`mycelium-vsa`)
         // constructs the result `Value` with its honest per-model tag; the wrappers carry it
@@ -1093,6 +1098,107 @@ fn prim_bin_neg(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
     )
 }
 
+// --- RFC-0034 §10 (CU-5): the executable `wrapping` construct — eval-mode dispatch --------------
+//
+// M-791 landed the named, explicit Axis-B `wrapping` opt-out at the representation layer
+// (`Meta::with_wrapping`/`WrappingOpt`, `mycelium-core`) but explicitly flagged the **op-layer
+// wiring** — the evaluation path that actually *honors* the marker by electing modular wraparound
+// instead of the non-wrapping `Option`/`Result`/`SwapError` refusal — as a downstream task. This
+// closes that gap for `bin.add`/`bin.sub`/`bin.mul` (RFC-0034 §10). **No new `wrapping_*` prim
+// names are added** — `wrapping` is a *mode* dispatched here over the existing three ops, never a
+// distinct entry in the `Π` table (per the CU-5 task ruling, DN-34 §8.16).
+//
+// **Surface-syntax FLAG (CU-5 leaf report).** `mycelium-l1`'s `elab`/`checkty` have no parser/AST/
+// elaborator support for a `wrapping { … }` surface construct yet (grepped before landing this —
+// only the M-791 representation-layer marker exists anywhere in the crate). [`eval_wrapping`] is
+// the runtime half a future surface construct will dispatch through once that parser/elaborator
+// work lands; until then it is reachable directly (this function, and any test/tool that calls it)
+// rather than via `.myc` source — never faked as "wired end-to-end" when only the eval half is.
+
+/// Evaluate `prim` (one of `bin.add`/`bin.sub`/`bin.mul`) under the **named** `wrapping` opt-out
+/// (RFC-0034 §10): the result wraps modulo `2^n` into `B_n` instead of refusing out-of-range —
+/// mirroring [`prim_bin_add`]/[`prim_bin_sub`]/[`prim_bin_mul`]'s operand contract (equal-width,
+/// the same per-op width cap) but never their range refusal. Tagged **`Declared`** (a
+/// zero-magnitude `UserDeclared` bound, M-I4 — the explicit, developer-opted-into semantics; never
+/// a fabricated `Proven`/`Empirical` claim, VR-5) and carrying the [`WrappingOpt`] marker so the
+/// opt-out stays inspectable on the result ([`Meta::wrapping_opt`]). Any other `prim` name, or a
+/// structural mismatch (unequal widths, an over-cap width), is an explicit
+/// [`EvalError::PrimType`] — never a silent fallback to the non-wrapping refusal.
+pub fn eval_wrapping(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 2)?;
+    let a = as_bits(prim, args[0])?;
+    let b = as_bits(prim, args[1])?;
+    if a.len() != b.len() {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!("width mismatch: {} vs {} bits", a.len(), b.len()),
+        });
+    }
+    /// A wrapping-mode binary bitvector op (`wrapping_add`/`wrapping_sub`/`wrapping_mul`'s shared
+    /// shape) — named to keep `eval_wrapping`'s dispatch tuple within clippy's complexity budget.
+    type WrappingOp = fn(&[bool], &[bool]) -> Option<Vec<bool>>;
+    let (op, cap): (WrappingOp, usize) = match prim {
+        "bin.add" => (binary::wrapping_add, binary::TC_MAX_WIDTH),
+        "bin.sub" => (binary::wrapping_sub, binary::TC_MAX_WIDTH),
+        "bin.mul" => (binary::wrapping_mul, binary::MUL_MAX_WIDTH),
+        _ => {
+            return Err(EvalError::PrimType {
+                prim: prim.to_owned(),
+                why: "eval_wrapping only supports the wrapping mode over bin.add/bin.sub/bin.mul \
+                      (RFC-0034 §10 — no new wrapping_* prims)"
+                    .to_owned(),
+            });
+        }
+    };
+    if a.len() > cap {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!(
+                "width {} exceeds the {}-bit wrapping arithmetic cap",
+                a.len(),
+                cap
+            ),
+        });
+    }
+    // `op` never refuses on range — only ever on the width checks already validated above.
+    let out = op(a, b).expect("width already validated; wrapping ops never refuse on range");
+    wrapping_result(prim, args, args[0].repr().clone(), Payload::Bits(out))
+}
+
+/// Build a `wrapping`-tagged result (RFC-0034 §10; CU-5): `Declared` guarantee with a
+/// zero-magnitude `UserDeclared` bound (M-I4) — the explicit, developer-opted-into semantics,
+/// never a fabricated `Proven`/`Empirical` claim (VR-5) — and the [`WrappingOpt`] marker attached
+/// so the opt-out stays inspectable ([`Meta::wrapping_opt`]).
+fn wrapping_result(
+    prim: &str,
+    inputs: &[&Value],
+    repr: Repr,
+    payload: Payload,
+) -> Result<Value, EvalError> {
+    let provenance = Provenance::Derived {
+        op: operation_hash(prim),
+        inputs: inputs.iter().map(|v| v.content_hash()).collect(),
+    };
+    let bound = Bound {
+        kind: BoundKind::Error {
+            eps: 0.0,
+            norm: NormKind::Linf,
+        },
+        basis: BoundBasis::UserDeclared,
+    };
+    let meta = Meta::new(
+        provenance,
+        GuaranteeStrength::Declared,
+        Some(bound),
+        None,
+        None,
+        None,
+    )
+    .map_err(EvalError::Wf)?
+    .with_wrapping(WrappingOpt::new());
+    Value::new(repr, payload, meta).map_err(EvalError::Wf)
+}
+
 // --- RFC-0033 §4.1.2/§4.1.3 (M-767, `enb` Gap B): the signedness-split signed op set -------------
 //
 // `bin.div_s`/`bin.rem_s`/`bin.shr_s`/`cmp.lt_s` are the **signed** counterparts to the landed
@@ -1942,6 +2048,30 @@ fn flt_input_composable(v: &Value) -> bool {
 /// that is neither `Exact` nor the composable zero-deviation form is an explicit
 /// [`EvalError::ApproxCompositionUnsupported`] (never a fabricated bound — G2/VR-5).
 fn flt_result(prim: &str, inputs: &[&Value], out: f64) -> Result<Value, EvalError> {
+    empirical_flt_result(
+        prim,
+        inputs,
+        Repr::Float {
+            width: FloatWidth::F64,
+        },
+        Payload::Float(out),
+    )
+}
+
+/// Build a result for any op whose **intrinsic** is `Empirical` with the shared zero-deviation-
+/// vs-spec bound (ADR-040 §2.6 — arithmetic, comparison, *and* conversion prims all carry this
+/// posture, §2.6's "Conversions: range/exactness checks `Empirical`…" clause). Generalizes
+/// [`flt_result`] (always a `Float` output) to an arbitrary output `repr`/`payload`, shared with
+/// the CU-3 `bin.to_flt`/`flt.to_bin` conversion prims. Composability is the same rule
+/// [`flt_result`] always used: every input must be `Exact` or the zero-deviation `Empirical` form
+/// a prior `flt.*`/conversion op produced ([`flt_input_composable`]); anything else is an explicit
+/// [`EvalError::ApproxCompositionUnsupported`] refusal, never a fabricated bound (G2/VR-5).
+fn empirical_flt_result(
+    prim: &str,
+    inputs: &[&Value],
+    repr: Repr,
+    payload: Payload,
+) -> Result<Value, EvalError> {
     if !inputs.iter().all(|v| flt_input_composable(v)) {
         return Err(EvalError::ApproxCompositionUnsupported {
             prim: prim.to_owned(),
@@ -1962,14 +2092,7 @@ fn flt_result(prim: &str, inputs: &[&Value], out: f64) -> Result<Value, EvalErro
     // inconsistency refuses honestly instead of panicking (G2).
     let meta = Meta::new(provenance, strength, Some(flt_bound()), None, None, None)
         .map_err(EvalError::Wf)?;
-    Value::new(
-        Repr::Float {
-            width: FloatWidth::F64,
-        },
-        Payload::Float(out),
-        meta,
-    )
-    .map_err(EvalError::Wf)
+    Value::new(repr, payload, meta).map_err(EvalError::Wf)
 }
 
 /// Shared arity/operand extraction for the binary `flt.*` ops.
@@ -2221,6 +2344,98 @@ fn prim_flt_is_finite(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
 fn prim_flt_is_infinite(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
     let x = flt_unop(prim, args)?;
     flt_cmp_result(prim, args, x.is_infinite())
+}
+
+// --- ADR-040 §2.4 (CU-3): never-silent Binary↔Float conversions --------------------------------
+//
+// `bin.to_flt`/`flt.to_bin` are the kernel prims behind the surface `bin_to_flt`/`flt_to_bin`
+// (`checkty.rs::try_check_float_prim`) — the "target-width prim" shape of `bit.width_cast`
+// (DN-41), crossing the Binary/Float paradigms. Both read `Binary` as the **unsigned** magnitude
+// ([`binary::bits_to_uint`]/[`binary::uint_to_bits`], sign-free per ADR-028), mirroring
+// `bit.width_cast` rather than the *signed* two's-complement reading `bin.add`/`bin.mul` use — a
+// signed variant is a natural, undecided follow-on (flagged in the CU-3 leaf report, never
+// guessed). Tag **`Empirical`** on both (ADR-040 §2.6: "Conversions: range/exactness checks
+// `Empirical` via property tests on the documented bounds (2^53, target-range edges)"), carrying
+// the same zero-deviation-vs-spec bound the `flt.*` arithmetic/comparison groups use
+// ([`empirical_flt_result`]).
+//
+// **The lossy `bin→flt` rounding direction is explicitly out of scope.** For a `Binary{N}`
+// magnitude exceeding `2^53`, [`prim_bin_to_flt`] refuses rather than silently rounding — a lossy
+// conversion is a reified *swap* carrying its rounding bound (ADR-040 §2.4/§5), not a prim; no
+// such swap is added here (see the CU-3 leaf report FLAG: the swap machinery to carry that bound
+// does not yet exist in this crate).
+
+/// `bin.to_flt : Binary{N} → Float` — checked-exact never-silent conversion (ADR-040 §2.4; CU-3).
+/// A non-`Binary` operand is an explicit [`EvalError::PrimType`]; an over-cap width (`N >`
+/// [`binary::FLOAT_CONV_MAX_WIDTH`]) is likewise an explicit [`EvalError::PrimType`]; a magnitude
+/// exceeding the binary64 exact-integer bound (`2^53`) is an explicit [`EvalError::Overflow`] —
+/// never a silent lossy round.
+fn prim_bin_to_flt(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 1)?;
+    let bits = as_bits(prim, args[0])?;
+    if bits.len() > binary::FLOAT_CONV_MAX_WIDTH {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!(
+                "width {} exceeds the {}-bit bin.to_flt conversion cap (CU-3 scope)",
+                bits.len(),
+                binary::FLOAT_CONV_MAX_WIDTH
+            ),
+        });
+    }
+    let out = binary::checked_uint_to_f64(bits).ok_or_else(|| EvalError::Overflow {
+        prim: prim.to_owned(),
+    })?;
+    empirical_flt_result(
+        prim,
+        args,
+        Repr::Float {
+            width: FloatWidth::F64,
+        },
+        Payload::Float(out),
+    )
+}
+
+/// `flt.to_bin : (Float, Binary{M}) → Binary{M}` — never-silent conversion (ADR-040 §2.4; CU-3).
+/// The second operand is a **width witness** (only its `Binary{M}` width is read; its bits are
+/// ignored — exactly `bit.width_cast`'s shape, DN-41). Refuses with an explicit
+/// [`EvalError::PrimType`] on a non-`Float` first operand, an over-cap witness width, NaN, ±inf, a
+/// negative value, or a nonzero fractional part (dropping it would be a silent truncation);
+/// refuses with an explicit [`EvalError::Overflow`] when the integer magnitude does not fit the
+/// unsigned `M`-bit target or exceeds the binary64 exact-integer bound (`2^53`) — never a silent
+/// round/truncate-by-default. The result's guarantee threads off the **value** operand only (the
+/// witness contributes its width, not its guarantee — mirroring [`prim_width_cast`]).
+fn prim_flt_to_bin(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 2)?;
+    let value = as_float(prim, args[0])?;
+    let witness = as_bits(prim, args[1])?;
+    if witness.len() > binary::FLOAT_CONV_MAX_WIDTH {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!(
+                "witness width {} exceeds the {}-bit flt.to_bin conversion cap (CU-3 scope)",
+                witness.len(),
+                binary::FLOAT_CONV_MAX_WIDTH
+            ),
+        });
+    }
+    if !value.is_finite() || value < 0.0 || value.fract() != 0.0 {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!(
+                "flt.to_bin requires a non-negative, finite, integer-valued Float (got {value}) \
+                 — never a silent NaN/inf/fractional coercion (ADR-040 §2.4)"
+            ),
+        });
+    }
+    // `m` fits u32: `witness.len() <= FLOAT_CONV_MAX_WIDTH == 64` by the cap check above.
+    let m = u32::try_from(witness.len()).expect("witness width <= 64 fits u32");
+    let magnitude = binary::checked_f64_to_uint(value, m).ok_or_else(|| EvalError::Overflow {
+        prim: prim.to_owned(),
+    })?;
+    let out = binary::uint_to_bits(magnitude, m)
+        .expect("checked_f64_to_uint already verified magnitude fits the m-bit unsigned target");
+    empirical_flt_result(prim, &args[..1], args[1].repr().clone(), Payload::Bits(out))
 }
 
 // --- RFC-0003 §3/§4 / ADR-008 (M-892, `enb` Gap C): the VSA bind group ---------------------------

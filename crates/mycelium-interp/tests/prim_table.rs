@@ -150,15 +150,20 @@ fn every_interp_builtin_intrinsic_matches_its_composition_path() {
                 "prim `{name}`: the table's intrinsic must be the meet over the MAP-I/FHRR/BSC \
                  dispatch set of the mycelium-vsa kernel's per-model tags (VR-5)",
             );
-        } else if name.starts_with("flt.") {
-            // ADR-040 §2.6 (M-898): the scalar-float group routes through `flt_result`, whose
-            // per-op tag is the ratified `Empirical` host-conformance posture (the value-side
-            // twin — tag + zero-deviation bound — is guarded in `src/tests/prims.rs`).
+        } else if name.starts_with("flt.") || name == "bin.to_flt" {
+            // ADR-040 §2.6 (M-898/CU-3): the scalar-float group AND the Binary↔Float conversion
+            // pair (`bin.to_flt`/`flt.to_bin`) route through `empirical_flt_result` (the
+            // generalization of `flt_result`), whose per-op tag is the ratified `Empirical`
+            // host-conformance/conversion posture ("Conversions: range/exactness checks
+            // Empirical…" — the value-side twin, tag + zero-deviation bound, is guarded in
+            // `src/tests/prims.rs`). `bin.to_flt` doesn't start with `flt.` (it's Binary-namespaced
+            // on the input side) so it's named explicitly here; `flt.to_bin` already matches the
+            // `flt.` prefix.
             assert_eq!(
                 table.intrinsic(name),
                 Some(GuaranteeStrength::Empirical),
-                "prim `{name}`: the table's intrinsic must match flt_result's ADR-040 §2.6 \
-                 Empirical (VR-5)",
+                "prim `{name}`: the table's intrinsic must match empirical_flt_result's ADR-040 \
+                 §2.6 Empirical (VR-5)",
             );
         } else {
             assert_eq!(
