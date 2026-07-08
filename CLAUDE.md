@@ -714,7 +714,12 @@ Invoke with `/<name>`; they auto-engage when relevant.
   **`/tero-explain`** (the why-these-sources/ordering trace), **`/tero-refresh`** (reload the served index
   after `just tero-index`, needs the `refresh` token scope). **Offline fallback** (no server): grep the
   committed **`docs/tero-index/INDEX.md`** — the same rows the API serves. Auth is token-scoped, read-only
-  by default; never commit `TERO_TOKENS`.
+  by default; never commit `TERO_TOKENS`. **The portable `tero-mcp-lite` server (`packages/tero-mcp-lite/`)
+  is registered via the repo-root `.mcp.json`**, so the `mcp__tero__*` tools (`query_by_id`/
+  `query_by_status`/`query_by_kind`/`cross_ref`/`text_search`/`cite`/`explain`/`identify`/`refresh`) are
+  available directly in-session — no separate server start needed. Prefer them for cited memory over
+  grepping by hand; the offline `docs/tero-index/INDEX.md` grep above remains the fallback when the MCP
+  tools aren't available.
 
 The review skills share one rubric: `.claude/skills/_shared/review-rubric.md` (tiers, severity,
 report format). Posture is **advisory** — they recommend, they don't gate. The
@@ -728,6 +733,9 @@ report format). Posture is **advisory** — they recommend, they don't gate. The
 - `tools/github/` — issue/label/milestone bootstrap (`mcp-bootstrap.md`, `gh-bootstrap-local.sh`,
   `issues.yaml`, `idmap.tsv`).
 - `justfile`, `.pre-commit-config.yaml`, `scripts/` — the local/CI check tooling.
+- `packages/` — portable MCP-tooling packages meant to drop into any repo, not just this one:
+  `tero-mcp-lite/` (the Python-only, zero-dependency Layer-1 `tero` MCP server registered in the
+  repo-root `.mcp.json`; see `/tero-query` above), plus `GROK-HANDOFF.md` and `BACKLOG.md`.
 
 ## Auto-generated docs & the agent index
 
