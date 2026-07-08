@@ -88,6 +88,30 @@ enum MathErr { DivByZero, NegativeDomain, NonPositiveDomain, BadBase, PoleDomain
 > a `numerics`-owned wrapper is M-512's call, not settled here — `math` only commits to *carrying* the bound, never
 > dropping it.
 
+### 3.1. Width-generic binary arithmetic/bit-manipulation primitives (self-hosted Mycelium-lang, `lib/std/math.myc`)
+
+A *distinct layer* from the numeric function surface above: `lib/std/math.myc` (RFC-0031 §5 D4 Tier-1) exports **width-generic, total** binary arithmetic and bit-manipulation operations over `Binary{N}`, one definition per op, monomorphized to the call-site width (M-753 / DN-42). Unsigned addition/subtraction and bit operations are `Exact` over the whole `Binary{N}` domain; binary multiply is `Exact` on in-range products (overflow is explicit refusal). Bit-count operations (`popcount`/`clz`/`ctz`) are `Exact`. Differential agreement (L1-eval ≡ L0-interp ≡ AOT) is `Empirical` (trials, `std_math.rs`). **Never-silent (G2):** overflow/underflow are explicit refusals, width-mismatch is refused.
+
+```
+// Binary addition/subtraction (unsigned, never-silent overflow/underflow)
+fn badd{N}(a: Binary{N}, b: Binary{N}) => Binary{N}       // Err(Overflow) on carry-out
+fn bsub{N}(a: Binary{N}, b: Binary{N}) => Binary{N}       // Err(Overflow) on borrow
+
+// Binary bitwise logic (total, Exact)
+fn band{N}(a: Binary{N}, b: Binary{N}) => Binary{N}       // bitwise AND
+fn bor{N}(a: Binary{N}, b: Binary{N}) => Binary{N}        // bitwise OR
+fn bxor{N}(a: Binary{N}, b: Binary{N}) => Binary{N}       // bitwise XOR
+fn bnot{N}(a: Binary{N}) => Binary{N}                     // bitwise NOT (one's complement)
+
+// Binary multiply with overflow refusal (CU-1: RFC-0033 §4.1.2)
+fn bmul{N}(a: Binary{N}, b: Binary{N}) => Binary{N}       // Err(Overflow) on product > U_N (never modular wrap)
+
+// Bit-count / manipulation operations (total, Exact)
+fn bpopcount{N}(a: Binary{N}) => Binary{N}                // population count (set-bit count)
+fn bclz{N}(a: Binary{N}) => Binary{N}                     // count leading zeros (N for all-zero)
+fn bctz{N}(a: Binary{N}) => Binary{N}                     // count trailing zeros (N for all-zero)
+```
+
 ## 4. Guarantee matrix (the load-bearing deliverable — RFC-0016 §4.5)
 
 Rows = exported ops. To be encoded as a checked table (the RFC-0003 §4 / `bound.schema.json` template) and asserted
@@ -119,6 +143,10 @@ per build, never pre-claimed**, see below).
 | `tan` | `Bounded-ε` | `Err(PoleDomain)` | none | yes (bound + basis cert) |
 | `asin`/`acos` | `Bounded-ε` | `Err(OutOfDomain)` when `\|x\| > 1` | none | yes (bound + basis cert) |
 | `atan`/`atan2` | `Bounded-ε` | total in domain (`atan2`: `Err(Undefined)` at `(0,0)`) | none | yes (bound + basis cert) |
+| `bmul{N}` (unsigned binary multiply) | `Exact` | `Err(Overflow)` when product exceeds `U_N` — never a modular wrap | none | yes (the refusal record) |
+| `bpopcount{N}` (population count) | `Exact` | total (`Binary{N}` bit count) | none | n/a |
+| `bclz{N}` (count leading zeros) | `Exact` | total (`Binary{N}`, N for all-zero) | none | n/a |
+| `bctz{N}` (count trailing zeros) | `Exact` | total (`Binary{N}`, N for all-zero) | none | n/a |
 
 **Tag justification (VR-5 — downgrade rather than overclaim):**
 - **`Exact` rows** carry no accuracy semantics — exact integer/rational arithmetic, or a comparison/aggregation that
@@ -228,3 +256,5 @@ per build, never pre-claimed**, see below).
 - **2026-06-20 — Accepted (maintainer ratification, DN-07).** The maintainer ratified this Rust-first spec: the §4.5 guarantee matrix is asserted in tests, never-silent fallibility and honest per-op tags hold, and the open §7/§8 questions are design/scope calls, not contract violations. No guarantee tag was upgraded without a checked basis (VR-5). The Proven/Empirical rows were verified/aligned by M-377 (M-512 delivered) — dense elementwise Proven via the ADR-010 IEEE backward-error bound (finiteness side-condition guarded), accumulation rows held at Empirical; nothing upgraded on faith. Status moves *Implemented (Rust-first) — pending ratification → Accepted*. Append-only; no kernel change (KC-3).
 
 - **2026-06-27 — Disambiguation: `lib/std/math.myc` is a *distinct* self-hosted primitive surface, not this numeric spec (M-718, rsm S2).** This spec owns the **numeric** function surface (`abs`/`sqrt`/`exp`/`log`/`sin`/… over Int/Rat/Real, with the ε-bound transcendental family). The newly-landed `lib/std/math.myc` (v0.1.0) is a *separate, narrower* artifact: a **self-hosted width-generic arithmetic/logic primitive surface** — `badd`/`bsub`/`band`/`bor`/`bxor`/`bnot` over `Binary{N}` and `tadd`/`tsub`/`tmul`/`tneg` over `Ternary{M}` — wrapping the kernel bit/trit prims (RFC-0032 §5 D2; consumed via RFC-0031 §5 D4 Tier-1). It is **width-generic** (one definition, monomorphized to the call-site width; M-753 / DN-42) and executes three-way (`crates/mycelium-l1/tests/std_math.rs`; agreement `Empirical`). It is **not** `std.math`: no transcendentals, no ε/δ, and (flagged in the nodule, VR-5) **no division and no binary multiply** — the kernel surfaces no such prim, so a self-hosted one is deferred rather than faked. Overflow/underflow/out-of-range is an explicit never-silent `Overflow` refusal (G2), never a modular wrap. This entry only **records the disambiguation**; it does not change this spec's surface, status, or the M-502-gated numeric migration. Append-only; no kernel change (KC-3).
+
+- **2026-07-08 — Self-hosted binary multiply (`bmul{N}`) and bit-count surface now documented (CU-1/CU-6).** The `bmul{N}` surface (unsigned width-preserving multiply with never-silent `Overflow` refusal when product exceeds `U_N`) and the bit-count helpers (`bpopcount{N}`, `bclz{N}`, `bctz{N}`, all total and `Exact`) close arithmetic/logic gaps in the self-hosted primitive surface. The earlier 2026-06-27 note "**no division and no binary multiply**" is superseded: `bmul` is now available (kernel `bit.mul` prim landed, RFC-0033 §4.1.2); binary division remains deferred (kernel prims exist but the self-hosted width-generic surface awaits a future increment). Added to §3.1 surface-sketch and guarantee matrix (§4); differential agreement (L1-eval ≡ L0-interp ≡ AOT) is `Empirical` (trials, `lib/std/math.myc:81-95` + `crates/mycelium-l1/src/checkty.rs:7260-7281` + `crates/mycelium-interp/src/prims.rs:144-150`). This spec's status and scope remain unchanged. Append-only; no kernel change (KC-3).
