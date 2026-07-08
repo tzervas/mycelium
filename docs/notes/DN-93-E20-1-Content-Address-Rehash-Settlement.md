@@ -161,7 +161,7 @@ individual object, the unit of migration — a coordinated, one-repo-at-a-time f
 bidirectional translation table, staged to an end-state that removes the old scheme entirely. The
 strategic reason it is one-shot rather than per-object: **an object's name is the hash of its
 content-plus-transitive-dependencies, so you cannot rehash one object without its whole closure** — the
-coherent unit is the whole store, migrated once (`Declared`; https://git-scm.com/docs/hash-function-transition).
+coherent unit is the whole store, migrated once (`Declared`; <https://git-scm.com/docs/hash-function-transition>).
 Mycelium's content address is the same closure hash (`Node::content_hash`), so the same argument holds
 door-for-door: the coherent unit is *all reshaping doors at once*.
 
@@ -175,7 +175,7 @@ door-for-door: the coherent unit is *all reshaping doors at once*.
 
 **Precedent: Nix RFC 62 content-addressed derivations** — input-addressed and content-addressed store
 paths **coexist**, gated per-derivation behind an experimental flag, migrating incrementally with a
-permanent indirection layer (`Declared`; https://github.com/NixOS/rfcs/blob/master/rfcs/0062-content-addressed-paths.md).
+permanent indirection layer (`Declared`; <https://github.com/NixOS/rfcs/blob/master/rfcs/0062-content-addressed-paths.md>).
 
 - **Buys:** no coordination window; each door lands independently.
 - **Costs:** *N* migrations over the same closure-coupled address space = up to *N* flag-days for values
@@ -187,9 +187,9 @@ permanent indirection layer (`Declared`; https://github.com/NixOS/rfcs/blob/mast
 **Precedent: IPFS CIDv1** — a self-describing identifier (`multibase ‖ version ‖ multicodec ‖ multihash`)
 whose embedded version/codec lets the scheme evolve by minting new self-declaring addresses, old and new
 coexisting, **avoiding any flag-day** at the cost of every consumer handling multiple schemes forever
-(`Declared`; https://github.com/multiformats/cid). **Unison** is the limiting case: content-addressed,
+(`Declared`; <https://github.com/multiformats/cid>). **Unison** is the limiting case: content-addressed,
 **append-only immutable** identity where a "change" is an *addition* of new-hash content beside the old, so
-migration dissolves entirely (`Declared`; https://www.unison-lang.org/docs/the-big-idea/).
+migration dissolves entirely (`Declared`; <https://www.unison-lang.org/docs/the-big-idea/>).
 
 - **Buys:** no future rehash ever; new doors are additive by construction. Mycelium's `Canon` **already
   has a weak form** of this — frozen prefix tags make *additive* doors free (§3); D-Float exploits it.
