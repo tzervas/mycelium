@@ -1058,6 +1058,24 @@ Each carries never-silent semantics + property + conformance/three-way (L1/L0/AO
 `.myc` comparator/count surface `Exact`). **Status unchanged (Draft)** — a ladder phase; the kernel prims
 land on the normal `dev → integration → main` path (kernel unfrozen). (Append-only; VR-5; G2.)
 
+### §8.17 Lane C closure — CU-3/5/7 kernel prims + the transpiler's operand-gated emission and forward-mapped prim table (kickoff `trx2` E33-1/E32-1) — `Empirical`
+
+Records the landing of §8.16's in-progress worklist items 1–4, as two scoped leaf→`dev` PRs (#1300 kernel · #1299 transpiler), each `/pr-review`'d (a real HIGH correctness finding on #1299 was fixed before merge) and both witnesses green.
+
+**Kernel prim-gap closure (PR #1300; Π 66 → 68):**
+
+- **CU-3 — never-silent Binary↔Float conversions (landed).** Two new prims: `bin.to_flt` (`Binary{N} → Float`, checked-exact, refuses `|n| > 2^53`) and `flt.to_bin` (`(Float, Binary{M}) → Binary{M}`, width-witness shape à la `bit.width_cast`; refuses NaN/±inf/negative/fractional/out-of-target-width). Unsigned-magnitude (ADR-028), `Empirical` (ADR-040 §2.6). Kernel property/boundary + interp domain-refusal + full three-way (L1/L0/AOT — the AOT leg ran) tests. The lossy `bin→flt` rounding stays a reified swap, not a prim — **FLAG-cu3-lossy-swap** (the swap machinery to carry its bound does not exist yet; refused rather than faked) and **FLAG-cu3-signed-conv** (a signed variant is an undecided follow-on).
+- **CU-5 — executable `wrapping` eval-mode dispatch (landed, eval-half).** Modular (never-refusing, `Declared`-tagged) evaluation over `bin.add`/`sub`/`mul` (RFC-0034 §10); no new prims — a mode, not a Π entry. **FLAG-cu5-surface-syntax:** `mycelium-l1` has no parser/AST for a `wrapping { … }` construct yet (only the M-791 representation marker), so this lands the runtime half and the front-end surface is a separate follow-on.
+- **CU-7 — arbitrary-width ternary: a verify-first correction (landed).** The §8.16 "~40-trit cap on `trit.*`" was **inaccurate** (mitigation #14): `ternary::add`/`mul` are digit-serial over `&[Trit]` with no `i64` in the arithmetic (only the conversion utilities are `i64`-capped) — already arbitrary-width, overflow detected structurally. Landed a doc correction plus a width-80 three-way (L1/L0/AOT) test (double the assumed cap). **FLAG-cu7-e20-1-gate:** a genuinely growable (no fixed `N`) Ternary value form is coupled to the E20-1 content-address one-way doors (RFC-0033 defers it post-1.0), so only the decidable fixed-width part landed — the growable form was flagged, not guessed.
+
+**Transpiler operand-gated emission + forward-mapped prim table (PR #1299; `checked_fraction` 5.79% → 7.76%, +15 items):**
+
+Closes the transpiler-side half of §8.16 item 4. `&`/`|` now emit `and`/`or` (not the dead `band`/`bor`), and `!=`/`>` compose from the `eq`/`lt` prims directly — a house-rule-#4 correction of the plan's assumption: `ne`/`gt` are non-`pub` `.myc` *functions*, not prims, so a bare respelling is a no-op; the composition mirrors `cmp.myc`'s own `ne{N}`/`gt{N}` derivation. Gated on a new name→type environment so both operands must resolve to a known `Binary{N}`; a review-found HIGH bug (the gate mis-firing on `let`-shadowed / `match`-arm-bound names) was fixed by invalidating the env on those rebinds — the gate never fires on a stale or guessed type (VR-5). Adds `prim_map.rs` forward-mapping the known kernel surface: `flt_is_nan`/`is_finite`/`is_infinite` **wired** (`Binary{1}`→`Bool` bridged), and `wrapping_add`/`sub`/`mul` **PENDING-BACKEND** (mapped, never emitted — refuses with a gap until a surface exists). Also fixed a stale `map_type` gap: `f64`→`Float` (the grammar's real binary64 base_type, `mycelium.ebnf:251`), which alone unblocked `std-sys`'s libm wrappers (1→15 clean) and drove most of the lift. CU-1/CU-6 deliberately not bound via `Call`/`MethodCall` — no faithful Rust shape exists (Option-vs-direct-value and fixed-`u32`-vs-width-preserving mismatches).
+
+**Integration-tier follow-on (not yet done):** with the CU-3/CU-5 backend now on `dev`, the transpiler's `prim_map` PENDING-BACKEND rows can be flipped to wired and emissions upgraded `Declared`→`Empirical` where a differential now exists — deferred to the `dev → integration` promotion. The DN-56/DN-76 "Π = 38" figure remains stale; DN-34 §8.15–§8.17 track the live count (now 68).
+
+**Guarantee tags:** CU-3 prims `Empirical`; transpiler emission `Declared`; the `checked_fraction`/vet figures `Empirical` (myc-check-clean). **Status unchanged (Draft)** — a ladder phase on the normal `dev → integration → main` path. (Append-only; VR-5; G2.)
+
 ---
 
 ## Meta — changelog
@@ -1268,3 +1286,14 @@ land on the normal `dev → integration → main` path (kernel unfrozen). (Appen
   work**: CU-6 rotate/reverse (FLAG-math-3 — not a clean derivation), CU-8 atomics (memory-model RFC), CU-9
   Dense dtype (E20-1 rehash; `vsa_checks` desktop numbers ground it). **Status unchanged (Draft).**
   (Append-only; VR-5; G2.)
+- **2026-07-08 — §8.17 added: Lane C closure (CU-3/5/7 + transpiler operand-gated emission).** Records the
+  landing of §8.16's in-progress items 1–4 as two scoped leaf→`dev` PRs. **Kernel** (#1300, Π 66 → 68):
+  CU-3 the two never-silent Binary/Float conversion prims (`bin.to_flt`/`flt.to_bin`, `Empirical`,
+  three-way + AOT; lossy rounding kept a swap, FLAG-cu3-lossy-swap/signed-conv), CU-5 the `wrapping`
+  eval-mode dispatch (no new prims; runtime half only, FLAG-cu5-surface-syntax), CU-7 a verify-first
+  correction (the "40-trit cap" was wrong — `trit.*` is already arbitrary-width; growable form gated on
+  E20-1, FLAG-cu7-e20-1-gate). **Transpiler** (#1299, `checked_fraction` 5.79% → 7.76%, +15): `and`/`or`
+  for `&`/`|` and `ne`/`gt` composed from `eq`/`lt` (a house-rule-#4 correction) under a new operand-type
+  env (a review-found HIGH mis-fire on shadowed names fixed by env invalidation); `prim_map.rs`
+  forward-maps the kernel surface (`flt_is_*` wired, `wrapping_*` PENDING-BACKEND); `f64`→`Float`
+  `map_type` fix. Emission `Declared`; vet `Empirical`. **Status unchanged (Draft).** (Append-only; VR-5; G2.)

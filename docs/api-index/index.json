@@ -3219,7 +3219,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::binary",
       "file": "crates/mycelium-core/src/binary.rs",
-      "line": 180,
+      "line": 257,
       "summary": "The current [`div_rem`] operand-width cap (`n ≤ 64`) — exact via a `u64` unsigned magnitude, the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3241,7 +3241,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::binary",
       "file": "crates/mycelium-core/src/binary.rs",
-      "line": 222,
+      "line": 299,
       "summary": "The current [`shl`]/[`shr`] operand-width cap (`n ≤ 64`) — exact via a `u64`/`u128` unsigned",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3252,7 +3252,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::binary",
       "file": "crates/mycelium-core/src/binary.rs",
-      "line": 285,
+      "line": 362,
       "summary": "The current [`add`]/[`sub`]/[`neg`] operand-width cap (`n ≤ 64`) — exact via the `i64` two's-",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3263,7 +3263,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::binary",
       "file": "crates/mycelium-core/src/binary.rs",
-      "line": 294,
+      "line": 371,
       "summary": "Two's-complement fixed-width add of two equal-width `n`-bit two's-complement integers (MSB-first),",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3296,7 +3296,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::binary",
       "file": "crates/mycelium-core/src/binary.rs",
-      "line": 472,
+      "line": 549,
       "summary": "**Signed** (two's-complement) total order over two equal-width bitvectors — the distinct-named",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3307,7 +3307,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::binary",
       "file": "crates/mycelium-core/src/binary.rs",
-      "line": 195,
+      "line": 272,
       "summary": "Unsigned fixed-width division and remainder of two equal-width `n`-bit bitvectors (MSB-first),",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3318,7 +3318,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::binary",
       "file": "crates/mycelium-core/src/binary.rs",
-      "line": 398,
+      "line": 475,
       "summary": "**Signed** (two's-complement) fixed-width division of two equal-width `n`-bit two's-complement",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3351,7 +3351,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::binary",
       "file": "crates/mycelium-core/src/binary.rs",
-      "line": 346,
+      "line": 423,
       "summary": "Two's-complement fixed-width negate (`−a`) of an `n`-bit two's-complement integer (MSB-first), for",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3362,7 +3362,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::binary",
       "file": "crates/mycelium-core/src/binary.rs",
-      "line": 420,
+      "line": 497,
       "summary": "**Signed** (two's-complement) fixed-width remainder — the companion to [`div_signed`], with the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3373,7 +3373,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::binary",
       "file": "crates/mycelium-core/src/binary.rs",
-      "line": 237,
+      "line": 314,
       "summary": "**Logical** (unsigned) fixed-width left shift of an `n`-bit bitvector (MSB-first) by a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3384,7 +3384,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::binary",
       "file": "crates/mycelium-core/src/binary.rs",
-      "line": 264,
+      "line": 341,
       "summary": "**Logical** (unsigned, zero-filling) fixed-width right shift — the counterpart to [`shl`], same",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3395,7 +3395,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::binary",
       "file": "crates/mycelium-core/src/binary.rs",
-      "line": 442,
+      "line": 519,
       "summary": "**Arithmetic** (sign-extending) fixed-width right shift — the distinct-named signed counterpart",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3406,7 +3406,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::binary",
       "file": "crates/mycelium-core/src/binary.rs",
-      "line": 318,
+      "line": 395,
       "summary": "Two's-complement fixed-width subtract (`a − b`) of two equal-width `n`-bit two's-complement",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4462,7 +4462,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::prim::PrimTable",
       "file": "crates/mycelium-core/src/prim.rs",
-      "line": 714,
+      "line": 776,
       "summary": "Whether a prim named `name` is registered.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4473,7 +4473,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::prim::PrimTable",
       "file": "crates/mycelium-core/src/prim.rs",
-      "line": 677,
+      "line": 739,
       "summary": "The content hash of the prim registered under kernel name `name`, if any.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4484,7 +4484,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::prim::PrimTable",
       "file": "crates/mycelium-core/src/prim.rs",
-      "line": 728,
+      "line": 790,
       "summary": "Every entry as `(name, #p, decl)`, in name order — the inspectable surface for EXPLAIN over",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4495,7 +4495,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::prim::PrimTable",
       "file": "crates/mycelium-core/src/prim.rs",
-      "line": 701,
+      "line": 763,
       "summary": "The declaration registered under kernel name `name`, if any.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4517,7 +4517,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::prim::PrimTable",
       "file": "crates/mycelium-core/src/prim.rs",
-      "line": 708,
+      "line": 770,
       "summary": "The intrinsic guarantee `g_f` of the prim named `name` (RFC-0001 §4.7), if registered.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4528,7 +4528,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::prim::PrimTable",
       "file": "crates/mycelium-core/src/prim.rs",
-      "line": 720,
+      "line": 782,
       "summary": "The registered kernel names, sorted.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4539,7 +4539,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::prim::PrimTable",
       "file": "crates/mycelium-core/src/prim.rs",
-      "line": 683,
+      "line": 745,
       "summary": "A [`PrimRef`] for the prim named `name`, if registered.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4550,7 +4550,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::prim::PrimTable",
       "file": "crates/mycelium-core/src/prim.rs",
-      "line": 695,
+      "line": 757,
       "summary": "The declaration a [`PrimRef`] points at, if registered.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4847,7 +4847,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::ternary",
       "file": "crates/mycelium-core/src/ternary/mod.rs",
-      "line": 154,
+      "line": 164,
       "summary": "Ripple-carry add over two equal-length MSB-first trit strings, fixed-width.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4869,7 +4869,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::ternary",
       "file": "crates/mycelium-core/src/ternary/mod.rs",
-      "line": 29,
+      "line": 39,
       "summary": "The signed value of a single trit.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4880,7 +4880,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::ternary",
       "file": "crates/mycelium-core/src/ternary/mod.rs",
-      "line": 116,
+      "line": 126,
       "summary": "The unique `m`-trit balanced representation of `value`, MSB-first — or `None` if `value` lies",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4891,7 +4891,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::ternary",
       "file": "crates/mycelium-core/src/ternary/mod.rs",
-      "line": 98,
+      "line": 108,
       "summary": "The maximum representable magnitude in `m` trits: `(3^m − 1) / 2`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4902,7 +4902,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::ternary",
       "file": "crates/mycelium-core/src/ternary/mod.rs",
-      "line": 187,
+      "line": 197,
       "summary": "Fixed-width multiplication.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4913,7 +4913,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::ternary",
       "file": "crates/mycelium-core/src/ternary/mod.rs",
-      "line": 139,
+      "line": 149,
       "summary": "Digit-wise negation: `value(neg t) = −value(t)` exactly (balanced ternary is sign-symmetric, §1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4924,7 +4924,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::ternary",
       "file": "crates/mycelium-core/src/ternary/mod.rs",
-      "line": 176,
+      "line": 186,
       "summary": "Fixed-width subtraction `a − b` = `add(a, neg(b))`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4935,7 +4935,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::ternary",
       "file": "crates/mycelium-core/src/ternary/mod.rs",
-      "line": 108,
+      "line": 118,
       "summary": "The integer denoted by an MSB-first trit string (`value(t)`, §1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7058,7 +7058,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::prims",
       "file": "crates/mycelium-interp/src/prims.rs",
-      "line": 1987,
+      "line": 2201,
       "summary": "The method recorded in the `EmpiricalFit` basis of every float-comparison result",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7069,7 +7069,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::prims",
       "file": "crates/mycelium-interp/src/prims.rs",
-      "line": 1983,
+      "line": 2197,
       "summary": "The trial count of the M-899 IEEE comparison reference corpus (`src/tests/prims.rs`,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7080,7 +7080,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::prims",
       "file": "crates/mycelium-interp/src/prims.rs",
-      "line": 1796,
+      "line": 1993,
       "summary": "The method recorded in the `EmpiricalFit` basis of every `flt.*` result (ADR-040 §2.6).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7091,7 +7091,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::prims",
       "file": "crates/mycelium-interp/src/prims.rs",
-      "line": 1793,
+      "line": 1990,
       "summary": "The trial count of the M-898 IEEE reference-case corpus (`src/tests/prims.rs`,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7124,7 +7124,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::prims::PrimRegistry",
       "file": "crates/mycelium-interp/src/prims.rs",
-      "line": 250,
+      "line": 269,
       "summary": "Look up a primitive by name.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7135,7 +7135,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::prims::PrimRegistry",
       "file": "crates/mycelium-interp/src/prims.rs",
-      "line": 256,
+      "line": 275,
       "summary": "The registered primitive names (sorted).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7146,7 +7146,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::prims::PrimRegistry",
       "file": "crates/mycelium-interp/src/prims.rs",
-      "line": 244,
+      "line": 263,
       "summary": "Register (or replace) a primitive.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8345,7 +8345,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 7208,
+      "line": 7260,
       "summary": "The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8356,7 +8356,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 7159,
+      "line": 7209,
       "summary": "The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8378,7 +8378,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 7198,
+      "line": 7250,
       "summary": "Canonicalize a surface VSA model ident to the **kernel model id** (`Repr::Vsa { model }` —",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8400,7 +8400,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::elab",
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 871,
+      "line": 881,
       "summary": "Build the content-addressed data registry `Σ` (RFC-0001 §4.3 r3) from the checked environment's",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8444,7 +8444,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 365,
+      "line": 375,
       "summary": "Elaborate the nullary function `entry` of a checked nodule to a closed L0 [`Node`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8455,7 +8455,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 435,
+      "line": 445,
       "summary": "**Per-hypha elaboration of a `colony` entry** for the *real-concurrency* execution path",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8466,7 +8466,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 409,
+      "line": 419,
       "summary": "**ADR-033/DN-74 (M-923):** elaborate `entry` **without** the [`crate::mono::monomorphize`]",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8477,7 +8477,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 566,
+      "line": 576,
       "summary": "**Elaborate a user-defined generative-lowering rule's RHS to a closed L0 [`Node`]** (DN-54",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8488,7 +8488,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 501,
+      "line": 511,
       "summary": "**Policy + body elaboration of a `reclaim` entry** for the *real-supervision* execution path",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26468,24 +26468,156 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_tero::Answer",
+      "kind": "struct",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero",
+      "file": "crates/mycelium-tero/src/query.rs",
+      "line": 211,
+      "summary": "An answer to a [`Query`]: a non-empty, ranked/ordered set of Layer-1 rows plus the [`Explain`]",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::Answer::citations",
+      "kind": "fn",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero::Answer",
+      "file": "crates/mycelium-tero/src/query.rs",
+      "line": 225,
+      "summary": "The resolvable citation for each item, same order as [`Answer::items`].",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::Answer::explain",
+      "kind": "fn",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero::Answer",
+      "file": "crates/mycelium-tero/src/query.rs",
+      "line": 231,
+      "summary": "The EXPLAIN trace for this answer's candidate set and ordering.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::Answer::items",
+      "kind": "fn",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero::Answer",
+      "file": "crates/mycelium-tero/src/query.rs",
+      "line": 219,
+      "summary": "The cited rows, in the answer's final order.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::AppState",
+      "kind": "struct",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero",
+      "file": "crates/mycelium-tero/src/front/http.rs",
+      "line": 51,
+      "summary": "Shared, cheaply-cloneable server state.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::AppState::new",
+      "kind": "fn",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero::AppState",
+      "file": "crates/mycelium-tero/src/front/http.rs",
+      "line": 62,
+      "summary": "Build server state.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::AuthError",
+      "kind": "enum",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero",
+      "file": "crates/mycelium-tero/src/front/auth.rs",
+      "line": 107,
+      "summary": "A per-request authorization failure, mapped to a `4xx` / JSON-RPC code by the front (via",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::Citation",
+      "kind": "struct",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero",
+      "file": "crates/mycelium-tero/src/query.rs",
+      "line": 131,
+      "summary": "A resolvable citation to one Layer-1 row — the atomic unit of provenance every [`Answer`] is",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::EvalQuestion",
+      "kind": "struct",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero",
+      "file": "crates/mycelium-tero/src/eval/mod.rs",
+      "line": 30,
+      "summary": "One eval question, drawn from a real agent task over this corpus, with a **stable, resolvable gold",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::EvalReport",
+      "kind": "struct",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero",
+      "file": "crates/mycelium-tero/src/eval/mod.rs",
+      "line": 139,
+      "summary": "The full eval report — the machine artifact (`eval/verdict.json`) and the source of the human",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::EvalSuite",
+      "kind": "struct",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero",
+      "file": "crates/mycelium-tero/src/eval/mod.rs",
+      "line": 43,
+      "summary": "The committed question-set file shape (`eval/questions.json`).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::EvalSuite::from_json",
+      "kind": "fn",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero::EvalSuite",
+      "file": "crates/mycelium-tero/src/eval/mod.rs",
+      "line": 54,
+      "summary": "Parse a suite from its committed JSON text.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::Explain",
+      "kind": "struct",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero",
+      "file": "crates/mycelium-tero/src/query.rs",
+      "line": 184,
+      "summary": "The EXPLAIN trace for an [`Answer`]: the candidate universe, how many matched, the ordering",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_tero::Family",
       "kind": "enum",
       "crate": "mycelium-tero",
       "module": "mycelium_tero",
       "file": "crates/mycelium-tero/src/model.rs",
-      "line": 73,
+      "line": 77,
       "summary": "Which corpus family a row was extracted from (drives grouping in `INDEX.md` + a stable primary",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::Family::as_str",
-      "kind": "fn",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero::Family",
-      "file": "crates/mycelium-tero/src/model.rs",
-      "line": 90,
-      "summary": "The canonical label (also the `INDEX.md` section grouping key).",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -26495,8 +26627,63 @@
       "crate": "mycelium-tero",
       "module": "mycelium_tero",
       "file": "crates/mycelium-tero/src/model.rs",
-      "line": 226,
+      "line": 239,
       "summary": "A construct/source the heuristic could not (or does not yet) place — recorded, never dropped",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::GateEvidence",
+      "kind": "struct",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero",
+      "file": "crates/mycelium-tero/src/eval/verdict.rs",
+      "line": 188,
+      "summary": "The measured evidence a gate verdict rests on — every number, with its denominator, recorded so",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::GateVerdict",
+      "kind": "enum",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero",
+      "file": "crates/mycelium-tero/src/eval/verdict.rs",
+      "line": 216,
+      "summary": "The append-only gate verdict.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::GateVerdict::evidence",
+      "kind": "fn",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero::GateVerdict",
+      "file": "crates/mycelium-tero/src/eval/verdict.rs",
+      "line": 252,
+      "summary": "The measured evidence, whichever arm.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::GateVerdict::is_open",
+      "kind": "fn",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero::GateVerdict",
+      "file": "crates/mycelium-tero/src/eval/verdict.rs",
+      "line": 237,
+      "summary": "Whether the gate opened.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::GateVerdict::status",
+      "kind": "fn",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero::GateVerdict",
+      "file": "crates/mycelium-tero/src/eval/verdict.rs",
+      "line": 129,
+      "summary": "A short status word for the report.",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -26523,6 +26710,281 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_tero::LatencyBaseline",
+      "kind": "struct",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero",
+      "file": "crates/mycelium-tero/src/eval/verdict.rs",
+      "line": 51,
+      "summary": "A committed latency baseline: a host tag (the portability guard) plus every captured `(case,",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::LatencyBaseline::lookup",
+      "kind": "fn",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero::LatencyBaseline",
+      "file": "crates/mycelium-tero/src/eval/verdict.rs",
+      "line": 67,
+      "summary": "Look up this baseline's `ns_per_call` for `(case_id, system)`, if captured.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::LatencyBaseline::to_json",
+      "kind": "fn",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero::LatencyBaseline",
+      "file": "crates/mycelium-tero/src/eval/verdict.rs",
+      "line": 88,
+      "summary": "Serialize this baseline to pretty JSON (the committed-artifact format).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::LatencyEntry",
+      "kind": "struct",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero",
+      "file": "crates/mycelium-tero/src/eval/verdict.rs",
+      "line": 38,
+      "summary": "One committed latency snapshot: a `(case, system)` `ns_per_call` from a prior run.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::LatencyOutcome",
+      "kind": "enum",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero",
+      "file": "crates/mycelium-tero/src/eval/verdict.rs",
+      "line": 96,
+      "summary": "The latency-gate verdict for one `(case, system)` pair — this run vs the committed baseline.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::LatencyOutcome::is_regression",
+      "kind": "fn",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero::LatencyOutcome",
+      "file": "crates/mycelium-tero/src/eval/verdict.rs",
+      "line": 142,
+      "summary": "Whether this is a flagged regression.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Answer",
+      "kind": "struct",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero",
+      "file": "crates/mycelium-tero/src/vsa2/mod.rs",
+      "line": 48,
+      "summary": "A Layer-2 answer: the recovered Layer-1 [`Citation`] (its evidence — the DoD requirement), the",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Answer::citation",
+      "kind": "fn",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero::Layer2Answer",
+      "file": "crates/mycelium-tero/src/vsa2/mod.rs",
+      "line": 59,
+      "summary": "The Layer-1 evidence this Layer-2 answer names — always resolvable (a Layer-2 answer with no",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Answer::confidence",
+      "kind": "fn",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero::Layer2Answer",
+      "file": "crates/mycelium-tero/src/vsa2/mod.rs",
+      "line": 65,
+      "summary": "The retrieval confidence (top cosine).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Answer::margin",
+      "kind": "fn",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero::Layer2Answer",
+      "file": "crates/mycelium-tero/src/vsa2/mod.rs",
+      "line": 71,
+      "summary": "The margin to the runner-up.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Explain",
+      "kind": "struct",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero",
+      "file": "crates/mycelium-tero/src/vsa2/explain.rs",
+      "line": 24,
+      "summary": "The inspectable trace behind one Layer-2 retrieval.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Index",
+      "kind": "struct",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero",
+      "file": "crates/mycelium-tero/src/vsa2/mod.rs",
+      "line": 101,
+      "summary": "The Layer-2 index facade: a VSA codebook over a Layer-1 report plus the machinery to query it and",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Index::build",
+      "kind": "fn",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero::Layer2Index",
+      "file": "crates/mycelium-tero/src/vsa2/mod.rs",
+      "line": 116,
+      "summary": "Build the Layer-2 index from a Layer-1 report: encode every row into the cleanup codebook",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Index::probe_kind",
+      "kind": "fn",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero::Layer2Index",
+      "file": "crates/mycelium-tero/src/vsa2/mod.rs",
+      "line": 297,
+      "summary": "**Optional structured probe** (secondary path): recover a record's `kind` filler by an",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Index::query",
+      "kind": "fn",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero::Layer2Index",
+      "file": "crates/mycelium-tero/src/vsa2/mod.rs",
+      "line": 213,
+      "summary": "The served Layer-2 query path: form the probe, clean up to the best record, and — above the",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Index::rank",
+      "kind": "fn",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero::Layer2Index",
+      "file": "crates/mycelium-tero/src/vsa2/mod.rs",
+      "line": 197,
+      "summary": "Rank the codebook against a free-text query, returning the top-`k` candidates (for the eval",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Index::refused",
+      "kind": "fn",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero::Layer2Index",
+      "file": "crates/mycelium-tero/src/vsa2/mod.rs",
+      "line": 177,
+      "summary": "The never-silent encode refusals.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Index::resolve",
+      "kind": "fn",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero::Layer2Index",
+      "file": "crates/mycelium-tero/src/vsa2/mod.rs",
+      "line": 190,
+      "summary": "Resolve an `anchor` to its Layer-1 citation, if it is a real row (the provenance check the",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Index::summary",
+      "kind": "fn",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero::Layer2Index",
+      "file": "crates/mycelium-tero/src/vsa2/mod.rs",
+      "line": 183,
+      "summary": "The honest build summary.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Refusal",
+      "kind": "enum",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero",
+      "file": "crates/mycelium-tero/src/vsa2/decode.rs",
+      "line": 38,
+      "summary": "A typed, never-silent Layer-2 \"no answer\" (the semantic-layer twin of [`crate::query::Refusal`]).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::Query",
+      "kind": "enum",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero",
+      "file": "crates/mycelium-tero/src/query.rs",
+      "line": 93,
+      "summary": "A structured or free-text query over the Layer-1 model (DN-87 §4: \"structured queries (by id,",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::QueryEngine",
+      "kind": "struct",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero",
+      "file": "crates/mycelium-tero/src/query.rs",
+      "line": 59,
+      "summary": "A read-only query engine over a [`TeroIndexReport`] (typically loaded via",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::REGRESSION_BAND:",
+      "kind": "const",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero",
+      "file": "crates/mycelium-tero/src/eval/verdict.rs",
+      "line": 18,
+      "summary": "The regression band half-width, reified (no black box) — matches `mycelium-bench`'s",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::RankedHit",
+      "kind": "struct",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero",
+      "file": "crates/mycelium-tero/src/query.rs",
+      "line": 168,
+      "summary": "One item's place in an [`Explain`] trace: its final rank position is implicit in",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::Refusal",
+      "kind": "enum",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero",
+      "file": "crates/mycelium-tero/src/query.rs",
+      "line": 244,
+      "summary": "A typed, never-silent \"no answer\" (DN-87 §6.2).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_tero::SIBLING_INDICES:",
       "kind": "const",
       "crate": "mycelium-tero",
@@ -26530,6 +26992,39 @@
       "file": "crates/mycelium-tero/src/model.rs",
       "line": 40,
       "summary": "The sibling indices this one deliberately does **not** duplicate — each owns its own domain and",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::Scope",
+      "kind": "enum",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero",
+      "file": "crates/mycelium-tero/src/front/auth.rs",
+      "line": 27,
+      "summary": "The access scope a token carries.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::Scope::allows",
+      "kind": "fn",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero::Scope",
+      "file": "crates/mycelium-tero/src/front/auth.rs",
+      "line": 45,
+      "summary": "Whether a token of `self` scope may perform an operation requiring `required` scope.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::Scope::as_str",
+      "kind": "fn",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero::Scope",
+      "file": "crates/mycelium-tero/src/front/auth.rs",
+      "line": 51,
+      "summary": "The wire keyword (`read` / `refresh`).",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -26545,24 +27040,68 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_tero::SystemMetrics",
+      "kind": "struct",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero",
+      "file": "crates/mycelium-tero/src/eval/mod.rs",
+      "line": 61,
+      "summary": "Per-system aggregate metrics, with **explicit denominators** (never a bare rate).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::SystemMetrics::provenance_fidelity",
+      "kind": "fn",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero::SystemMetrics",
+      "file": "crates/mycelium-tero/src/eval/mod.rs",
+      "line": 104,
+      "summary": "Provenance fidelity in `[0, 1]`.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::SystemMetrics::rate_at_1",
+      "kind": "fn",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero::SystemMetrics",
+      "file": "crates/mycelium-tero/src/eval/mod.rs",
+      "line": 83,
+      "summary": "correctness@1 as a rate in `[0, 1]` (`0` when no questions).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::SystemMetrics::rate_at_k",
+      "kind": "fn",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero::SystemMetrics",
+      "file": "crates/mycelium-tero/src/eval/mod.rs",
+      "line": 93,
+      "summary": "correctness@k as a rate in `[0, 1]`.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::TERO_L2_SEED:",
+      "kind": "const",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero",
+      "file": "crates/mycelium-tero/src/vsa2/atoms.rs",
+      "line": 17,
+      "summary": "The one committed master seed for Layer-2 atom generation.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_tero::TeroIndexItem",
       "kind": "struct",
       "crate": "mycelium-tero",
       "module": "mycelium_tero",
       "file": "crates/mycelium-tero/src/model.rs",
-      "line": 109,
+      "line": 116,
       "summary": "One indexed row: a citable unit of the corpus with its provenance, status/tag where the source",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::TeroIndexItem::new",
-      "kind": "fn",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero::TeroIndexItem",
-      "file": "crates/mycelium-tero/src/model.rs",
-      "line": 161,
-      "summary": "A minimal row with the shared honesty tag set and every family-specific field empty.",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -26572,7 +27111,7 @@
       "crate": "mycelium-tero",
       "module": "mycelium_tero",
       "file": "crates/mycelium-tero/src/model.rs",
-      "line": 235,
+      "line": 248,
       "summary": "The full build result: every extracted row plus every flagged gap, in stable sorted order.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26583,8 +27122,85 @@
       "crate": "mycelium-tero",
       "module": "mycelium_tero::TeroIndexReport",
       "file": "crates/mycelium-tero/src/model.rs",
-      "line": 246,
+      "line": 259,
       "summary": "Sort rows + flags into the canonical, deterministic order (the byte-identical-regeneration",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::TokenTable",
+      "kind": "struct",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero",
+      "file": "crates/mycelium-tero/src/front/auth.rs",
+      "line": 140,
+      "summary": "A runtime allow-list of `token -> scope`.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::TokenTable::authorize",
+      "kind": "fn",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero::TokenTable",
+      "file": "crates/mycelium-tero/src/front/auth.rs",
+      "line": 190,
+      "summary": "Authorize a presented token for an operation requiring `required` scope.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::TokenTable::from_env",
+      "kind": "fn",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero::TokenTable",
+      "file": "crates/mycelium-tero/src/front/auth.rs",
+      "line": 148,
+      "summary": "Load tokens from the environment: `TERO_TOKENS_FILE` (a path to a `token:scope` list) takes",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::TokenTable::is_empty",
+      "kind": "fn",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero::TokenTable",
+      "file": "crates/mycelium-tero/src/front/auth.rs",
+      "line": 211,
+      "summary": "Always `false` for a constructed table (kept for the `clippy::len_without_is_empty` lint).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::TokenTable::len",
+      "kind": "fn",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero::TokenTable",
+      "file": "crates/mycelium-tero/src/front/auth.rs",
+      "line": 205,
+      "summary": "The number of configured tokens (never zero post-construction — see [`TokenTableError::Empty`]).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::TokenTable::parse",
+      "kind": "fn",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero::TokenTable",
+      "file": "crates/mycelium-tero/src/front/auth.rs",
+      "line": 160,
+      "summary": "Parse a whitespace/comma-separated `token:scope` list into a table.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::TokenTableError",
+      "kind": "enum",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero",
+      "file": "crates/mycelium-tero/src/front/auth.rs",
+      "line": 71,
+      "summary": "A configuration error building the [`TokenTable`] — surfaced at startup, never swallowed.",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -26605,8 +27221,74 @@
       "crate": "mycelium-tero",
       "module": "mycelium_tero",
       "file": "crates/mycelium-tero/src/lib.rs",
-      "line": 46,
+      "line": 91,
       "summary": "The program's one-line summary, used by the (future) API fronts' identify endpoint.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::decide_gate",
+      "kind": "fn",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero",
+      "file": "crates/mycelium-tero/src/eval/verdict.rs",
+      "line": 263,
+      "summary": "Decide the gate from the measured `evidence` (pure — the sole gate decision point).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::host_tag",
+      "kind": "fn",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero",
+      "file": "crates/mycelium-tero/src/eval/mod.rs",
+      "line": 165,
+      "summary": "A single-machine host tag for latency provenance: `\"<arch>-<os>, <n> hw threads\"`.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::latency_classify",
+      "kind": "fn",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero",
+      "file": "crates/mycelium-tero/src/eval/verdict.rs",
+      "line": 150,
+      "summary": "Classify one `(case, system)` pair's fresh timing against the committed `baseline`, gated on the",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::load_report",
+      "kind": "fn",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero",
+      "file": "crates/mycelium-tero/src/load.rs",
+      "line": 43,
+      "summary": "Load a `TeroIndexReport` from a previously emitted `index.json` at `path` (typically",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::run_eval",
+      "kind": "fn",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero",
+      "file": "crates/mycelium-tero/src/eval/mod.rs",
+      "line": 199,
+      "summary": "Run the eval harness: grade both systems over `questions`, measure latency across `trials` reps,",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_tero::serve_mcp_stdio",
+      "kind": "fn",
+      "crate": "mycelium-tero",
+      "module": "mycelium_tero",
+      "file": "crates/mycelium-tero/src/front/mcp.rs",
+      "line": 70,
+      "summary": "Run the MCP server over the process's real stdio — the entry point an MCP client launches",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -26660,7 +27342,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/gap.rs",
-      "line": 91,
+      "line": 103,
       "summary": "One construct this transpiler could not (or would not) express in Mycelium surface syntax.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26671,7 +27353,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/gap.rs",
-      "line": 135,
+      "line": 147,
       "summary": "The full report for one transpiled source file.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26814,7 +27496,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 24,
+      "line": 150,
       "summary": "The `.myc` text (+ any dropped sub-features, e.g.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26825,7 +27507,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 43,
+      "line": 169,
       "summary": "Extract `///`/`//!` doc-comment lines (represented by `syn` as `#[doc = \"...\"]` attributes),",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26836,7 +27518,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 348,
+      "line": 485,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26847,7 +27529,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 849,
+      "line": 1383,
       "summary": "`enum` -> `type_item` (`type Name = C1 | C2(T1, T2) | ...;`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26858,7 +27540,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 511,
+      "line": 688,
       "summary": "Translate one Rust expression.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26869,7 +27551,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 996,
+      "line": 1607,
       "summary": "Top-level `fn` -> `fn_item`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26880,7 +27562,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 1146,
+      "line": 1757,
       "summary": "`impl` -> `impl_item` (trait-instance or inherent form).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26891,7 +27573,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 933,
+      "line": 1508,
       "summary": "`struct` -> a single-constructor `type_item`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26902,7 +27584,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 1031,
+      "line": 1642,
       "summary": "`trait` -> `trait_item` (`trait Name { fn sig1; fn sig2; ...",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26913,7 +27595,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 73,
+      "line": 199,
       "summary": "Heuristic `#[cfg(test)]` detection (Declared: a token-text `contains(\"test\")` check, not a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26924,7 +27606,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 778,
+      "line": 1279,
       "summary": "Translate one Rust pattern.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26935,7 +27617,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 63,
+      "line": 189,
       "summary": "Every non-doc attribute on an item, rendered as text — these are always dropped (KNOWN HARD",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26957,7 +27639,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::gap::Category",
       "file": "crates/mycelium-transpile/src/gap.rs",
-      "line": 66,
+      "line": 77,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26968,7 +27650,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::gap",
       "file": "crates/mycelium-transpile/src/gap.rs",
-      "line": 115,
+      "line": 127,
       "summary": "Internal helper carrying a [`Category`] + reason before a [`Gap`] is materialized with its",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26979,7 +27661,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::gap::GapReason",
       "file": "crates/mycelium-transpile/src/gap.rs",
-      "line": 121,
+      "line": 133,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26990,7 +27672,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::gap::GapReport",
       "file": "crates/mycelium-transpile/src/gap.rs",
-      "line": 169,
+      "line": 181,
       "summary": "Per-category gap counts, for reporting.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27001,7 +27683,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::gap::GapReport",
       "file": "crates/mycelium-transpile/src/gap.rs",
-      "line": 160,
+      "line": 172,
       "summary": "Fraction of non-test top-level items for which some `.myc` text was emitted.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27012,7 +27694,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::gap::GapReport",
       "file": "crates/mycelium-transpile/src/gap.rs",
-      "line": 153,
+      "line": 165,
       "summary": "`total_top_level_items` minus test items — the denominator for the expressible fraction.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27023,7 +27705,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::gap::GapReport",
       "file": "crates/mycelium-transpile/src/gap.rs",
-      "line": 145,
+      "line": 157,
       "summary": "Count of gaps tagged [`Category::TestItem`] — `#[cfg(test)]` items excluded from scope.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27045,7 +27727,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::map",
       "file": "crates/mycelium-transpile/src/map.rs",
-      "line": 60,
+      "line": 77,
       "summary": "Map a Rust type to its Mycelium `type_ref` text.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27067,7 +27749,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/lib.rs",
-      "line": 39,
+      "line": 40,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27122,7 +27804,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/lib.rs",
-      "line": 40,
+      "line": 41,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27144,7 +27826,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/transpile.rs",
-      "line": 19,
+      "line": 20,
       "summary": "Parse `path` and transpile every top-level item.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27155,7 +27837,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/transpile.rs",
-      "line": 31,
+      "line": 32,
       "summary": "Transpile already-read source text.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27166,7 +27848,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/lib.rs",
-      "line": 41,
+      "line": 42,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -33029,7 +33711,7 @@
     },
     {
       "symbol": "mycelium_core::ternary::BigTernary::add",
-      "reason": "dedup-alias: same definition as `mycelium_core::ternary::add` at crates/mycelium-core/src/ternary/mod.rs:154 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::ternary::add` at crates/mycelium-core/src/ternary/mod.rs:164 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::ternary::BigTernary::clone",
@@ -33049,15 +33731,15 @@
     },
     {
       "symbol": "mycelium_core::ternary::BigTernary::mul",
-      "reason": "dedup-alias: same definition as `mycelium_core::ternary::mul` at crates/mycelium-core/src/ternary/mod.rs:187 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::ternary::mul` at crates/mycelium-core/src/ternary/mod.rs:197 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::ternary::BigTernary::neg",
-      "reason": "dedup-alias: same definition as `mycelium_core::ternary::neg` at crates/mycelium-core/src/ternary/mod.rs:139 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::ternary::neg` at crates/mycelium-core/src/ternary/mod.rs:149 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::ternary::BigTernary::sub",
-      "reason": "dedup-alias: same definition as `mycelium_core::ternary::sub` at crates/mycelium-core/src/ternary/mod.rs:176 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::ternary::sub` at crates/mycelium-core/src/ternary/mod.rs:186 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::ternary::FixedWidthTrits::clone",
@@ -35561,23 +36243,23 @@
     },
     {
       "symbol": "mycelium_l1::elab::elaborate",
-      "reason": "dedup-alias: same definition as `mycelium_l1::elaborate` at crates/mycelium-l1/src/elab.rs:365 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::elaborate` at crates/mycelium-l1/src/elab.rs:375 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::elab::elaborate_colony",
-      "reason": "dedup-alias: same definition as `mycelium_l1::elaborate_colony` at crates/mycelium-l1/src/elab.rs:435 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::elaborate_colony` at crates/mycelium-l1/src/elab.rs:445 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::elab::elaborate_direct",
-      "reason": "dedup-alias: same definition as `mycelium_l1::elaborate_direct` at crates/mycelium-l1/src/elab.rs:409 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::elaborate_direct` at crates/mycelium-l1/src/elab.rs:419 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::elab::elaborate_lower_rule",
-      "reason": "dedup-alias: same definition as `mycelium_l1::elaborate_lower_rule` at crates/mycelium-l1/src/elab.rs:566 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::elaborate_lower_rule` at crates/mycelium-l1/src/elab.rs:576 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::elab::elaborate_reclaim",
-      "reason": "dedup-alias: same definition as `mycelium_l1::elaborate_reclaim` at crates/mycelium-l1/src/elab.rs:501 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::elaborate_reclaim` at crates/mycelium-l1/src/elab.rs:511 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::error::ParseError",
@@ -49496,12 +50178,164 @@
       "reason": "dedup-alias: same definition as `mycelium_std_vsa::reconstruct_role` at crates/mycelium-std-vsa/src/recon.rs:50 — one canonical row kept"
     },
     {
+      "symbol": "mycelium_tero::Answer::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::Answer::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::Answer::explain",
+      "reason": "ambiguous: short name 'explain' is defined in multiple modules; attributed to crates/mycelium-tero/src/query.rs by heuristic — verify against source (ground truth)"
+    },
+    {
+      "symbol": "mycelium_tero::Answer::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::AppState::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::AppState::new",
+      "reason": "ambiguous: short name 'new' is defined in multiple modules; attributed to crates/mycelium-tero/src/front/http.rs by heuristic — verify against source (ground truth)"
+    },
+    {
+      "symbol": "mycelium_tero::AuthError::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::AuthError::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::AuthError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::Citation::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::Citation::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::Citation::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::Citation::from",
+      "reason": "definition not found via regex heuristic (kind='fn', name='from') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::Citation::from",
+      "reason": "definition not found via regex heuristic (kind='fn', name='from') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::Citation::serialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::EvalQuestion::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::EvalQuestion::deserialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::EvalQuestion::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::EvalQuestion::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::EvalQuestion::serialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::EvalReport::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::EvalReport::deserialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::EvalReport::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::EvalReport::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::EvalReport::serialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::EvalSuite::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::EvalSuite::deserialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::EvalSuite::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::EvalSuite::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::EvalSuite::from_json",
+      "reason": "ambiguous: short name 'from_json' is defined in multiple modules; attributed to crates/mycelium-tero/src/eval/mod.rs by heuristic — verify against source (ground truth)"
+    },
+    {
+      "symbol": "mycelium_tero::EvalSuite::serialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::Explain::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::Explain::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::Explain::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::Explain::serialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::Family::as_str",
+      "reason": "ambiguous: short name 'as_str' is defined in multiple modules; attributed to crates/mycelium-tero/src/front/auth.rs by heuristic — verify against source (ground truth)"
+    },
+    {
+      "symbol": "mycelium_tero::Family::as_str",
+      "reason": "dedup-alias: same definition as `mycelium_tero::Scope::as_str` at crates/mycelium-tero/src/front/auth.rs:51 — one canonical row kept"
+    },
+    {
       "symbol": "mycelium_tero::Family::clone",
       "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
     },
     {
       "symbol": "mycelium_tero::Family::cmp",
       "reason": "definition not found via regex heuristic (kind='fn', name='cmp') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::Family::deserialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated"
     },
     {
       "symbol": "mycelium_tero::Family::eq",
@@ -49524,6 +50358,10 @@
       "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
     },
     {
+      "symbol": "mycelium_tero::Flagged::deserialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated"
+    },
+    {
       "symbol": "mycelium_tero::Flagged::eq",
       "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
     },
@@ -49534,6 +50372,262 @@
     {
       "symbol": "mycelium_tero::Flagged::serialize",
       "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::GateEvidence::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::GateEvidence::deserialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::GateEvidence::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::GateEvidence::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::GateEvidence::serialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::GateVerdict::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::GateVerdict::deserialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::GateVerdict::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::GateVerdict::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::GateVerdict::serialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::LatencyBaseline::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::LatencyBaseline::deserialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::LatencyBaseline::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::LatencyBaseline::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::LatencyBaseline::from_json",
+      "reason": "ambiguous: short name 'from_json' is defined in multiple modules; attributed to crates/mycelium-tero/src/eval/mod.rs by heuristic — verify against source (ground truth)"
+    },
+    {
+      "symbol": "mycelium_tero::LatencyBaseline::from_json",
+      "reason": "dedup-alias: same definition as `mycelium_tero::EvalSuite::from_json` at crates/mycelium-tero/src/eval/mod.rs:54 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_tero::LatencyBaseline::serialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::LatencyEntry::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::LatencyEntry::deserialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::LatencyEntry::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::LatencyEntry::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::LatencyEntry::serialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::LatencyOutcome::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::LatencyOutcome::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::LatencyOutcome::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::LatencyOutcome::serialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::LatencyOutcome::status",
+      "reason": "dedup-alias: same definition as `mycelium_tero::GateVerdict::status` at crates/mycelium-tero/src/eval/verdict.rs:129 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Answer::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Answer::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Answer::explain",
+      "reason": "ambiguous: short name 'explain' is defined in multiple modules; attributed to crates/mycelium-tero/src/query.rs by heuristic — verify against source (ground truth)"
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Answer::explain",
+      "reason": "dedup-alias: same definition as `mycelium_tero::Answer::explain` at crates/mycelium-tero/src/query.rs:231 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Answer::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Explain::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Explain::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Explain::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Explain::serialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Index::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Index::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Index::is_empty",
+      "reason": "ambiguous: short name 'is_empty' is defined in multiple modules; attributed to crates/mycelium-tero/src/front/auth.rs by heuristic — verify against source (ground truth)"
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Index::is_empty",
+      "reason": "dedup-alias: same definition as `mycelium_tero::TokenTable::is_empty` at crates/mycelium-tero/src/front/auth.rs:211 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Index::len",
+      "reason": "ambiguous: short name 'len' is defined in multiple modules; attributed to crates/mycelium-tero/src/front/auth.rs by heuristic — verify against source (ground truth)"
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Index::len",
+      "reason": "dedup-alias: same definition as `mycelium_tero::TokenTable::len` at crates/mycelium-tero/src/front/auth.rs:205 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Refusal::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Refusal::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Refusal::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Refusal::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::Query::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::Query::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::Query::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::QueryEngine",
+      "reason": "definition not found via regex heuristic (kind='fn', name='QueryEngine') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::QueryEngine",
+      "reason": "definition not found via regex heuristic (kind='fn', name='QueryEngine') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::RankedHit::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::RankedHit::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::RankedHit::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::RankedHit::serialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::Refusal::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::Refusal::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::Refusal::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::Refusal::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::Refusal::serialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::Scope::as_str",
+      "reason": "ambiguous: short name 'as_str' is defined in multiple modules; attributed to crates/mycelium-tero/src/front/auth.rs by heuristic — verify against source (ground truth)"
+    },
+    {
+      "symbol": "mycelium_tero::Scope::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::Scope::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::Scope::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
     },
     {
       "symbol": "mycelium_tero::SiblingIndex::clone",
@@ -49552,8 +50646,32 @@
       "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
     },
     {
+      "symbol": "mycelium_tero::SystemMetrics::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::SystemMetrics::deserialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::SystemMetrics::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::SystemMetrics::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::SystemMetrics::serialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
       "symbol": "mycelium_tero::TeroIndexItem::clone",
       "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::TeroIndexItem::deserialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated"
     },
     {
       "symbol": "mycelium_tero::TeroIndexItem::eq",
@@ -49562,6 +50680,14 @@
     {
       "symbol": "mycelium_tero::TeroIndexItem::fmt",
       "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::TeroIndexItem::new",
+      "reason": "ambiguous: short name 'new' is defined in multiple modules; attributed to crates/mycelium-tero/src/front/http.rs by heuristic — verify against source (ground truth)"
+    },
+    {
+      "symbol": "mycelium_tero::TeroIndexItem::new",
+      "reason": "dedup-alias: same definition as `mycelium_tero::AppState::new` at crates/mycelium-tero/src/front/http.rs:62 — one canonical row kept"
     },
     {
       "symbol": "mycelium_tero::TeroIndexItem::serialize",
@@ -49581,6 +50707,38 @@
     },
     {
       "symbol": "mycelium_tero::TeroIndexReport::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::TokenTable::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::TokenTable::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::TokenTable::is_empty",
+      "reason": "ambiguous: short name 'is_empty' is defined in multiple modules; attributed to crates/mycelium-tero/src/front/auth.rs by heuristic — verify against source (ground truth)"
+    },
+    {
+      "symbol": "mycelium_tero::TokenTable::len",
+      "reason": "ambiguous: short name 'len' is defined in multiple modules; attributed to crates/mycelium-tero/src/front/auth.rs by heuristic — verify against source (ground truth)"
+    },
+    {
+      "symbol": "mycelium_tero::TokenTableError::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::TokenTableError::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::TokenTableError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_tero::TokenTableError::fmt",
       "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
     },
     {
@@ -49729,7 +50887,7 @@
     },
     {
       "symbol": "mycelium_transpile::gap::Gap",
-      "reason": "dedup-alias: same definition as `mycelium_transpile::Gap` at crates/mycelium-transpile/src/gap.rs:91 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_transpile::Gap` at crates/mycelium-transpile/src/gap.rs:103 — one canonical row kept"
     },
     {
       "symbol": "mycelium_transpile::gap::Gap::clone",
@@ -49765,7 +50923,7 @@
     },
     {
       "symbol": "mycelium_transpile::gap::GapReport",
-      "reason": "dedup-alias: same definition as `mycelium_transpile::GapReport` at crates/mycelium-transpile/src/gap.rs:135 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_transpile::GapReport` at crates/mycelium-transpile/src/gap.rs:147 — one canonical row kept"
     },
     {
       "symbol": "mycelium_transpile::gap::GapReport::clone",
@@ -49793,11 +50951,11 @@
     },
     {
       "symbol": "mycelium_transpile::transpile::transpile_file",
-      "reason": "dedup-alias: same definition as `mycelium_transpile::transpile_file` at crates/mycelium-transpile/src/transpile.rs:19 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_transpile::transpile_file` at crates/mycelium-transpile/src/transpile.rs:20 — one canonical row kept"
     },
     {
       "symbol": "mycelium_transpile::transpile::transpile_source",
-      "reason": "dedup-alias: same definition as `mycelium_transpile::transpile_source` at crates/mycelium-transpile/src/transpile.rs:31 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_transpile::transpile_source` at crates/mycelium-transpile/src/transpile.rs:32 — one canonical row kept"
     },
     {
       "symbol": "mycelium_transpile::vet::MycChecker",
