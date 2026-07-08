@@ -11,7 +11,7 @@
         "docs/tero-index/index.json"
       ],
       "env": {
-        "TERO_TOKENS": "local-dev:refresh"
+        "TERO_TOKENS": "local-dev:read"
       }
     }
   }
