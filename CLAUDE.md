@@ -72,9 +72,10 @@ One source of truth (`just`); pre-commit and CI route through the same recipes.
 ```
 just            # list recipes
 just setup      # best-effort install of the check tools (uv tool / npx / pip / cargo-nextest)
-just test-fast  # Tier 0 (pre-commit): change-scoped crates' unit/regression tests — fastest
-just check      # Tier 1 (default; = `just ci`): change-scoped tests (LOW proptest cases) + all gates
-just check-full # Tier 2 (release/durability): full workspace, HIGH proptest cases, mutants + fuzz
+just test-fast    # Tier 0 (pre-commit): change-scoped crates' unit/regression tests — fastest
+just check-canary # Canary (per-promotion): ALL gates + Tier-0 tests — no reverse-dep/proptest balloon
+just check        # Tier 1 (default; = `just ci`): change-scoped tests (LOW proptest cases) + all gates
+just check-full   # Tier 2 (release/durability): full workspace, HIGH proptest cases, mutants + fuzz
 just fmt        # auto-format (rust + python)
 just hooks      # install the pre-commit hooks
 ```
@@ -88,6 +89,17 @@ HIGH proptest cases, `cargo-mutants` + `cargo-fuzz` smoke). **Transparency (VR-5
 test is dropped — only its *case count* is tiered (low every commit, full on release); the
 change-scoping only ever *widens* to `--workspace` (over-test, never under-test), and `check-full`
 always runs everything.
+
+**Canary tier + the per-promotion gate policy (maintainer directive, 2026-07-08).** `just check` is
+change-scoped, but a touch to a **base crate** (`mycelium-core`/`-l1`) pulls in *every*
+reverse-dependent crate's tests — ballooning to a near-whole-workspace, **multi-hour** run. So a
+per-promotion gate does **not** run the full sweep. Use **`just check-canary`** (every always-on gate
+plus Tier-0 change-scoped tests, no reverse-dep/proptest balloon — minutes, not hours) for **leaf→dev and
+dev→integration**; run **`just check`** (Tier-1, selective/stringent) for **integration→main**; keep
+**`just check-full`** (HIGH proptest, mutants, fuzz, VSA/GPU) **periodic + desktop-held**, never a
+per-promotion blocker — and accelerate it (multicore/GPU) per **M-1014**. The canary is a *complete
+gate signal* with *bounded tests*, never a dropped-coverage tier (VR-5): the heavy statistical power
+still runs, just periodically on the desktop, not on every promotion.
 
 **Heavy checks run on the maintainer's desktop — don't re-run them in cloud sessions (2026-07-06).**
 The **durability tier** (`just check-full` — HIGH proptest, `cargo-mutants`, `cargo-fuzz`) and all
@@ -702,7 +714,12 @@ Invoke with `/<name>`; they auto-engage when relevant.
   **`/tero-explain`** (the why-these-sources/ordering trace), **`/tero-refresh`** (reload the served index
   after `just tero-index`, needs the `refresh` token scope). **Offline fallback** (no server): grep the
   committed **`docs/tero-index/INDEX.md`** — the same rows the API serves. Auth is token-scoped, read-only
-  by default; never commit `TERO_TOKENS`.
+  by default; never commit `TERO_TOKENS`. **The portable `tero-mcp-lite` server (`packages/tero-mcp-lite/`)
+  is registered via the repo-root `.mcp.json`**, so the `mcp__tero__*` tools (`query_by_id`/
+  `query_by_status`/`query_by_kind`/`cross_ref`/`text_search`/`cite`/`explain`/`identify`/`refresh`) are
+  available directly in-session — no separate server start needed. Prefer them for cited memory over
+  grepping by hand; the offline `docs/tero-index/INDEX.md` grep above remains the fallback when the MCP
+  tools aren't available.
 
 The review skills share one rubric: `.claude/skills/_shared/review-rubric.md` (tiers, severity,
 report format). Posture is **advisory** — they recommend, they don't gate. The
@@ -716,6 +733,9 @@ report format). Posture is **advisory** — they recommend, they don't gate. The
 - `tools/github/` — issue/label/milestone bootstrap (`mcp-bootstrap.md`, `gh-bootstrap-local.sh`,
   `issues.yaml`, `idmap.tsv`).
 - `justfile`, `.pre-commit-config.yaml`, `scripts/` — the local/CI check tooling.
+- `packages/` — portable MCP-tooling packages meant to drop into any repo, not just this one:
+  `tero-mcp-lite/` (the Python-only, zero-dependency Layer-1 `tero` MCP server registered in the
+  repo-root `.mcp.json`; see `/tero-query` above), plus `GROK-HANDOFF.md` and `BACKLOG.md`.
 
 ## Auto-generated docs & the agent index
 

@@ -134,6 +134,12 @@ pub enum Tok {
     Wild,
     /// `spore` — reconstruction-manifest construction (themed).
     Spore,
+    /// `wrapping` — the named, explicit Axis-B modular-arithmetic opt-out (RFC-0034 §10/§10.1; CU-5).
+    /// Opens a `wrapping { <expr> }` block whose enclosed `Binary{N}` add/sub/mul wrap modulo `2^N`
+    /// instead of refusing out-of-range. Reserved as a keyword so it can never be a silent identifier
+    /// (G2); the construct is active at the surface (parses, type-checks, evaluates through the L1
+    /// evaluator's `eval_wrapping` dispatch).
+    Wrapping,
     /// `to` — the swap target label.
     To,
     /// `policy` — the swap policy label.
@@ -462,6 +468,10 @@ pub fn keyword(word: &str) -> Option<Tok> {
         "with" => Tok::With,
         "wild" => Tok::Wild,
         "spore" => Tok::Spore,
+        // RFC-0034 §10/§10.1 (CU-5): the named modular-arithmetic opt-out. Reserved so it is never a
+        // silent identifier (G2). Corpus-checked before reserving (only prose/comment uses of the
+        // English word "wrapping" exist in `.myc`; no identifier collides).
+        "wrapping" => Tok::Wrapping,
         "to" => Tok::To,
         "policy" => Tok::Policy,
         "Binary" => Tok::Binary,

@@ -785,6 +785,7 @@ impl<'e> Evaluator<'e> {
             base: 0,
             scope: Vec::new(),
             stack: Vec::new(),
+            wrapping_depth: 0,
         };
         // Charge the top-level source-call frame, then set up its invocation (params, effect ledger,
         // the return-guarantee `InvokePost`). A refusal here is the never-silent depth ceiling.
@@ -969,6 +970,20 @@ impl<'e> Evaluator<'e> {
                 what: "`spore` is deferred to the reconstruction-manifest work (E2-5/M-260)"
                     .to_owned(),
             })),
+
+            // `wrapping { <expr> }` (RFC-0034 §10/§10.1; CU-5) — the named modular-arithmetic opt-out.
+            // Bracket the body with the wrapping-region counter: entering raises `wrapping_depth`, and
+            // the paired `Frame::WrappingPop` lowers it once the body settles (on both the value and the
+            // error path — G2). Every enclosed `bin.add`/`bin.sub`/`bin.mul` evaluated while the counter
+            // is raised dispatches through `eval_wrapping` (see `app_dispatch`). The checker
+            // (`gate_wrapping_body`) has already guaranteed the body is a **call-free** add/sub/mul tree,
+            // so this dynamic bracket coincides exactly with the lexical block — the opt-out never leaks
+            // through a call (never ambient).
+            Expr::Wrapping(body) => {
+                regs.wrapping_depth += 1;
+                regs.stack.push(Frame::WrappingPop);
+                Ctrl::Eval(body)
+            }
 
             // `consume <expr>` — the M-904 checked identity-move (DN-71 Model S §4.3).
             Expr::Consume(operand) => {
@@ -1257,6 +1272,14 @@ impl<'e> Evaluator<'e> {
                         why: err.to_string(),
                     }
                 }))
+            }
+
+            // A `wrapping { … }` body settled (RFC-0034 §10.1; CU-5): lower the region counter and pass
+            // the value/error through unchanged. `saturating_sub` is defensive — the counter is always
+            // `> 0` here (this frame is only pushed after an increment), but never underflow silently.
+            Frame::WrappingPop => {
+                regs.wrapping_depth = regs.wrapping_depth.saturating_sub(1);
+                Ctrl::Settle(settled)
             }
 
             Frame::AscribePost { guar } => match settled {
@@ -1609,8 +1632,22 @@ impl<'e> Evaluator<'e> {
                     })
                 })
                 .collect();
+            // RFC-0034 §10/§10.1 (CU-5): inside a `wrapping { … }` region (`wrapping_depth > 0`), an
+            // enclosed `bin.add`/`bin.sub`/`bin.mul` dispatches through the landed free function
+            // `eval_wrapping` (modular wraparound, `Declared` + `WrappingOpt`), instead of the normal
+            // never-silent prim from the registry — the *only* behavioural change the opt-out makes.
+            // `eval_wrapping`'s signature is exactly the registry `PrimFn`, so the operand slice and the
+            // result mapping are identical; every other prim (and every op outside the region) takes the
+            // normal path unchanged. The checker (`gate_wrapping_body`) guarantees only these three ops
+            // ever appear in a region, so the `matches!` guard is belt-and-braces (a non-matching op
+            // falls through to the normal registry path — never a silent mis-dispatch, G2).
+            let wrapping =
+                regs.wrapping_depth > 0 && matches!(kernel, "bin.add" | "bin.sub" | "bin.mul");
             let out = match vals {
                 Err(e) => Err(e),
+                Ok(vals) if wrapping => mycelium_interp::prims::eval_wrapping(kernel, &vals)
+                    .map(L1Value::Repr)
+                    .map_err(L1Error::from),
                 Ok(vals) => match self.prims.get(kernel) {
                     None => Err(L1Error::Kernel(KernelError::UnknownPrim(kernel.to_owned()))),
                     Some(f) => f(kernel, &vals).map(L1Value::Repr).map_err(L1Error::from),
@@ -2129,6 +2166,14 @@ struct Regs<'e, 'b> {
     scope: Vec<(String, L1Value)>,
     /// The explicit heap continuation stack (the CEK "K").
     stack: Vec<Frame<'e, 'b>>,
+    /// The **`wrapping`-region nesting depth** (RFC-0034 §10/§10.1; CU-5). Raised on entering a
+    /// `wrapping { … }` block and lowered by its paired [`Frame::WrappingPop`]; while `> 0`, an
+    /// enclosed `bin.add`/`bin.sub`/`bin.mul` dispatches through
+    /// [`mycelium_interp::prims::eval_wrapping`] (modular, `Declared`-tagged) instead of the normal
+    /// never-silent prim. The checker guarantees a `wrapping` body is a **call-free** add/sub/mul tree
+    /// ([`crate::checkty::Cx::gate_wrapping_body`]), so this dynamic counter coincides exactly with the
+    /// lexical block — the opt-out is never ambient.
+    wrapping_depth: u32,
 }
 
 /// One **continuation frame** of the L1 work-stack CEK machine (RFC-0041 §4.1/§4.6): the reified
@@ -2169,6 +2214,10 @@ enum Frame<'e, 'b> {
     },
     /// A `consume` operand just evaluated → the checked affine Live→Consumed move.
     ConsumePost,
+    /// A `wrapping { … }` body just evaluated → lower the wrapping-region counter (`wrapping_depth`)
+    /// and pass the body's value/error through unchanged (RFC-0034 §10.1; CU-5). The counter is
+    /// lowered on **both** the value and the error path so an unwind never leaves the region latched.
+    WrappingPop,
     /// An ascription's inner value just evaluated → assert the guarantee index.
     AscribePost { guar: Strength },
     /// `fuse`'s left operand just evaluated → evaluate the right (carrying the left value + exprs).

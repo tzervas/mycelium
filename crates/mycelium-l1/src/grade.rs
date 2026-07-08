@@ -289,6 +289,11 @@ impl Gx<'_> {
             // `with paradigm` is stripped by the ambient pass before the checker. Defensive,
             // never-reached arms: grade the body conservatively rather than panic.
             Expr::Spore(_) => Ok(Strength::Declared),
+            // RFC-0034 §10/§10.1 (CU-5): `wrapping { … }` attests **`Declared`** — the enclosed
+            // modular ops are the developer's explicit opt-in (`eval_wrapping` tags each result
+            // `Declared` + `WrappingOpt`), never a fabricated stronger claim (VR-5). The construct's
+            // static grade is `Declared`, matching the runtime tag; never upgraded past that basis.
+            Expr::Wrapping(_) => Ok(Strength::Declared),
             // M-664: `consume <expr>` is a **move** — it transfers the operand value unchanged, so it
             // is grade-**transparent**: the result carries exactly the operand's grade. This both
             // *enforces* the operand's own grade demands (by grading it) and *propagates* its grade —

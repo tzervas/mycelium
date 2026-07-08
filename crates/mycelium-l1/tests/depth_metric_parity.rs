@@ -116,7 +116,9 @@ fn expr_depth(e: &Expr) -> usize {
         }
         Expr::Swap { value, .. } => expr_depth(value),
         Expr::WithParadigm { body, .. } => expr_depth(body),
-        Expr::Wild(inner) | Expr::Spore(inner) | Expr::Consume(inner) => expr_depth(inner),
+        Expr::Wild(inner) | Expr::Spore(inner) | Expr::Consume(inner) | Expr::Wrapping(inner) => {
+            expr_depth(inner)
+        }
         Expr::Colony(hyphae) => hyphae
             .iter()
             .map(|h| expr_depth(&h.body))

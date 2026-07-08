@@ -455,3 +455,117 @@ ceiling is the bound — Ops lessons above). The orchestrator owns the shared co
 (`issues.yaml` incl. the reconciliation pass, `CHANGELOG`, `Doc-Index`, `docs/api-index/`); leaves FLAG
 up. Promote leaf→`dev` via `/pr-land`; `dev→integration` is the batch close-out; `integration→main`
 stays the terminal **maintainer** checkpoint.
+
+## Session-4 (2026-07-08) — Lane C wave RELEASED to `main`; remaining transpiler + core/kernel worklist
+
+This session ran the **trx2 Lane C** wave (transpiler completion + kernel-API forward-mapping),
+landed it, and promoted the **entire accumulated multi-session wave** through `dev → integration →
+main`. **Read this as the re-kickoff launch pad.**
+
+### ✅ Landed + released this session
+- **Lane C leaves → `dev`** (each `/pr-land`'d): transpiler operand-gated emission + forward-mapped
+  `prim_map` (#1299, `checked_fraction` 5.79% → 7.76%, +15; a review-found HIGH shadowing bug in the
+  operand-type env was fixed); kernel **CU-3** Binary↔Float conversions, **CU-5** wrapping eval-mode,
+  and **CU-7** arbitrary-width-ternary correction (#1300, Π 66 → 68); the DN-34 §8.17 record (#1302).
+- **Full release → `main`** (squash #1305, `7b344b8f`): the whole wave since `dff9debe` (self-hosting
+  frontend port, tero M-1015…1018, CU-1…7 prims, M-1006 ladder, RFC-0041, ADR-042/043/044, DN-85…89).
+  `reject_ledger` reconciled 111 → 116 (CU-3's 5 legit new `self_err` sites; DN-80 updated).
+  Back-propagated `main` → `integration` (#1306) + `main` → `dev` (#1307).
+- **Check-policy formalized (maintainer directive):** a new **canary tier** — `just check-canary`
+  (all gates + Tier-0 change-scoped tests, no reverse-dep/proptest balloon) for per-promotion use;
+  `just check` (Tier-1) for `integration→main`; `just check-full` stays periodic + desktop-held (and
+  is to be ACCELERATED — multicore/GPU — per **M-1014**). Documented in CLAUDE.md + the justfile.
+  **Never run the hours-long full-workspace sweep as a per-promotion blocker.**
+
+### ⏳ Pending on `dev` — MUST NOT be lost (rides the next wave up to `main`)
+The **canary tier + README currency** housekeeping (#1304 — `check-canary` recipe, the canary-policy
+doc, RFC/ADR/DN range + crate-count + self-hosting-status README refresh) is on `dev` only; it flows
+up with the next `dev→integration→main` promotion. Confirmed present on `dev` (`grep check-canary
+justfile CLAUDE.md`). Also flagged for the maintainer's PM sync: the `issues.yaml` CU-3/5/7 status
+flips + the register-family close-outs (the sync script owns `issues.yaml`; re-sync from `main`).
+
+### ⇒ REMAINING WORK (re-kickoff scope) — transpiler + core/kernel, then onward
+
+**A. Transpiler completion (`crates/mycelium-transpile/` + `gen/myc-drafts/` + DN-34).**
+- **`Expr::Cast` handling** — the lever that unlocks CU-3 float↔int EMISSION (Rust's natural `as`
+  spelling is `Expr::Cast`, currently unhandled). Once emitted, **flip the `prim_map` CU-3
+  PENDING-BACKEND row → wired** and upgrade `Declared→Empirical` where a differential exists.
+- **CU-5 `wrapping { … }` surface syntax** in `mycelium-l1` (parser/AST/elab) — FLAG-cu5-surface-syntax;
+  then flip the `prim_map` `wrapping_*` row wired. (The runtime eval-half already landed.)
+- More operand-type-inference / emission levers + re-vet (`checked_fraction`), per DN-34 §8.12–§8.17.
+
+**B. Core/kernel work.**
+- **Spec-doc sync (Session-C #5):** document the new `std.cmp` surface (`ne/gt/cmp_s/le_s/ge_s`) in
+  `docs/spec/stdlib/cmp.md` and the `std.math` surface (`bmul/bpopcount/bclz/bctz`) in `math.md`.
+- **Mint tracked issues for the deferred design gates** (coordinate with the PM sync — do not hand-edit
+  `issues.yaml`): CU-6 rotate/reverse (a `bit.rotl`/`rotr` prim), CU-8 atomics (a memory-model RFC),
+  CU-9 Dense dtype/quant (E20-1 rehash), CU-3-signed-conv, CU-3-lossy-swap machinery, CU-7 growable
+  ternary value form.
+
+**C. ⚑ NEW DESIGN THEME (maintainer directive, 2026-07-08) — unified arbitrary-large values/sizes.**
+Design **an intelligent, sensible, future-extensible way of handling arbitrarily-large values / byte
+sizes across the board** (within reason — a foundation we extend as needed), rather than today's
+ad-hoc per-type caps. It spans the whole value model: **Binary{N}** widths (DN-41 `width_cast` /
+DN-42 width generics), **ternary magnitude** (the `i64`-capped `max_magnitude`/`int_to_trits`/
+`trits_to_int` conversion utilities vs the already-arbitrary-width digit-serial `ternary::add`/`mul`;
+CU-7's growable value form), **Bytes/Seq length** (ADR-025/026), and **Dense/VSA dims**. It is
+coupled to the **E20-1 content-address settlement** (the growable-`Repr` payload one-way doors,
+ADR-030). **This warrants a DN** to think through a coherent cross-representation strategy before
+implementing — flag the design gate to the maintainer; do not guess the content-address coupling
+(G2/VR-5). Land the *decidable* pieces (e.g. lifting an `i64` conversion cap to an explicit
+growable/checked form) incrementally; hold the E20-1-coupled pieces for the settlement.
+**Status: BACKLOG (maintainer, 2026-07-08).** Primarily something to **consider and plan around
+going forward**, not this wave's critical path. A **provider/consumer service** may be a fitting
+architecture for it — *to evaluate/assess, not decided*. IF it can be designed, do so on a
+**non-conflicting isolated worktree** (a disjoint DN/design lane, never colliding with the transpiler
+or core/kernel lanes) — the design proceeds in parallel without blocking or entangling the port work.
+
+### Re-kickoff shape
+Sonnet swarm; one isolated worktree per disjoint lane (transpiler vs core/kernel-docs are disjoint);
+**canary gate per promotion (NOT the full sweep)**; orchestrator owns the shared collision surface;
+`integration→main` stays the terminal maintainer checkpoint (this session's release was
+maintainer-authorized). Persist intent to disc before compaction (mitigation #8).
+
+## Session-6 LAUNCH PAD (2026-07-08) — NEXT MISSION: Phase B, unblock full Rust→Mycelium transpilation
+
+This section stows the **next mission** (not executed this session — a worklist for the next
+kickoff/session to pick up). It is **Phase B** of the ADR-042 self-hosting mission: with the
+transpiler ladder + kernel prim-gap closure (Session-4) landed on `main`, the next-highest-leverage
+work is **closing the design gates that block the transpiler's remaining emission gaps**, then
+widening the emission ceiling and pushing the semcore heavy-core port forward.
+
+### Grounding — what landed since Session-4/5
+This session (the parallel session that produced this doc-currency PR) landed **DN-90…94** (design
+work-ups for the deferred CU gates) and **`docs/planning/deferred-design-CU-gates.md`** (D1–D6 issue
+specs for the gates once ratified), plus **`packages/`** (the portable `tero-mcp-lite` MCP server +
+`GROK-HANDOFF.md` + `BACKLOG.md`, registered via the repo-root `.mcp.json` — see the `/tero-query`
+skill bullet above). DN-91 in particular records that Lane A1 (DN-34 §8.18) landed the transpiler's
+`Expr::Cast` arm but had to gap **every float-crossing cast** with `PENDING-DESIGN(CU-3-fidelity)` and
+every narrow cast with `FLAG-cast-narrow-fidelity`, pending exactly the design DN-91 works up.
+
+### Worklist (multi-wave programme — stow only, do NOT execute this session)
+1. **Ratify + implement the design gates DN-90…94** — esp. **DN-91 (CU-3 lossy-swap)**, which is the
+   gate that unblocks the transpiler's gapped float↔int conversions and narrows the `Expr::Cast`
+   emission gap (A1 gapped it pending exactly this design). Also **DN-92** (CU-6 bit-rotation surface,
+   `rotate`) and **DN-93** (the E20-1 content-address rehash settlement). DN-90 (the unified
+   arbitrary-large-values/sizes strategy) and DN-94 (atomics/memory-model direction) round out the
+   gate set. The issue specs for these once ratified live in
+   **`docs/planning/deferred-design-CU-gates.md`** (D1–D6) — mint the tracked `M-xxx`/`E*` ids from
+   there (mitigation #1: verify the slot is free first).
+2. **Transpiler emission ceiling** — cross-nodule/project-mode vetting so referents resolve across
+   nodule boundaries, deeper operand-type inference, and the newly-decidable emission arms that open up
+   once the DN-91 gate lands (DN-34 §8.11–§8.18 is the ladder record to extend).
+3. **Semcore heavy-core port** (M-993/M-1013: `checkty`/`elab`/`eval`/`mono`/`fuse`) on the
+   **marshalling-differential method** (DN-26 §10.2 — decode the `.myc` mirror into the real
+   `mycelium_core` type and compare against the live Rust oracle; the adopted trust foundation since
+   Session-A's STEP 2). See the Session-A/Session-3 sections above for the increment ladder and its
+   resume point.
+4. **Kernel/core completeness** — the remaining prim/surface gaps the port work surfaces as it goes
+   (the CU-6/CU-8/CU-9 deferred-design items from Session-4's worklist feed into this, once their
+   design gates are ratified per item 1).
+
+**Sequencing note:** this is a multi-wave programme, not a single session's work. **Start with the
+gate-ratification + `Expr::Cast` unblock (item 1, DN-91 specifically) — it is the highest-leverage
+first move**, since it directly resolves an existing FLAG on already-landed transpiler code and
+unblocks measurable `checked_fraction` gains on the next transpile-and-vet pass, before widening into
+items 2–4.

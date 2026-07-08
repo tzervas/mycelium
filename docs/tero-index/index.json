@@ -114,7 +114,7 @@
       "kind": "section",
       "title": "2. Dependency DAG",
       "file": "docs/Doc-Index.md",
-      "line": 205,
+      "line": 210,
       "tag": "Empirical/Declared"
     },
     {
@@ -123,7 +123,7 @@
       "kind": "section",
       "title": "3. What the research resolved (decisions now baked in)",
       "file": "docs/Doc-Index.md",
-      "line": 230,
+      "line": 235,
       "tag": "Empirical/Declared"
     },
     {
@@ -132,7 +132,7 @@
       "kind": "section",
       "title": "4. Remaining experiments (small; for the build phase, not blockers to design)",
       "file": "docs/Doc-Index.md",
-      "line": 241,
+      "line": 246,
       "tag": "Empirical/Declared"
     },
     {
@@ -141,7 +141,7 @@
       "kind": "section",
       "title": "5. Build status — the live phase ladder",
       "file": "docs/Doc-Index.md",
-      "line": 245,
+      "line": 250,
       "tag": "Empirical/Declared"
     },
     {
@@ -150,7 +150,7 @@
       "kind": "section",
       "title": "6. Agent tooling index",
       "file": "docs/Doc-Index.md",
-      "line": 254,
+      "line": 259,
       "tag": "Empirical/Declared"
     },
     {
@@ -159,7 +159,7 @@
       "kind": "section",
       "title": "Reader guide — README topic docs (`docs/guide/`)",
       "file": "docs/Doc-Index.md",
-      "line": 274,
+      "line": 279,
       "tag": "Empirical/Declared"
     },
     {
@@ -168,7 +168,7 @@
       "kind": "section",
       "title": "7. Maintenance",
       "file": "docs/Doc-Index.md",
-      "line": 283,
+      "line": 288,
       "tag": "Empirical/Declared"
     },
     {
@@ -22869,6 +22869,743 @@
       "tag": "Empirical/Declared"
     },
     {
+      "anchor": "dn-90-unified-arbitrary-large-values-and-sizes-strategy",
+      "family": "doc",
+      "kind": "note",
+      "id": "DN-90",
+      "title": "DN-90 — A Unified, Extensible Strategy for Arbitrarily-Large Values / Byte-Sizes Across the Value Model",
+      "file": "docs/notes/DN-90-Unified-Arbitrary-Large-Values-And-Sizes-Strategy.md",
+      "line": 1,
+      "status": "Draft",
+      "guarantee_tag": "Declared",
+      "summary": "**The maintainer's ask (captured, 2026-07-08).** Mycelium today handles size **ad-hoc per",
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-90-unified-arbitrary-large-values-and-sizes-strategy--1-problem-statement",
+      "family": "doc",
+      "kind": "section",
+      "title": "1. Problem statement",
+      "file": "docs/notes/DN-90-Unified-Arbitrary-Large-Values-And-Sizes-Strategy.md",
+      "line": 25,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-90-unified-arbitrary-large-values-and-sizes-strategy--2-current-state-verify-first-survey-empirical-cited",
+      "family": "doc",
+      "kind": "section",
+      "title": "2. Current state — verify-first survey (`Empirical`, cited)",
+      "file": "docs/notes/DN-90-Unified-Arbitrary-Large-Values-And-Sizes-Strategy.md",
+      "line": 53,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-90-unified-arbitrary-large-values-and-sizes-strategy--2-current-state-verify-first-survey-empirical-cited--2-1-binary-n-capped-at-64-arithmetic-shift-float-conv-bitwise-unbounded",
+      "family": "doc",
+      "kind": "section",
+      "title": "2.1 Binary{N} — capped at 64 (arithmetic/shift/float-conv); bitwise unbounded",
+      "file": "docs/notes/DN-90-Unified-Arbitrary-Large-Values-And-Sizes-Strategy.md",
+      "line": 58,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-90-unified-arbitrary-large-values-and-sizes-strategy--2-current-state-verify-first-survey-empirical-cited--2-2-ternary-the-i64-cap-vs-digit-serial-split-already-corrected-by-dn-34-cu-7",
+      "family": "doc",
+      "kind": "section",
+      "title": "2.2 Ternary — the i64-cap-vs-digit-serial split (already corrected by DN-34/CU-7)",
+      "file": "docs/notes/DN-90-Unified-Arbitrary-Large-Values-And-Sizes-Strategy.md",
+      "line": 76,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-90-unified-arbitrary-large-values-and-sizes-strategy--2-current-state-verify-first-survey-empirical-cited--2-3-bytes-seq-length-in-type-u32-adr-025-accepted",
+      "family": "doc",
+      "kind": "section",
+      "title": "2.3 Bytes / Seq — length-in-type `u32` (ADR-025, Accepted)",
+      "file": "docs/notes/DN-90-Unified-Arbitrary-Large-Values-And-Sizes-Strategy.md",
+      "line": 98,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-90-unified-arbitrary-large-values-and-sizes-strategy--2-current-state-verify-first-survey-empirical-cited--2-4-dense-vsa-dimension-is-u32-no-growable-dim",
+      "family": "doc",
+      "kind": "section",
+      "title": "2.4 Dense / VSA — dimension is `u32`; no growable dim",
+      "file": "docs/notes/DN-90-Unified-Arbitrary-Large-Values-And-Sizes-Strategy.md",
+      "line": 109,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-90-unified-arbitrary-large-values-and-sizes-strategy--2-current-state-verify-first-survey-empirical-cited--2-5-e20-1-the-content-address-settlement-in-progress-rehash-deferred-post-1-0",
+      "family": "doc",
+      "kind": "section",
+      "title": "2.5 E20-1 — the content-address settlement (in-progress; rehash deferred post-1.0)",
+      "file": "docs/notes/DN-90-Unified-Arbitrary-Large-Values-And-Sizes-Strategy.md",
+      "line": 121,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-90-unified-arbitrary-large-values-and-sizes-strategy--3-a-coherent-cross-representation-strategy-proposal-declared",
+      "family": "doc",
+      "kind": "section",
+      "title": "3. A coherent cross-representation strategy (proposal, `Declared`)",
+      "file": "docs/notes/DN-90-Unified-Arbitrary-Large-Values-And-Sizes-Strategy.md",
+      "line": 131,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-90-unified-arbitrary-large-values-and-sizes-strategy--3-a-coherent-cross-representation-strategy-proposal-declared--3-1-a-size-tier-lattice-the-never-silent-core",
+      "family": "doc",
+      "kind": "section",
+      "title": "3.1 A size-tier lattice (the never-silent core)",
+      "file": "docs/notes/DN-90-Unified-Arbitrary-Large-Values-And-Sizes-Strategy.md",
+      "line": 139,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-90-unified-arbitrary-large-values-and-sizes-strategy--3-a-coherent-cross-representation-strategy-proposal-declared--3-2-how-each-representation-maps-onto-the-tiers",
+      "family": "doc",
+      "kind": "section",
+      "title": "3.2 How each representation maps onto the tiers",
+      "file": "docs/notes/DN-90-Unified-Arbitrary-Large-Values-And-Sizes-Strategy.md",
+      "line": 169,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-90-unified-arbitrary-large-values-and-sizes-strategy--3-a-coherent-cross-representation-strategy-proposal-declared--3-3-what-the-strategy-explicitly-is-not",
+      "family": "doc",
+      "kind": "section",
+      "title": "3.3 What the strategy explicitly is *not*",
+      "file": "docs/notes/DN-90-Unified-Arbitrary-Large-Values-And-Sizes-Strategy.md",
+      "line": 188,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-90-unified-arbitrary-large-values-and-sizes-strategy--4-evaluate-do-not-decide-the-provider-consumer-service-candidate-vs-an-alternative",
+      "family": "doc",
+      "kind": "section",
+      "title": "4. EVALUATE (do not decide) — the provider/consumer service candidate vs. an alternative",
+      "file": "docs/notes/DN-90-Unified-Arbitrary-Large-Values-And-Sizes-Strategy.md",
+      "line": 196,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-90-unified-arbitrary-large-values-and-sizes-strategy--4-evaluate-do-not-decide-the-provider-consumer-service-candidate-vs-an-alternative--4-1-candidate-a-a-size-capacity-provider-service-consumer-ops-request-capacity",
+      "family": "doc",
+      "kind": "section",
+      "title": "4.1 Candidate A — a size/capacity **provider service** (consumer ops request capacity)",
+      "file": "docs/notes/DN-90-Unified-Arbitrary-Large-Values-And-Sizes-Strategy.md",
+      "line": 202,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-90-unified-arbitrary-large-values-and-sizes-strategy--4-evaluate-do-not-decide-the-provider-consumer-service-candidate-vs-an-alternative--4-2-candidate-b-contrast-a-type-level-size-tier-parameter-growth-as-a-swap-no-service",
+      "family": "doc",
+      "kind": "section",
+      "title": "4.2 Candidate B (contrast) — a **type-level size-tier** parameter, growth as a swap (no service)",
+      "file": "docs/notes/DN-90-Unified-Arbitrary-Large-Values-And-Sizes-Strategy.md",
+      "line": 223,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-90-unified-arbitrary-large-values-and-sizes-strategy--4-evaluate-do-not-decide-the-provider-consumer-service-candidate-vs-an-alternative--4-3-the-assessment-not-a-decision",
+      "family": "doc",
+      "kind": "section",
+      "title": "4.3 The assessment (not a decision)",
+      "file": "docs/notes/DN-90-Unified-Arbitrary-Large-Values-And-Sizes-Strategy.md",
+      "line": 240,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-90-unified-arbitrary-large-values-and-sizes-strategy--5-flag-the-e20-1-content-address-coupling-is-a-hard-design-gate-do-not-guess-it",
+      "family": "doc",
+      "kind": "section",
+      "title": "5. ⚑ FLAG — the E20-1 content-address coupling is a hard design gate (do NOT guess it)",
+      "file": "docs/notes/DN-90-Unified-Arbitrary-Large-Values-And-Sizes-Strategy.md",
+      "line": 252,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-90-unified-arbitrary-large-values-and-sizes-strategy--6-decidable-now-vs-held",
+      "family": "doc",
+      "kind": "section",
+      "title": "6. Decidable-now vs. held",
+      "file": "docs/notes/DN-90-Unified-Arbitrary-Large-Values-And-Sizes-Strategy.md",
+      "line": 278,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-90-unified-arbitrary-large-values-and-sizes-strategy--6-decidable-now-vs-held--6-1-decidable-now-no-content-address-change-can-land-incrementally",
+      "family": "doc",
+      "kind": "section",
+      "title": "6.1 Decidable now (no content-address change; can land incrementally)",
+      "file": "docs/notes/DN-90-Unified-Arbitrary-Large-Values-And-Sizes-Strategy.md",
+      "line": 283,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-90-unified-arbitrary-large-values-and-sizes-strategy--6-decidable-now-vs-held--6-2-held-on-the-e20-1-settlement-do-not-implement-until-m-780-5",
+      "family": "doc",
+      "kind": "section",
+      "title": "6.2 Held on the E20-1 settlement (do not implement until M-780 — §5)",
+      "file": "docs/notes/DN-90-Unified-Arbitrary-Large-Values-And-Sizes-Strategy.md",
+      "line": 302,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-90-unified-arbitrary-large-values-and-sizes-strategy--7-user-stories",
+      "family": "doc",
+      "kind": "section",
+      "title": "7. User stories",
+      "file": "docs/notes/DN-90-Unified-Arbitrary-Large-Values-And-Sizes-Strategy.md",
+      "line": 309,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-90-unified-arbitrary-large-values-and-sizes-strategy--8-definition-of-done-this-note-s-gate",
+      "family": "doc",
+      "kind": "section",
+      "title": "8. Definition of Done (this note's gate)",
+      "file": "docs/notes/DN-90-Unified-Arbitrary-Large-Values-And-Sizes-Strategy.md",
+      "line": 324,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-90-unified-arbitrary-large-values-and-sizes-strategy--meta-changelog",
+      "family": "doc",
+      "kind": "section",
+      "title": "Meta — changelog",
+      "file": "docs/notes/DN-90-Unified-Arbitrary-Large-Values-And-Sizes-Strategy.md",
+      "line": 355,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-91-cu-3-float-int-conversion-surface",
+      "family": "doc",
+      "kind": "note",
+      "id": "DN-91",
+      "title": "Design Note DN-91 — The CU-3 Float↔Int Conversion Surface: Reified Lossy-Conversion Swaps + Checked Signed Prims",
+      "file": "docs/notes/DN-91-CU-3-Float-Int-Conversion-Surface.md",
+      "line": 1,
+      "status": "Draft",
+      "summary": "**Posture (transparency rule / VR-5 / G2).** This note is **Draft / advisory** — a design direction",
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-91-cu-3-float-int-conversion-surface--1-purpose-the-gap-closes-design-gates-d4-d5",
+      "family": "doc",
+      "kind": "section",
+      "title": "§1 Purpose & the gap (closes design gates D4 + D5)",
+      "file": "docs/notes/DN-91-CU-3-Float-Int-Conversion-Surface.md",
+      "line": 23,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-91-cu-3-float-int-conversion-surface--2-verify-first-survey-what-already-exists-empirical-cited",
+      "family": "doc",
+      "kind": "section",
+      "title": "§2 Verify-first survey — what already exists (`Empirical`, cited)",
+      "file": "docs/notes/DN-91-CU-3-Float-Int-Conversion-Surface.md",
+      "line": 53,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-91-cu-3-float-int-conversion-surface--2-verify-first-survey-what-already-exists-empirical-cited--2-1-prior-art-external-declared-context-not-a-mycelium-guarantee",
+      "family": "doc",
+      "kind": "section",
+      "title": "§2.1 Prior art (external, `Declared` context — not a Mycelium guarantee)",
+      "file": "docs/notes/DN-91-CU-3-Float-Int-Conversion-Surface.md",
+      "line": 74,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-91-cu-3-float-int-conversion-surface--3-the-taxonomy-three-loss-shapes-two-families",
+      "family": "doc",
+      "kind": "section",
+      "title": "§3 The taxonomy — three loss shapes, two families",
+      "file": "docs/notes/DN-91-CU-3-Float-Int-Conversion-Surface.md",
+      "line": 100,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-91-cu-3-float-int-conversion-surface--3-the-taxonomy-three-loss-shapes-two-families--3-1-two-of-the-three-cross-paradigms-the-certificate-swap-family-d5-this-note-s-novelty",
+      "family": "doc",
+      "kind": "section",
+      "title": "§3.1 Two of the three cross paradigms → the certificate-swap family (D5, this note's novelty)",
+      "file": "docs/notes/DN-91-CU-3-Float-Int-Conversion-Surface.md",
+      "line": 105,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-91-cu-3-float-int-conversion-surface--3-the-taxonomy-three-loss-shapes-two-families--3-2-the-third-does-not-cross-paradigms-it-is-dn-51-s-truncate-not-a-new-swap-verify-first-correction",
+      "family": "doc",
+      "kind": "section",
+      "title": "§3.2 The third does not cross paradigms → it is DN-51's `truncate`, not a new swap (verify-first correction)",
+      "file": "docs/notes/DN-91-CU-3-Float-Int-Conversion-Surface.md",
+      "line": 120,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-91-cu-3-float-int-conversion-surface--4-d5-the-reified-lossy-conversion-swap-surface-recommended-option-a",
+      "family": "doc",
+      "kind": "section",
+      "title": "§4 D5 — the reified lossy-conversion swap surface (recommended: Option A)",
+      "file": "docs/notes/DN-91-CU-3-Float-Int-Conversion-Surface.md",
+      "line": 136,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-91-cu-3-float-int-conversion-surface--4-d5-the-reified-lossy-conversion-swap-surface-recommended-option-a--4-1-the-rounding-swap-swap-round-bin-flt-binary-n-float-f64",
+      "family": "doc",
+      "kind": "section",
+      "title": "§4.1 The rounding swap — `swap.round.bin_flt` (Binary{N} → Float{F64})",
+      "file": "docs/notes/DN-91-CU-3-Float-Int-Conversion-Surface.md",
+      "line": 142,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-91-cu-3-float-int-conversion-surface--4-d5-the-reified-lossy-conversion-swap-surface-recommended-option-a--4-2-the-saturating-swap-swap-sat-flt-bin-float-f64-binary-n",
+      "family": "doc",
+      "kind": "section",
+      "title": "§4.2 The saturating swap — `swap.sat.flt_bin` (Float{F64} → Binary{N})",
+      "file": "docs/notes/DN-91-CU-3-Float-Int-Conversion-Surface.md",
+      "line": 159,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-91-cu-3-float-int-conversion-surface--4-d5-the-reified-lossy-conversion-swap-surface-recommended-option-a--4-3-cross-cutting-mode-gating-explain-and-content-address",
+      "family": "doc",
+      "kind": "section",
+      "title": "§4.3 Cross-cutting: mode-gating, EXPLAIN, and content-address",
+      "file": "docs/notes/DN-91-CU-3-Float-Int-Conversion-Surface.md",
+      "line": 185,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-91-cu-3-float-int-conversion-surface--5-d4-the-checked-signed-int-float-conversion-prims-exact-or-refuse",
+      "family": "doc",
+      "kind": "section",
+      "title": "§5 D4 — the checked signed int↔float conversion prims (exact-or-refuse)",
+      "file": "docs/notes/DN-91-CU-3-Float-Int-Conversion-Surface.md",
+      "line": 206,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-91-cu-3-float-int-conversion-surface--6-the-transpiler-flip-dn-34-8-18-once-ratified-implemented",
+      "family": "doc",
+      "kind": "section",
+      "title": "§6 The transpiler flip (DN-34 §8.18, once ratified + implemented)",
+      "file": "docs/notes/DN-91-CU-3-Float-Int-Conversion-Surface.md",
+      "line": 231,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-91-cu-3-float-int-conversion-surface--7-guarantee-posture-lattice-exact-proven-empirical-declared-vr-5",
+      "family": "doc",
+      "kind": "section",
+      "title": "§7 Guarantee posture (lattice `Exact ⊐ Proven ⊐ Empirical ⊐ Declared`; VR-5)",
+      "file": "docs/notes/DN-91-CU-3-Float-Int-Conversion-Surface.md",
+      "line": 245,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-91-cu-3-float-int-conversion-surface--8-user-stories",
+      "family": "doc",
+      "kind": "section",
+      "title": "§8 User stories",
+      "file": "docs/notes/DN-91-CU-3-Float-Int-Conversion-Surface.md",
+      "line": 259,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-91-cu-3-float-int-conversion-surface--9-alternatives-considered",
+      "family": "doc",
+      "kind": "section",
+      "title": "§9 Alternatives considered",
+      "file": "docs/notes/DN-91-CU-3-Float-Int-Conversion-Surface.md",
+      "line": 279,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-91-cu-3-float-int-conversion-surface--10-definition-of-done",
+      "family": "doc",
+      "kind": "section",
+      "title": "§10 Definition of Done",
+      "file": "docs/notes/DN-91-CU-3-Float-Int-Conversion-Surface.md",
+      "line": 306,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-91-cu-3-float-int-conversion-surface--meta-changelog",
+      "family": "doc",
+      "kind": "section",
+      "title": "Meta — changelog",
+      "file": "docs/notes/DN-91-CU-3-Float-Int-Conversion-Surface.md",
+      "line": 337,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-92-cu-6-bit-rotation-surface",
+      "family": "doc",
+      "kind": "note",
+      "id": "DN-92",
+      "title": "Design Note DN-92 — CU-6 Bit-Rotation Surface: dedicated `bit.rotl`/`bit.rotr` prims vs a derived width-safe surface",
+      "file": "docs/notes/DN-92-CU-6-Bit-Rotation-Surface.md",
+      "line": 1,
+      "status": "Draft",
+      "summary": "**Posture (transparency rule / VR-5 / G2).** This note is **Draft** — a design direction for the",
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-92-cu-6-bit-rotation-surface--1-problem-the-one-cu-6-gap-left-open",
+      "family": "doc",
+      "kind": "section",
+      "title": "§1 Problem — the one CU-6 gap left open",
+      "file": "docs/notes/DN-92-CU-6-Bit-Rotation-Surface.md",
+      "line": 27,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-92-cu-6-bit-rotation-surface--2-the-decision-two-options",
+      "family": "doc",
+      "kind": "section",
+      "title": "§2 The decision — two options",
+      "file": "docs/notes/DN-92-CU-6-Bit-Rotation-Surface.md",
+      "line": 72,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-92-cu-6-bit-rotation-surface--2-the-decision-two-options--option-a-a-dedicated-bit-rotl-bit-rotr-bit-reverse-bit-swap-bytes-prim-family-recommended",
+      "family": "doc",
+      "kind": "section",
+      "title": "Option A — a dedicated `bit.rotl`/`bit.rotr` (+ `bit.reverse`/`bit.swap_bytes`) prim family *(recommended)*",
+      "file": "docs/notes/DN-92-CU-6-Bit-Rotation-Surface.md",
+      "line": 74,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-92-cu-6-bit-rotation-surface--2-the-decision-two-options--option-b-a-derived-width-safe-std-math-surface",
+      "family": "doc",
+      "kind": "section",
+      "title": "Option B — a derived width-safe `std.math` surface",
+      "file": "docs/notes/DN-92-CU-6-Bit-Rotation-Surface.md",
+      "line": 101,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-92-cu-6-bit-rotation-surface--3-prior-art-declared-cited-external-references",
+      "family": "doc",
+      "kind": "section",
+      "title": "§3 Prior art (`Declared` — cited external references)",
+      "file": "docs/notes/DN-92-CU-6-Bit-Rotation-Surface.md",
+      "line": 131,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-92-cu-6-bit-rotation-surface--4-recommendation-option-a-with-the-mod-n-convention-baked-into-the-prim",
+      "family": "doc",
+      "kind": "section",
+      "title": "§4 Recommendation — Option A, with the mod-`N` convention baked into the prim",
+      "file": "docs/notes/DN-92-CU-6-Bit-Rotation-Surface.md",
+      "line": 171,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-92-cu-6-bit-rotation-surface--5-guarantee-tags-honest-per-op",
+      "family": "doc",
+      "kind": "section",
+      "title": "§5 Guarantee tags (honest per-op)",
+      "file": "docs/notes/DN-92-CU-6-Bit-Rotation-Surface.md",
+      "line": 223,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-92-cu-6-bit-rotation-surface--6-user-stories",
+      "family": "doc",
+      "kind": "section",
+      "title": "§6 User stories",
+      "file": "docs/notes/DN-92-CU-6-Bit-Rotation-Surface.md",
+      "line": 237,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-92-cu-6-bit-rotation-surface--7-definition-of-done",
+      "family": "doc",
+      "kind": "section",
+      "title": "§7 Definition of Done",
+      "file": "docs/notes/DN-92-CU-6-Bit-Rotation-Surface.md",
+      "line": 254,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-92-cu-6-bit-rotation-surface--meta-changelog",
+      "family": "doc",
+      "kind": "section",
+      "title": "Meta — changelog",
+      "file": "docs/notes/DN-92-CU-6-Bit-Rotation-Surface.md",
+      "line": 277,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-93-e20-1-content-address-rehash-settlement",
+      "family": "doc",
+      "kind": "note",
+      "id": "DN-93",
+      "title": "DN-93 — The E20-1 Content-Address Rehash Settlement (batch every identity-changing one-way door into a single rehash)",
+      "file": "docs/notes/DN-93-E20-1-Content-Address-Rehash-Settlement.md",
+      "line": 1,
+      "status": "Draft",
+      "guarantee_tag": "Declared",
+      "summary": "**The decision this note works up (captured, 2026-07-08).** Several deferred features each want to",
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-93-e20-1-content-address-rehash-settlement--1-problem-statement-the-meta-blocker",
+      "family": "doc",
+      "kind": "section",
+      "title": "1. Problem statement — the meta-blocker",
+      "file": "docs/notes/DN-93-E20-1-Content-Address-Rehash-Settlement.md",
+      "line": 26,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-93-e20-1-content-address-rehash-settlement--2-the-pending-identity-change-manifest-the-doors-that-must-be-batched-verify-first-cited",
+      "family": "doc",
+      "kind": "section",
+      "title": "2. The pending-identity-change manifest — the doors that must be batched (verify-first, cited)",
+      "file": "docs/notes/DN-93-E20-1-Content-Address-Rehash-Settlement.md",
+      "line": 50,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-93-e20-1-content-address-rehash-settlement--3-the-canon-mechanism-additive-no-rehash-vs-reshaping-needs-the-rehash",
+      "family": "doc",
+      "kind": "section",
+      "title": "3. The `Canon` mechanism — additive (no rehash) vs. reshaping (needs the rehash)",
+      "file": "docs/notes/DN-93-E20-1-Content-Address-Rehash-Settlement.md",
+      "line": 75,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-93-e20-1-content-address-rehash-settlement--4-the-recommended-coordination-discipline-the-settlement-declared-for-ratification",
+      "family": "doc",
+      "kind": "section",
+      "title": "4. The recommended coordination discipline (the settlement — `Declared`, for ratification)",
+      "file": "docs/notes/DN-93-E20-1-Content-Address-Rehash-Settlement.md",
+      "line": 107,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-93-e20-1-content-address-rehash-settlement--5-alternatives-considered-rationale-prior-art-folded-in-declared",
+      "family": "doc",
+      "kind": "section",
+      "title": "5. Alternatives considered + rationale (prior art folded in, `Declared`)",
+      "file": "docs/notes/DN-93-E20-1-Content-Address-Rehash-Settlement.md",
+      "line": 152,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-93-e20-1-content-address-rehash-settlement--5-alternatives-considered-rationale-prior-art-folded-in-declared--alternative-a-one-batched-rehash-freeze-and-land-recommended-4",
+      "family": "doc",
+      "kind": "section",
+      "title": "Alternative A — one batched rehash / freeze-and-land *(recommended — §4)*",
+      "file": "docs/notes/DN-93-E20-1-Content-Address-Rehash-Settlement.md",
+      "line": 157,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-93-e20-1-content-address-rehash-settlement--5-alternatives-considered-rationale-prior-art-folded-in-declared--alternative-b-per-feature-rehash-each-door-migrates-when-it-lands",
+      "family": "doc",
+      "kind": "section",
+      "title": "Alternative B — per-feature rehash (each door migrates when it lands)",
+      "file": "docs/notes/DN-93-E20-1-Content-Address-Rehash-Settlement.md",
+      "line": 174,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-93-e20-1-content-address-rehash-settlement--5-alternatives-considered-rationale-prior-art-folded-in-declared--alternative-c-self-describing-versioned-identity-never-rehash-version-the-address",
+      "family": "doc",
+      "kind": "section",
+      "title": "Alternative C — self-describing / versioned identity (never rehash; version the address)",
+      "file": "docs/notes/DN-93-E20-1-Content-Address-Rehash-Settlement.md",
+      "line": 185,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-93-e20-1-content-address-rehash-settlement--6-what-this-settles-d3-and-d6-become-decidable-the-unblock",
+      "family": "doc",
+      "kind": "section",
+      "title": "6. What this settles — D3 and D6 become decidable (the unblock)",
+      "file": "docs/notes/DN-93-E20-1-Content-Address-Rehash-Settlement.md",
+      "line": 207,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-93-e20-1-content-address-rehash-settlement--7-user-stories",
+      "family": "doc",
+      "kind": "section",
+      "title": "7. User stories",
+      "file": "docs/notes/DN-93-E20-1-Content-Address-Rehash-Settlement.md",
+      "line": 233,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-93-e20-1-content-address-rehash-settlement--8-definition-of-done-this-note-s-gate",
+      "family": "doc",
+      "kind": "section",
+      "title": "8. Definition of Done (this note's gate)",
+      "file": "docs/notes/DN-93-E20-1-Content-Address-Rehash-Settlement.md",
+      "line": 248,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-93-e20-1-content-address-rehash-settlement--meta-changelog",
+      "family": "doc",
+      "kind": "section",
+      "title": "Meta — changelog",
+      "file": "docs/notes/DN-93-E20-1-Content-Address-Rehash-Settlement.md",
+      "line": 283,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-94-atomics-and-memory-model-direction",
+      "family": "doc",
+      "kind": "note",
+      "id": "DN-94",
+      "title": "Design Note DN-94 — Atomics & Memory-Model Direction (closes the CU-8 / gate-D2 design question)",
+      "file": "docs/notes/DN-94-Atomics-And-Memory-Model-Direction.md",
+      "line": 1,
+      "status": "Draft",
+      "summary": "**Posture (transparency rule / VR-5 / G2).** This note **works up a decision**; it does not take",
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-94-atomics-and-memory-model-direction--1-purpose-why-this-decision-was-deferred-and-what-it-needs",
+      "family": "doc",
+      "kind": "section",
+      "title": "§1 Purpose — why this decision was deferred, and what it needs",
+      "file": "docs/notes/DN-94-Atomics-And-Memory-Model-Direction.md",
+      "line": 27,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-94-atomics-and-memory-model-direction--2-the-core-question-restated-precisely",
+      "family": "doc",
+      "kind": "section",
+      "title": "§2 The core question, restated precisely",
+      "file": "docs/notes/DN-94-Atomics-And-Memory-Model-Direction.md",
+      "line": 49,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-94-atomics-and-memory-model-direction--3-mycelium-has-no-user-facing-shared-mutable-state-by-construction-already-ratified",
+      "family": "doc",
+      "kind": "section",
+      "title": "§3 Mycelium has no user-facing shared mutable state — by construction, already ratified",
+      "file": "docs/notes/DN-94-Atomics-And-Memory-Model-Direction.md",
+      "line": 70,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-94-atomics-and-memory-model-direction--4-the-atomics-that-do-exist-are-runtime-internal-and-this-is-where-cu-8-actually-came-from",
+      "family": "doc",
+      "kind": "section",
+      "title": "§4 The atomics that *do* exist are runtime-internal — and this is where CU-8 actually came from",
+      "file": "docs/notes/DN-94-Atomics-And-Memory-Model-Direction.md",
+      "line": 101,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-94-atomics-and-memory-model-direction--5-why-runtime-internal-is-the-value-semantics-consistent-answer",
+      "family": "doc",
+      "kind": "section",
+      "title": "§5 Why \"runtime-internal\" is the value-semantics-consistent answer",
+      "file": "docs/notes/DN-94-Atomics-And-Memory-Model-Direction.md",
+      "line": 130,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-94-atomics-and-memory-model-direction--6-prior-art-how-languages-split-on-exactly-this-axis-declared",
+      "family": "doc",
+      "kind": "section",
+      "title": "§6 Prior art — how languages split on exactly this axis (`Declared`)",
+      "file": "docs/notes/DN-94-Atomics-And-Memory-Model-Direction.md",
+      "line": 148,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-94-atomics-and-memory-model-direction--7-recommendation-runtime-internal-defer-the-user-surface-the-path",
+      "family": "doc",
+      "kind": "section",
+      "title": "§7 Recommendation — runtime-internal + defer the user surface (the path)",
+      "file": "docs/notes/DN-94-Atomics-And-Memory-Model-Direction.md",
+      "line": 173,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-94-atomics-and-memory-model-direction--8-the-alternative-a-user-facing-atomics-surface-memory-ordering-rfc-tabled-with-tradeoffs",
+      "family": "doc",
+      "kind": "section",
+      "title": "§8 The alternative — a user-facing atomics surface + memory-ordering RFC (tabled, with tradeoffs)",
+      "file": "docs/notes/DN-94-Atomics-And-Memory-Model-Direction.md",
+      "line": 218,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-94-atomics-and-memory-model-direction--9-risks",
+      "family": "doc",
+      "kind": "section",
+      "title": "§9 Risks",
+      "file": "docs/notes/DN-94-Atomics-And-Memory-Model-Direction.md",
+      "line": 255,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-94-atomics-and-memory-model-direction--10-never-silent-boundary-g2",
+      "family": "doc",
+      "kind": "section",
+      "title": "§10 Never-silent boundary (G2)",
+      "file": "docs/notes/DN-94-Atomics-And-Memory-Model-Direction.md",
+      "line": 277,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-94-atomics-and-memory-model-direction--11-user-stories",
+      "family": "doc",
+      "kind": "section",
+      "title": "§11 User stories",
+      "file": "docs/notes/DN-94-Atomics-And-Memory-Model-Direction.md",
+      "line": 293,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-94-atomics-and-memory-model-direction--definition-of-done",
+      "family": "doc",
+      "kind": "section",
+      "title": "Definition of Done",
+      "file": "docs/notes/DN-94-Atomics-And-Memory-Model-Direction.md",
+      "line": 309,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-94-atomics-and-memory-model-direction--flags-up-to-the-integrating-parent-not-edited-from-this-leaf",
+      "family": "doc",
+      "kind": "section",
+      "title": "FLAGs (up to the integrating parent — not edited from this leaf)",
+      "file": "docs/notes/DN-94-Atomics-And-Memory-Model-Direction.md",
+      "line": 325,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-94-atomics-and-memory-model-direction--meta-changelog",
+      "family": "doc",
+      "kind": "section",
+      "title": "Meta — changelog",
+      "file": "docs/notes/DN-94-Atomics-And-Memory-Model-Direction.md",
+      "line": 337,
+      "tag": "Empirical/Declared"
+    },
+    {
       "anchor": "example-programs-reference",
       "family": "doc",
       "kind": "note",
@@ -23754,6 +24491,97 @@
       "title": "Swarm discipline (per CLAUDE.md)",
       "file": "docs/planning/E12-Memory-Model-Build-Plan.md",
       "line": 113,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "deferred-design-cu-gates",
+      "family": "doc",
+      "kind": "other",
+      "title": "Deferred-Design CU Gates — Issue-Spec Source",
+      "file": "docs/planning/deferred-design-CU-gates.md",
+      "line": 1,
+      "summary": "**Posture (VR-5 / G2).** Every entry below is a **design gate** — it needs a decision / RFC / DN",
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "deferred-design-cu-gates--how-to-use-this",
+      "family": "doc",
+      "kind": "section",
+      "title": "How to use this",
+      "file": "docs/planning/deferred-design-CU-gates.md",
+      "line": 17,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "deferred-design-cu-gates--d1-cu-6-rotate-reverse-bit-rotation-surface",
+      "family": "doc",
+      "kind": "section",
+      "title": "D1 — CU-6 rotate / reverse (bit-rotation surface)",
+      "file": "docs/planning/deferred-design-CU-gates.md",
+      "line": 28,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "deferred-design-cu-gates--d2-cu-8-atomics-fetch-add-the-memory-model-gate",
+      "family": "doc",
+      "kind": "section",
+      "title": "D2 — CU-8 atomics (fetch_add & the memory-model gate)",
+      "file": "docs/planning/deferred-design-CU-gates.md",
+      "line": 40,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "deferred-design-cu-gates--d3-cu-9-dense-dtype-quantization-surface",
+      "family": "doc",
+      "kind": "section",
+      "title": "D3 — CU-9 Dense dtype / quantization surface",
+      "file": "docs/planning/deferred-design-CU-gates.md",
+      "line": 50,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "deferred-design-cu-gates--d4-cu-3-signed-int-float-conversions",
+      "family": "doc",
+      "kind": "section",
+      "title": "D4 — CU-3 signed int ↔ float conversions",
+      "file": "docs/planning/deferred-design-CU-gates.md",
+      "line": 61,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "deferred-design-cu-gates--d5-cu-3-lossy-swap-machinery-the-float-int-cast-fidelity-gate",
+      "family": "doc",
+      "kind": "section",
+      "title": "D5 — CU-3 lossy-swap machinery (the float↔int cast fidelity gate)",
+      "file": "docs/planning/deferred-design-CU-gates.md",
+      "line": 71,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "deferred-design-cu-gates--d6-cu-7-growable-ternary-value-form-bigternary-surfaced",
+      "family": "doc",
+      "kind": "section",
+      "title": "D6 — CU-7 growable ternary value form (BigTernary surfaced)",
+      "file": "docs/planning/deferred-design-CU-gates.md",
+      "line": 85,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "deferred-design-cu-gates--summary-map",
+      "family": "doc",
+      "kind": "section",
+      "title": "Summary map",
+      "file": "docs/planning/deferred-design-CU-gates.md",
+      "line": 98,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "deferred-design-cu-gates--meta-changelog",
+      "family": "doc",
+      "kind": "section",
+      "title": "Meta — changelog",
+      "file": "docs/planning/deferred-design-CU-gates.md",
+      "line": 111,
       "tag": "Empirical/Declared"
     },
     {
@@ -32049,12 +32877,21 @@
       "tag": "Empirical/Declared"
     },
     {
+      "anchor": "rfc-0034-tunable-certification-and-transparency-modes--10-the-axis-b-wrapping-opt-out-normative--10-1-the-concrete-wrapping-expr-block-form-addendum-implemented-rust-first-pending-ratification",
+      "family": "doc",
+      "kind": "section",
+      "title": "§10.1 The concrete `wrapping { <expr> }` block form (addendum — implemented Rust-first, pending ratification)",
+      "file": "docs/rfcs/RFC-0034-Tunable-Certification-and-Transparency-Modes.md",
+      "line": 183,
+      "tag": "Empirical/Declared"
+    },
+    {
       "anchor": "rfc-0034-tunable-certification-and-transparency-modes--11-why-it-stays-transparent-the-argument",
       "family": "doc",
       "kind": "section",
       "title": "§11 Why it stays transparent (the argument)",
       "file": "docs/rfcs/RFC-0034-Tunable-Certification-and-Transparency-Modes.md",
-      "line": 183,
+      "line": 234,
       "tag": "Empirical/Declared"
     },
     {
@@ -32063,7 +32900,7 @@
       "kind": "section",
       "title": "§12 What's kept (the maximalist phase earned these)",
       "file": "docs/rfcs/RFC-0034-Tunable-Certification-and-Transparency-Modes.md",
-      "line": 201,
+      "line": 252,
       "tag": "Empirical/Declared"
     },
     {
@@ -32072,7 +32909,7 @@
       "kind": "section",
       "title": "§13 Conformance & Definition of Done",
       "file": "docs/rfcs/RFC-0034-Tunable-Certification-and-Transparency-Modes.md",
-      "line": 209,
+      "line": 260,
       "tag": "Empirical/Declared"
     },
     {
@@ -32081,7 +32918,7 @@
       "kind": "section",
       "title": "§14 Residual / open",
       "file": "docs/rfcs/RFC-0034-Tunable-Certification-and-Transparency-Modes.md",
-      "line": 270,
+      "line": 321,
       "tag": "Empirical/Declared"
     },
     {
@@ -32090,7 +32927,7 @@
       "kind": "section",
       "title": "Changelog",
       "file": "docs/rfcs/RFC-0034-Tunable-Certification-and-Transparency-Modes.md",
-      "line": 280,
+      "line": 331,
       "tag": "Empirical/Declared"
     },
     {
@@ -34636,12 +35473,21 @@
       "tag": "Empirical/Declared"
     },
     {
+      "anchor": "cmp--3-exported-op-surface-design-sketch--3-1-width-generic-comparison-helpers-self-hosted-mycelium-lang-lib-std-cmp-myc",
+      "family": "doc",
+      "kind": "section",
+      "title": "3.1. Width-generic comparison helpers (self-hosted Mycelium-lang, `lib/std/cmp.myc`)",
+      "file": "docs/spec/stdlib/cmp.md",
+      "line": 59,
+      "tag": "Empirical/Declared"
+    },
+    {
       "anchor": "cmp--4-guarantee-matrix-the-load-bearing-deliverable-rfc-0016-4-5",
       "family": "doc",
       "kind": "section",
       "title": "4. Guarantee matrix (the load-bearing deliverable — RFC-0016 §4.5)",
       "file": "docs/spec/stdlib/cmp.md",
-      "line": 59,
+      "line": 81,
       "tag": "Empirical/Declared"
     },
     {
@@ -34650,7 +35496,7 @@
       "kind": "section",
       "title": "5. §4.1 contract conformance (C1–C6)",
       "file": "docs/spec/stdlib/cmp.md",
-      "line": 77,
+      "line": 104,
       "tag": "Empirical/Declared"
     },
     {
@@ -34659,7 +35505,7 @@
       "kind": "section",
       "title": "6. Grounding",
       "file": "docs/spec/stdlib/cmp.md",
-      "line": 86,
+      "line": 113,
       "tag": "Empirical/Declared"
     },
     {
@@ -34668,7 +35514,7 @@
       "kind": "section",
       "title": "7. Open questions (FLAGGED — resolve before ratification)",
       "file": "docs/spec/stdlib/cmp.md",
-      "line": 94,
+      "line": 121,
       "tag": "Empirical/Declared"
     },
     {
@@ -34677,7 +35523,7 @@
       "kind": "section",
       "title": "Meta — changelog",
       "file": "docs/spec/stdlib/cmp.md",
-      "line": 100,
+      "line": 127,
       "tag": "Empirical/Declared"
     },
     {
@@ -35549,12 +36395,21 @@
       "tag": "Empirical/Declared"
     },
     {
+      "anchor": "math--3-exported-op-surface-design-sketch--3-1-width-generic-binary-arithmetic-bit-manipulation-primitives-self-hosted-mycelium-lang-lib-std-math-myc",
+      "family": "doc",
+      "kind": "section",
+      "title": "3.1. Width-generic binary arithmetic/bit-manipulation primitives (self-hosted Mycelium-lang, `lib/std/math.myc`)",
+      "file": "docs/spec/stdlib/math.md",
+      "line": 91,
+      "tag": "Empirical/Declared"
+    },
+    {
       "anchor": "math--4-guarantee-matrix-the-load-bearing-deliverable-rfc-0016-4-5",
       "family": "doc",
       "kind": "section",
       "title": "4. Guarantee matrix (the load-bearing deliverable — RFC-0016 §4.5)",
       "file": "docs/spec/stdlib/math.md",
-      "line": 91,
+      "line": 115,
       "tag": "Empirical/Declared"
     },
     {
@@ -35563,7 +36418,7 @@
       "kind": "section",
       "title": "5. §4.1 contract conformance (C1–C6)",
       "file": "docs/spec/stdlib/math.md",
-      "line": 142,
+      "line": 170,
       "tag": "Empirical/Declared"
     },
     {
@@ -35572,7 +36427,7 @@
       "kind": "section",
       "title": "6. Grounding",
       "file": "docs/spec/stdlib/math.md",
-      "line": 168,
+      "line": 196,
       "tag": "Empirical/Declared"
     },
     {
@@ -35581,7 +36436,7 @@
       "kind": "section",
       "title": "7. Open questions (FLAGGED — resolve before ratification)",
       "file": "docs/spec/stdlib/math.md",
-      "line": 186,
+      "line": 214,
       "tag": "Empirical/Declared"
     },
     {
@@ -35590,7 +36445,7 @@
       "kind": "section",
       "title": "Meta — changelog",
       "file": "docs/spec/stdlib/math.md",
-      "line": 208,
+      "line": 236,
       "tag": "Empirical/Declared"
     },
     {

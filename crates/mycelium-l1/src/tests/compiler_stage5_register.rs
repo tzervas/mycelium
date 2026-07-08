@@ -900,6 +900,7 @@ fn encode_expr(e: &Expr) -> String {
         Expr::Wild(b) => format!("Wild({})", encode_expr(b)),
         Expr::Spore(b) => format!("Spore({})", encode_expr(b)),
         Expr::Consume(b) => format!("Consume({})", encode_expr(b)),
+        Expr::Wrapping(b) => format!("Wrapping({})", encode_expr(b)),
         Expr::Colony(hs) => format!("Colony({})", encode_hypha_list(hs)),
         Expr::Lambda { params, body } => {
             format!(
