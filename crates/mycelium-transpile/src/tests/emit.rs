@@ -1,6 +1,7 @@
 //! Unit tests for the `.myc` emitter, over a small fixture corpus (data-driven — per CLAUDE.md
 //! "Complex test logic lives in fixtures + parameterization, not in test bodies").
 
+use crate::emit::{emit_expr, TypeEnv};
 use crate::gap::Category;
 use crate::transpile::transpile_source;
 
@@ -572,6 +573,21 @@ fn cases() -> Vec<Case> {
                 contains: "and(self, b)",
             },
         },
+        // trx2 A1 (DN-34 §8.18): an `as` cast that WIDENS one unsigned `Binary` to a wider one
+        // (`u16 as u32`, `Binary{16}` -> `Binary{32}`, `M >= N`) emits the faithful DN-41
+        // `width_cast` — end-to-end through a fn body whose param type seeds the operand's env
+        // entry. `width_cast` zero-extends (unsigned), matching Rust's unsigned widening exactly.
+        // (The narrow / float-crossing / unknown-operand fidelity cases are pinned at the
+        // reason-string level in `expr_cast_fidelity` below, which this table's `Expect` cannot
+        // express — it asserts category, not the FLAG reason.)
+        Case {
+            name: "cast_widen_binary_emits_width_cast",
+            rust: "fn f(x: u16) -> u32 { x as u32 }",
+            expect: Expect::Emitted {
+                item: "f",
+                contains: "width_cast(x, 0b0000_0000_0000_0000_0000_0000_0000_0000)",
+            },
+        },
     ]
 }
 
@@ -1006,4 +1022,116 @@ fn shadow_and_pattern_bound_fixes_fall_back_to_known_gap_not_wrong_prim_call() {
     }
 
     let _ = std::fs::remove_dir_all(&dir);
+}
+
+// --- trx2 A1: `Expr::Cast` fidelity matrix (DN-34 §8.18) ---------------------------------------
+//
+// Rust `as` is lossy/wrapping/saturating/rounding by design; Mycelium's conversion prims are
+// checked/refusing by design. This data-driven table pins that fidelity boundary at the
+// gap-reason level (which the `cases()` table's `Expect` cannot express — it asserts a `Category`,
+// not the FLAG reason). Drives `emit_expr` directly so a case can seed the operand's `TypeEnv`
+// type precisely (a bare in-scope identifier is the only shape whose type the emitter resolves
+// without guessing — see `expr_env_type`).
+
+/// The expected outcome for one `Expr::Cast` fidelity case.
+enum CastExpect {
+    /// Emits this exact `.myc` text (faithful, `myc check`-clean).
+    Emits(&'static str),
+    /// Gaps with a reason containing this substring (the never-silent, honest refusal — G2/VR-5).
+    GapReasonContains(&'static str),
+}
+
+/// One cast case: the operand-name -> mapped-type-text env seed, the Rust cast source, the outcome.
+struct CastCase {
+    name: &'static str,
+    env: &'static [(&'static str, &'static str)],
+    src: &'static str,
+    expect: CastExpect,
+}
+
+fn cast_cases() -> Vec<CastCase> {
+    use CastExpect::{Emits, GapReasonContains};
+    vec![
+        // WIDEN (`u16 as u32`, Binary{16} -> Binary{32}, M >= N): the one decidable-faithful slice —
+        // `width_cast` zero-extends (unsigned), matching Rust's unsigned widening exactly (DN-41 §3).
+        CastCase {
+            name: "widen_u16_as_u32_emits_width_cast",
+            env: &[("x", "Binary{16}")],
+            src: "x as u32",
+            expect: Emits("width_cast(x, 0b0000_0000_0000_0000_0000_0000_0000_0000)"),
+        },
+        // IDENTITY (`x as u32` where x is already Binary{32}, M == N): width_cast is identity here —
+        // still faithful, still emitted.
+        CastCase {
+            name: "identity_u32_as_u32_emits_width_cast",
+            env: &[("x", "Binary{32}")],
+            src: "x as u32",
+            expect: Emits("width_cast(x, 0b0000_0000_0000_0000_0000_0000_0000_0000)"),
+        },
+        // NARROW (`u32 as u16`, Binary{32} -> Binary{16}, M < N): Rust WRAPS (low 16 bits) but
+        // `width_cast` REFUSES on overflow — NOT faithful, so it FLAGs rather than emits.
+        CastCase {
+            name: "narrow_u32_as_u16_flags_not_emitted",
+            env: &[("x", "Binary{32}")],
+            src: "x as u16",
+            expect: GapReasonContains("FLAG-cast-narrow-fidelity"),
+        },
+        // FLOAT->INT (`f64 as i32`): operand is `Float`, so this is CU-3 territory regardless of the
+        // (signed) target — Rust saturates, `flt.to_bin` refuses; no faithful prim, gap CU-3.
+        CastCase {
+            name: "float_to_int_f64_as_i32_gaps_cu3",
+            env: &[("x", "Float")],
+            src: "x as i32",
+            expect: GapReasonContains("PENDING-DESIGN(CU-3-fidelity)"),
+        },
+        // INT->FLOAT (`i64 as f64`): the target is a float, so this routes to CU-3 regardless of the
+        // operand. (`i64` does not map to any `Binary{N}` — signed magnitude, `map_type` gaps — so it
+        // is absent from the env; the target-float route gives the CU-3 gap, not the unknown-operand
+        // one.) Rust rounds; `bin.to_flt` errs |n| > 2^53; no faithful prim, gap CU-3.
+        CastCase {
+            name: "int_to_float_i64_as_f64_gaps_cu3",
+            env: &[],
+            src: "x as f64",
+            expect: GapReasonContains("PENDING-DESIGN(CU-3-fidelity)"),
+        },
+        // UNKNOWN OPERAND (`foo() as u32`): the operand is a call, not a bare in-scope identifier, so
+        // its type is unknown — refuse rather than guess it (VR-5), and no float is involved.
+        CastCase {
+            name: "unknown_operand_call_gaps_never_guesses",
+            env: &[],
+            src: "foo() as u32",
+            expect: GapReasonContains("operand type unknown"),
+        },
+    ]
+}
+
+#[test]
+fn expr_cast_fidelity() {
+    for c in cast_cases() {
+        let expr: syn::Expr = syn::parse_str(c.src)
+            .unwrap_or_else(|e| panic!("case `{}`: failed to parse `{}`: {e}", c.name, c.src));
+        let mut env = TypeEnv::new();
+        for (k, v) in c.env {
+            env.insert((*k).to_string(), (*v).to_string());
+        }
+        match (c.expect, emit_expr(&expr, None, &env)) {
+            (CastExpect::Emits(want), Ok(text)) => {
+                assert_eq!(text, want, "case `{}`: emitted text mismatch", c.name)
+            }
+            (CastExpect::Emits(want), Err(g)) => panic!(
+                "case `{}`: expected emit `{want}`, got gap: {}",
+                c.name, g.reason
+            ),
+            (CastExpect::GapReasonContains(sub), Err(g)) => assert!(
+                g.reason.contains(sub),
+                "case `{}`: gap reason did not contain `{sub}`; got: {}",
+                c.name,
+                g.reason
+            ),
+            (CastExpect::GapReasonContains(sub), Ok(text)) => panic!(
+                "case `{}`: expected a gap containing `{sub}`, got emit `{text}`",
+                c.name
+            ),
+        }
+    }
 }
