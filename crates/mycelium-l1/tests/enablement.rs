@@ -4510,3 +4510,161 @@ fn vsa_cleanup_reconstruct_conformance_reject() {
         );
     }
 }
+
+// ── CU-3 (ADR-040 §2.4): never-silent Binary↔Float conversions ─────────────────────────────────
+//
+// `bin_to_flt` (kernel `bin.to_flt`) is checked-exact `Binary{N} -> Float`; `flt_to_bin` (kernel
+// `flt.to_bin`) is `(Float, Binary{M}) -> Binary{M}`, the second operand a **width witness** —
+// exactly `width_cast`'s DN-41 shape (only the witness's width is read, its bits are ignored).
+// Both refuse rather than silently round/truncate on every path (G2/VR-5); the **lossy** rounding
+// `bin→flt` direction for magnitudes past the binary64 exact-integer bound (`2^53`) is explicitly
+// out of scope — a reified swap, not a prim (see the CU-3 leaf report FLAG).
+
+/// Assert `src` refuses on **all three** paths (L1-eval, L0-interp, AOT) — never a silent
+/// success on any path (G2). Mirrors the manual pattern `mul_u_overflow_refuses_on_every_path`
+/// uses, factored once for the CU-3 refusal cases below.
+fn assert_refuses_on_every_path(label: &str, src: &str) {
+    let env = check_nodule(&parse(src).unwrap_or_else(|e| panic!("{label}: parse failed: {e}")))
+        .unwrap_or_else(|e| panic!("{label}: check failed: {e}"));
+    let interp = Interpreter::new(
+        PrimRegistry::with_builtins(),
+        Box::new(mycelium_cert::BinaryTernarySwapEngine),
+    );
+    let prims = PrimRegistry::with_builtins();
+    let engine = mycelium_cert::BinaryTernarySwapEngine;
+
+    assert!(
+        Evaluator::new(&env).call("main", vec![]).is_err(),
+        "{label}: L1-eval must refuse (never-silent, ADR-040 §2.4)"
+    );
+    let node = elaborate(&env, "main").expect("in fragment");
+    assert!(
+        interp.eval(&node).is_err(),
+        "{label}: L0-interp must refuse (never-silent, ADR-040 §2.4)"
+    );
+    assert!(
+        mycelium_mlir::run(&node, &prims, &engine).is_err(),
+        "{label}: AOT must refuse (never-silent, ADR-040 §2.4)"
+    );
+}
+
+/// `bin_to_flt` round-trips small in-range magnitudes to `Float`, bit-exact on all three paths.
+#[test]
+fn bin_to_flt_round_trips_three_way() {
+    assert_three_way(
+        "bin_to_flt 0",
+        "nodule d;\nfn main() => Float = bin_to_flt(0b0000_0000);",
+        &Repr::Float {
+            width: FloatWidth::F64,
+        },
+        &Payload::Float(0.0),
+    );
+    assert_three_way(
+        "bin_to_flt 255",
+        "nodule d;\nfn main() => Float = bin_to_flt(0b1111_1111);",
+        &Repr::Float {
+            width: FloatWidth::F64,
+        },
+        &Payload::Float(255.0),
+    );
+}
+
+/// `bin_to_flt` refuses a magnitude past the binary64 exact-integer bound (`2^53`) on every
+/// path — never a silent lossy round (ADR-040 §2.4/§5: the lossy direction is a reified swap,
+/// not this prim).
+#[test]
+fn bin_to_flt_refuses_past_the_exact_bound_on_every_path() {
+    // 2^54 as a 55-bit Binary literal (MSB `1`, the rest `0`) exceeds FLOAT_EXACT_MAX = 2^53.
+    let lit: String = std::iter::once('1')
+        .chain(std::iter::repeat_n('0', 54))
+        .collect();
+    assert_refuses_on_every_path(
+        "bin_to_flt past 2^53",
+        &format!("nodule d;\nfn main() => Float = bin_to_flt(0b{lit});"),
+    );
+}
+
+/// `flt_to_bin` round-trips small in-range integers back to `Binary{M}` — the target width read
+/// from the witness operand only (its bits are ignored, exactly `width_cast`'s DN-41 shape).
+#[test]
+fn flt_to_bin_round_trips_three_way() {
+    assert_three_way(
+        "flt_to_bin 0",
+        "nodule d;\nfn main() => Binary{8} = flt_to_bin(0.0, 0b0000_0000);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("00000000".chars().map(|c| c == '1').collect()),
+    );
+    assert_three_way(
+        "flt_to_bin 255",
+        "nodule d;\nfn main() => Binary{8} = flt_to_bin(255.0, 0b0000_0000);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("11111111".chars().map(|c| c == '1').collect()),
+    );
+    // The witness's own value/bits are ignored — only its width matters.
+    assert_three_way(
+        "flt_to_bin witness bits ignored",
+        "nodule d;\nfn main() => Binary{8} = flt_to_bin(7.0, 0b1111_1111);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("00000111".chars().map(|c| c == '1').collect()),
+    );
+}
+
+/// `flt_to_bin` refuses NaN, ±inf, a negative value, and a nonzero fractional part on every path
+/// — never a silent coercion (ADR-040 §2.4; G2).
+#[test]
+fn flt_to_bin_refuses_the_never_silent_domain_on_every_path() {
+    assert_refuses_on_every_path(
+        "flt_to_bin NaN",
+        "nodule d;\nfn main() => Binary{8} = flt_to_bin(flt_div(0.0, 0.0), 0b0000_0000);",
+    );
+    assert_refuses_on_every_path(
+        "flt_to_bin +inf",
+        "nodule d;\nfn main() => Binary{8} = flt_to_bin(flt_div(1.0, 0.0), 0b0000_0000);",
+    );
+    assert_refuses_on_every_path(
+        "flt_to_bin negative",
+        "nodule d;\nfn main() => Binary{8} = flt_to_bin(flt_neg(1.0), 0b0000_0000);",
+    );
+    assert_refuses_on_every_path(
+        "flt_to_bin fractional",
+        "nodule d;\nfn main() => Binary{8} = flt_to_bin(1.5, 0b0000_0000);",
+    );
+}
+
+/// `flt_to_bin` refuses a magnitude that does not fit the witness's target width on every path —
+/// never a silent truncation (ADR-040 §2.4/DN-41).
+#[test]
+fn flt_to_bin_refuses_out_of_target_width_on_every_path() {
+    assert_refuses_on_every_path(
+        "flt_to_bin 256 does not fit Binary{8}",
+        "nodule d;\nfn main() => Binary{8} = flt_to_bin(256.0, 0b0000_0000);",
+    );
+}
+
+/// A non-`Binary` `bin_to_flt` operand, and a non-`Float` `flt_to_bin` value operand, are
+/// **static** never-silent refusals — caught at check time, never a runtime coercion.
+#[test]
+fn conversion_prims_reject_wrong_paradigm_statically() {
+    for (src, needle) in [
+        (
+            "nodule d;\nfn main() => Float = bin_to_flt(1.5);",
+            "must be a concrete `Binary{N}`",
+        ),
+        (
+            "nodule d;\nfn main() => Binary{8} = flt_to_bin(0b0000_0001, 0b0000_0000);",
+            "must be a `Float`",
+        ),
+        (
+            "nodule d;\nfn main() => Binary{8} = flt_to_bin(1.0, 1.0);",
+            "width witness must be a concrete `Binary{M}`",
+        ),
+    ] {
+        let err =
+            check_nodule(&parse(src).expect("parses")).expect_err(&format!("must reject: {src}"));
+        let msg = err.to_string();
+        assert!(
+            msg.contains(needle),
+            "the refusal must name the offense.\n  src: {src}\n  want: {needle}\n  got: {msg}"
+        );
+    }
+}

@@ -556,3 +556,75 @@ pub fn cmp_signed(a: &[bool], b: &[bool]) -> Option<Ordering> {
     // Flip the sign bit (negatives sort below non-negatives), then MSB-first lexicographic.
     Some((!a[0], &a[1..]).cmp(&(!b[0], &b[1..])))
 }
+
+// --- ADR-040 §2.4 (CU-3): never-silent Binary↔Float conversions -------------------------------
+//
+// `checked_uint_to_f64`/`checked_f64_to_uint` are the kernel codecs behind `mycelium-interp`'s
+// `bin.to_flt`/`flt.to_bin` prims (RFC-0033/ADR-040; the "target-width prim" shape of
+// `bit.width_cast`, DN-41). Both directions read `Binary` as the **unsigned** magnitude
+// ([`bits_to_uint`]/[`uint_to_bits`], not the two's-complement [`bits_to_int`]/[`int_to_bits`]) —
+// `Binary` is sign-free (ADR-028: signedness is a property of the *op*), mirroring how
+// `bit.width_cast` already treats it, rather than the *signed* two's-complement reading `bin.mul`/
+// `bin.add` use. A signed variant (paralleling `bit.mul` vs `bin.mul`) is a natural, undecided
+// follow-on left for a future CU — flagged, never guessed (G2/VR-5).
+//
+// **Never-silent, in both directions:**
+// - `bin → flt` is **checked-exact**: refuses (`None`) when the magnitude exceeds
+//   [`FLOAT_EXACT_MAX`] (`2^53`, binary64's exact-integer bound — ADR-040 §2.4). The **lossy**
+//   rounding conversion for magnitudes beyond that bound is explicitly **out of scope here** — it
+//   is a reified *swap* carrying its rounding bound (ADR-040 §2.4/§5), not a prim; this module adds
+//   no such swap (see the CU-3 leaf report FLAG).
+// - `flt → bin` refuses (`None`) on NaN, ±inf, a negative value (no unsigned `Binary`
+//   representation), a nonzero fractional part (dropping it would be a silent truncation — G2), or
+//   an integer magnitude that does not fit the target `Binary{M}` width. Never a silent
+//   round/truncate-by-default (ADR-040 §2.4).
+
+/// The current [`checked_uint_to_f64`]/[`checked_f64_to_uint`] operand-width cap (`n ≤ 64`),
+/// mirroring [`MUL_MAX_WIDTH`]/[`TC_MAX_WIDTH`] — the same `u64` exactness bound [`bits_to_uint`]/
+/// [`uint_to_bits`] already declare.
+pub const FLOAT_CONV_MAX_WIDTH: usize = 64;
+
+/// The largest non-negative integer magnitude IEEE-754 binary64 represents **exactly** — every
+/// integer in `[0, 2^53]` has an exact binary64 encoding; `2^53 + 1` does not (ADR-040 §2.4, the
+/// classic "a double loses integer precision past `2^53`" bound).
+pub const FLOAT_EXACT_MAX: u64 = 1u64 << 53;
+
+/// `Binary{N} → Float`, checked-exact (ADR-040 §2.4; CU-3). Reads `bits` as the **unsigned**
+/// magnitude ([`bits_to_uint`], sign-free per ADR-028); `None` when `bits.len()` exceeds
+/// [`FLOAT_CONV_MAX_WIDTH`] or the magnitude exceeds [`FLOAT_EXACT_MAX`] — never a silent lossy
+/// round (that direction is a reified swap, not this prim; see the module note above).
+#[must_use]
+pub fn checked_uint_to_f64(bits: &[bool]) -> Option<f64> {
+    if bits.len() > FLOAT_CONV_MAX_WIDTH {
+        return None;
+    }
+    let magnitude = bits_to_uint(bits);
+    if magnitude > FLOAT_EXACT_MAX {
+        return None;
+    }
+    // Exact: `magnitude <= 2^53` is losslessly representable in binary64 (ADR-040 §2.4).
+    Some(magnitude as f64)
+}
+
+/// `Float → Binary{M}`, never-silent (ADR-040 §2.4; CU-3). `None` when `value` is NaN, ±inf,
+/// negative (`Binary` is unsigned/sign-free — ADR-028), has a nonzero fractional part (never a
+/// silent truncation — G2), its magnitude exceeds [`FLOAT_EXACT_MAX`] (so the value itself is not a
+/// binary64-exact integer — no cast could be trusted), or does not fit the unsigned `m`-bit target
+/// (`m` capped at [`FLOAT_CONV_MAX_WIDTH`], mirroring the reverse direction).
+#[must_use]
+pub fn checked_f64_to_uint(value: f64, m: u32) -> Option<u64> {
+    if (m as usize) > FLOAT_CONV_MAX_WIDTH
+        || !value.is_finite()
+        || value < 0.0
+        || value.fract() != 0.0
+        || value > FLOAT_EXACT_MAX as f64
+    {
+        return None;
+    }
+    // Exact: `value` is a non-negative integer `<= 2^53` here, within `u64`'s exact range.
+    let magnitude = value as u64;
+    if m < 64 && magnitude >= (1u64 << m) {
+        return None; // does not fit the unsigned m-bit target — never a silent truncation.
+    }
+    Some(magnitude)
+}

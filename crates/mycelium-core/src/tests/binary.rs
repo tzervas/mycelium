@@ -1053,3 +1053,111 @@ fn cmp_signed_matches_the_value_order_oracle() {
         }
     }
 }
+
+// --- ADR-040 §2.4 (CU-3): never-silent Binary↔Float conversions --------------------------------
+
+/// **Oracle property test (round-trip):** exhaustively at small widths, `checked_uint_to_f64` ∘
+/// `uint_to_bits` agrees with the plain `f64` cast oracle for every in-range unsigned magnitude —
+/// every such magnitude is far below `FLOAT_EXACT_MAX`, so the conversion never refuses here.
+#[test]
+fn checked_uint_to_f64_matches_the_oracle_and_round_trips() {
+    for n in 0u32..=16 {
+        let hi: u64 = if n == 0 { 0 } else { (1u64 << n) - 1 };
+        for v in 0..=hi {
+            let bits = uint_to_bits(v, n).unwrap();
+            assert_eq!(
+                checked_uint_to_f64(&bits),
+                Some(v as f64),
+                "checked_uint_to_f64({v}) at n={n} must match the f64 cast oracle"
+            );
+        }
+    }
+}
+
+/// The exact-integer boundary: `2^53` round-trips exactly; `2^53 + 1` refuses (never a silent
+/// lossy round — ADR-040 §2.4).
+#[test]
+fn checked_uint_to_f64_exact_boundary() {
+    let at_bound = uint_to_bits(FLOAT_EXACT_MAX, 54).unwrap();
+    assert_eq!(checked_uint_to_f64(&at_bound), Some(FLOAT_EXACT_MAX as f64));
+
+    let past_bound = uint_to_bits(FLOAT_EXACT_MAX + 1, 54).unwrap();
+    assert_eq!(
+        checked_uint_to_f64(&past_bound),
+        None,
+        "2^53 + 1 exceeds binary64 exact-integer representability — must refuse, never round"
+    );
+}
+
+/// An over-cap width (`> FLOAT_CONV_MAX_WIDTH`) refuses regardless of the encoded magnitude —
+/// never a silent truncation of the width check itself.
+#[test]
+fn checked_uint_to_f64_rejects_over_cap_width() {
+    let bits = vec![false; FLOAT_CONV_MAX_WIDTH + 1];
+    assert_eq!(checked_uint_to_f64(&bits), None);
+}
+
+/// **Oracle property test (round-trip):** every non-negative integer magnitude at small target
+/// widths converts to `Binary{M}` and back to the identical `f64`/magnitude pair via
+/// `checked_f64_to_uint` — the never-silent `flt→bin` direction's total domain.
+#[test]
+fn checked_f64_to_uint_matches_the_oracle_and_round_trips() {
+    for m in 0u32..=16 {
+        let hi: u64 = if m == 0 { 0 } else { (1u64 << m) - 1 };
+        for v in 0..=hi {
+            assert_eq!(
+                checked_f64_to_uint(v as f64, m),
+                Some(v),
+                "checked_f64_to_uint({v}) at m={m} must match the oracle"
+            );
+        }
+        // One past the target width's range refuses (never a silent truncation).
+        assert_eq!(
+            checked_f64_to_uint((hi + 1) as f64, m),
+            None,
+            "{}(+1) does not fit Binary{{{m}}} — must refuse",
+            hi + 1
+        );
+    }
+}
+
+/// Never-silent domain refusals: NaN, ±inf, a negative value, and a nonzero fractional part all
+/// refuse — never a silent coercion/truncation (ADR-040 §2.4; G2).
+#[test]
+fn checked_f64_to_uint_refuses_the_never_silent_domain() {
+    for bad in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY, -1.0, 1.5, -0.5] {
+        assert_eq!(
+            checked_f64_to_uint(bad, 8),
+            None,
+            "checked_f64_to_uint({bad}) must refuse (NaN/±inf/negative/fractional)"
+        );
+    }
+    // `-0.0` is the one signed-zero edge that legitimately succeeds: it equals the integer 0.
+    assert_eq!(checked_f64_to_uint(-0.0, 8), Some(0));
+}
+
+/// The exact-integer boundary mirrors [`checked_uint_to_f64_exact_boundary`]: `2^53` succeeds (at
+/// a wide-enough target width); `2^54` (the next exactly-representable power of two beyond the
+/// bound — `2^53 + 1` is not itself an expressible `f64` literal, since binary64 cannot represent
+/// odd integers past `2^53`) refuses.
+#[test]
+fn checked_f64_to_uint_exact_boundary() {
+    assert_eq!(
+        checked_f64_to_uint(FLOAT_EXACT_MAX as f64, 54),
+        Some(FLOAT_EXACT_MAX)
+    );
+    assert_eq!(
+        checked_f64_to_uint((FLOAT_EXACT_MAX as f64) * 2.0, 64),
+        None,
+        "2^54 exceeds binary64 exact-integer representability (> 2^53) — must refuse"
+    );
+}
+
+/// An over-cap target width (`> FLOAT_CONV_MAX_WIDTH`) refuses regardless of the value.
+#[test]
+fn checked_f64_to_uint_rejects_over_cap_width() {
+    assert_eq!(
+        checked_f64_to_uint(1.0, (FLOAT_CONV_MAX_WIDTH + 1) as u32),
+        None
+    );
+}

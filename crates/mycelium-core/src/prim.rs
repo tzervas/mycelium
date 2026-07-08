@@ -568,6 +568,41 @@ impl PrimTable {
         t.insert("flt.is_nan", flt_class());
         t.insert("flt.is_finite", flt_class());
         t.insert("flt.is_infinite", flt_class());
+        // ADR-040 §2.4 (CU-3): never-silent Binary↔Float conversions — the "target-width prim"
+        // shape of `bit.width_cast` (DN-41), crossing the Binary/Float paradigms. `bin.to_flt`
+        // is **checked-exact** (refuses when the Binary operand's unsigned magnitude exceeds
+        // `2^53`, binary64's exact-integer bound); `flt.to_bin` refuses on NaN/±inf/negative/
+        // fractional/out-of-target-width, mirroring `bit.width_cast`'s witness-operand shape
+        // (`value: Float, into: Binary{M}) -> Binary{M}`, `M` read from the second operand's
+        // width only). The **lossy** rounding `flt(bin(n))` direction for `|n| > 2^53` is
+        // explicitly out of scope — a reified *swap* carrying its bound (ADR-040 §2.4/§5), not a
+        // prim (see the CU-3 leaf report FLAG).
+        //
+        // **Paradigm/width-model note (FLAG — the same escape hatch as the `flt.*` group above):**
+        // `PrimParadigm` has no first-class `Float` paradigm, so both operands/results are typed
+        // `Any` here; the real never-silent typing (the unsigned-magnitude reading, the checked-
+        // exact `2^53` bound, `flt.to_bin`'s width-witness) is enforced by the interpreter prims
+        // (`prims.rs::{prim_bin_to_flt,prim_flt_to_bin}`) and the L1 checker
+        // (`checkty.rs::try_check_float_prim`). Width `Uniform` is the nearest tag (no
+        // first-class width-*change* relation exists yet — the same width-model FLAG as
+        // `bit.width_cast`); `flt.to_bin`'s real result width is its witness operand's width.
+        //
+        // **Intrinsic `Empirical` (ADR-040 §2.6 — "Conversions: range/exactness checks Empirical
+        // via property tests on the documented bounds (2^53, target-range edges)"), NOT `Exact`.**
+        // Unlike `bit.width_cast` (a pure bit-pattern re-width with no float involved, hence
+        // `Exact`), both conversions here cross into `Repr::Float` territory and inherit the same
+        // ADR-040 §2.6 host-conformance posture the `flt.*` arithmetic/comparison groups carry —
+        // pinned by the same `empirical_flt_result` composition path (`mycelium-interp`).
+        let empirical = |operands: Vec<PrimParadigm>, result: PrimParadigm| PrimDecl {
+            sig: PrimSig {
+                operands,
+                result,
+                width: WidthRel::Uniform,
+            },
+            intrinsic: GuaranteeStrength::Empirical,
+        };
+        t.insert("bin.to_flt", empirical(vec![Any], Any));
+        t.insert("flt.to_bin", empirical(vec![Any, Any], Any));
         // RFC-0003 §3/§4 / ADR-008 (M-892, `enb` Gap C): the **VSA bind group** —
         // `vsa.bind`/`vsa.unbind`/`vsa.permute` over `Repr::Vsa{model, dim, sparsity}` values,
         // **model-dispatched** at runtime on the operand's model id across the introduction set

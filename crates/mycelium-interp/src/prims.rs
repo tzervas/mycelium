@@ -225,6 +225,11 @@ impl PrimRegistry {
         r.register("flt.is_nan", prim_flt_is_nan);
         r.register("flt.is_finite", prim_flt_is_finite);
         r.register("flt.is_infinite", prim_flt_is_infinite);
+        // ADR-040 §2.4 (CU-3): never-silent Binary↔Float conversions — the "target-width prim"
+        // shape of `bit.width_cast` (DN-41). `bin.to_flt` is checked-exact; `flt.to_bin` reads its
+        // target width off a witness operand, exactly as `bit.width_cast` does.
+        r.register("bin.to_flt", prim_bin_to_flt);
+        r.register("flt.to_bin", prim_flt_to_bin);
         // RFC-0003 §3/§4 / ADR-008 (M-892, `enb` Gap C): the VSA bind group — model-dispatched
         // (MAP-I/FHRR/BSC) on the operand's `Repr::Vsa` model id. The kernel (`mycelium-vsa`)
         // constructs the result `Value` with its honest per-model tag; the wrappers carry it
@@ -1942,6 +1947,30 @@ fn flt_input_composable(v: &Value) -> bool {
 /// that is neither `Exact` nor the composable zero-deviation form is an explicit
 /// [`EvalError::ApproxCompositionUnsupported`] (never a fabricated bound — G2/VR-5).
 fn flt_result(prim: &str, inputs: &[&Value], out: f64) -> Result<Value, EvalError> {
+    empirical_flt_result(
+        prim,
+        inputs,
+        Repr::Float {
+            width: FloatWidth::F64,
+        },
+        Payload::Float(out),
+    )
+}
+
+/// Build a result for any op whose **intrinsic** is `Empirical` with the shared zero-deviation-
+/// vs-spec bound (ADR-040 §2.6 — arithmetic, comparison, *and* conversion prims all carry this
+/// posture, §2.6's "Conversions: range/exactness checks `Empirical`…" clause). Generalizes
+/// [`flt_result`] (always a `Float` output) to an arbitrary output `repr`/`payload`, shared with
+/// the CU-3 `bin.to_flt`/`flt.to_bin` conversion prims. Composability is the same rule
+/// [`flt_result`] always used: every input must be `Exact` or the zero-deviation `Empirical` form
+/// a prior `flt.*`/conversion op produced ([`flt_input_composable`]); anything else is an explicit
+/// [`EvalError::ApproxCompositionUnsupported`] refusal, never a fabricated bound (G2/VR-5).
+fn empirical_flt_result(
+    prim: &str,
+    inputs: &[&Value],
+    repr: Repr,
+    payload: Payload,
+) -> Result<Value, EvalError> {
     if !inputs.iter().all(|v| flt_input_composable(v)) {
         return Err(EvalError::ApproxCompositionUnsupported {
             prim: prim.to_owned(),
@@ -1962,14 +1991,7 @@ fn flt_result(prim: &str, inputs: &[&Value], out: f64) -> Result<Value, EvalErro
     // inconsistency refuses honestly instead of panicking (G2).
     let meta = Meta::new(provenance, strength, Some(flt_bound()), None, None, None)
         .map_err(EvalError::Wf)?;
-    Value::new(
-        Repr::Float {
-            width: FloatWidth::F64,
-        },
-        Payload::Float(out),
-        meta,
-    )
-    .map_err(EvalError::Wf)
+    Value::new(repr, payload, meta).map_err(EvalError::Wf)
 }
 
 /// Shared arity/operand extraction for the binary `flt.*` ops.
@@ -2221,6 +2243,98 @@ fn prim_flt_is_finite(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
 fn prim_flt_is_infinite(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
     let x = flt_unop(prim, args)?;
     flt_cmp_result(prim, args, x.is_infinite())
+}
+
+// --- ADR-040 §2.4 (CU-3): never-silent Binary↔Float conversions --------------------------------
+//
+// `bin.to_flt`/`flt.to_bin` are the kernel prims behind the surface `bin_to_flt`/`flt_to_bin`
+// (`checkty.rs::try_check_float_prim`) — the "target-width prim" shape of `bit.width_cast`
+// (DN-41), crossing the Binary/Float paradigms. Both read `Binary` as the **unsigned** magnitude
+// ([`binary::bits_to_uint`]/[`binary::uint_to_bits`], sign-free per ADR-028), mirroring
+// `bit.width_cast` rather than the *signed* two's-complement reading `bin.add`/`bin.mul` use — a
+// signed variant is a natural, undecided follow-on (flagged in the CU-3 leaf report, never
+// guessed). Tag **`Empirical`** on both (ADR-040 §2.6: "Conversions: range/exactness checks
+// `Empirical` via property tests on the documented bounds (2^53, target-range edges)"), carrying
+// the same zero-deviation-vs-spec bound the `flt.*` arithmetic/comparison groups use
+// ([`empirical_flt_result`]).
+//
+// **The lossy `bin→flt` rounding direction is explicitly out of scope.** For a `Binary{N}`
+// magnitude exceeding `2^53`, [`prim_bin_to_flt`] refuses rather than silently rounding — a lossy
+// conversion is a reified *swap* carrying its rounding bound (ADR-040 §2.4/§5), not a prim; no
+// such swap is added here (see the CU-3 leaf report FLAG: the swap machinery to carry that bound
+// does not yet exist in this crate).
+
+/// `bin.to_flt : Binary{N} → Float` — checked-exact never-silent conversion (ADR-040 §2.4; CU-3).
+/// A non-`Binary` operand is an explicit [`EvalError::PrimType`]; an over-cap width (`N >`
+/// [`binary::FLOAT_CONV_MAX_WIDTH`]) is likewise an explicit [`EvalError::PrimType`]; a magnitude
+/// exceeding the binary64 exact-integer bound (`2^53`) is an explicit [`EvalError::Overflow`] —
+/// never a silent lossy round.
+fn prim_bin_to_flt(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 1)?;
+    let bits = as_bits(prim, args[0])?;
+    if bits.len() > binary::FLOAT_CONV_MAX_WIDTH {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!(
+                "width {} exceeds the {}-bit bin.to_flt conversion cap (CU-3 scope)",
+                bits.len(),
+                binary::FLOAT_CONV_MAX_WIDTH
+            ),
+        });
+    }
+    let out = binary::checked_uint_to_f64(bits).ok_or_else(|| EvalError::Overflow {
+        prim: prim.to_owned(),
+    })?;
+    empirical_flt_result(
+        prim,
+        args,
+        Repr::Float {
+            width: FloatWidth::F64,
+        },
+        Payload::Float(out),
+    )
+}
+
+/// `flt.to_bin : (Float, Binary{M}) → Binary{M}` — never-silent conversion (ADR-040 §2.4; CU-3).
+/// The second operand is a **width witness** (only its `Binary{M}` width is read; its bits are
+/// ignored — exactly `bit.width_cast`'s shape, DN-41). Refuses with an explicit
+/// [`EvalError::PrimType`] on a non-`Float` first operand, an over-cap witness width, NaN, ±inf, a
+/// negative value, or a nonzero fractional part (dropping it would be a silent truncation);
+/// refuses with an explicit [`EvalError::Overflow`] when the integer magnitude does not fit the
+/// unsigned `M`-bit target or exceeds the binary64 exact-integer bound (`2^53`) — never a silent
+/// round/truncate-by-default. The result's guarantee threads off the **value** operand only (the
+/// witness contributes its width, not its guarantee — mirroring [`prim_width_cast`]).
+fn prim_flt_to_bin(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 2)?;
+    let value = as_float(prim, args[0])?;
+    let witness = as_bits(prim, args[1])?;
+    if witness.len() > binary::FLOAT_CONV_MAX_WIDTH {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!(
+                "witness width {} exceeds the {}-bit flt.to_bin conversion cap (CU-3 scope)",
+                witness.len(),
+                binary::FLOAT_CONV_MAX_WIDTH
+            ),
+        });
+    }
+    if !value.is_finite() || value < 0.0 || value.fract() != 0.0 {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!(
+                "flt.to_bin requires a non-negative, finite, integer-valued Float (got {value}) \
+                 — never a silent NaN/inf/fractional coercion (ADR-040 §2.4)"
+            ),
+        });
+    }
+    // `m` fits u32: `witness.len() <= FLOAT_CONV_MAX_WIDTH == 64` by the cap check above.
+    let m = u32::try_from(witness.len()).expect("witness width <= 64 fits u32");
+    let magnitude = binary::checked_f64_to_uint(value, m).ok_or_else(|| EvalError::Overflow {
+        prim: prim.to_owned(),
+    })?;
+    let out = binary::uint_to_bits(magnitude, m)
+        .expect("checked_f64_to_uint already verified magnitude fits the m-bit unsigned target");
+    empirical_flt_result(prim, &args[..1], args[1].repr().clone(), Payload::Bits(out))
 }
 
 // --- RFC-0003 §3/§4 / ADR-008 (M-892, `enb` Gap C): the VSA bind group ---------------------------

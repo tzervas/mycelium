@@ -258,6 +258,44 @@ fn float_prims_resolve_to_declared_empirical_kernel_prims() {
     }
 }
 
+/// ADR-040 §2.4 (CU-3): the never-silent Binary↔Float conversions — mixed-paradigm operands
+/// (unlike the uniform-Float arithmetic group above), typed by a dedicated pre-branch in
+/// `try_check_float_prim` rather than the uniform loop. This guard pins their surface→Π
+/// consistency: each `bin_to_flt`/`flt_to_bin` surface name maps to a declared kernel prim with
+/// the right arity, the documented `Any` operand/result escape hatch (no first-class `Float`
+/// paradigm yet), and the intrinsic at the ratified ADR-040 §2.6 **`Empirical`** ("Conversions:
+/// range/exactness checks Empirical…" — never `Exact`, VR-5).
+#[test]
+fn float_conversion_prims_resolve_to_declared_empirical_kernel_prims() {
+    use mycelium_core::GuaranteeStrength;
+    let table = PrimTable::builtins();
+    for (surface, kernel_expected, arity) in [
+        ("bin_to_flt", "bin.to_flt", 1),
+        ("flt_to_bin", "flt.to_bin", 2),
+    ] {
+        let kernel = prim_kernel_name(surface)
+            .unwrap_or_else(|| panic!("conversion prim `{surface}` must map to a kernel name"));
+        assert_eq!(kernel, kernel_expected, "surface→kernel mapping drifted");
+        assert!(
+            table.contains(kernel),
+            "surface `{surface}` → kernel `{kernel}`, but `{kernel}` is not declared in Π",
+        );
+        let decl = table.get(kernel).expect("declared prim");
+        assert_eq!(decl.sig.arity(), arity, "`{kernel}` arity drifted");
+        assert!(
+            decl.sig.operands.iter().all(|p| *p == PrimParadigm::Any),
+            "`{kernel}` operands use the documented `Any` escape hatch (no Float paradigm yet)",
+        );
+        assert_eq!(decl.sig.result, PrimParadigm::Any);
+        assert_eq!(
+            decl.intrinsic,
+            GuaranteeStrength::Empirical,
+            "`{kernel}` intrinsic must be the ratified ADR-040 §2.6 Empirical — conversions are \
+             never `Exact` (VR-5)",
+        );
+    }
+}
+
 /// The M-899 (`enb` Gap A) scalar-float comparison prims — the IEEE-754 §5.11 partial-order
 /// predicates (`flt_lt`/`flt_le`/`flt_gt`/`flt_ge`/`flt_eq`, NaN explicitly unordered → false)
 /// plus the named opt-in total order `flt_total_le` (IEEE-754 §5.10 `totalOrder`) — are
