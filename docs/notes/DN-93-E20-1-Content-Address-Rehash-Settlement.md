@@ -187,9 +187,9 @@ permanent indirection layer (`Declared`; https://github.com/NixOS/rfcs/blob/mast
 **Precedent: IPFS CIDv1** — a self-describing identifier (`multibase ‖ version ‖ multicodec ‖ multihash`)
 whose embedded version/codec lets the scheme evolve by minting new self-declaring addresses, old and new
 coexisting, **avoiding any flag-day** at the cost of every consumer handling multiple schemes forever
-(`Declared`; https://github.com/multiformats/cid). **Unison** is the limiting case: content-addressed,
+(`Declared`; <https://github.com/multiformats/cid>). **Unison** is the limiting case: content-addressed,
 **append-only immutable** identity where a "change" is an *addition* of new-hash content beside the old, so
-migration dissolves entirely (`Declared`; https://www.unison-lang.org/docs/the-big-idea/).
+migration dissolves entirely (`Declared`; <https://www.unison-lang.org/docs/the-big-idea/>).
 
 - **Buys:** no future rehash ever; new doors are additive by construction. Mycelium's `Canon` **already
   has a weak form** of this — frozen prefix tags make *additive* doors free (§3); D-Float exploits it.
