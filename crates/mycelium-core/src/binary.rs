@@ -628,3 +628,78 @@ pub fn checked_f64_to_uint(value: f64, m: u32) -> Option<u64> {
     }
     Some(magnitude)
 }
+
+// --- RFC-0034 §10 (CU-5): the executable `wrapping` construct — modular two's-complement --------
+//
+// `wrapping_add`/`wrapping_sub`/`wrapping_mul` are the kernel codecs behind the *named, explicit*
+// Axis-B `wrapping` opt-out (M-791 landed the `Meta`/`WrappingOpt` marker; this closes the
+// evaluation half — see `mycelium-interp`'s `eval_wrapping` for the op-layer wiring). They share
+// [`add`]/[`sub`]/[`mul`]'s exact two's-complement operand contract (equal-width, `n ≤
+// TC_MAX_WIDTH`/`MUL_MAX_WIDTH`) but **never refuse on range** — a sum/difference/product outside
+// `B_n` wraps modulo `2^n` instead of returning `None`, the *declared*, explicitly-opted-into
+// semantics RFC-0034 §10 names. Reduction still refuses (`None`) on a structural mismatch (unequal
+// widths, an over-cap width) — the same never-silent posture as the non-wrapping ops for a
+// **malformed call**, distinct from the *declared* range opt-out.
+
+/// Reduce `value` modulo `2^n` and encode it as the `n`-bit two's-complement bit pattern
+/// (MSB-first) — the wrapping/modular reduction. Unlike [`int_to_bits`], this never refuses: every
+/// `i128` value maps to exactly one `n`-bit pattern. `n == 0` maps everything to the empty pattern
+/// (`B_0 = {0}`).
+fn wrap_to_bits(value: i128, n: u32) -> Vec<bool> {
+    if n == 0 {
+        return Vec::new();
+    }
+    let n = n as usize;
+    let modulus = 1i128 << n;
+    let u = value.rem_euclid(modulus);
+    let mut bits = vec![false; n];
+    for (i, slot) in bits.iter_mut().enumerate() {
+        *slot = (u >> (n - 1 - i)) & 1 == 1;
+    }
+    bits
+}
+
+/// Two's-complement fixed-width **wrapping** add (RFC-0034 §10; CU-5): the sum reduced modulo
+/// `2^n` into `B_n` instead of refusing out-of-range (contrast [`add`]). `None` only on a
+/// structural mismatch — `a.len() != b.len()` or an over-[`TC_MAX_WIDTH`] width — never on range.
+#[must_use]
+pub fn wrapping_add(a: &[bool], b: &[bool]) -> Option<Vec<bool>> {
+    if a.len() != b.len() || a.len() > TC_MAX_WIDTH {
+        return None;
+    }
+    let n = a.len() as u32;
+    let av = i128::from(bits_to_int(a));
+    let bv = i128::from(bits_to_int(b));
+    Some(wrap_to_bits(av + bv, n)) // never overflows i128 — |av|,|bv| <= 2^63.
+}
+
+/// Two's-complement fixed-width **wrapping** subtract (`a − b`, RFC-0034 §10; CU-5). Same
+/// structural-only refusal contract as [`wrapping_add`]; the difference wraps modulo `2^n` rather
+/// than refusing out-of-range (contrast [`sub`]).
+#[must_use]
+pub fn wrapping_sub(a: &[bool], b: &[bool]) -> Option<Vec<bool>> {
+    if a.len() != b.len() || a.len() > TC_MAX_WIDTH {
+        return None;
+    }
+    let n = a.len() as u32;
+    let av = i128::from(bits_to_int(a));
+    let bv = i128::from(bits_to_int(b));
+    Some(wrap_to_bits(av - bv, n)) // never overflows i128 — |av|,|bv| <= 2^63.
+}
+
+/// Two's-complement fixed-width **wrapping** multiply (RFC-0034 §10; CU-5). Same structural-only
+/// refusal contract as [`wrapping_add`] (mirroring [`mul`]'s `MUL_MAX_WIDTH` cap); the product
+/// wraps modulo `2^n` rather than refusing out-of-range (contrast [`mul`]).
+#[must_use]
+pub fn wrapping_mul(a: &[bool], b: &[bool]) -> Option<Vec<bool>> {
+    if a.len() != b.len() || a.len() > MUL_MAX_WIDTH {
+        return None;
+    }
+    let n = a.len() as u32;
+    if n == 0 {
+        return Some(Vec::new()); // B_0 = {0}; 0 * 0 = 0, trivially in range.
+    }
+    let av = i128::from(bits_to_int(a));
+    let bv = i128::from(bits_to_int(b));
+    Some(wrap_to_bits(av * bv, n)) // never overflows i128 — see `mul`'s doc comment.
+}

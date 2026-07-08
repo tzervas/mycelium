@@ -4261,3 +4261,99 @@ fn flt_to_bin_composes_over_a_prior_flt_op_result() {
     assert_eq!(y.payload(), &Payload::Bits(bits("0000_0111")));
     assert_eq!(y.meta().guarantee(), GuaranteeStrength::Empirical);
 }
+
+// --- RFC-0034 §10 (CU-5): the executable `wrapping` construct — eval-mode dispatch -------------
+//
+// `eval_wrapping` is **not** registered in `PrimRegistry` (no new `wrapping_*` prim name — RFC-0034
+// §10's mode is dispatched here over the existing `bin.add`/`bin.sub`/`bin.mul`, per the CU-5 task
+// ruling). These tests call it directly, as the future surface `wrapping { … }` construct's
+// lowering will once `mycelium-l1`'s parser/elaborator gain that surface (FLAGged: absent today).
+
+/// `eval_wrapping` over `bin.add`/`bin.sub`/`bin.mul` wraps modulo `2^n` exactly where the
+/// non-wrapping prims refuse — tagged `Declared` with the [`WrappingOpt`] marker attached
+/// (RFC-0034 §10), never the non-wrapping `Exact`/refuse contract.
+#[test]
+fn eval_wrapping_wraps_where_the_non_wrapping_prims_refuse() {
+    let reg = PrimRegistry::with_builtins();
+    let add = reg.get("bin.add").expect("bin.add registered");
+    let sub = reg.get("bin.sub").expect("bin.sub registered");
+    let mul = reg.get("bin.mul").expect("bin.mul registered");
+
+    // 127 + 1 = 128, out of B_8 = [-128, 127]: `bin.add` refuses, `eval_wrapping` wraps to -128.
+    let a = binv(bits("0111_1111")); // 127
+    let b = binv(bits("0000_0001")); // 1
+    assert!(
+        add("bin.add", &[&a, &b]).is_err(),
+        "bin.add must refuse 127 + 1 (never-silent)"
+    );
+    let y = eval_wrapping("bin.add", &[&a, &b]).expect("wrapping never refuses on range");
+    assert_eq!(
+        y.payload(),
+        &Payload::Bits(bits("1000_0000")), // -128
+        "127 + 1 must wrap to -128 (RFC-0034 §10)"
+    );
+    assert_eq!(y.meta().guarantee(), GuaranteeStrength::Declared);
+    assert!(
+        y.meta().wrapping_opt().is_some(),
+        "the WrappingOpt marker must be attached (RFC-0034 §10; M-791)"
+    );
+
+    // -128 - 1 = -129, out of range: `bin.sub` refuses, wraps to 127.
+    let lo = binv(bits("1000_0000")); // -128
+    let one = binv(bits("0000_0001")); // 1
+    assert!(sub("bin.sub", &[&lo, &one]).is_err());
+    let y = eval_wrapping("bin.sub", &[&lo, &one]).expect("wrapping never refuses on range");
+    assert_eq!(y.payload(), &Payload::Bits(bits("0111_1111"))); // 127
+    assert_eq!(y.meta().guarantee(), GuaranteeStrength::Declared);
+
+    // 16 * 16 = 256 = 2^8, out of B_8: `bin.mul` refuses, wraps to 0.
+    let sixteen = binv(bits("0001_0000"));
+    assert!(mul("bin.mul", &[&sixteen, &sixteen]).is_err());
+    let y = eval_wrapping("bin.mul", &[&sixteen, &sixteen]).expect("wrapping never refuses");
+    assert_eq!(y.payload(), &Payload::Bits(bits("0000_0000")));
+    assert_eq!(y.meta().guarantee(), GuaranteeStrength::Declared);
+}
+
+/// `eval_wrapping` still agrees with the non-wrapping prim on an **in-range** result — wrapping
+/// only opts out of the *range* refusal, never the arithmetic itself.
+#[test]
+fn eval_wrapping_agrees_with_the_non_wrapping_result_when_in_range() {
+    let reg = PrimRegistry::with_builtins();
+    let add = reg.get("bin.add").expect("bin.add registered");
+    let a = binv(bits("0000_0011")); // 3
+    let b = binv(bits("0000_0100")); // 4
+    let non_wrapping = add("bin.add", &[&a, &b]).expect("3 + 4 = 7 is in range");
+    let wrapping = eval_wrapping("bin.add", &[&a, &b]).expect("wrapping never refuses");
+    assert_eq!(non_wrapping.payload(), wrapping.payload());
+    assert_eq!(non_wrapping.meta().guarantee(), GuaranteeStrength::Exact);
+    assert_eq!(wrapping.meta().guarantee(), GuaranteeStrength::Declared);
+}
+
+/// `eval_wrapping` refuses a structural mismatch (unequal widths) and an unsupported prim name —
+/// `wrapping` only opts out of the range refusal, never the shape contract (G2).
+#[test]
+fn eval_wrapping_rejects_structural_mismatches_and_unsupported_prims() {
+    let a8 = binv(vec![false; 8]);
+    let a4 = binv(vec![false; 4]);
+    assert!(
+        matches!(
+            eval_wrapping("bin.add", &[&a8, &a4]),
+            Err(EvalError::PrimType { .. })
+        ),
+        "unequal widths must refuse"
+    );
+    assert!(
+        matches!(
+            eval_wrapping("bit.xor", &[&a8, &a8]),
+            Err(EvalError::PrimType { .. })
+        ),
+        "eval_wrapping only supports bin.add/bin.sub/bin.mul (RFC-0034 §10 — no new prims)"
+    );
+    assert!(
+        matches!(
+            eval_wrapping("bin.add", &[&a8]),
+            Err(EvalError::PrimType { .. })
+        ),
+        "arity 1 must refuse"
+    );
+}

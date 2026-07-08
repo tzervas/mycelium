@@ -1161,3 +1161,136 @@ fn checked_f64_to_uint_rejects_over_cap_width() {
         None
     );
 }
+
+// --- RFC-0034 §10 (CU-5): the executable `wrapping` construct — modular two's-complement -------
+
+/// **Oracle property test:** exhaustively at small widths, `wrapping_add`/`wrapping_sub` equal
+/// the exact integer sum/difference reduced modulo `2^n` into `B_n` (never `None` on range) — the
+/// modular-reduction oracle any two's-complement wraparound implementation must match.
+#[test]
+fn wrapping_add_sub_match_the_modular_oracle() {
+    for n in 1u32..=8 {
+        let lo = -(1i64 << (n - 1));
+        let hi = (1i64 << (n - 1)) - 1;
+        let modulus = 1i128 << n;
+        for x in lo..=hi {
+            for y in lo..=hi {
+                let a = int_to_bits(x, n).unwrap();
+                let b = int_to_bits(y, n).unwrap();
+
+                let sum = i128::from(x) + i128::from(y);
+                let wrapped_sum = sum.rem_euclid(modulus)
+                    - if sum.rem_euclid(modulus) >= (modulus / 2) {
+                        modulus
+                    } else {
+                        0
+                    };
+                assert_eq!(
+                    wrapping_add(&a, &b),
+                    int_to_bits(wrapped_sum as i64, n),
+                    "wrapping_add {x}+{y} at n={n} must equal the modular reduction"
+                );
+
+                let diff = i128::from(x) - i128::from(y);
+                let wrapped_diff = diff.rem_euclid(modulus)
+                    - if diff.rem_euclid(modulus) >= (modulus / 2) {
+                        modulus
+                    } else {
+                        0
+                    };
+                assert_eq!(
+                    wrapping_sub(&a, &b),
+                    int_to_bits(wrapped_diff as i64, n),
+                    "wrapping_sub {x}-{y} at n={n} must equal the modular reduction"
+                );
+            }
+        }
+    }
+}
+
+/// **Oracle property test:** `wrapping_mul` equals the exact product reduced modulo `2^n`.
+#[test]
+fn wrapping_mul_matches_the_modular_oracle() {
+    for n in 1u32..=8 {
+        let lo = -(1i64 << (n - 1));
+        let hi = (1i64 << (n - 1)) - 1;
+        let modulus = 1i128 << n;
+        for x in lo..=hi {
+            for y in lo..=hi {
+                let a = int_to_bits(x, n).unwrap();
+                let b = int_to_bits(y, n).unwrap();
+                let product = i128::from(x) * i128::from(y);
+                let m = product.rem_euclid(modulus);
+                let wrapped = m - if m >= (modulus / 2) { modulus } else { 0 };
+                assert_eq!(
+                    wrapping_mul(&a, &b),
+                    int_to_bits(wrapped as i64, n),
+                    "wrapping_mul {x}*{y} at n={n} must equal the modular reduction"
+                );
+            }
+        }
+    }
+}
+
+/// Worked examples pinning the genuine wraparound: `add`/`sub`/`mul` refuse exactly where
+/// `wrapping_add`/`wrapping_sub`/`wrapping_mul` instead produce the modular result — the CU-5
+/// contrast that makes `wrapping` meaningfully different from the non-wrapping ops.
+#[test]
+fn wrapping_worked_examples_where_the_non_wrapping_ops_refuse() {
+    // B_8 = [-128, 127]. 127 + 1 = 128, out of range: `add` refuses, `wrapping_add` wraps to -128.
+    let a = int_to_bits(127, 8).unwrap();
+    let b = int_to_bits(1, 8).unwrap();
+    assert_eq!(add(&a, &b), None, "127 + 1 must refuse (non-wrapping)");
+    assert_eq!(
+        wrapping_add(&a, &b),
+        int_to_bits(-128, 8),
+        "127 + 1 must wrap to -128 (RFC-0034 §10)"
+    );
+
+    // -128 - 1 = -129, out of range: `sub` refuses, `wrapping_sub` wraps to 127.
+    let lo = int_to_bits(-128, 8).unwrap();
+    let one = int_to_bits(1, 8).unwrap();
+    assert_eq!(sub(&lo, &one), None, "-128 - 1 must refuse (non-wrapping)");
+    assert_eq!(
+        wrapping_sub(&lo, &one),
+        int_to_bits(127, 8),
+        "-128 - 1 must wrap to 127 (RFC-0034 §10)"
+    );
+
+    // 16 * 16 = 256, out of range at n=8 (B_8 max is 127): `mul` refuses, `wrapping_mul` wraps to 0.
+    let sixteen = int_to_bits(16, 8).unwrap();
+    assert_eq!(
+        mul(&sixteen, &sixteen),
+        None,
+        "16 * 16 must refuse (non-wrapping)"
+    );
+    assert_eq!(
+        wrapping_mul(&sixteen, &sixteen),
+        int_to_bits(0, 8),
+        "16 * 16 = 256 = 2^8 must wrap to 0 (RFC-0034 §10)"
+    );
+}
+
+/// Structural mismatches (unequal widths, an over-cap width) still refuse — `wrapping` only opts
+/// out of the *range* refusal, never the shape contract (G2).
+#[test]
+fn wrapping_rejects_structural_mismatches() {
+    let a4 = int_to_bits(1, 4).unwrap();
+    let b8 = int_to_bits(1, 8).unwrap();
+    assert_eq!(wrapping_add(&a4, &b8), None, "unequal widths must refuse");
+    assert_eq!(wrapping_sub(&a4, &b8), None, "unequal widths must refuse");
+    assert_eq!(wrapping_mul(&a4, &b8), None, "unequal widths must refuse");
+
+    let over_cap = vec![false; TC_MAX_WIDTH + 1];
+    assert_eq!(
+        wrapping_add(&over_cap, &over_cap),
+        None,
+        "an over-cap width must refuse"
+    );
+    let over_mul_cap = vec![false; MUL_MAX_WIDTH + 1];
+    assert_eq!(
+        wrapping_mul(&over_mul_cap, &over_mul_cap),
+        None,
+        "an over-cap width must refuse"
+    );
+}

@@ -27,7 +27,7 @@ use std::collections::BTreeMap;
 
 use mycelium_core::{
     binary, operation_hash, ternary, Bound, BoundBasis, BoundKind, FloatWidth, GuaranteeStrength,
-    Meta, NormKind, Payload, Provenance, Repr, Trit, Value,
+    Meta, NormKind, Payload, Provenance, Repr, Trit, Value, WrappingOpt,
 };
 use mycelium_dense::{DenseError, DenseSpace};
 use mycelium_numerics::{compose_error_bound, ErrorOp};
@@ -1096,6 +1096,107 @@ fn prim_bin_neg(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
         Payload::Bits(out),
         ApproxRule::Refuse,
     )
+}
+
+// --- RFC-0034 §10 (CU-5): the executable `wrapping` construct — eval-mode dispatch --------------
+//
+// M-791 landed the named, explicit Axis-B `wrapping` opt-out at the representation layer
+// (`Meta::with_wrapping`/`WrappingOpt`, `mycelium-core`) but explicitly flagged the **op-layer
+// wiring** — the evaluation path that actually *honors* the marker by electing modular wraparound
+// instead of the non-wrapping `Option`/`Result`/`SwapError` refusal — as a downstream task. This
+// closes that gap for `bin.add`/`bin.sub`/`bin.mul` (RFC-0034 §10). **No new `wrapping_*` prim
+// names are added** — `wrapping` is a *mode* dispatched here over the existing three ops, never a
+// distinct entry in the `Π` table (per the CU-5 task ruling, DN-34 §8.16).
+//
+// **Surface-syntax FLAG (CU-5 leaf report).** `mycelium-l1`'s `elab`/`checkty` have no parser/AST/
+// elaborator support for a `wrapping { … }` surface construct yet (grepped before landing this —
+// only the M-791 representation-layer marker exists anywhere in the crate). [`eval_wrapping`] is
+// the runtime half a future surface construct will dispatch through once that parser/elaborator
+// work lands; until then it is reachable directly (this function, and any test/tool that calls it)
+// rather than via `.myc` source — never faked as "wired end-to-end" when only the eval half is.
+
+/// Evaluate `prim` (one of `bin.add`/`bin.sub`/`bin.mul`) under the **named** `wrapping` opt-out
+/// (RFC-0034 §10): the result wraps modulo `2^n` into `B_n` instead of refusing out-of-range —
+/// mirroring [`prim_bin_add`]/[`prim_bin_sub`]/[`prim_bin_mul`]'s operand contract (equal-width,
+/// the same per-op width cap) but never their range refusal. Tagged **`Declared`** (a
+/// zero-magnitude `UserDeclared` bound, M-I4 — the explicit, developer-opted-into semantics; never
+/// a fabricated `Proven`/`Empirical` claim, VR-5) and carrying the [`WrappingOpt`] marker so the
+/// opt-out stays inspectable on the result ([`Meta::wrapping_opt`]). Any other `prim` name, or a
+/// structural mismatch (unequal widths, an over-cap width), is an explicit
+/// [`EvalError::PrimType`] — never a silent fallback to the non-wrapping refusal.
+pub fn eval_wrapping(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 2)?;
+    let a = as_bits(prim, args[0])?;
+    let b = as_bits(prim, args[1])?;
+    if a.len() != b.len() {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!("width mismatch: {} vs {} bits", a.len(), b.len()),
+        });
+    }
+    /// A wrapping-mode binary bitvector op (`wrapping_add`/`wrapping_sub`/`wrapping_mul`'s shared
+    /// shape) — named to keep `eval_wrapping`'s dispatch tuple within clippy's complexity budget.
+    type WrappingOp = fn(&[bool], &[bool]) -> Option<Vec<bool>>;
+    let (op, cap): (WrappingOp, usize) = match prim {
+        "bin.add" => (binary::wrapping_add, binary::TC_MAX_WIDTH),
+        "bin.sub" => (binary::wrapping_sub, binary::TC_MAX_WIDTH),
+        "bin.mul" => (binary::wrapping_mul, binary::MUL_MAX_WIDTH),
+        _ => {
+            return Err(EvalError::PrimType {
+                prim: prim.to_owned(),
+                why: "eval_wrapping only supports the wrapping mode over bin.add/bin.sub/bin.mul \
+                      (RFC-0034 §10 — no new wrapping_* prims)"
+                    .to_owned(),
+            });
+        }
+    };
+    if a.len() > cap {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!(
+                "width {} exceeds the {}-bit wrapping arithmetic cap",
+                a.len(),
+                cap
+            ),
+        });
+    }
+    // `op` never refuses on range — only ever on the width checks already validated above.
+    let out = op(a, b).expect("width already validated; wrapping ops never refuse on range");
+    wrapping_result(prim, args, args[0].repr().clone(), Payload::Bits(out))
+}
+
+/// Build a `wrapping`-tagged result (RFC-0034 §10; CU-5): `Declared` guarantee with a
+/// zero-magnitude `UserDeclared` bound (M-I4) — the explicit, developer-opted-into semantics,
+/// never a fabricated `Proven`/`Empirical` claim (VR-5) — and the [`WrappingOpt`] marker attached
+/// so the opt-out stays inspectable ([`Meta::wrapping_opt`]).
+fn wrapping_result(
+    prim: &str,
+    inputs: &[&Value],
+    repr: Repr,
+    payload: Payload,
+) -> Result<Value, EvalError> {
+    let provenance = Provenance::Derived {
+        op: operation_hash(prim),
+        inputs: inputs.iter().map(|v| v.content_hash()).collect(),
+    };
+    let bound = Bound {
+        kind: BoundKind::Error {
+            eps: 0.0,
+            norm: NormKind::Linf,
+        },
+        basis: BoundBasis::UserDeclared,
+    };
+    let meta = Meta::new(
+        provenance,
+        GuaranteeStrength::Declared,
+        Some(bound),
+        None,
+        None,
+        None,
+    )
+    .map_err(EvalError::Wf)?
+    .with_wrapping(WrappingOpt::new());
+    Value::new(repr, payload, meta).map_err(EvalError::Wf)
 }
 
 // --- RFC-0033 §4.1.2/§4.1.3 (M-767, `enb` Gap B): the signedness-split signed op set -------------
