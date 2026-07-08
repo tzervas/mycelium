@@ -65,7 +65,7 @@ The repo-root `.mcp.json` already registers a `tero` server (see the top-level f
         "tero-mcp-lite", "--index", "docs/tero-index/index.json"
       ],
       "env": {
-        "TERO_TOKENS": "local-dev:refresh"
+        "TERO_TOKENS": "local-dev:read"
       }
     }
   }
@@ -76,6 +76,15 @@ Claude Code (and any other MCP-aware client) picks this up automatically for ses
 repo. Rotate `TERO_TOKENS` for anything beyond local/dev use — **never commit a real secret token**;
 the placeholder above is intentionally a non-secret local-dev value, matching the Rust server's own
 "refuses to start without tokens, but the token value itself is just an opaque bearer string" model.
+
+The committed default is scoped **`read`**, not `refresh` — least privilege for a local read-only
+default (`.mcp.json` is a plain JSON file and can't carry an inline comment, hence this note). `read`
+covers every query tool (`query_by_id`/`query_by_status`/`query_by_kind`/`cross_ref`/`text_search`/
+`cite`/`explain`/`identify`); only `refresh` (which `.mcp.json` does not grant by default) is needed to
+reload the served index after `just tero-index` regenerates `docs/tero-index/index.json` — see
+`/tero-refresh`. `refresh` implies `read` (see Auth below); widen the committed entry to
+`local-dev:refresh`, or add a second `refresh`-scoped token, only when you actually need that
+operation — don't leave a broader default committed than the common case requires.
 
 ## Auth
 
