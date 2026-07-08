@@ -71,17 +71,16 @@ Run, on your side, whatever this session's network couldn't reach:
 
 - **`uv lock --upgrade`** (or a fresh `uv sync`) against the *live* PyPI index from a fully-networked
   environment, to catch anything that drifted between when this session resolved `pytest` and now.
-- **Security scanning**, using **`tzervas/security-mcp`** (an existing repo — use it as the scan
-  tooling reference/toolchain for this step; the maintainer named it explicitly as the intended
-  scanner for handoffs like this one). At minimum:
-  - A **dependency/SCA scan** over `pyproject.toml`/`uv.lock` (even though runtime deps are empty,
-    the `dev` group pulls in `pytest` + its transitive deps — scan those too).
-  - A **SAST pass** over `src/tero_mcp_lite/*.py` (5 files, ~700 lines — should be fast).
-  - A **secret scan** over the whole extracted tree (this session's local fallback only checked a
-    narrow high-confidence pattern set — run the real thing here).
-  - Whatever `tero-mcp-lite`-relevant checks `security-mcp` runs by default (SBOM generation, license
-    compliance, etc.) — use its own README/CLI for the exact invocation; this handoff doesn't
-    presume its interface.
+- **Security scanning** with real repository / supply-chain scanners. **Note:** `tzervas/security-mcp`
+  is a *content/text* screener (PII/secret/injection patterns over MCP request/response payloads), **not
+  a repository scanner** — it can be layered on to screen *output* text, but it does not replace the
+  scanners below. At minimum:
+  - A **dependency/SCA scan** over `pyproject.toml`/`uv.lock` — e.g. `pip-audit` or `osv-scanner` (even
+    though runtime deps are empty, the `dev` group pulls in `pytest` + its transitive deps — scan those).
+  - A **SAST pass** over `src/tero_mcp_lite/*.py` (5 files, ~700 lines — fast) — e.g. `semgrep` or `bandit`.
+  - A **secret scan** over the whole extracted tree — `gitleaks` (this session's local fallback only
+    checked a narrow high-confidence pattern set — run the real thing here).
+  - Optionally a filesystem/config scan with `trivy`, plus SBOM + license generation.
 - **Patch findings.** For anything the scan surfaces:
   - A real vulnerability in a transitive `pytest`/dev-only dependency: bump the pin in
     `pyproject.toml`'s `[dependency-groups] dev`, re-run `uv lock`, re-run `uv run pytest`.
@@ -97,7 +96,7 @@ Run, on your side, whatever this session's network couldn't reach:
 
 ```bash
 git add -A
-git commit -m "chore: security scan + patch pass (tzervas/security-mcp)"
+git commit -m "chore: security scan + patch pass (pip-audit/semgrep/gitleaks/trivy)"
 git push origin main
 ```
 
