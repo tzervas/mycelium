@@ -121,10 +121,12 @@ pub struct PrimMapping {
 /// `wrapping` construct is a **decided** ruling ("implement the M-791 named construct, no new
 /// `wrapping_*` prims... wire the construct to modular evaluation over `bin.add`/`sub`/`mul`"), but
 /// has **no grammar surface at all yet** (confirmed: `wrapping` does not appear anywhere in
-/// `docs/spec/grammar/mycelium.ebnf`) and no wired runtime evaluation path
-/// (`crates/mycelium-core/src/meta.rs`'s doc: "not a runtime evaluation path"). Gated on the
-/// receiver being a known `Binary{N}` (any width) so an unrelated user type's `.wrapping_add()`-
-/// named method never produces a misleading citation.
+/// `docs/spec/grammar/mycelium.ebnf`) and no wired runtime evaluation path — per
+/// `crates/mycelium-core/src/wrapping.rs`'s module doc, the op-layer wiring (arithmetic/swap
+/// operations that actually honor the `WrappingOpt` marker) is a downstream task, and "the op
+/// layer is wired once arithmetic/swap operations exist". Gated on the receiver being a known
+/// `Binary{N}` (any width) so an unrelated user type's `.wrapping_add()`-named method never
+/// produces a misleading citation.
 pub const TABLE: &[PrimMapping] = &[
     PrimMapping {
         rust_method: "is_nan",
@@ -173,8 +175,10 @@ pub const TABLE: &[PrimMapping] = &[
         citation: "RFC-0034 §10; M-791; DN-34 §8.16 item 2 (\"implement the M-791 named \
                    construct, no new wrapping_* prims ... wire the construct to modular \
                    evaluation over bin.add/sub/mul\"); no `wrapping` token in \
-                   docs/spec/grammar/mycelium.ebnf (grammar surface unwired) and \
-                   crates/mycelium-core/src/meta.rs (\"not a runtime evaluation path\")",
+                   docs/spec/grammar/mycelium.ebnf (grammar surface unwired) and no wired \
+                   runtime evaluation path per crates/mycelium-core/src/wrapping.rs's module \
+                   doc (op-layer wiring is a downstream task; \"the op layer is wired once \
+                   arithmetic/swap operations exist\")",
     },
     PrimMapping {
         rust_method: "wrapping_sub",

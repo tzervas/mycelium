@@ -557,11 +557,22 @@ fn emit_block_as_expr_inner(
                 // `Expr::Struct`'s own emission already uses, so this never records a type for a
                 // struct that itself gapped). Any other RHS shape (a call, an arithmetic
                 // expression, a literal, …) leaves `name` absent from `local_env` — absence, not a
-                // wrong guess.
-                if let Some(ty) = expr_env_type(&init.expr, &local_env)
+                // wrong guess. Critically, when `name` **shadows** an existing binding and the new
+                // RHS's type is *not* known, the stale prior entry for `name` must be `remove`d —
+                // otherwise a shadow (e.g. `let x = a; let x = true;`) would leave the *old*
+                // binding's type in `local_env`, and `Expr::Binary`'s operand-type gate could then
+                // mis-fire on the shadowed `x` using a type that no longer applies to it (VR-5: a
+                // stale entry is exactly as wrong as a fabricated one — never guess, never keep a
+                // guess past its basis).
+                match expr_env_type(&init.expr, &local_env)
                     .or_else(|| known_struct_literal_ty(&init.expr, self_ty))
                 {
-                    local_env.insert(name.clone(), ty);
+                    Some(ty) => {
+                        local_env.insert(name.clone(), ty);
+                    }
+                    None => {
+                        local_env.remove(&name);
+                    }
                 }
                 bindings.push((name, value));
             }
@@ -773,7 +784,29 @@ fn emit_expr_inner(expr: &Expr, self_ty: Option<&str>, env: &TypeEnv) -> Result<
                     ));
                 }
                 let pat = map_pattern(&arm.pat)?;
-                let body = emit_expr(&arm.body, self_ty, env)?;
+                // A match arm's pattern can **bind** names that shadow an outer local of the same
+                // name with a completely different (and possibly narrower/wider) type — e.g. an
+                // enum payload field bound by the pattern is not the outer parameter it shadows.
+                // `env` must never let `Expr::Binary`'s operand-type gate keep firing on such a
+                // name using the *outer* type, so strip every name this arm's pattern binds from a
+                // per-arm copy of `env` before emitting the arm body (VR-5: absence, never a stale
+                // guess — see `collect_pattern_bound_names`'s docs for why this is conservative).
+                let arm_env = if env.is_empty() {
+                    env.clone()
+                } else {
+                    let mut bound = HashSet::new();
+                    collect_pattern_bound_names(&arm.pat, &mut bound);
+                    if bound.is_empty() {
+                        env.clone()
+                    } else {
+                        let mut e = env.clone();
+                        for name in &bound {
+                            e.remove(name);
+                        }
+                        e
+                    }
+                };
+                let body = emit_expr(&arm.body, self_ty, &arm_env)?;
                 arms.push(format!("{pat} => {body}"));
             }
             Ok(format!("match {scrutinee} {{ {} }}", arms.join(", ")))
@@ -1186,6 +1219,54 @@ fn member_text(m: &syn::Member) -> String {
     match m {
         syn::Member::Named(id) => id.to_string(),
         syn::Member::Unnamed(idx) => idx.index.to_string(),
+    }
+}
+
+/// Collect every identifier a match-arm pattern **binds** into `out` — the `Expr::Match` operand-
+/// type-env fix (see that arm's docs): a pattern-bound name (e.g. an enum payload field, `Wrap::A(x)`
+/// binding `x`) can carry a completely different type than any outer local of the same name it
+/// shadows, so every such name must be invalidated in a per-arm `env` copy before the arm body is
+/// emitted — otherwise `Expr::Binary`'s operand-type gate could mis-fire on the *outer* type of a
+/// name the pattern just rebound. Deliberately conservative and purely structural (no attempt to
+/// determine *what* a bound name's type is, only *that* it is bound — VR-5: never guess, and here
+/// over-invalidating is the safe direction; a name incorrectly stripped just falls back to the
+/// prior, unchanged default emission, never a wrong `Binary{N}`-gated one). Only called on patterns
+/// `map_pattern` has already accepted (so recursion depth is already budget-bounded by that call —
+/// see `crate::gap::guarded`), but every shape below is still handled defensively, including
+/// `Pat::Struct` (not itself accepted by `map_pattern` today, but future-proofed here so a later
+/// pattern-shape addition can never silently reintroduce this gap).
+fn collect_pattern_bound_names(pat: &Pat, out: &mut HashSet<String>) {
+    match pat {
+        Pat::Ident(pi) => {
+            out.insert(pi.ident.to_string());
+            if let Some((_, sub)) = &pi.subpat {
+                collect_pattern_bound_names(sub, out);
+            }
+        }
+        Pat::TupleStruct(pts) => {
+            for e in &pts.elems {
+                collect_pattern_bound_names(e, out);
+            }
+        }
+        Pat::Tuple(pt) => {
+            for e in &pt.elems {
+                collect_pattern_bound_names(e, out);
+            }
+        }
+        Pat::Struct(ps) => {
+            for f in &ps.fields {
+                collect_pattern_bound_names(&f.pat, out);
+            }
+        }
+        Pat::Or(po) => {
+            for c in &po.cases {
+                collect_pattern_bound_names(c, out);
+            }
+        }
+        Pat::Paren(pp) => collect_pattern_bound_names(&pp.pat, out),
+        Pat::Reference(pr) => collect_pattern_bound_names(&pr.pat, out),
+        // `Pat::Wild`/`Pat::Path`/`Pat::Lit`/everything else binds no name.
+        _ => {}
     }
 }
 

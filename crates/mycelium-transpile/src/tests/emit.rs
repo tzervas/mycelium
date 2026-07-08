@@ -854,3 +854,156 @@ fn binop_operand_gated_forms_check_clean() {
 
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// Regression guard (HIGH finding, PR #1299 review, fix 1a) for the `Stmt::Local` shadow-
+/// invalidation bug: a `let` that **shadows** an existing name with an RHS of *unknown* type left
+/// the shadowed name's *stale* prior type in `local_env`, so `Expr::Binary`'s operand-type gate
+/// could keep firing using a type that no longer applies to the (now-shadowed) name. Repro: `let x
+/// = a;` (RHS is the known `Binary{16}` param `a`, so `x` is recorded as `Binary{16}`), then `let x
+/// = true;` shadows `x` with a bool-literal RHS (unknown type to this module — never a `Binary{N}`
+/// guess). The tail `x != b` must fall back to the plain `!=` glyph (the shadowed `x`'s type is
+/// invalidated), never the `eq`/`lt`-composed form the gate would wrongly emit using the *old*
+/// binding.
+#[test]
+fn let_shadow_with_unknown_type_invalidates_stale_binary_env_entry() {
+    let rust = "fn f(a: u16, b: u16) -> bool { let x = a; let x = true; x != b }";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "fixture")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile: {e}"));
+    assert!(
+        report.emitted_items.iter().any(|n| n == "f"),
+        "expected `f` to emit, got emitted_items={:?}",
+        report.emitted_items
+    );
+    assert!(
+        myc.contains("x != b"),
+        "expected the shadowed `x != b` tail to fall back to the plain glyph (the shadow \
+         invalidates x's known-Binary{{16}} type from the OLD `let x = a;` binding), got:\n{myc}"
+    );
+    assert!(
+        !myc.contains("match eq(x, b)"),
+        "the operand-type gate must NOT fire on the shadowed `x` using the stale OLD binding's \
+         type — `let x = true;` shadows it with an unknown-type RHS, got:\n{myc}"
+    );
+}
+
+/// Regression guard (HIGH finding, PR #1299 review, fix 1b) for the match-arm pattern-binding gap:
+/// a name a match arm's pattern **binds** (here `Wrap::A(x)`'s `u32` payload `x`) must never
+/// inherit an outer local's type through `env` — the outer `x: u16` (`Binary{16}`) parameter must
+/// not leak onto the pattern-bound `x`, which is a *different* binding (the enum payload,
+/// `Binary{32}`). Before the fix this mis-fired `and(x, b)` using the outer `Binary{16}` — a real
+/// `myc check` width-mismatch failure once the pattern-bound `x` (actually `Binary{32}`) is
+/// resolved against `b: Binary{16}`. The arm must fall back to the plain `&` glyph.
+#[test]
+fn match_arm_pattern_bound_name_invalidates_outer_binary_env_entry() {
+    let rust = "enum Wrap { A(u32), B } fn f(x: u16, b: u16, w: Wrap) -> u16 { match w { \
+                Wrap::A(x) => x & b, Wrap::B => b } }";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "fixture")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile: {e}"));
+    assert!(
+        report.emitted_items.iter().any(|n| n == "f"),
+        "expected `f` to emit, got emitted_items={:?}",
+        report.emitted_items
+    );
+    assert!(
+        myc.contains("x & b"),
+        "expected the `Wrap::A(x) => x & b` arm to fall back to the plain glyph (the \
+         pattern-bound `x` is a distinct Binary{{32}} payload, not the outer u16 param), \
+         got:\n{myc}"
+    );
+    assert!(
+        !myc.contains("and(x, b)"),
+        "the operand-type gate must NOT fire using the outer `x: u16` param's type for the \
+         pattern-bound `x` (a real Binary{{32}} payload vs Binary{{16}} `b` — a genuine \
+         width-mismatch myc-check failure if emitted), got:\n{myc}"
+    );
+}
+
+/// **The verify-first live-oracle proof** (mitigation #14) for both PR #1299 review fixes above:
+/// runs the two repros' emitted `.myc` through the REAL `myc-check` oracle. Honest finding
+/// (never a silently-skipped false-green, G2): neither repro's *fixed* (fallen-back-to-glyph)
+/// emission is actually `myc check`-clean — but for a completely different, PRE-EXISTING and
+/// separately-tracked reason than the bug being fixed here. `!=`/`&` in the un-gated (operand-type
+/// unknown) fallback path desugar to the bare word calls `ne`/`band`, which are not resolvable
+/// prims with no import (exactly the failure mode this module's `Expr::Binary` doc already
+/// documents for every other un-gated `!=`/`&` case, e.g. `bitand_non_binary_operand_keeps_glyph`
+/// above) — this is orthogonal to, and unaffected by, the type-env shadow/pattern-binding fixes.
+/// What this test proves is the *negative* the fixes exist for: the diagnostic is the KNOWN
+/// `ne`/`band` gap, never a mismatched-width `and`/`eq` prim-call failure the pre-fix bug would
+/// have risked (or, worse, a coincidentally-succeeding wrong-type `Clean` result). Skips
+/// gracefully (never fails) when `myc-check` is not built.
+#[test]
+fn shadow_and_pattern_bound_fixes_fall_back_to_known_gap_not_wrong_prim_call() {
+    let Some(bin) = find_myc_check() else {
+        eprintln!(
+            "emit: live oracle test skipped — no runnable myc-check (set MYC_CHECK_CMD or build \
+             `cargo build -p mycelium-check --bin myc-check`). The fixture-corpus text \
+             assertions above still cover the emitted shape."
+        );
+        return;
+    };
+
+    let dir = std::env::temp_dir().join(format!(
+        "mycelium-transpile-emit-shadow-pattern-oracle-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0)
+    ));
+    std::fs::create_dir_all(&dir).expect("temp dir");
+
+    // (case name, rust source, the un-gated glyph word this fallback desugars to — the honest,
+    // pre-existing gap the diagnostic must name; NOT the mismatched-width prim the pre-fix bug
+    // would have wrongly emitted).
+    let cases = [
+        (
+            "let_shadow",
+            "fn f(a: u16, b: u16) -> bool { let x = a; let x = true; x != b }",
+            "`ne`",
+        ),
+        (
+            "match_arm_pattern_bound",
+            "enum Wrap { A(u32), B } fn f(x: u16, b: u16, w: Wrap) -> u16 { match w { \
+             Wrap::A(x) => x & b, Wrap::B => b } }",
+            "`band`",
+        ),
+    ];
+    for (name, rust, expected_gap_word) in cases {
+        let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
+            .unwrap_or_else(|e| panic!("case `{name}` (`{rust}`) failed to parse/transpile: {e}"));
+        assert!(
+            !report.emitted_items.is_empty(),
+            "case `{name}` (`{rust}`) failed to emit at all: gaps={:?}",
+            report.gaps
+        );
+        // Never the wrong-type prim call the pre-fix bug would have risked.
+        assert!(
+            !myc.contains("eq(x, b)") && !myc.contains("and(x, b)"),
+            "case `{name}`: must never emit the mismatched-type prim-call form the shadow/\
+             pattern-binding bug would have produced, got:\n{myc}"
+        );
+
+        let path = dir.join(format!("{name}.myc"));
+        std::fs::write(&path, &myc).expect("write case .myc");
+        let checker = crate::vet::MycChecker {
+            command: vec![bin.display().to_string()],
+            cwd: None,
+        };
+        let rec = checker.vet_file(&path, "fixture.rs", 1, 1);
+        assert_eq!(
+            rec.class,
+            crate::vet::VetClass::CheckError,
+            "case `{name}` (`{rust}`) was expected to hit the KNOWN pre-existing {expected_gap_word} \
+             gap (never silently `Clean` on a wrong-type basis) — emitted:\n{myc}\ndiagnostic={:?}",
+            rec.diagnostic
+        );
+        assert!(
+            rec.diagnostic.contains(expected_gap_word),
+            "case `{name}`: expected the diagnostic to name the known pre-existing \
+             {expected_gap_word} gap, got: {}",
+            rec.diagnostic
+        );
+    }
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
