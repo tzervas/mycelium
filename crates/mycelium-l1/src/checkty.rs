@@ -971,7 +971,7 @@ fn collect_tuple_arities_expr(e: &crate::ast::Expr, out: &mut std::collections::
             collect_tuple_arities_expr(body, out);
         }
         Expr::Swap { value, .. } => collect_tuple_arities_expr(value, out),
-        Expr::Wild(b) | Expr::Spore(b) | Expr::Consume(b) => {
+        Expr::Wild(b) | Expr::Spore(b) | Expr::Consume(b) | Expr::Wrapping(b) => {
             collect_tuple_arities_expr(b, out);
         }
         Expr::Colony(hyphae) => {
@@ -2585,6 +2585,7 @@ fn subst_type_param_in_expr(e: &Expr, param: &str, concrete: &TypeRef) -> Expr {
         Expr::Wild(b) => Expr::Wild(boxed(b)),
         Expr::Spore(b) => Expr::Spore(boxed(b)),
         Expr::Consume(b) => Expr::Consume(boxed(b)),
+        Expr::Wrapping(b) => Expr::Wrapping(boxed(b)),
         Expr::Colony(hyphae) => Expr::Colony(
             hyphae
                 .iter()
@@ -3701,6 +3702,8 @@ impl Cx<'_> {
             Expr::Spore(_) => {
                 self.err("`spore` is deferred to the reconstruction-manifest work (E2-5/M-260)")
             }
+            // RFC-0034 §10/§10.1 (CU-5): `wrapping { <expr> }` — the named modular-arithmetic opt-out.
+            Expr::Wrapping(body) => self.check_wrapping(scope, body, expected),
             // DN-03 §1 / M-664: `consume <expr>` — affine acquisition of a `Substrate` value (LR-8).
             Expr::Consume(operand) => self.check_consume(scope, operand, expected),
             Expr::Colony(hyphae) => self.check_colony(scope, hyphae, expected),
@@ -4234,6 +4237,81 @@ impl Cx<'_> {
         // `@std-sys` + a known expected type: the block *has* that type; the body is preserved
         // verbatim (opaque). Effect coverage (`ffi`) is checked by the M-660 pass, not here.
         Ok((want.clone(), Expr::Wild(Box::new(body.clone()))))
+    }
+
+    /// Type a `wrapping { <expr> }` block (RFC-0034 §10/§10.1; CU-5) — the named, explicit Axis-B
+    /// modular-arithmetic opt-out. Two gates, both never-silent (G2):
+    ///
+    /// 1. **Structural gate ([`Self::gate_wrapping_body`]).** The body must be a **`Binary` add/sub/mul
+    ///    arithmetic tree** — internal nodes are the surface ops whose kernel name is exactly
+    ///    `bin.add`/`bin.sub`/`bin.mul` (the three [`mycelium_interp::prims::eval_wrapping`] supports —
+    ///    surface `add_s`/`sub_s`/`mul_s`; the infix `+`/`-`/`*` are the *ternary* `trit.*`, refused
+    ///    here), and leaves are variable/literal operands. Any other enclosed operation (a division, a
+    ///    comparison, a **function call**, a `let`/`if`/`match`) is refused **up front**. Refusing calls
+    ///    is load-bearing: it makes the region a call-free arithmetic tree, so the evaluator's dynamic
+    ///    wrapping-region bracket ([`crate::eval`]) coincides exactly with the *lexical* block (the
+    ///    opt-out is never ambient — it cannot leak through a call).
+    /// 2. **Normal typing.** The body is then type-checked normally, which enforces the `Binary`-operand
+    ///    contract and the **equal-width** requirement via [`prim_sig`] (a width mismatch, or a
+    ///    non-`Binary` operand, is a never-silent [`CheckError`] there). The construct's type is the
+    ///    body's type, **preserved** (`Binary{N}`).
+    ///
+    /// Guarantee posture: `wrapping` opts out of the *range* refusal only; the enclosed ops evaluate to
+    /// `Declared`-tagged modular results at runtime (VR-5 — the developer's explicit opt-in, never a
+    /// fabricated stronger claim). The static shape is width-preserving exactly as the non-wrapping
+    /// `bin.add`/`bin.sub`/`bin.mul` (the modular semantics is a *runtime* mode, not a type change).
+    fn check_wrapping(
+        &self,
+        scope: &mut Vec<(String, Ty)>,
+        body: &Expr,
+        expected: Option<&Ty>,
+    ) -> Result<(Ty, Expr), CheckError> {
+        self.gate_wrapping_body(body)?;
+        let (ty, rbody) = self.check(scope, body, expected)?;
+        Ok((ty, Expr::Wrapping(Box::new(rbody))))
+    }
+
+    /// The structural gate for a `wrapping { … }` body (RFC-0034 §10.1): accept only a `Binary`
+    /// add/sub/mul arithmetic tree — internal nodes are single-segment applications whose
+    /// [`prim_kernel_name`] is `bin.add`/`bin.sub`/`bin.mul` (arity 2), leaves are `Path`/`Lit`
+    /// operands — and refuse everything else with an explicit, teaching refusal (never-silent — G2).
+    /// The operand types (`Binary`, equal width) are *not* checked here — that is the normal-typing
+    /// pass's job ([`prim_sig`]); this gate only constrains the *shape* so the region is a call-free
+    /// arithmetic tree (see [`Self::check_wrapping`]).
+    fn gate_wrapping_body(&self, e: &Expr) -> Result<(), CheckError> {
+        match e {
+            // A bare operand leaf (a variable or a literal) — the degenerate no-op region, and the
+            // recursion base for the operands of an enclosed add/sub/mul.
+            Expr::Path(_) | Expr::Lit(_) => Ok(()),
+            Expr::App { head, args } => {
+                if let Expr::Path(p) = head.as_ref() {
+                    if p.0.len() == 1
+                        && args.len() == 2
+                        && matches!(
+                            prim_kernel_name(&p.0[0]),
+                            Some("bin.add" | "bin.sub" | "bin.mul")
+                        )
+                    {
+                        self.gate_wrapping_body(&args[0])?;
+                        return self.gate_wrapping_body(&args[1]);
+                    }
+                }
+                self.err(
+                    "a `wrapping { … }` block accepts only an enclosed `Binary` add/sub/mul tree \
+                     (surface `add_s`/`sub_s`/`mul_s` — `eval_wrapping` supports exactly \
+                     `bin.add`/`bin.sub`/`bin.mul`; the infix `+`/`-`/`*` are the *ternary* ops and are \
+                     not wrapping-eligible). This enclosed operation is not one of them — a modular \
+                     arithmetic region cannot contain a different op or a function call (RFC-0034 \
+                     §10.1; never-silent — G2).",
+                )
+            }
+            _ => self.err(
+                "a `wrapping { … }` block's body must be a `Binary` add/sub/mul arithmetic expression \
+                 — its operands are variables/literals or nested add/sub/mul, never a \
+                 `let`/`if`/`match`/`swap`/other form (RFC-0034 §10.1; the opt-out is a modular \
+                 *arithmetic* region, not a general scope — never-silent, G2).",
+            ),
+        }
     }
 
     /// Type a `colony { hypha e1, …, hypha eN }` block (RFC-0008 §4.7; M-666). Every `hypha` body

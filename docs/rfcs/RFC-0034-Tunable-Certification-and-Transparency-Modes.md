@@ -180,6 +180,57 @@ developer who genuinely wants wraparound arithmetic opts in via a **named, expli
 exposed in **v0** (DN-29 §9 Q4). The opt-out is *named and visible*, never an ambient default: choosing
 `wrapping` is itself never-silent.
 
+### §10.1 The concrete `wrapping { <expr> }` block form (addendum — implemented Rust-first, pending ratification)
+
+> **Status of this subsection.** Append-only addendum (house rule #3) to the **Enacted** §10, added
+> **2026-07-08** under the maintainer's directive to land the CU-5 surface paired with this RFC. §10
+> above decided the *model* ("a named, explicit `wrapping` construct, exposed in v0") but deliberately
+> left the *exact form* open; this subsection fixes the concrete grammar and its checked semantics.
+> Guarantee tag of this subsection: **implemented (Rust-first) — pending ratification** — the surface
+> parses, type-checks, and evaluates in `mycelium-l1`; it is **not** silently promoted to `Accepted`
+> (VR-5/G2). Grounded in the 2026-07-08 maintainer directive plus the landed eval-half (M-791
+> follow-on, `mycelium-interp::prims::eval_wrapping`).
+
+**Grammar.** `wrapping` is a reserved keyword (lexed atomically, never a silent identifier — G2). The
+construct is a **block-form expression**:
+
+```text
+wrapping-expr := "wrapping" "{" expr "}"
+```
+
+**Semantics (normative, as implemented).** `wrapping { <expr> }` evaluates `<expr>` with its enclosed
+`Binary{N}` add/sub/mul operations (surface `+`/`-`/`*`, or their word forms) taken in **modular** mode:
+the result wraps modulo `2^N` into `B_N` instead of refusing out-of-range, mirroring `eval_wrapping`'s
+dispatch over exactly `bin.add`/`bin.sub`/`bin.mul` (RFC-0034 §10; the landed runtime half). Every result
+of an enclosed op is tagged **`Declared`** (a zero-magnitude `UserDeclared` bound — the developer's
+explicit opt-in, never a fabricated `Proven`/`Empirical` claim, VR-5) and carries the `WrappingOpt` marker
+so the opt-out stays inspectable on the value.
+
+**What the opt-out relaxes, and only that (never-silent — G2).** `wrapping` opts out of the **range**
+refusal *only*. It is **explicit and never ambient**: it changes nothing outside its lexical block. Every
+other never-silent floor still fires as a hard refusal, matching `eval_wrapping`'s own guards:
+
+- a **structural/width mismatch** (unequal operand widths, or a width over the per-op cap) still
+  refuses;
+- an **enclosed operation other than add/sub/mul** (e.g. a division, a comparison, a function call, or
+  a non-`Binary` operand) is refused **up front by the checker** — `wrapping` names a modular
+  *arithmetic* region, not a general "ignore errors" scope.
+
+**Layering (honest scope).** The surface is wired end-to-end through the `mycelium-l1` evaluator (the
+tree-walking interpreter that holds the prim registry and elects `eval_wrapping` for the enclosed ops).
+The **Core-IR lowering** (`mycelium-l1::elab` to `mycelium_core::Node` to the `mycelium-interp` small-step
+machine) is **staged**: `elab` refuses `wrapping` with a never-silent `Residual` until the interpreter's
+`Node::Op` dispatch learns the wrapping-mode election (a follow-on in `mycelium-interp`, outside this
+change's scope). This is disclosed, never silent (G2): the construct is *live* through the L1 evaluator
+and *explicitly staged* on the Core path, never faked as wired where it is not.
+
+**Definition of Done (this subsection).** (a) `wrapping` lexes as a reserved keyword; (b) `wrapping {
+<expr> }` parses to an AST node; (c) the checker accepts an enclosed `Binary{N}` add/sub/mul tree (result
+type preserved) and refuses every other enclosed op and any width mismatch, never-silently; (d) evaluation
+of an enclosed op returns the modular result tagged `Declared` plus `WrappingOpt`; (e) tests cover parse
+plus check plus eval, the width-mismatch refusal, and the unsupported-op refusal. Met by the `mycelium-l1`
+surface landing (CU-5).
+
 ## §11 Why it stays transparent (the argument)
 
 Tunability stays **transparent and accurate** at every setting — *transparency is disclosure-of-strength
@@ -286,4 +337,5 @@ refused.
 | 2026-06-24 | **Enacted (design-driven)** *(rev. — test contract)* | §13 conformance refined to require **mode-parametric** verification + the cross-mode **negative** cases (an invariant must be absent/relaxed where it should be, not just present where it should) and the **adapt-don't-drop** rule for the pre-existing all-on suite (DN-20). Implementation tasks: harness **M-795**, consolidated by the **M-794** gate. Strengthens the test obligation; the mechanism + the conformance clauses (a)–(f) are unchanged. |
 | 2026-06-24 | **Enacted (design-driven)** *(rev. — native scoped test toolkit)* | §13 generalizes the test contract into a **native, scoped capability of the Mycelium testing toolkit** (`mycelium-std-testing`): mode-parametric tests + the negative cross-mode pattern are first-class and configurable in **project / nodule / granular** scope, reusing the §6 `@certification` resolution — so downstream developers get the discipline for free, not hand-rolled. Implementation task **M-796** (the developer-facing surface generalization; M-795 is the kernel instance). Additive; mechanism + clauses (a)–(f) unchanged. |
 | 2026-06-24 | **Enacted (design-driven)** | Doc-and-design-driven enactment paired with TDD. The corpus amendments (ADR-032's act) were **applied**: 21 amendments / 13 files via `tools/dn29_apply.py` (charter conditionalize SC-3/FR-M3; living-doc transparency reframe; append-only footnotes on RFC-0001/0002/0005 + ADR-010/011/013/016/017); process/colloquial "honest" deliberately excluded. The per-mode rules now govern the corpus. **Implementation pending** — the runtime mode mechanism is the paired TDD cycle, not yet code, never claimed implemented (VR-5/G2); advances to fully Enacted-with-code as the modes land Rust-first. DN-29 → Superseded. |
+| 2026-07-08 | **Enacted — with code (Rust-first)** *(addendum §10.1 — surface, pending ratification)* | **CU-5: the concrete `wrapping { <expr> }` block surface lands in `mycelium-l1`** (lexer/token, AST, parser, checker, evaluator), paired with this RFC per the maintainer's 2026-07-08 directive. Append-only: §10 above is unchanged; the concrete grammar + checked semantics are added as **§10.1**, tagged *implemented (Rust-first) — pending ratification* (never silently `Accepted` — VR-5/G2). Reaches the landed eval-half (`mycelium-interp::prims::eval_wrapping`, M-791 follow-on) through the L1 tree-walking evaluator; the Core-IR lowering (`elab` → `mycelium-interp` `Node::Op` dispatch) stays a disclosed **staged `Residual`** (a `mycelium-interp` follow-on, FLAG-cu5-core-interp-emit). Enclosed non-add/sub/mul ops + width mismatches refuse never-silently (G2). Advances FR-M3/§10; verified by the in-crate parse/check/eval + refusal tests. |
 | 2026-06-24 | **Enacted — with code (Rust-first)** *(ratified by maintainer 2026-06-24)* | **Implementation DoD met (M-794, the E21-1 capstone gate).** The wiring leaves M-786…M-793 landed Rust-first and the **§13 conformance suite** (`crates/mycelium-cert/tests/conformance.rs`) asserts **all six clauses (a)–(f) end-to-end, each parameterized over `fast`/`balanced`/`certified` + the cross-mode negative cases** (the M-795 harness pattern: invariant present where it must fire, absent/relaxed where it must not) — green under `cargo test -p mycelium-cert`. Status advanced **Enacted (design-driven) → Enacted — with code**; ADR-032 decision 1 (mechanism adoption) is **realized in code**. Append-only: the prior design-driven enactment prose is preserved unchanged. Honest scope (VR-5/G2): the memory-safety clause's `Proven` rests on the checked `#![forbid(unsafe_code)]` side-condition (the suite reads + asserts it); per-op/per-knob granularity (§14) remains **deferred (named, not silent)**; the developer-facing native scoped testing toolkit landed alongside (M-796). **Ratified by the maintainer (2026-06-24)** — the capstone milestone, now final. |

@@ -1290,7 +1290,12 @@ fn collect_match_arm_comments(
                 )?;
             }
         }
-        Expr::WithParadigm { body, .. } | Expr::Wild(body) | Expr::Spore(body) => {
+        // RFC-0034 §10.1 (CU-5): `wrapping { … }` wraps a single sub-expression — recurse through it,
+        // exactly like the other single-body wrapper forms.
+        Expr::WithParadigm { body, .. }
+        | Expr::Wild(body)
+        | Expr::Spore(body)
+        | Expr::Wrapping(body) => {
             collect_match_arm_comments(
                 item_idx,
                 body,
@@ -1872,6 +1877,8 @@ fn render_expr_canonical_inner(e: &Expr) -> String {
         }
         Expr::Wild(b) => format!("wild {{ {} }}", render_expr_canonical_inner(b)),
         Expr::Spore(b) => format!("spore({})", render_expr_canonical_inner(b)),
+        // RFC-0034 §10.1 (CU-5): `wrapping { <expr> }` — the named modular-arithmetic opt-out.
+        Expr::Wrapping(b) => format!("wrapping {{ {} }}", render_expr_canonical_inner(b)),
         Expr::Colony(hyphae) => {
             // M-970 (found by M-914): a hypha's optional `@forage(policy)` placement annotation
             // (RFC-0008 RT3; DN-63 §3.5; M-906/DN-70 D1) must round-trip through the canonical

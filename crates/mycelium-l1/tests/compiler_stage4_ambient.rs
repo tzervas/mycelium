@@ -478,6 +478,9 @@ mod fp {
             Expr::Wild(body) => expr(tag(fp, 85), body),
             Expr::Spore(value) => expr(tag(fp, 86), value),
             Expr::Consume(value) => expr(tag(fp, 87), value),
+            // RFC-0034 §10.1 (CU-5): `wrapping { <expr> }` — fingerprint like the other single-body
+            // wrapper forms (unique tag 97).
+            Expr::Wrapping(body) => expr(tag(fp, 97), body),
             Expr::Colony(hyphae) => hypha_list(tag(fp, 88), hyphae),
             Expr::Lambda { params, body } => {
                 let fp = param_list(tag(fp, 89), params);
