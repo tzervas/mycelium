@@ -262,7 +262,12 @@ fn unavailable_checker_records_tool_unavailable() {
 /// Locate a runnable `myc-check`: `MYC_CHECK_CMD` (first whitespace token), else the workspace
 /// `target/debug/myc-check`. Returns `None` (→ graceful skip) when neither is present — this test
 /// must not *build* the checker (it isn't a dep of this crate), only exercise it if already built.
-fn find_myc_check() -> Option<PathBuf> {
+///
+/// `pub(in crate::tests)` (not private/`pub`): the `binop_operand_gated_forms_check_clean` live
+/// oracle in `src/tests/emit.rs` and the forward-map oracle tests in `src/tests/prim_map.rs` reuse
+/// this exact helper (DRY, CLAUDE.md house rule 5) instead of each keeping a drifting copy — scoped
+/// to `crate::tests` since it is test-only infrastructure, never part of the crate's real API.
+pub(in crate::tests) fn find_myc_check() -> Option<PathBuf> {
     if let Ok(cmd) = std::env::var("MYC_CHECK_CMD") {
         if let Some(first) = cmd.split_whitespace().next() {
             let p = PathBuf::from(first);

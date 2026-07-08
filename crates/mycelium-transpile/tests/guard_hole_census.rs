@@ -60,7 +60,10 @@ fn emit_expr_deep_paren_refuses_cleanly() {
     let budget = RecursionBudget::default();
     let result = ensure_sufficient_stack(&budget, || {
         let expr: syn::Expr = syn::parse_str(&src).expect("deeply-parenthesized Rust still parses");
-        emit_expr(&expr, None)
+        // trx2 Lane C Deliverable 1: `emit_expr` now threads a name->type environment (empty here
+        // — this census has no fn/method params in scope, and doesn't need any: it only exercises
+        // the recursion-budget guard hole, not the operand-type-gated operator emission).
+        emit_expr(&expr, None, &std::collections::HashMap::new())
     });
     let err = result
         .expect_err("expected an explicit over-budget GapReason refusal, not success or a SIGABRT");

@@ -7,7 +7,7 @@
       "exit_code": 0,
       "diagnostic": "",
       "non_test_items": 23,
-      "emitted_items": 1
+      "emitted_items": 2
     },
     {
       "myc_file": "gen/myc-drafts/stdlib/std-numerics/matrix.myc",
@@ -20,8 +20,8 @@
     }
   ],
   "total_non_test_items": 27,
-  "total_emitted_items": 1,
-  "total_checked_clean_items": 1,
+  "total_emitted_items": 2,
+  "total_checked_clean_items": 2,
   "class_counts": {
     "Clean": 2
   }
