@@ -32,9 +32,13 @@ pub fn tokens_to_string<T: ToTokens>(node: &T) -> String {
 ///   so *signed* integers (`i8`.../`isize`) are intentionally NOT mapped here (would misrepresent
 ///   twos-complement semantics as an unsigned-magnitude representation); they are a gap.
 /// - `isize`/`usize` -> gap (platform-dependent width has no fixed `Binary{N}`).
-/// - `f32`/`f64`/`char` -> gap (no confirmed base_type arm for any of these in this grammar
-///   fragment; `scalar` only appears inside `Dense{N, scalar}`/`ambient_params`, never as a bare
-///   value type).
+/// - `f64` -> `Float` (`base_type ::= 'Float'`, `docs/spec/grammar/mycelium.ebnf:251` — a nullary
+///   scalar-float type, "IEEE-754 binary64 only at introduction", ADR-040 FLAG-1/M-897; trx2 Lane C
+///   Deliverable 2 verify-first correction — `myc check`-confirmed). `f32`/`char` -> gap (`f32` has
+///   no confirmed representation, `Float` being binary64-only; `char` has no confirmed base_type
+///   arm in this grammar fragment). NOTE: `scalar` (`F16`/`BF16`/`F32`/`F64`) is a *different*,
+///   Dense-only production (`Dense{N, scalar}`/`ambient_params`) — unrelated to the bare `Float`
+///   value type.
 /// - `String`/`str`/`&str` -> `Bytes` (RFC-0033 §3.2: the dedicated, never-silent UTF-8 text repr;
 ///   grammar `base_type` line 250; a `"…"` StrLit lowers to the same `Repr::Bytes` value form —
 ///   checkty.rs:6669). Verified `myc check`-clean (DN-34 §8.14). `&str` is erased to `str` by the
@@ -121,12 +125,26 @@ fn map_type_inner(ty: &Type, self_ty: Option<&str>) -> Result<String, GapReason>
                         "`{name}` has a platform-dependent width; no fixed Binary{{N}} mapping"
                     ),
                 )),
-                "f32" | "f64" => Err(GapReason::new(
+                // trx2 Lane C Deliverable 2 (verify-first correction, mitigation #14): the prior
+                // "no confirmed base_type arm" reason for `f32`/`f64` was STALE — the grammar DOES
+                // have a nullary `Float` base_type (`docs/spec/grammar/mycelium.ebnf:251`: "first-
+                // class scalar float, IEEE-754 binary64 only at introduction (ADR-040 FLAG-1;
+                // M-897) — nullary like Bytes"). `scalar` (`F16`/`BF16`/`F32`/`F64`) is a DIFFERENT,
+                // Dense-only production (`Dense{N, scalar}`/`ambient_params`) — the earlier comment
+                // conflated the two. Confirmed `myc check`-clean empirically: `fn f(x: Float) =>
+                // Float = 1.5;` and `fn f(x: Float) => Binary{1} = flt_is_nan(x);` both check with
+                // no import (`target/debug/myc`, `mycelium-proj.toml` `lang = "mycelium-0"`).
+                // `Float` is explicitly "binary64 only at introduction" (a width extension is a
+                // future, its-own-decision append — the grammar comment's own words), so `f64` maps
+                // faithfully; `f32` still has no confirmed representation and stays a gap (never
+                // silently widened/narrowed to `Float`, VR-5).
+                "f64" => Ok("Float".to_string()),
+                "f32" => Err(GapReason::new(
                     Category::Other,
-                    format!(
-                        "`{name}` — `scalar` only appears inside Dense{{N,scalar}}/ambient_params \
-                         in the grammar, never as a bare value type; no confirmed base_type arm"
-                    ),
+                    "`f32` has no confirmed Mycelium representation — `Float` \
+                     (docs/spec/grammar/mycelium.ebnf:251) is IEEE-754 binary64 only at \
+                     introduction (ADR-040 FLAG-1/M-897); a width extension is a future, \
+                     separately-decided append, never silently assumed (VR-5)",
                 )),
                 "char" => Err(GapReason::new(
                     Category::Other,
@@ -287,12 +305,14 @@ pub(crate) fn field_type_user_deps(ty: &Type, out: &mut Vec<String>) -> bool {
                 // Builtins `map_type` maps directly — mappable, but contribute no user dep.
                 // `String`/`str` now map to `Bytes` (RFC-0033 §3.2 — DN-34 §8.14), so they join the
                 // builtins here: a `String`-typed field no longer withholds its struct's emission.
-                "bool" | "u8" | "u16" | "u32" | "u64" | "u128" | "String" | "str" => {
+                // `f64` now maps to `Float` (trx2 Lane C Deliverable 2 — see `map_type`'s doc); it
+                // joins the builtins here too, for the identical reason.
+                "bool" | "u8" | "u16" | "u32" | "u64" | "u128" | "String" | "str" | "f64" => {
                     matches!(seg.arguments, PathArguments::None)
                 }
                 // Shapes `map_type` gaps outright ⇒ unmappable field.
                 "Self" | "i8" | "i16" | "i32" | "i64" | "i128" | "isize" | "usize" | "f32"
-                | "f64" | "char" => false,
+                | "char" => false,
                 _ => {
                     // A reserved-word type name fails to lex ⇒ `map_type` gaps it (unmappable).
                     if crate::reserved::is_reserved(&name) {

@@ -11,13 +11,23 @@
 //! ([`max_magnitude`]). Arithmetic is **fixed-width**: a result outside the range is an explicit
 //! `None`/overflow — never a silent wrap (SC-3; G2).
 //!
-//! Integer values in the **fixed-width** path use `i64`; this is exact for every width up to `m = 40`
-//! (`(3^40−1)/2 < i64::MAX`) and is **never-silent** beyond it ([`max_magnitude`] returns `None` at
-//! `m ≥ 41`; [`add`]/[`mul`] return `None` on overflow). The **arbitrary-width** path that *removes*
-//! this cap (growing instead of returning `None`) lives in `big_ternary` ([`BigTernary`]) — the bignum
-//! need the original cap anticipated (E20-1/M-756; RFC-0033 §4.2; ADR-029). The shared balanced
-//! full-adder [`add_with_carry`] is the single never-silent digit primitive both the fixed-width
-//! [`add`] and the growable [`BigTernary`] ripple (DRY).
+//! **Correction (CU-7 recon, 2026-07-08 — mitigation #14, verify against the codebase before
+//! implementing): [`add`]/[`sub`]/[`mul`]/[`neg`] are NOT `i64`-capped.** They are digit-serial
+//! (ripple-carry add, shifted-accumulation multiply) directly over `&[Trit]`, with no `i64`
+//! anywhere in the algorithm; overflow is detected **structurally** (a nonzero final carry /
+//! nonzero high digits), so they are correct and never-silent at **any** width `m`, not just
+//! `m ≤ 40`. The `i64` cap belongs to the separate *conversion* utilities below —
+//! [`max_magnitude`] (whose own `3^m` computation needs `i64` room, hence `None` at `m ≥ 41`) and
+//! [`int_to_trits`]/[`trits_to_int`] (which round-trip a **value** through `i64`, not a width) —
+//! used for decimal-literal encoding and oracle tests, never by `add`/`sub`/`mul`/`neg`
+//! themselves. (A prior revision of this comment conflated the two; corrected per VR-5 — see
+//! `crates/mycelium-core/src/tests/ternary.rs` for the width-60/200 witness tests and
+//! `mycelium-l1/tests/enablement.rs`'s width-80 three-way for the end-to-end confirmation.) The
+//! **arbitrary-width** path that removes the *conversion* utilities' `i64` ceiling too (growing a
+//! digit instead of ever needing an `i64`-sized magnitude) lives in `big_ternary` ([`BigTernary`])
+//! — the bignum need the original cap anticipated (E20-1/M-756; RFC-0033 §4.2; ADR-029). The
+//! shared balanced full-adder [`add_with_carry`] is the single never-silent digit primitive both
+//! the fixed-width [`add`] and the growable [`BigTernary`] ripple (DRY).
 
 mod big_ternary;
 pub use big_ternary::{checked_add_fixed, BigTernary, FixedWidthTrits};

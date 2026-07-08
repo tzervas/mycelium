@@ -1319,7 +1319,7 @@ pub(crate) struct CoherenceView {
     /// Every trait name declared anywhere in the phylum (pub-blind).
     pub(crate) traits: BTreeSet<String>,
     /// Every data-type name declared anywhere in the phylum (pub-blind), excluding the prelude.
-    types: BTreeSet<String>,
+    pub(crate) types: BTreeSet<String>,
 }
 
 /// The **declaration-level** registries of one nodule (types/fns/traits), built before any body is
@@ -6574,11 +6574,62 @@ impl Cx<'_> {
         name: &str,
         args: &[Expr],
     ) -> Result<Option<(Ty, Expr)>, CheckError> {
+        // ADR-040 §2.4 (CU-3): the never-silent Binary↔Float conversions. Mixed-paradigm operands
+        // (unlike the uniform-Float shape the rest of this function checks below), so a dedicated
+        // pre-branch — `flt_to_bin` mirrors `width_cast`'s witness-operand shape (DN-41): the
+        // second operand's `Binary{M}` *width* is the result width, its bits unused.
+        if name == "bin_to_flt" {
+            if args.len() != 1 {
+                return self.err(format!(
+                    "`bin_to_flt` takes 1 operand, got {} (ADR-040 §2.4; CU-3)",
+                    args.len()
+                ));
+            }
+            let (vty, v2) = self.check(scope, &args[0], None)?;
+            if !matches!(vty, Ty::Binary(_)) {
+                return self.err(format!(
+                    "`bin_to_flt` operand must be a concrete `Binary{{N}}`, got {vty} (ADR-040 \
+                     §2.4 — a checked-exact conversion; never a default width)"
+                ));
+            }
+            return Ok(Some((Ty::Float, app_node(head, vec![v2]))));
+        }
+        if name == "flt_to_bin" {
+            if args.len() != 2 {
+                return self.err(format!(
+                    "`flt_to_bin` takes 2 operands, got {} (ADR-040 §2.4; CU-3)",
+                    args.len()
+                ));
+            }
+            let (vty, v2) = self.check(scope, &args[0], Some(&Ty::Float))?;
+            if !matches!(vty, Ty::Float) {
+                return self.err(format!(
+                    "`flt_to_bin` first (value) operand must be a `Float` (IEEE-754 binary64 — \
+                     ADR-040 §2.1), got {vty} (never a silent conversion; write a float literal \
+                     like `1.0`)"
+                ));
+            }
+            let (wty, w2) = self.check(scope, &args[1], None)?;
+            let Ty::Binary(Width::Lit(m)) = wty else {
+                return self.err(format!(
+                    "`flt_to_bin` width witness must be a concrete `Binary{{M}}` (only its width \
+                     is used), got {wty} (ADR-040 §2.4, the DN-41 witness shape; a width-variable \
+                     witness is refused)"
+                ));
+            };
+            return Ok(Some((
+                Ty::Binary(Width::Lit(m)),
+                app_node(head, vec![v2, w2]),
+            )));
+        }
         let is_cmp = matches!(
             name,
             "flt_lt" | "flt_le" | "flt_gt" | "flt_ge" | "flt_eq" | "flt_total_le"
         );
+        // ADR-040 §2.5 (CU-2): the mandated classification predicates — unary `Float → Binary{1}`.
+        let is_class = matches!(name, "flt_is_nan" | "flt_is_finite" | "flt_is_infinite");
         if !is_cmp
+            && !is_class
             && !matches!(
                 name,
                 "flt_add" | "flt_sub" | "flt_mul" | "flt_div" | "flt_neg"
@@ -6586,7 +6637,7 @@ impl Cx<'_> {
         {
             return Ok(None);
         }
-        let want = if name == "flt_neg" { 1 } else { 2 };
+        let want = if name == "flt_neg" || is_class { 1 } else { 2 };
         if args.len() != want {
             return self.err(format!(
                 "`{name}` takes {want} operand(s), got {} (ADR-040 §2.4/§2.5; M-898/M-899)",
@@ -6611,7 +6662,7 @@ impl Cx<'_> {
             }
             rebuilt.push(a2);
         }
-        let ret = if is_cmp {
+        let ret = if is_cmp || is_class {
             Ty::Binary(Width::Lit(1))
         } else {
             Ty::Float
@@ -7070,10 +7121,9 @@ fn prim_family(name: &str) -> Option<PrimFam> {
         // accumulated as ops landed under M-748/M-887/M-888/M-889/M-766). The `bit.*`/`bin.*`
         // *kernel*-namespace inconsistency one layer down is deliberately NOT touched — kernel
         // names are content-addressed (DN-10 §3.4); see the DN-72 deferred FLAG.
-        "not" | "xor" | "and" | "or" | "add_u" | "sub_u" | "mul_s" | "div_u" | "rem_u"
-        | "shl_u" | "shr_u" | "add_s" | "sub_s" | "neg_s" | "div_s" | "rem_s" | "shr_s" => {
-            PrimFam::Binary
-        }
+        "not" | "popcount" | "clz" | "ctz" | "xor" | "and" | "or" | "add_u" | "sub_u" | "mul_u"
+        | "mul_s" | "div_u" | "rem_u" | "shl_u" | "shr_u" | "add_s" | "sub_s" | "neg_s"
+        | "div_s" | "rem_s" | "shr_s" => PrimFam::Binary,
         "add" | "sub" | "mul" | "neg" => PrimFam::Ternary,
         _ => return None,
     })
@@ -7159,7 +7209,9 @@ fn encode_balanced_ternary(site: &str, v: i64, width: u32) -> Result<Literal, Ch
 pub fn prim_sig(name: &str, args: &[Ty]) -> Option<Ty> {
     match (name, args) {
         // M-766: `neg_s` — the two's-complement unary negate joins `not` (unary, width-preserving).
-        ("not" | "neg_s", [Ty::Binary(w)]) => Some(Ty::Binary(w.clone())),
+        ("not" | "neg_s" | "popcount" | "clz" | "ctz", [Ty::Binary(w)]) => {
+            Some(Ty::Binary(w.clone()))
+        }
         ("xor", [Ty::Binary(a), Ty::Binary(b)]) if a == b => Some(Ty::Binary(a.clone())),
         // RFC-0032 D2 (M-748): width-preserving binary arithmetic/logical (never-silent overflow is
         // a runtime contract; the static signature is width-preserving like the trit arithmetic).
@@ -7176,8 +7228,8 @@ pub fn prim_sig(name: &str, args: &[Ty]) -> Option<Ty> {
         // `min ÷ −1` signed-division overflow, and an out-of-range shift amount are likewise
         // runtime contracts, not static type errors.
         (
-            "and" | "or" | "add_u" | "sub_u" | "mul_s" | "div_u" | "rem_u" | "shl_u" | "shr_u"
-            | "add_s" | "sub_s" | "div_s" | "rem_s" | "shr_s",
+            "and" | "or" | "add_u" | "sub_u" | "mul_u" | "mul_s" | "div_u" | "rem_u" | "shl_u"
+            | "shr_u" | "add_s" | "sub_s" | "div_s" | "rem_s" | "shr_s",
             [Ty::Binary(a), Ty::Binary(b)],
         ) if a == b => Some(Ty::Binary(a.clone())),
         ("add" | "sub" | "mul", [Ty::Ternary(a), Ty::Ternary(b)]) if a == b => {
@@ -7208,6 +7260,10 @@ pub fn vsa_kernel_model_id(surface: &str) -> String {
 pub fn prim_kernel_name(name: &str) -> Option<&'static str> {
     Some(match name {
         "not" => "bit.not",
+        // CU-6: bit-manipulation counts (popcount/clz/ctz), unary Binary{N} -> Binary{N}.
+        "popcount" => "bit.popcount",
+        "clz" => "bit.clz",
+        "ctz" => "bit.ctz",
         "xor" => "bit.xor",
         // RFC-0032 D2 (M-748): surface the already-registered `bit.and`/`bit.or` + never-silent
         // binary `add`/`sub` (distinct surface names from the trit-backed `add`/`sub` below).
@@ -7220,6 +7276,9 @@ pub fn prim_kernel_name(name: &str) -> Option<&'static str> {
         // RFC-0033 §4.1.2/§4.1.3 (M-887, `enb` Gap B): never-silent two's-complement multiply —
         // the first shared (signedness-agnostic bit-pattern) two's-complement op ADR-028 names.
         "mul_s" => "bin.mul",
+        // RFC-0033 §4.1.2 (CU-1): never-silent **unsigned** multiply — overflow-distinct from the
+        // signed `mul_s`/`bin.mul` (the `math.myc` FLAG-math-1 missing op).
+        "mul_u" => "bit.mul",
         // RFC-0033 §4.1.2/§4.1.3 (M-888, `enb` Gap B): never-silent **unsigned** division/
         // remainder — division must be a distinct-named op per signedness (§4.1.2); the signed
         // reading rides M-767 under its own surface name.
@@ -7310,6 +7369,17 @@ pub fn prim_kernel_name(name: &str) -> Option<&'static str> {
         "flt_ge" => "flt.ge",
         "flt_eq" => "flt.eq",
         "flt_total_le" => "flt.total_le",
+        // ADR-040 §2.5 (CU-2): the mandated float classification predicates.
+        "flt_is_nan" => "flt.is_nan",
+        "flt_is_finite" => "flt.is_finite",
+        "flt_is_infinite" => "flt.is_infinite",
+        // ADR-040 §2.4 (CU-3): the never-silent Binary↔Float conversions — the "target-width
+        // prim" shape of `width_cast` (DN-41). `bin_to_flt` is checked-exact (unary,
+        // `Binary{N} -> Float`); `flt_to_bin` reads its target width off a witness operand
+        // (`Float, Binary{M} -> Binary{M}`), exactly like `width_cast`. Typed by the dedicated
+        // mixed-paradigm pre-branch in `try_check_float_prim` (not the uniform-Float loop below).
+        "bin_to_flt" => "bin.to_flt",
+        "flt_to_bin" => "flt.to_bin",
         // RFC-0003 §3/§4 / ADR-008 (M-892, `enb` Gap C): the model-dispatched VSA bind group —
         // kernel `mycelium-vsa`, per-model tags carried from the model's Value-level op (MAP-I/
         // BSC ops `Exact`; FHRR `unbind` `Empirical` with its trial-validated δ — VR-5, never

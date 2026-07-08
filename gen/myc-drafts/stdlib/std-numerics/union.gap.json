@@ -114,10 +114,20 @@
       "file": "crates/mycelium-std-numerics/src/lib.rs",
       "line": 202,
       "col": 1,
-      "category": "PayloadVariant",
-      "rust_construct": "PayloadVariant",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "# [doc = \" Structured verdict for the tier-i re-validation checker (spec §3 `CheckErr`; RFC-0013).\"] # [derive (Debug , Clone , PartialEq)] pub enum CheckErr { # [doc = \" The claimed bound is **tighter** than the kernel re-derivation (never a silent pass).\"] Rejected { # [doc = \" The bound the kernel re-derives (the sound floor).\"] recomputed : f64 , # [doc = \" The (too-tight) bound that was claimed.\"] claimed : f64 , } , # [doc = \" The certificate is ill-formed (bad arity, norm mismatch, non-finite magnitudes).\"] Malformed , }",
-      "reason": "enum `CheckErr` variant `Rejected` has a field type with no confirmed mapping (`f64` — `scalar` only appears inside Dense{N,scalar}/ambient_params in the grammar, never as a bare value type; no confirmed base_type arm)",
+      "reason": "dropped non-doc attribute(s) on enum `CheckErr`: # [derive (Debug , Clone , PartialEq)]",
+      "item_name": "CheckErr"
+    },
+    {
+      "file": "crates/mycelium-std-numerics/src/lib.rs",
+      "line": 202,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" Structured verdict for the tier-i re-validation checker (spec §3 `CheckErr`; RFC-0013).\"] # [derive (Debug , Clone , PartialEq)] pub enum CheckErr { # [doc = \" The claimed bound is **tighter** than the kernel re-derivation (never a silent pass).\"] Rejected { # [doc = \" The bound the kernel re-derives (the sound floor).\"] recomputed : f64 , # [doc = \" The (too-tight) bound that was claimed.\"] claimed : f64 , } , # [doc = \" The certificate is ill-formed (bad arity, norm mismatch, non-finite magnitudes).\"] Malformed , }",
+      "reason": "enum `CheckErr` variant `Rejected` named field(s) `recomputed, claimed` emitted positionally as `Rejected(Float, Float)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped",
       "item_name": "CheckErr"
     },
     {
@@ -157,7 +167,7 @@
       "category": "Struct",
       "rust_construct": "Struct",
       "snippet": "# [doc = \" The `explain` artifact for an [`Approx<T>`] (C3; G11 dual human/machine projection).\"] # [doc = \"\"] # [doc = \" Projects `{kind, eps|delta, norm, basis, strength}` and **why** the bound holds: which\"] # [doc = \" `ProvenThm{citation}`, which `EmpiricalFit{trials, method}`, or the `UserDeclared`\"] # [doc = \" \\\"declared, unverified\\\" marker. `eps` is `+∞` for non-`Error` bounds (honest, never `NaN`).\"] # [derive (Debug , Clone , PartialEq)] pub struct Explanation { # [doc = \" The bound kind tag (\\\"Error\\\" / \\\"Probability\\\" / \\\"Crosstalk\\\" / \\\"Capacity\\\").\"] pub kind : String , # [doc = \" The ε magnitude, or `+∞` when the bound is not an `Error` kind (honest; never `NaN`).\"] pub eps : f64 , # [doc = \" The norm in which `eps` is expressed (defaults to `Linf` for non-`Error` kinds).\"] pub norm : NormKind , # [doc = \" The δ failure probability (or `0.0` when the bound is not a `Probability` kind).\"] pub delta : f64 , # [doc = \" The basis: which theorem, which empirical fit, or `UserDeclared`.\"] pub basis : BoundBasis , # [doc = \" The honest guarantee strength.\"] pub strength : GuaranteeStrength , # [doc = \" Human-readable one-line summary (G11 human projection).\"] pub summary : String , }",
-      "reason": "struct `Explanation` has a field type with no confirmed mapping (`f64` — `scalar` only appears inside Dense{N,scalar}/ambient_params in the grammar, never as a bare value type; no confirmed base_type arm)",
+      "reason": "struct `Explanation` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
       "item_name": "Explanation"
     },
     {
@@ -174,20 +184,20 @@
       "file": "crates/mycelium-std-numerics/src/lib.rs",
       "line": 493,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "MultiStmtBody",
+      "rust_construct": "MultiStmtBody",
       "snippet": "# [doc = \" Construct an `ErrorBound{eps, norm, basis}` (spec §3 `error_bound`).\"] # [doc = \"\"] # [doc = \" Returns `Err(NumErr::BadEps)` when `eps < 0` or non-finite — mirrors the M-203 range-checked\"] # [doc = \" constructor; never a silent coercion (C1/A2-03).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" - [`NumErr::BadEps`] when `eps < 0` or non-finite.\"] pub fn error_bound (eps : f64 , norm : NormKind , basis : BoundBasis) -> Result < Bound , NumErr > { if ! eps . is_finite () || eps < 0.0 { return Err (NumErr :: BadEps) ; } Ok (Bound { kind : BoundKind :: Error { eps , norm } , basis , }) }",
-      "reason": "`f64` — `scalar` only appears inside Dense{N,scalar}/ambient_params in the grammar, never as a bare value type; no confirmed base_type arm",
+      "reason": "function body has a semicolon-terminated (value-discarding) statement expression before the tail — a `let`-chain body maps only simple `let x = e;` bindings plus a single trailing expression",
       "item_name": "error_bound"
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
       "line": 511,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "MultiStmtBody",
+      "rust_construct": "MultiStmtBody",
       "snippet": "# [doc = \" Construct a `ProbabilityBound{delta, basis}` (spec §3 `prob_bound`).\"] # [doc = \"\"] # [doc = \" Returns `Err(NumErr::BadDelta)` when `delta ∉ [0, 1]` or non-finite — mirrors M-203.\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" - [`NumErr::BadDelta`] when `delta ∉ [0, 1]` or non-finite.\"] pub fn prob_bound (delta : f64 , basis : BoundBasis) -> Result < Bound , NumErr > { if ! delta . is_finite () || ! (0.0 ..= 1.0) . contains (& delta) { return Err (NumErr :: BadDelta) ; } Ok (Bound { kind : BoundKind :: Probability { delta } , basis , }) }",
-      "reason": "`f64` — `scalar` only appears inside Dense{N,scalar}/ambient_params in the grammar, never as a bare value type; no confirmed base_type arm",
+      "reason": "function body has a semicolon-terminated (value-discarding) statement expression before the tail — a `let`-chain body maps only simple `let x = e;` bindings plus a single trailing expression",
       "item_name": "prob_bound"
     },
     {
@@ -204,10 +214,10 @@
       "file": "crates/mycelium-std-numerics/src/lib.rs",
       "line": 577,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "MultiStmtBody",
+      "rust_construct": "MultiStmtBody",
       "snippet": "# [doc = \" The single sanctioned cross-kernel inference (spec §3 `accuracy_to_probability`; ADR-010 §4).\"] # [doc = \"\"] # [doc = \" Given an `ErrorBound`-kind bound and a tolerance `tau ≥ 0`, returns a `Probability`-kind bound:\"] # [doc = \" - `eps ≤ tau` → failure probability = `acc_delta` (the accuracy confidence carries over).\"] # [doc = \" - `eps > tau` → honest worst case `δ = 1` (the bound permits a violation; never a silent tighten).\"] # [doc = \"\"] # [doc = \" `acc_delta` is the failure probability of the accuracy claim itself (e.g. from a\"] # [doc = \" `Probability`-kind companion); pass `0.0` for an accuracy bound that holds with certainty.\"] # [doc = \"\"] # [doc = \" This is the **one** legal ε↔δ mixing; no other cross-kernel inference is exposed (ADR-010 §4).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" - [`NumErr::NoRule`] when `acc` is not an `Error`-kind bound.\"] # [doc = \" - [`NumErr::BadEps`] when `acc` has a malformed ε.\"] # [doc = \" - [`NumErr::BadDelta`] when `tau < 0` or `acc_delta ∉ [0, 1]`.\"] pub fn accuracy_to_probability (acc : & Bound , tau : f64 , acc_delta : f64) -> Result < Bound , NumErr > { let (eps , norm) = match acc . kind { BoundKind :: Error { eps , norm } => (eps , norm) , _ => return Err (NumErr :: NoRule) , } ; let error_bound_val = ErrorBound :: new (eps , norm) . ok_or (NumErr :: BadEps) ? ; let prob = kern_accuracy_to_probability (error_bound_val , tau , acc_delta) . ok_or (NumErr :: BadDelta) ? ; let strength = basis_strength (& acc . basis) ; let basis = match strength { GuaranteeStrength :: Proven => BoundBasis :: ProvenThm { citation : format ! (\"ADR-010 §4 accuracy→probability: eps={eps:.2e} ≤ tau={tau:.2e} ({})\" , match & acc . basis { BoundBasis :: ProvenThm { citation } => citation . as_str () , _ => \"inherited\" , }) , } , GuaranteeStrength :: Empirical => { let (trials , method) = match & acc . basis { BoundBasis :: EmpiricalFit { trials , method } => (* trials , method . as_str ()) , _ => (0 , \"inherited\") , } ; BoundBasis :: EmpiricalFit { trials , method : format ! (\"ADR-010 §4 accuracy→probability: {method}\") , } } _ => BoundBasis :: UserDeclared , } ; Ok (Bound { kind : BoundKind :: Probability { delta : prob . delta () , } , basis , }) }",
-      "reason": "`f64` — `scalar` only appears inside Dense{N,scalar}/ambient_params in the grammar, never as a bare value type; no confirmed base_type arm",
+      "reason": "`let` binding uses an unsupported pattern (only simple `let x = e;` is supported)",
       "item_name": "accuracy_to_probability"
     },
     {
@@ -302,12 +312,13 @@
     }
   ],
   "category_counts": {
-    "DeriveAttr": 1,
+    "DeriveAttr": 2,
     "GenericBound": 2,
     "Impl": 3,
     "Import": 4,
-    "Other": 13,
-    "PayloadVariant": 1,
+    "MultiStmtBody": 3,
+    "NamedFieldDrop": 1,
+    "Other": 10,
     "Struct": 4,
     "TestItem": 2
   }

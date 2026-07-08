@@ -905,6 +905,21 @@ re-grounded to a **frozen-kernel** question with a tension that must be surfaced
    `Binary{N}` bit/compare bodies. **Cite:** RFC-0033 §4.1.2; DN-56 §5.3/§6 (Enacted, freeze); the landed
    arithmetic/shift set M-887/M-889/M-766/M-767. *(Owner: kernel/Session-A — flagged up, not edited here;
    the transpiler side lights up once the prims land, via the operand-type inference D3 deferred.)*
+
+   > **Correction (2026-07-07, maintainer determination — supersedes the "post-freeze" framing of this
+   > decision #1).** The **kernel is UNFROZEN**: the maintainer has declared the DN-56 kernel freeze lifted
+   > (determination made a few days prior, when further kernel work was surfaced as needed). So the framing
+   > above — that completing the RFC-0033 §4.1.2 bitwise ops (and the comparison/`Bool`-logical prims) is a
+   > *DN-39 default-DENY post-freeze promotion* or a *`core 2.0.0` event* — **no longer holds**. Under the
+   > unfrozen kernel these are **ordinary kernel work**: additive, never-silent prim implementations with
+   > property + conformance tests, landed on the normal `dev → integration → main` path (no DN-39 default-DENY
+   > gate, no major-version door). The *facts* in decision #1 stand unchanged and are still the basis (VR-5):
+   > RFC-0033 §4.1.2 mandates the bitwise ops; `prims.rs` still lacks `bin.band`/`bin.bor`/`bin.bxor`; the
+   > comparison-result-type and `and`/`or`-on-`Bool` questions are still open. Only the *disposition* changes
+   > — from "blocked behind a freeze gate" to "plannable and closable now." This correction feeds the
+   > **comprehensive kernel prim-gap closure** now underway (identify every prim gap → plan → close), whose
+   > purpose is exactly to unblock the transpiler and reduce post-transpilation polish. (Append-only; VR-5; G2.)
+
 2. **`mycelium_core` / kernel declarations target-set (D5 — the largest remaining transpiler-adjacent
    lever).** The dominant residual class is out-of-phylum type references (`Value`, `ContentHash`, `Ty`,
    `Path`, `Source`, `ScalarKind`, `GuaranteeTag`). A headers-only `core`/`compiler` nodule (decls only),
@@ -919,6 +934,147 @@ re-grounded to a **frozen-kernel** question with a tension that must be surfaced
 **Guarantee tags unchanged:** emission `Declared`; vet verdict `Empirical` (real `myc check`). **Status
 unchanged (Draft)** — a ladder phase, enacts nothing further; the kernel FLAG (#1) is *recorded for the
 DN-39/Session-A owner*, not enacted here (VR-5: no kernel edit, no prim fabricated).
+
+---
+
+### §8.15 A comprehensive prim-gap audit corrects §8.13/§8.14, and plans the closure (kickoff `trx2` E33-1) — `Empirical`
+
+**Why this section exists (house rule #4 — evidence over prior claims, including my own).** §8.13 and §8.14
+recorded two things as *fact* that a comprehensive, source-grounded audit of the kernel prim registry
+(`crates/mycelium-interp/src/prims.rs`, the content-addressed Π table `crates/mycelium-core/src/prim.rs`,
+and the `crates/mycelium-l1/src/checkty.rs` surface map) **disproves**. Both errors traced to the same
+root: the transpiler-emission probes tested *operator→prim spellings the emitter uses* (`band`/`bor`/`bxor`,
+infix `&`/`|`) rather than the *actual prim/surface names*. Corrected here (all re-verified by direct
+`myc check` probe):
+
+1. **The `Binary{N}` bitwise-logic ops are NOT missing (correcting §8.13 Lever-2 and §8.14 decision #1).**
+   AND/OR/XOR/NOT on `Binary{N}` exist as the prims **`bit.and`/`bit.or`/`bit.xor`/`bit.not`**
+   (`prims.rs:126-129,398-406`), surfaced as **`and`/`or`/`xor`/`not`** (`checkty.rs:7210-7217`). Verified:
+   `and(x,y)`/`or(x,y)`/`xor(x,y)`/`not(x)` on `Binary{32}` all `myc check`-clean. So the §4.1.2 bitwise
+   mandate is **already satisfied** — there is no `band`/`bor`/`bxor` gap; the transpiler simply emitted a
+   dead spelling. **`rotate` is expressible** — `or(shl_u(x,n), shr_u(x,m))` `myc check`-clean — so §8.13
+   Lever-2's "rotate is impossible, no bit-or prim" conclusion was **wrong**; the blocker was only the
+   emitter's operator names.
+2. **`==`/`<` returning `Binary{1}` (not `Bool`) is ratified design, not a gap (correcting §8.14 #1's
+   "result-type question").** `Bool` is a **stdlib ADT**, not a kernel type (`checkty.rs` `Ty` has no
+   `Bool`); a kernel prim returns a representation `Value`, so the D1 `Bool` bottoms out as `Binary{1}`
+   (`0b1`=true) and `std.cmp` lifts it (`cmp.myc:85-94`). Governing decision: **RFC-0032 D1 Q1 / M-747**.
+   Likewise `and`/`or` refusing `Bool` operands is correct (they are `Binary` bitwise prims; `Bool` logic is
+   the match-defined `.myc` `bool_and`/`bool_or`, which already exist). Neither is a gap.
+3. **Doc drift:** the live prim count is **Π = 59** (identical in both prim tables), not the **38** DN-56
+   §4/§9 and DN-76 §5A.2 still cite — those predate the M-887…M-899 landings. FLAG both for an append-only
+   Π-count refresh.
+
+**The genuine, additive, spec-mandated gaps (verified missing by probe) — the closure worklist:**
+
+| Unit | Gap | Basis (cited) | Nature |
+|---|---|---|---|
+| **CU-1** | `mul_u` unsigned multiply (kernel `bit.mul`) | RFC-0033 §4.1.2 (overflow is signedness-distinct ⇒ distinct named op); `lib/std/math.myc` FLAG-math-1 | Additive kernel prim (reuse the `bin.mul` codec; only the overflow predicate differs) |
+| **CU-2** | `flt.is_nan`/`flt.is_finite`/`flt.is_infinite` | **ADR-040 §2.5** ("classification … `is_nan`/`is_finite` at minimum") — ratified, never landed by M-898/M-899 | Additive kernel prims (host `f64` predicates → `Binary{1}`) |
+| **CU-4** | signed comparator surface `le_s`/`ge_s`/`cmp_s` + `ne`/`gt` + the ternary ordering surface | RFC-0033 §4.1.2; the `cmp.lt_s` prim already exists, unused by any `.myc` | Additive **`.myc` only** (derive from `lt_s`+`eq`, mirroring `cmp.myc`) |
+| **transpiler** | emit `and`/`or`/`xor` (not the dead `band`/`bor`), and rotate as `or(shl_u,shr_u)` | this §8.15 correction | Transpiler fix (still needs the §8.13-noted operand-type inference to select the `Binary{N}` surface) |
+
+**Deferred with grounded FLAGs (decision- or architecture-gated — captured, not decided).** CU-3 float↔int
+never-silent conversions (ADR-040 §2.4; prim-vs-swap placement open); CU-5 wrapping/saturating/overflowing
+arithmetic (RFC-0034 §10; reconcile with the landed M-791 `wrapping` construct); CU-6 bit-manipulation
+(`popcount`/`clz`/`ctz`/`rotate`/`reverse_bits`; prim-vs-`std.math` placement); CU-7 arbitrary-width ternary
+(RFC-0033 §4.2.2; `BigTernary`/M-756 exists in core but is unsurfaced — needs the growable-`Repr::Ternary`
+decision); CU-8 atomics (`fetch_add`; needs a memory-model RFC — DN-32 §7/RFC-0027 §12); CU-9 Dense
+dtype/quant (RFC-0033 §4.3.2; rides the E20-1/ADR-030 rehash). Plus the DN-72 §5 `bit.*`/`bin.*`
+unsigned-namespace-inconsistency FLAG, which CU-1 should be sequenced aware of.
+
+**A clean negative worth recording (VR-5/G2):** DN-52 §3 confirms there is **no *silent* parsable-but-not-
+runnable prim class** — every non-runnable construct is an explicit `ElabError::Residual`, and a missing prim
+is a loud `EvalError::UnknownPrim` / unknown-function `CheckError` (DN-80). So this census is **complete** and
+nothing here fails silently.
+
+**Disposition (kernel now UNFROZEN — see the §8.14 correction).** CU-1, CU-2, CU-4 and the transpiler fix are
+being closed now as scoped, tested PRs on the normal `dev → integration → main` path (never-silent semantics
+per RFC-0033, property + conformance accept/reject tests, three-way differential). The deferred units carry
+their FLAGs for a follow-on decision wave.
+
+**Guarantee tags:** new prims tagged at their supportable strength (`bit.mul` `Exact` on the unsigned codec;
+`flt.is_*` `Empirical` per ADR-040 §2.6; comparator surface `Exact` per pinned width). **Status unchanged
+(Draft).** (Append-only; VR-5; G2.)
+
+---
+
+### §8.16 The prim-gap closure wave — landed, in-progress, and deferred (kickoff `trx2` E33-1) — `Empirical`
+
+The execution record for the §8.15 closure worklist, under the maintainer's **kernel-unfrozen** ruling (§8.14
+correction) and the four decision-gated rulings (all resolved to the project-optimal option — performant ·
+memory-safe · small-auditable-kernel KC-3 · never-silent). This §8.16 is the durable wave record so any
+follow-on session completes the remainder with full context (mitigation #8).
+
+**Landed (each a scoped, tested PR on `dev`; Π 59 → 66):**
+
+| Unit | What landed | Basis | PR |
+|---|---|---|---|
+| CU-1 | `bit.mul` — never-silent unsigned multiply (`mul_u` surface) | RFC-0033 §4.1.2; `math.myc` FLAG-math-1 | #1273 |
+| CU-2 | `flt.is_nan`/`flt.is_finite`/`flt.is_infinite` | ADR-040 §2.5 mandate (unlanded by M-898/M-899) | #1274 |
+| CU-6 (prims) | `bit.popcount`/`bit.clz`/`bit.ctz` (kernel — the KC-3/perf split) | Rust-driven; maintainer ruling | #1275 |
+| CU-4 | `ne`/`gt`/`cmp_s`/`le_s`/`ge_s` (`std.cmp`, derived — no new prim) | RFC-0033 §4.1.2 / RFC-0032 D1 | #1291 |
+| CU-6 (surface) | `bmul`/`bpopcount`/`bclz`/`bctz` (`std.math`); FLAG-math-1 "no binary multiply" closed | — | #1291 |
+
+Each carries never-silent semantics + property + conformance/three-way (L1/L0/AOT) tests; the Π table, the
+`checkty` surface map, and the `prim_table` cases were updated in lockstep, and the `Π = 66` count is pinned
+(the DN-56/DN-76 "38" remains stale — FLAG stands).
+
+**In progress (ruled *implement-now*, per §8.15; each a multi-file effort — the follow-on worklist):**
+
+1. **CU-3 — float↔int never-silent conversions (ruling: prims for the total directions, a swap for the lossy
+   one).** Add target-width-parameterized prims (the `bit.width_cast`/DN-41 model) — `flt→bin` (refuse on
+   NaN/±inf/out-of-range) and a checked-exact `bin→flt` (error at `|n| > 2^53`); the lossy rounding `bin→flt`
+   is a **reified swap** carrying its bound (ADR-040 §2.4/§5, not a prim). Basis: ADR-040 §2.4.
+2. **CU-5 — executable `wrapping` construct (ruling: implement the M-791 named construct, no new
+   `wrapping_*` prims).** RFC-0034 §10 ratifies `wrapping` as the named Axis-B opt-out; M-791 landed the
+   *meta/mode axis* (`mycelium-core/src/meta.rs` — there is already a `src/tests/wrapping.rs`) but not a
+   runtime evaluation path. Wire the construct to modular (never-refusing, `Declared`-tagged) evaluation
+   over `bin.add`/`sub`/`mul` at the use site. Basis: RFC-0034 §10; RFC-0032 D2 note.
+3. **CU-7 — arbitrary-width ternary (ruling: implement per ADR-029 Accepted).** `mycelium_core::ternary::
+   BigTernary` (M-756) exists but is unsurfaced; the runnable arithmetic is fixed-width `trit.*` (~40-trit
+   cap). Surface `BigTernary` as the growable arithmetic path RFC-0033 §4.2.2 mandates (coordinate the
+   growable-`Repr::Ternary` payload with the E20-1 content-address settlement).
+4. **Transpiler operator/comparator emission.** Emit `and`/`or`/`xor` (not the dead `band`/`bor`) for
+   `&`/`|`/`^`, and the CU-4 comparators, when operands are known `Binary{N}` — which re-hits the **operand-
+   type inference** §8.13's D3 named as its own chunk (thread param/`self` widths through `emit.rs`). Rotate
+   emits once a rotate prim lands (FLAG-math-3).
+
+**Deferred to dedicated design work (ruling: defer both — no half-measures):**
+
+- **CU-6 rotate/reverse (`std.math` FLAG-math-3).** `rotate_left`/`rotate_right`/`reverse_bits`/`swap_bytes`
+  are **not** a clean width-generic derivation: rotate needs the width `N` as a runtime value for `N − n`,
+  and the naive `or(shl_u, shr_u)` mis-handles `n = 0` (a full-width `shr` refuses). Gated on a dedicated
+  `bit.rotl`/`bit.rotr` prim or a width-reflection surface — never faked (VR-5).
+- **CU-8 — atomics (`fetch_add`, …).** Needs a memory-model RFC coupled to the concurrency runtime tier
+  (hypha/colony; still aspirational, ADR-012 §7.3); atomics without a memory model would be unsound
+  (DN-32 §7 / RFC-0027 §12). Mint a tracked issue + an RFC stub; do not scope a partial stub.
+- **CU-9 — Dense dtype/quant.** RFC-0033 §4.3.2 mandates the 13-dtype set; it rides the **E20-1
+  content-address rehash** (a one-way door, ADR-030). The maintainer's `vsa_checks` desktop-run branch
+  carries the heavy VSA/Dense durability numbers to ground the follow-on (held out of cloud-session gates
+  per the CLAUDE.md desktop-hold policy).
+
+**Guarantee tags:** new prims at their supportable strength (`bit.*` `Exact`; `flt.is_*` `Empirical`;
+`.myc` comparator/count surface `Exact`). **Status unchanged (Draft)** — a ladder phase; the kernel prims
+land on the normal `dev → integration → main` path (kernel unfrozen). (Append-only; VR-5; G2.)
+
+### §8.17 Lane C closure — CU-3/5/7 kernel prims + the transpiler's operand-gated emission and forward-mapped prim table (kickoff `trx2` E33-1/E32-1) — `Empirical`
+
+Records the landing of §8.16's in-progress worklist items 1–4, as two scoped leaf→`dev` PRs (#1300 kernel · #1299 transpiler), each `/pr-review`'d (a real HIGH correctness finding on #1299 was fixed before merge) and both witnesses green.
+
+**Kernel prim-gap closure (PR #1300; Π 66 → 68):**
+
+- **CU-3 — never-silent Binary↔Float conversions (landed).** Two new prims: `bin.to_flt` (`Binary{N} → Float`, checked-exact, refuses `|n| > 2^53`) and `flt.to_bin` (`(Float, Binary{M}) → Binary{M}`, width-witness shape à la `bit.width_cast`; refuses NaN/±inf/negative/fractional/out-of-target-width). Unsigned-magnitude (ADR-028), `Empirical` (ADR-040 §2.6). Kernel property/boundary + interp domain-refusal + full three-way (L1/L0/AOT — the AOT leg ran) tests. The lossy `bin→flt` rounding stays a reified swap, not a prim — **FLAG-cu3-lossy-swap** (the swap machinery to carry its bound does not exist yet; refused rather than faked) and **FLAG-cu3-signed-conv** (a signed variant is an undecided follow-on).
+- **CU-5 — executable `wrapping` eval-mode dispatch (landed, eval-half).** Modular (never-refusing, `Declared`-tagged) evaluation over `bin.add`/`sub`/`mul` (RFC-0034 §10); no new prims — a mode, not a Π entry. **FLAG-cu5-surface-syntax:** `mycelium-l1` has no parser/AST for a `wrapping { … }` construct yet (only the M-791 representation marker), so this lands the runtime half and the front-end surface is a separate follow-on.
+- **CU-7 — arbitrary-width ternary: a verify-first correction (landed).** The §8.16 "~40-trit cap on `trit.*`" was **inaccurate** (mitigation #14): `ternary::add`/`mul` are digit-serial over `&[Trit]` with no `i64` in the arithmetic (only the conversion utilities are `i64`-capped) — already arbitrary-width, overflow detected structurally. Landed a doc correction plus a width-80 three-way (L1/L0/AOT) test (double the assumed cap). **FLAG-cu7-e20-1-gate:** a genuinely growable (no fixed `N`) Ternary value form is coupled to the E20-1 content-address one-way doors (RFC-0033 defers it post-1.0), so only the decidable fixed-width part landed — the growable form was flagged, not guessed.
+
+**Transpiler operand-gated emission + forward-mapped prim table (PR #1299; `checked_fraction` 5.79% → 7.76%, +15 items):**
+
+Closes the transpiler-side half of §8.16 item 4. `&`/`|` now emit `and`/`or` (not the dead `band`/`bor`), and `!=`/`>` compose from the `eq`/`lt` prims directly — a house-rule-#4 correction of the plan's assumption: `ne`/`gt` are non-`pub` `.myc` *functions*, not prims, so a bare respelling is a no-op; the composition mirrors `cmp.myc`'s own `ne{N}`/`gt{N}` derivation. Gated on a new name→type environment so both operands must resolve to a known `Binary{N}`; a review-found HIGH bug (the gate mis-firing on `let`-shadowed / `match`-arm-bound names) was fixed by invalidating the env on those rebinds — the gate never fires on a stale or guessed type (VR-5). Adds `prim_map.rs` forward-mapping the known kernel surface: `flt_is_nan`/`is_finite`/`is_infinite` **wired** (`Binary{1}`→`Bool` bridged), and `wrapping_add`/`sub`/`mul` **PENDING-BACKEND** (mapped, never emitted — refuses with a gap until a surface exists). Also fixed a stale `map_type` gap: `f64`→`Float` (the grammar's real binary64 base_type, `mycelium.ebnf:251`), which alone unblocked `std-sys`'s libm wrappers (1→15 clean) and drove most of the lift. CU-1/CU-6 deliberately not bound via `Call`/`MethodCall` — no faithful Rust shape exists (Option-vs-direct-value and fixed-`u32`-vs-width-preserving mismatches).
+
+**Integration-tier follow-on (not yet done):** with the CU-3/CU-5 backend now on `dev`, the transpiler's `prim_map` PENDING-BACKEND rows can be flipped to wired and emissions upgraded `Declared`→`Empirical` where a differential now exists — deferred to the `dev → integration` promotion. The DN-56/DN-76 "Π = 38" figure remains stale; DN-34 §8.15–§8.17 track the live count (now 68).
+
+**Guarantee tags:** CU-3 prims `Empirical`; transpiler emission `Declared`; the `checked_fraction`/vet figures `Empirical` (myc-check-clean). **Status unchanged (Draft)** — a ladder phase on the normal `dev → integration → main` path. (Append-only; VR-5; G2.)
 
 ---
 
@@ -1098,3 +1254,46 @@ DN-39/Session-A owner*, not enacted here (VR-5: no kernel edit, no prim fabricat
   not free closure — FLAGged as a kernel/Session-A task (not edited here). Emission `Declared`, vet
   `Empirical`. **Status unchanged (Draft)** — a ladder phase, enacts nothing further. (Append-only; VR-5;
   G2.)
+- **2026-07-07 — §8.14 correction: kernel UNFROZEN (maintainer determination).** Appends an append-only
+  correction to §8.14 decision #1: the maintainer has **lifted the DN-56 kernel freeze**, so completing the
+  RFC-0033 §4.1.2 `Binary{N}` bitwise ops (and the comparison-to-`Bool` / `and`-`or`-on-`Bool` prims) is
+  **ordinary kernel work** on the normal `dev → integration → main` path — **not** a DN-39 default-DENY
+  post-freeze promotion nor a `core 2.0.0` event, as the pre-correction framing assumed. The grounded facts
+  are unchanged (RFC-0033 §4.1.2 mandate; `prims.rs` still lacks `band`/`bor`/`bxor`); only the disposition
+  flips from freeze-blocked to plannable-and-closable-now. Feeds the comprehensive kernel prim-gap closure.
+  **Status unchanged (Draft).** (Append-only; VR-5; G2.)
+- **2026-07-07 — §8.15 added: prim-gap audit corrects §8.13/§8.14 + plans the closure.** A comprehensive,
+  source-grounded audit of the kernel prim registry (re-verified by direct `myc check` probe) **overturns
+  two claims §8.13/§8.14 recorded as fact** (house rule #4 — both errors traced to the transpiler probing
+  operator→prim spellings, not real prim names): (1) the `Binary{N}` bitwise-logic ops are **not missing** —
+  AND/OR/XOR/NOT exist as `bit.and`/`bit.or`/`bit.xor`/`bit.not` (surfaced `and`/`or`/`xor`/`not`), so the
+  §4.1.2 mandate is already satisfied and **`rotate` is expressible** via `or(shl_u,shr_u)` (§8.13 Lever-2's
+  "impossible" was wrong); (2) `==`/`<` → `Binary{1}` (not `Bool`) is **ratified design** (RFC-0032 D1/M-747;
+  `Bool` is a stdlib ADT the `.myc` surface lifts), not a gap. Records the live prim count **Π = 59** (DN-56/
+  DN-76 "38" is stale — FLAG). Enumerates the genuine additive gaps as the closure worklist — **CU-1** `mul_u`
+  (RFC-0033 §4.1.2), **CU-2** `flt.is_nan`/`is_finite`/`is_infinite` (ADR-040 §2.5 mandate, unlanded),
+  **CU-4** signed-comparator/`ne`/`gt`/ternary surface (`.myc`-only), plus the transpiler operator-name fix —
+  and FLAGs the decision/architecture-gated units (float↔int conv, wrapping, bit-manip placement, growable
+  ternary, atomics, Dense dtype). DN-52 confirms no *silent* gaps (all loud refusals). **Status unchanged
+  (Draft).** (Append-only; VR-5; G2.)
+- **2026-07-07 — §8.16 added: the prim-gap closure wave (landed / in-progress / deferred).** The execution
+  record for §8.15's worklist under the kernel-unfrozen ruling. **Landed** (scoped, tested PRs; Π 59 → 66):
+  CU-1 `bit.mul` (#1273), CU-2 `flt.is_nan`/`is_finite`/`is_infinite` (#1274), CU-6 `bit.popcount`/`clz`/`ctz`
+  (#1275), CU-4 `ne`/`gt`/`cmp_s`/`le_s`/`ge_s` + the CU-6 `std.math` surface (#1291). **In progress**
+  (ruled implement-now): CU-3 float↔int (prims for total dirs + a swap for lossy), CU-5 executable `wrapping`
+  construct (RFC-0034 §10 / M-791), CU-7 arbitrary-width ternary (ADR-029; surface `BigTernary`), and the
+  transpiler operator/comparator emission (re-hits the D3 operand-type inference). **Deferred to design
+  work**: CU-6 rotate/reverse (FLAG-math-3 — not a clean derivation), CU-8 atomics (memory-model RFC), CU-9
+  Dense dtype (E20-1 rehash; `vsa_checks` desktop numbers ground it). **Status unchanged (Draft).**
+  (Append-only; VR-5; G2.)
+- **2026-07-08 — §8.17 added: Lane C closure (CU-3/5/7 + transpiler operand-gated emission).** Records the
+  landing of §8.16's in-progress items 1–4 as two scoped leaf→`dev` PRs. **Kernel** (#1300, Π 66 → 68):
+  CU-3 the two never-silent Binary/Float conversion prims (`bin.to_flt`/`flt.to_bin`, `Empirical`,
+  three-way + AOT; lossy rounding kept a swap, FLAG-cu3-lossy-swap/signed-conv), CU-5 the `wrapping`
+  eval-mode dispatch (no new prims; runtime half only, FLAG-cu5-surface-syntax), CU-7 a verify-first
+  correction (the "40-trit cap" was wrong — `trit.*` is already arbitrary-width; growable form gated on
+  E20-1, FLAG-cu7-e20-1-gate). **Transpiler** (#1299, `checked_fraction` 5.79% → 7.76%, +15): `and`/`or`
+  for `&`/`|` and `ne`/`gt` composed from `eq`/`lt` (a house-rule-#4 correction) under a new operand-type
+  env (a review-found HIGH mis-fire on shadowed names fixed by env invalidation); `prim_map.rs`
+  forward-maps the kernel surface (`flt_is_*` wired, `wrapping_*` PENDING-BACKEND); `f64`→`Float`
+  `map_type` fix. Emission `Declared`; vet `Empirical`. **Status unchanged (Draft).** (Append-only; VR-5; G2.)

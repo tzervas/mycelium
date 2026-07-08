@@ -7,5 +7,6 @@ mod diff;
 mod emit;
 mod invariant;
 mod map;
+mod prim_map;
 mod reserved;
 mod vet;

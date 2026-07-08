@@ -43,7 +43,7 @@
       "exit_code": 0,
       "diagnostic": "",
       "non_test_items": 14,
-      "emitted_items": 0
+      "emitted_items": 14
     },
     {
       "myc_file": "gen/myc-drafts/stdlib/std-sys/rand.myc",
@@ -74,8 +74,8 @@
     }
   ],
   "total_non_test_items": 63,
-  "total_emitted_items": 4,
-  "total_checked_clean_items": 1,
+  "total_emitted_items": 18,
+  "total_checked_clean_items": 15,
   "class_counts": {
     "CheckError": 2,
     "Clean": 6

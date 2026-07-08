@@ -61,11 +61,10 @@
       "file": "crates/mycelium-std-sys/src/math.rs",
       "total_items": 15,
       "non_test_items": 14,
-      "emitted": 0,
-      "gaps": 15,
-      "expressible_pct": 0.0,
+      "emitted": 14,
+      "gaps": 1,
+      "expressible_pct": 100.0,
       "category_counts": {
-        "Other": 14,
         "TestItem": 1
       }
     },
@@ -115,9 +114,9 @@
   "totals": {
     "total_items": 70,
     "non_test_items": 63,
-    "emitted": 4,
-    "gaps": 71,
-    "expressible_pct": 6.349206349206349,
+    "emitted": 18,
+    "gaps": 57,
+    "expressible_pct": 28.57142857142857,
     "category_counts": {
       "DeriveAttr": 3,
       "GenericBound": 1,
@@ -125,7 +124,7 @@
       "Import": 7,
       "MultiStmtBody": 1,
       "NamedFieldDrop": 1,
-      "Other": 41,
+      "Other": 27,
       "PayloadVariant": 1,
       "ReservedWord": 1,
       "Struct": 1,

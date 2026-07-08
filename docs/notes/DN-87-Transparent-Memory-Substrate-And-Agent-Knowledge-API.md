@@ -111,22 +111,6 @@ isolated worktrees, disjoint dirs by construction, shared files integrator-owned
    to extend their agents with; the maintainer's stated preference (compensation preferred, wide
    usefulness prioritized) is recorded here as intent, not a license term.
 
-### 6.1 — Eval-gate verdict record (append-only, M-1018)
-
-The improved-on-RAG gate (§6 item 1). Each M-1018 `tero-eval` run appends a verdict; history is
-never rewritten (the in-crate mirror is `crates/mycelium-tero/eval/VERDICT.md`).
-
-- **Run 1 (2026-07-07, PR #1254) — CLOSED (serving Layer-1).** Over the PR-#1254 **dev** codebook of
-  5141 rows — *frozen, not re-run for this tier promotion; the promoted integration index is 5119
-  rows (the isolated tree carries fewer corpus items)* — (seed
-  `0x7E7010185EEDC0DE`, 16 questions, k=5, host x86_64-linux): correctness@1 Layer-1 **10/16
-  (0.625)** vs Layer-2 6/16 (0.375); correctness@5 Layer-1 **16/16** vs Layer-2 8/16; provenance
-  fidelity 1.000 both; latency Layer-1 **3.25M** ns/query vs Layer-2 85.9M (~26×). Layer-2 does not
-  beat Layer-1 on correctness (beyond the 20% band) or latency, so the gate stays **Closed**,
-  `layer2_enabled` remains `false`, and the system serves Layer-1 — the improved-on-RAG claim stays
-  aspiration (G2/VR-5). Nothing was tuned to force a pass; the decode thresholds are `Declared` and
-  the eval measures raw recall without them.
-
 ## 7. Definition of Done (for this note)
 
 DN-87 is **Resolved** when the maintainer (a) confirms/overrides the four §2 resolutions, (b)
@@ -145,10 +129,3 @@ E39-1 and its children.
   `crates/mycelium-tero` scaffold landed with the naming PR; E39-1 → `in-progress`; wave 1 =
   the M-1015 lane. DoD items (b)+(c) met; (a) — the §2 fork confirmations — remains with the
   maintainer before this note moves to Resolved.
-- 2026-07-07 — **M-1016/M-1017/M-1018 landed** (PR #1241, PR #1254). The query engine + mandatory
-  provenance (M-1016); the API fronts (MCP + HTTP, token-scoped) + the 4 cross-platform skills
-  (M-1017; ADR-044 — the workspace's first async runtime); and the VSA Layer-2 + Empirical eval gate
-  (M-1018). **Gate verdict Run 1 = CLOSED** (§6.1): Layer-2 does not beat Layer-1, so the system
-  serves Layer-1 and the improved-on-RAG claim stays aspiration. Minted **M-1020** (native HTTPS/TLS
-  for the HTTP front, maintainer follow-on). The §2 fork confirmations remain the last gate before
-  this note → Resolved.

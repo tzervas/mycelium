@@ -89,6 +89,17 @@ test is dropped — only its *case count* is tiered (low every commit, full on r
 change-scoping only ever *widens* to `--workspace` (over-test, never under-test), and `check-full`
 always runs everything.
 
+**Heavy checks run on the maintainer's desktop — don't re-run them in cloud sessions (2026-07-06).**
+The **durability tier** (`just check-full` — HIGH proptest, `cargo-mutants`, `cargo-fuzz`) and all
+**VSA/GPU-bound** work plus the **z3/LiquidHaskell/Lean proof** discharge are held out of the
+cloud-session gate and belong on a local/teleport machine (the `/myc-dogfood` note). In a
+Claude-Code-on-the-web session, run only the light tiers (`just check` / `just test-fast`) — do
+**not** re-run the heavy tier here over and over. Collect VSA-heavy work into a **dedicated PR** the
+maintainer checks out, runs on the desktop, and pushes results to: **`scripts/vsa-desktop-checks.sh`**
+bundles the VSA crate durability + the **M-832/OQ-F** GPU experiment + the proof discharge into one
+runnable, skip-graceful step, landing outputs in `experiments/results/vsa-m832/` (honesty tags kept —
+experiment `Empirical`, proof obligations `Declared` until discharged; VR-5/G2).
+
 Checks **skip gracefully** when a tool or language isn't present yet (most code doesn't exist
 yet). Never hand off a red `just check` without explaining the skip.
 
@@ -680,6 +691,18 @@ Invoke with `/<name>`; they auto-engage when relevant.
 - **`/myc-drafts`** — work the committed draft corpus (`gen/myc-drafts/`, E33-1): regenerate
   deterministically, triage a port target from the manifest before porting, graduate a draft into
   `lib/` the hand-vetted M-993 way (differential-witnessed), and run an M-1006 ladder phase.
+- **`/tero-query`** — the **transparent memory API** (`mycelium-tero`, DN-87/E39-1): cited,
+  provenance-carrying answers about this project's decisions/issues/docs/changelog/skills, over an MCP
+  (`tero-mcp`) or HTTP (`tero-http`) front (byte-identical answers). **Leverage tero for memory and
+  context** — prefer it over grepping the corpus by hand whenever you want the answer **with** its
+  resolvable citation in one hop (a decision by id, all items of a status/kind, a `depends_on`/`doc_refs`
+  cross-ref walk, a free-text search). An uncited query returns a typed **refusal**, never a silent empty
+  answer (DN-87 §6.2); answers project the `Empirical/Declared` Layer-1 index (source is ground truth).
+  Companions: **`/tero-cite`** (resolvable provenance only — anchor + `file:line` + guarantee tag),
+  **`/tero-explain`** (the why-these-sources/ordering trace), **`/tero-refresh`** (reload the served index
+  after `just tero-index`, needs the `refresh` token scope). **Offline fallback** (no server): grep the
+  committed **`docs/tero-index/INDEX.md`** — the same rows the API serves. Auth is token-scoped, read-only
+  by default; never commit `TERO_TOKENS`.
 
 The review skills share one rubric: `.claude/skills/_shared/review-rubric.md` (tiers, severity,
 report format). Posture is **advisory** — they recommend, they don't gate. The

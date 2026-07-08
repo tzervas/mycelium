@@ -3219,7 +3219,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::binary",
       "file": "crates/mycelium-core/src/binary.rs",
-      "line": 180,
+      "line": 257,
       "summary": "The current [`div_rem`] operand-width cap (`n ≤ 64`) — exact via a `u64` unsigned magnitude, the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3241,7 +3241,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::binary",
       "file": "crates/mycelium-core/src/binary.rs",
-      "line": 222,
+      "line": 299,
       "summary": "The current [`shl`]/[`shr`] operand-width cap (`n ≤ 64`) — exact via a `u64`/`u128` unsigned",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3252,7 +3252,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::binary",
       "file": "crates/mycelium-core/src/binary.rs",
-      "line": 285,
+      "line": 362,
       "summary": "The current [`add`]/[`sub`]/[`neg`] operand-width cap (`n ≤ 64`) — exact via the `i64` two's-",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3263,7 +3263,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::binary",
       "file": "crates/mycelium-core/src/binary.rs",
-      "line": 294,
+      "line": 371,
       "summary": "Two's-complement fixed-width add of two equal-width `n`-bit two's-complement integers (MSB-first),",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3296,7 +3296,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::binary",
       "file": "crates/mycelium-core/src/binary.rs",
-      "line": 472,
+      "line": 549,
       "summary": "**Signed** (two's-complement) total order over two equal-width bitvectors — the distinct-named",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3307,7 +3307,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::binary",
       "file": "crates/mycelium-core/src/binary.rs",
-      "line": 195,
+      "line": 272,
       "summary": "Unsigned fixed-width division and remainder of two equal-width `n`-bit bitvectors (MSB-first),",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3318,7 +3318,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::binary",
       "file": "crates/mycelium-core/src/binary.rs",
-      "line": 398,
+      "line": 475,
       "summary": "**Signed** (two's-complement) fixed-width division of two equal-width `n`-bit two's-complement",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3351,7 +3351,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::binary",
       "file": "crates/mycelium-core/src/binary.rs",
-      "line": 346,
+      "line": 423,
       "summary": "Two's-complement fixed-width negate (`−a`) of an `n`-bit two's-complement integer (MSB-first), for",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3362,7 +3362,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::binary",
       "file": "crates/mycelium-core/src/binary.rs",
-      "line": 420,
+      "line": 497,
       "summary": "**Signed** (two's-complement) fixed-width remainder — the companion to [`div_signed`], with the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3373,7 +3373,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::binary",
       "file": "crates/mycelium-core/src/binary.rs",
-      "line": 237,
+      "line": 314,
       "summary": "**Logical** (unsigned) fixed-width left shift of an `n`-bit bitvector (MSB-first) by a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3384,7 +3384,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::binary",
       "file": "crates/mycelium-core/src/binary.rs",
-      "line": 264,
+      "line": 341,
       "summary": "**Logical** (unsigned, zero-filling) fixed-width right shift — the counterpart to [`shl`], same",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3395,7 +3395,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::binary",
       "file": "crates/mycelium-core/src/binary.rs",
-      "line": 442,
+      "line": 519,
       "summary": "**Arithmetic** (sign-extending) fixed-width right shift — the distinct-named signed counterpart",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3406,7 +3406,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::binary",
       "file": "crates/mycelium-core/src/binary.rs",
-      "line": 318,
+      "line": 395,
       "summary": "Two's-complement fixed-width subtract (`a − b`) of two equal-width `n`-bit two's-complement",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4462,7 +4462,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::prim::PrimTable",
       "file": "crates/mycelium-core/src/prim.rs",
-      "line": 714,
+      "line": 776,
       "summary": "Whether a prim named `name` is registered.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4473,7 +4473,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::prim::PrimTable",
       "file": "crates/mycelium-core/src/prim.rs",
-      "line": 677,
+      "line": 739,
       "summary": "The content hash of the prim registered under kernel name `name`, if any.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4484,7 +4484,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::prim::PrimTable",
       "file": "crates/mycelium-core/src/prim.rs",
-      "line": 728,
+      "line": 790,
       "summary": "Every entry as `(name, #p, decl)`, in name order — the inspectable surface for EXPLAIN over",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4495,7 +4495,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::prim::PrimTable",
       "file": "crates/mycelium-core/src/prim.rs",
-      "line": 701,
+      "line": 763,
       "summary": "The declaration registered under kernel name `name`, if any.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4517,7 +4517,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::prim::PrimTable",
       "file": "crates/mycelium-core/src/prim.rs",
-      "line": 708,
+      "line": 770,
       "summary": "The intrinsic guarantee `g_f` of the prim named `name` (RFC-0001 §4.7), if registered.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4528,7 +4528,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::prim::PrimTable",
       "file": "crates/mycelium-core/src/prim.rs",
-      "line": 720,
+      "line": 782,
       "summary": "The registered kernel names, sorted.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4539,7 +4539,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::prim::PrimTable",
       "file": "crates/mycelium-core/src/prim.rs",
-      "line": 683,
+      "line": 745,
       "summary": "A [`PrimRef`] for the prim named `name`, if registered.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4550,7 +4550,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::prim::PrimTable",
       "file": "crates/mycelium-core/src/prim.rs",
-      "line": 695,
+      "line": 757,
       "summary": "The declaration a [`PrimRef`] points at, if registered.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4847,7 +4847,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::ternary",
       "file": "crates/mycelium-core/src/ternary/mod.rs",
-      "line": 154,
+      "line": 164,
       "summary": "Ripple-carry add over two equal-length MSB-first trit strings, fixed-width.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4869,7 +4869,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::ternary",
       "file": "crates/mycelium-core/src/ternary/mod.rs",
-      "line": 29,
+      "line": 39,
       "summary": "The signed value of a single trit.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4880,7 +4880,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::ternary",
       "file": "crates/mycelium-core/src/ternary/mod.rs",
-      "line": 116,
+      "line": 126,
       "summary": "The unique `m`-trit balanced representation of `value`, MSB-first — or `None` if `value` lies",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4891,7 +4891,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::ternary",
       "file": "crates/mycelium-core/src/ternary/mod.rs",
-      "line": 98,
+      "line": 108,
       "summary": "The maximum representable magnitude in `m` trits: `(3^m − 1) / 2`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4902,7 +4902,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::ternary",
       "file": "crates/mycelium-core/src/ternary/mod.rs",
-      "line": 187,
+      "line": 197,
       "summary": "Fixed-width multiplication.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4913,7 +4913,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::ternary",
       "file": "crates/mycelium-core/src/ternary/mod.rs",
-      "line": 139,
+      "line": 149,
       "summary": "Digit-wise negation: `value(neg t) = −value(t)` exactly (balanced ternary is sign-symmetric, §1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4924,7 +4924,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::ternary",
       "file": "crates/mycelium-core/src/ternary/mod.rs",
-      "line": 176,
+      "line": 186,
       "summary": "Fixed-width subtraction `a − b` = `add(a, neg(b))`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4935,7 +4935,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::ternary",
       "file": "crates/mycelium-core/src/ternary/mod.rs",
-      "line": 108,
+      "line": 118,
       "summary": "The integer denoted by an MSB-first trit string (`value(t)`, §1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7058,7 +7058,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::prims",
       "file": "crates/mycelium-interp/src/prims.rs",
-      "line": 1987,
+      "line": 2201,
       "summary": "The method recorded in the `EmpiricalFit` basis of every float-comparison result",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7069,7 +7069,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::prims",
       "file": "crates/mycelium-interp/src/prims.rs",
-      "line": 1983,
+      "line": 2197,
       "summary": "The trial count of the M-899 IEEE comparison reference corpus (`src/tests/prims.rs`,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7080,7 +7080,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::prims",
       "file": "crates/mycelium-interp/src/prims.rs",
-      "line": 1796,
+      "line": 1993,
       "summary": "The method recorded in the `EmpiricalFit` basis of every `flt.*` result (ADR-040 §2.6).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7091,7 +7091,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::prims",
       "file": "crates/mycelium-interp/src/prims.rs",
-      "line": 1793,
+      "line": 1990,
       "summary": "The trial count of the M-898 IEEE reference-case corpus (`src/tests/prims.rs`,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7124,7 +7124,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::prims::PrimRegistry",
       "file": "crates/mycelium-interp/src/prims.rs",
-      "line": 250,
+      "line": 269,
       "summary": "Look up a primitive by name.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7135,7 +7135,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::prims::PrimRegistry",
       "file": "crates/mycelium-interp/src/prims.rs",
-      "line": 256,
+      "line": 275,
       "summary": "The registered primitive names (sorted).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7146,7 +7146,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::prims::PrimRegistry",
       "file": "crates/mycelium-interp/src/prims.rs",
-      "line": 244,
+      "line": 263,
       "summary": "Register (or replace) a primitive.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8345,7 +8345,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 7208,
+      "line": 7260,
       "summary": "The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8356,7 +8356,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 7159,
+      "line": 7209,
       "summary": "The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8378,7 +8378,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 7198,
+      "line": 7250,
       "summary": "Canonicalize a surface VSA model ident to the **kernel model id** (`Repr::Vsa { model }` —",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8400,7 +8400,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::elab",
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 871,
+      "line": 881,
       "summary": "Build the content-addressed data registry `Σ` (RFC-0001 §4.3 r3) from the checked environment's",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8444,7 +8444,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 365,
+      "line": 375,
       "summary": "Elaborate the nullary function `entry` of a checked nodule to a closed L0 [`Node`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8455,7 +8455,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 435,
+      "line": 445,
       "summary": "**Per-hypha elaboration of a `colony` entry** for the *real-concurrency* execution path",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8466,7 +8466,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 409,
+      "line": 419,
       "summary": "**ADR-033/DN-74 (M-923):** elaborate `entry` **without** the [`crate::mono::monomorphize`]",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8477,7 +8477,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 566,
+      "line": 576,
       "summary": "**Elaborate a user-defined generative-lowering rule's RHS to a closed L0 [`Node`]** (DN-54",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8488,7 +8488,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 501,
+      "line": 511,
       "summary": "**Policy + body elaboration of a `reclaim` entry** for the *real-supervision* execution path",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27342,7 +27342,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/gap.rs",
-      "line": 91,
+      "line": 103,
       "summary": "One construct this transpiler could not (or would not) express in Mycelium surface syntax.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27353,7 +27353,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/gap.rs",
-      "line": 135,
+      "line": 147,
       "summary": "The full report for one transpiled source file.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27496,7 +27496,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 24,
+      "line": 150,
       "summary": "The `.myc` text (+ any dropped sub-features, e.g.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27507,7 +27507,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 43,
+      "line": 169,
       "summary": "Extract `///`/`//!` doc-comment lines (represented by `syn` as `#[doc = \"...\"]` attributes),",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27518,7 +27518,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 348,
+      "line": 485,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27529,7 +27529,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 849,
+      "line": 1383,
       "summary": "`enum` -> `type_item` (`type Name = C1 | C2(T1, T2) | ...;`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27540,7 +27540,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 511,
+      "line": 688,
       "summary": "Translate one Rust expression.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27551,7 +27551,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 996,
+      "line": 1607,
       "summary": "Top-level `fn` -> `fn_item`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27562,7 +27562,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 1146,
+      "line": 1757,
       "summary": "`impl` -> `impl_item` (trait-instance or inherent form).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27573,7 +27573,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 933,
+      "line": 1508,
       "summary": "`struct` -> a single-constructor `type_item`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27584,7 +27584,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 1031,
+      "line": 1642,
       "summary": "`trait` -> `trait_item` (`trait Name { fn sig1; fn sig2; ...",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27595,7 +27595,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 73,
+      "line": 199,
       "summary": "Heuristic `#[cfg(test)]` detection (Declared: a token-text `contains(\"test\")` check, not a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27606,7 +27606,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 778,
+      "line": 1279,
       "summary": "Translate one Rust pattern.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27617,7 +27617,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 63,
+      "line": 189,
       "summary": "Every non-doc attribute on an item, rendered as text — these are always dropped (KNOWN HARD",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27639,7 +27639,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::gap::Category",
       "file": "crates/mycelium-transpile/src/gap.rs",
-      "line": 66,
+      "line": 77,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27650,7 +27650,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::gap",
       "file": "crates/mycelium-transpile/src/gap.rs",
-      "line": 115,
+      "line": 127,
       "summary": "Internal helper carrying a [`Category`] + reason before a [`Gap`] is materialized with its",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27661,7 +27661,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::gap::GapReason",
       "file": "crates/mycelium-transpile/src/gap.rs",
-      "line": 121,
+      "line": 133,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27672,7 +27672,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::gap::GapReport",
       "file": "crates/mycelium-transpile/src/gap.rs",
-      "line": 169,
+      "line": 181,
       "summary": "Per-category gap counts, for reporting.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27683,7 +27683,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::gap::GapReport",
       "file": "crates/mycelium-transpile/src/gap.rs",
-      "line": 160,
+      "line": 172,
       "summary": "Fraction of non-test top-level items for which some `.myc` text was emitted.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27694,7 +27694,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::gap::GapReport",
       "file": "crates/mycelium-transpile/src/gap.rs",
-      "line": 153,
+      "line": 165,
       "summary": "`total_top_level_items` minus test items — the denominator for the expressible fraction.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27705,7 +27705,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::gap::GapReport",
       "file": "crates/mycelium-transpile/src/gap.rs",
-      "line": 145,
+      "line": 157,
       "summary": "Count of gaps tagged [`Category::TestItem`] — `#[cfg(test)]` items excluded from scope.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27727,7 +27727,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::map",
       "file": "crates/mycelium-transpile/src/map.rs",
-      "line": 60,
+      "line": 77,
       "summary": "Map a Rust type to its Mycelium `type_ref` text.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27749,7 +27749,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/lib.rs",
-      "line": 39,
+      "line": 40,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27804,7 +27804,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/lib.rs",
-      "line": 40,
+      "line": 41,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27826,7 +27826,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/transpile.rs",
-      "line": 19,
+      "line": 20,
       "summary": "Parse `path` and transpile every top-level item.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27837,7 +27837,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/transpile.rs",
-      "line": 31,
+      "line": 32,
       "summary": "Transpile already-read source text.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27848,7 +27848,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/lib.rs",
-      "line": 41,
+      "line": 42,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -33711,7 +33711,7 @@
     },
     {
       "symbol": "mycelium_core::ternary::BigTernary::add",
-      "reason": "dedup-alias: same definition as `mycelium_core::ternary::add` at crates/mycelium-core/src/ternary/mod.rs:154 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::ternary::add` at crates/mycelium-core/src/ternary/mod.rs:164 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::ternary::BigTernary::clone",
@@ -33731,15 +33731,15 @@
     },
     {
       "symbol": "mycelium_core::ternary::BigTernary::mul",
-      "reason": "dedup-alias: same definition as `mycelium_core::ternary::mul` at crates/mycelium-core/src/ternary/mod.rs:187 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::ternary::mul` at crates/mycelium-core/src/ternary/mod.rs:197 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::ternary::BigTernary::neg",
-      "reason": "dedup-alias: same definition as `mycelium_core::ternary::neg` at crates/mycelium-core/src/ternary/mod.rs:139 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::ternary::neg` at crates/mycelium-core/src/ternary/mod.rs:149 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::ternary::BigTernary::sub",
-      "reason": "dedup-alias: same definition as `mycelium_core::ternary::sub` at crates/mycelium-core/src/ternary/mod.rs:176 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::ternary::sub` at crates/mycelium-core/src/ternary/mod.rs:186 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::ternary::FixedWidthTrits::clone",
@@ -36243,23 +36243,23 @@
     },
     {
       "symbol": "mycelium_l1::elab::elaborate",
-      "reason": "dedup-alias: same definition as `mycelium_l1::elaborate` at crates/mycelium-l1/src/elab.rs:365 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::elaborate` at crates/mycelium-l1/src/elab.rs:375 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::elab::elaborate_colony",
-      "reason": "dedup-alias: same definition as `mycelium_l1::elaborate_colony` at crates/mycelium-l1/src/elab.rs:435 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::elaborate_colony` at crates/mycelium-l1/src/elab.rs:445 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::elab::elaborate_direct",
-      "reason": "dedup-alias: same definition as `mycelium_l1::elaborate_direct` at crates/mycelium-l1/src/elab.rs:409 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::elaborate_direct` at crates/mycelium-l1/src/elab.rs:419 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::elab::elaborate_lower_rule",
-      "reason": "dedup-alias: same definition as `mycelium_l1::elaborate_lower_rule` at crates/mycelium-l1/src/elab.rs:566 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::elaborate_lower_rule` at crates/mycelium-l1/src/elab.rs:576 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::elab::elaborate_reclaim",
-      "reason": "dedup-alias: same definition as `mycelium_l1::elaborate_reclaim` at crates/mycelium-l1/src/elab.rs:501 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::elaborate_reclaim` at crates/mycelium-l1/src/elab.rs:511 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::error::ParseError",
@@ -50887,7 +50887,7 @@
     },
     {
       "symbol": "mycelium_transpile::gap::Gap",
-      "reason": "dedup-alias: same definition as `mycelium_transpile::Gap` at crates/mycelium-transpile/src/gap.rs:91 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_transpile::Gap` at crates/mycelium-transpile/src/gap.rs:103 — one canonical row kept"
     },
     {
       "symbol": "mycelium_transpile::gap::Gap::clone",
@@ -50923,7 +50923,7 @@
     },
     {
       "symbol": "mycelium_transpile::gap::GapReport",
-      "reason": "dedup-alias: same definition as `mycelium_transpile::GapReport` at crates/mycelium-transpile/src/gap.rs:135 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_transpile::GapReport` at crates/mycelium-transpile/src/gap.rs:147 — one canonical row kept"
     },
     {
       "symbol": "mycelium_transpile::gap::GapReport::clone",
@@ -50951,11 +50951,11 @@
     },
     {
       "symbol": "mycelium_transpile::transpile::transpile_file",
-      "reason": "dedup-alias: same definition as `mycelium_transpile::transpile_file` at crates/mycelium-transpile/src/transpile.rs:19 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_transpile::transpile_file` at crates/mycelium-transpile/src/transpile.rs:20 — one canonical row kept"
     },
     {
       "symbol": "mycelium_transpile::transpile::transpile_source",
-      "reason": "dedup-alias: same definition as `mycelium_transpile::transpile_source` at crates/mycelium-transpile/src/transpile.rs:31 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_transpile::transpile_source` at crates/mycelium-transpile/src/transpile.rs:32 — one canonical row kept"
     },
     {
       "symbol": "mycelium_transpile::vet::MycChecker",

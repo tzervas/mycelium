@@ -13,7 +13,7 @@
 //! retained as the per-trial atom generator.  The statistical assertion (rate ≤ declared δ) is
 //! preserved unchanged.  proptest adds:
 //! - Shrinking: a failing seed batch is minimised before reporting.
-//! - `PROPTEST_CASES` control: number of independent batches tested per run (default 16); CI
+//! - `PROPTEST_CASES` control: number of independent batches tested per run (default 1); CI
 //!   rotates seeds across runs automatically.
 //! - No new dependency on `rand`; the LCG matches the calibration distributions.
 

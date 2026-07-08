@@ -11,6 +11,27 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### trx2 Lane C — CU-3/5/7 kernel prims + transpiler operand-gated emission and forward-mapped prim table (2026-07-08)
+
+Two scoped leaf→`dev` PRs close §8.16's in-progress worklist (DN-34 §8.17). Kernel (PR #1300, Π
+66 to 68): CU-3 adds two never-silent Binary/Float conversion prims — `bin.to_flt` (checked-exact,
+refuses `|n| > 2^53`) and `flt.to_bin` (width-witness shape, refuses NaN/inf/negative/fractional/
+out-of-width), unsigned-magnitude (ADR-028), `Empirical` (ADR-040 §2.6), with full three-way
+(L1/L0/AOT, AOT leg ran) tests; the lossy `bin to flt` rounding stays a reified swap (FLAG-cu3-lossy-
+swap). CU-5 wires the `wrapping` eval-mode dispatch over `bin.add`/`sub`/`mul` (RFC-0034 §10; no new
+prims), runtime half only — no `wrapping { }` parser surface yet (FLAG-cu5-surface-syntax). CU-7 is a
+verify-first correction (mitigation #14): the assumed "40-trit cap on `trit.*`" was inaccurate —
+`ternary::add`/`mul` are already arbitrary-width (digit-serial over `&[Trit]`), pinned by a width-80
+three-way test; the growable value form stays gated on E20-1 (FLAG-cu7-e20-1-gate). Transpiler (PR
+#1299, `checked_fraction` 5.79 to 7.76 percent, +15 items): `&`/`|` now emit `and`/`or` and `!=`/`>`
+compose from the `eq`/`lt` prims (a house-rule-#4 correction — `ne`/`gt` are non-`pub` functions, not
+prims) when both operands resolve to a known `Binary{N}` via a new type environment (a review-found
+HIGH bug where the gate mis-fired on shadowed/pattern-bound names was fixed by env invalidation); a
+new `prim_map.rs` forward-maps the known kernel surface with `flt_is_*` wired and `wrapping_*`
+PENDING-BACKEND (mapped, never emitted); and a stale `f64` to `Float` `map_type` fix unblocked
+`std-sys`'s libm wrappers. Emission stays `Declared`; vet figures `Empirical`. (trx2 E32-1/E33-1;
+DN-34 §8.17; VR-5/G2.)
+
 ### M-1006 transpiler-hardening ladder — String→`Bytes` lands the largest `checked_fraction` gain (2026-07-07)
 
 The Rust→Mycelium transpiler's `transpile → myc check → fix` gap-profiling ladder (kickoff `trx2`
@@ -74,6 +95,121 @@ The project corpus as a generated, provenance-carrying encoding, served platform
 - Supply-chain: `tokio`/`axum` hoisted to `[workspace.dependencies]`, `THIRD-PARTY-LICENSES`
   regenerated, `mycelium-tero` registered in `deps-strata` (stratum 7 / tier `tools`). Follow-on
   **M-1020** minted: native HTTPS/TLS for the HTTP front.
+
+_Note: the three entries above are integration's already-curated/condensed summaries of the same
+promoted work dev continues to describe in granular form below (M-1013 STEP 2 through the DN-87
+entries, and M-1006 phase-1); preserved here per the append-only union rule (never drop either side)
+even though they narrate overlapping content — a follow-up editorial pass may consolidate._
+
+### M-1013 STEP 2 — semcore Stage-5 differential retrofit to harness marshalling (2026-07-07)
+
+The Stage-5 self-hosting differential (`compiler_stage5_elab.rs`) switches from comparing the `.myc`
+port's mirror output against the Rust oracle by hand-written `.myc` structural-equality comparators
+(the FLAG-semcore-28 `_eq` family, now deleted from `semcore.myc`) to HARNESS MARSHALLING: a
+never-silent Rust `decode_*` family rebuilds the real `mycelium_core` type from the port's `L1Value`
+output and compares it with Rust's own trusted derived `==`. This removes the hand-mirrored
+comparators from the trust path -- the comparator is now `mycelium_core`'s own
+`#[derive(PartialEq)]`, the very thing the mirror was hand-restating. The M-1012 non-vacuity
+discipline migrates from the comparator to the decoder (`marshal_discriminates`: mirror values
+distinct in one dimension must decode to unequal Rust values). Derived `==` is the primary comparison
+for this Bits/Trits/Bytes subset; content-hash is the recorded switch for the first float-bearing
+increment. Both witnesses green: `stage5_elab` 11/11 with the full `mycelium-l1` suite, and native
+`myc check lib/compiler/semcore.myc` ok. DN-26 §10.2 records marshalling as the adopted method
+(append-only) -- the trust foundation for the remaining M-1013 increments. No logic `*.rs` changed.
+(M-1013; E18-1; VR-5/G2.)
+
+### M-1008/M-1009/M-1010 + M-1011(partial) — semcore pure-leaf port wave (M-993 ladder) (2026-07-07)
+
+Four pure/leaf increments of the M-993 semcore SCC port land in `lib/compiler/semcore.myc`
+(1721 to 2541 lines), each a faithful arm-by-arm port with a live-oracle differential vs the real
+Rust function (verdicts computed at test time, discrimination probes, never hand-derived): unify /
+resolve_ty / tuple helpers (M-1008), the mono mangle family (M-1009), free_vars / pattern_binders
+(M-1010), and lit_ty_of / literal_key / normalize_pattern (M-1011). 47 stage5 differential tests
+green; native `myc check lib/compiler/semcore.myc` ok; no logic *.rs touched (only new in-crate
+test modules + an append-only DN-26 note). FLAG-semcore-13..21 document each surface-inexpressible
+deviation (dead-arm collapses, value-threaded accumulators, ordered assoc-lists), review-verified
+behavior-preserving. Honest deferrals: `infer_type` (a wrapper over the un-ported inference SCC) to
+M-1013 -- M-1011 stays `todo` on that residual; `mangle_ty_in_ty`/`item_key` (private, no oracle) to
+a later increment. M-1008/M-1009/M-1010 close; M-993 advances, not closed.
+
+### M-1015 — docs/tero-index/: the whole-corpus Layer-1 citation index (DN-87 / E39-1) (2026-07-07)
+
+mycelium-tero Layer 1 lands: the api-index/lib-index deterministic-index pattern generalized over
+the WHOLE corpus, emitted to `docs/tero-index/{INDEX.md,index.json}` (5140 rows; grep-friendly
+table plus machine index; never-silent `flagged` section — 6 entries, reference notes genuinely
+lacking a Status row; uniform `Empirical/Declared` tag, "source is ground truth"). Families: docs
+(RFC/ADR/DN/spec/guide/planning) with status, guarantee tag, and section anchors; research records;
+issues.yaml (+idmap) with id/title/status/epic/depends_on/doc_refs/gh-number (526 rows, grep
+cross-checked); CHANGELOG entries by date/id (83, cross-checked); skills name+description (16,
+cross-checked); api-index and lib-index referenced as siblings, never duplicated. Reuses
+`mycelium_doc::corpus::ingest` (no parallel markdown heuristic, no pub-surface widening); issues.yaml
+read by a purpose-built YAML-subset reader (serde_yaml is neither in-workspace nor maintained —
+no new external dependency). Deterministic (two-run byte-identical, incl. the self-referential
+fixpoint fix: the index excludes its own output) and drift-gated (`scripts/checks/tero-index.sh`
+via `just tero-index`; regenerate via `just tero-index-gen`); 27 tests. Integration note: the
+`all.sh` COMPONENT_ID 5-bit space is exhausted, so `tero-index` deliberately shares `doc-index`'s
+id 23 (same committed-index-drift family; the digest names the exact gate) — a 32nd unique id
+needs a byte-scheme redesign, recorded as a deliberate open decision.
+
+### mycelium-tero — DN-87 named; kickoff `mem` FIRED; the scaffold lands (2026-07-07)
+
+The maintainer named the DN-87 program **`mycelium-tero`** — a quiet homage to **Atsushi Tero**,
+for his contribution to science and engineering (the name is sugar; the system is code). This
+entry lands the naming across the record (DN-87 title/Naming field, kickoff `mem` + kickoffs
+index → FIRED, E39-1 → `in-progress`) and the swarm pre-flight scaffold: `crates/mycelium-tero`
+(workspace-registered, buildable, tested stub carrying the DN-87 §6 binding invariants in its
+crate docs). Wave 1 = the M-1015 lane (corpus ingestion + the deterministic Layer-1 index), then
+M-1016/M-1017/M-1018 parallel per the kickoff's disjoint-lane table.
+
+### DN-87 — the transparent memory substrate & agent knowledge API captured; E39-1 + M-1015…M-1019 minted (2026-07-07)
+
+Captures (Proposed) the maintainer's vision near-verbatim: the corpus (methodologies, decisions,
+intents, language docs, tracker state) converted into a **generated, transparent,
+provenance-carrying encoding** that *supplements* the human-friendly format — search/access
+**improved upon RAG**, with that claim explicitly `Empirical`-gated behind M-1018's graded eval
+harness — exposed as a **secure, platform-agnostic API** (MCP + HTTP, token-scoped) plus an
+optimized skill set usable by Claude Code, Grok, and any other platform. Hybrid substrate:
+the deterministic structured-index pattern generalized corpus-wide (Layer 1, the floor) + a **VSA
+semantic layer** on `mycelium-vsa` with `EXPLAIN`-able resonator retrieval (Layer 2, the
+improved-on-RAG bet). v0 = Rust core + Python ingestion; the **Mycelium-lang package** is a
+phase-gated dogfood milestone (M-1019 ⟂ M-993). Mandatory provenance — an uncited answer is a
+refusal (G2); deterministic, drift-gated regeneration; MIT-only by house rule, with the
+maintainer's contribute-to-society intent recorded. Epic **E39-1** + **M-1015…M-1019** minted
+(E35–E38 left to DN-86's proposal); kickoff **`mem`** stowed — **the build wave (the fractal-swarm
+/ concurrent-PR shape) fires when the maintainer names the project**. Four design forks
+orchestrator-resolved (`Declared`, maintainer-overridable) after the interactive confirm failed —
+the session's standing pattern.
+
+### DN-85 — the multi-language transpilation program + single-language full-stack goal (2026-07-06)
+
+Records (Proposed, maintainer direction) the generalization of DN-34's Rust-only transpiler into a
+**multi-source-language** program whose flagship goal is a **single-language Mycelium full stack** —
+collapse a polyglot ecosystem's application, native extensions, and compute kernels into one
+language, toolchain, and guarantee model. Sequencing: Rust (in flight, trx2) then **Python-first
+(pure Python, gated on sound type inference)** then C/C++/Fortran/Cython/CUDA as demand arises.
+Interim strategy: transpile the coverable layer and **FFI-bind** the native backend (e.g.
+PyTorch/TensorFlow C++/CUDA) until its transpiler lands. **Open-source constraint** with the honest
+provenance ladder — transpile vs. binding vs. reverse-engineered Mycelium-native reimplementation; a
+bound or reverse-engineered artifact is **never** tagged a faithful port (G2/VR-5).
+`Declared`/aspirational; not `1.0.0`-gating (ADR-036). DN-34 gains a forward-pointer; Doc-Index
+registers the note. Its **architecture companion is DN-86** (front-end abstraction + method).
+
+### DN-86 — multi-language transpiler front-ends architecture (2026-07-06)
+
+New design note (Draft), the **architecture companion to DN-85** (which holds the strategy/vision) —
+authored concurrently and reconciled to a distinct number. The front-end-abstraction shape for
+extending the transpiler to ingest **Python** (then TypeScript, Java) alongside Rust. Grounds the
+refactor in the current `mycelium-transpile` split: the `vet.rs` myc-check loop and `.myc` emitter
+are **source-agnostic**, and `gap.rs`'s *structure* is reused wholesale though its taxonomy carries
+Rust-source-shaped categories (`Trait`/`Impl`/`MacroDef`/`DeriveAttr`/…) a multi-language front-end
+must **generalize** (the honest correction to a flat "backend already language-neutral" claim); only
+`transpile.rs`/`emit.rs`/`map.rs` are `syn`-coupled. Transfers the trx2 M-1006 ladder as the method.
+Per house rule #4 states the boundaries: Python dynamic typing (§4.1); the **C/CUDA library-core
+boundary** (§4.2 — numpy/scipy/pytorch cores are compiled C/C++/CUDA, *not* Python source, so
+transpilation yields the Python layer only and the compute is a separate Mycelium-native/FFI track);
+follow-on work bounded by Mycelium surface coverage (§4.3). Records the self-hosted-`.myc` toolchain
+switch (§5) as a `boot10`/DN-26 dependency. Ids proposed (E35–E38), not minted; decides nothing
+normatively.
 
 ### M-1006 phase-1 — transpiler hardening against the DN-34 §8.9 gap worklist (2026-07-06)
 
