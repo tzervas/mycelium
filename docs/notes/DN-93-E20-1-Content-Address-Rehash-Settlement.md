@@ -161,7 +161,7 @@ individual object, the unit of migration — a coordinated, one-repo-at-a-time f
 bidirectional translation table, staged to an end-state that removes the old scheme entirely. The
 strategic reason it is one-shot rather than per-object: **an object's name is the hash of its
 content-plus-transitive-dependencies, so you cannot rehash one object without its whole closure** — the
-coherent unit is the whole store, migrated once (`Declared`; https://git-scm.com/docs/hash-function-transition).
+coherent unit is the whole store, migrated once (`Declared`; <https://git-scm.com/docs/hash-function-transition>).
 Mycelium's content address is the same closure hash (`Node::content_hash`), so the same argument holds
 door-for-door: the coherent unit is *all reshaping doors at once*.
 
@@ -175,7 +175,7 @@ door-for-door: the coherent unit is *all reshaping doors at once*.
 
 **Precedent: Nix RFC 62 content-addressed derivations** — input-addressed and content-addressed store
 paths **coexist**, gated per-derivation behind an experimental flag, migrating incrementally with a
-permanent indirection layer (`Declared`; https://github.com/NixOS/rfcs/blob/master/rfcs/0062-content-addressed-paths.md).
+permanent indirection layer (`Declared`; <https://github.com/NixOS/rfcs/blob/master/rfcs/0062-content-addressed-paths.md>).
 
 - **Buys:** no coordination window; each door lands independently.
 - **Costs:** *N* migrations over the same closure-coupled address space = up to *N* flag-days for values
