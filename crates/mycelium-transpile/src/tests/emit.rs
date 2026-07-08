@@ -786,23 +786,7 @@ fn multi_stmt_body_reason_names_the_statement_kind() {
     }
 }
 
-/// The `myc-check` binary from `cargo build -p mycelium-check --bin myc-check`, or `None` when it
-/// hasn't been built (mirrors `src/tests/vet.rs`'s identical helper — kept as a small local
-/// duplicate rather than a cross-test-module import, since `src/tests/mod.rs` has no shared-util
-/// module and this is the only other call site).
-fn find_myc_check() -> Option<std::path::PathBuf> {
-    if let Ok(cmd) = std::env::var("MYC_CHECK_CMD") {
-        if let Some(first) = cmd.split_whitespace().next() {
-            let p = std::path::PathBuf::from(first);
-            if p.exists() {
-                return Some(p);
-            }
-        }
-    }
-    let built =
-        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/debug/myc-check");
-    built.exists().then_some(built)
-}
+use super::vet::find_myc_check;
 
 /// **The verify-first proof** (mitigation #14) for trx2 Lane C Deliverable 1: every operand-gated
 /// rewrite in `Expr::Binary` (`and`/`or` for `&`/`|`, the `eq`/`lt`-composed forms for `!=`/`>`) is

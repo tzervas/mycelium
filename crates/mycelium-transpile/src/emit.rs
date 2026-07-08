@@ -40,7 +40,7 @@ type StructLayout = Vec<Option<String>>;
 /// the WORD/prim-composed surface (real, myc-check-clean per the verify-first probes cited below) and
 /// the glyph fallback (unchanged, still Declared-heuristic). A name absent from the map is simply
 /// "not known" — never treated as "known to be something else" (VR-5: absence, not a wrong guess).
-type TypeEnv = HashMap<String, String>;
+pub(crate) type TypeEnv = HashMap<String, String>;
 
 /// If `e` is a **bare, single-segment identifier** naming a local whose type is present in `env`,
 /// return that local's mapped type text (a clone of the `env` entry) — `None` for any other
@@ -48,7 +48,7 @@ type TypeEnv = HashMap<String, String>;
 /// narrow: the transpiler has no general expression-typing pass, so only the one case it can decide
 /// *without guessing* — "this exact identifier's declared parameter/local type is known" — is
 /// answered; everything else is simply absent (VR-5).
-fn expr_env_type(e: &Expr, env: &TypeEnv) -> Option<String> {
+pub(crate) fn expr_env_type(e: &Expr, env: &TypeEnv) -> Option<String> {
     match e {
         Expr::Path(p) if p.qself.is_none() && p.path.segments.len() == 1 => {
             let name = p.path.segments.last()?.ident.to_string();
@@ -289,7 +289,7 @@ fn plain_type_params(generics: &Generics) -> Result<Vec<String>, GapReason> {
 /// Parse a `map_type`-produced `Binary{N}` type-ref string back to its width `N`. Only matches
 /// the exact `Binary{<digits>}` shape `map_type` emits for unsigned integers — never a guess for
 /// any other text (e.g. `Bool`, a bare ident) that happens to not match.
-fn binary_width(ty_text: &str) -> Option<u32> {
+pub(crate) fn binary_width(ty_text: &str) -> Option<u32> {
     ty_text
         .strip_prefix("Binary{")
         .and_then(|rest| rest.strip_suffix('}'))
@@ -939,17 +939,60 @@ fn emit_expr_inner(expr: &Expr, self_ty: Option<&str>, env: &TypeEnv) -> Result<
             Ok(format!("{func}({})", args.join(", ")))
         }
         Expr::MethodCall(m) => {
+            // trx2 Lane C Deliverable 2 — forward-mapped kernel prim surface (`crate::prim_map`).
+            // Consulted BEFORE the generic desugar below so a confirmed row wins; gated on the
+            // receiver's *known* type (never a guess — VR-5) so an unrelated Rust type's
+            // same-named method never triggers a wrong/misleading mapping. A row whose gate
+            // doesn't match (receiver type unknown or doesn't match) falls straight through to the
+            // unchanged generic desugar, exactly as if no row existed.
+            let method_name = m.method.to_string();
+            if let Some(row) = crate::prim_map::lookup(&method_name) {
+                let receiver_ty = expr_env_type(&m.receiver, env);
+                if crate::prim_map::receiver_gate_matches(row.receiver_gate, receiver_ty.as_deref())
+                {
+                    if !row.wired {
+                        // PENDING-BACKEND: the mapping is known (a decided ruling — see
+                        // `crate::prim_map` module docs for each row's citation) but the kernel/
+                        // grammar backend is not landed — always an explicit gap, NEVER an
+                        // emission (VR-5/G2: a forward-declared mapping is documentation, not a
+                        // fabricated success).
+                        return Err(GapReason::new(
+                            row.pending_category,
+                            format!(
+                                "PENDING-BACKEND({}): {} forward-mapped, backend unwired — gated \
+                                 off (VR-5/G2). {}",
+                                row.slug, row.myc_prim, row.citation
+                            ),
+                        ));
+                    }
+                    let recv = emit_expr(&m.receiver, self_ty, env)?;
+                    let mut args = vec![recv];
+                    for a in &m.args {
+                        args.push(emit_expr(a, self_ty, env)?);
+                    }
+                    let call = format!("{}({})", row.myc_prim, args.join(", "));
+                    return Ok(if row.bridge_binary1_to_bool {
+                        // The prim's own return is `Binary{1}`; Rust's method returns `bool` ->
+                        // bridge to `Bool` the same proven way `Expr::Binary`'s `!=`/`>` composition
+                        // does (see that arm's doc) — a bare call would fail `myc check`'s
+                        // `Binary{1}` vs `Bool` mismatch (confirmed empirically).
+                        format!("(match {call} {{ 0b1 => True, _ => False }})")
+                    } else {
+                        call
+                    });
+                }
+            }
             // Declared mapping decision: the grammar's `app_expr` has no postfix method-call
             // form (`primary ('(' args? ')')*` only) — desugar `recv.method(args)` to
             // `method(recv, args...)`, matching how `lib/std/cmp.myc`'s free functions
             // (`cmp`/`le`/`ge`/...) take the receiver as an ordinary first argument.
-            guard_ident(&m.method.to_string(), "method call")?;
+            guard_ident(&method_name, "method call")?;
             let recv = emit_expr(&m.receiver, self_ty, env)?;
             let mut args = vec![recv];
             for a in &m.args {
                 args.push(emit_expr(a, self_ty, env)?);
             }
-            Ok(format!("{}({})", m.method, args.join(", ")))
+            Ok(format!("{method_name}({})", args.join(", ")))
         }
         Expr::Paren(p) => Ok(format!("({})", emit_expr(&p.expr, self_ty, env)?)),
         Expr::Reference(r) => {
