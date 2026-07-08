@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "tero": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--project",
+        "packages/tero-mcp-lite",
+        "tero-mcp-lite",
+        "--index",
+        "docs/tero-index/index.json"
+      ],
+      "env": {
+        "TERO_TOKENS": "local-dev:refresh"
+      }
+    }
+  }
+}

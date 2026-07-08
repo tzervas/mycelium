@@ -56,6 +56,28 @@ enum ClampError  { InvertedBounds { lo, hi } }
 
 The `Widen`/`Narrow` split is the surface form of the honesty crux: widening is *structurally* total (the type system witnesses `domain ⊆ codomain`), so it has no error arm; narrowing is *structurally* fallible (the value may not fit), so its result type **is** a `Result` — a caller cannot narrow without handling the out-of-range arm (C1).
 
+### 3.1. Width-generic comparison helpers (self-hosted Mycelium-lang, `lib/std/cmp.myc`)
+
+A *distinct layer* from the trait surface above: `lib/std/cmp.myc` (RFC-0031 §5 D4 Tier-1) exports **width-generic, total** comparison operations over `Binary{N}`, one definition per op, monomorphized to the call-site width (M-753 / DN-42). All are `Exact` over the finite `Binary{N}` domain. Differential agreement (L1-eval ≡ L0-interp ≡ AOT) is `Empirical` (trials, `std_cmp.rs`). **Never-silent (G2):** width-mismatch refusals are explicit (a mixed-width compare fails, not coerced).
+
+```
+// Unsigned width-generic comparisons (RFC-0033 §4.1.2 basis: `eq`/`lt` kernel prims)
+fn cmp{N}(a: Binary{N}, b: Binary{N}) => Ordering        // three-way unsigned
+fn le{N}(a: Binary{N}, b: Binary{N}) => Bool             // unsigned <=
+fn ge{N}(a: Binary{N}, b: Binary{N}) => Bool             // unsigned >=
+fn max{N}(a: Binary{N}, b: Binary{N}) => Binary{N}       // unsigned max
+fn min{N}(a: Binary{N}, b: Binary{N}) => Binary{N}       // unsigned min
+
+// CU-4 completeness surface (RFC-0033 §4.1.2 / RFC-0032 D1)
+fn ne{N}(a: Binary{N}, b: Binary{N}) => Bool             // negation of `eq`
+fn gt{N}(a: Binary{N}, b: Binary{N}) => Bool             // unsigned >
+
+// Signed two's-complement comparisons (via `lt_s` prim + `eq`)
+fn cmp_s{N}(a: Binary{N}, b: Binary{N}) => Ordering      // three-way signed
+fn le_s{N}(a: Binary{N}, b: Binary{N}) => Bool           // signed <=
+fn ge_s{N}(a: Binary{N}, b: Binary{N}) => Bool           // signed >=
+```
+
 ## 4. Guarantee matrix (the load-bearing deliverable — RFC-0016 §4.5)
 
 Rows = exported ops. Columns = `{ guarantee tag · fallibility (explicit error set) · declared effects · EXPLAIN-able? }`. Encoded as a checked table (the RFC-0003 §4 template), asserted in tests once code lands — never prose only.
@@ -71,6 +93,11 @@ Rows = exported ops. Columns = `{ guarantee tag · fallibility (explicit error s
 | `widen` (lossless, e.g. `i8 → i32`) | `Exact` | **total** — domain ⊆ codomain, no error arm | none | n/a |
 | `narrow` (fallible, e.g. `i32 → i8`) | `Exact` *(exact when it returns `Ok`)* | `Err(NarrowError::OutOfRange { value, target_min, target_max })` — **never a silent truncation/wrap** | none | yes (the `NarrowError` carries the rejected value + bounds — a reified, inspectable diagnostic) |
 | `narrow` not-representable (e.g. `f64 → i32` on `NaN`/`±∞`/overflow) | `Exact` *(when `Ok`)* | `Err(NarrowError::NotRepresentable { reason })` | none | yes (reason record) |
+| `ne{N}` (negation of `eq`) | `Exact` | total (`bool`) | none | n/a |
+| `gt{N}` (unsigned, projection of `cmp`) | `Exact` | total (`bool`) | none | n/a |
+| `cmp_s{N}` (signed three-way) | `Exact` | total (`Ordering`) | none | n/a |
+| `le_s{N}` (signed comparison) | `Exact` | total (`bool`) | none | n/a |
+| `ge_s{N}` (signed comparison) | `Exact` | total (`bool`) | none | n/a |
 
 **Tag justification.** Every row is `Exact` — `cmp`/`convert` carries **no** accuracy/precision/probability semantics, so VR-5/C2 makes it `Exact` rather than any downgraded tag (RFC-0016 §4.1 C2: "an op with no accuracy semantics … is simply `Exact`"). The honesty here is **not** an approximation tag; it is the **fallibility column**: `widen` is total *because* it is lossless, and `narrow` is `Result` *because* it may lose information — the explicit narrowing-error set (`OutOfRange`, `NotRepresentable`) is the never-silent guarantee (C1/G2). The `EXPLAIN-able?` column is `yes` precisely where a conversion can *reject* (the narrowing rows): the error value is the reified artifact saying *why* (C3), not an opaque sentinel. Comparison ops need no EXPLAIN record — they neither select, convert, nor approximate (C3 trigger absent). Note the deliberate contrast with a **swap** (out of scope, M-516/RFC-0002): a lossy swap's row would tag the *bound* (`Proven`/`Empirical`/`Declared`) and be `EXPLAIN`-able via a `SwapCertificate`; a `convert` has neither — which is exactly why a representation change cannot live in this module.
 
@@ -103,3 +130,5 @@ Rows = exported ops. Columns = `{ guarantee tag · fallibility (explicit error s
 - **2026-06-20 — Accepted (maintainer ratification, DN-07).** The maintainer ratified this Rust-first spec: the §4.5 guarantee matrix (nine `Exact` rows) is asserted in tests, never-silent narrowing (`Result`, never silent truncation) holds, and the open §7 questions (float total order, the `convert`/`math` rounding seam, cross-paradigm `eq`) are design/scope calls, not contract violations. The **landed trait naming** (`MycEq`/`MycOrd`/`MycPartialOrd`) is now documented in §3 — a `Myc`-prefix that avoids a Rust `std::cmp` namespace collision (RFC-0016 §8-Q2); a parity note, **not** an honesty matter. Status moves *Implemented (Rust-first) — pending ratification → Accepted*. Append-only; no kernel change (KC-3).
 
 - **2026-06-27 — Self-hosted width-generic ordering prototype now executes three-way (M-718, rsm S2).** A *distinct artifact* from this Rust-first spec: `lib/std/cmp.myc` (RFC-0031 §5 D4) is a self-hosted Mycelium-lang prototype exporting **width-generic** `cmp` / `le` / `ge` / `max` / `min` over `Binary{N}` — one definition each, monomorphized to the call-site width (`le`/`ge`/`max`/`min` delegate to `cmp`; M-753 / DN-42). It now executes three-way (L1-eval ≡ L0-interp ≡ AOT; `crates/mycelium-l1/tests/std_cmp.rs` + the consolidated `std_generic_conformance.rs` at ≥ 2 widths), with width-mismatch refusals exercised (a mixed-width compare is an explicit never-silent refusal naming the offending width — G2). It is a **subset** of this spec's surface (no `convert`/`clamp`/`sort`-key, no float total-order story) and does **not** change this spec's status; the full Mycelium-lang migration (M-502-gated) still remains. Agreement `Empirical`; nothing upgraded to `Proven`. Append-only; no kernel change (KC-3).
+
+- **2026-07-08 — Self-hosted signed comparison and completeness surface now documented (CU-4).** The width-generic `ne{N}`, `gt{N}`, `cmp_s{N}`, `le_s{N}`, `ge_s{N}` helpers (RFC-0033 §4.1.2 / RFC-0032 D1) close the comparison basis — signed three-way via `lt_s` prim + `eq`, negation of `eq`, unsigned `gt` projection of `cmp`. All total, all `Exact`; differential agreement (L1-eval ≡ L0-interp ≡ AOT) is `Empirical` (trials, `lib/std/cmp.myc:111-130` + `crates/mycelium-l1/src/checkty.rs:7307-7312`). Added to §3 surface-sketch (§3.1) and guarantee matrix (§4) as width-generic helpers distinct from the Rust-first trait surface; this spec's status and scope remain unchanged. Append-only; no kernel change (KC-3).

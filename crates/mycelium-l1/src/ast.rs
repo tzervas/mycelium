@@ -762,6 +762,25 @@ pub enum Expr {
     Wild(Box<Expr>),
     /// `spore(value)` — reconstruction-manifest construction.
     Spore(Box<Expr>),
+    /// `wrapping { <expr> }` — the **named, explicit Axis-B `wrapping` opt-out** (RFC-0034 §10/§10.1;
+    /// CU-5). Evaluates the boxed body with its enclosed `Binary{N}` `add`/`sub`/`mul` operations
+    /// (surface `+`/`-`/`*`, or their word forms) taken in **modular** mode — the result wraps modulo
+    /// `2^N` into `B_N` instead of refusing out-of-range — dispatching each through the landed
+    /// [`mycelium_interp::prims::eval_wrapping`] runtime half (M-791 follow-on). Every enclosed-op
+    /// result is tagged **`Declared`** with the `WrappingOpt` marker (the developer's explicit opt-in;
+    /// never a fabricated `Proven`/`Empirical` claim — VR-5).
+    ///
+    /// Never-silent (G2): `wrapping` opts out of the **range** refusal *only*, and only lexically. The
+    /// checker ([`crate::checkty`]) refuses **up front** any enclosed operation other than
+    /// `add`/`sub`/`mul` (a division, a comparison, a call, a non-`Binary` operand) and any operand
+    /// **width mismatch** — a modular *arithmetic* region, not an "ignore errors" scope. It is explicit,
+    /// never ambient.
+    ///
+    /// Honest scope: the surface is wired end-to-end through the L1 tree-walking evaluator
+    /// ([`crate::eval`]); the **Core-IR lowering** ([`crate::elab`] → `mycelium-interp`) is **staged** —
+    /// `elab` refuses it with a never-silent [`crate::elab::ElabError::Residual`] until the interpreter's
+    /// `Node::Op` dispatch learns the wrapping-mode election (a `mycelium-interp` follow-on).
+    Wrapping(Box<Expr>),
     /// `consume <expr>` — acquire + take **exclusive** ownership of an affine `Substrate` value
     /// (DN-03 §1; LR-8; M-664). The operand must have a `Substrate{tag}` type — the checker
     /// ([`crate::checkty`]) refuses any other operand type (never silent, G2); the result is the

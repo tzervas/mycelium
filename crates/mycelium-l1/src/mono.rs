@@ -268,7 +268,9 @@ fn body_has_fn_value(env: &Env, e: &Expr) -> bool {
         }
         Expr::Swap { value, .. } => body_has_fn_value(env, value),
         Expr::WithParadigm { body, .. } => body_has_fn_value(env, body),
-        Expr::Wild(b) | Expr::Spore(b) | Expr::Consume(b) => body_has_fn_value(env, b),
+        Expr::Wild(b) | Expr::Spore(b) | Expr::Consume(b) | Expr::Wrapping(b) => {
+            body_has_fn_value(env, b)
+        }
         Expr::Colony(hyphae) => hyphae.iter().any(|h| body_has_fn_value(env, &h.body)),
         Expr::Lambda { body, .. } => body_has_fn_value(env, body),
         // The head of an application is a *call target*, not a fn value — do NOT descend into it as a
@@ -304,7 +306,7 @@ fn body_has_lambda(e: &Expr) -> bool {
         }
         Expr::Swap { value, .. } => body_has_lambda(value),
         Expr::WithParadigm { body, .. } => body_has_lambda(body),
-        Expr::Wild(b) | Expr::Spore(b) | Expr::Consume(b) => body_has_lambda(b),
+        Expr::Wild(b) | Expr::Spore(b) | Expr::Consume(b) | Expr::Wrapping(b) => body_has_lambda(b),
         Expr::Colony(hyphae) => hyphae.iter().any(|h| body_has_lambda(&h.body)),
         Expr::App { head, args } => body_has_lambda(head) || args.iter().any(body_has_lambda),
         Expr::Fuse { left, right } => body_has_lambda(left) || body_has_lambda(right),
@@ -1329,6 +1331,15 @@ impl<'e> Mono<'e> {
             Expr::Consume(operand) => {
                 let operand2 = self.rewrite(site, scope, operand, expected)?;
                 Ok(Expr::Consume(Box::new(operand2)))
+            }
+            // RFC-0034 §10.1 (CU-5): `wrapping { … }` is a transparent wrapper over a `Binary`
+            // arithmetic body — rewrite the body and reconstruct the node so it survives to the L1
+            // evaluator (which elects `eval_wrapping` for the enclosed ops). The body is a call-free
+            // add/sub/mul tree (the checker's gate), so mono has nothing to specialize; the pass-through
+            // simply preserves the wrapping region (mirroring the `Consume`/`Ascribe` wrapper cases).
+            Expr::Wrapping(body) => {
+                let body2 = self.rewrite(site, scope, body, expected)?;
+                Ok(Expr::Wrapping(Box::new(body2)))
             }
             // RFC-0024 §4A.4 (M-704): a `lambda` lowers to a **closure-constructor application** — its
             // captured environment, snapshotted by value at this definition site (value-semantics).
@@ -2738,7 +2749,7 @@ fn free_vars_at(
         }
         Expr::Swap { value, .. } => free_vars_at(value, bound, seen, out, depth)?,
         Expr::WithParadigm { body, .. } => free_vars_at(body, bound, seen, out, depth)?,
-        Expr::Wild(b) | Expr::Spore(b) | Expr::Consume(b) => {
+        Expr::Wild(b) | Expr::Spore(b) | Expr::Consume(b) | Expr::Wrapping(b) => {
             free_vars_at(b, bound, seen, out, depth)?;
         }
         Expr::Colony(hyphae) => {

@@ -362,6 +362,7 @@ impl Parser {
             Tok::With => "with",
             Tok::Wild => "wild",
             Tok::Spore => "spore",
+            Tok::Wrapping => "wrapping",
             Tok::Colony => "colony",
             // DN-53, M-811: `object` is now an active keyword; `via` is active inside object bodies.
             Tok::Object => "object",
@@ -1826,6 +1827,8 @@ impl Parser {
             Tok::With => self.parse_with_paradigm(),
             Tok::Wild => self.parse_wild(),
             Tok::Spore => self.parse_spore(),
+            // RFC-0034 §10/§10.1 / CU-5: `wrapping { <expr> }` — the named modular-arithmetic opt-out.
+            Tok::Wrapping => self.parse_wrapping(),
             // DN-03 §1 / M-664: `consume <expr>` — affine acquisition of a `Substrate` value (LR-8).
             Tok::Consume => self.parse_consume_expr(),
             Tok::Colony => self.parse_colony(),
@@ -2157,6 +2160,18 @@ impl Parser {
         let body = Box::new(self.parse_expr()?);
         self.expect(&Tok::RBrace, "`}` to close the wild block")?;
         Ok(Expr::Wild(body))
+    }
+
+    /// `wrapping { <expr> }` — the named, explicit Axis-B modular-arithmetic opt-out (RFC-0034
+    /// §10/§10.1; CU-5). Parses the braced body expression; the checker ([`crate::checkty`]) restricts
+    /// it to an enclosed `Binary{N}` add/sub/mul tree (refusing any other op / width mismatch,
+    /// never-silently — G2), and the evaluator dispatches those ops through `eval_wrapping`.
+    fn parse_wrapping(&mut self) -> Result<Expr, ParseError> {
+        self.expect_keyword(&Tok::Wrapping)?;
+        self.expect(&Tok::LBrace, "`{` to open the `wrapping` block")?;
+        let body = Box::new(self.parse_expr()?);
+        self.expect(&Tok::RBrace, "`}` to close the `wrapping` block")?;
+        Ok(Expr::Wrapping(body))
     }
 
     fn parse_spore(&mut self) -> Result<Expr, ParseError> {

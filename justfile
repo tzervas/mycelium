@@ -55,6 +55,28 @@ check:
 # CI entrypoint — same as `check` (explicit alias used by .github/workflows/checks.yml).
 ci: check
 
+# Canary tier (between test-fast and check) — the fastest COMPLETE-signal gate for per-promotion
+# use: EVERY always-on non-test gate (same set as `just check`: fmt, clippy, markdown, doc-status,
+# doc_refs, secrets, safety, …) PLUS Tier-0 tests only (change-scoped crates' unit/regression —
+# NO reverse-dependency expansion, NO proptest). Reuses `all.sh`'s gate orchestration; only the
+# `test` gate is lightened to the `fast` tier, so there is no gate-list drift.
+#
+# WHY: `just check` (Tier-1) is change-scoped, but a touch to a base crate (mycelium-core / -l1)
+# pulls in EVERY reverse-dependent crate's tests — ballooning to a near-whole-workspace, multi-hour
+# run. The canary keeps the full gate signal while bounding tests to what actually changed, so a
+# per-promotion gate stays minutes, not hours.
+#
+# TIER→STEP MAPPING (DN-20 + the 2026-07-08 canary policy):
+#   • leaf→dev and dev→integration : `just check-canary` (this) — fast complete signal.
+#   • integration→main             : `just check` (Tier-1, selective/stringent — reverse-deps +
+#                                     LOW proptest; still NOT the full durability sweep).
+#   • periodic / release / desktop : `just check-full` (Tier-2 — full workspace, HIGH proptest,
+#                                     mutants, fuzz; heavy VSA/GPU on the desktop; accelerate via M-1014).
+# Never run the Tier-2 durability sweep as a per-promotion blocker in a cloud session (DN-20 desktop-hold).
+check-canary:
+    @echo "── check-canary (all gates + Tier-0 change-scoped tests; no reverse-dep/proptest balloon) ──"
+    @MYC_TEST_TIER=fast bash scripts/checks/all.sh
+
 # Run `just check` but FAITHFULLY surface its exit code (never masked by a trailing
 # command) + a grep-able `CHECK_RESULT=PASS|FAIL exit=N` line. Use for automation /
 # background runs where `just check >log; tail log` would report tail's exit, not the

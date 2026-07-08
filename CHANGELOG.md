@@ -11,6 +11,34 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### trx2 promotion — transpiler `Expr::Cast`, CU-5 `wrapping { }` surface, DN-90…94 design gates, tero-mcp-lite package (2026-07-08)
+
+The trx2 wave promoted from the working tier to the staging tier. Six threads, all honest-tagged.
+**Transpiler** (DN-34 §8.18): a new `Expr::Cast` emitter arm faithfully emits the Binary
+width-widen slice; float↔int and narrowing casts are refused, not approximated (FLAG-cu3-cast-
+fidelity), and the `.myc` draft corpus was regenerated after the arm. Emission stays `Declared`; the
+`myc check` vet figures stay `Empirical` (the transpiler is a gap-profiling instrument, not a bulk
+porter — M-991/DN-34 §8.7–§8.8). **CU-5 `wrapping { }` surface syntax** (mycelium-l1, paired with
+RFC-0034 §10.1): the parser/AST surface for the Axis-B opt-out lands — a new public `Tok::Wrapping`
+and `Expr::Wrapping(Box<Expr>)` threaded through lex/parse/elab/checkty/eval/mono/grade/totality/
+ambient plus the LSP semantic-token and `mycelium-fmt` surfaces, with `src/tests/wrapping.rs`
+coverage. RFC-0034 §10.1 is an **append-only addendum to the Enacted §10** (house rule #3), marked
+*implemented Rust-first, pending ratification* — it enacts nothing on its own. This closes the
+CU-5 surface-syntax FLAG left open by the earlier Lane-C runtime-only landing. **Design gates**:
+five advisory Draft design notes work up the deferred CU/E20-1 questions for the maintainer to
+ratify — **DN-90** (unified arbitrary-large values/sizes strategy, BACKLOG), **DN-91** (CU-3 float↔int
+conversion surface, D4/D5), **DN-92** (CU-6 bit-rotation surface, D1), **DN-93** (E20-1 content-address
+rehash settlement, D3/D6), **DN-94** (atomics & memory-model direction, D2/CU-8) — each `Declared`,
+each moving no other decision's status; the `docs/planning/deferred-design-CU-gates.md` issue-spec
+source (trx2 B2) feeds them. **Stdlib docs**: `docs/spec/stdlib/cmp.md` and `math.md` document the
+self-hosted `std.cmp`/`std.math` surfaces (CU-1/CU-4/CU-6). **Tooling**: `packages/tero-mcp-lite`
+ships a portable, UV-packaged MCP-lite Tero server (query the committed `docs/tero-index/` over MCP)
+with `.mcp.json` registration and a Grok handoff note; `packages/BACKLOG.md` captures the future
+MCP-family/dogfooding backlog. `docs/tero-index/` and the agent api-index were regenerated over the
+merged corpus; `tools/github/issues.yaml` status flips (CU-3/5/7, DN-90…94 minting, E18-1/E33-1
+progress) are FLAGged for the maintainer's PM sync, not hand-edited here. (trx2 E32-1/E33-1;
+DN-34 §8.18; RFC-0034 §10.1; VR-5/G2.)
+
 ### trx2 Lane C — CU-3/5/7 kernel prims + transpiler operand-gated emission and forward-mapped prim table (2026-07-08)
 
 Two scoped leaf→`dev` PRs close §8.16's in-progress worklist (DN-34 §8.17). Kernel (PR #1300, Π
