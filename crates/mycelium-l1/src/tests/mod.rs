@@ -13,6 +13,7 @@ mod compiler_stage5_normpat;
 mod compiler_stage5_register;
 mod compiler_stage5_semcore;
 mod compiler_stage5_typealg;
+mod compiler_stage5_tyref;
 mod compiler_stage5_unify;
 mod decision;
 mod elab;
