@@ -3,7 +3,7 @@
 // @license: MIT
 // @authors: Tyler Zervas
 // @since: 2026-07-06
-// @updated: 2026-07-07
+// @updated: 2026-07-09
 // @summary: Self-hosted L1 semantic-core — a PARTIAL FIRST INCREMENT (M-740 Stage 5, increment 1;
 //   DN-26 SS7.3 row 5 / SS9 flag-1). The full semcore is a 9-file strongly-connected component
 //   (checkty/elab/eval/mono/fuse/decision/usefulness/grade/affine, ~16.7k Rust lines) that is ONE
@@ -2891,14 +2891,19 @@ fn unify_list(a1: Vec[Ty], a2: Vec[Ty], s: Vec[Pair[Bytes, Ty]]) => Result[Vec[P
 // helper; the issue framed it as M-1009's dependency because the increments were independently
 // scoped, but landed sequentially they share it).
 //
-// FLAG-semcore-17 (`mangle_ty_in_ty` and `item_key` are DEFERRED, not ported here — an honest gap,
-// never a silent one). `mangle_ty_in_ty` (a `Ty -> Ty` rewrite) is a Rust MODULE-PRIVATE `fn` with
-// NO reachable `pub(crate)` oracle, and `item_key` is likewise module-private AND depends on mono's
-// `Item` work-item type (not in this nodule's copied vocabulary). Porting either would land
-// UN-witnessable code — exactly the failure the FLAG-semcore-10 live-oracle discipline exists to
-// prevent (a port with no differential is `Declared` at best). Both are left for a later increment
-// that either lifts their visibility (a Rust-source change out of scope for this read-only leaf) or
-// reaches them through a `pub(crate)` entry point. Stated plainly (G2/VR-5), not narrowed silently.
+// FLAG-semcore-17 — RESOLVED (M-1013 STEP 6, further down this file). `mangle_ty_in_ty` and
+// `item_key` were DEFERRED here, not ported, because `mangle_ty_in_ty` (a `Ty -> Ty` rewrite) was a
+// Rust MODULE-PRIVATE `fn` with NO reachable `pub(crate)` oracle, and `item_key` was likewise
+// module-private AND depends on mono's `Item` work-item type (not in this nodule's copied
+// vocabulary). Porting either would have landed UN-witnessable code — exactly the failure the
+// FLAG-semcore-10 live-oracle discipline exists to prevent (a port with no differential is
+// `Declared` at best). RESOLUTION: both are now ported, in the mono.rs TYPE ROUND-TRIP + WORK-ITEM
+// section at the end of this file — `mangle_ty_in_ty`, `item_key`, `closure_field_ty`,
+// `closure_param_ref`, `ty_to_source_ref`, `ty_to_ref`, `ty_to_ref_tagged` were widened to
+// `pub(crate)` in `mono.rs` (zero logic change, the STEP-3/4/5 visibility-widening precedent), and
+// mono's own `Item` enum (a purely structural `Bytes`/`Ty`/`Width`/pair work-item, no `Env`
+// dependency) is likewise widened and mirrored as this nodule's `WorkItem` (a fresh name — `Item` is
+// already taken by this nodule's own ast-level nodule-item sum, FLAG-semcore-2 discipline).
 
 // ── small numeric literal + bytes helpers the mangling needs ─────────────────────────────────────
 fn three32() => Binary{32} = 0b0000_0000_0000_0000_0000_0000_0000_0011;
@@ -4265,4 +4270,144 @@ fn register_nodule_decls(nod: Nodule) => Result[NoduleRegs, Bytes] =
         }
       }
     }
+  };
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// mono.rs TYPE ROUND-TRIP + WORK-ITEM KEY family (M-1013 STEP 6). Closes FLAG-semcore-17.
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// Ports mono.rs's remaining PURE `Ty`/`TypeRef` round-trip helpers plus the monomorphization
+// work-item dedup key — the last of mono.rs's non-`Env`-dependent leaves, sitting directly upstream
+// of the (still un-ported, still entangled) `Mono` driver itself: `closure_field_ty`/
+// `closure_param_ref` (RFC-0024 §4A.2/§4A.4, M-704 — a closure tag-sum capture's field/param type),
+// `mangle_ty_in_ty` (rewrite an applied data type to its mangled-nullary form), `ty_to_source_ref`/
+// `ty_to_ref`/`ty_to_ref_tagged` (a checked `Ty` back to a surface `TypeRef`, two variants — source-
+// named vs. mangled-nullary — plus the guarantee-tagged form), and `item_key` (the canonical dedup
+// key of one `WorkItem`). All are pure `Ty -> {Ty, TypeRef, Bytes}` transformers depending only on
+// the increment-1 `Ty`/`TypeRef`/`BaseType` vocabulary and the increment-4 mangling family
+// (INDEPENDENT of M-1007/M-1008/M-1010/M-1011/M-1012). Live oracle: `mono::{closure_field_ty,
+// closure_param_ref, mangle_ty_in_ty, ty_to_source_ref, ty_to_ref, ty_to_ref_tagged, item_key,
+// Item}` — all six fns plus the `Item` enum were Rust MODULE-PRIVATE (FLAG-semcore-17's original
+// finding); this leaf widens all seven items to `pub(crate)` (zero logic change, the STEP-3/4/5
+// precedent: `resolve_ctors`/`first_duplicate`, commit 2bb06f88; `Exports`/`NoduleImports`,
+// `CoherenceView`, commit 65351071) so the in-crate differential module can reach them directly —
+// a marshalling differential (`decode_ty`/`decode_typeref` against the real oracle output),
+// not a hand-derived one.
+//
+// FLAG-semcore-33 (`WorkItem` — a FRESH name for mono.rs's `Item`; `Item`/`ItFn` are already taken).
+// This nodule already declares a type `Item` (checkty.rs's AST-level nodule-item sum — `ItType`/
+// `ItFn`/`ItTrait`/`ItImpl`/`ItUse`, M-1013 STEP 3/4) — a COMPLETELY different `Item` from mono.rs's
+// own monomorphization work-item enum, which happens to share the Rust type name only because the
+// two live in different Rust modules (`checkty::Item`-shaped construct is actually `ast::Item`; no
+// literal Rust name collision there, but re-using the bare name `Item` here WOULD collide with this
+// nodule's own flat namespace, FLAG-semcore-2's discipline). So mono.rs's `Item` mirrors here as
+// `WorkItem`, with ctors `WiFn`/`WiData`/`WiMethod` (the `Wi` prefix — checked against every other
+// family in this file: `Ty`/`Wd`/`CI`/`DI`/`Mp`/`Hd`/`Ct`/`TD`/`Ex`/`NI`/`NR`/`GPS`/`EPS`/`FtRepr`
+// and this nodule's copied `Kw*`/`Ct`/`TD` surface families — no collision). `Item::Fn`'s Rust field
+// order (`name, targs, wargs, fn_args, dyn_fns`) is preserved verbatim in `WiFn`'s tuple-positional
+// fields (this nodule's established field-order-fidelity convention, e.g. `FnSig`/`FnDecl` above).
+//
+// FLAG-semcore-34 (`ty_to_source_ref`/`ty_to_ref` split into a `_base` (`BaseType`-only) helper plus
+// a thin `TR(_, None)` wrapper). Rust's two fns each build a `BaseType` inline then wrap it once in
+// `TypeRef::unguaranteed(base)` at the end; this port factors the shared `BaseType`-only recursion
+// into `ty_to_source_base`/`ty_to_ref_base` so `ty_to_ref_tagged` (which needs the `BaseType` with a
+// CALLER-supplied guarantee, not `None`) reuses `ty_to_ref_base` directly rather than re-deriving it
+// or building a `TypeRef` and overwriting its guarantee field (this port has no field-mutation
+// primitive — value semantics — so the Rust `let mut r = ty_to_ref(t); r.guarantee = guarantee;`
+// pattern is restated as "compute the base once, wrap twice" instead). Behaviourally identical: the
+// `BaseType` shape produced for a given `Ty` is exactly Rust's, and the guarantee slot is `None` (in
+// `ty_to_ref`/`ty_to_source_ref`) or the caller's value (`ty_to_ref_tagged`) either way.
+
+// ── closure_field_ty / closure_param_ref (mono.rs, RFC-0024 SS4A.2/SS4A.4) ──────────────────────
+fn closure_field_ty(t: Ty) => Ty =
+  match t {
+    TyFn(a, b) => TyData(mangle_arrow(a, b), Nil),
+    _ => mangle_ty_in_ty(t)
+  };
+
+fn closure_param_ref(t: Ty) => TypeRef =
+  match t {
+    TyFn(a, b) => ty_to_ref(TyData(mangle_arrow(a, b), Nil)),
+    _ => ty_to_ref(t)
+  };
+
+// ── mangle_ty_in_ty (mono.rs) — rewrite an applied data type to its mangled-nullary form ────────
+fn mangle_ty_in_ty(t: Ty) => Ty =
+  match t {
+    TyBinary(_) => t,
+    TyTernary(_) => t,
+    TyDense(_, _) => t,
+    TyVsa(_, _, _) => t,
+    TySubstrate(_) => t,
+    TyBytes => t,
+    TyFloat => t,
+    TySeq(elem, n) => TySeq(mangle_ty_in_ty(elem), n),
+    TyData(n, args) => match args { Nil => t, Cons(_, _) => TyData(mangle_ty(t), Nil) },
+    TyVar(v) => TyVar(v),
+    TyFn(_, _) => t
+  };
+
+// ── ty_to_source_ref / ty_to_ref / ty_to_ref_tagged (mono.rs) — checked Ty -> surface TypeRef ───
+// ty_to_source_base: the SOURCE-named round-trip (an applied data type keeps its ORIGINAL name and
+// recurses into its arguments) — used to thread an `expected` type into re-inference.
+fn ty_to_source_base(t: Ty) => BaseType =
+  match t {
+    TyBinary(w) => match w { WdLit(n) => KwBinary(WLit(n)), WdVar(v) => KwBinary(WName(v)) },
+    TyTernary(w) => match w { WdLit(m) => KwTernary(WLit(m)), WdVar(v) => KwTernary(WName(v)) },
+    TyDense(d, sc) => KwDense(d, sc),
+    TyVsa(model, dim, sp) => Vsa(model, dim, sp),
+    TySubstrate(tag) => KwSubstrate(tag),
+    TySeq(elem, n) => KwSeq(ty_to_source_ref(elem), n),
+    TyBytes => KwBytes,
+    TyFloat => KwFloat,
+    TyData(n, args) => Named(n, ty_to_source_ref_list(args)),
+    TyVar(v) => Named(v, Nil),
+    TyFn(a, r) => FnArrow(ty_to_source_ref(a), ty_to_source_ref(r))
+  };
+
+fn ty_to_source_ref(t: Ty) => TypeRef = TR(ty_to_source_base(t), None);
+
+// ty_to_source_ref_list: map a constructor's applied type args through ty_to_source_ref (the direct
+// recursive walk this nodule uses throughout — no first-class-fn `map` primitive, FLAG-semcore-5's
+// KISS/YAGNI precedent for avoiding a generic higher-order helper in a bounded increment).
+fn ty_to_source_ref_list(ts: Vec[Ty]) => Vec[TypeRef] =
+  match ts { Nil => Nil, Cons(h, t) => Cons(ty_to_source_ref(h), ty_to_source_ref_list(t)) };
+
+// ty_to_ref_base: the MANGLED-NULLARY round-trip (an applied data type's arguments are baked into
+// its mangled name, so it becomes a nullary `Named`) — used for a rewritten `FnDecl`/`Param`/
+// `Ascribe`'s emitted surface type.
+fn ty_to_ref_base(t: Ty) => BaseType =
+  match t {
+    TyBinary(w) => match w { WdLit(n) => KwBinary(WLit(n)), WdVar(v) => KwBinary(WName(v)) },
+    TyTernary(w) => match w { WdLit(m) => KwTernary(WLit(m)), WdVar(v) => KwTernary(WName(v)) },
+    TyDense(d, sc) => KwDense(d, sc),
+    TyVsa(model, dim, sp) => Vsa(model, dim, sp),
+    TySubstrate(tag) => KwSubstrate(tag),
+    TySeq(elem, n) => KwSeq(ty_to_ref(elem), n),
+    TyBytes => KwBytes,
+    TyFloat => KwFloat,
+    TyData(n, args) => match args { Nil => Named(n, Nil), Cons(_, _) => Named(mangle_ty(t), Nil) },
+    TyVar(v) => Named(bytes_concat("VAR_", v), Nil),
+    TyFn(a, r) => FnArrow(ty_to_ref(a), ty_to_ref(r))
+  };
+
+fn ty_to_ref(t: Ty) => TypeRef = TR(ty_to_ref_base(t), None);
+
+// ty_to_ref_tagged: like ty_to_ref, but attaches the CALLER-supplied `guarantee` (the source
+// declaration's own `@ g` — never derived from `t`, never merged across instantiations).
+fn ty_to_ref_tagged(t: Ty, guarantee: Option[Strength]) => TypeRef = TR(ty_to_ref_base(t), guarantee);
+
+// ── WorkItem (mono.rs::Item, FLAG-semcore-33) + item_key (mono.rs) ──────────────────────────────
+// WorkItem: mirrors mono.rs::Item field-for-field (Fn's 5 fields, Data's 2, Method's 3 — Rust's own
+// declared field order in each variant, verbatim).
+type WorkItem =
+    WiFn(Bytes, Vec[Ty], Vec[Width], Vec[Pair[Binary{32}, Bytes]], Vec[Pair[Binary{32}, Bytes]])
+  | WiData(Bytes, Vec[Ty])
+  | WiMethod(Bytes, Bytes, Ty);
+
+// item_key: the canonical dedup key of a work item — a kind-tagged mangled string.
+fn item_key(item: WorkItem) => Bytes =
+  match item {
+    WiFn(name, targs, wargs, fa, df) => bytes_concat("fn:", mangle_hof_decl(name, targs, wargs, fa, df)),
+    WiData(name, targs) => bytes_concat("data:", mangle_decl(name, targs)),
+    WiMethod(trait_name, method, for_ty) => bytes_concat("method:", mangle_method(method, trait_name, for_ty))
   };
