@@ -17,6 +17,19 @@ if ! cargo public-api --help >/dev/null 2>&1; then
   exit 0
 fi
 
+# cargo-public-api reads the surface from rustdoc-JSON — a NIGHTLY-only rustdoc feature — so the
+# surface is introspected with a nightly toolchain (MYC_API_TOOLCHAIN, default `nightly`), while the
+# MSRV-pinned 1.96.1 still builds every real artifact (ADR-041): this gate reads the surface, it
+# produces no build output. Pin to a date (MYC_API_TOOLCHAIN=nightly-YYYY-MM-DD) for baselines that
+# stay reproducible across image rebuilds. When that toolchain is absent, SKIP (never fail) — a
+# missing introspection toolchain leaves the surface *unverified*, exactly like a missing
+# cargo-public-api above; it is not a surface regression (G2: honest skip, not a spurious red).
+api_toolchain="${MYC_API_TOOLCHAIN:-nightly}"
+if ! { have rustup && rustup run "$api_toolchain" rustdoc --version >/dev/null 2>&1; }; then
+  skip "no '$api_toolchain' rustdoc (cargo-public-api needs nightly rustdoc-JSON; \`rustup toolchain install $api_toolchain --profile minimal --component rustdoc\` or run scripts/install-tools.sh) — surface gate skipped"
+  exit 0
+fi
+
 baseline_dir="docs/spec/api"
 checked=0
 for d in crates/*/ xtask/; do
@@ -33,7 +46,7 @@ for d in crates/*/ xtask/; do
     skip "$pkg: no baseline ($base) — run \`just api-baseline\`"
     continue
   fi
-  if ! cur="$(cargo public-api --package "$pkg" --simplified 2>/dev/null)"; then
+  if ! cur="$(cargo public-api --toolchain "$api_toolchain" --package "$pkg" --simplified 2>/dev/null)"; then
     fail "$pkg: cargo public-api failed to build the surface"
     rc=1
     continue

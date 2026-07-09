@@ -56,7 +56,15 @@ Multi-stage build (`docker build -f .devcontainer/Dockerfile -t mycelium-dev .`)
    `scripts/checks/` tool, by literally `COPY`-ing in and running `scripts/install-tools.sh`
    (`MYCELIUM_SKIP_OPTIONAL_CARGO=0` here, unlike the thin launch path — an image build has minutes
    to spare, so it also bakes the `cargo-modules`/`cargo-depgraph`/`cargo-public-api` introspection
-   tools that the per-session bootstrap deliberately skips).
+   tools that the per-session bootstrap deliberately skips). It also provisions a **nightly**
+   toolchain (minimal profile + `rustdoc`) that `cargo public-api` (the `just api` surface gate) uses
+   **only** to build rustdoc-JSON — a nightly-only rustdoc feature; the MSRV-pinned 1.96.1 still
+   builds every real artifact (ADR-041), so the nightly never touches a shipped build. Pin it with
+   `--build-arg API_TOOLCHAIN=nightly-YYYY-MM-DD` (image build) or `MYC_API_TOOLCHAIN=…` (the
+   Setup-script / `just api` / `just api-baseline` paths — one knob, install and gate never disagree)
+   so the surface baselines stay reproducible across rebuilds. When no nightly is present the surface
+   gate **skips** (never fails) — an absent introspection toolchain leaves the surface unverified,
+   not regressed.
 2. **`planner`** — copies the full repo (this stage is never copied into the final image) and runs
    `cargo chef prepare` to produce a manifest-only `recipe.json`.
 3. **`warm`** — copies only `recipe.json` and runs `cargo chef cook --workspace --all-targets
