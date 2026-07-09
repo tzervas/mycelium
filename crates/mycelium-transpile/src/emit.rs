@@ -43,17 +43,41 @@ type StructLayout = Vec<Option<String>>;
 pub(crate) type TypeEnv = HashMap<String, String>;
 
 /// If `e` is a **bare, single-segment identifier** naming a local whose type is present in `env`,
-/// return that local's mapped type text (a clone of the `env` entry) — `None` for any other
+/// return that local's mapped type text (a clone of the `env` entry); or a **structurally
+/// transparent** wrapper around such an expression (`(e)`, `&e`/`&mut e`). `None` for any other
 /// expression shape (a call, a field access, a literal, …) or for a name not in scope. Deliberately
-/// narrow: the transpiler has no general expression-typing pass, so only the one case it can decide
-/// *without guessing* — "this exact identifier's declared parameter/local type is known" — is
-/// answered; everything else is simply absent (VR-5).
+/// narrow: the transpiler has no general expression-typing pass, so only cases this can decide
+/// *without guessing* are answered; everything else is simply absent (VR-5).
+///
+/// (D3 operand-type-inference depth, DN-34 §8.16 residual — trx2 follow-on.) The addition past the
+/// original bare-identifier case is decidable on the expression's own syntax, not an inference
+/// guess: `Expr::Paren`/`Expr::Reference` are recursed through because this module's own `emit_expr`
+/// treats them identically — `Expr::Paren` emits its inner text unchanged but wrapped in `( )`, and
+/// `Expr::Reference` is **erased** outright (value semantics, ADR-003; see that arm's doc) — so the
+/// *type* of `(e)`/`&e`/`&mut e` is exactly the type of `e` by this module's own emission contract,
+/// not a new claim.
+///
+/// **Verify-first-rejected extension (recorded, not guessed away — VR-5/mitigation #14):** typing an
+/// integer literal by its explicit unsigned Rust suffix (`5u16`) was tried and does NOT belong here.
+/// The suffix itself is decidable, but composing the literal into a prim call (`eq(a, 5)`) does not
+/// `myc check`-clean regardless — the real toolchain refuses a bare decimal `Int` operand with
+/// `"a bare integer literal has no representation family (no cross-family defaulting, Q6)"`
+/// (empirically confirmed against `target/debug/myc-check`; `docs/spec/grammar/mycelium.ebnf`'s
+/// literal-elaboration comment does not hold in the shipped checker). Fixing that needs the literal's
+/// *own emission* to change to a width-correct `BinLit` spelling — exactly the **"typed-literal
+/// form"** DN-34 §8.13/§8.14 already surveyed and explicitly left undecided ("a design decision, not
+/// a faithful drop-in (not implemented, VR-5)"). Inventing that spelling decision here would be
+/// exactly the guess G2/VR-5 forbid, so this module still only ever emits an `Int` literal as a bare
+/// decimal digit string (`Expr::Lit`'s arm, unchanged) and never claims one as a known `Binary{N}`
+/// operand for the gate below.
 pub(crate) fn expr_env_type(e: &Expr, env: &TypeEnv) -> Option<String> {
     match e {
         Expr::Path(p) if p.qself.is_none() && p.path.segments.len() == 1 => {
             let name = p.path.segments.last()?.ident.to_string();
             env.get(&name).cloned()
         }
+        Expr::Paren(p) => expr_env_type(&p.expr, env),
+        Expr::Reference(r) => expr_env_type(&r.expr, env),
         _ => None,
     }
 }
@@ -1231,10 +1255,17 @@ fn emit_expr_inner(expr: &Expr, self_ty: Option<&str>, env: &TypeEnv) -> Result<
         // The one decidable-faithful slice is **`Binary{N} as Binary{M}` widening/identity** (`M >=
         // N`): DN-41's `bit.width_cast` zero-extends on the MSB side (verified `prim_width_cast`,
         // `mycelium-interp/src/prims.rs`), and `Binary` is sign-free unsigned magnitude (ADR-028), so
-        // that exactly matches Rust's unsigned widening/identity. **Narrowing** (`M < N`) is NOT
-        // faithful: Rust `as` narrowing **wraps** (keeps the low `M` bits), but `width_cast` **refuses**
-        // (`EvalError::Overflow`) on any set dropped high bit — a *checked* narrow, not a wrapping one.
-        // No never-refusing wrapping-truncate prim exists yet, so a narrow is FLAGged, never emitted.
+        // that exactly matches Rust's unsigned widening/identity. **Narrowing** (`M < N`) was NOT
+        // faithful with `width_cast` alone: Rust `as` narrowing **wraps** (keeps the low `M` bits), but
+        // `width_cast` **refuses** (`EvalError::Overflow`) on any set dropped high bit — a *checked*
+        // narrow, not a wrapping one. DN-51 (**Accepted**) *names* the faithful wrapping form — an
+        // explicit `truncate` op, "unconditionally drops the high `N - M` bits… total but lossy"
+        // (DN-51 §2 D3) — and it is now **landed** (maintainer-authorized DN-39 post-freeze promotion:
+        // `bit.truncate` registered in `crates/mycelium-core/src/prim.rs`'s Π table, implemented in
+        // `crates/mycelium-interp/src/prims.rs::prim_truncate`, surfaced in
+        // `crates/mycelium-l1/src/checkty.rs`). So a narrow now emits `truncate` — it matches Rust `as`
+        // narrowing's wrap semantics *exactly* (DN-51 §2 D3: unconditional low-`M`-bits keep, never a
+        // refusal), the same fidelity bar the widen/identity arm above already meets.
         // Any **float-crossing** cast (`Binary{N} as Float`, `Float as Binary{N}`, `Float as Float`)
         // is CU-3 territory: the CU-3 kernel prims are checked/refusing where Rust `as` rounds/
         // saturates (`flt.to_bin` refuses out-of-range vs Rust's saturation; `bin.to_flt` errs
@@ -1243,8 +1274,10 @@ fn emit_expr_inner(expr: &Expr, self_ty: Option<&str>, env: &TypeEnv) -> Result<
         // explicit `PENDING-DESIGN(CU-3-fidelity)` gap (`prim_map.rs` §CU-3 records the same exclusion:
         // no confirmed prim name, `as` has no `Call`/`MethodCall` shape to key on).
         Expr::Cast(c) => {
-            // The operand's Mycelium type — decidable ONLY for a bare in-scope identifier (the only
-            // shape `expr_env_type` answers without guessing; `None` for a call/field/literal/etc.).
+            // The operand's Mycelium type — decidable for a bare in-scope identifier or a
+            // structurally-transparent `(e)`/`&e` wrapper around one; `None` for a call/field/
+            // literal/etc. (see `expr_env_type`'s doc — D3 operand-type-inference depth, DN-34
+            // §8.16 residual, including why a suffixed literal was tried and rejected there).
             let operand_ty = expr_env_type(&c.expr, env);
             let operand_is_float = operand_ty.as_deref() == Some("Float");
             let operand_width = operand_ty.as_deref().and_then(binary_width);
@@ -1274,13 +1307,14 @@ fn emit_expr_inner(expr: &Expr, self_ty: Option<&str>, env: &TypeEnv) -> Result<
                     ),
                 ))
             } else if operand_ty.is_none() {
-                // Operand type unknown (not a bare in-scope identifier) — never guess it (VR-5).
+                // Operand type unknown — never guess it (VR-5).
                 Err(GapReason::new(
                     Category::Other,
                     format!(
                         "cast `{}` — operand type unknown: `as` fidelity requires a known operand type, \
-                         but the operand is not a bare in-scope identifier whose type this transpiler \
-                         can resolve without guessing (no general expression-typing pass; VR-5)",
+                         but the operand is not a bare in-scope identifier (or a `(..)`/`&..` wrapper \
+                         around one) whose type this transpiler can resolve without guessing (no \
+                         general expression-typing pass; VR-5)",
                         tokens_to_string(expr)
                     ),
                 ))
@@ -1293,20 +1327,13 @@ fn emit_expr_inner(expr: &Expr, self_ty: Option<&str>, env: &TypeEnv) -> Result<
                     let operand = emit_expr(&c.expr, self_ty, env)?;
                     Ok(format!("width_cast({operand}, {})", zero_bin_literal(m)))
                 } else {
-                    // Narrow: Rust wraps (low `M` bits); `width_cast` REFUSES on overflow. Emitting it
-                    // would be UNFAITHFUL, and no never-refusing wrapping-truncate prim exists yet.
-                    Err(GapReason::new(
-                        Category::Other,
-                        format!(
-                            "FLAG-cast-narrow-fidelity: cast `{}` narrows Binary{{{n}}} -> Binary{{{m}}}, \
-                             but Rust `as` narrowing WRAPS (keeps the low {m} bits) while DN-41 \
-                             `bit.width_cast` REFUSES on a set dropped high bit (checked narrow, \
-                             `prim_width_cast` -> Overflow). No faithful never-refusing wrapping-truncate \
-                             prim exists yet, so this is an explicit gap, never an unfaithful \
-                             checked-narrow emission (G2/VR-5)",
-                            tokens_to_string(expr)
-                        ),
-                    ))
+                    // Narrow: Rust wraps (low `M` bits); `truncate` unconditionally keeps the low `M`
+                    // bits (DN-51 §2 D3) — an exact semantic match, now landed (maintainer-authorized
+                    // DN-39 post-freeze promotion). Reuses the same width-witness ABI `width_cast`
+                    // uses (`zero_bin_literal(m)` — only the witness's width is read, its bits are
+                    // ignored, DN-41 §3), since `truncate` was built as `width_cast`'s sibling.
+                    let operand = emit_expr(&c.expr, self_ty, env)?;
+                    Ok(format!("truncate({operand}, {})", zero_bin_literal(m)))
                 }
             } else {
                 // Operand known but not `Binary{N}` (e.g. `Bool`, a user type), or the target is not an
