@@ -37,6 +37,7 @@ mycelium/
 ├── proofs/                    ← Z3/SMT2 + Liquid-Haskell proof artifacts
 ├── scripts/                   ← the check tooling (scripts/checks/* behind `just check`)
 ├── editors/                   ← editor integrations (VS Code/Cursor extension — `mycelium-language`; M-924/lang-tooling)
+├── packages/                 ← portable, repo-agnostic MCP tooling (tero-mcp-lite — Layer-1 tero server; repo-root .mcp.json)
 ├── tools/                     ← GitHub issue bootstrap, LLM harness, Termux setup, grammar artifacts
 └── xtask/                     ← cargo-xtask repo-automation entrypoint
 ```
