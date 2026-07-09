@@ -355,6 +355,30 @@ impl PrimTable {
         // bytes prims' real typing lives in their interpreter prims (same paradigm-model escape hatch).
         // A first-class width-change `WidthRel` is a deliberate, RFC-unpinned extension left for later.
         t.insert("bit.width_cast", exact(vec![Binary, Binary], Binary));
+        // DN-51 §2 D3/§6 (maintainer-authorized DN-39 post-freeze promotion; extends DN-41): the
+        // explicit, total, **lossy** `Binary` narrow — `truncate` unconditionally drops the high
+        // `N - M` bits and keeps the low `M`, unlike `bit.width_cast`'s checked narrow, which
+        // refuses when the dropped bits are nonzero. `intrinsic = Declared` — DN-51 §4's guarantee
+        // matrix states this explicitly ("own honest lossy tag — never `Exact`"), and per VR-5/
+        // CLAUDE.md rule 1 `Proven` needs a checked-side-condition theorem and `Empirical` needs
+        // trial validation, neither of which applies to a deterministic bit-drop with no numeric
+        // approximation target; `Declared` is the honest floor, mirroring
+        // `prims.rs::wrapping_result`'s (RFC-0034 §10/CU-5) posture for the same shape of claim —
+        // an explicit, developer-opted-into semantics, not a fabricated bound (see the FLAG in
+        // `prims.rs::truncate_result`). Same width-model FLAG as `bit.width_cast` immediately above
+        // (`WidthRel::Uniform` as the nearest tag; the real witness-width-drives-`M` typing lives in
+        // the interpreter prim `prims.rs::prim_truncate` and the L1 checker `checkty.rs`).
+        t.insert(
+            "bit.truncate",
+            PrimDecl {
+                sig: PrimSig {
+                    operands: vec![Binary, Binary],
+                    result: Binary,
+                    width: WidthRel::Uniform,
+                },
+                intrinsic: GuaranteeStrength::Declared,
+            },
+        );
         // RFC-0032 D3 (M-749): never-silent indexed-sequence access. Both are `intrinsic = Exact`
         // (total/decidable over the in-range domain). **Paradigm-model note (FLAG):** the Π paradigm
         // model is `Binary`/`Ternary`/`Any` only — it has no first-class `Seq` paradigm, and a

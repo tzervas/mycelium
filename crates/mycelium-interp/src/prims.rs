@@ -72,7 +72,9 @@ impl PrimRegistry {
     /// M-111), the reduce-to-`Bool` comparison prims (`cmp.eq`/`cmp.lt` → `Binary{1}`, RFC-0032 D1,
     /// M-747), never-silent fixed-width binary arithmetic (`bit.add`/`bit.sub`, RFC-0032 D2,
     /// M-748), the never-silent `Binary` width-cast (`bit.width_cast` — zero-extend widen / checked
-    /// narrow, DN-41, M-798), never-silent indexed-sequence access (`seq.len`/`seq.get`, RFC-0032 D3,
+    /// narrow, DN-41, M-798), the explicit total-but-lossy `Binary` narrow (`bit.truncate` —
+    /// unconditionally drops the high bits, never refuses, `Declared` tag, DN-51 §2 D3/§6),
+    /// never-silent indexed-sequence access (`seq.len`/`seq.get`, RFC-0032 D3,
     /// M-749), never-silent byte-string access
     /// (`bytes.len`/`bytes.get`/`bytes.slice`/`bytes.concat`, RFC-0032 D4, M-750), the never-silent
     /// two's-complement `Binary` multiply (`bin.mul`, RFC-0033 §4.1.2/§4.1.3, M-887 — the first
@@ -170,6 +172,9 @@ impl PrimRegistry {
         r.register("cmp.lt_s", prim_cmp_lt_s);
         // DN-41 (M-798): never-silent width-cast (zero-extend widen / checked narrow) over `Binary`.
         r.register("bit.width_cast", prim_width_cast);
+        // DN-51 §2 D3/§6 (maintainer-authorized DN-39 post-freeze promotion): the explicit, total,
+        // lossy `Binary` narrow — unconditionally drops the high bits, never refuses.
+        r.register("bit.truncate", prim_truncate);
         // RFC-0032 D3 (M-749): never-silent indexed-sequence access over `Repr::Seq`.
         r.register("seq.len", prim_seq_len);
         r.register("seq.get", prim_seq_get);
@@ -1433,6 +1438,90 @@ fn prim_width_cast(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
         Payload::Bits(out),
         ApproxRule::Refuse,
     )
+}
+
+// --- DN-51 §2 D3/§6 (maintainer-authorized DN-39 post-freeze promotion, extends DN-41): `truncate`
+//
+// The explicit, total, **lossy** counterpart to `width_cast`'s checked narrow: `truncate`
+// unconditionally drops the high `N - M` bits and keeps the low `M` — it **never refuses**, unlike
+// `width_cast`'s narrow (`EvalError::Overflow` on a set dropped bit). DN-51 §2 D3: "unconditionally
+// drops the high `N − M` bits… total but lossy", "only ever via this named op" (so `width_cast`'s
+// "never a *silent* truncation" still holds — the loss is only ever opted into by name). Same
+// width-witness ABI as `width_cast` (DN-41 §3): the second operand's `Binary{M}` width is the
+// result width `M`; its bits are unused. When `M >= N` (widen/identity) no bits are actually
+// dropped — this behaves exactly as `width_cast`'s zero-extend/identity; DN-51 names `truncate` as
+// the narrowing counterpart to `width_cast` but does not restrict its *domain* to `M < N`, so this
+// stays total over every `M` rather than adding a refusal DN-51 never asked for (mirrors
+// `width_cast`'s own generality).
+//
+// **Honesty tag — `Declared`, never `Exact` (DN-51 §4's guarantee matrix, VR-5).** Per CLAUDE.md
+// rule 1, `Proven` needs a theorem with *checked* side-conditions and `Empirical` needs trial
+// validation; neither applies here — `truncate`'s "loss" is not a numerical approximation of some
+// other target quantity with a citable/fittable bound, it is the **explicit, developer-opted-into
+// semantics of the named op itself** (the whole point of naming it, per DN-51 §3). That is exactly
+// the shape [`wrapping_result`] (RFC-0034 §10/CU-5) already tags `Declared` with a zero-magnitude
+// `UserDeclared` bound for the same reason ("the explicit, developer-opted-into semantics… never a
+// fabricated `Proven`/`Empirical` claim"), so [`truncate_result`] mirrors it verbatim rather than
+// inventing a fresh convention. FLAG (per-instance grading, DN-51 §6 item 4, deferred): a future
+// pass could special-case the `M >= N` (no actual loss) instances back to `Exact`/`width_cast`'s own
+// tag — not done here; every `bit.truncate` call is uniformly `Declared` today, which is honest
+// (never an upgrade) even though it is not maximally precise for the non-narrowing sub-case.
+
+/// Build a `truncate`-tagged result (DN-51 §2 D3): mirrors [`wrapping_result`]'s posture exactly —
+/// `Declared` guarantee with a zero-magnitude `UserDeclared` bound, because the lossiness is the
+/// op's own declared semantics, not a fittable/provable numeric approximation (see the section note
+/// above). Mirrors [`prim_width_cast`]'s witness-invisibility: `inputs` is expected to be just the
+/// **value** operand (`&args[..1]`) — the witness contributes its width only, never its
+/// guarantee/provenance (DN-41 §3).
+fn truncate_result(
+    prim: &str,
+    inputs: &[&Value],
+    repr: Repr,
+    payload: Payload,
+) -> Result<Value, EvalError> {
+    let strength = GuaranteeStrength::propagate(
+        GuaranteeStrength::Declared,
+        inputs.iter().map(|v| v.meta().guarantee()),
+    );
+    let provenance = Provenance::Derived {
+        op: operation_hash(prim),
+        inputs: inputs.iter().map(|v| v.content_hash()).collect(),
+    };
+    let bound = Bound {
+        kind: BoundKind::Error {
+            eps: 0.0,
+            norm: NormKind::Linf,
+        },
+        basis: BoundBasis::UserDeclared,
+    };
+    let meta =
+        Meta::new(provenance, strength, Some(bound), None, None, None).map_err(EvalError::Wf)?;
+    Value::new(repr, payload, meta).map_err(EvalError::Wf)
+}
+
+/// `bit.truncate : (Binary{N}, Binary{M}) → Binary{M}` — DN-51 §2 D3's explicit, total, lossy
+/// narrow. Widen/identity (`M >= N`) zero-extends exactly like [`prim_width_cast`] (no bits
+/// dropped); narrow (`M < N`) unconditionally keeps the low `M` bits — **never refuses**, unlike
+/// `width_cast`'s checked narrow. The second operand is the same width-witness shape as
+/// `width_cast` (only its `Binary{M}` width is read; its bits are ignored).
+fn prim_truncate(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 2)?;
+    let value = as_bits(prim, args[0])?;
+    let witness = as_bits(prim, args[1])?;
+    let n = value.len();
+    let m = witness.len();
+    let out: Vec<bool> = if m >= n {
+        // Widen (or identity): zero-extend, identical to `width_cast` — no bits are dropped.
+        let mut bits = vec![false; m - n];
+        bits.extend_from_slice(value);
+        bits
+    } else {
+        // Narrow: unconditionally drop the high `N - M` bits and keep the low `M` — total, never
+        // refuses (DN-51 §2 D3), unlike `width_cast`'s checked narrow.
+        let (_dropped, kept) = value.split_at(n - m);
+        kept.to_vec()
+    };
+    truncate_result(prim, &args[..1], args[1].repr().clone(), Payload::Bits(out))
 }
 
 // --- RFC-0032 D3 (M-749): indexed-sequence primitives ------------------------------------------
