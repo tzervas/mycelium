@@ -206,6 +206,36 @@ not add `on: push` / `on: pull_request` auto-triggers without an explicit decisi
   `doc_refs_check.py`; proofs → `z3`/LH/Lean per the `proofs/*/README.md`. The scoped-setup
   automation (`just setup-scoped`) is tracked as **M-848**; until then the DN-65 §2.3 mapping is the
   manual checklist.
+- **Ratified branch/merge/propagation workflow (DN-97, Accepted 2026-07-09 — the batch engine).** The
+  high-throughput pattern for this project's parallel, AI-accelerated development. Operated by the
+  **`/forward`** (up) and **`/sync-down`** (down) skills plus `just package-release`; full spec in
+  **DN-97** (with DN-95 down-propagation + DN-96 forward-pipeline as inputs). The invariants:
+  - **Three *same-content* persistent trunks** (`dev`/`integration`/`main`) that differ by **rigor**,
+    not by tracked content (`dev` full check suite; `integration` polished/curated; `main` the
+    squashed release history). Because content is identical, **every merge — up and down — is a plain
+    `--no-ff` with zero machinery**: conflict-free, never deletes, never needs force.
+  - **Ephemeral work-sets, auto-pruned on merge**, made **disjoint by construction** via `/forward`'s
+    spec→public-API→private-API→component-seam-map→code pipeline (a context-windowing discipline: each
+    stage a bounded working set that persists a compact artifact and drops from context once consumed).
+    So 20–30 work-sets stay in flight without colliding.
+  - **Up-flow is non-squash `--no-ff`** (work-set→`dev`, `dev`→`integration`). Each **disjoint work-set
+    squash-PRs into `main` individually**; a **batch of 1–6** lands per cycle, so `main` stays a clean,
+    bisectable series of one-squash-per-work-set commits.
+  - **Down-flow is `/sync-down`**: after a batch lands, a plain `--no-ff` merge-down
+    `main`→`integration`→`dev`, **no force**, via a **PR per tier** (never a raw push to a protected
+    branch). In-flight work-sets then **adapt** with `git merge --no-ff origin/dev` and resume up.
+  - **Lightweight production `main` is a `just package-release` artifact** (`git archive` +
+    `.gitattributes export-ignore`), **not** divergent tracked content — Rank 1 dissolves the
+    content-filter, so no merge-driver is ever needed.
+  - **Change size:** the DN-65 ≈1–2k-LOC soft target, with a **4,000-LOC total-churn hard cap** per PR
+    (human-reviewable). Auto-generated bulk (`api-index`/`tero-index`/`lib-index`/rendered docs) is
+    **excluded** from both and rides **precursor doc/index branches** merged one commit ahead of the
+    change, keeping each change PR small and every tier's drift gate green.
+  - **Sanctioned carve-outs** (documented, never-silent — **none involve force**): the batched
+    multi-squash-to-`main` cadence; ephemeral-work-set auto-prune; and the standing note that **the
+    lower trunks' post-squash graph divergence is the sanctioned pattern, not drift** (DN-95 proved it
+    unavoidable under squash-only plus no-force plus persistent trunks — `main` is the clean history
+    that ships). **Force pushes remain prohibited (mitigation #6).**
 
 ## Swarm development — octopus-merge pattern (parallel agents, zero collision)
 When a wave decomposes into several **tightly-scoped, independent** tasks (e.g. one stdlib
@@ -693,6 +723,19 @@ Invoke with `/<name>`; they auto-engage when relevant.
   findings as PR comments → patches → replies → updates the description → merges the PR **up the tree**
   (leaf→`dev`, `dev`→`integration`). Parameterized by PR # + base tier. (Not the `main` squash — that's
   `/land`.)
+- **`/forward`** — develop one change forward the DN-97 way (the batch engine, above): the
+  spec→public-API→private-API→component-seam-map→code **context-windowing pipeline** (each stage a
+  bounded working set that persists a compact artifact and drops from context once consumed), the
+  change-sizing check (≈1–2k-LOC soft, **4,000-LOC total-churn hard cap**; auto-gen bulk excluded), and
+  the **precursor doc/index-branch** step. Owns only that new material; delegates isolation → `/worktree-guard`,
+  review+merge-up → `/pr-land`, index regen → `/doc-index`+`/tero-refresh`, and the `main` landing →
+  `/land`. Resume mid-pipeline after a compaction with `STAGE=<stage>`.
+- **`/sync-down`** — propagate a squashed landing on `main` back **down** to the persistent trunks
+  (`main`→`integration`→`dev`) via a **plain no-force `--no-ff` merge per tier** (DN-97 Rank 1:
+  same-content trunks ⇒ trivially conflict-free — no merge-driver), through the same **PR-merge**
+  mechanism `/pr-land`/`/land` use for these protected branches (never a raw push). Run once per batch
+  of 1–6 disjoint work-set squashes; also carries the in-flight-adapt one-liner (`git merge --no-ff
+  origin/dev` into an open work-set branch).
 - **`/worktree-guard`** — the isolated-worktree safeguard (mitigation #11), parameterized + idempotent
   like `/branch-guard`: `--leaf` asserts a concurrent agent is isolated; default asserts the
   orchestrator's main tree is a clean pointer. Backs `scripts/checks/worktree-guard.sh`.
