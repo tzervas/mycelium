@@ -1041,18 +1041,23 @@ impl PhylumEnv {
 /// separate from the pub-blind coherence view (below): conflating the two would let a `use` import a
 /// private name or let the orphan rule miss a private declaration (a bug — the two views answer
 /// different questions).
+// M-1013 STEP 4 (self-hosting differential): widened to `pub(crate)` (struct + fields), zero logic
+// change, so `crates/mycelium-l1/src/tests/compiler_stage5_imports.rs` (in-crate) can marshal
+// fixtures into this type and read `resolve_imports`'s live-oracle output back out — the same
+// widening precedent as `resolve_ctors`/`first_duplicate` (commit 2bb06f88) and `CoherenceView`
+// (commit 65351071).
 #[derive(Debug, Default)]
-struct Exports {
+pub(crate) struct Exports {
     /// Exported data types, by qualified name.
-    types: BTreeMap<String, DataInfo>,
+    pub(crate) types: BTreeMap<String, DataInfo>,
     /// Exported functions, by qualified name.
-    fns: BTreeMap<String, FnDecl>,
+    pub(crate) fns: BTreeMap<String, FnDecl>,
     /// Exported traits, by qualified name.
-    traits: BTreeMap<String, TraitInfo>,
+    pub(crate) traits: BTreeMap<String, TraitInfo>,
     /// **All** declared simple names per nodule-prefix, with their `pub`-ness — used to distinguish
     /// "no such name" from "exists but private" in a `use` refusal (G2 — an honest, helpful
     /// diagnostic). Keyed by qualified name → `is_pub`.
-    declared: BTreeMap<String, bool>,
+    pub(crate) declared: BTreeMap<String, bool>,
 }
 
 /// The resolved imports available to **one** nodule while its bodies are checked (M-662): the
@@ -1061,17 +1066,20 @@ struct Exports {
 /// **ambiguous** (importable only by an explicit `use`). The ambiguous set is consulted at every
 /// unresolved-name site so a *reference* to an ambiguous glob name is a never-silent `CheckError`,
 /// never a silent winner (G2).
-#[derive(Debug, Default, Clone)]
-struct NoduleImports {
+// M-1013 STEP 4: widened to `pub(crate)` (struct + fields), zero logic change (same rationale as
+// `Exports` above); `PartialEq` added (also derive-only) so the in-crate differential can
+// `assert_eq!`/`assert_ne!` a decoded `NoduleImports` against the live oracle's value.
+#[derive(Debug, Default, Clone, PartialEq)]
+pub(crate) struct NoduleImports {
     /// Imported data types, by simple name.
-    types: BTreeMap<String, DataInfo>,
+    pub(crate) types: BTreeMap<String, DataInfo>,
     /// Imported functions, by simple name.
-    fns: BTreeMap<String, FnDecl>,
+    pub(crate) fns: BTreeMap<String, FnDecl>,
     /// Imported traits, by simple name.
-    traits: BTreeMap<String, TraitInfo>,
+    pub(crate) traits: BTreeMap<String, TraitInfo>,
     /// Names brought in by **two or more** globs (and not resolved by an explicit `use` or a local
     /// decl): a *reference* to one of these is the never-silent glob-vs-glob ambiguity error.
-    ambiguous: BTreeSet<String>,
+    pub(crate) ambiguous: BTreeSet<String>,
 }
 
 impl NoduleImports {
@@ -1420,7 +1428,14 @@ fn register_nodule_decls(nodule: &Nodule) -> Result<NoduleRegs, CheckError> {
 ///
 /// (A glob over a prefix with zero `pub` names is allowed — an empty import; an unresolved *reference*
 /// then surfaces the normal unknown-name error.)
-fn resolve_imports(nodule: &Nodule, exports: &Exports) -> Result<NoduleImports, CheckError> {
+///
+/// M-1013 STEP 4: widened to `pub(crate)` (zero logic change) so the in-crate self-hosting
+/// differential (`crates/mycelium-l1/src/tests/compiler_stage5_imports.rs`) can call this live
+/// oracle directly (the same widening precedent as `resolve_ctors`/`first_duplicate`, PR #1238).
+pub(crate) fn resolve_imports(
+    nodule: &Nodule,
+    exports: &Exports,
+) -> Result<NoduleImports, CheckError> {
     let site = qualify(&nodule.path, "<use>");
     let mut imp = NoduleImports::default();
     // Track how each simple name entered (glob vs explicit) so precedence + the dup-explicit and
