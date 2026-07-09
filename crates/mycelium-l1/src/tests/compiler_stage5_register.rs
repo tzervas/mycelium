@@ -34,9 +34,9 @@ use crate::ast::{
     WidthRef,
 };
 use crate::checkty::{
-    collect_tuple_arities, first_duplicate, prelude, register_instances, register_traits,
-    register_types, resolve_ctors, resolve_imports, type_head, CoherenceView, CtorInfo, DataInfo,
-    Exports, InstanceInfo, NoduleImports, TraitInfo, Ty, Width,
+    collect_tuple_arities, first_duplicate, prelude, register_instances, register_nodule_decls,
+    register_traits, register_types, resolve_ctors, resolve_imports, type_head, CoherenceView,
+    CtorInfo, DataInfo, Exports, InstanceInfo, NoduleImports, NoduleRegs, TraitInfo, Ty, Width,
 };
 use crate::eval::L1Value;
 use crate::tests::marshal_support::*;
@@ -2819,4 +2819,214 @@ fn marshal_discriminates_nodule_imports() {
     );
     // field 3: ambiguous.
     assert_ne!(dd(&base), dd(&format!("NI(Nil, Nil, Nil, Cons({a}, Nil))")));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// register_nodule_decls (M-1013 STEP 5) — the top-level declaration-registration entry point
+// (checkty.rs 1340-1401), deferred at STEP 4 landing and now ported: it runs register_types (seeded
+// with the `Bool` prelude), register_traits, the CONDITIONAL built-in `Fuse` trait seed (M-965 F-A1,
+// via the newly-ported `fuse::prelude()` mirror — the fuse.rs slice that does NOT touch
+// `eval::Evaluator`), and a fresh fn-signature registration pass, in that exact order.
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+//
+// Differential method: identical harness marshalling (DN-26 §10.2) — run the REAL
+// `checkty::register_nodule_decls` oracle on a `Nodule` fixture, evaluate the `.myc` port's mirror
+// driver on the SAME fixture, decode its `NoduleRegs` output, compare against the oracle.
+//
+// FLAG-semcore-35 (scope narrowing, honestly flagged — G2/VR-5, the direct twin of FLAG-semcore-34
+// above): the `fns` registry decodes to its NAME set only, not the full `FnDecl` payload — decoding an
+// arbitrary registered `FnDecl.body` `Expr` needs a `decode_expr` no Stage-5 gate has built yet (every
+// prior increment's `Expr`/`FnDecl` traffic has been INPUT-only). `register_nodule_decls`'s own
+// fn-registration loop (checkty.rs 1392-1400) never inspects a body either — it is name-and-arity
+// registration only — so the *classification* this differential compares (which names got registered,
+// and the dup-type-param / dup-name refusals) is exactly the surface the ported loop's own logic
+// touches.
+
+/// `checkty::NoduleRegs.fns` → its NAME set (FLAG-semcore-35).
+fn fn_names(fns: &BTreeMap<String, FnDecl>) -> BTreeSet<String> {
+    fns.keys().cloned().collect()
+}
+
+/// `Pr(name, _)` → the name only, from a `Vec[Pair[Bytes, FnDecl]]` element (FLAG-semcore-35: the
+/// `FnDecl` field is never decoded).
+fn decode_nodule_regs_fn_names(v: &L1Value) -> BTreeSet<String> {
+    decode_vec(v, |p| {
+        let (ctor, fields) = expect_data(p, "Pair");
+        assert_eq!(
+            ctor, "Pr",
+            "decode_nodule_regs_fn_names: unexpected ctor {ctor}"
+        );
+        decode_string(&fields[0])
+    })
+    .into_iter()
+    .collect()
+}
+
+/// `NR(types, fns, traits)` — the `NoduleRegs` mirror decoder, into the SAME 3-tuple shape
+/// `run_register_nodule_decls_case` builds from the live oracle's `NoduleRegs`.
+fn decode_nodule_regs(
+    v: &L1Value,
+) -> (
+    BTreeMap<String, DataInfo>,
+    BTreeSet<String>,
+    BTreeMap<String, TraitInfo>,
+) {
+    let (ctor, fields) = expect_data(v, "NoduleRegs");
+    assert_eq!(ctor, "NR", "decode_nodule_regs: unexpected ctor {ctor}");
+    (
+        decode_types_map(&fields[0]),
+        decode_nodule_regs_fn_names(&fields[1]),
+        decode_traits_map(&fields[2]),
+    )
+}
+
+fn run_register_nodule_decls_case(label: &str, nod: &Nodule) {
+    let want = register_nodule_decls(nod)
+        .map(|regs: NoduleRegs| (regs.types, fn_names(&regs.fns), regs.traits))
+        .map_err(|_| ());
+    assert_l1_marshal(
+        label,
+        &format!(
+            "fn main() => Result[NoduleRegs, Bytes] = register_nodule_decls({});\n",
+            encode_nodule(nod)
+        ),
+        |v| decode_result(v, decode_nodule_regs),
+        want,
+    );
+}
+
+// ── fixture constructors (test bodies stay `assert over a case`) ───────────────────────────────────
+
+/// A `FnSig` with explicit type PARAMS (the `fn_sig` fixture above always leaves `params` empty —
+/// the dup-type-param refusal needs a non-empty one).
+fn fn_sig_with_type_params(name: &str, tps: Vec<TypeParam>, ret: TypeRef) -> FnSig {
+    FnSig {
+        name: name.to_owned(),
+        params: tps,
+        value_params: vec![],
+        ret,
+        effects: vec![],
+        effect_budgets: BTreeMap::new(),
+    }
+}
+
+fn type_param(name: &str) -> TypeParam {
+    TypeParam {
+        name: name.to_owned(),
+        kind: ParamKind::Type,
+        bounds: vec![],
+    }
+}
+
+// ── cases ────────────────────────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn register_nodule_decls_type_and_fn_ok() {
+    let nod = nodule(vec![
+        ty(type_decl("A", &[], vec![ctor("MkA", vec![])])),
+        Item::Fn(fn_decl(fn_sig("f", vec![], nm("A")), var("x"))),
+    ]);
+    run_register_nodule_decls_case("register_nodule_decls_type_and_fn_ok", &nod);
+}
+
+#[test]
+fn register_nodule_decls_dup_type_name_err() {
+    let nod = nodule(vec![
+        ty(type_decl("A", &[], vec![ctor("MkA", vec![])])),
+        ty(type_decl("A", &[], vec![ctor("MkA2", vec![])])),
+    ]);
+    run_register_nodule_decls_case("register_nodule_decls_dup_type_name_err", &nod);
+}
+
+#[test]
+fn register_nodule_decls_dup_fn_name_err() {
+    let nod = nodule(vec![
+        Item::Fn(fn_decl(fn_sig("f", vec![], nm("Bytes")), var("x"))),
+        Item::Fn(fn_decl(fn_sig("f", vec![], nm("Bytes")), var("y"))),
+    ]);
+    run_register_nodule_decls_case("register_nodule_decls_dup_fn_name_err", &nod);
+}
+
+#[test]
+fn register_nodule_decls_dup_fn_type_param_err() {
+    let nod = nodule(vec![Item::Fn(fn_decl(
+        fn_sig_with_type_params("f", vec![type_param("X"), type_param("X")], nm("X")),
+        var("x"),
+    ))]);
+    run_register_nodule_decls_case("register_nodule_decls_dup_fn_type_param_err", &nod);
+}
+
+#[test]
+fn register_nodule_decls_fuse_impl_seeds_trait() {
+    // `register_nodule_decls` never resolves/checks the impl's trait_args/for_ty/methods (that is
+    // `register_instances`' job, a later pass) -- registration only asks "is there an
+    // `impl Fuse[...] for ...` item at all?", so a minimal, unresolved-looking impl is a faithful
+    // fixture for THIS pass.
+    let nod = nodule(vec![Item::Impl(impl_decl(
+        "Fuse",
+        vec![],
+        nm("Unit"),
+        vec![],
+    ))]);
+    run_register_nodule_decls_case("register_nodule_decls_fuse_impl_seeds_trait", &nod);
+}
+
+#[test]
+fn register_nodule_decls_no_fuse_impl_no_trait_seeded() {
+    let nod = nodule(vec![ty(type_decl("A", &[], vec![ctor("MkA", vec![])]))]);
+    run_register_nodule_decls_case("register_nodule_decls_no_fuse_impl_no_trait_seeded", &nod);
+}
+
+#[test]
+fn register_nodule_decls_user_redeclares_fuse_trait_err() {
+    // A nodule that declares its OWN `trait Fuse { ... }` (no `impl Fuse[...] for ...` needed to
+    // trip this -- checkty.rs's `else if traits.contains_key(TRAIT_NAME)` branch, 1381-1387).
+    let nod = nodule(vec![trait1("Fuse", "join")]);
+    run_register_nodule_decls_case("register_nodule_decls_user_redeclares_fuse_trait_err", &nod);
+}
+
+#[test]
+fn register_nodule_decls_fuse_impl_plus_user_trait_redeclare_err() {
+    // Both `fuse_used` (an `impl Fuse[...] for ...`) AND a pre-existing `traits["Fuse"]` (the
+    // nodule's OWN `trait Fuse`) -- checkty.rs's OTHER redeclare branch, 1372-1378.
+    let nod = nodule(vec![
+        trait1("Fuse", "join"),
+        Item::Impl(impl_decl("Fuse", vec![], nm("Unit"), vec![])),
+    ]);
+    run_register_nodule_decls_case(
+        "register_nodule_decls_fuse_impl_plus_user_trait_redeclare_err",
+        &nod,
+    );
+}
+
+// ── decoder non-vacuity (M-1013 STEP 2 convention) ──────────────────────────────────────────────────
+
+#[test]
+fn marshal_discriminates_nodule_regs() {
+    fn dd(
+        expr: &str,
+    ) -> (
+        BTreeMap<String, DataInfo>,
+        BTreeSet<String>,
+        BTreeMap<String, TraitInfo>,
+    ) {
+        decode_driver("NoduleRegs", expr, decode_nodule_regs)
+    }
+    let a = encode_bytes("A");
+    let di_a = encode_data_info(&data_info_leaf("A"));
+    let ti_a = encode_trait_info(&trait_info_leaf("A"));
+    // A real (inert) `FnDecl` mirror -- the `fns` field's type is `Vec[Pair[Bytes, FnDecl]]`, so the
+    // filler value must actually type-check as `FnDecl`, unlike the untyped Rust-side comparison
+    // (decode_nodule_regs_fn_names never reads it, but the `.myc` driver text still must check).
+    let fd_a = encode_fn_decl(&fn_decl(fn_sig("g", vec![], nm("Bytes")), var("x")));
+    let base = "NR(Nil, Nil, Nil)".to_owned();
+    // field 0: types.
+    assert_ne!(dd(&base), dd(&format!("NR(Cons({di_a}, Nil), Nil, Nil)")));
+    // field 1: fns.
+    assert_ne!(
+        dd(&base),
+        dd(&format!("NR(Nil, Cons(Pr({a}, {fd_a}), Nil), Nil)"))
+    );
+    // field 2: traits.
+    assert_ne!(dd(&base), dd(&format!("NR(Nil, Nil, Cons({ti_a}, Nil))")));
 }

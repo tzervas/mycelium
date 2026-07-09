@@ -18,10 +18,19 @@
 //       (has_var / type_head / subst_ty / param_subst), the substitution primitives the checker /
 //       elaborator / monomorphizer build on. Still NONE of checkty's checking LOGIC — these are
 //       leaf `Ty`-transformers ported ahead of the entangled core (each live-oracle-differentialed).
-//     DEFERRED (NOT in this increment) — fuse.rs (its `check_fuse_laws` RUNS `eval::Evaluator`,
-//       which is not ported), checkty.rs's checking LOGIC (~7k lines), elab.rs, eval.rs, mono.rs
-//       (the heavy entangled core, ~15k lines total), the whole-program L0-output differential,
-//       and the `cargo-mutants` witness. These are FEASIBILITY-GATED on M-986 (the evaluator
+//     M-1013 STEP 5 (appended below) — register_types/register_traits/register_instances (STEP 3)
+//       and resolve_imports (STEP 4) already landed the "registration"/"resolution" halves of
+//       checkty.rs's declaration pass; this step ports register_nodule_decls itself (checkty.rs
+//       1340-1401) plus its two small pure prerequisites — checkty.rs::prelude (the `Bool` seed) and
+//       fuse.rs's F-A1 slice ONLY (`fuse::{TRAIT_NAME, prelude}`, fuse.rs 58-84 — a plain data-shaping
+//       fn with no `eval::Evaluator` dependency, unlike F-A2's `check_fuse_laws`, which stays
+//       deferred below). This CLOSES the STEP-4-landing FLAG that called `register_nodule_decls`
+//       "entangled" — the entanglement was with `check_fuse_laws`, not `fuse::prelude`.
+//     DEFERRED (NOT in this increment) — fuse.rs's F-A2 `check_fuse_laws` (RUNS `eval::Evaluator`,
+//       which is not ported; its own `enumerate_finite_domain` also constructs `eval::L1Value`),
+//       checkty.rs's checking LOGIC (~7k lines), elab.rs, eval.rs, mono.rs (the heavy entangled core,
+//       ~15k lines total), the whole-program L0-output differential, and the `cargo-mutants` witness.
+//       These are FEASIBILITY-GATED on M-986 (the evaluator
 //       elides only bare-body tail calls — no in-language loop today exceeds the 4096-depth
 //       budget, `parse.myc`'s own FLAG-parse-11 finding) and M-987 (~n^3 L1-eval cost): a
 //       self-hosted typechecker/elaborator run INSIDE the L1 evaluator over a whole program almost
@@ -3751,12 +3760,12 @@ fn policy_name_preimage(p: Path) => Bytes =
 // "resolution" half of DN-26's M-1013 increment-8 declaration-registration-and-resolution wave
 // (register_types/register_traits/register_instances, the "registration" half, landed as M-1013
 // STEP 3). `register_nodule_decls` (checkty.rs 1340-1401, the caller that seeds the built-in `Fuse`
-// trait and calls register_types/register_traits) is DEFERRED, not ported here — it entangles with
-// `fuse.rs::{TRAIT_NAME, prelude}`, and fuse.rs is itself deferred (M-1013 increment 13) because
-// `check_fuse_laws` RUNS the not-yet-ported evaluator. Porting `register_nodule_decls` in isolation
-// would either fork the logic (never exercising the real conditional Fuse-seeding path) or need a
-// hand-copied `Fuse`-prelude stand-in duplicating fuse.rs's own data — an honest gap, flagged
-// (G2/VR-5), not silently worked around.
+// trait and calls register_types/register_traits) was DEFERRED at STEP 4 landing on the read that it
+// entangles with fuse.rs — **now CLOSED at M-1013 STEP 5** (further down this file): the entanglement
+// turned out to be narrower than the STEP-4 FLAG assumed. `fuse::prelude()`/`TRAIT_NAME` (F-A1) is a
+// PURE data-shaping fn with no `eval::Evaluator` dependency; only `check_fuse_laws` (F-A2) touches the
+// evaluator, and `register_nodule_decls` never calls it. STEP 5 ports the real conditional
+// Fuse-seeding path (no fork, no hand-copied stand-in) using the real `fuse::prelude()` mirror.
 //
 // `resolve_imports` resolves ONE nodule's `use` imports against the phylum-wide `Exports` table
 // (M-662): globs first (lowest precedence), then explicit `use`s (which shadow a glob-bound name),
@@ -4108,6 +4117,152 @@ fn resolve_imports(nod: Nodule, exports: Exports) => Result[NoduleImports, Bytes
       match resolve_imports_explicit_items(exports, site, items, EPS(imp0, via_explicit0)) {
         Err(e) => Err(e),
         Ok(final_st) => match final_st { EPS(imp, _) => Ok(imp) }
+      }
+    }
+  };
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// fuse.rs F-A1 -- the `Fuse` PRELUDE trait vocabulary ONLY (M-1013 STEP 5; DN-58 §A / M-965).
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// Ports fuse.rs::{TRAIT_NAME, prelude} (fuse.rs 58-84) -- the PURE, evaluator-free half of fuse.rs.
+// `prelude()` hand-builds one `TraitInfo` (`trait Fuse[T] { fn join(a: T, b: T) => T; }`), a plain
+// data-shaping function with NO dependency on `eval::Evaluator` -- unlike `check_fuse_laws` (F-A2,
+// fuse.rs 116-236), which RUNS a scratch `Evaluator` to exhaustively verify the semilattice laws over
+// an enumerable domain and STAYS DEFERRED (the file-header FLAG's entanglement is real for F-A2, not
+// F-A1 -- confirmed by reading fuse.rs itself: `prelude()`'s only imports are `ast` types, never
+// `eval`). This narrower slice is exactly what UNBLOCKS `register_nodule_decls` below (checkty.rs
+// 1340-1401), which only ever calls `fuse::{TRAIT_NAME, prelude}` -- `check_fuse_laws` runs LATER, as
+// a separate `check_nodule_with` post-pass this increment does not port (still an honest, flagged
+// residual gap, not silently worked around -- G2/VR-5). Live oracle `fuse::prelude`/`TRAIT_NAME` are
+// already `pub(crate)` (no widening needed for this slice).
+
+// fuse_trait_name: the fuse.rs::TRAIT_NAME single source of truth (a fn, not a bare literal repeated
+// at each use site -- Law of Demeter).
+fn fuse_trait_name() => Bytes = "Fuse";
+
+// fuse_join_sig: fuse.rs::prelude's one `FnSig` -- `fn join(a: T, b: T) => T`. No method-level type
+// params (the trait's OWN param `T` lives in `TraitInfo.params`, not here -- DN-58 §A.2's explicit-
+// type-variable idiom, no implicit `Self`), no effects/budgets.
+fn fuse_join_sig() => FnSig =
+  FS("join", Nil, Cons(Prm("a", TR(Named("T", Nil), None)), Cons(Prm("b", TR(Named("T", Nil), None)), Nil)), TR(Named("T", Nil), None), Nil, Nil);
+
+// fuse_prelude: fuse.rs::prelude (58-84) verbatim -- `TrInfo(name, params, sigs)`.
+fn fuse_prelude() => TraitInfo =
+  TrInfo(fuse_trait_name(), Cons("T", Nil), Cons(fuse_join_sig(), Nil));
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// checkty.rs register_nodule_decls (M-1013 STEP 5; checkty.rs 1340-1401) -- the DEFERRED caller
+// FLAGged at this file's header and at M-1013 STEP 4's landing, now tractable via the fuse_prelude
+// slice above.
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// Register one (resolved) nodule's declaration-level registries -- data types (register_types, seeded
+// with the `Bool` prelude), traits (register_traits), the CONDITIONAL built-in `Fuse` trait seed
+// (M-965 F-A1: only when this nodule's own items contain an `impl Fuse[...] for ...`; never based on
+// whether `fuse(a, b)` is called), and function signatures (a fresh Pass-2 loop over `Item::Fn`, this
+// file's first port of that specific loop). Ok(NoduleRegs) or the FIRST refusal, in the oracle's
+// EXACT order. Pure; no evaluator dependency (this is the "registration" work `check_nodule_with`
+// runs before any body/instance is checked). Guarantee: `Declared` (a structural registry check, the
+// same tag `register_types`/`register_traits` already carry).
+
+// checkty_prelude: checkty.rs::prelude (600-618) -- the builtin `Bool = False | True` registry seed
+// `register_nodule_decls` inserts before `register_types` runs, so intra-nodule resolution of `Bool`
+// is unchanged.
+fn checkty_prelude() => DataInfo =
+  DI("Bool", Nil, Cons(CI("False", Nil), Cons(CI("True", Nil), Nil)));
+
+// nodule_uses_fuse: checkty.rs 1367-1370 -- does this nodule's OWN items contain an
+// `impl Fuse[...] for ...`? (Never based on whether `fuse(a, b)` is CALLED -- the repr-type fast path
+// in `check_fuse` never touches the trait registry at all; restated from the oracle's own comment.)
+fn nodule_uses_fuse(items: Vec[Item]) => Bool =
+  match items {
+    Nil => False,
+    Cons(it, rest) => match it {
+      ItImpl(id) => match bytes_eq(imd_trait_name(id), fuse_trait_name()) {
+        0b1 => True,
+        _ => nodule_uses_fuse(rest)
+      },
+      _ => nodule_uses_fuse(rest)
+    }
+  };
+
+// fuse_redeclare_err: checkty.rs 1372-1378 / 1381-1387 -- the never-silent refusal for either branch
+// that finds `Fuse` already present in `traits` (a user nodule trying to redeclare the built-in). Both
+// oracle call sites use the SAME message text (FLAG-semcore-32: error TEXT is not differential-
+// compared -- only Ok/Err CLASSIFICATION is; this file's established convention throughout STEP 4/5).
+fn fuse_redeclare_err() => Bytes =
+  "cannot redeclare the built-in prelude trait `Fuse` (DN-58 §A / M-965 F-A1) -- its lawful-merge `join` contract is already provided by the prelude; remove this declaration and `impl Fuse[T] for T { fn join(a: T, b: T) => T = ... }` directly";
+
+// seed_fuse_trait: checkty.rs 1367-1391 -- conditionally seed the built-in `Fuse` trait (iff this
+// nodule declares an `impl Fuse[...] for ...`), refusing any nodule that tries to redeclare it
+// (already present, on EITHER branch) -- never a silent shadow of the built-in (G2/VR-5), mirroring
+// how redeclaring `Bool` would collide in `types`.
+fn seed_fuse_trait(traits: Vec[TraitInfo], items: Vec[Item]) => Result[Vec[TraitInfo], Bytes] =
+  match nodule_uses_fuse(items) {
+    True => match traits_contains(traits, fuse_trait_name()) {
+      True => Err(fuse_redeclare_err()),
+      False => Ok(Cons(fuse_prelude(), traits))
+    },
+    False => match traits_contains(traits, fuse_trait_name()) {
+      True => Err(fuse_redeclare_err()),
+      False => Ok(traits)
+    }
+  };
+
+// fns_contains: the `fns.contains_key`-equivalent membership scan over the FLAG-semcore-4 assoc-list
+// fn registry `Vec[Pair[Bytes, FnDecl]]`.
+fn fns_contains(fns: Vec[Pair[Bytes, FnDecl]], name: Bytes) => Bool =
+  match fns {
+    Nil => False,
+    Cons(p, rest) => match p { Pr(k, _) => match bytes_eq(k, name) { 0b1 => True, _ => fns_contains(rest, name) } }
+  };
+
+// register_fns: checkty.rs 1392-1400 -- Pass 2, the fn-signature registration loop. Non-`Item::Fn`
+// items are skipped (the `let Item::Fn(fd) = item else { continue }` mirror); each fn's OWN
+// type-parameter names (`fnsig_tyvar_names`, the `sig.param_names()` mirror) must have no duplicate,
+// then the fn NAME must be free in the registry so far -- the first refusal wins, `Ok` with the built
+// registry otherwise.
+fn register_fns(items: Vec[Item], acc: Vec[Pair[Bytes, FnDecl]]) => Result[Vec[Pair[Bytes, FnDecl]], Bytes] =
+  match items {
+    Nil => Ok(acc),
+    Cons(it, rest) => match it {
+      ItFn(fd) => match first_duplicate(fnsig_tyvar_names(fndecl_sig(fd))) {
+        Some(dup) => Err(bytes_concat("duplicate type parameter `", bytes_concat(dup, bytes_concat("` in `", bytes_concat(fnsig_name(fndecl_sig(fd)), "`"))))),
+        None => match fns_contains(acc, fnsig_name(fndecl_sig(fd))) {
+          True => Err("duplicate function"),
+          False => register_fns(rest, Cons(Pr(fnsig_name(fndecl_sig(fd)), fd), acc))
+        }
+      },
+      _ => register_fns(rest, acc)
+    }
+  };
+
+// NoduleRegs: mirrors checkty.rs::NoduleRegs (1336-1340) field-for-field (types, fns, traits). New
+// ctor `NR` (FLAG-semcore-2 scheme; checked against every other family in this file, no collision).
+type NoduleRegs = NR(Vec[DataInfo], Vec[Pair[Bytes, FnDecl]], Vec[TraitInfo]);
+
+fn nr_types(r: NoduleRegs) => Vec[DataInfo] =
+  match r { NR(t, _, _) => t };
+
+fn nr_fns(r: NoduleRegs) => Vec[Pair[Bytes, FnDecl]] =
+  match r { NR(_, f, _) => f };
+
+fn nr_traits(r: NoduleRegs) => Vec[TraitInfo] =
+  match r { NR(_, _, tr) => tr };
+
+// register_nodule_decls: checkty.rs 1348-1401, top level. Runs the four passes in the oracle's EXACT
+// order -- types (seeded with the Bool prelude), traits, the conditional Fuse seed, then fns -- and
+// returns Ok(NoduleRegs) or the FIRST refusal.
+fn register_nodule_decls(nod: Nodule) => Result[NoduleRegs, Bytes] =
+  match register_types(Cons(checkty_prelude(), Nil), nod) {
+    Err(e) => Err(e),
+    Ok(types) => match register_traits(types, nod) {
+      Err(e) => Err(e),
+      Ok(traits0) => match seed_fuse_trait(traits0, nodule_items(nod)) {
+        Err(e) => Err(e),
+        Ok(traits) => match register_fns(nodule_items(nod), Nil) {
+          Err(e) => Err(e),
+          Ok(fns) => Ok(NR(types, fns, traits))
+        }
       }
     }
   };
