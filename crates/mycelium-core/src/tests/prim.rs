@@ -134,8 +134,25 @@ fn builtins_are_present_and_resolvable() {
     // (checked-exact, `Exact`) and `flt.to_bin` (the width-witness shape, `Exact`), bringing Π to
     // 68. (This supersedes the DN-56/DN-76 "Π = 38" figure, which predates the M-887…M-899 +
     // CU-1/CU-2/CU-3/CU-6 landings — see DN-34 §8.15/§8.16; those docs are FLAGged for a count
-    // refresh.)
-    assert_eq!(t.entries().len(), 68);
+    // refresh.) DN-51 §2 D3/§6 (maintainer-authorized DN-39 post-freeze promotion) added
+    // `bit.truncate` (the explicit total lossy Binary narrow) — the first `Declared` intrinsic in
+    // Π (its own honest lossy tag, never `Exact`; pinned separately below), bringing Π to 69.
+    assert_eq!(t.entries().len(), 69);
+}
+
+// DN-51 §2 D3/§6: `bit.truncate` is the first `Declared` intrinsic in Π — the explicit, total,
+// lossy Binary narrow (drops the high `N - M` bits) carries its own honest lossy tag, never
+// `Exact` (DN-51 §4). Pinned separately here like the other non-`Exact` groups above; VR-5 forbids
+// an upgrade, and the interpreter side (`mycelium-interp::tests::prims`) pins the eval semantics.
+#[test]
+fn truncate_carries_the_declared_lossy_tag() {
+    let t = PrimTable::builtins();
+    let d = t.get("bit.truncate").expect("bit.truncate registered");
+    assert_eq!(
+        d.intrinsic,
+        GuaranteeStrength::Declared,
+        "bit.truncate must stay `Declared` (its own honest lossy tag, never `Exact` — DN-51 §4)"
+    );
 }
 
 // M-890 (`enb` Gap C): the dense elementwise group — the first non-`Exact` intrinsics in Π.
@@ -529,10 +546,11 @@ fn names_returns_registered_sorted_names() {
     // missing op + CU-2 flt.is_nan/flt.is_finite/flt.is_infinite, the ADR-040 §2.5-mandated float
     // classification predicates + CU-6 bit.popcount/bit.clz/bit.ctz — bringing Π to 66 + CU-3
     // bin.to_flt/flt.to_bin, the never-silent Binary↔Float conversions (ADR-040 §2.4) — bringing
-    // Π to 68).
+    // Π to 68 + DN-51 §2 D3/§6 bit.truncate, the explicit total lossy Binary narrow (first
+    // `Declared` intrinsic) — bringing Π to 69).
     assert_eq!(
         ns.len(),
-        68,
+        69,
         "names() count must match the builtin count: {ns:?}"
     );
     // Sorted (BTreeMap iteration is sorted).

@@ -4357,3 +4357,223 @@ fn eval_wrapping_rejects_structural_mismatches_and_unsupported_prims() {
         "arity 1 must refuse"
     );
 }
+
+// --- DN-51 §2 D3/§6 (maintainer-authorized DN-39 post-freeze promotion, extends DN-41):
+// `bit.truncate` — the explicit, total, lossy `Binary` narrow ----------------------------------
+//
+// Unlike `bit.width_cast`'s checked narrow, `bit.truncate` unconditionally drops the high `N - M`
+// bits and **never refuses**. Tag `Declared` (never `Exact`, DN-51 §4's guarantee matrix) with a
+// zero-magnitude `UserDeclared` bound, mirroring `eval_wrapping`'s posture (RFC-0034 §10/CU-5) for
+// the same reason: the lossiness is the op's own explicit, developer-opted-into semantics, not a
+// fittable/provable numeric approximation.
+
+/// Property: `truncate(x, M) == x mod 2^M` for every 8-bit value narrowed to `Binary{4}` — the
+/// defining contract of DN-51 §2 D3 ("keeps the low `M` bits"), checked exhaustively over the
+/// 8-bit domain (256 cases).
+#[test]
+fn truncate_narrow_keeps_low_bits_mod_2m() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("bit.truncate").expect("bit.truncate registered");
+    let witness4 = binv(vec![false; 4]);
+    for v in 0u8..=255 {
+        let x = binv((0..8).rev().map(|i| (v >> i) & 1 == 1).collect());
+        let y = f("bit.truncate", &[&x, &witness4]).expect("truncate never refuses");
+        assert_eq!(y.repr(), &Repr::Binary { width: 4 });
+        let expected = v % 16; // x mod 2^4
+        let bits: Vec<bool> = (0..4).rev().map(|i| (expected >> i) & 1 == 1).collect();
+        assert_eq!(
+            y.payload(),
+            &Payload::Bits(bits),
+            "truncate({v}, 4) must equal {v} mod 16"
+        );
+    }
+}
+
+/// A same-width `truncate` is the identity (no bits are in the "dropped" range at all) — mirrors
+/// `width_cast`'s identity case, but still tagged `Declared` (DN-51 gives no per-instance carve-out
+/// today; see the FLAG at the `prim_truncate` section note).
+#[test]
+fn truncate_same_width_is_identity() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("bit.truncate").expect("bit.truncate registered");
+    let x = binv(bits("0011_1100"));
+    let witness = binv(vec![false; 8]);
+    let y = f("bit.truncate", &[&x, &witness]).expect("same-width truncate never refuses");
+    assert_eq!(y.payload(), &Payload::Bits(bits("0011_1100")));
+    assert_eq!(y.meta().guarantee(), GuaranteeStrength::Declared);
+}
+
+/// Widen (`M > N`): `truncate` zero-extends exactly like `width_cast` — no bits are dropped, the
+/// unsigned magnitude is unchanged (DN-51 does not restrict `truncate`'s domain to `M < N`; see the
+/// section note above `prim_truncate`).
+#[test]
+fn truncate_widen_matches_width_cast_zero_extend() {
+    let reg = PrimRegistry::with_builtins();
+    let truncate = reg.get("bit.truncate").expect("bit.truncate registered");
+    let width_cast = reg
+        .get("bit.width_cast")
+        .expect("bit.width_cast registered");
+    let x = binv(bits("1010_0101")); // 0xA5, Binary{8}
+    let witness32 = binv(vec![false; 32]);
+    let t = truncate("bit.truncate", &[&x, &witness32]).expect("widen never refuses");
+    let w = width_cast("bit.width_cast", &[&x, &witness32]).expect("widen is exact");
+    assert_eq!(t.repr(), w.repr());
+    assert_eq!(
+        t.payload(),
+        w.payload(),
+        "truncate's widen must match width_cast's zero-extend"
+    );
+    // The bit pattern agrees, but the honesty tag does not: width_cast's widen is `Exact`,
+    // truncate's is uniformly `Declared` (DN-51 §4; the FLAG on per-instance grading applies).
+    assert_eq!(w.meta().guarantee(), GuaranteeStrength::Exact);
+    assert_eq!(t.meta().guarantee(), GuaranteeStrength::Declared);
+}
+
+/// The never-silent contrast: a value whose dropped high bits are **set** makes `width_cast`'s
+/// narrow refuse (`EvalError::Overflow`), but `truncate` succeeds — total, keeping only the low
+/// bits (DN-51 §2 D3's core behavioral difference from DN-41's checked narrow).
+#[test]
+fn truncate_succeeds_where_width_cast_refuses() {
+    let reg = PrimRegistry::with_builtins();
+    let truncate = reg.get("bit.truncate").expect("bit.truncate registered");
+    let width_cast = reg
+        .get("bit.width_cast")
+        .expect("bit.width_cast registered");
+    let x = binv(bits("1111_1111_1111_1111_1111_1111_1111_1111")); // 0xFFFF_FFFF, Binary{32}
+    let witness8 = binv(vec![false; 8]);
+    assert!(
+        matches!(
+            width_cast("bit.width_cast", &[&x, &witness8]),
+            Err(EvalError::Overflow { .. })
+        ),
+        "width_cast must refuse — the dropped high bits are set"
+    );
+    let y = truncate("bit.truncate", &[&x, &witness8]).expect("truncate never refuses");
+    assert_eq!(y.repr(), &Repr::Binary { width: 8 });
+    assert_eq!(
+        y.payload(),
+        &Payload::Bits(bits("1111_1111")),
+        "truncate(0xFFFF_FFFF, 8) must keep the low byte (0xFF)"
+    );
+    assert_eq!(y.meta().guarantee(), GuaranteeStrength::Declared);
+}
+
+/// Round-trip/composition bound: widening a value with `width_cast` and then narrowing it back
+/// down to the original width with `truncate` recovers the original bits exactly for every value —
+/// the widen only adds zero high bits, so truncating back to the original width strips off exactly
+/// what was added, never touching the original magnitude.
+#[test]
+fn truncate_round_trips_after_a_widen_for_every_value() {
+    let reg = PrimRegistry::with_builtins();
+    let truncate = reg.get("bit.truncate").expect("bit.truncate registered");
+    let width_cast = reg
+        .get("bit.width_cast")
+        .expect("bit.width_cast registered");
+    let witness32 = binv(vec![false; 32]);
+    let witness8 = binv(vec![false; 8]);
+    for v in 0u8..=255 {
+        let x = binv((0..8).rev().map(|i| (v >> i) & 1 == 1).collect());
+        let widened = width_cast("bit.width_cast", &[&x, &witness32]).expect("widen never refuses");
+        let back = truncate("bit.truncate", &[&widened, &witness8]).expect("narrow never refuses");
+        assert_eq!(
+            back.payload(),
+            x.payload(),
+            "width_cast-then-truncate must round-trip to the original value {v}"
+        );
+    }
+}
+
+/// `truncate`'s tag is `Declared` regardless of the value operand's own guarantee — including an
+/// `Exact` root value whose magnitude *does* fit the target width without any actual loss. This is
+/// the "never `Exact`" assertion DN-51 §4 makes explicitly: `truncate` never upgrades to `Exact`
+/// even when, for that particular call, nothing was actually dropped (VR-5 — the FLAG on
+/// per-instance grading in the `prim_truncate` section note explains why this is conservative
+/// rather than maximally precise, and why that is still honest).
+#[test]
+fn truncate_result_is_never_exact() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("bit.truncate").expect("bit.truncate registered");
+    // 5 fits Binary{4} exactly (0b0101) — an in-range narrow that would be Exact under width_cast.
+    let x = binv(bits("0000_0101")); // Binary{8}(5)
+    let witness4 = binv(vec![false; 4]);
+    let y = f("bit.truncate", &[&x, &witness4]).expect("in-range narrow never refuses");
+    assert_eq!(y.payload(), &Payload::Bits(bits("0101")));
+    assert_ne!(
+        y.meta().guarantee(),
+        GuaranteeStrength::Exact,
+        "truncate must never claim Exact, even when the narrow happens to be lossless for this call"
+    );
+    assert_eq!(y.meta().guarantee(), GuaranteeStrength::Declared);
+}
+
+/// `truncate` refuses a non-`Binary` value operand, a non-`Binary` witness, and the wrong arity —
+/// never-silent surface typing (G2), exactly mirroring `width_cast`'s refusal surface.
+#[test]
+fn truncate_reject_surface_is_never_silent() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("bit.truncate").expect("bit.truncate registered");
+    let x = binv(vec![true; 8]);
+    let witness = binv(vec![false; 4]);
+    let non_binary = fv(1.0);
+    assert!(
+        matches!(
+            f("bit.truncate", &[&non_binary, &witness]),
+            Err(EvalError::PrimType { .. })
+        ),
+        "a non-Binary value operand must refuse"
+    );
+    assert!(
+        matches!(
+            f("bit.truncate", &[&x, &non_binary]),
+            Err(EvalError::PrimType { .. })
+        ),
+        "a non-Binary witness must refuse"
+    );
+    assert!(
+        matches!(f("bit.truncate", &[&x]), Err(EvalError::PrimType { .. })),
+        "arity 1 must refuse"
+    );
+    assert!(
+        matches!(
+            f("bit.truncate", &[&x, &witness, &witness]),
+            Err(EvalError::PrimType { .. })
+        ),
+        "arity 3 must refuse"
+    );
+}
+
+/// Chained composition: `truncate` over the result of a prior `Empirical`-tagged `flt.to_bin` (or
+/// any non-`Exact` input) still lands at `Declared` — the `Declared` strength **absorbs** every
+/// other strength in the meet-semilattice (`GuaranteeStrength::declared_is_absorbing`), so
+/// `truncate` never needs an `ApproxRule`-style composability check the way `flt.*`/`width_cast` do
+/// (contrast `prim_width_cast`, which refuses to compose an approximate input at all): total input
+/// domain, total output, always `Declared`.
+#[test]
+fn truncate_composes_over_any_prior_result_and_always_lands_declared() {
+    let reg = PrimRegistry::with_builtins();
+    let add = reg.get("flt.add").expect("flt.add registered");
+    let to_bin = reg.get("flt.to_bin").expect("flt.to_bin registered");
+    let truncate = reg.get("bit.truncate").expect("bit.truncate registered");
+    let witness8 = binv(vec![false; 8]);
+    let witness4 = binv(vec![false; 4]);
+
+    // Build an Empirical-tagged Binary{8} value via the flt.* conversion path.
+    let sum = add("flt.add", &[&fv(3.0), &fv(4.0)]).expect("exact dyadic sum");
+    assert_eq!(sum.meta().guarantee(), GuaranteeStrength::Empirical);
+    let as_bin = to_bin("flt.to_bin", &[&sum, &witness8]).expect("7.0 fits Binary{8}");
+    assert_eq!(as_bin.meta().guarantee(), GuaranteeStrength::Empirical);
+
+    let y = truncate("bit.truncate", &[&as_bin, &witness4]).expect("truncate never refuses");
+    assert_eq!(y.payload(), &Payload::Bits(bits("0111"))); // 7 mod 16 = 7
+    assert_eq!(
+        y.meta().guarantee(),
+        GuaranteeStrength::Declared,
+        "Declared absorbs the Empirical input via the meet-semilattice"
+    );
+
+    // And over a plain Exact root value, the result is still Declared (never upgraded to Exact).
+    let exact_x = binv(bits("0000_0111"));
+    let y2 = truncate("bit.truncate", &[&exact_x, &witness4]).expect("truncate never refuses");
+    assert_eq!(y2.payload(), y.payload());
+    assert_eq!(y2.meta().guarantee(), GuaranteeStrength::Declared);
+}

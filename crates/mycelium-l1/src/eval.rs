@@ -2002,7 +2002,12 @@ impl<'e> Evaluator<'e> {
     /// nested failure the caller discards `binds`, so no rollback is needed. The
     /// constructor/literal/binder resolution mirrors the typechecker's `check_pattern` exactly, so a
     /// checked program never gets stuck (RFC-0007 §4.7).
-    fn try_match(
+    ///
+    /// **`pub(crate)` (M-1013 eval PR-1; zero logic change — the STEP-3/4/5/6 visibility-widening
+    /// precedent).** Widened so the in-crate `src/tests/` differential module can reach it directly
+    /// to gate `lib/compiler/semcore.myc`'s new `lval_try_match` port of this fn's
+    /// Data/Ctor/Ident/Tuple/Wildcard fragment (see `compiler_stage5_evalmatch.rs`).
+    pub(crate) fn try_match(
         &self,
         site: &str,
         pat: &Pattern,

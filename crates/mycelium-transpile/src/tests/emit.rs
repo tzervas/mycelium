@@ -577,15 +577,30 @@ fn cases() -> Vec<Case> {
         // (`u16 as u32`, `Binary{16}` -> `Binary{32}`, `M >= N`) emits the faithful DN-41
         // `width_cast` — end-to-end through a fn body whose param type seeds the operand's env
         // entry. `width_cast` zero-extends (unsigned), matching Rust's unsigned widening exactly.
-        // (The narrow / float-crossing / unknown-operand fidelity cases are pinned at the
-        // reason-string level in `expr_cast_fidelity` below, which this table's `Expect` cannot
-        // express — it asserts category, not the FLAG reason.)
+        // (The float-crossing / unknown-operand fidelity cases are pinned at the reason-string
+        // level in `expr_cast_fidelity` below, which this table's `Expect` cannot express — it
+        // asserts category, not the FLAG reason.)
         Case {
             name: "cast_widen_binary_emits_width_cast",
             rust: "fn f(x: u16) -> u32 { x as u32 }",
             expect: Expect::Emitted {
                 item: "f",
                 contains: "width_cast(x, 0b0000_0000_0000_0000_0000_0000_0000_0000)",
+            },
+        },
+        // DN-51 §2 D3/§6 (maintainer-authorized DN-39 post-freeze promotion): an `as` cast that
+        // NARROWS one unsigned `Binary` to a smaller one (`u32 as u16`, `Binary{32}` -> `Binary{16}`,
+        // `M < N`) now emits the faithful DN-51 `truncate` — end-to-end through a fn body whose
+        // param type seeds the operand's env entry. `truncate` unconditionally keeps the low `M`
+        // bits, matching Rust's wrapping narrow exactly (where `width_cast`'s checked narrow would
+        // refuse — see `expr_cast_fidelity`'s `narrow_u32_as_u16_emits_truncate` for the direct
+        // gap-reason-level pin of the prior FLAGged state, now an emission).
+        Case {
+            name: "cast_narrow_binary_emits_truncate",
+            rust: "fn f(x: u32) -> u16 { x as u16 }",
+            expect: Expect::Emitted {
+                item: "f",
+                contains: "truncate(x, 0b0000_0000_0000_0000)",
             },
         },
         // ── D3 operand-type-inference depth (DN-34 §8.16 residual, trx2 follow-on) ───────────────
@@ -917,6 +932,72 @@ fn binop_operand_gated_forms_check_clean() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// **The verify-first live-oracle proof** (mitigation #14) for DN-51 §2 D3/§6's transpiler flip:
+/// the narrow-cast `truncate` emission (`cast_narrow_binary_emits_truncate` above) is run through
+/// the REAL `myc-check` oracle, not just asserted as a substring match — the property that matters
+/// is that the emitted `truncate(x, <M-bit zero witness>)` call genuinely type-checks, mirroring
+/// `binop_operand_gated_forms_check_clean`'s pattern. Skips gracefully (never fails) when
+/// `myc-check` is not built.
+#[test]
+fn cast_narrow_truncate_emission_checks_clean() {
+    let Some(bin) = find_myc_check() else {
+        eprintln!(
+            "emit: live oracle test skipped — no runnable myc-check (set MYC_CHECK_CMD or build \
+             `cargo build -p mycelium-check --bin myc-check`). The fixture-corpus text assertion \
+             (`cast_narrow_binary_emits_truncate`) still covers the emitted shape."
+        );
+        return;
+    };
+
+    let dir = std::env::temp_dir().join(format!(
+        "mycelium-transpile-emit-truncate-oracle-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0)
+    ));
+    std::fs::create_dir_all(&dir).expect("temp dir");
+
+    // The narrow-cast case (`u32 as u16`, the FLAG-truncate-not-emittable arm this task flips),
+    // plus the widen/identity siblings alongside it in one nodule — pinning that `truncate` and
+    // `width_cast` coexist cleanly in the same file (no cross-nodule imports, matching the real
+    // driver's one-file-per-input shape).
+    let rust_snippets = [
+        "fn f_narrow(x: u32) -> u16 { x as u16 }",
+        "fn f_widen(x: u16) -> u32 { x as u32 }",
+        "fn f_identity(x: u32) -> u32 { x as u32 }",
+        // A narrow all the way down to a single bit — the boundary `M = 1` case.
+        "fn f_narrow_to_bit(x: u32) -> u8 { x as u8 }",
+    ];
+    for (i, rust) in rust_snippets.iter().enumerate() {
+        let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
+            .unwrap_or_else(|e| panic!("failed to parse/transpile `{rust}`: {e}"));
+        assert!(
+            !report.emitted_items.is_empty(),
+            "case {i} (`{rust}`) failed to emit at all: gaps={:?}",
+            report.gaps
+        );
+        let path = dir.join(format!("case_{i}.myc"));
+        std::fs::write(&path, &myc).expect("write case .myc");
+
+        let checker = crate::vet::MycChecker {
+            command: vec![bin.display().to_string()],
+            cwd: None,
+        };
+        let rec = checker.vet_file(&path, "fixture.rs", 1, 1);
+        assert_eq!(
+            rec.class,
+            crate::vet::VetClass::Clean,
+            "case {i} (`{rust}`) must check CLEAN with the real myc-check oracle — emitted:\n{myc}\n\
+             diagnostic={:?}",
+            rec.diagnostic
+        );
+    }
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 /// Regression guard (HIGH finding, PR #1299 review, fix 1a) for the `Stmt::Local` shadow-
 /// invalidation bug: a `let` that **shadows** an existing name with an RHS of *unknown* type left
 /// the shadowed name's *stale* prior type in `local_env`, so `Expr::Binary`'s operand-type gate
@@ -1114,13 +1195,15 @@ fn cast_cases() -> Vec<CastCase> {
             src: "x as u32",
             expect: Emits("width_cast(x, 0b0000_0000_0000_0000_0000_0000_0000_0000)"),
         },
-        // NARROW (`u32 as u16`, Binary{32} -> Binary{16}, M < N): Rust WRAPS (low 16 bits) but
-        // `width_cast` REFUSES on overflow — NOT faithful, so it FLAGs rather than emits.
+        // NARROW (`u32 as u16`, Binary{32} -> Binary{16}, M < N): Rust WRAPS (low 16 bits);
+        // `width_cast` would REFUSE on overflow (not faithful), but `truncate` (DN-51 §2 D3, now
+        // landed — maintainer-authorized DN-39 post-freeze promotion) unconditionally keeps the low
+        // `M` bits — an exact match, so this now emits rather than FLAGging.
         CastCase {
-            name: "narrow_u32_as_u16_flags_not_emitted",
+            name: "narrow_u32_as_u16_emits_truncate",
             env: &[("x", "Binary{32}")],
             src: "x as u16",
-            expect: GapReasonContains("FLAG-truncate-not-emittable"),
+            expect: Emits("truncate(x, 0b0000_0000_0000_0000)"),
         },
         // FLOAT->INT (`f64 as i32`): operand is `Float`, so this is CU-3 territory regardless of the
         // (signed) target — Rust saturates, `flt.to_bin` refuses; no faithful prim, gap CU-3.
