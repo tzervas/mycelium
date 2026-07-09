@@ -247,6 +247,15 @@ grammar-gen:
 dist-verify:
     @bash scripts/dist/verify.sh
 
+# Lightweight production release artifact (DN-97 §4.1 Rank 1, maintainer-ratified): `git archive`
+# over `main`, honoring `.gitattributes` `export-ignore` to strip dev-only tooling from the shipped
+# tarball. Trunks (dev/integration/main) stay SAME-CONTENT -- this is a PACKAGING step, not a
+# filtered branch; export-ignore affects only this archive, nothing is removed from git tracking.
+# Skip-graceful off a checkout without `main`/`origin/main`; always prints what it excludes (G2).
+# Usage: `just package-release [version] [ref]` (both optional; ref defaults to main).
+package-release version="" ref="main":
+    @bash scripts/dist/package-release.sh "{{version}}" "{{ref}}"
+
 # --- durability / WS8 (M-654; opt-in, deliberately NOT part of `just check`) ---
 # Mutation testing on the trusted base. SLOW (re-runs the suite per mutant) — run deliberately.
 # Every surviving mutant is a missing/weak test: kill it with a regression test or justify it.
