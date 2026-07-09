@@ -1,0 +1,25 @@
+{
+  "name": "Mycelium (Rust 1.96.1 + Python 3.13/uv + just)",
+  "build": {
+    "context": "..",
+    "dockerfile": "Dockerfile",
+    "target": "final"
+  },
+  "remoteUser": "root",
+  "postCreateCommand": "bash scripts/bootstrap.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "rust-lang.rust-analyzer",
+        "tamasfe.even-better-toml",
+        "charliermarsh.ruff",
+        "DavidAnson.vscode-markdownlint",
+        "redhat.vscode-yaml"
+      ],
+      "settings": {
+        "rust-analyzer.check.command": "clippy",
+        "editor.formatOnSave": true
+      }
+    }
+  }
+}

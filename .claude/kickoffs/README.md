@@ -6,8 +6,14 @@ polished on top — plus **stowed kickoffs** (one per isolated-tree work package
 construction (CLAUDE.md §Swarm).
 
 > **The top-level of this directory holds only *current* kickoffs.** Completed kickoffs are moved to
-> [`archive/`](archive/) once their tranche has landed on `main` and been validated against the
-> codebase (the audit that produced this list, 2026-06-28). See **§Completed (archived)** below.
+> `archive/` once their tranche has landed on `main` and been validated against the codebase (the
+> audit that produced this list, 2026-06-28). See **§Completed (archived)** below. **2026-07-09
+> clean-snapshot prep:** the accumulated in-tree `archive/` (both here and `docs/archive/`) was
+> extracted to the persistent `archive` git branch and removed from this tree (79 files total) —
+> every `archive/` mention below now means **the `archive` git branch**, not an in-tree path; check
+> that branch out to read any archived kickoff/doc verbatim. (Whether future kickoff completions keep
+> targeting an in-tree `archive/` between sweeps, or write directly to the branch, is an open question
+> for the maintainer — flagged, not decided here.)
 >
 > **Recent landings (2026-06-29 → 06-30, on `main`).** The serial-language closeout — tuple type +
 > `f(x)(y)` (M-826), or-patterns (M-823), partial application (M-822), DN-54 §10 (M-824), backbone
@@ -56,7 +62,8 @@ construction (CLAUDE.md §Swarm).
 > M-978/M-979 closed, and the M-969/M-959 status lags corrected to `done`. Two maintainer decisions
 > the same day: **`boot10` is the next engineering kickoff**, and **`dfb` is RE-SHELVED** until after
 > `boot10`/the public flip. All six completed kickoffs (`acy`/`enb`/`grm`/`opp`/`frz`/`trx`) plus the
-> superseded-never-executed `rcp` moved to [`archive/`](archive/) (2026-07-05).
+> superseded-never-executed `rcp` moved to `archive/` (2026-07-05; now the `archive` branch — see
+> the top-of-file note).
 >
 > **Landings 2026-07-06 — boot10 Stages 0–5 released + the kernel-perf wave.** The self-hosted L1
 > frontend through a partial `compiler.semcore` was **squash-released to `main`** (#1186; Stages 0–5,
@@ -124,7 +131,7 @@ archived**.)*
 `frz` (H2 — **the kernel freeze declared**, M-969/DN-56 Enacted; PR #1051). Task ranges
 M-866 + M-877…M-935 + M-958…M-969 (plus the RFC-0033-named M-766/M-767) are all `status:done` in
 `issues.yaml`. Each archived file carries a completion header with its landing facts and residuals —
-see §Completed (archived) below and [`archive/`](archive/). Phase I's engineering is complete; the
+see §Completed (archived) below and `archive/` (now the `archive` branch — top-of-file note). Phase I's engineering is complete; the
 remaining Phase-I boundary acts are the maintainer's usability ratification + the public flip
 (`flp` Stage 1) and the reserved queue (see the One-line scheduler).
 
@@ -170,7 +177,7 @@ DN-54 §10 design-pass landed (M-824; DN-54 stays Accepted); `srf`/E7-2 **R2 con
 | **`tul`** | GitHub PM tooling | M-675 (`idmap.tsv` reconcile) **done**; only **M-676** (Projects-v2 Area field) remains — deferrable/secondary (P3) |
 | **`dfb`** | **the dogfooding boundary** — `crates/mycelium-web` + `crates/mycelium-adk` (NEW) | ⏸ **RE-SHELVED (2026-07-05, maintainer decision):** deferred until **after `boot10` + the public flip** (`flp` Stage 1). M-670/M-671 stay `status:blocked` (dated notes in their `issues.yaml` bodies); revisit at the flip milestone. The 2026-07-01 "unshelvable" state is resolved: the call is **re-shelve**, not resume. Research gate (`dfr`) remains discharged |
 
-## Completed (archived → [`archive/`](archive/))
+## Completed (archived → `archive/`, now the `archive` git branch)
 
 Validated against the codebase 2026-06-28; each tranche landed on `main`. Epic continuations (where
 any) are owned by the still-current kickoff noted.
@@ -208,7 +215,7 @@ any) are owned by the still-current kickoff noted.
 | **`grm`** | Phase-I H2a grammar-stability gate — M-915…M-924; DN-73 (tuple) + DN-74 (FLAG-1) Accepted; DN-75 Resolved; PR #1051, 2026-07-02 | DN-83 stability window PROPOSED → maintainer queue |
 | **`frz`** | Phase-I H2 closeout — M-958…M-969; **THE KERNEL FREEZE DECLARED 2026-07-02** (DN-56 → Enacted on the DN-76 green scorecard); inject-mode Phase-I subset (DN-77 Option B; RFC-0038 stays Accepted, remainder `Declared`); post-freeze diff policy DN-39-only; PR #1051 | M-833 guard-clause impl held (M-968/DN-79 dossier done); M-959/M-969 status lags corrected 2026-07-05 |
 
-Also in [`archive/`](archive/): **`rcp`** — the **superseded, never-executed** predecessor umbrella
+Also archived (now on the `archive` git branch): **`rcp`** — the **superseded, never-executed** predecessor umbrella
 plan (replaced 2026-07-01 by ADR-038's function-first decomposition A→`acy` · §8a→`enb` · B–G→`frz`
 · grammar→`grm`; archived 2026-07-05). The plan of record is
 `docs/planning/road-to-1.0.0-and-mycelium-rewrite.md`.

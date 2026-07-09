@@ -47,7 +47,8 @@ M-670/M-671 were **SHELVED** (2026-06-23, maintainer re-sequencing) behind the L
 surface-completeness wave — E7-3 (HOF, kickoff `hof`), E7-4 (comment-preserving `mycfmt`, kickoff
 `lwd`), E7-5 (operator syntax, kickoff `ops`/`s10`/`strm` per the wave's actual task split). That
 condition is now **SATISFIED**: E7-3, E7-4, and E7-5 are all `status:done` in `issues.yaml`, and
-their kickoffs (`s10`, `hof`, `lwd`, `strm`) are archived (`.claude/kickoffs/archive/`). Status is
+their kickoffs (`s10`, `hof`, `lwd`, `strm`) are archived, now on the `archive` git branch (was
+`.claude/kickoffs/archive/` in-tree; extracted 2026-07-09, clean-snapshot prep). Status is
 **"unshelvable — awaiting maintainer decision to resume or re-shelve"**: the technical blocker is
 gone, but M-670/M-671 remain `status:blocked` in `issues.yaml` pending an explicit maintainer call
 on resuming this dogfooding build now vs. keeping it shelved for other reasons — not decided here

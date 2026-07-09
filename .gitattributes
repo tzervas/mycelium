@@ -60,3 +60,34 @@ editors/vscode/syntaxes/mycelium.tmLanguage.json linguist-generated
 # Vendored test fixtures — the grammar conformance corpus (pinned accept/reject `.myc` cases),
 # not hand-authored language usage.
 docs/spec/grammar/conformance/** linguist-vendored
+
+# --- DN-97 §4.1 Rank 1 (maintainer-ratified 2026-07-09): lightweight production release artifact ---
+#
+# All three persistent trunks (`dev`/`integration`/`main`) stay SAME-CONTENT — tiers differ by
+# RIGOR, not content (no divergent tracked branches, no merge-driver/veto machinery; the
+# alternative "tracked-content per-trunk filter" was explicitly ranked #2 / not adopted). Instead,
+# "lightweight production" is a PACKAGING step: `just package-release` (scripts/dist/
+# package-release.sh) runs `git archive` over `main`, and `git archive` honors `export-ignore`
+# below to omit dev-only tooling from the shipped tarball. **This does NOT remove anything from
+# git tracking** — `export-ignore` affects ONLY `git archive` output, exactly the point: every path
+# below stays fully committed, reviewed, and diffed identically on all three trunks.
+#
+# Conservative, minimal set — chosen to avoid guessing broadly (DN-97 §4.1's own worked example is
+# `tools/** xtask/** **/tests/dev-only/**`; the task brief additionally named `.claude/` and "dev
+# scripts" explicitly). Below are exactly: the brief's named categories, DN-97's own literal
+# example paths (both exist verbatim in this repo), and this repo's closest unambiguous analogues
+# to "test-only trees" (fuzz/proofs/mutants.out — dev-only verification, never shipped) plus
+# `gen/` (the transpiler draft corpus, already documented elsewhere as `Declared`-only material
+# never imported by `lib/`). Broader candidates — `.github/`, `docs/api-index|tero-index|lib-index/`
+# (agent-only generated indices, but `docs/` overall is "the product" during the design phase),
+# `experiments/`, `research/`, `packages/`, per-crate `tests/` dirs, and dev-tool dotfile configs
+# (`.pre-commit-config.yaml`, `.gitleaks.toml`, `deny.toml`, …) — are judgment calls this leaf did
+# NOT include; flagged for the maintainer to confirm rather than guessed here.
+.claude/**       export-ignore
+scripts/**       export-ignore
+tools/**         export-ignore
+xtask/**         export-ignore
+fuzz/**          export-ignore
+proofs/**        export-ignore
+gen/**           export-ignore
+mutants.out/**   export-ignore

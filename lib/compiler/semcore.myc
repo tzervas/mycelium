@@ -3,7 +3,7 @@
 // @license: MIT
 // @authors: Tyler Zervas
 // @since: 2026-07-06
-// @updated: 2026-07-07
+// @updated: 2026-07-09
 // @summary: Self-hosted L1 semantic-core — a PARTIAL FIRST INCREMENT (M-740 Stage 5, increment 1;
 //   DN-26 SS7.3 row 5 / SS9 flag-1). The full semcore is a 9-file strongly-connected component
 //   (checkty/elab/eval/mono/fuse/decision/usefulness/grade/affine, ~16.7k Rust lines) that is ONE
@@ -18,10 +18,29 @@
 //       (has_var / type_head / subst_ty / param_subst), the substitution primitives the checker /
 //       elaborator / monomorphizer build on. Still NONE of checkty's checking LOGIC — these are
 //       leaf `Ty`-transformers ported ahead of the entangled core (each live-oracle-differentialed).
-//     DEFERRED (NOT in this increment) — fuse.rs (its `check_fuse_laws` RUNS `eval::Evaluator`,
-//       which is not ported), checkty.rs's checking LOGIC (~7k lines), elab.rs, eval.rs, mono.rs
-//       (the heavy entangled core, ~15k lines total), the whole-program L0-output differential,
-//       and the `cargo-mutants` witness. These are FEASIBILITY-GATED on M-986 (the evaluator
+//     M-1013 STEP 5 (appended below) — register_types/register_traits/register_instances (STEP 3)
+//       and resolve_imports (STEP 4) already landed the "registration"/"resolution" halves of
+//       checkty.rs's declaration pass; this step ports register_nodule_decls itself (checkty.rs
+//       1340-1401) plus its two small pure prerequisites — checkty.rs::prelude (the `Bool` seed) and
+//       fuse.rs's F-A1 slice ONLY (`fuse::{TRAIT_NAME, prelude}`, fuse.rs 58-84 — a plain data-shaping
+//       fn with no `eval::Evaluator` dependency, unlike F-A2's `check_fuse_laws`, which stays
+//       deferred below). This CLOSES the STEP-4-landing FLAG that called `register_nodule_decls`
+//       "entangled" — the entanglement was with `check_fuse_laws`, not `fuse::prelude`.
+//     M-1013 eval PR-1 (appended below) — the FIRST eval.rs fragment: the Data/Ctor/Ident/Tuple/
+//       Wildcard fraction of `Evaluator::try_match` (eval.rs 2005-2079), which is separable from
+//       the CEK work-stack machine (`run_machine`/`eval_step`/`apply_frame`) and needs only the
+//       already-ported `DataInfo`/`CtorInfo`/`types_lookup` registry. `Pattern::Lit` (kernel-`Value`
+//       equality) stays OUT of scope, honestly refused (FLAG-semcore-35) — see `lval_try_match`.
+//       This does NOT close the "eval.rs deferred" line below: the CEK machine itself (the bulk of
+//       eval.rs, ~2k Rust lines) remains unported and is a DIFFERENT, much larger undertaking.
+//     DEFERRED (NOT in this increment) — fuse.rs's F-A2 `check_fuse_laws` (RUNS `eval::Evaluator`,
+//       which is not ported; its own `enumerate_finite_domain` also constructs `eval::L1Value`),
+//       checkty.rs's checking LOGIC (~7k lines), elab.rs, eval.rs's CEK machine (`Evaluator::call`/
+//       `run_machine`/`eval_step`/`apply_frame`/`enter_call`/`app_dispatch` and the rest of the
+//       Env/PrimRegistry/SwapEngine-entangled core — the `try_match` fragment above is the one
+//       exception), mono.rs (the heavy entangled core, ~15k lines total across these), the
+//       whole-program L0-output differential, and the `cargo-mutants` witness.
+//       These are FEASIBILITY-GATED on M-986 (the evaluator
 //       elides only bare-body tail calls — no in-language loop today exceeds the 4096-depth
 //       budget, `parse.myc`'s own FLAG-parse-11 finding) and M-987 (~n^3 L1-eval cost): a
 //       self-hosted typechecker/elaborator run INSIDE the L1 evaluator over a whole program almost
@@ -2031,6 +2050,22 @@ type LowerDecl = LD(Bytes, Vec[Bytes], LowerRhs);
 fn ld_rhs(l: LowerDecl) => LowerRhs =
   match l { LD(_, _, r) => r };
 
+// UsePath: mirrors ast.rs::UsePath / ast.myc::UsePath field-for-field (`UP` ctor, same spelling as
+// ast.myc — M-1013 STEP 4, resolve_imports increment). `path`: the imported path (a specific import
+// names the item; a glob names the prefix whose `pub` names import). `glob`: true for `use a.b.*`.
+type UsePath = UP(Path, Bool);
+
+fn usepath_path(u: UsePath) => Path =
+  match u { UP(p, _) => p };
+
+fn usepath_glob(u: UsePath) => Bool =
+  match u { UP(_, g) => g };
+
+// Item gains ItUse (M-1013 STEP 4): the trimmed register-family mirror (FLAG-semcore-30's note)
+// previously collapsed `Use`/`Default`/`Derive` into the single tuple-free `ItOther`, which was
+// faithful for `collect_tuple_arities` (none of the three carry tuple-relevant content) but is NOT
+// faithful for `resolve_imports`, which reads `Item::Use(UsePath)` directly (checkty.rs 1423-1533).
+// `Default`/`Derive` remain folded into `ItOther` (still tuple-free and not read by resolve_imports).
 type Item =
     ItType(TypeDecl)
   | ItFn(FnDecl)
@@ -2039,6 +2074,7 @@ type Item =
   | ItObject(ObjectDecl)
   | ItLower(LowerDecl)
   | ItInherentImpl(InherentImplDecl)
+  | ItUse(UsePath)
   | ItOther;
 type Nodule = Nod(Path, Bool, Vec[Item]);
 
@@ -2227,6 +2263,7 @@ fn collect_tuple_arities_item(acc: Vec[Binary{32}], it: Item) => Vec[Binary{32}]
     },
     ItInherentImpl(iid) =>
       collect_tuple_arities_fndecls(collect_tuple_arities_typeref(iid_for_ty(iid), acc), iid_methods(iid)),
+    ItUse(_) => acc,
     ItOther => acc
   };
 
@@ -2864,14 +2901,19 @@ fn unify_list(a1: Vec[Ty], a2: Vec[Ty], s: Vec[Pair[Bytes, Ty]]) => Result[Vec[P
 // helper; the issue framed it as M-1009's dependency because the increments were independently
 // scoped, but landed sequentially they share it).
 //
-// FLAG-semcore-17 (`mangle_ty_in_ty` and `item_key` are DEFERRED, not ported here — an honest gap,
-// never a silent one). `mangle_ty_in_ty` (a `Ty -> Ty` rewrite) is a Rust MODULE-PRIVATE `fn` with
-// NO reachable `pub(crate)` oracle, and `item_key` is likewise module-private AND depends on mono's
-// `Item` work-item type (not in this nodule's copied vocabulary). Porting either would land
-// UN-witnessable code — exactly the failure the FLAG-semcore-10 live-oracle discipline exists to
-// prevent (a port with no differential is `Declared` at best). Both are left for a later increment
-// that either lifts their visibility (a Rust-source change out of scope for this read-only leaf) or
-// reaches them through a `pub(crate)` entry point. Stated plainly (G2/VR-5), not narrowed silently.
+// FLAG-semcore-17 — RESOLVED (M-1013 STEP 6, further down this file). `mangle_ty_in_ty` and
+// `item_key` were DEFERRED here, not ported, because `mangle_ty_in_ty` (a `Ty -> Ty` rewrite) was a
+// Rust MODULE-PRIVATE `fn` with NO reachable `pub(crate)` oracle, and `item_key` was likewise
+// module-private AND depends on mono's `Item` work-item type (not in this nodule's copied
+// vocabulary). Porting either would have landed UN-witnessable code — exactly the failure the
+// FLAG-semcore-10 live-oracle discipline exists to prevent (a port with no differential is
+// `Declared` at best). RESOLUTION: both are now ported, in the mono.rs TYPE ROUND-TRIP + WORK-ITEM
+// section at the end of this file — `mangle_ty_in_ty`, `item_key`, `closure_field_ty`,
+// `closure_param_ref`, `ty_to_source_ref`, `ty_to_ref`, `ty_to_ref_tagged` were widened to
+// `pub(crate)` in `mono.rs` (zero logic change, the STEP-3/4/5 visibility-widening precedent), and
+// mono's own `Item` enum (a purely structural `Bytes`/`Ty`/`Width`/pair work-item, no `Env`
+// dependency) is likewise widened and mirrored as this nodule's `WorkItem` (a fresh name — `Item` is
+// already taken by this nodule's own ast-level nodule-item sum, FLAG-semcore-2 discipline).
 
 // ── small numeric literal + bytes helpers the mangling needs ─────────────────────────────────────
 fn three32() => Binary{32} = 0b0000_0000_0000_0000_0000_0000_0000_0011;
@@ -3723,3 +3765,791 @@ fn policy_name_preimage(p: Path) => Bytes =
 // hand-mirrored comparators from the trust path. The live CHECK-logic equalities used by real
 // elaboration paths (`ty_eq`/`scalar_eq`/`sparsity_eq`/`width_eq`/`ty_list_eq`, FLAG-semcore-12) are
 // a DIFFERENT family, earlier in this nodule, and are unaffected.
+
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// checkty.rs IMPORT RESOLUTION (M-740 Stage 5, increment 8 continuation — M-1013 STEP 4).
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// Ports checkty.rs::resolve_imports (1423-1533) plus its six small helpers (qualify 1286-1292,
+// exports_has_pub/direct_child/split_last_seg/insert_export/remove_import 1535-1584) — the
+// "resolution" half of DN-26's M-1013 increment-8 declaration-registration-and-resolution wave
+// (register_types/register_traits/register_instances, the "registration" half, landed as M-1013
+// STEP 3). `register_nodule_decls` (checkty.rs 1340-1401, the caller that seeds the built-in `Fuse`
+// trait and calls register_types/register_traits) was DEFERRED at STEP 4 landing on the read that it
+// entangles with fuse.rs — **now CLOSED at M-1013 STEP 5** (further down this file): the entanglement
+// turned out to be narrower than the STEP-4 FLAG assumed. `fuse::prelude()`/`TRAIT_NAME` (F-A1) is a
+// PURE data-shaping fn with no `eval::Evaluator` dependency; only `check_fuse_laws` (F-A2) touches the
+// evaluator, and `register_nodule_decls` never calls it. STEP 5 ports the real conditional
+// Fuse-seeding path (no fork, no hand-copied stand-in) using the real `fuse::prelude()` mirror.
+//
+// `resolve_imports` resolves ONE nodule's `use` imports against the phylum-wide `Exports` table
+// (M-662): globs first (lowest precedence), then explicit `use`s (which shadow a glob-bound name),
+// enforcing three never-silent refusals — unknown name, private (exists but not `pub`), duplicate
+// explicit import — plus the glob-vs-glob ambiguity marking (a *reference* to an ambiguous name is
+// refused at use-site elsewhere, not here). Pure; no evaluator dependency; live oracle
+// `checkty::resolve_imports` (module-private in the oracle — widened to `pub(crate)`, zero logic
+// change, the same widening precedent as M-1013 STEP 3's `resolve_ctors`/`first_duplicate`
+// (commit 2bb06f88) and the `CoherenceView` widening (commit 65351071), so the in-crate differential
+// module can reach it; `Exports`/`NoduleImports` similarly widened, fields included, for marshalling).
+//
+// FLAG-semcore-31 (a provable no-op, ported anyway for structural fidelity). The oracle's glob pass
+// checks `via_explicit.contains(&simple)` even though `via_explicit` is populated ONLY by the LATER
+// explicit pass within the SAME `resolve_imports` call — so that check is always `false` when the
+// glob pass runs (the sets start fresh per call, and nothing populates `via_explicit` before the
+// glob loop reads it). This port THREADS `via_explicit` through the glob pass anyway (rather than
+// silently dropping the always-false branch) — arm-for-arm structural fidelity over a "provably dead
+// but let's not gamble on that proof" judgment call; this file's own precedent throughout is "port
+// every branch the oracle has."
+//
+// FLAG-semcore-32 (error TEXT is not differential-compared — the compiler_stage5_register.rs
+// precedent: "Err messages differ across the two productions ... only the Ok payload is
+// meaningful"). This port's four refusals return short `Bytes` reasons (this file's established
+// `bytes_concat`-chain idiom), not the oracle's word-for-word multi-sentence diagnostics; the gate
+// compares Ok/Err CLASSIFICATION (and, on Ok, the decoded `NoduleImports` payload structurally),
+// never message text.
+
+// Exports: mirrors checkty.rs::Exports (1045-1056) as FOUR FLAG-semcore-4 assoc lists (no map
+// primitive, M-982) keyed by the qualified (dot-joined) name STRING — `types`/`fns`/`traits` per
+// kind, `declared` the ALL-declared-names-with-pub-ness table `resolve_imports` distinguishes
+// "unknown" from "private" against. New ctor `Ex` (FLAG-semcore-2 scheme; checked, no collision).
+type Exports = Ex(Vec[Pair[Bytes, DataInfo]], Vec[Pair[Bytes, FnDecl]], Vec[Pair[Bytes, TraitInfo]], Vec[Pair[Bytes, Bool]]);
+
+fn ex_types(e: Exports) => Vec[Pair[Bytes, DataInfo]] =
+  match e { Ex(t, _, _, _) => t };
+
+fn ex_fns(e: Exports) => Vec[Pair[Bytes, FnDecl]] =
+  match e { Ex(_, f, _, _) => f };
+
+fn ex_traits(e: Exports) => Vec[Pair[Bytes, TraitInfo]] =
+  match e { Ex(_, _, tr, _) => tr };
+
+fn ex_declared(e: Exports) => Vec[Pair[Bytes, Bool]] =
+  match e { Ex(_, _, _, d) => d };
+
+// exports_types_lookup / exports_fns_lookup / exports_traits_lookup / exports_declared_lookup: the
+// FLAG-semcore-4 linear scan over each table, keyed by the flat qualified-name `Bytes` string
+// (four duplicated pairs rather than a generic dictionary — FLAG-semcore-5 precedent, KISS/YAGNI).
+fn exports_types_lookup(t: Vec[Pair[Bytes, DataInfo]], qual: Bytes) => Option[DataInfo] =
+  match t {
+    Nil => None,
+    Cons(p, rest) => match p { Pr(k, v) => match bytes_eq(k, qual) { 0b1 => Some(v), _ => exports_types_lookup(rest, qual) } }
+  };
+
+fn exports_fns_lookup(t: Vec[Pair[Bytes, FnDecl]], qual: Bytes) => Option[FnDecl] =
+  match t {
+    Nil => None,
+    Cons(p, rest) => match p { Pr(k, v) => match bytes_eq(k, qual) { 0b1 => Some(v), _ => exports_fns_lookup(rest, qual) } }
+  };
+
+fn exports_traits_lookup(t: Vec[Pair[Bytes, TraitInfo]], qual: Bytes) => Option[TraitInfo] =
+  match t {
+    Nil => None,
+    Cons(p, rest) => match p { Pr(k, v) => match bytes_eq(k, qual) { 0b1 => Some(v), _ => exports_traits_lookup(rest, qual) } }
+  };
+
+fn exports_declared_lookup(t: Vec[Pair[Bytes, Bool]], qual: Bytes) => Option[Bool] =
+  match t {
+    Nil => None,
+    Cons(p, rest) => match p { Pr(k, v) => match bytes_eq(k, qual) { 0b1 => Some(v), _ => exports_declared_lookup(rest, qual) } }
+  };
+
+// exports_has_pub (checkty.rs 1535-1537): is `qual` declared AND `pub`?
+fn exports_has_pub(exports: Exports, qual: Bytes) => Bool =
+  match exports_declared_lookup(ex_declared(exports), qual) {
+    Some(True) => True,
+    _ => False
+  };
+
+// NoduleImports: mirrors checkty.rs::NoduleImports (1064-1075). `ambiguous` is a Vec[Bytes] SET
+// (membership via `names_contains`) standing in for `BTreeSet<String>` (the same convention affine.rs
+// FLAG-semcore-6/-18 established for accumulator sets).
+type NoduleImports = NI(Vec[Pair[Bytes, DataInfo]], Vec[Pair[Bytes, FnDecl]], Vec[Pair[Bytes, TraitInfo]], Vec[Bytes]);
+
+fn ni_types(n: NoduleImports) => Vec[Pair[Bytes, DataInfo]] =
+  match n { NI(t, _, _, _) => t };
+
+fn ni_fns(n: NoduleImports) => Vec[Pair[Bytes, FnDecl]] =
+  match n { NI(_, f, _, _) => f };
+
+fn ni_traits(n: NoduleImports) => Vec[Pair[Bytes, TraitInfo]] =
+  match n { NI(_, _, tr, _) => tr };
+
+fn ni_ambiguous(n: NoduleImports) => Vec[Bytes] =
+  match n { NI(_, _, _, a) => a };
+
+// nodule_imports_empty: `NoduleImports::default()` (checkty.rs `#[derive(Default)]`, 1064).
+fn nodule_imports_empty() => NoduleImports = NI(Nil, Nil, Nil, Nil);
+
+// assoc_remove_*/assoc_set_*: `BTreeMap::insert` (replace-if-present) over each of the three
+// per-kind tables — remove any existing pair for `k`, then cons the new one (order-insensitive, an
+// assoc-list map; the FLAG-semcore-4 convention, three duplicated pairs per FLAG-semcore-5).
+fn assoc_remove_datainfo(t: Vec[Pair[Bytes, DataInfo]], k: Bytes) => Vec[Pair[Bytes, DataInfo]] =
+  match t {
+    Nil => Nil,
+    Cons(p, rest) => match p { Pr(k2, _) => match bytes_eq(k2, k) {
+      0b1 => assoc_remove_datainfo(rest, k),
+      _ => Cons(p, assoc_remove_datainfo(rest, k))
+    } }
+  };
+
+fn assoc_set_datainfo(t: Vec[Pair[Bytes, DataInfo]], k: Bytes, v: DataInfo) => Vec[Pair[Bytes, DataInfo]] =
+  Cons(Pr(k, v), assoc_remove_datainfo(t, k));
+
+fn assoc_remove_fndecl(t: Vec[Pair[Bytes, FnDecl]], k: Bytes) => Vec[Pair[Bytes, FnDecl]] =
+  match t {
+    Nil => Nil,
+    Cons(p, rest) => match p { Pr(k2, _) => match bytes_eq(k2, k) {
+      0b1 => assoc_remove_fndecl(rest, k),
+      _ => Cons(p, assoc_remove_fndecl(rest, k))
+    } }
+  };
+
+fn assoc_set_fndecl(t: Vec[Pair[Bytes, FnDecl]], k: Bytes, v: FnDecl) => Vec[Pair[Bytes, FnDecl]] =
+  Cons(Pr(k, v), assoc_remove_fndecl(t, k));
+
+fn assoc_remove_traitinfo(t: Vec[Pair[Bytes, TraitInfo]], k: Bytes) => Vec[Pair[Bytes, TraitInfo]] =
+  match t {
+    Nil => Nil,
+    Cons(p, rest) => match p { Pr(k2, _) => match bytes_eq(k2, k) {
+      0b1 => assoc_remove_traitinfo(rest, k),
+      _ => Cons(p, assoc_remove_traitinfo(rest, k))
+    } }
+  };
+
+fn assoc_set_traitinfo(t: Vec[Pair[Bytes, TraitInfo]], k: Bytes, v: TraitInfo) => Vec[Pair[Bytes, TraitInfo]] =
+  Cons(Pr(k, v), assoc_remove_traitinfo(t, k));
+
+// names_remove: drop every occurrence of `n` from a `Vec[Bytes]` SET (the `ambiguous.remove`
+// counterpart for a bare-name set, not a keyed table).
+fn names_remove(xs: Vec[Bytes], n: Bytes) => Vec[Bytes] =
+  match xs {
+    Nil => Nil,
+    Cons(h, t) => match bytes_eq(h, n) {
+      0b1 => names_remove(t, n),
+      _ => Cons(h, names_remove(t, n))
+    }
+  };
+
+// insert_export (checkty.rs 1560-1571): insert the export `qual` into `imp` under `simple`. The
+// oracle's OWN invariant comment says exactly one of the three export tables holds `qual` — but this
+// port still tries all three (arm-for-arm), since nothing in `Exports`'s SHAPE enforces that
+// invariant structurally (a caller-supplied fixture that violates it gets the same multi-table write
+// the oracle's own three independent `if let`s would produce).
+fn insert_export(imp: NoduleImports, exports: Exports, qual: Bytes, simple: Bytes) => NoduleImports =
+  let imp1 = match exports_types_lookup(ex_types(exports), qual) {
+    Some(info) => NI(assoc_set_datainfo(ni_types(imp), simple, info), ni_fns(imp), ni_traits(imp), ni_ambiguous(imp)),
+    None => imp
+  } in
+  let imp2 = match exports_fns_lookup(ex_fns(exports), qual) {
+    Some(fd) => NI(ni_types(imp1), assoc_set_fndecl(ni_fns(imp1), simple, fd), ni_traits(imp1), ni_ambiguous(imp1)),
+    None => imp1
+  } in
+  match exports_traits_lookup(ex_traits(exports), qual) {
+    Some(ti) => NI(ni_types(imp2), ni_fns(imp2), assoc_set_traitinfo(ni_traits(imp2), simple, ti), ni_ambiguous(imp2)),
+    None => imp2
+  };
+
+// remove_import (checkty.rs 1574-1580): drop any binding for `simple` across all three per-kind
+// tables (the glob-vs-glob-ambiguity demotion) — `ambiguous` is untouched (matching the oracle).
+fn remove_import(imp: NoduleImports, simple: Bytes) => NoduleImports =
+  NI(assoc_remove_datainfo(ni_types(imp), simple), assoc_remove_fndecl(ni_fns(imp), simple), assoc_remove_traitinfo(ni_traits(imp), simple), ni_ambiguous(imp));
+
+// qualify (checkty.rs 1286-1292): `path.0.is_empty() ? name : path.0.join(".") + "." + name`.
+fn qualify(path: Path, name: Bytes) => Bytes =
+  match path_segs(path) {
+    Nil => name,
+    Cons(_, _) => bytes_concat(join_dot(path_segs(path)), bytes_concat(".", name))
+  };
+
+// bytes_starts_with / bytes_contains_char(_at): small string primitives NOT already in this file —
+// needed because `direct_child`/`split_last_seg` operate on the FLAT qualified-name string (the
+// `Exports` table's key shape), unlike every prior string helper here (which walks Path SEGMENTS,
+// e.g. `join_dot`). Same byte-at-a-time idiom as `count_bindigits_at`/`filter_bindigits_at`
+// (`bytes_slice` + `bytes_eq`, source-length-bounded direct-tail recursion).
+fn bytes_starts_with(s: Bytes, prefix: Bytes) => Bool =
+  match lt(bytes_len(s), bytes_len(prefix)) {
+    0b1 => False,
+    _ => match bytes_eq(bytes_slice(s, zero32(), bytes_len(prefix)), prefix) { 0b1 => True, _ => False }
+  };
+
+fn bytes_contains_char_at(s: Bytes, ch: Bytes, i: Binary{32}, n: Binary{32}) => Bool =
+  match lt(i, n) {
+    0b1 => match bytes_eq(bytes_slice(s, i, add_u(i, one32())), ch) {
+      0b1 => True,
+      _ => bytes_contains_char_at(s, ch, add_u(i, one32()), n)
+    },
+    _ => False
+  };
+
+fn bytes_contains_char(s: Bytes, ch: Bytes) => Bool =
+  bytes_contains_char_at(s, ch, zero32(), bytes_len(s));
+
+// direct_child (checkty.rs 1542-1550): is `qual` exactly ONE segment under `prefix`? `Some(simple)`
+// iff `qual == prefix + "." + simple` with `simple` itself containing no further `.`.
+fn direct_child(prefix: Bytes, qual: Bytes) => Option[Bytes] =
+  match bytes_starts_with(qual, prefix) {
+    False => None,
+    True =>
+      let rest0 = bytes_slice(qual, bytes_len(prefix), bytes_len(qual)) in
+      match lt(zero32(), bytes_len(rest0)) {
+        0b1 =>
+          match bytes_eq(bytes_slice(rest0, zero32(), one32()), ".") {
+            0b1 =>
+              let rest = bytes_slice(rest0, one32(), bytes_len(rest0)) in
+              match lt(zero32(), bytes_len(rest)) {
+                0b1 => match bytes_contains_char(rest, ".") {
+                  True => None,
+                  False => Some(rest)
+                },
+                _ => None
+              },
+            _ => None
+          },
+        _ => None
+      }
+  };
+
+// split_last_seg_go / split_last_seg (checkty.rs 1553-1557): `path.0.split_last()` restated as an
+// accumulate-then-reverse walk (the FLAG-parse list-building convention) — last segment plus the
+// DOT-JOINED prefix of everything before it (`Option[Pair[Bytes, Bytes]]`, matching the oracle's
+// `Option<(String, String)>` return shape exactly).
+fn rev_bytes_acc(xs: Vec[Bytes], acc: Vec[Bytes]) => Vec[Bytes] =
+  match xs {
+    Nil => acc,
+    Cons(h, t) => rev_bytes_acc(t, Cons(h, acc))
+  };
+
+fn split_last_seg_go(segs: Vec[Bytes], acc: Vec[Bytes]) => Option[Pair[Bytes, Vec[Bytes]]] =
+  match segs {
+    Nil => None,
+    Cons(h, t) => match t {
+      Nil => Some(Pr(h, rev_bytes_acc(acc, Nil))),
+      Cons(_, _) => split_last_seg_go(t, Cons(h, acc))
+    }
+  };
+
+fn split_last_seg(path: Path) => Option[Pair[Bytes, Bytes]] =
+  match split_last_seg_go(path_segs(path), Nil) {
+    None => None,
+    Some(pr) => match pr { Pr(last, init) => Some(Pr(last, join_dot(init))) }
+  };
+
+// ── resolve_imports (checkty.rs 1423-1533) — the two-pass import resolver ───────────────────────
+
+// GlobPassState: the glob loop's threaded (imp, via_explicit, via_glob) triple (FLAG-semcore-6
+// value-threading convention — Rust's `&mut` accumulators restated as an explicit fold).
+type GlobPassState = GPS(NoduleImports, Vec[Bytes], Vec[Bytes]);
+
+// resolve_imports_glob_quals: the INNER loop over `exports.declared`'s entries for ONE glob item's
+// `prefix` (checkty.rs's `for qual in exports.declared.keys()`). FLAG-semcore-31 keeps the
+// (provably always-false, see the file-header FLAG) `via_explicit` check for structural fidelity.
+fn resolve_imports_glob_quals(exports: Exports, prefix: Bytes, decl: Vec[Pair[Bytes, Bool]], st: GlobPassState) => GlobPassState =
+  match decl {
+    Nil => st,
+    Cons(p, rest) => match p { Pr(qual, _) => match direct_child(prefix, qual) {
+      None => resolve_imports_glob_quals(exports, prefix, rest, st),
+      Some(simple) => match exports_has_pub(exports, qual) {
+        False => resolve_imports_glob_quals(exports, prefix, rest, st),
+        True => match st { GPS(imp, via_explicit, via_glob) =>
+          match names_contains(via_explicit, simple) {
+            True => resolve_imports_glob_quals(exports, prefix, rest, st),
+            False => match names_contains(via_glob, simple) {
+              True =>
+                let imp2 = NI(ni_types(imp), ni_fns(imp), ni_traits(imp), Cons(simple, ni_ambiguous(imp))) in
+                resolve_imports_glob_quals(exports, prefix, rest, GPS(remove_import(imp2, simple), via_explicit, via_glob)),
+              False =>
+                resolve_imports_glob_quals(exports, prefix, rest, GPS(insert_export(imp, exports, qual, simple), via_explicit, Cons(simple, via_glob)))
+            }
+          }
+        }
+      }
+    } }
+  };
+
+// resolve_imports_glob_items: the OUTER glob-pass loop over `nodule.items` (non-glob / non-use items
+// are skipped — the `let Item::Use(UsePath{path, glob:true}) = item else { continue }` mirror).
+fn resolve_imports_glob_items(exports: Exports, items: Vec[Item], st: GlobPassState) => GlobPassState =
+  match items {
+    Nil => st,
+    Cons(it, rest) => match it {
+      ItUse(up) => match usepath_glob(up) {
+        True => resolve_imports_glob_items(exports, rest, resolve_imports_glob_quals(exports, join_dot(path_segs(usepath_path(up))), ex_declared(exports), st)),
+        False => resolve_imports_glob_items(exports, rest, st)
+      },
+      _ => resolve_imports_glob_items(exports, rest, st)
+    }
+  };
+
+// ExplicitPassState: the explicit-pass threaded (imp, via_explicit) pair.
+type ExplicitPassState = EPS(NoduleImports, Vec[Bytes]);
+
+// resolve_imports_explicit_items (checkty.rs's explicit-`use` loop, 1478-1531): the never-silent
+// refusals in the oracle's EXACT order — unnamed path, un-qualified single-segment path, unknown
+// name, private name, duplicate explicit import (FLAG-semcore-32: reason strings, not the oracle's
+// full diagnostic text).
+fn resolve_imports_explicit_items(exports: Exports, site: Bytes, items: Vec[Item], st: ExplicitPassState) => Result[ExplicitPassState, Bytes] =
+  match items {
+    Nil => Ok(st),
+    Cons(it, rest) => match it {
+      ItUse(up) => match usepath_glob(up) {
+        True => resolve_imports_explicit_items(exports, site, rest, st),
+        False => match split_last_seg(usepath_path(up)) {
+          None => Err(bytes_concat("`", bytes_concat(site, "`: a `use` path must name an item (M-662)"))),
+          Some(pr) => match pr { Pr(simple, prefix) =>
+            match lt(zero32(), bytes_len(prefix)) {
+              0b1 =>
+                let qual = bytes_concat(prefix, bytes_concat(".", simple)) in
+                match exports_declared_lookup(ex_declared(exports), qual) {
+                  None => Err(bytes_concat("`use ", bytes_concat(qual, "`: no such name in the phylum (M-662)"))),
+                  Some(is_pub) => match is_pub {
+                    False => Err(bytes_concat("`use ", bytes_concat(qual, "`: exists but is not `pub` (M-662)"))),
+                    True => match st { EPS(imp, via_explicit) =>
+                      match names_contains(via_explicit, simple) {
+                        True => Err(bytes_concat("duplicate import of `", bytes_concat(simple, "` (M-662)"))),
+                        False =>
+                          let imp2 = NI(ni_types(imp), ni_fns(imp), ni_traits(imp), names_remove(ni_ambiguous(imp), simple)) in
+                          resolve_imports_explicit_items(exports, site, rest, EPS(insert_export(imp2, exports, qual, simple), Cons(simple, via_explicit)))
+                      }
+                    }
+                  }
+                },
+              _ => Err(bytes_concat("`use ", bytes_concat(simple, "`: a cross-nodule import must be nodule-qualified (M-662)")))
+            }
+          }
+        }
+      },
+      _ => resolve_imports_explicit_items(exports, site, rest, st)
+    }
+  };
+
+// resolve_imports (checkty.rs 1423-1533, top level): globs first (lowest precedence), then
+// explicit `use`s (which shadow a glob-bound name) — Ok(NoduleImports) or the first refusal.
+fn resolve_imports(nod: Nodule, exports: Exports) => Result[NoduleImports, Bytes] =
+  match nod { Nod(path, _, items) =>
+    let site = qualify(path, "<use>") in
+    let glob_st = resolve_imports_glob_items(exports, items, GPS(nodule_imports_empty(), Nil, Nil)) in
+    match glob_st { GPS(imp0, via_explicit0, _) =>
+      match resolve_imports_explicit_items(exports, site, items, EPS(imp0, via_explicit0)) {
+        Err(e) => Err(e),
+        Ok(final_st) => match final_st { EPS(imp, _) => Ok(imp) }
+      }
+    }
+  };
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// fuse.rs F-A1 -- the `Fuse` PRELUDE trait vocabulary ONLY (M-1013 STEP 5; DN-58 §A / M-965).
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// Ports fuse.rs::{TRAIT_NAME, prelude} (fuse.rs 58-84) -- the PURE, evaluator-free half of fuse.rs.
+// `prelude()` hand-builds one `TraitInfo` (`trait Fuse[T] { fn join(a: T, b: T) => T; }`), a plain
+// data-shaping function with NO dependency on `eval::Evaluator` -- unlike `check_fuse_laws` (F-A2,
+// fuse.rs 116-236), which RUNS a scratch `Evaluator` to exhaustively verify the semilattice laws over
+// an enumerable domain and STAYS DEFERRED (the file-header FLAG's entanglement is real for F-A2, not
+// F-A1 -- confirmed by reading fuse.rs itself: `prelude()`'s only imports are `ast` types, never
+// `eval`). This narrower slice is exactly what UNBLOCKS `register_nodule_decls` below (checkty.rs
+// 1340-1401), which only ever calls `fuse::{TRAIT_NAME, prelude}` -- `check_fuse_laws` runs LATER, as
+// a separate `check_nodule_with` post-pass this increment does not port (still an honest, flagged
+// residual gap, not silently worked around -- G2/VR-5). Live oracle `fuse::prelude`/`TRAIT_NAME` are
+// already `pub(crate)` (no widening needed for this slice).
+
+// fuse_trait_name: the fuse.rs::TRAIT_NAME single source of truth (a fn, not a bare literal repeated
+// at each use site -- Law of Demeter).
+fn fuse_trait_name() => Bytes = "Fuse";
+
+// fuse_join_sig: fuse.rs::prelude's one `FnSig` -- `fn join(a: T, b: T) => T`. No method-level type
+// params (the trait's OWN param `T` lives in `TraitInfo.params`, not here -- DN-58 §A.2's explicit-
+// type-variable idiom, no implicit `Self`), no effects/budgets.
+fn fuse_join_sig() => FnSig =
+  FS("join", Nil, Cons(Prm("a", TR(Named("T", Nil), None)), Cons(Prm("b", TR(Named("T", Nil), None)), Nil)), TR(Named("T", Nil), None), Nil, Nil);
+
+// fuse_prelude: fuse.rs::prelude (58-84) verbatim -- `TrInfo(name, params, sigs)`.
+fn fuse_prelude() => TraitInfo =
+  TrInfo(fuse_trait_name(), Cons("T", Nil), Cons(fuse_join_sig(), Nil));
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// checkty.rs register_nodule_decls (M-1013 STEP 5; checkty.rs 1340-1401) -- the DEFERRED caller
+// FLAGged at this file's header and at M-1013 STEP 4's landing, now tractable via the fuse_prelude
+// slice above.
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// Register one (resolved) nodule's declaration-level registries -- data types (register_types, seeded
+// with the `Bool` prelude), traits (register_traits), the CONDITIONAL built-in `Fuse` trait seed
+// (M-965 F-A1: only when this nodule's own items contain an `impl Fuse[...] for ...`; never based on
+// whether `fuse(a, b)` is called), and function signatures (a fresh Pass-2 loop over `Item::Fn`, this
+// file's first port of that specific loop). Ok(NoduleRegs) or the FIRST refusal, in the oracle's
+// EXACT order. Pure; no evaluator dependency (this is the "registration" work `check_nodule_with`
+// runs before any body/instance is checked). Guarantee: `Declared` (a structural registry check, the
+// same tag `register_types`/`register_traits` already carry).
+
+// checkty_prelude: checkty.rs::prelude (600-618) -- the builtin `Bool = False | True` registry seed
+// `register_nodule_decls` inserts before `register_types` runs, so intra-nodule resolution of `Bool`
+// is unchanged.
+fn checkty_prelude() => DataInfo =
+  DI("Bool", Nil, Cons(CI("False", Nil), Cons(CI("True", Nil), Nil)));
+
+// nodule_uses_fuse: checkty.rs 1367-1370 -- does this nodule's OWN items contain an
+// `impl Fuse[...] for ...`? (Never based on whether `fuse(a, b)` is CALLED -- the repr-type fast path
+// in `check_fuse` never touches the trait registry at all; restated from the oracle's own comment.)
+fn nodule_uses_fuse(items: Vec[Item]) => Bool =
+  match items {
+    Nil => False,
+    Cons(it, rest) => match it {
+      ItImpl(id) => match bytes_eq(imd_trait_name(id), fuse_trait_name()) {
+        0b1 => True,
+        _ => nodule_uses_fuse(rest)
+      },
+      _ => nodule_uses_fuse(rest)
+    }
+  };
+
+// fuse_redeclare_err: checkty.rs 1372-1378 / 1381-1387 -- the never-silent refusal for either branch
+// that finds `Fuse` already present in `traits` (a user nodule trying to redeclare the built-in). Both
+// oracle call sites use the SAME message text (FLAG-semcore-32: error TEXT is not differential-
+// compared -- only Ok/Err CLASSIFICATION is; this file's established convention throughout STEP 4/5).
+fn fuse_redeclare_err() => Bytes =
+  "cannot redeclare the built-in prelude trait `Fuse` (DN-58 §A / M-965 F-A1) -- its lawful-merge `join` contract is already provided by the prelude; remove this declaration and `impl Fuse[T] for T { fn join(a: T, b: T) => T = ... }` directly";
+
+// seed_fuse_trait: checkty.rs 1367-1391 -- conditionally seed the built-in `Fuse` trait (iff this
+// nodule declares an `impl Fuse[...] for ...`), refusing any nodule that tries to redeclare it
+// (already present, on EITHER branch) -- never a silent shadow of the built-in (G2/VR-5), mirroring
+// how redeclaring `Bool` would collide in `types`.
+fn seed_fuse_trait(traits: Vec[TraitInfo], items: Vec[Item]) => Result[Vec[TraitInfo], Bytes] =
+  match nodule_uses_fuse(items) {
+    True => match traits_contains(traits, fuse_trait_name()) {
+      True => Err(fuse_redeclare_err()),
+      False => Ok(Cons(fuse_prelude(), traits))
+    },
+    False => match traits_contains(traits, fuse_trait_name()) {
+      True => Err(fuse_redeclare_err()),
+      False => Ok(traits)
+    }
+  };
+
+// fns_contains: the `fns.contains_key`-equivalent membership scan over the FLAG-semcore-4 assoc-list
+// fn registry `Vec[Pair[Bytes, FnDecl]]`.
+fn fns_contains(fns: Vec[Pair[Bytes, FnDecl]], name: Bytes) => Bool =
+  match fns {
+    Nil => False,
+    Cons(p, rest) => match p { Pr(k, _) => match bytes_eq(k, name) { 0b1 => True, _ => fns_contains(rest, name) } }
+  };
+
+// register_fns: checkty.rs 1392-1400 -- Pass 2, the fn-signature registration loop. Non-`Item::Fn`
+// items are skipped (the `let Item::Fn(fd) = item else { continue }` mirror); each fn's OWN
+// type-parameter names (`fnsig_tyvar_names`, the `sig.param_names()` mirror) must have no duplicate,
+// then the fn NAME must be free in the registry so far -- the first refusal wins, `Ok` with the built
+// registry otherwise.
+fn register_fns(items: Vec[Item], acc: Vec[Pair[Bytes, FnDecl]]) => Result[Vec[Pair[Bytes, FnDecl]], Bytes] =
+  match items {
+    Nil => Ok(acc),
+    Cons(it, rest) => match it {
+      ItFn(fd) => match first_duplicate(fnsig_tyvar_names(fndecl_sig(fd))) {
+        Some(dup) => Err(bytes_concat("duplicate type parameter `", bytes_concat(dup, bytes_concat("` in `", bytes_concat(fnsig_name(fndecl_sig(fd)), "`"))))),
+        None => match fns_contains(acc, fnsig_name(fndecl_sig(fd))) {
+          True => Err("duplicate function"),
+          False => register_fns(rest, Cons(Pr(fnsig_name(fndecl_sig(fd)), fd), acc))
+        }
+      },
+      _ => register_fns(rest, acc)
+    }
+  };
+
+// NoduleRegs: mirrors checkty.rs::NoduleRegs (1336-1340) field-for-field (types, fns, traits). New
+// ctor `NR` (FLAG-semcore-2 scheme; checked against every other family in this file, no collision).
+type NoduleRegs = NR(Vec[DataInfo], Vec[Pair[Bytes, FnDecl]], Vec[TraitInfo]);
+
+fn nr_types(r: NoduleRegs) => Vec[DataInfo] =
+  match r { NR(t, _, _) => t };
+
+fn nr_fns(r: NoduleRegs) => Vec[Pair[Bytes, FnDecl]] =
+  match r { NR(_, f, _) => f };
+
+fn nr_traits(r: NoduleRegs) => Vec[TraitInfo] =
+  match r { NR(_, _, tr) => tr };
+
+// register_nodule_decls: checkty.rs 1348-1401, top level. Runs the four passes in the oracle's EXACT
+// order -- types (seeded with the Bool prelude), traits, the conditional Fuse seed, then fns -- and
+// returns Ok(NoduleRegs) or the FIRST refusal.
+fn register_nodule_decls(nod: Nodule) => Result[NoduleRegs, Bytes] =
+  match register_types(Cons(checkty_prelude(), Nil), nod) {
+    Err(e) => Err(e),
+    Ok(types) => match register_traits(types, nod) {
+      Err(e) => Err(e),
+      Ok(traits0) => match seed_fuse_trait(traits0, nodule_items(nod)) {
+        Err(e) => Err(e),
+        Ok(traits) => match register_fns(nodule_items(nod), Nil) {
+          Err(e) => Err(e),
+          Ok(fns) => Ok(NR(types, fns, traits))
+        }
+      }
+    }
+  };
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// mono.rs TYPE ROUND-TRIP + WORK-ITEM KEY family (M-1013 STEP 6). Closes FLAG-semcore-17.
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// Ports mono.rs's remaining PURE `Ty`/`TypeRef` round-trip helpers plus the monomorphization
+// work-item dedup key — the last of mono.rs's non-`Env`-dependent leaves, sitting directly upstream
+// of the (still un-ported, still entangled) `Mono` driver itself: `closure_field_ty`/
+// `closure_param_ref` (RFC-0024 §4A.2/§4A.4, M-704 — a closure tag-sum capture's field/param type),
+// `mangle_ty_in_ty` (rewrite an applied data type to its mangled-nullary form), `ty_to_source_ref`/
+// `ty_to_ref`/`ty_to_ref_tagged` (a checked `Ty` back to a surface `TypeRef`, two variants — source-
+// named vs. mangled-nullary — plus the guarantee-tagged form), and `item_key` (the canonical dedup
+// key of one `WorkItem`). All are pure `Ty -> {Ty, TypeRef, Bytes}` transformers depending only on
+// the increment-1 `Ty`/`TypeRef`/`BaseType` vocabulary and the increment-4 mangling family
+// (INDEPENDENT of M-1007/M-1008/M-1010/M-1011/M-1012). Live oracle: `mono::{closure_field_ty,
+// closure_param_ref, mangle_ty_in_ty, ty_to_source_ref, ty_to_ref, ty_to_ref_tagged, item_key,
+// Item}` — all six fns plus the `Item` enum were Rust MODULE-PRIVATE (FLAG-semcore-17's original
+// finding); this leaf widens all seven items to `pub(crate)` (zero logic change, the STEP-3/4/5
+// precedent: `resolve_ctors`/`first_duplicate`, commit 2bb06f88; `Exports`/`NoduleImports`,
+// `CoherenceView`, commit 65351071) so the in-crate differential module can reach them directly —
+// a marshalling differential (`decode_ty`/`decode_typeref` against the real oracle output),
+// not a hand-derived one.
+//
+// FLAG-semcore-33 (`WorkItem` — a FRESH name for mono.rs's `Item`; `Item`/`ItFn` are already taken).
+// This nodule already declares a type `Item` (checkty.rs's AST-level nodule-item sum — `ItType`/
+// `ItFn`/`ItTrait`/`ItImpl`/`ItUse`, M-1013 STEP 3/4) — a COMPLETELY different `Item` from mono.rs's
+// own monomorphization work-item enum, which happens to share the Rust type name only because the
+// two live in different Rust modules (`checkty::Item`-shaped construct is actually `ast::Item`; no
+// literal Rust name collision there, but re-using the bare name `Item` here WOULD collide with this
+// nodule's own flat namespace, FLAG-semcore-2's discipline). So mono.rs's `Item` mirrors here as
+// `WorkItem`, with ctors `WiFn`/`WiData`/`WiMethod` (the `Wi` prefix — checked against every other
+// family in this file: `Ty`/`Wd`/`CI`/`DI`/`Mp`/`Hd`/`Ct`/`TD`/`Ex`/`NI`/`NR`/`GPS`/`EPS`/`FtRepr`
+// and this nodule's copied `Kw*`/`Ct`/`TD` surface families — no collision). `Item::Fn`'s Rust field
+// order (`name, targs, wargs, fn_args, dyn_fns`) is preserved verbatim in `WiFn`'s tuple-positional
+// fields (this nodule's established field-order-fidelity convention, e.g. `FnSig`/`FnDecl` above).
+//
+// FLAG-semcore-34 (`ty_to_source_ref`/`ty_to_ref` split into a `_base` (`BaseType`-only) helper plus
+// a thin `TR(_, None)` wrapper). Rust's two fns each build a `BaseType` inline then wrap it once in
+// `TypeRef::unguaranteed(base)` at the end; this port factors the shared `BaseType`-only recursion
+// into `ty_to_source_base`/`ty_to_ref_base` so `ty_to_ref_tagged` (which needs the `BaseType` with a
+// CALLER-supplied guarantee, not `None`) reuses `ty_to_ref_base` directly rather than re-deriving it
+// or building a `TypeRef` and overwriting its guarantee field (this port has no field-mutation
+// primitive — value semantics — so the Rust `let mut r = ty_to_ref(t); r.guarantee = guarantee;`
+// pattern is restated as "compute the base once, wrap twice" instead). Behaviourally identical: the
+// `BaseType` shape produced for a given `Ty` is exactly Rust's, and the guarantee slot is `None` (in
+// `ty_to_ref`/`ty_to_source_ref`) or the caller's value (`ty_to_ref_tagged`) either way.
+
+// ── closure_field_ty / closure_param_ref (mono.rs, RFC-0024 SS4A.2/SS4A.4) ──────────────────────
+fn closure_field_ty(t: Ty) => Ty =
+  match t {
+    TyFn(a, b) => TyData(mangle_arrow(a, b), Nil),
+    _ => mangle_ty_in_ty(t)
+  };
+
+fn closure_param_ref(t: Ty) => TypeRef =
+  match t {
+    TyFn(a, b) => ty_to_ref(TyData(mangle_arrow(a, b), Nil)),
+    _ => ty_to_ref(t)
+  };
+
+// ── mangle_ty_in_ty (mono.rs) — rewrite an applied data type to its mangled-nullary form ────────
+fn mangle_ty_in_ty(t: Ty) => Ty =
+  match t {
+    TyBinary(_) => t,
+    TyTernary(_) => t,
+    TyDense(_, _) => t,
+    TyVsa(_, _, _) => t,
+    TySubstrate(_) => t,
+    TyBytes => t,
+    TyFloat => t,
+    TySeq(elem, n) => TySeq(mangle_ty_in_ty(elem), n),
+    TyData(n, args) => match args { Nil => t, Cons(_, _) => TyData(mangle_ty(t), Nil) },
+    TyVar(v) => TyVar(v),
+    TyFn(_, _) => t
+  };
+
+// ── ty_to_source_ref / ty_to_ref / ty_to_ref_tagged (mono.rs) — checked Ty -> surface TypeRef ───
+// ty_to_source_base: the SOURCE-named round-trip (an applied data type keeps its ORIGINAL name and
+// recurses into its arguments) — used to thread an `expected` type into re-inference.
+fn ty_to_source_base(t: Ty) => BaseType =
+  match t {
+    TyBinary(w) => match w { WdLit(n) => KwBinary(WLit(n)), WdVar(v) => KwBinary(WName(v)) },
+    TyTernary(w) => match w { WdLit(m) => KwTernary(WLit(m)), WdVar(v) => KwTernary(WName(v)) },
+    TyDense(d, sc) => KwDense(d, sc),
+    TyVsa(model, dim, sp) => Vsa(model, dim, sp),
+    TySubstrate(tag) => KwSubstrate(tag),
+    TySeq(elem, n) => KwSeq(ty_to_source_ref(elem), n),
+    TyBytes => KwBytes,
+    TyFloat => KwFloat,
+    TyData(n, args) => Named(n, ty_to_source_ref_list(args)),
+    TyVar(v) => Named(v, Nil),
+    TyFn(a, r) => FnArrow(ty_to_source_ref(a), ty_to_source_ref(r))
+  };
+
+fn ty_to_source_ref(t: Ty) => TypeRef = TR(ty_to_source_base(t), None);
+
+// ty_to_source_ref_list: map a constructor's applied type args through ty_to_source_ref (the direct
+// recursive walk this nodule uses throughout — no first-class-fn `map` primitive, FLAG-semcore-5's
+// KISS/YAGNI precedent for avoiding a generic higher-order helper in a bounded increment).
+fn ty_to_source_ref_list(ts: Vec[Ty]) => Vec[TypeRef] =
+  match ts { Nil => Nil, Cons(h, t) => Cons(ty_to_source_ref(h), ty_to_source_ref_list(t)) };
+
+// ty_to_ref_base: the MANGLED-NULLARY round-trip (an applied data type's arguments are baked into
+// its mangled name, so it becomes a nullary `Named`) — used for a rewritten `FnDecl`/`Param`/
+// `Ascribe`'s emitted surface type.
+fn ty_to_ref_base(t: Ty) => BaseType =
+  match t {
+    TyBinary(w) => match w { WdLit(n) => KwBinary(WLit(n)), WdVar(v) => KwBinary(WName(v)) },
+    TyTernary(w) => match w { WdLit(m) => KwTernary(WLit(m)), WdVar(v) => KwTernary(WName(v)) },
+    TyDense(d, sc) => KwDense(d, sc),
+    TyVsa(model, dim, sp) => Vsa(model, dim, sp),
+    TySubstrate(tag) => KwSubstrate(tag),
+    TySeq(elem, n) => KwSeq(ty_to_ref(elem), n),
+    TyBytes => KwBytes,
+    TyFloat => KwFloat,
+    TyData(n, args) => match args { Nil => Named(n, Nil), Cons(_, _) => Named(mangle_ty(t), Nil) },
+    TyVar(v) => Named(bytes_concat("VAR_", v), Nil),
+    TyFn(a, r) => FnArrow(ty_to_ref(a), ty_to_ref(r))
+  };
+
+fn ty_to_ref(t: Ty) => TypeRef = TR(ty_to_ref_base(t), None);
+
+// ty_to_ref_tagged: like ty_to_ref, but attaches the CALLER-supplied `guarantee` (the source
+// declaration's own `@ g` — never derived from `t`, never merged across instantiations).
+fn ty_to_ref_tagged(t: Ty, guarantee: Option[Strength]) => TypeRef = TR(ty_to_ref_base(t), guarantee);
+
+// ── WorkItem (mono.rs::Item, FLAG-semcore-33) + item_key (mono.rs) ──────────────────────────────
+// WorkItem: mirrors mono.rs::Item field-for-field (Fn's 5 fields, Data's 2, Method's 3 — Rust's own
+// declared field order in each variant, verbatim).
+type WorkItem =
+    WiFn(Bytes, Vec[Ty], Vec[Width], Vec[Pair[Binary{32}, Bytes]], Vec[Pair[Binary{32}, Bytes]])
+  | WiData(Bytes, Vec[Ty])
+  | WiMethod(Bytes, Bytes, Ty);
+
+// item_key: the canonical dedup key of a work item — a kind-tagged mangled string.
+fn item_key(item: WorkItem) => Bytes =
+  match item {
+    WiFn(name, targs, wargs, fa, df) => bytes_concat("fn:", mangle_hof_decl(name, targs, wargs, fa, df)),
+    WiData(name, targs) => bytes_concat("data:", mangle_decl(name, targs)),
+    WiMethod(trait_name, method, for_ty) => bytes_concat("method:", mangle_method(method, trait_name, for_ty))
+  };
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// eval.rs DYNAMIC PATTERN MATCH -- FIRST eval.rs FRAGMENT (M-740 Stage 5, increment 12 partial;
+// M-1013 eval PR-1). Ports the Data/Ctor/Ident/Tuple/Wildcard fragment of Evaluator::try_match.
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// The file header's DEFERRED list (top of this file) names eval.rs wholesale as "the heavy
+// entangled core" blocked on `eval::Evaluator`/`eval::L1Value` (Env + PrimRegistry + SwapEngine +
+// the CEK work-stack machine + the trusted kernel `Value` type). Triaging eval.rs (M-1013's
+// increment 12, "THE hardest wave") for a bounded, witnessable slice per that increment's own
+// scope note: `run_machine`/`eval_step`/`apply_frame` (the CEK loop itself, ~750 Rust lines) are
+// irreducibly Env/PrimRegistry/SwapEngine/fuel/depth-entangled -- no sub-fragment of the machine
+// runs standalone. But `Evaluator::try_match` (eval.rs 2005-2079, the runtime pattern matcher
+// `Expr::Match`/`Frame::MatchArms`/`for`-binder dispatch drives) is NOT part of that machine: it
+// is a small (~75 Rust line), separately-callable `&self` method whose ONLY `Env` dependency is a
+// single `self.env.types.get(ty)` lookup for the `Ident`-as-nullary-ctor check -- exactly the
+// `DataInfo`/`CtorInfo`/`types_lookup` registry shape THIS nodule already ported at increment 8
+// (M-1013 STEP 3). So `try_match` decomposes cleanly into a PORTABLE fragment (four of its six
+// `Pattern` arms: `Wildcard`/`Ident`/`Ctor`/`Tuple` -- pure structural matching over the checked
+// type registry) and one OUT-OF-SCOPE arm (`Lit`, FLAG-semcore-35 below); `Or` already refuses in
+// the Rust oracle (a checker invariant, ported verbatim as the same refusal).
+//
+// FLAG-semcore-35 (`Pattern::Lit` is OUT OF SCOPE for this increment -- an honest narrowing, not a
+// silent gap). Rust's `Lit` arm compares a literal pattern against `L1Value::Repr(v)` via
+// `crate::elab::lit_value` + the TRUSTED KERNEL `Value`'s `repr()`/`payload()` equality -- bridging
+// that trusted-kernel comparison into this checked fragment is real, separate work (no primitive
+// for kernel-`Value` construction/comparison exists in this language today; the same class of gap
+// M-982 already names for `BTreeMap`). `lval_try_match`'s `PLit` arm below refuses explicitly
+// (`Err`, never a fabricated `Ok`/silently-wrong comparison -- G2/VR-5) rather than mis-model it.
+// Rust's `Lit` arm is `Ok(false)` for `Data`/`Substrate`/`Fn` and only the `Repr` case does a real
+// comparison; THIS port's `PLit` arm is a BLANKET `Err` covering all of them, wider than strictly
+// necessary (the `Data`-vs-`Lit` and `Substrate`/`Fn`-vs-`Lit` "always false" sub-cases ARE
+// portable on their own). It is drawn this wide on purpose: `LVal` below collapses `Repr`/
+// `Substrate`/`Fn` into one `LOpaque` (precisely BECAUSE every arm this increment ports treats the
+// three identically), so a narrower `PLit` arm would have to re-introduce a way to distinguish
+// "this `LOpaque` came from a `Repr`" from "this `LOpaque` came from a `Substrate`/`Fn`" -- more
+// surface for one still-out-of-scope arm. The differential below therefore never constructs a
+// `PLit` case expecting oracle agreement (that would be a fabricated-coverage claim -- G2); it adds
+// one standalone "refuses cleanly, never panics" probe instead (`lval_try_match_lit_refuses`).
+// Every OTHER arm this port implements (`Wildcard`/`Ident`/`Ctor`/`Tuple`) treats `Repr`/
+// `Substrate`/`Fn` identically (bind-whole or no-match) in the REAL oracle, which is exactly why
+// `LVal`'s `LOpaque` collapse is lossless for everything this increment DOES claim to port.
+//
+// FLAG-semcore-36 (`LVal` -- the eval.rs::L1Value mirror, TRIMMED to what `try_match`'s ported
+// fragment needs). `Data { ty, ctor, fields }` mirrors verbatim (`LData`, FLAG-semcore-2 `L`-prefix
+// scheme extended: no collision against any family declared above). `Repr`/`Substrate`/`Fn` collapse
+// into ONE nullary `LOpaque` (FLAG-semcore-35 explains why this is lossless for the ported arms).
+// `binds` (Rust's `&mut Vec<(String, L1Value)>`, mutated by `push` -- APPEND order) is restated as
+// the FLAG-semcore-6 value-threaded collapse: threaded through and RETURNED, and appended (not
+// prepended, unlike the FLAG-semcore-13 assoc-list convention) via `bind_append` below, because
+// `binds`' ORDER is part of the observable differential (`Vec` equality is order-sensitive) --
+// unlike `unify`'s substitution, whose FIRST-MATCH lookup semantics make prepend-order invisible.
+type LVal = LData(Bytes, Bytes, Vec[LVal]) | LOpaque;
+
+// bind_append: append one `(name, val)` binding to the END of `binds` -- mirrors Rust's
+// `binds.push((n.clone(), val.clone()))` exactly (order-preserving; bounded by one pattern's own
+// binder count, never source-input-driven, so no depth budget is warranted -- the same class of
+// bounded structural recursion as `pat_append`/`ty_append` above).
+fn bind_append(binds: Vec[Pair[Bytes, LVal]], n: Bytes, v: LVal) => Vec[Pair[Bytes, LVal]] =
+  match binds {
+    Nil => Cons(Pr(n, v), Nil),
+    Cons(h, t) => Cons(h, bind_append(t, n, v))
+  };
+
+// (`pattern_len` -- the arity-counting fn over `Vec[Pattern]` -- is ALREADY ported above, increment
+// 6/M-1011's `expr_len`/`pattern_len` pair; reused here verbatim, no redeclaration needed.)
+
+// lval_ident_is_ctor_of / ctorinfo_any_named: mirrors try_match's `Ident` guard
+// `self.env.types.get(ty).is_some_and(|d| d.ctors.iter().any(|c| c.name == *n))` over the ALREADY
+// -ported `types_lookup`/`di_ctors`/`ci_name` registry accessors (increment 8, M-1013 STEP 3) --
+// no new registry machinery needed, only the `.any(name == n)` scan.
+fn ctorinfo_any_named(ctors: Vec[CtorInfo], n: Bytes) => Bool =
+  match ctors {
+    Nil => False,
+    Cons(c, rest) => match bytes_eq(ci_name(c), n) { 0b1 => True, _ => ctorinfo_any_named(rest, n) }
+  };
+
+fn lval_ident_is_ctor_of(types: Vec[DataInfo], ty: Bytes, n: Bytes) => Bool =
+  match types_lookup(types, ty) {
+    None => False,
+    Some(d) => ctorinfo_any_named(di_ctors(d), n)
+  };
+
+// lval_try_match: the ported fragment (mirrors eval.rs::Evaluator::try_match's `Wildcard`/`Ident`/
+// `Ctor`/`Tuple`/`Or` arms exactly; `Lit` refuses per FLAG-semcore-35). `site` is DROPPED (the
+// FLAG-semcore-13 precedent: the differential asserts `Ok`/`Err` + the resulting `(bool, binds)`,
+// never the message bytes) -- both the oracle's `L1Error` and this fn's `Bytes` message collapse to
+// `Err(())` on the marshalling harness's `decode_result`.
+fn lval_try_match(types: Vec[DataInfo], pat: Pattern, val: LVal, binds: Vec[Pair[Bytes, LVal]])
+    => Result[Pair[Bool, Vec[Pair[Bytes, LVal]]], Bytes] =
+  match pat {
+    PWildcard => Ok(Pr(True, binds)),
+    PIdent(n) => match val {
+      LData(ty, ctor, _) => match lval_ident_is_ctor_of(types, ty, n) {
+        True => match bytes_eq(ctor, n) { 0b1 => Ok(Pr(True, binds)), _ => Ok(Pr(False, binds)) },
+        False => Ok(Pr(True, bind_append(binds, n, val)))
+      },
+      LOpaque => Ok(Pr(True, bind_append(binds, n, val)))
+    },
+    PCtor(n, subs) => match val {
+      LData(_, ctor, fields) => match bytes_eq(ctor, n) {
+        0b1 => lval_match_zip(types, subs, fields, binds),
+        _ => Ok(Pr(False, binds))
+      },
+      LOpaque => Ok(Pr(False, binds))
+    },
+    PLit(_) => Err("lval_try_match: Pattern::Lit needs trusted-kernel Value equality -- out of scope for M-1013 eval PR-1 (FLAG-semcore-35); never silently mismatched"),
+    PTuple(subs) => lval_try_match(types, PCtor(tuple_ctor_name(pattern_len(subs)), subs), val, binds),
+    POr(_) => Err("lval_try_match: Pattern::Or must be desugared by the checker before evaluation (invariant violation) -- mirrors eval.rs::try_match's own refusal verbatim")
+  };
+
+// lval_match_zip: the `Ctor` arm's `for (sub, fv) in subs.iter().zip(fields.iter())` loop, restated
+// as a fold that THREADS `binds` and short-circuits `Ok(false)` on the first sub-pattern mismatch --
+// mirrors Rust's `zip` early-stop-at-the-shorter-list semantics exactly (a length mismatch between
+// `subs`/`fields` never occurs in a checked program; where it would, `zip` silently stops rather
+// than erroring, and so does this fold, for byte-for-byte behavioral parity).
+fn lval_match_zip(types: Vec[DataInfo], subs: Vec[Pattern], fields: Vec[LVal],
+    binds: Vec[Pair[Bytes, LVal]]) => Result[Pair[Bool, Vec[Pair[Bytes, LVal]]], Bytes] =
+  match subs {
+    Nil => Ok(Pr(True, binds)),
+    Cons(sh, st) => match fields {
+      Nil => Ok(Pr(True, binds)),
+      Cons(fh, ft) => match lval_try_match(types, sh, fh, binds) {
+        Err(e) => Err(e),
+        Ok(pr) => match pr {
+          Pr(matched, binds2) => match matched {
+            False => Ok(Pr(False, binds2)),
+            True => lval_match_zip(types, st, ft, binds2)
+          }
+        }
+      }
+    }
+  };
