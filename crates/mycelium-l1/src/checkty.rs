@@ -1333,10 +1333,17 @@ pub(crate) struct CoherenceView {
 /// The **declaration-level** registries of one nodule (types/fns/traits), built before any body is
 /// checked (M-662). The phylum builds its two cross-nodule views from these, then re-uses them as the
 /// per-nodule base when checking that nodule's bodies (so registration runs once per nodule — DRY).
-struct NoduleRegs {
-    types: BTreeMap<String, DataInfo>,
-    fns: BTreeMap<String, FnDecl>,
-    traits: BTreeMap<String, TraitInfo>,
+///
+/// Widened to `pub(crate)` (struct + all three fields) for the M-1013 STEP 5 `compiler.semcore`
+/// differential harness (`crates/mycelium-l1/src/tests/compiler_stage5_register.rs`), which needs to
+/// read the registries `register_nodule_decls` returns to compare them against the `.myc` port's
+/// mirror output — zero logic change, the same widening precedent as STEP 3's
+/// `resolve_ctors`/`first_duplicate` (commit 2bb06f88) and the `CoherenceView` widening
+/// (commit 65351071).
+pub(crate) struct NoduleRegs {
+    pub(crate) types: BTreeMap<String, DataInfo>,
+    pub(crate) fns: BTreeMap<String, FnDecl>,
+    pub(crate) traits: BTreeMap<String, TraitInfo>,
 }
 
 /// Register one (resolved) nodule's **declarations** — data types (Pass 1), traits (Pass 1b), and
@@ -1345,7 +1352,9 @@ struct NoduleRegs {
 /// its cross-nodule views before checking any body). Bodies and instances are **not** handled here
 /// (instances need the phylum-wide orphan view; bodies need imports). The prelude `Bool` is included
 /// so intra-nodule resolution is unchanged.
-fn register_nodule_decls(nodule: &Nodule) -> Result<NoduleRegs, CheckError> {
+///
+/// Widened to `pub(crate)` for the M-1013 STEP 5 differential harness (see [`NoduleRegs`]).
+pub(crate) fn register_nodule_decls(nodule: &Nodule) -> Result<NoduleRegs, CheckError> {
     let mut types = BTreeMap::new();
     let p = prelude();
     types.insert(p.name.clone(), p);
