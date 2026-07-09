@@ -7,7 +7,8 @@ This project is in **design + Rust-first implementation**; entries cover both th
 corpus and the landing kernel/stdlib code. Semantic versioning will begin when the kernel stabilizes.
 
 > Older entries are archived on periodic sweeps; this file holds `[Unreleased]` + a rolling recent
-> window. Full history: `docs/archive/changelog/`.
+> window. Full history: archived — see the `archive` git branch (was `docs/archive/changelog/`
+> in-tree; extracted 2026-07-09, clean-snapshot prep).
 
 ## [Unreleased]
 
@@ -624,7 +625,9 @@ nodule (`lib/compiler/nodule.myc`), the full `.myc` port of `crates/mycelium-l1/
 Post-Phase-I doc maintenance on the kickoff corpus (`.claude/kickoffs/`) plus `docs/CURRENT-STATE.md`
 — documentation only, no code changes.
 
-- **Seven kickoffs archived** (moved to `.claude/kickoffs/archive/`): the six completed — `acy`
+- **Seven kickoffs archived** (moved to `.claude/kickoffs/archive/`; that in-tree dir was itself
+  further extracted to the persistent `archive` git branch 2026-07-09, clean-snapshot prep — see
+  the entry near the top of this file): the six completed — `acy`
   (H0, commits 6636f56/ba0b800, E27-1), `enb` (H1) and `opp` (both PR #1020, 2026-07-02), `grm`
   (H2a) and `frz` (H2 — the kernel freeze, both PR #1051, 2026-07-02), and `trx` (transpiler PoC,
   landed 2026-07-01) — each with a prepended completion header whose task ranges were verified
@@ -2524,4 +2527,5 @@ Verified: `markdown.sh` (432 docs, 0 errors), `links.sh`, `doc_refs_check.py`, a
 
 ### Older entries
 
-See `docs/archive/changelog/CHANGELOG-2026-06.md` for entries 2026-06-27 and earlier (verbatim).
+Entries 2026-06-27 and earlier (verbatim) are archived — see the `archive` git branch (was
+`docs/archive/changelog/CHANGELOG-2026-06.md` in-tree; extracted 2026-07-09, clean-snapshot prep).
