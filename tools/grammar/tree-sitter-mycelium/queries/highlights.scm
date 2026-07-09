@@ -37,7 +37,7 @@
 (forage_attribute "@" @attribute "forage" @attribute)
 
 ; keyword buckets (lexer-derived, G2)
-["backbone" "colony" "consume" "cyst" "default" "derive" "else" "fn" "for" "forage" "fuse" "graft" "grow" "hypha" "if" "impl" "in" "lambda" "let" "lower" "match" "matured" "mesh" "nodule" "object" "paradigm" "phylum" "policy" "pub" "reclaim" "spore" "swap" "thaw" "then" "tier" "to" "trait" "type" "use" "via" "wild" "with" "xloc"] @keyword
+["backbone" "colony" "consume" "cyst" "default" "derive" "else" "fn" "for" "forage" "fuse" "graft" "grow" "hypha" "if" "impl" "in" "lambda" "let" "lower" "match" "matured" "mesh" "nodule" "object" "paradigm" "phylum" "policy" "pub" "reclaim" "spore" "swap" "thaw" "then" "tier" "to" "trait" "type" "use" "via" "wild" "with" "wrapping" "xloc"] @keyword
 ["Binary" "Bytes" "Dense" "Float" "Seq" "Sparse" "Substrate" "Ternary" "VSA" "bin" "emb" "hvec" "tern"] @type
 ["BF16" "F16" "F32" "F64"] @type.builtin
 ["Declared" "Empirical" "Exact" "Proven"] @attribute

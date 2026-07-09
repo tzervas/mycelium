@@ -29322,9 +29322,9 @@
       "phylum": "std",
       "nodule": "std.cmp",
       "file": "lib/std/cmp.myc",
-      "line": 111,
+      "line": 110,
       "signature": "fn ne{N}(a: Binary{N}, b: Binary{N}) => Bool",
-      "summary": "ne<N>: True iff a != b — the negation of `eq` (Exact; total).",
+      "summary": null,
       "tag": "Empirical/Declared"
     },
     {
@@ -29333,7 +29333,7 @@
       "phylum": "std",
       "nodule": "std.cmp",
       "file": "lib/std/cmp.myc",
-      "line": 115,
+      "line": 114,
       "signature": "fn gt{N}(a: Binary{N}, b: Binary{N}) => Bool",
       "summary": "gt<N>: True iff a > b (unsigned) — a projection of cmp (Exact; total).",
       "tag": "Empirical/Declared"
@@ -29344,7 +29344,7 @@
       "phylum": "std",
       "nodule": "std.cmp",
       "file": "lib/std/cmp.myc",
-      "line": 121,
+      "line": 120,
       "signature": "fn cmp_s{N}(a: Binary{N}, b: Binary{N}) => Ordering",
       "summary": "cmp_s<N>: SIGNED three-way comparison — two's-complement ordering (RFC-0033 §4.1.2: ordering is signedness-distinct). Uses the `lt_s` prim (signed less-than) + `eq` (bit-identity, signedness- agnostic). Total, Exact for every concrete N.",
       "tag": "Empirical/Declared"
@@ -29355,7 +29355,7 @@
       "phylum": "std",
       "nodule": "std.cmp",
       "file": "lib/std/cmp.myc",
-      "line": 125,
+      "line": 124,
       "signature": "fn le_s{N}(a: Binary{N}, b: Binary{N}) => Bool",
       "summary": "le_s<N>: True iff a <= b under the SIGNED (two's-complement) ordering — projection of cmp_s. Exact.",
       "tag": "Empirical/Declared"
@@ -29366,7 +29366,7 @@
       "phylum": "std",
       "nodule": "std.cmp",
       "file": "lib/std/cmp.myc",
-      "line": 129,
+      "line": 128,
       "signature": "fn ge_s{N}(a: Binary{N}, b: Binary{N}) => Bool",
       "summary": "ge_s<N>: True iff a >= b under the SIGNED ordering — projection of cmp_s. Exact.",
       "tag": "Empirical/Declared"
