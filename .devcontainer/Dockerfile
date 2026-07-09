@@ -76,6 +76,11 @@ ARG RUST_TOOLCHAIN=1.96.1
 ARG PYTHON_VERSION=3.13
 ARG UV_VERSION=0.8.17
 ARG NODE_VERSION=22.22.2
+# The `just api` public-API surface gate reads rustdoc-JSON (a nightly-only feature), so a nightly
+# toolchain is baked ALONGSIDE the MSRV — used ONLY to introspect the surface, never to build any
+# real artifact (the MSRV RUST_TOOLCHAIN above stays the build toolchain, ADR-041). Override to a
+# date (--build-arg API_TOOLCHAIN=nightly-YYYY-MM-DD) for baselines reproducible across rebuilds.
+ARG API_TOOLCHAIN=nightly
 
 LABEL org.opencontainers.image.title="mycelium-dev" \
       org.opencontainers.image.description="Mycelium portable dev/CI base image — Rust ${RUST_TOOLCHAIN} + Python ${PYTHON_VERSION}/uv + just + full check-tool set; libMLIR is a separate opt-in stage (with-mlir)." \
@@ -130,7 +135,7 @@ RUN cargo install --locked cargo-chef
 WORKDIR /workspace-setup
 COPY scripts/lib.sh scripts/install-tools.sh ./scripts/
 RUN apt-get update \
-    && MYCELIUM_SKIP_OPTIONAL_CARGO=0 bash ./scripts/install-tools.sh \
+    && MYCELIUM_SKIP_OPTIONAL_CARGO=0 MYC_API_TOOLCHAIN="${API_TOOLCHAIN}" bash ./scripts/install-tools.sh \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /
 RUN rm -rf /workspace-setup
