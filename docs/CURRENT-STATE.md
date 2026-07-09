@@ -40,8 +40,9 @@ this paragraph previously said "1/5 conditions met", a pre-freeze snapshot super
 
 ## Corpus status digest
 
-Rough counts (verified against the tree, 2026-07-01): **27 ADRs**, **39 RFCs**, **72 design notes**
-(`docs/adr/`, `docs/rfcs/`, `docs/notes/`, each minus its `README.md`). **One formal supersession:**
+Rough counts (verified against the tree, 2026-07-09, clean-snapshot prep): **33 ADRs**, **41 RFCs**,
+**97 design notes** (`docs/adr/`, `docs/rfcs/`, `docs/notes/`, each minus its `README.md`). **One
+formal supersession:**
 **ADR-021 → ADR-022** (2026-06-23) — ADR-021 is archived verbatim, now on the `archive` git branch
 (was `docs/archive/adr/ADR-021-1.0.0-Release-Readiness-Gate.md` in-tree; extracted 2026-07-09,
 clean-snapshot prep); its kernel Gate A/B criteria carry forward as ADR-022 track T1. **`docs/Doc-Index.md` is the authoritative status resolver** — this
