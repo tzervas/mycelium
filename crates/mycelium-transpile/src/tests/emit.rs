@@ -588,6 +588,48 @@ fn cases() -> Vec<Case> {
                 contains: "width_cast(x, 0b0000_0000_0000_0000_0000_0000_0000_0000)",
             },
         },
+        // ── D3 operand-type-inference depth (DN-34 §8.16 residual, trx2 follow-on) ───────────────
+        // A literal operand (suffixed or not) is STILL left unresolved — never guessed. A suffixed
+        // literal's *type* is decidable, but composing it into a prim call does not `myc check`-clean
+        // (verify-first finding: the real toolchain refuses a bare decimal `Int` operand — "no
+        // representation family" — and fixing that needs the width-correct `BinLit` spelling DN-34
+        // §8.13/§8.14 already flagged as an undecided "typed-literal form" design decision; see
+        // `expr_env_type`'s doc). So the gate still does not fire here, and the prior glyph emission
+        // is unchanged — this pins that non-result.
+        Case {
+            name: "bitand_known_binary_with_suffixed_literal_keeps_glyph",
+            rust: "fn f(a: u16) -> u16 { a & 5u16 }",
+            expect: Expect::Emitted {
+                item: "f",
+                contains: "a & 5",
+            },
+        },
+        Case {
+            name: "bitand_known_binary_with_unsuffixed_literal_keeps_glyph",
+            rust: "fn f(a: u16) -> u16 { a & 5 }",
+            expect: Expect::Emitted {
+                item: "f",
+                contains: "a & 5",
+            },
+        },
+        // `(e)`/`&e` ARE structurally transparent to the operand-type gate (this module's own
+        // `Expr::Paren`/`Expr::Reference` emission arms treat them identically to `e` itself).
+        Case {
+            name: "bitand_known_binary_through_paren_emits_and_call",
+            rust: "fn f(a: u16, b: u16) -> u16 { (a) & b }",
+            expect: Expect::Emitted {
+                item: "f",
+                contains: "and((a), b)",
+            },
+        },
+        Case {
+            name: "bitand_known_binary_through_reference_emits_and_call",
+            rust: "fn f(a: u16, b: u16) -> u16 { &a & b }",
+            expect: Expect::Emitted {
+                item: "f",
+                contains: "and(a, b)",
+            },
+        },
     ]
 }
 
@@ -842,6 +884,10 @@ fn binop_operand_gated_forms_check_clean() {
         // `^` (unchanged glyph) rides along as a negative control — it must ALSO check clean
         // (it already did before this deliverable; this pins that it still does).
         "fn f_xor(a: u16, b: u16) -> u16 { a ^ b }",
+        // D3 operand-type-inference depth (DN-34 §8.16 residual): a `&`-reference-wrapped operand
+        // must ALSO check clean, proving the extended `expr_env_type` gate composes into a real,
+        // myc-check-clean body, not just matching test-fixture text.
+        "fn f_and_ref(a: u16, b: u16) -> u16 { &a & b }",
     ];
     for (i, rust) in rust_snippets.iter().enumerate() {
         let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
@@ -1074,7 +1120,7 @@ fn cast_cases() -> Vec<CastCase> {
             name: "narrow_u32_as_u16_flags_not_emitted",
             env: &[("x", "Binary{32}")],
             src: "x as u16",
-            expect: GapReasonContains("FLAG-cast-narrow-fidelity"),
+            expect: GapReasonContains("FLAG-truncate-not-emittable"),
         },
         // FLOAT->INT (`f64 as i32`): operand is `Float`, so this is CU-3 territory regardless of the
         // (signed) target — Rust saturates, `flt.to_bin` refuses; no faithful prim, gap CU-3.

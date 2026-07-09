@@ -11,6 +11,28 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Phase-B B1 — transpiler D3 operand-type-inference depth + narrow-cast FLAG grounding (2026-07-09)
+
+Follow-on to the trx2 promotion below, scoped to `crates/mycelium-transpile/**`. **Transpiler**
+(DN-34 §8.16 residual): `expr_env_type` now sees through structurally-transparent `Expr::Paren`
+(`(e)`) and `Expr::Reference` (`&e`/`&mut e`) wrappers to the wrapped operand's known type — decidable
+on the expression's own syntax (this module already erases references per ADR-003 and re-wraps
+parens), so the `&`/`|`/`!=`/`>` operand-gated composition now reaches reference/paren-wrapped
+`Binary{N}` operands, not just bare identifiers. A suffixed-literal extension (`5u16`) was tried and
+**verify-first-rejected** (mitigation #14/VR-5): the live `myc check` oracle refuses a bare `Int`
+operand ("no representation family"), and fixing that needs the undecided "typed-literal form" DN-34
+§8.13/§8.14 already flagged — so it was reverted and pinned by two glyph-unchanged regression cases,
+never guessed past. The narrowing-cast gap FLAG was renamed `FLAG-cast-narrow-fidelity` to
+`FLAG-truncate-not-emittable` and re-grounded against **DN-51** (Accepted): the wrapping-truncate
+semantics is *decided* (DN-51 §2 D3 names the explicit `truncate` op), but no kernel `truncate` prim
+is landed yet (DN-51 §6 follow-on; verify-first confirmed absent) — a decided-semantics /
+no-emittable-surface gap, narrower than "undecided fidelity". The float↔int arm stays gapped pending
+DN-91 (Draft) ratification. Emission stays `Declared`; the vet figure stays `Empirical` (unchanged on
+the 5-target corpus, an honest zero-yield-on-this-corpus result — the new composed form is confirmed
+`myc check`-clean by the live-oracle test). The `mem`/`mycelium-tero` wave-1 (M-1015…M-1018) was
+verify-first confirmed already landed (no re-implementation); the stale `todo` status on M-1016/M-1017/
+M-1018 is FLAGged for the maintainer's PM sync, not hand-edited here. (trx2 E32-1; DN-34 §8.16; VR-5/G2.)
+
 ### trx2 promotion — transpiler `Expr::Cast`, CU-5 `wrapping { }` surface, DN-90…94 design gates, tero-mcp-lite package (2026-07-08)
 
 The trx2 wave promoted from the working tier to the staging tier. Six threads, all honest-tagged.
