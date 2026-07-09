@@ -11,6 +11,23 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Lint: `unsafe_code = "allow"` so documented unsafe never erroneously alarms — local, remote, or ad-hoc (2026-07-09)
+
+Follow-on to the entry below, per maintainer direction ("applied for both local and remote checks so
+you stop getting alarmed erroneously about intentional unsafe"). Set `unsafe_code = "allow"` in
+`[workspace.lints.rust]`, making `clippy::undocumented_unsafe_blocks` the single unsafe check: a
+documented, intentional unsafe block now passes **everywhere** — local `just check`, remote CI (`just
+ci`, same suite), and even ad-hoc `cargo clippy -D warnings` with no exemption flag — while an
+undocumented block (no `// SAFETY:` comment) is still caught. This removes the erroneous-alarm class:
+previously `unsafe_code = "warn"` fired on *every* unsafe site under any `-D warnings` run lacking the
+`-A unsafe_code` exemption, flagging intentional unsafe. What still guards unsafe is unchanged: the
+trusted-base crates keep their **source-level** `#![forbid(unsafe_code)]` (which overrides this
+workspace `allow`), `scripts/checks/scan.sh` enforces confinement + the per-site intentionality
+marker, and `undocumented_unsafe_blocks` enforces the `// SAFETY:` comment. Verified: ad-hoc
+`clippy -D warnings` (no `-A`) on `mycelium-mlir` now passes (0 errors, was 8); a synthetic
+undocumented block is still caught; trusted-base `forbid` unaffected. No `.rs` changed. (ADR-014;
+DN-21; G2.)
+
 ### Lint: enforce the mandatory `// SAFETY:` comment via clippy (ADR-014 refinement, 2026-07-09)
 
 Maintainer directive: catch *undocumented* unsafe while allowing documented, intentional unsafe. Added
