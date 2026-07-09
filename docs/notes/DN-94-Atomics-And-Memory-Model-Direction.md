@@ -270,7 +270,7 @@ condition.
 - **R-4 (Option B at R2 reopens the ordering question).** If R2 adopts Option B, a runtime
   memory-ordering obligation appears. *Mitigation:* this is expected and scoped — it lives in the R2
   distributed-execution RFC (G8), tagged and deferred already (DN-61 Part B); this DN does not
-  pre-empt it, only records that it stays runtime-internal there too.
+  preempt it, only records that it stays runtime-internal there too.
 
 ---
 

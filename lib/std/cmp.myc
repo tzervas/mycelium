@@ -106,7 +106,6 @@ fn min{N}(a: Binary{N}, b: Binary{N}) => Binary{N} =
 // RFC-0032 D1 makes `eq`/`lt` the minimal comparison *prim* basis; everything else is derived here.
 // These close the surface gaps the transpiler needs (signed ordering + `ne`/`gt`) — all Exact,
 // total over Binary{N} x Binary{N}, no new kernel prim (the `lt_s` prim already exists, unused).
-
 // ne<N>: True iff a != b — the negation of `eq` (Exact; total).
 fn ne{N}(a: Binary{N}, b: Binary{N}) => Bool =
   match eq(a, b) { 0b1 => False, _ => True };
