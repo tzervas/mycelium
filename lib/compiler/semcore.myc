@@ -26,10 +26,20 @@
 //       fn with no `eval::Evaluator` dependency, unlike F-A2's `check_fuse_laws`, which stays
 //       deferred below). This CLOSES the STEP-4-landing FLAG that called `register_nodule_decls`
 //       "entangled" — the entanglement was with `check_fuse_laws`, not `fuse::prelude`.
+//     M-1013 eval PR-1 (appended below) — the FIRST eval.rs fragment: the Data/Ctor/Ident/Tuple/
+//       Wildcard fraction of `Evaluator::try_match` (eval.rs 2005-2079), which is separable from
+//       the CEK work-stack machine (`run_machine`/`eval_step`/`apply_frame`) and needs only the
+//       already-ported `DataInfo`/`CtorInfo`/`types_lookup` registry. `Pattern::Lit` (kernel-`Value`
+//       equality) stays OUT of scope, honestly refused (FLAG-semcore-35) — see `lval_try_match`.
+//       This does NOT close the "eval.rs deferred" line below: the CEK machine itself (the bulk of
+//       eval.rs, ~2k Rust lines) remains unported and is a DIFFERENT, much larger undertaking.
 //     DEFERRED (NOT in this increment) — fuse.rs's F-A2 `check_fuse_laws` (RUNS `eval::Evaluator`,
 //       which is not ported; its own `enumerate_finite_domain` also constructs `eval::L1Value`),
-//       checkty.rs's checking LOGIC (~7k lines), elab.rs, eval.rs, mono.rs (the heavy entangled core,
-//       ~15k lines total), the whole-program L0-output differential, and the `cargo-mutants` witness.
+//       checkty.rs's checking LOGIC (~7k lines), elab.rs, eval.rs's CEK machine (`Evaluator::call`/
+//       `run_machine`/`eval_step`/`apply_frame`/`enter_call`/`app_dispatch` and the rest of the
+//       Env/PrimRegistry/SwapEngine-entangled core — the `try_match` fragment above is the one
+//       exception), mono.rs (the heavy entangled core, ~15k lines total across these), the
+//       whole-program L0-output differential, and the `cargo-mutants` witness.
 //       These are FEASIBILITY-GATED on M-986 (the evaluator
 //       elides only bare-body tail calls — no in-language loop today exceeds the 4096-depth
 //       budget, `parse.myc`'s own FLAG-parse-11 finding) and M-987 (~n^3 L1-eval cost): a
@@ -4410,4 +4420,136 @@ fn item_key(item: WorkItem) => Bytes =
     WiFn(name, targs, wargs, fa, df) => bytes_concat("fn:", mangle_hof_decl(name, targs, wargs, fa, df)),
     WiData(name, targs) => bytes_concat("data:", mangle_decl(name, targs)),
     WiMethod(trait_name, method, for_ty) => bytes_concat("method:", mangle_method(method, trait_name, for_ty))
+  };
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// eval.rs DYNAMIC PATTERN MATCH -- FIRST eval.rs FRAGMENT (M-740 Stage 5, increment 12 partial;
+// M-1013 eval PR-1). Ports the Data/Ctor/Ident/Tuple/Wildcard fragment of Evaluator::try_match.
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// The file header's DEFERRED list (top of this file) names eval.rs wholesale as "the heavy
+// entangled core" blocked on `eval::Evaluator`/`eval::L1Value` (Env + PrimRegistry + SwapEngine +
+// the CEK work-stack machine + the trusted kernel `Value` type). Triaging eval.rs (M-1013's
+// increment 12, "THE hardest wave") for a bounded, witnessable slice per that increment's own
+// scope note: `run_machine`/`eval_step`/`apply_frame` (the CEK loop itself, ~750 Rust lines) are
+// irreducibly Env/PrimRegistry/SwapEngine/fuel/depth-entangled -- no sub-fragment of the machine
+// runs standalone. But `Evaluator::try_match` (eval.rs 2005-2079, the runtime pattern matcher
+// `Expr::Match`/`Frame::MatchArms`/`for`-binder dispatch drives) is NOT part of that machine: it
+// is a small (~75 Rust line), separately-callable `&self` method whose ONLY `Env` dependency is a
+// single `self.env.types.get(ty)` lookup for the `Ident`-as-nullary-ctor check -- exactly the
+// `DataInfo`/`CtorInfo`/`types_lookup` registry shape THIS nodule already ported at increment 8
+// (M-1013 STEP 3). So `try_match` decomposes cleanly into a PORTABLE fragment (four of its six
+// `Pattern` arms: `Wildcard`/`Ident`/`Ctor`/`Tuple` -- pure structural matching over the checked
+// type registry) and one OUT-OF-SCOPE arm (`Lit`, FLAG-semcore-35 below); `Or` already refuses in
+// the Rust oracle (a checker invariant, ported verbatim as the same refusal).
+//
+// FLAG-semcore-35 (`Pattern::Lit` is OUT OF SCOPE for this increment -- an honest narrowing, not a
+// silent gap). Rust's `Lit` arm compares a literal pattern against `L1Value::Repr(v)` via
+// `crate::elab::lit_value` + the TRUSTED KERNEL `Value`'s `repr()`/`payload()` equality -- bridging
+// that trusted-kernel comparison into this checked fragment is real, separate work (no primitive
+// for kernel-`Value` construction/comparison exists in this language today; the same class of gap
+// M-982 already names for `BTreeMap`). `lval_try_match`'s `PLit` arm below refuses explicitly
+// (`Err`, never a fabricated `Ok`/silently-wrong comparison -- G2/VR-5) rather than mis-model it.
+// Rust's `Lit` arm is `Ok(false)` for `Data`/`Substrate`/`Fn` and only the `Repr` case does a real
+// comparison; THIS port's `PLit` arm is a BLANKET `Err` covering all of them, wider than strictly
+// necessary (the `Data`-vs-`Lit` and `Substrate`/`Fn`-vs-`Lit` "always false" sub-cases ARE
+// portable on their own). It is drawn this wide on purpose: `LVal` below collapses `Repr`/
+// `Substrate`/`Fn` into one `LOpaque` (precisely BECAUSE every arm this increment ports treats the
+// three identically), so a narrower `PLit` arm would have to re-introduce a way to distinguish
+// "this `LOpaque` came from a `Repr`" from "this `LOpaque` came from a `Substrate`/`Fn`" -- more
+// surface for one still-out-of-scope arm. The differential below therefore never constructs a
+// `PLit` case expecting oracle agreement (that would be a fabricated-coverage claim -- G2); it adds
+// one standalone "refuses cleanly, never panics" probe instead (`lval_try_match_lit_refuses`).
+// Every OTHER arm this port implements (`Wildcard`/`Ident`/`Ctor`/`Tuple`) treats `Repr`/
+// `Substrate`/`Fn` identically (bind-whole or no-match) in the REAL oracle, which is exactly why
+// `LVal`'s `LOpaque` collapse is lossless for everything this increment DOES claim to port.
+//
+// FLAG-semcore-36 (`LVal` -- the eval.rs::L1Value mirror, TRIMMED to what `try_match`'s ported
+// fragment needs). `Data { ty, ctor, fields }` mirrors verbatim (`LData`, FLAG-semcore-2 `L`-prefix
+// scheme extended: no collision against any family declared above). `Repr`/`Substrate`/`Fn` collapse
+// into ONE nullary `LOpaque` (FLAG-semcore-35 explains why this is lossless for the ported arms).
+// `binds` (Rust's `&mut Vec<(String, L1Value)>`, mutated by `push` -- APPEND order) is restated as
+// the FLAG-semcore-6 value-threaded collapse: threaded through and RETURNED, and appended (not
+// prepended, unlike the FLAG-semcore-13 assoc-list convention) via `bind_append` below, because
+// `binds`' ORDER is part of the observable differential (`Vec` equality is order-sensitive) --
+// unlike `unify`'s substitution, whose FIRST-MATCH lookup semantics make prepend-order invisible.
+type LVal = LData(Bytes, Bytes, Vec[LVal]) | LOpaque;
+
+// bind_append: append one `(name, val)` binding to the END of `binds` -- mirrors Rust's
+// `binds.push((n.clone(), val.clone()))` exactly (order-preserving; bounded by one pattern's own
+// binder count, never source-input-driven, so no depth budget is warranted -- the same class of
+// bounded structural recursion as `pat_append`/`ty_append` above).
+fn bind_append(binds: Vec[Pair[Bytes, LVal]], n: Bytes, v: LVal) => Vec[Pair[Bytes, LVal]] =
+  match binds {
+    Nil => Cons(Pr(n, v), Nil),
+    Cons(h, t) => Cons(h, bind_append(t, n, v))
+  };
+
+// (`pattern_len` -- the arity-counting fn over `Vec[Pattern]` -- is ALREADY ported above, increment
+// 6/M-1011's `expr_len`/`pattern_len` pair; reused here verbatim, no redeclaration needed.)
+
+// lval_ident_is_ctor_of / ctorinfo_any_named: mirrors try_match's `Ident` guard
+// `self.env.types.get(ty).is_some_and(|d| d.ctors.iter().any(|c| c.name == *n))` over the ALREADY
+// -ported `types_lookup`/`di_ctors`/`ci_name` registry accessors (increment 8, M-1013 STEP 3) --
+// no new registry machinery needed, only the `.any(name == n)` scan.
+fn ctorinfo_any_named(ctors: Vec[CtorInfo], n: Bytes) => Bool =
+  match ctors {
+    Nil => False,
+    Cons(c, rest) => match bytes_eq(ci_name(c), n) { 0b1 => True, _ => ctorinfo_any_named(rest, n) }
+  };
+
+fn lval_ident_is_ctor_of(types: Vec[DataInfo], ty: Bytes, n: Bytes) => Bool =
+  match types_lookup(types, ty) {
+    None => False,
+    Some(d) => ctorinfo_any_named(di_ctors(d), n)
+  };
+
+// lval_try_match: the ported fragment (mirrors eval.rs::Evaluator::try_match's `Wildcard`/`Ident`/
+// `Ctor`/`Tuple`/`Or` arms exactly; `Lit` refuses per FLAG-semcore-35). `site` is DROPPED (the
+// FLAG-semcore-13 precedent: the differential asserts `Ok`/`Err` + the resulting `(bool, binds)`,
+// never the message bytes) -- both the oracle's `L1Error` and this fn's `Bytes` message collapse to
+// `Err(())` on the marshalling harness's `decode_result`.
+fn lval_try_match(types: Vec[DataInfo], pat: Pattern, val: LVal, binds: Vec[Pair[Bytes, LVal]])
+    => Result[Pair[Bool, Vec[Pair[Bytes, LVal]]], Bytes] =
+  match pat {
+    PWildcard => Ok(Pr(True, binds)),
+    PIdent(n) => match val {
+      LData(ty, ctor, _) => match lval_ident_is_ctor_of(types, ty, n) {
+        True => match bytes_eq(ctor, n) { 0b1 => Ok(Pr(True, binds)), _ => Ok(Pr(False, binds)) },
+        False => Ok(Pr(True, bind_append(binds, n, val)))
+      },
+      LOpaque => Ok(Pr(True, bind_append(binds, n, val)))
+    },
+    PCtor(n, subs) => match val {
+      LData(_, ctor, fields) => match bytes_eq(ctor, n) {
+        0b1 => lval_match_zip(types, subs, fields, binds),
+        _ => Ok(Pr(False, binds))
+      },
+      LOpaque => Ok(Pr(False, binds))
+    },
+    PLit(_) => Err("lval_try_match: Pattern::Lit needs trusted-kernel Value equality -- out of scope for M-1013 eval PR-1 (FLAG-semcore-35); never silently mismatched"),
+    PTuple(subs) => lval_try_match(types, PCtor(tuple_ctor_name(pattern_len(subs)), subs), val, binds),
+    POr(_) => Err("lval_try_match: Pattern::Or must be desugared by the checker before evaluation (invariant violation) -- mirrors eval.rs::try_match's own refusal verbatim")
+  };
+
+// lval_match_zip: the `Ctor` arm's `for (sub, fv) in subs.iter().zip(fields.iter())` loop, restated
+// as a fold that THREADS `binds` and short-circuits `Ok(false)` on the first sub-pattern mismatch --
+// mirrors Rust's `zip` early-stop-at-the-shorter-list semantics exactly (a length mismatch between
+// `subs`/`fields` never occurs in a checked program; where it would, `zip` silently stops rather
+// than erroring, and so does this fold, for byte-for-byte behavioral parity).
+fn lval_match_zip(types: Vec[DataInfo], subs: Vec[Pattern], fields: Vec[LVal],
+    binds: Vec[Pair[Bytes, LVal]]) => Result[Pair[Bool, Vec[Pair[Bytes, LVal]]], Bytes] =
+  match subs {
+    Nil => Ok(Pr(True, binds)),
+    Cons(sh, st) => match fields {
+      Nil => Ok(Pr(True, binds)),
+      Cons(fh, ft) => match lval_try_match(types, sh, fh, binds) {
+        Err(e) => Err(e),
+        Ok(pr) => match pr {
+          Pr(matched, binds2) => match matched {
+            False => Ok(Pr(False, binds2)),
+            True => lval_match_zip(types, st, ft, binds2)
+          }
+        }
+      }
+    }
   };
