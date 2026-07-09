@@ -42,9 +42,11 @@ Keep the record honest and append-only.
 ## Releases (later)
 - When versioning starts: move `[Unreleased]` items into a dated `## [X.Y.Z] - YYYY-MM-DD`
   section, add comparison links, and reset `[Unreleased]`.
-- `CHANGELOG.md` is periodically swept: older entries move byte-for-byte to `docs/archive/changelog/`
-  (pointer left at the bottom of the live file) — those pre-versioning archived entries are excluded
-  from the first release section when it's cut; the custom `### Open` section rule above still holds.
+- `CHANGELOG.md` is periodically swept: older entries move byte-for-byte to an archive (pointer left
+  at the bottom of the live file) — as of 2026-07-09 the archive lives on the persistent `archive`
+  git branch, not an in-tree `docs/archive/` dir (clean-snapshot prep; see CLAUDE.md) — those
+  pre-versioning archived entries are excluded from the first release section when it's cut; the
+  custom `### Open` section rule above still holds.
 
 ## Checklist before staging the changelog entry
 - `docs/api-index/` in step with source: if any public symbol changed, confirm `just docs-index`

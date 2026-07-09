@@ -348,7 +348,7 @@ fn param_has_fn_type(
 /// canonical [`item_key`] (a discriminant-tagged mangled string), so a `BTreeSet<String>` of seen
 /// keys guarantees each specialization is emitted **once** (dedup ⟹ the recursive walk terminates).
 #[derive(Debug, Clone, PartialEq, Eq)]
-enum Item {
+pub(crate) enum Item {
     /// A function instance: the source fn `name` at concrete type arguments `targs` (empty for a
     /// monomorphic fn — which mangles to `name` unchanged), optionally specialised by resolved
     /// **function-argument** identities (RFC-0024 §4, M-687). `fn_args` carries `(param_index,
@@ -2621,7 +2621,7 @@ const APPLY_PARAM: &str = "%fnarg";
 /// constructor. A fn-typed capture (a closure capturing a closure) becomes its own arrow tag-sum
 /// `Fn$<inner>` (a nullary `Ty::Data`); everything else takes the existing mangled-nullary form
 /// ([`mangle_ty_in_ty`]) the registry/`field_spec` already consume.
-fn closure_field_ty(t: &Ty) -> Ty {
+pub(crate) fn closure_field_ty(t: &Ty) -> Ty {
     match t {
         Ty::Fn(a, b) => Ty::Data(mangle_arrow(a, b), vec![]),
         _ => mangle_ty_in_ty(t),
@@ -2631,7 +2631,7 @@ fn closure_field_ty(t: &Ty) -> Ty {
 /// RFC-0024 §4A.2 (M-704): the surface [`TypeRef`] for an `apply` dispatcher's param/return type. A
 /// fn-typed position (a higher-order arrow `(B => C) => D` etc.) is the closure data type
 /// `Fn$<inner>`; everything else round-trips via [`ty_to_ref`].
-fn closure_param_ref(t: &Ty) -> TypeRef {
+pub(crate) fn closure_param_ref(t: &Ty) -> TypeRef {
     match t {
         Ty::Fn(a, b) => ty_to_ref(&Ty::Data(mangle_arrow(a, b), vec![])),
         _ => ty_to_ref(t),
@@ -2862,7 +2862,7 @@ fn pattern_binders_at(
 
 /// The canonical dedup key of a work item — a kind-tagged string so a function and a data type that
 /// happen to mangle to the same name never alias, and `Ty` needs no `Ord` (just its `Display`).
-fn item_key(item: &Item) -> String {
+pub(crate) fn item_key(item: &Item) -> String {
     match item {
         Item::Fn {
             name,
@@ -3103,7 +3103,7 @@ pub(crate) fn mangle_ty_or_fn(t: &Ty) -> String {
 /// Rewrite a concrete `Ty` so every applied data type becomes its **mangled-nullary** form
 /// (`Data("List$Binary8", [])`), the shape `build_registry`/`field_spec` already handle. Primitive
 /// reprs pass through unchanged.
-fn mangle_ty_in_ty(t: &Ty) -> Ty {
+pub(crate) fn mangle_ty_in_ty(t: &Ty) -> Ty {
     match t {
         Ty::Binary(_)
         | Ty::Ternary(_)
@@ -3130,7 +3130,7 @@ fn mangle_ty_in_ty(t: &Ty) -> Ty {
 /// (`List<Binary{8}>` → `Named("List", [Binary{8}])`). Used to thread an `expected` type into
 /// re-inference (`infer_type`), which resolves names against the **source** env. (Contrast
 /// [`ty_to_ref`], which produces the *mangled-nullary* output form for the emitted env.)
-fn ty_to_source_ref(t: &Ty) -> TypeRef {
+pub(crate) fn ty_to_source_ref(t: &Ty) -> TypeRef {
     let base = match t {
         Ty::Binary(Width::Lit(n)) => BaseType::Binary(WidthRef::Lit(*n)),
         Ty::Binary(Width::Var(v)) => BaseType::Binary(WidthRef::Name(v.clone())),
@@ -3175,7 +3175,7 @@ fn ty_to_source_ref(t: &Ty) -> TypeRef {
 /// data type's arguments into its **mangled-nullary** name, so an applied `Ty::Data(_, args!=[])`
 /// becomes the `Named` of its mangled name; a `Ty::Var` would be an internal error, surfaced as a
 /// distinctive `Named` so a leak is never silent (rather than a panic).
-fn ty_to_ref(t: &Ty) -> TypeRef {
+pub(crate) fn ty_to_ref(t: &Ty) -> TypeRef {
     let base = match t {
         Ty::Binary(Width::Lit(n)) => BaseType::Binary(WidthRef::Lit(*n)),
         Ty::Binary(Width::Var(v)) => BaseType::Binary(WidthRef::Name(v.clone())),
@@ -3223,7 +3223,7 @@ fn ty_to_ref(t: &Ty) -> TypeRef {
 /// per-instantiation guarantee-tag threading point: a monomorphized copy's signature/ascription
 /// keeps exactly what its own source wrote — no silent loss (the pre-M-967 `ty_to_ref` blanking),
 /// no silent merge across instantiations, and no upgrade past the source's own annotation (VR-5).
-fn ty_to_ref_tagged(t: &Ty, guarantee: Option<Strength>) -> TypeRef {
+pub(crate) fn ty_to_ref_tagged(t: &Ty, guarantee: Option<Strength>) -> TypeRef {
     let mut r = ty_to_ref(t);
     r.guarantee = guarantee;
     r

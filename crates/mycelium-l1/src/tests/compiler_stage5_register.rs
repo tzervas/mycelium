@@ -30,12 +30,13 @@
 use crate::ast::{
     Arm, BaseType, Ctor, DeriveDecl, Expr, FnDecl, FnSig, ImplDecl, InherentImplDecl, Item,
     Literal, LowerDecl, LowerRhs, Nodule, ObjectDecl, Paradigm, Param, ParamKind, Path, Pattern,
-    Scalar, Sparsity, TraitDecl, TraitRef, TypeDecl, TypeParam, TypeRef, ViaDecl, Vis, WidthRef,
+    Scalar, Sparsity, TraitDecl, TraitRef, TypeDecl, TypeParam, TypeRef, UsePath, ViaDecl, Vis,
+    WidthRef,
 };
 use crate::checkty::{
-    collect_tuple_arities, first_duplicate, prelude, register_instances, register_traits,
-    register_types, resolve_ctors, type_head, CoherenceView, CtorInfo, DataInfo, InstanceInfo,
-    TraitInfo, Ty, Width,
+    collect_tuple_arities, first_duplicate, prelude, register_instances, register_nodule_decls,
+    register_traits, register_types, resolve_ctors, resolve_imports, type_head, CoherenceView,
+    CtorInfo, DataInfo, Exports, InstanceInfo, NoduleImports, NoduleRegs, TraitInfo, Ty, Width,
 };
 use crate::eval::L1Value;
 use crate::tests::marshal_support::*;
@@ -731,9 +732,20 @@ fn encode_path(p: &Path) -> String {
     format!("Pth({})", encode_names(&p.0))
 }
 
-/// The FULL `Item` mirror (PR-2b): every tuple-relevant item kind carries its data field-for-field;
-/// the three kinds `collect_tuple_arities_item` skips (`Use | Default | Derive` — the oracle skips
-/// `Derive` even though it holds a `for_ty`) collapse to the nullary `ItOther`.
+/// `UP(path, glob)` — the `UsePath` mirror (M-1013 STEP 4).
+fn encode_use_path(u: &crate::ast::UsePath) -> String {
+    format!(
+        "UP({}, {})",
+        encode_path(&u.path),
+        if u.glob { "True" } else { "False" }
+    )
+}
+
+/// The FULL `Item` mirror (PR-2b + STEP 4's `ItUse`): every tuple-relevant item kind carries its data
+/// field-for-field. `Item::Use` now carries its `UsePath` (M-1013 STEP 4 — `resolve_imports` reads it
+/// directly; `collect_tuple_arities_item`'s `ItUse(_) => acc` arm keeps the tuple-walk a no-op, same
+/// as before). `Default`/`Derive` remain the tuple-free `ItOther` collapse (still unread by both
+/// consumers).
 fn encode_item(it: &Item) -> String {
     match it {
         Item::Type(td) => format!("ItType({})", encode_type_decl(td)),
@@ -743,7 +755,8 @@ fn encode_item(it: &Item) -> String {
         Item::Object(od) => format!("ItObject({})", encode_object_decl(od)),
         Item::Lower(ld) => format!("ItLower({})", encode_lower_decl(ld)),
         Item::InherentImpl(iid) => format!("ItInherentImpl({})", encode_inherent_impl_decl(iid)),
-        Item::Use(_) | Item::Default(_) | Item::Derive(_) => "ItOther".to_owned(),
+        Item::Use(up) => format!("ItUse({})", encode_use_path(up)),
+        Item::Default(_) | Item::Derive(_) => "ItOther".to_owned(),
     }
 }
 
@@ -1504,8 +1517,11 @@ fn collect_tuple_arities_cases() {
                 }),
             })]),
         ),
-        // Use / Default / Derive — the tuple-free `ItOther` collapse. Derive's `for_ty` is a tuple
-        // `(A, B)` the ORACLE deliberately skips (`Item::Derive(_) => {}`), so the result is {}.
+        // Use / Default / Derive — all three tuple-free for `collect_tuple_arities` (M-1013 STEP 4:
+        // `Use` now carries its `UsePath` as `ItUse(..)` rather than collapsing to `ItOther`, but the
+        // tuple-walk's `ItUse(_) => acc` arm is still a no-op, so this case's expectation is
+        // unaffected). Derive's `for_ty` is a tuple `(A, B)` the ORACLE deliberately skips
+        // (`Item::Derive(_) => {}`), so the result is {}.
         (
             "otherkinds_free",
             nodule(vec![
@@ -2459,4 +2475,558 @@ fn marshal_discriminates_instances() {
             encode_bytes("m")
         ))
     );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════════════
+// resolve_imports (M-1013 STEP 4) — cross-nodule import resolution, the "resolution" half of
+// increment 8 (register_types/register_traits/register_instances above are its "registration" half).
+// ═══════════════════════════════════════════════════════════════════════════════════════════════════
+//
+// Differential method: identical harness marshalling (DN-26 §10.2) — build an `Exports` fixture, run
+// the REAL `checkty::resolve_imports` oracle, evaluate the `.myc` port's `resolve_imports` on the SAME
+// fixture (encoded), decode its `NoduleImports` output, `assert_eq!` against the oracle's.
+//
+// FLAG-semcore-34 (scope narrowing, honestly flagged — G2/VR-5): every fixture here leaves
+// `Exports.fns` EMPTY, so `NoduleImports.fns` is always the trivial `Nil`/`{}` case — decoding an
+// arbitrary returned `FnDecl` (a full recursive `Expr` body) would need a new `decode_expr` this
+// increment does not build (no other Stage-5 gate has needed to decode an `Expr` from `L1Value` output
+// yet; every prior increment's `Expr`/`FnDecl` traffic has been INPUT-only). `insert_export`'s
+// fn-branch is structurally IDENTICAL to its type/trait branches (checkty.rs 1560-1571: three
+// independent `if let Some(x) = exports.KIND.get(qual) { imp.KIND.insert(...) }` arms, ported
+// arm-for-arm in this port's own `insert_export`), so this narrowing is low-risk — but it is an
+// honest, explicit scope cut, not a silent one.
+
+// ── Exports / NoduleImports mirror encoders/decoders ──────────────────────────────────────────────────
+
+fn encode_str_datainfo_map(m: &BTreeMap<String, DataInfo>) -> String {
+    let mut s = String::from("Nil");
+    for (k, v) in m.iter().rev() {
+        s = format!(
+            "Cons(Pr({}, {}), {})",
+            encode_bytes(k),
+            encode_data_info(v),
+            s
+        );
+    }
+    s
+}
+
+fn encode_str_traitinfo_map(m: &BTreeMap<String, TraitInfo>) -> String {
+    let mut s = String::from("Nil");
+    for (k, v) in m.iter().rev() {
+        s = format!(
+            "Cons(Pr({}, {}), {})",
+            encode_bytes(k),
+            encode_trait_info(v),
+            s
+        );
+    }
+    s
+}
+
+fn encode_declared_map(m: &BTreeMap<String, bool>) -> String {
+    let mut s = String::from("Nil");
+    for (k, v) in m.iter().rev() {
+        s = format!(
+            "Cons(Pr({}, {}), {})",
+            encode_bytes(k),
+            if *v { "True" } else { "False" },
+            s
+        );
+    }
+    s
+}
+
+/// `Ex(types, fns, traits, declared)` — the `Exports` mirror. `fns` is always `Nil` (FLAG-semcore-34).
+fn encode_exports(e: &Exports) -> String {
+    assert!(
+        e.fns.is_empty(),
+        "encode_exports: every fixture in this gate leaves Exports.fns empty (FLAG-semcore-34)"
+    );
+    format!(
+        "Ex({}, Nil, {}, {})",
+        encode_str_datainfo_map(&e.types),
+        encode_str_traitinfo_map(&e.traits),
+        encode_declared_map(&e.declared)
+    )
+}
+
+/// `Pr(a, b)` decode: the shared two-field mirror pair.
+fn decode_pair<A, B>(
+    v: &L1Value,
+    da: impl Fn(&L1Value) -> A,
+    db: impl Fn(&L1Value) -> B,
+) -> (A, B) {
+    let (_, fields) = expect_data(v, "Pair");
+    (da(&fields[0]), db(&fields[1]))
+}
+
+fn decode_str_datainfo_map(v: &L1Value) -> BTreeMap<String, DataInfo> {
+    let mut map = BTreeMap::new();
+    let mut cur = v;
+    loop {
+        let (ctor, fields) = expect_data(cur, "assoc-list<Bytes,DataInfo>");
+        match ctor {
+            "Nil" => return map,
+            "Cons" => {
+                let (k, val) = decode_pair(&fields[0], decode_string, decode_data_info);
+                map.insert(k, val);
+                cur = &fields[1];
+            }
+            other => panic!("decode_str_datainfo_map: unexpected ctor {other}"),
+        }
+    }
+}
+
+fn decode_str_traitinfo_map(v: &L1Value) -> BTreeMap<String, TraitInfo> {
+    let mut map = BTreeMap::new();
+    let mut cur = v;
+    loop {
+        let (ctor, fields) = expect_data(cur, "assoc-list<Bytes,TraitInfo>");
+        match ctor {
+            "Nil" => return map,
+            "Cons" => {
+                let (k, val) = decode_pair(&fields[0], decode_string, decode_trait_info);
+                map.insert(k, val);
+                cur = &fields[1];
+            }
+            other => panic!("decode_str_traitinfo_map: unexpected ctor {other}"),
+        }
+    }
+}
+
+/// FLAG-semcore-34: every fixture leaves `Exports.fns` empty, so the port's returned `NoduleImports`
+/// `fns` field is always the empty `Nil` list — asserted here (never-silent: a future fixture that DID
+/// populate `Exports.fns` would panic here, not silently mis-decode).
+fn decode_empty_fndecl_map(v: &L1Value) -> BTreeMap<String, FnDecl> {
+    let (ctor, _) = expect_data(v, "assoc-list<Bytes,FnDecl> (expected empty)");
+    assert_eq!(
+        ctor, "Nil",
+        "decode_empty_fndecl_map: non-empty NoduleImports.fns -- FLAG-semcore-34's scope narrowing no \
+         longer holds; a real decode_fn_decl/decode_expr is now needed"
+    );
+    BTreeMap::new()
+}
+
+fn decode_bytes_set(v: &L1Value) -> BTreeSet<String> {
+    decode_vec(v, decode_string).into_iter().collect()
+}
+
+/// `NI(types, fns, traits, ambiguous)` — the `NoduleImports` mirror decoder.
+fn decode_nodule_imports(v: &L1Value) -> NoduleImports {
+    let (ctor, fields) = expect_data(v, "NoduleImports");
+    assert_eq!(ctor, "NI", "decode_nodule_imports: unexpected ctor {ctor}");
+    NoduleImports {
+        types: decode_str_datainfo_map(&fields[0]),
+        fns: decode_empty_fndecl_map(&fields[1]),
+        traits: decode_str_traitinfo_map(&fields[2]),
+        ambiguous: decode_bytes_set(&fields[3]),
+    }
+}
+
+// ── fixture constructors (test bodies stay `assert over a case`) ──────────────────────────────────────
+
+fn use_item(segs: &[&str], glob: bool) -> Item {
+    Item::Use(UsePath {
+        path: Path(segs.iter().map(|s| (*s).to_owned()).collect()),
+        glob,
+    })
+}
+
+fn data_info_leaf(name: &str) -> DataInfo {
+    DataInfo {
+        name: name.to_owned(),
+        params: vec![],
+        ctors: vec![],
+    }
+}
+
+fn trait_info_leaf(name: &str) -> TraitInfo {
+    TraitInfo {
+        name: name.to_owned(),
+        params: vec![],
+        sigs: vec![],
+    }
+}
+
+#[derive(Default)]
+struct ExportsBuilder {
+    types: Vec<(&'static str, DataInfo)>,
+    traits: Vec<(&'static str, TraitInfo)>,
+    declared: Vec<(&'static str, bool)>,
+}
+
+impl ExportsBuilder {
+    fn ty(mut self, qual: &'static str, d: DataInfo) -> Self {
+        self.types.push((qual, d));
+        self
+    }
+    fn tr(mut self, qual: &'static str, t: TraitInfo) -> Self {
+        self.traits.push((qual, t));
+        self
+    }
+    fn decl(mut self, qual: &'static str, is_pub: bool) -> Self {
+        self.declared.push((qual, is_pub));
+        self
+    }
+    fn build(self) -> Exports {
+        let mut e = Exports::default();
+        for (k, v) in self.types {
+            e.types.insert(k.to_owned(), v);
+        }
+        for (k, v) in self.traits {
+            e.traits.insert(k.to_owned(), v);
+        }
+        for (k, v) in self.declared {
+            e.declared.insert(k.to_owned(), v);
+        }
+        e
+    }
+}
+
+fn run_resolve_imports_case(label: &str, nod: &Nodule, exports: &Exports) {
+    let want = resolve_imports(nod, exports).map_err(|_| ());
+    assert_l1_marshal(
+        label,
+        &format!(
+            "fn main() => Result[NoduleImports, Bytes] = resolve_imports({}, {});\n",
+            encode_nodule(nod),
+            encode_exports(exports)
+        ),
+        |v| decode_result(v, decode_nodule_imports),
+        want,
+    );
+}
+
+// ── cases: explicit imports ─────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn resolve_imports_explicit_type_ok() {
+    let exports = ExportsBuilder::default()
+        .ty("m.List", data_info_leaf("List"))
+        .decl("m.List", true)
+        .build();
+    let nod = nodule(vec![use_item(&["m", "List"], false)]);
+    run_resolve_imports_case("resolve_imports_explicit_type_ok", &nod, &exports);
+}
+
+#[test]
+fn resolve_imports_explicit_trait_ok() {
+    let exports = ExportsBuilder::default()
+        .tr("m.Eq", trait_info_leaf("Eq"))
+        .decl("m.Eq", true)
+        .build();
+    let nod = nodule(vec![use_item(&["m", "Eq"], false)]);
+    run_resolve_imports_case("resolve_imports_explicit_trait_ok", &nod, &exports);
+}
+
+#[test]
+fn resolve_imports_explicit_unknown_err() {
+    let exports = ExportsBuilder::default().build();
+    let nod = nodule(vec![use_item(&["m", "Nope"], false)]);
+    run_resolve_imports_case("resolve_imports_explicit_unknown_err", &nod, &exports);
+}
+
+#[test]
+fn resolve_imports_explicit_private_err() {
+    let exports = ExportsBuilder::default()
+        .ty("m.Secret", data_info_leaf("Secret"))
+        .decl("m.Secret", false)
+        .build();
+    let nod = nodule(vec![use_item(&["m", "Secret"], false)]);
+    run_resolve_imports_case("resolve_imports_explicit_private_err", &nod, &exports);
+}
+
+#[test]
+fn resolve_imports_explicit_duplicate_err() {
+    let exports = ExportsBuilder::default()
+        .ty("m.List", data_info_leaf("List"))
+        .decl("m.List", true)
+        .build();
+    let nod = nodule(vec![
+        use_item(&["m", "List"], false),
+        use_item(&["m", "List"], false),
+    ]);
+    run_resolve_imports_case("resolve_imports_explicit_duplicate_err", &nod, &exports);
+}
+
+#[test]
+fn resolve_imports_explicit_unqualified_err() {
+    let exports = ExportsBuilder::default().build();
+    let nod = nodule(vec![use_item(&["List"], false)]);
+    run_resolve_imports_case("resolve_imports_explicit_unqualified_err", &nod, &exports);
+}
+
+// ── cases: globs ────────────────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn resolve_imports_glob_pulls_pub_only() {
+    let exports = ExportsBuilder::default()
+        .ty("m.A", data_info_leaf("A"))
+        .ty("m.C", data_info_leaf("C"))
+        .decl("m.A", true)
+        .decl("m.B", false)
+        .decl("m.C", true)
+        .build();
+    let nod = nodule(vec![use_item(&["m"], true)]);
+    run_resolve_imports_case("resolve_imports_glob_pulls_pub_only", &nod, &exports);
+}
+
+#[test]
+fn resolve_imports_glob_glob_ambiguous() {
+    let exports = ExportsBuilder::default()
+        .ty("m.A", data_info_leaf("A1"))
+        .ty("n.A", data_info_leaf("A2"))
+        .decl("m.A", true)
+        .decl("n.A", true)
+        .build();
+    let nod = nodule(vec![use_item(&["m"], true), use_item(&["n"], true)]);
+    run_resolve_imports_case("resolve_imports_glob_glob_ambiguous", &nod, &exports);
+}
+
+#[test]
+fn resolve_imports_explicit_shadows_glob() {
+    let exports = ExportsBuilder::default()
+        .ty("m.A", data_info_leaf("A1"))
+        .ty("n.A", data_info_leaf("A2"))
+        .decl("m.A", true)
+        .decl("n.A", true)
+        .build();
+    let nod = nodule(vec![use_item(&["m"], true), use_item(&["n", "A"], false)]);
+    run_resolve_imports_case("resolve_imports_explicit_shadows_glob", &nod, &exports);
+}
+
+// ── decoder non-vacuity (M-1013 STEP 2 convention) ──────────────────────────────────────────────────
+
+#[test]
+fn marshal_discriminates_nodule_imports() {
+    fn dd(expr: &str) -> NoduleImports {
+        decode_driver("NoduleImports", expr, decode_nodule_imports)
+    }
+    let a = encode_bytes("A");
+    let di_a = encode_data_info(&data_info_leaf("A"));
+    let ti_a = encode_trait_info(&trait_info_leaf("A"));
+    let base = "NI(Nil, Nil, Nil, Nil)".to_owned();
+    // field 0: types.
+    assert_ne!(
+        dd(&base),
+        dd(&format!("NI(Cons(Pr({a}, {di_a}), Nil), Nil, Nil, Nil)"))
+    );
+    // field 2: traits.
+    assert_ne!(
+        dd(&base),
+        dd(&format!("NI(Nil, Nil, Cons(Pr({a}, {ti_a}), Nil), Nil)"))
+    );
+    // field 3: ambiguous.
+    assert_ne!(dd(&base), dd(&format!("NI(Nil, Nil, Nil, Cons({a}, Nil))")));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// register_nodule_decls (M-1013 STEP 5) — the top-level declaration-registration entry point
+// (checkty.rs 1340-1401), deferred at STEP 4 landing and now ported: it runs register_types (seeded
+// with the `Bool` prelude), register_traits, the CONDITIONAL built-in `Fuse` trait seed (M-965 F-A1,
+// via the newly-ported `fuse::prelude()` mirror — the fuse.rs slice that does NOT touch
+// `eval::Evaluator`), and a fresh fn-signature registration pass, in that exact order.
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+//
+// Differential method: identical harness marshalling (DN-26 §10.2) — run the REAL
+// `checkty::register_nodule_decls` oracle on a `Nodule` fixture, evaluate the `.myc` port's mirror
+// driver on the SAME fixture, decode its `NoduleRegs` output, compare against the oracle.
+//
+// FLAG-semcore-35 (scope narrowing, honestly flagged — G2/VR-5, the direct twin of FLAG-semcore-34
+// above): the `fns` registry decodes to its NAME set only, not the full `FnDecl` payload — decoding an
+// arbitrary registered `FnDecl.body` `Expr` needs a `decode_expr` no Stage-5 gate has built yet (every
+// prior increment's `Expr`/`FnDecl` traffic has been INPUT-only). `register_nodule_decls`'s own
+// fn-registration loop (checkty.rs 1392-1400) never inspects a body either — it is name-and-arity
+// registration only — so the *classification* this differential compares (which names got registered,
+// and the dup-type-param / dup-name refusals) is exactly the surface the ported loop's own logic
+// touches.
+
+/// `checkty::NoduleRegs.fns` → its NAME set (FLAG-semcore-35).
+fn fn_names(fns: &BTreeMap<String, FnDecl>) -> BTreeSet<String> {
+    fns.keys().cloned().collect()
+}
+
+/// `Pr(name, _)` → the name only, from a `Vec[Pair[Bytes, FnDecl]]` element (FLAG-semcore-35: the
+/// `FnDecl` field is never decoded).
+fn decode_nodule_regs_fn_names(v: &L1Value) -> BTreeSet<String> {
+    decode_vec(v, |p| {
+        let (ctor, fields) = expect_data(p, "Pair");
+        assert_eq!(
+            ctor, "Pr",
+            "decode_nodule_regs_fn_names: unexpected ctor {ctor}"
+        );
+        decode_string(&fields[0])
+    })
+    .into_iter()
+    .collect()
+}
+
+/// `NR(types, fns, traits)` — the `NoduleRegs` mirror decoder, into the SAME 3-tuple shape
+/// `run_register_nodule_decls_case` builds from the live oracle's `NoduleRegs`.
+fn decode_nodule_regs(
+    v: &L1Value,
+) -> (
+    BTreeMap<String, DataInfo>,
+    BTreeSet<String>,
+    BTreeMap<String, TraitInfo>,
+) {
+    let (ctor, fields) = expect_data(v, "NoduleRegs");
+    assert_eq!(ctor, "NR", "decode_nodule_regs: unexpected ctor {ctor}");
+    (
+        decode_types_map(&fields[0]),
+        decode_nodule_regs_fn_names(&fields[1]),
+        decode_traits_map(&fields[2]),
+    )
+}
+
+fn run_register_nodule_decls_case(label: &str, nod: &Nodule) {
+    let want = register_nodule_decls(nod)
+        .map(|regs: NoduleRegs| (regs.types, fn_names(&regs.fns), regs.traits))
+        .map_err(|_| ());
+    assert_l1_marshal(
+        label,
+        &format!(
+            "fn main() => Result[NoduleRegs, Bytes] = register_nodule_decls({});\n",
+            encode_nodule(nod)
+        ),
+        |v| decode_result(v, decode_nodule_regs),
+        want,
+    );
+}
+
+// ── fixture constructors (test bodies stay `assert over a case`) ───────────────────────────────────
+
+/// A `FnSig` with explicit type PARAMS (the `fn_sig` fixture above always leaves `params` empty —
+/// the dup-type-param refusal needs a non-empty one).
+fn fn_sig_with_type_params(name: &str, tps: Vec<TypeParam>, ret: TypeRef) -> FnSig {
+    FnSig {
+        name: name.to_owned(),
+        params: tps,
+        value_params: vec![],
+        ret,
+        effects: vec![],
+        effect_budgets: BTreeMap::new(),
+    }
+}
+
+fn type_param(name: &str) -> TypeParam {
+    TypeParam {
+        name: name.to_owned(),
+        kind: ParamKind::Type,
+        bounds: vec![],
+    }
+}
+
+// ── cases ────────────────────────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn register_nodule_decls_type_and_fn_ok() {
+    let nod = nodule(vec![
+        ty(type_decl("A", &[], vec![ctor("MkA", vec![])])),
+        Item::Fn(fn_decl(fn_sig("f", vec![], nm("A")), var("x"))),
+    ]);
+    run_register_nodule_decls_case("register_nodule_decls_type_and_fn_ok", &nod);
+}
+
+#[test]
+fn register_nodule_decls_dup_type_name_err() {
+    let nod = nodule(vec![
+        ty(type_decl("A", &[], vec![ctor("MkA", vec![])])),
+        ty(type_decl("A", &[], vec![ctor("MkA2", vec![])])),
+    ]);
+    run_register_nodule_decls_case("register_nodule_decls_dup_type_name_err", &nod);
+}
+
+#[test]
+fn register_nodule_decls_dup_fn_name_err() {
+    let nod = nodule(vec![
+        Item::Fn(fn_decl(fn_sig("f", vec![], nm("Bytes")), var("x"))),
+        Item::Fn(fn_decl(fn_sig("f", vec![], nm("Bytes")), var("y"))),
+    ]);
+    run_register_nodule_decls_case("register_nodule_decls_dup_fn_name_err", &nod);
+}
+
+#[test]
+fn register_nodule_decls_dup_fn_type_param_err() {
+    let nod = nodule(vec![Item::Fn(fn_decl(
+        fn_sig_with_type_params("f", vec![type_param("X"), type_param("X")], nm("X")),
+        var("x"),
+    ))]);
+    run_register_nodule_decls_case("register_nodule_decls_dup_fn_type_param_err", &nod);
+}
+
+#[test]
+fn register_nodule_decls_fuse_impl_seeds_trait() {
+    // `register_nodule_decls` never resolves/checks the impl's trait_args/for_ty/methods (that is
+    // `register_instances`' job, a later pass) -- registration only asks "is there an
+    // `impl Fuse[...] for ...` item at all?", so a minimal, unresolved-looking impl is a faithful
+    // fixture for THIS pass.
+    let nod = nodule(vec![Item::Impl(impl_decl(
+        "Fuse",
+        vec![],
+        nm("Unit"),
+        vec![],
+    ))]);
+    run_register_nodule_decls_case("register_nodule_decls_fuse_impl_seeds_trait", &nod);
+}
+
+#[test]
+fn register_nodule_decls_no_fuse_impl_no_trait_seeded() {
+    let nod = nodule(vec![ty(type_decl("A", &[], vec![ctor("MkA", vec![])]))]);
+    run_register_nodule_decls_case("register_nodule_decls_no_fuse_impl_no_trait_seeded", &nod);
+}
+
+#[test]
+fn register_nodule_decls_user_redeclares_fuse_trait_err() {
+    // A nodule that declares its OWN `trait Fuse { ... }` (no `impl Fuse[...] for ...` needed to
+    // trip this -- checkty.rs's `else if traits.contains_key(TRAIT_NAME)` branch, 1381-1387).
+    let nod = nodule(vec![trait1("Fuse", "join")]);
+    run_register_nodule_decls_case("register_nodule_decls_user_redeclares_fuse_trait_err", &nod);
+}
+
+#[test]
+fn register_nodule_decls_fuse_impl_plus_user_trait_redeclare_err() {
+    // Both `fuse_used` (an `impl Fuse[...] for ...`) AND a pre-existing `traits["Fuse"]` (the
+    // nodule's OWN `trait Fuse`) -- checkty.rs's OTHER redeclare branch, 1372-1378.
+    let nod = nodule(vec![
+        trait1("Fuse", "join"),
+        Item::Impl(impl_decl("Fuse", vec![], nm("Unit"), vec![])),
+    ]);
+    run_register_nodule_decls_case(
+        "register_nodule_decls_fuse_impl_plus_user_trait_redeclare_err",
+        &nod,
+    );
+}
+
+// ── decoder non-vacuity (M-1013 STEP 2 convention) ──────────────────────────────────────────────────
+
+#[test]
+fn marshal_discriminates_nodule_regs() {
+    fn dd(
+        expr: &str,
+    ) -> (
+        BTreeMap<String, DataInfo>,
+        BTreeSet<String>,
+        BTreeMap<String, TraitInfo>,
+    ) {
+        decode_driver("NoduleRegs", expr, decode_nodule_regs)
+    }
+    let a = encode_bytes("A");
+    let di_a = encode_data_info(&data_info_leaf("A"));
+    let ti_a = encode_trait_info(&trait_info_leaf("A"));
+    // A real (inert) `FnDecl` mirror -- the `fns` field's type is `Vec[Pair[Bytes, FnDecl]]`, so the
+    // filler value must actually type-check as `FnDecl`, unlike the untyped Rust-side comparison
+    // (decode_nodule_regs_fn_names never reads it, but the `.myc` driver text still must check).
+    let fd_a = encode_fn_decl(&fn_decl(fn_sig("g", vec![], nm("Bytes")), var("x")));
+    let base = "NR(Nil, Nil, Nil)".to_owned();
+    // field 0: types.
+    assert_ne!(dd(&base), dd(&format!("NR(Cons({di_a}, Nil), Nil, Nil)")));
+    // field 1: fns.
+    assert_ne!(
+        dd(&base),
+        dd(&format!("NR(Nil, Cons(Pr({a}, {fd_a}), Nil), Nil)"))
+    );
+    // field 2: traits.
+    assert_ne!(dd(&base), dd(&format!("NR(Nil, Nil, Cons({ti_a}, Nil))")));
 }

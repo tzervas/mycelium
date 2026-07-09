@@ -1041,18 +1041,23 @@ impl PhylumEnv {
 /// separate from the pub-blind coherence view (below): conflating the two would let a `use` import a
 /// private name or let the orphan rule miss a private declaration (a bug — the two views answer
 /// different questions).
+// M-1013 STEP 4 (self-hosting differential): widened to `pub(crate)` (struct + fields), zero logic
+// change, so `crates/mycelium-l1/src/tests/compiler_stage5_imports.rs` (in-crate) can marshal
+// fixtures into this type and read `resolve_imports`'s live-oracle output back out — the same
+// widening precedent as `resolve_ctors`/`first_duplicate` (commit 2bb06f88) and `CoherenceView`
+// (commit 65351071).
 #[derive(Debug, Default)]
-struct Exports {
+pub(crate) struct Exports {
     /// Exported data types, by qualified name.
-    types: BTreeMap<String, DataInfo>,
+    pub(crate) types: BTreeMap<String, DataInfo>,
     /// Exported functions, by qualified name.
-    fns: BTreeMap<String, FnDecl>,
+    pub(crate) fns: BTreeMap<String, FnDecl>,
     /// Exported traits, by qualified name.
-    traits: BTreeMap<String, TraitInfo>,
+    pub(crate) traits: BTreeMap<String, TraitInfo>,
     /// **All** declared simple names per nodule-prefix, with their `pub`-ness — used to distinguish
     /// "no such name" from "exists but private" in a `use` refusal (G2 — an honest, helpful
     /// diagnostic). Keyed by qualified name → `is_pub`.
-    declared: BTreeMap<String, bool>,
+    pub(crate) declared: BTreeMap<String, bool>,
 }
 
 /// The resolved imports available to **one** nodule while its bodies are checked (M-662): the
@@ -1061,17 +1066,20 @@ struct Exports {
 /// **ambiguous** (importable only by an explicit `use`). The ambiguous set is consulted at every
 /// unresolved-name site so a *reference* to an ambiguous glob name is a never-silent `CheckError`,
 /// never a silent winner (G2).
-#[derive(Debug, Default, Clone)]
-struct NoduleImports {
+// M-1013 STEP 4: widened to `pub(crate)` (struct + fields), zero logic change (same rationale as
+// `Exports` above); `PartialEq` added (also derive-only) so the in-crate differential can
+// `assert_eq!`/`assert_ne!` a decoded `NoduleImports` against the live oracle's value.
+#[derive(Debug, Default, Clone, PartialEq)]
+pub(crate) struct NoduleImports {
     /// Imported data types, by simple name.
-    types: BTreeMap<String, DataInfo>,
+    pub(crate) types: BTreeMap<String, DataInfo>,
     /// Imported functions, by simple name.
-    fns: BTreeMap<String, FnDecl>,
+    pub(crate) fns: BTreeMap<String, FnDecl>,
     /// Imported traits, by simple name.
-    traits: BTreeMap<String, TraitInfo>,
+    pub(crate) traits: BTreeMap<String, TraitInfo>,
     /// Names brought in by **two or more** globs (and not resolved by an explicit `use` or a local
     /// decl): a *reference* to one of these is the never-silent glob-vs-glob ambiguity error.
-    ambiguous: BTreeSet<String>,
+    pub(crate) ambiguous: BTreeSet<String>,
 }
 
 impl NoduleImports {
@@ -1325,10 +1333,17 @@ pub(crate) struct CoherenceView {
 /// The **declaration-level** registries of one nodule (types/fns/traits), built before any body is
 /// checked (M-662). The phylum builds its two cross-nodule views from these, then re-uses them as the
 /// per-nodule base when checking that nodule's bodies (so registration runs once per nodule — DRY).
-struct NoduleRegs {
-    types: BTreeMap<String, DataInfo>,
-    fns: BTreeMap<String, FnDecl>,
-    traits: BTreeMap<String, TraitInfo>,
+///
+/// Widened to `pub(crate)` (struct + all three fields) for the M-1013 STEP 5 `compiler.semcore`
+/// differential harness (`crates/mycelium-l1/src/tests/compiler_stage5_register.rs`), which needs to
+/// read the registries `register_nodule_decls` returns to compare them against the `.myc` port's
+/// mirror output — zero logic change, the same widening precedent as STEP 3's
+/// `resolve_ctors`/`first_duplicate` (commit 2bb06f88) and the `CoherenceView` widening
+/// (commit 65351071).
+pub(crate) struct NoduleRegs {
+    pub(crate) types: BTreeMap<String, DataInfo>,
+    pub(crate) fns: BTreeMap<String, FnDecl>,
+    pub(crate) traits: BTreeMap<String, TraitInfo>,
 }
 
 /// Register one (resolved) nodule's **declarations** — data types (Pass 1), traits (Pass 1b), and
@@ -1337,7 +1352,9 @@ struct NoduleRegs {
 /// its cross-nodule views before checking any body). Bodies and instances are **not** handled here
 /// (instances need the phylum-wide orphan view; bodies need imports). The prelude `Bool` is included
 /// so intra-nodule resolution is unchanged.
-fn register_nodule_decls(nodule: &Nodule) -> Result<NoduleRegs, CheckError> {
+///
+/// Widened to `pub(crate)` for the M-1013 STEP 5 differential harness (see [`NoduleRegs`]).
+pub(crate) fn register_nodule_decls(nodule: &Nodule) -> Result<NoduleRegs, CheckError> {
     let mut types = BTreeMap::new();
     let p = prelude();
     types.insert(p.name.clone(), p);
@@ -1420,7 +1437,14 @@ fn register_nodule_decls(nodule: &Nodule) -> Result<NoduleRegs, CheckError> {
 ///
 /// (A glob over a prefix with zero `pub` names is allowed — an empty import; an unresolved *reference*
 /// then surfaces the normal unknown-name error.)
-fn resolve_imports(nodule: &Nodule, exports: &Exports) -> Result<NoduleImports, CheckError> {
+///
+/// M-1013 STEP 4: widened to `pub(crate)` (zero logic change) so the in-crate self-hosting
+/// differential (`crates/mycelium-l1/src/tests/compiler_stage5_imports.rs`) can call this live
+/// oracle directly (the same widening precedent as `resolve_ctors`/`first_duplicate`, PR #1238).
+pub(crate) fn resolve_imports(
+    nodule: &Nodule,
+    exports: &Exports,
+) -> Result<NoduleImports, CheckError> {
     let site = qualify(&nodule.path, "<use>");
     let mut imp = NoduleImports::default();
     // Track how each simple name entered (glob vs explicit) so precedence + the dup-explicit and
@@ -6009,6 +6033,38 @@ impl Cx<'_> {
                     app_node(head, vec![v2, w2]),
                 )))
             }
+            // DN-51 §2 D3/§6 (maintainer-authorized DN-39 post-freeze promotion; extends DN-41):
+            // `truncate(value: Binary{N}, into: Binary{M}) -> Binary{M}` — the explicit, total,
+            // **lossy** narrow: unconditionally drops the high `N - M` bits, never refuses (unlike
+            // `width_cast`'s checked narrow). Same width-witness shape as `width_cast` (only the
+            // second operand's `Binary{M}` width is read, its value is unused), so the static
+            // typing rule is identical — only the *runtime* semantics differ (`prims.rs::
+            // prim_truncate` never refuses on a lossy narrow, where `prim_width_cast` refuses).
+            "truncate" => {
+                if args.len() != 2 {
+                    return arity_err(2);
+                }
+                let (vty, v2) = self.check(scope, &args[0], None)?;
+                if !matches!(vty, Ty::Binary(_)) {
+                    return self.err(format!(
+                        "`truncate` value operand must be a concrete `Binary{{N}}`, got {vty} \
+                         (DN-51; never a default width)"
+                    ));
+                }
+                let (wty, w2) = self.check(scope, &args[1], None)?;
+                let Ty::Binary(Width::Lit(m)) = wty else {
+                    return self.err(format!(
+                        "`truncate` width witness must be a concrete `Binary{{M}}` (only its width is used), \
+                         got {wty} (DN-51; a width-variable witness is refused — DN-42/M-753)"
+                    ));
+                };
+                // The result is `Binary{M}` (the witness width); truncate is total — no runtime
+                // refusal exists for this op (DN-51 §2 D3).
+                Ok(Some((
+                    Ty::Binary(Width::Lit(m)),
+                    app_node(head, vec![v2, w2]),
+                )))
+            }
             // M-912 (`enb`, folded-in gap): `bytes_eq(a: Bytes, b: Bytes) -> Binary{1}` — byte-wise
             // equality, flagged missing by the diag/error/recover ports (`bytes.*` had len/get/
             // slice/concat but no equality). Both operands must be `Bytes` (a non-`Bytes` operand is
@@ -7406,6 +7462,9 @@ pub fn prim_kernel_name(name: &str) -> Option<&'static str> {
         "hash_blake3" => "hash.blake3",
         // DN-41 (M-798): never-silent `Binary` width-cast (zero-extend widen / checked narrow).
         "width_cast" => "bit.width_cast",
+        // DN-51 §2 D3/§6 (maintainer-authorized DN-39 post-freeze promotion; extends DN-41): the
+        // explicit, total, lossy `Binary` narrow — never refuses, unlike `width_cast`.
+        "truncate" => "bit.truncate",
         // RFC-0001 §4.1 / RFC-0002 §5 (M-890, `enb` Gap C): the tensor-valued dense elementwise
         // group — kernel `mycelium-dense`, per-op tags carried from `DenseSpace::op_guarantee`
         // (`dense.neg` `Exact`, the rest `Proven`; VR-5). Surface names are `_`-joined like

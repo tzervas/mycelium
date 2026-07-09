@@ -64,8 +64,9 @@ Validate: `python3 tools/github/doc_refs_check.py`
 ## Current state
 
 Current state → `docs/CURRENT-STATE.md` (the dense pointer index; refreshed at integration-tier
-close-out). Full dated history of this section (through 2026-06-29) →
-`docs/archive/agent-context/log-2026-06.md`.
+close-out). Full dated history of this section (through 2026-06-29) → archived, now on the
+`archive` git branch (was `docs/archive/agent-context/log-2026-06.md` in-tree; extracted
+2026-07-09, clean-snapshot prep).
 
 ---
 

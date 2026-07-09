@@ -558,3 +558,43 @@ fn bytes_eq_and_hash_blake3_resolve_to_declared_kernel_prims() {
          BLAKE3 use (VR-5)",
     );
 }
+
+/// DN-51 §2 D3/§6 (maintainer-authorized DN-39 post-freeze promotion, extends DN-41): the explicit,
+/// total, lossy `Binary` narrow. Same witness-operand shape as `width_cast` (not representable in
+/// `surface_cases()`'s simple `(operands, result)` model — `width_cast` itself has no entry there
+/// either, for the same reason), so this pins the surface→Π consistency directly, mirroring the
+/// CU-3 float-conversion guards above: `truncate` maps to the declared kernel prim `bit.truncate`
+/// with arity 2, both operands and the result `Binary` (a real paradigm here, not the `Any` escape
+/// hatch the float/dense/vsa groups need — `Binary` is already first-class in `PrimParadigm`), and
+/// — the DN-51 §4 core contract — the intrinsic is **`Declared`**, never `Exact` (VR-5: the
+/// deliberately-lossy op's own honest floor, mirroring `eval_wrapping`'s RFC-0034 §10/CU-5 posture;
+/// see the grounding note on `prims.rs::truncate_result`).
+#[test]
+fn truncate_resolves_to_declared_bit_truncate_kernel_prim() {
+    use mycelium_core::GuaranteeStrength;
+    let table = PrimTable::builtins();
+    let kernel = prim_kernel_name("truncate").expect("truncate must map to a kernel name");
+    assert_eq!(kernel, "bit.truncate", "surface→kernel mapping drifted");
+    assert!(
+        table.contains(kernel),
+        "surface `truncate` → kernel `{kernel}`, but it is not declared in Π",
+    );
+    let decl = table.get(kernel).expect("declared prim");
+    assert_eq!(
+        decl.sig.arity(),
+        2,
+        "`bit.truncate` is binary (value + width witness)"
+    );
+    assert!(
+        decl.sig.operands.iter().all(|p| *p == PrimParadigm::Binary),
+        "`bit.truncate` operands are both `Binary` — the witness's *value* paradigm is still \
+         Binary even though only its width is read at runtime",
+    );
+    assert_eq!(decl.sig.result, PrimParadigm::Binary);
+    assert_eq!(
+        decl.intrinsic,
+        GuaranteeStrength::Declared,
+        "`bit.truncate` intrinsic must be Declared — DN-51 §4: \"own honest lossy tag — never \
+         Exact\" (VR-5, never upgraded)",
+    );
+}

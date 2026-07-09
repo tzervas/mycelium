@@ -176,6 +176,33 @@ reading both the Rust output and the self-hosted output for the same input.
       a self-hosted checker/elaborator run inside the L1 evaluator over a whole program almost
       certainly can't complete under the current kernel; the lift (widen kernel TCO vs. reduce eval
       cost vs. lean on AOT) is a maintainer decision recorded in DN-26, not decided in-wave.
+
+      **This entry is stale past increment 1 (flagged, not silently left wrong; mitigation #14).**
+      `semcore.myc`/`compiler_stage5_semcore.rs`'s own headers + `git log -- lib/compiler/semcore.myc`
+      show increments 2–7 (M-1007…M-1012: checkty's pure type-algebra leaves, unify/resolve_ty/tuple
+      helpers, mono's name-mangling + free-var/binder analysis, checkty's literal/pattern typing,
+      elab's L0 mirror + pure lowering helpers) and M-1013 STEP 3 (checkty's *registration* half of
+      increment 8 — `register_types`/`register_traits`/`register_instances`, gate
+      `crates/mycelium-l1/src/tests/compiler_stage5_register.rs`) already landed on `dev` without this
+      wave-progress note being updated to match. **M-1013 STEP 4 (this change)** adds the
+      *resolution* half of increment 8 — `resolve_imports` + its six helpers (`qualify`,
+      `exports_has_pub`, `direct_child`, `split_last_seg`, `insert_export`, `remove_import`) and the
+      `Exports`/`NoduleImports`/`UsePath` mirrors — gated by 9 new live-oracle cases in
+      `compiler_stage5_register.rs` (explicit import ok/unknown/private/duplicate/unqualified-path,
+      glob pub-only pull, glob-vs-glob ambiguity, explicit-shadows-glob, plus a
+      `marshal_discriminates` non-vacuity case). `Item` gained an `ItUse(UsePath)` variant (previously
+      folded into the tuple-free `ItOther`) so `resolve_imports` can read `use` items directly;
+      `collect_tuple_arities_item`'s `ItUse(_) => acc` arm keeps the M-826 tuple pre-pass unaffected
+      (`Use` carries no tuple-relevant content, matching the oracle). `register_nodule_decls`
+      (checkty.rs 1340-1401, increment 8's remaining caller) is **not** ported — it seeds the built-in
+      `Fuse` trait, entangling with the still-deferred `fuse.rs` (FLAG, not silently worked around).
+      Native `myc check` reports `ok`; `pub(crate)` widened on `resolve_imports`/`Exports`/
+      `NoduleImports` (zero logic change, the M-1013 STEP 3 precedent). **FLAG-semcore-34:** the
+      differential leaves `Exports.fns`/`NoduleImports.fns` empty in every fixture (no `decode_expr`
+      exists yet to marshal an arbitrary returned `FnDecl` body) — `insert_export`'s fn-branch is
+      structurally identical to its type/trait branches, so this is a low-risk, explicitly flagged
+      narrowing, not a silent one. A full increment 2–8 reconciliation of this wave-progress note is
+      still owed (out of this change's scope — flagged up, not attempted here).
 - [ ] **Stage 6 / M-742** — `just bootstrap`: interpreted-first then AOT, stage-2 three-way
 
 *This README is the M-740 wave map; it is updated as each stage lands. Grounded in DN-26 §7/§9,

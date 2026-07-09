@@ -45,8 +45,18 @@
 //!
 //! CU-3 (float<->int conversion) is also excluded: DN-34 §8.16 records a *directional* ruling
 //! ("prims for the total directions") but no confirmed prim **name**, and Rust's natural spelling
-//! for a value conversion is the `as` cast (`syn::Expr::Cast`), which this emitter has no arm for
-//! at all (out of a `Call`/`MethodCall` table's scope). CU-7 (arbitrary-width ternary) is excluded
+//! for a value conversion is the `as` cast (`syn::Expr::Cast`), which is out of this `Call`/
+//! `MethodCall` table's scope regardless (`emit.rs`'s dedicated `Expr::Cast` arm handles casts, not
+//! this table — see that arm's own doc comment). **Update (DN-51 §2 D3/§6, maintainer-authorized
+//! DN-39 post-freeze promotion):** the *int-narrowing* sibling of "conversion"
+//! (`Binary{N} as Binary{M}`, `M < N`) is now landed and emits `truncate` — but that fix lives
+//! entirely in `emit.rs`'s `Expr::Cast` arm (mirroring how `Binary{N} as Binary{M}` widening
+//! already emitted `width_cast` there, never via this table), so it does not add a row here. This
+//! CU-3 exclusion is unchanged and still applies exactly to the **float-crossing** cast forms
+//! (`Binary{N} as Float`, `Float as Binary{N}`, `Float as Float`), which remain
+//! `PENDING-DESIGN(CU-3-fidelity)` — no faithful prim exists for those (ADR-040 §2.4's checked/
+//! refusing CU-3 prims don't match Rust `as`'s rounding/saturating float semantics). CU-7
+//! (arbitrary-width ternary) is excluded
 //! because its natural Rust shape (`BigTernary::add/sub/mul/neg`,
 //! `crates/mycelium-core/src/ternary/big_ternary.rs`) uses fully generic method names that collide
 //! with an enormous space of unrelated Rust code (`.add()`/`.sub()`/`.mul()`/`.neg()` are common

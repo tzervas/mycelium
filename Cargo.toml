@@ -84,16 +84,34 @@ tokio = { version = "1" }
 axum = { version = "0.8" }
 
 [workspace.lints.rust]
-# ADR-014: `unsafe` is permitted-but-warned (not forbidden). Plain `cargo build`/`cargo test`
-# (dev/test) warn at every unsafe site — the caution incentive — and still compile/run; the
-# `just check` lint gate exempts only this lint (`-A unsafe_code`) so intentional, justified unsafe
-# passes CI; a site silences the dev warning for production release with
-# `#[cfg_attr(not(debug_assertions), allow(unsafe_code))]` + a mandatory `// SAFETY:` comment.
-# Trusted-base crates should stay unsafe-free (may re-pin `unsafe_code = "forbid"` per-crate).
-unsafe_code = "warn"
+# ADR-014 (refined, maintainer directive 2026-07-09): `unsafe` is permitted-but-DOCUMENTED, not
+# forbidden. The policy is now enforced by ONE precise lint — `clippy::undocumented_unsafe_blocks`
+# (below) — instead of a blanket `unsafe_code` warn that fired on *every* unsafe site (documented or
+# not) and so erroneously flagged intentional, justified unsafe under any `-D warnings` run that
+# lacked the `-A unsafe_code` exemption. So `unsafe_code` is set to **`allow`** here: an intentional,
+# documented unsafe block passes **everywhere** — local `just check`, remote CI (`just ci`, same
+# suite), AND ad-hoc `cargo clippy -D warnings` — with no exemption flag to remember, while an
+# **undocumented** unsafe block (no `// SAFETY:` comment) is still caught by
+# `undocumented_unsafe_blocks`. This is *config-level*, so both local and remote inherit it.
+# What still guards unsafe (unchanged): (1) trusted-base crates keep their **source-level**
+# `#![forbid(unsafe_code)]` (mycelium-core/-cert/-numerics/-vsa) — `forbid` overrides this workspace
+# `allow`, so they stay unsafe-free; (2) `scripts/checks/scan.sh` enforces confinement + a per-site
+# `#[allow(unsafe_code)]` intentionality marker; (3) `undocumented_unsafe_blocks` enforces the
+# mandatory `// SAFETY:` comment. All existing unsafe is confined to `mycelium-mlir/src/jit.rs`
+# (DN-21/u78), documented, and passes.
+unsafe_code = "allow"
 
 [workspace.lints.clippy]
 all = { level = "warn", priority = -1 }
+# ADR-014 enforcement (maintainer directive 2026-07-09): this is now THE unsafe check — it catches
+# *undocumented* unsafe (an `unsafe` block with no `// SAFETY:` comment) while `unsafe_code = "allow"`
+# (above) lets documented, intentional unsafe pass everywhere. `warn` here + `-D warnings` (local
+# `just check` AND remote `just ci`, same suite) => deny-in-gate for undocumented unsafe; documented
+# unsafe never trips it. No `-A unsafe_code` flag is needed any longer (the exemption is redundant
+# now that `unsafe_code` is `allow`), so ad-hoc `cargo clippy -D warnings` no longer erroneously
+# alarms on intentional unsafe. This turns the "mandatory `// SAFETY:` comment" into a checked
+# requirement, not a convention.
+undocumented_unsafe_blocks = "warn"
 
 # Release arithmetic aligns with the never-silent honesty ethos (G2): trusted-kernel arithmetic
 # must panic on overflow, not silently wrap. Cargo disables overflow-checks in release by
