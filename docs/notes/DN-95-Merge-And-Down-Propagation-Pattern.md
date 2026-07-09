@@ -262,6 +262,7 @@ clears it at each boundary). A/B1 are the two ends that fail (A fails K3; B1 fai
 ### §6.1 Concrete mechanics (exact command sequences)
 
 **Land a release-candidate to `main` (squash-only, unchanged):**
+
 ```
 # on rc/<cycle> (or integration), full `just check` green + /pr-review clean:
 gh pr create --base main --head rc/<cycle> --title "release: <curated subject>"
@@ -269,6 +270,7 @@ gh pr create --base main --head rc/<cycle> --title "release: <curated subject>"
 ```
 
 **Propagate down plus re-clean the tiers after `S` lands (the boundary reset — B2):**
+
 ```
 git fetch origin main
 # (a) staging tier: nothing to propagate — delete the spent RC; next cycle cuts a fresh one off main
@@ -281,6 +283,7 @@ git push origin dev                            # dev now == S: clean linear base
 ```
 
 **Start the next cycle's work (always off the freshly-cleaned base):**
+
 ```
 git fetch origin
 git switch -c wave/<topic> origin/dev          # dev == main tip -> clean base by construction
@@ -289,6 +292,7 @@ git switch -c rc/<next> origin/main
 ```
 
 **De-conflict (the only conflict surface — an in-flight branch based on the old base):**
+
 ```
 # an ephemeral wave/leaf branch cut before the reset just merges the new base in — NEVER a force:
 git fetch origin main
@@ -302,6 +306,7 @@ git push                         # plain push fast-forwards the remote branch �
 The B2 reset of `dev` is safe **iff** at the boundary `dev` holds **no un-drained work** — i.e. every
 commit on `dev` that is not on `main` has either (i) been squashed into `S`, or (ii) been preserved on
 a live ephemeral branch. Enforce with a **loud pre-reset check** (never-silent, G2), e.g.:
+
 ```
 git fetch origin
 # commits on dev not in main:
@@ -309,6 +314,7 @@ git rev-list origin/main..origin/dev
 # for each, assert it is reachable from some live wave/*/leaf/* branch OR is content-captured in S;
 # if any is orphaned -> ABORT the reset, print the orphans, drain them first.
 ```
+
 Wire this into the recreate step so a reset can never silently discard work (the durability twin of
 mitigation #9). *(FLAG-4: propose adding `scripts/checks/boundary-reset-guard.sh` for this — an
 idempotent pure-read guard alongside `base-guard.sh`.)*
