@@ -11,6 +11,16 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Lint: enforce the mandatory `// SAFETY:` comment via clippy (ADR-014 refinement, 2026-07-09)
+
+Maintainer directive: catch *undocumented* unsafe while allowing documented, intentional unsafe. Added
+`clippy::undocumented_unsafe_blocks = "warn"` to `[workspace.lints.clippy]` — with the gate's
+`-D warnings` this denies any `unsafe` block lacking a `// SAFETY:` comment, while the existing
+`-A unsafe_code` exemption keeps intentional, documented unsafe passing. This turns ADR-014's "mandatory
+`// SAFETY:` comment" from a convention into a checked requirement. Verified: all existing unsafe
+(confined to `mycelium-mlir/src/jit.rs`, DN-21/u78 — 8 documented blocks) passes; a synthetic
+undocumented block is caught. No `.rs` changed. (ADR-014; DN-21; G2.)
+
 ### trx2 Lane C — CU-3/5/7 kernel prims + transpiler operand-gated emission and forward-mapped prim table (2026-07-08)
 
 Two scoped leaf→`dev` PRs close §8.16's in-progress worklist (DN-34 §8.17). Kernel (PR #1300, Π

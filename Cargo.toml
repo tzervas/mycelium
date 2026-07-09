@@ -90,10 +90,21 @@ axum = { version = "0.8" }
 # passes CI; a site silences the dev warning for production release with
 # `#[cfg_attr(not(debug_assertions), allow(unsafe_code))]` + a mandatory `// SAFETY:` comment.
 # Trusted-base crates should stay unsafe-free (may re-pin `unsafe_code = "forbid"` per-crate).
+# The `-A unsafe_code` gate-exemption allows *intentional* unsafe, but the mandatory `// SAFETY:`
+# comment is now *enforced by clippy* (not just convention) via `undocumented_unsafe_blocks` below —
+# an intentional, documented unsafe block passes; an undocumented one is caught (the only unsafe the
+# gate should reject). All existing unsafe (confined to `mycelium-mlir/src/jit.rs`, DN-21/u78)
+# already carries `// SAFETY:` and passes.
 unsafe_code = "warn"
 
 [workspace.lints.clippy]
 all = { level = "warn", priority = -1 }
+# ADR-014 enforcement (maintainer directive 2026-07-09): catch *undocumented* unsafe (an `unsafe`
+# block with no `// SAFETY:` comment) while the `-A unsafe_code` gate-exemption lets documented,
+# intentional unsafe pass. `warn` here + the gate's `-D warnings` => deny-in-gate; plain dev builds
+# just warn. This turns the "mandatory `// SAFETY:` comment" of the note above into a checked
+# requirement, not a convention.
+undocumented_unsafe_blocks = "warn"
 
 # Release arithmetic aligns with the never-silent honesty ethos (G2): trusted-kernel arithmetic
 # must panic on overflow, not silently wrap. Cargo disables overflow-checks in release by
