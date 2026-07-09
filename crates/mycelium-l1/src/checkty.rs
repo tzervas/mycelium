@@ -6009,6 +6009,38 @@ impl Cx<'_> {
                     app_node(head, vec![v2, w2]),
                 )))
             }
+            // DN-51 §2 D3/§6 (maintainer-authorized DN-39 post-freeze promotion; extends DN-41):
+            // `truncate(value: Binary{N}, into: Binary{M}) -> Binary{M}` — the explicit, total,
+            // **lossy** narrow: unconditionally drops the high `N - M` bits, never refuses (unlike
+            // `width_cast`'s checked narrow). Same width-witness shape as `width_cast` (only the
+            // second operand's `Binary{M}` width is read, its value is unused), so the static
+            // typing rule is identical — only the *runtime* semantics differ (`prims.rs::
+            // prim_truncate` never refuses on a lossy narrow, where `prim_width_cast` refuses).
+            "truncate" => {
+                if args.len() != 2 {
+                    return arity_err(2);
+                }
+                let (vty, v2) = self.check(scope, &args[0], None)?;
+                if !matches!(vty, Ty::Binary(_)) {
+                    return self.err(format!(
+                        "`truncate` value operand must be a concrete `Binary{{N}}`, got {vty} \
+                         (DN-51; never a default width)"
+                    ));
+                }
+                let (wty, w2) = self.check(scope, &args[1], None)?;
+                let Ty::Binary(Width::Lit(m)) = wty else {
+                    return self.err(format!(
+                        "`truncate` width witness must be a concrete `Binary{{M}}` (only its width is used), \
+                         got {wty} (DN-51; a width-variable witness is refused — DN-42/M-753)"
+                    ));
+                };
+                // The result is `Binary{M}` (the witness width); truncate is total — no runtime
+                // refusal exists for this op (DN-51 §2 D3).
+                Ok(Some((
+                    Ty::Binary(Width::Lit(m)),
+                    app_node(head, vec![v2, w2]),
+                )))
+            }
             // M-912 (`enb`, folded-in gap): `bytes_eq(a: Bytes, b: Bytes) -> Binary{1}` — byte-wise
             // equality, flagged missing by the diag/error/recover ports (`bytes.*` had len/get/
             // slice/concat but no equality). Both operands must be `Bytes` (a non-`Bytes` operand is
@@ -7406,6 +7438,9 @@ pub fn prim_kernel_name(name: &str) -> Option<&'static str> {
         "hash_blake3" => "hash.blake3",
         // DN-41 (M-798): never-silent `Binary` width-cast (zero-extend widen / checked narrow).
         "width_cast" => "bit.width_cast",
+        // DN-51 §2 D3/§6 (maintainer-authorized DN-39 post-freeze promotion; extends DN-41): the
+        // explicit, total, lossy `Binary` narrow — never refuses, unlike `width_cast`.
+        "truncate" => "bit.truncate",
         // RFC-0001 §4.1 / RFC-0002 §5 (M-890, `enb` Gap C): the tensor-valued dense elementwise
         // group — kernel `mycelium-dense`, per-op tags carried from `DenseSpace::op_guarantee`
         // (`dense.neg` `Exact`, the rest `Proven`; VR-5). Surface names are `_`-joined like

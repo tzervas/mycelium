@@ -1255,18 +1255,17 @@ fn emit_expr_inner(expr: &Expr, self_ty: Option<&str>, env: &TypeEnv) -> Result<
         // The one decidable-faithful slice is **`Binary{N} as Binary{M}` widening/identity** (`M >=
         // N`): DN-41's `bit.width_cast` zero-extends on the MSB side (verified `prim_width_cast`,
         // `mycelium-interp/src/prims.rs`), and `Binary` is sign-free unsigned magnitude (ADR-028), so
-        // that exactly matches Rust's unsigned widening/identity. **Narrowing** (`M < N`) is NOT
-        // faithful: Rust `as` narrowing **wraps** (keeps the low `M` bits), but `width_cast` **refuses**
-        // (`EvalError::Overflow`) on any set dropped high bit — a *checked* narrow, not a wrapping one.
-        // DN-51 (**Accepted**) *names* the faithful wrapping form — an
-        // explicit `truncate` op, "unconditionally drops the high `N - M` bits… total but
-        // lossy" (DN-51 §2 D3) — but DN-51 §6 records it as a **follow-on implementation**
-        // item, not yet landed: no `truncate` prim/surface exists in the kernel today
-        // (verify-first, mitigation #14 — `grep -rn truncate crates/mycelium-interp/src/prims.rs
-        // crates/mycelium-core/src/prim.rs` finds no such prim, only unrelated
-        // `Vec::truncate`/division-truncation uses). So a narrow is still FLAGged, never emitted —
-        // a *decided* semantics (DN-51, Accepted) with *no emittable surface yet*, a narrower gap
-        // than "undecided fidelity" (VR-5: the FLAG below says exactly this).
+        // that exactly matches Rust's unsigned widening/identity. **Narrowing** (`M < N`) was NOT
+        // faithful with `width_cast` alone: Rust `as` narrowing **wraps** (keeps the low `M` bits), but
+        // `width_cast` **refuses** (`EvalError::Overflow`) on any set dropped high bit — a *checked*
+        // narrow, not a wrapping one. DN-51 (**Accepted**) *names* the faithful wrapping form — an
+        // explicit `truncate` op, "unconditionally drops the high `N - M` bits… total but lossy"
+        // (DN-51 §2 D3) — and it is now **landed** (maintainer-authorized DN-39 post-freeze promotion:
+        // `bit.truncate` registered in `crates/mycelium-core/src/prim.rs`'s Π table, implemented in
+        // `crates/mycelium-interp/src/prims.rs::prim_truncate`, surfaced in
+        // `crates/mycelium-l1/src/checkty.rs`). So a narrow now emits `truncate` — it matches Rust `as`
+        // narrowing's wrap semantics *exactly* (DN-51 §2 D3: unconditional low-`M`-bits keep, never a
+        // refusal), the same fidelity bar the widen/identity arm above already meets.
         // Any **float-crossing** cast (`Binary{N} as Float`, `Float as Binary{N}`, `Float as Float`)
         // is CU-3 territory: the CU-3 kernel prims are checked/refusing where Rust `as` rounds/
         // saturates (`flt.to_bin` refuses out-of-range vs Rust's saturation; `bin.to_flt` errs
@@ -1328,30 +1327,13 @@ fn emit_expr_inner(expr: &Expr, self_ty: Option<&str>, env: &TypeEnv) -> Result<
                     let operand = emit_expr(&c.expr, self_ty, env)?;
                     Ok(format!("width_cast({operand}, {})", zero_bin_literal(m)))
                 } else {
-                    // Narrow: Rust wraps (low `M` bits); `width_cast` REFUSES on overflow. Emitting it
-                    // would be UNFAITHFUL. DN-51 (Accepted) NAMES the faithful wrapping form
-                    // (`truncate`), but its kernel prim/surface is not landed yet (DN-51 §6, a
-                    // follow-on implementation item) — so the semantics is DECIDED, the surface is
-                    // NOT YET EMITTABLE. FLAG renamed from `FLAG-cast-narrow-fidelity` to name that
-                    // precisely (this is no longer an undecided-fidelity question).
-                    Err(GapReason::new(
-                        Category::Other,
-                        format!(
-                            "FLAG-truncate-not-emittable: cast `{}` narrows Binary{{{n}}} -> Binary{{{m}}}, \
-                             which DN-51 (Accepted §2 D3) names as the explicit `truncate` op \
-                             (\"unconditionally drops the high N-M bits… total but lossy\") — Rust `as` \
-                             narrowing WRAPS (keeps the low {m} bits), matching `truncate`'s semantics \
-                             exactly, NOT DN-41 `bit.width_cast`'s checked narrow (`prim_width_cast` -> \
-                             Overflow on a set dropped high bit). But DN-51 §6 records `truncate` as a \
-                             follow-on implementation item, not yet landed: no `truncate` prim/surface \
-                             exists in the kernel today (verify-first, mitigation #14 — grepped \
-                             `crates/mycelium-interp/src/prims.rs` and `crates/mycelium-core/src/prim.rs`, \
-                             no such prim registered). So this stays an explicit gap — never an unfaithful \
-                             checked-narrow emission, and never a fabricated prim call to a surface that \
-                             does not exist (G2/VR-5)",
-                            tokens_to_string(expr)
-                        ),
-                    ))
+                    // Narrow: Rust wraps (low `M` bits); `truncate` unconditionally keeps the low `M`
+                    // bits (DN-51 §2 D3) — an exact semantic match, now landed (maintainer-authorized
+                    // DN-39 post-freeze promotion). Reuses the same width-witness ABI `width_cast`
+                    // uses (`zero_bin_literal(m)` — only the witness's width is read, its bits are
+                    // ignored, DN-41 §3), since `truncate` was built as `width_cast`'s sibling.
+                    let operand = emit_expr(&c.expr, self_ty, env)?;
+                    Ok(format!("truncate({operand}, {})", zero_bin_literal(m)))
                 }
             } else {
                 // Operand known but not `Binary{N}` (e.g. `Bool`, a user type), or the target is not an
