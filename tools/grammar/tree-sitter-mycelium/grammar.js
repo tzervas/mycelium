@@ -11,12 +11,12 @@
 // Highlight captures are in queries/highlights.scm.
 
 // GENERATED keyword sets (lexer-derived, G2 — the drift gate keeps these current).
-const KW_KEYWORD = ['backbone', 'colony', 'consume', 'cyst', 'default', 'derive', 'else', 'fn', 'for', 'forage', 'fuse', 'graft', 'grow', 'hypha', 'if', 'impl', 'in', 'lambda', 'let', 'lower', 'match', 'matured', 'mesh', 'nodule', 'object', 'paradigm', 'phylum', 'policy', 'pub', 'reclaim', 'spore', 'swap', 'thaw', 'then', 'tier', 'to', 'trait', 'type', 'use', 'via', 'wild', 'with', 'xloc'];
+const KW_KEYWORD = ['backbone', 'colony', 'consume', 'cyst', 'default', 'derive', 'else', 'fn', 'for', 'forage', 'fuse', 'graft', 'grow', 'hypha', 'if', 'impl', 'in', 'lambda', 'let', 'lower', 'match', 'matured', 'mesh', 'nodule', 'object', 'paradigm', 'phylum', 'policy', 'pub', 'reclaim', 'spore', 'swap', 'thaw', 'then', 'tier', 'to', 'trait', 'type', 'use', 'via', 'wild', 'with', 'wrapping', 'xloc'];
 const KW_TYPE = ['Binary', 'Bytes', 'Dense', 'Float', 'Seq', 'Sparse', 'Substrate', 'Ternary', 'VSA', 'bin', 'emb', 'hvec', 'tern'];
 const KW_SCALAR = ['BF16', 'F16', 'F32', 'F64'];
 const KW_STRENGTH = ['Declared', 'Empirical', 'Exact', 'Proven'];
 // Reserved-not-active (DN-03 §4; EBNF header): lexed as keywords, consumed by no production.
-const KW_RESERVED_INACTIVE = ['backbone', 'cyst', 'graft', 'grow', 'matured', 'mesh', 'xloc'];
+const KW_RESERVED_INACTIVE = ['backbone', 'cyst', 'graft', 'grow', 'matured', 'mesh', 'wrapping', 'xloc'];
 
 // RFC-0025 §4.1 tiers (M-705/M-745), written loosest→tightest; every binary operator is
 // left-associative, prefix operators bind tighter than every binary operator.

@@ -2721,11 +2721,11 @@
 | `std.cmp::ge` | fn | `lib/std/cmp.myc:93` | `fn ge{N}(a: Binary{N}, b: Binary{N}) => Bool` | ge<N>: True iff a >= b — a projection of cmp (Exact; total). | Empirical/Declared |
 | `std.cmp::max` | fn | `lib/std/cmp.myc:98` | `fn max{N}(a: Binary{N}, b: Binary{N}) => Binary{N}` | max<N>: the larger of a and b; returns b when equal (arbitrary but total — equal Binary{N} values are bit-identical, so the tie-break is observationally irrelevant). Exact. | Empirical/Declared |
 | `std.cmp::min` | fn | `lib/std/cmp.myc:102` | `fn min{N}(a: Binary{N}, b: Binary{N}) => Binary{N}` | min<N>: the smaller of a and b; returns a when equal (irrelevant tie-break, as max). Exact. | Empirical/Declared |
-| `std.cmp::ne` | fn | `lib/std/cmp.myc:111` | `fn ne{N}(a: Binary{N}, b: Binary{N}) => Bool` | ne<N>: True iff a != b — the negation of `eq` (Exact; total). | Empirical/Declared |
-| `std.cmp::gt` | fn | `lib/std/cmp.myc:115` | `fn gt{N}(a: Binary{N}, b: Binary{N}) => Bool` | gt<N>: True iff a > b (unsigned) — a projection of cmp (Exact; total). | Empirical/Declared |
-| `std.cmp::cmp_s` | fn | `lib/std/cmp.myc:121` | `fn cmp_s{N}(a: Binary{N}, b: Binary{N}) => Ordering` | cmp_s<N>: SIGNED three-way comparison — two's-complement ordering (RFC-0033 §4.1.2: ordering is signedness-distinct). Uses the `lt_s` prim (signed less-than) + `eq` (bit-identity, signedness- agnostic). Total, Exact for every concrete N. | Empirical/Declared |
-| `std.cmp::le_s` | fn | `lib/std/cmp.myc:125` | `fn le_s{N}(a: Binary{N}, b: Binary{N}) => Bool` | le_s<N>: True iff a <= b under the SIGNED (two's-complement) ordering — projection of cmp_s. Exact. | Empirical/Declared |
-| `std.cmp::ge_s` | fn | `lib/std/cmp.myc:129` | `fn ge_s{N}(a: Binary{N}, b: Binary{N}) => Bool` | ge_s<N>: True iff a >= b under the SIGNED ordering — projection of cmp_s. Exact. | Empirical/Declared |
+| `std.cmp::ne` | fn | `lib/std/cmp.myc:110` | `fn ne{N}(a: Binary{N}, b: Binary{N}) => Bool` | — | Empirical/Declared |
+| `std.cmp::gt` | fn | `lib/std/cmp.myc:114` | `fn gt{N}(a: Binary{N}, b: Binary{N}) => Bool` | gt<N>: True iff a > b (unsigned) — a projection of cmp (Exact; total). | Empirical/Declared |
+| `std.cmp::cmp_s` | fn | `lib/std/cmp.myc:120` | `fn cmp_s{N}(a: Binary{N}, b: Binary{N}) => Ordering` | cmp_s<N>: SIGNED three-way comparison — two's-complement ordering (RFC-0033 §4.1.2: ordering is signedness-distinct). Uses the `lt_s` prim (signed less-than) + `eq` (bit-identity, signedness- agnostic). Total, Exact for every concrete N. | Empirical/Declared |
+| `std.cmp::le_s` | fn | `lib/std/cmp.myc:124` | `fn le_s{N}(a: Binary{N}, b: Binary{N}) => Bool` | le_s<N>: True iff a <= b under the SIGNED (two's-complement) ordering — projection of cmp_s. Exact. | Empirical/Declared |
+| `std.cmp::ge_s` | fn | `lib/std/cmp.myc:128` | `fn ge_s{N}(a: Binary{N}, b: Binary{N}) => Bool` | ge_s<N>: True iff a >= b under the SIGNED ordering — projection of cmp_s. Exact. | Empirical/Declared |
 
 ### std.collections
 
