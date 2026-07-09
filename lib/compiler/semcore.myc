@@ -2031,6 +2031,22 @@ type LowerDecl = LD(Bytes, Vec[Bytes], LowerRhs);
 fn ld_rhs(l: LowerDecl) => LowerRhs =
   match l { LD(_, _, r) => r };
 
+// UsePath: mirrors ast.rs::UsePath / ast.myc::UsePath field-for-field (`UP` ctor, same spelling as
+// ast.myc — M-1013 STEP 4, resolve_imports increment). `path`: the imported path (a specific import
+// names the item; a glob names the prefix whose `pub` names import). `glob`: true for `use a.b.*`.
+type UsePath = UP(Path, Bool);
+
+fn usepath_path(u: UsePath) => Path =
+  match u { UP(p, _) => p };
+
+fn usepath_glob(u: UsePath) => Bool =
+  match u { UP(_, g) => g };
+
+// Item gains ItUse (M-1013 STEP 4): the trimmed register-family mirror (FLAG-semcore-30's note)
+// previously collapsed `Use`/`Default`/`Derive` into the single tuple-free `ItOther`, which was
+// faithful for `collect_tuple_arities` (none of the three carry tuple-relevant content) but is NOT
+// faithful for `resolve_imports`, which reads `Item::Use(UsePath)` directly (checkty.rs 1423-1533).
+// `Default`/`Derive` remain folded into `ItOther` (still tuple-free and not read by resolve_imports).
 type Item =
     ItType(TypeDecl)
   | ItFn(FnDecl)
@@ -2039,6 +2055,7 @@ type Item =
   | ItObject(ObjectDecl)
   | ItLower(LowerDecl)
   | ItInherentImpl(InherentImplDecl)
+  | ItUse(UsePath)
   | ItOther;
 type Nodule = Nod(Path, Bool, Vec[Item]);
 
@@ -2227,6 +2244,7 @@ fn collect_tuple_arities_item(acc: Vec[Binary{32}], it: Item) => Vec[Binary{32}]
     },
     ItInherentImpl(iid) =>
       collect_tuple_arities_fndecls(collect_tuple_arities_typeref(iid_for_ty(iid), acc), iid_methods(iid)),
+    ItUse(_) => acc,
     ItOther => acc
   };
 
@@ -3723,3 +3741,373 @@ fn policy_name_preimage(p: Path) => Bytes =
 // hand-mirrored comparators from the trust path. The live CHECK-logic equalities used by real
 // elaboration paths (`ty_eq`/`scalar_eq`/`sparsity_eq`/`width_eq`/`ty_list_eq`, FLAG-semcore-12) are
 // a DIFFERENT family, earlier in this nodule, and are unaffected.
+
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// checkty.rs IMPORT RESOLUTION (M-740 Stage 5, increment 8 continuation — M-1013 STEP 4).
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// Ports checkty.rs::resolve_imports (1423-1533) plus its six small helpers (qualify 1286-1292,
+// exports_has_pub/direct_child/split_last_seg/insert_export/remove_import 1535-1584) — the
+// "resolution" half of DN-26's M-1013 increment-8 declaration-registration-and-resolution wave
+// (register_types/register_traits/register_instances, the "registration" half, landed as M-1013
+// STEP 3). `register_nodule_decls` (checkty.rs 1340-1401, the caller that seeds the built-in `Fuse`
+// trait and calls register_types/register_traits) is DEFERRED, not ported here — it entangles with
+// `fuse.rs::{TRAIT_NAME, prelude}`, and fuse.rs is itself deferred (M-1013 increment 13) because
+// `check_fuse_laws` RUNS the not-yet-ported evaluator. Porting `register_nodule_decls` in isolation
+// would either fork the logic (never exercising the real conditional Fuse-seeding path) or need a
+// hand-copied `Fuse`-prelude stand-in duplicating fuse.rs's own data — an honest gap, flagged
+// (G2/VR-5), not silently worked around.
+//
+// `resolve_imports` resolves ONE nodule's `use` imports against the phylum-wide `Exports` table
+// (M-662): globs first (lowest precedence), then explicit `use`s (which shadow a glob-bound name),
+// enforcing three never-silent refusals — unknown name, private (exists but not `pub`), duplicate
+// explicit import — plus the glob-vs-glob ambiguity marking (a *reference* to an ambiguous name is
+// refused at use-site elsewhere, not here). Pure; no evaluator dependency; live oracle
+// `checkty::resolve_imports` (module-private in the oracle — widened to `pub(crate)`, zero logic
+// change, the same widening precedent as M-1013 STEP 3's `resolve_ctors`/`first_duplicate`
+// (commit 2bb06f88) and the `CoherenceView` widening (commit 65351071), so the in-crate differential
+// module can reach it; `Exports`/`NoduleImports` similarly widened, fields included, for marshalling).
+//
+// FLAG-semcore-31 (a provable no-op, ported anyway for structural fidelity). The oracle's glob pass
+// checks `via_explicit.contains(&simple)` even though `via_explicit` is populated ONLY by the LATER
+// explicit pass within the SAME `resolve_imports` call — so that check is always `false` when the
+// glob pass runs (the sets start fresh per call, and nothing populates `via_explicit` before the
+// glob loop reads it). This port THREADS `via_explicit` through the glob pass anyway (rather than
+// silently dropping the always-false branch) — arm-for-arm structural fidelity over a "provably dead
+// but let's not gamble on that proof" judgment call; this file's own precedent throughout is "port
+// every branch the oracle has."
+//
+// FLAG-semcore-32 (error TEXT is not differential-compared — the compiler_stage5_register.rs
+// precedent: "Err messages differ across the two productions ... only the Ok payload is
+// meaningful"). This port's four refusals return short `Bytes` reasons (this file's established
+// `bytes_concat`-chain idiom), not the oracle's word-for-word multi-sentence diagnostics; the gate
+// compares Ok/Err CLASSIFICATION (and, on Ok, the decoded `NoduleImports` payload structurally),
+// never message text.
+
+// Exports: mirrors checkty.rs::Exports (1045-1056) as FOUR FLAG-semcore-4 assoc lists (no map
+// primitive, M-982) keyed by the qualified (dot-joined) name STRING — `types`/`fns`/`traits` per
+// kind, `declared` the ALL-declared-names-with-pub-ness table `resolve_imports` distinguishes
+// "unknown" from "private" against. New ctor `Ex` (FLAG-semcore-2 scheme; checked, no collision).
+type Exports = Ex(Vec[Pair[Bytes, DataInfo]], Vec[Pair[Bytes, FnDecl]], Vec[Pair[Bytes, TraitInfo]], Vec[Pair[Bytes, Bool]]);
+
+fn ex_types(e: Exports) => Vec[Pair[Bytes, DataInfo]] =
+  match e { Ex(t, _, _, _) => t };
+
+fn ex_fns(e: Exports) => Vec[Pair[Bytes, FnDecl]] =
+  match e { Ex(_, f, _, _) => f };
+
+fn ex_traits(e: Exports) => Vec[Pair[Bytes, TraitInfo]] =
+  match e { Ex(_, _, tr, _) => tr };
+
+fn ex_declared(e: Exports) => Vec[Pair[Bytes, Bool]] =
+  match e { Ex(_, _, _, d) => d };
+
+// exports_types_lookup / exports_fns_lookup / exports_traits_lookup / exports_declared_lookup: the
+// FLAG-semcore-4 linear scan over each table, keyed by the flat qualified-name `Bytes` string
+// (four duplicated pairs rather than a generic dictionary — FLAG-semcore-5 precedent, KISS/YAGNI).
+fn exports_types_lookup(t: Vec[Pair[Bytes, DataInfo]], qual: Bytes) => Option[DataInfo] =
+  match t {
+    Nil => None,
+    Cons(p, rest) => match p { Pr(k, v) => match bytes_eq(k, qual) { 0b1 => Some(v), _ => exports_types_lookup(rest, qual) } }
+  };
+
+fn exports_fns_lookup(t: Vec[Pair[Bytes, FnDecl]], qual: Bytes) => Option[FnDecl] =
+  match t {
+    Nil => None,
+    Cons(p, rest) => match p { Pr(k, v) => match bytes_eq(k, qual) { 0b1 => Some(v), _ => exports_fns_lookup(rest, qual) } }
+  };
+
+fn exports_traits_lookup(t: Vec[Pair[Bytes, TraitInfo]], qual: Bytes) => Option[TraitInfo] =
+  match t {
+    Nil => None,
+    Cons(p, rest) => match p { Pr(k, v) => match bytes_eq(k, qual) { 0b1 => Some(v), _ => exports_traits_lookup(rest, qual) } }
+  };
+
+fn exports_declared_lookup(t: Vec[Pair[Bytes, Bool]], qual: Bytes) => Option[Bool] =
+  match t {
+    Nil => None,
+    Cons(p, rest) => match p { Pr(k, v) => match bytes_eq(k, qual) { 0b1 => Some(v), _ => exports_declared_lookup(rest, qual) } }
+  };
+
+// exports_has_pub (checkty.rs 1535-1537): is `qual` declared AND `pub`?
+fn exports_has_pub(exports: Exports, qual: Bytes) => Bool =
+  match exports_declared_lookup(ex_declared(exports), qual) {
+    Some(True) => True,
+    _ => False
+  };
+
+// NoduleImports: mirrors checkty.rs::NoduleImports (1064-1075). `ambiguous` is a Vec[Bytes] SET
+// (membership via `names_contains`) standing in for `BTreeSet<String>` (the same convention affine.rs
+// FLAG-semcore-6/-18 established for accumulator sets).
+type NoduleImports = NI(Vec[Pair[Bytes, DataInfo]], Vec[Pair[Bytes, FnDecl]], Vec[Pair[Bytes, TraitInfo]], Vec[Bytes]);
+
+fn ni_types(n: NoduleImports) => Vec[Pair[Bytes, DataInfo]] =
+  match n { NI(t, _, _, _) => t };
+
+fn ni_fns(n: NoduleImports) => Vec[Pair[Bytes, FnDecl]] =
+  match n { NI(_, f, _, _) => f };
+
+fn ni_traits(n: NoduleImports) => Vec[Pair[Bytes, TraitInfo]] =
+  match n { NI(_, _, tr, _) => tr };
+
+fn ni_ambiguous(n: NoduleImports) => Vec[Bytes] =
+  match n { NI(_, _, _, a) => a };
+
+// nodule_imports_empty: `NoduleImports::default()` (checkty.rs `#[derive(Default)]`, 1064).
+fn nodule_imports_empty() => NoduleImports = NI(Nil, Nil, Nil, Nil);
+
+// assoc_remove_*/assoc_set_*: `BTreeMap::insert` (replace-if-present) over each of the three
+// per-kind tables — remove any existing pair for `k`, then cons the new one (order-insensitive, an
+// assoc-list map; the FLAG-semcore-4 convention, three duplicated pairs per FLAG-semcore-5).
+fn assoc_remove_datainfo(t: Vec[Pair[Bytes, DataInfo]], k: Bytes) => Vec[Pair[Bytes, DataInfo]] =
+  match t {
+    Nil => Nil,
+    Cons(p, rest) => match p { Pr(k2, _) => match bytes_eq(k2, k) {
+      0b1 => assoc_remove_datainfo(rest, k),
+      _ => Cons(p, assoc_remove_datainfo(rest, k))
+    } }
+  };
+
+fn assoc_set_datainfo(t: Vec[Pair[Bytes, DataInfo]], k: Bytes, v: DataInfo) => Vec[Pair[Bytes, DataInfo]] =
+  Cons(Pr(k, v), assoc_remove_datainfo(t, k));
+
+fn assoc_remove_fndecl(t: Vec[Pair[Bytes, FnDecl]], k: Bytes) => Vec[Pair[Bytes, FnDecl]] =
+  match t {
+    Nil => Nil,
+    Cons(p, rest) => match p { Pr(k2, _) => match bytes_eq(k2, k) {
+      0b1 => assoc_remove_fndecl(rest, k),
+      _ => Cons(p, assoc_remove_fndecl(rest, k))
+    } }
+  };
+
+fn assoc_set_fndecl(t: Vec[Pair[Bytes, FnDecl]], k: Bytes, v: FnDecl) => Vec[Pair[Bytes, FnDecl]] =
+  Cons(Pr(k, v), assoc_remove_fndecl(t, k));
+
+fn assoc_remove_traitinfo(t: Vec[Pair[Bytes, TraitInfo]], k: Bytes) => Vec[Pair[Bytes, TraitInfo]] =
+  match t {
+    Nil => Nil,
+    Cons(p, rest) => match p { Pr(k2, _) => match bytes_eq(k2, k) {
+      0b1 => assoc_remove_traitinfo(rest, k),
+      _ => Cons(p, assoc_remove_traitinfo(rest, k))
+    } }
+  };
+
+fn assoc_set_traitinfo(t: Vec[Pair[Bytes, TraitInfo]], k: Bytes, v: TraitInfo) => Vec[Pair[Bytes, TraitInfo]] =
+  Cons(Pr(k, v), assoc_remove_traitinfo(t, k));
+
+// names_remove: drop every occurrence of `n` from a `Vec[Bytes]` SET (the `ambiguous.remove`
+// counterpart for a bare-name set, not a keyed table).
+fn names_remove(xs: Vec[Bytes], n: Bytes) => Vec[Bytes] =
+  match xs {
+    Nil => Nil,
+    Cons(h, t) => match bytes_eq(h, n) {
+      0b1 => names_remove(t, n),
+      _ => Cons(h, names_remove(t, n))
+    }
+  };
+
+// insert_export (checkty.rs 1560-1571): insert the export `qual` into `imp` under `simple`. The
+// oracle's OWN invariant comment says exactly one of the three export tables holds `qual` — but this
+// port still tries all three (arm-for-arm), since nothing in `Exports`'s SHAPE enforces that
+// invariant structurally (a caller-supplied fixture that violates it gets the same multi-table write
+// the oracle's own three independent `if let`s would produce).
+fn insert_export(imp: NoduleImports, exports: Exports, qual: Bytes, simple: Bytes) => NoduleImports =
+  let imp1 = match exports_types_lookup(ex_types(exports), qual) {
+    Some(info) => NI(assoc_set_datainfo(ni_types(imp), simple, info), ni_fns(imp), ni_traits(imp), ni_ambiguous(imp)),
+    None => imp
+  } in
+  let imp2 = match exports_fns_lookup(ex_fns(exports), qual) {
+    Some(fd) => NI(ni_types(imp1), assoc_set_fndecl(ni_fns(imp1), simple, fd), ni_traits(imp1), ni_ambiguous(imp1)),
+    None => imp1
+  } in
+  match exports_traits_lookup(ex_traits(exports), qual) {
+    Some(ti) => NI(ni_types(imp2), ni_fns(imp2), assoc_set_traitinfo(ni_traits(imp2), simple, ti), ni_ambiguous(imp2)),
+    None => imp2
+  };
+
+// remove_import (checkty.rs 1574-1580): drop any binding for `simple` across all three per-kind
+// tables (the glob-vs-glob-ambiguity demotion) — `ambiguous` is untouched (matching the oracle).
+fn remove_import(imp: NoduleImports, simple: Bytes) => NoduleImports =
+  NI(assoc_remove_datainfo(ni_types(imp), simple), assoc_remove_fndecl(ni_fns(imp), simple), assoc_remove_traitinfo(ni_traits(imp), simple), ni_ambiguous(imp));
+
+// qualify (checkty.rs 1286-1292): `path.0.is_empty() ? name : path.0.join(".") + "." + name`.
+fn qualify(path: Path, name: Bytes) => Bytes =
+  match path_segs(path) {
+    Nil => name,
+    Cons(_, _) => bytes_concat(join_dot(path_segs(path)), bytes_concat(".", name))
+  };
+
+// bytes_starts_with / bytes_contains_char(_at): small string primitives NOT already in this file —
+// needed because `direct_child`/`split_last_seg` operate on the FLAT qualified-name string (the
+// `Exports` table's key shape), unlike every prior string helper here (which walks Path SEGMENTS,
+// e.g. `join_dot`). Same byte-at-a-time idiom as `count_bindigits_at`/`filter_bindigits_at`
+// (`bytes_slice` + `bytes_eq`, source-length-bounded direct-tail recursion).
+fn bytes_starts_with(s: Bytes, prefix: Bytes) => Bool =
+  match lt(bytes_len(s), bytes_len(prefix)) {
+    0b1 => False,
+    _ => match bytes_eq(bytes_slice(s, zero32(), bytes_len(prefix)), prefix) { 0b1 => True, _ => False }
+  };
+
+fn bytes_contains_char_at(s: Bytes, ch: Bytes, i: Binary{32}, n: Binary{32}) => Bool =
+  match lt(i, n) {
+    0b1 => match bytes_eq(bytes_slice(s, i, add_u(i, one32())), ch) {
+      0b1 => True,
+      _ => bytes_contains_char_at(s, ch, add_u(i, one32()), n)
+    },
+    _ => False
+  };
+
+fn bytes_contains_char(s: Bytes, ch: Bytes) => Bool =
+  bytes_contains_char_at(s, ch, zero32(), bytes_len(s));
+
+// direct_child (checkty.rs 1542-1550): is `qual` exactly ONE segment under `prefix`? `Some(simple)`
+// iff `qual == prefix + "." + simple` with `simple` itself containing no further `.`.
+fn direct_child(prefix: Bytes, qual: Bytes) => Option[Bytes] =
+  match bytes_starts_with(qual, prefix) {
+    False => None,
+    True =>
+      let rest0 = bytes_slice(qual, bytes_len(prefix), bytes_len(qual)) in
+      match lt(zero32(), bytes_len(rest0)) {
+        0b1 =>
+          match bytes_eq(bytes_slice(rest0, zero32(), one32()), ".") {
+            0b1 =>
+              let rest = bytes_slice(rest0, one32(), bytes_len(rest0)) in
+              match lt(zero32(), bytes_len(rest)) {
+                0b1 => match bytes_contains_char(rest, ".") {
+                  True => None,
+                  False => Some(rest)
+                },
+                _ => None
+              },
+            _ => None
+          },
+        _ => None
+      }
+  };
+
+// split_last_seg_go / split_last_seg (checkty.rs 1553-1557): `path.0.split_last()` restated as an
+// accumulate-then-reverse walk (the FLAG-parse list-building convention) — last segment plus the
+// DOT-JOINED prefix of everything before it (`Option[Pair[Bytes, Bytes]]`, matching the oracle's
+// `Option<(String, String)>` return shape exactly).
+fn rev_bytes_acc(xs: Vec[Bytes], acc: Vec[Bytes]) => Vec[Bytes] =
+  match xs {
+    Nil => acc,
+    Cons(h, t) => rev_bytes_acc(t, Cons(h, acc))
+  };
+
+fn split_last_seg_go(segs: Vec[Bytes], acc: Vec[Bytes]) => Option[Pair[Bytes, Vec[Bytes]]] =
+  match segs {
+    Nil => None,
+    Cons(h, t) => match t {
+      Nil => Some(Pr(h, rev_bytes_acc(acc, Nil))),
+      Cons(_, _) => split_last_seg_go(t, Cons(h, acc))
+    }
+  };
+
+fn split_last_seg(path: Path) => Option[Pair[Bytes, Bytes]] =
+  match split_last_seg_go(path_segs(path), Nil) {
+    None => None,
+    Some(pr) => match pr { Pr(last, init) => Some(Pr(last, join_dot(init))) }
+  };
+
+// ── resolve_imports (checkty.rs 1423-1533) — the two-pass import resolver ───────────────────────
+
+// GlobPassState: the glob loop's threaded (imp, via_explicit, via_glob) triple (FLAG-semcore-6
+// value-threading convention — Rust's `&mut` accumulators restated as an explicit fold).
+type GlobPassState = GPS(NoduleImports, Vec[Bytes], Vec[Bytes]);
+
+// resolve_imports_glob_quals: the INNER loop over `exports.declared`'s entries for ONE glob item's
+// `prefix` (checkty.rs's `for qual in exports.declared.keys()`). FLAG-semcore-31 keeps the
+// (provably always-false, see the file-header FLAG) `via_explicit` check for structural fidelity.
+fn resolve_imports_glob_quals(exports: Exports, prefix: Bytes, decl: Vec[Pair[Bytes, Bool]], st: GlobPassState) => GlobPassState =
+  match decl {
+    Nil => st,
+    Cons(p, rest) => match p { Pr(qual, _) => match direct_child(prefix, qual) {
+      None => resolve_imports_glob_quals(exports, prefix, rest, st),
+      Some(simple) => match exports_has_pub(exports, qual) {
+        False => resolve_imports_glob_quals(exports, prefix, rest, st),
+        True => match st { GPS(imp, via_explicit, via_glob) =>
+          match names_contains(via_explicit, simple) {
+            True => resolve_imports_glob_quals(exports, prefix, rest, st),
+            False => match names_contains(via_glob, simple) {
+              True =>
+                let imp2 = NI(ni_types(imp), ni_fns(imp), ni_traits(imp), Cons(simple, ni_ambiguous(imp))) in
+                resolve_imports_glob_quals(exports, prefix, rest, GPS(remove_import(imp2, simple), via_explicit, via_glob)),
+              False =>
+                resolve_imports_glob_quals(exports, prefix, rest, GPS(insert_export(imp, exports, qual, simple), via_explicit, Cons(simple, via_glob)))
+            }
+          }
+        }
+      }
+    } }
+  };
+
+// resolve_imports_glob_items: the OUTER glob-pass loop over `nodule.items` (non-glob / non-use items
+// are skipped — the `let Item::Use(UsePath{path, glob:true}) = item else { continue }` mirror).
+fn resolve_imports_glob_items(exports: Exports, items: Vec[Item], st: GlobPassState) => GlobPassState =
+  match items {
+    Nil => st,
+    Cons(it, rest) => match it {
+      ItUse(up) => match usepath_glob(up) {
+        True => resolve_imports_glob_items(exports, rest, resolve_imports_glob_quals(exports, join_dot(path_segs(usepath_path(up))), ex_declared(exports), st)),
+        False => resolve_imports_glob_items(exports, rest, st)
+      },
+      _ => resolve_imports_glob_items(exports, rest, st)
+    }
+  };
+
+// ExplicitPassState: the explicit-pass threaded (imp, via_explicit) pair.
+type ExplicitPassState = EPS(NoduleImports, Vec[Bytes]);
+
+// resolve_imports_explicit_items (checkty.rs's explicit-`use` loop, 1478-1531): the never-silent
+// refusals in the oracle's EXACT order — unnamed path, un-qualified single-segment path, unknown
+// name, private name, duplicate explicit import (FLAG-semcore-32: reason strings, not the oracle's
+// full diagnostic text).
+fn resolve_imports_explicit_items(exports: Exports, site: Bytes, items: Vec[Item], st: ExplicitPassState) => Result[ExplicitPassState, Bytes] =
+  match items {
+    Nil => Ok(st),
+    Cons(it, rest) => match it {
+      ItUse(up) => match usepath_glob(up) {
+        True => resolve_imports_explicit_items(exports, site, rest, st),
+        False => match split_last_seg(usepath_path(up)) {
+          None => Err(bytes_concat("`", bytes_concat(site, "`: a `use` path must name an item (M-662)"))),
+          Some(pr) => match pr { Pr(simple, prefix) =>
+            match lt(zero32(), bytes_len(prefix)) {
+              0b1 =>
+                let qual = bytes_concat(prefix, bytes_concat(".", simple)) in
+                match exports_declared_lookup(ex_declared(exports), qual) {
+                  None => Err(bytes_concat("`use ", bytes_concat(qual, "`: no such name in the phylum (M-662)"))),
+                  Some(is_pub) => match is_pub {
+                    False => Err(bytes_concat("`use ", bytes_concat(qual, "`: exists but is not `pub` (M-662)"))),
+                    True => match st { EPS(imp, via_explicit) =>
+                      match names_contains(via_explicit, simple) {
+                        True => Err(bytes_concat("duplicate import of `", bytes_concat(simple, "` (M-662)"))),
+                        False =>
+                          let imp2 = NI(ni_types(imp), ni_fns(imp), ni_traits(imp), names_remove(ni_ambiguous(imp), simple)) in
+                          resolve_imports_explicit_items(exports, site, rest, EPS(insert_export(imp2, exports, qual, simple), Cons(simple, via_explicit)))
+                      }
+                    }
+                  }
+                },
+              _ => Err(bytes_concat("`use ", bytes_concat(simple, "`: a cross-nodule import must be nodule-qualified (M-662)")))
+            }
+          }
+        }
+      },
+      _ => resolve_imports_explicit_items(exports, site, rest, st)
+    }
+  };
+
+// resolve_imports (checkty.rs 1423-1533, top level): globs first (lowest precedence), then
+// explicit `use`s (which shadow a glob-bound name) — Ok(NoduleImports) or the first refusal.
+fn resolve_imports(nod: Nodule, exports: Exports) => Result[NoduleImports, Bytes] =
+  match nod { Nod(path, _, items) =>
+    let site = qualify(path, "<use>") in
+    let glob_st = resolve_imports_glob_items(exports, items, GPS(nodule_imports_empty(), Nil, Nil)) in
+    match glob_st { GPS(imp0, via_explicit0, _) =>
+      match resolve_imports_explicit_items(exports, site, items, EPS(imp0, via_explicit0)) {
+        Err(e) => Err(e),
+        Ok(final_st) => match final_st { EPS(imp, _) => Ok(imp) }
+      }
+    }
+  };
