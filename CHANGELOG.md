@@ -7,9 +7,105 @@ This project is in **design + Rust-first implementation**; entries cover both th
 corpus and the landing kernel/stdlib code. Semantic versioning will begin when the kernel stabilizes.
 
 > Older entries are archived on periodic sweeps; this file holds `[Unreleased]` + a rolling recent
-> window. Full history: `docs/archive/changelog/`.
+> window. Full history: archived — see the `archive` git branch (was `docs/archive/changelog/`
+> in-tree; extracted 2026-07-09, clean-snapshot prep).
 
 ## [Unreleased]
+
+### chore: clean-snapshot prep — archives extracted to the `archive` branch, indices regenerated (2026-07-09)
+
+Prep a lean trunk ahead of a promotion: historical archives moved out of the day-to-day tree but
+preserved for reference, not deleted. Created the persistent **`archive` git branch** at the
+pre-removal `dev` tip (the full corpus lives there byte-for-byte, permanently), then removed
+`docs/archive/` (46 files) and `.claude/kickoffs/archive/` (33 files) from this branch — exactly
+those two trees. Every dangling reference a repo-wide grep found (`CHANGELOG.md`,
+`docs/CURRENT-STATE.md`, `docs/Doc-Index.md`, `docs/adr/README.md`, the
+`docs/reviews/2026-06-14-deep-review/06-medium-findings-ledger.md` pointer stub,
+`.claude/skills/changelog/SKILL.md`, `.claude/kickoffs/{dfb,README}.md`, `.claude/agent-context.md`)
+now says "now on the `archive` branch" instead of pointing at a dead in-tree path; historical
+narrative is preserved with an added pointer, not rewritten. `scripts/checks/links.sh` additionally
+caught and fixed 5 relative hyperlinks to the removed directory in `.claude/kickoffs/README.md` that
+the initial path grep missed. Dropped 8 dangling `src:.claude/kickoffs/archive/*.md` `doc_refs` entries
+in `tools/github/issues.yaml` (a mechanical repair — no `doc_refs` grammar prefix can address a
+branch; each was one line in a multi-entry list). Regenerated all three committed indices on the
+lean tree (`just docs-index`, `just tero-index-gen`, `just lib-index-gen`); all three drift gates
+green. Backfilled 8 missing Design-Note rows in `docs/Doc-Index.md` (DN-90…DN-97 — discovered
+missing during this pass) and refreshed the stale 2026-07-01 corpus-count digest in
+`docs/CURRENT-STATE.md` (27/39/72 → **33 ADRs / 41 RFCs / 97 design notes**). Verified:
+`doc_refs_check.py` OK; `markdown.sh` 0 errors (450 docs); `links.sh`/`structured.sh`/`secrets.sh`
+(gitleaks) clean.
+
+### DN-97 ratified (Rank 1) — the unified branch/merge/propagation workflow + `/forward` + `/sync-down` skills (2026-07-09)
+
+The maintainer ratified **DN-97 → Accepted** in-session as **Rank 1**: three **same-content**
+persistent trunks (`dev`/`integration`/`main`, differing by rigor not tracked content) so **every**
+merge — up and down — is a plain, conflict-free `--no-ff` with zero merge-driver machinery; a
+lightweight production `main` is achieved as a **`just package-release`** artifact (`git archive` +
+`.gitattributes export-ignore`), never divergent tracked content. DN-97 reconciles its two inputs —
+**DN-95** (down-propagation; proves, within the git-DAG model, that squash-only + no-force-push +
+persistent accumulation tiers makes lower-tier graph divergence mathematically unavoidable) and
+**DN-96** (the forward/up-flow spec-first staged pipeline — spec/DN → public API → private API →
+component seam-map → code — as a context-windowing mechanism, with bite-sized changes and precursor
+doc/index branches for auto-generated bulk) — under the maintainer's ratified decisions, superseding
+their standalone recommendations only where they conflict (append-only: DN-95/DN-96 stay **Draft**,
+referenced not edited). Operationalized as two new skills plus a recipe: **`/forward`** (the staged
+pipeline + the ≈1–2k-LOC soft / 4,000-LOC hard change-sizing cap + the precursor-branch mechanic),
+**`/sync-down`** (`main`→`integration`→`dev` propagation as a plain no-force `--no-ff` merge per
+tier, landed via a PR per tier so the repo's enforced branch-guard stays respected — never a raw
+push, mitigation number 10), and **`just package-release [version] [ref]`** (skip-graceful, never-silent about
+what `.gitattributes export-ignore` excludes). Both skills wired into `CLAUDE.md` §Commits & PRs and
+§Skills. Verified: markdownlint 0 errors (529 docs at landing time), shellcheck clean (70 scripts),
+gitleaks clean, branch-guard ok, `just --list` parses the new recipe, `package-release.sh` produces a
+filtered tarball end-to-end against a local ref. (DN-95/DN-96/DN-97; VR-5/G2.)
+
+### E18-1 semcore self-hosting — Stage-5 continues: M-1013 STEP 4/5/6 + the first eval.rs fragment (2026-07-09)
+
+The M-993 staged port of `lib/compiler/semcore.myc` advances four more increments, each with a
+live-oracle differential in an in-crate `src/tests/` module and green `myc-dogfood --strict` (all 9
+self-hosted nodules). **STEP 4** ports `checkty::resolve_imports` (cross-nodule use-import
+resolution, M-662) plus six helpers — the resolution half of the increment-8 wave whose registration
+half (`register_types`/`traits`/`instances`) landed as STEP 3; adds an `ItUse(UsePath)` `Item`
+variant so imports are read directly. **STEP 5** ports `register_nodule_decls` (deferred at STEP 4
+on an over-broad fuse.rs-entanglement read that turned out narrower than assumed: only
+`check_fuse_laws`/F-A2 touches the evaluator) plus the `checkty::prelude` Bool-registry seed and the
+Fuse-trait vocabulary slice (F-A1: `TRAIT_NAME`/`prelude()` — pure data-shaping, no evaluator
+dependency; F-A2 stays deferred). **STEP 6** ports mono.rs's remaining pure Ty/TypeRef round-trip
+helpers (`mangle_ty_in_ty`, `item_key`, `closure_field_ty`, `closure_param_ref`,
+`ty_to_source_ref`/`ty_to_ref`/`ty_to_ref_tagged`) plus the monomorphization work-item dedup key
+(mirrored as `WorkItem` — `Item` is already taken at this nodule's ast level), resolving the
+previously-deferred FLAG-semcore-17. **eval PR-1** triages `eval.rs` (increment 12, "the hardest
+wave") for a bounded witnessable slice: the CEK work-stack machine itself is irreducibly
+Env/PrimRegistry/SwapEngine/fuel/depth-entangled, but `Evaluator::try_match`'s
+Wildcard/Ident/Ctor/Tuple leg is separately callable and ports as `lval_try_match` with a new `LVal`
+mirror; `Pattern::Lit` is out of scope (needs the trusted kernel `Value`'s equality) and refuses
+cleanly rather than guessing (G2). Each increment widens its target function to `pub(crate)`
+(zero logic change, the established STEP-3 precedent) so the differential harness can call the real
+oracle directly; `lib/compiler/README.md`'s stale Stage-5 wave-progress note is flagged, not
+silently left wrong (mitigation #14). Every surface-inexpressible deviation carries a
+FLAG-semcore-* note. Verified per-increment: `cargo test -p mycelium-l1 --lib` green throughout (437
+→ 464 passed), `clippy -p mycelium-l1 --tests -D warnings` clean, `cargo fmt` clean,
+`myc-dogfood --strict` clean. Does not close the "eval.rs deferred" line — the CEK machine's bulk
+remains unported. (M-993/M-1013 STEP 4/5/6 + eval PR-1; E18-1; DN-26; VR-5/G2.)
+
+### Kernel: `bit.truncate` prim (DN-51) + transpiler narrow-cast now emits it (2026-07-09)
+
+Adds the explicit, total, lossy `Binary` narrow that DN-51 §2 D3/§6 names as `width_cast`'s
+counterpart: `bit.truncate` unconditionally drops the high `N-M` bits and never refuses (unlike
+`width_cast`'s checked narrow) — a maintainer-authorized DN-39 post-freeze promotion (Π 68 → 69).
+Registered in the content-addressed prim table with an honestly-`Declared` intrinsic tag (DN-51 §4:
+"own honest lossy tag — never `Exact`"; neither `Proven`'s checked-theorem nor `Empirical`'s
+trial-fit basis applies to a deterministic bit-drop, VR-5); the L1 surface maps to it through the
+same width-witness ABI as `width_cast`. Tested with interp-level properties (identity,
+keeps-low-bits-mod-2^M, never-`Exact`, round-trip after widen, composition/absorption), an L1
+three-way differential (L1-eval == L0-interp == AOT, including the direct
+width_cast-refuses/truncate-succeeds contrast), and a Π surface-consistency guard. The
+`mycelium-transpile` `Expr::Cast` narrow arm (`Binary{N} as Binary{M}`, `M < N`) now emits
+`truncate(operand, <M-bit witness>)` instead of the `FLAG-truncate-not-emittable` gap, matching Rust
+`as` narrowing's wrap semantics exactly; a live `myc-check` oracle test proves the emission genuinely
+type-checks (narrow/widen/identity/narrow-to-`Binary{1}` cases). Verified: `cargo fmt`/`clippy -D
+warnings`/`test` clean across `mycelium-core`/`mycelium-interp`/`mycelium-l1`/`mycelium-transpile`
+(the AOT leg ran for real; the `myc-check` binary was built locally so the live oracle ran rather
+than skipped); the two prim-inventory count assertions bumped 68 → 69. (DN-51; VR-5/G2.)
 
 ### Lint: `unsafe_code = "allow"` so documented unsafe never erroneously alarms — local, remote, or ad-hoc (2026-07-09)
 
@@ -624,7 +720,9 @@ nodule (`lib/compiler/nodule.myc`), the full `.myc` port of `crates/mycelium-l1/
 Post-Phase-I doc maintenance on the kickoff corpus (`.claude/kickoffs/`) plus `docs/CURRENT-STATE.md`
 — documentation only, no code changes.
 
-- **Seven kickoffs archived** (moved to `.claude/kickoffs/archive/`): the six completed — `acy`
+- **Seven kickoffs archived** (moved to `.claude/kickoffs/archive/`; that in-tree dir was itself
+  further extracted to the persistent `archive` git branch 2026-07-09, clean-snapshot prep — see
+  the entry near the top of this file): the six completed — `acy`
   (H0, commits 6636f56/ba0b800, E27-1), `enb` (H1) and `opp` (both PR #1020, 2026-07-02), `grm`
   (H2a) and `frz` (H2 — the kernel freeze, both PR #1051, 2026-07-02), and `trx` (transpiler PoC,
   landed 2026-07-01) — each with a prepended completion header whose task ranges were verified
@@ -2524,4 +2622,5 @@ Verified: `markdown.sh` (432 docs, 0 errors), `links.sh`, `doc_refs_check.py`, a
 
 ### Older entries
 
-See `docs/archive/changelog/CHANGELOG-2026-06.md` for entries 2026-06-27 and earlier (verbatim).
+Entries 2026-06-27 and earlier (verbatim) are archived — see the `archive` git branch (was
+`docs/archive/changelog/CHANGELOG-2026-06.md` in-tree; extracted 2026-07-09, clean-snapshot prep).
