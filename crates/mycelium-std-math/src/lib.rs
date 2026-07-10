@@ -83,7 +83,7 @@
 //! **Unfrozen for the gap-closure window (ADR-045, Accepted 2026-07-10):** this DN-66 freeze is
 //! lifted per [ADR-045](../../../docs/adr/ADR-045-Kernel-And-Lexicon-Unfreeze-For-Early-Gap-Closure.md)
 //! for a bounded window; a breaking change here still needs a spec amendment + changelog entry
-//! (G2), not a silent edit — the window closes per the DN-66 §8 re-freeze conditions, bound by
+//! (G2), not a silent edit — the window closes per the ADR-045 §2.4 re-freeze conditions, bound by
 //! the DN-99 residual worklist.
 //! It remains the RFC-0031 D6 differential-oracle reference; the same-named `lib/std/math.myc` prototype is a narrower, structurally distinct surface (DN-66 S3.1) — the D6 retirement trigger has not fired, so no item here is `#[deprecated]`.
 #![forbid(unsafe_code)]
