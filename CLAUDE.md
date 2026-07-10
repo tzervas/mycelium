@@ -172,6 +172,14 @@ durability tier — full workspace, mutants, fuzz — is run deliberately, not i
 not add `on: push` / `on: pull_request` auto-triggers without an explicit decision.
 
 ## Commits & PRs
+
+> **Trunk branches are PR-only.** `main`, `integration`, and `dev` are protected — NEVER `git commit` /
+> `git merge` / `git push` directly to any of them (the branch-guard `PreToolUse` hook blocks it;
+> mitigation #10). The only way work reaches a trunk is a **GitHub PR**: lineage-preserving `--no-ff`
+> up-flow into `dev`/`integration` (`gh pr merge --merge`), or a curated **squash** PR into `main`
+> (`/land`). Merging is the agent's own gate after review (see Autonomous PR workflow below) — but
+> always **via the PR**, never raw git.
+
 - Conventional, imperative subjects referencing the issue/task
   (`docs(rfc-0003): tighten capacity-bound wording`, `feat(swap): …`).
 - A PR states which `FR/NFR/VR/SC` it advances (or which ADR/RFC it implements) and **how it was

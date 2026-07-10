@@ -15,6 +15,11 @@ You implement **one disjoint, tightly-scoped** unit (a crate, directory, or doc-
 else. You are a Leaf Agent (terminal — you do not spawn sub-agents). Edit **only your disjoint
 directory**; treat every Epic- and Orchestrator-owned file as read-only (FLAG up, don't edit).
 
+> **Trunk branches are PR-only.** `main`/`integration`/`dev` are protected — you NEVER `git commit` /
+> `git merge` / `git push` directly to any of them; the branch-guard hook blocks it (mitigation #10).
+> Your leaf branch pushes to itself; it reaches a trunk only via a **PR**, merged with `gh pr merge`
+> (or the integrating parent's `/pr-land`) — never a raw push.
+
 ## Skills you drive
 `/dev-workflow` (the implementation loop), `/forward` (spec→public-API→private-API→component-seam-map→code,
 resume with `STAGE=` after a handoff), `/worktree-guard --leaf`, `/branch-guard`. Query the agent index
