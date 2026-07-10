@@ -2205,11 +2205,14 @@ fn render_expr_broken(e: &Expr, indent: usize, cfg: LayoutCfg) -> String {
 /// Render one sum-type constructor (`Name` or `Name(T1, T2)`) — mirrors the ctor render in
 /// `mycelium_l1::ambient::print_type_decl`, used by [`render_type_decl_readable`].
 fn render_ctor(c: &mycelium_l1::ast::Ctor) -> String {
+    // M-1027 / DN-104 §2: a `priv`-sealed constructor renders with its leading `priv ` marker so the
+    // formatter round-trips the seal (mirrors `ambient::print_type_decl`; never silently dropped — G2).
+    let seal = if c.sealed { "priv " } else { "" };
     if c.fields.is_empty() {
-        c.name.clone()
+        format!("{seal}{}", c.name)
     } else {
         let fs: Vec<String> = c.fields.iter().map(render_type_ref).collect();
-        format!("{}({})", c.name, fs.join(", "))
+        format!("{seal}{}({})", c.name, fs.join(", "))
     }
 }
 

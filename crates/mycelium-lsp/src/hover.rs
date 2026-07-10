@@ -95,6 +95,11 @@ fn describe(kind: &LexKind) -> Option<String> {
         Tok::Colony => kw("colony", "a runtime grouping of hyphae (reserved)."),
         Tok::Use => kw("use", "imports names from another nodule."),
         Tok::Pub => kw("pub", "marks a cross-nodule export."),
+        Tok::Priv => kw(
+            "priv",
+            "seals a constructor: the `pub type`'s name is exported, but this constructor is withheld \
+             from cross-nodule construction (M-1027 / DN-104).",
+        ),
         Tok::Type => kw("type", "declares a type."),
         Tok::Trait => kw("trait", "declares a trait (behavioural interface)."),
         Tok::Impl => kw("impl", "implements a trait for a type (ratified; not yet active)."),

@@ -1219,6 +1219,13 @@ pub(crate) struct Exports {
     /// "no such name" from "exists but private" in a `use` refusal (G2 — an honest, helpful
     /// diagnostic). Keyed by qualified name → `is_pub`.
     pub(crate) declared: BTreeMap<String, bool>,
+    /// **Sealed constructors** per `pub` type (M-1027 / ENB-4; DN-104 §4). Keyed by the type's
+    /// **qualified name** → the set of its **`priv`-sealed** constructor names. A `pub type` exports its
+    /// type *name*, but a sealed constructor is **withheld from cross-nodule construction**: when a
+    /// nodule imports the type, these names are folded into its per-nodule withheld set
+    /// ([`NoduleImports::sealed`]). Only `pub` types appear here (a private type is unimportable, so its
+    /// seal is moot). Empty for a phylum with no sealed constructors (backward-compatible).
+    pub(crate) sealed_ctors: BTreeMap<String, BTreeSet<String>>,
 }
 
 /// The resolved imports available to **one** nodule while its bodies are checked (M-662): the
@@ -1241,6 +1248,25 @@ pub(crate) struct NoduleImports {
     /// Names brought in by **two or more** globs (and not resolved by an explicit `use` or a local
     /// decl): a *reference* to one of these is the never-silent glob-vs-glob ambiguity error.
     pub(crate) ambiguous: BTreeSet<String>,
+    /// **Withheld (sealed) constructor names** (M-1027 / ENB-4; DN-104 §4). The imported constructor
+    /// simple-names that are `priv`-sealed in their home nodule — **constructing** one from *this*
+    /// nodule via an imported (`use`-resolved) name is a never-silent [`CheckError`]. The exact twin
+    /// of [`Self::ambiguous`]: `ambiguous` answers "which imported names may not be *referenced*",
+    /// `sealed` answers "which imported constructor names may not be *constructed*". This nodule's
+    /// **own** constructor names are subtracted (an own constructor is always constructible in its
+    /// home; own decls shadow imports). Consulted only at the two constructor-application sites.
+    ///
+    /// **Known gap (M-1036, not yet fixed — see `tests/ctor_seal.rs`'s
+    /// `known_gap_a_same_named_local_shadow_type_bypasses_the_seal`):** this withheld set is keyed
+    /// by **bare constructor name**, and Mycelium resolves types/ctors by bare name in the
+    /// *caller's own scope* (own decls shadow imports — the pre-existing RFC-0006 §4.3 precedence
+    /// rule), not by nodule-qualified nominal identity. So a foreign nodule that declares its own
+    /// unsealed type/ctor of the **same name** — without ever importing the sealed original — is
+    /// never populated into *its* withheld set and bypasses the seal entirely. This is **not** an
+    /// enforced capability/security boundary against an adversarial or accidentally-colliding
+    /// same-named local declaration; it only ever refuses a well-behaved caller that goes through
+    /// `use home.Ctor`. A real fix needs nodule-qualified type identity (tracked as M-1036).
+    pub(crate) sealed: BTreeSet<String>,
 }
 
 impl NoduleImports {
@@ -1439,6 +1465,24 @@ fn check_phylum_inner(phylum: &Phylum, matured_scope: bool) -> Result<PhylumEnv,
                 .insert(qual(name), info_is_pub_type(nodule, name));
             if info_is_pub_type(nodule, name) {
                 exports.types.insert(qual(name), info.clone());
+                // M-1027 / DN-104 §4: record this `pub` type's `priv`-sealed constructor names so a
+                // consumer nodule that imports the type inherits the cross-nodule construction seal.
+                // Read from the AST `TypeDecl` (the surface `Ctor.sealed`); only non-empty seals are
+                // recorded (backward-compatible — an unsealed type contributes nothing).
+                let sealed: BTreeSet<String> = nodule
+                    .items
+                    .iter()
+                    .filter_map(|it| match it {
+                        Item::Type(td) if &td.name == name => Some(td),
+                        _ => None,
+                    })
+                    .flat_map(|td| td.ctors.iter())
+                    .filter(|c| c.sealed)
+                    .map(|c| c.name.clone())
+                    .collect();
+                if !sealed.is_empty() {
+                    exports.sealed_ctors.insert(qual(name), sealed);
+                }
             }
         }
         for (name, fd) in &regs.fns {
@@ -1776,6 +1820,20 @@ pub(crate) fn resolve_imports(
         imp.ambiguous.remove(&simple);
         insert_export(&mut imp, exports, &qual, &simple);
     }
+    // M-1027 / DN-104 §4: an own constructor is always constructible in its home nodule (own decls
+    // shadow imports). Subtract this nodule's own constructor names from the withheld set so a
+    // same-named home constructor is never wrongly refused; the seal only ever withholds a *foreign*
+    // nodule's `priv` constructor from construction here (G2 — never a home-construction false-refusal).
+    let own_ctors: BTreeSet<String> = nodule
+        .items
+        .iter()
+        .filter_map(|it| match it {
+            Item::Type(td) => Some(td),
+            _ => None,
+        })
+        .flat_map(|td| td.ctors.iter().map(|c| c.name.clone()))
+        .collect();
+    imp.sealed.retain(|c| !own_ctors.contains(c));
     Ok(imp)
 }
 
@@ -1808,6 +1866,12 @@ fn split_last_seg(path: &Path) -> Option<(String, String)> {
 fn insert_export(imp: &mut NoduleImports, exports: &Exports, qual: &str, simple: &str) {
     if let Some(info) = exports.types.get(qual) {
         imp.types.insert(simple.to_owned(), info.clone());
+        // M-1027 / DN-104 §4: importing a `pub` type inherits the cross-nodule construction seal on any
+        // of its `priv`-marked constructors. The own-ctor subtraction (a home constructor is always
+        // constructible) happens once at the end of `resolve_imports`.
+        if let Some(sealed) = exports.sealed_ctors.get(qual) {
+            imp.sealed.extend(sealed.iter().cloned());
+        }
     }
     if let Some(fd) = exports.fns.get(qual) {
         imp.fns.insert(simple.to_owned(), fd.clone());
@@ -3242,6 +3306,22 @@ pub(crate) fn resolve_ctors(
                 format!("duplicate constructor `{}`", c.name),
             ));
         }
+        // M-1027 / DN-104 §4: the `priv` constructor seal is meaningful **only** on a `pub type` — it
+        // exports the type NAME but withholds the constructor from *cross-nodule* construction. On a
+        // nodule-private type the whole type is already unimportable, so a seal is redundant and almost
+        // certainly a mistake. Refuse it never-silently (G2) rather than accept a no-op marker.
+        if c.sealed && td.vis == crate::ast::Vis::Private {
+            return Err(CheckError::new(
+                &td.name,
+                format!(
+                    "constructor `{}` is marked `priv`, but type `{}` is not `pub` — the seal is \
+                     redundant (a nodule-private type's constructors are already unreachable \
+                     cross-nodule). Make the type `pub` to export its name while withholding this \
+                     constructor, or drop the `priv` marker (DN-104 §4; never-silent, G2)",
+                    c.name, td.name
+                ),
+            ));
+        }
         let mut fields = Vec::new();
         for f in &c.fields {
             // The declaration's type parameters are in scope, so a field may be an abstract
@@ -3896,6 +3976,33 @@ impl Cx<'_> {
             .find_map(|d| d.ctors.iter().position(|c| c.name == name).map(|i| (d, i)))
     }
 
+    /// M-1027 / DN-104 §4: the **cross-nodule construction seal**. If `name` is a constructor **imported
+    /// by name** (`use home.Ctor`) from another nodule where it is `priv`-sealed, **constructing** it
+    /// here is a never-silent [`CheckError`]. Returns `Err` at the two constructor-application sites for
+    /// a withheld name; `Ok(())` otherwise (an unsealed ctor, or a home constructor — own decls are
+    /// subtracted from the withheld set in `resolve_imports`). The type **name** and **pattern-matching**
+    /// are unaffected — only *construction* is withheld (DN-104 §4).
+    ///
+    /// **Not an enforced security/capability boundary (known gap, M-1036)** — this check is keyed by
+    /// bare constructor name in [`NoduleImports::sealed`], so a caller that declares its own same-named
+    /// **local** (unsealed) type/ctor — rather than importing the real one — never populates its
+    /// withheld set and bypasses this check entirely (own decls shadow imports, RFC-0006 §4.3; pinned
+    /// by `tests/ctor_seal.rs::known_gap_a_same_named_local_shadow_type_bypasses_the_seal`). It refuses
+    /// a well-behaved cross-nodule caller that actually goes through `use`; it does not defend against
+    /// an adversarial or accidentally-colliding same name.
+    fn check_ctor_seal(&self, name: &str, ty_name: &str) -> Result<(), CheckError> {
+        if self.imports.sealed.contains(name) {
+            return self.err(format!(
+                "constructor `{name}` of `{ty_name}` is `priv`-sealed in its home nodule — it is \
+                 exported for use in signatures and pattern-matching, but **withheld from \
+                 cross-nodule construction** (the capability-gate: only its home nodule may mint one; \
+                 M-1027 / DN-104 §4). Construct it in its home nodule, or call a `pub fn` factory the \
+                 home nodule exposes (never a silent forge — G2/VR-5)"
+            ));
+        }
+        Ok(())
+    }
+
     /// Infer the type of `e` under `scope` (a lexical stack; shadowing = later wins). A thin wrapper
     /// over the bidirectional [`Self::check`] with no expected type — used where only the type is
     /// wanted and `e` carries no ambient bare-decimal needing context (e.g. the elaborator's
@@ -4099,6 +4206,11 @@ impl Cx<'_> {
             return Err(err);
         }
         if let Some((d, i)) = self.ctor(name) {
+            // M-1027 / DN-104 §4: refuse cross-nodule construction of a `priv`-sealed constructor
+            // (here a **nullary** ctor used as a value — a construction). The type name / pattern use
+            // are unaffected; only construction is withheld (G2). Checked before arity so the seal
+            // diagnostic wins over an incidental "takes N fields" message.
+            self.check_ctor_seal(name, &d.name)?;
             if d.ctors[i].fields.is_empty() {
                 // Nullary constructor as a value. A **generic** type has no fields to infer its type
                 // arguments from, so they must come from `expected` (bidirectional) — an absent or
@@ -5066,6 +5178,10 @@ impl Cx<'_> {
 
         // Constructor (W6 saturation).
         if let Some((d, i)) = self.ctor(name) {
+            // M-1027 / DN-104 §4: refuse cross-nodule construction of a `priv`-sealed constructor
+            // (here a **saturated** application — a construction). Checked before arity so the seal
+            // diagnostic wins over an incidental "takes N fields" message (G2).
+            self.check_ctor_seal(name, &d.name)?;
             let arity = d.ctors[i].fields.len();
             let dname = d.name.clone();
             let params = d.params.clone();

@@ -316,13 +316,16 @@ type BaseType =
 // Ctor: mirrors ast.rs::Ctor (a constructor name + its positional field TypeRefs). NEW ctor `Ct`
 // (FLAG-semcore-2 prefix scheme — distinct from the surface `Kw*`/checked `Ty*` families and from the
 // `CI` checked-ctor mirror below).
-type Ctor = Ct(Bytes, Vec[TypeRef]);
+// M-1027 / DN-104: the 3rd field is the `sealed` (`priv`) flag — surface parity with ast.rs::Ctor.
+// The checked `CtorInfo` (`CI`) mirror below does NOT carry it (the cross-nodule construction seal is
+// enforced by the export-table layer, which is not ported to `.myc` — DN-104 §6 residual).
+type Ctor = Ct(Bytes, Vec[TypeRef], Bool);
 
 fn ct_name(c: Ctor) => Bytes =
-  match c { Ct(n, _) => n };
+  match c { Ct(n, _, _) => n };
 
 fn ct_fields(c: Ctor) => Vec[TypeRef] =
-  match c { Ct(_, f) => f };
+  match c { Ct(_, f, _) => f };
 
 // TypeDecl: mirrors ast.rs::TypeDecl field-for-field (vis, name, params, ctors — declaration order).
 type TypeDecl = TD(Vis, Bytes, Vec[Bytes], Vec[Ctor]);

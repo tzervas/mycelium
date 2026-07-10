@@ -194,7 +194,7 @@ type Tok =
     Nodule | Phylum | TColony
   | Hypha | TFuse | Mesh | Graft | Cyst | Xloc | Forage | Backbone | Tier | TReclaim
   | TConsume | Grow | TDerive
-  | TUse | TPub | TType | TTrait | TImpl | TFn | Matured | Thaw
+  | TUse | TPub | TPriv | TType | TTrait | TImpl | TFn | Matured | Thaw
   | TLet | In | TIf | Then | Else | TMatch | TFor | TSwap
   | TDefault | Paradigm | With | TWild | TSpore | To | Policy
   | TLambda | TObject | Via | TLower
@@ -294,6 +294,9 @@ fn keyword(word: Bytes) => Option[Tok] =
                                               _ =>
                                               match bytes_eq(word, "pub") {
                                                 0b1 => Some(TPub),
+                                                _ =>
+                                                match bytes_eq(word, "priv") {
+                                                0b1 => Some(TPriv),
                                                 _ =>
                                                 match bytes_eq(word, "type") {
                                                   0b1 => Some(TType),
@@ -422,6 +425,7 @@ fn keyword(word: Bytes) => Option[Tok] =
                                                       0b1 => Some(Strength(TGDeclared)),
                                                       _ =>
                                                       None
+                                                    }
                                                     }
                                                     }
                                                     }
@@ -1188,13 +1192,18 @@ fn fndecl_body(f: FnDecl) => Expr =
   match f { FD(_, _, _, _, b) => b };
 
 // ── Ctor (mirrors ast.rs::Ctor — one constructor of a TypeDecl) ─────────────────────────────────
-type Ctor = Ctr(Bytes, Vec[TypeRef]);
+// M-1027 / DN-104: the 3rd field is the `sealed` (`priv`) flag (surface parity with ast.rs::Ctor).
+type Ctor = Ctr(Bytes, Vec[TypeRef], Bool);
 
 fn ctor_name(c: Ctor) => Bytes =
-  match c { Ctr(n, _) => n };
+  match c { Ctr(n, _, _) => n };
 
 fn ctor_fields(c: Ctor) => Vec[TypeRef] =
-  match c { Ctr(_, f) => f };
+  match c { Ctr(_, f, _) => f };
+
+// ctor_sealed: the per-constructor `priv` seal (M-1027 / DN-104).
+fn ctor_sealed(c: Ctor) => Bool =
+  match c { Ctr(_, _, s) => s };
 
 // ── TypeDecl (mirrors ast.rs::TypeDecl — `type Name<params> = Ctor | …`) ────────────────────────
 type TypeDecl = TD(Vis, Bytes, Vec[Bytes], Vec[Ctor]);
@@ -1566,6 +1575,9 @@ fn is_rangle(t: Tok) => Bool =
   match t { RAngle => True, _ => False };
 fn is_pipe(t: Tok) => Bool =
   match t { Pipe => True, _ => False };
+// is_tpriv: the M-1027 / DN-104 constructor seal marker (`priv`).
+fn is_tpriv(t: Tok) => Bool =
+  match t { TPriv => True, _ => False };
 fn is_plus(t: Tok) => Bool =
   match t { Plus => True, _ => False };
 fn is_via(t: Tok) => Bool =
@@ -3549,18 +3561,26 @@ fn parse_tier_fn_decl_tail2(vis: Vis, mode: ExecutionMode, thw: Bool, ts: Vec[Sp
 
 // ── ctor / type decl / trait decl ────────────────────────────────────────────────────────────────
 
+// M-1027 / DN-104 §2: an optional leading `priv` seals the constructor (exports the type NAME but
+// withholds cross-nodule construction). Eat it first, then parse the name+fields with the flag.
 fn parse_ctor(ts: Vec[Spanned]) => Result[Pair[Ctor, Vec[Spanned]], PErr] =
+  match p_eat(ts, is_tpriv(p_cur(ts))) {
+    Some(ts0) => parse_ctor_named(ts0, True),
+    None => parse_ctor_named(ts, False)
+  };
+
+fn parse_ctor_named(ts: Vec[Spanned], sealed: Bool) => Result[Pair[Ctor, Vec[Spanned]], PErr] =
   match p_ident(ts) {
     Err(e) => Err(e),
     Ok(pr) => match pr { Pr(name, ts1) =>
       match p_eat(ts1, is_lparen(p_cur(ts1))) {
-        None => Ok(Pr(Ctr(name, Nil), ts1)),
+        None => Ok(Pr(Ctr(name, Nil, sealed), ts1)),
         Some(ts2) => match parse_type_ref_comma_list(ts2, zero32()) {
           Err(e) => Err(e),
           Ok(pr2) => match pr2 { Pr(fields, ts3) =>
             match p_expect(ts3, is_rparen(p_cur(ts3)), "`)` to close the constructor fields") {
               Err(e) => Err(e),
-              Ok(ts4) => Ok(Pr(Ctr(name, fields), ts4))
+              Ok(ts4) => Ok(Pr(Ctr(name, fields, sealed), ts4))
             }
           }
         }
@@ -4257,8 +4277,14 @@ fn walk_fnsig(fp: Fp, s: FnSig) => Fp =
       budgets)
   };
 
+// M-1027 / DN-104: the `sealed` (`priv`) flag joins the structural fingerprint via tag 110 (the next
+// sequential entry after the 1..109 table), folded ONLY when sealed — so an unsealed ctor's fingerprint
+// stays byte-identical to the pre-M-1027 form (backward-compatible; the Rust mirror `fp::ctor` matches).
+fn walk_ctor_seal(fp: Fp, s: Bool) => Fp =
+  match s { False => fp, True => fp_tag(fp, 0b0000_0000_0000_0000_0000_0000_0110_1110) };
+
 fn walk_ctor(fp: Fp, c: Ctor) => Fp =
-  match c { Ctr(name, fields) => walk_typeref_list(fp_bytes(fp_tag(fp, 0b0000_0000_0000_0000_0000_0000_0011_0000), name), fields) };
+  match c { Ctr(name, fields, sealed) => walk_ctor_seal(walk_typeref_list(fp_bytes(fp_tag(fp, 0b0000_0000_0000_0000_0000_0000_0011_0000), name), fields), sealed) };
 
 fn walk_ctor_list(fp: Fp, xs: Vec[Ctor]) => Fp =
   match xs { Nil => fp, Cons(h, rest) => walk_ctor_list(walk_ctor(fp, h), rest) };

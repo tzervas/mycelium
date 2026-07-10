@@ -806,6 +806,7 @@ fn test_input_7() -> Nodule {
                     fields: vec![tr_unguaranteed(mycelium_l1::ast::BaseType::Ambient(
                         AmbientParams::Size(16),
                     ))],
+                    sealed: false,
                 },
                 via_decls: vec![],
                 impls: vec![],
