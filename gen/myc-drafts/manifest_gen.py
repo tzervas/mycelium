@@ -118,7 +118,9 @@ def build_target_entry(
         # subtracted only TestItem, so a semcore file carrying a `mod foo;` would have understated its
         # denominator vs the batch path (VR-5: only shrink by genuinely-non-surface items, never to
         # flatter a number — and never inconsistently between the two paths).
-        excluded = sum(1 for g in gaps_list if g["category"] in ("TestItem", "ModuleDecl"))
+        excluded = sum(
+            1 for g in gaps_list if g["category"] in ("TestItem", "ModuleDecl")
+        )
         non_test_items = total_items - excluded
         emitted = len(gap["emitted_items"])
         gap_count = len(gaps_list)
