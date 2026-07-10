@@ -87,334 +87,333 @@
 | `compiler.ambient::ExecutionMode::Interpreted` | ctor | `lib/compiler/ambient.myc:129` | `Interpreted` | — | Empirical/Declared |
 | `compiler.ambient::FnDecl` | type | `lib/compiler/ambient.myc:130` | `type FnDecl = FD(Vis, Bool, Option[ExecutionMode], FnSig, Expr)` | — | Empirical/Declared |
 | `compiler.ambient::FnDecl::FD` | ctor | `lib/compiler/ambient.myc:130` | `FD(Vis, Bool, Option[ExecutionMode], FnSig, Expr)` | — | Empirical/Declared |
-| `compiler.ambient::Ctor` | type | `lib/compiler/ambient.myc:131` | `type Ctor = Ctr(Bytes, Vec[TypeRef])` | — | Empirical/Declared |
-| `compiler.ambient::Ctor::Ctr` | ctor | `lib/compiler/ambient.myc:131` | `Ctr(Bytes, Vec[TypeRef])` | — | Empirical/Declared |
-| `compiler.ambient::TypeDecl` | type | `lib/compiler/ambient.myc:132` | `type TypeDecl = TD(Vis, Bytes, Vec[Bytes], Vec[Ctor])` | — | Empirical/Declared |
-| `compiler.ambient::TypeDecl::TD` | ctor | `lib/compiler/ambient.myc:132` | `TD(Vis, Bytes, Vec[Bytes], Vec[Ctor])` | — | Empirical/Declared |
-| `compiler.ambient::TraitDecl` | type | `lib/compiler/ambient.myc:133` | `type TraitDecl = TrD(Vis, Bytes, Vec[Bytes], Vec[FnSig])` | — | Empirical/Declared |
-| `compiler.ambient::TraitDecl::TrD` | ctor | `lib/compiler/ambient.myc:133` | `TrD(Vis, Bytes, Vec[Bytes], Vec[FnSig])` | — | Empirical/Declared |
-| `compiler.ambient::ImplDecl` | type | `lib/compiler/ambient.myc:134` | `type ImplDecl = ImD(Bytes, Vec[TypeRef], TypeRef, Vec[FnDecl])` | — | Empirical/Declared |
-| `compiler.ambient::ImplDecl::ImD` | ctor | `lib/compiler/ambient.myc:134` | `ImD(Bytes, Vec[TypeRef], TypeRef, Vec[FnDecl])` | — | Empirical/Declared |
-| `compiler.ambient::ViaDecl` | type | `lib/compiler/ambient.myc:135` | `type ViaDecl = VD(Binary{32}, Bytes, Vec[TypeRef])` | — | Empirical/Declared |
-| `compiler.ambient::ViaDecl::VD` | ctor | `lib/compiler/ambient.myc:135` | `VD(Binary{32}, Bytes, Vec[TypeRef])` | — | Empirical/Declared |
-| `compiler.ambient::ObjectDecl` | type | `lib/compiler/ambient.myc:136` | `type ObjectDecl = OD(Vis, Bytes, Vec[Bytes], Ctor, Vec[ViaDecl], Vec[ImplDecl], Vec[FnDecl])` | — | Empirical/Declared |
-| `compiler.ambient::ObjectDecl::OD` | ctor | `lib/compiler/ambient.myc:136` | `OD(Vis, Bytes, Vec[Bytes], Ctor, Vec[ViaDecl], Vec[ImplDecl], Vec[FnDecl])` | — | Empirical/Declared |
-| `compiler.ambient::InherentImplDecl` | type | `lib/compiler/ambient.myc:137` | `type InherentImplDecl = IID(TypeRef, Vec[FnDecl])` | — | Empirical/Declared |
-| `compiler.ambient::InherentImplDecl::IID` | ctor | `lib/compiler/ambient.myc:137` | `IID(TypeRef, Vec[FnDecl])` | — | Empirical/Declared |
-| `compiler.ambient::LowerRhs` | type | `lib/compiler/ambient.myc:138` | `type LowerRhs = LRExpr(Expr) \| LRImpl(ImplDecl)` | — | Empirical/Declared |
-| `compiler.ambient::LowerRhs::LRExpr` | ctor | `lib/compiler/ambient.myc:138` | `LRExpr(Expr)` | — | Empirical/Declared |
-| `compiler.ambient::LowerRhs::LRImpl` | ctor | `lib/compiler/ambient.myc:138` | `LRImpl(ImplDecl)` | — | Empirical/Declared |
-| `compiler.ambient::LowerDecl` | type | `lib/compiler/ambient.myc:139` | `type LowerDecl = LD(Bytes, Vec[Bytes], LowerRhs)` | — | Empirical/Declared |
-| `compiler.ambient::LowerDecl::LD` | ctor | `lib/compiler/ambient.myc:139` | `LD(Bytes, Vec[Bytes], LowerRhs)` | — | Empirical/Declared |
-| `compiler.ambient::DeriveDecl` | type | `lib/compiler/ambient.myc:140` | `type DeriveDecl = DD(Bytes, TypeRef)` | — | Empirical/Declared |
-| `compiler.ambient::DeriveDecl::DD` | ctor | `lib/compiler/ambient.myc:140` | `DD(Bytes, TypeRef)` | — | Empirical/Declared |
-| `compiler.ambient::Item` | type | `lib/compiler/ambient.myc:141` | `type Item = Use(UsePath) \| Default(Paradigm) \| Type(TypeDecl) \| Trait(TraitDecl) \| Impl(ImplDecl) \| Fn(FnDecl) \| Object(ObjectDecl) \| Lower(LowerDecl) \| Derive(DeriveDecl) \| InherentImpl(InherentImplDecl)` | — | Empirical/Declared |
-| `compiler.ambient::Item::Use` | ctor | `lib/compiler/ambient.myc:142` | `Use(UsePath)` | — | Empirical/Declared |
-| `compiler.ambient::Item::Default` | ctor | `lib/compiler/ambient.myc:143` | `Default(Paradigm)` | — | Empirical/Declared |
-| `compiler.ambient::Item::Type` | ctor | `lib/compiler/ambient.myc:144` | `Type(TypeDecl)` | — | Empirical/Declared |
-| `compiler.ambient::Item::Trait` | ctor | `lib/compiler/ambient.myc:145` | `Trait(TraitDecl)` | — | Empirical/Declared |
-| `compiler.ambient::Item::Impl` | ctor | `lib/compiler/ambient.myc:146` | `Impl(ImplDecl)` | — | Empirical/Declared |
-| `compiler.ambient::Item::Fn` | ctor | `lib/compiler/ambient.myc:147` | `Fn(FnDecl)` | — | Empirical/Declared |
-| `compiler.ambient::Item::Object` | ctor | `lib/compiler/ambient.myc:148` | `Object(ObjectDecl)` | — | Empirical/Declared |
-| `compiler.ambient::Item::Lower` | ctor | `lib/compiler/ambient.myc:149` | `Lower(LowerDecl)` | — | Empirical/Declared |
-| `compiler.ambient::Item::Derive` | ctor | `lib/compiler/ambient.myc:150` | `Derive(DeriveDecl)` | — | Empirical/Declared |
-| `compiler.ambient::Item::InherentImpl` | ctor | `lib/compiler/ambient.myc:151` | `InherentImpl(InherentImplDecl)` | — | Empirical/Declared |
-| `compiler.ambient::Nodule` | type | `lib/compiler/ambient.myc:152` | `type Nodule = Nd(Path, Bool, Vec[Item])` | — | Empirical/Declared |
-| `compiler.ambient::Nodule::Nd` | ctor | `lib/compiler/ambient.myc:152` | `Nd(Path, Bool, Vec[Item])` | — | Empirical/Declared |
-| `compiler.ambient::Phylum` | type | `lib/compiler/ambient.myc:153` | `type Phylum = Phy(Option[Path], Vec[Nodule])` | — | Empirical/Declared |
-| `compiler.ambient::Phylum::Phy` | ctor | `lib/compiler/ambient.myc:153` | `Phy(Option[Path], Vec[Nodule])` | — | Empirical/Declared |
-| `compiler.ambient::Literal` | type | `lib/compiler/ambient.myc:154` | `type Literal = Bin(Bytes) \| Trit(Bytes) \| Int(Binary{64}) \| AmbientInt(Paradigm, Binary{64}) \| List(Vec[Expr]) \| LBytes(Bytes) \| Str(Bytes) \| LFloat(Bytes)` | — | Empirical/Declared |
-| `compiler.ambient::Literal::Bin` | ctor | `lib/compiler/ambient.myc:155` | `Bin(Bytes)` | — | Empirical/Declared |
-| `compiler.ambient::Literal::Trit` | ctor | `lib/compiler/ambient.myc:156` | `Trit(Bytes)` | — | Empirical/Declared |
-| `compiler.ambient::Literal::Int` | ctor | `lib/compiler/ambient.myc:157` | `Int(Binary{64})` | — | Empirical/Declared |
-| `compiler.ambient::Literal::AmbientInt` | ctor | `lib/compiler/ambient.myc:158` | `AmbientInt(Paradigm, Binary{64})` | — | Empirical/Declared |
-| `compiler.ambient::Literal::List` | ctor | `lib/compiler/ambient.myc:159` | `List(Vec[Expr])` | — | Empirical/Declared |
-| `compiler.ambient::Literal::LBytes` | ctor | `lib/compiler/ambient.myc:160` | `LBytes(Bytes)` | — | Empirical/Declared |
-| `compiler.ambient::Literal::Str` | ctor | `lib/compiler/ambient.myc:161` | `Str(Bytes)` | — | Empirical/Declared |
-| `compiler.ambient::Literal::LFloat` | ctor | `lib/compiler/ambient.myc:162` | `LFloat(Bytes)` | — | Empirical/Declared |
-| `compiler.ambient::Pattern` | type | `lib/compiler/ambient.myc:163` | `type Pattern = PWildcard \| PLit(Literal) \| PCtor(Bytes, Vec[Pattern]) \| PIdent(Bytes) \| PTuple(Vec[Pattern]) \| POr(Vec[Pattern])` | — | Empirical/Declared |
-| `compiler.ambient::Pattern::PWildcard` | ctor | `lib/compiler/ambient.myc:164` | `PWildcard` | — | Empirical/Declared |
-| `compiler.ambient::Pattern::PLit` | ctor | `lib/compiler/ambient.myc:165` | `PLit(Literal)` | — | Empirical/Declared |
-| `compiler.ambient::Pattern::PCtor` | ctor | `lib/compiler/ambient.myc:166` | `PCtor(Bytes, Vec[Pattern])` | — | Empirical/Declared |
-| `compiler.ambient::Pattern::PIdent` | ctor | `lib/compiler/ambient.myc:167` | `PIdent(Bytes)` | — | Empirical/Declared |
-| `compiler.ambient::Pattern::PTuple` | ctor | `lib/compiler/ambient.myc:168` | `PTuple(Vec[Pattern])` | — | Empirical/Declared |
-| `compiler.ambient::Pattern::POr` | ctor | `lib/compiler/ambient.myc:169` | `POr(Vec[Pattern])` | — | Empirical/Declared |
-| `compiler.ambient::Arm` | type | `lib/compiler/ambient.myc:170` | `type Arm = Ar(Pattern, Expr)` | — | Empirical/Declared |
-| `compiler.ambient::Arm::Ar` | ctor | `lib/compiler/ambient.myc:170` | `Ar(Pattern, Expr)` | — | Empirical/Declared |
-| `compiler.ambient::Hypha` | type | `lib/compiler/ambient.myc:171` | `type Hypha = Hy(Option[Expr], Expr)` | — | Empirical/Declared |
-| `compiler.ambient::Hypha::Hy` | ctor | `lib/compiler/ambient.myc:171` | `Hy(Option[Expr], Expr)` | — | Empirical/Declared |
-| `compiler.ambient::Expr` | type | `lib/compiler/ambient.myc:172` | `type Expr = Let(Bytes, Option[TypeRef], Expr, Expr) \| If(Expr, Expr, Expr) \| Match(Expr, Vec[Arm]) \| For(Bytes, Expr, Bytes, Expr, Expr) \| Swap(Expr, TypeRef, Path) \| WithParadigm(Paradigm, Expr) \| Wild(Expr) \| Spore(Expr) \| Wrapping(Expr) \| Consume(Expr) \| Try(Expr) \| Colony(Vec[Hypha]) \| Lambda(Vec[Param], Expr) \| App(Expr, Vec[Expr]) \| Fuse(Expr, Expr) \| Reclaim(Expr, Expr) \| Path(Path) \| Lit(Literal) \| Ascribe(Expr, TypeRef) \| TupleLit(Vec[Expr])` | — | Empirical/Declared |
-| `compiler.ambient::Expr::Let` | ctor | `lib/compiler/ambient.myc:173` | `Let(Bytes, Option[TypeRef], Expr, Expr)` | — | Empirical/Declared |
-| `compiler.ambient::Expr::If` | ctor | `lib/compiler/ambient.myc:174` | `If(Expr, Expr, Expr)` | — | Empirical/Declared |
-| `compiler.ambient::Expr::Match` | ctor | `lib/compiler/ambient.myc:175` | `Match(Expr, Vec[Arm])` | — | Empirical/Declared |
-| `compiler.ambient::Expr::For` | ctor | `lib/compiler/ambient.myc:176` | `For(Bytes, Expr, Bytes, Expr, Expr)` | — | Empirical/Declared |
-| `compiler.ambient::Expr::Path` | ctor | `lib/compiler/ambient.myc:177` | `Path(Path)` | — | Empirical/Declared |
-| `compiler.ambient::Expr::Swap` | ctor | `lib/compiler/ambient.myc:177` | `Swap(Expr, TypeRef, Path)` | — | Empirical/Declared |
-| `compiler.ambient::Expr::WithParadigm` | ctor | `lib/compiler/ambient.myc:178` | `WithParadigm(Paradigm, Expr)` | — | Empirical/Declared |
-| `compiler.ambient::Expr::Wild` | ctor | `lib/compiler/ambient.myc:179` | `Wild(Expr)` | — | Empirical/Declared |
-| `compiler.ambient::Expr::Spore` | ctor | `lib/compiler/ambient.myc:180` | `Spore(Expr)` | — | Empirical/Declared |
-| `compiler.ambient::Expr::Wrapping` | ctor | `lib/compiler/ambient.myc:181` | `Wrapping(Expr)` | — | Empirical/Declared |
-| `compiler.ambient::Expr::Consume` | ctor | `lib/compiler/ambient.myc:182` | `Consume(Expr)` | — | Empirical/Declared |
-| `compiler.ambient::Expr::Try` | ctor | `lib/compiler/ambient.myc:185` | `Try(Expr)` | — | Empirical/Declared |
-| `compiler.ambient::Expr::Colony` | ctor | `lib/compiler/ambient.myc:188` | `Colony(Vec[Hypha])` | — | Empirical/Declared |
-| `compiler.ambient::Expr::Lambda` | ctor | `lib/compiler/ambient.myc:189` | `Lambda(Vec[Param], Expr)` | — | Empirical/Declared |
-| `compiler.ambient::Expr::App` | ctor | `lib/compiler/ambient.myc:190` | `App(Expr, Vec[Expr])` | — | Empirical/Declared |
-| `compiler.ambient::Expr::Fuse` | ctor | `lib/compiler/ambient.myc:191` | `Fuse(Expr, Expr)` | — | Empirical/Declared |
-| `compiler.ambient::Expr::Reclaim` | ctor | `lib/compiler/ambient.myc:192` | `Reclaim(Expr, Expr)` | — | Empirical/Declared |
-| `compiler.ambient::Expr::Lit` | ctor | `lib/compiler/ambient.myc:194` | `Lit(Literal)` | — | Empirical/Declared |
-| `compiler.ambient::Expr::Ascribe` | ctor | `lib/compiler/ambient.myc:195` | `Ascribe(Expr, TypeRef)` | — | Empirical/Declared |
-| `compiler.ambient::Expr::TupleLit` | ctor | `lib/compiler/ambient.myc:196` | `TupleLit(Vec[Expr])` | — | Empirical/Declared |
-| `compiler.ambient::zero32` | fn | `lib/compiler/ambient.myc:205` | `fn zero32() => Binary{32}` | — | Empirical/Declared |
-| `compiler.ambient::one32` | fn | `lib/compiler/ambient.myc:206` | `fn one32() => Binary{32}` | — | Empirical/Declared |
-| `compiler.ambient::three32` | fn | `lib/compiler/ambient.myc:207` | `fn three32() => Binary{32}` | — | Empirical/Declared |
-| `compiler.ambient::ten32` | fn | `lib/compiler/ambient.myc:208` | `fn ten32() => Binary{32}` | — | Empirical/Declared |
-| `compiler.ambient::zero64` | fn | `lib/compiler/ambient.myc:209` | `fn zero64() => Binary{64}` | — | Empirical/Declared |
-| `compiler.ambient::ten64` | fn | `lib/compiler/ambient.myc:210` | `fn ten64() => Binary{64}` | — | Empirical/Declared |
-| `compiler.ambient::empty_bytes` | fn | `lib/compiler/ambient.myc:212` | `fn empty_bytes() => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::digit_table` | fn | `lib/compiler/ambient.myc:214` | `fn digit_table() => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::digit_bytes` | fn | `lib/compiler/ambient.myc:216` | `fn digit_bytes(d: Binary{32}) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::join_bytes` | fn | `lib/compiler/ambient.myc:219` | `fn join_bytes(xs: Vec[Bytes]) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::u32_to_dec_acc` | fn | `lib/compiler/ambient.myc:222` | `fn u32_to_dec_acc(n: Binary{32}, acc: Vec[Bytes]) => Vec[Bytes]` | — | Empirical/Declared |
-| `compiler.ambient::u32_to_dec` | fn | `lib/compiler/ambient.myc:232` | `fn u32_to_dec(n: Binary{32}) => Bytes` | u32_to_dec: decimal-render a Binary{32} (widths/dims/sparsity-k/the depth limit). Grounded (`Empirical`): the digit order falls out of prepending each new (more-significant) digit to the front of the accumulator as the value shrinks — no explicit reversal step is needed (verified during authoring against `u32_to_dec(0b...1111011)` (123) => "123"). | Empirical/Declared |
-| `compiler.ambient::u64_to_dec_acc` | fn | `lib/compiler/ambient.myc:235` | `fn u64_to_dec_acc(n: Binary{64}, acc: Vec[Bytes]) => Vec[Bytes]` | — | Empirical/Declared |
-| `compiler.ambient::u64_to_dec` | fn | `lib/compiler/ambient.myc:242` | `fn u64_to_dec(n: Binary{64}) => Bytes` | u64_to_dec: decimal-render a Binary{64} (`Literal::Int`/`AmbientInt` payloads). | Empirical/Declared |
-| `compiler.ambient::backslash_b` | fn | `lib/compiler/ambient.myc:246` | `fn backslash_b() => Binary{8}` | — | Empirical/Declared |
-| `compiler.ambient::quote_b` | fn | `lib/compiler/ambient.myc:247` | `fn quote_b() => Binary{8}` | — | Empirical/Declared |
-| `compiler.ambient::nl_b` | fn | `lib/compiler/ambient.myc:248` | `fn nl_b() => Binary{8}` | — | Empirical/Declared |
-| `compiler.ambient::tab_b` | fn | `lib/compiler/ambient.myc:249` | `fn tab_b() => Binary{8}` | — | Empirical/Declared |
-| `compiler.ambient::cr_b` | fn | `lib/compiler/ambient.myc:250` | `fn cr_b() => Binary{8}` | — | Empirical/Declared |
-| `compiler.ambient::nul_b` | fn | `lib/compiler/ambient.myc:251` | `fn nul_b() => Binary{8}` | — | Empirical/Declared |
-| `compiler.ambient::escape_string_literal_acc` | fn | `lib/compiler/ambient.myc:260` | `fn escape_string_literal_acc(s: Bytes, i: Binary{32}, len: Binary{32}, acc: Bytes) => Bytes` | escape_string_literal_acc: walks `s` BYTE-by-byte (never char-by-char — this surface has no codepoint-aware iteration), re-escaping the same minimal set `Lexer::lex_string` decodes. Every OTHER byte (including every byte of a multi-byte UTF-8 sequence, which is never equal to any of the ASCII control bytes checked below) is passed through via a 1-byte SLICE of `s` itself — this surface has no "synthesize a Bytes from an arbitrary Binary{8}" primitive, so passthrough must slice the byte from an EXISTING buffer rather than reconstruct it (the same reasoning `digit_bytes` above relies on for the KNOWN 0-9 range). | Empirical/Declared |
-| `compiler.ambient::escape_string_literal` | fn | `lib/compiler/ambient.myc:286` | `fn escape_string_literal(s: Bytes) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::split_lines_acc` | fn | `lib/compiler/ambient.myc:290` | `fn split_lines_acc(s: Bytes, i: Binary{32}, start: Binary{32}, len: Binary{32}, acc: Vec[Bytes]) => Vec[Bytes]` | — | Empirical/Declared |
-| `compiler.ambient::split_lines` | fn | `lib/compiler/ambient.myc:303` | `fn split_lines(s: Bytes) => Vec[Bytes]` | — | Empirical/Declared |
-| `compiler.ambient::indent_lines_acc` | fn | `lib/compiler/ambient.myc:306` | `fn indent_lines_acc(prefix: Bytes, lines: Vec[Bytes], acc: Bytes) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::indent_lines` | fn | `lib/compiler/ambient.myc:314` | `fn indent_lines(prefix: Bytes, text: Bytes) => Bytes` | indent_lines: re-indent every line of `text` by `prefix`, one trailing "\n" each (matches Rust's `for line in text.lines() { s.push_str(&format!("{prefix}{line}\n")); }`). | Empirical/Declared |
-| `compiler.ambient::ends_with_nl` | fn | `lib/compiler/ambient.myc:317` | `fn ends_with_nl(s: Bytes) => Bool` | — | Empirical/Declared |
-| `compiler.ambient::strip_suffix_nl` | fn | `lib/compiler/ambient.myc:323` | `fn strip_suffix_nl(s: Bytes) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::trim_end_nl` | fn | `lib/compiler/ambient.myc:329` | `fn trim_end_nl(s: Bytes) => Bytes` | trim_end_nl: mirrors `str::trim_end` as used on `print_impl_decl`'s output inside `print_lower_decl` — that output always ends in exactly one "\n" (never other trailing whitespace), so stripping just that one trailing byte is the faithful equivalent here. | Empirical/Declared |
-| `compiler.ambient::join_bytes_list` | fn | `lib/compiler/ambient.myc:333` | `fn join_bytes_list(sep: Bytes, xs: Vec[Bytes]) => Bytes` | join_bytes_list: comma/sep-join a Vec[Bytes] (type-param name lists, `object`/`type` params). | Empirical/Declared |
-| `compiler.ambient::AmbientError` | type | `lib/compiler/ambient.myc:343` | `type AmbientError = MultipleDefaults(Paradigm, Paradigm) \| UnresolvedAmbient(Bytes) \| ParadigmShapeMismatch(Bytes, Paradigm, Bytes) \| BareDecimalNoEncoding(Bytes, Paradigm) \| DepthExceeded(Bytes, Binary{32})` | — | Empirical/Declared |
-| `compiler.ambient::AmbientError::MultipleDefaults` | ctor | `lib/compiler/ambient.myc:344` | `MultipleDefaults(Paradigm, Paradigm)` | — | Empirical/Declared |
-| `compiler.ambient::AmbientError::UnresolvedAmbient` | ctor | `lib/compiler/ambient.myc:345` | `UnresolvedAmbient(Bytes)` | — | Empirical/Declared |
-| `compiler.ambient::AmbientError::ParadigmShapeMismatch` | ctor | `lib/compiler/ambient.myc:346` | `ParadigmShapeMismatch(Bytes, Paradigm, Bytes)` | — | Empirical/Declared |
-| `compiler.ambient::AmbientError::BareDecimalNoEncoding` | ctor | `lib/compiler/ambient.myc:347` | `BareDecimalNoEncoding(Bytes, Paradigm)` | — | Empirical/Declared |
-| `compiler.ambient::AmbientError::DepthExceeded` | ctor | `lib/compiler/ambient.myc:348` | `DepthExceeded(Bytes, Binary{32})` | — | Empirical/Declared |
-| `compiler.ambient::ambient_error_kind` | fn | `lib/compiler/ambient.myc:351` | `fn ambient_error_kind(e: AmbientError) => Binary{32}` | ambient_error_kind: a 5-way classification code (FLAG-ambient-3 — message TEXT is not ported). | Empirical/Declared |
-| `compiler.ambient::ResolutionNote` | type | `lib/compiler/ambient.myc:362` | `type ResolutionNote = RNote(Bytes, Paradigm, Bytes)` | ResolutionNote / Resolved: kept as real types (a caller can hold/inspect a `Resolved` value); the FLAG-ambient-2 narrowing is that `resolve_report` always returns `notes = Nil` (never populated). | Empirical/Declared |
-| `compiler.ambient::ResolutionNote::RNote` | ctor | `lib/compiler/ambient.myc:362` | `RNote(Bytes, Paradigm, Bytes)` | — | Empirical/Declared |
-| `compiler.ambient::Resolved` | type | `lib/compiler/ambient.myc:363` | `type Resolved = Rsv(Nodule, Vec[ResolutionNote])` | — | Empirical/Declared |
-| `compiler.ambient::Resolved::Rsv` | ctor | `lib/compiler/ambient.myc:363` | `Rsv(Nodule, Vec[ResolutionNote])` | — | Empirical/Declared |
-| `compiler.ambient::max_ambient_depth` | fn | `lib/compiler/ambient.myc:366` | `fn max_ambient_depth() => Binary{32}` | — | Empirical/Declared |
-| `compiler.ambient::enter_depth` | fn | `lib/compiler/ambient.myc:368` | `fn enter_depth(site: Bytes, depth: Binary{32}) => Result[Binary{32}, AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::mismatch_detail_size` | fn | `lib/compiler/ambient.myc:376` | `fn mismatch_detail_size() => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::mismatch_detail_dense` | fn | `lib/compiler/ambient.myc:377` | `fn mismatch_detail_dense() => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::mismatch_detail_vsa` | fn | `lib/compiler/ambient.myc:378` | `fn mismatch_detail_vsa() => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::fill_repr` | fn | `lib/compiler/ambient.myc:380` | `fn fill_repr(site: Bytes, p: Paradigm, params: AmbientParams) => Result[BaseType, AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::resolve_type_ref` | fn | `lib/compiler/ambient.myc:401` | `fn resolve_type_ref(amb: Option[Paradigm], site: Bytes, t: TypeRef, depth: Binary{32}) => Result[TypeRef, AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::resolve_base_type` | fn | `lib/compiler/ambient.myc:412` | `fn resolve_base_type(amb: Option[Paradigm], site: Bytes, b: BaseType, depth: Binary{32}) => Result[BaseType, AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::resolve_typeref_list_acc` | fn | `lib/compiler/ambient.myc:432` | `fn resolve_typeref_list_acc(amb: Option[Paradigm], site: Bytes, xs: Vec[TypeRef], depth: Binary{32}, acc: Vec[TypeRef]) => Result[Vec[TypeRef], AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::resolve_typeref_list` | fn | `lib/compiler/ambient.myc:441` | `fn resolve_typeref_list(amb: Option[Paradigm], site: Bytes, xs: Vec[TypeRef], depth: Binary{32}) => Result[Vec[TypeRef], AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::resolve_typeref_opt` | fn | `lib/compiler/ambient.myc:444` | `fn resolve_typeref_opt(amb: Option[Paradigm], site: Bytes, t: Option[TypeRef], depth: Binary{32}) => Result[Option[TypeRef], AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::resolve_literal` | fn | `lib/compiler/ambient.myc:451` | `fn resolve_literal(amb: Option[Paradigm], site: Bytes, l: Literal, depth: Binary{32}) => Result[Literal, AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::resolve_pattern` | fn | `lib/compiler/ambient.myc:469` | `fn resolve_pattern(amb: Option[Paradigm], site: Bytes, p: Pattern, depth: Binary{32}) => Result[Pattern, AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::resolve_pattern_list_acc` | fn | `lib/compiler/ambient.myc:482` | `fn resolve_pattern_list_acc(amb: Option[Paradigm], site: Bytes, xs: Vec[Pattern], depth: Binary{32}, acc: Vec[Pattern]) => Result[Vec[Pattern], AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::resolve_pattern_list` | fn | `lib/compiler/ambient.myc:491` | `fn resolve_pattern_list(amb: Option[Paradigm], site: Bytes, xs: Vec[Pattern], depth: Binary{32}) => Result[Vec[Pattern], AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::resolve_expr` | fn | `lib/compiler/ambient.myc:495` | `fn resolve_expr(amb: Option[Paradigm], site: Bytes, e: Expr, depth: Binary{32}) => Result[Expr, AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::resolve_expr_list_acc` | fn | `lib/compiler/ambient.myc:587` | `fn resolve_expr_list_acc(amb: Option[Paradigm], site: Bytes, xs: Vec[Expr], depth: Binary{32}, acc: Vec[Expr]) => Result[Vec[Expr], AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::resolve_expr_list` | fn | `lib/compiler/ambient.myc:596` | `fn resolve_expr_list(amb: Option[Paradigm], site: Bytes, xs: Vec[Expr], depth: Binary{32}) => Result[Vec[Expr], AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::resolve_expr_opt` | fn | `lib/compiler/ambient.myc:599` | `fn resolve_expr_opt(amb: Option[Paradigm], site: Bytes, e: Option[Expr], depth: Binary{32}) => Result[Option[Expr], AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::resolve_arm` | fn | `lib/compiler/ambient.myc:605` | `fn resolve_arm(amb: Option[Paradigm], site: Bytes, a: Arm, depth: Binary{32}) => Result[Arm, AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::resolve_arm_list_acc` | fn | `lib/compiler/ambient.myc:616` | `fn resolve_arm_list_acc(amb: Option[Paradigm], site: Bytes, xs: Vec[Arm], depth: Binary{32}, acc: Vec[Arm]) => Result[Vec[Arm], AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::resolve_arm_list` | fn | `lib/compiler/ambient.myc:625` | `fn resolve_arm_list(amb: Option[Paradigm], site: Bytes, xs: Vec[Arm], depth: Binary{32}) => Result[Vec[Arm], AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::resolve_hypha` | fn | `lib/compiler/ambient.myc:630` | `fn resolve_hypha(amb: Option[Paradigm], site: Bytes, h: Hypha, depth: Binary{32}) => Result[Hypha, AmbientError]` | resolve_hypha: M-906 (DN-70 D1) — a hypha's optional `@forage(policy)` resolves under the same ambient as its body (no new ambient frame). | Empirical/Declared |
-| `compiler.ambient::resolve_hypha_list_acc` | fn | `lib/compiler/ambient.myc:641` | `fn resolve_hypha_list_acc(amb: Option[Paradigm], site: Bytes, xs: Vec[Hypha], depth: Binary{32}, acc: Vec[Hypha]) => Result[Vec[Hypha], AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::resolve_hypha_list` | fn | `lib/compiler/ambient.myc:650` | `fn resolve_hypha_list(amb: Option[Paradigm], site: Bytes, xs: Vec[Hypha], depth: Binary{32}) => Result[Vec[Hypha], AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::resolve_param` | fn | `lib/compiler/ambient.myc:654` | `fn resolve_param(amb: Option[Paradigm], site: Bytes, p: Param) => Result[Param, AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::resolve_param_list_acc` | fn | `lib/compiler/ambient.myc:662` | `fn resolve_param_list_acc(amb: Option[Paradigm], site: Bytes, xs: Vec[Param], acc: Vec[Param]) => Result[Vec[Param], AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::resolve_param_list` | fn | `lib/compiler/ambient.myc:671` | `fn resolve_param_list(amb: Option[Paradigm], site: Bytes, xs: Vec[Param]) => Result[Vec[Param], AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::resolve_fn_sig` | fn | `lib/compiler/ambient.myc:674` | `fn resolve_fn_sig(amb: Option[Paradigm], s: FnSig) => Result[FnSig, AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::resolve_fnsig_list_acc` | fn | `lib/compiler/ambient.myc:685` | `fn resolve_fnsig_list_acc(amb: Option[Paradigm], xs: Vec[FnSig], acc: Vec[FnSig]) => Result[Vec[FnSig], AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::resolve_fnsig_list` | fn | `lib/compiler/ambient.myc:694` | `fn resolve_fnsig_list(amb: Option[Paradigm], xs: Vec[FnSig]) => Result[Vec[FnSig], AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::resolve_ctor` | fn | `lib/compiler/ambient.myc:698` | `fn resolve_ctor(amb: Option[Paradigm], site: Bytes, c: Ctor) => Result[Ctor, AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::resolve_ctor_list_acc` | fn | `lib/compiler/ambient.myc:706` | `fn resolve_ctor_list_acc(amb: Option[Paradigm], site: Bytes, xs: Vec[Ctor], acc: Vec[Ctor]) => Result[Vec[Ctor], AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::resolve_ctor_list` | fn | `lib/compiler/ambient.myc:715` | `fn resolve_ctor_list(amb: Option[Paradigm], site: Bytes, xs: Vec[Ctor]) => Result[Vec[Ctor], AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::resolve_type_decl` | fn | `lib/compiler/ambient.myc:718` | `fn resolve_type_decl(amb: Option[Paradigm], td: TypeDecl) => Result[TypeDecl, AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::resolve_trait_decl` | fn | `lib/compiler/ambient.myc:726` | `fn resolve_trait_decl(amb: Option[Paradigm], td: TraitDecl) => Result[TraitDecl, AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::resolve_fndecl` | fn | `lib/compiler/ambient.myc:735` | `fn resolve_fndecl(amb: Option[Paradigm], f: FnDecl) => Result[FnDecl, AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::resolve_fndecl_list_acc` | fn | `lib/compiler/ambient.myc:748` | `fn resolve_fndecl_list_acc(amb: Option[Paradigm], xs: Vec[FnDecl], acc: Vec[FnDecl]) => Result[Vec[FnDecl], AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::resolve_fndecl_list` | fn | `lib/compiler/ambient.myc:757` | `fn resolve_fndecl_list(amb: Option[Paradigm], xs: Vec[FnDecl]) => Result[Vec[FnDecl], AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::resolve_impl_decl` | fn | `lib/compiler/ambient.myc:760` | `fn resolve_impl_decl(amb: Option[Paradigm], id: ImplDecl) => Result[ImplDecl, AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::resolve_impldecl_list_acc` | fn | `lib/compiler/ambient.myc:774` | `fn resolve_impldecl_list_acc(amb: Option[Paradigm], xs: Vec[ImplDecl], acc: Vec[ImplDecl]) => Result[Vec[ImplDecl], AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::resolve_impldecl_list` | fn | `lib/compiler/ambient.myc:783` | `fn resolve_impldecl_list(amb: Option[Paradigm], xs: Vec[ImplDecl]) => Result[Vec[ImplDecl], AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::resolve_inherent_impl_decl` | fn | `lib/compiler/ambient.myc:786` | `fn resolve_inherent_impl_decl(amb: Option[Paradigm], i: InherentImplDecl) => Result[InherentImplDecl, AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::resolve_viadecl` | fn | `lib/compiler/ambient.myc:797` | `fn resolve_viadecl(amb: Option[Paradigm], site: Bytes, v: ViaDecl) => Result[ViaDecl, AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::resolve_viadecl_list_acc` | fn | `lib/compiler/ambient.myc:805` | `fn resolve_viadecl_list_acc(amb: Option[Paradigm], site: Bytes, xs: Vec[ViaDecl], acc: Vec[ViaDecl]) => Result[Vec[ViaDecl], AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::resolve_viadecl_list` | fn | `lib/compiler/ambient.myc:814` | `fn resolve_viadecl_list(amb: Option[Paradigm], site: Bytes, xs: Vec[ViaDecl]) => Result[Vec[ViaDecl], AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::resolve_object_decl` | fn | `lib/compiler/ambient.myc:817` | `fn resolve_object_decl(amb: Option[Paradigm], od: ObjectDecl) => Result[ObjectDecl, AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::resolve_item` | fn | `lib/compiler/ambient.myc:835` | `fn resolve_item(default_p: Option[Paradigm], i: Item) => Result[Option[Item], AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::resolve_item_list_acc` | fn | `lib/compiler/ambient.myc:851` | `fn resolve_item_list_acc(default_p: Option[Paradigm], xs: Vec[Item], acc: Vec[Item]) => Result[Vec[Item], AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::resolve_item_list` | fn | `lib/compiler/ambient.myc:863` | `fn resolve_item_list(default_p: Option[Paradigm], xs: Vec[Item]) => Result[Vec[Item], AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::scan_default_acc` | fn | `lib/compiler/ambient.myc:867` | `fn scan_default_acc(xs: Vec[Item], found: Option[Paradigm]) => Result[Option[Paradigm], AmbientError]` | scan_default: the nodule-scope ambient scan — at most one `default paradigm`, else MultipleDefaults. | Empirical/Declared |
-| `compiler.ambient::scan_default` | fn | `lib/compiler/ambient.myc:879` | `fn scan_default(xs: Vec[Item]) => Result[Option[Paradigm], AmbientError]` | — | Empirical/Declared |
-| `compiler.ambient::resolve_report` | fn | `lib/compiler/ambient.myc:883` | `fn resolve_report(n: Nodule) => Result[Resolved, AmbientError]` | resolve_report: like `resolve`, but also returns the (FLAG-ambient-2: always-empty) notes trace. | Empirical/Declared |
-| `compiler.ambient::resolve` | fn | `lib/compiler/ambient.myc:897` | `fn resolve(n: Nodule) => Result[Nodule, AmbientError]` | resolve: rewrite a parsed Nodule to its longhand twin (RFC-0012 §4.3/§4.4). Identity on a program that uses no ambient. | Empirical/Declared |
-| `compiler.ambient::path_str` | fn | `lib/compiler/ambient.myc:904` | `fn path_str(p: Path) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::pub_str` | fn | `lib/compiler/ambient.myc:907` | `fn pub_str(v: Vis) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::thaw_str` | fn | `lib/compiler/ambient.myc:910` | `fn thaw_str(t: Bool) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::scalar_str` | fn | `lib/compiler/ambient.myc:913` | `fn scalar_str(s: Scalar) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::paradigm_str` | fn | `lib/compiler/ambient.myc:916` | `fn paradigm_str(p: Paradigm) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::strength_dbg` | fn | `lib/compiler/ambient.myc:919` | `fn strength_dbg(g: Strength) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::sparsity_str` | fn | `lib/compiler/ambient.myc:922` | `fn sparsity_str(s: Sparsity) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::ambient_params_str` | fn | `lib/compiler/ambient.myc:925` | `fn ambient_params_str(p: AmbientParams) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::print_widthref` | fn | `lib/compiler/ambient.myc:932` | `fn print_widthref(w: WidthRef) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::print_type_ref_list` | fn | `lib/compiler/ambient.myc:935` | `fn print_type_ref_list(xs: Vec[TypeRef]) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::print_base_type` | fn | `lib/compiler/ambient.myc:938` | `fn print_base_type(b: BaseType) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::print_type_ref` | fn | `lib/compiler/ambient.myc:960` | `fn print_type_ref(t: TypeRef) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::print_traitref_list` | fn | `lib/compiler/ambient.myc:966` | `fn print_traitref_list(xs: Vec[TraitRef]) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::print_trait_ref` | fn | `lib/compiler/ambient.myc:969` | `fn print_trait_ref(t: TraitRef) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::print_type_param` | fn | `lib/compiler/ambient.myc:972` | `fn print_type_param(t: TypeParam) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::print_type_param_list` | fn | `lib/compiler/ambient.myc:975` | `fn print_type_param_list(xs: Vec[TypeParam]) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::filter_type_params_acc` | fn | `lib/compiler/ambient.myc:978` | `fn filter_type_params_acc(xs: Vec[TypeParam], acc: Vec[TypeParam]) => Vec[TypeParam]` | — | Empirical/Declared |
-| `compiler.ambient::filter_type_params` | fn | `lib/compiler/ambient.myc:987` | `fn filter_type_params(xs: Vec[TypeParam]) => Vec[TypeParam]` | — | Empirical/Declared |
-| `compiler.ambient::filter_width_params_acc` | fn | `lib/compiler/ambient.myc:989` | `fn filter_width_params_acc(xs: Vec[TypeParam], acc: Vec[TypeParam]) => Vec[TypeParam]` | — | Empirical/Declared |
-| `compiler.ambient::filter_width_params` | fn | `lib/compiler/ambient.myc:998` | `fn filter_width_params(xs: Vec[TypeParam]) => Vec[TypeParam]` | — | Empirical/Declared |
-| `compiler.ambient::print_param_list` | fn | `lib/compiler/ambient.myc:1000` | `fn print_param_list(xs: Vec[Param]) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::print_sig_tail` | fn | `lib/compiler/ambient.myc:1006` | `fn print_sig_tail(s: FnSig) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::print_params_brackets` | fn | `lib/compiler/ambient.myc:1015` | `fn print_params_brackets(xs: Vec[Bytes]) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::print_typeref_ann` | fn | `lib/compiler/ambient.myc:1019` | `fn print_typeref_ann(ty: Option[TypeRef]) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::print_param_names` | fn | `lib/compiler/ambient.myc:1022` | `fn print_param_names(xs: Vec[Param]) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::print_expr_list` | fn | `lib/compiler/ambient.myc:1028` | `fn print_expr_list(xs: Vec[Expr]) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::print_one_arm` | fn | `lib/compiler/ambient.myc:1031` | `fn print_one_arm(a: Arm) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::print_arm_list` | fn | `lib/compiler/ambient.myc:1034` | `fn print_arm_list(xs: Vec[Arm]) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::print_one_hypha` | fn | `lib/compiler/ambient.myc:1039` | `fn print_one_hypha(h: Hypha) => Bytes` | print_one_hypha: the ORACLE's own print form drops the `@forage(policy)` annotation from the rendered text (mirrored here verbatim, not a narrowing this port introduces). | Empirical/Declared |
-| `compiler.ambient::print_hypha_list` | fn | `lib/compiler/ambient.myc:1042` | `fn print_hypha_list(xs: Vec[Hypha]) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::print_expr` | fn | `lib/compiler/ambient.myc:1045` | `fn print_expr(e: Expr) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::print_pattern_list` | fn | `lib/compiler/ambient.myc:1069` | `fn print_pattern_list(xs: Vec[Pattern]) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::print_pattern_or_list` | fn | `lib/compiler/ambient.myc:1072` | `fn print_pattern_or_list(xs: Vec[Pattern]) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::print_pattern` | fn | `lib/compiler/ambient.myc:1075` | `fn print_pattern(p: Pattern) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::print_literal` | fn | `lib/compiler/ambient.myc:1085` | `fn print_literal(l: Literal) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::print_ctor` | fn | `lib/compiler/ambient.myc:1098` | `fn print_ctor(c: Ctor) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::print_ctor_list` | fn | `lib/compiler/ambient.myc:1101` | `fn print_ctor_list(xs: Vec[Ctor]) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::print_type_decl` | fn | `lib/compiler/ambient.myc:1104` | `fn print_type_decl(td: TypeDecl) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::print_fn_sig_list_lines_acc` | fn | `lib/compiler/ambient.myc:1109` | `fn print_fn_sig_list_lines_acc(xs: Vec[FnSig], acc: Bytes) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::print_trait_decl` | fn | `lib/compiler/ambient.myc:1115` | `fn print_trait_decl(td: TraitDecl) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::print_fn_decl` | fn | `lib/compiler/ambient.myc:1120` | `fn print_fn_decl(f: FnDecl) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::terminate_item` | fn | `lib/compiler/ambient.myc:1127` | `fn terminate_item(item_text: Bytes) => Bytes` | terminate_item: append the mandatory `;` component terminator (DN-57 §3, M-818) — replace a single trailing "\n" with ";\n", else append a bare ";". | Empirical/Declared |
-| `compiler.ambient::print_impldecl_methods_acc` | fn | `lib/compiler/ambient.myc:1133` | `fn print_impldecl_methods_acc(xs: Vec[FnDecl], acc: Bytes) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::print_impl_decl` | fn | `lib/compiler/ambient.myc:1136` | `fn print_impl_decl(id: ImplDecl) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::print_inherent_impl_decl` | fn | `lib/compiler/ambient.myc:1142` | `fn print_inherent_impl_decl(i: InherentImplDecl) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::print_via_decl` | fn | `lib/compiler/ambient.myc:1147` | `fn print_via_decl(v: ViaDecl) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::print_via_decl_list_acc` | fn | `lib/compiler/ambient.myc:1153` | `fn print_via_decl_list_acc(xs: Vec[ViaDecl], acc: Bytes) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::print_impl_decl_list_indented_acc` | fn | `lib/compiler/ambient.myc:1156` | `fn print_impl_decl_list_indented_acc(xs: Vec[ImplDecl], acc: Bytes) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::print_fn_decl_list_indented_acc` | fn | `lib/compiler/ambient.myc:1159` | `fn print_fn_decl_list_indented_acc(xs: Vec[FnDecl], acc: Bytes) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::print_object_decl` | fn | `lib/compiler/ambient.myc:1162` | `fn print_object_decl(od: ObjectDecl) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::print_use` | fn | `lib/compiler/ambient.myc:1175` | `fn print_use(u: UsePath) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::print_lower_decl` | fn | `lib/compiler/ambient.myc:1181` | `fn print_lower_decl(l: LowerDecl) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::print_derive_decl` | fn | `lib/compiler/ambient.myc:1187` | `fn print_derive_decl(d: DeriveDecl) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::print_item` | fn | `lib/compiler/ambient.myc:1191` | `fn print_item(i: Item) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::print_item_list_acc` | fn | `lib/compiler/ambient.myc:1205` | `fn print_item_list_acc(xs: Vec[Item], acc: Bytes) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::expand_to_source` | fn | `lib/compiler/ambient.myc:1211` | `fn expand_to_source(n: Nodule) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::print_nodule_list_acc` | fn | `lib/compiler/ambient.myc:1220` | `fn print_nodule_list_acc(xs: Vec[Nodule], acc: Bytes) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::expand_phylum_to_source` | fn | `lib/compiler/ambient.myc:1229` | `fn expand_phylum_to_source(ph: Phylum) => Bytes` | — | Empirical/Declared |
-| `compiler.ambient::Fp` | type | `lib/compiler/ambient.myc:1238` | `type Fp = FP(Binary{32}, Binary{32})` | — | Empirical/Declared |
-| `compiler.ambient::Fp::FP` | ctor | `lib/compiler/ambient.myc:1238` | `FP(Binary{32}, Binary{32})` | — | Empirical/Declared |
-| `compiler.ambient::fp_hash` | fn | `lib/compiler/ambient.myc:1240` | `fn fp_hash(fp: Fp) => Binary{32}` | — | Empirical/Declared |
-| `compiler.ambient::fp_count` | fn | `lib/compiler/ambient.myc:1241` | `fn fp_count(fp: Fp) => Binary{32}` | — | Empirical/Declared |
-| `compiler.ambient::rotl7` | fn | `lib/compiler/ambient.myc:1243` | `fn rotl7(x: Binary{32}) => Binary{32}` | — | Empirical/Declared |
-| `compiler.ambient::fp_tag` | fn | `lib/compiler/ambient.myc:1246` | `fn fp_tag(fp: Fp, tag: Binary{32}) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::fp_bytes` | fn | `lib/compiler/ambient.myc:1249` | `fn fp_bytes(fp: Fp, b: Bytes) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::fp_u32` | fn | `lib/compiler/ambient.myc:1252` | `fn fp_u32(fp: Fp, n: Binary{32}) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_vis` | fn | `lib/compiler/ambient.myc:1255` | `fn walk_vis(fp: Fp, v: Vis) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_paradigm` | fn | `lib/compiler/ambient.myc:1258` | `fn walk_paradigm(fp: Fp, p: Paradigm) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_scalar` | fn | `lib/compiler/ambient.myc:1266` | `fn walk_scalar(fp: Fp, s: Scalar) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_strength` | fn | `lib/compiler/ambient.myc:1274` | `fn walk_strength(fp: Fp, s: Strength) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_sparsity` | fn | `lib/compiler/ambient.myc:1282` | `fn walk_sparsity(fp: Fp, s: Sparsity) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_paramkind` | fn | `lib/compiler/ambient.myc:1288` | `fn walk_paramkind(fp: Fp, k: ParamKind) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_execmode` | fn | `lib/compiler/ambient.myc:1291` | `fn walk_execmode(fp: Fp, e: ExecutionMode) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_widthref` | fn | `lib/compiler/ambient.myc:1294` | `fn walk_widthref(fp: Fp, w: WidthRef) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_path` | fn | `lib/compiler/ambient.myc:1300` | `fn walk_path(fp: Fp, p: Path) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_bytes_list` | fn | `lib/compiler/ambient.myc:1303` | `fn walk_bytes_list(fp: Fp, xs: Vec[Bytes]) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_usepath` | fn | `lib/compiler/ambient.myc:1306` | `fn walk_usepath(fp: Fp, u: UsePath) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_bool` | fn | `lib/compiler/ambient.myc:1309` | `fn walk_bool(fp: Fp, b: Bool) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_ambientparams` | fn | `lib/compiler/ambient.myc:1312` | `fn walk_ambientparams(fp: Fp, a: AmbientParams) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_typeref` | fn | `lib/compiler/ambient.myc:1319` | `fn walk_typeref(fp: Fp, t: TypeRef) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_guarantee_opt` | fn | `lib/compiler/ambient.myc:1322` | `fn walk_guarantee_opt(fp: Fp, g: Option[Strength]) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_typeref_list` | fn | `lib/compiler/ambient.myc:1325` | `fn walk_typeref_list(fp: Fp, xs: Vec[TypeRef]) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_basetype` | fn | `lib/compiler/ambient.myc:1328` | `fn walk_basetype(fp: Fp, b: BaseType) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_traitref` | fn | `lib/compiler/ambient.myc:1344` | `fn walk_traitref(fp: Fp, t: TraitRef) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_traitref_list` | fn | `lib/compiler/ambient.myc:1347` | `fn walk_traitref_list(fp: Fp, xs: Vec[TraitRef]) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_typeparam` | fn | `lib/compiler/ambient.myc:1350` | `fn walk_typeparam(fp: Fp, t: TypeParam) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_typeparam_list` | fn | `lib/compiler/ambient.myc:1353` | `fn walk_typeparam_list(fp: Fp, xs: Vec[TypeParam]) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_param` | fn | `lib/compiler/ambient.myc:1356` | `fn walk_param(fp: Fp, p: Param) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_param_list` | fn | `lib/compiler/ambient.myc:1359` | `fn walk_param_list(fp: Fp, xs: Vec[Param]) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_bytes_list2` | fn | `lib/compiler/ambient.myc:1362` | `fn walk_bytes_list2(fp: Fp, xs: Vec[Bytes]) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_effectbudget_list` | fn | `lib/compiler/ambient.myc:1365` | `fn walk_effectbudget_list(fp: Fp, xs: Vec[EffectBudget]) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_fnsig` | fn | `lib/compiler/ambient.myc:1368` | `fn walk_fnsig(fp: Fp, s: FnSig) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_ctor` | fn | `lib/compiler/ambient.myc:1381` | `fn walk_ctor(fp: Fp, c: Ctor) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_ctor_list` | fn | `lib/compiler/ambient.myc:1384` | `fn walk_ctor_list(fp: Fp, xs: Vec[Ctor]) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_typedecl` | fn | `lib/compiler/ambient.myc:1387` | `fn walk_typedecl(fp: Fp, t: TypeDecl) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_fnsig_list` | fn | `lib/compiler/ambient.myc:1390` | `fn walk_fnsig_list(fp: Fp, xs: Vec[FnSig]) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_traitdecl` | fn | `lib/compiler/ambient.myc:1393` | `fn walk_traitdecl(fp: Fp, t: TraitDecl) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_fndecl` | fn | `lib/compiler/ambient.myc:1396` | `fn walk_fndecl(fp: Fp, f: FnDecl) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_tier_opt` | fn | `lib/compiler/ambient.myc:1401` | `fn walk_tier_opt(fp: Fp, t: Option[ExecutionMode]) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_fndecl_list` | fn | `lib/compiler/ambient.myc:1404` | `fn walk_fndecl_list(fp: Fp, xs: Vec[FnDecl]) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_impldecl` | fn | `lib/compiler/ambient.myc:1407` | `fn walk_impldecl(fp: Fp, i: ImplDecl) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_viadecl` | fn | `lib/compiler/ambient.myc:1412` | `fn walk_viadecl(fp: Fp, v: ViaDecl) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_viadecl_list` | fn | `lib/compiler/ambient.myc:1415` | `fn walk_viadecl_list(fp: Fp, xs: Vec[ViaDecl]) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_impldecl_list` | fn | `lib/compiler/ambient.myc:1418` | `fn walk_impldecl_list(fp: Fp, xs: Vec[ImplDecl]) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_objectdecl` | fn | `lib/compiler/ambient.myc:1421` | `fn walk_objectdecl(fp: Fp, o: ObjectDecl) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_inherentimpldecl` | fn | `lib/compiler/ambient.myc:1432` | `fn walk_inherentimpldecl(fp: Fp, i: InherentImplDecl) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_lowerrhs` | fn | `lib/compiler/ambient.myc:1435` | `fn walk_lowerrhs(fp: Fp, r: LowerRhs) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_lowerdecl` | fn | `lib/compiler/ambient.myc:1441` | `fn walk_lowerdecl(fp: Fp, l: LowerDecl) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_derivedecl` | fn | `lib/compiler/ambient.myc:1444` | `fn walk_derivedecl(fp: Fp, d: DeriveDecl) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_expr_list` | fn | `lib/compiler/ambient.myc:1447` | `fn walk_expr_list(fp: Fp, xs: Vec[Expr]) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_literal` | fn | `lib/compiler/ambient.myc:1450` | `fn walk_literal(fp: Fp, l: Literal) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_pattern` | fn | `lib/compiler/ambient.myc:1462` | `fn walk_pattern(fp: Fp, p: Pattern) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_pattern_list` | fn | `lib/compiler/ambient.myc:1472` | `fn walk_pattern_list(fp: Fp, xs: Vec[Pattern]) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_arm` | fn | `lib/compiler/ambient.myc:1475` | `fn walk_arm(fp: Fp, a: Arm) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_arm_list` | fn | `lib/compiler/ambient.myc:1478` | `fn walk_arm_list(fp: Fp, xs: Vec[Arm]) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_expr_opt` | fn | `lib/compiler/ambient.myc:1481` | `fn walk_expr_opt(fp: Fp, e: Option[Expr]) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_hypha` | fn | `lib/compiler/ambient.myc:1484` | `fn walk_hypha(fp: Fp, h: Hypha) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_hypha_list` | fn | `lib/compiler/ambient.myc:1487` | `fn walk_hypha_list(fp: Fp, xs: Vec[Hypha]) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_typeref_opt` | fn | `lib/compiler/ambient.myc:1490` | `fn walk_typeref_opt(fp: Fp, t: Option[TypeRef]) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_expr` | fn | `lib/compiler/ambient.myc:1493` | `fn walk_expr(fp: Fp, e: Expr) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_item` | fn | `lib/compiler/ambient.myc:1517` | `fn walk_item(fp: Fp, i: Item) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_item_list` | fn | `lib/compiler/ambient.myc:1531` | `fn walk_item_list(fp: Fp, xs: Vec[Item]) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::walk_nodule` | fn | `lib/compiler/ambient.myc:1534` | `fn walk_nodule(fp: Fp, n: Nodule) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::fingerprint_nodule` | fn | `lib/compiler/ambient.myc:1537` | `fn fingerprint_nodule(n: Nodule) => Fp` | — | Empirical/Declared |
-| `compiler.ambient::stage4_verdict_fp` | fn | `lib/compiler/ambient.myc:1541` | `fn stage4_verdict_fp(fp: Fp, want_hash: Binary{32}, want_count: Binary{32}) => Binary{32}` | — | Empirical/Declared |
-| `compiler.ambient::resolve_err_kind` | fn | `lib/compiler/ambient.myc:1548` | `fn resolve_err_kind(n: Nodule) => Binary{32}` | resolve_err_kind: Ok => 0; Err(e) => the 5-way classification code (ambient_error_kind). | Empirical/Declared |
-| `compiler.ambient::test_input_1` | fn | `lib/compiler/ambient.myc:1556` | `fn test_input_1() => Nodule` | TC1: pure passthrough — no ambient anywhere; `resolve` must be the identity. | Empirical/Declared |
-| `compiler.ambient::test_input_2` | fn | `lib/compiler/ambient.myc:1564` | `fn test_input_2() => Nodule` | TC2: `default paradigm Binary` + a paradigm-less `{8}` return type resolves to `Binary{8}`. | Empirical/Declared |
-| `compiler.ambient::test_input_3` | fn | `lib/compiler/ambient.myc:1573` | `fn test_input_3() => Nodule` | TC3: `default paradigm Ternary`, same shape as TC2 but Ternary. | Empirical/Declared |
-| `compiler.ambient::test_input_4` | fn | `lib/compiler/ambient.myc:1582` | `fn test_input_4() => Nodule` | TC4: `default paradigm Dense` + `{4, F32}` resolves to `Dense{4, F32}`. | Empirical/Declared |
-| `compiler.ambient::test_input_5` | fn | `lib/compiler/ambient.myc:1591` | `fn test_input_5() => Nodule` | TC5: `default paradigm VSA` + `{"hrr", 128, Dense}` resolves to `VSA{"hrr", 128, Dense}`. | Empirical/Declared |
-| `compiler.ambient::test_input_6` | fn | `lib/compiler/ambient.myc:1600` | `fn test_input_6() => Nodule` | TC6: nested `with paradigm Ternary { … }` locally overrides a `Binary` nodule default. | Empirical/Declared |
-| `compiler.ambient::one32_as_64` | fn | `lib/compiler/ambient.myc:1608` | `fn one32_as_64() => Binary{64}` | — | Empirical/Declared |
-| `compiler.ambient::test_input_7` | fn | `lib/compiler/ambient.myc:1611` | `fn test_input_7() => Nodule` | TC7: an `object` declaration with a paradigm-less ctor field, resolved under a Binary default. | Empirical/Declared |
-| `compiler.ambient::test_input_8` | fn | `lib/compiler/ambient.myc:1621` | `fn test_input_8() => Nodule` | TC8: a mixed-expr body (let/if/match/app/tuple) under a Binary ambient — several bare decimals each resolve to `AmbientInt(Binary, _)`. | Empirical/Declared |
-| `compiler.ambient::test_input_err1` | fn | `lib/compiler/ambient.myc:1633` | `fn test_input_err1() => Nodule` | ERR1: two `default paradigm` declarations -> MultipleDefaults. | Empirical/Declared |
-| `compiler.ambient::test_input_err2` | fn | `lib/compiler/ambient.myc:1637` | `fn test_input_err2() => Nodule` | ERR2: a paradigm-less `{8}` with no enclosing ambient anywhere -> UnresolvedAmbient. | Empirical/Declared |
-| `compiler.ambient::test_input_err3` | fn | `lib/compiler/ambient.myc:1645` | `fn test_input_err3() => Nodule` | ERR3: a Binary ambient but a Dense-shaped `{4, F32}` param -> ParadigmShapeMismatch. | Empirical/Declared |
-| `compiler.ambient::test_input_err4` | fn | `lib/compiler/ambient.myc:1654` | `fn test_input_err4() => Nodule` | ERR4: a bare decimal under a Dense ambient -> BareDecimalNoEncoding. | Empirical/Declared |
-| `compiler.ambient::stage4_verdict_1` | fn | `lib/compiler/ambient.myc:1663` | `fn stage4_verdict_1(want_ok: Binary{32}, want_hash: Binary{32}, want_count: Binary{32}) => Binary{32}` | — | Empirical/Declared |
-| `compiler.ambient::stage4_verdict_2` | fn | `lib/compiler/ambient.myc:1669` | `fn stage4_verdict_2(want_ok: Binary{32}, want_hash: Binary{32}, want_count: Binary{32}) => Binary{32}` | — | Empirical/Declared |
-| `compiler.ambient::stage4_verdict_3` | fn | `lib/compiler/ambient.myc:1675` | `fn stage4_verdict_3(want_ok: Binary{32}, want_hash: Binary{32}, want_count: Binary{32}) => Binary{32}` | — | Empirical/Declared |
-| `compiler.ambient::stage4_verdict_4` | fn | `lib/compiler/ambient.myc:1681` | `fn stage4_verdict_4(want_ok: Binary{32}, want_hash: Binary{32}, want_count: Binary{32}) => Binary{32}` | — | Empirical/Declared |
-| `compiler.ambient::stage4_verdict_5` | fn | `lib/compiler/ambient.myc:1687` | `fn stage4_verdict_5(want_ok: Binary{32}, want_hash: Binary{32}, want_count: Binary{32}) => Binary{32}` | — | Empirical/Declared |
-| `compiler.ambient::stage4_verdict_6` | fn | `lib/compiler/ambient.myc:1693` | `fn stage4_verdict_6(want_ok: Binary{32}, want_hash: Binary{32}, want_count: Binary{32}) => Binary{32}` | — | Empirical/Declared |
-| `compiler.ambient::stage4_verdict_7` | fn | `lib/compiler/ambient.myc:1699` | `fn stage4_verdict_7(want_ok: Binary{32}, want_hash: Binary{32}, want_count: Binary{32}) => Binary{32}` | — | Empirical/Declared |
-| `compiler.ambient::stage4_verdict_8` | fn | `lib/compiler/ambient.myc:1705` | `fn stage4_verdict_8(want_ok: Binary{32}, want_hash: Binary{32}, want_count: Binary{32}) => Binary{32}` | — | Empirical/Declared |
-| `compiler.ambient::stage4_expand_verdict_1` | fn | `lib/compiler/ambient.myc:1714` | `fn stage4_expand_verdict_1(want_expand: Bytes) => Binary{32}` | — | Empirical/Declared |
-| `compiler.ambient::stage4_expand_verdict_2` | fn | `lib/compiler/ambient.myc:1717` | `fn stage4_expand_verdict_2(want_expand: Bytes) => Binary{32}` | — | Empirical/Declared |
-| `compiler.ambient::stage4_expand_verdict_resolved_2` | fn | `lib/compiler/ambient.myc:1720` | `fn stage4_expand_verdict_resolved_2(want_expand: Bytes) => Binary{32}` | — | Empirical/Declared |
-| `compiler.ambient::stage4_expand_verdict_7` | fn | `lib/compiler/ambient.myc:1726` | `fn stage4_expand_verdict_7(want_expand: Bytes) => Binary{32}` | — | Empirical/Declared |
-| `compiler.ambient::stage4_expand_verdict_resolved_7` | fn | `lib/compiler/ambient.myc:1729` | `fn stage4_expand_verdict_resolved_7(want_expand: Bytes) => Binary{32}` | — | Empirical/Declared |
-| `compiler.ambient::stage4_err_kind_1` | fn | `lib/compiler/ambient.myc:1736` | `fn stage4_err_kind_1() => Binary{32}` | — | Empirical/Declared |
-| `compiler.ambient::stage4_err_kind_2` | fn | `lib/compiler/ambient.myc:1737` | `fn stage4_err_kind_2() => Binary{32}` | — | Empirical/Declared |
-| `compiler.ambient::stage4_err_kind_3` | fn | `lib/compiler/ambient.myc:1738` | `fn stage4_err_kind_3() => Binary{32}` | — | Empirical/Declared |
-| `compiler.ambient::stage4_err_kind_4` | fn | `lib/compiler/ambient.myc:1739` | `fn stage4_err_kind_4() => Binary{32}` | — | Empirical/Declared |
+| `compiler.ambient::Ctor` | type | `lib/compiler/ambient.myc:132` | `type Ctor = Ctr(Bytes, Vec[TypeRef], Bool)` | M-1027 / DN-104: the 3rd field is the `sealed` (`priv`) flag (surface parity with ast.rs::Ctor). | Empirical/Declared |
+| `compiler.ambient::Ctor::Ctr` | ctor | `lib/compiler/ambient.myc:132` | `Ctr(Bytes, Vec[TypeRef], Bool)` | — | Empirical/Declared |
+| `compiler.ambient::TypeDecl` | type | `lib/compiler/ambient.myc:133` | `type TypeDecl = TD(Vis, Bytes, Vec[Bytes], Vec[Ctor])` | — | Empirical/Declared |
+| `compiler.ambient::TypeDecl::TD` | ctor | `lib/compiler/ambient.myc:133` | `TD(Vis, Bytes, Vec[Bytes], Vec[Ctor])` | — | Empirical/Declared |
+| `compiler.ambient::TraitDecl` | type | `lib/compiler/ambient.myc:134` | `type TraitDecl = TrD(Vis, Bytes, Vec[Bytes], Vec[FnSig])` | — | Empirical/Declared |
+| `compiler.ambient::TraitDecl::TrD` | ctor | `lib/compiler/ambient.myc:134` | `TrD(Vis, Bytes, Vec[Bytes], Vec[FnSig])` | — | Empirical/Declared |
+| `compiler.ambient::ImplDecl` | type | `lib/compiler/ambient.myc:135` | `type ImplDecl = ImD(Bytes, Vec[TypeRef], TypeRef, Vec[FnDecl])` | — | Empirical/Declared |
+| `compiler.ambient::ImplDecl::ImD` | ctor | `lib/compiler/ambient.myc:135` | `ImD(Bytes, Vec[TypeRef], TypeRef, Vec[FnDecl])` | — | Empirical/Declared |
+| `compiler.ambient::ViaDecl` | type | `lib/compiler/ambient.myc:136` | `type ViaDecl = VD(Binary{32}, Bytes, Vec[TypeRef])` | — | Empirical/Declared |
+| `compiler.ambient::ViaDecl::VD` | ctor | `lib/compiler/ambient.myc:136` | `VD(Binary{32}, Bytes, Vec[TypeRef])` | — | Empirical/Declared |
+| `compiler.ambient::ObjectDecl` | type | `lib/compiler/ambient.myc:137` | `type ObjectDecl = OD(Vis, Bytes, Vec[Bytes], Ctor, Vec[ViaDecl], Vec[ImplDecl], Vec[FnDecl])` | — | Empirical/Declared |
+| `compiler.ambient::ObjectDecl::OD` | ctor | `lib/compiler/ambient.myc:137` | `OD(Vis, Bytes, Vec[Bytes], Ctor, Vec[ViaDecl], Vec[ImplDecl], Vec[FnDecl])` | — | Empirical/Declared |
+| `compiler.ambient::InherentImplDecl` | type | `lib/compiler/ambient.myc:138` | `type InherentImplDecl = IID(Vec[Bytes], TypeRef, Vec[FnDecl]);  // DN-103: impl-level type-param slot first type LowerRhs = LRExpr(Expr) \| LRImpl(ImplDecl)` | — | Empirical/Declared |
+| `compiler.ambient::InherentImplDecl::IID` | ctor | `lib/compiler/ambient.myc:138` | `IID(Vec[Bytes], TypeRef, Vec[FnDecl]);  // DN-103: impl-level type-param slot first type LowerRhs = LRExpr(Expr)` | — | Empirical/Declared |
+| `compiler.ambient::InherentImplDecl::LRImpl` | ctor | `lib/compiler/ambient.myc:139` | `LRImpl(ImplDecl)` | — | Empirical/Declared |
+| `compiler.ambient::LowerDecl` | type | `lib/compiler/ambient.myc:140` | `type LowerDecl = LD(Bytes, Vec[Bytes], LowerRhs)` | — | Empirical/Declared |
+| `compiler.ambient::LowerDecl::LD` | ctor | `lib/compiler/ambient.myc:140` | `LD(Bytes, Vec[Bytes], LowerRhs)` | — | Empirical/Declared |
+| `compiler.ambient::DeriveDecl` | type | `lib/compiler/ambient.myc:141` | `type DeriveDecl = DD(Bytes, TypeRef)` | — | Empirical/Declared |
+| `compiler.ambient::DeriveDecl::DD` | ctor | `lib/compiler/ambient.myc:141` | `DD(Bytes, TypeRef)` | — | Empirical/Declared |
+| `compiler.ambient::Item` | type | `lib/compiler/ambient.myc:142` | `type Item = Use(UsePath) \| Default(Paradigm) \| Type(TypeDecl) \| Trait(TraitDecl) \| Impl(ImplDecl) \| Fn(FnDecl) \| Object(ObjectDecl) \| Lower(LowerDecl) \| Derive(DeriveDecl) \| InherentImpl(InherentImplDecl)` | — | Empirical/Declared |
+| `compiler.ambient::Item::Use` | ctor | `lib/compiler/ambient.myc:143` | `Use(UsePath)` | — | Empirical/Declared |
+| `compiler.ambient::Item::Default` | ctor | `lib/compiler/ambient.myc:144` | `Default(Paradigm)` | — | Empirical/Declared |
+| `compiler.ambient::Item::Type` | ctor | `lib/compiler/ambient.myc:145` | `Type(TypeDecl)` | — | Empirical/Declared |
+| `compiler.ambient::Item::Trait` | ctor | `lib/compiler/ambient.myc:146` | `Trait(TraitDecl)` | — | Empirical/Declared |
+| `compiler.ambient::Item::Impl` | ctor | `lib/compiler/ambient.myc:147` | `Impl(ImplDecl)` | — | Empirical/Declared |
+| `compiler.ambient::Item::Fn` | ctor | `lib/compiler/ambient.myc:148` | `Fn(FnDecl)` | — | Empirical/Declared |
+| `compiler.ambient::Item::Object` | ctor | `lib/compiler/ambient.myc:149` | `Object(ObjectDecl)` | — | Empirical/Declared |
+| `compiler.ambient::Item::Lower` | ctor | `lib/compiler/ambient.myc:150` | `Lower(LowerDecl)` | — | Empirical/Declared |
+| `compiler.ambient::Item::Derive` | ctor | `lib/compiler/ambient.myc:151` | `Derive(DeriveDecl)` | — | Empirical/Declared |
+| `compiler.ambient::Item::InherentImpl` | ctor | `lib/compiler/ambient.myc:152` | `InherentImpl(InherentImplDecl)` | — | Empirical/Declared |
+| `compiler.ambient::Nodule` | type | `lib/compiler/ambient.myc:153` | `type Nodule = Nd(Path, Bool, Vec[Item])` | — | Empirical/Declared |
+| `compiler.ambient::Nodule::Nd` | ctor | `lib/compiler/ambient.myc:153` | `Nd(Path, Bool, Vec[Item])` | — | Empirical/Declared |
+| `compiler.ambient::Phylum` | type | `lib/compiler/ambient.myc:154` | `type Phylum = Phy(Option[Path], Vec[Nodule])` | — | Empirical/Declared |
+| `compiler.ambient::Phylum::Phy` | ctor | `lib/compiler/ambient.myc:154` | `Phy(Option[Path], Vec[Nodule])` | — | Empirical/Declared |
+| `compiler.ambient::Literal` | type | `lib/compiler/ambient.myc:155` | `type Literal = Bin(Bytes) \| Trit(Bytes) \| Int(Binary{64}) \| AmbientInt(Paradigm, Binary{64}) \| List(Vec[Expr]) \| LBytes(Bytes) \| Str(Bytes) \| LFloat(Bytes)` | — | Empirical/Declared |
+| `compiler.ambient::Literal::Bin` | ctor | `lib/compiler/ambient.myc:156` | `Bin(Bytes)` | — | Empirical/Declared |
+| `compiler.ambient::Literal::Trit` | ctor | `lib/compiler/ambient.myc:157` | `Trit(Bytes)` | — | Empirical/Declared |
+| `compiler.ambient::Literal::Int` | ctor | `lib/compiler/ambient.myc:158` | `Int(Binary{64})` | — | Empirical/Declared |
+| `compiler.ambient::Literal::AmbientInt` | ctor | `lib/compiler/ambient.myc:159` | `AmbientInt(Paradigm, Binary{64})` | — | Empirical/Declared |
+| `compiler.ambient::Literal::List` | ctor | `lib/compiler/ambient.myc:160` | `List(Vec[Expr])` | — | Empirical/Declared |
+| `compiler.ambient::Literal::LBytes` | ctor | `lib/compiler/ambient.myc:161` | `LBytes(Bytes)` | — | Empirical/Declared |
+| `compiler.ambient::Literal::Str` | ctor | `lib/compiler/ambient.myc:162` | `Str(Bytes)` | — | Empirical/Declared |
+| `compiler.ambient::Literal::LFloat` | ctor | `lib/compiler/ambient.myc:163` | `LFloat(Bytes)` | — | Empirical/Declared |
+| `compiler.ambient::Pattern` | type | `lib/compiler/ambient.myc:164` | `type Pattern = PWildcard \| PLit(Literal) \| PCtor(Bytes, Vec[Pattern]) \| PIdent(Bytes) \| PTuple(Vec[Pattern]) \| POr(Vec[Pattern])` | — | Empirical/Declared |
+| `compiler.ambient::Pattern::PWildcard` | ctor | `lib/compiler/ambient.myc:165` | `PWildcard` | — | Empirical/Declared |
+| `compiler.ambient::Pattern::PLit` | ctor | `lib/compiler/ambient.myc:166` | `PLit(Literal)` | — | Empirical/Declared |
+| `compiler.ambient::Pattern::PCtor` | ctor | `lib/compiler/ambient.myc:167` | `PCtor(Bytes, Vec[Pattern])` | — | Empirical/Declared |
+| `compiler.ambient::Pattern::PIdent` | ctor | `lib/compiler/ambient.myc:168` | `PIdent(Bytes)` | — | Empirical/Declared |
+| `compiler.ambient::Pattern::PTuple` | ctor | `lib/compiler/ambient.myc:169` | `PTuple(Vec[Pattern])` | — | Empirical/Declared |
+| `compiler.ambient::Pattern::POr` | ctor | `lib/compiler/ambient.myc:170` | `POr(Vec[Pattern])` | — | Empirical/Declared |
+| `compiler.ambient::Arm` | type | `lib/compiler/ambient.myc:171` | `type Arm = Ar(Pattern, Expr)` | — | Empirical/Declared |
+| `compiler.ambient::Arm::Ar` | ctor | `lib/compiler/ambient.myc:171` | `Ar(Pattern, Expr)` | — | Empirical/Declared |
+| `compiler.ambient::Hypha` | type | `lib/compiler/ambient.myc:172` | `type Hypha = Hy(Option[Expr], Expr)` | — | Empirical/Declared |
+| `compiler.ambient::Hypha::Hy` | ctor | `lib/compiler/ambient.myc:172` | `Hy(Option[Expr], Expr)` | — | Empirical/Declared |
+| `compiler.ambient::Expr` | type | `lib/compiler/ambient.myc:173` | `type Expr = Let(Bytes, Option[TypeRef], Expr, Expr) \| If(Expr, Expr, Expr) \| Match(Expr, Vec[Arm]) \| For(Bytes, Expr, Bytes, Expr, Expr) \| Swap(Expr, TypeRef, Path) \| WithParadigm(Paradigm, Expr) \| Wild(Expr) \| Spore(Expr) \| Wrapping(Expr) \| Consume(Expr) \| Try(Expr) \| Colony(Vec[Hypha]) \| Lambda(Vec[Param], Expr) \| App(Expr, Vec[Expr]) \| Fuse(Expr, Expr) \| Reclaim(Expr, Expr) \| Path(Path) \| Lit(Literal) \| Ascribe(Expr, TypeRef) \| TupleLit(Vec[Expr])` | — | Empirical/Declared |
+| `compiler.ambient::Expr::Let` | ctor | `lib/compiler/ambient.myc:174` | `Let(Bytes, Option[TypeRef], Expr, Expr)` | — | Empirical/Declared |
+| `compiler.ambient::Expr::If` | ctor | `lib/compiler/ambient.myc:175` | `If(Expr, Expr, Expr)` | — | Empirical/Declared |
+| `compiler.ambient::Expr::Match` | ctor | `lib/compiler/ambient.myc:176` | `Match(Expr, Vec[Arm])` | — | Empirical/Declared |
+| `compiler.ambient::Expr::For` | ctor | `lib/compiler/ambient.myc:177` | `For(Bytes, Expr, Bytes, Expr, Expr)` | — | Empirical/Declared |
+| `compiler.ambient::Expr::Path` | ctor | `lib/compiler/ambient.myc:178` | `Path(Path)` | — | Empirical/Declared |
+| `compiler.ambient::Expr::Swap` | ctor | `lib/compiler/ambient.myc:178` | `Swap(Expr, TypeRef, Path)` | — | Empirical/Declared |
+| `compiler.ambient::Expr::WithParadigm` | ctor | `lib/compiler/ambient.myc:179` | `WithParadigm(Paradigm, Expr)` | — | Empirical/Declared |
+| `compiler.ambient::Expr::Wild` | ctor | `lib/compiler/ambient.myc:180` | `Wild(Expr)` | — | Empirical/Declared |
+| `compiler.ambient::Expr::Spore` | ctor | `lib/compiler/ambient.myc:181` | `Spore(Expr)` | — | Empirical/Declared |
+| `compiler.ambient::Expr::Wrapping` | ctor | `lib/compiler/ambient.myc:182` | `Wrapping(Expr)` | — | Empirical/Declared |
+| `compiler.ambient::Expr::Consume` | ctor | `lib/compiler/ambient.myc:183` | `Consume(Expr)` | — | Empirical/Declared |
+| `compiler.ambient::Expr::Try` | ctor | `lib/compiler/ambient.myc:186` | `Try(Expr)` | — | Empirical/Declared |
+| `compiler.ambient::Expr::Colony` | ctor | `lib/compiler/ambient.myc:189` | `Colony(Vec[Hypha])` | — | Empirical/Declared |
+| `compiler.ambient::Expr::Lambda` | ctor | `lib/compiler/ambient.myc:190` | `Lambda(Vec[Param], Expr)` | — | Empirical/Declared |
+| `compiler.ambient::Expr::App` | ctor | `lib/compiler/ambient.myc:191` | `App(Expr, Vec[Expr])` | — | Empirical/Declared |
+| `compiler.ambient::Expr::Fuse` | ctor | `lib/compiler/ambient.myc:192` | `Fuse(Expr, Expr)` | — | Empirical/Declared |
+| `compiler.ambient::Expr::Reclaim` | ctor | `lib/compiler/ambient.myc:193` | `Reclaim(Expr, Expr)` | — | Empirical/Declared |
+| `compiler.ambient::Expr::Lit` | ctor | `lib/compiler/ambient.myc:195` | `Lit(Literal)` | — | Empirical/Declared |
+| `compiler.ambient::Expr::Ascribe` | ctor | `lib/compiler/ambient.myc:196` | `Ascribe(Expr, TypeRef)` | — | Empirical/Declared |
+| `compiler.ambient::Expr::TupleLit` | ctor | `lib/compiler/ambient.myc:197` | `TupleLit(Vec[Expr])` | — | Empirical/Declared |
+| `compiler.ambient::zero32` | fn | `lib/compiler/ambient.myc:206` | `fn zero32() => Binary{32}` | — | Empirical/Declared |
+| `compiler.ambient::one32` | fn | `lib/compiler/ambient.myc:207` | `fn one32() => Binary{32}` | — | Empirical/Declared |
+| `compiler.ambient::three32` | fn | `lib/compiler/ambient.myc:208` | `fn three32() => Binary{32}` | — | Empirical/Declared |
+| `compiler.ambient::ten32` | fn | `lib/compiler/ambient.myc:209` | `fn ten32() => Binary{32}` | — | Empirical/Declared |
+| `compiler.ambient::zero64` | fn | `lib/compiler/ambient.myc:210` | `fn zero64() => Binary{64}` | — | Empirical/Declared |
+| `compiler.ambient::ten64` | fn | `lib/compiler/ambient.myc:211` | `fn ten64() => Binary{64}` | — | Empirical/Declared |
+| `compiler.ambient::empty_bytes` | fn | `lib/compiler/ambient.myc:213` | `fn empty_bytes() => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::digit_table` | fn | `lib/compiler/ambient.myc:215` | `fn digit_table() => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::digit_bytes` | fn | `lib/compiler/ambient.myc:217` | `fn digit_bytes(d: Binary{32}) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::join_bytes` | fn | `lib/compiler/ambient.myc:220` | `fn join_bytes(xs: Vec[Bytes]) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::u32_to_dec_acc` | fn | `lib/compiler/ambient.myc:223` | `fn u32_to_dec_acc(n: Binary{32}, acc: Vec[Bytes]) => Vec[Bytes]` | — | Empirical/Declared |
+| `compiler.ambient::u32_to_dec` | fn | `lib/compiler/ambient.myc:233` | `fn u32_to_dec(n: Binary{32}) => Bytes` | u32_to_dec: decimal-render a Binary{32} (widths/dims/sparsity-k/the depth limit). Grounded (`Empirical`): the digit order falls out of prepending each new (more-significant) digit to the front of the accumulator as the value shrinks — no explicit reversal step is needed (verified during authoring against `u32_to_dec(0b...1111011)` (123) => "123"). | Empirical/Declared |
+| `compiler.ambient::u64_to_dec_acc` | fn | `lib/compiler/ambient.myc:236` | `fn u64_to_dec_acc(n: Binary{64}, acc: Vec[Bytes]) => Vec[Bytes]` | — | Empirical/Declared |
+| `compiler.ambient::u64_to_dec` | fn | `lib/compiler/ambient.myc:243` | `fn u64_to_dec(n: Binary{64}) => Bytes` | u64_to_dec: decimal-render a Binary{64} (`Literal::Int`/`AmbientInt` payloads). | Empirical/Declared |
+| `compiler.ambient::backslash_b` | fn | `lib/compiler/ambient.myc:247` | `fn backslash_b() => Binary{8}` | — | Empirical/Declared |
+| `compiler.ambient::quote_b` | fn | `lib/compiler/ambient.myc:248` | `fn quote_b() => Binary{8}` | — | Empirical/Declared |
+| `compiler.ambient::nl_b` | fn | `lib/compiler/ambient.myc:249` | `fn nl_b() => Binary{8}` | — | Empirical/Declared |
+| `compiler.ambient::tab_b` | fn | `lib/compiler/ambient.myc:250` | `fn tab_b() => Binary{8}` | — | Empirical/Declared |
+| `compiler.ambient::cr_b` | fn | `lib/compiler/ambient.myc:251` | `fn cr_b() => Binary{8}` | — | Empirical/Declared |
+| `compiler.ambient::nul_b` | fn | `lib/compiler/ambient.myc:252` | `fn nul_b() => Binary{8}` | — | Empirical/Declared |
+| `compiler.ambient::escape_string_literal_acc` | fn | `lib/compiler/ambient.myc:261` | `fn escape_string_literal_acc(s: Bytes, i: Binary{32}, len: Binary{32}, acc: Bytes) => Bytes` | escape_string_literal_acc: walks `s` BYTE-by-byte (never char-by-char — this surface has no codepoint-aware iteration), re-escaping the same minimal set `Lexer::lex_string` decodes. Every OTHER byte (including every byte of a multi-byte UTF-8 sequence, which is never equal to any of the ASCII control bytes checked below) is passed through via a 1-byte SLICE of `s` itself — this surface has no "synthesize a Bytes from an arbitrary Binary{8}" primitive, so passthrough must slice the byte from an EXISTING buffer rather than reconstruct it (the same reasoning `digit_bytes` above relies on for the KNOWN 0-9 range). | Empirical/Declared |
+| `compiler.ambient::escape_string_literal` | fn | `lib/compiler/ambient.myc:287` | `fn escape_string_literal(s: Bytes) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::split_lines_acc` | fn | `lib/compiler/ambient.myc:291` | `fn split_lines_acc(s: Bytes, i: Binary{32}, start: Binary{32}, len: Binary{32}, acc: Vec[Bytes]) => Vec[Bytes]` | — | Empirical/Declared |
+| `compiler.ambient::split_lines` | fn | `lib/compiler/ambient.myc:304` | `fn split_lines(s: Bytes) => Vec[Bytes]` | — | Empirical/Declared |
+| `compiler.ambient::indent_lines_acc` | fn | `lib/compiler/ambient.myc:307` | `fn indent_lines_acc(prefix: Bytes, lines: Vec[Bytes], acc: Bytes) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::indent_lines` | fn | `lib/compiler/ambient.myc:315` | `fn indent_lines(prefix: Bytes, text: Bytes) => Bytes` | indent_lines: re-indent every line of `text` by `prefix`, one trailing "\n" each (matches Rust's `for line in text.lines() { s.push_str(&format!("{prefix}{line}\n")); }`). | Empirical/Declared |
+| `compiler.ambient::ends_with_nl` | fn | `lib/compiler/ambient.myc:318` | `fn ends_with_nl(s: Bytes) => Bool` | — | Empirical/Declared |
+| `compiler.ambient::strip_suffix_nl` | fn | `lib/compiler/ambient.myc:324` | `fn strip_suffix_nl(s: Bytes) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::trim_end_nl` | fn | `lib/compiler/ambient.myc:330` | `fn trim_end_nl(s: Bytes) => Bytes` | trim_end_nl: mirrors `str::trim_end` as used on `print_impl_decl`'s output inside `print_lower_decl` — that output always ends in exactly one "\n" (never other trailing whitespace), so stripping just that one trailing byte is the faithful equivalent here. | Empirical/Declared |
+| `compiler.ambient::join_bytes_list` | fn | `lib/compiler/ambient.myc:334` | `fn join_bytes_list(sep: Bytes, xs: Vec[Bytes]) => Bytes` | join_bytes_list: comma/sep-join a Vec[Bytes] (type-param name lists, `object`/`type` params). | Empirical/Declared |
+| `compiler.ambient::AmbientError` | type | `lib/compiler/ambient.myc:344` | `type AmbientError = MultipleDefaults(Paradigm, Paradigm) \| UnresolvedAmbient(Bytes) \| ParadigmShapeMismatch(Bytes, Paradigm, Bytes) \| BareDecimalNoEncoding(Bytes, Paradigm) \| DepthExceeded(Bytes, Binary{32})` | — | Empirical/Declared |
+| `compiler.ambient::AmbientError::MultipleDefaults` | ctor | `lib/compiler/ambient.myc:345` | `MultipleDefaults(Paradigm, Paradigm)` | — | Empirical/Declared |
+| `compiler.ambient::AmbientError::UnresolvedAmbient` | ctor | `lib/compiler/ambient.myc:346` | `UnresolvedAmbient(Bytes)` | — | Empirical/Declared |
+| `compiler.ambient::AmbientError::ParadigmShapeMismatch` | ctor | `lib/compiler/ambient.myc:347` | `ParadigmShapeMismatch(Bytes, Paradigm, Bytes)` | — | Empirical/Declared |
+| `compiler.ambient::AmbientError::BareDecimalNoEncoding` | ctor | `lib/compiler/ambient.myc:348` | `BareDecimalNoEncoding(Bytes, Paradigm)` | — | Empirical/Declared |
+| `compiler.ambient::AmbientError::DepthExceeded` | ctor | `lib/compiler/ambient.myc:349` | `DepthExceeded(Bytes, Binary{32})` | — | Empirical/Declared |
+| `compiler.ambient::ambient_error_kind` | fn | `lib/compiler/ambient.myc:352` | `fn ambient_error_kind(e: AmbientError) => Binary{32}` | ambient_error_kind: a 5-way classification code (FLAG-ambient-3 — message TEXT is not ported). | Empirical/Declared |
+| `compiler.ambient::ResolutionNote` | type | `lib/compiler/ambient.myc:363` | `type ResolutionNote = RNote(Bytes, Paradigm, Bytes)` | ResolutionNote / Resolved: kept as real types (a caller can hold/inspect a `Resolved` value); the FLAG-ambient-2 narrowing is that `resolve_report` always returns `notes = Nil` (never populated). | Empirical/Declared |
+| `compiler.ambient::ResolutionNote::RNote` | ctor | `lib/compiler/ambient.myc:363` | `RNote(Bytes, Paradigm, Bytes)` | — | Empirical/Declared |
+| `compiler.ambient::Resolved` | type | `lib/compiler/ambient.myc:364` | `type Resolved = Rsv(Nodule, Vec[ResolutionNote])` | — | Empirical/Declared |
+| `compiler.ambient::Resolved::Rsv` | ctor | `lib/compiler/ambient.myc:364` | `Rsv(Nodule, Vec[ResolutionNote])` | — | Empirical/Declared |
+| `compiler.ambient::max_ambient_depth` | fn | `lib/compiler/ambient.myc:367` | `fn max_ambient_depth() => Binary{32}` | — | Empirical/Declared |
+| `compiler.ambient::enter_depth` | fn | `lib/compiler/ambient.myc:369` | `fn enter_depth(site: Bytes, depth: Binary{32}) => Result[Binary{32}, AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::mismatch_detail_size` | fn | `lib/compiler/ambient.myc:377` | `fn mismatch_detail_size() => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::mismatch_detail_dense` | fn | `lib/compiler/ambient.myc:378` | `fn mismatch_detail_dense() => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::mismatch_detail_vsa` | fn | `lib/compiler/ambient.myc:379` | `fn mismatch_detail_vsa() => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::fill_repr` | fn | `lib/compiler/ambient.myc:381` | `fn fill_repr(site: Bytes, p: Paradigm, params: AmbientParams) => Result[BaseType, AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::resolve_type_ref` | fn | `lib/compiler/ambient.myc:402` | `fn resolve_type_ref(amb: Option[Paradigm], site: Bytes, t: TypeRef, depth: Binary{32}) => Result[TypeRef, AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::resolve_base_type` | fn | `lib/compiler/ambient.myc:413` | `fn resolve_base_type(amb: Option[Paradigm], site: Bytes, b: BaseType, depth: Binary{32}) => Result[BaseType, AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::resolve_typeref_list_acc` | fn | `lib/compiler/ambient.myc:433` | `fn resolve_typeref_list_acc(amb: Option[Paradigm], site: Bytes, xs: Vec[TypeRef], depth: Binary{32}, acc: Vec[TypeRef]) => Result[Vec[TypeRef], AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::resolve_typeref_list` | fn | `lib/compiler/ambient.myc:442` | `fn resolve_typeref_list(amb: Option[Paradigm], site: Bytes, xs: Vec[TypeRef], depth: Binary{32}) => Result[Vec[TypeRef], AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::resolve_typeref_opt` | fn | `lib/compiler/ambient.myc:445` | `fn resolve_typeref_opt(amb: Option[Paradigm], site: Bytes, t: Option[TypeRef], depth: Binary{32}) => Result[Option[TypeRef], AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::resolve_literal` | fn | `lib/compiler/ambient.myc:452` | `fn resolve_literal(amb: Option[Paradigm], site: Bytes, l: Literal, depth: Binary{32}) => Result[Literal, AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::resolve_pattern` | fn | `lib/compiler/ambient.myc:470` | `fn resolve_pattern(amb: Option[Paradigm], site: Bytes, p: Pattern, depth: Binary{32}) => Result[Pattern, AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::resolve_pattern_list_acc` | fn | `lib/compiler/ambient.myc:483` | `fn resolve_pattern_list_acc(amb: Option[Paradigm], site: Bytes, xs: Vec[Pattern], depth: Binary{32}, acc: Vec[Pattern]) => Result[Vec[Pattern], AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::resolve_pattern_list` | fn | `lib/compiler/ambient.myc:492` | `fn resolve_pattern_list(amb: Option[Paradigm], site: Bytes, xs: Vec[Pattern], depth: Binary{32}) => Result[Vec[Pattern], AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::resolve_expr` | fn | `lib/compiler/ambient.myc:496` | `fn resolve_expr(amb: Option[Paradigm], site: Bytes, e: Expr, depth: Binary{32}) => Result[Expr, AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::resolve_expr_list_acc` | fn | `lib/compiler/ambient.myc:588` | `fn resolve_expr_list_acc(amb: Option[Paradigm], site: Bytes, xs: Vec[Expr], depth: Binary{32}, acc: Vec[Expr]) => Result[Vec[Expr], AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::resolve_expr_list` | fn | `lib/compiler/ambient.myc:597` | `fn resolve_expr_list(amb: Option[Paradigm], site: Bytes, xs: Vec[Expr], depth: Binary{32}) => Result[Vec[Expr], AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::resolve_expr_opt` | fn | `lib/compiler/ambient.myc:600` | `fn resolve_expr_opt(amb: Option[Paradigm], site: Bytes, e: Option[Expr], depth: Binary{32}) => Result[Option[Expr], AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::resolve_arm` | fn | `lib/compiler/ambient.myc:606` | `fn resolve_arm(amb: Option[Paradigm], site: Bytes, a: Arm, depth: Binary{32}) => Result[Arm, AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::resolve_arm_list_acc` | fn | `lib/compiler/ambient.myc:617` | `fn resolve_arm_list_acc(amb: Option[Paradigm], site: Bytes, xs: Vec[Arm], depth: Binary{32}, acc: Vec[Arm]) => Result[Vec[Arm], AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::resolve_arm_list` | fn | `lib/compiler/ambient.myc:626` | `fn resolve_arm_list(amb: Option[Paradigm], site: Bytes, xs: Vec[Arm], depth: Binary{32}) => Result[Vec[Arm], AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::resolve_hypha` | fn | `lib/compiler/ambient.myc:631` | `fn resolve_hypha(amb: Option[Paradigm], site: Bytes, h: Hypha, depth: Binary{32}) => Result[Hypha, AmbientError]` | resolve_hypha: M-906 (DN-70 D1) — a hypha's optional `@forage(policy)` resolves under the same ambient as its body (no new ambient frame). | Empirical/Declared |
+| `compiler.ambient::resolve_hypha_list_acc` | fn | `lib/compiler/ambient.myc:642` | `fn resolve_hypha_list_acc(amb: Option[Paradigm], site: Bytes, xs: Vec[Hypha], depth: Binary{32}, acc: Vec[Hypha]) => Result[Vec[Hypha], AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::resolve_hypha_list` | fn | `lib/compiler/ambient.myc:651` | `fn resolve_hypha_list(amb: Option[Paradigm], site: Bytes, xs: Vec[Hypha], depth: Binary{32}) => Result[Vec[Hypha], AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::resolve_param` | fn | `lib/compiler/ambient.myc:655` | `fn resolve_param(amb: Option[Paradigm], site: Bytes, p: Param) => Result[Param, AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::resolve_param_list_acc` | fn | `lib/compiler/ambient.myc:663` | `fn resolve_param_list_acc(amb: Option[Paradigm], site: Bytes, xs: Vec[Param], acc: Vec[Param]) => Result[Vec[Param], AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::resolve_param_list` | fn | `lib/compiler/ambient.myc:672` | `fn resolve_param_list(amb: Option[Paradigm], site: Bytes, xs: Vec[Param]) => Result[Vec[Param], AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::resolve_fn_sig` | fn | `lib/compiler/ambient.myc:675` | `fn resolve_fn_sig(amb: Option[Paradigm], s: FnSig) => Result[FnSig, AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::resolve_fnsig_list_acc` | fn | `lib/compiler/ambient.myc:686` | `fn resolve_fnsig_list_acc(amb: Option[Paradigm], xs: Vec[FnSig], acc: Vec[FnSig]) => Result[Vec[FnSig], AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::resolve_fnsig_list` | fn | `lib/compiler/ambient.myc:695` | `fn resolve_fnsig_list(amb: Option[Paradigm], xs: Vec[FnSig]) => Result[Vec[FnSig], AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::resolve_ctor` | fn | `lib/compiler/ambient.myc:699` | `fn resolve_ctor(amb: Option[Paradigm], site: Bytes, c: Ctor) => Result[Ctor, AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::resolve_ctor_list_acc` | fn | `lib/compiler/ambient.myc:708` | `fn resolve_ctor_list_acc(amb: Option[Paradigm], site: Bytes, xs: Vec[Ctor], acc: Vec[Ctor]) => Result[Vec[Ctor], AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::resolve_ctor_list` | fn | `lib/compiler/ambient.myc:717` | `fn resolve_ctor_list(amb: Option[Paradigm], site: Bytes, xs: Vec[Ctor]) => Result[Vec[Ctor], AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::resolve_type_decl` | fn | `lib/compiler/ambient.myc:720` | `fn resolve_type_decl(amb: Option[Paradigm], td: TypeDecl) => Result[TypeDecl, AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::resolve_trait_decl` | fn | `lib/compiler/ambient.myc:728` | `fn resolve_trait_decl(amb: Option[Paradigm], td: TraitDecl) => Result[TraitDecl, AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::resolve_fndecl` | fn | `lib/compiler/ambient.myc:737` | `fn resolve_fndecl(amb: Option[Paradigm], f: FnDecl) => Result[FnDecl, AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::resolve_fndecl_list_acc` | fn | `lib/compiler/ambient.myc:750` | `fn resolve_fndecl_list_acc(amb: Option[Paradigm], xs: Vec[FnDecl], acc: Vec[FnDecl]) => Result[Vec[FnDecl], AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::resolve_fndecl_list` | fn | `lib/compiler/ambient.myc:759` | `fn resolve_fndecl_list(amb: Option[Paradigm], xs: Vec[FnDecl]) => Result[Vec[FnDecl], AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::resolve_impl_decl` | fn | `lib/compiler/ambient.myc:762` | `fn resolve_impl_decl(amb: Option[Paradigm], id: ImplDecl) => Result[ImplDecl, AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::resolve_impldecl_list_acc` | fn | `lib/compiler/ambient.myc:776` | `fn resolve_impldecl_list_acc(amb: Option[Paradigm], xs: Vec[ImplDecl], acc: Vec[ImplDecl]) => Result[Vec[ImplDecl], AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::resolve_impldecl_list` | fn | `lib/compiler/ambient.myc:785` | `fn resolve_impldecl_list(amb: Option[Paradigm], xs: Vec[ImplDecl]) => Result[Vec[ImplDecl], AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::resolve_inherent_impl_decl` | fn | `lib/compiler/ambient.myc:788` | `fn resolve_inherent_impl_decl(amb: Option[Paradigm], i: InherentImplDecl) => Result[InherentImplDecl, AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::resolve_viadecl` | fn | `lib/compiler/ambient.myc:799` | `fn resolve_viadecl(amb: Option[Paradigm], site: Bytes, v: ViaDecl) => Result[ViaDecl, AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::resolve_viadecl_list_acc` | fn | `lib/compiler/ambient.myc:807` | `fn resolve_viadecl_list_acc(amb: Option[Paradigm], site: Bytes, xs: Vec[ViaDecl], acc: Vec[ViaDecl]) => Result[Vec[ViaDecl], AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::resolve_viadecl_list` | fn | `lib/compiler/ambient.myc:816` | `fn resolve_viadecl_list(amb: Option[Paradigm], site: Bytes, xs: Vec[ViaDecl]) => Result[Vec[ViaDecl], AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::resolve_object_decl` | fn | `lib/compiler/ambient.myc:819` | `fn resolve_object_decl(amb: Option[Paradigm], od: ObjectDecl) => Result[ObjectDecl, AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::resolve_item` | fn | `lib/compiler/ambient.myc:837` | `fn resolve_item(default_p: Option[Paradigm], i: Item) => Result[Option[Item], AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::resolve_item_list_acc` | fn | `lib/compiler/ambient.myc:853` | `fn resolve_item_list_acc(default_p: Option[Paradigm], xs: Vec[Item], acc: Vec[Item]) => Result[Vec[Item], AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::resolve_item_list` | fn | `lib/compiler/ambient.myc:865` | `fn resolve_item_list(default_p: Option[Paradigm], xs: Vec[Item]) => Result[Vec[Item], AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::scan_default_acc` | fn | `lib/compiler/ambient.myc:869` | `fn scan_default_acc(xs: Vec[Item], found: Option[Paradigm]) => Result[Option[Paradigm], AmbientError]` | scan_default: the nodule-scope ambient scan — at most one `default paradigm`, else MultipleDefaults. | Empirical/Declared |
+| `compiler.ambient::scan_default` | fn | `lib/compiler/ambient.myc:881` | `fn scan_default(xs: Vec[Item]) => Result[Option[Paradigm], AmbientError]` | — | Empirical/Declared |
+| `compiler.ambient::resolve_report` | fn | `lib/compiler/ambient.myc:885` | `fn resolve_report(n: Nodule) => Result[Resolved, AmbientError]` | resolve_report: like `resolve`, but also returns the (FLAG-ambient-2: always-empty) notes trace. | Empirical/Declared |
+| `compiler.ambient::resolve` | fn | `lib/compiler/ambient.myc:899` | `fn resolve(n: Nodule) => Result[Nodule, AmbientError]` | resolve: rewrite a parsed Nodule to its longhand twin (RFC-0012 §4.3/§4.4). Identity on a program that uses no ambient. | Empirical/Declared |
+| `compiler.ambient::path_str` | fn | `lib/compiler/ambient.myc:906` | `fn path_str(p: Path) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::pub_str` | fn | `lib/compiler/ambient.myc:909` | `fn pub_str(v: Vis) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::thaw_str` | fn | `lib/compiler/ambient.myc:912` | `fn thaw_str(t: Bool) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::scalar_str` | fn | `lib/compiler/ambient.myc:915` | `fn scalar_str(s: Scalar) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::paradigm_str` | fn | `lib/compiler/ambient.myc:918` | `fn paradigm_str(p: Paradigm) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::strength_dbg` | fn | `lib/compiler/ambient.myc:921` | `fn strength_dbg(g: Strength) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::sparsity_str` | fn | `lib/compiler/ambient.myc:924` | `fn sparsity_str(s: Sparsity) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::ambient_params_str` | fn | `lib/compiler/ambient.myc:927` | `fn ambient_params_str(p: AmbientParams) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::print_widthref` | fn | `lib/compiler/ambient.myc:934` | `fn print_widthref(w: WidthRef) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::print_type_ref_list` | fn | `lib/compiler/ambient.myc:937` | `fn print_type_ref_list(xs: Vec[TypeRef]) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::print_base_type` | fn | `lib/compiler/ambient.myc:940` | `fn print_base_type(b: BaseType) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::print_type_ref` | fn | `lib/compiler/ambient.myc:962` | `fn print_type_ref(t: TypeRef) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::print_traitref_list` | fn | `lib/compiler/ambient.myc:968` | `fn print_traitref_list(xs: Vec[TraitRef]) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::print_trait_ref` | fn | `lib/compiler/ambient.myc:971` | `fn print_trait_ref(t: TraitRef) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::print_type_param` | fn | `lib/compiler/ambient.myc:974` | `fn print_type_param(t: TypeParam) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::print_type_param_list` | fn | `lib/compiler/ambient.myc:977` | `fn print_type_param_list(xs: Vec[TypeParam]) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::filter_type_params_acc` | fn | `lib/compiler/ambient.myc:980` | `fn filter_type_params_acc(xs: Vec[TypeParam], acc: Vec[TypeParam]) => Vec[TypeParam]` | — | Empirical/Declared |
+| `compiler.ambient::filter_type_params` | fn | `lib/compiler/ambient.myc:989` | `fn filter_type_params(xs: Vec[TypeParam]) => Vec[TypeParam]` | — | Empirical/Declared |
+| `compiler.ambient::filter_width_params_acc` | fn | `lib/compiler/ambient.myc:991` | `fn filter_width_params_acc(xs: Vec[TypeParam], acc: Vec[TypeParam]) => Vec[TypeParam]` | — | Empirical/Declared |
+| `compiler.ambient::filter_width_params` | fn | `lib/compiler/ambient.myc:1000` | `fn filter_width_params(xs: Vec[TypeParam]) => Vec[TypeParam]` | — | Empirical/Declared |
+| `compiler.ambient::print_param_list` | fn | `lib/compiler/ambient.myc:1002` | `fn print_param_list(xs: Vec[Param]) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::print_sig_tail` | fn | `lib/compiler/ambient.myc:1008` | `fn print_sig_tail(s: FnSig) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::print_params_brackets` | fn | `lib/compiler/ambient.myc:1017` | `fn print_params_brackets(xs: Vec[Bytes]) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::print_typeref_ann` | fn | `lib/compiler/ambient.myc:1021` | `fn print_typeref_ann(ty: Option[TypeRef]) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::print_param_names` | fn | `lib/compiler/ambient.myc:1024` | `fn print_param_names(xs: Vec[Param]) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::print_expr_list` | fn | `lib/compiler/ambient.myc:1030` | `fn print_expr_list(xs: Vec[Expr]) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::print_one_arm` | fn | `lib/compiler/ambient.myc:1033` | `fn print_one_arm(a: Arm) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::print_arm_list` | fn | `lib/compiler/ambient.myc:1036` | `fn print_arm_list(xs: Vec[Arm]) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::print_one_hypha` | fn | `lib/compiler/ambient.myc:1041` | `fn print_one_hypha(h: Hypha) => Bytes` | print_one_hypha: the ORACLE's own print form drops the `@forage(policy)` annotation from the rendered text (mirrored here verbatim, not a narrowing this port introduces). | Empirical/Declared |
+| `compiler.ambient::print_hypha_list` | fn | `lib/compiler/ambient.myc:1044` | `fn print_hypha_list(xs: Vec[Hypha]) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::print_expr` | fn | `lib/compiler/ambient.myc:1047` | `fn print_expr(e: Expr) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::print_pattern_list` | fn | `lib/compiler/ambient.myc:1071` | `fn print_pattern_list(xs: Vec[Pattern]) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::print_pattern_or_list` | fn | `lib/compiler/ambient.myc:1074` | `fn print_pattern_or_list(xs: Vec[Pattern]) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::print_pattern` | fn | `lib/compiler/ambient.myc:1077` | `fn print_pattern(p: Pattern) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::print_literal` | fn | `lib/compiler/ambient.myc:1087` | `fn print_literal(l: Literal) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::print_ctor` | fn | `lib/compiler/ambient.myc:1100` | `fn print_ctor(c: Ctor) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::print_ctor_list` | fn | `lib/compiler/ambient.myc:1109` | `fn print_ctor_list(xs: Vec[Ctor]) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::print_type_decl` | fn | `lib/compiler/ambient.myc:1112` | `fn print_type_decl(td: TypeDecl) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::print_fn_sig_list_lines_acc` | fn | `lib/compiler/ambient.myc:1117` | `fn print_fn_sig_list_lines_acc(xs: Vec[FnSig], acc: Bytes) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::print_trait_decl` | fn | `lib/compiler/ambient.myc:1123` | `fn print_trait_decl(td: TraitDecl) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::print_fn_decl` | fn | `lib/compiler/ambient.myc:1128` | `fn print_fn_decl(f: FnDecl) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::terminate_item` | fn | `lib/compiler/ambient.myc:1135` | `fn terminate_item(item_text: Bytes) => Bytes` | terminate_item: append the mandatory `;` component terminator (DN-57 §3, M-818) — replace a single trailing "\n" with ";\n", else append a bare ";". | Empirical/Declared |
+| `compiler.ambient::print_impldecl_methods_acc` | fn | `lib/compiler/ambient.myc:1141` | `fn print_impldecl_methods_acc(xs: Vec[FnDecl], acc: Bytes) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::print_impl_decl` | fn | `lib/compiler/ambient.myc:1144` | `fn print_impl_decl(id: ImplDecl) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::print_inherent_impl_decl` | fn | `lib/compiler/ambient.myc:1150` | `fn print_inherent_impl_decl(i: InherentImplDecl) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::print_via_decl` | fn | `lib/compiler/ambient.myc:1156` | `fn print_via_decl(v: ViaDecl) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::print_via_decl_list_acc` | fn | `lib/compiler/ambient.myc:1162` | `fn print_via_decl_list_acc(xs: Vec[ViaDecl], acc: Bytes) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::print_impl_decl_list_indented_acc` | fn | `lib/compiler/ambient.myc:1165` | `fn print_impl_decl_list_indented_acc(xs: Vec[ImplDecl], acc: Bytes) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::print_fn_decl_list_indented_acc` | fn | `lib/compiler/ambient.myc:1168` | `fn print_fn_decl_list_indented_acc(xs: Vec[FnDecl], acc: Bytes) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::print_object_decl` | fn | `lib/compiler/ambient.myc:1171` | `fn print_object_decl(od: ObjectDecl) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::print_use` | fn | `lib/compiler/ambient.myc:1184` | `fn print_use(u: UsePath) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::print_lower_decl` | fn | `lib/compiler/ambient.myc:1190` | `fn print_lower_decl(l: LowerDecl) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::print_derive_decl` | fn | `lib/compiler/ambient.myc:1196` | `fn print_derive_decl(d: DeriveDecl) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::print_item` | fn | `lib/compiler/ambient.myc:1200` | `fn print_item(i: Item) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::print_item_list_acc` | fn | `lib/compiler/ambient.myc:1214` | `fn print_item_list_acc(xs: Vec[Item], acc: Bytes) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::expand_to_source` | fn | `lib/compiler/ambient.myc:1220` | `fn expand_to_source(n: Nodule) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::print_nodule_list_acc` | fn | `lib/compiler/ambient.myc:1229` | `fn print_nodule_list_acc(xs: Vec[Nodule], acc: Bytes) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::expand_phylum_to_source` | fn | `lib/compiler/ambient.myc:1238` | `fn expand_phylum_to_source(ph: Phylum) => Bytes` | — | Empirical/Declared |
+| `compiler.ambient::Fp` | type | `lib/compiler/ambient.myc:1247` | `type Fp = FP(Binary{32}, Binary{32})` | — | Empirical/Declared |
+| `compiler.ambient::Fp::FP` | ctor | `lib/compiler/ambient.myc:1247` | `FP(Binary{32}, Binary{32})` | — | Empirical/Declared |
+| `compiler.ambient::fp_hash` | fn | `lib/compiler/ambient.myc:1249` | `fn fp_hash(fp: Fp) => Binary{32}` | — | Empirical/Declared |
+| `compiler.ambient::fp_count` | fn | `lib/compiler/ambient.myc:1250` | `fn fp_count(fp: Fp) => Binary{32}` | — | Empirical/Declared |
+| `compiler.ambient::rotl7` | fn | `lib/compiler/ambient.myc:1252` | `fn rotl7(x: Binary{32}) => Binary{32}` | — | Empirical/Declared |
+| `compiler.ambient::fp_tag` | fn | `lib/compiler/ambient.myc:1255` | `fn fp_tag(fp: Fp, tag: Binary{32}) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::fp_bytes` | fn | `lib/compiler/ambient.myc:1258` | `fn fp_bytes(fp: Fp, b: Bytes) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::fp_u32` | fn | `lib/compiler/ambient.myc:1261` | `fn fp_u32(fp: Fp, n: Binary{32}) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_vis` | fn | `lib/compiler/ambient.myc:1264` | `fn walk_vis(fp: Fp, v: Vis) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_paradigm` | fn | `lib/compiler/ambient.myc:1267` | `fn walk_paradigm(fp: Fp, p: Paradigm) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_scalar` | fn | `lib/compiler/ambient.myc:1275` | `fn walk_scalar(fp: Fp, s: Scalar) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_strength` | fn | `lib/compiler/ambient.myc:1283` | `fn walk_strength(fp: Fp, s: Strength) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_sparsity` | fn | `lib/compiler/ambient.myc:1291` | `fn walk_sparsity(fp: Fp, s: Sparsity) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_paramkind` | fn | `lib/compiler/ambient.myc:1297` | `fn walk_paramkind(fp: Fp, k: ParamKind) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_execmode` | fn | `lib/compiler/ambient.myc:1300` | `fn walk_execmode(fp: Fp, e: ExecutionMode) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_widthref` | fn | `lib/compiler/ambient.myc:1303` | `fn walk_widthref(fp: Fp, w: WidthRef) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_path` | fn | `lib/compiler/ambient.myc:1309` | `fn walk_path(fp: Fp, p: Path) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_bytes_list` | fn | `lib/compiler/ambient.myc:1312` | `fn walk_bytes_list(fp: Fp, xs: Vec[Bytes]) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_usepath` | fn | `lib/compiler/ambient.myc:1315` | `fn walk_usepath(fp: Fp, u: UsePath) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_bool` | fn | `lib/compiler/ambient.myc:1318` | `fn walk_bool(fp: Fp, b: Bool) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_ambientparams` | fn | `lib/compiler/ambient.myc:1321` | `fn walk_ambientparams(fp: Fp, a: AmbientParams) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_typeref` | fn | `lib/compiler/ambient.myc:1328` | `fn walk_typeref(fp: Fp, t: TypeRef) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_guarantee_opt` | fn | `lib/compiler/ambient.myc:1331` | `fn walk_guarantee_opt(fp: Fp, g: Option[Strength]) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_typeref_list` | fn | `lib/compiler/ambient.myc:1334` | `fn walk_typeref_list(fp: Fp, xs: Vec[TypeRef]) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_basetype` | fn | `lib/compiler/ambient.myc:1337` | `fn walk_basetype(fp: Fp, b: BaseType) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_traitref` | fn | `lib/compiler/ambient.myc:1353` | `fn walk_traitref(fp: Fp, t: TraitRef) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_traitref_list` | fn | `lib/compiler/ambient.myc:1356` | `fn walk_traitref_list(fp: Fp, xs: Vec[TraitRef]) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_typeparam` | fn | `lib/compiler/ambient.myc:1359` | `fn walk_typeparam(fp: Fp, t: TypeParam) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_typeparam_list` | fn | `lib/compiler/ambient.myc:1362` | `fn walk_typeparam_list(fp: Fp, xs: Vec[TypeParam]) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_param` | fn | `lib/compiler/ambient.myc:1365` | `fn walk_param(fp: Fp, p: Param) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_param_list` | fn | `lib/compiler/ambient.myc:1368` | `fn walk_param_list(fp: Fp, xs: Vec[Param]) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_bytes_list2` | fn | `lib/compiler/ambient.myc:1371` | `fn walk_bytes_list2(fp: Fp, xs: Vec[Bytes]) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_effectbudget_list` | fn | `lib/compiler/ambient.myc:1374` | `fn walk_effectbudget_list(fp: Fp, xs: Vec[EffectBudget]) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_fnsig` | fn | `lib/compiler/ambient.myc:1377` | `fn walk_fnsig(fp: Fp, s: FnSig) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_ctor_seal` | fn | `lib/compiler/ambient.myc:1392` | `fn walk_ctor_seal(fp: Fp, s: Bool) => Fp` | M-1027 / DN-104: the `sealed` (`priv`) flag joins the structural fingerprint via tag 110, folded ONLY when sealed — so an unsealed ctor's fingerprint stays byte-identical (lock-step with parse.myc). | Empirical/Declared |
+| `compiler.ambient::walk_ctor` | fn | `lib/compiler/ambient.myc:1395` | `fn walk_ctor(fp: Fp, c: Ctor) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_ctor_list` | fn | `lib/compiler/ambient.myc:1398` | `fn walk_ctor_list(fp: Fp, xs: Vec[Ctor]) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_typedecl` | fn | `lib/compiler/ambient.myc:1401` | `fn walk_typedecl(fp: Fp, t: TypeDecl) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_fnsig_list` | fn | `lib/compiler/ambient.myc:1404` | `fn walk_fnsig_list(fp: Fp, xs: Vec[FnSig]) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_traitdecl` | fn | `lib/compiler/ambient.myc:1407` | `fn walk_traitdecl(fp: Fp, t: TraitDecl) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_fndecl` | fn | `lib/compiler/ambient.myc:1410` | `fn walk_fndecl(fp: Fp, f: FnDecl) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_tier_opt` | fn | `lib/compiler/ambient.myc:1415` | `fn walk_tier_opt(fp: Fp, t: Option[ExecutionMode]) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_fndecl_list` | fn | `lib/compiler/ambient.myc:1418` | `fn walk_fndecl_list(fp: Fp, xs: Vec[FnDecl]) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_impldecl` | fn | `lib/compiler/ambient.myc:1421` | `fn walk_impldecl(fp: Fp, i: ImplDecl) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_viadecl` | fn | `lib/compiler/ambient.myc:1426` | `fn walk_viadecl(fp: Fp, v: ViaDecl) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_viadecl_list` | fn | `lib/compiler/ambient.myc:1429` | `fn walk_viadecl_list(fp: Fp, xs: Vec[ViaDecl]) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_impldecl_list` | fn | `lib/compiler/ambient.myc:1432` | `fn walk_impldecl_list(fp: Fp, xs: Vec[ImplDecl]) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_objectdecl` | fn | `lib/compiler/ambient.myc:1435` | `fn walk_objectdecl(fp: Fp, o: ObjectDecl) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_inherentimpldecl` | fn | `lib/compiler/ambient.myc:1449` | `fn walk_inherentimpldecl(fp: Fp, i: InherentImplDecl) => Fp` | DN-103 / M-1026: fold the impl-level type-parameter slot (unbounded names) first — matching how TypeDecl/TraitDecl/LowerDecl fold their `params` — so the fingerprint distinguishes `impl[T] Foo[T]` from `impl Foo[T]` (lock-step with the oracle `fp::inherentimpldecl`, no new tag-table entry). | Empirical/Declared |
+| `compiler.ambient::walk_lowerrhs` | fn | `lib/compiler/ambient.myc:1452` | `fn walk_lowerrhs(fp: Fp, r: LowerRhs) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_lowerdecl` | fn | `lib/compiler/ambient.myc:1458` | `fn walk_lowerdecl(fp: Fp, l: LowerDecl) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_derivedecl` | fn | `lib/compiler/ambient.myc:1461` | `fn walk_derivedecl(fp: Fp, d: DeriveDecl) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_expr_list` | fn | `lib/compiler/ambient.myc:1464` | `fn walk_expr_list(fp: Fp, xs: Vec[Expr]) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_literal` | fn | `lib/compiler/ambient.myc:1467` | `fn walk_literal(fp: Fp, l: Literal) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_pattern` | fn | `lib/compiler/ambient.myc:1479` | `fn walk_pattern(fp: Fp, p: Pattern) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_pattern_list` | fn | `lib/compiler/ambient.myc:1489` | `fn walk_pattern_list(fp: Fp, xs: Vec[Pattern]) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_arm` | fn | `lib/compiler/ambient.myc:1492` | `fn walk_arm(fp: Fp, a: Arm) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_arm_list` | fn | `lib/compiler/ambient.myc:1495` | `fn walk_arm_list(fp: Fp, xs: Vec[Arm]) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_expr_opt` | fn | `lib/compiler/ambient.myc:1498` | `fn walk_expr_opt(fp: Fp, e: Option[Expr]) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_hypha` | fn | `lib/compiler/ambient.myc:1501` | `fn walk_hypha(fp: Fp, h: Hypha) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_hypha_list` | fn | `lib/compiler/ambient.myc:1504` | `fn walk_hypha_list(fp: Fp, xs: Vec[Hypha]) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_typeref_opt` | fn | `lib/compiler/ambient.myc:1507` | `fn walk_typeref_opt(fp: Fp, t: Option[TypeRef]) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_expr` | fn | `lib/compiler/ambient.myc:1510` | `fn walk_expr(fp: Fp, e: Expr) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_item` | fn | `lib/compiler/ambient.myc:1534` | `fn walk_item(fp: Fp, i: Item) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_item_list` | fn | `lib/compiler/ambient.myc:1548` | `fn walk_item_list(fp: Fp, xs: Vec[Item]) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::walk_nodule` | fn | `lib/compiler/ambient.myc:1551` | `fn walk_nodule(fp: Fp, n: Nodule) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::fingerprint_nodule` | fn | `lib/compiler/ambient.myc:1554` | `fn fingerprint_nodule(n: Nodule) => Fp` | — | Empirical/Declared |
+| `compiler.ambient::stage4_verdict_fp` | fn | `lib/compiler/ambient.myc:1558` | `fn stage4_verdict_fp(fp: Fp, want_hash: Binary{32}, want_count: Binary{32}) => Binary{32}` | — | Empirical/Declared |
+| `compiler.ambient::resolve_err_kind` | fn | `lib/compiler/ambient.myc:1565` | `fn resolve_err_kind(n: Nodule) => Binary{32}` | resolve_err_kind: Ok => 0; Err(e) => the 5-way classification code (ambient_error_kind). | Empirical/Declared |
+| `compiler.ambient::test_input_1` | fn | `lib/compiler/ambient.myc:1573` | `fn test_input_1() => Nodule` | TC1: pure passthrough — no ambient anywhere; `resolve` must be the identity. | Empirical/Declared |
+| `compiler.ambient::test_input_2` | fn | `lib/compiler/ambient.myc:1581` | `fn test_input_2() => Nodule` | TC2: `default paradigm Binary` + a paradigm-less `{8}` return type resolves to `Binary{8}`. | Empirical/Declared |
+| `compiler.ambient::test_input_3` | fn | `lib/compiler/ambient.myc:1590` | `fn test_input_3() => Nodule` | TC3: `default paradigm Ternary`, same shape as TC2 but Ternary. | Empirical/Declared |
+| `compiler.ambient::test_input_4` | fn | `lib/compiler/ambient.myc:1599` | `fn test_input_4() => Nodule` | TC4: `default paradigm Dense` + `{4, F32}` resolves to `Dense{4, F32}`. | Empirical/Declared |
+| `compiler.ambient::test_input_5` | fn | `lib/compiler/ambient.myc:1608` | `fn test_input_5() => Nodule` | TC5: `default paradigm VSA` + `{"hrr", 128, Dense}` resolves to `VSA{"hrr", 128, Dense}`. | Empirical/Declared |
+| `compiler.ambient::test_input_6` | fn | `lib/compiler/ambient.myc:1617` | `fn test_input_6() => Nodule` | TC6: nested `with paradigm Ternary { … }` locally overrides a `Binary` nodule default. | Empirical/Declared |
+| `compiler.ambient::one32_as_64` | fn | `lib/compiler/ambient.myc:1625` | `fn one32_as_64() => Binary{64}` | — | Empirical/Declared |
+| `compiler.ambient::test_input_7` | fn | `lib/compiler/ambient.myc:1628` | `fn test_input_7() => Nodule` | TC7: an `object` declaration with a paradigm-less ctor field, resolved under a Binary default. | Empirical/Declared |
+| `compiler.ambient::test_input_8` | fn | `lib/compiler/ambient.myc:1638` | `fn test_input_8() => Nodule` | TC8: a mixed-expr body (let/if/match/app/tuple) under a Binary ambient — several bare decimals each resolve to `AmbientInt(Binary, _)`. | Empirical/Declared |
+| `compiler.ambient::test_input_err1` | fn | `lib/compiler/ambient.myc:1650` | `fn test_input_err1() => Nodule` | ERR1: two `default paradigm` declarations -> MultipleDefaults. | Empirical/Declared |
+| `compiler.ambient::test_input_err2` | fn | `lib/compiler/ambient.myc:1654` | `fn test_input_err2() => Nodule` | ERR2: a paradigm-less `{8}` with no enclosing ambient anywhere -> UnresolvedAmbient. | Empirical/Declared |
+| `compiler.ambient::test_input_err3` | fn | `lib/compiler/ambient.myc:1662` | `fn test_input_err3() => Nodule` | ERR3: a Binary ambient but a Dense-shaped `{4, F32}` param -> ParadigmShapeMismatch. | Empirical/Declared |
+| `compiler.ambient::test_input_err4` | fn | `lib/compiler/ambient.myc:1671` | `fn test_input_err4() => Nodule` | ERR4: a bare decimal under a Dense ambient -> BareDecimalNoEncoding. | Empirical/Declared |
+| `compiler.ambient::stage4_verdict_1` | fn | `lib/compiler/ambient.myc:1680` | `fn stage4_verdict_1(want_ok: Binary{32}, want_hash: Binary{32}, want_count: Binary{32}) => Binary{32}` | — | Empirical/Declared |
+| `compiler.ambient::stage4_verdict_2` | fn | `lib/compiler/ambient.myc:1686` | `fn stage4_verdict_2(want_ok: Binary{32}, want_hash: Binary{32}, want_count: Binary{32}) => Binary{32}` | — | Empirical/Declared |
+| `compiler.ambient::stage4_verdict_3` | fn | `lib/compiler/ambient.myc:1692` | `fn stage4_verdict_3(want_ok: Binary{32}, want_hash: Binary{32}, want_count: Binary{32}) => Binary{32}` | — | Empirical/Declared |
+| `compiler.ambient::stage4_verdict_4` | fn | `lib/compiler/ambient.myc:1698` | `fn stage4_verdict_4(want_ok: Binary{32}, want_hash: Binary{32}, want_count: Binary{32}) => Binary{32}` | — | Empirical/Declared |
+| `compiler.ambient::stage4_verdict_5` | fn | `lib/compiler/ambient.myc:1704` | `fn stage4_verdict_5(want_ok: Binary{32}, want_hash: Binary{32}, want_count: Binary{32}) => Binary{32}` | — | Empirical/Declared |
+| `compiler.ambient::stage4_verdict_6` | fn | `lib/compiler/ambient.myc:1710` | `fn stage4_verdict_6(want_ok: Binary{32}, want_hash: Binary{32}, want_count: Binary{32}) => Binary{32}` | — | Empirical/Declared |
+| `compiler.ambient::stage4_verdict_7` | fn | `lib/compiler/ambient.myc:1716` | `fn stage4_verdict_7(want_ok: Binary{32}, want_hash: Binary{32}, want_count: Binary{32}) => Binary{32}` | — | Empirical/Declared |
+| `compiler.ambient::stage4_verdict_8` | fn | `lib/compiler/ambient.myc:1722` | `fn stage4_verdict_8(want_ok: Binary{32}, want_hash: Binary{32}, want_count: Binary{32}) => Binary{32}` | — | Empirical/Declared |
+| `compiler.ambient::stage4_expand_verdict_1` | fn | `lib/compiler/ambient.myc:1731` | `fn stage4_expand_verdict_1(want_expand: Bytes) => Binary{32}` | — | Empirical/Declared |
+| `compiler.ambient::stage4_expand_verdict_2` | fn | `lib/compiler/ambient.myc:1734` | `fn stage4_expand_verdict_2(want_expand: Bytes) => Binary{32}` | — | Empirical/Declared |
+| `compiler.ambient::stage4_expand_verdict_resolved_2` | fn | `lib/compiler/ambient.myc:1737` | `fn stage4_expand_verdict_resolved_2(want_expand: Bytes) => Binary{32}` | — | Empirical/Declared |
+| `compiler.ambient::stage4_expand_verdict_7` | fn | `lib/compiler/ambient.myc:1743` | `fn stage4_expand_verdict_7(want_expand: Bytes) => Binary{32}` | — | Empirical/Declared |
+| `compiler.ambient::stage4_expand_verdict_resolved_7` | fn | `lib/compiler/ambient.myc:1746` | `fn stage4_expand_verdict_resolved_7(want_expand: Bytes) => Binary{32}` | — | Empirical/Declared |
+| `compiler.ambient::stage4_err_kind_1` | fn | `lib/compiler/ambient.myc:1753` | `fn stage4_err_kind_1() => Binary{32}` | — | Empirical/Declared |
+| `compiler.ambient::stage4_err_kind_2` | fn | `lib/compiler/ambient.myc:1754` | `fn stage4_err_kind_2() => Binary{32}` | — | Empirical/Declared |
+| `compiler.ambient::stage4_err_kind_3` | fn | `lib/compiler/ambient.myc:1755` | `fn stage4_err_kind_3() => Binary{32}` | — | Empirical/Declared |
+| `compiler.ambient::stage4_err_kind_4` | fn | `lib/compiler/ambient.myc:1756` | `fn stage4_err_kind_4() => Binary{32}` | — | Empirical/Declared |
 
 ### compiler.ast
 
@@ -526,130 +525,132 @@
 | `compiler.ast::fndecl_tier` | fn | `lib/compiler/ast.myc:347` | `fn fndecl_tier(f: FnDecl) => Option[ExecutionMode]` | — | Empirical/Declared |
 | `compiler.ast::fndecl_sig` | fn | `lib/compiler/ast.myc:350` | `fn fndecl_sig(f: FnDecl) => FnSig` | — | Empirical/Declared |
 | `compiler.ast::fndecl_body` | fn | `lib/compiler/ast.myc:353` | `fn fndecl_body(f: FnDecl) => Expr` | — | Empirical/Declared |
-| `compiler.ast::Ctor` | type | `lib/compiler/ast.myc:357` | `type Ctor = Ctr(Bytes, Vec[TypeRef])` | — | Empirical/Declared |
-| `compiler.ast::Ctor::Ctr` | ctor | `lib/compiler/ast.myc:357` | `Ctr(Bytes, Vec[TypeRef])` | — | Empirical/Declared |
-| `compiler.ast::ctor_name` | fn | `lib/compiler/ast.myc:359` | `fn ctor_name(c: Ctor) => Bytes` | — | Empirical/Declared |
-| `compiler.ast::ctor_fields` | fn | `lib/compiler/ast.myc:362` | `fn ctor_fields(c: Ctor) => Vec[TypeRef]` | — | Empirical/Declared |
-| `compiler.ast::TypeDecl` | type | `lib/compiler/ast.myc:366` | `type TypeDecl = TD(Vis, Bytes, Vec[Bytes], Vec[Ctor])` | — | Empirical/Declared |
-| `compiler.ast::TypeDecl::TD` | ctor | `lib/compiler/ast.myc:366` | `TD(Vis, Bytes, Vec[Bytes], Vec[Ctor])` | — | Empirical/Declared |
-| `compiler.ast::typedecl_vis` | fn | `lib/compiler/ast.myc:368` | `fn typedecl_vis(t: TypeDecl) => Vis` | — | Empirical/Declared |
-| `compiler.ast::typedecl_name` | fn | `lib/compiler/ast.myc:371` | `fn typedecl_name(t: TypeDecl) => Bytes` | — | Empirical/Declared |
-| `compiler.ast::typedecl_params` | fn | `lib/compiler/ast.myc:374` | `fn typedecl_params(t: TypeDecl) => Vec[Bytes]` | — | Empirical/Declared |
-| `compiler.ast::typedecl_ctors` | fn | `lib/compiler/ast.myc:377` | `fn typedecl_ctors(t: TypeDecl) => Vec[Ctor]` | — | Empirical/Declared |
-| `compiler.ast::TraitDecl` | type | `lib/compiler/ast.myc:381` | `type TraitDecl = TrD(Vis, Bytes, Vec[Bytes], Vec[FnSig])` | — | Empirical/Declared |
-| `compiler.ast::TraitDecl::TrD` | ctor | `lib/compiler/ast.myc:381` | `TrD(Vis, Bytes, Vec[Bytes], Vec[FnSig])` | — | Empirical/Declared |
-| `compiler.ast::traitdecl_vis` | fn | `lib/compiler/ast.myc:383` | `fn traitdecl_vis(t: TraitDecl) => Vis` | — | Empirical/Declared |
-| `compiler.ast::traitdecl_name` | fn | `lib/compiler/ast.myc:386` | `fn traitdecl_name(t: TraitDecl) => Bytes` | — | Empirical/Declared |
-| `compiler.ast::traitdecl_params` | fn | `lib/compiler/ast.myc:389` | `fn traitdecl_params(t: TraitDecl) => Vec[Bytes]` | — | Empirical/Declared |
-| `compiler.ast::traitdecl_sigs` | fn | `lib/compiler/ast.myc:392` | `fn traitdecl_sigs(t: TraitDecl) => Vec[FnSig]` | — | Empirical/Declared |
-| `compiler.ast::ImplDecl` | type | `lib/compiler/ast.myc:396` | `type ImplDecl = ImD(Bytes, Vec[TypeRef], TypeRef, Vec[FnDecl])` | — | Empirical/Declared |
-| `compiler.ast::ImplDecl::ImD` | ctor | `lib/compiler/ast.myc:396` | `ImD(Bytes, Vec[TypeRef], TypeRef, Vec[FnDecl])` | — | Empirical/Declared |
-| `compiler.ast::impldecl_trait_name` | fn | `lib/compiler/ast.myc:398` | `fn impldecl_trait_name(i: ImplDecl) => Bytes` | — | Empirical/Declared |
-| `compiler.ast::impldecl_trait_args` | fn | `lib/compiler/ast.myc:401` | `fn impldecl_trait_args(i: ImplDecl) => Vec[TypeRef]` | — | Empirical/Declared |
-| `compiler.ast::impldecl_for_ty` | fn | `lib/compiler/ast.myc:404` | `fn impldecl_for_ty(i: ImplDecl) => TypeRef` | — | Empirical/Declared |
-| `compiler.ast::impldecl_methods` | fn | `lib/compiler/ast.myc:407` | `fn impldecl_methods(i: ImplDecl) => Vec[FnDecl]` | — | Empirical/Declared |
-| `compiler.ast::ViaDecl` | type | `lib/compiler/ast.myc:411` | `type ViaDecl = VD(Binary{32}, Bytes, Vec[TypeRef])` | — | Empirical/Declared |
-| `compiler.ast::ViaDecl::VD` | ctor | `lib/compiler/ast.myc:411` | `VD(Binary{32}, Bytes, Vec[TypeRef])` | — | Empirical/Declared |
-| `compiler.ast::viadecl_field_idx` | fn | `lib/compiler/ast.myc:413` | `fn viadecl_field_idx(v: ViaDecl) => Binary{32}` | — | Empirical/Declared |
-| `compiler.ast::viadecl_trait_name` | fn | `lib/compiler/ast.myc:416` | `fn viadecl_trait_name(v: ViaDecl) => Bytes` | — | Empirical/Declared |
-| `compiler.ast::viadecl_trait_args` | fn | `lib/compiler/ast.myc:419` | `fn viadecl_trait_args(v: ViaDecl) => Vec[TypeRef]` | — | Empirical/Declared |
-| `compiler.ast::ObjectDecl` | type | `lib/compiler/ast.myc:423` | `type ObjectDecl = OD(Vis, Bytes, Vec[Bytes], Ctor, Vec[ViaDecl], Vec[ImplDecl], Vec[FnDecl])` | — | Empirical/Declared |
-| `compiler.ast::ObjectDecl::OD` | ctor | `lib/compiler/ast.myc:423` | `OD(Vis, Bytes, Vec[Bytes], Ctor, Vec[ViaDecl], Vec[ImplDecl], Vec[FnDecl])` | — | Empirical/Declared |
-| `compiler.ast::objectdecl_vis` | fn | `lib/compiler/ast.myc:425` | `fn objectdecl_vis(o: ObjectDecl) => Vis` | — | Empirical/Declared |
-| `compiler.ast::objectdecl_name` | fn | `lib/compiler/ast.myc:428` | `fn objectdecl_name(o: ObjectDecl) => Bytes` | — | Empirical/Declared |
-| `compiler.ast::objectdecl_params` | fn | `lib/compiler/ast.myc:431` | `fn objectdecl_params(o: ObjectDecl) => Vec[Bytes]` | — | Empirical/Declared |
-| `compiler.ast::objectdecl_ctor` | fn | `lib/compiler/ast.myc:434` | `fn objectdecl_ctor(o: ObjectDecl) => Ctor` | — | Empirical/Declared |
-| `compiler.ast::objectdecl_via_decls` | fn | `lib/compiler/ast.myc:437` | `fn objectdecl_via_decls(o: ObjectDecl) => Vec[ViaDecl]` | — | Empirical/Declared |
-| `compiler.ast::objectdecl_impls` | fn | `lib/compiler/ast.myc:440` | `fn objectdecl_impls(o: ObjectDecl) => Vec[ImplDecl]` | — | Empirical/Declared |
-| `compiler.ast::objectdecl_fns` | fn | `lib/compiler/ast.myc:443` | `fn objectdecl_fns(o: ObjectDecl) => Vec[FnDecl]` | — | Empirical/Declared |
-| `compiler.ast::InherentImplDecl` | type | `lib/compiler/ast.myc:447` | `type InherentImplDecl = IID(TypeRef, Vec[FnDecl])` | — | Empirical/Declared |
-| `compiler.ast::InherentImplDecl::IID` | ctor | `lib/compiler/ast.myc:447` | `IID(TypeRef, Vec[FnDecl])` | — | Empirical/Declared |
-| `compiler.ast::inherentimpldecl_for_ty` | fn | `lib/compiler/ast.myc:449` | `fn inherentimpldecl_for_ty(i: InherentImplDecl) => TypeRef` | — | Empirical/Declared |
-| `compiler.ast::inherentimpldecl_methods` | fn | `lib/compiler/ast.myc:452` | `fn inherentimpldecl_methods(i: InherentImplDecl) => Vec[FnDecl]` | — | Empirical/Declared |
-| `compiler.ast::LowerRhs` | type | `lib/compiler/ast.myc:457` | `type LowerRhs = LRExpr(Expr) \| LRImpl(ImplDecl)` | — | Empirical/Declared |
-| `compiler.ast::LowerRhs::LRExpr` | ctor | `lib/compiler/ast.myc:457` | `LRExpr(Expr)` | — | Empirical/Declared |
-| `compiler.ast::LowerRhs::LRImpl` | ctor | `lib/compiler/ast.myc:457` | `LRImpl(ImplDecl)` | — | Empirical/Declared |
-| `compiler.ast::LowerDecl` | type | `lib/compiler/ast.myc:460` | `type LowerDecl = LD(Bytes, Vec[Bytes], LowerRhs)` | — | Empirical/Declared |
-| `compiler.ast::LowerDecl::LD` | ctor | `lib/compiler/ast.myc:460` | `LD(Bytes, Vec[Bytes], LowerRhs)` | — | Empirical/Declared |
-| `compiler.ast::lowerdecl_name` | fn | `lib/compiler/ast.myc:462` | `fn lowerdecl_name(l: LowerDecl) => Bytes` | — | Empirical/Declared |
-| `compiler.ast::lowerdecl_params` | fn | `lib/compiler/ast.myc:465` | `fn lowerdecl_params(l: LowerDecl) => Vec[Bytes]` | — | Empirical/Declared |
-| `compiler.ast::lowerdecl_rhs` | fn | `lib/compiler/ast.myc:468` | `fn lowerdecl_rhs(l: LowerDecl) => LowerRhs` | — | Empirical/Declared |
-| `compiler.ast::lowerdecl_expr_rhs` | fn | `lib/compiler/ast.myc:472` | `fn lowerdecl_expr_rhs(l: LowerDecl) => Option[Expr]` | lowerdecl_expr_rhs: mirrors `LowerDecl::expr_rhs`. | Empirical/Declared |
-| `compiler.ast::lowerdecl_impl_rhs` | fn | `lib/compiler/ast.myc:479` | `fn lowerdecl_impl_rhs(l: LowerDecl) => Option[ImplDecl]` | lowerdecl_impl_rhs: mirrors `LowerDecl::impl_rhs`. | Empirical/Declared |
-| `compiler.ast::DeriveDecl` | type | `lib/compiler/ast.myc:486` | `type DeriveDecl = DD(Bytes, TypeRef)` | — | Empirical/Declared |
-| `compiler.ast::DeriveDecl::DD` | ctor | `lib/compiler/ast.myc:486` | `DD(Bytes, TypeRef)` | — | Empirical/Declared |
-| `compiler.ast::derivedecl_name` | fn | `lib/compiler/ast.myc:488` | `fn derivedecl_name(d: DeriveDecl) => Bytes` | — | Empirical/Declared |
-| `compiler.ast::derivedecl_for_ty` | fn | `lib/compiler/ast.myc:491` | `fn derivedecl_for_ty(d: DeriveDecl) => TypeRef` | — | Empirical/Declared |
-| `compiler.ast::Item` | type | `lib/compiler/ast.myc:496` | `type Item = Use(UsePath) \| Default(Paradigm) \| Type(TypeDecl) \| Trait(TraitDecl) \| Impl(ImplDecl) \| Fn(FnDecl) \| Object(ObjectDecl) \| Lower(LowerDecl) \| Derive(DeriveDecl) \| InherentImpl(InherentImplDecl)` | — | Empirical/Declared |
-| `compiler.ast::Item::Use` | ctor | `lib/compiler/ast.myc:497` | `Use(UsePath)` | — | Empirical/Declared |
-| `compiler.ast::Item::Default` | ctor | `lib/compiler/ast.myc:498` | `Default(Paradigm)` | — | Empirical/Declared |
-| `compiler.ast::Item::Type` | ctor | `lib/compiler/ast.myc:499` | `Type(TypeDecl)` | — | Empirical/Declared |
-| `compiler.ast::Item::Trait` | ctor | `lib/compiler/ast.myc:500` | `Trait(TraitDecl)` | — | Empirical/Declared |
-| `compiler.ast::Item::Impl` | ctor | `lib/compiler/ast.myc:501` | `Impl(ImplDecl)` | — | Empirical/Declared |
-| `compiler.ast::Item::Fn` | ctor | `lib/compiler/ast.myc:502` | `Fn(FnDecl)` | — | Empirical/Declared |
-| `compiler.ast::Item::Object` | ctor | `lib/compiler/ast.myc:503` | `Object(ObjectDecl)` | — | Empirical/Declared |
-| `compiler.ast::Item::Lower` | ctor | `lib/compiler/ast.myc:504` | `Lower(LowerDecl)` | — | Empirical/Declared |
-| `compiler.ast::Item::Derive` | ctor | `lib/compiler/ast.myc:505` | `Derive(DeriveDecl)` | — | Empirical/Declared |
-| `compiler.ast::Item::InherentImpl` | ctor | `lib/compiler/ast.myc:506` | `InherentImpl(InherentImplDecl)` | — | Empirical/Declared |
-| `compiler.ast::Nodule` | type | `lib/compiler/ast.myc:510` | `type Nodule = Nd(Path, Bool, Vec[Item])` | — | Empirical/Declared |
-| `compiler.ast::Nodule::Nd` | ctor | `lib/compiler/ast.myc:510` | `Nd(Path, Bool, Vec[Item])` | — | Empirical/Declared |
-| `compiler.ast::nodule_path` | fn | `lib/compiler/ast.myc:512` | `fn nodule_path(n: Nodule) => Path` | — | Empirical/Declared |
-| `compiler.ast::nodule_std_sys` | fn | `lib/compiler/ast.myc:515` | `fn nodule_std_sys(n: Nodule) => Bool` | — | Empirical/Declared |
-| `compiler.ast::nodule_items` | fn | `lib/compiler/ast.myc:518` | `fn nodule_items(n: Nodule) => Vec[Item]` | — | Empirical/Declared |
-| `compiler.ast::Phylum` | type | `lib/compiler/ast.myc:522` | `type Phylum = Phy(Option[Path], Vec[Nodule])` | — | Empirical/Declared |
-| `compiler.ast::Phylum::Phy` | ctor | `lib/compiler/ast.myc:522` | `Phy(Option[Path], Vec[Nodule])` | — | Empirical/Declared |
-| `compiler.ast::phylum_path` | fn | `lib/compiler/ast.myc:524` | `fn phylum_path(p: Phylum) => Option[Path]` | — | Empirical/Declared |
-| `compiler.ast::phylum_nodules` | fn | `lib/compiler/ast.myc:527` | `fn phylum_nodules(p: Phylum) => Vec[Nodule]` | — | Empirical/Declared |
-| `compiler.ast::phylum_of_one` | fn | `lib/compiler/ast.myc:531` | `fn phylum_of_one(n: Nodule) => Phylum` | phylum_of_one: mirrors `Phylum::of_one` — a phylum-of-one wrapping a single bare nodule. | Empirical/Declared |
-| `compiler.ast::Literal` | type | `lib/compiler/ast.myc:537` | `type Literal = Bin(Bytes) \| Trit(Bytes) \| Int(Binary{64}) \| AmbientInt(Paradigm, Binary{64}) \| List(Vec[Expr]) \| LBytes(Bytes) \| Str(Bytes) \| LFloat(Bytes)` | — | Empirical/Declared |
-| `compiler.ast::Literal::Bin` | ctor | `lib/compiler/ast.myc:538` | `Bin(Bytes)` | — | Empirical/Declared |
-| `compiler.ast::Literal::Trit` | ctor | `lib/compiler/ast.myc:539` | `Trit(Bytes)` | — | Empirical/Declared |
-| `compiler.ast::Literal::Int` | ctor | `lib/compiler/ast.myc:540` | `Int(Binary{64})` | — | Empirical/Declared |
-| `compiler.ast::Literal::AmbientInt` | ctor | `lib/compiler/ast.myc:541` | `AmbientInt(Paradigm, Binary{64})` | — | Empirical/Declared |
-| `compiler.ast::Literal::List` | ctor | `lib/compiler/ast.myc:542` | `List(Vec[Expr])` | — | Empirical/Declared |
-| `compiler.ast::Literal::LBytes` | ctor | `lib/compiler/ast.myc:543` | `LBytes(Bytes)` | — | Empirical/Declared |
-| `compiler.ast::Literal::Str` | ctor | `lib/compiler/ast.myc:544` | `Str(Bytes)` | — | Empirical/Declared |
-| `compiler.ast::Literal::LFloat` | ctor | `lib/compiler/ast.myc:545` | `LFloat(Bytes)` | — | Empirical/Declared |
-| `compiler.ast::literal_binary` | fn | `lib/compiler/ast.myc:548` | `fn literal_binary(digits: Bytes) => Literal` | literal_binary: mirrors `Literal::binary`. | Empirical/Declared |
-| `compiler.ast::literal_ternary` | fn | `lib/compiler/ast.myc:552` | `fn literal_ternary(trits: Bytes) => Literal` | literal_ternary: mirrors `Literal::ternary`. | Empirical/Declared |
-| `compiler.ast::literal_string` | fn | `lib/compiler/ast.myc:556` | `fn literal_string(content: Bytes) => Literal` | literal_string: mirrors `Literal::string`. | Empirical/Declared |
-| `compiler.ast::literal_float` | fn | `lib/compiler/ast.myc:560` | `fn literal_float(text: Bytes) => Literal` | literal_float: mirrors `Literal::float`. | Empirical/Declared |
-| `compiler.ast::Pattern` | type | `lib/compiler/ast.myc:565` | `type Pattern = PWildcard \| PLit(Literal) \| PCtor(Bytes, Vec[Pattern]) \| PIdent(Bytes) \| PTuple(Vec[Pattern]) \| POr(Vec[Pattern])` | — | Empirical/Declared |
-| `compiler.ast::Pattern::PWildcard` | ctor | `lib/compiler/ast.myc:566` | `PWildcard` | — | Empirical/Declared |
-| `compiler.ast::Pattern::PLit` | ctor | `lib/compiler/ast.myc:567` | `PLit(Literal)` | — | Empirical/Declared |
-| `compiler.ast::Pattern::PCtor` | ctor | `lib/compiler/ast.myc:568` | `PCtor(Bytes, Vec[Pattern])` | — | Empirical/Declared |
-| `compiler.ast::Pattern::PIdent` | ctor | `lib/compiler/ast.myc:569` | `PIdent(Bytes)` | — | Empirical/Declared |
-| `compiler.ast::Pattern::PTuple` | ctor | `lib/compiler/ast.myc:570` | `PTuple(Vec[Pattern])` | — | Empirical/Declared |
-| `compiler.ast::Pattern::POr` | ctor | `lib/compiler/ast.myc:571` | `POr(Vec[Pattern])` | — | Empirical/Declared |
-| `compiler.ast::Arm` | type | `lib/compiler/ast.myc:574` | `type Arm = Ar(Pattern, Expr)` | — | Empirical/Declared |
-| `compiler.ast::Arm::Ar` | ctor | `lib/compiler/ast.myc:574` | `Ar(Pattern, Expr)` | — | Empirical/Declared |
-| `compiler.ast::arm_pattern` | fn | `lib/compiler/ast.myc:576` | `fn arm_pattern(a: Arm) => Pattern` | — | Empirical/Declared |
-| `compiler.ast::arm_body` | fn | `lib/compiler/ast.myc:579` | `fn arm_body(a: Arm) => Expr` | — | Empirical/Declared |
-| `compiler.ast::Hypha` | type | `lib/compiler/ast.myc:584` | `type Hypha = Hy(Option[Expr], Expr)` | — | Empirical/Declared |
-| `compiler.ast::Hypha::Hy` | ctor | `lib/compiler/ast.myc:584` | `Hy(Option[Expr], Expr)` | — | Empirical/Declared |
-| `compiler.ast::hypha_forage` | fn | `lib/compiler/ast.myc:586` | `fn hypha_forage(h: Hypha) => Option[Expr]` | — | Empirical/Declared |
-| `compiler.ast::hypha_body` | fn | `lib/compiler/ast.myc:589` | `fn hypha_body(h: Hypha) => Expr` | — | Empirical/Declared |
-| `compiler.ast::Expr` | type | `lib/compiler/ast.myc:599` | `type Expr = Let(Bytes, Option[TypeRef], Expr, Expr) \| If(Expr, Expr, Expr) \| Match(Expr, Vec[Arm]) \| For(Bytes, Expr, Bytes, Expr, Expr) \| Swap(Expr, TypeRef, Path) \| WithParadigm(Paradigm, Expr) \| Wild(Expr) \| Spore(Expr) \| Wrapping(Expr) \| Consume(Expr) \| Try(Expr) \| Colony(Vec[Hypha]) \| Lambda(Vec[Param], Expr) \| App(Expr, Vec[Expr]) \| Fuse(Expr, Expr) \| Reclaim(Expr, Expr) \| Path(Path) \| Lit(Literal) \| Ascribe(Expr, TypeRef) \| TupleLit(Vec[Expr])` | — | Empirical/Declared |
-| `compiler.ast::Expr::Let` | ctor | `lib/compiler/ast.myc:600` | `Let(Bytes, Option[TypeRef], Expr, Expr)` | — | Empirical/Declared |
-| `compiler.ast::Expr::If` | ctor | `lib/compiler/ast.myc:601` | `If(Expr, Expr, Expr)` | — | Empirical/Declared |
-| `compiler.ast::Expr::Match` | ctor | `lib/compiler/ast.myc:602` | `Match(Expr, Vec[Arm])` | — | Empirical/Declared |
-| `compiler.ast::Expr::For` | ctor | `lib/compiler/ast.myc:603` | `For(Bytes, Expr, Bytes, Expr, Expr)` | — | Empirical/Declared |
-| `compiler.ast::Expr::Path` | ctor | `lib/compiler/ast.myc:604` | `Path(Path)` | — | Empirical/Declared |
-| `compiler.ast::Expr::Swap` | ctor | `lib/compiler/ast.myc:604` | `Swap(Expr, TypeRef, Path)` | — | Empirical/Declared |
-| `compiler.ast::Expr::WithParadigm` | ctor | `lib/compiler/ast.myc:605` | `WithParadigm(Paradigm, Expr)` | — | Empirical/Declared |
-| `compiler.ast::Expr::Wild` | ctor | `lib/compiler/ast.myc:606` | `Wild(Expr)` | — | Empirical/Declared |
-| `compiler.ast::Expr::Spore` | ctor | `lib/compiler/ast.myc:607` | `Spore(Expr)` | — | Empirical/Declared |
-| `compiler.ast::Expr::Wrapping` | ctor | `lib/compiler/ast.myc:608` | `Wrapping(Expr)` | — | Empirical/Declared |
-| `compiler.ast::Expr::Consume` | ctor | `lib/compiler/ast.myc:609` | `Consume(Expr)` | — | Empirical/Declared |
-| `compiler.ast::Expr::Try` | ctor | `lib/compiler/ast.myc:612` | `Try(Expr)` | — | Empirical/Declared |
-| `compiler.ast::Expr::Colony` | ctor | `lib/compiler/ast.myc:615` | `Colony(Vec[Hypha])` | — | Empirical/Declared |
-| `compiler.ast::Expr::Lambda` | ctor | `lib/compiler/ast.myc:616` | `Lambda(Vec[Param], Expr)` | — | Empirical/Declared |
-| `compiler.ast::Expr::App` | ctor | `lib/compiler/ast.myc:617` | `App(Expr, Vec[Expr])` | — | Empirical/Declared |
-| `compiler.ast::Expr::Fuse` | ctor | `lib/compiler/ast.myc:618` | `Fuse(Expr, Expr)` | — | Empirical/Declared |
-| `compiler.ast::Expr::Reclaim` | ctor | `lib/compiler/ast.myc:619` | `Reclaim(Expr, Expr)` | — | Empirical/Declared |
-| `compiler.ast::Expr::Lit` | ctor | `lib/compiler/ast.myc:621` | `Lit(Literal)` | — | Empirical/Declared |
-| `compiler.ast::Expr::Ascribe` | ctor | `lib/compiler/ast.myc:622` | `Ascribe(Expr, TypeRef)` | — | Empirical/Declared |
-| `compiler.ast::Expr::TupleLit` | ctor | `lib/compiler/ast.myc:623` | `TupleLit(Vec[Expr])` | — | Empirical/Declared |
+| `compiler.ast::Ctor` | type | `lib/compiler/ast.myc:360` | `type Ctor = Ctr(Bytes, Vec[TypeRef], Bool)` | — | Empirical/Declared |
+| `compiler.ast::Ctor::Ctr` | ctor | `lib/compiler/ast.myc:360` | `Ctr(Bytes, Vec[TypeRef], Bool)` | — | Empirical/Declared |
+| `compiler.ast::ctor_name` | fn | `lib/compiler/ast.myc:362` | `fn ctor_name(c: Ctor) => Bytes` | — | Empirical/Declared |
+| `compiler.ast::ctor_fields` | fn | `lib/compiler/ast.myc:365` | `fn ctor_fields(c: Ctor) => Vec[TypeRef]` | — | Empirical/Declared |
+| `compiler.ast::ctor_sealed` | fn | `lib/compiler/ast.myc:369` | `fn ctor_sealed(c: Ctor) => Bool` | ctor_sealed: the per-constructor `priv` seal (M-1027 / DN-104). | Empirical/Declared |
+| `compiler.ast::TypeDecl` | type | `lib/compiler/ast.myc:373` | `type TypeDecl = TD(Vis, Bytes, Vec[Bytes], Vec[Ctor])` | — | Empirical/Declared |
+| `compiler.ast::TypeDecl::TD` | ctor | `lib/compiler/ast.myc:373` | `TD(Vis, Bytes, Vec[Bytes], Vec[Ctor])` | — | Empirical/Declared |
+| `compiler.ast::typedecl_vis` | fn | `lib/compiler/ast.myc:375` | `fn typedecl_vis(t: TypeDecl) => Vis` | — | Empirical/Declared |
+| `compiler.ast::typedecl_name` | fn | `lib/compiler/ast.myc:378` | `fn typedecl_name(t: TypeDecl) => Bytes` | — | Empirical/Declared |
+| `compiler.ast::typedecl_params` | fn | `lib/compiler/ast.myc:381` | `fn typedecl_params(t: TypeDecl) => Vec[Bytes]` | — | Empirical/Declared |
+| `compiler.ast::typedecl_ctors` | fn | `lib/compiler/ast.myc:384` | `fn typedecl_ctors(t: TypeDecl) => Vec[Ctor]` | — | Empirical/Declared |
+| `compiler.ast::TraitDecl` | type | `lib/compiler/ast.myc:388` | `type TraitDecl = TrD(Vis, Bytes, Vec[Bytes], Vec[FnSig])` | — | Empirical/Declared |
+| `compiler.ast::TraitDecl::TrD` | ctor | `lib/compiler/ast.myc:388` | `TrD(Vis, Bytes, Vec[Bytes], Vec[FnSig])` | — | Empirical/Declared |
+| `compiler.ast::traitdecl_vis` | fn | `lib/compiler/ast.myc:390` | `fn traitdecl_vis(t: TraitDecl) => Vis` | — | Empirical/Declared |
+| `compiler.ast::traitdecl_name` | fn | `lib/compiler/ast.myc:393` | `fn traitdecl_name(t: TraitDecl) => Bytes` | — | Empirical/Declared |
+| `compiler.ast::traitdecl_params` | fn | `lib/compiler/ast.myc:396` | `fn traitdecl_params(t: TraitDecl) => Vec[Bytes]` | — | Empirical/Declared |
+| `compiler.ast::traitdecl_sigs` | fn | `lib/compiler/ast.myc:399` | `fn traitdecl_sigs(t: TraitDecl) => Vec[FnSig]` | — | Empirical/Declared |
+| `compiler.ast::ImplDecl` | type | `lib/compiler/ast.myc:403` | `type ImplDecl = ImD(Bytes, Vec[TypeRef], TypeRef, Vec[FnDecl])` | — | Empirical/Declared |
+| `compiler.ast::ImplDecl::ImD` | ctor | `lib/compiler/ast.myc:403` | `ImD(Bytes, Vec[TypeRef], TypeRef, Vec[FnDecl])` | — | Empirical/Declared |
+| `compiler.ast::impldecl_trait_name` | fn | `lib/compiler/ast.myc:405` | `fn impldecl_trait_name(i: ImplDecl) => Bytes` | — | Empirical/Declared |
+| `compiler.ast::impldecl_trait_args` | fn | `lib/compiler/ast.myc:408` | `fn impldecl_trait_args(i: ImplDecl) => Vec[TypeRef]` | — | Empirical/Declared |
+| `compiler.ast::impldecl_for_ty` | fn | `lib/compiler/ast.myc:411` | `fn impldecl_for_ty(i: ImplDecl) => TypeRef` | — | Empirical/Declared |
+| `compiler.ast::impldecl_methods` | fn | `lib/compiler/ast.myc:414` | `fn impldecl_methods(i: ImplDecl) => Vec[FnDecl]` | — | Empirical/Declared |
+| `compiler.ast::ViaDecl` | type | `lib/compiler/ast.myc:418` | `type ViaDecl = VD(Binary{32}, Bytes, Vec[TypeRef])` | — | Empirical/Declared |
+| `compiler.ast::ViaDecl::VD` | ctor | `lib/compiler/ast.myc:418` | `VD(Binary{32}, Bytes, Vec[TypeRef])` | — | Empirical/Declared |
+| `compiler.ast::viadecl_field_idx` | fn | `lib/compiler/ast.myc:420` | `fn viadecl_field_idx(v: ViaDecl) => Binary{32}` | — | Empirical/Declared |
+| `compiler.ast::viadecl_trait_name` | fn | `lib/compiler/ast.myc:423` | `fn viadecl_trait_name(v: ViaDecl) => Bytes` | — | Empirical/Declared |
+| `compiler.ast::viadecl_trait_args` | fn | `lib/compiler/ast.myc:426` | `fn viadecl_trait_args(v: ViaDecl) => Vec[TypeRef]` | — | Empirical/Declared |
+| `compiler.ast::ObjectDecl` | type | `lib/compiler/ast.myc:430` | `type ObjectDecl = OD(Vis, Bytes, Vec[Bytes], Ctor, Vec[ViaDecl], Vec[ImplDecl], Vec[FnDecl])` | — | Empirical/Declared |
+| `compiler.ast::ObjectDecl::OD` | ctor | `lib/compiler/ast.myc:430` | `OD(Vis, Bytes, Vec[Bytes], Ctor, Vec[ViaDecl], Vec[ImplDecl], Vec[FnDecl])` | — | Empirical/Declared |
+| `compiler.ast::objectdecl_vis` | fn | `lib/compiler/ast.myc:432` | `fn objectdecl_vis(o: ObjectDecl) => Vis` | — | Empirical/Declared |
+| `compiler.ast::objectdecl_name` | fn | `lib/compiler/ast.myc:435` | `fn objectdecl_name(o: ObjectDecl) => Bytes` | — | Empirical/Declared |
+| `compiler.ast::objectdecl_params` | fn | `lib/compiler/ast.myc:438` | `fn objectdecl_params(o: ObjectDecl) => Vec[Bytes]` | — | Empirical/Declared |
+| `compiler.ast::objectdecl_ctor` | fn | `lib/compiler/ast.myc:441` | `fn objectdecl_ctor(o: ObjectDecl) => Ctor` | — | Empirical/Declared |
+| `compiler.ast::objectdecl_via_decls` | fn | `lib/compiler/ast.myc:444` | `fn objectdecl_via_decls(o: ObjectDecl) => Vec[ViaDecl]` | — | Empirical/Declared |
+| `compiler.ast::objectdecl_impls` | fn | `lib/compiler/ast.myc:447` | `fn objectdecl_impls(o: ObjectDecl) => Vec[ImplDecl]` | — | Empirical/Declared |
+| `compiler.ast::objectdecl_fns` | fn | `lib/compiler/ast.myc:450` | `fn objectdecl_fns(o: ObjectDecl) => Vec[FnDecl]` | — | Empirical/Declared |
+| `compiler.ast::InherentImplDecl` | type | `lib/compiler/ast.myc:456` | `type InherentImplDecl = IID(Vec[Bytes], TypeRef, Vec[FnDecl])` | — | Empirical/Declared |
+| `compiler.ast::InherentImplDecl::IID` | ctor | `lib/compiler/ast.myc:456` | `IID(Vec[Bytes], TypeRef, Vec[FnDecl])` | — | Empirical/Declared |
+| `compiler.ast::inherentimpldecl_params` | fn | `lib/compiler/ast.myc:458` | `fn inherentimpldecl_params(i: InherentImplDecl) => Vec[Bytes]` | — | Empirical/Declared |
+| `compiler.ast::inherentimpldecl_for_ty` | fn | `lib/compiler/ast.myc:461` | `fn inherentimpldecl_for_ty(i: InherentImplDecl) => TypeRef` | — | Empirical/Declared |
+| `compiler.ast::inherentimpldecl_methods` | fn | `lib/compiler/ast.myc:464` | `fn inherentimpldecl_methods(i: InherentImplDecl) => Vec[FnDecl]` | — | Empirical/Declared |
+| `compiler.ast::LowerRhs` | type | `lib/compiler/ast.myc:469` | `type LowerRhs = LRExpr(Expr) \| LRImpl(ImplDecl)` | — | Empirical/Declared |
+| `compiler.ast::LowerRhs::LRExpr` | ctor | `lib/compiler/ast.myc:469` | `LRExpr(Expr)` | — | Empirical/Declared |
+| `compiler.ast::LowerRhs::LRImpl` | ctor | `lib/compiler/ast.myc:469` | `LRImpl(ImplDecl)` | — | Empirical/Declared |
+| `compiler.ast::LowerDecl` | type | `lib/compiler/ast.myc:472` | `type LowerDecl = LD(Bytes, Vec[Bytes], LowerRhs)` | — | Empirical/Declared |
+| `compiler.ast::LowerDecl::LD` | ctor | `lib/compiler/ast.myc:472` | `LD(Bytes, Vec[Bytes], LowerRhs)` | — | Empirical/Declared |
+| `compiler.ast::lowerdecl_name` | fn | `lib/compiler/ast.myc:474` | `fn lowerdecl_name(l: LowerDecl) => Bytes` | — | Empirical/Declared |
+| `compiler.ast::lowerdecl_params` | fn | `lib/compiler/ast.myc:477` | `fn lowerdecl_params(l: LowerDecl) => Vec[Bytes]` | — | Empirical/Declared |
+| `compiler.ast::lowerdecl_rhs` | fn | `lib/compiler/ast.myc:480` | `fn lowerdecl_rhs(l: LowerDecl) => LowerRhs` | — | Empirical/Declared |
+| `compiler.ast::lowerdecl_expr_rhs` | fn | `lib/compiler/ast.myc:484` | `fn lowerdecl_expr_rhs(l: LowerDecl) => Option[Expr]` | lowerdecl_expr_rhs: mirrors `LowerDecl::expr_rhs`. | Empirical/Declared |
+| `compiler.ast::lowerdecl_impl_rhs` | fn | `lib/compiler/ast.myc:491` | `fn lowerdecl_impl_rhs(l: LowerDecl) => Option[ImplDecl]` | lowerdecl_impl_rhs: mirrors `LowerDecl::impl_rhs`. | Empirical/Declared |
+| `compiler.ast::DeriveDecl` | type | `lib/compiler/ast.myc:498` | `type DeriveDecl = DD(Bytes, TypeRef)` | — | Empirical/Declared |
+| `compiler.ast::DeriveDecl::DD` | ctor | `lib/compiler/ast.myc:498` | `DD(Bytes, TypeRef)` | — | Empirical/Declared |
+| `compiler.ast::derivedecl_name` | fn | `lib/compiler/ast.myc:500` | `fn derivedecl_name(d: DeriveDecl) => Bytes` | — | Empirical/Declared |
+| `compiler.ast::derivedecl_for_ty` | fn | `lib/compiler/ast.myc:503` | `fn derivedecl_for_ty(d: DeriveDecl) => TypeRef` | — | Empirical/Declared |
+| `compiler.ast::Item` | type | `lib/compiler/ast.myc:508` | `type Item = Use(UsePath) \| Default(Paradigm) \| Type(TypeDecl) \| Trait(TraitDecl) \| Impl(ImplDecl) \| Fn(FnDecl) \| Object(ObjectDecl) \| Lower(LowerDecl) \| Derive(DeriveDecl) \| InherentImpl(InherentImplDecl)` | — | Empirical/Declared |
+| `compiler.ast::Item::Use` | ctor | `lib/compiler/ast.myc:509` | `Use(UsePath)` | — | Empirical/Declared |
+| `compiler.ast::Item::Default` | ctor | `lib/compiler/ast.myc:510` | `Default(Paradigm)` | — | Empirical/Declared |
+| `compiler.ast::Item::Type` | ctor | `lib/compiler/ast.myc:511` | `Type(TypeDecl)` | — | Empirical/Declared |
+| `compiler.ast::Item::Trait` | ctor | `lib/compiler/ast.myc:512` | `Trait(TraitDecl)` | — | Empirical/Declared |
+| `compiler.ast::Item::Impl` | ctor | `lib/compiler/ast.myc:513` | `Impl(ImplDecl)` | — | Empirical/Declared |
+| `compiler.ast::Item::Fn` | ctor | `lib/compiler/ast.myc:514` | `Fn(FnDecl)` | — | Empirical/Declared |
+| `compiler.ast::Item::Object` | ctor | `lib/compiler/ast.myc:515` | `Object(ObjectDecl)` | — | Empirical/Declared |
+| `compiler.ast::Item::Lower` | ctor | `lib/compiler/ast.myc:516` | `Lower(LowerDecl)` | — | Empirical/Declared |
+| `compiler.ast::Item::Derive` | ctor | `lib/compiler/ast.myc:517` | `Derive(DeriveDecl)` | — | Empirical/Declared |
+| `compiler.ast::Item::InherentImpl` | ctor | `lib/compiler/ast.myc:518` | `InherentImpl(InherentImplDecl)` | — | Empirical/Declared |
+| `compiler.ast::Nodule` | type | `lib/compiler/ast.myc:522` | `type Nodule = Nd(Path, Bool, Vec[Item])` | — | Empirical/Declared |
+| `compiler.ast::Nodule::Nd` | ctor | `lib/compiler/ast.myc:522` | `Nd(Path, Bool, Vec[Item])` | — | Empirical/Declared |
+| `compiler.ast::nodule_path` | fn | `lib/compiler/ast.myc:524` | `fn nodule_path(n: Nodule) => Path` | — | Empirical/Declared |
+| `compiler.ast::nodule_std_sys` | fn | `lib/compiler/ast.myc:527` | `fn nodule_std_sys(n: Nodule) => Bool` | — | Empirical/Declared |
+| `compiler.ast::nodule_items` | fn | `lib/compiler/ast.myc:530` | `fn nodule_items(n: Nodule) => Vec[Item]` | — | Empirical/Declared |
+| `compiler.ast::Phylum` | type | `lib/compiler/ast.myc:534` | `type Phylum = Phy(Option[Path], Vec[Nodule])` | — | Empirical/Declared |
+| `compiler.ast::Phylum::Phy` | ctor | `lib/compiler/ast.myc:534` | `Phy(Option[Path], Vec[Nodule])` | — | Empirical/Declared |
+| `compiler.ast::phylum_path` | fn | `lib/compiler/ast.myc:536` | `fn phylum_path(p: Phylum) => Option[Path]` | — | Empirical/Declared |
+| `compiler.ast::phylum_nodules` | fn | `lib/compiler/ast.myc:539` | `fn phylum_nodules(p: Phylum) => Vec[Nodule]` | — | Empirical/Declared |
+| `compiler.ast::phylum_of_one` | fn | `lib/compiler/ast.myc:543` | `fn phylum_of_one(n: Nodule) => Phylum` | phylum_of_one: mirrors `Phylum::of_one` — a phylum-of-one wrapping a single bare nodule. | Empirical/Declared |
+| `compiler.ast::Literal` | type | `lib/compiler/ast.myc:549` | `type Literal = Bin(Bytes) \| Trit(Bytes) \| Int(Binary{64}) \| AmbientInt(Paradigm, Binary{64}) \| List(Vec[Expr]) \| LBytes(Bytes) \| Str(Bytes) \| LFloat(Bytes)` | — | Empirical/Declared |
+| `compiler.ast::Literal::Bin` | ctor | `lib/compiler/ast.myc:550` | `Bin(Bytes)` | — | Empirical/Declared |
+| `compiler.ast::Literal::Trit` | ctor | `lib/compiler/ast.myc:551` | `Trit(Bytes)` | — | Empirical/Declared |
+| `compiler.ast::Literal::Int` | ctor | `lib/compiler/ast.myc:552` | `Int(Binary{64})` | — | Empirical/Declared |
+| `compiler.ast::Literal::AmbientInt` | ctor | `lib/compiler/ast.myc:553` | `AmbientInt(Paradigm, Binary{64})` | — | Empirical/Declared |
+| `compiler.ast::Literal::List` | ctor | `lib/compiler/ast.myc:554` | `List(Vec[Expr])` | — | Empirical/Declared |
+| `compiler.ast::Literal::LBytes` | ctor | `lib/compiler/ast.myc:555` | `LBytes(Bytes)` | — | Empirical/Declared |
+| `compiler.ast::Literal::Str` | ctor | `lib/compiler/ast.myc:556` | `Str(Bytes)` | — | Empirical/Declared |
+| `compiler.ast::Literal::LFloat` | ctor | `lib/compiler/ast.myc:557` | `LFloat(Bytes)` | — | Empirical/Declared |
+| `compiler.ast::literal_binary` | fn | `lib/compiler/ast.myc:560` | `fn literal_binary(digits: Bytes) => Literal` | literal_binary: mirrors `Literal::binary`. | Empirical/Declared |
+| `compiler.ast::literal_ternary` | fn | `lib/compiler/ast.myc:564` | `fn literal_ternary(trits: Bytes) => Literal` | literal_ternary: mirrors `Literal::ternary`. | Empirical/Declared |
+| `compiler.ast::literal_string` | fn | `lib/compiler/ast.myc:568` | `fn literal_string(content: Bytes) => Literal` | literal_string: mirrors `Literal::string`. | Empirical/Declared |
+| `compiler.ast::literal_float` | fn | `lib/compiler/ast.myc:572` | `fn literal_float(text: Bytes) => Literal` | literal_float: mirrors `Literal::float`. | Empirical/Declared |
+| `compiler.ast::Pattern` | type | `lib/compiler/ast.myc:577` | `type Pattern = PWildcard \| PLit(Literal) \| PCtor(Bytes, Vec[Pattern]) \| PIdent(Bytes) \| PTuple(Vec[Pattern]) \| POr(Vec[Pattern])` | — | Empirical/Declared |
+| `compiler.ast::Pattern::PWildcard` | ctor | `lib/compiler/ast.myc:578` | `PWildcard` | — | Empirical/Declared |
+| `compiler.ast::Pattern::PLit` | ctor | `lib/compiler/ast.myc:579` | `PLit(Literal)` | — | Empirical/Declared |
+| `compiler.ast::Pattern::PCtor` | ctor | `lib/compiler/ast.myc:580` | `PCtor(Bytes, Vec[Pattern])` | — | Empirical/Declared |
+| `compiler.ast::Pattern::PIdent` | ctor | `lib/compiler/ast.myc:581` | `PIdent(Bytes)` | — | Empirical/Declared |
+| `compiler.ast::Pattern::PTuple` | ctor | `lib/compiler/ast.myc:582` | `PTuple(Vec[Pattern])` | — | Empirical/Declared |
+| `compiler.ast::Pattern::POr` | ctor | `lib/compiler/ast.myc:583` | `POr(Vec[Pattern])` | — | Empirical/Declared |
+| `compiler.ast::Arm` | type | `lib/compiler/ast.myc:586` | `type Arm = Ar(Pattern, Expr)` | — | Empirical/Declared |
+| `compiler.ast::Arm::Ar` | ctor | `lib/compiler/ast.myc:586` | `Ar(Pattern, Expr)` | — | Empirical/Declared |
+| `compiler.ast::arm_pattern` | fn | `lib/compiler/ast.myc:588` | `fn arm_pattern(a: Arm) => Pattern` | — | Empirical/Declared |
+| `compiler.ast::arm_body` | fn | `lib/compiler/ast.myc:591` | `fn arm_body(a: Arm) => Expr` | — | Empirical/Declared |
+| `compiler.ast::Hypha` | type | `lib/compiler/ast.myc:596` | `type Hypha = Hy(Option[Expr], Expr)` | — | Empirical/Declared |
+| `compiler.ast::Hypha::Hy` | ctor | `lib/compiler/ast.myc:596` | `Hy(Option[Expr], Expr)` | — | Empirical/Declared |
+| `compiler.ast::hypha_forage` | fn | `lib/compiler/ast.myc:598` | `fn hypha_forage(h: Hypha) => Option[Expr]` | — | Empirical/Declared |
+| `compiler.ast::hypha_body` | fn | `lib/compiler/ast.myc:601` | `fn hypha_body(h: Hypha) => Expr` | — | Empirical/Declared |
+| `compiler.ast::Expr` | type | `lib/compiler/ast.myc:611` | `type Expr = Let(Bytes, Option[TypeRef], Expr, Expr) \| If(Expr, Expr, Expr) \| Match(Expr, Vec[Arm]) \| For(Bytes, Expr, Bytes, Expr, Expr) \| Swap(Expr, TypeRef, Path) \| WithParadigm(Paradigm, Expr) \| Wild(Expr) \| Spore(Expr) \| Wrapping(Expr) \| Consume(Expr) \| Try(Expr) \| Colony(Vec[Hypha]) \| Lambda(Vec[Param], Expr) \| App(Expr, Vec[Expr]) \| Fuse(Expr, Expr) \| Reclaim(Expr, Expr) \| Path(Path) \| Lit(Literal) \| Ascribe(Expr, TypeRef) \| TupleLit(Vec[Expr])` | — | Empirical/Declared |
+| `compiler.ast::Expr::Let` | ctor | `lib/compiler/ast.myc:612` | `Let(Bytes, Option[TypeRef], Expr, Expr)` | — | Empirical/Declared |
+| `compiler.ast::Expr::If` | ctor | `lib/compiler/ast.myc:613` | `If(Expr, Expr, Expr)` | — | Empirical/Declared |
+| `compiler.ast::Expr::Match` | ctor | `lib/compiler/ast.myc:614` | `Match(Expr, Vec[Arm])` | — | Empirical/Declared |
+| `compiler.ast::Expr::For` | ctor | `lib/compiler/ast.myc:615` | `For(Bytes, Expr, Bytes, Expr, Expr)` | — | Empirical/Declared |
+| `compiler.ast::Expr::Path` | ctor | `lib/compiler/ast.myc:616` | `Path(Path)` | — | Empirical/Declared |
+| `compiler.ast::Expr::Swap` | ctor | `lib/compiler/ast.myc:616` | `Swap(Expr, TypeRef, Path)` | — | Empirical/Declared |
+| `compiler.ast::Expr::WithParadigm` | ctor | `lib/compiler/ast.myc:617` | `WithParadigm(Paradigm, Expr)` | — | Empirical/Declared |
+| `compiler.ast::Expr::Wild` | ctor | `lib/compiler/ast.myc:618` | `Wild(Expr)` | — | Empirical/Declared |
+| `compiler.ast::Expr::Spore` | ctor | `lib/compiler/ast.myc:619` | `Spore(Expr)` | — | Empirical/Declared |
+| `compiler.ast::Expr::Wrapping` | ctor | `lib/compiler/ast.myc:620` | `Wrapping(Expr)` | — | Empirical/Declared |
+| `compiler.ast::Expr::Consume` | ctor | `lib/compiler/ast.myc:621` | `Consume(Expr)` | — | Empirical/Declared |
+| `compiler.ast::Expr::Try` | ctor | `lib/compiler/ast.myc:624` | `Try(Expr)` | — | Empirical/Declared |
+| `compiler.ast::Expr::Colony` | ctor | `lib/compiler/ast.myc:627` | `Colony(Vec[Hypha])` | — | Empirical/Declared |
+| `compiler.ast::Expr::Lambda` | ctor | `lib/compiler/ast.myc:628` | `Lambda(Vec[Param], Expr)` | — | Empirical/Declared |
+| `compiler.ast::Expr::App` | ctor | `lib/compiler/ast.myc:629` | `App(Expr, Vec[Expr])` | — | Empirical/Declared |
+| `compiler.ast::Expr::Fuse` | ctor | `lib/compiler/ast.myc:630` | `Fuse(Expr, Expr)` | — | Empirical/Declared |
+| `compiler.ast::Expr::Reclaim` | ctor | `lib/compiler/ast.myc:631` | `Reclaim(Expr, Expr)` | — | Empirical/Declared |
+| `compiler.ast::Expr::Lit` | ctor | `lib/compiler/ast.myc:633` | `Lit(Literal)` | — | Empirical/Declared |
+| `compiler.ast::Expr::Ascribe` | ctor | `lib/compiler/ast.myc:634` | `Ascribe(Expr, TypeRef)` | — | Empirical/Declared |
+| `compiler.ast::Expr::TupleLit` | ctor | `lib/compiler/ast.myc:635` | `TupleLit(Vec[Expr])` | — | Empirical/Declared |
 
 ### compiler.lex
 
@@ -678,7 +679,7 @@
 | `compiler.lex::StrengthTok::GEmpirical` | ctor | `lib/compiler/lex.myc:97` | `GEmpirical` | — | Empirical/Declared |
 | `compiler.lex::StrengthTok::GExact` | ctor | `lib/compiler/lex.myc:97` | `GExact` | — | Empirical/Declared |
 | `compiler.lex::StrengthTok::GProven` | ctor | `lib/compiler/lex.myc:97` | `GProven` | — | Empirical/Declared |
-| `compiler.lex::Tok` | type | `lib/compiler/lex.myc:100` | `type Tok = Nodule \| Phylum \| Colony \| Hypha \| Fuse \| Mesh \| Graft \| Cyst \| Xloc \| Forage \| Backbone \| Tier \| Reclaim \| Consume \| Grow \| Derive \| Use \| Pub \| Type \| Trait \| Impl \| Fn \| Matured \| Thaw \| Let \| In \| If \| Then \| Else \| Match \| For \| Swap \| Default \| Paradigm \| With \| Wild \| Spore \| To \| Policy \| Lambda \| Object \| Via \| Lower \| KwBinary \| KwTernary \| KwDense \| Vsa \| BinShort \| TernShort \| EmbShort \| HvecShort \| KwSeq \| KwBytes \| KwFloat \| KwSubstrate \| KwSparse \| Scalar(ScalarTok) \| Strength(StrengthTok) \| Ident(Bytes) \| BinLit(Bytes) \| BytesLit(Bytes) \| TritLit(Bytes) \| StrLit(Bytes) \| Int(Bytes) \| FloatLit(Bytes) \| LParen \| RParen \| LBrace \| RBrace \| LBracket \| RBracket \| LAngle \| RAngle \| Shl \| Shr \| At \| AtStdSys \| Colon \| Comma \| Semi \| Dot \| Pipe \| Plus \| Minus \| Star \| Slash \| Percent \| Caret \| Amp \| AmpAmp \| Eq \| EqEq \| Arrow \| FatArrow \| Bang \| BangEq \| PipePipe \| Eof` | — | Empirical/Declared |
+| `compiler.lex::Tok` | type | `lib/compiler/lex.myc:100` | `type Tok = Nodule \| Phylum \| Colony \| Hypha \| Fuse \| Mesh \| Graft \| Cyst \| Xloc \| Forage \| Backbone \| Tier \| Reclaim \| Consume \| Grow \| Derive \| Use \| Pub \| Priv \| Type \| Trait \| Impl \| Fn \| Matured \| Thaw \| Let \| In \| If \| Then \| Else \| Match \| For \| Swap \| Default \| Paradigm \| With \| Wild \| Spore \| To \| Policy \| Lambda \| Object \| Via \| Lower \| KwBinary \| KwTernary \| KwDense \| Vsa \| BinShort \| TernShort \| EmbShort \| HvecShort \| KwSeq \| KwBytes \| KwFloat \| KwSubstrate \| KwSparse \| Scalar(ScalarTok) \| Strength(StrengthTok) \| Ident(Bytes) \| BinLit(Bytes) \| BytesLit(Bytes) \| TritLit(Bytes) \| StrLit(Bytes) \| Int(Bytes) \| FloatLit(Bytes) \| LParen \| RParen \| LBrace \| RBrace \| LBracket \| RBracket \| LAngle \| RAngle \| Shl \| Shr \| At \| AtStdSys \| Colon \| Comma \| Semi \| Dot \| Pipe \| Plus \| Minus \| Star \| Slash \| Percent \| Caret \| Amp \| AmpAmp \| Eq \| EqEq \| Arrow \| FatArrow \| Bang \| BangEq \| PipePipe \| Eof` | — | Empirical/Declared |
 | `compiler.lex::Tok::Colony` | ctor | `lib/compiler/lex.myc:101` | `Colony` | — | Empirical/Declared |
 | `compiler.lex::Tok::Nodule` | ctor | `lib/compiler/lex.myc:101` | `Nodule` | — | Empirical/Declared |
 | `compiler.lex::Tok::Phylum` | ctor | `lib/compiler/lex.myc:101` | `Phylum` | — | Empirical/Declared |
@@ -698,6 +699,7 @@
 | `compiler.lex::Tok::Fn` | ctor | `lib/compiler/lex.myc:104` | `Fn` | — | Empirical/Declared |
 | `compiler.lex::Tok::Impl` | ctor | `lib/compiler/lex.myc:104` | `Impl` | — | Empirical/Declared |
 | `compiler.lex::Tok::Matured` | ctor | `lib/compiler/lex.myc:104` | `Matured` | — | Empirical/Declared |
+| `compiler.lex::Tok::Priv` | ctor | `lib/compiler/lex.myc:104` | `Priv` | — | Empirical/Declared |
 | `compiler.lex::Tok::Pub` | ctor | `lib/compiler/lex.myc:104` | `Pub` | — | Empirical/Declared |
 | `compiler.lex::Tok::Thaw` | ctor | `lib/compiler/lex.myc:104` | `Thaw` | — | Empirical/Declared |
 | `compiler.lex::Tok::Trait` | ctor | `lib/compiler/lex.myc:104` | `Trait` | — | Empirical/Declared |
@@ -782,70 +784,70 @@
 | `compiler.lex::sp_tok` | fn | `lib/compiler/lex.myc:130` | `fn sp_tok(s: Spanned) => Tok` | — | Empirical/Declared |
 | `compiler.lex::sp_pos` | fn | `lib/compiler/lex.myc:133` | `fn sp_pos(s: Spanned) => Pos` | — | Empirical/Declared |
 | `compiler.lex::keyword` | fn | `lib/compiler/lex.myc:140` | `fn keyword(word: Bytes) => Option[Tok]` | — | Empirical/Declared |
-| `compiler.lex::Vec` | type | `lib/compiler/lex.myc:403` | `type Vec[A] = Nil \| Cons(A, Vec[A])` | — | Empirical/Declared |
-| `compiler.lex::Vec::Cons` | ctor | `lib/compiler/lex.myc:403` | `Cons(A, Vec[A])` | — | Empirical/Declared |
-| `compiler.lex::Vec::Nil` | ctor | `lib/compiler/lex.myc:403` | `Nil` | — | Empirical/Declared |
-| `compiler.lex::tok_count` | fn | `lib/compiler/lex.myc:407` | `fn tok_count(v: Vec[Spanned]) => Binary{32}` | tok_count: the number of tokens in a Vec[Spanned] (structural spine-walk; matches only Nil/Cons, never Tok itself — cheap and safe, see FLAG-lex-6). | Empirical/Declared |
-| `compiler.lex::nth` | fn | `lib/compiler/lex.myc:416` | `fn nth(v: Vec[Spanned], n: Binary{32}) => Option[Spanned]` | nth: the token at 0-based index `n`, or `None` if out of range. Lets a differential test inspect ONE token's `Tok`/`Pos` at a time without ever matching multiple `Tok` sites in the same nodule check pass (FLAG-lex-6's mitigation). | Empirical/Declared |
-| `compiler.lex::LexErr` | type | `lib/compiler/lex.myc:432` | `type LexErr = LE(Pos, Bytes)` | — | Empirical/Declared |
-| `compiler.lex::LexErr::LE` | ctor | `lib/compiler/lex.myc:432` | `LE(Pos, Bytes)` | — | Empirical/Declared |
-| `compiler.lex::St` | type | `lib/compiler/lex.myc:436` | `type St = S(Binary{32}, Binary{32}, Binary{32})` | — | Empirical/Declared |
-| `compiler.lex::St::S` | ctor | `lib/compiler/lex.myc:436` | `S(Binary{32}, Binary{32}, Binary{32})` | — | Empirical/Declared |
-| `compiler.lex::st_i` | fn | `lib/compiler/lex.myc:438` | `fn st_i(s: St) => Binary{32}` | — | Empirical/Declared |
-| `compiler.lex::st_line` | fn | `lib/compiler/lex.myc:441` | `fn st_line(s: St) => Binary{32}` | — | Empirical/Declared |
-| `compiler.lex::st_col` | fn | `lib/compiler/lex.myc:444` | `fn st_col(s: St) => Binary{32}` | — | Empirical/Declared |
-| `compiler.lex::st_pos` | fn | `lib/compiler/lex.myc:447` | `fn st_pos(s: St) => Pos` | — | Empirical/Declared |
-| `compiler.lex::empty_bytes` | fn | `lib/compiler/lex.myc:454` | `fn empty_bytes() => Bytes` | — | Empirical/Declared |
-| `compiler.lex::bool_and` | fn | `lib/compiler/lex.myc:459` | `fn bool_and(a: Bool, b: Bool) => Bool` | — | Empirical/Declared |
-| `compiler.lex::bool_or` | fn | `lib/compiler/lex.myc:462` | `fn bool_or(a: Bool, b: Bool) => Bool` | — | Empirical/Declared |
-| `compiler.lex::eq_b` | fn | `lib/compiler/lex.myc:465` | `fn eq_b(a: Binary{8}, b: Binary{8}) => Bool` | — | Empirical/Declared |
-| `compiler.lex::lt_b` | fn | `lib/compiler/lex.myc:468` | `fn lt_b(a: Binary{8}, b: Binary{8}) => Bool` | — | Empirical/Declared |
-| `compiler.lex::le_b` | fn | `lib/compiler/lex.myc:472` | `fn le_b(a: Binary{8}, b: Binary{8}) => Bool` | le_b: a <= b, i.e. NOT (b < a). | Empirical/Declared |
-| `compiler.lex::in_range` | fn | `lib/compiler/lex.myc:475` | `fn in_range(c: Binary{8}, lo: Binary{8}, hi: Binary{8}) => Bool` | — | Empirical/Declared |
-| `compiler.lex::is_cont_byte` | fn | `lib/compiler/lex.myc:479` | `fn is_cont_byte(c: Binary{8}) => Bool` | UTF-8 continuation byte: 0x80..0xBF (mirrors lib/std/text.myc::is_cont_byte exactly). | Empirical/Declared |
-| `compiler.lex::is_digit` | fn | `lib/compiler/lex.myc:482` | `fn is_digit(c: Binary{8}) => Bool` | — | Empirical/Declared |
-| `compiler.lex::is_upper` | fn | `lib/compiler/lex.myc:485` | `fn is_upper(c: Binary{8}) => Bool` | — | Empirical/Declared |
-| `compiler.lex::is_lower` | fn | `lib/compiler/lex.myc:488` | `fn is_lower(c: Binary{8}) => Bool` | — | Empirical/Declared |
-| `compiler.lex::is_alpha` | fn | `lib/compiler/lex.myc:491` | `fn is_alpha(c: Binary{8}) => Bool` | — | Empirical/Declared |
-| `compiler.lex::is_ident_start` | fn | `lib/compiler/lex.myc:494` | `fn is_ident_start(c: Binary{8}) => Bool` | — | Empirical/Declared |
-| `compiler.lex::is_ident_continue` | fn | `lib/compiler/lex.myc:497` | `fn is_ident_continue(c: Binary{8}) => Bool` | — | Empirical/Declared |
-| `compiler.lex::is_hex_digit` | fn | `lib/compiler/lex.myc:500` | `fn is_hex_digit(c: Binary{8}) => Bool` | — | Empirical/Declared |
-| `compiler.lex::is_bin_digit` | fn | `lib/compiler/lex.myc:503` | `fn is_bin_digit(c: Binary{8}) => Bool` | — | Empirical/Declared |
-| `compiler.lex::is_trit_glyph` | fn | `lib/compiler/lex.myc:506` | `fn is_trit_glyph(c: Binary{8}) => Bool` | — | Empirical/Declared |
-| `compiler.lex::is_underscore` | fn | `lib/compiler/lex.myc:509` | `fn is_underscore(c: Binary{8}) => Bool` | — | Empirical/Declared |
-| `compiler.lex::is_ascii_ws` | fn | `lib/compiler/lex.myc:512` | `fn is_ascii_ws(c: Binary{8}) => Bool` | — | Empirical/Declared |
-| `compiler.lex::is_nl_or_cr` | fn | `lib/compiler/lex.myc:515` | `fn is_nl_or_cr(c: Binary{8}) => Bool` | — | Empirical/Declared |
-| `compiler.lex::src_peek` | fn | `lib/compiler/lex.myc:519` | `fn src_peek(src: Bytes, i: Binary{32}) => Option[Binary{8}]` | — | Empirical/Declared |
-| `compiler.lex::step_pos` | fn | `lib/compiler/lex.myc:524` | `fn step_pos(c: Binary{8}, s: St) => St` | step_pos: the position AFTER consuming byte `c` (FLAG-lex-1: bumps line on '\n', else bumps column only on a non-continuation byte — "count codepoints, not bytes"). | Empirical/Declared |
-| `compiler.lex::bump` | fn | `lib/compiler/lex.myc:534` | `fn bump(src: Bytes, s: St) => St` | bump: consume one byte at the current position (never-silent no-op at EOF — total). | Empirical/Declared |
-| `compiler.lex::advance_n` | fn | `lib/compiler/lex.myc:538` | `fn advance_n(src: Bytes, s: St, n: Binary{32}) => St` | advance_n: bump `n` times (used after a run-length scan to jump the cursor past a lexeme). | Empirical/Declared |
-| `compiler.lex::skip_to_eol` | fn | `lib/compiler/lex.myc:542` | `fn skip_to_eol(src: Bytes, s: St) => St` | — | Empirical/Declared |
-| `compiler.lex::skip_trivia` | fn | `lib/compiler/lex.myc:548` | `fn skip_trivia(src: Bytes, s: St) => St` | — | Empirical/Declared |
-| `compiler.lex::run_len_ident` | fn | `lib/compiler/lex.myc:567` | `fn run_len_ident(src: Bytes, i: Binary{32}) => Binary{32}` | — | Empirical/Declared |
-| `compiler.lex::run_len_digits` | fn | `lib/compiler/lex.myc:573` | `fn run_len_digits(src: Bytes, i: Binary{32}) => Binary{32}` | — | Empirical/Declared |
-| `compiler.lex::scan_bin_run` | fn | `lib/compiler/lex.myc:580` | `fn scan_bin_run(src: Bytes, i: Binary{32}) => Pair[Binary{32}, Binary{32}]` | scan_bin_run: Pair(total run length INCLUDING `_` separators, count of actual `0`/`1` digits). | Empirical/Declared |
-| `compiler.lex::scan_hex_run` | fn | `lib/compiler/lex.myc:593` | `fn scan_hex_run(src: Bytes, i: Binary{32}) => Pair[Binary{32}, Binary{32}]` | scan_hex_run: Pair(total run length INCLUDING `_` separators, count of actual hex digits). | Empirical/Declared |
-| `compiler.lex::scan_trit_run` | fn | `lib/compiler/lex.myc:606` | `fn scan_trit_run(src: Bytes, i: Binary{32}) => Binary{32}` | scan_trit_run: total count of trit glyphs (`+`/`0`/`-`; no `_` separator in the trit grammar). | Empirical/Declared |
-| `compiler.lex::scan_string_escape` | fn | `lib/compiler/lex.myc:615` | `fn scan_string_escape(src: Bytes, s: St) => Result[Pair[Bytes, St], LexErr]` | — | Empirical/Declared |
-| `compiler.lex::scan_string` | fn | `lib/compiler/lex.myc:632` | `fn scan_string(src: Bytes, s: St) => Result[Pair[Bytes, St], LexErr]` | scan_string: `s` is the position right after the opening `"`. Returns the DECODED content + the position right after the closing `"` (never-silent: unterminated / raw newline / bad escape are explicit `Err`, matching lexer.rs::lex_string's contract — see FLAG-lex-7 for message fidelity). | Empirical/Declared |
-| `compiler.lex::lex_rangle` | fn | `lib/compiler/lex.myc:661` | `fn lex_rangle(src: Bytes, s: St) => Pair[Tok, St]` | — | Empirical/Declared |
-| `compiler.lex::lex_langle` | fn | `lib/compiler/lex.myc:668` | `fn lex_langle(src: Bytes, s: St) => Pair[Tok, St]` | — | Empirical/Declared |
-| `compiler.lex::lex_amp` | fn | `lib/compiler/lex.myc:675` | `fn lex_amp(src: Bytes, s: St) => Pair[Tok, St]` | — | Empirical/Declared |
-| `compiler.lex::lex_pipe` | fn | `lib/compiler/lex.myc:682` | `fn lex_pipe(src: Bytes, s: St) => Pair[Tok, St]` | — | Empirical/Declared |
-| `compiler.lex::lex_bang` | fn | `lib/compiler/lex.myc:689` | `fn lex_bang(src: Bytes, s: St) => Pair[Tok, St]` | — | Empirical/Declared |
-| `compiler.lex::lex_eq` | fn | `lib/compiler/lex.myc:696` | `fn lex_eq(src: Bytes, s: St) => Pair[Tok, St]` | — | Empirical/Declared |
-| `compiler.lex::lex_dash` | fn | `lib/compiler/lex.myc:704` | `fn lex_dash(src: Bytes, s: St) => Pair[Tok, St]` | — | Empirical/Declared |
-| `compiler.lex::lex_at` | fn | `lib/compiler/lex.myc:713` | `fn lex_at(src: Bytes, s: St) => Pair[Tok, St]` | `@` vs the atomic `@std-sys` nodule-header marker (M-661; mirrors lexer.rs::lex_at exactly, now expressible directly via the `bytes_eq` prim, M-912). | Empirical/Declared |
-| `compiler.lex::lex_ident` | fn | `lib/compiler/lex.myc:731` | `fn lex_ident(src: Bytes, s: St) => Pair[Tok, St]` | — | Empirical/Declared |
-| `compiler.lex::lex_int` | fn | `lib/compiler/lex.myc:740` | `fn lex_int(src: Bytes, s: St) => Pair[Tok, St]` | lex_int: a non-negative decimal digit run, verbatim (FLAG-lex-2: no float extension, no eager numeric conversion — a structural deviation from lexer.rs, deliberately scoped, no accept-corpus input exercises the gap). | Empirical/Declared |
-| `compiler.lex::lex_binlit` | fn | `lib/compiler/lex.myc:745` | `fn lex_binlit(src: Bytes, s: St) => Result[Pair[Tok, St], LexErr]` | — | Empirical/Declared |
-| `compiler.lex::lex_hexlit` | fn | `lib/compiler/lex.myc:758` | `fn lex_hexlit(src: Bytes, s: St) => Result[Pair[Tok, St], LexErr]` | Even-hex-digit-count check (RFC-0032 D4: a byte is two hex chars): `and(digits, 1)` masks the low bit — `0` iff `digits` is even. `and` requires same-width operands; the bare `1` anchors to `digits`'s width (Binary{32}, RFC-0012 ambient bare-decimal inference). | Empirical/Declared |
-| `compiler.lex::lex_tritlit` | fn | `lib/compiler/lex.myc:770` | `fn lex_tritlit(src: Bytes, s: St) => Result[Pair[Tok, St], LexErr]` | — | Empirical/Declared |
-| `compiler.lex::lex_string` | fn | `lib/compiler/lex.myc:778` | `fn lex_string(src: Bytes, s: St) => Result[Pair[Tok, St], LexErr]` | — | Empirical/Declared |
-| `compiler.lex::lex_zero_prefixed` | fn | `lib/compiler/lex.myc:785` | `fn lex_zero_prefixed(src: Bytes, s: St) => Result[Pair[Tok, St], LexErr]` | `0` followed by `b`/`x`/`t` opens a base-prefixed literal; otherwise a plain decimal int. | Empirical/Declared |
-| `compiler.lex::next_token` | fn | `lib/compiler/lex.myc:797` | `fn next_token(src: Bytes, s: St) => Result[Pair[Tok, St], LexErr]` | — | Empirical/Declared |
-| `compiler.lex::run` | fn | `lib/compiler/lex.myc:833` | `fn run(src: Bytes, s: St) => Result[Vec[Spanned], LexErr]` | — | Empirical/Declared |
-| `compiler.lex::lex` | fn | `lib/compiler/lex.myc:851` | `fn lex(src: Bytes) => Result[Vec[Spanned], LexErr]` | lex: tokenize `src` into a `Spanned` stream terminated by `Eof` (mirrors lexer.rs::lex). Comments are discarded (FLAG-lex-5); never-silent on any lexically invalid input (an explicit `Err`, never a panic or a silently-skipped character). | Empirical/Declared |
+| `compiler.lex::Vec` | type | `lib/compiler/lex.myc:407` | `type Vec[A] = Nil \| Cons(A, Vec[A])` | — | Empirical/Declared |
+| `compiler.lex::Vec::Cons` | ctor | `lib/compiler/lex.myc:407` | `Cons(A, Vec[A])` | — | Empirical/Declared |
+| `compiler.lex::Vec::Nil` | ctor | `lib/compiler/lex.myc:407` | `Nil` | — | Empirical/Declared |
+| `compiler.lex::tok_count` | fn | `lib/compiler/lex.myc:411` | `fn tok_count(v: Vec[Spanned]) => Binary{32}` | tok_count: the number of tokens in a Vec[Spanned] (structural spine-walk; matches only Nil/Cons, never Tok itself — cheap and safe, see FLAG-lex-6). | Empirical/Declared |
+| `compiler.lex::nth` | fn | `lib/compiler/lex.myc:420` | `fn nth(v: Vec[Spanned], n: Binary{32}) => Option[Spanned]` | nth: the token at 0-based index `n`, or `None` if out of range. Lets a differential test inspect ONE token's `Tok`/`Pos` at a time without ever matching multiple `Tok` sites in the same nodule check pass (FLAG-lex-6's mitigation). | Empirical/Declared |
+| `compiler.lex::LexErr` | type | `lib/compiler/lex.myc:436` | `type LexErr = LE(Pos, Bytes)` | — | Empirical/Declared |
+| `compiler.lex::LexErr::LE` | ctor | `lib/compiler/lex.myc:436` | `LE(Pos, Bytes)` | — | Empirical/Declared |
+| `compiler.lex::St` | type | `lib/compiler/lex.myc:440` | `type St = S(Binary{32}, Binary{32}, Binary{32})` | — | Empirical/Declared |
+| `compiler.lex::St::S` | ctor | `lib/compiler/lex.myc:440` | `S(Binary{32}, Binary{32}, Binary{32})` | — | Empirical/Declared |
+| `compiler.lex::st_i` | fn | `lib/compiler/lex.myc:442` | `fn st_i(s: St) => Binary{32}` | — | Empirical/Declared |
+| `compiler.lex::st_line` | fn | `lib/compiler/lex.myc:445` | `fn st_line(s: St) => Binary{32}` | — | Empirical/Declared |
+| `compiler.lex::st_col` | fn | `lib/compiler/lex.myc:448` | `fn st_col(s: St) => Binary{32}` | — | Empirical/Declared |
+| `compiler.lex::st_pos` | fn | `lib/compiler/lex.myc:451` | `fn st_pos(s: St) => Pos` | — | Empirical/Declared |
+| `compiler.lex::empty_bytes` | fn | `lib/compiler/lex.myc:458` | `fn empty_bytes() => Bytes` | — | Empirical/Declared |
+| `compiler.lex::bool_and` | fn | `lib/compiler/lex.myc:463` | `fn bool_and(a: Bool, b: Bool) => Bool` | — | Empirical/Declared |
+| `compiler.lex::bool_or` | fn | `lib/compiler/lex.myc:466` | `fn bool_or(a: Bool, b: Bool) => Bool` | — | Empirical/Declared |
+| `compiler.lex::eq_b` | fn | `lib/compiler/lex.myc:469` | `fn eq_b(a: Binary{8}, b: Binary{8}) => Bool` | — | Empirical/Declared |
+| `compiler.lex::lt_b` | fn | `lib/compiler/lex.myc:472` | `fn lt_b(a: Binary{8}, b: Binary{8}) => Bool` | — | Empirical/Declared |
+| `compiler.lex::le_b` | fn | `lib/compiler/lex.myc:476` | `fn le_b(a: Binary{8}, b: Binary{8}) => Bool` | le_b: a <= b, i.e. NOT (b < a). | Empirical/Declared |
+| `compiler.lex::in_range` | fn | `lib/compiler/lex.myc:479` | `fn in_range(c: Binary{8}, lo: Binary{8}, hi: Binary{8}) => Bool` | — | Empirical/Declared |
+| `compiler.lex::is_cont_byte` | fn | `lib/compiler/lex.myc:483` | `fn is_cont_byte(c: Binary{8}) => Bool` | UTF-8 continuation byte: 0x80..0xBF (mirrors lib/std/text.myc::is_cont_byte exactly). | Empirical/Declared |
+| `compiler.lex::is_digit` | fn | `lib/compiler/lex.myc:486` | `fn is_digit(c: Binary{8}) => Bool` | — | Empirical/Declared |
+| `compiler.lex::is_upper` | fn | `lib/compiler/lex.myc:489` | `fn is_upper(c: Binary{8}) => Bool` | — | Empirical/Declared |
+| `compiler.lex::is_lower` | fn | `lib/compiler/lex.myc:492` | `fn is_lower(c: Binary{8}) => Bool` | — | Empirical/Declared |
+| `compiler.lex::is_alpha` | fn | `lib/compiler/lex.myc:495` | `fn is_alpha(c: Binary{8}) => Bool` | — | Empirical/Declared |
+| `compiler.lex::is_ident_start` | fn | `lib/compiler/lex.myc:498` | `fn is_ident_start(c: Binary{8}) => Bool` | — | Empirical/Declared |
+| `compiler.lex::is_ident_continue` | fn | `lib/compiler/lex.myc:501` | `fn is_ident_continue(c: Binary{8}) => Bool` | — | Empirical/Declared |
+| `compiler.lex::is_hex_digit` | fn | `lib/compiler/lex.myc:504` | `fn is_hex_digit(c: Binary{8}) => Bool` | — | Empirical/Declared |
+| `compiler.lex::is_bin_digit` | fn | `lib/compiler/lex.myc:507` | `fn is_bin_digit(c: Binary{8}) => Bool` | — | Empirical/Declared |
+| `compiler.lex::is_trit_glyph` | fn | `lib/compiler/lex.myc:510` | `fn is_trit_glyph(c: Binary{8}) => Bool` | — | Empirical/Declared |
+| `compiler.lex::is_underscore` | fn | `lib/compiler/lex.myc:513` | `fn is_underscore(c: Binary{8}) => Bool` | — | Empirical/Declared |
+| `compiler.lex::is_ascii_ws` | fn | `lib/compiler/lex.myc:516` | `fn is_ascii_ws(c: Binary{8}) => Bool` | — | Empirical/Declared |
+| `compiler.lex::is_nl_or_cr` | fn | `lib/compiler/lex.myc:519` | `fn is_nl_or_cr(c: Binary{8}) => Bool` | — | Empirical/Declared |
+| `compiler.lex::src_peek` | fn | `lib/compiler/lex.myc:523` | `fn src_peek(src: Bytes, i: Binary{32}) => Option[Binary{8}]` | — | Empirical/Declared |
+| `compiler.lex::step_pos` | fn | `lib/compiler/lex.myc:528` | `fn step_pos(c: Binary{8}, s: St) => St` | step_pos: the position AFTER consuming byte `c` (FLAG-lex-1: bumps line on '\n', else bumps column only on a non-continuation byte — "count codepoints, not bytes"). | Empirical/Declared |
+| `compiler.lex::bump` | fn | `lib/compiler/lex.myc:538` | `fn bump(src: Bytes, s: St) => St` | bump: consume one byte at the current position (never-silent no-op at EOF — total). | Empirical/Declared |
+| `compiler.lex::advance_n` | fn | `lib/compiler/lex.myc:542` | `fn advance_n(src: Bytes, s: St, n: Binary{32}) => St` | advance_n: bump `n` times (used after a run-length scan to jump the cursor past a lexeme). | Empirical/Declared |
+| `compiler.lex::skip_to_eol` | fn | `lib/compiler/lex.myc:546` | `fn skip_to_eol(src: Bytes, s: St) => St` | — | Empirical/Declared |
+| `compiler.lex::skip_trivia` | fn | `lib/compiler/lex.myc:552` | `fn skip_trivia(src: Bytes, s: St) => St` | — | Empirical/Declared |
+| `compiler.lex::run_len_ident` | fn | `lib/compiler/lex.myc:571` | `fn run_len_ident(src: Bytes, i: Binary{32}) => Binary{32}` | — | Empirical/Declared |
+| `compiler.lex::run_len_digits` | fn | `lib/compiler/lex.myc:577` | `fn run_len_digits(src: Bytes, i: Binary{32}) => Binary{32}` | — | Empirical/Declared |
+| `compiler.lex::scan_bin_run` | fn | `lib/compiler/lex.myc:584` | `fn scan_bin_run(src: Bytes, i: Binary{32}) => Pair[Binary{32}, Binary{32}]` | scan_bin_run: Pair(total run length INCLUDING `_` separators, count of actual `0`/`1` digits). | Empirical/Declared |
+| `compiler.lex::scan_hex_run` | fn | `lib/compiler/lex.myc:597` | `fn scan_hex_run(src: Bytes, i: Binary{32}) => Pair[Binary{32}, Binary{32}]` | scan_hex_run: Pair(total run length INCLUDING `_` separators, count of actual hex digits). | Empirical/Declared |
+| `compiler.lex::scan_trit_run` | fn | `lib/compiler/lex.myc:610` | `fn scan_trit_run(src: Bytes, i: Binary{32}) => Binary{32}` | scan_trit_run: total count of trit glyphs (`+`/`0`/`-`; no `_` separator in the trit grammar). | Empirical/Declared |
+| `compiler.lex::scan_string_escape` | fn | `lib/compiler/lex.myc:619` | `fn scan_string_escape(src: Bytes, s: St) => Result[Pair[Bytes, St], LexErr]` | — | Empirical/Declared |
+| `compiler.lex::scan_string` | fn | `lib/compiler/lex.myc:636` | `fn scan_string(src: Bytes, s: St) => Result[Pair[Bytes, St], LexErr]` | scan_string: `s` is the position right after the opening `"`. Returns the DECODED content + the position right after the closing `"` (never-silent: unterminated / raw newline / bad escape are explicit `Err`, matching lexer.rs::lex_string's contract — see FLAG-lex-7 for message fidelity). | Empirical/Declared |
+| `compiler.lex::lex_rangle` | fn | `lib/compiler/lex.myc:665` | `fn lex_rangle(src: Bytes, s: St) => Pair[Tok, St]` | — | Empirical/Declared |
+| `compiler.lex::lex_langle` | fn | `lib/compiler/lex.myc:672` | `fn lex_langle(src: Bytes, s: St) => Pair[Tok, St]` | — | Empirical/Declared |
+| `compiler.lex::lex_amp` | fn | `lib/compiler/lex.myc:679` | `fn lex_amp(src: Bytes, s: St) => Pair[Tok, St]` | — | Empirical/Declared |
+| `compiler.lex::lex_pipe` | fn | `lib/compiler/lex.myc:686` | `fn lex_pipe(src: Bytes, s: St) => Pair[Tok, St]` | — | Empirical/Declared |
+| `compiler.lex::lex_bang` | fn | `lib/compiler/lex.myc:693` | `fn lex_bang(src: Bytes, s: St) => Pair[Tok, St]` | — | Empirical/Declared |
+| `compiler.lex::lex_eq` | fn | `lib/compiler/lex.myc:700` | `fn lex_eq(src: Bytes, s: St) => Pair[Tok, St]` | — | Empirical/Declared |
+| `compiler.lex::lex_dash` | fn | `lib/compiler/lex.myc:708` | `fn lex_dash(src: Bytes, s: St) => Pair[Tok, St]` | — | Empirical/Declared |
+| `compiler.lex::lex_at` | fn | `lib/compiler/lex.myc:717` | `fn lex_at(src: Bytes, s: St) => Pair[Tok, St]` | `@` vs the atomic `@std-sys` nodule-header marker (M-661; mirrors lexer.rs::lex_at exactly, now expressible directly via the `bytes_eq` prim, M-912). | Empirical/Declared |
+| `compiler.lex::lex_ident` | fn | `lib/compiler/lex.myc:735` | `fn lex_ident(src: Bytes, s: St) => Pair[Tok, St]` | — | Empirical/Declared |
+| `compiler.lex::lex_int` | fn | `lib/compiler/lex.myc:744` | `fn lex_int(src: Bytes, s: St) => Pair[Tok, St]` | lex_int: a non-negative decimal digit run, verbatim (FLAG-lex-2: no float extension, no eager numeric conversion — a structural deviation from lexer.rs, deliberately scoped, no accept-corpus input exercises the gap). | Empirical/Declared |
+| `compiler.lex::lex_binlit` | fn | `lib/compiler/lex.myc:749` | `fn lex_binlit(src: Bytes, s: St) => Result[Pair[Tok, St], LexErr]` | — | Empirical/Declared |
+| `compiler.lex::lex_hexlit` | fn | `lib/compiler/lex.myc:762` | `fn lex_hexlit(src: Bytes, s: St) => Result[Pair[Tok, St], LexErr]` | Even-hex-digit-count check (RFC-0032 D4: a byte is two hex chars): `and(digits, 1)` masks the low bit — `0` iff `digits` is even. `and` requires same-width operands; the bare `1` anchors to `digits`'s width (Binary{32}, RFC-0012 ambient bare-decimal inference). | Empirical/Declared |
+| `compiler.lex::lex_tritlit` | fn | `lib/compiler/lex.myc:774` | `fn lex_tritlit(src: Bytes, s: St) => Result[Pair[Tok, St], LexErr]` | — | Empirical/Declared |
+| `compiler.lex::lex_string` | fn | `lib/compiler/lex.myc:782` | `fn lex_string(src: Bytes, s: St) => Result[Pair[Tok, St], LexErr]` | — | Empirical/Declared |
+| `compiler.lex::lex_zero_prefixed` | fn | `lib/compiler/lex.myc:789` | `fn lex_zero_prefixed(src: Bytes, s: St) => Result[Pair[Tok, St], LexErr]` | `0` followed by `b`/`x`/`t` opens a base-prefixed literal; otherwise a plain decimal int. | Empirical/Declared |
+| `compiler.lex::next_token` | fn | `lib/compiler/lex.myc:801` | `fn next_token(src: Bytes, s: St) => Result[Pair[Tok, St], LexErr]` | — | Empirical/Declared |
+| `compiler.lex::run` | fn | `lib/compiler/lex.myc:837` | `fn run(src: Bytes, s: St) => Result[Vec[Spanned], LexErr]` | — | Empirical/Declared |
+| `compiler.lex::lex` | fn | `lib/compiler/lex.myc:855` | `fn lex(src: Bytes) => Result[Vec[Spanned], LexErr]` | lex: tokenize `src` into a `Spanned` stream terminated by `Eof` (mirrors lexer.rs::lex). Comments are discarded (FLAG-lex-5); never-silent on any lexically invalid input (an explicit `Err`, never a panic or a silently-skipped character). | Empirical/Declared |
 
 ### compiler.nodule_header
 
@@ -926,7 +928,7 @@
 | `compiler.parse::StrengthTok::TGEmpirical` | ctor | `lib/compiler/parse.myc:189` | `TGEmpirical` | — | Empirical/Declared |
 | `compiler.parse::StrengthTok::TGExact` | ctor | `lib/compiler/parse.myc:189` | `TGExact` | — | Empirical/Declared |
 | `compiler.parse::StrengthTok::TGProven` | ctor | `lib/compiler/parse.myc:189` | `TGProven` | — | Empirical/Declared |
-| `compiler.parse::Tok` | type | `lib/compiler/parse.myc:193` | `type Tok = Nodule \| Phylum \| TColony \| Hypha \| TFuse \| Mesh \| Graft \| Cyst \| Xloc \| Forage \| Backbone \| Tier \| TReclaim \| TConsume \| Grow \| TDerive \| TUse \| TPub \| TType \| TTrait \| TImpl \| TFn \| Matured \| Thaw \| TLet \| In \| TIf \| Then \| Else \| TMatch \| TFor \| TSwap \| TDefault \| Paradigm \| With \| TWild \| TSpore \| To \| Policy \| TLambda \| TObject \| Via \| TLower \| TKwBinary \| TKwTernary \| TKwDense \| TVsa \| BinShort \| TernShort \| EmbShort \| HvecShort \| TKwSeq \| TKwBytes \| TKwFloat \| TKwSubstrate \| KwSparse \| Scalar(ScalarTok) \| Strength(StrengthTok) \| Ident(Bytes) \| BinLit(Bytes) \| BytesLit(Bytes) \| TritLit(Bytes) \| StrLit(Bytes) \| TInt(Bytes) \| FloatLit(Bytes) \| LParen \| RParen \| LBrace \| RBrace \| LBracket \| RBracket \| LAngle \| RAngle \| Shl \| Shr \| At \| AtStdSys \| Colon \| Comma \| Semi \| Dot \| Pipe \| Plus \| Minus \| Star \| Slash \| Percent \| Caret \| Amp \| AmpAmp \| Eq \| EqEq \| Arrow \| FatArrow \| Bang \| BangEq \| PipePipe \| Eof` | — | Empirical/Declared |
+| `compiler.parse::Tok` | type | `lib/compiler/parse.myc:193` | `type Tok = Nodule \| Phylum \| TColony \| Hypha \| TFuse \| Mesh \| Graft \| Cyst \| Xloc \| Forage \| Backbone \| Tier \| TReclaim \| TConsume \| Grow \| TDerive \| TUse \| TPub \| TPriv \| TType \| TTrait \| TImpl \| TFn \| Matured \| Thaw \| TLet \| In \| TIf \| Then \| Else \| TMatch \| TFor \| TSwap \| TDefault \| Paradigm \| With \| TWild \| TSpore \| To \| Policy \| TLambda \| TObject \| Via \| TLower \| TKwBinary \| TKwTernary \| TKwDense \| TVsa \| BinShort \| TernShort \| EmbShort \| HvecShort \| TKwSeq \| TKwBytes \| TKwFloat \| TKwSubstrate \| KwSparse \| Scalar(ScalarTok) \| Strength(StrengthTok) \| Ident(Bytes) \| BinLit(Bytes) \| BytesLit(Bytes) \| TritLit(Bytes) \| StrLit(Bytes) \| TInt(Bytes) \| FloatLit(Bytes) \| LParen \| RParen \| LBrace \| RBrace \| LBracket \| RBracket \| LAngle \| RAngle \| Shl \| Shr \| At \| AtStdSys \| Colon \| Comma \| Semi \| Dot \| Pipe \| Plus \| Minus \| Star \| Slash \| Percent \| Caret \| Amp \| AmpAmp \| Eq \| EqEq \| Arrow \| FatArrow \| Bang \| BangEq \| PipePipe \| Eof` | — | Empirical/Declared |
 | `compiler.parse::Tok::Nodule` | ctor | `lib/compiler/parse.myc:194` | `Nodule` | — | Empirical/Declared |
 | `compiler.parse::Tok::Phylum` | ctor | `lib/compiler/parse.myc:194` | `Phylum` | — | Empirical/Declared |
 | `compiler.parse::Tok::TColony` | ctor | `lib/compiler/parse.myc:194` | `TColony` | — | Empirical/Declared |
@@ -946,6 +948,7 @@
 | `compiler.parse::Tok::Matured` | ctor | `lib/compiler/parse.myc:197` | `Matured` | — | Empirical/Declared |
 | `compiler.parse::Tok::TFn` | ctor | `lib/compiler/parse.myc:197` | `TFn` | — | Empirical/Declared |
 | `compiler.parse::Tok::TImpl` | ctor | `lib/compiler/parse.myc:197` | `TImpl` | — | Empirical/Declared |
+| `compiler.parse::Tok::TPriv` | ctor | `lib/compiler/parse.myc:197` | `TPriv` | — | Empirical/Declared |
 | `compiler.parse::Tok::TPub` | ctor | `lib/compiler/parse.myc:197` | `TPub` | — | Empirical/Declared |
 | `compiler.parse::Tok::TTrait` | ctor | `lib/compiler/parse.myc:197` | `TTrait` | — | Empirical/Declared |
 | `compiler.parse::Tok::TType` | ctor | `lib/compiler/parse.myc:197` | `TType` | — | Empirical/Declared |
@@ -1030,655 +1033,661 @@
 | `compiler.parse::sp_tok` | fn | `lib/compiler/parse.myc:223` | `fn sp_tok(s: Spanned) => Tok` | — | Empirical/Declared |
 | `compiler.parse::sp_pos` | fn | `lib/compiler/parse.myc:226` | `fn sp_pos(s: Spanned) => Pos` | — | Empirical/Declared |
 | `compiler.parse::keyword` | fn | `lib/compiler/parse.myc:231` | `fn keyword(word: Bytes) => Option[Tok]` | — | Empirical/Declared |
-| `compiler.parse::tok_count` | fn | `lib/compiler/parse.myc:495` | `fn tok_count(v: Vec[Spanned]) => Binary{32}` | — | Empirical/Declared |
-| `compiler.parse::tok_count_acc` | fn | `lib/compiler/parse.myc:498` | `fn tok_count_acc(v: Vec[Spanned], acc: Binary{32}) => Binary{32}` | — | Empirical/Declared |
-| `compiler.parse::nth` | fn | `lib/compiler/parse.myc:507` | `fn nth(v: Vec[Spanned], n: Binary{32}) => Option[Spanned]` | nth: the token at 0-based index `n`, or `None` if out of range. Lets a differential test inspect ONE token's `Tok`/`Pos` at a time without ever matching multiple `Tok` sites in the same nodule check pass (FLAG-lex-6's mitigation). | Empirical/Declared |
-| `compiler.parse::PErr` | type | `lib/compiler/parse.myc:523` | `type PErr = PE(Pos, Bytes)` | — | Empirical/Declared |
-| `compiler.parse::PErr::PE` | ctor | `lib/compiler/parse.myc:523` | `PE(Pos, Bytes)` | — | Empirical/Declared |
-| `compiler.parse::St` | type | `lib/compiler/parse.myc:527` | `type St = S(Binary{32}, Binary{32}, Binary{32})` | — | Empirical/Declared |
-| `compiler.parse::St::S` | ctor | `lib/compiler/parse.myc:527` | `S(Binary{32}, Binary{32}, Binary{32})` | — | Empirical/Declared |
-| `compiler.parse::st_i` | fn | `lib/compiler/parse.myc:529` | `fn st_i(s: St) => Binary{32}` | — | Empirical/Declared |
-| `compiler.parse::st_line` | fn | `lib/compiler/parse.myc:532` | `fn st_line(s: St) => Binary{32}` | — | Empirical/Declared |
-| `compiler.parse::st_col` | fn | `lib/compiler/parse.myc:535` | `fn st_col(s: St) => Binary{32}` | — | Empirical/Declared |
-| `compiler.parse::st_pos` | fn | `lib/compiler/parse.myc:538` | `fn st_pos(s: St) => Pos` | — | Empirical/Declared |
-| `compiler.parse::empty_bytes` | fn | `lib/compiler/parse.myc:545` | `fn empty_bytes() => Bytes` | — | Empirical/Declared |
-| `compiler.parse::bool_and` | fn | `lib/compiler/parse.myc:550` | `fn bool_and(a: Bool, b: Bool) => Bool` | — | Empirical/Declared |
-| `compiler.parse::bool_or` | fn | `lib/compiler/parse.myc:553` | `fn bool_or(a: Bool, b: Bool) => Bool` | — | Empirical/Declared |
-| `compiler.parse::eq_b` | fn | `lib/compiler/parse.myc:556` | `fn eq_b(a: Binary{8}, b: Binary{8}) => Bool` | — | Empirical/Declared |
-| `compiler.parse::lt_b` | fn | `lib/compiler/parse.myc:559` | `fn lt_b(a: Binary{8}, b: Binary{8}) => Bool` | — | Empirical/Declared |
-| `compiler.parse::le_b` | fn | `lib/compiler/parse.myc:563` | `fn le_b(a: Binary{8}, b: Binary{8}) => Bool` | le_b: a <= b, i.e. NOT (b < a). | Empirical/Declared |
-| `compiler.parse::in_range` | fn | `lib/compiler/parse.myc:566` | `fn in_range(c: Binary{8}, lo: Binary{8}, hi: Binary{8}) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_cont_byte` | fn | `lib/compiler/parse.myc:570` | `fn is_cont_byte(c: Binary{8}) => Bool` | UTF-8 continuation byte: 0x80..0xBF (mirrors lib/std/text.myc::is_cont_byte exactly). | Empirical/Declared |
-| `compiler.parse::is_digit` | fn | `lib/compiler/parse.myc:573` | `fn is_digit(c: Binary{8}) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_upper` | fn | `lib/compiler/parse.myc:576` | `fn is_upper(c: Binary{8}) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_lower` | fn | `lib/compiler/parse.myc:579` | `fn is_lower(c: Binary{8}) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_alpha` | fn | `lib/compiler/parse.myc:582` | `fn is_alpha(c: Binary{8}) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_ident_start` | fn | `lib/compiler/parse.myc:585` | `fn is_ident_start(c: Binary{8}) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_ident_continue` | fn | `lib/compiler/parse.myc:588` | `fn is_ident_continue(c: Binary{8}) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_hex_digit` | fn | `lib/compiler/parse.myc:591` | `fn is_hex_digit(c: Binary{8}) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_bin_digit` | fn | `lib/compiler/parse.myc:594` | `fn is_bin_digit(c: Binary{8}) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_trit_glyph` | fn | `lib/compiler/parse.myc:597` | `fn is_trit_glyph(c: Binary{8}) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_underscore` | fn | `lib/compiler/parse.myc:600` | `fn is_underscore(c: Binary{8}) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_ascii_ws` | fn | `lib/compiler/parse.myc:603` | `fn is_ascii_ws(c: Binary{8}) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_nl_or_cr` | fn | `lib/compiler/parse.myc:606` | `fn is_nl_or_cr(c: Binary{8}) => Bool` | — | Empirical/Declared |
-| `compiler.parse::src_peek` | fn | `lib/compiler/parse.myc:610` | `fn src_peek(src: Bytes, i: Binary{32}) => Option[Binary{8}]` | — | Empirical/Declared |
-| `compiler.parse::step_pos` | fn | `lib/compiler/parse.myc:615` | `fn step_pos(c: Binary{8}, s: St) => St` | step_pos: the position AFTER consuming byte `c` (FLAG-lex-1: bumps line on '\n', else bumps column only on a non-continuation byte — "count codepoints, not bytes"). | Empirical/Declared |
-| `compiler.parse::bump` | fn | `lib/compiler/parse.myc:625` | `fn bump(src: Bytes, s: St) => St` | bump: consume one byte at the current position (never-silent no-op at EOF — total). | Empirical/Declared |
-| `compiler.parse::advance_n` | fn | `lib/compiler/parse.myc:629` | `fn advance_n(src: Bytes, s: St, n: Binary{32}) => St` | advance_n: bump `n` times (used after a run-length scan to jump the cursor past a lexeme). | Empirical/Declared |
-| `compiler.parse::skip_to_eol` | fn | `lib/compiler/parse.myc:633` | `fn skip_to_eol(src: Bytes, s: St) => St` | — | Empirical/Declared |
-| `compiler.parse::skip_trivia` | fn | `lib/compiler/parse.myc:639` | `fn skip_trivia(src: Bytes, s: St) => St` | — | Empirical/Declared |
-| `compiler.parse::run_len_ident` | fn | `lib/compiler/parse.myc:658` | `fn run_len_ident(src: Bytes, i: Binary{32}) => Binary{32}` | — | Empirical/Declared |
-| `compiler.parse::run_len_ident_acc` | fn | `lib/compiler/parse.myc:661` | `fn run_len_ident_acc(src: Bytes, i: Binary{32}, acc: Binary{32}) => Binary{32}` | — | Empirical/Declared |
-| `compiler.parse::run_len_digits` | fn | `lib/compiler/parse.myc:670` | `fn run_len_digits(src: Bytes, i: Binary{32}) => Binary{32}` | — | Empirical/Declared |
-| `compiler.parse::run_len_digits_acc` | fn | `lib/compiler/parse.myc:673` | `fn run_len_digits_acc(src: Bytes, i: Binary{32}, acc: Binary{32}) => Binary{32}` | — | Empirical/Declared |
-| `compiler.parse::scan_bin_run` | fn | `lib/compiler/parse.myc:683` | `fn scan_bin_run(src: Bytes, i: Binary{32}) => Pair[Binary{32}, Binary{32}]` | scan_bin_run: Pair(total run length INCLUDING `_` separators, count of actual `0`/`1` digits). | Empirical/Declared |
-| `compiler.parse::scan_bin_run_acc` | fn | `lib/compiler/parse.myc:686` | `fn scan_bin_run_acc(src: Bytes, i: Binary{32}, len: Binary{32}, digits: Binary{32}) => Pair[Binary{32}, Binary{32}]` | — | Empirical/Declared |
-| `compiler.parse::scan_hex_run` | fn | `lib/compiler/parse.myc:699` | `fn scan_hex_run(src: Bytes, i: Binary{32}) => Pair[Binary{32}, Binary{32}]` | scan_hex_run: Pair(total run length INCLUDING `_` separators, count of actual hex digits). | Empirical/Declared |
-| `compiler.parse::scan_hex_run_acc` | fn | `lib/compiler/parse.myc:702` | `fn scan_hex_run_acc(src: Bytes, i: Binary{32}, len: Binary{32}, digits: Binary{32}) => Pair[Binary{32}, Binary{32}]` | — | Empirical/Declared |
-| `compiler.parse::scan_trit_run` | fn | `lib/compiler/parse.myc:715` | `fn scan_trit_run(src: Bytes, i: Binary{32}) => Binary{32}` | scan_trit_run: total count of trit glyphs (`+`/`0`/`-`; no `_` separator in the trit grammar). | Empirical/Declared |
-| `compiler.parse::scan_trit_run_acc` | fn | `lib/compiler/parse.myc:718` | `fn scan_trit_run_acc(src: Bytes, i: Binary{32}, acc: Binary{32}) => Binary{32}` | — | Empirical/Declared |
-| `compiler.parse::scan_string_escape` | fn | `lib/compiler/parse.myc:730` | `fn scan_string_escape(src: Bytes, s: St) => Result[Pair[Bytes, St], PErr]` | — | Empirical/Declared |
-| `compiler.parse::scan_string` | fn | `lib/compiler/parse.myc:747` | `fn scan_string(src: Bytes, s: St) => Result[Pair[Bytes, St], PErr]` | scan_string: `s` is the position right after the opening `"`. Returns the DECODED content + the position right after the closing `"` (never-silent: unterminated / raw newline / bad escape are explicit `Err`, matching lexer.rs::lex_string's contract — see FLAG-lex-7 for message fidelity). | Empirical/Declared |
-| `compiler.parse::scan_string_acc` | fn | `lib/compiler/parse.myc:750` | `fn scan_string_acc(src: Bytes, s: St, acc: Bytes) => Result[Pair[Bytes, St], PErr]` | — | Empirical/Declared |
-| `compiler.parse::lex_rangle` | fn | `lib/compiler/parse.myc:769` | `fn lex_rangle(src: Bytes, s: St) => Pair[Tok, St]` | — | Empirical/Declared |
-| `compiler.parse::lex_langle` | fn | `lib/compiler/parse.myc:776` | `fn lex_langle(src: Bytes, s: St) => Pair[Tok, St]` | — | Empirical/Declared |
-| `compiler.parse::lex_amp` | fn | `lib/compiler/parse.myc:783` | `fn lex_amp(src: Bytes, s: St) => Pair[Tok, St]` | — | Empirical/Declared |
-| `compiler.parse::lex_pipe` | fn | `lib/compiler/parse.myc:790` | `fn lex_pipe(src: Bytes, s: St) => Pair[Tok, St]` | — | Empirical/Declared |
-| `compiler.parse::lex_bang` | fn | `lib/compiler/parse.myc:797` | `fn lex_bang(src: Bytes, s: St) => Pair[Tok, St]` | — | Empirical/Declared |
-| `compiler.parse::lex_eq` | fn | `lib/compiler/parse.myc:804` | `fn lex_eq(src: Bytes, s: St) => Pair[Tok, St]` | — | Empirical/Declared |
-| `compiler.parse::lex_dash` | fn | `lib/compiler/parse.myc:812` | `fn lex_dash(src: Bytes, s: St) => Pair[Tok, St]` | — | Empirical/Declared |
-| `compiler.parse::lex_at` | fn | `lib/compiler/parse.myc:821` | `fn lex_at(src: Bytes, s: St) => Pair[Tok, St]` | `@` vs the atomic `@std-sys` nodule-header marker (M-661; mirrors lexer.rs::lex_at exactly, now expressible directly via the `bytes_eq` prim, M-912). | Empirical/Declared |
-| `compiler.parse::lex_ident` | fn | `lib/compiler/parse.myc:839` | `fn lex_ident(src: Bytes, s: St) => Pair[Tok, St]` | — | Empirical/Declared |
-| `compiler.parse::lex_int` | fn | `lib/compiler/parse.myc:848` | `fn lex_int(src: Bytes, s: St) => Pair[Tok, St]` | lex_int: a non-negative decimal digit run, verbatim (FLAG-lex-2: no float extension, no eager numeric conversion — a structural deviation from lexer.rs, deliberately scoped, no accept-corpus input exercises the gap). | Empirical/Declared |
-| `compiler.parse::lex_binlit` | fn | `lib/compiler/parse.myc:853` | `fn lex_binlit(src: Bytes, s: St) => Result[Pair[Tok, St], PErr]` | — | Empirical/Declared |
-| `compiler.parse::lex_hexlit` | fn | `lib/compiler/parse.myc:866` | `fn lex_hexlit(src: Bytes, s: St) => Result[Pair[Tok, St], PErr]` | Even-hex-digit-count check (RFC-0032 D4: a byte is two hex chars): `and(digits, 1)` masks the low bit — `0` iff `digits` is even. `and` requires same-width operands; the bare `1` anchors to `digits`'s width (Binary{32}, RFC-0012 ambient bare-decimal inference). | Empirical/Declared |
-| `compiler.parse::lex_tritlit` | fn | `lib/compiler/parse.myc:878` | `fn lex_tritlit(src: Bytes, s: St) => Result[Pair[Tok, St], PErr]` | — | Empirical/Declared |
-| `compiler.parse::lex_string` | fn | `lib/compiler/parse.myc:886` | `fn lex_string(src: Bytes, s: St) => Result[Pair[Tok, St], PErr]` | — | Empirical/Declared |
-| `compiler.parse::lex_zero_prefixed` | fn | `lib/compiler/parse.myc:893` | `fn lex_zero_prefixed(src: Bytes, s: St) => Result[Pair[Tok, St], PErr]` | `0` followed by `b`/`x`/`t` opens a base-prefixed literal; otherwise a plain decimal int. | Empirical/Declared |
-| `compiler.parse::next_token` | fn | `lib/compiler/parse.myc:905` | `fn next_token(src: Bytes, s: St) => Result[Pair[Tok, St], PErr]` | — | Empirical/Declared |
-| `compiler.parse::run` | fn | `lib/compiler/parse.myc:941` | `fn run(src: Bytes, s: St) => Result[Vec[Spanned], PErr]` | — | Empirical/Declared |
-| `compiler.parse::run_acc` | fn | `lib/compiler/parse.myc:944` | `fn run_acc(src: Bytes, s: St, acc: Vec[Spanned]) => Result[Vec[Spanned], PErr]` | — | Empirical/Declared |
-| `compiler.parse::lex` | fn | `lib/compiler/parse.myc:959` | `fn lex(src: Bytes) => Result[Vec[Spanned], PErr]` | lex: tokenize `src` into a `Spanned` stream terminated by `Eof` (mirrors lexer.rs::lex). Comments are discarded (FLAG-lex-5); never-silent on any lexically invalid input (an explicit `Err`, never a panic or a silently-skipped character). | Empirical/Declared |
-| `compiler.parse::Vis` | type | `lib/compiler/parse.myc:966` | `type Vis = Private \| Pub` | — | Empirical/Declared |
-| `compiler.parse::Vis::Private` | ctor | `lib/compiler/parse.myc:966` | `Private` | — | Empirical/Declared |
-| `compiler.parse::Vis::Pub` | ctor | `lib/compiler/parse.myc:966` | `Pub` | — | Empirical/Declared |
-| `compiler.parse::vis_is_pub` | fn | `lib/compiler/parse.myc:968` | `fn vis_is_pub(v: Vis) => Bool` | — | Empirical/Declared |
-| `compiler.parse::Path` | type | `lib/compiler/parse.myc:972` | `type Path = Pth(Vec[Bytes])` | — | Empirical/Declared |
-| `compiler.parse::Path::Pth` | ctor | `lib/compiler/parse.myc:972` | `Pth(Vec[Bytes])` | — | Empirical/Declared |
-| `compiler.parse::path_segs` | fn | `lib/compiler/parse.myc:974` | `fn path_segs(p: Path) => Vec[Bytes]` | — | Empirical/Declared |
-| `compiler.parse::UsePath` | type | `lib/compiler/parse.myc:979` | `type UsePath = UP(Path, Bool)` | — | Empirical/Declared |
-| `compiler.parse::UsePath::UP` | ctor | `lib/compiler/parse.myc:979` | `UP(Path, Bool)` | — | Empirical/Declared |
-| `compiler.parse::usepath_path` | fn | `lib/compiler/parse.myc:981` | `fn usepath_path(u: UsePath) => Path` | — | Empirical/Declared |
-| `compiler.parse::usepath_glob` | fn | `lib/compiler/parse.myc:984` | `fn usepath_glob(u: UsePath) => Bool` | — | Empirical/Declared |
-| `compiler.parse::Paradigm` | type | `lib/compiler/parse.myc:988` | `type Paradigm = PBinary \| PTernary \| PDense \| PVsa` | — | Empirical/Declared |
-| `compiler.parse::Paradigm::PBinary` | ctor | `lib/compiler/parse.myc:988` | `PBinary` | — | Empirical/Declared |
-| `compiler.parse::Paradigm::PDense` | ctor | `lib/compiler/parse.myc:988` | `PDense` | — | Empirical/Declared |
-| `compiler.parse::Paradigm::PTernary` | ctor | `lib/compiler/parse.myc:988` | `PTernary` | — | Empirical/Declared |
-| `compiler.parse::Paradigm::PVsa` | ctor | `lib/compiler/parse.myc:988` | `PVsa` | — | Empirical/Declared |
-| `compiler.parse::paradigm_to_bytes` | fn | `lib/compiler/parse.myc:992` | `fn paradigm_to_bytes(p: Paradigm) => Bytes` | paradigm_to_bytes: mirrors `impl Display for Paradigm` (FLAG-ast-7 note: this one IS ported — a trivial fixed 4-string lookup, unlike WidthRef's). | Empirical/Declared |
-| `compiler.parse::Scalar` | type | `lib/compiler/parse.myc:1001` | `type Scalar = SF16 \| SBf16 \| SF32 \| SF64` | — | Empirical/Declared |
-| `compiler.parse::Scalar::SBf16` | ctor | `lib/compiler/parse.myc:1001` | `SBf16` | — | Empirical/Declared |
-| `compiler.parse::Scalar::SF16` | ctor | `lib/compiler/parse.myc:1001` | `SF16` | — | Empirical/Declared |
-| `compiler.parse::Scalar::SF32` | ctor | `lib/compiler/parse.myc:1001` | `SF32` | — | Empirical/Declared |
-| `compiler.parse::Scalar::SF64` | ctor | `lib/compiler/parse.myc:1001` | `SF64` | — | Empirical/Declared |
-| `compiler.parse::Sparsity` | type | `lib/compiler/parse.myc:1004` | `type Sparsity = SpDense \| SpSparse(Binary{32})` | — | Empirical/Declared |
-| `compiler.parse::Sparsity::SpDense` | ctor | `lib/compiler/parse.myc:1004` | `SpDense` | — | Empirical/Declared |
-| `compiler.parse::Sparsity::SpSparse` | ctor | `lib/compiler/parse.myc:1004` | `SpSparse(Binary{32})` | — | Empirical/Declared |
-| `compiler.parse::AmbientParams` | type | `lib/compiler/parse.myc:1008` | `type AmbientParams = APSize(Binary{32}) \| APDense(Binary{32}, Scalar) \| APVsa(Bytes, Binary{32}, Sparsity)` | — | Empirical/Declared |
-| `compiler.parse::AmbientParams::APSize` | ctor | `lib/compiler/parse.myc:1009` | `APSize(Binary{32})` | — | Empirical/Declared |
-| `compiler.parse::AmbientParams::APDense` | ctor | `lib/compiler/parse.myc:1010` | `APDense(Binary{32}, Scalar)` | — | Empirical/Declared |
-| `compiler.parse::AmbientParams::APVsa` | ctor | `lib/compiler/parse.myc:1011` | `APVsa(Bytes, Binary{32}, Sparsity)` | — | Empirical/Declared |
-| `compiler.parse::Strength` | type | `lib/compiler/parse.myc:1014` | `type Strength = GExact \| GProven \| GEmpirical \| GDeclared` | — | Empirical/Declared |
-| `compiler.parse::Strength::GDeclared` | ctor | `lib/compiler/parse.myc:1014` | `GDeclared` | — | Empirical/Declared |
-| `compiler.parse::Strength::GEmpirical` | ctor | `lib/compiler/parse.myc:1014` | `GEmpirical` | — | Empirical/Declared |
-| `compiler.parse::Strength::GExact` | ctor | `lib/compiler/parse.myc:1014` | `GExact` | — | Empirical/Declared |
-| `compiler.parse::Strength::GProven` | ctor | `lib/compiler/parse.myc:1014` | `GProven` | — | Empirical/Declared |
-| `compiler.parse::strength_rank` | fn | `lib/compiler/parse.myc:1017` | `fn strength_rank(s: Strength) => Binary{8}` | strength_rank: mirrors `Strength::rank` (u8 -> Binary{8}; Declared=0 .. Exact=3). | Empirical/Declared |
-| `compiler.parse::strength_meet` | fn | `lib/compiler/parse.myc:1026` | `fn strength_meet(a: Strength, b: Strength) => Strength` | strength_meet: mirrors `Strength::meet` — the weaker (less-trusted) of the two grades. | Empirical/Declared |
-| `compiler.parse::strength_satisfies` | fn | `lib/compiler/parse.myc:1033` | `fn strength_satisfies(actual: Strength, demand: Strength) => Bool` | strength_satisfies: mirrors `Strength::satisfies` — `self.rank() >= demand.rank()`. | Empirical/Declared |
-| `compiler.parse::WidthRef` | type | `lib/compiler/parse.myc:1040` | `type WidthRef = WLit(Binary{32}) \| WName(Bytes)` | — | Empirical/Declared |
-| `compiler.parse::WidthRef::WLit` | ctor | `lib/compiler/parse.myc:1040` | `WLit(Binary{32})` | — | Empirical/Declared |
-| `compiler.parse::WidthRef::WName` | ctor | `lib/compiler/parse.myc:1040` | `WName(Bytes)` | — | Empirical/Declared |
-| `compiler.parse::ParamKind` | type | `lib/compiler/parse.myc:1046` | `type ParamKind = PkType \| PkWidth` | — | Empirical/Declared |
-| `compiler.parse::ParamKind::PkType` | ctor | `lib/compiler/parse.myc:1046` | `PkType` | — | Empirical/Declared |
-| `compiler.parse::ParamKind::PkWidth` | ctor | `lib/compiler/parse.myc:1046` | `PkWidth` | — | Empirical/Declared |
-| `compiler.parse::paramkind_eq` | fn | `lib/compiler/parse.myc:1048` | `fn paramkind_eq(a: ParamKind, b: ParamKind) => Bool` | — | Empirical/Declared |
-| `compiler.parse::TraitRef` | type | `lib/compiler/parse.myc:1055` | `type TraitRef = TRf(Bytes, Vec[TypeRef])` | — | Empirical/Declared |
-| `compiler.parse::TraitRef::TRf` | ctor | `lib/compiler/parse.myc:1055` | `TRf(Bytes, Vec[TypeRef])` | — | Empirical/Declared |
-| `compiler.parse::traitref_name` | fn | `lib/compiler/parse.myc:1057` | `fn traitref_name(t: TraitRef) => Bytes` | — | Empirical/Declared |
-| `compiler.parse::traitref_args` | fn | `lib/compiler/parse.myc:1060` | `fn traitref_args(t: TraitRef) => Vec[TypeRef]` | — | Empirical/Declared |
-| `compiler.parse::TypeParam` | type | `lib/compiler/parse.myc:1064` | `type TypeParam = TP(Bytes, ParamKind, Vec[TraitRef])` | — | Empirical/Declared |
-| `compiler.parse::TypeParam::TP` | ctor | `lib/compiler/parse.myc:1064` | `TP(Bytes, ParamKind, Vec[TraitRef])` | — | Empirical/Declared |
-| `compiler.parse::typeparam_name` | fn | `lib/compiler/parse.myc:1066` | `fn typeparam_name(t: TypeParam) => Bytes` | — | Empirical/Declared |
-| `compiler.parse::typeparam_kind` | fn | `lib/compiler/parse.myc:1069` | `fn typeparam_kind(t: TypeParam) => ParamKind` | — | Empirical/Declared |
-| `compiler.parse::typeparam_bounds` | fn | `lib/compiler/parse.myc:1072` | `fn typeparam_bounds(t: TypeParam) => Vec[TraitRef]` | — | Empirical/Declared |
-| `compiler.parse::typeparam_names_of_kind` | fn | `lib/compiler/parse.myc:1078` | `fn typeparam_names_of_kind(ps: Vec[TypeParam], k: ParamKind) => Vec[Bytes]` | typeparam_names_of_kind: shared filter for fn_sig_param_names / fn_sig_width_param_names below. Non-tail, bounded by the fn's OWN type-parameter count (a handful) — not source length; the same nesting-bounded shape nodule.myc's split_dotted/join_segs use (RFC-0041 §7 W7 amendment 11). | Empirical/Declared |
-| `compiler.parse::EffectBudget` | type | `lib/compiler/parse.myc:1089` | `type EffectBudget = EB(Bytes, Binary{64})` | — | Empirical/Declared |
-| `compiler.parse::EffectBudget::EB` | ctor | `lib/compiler/parse.myc:1089` | `EB(Bytes, Binary{64})` | — | Empirical/Declared |
-| `compiler.parse::FnSig` | type | `lib/compiler/parse.myc:1094` | `type FnSig = FS(Bytes, Vec[TypeParam], Vec[Param], TypeRef, Vec[Bytes], Vec[EffectBudget])` | — | Empirical/Declared |
-| `compiler.parse::FnSig::FS` | ctor | `lib/compiler/parse.myc:1094` | `FS(Bytes, Vec[TypeParam], Vec[Param], TypeRef, Vec[Bytes], Vec[EffectBudget])` | — | Empirical/Declared |
-| `compiler.parse::fnsig_name` | fn | `lib/compiler/parse.myc:1096` | `fn fnsig_name(s: FnSig) => Bytes` | — | Empirical/Declared |
-| `compiler.parse::fnsig_params` | fn | `lib/compiler/parse.myc:1099` | `fn fnsig_params(s: FnSig) => Vec[TypeParam]` | — | Empirical/Declared |
-| `compiler.parse::fnsig_value_params` | fn | `lib/compiler/parse.myc:1102` | `fn fnsig_value_params(s: FnSig) => Vec[Param]` | — | Empirical/Declared |
-| `compiler.parse::fnsig_ret` | fn | `lib/compiler/parse.myc:1105` | `fn fnsig_ret(s: FnSig) => TypeRef` | — | Empirical/Declared |
-| `compiler.parse::fnsig_effects` | fn | `lib/compiler/parse.myc:1108` | `fn fnsig_effects(s: FnSig) => Vec[Bytes]` | — | Empirical/Declared |
-| `compiler.parse::fnsig_effect_budgets` | fn | `lib/compiler/parse.myc:1111` | `fn fnsig_effect_budgets(s: FnSig) => Vec[EffectBudget]` | — | Empirical/Declared |
-| `compiler.parse::fnsig_param_names` | fn | `lib/compiler/parse.myc:1115` | `fn fnsig_param_names(s: FnSig) => Vec[Bytes]` | fnsig_param_names: mirrors `FnSig::param_names` (type-kind params only). | Empirical/Declared |
-| `compiler.parse::fnsig_width_param_names` | fn | `lib/compiler/parse.myc:1119` | `fn fnsig_width_param_names(s: FnSig) => Vec[Bytes]` | fnsig_width_param_names: mirrors `FnSig::width_param_names` (width-kind params only). | Empirical/Declared |
-| `compiler.parse::Param` | type | `lib/compiler/parse.myc:1123` | `type Param = Prm(Bytes, TypeRef)` | — | Empirical/Declared |
-| `compiler.parse::Param::Prm` | ctor | `lib/compiler/parse.myc:1123` | `Prm(Bytes, TypeRef)` | — | Empirical/Declared |
-| `compiler.parse::param_name` | fn | `lib/compiler/parse.myc:1125` | `fn param_name(p: Param) => Bytes` | — | Empirical/Declared |
-| `compiler.parse::param_ty` | fn | `lib/compiler/parse.myc:1128` | `fn param_ty(p: Param) => TypeRef` | — | Empirical/Declared |
-| `compiler.parse::TypeRef` | type | `lib/compiler/parse.myc:1134` | `type TypeRef = TR(BaseType, Option[Strength])` | — | Empirical/Declared |
-| `compiler.parse::TypeRef::TR` | ctor | `lib/compiler/parse.myc:1134` | `TR(BaseType, Option[Strength])` | — | Empirical/Declared |
-| `compiler.parse::typeref_base` | fn | `lib/compiler/parse.myc:1136` | `fn typeref_base(t: TypeRef) => BaseType` | — | Empirical/Declared |
-| `compiler.parse::typeref_guarantee` | fn | `lib/compiler/parse.myc:1139` | `fn typeref_guarantee(t: TypeRef) => Option[Strength]` | — | Empirical/Declared |
-| `compiler.parse::typeref_unguaranteed` | fn | `lib/compiler/parse.myc:1143` | `fn typeref_unguaranteed(b: BaseType) => TypeRef` | typeref_unguaranteed: mirrors `TypeRef::unguaranteed`. | Empirical/Declared |
-| `compiler.parse::typeref_with_guarantee` | fn | `lib/compiler/parse.myc:1147` | `fn typeref_with_guarantee(b: BaseType, g: Strength) => TypeRef` | typeref_with_guarantee: mirrors `TypeRef::with_guarantee`. | Empirical/Declared |
-| `compiler.parse::BaseType` | type | `lib/compiler/parse.myc:1154` | `type BaseType = KwBinary(WidthRef) \| KwTernary(WidthRef) \| KwDense(Binary{32}, Scalar) \| Vsa(Bytes, Binary{32}, Sparsity) \| KwSubstrate(Bytes) \| KwSeq(TypeRef, Binary{32}) \| KwBytes \| KwFloat \| Named(Bytes, Vec[TypeRef]) \| Ambient(AmbientParams) \| FnArrow(TypeRef, TypeRef) \| Tuple(Vec[TypeRef])` | BaseType: mirrors ast.rs::BaseType field-for-field. FLAG-ast-4 renames the 7 repr-keyword collisions (Kw-prefix); FLAG-ast-5 renames `Fn` (cross-type collision with `Item::Fn`) to `FnArrow`. `Vsa`/`Named`/`Ambient`/`Tuple` are bare (no collision after FLAG-ast-4's Paradigm/ AmbientParams renames leave them the sole survivor). | Empirical/Declared |
-| `compiler.parse::BaseType::KwBinary` | ctor | `lib/compiler/parse.myc:1155` | `KwBinary(WidthRef)` | — | Empirical/Declared |
-| `compiler.parse::BaseType::KwTernary` | ctor | `lib/compiler/parse.myc:1156` | `KwTernary(WidthRef)` | — | Empirical/Declared |
-| `compiler.parse::BaseType::KwDense` | ctor | `lib/compiler/parse.myc:1157` | `KwDense(Binary{32}, Scalar)` | — | Empirical/Declared |
-| `compiler.parse::BaseType::Vsa` | ctor | `lib/compiler/parse.myc:1158` | `Vsa(Bytes, Binary{32}, Sparsity)` | — | Empirical/Declared |
-| `compiler.parse::BaseType::KwSubstrate` | ctor | `lib/compiler/parse.myc:1159` | `KwSubstrate(Bytes)` | — | Empirical/Declared |
-| `compiler.parse::BaseType::KwSeq` | ctor | `lib/compiler/parse.myc:1160` | `KwSeq(TypeRef, Binary{32})` | — | Empirical/Declared |
-| `compiler.parse::BaseType::KwBytes` | ctor | `lib/compiler/parse.myc:1161` | `KwBytes` | — | Empirical/Declared |
-| `compiler.parse::BaseType::KwFloat` | ctor | `lib/compiler/parse.myc:1162` | `KwFloat` | — | Empirical/Declared |
-| `compiler.parse::BaseType::Named` | ctor | `lib/compiler/parse.myc:1163` | `Named(Bytes, Vec[TypeRef])` | — | Empirical/Declared |
-| `compiler.parse::BaseType::Ambient` | ctor | `lib/compiler/parse.myc:1164` | `Ambient(AmbientParams)` | — | Empirical/Declared |
-| `compiler.parse::BaseType::FnArrow` | ctor | `lib/compiler/parse.myc:1165` | `FnArrow(TypeRef, TypeRef)` | — | Empirical/Declared |
-| `compiler.parse::BaseType::Tuple` | ctor | `lib/compiler/parse.myc:1166` | `Tuple(Vec[TypeRef])` | — | Empirical/Declared |
-| `compiler.parse::ExecutionMode` | type | `lib/compiler/parse.myc:1169` | `type ExecutionMode = Interpreted \| Compiled` | — | Empirical/Declared |
-| `compiler.parse::ExecutionMode::Compiled` | ctor | `lib/compiler/parse.myc:1169` | `Compiled` | — | Empirical/Declared |
-| `compiler.parse::ExecutionMode::Interpreted` | ctor | `lib/compiler/parse.myc:1169` | `Interpreted` | — | Empirical/Declared |
-| `compiler.parse::FnDecl` | type | `lib/compiler/parse.myc:1173` | `type FnDecl = FD(Vis, Bool, Option[ExecutionMode], FnSig, Expr)` | — | Empirical/Declared |
-| `compiler.parse::FnDecl::FD` | ctor | `lib/compiler/parse.myc:1173` | `FD(Vis, Bool, Option[ExecutionMode], FnSig, Expr)` | — | Empirical/Declared |
-| `compiler.parse::fndecl_vis` | fn | `lib/compiler/parse.myc:1175` | `fn fndecl_vis(f: FnDecl) => Vis` | — | Empirical/Declared |
-| `compiler.parse::fndecl_thaw` | fn | `lib/compiler/parse.myc:1178` | `fn fndecl_thaw(f: FnDecl) => Bool` | — | Empirical/Declared |
-| `compiler.parse::fndecl_tier` | fn | `lib/compiler/parse.myc:1181` | `fn fndecl_tier(f: FnDecl) => Option[ExecutionMode]` | — | Empirical/Declared |
-| `compiler.parse::fndecl_sig` | fn | `lib/compiler/parse.myc:1184` | `fn fndecl_sig(f: FnDecl) => FnSig` | — | Empirical/Declared |
-| `compiler.parse::fndecl_body` | fn | `lib/compiler/parse.myc:1187` | `fn fndecl_body(f: FnDecl) => Expr` | — | Empirical/Declared |
-| `compiler.parse::Ctor` | type | `lib/compiler/parse.myc:1191` | `type Ctor = Ctr(Bytes, Vec[TypeRef])` | — | Empirical/Declared |
-| `compiler.parse::Ctor::Ctr` | ctor | `lib/compiler/parse.myc:1191` | `Ctr(Bytes, Vec[TypeRef])` | — | Empirical/Declared |
-| `compiler.parse::ctor_name` | fn | `lib/compiler/parse.myc:1193` | `fn ctor_name(c: Ctor) => Bytes` | — | Empirical/Declared |
-| `compiler.parse::ctor_fields` | fn | `lib/compiler/parse.myc:1196` | `fn ctor_fields(c: Ctor) => Vec[TypeRef]` | — | Empirical/Declared |
-| `compiler.parse::TypeDecl` | type | `lib/compiler/parse.myc:1200` | `type TypeDecl = TD(Vis, Bytes, Vec[Bytes], Vec[Ctor])` | — | Empirical/Declared |
-| `compiler.parse::TypeDecl::TD` | ctor | `lib/compiler/parse.myc:1200` | `TD(Vis, Bytes, Vec[Bytes], Vec[Ctor])` | — | Empirical/Declared |
-| `compiler.parse::typedecl_vis` | fn | `lib/compiler/parse.myc:1202` | `fn typedecl_vis(t: TypeDecl) => Vis` | — | Empirical/Declared |
-| `compiler.parse::typedecl_name` | fn | `lib/compiler/parse.myc:1205` | `fn typedecl_name(t: TypeDecl) => Bytes` | — | Empirical/Declared |
-| `compiler.parse::typedecl_params` | fn | `lib/compiler/parse.myc:1208` | `fn typedecl_params(t: TypeDecl) => Vec[Bytes]` | — | Empirical/Declared |
-| `compiler.parse::typedecl_ctors` | fn | `lib/compiler/parse.myc:1211` | `fn typedecl_ctors(t: TypeDecl) => Vec[Ctor]` | — | Empirical/Declared |
-| `compiler.parse::TraitDecl` | type | `lib/compiler/parse.myc:1215` | `type TraitDecl = TrD(Vis, Bytes, Vec[Bytes], Vec[FnSig])` | — | Empirical/Declared |
-| `compiler.parse::TraitDecl::TrD` | ctor | `lib/compiler/parse.myc:1215` | `TrD(Vis, Bytes, Vec[Bytes], Vec[FnSig])` | — | Empirical/Declared |
-| `compiler.parse::traitdecl_vis` | fn | `lib/compiler/parse.myc:1217` | `fn traitdecl_vis(t: TraitDecl) => Vis` | — | Empirical/Declared |
-| `compiler.parse::traitdecl_name` | fn | `lib/compiler/parse.myc:1220` | `fn traitdecl_name(t: TraitDecl) => Bytes` | — | Empirical/Declared |
-| `compiler.parse::traitdecl_params` | fn | `lib/compiler/parse.myc:1223` | `fn traitdecl_params(t: TraitDecl) => Vec[Bytes]` | — | Empirical/Declared |
-| `compiler.parse::traitdecl_sigs` | fn | `lib/compiler/parse.myc:1226` | `fn traitdecl_sigs(t: TraitDecl) => Vec[FnSig]` | — | Empirical/Declared |
-| `compiler.parse::ImplDecl` | type | `lib/compiler/parse.myc:1230` | `type ImplDecl = ImD(Bytes, Vec[TypeRef], TypeRef, Vec[FnDecl])` | — | Empirical/Declared |
-| `compiler.parse::ImplDecl::ImD` | ctor | `lib/compiler/parse.myc:1230` | `ImD(Bytes, Vec[TypeRef], TypeRef, Vec[FnDecl])` | — | Empirical/Declared |
-| `compiler.parse::impldecl_trait_name` | fn | `lib/compiler/parse.myc:1232` | `fn impldecl_trait_name(i: ImplDecl) => Bytes` | — | Empirical/Declared |
-| `compiler.parse::impldecl_trait_args` | fn | `lib/compiler/parse.myc:1235` | `fn impldecl_trait_args(i: ImplDecl) => Vec[TypeRef]` | — | Empirical/Declared |
-| `compiler.parse::impldecl_for_ty` | fn | `lib/compiler/parse.myc:1238` | `fn impldecl_for_ty(i: ImplDecl) => TypeRef` | — | Empirical/Declared |
-| `compiler.parse::impldecl_methods` | fn | `lib/compiler/parse.myc:1241` | `fn impldecl_methods(i: ImplDecl) => Vec[FnDecl]` | — | Empirical/Declared |
-| `compiler.parse::ViaDecl` | type | `lib/compiler/parse.myc:1245` | `type ViaDecl = VD(Binary{32}, Bytes, Vec[TypeRef])` | — | Empirical/Declared |
-| `compiler.parse::ViaDecl::VD` | ctor | `lib/compiler/parse.myc:1245` | `VD(Binary{32}, Bytes, Vec[TypeRef])` | — | Empirical/Declared |
-| `compiler.parse::viadecl_field_idx` | fn | `lib/compiler/parse.myc:1247` | `fn viadecl_field_idx(v: ViaDecl) => Binary{32}` | — | Empirical/Declared |
-| `compiler.parse::viadecl_trait_name` | fn | `lib/compiler/parse.myc:1250` | `fn viadecl_trait_name(v: ViaDecl) => Bytes` | — | Empirical/Declared |
-| `compiler.parse::viadecl_trait_args` | fn | `lib/compiler/parse.myc:1253` | `fn viadecl_trait_args(v: ViaDecl) => Vec[TypeRef]` | — | Empirical/Declared |
-| `compiler.parse::ObjectDecl` | type | `lib/compiler/parse.myc:1257` | `type ObjectDecl = OD(Vis, Bytes, Vec[Bytes], Ctor, Vec[ViaDecl], Vec[ImplDecl], Vec[FnDecl])` | — | Empirical/Declared |
-| `compiler.parse::ObjectDecl::OD` | ctor | `lib/compiler/parse.myc:1257` | `OD(Vis, Bytes, Vec[Bytes], Ctor, Vec[ViaDecl], Vec[ImplDecl], Vec[FnDecl])` | — | Empirical/Declared |
-| `compiler.parse::objectdecl_vis` | fn | `lib/compiler/parse.myc:1259` | `fn objectdecl_vis(o: ObjectDecl) => Vis` | — | Empirical/Declared |
-| `compiler.parse::objectdecl_name` | fn | `lib/compiler/parse.myc:1262` | `fn objectdecl_name(o: ObjectDecl) => Bytes` | — | Empirical/Declared |
-| `compiler.parse::objectdecl_params` | fn | `lib/compiler/parse.myc:1265` | `fn objectdecl_params(o: ObjectDecl) => Vec[Bytes]` | — | Empirical/Declared |
-| `compiler.parse::objectdecl_ctor` | fn | `lib/compiler/parse.myc:1268` | `fn objectdecl_ctor(o: ObjectDecl) => Ctor` | — | Empirical/Declared |
-| `compiler.parse::objectdecl_via_decls` | fn | `lib/compiler/parse.myc:1271` | `fn objectdecl_via_decls(o: ObjectDecl) => Vec[ViaDecl]` | — | Empirical/Declared |
-| `compiler.parse::objectdecl_impls` | fn | `lib/compiler/parse.myc:1274` | `fn objectdecl_impls(o: ObjectDecl) => Vec[ImplDecl]` | — | Empirical/Declared |
-| `compiler.parse::objectdecl_fns` | fn | `lib/compiler/parse.myc:1277` | `fn objectdecl_fns(o: ObjectDecl) => Vec[FnDecl]` | — | Empirical/Declared |
-| `compiler.parse::InherentImplDecl` | type | `lib/compiler/parse.myc:1281` | `type InherentImplDecl = IID(TypeRef, Vec[FnDecl])` | — | Empirical/Declared |
-| `compiler.parse::InherentImplDecl::IID` | ctor | `lib/compiler/parse.myc:1281` | `IID(TypeRef, Vec[FnDecl])` | — | Empirical/Declared |
-| `compiler.parse::inherentimpldecl_for_ty` | fn | `lib/compiler/parse.myc:1283` | `fn inherentimpldecl_for_ty(i: InherentImplDecl) => TypeRef` | — | Empirical/Declared |
-| `compiler.parse::inherentimpldecl_methods` | fn | `lib/compiler/parse.myc:1286` | `fn inherentimpldecl_methods(i: InherentImplDecl) => Vec[FnDecl]` | — | Empirical/Declared |
-| `compiler.parse::LowerRhs` | type | `lib/compiler/parse.myc:1291` | `type LowerRhs = LRExpr(Expr) \| LRImpl(ImplDecl)` | — | Empirical/Declared |
-| `compiler.parse::LowerRhs::LRExpr` | ctor | `lib/compiler/parse.myc:1291` | `LRExpr(Expr)` | — | Empirical/Declared |
-| `compiler.parse::LowerRhs::LRImpl` | ctor | `lib/compiler/parse.myc:1291` | `LRImpl(ImplDecl)` | — | Empirical/Declared |
-| `compiler.parse::LowerDecl` | type | `lib/compiler/parse.myc:1294` | `type LowerDecl = LD(Bytes, Vec[Bytes], LowerRhs)` | — | Empirical/Declared |
-| `compiler.parse::LowerDecl::LD` | ctor | `lib/compiler/parse.myc:1294` | `LD(Bytes, Vec[Bytes], LowerRhs)` | — | Empirical/Declared |
-| `compiler.parse::lowerdecl_name` | fn | `lib/compiler/parse.myc:1296` | `fn lowerdecl_name(l: LowerDecl) => Bytes` | — | Empirical/Declared |
-| `compiler.parse::lowerdecl_params` | fn | `lib/compiler/parse.myc:1299` | `fn lowerdecl_params(l: LowerDecl) => Vec[Bytes]` | — | Empirical/Declared |
-| `compiler.parse::lowerdecl_rhs` | fn | `lib/compiler/parse.myc:1302` | `fn lowerdecl_rhs(l: LowerDecl) => LowerRhs` | — | Empirical/Declared |
-| `compiler.parse::lowerdecl_expr_rhs` | fn | `lib/compiler/parse.myc:1306` | `fn lowerdecl_expr_rhs(l: LowerDecl) => Option[Expr]` | lowerdecl_expr_rhs: mirrors `LowerDecl::expr_rhs`. | Empirical/Declared |
-| `compiler.parse::lowerdecl_impl_rhs` | fn | `lib/compiler/parse.myc:1313` | `fn lowerdecl_impl_rhs(l: LowerDecl) => Option[ImplDecl]` | lowerdecl_impl_rhs: mirrors `LowerDecl::impl_rhs`. | Empirical/Declared |
-| `compiler.parse::DeriveDecl` | type | `lib/compiler/parse.myc:1320` | `type DeriveDecl = DD(Bytes, TypeRef)` | — | Empirical/Declared |
-| `compiler.parse::DeriveDecl::DD` | ctor | `lib/compiler/parse.myc:1320` | `DD(Bytes, TypeRef)` | — | Empirical/Declared |
-| `compiler.parse::derivedecl_name` | fn | `lib/compiler/parse.myc:1322` | `fn derivedecl_name(d: DeriveDecl) => Bytes` | — | Empirical/Declared |
-| `compiler.parse::derivedecl_for_ty` | fn | `lib/compiler/parse.myc:1325` | `fn derivedecl_for_ty(d: DeriveDecl) => TypeRef` | — | Empirical/Declared |
-| `compiler.parse::Item` | type | `lib/compiler/parse.myc:1330` | `type Item = Use(UsePath) \| Default(Paradigm) \| Type(TypeDecl) \| Trait(TraitDecl) \| Impl(ImplDecl) \| Fn(FnDecl) \| Object(ObjectDecl) \| Lower(LowerDecl) \| Derive(DeriveDecl) \| InherentImpl(InherentImplDecl)` | — | Empirical/Declared |
-| `compiler.parse::Item::Use` | ctor | `lib/compiler/parse.myc:1331` | `Use(UsePath)` | — | Empirical/Declared |
-| `compiler.parse::Item::Default` | ctor | `lib/compiler/parse.myc:1332` | `Default(Paradigm)` | — | Empirical/Declared |
-| `compiler.parse::Item::Type` | ctor | `lib/compiler/parse.myc:1333` | `Type(TypeDecl)` | — | Empirical/Declared |
-| `compiler.parse::Item::Trait` | ctor | `lib/compiler/parse.myc:1334` | `Trait(TraitDecl)` | — | Empirical/Declared |
-| `compiler.parse::Item::Impl` | ctor | `lib/compiler/parse.myc:1335` | `Impl(ImplDecl)` | — | Empirical/Declared |
-| `compiler.parse::Item::Fn` | ctor | `lib/compiler/parse.myc:1336` | `Fn(FnDecl)` | — | Empirical/Declared |
-| `compiler.parse::Item::Object` | ctor | `lib/compiler/parse.myc:1337` | `Object(ObjectDecl)` | — | Empirical/Declared |
-| `compiler.parse::Item::Lower` | ctor | `lib/compiler/parse.myc:1338` | `Lower(LowerDecl)` | — | Empirical/Declared |
-| `compiler.parse::Item::Derive` | ctor | `lib/compiler/parse.myc:1339` | `Derive(DeriveDecl)` | — | Empirical/Declared |
-| `compiler.parse::Item::InherentImpl` | ctor | `lib/compiler/parse.myc:1340` | `InherentImpl(InherentImplDecl)` | — | Empirical/Declared |
-| `compiler.parse::Nodule` | type | `lib/compiler/parse.myc:1344` | `type Nodule = Nd(Path, Bool, Vec[Item])` | — | Empirical/Declared |
-| `compiler.parse::Nodule::Nd` | ctor | `lib/compiler/parse.myc:1344` | `Nd(Path, Bool, Vec[Item])` | — | Empirical/Declared |
-| `compiler.parse::nodule_path` | fn | `lib/compiler/parse.myc:1346` | `fn nodule_path(n: Nodule) => Path` | — | Empirical/Declared |
-| `compiler.parse::nodule_std_sys` | fn | `lib/compiler/parse.myc:1349` | `fn nodule_std_sys(n: Nodule) => Bool` | — | Empirical/Declared |
-| `compiler.parse::nodule_items` | fn | `lib/compiler/parse.myc:1352` | `fn nodule_items(n: Nodule) => Vec[Item]` | — | Empirical/Declared |
-| `compiler.parse::Phylum` | type | `lib/compiler/parse.myc:1356` | `type Phylum = Phy(Option[Path], Vec[Nodule])` | — | Empirical/Declared |
-| `compiler.parse::Phylum::Phy` | ctor | `lib/compiler/parse.myc:1356` | `Phy(Option[Path], Vec[Nodule])` | — | Empirical/Declared |
-| `compiler.parse::phylum_path` | fn | `lib/compiler/parse.myc:1358` | `fn phylum_path(p: Phylum) => Option[Path]` | — | Empirical/Declared |
-| `compiler.parse::phylum_nodules` | fn | `lib/compiler/parse.myc:1361` | `fn phylum_nodules(p: Phylum) => Vec[Nodule]` | — | Empirical/Declared |
-| `compiler.parse::phylum_of_one` | fn | `lib/compiler/parse.myc:1365` | `fn phylum_of_one(n: Nodule) => Phylum` | phylum_of_one: mirrors `Phylum::of_one` — a phylum-of-one wrapping a single bare nodule. | Empirical/Declared |
-| `compiler.parse::Literal` | type | `lib/compiler/parse.myc:1371` | `type Literal = Bin(Bytes) \| Trit(Bytes) \| Int(Binary{64}) \| AmbientInt(Paradigm, Binary{64}) \| List(Vec[Expr]) \| LBytes(Bytes) \| Str(Bytes) \| LFloat(Bytes)` | — | Empirical/Declared |
-| `compiler.parse::Literal::Bin` | ctor | `lib/compiler/parse.myc:1372` | `Bin(Bytes)` | — | Empirical/Declared |
-| `compiler.parse::Literal::Trit` | ctor | `lib/compiler/parse.myc:1373` | `Trit(Bytes)` | — | Empirical/Declared |
-| `compiler.parse::Literal::Int` | ctor | `lib/compiler/parse.myc:1374` | `Int(Binary{64})` | — | Empirical/Declared |
-| `compiler.parse::Literal::AmbientInt` | ctor | `lib/compiler/parse.myc:1375` | `AmbientInt(Paradigm, Binary{64})` | — | Empirical/Declared |
-| `compiler.parse::Literal::List` | ctor | `lib/compiler/parse.myc:1376` | `List(Vec[Expr])` | — | Empirical/Declared |
-| `compiler.parse::Literal::LBytes` | ctor | `lib/compiler/parse.myc:1377` | `LBytes(Bytes)` | — | Empirical/Declared |
-| `compiler.parse::Literal::Str` | ctor | `lib/compiler/parse.myc:1378` | `Str(Bytes)` | — | Empirical/Declared |
-| `compiler.parse::Literal::LFloat` | ctor | `lib/compiler/parse.myc:1379` | `LFloat(Bytes)` | — | Empirical/Declared |
-| `compiler.parse::literal_binary` | fn | `lib/compiler/parse.myc:1382` | `fn literal_binary(digits: Bytes) => Literal` | literal_binary: mirrors `Literal::binary`. | Empirical/Declared |
-| `compiler.parse::literal_ternary` | fn | `lib/compiler/parse.myc:1386` | `fn literal_ternary(trits: Bytes) => Literal` | literal_ternary: mirrors `Literal::ternary`. | Empirical/Declared |
-| `compiler.parse::literal_string` | fn | `lib/compiler/parse.myc:1390` | `fn literal_string(content: Bytes) => Literal` | literal_string: mirrors `Literal::string`. | Empirical/Declared |
-| `compiler.parse::literal_float` | fn | `lib/compiler/parse.myc:1394` | `fn literal_float(text: Bytes) => Literal` | literal_float: mirrors `Literal::float`. | Empirical/Declared |
-| `compiler.parse::Pattern` | type | `lib/compiler/parse.myc:1399` | `type Pattern = PWildcard \| PLit(Literal) \| PCtor(Bytes, Vec[Pattern]) \| PIdent(Bytes) \| PTuple(Vec[Pattern]) \| POr(Vec[Pattern])` | — | Empirical/Declared |
-| `compiler.parse::Pattern::PWildcard` | ctor | `lib/compiler/parse.myc:1400` | `PWildcard` | — | Empirical/Declared |
-| `compiler.parse::Pattern::PLit` | ctor | `lib/compiler/parse.myc:1401` | `PLit(Literal)` | — | Empirical/Declared |
-| `compiler.parse::Pattern::PCtor` | ctor | `lib/compiler/parse.myc:1402` | `PCtor(Bytes, Vec[Pattern])` | — | Empirical/Declared |
-| `compiler.parse::Pattern::PIdent` | ctor | `lib/compiler/parse.myc:1403` | `PIdent(Bytes)` | — | Empirical/Declared |
-| `compiler.parse::Pattern::PTuple` | ctor | `lib/compiler/parse.myc:1404` | `PTuple(Vec[Pattern])` | — | Empirical/Declared |
-| `compiler.parse::Pattern::POr` | ctor | `lib/compiler/parse.myc:1405` | `POr(Vec[Pattern])` | — | Empirical/Declared |
-| `compiler.parse::Arm` | type | `lib/compiler/parse.myc:1408` | `type Arm = Ar(Pattern, Expr)` | — | Empirical/Declared |
-| `compiler.parse::Arm::Ar` | ctor | `lib/compiler/parse.myc:1408` | `Ar(Pattern, Expr)` | — | Empirical/Declared |
-| `compiler.parse::arm_pattern` | fn | `lib/compiler/parse.myc:1410` | `fn arm_pattern(a: Arm) => Pattern` | — | Empirical/Declared |
-| `compiler.parse::arm_body` | fn | `lib/compiler/parse.myc:1413` | `fn arm_body(a: Arm) => Expr` | — | Empirical/Declared |
-| `compiler.parse::Hypha` | type | `lib/compiler/parse.myc:1418` | `type Hypha = Hy(Option[Expr], Expr)` | — | Empirical/Declared |
-| `compiler.parse::Hypha::Hy` | ctor | `lib/compiler/parse.myc:1418` | `Hy(Option[Expr], Expr)` | — | Empirical/Declared |
-| `compiler.parse::hypha_forage` | fn | `lib/compiler/parse.myc:1420` | `fn hypha_forage(h: Hypha) => Option[Expr]` | — | Empirical/Declared |
-| `compiler.parse::hypha_body` | fn | `lib/compiler/parse.myc:1423` | `fn hypha_body(h: Hypha) => Expr` | — | Empirical/Declared |
-| `compiler.parse::Expr` | type | `lib/compiler/parse.myc:1433` | `type Expr = Let(Bytes, Option[TypeRef], Expr, Expr) \| If(Expr, Expr, Expr) \| Match(Expr, Vec[Arm]) \| For(Bytes, Expr, Bytes, Expr, Expr) \| Swap(Expr, TypeRef, Path) \| WithParadigm(Paradigm, Expr) \| Wild(Expr) \| Spore(Expr) \| Wrapping(Expr) \| Consume(Expr) \| Try(Expr) \| Colony(Vec[Hypha]) \| Lambda(Vec[Param], Expr) \| App(Expr, Vec[Expr]) \| Fuse(Expr, Expr) \| Reclaim(Expr, Expr) \| Path(Path) \| Lit(Literal) \| Ascribe(Expr, TypeRef) \| TupleLit(Vec[Expr])` | — | Empirical/Declared |
-| `compiler.parse::Expr::Let` | ctor | `lib/compiler/parse.myc:1434` | `Let(Bytes, Option[TypeRef], Expr, Expr)` | — | Empirical/Declared |
-| `compiler.parse::Expr::If` | ctor | `lib/compiler/parse.myc:1435` | `If(Expr, Expr, Expr)` | — | Empirical/Declared |
-| `compiler.parse::Expr::Match` | ctor | `lib/compiler/parse.myc:1436` | `Match(Expr, Vec[Arm])` | — | Empirical/Declared |
-| `compiler.parse::Expr::For` | ctor | `lib/compiler/parse.myc:1437` | `For(Bytes, Expr, Bytes, Expr, Expr)` | — | Empirical/Declared |
-| `compiler.parse::Expr::Path` | ctor | `lib/compiler/parse.myc:1438` | `Path(Path)` | — | Empirical/Declared |
-| `compiler.parse::Expr::Swap` | ctor | `lib/compiler/parse.myc:1438` | `Swap(Expr, TypeRef, Path)` | — | Empirical/Declared |
-| `compiler.parse::Expr::WithParadigm` | ctor | `lib/compiler/parse.myc:1439` | `WithParadigm(Paradigm, Expr)` | — | Empirical/Declared |
-| `compiler.parse::Expr::Wild` | ctor | `lib/compiler/parse.myc:1440` | `Wild(Expr)` | — | Empirical/Declared |
-| `compiler.parse::Expr::Spore` | ctor | `lib/compiler/parse.myc:1441` | `Spore(Expr)` | — | Empirical/Declared |
-| `compiler.parse::Expr::Wrapping` | ctor | `lib/compiler/parse.myc:1442` | `Wrapping(Expr)` | — | Empirical/Declared |
-| `compiler.parse::Expr::Consume` | ctor | `lib/compiler/parse.myc:1443` | `Consume(Expr)` | — | Empirical/Declared |
-| `compiler.parse::Expr::Try` | ctor | `lib/compiler/parse.myc:1446` | `Try(Expr)` | — | Empirical/Declared |
-| `compiler.parse::Expr::Colony` | ctor | `lib/compiler/parse.myc:1449` | `Colony(Vec[Hypha])` | — | Empirical/Declared |
-| `compiler.parse::Expr::Lambda` | ctor | `lib/compiler/parse.myc:1450` | `Lambda(Vec[Param], Expr)` | — | Empirical/Declared |
-| `compiler.parse::Expr::App` | ctor | `lib/compiler/parse.myc:1451` | `App(Expr, Vec[Expr])` | — | Empirical/Declared |
-| `compiler.parse::Expr::Fuse` | ctor | `lib/compiler/parse.myc:1452` | `Fuse(Expr, Expr)` | — | Empirical/Declared |
-| `compiler.parse::Expr::Reclaim` | ctor | `lib/compiler/parse.myc:1453` | `Reclaim(Expr, Expr)` | — | Empirical/Declared |
-| `compiler.parse::Expr::Lit` | ctor | `lib/compiler/parse.myc:1455` | `Lit(Literal)` | — | Empirical/Declared |
-| `compiler.parse::Expr::Ascribe` | ctor | `lib/compiler/parse.myc:1456` | `Ascribe(Expr, TypeRef)` | — | Empirical/Declared |
-| `compiler.parse::Expr::TupleLit` | ctor | `lib/compiler/parse.myc:1457` | `TupleLit(Vec[Expr])` | — | Empirical/Declared |
-| `compiler.parse::is_nodule` | fn | `lib/compiler/parse.myc:1465` | `fn is_nodule(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_phylum` | fn | `lib/compiler/parse.myc:1467` | `fn is_phylum(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_atstdsys` | fn | `lib/compiler/parse.myc:1469` | `fn is_atstdsys(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_semi` | fn | `lib/compiler/parse.myc:1471` | `fn is_semi(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_tpub` | fn | `lib/compiler/parse.myc:1473` | `fn is_tpub(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_at` | fn | `lib/compiler/parse.myc:1475` | `fn is_at(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_tuse` | fn | `lib/compiler/parse.myc:1477` | `fn is_tuse(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_tdefault` | fn | `lib/compiler/parse.myc:1479` | `fn is_tdefault(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_paradigm` | fn | `lib/compiler/parse.myc:1481` | `fn is_paradigm(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_ttype` | fn | `lib/compiler/parse.myc:1483` | `fn is_ttype(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_ttrait` | fn | `lib/compiler/parse.myc:1485` | `fn is_ttrait(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_timpl` | fn | `lib/compiler/parse.myc:1487` | `fn is_timpl(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_tfn` | fn | `lib/compiler/parse.myc:1489` | `fn is_tfn(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_thaw` | fn | `lib/compiler/parse.myc:1491` | `fn is_thaw(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_matured` | fn | `lib/compiler/parse.myc:1493` | `fn is_matured(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_tcolony` | fn | `lib/compiler/parse.myc:1495` | `fn is_tcolony(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_hypha` | fn | `lib/compiler/parse.myc:1497` | `fn is_hypha(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_mesh` | fn | `lib/compiler/parse.myc:1499` | `fn is_mesh(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_graft` | fn | `lib/compiler/parse.myc:1501` | `fn is_graft(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_cyst` | fn | `lib/compiler/parse.myc:1503` | `fn is_cyst(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_xloc` | fn | `lib/compiler/parse.myc:1505` | `fn is_xloc(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_forage` | fn | `lib/compiler/parse.myc:1507` | `fn is_forage(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_backbone` | fn | `lib/compiler/parse.myc:1509` | `fn is_backbone(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_tier` | fn | `lib/compiler/parse.myc:1511` | `fn is_tier(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_tfuse` | fn | `lib/compiler/parse.myc:1513` | `fn is_tfuse(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_treclaim` | fn | `lib/compiler/parse.myc:1515` | `fn is_treclaim(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_tconsume` | fn | `lib/compiler/parse.myc:1517` | `fn is_tconsume(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_grow` | fn | `lib/compiler/parse.myc:1519` | `fn is_grow(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_tlambda` | fn | `lib/compiler/parse.myc:1521` | `fn is_tlambda(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_tobject` | fn | `lib/compiler/parse.myc:1523` | `fn is_tobject(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_tlower` | fn | `lib/compiler/parse.myc:1525` | `fn is_tlower(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_tderive` | fn | `lib/compiler/parse.myc:1527` | `fn is_tderive(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_dot` | fn | `lib/compiler/parse.myc:1529` | `fn is_dot(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_star` | fn | `lib/compiler/parse.myc:1531` | `fn is_star(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_comma` | fn | `lib/compiler/parse.myc:1533` | `fn is_comma(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_lparen` | fn | `lib/compiler/parse.myc:1535` | `fn is_lparen(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_rparen` | fn | `lib/compiler/parse.myc:1537` | `fn is_rparen(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_lbracket` | fn | `lib/compiler/parse.myc:1539` | `fn is_lbracket(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_rbracket` | fn | `lib/compiler/parse.myc:1541` | `fn is_rbracket(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_lbrace` | fn | `lib/compiler/parse.myc:1543` | `fn is_lbrace(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_rbrace` | fn | `lib/compiler/parse.myc:1545` | `fn is_rbrace(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_colon` | fn | `lib/compiler/parse.myc:1547` | `fn is_colon(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_eq` | fn | `lib/compiler/parse.myc:1549` | `fn is_eq(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_fatarrow` | fn | `lib/compiler/parse.myc:1551` | `fn is_fatarrow(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_arrow` | fn | `lib/compiler/parse.myc:1553` | `fn is_arrow(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_bang` | fn | `lib/compiler/parse.myc:1555` | `fn is_bang(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_langle` | fn | `lib/compiler/parse.myc:1557` | `fn is_langle(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_rangle` | fn | `lib/compiler/parse.myc:1559` | `fn is_rangle(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_pipe` | fn | `lib/compiler/parse.myc:1561` | `fn is_pipe(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_plus` | fn | `lib/compiler/parse.myc:1563` | `fn is_plus(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_via` | fn | `lib/compiler/parse.myc:1565` | `fn is_via(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_tfor` | fn | `lib/compiler/parse.myc:1567` | `fn is_tfor(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_tswap` | fn | `lib/compiler/parse.myc:1569` | `fn is_tswap(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_to` | fn | `lib/compiler/parse.myc:1571` | `fn is_to(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_policy` | fn | `lib/compiler/parse.myc:1573` | `fn is_policy(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_with` | fn | `lib/compiler/parse.myc:1575` | `fn is_with(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_twild` | fn | `lib/compiler/parse.myc:1577` | `fn is_twild(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_tspore` | fn | `lib/compiler/parse.myc:1579` | `fn is_tspore(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_in_` | fn | `lib/compiler/parse.myc:1581` | `fn is_in_(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_tif` | fn | `lib/compiler/parse.myc:1583` | `fn is_tif(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_then` | fn | `lib/compiler/parse.myc:1585` | `fn is_then(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_else_` | fn | `lib/compiler/parse.myc:1587` | `fn is_else_(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_tmatch` | fn | `lib/compiler/parse.myc:1589` | `fn is_tmatch(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_tlet` | fn | `lib/compiler/parse.myc:1591` | `fn is_tlet(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_kwsparse` | fn | `lib/compiler/parse.myc:1593` | `fn is_kwsparse(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_tkwdense` | fn | `lib/compiler/parse.myc:1595` | `fn is_tkwdense(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_binshort` | fn | `lib/compiler/parse.myc:1597` | `fn is_binshort(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_ternshort` | fn | `lib/compiler/parse.myc:1599` | `fn is_ternshort(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_embshort` | fn | `lib/compiler/parse.myc:1601` | `fn is_embshort(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_hvecshort` | fn | `lib/compiler/parse.myc:1603` | `fn is_hvecshort(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_tvsa` | fn | `lib/compiler/parse.myc:1605` | `fn is_tvsa(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_tkwsubstrate` | fn | `lib/compiler/parse.myc:1607` | `fn is_tkwsubstrate(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_tkwseq` | fn | `lib/compiler/parse.myc:1609` | `fn is_tkwseq(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_tkwbytes` | fn | `lib/compiler/parse.myc:1611` | `fn is_tkwbytes(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_tkwfloat` | fn | `lib/compiler/parse.myc:1613` | `fn is_tkwfloat(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_shl` | fn | `lib/compiler/parse.myc:1615` | `fn is_shl(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_shr` | fn | `lib/compiler/parse.myc:1617` | `fn is_shr(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_amp` | fn | `lib/compiler/parse.myc:1619` | `fn is_amp(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_caret` | fn | `lib/compiler/parse.myc:1621` | `fn is_caret(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_eqeq` | fn | `lib/compiler/parse.myc:1623` | `fn is_eqeq(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_bangeq` | fn | `lib/compiler/parse.myc:1625` | `fn is_bangeq(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_ampamp` | fn | `lib/compiler/parse.myc:1627` | `fn is_ampamp(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_pipepipe` | fn | `lib/compiler/parse.myc:1629` | `fn is_pipepipe(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_percent` | fn | `lib/compiler/parse.myc:1631` | `fn is_percent(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_slash` | fn | `lib/compiler/parse.myc:1633` | `fn is_slash(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_minus` | fn | `lib/compiler/parse.myc:1635` | `fn is_minus(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_tkwbinary` | fn | `lib/compiler/parse.myc:1637` | `fn is_tkwbinary(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_tkwternary` | fn | `lib/compiler/parse.myc:1639` | `fn is_tkwternary(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_eof` | fn | `lib/compiler/parse.myc:1641` | `fn is_eof(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::p_cur` | fn | `lib/compiler/parse.myc:1649` | `fn p_cur(ts: Vec[Spanned]) => Tok` | — | Empirical/Declared |
-| `compiler.parse::p_pos` | fn | `lib/compiler/parse.myc:1655` | `fn p_pos(ts: Vec[Spanned]) => Pos` | — | Empirical/Declared |
-| `compiler.parse::p_bump` | fn | `lib/compiler/parse.myc:1663` | `fn p_bump(ts: Vec[Spanned]) => Vec[Spanned]` | p_bump: drop the current token UNLESS it is the last remaining one (mirrors Rust's bump, which never advances the index once at the final token — the stream tail is always a lone `Eof` cell). | Empirical/Declared |
-| `compiler.parse::p_eat` | fn | `lib/compiler/parse.myc:1674` | `fn p_eat(ts: Vec[Spanned], is_it: Bool) => Option[Vec[Spanned]]` | p_eat(ts, is_it): mirrors `Parser::eat` — the caller supplies `is_it = is_X(p_cur(ts))` (FLAG-parse-5 extended). `Some(ts')` on a match (consumed), `None` otherwise (unchanged). | Empirical/Declared |
-| `compiler.parse::p_expect` | fn | `lib/compiler/parse.myc:1682` | `fn p_expect(ts: Vec[Spanned], is_it: Bool, msg: Bytes) => Result[Vec[Spanned], PErr]` | p_expect(ts, is_it, msg): mirrors `Parser::expect` — consumes on a match, else an explicit `PErr` at the CURRENT position (captured by the caller before dispatch, since `ts` is still un-bumped). | Empirical/Declared |
-| `compiler.parse::p_ident` | fn | `lib/compiler/parse.myc:1689` | `fn p_ident(ts: Vec[Spanned]) => Result[Pair[Bytes, Vec[Spanned]], PErr]` | p_ident: mirrors `Parser::ident` — an `Ident(s)` token, or an explicit refusal. | Empirical/Declared |
-| `compiler.parse::zero32` | fn | `lib/compiler/parse.myc:1701` | `fn zero32() => Binary{32}` | — | Empirical/Declared |
-| `compiler.parse::one32` | fn | `lib/compiler/parse.myc:1702` | `fn one32() => Binary{32}` | — | Empirical/Declared |
-| `compiler.parse::three32` | fn | `lib/compiler/parse.myc:1703` | `fn three32() => Binary{32}` | — | Empirical/Declared |
-| `compiler.parse::zero64` | fn | `lib/compiler/parse.myc:1704` | `fn zero64() => Binary{64}` | — | Empirical/Declared |
-| `compiler.parse::one64` | fn | `lib/compiler/parse.myc:1705` | `fn one64() => Binary{64}` | — | Empirical/Declared |
-| `compiler.parse::three64` | fn | `lib/compiler/parse.myc:1706` | `fn three64() => Binary{64}` | — | Empirical/Declared |
-| `compiler.parse::digit_value` | fn | `lib/compiler/parse.myc:1708` | `fn digit_value(b: Binary{8}) => Binary{8}` | — | Empirical/Declared |
-| `compiler.parse::bytes_to_u32` | fn | `lib/compiler/parse.myc:1711` | `fn bytes_to_u32(digits: Bytes, i: Binary{32}, acc: Binary{32}) => Binary{32}` | — | Empirical/Declared |
-| `compiler.parse::decimal_to_u32` | fn | `lib/compiler/parse.myc:1720` | `fn decimal_to_u32(digits: Bytes) => Binary{32}` | — | Empirical/Declared |
-| `compiler.parse::bytes_to_u64` | fn | `lib/compiler/parse.myc:1723` | `fn bytes_to_u64(digits: Bytes, i: Binary{32}, acc: Binary{64}) => Binary{64}` | — | Empirical/Declared |
-| `compiler.parse::decimal_to_u64` | fn | `lib/compiler/parse.myc:1732` | `fn decimal_to_u64(digits: Bytes) => Binary{64}` | — | Empirical/Declared |
-| `compiler.parse::p_u32_lit` | fn | `lib/compiler/parse.myc:1736` | `fn p_u32_lit(ts: Vec[Spanned]) => Result[Pair[Binary{32}, Vec[Spanned]], PErr]` | p_u32_lit: mirrors `Parser::u32_lit` — a `TInt(digits)` token, decimal-converted (FLAG-parse-3/4). | Empirical/Declared |
-| `compiler.parse::max_expr_depth` | fn | `lib/compiler/parse.myc:1743` | `fn max_expr_depth() => Binary{32}` | — | Empirical/Declared |
-| `compiler.parse::enter_depth` | fn | `lib/compiler/parse.myc:1748` | `fn enter_depth(ts: Vec[Spanned], depth: Binary{32}) => Result[Binary{32}, PErr]` | enter_depth: charge one level against the budget. `Err` on overflow (never a panic); the caller passes the CHARGED depth into whatever it recurses into, and simply drops it (does not thread it back out) once that recursion returns — the net-zero restatement of `leave_depth` (FLAG-parse-7). | Empirical/Declared |
-| `compiler.parse::contains_bytes` | fn | `lib/compiler/parse.myc:1758` | `fn contains_bytes(xs: Vec[Bytes], x: Bytes) => Bool` | — | Empirical/Declared |
-| `compiler.parse::add_bytes_if_absent` | fn | `lib/compiler/parse.myc:1764` | `fn add_bytes_if_absent(xs: Vec[Bytes], x: Bytes) => Vec[Bytes]` | — | Empirical/Declared |
-| `compiler.parse::NameUses` | type | `lib/compiler/parse.myc:1772` | `type NameUses = NU(Vec[Bytes], Vec[Bytes])` | NameUses: mirrors the pair of BTreeSets `collect_name_uses` accumulates into (width_used, type_used) — threaded functionally instead of via `&mut` out-params. | Empirical/Declared |
-| `compiler.parse::NameUses::NU` | ctor | `lib/compiler/parse.myc:1772` | `NU(Vec[Bytes], Vec[Bytes])` | — | Empirical/Declared |
-| `compiler.parse::nu_width` | fn | `lib/compiler/parse.myc:1774` | `fn nu_width(n: NameUses) => Vec[Bytes]` | — | Empirical/Declared |
-| `compiler.parse::nu_type` | fn | `lib/compiler/parse.myc:1777` | `fn nu_type(n: NameUses) => Vec[Bytes]` | — | Empirical/Declared |
-| `compiler.parse::collect_widthref_use` | fn | `lib/compiler/parse.myc:1780` | `fn collect_widthref_use(w: WidthRef, params: Vec[Bytes], acc: NameUses) => NameUses` | — | Empirical/Declared |
-| `compiler.parse::collect_typeref_list_uses` | fn | `lib/compiler/parse.myc:1789` | `fn collect_typeref_list_uses(trs: Vec[TypeRef], params: Vec[Bytes], acc: NameUses) => NameUses` | — | Empirical/Declared |
-| `compiler.parse::collect_name_uses` | fn | `lib/compiler/parse.myc:1795` | `fn collect_name_uses(tr: TypeRef, params: Vec[Bytes], acc: NameUses) => NameUses` | — | Empirical/Declared |
-| `compiler.parse::collect_base_name_uses` | fn | `lib/compiler/parse.myc:1798` | `fn collect_base_name_uses(bt: BaseType, params: Vec[Bytes], acc: NameUses) => NameUses` | — | Empirical/Declared |
-| `compiler.parse::typeparam_names` | fn | `lib/compiler/parse.myc:1813` | `fn typeparam_names(ps: Vec[TypeParam]) => Vec[Bytes]` | — | Empirical/Declared |
-| `compiler.parse::typeparam_names_acc` | fn | `lib/compiler/parse.myc:1816` | `fn typeparam_names_acc(ps: Vec[TypeParam], acc: Vec[Bytes]) => Vec[Bytes]` | — | Empirical/Declared |
-| `compiler.parse::collect_param_list_uses` | fn | `lib/compiler/parse.myc:1822` | `fn collect_param_list_uses(vps: Vec[Param], params: Vec[Bytes], acc: NameUses) => NameUses` | — | Empirical/Declared |
-| `compiler.parse::is_bounds_empty` | fn | `lib/compiler/parse.myc:1828` | `fn is_bounds_empty(bs: Vec[TraitRef]) => Bool` | — | Empirical/Declared |
-| `compiler.parse::classify_one_param` | fn | `lib/compiler/parse.myc:1831` | `fn classify_one_param(p: TypeParam, width_used: Vec[Bytes], type_used: Vec[Bytes]) => Result[TypeParam, PErr]` | — | Empirical/Declared |
-| `compiler.parse::classify_params_list` | fn | `lib/compiler/parse.myc:1846` | `fn classify_params_list(ps: Vec[TypeParam], width_used: Vec[Bytes], type_used: Vec[Bytes]) => Result[Vec[TypeParam], PErr]` | — | Empirical/Declared |
-| `compiler.parse::classify_params_list_acc` | fn | `lib/compiler/parse.myc:1849` | `fn classify_params_list_acc(ps: Vec[TypeParam], width_used: Vec[Bytes], type_used: Vec[Bytes], acc: Vec[TypeParam]) => Result[Vec[TypeParam], PErr]` | — | Empirical/Declared |
-| `compiler.parse::classify_params` | fn | `lib/compiler/parse.myc:1861` | `fn classify_params(raw_params: Vec[TypeParam], value_params: Vec[Param], ret: TypeRef) => Result[Vec[TypeParam], PErr]` | classify_params: mirrors the free fn of the same name (parse.rs L133). Rust hardcodes `Pos{line:0,col:0}` for these errors (not `self.pos()`) — reproduced verbatim (FLAG-parse-8: error POSITION fidelity is not compared by the Stage-3 gate, only Ok/Err classification). | Empirical/Declared |
-| `compiler.parse::first_duplicate_bytes` | fn | `lib/compiler/parse.myc:1868` | `fn first_duplicate_bytes(xs: Vec[Bytes]) => Option[Bytes]` | first_duplicate_bytes: mirrors `first_duplicate_str` (the effect-set / param-name dup check). | Empirical/Declared |
-| `compiler.parse::first_duplicate_bytes_seen` | fn | `lib/compiler/parse.myc:1871` | `fn first_duplicate_bytes_seen(xs: Vec[Bytes], seen: Vec[Bytes]) => Option[Bytes]` | — | Empirical/Declared |
-| `compiler.parse::parse_paradigm` | fn | `lib/compiler/parse.myc:1883` | `fn parse_paradigm(ts: Vec[Spanned]) => Result[Pair[Paradigm, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_scalar` | fn | `lib/compiler/parse.myc:1892` | `fn parse_scalar(ts: Vec[Spanned]) => Result[Pair[Scalar, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_strength` | fn | `lib/compiler/parse.myc:1903` | `fn parse_strength(ts: Vec[Spanned]) => Result[Pair[Strength, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::braced_u32` | fn | `lib/compiler/parse.myc:1914` | `fn braced_u32(ts: Vec[Spanned]) => Result[Pair[Binary{32}, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_sparsity` | fn | `lib/compiler/parse.myc:1928` | `fn parse_sparsity(ts: Vec[Spanned]) => Result[Pair[Sparsity, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::braced_width` | fn | `lib/compiler/parse.myc:1940` | `fn braced_width(ts: Vec[Spanned]) => Result[Pair[WidthRef, Vec[Spanned]], PErr]` | braced_width: `{` (u32_lit \| Ident) `}` — DN-42/M-753 width slot (concrete literal or width-param name). | Empirical/Declared |
-| `compiler.parse::parse_type_ref` | fn | `lib/compiler/parse.myc:1964` | `fn parse_type_ref(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[TypeRef, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_type_ref_guarded` | fn | `lib/compiler/parse.myc:1970` | `fn parse_type_ref_guarded(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[TypeRef, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_type_ref_atom` | fn | `lib/compiler/parse.myc:1987` | `fn parse_type_ref_atom(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[TypeRef, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_base_type` | fn | `lib/compiler/parse.myc:2001` | `fn parse_base_type(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[BaseType, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_dense_tail` | fn | `lib/compiler/parse.myc:2067` | `fn parse_dense_tail(ts: Vec[Spanned]) => Result[Pair[BaseType, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_vsa_tail` | fn | `lib/compiler/parse.myc:2089` | `fn parse_vsa_tail(ts: Vec[Spanned]) => Result[Pair[BaseType, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_paren_type_tail` | fn | `lib/compiler/parse.myc:2121` | `fn parse_paren_type_tail(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[BaseType, Vec[Spanned]], PErr]` | parse_paren_type_tail: `ts` is positioned right AFTER the opening `(` (M-826 tuple-type / grouping disambiguation — arity >= 2 is a tuple, a single `(T)` is grouping). | Empirical/Declared |
-| `compiler.parse::parse_type_ref_tuple_rest` | fn | `lib/compiler/parse.myc:2143` | `fn parse_type_ref_tuple_rest(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Vec[TypeRef], Vec[Spanned]], PErr]` | parse_type_ref_tuple_rest: the elements after the first comma, tolerating a trailing comma before `)` (mirrors the Rust `while !at(RParen) { push; if !eat(Comma) break }` loop). | Empirical/Declared |
-| `compiler.parse::parse_type_ref_tuple_rest_acc` | fn | `lib/compiler/parse.myc:2146` | `fn parse_type_ref_tuple_rest_acc(ts: Vec[Spanned], depth: Binary{32}, acc: Vec[TypeRef]) => Result[Pair[Vec[TypeRef], Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_ambient_repr` | fn | `lib/compiler/parse.myc:2167` | `fn parse_ambient_repr(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[AmbientParams, Vec[Spanned]], PErr]` | parse_ambient_repr: `ts` still positioned AT the opening `{` (RFC-0012 SS4.2 paradigm-less repr). | Empirical/Declared |
-| `compiler.parse::parse_type_args_opt` | fn | `lib/compiler/parse.myc:2220` | `fn parse_type_args_opt(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Vec[TypeRef], Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_type_ref_comma_list` | fn | `lib/compiler/parse.myc:2236` | `fn parse_type_ref_comma_list(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Vec[TypeRef], Vec[Spanned]], PErr]` | parse_type_ref_comma_list: NON-EMPTY "`one (, one)\*`" — no trailing tolerance (ctor fields, type args; FLAG-parse-5). | Empirical/Declared |
-| `compiler.parse::parse_type_ref_comma_list_acc` | fn | `lib/compiler/parse.myc:2239` | `fn parse_type_ref_comma_list_acc(ts: Vec[Spanned], depth: Binary{32}, acc: Vec[TypeRef]) => Result[Pair[Vec[TypeRef], Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_literal` | fn | `lib/compiler/parse.myc:2252` | `fn parse_literal(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Literal, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_pattern` | fn | `lib/compiler/parse.myc:2272` | `fn parse_pattern(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Pattern, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_pattern_guarded` | fn | `lib/compiler/parse.myc:2278` | `fn parse_pattern_guarded(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Pattern, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_pattern_lit` | fn | `lib/compiler/parse.myc:2308` | `fn parse_pattern_lit(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Pattern, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_pattern_comma_list` | fn | `lib/compiler/parse.myc:2315` | `fn parse_pattern_comma_list(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Vec[Pattern], Vec[Spanned]], PErr]` | parse_pattern_comma_list: NON-EMPTY, no trailing tolerance (ctor sub-patterns). | Empirical/Declared |
-| `compiler.parse::parse_pattern_comma_list_acc` | fn | `lib/compiler/parse.myc:2318` | `fn parse_pattern_comma_list_acc(ts: Vec[Spanned], depth: Binary{32}, acc: Vec[Pattern]) => Result[Pair[Vec[Pattern], Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_pattern_paren_tail` | fn | `lib/compiler/parse.myc:2330` | `fn parse_pattern_paren_tail(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Pattern, Vec[Spanned]], PErr]` | parse_pattern_paren_tail: `ts` positioned right after `(` (M-826 tuple/grouping disambiguation). | Empirical/Declared |
-| `compiler.parse::parse_pattern_tuple_rest` | fn | `lib/compiler/parse.myc:2350` | `fn parse_pattern_tuple_rest(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Vec[Pattern], Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_pattern_tuple_rest_acc` | fn | `lib/compiler/parse.myc:2353` | `fn parse_pattern_tuple_rest_acc(ts: Vec[Spanned], depth: Binary{32}, acc: Vec[Pattern]) => Result[Pair[Vec[Pattern], Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_path` | fn | `lib/compiler/parse.myc:2374` | `fn parse_path(ts: Vec[Spanned]) => Result[Pair[Path, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_path_rest` | fn | `lib/compiler/parse.myc:2383` | `fn parse_path_rest(ts: Vec[Spanned]) => Result[Pair[Vec[Bytes], Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_path_rest_acc` | fn | `lib/compiler/parse.myc:2386` | `fn parse_path_rest_acc(ts: Vec[Spanned], acc: Vec[Bytes]) => Result[Pair[Vec[Bytes], Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_use_tail` | fn | `lib/compiler/parse.myc:2396` | `fn parse_use_tail(ts: Vec[Spanned]) => Result[Pair[Pair[Vec[Bytes], Bool], Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_use_tail_acc` | fn | `lib/compiler/parse.myc:2399` | `fn parse_use_tail_acc(ts: Vec[Spanned], acc: Vec[Bytes]) => Result[Pair[Pair[Vec[Bytes], Bool], Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_use` | fn | `lib/compiler/parse.myc:2411` | `fn parse_use(ts: Vec[Spanned]) => Result[Pair[UsePath, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::bytes_eq_b` | fn | `lib/compiler/parse.myc:2424` | `fn bytes_eq_b(a: Bytes, b: Bytes) => Bool` | — | Empirical/Declared |
-| `compiler.parse::one8` | fn | `lib/compiler/parse.myc:2427` | `fn one8() => Binary{8}` | — | Empirical/Declared |
-| `compiler.parse::is_imperative_word` | fn | `lib/compiler/parse.myc:2432` | `fn is_imperative_word(w: Bytes) => Bool` | — | Empirical/Declared |
-| `compiler.parse::is_juxtaposed_opener` | fn | `lib/compiler/parse.myc:2435` | `fn is_juxtaposed_opener(t: Tok) => Bool` | — | Empirical/Declared |
-| `compiler.parse::teach_imperative` | fn | `lib/compiler/parse.myc:2442` | `fn teach_imperative(ts: Vec[Spanned]) => Option[PErr]` | — | Empirical/Declared |
-| `compiler.parse::infix_op` | fn | `lib/compiler/parse.myc:2455` | `fn infix_op(t: Tok) => Option[Pair[Binary{8}, Bytes]]` | — | Empirical/Declared |
-| `compiler.parse::op_call` | fn | `lib/compiler/parse.myc:2476` | `fn op_call(word: Bytes, args: Vec[Expr]) => Expr` | — | Empirical/Declared |
-| `compiler.parse::parse_expr` | fn | `lib/compiler/parse.myc:2481` | `fn parse_expr(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_expr_inner` | fn | `lib/compiler/parse.myc:2487` | `fn parse_expr_inner(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_binexpr` | fn | `lib/compiler/parse.myc:2520` | `fn parse_binexpr(ts: Vec[Spanned], depth: Binary{32}, min_bp: Binary{8}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_binexpr_loop` | fn | `lib/compiler/parse.myc:2526` | `fn parse_binexpr_loop(lhs: Expr, ts: Vec[Spanned], depth: Binary{32}, min_bp: Binary{8}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_unary` | fn | `lib/compiler/parse.myc:2542` | `fn parse_unary(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_unary_prefix` | fn | `lib/compiler/parse.myc:2549` | `fn parse_unary_prefix(ts: Vec[Spanned], depth: Binary{32}, word: Bytes) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_for` | fn | `lib/compiler/parse.myc:2560` | `fn parse_for(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_let` | fn | `lib/compiler/parse.myc:2601` | `fn parse_let(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_let_tail` | fn | `lib/compiler/parse.myc:2618` | `fn parse_let_tail(name: Bytes, ty: Option[TypeRef], ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_if` | fn | `lib/compiler/parse.myc:2635` | `fn parse_if(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_match` | fn | `lib/compiler/parse.myc:2660` | `fn parse_match(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_arm_list` | fn | `lib/compiler/parse.myc:2683` | `fn parse_arm_list(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Vec[Arm], Vec[Spanned]], PErr]` | parse_arm_list: NON-EMPTY, trailing comma before `}` tolerated. | Empirical/Declared |
-| `compiler.parse::parse_arm_list_acc` | fn | `lib/compiler/parse.myc:2686` | `fn parse_arm_list_acc(ts: Vec[Spanned], depth: Binary{32}, acc: Vec[Arm]) => Result[Pair[Vec[Arm], Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_arm` | fn | `lib/compiler/parse.myc:2700` | `fn parse_arm(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Arm, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_or_pattern_rest` | fn | `lib/compiler/parse.myc:2714` | `fn parse_or_pattern_rest(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Vec[Pattern], Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_or_pattern_rest_acc` | fn | `lib/compiler/parse.myc:2717` | `fn parse_or_pattern_rest_acc(ts: Vec[Spanned], depth: Binary{32}, acc: Vec[Pattern]) => Result[Pair[Vec[Pattern], Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_arm_tail` | fn | `lib/compiler/parse.myc:2726` | `fn parse_arm_tail(pattern: Pattern, ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Arm, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_swap` | fn | `lib/compiler/parse.myc:2735` | `fn parse_swap(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_with_paradigm` | fn | `lib/compiler/parse.myc:2780` | `fn parse_with_paradigm(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_wild` | fn | `lib/compiler/parse.myc:2805` | `fn parse_wild(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_spore` | fn | `lib/compiler/parse.myc:2822` | `fn parse_spore(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_consume_expr` | fn | `lib/compiler/parse.myc:2839` | `fn parse_consume_expr(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_colony` | fn | `lib/compiler/parse.myc:2851` | `fn parse_colony(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_hypha_list` | fn | `lib/compiler/parse.myc:2869` | `fn parse_hypha_list(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Vec[Hypha], Vec[Spanned]], PErr]` | parse_hypha_list: NON-EMPTY, trailing comma before `}` tolerated. | Empirical/Declared |
-| `compiler.parse::parse_hypha_list_acc` | fn | `lib/compiler/parse.myc:2872` | `fn parse_hypha_list_acc(ts: Vec[Spanned], depth: Binary{32}, acc: Vec[Hypha]) => Result[Pair[Vec[Hypha], Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_hypha` | fn | `lib/compiler/parse.myc:2886` | `fn parse_hypha(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Hypha, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_hypha_tail` | fn | `lib/compiler/parse.myc:2906` | `fn parse_hypha_tail(frg: Option[Expr], ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Hypha, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_app` | fn | `lib/compiler/parse.myc:2915` | `fn parse_app(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_app_tail` | fn | `lib/compiler/parse.myc:2921` | `fn parse_app_tail(e: Expr, ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_expr_list_until` | fn | `lib/compiler/parse.myc:2941` | `fn parse_expr_list_until(ts: Vec[Spanned], depth: Binary{32}, is_end: Bool) => Result[Pair[Vec[Expr], Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_expr_comma_list` | fn | `lib/compiler/parse.myc:2947` | `fn parse_expr_comma_list(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Vec[Expr], Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_expr_comma_list_acc` | fn | `lib/compiler/parse.myc:2950` | `fn parse_expr_comma_list_acc(ts: Vec[Spanned], depth: Binary{32}, acc: Vec[Expr]) => Result[Pair[Vec[Expr], Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_primary` | fn | `lib/compiler/parse.myc:2961` | `fn parse_primary(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_primary_lit` | fn | `lib/compiler/parse.myc:2978` | `fn parse_primary_lit(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_primary_paren_tail` | fn | `lib/compiler/parse.myc:2984` | `fn parse_primary_paren_tail(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_expr_tuple_rest` | fn | `lib/compiler/parse.myc:3004` | `fn parse_expr_tuple_rest(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Vec[Expr], Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_expr_tuple_rest_acc` | fn | `lib/compiler/parse.myc:3007` | `fn parse_expr_tuple_rest_acc(ts: Vec[Spanned], depth: Binary{32}, acc: Vec[Expr]) => Result[Pair[Vec[Expr], Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_fuse_expr` | fn | `lib/compiler/parse.myc:3027` | `fn parse_fuse_expr(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_reclaim_expr` | fn | `lib/compiler/parse.myc:3052` | `fn parse_reclaim_expr(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_lambda` | fn | `lib/compiler/parse.myc:3080` | `fn parse_lambda(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_params_opt` | fn | `lib/compiler/parse.myc:3112` | `fn parse_params_opt(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Vec[Param], Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_params_comma_list` | fn | `lib/compiler/parse.myc:3118` | `fn parse_params_comma_list(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Vec[Param], Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_params_comma_list_acc` | fn | `lib/compiler/parse.myc:3121` | `fn parse_params_comma_list_acc(ts: Vec[Spanned], depth: Binary{32}, acc: Vec[Param]) => Result[Pair[Vec[Param], Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_one_param` | fn | `lib/compiler/parse.myc:3132` | `fn parse_one_param(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Param, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_type_params_opt` | fn | `lib/compiler/parse.myc:3148` | `fn parse_type_params_opt(ts: Vec[Spanned]) => Result[Pair[Vec[Bytes], Vec[Spanned]], PErr]` | parse_type_params_opt: UNBOUNDED names for `type`/`trait` decls; a `: bound` here is an explicit deferred-stage refusal (RFC-0019 SS4.1). | Empirical/Declared |
-| `compiler.parse::parse_type_param_name_list` | fn | `lib/compiler/parse.myc:3162` | `fn parse_type_param_name_list(ts: Vec[Spanned]) => Result[Pair[Vec[Bytes], Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_type_param_name_list_acc` | fn | `lib/compiler/parse.myc:3165` | `fn parse_type_param_name_list_acc(ts: Vec[Spanned], acc: Vec[Bytes]) => Result[Pair[Vec[Bytes], Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_one_type_param_name` | fn | `lib/compiler/parse.myc:3176` | `fn parse_one_type_param_name(ts: Vec[Spanned]) => Result[Pair[Bytes, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_type_params_bounded` | fn | `lib/compiler/parse.myc:3188` | `fn parse_type_params_bounded(ts: Vec[Spanned]) => Result[Pair[Vec[TypeParam], Vec[Spanned]], PErr]` | parse_type_params_bounded: BOUNDED type-parameters for function signatures (RFC-0019 SS4.1). | Empirical/Declared |
-| `compiler.parse::parse_type_param_comma_list` | fn | `lib/compiler/parse.myc:3202` | `fn parse_type_param_comma_list(ts: Vec[Spanned]) => Result[Pair[Vec[TypeParam], Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_type_param_comma_list_acc` | fn | `lib/compiler/parse.myc:3205` | `fn parse_type_param_comma_list_acc(ts: Vec[Spanned], acc: Vec[TypeParam]) => Result[Pair[Vec[TypeParam], Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_type_param` | fn | `lib/compiler/parse.myc:3216` | `fn parse_type_param(ts: Vec[Spanned]) => Result[Pair[TypeParam, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_bound` | fn | `lib/compiler/parse.myc:3230` | `fn parse_bound(ts: Vec[Spanned]) => Result[Pair[Vec[TraitRef], Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_bound_acc` | fn | `lib/compiler/parse.myc:3233` | `fn parse_bound_acc(ts: Vec[Spanned], acc: Vec[TraitRef]) => Result[Pair[Vec[TraitRef], Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_trait_ref` | fn | `lib/compiler/parse.myc:3244` | `fn parse_trait_ref(ts: Vec[Spanned]) => Result[Pair[TraitRef, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_const_params_opt` | fn | `lib/compiler/parse.myc:3256` | `fn parse_const_params_opt(ts: Vec[Spanned]) => Result[Pair[Vec[TypeParam], Vec[Spanned]], PErr]` | parse_const_params_opt: `{ Ident (, Ident)\* }?` — width/const parameter DECLARATIONS (distinct `{...}` position from a `Binary{N}` width SLOT — never ambiguous, only ever right after the fn name/[...] and before `(`). | Empirical/Declared |
-| `compiler.parse::parse_const_param_comma_list` | fn | `lib/compiler/parse.myc:3270` | `fn parse_const_param_comma_list(ts: Vec[Spanned]) => Result[Pair[Vec[TypeParam], Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_const_param_comma_list_acc` | fn | `lib/compiler/parse.myc:3273` | `fn parse_const_param_comma_list_acc(ts: Vec[Spanned], acc: Vec[TypeParam]) => Result[Pair[Vec[TypeParam], Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_one_const_param` | fn | `lib/compiler/parse.myc:3284` | `fn parse_one_const_param(ts: Vec[Spanned]) => Result[Pair[TypeParam, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::effect_budget_shift` | fn | `lib/compiler/parse.myc:3296` | `fn effect_budget_shift(unit: Bytes) => Option[Binary{64}]` | — | Empirical/Declared |
-| `compiler.parse::append_budget` | fn | `lib/compiler/parse.myc:3308` | `fn append_budget(mb: Option[EffectBudget], rest: Vec[EffectBudget]) => Vec[EffectBudget]` | — | Empirical/Declared |
-| `compiler.parse::parse_one_effect_entry` | fn | `lib/compiler/parse.myc:3312` | `fn parse_one_effect_entry(ts: Vec[Spanned]) => Result[Pair[Pair[Bytes, Option[EffectBudget]], Vec[Spanned]], PErr]` | parse_one_effect_entry: `eff (<=N unit?)?` — mirrors the loop body of `parse_effects_opt`. | Empirical/Declared |
-| `compiler.parse::parse_effect_budget_tail` | fn | `lib/compiler/parse.myc:3332` | `fn parse_effect_budget_tail(name: Bytes, raw: Binary{64}, budget_pos: Pos, ts: Vec[Spanned]) => Result[Pair[Pair[Bytes, Option[EffectBudget]], Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_effect_entries` | fn | `lib/compiler/parse.myc:3354` | `fn parse_effect_entries(ts: Vec[Spanned]) => Result[Pair[Pair[Vec[Bytes], Vec[EffectBudget]], Vec[Spanned]], PErr]` | parse_effect_entries: comma-separated `eff(<=N)?` entries; a trailing comma before `}` is an explicit refusal (kept strict — G2). | Empirical/Declared |
-| `compiler.parse::parse_effect_entries_acc` | fn | `lib/compiler/parse.myc:3357` | `fn parse_effect_entries_acc(ts: Vec[Spanned], names: Vec[Bytes], budgets: Vec[EffectBudget]) => Result[Pair[Pair[Vec[Bytes], Vec[EffectBudget]], Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_effects_opt` | fn | `lib/compiler/parse.myc:3374` | `fn parse_effects_opt(ts: Vec[Spanned]) => Result[Pair[Pair[Vec[Bytes], Vec[EffectBudget]], Vec[Spanned]], PErr]` | parse_effects_opt: `!{ eff(<=N unit?)? (, ...)\* }?` — absent `!` => pure (empty set). | Empirical/Declared |
-| `compiler.parse::Tr3` | type | `lib/compiler/parse.myc:3401` | `type Tr3[A, B, C] = T3(A, B, C)` | — | Empirical/Declared |
-| `compiler.parse::Tr3::T3` | ctor | `lib/compiler/parse.myc:3401` | `T3(A, B, C)` | — | Empirical/Declared |
-| `compiler.parse::append_typeparams` | fn | `lib/compiler/parse.myc:3405` | `fn append_typeparams(a: Vec[TypeParam], b: Vec[TypeParam]) => Vec[TypeParam]` | append_typeparams: `a ++ b` via double reversal — both passes direct-tail (rev_acc), so the depth is O(1) regardless of the [...]/{...} parameter-list lengths. | Empirical/Declared |
-| `compiler.parse::expect_return_arrow` | fn | `lib/compiler/parse.myc:3411` | `fn expect_return_arrow(ts: Vec[Spanned]) => Result[Vec[Spanned], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_sig_tail` | fn | `lib/compiler/parse.myc:3417` | `fn parse_sig_tail(ts: Vec[Spanned]) => Result[Pair[FnSig, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_fn_sig` | fn | `lib/compiler/parse.myc:3466` | `fn parse_fn_sig(ts: Vec[Spanned]) => Result[Pair[FnSig, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_fn_decl` | fn | `lib/compiler/parse.myc:3473` | `fn parse_fn_decl(vis: Vis, ts: Vec[Spanned]) => Result[Pair[FnDecl, Vec[Spanned]], PErr]` | parse_fn_decl: `thaw? fn ...` with the caller-supplied cross-nodule visibility `vis` (M-662). | Empirical/Declared |
-| `compiler.parse::parse_fn_decl_tail` | fn | `lib/compiler/parse.myc:3479` | `fn parse_fn_decl_tail(vis: Vis, thw: Bool, ts: Vec[Spanned]) => Result[Pair[FnDecl, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_tier_fn_decl` | fn | `lib/compiler/parse.myc:3497` | `fn parse_tier_fn_decl(vis: Vis, ts: Vec[Spanned]) => Result[Pair[FnDecl, Vec[Spanned]], PErr]` | parse_tier_fn_decl: `@tier(compiled\|interpreted) thaw? fn ...` (DN-58 SSC/M-667). | Empirical/Declared |
-| `compiler.parse::parse_tier_fn_decl_tail` | fn | `lib/compiler/parse.myc:3518` | `fn parse_tier_fn_decl_tail(vis: Vis, mode: ExecutionMode, ts: Vec[Spanned]) => Result[Pair[FnDecl, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_tier_fn_decl_tail2` | fn | `lib/compiler/parse.myc:3527` | `fn parse_tier_fn_decl_tail2(vis: Vis, mode: ExecutionMode, thw: Bool, ts: Vec[Spanned]) => Result[Pair[FnDecl, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_ctor` | fn | `lib/compiler/parse.myc:3546` | `fn parse_ctor(ts: Vec[Spanned]) => Result[Pair[Ctor, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_ctor_pipe_list` | fn | `lib/compiler/parse.myc:3565` | `fn parse_ctor_pipe_list(ts: Vec[Spanned]) => Result[Pair[Vec[Ctor], Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_ctor_pipe_list_acc` | fn | `lib/compiler/parse.myc:3568` | `fn parse_ctor_pipe_list_acc(ts: Vec[Spanned], acc: Vec[Ctor]) => Result[Pair[Vec[Ctor], Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_type_decl` | fn | `lib/compiler/parse.myc:3579` | `fn parse_type_decl(vis: Vis, ts: Vec[Spanned]) => Result[Pair[TypeDecl, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_trait_sig_list` | fn | `lib/compiler/parse.myc:3601` | `fn parse_trait_sig_list(ts: Vec[Spanned]) => Result[Pair[Vec[FnSig], Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_trait_sig_list_acc` | fn | `lib/compiler/parse.myc:3604` | `fn parse_trait_sig_list_acc(ts: Vec[Spanned], acc: Vec[FnSig]) => Result[Pair[Vec[FnSig], Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_trait_decl` | fn | `lib/compiler/parse.myc:3618` | `fn parse_trait_decl(vis: Vis, ts: Vec[Spanned]) => Result[Pair[TraitDecl, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_impl_method_list` | fn | `lib/compiler/parse.myc:3647` | `fn parse_impl_method_list(ts: Vec[Spanned]) => Result[Pair[Vec[FnDecl], Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_impl_method_list_acc` | fn | `lib/compiler/parse.myc:3650` | `fn parse_impl_method_list_acc(ts: Vec[Spanned], acc: Vec[FnDecl]) => Result[Pair[Vec[FnDecl], Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_impl_body` | fn | `lib/compiler/parse.myc:3667` | `fn parse_impl_body(ts: Vec[Spanned]) => Result[Pair[Vec[FnDecl], Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_impl_decl` | fn | `lib/compiler/parse.myc:3681` | `fn parse_impl_decl(ts: Vec[Spanned]) => Result[Pair[ImplDecl, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_impl_item` | fn | `lib/compiler/parse.myc:3709` | `fn parse_impl_item(ts: Vec[Spanned]) => Result[Pair[Item, Vec[Spanned]], PErr]` | parse_impl_item: the top-level `impl` dispatcher (M-664) — disambiguates the trait-instance form (`impl Trait for T { ... }`) from the inherent-method form (`impl T { ... }`) by parsing the head base type once and branching on the follower (`for` vs `{`). | Empirical/Declared |
-| `compiler.parse::parse_impl_item_tail` | fn | `lib/compiler/parse.myc:3718` | `fn parse_impl_item_tail(head: BaseType, ts: Vec[Spanned]) => Result[Pair[Item, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_object_body` | fn | `lib/compiler/parse.myc:3743` | `fn parse_object_body(ts: Vec[Spanned]) => Result[Pair[Tr3[Vec[ViaDecl], Vec[ImplDecl], Vec[FnDecl]], Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_object_body_acc` | fn | `lib/compiler/parse.myc:3749` | `fn parse_object_body_acc(ts: Vec[Spanned], vds: Vec[ViaDecl], ims: Vec[ImplDecl], fs: Vec[FnDecl]) => Result[Pair[Tr3[Vec[ViaDecl], Vec[ImplDecl], Vec[FnDecl]], Vec[Spanned]], PErr]` | parse_object_body_acc: the accumulator dispatcher — each member arm parses ONE member (incl. its `;` terminator) then direct-tail-recurses with the member prepended; the three lists are rev_acc'd back to source order once at the `}`. | Empirical/Declared |
-| `compiler.parse::parse_one_object_via` | fn | `lib/compiler/parse.myc:3775` | `fn parse_one_object_via(ts: Vec[Spanned]) => Result[Pair[ViaDecl, Vec[Spanned]], PErr]` | parse_one_object_via: ONE `via N : Trait[args]?;` clause — `ts` positioned right after `via`. | Empirical/Declared |
-| `compiler.parse::parse_one_object_impl` | fn | `lib/compiler/parse.myc:3799` | `fn parse_one_object_impl(ts: Vec[Spanned]) => Result[Pair[ImplDecl, Vec[Spanned]], PErr]` | parse_one_object_impl: ONE `impl Trait for T { ... };` member. | Empirical/Declared |
-| `compiler.parse::parse_one_object_fn` | fn | `lib/compiler/parse.myc:3811` | `fn parse_one_object_fn(ts: Vec[Spanned]) => Result[Pair[FnDecl, Vec[Spanned]], PErr]` | parse_one_object_fn: ONE `fn ...;` / `thaw fn ...;` member. | Empirical/Declared |
-| `compiler.parse::parse_object_decl` | fn | `lib/compiler/parse.myc:3822` | `fn parse_object_decl(vis: Vis, ts: Vec[Spanned]) => Result[Pair[ObjectDecl, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_lower_item_rhs` | fn | `lib/compiler/parse.myc:3862` | `fn parse_lower_item_rhs(ts: Vec[Spanned]) => Result[Pair[ImplDecl, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_lower_decl` | fn | `lib/compiler/parse.myc:3865` | `fn parse_lower_decl(ts: Vec[Spanned]) => Result[Pair[LowerDecl, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_derive_decl` | fn | `lib/compiler/parse.myc:3893` | `fn parse_derive_decl(ts: Vec[Spanned]) => Result[Pair[DeriveDecl, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_item` | fn | `lib/compiler/parse.myc:3912` | `fn parse_item(ts: Vec[Spanned]) => Result[Pair[Item, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_pub_item` | fn | `lib/compiler/parse.myc:3957` | `fn parse_pub_item(ts: Vec[Spanned]) => Result[Pair[Item, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_nodule_items` | fn | `lib/compiler/parse.myc:3979` | `fn parse_nodule_items(ts: Vec[Spanned]) => Result[Pair[Vec[Item], Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_nodule_items_acc` | fn | `lib/compiler/parse.myc:3982` | `fn parse_nodule_items_acc(ts: Vec[Spanned], acc: Vec[Item]) => Result[Pair[Vec[Item], Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_nodule_tail` | fn | `lib/compiler/parse.myc:3996` | `fn parse_nodule_tail(path: Path, std_sys: Bool, ts: Vec[Spanned]) => Result[Pair[Nodule, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_nodule` | fn | `lib/compiler/parse.myc:4005` | `fn parse_nodule(ts: Vec[Spanned]) => Result[Pair[Nodule, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_nodule_list` | fn | `lib/compiler/parse.myc:4019` | `fn parse_nodule_list(ts: Vec[Spanned]) => Result[Pair[Vec[Nodule], Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_nodule_list_acc` | fn | `lib/compiler/parse.myc:4022` | `fn parse_nodule_list_acc(ts: Vec[Spanned], acc: Vec[Nodule]) => Result[Pair[Vec[Nodule], Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_phylum_tail` | fn | `lib/compiler/parse.myc:4031` | `fn parse_phylum_tail(path: Option[Path], ts: Vec[Spanned]) => Result[Pair[Phylum, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_phylum_prog` | fn | `lib/compiler/parse.myc:4040` | `fn parse_phylum_prog(ts: Vec[Spanned]) => Result[Pair[Phylum, Vec[Spanned]], PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse` | fn | `lib/compiler/parse.myc:4051` | `fn parse(src: Bytes) => Result[Nodule, PErr]` | — | Empirical/Declared |
-| `compiler.parse::parse_phylum` | fn | `lib/compiler/parse.myc:4065` | `fn parse_phylum(src: Bytes) => Result[Phylum, PErr]` | — | Empirical/Declared |
-| `compiler.parse::Fp` | type | `lib/compiler/parse.myc:4091` | `type Fp = FP(Binary{32}, Binary{32})` | — | Empirical/Declared |
-| `compiler.parse::Fp::FP` | ctor | `lib/compiler/parse.myc:4091` | `FP(Binary{32}, Binary{32})` | — | Empirical/Declared |
-| `compiler.parse::fp_hash` | fn | `lib/compiler/parse.myc:4093` | `fn fp_hash(fp: Fp) => Binary{32}` | — | Empirical/Declared |
-| `compiler.parse::fp_count` | fn | `lib/compiler/parse.myc:4094` | `fn fp_count(fp: Fp) => Binary{32}` | — | Empirical/Declared |
-| `compiler.parse::rotl7` | fn | `lib/compiler/parse.myc:4096` | `fn rotl7(x: Binary{32}) => Binary{32}` | — | Empirical/Declared |
-| `compiler.parse::fp_tag` | fn | `lib/compiler/parse.myc:4099` | `fn fp_tag(fp: Fp, tag: Binary{32}) => Fp` | — | Empirical/Declared |
-| `compiler.parse::fp_bytes` | fn | `lib/compiler/parse.myc:4102` | `fn fp_bytes(fp: Fp, b: Bytes) => Fp` | — | Empirical/Declared |
-| `compiler.parse::fp_u32` | fn | `lib/compiler/parse.myc:4105` | `fn fp_u32(fp: Fp, n: Binary{32}) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_vis` | fn | `lib/compiler/parse.myc:4109` | `fn walk_vis(fp: Fp, v: Vis) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_paradigm` | fn | `lib/compiler/parse.myc:4112` | `fn walk_paradigm(fp: Fp, p: Paradigm) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_scalar` | fn | `lib/compiler/parse.myc:4120` | `fn walk_scalar(fp: Fp, s: Scalar) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_strength` | fn | `lib/compiler/parse.myc:4128` | `fn walk_strength(fp: Fp, s: Strength) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_sparsity` | fn | `lib/compiler/parse.myc:4136` | `fn walk_sparsity(fp: Fp, s: Sparsity) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_paramkind` | fn | `lib/compiler/parse.myc:4142` | `fn walk_paramkind(fp: Fp, k: ParamKind) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_execmode` | fn | `lib/compiler/parse.myc:4145` | `fn walk_execmode(fp: Fp, e: ExecutionMode) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_widthref` | fn | `lib/compiler/parse.myc:4148` | `fn walk_widthref(fp: Fp, w: WidthRef) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_path` | fn | `lib/compiler/parse.myc:4154` | `fn walk_path(fp: Fp, p: Path) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_bytes_list` | fn | `lib/compiler/parse.myc:4157` | `fn walk_bytes_list(fp: Fp, xs: Vec[Bytes]) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_usepath` | fn | `lib/compiler/parse.myc:4160` | `fn walk_usepath(fp: Fp, u: UsePath) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_bool` | fn | `lib/compiler/parse.myc:4163` | `fn walk_bool(fp: Fp, b: Bool) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_ambientparams` | fn | `lib/compiler/parse.myc:4167` | `fn walk_ambientparams(fp: Fp, a: AmbientParams) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_typeref` | fn | `lib/compiler/parse.myc:4174` | `fn walk_typeref(fp: Fp, t: TypeRef) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_guarantee_opt` | fn | `lib/compiler/parse.myc:4177` | `fn walk_guarantee_opt(fp: Fp, g: Option[Strength]) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_typeref_list` | fn | `lib/compiler/parse.myc:4180` | `fn walk_typeref_list(fp: Fp, xs: Vec[TypeRef]) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_basetype` | fn | `lib/compiler/parse.myc:4183` | `fn walk_basetype(fp: Fp, b: BaseType) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_traitref` | fn | `lib/compiler/parse.myc:4199` | `fn walk_traitref(fp: Fp, t: TraitRef) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_traitref_list` | fn | `lib/compiler/parse.myc:4202` | `fn walk_traitref_list(fp: Fp, xs: Vec[TraitRef]) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_typeparam` | fn | `lib/compiler/parse.myc:4205` | `fn walk_typeparam(fp: Fp, t: TypeParam) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_typeparam_list` | fn | `lib/compiler/parse.myc:4208` | `fn walk_typeparam_list(fp: Fp, xs: Vec[TypeParam]) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_param` | fn | `lib/compiler/parse.myc:4211` | `fn walk_param(fp: Fp, p: Param) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_param_list` | fn | `lib/compiler/parse.myc:4214` | `fn walk_param_list(fp: Fp, xs: Vec[Param]) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_bytes_list2` | fn | `lib/compiler/parse.myc:4217` | `fn walk_bytes_list2(fp: Fp, xs: Vec[Bytes]) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_effectbudget_list` | fn | `lib/compiler/parse.myc:4224` | `fn walk_effectbudget_list(fp: Fp, xs: Vec[EffectBudget]) => Fp` | FLAG-parse-10: the budget VALUE is not mixed into the fingerprint (only its effect name) -- narrowing a Binary{64} budget to Binary{32} for the hash risks the SAME checked-narrow refusal as FLAG-parse-4/-9, and no accept-corpus file uses `(<=N)` syntax at all (verified during authoring), so this is an honest, unexercised, zero-cost-to-skip narrowing. | Empirical/Declared |
-| `compiler.parse::walk_fnsig` | fn | `lib/compiler/parse.myc:4227` | `fn walk_fnsig(fp: Fp, s: FnSig) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_ctor` | fn | `lib/compiler/parse.myc:4240` | `fn walk_ctor(fp: Fp, c: Ctor) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_ctor_list` | fn | `lib/compiler/parse.myc:4243` | `fn walk_ctor_list(fp: Fp, xs: Vec[Ctor]) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_typedecl` | fn | `lib/compiler/parse.myc:4246` | `fn walk_typedecl(fp: Fp, t: TypeDecl) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_fnsig_list` | fn | `lib/compiler/parse.myc:4249` | `fn walk_fnsig_list(fp: Fp, xs: Vec[FnSig]) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_traitdecl` | fn | `lib/compiler/parse.myc:4252` | `fn walk_traitdecl(fp: Fp, t: TraitDecl) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_fndecl` | fn | `lib/compiler/parse.myc:4255` | `fn walk_fndecl(fp: Fp, f: FnDecl) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_tier_opt` | fn | `lib/compiler/parse.myc:4260` | `fn walk_tier_opt(fp: Fp, t: Option[ExecutionMode]) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_fndecl_list` | fn | `lib/compiler/parse.myc:4263` | `fn walk_fndecl_list(fp: Fp, xs: Vec[FnDecl]) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_impldecl` | fn | `lib/compiler/parse.myc:4266` | `fn walk_impldecl(fp: Fp, i: ImplDecl) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_viadecl` | fn | `lib/compiler/parse.myc:4271` | `fn walk_viadecl(fp: Fp, v: ViaDecl) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_viadecl_list` | fn | `lib/compiler/parse.myc:4274` | `fn walk_viadecl_list(fp: Fp, xs: Vec[ViaDecl]) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_impldecl_list` | fn | `lib/compiler/parse.myc:4277` | `fn walk_impldecl_list(fp: Fp, xs: Vec[ImplDecl]) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_objectdecl` | fn | `lib/compiler/parse.myc:4280` | `fn walk_objectdecl(fp: Fp, o: ObjectDecl) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_inherentimpldecl` | fn | `lib/compiler/parse.myc:4291` | `fn walk_inherentimpldecl(fp: Fp, i: InherentImplDecl) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_lowerrhs` | fn | `lib/compiler/parse.myc:4294` | `fn walk_lowerrhs(fp: Fp, r: LowerRhs) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_lowerdecl` | fn | `lib/compiler/parse.myc:4300` | `fn walk_lowerdecl(fp: Fp, l: LowerDecl) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_derivedecl` | fn | `lib/compiler/parse.myc:4303` | `fn walk_derivedecl(fp: Fp, d: DeriveDecl) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_expr_list` | fn | `lib/compiler/parse.myc:4307` | `fn walk_expr_list(fp: Fp, xs: Vec[Expr]) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_literal` | fn | `lib/compiler/parse.myc:4310` | `fn walk_literal(fp: Fp, l: Literal) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_pattern` | fn | `lib/compiler/parse.myc:4322` | `fn walk_pattern(fp: Fp, p: Pattern) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_pattern_list` | fn | `lib/compiler/parse.myc:4332` | `fn walk_pattern_list(fp: Fp, xs: Vec[Pattern]) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_arm` | fn | `lib/compiler/parse.myc:4335` | `fn walk_arm(fp: Fp, a: Arm) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_arm_list` | fn | `lib/compiler/parse.myc:4338` | `fn walk_arm_list(fp: Fp, xs: Vec[Arm]) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_expr_opt` | fn | `lib/compiler/parse.myc:4341` | `fn walk_expr_opt(fp: Fp, e: Option[Expr]) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_hypha` | fn | `lib/compiler/parse.myc:4344` | `fn walk_hypha(fp: Fp, h: Hypha) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_hypha_list` | fn | `lib/compiler/parse.myc:4347` | `fn walk_hypha_list(fp: Fp, xs: Vec[Hypha]) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_typeref_opt` | fn | `lib/compiler/parse.myc:4350` | `fn walk_typeref_opt(fp: Fp, t: Option[TypeRef]) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_expr` | fn | `lib/compiler/parse.myc:4353` | `fn walk_expr(fp: Fp, e: Expr) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_item` | fn | `lib/compiler/parse.myc:4378` | `fn walk_item(fp: Fp, i: Item) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_item_list` | fn | `lib/compiler/parse.myc:4392` | `fn walk_item_list(fp: Fp, xs: Vec[Item]) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_nodule` | fn | `lib/compiler/parse.myc:4395` | `fn walk_nodule(fp: Fp, n: Nodule) => Fp` | — | Empirical/Declared |
-| `compiler.parse::fingerprint_nodule` | fn | `lib/compiler/parse.myc:4399` | `fn fingerprint_nodule(n: Nodule) => Fp` | fingerprint_nodule: the top-level entry — a fresh (0,0) accumulator walked over a parsed Nodule. | Empirical/Declared |
-| `compiler.parse::parse_ok_code` | fn | `lib/compiler/parse.myc:4406` | `fn parse_ok_code(src: Bytes) => Binary{32}` | parse_ok_code: 1 if `src` parses Ok, 0 if Err (the classification-parity leg). | Empirical/Declared |
-| `compiler.parse::parse_fingerprint_hash` | fn | `lib/compiler/parse.myc:4411` | `fn parse_fingerprint_hash(src: Bytes) => Binary{32}` | parse_fingerprint_hash / parse_fingerprint_count: the fingerprint's two legs, `Eof`-safe default (0) on a parse error (the caller only compares these on inputs BOTH sides accepted). | Empirical/Declared |
-| `compiler.parse::parse_fingerprint_count` | fn | `lib/compiler/parse.myc:4414` | `fn parse_fingerprint_count(src: Bytes) => Binary{32}` | — | Empirical/Declared |
-| `compiler.parse::stage3_verdict` | fn | `lib/compiler/parse.myc:4423` | `fn stage3_verdict(src: Bytes, want_ok: Binary{32}, want_hash: Binary{32}, want_count: Binary{32}) => Binary{32}` | stage3_verdict: the ONE-EVAL-PER-FILE Stage-3 gate driver (DN-26 SS7.3 runtime-budget economy: the Rust harness checks THIS nodule once, then calls this fn once per corpus file with the oracle-computed expectations as arguments — one elaboration, many eval calls). Verdict codes: 1 = full agreement; 0 = Ok/Err classification mismatch; 2 = fingerprint HASH mismatch; 3 = fingerprint NODE-COUNT mismatch. For a want_ok=0 (oracle-rejected) input the fingerprint legs are vacuous (never compared — DN-26 SS7.3 compares shape only on mutually-accepted files). | Empirical/Declared |
-| `compiler.parse::stage3_verdict_fp` | fn | `lib/compiler/parse.myc:4432` | `fn stage3_verdict_fp(fp: Fp, want_hash: Binary{32}, want_count: Binary{32}) => Binary{32}` | — | Empirical/Declared |
-| `compiler.parse::walk_phylum_path_opt` | fn | `lib/compiler/parse.myc:4441` | `fn walk_phylum_path_opt(fp: Fp, p: Option[Path]) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_nodule_list` | fn | `lib/compiler/parse.myc:4444` | `fn walk_nodule_list(fp: Fp, xs: Vec[Nodule]) => Fp` | — | Empirical/Declared |
-| `compiler.parse::walk_phylum` | fn | `lib/compiler/parse.myc:4447` | `fn walk_phylum(fp: Fp, ph: Phylum) => Fp` | — | Empirical/Declared |
-| `compiler.parse::fingerprint_phylum` | fn | `lib/compiler/parse.myc:4450` | `fn fingerprint_phylum(ph: Phylum) => Fp` | — | Empirical/Declared |
-| `compiler.parse::stage3_phylum_verdict` | fn | `lib/compiler/parse.myc:4455` | `fn stage3_phylum_verdict(src: Bytes, want_ok: Binary{32}, want_hash: Binary{32}, want_count: Binary{32}) => Binary{32}` | stage3_phylum_verdict: the parse_phylum leg of the Stage-3 gate (same verdict codes as stage3_verdict; same one-eval-per-file economy). | Empirical/Declared |
+| `compiler.parse::tok_count` | fn | `lib/compiler/parse.myc:499` | `fn tok_count(v: Vec[Spanned]) => Binary{32}` | — | Empirical/Declared |
+| `compiler.parse::tok_count_acc` | fn | `lib/compiler/parse.myc:502` | `fn tok_count_acc(v: Vec[Spanned], acc: Binary{32}) => Binary{32}` | — | Empirical/Declared |
+| `compiler.parse::nth` | fn | `lib/compiler/parse.myc:511` | `fn nth(v: Vec[Spanned], n: Binary{32}) => Option[Spanned]` | nth: the token at 0-based index `n`, or `None` if out of range. Lets a differential test inspect ONE token's `Tok`/`Pos` at a time without ever matching multiple `Tok` sites in the same nodule check pass (FLAG-lex-6's mitigation). | Empirical/Declared |
+| `compiler.parse::PErr` | type | `lib/compiler/parse.myc:527` | `type PErr = PE(Pos, Bytes)` | — | Empirical/Declared |
+| `compiler.parse::PErr::PE` | ctor | `lib/compiler/parse.myc:527` | `PE(Pos, Bytes)` | — | Empirical/Declared |
+| `compiler.parse::St` | type | `lib/compiler/parse.myc:531` | `type St = S(Binary{32}, Binary{32}, Binary{32})` | — | Empirical/Declared |
+| `compiler.parse::St::S` | ctor | `lib/compiler/parse.myc:531` | `S(Binary{32}, Binary{32}, Binary{32})` | — | Empirical/Declared |
+| `compiler.parse::st_i` | fn | `lib/compiler/parse.myc:533` | `fn st_i(s: St) => Binary{32}` | — | Empirical/Declared |
+| `compiler.parse::st_line` | fn | `lib/compiler/parse.myc:536` | `fn st_line(s: St) => Binary{32}` | — | Empirical/Declared |
+| `compiler.parse::st_col` | fn | `lib/compiler/parse.myc:539` | `fn st_col(s: St) => Binary{32}` | — | Empirical/Declared |
+| `compiler.parse::st_pos` | fn | `lib/compiler/parse.myc:542` | `fn st_pos(s: St) => Pos` | — | Empirical/Declared |
+| `compiler.parse::empty_bytes` | fn | `lib/compiler/parse.myc:549` | `fn empty_bytes() => Bytes` | — | Empirical/Declared |
+| `compiler.parse::bool_and` | fn | `lib/compiler/parse.myc:554` | `fn bool_and(a: Bool, b: Bool) => Bool` | — | Empirical/Declared |
+| `compiler.parse::bool_or` | fn | `lib/compiler/parse.myc:557` | `fn bool_or(a: Bool, b: Bool) => Bool` | — | Empirical/Declared |
+| `compiler.parse::eq_b` | fn | `lib/compiler/parse.myc:560` | `fn eq_b(a: Binary{8}, b: Binary{8}) => Bool` | — | Empirical/Declared |
+| `compiler.parse::lt_b` | fn | `lib/compiler/parse.myc:563` | `fn lt_b(a: Binary{8}, b: Binary{8}) => Bool` | — | Empirical/Declared |
+| `compiler.parse::le_b` | fn | `lib/compiler/parse.myc:567` | `fn le_b(a: Binary{8}, b: Binary{8}) => Bool` | le_b: a <= b, i.e. NOT (b < a). | Empirical/Declared |
+| `compiler.parse::in_range` | fn | `lib/compiler/parse.myc:570` | `fn in_range(c: Binary{8}, lo: Binary{8}, hi: Binary{8}) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_cont_byte` | fn | `lib/compiler/parse.myc:574` | `fn is_cont_byte(c: Binary{8}) => Bool` | UTF-8 continuation byte: 0x80..0xBF (mirrors lib/std/text.myc::is_cont_byte exactly). | Empirical/Declared |
+| `compiler.parse::is_digit` | fn | `lib/compiler/parse.myc:577` | `fn is_digit(c: Binary{8}) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_upper` | fn | `lib/compiler/parse.myc:580` | `fn is_upper(c: Binary{8}) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_lower` | fn | `lib/compiler/parse.myc:583` | `fn is_lower(c: Binary{8}) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_alpha` | fn | `lib/compiler/parse.myc:586` | `fn is_alpha(c: Binary{8}) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_ident_start` | fn | `lib/compiler/parse.myc:589` | `fn is_ident_start(c: Binary{8}) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_ident_continue` | fn | `lib/compiler/parse.myc:592` | `fn is_ident_continue(c: Binary{8}) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_hex_digit` | fn | `lib/compiler/parse.myc:595` | `fn is_hex_digit(c: Binary{8}) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_bin_digit` | fn | `lib/compiler/parse.myc:598` | `fn is_bin_digit(c: Binary{8}) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_trit_glyph` | fn | `lib/compiler/parse.myc:601` | `fn is_trit_glyph(c: Binary{8}) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_underscore` | fn | `lib/compiler/parse.myc:604` | `fn is_underscore(c: Binary{8}) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_ascii_ws` | fn | `lib/compiler/parse.myc:607` | `fn is_ascii_ws(c: Binary{8}) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_nl_or_cr` | fn | `lib/compiler/parse.myc:610` | `fn is_nl_or_cr(c: Binary{8}) => Bool` | — | Empirical/Declared |
+| `compiler.parse::src_peek` | fn | `lib/compiler/parse.myc:614` | `fn src_peek(src: Bytes, i: Binary{32}) => Option[Binary{8}]` | — | Empirical/Declared |
+| `compiler.parse::step_pos` | fn | `lib/compiler/parse.myc:619` | `fn step_pos(c: Binary{8}, s: St) => St` | step_pos: the position AFTER consuming byte `c` (FLAG-lex-1: bumps line on '\n', else bumps column only on a non-continuation byte — "count codepoints, not bytes"). | Empirical/Declared |
+| `compiler.parse::bump` | fn | `lib/compiler/parse.myc:629` | `fn bump(src: Bytes, s: St) => St` | bump: consume one byte at the current position (never-silent no-op at EOF — total). | Empirical/Declared |
+| `compiler.parse::advance_n` | fn | `lib/compiler/parse.myc:633` | `fn advance_n(src: Bytes, s: St, n: Binary{32}) => St` | advance_n: bump `n` times (used after a run-length scan to jump the cursor past a lexeme). | Empirical/Declared |
+| `compiler.parse::skip_to_eol` | fn | `lib/compiler/parse.myc:637` | `fn skip_to_eol(src: Bytes, s: St) => St` | — | Empirical/Declared |
+| `compiler.parse::skip_trivia` | fn | `lib/compiler/parse.myc:643` | `fn skip_trivia(src: Bytes, s: St) => St` | — | Empirical/Declared |
+| `compiler.parse::run_len_ident` | fn | `lib/compiler/parse.myc:662` | `fn run_len_ident(src: Bytes, i: Binary{32}) => Binary{32}` | — | Empirical/Declared |
+| `compiler.parse::run_len_ident_acc` | fn | `lib/compiler/parse.myc:665` | `fn run_len_ident_acc(src: Bytes, i: Binary{32}, acc: Binary{32}) => Binary{32}` | — | Empirical/Declared |
+| `compiler.parse::run_len_digits` | fn | `lib/compiler/parse.myc:674` | `fn run_len_digits(src: Bytes, i: Binary{32}) => Binary{32}` | — | Empirical/Declared |
+| `compiler.parse::run_len_digits_acc` | fn | `lib/compiler/parse.myc:677` | `fn run_len_digits_acc(src: Bytes, i: Binary{32}, acc: Binary{32}) => Binary{32}` | — | Empirical/Declared |
+| `compiler.parse::scan_bin_run` | fn | `lib/compiler/parse.myc:687` | `fn scan_bin_run(src: Bytes, i: Binary{32}) => Pair[Binary{32}, Binary{32}]` | scan_bin_run: Pair(total run length INCLUDING `_` separators, count of actual `0`/`1` digits). | Empirical/Declared |
+| `compiler.parse::scan_bin_run_acc` | fn | `lib/compiler/parse.myc:690` | `fn scan_bin_run_acc(src: Bytes, i: Binary{32}, len: Binary{32}, digits: Binary{32}) => Pair[Binary{32}, Binary{32}]` | — | Empirical/Declared |
+| `compiler.parse::scan_hex_run` | fn | `lib/compiler/parse.myc:703` | `fn scan_hex_run(src: Bytes, i: Binary{32}) => Pair[Binary{32}, Binary{32}]` | scan_hex_run: Pair(total run length INCLUDING `_` separators, count of actual hex digits). | Empirical/Declared |
+| `compiler.parse::scan_hex_run_acc` | fn | `lib/compiler/parse.myc:706` | `fn scan_hex_run_acc(src: Bytes, i: Binary{32}, len: Binary{32}, digits: Binary{32}) => Pair[Binary{32}, Binary{32}]` | — | Empirical/Declared |
+| `compiler.parse::scan_trit_run` | fn | `lib/compiler/parse.myc:719` | `fn scan_trit_run(src: Bytes, i: Binary{32}) => Binary{32}` | scan_trit_run: total count of trit glyphs (`+`/`0`/`-`; no `_` separator in the trit grammar). | Empirical/Declared |
+| `compiler.parse::scan_trit_run_acc` | fn | `lib/compiler/parse.myc:722` | `fn scan_trit_run_acc(src: Bytes, i: Binary{32}, acc: Binary{32}) => Binary{32}` | — | Empirical/Declared |
+| `compiler.parse::scan_string_escape` | fn | `lib/compiler/parse.myc:734` | `fn scan_string_escape(src: Bytes, s: St) => Result[Pair[Bytes, St], PErr]` | — | Empirical/Declared |
+| `compiler.parse::scan_string` | fn | `lib/compiler/parse.myc:751` | `fn scan_string(src: Bytes, s: St) => Result[Pair[Bytes, St], PErr]` | scan_string: `s` is the position right after the opening `"`. Returns the DECODED content + the position right after the closing `"` (never-silent: unterminated / raw newline / bad escape are explicit `Err`, matching lexer.rs::lex_string's contract — see FLAG-lex-7 for message fidelity). | Empirical/Declared |
+| `compiler.parse::scan_string_acc` | fn | `lib/compiler/parse.myc:754` | `fn scan_string_acc(src: Bytes, s: St, acc: Bytes) => Result[Pair[Bytes, St], PErr]` | — | Empirical/Declared |
+| `compiler.parse::lex_rangle` | fn | `lib/compiler/parse.myc:773` | `fn lex_rangle(src: Bytes, s: St) => Pair[Tok, St]` | — | Empirical/Declared |
+| `compiler.parse::lex_langle` | fn | `lib/compiler/parse.myc:780` | `fn lex_langle(src: Bytes, s: St) => Pair[Tok, St]` | — | Empirical/Declared |
+| `compiler.parse::lex_amp` | fn | `lib/compiler/parse.myc:787` | `fn lex_amp(src: Bytes, s: St) => Pair[Tok, St]` | — | Empirical/Declared |
+| `compiler.parse::lex_pipe` | fn | `lib/compiler/parse.myc:794` | `fn lex_pipe(src: Bytes, s: St) => Pair[Tok, St]` | — | Empirical/Declared |
+| `compiler.parse::lex_bang` | fn | `lib/compiler/parse.myc:801` | `fn lex_bang(src: Bytes, s: St) => Pair[Tok, St]` | — | Empirical/Declared |
+| `compiler.parse::lex_eq` | fn | `lib/compiler/parse.myc:808` | `fn lex_eq(src: Bytes, s: St) => Pair[Tok, St]` | — | Empirical/Declared |
+| `compiler.parse::lex_dash` | fn | `lib/compiler/parse.myc:816` | `fn lex_dash(src: Bytes, s: St) => Pair[Tok, St]` | — | Empirical/Declared |
+| `compiler.parse::lex_at` | fn | `lib/compiler/parse.myc:825` | `fn lex_at(src: Bytes, s: St) => Pair[Tok, St]` | `@` vs the atomic `@std-sys` nodule-header marker (M-661; mirrors lexer.rs::lex_at exactly, now expressible directly via the `bytes_eq` prim, M-912). | Empirical/Declared |
+| `compiler.parse::lex_ident` | fn | `lib/compiler/parse.myc:843` | `fn lex_ident(src: Bytes, s: St) => Pair[Tok, St]` | — | Empirical/Declared |
+| `compiler.parse::lex_int` | fn | `lib/compiler/parse.myc:852` | `fn lex_int(src: Bytes, s: St) => Pair[Tok, St]` | lex_int: a non-negative decimal digit run, verbatim (FLAG-lex-2: no float extension, no eager numeric conversion — a structural deviation from lexer.rs, deliberately scoped, no accept-corpus input exercises the gap). | Empirical/Declared |
+| `compiler.parse::lex_binlit` | fn | `lib/compiler/parse.myc:857` | `fn lex_binlit(src: Bytes, s: St) => Result[Pair[Tok, St], PErr]` | — | Empirical/Declared |
+| `compiler.parse::lex_hexlit` | fn | `lib/compiler/parse.myc:870` | `fn lex_hexlit(src: Bytes, s: St) => Result[Pair[Tok, St], PErr]` | Even-hex-digit-count check (RFC-0032 D4: a byte is two hex chars): `and(digits, 1)` masks the low bit — `0` iff `digits` is even. `and` requires same-width operands; the bare `1` anchors to `digits`'s width (Binary{32}, RFC-0012 ambient bare-decimal inference). | Empirical/Declared |
+| `compiler.parse::lex_tritlit` | fn | `lib/compiler/parse.myc:882` | `fn lex_tritlit(src: Bytes, s: St) => Result[Pair[Tok, St], PErr]` | — | Empirical/Declared |
+| `compiler.parse::lex_string` | fn | `lib/compiler/parse.myc:890` | `fn lex_string(src: Bytes, s: St) => Result[Pair[Tok, St], PErr]` | — | Empirical/Declared |
+| `compiler.parse::lex_zero_prefixed` | fn | `lib/compiler/parse.myc:897` | `fn lex_zero_prefixed(src: Bytes, s: St) => Result[Pair[Tok, St], PErr]` | `0` followed by `b`/`x`/`t` opens a base-prefixed literal; otherwise a plain decimal int. | Empirical/Declared |
+| `compiler.parse::next_token` | fn | `lib/compiler/parse.myc:909` | `fn next_token(src: Bytes, s: St) => Result[Pair[Tok, St], PErr]` | — | Empirical/Declared |
+| `compiler.parse::run` | fn | `lib/compiler/parse.myc:945` | `fn run(src: Bytes, s: St) => Result[Vec[Spanned], PErr]` | — | Empirical/Declared |
+| `compiler.parse::run_acc` | fn | `lib/compiler/parse.myc:948` | `fn run_acc(src: Bytes, s: St, acc: Vec[Spanned]) => Result[Vec[Spanned], PErr]` | — | Empirical/Declared |
+| `compiler.parse::lex` | fn | `lib/compiler/parse.myc:963` | `fn lex(src: Bytes) => Result[Vec[Spanned], PErr]` | lex: tokenize `src` into a `Spanned` stream terminated by `Eof` (mirrors lexer.rs::lex). Comments are discarded (FLAG-lex-5); never-silent on any lexically invalid input (an explicit `Err`, never a panic or a silently-skipped character). | Empirical/Declared |
+| `compiler.parse::Vis` | type | `lib/compiler/parse.myc:970` | `type Vis = Private \| Pub` | — | Empirical/Declared |
+| `compiler.parse::Vis::Private` | ctor | `lib/compiler/parse.myc:970` | `Private` | — | Empirical/Declared |
+| `compiler.parse::Vis::Pub` | ctor | `lib/compiler/parse.myc:970` | `Pub` | — | Empirical/Declared |
+| `compiler.parse::vis_is_pub` | fn | `lib/compiler/parse.myc:972` | `fn vis_is_pub(v: Vis) => Bool` | — | Empirical/Declared |
+| `compiler.parse::Path` | type | `lib/compiler/parse.myc:976` | `type Path = Pth(Vec[Bytes])` | — | Empirical/Declared |
+| `compiler.parse::Path::Pth` | ctor | `lib/compiler/parse.myc:976` | `Pth(Vec[Bytes])` | — | Empirical/Declared |
+| `compiler.parse::path_segs` | fn | `lib/compiler/parse.myc:978` | `fn path_segs(p: Path) => Vec[Bytes]` | — | Empirical/Declared |
+| `compiler.parse::UsePath` | type | `lib/compiler/parse.myc:983` | `type UsePath = UP(Path, Bool)` | — | Empirical/Declared |
+| `compiler.parse::UsePath::UP` | ctor | `lib/compiler/parse.myc:983` | `UP(Path, Bool)` | — | Empirical/Declared |
+| `compiler.parse::usepath_path` | fn | `lib/compiler/parse.myc:985` | `fn usepath_path(u: UsePath) => Path` | — | Empirical/Declared |
+| `compiler.parse::usepath_glob` | fn | `lib/compiler/parse.myc:988` | `fn usepath_glob(u: UsePath) => Bool` | — | Empirical/Declared |
+| `compiler.parse::Paradigm` | type | `lib/compiler/parse.myc:992` | `type Paradigm = PBinary \| PTernary \| PDense \| PVsa` | — | Empirical/Declared |
+| `compiler.parse::Paradigm::PBinary` | ctor | `lib/compiler/parse.myc:992` | `PBinary` | — | Empirical/Declared |
+| `compiler.parse::Paradigm::PDense` | ctor | `lib/compiler/parse.myc:992` | `PDense` | — | Empirical/Declared |
+| `compiler.parse::Paradigm::PTernary` | ctor | `lib/compiler/parse.myc:992` | `PTernary` | — | Empirical/Declared |
+| `compiler.parse::Paradigm::PVsa` | ctor | `lib/compiler/parse.myc:992` | `PVsa` | — | Empirical/Declared |
+| `compiler.parse::paradigm_to_bytes` | fn | `lib/compiler/parse.myc:996` | `fn paradigm_to_bytes(p: Paradigm) => Bytes` | paradigm_to_bytes: mirrors `impl Display for Paradigm` (FLAG-ast-7 note: this one IS ported — a trivial fixed 4-string lookup, unlike WidthRef's). | Empirical/Declared |
+| `compiler.parse::Scalar` | type | `lib/compiler/parse.myc:1005` | `type Scalar = SF16 \| SBf16 \| SF32 \| SF64` | — | Empirical/Declared |
+| `compiler.parse::Scalar::SBf16` | ctor | `lib/compiler/parse.myc:1005` | `SBf16` | — | Empirical/Declared |
+| `compiler.parse::Scalar::SF16` | ctor | `lib/compiler/parse.myc:1005` | `SF16` | — | Empirical/Declared |
+| `compiler.parse::Scalar::SF32` | ctor | `lib/compiler/parse.myc:1005` | `SF32` | — | Empirical/Declared |
+| `compiler.parse::Scalar::SF64` | ctor | `lib/compiler/parse.myc:1005` | `SF64` | — | Empirical/Declared |
+| `compiler.parse::Sparsity` | type | `lib/compiler/parse.myc:1008` | `type Sparsity = SpDense \| SpSparse(Binary{32})` | — | Empirical/Declared |
+| `compiler.parse::Sparsity::SpDense` | ctor | `lib/compiler/parse.myc:1008` | `SpDense` | — | Empirical/Declared |
+| `compiler.parse::Sparsity::SpSparse` | ctor | `lib/compiler/parse.myc:1008` | `SpSparse(Binary{32})` | — | Empirical/Declared |
+| `compiler.parse::AmbientParams` | type | `lib/compiler/parse.myc:1012` | `type AmbientParams = APSize(Binary{32}) \| APDense(Binary{32}, Scalar) \| APVsa(Bytes, Binary{32}, Sparsity)` | — | Empirical/Declared |
+| `compiler.parse::AmbientParams::APSize` | ctor | `lib/compiler/parse.myc:1013` | `APSize(Binary{32})` | — | Empirical/Declared |
+| `compiler.parse::AmbientParams::APDense` | ctor | `lib/compiler/parse.myc:1014` | `APDense(Binary{32}, Scalar)` | — | Empirical/Declared |
+| `compiler.parse::AmbientParams::APVsa` | ctor | `lib/compiler/parse.myc:1015` | `APVsa(Bytes, Binary{32}, Sparsity)` | — | Empirical/Declared |
+| `compiler.parse::Strength` | type | `lib/compiler/parse.myc:1018` | `type Strength = GExact \| GProven \| GEmpirical \| GDeclared` | — | Empirical/Declared |
+| `compiler.parse::Strength::GDeclared` | ctor | `lib/compiler/parse.myc:1018` | `GDeclared` | — | Empirical/Declared |
+| `compiler.parse::Strength::GEmpirical` | ctor | `lib/compiler/parse.myc:1018` | `GEmpirical` | — | Empirical/Declared |
+| `compiler.parse::Strength::GExact` | ctor | `lib/compiler/parse.myc:1018` | `GExact` | — | Empirical/Declared |
+| `compiler.parse::Strength::GProven` | ctor | `lib/compiler/parse.myc:1018` | `GProven` | — | Empirical/Declared |
+| `compiler.parse::strength_rank` | fn | `lib/compiler/parse.myc:1021` | `fn strength_rank(s: Strength) => Binary{8}` | strength_rank: mirrors `Strength::rank` (u8 -> Binary{8}; Declared=0 .. Exact=3). | Empirical/Declared |
+| `compiler.parse::strength_meet` | fn | `lib/compiler/parse.myc:1030` | `fn strength_meet(a: Strength, b: Strength) => Strength` | strength_meet: mirrors `Strength::meet` — the weaker (less-trusted) of the two grades. | Empirical/Declared |
+| `compiler.parse::strength_satisfies` | fn | `lib/compiler/parse.myc:1037` | `fn strength_satisfies(actual: Strength, demand: Strength) => Bool` | strength_satisfies: mirrors `Strength::satisfies` — `self.rank() >= demand.rank()`. | Empirical/Declared |
+| `compiler.parse::WidthRef` | type | `lib/compiler/parse.myc:1044` | `type WidthRef = WLit(Binary{32}) \| WName(Bytes)` | — | Empirical/Declared |
+| `compiler.parse::WidthRef::WLit` | ctor | `lib/compiler/parse.myc:1044` | `WLit(Binary{32})` | — | Empirical/Declared |
+| `compiler.parse::WidthRef::WName` | ctor | `lib/compiler/parse.myc:1044` | `WName(Bytes)` | — | Empirical/Declared |
+| `compiler.parse::ParamKind` | type | `lib/compiler/parse.myc:1050` | `type ParamKind = PkType \| PkWidth` | — | Empirical/Declared |
+| `compiler.parse::ParamKind::PkType` | ctor | `lib/compiler/parse.myc:1050` | `PkType` | — | Empirical/Declared |
+| `compiler.parse::ParamKind::PkWidth` | ctor | `lib/compiler/parse.myc:1050` | `PkWidth` | — | Empirical/Declared |
+| `compiler.parse::paramkind_eq` | fn | `lib/compiler/parse.myc:1052` | `fn paramkind_eq(a: ParamKind, b: ParamKind) => Bool` | — | Empirical/Declared |
+| `compiler.parse::TraitRef` | type | `lib/compiler/parse.myc:1059` | `type TraitRef = TRf(Bytes, Vec[TypeRef])` | — | Empirical/Declared |
+| `compiler.parse::TraitRef::TRf` | ctor | `lib/compiler/parse.myc:1059` | `TRf(Bytes, Vec[TypeRef])` | — | Empirical/Declared |
+| `compiler.parse::traitref_name` | fn | `lib/compiler/parse.myc:1061` | `fn traitref_name(t: TraitRef) => Bytes` | — | Empirical/Declared |
+| `compiler.parse::traitref_args` | fn | `lib/compiler/parse.myc:1064` | `fn traitref_args(t: TraitRef) => Vec[TypeRef]` | — | Empirical/Declared |
+| `compiler.parse::TypeParam` | type | `lib/compiler/parse.myc:1068` | `type TypeParam = TP(Bytes, ParamKind, Vec[TraitRef])` | — | Empirical/Declared |
+| `compiler.parse::TypeParam::TP` | ctor | `lib/compiler/parse.myc:1068` | `TP(Bytes, ParamKind, Vec[TraitRef])` | — | Empirical/Declared |
+| `compiler.parse::typeparam_name` | fn | `lib/compiler/parse.myc:1070` | `fn typeparam_name(t: TypeParam) => Bytes` | — | Empirical/Declared |
+| `compiler.parse::typeparam_kind` | fn | `lib/compiler/parse.myc:1073` | `fn typeparam_kind(t: TypeParam) => ParamKind` | — | Empirical/Declared |
+| `compiler.parse::typeparam_bounds` | fn | `lib/compiler/parse.myc:1076` | `fn typeparam_bounds(t: TypeParam) => Vec[TraitRef]` | — | Empirical/Declared |
+| `compiler.parse::typeparam_names_of_kind` | fn | `lib/compiler/parse.myc:1082` | `fn typeparam_names_of_kind(ps: Vec[TypeParam], k: ParamKind) => Vec[Bytes]` | typeparam_names_of_kind: shared filter for fn_sig_param_names / fn_sig_width_param_names below. Non-tail, bounded by the fn's OWN type-parameter count (a handful) — not source length; the same nesting-bounded shape nodule.myc's split_dotted/join_segs use (RFC-0041 §7 W7 amendment 11). | Empirical/Declared |
+| `compiler.parse::EffectBudget` | type | `lib/compiler/parse.myc:1093` | `type EffectBudget = EB(Bytes, Binary{64})` | — | Empirical/Declared |
+| `compiler.parse::EffectBudget::EB` | ctor | `lib/compiler/parse.myc:1093` | `EB(Bytes, Binary{64})` | — | Empirical/Declared |
+| `compiler.parse::FnSig` | type | `lib/compiler/parse.myc:1098` | `type FnSig = FS(Bytes, Vec[TypeParam], Vec[Param], TypeRef, Vec[Bytes], Vec[EffectBudget])` | — | Empirical/Declared |
+| `compiler.parse::FnSig::FS` | ctor | `lib/compiler/parse.myc:1098` | `FS(Bytes, Vec[TypeParam], Vec[Param], TypeRef, Vec[Bytes], Vec[EffectBudget])` | — | Empirical/Declared |
+| `compiler.parse::fnsig_name` | fn | `lib/compiler/parse.myc:1100` | `fn fnsig_name(s: FnSig) => Bytes` | — | Empirical/Declared |
+| `compiler.parse::fnsig_params` | fn | `lib/compiler/parse.myc:1103` | `fn fnsig_params(s: FnSig) => Vec[TypeParam]` | — | Empirical/Declared |
+| `compiler.parse::fnsig_value_params` | fn | `lib/compiler/parse.myc:1106` | `fn fnsig_value_params(s: FnSig) => Vec[Param]` | — | Empirical/Declared |
+| `compiler.parse::fnsig_ret` | fn | `lib/compiler/parse.myc:1109` | `fn fnsig_ret(s: FnSig) => TypeRef` | — | Empirical/Declared |
+| `compiler.parse::fnsig_effects` | fn | `lib/compiler/parse.myc:1112` | `fn fnsig_effects(s: FnSig) => Vec[Bytes]` | — | Empirical/Declared |
+| `compiler.parse::fnsig_effect_budgets` | fn | `lib/compiler/parse.myc:1115` | `fn fnsig_effect_budgets(s: FnSig) => Vec[EffectBudget]` | — | Empirical/Declared |
+| `compiler.parse::fnsig_param_names` | fn | `lib/compiler/parse.myc:1119` | `fn fnsig_param_names(s: FnSig) => Vec[Bytes]` | fnsig_param_names: mirrors `FnSig::param_names` (type-kind params only). | Empirical/Declared |
+| `compiler.parse::fnsig_width_param_names` | fn | `lib/compiler/parse.myc:1123` | `fn fnsig_width_param_names(s: FnSig) => Vec[Bytes]` | fnsig_width_param_names: mirrors `FnSig::width_param_names` (width-kind params only). | Empirical/Declared |
+| `compiler.parse::Param` | type | `lib/compiler/parse.myc:1127` | `type Param = Prm(Bytes, TypeRef)` | — | Empirical/Declared |
+| `compiler.parse::Param::Prm` | ctor | `lib/compiler/parse.myc:1127` | `Prm(Bytes, TypeRef)` | — | Empirical/Declared |
+| `compiler.parse::param_name` | fn | `lib/compiler/parse.myc:1129` | `fn param_name(p: Param) => Bytes` | — | Empirical/Declared |
+| `compiler.parse::param_ty` | fn | `lib/compiler/parse.myc:1132` | `fn param_ty(p: Param) => TypeRef` | — | Empirical/Declared |
+| `compiler.parse::TypeRef` | type | `lib/compiler/parse.myc:1138` | `type TypeRef = TR(BaseType, Option[Strength])` | — | Empirical/Declared |
+| `compiler.parse::TypeRef::TR` | ctor | `lib/compiler/parse.myc:1138` | `TR(BaseType, Option[Strength])` | — | Empirical/Declared |
+| `compiler.parse::typeref_base` | fn | `lib/compiler/parse.myc:1140` | `fn typeref_base(t: TypeRef) => BaseType` | — | Empirical/Declared |
+| `compiler.parse::typeref_guarantee` | fn | `lib/compiler/parse.myc:1143` | `fn typeref_guarantee(t: TypeRef) => Option[Strength]` | — | Empirical/Declared |
+| `compiler.parse::typeref_unguaranteed` | fn | `lib/compiler/parse.myc:1147` | `fn typeref_unguaranteed(b: BaseType) => TypeRef` | typeref_unguaranteed: mirrors `TypeRef::unguaranteed`. | Empirical/Declared |
+| `compiler.parse::typeref_with_guarantee` | fn | `lib/compiler/parse.myc:1151` | `fn typeref_with_guarantee(b: BaseType, g: Strength) => TypeRef` | typeref_with_guarantee: mirrors `TypeRef::with_guarantee`. | Empirical/Declared |
+| `compiler.parse::BaseType` | type | `lib/compiler/parse.myc:1158` | `type BaseType = KwBinary(WidthRef) \| KwTernary(WidthRef) \| KwDense(Binary{32}, Scalar) \| Vsa(Bytes, Binary{32}, Sparsity) \| KwSubstrate(Bytes) \| KwSeq(TypeRef, Binary{32}) \| KwBytes \| KwFloat \| Named(Bytes, Vec[TypeRef]) \| Ambient(AmbientParams) \| FnArrow(TypeRef, TypeRef) \| Tuple(Vec[TypeRef])` | BaseType: mirrors ast.rs::BaseType field-for-field. FLAG-ast-4 renames the 7 repr-keyword collisions (Kw-prefix); FLAG-ast-5 renames `Fn` (cross-type collision with `Item::Fn`) to `FnArrow`. `Vsa`/`Named`/`Ambient`/`Tuple` are bare (no collision after FLAG-ast-4's Paradigm/ AmbientParams renames leave them the sole survivor). | Empirical/Declared |
+| `compiler.parse::BaseType::KwBinary` | ctor | `lib/compiler/parse.myc:1159` | `KwBinary(WidthRef)` | — | Empirical/Declared |
+| `compiler.parse::BaseType::KwTernary` | ctor | `lib/compiler/parse.myc:1160` | `KwTernary(WidthRef)` | — | Empirical/Declared |
+| `compiler.parse::BaseType::KwDense` | ctor | `lib/compiler/parse.myc:1161` | `KwDense(Binary{32}, Scalar)` | — | Empirical/Declared |
+| `compiler.parse::BaseType::Vsa` | ctor | `lib/compiler/parse.myc:1162` | `Vsa(Bytes, Binary{32}, Sparsity)` | — | Empirical/Declared |
+| `compiler.parse::BaseType::KwSubstrate` | ctor | `lib/compiler/parse.myc:1163` | `KwSubstrate(Bytes)` | — | Empirical/Declared |
+| `compiler.parse::BaseType::KwSeq` | ctor | `lib/compiler/parse.myc:1164` | `KwSeq(TypeRef, Binary{32})` | — | Empirical/Declared |
+| `compiler.parse::BaseType::KwBytes` | ctor | `lib/compiler/parse.myc:1165` | `KwBytes` | — | Empirical/Declared |
+| `compiler.parse::BaseType::KwFloat` | ctor | `lib/compiler/parse.myc:1166` | `KwFloat` | — | Empirical/Declared |
+| `compiler.parse::BaseType::Named` | ctor | `lib/compiler/parse.myc:1167` | `Named(Bytes, Vec[TypeRef])` | — | Empirical/Declared |
+| `compiler.parse::BaseType::Ambient` | ctor | `lib/compiler/parse.myc:1168` | `Ambient(AmbientParams)` | — | Empirical/Declared |
+| `compiler.parse::BaseType::FnArrow` | ctor | `lib/compiler/parse.myc:1169` | `FnArrow(TypeRef, TypeRef)` | — | Empirical/Declared |
+| `compiler.parse::BaseType::Tuple` | ctor | `lib/compiler/parse.myc:1170` | `Tuple(Vec[TypeRef])` | — | Empirical/Declared |
+| `compiler.parse::ExecutionMode` | type | `lib/compiler/parse.myc:1173` | `type ExecutionMode = Interpreted \| Compiled` | — | Empirical/Declared |
+| `compiler.parse::ExecutionMode::Compiled` | ctor | `lib/compiler/parse.myc:1173` | `Compiled` | — | Empirical/Declared |
+| `compiler.parse::ExecutionMode::Interpreted` | ctor | `lib/compiler/parse.myc:1173` | `Interpreted` | — | Empirical/Declared |
+| `compiler.parse::FnDecl` | type | `lib/compiler/parse.myc:1177` | `type FnDecl = FD(Vis, Bool, Option[ExecutionMode], FnSig, Expr)` | — | Empirical/Declared |
+| `compiler.parse::FnDecl::FD` | ctor | `lib/compiler/parse.myc:1177` | `FD(Vis, Bool, Option[ExecutionMode], FnSig, Expr)` | — | Empirical/Declared |
+| `compiler.parse::fndecl_vis` | fn | `lib/compiler/parse.myc:1179` | `fn fndecl_vis(f: FnDecl) => Vis` | — | Empirical/Declared |
+| `compiler.parse::fndecl_thaw` | fn | `lib/compiler/parse.myc:1182` | `fn fndecl_thaw(f: FnDecl) => Bool` | — | Empirical/Declared |
+| `compiler.parse::fndecl_tier` | fn | `lib/compiler/parse.myc:1185` | `fn fndecl_tier(f: FnDecl) => Option[ExecutionMode]` | — | Empirical/Declared |
+| `compiler.parse::fndecl_sig` | fn | `lib/compiler/parse.myc:1188` | `fn fndecl_sig(f: FnDecl) => FnSig` | — | Empirical/Declared |
+| `compiler.parse::fndecl_body` | fn | `lib/compiler/parse.myc:1191` | `fn fndecl_body(f: FnDecl) => Expr` | — | Empirical/Declared |
+| `compiler.parse::Ctor` | type | `lib/compiler/parse.myc:1196` | `type Ctor = Ctr(Bytes, Vec[TypeRef], Bool)` | — | Empirical/Declared |
+| `compiler.parse::Ctor::Ctr` | ctor | `lib/compiler/parse.myc:1196` | `Ctr(Bytes, Vec[TypeRef], Bool)` | — | Empirical/Declared |
+| `compiler.parse::ctor_name` | fn | `lib/compiler/parse.myc:1198` | `fn ctor_name(c: Ctor) => Bytes` | — | Empirical/Declared |
+| `compiler.parse::ctor_fields` | fn | `lib/compiler/parse.myc:1201` | `fn ctor_fields(c: Ctor) => Vec[TypeRef]` | — | Empirical/Declared |
+| `compiler.parse::ctor_sealed` | fn | `lib/compiler/parse.myc:1205` | `fn ctor_sealed(c: Ctor) => Bool` | ctor_sealed: the per-constructor `priv` seal (M-1027 / DN-104). | Empirical/Declared |
+| `compiler.parse::TypeDecl` | type | `lib/compiler/parse.myc:1209` | `type TypeDecl = TD(Vis, Bytes, Vec[Bytes], Vec[Ctor])` | — | Empirical/Declared |
+| `compiler.parse::TypeDecl::TD` | ctor | `lib/compiler/parse.myc:1209` | `TD(Vis, Bytes, Vec[Bytes], Vec[Ctor])` | — | Empirical/Declared |
+| `compiler.parse::typedecl_vis` | fn | `lib/compiler/parse.myc:1211` | `fn typedecl_vis(t: TypeDecl) => Vis` | — | Empirical/Declared |
+| `compiler.parse::typedecl_name` | fn | `lib/compiler/parse.myc:1214` | `fn typedecl_name(t: TypeDecl) => Bytes` | — | Empirical/Declared |
+| `compiler.parse::typedecl_params` | fn | `lib/compiler/parse.myc:1217` | `fn typedecl_params(t: TypeDecl) => Vec[Bytes]` | — | Empirical/Declared |
+| `compiler.parse::typedecl_ctors` | fn | `lib/compiler/parse.myc:1220` | `fn typedecl_ctors(t: TypeDecl) => Vec[Ctor]` | — | Empirical/Declared |
+| `compiler.parse::TraitDecl` | type | `lib/compiler/parse.myc:1224` | `type TraitDecl = TrD(Vis, Bytes, Vec[Bytes], Vec[FnSig])` | — | Empirical/Declared |
+| `compiler.parse::TraitDecl::TrD` | ctor | `lib/compiler/parse.myc:1224` | `TrD(Vis, Bytes, Vec[Bytes], Vec[FnSig])` | — | Empirical/Declared |
+| `compiler.parse::traitdecl_vis` | fn | `lib/compiler/parse.myc:1226` | `fn traitdecl_vis(t: TraitDecl) => Vis` | — | Empirical/Declared |
+| `compiler.parse::traitdecl_name` | fn | `lib/compiler/parse.myc:1229` | `fn traitdecl_name(t: TraitDecl) => Bytes` | — | Empirical/Declared |
+| `compiler.parse::traitdecl_params` | fn | `lib/compiler/parse.myc:1232` | `fn traitdecl_params(t: TraitDecl) => Vec[Bytes]` | — | Empirical/Declared |
+| `compiler.parse::traitdecl_sigs` | fn | `lib/compiler/parse.myc:1235` | `fn traitdecl_sigs(t: TraitDecl) => Vec[FnSig]` | — | Empirical/Declared |
+| `compiler.parse::ImplDecl` | type | `lib/compiler/parse.myc:1239` | `type ImplDecl = ImD(Bytes, Vec[TypeRef], TypeRef, Vec[FnDecl])` | — | Empirical/Declared |
+| `compiler.parse::ImplDecl::ImD` | ctor | `lib/compiler/parse.myc:1239` | `ImD(Bytes, Vec[TypeRef], TypeRef, Vec[FnDecl])` | — | Empirical/Declared |
+| `compiler.parse::impldecl_trait_name` | fn | `lib/compiler/parse.myc:1241` | `fn impldecl_trait_name(i: ImplDecl) => Bytes` | — | Empirical/Declared |
+| `compiler.parse::impldecl_trait_args` | fn | `lib/compiler/parse.myc:1244` | `fn impldecl_trait_args(i: ImplDecl) => Vec[TypeRef]` | — | Empirical/Declared |
+| `compiler.parse::impldecl_for_ty` | fn | `lib/compiler/parse.myc:1247` | `fn impldecl_for_ty(i: ImplDecl) => TypeRef` | — | Empirical/Declared |
+| `compiler.parse::impldecl_methods` | fn | `lib/compiler/parse.myc:1250` | `fn impldecl_methods(i: ImplDecl) => Vec[FnDecl]` | — | Empirical/Declared |
+| `compiler.parse::ViaDecl` | type | `lib/compiler/parse.myc:1254` | `type ViaDecl = VD(Binary{32}, Bytes, Vec[TypeRef])` | — | Empirical/Declared |
+| `compiler.parse::ViaDecl::VD` | ctor | `lib/compiler/parse.myc:1254` | `VD(Binary{32}, Bytes, Vec[TypeRef])` | — | Empirical/Declared |
+| `compiler.parse::viadecl_field_idx` | fn | `lib/compiler/parse.myc:1256` | `fn viadecl_field_idx(v: ViaDecl) => Binary{32}` | — | Empirical/Declared |
+| `compiler.parse::viadecl_trait_name` | fn | `lib/compiler/parse.myc:1259` | `fn viadecl_trait_name(v: ViaDecl) => Bytes` | — | Empirical/Declared |
+| `compiler.parse::viadecl_trait_args` | fn | `lib/compiler/parse.myc:1262` | `fn viadecl_trait_args(v: ViaDecl) => Vec[TypeRef]` | — | Empirical/Declared |
+| `compiler.parse::ObjectDecl` | type | `lib/compiler/parse.myc:1266` | `type ObjectDecl = OD(Vis, Bytes, Vec[Bytes], Ctor, Vec[ViaDecl], Vec[ImplDecl], Vec[FnDecl])` | — | Empirical/Declared |
+| `compiler.parse::ObjectDecl::OD` | ctor | `lib/compiler/parse.myc:1266` | `OD(Vis, Bytes, Vec[Bytes], Ctor, Vec[ViaDecl], Vec[ImplDecl], Vec[FnDecl])` | — | Empirical/Declared |
+| `compiler.parse::objectdecl_vis` | fn | `lib/compiler/parse.myc:1268` | `fn objectdecl_vis(o: ObjectDecl) => Vis` | — | Empirical/Declared |
+| `compiler.parse::objectdecl_name` | fn | `lib/compiler/parse.myc:1271` | `fn objectdecl_name(o: ObjectDecl) => Bytes` | — | Empirical/Declared |
+| `compiler.parse::objectdecl_params` | fn | `lib/compiler/parse.myc:1274` | `fn objectdecl_params(o: ObjectDecl) => Vec[Bytes]` | — | Empirical/Declared |
+| `compiler.parse::objectdecl_ctor` | fn | `lib/compiler/parse.myc:1277` | `fn objectdecl_ctor(o: ObjectDecl) => Ctor` | — | Empirical/Declared |
+| `compiler.parse::objectdecl_via_decls` | fn | `lib/compiler/parse.myc:1280` | `fn objectdecl_via_decls(o: ObjectDecl) => Vec[ViaDecl]` | — | Empirical/Declared |
+| `compiler.parse::objectdecl_impls` | fn | `lib/compiler/parse.myc:1283` | `fn objectdecl_impls(o: ObjectDecl) => Vec[ImplDecl]` | — | Empirical/Declared |
+| `compiler.parse::objectdecl_fns` | fn | `lib/compiler/parse.myc:1286` | `fn objectdecl_fns(o: ObjectDecl) => Vec[FnDecl]` | — | Empirical/Declared |
+| `compiler.parse::InherentImplDecl` | type | `lib/compiler/parse.myc:1293` | `type InherentImplDecl = IID(Vec[Bytes], TypeRef, Vec[FnDecl])` | — | Empirical/Declared |
+| `compiler.parse::InherentImplDecl::IID` | ctor | `lib/compiler/parse.myc:1293` | `IID(Vec[Bytes], TypeRef, Vec[FnDecl])` | — | Empirical/Declared |
+| `compiler.parse::inherentimpldecl_params` | fn | `lib/compiler/parse.myc:1295` | `fn inherentimpldecl_params(i: InherentImplDecl) => Vec[Bytes]` | — | Empirical/Declared |
+| `compiler.parse::inherentimpldecl_for_ty` | fn | `lib/compiler/parse.myc:1298` | `fn inherentimpldecl_for_ty(i: InherentImplDecl) => TypeRef` | — | Empirical/Declared |
+| `compiler.parse::inherentimpldecl_methods` | fn | `lib/compiler/parse.myc:1301` | `fn inherentimpldecl_methods(i: InherentImplDecl) => Vec[FnDecl]` | — | Empirical/Declared |
+| `compiler.parse::LowerRhs` | type | `lib/compiler/parse.myc:1306` | `type LowerRhs = LRExpr(Expr) \| LRImpl(ImplDecl)` | — | Empirical/Declared |
+| `compiler.parse::LowerRhs::LRExpr` | ctor | `lib/compiler/parse.myc:1306` | `LRExpr(Expr)` | — | Empirical/Declared |
+| `compiler.parse::LowerRhs::LRImpl` | ctor | `lib/compiler/parse.myc:1306` | `LRImpl(ImplDecl)` | — | Empirical/Declared |
+| `compiler.parse::LowerDecl` | type | `lib/compiler/parse.myc:1309` | `type LowerDecl = LD(Bytes, Vec[Bytes], LowerRhs)` | — | Empirical/Declared |
+| `compiler.parse::LowerDecl::LD` | ctor | `lib/compiler/parse.myc:1309` | `LD(Bytes, Vec[Bytes], LowerRhs)` | — | Empirical/Declared |
+| `compiler.parse::lowerdecl_name` | fn | `lib/compiler/parse.myc:1311` | `fn lowerdecl_name(l: LowerDecl) => Bytes` | — | Empirical/Declared |
+| `compiler.parse::lowerdecl_params` | fn | `lib/compiler/parse.myc:1314` | `fn lowerdecl_params(l: LowerDecl) => Vec[Bytes]` | — | Empirical/Declared |
+| `compiler.parse::lowerdecl_rhs` | fn | `lib/compiler/parse.myc:1317` | `fn lowerdecl_rhs(l: LowerDecl) => LowerRhs` | — | Empirical/Declared |
+| `compiler.parse::lowerdecl_expr_rhs` | fn | `lib/compiler/parse.myc:1321` | `fn lowerdecl_expr_rhs(l: LowerDecl) => Option[Expr]` | lowerdecl_expr_rhs: mirrors `LowerDecl::expr_rhs`. | Empirical/Declared |
+| `compiler.parse::lowerdecl_impl_rhs` | fn | `lib/compiler/parse.myc:1328` | `fn lowerdecl_impl_rhs(l: LowerDecl) => Option[ImplDecl]` | lowerdecl_impl_rhs: mirrors `LowerDecl::impl_rhs`. | Empirical/Declared |
+| `compiler.parse::DeriveDecl` | type | `lib/compiler/parse.myc:1335` | `type DeriveDecl = DD(Bytes, TypeRef)` | — | Empirical/Declared |
+| `compiler.parse::DeriveDecl::DD` | ctor | `lib/compiler/parse.myc:1335` | `DD(Bytes, TypeRef)` | — | Empirical/Declared |
+| `compiler.parse::derivedecl_name` | fn | `lib/compiler/parse.myc:1337` | `fn derivedecl_name(d: DeriveDecl) => Bytes` | — | Empirical/Declared |
+| `compiler.parse::derivedecl_for_ty` | fn | `lib/compiler/parse.myc:1340` | `fn derivedecl_for_ty(d: DeriveDecl) => TypeRef` | — | Empirical/Declared |
+| `compiler.parse::Item` | type | `lib/compiler/parse.myc:1345` | `type Item = Use(UsePath) \| Default(Paradigm) \| Type(TypeDecl) \| Trait(TraitDecl) \| Impl(ImplDecl) \| Fn(FnDecl) \| Object(ObjectDecl) \| Lower(LowerDecl) \| Derive(DeriveDecl) \| InherentImpl(InherentImplDecl)` | — | Empirical/Declared |
+| `compiler.parse::Item::Use` | ctor | `lib/compiler/parse.myc:1346` | `Use(UsePath)` | — | Empirical/Declared |
+| `compiler.parse::Item::Default` | ctor | `lib/compiler/parse.myc:1347` | `Default(Paradigm)` | — | Empirical/Declared |
+| `compiler.parse::Item::Type` | ctor | `lib/compiler/parse.myc:1348` | `Type(TypeDecl)` | — | Empirical/Declared |
+| `compiler.parse::Item::Trait` | ctor | `lib/compiler/parse.myc:1349` | `Trait(TraitDecl)` | — | Empirical/Declared |
+| `compiler.parse::Item::Impl` | ctor | `lib/compiler/parse.myc:1350` | `Impl(ImplDecl)` | — | Empirical/Declared |
+| `compiler.parse::Item::Fn` | ctor | `lib/compiler/parse.myc:1351` | `Fn(FnDecl)` | — | Empirical/Declared |
+| `compiler.parse::Item::Object` | ctor | `lib/compiler/parse.myc:1352` | `Object(ObjectDecl)` | — | Empirical/Declared |
+| `compiler.parse::Item::Lower` | ctor | `lib/compiler/parse.myc:1353` | `Lower(LowerDecl)` | — | Empirical/Declared |
+| `compiler.parse::Item::Derive` | ctor | `lib/compiler/parse.myc:1354` | `Derive(DeriveDecl)` | — | Empirical/Declared |
+| `compiler.parse::Item::InherentImpl` | ctor | `lib/compiler/parse.myc:1355` | `InherentImpl(InherentImplDecl)` | — | Empirical/Declared |
+| `compiler.parse::Nodule` | type | `lib/compiler/parse.myc:1359` | `type Nodule = Nd(Path, Bool, Vec[Item])` | — | Empirical/Declared |
+| `compiler.parse::Nodule::Nd` | ctor | `lib/compiler/parse.myc:1359` | `Nd(Path, Bool, Vec[Item])` | — | Empirical/Declared |
+| `compiler.parse::nodule_path` | fn | `lib/compiler/parse.myc:1361` | `fn nodule_path(n: Nodule) => Path` | — | Empirical/Declared |
+| `compiler.parse::nodule_std_sys` | fn | `lib/compiler/parse.myc:1364` | `fn nodule_std_sys(n: Nodule) => Bool` | — | Empirical/Declared |
+| `compiler.parse::nodule_items` | fn | `lib/compiler/parse.myc:1367` | `fn nodule_items(n: Nodule) => Vec[Item]` | — | Empirical/Declared |
+| `compiler.parse::Phylum` | type | `lib/compiler/parse.myc:1371` | `type Phylum = Phy(Option[Path], Vec[Nodule])` | — | Empirical/Declared |
+| `compiler.parse::Phylum::Phy` | ctor | `lib/compiler/parse.myc:1371` | `Phy(Option[Path], Vec[Nodule])` | — | Empirical/Declared |
+| `compiler.parse::phylum_path` | fn | `lib/compiler/parse.myc:1373` | `fn phylum_path(p: Phylum) => Option[Path]` | — | Empirical/Declared |
+| `compiler.parse::phylum_nodules` | fn | `lib/compiler/parse.myc:1376` | `fn phylum_nodules(p: Phylum) => Vec[Nodule]` | — | Empirical/Declared |
+| `compiler.parse::phylum_of_one` | fn | `lib/compiler/parse.myc:1380` | `fn phylum_of_one(n: Nodule) => Phylum` | phylum_of_one: mirrors `Phylum::of_one` — a phylum-of-one wrapping a single bare nodule. | Empirical/Declared |
+| `compiler.parse::Literal` | type | `lib/compiler/parse.myc:1386` | `type Literal = Bin(Bytes) \| Trit(Bytes) \| Int(Binary{64}) \| AmbientInt(Paradigm, Binary{64}) \| List(Vec[Expr]) \| LBytes(Bytes) \| Str(Bytes) \| LFloat(Bytes)` | — | Empirical/Declared |
+| `compiler.parse::Literal::Bin` | ctor | `lib/compiler/parse.myc:1387` | `Bin(Bytes)` | — | Empirical/Declared |
+| `compiler.parse::Literal::Trit` | ctor | `lib/compiler/parse.myc:1388` | `Trit(Bytes)` | — | Empirical/Declared |
+| `compiler.parse::Literal::Int` | ctor | `lib/compiler/parse.myc:1389` | `Int(Binary{64})` | — | Empirical/Declared |
+| `compiler.parse::Literal::AmbientInt` | ctor | `lib/compiler/parse.myc:1390` | `AmbientInt(Paradigm, Binary{64})` | — | Empirical/Declared |
+| `compiler.parse::Literal::List` | ctor | `lib/compiler/parse.myc:1391` | `List(Vec[Expr])` | — | Empirical/Declared |
+| `compiler.parse::Literal::LBytes` | ctor | `lib/compiler/parse.myc:1392` | `LBytes(Bytes)` | — | Empirical/Declared |
+| `compiler.parse::Literal::Str` | ctor | `lib/compiler/parse.myc:1393` | `Str(Bytes)` | — | Empirical/Declared |
+| `compiler.parse::Literal::LFloat` | ctor | `lib/compiler/parse.myc:1394` | `LFloat(Bytes)` | — | Empirical/Declared |
+| `compiler.parse::literal_binary` | fn | `lib/compiler/parse.myc:1397` | `fn literal_binary(digits: Bytes) => Literal` | literal_binary: mirrors `Literal::binary`. | Empirical/Declared |
+| `compiler.parse::literal_ternary` | fn | `lib/compiler/parse.myc:1401` | `fn literal_ternary(trits: Bytes) => Literal` | literal_ternary: mirrors `Literal::ternary`. | Empirical/Declared |
+| `compiler.parse::literal_string` | fn | `lib/compiler/parse.myc:1405` | `fn literal_string(content: Bytes) => Literal` | literal_string: mirrors `Literal::string`. | Empirical/Declared |
+| `compiler.parse::literal_float` | fn | `lib/compiler/parse.myc:1409` | `fn literal_float(text: Bytes) => Literal` | literal_float: mirrors `Literal::float`. | Empirical/Declared |
+| `compiler.parse::Pattern` | type | `lib/compiler/parse.myc:1414` | `type Pattern = PWildcard \| PLit(Literal) \| PCtor(Bytes, Vec[Pattern]) \| PIdent(Bytes) \| PTuple(Vec[Pattern]) \| POr(Vec[Pattern])` | — | Empirical/Declared |
+| `compiler.parse::Pattern::PWildcard` | ctor | `lib/compiler/parse.myc:1415` | `PWildcard` | — | Empirical/Declared |
+| `compiler.parse::Pattern::PLit` | ctor | `lib/compiler/parse.myc:1416` | `PLit(Literal)` | — | Empirical/Declared |
+| `compiler.parse::Pattern::PCtor` | ctor | `lib/compiler/parse.myc:1417` | `PCtor(Bytes, Vec[Pattern])` | — | Empirical/Declared |
+| `compiler.parse::Pattern::PIdent` | ctor | `lib/compiler/parse.myc:1418` | `PIdent(Bytes)` | — | Empirical/Declared |
+| `compiler.parse::Pattern::PTuple` | ctor | `lib/compiler/parse.myc:1419` | `PTuple(Vec[Pattern])` | — | Empirical/Declared |
+| `compiler.parse::Pattern::POr` | ctor | `lib/compiler/parse.myc:1420` | `POr(Vec[Pattern])` | — | Empirical/Declared |
+| `compiler.parse::Arm` | type | `lib/compiler/parse.myc:1423` | `type Arm = Ar(Pattern, Expr)` | — | Empirical/Declared |
+| `compiler.parse::Arm::Ar` | ctor | `lib/compiler/parse.myc:1423` | `Ar(Pattern, Expr)` | — | Empirical/Declared |
+| `compiler.parse::arm_pattern` | fn | `lib/compiler/parse.myc:1425` | `fn arm_pattern(a: Arm) => Pattern` | — | Empirical/Declared |
+| `compiler.parse::arm_body` | fn | `lib/compiler/parse.myc:1428` | `fn arm_body(a: Arm) => Expr` | — | Empirical/Declared |
+| `compiler.parse::Hypha` | type | `lib/compiler/parse.myc:1433` | `type Hypha = Hy(Option[Expr], Expr)` | — | Empirical/Declared |
+| `compiler.parse::Hypha::Hy` | ctor | `lib/compiler/parse.myc:1433` | `Hy(Option[Expr], Expr)` | — | Empirical/Declared |
+| `compiler.parse::hypha_forage` | fn | `lib/compiler/parse.myc:1435` | `fn hypha_forage(h: Hypha) => Option[Expr]` | — | Empirical/Declared |
+| `compiler.parse::hypha_body` | fn | `lib/compiler/parse.myc:1438` | `fn hypha_body(h: Hypha) => Expr` | — | Empirical/Declared |
+| `compiler.parse::Expr` | type | `lib/compiler/parse.myc:1448` | `type Expr = Let(Bytes, Option[TypeRef], Expr, Expr) \| If(Expr, Expr, Expr) \| Match(Expr, Vec[Arm]) \| For(Bytes, Expr, Bytes, Expr, Expr) \| Swap(Expr, TypeRef, Path) \| WithParadigm(Paradigm, Expr) \| Wild(Expr) \| Spore(Expr) \| Wrapping(Expr) \| Consume(Expr) \| Try(Expr) \| Colony(Vec[Hypha]) \| Lambda(Vec[Param], Expr) \| App(Expr, Vec[Expr]) \| Fuse(Expr, Expr) \| Reclaim(Expr, Expr) \| Path(Path) \| Lit(Literal) \| Ascribe(Expr, TypeRef) \| TupleLit(Vec[Expr])` | — | Empirical/Declared |
+| `compiler.parse::Expr::Let` | ctor | `lib/compiler/parse.myc:1449` | `Let(Bytes, Option[TypeRef], Expr, Expr)` | — | Empirical/Declared |
+| `compiler.parse::Expr::If` | ctor | `lib/compiler/parse.myc:1450` | `If(Expr, Expr, Expr)` | — | Empirical/Declared |
+| `compiler.parse::Expr::Match` | ctor | `lib/compiler/parse.myc:1451` | `Match(Expr, Vec[Arm])` | — | Empirical/Declared |
+| `compiler.parse::Expr::For` | ctor | `lib/compiler/parse.myc:1452` | `For(Bytes, Expr, Bytes, Expr, Expr)` | — | Empirical/Declared |
+| `compiler.parse::Expr::Path` | ctor | `lib/compiler/parse.myc:1453` | `Path(Path)` | — | Empirical/Declared |
+| `compiler.parse::Expr::Swap` | ctor | `lib/compiler/parse.myc:1453` | `Swap(Expr, TypeRef, Path)` | — | Empirical/Declared |
+| `compiler.parse::Expr::WithParadigm` | ctor | `lib/compiler/parse.myc:1454` | `WithParadigm(Paradigm, Expr)` | — | Empirical/Declared |
+| `compiler.parse::Expr::Wild` | ctor | `lib/compiler/parse.myc:1455` | `Wild(Expr)` | — | Empirical/Declared |
+| `compiler.parse::Expr::Spore` | ctor | `lib/compiler/parse.myc:1456` | `Spore(Expr)` | — | Empirical/Declared |
+| `compiler.parse::Expr::Wrapping` | ctor | `lib/compiler/parse.myc:1457` | `Wrapping(Expr)` | — | Empirical/Declared |
+| `compiler.parse::Expr::Consume` | ctor | `lib/compiler/parse.myc:1458` | `Consume(Expr)` | — | Empirical/Declared |
+| `compiler.parse::Expr::Try` | ctor | `lib/compiler/parse.myc:1461` | `Try(Expr)` | — | Empirical/Declared |
+| `compiler.parse::Expr::Colony` | ctor | `lib/compiler/parse.myc:1464` | `Colony(Vec[Hypha])` | — | Empirical/Declared |
+| `compiler.parse::Expr::Lambda` | ctor | `lib/compiler/parse.myc:1465` | `Lambda(Vec[Param], Expr)` | — | Empirical/Declared |
+| `compiler.parse::Expr::App` | ctor | `lib/compiler/parse.myc:1466` | `App(Expr, Vec[Expr])` | — | Empirical/Declared |
+| `compiler.parse::Expr::Fuse` | ctor | `lib/compiler/parse.myc:1467` | `Fuse(Expr, Expr)` | — | Empirical/Declared |
+| `compiler.parse::Expr::Reclaim` | ctor | `lib/compiler/parse.myc:1468` | `Reclaim(Expr, Expr)` | — | Empirical/Declared |
+| `compiler.parse::Expr::Lit` | ctor | `lib/compiler/parse.myc:1470` | `Lit(Literal)` | — | Empirical/Declared |
+| `compiler.parse::Expr::Ascribe` | ctor | `lib/compiler/parse.myc:1471` | `Ascribe(Expr, TypeRef)` | — | Empirical/Declared |
+| `compiler.parse::Expr::TupleLit` | ctor | `lib/compiler/parse.myc:1472` | `TupleLit(Vec[Expr])` | — | Empirical/Declared |
+| `compiler.parse::is_nodule` | fn | `lib/compiler/parse.myc:1480` | `fn is_nodule(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_phylum` | fn | `lib/compiler/parse.myc:1482` | `fn is_phylum(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_atstdsys` | fn | `lib/compiler/parse.myc:1484` | `fn is_atstdsys(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_semi` | fn | `lib/compiler/parse.myc:1486` | `fn is_semi(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_tpub` | fn | `lib/compiler/parse.myc:1488` | `fn is_tpub(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_at` | fn | `lib/compiler/parse.myc:1490` | `fn is_at(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_tuse` | fn | `lib/compiler/parse.myc:1492` | `fn is_tuse(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_tdefault` | fn | `lib/compiler/parse.myc:1494` | `fn is_tdefault(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_paradigm` | fn | `lib/compiler/parse.myc:1496` | `fn is_paradigm(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_ttype` | fn | `lib/compiler/parse.myc:1498` | `fn is_ttype(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_ttrait` | fn | `lib/compiler/parse.myc:1500` | `fn is_ttrait(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_timpl` | fn | `lib/compiler/parse.myc:1502` | `fn is_timpl(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_tfn` | fn | `lib/compiler/parse.myc:1504` | `fn is_tfn(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_thaw` | fn | `lib/compiler/parse.myc:1506` | `fn is_thaw(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_matured` | fn | `lib/compiler/parse.myc:1508` | `fn is_matured(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_tcolony` | fn | `lib/compiler/parse.myc:1510` | `fn is_tcolony(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_hypha` | fn | `lib/compiler/parse.myc:1512` | `fn is_hypha(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_mesh` | fn | `lib/compiler/parse.myc:1514` | `fn is_mesh(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_graft` | fn | `lib/compiler/parse.myc:1516` | `fn is_graft(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_cyst` | fn | `lib/compiler/parse.myc:1518` | `fn is_cyst(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_xloc` | fn | `lib/compiler/parse.myc:1520` | `fn is_xloc(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_forage` | fn | `lib/compiler/parse.myc:1522` | `fn is_forage(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_backbone` | fn | `lib/compiler/parse.myc:1524` | `fn is_backbone(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_tier` | fn | `lib/compiler/parse.myc:1526` | `fn is_tier(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_tfuse` | fn | `lib/compiler/parse.myc:1528` | `fn is_tfuse(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_treclaim` | fn | `lib/compiler/parse.myc:1530` | `fn is_treclaim(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_tconsume` | fn | `lib/compiler/parse.myc:1532` | `fn is_tconsume(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_grow` | fn | `lib/compiler/parse.myc:1534` | `fn is_grow(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_tlambda` | fn | `lib/compiler/parse.myc:1536` | `fn is_tlambda(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_tobject` | fn | `lib/compiler/parse.myc:1538` | `fn is_tobject(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_tlower` | fn | `lib/compiler/parse.myc:1540` | `fn is_tlower(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_tderive` | fn | `lib/compiler/parse.myc:1542` | `fn is_tderive(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_dot` | fn | `lib/compiler/parse.myc:1544` | `fn is_dot(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_star` | fn | `lib/compiler/parse.myc:1546` | `fn is_star(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_comma` | fn | `lib/compiler/parse.myc:1548` | `fn is_comma(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_lparen` | fn | `lib/compiler/parse.myc:1550` | `fn is_lparen(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_rparen` | fn | `lib/compiler/parse.myc:1552` | `fn is_rparen(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_lbracket` | fn | `lib/compiler/parse.myc:1554` | `fn is_lbracket(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_rbracket` | fn | `lib/compiler/parse.myc:1556` | `fn is_rbracket(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_lbrace` | fn | `lib/compiler/parse.myc:1558` | `fn is_lbrace(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_rbrace` | fn | `lib/compiler/parse.myc:1560` | `fn is_rbrace(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_colon` | fn | `lib/compiler/parse.myc:1562` | `fn is_colon(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_eq` | fn | `lib/compiler/parse.myc:1564` | `fn is_eq(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_fatarrow` | fn | `lib/compiler/parse.myc:1566` | `fn is_fatarrow(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_arrow` | fn | `lib/compiler/parse.myc:1568` | `fn is_arrow(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_bang` | fn | `lib/compiler/parse.myc:1570` | `fn is_bang(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_langle` | fn | `lib/compiler/parse.myc:1572` | `fn is_langle(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_rangle` | fn | `lib/compiler/parse.myc:1574` | `fn is_rangle(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_pipe` | fn | `lib/compiler/parse.myc:1576` | `fn is_pipe(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_tpriv` | fn | `lib/compiler/parse.myc:1579` | `fn is_tpriv(t: Tok) => Bool` | is_tpriv: the M-1027 / DN-104 constructor seal marker (`priv`). | Empirical/Declared |
+| `compiler.parse::is_plus` | fn | `lib/compiler/parse.myc:1581` | `fn is_plus(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_via` | fn | `lib/compiler/parse.myc:1583` | `fn is_via(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_tfor` | fn | `lib/compiler/parse.myc:1585` | `fn is_tfor(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_tswap` | fn | `lib/compiler/parse.myc:1587` | `fn is_tswap(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_to` | fn | `lib/compiler/parse.myc:1589` | `fn is_to(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_policy` | fn | `lib/compiler/parse.myc:1591` | `fn is_policy(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_with` | fn | `lib/compiler/parse.myc:1593` | `fn is_with(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_twild` | fn | `lib/compiler/parse.myc:1595` | `fn is_twild(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_tspore` | fn | `lib/compiler/parse.myc:1597` | `fn is_tspore(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_in_` | fn | `lib/compiler/parse.myc:1599` | `fn is_in_(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_tif` | fn | `lib/compiler/parse.myc:1601` | `fn is_tif(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_then` | fn | `lib/compiler/parse.myc:1603` | `fn is_then(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_else_` | fn | `lib/compiler/parse.myc:1605` | `fn is_else_(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_tmatch` | fn | `lib/compiler/parse.myc:1607` | `fn is_tmatch(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_tlet` | fn | `lib/compiler/parse.myc:1609` | `fn is_tlet(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_kwsparse` | fn | `lib/compiler/parse.myc:1611` | `fn is_kwsparse(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_tkwdense` | fn | `lib/compiler/parse.myc:1613` | `fn is_tkwdense(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_binshort` | fn | `lib/compiler/parse.myc:1615` | `fn is_binshort(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_ternshort` | fn | `lib/compiler/parse.myc:1617` | `fn is_ternshort(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_embshort` | fn | `lib/compiler/parse.myc:1619` | `fn is_embshort(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_hvecshort` | fn | `lib/compiler/parse.myc:1621` | `fn is_hvecshort(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_tvsa` | fn | `lib/compiler/parse.myc:1623` | `fn is_tvsa(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_tkwsubstrate` | fn | `lib/compiler/parse.myc:1625` | `fn is_tkwsubstrate(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_tkwseq` | fn | `lib/compiler/parse.myc:1627` | `fn is_tkwseq(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_tkwbytes` | fn | `lib/compiler/parse.myc:1629` | `fn is_tkwbytes(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_tkwfloat` | fn | `lib/compiler/parse.myc:1631` | `fn is_tkwfloat(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_shl` | fn | `lib/compiler/parse.myc:1633` | `fn is_shl(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_shr` | fn | `lib/compiler/parse.myc:1635` | `fn is_shr(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_amp` | fn | `lib/compiler/parse.myc:1637` | `fn is_amp(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_caret` | fn | `lib/compiler/parse.myc:1639` | `fn is_caret(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_eqeq` | fn | `lib/compiler/parse.myc:1641` | `fn is_eqeq(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_bangeq` | fn | `lib/compiler/parse.myc:1643` | `fn is_bangeq(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_ampamp` | fn | `lib/compiler/parse.myc:1645` | `fn is_ampamp(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_pipepipe` | fn | `lib/compiler/parse.myc:1647` | `fn is_pipepipe(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_percent` | fn | `lib/compiler/parse.myc:1649` | `fn is_percent(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_slash` | fn | `lib/compiler/parse.myc:1651` | `fn is_slash(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_minus` | fn | `lib/compiler/parse.myc:1653` | `fn is_minus(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_tkwbinary` | fn | `lib/compiler/parse.myc:1655` | `fn is_tkwbinary(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_tkwternary` | fn | `lib/compiler/parse.myc:1657` | `fn is_tkwternary(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_eof` | fn | `lib/compiler/parse.myc:1659` | `fn is_eof(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::p_cur` | fn | `lib/compiler/parse.myc:1667` | `fn p_cur(ts: Vec[Spanned]) => Tok` | — | Empirical/Declared |
+| `compiler.parse::p_pos` | fn | `lib/compiler/parse.myc:1673` | `fn p_pos(ts: Vec[Spanned]) => Pos` | — | Empirical/Declared |
+| `compiler.parse::p_bump` | fn | `lib/compiler/parse.myc:1681` | `fn p_bump(ts: Vec[Spanned]) => Vec[Spanned]` | p_bump: drop the current token UNLESS it is the last remaining one (mirrors Rust's bump, which never advances the index once at the final token — the stream tail is always a lone `Eof` cell). | Empirical/Declared |
+| `compiler.parse::p_eat` | fn | `lib/compiler/parse.myc:1692` | `fn p_eat(ts: Vec[Spanned], is_it: Bool) => Option[Vec[Spanned]]` | p_eat(ts, is_it): mirrors `Parser::eat` — the caller supplies `is_it = is_X(p_cur(ts))` (FLAG-parse-5 extended). `Some(ts')` on a match (consumed), `None` otherwise (unchanged). | Empirical/Declared |
+| `compiler.parse::p_expect` | fn | `lib/compiler/parse.myc:1700` | `fn p_expect(ts: Vec[Spanned], is_it: Bool, msg: Bytes) => Result[Vec[Spanned], PErr]` | p_expect(ts, is_it, msg): mirrors `Parser::expect` — consumes on a match, else an explicit `PErr` at the CURRENT position (captured by the caller before dispatch, since `ts` is still un-bumped). | Empirical/Declared |
+| `compiler.parse::p_ident` | fn | `lib/compiler/parse.myc:1707` | `fn p_ident(ts: Vec[Spanned]) => Result[Pair[Bytes, Vec[Spanned]], PErr]` | p_ident: mirrors `Parser::ident` — an `Ident(s)` token, or an explicit refusal. | Empirical/Declared |
+| `compiler.parse::zero32` | fn | `lib/compiler/parse.myc:1719` | `fn zero32() => Binary{32}` | — | Empirical/Declared |
+| `compiler.parse::one32` | fn | `lib/compiler/parse.myc:1720` | `fn one32() => Binary{32}` | — | Empirical/Declared |
+| `compiler.parse::three32` | fn | `lib/compiler/parse.myc:1721` | `fn three32() => Binary{32}` | — | Empirical/Declared |
+| `compiler.parse::zero64` | fn | `lib/compiler/parse.myc:1722` | `fn zero64() => Binary{64}` | — | Empirical/Declared |
+| `compiler.parse::one64` | fn | `lib/compiler/parse.myc:1723` | `fn one64() => Binary{64}` | — | Empirical/Declared |
+| `compiler.parse::three64` | fn | `lib/compiler/parse.myc:1724` | `fn three64() => Binary{64}` | — | Empirical/Declared |
+| `compiler.parse::digit_value` | fn | `lib/compiler/parse.myc:1726` | `fn digit_value(b: Binary{8}) => Binary{8}` | — | Empirical/Declared |
+| `compiler.parse::bytes_to_u32` | fn | `lib/compiler/parse.myc:1729` | `fn bytes_to_u32(digits: Bytes, i: Binary{32}, acc: Binary{32}) => Binary{32}` | — | Empirical/Declared |
+| `compiler.parse::decimal_to_u32` | fn | `lib/compiler/parse.myc:1738` | `fn decimal_to_u32(digits: Bytes) => Binary{32}` | — | Empirical/Declared |
+| `compiler.parse::bytes_to_u64` | fn | `lib/compiler/parse.myc:1741` | `fn bytes_to_u64(digits: Bytes, i: Binary{32}, acc: Binary{64}) => Binary{64}` | — | Empirical/Declared |
+| `compiler.parse::decimal_to_u64` | fn | `lib/compiler/parse.myc:1750` | `fn decimal_to_u64(digits: Bytes) => Binary{64}` | — | Empirical/Declared |
+| `compiler.parse::p_u32_lit` | fn | `lib/compiler/parse.myc:1754` | `fn p_u32_lit(ts: Vec[Spanned]) => Result[Pair[Binary{32}, Vec[Spanned]], PErr]` | p_u32_lit: mirrors `Parser::u32_lit` — a `TInt(digits)` token, decimal-converted (FLAG-parse-3/4). | Empirical/Declared |
+| `compiler.parse::max_expr_depth` | fn | `lib/compiler/parse.myc:1761` | `fn max_expr_depth() => Binary{32}` | — | Empirical/Declared |
+| `compiler.parse::enter_depth` | fn | `lib/compiler/parse.myc:1766` | `fn enter_depth(ts: Vec[Spanned], depth: Binary{32}) => Result[Binary{32}, PErr]` | enter_depth: charge one level against the budget. `Err` on overflow (never a panic); the caller passes the CHARGED depth into whatever it recurses into, and simply drops it (does not thread it back out) once that recursion returns — the net-zero restatement of `leave_depth` (FLAG-parse-7). | Empirical/Declared |
+| `compiler.parse::contains_bytes` | fn | `lib/compiler/parse.myc:1776` | `fn contains_bytes(xs: Vec[Bytes], x: Bytes) => Bool` | — | Empirical/Declared |
+| `compiler.parse::add_bytes_if_absent` | fn | `lib/compiler/parse.myc:1782` | `fn add_bytes_if_absent(xs: Vec[Bytes], x: Bytes) => Vec[Bytes]` | — | Empirical/Declared |
+| `compiler.parse::NameUses` | type | `lib/compiler/parse.myc:1790` | `type NameUses = NU(Vec[Bytes], Vec[Bytes])` | NameUses: mirrors the pair of BTreeSets `collect_name_uses` accumulates into (width_used, type_used) — threaded functionally instead of via `&mut` out-params. | Empirical/Declared |
+| `compiler.parse::NameUses::NU` | ctor | `lib/compiler/parse.myc:1790` | `NU(Vec[Bytes], Vec[Bytes])` | — | Empirical/Declared |
+| `compiler.parse::nu_width` | fn | `lib/compiler/parse.myc:1792` | `fn nu_width(n: NameUses) => Vec[Bytes]` | — | Empirical/Declared |
+| `compiler.parse::nu_type` | fn | `lib/compiler/parse.myc:1795` | `fn nu_type(n: NameUses) => Vec[Bytes]` | — | Empirical/Declared |
+| `compiler.parse::collect_widthref_use` | fn | `lib/compiler/parse.myc:1798` | `fn collect_widthref_use(w: WidthRef, params: Vec[Bytes], acc: NameUses) => NameUses` | — | Empirical/Declared |
+| `compiler.parse::collect_typeref_list_uses` | fn | `lib/compiler/parse.myc:1807` | `fn collect_typeref_list_uses(trs: Vec[TypeRef], params: Vec[Bytes], acc: NameUses) => NameUses` | — | Empirical/Declared |
+| `compiler.parse::collect_name_uses` | fn | `lib/compiler/parse.myc:1813` | `fn collect_name_uses(tr: TypeRef, params: Vec[Bytes], acc: NameUses) => NameUses` | — | Empirical/Declared |
+| `compiler.parse::collect_base_name_uses` | fn | `lib/compiler/parse.myc:1816` | `fn collect_base_name_uses(bt: BaseType, params: Vec[Bytes], acc: NameUses) => NameUses` | — | Empirical/Declared |
+| `compiler.parse::typeparam_names` | fn | `lib/compiler/parse.myc:1831` | `fn typeparam_names(ps: Vec[TypeParam]) => Vec[Bytes]` | — | Empirical/Declared |
+| `compiler.parse::typeparam_names_acc` | fn | `lib/compiler/parse.myc:1834` | `fn typeparam_names_acc(ps: Vec[TypeParam], acc: Vec[Bytes]) => Vec[Bytes]` | — | Empirical/Declared |
+| `compiler.parse::collect_param_list_uses` | fn | `lib/compiler/parse.myc:1840` | `fn collect_param_list_uses(vps: Vec[Param], params: Vec[Bytes], acc: NameUses) => NameUses` | — | Empirical/Declared |
+| `compiler.parse::is_bounds_empty` | fn | `lib/compiler/parse.myc:1846` | `fn is_bounds_empty(bs: Vec[TraitRef]) => Bool` | — | Empirical/Declared |
+| `compiler.parse::classify_one_param` | fn | `lib/compiler/parse.myc:1849` | `fn classify_one_param(p: TypeParam, width_used: Vec[Bytes], type_used: Vec[Bytes]) => Result[TypeParam, PErr]` | — | Empirical/Declared |
+| `compiler.parse::classify_params_list` | fn | `lib/compiler/parse.myc:1864` | `fn classify_params_list(ps: Vec[TypeParam], width_used: Vec[Bytes], type_used: Vec[Bytes]) => Result[Vec[TypeParam], PErr]` | — | Empirical/Declared |
+| `compiler.parse::classify_params_list_acc` | fn | `lib/compiler/parse.myc:1867` | `fn classify_params_list_acc(ps: Vec[TypeParam], width_used: Vec[Bytes], type_used: Vec[Bytes], acc: Vec[TypeParam]) => Result[Vec[TypeParam], PErr]` | — | Empirical/Declared |
+| `compiler.parse::classify_params` | fn | `lib/compiler/parse.myc:1879` | `fn classify_params(raw_params: Vec[TypeParam], value_params: Vec[Param], ret: TypeRef) => Result[Vec[TypeParam], PErr]` | classify_params: mirrors the free fn of the same name (parse.rs L133). Rust hardcodes `Pos{line:0,col:0}` for these errors (not `self.pos()`) — reproduced verbatim (FLAG-parse-8: error POSITION fidelity is not compared by the Stage-3 gate, only Ok/Err classification). | Empirical/Declared |
+| `compiler.parse::first_duplicate_bytes` | fn | `lib/compiler/parse.myc:1886` | `fn first_duplicate_bytes(xs: Vec[Bytes]) => Option[Bytes]` | first_duplicate_bytes: mirrors `first_duplicate_str` (the effect-set / param-name dup check). | Empirical/Declared |
+| `compiler.parse::first_duplicate_bytes_seen` | fn | `lib/compiler/parse.myc:1889` | `fn first_duplicate_bytes_seen(xs: Vec[Bytes], seen: Vec[Bytes]) => Option[Bytes]` | — | Empirical/Declared |
+| `compiler.parse::parse_paradigm` | fn | `lib/compiler/parse.myc:1901` | `fn parse_paradigm(ts: Vec[Spanned]) => Result[Pair[Paradigm, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_scalar` | fn | `lib/compiler/parse.myc:1910` | `fn parse_scalar(ts: Vec[Spanned]) => Result[Pair[Scalar, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_strength` | fn | `lib/compiler/parse.myc:1921` | `fn parse_strength(ts: Vec[Spanned]) => Result[Pair[Strength, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::braced_u32` | fn | `lib/compiler/parse.myc:1932` | `fn braced_u32(ts: Vec[Spanned]) => Result[Pair[Binary{32}, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_sparsity` | fn | `lib/compiler/parse.myc:1946` | `fn parse_sparsity(ts: Vec[Spanned]) => Result[Pair[Sparsity, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::braced_width` | fn | `lib/compiler/parse.myc:1958` | `fn braced_width(ts: Vec[Spanned]) => Result[Pair[WidthRef, Vec[Spanned]], PErr]` | braced_width: `{` (u32_lit \| Ident) `}` — DN-42/M-753 width slot (concrete literal or width-param name). | Empirical/Declared |
+| `compiler.parse::parse_type_ref` | fn | `lib/compiler/parse.myc:1982` | `fn parse_type_ref(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[TypeRef, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_type_ref_guarded` | fn | `lib/compiler/parse.myc:1988` | `fn parse_type_ref_guarded(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[TypeRef, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_type_ref_atom` | fn | `lib/compiler/parse.myc:2005` | `fn parse_type_ref_atom(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[TypeRef, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_base_type` | fn | `lib/compiler/parse.myc:2019` | `fn parse_base_type(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[BaseType, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_dense_tail` | fn | `lib/compiler/parse.myc:2085` | `fn parse_dense_tail(ts: Vec[Spanned]) => Result[Pair[BaseType, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_vsa_tail` | fn | `lib/compiler/parse.myc:2107` | `fn parse_vsa_tail(ts: Vec[Spanned]) => Result[Pair[BaseType, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_paren_type_tail` | fn | `lib/compiler/parse.myc:2139` | `fn parse_paren_type_tail(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[BaseType, Vec[Spanned]], PErr]` | parse_paren_type_tail: `ts` is positioned right AFTER the opening `(` (M-826 tuple-type / grouping disambiguation — arity >= 2 is a tuple, a single `(T)` is grouping). | Empirical/Declared |
+| `compiler.parse::parse_type_ref_tuple_rest` | fn | `lib/compiler/parse.myc:2161` | `fn parse_type_ref_tuple_rest(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Vec[TypeRef], Vec[Spanned]], PErr]` | parse_type_ref_tuple_rest: the elements after the first comma, tolerating a trailing comma before `)` (mirrors the Rust `while !at(RParen) { push; if !eat(Comma) break }` loop). | Empirical/Declared |
+| `compiler.parse::parse_type_ref_tuple_rest_acc` | fn | `lib/compiler/parse.myc:2164` | `fn parse_type_ref_tuple_rest_acc(ts: Vec[Spanned], depth: Binary{32}, acc: Vec[TypeRef]) => Result[Pair[Vec[TypeRef], Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_ambient_repr` | fn | `lib/compiler/parse.myc:2185` | `fn parse_ambient_repr(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[AmbientParams, Vec[Spanned]], PErr]` | parse_ambient_repr: `ts` still positioned AT the opening `{` (RFC-0012 SS4.2 paradigm-less repr). | Empirical/Declared |
+| `compiler.parse::parse_type_args_opt` | fn | `lib/compiler/parse.myc:2238` | `fn parse_type_args_opt(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Vec[TypeRef], Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_type_ref_comma_list` | fn | `lib/compiler/parse.myc:2254` | `fn parse_type_ref_comma_list(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Vec[TypeRef], Vec[Spanned]], PErr]` | parse_type_ref_comma_list: NON-EMPTY "`one (, one)\*`" — no trailing tolerance (ctor fields, type args; FLAG-parse-5). | Empirical/Declared |
+| `compiler.parse::parse_type_ref_comma_list_acc` | fn | `lib/compiler/parse.myc:2257` | `fn parse_type_ref_comma_list_acc(ts: Vec[Spanned], depth: Binary{32}, acc: Vec[TypeRef]) => Result[Pair[Vec[TypeRef], Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_literal` | fn | `lib/compiler/parse.myc:2270` | `fn parse_literal(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Literal, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_pattern` | fn | `lib/compiler/parse.myc:2290` | `fn parse_pattern(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Pattern, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_pattern_guarded` | fn | `lib/compiler/parse.myc:2296` | `fn parse_pattern_guarded(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Pattern, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_pattern_lit` | fn | `lib/compiler/parse.myc:2326` | `fn parse_pattern_lit(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Pattern, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_pattern_comma_list` | fn | `lib/compiler/parse.myc:2333` | `fn parse_pattern_comma_list(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Vec[Pattern], Vec[Spanned]], PErr]` | parse_pattern_comma_list: NON-EMPTY, no trailing tolerance (ctor sub-patterns). | Empirical/Declared |
+| `compiler.parse::parse_pattern_comma_list_acc` | fn | `lib/compiler/parse.myc:2336` | `fn parse_pattern_comma_list_acc(ts: Vec[Spanned], depth: Binary{32}, acc: Vec[Pattern]) => Result[Pair[Vec[Pattern], Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_pattern_paren_tail` | fn | `lib/compiler/parse.myc:2348` | `fn parse_pattern_paren_tail(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Pattern, Vec[Spanned]], PErr]` | parse_pattern_paren_tail: `ts` positioned right after `(` (M-826 tuple/grouping disambiguation). | Empirical/Declared |
+| `compiler.parse::parse_pattern_tuple_rest` | fn | `lib/compiler/parse.myc:2368` | `fn parse_pattern_tuple_rest(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Vec[Pattern], Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_pattern_tuple_rest_acc` | fn | `lib/compiler/parse.myc:2371` | `fn parse_pattern_tuple_rest_acc(ts: Vec[Spanned], depth: Binary{32}, acc: Vec[Pattern]) => Result[Pair[Vec[Pattern], Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_path` | fn | `lib/compiler/parse.myc:2392` | `fn parse_path(ts: Vec[Spanned]) => Result[Pair[Path, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_path_rest` | fn | `lib/compiler/parse.myc:2401` | `fn parse_path_rest(ts: Vec[Spanned]) => Result[Pair[Vec[Bytes], Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_path_rest_acc` | fn | `lib/compiler/parse.myc:2404` | `fn parse_path_rest_acc(ts: Vec[Spanned], acc: Vec[Bytes]) => Result[Pair[Vec[Bytes], Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_use_tail` | fn | `lib/compiler/parse.myc:2414` | `fn parse_use_tail(ts: Vec[Spanned]) => Result[Pair[Pair[Vec[Bytes], Bool], Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_use_tail_acc` | fn | `lib/compiler/parse.myc:2417` | `fn parse_use_tail_acc(ts: Vec[Spanned], acc: Vec[Bytes]) => Result[Pair[Pair[Vec[Bytes], Bool], Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_use` | fn | `lib/compiler/parse.myc:2429` | `fn parse_use(ts: Vec[Spanned]) => Result[Pair[UsePath, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::bytes_eq_b` | fn | `lib/compiler/parse.myc:2442` | `fn bytes_eq_b(a: Bytes, b: Bytes) => Bool` | — | Empirical/Declared |
+| `compiler.parse::one8` | fn | `lib/compiler/parse.myc:2445` | `fn one8() => Binary{8}` | — | Empirical/Declared |
+| `compiler.parse::is_imperative_word` | fn | `lib/compiler/parse.myc:2450` | `fn is_imperative_word(w: Bytes) => Bool` | — | Empirical/Declared |
+| `compiler.parse::is_juxtaposed_opener` | fn | `lib/compiler/parse.myc:2453` | `fn is_juxtaposed_opener(t: Tok) => Bool` | — | Empirical/Declared |
+| `compiler.parse::teach_imperative` | fn | `lib/compiler/parse.myc:2460` | `fn teach_imperative(ts: Vec[Spanned]) => Option[PErr]` | — | Empirical/Declared |
+| `compiler.parse::infix_op` | fn | `lib/compiler/parse.myc:2473` | `fn infix_op(t: Tok) => Option[Pair[Binary{8}, Bytes]]` | — | Empirical/Declared |
+| `compiler.parse::op_call` | fn | `lib/compiler/parse.myc:2494` | `fn op_call(word: Bytes, args: Vec[Expr]) => Expr` | — | Empirical/Declared |
+| `compiler.parse::parse_expr` | fn | `lib/compiler/parse.myc:2499` | `fn parse_expr(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_expr_inner` | fn | `lib/compiler/parse.myc:2505` | `fn parse_expr_inner(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_binexpr` | fn | `lib/compiler/parse.myc:2538` | `fn parse_binexpr(ts: Vec[Spanned], depth: Binary{32}, min_bp: Binary{8}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_binexpr_loop` | fn | `lib/compiler/parse.myc:2544` | `fn parse_binexpr_loop(lhs: Expr, ts: Vec[Spanned], depth: Binary{32}, min_bp: Binary{8}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_unary` | fn | `lib/compiler/parse.myc:2560` | `fn parse_unary(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_unary_prefix` | fn | `lib/compiler/parse.myc:2567` | `fn parse_unary_prefix(ts: Vec[Spanned], depth: Binary{32}, word: Bytes) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_for` | fn | `lib/compiler/parse.myc:2578` | `fn parse_for(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_let` | fn | `lib/compiler/parse.myc:2619` | `fn parse_let(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_let_tail` | fn | `lib/compiler/parse.myc:2636` | `fn parse_let_tail(name: Bytes, ty: Option[TypeRef], ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_if` | fn | `lib/compiler/parse.myc:2653` | `fn parse_if(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_match` | fn | `lib/compiler/parse.myc:2678` | `fn parse_match(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_arm_list` | fn | `lib/compiler/parse.myc:2701` | `fn parse_arm_list(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Vec[Arm], Vec[Spanned]], PErr]` | parse_arm_list: NON-EMPTY, trailing comma before `}` tolerated. | Empirical/Declared |
+| `compiler.parse::parse_arm_list_acc` | fn | `lib/compiler/parse.myc:2704` | `fn parse_arm_list_acc(ts: Vec[Spanned], depth: Binary{32}, acc: Vec[Arm]) => Result[Pair[Vec[Arm], Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_arm` | fn | `lib/compiler/parse.myc:2718` | `fn parse_arm(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Arm, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_or_pattern_rest` | fn | `lib/compiler/parse.myc:2732` | `fn parse_or_pattern_rest(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Vec[Pattern], Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_or_pattern_rest_acc` | fn | `lib/compiler/parse.myc:2735` | `fn parse_or_pattern_rest_acc(ts: Vec[Spanned], depth: Binary{32}, acc: Vec[Pattern]) => Result[Pair[Vec[Pattern], Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_arm_tail` | fn | `lib/compiler/parse.myc:2744` | `fn parse_arm_tail(pattern: Pattern, ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Arm, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_swap` | fn | `lib/compiler/parse.myc:2753` | `fn parse_swap(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_with_paradigm` | fn | `lib/compiler/parse.myc:2798` | `fn parse_with_paradigm(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_wild` | fn | `lib/compiler/parse.myc:2823` | `fn parse_wild(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_spore` | fn | `lib/compiler/parse.myc:2840` | `fn parse_spore(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_consume_expr` | fn | `lib/compiler/parse.myc:2857` | `fn parse_consume_expr(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_colony` | fn | `lib/compiler/parse.myc:2869` | `fn parse_colony(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_hypha_list` | fn | `lib/compiler/parse.myc:2887` | `fn parse_hypha_list(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Vec[Hypha], Vec[Spanned]], PErr]` | parse_hypha_list: NON-EMPTY, trailing comma before `}` tolerated. | Empirical/Declared |
+| `compiler.parse::parse_hypha_list_acc` | fn | `lib/compiler/parse.myc:2890` | `fn parse_hypha_list_acc(ts: Vec[Spanned], depth: Binary{32}, acc: Vec[Hypha]) => Result[Pair[Vec[Hypha], Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_hypha` | fn | `lib/compiler/parse.myc:2904` | `fn parse_hypha(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Hypha, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_hypha_tail` | fn | `lib/compiler/parse.myc:2924` | `fn parse_hypha_tail(frg: Option[Expr], ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Hypha, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_app` | fn | `lib/compiler/parse.myc:2933` | `fn parse_app(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_app_tail` | fn | `lib/compiler/parse.myc:2939` | `fn parse_app_tail(e: Expr, ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_expr_list_until` | fn | `lib/compiler/parse.myc:2959` | `fn parse_expr_list_until(ts: Vec[Spanned], depth: Binary{32}, is_end: Bool) => Result[Pair[Vec[Expr], Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_expr_comma_list` | fn | `lib/compiler/parse.myc:2965` | `fn parse_expr_comma_list(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Vec[Expr], Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_expr_comma_list_acc` | fn | `lib/compiler/parse.myc:2968` | `fn parse_expr_comma_list_acc(ts: Vec[Spanned], depth: Binary{32}, acc: Vec[Expr]) => Result[Pair[Vec[Expr], Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_primary` | fn | `lib/compiler/parse.myc:2979` | `fn parse_primary(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_primary_lit` | fn | `lib/compiler/parse.myc:2996` | `fn parse_primary_lit(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_primary_paren_tail` | fn | `lib/compiler/parse.myc:3002` | `fn parse_primary_paren_tail(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_expr_tuple_rest` | fn | `lib/compiler/parse.myc:3022` | `fn parse_expr_tuple_rest(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Vec[Expr], Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_expr_tuple_rest_acc` | fn | `lib/compiler/parse.myc:3025` | `fn parse_expr_tuple_rest_acc(ts: Vec[Spanned], depth: Binary{32}, acc: Vec[Expr]) => Result[Pair[Vec[Expr], Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_fuse_expr` | fn | `lib/compiler/parse.myc:3045` | `fn parse_fuse_expr(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_reclaim_expr` | fn | `lib/compiler/parse.myc:3070` | `fn parse_reclaim_expr(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_lambda` | fn | `lib/compiler/parse.myc:3098` | `fn parse_lambda(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Expr, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_params_opt` | fn | `lib/compiler/parse.myc:3130` | `fn parse_params_opt(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Vec[Param], Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_params_comma_list` | fn | `lib/compiler/parse.myc:3136` | `fn parse_params_comma_list(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Vec[Param], Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_params_comma_list_acc` | fn | `lib/compiler/parse.myc:3139` | `fn parse_params_comma_list_acc(ts: Vec[Spanned], depth: Binary{32}, acc: Vec[Param]) => Result[Pair[Vec[Param], Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_one_param` | fn | `lib/compiler/parse.myc:3150` | `fn parse_one_param(ts: Vec[Spanned], depth: Binary{32}) => Result[Pair[Param, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_type_params_opt` | fn | `lib/compiler/parse.myc:3166` | `fn parse_type_params_opt(ts: Vec[Spanned]) => Result[Pair[Vec[Bytes], Vec[Spanned]], PErr]` | parse_type_params_opt: UNBOUNDED names for `type`/`trait` decls; a `: bound` here is an explicit deferred-stage refusal (RFC-0019 SS4.1). | Empirical/Declared |
+| `compiler.parse::parse_type_param_name_list` | fn | `lib/compiler/parse.myc:3180` | `fn parse_type_param_name_list(ts: Vec[Spanned]) => Result[Pair[Vec[Bytes], Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_type_param_name_list_acc` | fn | `lib/compiler/parse.myc:3183` | `fn parse_type_param_name_list_acc(ts: Vec[Spanned], acc: Vec[Bytes]) => Result[Pair[Vec[Bytes], Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_one_type_param_name` | fn | `lib/compiler/parse.myc:3194` | `fn parse_one_type_param_name(ts: Vec[Spanned]) => Result[Pair[Bytes, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_type_params_bounded` | fn | `lib/compiler/parse.myc:3206` | `fn parse_type_params_bounded(ts: Vec[Spanned]) => Result[Pair[Vec[TypeParam], Vec[Spanned]], PErr]` | parse_type_params_bounded: BOUNDED type-parameters for function signatures (RFC-0019 SS4.1). | Empirical/Declared |
+| `compiler.parse::parse_type_param_comma_list` | fn | `lib/compiler/parse.myc:3220` | `fn parse_type_param_comma_list(ts: Vec[Spanned]) => Result[Pair[Vec[TypeParam], Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_type_param_comma_list_acc` | fn | `lib/compiler/parse.myc:3223` | `fn parse_type_param_comma_list_acc(ts: Vec[Spanned], acc: Vec[TypeParam]) => Result[Pair[Vec[TypeParam], Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_type_param` | fn | `lib/compiler/parse.myc:3234` | `fn parse_type_param(ts: Vec[Spanned]) => Result[Pair[TypeParam, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_bound` | fn | `lib/compiler/parse.myc:3248` | `fn parse_bound(ts: Vec[Spanned]) => Result[Pair[Vec[TraitRef], Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_bound_acc` | fn | `lib/compiler/parse.myc:3251` | `fn parse_bound_acc(ts: Vec[Spanned], acc: Vec[TraitRef]) => Result[Pair[Vec[TraitRef], Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_trait_ref` | fn | `lib/compiler/parse.myc:3262` | `fn parse_trait_ref(ts: Vec[Spanned]) => Result[Pair[TraitRef, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_const_params_opt` | fn | `lib/compiler/parse.myc:3274` | `fn parse_const_params_opt(ts: Vec[Spanned]) => Result[Pair[Vec[TypeParam], Vec[Spanned]], PErr]` | parse_const_params_opt: `{ Ident (, Ident)\* }?` — width/const parameter DECLARATIONS (distinct `{...}` position from a `Binary{N}` width SLOT — never ambiguous, only ever right after the fn name/[...] and before `(`). | Empirical/Declared |
+| `compiler.parse::parse_const_param_comma_list` | fn | `lib/compiler/parse.myc:3288` | `fn parse_const_param_comma_list(ts: Vec[Spanned]) => Result[Pair[Vec[TypeParam], Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_const_param_comma_list_acc` | fn | `lib/compiler/parse.myc:3291` | `fn parse_const_param_comma_list_acc(ts: Vec[Spanned], acc: Vec[TypeParam]) => Result[Pair[Vec[TypeParam], Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_one_const_param` | fn | `lib/compiler/parse.myc:3302` | `fn parse_one_const_param(ts: Vec[Spanned]) => Result[Pair[TypeParam, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::effect_budget_shift` | fn | `lib/compiler/parse.myc:3314` | `fn effect_budget_shift(unit: Bytes) => Option[Binary{64}]` | — | Empirical/Declared |
+| `compiler.parse::append_budget` | fn | `lib/compiler/parse.myc:3326` | `fn append_budget(mb: Option[EffectBudget], rest: Vec[EffectBudget]) => Vec[EffectBudget]` | — | Empirical/Declared |
+| `compiler.parse::parse_one_effect_entry` | fn | `lib/compiler/parse.myc:3330` | `fn parse_one_effect_entry(ts: Vec[Spanned]) => Result[Pair[Pair[Bytes, Option[EffectBudget]], Vec[Spanned]], PErr]` | parse_one_effect_entry: `eff (<=N unit?)?` — mirrors the loop body of `parse_effects_opt`. | Empirical/Declared |
+| `compiler.parse::parse_effect_budget_tail` | fn | `lib/compiler/parse.myc:3350` | `fn parse_effect_budget_tail(name: Bytes, raw: Binary{64}, budget_pos: Pos, ts: Vec[Spanned]) => Result[Pair[Pair[Bytes, Option[EffectBudget]], Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_effect_entries` | fn | `lib/compiler/parse.myc:3372` | `fn parse_effect_entries(ts: Vec[Spanned]) => Result[Pair[Pair[Vec[Bytes], Vec[EffectBudget]], Vec[Spanned]], PErr]` | parse_effect_entries: comma-separated `eff(<=N)?` entries; a trailing comma before `}` is an explicit refusal (kept strict — G2). | Empirical/Declared |
+| `compiler.parse::parse_effect_entries_acc` | fn | `lib/compiler/parse.myc:3375` | `fn parse_effect_entries_acc(ts: Vec[Spanned], names: Vec[Bytes], budgets: Vec[EffectBudget]) => Result[Pair[Pair[Vec[Bytes], Vec[EffectBudget]], Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_effects_opt` | fn | `lib/compiler/parse.myc:3392` | `fn parse_effects_opt(ts: Vec[Spanned]) => Result[Pair[Pair[Vec[Bytes], Vec[EffectBudget]], Vec[Spanned]], PErr]` | parse_effects_opt: `!{ eff(<=N unit?)? (, ...)\* }?` — absent `!` => pure (empty set). | Empirical/Declared |
+| `compiler.parse::Tr3` | type | `lib/compiler/parse.myc:3419` | `type Tr3[A, B, C] = T3(A, B, C)` | — | Empirical/Declared |
+| `compiler.parse::Tr3::T3` | ctor | `lib/compiler/parse.myc:3419` | `T3(A, B, C)` | — | Empirical/Declared |
+| `compiler.parse::append_typeparams` | fn | `lib/compiler/parse.myc:3423` | `fn append_typeparams(a: Vec[TypeParam], b: Vec[TypeParam]) => Vec[TypeParam]` | append_typeparams: `a ++ b` via double reversal — both passes direct-tail (rev_acc), so the depth is O(1) regardless of the [...]/{...} parameter-list lengths. | Empirical/Declared |
+| `compiler.parse::expect_return_arrow` | fn | `lib/compiler/parse.myc:3429` | `fn expect_return_arrow(ts: Vec[Spanned]) => Result[Vec[Spanned], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_sig_tail` | fn | `lib/compiler/parse.myc:3435` | `fn parse_sig_tail(ts: Vec[Spanned]) => Result[Pair[FnSig, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_fn_sig` | fn | `lib/compiler/parse.myc:3484` | `fn parse_fn_sig(ts: Vec[Spanned]) => Result[Pair[FnSig, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_fn_decl` | fn | `lib/compiler/parse.myc:3491` | `fn parse_fn_decl(vis: Vis, ts: Vec[Spanned]) => Result[Pair[FnDecl, Vec[Spanned]], PErr]` | parse_fn_decl: `thaw? fn ...` with the caller-supplied cross-nodule visibility `vis` (M-662). | Empirical/Declared |
+| `compiler.parse::parse_fn_decl_tail` | fn | `lib/compiler/parse.myc:3497` | `fn parse_fn_decl_tail(vis: Vis, thw: Bool, ts: Vec[Spanned]) => Result[Pair[FnDecl, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_tier_fn_decl` | fn | `lib/compiler/parse.myc:3515` | `fn parse_tier_fn_decl(vis: Vis, ts: Vec[Spanned]) => Result[Pair[FnDecl, Vec[Spanned]], PErr]` | parse_tier_fn_decl: `@tier(compiled\|interpreted) thaw? fn ...` (DN-58 SSC/M-667). | Empirical/Declared |
+| `compiler.parse::parse_tier_fn_decl_tail` | fn | `lib/compiler/parse.myc:3536` | `fn parse_tier_fn_decl_tail(vis: Vis, mode: ExecutionMode, ts: Vec[Spanned]) => Result[Pair[FnDecl, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_tier_fn_decl_tail2` | fn | `lib/compiler/parse.myc:3545` | `fn parse_tier_fn_decl_tail2(vis: Vis, mode: ExecutionMode, thw: Bool, ts: Vec[Spanned]) => Result[Pair[FnDecl, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_ctor` | fn | `lib/compiler/parse.myc:3566` | `fn parse_ctor(ts: Vec[Spanned]) => Result[Pair[Ctor, Vec[Spanned]], PErr]` | M-1027 / DN-104 §2: an optional leading `priv` seals the constructor (exports the type NAME but withholds cross-nodule construction). Eat it first, then parse the name+fields with the flag. | Empirical/Declared |
+| `compiler.parse::parse_ctor_named` | fn | `lib/compiler/parse.myc:3572` | `fn parse_ctor_named(ts: Vec[Spanned], sealed: Bool) => Result[Pair[Ctor, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_ctor_pipe_list` | fn | `lib/compiler/parse.myc:3591` | `fn parse_ctor_pipe_list(ts: Vec[Spanned]) => Result[Pair[Vec[Ctor], Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_ctor_pipe_list_acc` | fn | `lib/compiler/parse.myc:3594` | `fn parse_ctor_pipe_list_acc(ts: Vec[Spanned], acc: Vec[Ctor]) => Result[Pair[Vec[Ctor], Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_type_decl` | fn | `lib/compiler/parse.myc:3605` | `fn parse_type_decl(vis: Vis, ts: Vec[Spanned]) => Result[Pair[TypeDecl, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_trait_sig_list` | fn | `lib/compiler/parse.myc:3627` | `fn parse_trait_sig_list(ts: Vec[Spanned]) => Result[Pair[Vec[FnSig], Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_trait_sig_list_acc` | fn | `lib/compiler/parse.myc:3630` | `fn parse_trait_sig_list_acc(ts: Vec[Spanned], acc: Vec[FnSig]) => Result[Pair[Vec[FnSig], Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_trait_decl` | fn | `lib/compiler/parse.myc:3644` | `fn parse_trait_decl(vis: Vis, ts: Vec[Spanned]) => Result[Pair[TraitDecl, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_impl_method_list` | fn | `lib/compiler/parse.myc:3673` | `fn parse_impl_method_list(ts: Vec[Spanned]) => Result[Pair[Vec[FnDecl], Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_impl_method_list_acc` | fn | `lib/compiler/parse.myc:3676` | `fn parse_impl_method_list_acc(ts: Vec[Spanned], acc: Vec[FnDecl]) => Result[Pair[Vec[FnDecl], Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_impl_body` | fn | `lib/compiler/parse.myc:3693` | `fn parse_impl_body(ts: Vec[Spanned]) => Result[Pair[Vec[FnDecl], Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_impl_decl` | fn | `lib/compiler/parse.myc:3707` | `fn parse_impl_decl(ts: Vec[Spanned]) => Result[Pair[ImplDecl, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_impl_item` | fn | `lib/compiler/parse.myc:3739` | `fn parse_impl_item(ts: Vec[Spanned]) => Result[Pair[Item, Vec[Spanned]], PErr]` | parse_impl_item: the top-level `impl` dispatcher (M-664) — disambiguates the trait-instance form (`impl Trait for T { ... }`) from the inherent-method form (`impl T { ... }`) by parsing the head base type once and branching on the follower (`for` vs `{`). DN-103 / M-1026 / ENB-3: an impl-level type-parameter slot (`impl[T] Foo[T] { … }`) is parsed immediately after `impl`, before the head (unambiguous — no base type begins with `[`). Nil for the plain M-664 block. The slot rides `parse_impl_item_tail` and lands on the inherent `IID`; a non-empty slot on a trait instance is a never-silent refusal (generic trait-instance coherence deferred). | Empirical/Declared |
+| `compiler.parse::parse_impl_item_tail` | fn | `lib/compiler/parse.myc:3751` | `fn parse_impl_item_tail(iparams: Vec[Bytes], head: BaseType, ts: Vec[Spanned]) => Result[Pair[Item, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::is_nil_bytes_list` | fn | `lib/compiler/parse.myc:3778` | `fn is_nil_bytes_list(xs: Vec[Bytes]) => Bool` | is_nil_bytes_list: True iff the impl-level type-parameter slot is empty (the plain M-664 block). | Empirical/Declared |
+| `compiler.parse::parse_object_body` | fn | `lib/compiler/parse.myc:3783` | `fn parse_object_body(ts: Vec[Spanned]) => Result[Pair[Tr3[Vec[ViaDecl], Vec[ImplDecl], Vec[FnDecl]], Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_object_body_acc` | fn | `lib/compiler/parse.myc:3789` | `fn parse_object_body_acc(ts: Vec[Spanned], vds: Vec[ViaDecl], ims: Vec[ImplDecl], fs: Vec[FnDecl]) => Result[Pair[Tr3[Vec[ViaDecl], Vec[ImplDecl], Vec[FnDecl]], Vec[Spanned]], PErr]` | parse_object_body_acc: the accumulator dispatcher — each member arm parses ONE member (incl. its `;` terminator) then direct-tail-recurses with the member prepended; the three lists are rev_acc'd back to source order once at the `}`. | Empirical/Declared |
+| `compiler.parse::parse_one_object_via` | fn | `lib/compiler/parse.myc:3815` | `fn parse_one_object_via(ts: Vec[Spanned]) => Result[Pair[ViaDecl, Vec[Spanned]], PErr]` | parse_one_object_via: ONE `via N : Trait[args]?;` clause — `ts` positioned right after `via`. | Empirical/Declared |
+| `compiler.parse::parse_one_object_impl` | fn | `lib/compiler/parse.myc:3839` | `fn parse_one_object_impl(ts: Vec[Spanned]) => Result[Pair[ImplDecl, Vec[Spanned]], PErr]` | parse_one_object_impl: ONE `impl Trait for T { ... };` member. | Empirical/Declared |
+| `compiler.parse::parse_one_object_fn` | fn | `lib/compiler/parse.myc:3851` | `fn parse_one_object_fn(ts: Vec[Spanned]) => Result[Pair[FnDecl, Vec[Spanned]], PErr]` | parse_one_object_fn: ONE `fn ...;` / `thaw fn ...;` member. | Empirical/Declared |
+| `compiler.parse::parse_object_decl` | fn | `lib/compiler/parse.myc:3862` | `fn parse_object_decl(vis: Vis, ts: Vec[Spanned]) => Result[Pair[ObjectDecl, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_lower_item_rhs` | fn | `lib/compiler/parse.myc:3902` | `fn parse_lower_item_rhs(ts: Vec[Spanned]) => Result[Pair[ImplDecl, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_lower_decl` | fn | `lib/compiler/parse.myc:3905` | `fn parse_lower_decl(ts: Vec[Spanned]) => Result[Pair[LowerDecl, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_derive_decl` | fn | `lib/compiler/parse.myc:3933` | `fn parse_derive_decl(ts: Vec[Spanned]) => Result[Pair[DeriveDecl, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_item` | fn | `lib/compiler/parse.myc:3952` | `fn parse_item(ts: Vec[Spanned]) => Result[Pair[Item, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_pub_item` | fn | `lib/compiler/parse.myc:3997` | `fn parse_pub_item(ts: Vec[Spanned]) => Result[Pair[Item, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_nodule_items` | fn | `lib/compiler/parse.myc:4019` | `fn parse_nodule_items(ts: Vec[Spanned]) => Result[Pair[Vec[Item], Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_nodule_items_acc` | fn | `lib/compiler/parse.myc:4022` | `fn parse_nodule_items_acc(ts: Vec[Spanned], acc: Vec[Item]) => Result[Pair[Vec[Item], Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_nodule_tail` | fn | `lib/compiler/parse.myc:4036` | `fn parse_nodule_tail(path: Path, std_sys: Bool, ts: Vec[Spanned]) => Result[Pair[Nodule, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_nodule` | fn | `lib/compiler/parse.myc:4045` | `fn parse_nodule(ts: Vec[Spanned]) => Result[Pair[Nodule, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_nodule_list` | fn | `lib/compiler/parse.myc:4059` | `fn parse_nodule_list(ts: Vec[Spanned]) => Result[Pair[Vec[Nodule], Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_nodule_list_acc` | fn | `lib/compiler/parse.myc:4062` | `fn parse_nodule_list_acc(ts: Vec[Spanned], acc: Vec[Nodule]) => Result[Pair[Vec[Nodule], Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_phylum_tail` | fn | `lib/compiler/parse.myc:4071` | `fn parse_phylum_tail(path: Option[Path], ts: Vec[Spanned]) => Result[Pair[Phylum, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_phylum_prog` | fn | `lib/compiler/parse.myc:4080` | `fn parse_phylum_prog(ts: Vec[Spanned]) => Result[Pair[Phylum, Vec[Spanned]], PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse` | fn | `lib/compiler/parse.myc:4091` | `fn parse(src: Bytes) => Result[Nodule, PErr]` | — | Empirical/Declared |
+| `compiler.parse::parse_phylum` | fn | `lib/compiler/parse.myc:4105` | `fn parse_phylum(src: Bytes) => Result[Phylum, PErr]` | — | Empirical/Declared |
+| `compiler.parse::Fp` | type | `lib/compiler/parse.myc:4131` | `type Fp = FP(Binary{32}, Binary{32})` | — | Empirical/Declared |
+| `compiler.parse::Fp::FP` | ctor | `lib/compiler/parse.myc:4131` | `FP(Binary{32}, Binary{32})` | — | Empirical/Declared |
+| `compiler.parse::fp_hash` | fn | `lib/compiler/parse.myc:4133` | `fn fp_hash(fp: Fp) => Binary{32}` | — | Empirical/Declared |
+| `compiler.parse::fp_count` | fn | `lib/compiler/parse.myc:4134` | `fn fp_count(fp: Fp) => Binary{32}` | — | Empirical/Declared |
+| `compiler.parse::rotl7` | fn | `lib/compiler/parse.myc:4136` | `fn rotl7(x: Binary{32}) => Binary{32}` | — | Empirical/Declared |
+| `compiler.parse::fp_tag` | fn | `lib/compiler/parse.myc:4139` | `fn fp_tag(fp: Fp, tag: Binary{32}) => Fp` | — | Empirical/Declared |
+| `compiler.parse::fp_bytes` | fn | `lib/compiler/parse.myc:4142` | `fn fp_bytes(fp: Fp, b: Bytes) => Fp` | — | Empirical/Declared |
+| `compiler.parse::fp_u32` | fn | `lib/compiler/parse.myc:4145` | `fn fp_u32(fp: Fp, n: Binary{32}) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_vis` | fn | `lib/compiler/parse.myc:4149` | `fn walk_vis(fp: Fp, v: Vis) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_paradigm` | fn | `lib/compiler/parse.myc:4152` | `fn walk_paradigm(fp: Fp, p: Paradigm) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_scalar` | fn | `lib/compiler/parse.myc:4160` | `fn walk_scalar(fp: Fp, s: Scalar) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_strength` | fn | `lib/compiler/parse.myc:4168` | `fn walk_strength(fp: Fp, s: Strength) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_sparsity` | fn | `lib/compiler/parse.myc:4176` | `fn walk_sparsity(fp: Fp, s: Sparsity) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_paramkind` | fn | `lib/compiler/parse.myc:4182` | `fn walk_paramkind(fp: Fp, k: ParamKind) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_execmode` | fn | `lib/compiler/parse.myc:4185` | `fn walk_execmode(fp: Fp, e: ExecutionMode) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_widthref` | fn | `lib/compiler/parse.myc:4188` | `fn walk_widthref(fp: Fp, w: WidthRef) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_path` | fn | `lib/compiler/parse.myc:4194` | `fn walk_path(fp: Fp, p: Path) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_bytes_list` | fn | `lib/compiler/parse.myc:4197` | `fn walk_bytes_list(fp: Fp, xs: Vec[Bytes]) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_usepath` | fn | `lib/compiler/parse.myc:4200` | `fn walk_usepath(fp: Fp, u: UsePath) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_bool` | fn | `lib/compiler/parse.myc:4203` | `fn walk_bool(fp: Fp, b: Bool) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_ambientparams` | fn | `lib/compiler/parse.myc:4207` | `fn walk_ambientparams(fp: Fp, a: AmbientParams) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_typeref` | fn | `lib/compiler/parse.myc:4214` | `fn walk_typeref(fp: Fp, t: TypeRef) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_guarantee_opt` | fn | `lib/compiler/parse.myc:4217` | `fn walk_guarantee_opt(fp: Fp, g: Option[Strength]) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_typeref_list` | fn | `lib/compiler/parse.myc:4220` | `fn walk_typeref_list(fp: Fp, xs: Vec[TypeRef]) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_basetype` | fn | `lib/compiler/parse.myc:4223` | `fn walk_basetype(fp: Fp, b: BaseType) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_traitref` | fn | `lib/compiler/parse.myc:4239` | `fn walk_traitref(fp: Fp, t: TraitRef) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_traitref_list` | fn | `lib/compiler/parse.myc:4242` | `fn walk_traitref_list(fp: Fp, xs: Vec[TraitRef]) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_typeparam` | fn | `lib/compiler/parse.myc:4245` | `fn walk_typeparam(fp: Fp, t: TypeParam) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_typeparam_list` | fn | `lib/compiler/parse.myc:4248` | `fn walk_typeparam_list(fp: Fp, xs: Vec[TypeParam]) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_param` | fn | `lib/compiler/parse.myc:4251` | `fn walk_param(fp: Fp, p: Param) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_param_list` | fn | `lib/compiler/parse.myc:4254` | `fn walk_param_list(fp: Fp, xs: Vec[Param]) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_bytes_list2` | fn | `lib/compiler/parse.myc:4257` | `fn walk_bytes_list2(fp: Fp, xs: Vec[Bytes]) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_effectbudget_list` | fn | `lib/compiler/parse.myc:4264` | `fn walk_effectbudget_list(fp: Fp, xs: Vec[EffectBudget]) => Fp` | FLAG-parse-10: the budget VALUE is not mixed into the fingerprint (only its effect name) -- narrowing a Binary{64} budget to Binary{32} for the hash risks the SAME checked-narrow refusal as FLAG-parse-4/-9, and no accept-corpus file uses `(<=N)` syntax at all (verified during authoring), so this is an honest, unexercised, zero-cost-to-skip narrowing. | Empirical/Declared |
+| `compiler.parse::walk_fnsig` | fn | `lib/compiler/parse.myc:4267` | `fn walk_fnsig(fp: Fp, s: FnSig) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_ctor_seal` | fn | `lib/compiler/parse.myc:4283` | `fn walk_ctor_seal(fp: Fp, s: Bool) => Fp` | M-1027 / DN-104: the `sealed` (`priv`) flag joins the structural fingerprint via tag 110 (the next sequential entry after the 1..109 table), folded ONLY when sealed — so an unsealed ctor's fingerprint stays byte-identical to the pre-M-1027 form (backward-compatible; the Rust mirror `fp::ctor` matches). | Empirical/Declared |
+| `compiler.parse::walk_ctor` | fn | `lib/compiler/parse.myc:4286` | `fn walk_ctor(fp: Fp, c: Ctor) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_ctor_list` | fn | `lib/compiler/parse.myc:4289` | `fn walk_ctor_list(fp: Fp, xs: Vec[Ctor]) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_typedecl` | fn | `lib/compiler/parse.myc:4292` | `fn walk_typedecl(fp: Fp, t: TypeDecl) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_fnsig_list` | fn | `lib/compiler/parse.myc:4295` | `fn walk_fnsig_list(fp: Fp, xs: Vec[FnSig]) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_traitdecl` | fn | `lib/compiler/parse.myc:4298` | `fn walk_traitdecl(fp: Fp, t: TraitDecl) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_fndecl` | fn | `lib/compiler/parse.myc:4301` | `fn walk_fndecl(fp: Fp, f: FnDecl) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_tier_opt` | fn | `lib/compiler/parse.myc:4306` | `fn walk_tier_opt(fp: Fp, t: Option[ExecutionMode]) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_fndecl_list` | fn | `lib/compiler/parse.myc:4309` | `fn walk_fndecl_list(fp: Fp, xs: Vec[FnDecl]) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_impldecl` | fn | `lib/compiler/parse.myc:4312` | `fn walk_impldecl(fp: Fp, i: ImplDecl) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_viadecl` | fn | `lib/compiler/parse.myc:4317` | `fn walk_viadecl(fp: Fp, v: ViaDecl) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_viadecl_list` | fn | `lib/compiler/parse.myc:4320` | `fn walk_viadecl_list(fp: Fp, xs: Vec[ViaDecl]) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_impldecl_list` | fn | `lib/compiler/parse.myc:4323` | `fn walk_impldecl_list(fp: Fp, xs: Vec[ImplDecl]) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_objectdecl` | fn | `lib/compiler/parse.myc:4326` | `fn walk_objectdecl(fp: Fp, o: ObjectDecl) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_inherentimpldecl` | fn | `lib/compiler/parse.myc:4340` | `fn walk_inherentimpldecl(fp: Fp, i: InherentImplDecl) => Fp` | DN-103 / M-1026: fold the impl-level type-parameter slot (unbounded names) first — matching how TypeDecl/TraitDecl/LowerDecl fold their `params` — so the fingerprint distinguishes `impl[T] Foo[T]` from `impl Foo[T]` (lock-step with the oracle `fp::inherentimpldecl`, no new tag-table entry). | Empirical/Declared |
+| `compiler.parse::walk_lowerrhs` | fn | `lib/compiler/parse.myc:4343` | `fn walk_lowerrhs(fp: Fp, r: LowerRhs) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_lowerdecl` | fn | `lib/compiler/parse.myc:4349` | `fn walk_lowerdecl(fp: Fp, l: LowerDecl) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_derivedecl` | fn | `lib/compiler/parse.myc:4352` | `fn walk_derivedecl(fp: Fp, d: DeriveDecl) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_expr_list` | fn | `lib/compiler/parse.myc:4356` | `fn walk_expr_list(fp: Fp, xs: Vec[Expr]) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_literal` | fn | `lib/compiler/parse.myc:4359` | `fn walk_literal(fp: Fp, l: Literal) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_pattern` | fn | `lib/compiler/parse.myc:4371` | `fn walk_pattern(fp: Fp, p: Pattern) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_pattern_list` | fn | `lib/compiler/parse.myc:4381` | `fn walk_pattern_list(fp: Fp, xs: Vec[Pattern]) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_arm` | fn | `lib/compiler/parse.myc:4384` | `fn walk_arm(fp: Fp, a: Arm) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_arm_list` | fn | `lib/compiler/parse.myc:4387` | `fn walk_arm_list(fp: Fp, xs: Vec[Arm]) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_expr_opt` | fn | `lib/compiler/parse.myc:4390` | `fn walk_expr_opt(fp: Fp, e: Option[Expr]) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_hypha` | fn | `lib/compiler/parse.myc:4393` | `fn walk_hypha(fp: Fp, h: Hypha) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_hypha_list` | fn | `lib/compiler/parse.myc:4396` | `fn walk_hypha_list(fp: Fp, xs: Vec[Hypha]) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_typeref_opt` | fn | `lib/compiler/parse.myc:4399` | `fn walk_typeref_opt(fp: Fp, t: Option[TypeRef]) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_expr` | fn | `lib/compiler/parse.myc:4402` | `fn walk_expr(fp: Fp, e: Expr) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_item` | fn | `lib/compiler/parse.myc:4427` | `fn walk_item(fp: Fp, i: Item) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_item_list` | fn | `lib/compiler/parse.myc:4441` | `fn walk_item_list(fp: Fp, xs: Vec[Item]) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_nodule` | fn | `lib/compiler/parse.myc:4444` | `fn walk_nodule(fp: Fp, n: Nodule) => Fp` | — | Empirical/Declared |
+| `compiler.parse::fingerprint_nodule` | fn | `lib/compiler/parse.myc:4448` | `fn fingerprint_nodule(n: Nodule) => Fp` | fingerprint_nodule: the top-level entry — a fresh (0,0) accumulator walked over a parsed Nodule. | Empirical/Declared |
+| `compiler.parse::parse_ok_code` | fn | `lib/compiler/parse.myc:4455` | `fn parse_ok_code(src: Bytes) => Binary{32}` | parse_ok_code: 1 if `src` parses Ok, 0 if Err (the classification-parity leg). | Empirical/Declared |
+| `compiler.parse::parse_fingerprint_hash` | fn | `lib/compiler/parse.myc:4460` | `fn parse_fingerprint_hash(src: Bytes) => Binary{32}` | parse_fingerprint_hash / parse_fingerprint_count: the fingerprint's two legs, `Eof`-safe default (0) on a parse error (the caller only compares these on inputs BOTH sides accepted). | Empirical/Declared |
+| `compiler.parse::parse_fingerprint_count` | fn | `lib/compiler/parse.myc:4463` | `fn parse_fingerprint_count(src: Bytes) => Binary{32}` | — | Empirical/Declared |
+| `compiler.parse::stage3_verdict` | fn | `lib/compiler/parse.myc:4472` | `fn stage3_verdict(src: Bytes, want_ok: Binary{32}, want_hash: Binary{32}, want_count: Binary{32}) => Binary{32}` | stage3_verdict: the ONE-EVAL-PER-FILE Stage-3 gate driver (DN-26 SS7.3 runtime-budget economy: the Rust harness checks THIS nodule once, then calls this fn once per corpus file with the oracle-computed expectations as arguments — one elaboration, many eval calls). Verdict codes: 1 = full agreement; 0 = Ok/Err classification mismatch; 2 = fingerprint HASH mismatch; 3 = fingerprint NODE-COUNT mismatch. For a want_ok=0 (oracle-rejected) input the fingerprint legs are vacuous (never compared — DN-26 SS7.3 compares shape only on mutually-accepted files). | Empirical/Declared |
+| `compiler.parse::stage3_verdict_fp` | fn | `lib/compiler/parse.myc:4481` | `fn stage3_verdict_fp(fp: Fp, want_hash: Binary{32}, want_count: Binary{32}) => Binary{32}` | — | Empirical/Declared |
+| `compiler.parse::walk_phylum_path_opt` | fn | `lib/compiler/parse.myc:4490` | `fn walk_phylum_path_opt(fp: Fp, p: Option[Path]) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_nodule_list` | fn | `lib/compiler/parse.myc:4493` | `fn walk_nodule_list(fp: Fp, xs: Vec[Nodule]) => Fp` | — | Empirical/Declared |
+| `compiler.parse::walk_phylum` | fn | `lib/compiler/parse.myc:4496` | `fn walk_phylum(fp: Fp, ph: Phylum) => Fp` | — | Empirical/Declared |
+| `compiler.parse::fingerprint_phylum` | fn | `lib/compiler/parse.myc:4499` | `fn fingerprint_phylum(ph: Phylum) => Fp` | — | Empirical/Declared |
+| `compiler.parse::stage3_phylum_verdict` | fn | `lib/compiler/parse.myc:4504` | `fn stage3_phylum_verdict(src: Bytes, want_ok: Binary{32}, want_hash: Binary{32}, want_count: Binary{32}) => Binary{32}` | stage3_phylum_verdict: the parse_phylum leg of the Stage-3 gate (same verdict codes as stage3_verdict; same one-eval-per-file economy). | Empirical/Declared |
 
 ### compiler.semcore
 
@@ -1764,585 +1773,586 @@
 | `compiler.semcore::BaseType::Ambient` | ctor | `lib/compiler/semcore.myc:311` | `Ambient(AmbientParams)` | — | Empirical/Declared |
 | `compiler.semcore::BaseType::FnArrow` | ctor | `lib/compiler/semcore.myc:312` | `FnArrow(TypeRef, TypeRef)` | — | Empirical/Declared |
 | `compiler.semcore::BaseType::Tuple` | ctor | `lib/compiler/semcore.myc:313` | `Tuple(Vec[TypeRef])` | — | Empirical/Declared |
-| `compiler.semcore::Ctor` | type | `lib/compiler/semcore.myc:319` | `type Ctor = Ct(Bytes, Vec[TypeRef])` | — | Empirical/Declared |
-| `compiler.semcore::Ctor::Ct` | ctor | `lib/compiler/semcore.myc:319` | `Ct(Bytes, Vec[TypeRef])` | — | Empirical/Declared |
-| `compiler.semcore::ct_name` | fn | `lib/compiler/semcore.myc:321` | `fn ct_name(c: Ctor) => Bytes` | — | Empirical/Declared |
-| `compiler.semcore::ct_fields` | fn | `lib/compiler/semcore.myc:324` | `fn ct_fields(c: Ctor) => Vec[TypeRef]` | — | Empirical/Declared |
-| `compiler.semcore::TypeDecl` | type | `lib/compiler/semcore.myc:328` | `type TypeDecl = TD(Vis, Bytes, Vec[Bytes], Vec[Ctor])` | TypeDecl: mirrors ast.rs::TypeDecl field-for-field (vis, name, params, ctors — declaration order). | Empirical/Declared |
-| `compiler.semcore::TypeDecl::TD` | ctor | `lib/compiler/semcore.myc:328` | `TD(Vis, Bytes, Vec[Bytes], Vec[Ctor])` | — | Empirical/Declared |
-| `compiler.semcore::td_name` | fn | `lib/compiler/semcore.myc:330` | `fn td_name(t: TypeDecl) => Bytes` | — | Empirical/Declared |
-| `compiler.semcore::td_params` | fn | `lib/compiler/semcore.myc:333` | `fn td_params(t: TypeDecl) => Vec[Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::td_ctors` | fn | `lib/compiler/semcore.myc:336` | `fn td_ctors(t: TypeDecl) => Vec[Ctor]` | — | Empirical/Declared |
-| `compiler.semcore::ExecutionMode` | type | `lib/compiler/semcore.myc:340` | `type ExecutionMode = Interpreted \| Compiled` | ExecutionMode: mirrors ast.myc::ExecutionMode (a field of `FnDecl`; unused by grade otherwise). | Empirical/Declared |
-| `compiler.semcore::ExecutionMode::Compiled` | ctor | `lib/compiler/semcore.myc:340` | `Compiled` | — | Empirical/Declared |
-| `compiler.semcore::ExecutionMode::Interpreted` | ctor | `lib/compiler/semcore.myc:340` | `Interpreted` | — | Empirical/Declared |
-| `compiler.semcore::FnDecl` | type | `lib/compiler/semcore.myc:343` | `type FnDecl = FD(Vis, Bool, Option[ExecutionMode], FnSig, Expr)` | FnDecl: mirrors ast.myc::FnDecl field-for-field. Only `sig`/`body` accessors are kept. | Empirical/Declared |
-| `compiler.semcore::FnDecl::FD` | ctor | `lib/compiler/semcore.myc:343` | `FD(Vis, Bool, Option[ExecutionMode], FnSig, Expr)` | — | Empirical/Declared |
-| `compiler.semcore::fndecl_sig` | fn | `lib/compiler/semcore.myc:345` | `fn fndecl_sig(f: FnDecl) => FnSig` | — | Empirical/Declared |
-| `compiler.semcore::fndecl_body` | fn | `lib/compiler/semcore.myc:348` | `fn fndecl_body(f: FnDecl) => Expr` | — | Empirical/Declared |
-| `compiler.semcore::Literal` | type | `lib/compiler/semcore.myc:353` | `type Literal = Bin(Bytes) \| Trit(Bytes) \| Int(Binary{64}) \| AmbientInt(Paradigm, Binary{64}) \| List(Vec[Expr]) \| LBytes(Bytes) \| Str(Bytes) \| LFloat(Bytes)` | Literal: mirrors ast.myc::Literal verbatim (FLAG-ast-4/5 renames carried over — `LBytes`/ `LFloat`, FLAG-ast-8: no `#[non_exhaustive]` analog). | Empirical/Declared |
-| `compiler.semcore::Literal::Bin` | ctor | `lib/compiler/semcore.myc:354` | `Bin(Bytes)` | — | Empirical/Declared |
-| `compiler.semcore::Literal::Trit` | ctor | `lib/compiler/semcore.myc:355` | `Trit(Bytes)` | — | Empirical/Declared |
-| `compiler.semcore::Literal::Int` | ctor | `lib/compiler/semcore.myc:356` | `Int(Binary{64})` | — | Empirical/Declared |
-| `compiler.semcore::Literal::AmbientInt` | ctor | `lib/compiler/semcore.myc:357` | `AmbientInt(Paradigm, Binary{64})` | — | Empirical/Declared |
-| `compiler.semcore::Literal::List` | ctor | `lib/compiler/semcore.myc:358` | `List(Vec[Expr])` | — | Empirical/Declared |
-| `compiler.semcore::Literal::LBytes` | ctor | `lib/compiler/semcore.myc:359` | `LBytes(Bytes)` | — | Empirical/Declared |
-| `compiler.semcore::Literal::Str` | ctor | `lib/compiler/semcore.myc:360` | `Str(Bytes)` | — | Empirical/Declared |
-| `compiler.semcore::Literal::LFloat` | ctor | `lib/compiler/semcore.myc:361` | `LFloat(Bytes)` | — | Empirical/Declared |
-| `compiler.semcore::Pattern` | type | `lib/compiler/semcore.myc:364` | `type Pattern = PWildcard \| PLit(Literal) \| PCtor(Bytes, Vec[Pattern]) \| PIdent(Bytes) \| PTuple(Vec[Pattern]) \| POr(Vec[Pattern])` | Pattern: mirrors ast.myc::Pattern verbatim (FLAG-ast-5 P-prefix throughout). | Empirical/Declared |
-| `compiler.semcore::Pattern::PWildcard` | ctor | `lib/compiler/semcore.myc:365` | `PWildcard` | — | Empirical/Declared |
-| `compiler.semcore::Pattern::PLit` | ctor | `lib/compiler/semcore.myc:366` | `PLit(Literal)` | — | Empirical/Declared |
-| `compiler.semcore::Pattern::PCtor` | ctor | `lib/compiler/semcore.myc:367` | `PCtor(Bytes, Vec[Pattern])` | — | Empirical/Declared |
-| `compiler.semcore::Pattern::PIdent` | ctor | `lib/compiler/semcore.myc:368` | `PIdent(Bytes)` | — | Empirical/Declared |
-| `compiler.semcore::Pattern::PTuple` | ctor | `lib/compiler/semcore.myc:369` | `PTuple(Vec[Pattern])` | — | Empirical/Declared |
-| `compiler.semcore::Pattern::POr` | ctor | `lib/compiler/semcore.myc:370` | `POr(Vec[Pattern])` | — | Empirical/Declared |
-| `compiler.semcore::Arm` | type | `lib/compiler/semcore.myc:373` | `type Arm = Ar(Pattern, Expr)` | Arm: mirrors ast.myc::Arm (one `match` arm). | Empirical/Declared |
-| `compiler.semcore::Arm::Ar` | ctor | `lib/compiler/semcore.myc:373` | `Ar(Pattern, Expr)` | — | Empirical/Declared |
-| `compiler.semcore::arm_pattern` | fn | `lib/compiler/semcore.myc:375` | `fn arm_pattern(a: Arm) => Pattern` | — | Empirical/Declared |
-| `compiler.semcore::arm_body` | fn | `lib/compiler/semcore.myc:378` | `fn arm_body(a: Arm) => Expr` | — | Empirical/Declared |
-| `compiler.semcore::Hypha` | type | `lib/compiler/semcore.myc:382` | `type Hypha = Hy(Option[Expr], Expr)` | Hypha: mirrors ast.myc::Hypha (only `body` accessor kept — grade never inspects `forage`). | Empirical/Declared |
-| `compiler.semcore::Hypha::Hy` | ctor | `lib/compiler/semcore.myc:382` | `Hy(Option[Expr], Expr)` | — | Empirical/Declared |
-| `compiler.semcore::hypha_body` | fn | `lib/compiler/semcore.myc:384` | `fn hypha_body(h: Hypha) => Expr` | — | Empirical/Declared |
-| `compiler.semcore::Expr` | type | `lib/compiler/semcore.myc:393` | `type Expr = Let(Bytes, Option[TypeRef], Expr, Expr) \| If(Expr, Expr, Expr) \| Match(Expr, Vec[Arm]) \| For(Bytes, Expr, Bytes, Expr, Expr) \| Swap(Expr, TypeRef, Path) \| WithParadigm(Paradigm, Expr) \| Wild(Expr) \| Spore(Expr) \| Wrapping(Expr) \| Consume(Expr) \| Try(Expr) \| Colony(Vec[Hypha]) \| Lambda(Vec[Param], Expr) \| App(Expr, Vec[Expr]) \| Fuse(Expr, Expr) \| Reclaim(Expr, Expr) \| Path(Path) \| Lit(Literal) \| Ascribe(Expr, TypeRef) \| TupleLit(Vec[Expr])` | Expr: mirrors ast.myc::Expr verbatim, field-for-field, same variant order. FLAG-semcore-37 / FLAG-try-3 (DN-102): `Wrapping` (M-791) and `Try` (`?`, M-1025) are REPRESENTED and traversed here (grade / collect_tuple_arities_expr / fvw all recurse into its child, mirroring `Consume`), but the self-hosted lexer/parser does not yet PRODUCE it (no `wrapping` keyword in token/lex; no parse rule) — surface parsing of `wrapping { e }` is deferred remaining work (never-silent, G2). The Rust reference frontend produces it (ast.rs::Expr::Wrapping). | Empirical/Declared |
-| `compiler.semcore::Expr::Let` | ctor | `lib/compiler/semcore.myc:394` | `Let(Bytes, Option[TypeRef], Expr, Expr)` | — | Empirical/Declared |
-| `compiler.semcore::Expr::If` | ctor | `lib/compiler/semcore.myc:395` | `If(Expr, Expr, Expr)` | — | Empirical/Declared |
-| `compiler.semcore::Expr::Match` | ctor | `lib/compiler/semcore.myc:396` | `Match(Expr, Vec[Arm])` | — | Empirical/Declared |
-| `compiler.semcore::Expr::For` | ctor | `lib/compiler/semcore.myc:397` | `For(Bytes, Expr, Bytes, Expr, Expr)` | — | Empirical/Declared |
-| `compiler.semcore::Expr::Path` | ctor | `lib/compiler/semcore.myc:398` | `Path(Path)` | — | Empirical/Declared |
-| `compiler.semcore::Expr::Swap` | ctor | `lib/compiler/semcore.myc:398` | `Swap(Expr, TypeRef, Path)` | — | Empirical/Declared |
-| `compiler.semcore::Expr::WithParadigm` | ctor | `lib/compiler/semcore.myc:399` | `WithParadigm(Paradigm, Expr)` | — | Empirical/Declared |
-| `compiler.semcore::Expr::Wild` | ctor | `lib/compiler/semcore.myc:400` | `Wild(Expr)` | — | Empirical/Declared |
-| `compiler.semcore::Expr::Spore` | ctor | `lib/compiler/semcore.myc:401` | `Spore(Expr)` | — | Empirical/Declared |
-| `compiler.semcore::Expr::Wrapping` | ctor | `lib/compiler/semcore.myc:402` | `Wrapping(Expr)` | — | Empirical/Declared |
-| `compiler.semcore::Expr::Consume` | ctor | `lib/compiler/semcore.myc:403` | `Consume(Expr)` | — | Empirical/Declared |
-| `compiler.semcore::Expr::Try` | ctor | `lib/compiler/semcore.myc:406` | `Try(Expr)` | — | Empirical/Declared |
-| `compiler.semcore::Expr::Colony` | ctor | `lib/compiler/semcore.myc:409` | `Colony(Vec[Hypha])` | — | Empirical/Declared |
-| `compiler.semcore::Expr::Lambda` | ctor | `lib/compiler/semcore.myc:410` | `Lambda(Vec[Param], Expr)` | — | Empirical/Declared |
-| `compiler.semcore::Expr::App` | ctor | `lib/compiler/semcore.myc:411` | `App(Expr, Vec[Expr])` | — | Empirical/Declared |
-| `compiler.semcore::Expr::Fuse` | ctor | `lib/compiler/semcore.myc:412` | `Fuse(Expr, Expr)` | — | Empirical/Declared |
-| `compiler.semcore::Expr::Reclaim` | ctor | `lib/compiler/semcore.myc:413` | `Reclaim(Expr, Expr)` | — | Empirical/Declared |
-| `compiler.semcore::Expr::Lit` | ctor | `lib/compiler/semcore.myc:415` | `Lit(Literal)` | — | Empirical/Declared |
-| `compiler.semcore::Expr::Ascribe` | ctor | `lib/compiler/semcore.myc:416` | `Ascribe(Expr, TypeRef)` | — | Empirical/Declared |
-| `compiler.semcore::Expr::TupleLit` | ctor | `lib/compiler/semcore.myc:417` | `TupleLit(Vec[Expr])` | — | Empirical/Declared |
-| `compiler.semcore::zero32` | fn | `lib/compiler/semcore.myc:420` | `fn zero32() => Binary{32}` | — | Empirical/Declared |
-| `compiler.semcore::one32` | fn | `lib/compiler/semcore.myc:421` | `fn one32() => Binary{32}` | — | Empirical/Declared |
-| `compiler.semcore::max_semcore_depth` | fn | `lib/compiler/semcore.myc:425` | `fn max_semcore_depth() => Binary{32}` | max_semcore_depth: SAME 4096 ceiling as checkty::MAX_CHECK_DEPTH / parse.myc::max_expr_depth (FLAG-semcore-3). | Empirical/Declared |
-| `compiler.semcore::enter_depth` | fn | `lib/compiler/semcore.myc:429` | `fn enter_depth(depth: Binary{32}) => Result[Binary{32}, Bytes]` | enter_depth: charge one level against the shared budget; `Err` on overflow (never a panic — the parse.myc FLAG-parse-7 convention, restated for this nodule's three budgeted recursions). | Empirical/Declared |
-| `compiler.semcore::names_contains` | fn | `lib/compiler/semcore.myc:438` | `fn names_contains(names: Vec[Bytes], n: Bytes) => Bool` | names_contains: linear membership check over a `Vec[Bytes]` (used throughout for dedup / signature-completeness checks — the FLAG-semcore-4 assoc-list convention). | Empirical/Declared |
-| `compiler.semcore::Width` | type | `lib/compiler/semcore.myc:448` | `type Width = WdLit(Binary{32}) \| WdVar(Bytes)` | Width: mirrors checkty.rs::Width (a `Binary{n}`/`Ternary{m}` width argument — concrete literal or abstract width variable). | Empirical/Declared |
-| `compiler.semcore::Width::WdLit` | ctor | `lib/compiler/semcore.myc:448` | `WdLit(Binary{32})` | — | Empirical/Declared |
-| `compiler.semcore::Width::WdVar` | ctor | `lib/compiler/semcore.myc:448` | `WdVar(Bytes)` | — | Empirical/Declared |
-| `compiler.semcore::Ty` | type | `lib/compiler/semcore.myc:452` | `type Ty = TyBinary(Width) \| TyTernary(Width) \| TyDense(Binary{32}, Scalar) \| TyVsa(Bytes, Binary{32}, Sparsity) \| TyData(Bytes, Vec[Ty]) \| TySubstrate(Bytes) \| TySeq(Ty, Binary{32}) \| TyBytes \| TyFloat \| TyVar(Bytes) \| TyFn(Ty, Ty)` | Ty: mirrors checkty.rs::Ty field-for-field (11 variants; `Box<Ty>` fields carry over as plain `Ty` per ast.myc's own shell-first-registration recursion note — no wrapper needed). | Empirical/Declared |
-| `compiler.semcore::Ty::TyBinary` | ctor | `lib/compiler/semcore.myc:453` | `TyBinary(Width)` | — | Empirical/Declared |
-| `compiler.semcore::Ty::TyTernary` | ctor | `lib/compiler/semcore.myc:454` | `TyTernary(Width)` | — | Empirical/Declared |
-| `compiler.semcore::Ty::TyDense` | ctor | `lib/compiler/semcore.myc:455` | `TyDense(Binary{32}, Scalar)` | — | Empirical/Declared |
-| `compiler.semcore::Ty::TyVsa` | ctor | `lib/compiler/semcore.myc:456` | `TyVsa(Bytes, Binary{32}, Sparsity)` | — | Empirical/Declared |
-| `compiler.semcore::Ty::TyData` | ctor | `lib/compiler/semcore.myc:457` | `TyData(Bytes, Vec[Ty])` | — | Empirical/Declared |
-| `compiler.semcore::Ty::TySubstrate` | ctor | `lib/compiler/semcore.myc:458` | `TySubstrate(Bytes)` | — | Empirical/Declared |
-| `compiler.semcore::Ty::TySeq` | ctor | `lib/compiler/semcore.myc:459` | `TySeq(Ty, Binary{32})` | — | Empirical/Declared |
-| `compiler.semcore::Ty::TyBytes` | ctor | `lib/compiler/semcore.myc:460` | `TyBytes` | — | Empirical/Declared |
-| `compiler.semcore::Ty::TyFloat` | ctor | `lib/compiler/semcore.myc:461` | `TyFloat` | — | Empirical/Declared |
-| `compiler.semcore::Ty::TyVar` | ctor | `lib/compiler/semcore.myc:462` | `TyVar(Bytes)` | — | Empirical/Declared |
-| `compiler.semcore::Ty::TyFn` | ctor | `lib/compiler/semcore.myc:463` | `TyFn(Ty, Ty)` | — | Empirical/Declared |
-| `compiler.semcore::CtorInfo` | type | `lib/compiler/semcore.myc:466` | `type CtorInfo = CI(Bytes, Vec[Ty])` | CtorInfo: mirrors checkty.rs::CtorInfo (name, field types). | Empirical/Declared |
-| `compiler.semcore::CtorInfo::CI` | ctor | `lib/compiler/semcore.myc:466` | `CI(Bytes, Vec[Ty])` | — | Empirical/Declared |
-| `compiler.semcore::ci_name` | fn | `lib/compiler/semcore.myc:468` | `fn ci_name(c: CtorInfo) => Bytes` | — | Empirical/Declared |
-| `compiler.semcore::ci_fields` | fn | `lib/compiler/semcore.myc:471` | `fn ci_fields(c: CtorInfo) => Vec[Ty]` | — | Empirical/Declared |
-| `compiler.semcore::DataInfo` | type | `lib/compiler/semcore.myc:475` | `type DataInfo = DI(Bytes, Vec[Bytes], Vec[CtorInfo])` | DataInfo: mirrors checkty.rs::DataInfo (name, type params, ctors in declaration order). | Empirical/Declared |
-| `compiler.semcore::DataInfo::DI` | ctor | `lib/compiler/semcore.myc:475` | `DI(Bytes, Vec[Bytes], Vec[CtorInfo])` | — | Empirical/Declared |
-| `compiler.semcore::di_name` | fn | `lib/compiler/semcore.myc:477` | `fn di_name(d: DataInfo) => Bytes` | — | Empirical/Declared |
-| `compiler.semcore::di_ctors` | fn | `lib/compiler/semcore.myc:480` | `fn di_ctors(d: DataInfo) => Vec[CtorInfo]` | — | Empirical/Declared |
-| `compiler.semcore::types_lookup` | fn | `lib/compiler/semcore.myc:485` | `fn types_lookup(types: Vec[DataInfo], name: Bytes) => Option[DataInfo]` | types_lookup: the FLAG-semcore-4 ordered-assoc-list lookup standing in for `BTreeMap<String, DataInfo>`. | Empirical/Declared |
-| `compiler.semcore::Pat` | type | `lib/compiler/semcore.myc:497` | `type Pat = MpWild \| MpCtor(Bytes, Vec[Pat]) \| MpLit(Bytes)` | Pat: mirrors usefulness.rs::Pat (the NORMALIZED matrix pattern — FLAG-semcore-2 Mp-prefix). | Empirical/Declared |
-| `compiler.semcore::Pat::MpCtor` | ctor | `lib/compiler/semcore.myc:497` | `MpCtor(Bytes, Vec[Pat])` | — | Empirical/Declared |
-| `compiler.semcore::Pat::MpLit` | ctor | `lib/compiler/semcore.myc:497` | `MpLit(Bytes)` | — | Empirical/Declared |
-| `compiler.semcore::Pat::MpWild` | ctor | `lib/compiler/semcore.myc:497` | `MpWild` | — | Empirical/Declared |
-| `compiler.semcore::pat_append` | fn | `lib/compiler/semcore.myc:501` | `fn pat_append(a: Vec[Pat], b: Vec[Pat]) => Vec[Pat]` | pat_append / pat_len: small list helpers (non-tail, bounded by ONE row's arity — a handful of fields, never source length; mirrors nodule.myc::join_segs's count-bounded-recursion precedent). | Empirical/Declared |
-| `compiler.semcore::pat_len` | fn | `lib/compiler/semcore.myc:504` | `fn pat_len(v: Vec[Pat]) => Binary{32}` | — | Empirical/Declared |
-| `compiler.semcore::ty_len` | fn | `lib/compiler/semcore.myc:510` | `fn ty_len(v: Vec[Ty]) => Binary{32}` | ty_len: the arity-counting twin of `pat_len`, over a constructor's OWN field-type list (`Vec[Ty]`, not `Vec[Pat]` — a distinct monomorphic length fn since this language's total-fn discipline rules out a single generic one here, FLAG-semcore-5's KISS/YAGNI rationale extended). | Empirical/Declared |
-| `compiler.semcore::wild_n` | fn | `lib/compiler/semcore.myc:514` | `fn wild_n(n: Binary{32}) => Vec[Pat]` | wild_n: `n` fresh wildcards (bounded by a constructor's own arity). | Empirical/Declared |
-| `compiler.semcore::ty_append` | fn | `lib/compiler/semcore.myc:521` | `fn ty_append(a: Vec[Ty], b: Vec[Ty]) => Vec[Ty]` | ty_append: mirrors the Rust `ct2.extend_from_slice(...)` column-type splicing. | Empirical/Declared |
-| `compiler.semcore::ct_head` | fn | `lib/compiler/semcore.myc:527` | `fn ct_head(ts: Vec[Ty]) => Ty` | ct_head / ct_tail: single-level column-type accessors (the `Nil` arm is an internal-invariant edge — never hit by a well-formed call where `col_types` is parallel to the query — a harmless sentinel value, not a silent behavior change to any reachable case). | Empirical/Declared |
-| `compiler.semcore::ct_tail` | fn | `lib/compiler/semcore.myc:530` | `fn ct_tail(ts: Vec[Ty]) => Vec[Ty]` | — | Empirical/Declared |
-| `compiler.semcore::signature` | fn | `lib/compiler/semcore.myc:536` | `fn signature(ty: Ty, types: Vec[DataInfo]) => Option[DataInfo]` | signature: the finite constructor signature of `ty`, or `None` if its domain is open (`Binary`/`Ternary` — mirrors usefulness.rs::signature; the trailing wildcard is the established `_ => …` idiom over a big-variant sum type, parse.myc's own `Tok` classifiers). | Empirical/Declared |
-| `compiler.semcore::ctorinfo_fields_by_name` | fn | `lib/compiler/semcore.myc:541` | `fn ctorinfo_fields_by_name(ctors: Vec[CtorInfo], c: Bytes) => Vec[Ty]` | ctorinfo_fields_by_name / ctor_fields_of: the field types of constructor `c` (mirrors usefulness.rs::ctor_fields; empty if not found — a well-typed matrix never misses). | Empirical/Declared |
-| `compiler.semcore::ctor_fields_of` | fn | `lib/compiler/semcore.myc:550` | `fn ctor_fields_of(ty: Ty, c: Bytes, types: Vec[DataInfo]) => Vec[Ty]` | — | Empirical/Declared |
-| `compiler.semcore::specialize_ctor_pat` | fn | `lib/compiler/semcore.myc:559` | `fn specialize_ctor_pat(matrix: Vec[Vec[Pat]], c: Bytes, a: Binary{32}) => Vec[Vec[Pat]]` | specialize_ctor_pat / specialize_lit_pat: mirror usefulness.rs::specialize_ctor/specialize_lit over a BARE `Vec[Pat]` matrix (FLAG-semcore-5 — no shared `SpecializeRow` trait; this is the `useful`-side copy, `specialize_ctor_row`/`specialize_lit_row` below is the `compile`-side one). | Empirical/Declared |
-| `compiler.semcore::specialize_lit_pat` | fn | `lib/compiler/semcore.myc:575` | `fn specialize_lit_pat(matrix: Vec[Vec[Pat]], k: Bytes) => Vec[Vec[Pat]]` | — | Empirical/Declared |
-| `compiler.semcore::default_matrix` | fn | `lib/compiler/semcore.myc:592` | `fn default_matrix(matrix: Vec[Vec[Pat]]) => Vec[Vec[Pat]]` | default_matrix: `D(P)` — rows headed by a wildcard, leading column dropped. | Empirical/Declared |
-| `compiler.semcore::head_ctors` | fn | `lib/compiler/semcore.myc:606` | `fn head_ctors(matrix: Vec[Vec[Pat]]) => Vec[Bytes]` | head_ctors: the (deduped) constructor names appearing in the matrix's first column. | Empirical/Declared |
-| `compiler.semcore::ctors_all_present` | fn | `lib/compiler/semcore.myc:622` | `fn ctors_all_present(ctors: Vec[CtorInfo], present: Vec[Bytes]) => Bool` | ctors_all_present / find_missing_ctor: shared by usefulness AND decision's completeness checks. | Empirical/Declared |
-| `compiler.semcore::find_missing_ctor` | fn | `lib/compiler/semcore.myc:631` | `fn find_missing_ctor(ctors: Vec[CtorInfo], present: Vec[Bytes]) => Option[CtorInfo]` | — | Empirical/Declared |
-| `compiler.semcore::missing_head` | fn | `lib/compiler/semcore.myc:642` | `fn missing_head(m: Option[CtorInfo]) => Pat` | missing_head: the witness head for an incomplete column (mirrors usefulness.rs's inline `missing.map_or(Pat::Wild, ...)`). | Empirical/Declared |
-| `compiler.semcore::pat_split_at` | fn | `lib/compiler/semcore.myc:646` | `fn pat_split_at(w: Vec[Pat], n: Binary{32}) => Pair[Vec[Pat], Vec[Pat]]` | pat_split_at: split a witness vector at `n` (mirrors usefulness.rs's `w.split_off(a)`). | Empirical/Declared |
-| `compiler.semcore::rebuild_ctor` | fn | `lib/compiler/semcore.myc:659` | `fn rebuild_ctor(c: Bytes, a: Binary{32}, w: Vec[Pat]) => Vec[Pat]` | rebuild_ctor / prepend: re-fold a witness whose first `a` elements are constructor `c`'s sub-witnesses (mirrors usefulness.rs verbatim). | Empirical/Declared |
-| `compiler.semcore::prepend` | fn | `lib/compiler/semcore.myc:662` | `fn prepend(head: Pat, rest: Vec[Pat]) => Vec[Pat]` | — | Empirical/Declared |
-| `compiler.semcore::matrix_is_empty_to_witness` | fn | `lib/compiler/semcore.myc:667` | `fn matrix_is_empty_to_witness(matrix: Vec[Vec[Pat]]) => Option[Vec[Pat]]` | matrix_is_empty_to_witness: the `q.is_empty()` base case's witness (`Some([])` iff no row remains). | Empirical/Declared |
-| `compiler.semcore::useful` | fn | `lib/compiler/semcore.myc:671` | `fn useful(types: Vec[DataInfo], matrix: Vec[Vec[Pat]], q: Vec[Pat], col_types: Vec[Ty]) => Result[Option[Vec[Pat]], Bytes]` | useful: `U(P, q)` entry point — a fresh per-query budget (mirrors usefulness.rs::useful). | Empirical/Declared |
-| `compiler.semcore::useful_budgeted` | fn | `lib/compiler/semcore.myc:676` | `fn useful_budgeted(depth: Binary{32}, types: Vec[DataInfo], matrix: Vec[Vec[Pat]], q: Vec[Pat], col_types: Vec[Ty]) => Result[Option[Vec[Pat]], Bytes]` | useful_budgeted: the budget-charged recursion (mirrors usefulness.rs::useful_budgeted). | Empirical/Declared |
-| `compiler.semcore::useful_ctor` | fn | `lib/compiler/semcore.myc:690` | `fn useful_ctor(depth: Binary{32}, types: Vec[DataInfo], matrix: Vec[Vec[Pat]], qrest: Vec[Pat], col_types: Vec[Ty], c: Bytes, subs: Vec[Pat]) => Result[Option[Vec[Pat]], Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::useful_lit` | fn | `lib/compiler/semcore.myc:704` | `fn useful_lit(depth: Binary{32}, types: Vec[DataInfo], matrix: Vec[Vec[Pat]], qrest: Vec[Pat], col_types: Vec[Ty], k: Bytes) => Result[Option[Vec[Pat]], Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::useful_wild` | fn | `lib/compiler/semcore.myc:715` | `fn useful_wild(depth: Binary{32}, types: Vec[DataInfo], matrix: Vec[Vec[Pat]], qrest: Vec[Pat], col_types: Vec[Ty]) => Result[Option[Vec[Pat]], Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::useful_wild_open` | fn | `lib/compiler/semcore.myc:727` | `fn useful_wild_open(depth: Binary{32}, types: Vec[DataInfo], matrix: Vec[Vec[Pat]], qrest: Vec[Pat], col_types: Vec[Ty]) => Result[Option[Vec[Pat]], Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::useful_wild_incomplete` | fn | `lib/compiler/semcore.myc:738` | `fn useful_wild_incomplete(depth: Binary{32}, types: Vec[DataInfo], matrix: Vec[Vec[Pat]], qrest: Vec[Pat], col_types: Vec[Ty], d: DataInfo, present: Vec[Bytes]) => Result[Option[Vec[Pat]], Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::useful_wild_complete` | fn | `lib/compiler/semcore.myc:752` | `fn useful_wild_complete(depth: Binary{32}, types: Vec[DataInfo], matrix: Vec[Vec[Pat]], qrest: Vec[Pat], col_types: Vec[Ty], ctors: Vec[CtorInfo]) => Result[Option[Vec[Pat]], Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::render` | fn | `lib/compiler/semcore.myc:773` | `fn render(p: Pat) => Bytes` | render: render a witness pattern for a diagnostic (mirrors usefulness.rs::render; the b:/t: literal-key rewrite is SKIPPED here — cosmetic-only, not exercised by this increment's differential, which compares verdict SHAPE, not rendered text). | Empirical/Declared |
-| `compiler.semcore::render_list` | fn | `lib/compiler/semcore.myc:783` | `fn render_list(subs: Vec[Pat]) => Bytes` | — | Empirical/Declared |
-| `compiler.semcore::Head` | type | `lib/compiler/semcore.myc:795` | `type Head = HdCtor(Bytes, Binary{32}) \| HdLit(Bytes)` | Head: mirrors decision.rs::Head (FLAG-semcore-2 Hd-prefix). | Empirical/Declared |
-| `compiler.semcore::Head::HdCtor` | ctor | `lib/compiler/semcore.myc:795` | `HdCtor(Bytes, Binary{32})` | — | Empirical/Declared |
-| `compiler.semcore::Head::HdLit` | ctor | `lib/compiler/semcore.myc:795` | `HdLit(Bytes)` | — | Empirical/Declared |
-| `compiler.semcore::Tree` | type | `lib/compiler/semcore.myc:799` | `type Tree = Leaf(Binary{32}) \| Fail \| Switch(Vec[Binary{32}], Vec[Pair[Head, Tree]], Option[Tree])` | Tree: mirrors decision.rs::Tree (no Box needed — recursion note above; `Occurrence` inlined as `Vec[Binary{32}]`, FLAG-semcore-7). | Empirical/Declared |
-| `compiler.semcore::Tree::Fail` | ctor | `lib/compiler/semcore.myc:799` | `Fail` | — | Empirical/Declared |
-| `compiler.semcore::Tree::Leaf` | ctor | `lib/compiler/semcore.myc:799` | `Leaf(Binary{32})` | — | Empirical/Declared |
-| `compiler.semcore::Tree::Switch` | ctor | `lib/compiler/semcore.myc:799` | `Switch(Vec[Binary{32}], Vec[Pair[Head, Tree]], Option[Tree])` | — | Empirical/Declared |
-| `compiler.semcore::DRow` | type | `lib/compiler/semcore.myc:802` | `type DRow = DRw(Vec[Pat], Binary{32})` | DRow: mirrors decision.rs::Row (a matrix row carrying its surface arm index). | Empirical/Declared |
-| `compiler.semcore::DRow::DRw` | ctor | `lib/compiler/semcore.myc:802` | `DRw(Vec[Pat], Binary{32})` | — | Empirical/Declared |
-| `compiler.semcore::drow_pats` | fn | `lib/compiler/semcore.myc:804` | `fn drow_pats(r: DRow) => Vec[Pat]` | — | Empirical/Declared |
-| `compiler.semcore::drow_arm` | fn | `lib/compiler/semcore.myc:807` | `fn drow_arm(r: DRow) => Binary{32}` | — | Empirical/Declared |
-| `compiler.semcore::specialize_ctor_row` | fn | `lib/compiler/semcore.myc:812` | `fn specialize_ctor_row(rows: Vec[DRow], c: Bytes, a: Binary{32}) => Vec[DRow]` | specialize_ctor_row / specialize_lit_row: the DRow-carrying twin of the `_pat` versions above (FLAG-semcore-5 — no shared trait; the arm index rides through unchanged). | Empirical/Declared |
-| `compiler.semcore::specialize_lit_row` | fn | `lib/compiler/semcore.myc:829` | `fn specialize_lit_row(rows: Vec[DRow], k: Bytes) => Vec[DRow]` | — | Empirical/Declared |
-| `compiler.semcore::default_rows` | fn | `lib/compiler/semcore.myc:846` | `fn default_rows(rows: Vec[DRow]) => Vec[DRow]` | default_rows: `D(P)` over `DRow`s. | Empirical/Declared |
-| `compiler.semcore::row_all_wild` | fn | `lib/compiler/semcore.myc:860` | `fn row_all_wild(pats: Vec[Pat]) => Bool` | row_all_wild: whether every column of one row is a wildcard. | Empirical/Declared |
-| `compiler.semcore::first_nonwild_idx` | fn | `lib/compiler/semcore.myc:873` | `fn first_nonwild_idx(pats: Vec[Pat], idx: Binary{32}) => Binary{32}` | first_nonwild_idx: the FLAG-semcore-8 simplified column-selection heuristic — the first non-wildcard column of ONE row (called on the first row only, which the caller has already established is not all-wild). | Empirical/Declared |
-| `compiler.semcore::extract_occ` | fn | `lib/compiler/semcore.myc:885` | `fn extract_occ(v: Vec[Vec[Binary{32}]], i: Binary{32}) => Pair[Vec[Binary{32}], Vec[Vec[Binary{32}]]]` | extract_occ / extract_ty / extract_pat: remove the `i`-th element, returning it paired with the remainder in original relative order (the building block of "rotate column `i` to the front"). | Empirical/Declared |
-| `compiler.semcore::extract_ty` | fn | `lib/compiler/semcore.myc:894` | `fn extract_ty(v: Vec[Ty], i: Binary{32}) => Pair[Ty, Vec[Ty]]` | — | Empirical/Declared |
-| `compiler.semcore::extract_pat` | fn | `lib/compiler/semcore.myc:903` | `fn extract_pat(v: Vec[Pat], i: Binary{32}) => Pair[Pat, Vec[Pat]]` | — | Empirical/Declared |
-| `compiler.semcore::rotate_pat_to_front` | fn | `lib/compiler/semcore.myc:912` | `fn rotate_pat_to_front(v: Vec[Pat], i: Binary{32}) => Vec[Pat]` | — | Empirical/Declared |
-| `compiler.semcore::rotate_rows_to_front` | fn | `lib/compiler/semcore.myc:915` | `fn rotate_rows_to_front(rows: Vec[DRow], i: Binary{32}) => Vec[DRow]` | — | Empirical/Declared |
-| `compiler.semcore::u32_append` | fn | `lib/compiler/semcore.myc:923` | `fn u32_append(a: Vec[Binary{32}], b: Vec[Binary{32}]) => Vec[Binary{32}]` | u32_append / occ_append / cases_append: small list-splicing helpers. | Empirical/Declared |
-| `compiler.semcore::occ_append` | fn | `lib/compiler/semcore.myc:926` | `fn occ_append(a: Vec[Vec[Binary{32}]], b: Vec[Vec[Binary{32}]]) => Vec[Vec[Binary{32}]]` | — | Empirical/Declared |
-| `compiler.semcore::cases_append` | fn | `lib/compiler/semcore.myc:929` | `fn cases_append(a: Vec[Pair[Head, Tree]], b: Vec[Pair[Head, Tree]]) => Vec[Pair[Head, Tree]]` | — | Empirical/Declared |
-| `compiler.semcore::child_occ` | fn | `lib/compiler/semcore.myc:933` | `fn child_occ(occ_rest: Vec[Vec[Binary{32}]], occ0: Vec[Binary{32}], a: Binary{32}) => Vec[Vec[Binary{32}]]` | child_occ: the `a` child occurrences `occ0 ++ [j]` (j = 0..a) followed by the remaining columns. | Empirical/Declared |
-| `compiler.semcore::child_occ_acc` | fn | `lib/compiler/semcore.myc:937` | `fn child_occ_acc(occ0: Vec[Binary{32}], j: Binary{32}, a: Binary{32}) => Vec[Vec[Binary{32}]]` | — | Empirical/Declared |
-| `compiler.semcore::gather_ctor_names` | fn | `lib/compiler/semcore.myc:944` | `fn gather_ctor_names(rows: Vec[DRow]) => Vec[Bytes]` | gather_ctor_names / gather_lit_names: first-seen, deduped head names in column 0. | Empirical/Declared |
-| `compiler.semcore::gather_lit_names` | fn | `lib/compiler/semcore.myc:959` | `fn gather_lit_names(rows: Vec[DRow]) => Vec[Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::signature_complete` | fn | `lib/compiler/semcore.myc:975` | `fn signature_complete(ty0: Ty, types: Vec[DataInfo], present: Vec[Bytes]) => Bool` | signature_complete: whether `present` covers `ty0`'s whole finite signature. | Empirical/Declared |
-| `compiler.semcore::build_ctor_cases` | fn | `lib/compiler/semcore.myc:983` | `fn build_ctor_cases(depth: Binary{32}, types: Vec[DataInfo], rows: Vec[DRow], ty0: Ty, occ0: Vec[Binary{32}], occ_rest: Vec[Vec[Binary{32}]], tys_rest: Vec[Ty], present: Vec[Bytes]) => Result[Vec[Pair[Head, Tree]], Bytes]` | build_ctor_cases(_from): one `(Head::Ctor, subtree)` case per ctor of `ty0`'s signature that appears in `present`, in SIGNATURE order (mirrors decision.rs::compile_rows's ctor loop). | Empirical/Declared |
-| `compiler.semcore::build_ctor_cases_from` | fn | `lib/compiler/semcore.myc:991` | `fn build_ctor_cases_from(depth: Binary{32}, types: Vec[DataInfo], rows: Vec[DRow], occ0: Vec[Binary{32}], occ_rest: Vec[Vec[Binary{32}]], tys_rest: Vec[Ty], ctors: Vec[CtorInfo], present: Vec[Bytes]) => Result[Vec[Pair[Head, Tree]], Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::build_lit_cases` | fn | `lib/compiler/semcore.myc:1015` | `fn build_lit_cases(depth: Binary{32}, types: Vec[DataInfo], rows: Vec[DRow], occ_rest: Vec[Vec[Binary{32}]], tys_rest: Vec[Ty], lits: Vec[Bytes]) => Result[Vec[Pair[Head, Tree]], Bytes]` | build_lit_cases: one `(Head::Lit, subtree)` case per literal head, first-seen order. | Empirical/Declared |
-| `compiler.semcore::compile` | fn | `lib/compiler/semcore.myc:1030` | `fn compile(types: Vec[DataInfo], matrix: Vec[Vec[Pat]], arms: Vec[Binary{32}], occ: Vec[Vec[Binary{32}]], tys: Vec[Ty]) => Result[Tree, Bytes]` | compile: entry point — a fresh per-compilation budget (mirrors decision.rs::compile). | Empirical/Declared |
-| `compiler.semcore::zip_rows` | fn | `lib/compiler/semcore.myc:1034` | `fn zip_rows(matrix: Vec[Vec[Pat]], arms: Vec[Binary{32}]) => Vec[DRow]` | — | Empirical/Declared |
-| `compiler.semcore::compile_rows` | fn | `lib/compiler/semcore.myc:1044` | `fn compile_rows(depth: Binary{32}, types: Vec[DataInfo], rows: Vec[DRow], occ: Vec[Vec[Binary{32}]], tys: Vec[Ty]) => Result[Tree, Bytes]` | compile_rows: the budget-charged recursion (mirrors decision.rs::compile_rows). | Empirical/Declared |
-| `compiler.semcore::compile_switch` | fn | `lib/compiler/semcore.myc:1057` | `fn compile_switch(depth: Binary{32}, types: Vec[DataInfo], rows: Vec[DRow], occ: Vec[Vec[Binary{32}]], tys: Vec[Ty], col: Binary{32}) => Result[Tree, Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::has_reachable_fail` | fn | `lib/compiler/semcore.myc:1084` | `fn has_reachable_fail(t: Tree) => Bool` | has_reachable_fail: whether the tree contains a reachable `Fail` (mirrors decision.rs verbatim). | Empirical/Declared |
-| `compiler.semcore::cases_any_reachable_fail` | fn | `lib/compiler/semcore.myc:1094` | `fn cases_any_reachable_fail(cases: Vec[Pair[Head, Tree]]) => Bool` | — | Empirical/Declared |
-| `compiler.semcore::tree_eval` | fn | `lib/compiler/semcore.myc:1108` | `fn tree_eval(t: Tree, value: Pat) => Option[Binary{32}]` | tree_eval: a small TEST-ONLY reference evaluator (mirrors decision.rs's own module-doc-mentioned `eval_tree` reference — "it verifies the compiler; it does not run programs"). Walks the tree against one concrete (fully-ground, no `MpWild`) value pattern, returning the arm index reached, or `None` if a `Fail` is reached. Occurrence-indexed lookup into the concrete value is done via `pat_at_occ` (a small ground-value navigator — NOT part of decision.rs itself, purely this increment's differential-driving harness). | Empirical/Declared |
-| `compiler.semcore::tree_eval_switch` | fn | `lib/compiler/semcore.myc:1115` | `fn tree_eval_switch(scrutinee: Pat, cases: Vec[Pair[Head, Tree]], deft: Option[Tree], value: Pat) => Option[Binary{32}]` | — | Empirical/Declared |
-| `compiler.semcore::tree_eval_deft` | fn | `lib/compiler/semcore.myc:1127` | `fn tree_eval_deft(deft: Option[Tree], value: Pat) => Option[Binary{32}]` | — | Empirical/Declared |
-| `compiler.semcore::head_matches` | fn | `lib/compiler/semcore.myc:1130` | `fn head_matches(h: Head, scrutinee: Pat) => Bool` | — | Empirical/Declared |
-| `compiler.semcore::pat_at_occ` | fn | `lib/compiler/semcore.myc:1145` | `fn pat_at_occ(value: Pat, occ: Vec[Binary{32}]) => Pat` | pat_at_occ: navigate a ground value pattern via a field-index occurrence (root = `Nil`). | Empirical/Declared |
-| `compiler.semcore::pat_nth` | fn | `lib/compiler/semcore.myc:1155` | `fn pat_nth(v: Vec[Pat], i: Binary{32}) => Pat` | — | Empirical/Declared |
-| `compiler.semcore::Slot` | type | `lib/compiler/semcore.myc:1169` | `type Slot = Skip \| Live(Bytes) \| Moved(Bytes, Binary{32})` | Slot: mirrors affine.rs::Slot (one scope slot's affine state). | Empirical/Declared |
-| `compiler.semcore::Slot::Live` | ctor | `lib/compiler/semcore.myc:1169` | `Live(Bytes)` | — | Empirical/Declared |
-| `compiler.semcore::Slot::Moved` | ctor | `lib/compiler/semcore.myc:1169` | `Moved(Bytes, Binary{32})` | — | Empirical/Declared |
-| `compiler.semcore::Slot::Skip` | ctor | `lib/compiler/semcore.myc:1169` | `Skip` | — | Empirical/Declared |
-| `compiler.semcore::UseOutcome` | type | `lib/compiler/semcore.myc:1172` | `type UseOutcome = NotAffine \| FirstUse \| DoubleUse(Bytes, Binary{32}, Binary{32})` | UseOutcome: mirrors affine.rs::UseOutcome (the outcome of recording a use at some index). | Empirical/Declared |
-| `compiler.semcore::UseOutcome::DoubleUse` | ctor | `lib/compiler/semcore.myc:1172` | `DoubleUse(Bytes, Binary{32}, Binary{32})` | — | Empirical/Declared |
-| `compiler.semcore::UseOutcome::FirstUse` | ctor | `lib/compiler/semcore.myc:1172` | `FirstUse` | — | Empirical/Declared |
-| `compiler.semcore::UseOutcome::NotAffine` | ctor | `lib/compiler/semcore.myc:1172` | `NotAffine` | — | Empirical/Declared |
-| `compiler.semcore::slot_for_ty` | fn | `lib/compiler/semcore.myc:1176` | `fn slot_for_ty(ty: Ty) => Slot` | slot_for_ty: the slot a fresh binding of type `ty` starts in (mirrors affine.rs::Slot::for_ty; the trailing-wildcard idiom — every non-`TySubstrate` type is `Skip`). | Empirical/Declared |
-| `compiler.semcore::slots_seeded` | fn | `lib/compiler/semcore.myc:1181` | `fn slots_seeded(tys: Vec[Ty]) => Vec[Slot]` | slots_seeded: one slot per entry of `tys` (mirrors affine.rs::Tracker::seeded's per-parameter seeding, restated as a pure fn over the parameter TYPE list). | Empirical/Declared |
-| `compiler.semcore::slots_use_at` | fn | `lib/compiler/semcore.myc:1187` | `fn slots_use_at(slots: Vec[Slot], idx: Binary{32}, ordinal: Binary{32}) => Pair[Vec[Slot], UseOutcome]` | slots_use_at: record a use (move) of the binding at scope index `idx`, returning the UPDATED slots vector paired with the outcome (mirrors affine.rs::Tracker::use_at; `ordinal` is the caller's own monotonic use counter — FLAG-semcore-7, no wrapper `UseSite` type). | Empirical/Declared |
-| `compiler.semcore::slots_use_here` | fn | `lib/compiler/semcore.myc:1198` | `fn slots_use_here(slots: Vec[Slot], ordinal: Binary{32}) => Pair[Vec[Slot], UseOutcome]` | — | Empirical/Declared |
-| `compiler.semcore::union_merge_into` | fn | `lib/compiler/semcore.myc:1213` | `fn union_merge_into(acc: Vec[Slot], other: Vec[Slot]) => Vec[Slot]` | merge_slot / union_merge_into: the conservative branch-merge rule (mirrors affine.rs verbatim — a slot moved in EITHER alternative is moved afterward). A length mismatch between `acc` and `other` is an internal-invariant violation (mirrors the Rust `debug_assert_eq!`); this total-fn port stops merging at the shorter side rather than panicking (never-silent by construction — no call site in this increment's differential produces mismatched snapshots). | Empirical/Declared |
-| `compiler.semcore::merge_slot` | fn | `lib/compiler/semcore.myc:1222` | `fn merge_slot(a: Slot, o: Slot) => Slot` | — | Empirical/Declared |
-| `compiler.semcore::CheckError` | type | `lib/compiler/semcore.myc:1236` | `type CheckError = CE(Bytes, Bytes)` | CheckError: mirrors checkty.rs::CheckError (site, message) — the one error surface `grade` needs; no checking LOGIC accompanies it (this file ports no checkty.rs logic at all). | Empirical/Declared |
-| `compiler.semcore::CheckError::CE` | ctor | `lib/compiler/semcore.myc:1236` | `CE(Bytes, Bytes)` | — | Empirical/Declared |
-| `compiler.semcore::ce_site` | fn | `lib/compiler/semcore.myc:1238` | `fn ce_site(e: CheckError) => Bytes` | — | Empirical/Declared |
-| `compiler.semcore::ce_message` | fn | `lib/compiler/semcore.myc:1241` | `fn ce_message(e: CheckError) => Bytes` | — | Empirical/Declared |
-| `compiler.semcore::fnenv_lookup` | fn | `lib/compiler/semcore.myc:1246` | `fn fnenv_lookup(fns: Vec[Pair[Bytes, FnDecl]], name: Bytes) => Option[FnDecl]` | FnEnv: the FLAG-semcore-4 ordered-assoc-list standing in for the checker's resolved `BTreeMap<String, FnDecl>` fn table. | Empirical/Declared |
-| `compiler.semcore::ret_grade` | fn | `lib/compiler/semcore.myc:1256` | `fn ret_grade(fd: FnDecl) => Strength` | ret_grade / param_grade: the modular-bottom defaults (mirrors grade.rs verbatim — an unannotated demand/advertisement is `GDeclared`, the weakest grade). | Empirical/Declared |
-| `compiler.semcore::param_grade` | fn | `lib/compiler/semcore.myc:1259` | `fn param_grade(p: Param) => Strength` | — | Empirical/Declared |
-| `compiler.semcore::scope_lookup` | fn | `lib/compiler/semcore.myc:1264` | `fn scope_lookup(scope: Vec[Pair[Bytes, Strength]], name: Bytes) => Option[Strength]` | scope_lookup: a lexical stack of `(name, grade)`, most-recent-first (`Cons` = push; shadowing = head-first scan finds the most recent binding — mirrors the Rust `scope.iter().rev().find`). | Empirical/Declared |
-| `compiler.semcore::require` | fn | `lib/compiler/semcore.myc:1274` | `fn require(have: Strength, demand: Strength, site: Bytes, what: Bytes) => Option[CheckError]` | require: the honesty check `have >= demand` (G-Sub; mirrors grade.rs::require, `Option`-returning rather than `Result<(),_>` — no unit type needed self-contained). | Empirical/Declared |
-| `compiler.semcore::grade` | fn | `lib/compiler/semcore.myc:1281` | `fn grade(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]], site: Bytes, e: Expr) => Result[Strength, CheckError]` | grade: the budgeted entry point (mirrors grade.rs::Gx::grade's per-recursion budget charge). | Empirical/Declared |
-| `compiler.semcore::grade_expr` | fn | `lib/compiler/semcore.myc:1290` | `fn grade_expr(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]], site: Bytes, e: Expr) => Result[Strength, CheckError]` | grade_expr: the per-variant dispatch (mirrors grade.rs::Gx::grade's big `match e { ... }`, field-for-field against ast.myc's `Expr` — every variant explicit, M-980 split-match idiom). | Empirical/Declared |
-| `compiler.semcore::grade_path` | fn | `lib/compiler/semcore.myc:1321` | `fn grade_path(scope: Vec[Pair[Bytes, Strength]], p: Path) => Strength` | grade_path: G-Var — a single-segment path is a bound variable (`GExact` if unbound: a nullary constructor/constant); a multi-segment path is conservatively `GExact` too (the checker already refuses those; a residual one here is never reached by a well-formed body). | Empirical/Declared |
-| `compiler.semcore::grade_lit` | fn | `lib/compiler/semcore.myc:1332` | `fn grade_lit(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]], site: Bytes, lit: Literal) => Result[Strength, CheckError]` | grade_lit: G-Const — a literal is `Exact` by construction; a list literal is the meet of its elements (G-Con). | Empirical/Declared |
-| `compiler.semcore::grade_let` | fn | `lib/compiler/semcore.myc:1347` | `fn grade_let(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]], site: Bytes, name: Bytes, ty: Option[TypeRef], bound: Expr, body: Expr) => Result[Strength, CheckError]` | grade_let: G-Let / G-Weaken — grade the bound expr, weaken to the ascription if written, bind, then take the meet with the body's grade. | Empirical/Declared |
-| `compiler.semcore::let_bind_grade` | fn | `lib/compiler/semcore.myc:1361` | `fn let_bind_grade(ty: Option[TypeRef], g_bound: Strength, site: Bytes, name: Bytes) => Result[Strength, CheckError]` | — | Empirical/Declared |
-| `compiler.semcore::grade_if` | fn | `lib/compiler/semcore.myc:1376` | `fn grade_if(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]], site: Bytes, cond: Expr, conseq: Expr, alt: Expr) => Result[Strength, CheckError]` | grade_if: Design A — the condition is walked (to enforce demands inside it) but does NOT degrade the result; the result is the meet of both branch bodies. | Empirical/Declared |
-| `compiler.semcore::bind_pattern` | fn | `lib/compiler/semcore.myc:1393` | `fn bind_pattern(scope: Vec[Pair[Bytes, Strength]], pat: Pattern, g_s: Strength) => Vec[Pair[Bytes, Strength]]` | bind_pattern(s): push every variable a pattern binds at grade `g_s` (G-Match/A's field-binder data-provenance rule); `POr` is unreachable post-check (the checker desugars it) — a defensive no-op here (this language has no abort/panic primitive to mirror Rust's invariant-violation panic, so the no-op IS the honest total-fn restatement, documented rather than silent). | Empirical/Declared |
-| `compiler.semcore::bind_patterns` | fn | `lib/compiler/semcore.myc:1404` | `fn bind_patterns(scope: Vec[Pair[Bytes, Strength]], pats: Vec[Pattern], g_s: Strength) => Vec[Pair[Bytes, Strength]]` | — | Empirical/Declared |
-| `compiler.semcore::grade_match` | fn | `lib/compiler/semcore.myc:1413` | `fn grade_match(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]], site: Bytes, scrutinee: Expr, arms: Vec[Arm]) => Result[Strength, CheckError]` | grade_match: G-Match/A — the scrutinee's grade does not appear in the result; the result is the meet of the arm bodies (each graded under its own pattern-bound scope). | Empirical/Declared |
-| `compiler.semcore::grade_arms` | fn | `lib/compiler/semcore.myc:1420` | `fn grade_arms(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]], site: Bytes, arms: Vec[Arm], g_s: Strength) => Result[Strength, CheckError]` | — | Empirical/Declared |
-| `compiler.semcore::grade_for` | fn | `lib/compiler/semcore.myc:1440` | `fn grade_for(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]], site: Bytes, x: Bytes, xs: Expr, acc: Bytes, init: Expr, body: Expr) => Result[Strength, CheckError]` | grade_for: the fixpoint-avoiding fold rule — the accumulator is graded at the BOTTOM (`GDeclared`) inside the body (sound without iterating to a fixpoint); the result is the meet of init/xs/body. | Empirical/Declared |
-| `compiler.semcore::grade_colony` | fn | `lib/compiler/semcore.myc:1458` | `fn grade_colony(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]], site: Bytes, hyphae: Vec[Hypha]) => Result[Strength, CheckError]` | grade_colony: the colony's observable is its LAST hypha; leading hyphae are still walked (to enforce demands inside them) but do not contribute to the result grade. | Empirical/Declared |
-| `compiler.semcore::grade_fuse` | fn | `lib/compiler/semcore.myc:1472` | `fn grade_fuse(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]], site: Bytes, left: Expr, right: Expr) => Result[Strength, CheckError]` | grade_fuse: DN-58 SSA/SSB — the meet of both operands (composition takes the weakest). | Empirical/Declared |
-| `compiler.semcore::grade_reclaim` | fn | `lib/compiler/semcore.myc:1484` | `fn grade_reclaim(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]], site: Bytes, pol: Expr, body: Expr) => Result[Strength, CheckError]` | grade_reclaim: DN-58 SSB — the policy expr is walked (to surface any policy-grade violation), then the result is the body's grade. | Empirical/Declared |
-| `compiler.semcore::grade_ascribe` | fn | `lib/compiler/semcore.myc:1493` | `fn grade_ascribe(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]], site: Bytes, inner: Expr, t: TypeRef) => Result[Strength, CheckError]` | grade_ascribe: G-Weaken — an `@ g` ascription demands the inferred grade satisfy `g`; the ascribed expr then carries `g`. A bare type ascription (no `@ g`) is grade-transparent. | Empirical/Declared |
-| `compiler.semcore::meet_all` | fn | `lib/compiler/semcore.myc:1507` | `fn meet_all(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]], site: Bytes, es: Vec[Expr]) => Result[Strength, CheckError]` | meet_all: the meet of every expression's grade (`GExact` for an empty list — the meet identity). | Empirical/Declared |
-| `compiler.semcore::app_head_fn` | fn | `lib/compiler/semcore.myc:1522` | `fn app_head_fn(fns: Vec[Pair[Bytes, FnDecl]], head: Expr) => Option[FnDecl]` | app_head_fn: resolve an `App` head to a KNOWN user function (a single-segment `Path` present in `fns`), else `None` (constructor / prim / trait-method — no graded signature in stage 1a). | Empirical/Declared |
-| `compiler.semcore::grade_app` | fn | `lib/compiler/semcore.myc:1533` | `fn grade_app(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]], site: Bytes, head: Expr, args: Vec[Expr]) => Result[Strength, CheckError]` | grade_app: G-App (a known callee: check each arg against its param's demand, result is the callee's declared return grade) / G-Con-fallback (anything else: the conservative meet of args). | Empirical/Declared |
-| `compiler.semcore::grade_call` | fn | `lib/compiler/semcore.myc:1540` | `fn grade_call(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]], site: Bytes, fd: FnDecl, args: Vec[Expr]) => Result[Strength, CheckError]` | — | Empirical/Declared |
-| `compiler.semcore::check_args` | fn | `lib/compiler/semcore.myc:1547` | `fn check_args(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]], site: Bytes, params: Vec[Param], args: Vec[Expr]) => Result[Binary{32}, CheckError]` | — | Empirical/Declared |
-| `compiler.semcore::params_to_scope` | fn | `lib/compiler/semcore.myc:1565` | `fn params_to_scope(params: Vec[Param]) => Vec[Pair[Bytes, Strength]]` | params_to_scope / grade_fn_body: the thin per-body entry point this increment's differential drives directly (FLAG-semcore-9 — no whole-program `own_names`/`impl_methods` driver). | Empirical/Declared |
-| `compiler.semcore::grade_fn_body` | fn | `lib/compiler/semcore.myc:1571` | `fn grade_fn_body(fns: Vec[Pair[Bytes, FnDecl]], fd: FnDecl) => Result[Strength, CheckError]` | — | Empirical/Declared |
-| `compiler.semcore::eq_u` | fn | `lib/compiler/semcore.myc:1616` | `fn eq_u(a: Binary{32}, b: Binary{32}) => Bool` | — | Empirical/Declared |
-| `compiler.semcore::beq` | fn | `lib/compiler/semcore.myc:1619` | `fn beq(a: Bytes, b: Bytes) => Bool` | — | Empirical/Declared |
-| `compiler.semcore::and_` | fn | `lib/compiler/semcore.myc:1622` | `fn and_(a: Bool, b: Bool) => Bool` | — | Empirical/Declared |
-| `compiler.semcore::width_is_var` | fn | `lib/compiler/semcore.myc:1627` | `fn width_is_var(w: Width) => Bool` | — | Empirical/Declared |
-| `compiler.semcore::has_var` | fn | `lib/compiler/semcore.myc:1630` | `fn has_var(ty: Ty) => Bool` | — | Empirical/Declared |
-| `compiler.semcore::any_has_var` | fn | `lib/compiler/semcore.myc:1645` | `fn any_has_var(tys: Vec[Ty]) => Bool` | — | Empirical/Declared |
-| `compiler.semcore::type_head` | fn | `lib/compiler/semcore.myc:1655` | `fn type_head(ty: Ty) => Option[Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::ty_subst_lookup` | fn | `lib/compiler/semcore.myc:1672` | `fn ty_subst_lookup(s: Vec[Pair[Bytes, Ty]], v: Bytes) => Option[Ty]` | — | Empirical/Declared |
-| `compiler.semcore::subst_ty` | fn | `lib/compiler/semcore.myc:1680` | `fn subst_ty(ty: Ty, s: Vec[Pair[Bytes, Ty]]) => Ty` | — | Empirical/Declared |
-| `compiler.semcore::subst_ty_list` | fn | `lib/compiler/semcore.myc:1695` | `fn subst_ty_list(tys: Vec[Ty], s: Vec[Pair[Bytes, Ty]]) => Vec[Ty]` | — | Empirical/Declared |
-| `compiler.semcore::subst_binary_width` | fn | `lib/compiler/semcore.myc:1702` | `fn subst_binary_width(w: Width, s: Vec[Pair[Bytes, Ty]]) => Ty` | subst_binary_width / subst_ternary_width: DN-42/M-753 width-var substitution via the carrier convention — a width-var binding is stored as `v -> TyBinary(WdLit(n))` regardless of paradigm; on extraction we re-emit Binary or Ternary as appropriate. An unbound / unrecognised carrier is left as-is (defensive; mirrors the Rust `unwrap_or_else(\|\| ty.clone())` + `_ => ty.clone()`). | Empirical/Declared |
-| `compiler.semcore::subst_ternary_width` | fn | `lib/compiler/semcore.myc:1714` | `fn subst_ternary_width(w: Width, s: Vec[Pair[Bytes, Ty]]) => Ty` | — | Empirical/Declared |
-| `compiler.semcore::param_subst` | fn | `lib/compiler/semcore.myc:1728` | `fn param_subst(params: Vec[Bytes], args: Vec[Ty]) => Vec[Pair[Bytes, Ty]]` | — | Empirical/Declared |
-| `compiler.semcore::scalar_eq` | fn | `lib/compiler/semcore.myc:1738` | `fn scalar_eq(a: Scalar, b: Scalar) => Bool` | — | Empirical/Declared |
-| `compiler.semcore::sparsity_eq` | fn | `lib/compiler/semcore.myc:1746` | `fn sparsity_eq(a: Sparsity, b: Sparsity) => Bool` | — | Empirical/Declared |
-| `compiler.semcore::width_eq` | fn | `lib/compiler/semcore.myc:1752` | `fn width_eq(a: Width, b: Width) => Bool` | — | Empirical/Declared |
-| `compiler.semcore::ty_eq` | fn | `lib/compiler/semcore.myc:1758` | `fn ty_eq(a: Ty, b: Ty) => Bool` | — | Empirical/Declared |
-| `compiler.semcore::ty_list_eq` | fn | `lib/compiler/semcore.myc:1773` | `fn ty_list_eq(a: Vec[Ty], b: Vec[Ty]) => Bool` | — | Empirical/Declared |
-| `compiler.semcore::dec_digit` | fn | `lib/compiler/semcore.myc:1818` | `fn dec_digit(d: Binary{32}) => Bytes` | — | Empirical/Declared |
-| `compiler.semcore::ten32` | fn | `lib/compiler/semcore.myc:1830` | `fn ten32() => Binary{32}` | — | Empirical/Declared |
-| `compiler.semcore::dec_u32` | fn | `lib/compiler/semcore.myc:1833` | `fn dec_u32(n: Binary{32}) => Bytes` | Base-10 render, big-endian: n < 10 -> one digit; else render n/10 then append n%10 (<= 10 iters). | Empirical/Declared |
-| `compiler.semcore::tuple_type_name` | fn | `lib/compiler/semcore.myc:1842` | `fn tuple_type_name(n: Binary{32}) => Bytes` | — | Empirical/Declared |
-| `compiler.semcore::tuple_ctor_name` | fn | `lib/compiler/semcore.myc:1844` | `fn tuple_ctor_name(n: Binary{32}) => Bytes` | — | Empirical/Declared |
-| `compiler.semcore::tuple_params_from` | fn | `lib/compiler/semcore.myc:1847` | `fn tuple_params_from(i: Binary{32}, n: Binary{32}) => Vec[Bytes]` | tuple_params: the `n` type-parameter names `T0 .. T{n-1}` (Rust `(0..n).map(\|i\| format!("T{i}"))`). | Empirical/Declared |
-| `compiler.semcore::vars_of` | fn | `lib/compiler/semcore.myc:1854` | `fn vars_of(params: Vec[Bytes]) => Vec[Ty]` | vars_of: one `TyVar(p)` field per parameter name (Rust `params.iter().map(\|p\| Ty::Var(p))`). | Empirical/Declared |
-| `compiler.semcore::synthetic_tuple_data` | fn | `lib/compiler/semcore.myc:1857` | `fn synthetic_tuple_data(n: Binary{32}) => DataInfo` | — | Empirical/Declared |
-| `compiler.semcore::typeref_base` | fn | `lib/compiler/semcore.myc:1863` | `fn typeref_base(t: TypeRef) => BaseType` | — | Empirical/Declared |
-| `compiler.semcore::di_params` | fn | `lib/compiler/semcore.myc:1865` | `fn di_params(d: DataInfo) => Vec[Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::resolve_widthref_binary` | fn | `lib/compiler/semcore.myc:1870` | `fn resolve_widthref_binary(w: WidthRef) => Ty` | resolve_widthref_\*: a surface `WidthRef` (WLit/WName) becomes a checked `Width` under the given paradigm (Rust's per-`BaseType::Binary/Ternary` inline `match &t.base` arms). | Empirical/Declared |
-| `compiler.semcore::resolve_widthref_ternary` | fn | `lib/compiler/semcore.myc:1873` | `fn resolve_widthref_ternary(w: WidthRef) => Ty` | — | Empirical/Declared |
-| `compiler.semcore::vsa_kernel_model_id` | fn | `lib/compiler/semcore.myc:1877` | `fn vsa_kernel_model_id(surface: Bytes) => Bytes` | vsa_kernel_model_id: the surface->kernel VSA model-id canonicalization (checkty.rs; M-892). | Empirical/Declared |
-| `compiler.semcore::tref_len` | fn | `lib/compiler/semcore.myc:1882` | `fn tref_len(v: Vec[TypeRef]) => Binary{32}` | tref_len / names_len: monomorphic length counters (Vec[TypeRef] / Vec[Bytes]) — the arity check. | Empirical/Declared |
-| `compiler.semcore::names_len` | fn | `lib/compiler/semcore.myc:1885` | `fn names_len(v: Vec[Bytes]) => Binary{32}` | — | Empirical/Declared |
-| `compiler.semcore::args_is_empty` | fn | `lib/compiler/semcore.myc:1888` | `fn args_is_empty(v: Vec[TypeRef]) => Bool` | — | Empirical/Declared |
-| `compiler.semcore::resolve_base` | fn | `lib/compiler/semcore.myc:1891` | `fn resolve_base(types: Vec[DataInfo], tyvars: Vec[Bytes], b: BaseType) => Result[Ty, Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::resolve_args` | fn | `lib/compiler/semcore.myc:1918` | `fn resolve_args(types: Vec[DataInfo], tyvars: Vec[Bytes], args: Vec[TypeRef]) => Result[Vec[Ty], Bytes]` | resolve_args: map resolve_ty over each surface arg, short-circuiting on the first Err (Rust's `for a in args { resolved.push(resolve_ty(..)?.0) }`; the guarantee of each arg is discarded). | Empirical/Declared |
-| `compiler.semcore::resolve_named` | fn | `lib/compiler/semcore.myc:1930` | `fn resolve_named(types: Vec[DataInfo], tyvars: Vec[Bytes], name: Bytes, args: Vec[TypeRef]) => Result[Ty, Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::resolve_tuple` | fn | `lib/compiler/semcore.myc:1945` | `fn resolve_tuple(types: Vec[DataInfo], tyvars: Vec[Bytes], elems: Vec[TypeRef]) => Result[Ty, Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::resolve_ty` | fn | `lib/compiler/semcore.myc:1955` | `fn resolve_ty(types: Vec[DataInfo], tyvars: Vec[Bytes], t: TypeRef) => Result[Pair[Ty, Option[Strength]], Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::first_duplicate` | fn | `lib/compiler/semcore.myc:1966` | `fn first_duplicate(xs: Vec[Bytes]) => Option[Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::first_duplicate_go` | fn | `lib/compiler/semcore.myc:1969` | `fn first_duplicate_go(seen: Vec[Bytes], xs: Vec[Bytes]) => Option[Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::resolve_ctors` | fn | `lib/compiler/semcore.myc:1984` | `fn resolve_ctors(types: Vec[DataInfo], td: TypeDecl) => Result[Vec[CtorInfo], Bytes]` | resolve_ctors: for each surface `Ctor`, resolve every field `TypeRef` with the decl's type params in scope (reusing the `resolve_ty`/`resolve_args` family), refusing a duplicate constructor name. Mirrors checkty.rs::resolve_ctors arm-for-arm: the `seen` list carries the ctor-names-to-the-left for the dup check (Rust's `ctors.iter().any(..)`), and the result preserves declaration order (prepend-on-return). Never-silent `Err` on a duplicate ctor and on any field-resolution failure (G2/VR-5). The resolve_ty guarantee slot is discarded exactly as in Rust (`let (ty, _) = ..`). | Empirical/Declared |
-| `compiler.semcore::resolve_ctors_go` | fn | `lib/compiler/semcore.myc:1987` | `fn resolve_ctors_go(types: Vec[DataInfo], tyvars: Vec[Bytes], seen: Vec[Bytes], cs: Vec[Ctor]) => Result[Vec[CtorInfo], Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::TraitDecl` | type | `lib/compiler/semcore.myc:2018` | `type TraitDecl = TrD(Vis, Bytes, Vec[Bytes], Vec[FnSig])` | desugars them to `Type + Impl + Fn` items in a Phase-0 pass BEFORE registration (checkty.rs `check_phylum_inner`), so in production their tuples arrive via the desugared items. Porting the arms anyway keeps the port arm-for-arm faithful to `collect_tuple_arities` itself (never a silent gap — a raw-nodule caller gets exactly the oracle's answer). | Empirical/Declared |
-| `compiler.semcore::TraitDecl::TrD` | ctor | `lib/compiler/semcore.myc:2018` | `TrD(Vis, Bytes, Vec[Bytes], Vec[FnSig])` | — | Empirical/Declared |
-| `compiler.semcore::trd_sigs` | fn | `lib/compiler/semcore.myc:2020` | `fn trd_sigs(t: TraitDecl) => Vec[FnSig]` | — | Empirical/Declared |
-| `compiler.semcore::ImplDecl` | type | `lib/compiler/semcore.myc:2023` | `type ImplDecl = ImD(Bytes, Vec[TypeRef], TypeRef, Vec[FnDecl])` | — | Empirical/Declared |
-| `compiler.semcore::ImplDecl::ImD` | ctor | `lib/compiler/semcore.myc:2023` | `ImD(Bytes, Vec[TypeRef], TypeRef, Vec[FnDecl])` | — | Empirical/Declared |
-| `compiler.semcore::imd_trait_args` | fn | `lib/compiler/semcore.myc:2025` | `fn imd_trait_args(i: ImplDecl) => Vec[TypeRef]` | — | Empirical/Declared |
-| `compiler.semcore::imd_for_ty` | fn | `lib/compiler/semcore.myc:2028` | `fn imd_for_ty(i: ImplDecl) => TypeRef` | — | Empirical/Declared |
-| `compiler.semcore::imd_methods` | fn | `lib/compiler/semcore.myc:2031` | `fn imd_methods(i: ImplDecl) => Vec[FnDecl]` | — | Empirical/Declared |
-| `compiler.semcore::InherentImplDecl` | type | `lib/compiler/semcore.myc:2034` | `type InherentImplDecl = IID(TypeRef, Vec[FnDecl])` | — | Empirical/Declared |
-| `compiler.semcore::InherentImplDecl::IID` | ctor | `lib/compiler/semcore.myc:2034` | `IID(TypeRef, Vec[FnDecl])` | — | Empirical/Declared |
-| `compiler.semcore::iid_for_ty` | fn | `lib/compiler/semcore.myc:2036` | `fn iid_for_ty(i: InherentImplDecl) => TypeRef` | — | Empirical/Declared |
-| `compiler.semcore::iid_methods` | fn | `lib/compiler/semcore.myc:2039` | `fn iid_methods(i: InherentImplDecl) => Vec[FnDecl]` | — | Empirical/Declared |
-| `compiler.semcore::ViaDecl` | type | `lib/compiler/semcore.myc:2045` | `type ViaDecl = VD(Binary{32}, Bytes, Vec[TypeRef])` | ViaDecl: mirrors ast.rs::ViaDecl field-for-field (field_idx, trait_name, trait_args). No accessor — `collect_tuple_arities_item`'s Object arm does NOT walk `via_decls` (a dead field, kept only so `ObjectDecl` is field-for-field faithful; the oracle skips it too). | Empirical/Declared |
-| `compiler.semcore::ViaDecl::VD` | ctor | `lib/compiler/semcore.myc:2045` | `VD(Binary{32}, Bytes, Vec[TypeRef])` | — | Empirical/Declared |
-| `compiler.semcore::ObjectDecl` | type | `lib/compiler/semcore.myc:2047` | `type ObjectDecl = OD(Vis, Bytes, Vec[Bytes], Ctor, Vec[ViaDecl], Vec[ImplDecl], Vec[FnDecl])` | — | Empirical/Declared |
-| `compiler.semcore::ObjectDecl::OD` | ctor | `lib/compiler/semcore.myc:2047` | `OD(Vis, Bytes, Vec[Bytes], Ctor, Vec[ViaDecl], Vec[ImplDecl], Vec[FnDecl])` | — | Empirical/Declared |
-| `compiler.semcore::od_ctor` | fn | `lib/compiler/semcore.myc:2049` | `fn od_ctor(o: ObjectDecl) => Ctor` | — | Empirical/Declared |
-| `compiler.semcore::od_impls` | fn | `lib/compiler/semcore.myc:2052` | `fn od_impls(o: ObjectDecl) => Vec[ImplDecl]` | — | Empirical/Declared |
-| `compiler.semcore::od_fns` | fn | `lib/compiler/semcore.myc:2055` | `fn od_fns(o: ObjectDecl) => Vec[FnDecl]` | — | Empirical/Declared |
-| `compiler.semcore::LowerRhs` | type | `lib/compiler/semcore.myc:2059` | `type LowerRhs = LrExpr(Expr) \| LrImpl(ImplDecl)` | LowerRhs / LowerDecl: mirror ast.rs::LowerRhs / ast.rs::LowerDecl (DN-54 §10). Only `rhs` grades. | Empirical/Declared |
-| `compiler.semcore::LowerRhs::LrExpr` | ctor | `lib/compiler/semcore.myc:2059` | `LrExpr(Expr)` | — | Empirical/Declared |
-| `compiler.semcore::LowerRhs::LrImpl` | ctor | `lib/compiler/semcore.myc:2059` | `LrImpl(ImplDecl)` | — | Empirical/Declared |
-| `compiler.semcore::LowerDecl` | type | `lib/compiler/semcore.myc:2061` | `type LowerDecl = LD(Bytes, Vec[Bytes], LowerRhs)` | — | Empirical/Declared |
-| `compiler.semcore::LowerDecl::LD` | ctor | `lib/compiler/semcore.myc:2061` | `LD(Bytes, Vec[Bytes], LowerRhs)` | — | Empirical/Declared |
-| `compiler.semcore::ld_rhs` | fn | `lib/compiler/semcore.myc:2063` | `fn ld_rhs(l: LowerDecl) => LowerRhs` | — | Empirical/Declared |
-| `compiler.semcore::UsePath` | type | `lib/compiler/semcore.myc:2069` | `type UsePath = UP(Path, Bool)` | UsePath: mirrors ast.rs::UsePath / ast.myc::UsePath field-for-field (`UP` ctor, same spelling as ast.myc — M-1013 STEP 4, resolve_imports increment). `path`: the imported path (a specific import names the item; a glob names the prefix whose `pub` names import). `glob`: true for `use a.b.\*`. | Empirical/Declared |
-| `compiler.semcore::UsePath::UP` | ctor | `lib/compiler/semcore.myc:2069` | `UP(Path, Bool)` | — | Empirical/Declared |
-| `compiler.semcore::usepath_path` | fn | `lib/compiler/semcore.myc:2071` | `fn usepath_path(u: UsePath) => Path` | — | Empirical/Declared |
-| `compiler.semcore::usepath_glob` | fn | `lib/compiler/semcore.myc:2074` | `fn usepath_glob(u: UsePath) => Bool` | — | Empirical/Declared |
-| `compiler.semcore::Item` | type | `lib/compiler/semcore.myc:2082` | `type Item = ItType(TypeDecl) \| ItFn(FnDecl) \| ItTrait(TraitDecl) \| ItImpl(ImplDecl) \| ItObject(ObjectDecl) \| ItLower(LowerDecl) \| ItInherentImpl(InherentImplDecl) \| ItUse(UsePath) \| ItOther` | Item gains ItUse (M-1013 STEP 4): the trimmed register-family mirror (FLAG-semcore-30's note) previously collapsed `Use`/`Default`/`Derive` into the single tuple-free `ItOther`, which was faithful for `collect_tuple_arities` (none of the three carry tuple-relevant content) but is NOT faithful for `resolve_imports`, which reads `Item::Use(UsePath)` directly (checkty.rs 1423-1533). `Default`/`Derive` remain folded into `ItOther` (still tuple-free and not read by resolve_imports). | Empirical/Declared |
-| `compiler.semcore::Item::ItType` | ctor | `lib/compiler/semcore.myc:2083` | `ItType(TypeDecl)` | — | Empirical/Declared |
-| `compiler.semcore::Item::ItFn` | ctor | `lib/compiler/semcore.myc:2084` | `ItFn(FnDecl)` | — | Empirical/Declared |
-| `compiler.semcore::Item::ItTrait` | ctor | `lib/compiler/semcore.myc:2085` | `ItTrait(TraitDecl)` | — | Empirical/Declared |
-| `compiler.semcore::Item::ItImpl` | ctor | `lib/compiler/semcore.myc:2086` | `ItImpl(ImplDecl)` | — | Empirical/Declared |
-| `compiler.semcore::Item::ItObject` | ctor | `lib/compiler/semcore.myc:2087` | `ItObject(ObjectDecl)` | — | Empirical/Declared |
-| `compiler.semcore::Item::ItLower` | ctor | `lib/compiler/semcore.myc:2088` | `ItLower(LowerDecl)` | — | Empirical/Declared |
-| `compiler.semcore::Item::ItInherentImpl` | ctor | `lib/compiler/semcore.myc:2089` | `ItInherentImpl(InherentImplDecl)` | — | Empirical/Declared |
-| `compiler.semcore::Item::ItUse` | ctor | `lib/compiler/semcore.myc:2090` | `ItUse(UsePath)` | — | Empirical/Declared |
-| `compiler.semcore::Item::ItOther` | ctor | `lib/compiler/semcore.myc:2091` | `ItOther` | — | Empirical/Declared |
-| `compiler.semcore::Nodule` | type | `lib/compiler/semcore.myc:2092` | `type Nodule = Nod(Path, Bool, Vec[Item])` | — | Empirical/Declared |
-| `compiler.semcore::Nodule::Nod` | ctor | `lib/compiler/semcore.myc:2092` | `Nod(Path, Bool, Vec[Item])` | — | Empirical/Declared |
-| `compiler.semcore::nodule_items` | fn | `lib/compiler/semcore.myc:2094` | `fn nodule_items(n: Nodule) => Vec[Item]` | — | Empirical/Declared |
-| `compiler.semcore::collect_tuple_arities_typeref` | fn | `lib/compiler/semcore.myc:2112` | `fn collect_tuple_arities_typeref(t: TypeRef, acc: Vec[Binary{32}]) => Vec[Binary{32}]` | `_typeref` / `_trefs` / `_ctors` (below) are unchanged from PR-2 — already arm-for-arm faithful to checkty.rs::collect_tuple_arities_typeref and its list folds; the new `_sig` / `_pattern` / `_expr` / `_item` legs reuse them. | Empirical/Declared |
-| `compiler.semcore::collect_tuple_arities_trefs` | fn | `lib/compiler/semcore.myc:2121` | `fn collect_tuple_arities_trefs(acc: Vec[Binary{32}], ts: Vec[TypeRef]) => Vec[Binary{32}]` | — | Empirical/Declared |
-| `compiler.semcore::collect_tuple_arities_ctors` | fn | `lib/compiler/semcore.myc:2127` | `fn collect_tuple_arities_ctors(acc: Vec[Binary{32}], cs: Vec[Ctor]) => Vec[Binary{32}]` | — | Empirical/Declared |
-| `compiler.semcore::expr_len` | fn | `lib/compiler/semcore.myc:2135` | `fn expr_len(v: Vec[Expr]) => Binary{32}` | expr_len / pattern_len: monomorphic length counters (Vec[Expr] / Vec[Pattern]) — the tuple-literal / tuple-pattern arity (mirrors Rust's `elems.len()` / `subs.len()`; the tref_len/pat_len twins). | Empirical/Declared |
-| `compiler.semcore::pattern_len` | fn | `lib/compiler/semcore.myc:2138` | `fn pattern_len(v: Vec[Pattern]) => Binary{32}` | — | Empirical/Declared |
-| `compiler.semcore::collect_tuple_arities_params` | fn | `lib/compiler/semcore.myc:2142` | `fn collect_tuple_arities_params(acc: Vec[Binary{32}], ps: Vec[Param]) => Vec[Binary{32}]` | — | Empirical/Declared |
-| `compiler.semcore::collect_tuple_arities_sig` | fn | `lib/compiler/semcore.myc:2148` | `fn collect_tuple_arities_sig(acc: Vec[Binary{32}], sig: FnSig) => Vec[Binary{32}]` | — | Empirical/Declared |
-| `compiler.semcore::collect_tuple_arities_sigs` | fn | `lib/compiler/semcore.myc:2151` | `fn collect_tuple_arities_sigs(acc: Vec[Binary{32}], sigs: Vec[FnSig]) => Vec[Binary{32}]` | — | Empirical/Declared |
-| `compiler.semcore::collect_tuple_arities_pattern` | fn | `lib/compiler/semcore.myc:2160` | `fn collect_tuple_arities_pattern(acc: Vec[Binary{32}], p: Pattern) => Vec[Binary{32}]` | — | Empirical/Declared |
-| `compiler.semcore::collect_tuple_arities_patterns` | fn | `lib/compiler/semcore.myc:2170` | `fn collect_tuple_arities_patterns(acc: Vec[Binary{32}], ps: Vec[Pattern]) => Vec[Binary{32}]` | — | Empirical/Declared |
-| `compiler.semcore::collect_tuple_arities_opt_typeref` | fn | `lib/compiler/semcore.myc:2177` | `fn collect_tuple_arities_opt_typeref(acc: Vec[Binary{32}], oty: Option[TypeRef]) => Vec[Binary{32}]` | collect_tuple_arities_opt_typeref: the `if let Some(t) = ty` guard on the `Let` arm's ascription. | Empirical/Declared |
-| `compiler.semcore::collect_tuple_arities_expr` | fn | `lib/compiler/semcore.myc:2184` | `fn collect_tuple_arities_expr(acc: Vec[Binary{32}], e: Expr) => Vec[Binary{32}]` | — | Empirical/Declared |
-| `compiler.semcore::collect_tuple_arities_exprs` | fn | `lib/compiler/semcore.myc:2217` | `fn collect_tuple_arities_exprs(acc: Vec[Binary{32}], es: Vec[Expr]) => Vec[Binary{32}]` | — | Empirical/Declared |
-| `compiler.semcore::collect_tuple_arities_arm` | fn | `lib/compiler/semcore.myc:2223` | `fn collect_tuple_arities_arm(acc: Vec[Binary{32}], a: Arm) => Vec[Binary{32}]` | — | Empirical/Declared |
-| `compiler.semcore::collect_tuple_arities_arms` | fn | `lib/compiler/semcore.myc:2226` | `fn collect_tuple_arities_arms(acc: Vec[Binary{32}], arms: Vec[Arm]) => Vec[Binary{32}]` | — | Empirical/Declared |
-| `compiler.semcore::collect_tuple_arities_hyphae` | fn | `lib/compiler/semcore.myc:2232` | `fn collect_tuple_arities_hyphae(acc: Vec[Binary{32}], hs: Vec[Hypha]) => Vec[Binary{32}]` | — | Empirical/Declared |
-| `compiler.semcore::collect_tuple_arities_fndecl` | fn | `lib/compiler/semcore.myc:2240` | `fn collect_tuple_arities_fndecl(acc: Vec[Binary{32}], fd: FnDecl) => Vec[Binary{32}]` | — | Empirical/Declared |
-| `compiler.semcore::collect_tuple_arities_fndecls` | fn | `lib/compiler/semcore.myc:2243` | `fn collect_tuple_arities_fndecls(acc: Vec[Binary{32}], fds: Vec[FnDecl]) => Vec[Binary{32}]` | — | Empirical/Declared |
-| `compiler.semcore::collect_tuple_arities_impl` | fn | `lib/compiler/semcore.myc:2249` | `fn collect_tuple_arities_impl(acc: Vec[Binary{32}], id: ImplDecl) => Vec[Binary{32}]` | — | Empirical/Declared |
-| `compiler.semcore::collect_tuple_arities_impls` | fn | `lib/compiler/semcore.myc:2254` | `fn collect_tuple_arities_impls(acc: Vec[Binary{32}], ids: Vec[ImplDecl]) => Vec[Binary{32}]` | — | Empirical/Declared |
-| `compiler.semcore::collect_tuple_arities_item` | fn | `lib/compiler/semcore.myc:2263` | `fn collect_tuple_arities_item(acc: Vec[Binary{32}], it: Item) => Vec[Binary{32}]` | collect_tuple_arities_item: checkty.rs::collect_tuple_arities_item, arm-for-arm. `ItOther` (Use / Default / Derive) is the oracle's `=> {}` no-op. Object/InherentImpl are pre-desugared in the real pipeline (see the mirror header above) but ported faithfully for a raw-nodule caller. | Empirical/Declared |
-| `compiler.semcore::collect_tuple_arities` | fn | `lib/compiler/semcore.myc:2286` | `fn collect_tuple_arities(items: Vec[Item], acc: Vec[Binary{32}]) => Vec[Binary{32}]` | collect_tuple_arities: the FULL walk — every item's tuple-relevant content (checkty.rs §793). | Empirical/Declared |
-| `compiler.semcore::register_tuple_arities` | fn | `lib/compiler/semcore.myc:2295` | `fn register_tuple_arities(types: Vec[DataInfo], arities: Vec[Binary{32}]) => Vec[DataInfo]` | register_tuple_arities: pre-register a synthetic `Tuple$N` for each collected arity, but only if absent (checkty.rs's `types.entry(tname).or_insert_with(\|\| synthetic_tuple_data(arity))`). A duplicate arity in `arities` is a no-op the second time (the presence check dedups it). | Empirical/Declared |
-| `compiler.semcore::register_shells` | fn | `lib/compiler/semcore.myc:2311` | `fn register_shells(types: Vec[DataInfo], items: Vec[Item]) => Result[Vec[DataInfo], Bytes]` | register_shells: Pass 1 — a shell `DI(name, params, Nil)` per `Item::Type` so recursive/forward field references resolve (checkty.rs's first loop). Never-silent refusals, in Rust's exact order: a duplicate type PARAMETER (`first_duplicate`) is checked FIRST, then a duplicate type NAME (`types_lookup` over the accumulated registry — which includes the seeded prelude, so redeclaring `Bool` collides exactly as in Rust). EVERY non-Type item is skipped — the faithful mirror of the oracle's `if let Item::Type(td) = item` (only a type declaration declares a data type; the un-trimmed Fn/Trait/Impl/Object/Lower/InherentImpl/`ItOther` kinds are all non-declarations here). | Empirical/Declared |
-| `compiler.semcore::types_set_ctors` | fn | `lib/compiler/semcore.myc:2331` | `fn types_set_ctors(types: Vec[DataInfo], name: Bytes, ctors: Vec[CtorInfo]) => Vec[DataInfo]` | types_set_ctors: replace the ctors of the (shell) entry named `name`, preserving its params — checkty.rs's `types.get_mut(&td.name).expect("registered above").ctors = ctors`. `register_shells` registered every `Item::Type`, so `name` is always present; a not-found (invariant-impossible) entry leaves the list unchanged (the wild-free, value-threaded analogue of Rust's `.expect`: no panic, no silent fabrication — G2). | Empirical/Declared |
-| `compiler.semcore::fill_ctors` | fn | `lib/compiler/semcore.myc:2343` | `fn fill_ctors(types: Vec[DataInfo], items: Vec[Item]) => Result[Vec[DataInfo], Bytes]` | fill_ctors: Pass 2 — resolve each `Item::Type`'s ctors (all shells now present) and write them into the registry (checkty.rs's second loop). Never-silent: any field-resolution or duplicate-ctor failure short-circuits to `Err` (reusing PR-1's `resolve_ctors`). | Empirical/Declared |
-| `compiler.semcore::register_types` | fn | `lib/compiler/semcore.myc:2359` | `fn register_types(types: Vec[DataInfo], nod: Nodule) => Result[Vec[DataInfo], Bytes]` | register_types: the two-pass data-declaration registration, value-threaded over the assoc-list registry (checkty.rs::register_types). Order matches Rust exactly: (0) the FULL M-826 tuple pre-pass (all legs — FLAG-semcore-30 CLOSED, PR-2b), (1) shell-register each type, (2) fill each type's ctors. Returns the mutated registry or the first never-silent refusal. | Empirical/Declared |
-| `compiler.semcore::TraitInfo` | type | `lib/compiler/semcore.myc:2389` | `type TraitInfo = TrInfo(Bytes, Vec[Bytes], Vec[FnSig])` | TraitInfo: mirrors checkty.rs::TraitInfo (264-272) — { name, params (tyvar names), sigs (SURFACE FnSigs, stored verbatim) }. Modeled as a presence-checked `Vec[TraitInfo]` keyed by name, exactly as `register_types`' output is a `Vec[DataInfo]` (NOT a map). | Empirical/Declared |
-| `compiler.semcore::TraitInfo::TrInfo` | ctor | `lib/compiler/semcore.myc:2389` | `TrInfo(Bytes, Vec[Bytes], Vec[FnSig])` | — | Empirical/Declared |
-| `compiler.semcore::trinfo_name` | fn | `lib/compiler/semcore.myc:2391` | `fn trinfo_name(t: TraitInfo) => Bytes` | — | Empirical/Declared |
-| `compiler.semcore::trinfo_sigs` | fn | `lib/compiler/semcore.myc:2394` | `fn trinfo_sigs(t: TraitInfo) => Vec[FnSig]` | — | Empirical/Declared |
-| `compiler.semcore::trd_name` | fn | `lib/compiler/semcore.myc:2399` | `fn trd_name(t: TraitDecl) => Bytes` | TraitDecl accessors: name (field 1) / params (field 2). `trd_sigs` (field 3) already exists above; `td_name`/`td_params` are TypeDecl's, so TraitDecl needs its own (distinct ADT). | Empirical/Declared |
-| `compiler.semcore::trd_params` | fn | `lib/compiler/semcore.myc:2402` | `fn trd_params(t: TraitDecl) => Vec[Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::fnsig_type_params` | fn | `lib/compiler/semcore.myc:2407` | `fn fnsig_type_params(s: FnSig) => Vec[TypeParam]` | FnSig type-params accessor (FS field 1) — the 3 grade accessors above (name/value_params/ret) omitted it as unused; the trait pass needs it (method type-params → tyvar scope + bound checks). | Empirical/Declared |
-| `compiler.semcore::tp_name` | fn | `lib/compiler/semcore.myc:2411` | `fn tp_name(t: TypeParam) => Bytes` | TypeParam / TraitRef accessors (checkty.rs reads `tp.name` / `tp.kind` / `tp.bounds` / `b.name`). | Empirical/Declared |
-| `compiler.semcore::tp_kind` | fn | `lib/compiler/semcore.myc:2414` | `fn tp_kind(t: TypeParam) => ParamKind` | — | Empirical/Declared |
-| `compiler.semcore::tp_bounds` | fn | `lib/compiler/semcore.myc:2417` | `fn tp_bounds(t: TypeParam) => Vec[TraitRef]` | — | Empirical/Declared |
-| `compiler.semcore::traitref_name` | fn | `lib/compiler/semcore.myc:2420` | `fn traitref_name(r: TraitRef) => Bytes` | — | Empirical/Declared |
-| `compiler.semcore::fnsig_tyvar_names` | fn | `lib/compiler/semcore.myc:2427` | `fn fnsig_tyvar_names(s: FnSig) => Vec[Bytes]` | fnsig_tyvar_names: mirrors FnSig::param_names (ast.rs 447-460) — the method's TYPE-kind type-param names only (width params are dropped; they cannot stand in the tyvar scope, DN-42 §7). Distinct from the value-parameter `param_names(Vec[Param])` above (that maps `Vec[Param]`; this filters `Vec[TypeParam]` by `PkType`). | Empirical/Declared |
-| `compiler.semcore::type_param_type_names` | fn | `lib/compiler/semcore.myc:2430` | `fn type_param_type_names(tps: Vec[TypeParam]) => Vec[Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::traits_contains` | fn | `lib/compiler/semcore.myc:2440` | `fn traits_contains(traits: Vec[TraitInfo], name: Bytes) => Bool` | traits_contains: `traits.contains_key(name)` over the assoc-list registry (set membership by name). | Empirical/Declared |
-| `compiler.semcore::check_sig_resolves` | fn | `lib/compiler/semcore.myc:2452` | `fn check_sig_resolves(types: Vec[DataInfo], tyvars: Vec[Bytes], sig: FnSig) => Result[Bool, Bytes]` | check_sig_resolves: checkty.rs 3088-3099 — every value-param type, then the ret, must `resolve_ty` under `tyvars`; `Ok(True)` (a unit sentinel; the resolved types + their guarantee slot are discarded exactly as Rust's `resolve_ty(...)?` ignores its value) or the FIRST `Err`. | Empirical/Declared |
-| `compiler.semcore::check_params_resolve` | fn | `lib/compiler/semcore.myc:2461` | `fn check_params_resolve(types: Vec[DataInfo], tyvars: Vec[Bytes], params: Vec[Param]) => Result[Bool, Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::register_traits` | fn | `lib/compiler/semcore.myc:2471` | `fn register_traits(types: Vec[DataInfo], nod: Nodule) => Result[Vec[TraitInfo], Bytes]` | register_traits: the two-pass entry (checkty.rs 3016-3083). Returns the registry or the first refusal. | Empirical/Declared |
-| `compiler.semcore::register_traits_pass1` | fn | `lib/compiler/semcore.myc:2483` | `fn register_traits_pass1(types: Vec[DataInfo], acc: Vec[TraitInfo], items: Vec[Item]) => Result[Vec[TraitInfo], Bytes]` | PASS 1 — checkty.rs 3021-3057. Every non-Trait item is skipped (the mirror of `let Item::Trait(td) = item else { continue }`); each trait's checks run in the oracle's order (dup param -> dup name -> method checks -> insert). | Empirical/Declared |
-| `compiler.semcore::check_trait_methods` | fn | `lib/compiler/semcore.myc:2503` | `fn check_trait_methods(types: Vec[DataInfo], trait_name: Bytes, params: Vec[Bytes], seen: Vec[Bytes], sigs: Vec[FnSig]) => Result[Bool, Bytes]` | check_trait_methods: the within-trait method loop (checkty.rs 3034-3048). `seen` tracks distinct method names; each sig resolves with `tyvars = trait.params ++ method.param_names()` (3045-3046). | Empirical/Declared |
-| `compiler.semcore::register_traits_bounds` | fn | `lib/compiler/semcore.myc:2518` | `fn register_traits_bounds(all: Vec[TraitInfo], traits: Vec[TraitInfo]) => Result[Bool, Bytes]` | PASS 2 — checkty.rs 3063-3081. Over the COMPLETE registry (`all`), so a bound may forward-reference a later-declared trait. Every method type-parameter bound must name a KNOWN trait, else an explicit refusal naming the site + the offending bound (mirroring the oracle's message shape). | Empirical/Declared |
-| `compiler.semcore::check_trait_sig_bounds` | fn | `lib/compiler/semcore.myc:2527` | `fn check_trait_sig_bounds(all: Vec[TraitInfo], trname: Bytes, sigs: Vec[FnSig]) => Result[Bool, Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::check_sig_tp_bounds` | fn | `lib/compiler/semcore.myc:2536` | `fn check_sig_tp_bounds(all: Vec[TraitInfo], trname: Bytes, method: Bytes, tps: Vec[TypeParam]) => Result[Bool, Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::unknown_bound_msg` | fn | `lib/compiler/semcore.myc:2548` | `fn unknown_bound_msg(trname: Bytes, method: Bytes, pname: Bytes, bound: Bytes) => Bytes` | unknown_bound_msg: the never-silent refusal text for pass 2 (checkty.rs 3068-3076) — names the site (`trait <T> method <m>`) and the offending bound (`<param>: <bound>`). Built in `let`-pieces to keep the concatenation legibly balanced. | Empirical/Declared |
-| `compiler.semcore::check_tp_bounds` | fn | `lib/compiler/semcore.myc:2554` | `fn check_tp_bounds(all: Vec[TraitInfo], trname: Bytes, method: Bytes, pname: Bytes, bounds: Vec[TraitRef]) => Result[Bool, Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::InstanceInfo` | type | `lib/compiler/semcore.myc:2593` | `type InstanceInfo = InstInfo(Bytes, Vec[Ty], Ty, Vec[Bytes])` | InstanceInfo: mirrors checkty.rs::InstanceInfo (277-286) -- { trait_name, trait_args (concrete Ty), for_ty (concrete Ty), methods (provided method names) }. Modeled as a presence-checked `Vec[InstanceInfo]` keyed by `(trait_name, type_head(for_ty))`, exactly as the other register-family outputs are Vecs (NOT maps). | Empirical/Declared |
-| `compiler.semcore::InstanceInfo::InstInfo` | ctor | `lib/compiler/semcore.myc:2593` | `InstInfo(Bytes, Vec[Ty], Ty, Vec[Bytes])` | — | Empirical/Declared |
-| `compiler.semcore::instinfo_trait_name` | fn | `lib/compiler/semcore.myc:2595` | `fn instinfo_trait_name(i: InstanceInfo) => Bytes` | — | Empirical/Declared |
-| `compiler.semcore::instinfo_for_ty` | fn | `lib/compiler/semcore.myc:2598` | `fn instinfo_for_ty(i: InstanceInfo) => Ty` | — | Empirical/Declared |
-| `compiler.semcore::CoherenceView` | type | `lib/compiler/semcore.myc:2605` | `type CoherenceView = CV(Vec[Bytes], Vec[Bytes])` | CoherenceView: mirrors checkty.rs::CoherenceView (1318-1323) -- the pub-blind phylum-wide name view the orphan rule reads: (all trait names, all data-type names), each a `Vec[Bytes]` name-list (the FLAG-semcore-4 assoc-list stand-in for the oracle's two `BTreeSet<String>`; membership via `names_contains`). | Empirical/Declared |
-| `compiler.semcore::CoherenceView::CV` | ctor | `lib/compiler/semcore.myc:2605` | `CV(Vec[Bytes], Vec[Bytes])` | — | Empirical/Declared |
-| `compiler.semcore::cv_traits` | fn | `lib/compiler/semcore.myc:2607` | `fn cv_traits(c: CoherenceView) => Vec[Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::cv_types` | fn | `lib/compiler/semcore.myc:2610` | `fn cv_types(c: CoherenceView) => Vec[Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::imd_trait_name` | fn | `lib/compiler/semcore.myc:2615` | `fn imd_trait_name(i: ImplDecl) => Bytes` | ImplDecl trait-name accessor (ImD field 1) -- the register-family tuple pre-pass read only args/for_ty/methods; the impl pass needs the trait name (lookup + instance key + messages). | Empirical/Declared |
-| `compiler.semcore::trinfo_params` | fn | `lib/compiler/semcore.myc:2619` | `fn trinfo_params(t: TraitInfo) => Vec[Bytes]` | TraitInfo params accessor (TrInfo field 2) -- the trait pass registered it; the arity check reads it. | Empirical/Declared |
-| `compiler.semcore::traits_lookup` | fn | `lib/compiler/semcore.myc:2624` | `fn traits_lookup(traits: Vec[TraitInfo], name: Bytes) => Option[TraitInfo]` | traits_lookup: `traits.get(name)` over the assoc-list registry (the ENTRY, not just membership -- register_instances needs the `TraitInfo` for the arity + method-set checks). | Empirical/Declared |
-| `compiler.semcore::impl_method_names` | fn | `lib/compiler/semcore.myc:2636` | `fn impl_method_names(id: ImplDecl) => Vec[Bytes]` | impl_method_names / trait_required_names: the impl's provided method NAMES (`m.sig.name`, i.e. `fnsig_name(fndecl_sig(m))`) and the trait's required method NAMES (`s.name` over the trait's sigs) -- the two name-sets `check_impl_method_set` compares (checkty.rs 3245-3248). | Empirical/Declared |
-| `compiler.semcore::method_sig_names` | fn | `lib/compiler/semcore.myc:2639` | `fn method_sig_names(ms: Vec[FnDecl]) => Vec[Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::trait_required_names` | fn | `lib/compiler/semcore.myc:2645` | `fn trait_required_names(sigs: Vec[FnSig]) => Vec[Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::check_impl_method_set` | fn | `lib/compiler/semcore.myc:2656` | `fn check_impl_method_set(tr: TraitInfo, id: ImplDecl) => Result[Bool, Bytes]` | check_impl_method_set: the impl's method SET must EXACTLY match the trait's requirement SET (checkty.rs::check_impl_method_set 3243-3284). In the oracle's ORDER: (a) every required name is provided (else "missing method"); (b) every provided name is required (else "has method ... not in trait"); (c) no provided name appears twice (else "provides ... more than once"). All three are explicit never-silent refusals (G2) -- never a silently-filled or silently-dropped method. | Empirical/Declared |
-| `compiler.semcore::check_methods_present` | fn | `lib/compiler/semcore.myc:2671` | `fn check_methods_present(trname: Bytes, required: Vec[Bytes], provided: Vec[Bytes]) => Result[Bool, Bytes]` | (a) every required method name must be present in `provided` (checkty.rs 3249-3256). | Empirical/Declared |
-| `compiler.semcore::check_methods_no_extra` | fn | `lib/compiler/semcore.myc:2681` | `fn check_methods_no_extra(trname: Bytes, required: Vec[Bytes], provided: Vec[Bytes]) => Result[Bool, Bytes]` | (b) every provided method name must be required -- no extra methods (checkty.rs 3257-3267). | Empirical/Declared |
-| `compiler.semcore::type_local` | fn | `lib/compiler/semcore.myc:2695` | `fn type_local(coherence_types: Vec[Bytes], for_ty: Ty) => Bool` | type_local: the orphan rule's `type_local` arm (checkty.rs 3182-3198), matching the `for_ty` variant EXACTLY as the oracle -- a `Data` head is local iff its name is in coherence.types; every primitive repr (Binary/Ternary/Dense/Vsa/Substrate/Seq/Bytes/Float) is phylum-owned (always true); `Var`/`Fn` are not legal heads (false -- kept for exhaustiveness, never a silent accept, G2; `type_head` refuses them upstream so these two arms are unreachable in practice). | Empirical/Declared |
-| `compiler.semcore::orphan_ok` | fn | `lib/compiler/semcore.myc:2711` | `fn orphan_ok(coherence: CoherenceView, trait_name: Bytes, for_ty: Ty) => Bool` | orphan_ok: legal iff trait_local OR type_local (checkty.rs 3181-3199). | Empirical/Declared |
-| `compiler.semcore::instance_head_eq` | fn | `lib/compiler/semcore.myc:2720` | `fn instance_head_eq(for_ty: Ty, head: Bytes) => Bool` | instance_head_eq: does `for_ty`'s head equal `head`? A stored instance always has a `Some` head (it passed the type_head check), so the `None` arm is an unreachable-in-practice `False` -- never a silent match (G2). | Empirical/Declared |
-| `compiler.semcore::instances_contains_key` | fn | `lib/compiler/semcore.myc:2729` | `fn instances_contains_key(acc: Vec[InstanceInfo], trait_name: Bytes, head: Bytes) => Bool` | instances_contains_key: `instances.contains_key((trait_name, head))` over the assoc-list registry -- the global-uniqueness scan (checkty.rs 3213-3214). The stored `(trait, head)` is recomputed from the instance's `for_ty` (the registry keeps the full for_ty, not the erased head). | Empirical/Declared |
-| `compiler.semcore::register_instances` | fn | `lib/compiler/semcore.myc:2741` | `fn register_instances(types: Vec[DataInfo], traits: Vec[TraitInfo], coherence: CoherenceView, nod: Nodule) => Result[Vec[InstanceInfo], Bytes]` | register_instances: the two-level loop (checkty.rs 3130-3237). Returns the instance registry or the FIRST refusal. `register_one_instance` threads the accumulated registry so the uniqueness scan sees earlier-registered instances (the oracle's growing `BTreeMap`). | Empirical/Declared |
-| `compiler.semcore::register_instances_go` | fn | `lib/compiler/semcore.myc:2744` | `fn register_instances_go(types: Vec[DataInfo], traits: Vec[TraitInfo], coherence: CoherenceView, acc: Vec[InstanceInfo], items: Vec[Item]) => Result[Vec[InstanceInfo], Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::register_one_instance` | fn | `lib/compiler/semcore.myc:2758` | `fn register_one_instance(types: Vec[DataInfo], traits: Vec[TraitInfo], coherence: CoherenceView, acc: Vec[InstanceInfo], id: ImplDecl) => Result[Vec[InstanceInfo], Bytes]` | register_one_instance: the per-impl body (checkty.rs 3132-3235) -- the eight checks in the oracle's EXACT order. `resolve_ty`'s guarantee slot is discarded (`let (for_ty, _) = ..`), matching the oracle. | Empirical/Declared |
-| `compiler.semcore::arity_mismatch_msg` | fn | `lib/compiler/semcore.myc:2789` | `fn arity_mismatch_msg(trname: Bytes, want: Binary{32}, got: Binary{32}) => Bytes` | The three never-silent refusal messages, mirroring the oracle's site + reason wording (checkty.rs 3152-3163 / 3199-3209 / 3214-3224). Built in `bytes_concat` pieces (the file's established idiom). | Empirical/Declared |
-| `compiler.semcore::orphan_msg` | fn | `lib/compiler/semcore.myc:2792` | `fn orphan_msg(trname: Bytes) => Bytes` | — | Empirical/Declared |
-| `compiler.semcore::overlapping_msg` | fn | `lib/compiler/semcore.myc:2795` | `fn overlapping_msg(trname: Bytes, head: Bytes) => Bytes` | — | Empirical/Declared |
-| `compiler.semcore::same_ty_len` | fn | `lib/compiler/semcore.myc:2800` | `fn same_ty_len(a: Vec[Ty], b: Vec[Ty]) => Bool` | — | Empirical/Declared |
-| `compiler.semcore::unify_eq_or_mismatch` | fn | `lib/compiler/semcore.myc:2808` | `fn unify_eq_or_mismatch(decl: Ty, actual: Ty, s: Vec[Pair[Bytes, Ty]]) => Result[Vec[Pair[Bytes, Ty]], Bytes]` | The `_ if decl == actual` fallback (arm 8) + the `_ => Err` mismatch (arm 9), and the collapsed FLAG-semcore-14 dead arm: an unhandled pair unifies iff it is already structurally equal. | Empirical/Declared |
-| `compiler.semcore::unify_var` | fn | `lib/compiler/semcore.myc:2816` | `fn unify_var(v: Bytes, actual: Ty, s: Vec[Pair[Bytes, Ty]]) => Result[Vec[Pair[Bytes, Ty]], Bytes]` | unify_var: the `(Ty::Var(v), _)` arm — a prior binding to a DIFFERENT type is a never-silent conflict; otherwise bind `v -> actual` (VR-5/G2). | Empirical/Declared |
-| `compiler.semcore::unify_width_carrier` | fn | `lib/compiler/semcore.myc:2828` | `fn unify_width_carrier(v: Bytes, carrier: Ty, s: Vec[Pair[Bytes, Ty]]) => Result[Vec[Pair[Bytes, Ty]], Bytes]` | unify_width_carrier: the shared width-var binding logic. The carrier is ALWAYS a `TyBinary` (`WdLit(n)` for a concrete width, `WdVar(v2)` for a width-var) regardless of the paradigm — the DN-42/M-753 carrier convention `subst_ty` reads back. A conflicting prior binding is never-silent. | Empirical/Declared |
-| `compiler.semcore::unify_binary_width` | fn | `lib/compiler/semcore.myc:2840` | `fn unify_binary_width(v: Bytes, actual: Ty, decl: Ty, s: Vec[Pair[Bytes, Ty]]) => Result[Vec[Pair[Bytes, Ty]], Bytes]` | unify_width: a width-var `decl` (Binary or Ternary) against an actual of the SAME paradigm. A concrete-width actual binds `v -> TyBinary(WdLit(n))`; a width-var actual binds `v -> TyBinary(WdVar(v2))`. Any cross-paradigm / non-width actual falls through to eq/mismatch. | Empirical/Declared |
-| `compiler.semcore::unify_ternary_width` | fn | `lib/compiler/semcore.myc:2849` | `fn unify_ternary_width(v: Bytes, actual: Ty, decl: Ty, s: Vec[Pair[Bytes, Ty]]) => Result[Vec[Pair[Bytes, Ty]], Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::unify` | fn | `lib/compiler/semcore.myc:2858` | `fn unify(decl: Ty, actual: Ty, s: Vec[Pair[Bytes, Ty]]) => Result[Vec[Pair[Bytes, Ty]], Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::unify_list` | fn | `lib/compiler/semcore.myc:2891` | `fn unify_list(a1: Vec[Ty], a2: Vec[Ty], s: Vec[Pair[Bytes, Ty]]) => Result[Vec[Pair[Bytes, Ty]], Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::three32` | fn | `lib/compiler/semcore.myc:2934` | `fn three32() => Binary{32}` | — | Empirical/Declared |
-| `compiler.semcore::replace_dash_at` | fn | `lib/compiler/semcore.myc:2939` | `fn replace_dash_at(s: Bytes, i: Binary{32}, n: Binary{32}) => Bytes` | replace_dash: `model.replace('-', '_')` (the VSA kernel-model-id fragment is `$`-joined and its `-` — not an identifier char — maps to `_`; injective over the model-id alphabet). O(len) over the short model id via 1-char slices. | Empirical/Declared |
-| `compiler.semcore::replace_dash` | fn | `lib/compiler/semcore.myc:2949` | `fn replace_dash(s: Bytes) => Bytes` | — | Empirical/Declared |
-| `compiler.semcore::strip_fn_prefix` | fn | `lib/compiler/semcore.myc:2952` | `fn strip_fn_prefix(a: Bytes) => Bytes` | strip_fn_prefix: `arrow.strip_prefix("Fn$").unwrap_or(arrow)` — strip a leading "Fn$" if present. | Empirical/Declared |
-| `compiler.semcore::scalar_tag` | fn | `lib/compiler/semcore.myc:2962` | `fn scalar_tag(s: Scalar) => Bytes` | — | Empirical/Declared |
-| `compiler.semcore::vsa_sp_tag` | fn | `lib/compiler/semcore.myc:2966` | `fn vsa_sp_tag(sp: Sparsity) => Bytes` | vsa_sp_tag: the VSA sparsity fragment (`Dense` -> "Dn", `Sparse(k)` -> "Sp{k}"). | Empirical/Declared |
-| `compiler.semcore::mangle_ty_args` | fn | `lib/compiler/semcore.myc:2971` | `fn mangle_ty_args(args: Vec[Ty]) => Bytes` | mangle_ty_args: the `$`-joined argument fragments of an applied data type / a decl's type args (`for a in args { push('$'); push(mangle_ty(a)) }`). | Empirical/Declared |
-| `compiler.semcore::mangle_ty` | fn | `lib/compiler/semcore.myc:2978` | `fn mangle_ty(t: Ty) => Bytes` | — | Empirical/Declared |
-| `compiler.semcore::mangle_decl` | fn | `lib/compiler/semcore.myc:2998` | `fn mangle_decl(name: Bytes, targs: Vec[Ty]) => Bytes` | — | Empirical/Declared |
-| `compiler.semcore::mangle_ctor` | fn | `lib/compiler/semcore.myc:3001` | `fn mangle_ctor(name: Bytes, targs: Vec[Ty]) => Bytes` | — | Empirical/Declared |
-| `compiler.semcore::mangle_method` | fn | `lib/compiler/semcore.myc:3004` | `fn mangle_method(method: Bytes, trait_name: Bytes, for_ty: Ty) => Bytes` | — | Empirical/Declared |
-| `compiler.semcore::mangle_ty_or_fn` | fn | `lib/compiler/semcore.myc:3010` | `fn mangle_ty_or_fn(t: Ty) => Bytes` | — | Empirical/Declared |
-| `compiler.semcore::mangle_arrow` | fn | `lib/compiler/semcore.myc:3013` | `fn mangle_arrow(a: Ty, b: Ty) => Bytes` | — | Empirical/Declared |
-| `compiler.semcore::apply_fn_name` | fn | `lib/compiler/semcore.myc:3017` | `fn apply_fn_name(arrow: Bytes) => Bytes` | apply_fn_name: the dispatcher name for an arrow mangle `Fn$A$B` -> `apply$A$B`. | Empirical/Declared |
-| `compiler.semcore::warg_tag` | fn | `lib/compiler/semcore.myc:3022` | `fn warg_tag(w: Width) => Bytes` | — | Empirical/Declared |
-| `compiler.semcore::warg_joints` | fn | `lib/compiler/semcore.myc:3025` | `fn warg_joints(wargs: Vec[Width]) => Bytes` | — | Empirical/Declared |
-| `compiler.semcore::mangle_decl_with_wargs` | fn | `lib/compiler/semcore.myc:3028` | `fn mangle_decl_with_wargs(name: Bytes, targs: Vec[Ty], wargs: Vec[Width]) => Bytes` | — | Empirical/Declared |
-| `compiler.semcore::pairs_is_empty` | fn | `lib/compiler/semcore.myc:3032` | `fn pairs_is_empty(p: Vec[Pair[Binary{32}, Bytes]]) => Bool` | pairs_is_empty: the `fn_args.is_empty() && dyn_fns.is_empty()` guard (over Vec[Pair[u32, Bytes]]). | Empirical/Declared |
-| `compiler.semcore::hof_fn_joints` | fn | `lib/compiler/semcore.myc:3036` | `fn hof_fn_joints(fa: Vec[Pair[Binary{32}, Bytes]]) => Bytes` | hof_fn_joints: the static fn-argument segments `%{idx}:{callee}` (the `%` fresh-var joint). | Empirical/Declared |
-| `compiler.semcore::hof_dyn_joints` | fn | `lib/compiler/semcore.myc:3044` | `fn hof_dyn_joints(df: Vec[Pair[Binary{32}, Bytes]]) => Bytes` | hof_dyn_joints: the dynamic (kept-closure) fn-argument segments `~{idx}:{arrow}` (the `~` joint). | Empirical/Declared |
-| `compiler.semcore::mangle_hof_decl` | fn | `lib/compiler/semcore.myc:3051` | `fn mangle_hof_decl(name: Bytes, targs: Vec[Ty], wargs: Vec[Width], fa: Vec[Pair[Binary{32}, Bytes]], df: Vec[Pair[Binary{32}, Bytes]]) => Bytes` | — | Empirical/Declared |
-| `compiler.semcore::names_snoc` | fn | `lib/compiler/semcore.myc:3092` | `fn names_snoc(xs: Vec[Bytes], n: Bytes) => Vec[Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::names_append` | fn | `lib/compiler/semcore.myc:3096` | `fn names_append(a: Vec[Bytes], b: Vec[Bytes]) => Vec[Bytes]` | names_append: concatenate two name lists (a pattern's binder-set union across sub-patterns). | Empirical/Declared |
-| `compiler.semcore::ensure_bound` | fn | `lib/compiler/semcore.myc:3100` | `fn ensure_bound(bound: Vec[Bytes], n: Bytes) => Vec[Bytes]` | ensure_bound: `bound.insert(n)` as a set op — add iff absent (an already-bound name is unchanged). | Empirical/Declared |
-| `compiler.semcore::union_names` | fn | `lib/compiler/semcore.myc:3104` | `fn union_names(bound: Vec[Bytes], names: Vec[Bytes]) => Vec[Bytes]` | union_names: extend `bound` by every name in `names` (the arm/lambda/for scope extension). | Empirical/Declared |
-| `compiler.semcore::param_names` | fn | `lib/compiler/semcore.myc:3108` | `fn param_names(params: Vec[Param]) => Vec[Bytes]` | param_names: the value-parameter names of a lambda (Rust `params.iter().map(\|p\| p.name)`). | Empirical/Declared |
-| `compiler.semcore::pattern_binder_names` | fn | `lib/compiler/semcore.myc:3112` | `fn pattern_binder_names(pat: Pattern, depth: Binary{32}) => Result[Vec[Bytes], Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::pattern_binder_names_list` | fn | `lib/compiler/semcore.myc:3125` | `fn pattern_binder_names_list(subs: Vec[Pattern], depth: Binary{32}) => Result[Vec[Bytes], Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::fvw` | fn | `lib/compiler/semcore.myc:3139` | `fn fvw(e: Expr, bound: Vec[Bytes], seen: Vec[Bytes], out: Vec[Bytes], depth: Binary{32}) => Result[Pair[Vec[Bytes], Vec[Bytes]], Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::fvw_list` | fn | `lib/compiler/semcore.myc:3209` | `fn fvw_list(es: Vec[Expr], bound: Vec[Bytes], seen: Vec[Bytes], out: Vec[Bytes], depth: Binary{32}) => Result[Pair[Vec[Bytes], Vec[Bytes]], Bytes]` | fvw_list: walk a Vec[Expr] left-to-right, threading (seen, out) (Lit(List)/App args/TupleLit). | Empirical/Declared |
-| `compiler.semcore::fvw_hyphae` | fn | `lib/compiler/semcore.myc:3219` | `fn fvw_hyphae(hs: Vec[Hypha], bound: Vec[Bytes], seen: Vec[Bytes], out: Vec[Bytes], depth: Binary{32}) => Result[Pair[Vec[Bytes], Vec[Bytes]], Bytes]` | fvw_hyphae: walk each hypha's body (Colony) — forage clauses are not free-var positions here. | Empirical/Declared |
-| `compiler.semcore::fvw_arms` | fn | `lib/compiler/semcore.myc:3230` | `fn fvw_arms(arms: Vec[Arm], bound: Vec[Bytes], seen: Vec[Bytes], out: Vec[Bytes], depth: Binary{32}) => Result[Pair[Vec[Bytes], Vec[Bytes]], Bytes]` | fvw_arms: per arm, extend `bound` by the arm pattern's binder set, walk the arm body; `bound` resets to the match scope between arms (the Rust insert/remove pair, collapsed). | Empirical/Declared |
-| `compiler.semcore::free_vars` | fn | `lib/compiler/semcore.myc:3243` | `fn free_vars(e: Expr) => Result[Vec[Bytes], Bytes]` | free_vars: the pub entry — an empty scope/seen/out, returning the ordered capture list. | Empirical/Declared |
-| `compiler.semcore::Bind` | type | `lib/compiler/semcore.myc:3287` | `type Bind = Bnd(Bytes, Ty, Vec[Binary{32}])` | — | Empirical/Declared |
-| `compiler.semcore::Bind::Bnd` | ctor | `lib/compiler/semcore.myc:3287` | `Bnd(Bytes, Ty, Vec[Binary{32}])` | — | Empirical/Declared |
-| `compiler.semcore::snoc_bind` | fn | `lib/compiler/semcore.myc:3289` | `fn snoc_bind(xs: Vec[Bind], b: Bind) => Vec[Bind]` | — | Empirical/Declared |
-| `compiler.semcore::is_bindigit` | fn | `lib/compiler/semcore.myc:3293` | `fn is_bindigit(ch: Bytes) => Bool` | — | Empirical/Declared |
-| `compiler.semcore::count_bindigits_at` | fn | `lib/compiler/semcore.myc:3297` | `fn count_bindigits_at(s: Bytes, i: Binary{32}, n: Binary{32}) => Binary{32}` | count_bindigits: `s.chars().filter(\|c\| \*c == '0' \|\| \*c == '1').count()` (the binary literal width). | Empirical/Declared |
-| `compiler.semcore::count_bindigits` | fn | `lib/compiler/semcore.myc:3304` | `fn count_bindigits(s: Bytes) => Binary{32}` | — | Empirical/Declared |
-| `compiler.semcore::filter_bindigits_at` | fn | `lib/compiler/semcore.myc:3307` | `fn filter_bindigits_at(s: Bytes, i: Binary{32}, n: Binary{32}) => Bytes` | filter_bindigits: the 0/1 chars of `s` concatenated (the `literal_key` `b:` body). | Empirical/Declared |
-| `compiler.semcore::filter_bindigits` | fn | `lib/compiler/semcore.myc:3314` | `fn filter_bindigits(s: Bytes) => Bytes` | — | Empirical/Declared |
-| `compiler.semcore::filter_no_us_at` | fn | `lib/compiler/semcore.myc:3317` | `fn filter_no_us_at(s: Bytes, i: Binary{32}, n: Binary{32}) => Bytes` | filter_no_underscore: `s.chars().filter(\|c\| \*c != '_')` (the `literal_key` `by:` body). | Empirical/Declared |
-| `compiler.semcore::filter_no_underscore` | fn | `lib/compiler/semcore.myc:3324` | `fn filter_no_underscore(s: Bytes) => Bytes` | — | Empirical/Declared |
-| `compiler.semcore::lit_ty_of` | fn | `lib/compiler/semcore.myc:3327` | `fn lit_ty_of(l: Literal) => Result[Ty, Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::literal_key` | fn | `lib/compiler/semcore.myc:3341` | `fn literal_key(l: Literal) => Bytes` | — | Empirical/Declared |
-| `compiler.semcore::ctor_lookup` | fn | `lib/compiler/semcore.myc:3355` | `fn ctor_lookup(ctors: Vec[CtorInfo], name: Bytes) => Option[CtorInfo]` | — | Empirical/Declared |
-| `compiler.semcore::pat_count` | fn | `lib/compiler/semcore.myc:3362` | `fn pat_count(v: Vec[Pattern]) => Binary{32}` | pat_count: the arity of a sub-pattern list (Vec[Pattern] length). | Empirical/Declared |
-| `compiler.semcore::is_float_lit` | fn | `lib/compiler/semcore.myc:3365` | `fn is_float_lit(l: Literal) => Bool` | — | Empirical/Declared |
-| `compiler.semcore::normalize_lit` | fn | `lib/compiler/semcore.myc:3367` | `fn normalize_lit(lit: Literal, expected: Ty, binds: Vec[Bind]) => Result[Pair[Pat, Vec[Bind]], Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::normalize_ident` | fn | `lib/compiler/semcore.myc:3379` | `fn normalize_ident(types: Vec[DataInfo], n: Bytes, expected: Ty, occ: Vec[Binary{32}], binds: Vec[Bind]) => Result[Pair[Pat, Vec[Bind]], Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::normalize_fields` | fn | `lib/compiler/semcore.myc:3394` | `fn normalize_fields(types: Vec[DataInfo], subs: Vec[Pattern], fields: Vec[Ty], s: Vec[Pair[Bytes, Ty]], occ: Vec[Binary{32}], i: Binary{32}, binds: Vec[Bind]) => Result[Pair[Vec[Pat], Vec[Bind]], Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::normalize_ctor` | fn | `lib/compiler/semcore.myc:3414` | `fn normalize_ctor(types: Vec[DataInfo], n: Bytes, subs: Vec[Pattern], expected: Ty, occ: Vec[Binary{32}], binds: Vec[Bind]) => Result[Pair[Pat, Vec[Bind]], Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::normalize_pattern` | fn | `lib/compiler/semcore.myc:3433` | `fn normalize_pattern(types: Vec[DataInfo], pat: Pattern, expected: Ty, occ: Vec[Binary{32}], binds: Vec[Bind]) => Result[Pair[Pat, Vec[Bind]], Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::ScalarK` | type | `lib/compiler/semcore.myc:3548` | `type ScalarK = SkF16 \| SkBf16 \| SkF32 \| SkF64` | — | Empirical/Declared |
-| `compiler.semcore::ScalarK::SkBf16` | ctor | `lib/compiler/semcore.myc:3548` | `SkBf16` | — | Empirical/Declared |
-| `compiler.semcore::ScalarK::SkF16` | ctor | `lib/compiler/semcore.myc:3548` | `SkF16` | — | Empirical/Declared |
-| `compiler.semcore::ScalarK::SkF32` | ctor | `lib/compiler/semcore.myc:3548` | `SkF32` | — | Empirical/Declared |
-| `compiler.semcore::ScalarK::SkF64` | ctor | `lib/compiler/semcore.myc:3548` | `SkF64` | — | Empirical/Declared |
-| `compiler.semcore::SparsityC` | type | `lib/compiler/semcore.myc:3551` | `type SparsityC = ScDense \| ScSparse(Binary{32})` | SparsityC: mirrors mycelium_core::SparsityClass (repr.rs). Sparse carries the max_active passthrough. | Empirical/Declared |
-| `compiler.semcore::SparsityC::ScDense` | ctor | `lib/compiler/semcore.myc:3551` | `ScDense` | — | Empirical/Declared |
-| `compiler.semcore::SparsityC::ScSparse` | ctor | `lib/compiler/semcore.myc:3551` | `ScSparse(Binary{32})` | — | Empirical/Declared |
-| `compiler.semcore::FloatW` | type | `lib/compiler/semcore.myc:3554` | `type FloatW = FwF64` | FloatW: mirrors mycelium_core::FloatWidth (repr.rs) — F64-only at introduction (ADR-040 FLAG-1). | Empirical/Declared |
-| `compiler.semcore::FloatW::FwF64` | ctor | `lib/compiler/semcore.myc:3554` | `FwF64` | — | Empirical/Declared |
-| `compiler.semcore::Repr` | type | `lib/compiler/semcore.myc:3557` | `type Repr = RBinary(Binary{32}) \| RTernary(Binary{32}) \| RDense(Binary{32}, ScalarK) \| RVsa(Bytes, Binary{32}, SparsityC) \| RSeq(Repr, Binary{32}) \| RFloat(FloatW) \| RBytes` | Repr: mirrors mycelium_core::Repr (repr.rs), the four closed paradigm kinds + Seq/Float/Bytes. | Empirical/Declared |
-| `compiler.semcore::Repr::RBinary` | ctor | `lib/compiler/semcore.myc:3558` | `RBinary(Binary{32})` | — | Empirical/Declared |
-| `compiler.semcore::Repr::RTernary` | ctor | `lib/compiler/semcore.myc:3559` | `RTernary(Binary{32})` | — | Empirical/Declared |
-| `compiler.semcore::Repr::RDense` | ctor | `lib/compiler/semcore.myc:3560` | `RDense(Binary{32}, ScalarK)` | — | Empirical/Declared |
-| `compiler.semcore::Repr::RVsa` | ctor | `lib/compiler/semcore.myc:3561` | `RVsa(Bytes, Binary{32}, SparsityC)` | — | Empirical/Declared |
-| `compiler.semcore::Repr::RSeq` | ctor | `lib/compiler/semcore.myc:3562` | `RSeq(Repr, Binary{32})` | — | Empirical/Declared |
-| `compiler.semcore::Repr::RFloat` | ctor | `lib/compiler/semcore.myc:3563` | `RFloat(FloatW)` | — | Empirical/Declared |
-| `compiler.semcore::Repr::RBytes` | ctor | `lib/compiler/semcore.myc:3564` | `RBytes` | — | Empirical/Declared |
-| `compiler.semcore::TritK` | type | `lib/compiler/semcore.myc:3567` | `type TritK = TkNeg \| TkZero \| TkPos` | TritK: mirrors mycelium_core::Trit (value.rs). | Empirical/Declared |
-| `compiler.semcore::TritK::TkNeg` | ctor | `lib/compiler/semcore.myc:3567` | `TkNeg` | — | Empirical/Declared |
-| `compiler.semcore::TritK::TkPos` | ctor | `lib/compiler/semcore.myc:3567` | `TkPos` | — | Empirical/Declared |
-| `compiler.semcore::TritK::TkZero` | ctor | `lib/compiler/semcore.myc:3567` | `TkZero` | — | Empirical/Declared |
-| `compiler.semcore::Payload` | type | `lib/compiler/semcore.myc:3571` | `type Payload = PlBits(Vec[Binary{1}]) \| PlTrits(Vec[TritK]) \| PlBytes(Bytes)` | Payload: mirrors mycelium_core::Payload (value.rs) — the wild-free-constructible subset only (FLAG-semcore-23). `PlBytes(Bytes)` holds the byte-vector directly (the `.myc` Bytes primitive). | Empirical/Declared |
-| `compiler.semcore::Payload::PlBits` | ctor | `lib/compiler/semcore.myc:3571` | `PlBits(Vec[Binary{1}])` | — | Empirical/Declared |
-| `compiler.semcore::Payload::PlBytes` | ctor | `lib/compiler/semcore.myc:3571` | `PlBytes(Bytes)` | — | Empirical/Declared |
-| `compiler.semcore::Payload::PlTrits` | ctor | `lib/compiler/semcore.myc:3571` | `PlTrits(Vec[TritK])` | — | Empirical/Declared |
-| `compiler.semcore::Meta` | type | `lib/compiler/semcore.myc:3574` | `type Meta = MtExactRoot` | Meta: mirrors mycelium_core::Meta minimally (FLAG-semcore-24) — the single `exact(Root)` form. | Empirical/Declared |
-| `compiler.semcore::Meta::MtExactRoot` | ctor | `lib/compiler/semcore.myc:3574` | `MtExactRoot` | — | Empirical/Declared |
-| `compiler.semcore::Value` | type | `lib/compiler/semcore.myc:3577` | `type Value = Val(Repr, Payload, Meta)` | Value: mirrors mycelium_core::Value (value.rs) — the (repr, payload, meta) triple. | Empirical/Declared |
-| `compiler.semcore::Value::Val` | ctor | `lib/compiler/semcore.myc:3577` | `Val(Repr, Payload, Meta)` | — | Empirical/Declared |
-| `compiler.semcore::KFnSig` | type | `lib/compiler/semcore.myc:3581` | `type KFnSig = KFS(Binary{32}, Vec[FieldTyRef], FieldTyRef)` | KFnSig: mirrors mycelium_core::FnSig (data.rs) — (arity, params, ret). Spelled `KFnSig`/`KFS` to avoid the SURFACE `FnSig`/`FS` mirror already present (FLAG-semcore-22). | Empirical/Declared |
-| `compiler.semcore::KFnSig::KFS` | ctor | `lib/compiler/semcore.myc:3581` | `KFS(Binary{32}, Vec[FieldTyRef], FieldTyRef)` | — | Empirical/Declared |
-| `compiler.semcore::FieldTyRef` | type | `lib/compiler/semcore.myc:3584` | `type FieldTyRef = FtRepr(Repr) \| FtData(Bytes) \| FtFn(KFnSig)` | FieldTyRef: mirrors mycelium_core::FieldTyRef (data.rs). | Empirical/Declared |
-| `compiler.semcore::FieldTyRef::FtData` | ctor | `lib/compiler/semcore.myc:3584` | `FtData(Bytes)` | — | Empirical/Declared |
-| `compiler.semcore::FieldTyRef::FtFn` | ctor | `lib/compiler/semcore.myc:3584` | `FtFn(KFnSig)` | — | Empirical/Declared |
-| `compiler.semcore::FieldTyRef::FtRepr` | ctor | `lib/compiler/semcore.myc:3584` | `FtRepr(Repr)` | — | Empirical/Declared |
-| `compiler.semcore::FieldSpec` | type | `lib/compiler/semcore.myc:3587` | `type FieldSpec = FsRepr(Repr) \| FsData(Bytes) \| FsFn(Binary{32}, KFnSig)` | FieldSpec: mirrors mycelium_core::FieldSpec (data.rs). | Empirical/Declared |
-| `compiler.semcore::FieldSpec::FsData` | ctor | `lib/compiler/semcore.myc:3587` | `FsData(Bytes)` | — | Empirical/Declared |
-| `compiler.semcore::FieldSpec::FsFn` | ctor | `lib/compiler/semcore.myc:3587` | `FsFn(Binary{32}, KFnSig)` | — | Empirical/Declared |
-| `compiler.semcore::FieldSpec::FsRepr` | ctor | `lib/compiler/semcore.myc:3587` | `FsRepr(Repr)` | — | Empirical/Declared |
-| `compiler.semcore::scalar_kind` | fn | `lib/compiler/semcore.myc:3593` | `fn scalar_kind(s: Scalar) => ScalarK` | scalar_kind (elab.rs:1043) — Scalar -> ScalarKind. Boundary-independent (lands first, DN-26 SS10); its tag twin `scalar_tag` (mono.rs) already landed increment 4. | Empirical/Declared |
-| `compiler.semcore::sparsity_class` | fn | `lib/compiler/semcore.myc:3598` | `fn sparsity_class(sp: Sparsity) => SparsityC` | sparsity_class (elab.rs:1053) — Sparsity -> SparsityClass (the Sparse arm is a bare max_active passthrough). Boundary-independent; its tag twin `vsa_sp_tag` already landed increment 4. | Empirical/Declared |
-| `compiler.semcore::bin_bits_at` | fn | `lib/compiler/semcore.myc:3605` | `fn bin_bits_at(s: Bytes, i: Binary{32}, n: Binary{32}) => Vec[Binary{1}]` | lit_value (elab.rs:102) — a representation literal's L0 Value. Bin/Trit/Str + refusals ported faithfully; LBytes/LFloat DEFERRED (FLAG-semcore-25). Never-silent on every fallible arm (G2). bin_bits: filter the digit/`_` string to its 0/1 bits, MSB-first (Rust `chars().filter(\|c\| c=='0'\|\|c=='1').map(\|c\| c=='1')`). | Empirical/Declared |
-| `compiler.semcore::bin_bits` | fn | `lib/compiler/semcore.myc:3618` | `fn bin_bits(s: Bytes) => Vec[Binary{1}]` | — | Empirical/Declared |
-| `compiler.semcore::bits_len` | fn | `lib/compiler/semcore.myc:3620` | `fn bits_len(v: Vec[Binary{1}]) => Binary{32}` | — | Empirical/Declared |
-| `compiler.semcore::trit_of` | fn | `lib/compiler/semcore.myc:3625` | `fn trit_of(ch: Bytes) => Result[TritK, Bytes]` | trit_of: one wire glyph -> a trit; every non-{+,0,-} char is an explicit error (Rust maps EVERY char, no filtering — a stray char is a never-silent residual, G2). | Empirical/Declared |
-| `compiler.semcore::trit_trits_at` | fn | `lib/compiler/semcore.myc:3631` | `fn trit_trits_at(s: Bytes, i: Binary{32}, n: Binary{32}) => Result[Vec[TritK], Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::trits_len` | fn | `lib/compiler/semcore.myc:3643` | `fn trits_len(v: Vec[TritK]) => Binary{32}` | — | Empirical/Declared |
-| `compiler.semcore::lit_value` | fn | `lib/compiler/semcore.myc:3648` | `fn lit_value(l: Literal) => Result[Value, Bytes]` | lower-bound (`width == 0`) refused below, matching `Value::new`/`check_well_formed`; the `MAX_DIM` UPPER bound is NOT ported this wave (FLAG-semcore-29 — an honest, intentional cut). | Empirical/Declared |
-| `compiler.semcore::type_repr` | fn | `lib/compiler/semcore.myc:3676` | `fn type_repr(t: TypeRef) => Result[Repr, Bytes]` | type_repr (elab.rs:244) — surface `TypeRef` -> kernel `Repr` (swap targets). Only representation types resolve; named/data/Substrate/Fn/Tuple/Ambient/width-var are explicit refusals. Note the Vsa arm canonicalizes the surface model id (`vsa_kernel_model_id`) -- matching the Rust oracle, and DISTINCT from `field_spec`/`ty_to_repr` below (whose checked `Ty` already carries the canonical id). | Empirical/Declared |
-| `compiler.semcore::ty_to_repr` | fn | `lib/compiler/semcore.myc:3704` | `fn ty_to_repr(ty: Ty) => Option[Repr]` | ty_to_repr (elab.rs:982) — a representation checked `Ty` -> kernel `Repr`; `None` for any non-representation type (never a half-elaborated artifact -- G2/VR-5). Vsa uses the model DIRECTLY (the checked `Ty` already holds the canonical kernel id -- no re-canonicalization, matching Rust). | Empirical/Declared |
-| `compiler.semcore::ty_to_field_ty_ref` | fn | `lib/compiler/semcore.myc:3722` | `fn ty_to_field_ty_ref(ty: Ty) => Option[FieldTyRef]` | ty_to_field_ty_ref (elab.rs:1023) — a v0 `Ty` -> a `FieldTyRef` signature leaf: a monomorphic `Data` reference, a nested `Fn` signature, or (the `_` arm) a `Repr` leaf via `ty_to_repr`. `None` for anything with no monomorphic form (mirrors `field_spec`'s staging -- G2/VR-5). | Empirical/Declared |
-| `compiler.semcore::field_spec` | fn | `lib/compiler/semcore.myc:3740` | `fn field_spec(ty: Ty) => Option[FieldSpec]` | field_spec (elab.rs:923) — a checked `Ty` field -> a build-time `FieldSpec`; `None` when the field has no monomorphic kernel form (a width-var, a generic `Data`, a `Var`, a `Substrate`, or an unresolvable `Fn` signature leaf) -- staged, never half-encoded (G2/VR-5). | Empirical/Declared |
-| `compiler.semcore::join_dot` | fn | `lib/compiler/semcore.myc:3764` | `fn join_dot(segs: Vec[Bytes]) => Bytes` | policy_name_preimage (elab.rs:344 preimage) — the domain-separated PREIMAGE of `policy_name_ref` (`policy-name.v0:<dotted>`). The hashing step is DEFERRED (FLAG-semcore-27). `join_dot` restates `policy.0.join(".")`. | Empirical/Declared |
-| `compiler.semcore::policy_name_preimage` | fn | `lib/compiler/semcore.myc:3773` | `fn policy_name_preimage(p: Path) => Bytes` | — | Empirical/Declared |
-| `compiler.semcore::Exports` | type | `lib/compiler/semcore.myc:3832` | `type Exports = Ex(Vec[Pair[Bytes, DataInfo]], Vec[Pair[Bytes, FnDecl]], Vec[Pair[Bytes, TraitInfo]], Vec[Pair[Bytes, Bool]])` | Exports: mirrors checkty.rs::Exports (1045-1056) as FOUR FLAG-semcore-4 assoc lists (no map primitive, M-982) keyed by the qualified (dot-joined) name STRING — `types`/`fns`/`traits` per kind, `declared` the ALL-declared-names-with-pub-ness table `resolve_imports` distinguishes "unknown" from "private" against. New ctor `Ex` (FLAG-semcore-2 scheme; checked, no collision). | Empirical/Declared |
-| `compiler.semcore::Exports::Ex` | ctor | `lib/compiler/semcore.myc:3832` | `Ex(Vec[Pair[Bytes, DataInfo]], Vec[Pair[Bytes, FnDecl]], Vec[Pair[Bytes, TraitInfo]], Vec[Pair[Bytes, Bool]])` | — | Empirical/Declared |
-| `compiler.semcore::ex_types` | fn | `lib/compiler/semcore.myc:3834` | `fn ex_types(e: Exports) => Vec[Pair[Bytes, DataInfo]]` | — | Empirical/Declared |
-| `compiler.semcore::ex_fns` | fn | `lib/compiler/semcore.myc:3837` | `fn ex_fns(e: Exports) => Vec[Pair[Bytes, FnDecl]]` | — | Empirical/Declared |
-| `compiler.semcore::ex_traits` | fn | `lib/compiler/semcore.myc:3840` | `fn ex_traits(e: Exports) => Vec[Pair[Bytes, TraitInfo]]` | — | Empirical/Declared |
-| `compiler.semcore::ex_declared` | fn | `lib/compiler/semcore.myc:3843` | `fn ex_declared(e: Exports) => Vec[Pair[Bytes, Bool]]` | — | Empirical/Declared |
-| `compiler.semcore::exports_types_lookup` | fn | `lib/compiler/semcore.myc:3849` | `fn exports_types_lookup(t: Vec[Pair[Bytes, DataInfo]], qual: Bytes) => Option[DataInfo]` | exports_types_lookup / exports_fns_lookup / exports_traits_lookup / exports_declared_lookup: the FLAG-semcore-4 linear scan over each table, keyed by the flat qualified-name `Bytes` string (four duplicated pairs rather than a generic dictionary — FLAG-semcore-5 precedent, KISS/YAGNI). | Empirical/Declared |
-| `compiler.semcore::exports_fns_lookup` | fn | `lib/compiler/semcore.myc:3855` | `fn exports_fns_lookup(t: Vec[Pair[Bytes, FnDecl]], qual: Bytes) => Option[FnDecl]` | — | Empirical/Declared |
-| `compiler.semcore::exports_traits_lookup` | fn | `lib/compiler/semcore.myc:3861` | `fn exports_traits_lookup(t: Vec[Pair[Bytes, TraitInfo]], qual: Bytes) => Option[TraitInfo]` | — | Empirical/Declared |
-| `compiler.semcore::exports_declared_lookup` | fn | `lib/compiler/semcore.myc:3867` | `fn exports_declared_lookup(t: Vec[Pair[Bytes, Bool]], qual: Bytes) => Option[Bool]` | — | Empirical/Declared |
-| `compiler.semcore::exports_has_pub` | fn | `lib/compiler/semcore.myc:3874` | `fn exports_has_pub(exports: Exports, qual: Bytes) => Bool` | exports_has_pub (checkty.rs 1535-1537): is `qual` declared AND `pub`? | Empirical/Declared |
-| `compiler.semcore::NoduleImports` | type | `lib/compiler/semcore.myc:3883` | `type NoduleImports = NI(Vec[Pair[Bytes, DataInfo]], Vec[Pair[Bytes, FnDecl]], Vec[Pair[Bytes, TraitInfo]], Vec[Bytes])` | NoduleImports: mirrors checkty.rs::NoduleImports (1064-1075). `ambiguous` is a Vec[Bytes] SET (membership via `names_contains`) standing in for `BTreeSet<String>` (the same convention affine.rs FLAG-semcore-6/-18 established for accumulator sets). | Empirical/Declared |
-| `compiler.semcore::NoduleImports::NI` | ctor | `lib/compiler/semcore.myc:3883` | `NI(Vec[Pair[Bytes, DataInfo]], Vec[Pair[Bytes, FnDecl]], Vec[Pair[Bytes, TraitInfo]], Vec[Bytes])` | — | Empirical/Declared |
-| `compiler.semcore::ni_types` | fn | `lib/compiler/semcore.myc:3885` | `fn ni_types(n: NoduleImports) => Vec[Pair[Bytes, DataInfo]]` | — | Empirical/Declared |
-| `compiler.semcore::ni_fns` | fn | `lib/compiler/semcore.myc:3888` | `fn ni_fns(n: NoduleImports) => Vec[Pair[Bytes, FnDecl]]` | — | Empirical/Declared |
-| `compiler.semcore::ni_traits` | fn | `lib/compiler/semcore.myc:3891` | `fn ni_traits(n: NoduleImports) => Vec[Pair[Bytes, TraitInfo]]` | — | Empirical/Declared |
-| `compiler.semcore::ni_ambiguous` | fn | `lib/compiler/semcore.myc:3894` | `fn ni_ambiguous(n: NoduleImports) => Vec[Bytes]` | — | Empirical/Declared |
-| `compiler.semcore::nodule_imports_empty` | fn | `lib/compiler/semcore.myc:3898` | `fn nodule_imports_empty() => NoduleImports` | — | Empirical/Declared |
-| `compiler.semcore::assoc_remove_datainfo` | fn | `lib/compiler/semcore.myc:3903` | `fn assoc_remove_datainfo(t: Vec[Pair[Bytes, DataInfo]], k: Bytes) => Vec[Pair[Bytes, DataInfo]]` | assoc_remove_\*/assoc_set_\*: `BTreeMap::insert` (replace-if-present) over each of the three per-kind tables — remove any existing pair for `k`, then cons the new one (order-insensitive, an assoc-list map; the FLAG-semcore-4 convention, three duplicated pairs per FLAG-semcore-5). | Empirical/Declared |
-| `compiler.semcore::assoc_set_datainfo` | fn | `lib/compiler/semcore.myc:3912` | `fn assoc_set_datainfo(t: Vec[Pair[Bytes, DataInfo]], k: Bytes, v: DataInfo) => Vec[Pair[Bytes, DataInfo]]` | — | Empirical/Declared |
-| `compiler.semcore::assoc_remove_fndecl` | fn | `lib/compiler/semcore.myc:3915` | `fn assoc_remove_fndecl(t: Vec[Pair[Bytes, FnDecl]], k: Bytes) => Vec[Pair[Bytes, FnDecl]]` | — | Empirical/Declared |
-| `compiler.semcore::assoc_set_fndecl` | fn | `lib/compiler/semcore.myc:3924` | `fn assoc_set_fndecl(t: Vec[Pair[Bytes, FnDecl]], k: Bytes, v: FnDecl) => Vec[Pair[Bytes, FnDecl]]` | — | Empirical/Declared |
-| `compiler.semcore::assoc_remove_traitinfo` | fn | `lib/compiler/semcore.myc:3927` | `fn assoc_remove_traitinfo(t: Vec[Pair[Bytes, TraitInfo]], k: Bytes) => Vec[Pair[Bytes, TraitInfo]]` | — | Empirical/Declared |
-| `compiler.semcore::assoc_set_traitinfo` | fn | `lib/compiler/semcore.myc:3936` | `fn assoc_set_traitinfo(t: Vec[Pair[Bytes, TraitInfo]], k: Bytes, v: TraitInfo) => Vec[Pair[Bytes, TraitInfo]]` | — | Empirical/Declared |
-| `compiler.semcore::names_remove` | fn | `lib/compiler/semcore.myc:3941` | `fn names_remove(xs: Vec[Bytes], n: Bytes) => Vec[Bytes]` | names_remove: drop every occurrence of `n` from a `Vec[Bytes]` SET (the `ambiguous.remove` counterpart for a bare-name set, not a keyed table). | Empirical/Declared |
-| `compiler.semcore::insert_export` | fn | `lib/compiler/semcore.myc:3955` | `fn insert_export(imp: NoduleImports, exports: Exports, qual: Bytes, simple: Bytes) => NoduleImports` | insert_export (checkty.rs 1560-1571): insert the export `qual` into `imp` under `simple`. The oracle's OWN invariant comment says exactly one of the three export tables holds `qual` — but this port still tries all three (arm-for-arm), since nothing in `Exports`'s SHAPE enforces that invariant structurally (a caller-supplied fixture that violates it gets the same multi-table write the oracle's own three independent `if let`s would produce). | Empirical/Declared |
-| `compiler.semcore::remove_import` | fn | `lib/compiler/semcore.myc:3971` | `fn remove_import(imp: NoduleImports, simple: Bytes) => NoduleImports` | remove_import (checkty.rs 1574-1580): drop any binding for `simple` across all three per-kind tables (the glob-vs-glob-ambiguity demotion) — `ambiguous` is untouched (matching the oracle). | Empirical/Declared |
-| `compiler.semcore::qualify` | fn | `lib/compiler/semcore.myc:3975` | `fn qualify(path: Path, name: Bytes) => Bytes` | qualify (checkty.rs 1286-1292): `path.0.is_empty() ? name : path.0.join(".") + "." + name`. | Empirical/Declared |
-| `compiler.semcore::bytes_starts_with` | fn | `lib/compiler/semcore.myc:3986` | `fn bytes_starts_with(s: Bytes, prefix: Bytes) => Bool` | bytes_starts_with / bytes_contains_char(_at): small string primitives NOT already in this file — needed because `direct_child`/`split_last_seg` operate on the FLAT qualified-name string (the `Exports` table's key shape), unlike every prior string helper here (which walks Path SEGMENTS, e.g. `join_dot`). Same byte-at-a-time idiom as `count_bindigits_at`/`filter_bindigits_at` (`bytes_slice` + `bytes_eq`, source-length-bounded direct-tail recursion). | Empirical/Declared |
-| `compiler.semcore::bytes_contains_char_at` | fn | `lib/compiler/semcore.myc:3992` | `fn bytes_contains_char_at(s: Bytes, ch: Bytes, i: Binary{32}, n: Binary{32}) => Bool` | — | Empirical/Declared |
-| `compiler.semcore::bytes_contains_char` | fn | `lib/compiler/semcore.myc:4001` | `fn bytes_contains_char(s: Bytes, ch: Bytes) => Bool` | — | Empirical/Declared |
-| `compiler.semcore::direct_child` | fn | `lib/compiler/semcore.myc:4006` | `fn direct_child(prefix: Bytes, qual: Bytes) => Option[Bytes]` | direct_child (checkty.rs 1542-1550): is `qual` exactly ONE segment under `prefix`? `Some(simple)` iff `qual == prefix + "." + simple` with `simple` itself containing no further `.`. | Empirical/Declared |
-| `compiler.semcore::rev_bytes_acc` | fn | `lib/compiler/semcore.myc:4033` | `fn rev_bytes_acc(xs: Vec[Bytes], acc: Vec[Bytes]) => Vec[Bytes]` | split_last_seg_go / split_last_seg (checkty.rs 1553-1557): `path.0.split_last()` restated as an accumulate-then-reverse walk (the FLAG-parse list-building convention) — last segment plus the DOT-JOINED prefix of everything before it (`Option[Pair[Bytes, Bytes]]`, matching the oracle's `Option<(String, String)>` return shape exactly). | Empirical/Declared |
-| `compiler.semcore::split_last_seg_go` | fn | `lib/compiler/semcore.myc:4039` | `fn split_last_seg_go(segs: Vec[Bytes], acc: Vec[Bytes]) => Option[Pair[Bytes, Vec[Bytes]]]` | — | Empirical/Declared |
-| `compiler.semcore::split_last_seg` | fn | `lib/compiler/semcore.myc:4048` | `fn split_last_seg(path: Path) => Option[Pair[Bytes, Bytes]]` | — | Empirical/Declared |
-| `compiler.semcore::GlobPassState` | type | `lib/compiler/semcore.myc:4058` | `type GlobPassState = GPS(NoduleImports, Vec[Bytes], Vec[Bytes])` | GlobPassState: the glob loop's threaded (imp, via_explicit, via_glob) triple (FLAG-semcore-6 value-threading convention — Rust's `&mut` accumulators restated as an explicit fold). | Empirical/Declared |
-| `compiler.semcore::GlobPassState::GPS` | ctor | `lib/compiler/semcore.myc:4058` | `GPS(NoduleImports, Vec[Bytes], Vec[Bytes])` | — | Empirical/Declared |
-| `compiler.semcore::resolve_imports_glob_quals` | fn | `lib/compiler/semcore.myc:4063` | `fn resolve_imports_glob_quals(exports: Exports, prefix: Bytes, decl: Vec[Pair[Bytes, Bool]], st: GlobPassState) => GlobPassState` | resolve_imports_glob_quals: the INNER loop over `exports.declared`'s entries for ONE glob item's `prefix` (checkty.rs's `for qual in exports.declared.keys()`). FLAG-semcore-31 keeps the (provably always-false, see the file-header FLAG) `via_explicit` check for structural fidelity. | Empirical/Declared |
-| `compiler.semcore::resolve_imports_glob_items` | fn | `lib/compiler/semcore.myc:4088` | `fn resolve_imports_glob_items(exports: Exports, items: Vec[Item], st: GlobPassState) => GlobPassState` | resolve_imports_glob_items: the OUTER glob-pass loop over `nodule.items` (non-glob / non-use items are skipped — the `let Item::Use(UsePath{path, glob:true}) = item else { continue }` mirror). | Empirical/Declared |
-| `compiler.semcore::ExplicitPassState` | type | `lib/compiler/semcore.myc:4101` | `type ExplicitPassState = EPS(NoduleImports, Vec[Bytes])` | ExplicitPassState: the explicit-pass threaded (imp, via_explicit) pair. | Empirical/Declared |
-| `compiler.semcore::ExplicitPassState::EPS` | ctor | `lib/compiler/semcore.myc:4101` | `EPS(NoduleImports, Vec[Bytes])` | — | Empirical/Declared |
-| `compiler.semcore::resolve_imports_explicit_items` | fn | `lib/compiler/semcore.myc:4107` | `fn resolve_imports_explicit_items(exports: Exports, site: Bytes, items: Vec[Item], st: ExplicitPassState) => Result[ExplicitPassState, Bytes]` | resolve_imports_explicit_items (checkty.rs's explicit-`use` loop, 1478-1531): the never-silent refusals in the oracle's EXACT order — unnamed path, un-qualified single-segment path, unknown name, private name, duplicate explicit import (FLAG-semcore-32: reason strings, not the oracle's full diagnostic text). | Empirical/Declared |
-| `compiler.semcore::resolve_imports` | fn | `lib/compiler/semcore.myc:4144` | `fn resolve_imports(nod: Nodule, exports: Exports) => Result[NoduleImports, Bytes]` | resolve_imports (checkty.rs 1423-1533, top level): globs first (lowest precedence), then explicit `use`s (which shadow a glob-bound name) — Ok(NoduleImports) or the first refusal. | Empirical/Declared |
-| `compiler.semcore::fuse_trait_name` | fn | `lib/compiler/semcore.myc:4173` | `fn fuse_trait_name() => Bytes` | fuse_trait_name: the fuse.rs::TRAIT_NAME single source of truth (a fn, not a bare literal repeated at each use site -- Law of Demeter). | Empirical/Declared |
-| `compiler.semcore::fuse_join_sig` | fn | `lib/compiler/semcore.myc:4178` | `fn fuse_join_sig() => FnSig` | fuse_join_sig: fuse.rs::prelude's one `FnSig` -- `fn join(a: T, b: T) => T`. No method-level type params (the trait's OWN param `T` lives in `TraitInfo.params`, not here -- DN-58 §A.2's explicit- type-variable idiom, no implicit `Self`), no effects/budgets. | Empirical/Declared |
-| `compiler.semcore::fuse_prelude` | fn | `lib/compiler/semcore.myc:4182` | `fn fuse_prelude() => TraitInfo` | fuse_prelude: fuse.rs::prelude (58-84) verbatim -- `TrInfo(name, params, sigs)`. | Empirical/Declared |
-| `compiler.semcore::checkty_prelude` | fn | `lib/compiler/semcore.myc:4202` | `fn checkty_prelude() => DataInfo` | checkty_prelude: checkty.rs::prelude (600-618) -- the builtin `Bool = False \| True` registry seed `register_nodule_decls` inserts before `register_types` runs, so intra-nodule resolution of `Bool` is unchanged. | Empirical/Declared |
-| `compiler.semcore::nodule_uses_fuse` | fn | `lib/compiler/semcore.myc:4208` | `fn nodule_uses_fuse(items: Vec[Item]) => Bool` | `impl Fuse[...] for ...`? (Never based on whether `fuse(a, b)` is CALLED -- the repr-type fast path in `check_fuse` never touches the trait registry at all; restated from the oracle's own comment.) | Empirical/Declared |
-| `compiler.semcore::fuse_redeclare_err` | fn | `lib/compiler/semcore.myc:4224` | `fn fuse_redeclare_err() => Bytes` | fuse_redeclare_err: checkty.rs 1372-1378 / 1381-1387 -- the never-silent refusal for either branch that finds `Fuse` already present in `traits` (a user nodule trying to redeclare the built-in). Both oracle call sites use the SAME message text (FLAG-semcore-32: error TEXT is not differential- compared -- only Ok/Err CLASSIFICATION is; this file's established convention throughout STEP 4/5). | Empirical/Declared |
-| `compiler.semcore::seed_fuse_trait` | fn | `lib/compiler/semcore.myc:4231` | `fn seed_fuse_trait(traits: Vec[TraitInfo], items: Vec[Item]) => Result[Vec[TraitInfo], Bytes]` | (already present, on EITHER branch) -- never a silent shadow of the built-in (G2/VR-5), mirroring how redeclaring `Bool` would collide in `types`. | Empirical/Declared |
-| `compiler.semcore::fns_contains` | fn | `lib/compiler/semcore.myc:4245` | `fn fns_contains(fns: Vec[Pair[Bytes, FnDecl]], name: Bytes) => Bool` | fns_contains: the `fns.contains_key`-equivalent membership scan over the FLAG-semcore-4 assoc-list fn registry `Vec[Pair[Bytes, FnDecl]]`. | Empirical/Declared |
-| `compiler.semcore::register_fns` | fn | `lib/compiler/semcore.myc:4256` | `fn register_fns(items: Vec[Item], acc: Vec[Pair[Bytes, FnDecl]]) => Result[Vec[Pair[Bytes, FnDecl]], Bytes]` | register_fns: checkty.rs 1392-1400 -- Pass 2, the fn-signature registration loop. Non-`Item::Fn` items are skipped (the `let Item::Fn(fd) = item else { continue }` mirror); each fn's OWN type-parameter names (`fnsig_tyvar_names`, the `sig.param_names()` mirror) must have no duplicate, then the fn NAME must be free in the registry so far -- the first refusal wins, `Ok` with the built registry otherwise. | Empirical/Declared |
-| `compiler.semcore::NoduleRegs` | type | `lib/compiler/semcore.myc:4273` | `type NoduleRegs = NR(Vec[DataInfo], Vec[Pair[Bytes, FnDecl]], Vec[TraitInfo])` | NoduleRegs: mirrors checkty.rs::NoduleRegs (1336-1340) field-for-field (types, fns, traits). New ctor `NR` (FLAG-semcore-2 scheme; checked against every other family in this file, no collision). | Empirical/Declared |
-| `compiler.semcore::NoduleRegs::NR` | ctor | `lib/compiler/semcore.myc:4273` | `NR(Vec[DataInfo], Vec[Pair[Bytes, FnDecl]], Vec[TraitInfo])` | — | Empirical/Declared |
-| `compiler.semcore::nr_types` | fn | `lib/compiler/semcore.myc:4275` | `fn nr_types(r: NoduleRegs) => Vec[DataInfo]` | — | Empirical/Declared |
-| `compiler.semcore::nr_fns` | fn | `lib/compiler/semcore.myc:4278` | `fn nr_fns(r: NoduleRegs) => Vec[Pair[Bytes, FnDecl]]` | — | Empirical/Declared |
-| `compiler.semcore::nr_traits` | fn | `lib/compiler/semcore.myc:4281` | `fn nr_traits(r: NoduleRegs) => Vec[TraitInfo]` | — | Empirical/Declared |
-| `compiler.semcore::register_nodule_decls` | fn | `lib/compiler/semcore.myc:4287` | `fn register_nodule_decls(nod: Nodule) => Result[NoduleRegs, Bytes]` | register_nodule_decls: checkty.rs 1348-1401, top level. Runs the four passes in the oracle's EXACT order -- types (seeded with the Bool prelude), traits, the conditional Fuse seed, then fns -- and returns Ok(NoduleRegs) or the FIRST refusal. | Empirical/Declared |
-| `compiler.semcore::closure_field_ty` | fn | `lib/compiler/semcore.myc:4348` | `fn closure_field_ty(t: Ty) => Ty` | — | Empirical/Declared |
-| `compiler.semcore::closure_param_ref` | fn | `lib/compiler/semcore.myc:4354` | `fn closure_param_ref(t: Ty) => TypeRef` | — | Empirical/Declared |
-| `compiler.semcore::mangle_ty_in_ty` | fn | `lib/compiler/semcore.myc:4361` | `fn mangle_ty_in_ty(t: Ty) => Ty` | — | Empirical/Declared |
-| `compiler.semcore::ty_to_source_base` | fn | `lib/compiler/semcore.myc:4379` | `fn ty_to_source_base(t: Ty) => BaseType` | — | Empirical/Declared |
-| `compiler.semcore::ty_to_source_ref` | fn | `lib/compiler/semcore.myc:4394` | `fn ty_to_source_ref(t: Ty) => TypeRef` | — | Empirical/Declared |
-| `compiler.semcore::ty_to_source_ref_list` | fn | `lib/compiler/semcore.myc:4399` | `fn ty_to_source_ref_list(ts: Vec[Ty]) => Vec[TypeRef]` | ty_to_source_ref_list: map a constructor's applied type args through ty_to_source_ref (the direct recursive walk this nodule uses throughout — no first-class-fn `map` primitive, FLAG-semcore-5's KISS/YAGNI precedent for avoiding a generic higher-order helper in a bounded increment). | Empirical/Declared |
-| `compiler.semcore::ty_to_ref_base` | fn | `lib/compiler/semcore.myc:4405` | `fn ty_to_ref_base(t: Ty) => BaseType` | ty_to_ref_base: the MANGLED-NULLARY round-trip (an applied data type's arguments are baked into its mangled name, so it becomes a nullary `Named`) — used for a rewritten `FnDecl`/`Param`/ `Ascribe`'s emitted surface type. | Empirical/Declared |
-| `compiler.semcore::ty_to_ref` | fn | `lib/compiler/semcore.myc:4420` | `fn ty_to_ref(t: Ty) => TypeRef` | — | Empirical/Declared |
-| `compiler.semcore::ty_to_ref_tagged` | fn | `lib/compiler/semcore.myc:4424` | `fn ty_to_ref_tagged(t: Ty, guarantee: Option[Strength]) => TypeRef` | ty_to_ref_tagged: like ty_to_ref, but attaches the CALLER-supplied `guarantee` (the source declaration's own `@ g` — never derived from `t`, never merged across instantiations). | Empirical/Declared |
-| `compiler.semcore::WorkItem` | type | `lib/compiler/semcore.myc:4429` | `type WorkItem = WiFn(Bytes, Vec[Ty], Vec[Width], Vec[Pair[Binary{32}, Bytes]], Vec[Pair[Binary{32}, Bytes]]) \| WiData(Bytes, Vec[Ty]) \| WiMethod(Bytes, Bytes, Ty)` | — | Empirical/Declared |
-| `compiler.semcore::WorkItem::WiFn` | ctor | `lib/compiler/semcore.myc:4430` | `WiFn(Bytes, Vec[Ty], Vec[Width], Vec[Pair[Binary{32}, Bytes]], Vec[Pair[Binary{32}, Bytes]])` | — | Empirical/Declared |
-| `compiler.semcore::WorkItem::WiData` | ctor | `lib/compiler/semcore.myc:4431` | `WiData(Bytes, Vec[Ty])` | — | Empirical/Declared |
-| `compiler.semcore::WorkItem::WiMethod` | ctor | `lib/compiler/semcore.myc:4432` | `WiMethod(Bytes, Bytes, Ty)` | — | Empirical/Declared |
-| `compiler.semcore::item_key` | fn | `lib/compiler/semcore.myc:4435` | `fn item_key(item: WorkItem) => Bytes` | item_key: the canonical dedup key of a work item — a kind-tagged mangled string. | Empirical/Declared |
-| `compiler.semcore::LVal` | type | `lib/compiler/semcore.myc:4492` | `type LVal = LData(Bytes, Bytes, Vec[LVal]) \| LOpaque` | FLAG-semcore-36 (`LVal` -- the eval.rs::L1Value mirror, TRIMMED to what `try_match`'s ported fragment needs). `Data { ty, ctor, fields }` mirrors verbatim (`LData`, FLAG-semcore-2 `L`-prefix scheme extended: no collision against any family declared above). `Repr`/`Substrate`/`Fn` collapse into ONE nullary `LOpaque` (FLAG-semcore-35 explains why this is lossless for the ported arms). `binds` (Rust's `&mut Vec<(String, L1Value)>`, mutated by `push` -- APPEND order) is restated as the FLAG-semcore-6 value-threaded collapse: threaded through and RETURNED, and appended (not prepended, unlike the FLAG-semcore-13 assoc-list convention) via `bind_append` below, because `binds`' ORDER is part of the observable differential (`Vec` equality is order-sensitive) -- unlike `unify`'s substitution, whose FIRST-MATCH lookup semantics make prepend-order invisible. | Empirical/Declared |
-| `compiler.semcore::LVal::LData` | ctor | `lib/compiler/semcore.myc:4492` | `LData(Bytes, Bytes, Vec[LVal])` | — | Empirical/Declared |
-| `compiler.semcore::LVal::LOpaque` | ctor | `lib/compiler/semcore.myc:4492` | `LOpaque` | — | Empirical/Declared |
-| `compiler.semcore::bind_append` | fn | `lib/compiler/semcore.myc:4498` | `fn bind_append(binds: Vec[Pair[Bytes, LVal]], n: Bytes, v: LVal) => Vec[Pair[Bytes, LVal]]` | bind_append: append one `(name, val)` binding to the END of `binds` -- mirrors Rust's `binds.push((n.clone(), val.clone()))` exactly (order-preserving; bounded by one pattern's own binder count, never source-input-driven, so no depth budget is warranted -- the same class of bounded structural recursion as `pat_append`/`ty_append` above). | Empirical/Declared |
-| `compiler.semcore::ctorinfo_any_named` | fn | `lib/compiler/semcore.myc:4511` | `fn ctorinfo_any_named(ctors: Vec[CtorInfo], n: Bytes) => Bool` | lval_ident_is_ctor_of / ctorinfo_any_named: mirrors try_match's `Ident` guard `self.env.types.get(ty).is_some_and(\|d\| d.ctors.iter().any(\|c\| c.name == \*n))` over the ALREADY -ported `types_lookup`/`di_ctors`/`ci_name` registry accessors (increment 8, M-1013 STEP 3) -- no new registry machinery needed, only the `.any(name == n)` scan. | Empirical/Declared |
-| `compiler.semcore::lval_ident_is_ctor_of` | fn | `lib/compiler/semcore.myc:4517` | `fn lval_ident_is_ctor_of(types: Vec[DataInfo], ty: Bytes, n: Bytes) => Bool` | — | Empirical/Declared |
-| `compiler.semcore::lval_try_match` | fn | `lib/compiler/semcore.myc:4528` | `fn lval_try_match(types: Vec[DataInfo], pat: Pattern, val: LVal, binds: Vec[Pair[Bytes, LVal]]) => Result[Pair[Bool, Vec[Pair[Bytes, LVal]]], Bytes]` | lval_try_match: the ported fragment (mirrors eval.rs::Evaluator::try_match's `Wildcard`/`Ident`/ `Ctor`/`Tuple`/`Or` arms exactly; `Lit` refuses per FLAG-semcore-35). `site` is DROPPED (the FLAG-semcore-13 precedent: the differential asserts `Ok`/`Err` + the resulting `(bool, binds)`, never the message bytes) -- both the oracle's `L1Error` and this fn's `Bytes` message collapse to `Err(())` on the marshalling harness's `decode_result`. | Empirical/Declared |
-| `compiler.semcore::lval_match_zip` | fn | `lib/compiler/semcore.myc:4556` | `fn lval_match_zip(types: Vec[DataInfo], subs: Vec[Pattern], fields: Vec[LVal], binds: Vec[Pair[Bytes, LVal]]) => Result[Pair[Bool, Vec[Pair[Bytes, LVal]]], Bytes]` | lval_match_zip: the `Ctor` arm's `for (sub, fv) in subs.iter().zip(fields.iter())` loop, restated as a fold that THREADS `binds` and short-circuits `Ok(false)` on the first sub-pattern mismatch -- mirrors Rust's `zip` early-stop-at-the-shorter-list semantics exactly (a length mismatch between `subs`/`fields` never occurs in a checked program; where it would, `zip` silently stops rather than erroring, and so does this fold, for byte-for-byte behavioral parity). | Empirical/Declared |
-| `compiler.semcore::paradigm_name` | fn | `lib/compiler/semcore.myc:4591` | `fn paradigm_name(t: Ty) => Option[Bytes]` | paradigm_name: mirrors checkty.rs::paradigm_name (checkty.rs 7175-7197) — the swap-paradigm name of a representation type, for the never-silent cross-paradigm framing (RFC-0001 §4.1 / M-892). The four swap-paradigms (Binary/Ternary/Dense/VSA) name themselves; every other `Ty` is `None` — `Seq`/`Bytes`/`Float` are first-class reprs but not v0 swap-paradigms (RFC-0032 D3/D4, ADR-040 §5), and `Data`/`Substrate`/`Var`/`Fn` are not representation types at all (RFC-0024 §3). All 11 arms are enumerated EXPLICITLY (no `_` wildcard), exactly as the Rust does: a future `Ty` variant must force a paradigm decision here, never be absorbed into a silent `None` (G2 — never-silent). | Empirical/Declared |
-| `compiler.semcore::cons_list_scan` | fn | `lib/compiler/semcore.myc:4617` | `fn cons_list_scan(ctors: Vec[CtorInfo], name: Bytes, nparams: Binary{32}, nil: Option[Bytes], cons: Option[Bytes]) => Pair[Option[Bytes], Option[Bytes]]` | cons_list_scan: checkty.rs::cons_list_ctors's `for c in &di.ctors { match c.fields.len() ... }` mutable-accumulator loop, restated as a threaded fold over the ctor list carrying the `(nil_name?, cons_name?)` pair (the FLAG-semcore-6 value-threaded collapse of the two `mut` locals). The field-count dispatch mirrors the Rust exactly: 0 fields -> record `nil`; exactly 2 fields whose SECOND is the recursive `Data(name, ..)` self-reference at the type's own arity -> record `cons`; every other shape leaves the accumulator untouched. The 1-field and 3+-field shapes fall to Rust's OUTER `match c.fields.len() { _ => {} }` (the `Nil`/`Cons(_, _)` inner arms below); a 2-field ctor whose 2nd field is NOT the `Data(..)` self-reference falls to Rust's inner `if let Ty::Data(..) = &c.fields[1] { .. } else {}` (the `_` arm on `f1` below). `&c.fields[1]` (Rust indexing) is expressed structurally as the exactly-two-elements shape (`Cons(_, Cons(f1, Nil))`), destructured one level at a time per this nodule's single-level-pattern convention. | Empirical/Declared |
-| `compiler.semcore::cons_list_ctors` | fn | `lib/compiler/semcore.myc:4648` | `fn cons_list_ctors(types: Vec[DataInfo], expected: Ty) => Option[Pair[Bytes, Bytes]]` | cons_list_ctors: mirrors checkty.rs::cons_list_ctors (checkty.rs 3592-3624) — recognizes whether `expected` is a 2-constructor linked-list type (one nullary "nil" ctor; one binary "cons" ctor whose SECOND field is the recursive `Data(name, ..)` self-reference at the type's own arity) and returns `(nil_name, cons_name)`; every non-conforming shape yields `None` (never a silent reinterpret — the `Seq{T,N}`/no-context paths stay untouched). Pure structural registry inspection: no Env, no evaluator, no kernel `Value`. `BTreeMap<String, DataInfo>` is the already-established FLAG-semcore-4 `Vec[DataInfo]` + `types_lookup` (no new deviation). The Rust `di.ctors.len() != 2` early-return is expressed by matching the ctor list's shape to exactly two elements before scanning (one level at a time per the single-level-pattern convention). | Empirical/Declared |
-| `compiler.semcore::strength_or` | fn | `lib/compiler/semcore.myc:4693` | `fn strength_or(a: Option[Strength], b: Option[Strength]) => Option[Strength]` | strength_or: `Option[Strength]::or` — keep the left guarantee if present, else take the right. The exact semantics of `tr.guarantee.or(concrete.guarantee)`: an occurrence's own `@ g` wins over the concrete type's, and a bare occurrence inherits the concrete's guarantee. | Empirical/Declared |
-| `compiler.semcore::subst_typeref_list` | fn | `lib/compiler/semcore.myc:4696` | `fn subst_typeref_list(trs: Vec[TypeRef], param: Bytes, concrete: TypeRef) => Vec[TypeRef]` | — | Empirical/Declared |
-| `compiler.semcore::subst_type_param_in_typeref` | fn | `lib/compiler/semcore.myc:4703` | `fn subst_type_param_in_typeref(tr: TypeRef, param: Bytes, concrete: TypeRef) => TypeRef` | — | Empirical/Declared |
+| `compiler.semcore::Ctor` | type | `lib/compiler/semcore.myc:322` | `type Ctor = Ct(Bytes, Vec[TypeRef], Bool)` | — | Empirical/Declared |
+| `compiler.semcore::Ctor::Ct` | ctor | `lib/compiler/semcore.myc:322` | `Ct(Bytes, Vec[TypeRef], Bool)` | — | Empirical/Declared |
+| `compiler.semcore::ct_name` | fn | `lib/compiler/semcore.myc:324` | `fn ct_name(c: Ctor) => Bytes` | — | Empirical/Declared |
+| `compiler.semcore::ct_fields` | fn | `lib/compiler/semcore.myc:327` | `fn ct_fields(c: Ctor) => Vec[TypeRef]` | — | Empirical/Declared |
+| `compiler.semcore::TypeDecl` | type | `lib/compiler/semcore.myc:331` | `type TypeDecl = TD(Vis, Bytes, Vec[Bytes], Vec[Ctor])` | TypeDecl: mirrors ast.rs::TypeDecl field-for-field (vis, name, params, ctors — declaration order). | Empirical/Declared |
+| `compiler.semcore::TypeDecl::TD` | ctor | `lib/compiler/semcore.myc:331` | `TD(Vis, Bytes, Vec[Bytes], Vec[Ctor])` | — | Empirical/Declared |
+| `compiler.semcore::td_name` | fn | `lib/compiler/semcore.myc:333` | `fn td_name(t: TypeDecl) => Bytes` | — | Empirical/Declared |
+| `compiler.semcore::td_params` | fn | `lib/compiler/semcore.myc:336` | `fn td_params(t: TypeDecl) => Vec[Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::td_ctors` | fn | `lib/compiler/semcore.myc:339` | `fn td_ctors(t: TypeDecl) => Vec[Ctor]` | — | Empirical/Declared |
+| `compiler.semcore::ExecutionMode` | type | `lib/compiler/semcore.myc:343` | `type ExecutionMode = Interpreted \| Compiled` | ExecutionMode: mirrors ast.myc::ExecutionMode (a field of `FnDecl`; unused by grade otherwise). | Empirical/Declared |
+| `compiler.semcore::ExecutionMode::Compiled` | ctor | `lib/compiler/semcore.myc:343` | `Compiled` | — | Empirical/Declared |
+| `compiler.semcore::ExecutionMode::Interpreted` | ctor | `lib/compiler/semcore.myc:343` | `Interpreted` | — | Empirical/Declared |
+| `compiler.semcore::FnDecl` | type | `lib/compiler/semcore.myc:346` | `type FnDecl = FD(Vis, Bool, Option[ExecutionMode], FnSig, Expr)` | FnDecl: mirrors ast.myc::FnDecl field-for-field. Only `sig`/`body` accessors are kept. | Empirical/Declared |
+| `compiler.semcore::FnDecl::FD` | ctor | `lib/compiler/semcore.myc:346` | `FD(Vis, Bool, Option[ExecutionMode], FnSig, Expr)` | — | Empirical/Declared |
+| `compiler.semcore::fndecl_sig` | fn | `lib/compiler/semcore.myc:348` | `fn fndecl_sig(f: FnDecl) => FnSig` | — | Empirical/Declared |
+| `compiler.semcore::fndecl_body` | fn | `lib/compiler/semcore.myc:351` | `fn fndecl_body(f: FnDecl) => Expr` | — | Empirical/Declared |
+| `compiler.semcore::Literal` | type | `lib/compiler/semcore.myc:356` | `type Literal = Bin(Bytes) \| Trit(Bytes) \| Int(Binary{64}) \| AmbientInt(Paradigm, Binary{64}) \| List(Vec[Expr]) \| LBytes(Bytes) \| Str(Bytes) \| LFloat(Bytes)` | Literal: mirrors ast.myc::Literal verbatim (FLAG-ast-4/5 renames carried over — `LBytes`/ `LFloat`, FLAG-ast-8: no `#[non_exhaustive]` analog). | Empirical/Declared |
+| `compiler.semcore::Literal::Bin` | ctor | `lib/compiler/semcore.myc:357` | `Bin(Bytes)` | — | Empirical/Declared |
+| `compiler.semcore::Literal::Trit` | ctor | `lib/compiler/semcore.myc:358` | `Trit(Bytes)` | — | Empirical/Declared |
+| `compiler.semcore::Literal::Int` | ctor | `lib/compiler/semcore.myc:359` | `Int(Binary{64})` | — | Empirical/Declared |
+| `compiler.semcore::Literal::AmbientInt` | ctor | `lib/compiler/semcore.myc:360` | `AmbientInt(Paradigm, Binary{64})` | — | Empirical/Declared |
+| `compiler.semcore::Literal::List` | ctor | `lib/compiler/semcore.myc:361` | `List(Vec[Expr])` | — | Empirical/Declared |
+| `compiler.semcore::Literal::LBytes` | ctor | `lib/compiler/semcore.myc:362` | `LBytes(Bytes)` | — | Empirical/Declared |
+| `compiler.semcore::Literal::Str` | ctor | `lib/compiler/semcore.myc:363` | `Str(Bytes)` | — | Empirical/Declared |
+| `compiler.semcore::Literal::LFloat` | ctor | `lib/compiler/semcore.myc:364` | `LFloat(Bytes)` | — | Empirical/Declared |
+| `compiler.semcore::Pattern` | type | `lib/compiler/semcore.myc:367` | `type Pattern = PWildcard \| PLit(Literal) \| PCtor(Bytes, Vec[Pattern]) \| PIdent(Bytes) \| PTuple(Vec[Pattern]) \| POr(Vec[Pattern])` | Pattern: mirrors ast.myc::Pattern verbatim (FLAG-ast-5 P-prefix throughout). | Empirical/Declared |
+| `compiler.semcore::Pattern::PWildcard` | ctor | `lib/compiler/semcore.myc:368` | `PWildcard` | — | Empirical/Declared |
+| `compiler.semcore::Pattern::PLit` | ctor | `lib/compiler/semcore.myc:369` | `PLit(Literal)` | — | Empirical/Declared |
+| `compiler.semcore::Pattern::PCtor` | ctor | `lib/compiler/semcore.myc:370` | `PCtor(Bytes, Vec[Pattern])` | — | Empirical/Declared |
+| `compiler.semcore::Pattern::PIdent` | ctor | `lib/compiler/semcore.myc:371` | `PIdent(Bytes)` | — | Empirical/Declared |
+| `compiler.semcore::Pattern::PTuple` | ctor | `lib/compiler/semcore.myc:372` | `PTuple(Vec[Pattern])` | — | Empirical/Declared |
+| `compiler.semcore::Pattern::POr` | ctor | `lib/compiler/semcore.myc:373` | `POr(Vec[Pattern])` | — | Empirical/Declared |
+| `compiler.semcore::Arm` | type | `lib/compiler/semcore.myc:376` | `type Arm = Ar(Pattern, Expr)` | Arm: mirrors ast.myc::Arm (one `match` arm). | Empirical/Declared |
+| `compiler.semcore::Arm::Ar` | ctor | `lib/compiler/semcore.myc:376` | `Ar(Pattern, Expr)` | — | Empirical/Declared |
+| `compiler.semcore::arm_pattern` | fn | `lib/compiler/semcore.myc:378` | `fn arm_pattern(a: Arm) => Pattern` | — | Empirical/Declared |
+| `compiler.semcore::arm_body` | fn | `lib/compiler/semcore.myc:381` | `fn arm_body(a: Arm) => Expr` | — | Empirical/Declared |
+| `compiler.semcore::Hypha` | type | `lib/compiler/semcore.myc:385` | `type Hypha = Hy(Option[Expr], Expr)` | Hypha: mirrors ast.myc::Hypha (only `body` accessor kept — grade never inspects `forage`). | Empirical/Declared |
+| `compiler.semcore::Hypha::Hy` | ctor | `lib/compiler/semcore.myc:385` | `Hy(Option[Expr], Expr)` | — | Empirical/Declared |
+| `compiler.semcore::hypha_body` | fn | `lib/compiler/semcore.myc:387` | `fn hypha_body(h: Hypha) => Expr` | — | Empirical/Declared |
+| `compiler.semcore::Expr` | type | `lib/compiler/semcore.myc:396` | `type Expr = Let(Bytes, Option[TypeRef], Expr, Expr) \| If(Expr, Expr, Expr) \| Match(Expr, Vec[Arm]) \| For(Bytes, Expr, Bytes, Expr, Expr) \| Swap(Expr, TypeRef, Path) \| WithParadigm(Paradigm, Expr) \| Wild(Expr) \| Spore(Expr) \| Wrapping(Expr) \| Consume(Expr) \| Try(Expr) \| Colony(Vec[Hypha]) \| Lambda(Vec[Param], Expr) \| App(Expr, Vec[Expr]) \| Fuse(Expr, Expr) \| Reclaim(Expr, Expr) \| Path(Path) \| Lit(Literal) \| Ascribe(Expr, TypeRef) \| TupleLit(Vec[Expr])` | Expr: mirrors ast.myc::Expr verbatim, field-for-field, same variant order. FLAG-semcore-37 / FLAG-try-3 (DN-102): `Wrapping` (M-791) and `Try` (`?`, M-1025) are REPRESENTED and traversed here (grade / collect_tuple_arities_expr / fvw all recurse into its child, mirroring `Consume`), but the self-hosted lexer/parser does not yet PRODUCE it (no `wrapping` keyword in token/lex; no parse rule) — surface parsing of `wrapping { e }` is deferred remaining work (never-silent, G2). The Rust reference frontend produces it (ast.rs::Expr::Wrapping). | Empirical/Declared |
+| `compiler.semcore::Expr::Let` | ctor | `lib/compiler/semcore.myc:397` | `Let(Bytes, Option[TypeRef], Expr, Expr)` | — | Empirical/Declared |
+| `compiler.semcore::Expr::If` | ctor | `lib/compiler/semcore.myc:398` | `If(Expr, Expr, Expr)` | — | Empirical/Declared |
+| `compiler.semcore::Expr::Match` | ctor | `lib/compiler/semcore.myc:399` | `Match(Expr, Vec[Arm])` | — | Empirical/Declared |
+| `compiler.semcore::Expr::For` | ctor | `lib/compiler/semcore.myc:400` | `For(Bytes, Expr, Bytes, Expr, Expr)` | — | Empirical/Declared |
+| `compiler.semcore::Expr::Path` | ctor | `lib/compiler/semcore.myc:401` | `Path(Path)` | — | Empirical/Declared |
+| `compiler.semcore::Expr::Swap` | ctor | `lib/compiler/semcore.myc:401` | `Swap(Expr, TypeRef, Path)` | — | Empirical/Declared |
+| `compiler.semcore::Expr::WithParadigm` | ctor | `lib/compiler/semcore.myc:402` | `WithParadigm(Paradigm, Expr)` | — | Empirical/Declared |
+| `compiler.semcore::Expr::Wild` | ctor | `lib/compiler/semcore.myc:403` | `Wild(Expr)` | — | Empirical/Declared |
+| `compiler.semcore::Expr::Spore` | ctor | `lib/compiler/semcore.myc:404` | `Spore(Expr)` | — | Empirical/Declared |
+| `compiler.semcore::Expr::Wrapping` | ctor | `lib/compiler/semcore.myc:405` | `Wrapping(Expr)` | — | Empirical/Declared |
+| `compiler.semcore::Expr::Consume` | ctor | `lib/compiler/semcore.myc:406` | `Consume(Expr)` | — | Empirical/Declared |
+| `compiler.semcore::Expr::Try` | ctor | `lib/compiler/semcore.myc:409` | `Try(Expr)` | — | Empirical/Declared |
+| `compiler.semcore::Expr::Colony` | ctor | `lib/compiler/semcore.myc:412` | `Colony(Vec[Hypha])` | — | Empirical/Declared |
+| `compiler.semcore::Expr::Lambda` | ctor | `lib/compiler/semcore.myc:413` | `Lambda(Vec[Param], Expr)` | — | Empirical/Declared |
+| `compiler.semcore::Expr::App` | ctor | `lib/compiler/semcore.myc:414` | `App(Expr, Vec[Expr])` | — | Empirical/Declared |
+| `compiler.semcore::Expr::Fuse` | ctor | `lib/compiler/semcore.myc:415` | `Fuse(Expr, Expr)` | — | Empirical/Declared |
+| `compiler.semcore::Expr::Reclaim` | ctor | `lib/compiler/semcore.myc:416` | `Reclaim(Expr, Expr)` | — | Empirical/Declared |
+| `compiler.semcore::Expr::Lit` | ctor | `lib/compiler/semcore.myc:418` | `Lit(Literal)` | — | Empirical/Declared |
+| `compiler.semcore::Expr::Ascribe` | ctor | `lib/compiler/semcore.myc:419` | `Ascribe(Expr, TypeRef)` | — | Empirical/Declared |
+| `compiler.semcore::Expr::TupleLit` | ctor | `lib/compiler/semcore.myc:420` | `TupleLit(Vec[Expr])` | — | Empirical/Declared |
+| `compiler.semcore::zero32` | fn | `lib/compiler/semcore.myc:423` | `fn zero32() => Binary{32}` | — | Empirical/Declared |
+| `compiler.semcore::one32` | fn | `lib/compiler/semcore.myc:424` | `fn one32() => Binary{32}` | — | Empirical/Declared |
+| `compiler.semcore::max_semcore_depth` | fn | `lib/compiler/semcore.myc:428` | `fn max_semcore_depth() => Binary{32}` | max_semcore_depth: SAME 4096 ceiling as checkty::MAX_CHECK_DEPTH / parse.myc::max_expr_depth (FLAG-semcore-3). | Empirical/Declared |
+| `compiler.semcore::enter_depth` | fn | `lib/compiler/semcore.myc:432` | `fn enter_depth(depth: Binary{32}) => Result[Binary{32}, Bytes]` | enter_depth: charge one level against the shared budget; `Err` on overflow (never a panic — the parse.myc FLAG-parse-7 convention, restated for this nodule's three budgeted recursions). | Empirical/Declared |
+| `compiler.semcore::names_contains` | fn | `lib/compiler/semcore.myc:441` | `fn names_contains(names: Vec[Bytes], n: Bytes) => Bool` | names_contains: linear membership check over a `Vec[Bytes]` (used throughout for dedup / signature-completeness checks — the FLAG-semcore-4 assoc-list convention). | Empirical/Declared |
+| `compiler.semcore::Width` | type | `lib/compiler/semcore.myc:451` | `type Width = WdLit(Binary{32}) \| WdVar(Bytes)` | Width: mirrors checkty.rs::Width (a `Binary{n}`/`Ternary{m}` width argument — concrete literal or abstract width variable). | Empirical/Declared |
+| `compiler.semcore::Width::WdLit` | ctor | `lib/compiler/semcore.myc:451` | `WdLit(Binary{32})` | — | Empirical/Declared |
+| `compiler.semcore::Width::WdVar` | ctor | `lib/compiler/semcore.myc:451` | `WdVar(Bytes)` | — | Empirical/Declared |
+| `compiler.semcore::Ty` | type | `lib/compiler/semcore.myc:455` | `type Ty = TyBinary(Width) \| TyTernary(Width) \| TyDense(Binary{32}, Scalar) \| TyVsa(Bytes, Binary{32}, Sparsity) \| TyData(Bytes, Vec[Ty]) \| TySubstrate(Bytes) \| TySeq(Ty, Binary{32}) \| TyBytes \| TyFloat \| TyVar(Bytes) \| TyFn(Ty, Ty)` | Ty: mirrors checkty.rs::Ty field-for-field (11 variants; `Box<Ty>` fields carry over as plain `Ty` per ast.myc's own shell-first-registration recursion note — no wrapper needed). | Empirical/Declared |
+| `compiler.semcore::Ty::TyBinary` | ctor | `lib/compiler/semcore.myc:456` | `TyBinary(Width)` | — | Empirical/Declared |
+| `compiler.semcore::Ty::TyTernary` | ctor | `lib/compiler/semcore.myc:457` | `TyTernary(Width)` | — | Empirical/Declared |
+| `compiler.semcore::Ty::TyDense` | ctor | `lib/compiler/semcore.myc:458` | `TyDense(Binary{32}, Scalar)` | — | Empirical/Declared |
+| `compiler.semcore::Ty::TyVsa` | ctor | `lib/compiler/semcore.myc:459` | `TyVsa(Bytes, Binary{32}, Sparsity)` | — | Empirical/Declared |
+| `compiler.semcore::Ty::TyData` | ctor | `lib/compiler/semcore.myc:460` | `TyData(Bytes, Vec[Ty])` | — | Empirical/Declared |
+| `compiler.semcore::Ty::TySubstrate` | ctor | `lib/compiler/semcore.myc:461` | `TySubstrate(Bytes)` | — | Empirical/Declared |
+| `compiler.semcore::Ty::TySeq` | ctor | `lib/compiler/semcore.myc:462` | `TySeq(Ty, Binary{32})` | — | Empirical/Declared |
+| `compiler.semcore::Ty::TyBytes` | ctor | `lib/compiler/semcore.myc:463` | `TyBytes` | — | Empirical/Declared |
+| `compiler.semcore::Ty::TyFloat` | ctor | `lib/compiler/semcore.myc:464` | `TyFloat` | — | Empirical/Declared |
+| `compiler.semcore::Ty::TyVar` | ctor | `lib/compiler/semcore.myc:465` | `TyVar(Bytes)` | — | Empirical/Declared |
+| `compiler.semcore::Ty::TyFn` | ctor | `lib/compiler/semcore.myc:466` | `TyFn(Ty, Ty)` | — | Empirical/Declared |
+| `compiler.semcore::CtorInfo` | type | `lib/compiler/semcore.myc:469` | `type CtorInfo = CI(Bytes, Vec[Ty])` | CtorInfo: mirrors checkty.rs::CtorInfo (name, field types). | Empirical/Declared |
+| `compiler.semcore::CtorInfo::CI` | ctor | `lib/compiler/semcore.myc:469` | `CI(Bytes, Vec[Ty])` | — | Empirical/Declared |
+| `compiler.semcore::ci_name` | fn | `lib/compiler/semcore.myc:471` | `fn ci_name(c: CtorInfo) => Bytes` | — | Empirical/Declared |
+| `compiler.semcore::ci_fields` | fn | `lib/compiler/semcore.myc:474` | `fn ci_fields(c: CtorInfo) => Vec[Ty]` | — | Empirical/Declared |
+| `compiler.semcore::DataInfo` | type | `lib/compiler/semcore.myc:478` | `type DataInfo = DI(Bytes, Vec[Bytes], Vec[CtorInfo])` | DataInfo: mirrors checkty.rs::DataInfo (name, type params, ctors in declaration order). | Empirical/Declared |
+| `compiler.semcore::DataInfo::DI` | ctor | `lib/compiler/semcore.myc:478` | `DI(Bytes, Vec[Bytes], Vec[CtorInfo])` | — | Empirical/Declared |
+| `compiler.semcore::di_name` | fn | `lib/compiler/semcore.myc:480` | `fn di_name(d: DataInfo) => Bytes` | — | Empirical/Declared |
+| `compiler.semcore::di_ctors` | fn | `lib/compiler/semcore.myc:483` | `fn di_ctors(d: DataInfo) => Vec[CtorInfo]` | — | Empirical/Declared |
+| `compiler.semcore::types_lookup` | fn | `lib/compiler/semcore.myc:488` | `fn types_lookup(types: Vec[DataInfo], name: Bytes) => Option[DataInfo]` | types_lookup: the FLAG-semcore-4 ordered-assoc-list lookup standing in for `BTreeMap<String, DataInfo>`. | Empirical/Declared |
+| `compiler.semcore::Pat` | type | `lib/compiler/semcore.myc:500` | `type Pat = MpWild \| MpCtor(Bytes, Vec[Pat]) \| MpLit(Bytes)` | Pat: mirrors usefulness.rs::Pat (the NORMALIZED matrix pattern — FLAG-semcore-2 Mp-prefix). | Empirical/Declared |
+| `compiler.semcore::Pat::MpCtor` | ctor | `lib/compiler/semcore.myc:500` | `MpCtor(Bytes, Vec[Pat])` | — | Empirical/Declared |
+| `compiler.semcore::Pat::MpLit` | ctor | `lib/compiler/semcore.myc:500` | `MpLit(Bytes)` | — | Empirical/Declared |
+| `compiler.semcore::Pat::MpWild` | ctor | `lib/compiler/semcore.myc:500` | `MpWild` | — | Empirical/Declared |
+| `compiler.semcore::pat_append` | fn | `lib/compiler/semcore.myc:504` | `fn pat_append(a: Vec[Pat], b: Vec[Pat]) => Vec[Pat]` | pat_append / pat_len: small list helpers (non-tail, bounded by ONE row's arity — a handful of fields, never source length; mirrors nodule.myc::join_segs's count-bounded-recursion precedent). | Empirical/Declared |
+| `compiler.semcore::pat_len` | fn | `lib/compiler/semcore.myc:507` | `fn pat_len(v: Vec[Pat]) => Binary{32}` | — | Empirical/Declared |
+| `compiler.semcore::ty_len` | fn | `lib/compiler/semcore.myc:513` | `fn ty_len(v: Vec[Ty]) => Binary{32}` | ty_len: the arity-counting twin of `pat_len`, over a constructor's OWN field-type list (`Vec[Ty]`, not `Vec[Pat]` — a distinct monomorphic length fn since this language's total-fn discipline rules out a single generic one here, FLAG-semcore-5's KISS/YAGNI rationale extended). | Empirical/Declared |
+| `compiler.semcore::wild_n` | fn | `lib/compiler/semcore.myc:517` | `fn wild_n(n: Binary{32}) => Vec[Pat]` | wild_n: `n` fresh wildcards (bounded by a constructor's own arity). | Empirical/Declared |
+| `compiler.semcore::ty_append` | fn | `lib/compiler/semcore.myc:524` | `fn ty_append(a: Vec[Ty], b: Vec[Ty]) => Vec[Ty]` | ty_append: mirrors the Rust `ct2.extend_from_slice(...)` column-type splicing. | Empirical/Declared |
+| `compiler.semcore::ct_head` | fn | `lib/compiler/semcore.myc:530` | `fn ct_head(ts: Vec[Ty]) => Ty` | ct_head / ct_tail: single-level column-type accessors (the `Nil` arm is an internal-invariant edge — never hit by a well-formed call where `col_types` is parallel to the query — a harmless sentinel value, not a silent behavior change to any reachable case). | Empirical/Declared |
+| `compiler.semcore::ct_tail` | fn | `lib/compiler/semcore.myc:533` | `fn ct_tail(ts: Vec[Ty]) => Vec[Ty]` | — | Empirical/Declared |
+| `compiler.semcore::signature` | fn | `lib/compiler/semcore.myc:539` | `fn signature(ty: Ty, types: Vec[DataInfo]) => Option[DataInfo]` | signature: the finite constructor signature of `ty`, or `None` if its domain is open (`Binary`/`Ternary` — mirrors usefulness.rs::signature; the trailing wildcard is the established `_ => …` idiom over a big-variant sum type, parse.myc's own `Tok` classifiers). | Empirical/Declared |
+| `compiler.semcore::ctorinfo_fields_by_name` | fn | `lib/compiler/semcore.myc:544` | `fn ctorinfo_fields_by_name(ctors: Vec[CtorInfo], c: Bytes) => Vec[Ty]` | ctorinfo_fields_by_name / ctor_fields_of: the field types of constructor `c` (mirrors usefulness.rs::ctor_fields; empty if not found — a well-typed matrix never misses). | Empirical/Declared |
+| `compiler.semcore::ctor_fields_of` | fn | `lib/compiler/semcore.myc:553` | `fn ctor_fields_of(ty: Ty, c: Bytes, types: Vec[DataInfo]) => Vec[Ty]` | — | Empirical/Declared |
+| `compiler.semcore::specialize_ctor_pat` | fn | `lib/compiler/semcore.myc:562` | `fn specialize_ctor_pat(matrix: Vec[Vec[Pat]], c: Bytes, a: Binary{32}) => Vec[Vec[Pat]]` | specialize_ctor_pat / specialize_lit_pat: mirror usefulness.rs::specialize_ctor/specialize_lit over a BARE `Vec[Pat]` matrix (FLAG-semcore-5 — no shared `SpecializeRow` trait; this is the `useful`-side copy, `specialize_ctor_row`/`specialize_lit_row` below is the `compile`-side one). | Empirical/Declared |
+| `compiler.semcore::specialize_lit_pat` | fn | `lib/compiler/semcore.myc:578` | `fn specialize_lit_pat(matrix: Vec[Vec[Pat]], k: Bytes) => Vec[Vec[Pat]]` | — | Empirical/Declared |
+| `compiler.semcore::default_matrix` | fn | `lib/compiler/semcore.myc:595` | `fn default_matrix(matrix: Vec[Vec[Pat]]) => Vec[Vec[Pat]]` | default_matrix: `D(P)` — rows headed by a wildcard, leading column dropped. | Empirical/Declared |
+| `compiler.semcore::head_ctors` | fn | `lib/compiler/semcore.myc:609` | `fn head_ctors(matrix: Vec[Vec[Pat]]) => Vec[Bytes]` | head_ctors: the (deduped) constructor names appearing in the matrix's first column. | Empirical/Declared |
+| `compiler.semcore::ctors_all_present` | fn | `lib/compiler/semcore.myc:625` | `fn ctors_all_present(ctors: Vec[CtorInfo], present: Vec[Bytes]) => Bool` | ctors_all_present / find_missing_ctor: shared by usefulness AND decision's completeness checks. | Empirical/Declared |
+| `compiler.semcore::find_missing_ctor` | fn | `lib/compiler/semcore.myc:634` | `fn find_missing_ctor(ctors: Vec[CtorInfo], present: Vec[Bytes]) => Option[CtorInfo]` | — | Empirical/Declared |
+| `compiler.semcore::missing_head` | fn | `lib/compiler/semcore.myc:645` | `fn missing_head(m: Option[CtorInfo]) => Pat` | missing_head: the witness head for an incomplete column (mirrors usefulness.rs's inline `missing.map_or(Pat::Wild, ...)`). | Empirical/Declared |
+| `compiler.semcore::pat_split_at` | fn | `lib/compiler/semcore.myc:649` | `fn pat_split_at(w: Vec[Pat], n: Binary{32}) => Pair[Vec[Pat], Vec[Pat]]` | pat_split_at: split a witness vector at `n` (mirrors usefulness.rs's `w.split_off(a)`). | Empirical/Declared |
+| `compiler.semcore::rebuild_ctor` | fn | `lib/compiler/semcore.myc:662` | `fn rebuild_ctor(c: Bytes, a: Binary{32}, w: Vec[Pat]) => Vec[Pat]` | rebuild_ctor / prepend: re-fold a witness whose first `a` elements are constructor `c`'s sub-witnesses (mirrors usefulness.rs verbatim). | Empirical/Declared |
+| `compiler.semcore::prepend` | fn | `lib/compiler/semcore.myc:665` | `fn prepend(head: Pat, rest: Vec[Pat]) => Vec[Pat]` | — | Empirical/Declared |
+| `compiler.semcore::matrix_is_empty_to_witness` | fn | `lib/compiler/semcore.myc:670` | `fn matrix_is_empty_to_witness(matrix: Vec[Vec[Pat]]) => Option[Vec[Pat]]` | matrix_is_empty_to_witness: the `q.is_empty()` base case's witness (`Some([])` iff no row remains). | Empirical/Declared |
+| `compiler.semcore::useful` | fn | `lib/compiler/semcore.myc:674` | `fn useful(types: Vec[DataInfo], matrix: Vec[Vec[Pat]], q: Vec[Pat], col_types: Vec[Ty]) => Result[Option[Vec[Pat]], Bytes]` | useful: `U(P, q)` entry point — a fresh per-query budget (mirrors usefulness.rs::useful). | Empirical/Declared |
+| `compiler.semcore::useful_budgeted` | fn | `lib/compiler/semcore.myc:679` | `fn useful_budgeted(depth: Binary{32}, types: Vec[DataInfo], matrix: Vec[Vec[Pat]], q: Vec[Pat], col_types: Vec[Ty]) => Result[Option[Vec[Pat]], Bytes]` | useful_budgeted: the budget-charged recursion (mirrors usefulness.rs::useful_budgeted). | Empirical/Declared |
+| `compiler.semcore::useful_ctor` | fn | `lib/compiler/semcore.myc:693` | `fn useful_ctor(depth: Binary{32}, types: Vec[DataInfo], matrix: Vec[Vec[Pat]], qrest: Vec[Pat], col_types: Vec[Ty], c: Bytes, subs: Vec[Pat]) => Result[Option[Vec[Pat]], Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::useful_lit` | fn | `lib/compiler/semcore.myc:707` | `fn useful_lit(depth: Binary{32}, types: Vec[DataInfo], matrix: Vec[Vec[Pat]], qrest: Vec[Pat], col_types: Vec[Ty], k: Bytes) => Result[Option[Vec[Pat]], Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::useful_wild` | fn | `lib/compiler/semcore.myc:718` | `fn useful_wild(depth: Binary{32}, types: Vec[DataInfo], matrix: Vec[Vec[Pat]], qrest: Vec[Pat], col_types: Vec[Ty]) => Result[Option[Vec[Pat]], Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::useful_wild_open` | fn | `lib/compiler/semcore.myc:730` | `fn useful_wild_open(depth: Binary{32}, types: Vec[DataInfo], matrix: Vec[Vec[Pat]], qrest: Vec[Pat], col_types: Vec[Ty]) => Result[Option[Vec[Pat]], Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::useful_wild_incomplete` | fn | `lib/compiler/semcore.myc:741` | `fn useful_wild_incomplete(depth: Binary{32}, types: Vec[DataInfo], matrix: Vec[Vec[Pat]], qrest: Vec[Pat], col_types: Vec[Ty], d: DataInfo, present: Vec[Bytes]) => Result[Option[Vec[Pat]], Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::useful_wild_complete` | fn | `lib/compiler/semcore.myc:755` | `fn useful_wild_complete(depth: Binary{32}, types: Vec[DataInfo], matrix: Vec[Vec[Pat]], qrest: Vec[Pat], col_types: Vec[Ty], ctors: Vec[CtorInfo]) => Result[Option[Vec[Pat]], Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::render` | fn | `lib/compiler/semcore.myc:776` | `fn render(p: Pat) => Bytes` | render: render a witness pattern for a diagnostic (mirrors usefulness.rs::render; the b:/t: literal-key rewrite is SKIPPED here — cosmetic-only, not exercised by this increment's differential, which compares verdict SHAPE, not rendered text). | Empirical/Declared |
+| `compiler.semcore::render_list` | fn | `lib/compiler/semcore.myc:786` | `fn render_list(subs: Vec[Pat]) => Bytes` | — | Empirical/Declared |
+| `compiler.semcore::Head` | type | `lib/compiler/semcore.myc:798` | `type Head = HdCtor(Bytes, Binary{32}) \| HdLit(Bytes)` | Head: mirrors decision.rs::Head (FLAG-semcore-2 Hd-prefix). | Empirical/Declared |
+| `compiler.semcore::Head::HdCtor` | ctor | `lib/compiler/semcore.myc:798` | `HdCtor(Bytes, Binary{32})` | — | Empirical/Declared |
+| `compiler.semcore::Head::HdLit` | ctor | `lib/compiler/semcore.myc:798` | `HdLit(Bytes)` | — | Empirical/Declared |
+| `compiler.semcore::Tree` | type | `lib/compiler/semcore.myc:802` | `type Tree = Leaf(Binary{32}) \| Fail \| Switch(Vec[Binary{32}], Vec[Pair[Head, Tree]], Option[Tree])` | Tree: mirrors decision.rs::Tree (no Box needed — recursion note above; `Occurrence` inlined as `Vec[Binary{32}]`, FLAG-semcore-7). | Empirical/Declared |
+| `compiler.semcore::Tree::Fail` | ctor | `lib/compiler/semcore.myc:802` | `Fail` | — | Empirical/Declared |
+| `compiler.semcore::Tree::Leaf` | ctor | `lib/compiler/semcore.myc:802` | `Leaf(Binary{32})` | — | Empirical/Declared |
+| `compiler.semcore::Tree::Switch` | ctor | `lib/compiler/semcore.myc:802` | `Switch(Vec[Binary{32}], Vec[Pair[Head, Tree]], Option[Tree])` | — | Empirical/Declared |
+| `compiler.semcore::DRow` | type | `lib/compiler/semcore.myc:805` | `type DRow = DRw(Vec[Pat], Binary{32})` | DRow: mirrors decision.rs::Row (a matrix row carrying its surface arm index). | Empirical/Declared |
+| `compiler.semcore::DRow::DRw` | ctor | `lib/compiler/semcore.myc:805` | `DRw(Vec[Pat], Binary{32})` | — | Empirical/Declared |
+| `compiler.semcore::drow_pats` | fn | `lib/compiler/semcore.myc:807` | `fn drow_pats(r: DRow) => Vec[Pat]` | — | Empirical/Declared |
+| `compiler.semcore::drow_arm` | fn | `lib/compiler/semcore.myc:810` | `fn drow_arm(r: DRow) => Binary{32}` | — | Empirical/Declared |
+| `compiler.semcore::specialize_ctor_row` | fn | `lib/compiler/semcore.myc:815` | `fn specialize_ctor_row(rows: Vec[DRow], c: Bytes, a: Binary{32}) => Vec[DRow]` | specialize_ctor_row / specialize_lit_row: the DRow-carrying twin of the `_pat` versions above (FLAG-semcore-5 — no shared trait; the arm index rides through unchanged). | Empirical/Declared |
+| `compiler.semcore::specialize_lit_row` | fn | `lib/compiler/semcore.myc:832` | `fn specialize_lit_row(rows: Vec[DRow], k: Bytes) => Vec[DRow]` | — | Empirical/Declared |
+| `compiler.semcore::default_rows` | fn | `lib/compiler/semcore.myc:849` | `fn default_rows(rows: Vec[DRow]) => Vec[DRow]` | default_rows: `D(P)` over `DRow`s. | Empirical/Declared |
+| `compiler.semcore::row_all_wild` | fn | `lib/compiler/semcore.myc:863` | `fn row_all_wild(pats: Vec[Pat]) => Bool` | row_all_wild: whether every column of one row is a wildcard. | Empirical/Declared |
+| `compiler.semcore::first_nonwild_idx` | fn | `lib/compiler/semcore.myc:876` | `fn first_nonwild_idx(pats: Vec[Pat], idx: Binary{32}) => Binary{32}` | first_nonwild_idx: the FLAG-semcore-8 simplified column-selection heuristic — the first non-wildcard column of ONE row (called on the first row only, which the caller has already established is not all-wild). | Empirical/Declared |
+| `compiler.semcore::extract_occ` | fn | `lib/compiler/semcore.myc:888` | `fn extract_occ(v: Vec[Vec[Binary{32}]], i: Binary{32}) => Pair[Vec[Binary{32}], Vec[Vec[Binary{32}]]]` | extract_occ / extract_ty / extract_pat: remove the `i`-th element, returning it paired with the remainder in original relative order (the building block of "rotate column `i` to the front"). | Empirical/Declared |
+| `compiler.semcore::extract_ty` | fn | `lib/compiler/semcore.myc:897` | `fn extract_ty(v: Vec[Ty], i: Binary{32}) => Pair[Ty, Vec[Ty]]` | — | Empirical/Declared |
+| `compiler.semcore::extract_pat` | fn | `lib/compiler/semcore.myc:906` | `fn extract_pat(v: Vec[Pat], i: Binary{32}) => Pair[Pat, Vec[Pat]]` | — | Empirical/Declared |
+| `compiler.semcore::rotate_pat_to_front` | fn | `lib/compiler/semcore.myc:915` | `fn rotate_pat_to_front(v: Vec[Pat], i: Binary{32}) => Vec[Pat]` | — | Empirical/Declared |
+| `compiler.semcore::rotate_rows_to_front` | fn | `lib/compiler/semcore.myc:918` | `fn rotate_rows_to_front(rows: Vec[DRow], i: Binary{32}) => Vec[DRow]` | — | Empirical/Declared |
+| `compiler.semcore::u32_append` | fn | `lib/compiler/semcore.myc:926` | `fn u32_append(a: Vec[Binary{32}], b: Vec[Binary{32}]) => Vec[Binary{32}]` | u32_append / occ_append / cases_append: small list-splicing helpers. | Empirical/Declared |
+| `compiler.semcore::occ_append` | fn | `lib/compiler/semcore.myc:929` | `fn occ_append(a: Vec[Vec[Binary{32}]], b: Vec[Vec[Binary{32}]]) => Vec[Vec[Binary{32}]]` | — | Empirical/Declared |
+| `compiler.semcore::cases_append` | fn | `lib/compiler/semcore.myc:932` | `fn cases_append(a: Vec[Pair[Head, Tree]], b: Vec[Pair[Head, Tree]]) => Vec[Pair[Head, Tree]]` | — | Empirical/Declared |
+| `compiler.semcore::child_occ` | fn | `lib/compiler/semcore.myc:936` | `fn child_occ(occ_rest: Vec[Vec[Binary{32}]], occ0: Vec[Binary{32}], a: Binary{32}) => Vec[Vec[Binary{32}]]` | child_occ: the `a` child occurrences `occ0 ++ [j]` (j = 0..a) followed by the remaining columns. | Empirical/Declared |
+| `compiler.semcore::child_occ_acc` | fn | `lib/compiler/semcore.myc:940` | `fn child_occ_acc(occ0: Vec[Binary{32}], j: Binary{32}, a: Binary{32}) => Vec[Vec[Binary{32}]]` | — | Empirical/Declared |
+| `compiler.semcore::gather_ctor_names` | fn | `lib/compiler/semcore.myc:947` | `fn gather_ctor_names(rows: Vec[DRow]) => Vec[Bytes]` | gather_ctor_names / gather_lit_names: first-seen, deduped head names in column 0. | Empirical/Declared |
+| `compiler.semcore::gather_lit_names` | fn | `lib/compiler/semcore.myc:962` | `fn gather_lit_names(rows: Vec[DRow]) => Vec[Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::signature_complete` | fn | `lib/compiler/semcore.myc:978` | `fn signature_complete(ty0: Ty, types: Vec[DataInfo], present: Vec[Bytes]) => Bool` | signature_complete: whether `present` covers `ty0`'s whole finite signature. | Empirical/Declared |
+| `compiler.semcore::build_ctor_cases` | fn | `lib/compiler/semcore.myc:986` | `fn build_ctor_cases(depth: Binary{32}, types: Vec[DataInfo], rows: Vec[DRow], ty0: Ty, occ0: Vec[Binary{32}], occ_rest: Vec[Vec[Binary{32}]], tys_rest: Vec[Ty], present: Vec[Bytes]) => Result[Vec[Pair[Head, Tree]], Bytes]` | build_ctor_cases(_from): one `(Head::Ctor, subtree)` case per ctor of `ty0`'s signature that appears in `present`, in SIGNATURE order (mirrors decision.rs::compile_rows's ctor loop). | Empirical/Declared |
+| `compiler.semcore::build_ctor_cases_from` | fn | `lib/compiler/semcore.myc:994` | `fn build_ctor_cases_from(depth: Binary{32}, types: Vec[DataInfo], rows: Vec[DRow], occ0: Vec[Binary{32}], occ_rest: Vec[Vec[Binary{32}]], tys_rest: Vec[Ty], ctors: Vec[CtorInfo], present: Vec[Bytes]) => Result[Vec[Pair[Head, Tree]], Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::build_lit_cases` | fn | `lib/compiler/semcore.myc:1018` | `fn build_lit_cases(depth: Binary{32}, types: Vec[DataInfo], rows: Vec[DRow], occ_rest: Vec[Vec[Binary{32}]], tys_rest: Vec[Ty], lits: Vec[Bytes]) => Result[Vec[Pair[Head, Tree]], Bytes]` | build_lit_cases: one `(Head::Lit, subtree)` case per literal head, first-seen order. | Empirical/Declared |
+| `compiler.semcore::compile` | fn | `lib/compiler/semcore.myc:1033` | `fn compile(types: Vec[DataInfo], matrix: Vec[Vec[Pat]], arms: Vec[Binary{32}], occ: Vec[Vec[Binary{32}]], tys: Vec[Ty]) => Result[Tree, Bytes]` | compile: entry point — a fresh per-compilation budget (mirrors decision.rs::compile). | Empirical/Declared |
+| `compiler.semcore::zip_rows` | fn | `lib/compiler/semcore.myc:1037` | `fn zip_rows(matrix: Vec[Vec[Pat]], arms: Vec[Binary{32}]) => Vec[DRow]` | — | Empirical/Declared |
+| `compiler.semcore::compile_rows` | fn | `lib/compiler/semcore.myc:1047` | `fn compile_rows(depth: Binary{32}, types: Vec[DataInfo], rows: Vec[DRow], occ: Vec[Vec[Binary{32}]], tys: Vec[Ty]) => Result[Tree, Bytes]` | compile_rows: the budget-charged recursion (mirrors decision.rs::compile_rows). | Empirical/Declared |
+| `compiler.semcore::compile_switch` | fn | `lib/compiler/semcore.myc:1060` | `fn compile_switch(depth: Binary{32}, types: Vec[DataInfo], rows: Vec[DRow], occ: Vec[Vec[Binary{32}]], tys: Vec[Ty], col: Binary{32}) => Result[Tree, Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::has_reachable_fail` | fn | `lib/compiler/semcore.myc:1087` | `fn has_reachable_fail(t: Tree) => Bool` | has_reachable_fail: whether the tree contains a reachable `Fail` (mirrors decision.rs verbatim). | Empirical/Declared |
+| `compiler.semcore::cases_any_reachable_fail` | fn | `lib/compiler/semcore.myc:1097` | `fn cases_any_reachable_fail(cases: Vec[Pair[Head, Tree]]) => Bool` | — | Empirical/Declared |
+| `compiler.semcore::tree_eval` | fn | `lib/compiler/semcore.myc:1111` | `fn tree_eval(t: Tree, value: Pat) => Option[Binary{32}]` | tree_eval: a small TEST-ONLY reference evaluator (mirrors decision.rs's own module-doc-mentioned `eval_tree` reference — "it verifies the compiler; it does not run programs"). Walks the tree against one concrete (fully-ground, no `MpWild`) value pattern, returning the arm index reached, or `None` if a `Fail` is reached. Occurrence-indexed lookup into the concrete value is done via `pat_at_occ` (a small ground-value navigator — NOT part of decision.rs itself, purely this increment's differential-driving harness). | Empirical/Declared |
+| `compiler.semcore::tree_eval_switch` | fn | `lib/compiler/semcore.myc:1118` | `fn tree_eval_switch(scrutinee: Pat, cases: Vec[Pair[Head, Tree]], deft: Option[Tree], value: Pat) => Option[Binary{32}]` | — | Empirical/Declared |
+| `compiler.semcore::tree_eval_deft` | fn | `lib/compiler/semcore.myc:1130` | `fn tree_eval_deft(deft: Option[Tree], value: Pat) => Option[Binary{32}]` | — | Empirical/Declared |
+| `compiler.semcore::head_matches` | fn | `lib/compiler/semcore.myc:1133` | `fn head_matches(h: Head, scrutinee: Pat) => Bool` | — | Empirical/Declared |
+| `compiler.semcore::pat_at_occ` | fn | `lib/compiler/semcore.myc:1148` | `fn pat_at_occ(value: Pat, occ: Vec[Binary{32}]) => Pat` | pat_at_occ: navigate a ground value pattern via a field-index occurrence (root = `Nil`). | Empirical/Declared |
+| `compiler.semcore::pat_nth` | fn | `lib/compiler/semcore.myc:1158` | `fn pat_nth(v: Vec[Pat], i: Binary{32}) => Pat` | — | Empirical/Declared |
+| `compiler.semcore::Slot` | type | `lib/compiler/semcore.myc:1172` | `type Slot = Skip \| Live(Bytes) \| Moved(Bytes, Binary{32})` | Slot: mirrors affine.rs::Slot (one scope slot's affine state). | Empirical/Declared |
+| `compiler.semcore::Slot::Live` | ctor | `lib/compiler/semcore.myc:1172` | `Live(Bytes)` | — | Empirical/Declared |
+| `compiler.semcore::Slot::Moved` | ctor | `lib/compiler/semcore.myc:1172` | `Moved(Bytes, Binary{32})` | — | Empirical/Declared |
+| `compiler.semcore::Slot::Skip` | ctor | `lib/compiler/semcore.myc:1172` | `Skip` | — | Empirical/Declared |
+| `compiler.semcore::UseOutcome` | type | `lib/compiler/semcore.myc:1175` | `type UseOutcome = NotAffine \| FirstUse \| DoubleUse(Bytes, Binary{32}, Binary{32})` | UseOutcome: mirrors affine.rs::UseOutcome (the outcome of recording a use at some index). | Empirical/Declared |
+| `compiler.semcore::UseOutcome::DoubleUse` | ctor | `lib/compiler/semcore.myc:1175` | `DoubleUse(Bytes, Binary{32}, Binary{32})` | — | Empirical/Declared |
+| `compiler.semcore::UseOutcome::FirstUse` | ctor | `lib/compiler/semcore.myc:1175` | `FirstUse` | — | Empirical/Declared |
+| `compiler.semcore::UseOutcome::NotAffine` | ctor | `lib/compiler/semcore.myc:1175` | `NotAffine` | — | Empirical/Declared |
+| `compiler.semcore::slot_for_ty` | fn | `lib/compiler/semcore.myc:1179` | `fn slot_for_ty(ty: Ty) => Slot` | slot_for_ty: the slot a fresh binding of type `ty` starts in (mirrors affine.rs::Slot::for_ty; the trailing-wildcard idiom — every non-`TySubstrate` type is `Skip`). | Empirical/Declared |
+| `compiler.semcore::slots_seeded` | fn | `lib/compiler/semcore.myc:1184` | `fn slots_seeded(tys: Vec[Ty]) => Vec[Slot]` | slots_seeded: one slot per entry of `tys` (mirrors affine.rs::Tracker::seeded's per-parameter seeding, restated as a pure fn over the parameter TYPE list). | Empirical/Declared |
+| `compiler.semcore::slots_use_at` | fn | `lib/compiler/semcore.myc:1190` | `fn slots_use_at(slots: Vec[Slot], idx: Binary{32}, ordinal: Binary{32}) => Pair[Vec[Slot], UseOutcome]` | slots_use_at: record a use (move) of the binding at scope index `idx`, returning the UPDATED slots vector paired with the outcome (mirrors affine.rs::Tracker::use_at; `ordinal` is the caller's own monotonic use counter — FLAG-semcore-7, no wrapper `UseSite` type). | Empirical/Declared |
+| `compiler.semcore::slots_use_here` | fn | `lib/compiler/semcore.myc:1201` | `fn slots_use_here(slots: Vec[Slot], ordinal: Binary{32}) => Pair[Vec[Slot], UseOutcome]` | — | Empirical/Declared |
+| `compiler.semcore::union_merge_into` | fn | `lib/compiler/semcore.myc:1216` | `fn union_merge_into(acc: Vec[Slot], other: Vec[Slot]) => Vec[Slot]` | merge_slot / union_merge_into: the conservative branch-merge rule (mirrors affine.rs verbatim — a slot moved in EITHER alternative is moved afterward). A length mismatch between `acc` and `other` is an internal-invariant violation (mirrors the Rust `debug_assert_eq!`); this total-fn port stops merging at the shorter side rather than panicking (never-silent by construction — no call site in this increment's differential produces mismatched snapshots). | Empirical/Declared |
+| `compiler.semcore::merge_slot` | fn | `lib/compiler/semcore.myc:1225` | `fn merge_slot(a: Slot, o: Slot) => Slot` | — | Empirical/Declared |
+| `compiler.semcore::CheckError` | type | `lib/compiler/semcore.myc:1239` | `type CheckError = CE(Bytes, Bytes)` | CheckError: mirrors checkty.rs::CheckError (site, message) — the one error surface `grade` needs; no checking LOGIC accompanies it (this file ports no checkty.rs logic at all). | Empirical/Declared |
+| `compiler.semcore::CheckError::CE` | ctor | `lib/compiler/semcore.myc:1239` | `CE(Bytes, Bytes)` | — | Empirical/Declared |
+| `compiler.semcore::ce_site` | fn | `lib/compiler/semcore.myc:1241` | `fn ce_site(e: CheckError) => Bytes` | — | Empirical/Declared |
+| `compiler.semcore::ce_message` | fn | `lib/compiler/semcore.myc:1244` | `fn ce_message(e: CheckError) => Bytes` | — | Empirical/Declared |
+| `compiler.semcore::fnenv_lookup` | fn | `lib/compiler/semcore.myc:1249` | `fn fnenv_lookup(fns: Vec[Pair[Bytes, FnDecl]], name: Bytes) => Option[FnDecl]` | FnEnv: the FLAG-semcore-4 ordered-assoc-list standing in for the checker's resolved `BTreeMap<String, FnDecl>` fn table. | Empirical/Declared |
+| `compiler.semcore::ret_grade` | fn | `lib/compiler/semcore.myc:1259` | `fn ret_grade(fd: FnDecl) => Strength` | ret_grade / param_grade: the modular-bottom defaults (mirrors grade.rs verbatim — an unannotated demand/advertisement is `GDeclared`, the weakest grade). | Empirical/Declared |
+| `compiler.semcore::param_grade` | fn | `lib/compiler/semcore.myc:1262` | `fn param_grade(p: Param) => Strength` | — | Empirical/Declared |
+| `compiler.semcore::scope_lookup` | fn | `lib/compiler/semcore.myc:1267` | `fn scope_lookup(scope: Vec[Pair[Bytes, Strength]], name: Bytes) => Option[Strength]` | scope_lookup: a lexical stack of `(name, grade)`, most-recent-first (`Cons` = push; shadowing = head-first scan finds the most recent binding — mirrors the Rust `scope.iter().rev().find`). | Empirical/Declared |
+| `compiler.semcore::require` | fn | `lib/compiler/semcore.myc:1277` | `fn require(have: Strength, demand: Strength, site: Bytes, what: Bytes) => Option[CheckError]` | require: the honesty check `have >= demand` (G-Sub; mirrors grade.rs::require, `Option`-returning rather than `Result<(),_>` — no unit type needed self-contained). | Empirical/Declared |
+| `compiler.semcore::grade` | fn | `lib/compiler/semcore.myc:1284` | `fn grade(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]], site: Bytes, e: Expr) => Result[Strength, CheckError]` | grade: the budgeted entry point (mirrors grade.rs::Gx::grade's per-recursion budget charge). | Empirical/Declared |
+| `compiler.semcore::grade_expr` | fn | `lib/compiler/semcore.myc:1293` | `fn grade_expr(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]], site: Bytes, e: Expr) => Result[Strength, CheckError]` | grade_expr: the per-variant dispatch (mirrors grade.rs::Gx::grade's big `match e { ... }`, field-for-field against ast.myc's `Expr` — every variant explicit, M-980 split-match idiom). | Empirical/Declared |
+| `compiler.semcore::grade_path` | fn | `lib/compiler/semcore.myc:1324` | `fn grade_path(scope: Vec[Pair[Bytes, Strength]], p: Path) => Strength` | grade_path: G-Var — a single-segment path is a bound variable (`GExact` if unbound: a nullary constructor/constant); a multi-segment path is conservatively `GExact` too (the checker already refuses those; a residual one here is never reached by a well-formed body). | Empirical/Declared |
+| `compiler.semcore::grade_lit` | fn | `lib/compiler/semcore.myc:1335` | `fn grade_lit(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]], site: Bytes, lit: Literal) => Result[Strength, CheckError]` | grade_lit: G-Const — a literal is `Exact` by construction; a list literal is the meet of its elements (G-Con). | Empirical/Declared |
+| `compiler.semcore::grade_let` | fn | `lib/compiler/semcore.myc:1350` | `fn grade_let(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]], site: Bytes, name: Bytes, ty: Option[TypeRef], bound: Expr, body: Expr) => Result[Strength, CheckError]` | grade_let: G-Let / G-Weaken — grade the bound expr, weaken to the ascription if written, bind, then take the meet with the body's grade. | Empirical/Declared |
+| `compiler.semcore::let_bind_grade` | fn | `lib/compiler/semcore.myc:1364` | `fn let_bind_grade(ty: Option[TypeRef], g_bound: Strength, site: Bytes, name: Bytes) => Result[Strength, CheckError]` | — | Empirical/Declared |
+| `compiler.semcore::grade_if` | fn | `lib/compiler/semcore.myc:1379` | `fn grade_if(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]], site: Bytes, cond: Expr, conseq: Expr, alt: Expr) => Result[Strength, CheckError]` | grade_if: Design A — the condition is walked (to enforce demands inside it) but does NOT degrade the result; the result is the meet of both branch bodies. | Empirical/Declared |
+| `compiler.semcore::bind_pattern` | fn | `lib/compiler/semcore.myc:1396` | `fn bind_pattern(scope: Vec[Pair[Bytes, Strength]], pat: Pattern, g_s: Strength) => Vec[Pair[Bytes, Strength]]` | bind_pattern(s): push every variable a pattern binds at grade `g_s` (G-Match/A's field-binder data-provenance rule); `POr` is unreachable post-check (the checker desugars it) — a defensive no-op here (this language has no abort/panic primitive to mirror Rust's invariant-violation panic, so the no-op IS the honest total-fn restatement, documented rather than silent). | Empirical/Declared |
+| `compiler.semcore::bind_patterns` | fn | `lib/compiler/semcore.myc:1407` | `fn bind_patterns(scope: Vec[Pair[Bytes, Strength]], pats: Vec[Pattern], g_s: Strength) => Vec[Pair[Bytes, Strength]]` | — | Empirical/Declared |
+| `compiler.semcore::grade_match` | fn | `lib/compiler/semcore.myc:1416` | `fn grade_match(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]], site: Bytes, scrutinee: Expr, arms: Vec[Arm]) => Result[Strength, CheckError]` | grade_match: G-Match/A — the scrutinee's grade does not appear in the result; the result is the meet of the arm bodies (each graded under its own pattern-bound scope). | Empirical/Declared |
+| `compiler.semcore::grade_arms` | fn | `lib/compiler/semcore.myc:1423` | `fn grade_arms(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]], site: Bytes, arms: Vec[Arm], g_s: Strength) => Result[Strength, CheckError]` | — | Empirical/Declared |
+| `compiler.semcore::grade_for` | fn | `lib/compiler/semcore.myc:1443` | `fn grade_for(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]], site: Bytes, x: Bytes, xs: Expr, acc: Bytes, init: Expr, body: Expr) => Result[Strength, CheckError]` | grade_for: the fixpoint-avoiding fold rule — the accumulator is graded at the BOTTOM (`GDeclared`) inside the body (sound without iterating to a fixpoint); the result is the meet of init/xs/body. | Empirical/Declared |
+| `compiler.semcore::grade_colony` | fn | `lib/compiler/semcore.myc:1461` | `fn grade_colony(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]], site: Bytes, hyphae: Vec[Hypha]) => Result[Strength, CheckError]` | grade_colony: the colony's observable is its LAST hypha; leading hyphae are still walked (to enforce demands inside them) but do not contribute to the result grade. | Empirical/Declared |
+| `compiler.semcore::grade_fuse` | fn | `lib/compiler/semcore.myc:1475` | `fn grade_fuse(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]], site: Bytes, left: Expr, right: Expr) => Result[Strength, CheckError]` | grade_fuse: DN-58 SSA/SSB — the meet of both operands (composition takes the weakest). | Empirical/Declared |
+| `compiler.semcore::grade_reclaim` | fn | `lib/compiler/semcore.myc:1487` | `fn grade_reclaim(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]], site: Bytes, pol: Expr, body: Expr) => Result[Strength, CheckError]` | grade_reclaim: DN-58 SSB — the policy expr is walked (to surface any policy-grade violation), then the result is the body's grade. | Empirical/Declared |
+| `compiler.semcore::grade_ascribe` | fn | `lib/compiler/semcore.myc:1496` | `fn grade_ascribe(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]], site: Bytes, inner: Expr, t: TypeRef) => Result[Strength, CheckError]` | grade_ascribe: G-Weaken — an `@ g` ascription demands the inferred grade satisfy `g`; the ascribed expr then carries `g`. A bare type ascription (no `@ g`) is grade-transparent. | Empirical/Declared |
+| `compiler.semcore::meet_all` | fn | `lib/compiler/semcore.myc:1510` | `fn meet_all(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]], site: Bytes, es: Vec[Expr]) => Result[Strength, CheckError]` | meet_all: the meet of every expression's grade (`GExact` for an empty list — the meet identity). | Empirical/Declared |
+| `compiler.semcore::app_head_fn` | fn | `lib/compiler/semcore.myc:1525` | `fn app_head_fn(fns: Vec[Pair[Bytes, FnDecl]], head: Expr) => Option[FnDecl]` | app_head_fn: resolve an `App` head to a KNOWN user function (a single-segment `Path` present in `fns`), else `None` (constructor / prim / trait-method — no graded signature in stage 1a). | Empirical/Declared |
+| `compiler.semcore::grade_app` | fn | `lib/compiler/semcore.myc:1536` | `fn grade_app(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]], site: Bytes, head: Expr, args: Vec[Expr]) => Result[Strength, CheckError]` | grade_app: G-App (a known callee: check each arg against its param's demand, result is the callee's declared return grade) / G-Con-fallback (anything else: the conservative meet of args). | Empirical/Declared |
+| `compiler.semcore::grade_call` | fn | `lib/compiler/semcore.myc:1543` | `fn grade_call(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]], site: Bytes, fd: FnDecl, args: Vec[Expr]) => Result[Strength, CheckError]` | — | Empirical/Declared |
+| `compiler.semcore::check_args` | fn | `lib/compiler/semcore.myc:1550` | `fn check_args(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[Bytes, Strength]], site: Bytes, params: Vec[Param], args: Vec[Expr]) => Result[Binary{32}, CheckError]` | — | Empirical/Declared |
+| `compiler.semcore::params_to_scope` | fn | `lib/compiler/semcore.myc:1568` | `fn params_to_scope(params: Vec[Param]) => Vec[Pair[Bytes, Strength]]` | params_to_scope / grade_fn_body: the thin per-body entry point this increment's differential drives directly (FLAG-semcore-9 — no whole-program `own_names`/`impl_methods` driver). | Empirical/Declared |
+| `compiler.semcore::grade_fn_body` | fn | `lib/compiler/semcore.myc:1574` | `fn grade_fn_body(fns: Vec[Pair[Bytes, FnDecl]], fd: FnDecl) => Result[Strength, CheckError]` | — | Empirical/Declared |
+| `compiler.semcore::eq_u` | fn | `lib/compiler/semcore.myc:1619` | `fn eq_u(a: Binary{32}, b: Binary{32}) => Bool` | — | Empirical/Declared |
+| `compiler.semcore::beq` | fn | `lib/compiler/semcore.myc:1622` | `fn beq(a: Bytes, b: Bytes) => Bool` | — | Empirical/Declared |
+| `compiler.semcore::and_` | fn | `lib/compiler/semcore.myc:1625` | `fn and_(a: Bool, b: Bool) => Bool` | — | Empirical/Declared |
+| `compiler.semcore::width_is_var` | fn | `lib/compiler/semcore.myc:1630` | `fn width_is_var(w: Width) => Bool` | — | Empirical/Declared |
+| `compiler.semcore::has_var` | fn | `lib/compiler/semcore.myc:1633` | `fn has_var(ty: Ty) => Bool` | — | Empirical/Declared |
+| `compiler.semcore::any_has_var` | fn | `lib/compiler/semcore.myc:1648` | `fn any_has_var(tys: Vec[Ty]) => Bool` | — | Empirical/Declared |
+| `compiler.semcore::type_head` | fn | `lib/compiler/semcore.myc:1658` | `fn type_head(ty: Ty) => Option[Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::ty_subst_lookup` | fn | `lib/compiler/semcore.myc:1675` | `fn ty_subst_lookup(s: Vec[Pair[Bytes, Ty]], v: Bytes) => Option[Ty]` | — | Empirical/Declared |
+| `compiler.semcore::subst_ty` | fn | `lib/compiler/semcore.myc:1683` | `fn subst_ty(ty: Ty, s: Vec[Pair[Bytes, Ty]]) => Ty` | — | Empirical/Declared |
+| `compiler.semcore::subst_ty_list` | fn | `lib/compiler/semcore.myc:1698` | `fn subst_ty_list(tys: Vec[Ty], s: Vec[Pair[Bytes, Ty]]) => Vec[Ty]` | — | Empirical/Declared |
+| `compiler.semcore::subst_binary_width` | fn | `lib/compiler/semcore.myc:1705` | `fn subst_binary_width(w: Width, s: Vec[Pair[Bytes, Ty]]) => Ty` | subst_binary_width / subst_ternary_width: DN-42/M-753 width-var substitution via the carrier convention — a width-var binding is stored as `v -> TyBinary(WdLit(n))` regardless of paradigm; on extraction we re-emit Binary or Ternary as appropriate. An unbound / unrecognised carrier is left as-is (defensive; mirrors the Rust `unwrap_or_else(\|\| ty.clone())` + `_ => ty.clone()`). | Empirical/Declared |
+| `compiler.semcore::subst_ternary_width` | fn | `lib/compiler/semcore.myc:1717` | `fn subst_ternary_width(w: Width, s: Vec[Pair[Bytes, Ty]]) => Ty` | — | Empirical/Declared |
+| `compiler.semcore::param_subst` | fn | `lib/compiler/semcore.myc:1731` | `fn param_subst(params: Vec[Bytes], args: Vec[Ty]) => Vec[Pair[Bytes, Ty]]` | — | Empirical/Declared |
+| `compiler.semcore::scalar_eq` | fn | `lib/compiler/semcore.myc:1741` | `fn scalar_eq(a: Scalar, b: Scalar) => Bool` | — | Empirical/Declared |
+| `compiler.semcore::sparsity_eq` | fn | `lib/compiler/semcore.myc:1749` | `fn sparsity_eq(a: Sparsity, b: Sparsity) => Bool` | — | Empirical/Declared |
+| `compiler.semcore::width_eq` | fn | `lib/compiler/semcore.myc:1755` | `fn width_eq(a: Width, b: Width) => Bool` | — | Empirical/Declared |
+| `compiler.semcore::ty_eq` | fn | `lib/compiler/semcore.myc:1761` | `fn ty_eq(a: Ty, b: Ty) => Bool` | — | Empirical/Declared |
+| `compiler.semcore::ty_list_eq` | fn | `lib/compiler/semcore.myc:1776` | `fn ty_list_eq(a: Vec[Ty], b: Vec[Ty]) => Bool` | — | Empirical/Declared |
+| `compiler.semcore::dec_digit` | fn | `lib/compiler/semcore.myc:1821` | `fn dec_digit(d: Binary{32}) => Bytes` | — | Empirical/Declared |
+| `compiler.semcore::ten32` | fn | `lib/compiler/semcore.myc:1833` | `fn ten32() => Binary{32}` | — | Empirical/Declared |
+| `compiler.semcore::dec_u32` | fn | `lib/compiler/semcore.myc:1836` | `fn dec_u32(n: Binary{32}) => Bytes` | Base-10 render, big-endian: n < 10 -> one digit; else render n/10 then append n%10 (<= 10 iters). | Empirical/Declared |
+| `compiler.semcore::tuple_type_name` | fn | `lib/compiler/semcore.myc:1845` | `fn tuple_type_name(n: Binary{32}) => Bytes` | — | Empirical/Declared |
+| `compiler.semcore::tuple_ctor_name` | fn | `lib/compiler/semcore.myc:1847` | `fn tuple_ctor_name(n: Binary{32}) => Bytes` | — | Empirical/Declared |
+| `compiler.semcore::tuple_params_from` | fn | `lib/compiler/semcore.myc:1850` | `fn tuple_params_from(i: Binary{32}, n: Binary{32}) => Vec[Bytes]` | tuple_params: the `n` type-parameter names `T0 .. T{n-1}` (Rust `(0..n).map(\|i\| format!("T{i}"))`). | Empirical/Declared |
+| `compiler.semcore::vars_of` | fn | `lib/compiler/semcore.myc:1857` | `fn vars_of(params: Vec[Bytes]) => Vec[Ty]` | vars_of: one `TyVar(p)` field per parameter name (Rust `params.iter().map(\|p\| Ty::Var(p))`). | Empirical/Declared |
+| `compiler.semcore::synthetic_tuple_data` | fn | `lib/compiler/semcore.myc:1860` | `fn synthetic_tuple_data(n: Binary{32}) => DataInfo` | — | Empirical/Declared |
+| `compiler.semcore::typeref_base` | fn | `lib/compiler/semcore.myc:1866` | `fn typeref_base(t: TypeRef) => BaseType` | — | Empirical/Declared |
+| `compiler.semcore::di_params` | fn | `lib/compiler/semcore.myc:1868` | `fn di_params(d: DataInfo) => Vec[Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::resolve_widthref_binary` | fn | `lib/compiler/semcore.myc:1873` | `fn resolve_widthref_binary(w: WidthRef) => Ty` | resolve_widthref_\*: a surface `WidthRef` (WLit/WName) becomes a checked `Width` under the given paradigm (Rust's per-`BaseType::Binary/Ternary` inline `match &t.base` arms). | Empirical/Declared |
+| `compiler.semcore::resolve_widthref_ternary` | fn | `lib/compiler/semcore.myc:1876` | `fn resolve_widthref_ternary(w: WidthRef) => Ty` | — | Empirical/Declared |
+| `compiler.semcore::vsa_kernel_model_id` | fn | `lib/compiler/semcore.myc:1880` | `fn vsa_kernel_model_id(surface: Bytes) => Bytes` | vsa_kernel_model_id: the surface->kernel VSA model-id canonicalization (checkty.rs; M-892). | Empirical/Declared |
+| `compiler.semcore::tref_len` | fn | `lib/compiler/semcore.myc:1885` | `fn tref_len(v: Vec[TypeRef]) => Binary{32}` | tref_len / names_len: monomorphic length counters (Vec[TypeRef] / Vec[Bytes]) — the arity check. | Empirical/Declared |
+| `compiler.semcore::names_len` | fn | `lib/compiler/semcore.myc:1888` | `fn names_len(v: Vec[Bytes]) => Binary{32}` | — | Empirical/Declared |
+| `compiler.semcore::args_is_empty` | fn | `lib/compiler/semcore.myc:1891` | `fn args_is_empty(v: Vec[TypeRef]) => Bool` | — | Empirical/Declared |
+| `compiler.semcore::resolve_base` | fn | `lib/compiler/semcore.myc:1894` | `fn resolve_base(types: Vec[DataInfo], tyvars: Vec[Bytes], b: BaseType) => Result[Ty, Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::resolve_args` | fn | `lib/compiler/semcore.myc:1921` | `fn resolve_args(types: Vec[DataInfo], tyvars: Vec[Bytes], args: Vec[TypeRef]) => Result[Vec[Ty], Bytes]` | resolve_args: map resolve_ty over each surface arg, short-circuiting on the first Err (Rust's `for a in args { resolved.push(resolve_ty(..)?.0) }`; the guarantee of each arg is discarded). | Empirical/Declared |
+| `compiler.semcore::resolve_named` | fn | `lib/compiler/semcore.myc:1933` | `fn resolve_named(types: Vec[DataInfo], tyvars: Vec[Bytes], name: Bytes, args: Vec[TypeRef]) => Result[Ty, Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::resolve_tuple` | fn | `lib/compiler/semcore.myc:1948` | `fn resolve_tuple(types: Vec[DataInfo], tyvars: Vec[Bytes], elems: Vec[TypeRef]) => Result[Ty, Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::resolve_ty` | fn | `lib/compiler/semcore.myc:1958` | `fn resolve_ty(types: Vec[DataInfo], tyvars: Vec[Bytes], t: TypeRef) => Result[Pair[Ty, Option[Strength]], Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::first_duplicate` | fn | `lib/compiler/semcore.myc:1969` | `fn first_duplicate(xs: Vec[Bytes]) => Option[Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::first_duplicate_go` | fn | `lib/compiler/semcore.myc:1972` | `fn first_duplicate_go(seen: Vec[Bytes], xs: Vec[Bytes]) => Option[Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::resolve_ctors` | fn | `lib/compiler/semcore.myc:1987` | `fn resolve_ctors(types: Vec[DataInfo], td: TypeDecl) => Result[Vec[CtorInfo], Bytes]` | resolve_ctors: for each surface `Ctor`, resolve every field `TypeRef` with the decl's type params in scope (reusing the `resolve_ty`/`resolve_args` family), refusing a duplicate constructor name. Mirrors checkty.rs::resolve_ctors arm-for-arm: the `seen` list carries the ctor-names-to-the-left for the dup check (Rust's `ctors.iter().any(..)`), and the result preserves declaration order (prepend-on-return). Never-silent `Err` on a duplicate ctor and on any field-resolution failure (G2/VR-5). The resolve_ty guarantee slot is discarded exactly as in Rust (`let (ty, _) = ..`). | Empirical/Declared |
+| `compiler.semcore::resolve_ctors_go` | fn | `lib/compiler/semcore.myc:1990` | `fn resolve_ctors_go(types: Vec[DataInfo], tyvars: Vec[Bytes], seen: Vec[Bytes], cs: Vec[Ctor]) => Result[Vec[CtorInfo], Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::TraitDecl` | type | `lib/compiler/semcore.myc:2021` | `type TraitDecl = TrD(Vis, Bytes, Vec[Bytes], Vec[FnSig])` | desugars them to `Type + Impl + Fn` items in a Phase-0 pass BEFORE registration (checkty.rs `check_phylum_inner`), so in production their tuples arrive via the desugared items. Porting the arms anyway keeps the port arm-for-arm faithful to `collect_tuple_arities` itself (never a silent gap — a raw-nodule caller gets exactly the oracle's answer). | Empirical/Declared |
+| `compiler.semcore::TraitDecl::TrD` | ctor | `lib/compiler/semcore.myc:2021` | `TrD(Vis, Bytes, Vec[Bytes], Vec[FnSig])` | — | Empirical/Declared |
+| `compiler.semcore::trd_sigs` | fn | `lib/compiler/semcore.myc:2023` | `fn trd_sigs(t: TraitDecl) => Vec[FnSig]` | — | Empirical/Declared |
+| `compiler.semcore::ImplDecl` | type | `lib/compiler/semcore.myc:2026` | `type ImplDecl = ImD(Bytes, Vec[TypeRef], TypeRef, Vec[FnDecl])` | — | Empirical/Declared |
+| `compiler.semcore::ImplDecl::ImD` | ctor | `lib/compiler/semcore.myc:2026` | `ImD(Bytes, Vec[TypeRef], TypeRef, Vec[FnDecl])` | — | Empirical/Declared |
+| `compiler.semcore::imd_trait_args` | fn | `lib/compiler/semcore.myc:2028` | `fn imd_trait_args(i: ImplDecl) => Vec[TypeRef]` | — | Empirical/Declared |
+| `compiler.semcore::imd_for_ty` | fn | `lib/compiler/semcore.myc:2031` | `fn imd_for_ty(i: ImplDecl) => TypeRef` | — | Empirical/Declared |
+| `compiler.semcore::imd_methods` | fn | `lib/compiler/semcore.myc:2034` | `fn imd_methods(i: ImplDecl) => Vec[FnDecl]` | — | Empirical/Declared |
+| `compiler.semcore::InherentImplDecl` | type | `lib/compiler/semcore.myc:2039` | `type InherentImplDecl = IID(Vec[Bytes], TypeRef, Vec[FnDecl])` | DN-103 / M-1026: first field is the impl-level type-parameter slot (unbounded names, Nil for the plain M-664 block). The desugar-prepend is Rust-only (pre-desugared before this mirror runs). | Empirical/Declared |
+| `compiler.semcore::InherentImplDecl::IID` | ctor | `lib/compiler/semcore.myc:2039` | `IID(Vec[Bytes], TypeRef, Vec[FnDecl])` | — | Empirical/Declared |
+| `compiler.semcore::iid_for_ty` | fn | `lib/compiler/semcore.myc:2041` | `fn iid_for_ty(i: InherentImplDecl) => TypeRef` | — | Empirical/Declared |
+| `compiler.semcore::iid_methods` | fn | `lib/compiler/semcore.myc:2044` | `fn iid_methods(i: InherentImplDecl) => Vec[FnDecl]` | — | Empirical/Declared |
+| `compiler.semcore::ViaDecl` | type | `lib/compiler/semcore.myc:2050` | `type ViaDecl = VD(Binary{32}, Bytes, Vec[TypeRef])` | ViaDecl: mirrors ast.rs::ViaDecl field-for-field (field_idx, trait_name, trait_args). No accessor — `collect_tuple_arities_item`'s Object arm does NOT walk `via_decls` (a dead field, kept only so `ObjectDecl` is field-for-field faithful; the oracle skips it too). | Empirical/Declared |
+| `compiler.semcore::ViaDecl::VD` | ctor | `lib/compiler/semcore.myc:2050` | `VD(Binary{32}, Bytes, Vec[TypeRef])` | — | Empirical/Declared |
+| `compiler.semcore::ObjectDecl` | type | `lib/compiler/semcore.myc:2052` | `type ObjectDecl = OD(Vis, Bytes, Vec[Bytes], Ctor, Vec[ViaDecl], Vec[ImplDecl], Vec[FnDecl])` | — | Empirical/Declared |
+| `compiler.semcore::ObjectDecl::OD` | ctor | `lib/compiler/semcore.myc:2052` | `OD(Vis, Bytes, Vec[Bytes], Ctor, Vec[ViaDecl], Vec[ImplDecl], Vec[FnDecl])` | — | Empirical/Declared |
+| `compiler.semcore::od_ctor` | fn | `lib/compiler/semcore.myc:2054` | `fn od_ctor(o: ObjectDecl) => Ctor` | — | Empirical/Declared |
+| `compiler.semcore::od_impls` | fn | `lib/compiler/semcore.myc:2057` | `fn od_impls(o: ObjectDecl) => Vec[ImplDecl]` | — | Empirical/Declared |
+| `compiler.semcore::od_fns` | fn | `lib/compiler/semcore.myc:2060` | `fn od_fns(o: ObjectDecl) => Vec[FnDecl]` | — | Empirical/Declared |
+| `compiler.semcore::LowerRhs` | type | `lib/compiler/semcore.myc:2064` | `type LowerRhs = LrExpr(Expr) \| LrImpl(ImplDecl)` | LowerRhs / LowerDecl: mirror ast.rs::LowerRhs / ast.rs::LowerDecl (DN-54 §10). Only `rhs` grades. | Empirical/Declared |
+| `compiler.semcore::LowerRhs::LrExpr` | ctor | `lib/compiler/semcore.myc:2064` | `LrExpr(Expr)` | — | Empirical/Declared |
+| `compiler.semcore::LowerRhs::LrImpl` | ctor | `lib/compiler/semcore.myc:2064` | `LrImpl(ImplDecl)` | — | Empirical/Declared |
+| `compiler.semcore::LowerDecl` | type | `lib/compiler/semcore.myc:2066` | `type LowerDecl = LD(Bytes, Vec[Bytes], LowerRhs)` | — | Empirical/Declared |
+| `compiler.semcore::LowerDecl::LD` | ctor | `lib/compiler/semcore.myc:2066` | `LD(Bytes, Vec[Bytes], LowerRhs)` | — | Empirical/Declared |
+| `compiler.semcore::ld_rhs` | fn | `lib/compiler/semcore.myc:2068` | `fn ld_rhs(l: LowerDecl) => LowerRhs` | — | Empirical/Declared |
+| `compiler.semcore::UsePath` | type | `lib/compiler/semcore.myc:2074` | `type UsePath = UP(Path, Bool)` | UsePath: mirrors ast.rs::UsePath / ast.myc::UsePath field-for-field (`UP` ctor, same spelling as ast.myc — M-1013 STEP 4, resolve_imports increment). `path`: the imported path (a specific import names the item; a glob names the prefix whose `pub` names import). `glob`: true for `use a.b.\*`. | Empirical/Declared |
+| `compiler.semcore::UsePath::UP` | ctor | `lib/compiler/semcore.myc:2074` | `UP(Path, Bool)` | — | Empirical/Declared |
+| `compiler.semcore::usepath_path` | fn | `lib/compiler/semcore.myc:2076` | `fn usepath_path(u: UsePath) => Path` | — | Empirical/Declared |
+| `compiler.semcore::usepath_glob` | fn | `lib/compiler/semcore.myc:2079` | `fn usepath_glob(u: UsePath) => Bool` | — | Empirical/Declared |
+| `compiler.semcore::Item` | type | `lib/compiler/semcore.myc:2087` | `type Item = ItType(TypeDecl) \| ItFn(FnDecl) \| ItTrait(TraitDecl) \| ItImpl(ImplDecl) \| ItObject(ObjectDecl) \| ItLower(LowerDecl) \| ItInherentImpl(InherentImplDecl) \| ItUse(UsePath) \| ItOther` | Item gains ItUse (M-1013 STEP 4): the trimmed register-family mirror (FLAG-semcore-30's note) previously collapsed `Use`/`Default`/`Derive` into the single tuple-free `ItOther`, which was faithful for `collect_tuple_arities` (none of the three carry tuple-relevant content) but is NOT faithful for `resolve_imports`, which reads `Item::Use(UsePath)` directly (checkty.rs 1423-1533). `Default`/`Derive` remain folded into `ItOther` (still tuple-free and not read by resolve_imports). | Empirical/Declared |
+| `compiler.semcore::Item::ItType` | ctor | `lib/compiler/semcore.myc:2088` | `ItType(TypeDecl)` | — | Empirical/Declared |
+| `compiler.semcore::Item::ItFn` | ctor | `lib/compiler/semcore.myc:2089` | `ItFn(FnDecl)` | — | Empirical/Declared |
+| `compiler.semcore::Item::ItTrait` | ctor | `lib/compiler/semcore.myc:2090` | `ItTrait(TraitDecl)` | — | Empirical/Declared |
+| `compiler.semcore::Item::ItImpl` | ctor | `lib/compiler/semcore.myc:2091` | `ItImpl(ImplDecl)` | — | Empirical/Declared |
+| `compiler.semcore::Item::ItObject` | ctor | `lib/compiler/semcore.myc:2092` | `ItObject(ObjectDecl)` | — | Empirical/Declared |
+| `compiler.semcore::Item::ItLower` | ctor | `lib/compiler/semcore.myc:2093` | `ItLower(LowerDecl)` | — | Empirical/Declared |
+| `compiler.semcore::Item::ItInherentImpl` | ctor | `lib/compiler/semcore.myc:2094` | `ItInherentImpl(InherentImplDecl)` | — | Empirical/Declared |
+| `compiler.semcore::Item::ItUse` | ctor | `lib/compiler/semcore.myc:2095` | `ItUse(UsePath)` | — | Empirical/Declared |
+| `compiler.semcore::Item::ItOther` | ctor | `lib/compiler/semcore.myc:2096` | `ItOther` | — | Empirical/Declared |
+| `compiler.semcore::Nodule` | type | `lib/compiler/semcore.myc:2097` | `type Nodule = Nod(Path, Bool, Vec[Item])` | — | Empirical/Declared |
+| `compiler.semcore::Nodule::Nod` | ctor | `lib/compiler/semcore.myc:2097` | `Nod(Path, Bool, Vec[Item])` | — | Empirical/Declared |
+| `compiler.semcore::nodule_items` | fn | `lib/compiler/semcore.myc:2099` | `fn nodule_items(n: Nodule) => Vec[Item]` | — | Empirical/Declared |
+| `compiler.semcore::collect_tuple_arities_typeref` | fn | `lib/compiler/semcore.myc:2117` | `fn collect_tuple_arities_typeref(t: TypeRef, acc: Vec[Binary{32}]) => Vec[Binary{32}]` | `_typeref` / `_trefs` / `_ctors` (below) are unchanged from PR-2 — already arm-for-arm faithful to checkty.rs::collect_tuple_arities_typeref and its list folds; the new `_sig` / `_pattern` / `_expr` / `_item` legs reuse them. | Empirical/Declared |
+| `compiler.semcore::collect_tuple_arities_trefs` | fn | `lib/compiler/semcore.myc:2126` | `fn collect_tuple_arities_trefs(acc: Vec[Binary{32}], ts: Vec[TypeRef]) => Vec[Binary{32}]` | — | Empirical/Declared |
+| `compiler.semcore::collect_tuple_arities_ctors` | fn | `lib/compiler/semcore.myc:2132` | `fn collect_tuple_arities_ctors(acc: Vec[Binary{32}], cs: Vec[Ctor]) => Vec[Binary{32}]` | — | Empirical/Declared |
+| `compiler.semcore::expr_len` | fn | `lib/compiler/semcore.myc:2140` | `fn expr_len(v: Vec[Expr]) => Binary{32}` | expr_len / pattern_len: monomorphic length counters (Vec[Expr] / Vec[Pattern]) — the tuple-literal / tuple-pattern arity (mirrors Rust's `elems.len()` / `subs.len()`; the tref_len/pat_len twins). | Empirical/Declared |
+| `compiler.semcore::pattern_len` | fn | `lib/compiler/semcore.myc:2143` | `fn pattern_len(v: Vec[Pattern]) => Binary{32}` | — | Empirical/Declared |
+| `compiler.semcore::collect_tuple_arities_params` | fn | `lib/compiler/semcore.myc:2147` | `fn collect_tuple_arities_params(acc: Vec[Binary{32}], ps: Vec[Param]) => Vec[Binary{32}]` | — | Empirical/Declared |
+| `compiler.semcore::collect_tuple_arities_sig` | fn | `lib/compiler/semcore.myc:2153` | `fn collect_tuple_arities_sig(acc: Vec[Binary{32}], sig: FnSig) => Vec[Binary{32}]` | — | Empirical/Declared |
+| `compiler.semcore::collect_tuple_arities_sigs` | fn | `lib/compiler/semcore.myc:2156` | `fn collect_tuple_arities_sigs(acc: Vec[Binary{32}], sigs: Vec[FnSig]) => Vec[Binary{32}]` | — | Empirical/Declared |
+| `compiler.semcore::collect_tuple_arities_pattern` | fn | `lib/compiler/semcore.myc:2165` | `fn collect_tuple_arities_pattern(acc: Vec[Binary{32}], p: Pattern) => Vec[Binary{32}]` | — | Empirical/Declared |
+| `compiler.semcore::collect_tuple_arities_patterns` | fn | `lib/compiler/semcore.myc:2175` | `fn collect_tuple_arities_patterns(acc: Vec[Binary{32}], ps: Vec[Pattern]) => Vec[Binary{32}]` | — | Empirical/Declared |
+| `compiler.semcore::collect_tuple_arities_opt_typeref` | fn | `lib/compiler/semcore.myc:2182` | `fn collect_tuple_arities_opt_typeref(acc: Vec[Binary{32}], oty: Option[TypeRef]) => Vec[Binary{32}]` | collect_tuple_arities_opt_typeref: the `if let Some(t) = ty` guard on the `Let` arm's ascription. | Empirical/Declared |
+| `compiler.semcore::collect_tuple_arities_expr` | fn | `lib/compiler/semcore.myc:2189` | `fn collect_tuple_arities_expr(acc: Vec[Binary{32}], e: Expr) => Vec[Binary{32}]` | — | Empirical/Declared |
+| `compiler.semcore::collect_tuple_arities_exprs` | fn | `lib/compiler/semcore.myc:2222` | `fn collect_tuple_arities_exprs(acc: Vec[Binary{32}], es: Vec[Expr]) => Vec[Binary{32}]` | — | Empirical/Declared |
+| `compiler.semcore::collect_tuple_arities_arm` | fn | `lib/compiler/semcore.myc:2228` | `fn collect_tuple_arities_arm(acc: Vec[Binary{32}], a: Arm) => Vec[Binary{32}]` | — | Empirical/Declared |
+| `compiler.semcore::collect_tuple_arities_arms` | fn | `lib/compiler/semcore.myc:2231` | `fn collect_tuple_arities_arms(acc: Vec[Binary{32}], arms: Vec[Arm]) => Vec[Binary{32}]` | — | Empirical/Declared |
+| `compiler.semcore::collect_tuple_arities_hyphae` | fn | `lib/compiler/semcore.myc:2237` | `fn collect_tuple_arities_hyphae(acc: Vec[Binary{32}], hs: Vec[Hypha]) => Vec[Binary{32}]` | — | Empirical/Declared |
+| `compiler.semcore::collect_tuple_arities_fndecl` | fn | `lib/compiler/semcore.myc:2245` | `fn collect_tuple_arities_fndecl(acc: Vec[Binary{32}], fd: FnDecl) => Vec[Binary{32}]` | — | Empirical/Declared |
+| `compiler.semcore::collect_tuple_arities_fndecls` | fn | `lib/compiler/semcore.myc:2248` | `fn collect_tuple_arities_fndecls(acc: Vec[Binary{32}], fds: Vec[FnDecl]) => Vec[Binary{32}]` | — | Empirical/Declared |
+| `compiler.semcore::collect_tuple_arities_impl` | fn | `lib/compiler/semcore.myc:2254` | `fn collect_tuple_arities_impl(acc: Vec[Binary{32}], id: ImplDecl) => Vec[Binary{32}]` | — | Empirical/Declared |
+| `compiler.semcore::collect_tuple_arities_impls` | fn | `lib/compiler/semcore.myc:2259` | `fn collect_tuple_arities_impls(acc: Vec[Binary{32}], ids: Vec[ImplDecl]) => Vec[Binary{32}]` | — | Empirical/Declared |
+| `compiler.semcore::collect_tuple_arities_item` | fn | `lib/compiler/semcore.myc:2268` | `fn collect_tuple_arities_item(acc: Vec[Binary{32}], it: Item) => Vec[Binary{32}]` | collect_tuple_arities_item: checkty.rs::collect_tuple_arities_item, arm-for-arm. `ItOther` (Use / Default / Derive) is the oracle's `=> {}` no-op. Object/InherentImpl are pre-desugared in the real pipeline (see the mirror header above) but ported faithfully for a raw-nodule caller. | Empirical/Declared |
+| `compiler.semcore::collect_tuple_arities` | fn | `lib/compiler/semcore.myc:2291` | `fn collect_tuple_arities(items: Vec[Item], acc: Vec[Binary{32}]) => Vec[Binary{32}]` | collect_tuple_arities: the FULL walk — every item's tuple-relevant content (checkty.rs §793). | Empirical/Declared |
+| `compiler.semcore::register_tuple_arities` | fn | `lib/compiler/semcore.myc:2300` | `fn register_tuple_arities(types: Vec[DataInfo], arities: Vec[Binary{32}]) => Vec[DataInfo]` | register_tuple_arities: pre-register a synthetic `Tuple$N` for each collected arity, but only if absent (checkty.rs's `types.entry(tname).or_insert_with(\|\| synthetic_tuple_data(arity))`). A duplicate arity in `arities` is a no-op the second time (the presence check dedups it). | Empirical/Declared |
+| `compiler.semcore::register_shells` | fn | `lib/compiler/semcore.myc:2316` | `fn register_shells(types: Vec[DataInfo], items: Vec[Item]) => Result[Vec[DataInfo], Bytes]` | register_shells: Pass 1 — a shell `DI(name, params, Nil)` per `Item::Type` so recursive/forward field references resolve (checkty.rs's first loop). Never-silent refusals, in Rust's exact order: a duplicate type PARAMETER (`first_duplicate`) is checked FIRST, then a duplicate type NAME (`types_lookup` over the accumulated registry — which includes the seeded prelude, so redeclaring `Bool` collides exactly as in Rust). EVERY non-Type item is skipped — the faithful mirror of the oracle's `if let Item::Type(td) = item` (only a type declaration declares a data type; the un-trimmed Fn/Trait/Impl/Object/Lower/InherentImpl/`ItOther` kinds are all non-declarations here). | Empirical/Declared |
+| `compiler.semcore::types_set_ctors` | fn | `lib/compiler/semcore.myc:2336` | `fn types_set_ctors(types: Vec[DataInfo], name: Bytes, ctors: Vec[CtorInfo]) => Vec[DataInfo]` | types_set_ctors: replace the ctors of the (shell) entry named `name`, preserving its params — checkty.rs's `types.get_mut(&td.name).expect("registered above").ctors = ctors`. `register_shells` registered every `Item::Type`, so `name` is always present; a not-found (invariant-impossible) entry leaves the list unchanged (the wild-free, value-threaded analogue of Rust's `.expect`: no panic, no silent fabrication — G2). | Empirical/Declared |
+| `compiler.semcore::fill_ctors` | fn | `lib/compiler/semcore.myc:2348` | `fn fill_ctors(types: Vec[DataInfo], items: Vec[Item]) => Result[Vec[DataInfo], Bytes]` | fill_ctors: Pass 2 — resolve each `Item::Type`'s ctors (all shells now present) and write them into the registry (checkty.rs's second loop). Never-silent: any field-resolution or duplicate-ctor failure short-circuits to `Err` (reusing PR-1's `resolve_ctors`). | Empirical/Declared |
+| `compiler.semcore::register_types` | fn | `lib/compiler/semcore.myc:2364` | `fn register_types(types: Vec[DataInfo], nod: Nodule) => Result[Vec[DataInfo], Bytes]` | register_types: the two-pass data-declaration registration, value-threaded over the assoc-list registry (checkty.rs::register_types). Order matches Rust exactly: (0) the FULL M-826 tuple pre-pass (all legs — FLAG-semcore-30 CLOSED, PR-2b), (1) shell-register each type, (2) fill each type's ctors. Returns the mutated registry or the first never-silent refusal. | Empirical/Declared |
+| `compiler.semcore::TraitInfo` | type | `lib/compiler/semcore.myc:2394` | `type TraitInfo = TrInfo(Bytes, Vec[Bytes], Vec[FnSig])` | TraitInfo: mirrors checkty.rs::TraitInfo (264-272) — { name, params (tyvar names), sigs (SURFACE FnSigs, stored verbatim) }. Modeled as a presence-checked `Vec[TraitInfo]` keyed by name, exactly as `register_types`' output is a `Vec[DataInfo]` (NOT a map). | Empirical/Declared |
+| `compiler.semcore::TraitInfo::TrInfo` | ctor | `lib/compiler/semcore.myc:2394` | `TrInfo(Bytes, Vec[Bytes], Vec[FnSig])` | — | Empirical/Declared |
+| `compiler.semcore::trinfo_name` | fn | `lib/compiler/semcore.myc:2396` | `fn trinfo_name(t: TraitInfo) => Bytes` | — | Empirical/Declared |
+| `compiler.semcore::trinfo_sigs` | fn | `lib/compiler/semcore.myc:2399` | `fn trinfo_sigs(t: TraitInfo) => Vec[FnSig]` | — | Empirical/Declared |
+| `compiler.semcore::trd_name` | fn | `lib/compiler/semcore.myc:2404` | `fn trd_name(t: TraitDecl) => Bytes` | TraitDecl accessors: name (field 1) / params (field 2). `trd_sigs` (field 3) already exists above; `td_name`/`td_params` are TypeDecl's, so TraitDecl needs its own (distinct ADT). | Empirical/Declared |
+| `compiler.semcore::trd_params` | fn | `lib/compiler/semcore.myc:2407` | `fn trd_params(t: TraitDecl) => Vec[Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::fnsig_type_params` | fn | `lib/compiler/semcore.myc:2412` | `fn fnsig_type_params(s: FnSig) => Vec[TypeParam]` | FnSig type-params accessor (FS field 1) — the 3 grade accessors above (name/value_params/ret) omitted it as unused; the trait pass needs it (method type-params → tyvar scope + bound checks). | Empirical/Declared |
+| `compiler.semcore::tp_name` | fn | `lib/compiler/semcore.myc:2416` | `fn tp_name(t: TypeParam) => Bytes` | TypeParam / TraitRef accessors (checkty.rs reads `tp.name` / `tp.kind` / `tp.bounds` / `b.name`). | Empirical/Declared |
+| `compiler.semcore::tp_kind` | fn | `lib/compiler/semcore.myc:2419` | `fn tp_kind(t: TypeParam) => ParamKind` | — | Empirical/Declared |
+| `compiler.semcore::tp_bounds` | fn | `lib/compiler/semcore.myc:2422` | `fn tp_bounds(t: TypeParam) => Vec[TraitRef]` | — | Empirical/Declared |
+| `compiler.semcore::traitref_name` | fn | `lib/compiler/semcore.myc:2425` | `fn traitref_name(r: TraitRef) => Bytes` | — | Empirical/Declared |
+| `compiler.semcore::fnsig_tyvar_names` | fn | `lib/compiler/semcore.myc:2432` | `fn fnsig_tyvar_names(s: FnSig) => Vec[Bytes]` | fnsig_tyvar_names: mirrors FnSig::param_names (ast.rs 447-460) — the method's TYPE-kind type-param names only (width params are dropped; they cannot stand in the tyvar scope, DN-42 §7). Distinct from the value-parameter `param_names(Vec[Param])` above (that maps `Vec[Param]`; this filters `Vec[TypeParam]` by `PkType`). | Empirical/Declared |
+| `compiler.semcore::type_param_type_names` | fn | `lib/compiler/semcore.myc:2435` | `fn type_param_type_names(tps: Vec[TypeParam]) => Vec[Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::traits_contains` | fn | `lib/compiler/semcore.myc:2445` | `fn traits_contains(traits: Vec[TraitInfo], name: Bytes) => Bool` | traits_contains: `traits.contains_key(name)` over the assoc-list registry (set membership by name). | Empirical/Declared |
+| `compiler.semcore::check_sig_resolves` | fn | `lib/compiler/semcore.myc:2457` | `fn check_sig_resolves(types: Vec[DataInfo], tyvars: Vec[Bytes], sig: FnSig) => Result[Bool, Bytes]` | check_sig_resolves: checkty.rs 3088-3099 — every value-param type, then the ret, must `resolve_ty` under `tyvars`; `Ok(True)` (a unit sentinel; the resolved types + their guarantee slot are discarded exactly as Rust's `resolve_ty(...)?` ignores its value) or the FIRST `Err`. | Empirical/Declared |
+| `compiler.semcore::check_params_resolve` | fn | `lib/compiler/semcore.myc:2466` | `fn check_params_resolve(types: Vec[DataInfo], tyvars: Vec[Bytes], params: Vec[Param]) => Result[Bool, Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::register_traits` | fn | `lib/compiler/semcore.myc:2476` | `fn register_traits(types: Vec[DataInfo], nod: Nodule) => Result[Vec[TraitInfo], Bytes]` | register_traits: the two-pass entry (checkty.rs 3016-3083). Returns the registry or the first refusal. | Empirical/Declared |
+| `compiler.semcore::register_traits_pass1` | fn | `lib/compiler/semcore.myc:2488` | `fn register_traits_pass1(types: Vec[DataInfo], acc: Vec[TraitInfo], items: Vec[Item]) => Result[Vec[TraitInfo], Bytes]` | PASS 1 — checkty.rs 3021-3057. Every non-Trait item is skipped (the mirror of `let Item::Trait(td) = item else { continue }`); each trait's checks run in the oracle's order (dup param -> dup name -> method checks -> insert). | Empirical/Declared |
+| `compiler.semcore::check_trait_methods` | fn | `lib/compiler/semcore.myc:2508` | `fn check_trait_methods(types: Vec[DataInfo], trait_name: Bytes, params: Vec[Bytes], seen: Vec[Bytes], sigs: Vec[FnSig]) => Result[Bool, Bytes]` | check_trait_methods: the within-trait method loop (checkty.rs 3034-3048). `seen` tracks distinct method names; each sig resolves with `tyvars = trait.params ++ method.param_names()` (3045-3046). | Empirical/Declared |
+| `compiler.semcore::register_traits_bounds` | fn | `lib/compiler/semcore.myc:2523` | `fn register_traits_bounds(all: Vec[TraitInfo], traits: Vec[TraitInfo]) => Result[Bool, Bytes]` | PASS 2 — checkty.rs 3063-3081. Over the COMPLETE registry (`all`), so a bound may forward-reference a later-declared trait. Every method type-parameter bound must name a KNOWN trait, else an explicit refusal naming the site + the offending bound (mirroring the oracle's message shape). | Empirical/Declared |
+| `compiler.semcore::check_trait_sig_bounds` | fn | `lib/compiler/semcore.myc:2532` | `fn check_trait_sig_bounds(all: Vec[TraitInfo], trname: Bytes, sigs: Vec[FnSig]) => Result[Bool, Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::check_sig_tp_bounds` | fn | `lib/compiler/semcore.myc:2541` | `fn check_sig_tp_bounds(all: Vec[TraitInfo], trname: Bytes, method: Bytes, tps: Vec[TypeParam]) => Result[Bool, Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::unknown_bound_msg` | fn | `lib/compiler/semcore.myc:2553` | `fn unknown_bound_msg(trname: Bytes, method: Bytes, pname: Bytes, bound: Bytes) => Bytes` | unknown_bound_msg: the never-silent refusal text for pass 2 (checkty.rs 3068-3076) — names the site (`trait <T> method <m>`) and the offending bound (`<param>: <bound>`). Built in `let`-pieces to keep the concatenation legibly balanced. | Empirical/Declared |
+| `compiler.semcore::check_tp_bounds` | fn | `lib/compiler/semcore.myc:2559` | `fn check_tp_bounds(all: Vec[TraitInfo], trname: Bytes, method: Bytes, pname: Bytes, bounds: Vec[TraitRef]) => Result[Bool, Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::InstanceInfo` | type | `lib/compiler/semcore.myc:2598` | `type InstanceInfo = InstInfo(Bytes, Vec[Ty], Ty, Vec[Bytes])` | InstanceInfo: mirrors checkty.rs::InstanceInfo (277-286) -- { trait_name, trait_args (concrete Ty), for_ty (concrete Ty), methods (provided method names) }. Modeled as a presence-checked `Vec[InstanceInfo]` keyed by `(trait_name, type_head(for_ty))`, exactly as the other register-family outputs are Vecs (NOT maps). | Empirical/Declared |
+| `compiler.semcore::InstanceInfo::InstInfo` | ctor | `lib/compiler/semcore.myc:2598` | `InstInfo(Bytes, Vec[Ty], Ty, Vec[Bytes])` | — | Empirical/Declared |
+| `compiler.semcore::instinfo_trait_name` | fn | `lib/compiler/semcore.myc:2600` | `fn instinfo_trait_name(i: InstanceInfo) => Bytes` | — | Empirical/Declared |
+| `compiler.semcore::instinfo_for_ty` | fn | `lib/compiler/semcore.myc:2603` | `fn instinfo_for_ty(i: InstanceInfo) => Ty` | — | Empirical/Declared |
+| `compiler.semcore::CoherenceView` | type | `lib/compiler/semcore.myc:2610` | `type CoherenceView = CV(Vec[Bytes], Vec[Bytes])` | CoherenceView: mirrors checkty.rs::CoherenceView (1318-1323) -- the pub-blind phylum-wide name view the orphan rule reads: (all trait names, all data-type names), each a `Vec[Bytes]` name-list (the FLAG-semcore-4 assoc-list stand-in for the oracle's two `BTreeSet<String>`; membership via `names_contains`). | Empirical/Declared |
+| `compiler.semcore::CoherenceView::CV` | ctor | `lib/compiler/semcore.myc:2610` | `CV(Vec[Bytes], Vec[Bytes])` | — | Empirical/Declared |
+| `compiler.semcore::cv_traits` | fn | `lib/compiler/semcore.myc:2612` | `fn cv_traits(c: CoherenceView) => Vec[Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::cv_types` | fn | `lib/compiler/semcore.myc:2615` | `fn cv_types(c: CoherenceView) => Vec[Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::imd_trait_name` | fn | `lib/compiler/semcore.myc:2620` | `fn imd_trait_name(i: ImplDecl) => Bytes` | ImplDecl trait-name accessor (ImD field 1) -- the register-family tuple pre-pass read only args/for_ty/methods; the impl pass needs the trait name (lookup + instance key + messages). | Empirical/Declared |
+| `compiler.semcore::trinfo_params` | fn | `lib/compiler/semcore.myc:2624` | `fn trinfo_params(t: TraitInfo) => Vec[Bytes]` | TraitInfo params accessor (TrInfo field 2) -- the trait pass registered it; the arity check reads it. | Empirical/Declared |
+| `compiler.semcore::traits_lookup` | fn | `lib/compiler/semcore.myc:2629` | `fn traits_lookup(traits: Vec[TraitInfo], name: Bytes) => Option[TraitInfo]` | traits_lookup: `traits.get(name)` over the assoc-list registry (the ENTRY, not just membership -- register_instances needs the `TraitInfo` for the arity + method-set checks). | Empirical/Declared |
+| `compiler.semcore::impl_method_names` | fn | `lib/compiler/semcore.myc:2641` | `fn impl_method_names(id: ImplDecl) => Vec[Bytes]` | impl_method_names / trait_required_names: the impl's provided method NAMES (`m.sig.name`, i.e. `fnsig_name(fndecl_sig(m))`) and the trait's required method NAMES (`s.name` over the trait's sigs) -- the two name-sets `check_impl_method_set` compares (checkty.rs 3245-3248). | Empirical/Declared |
+| `compiler.semcore::method_sig_names` | fn | `lib/compiler/semcore.myc:2644` | `fn method_sig_names(ms: Vec[FnDecl]) => Vec[Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::trait_required_names` | fn | `lib/compiler/semcore.myc:2650` | `fn trait_required_names(sigs: Vec[FnSig]) => Vec[Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::check_impl_method_set` | fn | `lib/compiler/semcore.myc:2661` | `fn check_impl_method_set(tr: TraitInfo, id: ImplDecl) => Result[Bool, Bytes]` | check_impl_method_set: the impl's method SET must EXACTLY match the trait's requirement SET (checkty.rs::check_impl_method_set 3243-3284). In the oracle's ORDER: (a) every required name is provided (else "missing method"); (b) every provided name is required (else "has method ... not in trait"); (c) no provided name appears twice (else "provides ... more than once"). All three are explicit never-silent refusals (G2) -- never a silently-filled or silently-dropped method. | Empirical/Declared |
+| `compiler.semcore::check_methods_present` | fn | `lib/compiler/semcore.myc:2676` | `fn check_methods_present(trname: Bytes, required: Vec[Bytes], provided: Vec[Bytes]) => Result[Bool, Bytes]` | (a) every required method name must be present in `provided` (checkty.rs 3249-3256). | Empirical/Declared |
+| `compiler.semcore::check_methods_no_extra` | fn | `lib/compiler/semcore.myc:2686` | `fn check_methods_no_extra(trname: Bytes, required: Vec[Bytes], provided: Vec[Bytes]) => Result[Bool, Bytes]` | (b) every provided method name must be required -- no extra methods (checkty.rs 3257-3267). | Empirical/Declared |
+| `compiler.semcore::type_local` | fn | `lib/compiler/semcore.myc:2700` | `fn type_local(coherence_types: Vec[Bytes], for_ty: Ty) => Bool` | type_local: the orphan rule's `type_local` arm (checkty.rs 3182-3198), matching the `for_ty` variant EXACTLY as the oracle -- a `Data` head is local iff its name is in coherence.types; every primitive repr (Binary/Ternary/Dense/Vsa/Substrate/Seq/Bytes/Float) is phylum-owned (always true); `Var`/`Fn` are not legal heads (false -- kept for exhaustiveness, never a silent accept, G2; `type_head` refuses them upstream so these two arms are unreachable in practice). | Empirical/Declared |
+| `compiler.semcore::orphan_ok` | fn | `lib/compiler/semcore.myc:2716` | `fn orphan_ok(coherence: CoherenceView, trait_name: Bytes, for_ty: Ty) => Bool` | orphan_ok: legal iff trait_local OR type_local (checkty.rs 3181-3199). | Empirical/Declared |
+| `compiler.semcore::instance_head_eq` | fn | `lib/compiler/semcore.myc:2725` | `fn instance_head_eq(for_ty: Ty, head: Bytes) => Bool` | instance_head_eq: does `for_ty`'s head equal `head`? A stored instance always has a `Some` head (it passed the type_head check), so the `None` arm is an unreachable-in-practice `False` -- never a silent match (G2). | Empirical/Declared |
+| `compiler.semcore::instances_contains_key` | fn | `lib/compiler/semcore.myc:2734` | `fn instances_contains_key(acc: Vec[InstanceInfo], trait_name: Bytes, head: Bytes) => Bool` | instances_contains_key: `instances.contains_key((trait_name, head))` over the assoc-list registry -- the global-uniqueness scan (checkty.rs 3213-3214). The stored `(trait, head)` is recomputed from the instance's `for_ty` (the registry keeps the full for_ty, not the erased head). | Empirical/Declared |
+| `compiler.semcore::register_instances` | fn | `lib/compiler/semcore.myc:2746` | `fn register_instances(types: Vec[DataInfo], traits: Vec[TraitInfo], coherence: CoherenceView, nod: Nodule) => Result[Vec[InstanceInfo], Bytes]` | register_instances: the two-level loop (checkty.rs 3130-3237). Returns the instance registry or the FIRST refusal. `register_one_instance` threads the accumulated registry so the uniqueness scan sees earlier-registered instances (the oracle's growing `BTreeMap`). | Empirical/Declared |
+| `compiler.semcore::register_instances_go` | fn | `lib/compiler/semcore.myc:2749` | `fn register_instances_go(types: Vec[DataInfo], traits: Vec[TraitInfo], coherence: CoherenceView, acc: Vec[InstanceInfo], items: Vec[Item]) => Result[Vec[InstanceInfo], Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::register_one_instance` | fn | `lib/compiler/semcore.myc:2763` | `fn register_one_instance(types: Vec[DataInfo], traits: Vec[TraitInfo], coherence: CoherenceView, acc: Vec[InstanceInfo], id: ImplDecl) => Result[Vec[InstanceInfo], Bytes]` | register_one_instance: the per-impl body (checkty.rs 3132-3235) -- the eight checks in the oracle's EXACT order. `resolve_ty`'s guarantee slot is discarded (`let (for_ty, _) = ..`), matching the oracle. | Empirical/Declared |
+| `compiler.semcore::arity_mismatch_msg` | fn | `lib/compiler/semcore.myc:2794` | `fn arity_mismatch_msg(trname: Bytes, want: Binary{32}, got: Binary{32}) => Bytes` | The three never-silent refusal messages, mirroring the oracle's site + reason wording (checkty.rs 3152-3163 / 3199-3209 / 3214-3224). Built in `bytes_concat` pieces (the file's established idiom). | Empirical/Declared |
+| `compiler.semcore::orphan_msg` | fn | `lib/compiler/semcore.myc:2797` | `fn orphan_msg(trname: Bytes) => Bytes` | — | Empirical/Declared |
+| `compiler.semcore::overlapping_msg` | fn | `lib/compiler/semcore.myc:2800` | `fn overlapping_msg(trname: Bytes, head: Bytes) => Bytes` | — | Empirical/Declared |
+| `compiler.semcore::same_ty_len` | fn | `lib/compiler/semcore.myc:2805` | `fn same_ty_len(a: Vec[Ty], b: Vec[Ty]) => Bool` | — | Empirical/Declared |
+| `compiler.semcore::unify_eq_or_mismatch` | fn | `lib/compiler/semcore.myc:2813` | `fn unify_eq_or_mismatch(decl: Ty, actual: Ty, s: Vec[Pair[Bytes, Ty]]) => Result[Vec[Pair[Bytes, Ty]], Bytes]` | The `_ if decl == actual` fallback (arm 8) + the `_ => Err` mismatch (arm 9), and the collapsed FLAG-semcore-14 dead arm: an unhandled pair unifies iff it is already structurally equal. | Empirical/Declared |
+| `compiler.semcore::unify_var` | fn | `lib/compiler/semcore.myc:2821` | `fn unify_var(v: Bytes, actual: Ty, s: Vec[Pair[Bytes, Ty]]) => Result[Vec[Pair[Bytes, Ty]], Bytes]` | unify_var: the `(Ty::Var(v), _)` arm — a prior binding to a DIFFERENT type is a never-silent conflict; otherwise bind `v -> actual` (VR-5/G2). | Empirical/Declared |
+| `compiler.semcore::unify_width_carrier` | fn | `lib/compiler/semcore.myc:2833` | `fn unify_width_carrier(v: Bytes, carrier: Ty, s: Vec[Pair[Bytes, Ty]]) => Result[Vec[Pair[Bytes, Ty]], Bytes]` | unify_width_carrier: the shared width-var binding logic. The carrier is ALWAYS a `TyBinary` (`WdLit(n)` for a concrete width, `WdVar(v2)` for a width-var) regardless of the paradigm — the DN-42/M-753 carrier convention `subst_ty` reads back. A conflicting prior binding is never-silent. | Empirical/Declared |
+| `compiler.semcore::unify_binary_width` | fn | `lib/compiler/semcore.myc:2845` | `fn unify_binary_width(v: Bytes, actual: Ty, decl: Ty, s: Vec[Pair[Bytes, Ty]]) => Result[Vec[Pair[Bytes, Ty]], Bytes]` | unify_width: a width-var `decl` (Binary or Ternary) against an actual of the SAME paradigm. A concrete-width actual binds `v -> TyBinary(WdLit(n))`; a width-var actual binds `v -> TyBinary(WdVar(v2))`. Any cross-paradigm / non-width actual falls through to eq/mismatch. | Empirical/Declared |
+| `compiler.semcore::unify_ternary_width` | fn | `lib/compiler/semcore.myc:2854` | `fn unify_ternary_width(v: Bytes, actual: Ty, decl: Ty, s: Vec[Pair[Bytes, Ty]]) => Result[Vec[Pair[Bytes, Ty]], Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::unify` | fn | `lib/compiler/semcore.myc:2863` | `fn unify(decl: Ty, actual: Ty, s: Vec[Pair[Bytes, Ty]]) => Result[Vec[Pair[Bytes, Ty]], Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::unify_list` | fn | `lib/compiler/semcore.myc:2896` | `fn unify_list(a1: Vec[Ty], a2: Vec[Ty], s: Vec[Pair[Bytes, Ty]]) => Result[Vec[Pair[Bytes, Ty]], Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::three32` | fn | `lib/compiler/semcore.myc:2939` | `fn three32() => Binary{32}` | — | Empirical/Declared |
+| `compiler.semcore::replace_dash_at` | fn | `lib/compiler/semcore.myc:2944` | `fn replace_dash_at(s: Bytes, i: Binary{32}, n: Binary{32}) => Bytes` | replace_dash: `model.replace('-', '_')` (the VSA kernel-model-id fragment is `$`-joined and its `-` — not an identifier char — maps to `_`; injective over the model-id alphabet). O(len) over the short model id via 1-char slices. | Empirical/Declared |
+| `compiler.semcore::replace_dash` | fn | `lib/compiler/semcore.myc:2954` | `fn replace_dash(s: Bytes) => Bytes` | — | Empirical/Declared |
+| `compiler.semcore::strip_fn_prefix` | fn | `lib/compiler/semcore.myc:2957` | `fn strip_fn_prefix(a: Bytes) => Bytes` | strip_fn_prefix: `arrow.strip_prefix("Fn$").unwrap_or(arrow)` — strip a leading "Fn$" if present. | Empirical/Declared |
+| `compiler.semcore::scalar_tag` | fn | `lib/compiler/semcore.myc:2967` | `fn scalar_tag(s: Scalar) => Bytes` | — | Empirical/Declared |
+| `compiler.semcore::vsa_sp_tag` | fn | `lib/compiler/semcore.myc:2971` | `fn vsa_sp_tag(sp: Sparsity) => Bytes` | vsa_sp_tag: the VSA sparsity fragment (`Dense` -> "Dn", `Sparse(k)` -> "Sp{k}"). | Empirical/Declared |
+| `compiler.semcore::mangle_ty_args` | fn | `lib/compiler/semcore.myc:2976` | `fn mangle_ty_args(args: Vec[Ty]) => Bytes` | mangle_ty_args: the `$`-joined argument fragments of an applied data type / a decl's type args (`for a in args { push('$'); push(mangle_ty(a)) }`). | Empirical/Declared |
+| `compiler.semcore::mangle_ty` | fn | `lib/compiler/semcore.myc:2983` | `fn mangle_ty(t: Ty) => Bytes` | — | Empirical/Declared |
+| `compiler.semcore::mangle_decl` | fn | `lib/compiler/semcore.myc:3003` | `fn mangle_decl(name: Bytes, targs: Vec[Ty]) => Bytes` | — | Empirical/Declared |
+| `compiler.semcore::mangle_ctor` | fn | `lib/compiler/semcore.myc:3006` | `fn mangle_ctor(name: Bytes, targs: Vec[Ty]) => Bytes` | — | Empirical/Declared |
+| `compiler.semcore::mangle_method` | fn | `lib/compiler/semcore.myc:3009` | `fn mangle_method(method: Bytes, trait_name: Bytes, for_ty: Ty) => Bytes` | — | Empirical/Declared |
+| `compiler.semcore::mangle_ty_or_fn` | fn | `lib/compiler/semcore.myc:3015` | `fn mangle_ty_or_fn(t: Ty) => Bytes` | — | Empirical/Declared |
+| `compiler.semcore::mangle_arrow` | fn | `lib/compiler/semcore.myc:3018` | `fn mangle_arrow(a: Ty, b: Ty) => Bytes` | — | Empirical/Declared |
+| `compiler.semcore::apply_fn_name` | fn | `lib/compiler/semcore.myc:3022` | `fn apply_fn_name(arrow: Bytes) => Bytes` | apply_fn_name: the dispatcher name for an arrow mangle `Fn$A$B` -> `apply$A$B`. | Empirical/Declared |
+| `compiler.semcore::warg_tag` | fn | `lib/compiler/semcore.myc:3027` | `fn warg_tag(w: Width) => Bytes` | — | Empirical/Declared |
+| `compiler.semcore::warg_joints` | fn | `lib/compiler/semcore.myc:3030` | `fn warg_joints(wargs: Vec[Width]) => Bytes` | — | Empirical/Declared |
+| `compiler.semcore::mangle_decl_with_wargs` | fn | `lib/compiler/semcore.myc:3033` | `fn mangle_decl_with_wargs(name: Bytes, targs: Vec[Ty], wargs: Vec[Width]) => Bytes` | — | Empirical/Declared |
+| `compiler.semcore::pairs_is_empty` | fn | `lib/compiler/semcore.myc:3037` | `fn pairs_is_empty(p: Vec[Pair[Binary{32}, Bytes]]) => Bool` | pairs_is_empty: the `fn_args.is_empty() && dyn_fns.is_empty()` guard (over Vec[Pair[u32, Bytes]]). | Empirical/Declared |
+| `compiler.semcore::hof_fn_joints` | fn | `lib/compiler/semcore.myc:3041` | `fn hof_fn_joints(fa: Vec[Pair[Binary{32}, Bytes]]) => Bytes` | hof_fn_joints: the static fn-argument segments `%{idx}:{callee}` (the `%` fresh-var joint). | Empirical/Declared |
+| `compiler.semcore::hof_dyn_joints` | fn | `lib/compiler/semcore.myc:3049` | `fn hof_dyn_joints(df: Vec[Pair[Binary{32}, Bytes]]) => Bytes` | hof_dyn_joints: the dynamic (kept-closure) fn-argument segments `~{idx}:{arrow}` (the `~` joint). | Empirical/Declared |
+| `compiler.semcore::mangle_hof_decl` | fn | `lib/compiler/semcore.myc:3056` | `fn mangle_hof_decl(name: Bytes, targs: Vec[Ty], wargs: Vec[Width], fa: Vec[Pair[Binary{32}, Bytes]], df: Vec[Pair[Binary{32}, Bytes]]) => Bytes` | — | Empirical/Declared |
+| `compiler.semcore::names_snoc` | fn | `lib/compiler/semcore.myc:3097` | `fn names_snoc(xs: Vec[Bytes], n: Bytes) => Vec[Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::names_append` | fn | `lib/compiler/semcore.myc:3101` | `fn names_append(a: Vec[Bytes], b: Vec[Bytes]) => Vec[Bytes]` | names_append: concatenate two name lists (a pattern's binder-set union across sub-patterns). | Empirical/Declared |
+| `compiler.semcore::ensure_bound` | fn | `lib/compiler/semcore.myc:3105` | `fn ensure_bound(bound: Vec[Bytes], n: Bytes) => Vec[Bytes]` | ensure_bound: `bound.insert(n)` as a set op — add iff absent (an already-bound name is unchanged). | Empirical/Declared |
+| `compiler.semcore::union_names` | fn | `lib/compiler/semcore.myc:3109` | `fn union_names(bound: Vec[Bytes], names: Vec[Bytes]) => Vec[Bytes]` | union_names: extend `bound` by every name in `names` (the arm/lambda/for scope extension). | Empirical/Declared |
+| `compiler.semcore::param_names` | fn | `lib/compiler/semcore.myc:3113` | `fn param_names(params: Vec[Param]) => Vec[Bytes]` | param_names: the value-parameter names of a lambda (Rust `params.iter().map(\|p\| p.name)`). | Empirical/Declared |
+| `compiler.semcore::pattern_binder_names` | fn | `lib/compiler/semcore.myc:3117` | `fn pattern_binder_names(pat: Pattern, depth: Binary{32}) => Result[Vec[Bytes], Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::pattern_binder_names_list` | fn | `lib/compiler/semcore.myc:3130` | `fn pattern_binder_names_list(subs: Vec[Pattern], depth: Binary{32}) => Result[Vec[Bytes], Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::fvw` | fn | `lib/compiler/semcore.myc:3144` | `fn fvw(e: Expr, bound: Vec[Bytes], seen: Vec[Bytes], out: Vec[Bytes], depth: Binary{32}) => Result[Pair[Vec[Bytes], Vec[Bytes]], Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::fvw_list` | fn | `lib/compiler/semcore.myc:3214` | `fn fvw_list(es: Vec[Expr], bound: Vec[Bytes], seen: Vec[Bytes], out: Vec[Bytes], depth: Binary{32}) => Result[Pair[Vec[Bytes], Vec[Bytes]], Bytes]` | fvw_list: walk a Vec[Expr] left-to-right, threading (seen, out) (Lit(List)/App args/TupleLit). | Empirical/Declared |
+| `compiler.semcore::fvw_hyphae` | fn | `lib/compiler/semcore.myc:3224` | `fn fvw_hyphae(hs: Vec[Hypha], bound: Vec[Bytes], seen: Vec[Bytes], out: Vec[Bytes], depth: Binary{32}) => Result[Pair[Vec[Bytes], Vec[Bytes]], Bytes]` | fvw_hyphae: walk each hypha's body (Colony) — forage clauses are not free-var positions here. | Empirical/Declared |
+| `compiler.semcore::fvw_arms` | fn | `lib/compiler/semcore.myc:3235` | `fn fvw_arms(arms: Vec[Arm], bound: Vec[Bytes], seen: Vec[Bytes], out: Vec[Bytes], depth: Binary{32}) => Result[Pair[Vec[Bytes], Vec[Bytes]], Bytes]` | fvw_arms: per arm, extend `bound` by the arm pattern's binder set, walk the arm body; `bound` resets to the match scope between arms (the Rust insert/remove pair, collapsed). | Empirical/Declared |
+| `compiler.semcore::free_vars` | fn | `lib/compiler/semcore.myc:3248` | `fn free_vars(e: Expr) => Result[Vec[Bytes], Bytes]` | free_vars: the pub entry — an empty scope/seen/out, returning the ordered capture list. | Empirical/Declared |
+| `compiler.semcore::Bind` | type | `lib/compiler/semcore.myc:3292` | `type Bind = Bnd(Bytes, Ty, Vec[Binary{32}])` | — | Empirical/Declared |
+| `compiler.semcore::Bind::Bnd` | ctor | `lib/compiler/semcore.myc:3292` | `Bnd(Bytes, Ty, Vec[Binary{32}])` | — | Empirical/Declared |
+| `compiler.semcore::snoc_bind` | fn | `lib/compiler/semcore.myc:3294` | `fn snoc_bind(xs: Vec[Bind], b: Bind) => Vec[Bind]` | — | Empirical/Declared |
+| `compiler.semcore::is_bindigit` | fn | `lib/compiler/semcore.myc:3298` | `fn is_bindigit(ch: Bytes) => Bool` | — | Empirical/Declared |
+| `compiler.semcore::count_bindigits_at` | fn | `lib/compiler/semcore.myc:3302` | `fn count_bindigits_at(s: Bytes, i: Binary{32}, n: Binary{32}) => Binary{32}` | count_bindigits: `s.chars().filter(\|c\| \*c == '0' \|\| \*c == '1').count()` (the binary literal width). | Empirical/Declared |
+| `compiler.semcore::count_bindigits` | fn | `lib/compiler/semcore.myc:3309` | `fn count_bindigits(s: Bytes) => Binary{32}` | — | Empirical/Declared |
+| `compiler.semcore::filter_bindigits_at` | fn | `lib/compiler/semcore.myc:3312` | `fn filter_bindigits_at(s: Bytes, i: Binary{32}, n: Binary{32}) => Bytes` | filter_bindigits: the 0/1 chars of `s` concatenated (the `literal_key` `b:` body). | Empirical/Declared |
+| `compiler.semcore::filter_bindigits` | fn | `lib/compiler/semcore.myc:3319` | `fn filter_bindigits(s: Bytes) => Bytes` | — | Empirical/Declared |
+| `compiler.semcore::filter_no_us_at` | fn | `lib/compiler/semcore.myc:3322` | `fn filter_no_us_at(s: Bytes, i: Binary{32}, n: Binary{32}) => Bytes` | filter_no_underscore: `s.chars().filter(\|c\| \*c != '_')` (the `literal_key` `by:` body). | Empirical/Declared |
+| `compiler.semcore::filter_no_underscore` | fn | `lib/compiler/semcore.myc:3329` | `fn filter_no_underscore(s: Bytes) => Bytes` | — | Empirical/Declared |
+| `compiler.semcore::lit_ty_of` | fn | `lib/compiler/semcore.myc:3332` | `fn lit_ty_of(l: Literal) => Result[Ty, Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::literal_key` | fn | `lib/compiler/semcore.myc:3346` | `fn literal_key(l: Literal) => Bytes` | — | Empirical/Declared |
+| `compiler.semcore::ctor_lookup` | fn | `lib/compiler/semcore.myc:3360` | `fn ctor_lookup(ctors: Vec[CtorInfo], name: Bytes) => Option[CtorInfo]` | — | Empirical/Declared |
+| `compiler.semcore::pat_count` | fn | `lib/compiler/semcore.myc:3367` | `fn pat_count(v: Vec[Pattern]) => Binary{32}` | pat_count: the arity of a sub-pattern list (Vec[Pattern] length). | Empirical/Declared |
+| `compiler.semcore::is_float_lit` | fn | `lib/compiler/semcore.myc:3370` | `fn is_float_lit(l: Literal) => Bool` | — | Empirical/Declared |
+| `compiler.semcore::normalize_lit` | fn | `lib/compiler/semcore.myc:3372` | `fn normalize_lit(lit: Literal, expected: Ty, binds: Vec[Bind]) => Result[Pair[Pat, Vec[Bind]], Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::normalize_ident` | fn | `lib/compiler/semcore.myc:3384` | `fn normalize_ident(types: Vec[DataInfo], n: Bytes, expected: Ty, occ: Vec[Binary{32}], binds: Vec[Bind]) => Result[Pair[Pat, Vec[Bind]], Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::normalize_fields` | fn | `lib/compiler/semcore.myc:3399` | `fn normalize_fields(types: Vec[DataInfo], subs: Vec[Pattern], fields: Vec[Ty], s: Vec[Pair[Bytes, Ty]], occ: Vec[Binary{32}], i: Binary{32}, binds: Vec[Bind]) => Result[Pair[Vec[Pat], Vec[Bind]], Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::normalize_ctor` | fn | `lib/compiler/semcore.myc:3419` | `fn normalize_ctor(types: Vec[DataInfo], n: Bytes, subs: Vec[Pattern], expected: Ty, occ: Vec[Binary{32}], binds: Vec[Bind]) => Result[Pair[Pat, Vec[Bind]], Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::normalize_pattern` | fn | `lib/compiler/semcore.myc:3438` | `fn normalize_pattern(types: Vec[DataInfo], pat: Pattern, expected: Ty, occ: Vec[Binary{32}], binds: Vec[Bind]) => Result[Pair[Pat, Vec[Bind]], Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::ScalarK` | type | `lib/compiler/semcore.myc:3553` | `type ScalarK = SkF16 \| SkBf16 \| SkF32 \| SkF64` | — | Empirical/Declared |
+| `compiler.semcore::ScalarK::SkBf16` | ctor | `lib/compiler/semcore.myc:3553` | `SkBf16` | — | Empirical/Declared |
+| `compiler.semcore::ScalarK::SkF16` | ctor | `lib/compiler/semcore.myc:3553` | `SkF16` | — | Empirical/Declared |
+| `compiler.semcore::ScalarK::SkF32` | ctor | `lib/compiler/semcore.myc:3553` | `SkF32` | — | Empirical/Declared |
+| `compiler.semcore::ScalarK::SkF64` | ctor | `lib/compiler/semcore.myc:3553` | `SkF64` | — | Empirical/Declared |
+| `compiler.semcore::SparsityC` | type | `lib/compiler/semcore.myc:3556` | `type SparsityC = ScDense \| ScSparse(Binary{32})` | SparsityC: mirrors mycelium_core::SparsityClass (repr.rs). Sparse carries the max_active passthrough. | Empirical/Declared |
+| `compiler.semcore::SparsityC::ScDense` | ctor | `lib/compiler/semcore.myc:3556` | `ScDense` | — | Empirical/Declared |
+| `compiler.semcore::SparsityC::ScSparse` | ctor | `lib/compiler/semcore.myc:3556` | `ScSparse(Binary{32})` | — | Empirical/Declared |
+| `compiler.semcore::FloatW` | type | `lib/compiler/semcore.myc:3559` | `type FloatW = FwF64` | FloatW: mirrors mycelium_core::FloatWidth (repr.rs) — F64-only at introduction (ADR-040 FLAG-1). | Empirical/Declared |
+| `compiler.semcore::FloatW::FwF64` | ctor | `lib/compiler/semcore.myc:3559` | `FwF64` | — | Empirical/Declared |
+| `compiler.semcore::Repr` | type | `lib/compiler/semcore.myc:3562` | `type Repr = RBinary(Binary{32}) \| RTernary(Binary{32}) \| RDense(Binary{32}, ScalarK) \| RVsa(Bytes, Binary{32}, SparsityC) \| RSeq(Repr, Binary{32}) \| RFloat(FloatW) \| RBytes` | Repr: mirrors mycelium_core::Repr (repr.rs), the four closed paradigm kinds + Seq/Float/Bytes. | Empirical/Declared |
+| `compiler.semcore::Repr::RBinary` | ctor | `lib/compiler/semcore.myc:3563` | `RBinary(Binary{32})` | — | Empirical/Declared |
+| `compiler.semcore::Repr::RTernary` | ctor | `lib/compiler/semcore.myc:3564` | `RTernary(Binary{32})` | — | Empirical/Declared |
+| `compiler.semcore::Repr::RDense` | ctor | `lib/compiler/semcore.myc:3565` | `RDense(Binary{32}, ScalarK)` | — | Empirical/Declared |
+| `compiler.semcore::Repr::RVsa` | ctor | `lib/compiler/semcore.myc:3566` | `RVsa(Bytes, Binary{32}, SparsityC)` | — | Empirical/Declared |
+| `compiler.semcore::Repr::RSeq` | ctor | `lib/compiler/semcore.myc:3567` | `RSeq(Repr, Binary{32})` | — | Empirical/Declared |
+| `compiler.semcore::Repr::RFloat` | ctor | `lib/compiler/semcore.myc:3568` | `RFloat(FloatW)` | — | Empirical/Declared |
+| `compiler.semcore::Repr::RBytes` | ctor | `lib/compiler/semcore.myc:3569` | `RBytes` | — | Empirical/Declared |
+| `compiler.semcore::TritK` | type | `lib/compiler/semcore.myc:3572` | `type TritK = TkNeg \| TkZero \| TkPos` | TritK: mirrors mycelium_core::Trit (value.rs). | Empirical/Declared |
+| `compiler.semcore::TritK::TkNeg` | ctor | `lib/compiler/semcore.myc:3572` | `TkNeg` | — | Empirical/Declared |
+| `compiler.semcore::TritK::TkPos` | ctor | `lib/compiler/semcore.myc:3572` | `TkPos` | — | Empirical/Declared |
+| `compiler.semcore::TritK::TkZero` | ctor | `lib/compiler/semcore.myc:3572` | `TkZero` | — | Empirical/Declared |
+| `compiler.semcore::Payload` | type | `lib/compiler/semcore.myc:3576` | `type Payload = PlBits(Vec[Binary{1}]) \| PlTrits(Vec[TritK]) \| PlBytes(Bytes)` | Payload: mirrors mycelium_core::Payload (value.rs) — the wild-free-constructible subset only (FLAG-semcore-23). `PlBytes(Bytes)` holds the byte-vector directly (the `.myc` Bytes primitive). | Empirical/Declared |
+| `compiler.semcore::Payload::PlBits` | ctor | `lib/compiler/semcore.myc:3576` | `PlBits(Vec[Binary{1}])` | — | Empirical/Declared |
+| `compiler.semcore::Payload::PlBytes` | ctor | `lib/compiler/semcore.myc:3576` | `PlBytes(Bytes)` | — | Empirical/Declared |
+| `compiler.semcore::Payload::PlTrits` | ctor | `lib/compiler/semcore.myc:3576` | `PlTrits(Vec[TritK])` | — | Empirical/Declared |
+| `compiler.semcore::Meta` | type | `lib/compiler/semcore.myc:3579` | `type Meta = MtExactRoot` | Meta: mirrors mycelium_core::Meta minimally (FLAG-semcore-24) — the single `exact(Root)` form. | Empirical/Declared |
+| `compiler.semcore::Meta::MtExactRoot` | ctor | `lib/compiler/semcore.myc:3579` | `MtExactRoot` | — | Empirical/Declared |
+| `compiler.semcore::Value` | type | `lib/compiler/semcore.myc:3582` | `type Value = Val(Repr, Payload, Meta)` | Value: mirrors mycelium_core::Value (value.rs) — the (repr, payload, meta) triple. | Empirical/Declared |
+| `compiler.semcore::Value::Val` | ctor | `lib/compiler/semcore.myc:3582` | `Val(Repr, Payload, Meta)` | — | Empirical/Declared |
+| `compiler.semcore::KFnSig` | type | `lib/compiler/semcore.myc:3586` | `type KFnSig = KFS(Binary{32}, Vec[FieldTyRef], FieldTyRef)` | KFnSig: mirrors mycelium_core::FnSig (data.rs) — (arity, params, ret). Spelled `KFnSig`/`KFS` to avoid the SURFACE `FnSig`/`FS` mirror already present (FLAG-semcore-22). | Empirical/Declared |
+| `compiler.semcore::KFnSig::KFS` | ctor | `lib/compiler/semcore.myc:3586` | `KFS(Binary{32}, Vec[FieldTyRef], FieldTyRef)` | — | Empirical/Declared |
+| `compiler.semcore::FieldTyRef` | type | `lib/compiler/semcore.myc:3589` | `type FieldTyRef = FtRepr(Repr) \| FtData(Bytes) \| FtFn(KFnSig)` | FieldTyRef: mirrors mycelium_core::FieldTyRef (data.rs). | Empirical/Declared |
+| `compiler.semcore::FieldTyRef::FtData` | ctor | `lib/compiler/semcore.myc:3589` | `FtData(Bytes)` | — | Empirical/Declared |
+| `compiler.semcore::FieldTyRef::FtFn` | ctor | `lib/compiler/semcore.myc:3589` | `FtFn(KFnSig)` | — | Empirical/Declared |
+| `compiler.semcore::FieldTyRef::FtRepr` | ctor | `lib/compiler/semcore.myc:3589` | `FtRepr(Repr)` | — | Empirical/Declared |
+| `compiler.semcore::FieldSpec` | type | `lib/compiler/semcore.myc:3592` | `type FieldSpec = FsRepr(Repr) \| FsData(Bytes) \| FsFn(Binary{32}, KFnSig)` | FieldSpec: mirrors mycelium_core::FieldSpec (data.rs). | Empirical/Declared |
+| `compiler.semcore::FieldSpec::FsData` | ctor | `lib/compiler/semcore.myc:3592` | `FsData(Bytes)` | — | Empirical/Declared |
+| `compiler.semcore::FieldSpec::FsFn` | ctor | `lib/compiler/semcore.myc:3592` | `FsFn(Binary{32}, KFnSig)` | — | Empirical/Declared |
+| `compiler.semcore::FieldSpec::FsRepr` | ctor | `lib/compiler/semcore.myc:3592` | `FsRepr(Repr)` | — | Empirical/Declared |
+| `compiler.semcore::scalar_kind` | fn | `lib/compiler/semcore.myc:3598` | `fn scalar_kind(s: Scalar) => ScalarK` | scalar_kind (elab.rs:1043) — Scalar -> ScalarKind. Boundary-independent (lands first, DN-26 SS10); its tag twin `scalar_tag` (mono.rs) already landed increment 4. | Empirical/Declared |
+| `compiler.semcore::sparsity_class` | fn | `lib/compiler/semcore.myc:3603` | `fn sparsity_class(sp: Sparsity) => SparsityC` | sparsity_class (elab.rs:1053) — Sparsity -> SparsityClass (the Sparse arm is a bare max_active passthrough). Boundary-independent; its tag twin `vsa_sp_tag` already landed increment 4. | Empirical/Declared |
+| `compiler.semcore::bin_bits_at` | fn | `lib/compiler/semcore.myc:3610` | `fn bin_bits_at(s: Bytes, i: Binary{32}, n: Binary{32}) => Vec[Binary{1}]` | lit_value (elab.rs:102) — a representation literal's L0 Value. Bin/Trit/Str + refusals ported faithfully; LBytes/LFloat DEFERRED (FLAG-semcore-25). Never-silent on every fallible arm (G2). bin_bits: filter the digit/`_` string to its 0/1 bits, MSB-first (Rust `chars().filter(\|c\| c=='0'\|\|c=='1').map(\|c\| c=='1')`). | Empirical/Declared |
+| `compiler.semcore::bin_bits` | fn | `lib/compiler/semcore.myc:3623` | `fn bin_bits(s: Bytes) => Vec[Binary{1}]` | — | Empirical/Declared |
+| `compiler.semcore::bits_len` | fn | `lib/compiler/semcore.myc:3625` | `fn bits_len(v: Vec[Binary{1}]) => Binary{32}` | — | Empirical/Declared |
+| `compiler.semcore::trit_of` | fn | `lib/compiler/semcore.myc:3630` | `fn trit_of(ch: Bytes) => Result[TritK, Bytes]` | trit_of: one wire glyph -> a trit; every non-{+,0,-} char is an explicit error (Rust maps EVERY char, no filtering — a stray char is a never-silent residual, G2). | Empirical/Declared |
+| `compiler.semcore::trit_trits_at` | fn | `lib/compiler/semcore.myc:3636` | `fn trit_trits_at(s: Bytes, i: Binary{32}, n: Binary{32}) => Result[Vec[TritK], Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::trits_len` | fn | `lib/compiler/semcore.myc:3648` | `fn trits_len(v: Vec[TritK]) => Binary{32}` | — | Empirical/Declared |
+| `compiler.semcore::lit_value` | fn | `lib/compiler/semcore.myc:3653` | `fn lit_value(l: Literal) => Result[Value, Bytes]` | lower-bound (`width == 0`) refused below, matching `Value::new`/`check_well_formed`; the `MAX_DIM` UPPER bound is NOT ported this wave (FLAG-semcore-29 — an honest, intentional cut). | Empirical/Declared |
+| `compiler.semcore::type_repr` | fn | `lib/compiler/semcore.myc:3681` | `fn type_repr(t: TypeRef) => Result[Repr, Bytes]` | type_repr (elab.rs:244) — surface `TypeRef` -> kernel `Repr` (swap targets). Only representation types resolve; named/data/Substrate/Fn/Tuple/Ambient/width-var are explicit refusals. Note the Vsa arm canonicalizes the surface model id (`vsa_kernel_model_id`) -- matching the Rust oracle, and DISTINCT from `field_spec`/`ty_to_repr` below (whose checked `Ty` already carries the canonical id). | Empirical/Declared |
+| `compiler.semcore::ty_to_repr` | fn | `lib/compiler/semcore.myc:3709` | `fn ty_to_repr(ty: Ty) => Option[Repr]` | ty_to_repr (elab.rs:982) — a representation checked `Ty` -> kernel `Repr`; `None` for any non-representation type (never a half-elaborated artifact -- G2/VR-5). Vsa uses the model DIRECTLY (the checked `Ty` already holds the canonical kernel id -- no re-canonicalization, matching Rust). | Empirical/Declared |
+| `compiler.semcore::ty_to_field_ty_ref` | fn | `lib/compiler/semcore.myc:3727` | `fn ty_to_field_ty_ref(ty: Ty) => Option[FieldTyRef]` | ty_to_field_ty_ref (elab.rs:1023) — a v0 `Ty` -> a `FieldTyRef` signature leaf: a monomorphic `Data` reference, a nested `Fn` signature, or (the `_` arm) a `Repr` leaf via `ty_to_repr`. `None` for anything with no monomorphic form (mirrors `field_spec`'s staging -- G2/VR-5). | Empirical/Declared |
+| `compiler.semcore::field_spec` | fn | `lib/compiler/semcore.myc:3745` | `fn field_spec(ty: Ty) => Option[FieldSpec]` | field_spec (elab.rs:923) — a checked `Ty` field -> a build-time `FieldSpec`; `None` when the field has no monomorphic kernel form (a width-var, a generic `Data`, a `Var`, a `Substrate`, or an unresolvable `Fn` signature leaf) -- staged, never half-encoded (G2/VR-5). | Empirical/Declared |
+| `compiler.semcore::join_dot` | fn | `lib/compiler/semcore.myc:3769` | `fn join_dot(segs: Vec[Bytes]) => Bytes` | policy_name_preimage (elab.rs:344 preimage) — the domain-separated PREIMAGE of `policy_name_ref` (`policy-name.v0:<dotted>`). The hashing step is DEFERRED (FLAG-semcore-27). `join_dot` restates `policy.0.join(".")`. | Empirical/Declared |
+| `compiler.semcore::policy_name_preimage` | fn | `lib/compiler/semcore.myc:3778` | `fn policy_name_preimage(p: Path) => Bytes` | — | Empirical/Declared |
+| `compiler.semcore::Exports` | type | `lib/compiler/semcore.myc:3837` | `type Exports = Ex(Vec[Pair[Bytes, DataInfo]], Vec[Pair[Bytes, FnDecl]], Vec[Pair[Bytes, TraitInfo]], Vec[Pair[Bytes, Bool]])` | Exports: mirrors checkty.rs::Exports (1045-1056) as FOUR FLAG-semcore-4 assoc lists (no map primitive, M-982) keyed by the qualified (dot-joined) name STRING — `types`/`fns`/`traits` per kind, `declared` the ALL-declared-names-with-pub-ness table `resolve_imports` distinguishes "unknown" from "private" against. New ctor `Ex` (FLAG-semcore-2 scheme; checked, no collision). | Empirical/Declared |
+| `compiler.semcore::Exports::Ex` | ctor | `lib/compiler/semcore.myc:3837` | `Ex(Vec[Pair[Bytes, DataInfo]], Vec[Pair[Bytes, FnDecl]], Vec[Pair[Bytes, TraitInfo]], Vec[Pair[Bytes, Bool]])` | — | Empirical/Declared |
+| `compiler.semcore::ex_types` | fn | `lib/compiler/semcore.myc:3839` | `fn ex_types(e: Exports) => Vec[Pair[Bytes, DataInfo]]` | — | Empirical/Declared |
+| `compiler.semcore::ex_fns` | fn | `lib/compiler/semcore.myc:3842` | `fn ex_fns(e: Exports) => Vec[Pair[Bytes, FnDecl]]` | — | Empirical/Declared |
+| `compiler.semcore::ex_traits` | fn | `lib/compiler/semcore.myc:3845` | `fn ex_traits(e: Exports) => Vec[Pair[Bytes, TraitInfo]]` | — | Empirical/Declared |
+| `compiler.semcore::ex_declared` | fn | `lib/compiler/semcore.myc:3848` | `fn ex_declared(e: Exports) => Vec[Pair[Bytes, Bool]]` | — | Empirical/Declared |
+| `compiler.semcore::exports_types_lookup` | fn | `lib/compiler/semcore.myc:3854` | `fn exports_types_lookup(t: Vec[Pair[Bytes, DataInfo]], qual: Bytes) => Option[DataInfo]` | exports_types_lookup / exports_fns_lookup / exports_traits_lookup / exports_declared_lookup: the FLAG-semcore-4 linear scan over each table, keyed by the flat qualified-name `Bytes` string (four duplicated pairs rather than a generic dictionary — FLAG-semcore-5 precedent, KISS/YAGNI). | Empirical/Declared |
+| `compiler.semcore::exports_fns_lookup` | fn | `lib/compiler/semcore.myc:3860` | `fn exports_fns_lookup(t: Vec[Pair[Bytes, FnDecl]], qual: Bytes) => Option[FnDecl]` | — | Empirical/Declared |
+| `compiler.semcore::exports_traits_lookup` | fn | `lib/compiler/semcore.myc:3866` | `fn exports_traits_lookup(t: Vec[Pair[Bytes, TraitInfo]], qual: Bytes) => Option[TraitInfo]` | — | Empirical/Declared |
+| `compiler.semcore::exports_declared_lookup` | fn | `lib/compiler/semcore.myc:3872` | `fn exports_declared_lookup(t: Vec[Pair[Bytes, Bool]], qual: Bytes) => Option[Bool]` | — | Empirical/Declared |
+| `compiler.semcore::exports_has_pub` | fn | `lib/compiler/semcore.myc:3879` | `fn exports_has_pub(exports: Exports, qual: Bytes) => Bool` | exports_has_pub (checkty.rs 1535-1537): is `qual` declared AND `pub`? | Empirical/Declared |
+| `compiler.semcore::NoduleImports` | type | `lib/compiler/semcore.myc:3888` | `type NoduleImports = NI(Vec[Pair[Bytes, DataInfo]], Vec[Pair[Bytes, FnDecl]], Vec[Pair[Bytes, TraitInfo]], Vec[Bytes])` | NoduleImports: mirrors checkty.rs::NoduleImports (1064-1075). `ambiguous` is a Vec[Bytes] SET (membership via `names_contains`) standing in for `BTreeSet<String>` (the same convention affine.rs FLAG-semcore-6/-18 established for accumulator sets). | Empirical/Declared |
+| `compiler.semcore::NoduleImports::NI` | ctor | `lib/compiler/semcore.myc:3888` | `NI(Vec[Pair[Bytes, DataInfo]], Vec[Pair[Bytes, FnDecl]], Vec[Pair[Bytes, TraitInfo]], Vec[Bytes])` | — | Empirical/Declared |
+| `compiler.semcore::ni_types` | fn | `lib/compiler/semcore.myc:3890` | `fn ni_types(n: NoduleImports) => Vec[Pair[Bytes, DataInfo]]` | — | Empirical/Declared |
+| `compiler.semcore::ni_fns` | fn | `lib/compiler/semcore.myc:3893` | `fn ni_fns(n: NoduleImports) => Vec[Pair[Bytes, FnDecl]]` | — | Empirical/Declared |
+| `compiler.semcore::ni_traits` | fn | `lib/compiler/semcore.myc:3896` | `fn ni_traits(n: NoduleImports) => Vec[Pair[Bytes, TraitInfo]]` | — | Empirical/Declared |
+| `compiler.semcore::ni_ambiguous` | fn | `lib/compiler/semcore.myc:3899` | `fn ni_ambiguous(n: NoduleImports) => Vec[Bytes]` | — | Empirical/Declared |
+| `compiler.semcore::nodule_imports_empty` | fn | `lib/compiler/semcore.myc:3903` | `fn nodule_imports_empty() => NoduleImports` | — | Empirical/Declared |
+| `compiler.semcore::assoc_remove_datainfo` | fn | `lib/compiler/semcore.myc:3908` | `fn assoc_remove_datainfo(t: Vec[Pair[Bytes, DataInfo]], k: Bytes) => Vec[Pair[Bytes, DataInfo]]` | assoc_remove_\*/assoc_set_\*: `BTreeMap::insert` (replace-if-present) over each of the three per-kind tables — remove any existing pair for `k`, then cons the new one (order-insensitive, an assoc-list map; the FLAG-semcore-4 convention, three duplicated pairs per FLAG-semcore-5). | Empirical/Declared |
+| `compiler.semcore::assoc_set_datainfo` | fn | `lib/compiler/semcore.myc:3917` | `fn assoc_set_datainfo(t: Vec[Pair[Bytes, DataInfo]], k: Bytes, v: DataInfo) => Vec[Pair[Bytes, DataInfo]]` | — | Empirical/Declared |
+| `compiler.semcore::assoc_remove_fndecl` | fn | `lib/compiler/semcore.myc:3920` | `fn assoc_remove_fndecl(t: Vec[Pair[Bytes, FnDecl]], k: Bytes) => Vec[Pair[Bytes, FnDecl]]` | — | Empirical/Declared |
+| `compiler.semcore::assoc_set_fndecl` | fn | `lib/compiler/semcore.myc:3929` | `fn assoc_set_fndecl(t: Vec[Pair[Bytes, FnDecl]], k: Bytes, v: FnDecl) => Vec[Pair[Bytes, FnDecl]]` | — | Empirical/Declared |
+| `compiler.semcore::assoc_remove_traitinfo` | fn | `lib/compiler/semcore.myc:3932` | `fn assoc_remove_traitinfo(t: Vec[Pair[Bytes, TraitInfo]], k: Bytes) => Vec[Pair[Bytes, TraitInfo]]` | — | Empirical/Declared |
+| `compiler.semcore::assoc_set_traitinfo` | fn | `lib/compiler/semcore.myc:3941` | `fn assoc_set_traitinfo(t: Vec[Pair[Bytes, TraitInfo]], k: Bytes, v: TraitInfo) => Vec[Pair[Bytes, TraitInfo]]` | — | Empirical/Declared |
+| `compiler.semcore::names_remove` | fn | `lib/compiler/semcore.myc:3946` | `fn names_remove(xs: Vec[Bytes], n: Bytes) => Vec[Bytes]` | names_remove: drop every occurrence of `n` from a `Vec[Bytes]` SET (the `ambiguous.remove` counterpart for a bare-name set, not a keyed table). | Empirical/Declared |
+| `compiler.semcore::insert_export` | fn | `lib/compiler/semcore.myc:3960` | `fn insert_export(imp: NoduleImports, exports: Exports, qual: Bytes, simple: Bytes) => NoduleImports` | insert_export (checkty.rs 1560-1571): insert the export `qual` into `imp` under `simple`. The oracle's OWN invariant comment says exactly one of the three export tables holds `qual` — but this port still tries all three (arm-for-arm), since nothing in `Exports`'s SHAPE enforces that invariant structurally (a caller-supplied fixture that violates it gets the same multi-table write the oracle's own three independent `if let`s would produce). | Empirical/Declared |
+| `compiler.semcore::remove_import` | fn | `lib/compiler/semcore.myc:3976` | `fn remove_import(imp: NoduleImports, simple: Bytes) => NoduleImports` | remove_import (checkty.rs 1574-1580): drop any binding for `simple` across all three per-kind tables (the glob-vs-glob-ambiguity demotion) — `ambiguous` is untouched (matching the oracle). | Empirical/Declared |
+| `compiler.semcore::qualify` | fn | `lib/compiler/semcore.myc:3980` | `fn qualify(path: Path, name: Bytes) => Bytes` | qualify (checkty.rs 1286-1292): `path.0.is_empty() ? name : path.0.join(".") + "." + name`. | Empirical/Declared |
+| `compiler.semcore::bytes_starts_with` | fn | `lib/compiler/semcore.myc:3991` | `fn bytes_starts_with(s: Bytes, prefix: Bytes) => Bool` | bytes_starts_with / bytes_contains_char(_at): small string primitives NOT already in this file — needed because `direct_child`/`split_last_seg` operate on the FLAT qualified-name string (the `Exports` table's key shape), unlike every prior string helper here (which walks Path SEGMENTS, e.g. `join_dot`). Same byte-at-a-time idiom as `count_bindigits_at`/`filter_bindigits_at` (`bytes_slice` + `bytes_eq`, source-length-bounded direct-tail recursion). | Empirical/Declared |
+| `compiler.semcore::bytes_contains_char_at` | fn | `lib/compiler/semcore.myc:3997` | `fn bytes_contains_char_at(s: Bytes, ch: Bytes, i: Binary{32}, n: Binary{32}) => Bool` | — | Empirical/Declared |
+| `compiler.semcore::bytes_contains_char` | fn | `lib/compiler/semcore.myc:4006` | `fn bytes_contains_char(s: Bytes, ch: Bytes) => Bool` | — | Empirical/Declared |
+| `compiler.semcore::direct_child` | fn | `lib/compiler/semcore.myc:4011` | `fn direct_child(prefix: Bytes, qual: Bytes) => Option[Bytes]` | direct_child (checkty.rs 1542-1550): is `qual` exactly ONE segment under `prefix`? `Some(simple)` iff `qual == prefix + "." + simple` with `simple` itself containing no further `.`. | Empirical/Declared |
+| `compiler.semcore::rev_bytes_acc` | fn | `lib/compiler/semcore.myc:4038` | `fn rev_bytes_acc(xs: Vec[Bytes], acc: Vec[Bytes]) => Vec[Bytes]` | split_last_seg_go / split_last_seg (checkty.rs 1553-1557): `path.0.split_last()` restated as an accumulate-then-reverse walk (the FLAG-parse list-building convention) — last segment plus the DOT-JOINED prefix of everything before it (`Option[Pair[Bytes, Bytes]]`, matching the oracle's `Option<(String, String)>` return shape exactly). | Empirical/Declared |
+| `compiler.semcore::split_last_seg_go` | fn | `lib/compiler/semcore.myc:4044` | `fn split_last_seg_go(segs: Vec[Bytes], acc: Vec[Bytes]) => Option[Pair[Bytes, Vec[Bytes]]]` | — | Empirical/Declared |
+| `compiler.semcore::split_last_seg` | fn | `lib/compiler/semcore.myc:4053` | `fn split_last_seg(path: Path) => Option[Pair[Bytes, Bytes]]` | — | Empirical/Declared |
+| `compiler.semcore::GlobPassState` | type | `lib/compiler/semcore.myc:4063` | `type GlobPassState = GPS(NoduleImports, Vec[Bytes], Vec[Bytes])` | GlobPassState: the glob loop's threaded (imp, via_explicit, via_glob) triple (FLAG-semcore-6 value-threading convention — Rust's `&mut` accumulators restated as an explicit fold). | Empirical/Declared |
+| `compiler.semcore::GlobPassState::GPS` | ctor | `lib/compiler/semcore.myc:4063` | `GPS(NoduleImports, Vec[Bytes], Vec[Bytes])` | — | Empirical/Declared |
+| `compiler.semcore::resolve_imports_glob_quals` | fn | `lib/compiler/semcore.myc:4068` | `fn resolve_imports_glob_quals(exports: Exports, prefix: Bytes, decl: Vec[Pair[Bytes, Bool]], st: GlobPassState) => GlobPassState` | resolve_imports_glob_quals: the INNER loop over `exports.declared`'s entries for ONE glob item's `prefix` (checkty.rs's `for qual in exports.declared.keys()`). FLAG-semcore-31 keeps the (provably always-false, see the file-header FLAG) `via_explicit` check for structural fidelity. | Empirical/Declared |
+| `compiler.semcore::resolve_imports_glob_items` | fn | `lib/compiler/semcore.myc:4093` | `fn resolve_imports_glob_items(exports: Exports, items: Vec[Item], st: GlobPassState) => GlobPassState` | resolve_imports_glob_items: the OUTER glob-pass loop over `nodule.items` (non-glob / non-use items are skipped — the `let Item::Use(UsePath{path, glob:true}) = item else { continue }` mirror). | Empirical/Declared |
+| `compiler.semcore::ExplicitPassState` | type | `lib/compiler/semcore.myc:4106` | `type ExplicitPassState = EPS(NoduleImports, Vec[Bytes])` | ExplicitPassState: the explicit-pass threaded (imp, via_explicit) pair. | Empirical/Declared |
+| `compiler.semcore::ExplicitPassState::EPS` | ctor | `lib/compiler/semcore.myc:4106` | `EPS(NoduleImports, Vec[Bytes])` | — | Empirical/Declared |
+| `compiler.semcore::resolve_imports_explicit_items` | fn | `lib/compiler/semcore.myc:4112` | `fn resolve_imports_explicit_items(exports: Exports, site: Bytes, items: Vec[Item], st: ExplicitPassState) => Result[ExplicitPassState, Bytes]` | resolve_imports_explicit_items (checkty.rs's explicit-`use` loop, 1478-1531): the never-silent refusals in the oracle's EXACT order — unnamed path, un-qualified single-segment path, unknown name, private name, duplicate explicit import (FLAG-semcore-32: reason strings, not the oracle's full diagnostic text). | Empirical/Declared |
+| `compiler.semcore::resolve_imports` | fn | `lib/compiler/semcore.myc:4149` | `fn resolve_imports(nod: Nodule, exports: Exports) => Result[NoduleImports, Bytes]` | resolve_imports (checkty.rs 1423-1533, top level): globs first (lowest precedence), then explicit `use`s (which shadow a glob-bound name) — Ok(NoduleImports) or the first refusal. | Empirical/Declared |
+| `compiler.semcore::fuse_trait_name` | fn | `lib/compiler/semcore.myc:4178` | `fn fuse_trait_name() => Bytes` | fuse_trait_name: the fuse.rs::TRAIT_NAME single source of truth (a fn, not a bare literal repeated at each use site -- Law of Demeter). | Empirical/Declared |
+| `compiler.semcore::fuse_join_sig` | fn | `lib/compiler/semcore.myc:4183` | `fn fuse_join_sig() => FnSig` | fuse_join_sig: fuse.rs::prelude's one `FnSig` -- `fn join(a: T, b: T) => T`. No method-level type params (the trait's OWN param `T` lives in `TraitInfo.params`, not here -- DN-58 §A.2's explicit- type-variable idiom, no implicit `Self`), no effects/budgets. | Empirical/Declared |
+| `compiler.semcore::fuse_prelude` | fn | `lib/compiler/semcore.myc:4187` | `fn fuse_prelude() => TraitInfo` | fuse_prelude: fuse.rs::prelude (58-84) verbatim -- `TrInfo(name, params, sigs)`. | Empirical/Declared |
+| `compiler.semcore::checkty_prelude` | fn | `lib/compiler/semcore.myc:4207` | `fn checkty_prelude() => DataInfo` | checkty_prelude: checkty.rs::prelude (600-618) -- the builtin `Bool = False \| True` registry seed `register_nodule_decls` inserts before `register_types` runs, so intra-nodule resolution of `Bool` is unchanged. | Empirical/Declared |
+| `compiler.semcore::nodule_uses_fuse` | fn | `lib/compiler/semcore.myc:4213` | `fn nodule_uses_fuse(items: Vec[Item]) => Bool` | `impl Fuse[...] for ...`? (Never based on whether `fuse(a, b)` is CALLED -- the repr-type fast path in `check_fuse` never touches the trait registry at all; restated from the oracle's own comment.) | Empirical/Declared |
+| `compiler.semcore::fuse_redeclare_err` | fn | `lib/compiler/semcore.myc:4229` | `fn fuse_redeclare_err() => Bytes` | fuse_redeclare_err: checkty.rs 1372-1378 / 1381-1387 -- the never-silent refusal for either branch that finds `Fuse` already present in `traits` (a user nodule trying to redeclare the built-in). Both oracle call sites use the SAME message text (FLAG-semcore-32: error TEXT is not differential- compared -- only Ok/Err CLASSIFICATION is; this file's established convention throughout STEP 4/5). | Empirical/Declared |
+| `compiler.semcore::seed_fuse_trait` | fn | `lib/compiler/semcore.myc:4236` | `fn seed_fuse_trait(traits: Vec[TraitInfo], items: Vec[Item]) => Result[Vec[TraitInfo], Bytes]` | (already present, on EITHER branch) -- never a silent shadow of the built-in (G2/VR-5), mirroring how redeclaring `Bool` would collide in `types`. | Empirical/Declared |
+| `compiler.semcore::fns_contains` | fn | `lib/compiler/semcore.myc:4250` | `fn fns_contains(fns: Vec[Pair[Bytes, FnDecl]], name: Bytes) => Bool` | fns_contains: the `fns.contains_key`-equivalent membership scan over the FLAG-semcore-4 assoc-list fn registry `Vec[Pair[Bytes, FnDecl]]`. | Empirical/Declared |
+| `compiler.semcore::register_fns` | fn | `lib/compiler/semcore.myc:4261` | `fn register_fns(items: Vec[Item], acc: Vec[Pair[Bytes, FnDecl]]) => Result[Vec[Pair[Bytes, FnDecl]], Bytes]` | register_fns: checkty.rs 1392-1400 -- Pass 2, the fn-signature registration loop. Non-`Item::Fn` items are skipped (the `let Item::Fn(fd) = item else { continue }` mirror); each fn's OWN type-parameter names (`fnsig_tyvar_names`, the `sig.param_names()` mirror) must have no duplicate, then the fn NAME must be free in the registry so far -- the first refusal wins, `Ok` with the built registry otherwise. | Empirical/Declared |
+| `compiler.semcore::NoduleRegs` | type | `lib/compiler/semcore.myc:4278` | `type NoduleRegs = NR(Vec[DataInfo], Vec[Pair[Bytes, FnDecl]], Vec[TraitInfo])` | NoduleRegs: mirrors checkty.rs::NoduleRegs (1336-1340) field-for-field (types, fns, traits). New ctor `NR` (FLAG-semcore-2 scheme; checked against every other family in this file, no collision). | Empirical/Declared |
+| `compiler.semcore::NoduleRegs::NR` | ctor | `lib/compiler/semcore.myc:4278` | `NR(Vec[DataInfo], Vec[Pair[Bytes, FnDecl]], Vec[TraitInfo])` | — | Empirical/Declared |
+| `compiler.semcore::nr_types` | fn | `lib/compiler/semcore.myc:4280` | `fn nr_types(r: NoduleRegs) => Vec[DataInfo]` | — | Empirical/Declared |
+| `compiler.semcore::nr_fns` | fn | `lib/compiler/semcore.myc:4283` | `fn nr_fns(r: NoduleRegs) => Vec[Pair[Bytes, FnDecl]]` | — | Empirical/Declared |
+| `compiler.semcore::nr_traits` | fn | `lib/compiler/semcore.myc:4286` | `fn nr_traits(r: NoduleRegs) => Vec[TraitInfo]` | — | Empirical/Declared |
+| `compiler.semcore::register_nodule_decls` | fn | `lib/compiler/semcore.myc:4292` | `fn register_nodule_decls(nod: Nodule) => Result[NoduleRegs, Bytes]` | register_nodule_decls: checkty.rs 1348-1401, top level. Runs the four passes in the oracle's EXACT order -- types (seeded with the Bool prelude), traits, the conditional Fuse seed, then fns -- and returns Ok(NoduleRegs) or the FIRST refusal. | Empirical/Declared |
+| `compiler.semcore::closure_field_ty` | fn | `lib/compiler/semcore.myc:4353` | `fn closure_field_ty(t: Ty) => Ty` | — | Empirical/Declared |
+| `compiler.semcore::closure_param_ref` | fn | `lib/compiler/semcore.myc:4359` | `fn closure_param_ref(t: Ty) => TypeRef` | — | Empirical/Declared |
+| `compiler.semcore::mangle_ty_in_ty` | fn | `lib/compiler/semcore.myc:4366` | `fn mangle_ty_in_ty(t: Ty) => Ty` | — | Empirical/Declared |
+| `compiler.semcore::ty_to_source_base` | fn | `lib/compiler/semcore.myc:4384` | `fn ty_to_source_base(t: Ty) => BaseType` | — | Empirical/Declared |
+| `compiler.semcore::ty_to_source_ref` | fn | `lib/compiler/semcore.myc:4399` | `fn ty_to_source_ref(t: Ty) => TypeRef` | — | Empirical/Declared |
+| `compiler.semcore::ty_to_source_ref_list` | fn | `lib/compiler/semcore.myc:4404` | `fn ty_to_source_ref_list(ts: Vec[Ty]) => Vec[TypeRef]` | ty_to_source_ref_list: map a constructor's applied type args through ty_to_source_ref (the direct recursive walk this nodule uses throughout — no first-class-fn `map` primitive, FLAG-semcore-5's KISS/YAGNI precedent for avoiding a generic higher-order helper in a bounded increment). | Empirical/Declared |
+| `compiler.semcore::ty_to_ref_base` | fn | `lib/compiler/semcore.myc:4410` | `fn ty_to_ref_base(t: Ty) => BaseType` | ty_to_ref_base: the MANGLED-NULLARY round-trip (an applied data type's arguments are baked into its mangled name, so it becomes a nullary `Named`) — used for a rewritten `FnDecl`/`Param`/ `Ascribe`'s emitted surface type. | Empirical/Declared |
+| `compiler.semcore::ty_to_ref` | fn | `lib/compiler/semcore.myc:4425` | `fn ty_to_ref(t: Ty) => TypeRef` | — | Empirical/Declared |
+| `compiler.semcore::ty_to_ref_tagged` | fn | `lib/compiler/semcore.myc:4429` | `fn ty_to_ref_tagged(t: Ty, guarantee: Option[Strength]) => TypeRef` | ty_to_ref_tagged: like ty_to_ref, but attaches the CALLER-supplied `guarantee` (the source declaration's own `@ g` — never derived from `t`, never merged across instantiations). | Empirical/Declared |
+| `compiler.semcore::WorkItem` | type | `lib/compiler/semcore.myc:4434` | `type WorkItem = WiFn(Bytes, Vec[Ty], Vec[Width], Vec[Pair[Binary{32}, Bytes]], Vec[Pair[Binary{32}, Bytes]]) \| WiData(Bytes, Vec[Ty]) \| WiMethod(Bytes, Bytes, Ty)` | — | Empirical/Declared |
+| `compiler.semcore::WorkItem::WiFn` | ctor | `lib/compiler/semcore.myc:4435` | `WiFn(Bytes, Vec[Ty], Vec[Width], Vec[Pair[Binary{32}, Bytes]], Vec[Pair[Binary{32}, Bytes]])` | — | Empirical/Declared |
+| `compiler.semcore::WorkItem::WiData` | ctor | `lib/compiler/semcore.myc:4436` | `WiData(Bytes, Vec[Ty])` | — | Empirical/Declared |
+| `compiler.semcore::WorkItem::WiMethod` | ctor | `lib/compiler/semcore.myc:4437` | `WiMethod(Bytes, Bytes, Ty)` | — | Empirical/Declared |
+| `compiler.semcore::item_key` | fn | `lib/compiler/semcore.myc:4440` | `fn item_key(item: WorkItem) => Bytes` | item_key: the canonical dedup key of a work item — a kind-tagged mangled string. | Empirical/Declared |
+| `compiler.semcore::LVal` | type | `lib/compiler/semcore.myc:4503` | `type LVal = LData(Bytes, Bytes, Vec[LVal]) \| LReprBytes(Bytes) \| LOpaque` | FLAG-semcore-36 (`LVal` -- the eval.rs::L1Value mirror, TRIMMED to what `try_match`'s ported fragment needs). `Data { ty, ctor, fields }` mirrors verbatim (`LData`, FLAG-semcore-2 `L`-prefix scheme extended: no collision against any family declared above). `Repr`/`Substrate`/`Fn` collapse into ONE nullary `LOpaque` (FLAG-semcore-35 explains why this is lossless for the ported arms). `binds` (Rust's `&mut Vec<(String, L1Value)>`, mutated by `push` -- APPEND order) is restated as the FLAG-semcore-6 value-threaded collapse: threaded through and RETURNED, and appended (not prepended, unlike the FLAG-semcore-13 assoc-list convention) via `bind_append` below, because `binds`' ORDER is part of the observable differential (`Vec` equality is order-sensitive) -- unlike `unify`'s substitution, whose FIRST-MATCH lookup semantics make prepend-order invisible. DN-105 / M-1035 (ENB-12): the `Bytes` repr value is LIFTED out of the `LOpaque` collapse into a dedicated `LReprBytes(Bytes)` carrier, so `lval_try_match`'s `PLit` arm can compare a `Bytes` scrutinee against a TEXT (`Str`) byte-string-literal pattern by byte content -- a REAL eval-match mirror of eval.rs's `try_match` `Pattern::Lit` `Repr`-case for the string-literal (#72) target (DN-105 §5). Every OTHER repr (`Binary`/`Ternary`/`Float`) plus `Substrate`/`Fn` stays collapsed into `LOpaque` (their `PLit` eval-match stays deferred -- FLAG-semcore-35), and the `0x..`-hex byte-string \*value synthesis\* stays deferred too (FLAG-semcore-25 -- `lit_value`'s `LBytes` arm), so a `0x..` pattern arm's eval propagates that deferral as an explicit `Err`, never a silent mismatch (G2). The Bytes carrier is thus a MINIMAL, targeted lift, not a full `L1Value` port. | Empirical/Declared |
+| `compiler.semcore::LVal::LData` | ctor | `lib/compiler/semcore.myc:4503` | `LData(Bytes, Bytes, Vec[LVal])` | — | Empirical/Declared |
+| `compiler.semcore::LVal::LOpaque` | ctor | `lib/compiler/semcore.myc:4503` | `LOpaque` | — | Empirical/Declared |
+| `compiler.semcore::LVal::LReprBytes` | ctor | `lib/compiler/semcore.myc:4503` | `LReprBytes(Bytes)` | — | Empirical/Declared |
+| `compiler.semcore::bind_append` | fn | `lib/compiler/semcore.myc:4509` | `fn bind_append(binds: Vec[Pair[Bytes, LVal]], n: Bytes, v: LVal) => Vec[Pair[Bytes, LVal]]` | bind_append: append one `(name, val)` binding to the END of `binds` -- mirrors Rust's `binds.push((n.clone(), val.clone()))` exactly (order-preserving; bounded by one pattern's own binder count, never source-input-driven, so no depth budget is warranted -- the same class of bounded structural recursion as `pat_append`/`ty_append` above). | Empirical/Declared |
+| `compiler.semcore::ctorinfo_any_named` | fn | `lib/compiler/semcore.myc:4522` | `fn ctorinfo_any_named(ctors: Vec[CtorInfo], n: Bytes) => Bool` | lval_ident_is_ctor_of / ctorinfo_any_named: mirrors try_match's `Ident` guard `self.env.types.get(ty).is_some_and(\|d\| d.ctors.iter().any(\|c\| c.name == \*n))` over the ALREADY -ported `types_lookup`/`di_ctors`/`ci_name` registry accessors (increment 8, M-1013 STEP 3) -- no new registry machinery needed, only the `.any(name == n)` scan. | Empirical/Declared |
+| `compiler.semcore::lval_ident_is_ctor_of` | fn | `lib/compiler/semcore.myc:4528` | `fn lval_ident_is_ctor_of(types: Vec[DataInfo], ty: Bytes, n: Bytes) => Bool` | — | Empirical/Declared |
+| `compiler.semcore::lval_try_match` | fn | `lib/compiler/semcore.myc:4539` | `fn lval_try_match(types: Vec[DataInfo], pat: Pattern, val: LVal, binds: Vec[Pair[Bytes, LVal]]) => Result[Pair[Bool, Vec[Pair[Bytes, LVal]]], Bytes]` | lval_try_match: the ported fragment (mirrors eval.rs::Evaluator::try_match's `Wildcard`/`Ident`/ `Ctor`/`Tuple`/`Or` arms exactly; `Lit` refuses per FLAG-semcore-35). `site` is DROPPED (the FLAG-semcore-13 precedent: the differential asserts `Ok`/`Err` + the resulting `(bool, binds)`, never the message bytes) -- both the oracle's `L1Error` and this fn's `Bytes` message collapse to `Err(())` on the marshalling harness's `decode_result`. | Empirical/Declared |
+| `compiler.semcore::lval_match_zip` | fn | `lib/compiler/semcore.myc:4596` | `fn lval_match_zip(types: Vec[DataInfo], subs: Vec[Pattern], fields: Vec[LVal], binds: Vec[Pair[Bytes, LVal]]) => Result[Pair[Bool, Vec[Pair[Bytes, LVal]]], Bytes]` | lval_match_zip: the `Ctor` arm's `for (sub, fv) in subs.iter().zip(fields.iter())` loop, restated as a fold that THREADS `binds` and short-circuits `Ok(false)` on the first sub-pattern mismatch -- mirrors Rust's `zip` early-stop-at-the-shorter-list semantics exactly (a length mismatch between `subs`/`fields` never occurs in a checked program; where it would, `zip` silently stops rather than erroring, and so does this fold, for byte-for-byte behavioral parity). | Empirical/Declared |
+| `compiler.semcore::paradigm_name` | fn | `lib/compiler/semcore.myc:4631` | `fn paradigm_name(t: Ty) => Option[Bytes]` | paradigm_name: mirrors checkty.rs::paradigm_name (checkty.rs 7175-7197) — the swap-paradigm name of a representation type, for the never-silent cross-paradigm framing (RFC-0001 §4.1 / M-892). The four swap-paradigms (Binary/Ternary/Dense/VSA) name themselves; every other `Ty` is `None` — `Seq`/`Bytes`/`Float` are first-class reprs but not v0 swap-paradigms (RFC-0032 D3/D4, ADR-040 §5), and `Data`/`Substrate`/`Var`/`Fn` are not representation types at all (RFC-0024 §3). All 11 arms are enumerated EXPLICITLY (no `_` wildcard), exactly as the Rust does: a future `Ty` variant must force a paradigm decision here, never be absorbed into a silent `None` (G2 — never-silent). | Empirical/Declared |
+| `compiler.semcore::cons_list_scan` | fn | `lib/compiler/semcore.myc:4657` | `fn cons_list_scan(ctors: Vec[CtorInfo], name: Bytes, nparams: Binary{32}, nil: Option[Bytes], cons: Option[Bytes]) => Pair[Option[Bytes], Option[Bytes]]` | cons_list_scan: checkty.rs::cons_list_ctors's `for c in &di.ctors { match c.fields.len() ... }` mutable-accumulator loop, restated as a threaded fold over the ctor list carrying the `(nil_name?, cons_name?)` pair (the FLAG-semcore-6 value-threaded collapse of the two `mut` locals). The field-count dispatch mirrors the Rust exactly: 0 fields -> record `nil`; exactly 2 fields whose SECOND is the recursive `Data(name, ..)` self-reference at the type's own arity -> record `cons`; every other shape leaves the accumulator untouched. The 1-field and 3+-field shapes fall to Rust's OUTER `match c.fields.len() { _ => {} }` (the `Nil`/`Cons(_, _)` inner arms below); a 2-field ctor whose 2nd field is NOT the `Data(..)` self-reference falls to Rust's inner `if let Ty::Data(..) = &c.fields[1] { .. } else {}` (the `_` arm on `f1` below). `&c.fields[1]` (Rust indexing) is expressed structurally as the exactly-two-elements shape (`Cons(_, Cons(f1, Nil))`), destructured one level at a time per this nodule's single-level-pattern convention. | Empirical/Declared |
+| `compiler.semcore::cons_list_ctors` | fn | `lib/compiler/semcore.myc:4688` | `fn cons_list_ctors(types: Vec[DataInfo], expected: Ty) => Option[Pair[Bytes, Bytes]]` | cons_list_ctors: mirrors checkty.rs::cons_list_ctors (checkty.rs 3592-3624) — recognizes whether `expected` is a 2-constructor linked-list type (one nullary "nil" ctor; one binary "cons" ctor whose SECOND field is the recursive `Data(name, ..)` self-reference at the type's own arity) and returns `(nil_name, cons_name)`; every non-conforming shape yields `None` (never a silent reinterpret — the `Seq{T,N}`/no-context paths stay untouched). Pure structural registry inspection: no Env, no evaluator, no kernel `Value`. `BTreeMap<String, DataInfo>` is the already-established FLAG-semcore-4 `Vec[DataInfo]` + `types_lookup` (no new deviation). The Rust `di.ctors.len() != 2` early-return is expressed by matching the ctor list's shape to exactly two elements before scanning (one level at a time per the single-level-pattern convention). | Empirical/Declared |
+| `compiler.semcore::strength_or` | fn | `lib/compiler/semcore.myc:4733` | `fn strength_or(a: Option[Strength], b: Option[Strength]) => Option[Strength]` | strength_or: `Option[Strength]::or` — keep the left guarantee if present, else take the right. The exact semantics of `tr.guarantee.or(concrete.guarantee)`: an occurrence's own `@ g` wins over the concrete type's, and a bare occurrence inherits the concrete's guarantee. | Empirical/Declared |
+| `compiler.semcore::subst_typeref_list` | fn | `lib/compiler/semcore.myc:4736` | `fn subst_typeref_list(trs: Vec[TypeRef], param: Bytes, concrete: TypeRef) => Vec[TypeRef]` | — | Empirical/Declared |
+| `compiler.semcore::subst_type_param_in_typeref` | fn | `lib/compiler/semcore.myc:4743` | `fn subst_type_param_in_typeref(tr: TypeRef, param: Bytes, concrete: TypeRef) => TypeRef` | — | Empirical/Declared |
 
 ### compiler.substrate
 
@@ -2417,7 +2427,7 @@
 | `compiler.token::StrengthTok::GEmpirical` | ctor | `lib/compiler/token.myc:97` | `GEmpirical` | — | Empirical/Declared |
 | `compiler.token::StrengthTok::GExact` | ctor | `lib/compiler/token.myc:97` | `GExact` | — | Empirical/Declared |
 | `compiler.token::StrengthTok::GProven` | ctor | `lib/compiler/token.myc:97` | `GProven` | — | Empirical/Declared |
-| `compiler.token::Tok` | type | `lib/compiler/token.myc:104` | `type Tok = Nodule \| Phylum \| Colony \| Hypha \| Fuse \| Mesh \| Graft \| Cyst \| Xloc \| Forage \| Backbone \| Tier \| Reclaim \| Consume \| Grow \| Derive \| Use \| Pub \| Type \| Trait \| Impl \| Fn \| Matured \| Thaw \| Let \| In \| If \| Then \| Else \| Match \| For \| Swap \| Default \| Paradigm \| With \| Wild \| Spore \| To \| Policy \| Lambda \| Object \| Via \| Lower \| KwBinary \| KwTernary \| KwDense \| Vsa \| BinShort \| TernShort \| EmbShort \| HvecShort \| KwSeq \| KwBytes \| KwFloat \| KwSubstrate \| KwSparse \| Scalar(ScalarTok) \| Strength(StrengthTok) \| Ident(Bytes) \| BinLit(Bytes) \| BytesLit(Bytes) \| TritLit(Bytes) \| StrLit(Bytes) \| Int(Bytes) \| FloatLit(Bytes) \| LParen \| RParen \| LBrace \| RBrace \| LBracket \| RBracket \| LAngle \| RAngle \| Shl \| Shr \| At \| AtStdSys \| Colon \| Comma \| Semi \| Dot \| Pipe \| Plus \| Minus \| Star \| Slash \| Percent \| Caret \| Amp \| AmpAmp \| Eq \| EqEq \| Arrow \| FatArrow \| Bang \| BangEq \| PipePipe \| Eof` | — | Empirical/Declared |
+| `compiler.token::Tok` | type | `lib/compiler/token.myc:104` | `type Tok = Nodule \| Phylum \| Colony \| Hypha \| Fuse \| Mesh \| Graft \| Cyst \| Xloc \| Forage \| Backbone \| Tier \| Reclaim \| Consume \| Grow \| Derive \| Use \| Pub \| Priv \| Type \| Trait \| Impl \| Fn \| Matured \| Thaw \| Let \| In \| If \| Then \| Else \| Match \| For \| Swap \| Default \| Paradigm \| With \| Wild \| Spore \| To \| Policy \| Lambda \| Object \| Via \| Lower \| KwBinary \| KwTernary \| KwDense \| Vsa \| BinShort \| TernShort \| EmbShort \| HvecShort \| KwSeq \| KwBytes \| KwFloat \| KwSubstrate \| KwSparse \| Scalar(ScalarTok) \| Strength(StrengthTok) \| Ident(Bytes) \| BinLit(Bytes) \| BytesLit(Bytes) \| TritLit(Bytes) \| StrLit(Bytes) \| Int(Bytes) \| FloatLit(Bytes) \| LParen \| RParen \| LBrace \| RBrace \| LBracket \| RBracket \| LAngle \| RAngle \| Shl \| Shr \| At \| AtStdSys \| Colon \| Comma \| Semi \| Dot \| Pipe \| Plus \| Minus \| Star \| Slash \| Percent \| Caret \| Amp \| AmpAmp \| Eq \| EqEq \| Arrow \| FatArrow \| Bang \| BangEq \| PipePipe \| Eof` | — | Empirical/Declared |
 | `compiler.token::Tok::Colony` | ctor | `lib/compiler/token.myc:106` | `Colony` | — | Empirical/Declared |
 | `compiler.token::Tok::Nodule` | ctor | `lib/compiler/token.myc:106` | `Nodule` | — | Empirical/Declared |
 | `compiler.token::Tok::Phylum` | ctor | `lib/compiler/token.myc:106` | `Phylum` | — | Empirical/Declared |
@@ -2437,6 +2447,7 @@
 | `compiler.token::Tok::Fn` | ctor | `lib/compiler/token.myc:112` | `Fn` | — | Empirical/Declared |
 | `compiler.token::Tok::Impl` | ctor | `lib/compiler/token.myc:112` | `Impl` | — | Empirical/Declared |
 | `compiler.token::Tok::Matured` | ctor | `lib/compiler/token.myc:112` | `Matured` | — | Empirical/Declared |
+| `compiler.token::Tok::Priv` | ctor | `lib/compiler/token.myc:112` | `Priv` | — | Empirical/Declared |
 | `compiler.token::Tok::Pub` | ctor | `lib/compiler/token.myc:112` | `Pub` | — | Empirical/Declared |
 | `compiler.token::Tok::Thaw` | ctor | `lib/compiler/token.myc:112` | `Thaw` | — | Empirical/Declared |
 | `compiler.token::Tok::Trait` | ctor | `lib/compiler/token.myc:112` | `Trait` | — | Empirical/Declared |

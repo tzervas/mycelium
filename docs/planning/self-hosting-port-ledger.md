@@ -133,6 +133,28 @@ partial port — the Rust oracle crate is not fully replaced (the residual above
 FULLY validated (its residual enablers land + a whole-crate differential clears). The surfaced enabler
 blockers are consolidated for the `enb` epic (E28-1) as **M-1023** (never silently dropped, G2).
 
+### `enb`-wave (E28-1) L1 gap-closure enablers — self-hosting-port considerations (M-1024…M-1035)
+
+The `enb` wave (E28-1, under the ADR-045 whole-project unfreeze) closes DN-99 surface gaps by adding L1
+**frontend capabilities** (grammar/runtime), not stdlib nodule ports — so each is a future
+**self-hosted-frontend** port target: the `.myc` checker/parser/evaluator must reproduce the same rule.
+All are `Empirical` (three-way witnessed — L1-eval ≡ elaborate→L0-interp ≡ trampoline-AOT — plus the
+per-enabler oracle noted). Residuals are honest (VR-5/G2): the `.myc`-mirror and follow-up gaps are
+flagged, never silently dropped.
+
+| Enabler (L1 capability) | Rust module | Logic to reproduce (self-hosting) | Basis (`Empirical`) | Honest residual | Tracking |
+|---|---|---|---|---|---|
+| Cross-nodule runtime link | `crates/mycelium-l1/src/phylum_exec.rs` (`PhylumEnv::link`) | fold every nodule's CHECKED decls into one linked `Env` the existing elab/mono/eval pipeline consumes unchanged; v0 flat-namespace (one decl per simple name; a collision is a never-silent `CheckError`, G2) | cross-nodule three-way plus `phylum_exec.rs` witnesses (DN-101) | AOT parity = M-1024 follow-up; `.myc` runtime mirror N/A until the `.myc` evaluator (M-986/M-987); qualified per-nodule scoping to DISAMBIGUATE a collision = M-982 | M-1024 (DN-101) |
+| `?` try-operator desugar | `crates/mycelium-l1/src/{parse,checkty}.rs` (`Expr::Try`) | `e?` parsed as a postfix marker; `let x = e? in body` desugars to a type-directed `match` over the operand's `Result`/`Option` channel (no `return`, no `!`); a `Try` never survives checking (KC-3 — reuses `Expr::Match`) | `tests/try_operator.rs` three-way (DN-102) | v0 `let`-binder-RHS only (other positions never-silent refuse → CPS lift M-1030/#88); no `From`-error widening (v0 exact-match); the `.myc` frontend represents-not-produces `?` | M-1025 (DN-102) |
+| impl-level generic slot | `crates/mycelium-l1/src/{parse,ast,checkty,mono}.rs` (`InherentImplDecl.params`) | `impl[T] Foo[T] { … }`; a `[T,…]` slot after `impl`, Phase-0-desugared by prepending its params to each lifted method's fn type-params → ordinary generic free fns (KC-3/DRY — no new L0 node, no new mono pass) | `tests/check.rs` three-way (DN-103) | v0 inherent impls only (a slot on a trait instance is a never-silent refusal → RFC-0019 §4.5 amendment); a `: bound` in the slot is refused; width-param impls (DN-42) deferred | M-1026 (DN-103) |
+| per-constructor visibility seal | `crates/mycelium-l1/src/{parse,ast,checkty}.rs` (`Ctor.sealed`) | `pub type T = priv Mk(..)`: export the type NAME but WITHHOLD cross-nodule construction via an imported name (a per-nodule withheld set derived from the M-662/M-1024 export table); a well-behaved `use`-caller's construction is a never-silent refusal (G2) | `tests/ctor_seal.rs` (11 witnesses incl. the pinned gap) (DN-104) | **NOT a security/capability boundary** — a same-named local shadow type bypasses the seal (bare-name resolution, RFC-0006 §4.3); the real nodule-qualified-identity fix = **M-1036**; the `.myc` cross-nodule ENFORCEMENT mirror rides M-741 (this increment mirrors surface + AST + fingerprint only) | M-1027 (DN-104) |
+| `match` on a `Bytes` scrutinee | `crates/mycelium-l1/src/checkty.rs` (`check_match` scrutinee gate) | admit `Ty::Bytes` as a scrutinee with byte-string-literal arms (`0x…`/`"…"` → the same `Repr::Bytes`; byte-content equality) and a REQUIRED default (open domain ⇒ a non-exhaustive `Bytes` match is a never-silent W7 refusal); downstream normalize/usefulness/decision/eval/elab already generic | `tests/enablement.rs` three-way plus the `compiler_stage5_evalmatch.rs` `.myc` oracle (DN-105) | `.myc` `0x…`-hex eval synthesis deferred (FLAG-semcore-25, explicit `Err`); the native-LLVM `Bytes`-match backend refuses explicitly (the trampoline AOT handles it); the redundancy key is per-surface-form (a conservative under-report, never a silent miscompile) | M-1035 (DN-105) |
+
+**M-1033 (ENB-10) adds no L1 port target.** Its triage (DN-106) found both sub-gaps already closed at L1
+(statement-sequencing `let _` is an ordinary `let`; functional field-update is destructure-and-reconstruct
+`match` — both pre-existing, three-way witnessed and pinned in `tests/enablement.rs`); the residual is
+transpiler-lane, so there is no new self-hosted-frontend capability to reproduce here.
+
 ### Forward items (not yet landed — tracked for when they do)
 
 | Component | Status | What it will add to this ledger when it lands |
