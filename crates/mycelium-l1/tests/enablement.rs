@@ -4741,3 +4741,113 @@ fn trit_mul_beyond_the_claimed_40_trit_cap_three_way() {
         &Payload::Trits(trits(&expected_digits)),
     );
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// M-1035 (ENB-12; DN-105) — `match` on a `Bytes` scrutinee (the string-literal-pattern enabler).
+//
+// The L1 checker's scrutinee-type gate is lifted to admit `Ty::Bytes` (DN-105 §2). A byte-string
+// literal arm — in both surface spellings, `"…"` (Str) and `0x…` (hex Bytes), which lower to the
+// SAME `Repr::Bytes` value (KC-3) — matches by BYTE-CONTENT equality; `Bytes` is an OPEN domain, so
+// a wildcard/default arm is REQUIRED (a non-exhaustive `Bytes` match is a never-silent W7 refusal).
+//
+// The full THREE-WAY differential (L1-eval ≡ elaborate→L0-interp ≡ AOT) holds: the interpreter and
+// the trampoline-AOT (`mycelium_mlir::run`) both compare `Alt::Lit` `Repr::Bytes`/`Payload::Bytes`
+// values by content generically. Only the SEPARATE native-LLVM textual-IR backend (`llvm.rs`, a
+// `Binary{8}`-specialized switch) cannot lower a `Bytes` scrutinee — a never-silent
+// `AotError::UnsupportedNode` pinned by `bytes_match_native_llvm_refuses_explicitly` (DN-105 §6.5).
+// Every path exercises the two Rust changes: the checker gate (`check_nodule`) and the `by:`/`s:` L0
+// literal bridge (`elaborate` → `lit_key_to_value`).
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+
+/// A `Bytes` byte-vector `(repr, payload)` reference — the bytes of an ASCII string.
+fn bytes_payload(bs: &[u8]) -> (Repr, Payload) {
+    (Repr::Bytes, Payload::Bytes(bs.to_vec()))
+}
+
+/// A `match` on a `Bytes` value HITS the matching text (`"…"`) literal arm — the DN-99 #72 target.
+#[test]
+fn bytes_match_text_literal_hit_three_way() {
+    let (r, p) = b1(true);
+    assert_three_way(
+        "Bytes match: text-literal hit",
+        "nodule d;\nfn main() => Binary{1} = match \"post\" { \"get\" => 0b0, \"post\" => 0b1, _ => 0b0 };",
+        &r,
+        &p,
+    );
+}
+
+/// A `match` on a `Bytes` value FALLS THROUGH to the required default arm when no literal matches.
+#[test]
+fn bytes_match_falls_through_to_default_three_way() {
+    let (r, p) = b1(false);
+    assert_three_way(
+        "Bytes match: fall through to default",
+        "nodule d;\nfn main() => Binary{1} = match \"delete\" { \"get\" => 0b1, \"post\" => 0b1, _ => 0b0 };",
+        &r,
+        &p,
+    );
+}
+
+/// The `0x…` hex spelling of a byte-string literal is an equally-legal arm; `0x666f6f` and `"foo"`
+/// denote the SAME `Bytes` value, so a `"foo"` scrutinee HITS the `0x666f6f` arm (byte-content
+/// equality — DN-105 §2). The arm bodies are `Bytes` values, so this also witnesses a `Bytes`-valued
+/// match result flowing through all three paths (and exercises the `by:` hex L0 bridge).
+#[test]
+fn bytes_match_hex_literal_hit_cross_spelling_three_way() {
+    let (r, p) = bytes_payload(b"hit");
+    assert_three_way(
+        "Bytes match: hex-literal arm hit by a text-spelled scrutinee",
+        "nodule d;\nfn main() => Bytes = match \"foo\" { 0x666f6f => \"hit\", _ => \"miss\" };",
+        &r,
+        &p,
+    );
+}
+
+/// A `Bytes` match with only literal arms and NO default is NON-EXHAUSTIVE — a never-silent W7
+/// refusal at check time (byte-strings are an open domain — DN-105 §2), never a silent partial match
+/// or a runtime panic.
+#[test]
+fn bytes_match_non_exhaustive_refuses_statically() {
+    let src =
+        "nodule d;\nfn main() => Binary{1} = match \"get\" { \"get\" => 0b1, \"post\" => 0b0 };";
+    let err = check_nodule(&parse(src).expect("parses"));
+    assert!(
+        err.is_err(),
+        "a Bytes match without a default arm must be a static non-exhaustive (W7) refusal — \
+         byte-strings are open"
+    );
+    let msg = format!("{}", err.unwrap_err());
+    assert!(
+        msg.contains("non-exhaustive"),
+        "the refusal must name non-exhaustiveness (W7), got: {msg}"
+    );
+}
+
+/// An ill-typed literal arm — a non-`Bytes` literal (`0b1010`) against a `Bytes` scrutinee — is a
+/// never-silent check-time refusal (W7: a literal arm must match the scrutinee's repr), never a
+/// silent cross-repr coercion.
+#[test]
+fn bytes_match_ill_typed_literal_arm_refuses_statically() {
+    let src = "nodule d;\nfn main() => Binary{1} = match \"get\" { 0b1010 => 0b1, _ => 0b0 };";
+    assert!(
+        check_nodule(&parse(src).expect("parses")).is_err(),
+        "a Binary literal arm on a Bytes scrutinee must refuse (W7 repr mismatch), never a silent coercion"
+    );
+}
+
+/// The SEPARATE native-LLVM textual-IR backend's `Bytes`-match limitation is EXPLICIT, not silent
+/// (DN-105 §6.5): its match switch is `Binary{8}`-specialized, so emitting IR for an elaborated
+/// `Bytes` match is a never-silent `AotError` refusal, never a wrong-answer codegen. (The
+/// trampoline-AOT used by the three-way differential above handles it correctly; only this bit-subset
+/// native path refuses.)
+#[test]
+fn bytes_match_native_llvm_refuses_explicitly() {
+    let src = "nodule d;\nfn main() => Binary{1} = match \"get\" { \"get\" => 0b1, _ => 0b0 };";
+    let env = check_nodule(&parse(src).expect("parses")).expect("checks (the gate is lifted)");
+    let node = elaborate(&env, "main").expect("elaborates");
+    assert!(
+        mycelium_mlir::emit_llvm_ir(&node).is_err(),
+        "the native-LLVM backend must REFUSE a Bytes-scrutinee match explicitly (its switch is \
+         Binary8-specialized), never silently miscompile it"
+    );
+}
