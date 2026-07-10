@@ -12,6 +12,55 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### build(checks): auto-reflow the MD004 soft-wrap `+`/`*`-at-line-start pitfall (`just md-fix`) (2026-07-10)
+
+The recurring MD004 false-positive — prose that soft-wraps so a `+`/`*` operator lands at line start,
+which `markdownlint` reads as a list item and fails the `markdown` gate (CLAUDE.md §"Markdown
+authoring") — now has a safe automated fix. `scripts/checks/md_wrap_fix.py` (invoked via **`just
+md-fix`** and a `repo: local` pre-commit hook) is **findings-driven**: it asks `markdownlint` for the
+exact MD004 lines and reflows only those, lifting the flagged marker off line-start (behaviour-neutral
+for prose — the wrapped and reflowed forms render identically). It is safe by construction: a green doc
+is a no-op (verified across all 459 tracked docs), so a legitimately-`+`-listed doc such as DN-15 is
+untouched; and it **reports, never rewrites,** any finding that resembles a real list (the previous
+line is a list intro or item, or the next line is another item at the same marker). `markdownlint
+--fix` is deliberately NOT used — it normalizes marker *style*, so under the repo's `consistent` MD004
+it rewrites genuine `-` lists to match the prose-wrap marker (verified: a real `-` list became a `+`
+list), i.e. a green gate over corrupted content. The `markdown` gate's failure message now points at
+`just md-fix`, and the CLAUDE.md pitfall note documents the tool. Verified: the fixer reflows a planted
+`+` wrap and re-greens the doc, leaves a colon-introduced `+` list for manual review, and is a no-op on
+the whole corpus; `ruff check`/`ruff format` clean. (Tooling/DX; VR-5/G2.)
+
+### E18-1 semcore self-hosting — Stage-5 continues: M-1013 checkty PR-3 (`subst_type_param_in_typeref`) (2026-07-10)
+
+The M-993 staged port of `lib/compiler/semcore.myc` advances one increment: `checkty.rs`'s
+**`subst_type_param_in_typeref`** — the DN-54 §10 Model-A rule-instantiation substitution (M-973) that
+replaces a rule's type parameter with a concrete `TypeRef` throughout a `TypeRef`, differential-
+witnessed via the DN-26 §10.2 harness-marshalling method (the real Rust oracle vs. the `.myc` port,
+decoded and compared with Rust's own derived `==`) and green under native `myc check`. A bare nullary
+`Named(param, [])` occurrence becomes the concrete type's base, keeping the occurrence's own guarantee
+where written and otherwise inheriting the concrete's — the `tr.guarantee.or(concrete.guarantee)`
+first-Some-wins merge, ported as the `strength_or` helper; every structural form (`Named` arguments,
+`Seq` element, `Fn` arrow, `Tuple` elements) recurses; the repr / `Substrate` / `Bytes` / `Float` /
+VSA / dense / `Ambient` atoms carry no nested type-name and clone verbatim. The port is a complete,
+wildcard-free 12-arm `BaseType` match (a future `BaseType` variant is a `myc check` error, never a
+silent pass-through; G2), and like the Rust oracle it takes no recursion budget (the `subst_ty`
+structural-substitution precedent). No new FLAG: `BaseType` is already a field-for-field mirror, the
+Rust `if name == param && args.is_empty()` guard is expressed one level at a time (the single-level
+pattern convention), and the argument-list recursion reuses the direct-recursive-map idiom
+(FLAG-semcore-5, no generic `map`). The Rust oracle was widened `pub(crate)` (zero logic change) for the
+differential. The gate extends `crates/mycelium-l1/src/tests/compiler_stage5_tyref.rs` (now 11 tests)
+with `subst_type_param_in_typeref_cases` (19 cases: every `BaseType` arm; the four guarantee-merge
+corners of bare/bare, occurrence-tagged, concrete-tagged, both-tagged; the guard's negative corners of
+nullary-miss and applied-`name == param`; and nested-guarantee preservation) plus a
+`subst_marshal_discriminates` non-vacuity twin. This is the first Stage-5 differential to marshal a
+guarantee-bearing `TypeRef` on the INPUT side (the shared `encode_typeref` discards the slot), so it
+adds a guarantee-threading `enc_tr` encoder; the output guarantee is already checked by the file's
+`decode_typeref`. Verified: `cargo test -p mycelium-l1 --lib` green (469 → 471 passed), `clippy -p
+mycelium-l1 --tests -D warnings` clean, `cargo fmt` clean, `myc-dogfood --strict` green (all 9
+self-hosted nodules). Graded `Empirical` (differential agreement); DN-26 stays **Draft** (→ Resolved
+with M-741). Unlocks the DN-54 `subst_type_param_in_{sig,expr,impl}` family as the next rungs.
+(M-993/M-1013 checkty PR-3; E18-1; DN-26; DN-54; VR-5/G2.)
+
 ### E18-1 semcore self-hosting — Stage-5 continues: M-1013 checkty PR-2 (two pure checkty classifiers) (2026-07-10)
 
 The M-993 staged port of `lib/compiler/semcore.myc` advances one increment: two PURE `checkty.rs`
