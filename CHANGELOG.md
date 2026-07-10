@@ -12,6 +12,28 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### fix(l1): add the missing `Wrapping(_)` arm to the `compiler_stage3_ast` test-driver's `classify_expr` (2026-07-10)
+
+Fixes a RED `dev`: 17 failing `ast_myc_*` tests in `crates/mycelium-l1/tests/compiler_stage3_ast.rs`.
+The #1355 `Wrapping` Expr-variant port (M-1013/M-791) correctly added `| Wrapping(Expr)` to
+`lib/compiler/ast.myc::Expr` (between `Spore` and `Consume`, mirroring `ast.rs::Expr`'s declaration
+order) — but this test file's embedded `.myc` driver prelude (`driver_prelude()`'s `classify_expr`
+helper, appended to every `program_with_prelude` fixture) still had an 18-arm match, so the
+self-hosted checker's exhaustiveness gate (`myc check`: "non-exhaustive match on Expr: missing
+Wrapping(_)") failed on every test that pulls in the shared prelude — not just the one test that
+directly exercises `Expr` classification. Root cause was a completeness gap in the test harness, not
+in `ast.myc` itself (`myc-check` on `ast.myc` is green both before and after this change). Fix: added
+`Wrapping(_) => 0b00000000000000000000000000010010` (18) between the existing `Spore` (7) and
+`Consume` (8) arms, positioned to mirror the oracle's declaration order for readability but given a
+**new, unused** code (18, the next free value) rather than renumbering `Consume..TupleLit` — since
+`ast_myc_classifies_every_expr_variant` hard-codes expected classification codes 0–17 for the other 18
+variants and does not (yet) assert a value for `Wrapping` itself; renumbering would have silently
+changed those tests' semantics for no reason (VR-5 — preserve what's already checked). Verified:
+`cargo test -p mycelium-l1 --test compiler_stage3_ast` 26/26 green (was 9 passed/17 failed);
+`cargo test -p mycelium-l1` full suite green, no regressions; `myc check lib/compiler/ast.myc` clean;
+`cargo fmt --check` and `cargo clippy -p mycelium-l1 --all-targets -D warnings` clean. (M-1013/M-791;
+VR-5/G2.)
+
 ### feat(transpile): trx increment — reclassify DN-99 #72 as an L1-enabler gap, DN-100 macro pre-pass DN, #1349 FLAG fixes (2026-07-10)
 
 A transpiler-track increment toward the zero-hand-port north star (kickoff `trx`, lane
