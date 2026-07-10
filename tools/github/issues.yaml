@@ -13848,6 +13848,11 @@ issues:
       second-research-pass issue), independent of M-1030/DN-107's scope. No change to this issue's own
       landed status or DoD.
 
+      Progress note (2026-07-10, DN-102 ratification, append-only): DN-102 is ratified → Accepted
+      (SP.5 Rank 1). M-1049 (the second-research-pass issue) is now `done`; the general-`?` CPS-lift
+      follow-up this progress note referenced is now tracked as its own issue, **M-1059**
+      (decoupled from M-1030 per DN-107 §6-a). No change to this issue's own landed status or DoD.
+
   - id: M-1026
     title: "enb ENB-3 — impl-level generic-parameter slot"
     milestone: "Phase 5 — Self-Hosting & Core Library"
@@ -14166,7 +14171,12 @@ issues:
       DN decides) so `matches!`/`format!`/etc. are expanded before translation. NONE semcore-lane
       collision — lands in `crates/mycelium-transpile/**`, OUTSIDE the semcore lane (no M-1013
       coordination needed). Optional bulk lever; measure before/after `expressible_fraction` on std-cmp.
-      Needs a toolchain Draft DN.
+
+      UNBLOCKED (2026-07-10): the required toolchain DN is ratified — **DN-100 → Accepted**, adopting
+      §5 Rank 1 (`cargo expand` as an opt-in, off-by-default, never-gating profiling mode) plus Rank 2
+      (a std-macro shim), with the honest ROI framing (uncertain `checked_fraction` effect) carried
+      forward unchanged (VR-5). This issue proceeds against that ratified mechanism + DoD; status stays
+      `todo` (design ratified, implementation not yet landed — Accepted is not Enacted, house rule #3).
 
       User stories:
       - As a transpiler maintainer, I want macros expanded before translation, so that macro-heavy Rust
@@ -14875,28 +14885,29 @@ issues:
   - id: M-1049
     title: "DN-102 second research pass + resolve FLAG-try-2 via language gap closure; re-stage for ratification"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:research, area:language, priority:P2, status:in-progress]
+    labels: [phase:5, type:research, area:language, priority:P2, status:done]
     epic: E28-1
     depends_on: [M-1025]
     doc_refs:
       - corpus:DN-102
       - corpus:DN-99
+      - corpus:DN-106
+      - corpus:DN-109
     landed_basis: >
-      status:in-progress (research pass complete + re-submitted; DN-102 itself not yet ratified) —
-      PR #1395 (`claude/dn-102-second-pass`, merged to `dev` 2026-07-10) appends DN-102's "Second
+      status:done (2026-07-10) — DN-102 is ratified → **Accepted** (maintainer, 2026-07-10), adopting
+      SP.5 Rank 1 in full: the landed v0 desugar (§2/§3/§5, PR #1363) plus the second-pass resolutions.
+      PR #1395 (`claude/dn-102-second-pass`, merged to `dev` 2026-07-10) appended DN-102's "Second
       research pass (2026-07-11) — M-1049" section (SP.1–SP.8): reconciles the design with DN-106/
       DN-109/DN-107 (all ratified since the first pass); resolves FLAG-try-2 by scoping implicit
       `From`-error widening as a deliberate exclusion (DN-109 D13 inferred-conversion black-box
       family) mapped to the native `map_err(e, conv)?` idiom (`lib/std/result.myc:39`), no
-      error-conversion-trait subsystem proposed; evaluates and declines the `?`-as-macro framing;
-      reconciles with the landed M-1025 let-RHS increment (no revision needed); recommends Rank 1
-      (ratify the landed v0 core + adopt the SP resolutions). A matching append-only addendum was
-      added to DN-99's ENB-2 backlog row. This issue's first two DoD clauses (pass documented,
-      FLAG-try-2 resolved) are complete; the third ("DN-102 is re-submitted for maintainer
-      ratification") is procedurally complete (the pass is held/surfaced) but **DN-102's own Status
-      stays Draft** — the maintainer has not yet ratified it (surfaced as an open Draft-DN item in
-      this integration close-out, not decided here — house rule #3, only the maintainer ratifies).
-      Flip this issue to `done` once DN-102 is actually ratified, or revise if declined again.
+      error-conversion-trait subsystem; reframes FLAG-try-1 as an independent CPS-lift follow-up
+      decoupled from the never-type (DN-107 §6-a) — now tracked as **M-1059**. The matching
+      append-only addendum on DN-99's ENB-2 backlog row is confirmed on this ratification. All three
+      DoD clauses are complete: the pass is documented, FLAG-try-2 is resolved by the ratified
+      permanent-exact-match-plus-native-`map_err` decision, and DN-102 is ratified on this basis
+      (house rule #3 — only the maintainer ratifies; verified against the DN-102 "Ratification
+      (maintainer, 2026-07-10)" section, mitigation #14).
     body: |
       Filed 2026-07-11 from the maintainer's non-ratification of DN-102 (ENB-2, the `?` try-operator
       desugar). The maintainer declined to ratify DN-102 as drafted: "many must be resolved via
@@ -15336,3 +15347,44 @@ issues:
         (not this issue): the `native_strategy` taxonomy column — the taxonomy itself is now settled
         (DN-111, Accepted 2026-07-10), but populating this file's 45 rows against it is left as a
         `# TODO(DN-111)` placeholder in `sugar.yaml` rather than invented here.
+
+  - id: M-1059
+    title: "general-position `?` — the CPS-lift follow-up (decoupled from the never-type, DN-102 SP.3/DN-107 §6-a)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:todo]
+    epic: E28-1
+    depends_on: [M-1025]
+    doc_refs:
+      - corpus:DN-102
+      - corpus:DN-107
+      - corpus:DN-99
+    body: |
+      Filed 2026-07-10 on DN-102's ratification (SP.5 Rank 1, item 3 / FLAG-try-1 reframed) — the
+      residual FLAG-SP-2 routing from DN-102's second research pass (M-1049, now `done`). DN-102 v0
+      (landed, M-1025/PR #1363) restricts `?` to a `let`-binder RHS; `?` in any other position
+      (`g(f()?)`, `f()?.method`, a tail `e?`) is a never-silent refusal (FLAG-try-1). DN-102 §SP.3
+      found this is the **same sugar** as the let-RHS case, generalized by a **CPS lift** that
+      recovers the implicit continuation: `g(f()?)` ⇓ `match f() { Ok(x) => Ok(g(x)), Err(e) =>
+      Err(e) }`. DN-107 §6-a (Accepted, adopted at ratification) found this lift unifies both arms by
+      **ordinary structural equality** (`Result[B, E]`) — **no bottom type, no early return** — so
+      this issue is explicitly **decoupled from M-1030** (the never-type / host-effect issue) and
+      gates on nothing there.
+
+      User stories:
+      - As a stdlib porter, I want `?` usable in non-let-RHS positions (`g(f()?)`, a tail `e?`,
+        chained `e??`), so that Rust ports whose `?` usage is not already a `let`-statement don't need
+        a manual `let tmp = inner? in outer(tmp)` rewrite.
+
+      Definition of Done:
+      - The CPS-lift lowering step is implemented in the checker (extending `check_try_let`'s
+        type-directed dispatch, DN-102 §4/SP.3) so a `?` in a non-let-RHS position recovers its
+        enclosing expression as the success continuation and lowers to the DN-102 §2 `match` form,
+        for at least the `g(f()?)` call-argument shape and a tail `e?` (chained `e??` optional,
+        FLAG if deferred); a differential witnesses the lift ≡ the manual `let tmp = … in …` rewrite
+        for both `Result` and `Option`; a `?` shape the lift cannot recover stays a never-silent
+        refusal (G2), never a fabricated lowering; the honest `Declared`/`Empirical` split (VR-5) is
+        preserved — no tag upgraded past what the differential actually witnesses. DN-107's
+        confidence that the general lift is bottom-free is `Empirical` for the simple shape and
+        `Declared` for full generality (DN-107 §6) — this issue's differential either witnesses the
+        remaining generality or surfaces the one shape that needs divergence (reusing DN-107's
+        `diverges` effect, never a new bottom type).

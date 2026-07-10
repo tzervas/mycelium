@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-102 |
-| **Status** | **Draft** (2026-07-10). Authored alongside the **first landable increment** of M-1025 (ENB-2). It records the design of the `?` try-operator **surface + desugar**, recommends a desugar rule and a position restriction **for ratification**, and **enacts nothing** and **moves no other doc's status** (house rule #3, append-only). Tags are `Empirical` where read against the code / witnessed by a running differential, `Declared` for any design not yet ratified (VR-5). |
+| **Status** | **Accepted** (ratified 2026-07-10 on the second research pass's SP.5 Rank-1 recommendation; Draft since 2026-07-10, non-ratified 2026-07-11 pending a second pass, second pass added 2026-07-11 — steps through Draft first, house rule #3). See the **Ratification (maintainer, 2026-07-10)** section (after §SP.8) for the accepted alternative and its scope. Authored alongside the **first landable increment** of M-1025 (ENB-2). It records the design of the `?` try-operator **surface + desugar**; ratification accepts the desugar rule + position restriction **as landed**, plus the second-pass SP.2/SP.3 resolutions — it **enacts nothing further** (M-1025's v0 increment already landed; the general-position CPS lift stays a follow-up) and **moves no other doc's status** except as FLAGGED (house rule #3, append-only). Tags are `Empirical` where read against the code / witnessed by a running differential, `Declared` for any design not yet implemented (VR-5). |
 | **Decides** | *Proposes, for ratification:* (1) a `Question` token (`?`) lexed as one atomic glyph; (2) `expr?` parsed as a **postfix marker** wrapping its operand in `Expr::Try`; (3) the desugar of `let x = e? in body` to a **type-directed `match`** over the operand's `Result`/`Option` type — the continuation `body` lives inside the binding arm, so the desugar type-checks **without** an early-return or a never-type (DN-99 #88/`->!` stays deferred); (4) the **error-type unification rule** (the `?`-operand's error/absence channel must match the enclosing function's return channel); (5) the **v0 position restriction**: `?` is legal **only** as a `let`-binder RHS — a `?` anywhere else is a **never-silent refusal** pointing at the deferred CPS-lift follow-up. It does **not** edit `issues.yaml`, `CHANGELOG.md`, or `Doc-Index.md` (the integrating session owns those). |
 | **Feeds** | DN-99 §A1 / register rows #60 (`?` grammar sugar) + #52 (the try-operator idiom facet), ENB-2; M-1025; DN-26 (SCC self-hosting, the Rust↔`.myc` dual); DN-34 §8 (surface-gap census). |
 | **Grounds on** | KC-3 (small kernel, no new L0 node — desugars to the existing `Match`), DRY (reuse `Result`/`Option` + the existing `match` machinery), G2 (never-silent — a refused position/type prints the fix), VR-5 (no tag upgraded past its basis), KISS/YAGNI (the `let`-RHS subset over a full CPS lift). |
@@ -440,6 +440,67 @@ rule #2, VR-5, DN-109 D13); KC-3/YAGNI. Recorded, not silently dropped (house ru
   the DN-102 second research pass (+ the DN-99 §8 refinement addendum); no Doc-Index row change (DN-102
   and DN-99 are already registered).
 
+## Ratification (maintainer, 2026-07-10)
+
+> **Accepted — the desugar rule (§2), the error-type unification rule (§3), the v0 `let`-RHS position
+> restriction (§5), and the second-pass SP.2/SP.3 resolutions.** Per the maintainer's "ratify the
+> above" (naming DN-100 and DN-102). Append-only (house rule #3): the record above (§1–§SP.8) is
+> unchanged; this section only records the ratification decision.
+
+**Accepts SP.5 Rank 1 as written:** *"Rank 1 (recommended) — ratify the v0 desugar as landed, and
+adopt the second-pass resolutions. A maintainer ratifying DN-102 → Accepted confirms: 1. The core
+desugar (§2), the exact-match error-unification rule (§3), and the v0 let-RHS position restriction
+(§5) — as landed and differential-witnessed (M-1025 / PR #1363), and now framed as the DN-109 D2
+Mechanical idiom rule and a DN-106 revealable sugar (no new L0 node). 2. FLAG-try-2 resolved (SP.2):
+implicit trait-`From` widening is a deliberate exclusion (the inferred-conversion black-box family,
+D13); the native solution is explicit `map_err(e, conv)?`; an explicit-conversion `?` sugar is a
+deferred, additive follow-up (not implicit `From`); the transpiler flags-with-suggested-idiom (M-1045)
+rather than bare-refuses. No error-conversion trait subsystem is adopted. 3. FLAG-try-1 reframed
+(SP.3): general-position `?` is one sugar with a CPS-lift lowering, decoupled from the never-type
+(DN-107 §6-a, adopted). It is its own follow-up (tracked via M-1049 → a CPS-lift increment), gating on
+nothing in M-1030. 4. The `?`-as-macro framing (SP.3) is accepted as the transparency/reversibility
+description (revealable via M-1051 expand/EXPLAIN), with the honest caveat that the dispatch stays
+type-directed in the checker (not a parse-time syntactic macro)."*
+
+**What is — and is not — ratified (honesty, VR-5/G2):**
+1. **The desugar itself is already landed and differential-witnessed** (M-1025 / PR #1363,
+   `tests/try_operator.rs` — 8 behavioural cases + 5 reject tests + 1 regression test, SP.4).
+   Ratification confirms the *design* — not a new implementation — and moves DN-102 from Draft to
+   Accepted; per house rule #3 this is **not** Enacted (Enacted requires "complete and stable, outside
+   ongoing maintenance and future-dev integration," and the general-`?` CPS lift + the
+   explicit-conversion sugar remain open, additive follow-ups).
+2. **FLAG-try-2 resolved as SP.2 states:** implicit `From`-widening stays a deliberate exclusion (not
+   built); the native mapping is the already-landed `map_err` combinator; an explicit-conversion `?`
+   sugar is deferred (YAGNI, witnessed-need only); **no error-conversion-trait subsystem is ratified or
+   wanted.**
+3. **FLAG-try-1 reframed as SP.3 states:** general-position `?` is a CPS-lift follow-up, decoupled from
+   the never-type per DN-107 §6-a — tracked as its own increment (see issues reconciliation below), not
+   gated on M-1030.
+4. **Honesty carried forward unchanged (VR-5):** the desugar's *agreement* claim (that `?` ≡ the
+   hand-`match` oracle) stays the differential-witnessed `Empirical` basis already established (SP.4);
+   nothing here upgrades it to `Proven`. `map_err`'s executability via static defunctionalization stays
+   `Declared` (SP.6 item 2 — not itself witnessed by the cited `@summary`) until a differential exercises
+   it directly. FLAG-try-3 (`.myc` elab/eval mirror) and FLAG-try-5 (type-name, not structural,
+   `Result`/`Option` dispatch) are **not** resolved by this ratification — they remain open residuals
+   per §6/SP.8, tracked exactly as those sections state.
+5. **No blocking caveat withheld ratification.** SP.6's adversarial stress-test confronts the real
+   objections (port-idiom faithfulness losing implicit widening; `map_err`'s HOF-executability;
+   blessing a "half-operator"; the type-name-dispatch soundness; whether the general CPS lift truly
+   needs no never-type) and each is answered on the record (explicit `map_err` preserves the
+   capability, only the invisibility; `map_err` stays honestly `Declared` pending its own differential;
+   the v0 subset is the accepted KISS/YAGNI increment with the general case an additive follow-up, not
+   a different design; type-name dispatch fails closed, never-silently; DN-107's confidence is
+   `Empirical` for the simple lift and honestly `Declared`, not `Proven`, for full generality) — none of
+   these blocks accepting Rank 1 as scoped.
+
+**FLAG-SP-1 (DN-99 §8 ENB-2 wording) — confirmed.** DN-99 §8 already carries the "ENB-2 FLAG-try-2
+RESOLUTION addendum (2026-07-11)" recording this exact resolution, pending "the maintainer confirms
+this wording on ratifying DN-102 (M-1049)." **This ratification is that confirmation** — see the
+companion dated addendum added to `docs/notes/DN-99-Surface-Gap-Closure-Register.md` §8 in this same
+branch.
+
+---
+
 ## §8 Grounding
 
 - **KC-3 / no new kernel node:** the desugar targets the existing `Expr::Match` + `Result`/`Option` data
@@ -457,6 +518,14 @@ rule #2, VR-5, DN-109 D13); KC-3/YAGNI. Recorded, not silently dropped (house ru
 
 ## Changelog
 
+- **2026-07-10** — **Ratified — Accepted.** Maintainer ratifies SP.5 Rank 1: the landed v0 desugar
+  (§2/§3/§5, differential-witnessed M-1025/PR #1363) plus the second-pass resolutions — FLAG-try-2
+  resolved as a deliberate exclusion of implicit `From`-widening mapped to the native `map_err`
+  combinator (SP.2), FLAG-try-1 reframed as an independent CPS-lift follow-up decoupled from the
+  never-type (SP.3), the `?`-as-macro transparency framing accepted with its type-directed-dispatch
+  caveat. Confirms the DN-99 §8 ENB-2 FLAG-try-2 RESOLUTION addendum's wording (FLAG-SP-1). **Not
+  Enacted** — the general-`?` CPS lift and the explicit-conversion sugar remain open, additive
+  follow-ups; no tag upgraded past its basis (VR-5). Append-only (house rule #3).
 - **2026-07-11** — **PR #1395 review correction (grounding, append-only).** Fixed two citations in the second research pass below: SP.4's `tests/try_operator.rs` count corrected from "6 behavioural + 4 reject" to the actual 8 data-driven behavioural cases + 5 reject tests + 1 regression test; SP.6 item 2's `map_err`-executable claim narrowed — the cited `lib/std/result.myc:7` `@summary` witnesses `map`/`and_then`/`fold` as executable, not `map_err` by name, so `map_err`'s *agreement* claim stays `Declared` (not upgraded past this basis, VR-5) rather than asserted `Empirical`-executable. No other content changed.
 - **2026-07-11** — **Second research pass added (M-1049) — re-staged for ratification** (append-only;
   the original §1–§7 design record is unchanged). Grounds the `?` desugar in the now-ratified frame:
