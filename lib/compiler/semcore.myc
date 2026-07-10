@@ -385,7 +385,7 @@ fn hypha_body(h: Hypha) => Expr =
   match h { Hy(_, b) => b };
 
 // Expr: mirrors ast.myc::Expr verbatim, field-for-field, same variant order.
-// FLAG-semcore-37: the `Wrapping` variant (M-791 wrapping-arithmetic opt-in) is REPRESENTED and
+// FLAG-semcore-37 / FLAG-try-3 (DN-102): `Wrapping` (M-791) and `Try` (`?`, M-1025) are REPRESENTED and
 // traversed here (grade / collect_tuple_arities_expr / fvw all recurse into its child, mirroring
 // `Consume`), but the self-hosted lexer/parser does not yet PRODUCE it (no `wrapping` keyword in
 // token/lex; no parse rule) — surface parsing of `wrapping { e }` is deferred remaining work
@@ -401,6 +401,11 @@ type Expr =
   | Spore(Expr)
   | Wrapping(Expr)
   | Consume(Expr)
+  // DN-102 (M-1025 ENB-2): the `?` try-operator node. REPRESENTED + traversed here (like
+  // `Wrapping`/`Consume`), but the self-hosted lexer/parser does NOT yet PRODUCE it — the Rust
+  // reference frontend does (ast.rs::Expr::Try), and `myc check` (Rust-backed) handles `?` in a
+  // `.myc` file. Represented-not-produced (never-silent, G2; FLAG-try-3).
+  | Try(Expr)
   | Colony(Vec[Hypha])
   | Lambda(Vec[Param], Expr)
   | App(Expr, Vec[Expr])
@@ -1298,6 +1303,7 @@ fn grade_expr(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[
     Spore(_) => Ok(GDeclared),
     Wrapping(_) => Ok(GDeclared),
     Consume(b) => grade(depth, fns, scope, site, b),
+    Try(b) => grade(depth, fns, scope, site, b),
     Colony(hyphae) => grade_colony(depth, fns, scope, site, hyphae),
     Lambda(_, _) => Ok(GDeclared),
     App(head, args) => grade_app(depth, fns, scope, site, head, args),
@@ -2197,6 +2203,7 @@ fn collect_tuple_arities_expr(acc: Vec[Binary{32}], e: Expr) => Vec[Binary{32}] 
     Spore(b) => collect_tuple_arities_expr(acc, b),
     Wrapping(b) => collect_tuple_arities_expr(acc, b),
     Consume(b) => collect_tuple_arities_expr(acc, b),
+    Try(b) => collect_tuple_arities_expr(acc, b),
     Colony(hs) => collect_tuple_arities_hyphae(acc, hs),
     Lambda(ps, body) => collect_tuple_arities_expr(collect_tuple_arities_params(acc, ps), body),
     App(head, args) => collect_tuple_arities_exprs(collect_tuple_arities_expr(acc, head), args),
@@ -3178,6 +3185,7 @@ fn fvw(e: Expr, bound: Vec[Bytes], seen: Vec[Bytes], out: Vec[Bytes], depth: Bin
       Spore(b) => fvw(b, bound, seen, out, d),
       Wrapping(b) => fvw(b, bound, seen, out, d),
       Consume(b) => fvw(b, bound, seen, out, d),
+      Try(b) => fvw(b, bound, seen, out, d),
       Colony(hyphae) => fvw_hyphae(hyphae, bound, seen, out, d),
       Lambda(params, body) => fvw(body, union_names(bound, param_names(params)), seen, out, d),
       App(head, args) => match fvw(head, bound, seen, out, d) {

@@ -1295,7 +1295,9 @@ fn collect_match_arm_comments(
         Expr::WithParadigm { body, .. }
         | Expr::Wild(body)
         | Expr::Spore(body)
-        | Expr::Wrapping(body) => {
+        | Expr::Wrapping(body)
+        // DN-102 (M-1025 ENB-2): `e?` wraps a single sub-expression — recurse transparently.
+        | Expr::Try(body) => {
             collect_match_arm_comments(
                 item_idx,
                 body,
@@ -1937,6 +1939,8 @@ fn render_expr_canonical_inner(e: &Expr) -> String {
         ),
         // `consume e` — affine move of a substrate (mirrors `print_expr` in ambient.rs).
         Expr::Consume(b) => format!("consume {}", render_expr_canonical_inner(b)),
+        // `e?` — the DN-102 postfix try-operator (M-1025 ENB-2); renders as the operand then `?`.
+        Expr::Try(b) => format!("{}?", render_expr_canonical_inner(b)),
     }
 }
 

@@ -13757,14 +13757,17 @@ issues:
   - id: M-1025
     title: "enb ENB-2 — `?` try-operator grammar sugar + desugar"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P1, status:todo]
+    labels: [phase:5, type:feature, area:language, priority:P1, status:in-progress]
     epic: E28-1
     depends_on: [M-527, M-1023]
     doc_refs:
       - corpus:DN-99
+      - corpus:DN-102
       - corpus:DN-34
       - src:crates/mycelium-l1/src/token.rs
       - src:crates/mycelium-l1/src/parse.rs
+      - src:crates/mycelium-l1/src/checkty.rs
+      - src:crates/mycelium-l1/tests/try_operator.rs
     body: |
       From DN-99 §8 ENB-2 (Draft backlog). Closes register rows #60 (`?` grammar sugar, genuinely open —
       verified zero `?`/`Question` tokens in token.rs) and #52 (the try-operator idiom facet). A
@@ -13781,6 +13784,43 @@ issues:
       Definition of Done:
       - Differential `?` ≡ the hand-`match`/`and_then` desugar (three-way where forms close); the
         error-type unification rule pinned; conformance accept + reject; a Draft DN records the desugar.
+
+      Landed — FIRST INCREMENT (2026-07-10, PR #1363; `status: in-progress`, NOT done). The `let`-binder-RHS
+      scope of `?` is landed in the Rust reference frontend: `Tok::Question` (lexer) -> `parse_app` postfix
+      `e?` -> `Expr::Try` -> the CHECKER desugars `let x = e? in body`, type-directed on `e`'s checked
+      `Result`/`Option` type, to the existing `match` bind (`Ok(x) => body, Err($f) => Err($f)` /
+      `Some(x) => body, None => None`) with the continuation inside the binding arm — so the propagation
+      arm unifies with NO early-return and NO never-type (the DN-102 §2 fork resolution). `Try` never
+      survives checking (KC-3, no new L0 node); elab/eval keep only a defensive never-silent residual.
+      The `.myc` mirror REPRESENTS `Try(Expr)` (all 5 encoders + every walker) but does not yet PRODUCE
+      it (`Wrapping` precedent). Design recorded in Draft DN-102 (maintainer ratifies the v0 scoping +
+      the CPS-lift follow-up — house rule #3, not self-ratified). VERIFIED: `cargo test -p mycelium-l1`
+      (`tests/try_operator.rs` — 6 behavioural cases Ok/Err + Some/None + chained on L1-eval AND the
+      three-way L0 leg, plus 4 never-silent reject witnesses), `-p mycelium-fmt`, `-p mycelium-lsp` green;
+      `cargo fmt --check` + `cargo clippy -p mycelium-l1 --all-targets -D warnings` clean; `myc check` on
+      the touched `.myc` mirrors green.
+
+      Residual (flagged, VR-5/G2 — NOT done):
+      - FLAG-try-1 — general `?` position (the CPS lift). `?` outside a `let`-binder RHS (`g(f()?)`,
+        `f()?.m`, tail `e?`, repeated `e??`) is a never-silent refusal, not lowered. Generalizing it
+        needs a CPS lift of the enclosing expression, which is gated on the never-type `-> !` / an
+        early-return form (M-1030 / DN-99 #88) — deferred to an ENB continuation (DN-102 §5/§6).
+      - FLAG-try-2 — no `From`-error widening. The error-type unification rule (DN-102 §3) is exact-match
+        only; a widening `?` (Rust's `From::from` on the error) is refused until an error-conversion trait
+        lands.
+      - FLAG-try-3 — the `.myc` frontend represents-but-does-not-produce `?` (no self-hosted lex/parse
+        rule yet); `myc check` (Rust-backed) handles `?` in a `.myc` file. The `.myc` elab/eval mirror
+        follows the port's general cadence (DN-26), not this increment.
+      - FLAG-try-5 — `?` dispatches on the operand's type NAME (`Result`/`Option`), not its structure
+        (DN-102 §6). A user type shadowing the name with a different shape fails closed (never-silent
+        constructor-mismatch, G2) rather than with a targeted diagnostic; structural dispatch is the
+        follow-up if a port witnesses the need (PR #1363 review).
+
+      Review (PR #1363, pr-reviewer T2 deep): the Expr-walker sweep verified COMPLETE (no missed
+      walker across the Rust core, 6 test-harness encoders, 5 `.myc` mirrors, and the mycelium-fmt/-lsp
+      consumers); one HIGH fixed pre-merge — the type-peek in `check_try_let` double-invoked the affine
+      tracker (spurious `double-consume` on an affine-`Substrate` `?`-operand), resolved by snapshotting
+      the affine tracker around the peek, with a regression witness in `tests/try_operator.rs`.
 
   - id: M-1026
     title: "enb ENB-3 — impl-level generic-parameter slot"

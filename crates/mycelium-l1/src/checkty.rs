@@ -971,7 +971,7 @@ fn collect_tuple_arities_expr(e: &crate::ast::Expr, out: &mut std::collections::
             collect_tuple_arities_expr(body, out);
         }
         Expr::Swap { value, .. } => collect_tuple_arities_expr(value, out),
-        Expr::Wild(b) | Expr::Spore(b) | Expr::Consume(b) | Expr::Wrapping(b) => {
+        Expr::Wild(b) | Expr::Spore(b) | Expr::Consume(b) | Expr::Wrapping(b) | Expr::Try(b) => {
             collect_tuple_arities_expr(b, out);
         }
         Expr::Colony(hyphae) => {
@@ -2805,6 +2805,7 @@ fn subst_type_param_in_expr(e: &Expr, param: &str, concrete: &TypeRef) -> Expr {
         Expr::Spore(b) => Expr::Spore(boxed(b)),
         Expr::Consume(b) => Expr::Consume(boxed(b)),
         Expr::Wrapping(b) => Expr::Wrapping(boxed(b)),
+        Expr::Try(b) => Expr::Try(boxed(b)),
         Expr::Colony(hyphae) => Expr::Colony(
             hyphae
                 .iter()
@@ -3927,6 +3928,16 @@ impl Cx<'_> {
             Expr::Wrapping(body) => self.check_wrapping(scope, body, expected),
             // DN-03 §1 / M-664: `consume <expr>` — affine acquisition of a `Substrate` value (LR-8).
             Expr::Consume(operand) => self.check_consume(scope, operand, expected),
+            // DN-102 / M-1025 ENB-2: a bare `?` reaching the dispatch is a `?` **outside** a `let`-binder
+            // RHS (the only position handled — intercepted in `check_let`). v0 refuses it never-silently
+            // (G2): the general-position CPS lift is deferred (FLAG-try-1). This also catches a repeated
+            // `e??` (the inner `?`'s operand is itself a `Try`).
+            Expr::Try(_) => self.err(
+                "`?` (the try-operator) is only supported as a `let`-binder RHS in v0 — write \
+                 `let x = e? in body` (DN-102 §5). A `?` in any other position (a nested `g(f()?)`, a \
+                 repeated `e??`, or a tail `e?`) needs the general-position CPS lift, which is deferred \
+                 (FLAG-try-1); rewrite it as `let tmp = <inner>? in <continuation using tmp>`.",
+            ),
             Expr::Colony(hyphae) => self.check_colony(scope, hyphae, expected),
             // RFC-0024 §4A (M-704): a `lambda(p: A) => body` checks to `Ty::Fn(A, B)` where
             // `B = infer(body)` under `scope ∪ {p: A}`. The closure's *capture set* (free variables
@@ -4207,6 +4218,24 @@ impl Cx<'_> {
         body: &Expr,
         expected: Option<&Ty>,
     ) -> Result<(Ty, Expr), CheckError> {
+        // DN-102 (M-1025 ENB-2): `let x = e? in body` — the try-operator desugar. When the binder RHS
+        // is a `?`, rewrite to the type-directed `match` bind over `e`'s `Result`/`Option` channel;
+        // the continuation `body` lives inside the binding arm so the propagation arm unifies with no
+        // early-return / never-type (DN-102 §2). This is the ONLY position `?` is supported in v0
+        // (DN-102 §5) — a `?` elsewhere is refused by the `Expr::Try` arm of `check`.
+        if let Expr::Try(inner) = bound {
+            if ty.is_some() {
+                // Never-silent (G2): an explicit binder ascription on a `?`-let is not part of the v0
+                // surface — the success binder's type comes from `e`'s `Result`/`Option` payload, so a
+                // `: T` here would be ignored. Refuse rather than silently drop it (VR-5).
+                return self.err(format!(
+                    "let `{name}`: an explicit ascription on a `?`-binder is not supported in v0 — \
+                     the success type is taken from the operand's `Result`/`Option` payload \
+                     (DN-102 §5). Drop the `: …` or bind and ascribe on a separate `let`."
+                ));
+            }
+            return self.check_try_let(scope, name, inner, body, expected);
+        }
         let want = match ty {
             Some(t) => Some(resolve_ty(self.site, self.types, self.tyvars, t)?.0),
             None => None,
@@ -4232,6 +4261,92 @@ impl Cx<'_> {
                 body: Box::new(body2),
             },
         ))
+    }
+
+    /// `let x = e? in body` — the **try-operator desugar** (DN-102 / M-1025 ENB-2). The `?` on the
+    /// binder RHS propagates the operand's error/absence channel: it rewrites, **type-directed on the
+    /// operand's checked `Result`/`Option` type**, to the existing `match` bind with the continuation
+    /// `body` inside the binding arm —
+    ///
+    /// ```text
+    /// let x = e? in body                       let x = e? in body
+    ///   ⇓  (e : Result[A, E])                    ⇓  (e : Option[A])
+    /// match e { Ok(x) => body,                 match e { Some(x) => body,
+    ///           Err($try_err) => Err($try_err) }          None => None }
+    /// ```
+    ///
+    /// Because `body` is in tail position its type is the enclosing function's return type
+    /// `Result[B, E]` (resp. `Option[B]`), so the `Err($f) => Err($f)` arm (`Result[B, E]`) **unifies**
+    /// with it — **no early return, no never-type** (`->!` stays deferred, DN-99 #88; DN-102 §2). The
+    /// **error-type unification rule** (DN-102 §3) falls out of that arm-type unification: `E` on both
+    /// sides must match, forcing the function to return the same error channel — a mismatch is the
+    /// ordinary never-silent `match`-arm `CheckError` (G2). KC-3: no new L0 node — the returned
+    /// rewritten `Match` is what the evaluator/elaborator consume, so a `Try` never survives past the
+    /// checker (elab/eval keep only a defensive residual). Guarantee: `Declared` (surface contract)
+    /// until the DN-102 §7 differential witnesses `?` ≡ the hand-`match` oracle (VR-5).
+    fn check_try_let(
+        &self,
+        scope: &mut Vec<(String, Ty)>,
+        name: &str,
+        inner: &Expr,
+        body: &Expr,
+        expected: Option<&Ty>,
+    ) -> Result<(Ty, Expr), CheckError> {
+        // Peek the operand's type to pick the constructor set (Result vs Option). `infer` runs the
+        // FULL checker on `inner` (including the affine/linear `use_at` tracker), and `check_match`
+        // below re-checks the *same* scrutinee for the real rewrite — so the peek must NOT leave its
+        // affine effects behind. Otherwise an operand whose evaluation consumes an affine `Substrate`
+        // (e.g. `let x = f(s)? in …` where `f` consumes `s`) is marked used TWICE and rejected with a
+        // spurious `double-consume` — a false rejection on the *dominant* port shape this feature
+        // targets. Snapshot the affine tracker before the peek and restore it after, so only
+        // `check_match`'s single real pass records the consume — the same speculative-then-real idiom
+        // `check_if`/`check_match` use (`self.affine.snapshot()`/`restore()`). (M-1025 / DN-102 §3;
+        // PR #1363 review.)
+        let affine_snap = self.affine.snapshot();
+        let ity = self.infer(scope, inner)?;
+        self.affine.restore(&affine_snap);
+        // The fresh propagation binder. `$` is not a source-identifier character, so this can never
+        // collide with a user name; and it is scoped to the propagation arm only (never the `body`
+        // arm), so it also cannot shadow anything `body` references.
+        const ERRB: &str = "$try_err";
+        let arms = match &ity {
+            Ty::Data(n, args) if n == "Result" && args.len() == 2 => vec![
+                Arm {
+                    pattern: Pattern::Ctor("Ok".to_owned(), vec![Pattern::Ident(name.to_owned())]),
+                    body: body.clone(),
+                },
+                Arm {
+                    pattern: Pattern::Ctor("Err".to_owned(), vec![Pattern::Ident(ERRB.to_owned())]),
+                    body: Expr::App {
+                        head: Box::new(Expr::Path(Path(vec!["Err".to_owned()]))),
+                        args: vec![Expr::Path(Path(vec![ERRB.to_owned()]))],
+                    },
+                },
+            ],
+            Ty::Data(n, args) if n == "Option" && args.len() == 1 => vec![
+                Arm {
+                    pattern: Pattern::Ctor(
+                        "Some".to_owned(),
+                        vec![Pattern::Ident(name.to_owned())],
+                    ),
+                    body: body.clone(),
+                },
+                Arm {
+                    pattern: Pattern::Ident("None".to_owned()),
+                    body: Expr::Path(Path(vec!["None".to_owned()])),
+                },
+            ],
+            _ => {
+                return self.err(format!(
+                    "`?` operand must have a `Result[_, _]` or `Option[_]` type, got `{ity}` — the \
+                     try-operator propagates an error/absence channel (DN-102 §3; M-1025)"
+                ));
+            }
+        };
+        // Check the desugared match: exhaustiveness (Maranget usefulness) AND the arm-type unification
+        // that *is* the error-type unification rule (DN-102 §3). The returned rewritten `Match` is
+        // stored back into the checked `Env` (downstream passes see it, never the `Try`).
+        self.check_match(scope, inner, &arms, expected)
     }
 
     /// **Lambda / closure typing** (RFC-0024 §4A.6, M-704). A `lambda(p: A) => body` checks to

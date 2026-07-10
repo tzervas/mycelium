@@ -193,6 +193,10 @@ impl Lexer {
                 // `%` (rem), `^` (xor): infix operators at expression position (RFC-0025 / M-705).
                 '%' => self.single(Tok::Percent),
                 '^' => self.single(Tok::Caret),
+                // `?` is the postfix try-operator glyph (DN-102 / M-1025 ENB-2): a single-char token,
+                // parsed as a postfix on a `let`-binder RHS and desugared to the existing `Result`/
+                // `Option` `match` bind. No `??`/`?.` multi-char form exists.
+                '?' => self.single(Tok::Question),
                 // `&` (band) / `&&` (and): bitwise- and logical-and operators (RFC-0025 / M-705).
                 '&' => self.lex_amp(),
                 // `<` is operator-only (RFC-0037 D1): type-args moved to `[…]` and trit literals to

@@ -371,6 +371,13 @@ pub enum Tok {
     /// two `|` uses never overlap (the separator is in a `type` decl, the operator at expression
     /// position). (There is no `|`-separated pattern-alternation production in the v0 surface.)
     PipePipe,
+    /// `?` — the **postfix try-operator** glyph (RFC-0031 §5 / DN-102; M-1025 ENB-2). At expression
+    /// position a trailing `?` on a `let`-binder RHS (`let x = e? in body`) desugars — type-directed on
+    /// `e`'s `Result`/`Option` type — to the existing `match` bind (`Ok(x) => body, Err(f) => Err(f)` /
+    /// `Some(x) => body, None => None`), propagating the error/absence without an early return or a
+    /// never-type (DN-102 §2). Lexed as one atomic single-char glyph; there is no `??`/`?.` form. A `?`
+    /// outside a `let`-binder RHS is a never-silent refusal (DN-102 §5; G2).
+    Question,
     /// End of input.
     Eof,
 }

@@ -12,6 +12,44 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### feat(l1): `?` try-operator grammar sugar + type-directed `match` desugar — M-1025 (ENB-2) first increment (2026-07-10)
+
+Closes the **`let`-binder-RHS scope** of the `?` try-operator surface gap (DN-99 register rows #60
+and #52, ENB-2) — the dominant Rust error-propagation shape (`let x = f()?;`) now ports without hand-writing
+a nested `match`. Under the whole-project unfrozen posture (ADR-045). **M-1025 stays `in-progress`**
+(first landable increment; general-position CPS lift flagged below). Design recorded in **Draft DN-102**
+(the maintainer ratifies the v0 scoping and the CPS-lift follow-up — house rule #3, not self-ratified).
+
+- **Surface + lowering, no new kernel node (KC-3).** `Tok::Question` (lexer) parses as a `parse_app`
+  postfix `e?` wrapping the operand in `Expr::Try` (`crates/mycelium-l1/src`); the **checker** desugars
+  `let x = e? in body` — type-directed on `e`'s checked `Result`/`Option` type — to the existing `match`
+  bind (`Ok(x) => body, Err($try_err) => Err($try_err)` resp. `Some(x) => body, None => None`), with the
+  continuation `body` **inside** the binding arm. `Try` never survives checking; elab/eval keep only a
+  defensive never-silent residual.
+- **The design fork, confronted not guessed (DN-102 §2).** Rust's `?` desugars via an early `return` and
+  the never-type `!`; Mycelium has neither (no `return` form; `-> !` deferred, DN-99 #88). The naive
+  local desugar is doubly ill-typed here (`A` vs `Result[A, E]` do not unify). Putting the continuation
+  in the binding arm makes both arms `typeof(body)`, so the propagation arm unifies with **no early
+  return and no never-type** — the sound form.
+- **Never-silent boundary (G2/VR-5).** The error-type unification rule (DN-102 §3) falls out of the
+  `Err($f) => Err($f)` arm — exact-match, **no** `From`-error widening in v0. Every unsupported position
+  is a refusal, never a mis-desugar: a `?` outside a `let`-binder RHS, a repeated `e??`, an ascribed
+  `?`-binder, and a `?` on a non-`Result`/`Option` operand each raise a `CheckError` naming the fix.
+- **`.myc` mirror (DN-26 dual).** `Try(Expr)` is **represented + traversed** across all five self-hosted
+  encoders (`ast`/`semcore`/`parse`/`ambient`/`totality`.myc) and every walker, but the self-hosted
+  lexer/parser does **not** yet PRODUCE it — the `Wrapping` represented-not-produced precedent (FLAG-try-3).
+- **How verified (change-scoped):** `crates/mycelium-l1/tests/try_operator.rs` — 6 behavioural witnesses
+  (`Result` Ok/Err, `Option` Some/None, chained `?`, and a chained short-circuit) each pinned against a
+  hand-`match` twin on **both** the L1-eval leg and the three-way L0 leg (monomorphize -> elaborate ->
+  L0-interp vs the L1 `to_core` projection), plus 4 never-silent reject witnesses. `cargo test -p
+  mycelium-l1 -p mycelium-fmt -p mycelium-lsp` green; `cargo fmt --check` and `cargo clippy -p
+  mycelium-l1 --all-targets -D warnings` clean; `myc check` on the touched `.myc` mirrors green.
+- **Residual (flagged, VR-5/G2):** FLAG-try-1 — the general `?` position (a CPS lift of the enclosing
+  expression) is deferred, gated on the never-type `-> !` / an early-return form (M-1030 / DN-99 #88);
+  FLAG-try-2 — no `From`-error widening (exact error-channel match only); FLAG-try-3 — the `.myc`
+  frontend represents-but-does-not-produce `?` (the `.myc` elab/eval mirror follows the port cadence,
+  DN-26).
+
 ### feat(l1): cross-nodule runtime execution via `PhylumEnv::link` — M-1024 (ENB-1) first increment (2026-07-10)
 
 Closes the **runtime-execution** half of cross-nodule symbols (DN-99 register row #41, ENB-1) — the
