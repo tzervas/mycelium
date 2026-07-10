@@ -203,6 +203,18 @@ reading both the Rust output and the self-hosted output for the same input.
       structurally identical to its type/trait branches, so this is a low-risk, explicitly flagged
       narrowing, not a silent one. A full increment 2–8 reconciliation of this wave-progress note is
       still owed (out of this change's scope — flagged up, not attempted here).
+
+      **M-1013 checkty PR-2** ports two PURE `checkty.rs` classifiers into `semcore.myc`:
+      `paradigm_name` (checkty.rs 7175-7197 — the swap-paradigm name of a representation type; all 11
+      `Ty` arms enumerated, no wildcard) and `cons_list_ctors` (checkty.rs 3592-3624 — the two-ctor
+      linked-list recognizer) with its `cons_list_scan` fold, gated by
+      `crates/mycelium-l1/src/tests/compiler_stage5_classify.rs` (5 tests: all 11 `paradigm_name` arms;
+      11 `cons_list_ctors` shapes including the one-field / three-plus-field scan paths and the
+      no-nullary `(None, Some)` / `(None, None)` finals; two `marshal_discriminates` non-vacuity twins).
+      No new FLAG (the `&'static str`→`Bytes` idiom and the FLAG-semcore-4 `Vec[DataInfo]` `BTreeMap`
+      stand-in); both oracles `pub(crate)`-widened, zero logic change; native `myc check` reports `ok`.
+      (STEP 5/6 and eval PR-1 also landed on `dev` between STEP 4 and this note; the full increment
+      2–8+ reconciliation of this wave-progress note remains owed — flagged up, not attempted here.)
 - [ ] **Stage 6 / M-742** — `just bootstrap`: interpreted-first then AOT, stage-2 three-way
 
 *This README is the M-740 wave map; it is updated as each stage lands. Grounded in DN-26 §7/§9,

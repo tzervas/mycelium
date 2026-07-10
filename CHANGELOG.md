@@ -12,6 +12,34 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### E18-1 semcore self-hosting — Stage-5 continues: M-1013 checkty PR-2 (two pure checkty classifiers) (2026-07-10)
+
+The M-993 staged port of `lib/compiler/semcore.myc` advances one increment: two PURE `checkty.rs`
+classifiers, each differential-witnessed via the DN-26 §10.2 harness-marshalling method (the real Rust
+oracle vs. the `.myc` port, decoded and compared with Rust's own derived `==`) and green under native
+`myc check`. **`paradigm_name`** (checkty.rs 7175-7197) — the swap-paradigm name of a representation
+type (`Binary`/`Ternary`/`Dense`/`VSA`, `None` for every other `Ty`) — ports as a flat 11-arm match
+with every arm enumerated explicitly (no wildcard, so a future `Ty` variant must force a paradigm
+decision rather than fall silently to `None`; G2). **`cons_list_ctors`** (checkty.rs 3592-3624), the
+two-constructor linked-list recognizer (one nullary "nil"; one binary "cons" whose second field is the
+recursive `Data(name, ..)` self-reference at the type's own arity), ports as a threaded fold
+(`cons_list_scan`) that reads the type registry through the already-established FLAG-semcore-4
+`Vec[DataInfo]` assoc-list (`types_lookup` standing in for `BTreeMap`). Neither adds a NEW
+surface-inexpressibility: `paradigm_name` uses the standard `&'static str`→`Bytes` idiom, and
+`cons_list_ctors` reuses the existing assoc-list registry convention. Both Rust oracles were widened
+`pub(crate)` (zero logic change) for the differential. The new gate
+(`crates/mycelium-l1/src/tests/compiler_stage5_classify.rs`, 5 tests) builds its `DataInfo` fixtures by
+extracting them from a parsed + checked `env.types` (never hand-built, so a marshalling bug cannot hide
+behind a hand-typed mismatch); it covers all 11 `paradigm_name` arms plus 11 `cons_list_ctors` shapes
+(match, arity-parametric match, wrong-second-field, different-data-second-field, three-ctor, one-ctor,
+missing name, non-`Data`, the one-field and three-plus-field scan paths, and the no-nullary
+`(None, Some)` / `(None, None)` finals), with a non-vacuity `*_discriminates` twin per direction. A
+three-lens adversarial review (faithfulness, coverage, honesty) found no divergence from the oracle.
+Verified: `cargo test -p mycelium-l1 --lib` green (464 → 469 passed), `clippy -p mycelium-l1 --tests -D
+warnings` clean, `cargo fmt` clean, `myc-dogfood --strict` green (all 9 self-hosted nodules). Graded
+`Empirical` (differential agreement); DN-26 stays **Draft** (→ Resolved with M-741). (M-993/M-1013
+checkty PR-2; E18-1; DN-26; VR-5/G2.)
+
 ### chore: clean-snapshot prep — archives extracted to the `archive` branch, indices regenerated (2026-07-09)
 
 Prep a lean trunk ahead of a promotion: historical archives moved out of the day-to-day tree but

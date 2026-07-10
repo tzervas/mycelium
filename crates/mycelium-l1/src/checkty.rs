@@ -3587,7 +3587,9 @@ struct Cx<'a> {
 /// the recursive `Self` type `Data(name, …)` (the "cons": `Cons(A, Self)`). This matches every
 /// `lib/std` list type (`Vec`, `Trits`, `ByteList`, `GRowList`, …) uniformly. A type not of this shape
 /// yields `None`, so the `Seq{T,N}` and no-context paths are untouched (never a silent reinterpret).
-fn cons_list_ctors(
+// `pub(crate)` (widened from private, zero logic change) for the M-1013 Stage-5 self-hosting
+// differential (`compiler_stage5_classify.rs`) — the eval-PR-1 harness-marshalling precedent.
+pub(crate) fn cons_list_ctors(
     types: &std::collections::BTreeMap<String, DataInfo>,
     expected: &Ty,
 ) -> Option<(String, String)> {
@@ -7166,7 +7168,11 @@ fn app_node(head: &Expr, args: Vec<Expr>) -> Expr {
 }
 
 /// The paradigm name of a representation type (for the never-silent cross-paradigm framing).
-fn paradigm_name(t: &Ty) -> Option<&'static str> {
+///
+/// `pub(crate)` (widened from private, zero logic change) so the M-1013 Stage-5 self-hosting
+/// differential (`compiler_stage5_classify.rs`) can call this real oracle directly, exactly as the
+/// eval PR-1 leaf widened `try_match` (DN-26 §10.2 harness marshalling).
+pub(crate) fn paradigm_name(t: &Ty) -> Option<&'static str> {
     match t {
         Ty::Binary(_) => Some("Binary"),
         Ty::Ternary(_) => Some("Ternary"),
