@@ -4234,7 +4234,7 @@ impl Cx<'_> {
                      (DN-102 §5). Drop the `: …` or bind and ascribe on a separate `let`."
                 ));
             }
-            return self.check_try_let(scope, name, &**inner, body, expected);
+            return self.check_try_let(scope, name, inner, body, expected);
         }
         let want = match ty {
             Some(t) => Some(resolve_ty(self.site, self.types, self.tyvars, t)?.0),
@@ -4317,7 +4317,10 @@ impl Cx<'_> {
             ],
             Ty::Data(n, args) if n == "Option" && args.len() == 1 => vec![
                 Arm {
-                    pattern: Pattern::Ctor("Some".to_owned(), vec![Pattern::Ident(name.to_owned())]),
+                    pattern: Pattern::Ctor(
+                        "Some".to_owned(),
+                        vec![Pattern::Ident(name.to_owned())],
+                    ),
                     body: body.clone(),
                 },
                 Arm {

@@ -120,9 +120,7 @@ fn expr_depth(e: &Expr) -> usize {
         | Expr::Spore(inner)
         | Expr::Consume(inner)
         | Expr::Wrapping(inner)
-        | Expr::Try(inner) => {
-            expr_depth(inner)
-        }
+        | Expr::Try(inner) => expr_depth(inner),
         Expr::Colony(hyphae) => hyphae
             .iter()
             .map(|h| expr_depth(&h.body))

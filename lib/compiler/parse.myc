@@ -1441,6 +1441,11 @@ type Expr =
   | Spore(Expr)
   | Wrapping(Expr)
   | Consume(Expr)
+  // DN-102 (M-1025 ENB-2): the `?` try-operator node. REPRESENTED + traversed here (like
+  // `Wrapping`/`Consume`), but the self-hosted lexer/parser does NOT yet PRODUCE it — the Rust
+  // reference frontend does (ast.rs::Expr::Try), and `myc check` (Rust-backed) handles `?` in a
+  // `.myc` file. Represented-not-produced (never-silent, G2; FLAG-try-3).
+  | Try(Expr)
   | Colony(Vec[Hypha])
   | Lambda(Vec[Param], Expr)
   | App(Expr, Vec[Expr])
@@ -4356,6 +4361,7 @@ fn walk_expr(fp: Fp, e: Expr) => Fp =
     Wild(body) => walk_expr(fp_tag(fp, 0b0000_0000_0000_0000_0000_0000_0101_0101), body),
     Spore(value) => walk_expr(fp_tag(fp, 0b0000_0000_0000_0000_0000_0000_0101_0110), value),
     Wrapping(value) => walk_expr(fp_tag(fp, 0b0000_0000_0000_0000_0000_0000_0110_1110), value),
+    Try(value) => walk_expr(fp_tag(fp, 0b0000_0000_0000_0000_0000_0000_0110_1111), value),
     Consume(value) => walk_expr(fp_tag(fp, 0b0000_0000_0000_0000_0000_0000_0101_0111), value),
     Colony(hyphae) => walk_hypha_list(fp_tag(fp, 0b0000_0000_0000_0000_0000_0000_0101_1000), hyphae),
     Lambda(params, body) => walk_expr(walk_param_list(fp_tag(fp, 0b0000_0000_0000_0000_0000_0000_0101_1001), params), body),

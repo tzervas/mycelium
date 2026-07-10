@@ -306,7 +306,9 @@ fn body_has_lambda(e: &Expr) -> bool {
         }
         Expr::Swap { value, .. } => body_has_lambda(value),
         Expr::WithParadigm { body, .. } => body_has_lambda(body),
-        Expr::Wild(b) | Expr::Spore(b) | Expr::Consume(b) | Expr::Wrapping(b) | Expr::Try(b) => body_has_lambda(b),
+        Expr::Wild(b) | Expr::Spore(b) | Expr::Consume(b) | Expr::Wrapping(b) | Expr::Try(b) => {
+            body_has_lambda(b)
+        }
         Expr::Colony(hyphae) => hyphae.iter().any(|h| body_has_lambda(&h.body)),
         Expr::App { head, args } => body_has_lambda(head) || args.iter().any(body_has_lambda),
         Expr::Fuse { left, right } => body_has_lambda(left) || body_has_lambda(right),

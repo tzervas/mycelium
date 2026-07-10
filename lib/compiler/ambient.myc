@@ -180,6 +180,11 @@ type Expr =
   | Spore(Expr)
   | Wrapping(Expr)
   | Consume(Expr)
+  // DN-102 (M-1025 ENB-2): the `?` try-operator node. REPRESENTED + traversed here (like
+  // `Wrapping`/`Consume`), but the self-hosted lexer/parser does NOT yet PRODUCE it — the Rust
+  // reference frontend does (ast.rs::Expr::Try), and `myc check` (Rust-backed) handles `?` in a
+  // `.myc` file. Represented-not-produced (never-silent, G2; FLAG-try-3).
+  | Try(Expr)
   | Colony(Vec[Hypha])
   | Lambda(Vec[Param], Expr)
   | App(Expr, Vec[Expr])
@@ -544,6 +549,7 @@ fn resolve_expr(amb: Option[Paradigm], site: Bytes, e: Expr, depth: Binary{32}) 
       Spore(b) => match resolve_expr(amb, site, b, d2) { Err(er) => Err(er), Ok(b2) => Ok(Spore(b2)) },
       Wrapping(b) => match resolve_expr(amb, site, b, d2) { Err(er) => Err(er), Ok(b2) => Ok(Wrapping(b2)) },
       Consume(b) => match resolve_expr(amb, site, b, d2) { Err(er) => Err(er), Ok(b2) => Ok(Consume(b2)) },
+      Try(b) => match resolve_expr(amb, site, b, d2) { Err(er) => Err(er), Ok(b2) => Ok(Try(b2)) },
       Lambda(params, body) => match resolve_expr(amb, site, body, d2) { Err(er) => Err(er), Ok(body2) => Ok(Lambda(params, body2)) },
       Colony(hyphae) => match resolve_hypha_list(amb, site, hyphae, d2) { Err(er) => Err(er), Ok(hyphae2) => Ok(Colony(hyphae2)) },
       App(head, args) => match resolve_expr(amb, site, head, d2) {
@@ -1050,6 +1056,7 @@ fn print_expr(e: Expr) => Bytes =
     Spore(b) => bytes_concat("spore(", bytes_concat(print_expr(b), ")")),
     Wrapping(b) => bytes_concat("wrapping { ", bytes_concat(print_expr(b), " }")),
     Consume(b) => bytes_concat("consume ", print_expr(b)),
+    Try(b) => bytes_concat(print_expr(b), "?"),
     Lambda(params, body) => bytes_concat("lambda(", bytes_concat(print_param_names(params), bytes_concat(") => ", print_expr(body)))),
     Colony(hyphae) => bytes_concat("colony { ", bytes_concat(print_hypha_list(hyphae), " }")),
     App(head, args) => bytes_concat(print_expr(head), bytes_concat("(", bytes_concat(print_expr_list(args), ")"))),
@@ -1494,6 +1501,7 @@ fn walk_expr(fp: Fp, e: Expr) => Fp =
     Wild(body) => walk_expr(fp_tag(fp, 0b0000_0000_0000_0000_0000_0000_0101_0101), body),
     Spore(value) => walk_expr(fp_tag(fp, 0b0000_0000_0000_0000_0000_0000_0101_0110), value),
     Wrapping(value) => walk_expr(fp_tag(fp, 0b0000_0000_0000_0000_0000_0000_0110_1110), value),
+    Try(value) => walk_expr(fp_tag(fp, 0b0000_0000_0000_0000_0000_0000_0110_1111), value),
     Consume(value) => walk_expr(fp_tag(fp, 0b0000_0000_0000_0000_0000_0000_0101_0111), value),
     Colony(hyphae) => walk_hypha_list(fp_tag(fp, 0b0000_0000_0000_0000_0000_0000_0101_1000), hyphae),
     Lambda(params, body) => walk_expr(walk_param_list(fp_tag(fp, 0b0000_0000_0000_0000_0000_0000_0101_1001), params), body),

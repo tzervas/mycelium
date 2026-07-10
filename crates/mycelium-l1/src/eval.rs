@@ -930,10 +930,11 @@ impl<'e> Evaluator<'e> {
             // violation (an un-checked raw AST). Refuse never-silently (G2) — never a fabricated value.
             Expr::Try(_) => Ctrl::Settle(Err(L1Error::Unsupported {
                 site: site.to_owned(),
-                what: "internal: a `?` try-operator reached the evaluator undesugared — the checker \
+                what:
+                    "internal: a `?` try-operator reached the evaluator undesugared — the checker \
                        rewrites `let x = e? in body` to the `Result`/`Option` `match` bind \
                        (DN-102 §4). Check the program first."
-                    .to_owned(),
+                        .to_owned(),
             })),
 
             // A `wild { name(args…) }` block (the audited FFI floor — M-661/M-721; RFC-0028 §4.3):

@@ -592,7 +592,8 @@ fn hypha_body(h: Hypha) => Expr =
 // ── Expr (mirrors ast.rs::Expr — an expression; every variant is bare/unrenamed except where
 // FLAG-ast-4/5 note a collision elsewhere in this file) ─────────────────────────────────────────
 // FLAG-ast-9: the `Wrapping` variant (M-791) is now REPRESENTED here so this type mirrors
-// ast.rs::Expr's 19 variants field-for-field, but the self-hosted lexer/parser does NOT yet
+// ast.rs::Expr's 20 variants field-for-field (incl. the DN-102 `Try` node), but the self-hosted
+// lexer/parser does NOT yet
 // PRODUCE it (no `wrapping` keyword; no parse rule) — surface parsing of `wrapping { e }` is
 // deferred remaining work (never-silent, G2). Represented and traversed, not yet parsed.
 type Expr =
@@ -606,6 +607,11 @@ type Expr =
   | Spore(Expr)
   | Wrapping(Expr)
   | Consume(Expr)
+  // DN-102 (M-1025 ENB-2): the `?` try-operator node. REPRESENTED + traversed here (like
+  // `Wrapping`/`Consume`), but the self-hosted lexer/parser does NOT yet PRODUCE it — the Rust
+  // reference frontend does (ast.rs::Expr::Try), and `myc check` (Rust-backed) handles `?` in a
+  // `.myc` file. Represented-not-produced (never-silent, G2; FLAG-try-3).
+  | Try(Expr)
   | Colony(Vec[Hypha])
   | Lambda(Vec[Param], Expr)
   | App(Expr, Vec[Expr])

@@ -174,6 +174,8 @@ pub(crate) fn classify(kind: &LexKind) -> Option<u32> {
         | Tok::Star
         | Tok::Slash
         | Tok::Percent
+        // `?` — the DN-102 postfix try-operator glyph (M-1025 ENB-2).
+        | Tok::Question
         | Tok::Caret
         | Tok::Amp
         | Tok::AmpAmp
