@@ -1277,14 +1277,20 @@ fn objectdecl_impls(o: ObjectDecl) => Vec[ImplDecl] =
 fn objectdecl_fns(o: ObjectDecl) => Vec[FnDecl] =
   match o { OD(_, _, _, _, _, _, f) => f };
 
-// ── InherentImplDecl (mirrors ast.rs::InherentImplDecl — M-664 `impl T { fn … }`) ───────────────
-type InherentImplDecl = IID(TypeRef, Vec[FnDecl]);
+// ── InherentImplDecl (mirrors ast.rs::InherentImplDecl — M-664 + DN-103 `impl[T]? T { fn … }`) ────
+// The first field is the impl-level type-parameter slot (DN-103 / M-1026 / ENB-3): unbounded names
+// (`impl[T] Foo[T] { … }`), Nil for the plain M-664 block. The desugar-prepend of these params onto
+// each lifted method is Rust-only (checkty.rs Phase 0) — this mirror carries the slot structurally.
+type InherentImplDecl = IID(Vec[Bytes], TypeRef, Vec[FnDecl]);
+
+fn inherentimpldecl_params(i: InherentImplDecl) => Vec[Bytes] =
+  match i { IID(p, _, _) => p };
 
 fn inherentimpldecl_for_ty(i: InherentImplDecl) => TypeRef =
-  match i { IID(t, _) => t };
+  match i { IID(_, t, _) => t };
 
 fn inherentimpldecl_methods(i: InherentImplDecl) => Vec[FnDecl] =
-  match i { IID(_, m) => m };
+  match i { IID(_, _, m) => m };
 
 // ── LowerRhs (mirrors ast.rs::LowerRhs — DN-54 §10 the RHS of a `lower` rule; FLAG-ast-5 LR-
 // prefix, both variants renamed since `Impl` collides with `Item::Impl`) ────────────────────────
@@ -3706,37 +3712,51 @@ fn parse_impl_decl(ts: Vec[Spanned]) => Result[Pair[ImplDecl, Vec[Spanned]], PEr
 // parse_impl_item: the top-level `impl` dispatcher (M-664) — disambiguates the trait-instance form
 // (`impl Trait for T { ... }`) from the inherent-method form (`impl T { ... }`) by parsing the head
 // base type once and branching on the follower (`for` vs `{`).
+// DN-103 / M-1026 / ENB-3: an impl-level type-parameter slot (`impl[T] Foo[T] { … }`) is parsed
+// immediately after `impl`, before the head (unambiguous — no base type begins with `[`). Nil for the
+// plain M-664 block. The slot rides `parse_impl_item_tail` and lands on the inherent `IID`; a non-empty
+// slot on a trait instance is a never-silent refusal (generic trait-instance coherence deferred).
 fn parse_impl_item(ts: Vec[Spanned]) => Result[Pair[Item, Vec[Spanned]], PErr] =
   match p_expect(ts, is_timpl(p_cur(ts)), "`impl`") {
     Err(e) => Err(e),
-    Ok(ts1) => match parse_base_type(ts1, zero32()) {
+    Ok(ts1) => match parse_type_params_opt(ts1) {
       Err(e) => Err(e),
-      Ok(pr) => match pr { Pr(head, ts2) => parse_impl_item_tail(head, ts2) }
+      Ok(pr0) => match pr0 { Pr(iparams, ts2) => match parse_base_type(ts2, zero32()) {
+        Err(e) => Err(e),
+        Ok(pr) => match pr { Pr(head, ts3) => parse_impl_item_tail(iparams, head, ts3) }
+      } }
     }
   };
 
-fn parse_impl_item_tail(head: BaseType, ts: Vec[Spanned]) => Result[Pair[Item, Vec[Spanned]], PErr] =
+fn parse_impl_item_tail(iparams: Vec[Bytes], head: BaseType, ts: Vec[Spanned]) => Result[Pair[Item, Vec[Spanned]], PErr] =
   match is_tfor(p_cur(ts)) {
-    True => match head {
-      Named(name, args) =>
-        let ts1 = p_bump(ts) in
-        match parse_type_ref(ts1, zero32()) {
-          Err(e) => Err(e),
-          Ok(pr) => match pr { Pr(for_ty, ts2) => match parse_impl_body(ts2) {
+    True => match is_nil_bytes_list(iparams) {
+      False => Err(PE(p_pos(ts), "impl-level type parameters on a trait instance (`impl[T] Trait for ...`) are deferred -- generic trait-instance coherence is not yet supported (DN-103 SS3 / RFC-0019 SS4.5); use a generic inherent block (`impl[T] Foo[T] { ... }`) or impls-as-functions meanwhile (never silent -- G2)")),
+      True => match head {
+        Named(name, args) =>
+          let ts1 = p_bump(ts) in
+          match parse_type_ref(ts1, zero32()) {
             Err(e) => Err(e),
-            Ok(pr2) => match pr2 { Pr(methods, ts3) => Ok(Pr(Impl(ImD(name, args, for_ty, methods)), ts3)) }
-          } }
-        },
-      _ => Err(PE(p_pos(ts), "the item before `for` in a trait `impl ... for ...` must be a trait name (RFC-0019 SS4.1)"))
+            Ok(pr) => match pr { Pr(for_ty, ts2) => match parse_impl_body(ts2) {
+              Err(e) => Err(e),
+              Ok(pr2) => match pr2 { Pr(methods, ts3) => Ok(Pr(Impl(ImD(name, args, for_ty, methods)), ts3)) }
+            } }
+          },
+        _ => Err(PE(p_pos(ts), "the item before `for` in a trait `impl ... for ...` must be a trait name (RFC-0019 SS4.1)"))
+      }
     },
     False => match is_lbrace(p_cur(ts)) {
       True => match parse_impl_body(ts) {
         Err(e) => Err(e),
-        Ok(pr) => match pr { Pr(methods, ts1) => Ok(Pr(InherentImpl(IID(typeref_unguaranteed(head), methods)), ts1)) }
+        Ok(pr) => match pr { Pr(methods, ts1) => Ok(Pr(InherentImpl(IID(iparams, typeref_unguaranteed(head), methods)), ts1)) }
       },
       False => Err(PE(p_pos(ts), "expected `for` (a trait instance) or `{` (an inherent method block) after the type in an `impl`"))
     }
   };
+
+// is_nil_bytes_list: True iff the impl-level type-parameter slot is empty (the plain M-664 block).
+fn is_nil_bytes_list(xs: Vec[Bytes]) => Bool =
+  match xs { Nil => True, Cons(_, _) => False };
 
 // ── object composition (DN-53/M-811) ─────────────────────────────────────────────────────────────
 
@@ -4289,7 +4309,7 @@ fn walk_objectdecl(fp: Fp, o: ObjectDecl) => Fp =
   };
 
 fn walk_inherentimpldecl(fp: Fp, i: InherentImplDecl) => Fp =
-  match i { IID(for_ty, methods) => walk_fndecl_list(walk_typeref(fp_tag(fp, 0b0000_0000_0000_0000_0000_0000_0011_1000), for_ty), methods) };
+  match i { IID(_, for_ty, methods) => walk_fndecl_list(walk_typeref(fp_tag(fp, 0b0000_0000_0000_0000_0000_0000_0011_1000), for_ty), methods) };
 
 fn walk_lowerrhs(fp: Fp, r: LowerRhs) => Fp =
   match r {

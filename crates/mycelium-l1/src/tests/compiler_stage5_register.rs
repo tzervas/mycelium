@@ -1085,8 +1085,10 @@ fn encode_impl_decl_list(ids: &[ImplDecl]) -> String {
 }
 
 fn encode_inherent_impl_decl(iid: &InherentImplDecl) -> String {
+    // DN-103 / M-1026: IID carries the impl-level type-parameter slot (unbounded names) first.
     format!(
-        "IID({}, {})",
+        "IID({}, {}, {})",
+        encode_names(&iid.params),
         encode_typeref(&iid.for_ty),
         encode_fn_decl_list(&iid.methods)
     )
@@ -1478,6 +1480,7 @@ fn collect_tuple_arities_cases() {
         (
             "inherent_impl_leg",
             nodule(vec![Item::InherentImpl(InherentImplDecl {
+                params: vec![],
                 for_ty: tup_ty(vec![nm("A"), nm("B")]),
                 methods: vec![fn_decl(
                     fn_sig(

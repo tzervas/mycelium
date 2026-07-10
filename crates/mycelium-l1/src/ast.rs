@@ -215,6 +215,14 @@ pub enum Item {
 /// is just the first explicitly-typed value parameter).
 #[derive(Debug, Clone, PartialEq)]
 pub struct InherentImplDecl {
+    /// Impl-level **type parameters** — the `[T, …]` slot after `impl` (`impl[T] Foo[T] { … }`;
+    /// DN-103 / M-1026 / ENB-3). **Unbounded names** (bounds live only on `fn` type-params — the
+    /// dictionary site, RFC-0019 §4.1 — so a `: bound` here is a never-silent parse refusal, mirroring
+    /// a `type`/`trait` head). Empty for the plain `impl T { … }` block (the identity — every M-664
+    /// program is unchanged). At the Phase-0 desugar these params are **prepended** to each lifted
+    /// method's `fn` type-parameters, so a generic inherent method becomes an ordinary generic free
+    /// function and monomorphization reuses the existing fn-generics path (KC-3/DRY).
+    pub params: Vec<String>,
     /// The type the methods are associated with (`impl Binary{8} { … }` ⇒ `Binary{8}`).
     pub for_ty: TypeRef,
     /// The method definitions, lifted verbatim to top-level `fn`s at desugar time.

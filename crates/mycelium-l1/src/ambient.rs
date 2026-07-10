@@ -446,7 +446,13 @@ impl Resolver {
         for m in &id.methods {
             methods.push(self.fn_decl(amb, m)?);
         }
-        Ok(InherentImplDecl { for_ty, methods })
+        // DN-103 / M-1026: the impl-level type-parameter names are inert here (ambient carries no
+        // per-param frame); pass them through unchanged so the desugar sees the faithful block.
+        Ok(InherentImplDecl {
+            params: id.params.clone(),
+            for_ty,
+            methods,
+        })
     }
 
     fn fn_decl(&mut self, amb: Option<Paradigm>, fd: &FnDecl) -> Result<FnDecl, AmbientError> {
@@ -1101,7 +1107,14 @@ fn print_impl_decl(id: &ImplDecl) -> String {
 
 /// Canonical surface form of an inherent method block `impl T { fn … }` (DN-03 §1 / M-664).
 fn print_inherent_impl_decl(id: &InherentImplDecl) -> String {
-    let mut s = format!("impl {} {{\n", print_type_ref(&id.for_ty));
+    // DN-103 / M-1026: render the impl-level type-parameter slot `impl[T, …]` when present (empty for
+    // the plain M-664 block — the identity, printed exactly as before).
+    let tps = if id.params.is_empty() {
+        String::new()
+    } else {
+        format!("[{}]", id.params.join(", "))
+    };
+    let mut s = format!("impl{} {} {{\n", tps, print_type_ref(&id.for_ty));
     for m in &id.methods {
         // DN-57 §3 (M-818): each inherent method is a component — terminated by `;`.
         s.push_str(&format!("  {}", terminate_item(&print_fn_decl(m))));

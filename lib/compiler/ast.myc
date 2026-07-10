@@ -443,14 +443,19 @@ fn objectdecl_impls(o: ObjectDecl) => Vec[ImplDecl] =
 fn objectdecl_fns(o: ObjectDecl) => Vec[FnDecl] =
   match o { OD(_, _, _, _, _, _, f) => f };
 
-// ── InherentImplDecl (mirrors ast.rs::InherentImplDecl — M-664 `impl T { fn … }`) ───────────────
-type InherentImplDecl = IID(TypeRef, Vec[FnDecl]);
+// ── InherentImplDecl (mirrors ast.rs::InherentImplDecl — M-664 + DN-103 `impl[T]? T { fn … }`) ────
+// First field: the impl-level type-parameter slot (DN-103 / M-1026 / ENB-3) — unbounded names, Nil
+// for the plain M-664 block.
+type InherentImplDecl = IID(Vec[Bytes], TypeRef, Vec[FnDecl]);
+
+fn inherentimpldecl_params(i: InherentImplDecl) => Vec[Bytes] =
+  match i { IID(p, _, _) => p };
 
 fn inherentimpldecl_for_ty(i: InherentImplDecl) => TypeRef =
-  match i { IID(t, _) => t };
+  match i { IID(_, t, _) => t };
 
 fn inherentimpldecl_methods(i: InherentImplDecl) => Vec[FnDecl] =
-  match i { IID(_, m) => m };
+  match i { IID(_, _, m) => m };
 
 // ── LowerRhs (mirrors ast.rs::LowerRhs — DN-54 §10 the RHS of a `lower` rule; FLAG-ast-5 LR-
 // prefix, both variants renamed since `Impl` collides with `Item::Impl`) ────────────────────────
