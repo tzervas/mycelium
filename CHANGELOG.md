@@ -12,6 +12,51 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### docs(planning): zero-hand-port delta ledger + DN-109 idiom/structural design (2026-07-10)
+
+Lands the capstone planning deliverable for the zero-hand-port program: a five-layer analysis
+swarm (L1 hand-expressibility ceiling, L2 engines, L3 transpiler, L4/L5 idiom + structural design,
+plus a DX/QoL track) synthesized into one living register.
+
+- **`docs/planning/zero-hand-port-delta-ledger.md`** (Status: Draft, living — updated in place as
+  phases close). Frames the program around two numbers: the ~85% hand-expressibility ceiling (L1)
+  vs the ~7.8% measured auto-transpile floor (`checked_fraction`, L3) — the delta between them is
+  the roadmap. Finds ~75-80% of the ~812 measured gap instances are downstream language/kernel
+  surface, not transpiler defects (empirically proven: faithful new transpiler rules moved
+  `checked_fraction` by 0 across several ladder phases; only kernel/language surface closures
+  moved it). Records the visitor-DRY meta-gap (a new `Expr` variant costs ~13 hand-edits) as the
+  force-multiplier to build first, and the flat-emit stem-collision data-loss bug as an L5
+  prerequisite fix. Names 6 strategic forks for the maintainer (F1, acquiring a borrowck frontend,
+  is pivotal). Supporting per-layer inventories committed as appendices under
+  `docs/planning/zero-hand-port/` (`delta-L2-engines.md`, `delta-L3-transpiler.md`,
+  `delta-DX-qol.md`, `delta-L4L5-idiom-structural-DRAFT.md`).
+- **DN-109 — Layer-4 Idiom-Optimal Transpilation and Layer-5 Structural Remapping**
+  (`docs/notes/DN-109-Idiom-Optimal-Transpilation-And-Structural-Remapping.md`, **Draft, pending
+  ratification** — house rule #3, not self-ratified). Recommends a three-bucket idiom-decision
+  framework (Mechanical auto-emit / Heuristic-plus-flag / Judgment-flag-never-guess) bound by a
+  conjunctive no-silent-upgrade ratchet (semantics-preserving, no inferred `swap` per S1, no
+  guarantee-tag upgrade per VR-5, EXPLAIN-recorded), plus a structure-preserving-1:1 default and a
+  **mandatory remap manifest** (`remap.json`/`REMAP.md`) as the transpiler's structural + idiom
+  provenance artifact of record. Verify-first finding (mitigation #14): the transpiler's batch mode
+  discards directory structure today and last-writer-wins on stem collision — a real data-loss bug,
+  not just a missing feature.
+- **Seven new tracked issues filed** (`tools/github/issues.yaml`, epic E32-1, all `status:todo`):
+  **M-1041** (DRY `ExprVisitor`/fold trait — the L2 meta-gap and DX-D1 finding converged
+  independently on the same gap), **M-1042** (structured, source-tree-mirroring transpiler output
+  with path-qualified nodule names, fixing the flat-emit collision), **M-1043** (per-item
+  `// src: file:line` provenance breadcrumbs in emitted `.myc`), **M-1044** (the remap manifest,
+  gated on DN-109's ratification), **M-1045** (actionable `suggested_idiom` on gap diagnostics),
+  **M-1046** (closest-to-clean investment ranking in the vet report), **M-1047** (transpiler DX
+  polish: `mycfmt` post-pass, dry-run/summary mode, minimal arg parsing — combined). One prior DX
+  finding (the tree-sitter `priv` grammar gap) had already independently landed same-day as M-1039
+  and is recorded as closed rather than re-filed (verified against the codebase before filing,
+  mitigation #14).
+
+`docs/Doc-Index.md` updated with the DN-109 row and a zero-hand-port program pointer under
+Build Status. `python3 -c "import yaml; yaml.safe_load(...)"` clean, no duplicate ids;
+`tools/github/doc_refs_check.py` clean; `scripts/checks/markdown.sh` green on all touched/new
+`.md` files.
+
 ### fix(grammar,docs): terminal-review fast-follows — tree-sitter `priv` structural gap + wrong path citation (M-1039/M-1040) (2026-07-10)
 
 Two small findings from the terminal review of the enb-wave batch, tracked and closed same-day.

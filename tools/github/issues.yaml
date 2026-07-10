@@ -14481,3 +14481,229 @@ issues:
       for the same class of error in this pass (scope-limited to the row found) — a fuller citation
       sweep across the ledger's other rows is not covered by this issue and is not currently tracked
       elsewhere; flagged here in case a future doc-hygiene pass wants to pick it up.
+
+  - id: M-1041
+    title: "M-1041 — DRY ExprVisitor/fold trait across the mycelium-l1 walkers and the transpiler's emit.rs (the visitor-DRY meta-gap)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:chore, area:language, priority:P2, status:todo]
+    epic: E32-1
+    depends_on: [M-641]
+    doc_refs:
+      - corpus:DN-109
+      - src:crates/mycelium-l1/src/totality.rs
+      - src:crates/mycelium-transpile/src/emit.rs
+    body: |
+      Filed 2026-07-10 from the zero-hand-port delta-ledger analysis (docs/planning/zero-hand-port-delta-ledger.md
+      §3/§4.5, DN-109 §9). TWO independent analyses converged on the same gap: the L2 engine audit found
+      that a new `Expr` variant touches ~13 sites (8 exhaustive walkers in mycelium-l1 — parse, ambient,
+      checkty, elab, eval, grade, mono, totality — plus fmt, plus ~5 mirror encoders in lib/compiler/*.myc);
+      the DX/QoL audit independently found emit.rs/map.rs in mycelium-transpile are ~15 free `emit_*`/`map_*`
+      functions (emit_expr_inner alone a 19-arm match) with the same shape of tax. M-641 (E4-1, done)
+      already extracted `totality::walk_expr`, a depth-budgeted callback HOF reused for pure *collection*
+      passes (call-set/cycle/free-var) — it is NOT a semantic visitor: every pass needing per-variant
+      handling still writes its own exhaustive match. This issue is the force-multiplier: a real
+      trait-based `ExprVisitor`/fold (or an equivalent dispatch macro) that lets one new Expr variant be
+      ONE edit instead of ~13, spanning both mycelium-l1's walkers and mycelium-transpile's emit/map
+      dispatch. The M-1006 transpiler ladder pays this tax every phase, so this is on the critical path.
+
+      User stories:
+      - As a compiler engineer adding a new Expr variant, I want one visitor trait to implement instead
+        of hand-editing 13 separate exhaustive matches, so that language-surface closure work (the
+        dominant zero-hand-port lever per the ledger §2) isn't slowed by a DRY tax on every construct.
+
+      Definition of Done:
+      - A trait-based `ExprVisitor`/fold abstraction lands over the mycelium-l1 walkers AND
+        mycelium-transpile's emit/map dispatch (or a documented reason the two crates need separate
+        abstractions); adding a synthetic test variant/case demonstrates a single-site edit; Rust
+        exhaustiveness still catches a missed arm at compile time (no silent gap); `cargo test`
+        byte-identical on existing walker outputs; no guarantee-tag change (VR-5); net LOC trends down
+        or flat despite the added abstraction.
+
+  - id: M-1042
+    title: "M-1042 — structured (source-tree-mirroring) transpiler output with path-qualified nodule names"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:tooling, priority:P2, status:todo]
+    epic: E32-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-109
+      - src:crates/mycelium-transpile/src/bin/mycelium-transpile.rs
+      - src:crates/mycelium-transpile/src/batch.rs
+    body: |
+      Filed 2026-07-10 from the zero-hand-port delta-ledger analysis (docs/planning/zero-hand-port-delta-ledger.md
+      §4/§4.5, DN-109 §5.1/§9). `run_batch` (mycelium-transpile.rs) writes FLAT `out_dir/<stem>.myc`,
+      discarding the Rust module directory structure; two files sharing a stem (e.g. two `mod.rs`)
+      collide last-writer-wins with only a WARNING (bin:222-229) — a real data-loss bug, mitigated today
+      only at the workflow layer (regenerate.sh gives each target its own out-dir) but not in the CLI
+      itself. This is DN-109 §5.1's path-model prerequisite: preserve the Rust `mod` tree as a nodule
+      dotted path (`a/b/mod.rs` -> `nodule a.b;`) and mirror the source tree under out_dir
+      (`<rel/path>.myc`), making the CLI collision-safe on its own, not just via the driver-script
+      workaround.
+
+      User stories:
+      - As a hand-porter running the transpiler directly (not via regenerate.sh), I want the output tree
+        to mirror the Rust source tree with path-qualified nodule names, so that I never silently lose a
+        file to a stem collision.
+
+      Definition of Done:
+      - Batch-mode output mirrors the source directory structure under out_dir; nodule paths are
+        dotted-qualified from the mod tree; two same-stem files (e.g. two `mod.rs`) both survive with
+        distinct qualified names; the last-writer-wins WARNING path is removed (structurally impossible,
+        not just warned); existing single-file-mode behavior unchanged; tests in the crate's
+        src/tests/ layout; `just transpile-vet` still green.
+
+  - id: M-1043
+    title: "M-1043 — per-item `// src: file:line` provenance breadcrumbs in emitted .myc"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:tooling, priority:P3, status:todo]
+    epic: E32-1
+    depends_on: [M-1042]
+    doc_refs:
+      - corpus:DN-109
+      - src:crates/mycelium-transpile/src/emit.rs
+      - src:crates/mycelium-transpile/src/gap.rs
+    body: |
+      Filed 2026-07-10 from the zero-hand-port delta-ledger analysis (docs/planning/zero-hand-port-delta-ledger.md
+      §4.5 DX-D3b). The `// nodule:` header and `@summary` provenance banner are already emitted
+      (transpile.rs:449-465) but there is no PER-ITEM `// src: <file>:<line>` breadcrumb above each
+      emitted item — a hand-porter must cross-reference gap.json to locate the original Rust source for
+      any given emitted item. The span data already exists on `Gap`/the syn node; this is a small,
+      high-leverage addition (rated the single biggest hand-porter accelerator in the DX audit).
+
+      User stories:
+      - As a hand-porter refining an emitted draft, I want each item's Rust source location inline as a
+        comment, so that I don't have to cross-reference a separate gap report to find what I'm editing.
+
+      Definition of Done:
+      - Every emitted top-level item carries a `// src: <relative-path>:<line>` comment immediately
+        above it; span data sourced from the same location already captured for `Gap`; comment format
+        documented in the crate README; `just transpile-vet` / `mycfmt` unaffected (comment syntax
+        already supported); tests assert the breadcrumb on a small fixture.
+
+  - id: M-1044
+    title: "M-1044 — the remap manifest (remap.json / REMAP.md): item-granular structural + idiom provenance ledger"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:tooling, priority:P2, status:todo]
+    epic: E32-1
+    depends_on: [M-1042]
+    doc_refs:
+      - corpus:DN-109
+      - src:crates/mycelium-transpile/src/batch.rs
+    body: |
+      Filed 2026-07-10 from DN-109 §5.2 (the L5 structural-remapping design). Gated on DN-109's
+      ratification of §7-c (whether the manifest is a new artifact or extends the existing
+      summary.json/union.gap.json) and the v0 auto-fire set (§7-e) — do not begin implementation before
+      those forks are resolved by the maintainer (house rule #3). Once ratified: a committed,
+      item-granular sidecar per transpiled phylum — machine-readable `remap.json` plus a rendered
+      `REMAP.md` — recording, per target nodule, the restructuring `operation`
+      (Keep/Consolidate/Split/Relocate/CrateToPhylum), `sources` (rust_path/rust_span/moved_items),
+      `rationale`, `safety` (Safe/Review per DN-109 §4.2), `api_surface_changed`, `identity_neutral`
+      (ADR-003), plus an `idiom_choices` EXPLAIN trail (the L4 decision-class + chosen/alternative +
+      reason per DN-109 §3.2 clause 4). This is the maintainer's "mapped, documented, explained
+      (how/where/why)" hard requirement, mandatory from v0 even for pure 1:1 Keep.
+
+      User stories:
+      - As a reviewer of a ported phylum, I want one machine-readable ledger with every non-1:1
+        structural decision and every non-mechanical idiom choice explained, so I can audit a port
+        without diffing the Rust by eye (DN-109 §1.2).
+
+      Definition of Done:
+      - DN-109 §7-c and §7-e ratified first (this issue does not decide them); schema matches the
+        ratified version of DN-109 §5.2; emitted for every batch run (v0: pure Keep entries plus any
+        idiom_choices already made, e.g. `&T` erasure); `REMAP.md` byte-derivable from `remap.json`;
+        never a black box (S4) — every non-Mechanical choice has a `reason`; tests assert schema +
+        round-trip; no guarantee-tag upgrade from the manifest's existence alone (VR-5).
+
+  - id: M-1045
+    title: "M-1045 — actionable suggested_idiom field on transpiler gap diagnostics"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:tooling, priority:P3, status:todo]
+    epic: E32-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-109
+      - src:crates/mycelium-transpile/src/gap.rs
+    body: |
+      Filed 2026-07-10 from the zero-hand-port delta-ledger analysis (docs/planning/zero-hand-port-delta-ledger.md
+      §4.5 DX-D6). Gap reasons already say what/why (gap.rs, e.g. good detail on `NamedFieldDrop`) but
+      rarely give the exact hand-idiom to apply next — never-silent is satisfied but not maximally
+      helpful. Add an optional `suggested_idiom` field to `Gap`, populated for the common, well
+      understood classes (record literal -> positional ctor ordering hint; `use` -> the cross-nodule
+      FLAG with the DN-109-recommended manual workaround; reserved-word -> a rename suggestion). Must
+      never guess a *semantic* answer (Judgment-class gaps get no suggestion, or an explicitly-flagged
+      one) — this is a documentation aid, not a new auto-transform (does not change §3.2's ratchet).
+
+      User stories:
+      - As a hand-porter facing a gap, I want a suggested next step where one is safely knowable, so
+        that never-silent diagnostics are also genuinely actionable, not just honest.
+
+      Definition of Done:
+      - `Gap.suggested_idiom: Option<String>` populated for at least the record/reserved-word/import
+        classes; never populated for Judgment-class gaps without an explicit human-facing caveat; field
+        surfaced in `gap.json` and the human-readable report; tests cover populated + intentionally-empty
+        cases; no change to `checked_fraction`/`expressible_fraction` semantics.
+
+  - id: M-1046
+    title: "M-1046 — \"closest-to-clean\" investment ranking in the vet report"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:tooling, priority:P3, status:todo]
+    epic: E32-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-109
+      - src:crates/mycelium-transpile/src/vet.rs
+    body: |
+      Filed 2026-07-10 from the zero-hand-port delta-ledger analysis (docs/planning/zero-hand-port-delta-ledger.md
+      §4.5 DX-D8). `checked_fraction` is file-gated all-or-nothing (vet.rs:143,
+      checked_clean_items_is_file_gated_all_or_nothing) — one poison item zeros a whole file's credit,
+      and the report never says which item to fix first, nor ranks files by how close they are to fully
+      clean. `VetRecord::diagnostic` already captures the first check-error per file. Add a ranked
+      worklist to the vet/manifest output: files ordered by (emitted minus checked) delta, each with its
+      first blocking diagnostic surfaced, so a porter knows where to invest fix-up effort first.
+
+      User stories:
+      - As a porter working through the M-1006 ladder, I want the vet report to rank files by how close
+        they are to fully clean with the blocking diagnostic up front, so that I fix the highest-leverage
+        file first instead of scanning the whole union report.
+
+      Definition of Done:
+      - Vet output includes a ranked-by-delta file list with each entry's first blocking diagnostic
+        (reusing the existing `VetRecord::diagnostic` capture, no new parsing); ranking is stable/
+        deterministic; tests assert the ranking on a small fixture with a known delta ordering; no
+        change to the underlying file-gated `checked_fraction` metric itself (this is a reporting
+        addition, not a metric change).
+
+  - id: M-1047
+    title: "M-1047 — transpiler DX polish: mycfmt post-pass, dry-run/summary mode, minimal arg parsing"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:chore, area:tooling, priority:P3, status:todo]
+    epic: E32-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-109
+      - src:crates/mycelium-transpile/src/bin/mycelium-transpile.rs
+      - src:crates/mycelium-transpile/src/transpile.rs
+    body: |
+      Filed 2026-07-10 from the zero-hand-port delta-ledger analysis (docs/planning/zero-hand-port-delta-ledger.md
+      §4.5 DX-D4/D5/D12), combined into one polish issue per the ledger's own recommendation (these are
+      small, disjoint-effort, non-blocking QoL items on the same CLI binary). Three closures: (D4)
+      emitted `.myc` is hand-rolled `chunks.join("\n\n")` (transpile.rs:462) with no canonical
+      formatting — add an optional `--fmt` post-pass piping emission through `mycfmt` (M-364) for
+      readable drafts; (D5) the CLI always writes artifacts, add `--summary`/`--dry-run` to compute and
+      print the gap/category/fraction table without writing files, for fast gap-profiling; (D12) arg
+      parsing is a hand-rolled `env::args` loop with no `--help` (bin:33-42) — once these flags land
+      (>=3 total), adopt a minimal arg helper. Watch/incremental mode explicitly deferred (YAGNI, corpus
+      is small).
+
+      User stories:
+      - As a porter profiling a crate before committing to a full port, I want a dry-run mode that
+        prints the gap distribution without writing files, so I can triage quickly (ties to the
+        /myc-drafts triage-before-porting workflow).
+      - As a reader of a generated draft, I want it passed through mycfmt, so the formatting is
+        canonical rather than whatever the emitter hardcoded.
+
+      Definition of Done:
+      - `--fmt` post-pass available (opt-in, off by default to keep byte-for-byte reproducibility the
+        default per the DX audit's confirmed-GOOD determinism finding); `--summary`/`--dry-run` writes
+        nothing and prints the same table already computed for stdout; `--help` documents all flags;
+        existing default (no-flag) behavior byte-identical to today; tests cover each new flag.
