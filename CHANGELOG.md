@@ -12,6 +12,40 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### feat(transpile): flip DN-99 #72 string-literal `match` gap→emit on the M-1035 enabler; gap fabricated conversion no-ops (2026-07-10)
+
+The first **enabler-driven transpiler win**: now that **M-1035 / ENB-12** landed the L1
+match-on-`Bytes` enabler (DN-99 register row #72), the Rust→Mycelium transpiler flips #72 from
+*gapped* to *emitted* — `match s { "yes" => true, _ => false }` lowers to the faithful, `myc
+check`-clean `match s { "yes" => True, _ => False }` (`&str` → `Bytes`, `"yes"` verbatim,
+`true`/`false` → `True`/`False`). Scope: `crates/mycelium-transpile` only (PR #1372 → dev). Emissions
+stay `Declared` (no guarantee tag upgraded — VR-5).
+
+- **Emit only WITH a wildcard/default arm; else gap, never-silently (G2/VR-5).** `Bytes` is an OPEN
+  value domain, so M-1035's W7 coverage rejects a non-exhaustive `Bytes` match (`non-exhaustive match
+  on Bytes: missing _`). The `Expr::Match` guard emits a string-literal match **only** when it carries
+  an unguarded irrefutable default (wildcard `_` or a bare binding); a defaultless string-literal
+  match still gaps with the precise open-domain reason — never a check-failing non-exhaustive surface.
+  Pinned by `string_literal_pattern_emits_with_l1_enabler` (positive + the defaultless-gaps negative).
+- **Co-fix: gap Rust ownership/identity-conversion no-op methods, never fabricate a prim (G2/VR-5).**
+  `.to_owned()` / `.clone()` / `.to_string()` / `.into()` / `.as_ref()` / … have no Mycelium
+  free-function or prim referent (value semantics — ADR-003), so the old bare-call desugar
+  (`recv.to_owned()` → `to_owned(recv)`) **fabricated** a call to a non-existent prim (`myc check`:
+  `unknown function/constructor/prim to_owned`). These are now gapped explicitly instead of
+  fake-emitted. This un-poisons real files under the vet loop's file-gated `checked_fraction` (the
+  `checkty::vsa_kernel_model_id` string-`match` whose arm bodies are `"MAP-I".to_owned()` now gaps
+  cleanly rather than dragging a fabricated `to_owned` into an emission). Pinned by
+  `conversion_noop_method_gaps_never_fabricates_unknown_prim`.
+- **Measured effect (`Empirical`).** `checked_fraction` on the 24-target port-surface corpus rises
+  **6.193% → 6.740% (+0.547pp)** — but the load-bearing change is *correctness*: no more fabricated
+  prims (an honest gap is the right outcome for an unmapped conversion — VR-5/G2). The corpus win now
+  awaits the conversion-method mapping (`ToOwned`/`Clone`/`ToString`/`Into` → identity-or-real-surface),
+  filed as the next `checked_fraction` lever.
+- **How verified (change-scoped).** `cargo test -p mycelium-transpile` green (62 tests, incl. the two
+  new pins) · `cargo fmt --check` clean · `cargo clippy -p mycelium-transpile --all-targets -D
+  warnings` clean. The `Bytes`-match surface's `myc check`-cleanliness rides M-1035's own three-way
+  differential (`crates/mycelium-l1/tests/enablement.rs`), unchanged here.
+
 ### feat(l1): admit a `Bytes` scrutinee in `match` — M-1035 (ENB-12) (2026-07-10)
 
 Closes **DN-99 register row #72** (string-literal match pattern): the L1 checker now admits a `match`

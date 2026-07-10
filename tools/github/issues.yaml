@@ -14244,3 +14244,72 @@ issues:
       FOLLOW-UP (now UNBLOCKED, separate transpile-crate PR — outside the mycelium-l1 lane): the trx #72
       pin `string_literal_pattern_gaps_with_l1_enabler_reason` (`crates/mycelium-transpile/src/emit.rs`
       + `tests/emit.rs`) can flip from *gapped* to *emitted* now that the L1 enabler has landed.
+
+      DISCHARGED (2026-07-10, PR #1372 → dev): the language-enabler this issue delivered is now
+      consumed by the transpiler — the trx #72 arm flips *gapped* → *emitted* (`emit.rs` `Expr::Match`
+      now emits a string-literal match WITH a wildcard/default arm, else gaps the open-`Bytes`
+      non-exhaustive surface never-silently; the pin was renamed `string_literal_pattern_gaps_with_l1_
+      enabler_reason` → `string_literal_pattern_emits_with_l1_enabler`). The measured `checked_fraction`
+      corpus win is small (+0.547pp, 6.193% → 6.740%) because most string-`match` arm bodies are
+      ownership/identity-conversion no-ops (`.to_owned()`/`.clone()`/…) that the same PR now GAPS rather
+      than fabricates (the honest never-silent outcome, G2/VR-5). The full corpus win awaits the
+      conversion-method mapping — filed as M-1037 (the next `checked_fraction` lever).
+
+  - id: M-1037
+    title: "transpiler conversion-op method mapping — ToOwned/Clone/ToString/Into → identity-or-real-surface"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:transpile, priority:P2, status:todo]
+    epic: E28-1
+    depends_on: [M-1035]
+    doc_refs:
+      - corpus:DN-99
+      - corpus:DN-34
+      - corpus:DN-101
+      - src:crates/mycelium-transpile/src/emit.rs
+    body: |
+      Minted 2026-07-10 (PR #1372 → dev integration close-out, the trx #72 emit-flip follow-up). The
+      next `checked_fraction` lever on the 24-target port-surface corpus. PR #1372 landed the DN-99 #72
+      string-literal `match` emit flip (riding the M-1035/ENB-12 L1 enabler) but the measured corpus
+      gain was small (+0.547pp, 6.193% → 6.740%) because most string-`match` arm bodies — and much of
+      the surrounding port surface — are Rust **ownership/identity-conversion no-op methods**
+      (`ToOwned::to_owned`, `Clone::clone`, `ToString::to_string`, `Into::into`, `AsRef`/`Borrow`/
+      `Deref` accessors, `to_vec`, `as_str`/`as_slice`). Mycelium is value-semantic (ADR-003), so a
+      bare-call desugar (`recv.to_owned()` → `to_owned(recv)`) FABRICATES a call to a non-existent prim
+      (`myc check`: `unknown function/constructor/prim to_owned`) — a G2/VR-5 violation. PR #1372's
+      interim fix GAPS these never-silently (`is_unmappable_conversion_method` in `emit.rs`), which is
+      correct-but-lossy: the emission is honest, but the arm/expression does not count toward
+      `checked_fraction`.
+
+      This issue is the real fix: map each conversion op to its faithful Mycelium surface — an
+      **identity lowering** where value semantics make it a no-op (`recv.to_owned()`/`.clone()`/`.into()`
+      /`.as_ref()` → `recv`), or a **real free-function/prim surface** where one exists or should be
+      surfaced (`.to_string()` on a non-`Bytes` value → a `Display`/format lowering; `.to_vec()` → the
+      Seq copy form). Also resolve the pre-existing gap-vs-fabricate decision for the other unmapped
+      method receivers surfaced by the vet loop (`ne`, `fetch_add`, `contains`) — each either maps to a
+      real prim or gaps never-silently, never fabricates. Every mapping is an EXPLAIN-able, never-silent
+      decision; emissions stay `Declared` until a differential upgrades them (M-991 verdict, DN-34
+      §8.7–§8.8); no guarantee tag upgraded (VR-5).
+
+      **Relates to M-1024 (ENB-1) / the transpiler unknown-prim symbol-table FLAG (FLAG-tr-unknown-prim,
+      DN-101):** the general fix for "does this method/prim have a real referent?" is the symbol table
+      the transpiler currently lacks — a bare-call desugar cannot today distinguish a real prim from a
+      fabricated one without it. M-1037 can land the conservative hand-mapped conversion set immediately
+      (the closed, canonical no-op class), and fold into the symbol-table-driven check once M-1024's
+      unknown-prim table exists (avoid re-litigating the same gap-vs-fabricate decision per method).
+
+      User stories:
+      - As a stdlib porter, I want the transpiler to lower a Rust `.to_owned()`/`.clone()`/`.into()`
+        conversion to its faithful (usually identity) Mycelium surface, so that a string-dispatch port
+        whose arm bodies are `"MAP-I".to_owned()` counts toward `checked_fraction` instead of gapping
+        the whole file.
+
+      Definition of Done:
+      - Each ownership/identity-conversion no-op method maps to a faithful Mycelium surface (identity or
+        real free-function/prim), `myc check`-clean, verified against the real oracle in the vet loop; a
+        measured `checked_fraction` rise on the 24-target corpus recorded (`Empirical`).
+      - The `ne`/`fetch_add`/`contains` (and any remaining) unmapped receivers are each mapped or gapped
+        never-silently — no fabricated bare call survives (the `conversion_noop_method_gaps_never_
+        fabricates_unknown_prim` pin generalized to assert no unknown-prim fabrication for the mapped set).
+      - No guarantee tag upgraded; emissions stay `Declared` pending a differential (VR-5/G2). Cross-ref
+        M-1024 / FLAG-tr-unknown-prim resolved or explicitly deferred with the symbol-table dependency
+        noted.

@@ -353,6 +353,32 @@ fn zero_bin_literal(width: u32) -> String {
     s
 }
 
+/// Whether `method` is a Rust **ownership/identity-conversion no-op** whose bare-call desugar would
+/// fabricate a non-existent Mycelium prim. In value-semantic Mycelium (ADR-003) these are identity
+/// or unmapped conversions with no free-function/prim referent, so `recv.method()` → `method(recv)`
+/// is a check-failing fabrication (`unknown function/constructor/prim `method``) — the caller gaps
+/// them, never-silently, instead of emitting (G2/VR-5). The set is deliberately conservative: only
+/// the canonical `ToOwned`/`Clone`/`ToString`/`Into`/`AsRef`/`Borrow`/`Deref` accessors whose sole
+/// effect is ownership/representation identity, never an operation that computes a value.
+fn is_unmappable_conversion_method(method: &str) -> bool {
+    matches!(
+        method,
+        "to_owned"
+            | "to_string"
+            | "to_vec"
+            | "clone"
+            | "into"
+            | "as_str"
+            | "as_ref"
+            | "as_slice"
+            | "as_mut"
+            | "borrow"
+            | "borrow_mut"
+            | "deref"
+            | "deref_mut"
+    )
+}
+
 /// If `trait_name`/`method` identify a `Widen::widen` method whose `Self`/target both map to
 /// `Binary{N}`/`Binary{M}` (unsigned widening) with `M > N`, return the faithful `width_cast`
 /// body. `None` for every other shape (bool/float/signed self types, non-`Widen` impls, or a
@@ -813,6 +839,26 @@ fn emit_expr_inner(expr: &Expr, self_ty: Option<&str>, env: &TypeEnv) -> Result<
         }
         Expr::Match(m) => {
             let scrutinee = emit_expr(&m.expr, self_ty, env)?;
+            // M-1035/ENB-12: a string-literal arm implies a `Bytes` scrutinee, and `Bytes` is an
+            // OPEN value domain — the L1 checker's W7 coverage rejects a non-exhaustive `Bytes`
+            // match (`non-exhaustive match on Bytes: missing _`, verified against the oracle). So a
+            // string-literal `match` is emittable-and-check-clean ONLY with a wildcard/default arm;
+            // without one, emit nothing (gap the whole match) rather than a check-failing surface
+            // that would regress `checked_fraction` (VR-5/G2). Non-string matches are unaffected.
+            if m.arms.iter().any(|a| pattern_contains_str_lit(&a.pat))
+                && !m
+                    .arms
+                    .iter()
+                    .any(|a| a.guard.is_none() && is_irrefutable_match_default(&a.pat))
+            {
+                return Err(GapReason::new(
+                    Category::Other,
+                    "string-literal `match` on a `Bytes` scrutinee without a wildcard/default arm \
+                     (`_ => …`): `Bytes` is an open value domain, so the L1 checker rejects a \
+                     non-exhaustive match (`non-exhaustive match on Bytes: missing _` — M-1035/ \
+                     ENB-12 W7 coverage); emitting it would regress checked_fraction (VR-5/G2)",
+                ));
+            }
             let mut arms = Vec::with_capacity(m.arms.len());
             for arm in &m.arms {
                 if arm.guard.is_some() {
@@ -1053,6 +1099,29 @@ fn emit_expr_inner(expr: &Expr, self_ty: Option<&str>, env: &TypeEnv) -> Result<
                         call
                     });
                 }
+            }
+            // A Rust **ownership/identity-conversion no-op method** (`ToOwned::to_owned`,
+            // `Clone::clone`, `ToString::to_string`, `Into::into`, `AsRef`/`Borrow` accessors, …)
+            // has NO Mycelium free-function or prim referent: Mycelium is value-semantic (ADR-003),
+            // so these are either identity or an unmapped conversion — desugaring `recv.to_owned()`
+            // to a bare `to_owned(recv)` FABRICATES a call to a non-existent prim (`myc check`:
+            // `unknown function/constructor/prim to_owned`), which is exactly the never-silent
+            // violation the house rules forbid (G2/VR-5). Gap it explicitly instead of emitting a
+            // check-failing surface. (This is the #72 co-poison fix: the string-literal-`match`
+            // enabler (M-1035) let `checkty::vsa_kernel_model_id`'s match emit, but its arm bodies
+            // are `"MAP-I".to_owned()` — without this gap, the fabricated `to_owned` poisons the
+            // whole file under the vet loop's file-gated all-or-nothing `checked_fraction`.)
+            if is_unmappable_conversion_method(&method_name) {
+                return Err(GapReason::new(
+                    Category::Other,
+                    format!(
+                        "Rust ownership/identity-conversion no-op method `.{method_name}()` has no \
+                         Mycelium free-function/prim referent (value semantics — ADR-003); \
+                         desugaring it to a bare `{method_name}(recv)` would fabricate an unknown \
+                         prim (`unknown function/constructor/prim `{method_name}`` — verified \
+                         against the oracle), so it is gapped, never fake-emitted (G2/VR-5)"
+                    ),
+                ));
             }
             // Declared mapping decision: the grammar's `app_expr` has no postfix method-call
             // form (`primary ('(' args? ')')*` only) — desugar `recv.method(args)` to
@@ -1414,6 +1483,33 @@ fn collect_pattern_bound_names(pat: &Pat, out: &mut HashSet<String>) {
     }
 }
 
+/// Whether a match-arm pattern is (or, through `|`/parens/refs, contains) a **string-literal**
+/// pattern — the M-1035/ENB-12 marker that the scrutinee is `Bytes`. Drives the `Expr::Match`
+/// open-domain exhaustiveness guard (a `Bytes` match needs a wildcard/default arm). Mirrors the
+/// same transparent `Pat::Or`/`Pat::Paren`/`Pat::Reference` descent as [`map_pattern_inner`].
+fn pattern_contains_str_lit(pat: &Pat) -> bool {
+    match pat {
+        Pat::Lit(pl) => matches!(&pl.lit, Lit::Str(_)),
+        Pat::Or(po) => po.cases.iter().any(pattern_contains_str_lit),
+        Pat::Paren(pp) => pattern_contains_str_lit(&pp.pat),
+        Pat::Reference(pr) => pattern_contains_str_lit(&pr.pat),
+        _ => false,
+    }
+}
+
+/// Whether a match-arm pattern is an **irrefutable default** — a wildcard `_` or a bare identifier
+/// binding (no `ref`, no subpattern) — i.e. the catch-all arm that satisfies M-1035's open-`Bytes`
+/// W7 coverage requirement. A guarded arm is never a default (its guard makes it conditional); the
+/// caller pairs this with an `a.guard.is_none()` check.
+fn is_irrefutable_match_default(pat: &Pat) -> bool {
+    match pat {
+        Pat::Wild(_) => true,
+        Pat::Ident(pi) => pi.by_ref.is_none() && pi.subpat.is_none(),
+        Pat::Paren(pp) => is_irrefutable_match_default(&pp.pat),
+        _ => false,
+    }
+}
+
 /// Translate one Rust pattern. Exhaustive `match` over `syn::Pat`; fallback arm errors.
 ///
 /// **RFC-0041 §4.7 (W1):** guarded by the crate-wide recursion budget (`crate::gap::guarded`) —
@@ -1459,27 +1555,24 @@ fn map_pattern_inner(pat: &Pat) -> Result<String, GapReason> {
             Lit::Bool(b) => Ok(if b.value { "True" } else { "False" }.to_string()),
             Lit::Int(i) => Ok(i.base10_digits().to_string()),
             // A **string-literal** pattern (`"foo" => …`) is grammatically a valid Mycelium pattern
-            // (`pattern ::= literal ::= StrLit`, grammar line 305/414), BUT the L1 checker
-            // categorically REJECTS a `match` whose scrutinee is `Bytes` — verified against the real
-            // oracle: `check-error: match scrutinee must be a data, Binary, or Ternary type, got
-            // Bytes`. So this is **not** a transpiler-only gap (the register's DN-99 #72 `tr-only`
-            // guess is wrong — mitigation #14): emitting the faithful surface would produce
-            // parse-clean but check-*failing* `.myc`, regressing `checked_fraction`. It is gapped
-            // never-silently with the precise LANGUAGE-ENABLER reason (L1 needs match-on-`Bytes` /
-            // string-literal-pattern support) rather than fake-emitted (VR-5/G2). See DN-34 §8.21.
-            Lit::Str(_) => Err(GapReason::new(
-                Category::Other,
-                "string-literal match pattern (`\"…\" => …`): grammatically valid Mycelium surface \
-                 (`pattern ::= literal ::= StrLit`) but the L1 checker rejects a `match` on a \
-                 `Bytes` scrutinee (`match scrutinee must be a data, Binary, or Ternary type, got \
-                 Bytes` — verified against the real oracle), so this is a LANGUAGE-ENABLER gap \
-                 (L1 match-on-`Bytes`), NOT transpiler-only — emitting it would regress \
-                 checked_fraction (DN-99 #72 reclassified by trx profiling; VR-5/G2)",
-            )),
+            // (`pattern ::= literal ::= StrLit`, grammar line 305/414). It was previously gapped
+            // because the L1 checker categorically rejected a `match` whose scrutinee is `Bytes`
+            // (`match scrutinee must be a data, Binary, or Ternary type, got Bytes`). **M-1035 /
+            // ENB-12 landed that enabler** (`check_match` now admits `Ty::Bytes` with byte-string
+            // literal arms — DN-99 #72 reclassified `tr-only` → language-enabler, then unblocked),
+            // so a string-literal arm now emits and `myc check`-cleans — verified against the real
+            // oracle (`fn c(s: Bytes) => Bool = match s { "yes" => True, _ => False };` → `ok`).
+            // The **open-`Bytes` exhaustiveness** requirement (M-1035's W7 coverage: a `Bytes` match
+            // needs a wildcard/default arm, else `non-exhaustive match on Bytes: missing _`) is
+            // enforced at the `Expr::Match` level (see `pattern_contains_str_lit` /
+            // `is_irrefutable_match_default`), so a string-literal match is emitted only when it
+            // carries the default M-1035 requires — never a check-failing non-exhaustive one
+            // (VR-5/G2). See DN-34 §8.21 and `string_literal_pattern_emits_with_l1_enabler`.
+            Lit::Str(s) => myc_string_literal(&s.value()),
             _ => Err(GapReason::new(
                 Category::Other,
-                "unsupported literal pattern kind (only bool/int literal patterns map; a string \
-                 literal pattern needs an L1 match-on-`Bytes` enabler — DN-99 #72 / DN-34 §8.21)",
+                "unsupported literal pattern kind (only bool/int/string literal patterns map; \
+                 a float/byte/char literal pattern has no faithful Mycelium surface — VR-5/G2)",
             )),
         },
         Pat::Or(po) => {

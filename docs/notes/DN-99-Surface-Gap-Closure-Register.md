@@ -132,7 +132,7 @@ unblocker, e.g. #41).
 | 69 | restricted-visibility-modifier (`pub(crate)`) | idiom | ac | `ast.rs:42`; DN-53 §B.6 Q1 | collapse to binary; field newtype → seal idiom | no `pub(` survives; genuine sub-scope FLAGged | no | DN-53 §B.6 Q1/B.5 | none | S | P2 |
 | 70 | **format-string-mini-language** | **partial** | **ac+rt** | `fmt.myc:19`; `transpile.rs:298`; M-533 | hand-compose over Bytes; Display + `{:.2e}` prim = M-533 | idiom recipe; M-533 DN for float-precision prim | **yes** | M-533; DN-34 §8 | **HIGH** (residual) | L | **P1** |
 | 71 | tuple-let-destructure (transpiler) | partial | tr | `emit.rs:569`; M-826 | `let (a,b)=e`→`match e{(a,b)=>…}` in Stmt::Local | vet: `let (` sites off MultiStmtBody-gap | no | M-1006 | low | S | P2 |
-| 72 | string-literal-pattern | language-enabler | rt | `emit.rs:1458`; DN-34 §8.21; M-1035 | L1 enabler — accept `match` on a `Bytes` scrutinee (M-1035); the transpiler arm emits once it lands (now gapped never-silently, G2) | L1 accepts match-on-`Bytes`; the `emit.rs` gap flips to emitted in lockstep (`string_literal_pattern_gaps_with_l1_enabler_reason`) | yes | M-1035; DN-34 §8.21 | HIGH | S | P2 |
+| 72 | string-literal-pattern | closed | rt | `emit.rs`; DN-34 §8.21; M-1035; PR #1372 | L1 enabler landed (M-1035/ENB-12) AND the transpiler arm now EMITS (PR #1372): `match s { "yes" => True, _ => False }`, `myc check`-clean — emit only WITH a wildcard/default arm (open-`Bytes` W7), else gaps never-silently (G2/VR-5) | closed: `string_literal_pattern_emits_with_l1_enabler` pins emit+defaultless-gap; corpus win awaits conversion-method mapping (M-1037) | no | M-1035; PR #1372; DN-34 §8.21 | low (residual: M-1037) | S | P2 |
 | 73 | or-pattern-in-match-arm | closed | cl | `emit.rs:1466`; M-873; RFC-0020 §9 | none — emits end-to-end (100% witnessed) | one regression fixture (nice-to-have) | no | M-873; RFC-0020 §9 | none | S | P3 |
 | 74 | reserved-word-ctor-declaration | idiom | ac | `lex.myc:96-127`; `core.myc:82` | prefix-rename at decl (Kw-/G-/S-) + FLAG | docs enumerate the decl slot | no | DN-02/03; DN-80 §5 | low | S | P3 |
 | 75 | drop-trait-raii-destructor | idiom | ac | `checkty.rs:49`; `ambient.myc:362` | rewrite RAII as explicit depth-threading | budget-threading differential parity | no | RFC-0031; DN-84 | HIGH (port site) | S | P3 |
@@ -370,3 +370,15 @@ policy, #10 payload-variant census refresh, #24 struct-literal `..rest`.
   DN-101), so it is not a standalone transpiler-only win. The prior "add-an-arm / `myc check`-clean"
   DoDs were the stale guesses. Only the two rows' classification + tracking are corrected here
   (append-only spirit — the register's structure is unchanged); see DN-34 §8.21 for the measured basis.
+- **2026-07-10** — **row #72 CLOSED (emitted-with-enabler): the M-1035/ENB-12 L1 enabler was
+  consumed by the transpiler (PR #1372 → dev).** The trx #72 arm flipped *gapped* → *emitted* — a
+  string-literal `match` now lowers to the faithful, `myc check`-clean `match s { "yes" => True, _ =>
+  False }` (`&str` → `Bytes`, `true`/`false` → `True`/`False`), but only WITH a wildcard/default arm;
+  a defaultless string-literal match still gaps never-silently (an open-`Bytes` non-exhaustive surface
+  is check-failing — VR-5/G2). Pinned by `string_literal_pattern_emits_with_l1_enabler`. The measured
+  corpus win is small (`checked_fraction` +0.547pp, 6.193% → 6.740%) because most string-`match` arm
+  bodies are ownership/identity-conversion no-ops (`.to_owned()`/`.clone()`/…) that PR #1372 now GAPS
+  rather than fabricates (the honest never-silent outcome) — the full corpus win awaits the
+  conversion-method mapping, filed as **M-1037** (relates to the ENB-1 unknown-prim symbol table /
+  FLAG-tr-unknown-prim on **M-1024** / DN-101). Row #72's classification + notes are corrected here;
+  the register's structure is unchanged (append-only spirit, house rule #3).
