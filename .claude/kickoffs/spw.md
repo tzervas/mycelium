@@ -76,8 +76,8 @@ need `wild`/`@std-sys` side-effect handling.) One isolated worktree per target.
 - **sccache** shared compile cache on; **cap concurrency** to fit disk; **clean the worktree `target/`**
   on leaf completion; watch `df` between rounds.
 - **Heavy durability is OFF the leaf loop** — it runs ONCE on the desktop via
-  **`scripts/wave-desktop-checks.sh`** (full `just check` + `check-full` + the self-hosting differentials
-  + the VSA/GPU bundle), results committed back. Cloud/leaf sessions run only the light tiers.
+  **`scripts/wave-desktop-checks.sh`** (full `just check` + `check-full` + the self-hosting differentials +
+  the VSA/GPU bundle), results committed back. Cloud/leaf sessions run only the light tiers.
 
 ## Swarm flow
 
@@ -89,8 +89,8 @@ files it owns (`harness/mod.rs` is read-only to leaves; `Cargo.toml`, `CHANGELOG
 
 ## Definition of Done (Wave-0 pilot)
 
-- The pilot validates the loop end-to-end: ≥1 stdlib module ported with a **green three-way differential**
-  + native `myc check`, landed as a scoped PR, with the swarm mechanics (isolated worktrees, sccache,
+- The pilot validates the loop end-to-end: ≥1 stdlib module ported with a **green three-way differential** +
+  native `myc check`, landed as a scoped PR, with the swarm mechanics (isolated worktrees, sccache,
   disk) confirmed under parallel load.
 - Each ported module: three-way differential green (`Empirical`); no `lib/` edit from a corpus run;
   no silent gap (every deviation FLAGged).
@@ -106,7 +106,7 @@ files it owns (`harness/mod.rs` is read-only to leaves; `Cargo.toml`, `CHANGELOG
 ## Grounding
 
 `gen/myc-drafts/MANIFEST.md` (per-target `checked%` + gap categories) · DN-34 §8.7–§8.9 (M-991 verdict) ·
-`crates/mycelium-std-conformance/tests/harness/mod.rs` (the D5 harness) · `/myc-drafts` + `/transpile-vet`
-+ `/wave` + `/pr-land` skills · **ADR-042** (Rust-base freeze + Mycelium-first, kernel-included end-state)
+`crates/mycelium-std-conformance/tests/harness/mod.rs` (the D5 harness) · `/myc-drafts` + `/transpile-vet` +
+`/wave` + `/pr-land` skills · **ADR-042** (Rust-base freeze + Mycelium-first, kernel-included end-state)
 · **ADR-043** (retire-when-proven + `archive` branch) · ADR-035/M-867 (superseded by ADR-043's per-crate
 gate) · CLAUDE.md §Concurrent-PR development + §Wave-N workflow + mitigations #6/#11/#14.
