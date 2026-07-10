@@ -1458,9 +1458,28 @@ fn map_pattern_inner(pat: &Pat) -> Result<String, GapReason> {
         Pat::Lit(pl) => match &pl.lit {
             Lit::Bool(b) => Ok(if b.value { "True" } else { "False" }.to_string()),
             Lit::Int(i) => Ok(i.base10_digits().to_string()),
+            // A **string-literal** pattern (`"foo" => …`) is grammatically a valid Mycelium pattern
+            // (`pattern ::= literal ::= StrLit`, grammar line 305/414), BUT the L1 checker
+            // categorically REJECTS a `match` whose scrutinee is `Bytes` — verified against the real
+            // oracle: `check-error: match scrutinee must be a data, Binary, or Ternary type, got
+            // Bytes`. So this is **not** a transpiler-only gap (the register's DN-99 #72 `tr-only`
+            // guess is wrong — mitigation #14): emitting the faithful surface would produce
+            // parse-clean but check-*failing* `.myc`, regressing `checked_fraction`. It is gapped
+            // never-silently with the precise LANGUAGE-ENABLER reason (L1 needs match-on-`Bytes` /
+            // string-literal-pattern support) rather than fake-emitted (VR-5/G2). See DN-34 §8.21.
+            Lit::Str(_) => Err(GapReason::new(
+                Category::Other,
+                "string-literal match pattern (`\"…\" => …`): grammatically valid Mycelium surface \
+                 (`pattern ::= literal ::= StrLit`) but the L1 checker rejects a `match` on a \
+                 `Bytes` scrutinee (`match scrutinee must be a data, Binary, or Ternary type, got \
+                 Bytes` — verified against the real oracle), so this is a LANGUAGE-ENABLER gap \
+                 (L1 match-on-`Bytes`), NOT transpiler-only — emitting it would regress \
+                 checked_fraction (DN-99 #72 reclassified by trx profiling; VR-5/G2)",
+            )),
             _ => Err(GapReason::new(
                 Category::Other,
-                "unsupported literal pattern kind (only bool/int literal patterns map)",
+                "unsupported literal pattern kind (only bool/int literal patterns map; a string \
+                 literal pattern needs an L1 match-on-`Bytes` enabler — DN-99 #72 / DN-34 §8.21)",
             )),
         },
         Pat::Or(po) => {
