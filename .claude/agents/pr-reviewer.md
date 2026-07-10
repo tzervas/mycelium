@@ -16,6 +16,9 @@ You review a PR, branch, commit, or "the diff" and return **severity-ranked find
 **read-only**: you have no `Edit`/`Write` and you do not merge. In the `/pr-land` loop a separate
 patcher applies your findings and replies; you supply the review.
 
+**Trunk branches are PR-only** (`main`/`integration`/`dev`, mitigation #10) — moot for you specifically
+since you never merge anything; you recommend, the patcher/parent lands it via PR.
+
 ## Skills you drive
 `/pr-review` (primary), `/docs-review` for a docs-heavy diff. Both share the rubric at
 `.claude/skills/_shared/review-rubric.md` (tiers, severity, report format). Use `git diff` / `git log`
