@@ -12,6 +12,33 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### docs(dn-106): triage ENB-10 statement-sequencing + record-update — both closed at L1 (M-1033) (2026-07-10)
+
+Adds **DN-106 — Statement-Sequencing (`let _`) + Record-Update / Mutation Split: a Triage (ENB-10)**
+(Draft) plus four pinning regression witnesses in `crates/mycelium-l1/tests/enablement.rs` — **no
+AST/grammar/code change**. Per mitigation #14 (verify a stale issue's claim against the codebase before
+implementing), the M-1033 triage finds that **both** ENB-10 sub-gaps' language side is **already closed at
+L1**, three-way witnessed (L1-eval ≡ elaborate→L0-interp ≡ trampoline-AOT):
+
+- **Part 1 — statement-sequencing `let _ = e in body`** is an ordinary `let` whose binder is the
+  identifier `_` (grammatical `ebnf:291`/`ebnf:447`, parsed, checked, evaluated, elaborated) and is
+  moreover the established affine drop/use-once surface (DN-71/M-903). Two pins lock the plain and the
+  ascribed `let _: T = e in body` discard forms.
+- **Part 2 — functional field-update** is the already-expressible destructure-and-reconstruct
+  `match base { Ctor(f0, …) => Ctor(f0, …, NEW, …) }` (Mycelium has positional constructors, no
+  named-field record literal and no field-projection, by design — KC-3). One pin locks the reconstruct
+  form value-correct; one never-silent pin locks that a Rust-style `{ ..base, field: v }` record-update
+  literal has **no** Mycelium surface and is an explicit parse refusal (G2), never a silent mis-parse.
+
+The real residual is entirely **transpiler-lane** (`crates/mycelium-transpile`: the `let _` emit and the
+mutation→functional rewrite), confirming DN-99 register row #89's own `tr`/`low` tags and correcting the
+M-1033 issue body's over-scoped "grammar-`enb`, HIGH collision, touches `crates/mycelium-l1/**`" framing
+(mitigation #14). **M-1033's L1/semcore residual is NIL**; the issue is re-scoped to its transpiler-lane
+residual. DN-106 enacts nothing and moves no other doc's status (append-only, house rule #3); tags are
+`Empirical` where three-way-witnessed, `Declared` for the unratified Part-2 fork resolution (VR-5).
+Reviewed per `/pr-review` (PR #1373); the pins keep the closure from silently regressing. (DN-106 Draft;
+DN-99 #89 aligned; M-1033 re-scoped; VR-5 / G2 / house rules #3/#4.)
+
 ### feat(transpile): flip DN-99 #72 string-literal `match` gap→emit on the M-1035 enabler; gap fabricated conversion no-ops (2026-07-10)
 
 The first **enabler-driven transpiler win**: now that **M-1035 / ENB-12** landed the L1

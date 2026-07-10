@@ -344,6 +344,20 @@ DN + tracking issue** for the integrator to file. All touch the **cloud semcore 
 | ENB-10 | statement-sequencing (`let _`) + record-update-mutation split | transpiler + grammar-`enb` | #89 | low/HIGH | P2 | Part 1 tr-only; Part 2 (mutation→functional) separate DN-gated |
 | ENB-11 | signed/format ratification notes (idiom-close) | idiom (docs) | #70 (idiom arm), #26 | none | P1 | Display-composition recipe; float `{:.2e}` prim residual = ENB-5-adjacent |
 
+> **ENB-10 triage update (2026-07-10, DN-106 — append-only, this note's decisions unchanged).** M-1033
+> (ENB-10) was triaged per mitigation #14 (verify a stale issue's claim against the codebase before
+> implementing). Finding: **both** sub-gaps' LANGUAGE side is already closed at L1 — three-way witnessed
+> (L1-eval ≡ elaborate→L0-interp ≡ trampoline-AOT) and pinned as four regression witnesses in
+> `crates/mycelium-l1/tests/enablement.rs` (PR #1373) — which resolves the tension between **this
+> register's own two ENB-10 tags**: row #89 carries layer `tr` / collision `low`, while the §8 ENB-10
+> backlog synthesis (above) carried `transpiler + grammar-`enb`` / `low/HIGH` and deferred Part 2's
+> classification to "a separate DN." **DN-106 is that DN**, and resolves it in favour of row #89's
+> `tr`/`low`: **M-1033's L1/semcore residual is NIL**; the real residual is entirely transpiler-lane
+> (Part 1 `let _` emit for value-producing discarded statements; Part 2 the mutation→functional
+> destructure-and-reconstruct rewrite). A `{ ..base, field: v }` record-update literal has no Mycelium
+> surface by design (positional constructors, DN-106 §2/§3) and its addition to L1 is rejected (fork B).
+> See **DN-106** (Draft).
+
 **Transpiler-only closures needing NO new DN** (file as ordinary tracking issues under M-1006 / the trx2
 ladder): #72 string-literal pattern, #85 byte-literal/byte-string, #71 tuple-let-destructure, #21
 field-access desugar, #29 struct-variant pattern, #64 turbofish-never-silent, #50 impl/derive emit

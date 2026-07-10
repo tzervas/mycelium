@@ -14128,31 +14128,53 @@ issues:
         upgrades it (M-991); no fabricated output on an unexpandable macro (never-silent gap).
 
   - id: M-1033
-    title: "enb ENB-10 — statement-sequencing (`let _`) + record-update-mutation split"
+    title: "enb ENB-10 — statement-sequencing (`let _`) + record-update-mutation split (L1 closed; transpiler-lane residual)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P2, status:todo]
+    labels: [phase:5, type:feature, area:transpile, priority:P2, status:todo]
     epic: E28-1
     depends_on: [M-1023]
     doc_refs:
+      - corpus:DN-106
       - corpus:DN-99
       - corpus:DN-34
       - src:crates/mycelium-transpile/src/emit.rs
     body: |
-      From DN-99 §8 ENB-10 (Draft backlog). Closes register row #89 (statement-sequencing body, partial).
-      Two parts: Part 1 (transpiler-only, `low` collision) — emit `let _ = e in body` for value-producing
-      discarded statements in `Stmt::Local`; Part 2 (grammar-`enb`, HIGH collision) — the
-      record-update-mutation→functional rewrite is a SEPARATE DN-gated gap that touches
-      `crates/mycelium-l1/**`: cloud-semcore-lane, coordinate M-1013 for Part 2 only. Part 1 lands in
-      `crates/mycelium-transpile/**` with no coordination. Needs a Draft DN for Part 2.
+      From DN-99 §8 ENB-10 (Draft backlog); register row #89 (statement-sequencing body). **Triaged
+      2026-07-10 (DN-106, mitigation #14 — verify a stale issue's claim against the codebase before
+      implementing).** The triage finding: **both** ENB-10 sub-gaps' LANGUAGE side is ALREADY CLOSED at
+      L1 — three-way witnessed (L1-eval ≡ elaborate→L0-interp ≡ trampoline-AOT), pinned as four
+      regression witnesses in `crates/mycelium-l1/tests/enablement.rs` (PR #1373). So **M-1033's
+      L1/semcore residual is NIL** and the earlier "Part 2 = grammar-`enb`, HIGH collision, touches
+      `crates/mycelium-l1/**`, coordinate M-1013" framing is CORRECTED as over-scoped (DN-99 #89's own
+      tags already agree — layer `tr`, collision `low`; no M-1013 coordination, no L1 change).
+
+      - Part 1 — statement-sequencing `let _ = e in body` — is an ordinary `let` whose binder is the
+        identifier `_` (grammatical `ebnf:291`/`ebnf:447`; parsed, checked, evaluated, elaborated; the
+        established affine drop/use-once surface, DN-71/M-903). The residual is the TRANSPILER emit of
+        `let _ = e in body` for value-producing discarded `Stmt::Local` statements.
+      - Part 2 — functional field-update — is the already-expressible destructure-and-reconstruct
+        `match base { Ctor(f0, …) => Ctor(f0, …, NEW, …) }` (Mycelium has positional constructors, no
+        named-field record literal and no field-projection BY DESIGN — DN-106 §2/§3, KC-3; the
+        `{ ..base, field: v }` record-update literal is a never-silent parse refusal today, G2). The
+        residual is the TRANSPILER mutation→functional rewrite (a translation policy that must never
+        fabricate a mutation it was not taught).
+
+      This issue is therefore now scoped to the transpiler-lane residual only (both parts land in
+      `crates/mycelium-transpile/**`, no semcore coordination). Design ratification of the triage +
+      Part-2 fork resolution rides DN-106 (Draft).
 
       User stories:
-      - As a transpiler maintainer, I want value-producing statements emitted as `let _ = e in body`, so
-        that statement-sequenced Rust bodies translate without dropping the effect.
+      - As a transpiler maintainer, I want value-producing statements emitted as `let _ = e in body` and
+        Rust struct-update / in-place mutation rewritten to the already-expressible functional
+        destructure-and-reconstruct target, so that statement-sequenced and field-updating Rust bodies
+        translate without dropping the effect or fabricating a mutation the transpiler was not taught.
 
       Definition of Done:
+      - L1/semcore residual: NIL (closed — three-way witnessed by the PR #1373 pins; do not re-implement).
       - Part 1: the transpiler emits `let _ = e in body`; vet shows `let (`/discarded-value sites off the
-        MultiStmtBody gap. Part 2: the mutation→functional rewrite is scoped to a separate Draft DN (not
-        conflated); neither part fabricates mutation the transpiler was not taught (never-silent).
+        MultiStmtBody gap. Part 2: the mutation→functional rewrite lands per DN-106's fork A (translation
+        rules only, no L1 record-update sugar); neither part fabricates mutation the transpiler was not
+        taught (never-silent, G2/VR-5).
 
   - id: M-1034
     title: "enb ENB-11 — signed/format idiom-ratification notes (port-guide close)"
