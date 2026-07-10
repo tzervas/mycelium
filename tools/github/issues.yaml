@@ -13718,6 +13718,13 @@ issues:
       M-982. HIGH semcore-lane collision — touches `crates/mycelium-l1/**`: cloud-semcore-lane, coordinate
       M-1013 (unfrozen-actionable, NOT deferred-by-freeze). Needs a Draft DN before implementation.
 
+      Cross-ref (trx increment, 2026-07-10; DN-34 §8.21): also tracks **FLAG-tr-unknown-prim** — the
+      transpiler's generic method-call desugar (`emit.rs` `Expr::MethodCall` fallthrough) emits unknown
+      prim methods blindly (`b.is_ascii_alphanumeric()` becomes `is_ascii_alphanumeric(b)`, a
+      plausible-but-wrong VR-5/G2 emission). Closing it cleanly needs a known-prim set / symbol table,
+      which the cross-nodule symbol resolution this issue establishes (register #21/#50) is the natural
+      home for — so no separate issue is filed (mitigation #14).
+
       User stories:
       - As a stdlib porter, I want a `.myc` nodule to call symbols defined in another nodule at RUNTIME,
         so that a multi-nodule port runs end-to-end instead of local-mirroring every shared ADT.
@@ -13938,6 +13945,7 @@ issues:
     doc_refs:
       - corpus:DN-99
       - corpus:DN-34
+      - corpus:DN-100
       - src:crates/mycelium-transpile/src/transpile.rs
     body: |
       From DN-99 §8 ENB-9 (Draft backlog). Closes register row #51 (macro-expand, transpiler-only). A
@@ -14009,3 +14017,37 @@ issues:
       - The RFC-0031 port guide records the Display-composition recipe and the signed idiom; the residual
         float-precision prim is explicitly cross-referenced to M-1028/M-533 (not silently folded into the
         idiom); docs-only, no code.
+
+  - id: M-1035
+    title: "enb ENB-12 — L1 `match` on a `Bytes` scrutinee (string-literal-pattern enabler)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:todo]
+    epic: E28-1
+    depends_on: [M-1023]
+    doc_refs:
+      - corpus:DN-99
+      - corpus:DN-34
+      - src:crates/mycelium-l1/src/checkty.rs
+    body: |
+      From the trx transpiler-increment profiling (DN-34 §8.21, 2026-07-10; FLAG-L1-match-Bytes). The L1
+      checker categorically REJECTS a `match` whose scrutinee is `Bytes` (`check-error: match scrutinee
+      must be a data, Binary, or Ternary type, got Bytes` — verified against the real `myc check` oracle).
+      This blocks DN-99 register #72 (string-literal match pattern): grammatically valid Mycelium surface
+      (`pattern ::= literal ::= StrLit`) that the transpiler now gaps never-silently rather than emit
+      check-failing `.myc` (VR-5/G2). Reclassified from DN-99 #72's `tr-only` guess to a LANGUAGE-ENABLER
+      gap (mitigation #14) — the enabler unblocks #72 and every string-`match` port target. HIGH
+      semcore-lane collision — touches `crates/mycelium-l1/**` (the checker's match-scrutinee-type rule):
+      cloud-semcore-lane, coordinate the serial enb pipeline / M-1013 (unfrozen-actionable per ADR-045,
+      not deferred-by-freeze). Needs a Draft DN before the L1 change.
+
+      User stories:
+      - As a stdlib porter, I want to `match` on a `&str`/`Bytes` value in `.myc`, so that string-dispatch
+        Rust ports keep their `match "literal" => …` shape instead of hand-lowering to an if-else chain.
+
+      Definition of Done:
+      - The L1 checker accepts a `match` on a `Bytes` scrutinee with string-literal arms (or the ratified
+        equivalent surface); a differential vs the Rust semantics plus conformance accept + reject; the
+        transpiler's #72 gap flips from gapped to emitted once the enabler lands (the trx pin
+        `string_literal_pattern_gaps_with_l1_enabler_reason` updated in lockstep); never-silent on a
+        non-exhaustive/ill-typed match (explicit error, not a panic); a Draft DN records the rule before
+        the L1 change.
