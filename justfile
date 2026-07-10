@@ -293,6 +293,15 @@ issues-sync:
 # Apply ONLY the drifted/missing-issue deltas (create + edit changed fields), capped for safety.
 issues-sync-apply:
     python3 tools/github/sync_issues.py --apply --max-writes 25
+# Disk-usage watchdog + reclaimable worktree target/ dry-run report (never deletes). Run when a
+# build filesystem is getting full — see scripts/disk-watchdog.sh / scripts/worktree-target-sweep.sh.
+reclaim:
+    @bash scripts/disk-watchdog.sh || true
+    @bash scripts/worktree-target-sweep.sh
+# Actually reclaim: delete merged/idle worktree target/ dirs found by `just reclaim` (review its
+# dry-run output first).
+reclaim-apply:
+    @bash scripts/worktree-target-sweep.sh --apply
 # Build rustdoc HTML locally (NOT committed — output in target/doc/).
 docs:
     cargo doc --workspace --no-deps
