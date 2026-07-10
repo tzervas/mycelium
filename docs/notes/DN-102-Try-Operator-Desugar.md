@@ -329,7 +329,10 @@ Read against the tree: `Tok::Question` (`token.rs:389`), `Expr::Try(Box<Expr>)` 
 `check_try_let` (`checkty.rs:4435`) desugaring `let x = e? in body` type-directed to the §2 `match`,
 `Try` never surviving the checker (no new L0 node), and the general-position refusal
 (`checkty.rs:4078` — "`?` … is only supported as a `let`-binder RHS in v0 … needs the general-position
-CPS lift, which is deferred"), witnessed by `tests/try_operator.rs` (6 behavioural + 4 reject). **The
+CPS lift, which is deferred"), witnessed by `tests/try_operator.rs` (8 data-driven behavioural cases
+in one differential test, 5 never-silent-reject tests, plus 1 affine-consume regression test —
+corrected count, PR #1395 review; the earlier "6 behavioural + 4 reject" figure undercounted both).
+**The
 landed increment is exactly the base case of the unified sugar in SP.3** and needs **no revision**. The
 only correction the second pass makes to its *framing* is the one DN-107 already applied append-only to
 the M-1025 issue body: FLAG-try-1's general-`?` residual is **independent of the never-type** — a
@@ -384,10 +387,15 @@ rule #2, VR-5, DN-109 D13); KC-3/YAGNI. Recorded, not silently dropped (house ru
    only the *invisibility*. That is the intended trade under G2 (the same trade S1 makes for `swap`).
    The *ergonomic* cost (an extra `map_err`) is the driver that would later justify the explicit-
    conversion sugar (SP.2 item 3) — witnessed-need, not speculative.
-2. **"`map_err` is HOF — does it even run in `.myc`?"** Checked: `map`/`and_then`/`map_err` are executable
-   via RFC-0024 static defunctionalization (M-685/686/687), three-way witnessed (M-688) — per
-   `lib/std/result.myc:7` `@summary`. So the native solution is **`Empirical`-executable**, not a paper
-   combinator. (Its *agreement* is `Empirical`; the type-level contract is `Declared` — unchanged.)
+2. **"`map_err` is HOF — does it even run in `.myc`?"** Checked, with a correction (PR #1395 review):
+   `map`/`and_then` are named as executable via RFC-0024 static defunctionalization (M-685/686/687),
+   three-way witnessed (M-688), per `lib/std/result.myc:7` `@summary` — but that `@summary` line does
+   **not** name `map_err` among the witnessed HOF combinators. `map_err` (`lib/std/result.myc:39`) has
+   the identical single-arg-closure shape as `map`, so it is very likely executable by the same
+   defunctionalization mechanism, but this is **not itself witnessed** by the cited `@summary` —
+   `map_err`'s *agreement* claim stays `Declared` until a differential exercises it directly (not
+   upgraded past this basis, VR-5). The native-solution argument (item 1 above) does not depend on
+   this upgrade — an unexecuted `Declared` combinator is still the honest, non-black-box mapping.
 3. **"Ratifying a `let`-RHS-only `?` blesses a half-operator."** It blesses the **witnessed base case of
    one sugar** (SP.3), with the general case explicitly scoped as an additive CPS-lift follow-up — the
    KISS/YAGNI increment the project uses everywhere (`Wrapping` precedent). Not a different design later;
@@ -449,6 +457,7 @@ rule #2, VR-5, DN-109 D13); KC-3/YAGNI. Recorded, not silently dropped (house ru
 
 ## Changelog
 
+- **2026-07-11** — **PR #1395 review correction (grounding, append-only).** Fixed two citations in the second research pass below: SP.4's `tests/try_operator.rs` count corrected from "6 behavioural + 4 reject" to the actual 8 data-driven behavioural cases + 5 reject tests + 1 regression test; SP.6 item 2's `map_err`-executable claim narrowed — the cited `lib/std/result.myc:7` `@summary` witnesses `map`/`and_then`/`fold` as executable, not `map_err` by name, so `map_err`'s *agreement* claim stays `Declared` (not upgraded past this basis, VR-5) rather than asserted `Empirical`-executable. No other content changed.
 - **2026-07-11** — **Second research pass added (M-1049) — re-staged for ratification** (append-only;
   the original §1–§7 design record is unchanged). Grounds the `?` desugar in the now-ratified frame:
   DN-106 (sugar-transparency + the gap-closure default — `?` is the archetypal mechanically-lowering
