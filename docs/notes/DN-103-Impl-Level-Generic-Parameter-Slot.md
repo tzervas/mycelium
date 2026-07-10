@@ -60,7 +60,7 @@ type_params ::= '[' ident (',' ident)* ']'       // reuses parse_type_params_opt
 monomorphize:
 
 - **(A) Parse-time flatten.** At parse, prepend `T` to each method's `fn` type-params and construct the
-  ordinary `InherentImplDecl` with **no** new field — the method is born as `fn get[T](x: Foo[T]) => T`.
+  ordinary `InherentImplDecl` with **no** new field — the method is born as `fn get[T]` over `(x: Foo[T]) => T`.
   *Zero* AST/walker/encoder blast radius. **But** it discards the impl-block structure at the earliest
   stage: the AST no longer records "these methods share an impl-level `T`", so the canonical printer
   (`print_inherent_impl_decl`) and any AST consumer see a flattened form — i.e. it **is** the
@@ -110,7 +110,7 @@ method's `sig.params`. Consequences, all free:
 2. A call `get(some_foo_of_Binary8)` infers `T = Binary{8}` and monomorphizes to `get$Binary8` exactly as
    any generic free function does; two call sites at two type args emit two specializations — the §7
    witness.
-3. A **duplicate** between an impl param and a method's own param (`impl[T] Foo[T] { fn g[T](…) }`) is
+3. A **duplicate** between an impl param and a method's own param — an `impl[T] Foo[T]` whose method re-binds `T` as `fn g[T]` — is
    caught by the existing duplicate-type-parameter check on the lifted sig (never-silent — G2).
 4. The impl's `for_ty` stays advisory metadata in v0 exactly as today (no qualified `T::m` call surface
    binds to it — the M-664 known gap is unchanged; the generic slot does not alter that boundary).
@@ -157,7 +157,7 @@ each implements.
   `get$Binary16`), each with empty type-params (the M-673 closure invariant) — the ENB-3 witness.
 - **Reject (never-silent, G2)** — (a) `impl[T] Trait for Foo[T] { … }` → the generic-trait-instance
   deferral refusal; (b) `impl[T: Cmp] Foo[T] { … }` → the impl-slot bound refusal; (c)
-  `impl[T] Foo[T] { fn g[T](…) }` → the duplicate-type-parameter refusal.
+  an `impl[T] Foo[T]` whose method re-binds `T` as `fn g[T]` → the duplicate-type-parameter refusal.
 - **Dual (DN-26 / `/myc-dogfood`)** — the `.myc` frontend `myc check`-clean with the extended `IID`; the
   Rust-oracle vs `.myc` differential agrees on the accept + the two rejects at the layer each implements.
 - **Guarantee** — `Declared` (surface + a structural desugar into the existing generic-`fn` vehicle),
