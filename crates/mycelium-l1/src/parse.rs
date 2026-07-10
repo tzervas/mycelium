@@ -2264,6 +2264,14 @@ impl Parser {
             let ty = self.parse_type_ref()?;
             e = Expr::Ascribe(Box::new(e), ty);
         }
+        // Postfix try-operator `e?` (DN-102 / M-1025 ENB-2): wrap the expression in an `Expr::Try`
+        // marker. The desugar (type-directed on `e`'s `Result`/`Option` type) and the v0 `let`-binder
+        // position restriction are enforced downstream by the checker (never-silent — DN-102 §5). A
+        // repeated `??` is accepted at the surface (`(e?)?`) and refused by the same checker rule, so
+        // the parser stays position-agnostic and the diagnostic stays in one place.
+        while self.eat(&Tok::Question) {
+            e = Expr::Try(Box::new(e));
+        }
         Ok(e)
     }
 

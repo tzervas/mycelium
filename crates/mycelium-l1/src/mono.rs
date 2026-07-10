@@ -268,7 +268,7 @@ fn body_has_fn_value(env: &Env, e: &Expr) -> bool {
         }
         Expr::Swap { value, .. } => body_has_fn_value(env, value),
         Expr::WithParadigm { body, .. } => body_has_fn_value(env, body),
-        Expr::Wild(b) | Expr::Spore(b) | Expr::Consume(b) | Expr::Wrapping(b) => {
+        Expr::Wild(b) | Expr::Spore(b) | Expr::Consume(b) | Expr::Wrapping(b) | Expr::Try(b) => {
             body_has_fn_value(env, b)
         }
         Expr::Colony(hyphae) => hyphae.iter().any(|h| body_has_fn_value(env, &h.body)),
@@ -306,7 +306,7 @@ fn body_has_lambda(e: &Expr) -> bool {
         }
         Expr::Swap { value, .. } => body_has_lambda(value),
         Expr::WithParadigm { body, .. } => body_has_lambda(body),
-        Expr::Wild(b) | Expr::Spore(b) | Expr::Consume(b) | Expr::Wrapping(b) => body_has_lambda(b),
+        Expr::Wild(b) | Expr::Spore(b) | Expr::Consume(b) | Expr::Wrapping(b) | Expr::Try(b) => body_has_lambda(b),
         Expr::Colony(hyphae) => hyphae.iter().any(|h| body_has_lambda(&h.body)),
         Expr::App { head, args } => body_has_lambda(head) || args.iter().any(body_has_lambda),
         Expr::Fuse { left, right } => body_has_lambda(left) || body_has_lambda(right),
@@ -1331,6 +1331,14 @@ impl<'e> Mono<'e> {
             Expr::Consume(operand) => {
                 let operand2 = self.rewrite(site, scope, operand, expected)?;
                 Ok(Expr::Consume(Box::new(operand2)))
+            }
+            // DN-102 (M-1025 ENB-2): `e?` is a transparent surface marker — rewrite the operand and
+            // reconstruct, exactly as for `Consume`/`Wrapping`. The desugar to the `Result`/`Option`
+            // `match` bind happens in the checker/elab/eval `Let` handling, not in mono (a well-formed
+            // `Try` is always the `bound` of a `Let`), so mono just preserves the marker.
+            Expr::Try(operand) => {
+                let operand2 = self.rewrite(site, scope, operand, expected)?;
+                Ok(Expr::Try(Box::new(operand2)))
             }
             // RFC-0034 §10.1 (CU-5): `wrapping { … }` is a transparent wrapper over a `Binary`
             // arithmetic body — rewrite the body and reconstruct the node so it survives to the L1
@@ -2749,7 +2757,7 @@ fn free_vars_at(
         }
         Expr::Swap { value, .. } => free_vars_at(value, bound, seen, out, depth)?,
         Expr::WithParadigm { body, .. } => free_vars_at(body, bound, seen, out, depth)?,
-        Expr::Wild(b) | Expr::Spore(b) | Expr::Consume(b) | Expr::Wrapping(b) => {
+        Expr::Wild(b) | Expr::Spore(b) | Expr::Consume(b) | Expr::Wrapping(b) | Expr::Try(b) => {
             free_vars_at(b, bound, seen, out, depth)?;
         }
         Expr::Colony(hyphae) => {

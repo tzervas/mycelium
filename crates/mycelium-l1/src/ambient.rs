@@ -677,6 +677,9 @@ impl Resolver {
             // M-664: `consume <expr>` — resolve the operand's ambient (the operand is an ordinary
             // value expression; the `Substrate`-type check is the checker's job).
             Expr::Consume(b) => Expr::Consume(Box::new(self.expr(amb, site, b, depth)?)),
+            // DN-102 (M-1025 ENB-2): `e?` is paradigm-transparent — resolve the operand's ambient and
+            // reconstruct the marker (as for `Consume`/`Wrapping`).
+            Expr::Try(b) => Expr::Try(Box::new(self.expr(amb, site, b, depth)?)),
             // RFC-0034 §10.1 (CU-5): `wrapping { … }` wraps a real `Binary` arithmetic expression —
             // resolve its interior ambient transparently (the enclosed operands need their ambient
             // filled exactly as any expression; the wrapping *mode* is orthogonal to representation
@@ -1249,6 +1252,7 @@ fn print_expr(e: &Expr) -> String {
         Expr::Wild(b) => format!("wild {{ {} }}", print_expr(b)),
         Expr::Spore(b) => format!("spore({})", print_expr(b)),
         Expr::Consume(b) => format!("consume {}", print_expr(b)),
+        Expr::Try(b) => format!("{}?", print_expr(b)),
         Expr::Wrapping(b) => format!("wrapping {{ {} }}", print_expr(b)),
         Expr::Lambda { params, body } => format!(
             "lambda({}) => {}",
