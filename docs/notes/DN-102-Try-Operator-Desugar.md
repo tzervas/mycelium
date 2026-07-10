@@ -164,6 +164,33 @@ KISS increment; §6 tracks the general position.
 - [ ] This note records the desugar, the fork resolution (§2), the unification rule (§3), and the v0
       restriction (§5); the maintainer ratifies (house rule #3).
 
+## Ratification / Maintainer decision (2026-07-11)
+
+> **Not ratified — second research pass required.** Maintainer: *"many must be resolved via language
+> gap closure; the flag try 2 issue presents an issue that must be resolved from that gap review pass
+> and should have been raised as part of it. much of this may just need a second research pass to
+> stage for ratification based on the data, project intent, and solid reasoned research."*
+
+**Recorded decision (append-only — this note's original text above is unchanged; this section adds the
+maintainer's decision, per house rule #3):**
+
+1. **DN-102 status stays Draft.** Ratification of the desugar rule (§2), the error-type unification
+   rule (§3), and the v0 `let`-RHS position restriction (§5) is **deferred**, pending a **second
+   research pass** — one grounded in the DN-99 surface-gap-closure register's data, the project's stated
+   intent (the zero-hand-port north star, ADR-045), and solid reasoned research, rather than ratifying
+   the first-pass design as-is.
+2. **FLAG-try-2 routed into language-gap closure — it should have surfaced in the DN-99 gap review.**
+   §6's **FLAG-try-2** ("no `From`-error widening — the error-type unification rule is exact-match
+   only; a widening `?` is refused until an error-conversion trait lands") is a genuine language-surface
+   gap (no error-conversion trait wiring exists yet) that the maintainer judges should have been raised
+   as part of the DN-99 sweep rather than surfacing only as a residual FLAG here. It is now cross-routed
+   into **DN-99's §8 `enb` backlog** (a dated addendum on the **ENB-2** row records the routing — see
+   `docs/notes/DN-99-Surface-Gap-Closure-Register.md` §8) so the gap is tracked in the register's own
+   surface, not left orphaned in this note's residual list.
+3. **Follow-up filed:** **M-1049** — "DN-102 second research pass + resolve FLAG-try-2 via language gap
+   closure; re-stage for ratification" (`status:todo`, `doc_refs: corpus:DN-102, corpus:DN-99`,
+   `tools/github/issues.yaml`).
+
 ## §8 Grounding
 
 - **KC-3 / no new kernel node:** the desugar targets the existing `Expr::Match` + `Result`/`Option` data
@@ -181,6 +208,10 @@ KISS increment; §6 tracks the general position.
 
 ## Changelog
 
+- **2026-07-11** — **Maintainer decision: NOT ratified — a second research pass is required** (house
+  rule #3). Status stays **Draft**. FLAG-try-2 (`From`-error widening) cross-routed into the DN-99
+  gap-closure register's §8 `enb` backlog (ENB-2 row addendum). Follow-up filed as **M-1049**.
+  Append-only — the original design record above is unchanged; this is an added decision note.
 - **2026-07-10** — DN-102 created as **Draft** (M-1025 / ENB-2). Records the `?` surface + the
   type-directed `match` desugar, the fork resolution (no sound local desugar without a never-type — §2),
   the error-type unification rule (§3), and the v0 `let`-RHS position restriction (§5). Authored with the

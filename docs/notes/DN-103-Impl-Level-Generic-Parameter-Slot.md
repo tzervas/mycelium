@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-103 |
-| **Status** | **Draft** (2026-07-10). Authored alongside the **first landable increment** of M-1026 (ENB-3). It records the design of the impl-level **type-parameter slot** (`impl[T] …`) — surface, grammar, AST, checking, monomorphization — recommends a scoping decision **for ratification**, and **enacts nothing** and **moves no other doc's status** (house rule #3, append-only). Tags are `Empirical` where read against the code / witnessed by a running differential, `Declared` for any design not yet ratified (VR-5). |
+| **Status** | **Accepted** (2026-07-11, maintainer ratification — see the dated "Ratification / Maintainer decision" note below: §3 Fork 1 resolves to **option (B)**, matching this note's own recommendation). Originally **Draft** (2026-07-10). Authored alongside the **first landable increment** of M-1026 (ENB-3). It records the design of the impl-level **type-parameter slot** (`impl[T] …`) — surface, grammar, AST, checking, monomorphization — recommends a scoping decision **for ratification**, and **enacts nothing** and **moves no other doc's status** (house rule #3, append-only). Tags are `Empirical` where read against the code / witnessed by a running differential, `Declared` for any design not yet ratified (VR-5). |
 | **Decides** | *Proposes, for ratification:* (1) an `impl[T, …]` **type-parameter slot** parsed **immediately after the `impl` keyword**, reusing the existing unbounded-name parser (`parse_type_params_opt`) — a `: bound` here is the same never-silent refusal as on a `type`/`trait` head (bounds live only on `fn` type-params, RFC-0019 §4.1); (2) the slot is **threaded into the inherent-impl AST** (`InherentImplDecl.params`), not flattened at parse time — so the impl block stays faithful for printing/round-trip and any AST consumer; (3) at the **Phase-0 desugar** each lifted method gains the impl's params **prepended** to its own `fn` type-parameters, so the method becomes an ordinary **generic free function** and **monomorphization reuses the existing fn-generics path** (zero new mono code, KC-3/DRY); (4) a **duplicate** between an impl param and a method's own param is the existing never-silent duplicate-type-parameter refusal (G2); (5) the **v0 scope restriction**: the slot is honored on **inherent** impls (`impl[T] Foo[T] { … }`); a non-empty slot on a **trait-instance** impl (`impl[T] Trait for Foo[T]`) is a **never-silent refusal** deferring generic trait-instance coherence (RFC-0019 §4.5) to a follow-up; (6) **lifetime erasure is N/A** — Mycelium v0 has no lifetime surface, so the slot is type-params only (the DN-99 "decide lifetime erasure" question resolves to "no lifetimes to erase"). It does **not** edit `issues.yaml`, `CHANGELOG.md`, or `Doc-Index.md` (the integrating session owns those). |
 | **Feeds** | DN-99 §A2 / register row #63 (generic-parameterized impl-block), ENB-3; M-1026; RFC-0019 (traits/generics — the generic + monomorphization machinery this note reuses, already Enacted); DN-03 §1 / M-664 (the inherent-impl block this note extends); DN-26 (SCC self-hosting, the Rust↔`.myc` dual); DN-34 §8 (surface-gap census). |
 | **Grounds on** | KC-3 (small kernel — no new L0 node, no new mono pass; the slot desugars into the existing generic-`fn` form), DRY (reuse `parse_type_params_opt` + the fn-generics monomorphizer), G2 (never-silent — a refused bound / a generic trait-impl / a duplicate param each prints the fix), VR-5 (no tag upgraded past its basis), KISS/YAGNI (inherent-only, type-params-only over a full generic-trait-instance + width-param close). |
@@ -164,8 +164,27 @@ each implements.
   upgraded to `Empirical` by the running conformance + differential witnesses above; **not** upgraded past
   that (no `Proven` claim — VR-5).
 
+## Ratification / Maintainer decision (2026-07-11)
+
+> **SS3 fork-1 → B (maintainer, 2026-07-11).** Maintainer: *"SS3 fork 1 should go with B for sure.
+> ratify."*
+
+**Recorded decision (append-only — this note's original §3 text above is unchanged; this section adds
+the ratification, per house rule #3):** §3 **Fork 1** ("parse-time flatten vs AST slot") resolves to
+**option (B) — AST slot + Phase-0 desugar-prepend**: `InherentImplDecl` carries a `params` field, the
+impl block stays structurally intact through parse/ambient/print, and the impl's type-params are
+prepended to each lifted method at the existing Phase-0 desugar. This **confirms** the note's own §3
+recommendation ("Recommendation: (B)... (A) is definitionally the flatten it supersedes"). §3 Forks 2
+(inherent-only, deferring generic trait-instance impls) and 3 (lifetime erasure resolves N/A) are
+**not** separately overridden by this ratification and stand as originally drafted. **DN-103 moves
+Draft → Accepted** on this basis; §6's residuals (generic trait instances, width-param impls) remain
+open follow-up scope, not blocking this ratification.
+
 ## §8 Changelog
 
+- **2026-07-11** — **Ratified (maintainer, house rule #3).** Status **Draft → Accepted**: §3 Fork 1
+  confirmed as option (B) — AST slot + Phase-0 desugar-prepend (matching the note's own recommendation).
+  Append-only — the original §3 design record above is unchanged; this is an added ratification note.
 - **2026-07-10** — DN-103 created (**Draft**). Recorded the impl-level type-parameter slot design
   (surface/grammar §2; the parse-flatten-vs-AST-slot, inherent-vs-trait-instance, and lifetime-erasure
   forks §3; the fn-generics reuse §4; the Rust↔`.myc` dual §5; residuals §6; the DoD/witnesses §7).

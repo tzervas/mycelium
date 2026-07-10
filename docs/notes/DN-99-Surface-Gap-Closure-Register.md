@@ -357,6 +357,18 @@ DN + tracking issue** for the integrator to file. All touch the **cloud semcore 
 > destructure-and-reconstruct rewrite). A `{ ..base, field: v }` record-update literal has no Mycelium
 > surface by design (positional constructors, DN-106 §2/§3) and its addition to L1 is rejected (fork B).
 > See **DN-106** (Draft).
+>
+> **ENB-2 gap-routing addendum (2026-07-11, maintainer decision on DN-102 — append-only, this
+> register's rows are unchanged).** The maintainer declined to ratify DN-102 (the `?` try-operator
+> desugar) as originally drafted, judging that DN-102's **FLAG-try-2** — no `From`-error widening; the
+> error-type unification rule is exact-match only, since Mycelium has no error-conversion trait wiring —
+> is a genuine **language-surface gap** that should have surfaced in this register's own sweep rather
+> than only as a residual FLAG on the implementing note. It is recorded here, against the **ENB-2** row
+> above, as an explicit sub-gap: **error-conversion-trait wiring for `?`-widening** — no register row
+> number is reassigned (append-only; a future sweep may mint one if warranted). Tracked for
+> implementation-readiness alongside DN-102's required second research pass, filed as **M-1049**
+> (`doc_refs: corpus:DN-102, corpus:DN-99`). See DN-102's "Ratification / Maintainer decision
+> (2026-07-11)" section for the maintainer's exact words.
 
 **Transpiler-only closures needing NO new DN** (file as ordinary tracking issues under M-1006 / the trx2
 ladder): #72 string-literal pattern, #85 byte-literal/byte-string, #71 tuple-let-destructure, #21
@@ -367,6 +379,10 @@ policy, #10 payload-variant census refresh, #24 struct-literal `..rest`.
 
 ## §9 Changelog
 
+- **2026-07-11** — **ENB-2 gap-routing addendum** (§8, after the backlog table): the maintainer's
+  DN-102 non-ratification decision routes **FLAG-try-2** (`From`-error widening) into this register as
+  an explicit sub-gap of the ENB-2 row, tracked via **M-1049**. Append-only — the register's rows and
+  tally are unchanged; this adds a dated cross-reference note only.
 - **2026-07-10** — DN-99 created (**Draft**). Synthesized the spw / RFC-0031 surface-gap closure register
   (92 gaps), the two-track ranked closure plan, the already-closed set (Float-lesson corrections), the
   adversarial-completeness attestation, and the `enb` backlog. `Empirical` where cited against the tree

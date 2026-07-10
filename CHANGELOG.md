@@ -12,6 +12,67 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### docs(notes): maintainer ratification batch — DN-101 through DN-109 (2026-07-11)
+
+Records the maintainer's ratification decisions on all nine ENB/design-reasoner notes from the
+2026-07-10 batch (append-only; house rule #3 — no existing decision text rewritten, each note gains a
+dated "Ratification / Maintainer decision" section plus a Status-line update where the maintainer
+ratified).
+
+- **DN-101 (Cross-Nodule Runtime Link) — Status Draft → Accepted.** The v0 flat-namespace collision
+  policy (§5 option A) is confirmed as the shipped baseline; the long-term choice between §5 option
+  (B) qualified per-frame scoping and option (C) name-mangled qualified keys is explicitly left open
+  for a dedicated planning pass (API design first, then progressive/iterative implementation). Filed
+  **M-1048**.
+- **DN-102 (`?` Try-Operator Desugar) — NOT ratified; stays Draft.** The maintainer requires a second
+  research pass grounded in the DN-99 gap-review data and project intent before re-staging for
+  ratification. **FLAG-try-2** (no `From`-error widening) is cross-routed into DN-99's §8 `enb`
+  backlog as an ENB-2 sub-gap addendum. Filed **M-1049**.
+- **DN-103 (Impl-Level Generic-Parameter Slot) — Status Draft → Accepted.** §3 Fork 1 ("parse-time
+  flatten vs AST slot") is ratified as **option (B)** — the AST slot + Phase-0 desugar-prepend design,
+  matching the note's own recommendation.
+- **DN-104 (Per-Constructor Visibility Seal) — Status stays Draft** (the shipped M-1027 binary seal is
+  not re-ratified as the final design). The maintainer directs pursuing §3's fuller **option (B)**
+  (`pub(path)` scoped visibility) as the long-term successor to the binary `priv` seal. `M-1036`
+  (nodule-qualified type identity) updated with this forward-direction progress note; filed **M-1050**
+  (`depends_on: [M-1036]`) as the design+implementation follow-up.
+- **DN-105 (`match` on a `Bytes` Scrutinee) — Status Draft → Accepted, ratified as drafted.** The §3
+  literal-only-equality fork and the §4 per-surface-form redundancy-key choice both confirmed.
+- **DN-106 (Statement-Sequencing + Record-Update Triage) — Status Draft → Accepted.** §3's fork
+  confirmed (no new L1 grammar); fork (B) reframed as an in-scope, mechanically-lowering, reversibly-
+  expandable **surface sugar**. Establishes two general, project-wide principles: **surface-sugar
+  transparency** (a sugar may be carried when it drives toward the native target, hides nothing via
+  on-demand expand/EXPLAIN, and is purely mnemonic) and the **gap-closure default** (map an excluded
+  construct's underlying problem to Mycelium's native solution — auto-emit where mechanical, flag
+  **with the suggested native idiom** where judgment is needed; bare refusal is the last resort).
+  Cross-linked to DN-109's L4 idiom framework and the zero-hand-port delta ledger. Filed **M-1051**
+  (desugar/expand-on-demand tooling).
+- **DN-107 (Host-Effect Real-Syscall Registry + Never-Type) — Status Draft → Accepted.** Rank 1
+  accepted for both sub-gaps (real `wild:` prims via H-i; divergence-as-effect N-C, no bottom `Ty`).
+  The §6 fork resolved to **6-a**: general-`?` is independent of the never-type. Corrects **M-1025**'s
+  FLAG-try-1 progress note (the "gated on the never-type" framing lived there, not in DN-102's own
+  text) to decouple the CPS lift from M-1030, tracked via M-1049.
+- **DN-108 (Numerics Transcendentals) — Status Draft → Accepted.** Rank 1 accepted (op-level bound in
+  the ADR-010 provenance certificate, v0 tag `Declared`). OQ-3 (vendored vs host libm) accepted with
+  recommendation (vendored/version-locked); OQ-4 resolved to land-now (M-1028). Filed **M-1053**
+  (companion ADR + the OQ-3 implementation decision).
+- **DN-109 (L4 Idiom-Optimal Transpilation + L5 Structural Remapping) — Status Draft (advisory) →
+  Accepted.** The Mechanical-only v0 auto-fire set, the remap-manifest schema, and structure-
+  preserving 1:1 all accepted; forks §7-a (L2 surface) and §7-c (extend the existing gap-report
+  artifact) accepted per the note's own leans. **Fork §7-b/F1 REFRAMED** (not left open): the `&mut`-
+  aliasing (D7) and unbounded-iterator (D8) cases are the deliberate-exclusion set, with native
+  Mycelium solutions (functional update, bounded `for`) — a borrowck/rust-analyzer frontend is an
+  **optional precision aid**, not a porting blocker; the default path is flag-with-suggested-native-
+  idiom (`suggested_idiom`, M-1045). **Fork §7-d is FLAGGED**, genuinely unresolved (not silently
+  assumed). Adds a new pipeline-wide transparency/revealability requirement, cross-linked to DN-106's
+  desugar/expand capability (M-1051). Filed **M-1052**.
+
+`docs/Doc-Index.md` status-column cells updated for DN-101/DN-103/DN-105/DN-106/DN-107/DN-108/DN-109
+(→ Accepted); DN-102/DN-104 cells stay Draft, matching their own dispositions above.
+`tools/github/issues.yaml` gains **M-1048…M-1053** (all `status:todo`) plus progress notes on
+**M-1025** and **M-1036**; validated (`python3 -c "import yaml; yaml.safe_load(...)"` clean, no
+duplicate ids; `doc_refs_check.py` clean). `scripts/checks/markdown.sh` green on all touched `.md`.
+
 ### docs(planning): zero-hand-port delta ledger + DN-109 idiom/structural design (2026-07-10)
 
 Lands the capstone planning deliverable for the zero-hand-port program: a five-layer analysis
