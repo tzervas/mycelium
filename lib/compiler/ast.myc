@@ -591,6 +591,10 @@ fn hypha_body(h: Hypha) => Expr =
 
 // ── Expr (mirrors ast.rs::Expr — an expression; every variant is bare/unrenamed except where
 // FLAG-ast-4/5 note a collision elsewhere in this file) ─────────────────────────────────────────
+// FLAG-ast-9: the `Wrapping` variant (M-791) is now REPRESENTED here so this type mirrors
+// ast.rs::Expr's 19 variants field-for-field, but the self-hosted lexer/parser does NOT yet
+// PRODUCE it (no `wrapping` keyword; no parse rule) — surface parsing of `wrapping { e }` is
+// deferred remaining work (never-silent, G2). Represented and traversed, not yet parsed.
 type Expr =
     Let(Bytes, Option[TypeRef], Expr, Expr)
   | If(Expr, Expr, Expr)
@@ -600,6 +604,7 @@ type Expr =
   | WithParadigm(Paradigm, Expr)
   | Wild(Expr)
   | Spore(Expr)
+  | Wrapping(Expr)
   | Consume(Expr)
   | Colony(Vec[Hypha])
   | Lambda(Vec[Param], Expr)
