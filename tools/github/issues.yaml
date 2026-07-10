@@ -13352,7 +13352,7 @@ issues:
       - corpus:DN-87
       - src:tools/docgen/code_index.py
       - src:crates/mycelium-doc/src/lib_index.rs
-      - src:crates/mycelium-tero/src/index.rs
+      - src:tools/tero-rs/PROVENANCE.md
       - src:docs/tero-index/INDEX.md
       - src:scripts/checks/tero-index.sh
     body: |
@@ -13384,6 +13384,15 @@ issues:
       needs a byte-scheme redesign, an open deliberate decision) + docs/spec/api/mycelium-tero.txt
       baseline. Deterministic two-run byte-identical (incl. the self-referential fixpoint fix);
       27 tests; change-scoped gates green. DoD met.
+
+      TRIM (2026-07-10, chore/extract-tero-trim): crates/mycelium-tero was extracted verbatim into
+      its own published repo (tzervas/tero-rs, renamed `tero`; tools/tero-rs/PROVENANCE.md) and
+      removed from this workspace -- mycelium now consumes a checksum-pinned published `tero-index`
+      binary (scripts/fetch-tero-index.sh) instead of recompiling the crate in-tree. Verified via a
+      three-way differential (in-tree crate / published binary / committed docs/tero-index/, all
+      byte-identical) before removal -- no behavior change, a build-speed trim only. The MCP/HTTP/
+      eval fronts this issue's Layer-1 engine underpins are unaffected: `.mcp.json` still runs the
+      vendored packages/tero-mcp-lite/ Python server, unchanged.
 
   - id: M-1016
     title: "M-1016 — Query engine + mandatory provenance (EXPLAIN-able retrieval)"

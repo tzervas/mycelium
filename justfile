@@ -308,13 +308,15 @@ docs:
 # Regenerate committed agent index (docs/api-index/); commit the result after any public-API change.
 docs-index:
     python3 tools/docgen/code_index.py
-# Drift gate: committed docs/tero-index/ must match a fresh regeneration. Skip if cargo absent.
+# Drift gate: committed docs/tero-index/ must match a fresh regeneration via the published tero-rs
+# tero-index binary (scripts/fetch-tero-index.sh; skip-graceful if unfetchable).
 tero-index:
     @bash scripts/checks/tero-index.sh
-# (Re)generate committed tero-index (docs/tero-index/) from the whole corpus (M-1015). Commit the
-# result after any corpus change (docs/issues/changelog/skills).
+# (Re)generate committed tero-index (docs/tero-index/) from the whole corpus (M-1015), via the
+# published tero-index binary (tools/tero-rs/PROVENANCE.md). Commit the result after any corpus
+# change (docs/issues/changelog/skills).
 tero-index-gen:
-    cargo run -q -p mycelium-tero --bin tero-index -- --repo-root . --out docs/tero-index
+    bin=$(bash scripts/fetch-tero-index.sh) && "$bin" --repo-root . --out docs/tero-index
 # (Re)generate committed lib-index (docs/lib-index/) from lib/*.myc (M-1004). Commit the result
 # after any change under lib/std/ or lib/compiler/.
 lib-index-gen:
