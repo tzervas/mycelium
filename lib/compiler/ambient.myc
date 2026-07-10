@@ -178,6 +178,7 @@ type Expr =
   | WithParadigm(Paradigm, Expr)
   | Wild(Expr)
   | Spore(Expr)
+  | Wrapping(Expr)
   | Consume(Expr)
   | Colony(Vec[Hypha])
   | Lambda(Vec[Param], Expr)
@@ -541,6 +542,7 @@ fn resolve_expr(amb: Option[Paradigm], site: Bytes, e: Expr, depth: Binary{32}) 
       // own comment: descending would rewrite/refuse inside a body that should stay opaque/trusted).
       Wild(b) => Ok(Wild(b)),
       Spore(b) => match resolve_expr(amb, site, b, d2) { Err(er) => Err(er), Ok(b2) => Ok(Spore(b2)) },
+      Wrapping(b) => match resolve_expr(amb, site, b, d2) { Err(er) => Err(er), Ok(b2) => Ok(Wrapping(b2)) },
       Consume(b) => match resolve_expr(amb, site, b, d2) { Err(er) => Err(er), Ok(b2) => Ok(Consume(b2)) },
       Lambda(params, body) => match resolve_expr(amb, site, body, d2) { Err(er) => Err(er), Ok(body2) => Ok(Lambda(params, body2)) },
       Colony(hyphae) => match resolve_hypha_list(amb, site, hyphae, d2) { Err(er) => Err(er), Ok(hyphae2) => Ok(Colony(hyphae2)) },
@@ -1046,6 +1048,7 @@ fn print_expr(e: Expr) => Bytes =
     WithParadigm(par, body) => bytes_concat("with paradigm ", bytes_concat(paradigm_str(par), bytes_concat(" { ", bytes_concat(print_expr(body), " }")))),
     Wild(b) => bytes_concat("wild { ", bytes_concat(print_expr(b), " }")),
     Spore(b) => bytes_concat("spore(", bytes_concat(print_expr(b), ")")),
+    Wrapping(b) => bytes_concat("wrapping { ", bytes_concat(print_expr(b), " }")),
     Consume(b) => bytes_concat("consume ", print_expr(b)),
     Lambda(params, body) => bytes_concat("lambda(", bytes_concat(print_param_names(params), bytes_concat(") => ", print_expr(body)))),
     Colony(hyphae) => bytes_concat("colony { ", bytes_concat(print_hypha_list(hyphae), " }")),
@@ -1490,6 +1493,7 @@ fn walk_expr(fp: Fp, e: Expr) => Fp =
     WithParadigm(par, body) => walk_expr(walk_paradigm(fp_tag(fp, 0b0000_0000_0000_0000_0000_0000_0101_0100), par), body),
     Wild(body) => walk_expr(fp_tag(fp, 0b0000_0000_0000_0000_0000_0000_0101_0101), body),
     Spore(value) => walk_expr(fp_tag(fp, 0b0000_0000_0000_0000_0000_0000_0101_0110), value),
+    Wrapping(value) => walk_expr(fp_tag(fp, 0b0000_0000_0000_0000_0000_0000_0110_1110), value),
     Consume(value) => walk_expr(fp_tag(fp, 0b0000_0000_0000_0000_0000_0000_0101_0111), value),
     Colony(hyphae) => walk_hypha_list(fp_tag(fp, 0b0000_0000_0000_0000_0000_0000_0101_1000), hyphae),
     Lambda(params, body) => walk_expr(walk_param_list(fp_tag(fp, 0b0000_0000_0000_0000_0000_0000_0101_1001), params), body),

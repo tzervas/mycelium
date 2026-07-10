@@ -109,6 +109,30 @@ select/swap/spore **re-export** surfaces, and the content-address/`hash`-**minti
 MLIR/Dense-VSA rows above record: a self-hosted stdlib still keeps its kernel-mint/kernel-re-export
 half in the host until the kernel itself self-hosts.
 
+### `spw`-wave (Wave-0 pilot) stdlib nodule ports — measured transpiler-assist % (M-1020…M-1022)
+
+The `spw` Wave-0 pilot (kickoff `spw`, E33-1) ported three unported stdlib crates to self-hosted
+`.myc`, each differential-witnessed (three-way L1≡L0≡AOT **plus** a live Rust-oracle comparison —
+`Empirical`) and independently, adversarially re-verified (accept, not forced-green). The
+transpiler-assist % is the fraction of the landed `.myc` the `mycelium-transpile` PoC (M-873) could
+mechanically emit; the rest is hand-written. A **STEP-0** re-run of the CURRENT transpiler measured
+**ZERO checked-% delta** vs the committed `gen/myc-drafts/` manifest on all three (the two emitter
+features landed since — DN-51 narrow-cast→truncate, D3 operand inference — are orthogonal to these
+targets' gap classes), so net assist to the shipped nodules is ~0% (only already-clean draft
+enums/types graduated verbatim). All values `Empirical` (measured against the landed port).
+
+| Nodule (`.myc`) | Rust reference | Transpiler-assist % (`Empirical`) | Ported subset / residual (enabler-blocked, not effort-blocked) | Tracking |
+|---|---|---|---|---|
+| `std.numerics` (`lib/std/numerics.myc`) | `crates/mycelium-std-numerics` | ~0% (checked 7.4%) | PORTED: the honesty-crux strength surface (Guarantee/BoundBasis lattice + meet, `Approx[A]` carrier, `NumErr`/`CheckErr`). RESIDUAL (→ `enb`): the float-valued ε/δ magnitude surface (no scalar-Float VALUE in the runtime, Gap A/M-895/M-896), the sealed FR-N3 `ProvenThm` witness (`Approx::proven` omitted, not faked), the `&mut Formatter` Display (ADR-003) | M-1020 |
+| `std.time` (`lib/std/time.myc`) | `crates/mycelium-std-time` | ~0% (checked 18.9%) | PORTED: the full value-semantic surface (4 instant/duration types, the complete comparison surface via uncapped `lt_s`, deterministic `ManualClock`, declared-effect wrappers, 11-row matrix). RESIDUAL (→ `enb`): signed 128-bit duration/instant arithmetic (kernel `TC_MAX_WIDTH=64` cap), saturating advance (never-silent mismatch), TimeErr payloads/Display; OS clock is host-FFI (→ M-541) | M-1021 |
+| `std.content` (`lib/std/content.myc`) | `crates/mycelium-std-content` | ~0% (checked 14.3%) | PORTED: the content-addressing surface (`digest_eq` via M-912 `bytes_eq`, `ContentRef`/`RefKind` accessors, hand-rolled recursive `parse_ref`/`content_ref_from_str`, 7-row matrix, `NameRegistry` assoc-list). RESIDUAL (→ `enb`): `hash_of_value`/`hash_of_def` (kernel structural-hash normalizer, RFC-0031 D1); a `bytes.find`/`split_once` prim would collapse the hand-rolled scanners | M-1022 |
+
+**Retirement (ADR-043): NOT triggered for any of the three (as-proven, per-module).** Each is an honest
+partial port — the Rust oracle crate is not fully replaced (the residual above stays Rust) — so
+`retireReady=false`; no crate is archived/removed this wave. Retirement waits until a module's port is
+FULLY validated (its residual enablers land + a whole-crate differential clears). The surfaced enabler
+blockers are consolidated for the `enb` epic (E28-1) as **M-1023** (never silently dropped, G2).
+
 ### Forward items (not yet landed — tracked for when they do)
 
 | Component | Status | What it will add to this ledger when it lands |
