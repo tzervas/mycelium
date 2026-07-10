@@ -1089,44 +1089,45 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
     }
 
     fn visit_call(&mut self, _expr: &Expr, c: &syn::ExprCall) -> Self::Output {
-        let func =
-            match &*c.func {
-                Expr::Path(p) if p.qself.is_none() && p.path.segments.len() == 1 => p
-                    .path
-                    .segments
-                    .last()
-                    .map(|s| s.ident.to_string())
-                    .ok_or_else(|| GapReason::new(Category::Other, "empty call-target path"))?,
-                Expr::Path(p) if p.qself.is_none() => {
-                    // A qualified/associated-function call (`Type::method(...)`, e.g. Rust's
-                    // widening bodies `i16::from(self)`). Mycelium calls are bare identifiers
-                    // (`app_expr ::= primary ('(' args? ')')*`, `primary ::= ... | path`,
-                    // `path ::= Ident ('.' Ident)*` — no `::`/qualifier form). An earlier
-                    // iteration of this arm collapsed any path to its last segment, which for a
-                    // *call target* fabricates a call to whatever that segment's name happens to
-                    // be — e.g. `i16::from(self)` -> `from(self)`, and `from` is NOT a confirmed
-                    // Mycelium builtin (grep of `docs/spec/grammar/mycelium.ebnf` finds it only in
-                    // prose, never in a grammar production). There is no established Mycelium
-                    // surface form for a Rust conversion-op/associated-fn call, so — mirroring
-                    // `map::map_type`'s identical qualified-path decision — this is left an
-                    // explicit gap rather than a fabricated call (G2/DN-34 §4).
-                    return Err(GapReason::new(
-                        Category::Other,
-                        format!(
+        let func = match &*c.func {
+            Expr::Path(p) if p.qself.is_none() && p.path.segments.len() == 1 => p
+                .path
+                .segments
+                .last()
+                .map(|s| s.ident.to_string())
+                .ok_or_else(|| GapReason::new(Category::Other, "empty call-target path"))?,
+            Expr::Path(p) if p.qself.is_none() => {
+                // A qualified/associated-function call (`Type::method(...)`, e.g. Rust's
+                // widening bodies `i16::from(self)`). Mycelium calls are bare identifiers
+                // (`app_expr ::= primary ('(' args? ')')*`, `primary ::= ... | path`,
+                // `path ::= Ident ('.' Ident)*` — no `::`/qualifier form). An earlier
+                // iteration of this arm collapsed any path to its last segment, which for a
+                // *call target* fabricates a call to whatever that segment's name happens to
+                // be — e.g. `i16::from(self)` -> `from(self)`, and `from` is NOT a confirmed
+                // Mycelium builtin (grep of `docs/spec/grammar/mycelium.ebnf` finds it only in
+                // prose, never in a grammar production). There is no established Mycelium
+                // surface form for a Rust conversion-op/associated-fn call, so — mirroring
+                // `map::map_type`'s identical qualified-path decision — this is left an
+                // explicit gap rather than a fabricated call (G2/DN-34 §4).
+                return Err(GapReason::new(
+                    Category::Other,
+                    format!(
                         "qualified/associated-function call `{}` — no established Mycelium \
                          surface form for a Rust conversion-op body; emitting the bare \
                          last-segment name would fabricate a call (e.g. `from(...)` is not a \
                          Mycelium builtin)",
                         tokens_to_string(&*c.func)
                     ),
-                    ));
-                }
-                _ => return Err(GapReason::new(
+                ));
+            }
+            _ => {
+                return Err(GapReason::new(
                     Category::Other,
                     "call target is not a simple path (e.g. a closure call) — no confirmed \
                      mapping",
-                )),
-            };
+                ))
+            }
+        };
         // M-1001: a call to a function whose name is a reserved word (e.g. a Rust `.swap()`
         // method or a `to(..)` helper) would emit un-parseable text; gap it (VR-5/G2).
         guard_ident(&func, "call target")?;
@@ -1147,8 +1148,7 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
         let method_name = m.method.to_string();
         if let Some(row) = crate::prim_map::lookup(&method_name) {
             let receiver_ty = expr_env_type(&m.receiver, self.env);
-            if crate::prim_map::receiver_gate_matches(row.receiver_gate, receiver_ty.as_deref())
-            {
+            if crate::prim_map::receiver_gate_matches(row.receiver_gate, receiver_ty.as_deref()) {
                 if !row.wired {
                     // PENDING-BACKEND: the mapping is known (a decided ruling — see
                     // `crate::prim_map` module docs for each row's citation) but the kernel/
