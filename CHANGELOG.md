@@ -12,6 +12,54 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### feat(l1): admit a `Bytes` scrutinee in `match` — M-1035 (ENB-12) (2026-07-10)
+
+Closes **DN-99 register row #72** (string-literal match pattern): the L1 checker now admits a `match`
+whose scrutinee is a `Bytes` value, with **byte-string-literal** arms and a **required default arm** —
+the ENB-12 enabler that unblocks every string-dispatch (`match s { "get" => …, "post" => …, _ => … }`)
+port target. Under the whole-project unfrozen posture (ADR-045). Design recorded in **Draft DN-105**
+(the maintainer ratifies — house rule #3, not self-ratified).
+
+- **One-clause enabler, not a new pattern subsystem (KC-3/DRY).** The single categorical block was
+  `check_match`'s scrutinee-type gate, which admitted only `Data`/`Binary`/`Ternary`; lifting it to
+  admit `Ty::Bytes` is the whole language change. Everything downstream already handled an open-domain
+  literal column generically — `normalize_pattern` already types `0x…`/`"…"` literal patterns as
+  `Bytes`, `usefulness::signature()` already returns `None` for `Bytes` (an OPEN domain), the decision
+  compiler already marks a non-`Data` column incomplete, and the evaluator's `try_match` already
+  compares `Repr::Bytes`/`Payload::Bytes` by content. No new L0 node, no new pattern/AST node, no new
+  checking pass.
+- **Byte-content equality; both surface spellings.** A `"…"` text literal (`Literal::Str`) and a `0x…`
+  hex literal (`Literal::Bytes`) lower to the SAME `Repr::Bytes` value, so `"foo"` and `0x666f6f`
+  denote equal values and match interchangeably (`elab.rs::lit_key_to_value` decodes the `by:` and `s:`
+  literal-pattern keys to `Repr::Bytes`, using the established `Meta::exact(Provenance::Root)` literal
+  form — no guarantee tag upgraded, VR-5).
+- **`Bytes` is OPEN ⇒ a default arm is REQUIRED, never-silently (G2).** A literal column never
+  completes the domain, so a `Bytes` match without a wildcard/default is a static **W7 non-exhaustive
+  refusal** (witness `_`), exactly as for `Binary`/`Ternary`. An ill-typed literal arm (a `Binary`
+  literal against a `Bytes` scrutinee) is likewise a static refusal, never a silent coercion.
+- **`.myc` mirror (DN-26 dual).** Pattern-typing + coverage leaves were already at parity (generic over
+  open types). The `Bytes` repr value is lifted out of the `LOpaque` collapse into a dedicated
+  `LReprBytes(Bytes)` carrier so `lval_try_match`'s `PLit` arm does a real byte-content match against a
+  text (`Str`) byte-string literal — the eval-match mirror for #72. All three `LVal` consumers
+  (`PIdent`/`PCtor`/`PLit`) handle the new variant exhaustively; no AST/pattern node changed, so the
+  fingerprint/classify walkers are unaffected. The `0x…`-hex value synthesis in `.myc` stays deferred
+  (FLAG-semcore-25, an honest `Err`); other reprs stay `LOpaque` (FLAG-semcore-35).
+- **Honest residuals (VR-5/G2).** The native-LLVM textual-IR backend cannot lower a `Bytes`-scrutinee
+  match (its `Binary8`-specialized switch) — it **refuses explicitly** (`AotError`), and the
+  trampoline AOT handles the case; the cross-surface-form redundancy key stays per-form (`by:`/`s:`), a
+  conservative under-report of a redundancy *lint*, never a wrong-arm miscompile (DN-105 §4); the trx
+  transpiler's #72 pin (`string_literal_pattern_gaps_with_l1_enabler_reason`) can now flip *gapped* →
+  *emitted* as a **separate transpile-crate follow-up** (outside the `mycelium-l1` lane).
+- **How verified (change-scoped).** `crates/mycelium-l1/tests/enablement.rs` — a three-way differential
+  (L1-eval ≡ elaborate→L0-interp ≡ trampoline-AOT): text-literal hit, fall-through-to-default,
+  hex/text cross-spelling hit (`"foo"` hits a `0x666f6f` arm), plus static rejects of the
+  non-exhaustive and ill-typed cases and the explicit native-LLVM refusal. `.myc` eval-match
+  differential vs the real `Evaluator::try_match` oracle (`src/tests/compiler_stage5_evalmatch.rs`):
+  text-literal hit/miss, empty-string edge, binder-captures-`Bytes`, `Bytes`-vs-`Ctor` false, and the
+  honest `0x…`-hex deferral probe. `cargo test -p mycelium-l1` green · `cargo fmt --check` clean ·
+  `cargo clippy -p mycelium-l1 --all-targets -D warnings` clean · `myc check lib/compiler/semcore.myc`
+  clean (dogfood parity) · `markdown.sh` + `doc_refs_check.py` clean.
+
 ### feat(l1): per-constructor visibility seal — `priv` ctor — M-1027 (ENB-4) (2026-07-10)
 
 Closes the **sealed-constructor visibility** surface gap (DN-99 register row #37 / §A3, ENB-4; and the

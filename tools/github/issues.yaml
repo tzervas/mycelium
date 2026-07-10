@@ -14184,13 +14184,17 @@ issues:
   - id: M-1035
     title: "enb ENB-12 — L1 `match` on a `Bytes` scrutinee (string-literal-pattern enabler)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P2, status:todo]
+    labels: [phase:5, type:feature, area:language, priority:P2, status:done]
     epic: E28-1
     depends_on: [M-1023]
     doc_refs:
+      - corpus:DN-105
       - corpus:DN-99
       - corpus:DN-34
       - src:crates/mycelium-l1/src/checkty.rs
+      - src:crates/mycelium-l1/src/elab.rs
+      - src:crates/mycelium-l1/src/usefulness.rs
+      - src:lib/compiler/semcore.myc
     body: |
       From the trx transpiler-increment profiling (DN-34 §8.21, 2026-07-10; FLAG-L1-match-Bytes). The L1
       checker categorically REJECTS a `match` whose scrutinee is `Bytes` (`check-error: match scrutinee
@@ -14214,3 +14218,29 @@ issues:
         `string_literal_pattern_gaps_with_l1_enabler_reason` updated in lockstep); never-silent on a
         non-exhaustive/ill-typed match (explicit error, not a panic); a Draft DN records the rule before
         the L1 change.
+
+      LANDED (2026-07-10, PR #1371 → dev; DN-105 Draft). The `check_match` scrutinee-type gate
+      (`checkty.rs:~5805`) was lifted to admit `Ty::Bytes`; a one-clause enabler, since everything
+      downstream already handled an open-domain literal column generically (`usefulness::signature() →
+      None` for `Bytes`; `try_match` already compares `Repr::Bytes`/`Payload::Bytes` by content).
+      `elab.rs::lit_key_to_value` decodes the `by:`/`s:` literal-pattern keys to a `Repr::Bytes` value
+      (established `Meta::exact` literal form — no guarantee tag upgraded, VR-5). Byte-content equality
+      (`"foo"` ≡ `0x666f6f`); an OPEN domain, so a default arm is REQUIRED (a non-exhaustive `Bytes`
+      match is a never-silent W7 refusal). `.myc` mirror: a dedicated `LReprBytes(Bytes)` carrier so
+      `lval_try_match`'s `PLit` arm does a real byte-content match for the text form (all three `LVal`
+      consumers updated; no AST/pattern node changed). Verified: three-way differential
+      (`tests/enablement.rs`: text hit, fall-through-to-default, hex/text cross-spelling, static
+      non-exhaustive + ill-typed rejects, explicit native-LLVM refusal) + the `.myc` eval-match oracle
+      (`compiler_stage5_evalmatch.rs`); `cargo test -p mycelium-l1` green, `cargo clippy -p mycelium-l1
+      --all-targets -D warnings` clean, `myc check lib/compiler/semcore.myc` clean.
+
+      Honest residuals (VR-5/G2, tracked, NOT part of this done): the `.myc` `0x…`-hex value synthesis
+      stays deferred (FLAG-semcore-25 — no wild-free hex→byte primitive; an explicit `Err`, the text
+      form has full parity); the native-LLVM `Binary8`-switch backend REFUSES a `Bytes`-scrutinee match
+      explicitly (`AotError`) and the trampoline AOT handles it (DN-105 §6.5); the cross-surface-form
+      redundancy key stays per-form (`by:`/`s:`) — a conservative missed redundancy *lint*, never a
+      wrong-arm miscompile (DN-105 §4).
+
+      FOLLOW-UP (now UNBLOCKED, separate transpile-crate PR — outside the mycelium-l1 lane): the trx #72
+      pin `string_literal_pattern_gaps_with_l1_enabler_reason` (`crates/mycelium-transpile/src/emit.rs`
+      + `tests/emit.rs`) can flip from *gapped* to *emitted* now that the L1 enabler has landed.
