@@ -243,7 +243,7 @@ bound / a mean-value or affine enclosure) is **real future work**, tracked as an
 is the top surviving concern: the recommendation is honest precisely because it refuses, and that refusal
 is a genuine functional limit the maintainer must accept for v0.*
 
-### §6.2 Is `Empirical` defensible without measured trials? — no.
+### §6.2 Is `Empirical` defensible without measured trials? — no
 
 The maintainer's mandate is explicit and correct: **v0 has no measured reference-case corpus** for
 transcendental accuracy (nothing analogous to `FLT_CONFORMANCE_TRIALS = 40` hand-derived IEEE cases,
@@ -254,7 +254,7 @@ reference-case corpus (the direct analogue of the flt.* corpus); `Proven` is ear
 correctly-rounded/error-analysis theorem (CR-libm / RLIBM / Gappa-class) plus the DN-104 `ProvenThm`
 seal. The upgrade path is clean *because* the bound rides the same certificate — but v0 does not walk it.
 
-### §6.3 Where does ergonomics tempt a silent upgrade? — the `fast`-mode footgun.
+### §6.3 Where does ergonomics tempt a silent upgrade? — the `fast`-mode footgun
 
 Users want `sin(x): Float`. The temptation is to have `fast` mode return a **bare float with the bound
 dropped** — which reads downstream as an *unmarked, exact-looking* value: the precise G2/VR-5 failure.
@@ -335,8 +335,8 @@ them. **FLAGs to the integrator:**
   Rule (Draft, 2026-07-10)`, feeding DN-99 #42 / ENB-5, ADR-010, ADR-040.
 - **CHANGELOG:** an append-only entry for DN-108 created (Draft) — design-forward note for row #42.
 - **issues.yaml linkage:** wire DN-108 as the design note for the **ENB-5** backlog item (DN-99 §8) /
-  **M-1028** (row #42); mark row #42's DN-flag satisfied-by DN-108 (Draft). File the ENB-5 tracking issue
-  + companion ADR per §8.4. Do **not** flip row #42's status (append-only; ratification-gated).
+  **M-1028** (row #42); mark row #42's DN-flag satisfied-by DN-108 (Draft). File the ENB-5 tracking
+  issue and companion ADR per §8.4. Do **not** flip row #42's status (append-only; ratification-gated).
 - **Stale-comment refresh (mitigation #14):** `lib/std/numerics.myc:52-54` FLAG-num-1's "no scalar-float
   VALUE form yet" is stale post-ADR-040-Enacted (§1); flag for a doc-hygiene refresh in the self-hosted
   numerics workstream (not this note's write scope).
