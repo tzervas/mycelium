@@ -12,6 +12,23 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### docs(dn-99): surface-gap closure register + plan for the spw / RFC-0031 stdlib-port wave (2026-07-10)
+
+Adds **DN-99 — Surface-Gap Closure Register and Plan** (Draft), the single closure register for the
+`spw` stdlib-port wave: 92 enumerated surface gaps, each with a status
+(open/partial/already-closed/transpiler-only/idiom), an `Empirical` evidence cite
+(`file:line` / `M-id` read against dev tip `6d906b76`), a layer, a closure approach, a DoD, a DN-flag,
+a tracking ref, a semcore-lane collision class, a size, and a priority. Foregrounds the already-closed
+set (§3) so landed work is not re-opened — the Float correction (ADR-040 Enacted 2026-07-02; `flt.*`
+prims registered) refutes the stale ".myc has no float surface" flag (mitigation #14). Ranks a two-track
+closure plan (§4) toward the zero-hand-port north star: language `enb` closures (grammar/kernel/runtime)
+and transpiler closures, under the whole-project unfrozen posture (ADR-045). Attests completeness
+honestly (§5): one targeted spot-verify round; residual uncertainty `Declared`, never claimed `Proven`.
+The §8 `enb` backlog is filed as **M-1024…M-1034** under epic E28-1 — each cross-references M-1023's
+Wave-0 consolidation, and those touching `mycelium-l1` note "cloud-semcore-lane, coordinate M-1013"
+(unfrozen-actionable, not deferred-by-freeze). Enacts nothing; moves no other doc's status. Authored
+READ + DN only. (DN-99; RFC-0031; E28-1; VR-5 / G2 / house rule #3.)
+
 ### fix(semcore): complete the `Wrapping` Expr-variant port across the self-hosted `.myc` frontend (2026-07-10)
 
 Closes a pre-existing transparency gap in the self-hosted compiler. `ast.rs::Expr` has 19 variants

@@ -143,7 +143,7 @@ cloud semcore lane (`crates/mycelium-l1/**` + `lib/compiler/**`): `none` / `low`
 | 83 | imperative-loop-construct | idiom | ac | `RFC-0007:257`; `iter.myc:75` | recursion / bounded `for`-fold | playbook row; optional tr fold-emit | no | RFC-0007 §4.8 | partial (l1 sites=boot10) | M | P2 |
 | 84 | empty-marker-trait-impl | tr-only | ac | `parse.myc:3640`; `semcore.myc:2656`; FLAG-core-4 | drop (errors-as-values); optional tr empty-ImplDecl | recorded expressible + accepted drop | no | FLAG-core-4; M-535 | none | S | P3 |
 | 85 | byte-literal + byte-string (`b'…'`/`b"…"`) | tr-only | tr | `emit.rs:787`; `lex.myc:513` | add `Lit::Byte`→`0b…`, `Lit::ByteStr`→`0x…` arms | both forms emit `myc check`-clean, tested | no | M-873 | low | S | P2 |
-| 86 | bitwise-and-shift-operator-suite | closed | cl | `token.rs:290`; `parse.rs:2396`; M-745 | none — `<<>>&|^!` desugar landed; compound-assign=SSA | register row + compound-assign note | no | M-745; RFC-0025 §4.1 | none | S | P3 |
+| 86 | bitwise-and-shift-operator-suite | closed | cl | `token.rs:290`; `parse.rs:2396`; M-745 | none — `<<>>&\|^!` desugar landed; compound-assign=SSA | register row + compound-assign note | no | M-745; RFC-0025 §4.1 | none | S | P3 |
 | 87 | phantom-type-marker | idiom | ac | `checkty.rs:1691` (unused params tolerated) | drop PhantomData fields; keep unused type params | DN records contract; regression test FLAGged | no | untracked | low (test) | S | P3 |
 | 88 | **never-type-divergence (`-> !`)** | **open** | **rt** | `ast.rs:553` (no bottom); `sys.rs:32` | model as divergent host-effect prim + `diverges` effect | DN: divergence-as-effect + totality interaction | **yes** | untracked | **HIGH** | M | P3 |
 | 89 | **statement-sequencing-body** | **partial** | **tr** | `emit.rs:637`; `ebnf:291` | Part1: `let _=e in body`; Part2: mutation→functional (sep gap) | tr emits `let _`; mutation stays separate gap | **yes** | untracked | low | M | P2 |
@@ -151,8 +151,7 @@ cloud semcore lane (`crates/mycelium-l1/**` + `lib/compiler/**`): `none` / `low`
 | 91 | generic-function-declaration (`fn f<T>`) | closed | cl | `ebnf:162`; `parse.rs:857`; `emit.rs:229` | none — `fn f[T]` landed; `<T>` retired | register corrected to already-closed | no | RFC-0037; RFC-0019 §4.1 | none | S | P3 |
 | 92 | box-recursive-indirection-type (`Box<T>`) | idiom | ac | `map.rs:176`; `ast.myc:44`; `checkty.rs:1652` | Box field → plain `T` (value-semantic recursion) | idiom documented; optional tr erase-arm | no | untracked | low | S | P3 |
 
-**Status tally:** `open` = 4 (#37, #42, #60, #88) · `partial` = 11 (#24, #41, #44, #45, #55, #56, #63, #65,
-#70, #71, #89) · `already-closed` = 16 · `transpiler-only` = 10 · `idiom` (closed-by-convention) = 51.
+**Status tally:** `open` = 4 (#37, #42, #60, #88) · `partial` = 11 (#24, #41, #44, #45, #55, #56, #63, #65, #70, #71, #89) · `already-closed` = 16 · `transpiler-only` = 10 · `idiom` (closed-by-convention) = 51.
 **Total = 92.** So **67 are closed today** (16 landed + 51 idiom), **10 need only transpiler work**, and
 **15 carry a genuine language/runtime residual** (the 4 `open` + 11 `partial`), of which **15 rows are
 tagged `DN? = yes`** (before de-dup; §8 collapses the duplicates into the filable backlog).
@@ -195,8 +194,7 @@ gap (grammar / kernel / runtime — now unfrozen), and **(b)** capture the trans
 
 ### Track A — language `enb` closures (grammar / runtime; cloud semcore lane — coordinate)
 
-**A0 (rank 1, highest impact) — Cross-nodule symbol resolution + execution (runtime-`enb`, #41; unblocks
-#13 mod, #1 import, #16/#18 qualified path).** The check-time half is **landed** (`resolve_imports`,
+**A0 (rank 1, highest impact) — Cross-nodule symbol resolution + execution (runtime-`enb`, #41; unblocks #13 mod, #1 import, #16/#18 qualified path).** The check-time half is **landed** (`resolve_imports`,
 M-662); the runtime half is **open** (`eval.rs` holds a single per-nodule `env`). Under the unfrozen
 posture this is the **preferred real close** over the local-mirror sidestep: give the evaluator a
 phylum-wide view that reuses the *check-time import registry* as the runtime link table (DRY, KC-3, no
@@ -319,8 +317,7 @@ edit them. **FLAG to the integrator:** add a Design-Notes row for `DN-99 — Sur
 
 ## §8 Proposed `enb` backlog — issues to FILE (do NOT edit `issues.yaml` here)
 
-De-duplicated from the 15 `DN? = yes` rows (signed #26/#44 collapse into one; the two `?` facets
-#52/#60 collapse into one; char/width #45 subsumes the signed/char sub-questions). Each is a **new Draft
+De-duplicated from the 15 `DN? = yes` rows (signed #26/#44 collapse into one; the two `?` facets #52/#60 collapse into one; char/width #45 subsumes the signed/char sub-questions). Each is a **new Draft
 DN + tracking issue** for the integrator to file. All touch the **cloud semcore lane** unless noted —
 **coordinate with the cloud CC session** (M-1013 SCC), unfrozen-actionable, not deferred-by-freeze.
 
