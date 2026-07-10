@@ -12,6 +12,34 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### docs(notes): maintainer ratification — DN-100 macro-expand-first pre-pass; DN-102 `?` try-operator desugar (2026-07-10)
+
+Accepted (design, pending Enactment): **DN-100** and **DN-102**, per the maintainer's "ratify the
+above" naming both. Design/mechanism decisions ratified; house rule #3 — Accepted is NOT Enacted, no
+code lands via either ratification.
+
+- **DN-100 — Status Draft -> Accepted.** Ratifies §5 Rank 1 (`cargo expand` as an opt-in,
+  off-by-default, never-gating profiling mode for the transpiler's macro-expand pre-pass) plus Rank 2
+  (a small dependency-free std-macro shim) as complementary. The §3 honest ROI framing (macro expansion
+  raises `expressible_fraction`; its `checked_fraction` effect stays `Declared`/uncertain on this
+  corpus) is carried forward unchanged (VR-5) — not overclaimed by ratification. Unblocks **M-1032**
+  (the toolchain DN it required is now ratified).
+- **DN-102 — Status Draft -> Accepted.** Ratifies SP.5 Rank 1: the landed v0 `?` desugar (§2 fork
+  resolution, §3 error-type unification, §5 `let`-RHS position restriction — differential-witnessed,
+  M-1025/PR #1363) plus the second research pass's resolutions — FLAG-try-2 (implicit `From`-widening
+  is a deliberate exclusion, mapped to the native `map_err` combinator, no error-conversion-trait
+  subsystem) and FLAG-try-1 (general-position `?` reframed as an independent CPS-lift follow-up,
+  decoupled from the never-type per DN-107 §6-a). Confirms the DN-99 §8 ENB-2 FLAG-try-2 RESOLUTION
+  addendum's wording (a dated confirmation addendum added to DN-99 §8 in this same change).
+- **Issues reconciled:** **M-1049** (DN-102 second research pass) -> `done`, landed basis the DN-102
+  ratification above. New follow-up **M-1059** filed for the general-`?` CPS-lift increment (decoupled
+  from M-1030 per DN-107 §6-a, cross-ref DN-102 SP.3/FLAG-try-1) — the residual FLAG-SP-2 routing.
+  (M-1054 was already taken by the DN-110 epic; mitigation #1 — verified against the actual tree
+  before minting, not the earlier free-slot check against a stale checkout.)
+  **M-1032** doc_refs/body note updated to reflect DN-100 as ratified (no code lands here; M-1032
+  itself stays `todo`, now unblocked on its required toolchain DN).
+- **Doc-Index rows** for DN-100 and DN-102 updated Draft -> Accepted with the ratified basis.
+
 ### chore(integration): dev -> integration close-out — DN-111 ratification + gap-close-run batch reconciliation (2026-07-10)
 
 Integration-tier close-out for the gap-close-run batch (dn-102 second pass, blocked-op protocol,

@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-100 |
-| **Status** | **Draft** (2026-07-10). The **toolchain DN** the M-1032 (ENB-9) issue requires before implementation. Authored as **READ + a new DN only** in the `crates/mycelium-transpile` lane; it **enacts nothing** and **moves no other doc's status** (house rule #3, append-only). It **decides how** the transpiler should expand Rust macros before translation — `cargo expand` vs a vendored expander vs a hybrid — recommends (ranked) but **does not self-ratify** (house rule #4); the maintainer ratifies. |
+| **Status** | **Accepted** (ratified 2026-07-10; Draft since 2026-07-10 — steps through Draft first, house rule #3). See the **Ratification** section below for the accepted alternative and its scope. The **toolchain DN** the M-1032 (ENB-9) issue requires before implementation. Authored as **READ + a new DN only** in the `crates/mycelium-transpile` lane; ratification accepts the **mechanism decision + DoD**, not any implementation — it **enacts nothing** (no code lands via this ratification) and **moves no other doc's status** except as FLAGGED in §8 (house rule #3, append-only). |
 | **Decides** | *Proposes, for ratification:* (1) the **macro-expansion mechanism** for the transpiler's pre-pass (Alt A `cargo expand` · Alt B vendored `macro_rules` engine · Alt C hybrid/std-only · Alt D status-quo hand-expand); (2) the **honest ROI framing** — macro expansion raises `expressible_fraction`, with an *uncertain* `checked_fraction` effect (the dominant corpus macros expand to constructs the transpiler still gaps); (3) the **never-silent contract** for an unexpandable macro; (4) the **DoD** for M-1032. It does **not** edit `issues.yaml`, `CHANGELOG.md`, `Doc-Index.md`, `lib/compiler/**`, or `crates/mycelium-l1/**`. |
 | **Lane / collision** | **`crates/mycelium-transpile/**` only** — `none` collision with the cloud semcore lane (M-1013). Confirmed by M-1032's own body: "lands OUTSIDE the semcore lane, no M-1013 coordination." |
 | **Feeds** | M-1032 (ENB-9) implementation; DN-34 §8 (transpiler gap taxonomy — register row #51 macro-expand); DN-99 §4 Track B (transpiler closures). |
@@ -183,8 +183,54 @@ toolchain Draft DN" note in its body with the DN reference on ratification).
 
 ---
 
+## Ratification (maintainer, 2026-07-10)
+
+> **Accepted — the design decision + DoD (§7), not any implementation.** Per the maintainer's "ratify
+> the above" (naming DN-100 and DN-102). Append-only (house rule #3): the record above (§1–§8) is
+> unchanged; this section only records the ratification decision.
+
+**Accepts §5 Rank 1 as written:** *"Rank 1 — Alt A (`cargo expand`) as an opt-in, off-by-default,
+never-gating profiling mode, not a default pre-pass … only Alt A actually handles the §2-dominant
+custom `macro_rules!`, and a 'gap-profiling instrument' (M-991) is exactly where the 'de-opaque the
+`MacroInvocation` bucket, see the real surface' value lands … Gating it behind an explicit flag (and
+the buildable-crate/nightly precondition, skipped-gracefully) keeps the toolchain dependency out of
+the change-scoped `just check` path."* **And Rank 2 alongside it, as complementary, not exclusive:**
+*"Rank 2 — Alt C (std-macro shim) as an independent, always-available accelerator for the handful of
+std macros, since it is tiny, dependency-free, and mechanizes real port-time hand-work."*
+
+**What is — and is not — ratified (honesty, VR-5/G2):**
+1. The **mechanism**: Alt A (`cargo expand`) gated behind an explicit opt-in flag, off by default,
+   never gating `just check`/CI, with a skip-graceful per-crate fallback on a missing
+   nightly/buildable-crate precondition (§4 Alt A cons, §6 never-silent contract) — **plus** Alt C (a
+   small, dependency-free std-macro shim) as an independent accelerator. Alt B (vendored
+   `macro_rules!` engine) and building Alt A as a *default* pre-pass are **not** ratified (§5
+   "Not recommended").
+2. The **honest ROI framing (§3) carries forward unchanged**: macro expansion is a
+   profiling/expressibility lever whose `checked_fraction` effect is **`Declared`/uncertain** on this
+   corpus (the dominant `impl_narrow_int!`/`impl_std_error!` expansions land on constructs the
+   transpiler already gaps). Ratifying the mechanism does **not** upgrade this to a claimed
+   `checked_fraction` win — the M-1032 DoD's before/after `expressible_fraction` measurement (§7 item 3)
+   remains the metric that matters, not `checked_fraction`.
+3. **This ratifies the mechanism decision and the DoD (§7) — it does not Enact.** No code lands via
+   this ratification (house rule #3: Accepted ≠ Enacted); M-1032 implements it, gated by this DN
+   per §7 item 1, which is now satisfied.
+4. **No FLAG withheld ratification.** §5's own adversarial stress-test already confronts the ROI
+   uncertainty and answers it (opt-in/advisory framing exists precisely because the payoff is
+   uncertain) — there is no unaddressed caveat that makes accepting Rank 1 as scoped unwise.
+
+**Unblocks M-1032** (ENB-9): the toolchain DN it required (§7 item 1) is now ratified; M-1032 proceeds
+against Rank 1 + Rank 2 as scoped above.
+
+---
+
 ## §9 Changelog
 
+- **2026-07-10** — **Ratified — Accepted.** Maintainer ratifies §5 Rank 1 (`cargo expand`, opt-in/
+  off-by-default/never-gating profiling mode) and Rank 2 (the std-macro shim) as complementary; Alt B
+  and a default-on Alt A remain not recommended. Ratifies the mechanism decision + the §7 DoD only —
+  **not Enacted**, no code lands via this ratification (house rule #3); the §3 honest ROI framing
+  (uncertain `checked_fraction` effect) is carried forward unchanged (VR-5). Unblocks M-1032.
+  Append-only (house rule #3).
 - **2026-07-10** — DN-100 created (**Draft**). The toolchain decision for M-1032 (ENB-9): profiled the
   whole-corpus macro population (82 item-position invocations across 18 files, ≈93% custom
   `macro_rules!`; 13 body-level macro poisons), framed the honest ROI (expressibility lever, uncertain
