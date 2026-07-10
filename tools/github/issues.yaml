@@ -13460,3 +13460,99 @@ issues:
       Definition of Done:
       - The core query/encode path runs as a .myc package with a differential vs the Rust engine
         (Empirical); the gate that unblocked this issue is cited in its landed-basis note.
+
+  - id: M-1020
+    title: "Port std-numerics to .myc (kickoff spw, Wave-0 pilot leaf)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:stdlib, priority:P2, status:in-progress]
+    epic: E33-1
+    depends_on: [M-1003]
+    doc_refs:
+      - corpus:RFC-0031
+      - src:crates/mycelium-std-numerics/src/lib.rs
+      - src:.claude/kickoffs/spw.md
+      - src:docs/planning/self-hosting-port-ledger.md
+    body: |
+      Minted 2026-07-09 (kickoff `spw`, Wave-0 stdlib-port-wave pilot). Port `std-numerics`
+      (27 non-test items; committed draft checked% 7.4 — mostly hand-port) to self-hosted
+      `lib/std/numerics.myc` with a `crates/mycelium-std-conformance/tests/std_numerics.rs`
+      three-way differential + Rust-oracle comparison. Model: Opus.
+
+      User stories:
+      - As a stdlib author, I want the numerics ε/δ carrier surface self-hosted, so that the
+        honesty-lattice carrier is expressed in the language it certifies.
+
+      Definition of Done:
+      - STEP 0 (maintainer directive 2026-07-09): re-run the CURRENT transpiler on the target and
+        record the honest `checked_fraction`/`emitted` delta vs the committed manifest (Empirical) —
+        two emitter features landed since the manifest base (DN-51 narrow-cast→truncate; D3 operand
+        inference), so measure whether quality legitimately improved before hand-porting.
+      - The five D5 rows: surface-check first (STOP + FLAG to `enb` if a below-grammar enabler is
+        missing — never force, G2); behavior-neutral pre-port polish; `.myc` nodule + `include_str!`
+        harness three-way (L1-eval ≡ L0-interp ≡ AOT); differential vs the retained Rust oracle
+        green (earns `Empirical`); per-op tags carried at the same strength (VR-5).
+      - Change-scoped gates only; ownership boundary honored (only `lib/std/numerics.myc` +
+        `tests/std_numerics.rs`; `Cargo.toml`/`harness/mod.rs`/shared indices read-only, FLAG up).
+
+  - id: M-1021
+    title: "Port std-time to .myc (kickoff spw, Wave-0 pilot leaf)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:stdlib, priority:P2, status:in-progress]
+    epic: E33-1
+    depends_on: [M-1003]
+    doc_refs:
+      - corpus:RFC-0031
+      - src:crates/mycelium-std-time/src/lib.rs
+      - src:.claude/kickoffs/spw.md
+      - src:docs/planning/self-hosting-port-ledger.md
+    body: |
+      Minted 2026-07-09 (kickoff `spw`, Wave-0 stdlib-port-wave pilot). Port `std-time`
+      (37 non-test items; committed draft checked% 18.9) to self-hosted `lib/std/time.myc` with a
+      `crates/mycelium-std-conformance/tests/std_time.rs` three-way differential + Rust-oracle
+      comparison. Model: Opus.
+
+      User stories:
+      - As a stdlib author, I want the time surface self-hosted, so that duration/instant algebra
+        is expressed in Mycelium.
+
+      Definition of Done:
+      - STEP 0 (maintainer directive 2026-07-09): re-run the CURRENT transpiler and record the
+        honest `checked_fraction`/`emitted` delta vs the committed manifest (Empirical) before
+        hand-porting.
+      - The five D5 rows (surface-check → STOP+FLAG if enabler missing; behavior-neutral pre-port
+        polish; nodule + include_str! three-way; Rust-oracle differential green → `Empirical`;
+        tags carried at same strength, VR-5).
+      - Change-scoped gates only; ownership boundary honored (only `lib/std/time.myc` +
+        `tests/std_time.rs`; shared files read-only, FLAG up).
+
+  - id: M-1022
+    title: "Port std-content to .myc (kickoff spw, Wave-0 pilot leaf)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:stdlib, priority:P2, status:in-progress]
+    epic: E33-1
+    depends_on: [M-1003]
+    doc_refs:
+      - corpus:RFC-0031
+      - src:crates/mycelium-std-content/src/lib.rs
+      - src:.claude/kickoffs/spw.md
+      - src:docs/planning/self-hosting-port-ledger.md
+    body: |
+      Minted 2026-07-09 (kickoff `spw`, Wave-0 stdlib-port-wave pilot). Port `std-content`
+      (35 non-test items; committed draft checked% 20.0; one CheckError in the draft `lib.myc`:
+      `unknown type ContentHash` — a hand-port target) to self-hosted `lib/std/content.myc` with a
+      `crates/mycelium-std-conformance/tests/std_content.rs` three-way differential + Rust-oracle
+      comparison. Model: Opus.
+
+      User stories:
+      - As a stdlib author, I want the content-addressing surface self-hosted, so that content
+        refs/hashes are expressed in Mycelium.
+
+      Definition of Done:
+      - STEP 0 (maintainer directive 2026-07-09): re-run the CURRENT transpiler and record the
+        honest `checked_fraction`/`emitted` delta vs the committed manifest (Empirical) before
+        hand-porting — pay attention to whether the draft `lib.myc` CheckError now resolves.
+      - The five D5 rows (surface-check → STOP+FLAG if enabler missing; behavior-neutral pre-port
+        polish; nodule + include_str! three-way; Rust-oracle differential green → `Empirical`;
+        tags carried at same strength, VR-5).
+      - Change-scoped gates only; ownership boundary honored (only `lib/std/content.myc` +
+        `tests/std_content.rs`; shared files read-only, FLAG up).
