@@ -14553,13 +14553,14 @@ issues:
   - id: M-1042
     title: "M-1042 — structured (source-tree-mirroring) transpiler output with path-qualified nodule names"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:tooling, priority:P2, status:todo]
+    labels: [phase:5, type:feature, area:tooling, priority:P2, status:done]
     epic: E32-1
     depends_on: []
     doc_refs:
       - corpus:DN-109
       - src:crates/mycelium-transpile/src/bin/mycelium-transpile.rs
       - src:crates/mycelium-transpile/src/batch.rs
+      - src:crates/mycelium-transpile/src/transpile.rs
     body: |
       Filed 2026-07-10 from the zero-hand-port delta-ledger analysis (docs/planning/zero-hand-port-delta-ledger.md
       §4/§4.5, DN-109 §5.1/§9). `run_batch` (mycelium-transpile.rs) writes FLAT `out_dir/<stem>.myc`,
@@ -14582,6 +14583,45 @@ issues:
         distinct qualified names; the last-writer-wins WARNING path is removed (structurally impossible,
         not just warned); existing single-file-mode behavior unchanged; tests in the crate's
         src/tests/ layout; `just transpile-vet` still green.
+
+      RE-SCOPED 2026-07-10 (mitigation #14 — verify-first caught this issue stale before
+      implementation): the output-path half of this DoD (structurally-impossible flat-emit
+      collision, source-tree mirroring under out_dir) was ALREADY LANDED by `e0085ec0` ("M-1006
+      Phase-2 — path-qualified batch output") — `run_batch` now mirrors the source tree under
+      `out_dir` via `batch::output_rel_path` (5 unit tests pin the mapping); the last-writer-wins
+      WARNING path is gone. Confirmed against the codebase (`git show e0085ec0 --stat`,
+      `src/batch.rs`) before starting — not re-implemented.
+
+      DONE 2026-07-10 (the residual): `derive_nodule_path` (transpile.rs) still derived the
+      `// nodule: <path>;` header from the crate directory name alone, so two nested `mod.rs`
+      files in the same crate kept emitting the SAME nodule header even though M-1006 Phase-2
+      now writes them to distinct output paths. Fixed by anchoring the derivation on the file's
+      last `src` path component and appending its intra-crate module path as dotted segments
+      (`mod.rs`/`lib.rs` leaves contribute no segment of their own — they name the enclosing
+      directory): `crates/mycelium-std-cmp/src/foo/mod.rs` -> `std.cmp.foo`,
+      `crates/mycelium-std-cmp/src/foo/bar.rs` -> `std.cmp.foo.bar`. Self-contained in
+      `transpile.rs` (no root parameter threaded through `batch.rs`/the CLI — every real
+      invocation already passes a `<crate>/src`-rooted or file-rooted path, and the derivation
+      is anchored on the path's own `src` component, which generalizes to both). The existing
+      top-level case (a file directly under `src/`, e.g. `lib.rs`) is unchanged.
+      Data-driven fixture-table tests added in `src/tests/transpile.rs` (regression + nested +
+      two-deep + non-mod-rs submodule + hyphenated-crate + no-`src`-ancestor fallback cases, plus
+      a same-crate-sibling-non-collision property test). `derive_nodule_path` promoted to
+      `pub(crate)` for white-box testability (existing crate precedent: `emit::binary_width` etc.).
+      Verified end-to-end against real source (`mycelium-core/src` — `lib.rs` -> `core`,
+      `ternary/mod.rs` -> `core.ternary`), not just the fixture table.
+
+      FLAG (follow-up, out of this change's scope — `crates/mycelium-transpile/src/` only): the
+      committed `gen/myc-drafts/semcore/{checkty,elab,eval,mono,fuse}/*.myc` drafts all emit
+      `// nodule: l1` today (single-file transpiles of 5 `crates/mycelium-l1/src/*.rs` targets,
+      which previously collided identically on the crate-level prefix — a second latent instance
+      of the same collision class this fix closes for single-file mode too). After this change
+      they will instead each derive their own file-qualified nodule (`l1.checkty`, `l1.elab`, …)
+      on the next `gen/myc-drafts/regenerate.sh` run — a comment-text-only diff (`manifest_gen.py`
+      does not parse the emitted header, only carries descriptive prose about the eventual
+      hand-merge into `compiler.semcore`), not a functional break. Left un-regenerated here per
+      this leaf's disjoint-ownership scope; a follow-up `/myc-drafts` regenerate pass should pick
+      it up.
 
   - id: M-1043
     title: "M-1043 — per-item `// src: file:line` provenance breadcrumbs in emitted .myc"

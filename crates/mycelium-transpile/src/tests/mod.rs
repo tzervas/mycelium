@@ -10,4 +10,5 @@ mod map;
 mod prim_map;
 mod reserved;
 mod taxonomy;
+mod transpile;
 mod vet;
