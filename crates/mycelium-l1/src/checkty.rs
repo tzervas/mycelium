@@ -5802,9 +5802,20 @@ impl Cx<'_> {
         expected: Option<&Ty>,
     ) -> Result<(Ty, Expr), CheckError> {
         let (sty, scrut2) = self.check(scope, scrutinee, None)?;
-        if !matches!(sty, Ty::Data(_, _) | Ty::Binary(_) | Ty::Ternary(_)) {
+        // DN-105 / M-1035 (ENB-12): a `Bytes` scrutinee is admitted alongside `Data`/`Binary`/
+        // `Ternary`. `Bytes` is an **open** value domain (`usefulness::signature() → None`), so a
+        // byte-string-literal column never completes it and a wildcard/default arm is **required** —
+        // the W7 exhaustiveness check below enforces that never-silently (a non-exhaustive `Bytes`
+        // match refuses with witness `_`, exactly as for `Binary`/`Ternary`). Everything downstream
+        // (normalize/usefulness/decision/eval/elab) already handles an open-domain literal column
+        // generically, so this is a one-clause gate lift, not a new pattern subsystem (KC-3).
+        if !matches!(
+            sty,
+            Ty::Data(_, _) | Ty::Binary(_) | Ty::Ternary(_) | Ty::Bytes
+        ) {
             return self.err(format!(
-                "match scrutinee must be a data, Binary, or Ternary type, got {sty}"
+                "match scrutinee must be a data, Binary, Ternary, or Bytes type, got {sty} \
+                 (DN-105 / RFC-0007 §4.7)"
             ));
         }
         if arms.is_empty() {

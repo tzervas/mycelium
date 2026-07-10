@@ -40,6 +40,11 @@ use crate::tests::marshal_support::*;
 #[derive(Debug, Clone, PartialEq)]
 enum TestVal {
     Data(String, String, Vec<TestVal>),
+    // DN-105 / M-1035 (ENB-12): a `Bytes` repr value, lifted out of the `Opaque` collapse so the
+    // `Pattern::Lit`-on-`Bytes` eval-match (the string-literal / #72 target) can be witnessed against
+    // the real oracle. Carried as the raw byte-vector (the tests use ASCII text, so it round-trips
+    // through a `.myc` `Str` literal in `encode_lval`).
+    Bytes(Vec<u8>),
     Opaque,
 }
 
@@ -54,6 +59,16 @@ fn testval_to_l1value(v: &TestVal) -> L1Value {
             ctor: ctor.clone(),
             fields: Arc::new(fields.iter().map(testval_to_l1value).collect()),
         },
+        // DN-105: a real `Repr::Bytes` value — the oracle's `try_match` `Pattern::Lit` arm compares
+        // it by `repr()`/`payload()` against the literal's own value (`elab::lit_value`).
+        TestVal::Bytes(b) => L1Value::Repr(
+            mycelium_core::Value::new(
+                mycelium_core::Repr::Bytes,
+                mycelium_core::Payload::Bytes(b.clone()),
+                mycelium_core::Meta::exact(mycelium_core::Provenance::Root),
+            )
+            .expect("a Bytes Value is well-formed"),
+        ),
         TestVal::Opaque => L1Value::Fn("opaque".to_owned()),
     }
 }
@@ -72,9 +87,20 @@ fn l1value_to_testval(v: &L1Value) -> TestVal {
             fields.iter().map(l1value_to_testval).collect(),
         ),
         L1Value::Fn(_) => TestVal::Opaque,
+        // DN-105: a `Bytes` repr value round-trips to `TestVal::Bytes` (used when an oracle bind
+        // captures a `Bytes` scrutinee). A non-`Bytes` repr or a `Substrate` still never appears in
+        // this file's corpus, so those stay a documented, unreached `panic!` (never a silent
+        // misdecode — G2).
+        L1Value::Repr(rv) if matches!(rv.payload(), mycelium_core::Payload::Bytes(_)) => {
+            match rv.payload() {
+                mycelium_core::Payload::Bytes(b) => TestVal::Bytes(b.clone()),
+                _ => unreachable!("guarded by the matches! above"),
+            }
+        }
         L1Value::Repr(_) | L1Value::Substrate(_) => panic!(
-            "l1value_to_testval: a Repr/Substrate value reached the oracle-side decoder — this \
-             file's corpus never constructs one (the Lit-arm narrowing keeps them out of scope)"
+            "l1value_to_testval: a non-Bytes Repr / Substrate value reached the oracle-side decoder \
+             — this file's corpus only constructs Bytes repr values (the Lit-arm narrowing keeps \
+             the rest out of scope)"
         ),
     }
 }
@@ -97,6 +123,12 @@ fn encode_lval(v: &TestVal) -> String {
             encode_bytes(ctor),
             encode_lval_list(fields)
         ),
+        // DN-105: `LReprBytes(<bytes>)`. The corpus uses ASCII text, so the byte-vector round-trips
+        // through a `.myc` `Str` literal (`encode_bytes` renders the quoted, escape-correct form).
+        TestVal::Bytes(b) => format!(
+            "LReprBytes({})",
+            encode_bytes(std::str::from_utf8(b).expect("test Bytes fixtures are ASCII text"))
+        ),
         TestVal::Opaque => "LOpaque".to_owned(),
     }
 }
@@ -111,6 +143,8 @@ fn decode_lval(v: &L1Value) -> TestVal {
             decode_string(&fields[1]),
             decode_vec(&fields[2], decode_lval),
         ),
+        // DN-105: `LReprBytes(<bytes>)` — its single field is the `Bytes` repr value.
+        "LReprBytes" => TestVal::Bytes(decode_bytes(&fields[0])),
         "LOpaque" => TestVal::Opaque,
         c => panic!("marshal decode_lval: unexpected ctor {c}"),
     }
@@ -211,10 +245,12 @@ fn encode_pattern(p: &Pattern) -> String {
     }
 }
 
-/// A minimal `Literal` encoder — only `Bytes` is needed (the standalone `Lit`-refuses probe).
+/// A minimal `Literal` encoder — `Bytes` (the `0x…`-hex deferred probe) and `Str` (the DN-105
+/// text byte-string-literal pattern) are the forms this file's fixtures use.
 fn encode_literal(l: &Literal) -> String {
     match l {
         Literal::Bytes(hex) => format!("LBytes({})", encode_bytes(hex)),
+        Literal::Str(s) => format!("Str({})", encode_bytes(s)),
         other => panic!("encode_literal: {other:?} not needed by this file's fixtures"),
     }
 }
@@ -512,6 +548,91 @@ fn lval_try_match_lit_refuses() {
         got,
         Err(()),
         "lval_try_match's Lit arm must refuse explicitly (Err), never silently succeed -- got {got:?}"
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+// DN-105 / M-1035 (ENB-12): the `Pattern::Lit`-on-`Bytes` eval-match — the string-literal (#72)
+// target — is NOW in scope for a TEXT (`Str`) literal, via the `LReprBytes` carrier. These ARE
+// oracle-parity cases (unlike the deferred probes): the port's `lval_try_match` compares a `Bytes`
+// scrutinee against a `"…"` literal by byte content, exactly as the real `Evaluator::try_match` does.
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+
+/// A text byte-string literal arm HITS a `Bytes` scrutinee with the same bytes, and MISSES one with
+/// different bytes (the single-arm view of "matched literal" vs "fell through to the default").
+#[test]
+fn try_match_bytes_text_literal_hit_and_miss() {
+    // hit: `"get"` vs the `Bytes` value `"get"` → matched, no bind.
+    assert_try_match(
+        "PLit(Str \"get\") vs Bytes \"get\" — byte-content hit",
+        &[],
+        &Pattern::Lit(Literal::Str("get".to_owned())),
+        &TestVal::Bytes(b"get".to_vec()),
+    );
+    // miss: `"get"` vs the `Bytes` value `"post"` → no match (a real match tries the next/default arm).
+    assert_try_match(
+        "PLit(Str \"get\") vs Bytes \"post\" — byte-content miss (falls through)",
+        &[],
+        &Pattern::Lit(Literal::Str("get".to_owned())),
+        &TestVal::Bytes(b"post".to_vec()),
+    );
+    // empty-string edge: `""` vs `Bytes ""` → hit; `""` vs `Bytes "x"` → miss.
+    assert_try_match(
+        "PLit(Str \"\") vs Bytes \"\" — empty byte-string hit",
+        &[],
+        &Pattern::Lit(Literal::Str(String::new())),
+        &TestVal::Bytes(Vec::new()),
+    );
+}
+
+/// A plain binder captures a `Bytes` scrutinee whole (the `LReprBytes` case of the `Ident`
+/// fall-through) — the same bind the real oracle records for a `Repr` value.
+#[test]
+fn try_match_bytes_binds_to_ident() {
+    assert_try_match(
+        "PIdent(x) vs Bytes \"hi\" — binds the whole Bytes value",
+        &[],
+        &Pattern::Ident("x".to_owned()),
+        &TestVal::Bytes(b"hi".to_vec()),
+    );
+}
+
+/// A `Bytes` scrutinee does NOT match a constructor pattern — `Ok(false)`, mirroring the oracle's
+/// `L1Value::Repr => Ok(false)` in the `Ctor` arm (never-silent; the `LReprBytes` PCtor arm).
+#[test]
+fn try_match_bytes_vs_ctor_is_false() {
+    assert_try_match(
+        "PCtor(SPoint) vs Bytes \"x\" — a repr value matches no ctor, false",
+        &[],
+        &Pattern::Ctor("SPoint".to_owned(), vec![]),
+        &TestVal::Bytes(b"x".to_vec()),
+    );
+}
+
+/// The `0x…`-HEX byte-string literal pattern's eval stays DEFERRED in `.myc` (FLAG-semcore-25 — no
+/// wild-free hex→byte synthesis), so its `PLit` arm propagates an explicit `Err` against a `Bytes`
+/// scrutinee. A STANDALONE probe (no oracle-parity claim — the real oracle CAN synthesize the hex
+/// value and would compare): the port must refuse cleanly (`Err`), never a panic or a silently-wrong
+/// `Ok` (G2). This is the honest boundary between the text form (parity, above) and the hex form.
+#[test]
+fn lval_try_match_bytes_hex_literal_defers() {
+    // `PLit(LBytes("6765"))` (= 0x6765 = "ge") vs `LReprBytes("ge")` — the bytes are equal, but the
+    // `.myc` `lit_value` cannot synthesize the hex value, so the port refuses rather than fake it.
+    let driver = "fn main() => Result[Pair[Bool, Vec[Pair[Bytes, LVal]]], Bytes] = \
+                   lval_try_match(Nil, PLit(LBytes(\"6765\")), LReprBytes(\"ge\"), Nil);\n";
+    let src = program(driver);
+    let env = check_nodule(&parse(&src).unwrap_or_else(|e| panic!("parse: {e}")))
+        .unwrap_or_else(|e| panic!("check: {e}"));
+    let mono = monomorphize(&env, "main").unwrap_or_else(|e| panic!("mono: {e}"));
+    let l1_val = Evaluator::new(&mono)
+        .call("main", vec![])
+        .unwrap_or_else(|e| panic!("eval: {e}"));
+    let got = decode_match_result(&l1_val);
+    assert_eq!(
+        got,
+        Err(()),
+        "the .myc `0x…`-hex literal-pattern eval must defer explicitly (Err), never fake a match — \
+         got {got:?}"
     );
 }
 
