@@ -11,9 +11,11 @@
 //!   relative to the batch root becomes its output path — `mycelium-core/src/lib.myc`, not a flat
 //!   `lib.myc`), so a whole-corpus run never overwrites two crates' same-stem files (M-1006
 //!   Phase-2). For a single-crate `src/` with a flat layout the mirrored path is just the stem, so
-//!   the output is identical to the pre-Phase-2 flat naming. Also writes two combined artifacts:
-//!   `<out-dir>/summary.json` (per-file + aggregate counts) and `<out-dir>/union.gap.json` (every
-//!   gap from every file, plus aggregate category counts).
+//!   the output is identical to the pre-Phase-2 flat naming. Also writes three combined artifacts:
+//!   `<out-dir>/summary.json` (per-file + aggregate counts, plus the M-1044/DN-109 §5.2 `remap`
+//!   provenance manifest — one `Keep` entry per emitted nodule, v0 Mechanical-only), the
+//!   `<out-dir>/REMAP.md` human-rendered projection of that same `remap` field (`src/remap.rs`),
+//!   and `<out-dir>/union.gap.json` (every gap from every file, plus aggregate category counts).
 //!
 //! `--vet` (M-1000) runs the **real** `myc check` oracle over every emitted `.myc`, writes
 //! `<out-dir>/vet.json` (per-file + aggregate vet records), and prints the **`checked_fraction`**
@@ -27,6 +29,7 @@
 //! (kickoff-scoped minimal deps).
 
 use mycelium_transpile::batch::{discover_rs_files, output_rel_path, summarize, transpile_batch};
+use mycelium_transpile::remap::render_remap_md;
 use mycelium_transpile::vet::{vet_batch, MycChecker, VetInput, VetReport};
 use mycelium_transpile::{transpile_file, GapReport};
 use std::env;
@@ -276,7 +279,7 @@ fn run_batch(input_dir: &Path, out_dir: &Path, vet: bool) -> ExitCode {
         }
     }
 
-    let (batch_summary, union) = summarize(&results);
+    let (batch_summary, union) = summarize(&results, input_dir);
 
     let summary_path = out_dir.join("summary.json");
     match serde_json::to_string_pretty(&batch_summary) {
@@ -293,6 +296,17 @@ fn run_batch(input_dir: &Path, out_dir: &Path, vet: bool) -> ExitCode {
             eprintln!("mycelium-transpile: failed to serialize summary.json: {e}");
             return ExitCode::FAILURE;
         }
+    }
+
+    // M-1044 / DN-109 §5.2: REMAP.md is a pure projection of `batch_summary.remap` (the JSON is
+    // the source of truth, this is a rendered view) — see `src/remap.rs`.
+    let remap_md_path = out_dir.join("REMAP.md");
+    if let Err(e) = fs::write(&remap_md_path, render_remap_md(&batch_summary.remap)) {
+        eprintln!(
+            "mycelium-transpile: failed to write {}: {e}",
+            remap_md_path.display()
+        );
+        return ExitCode::FAILURE;
     }
 
     let union_path = out_dir.join("union.gap.json");
@@ -314,7 +328,8 @@ fn run_batch(input_dir: &Path, out_dir: &Path, vet: bool) -> ExitCode {
 
     println!(
         "mycelium-transpile: batch over {} file(s) ({} failed to parse) — {} top-level item(s) \
-         ({} non-test), {} emitted, {} gap(s), {:.1}% expressible -> {}, {}",
+         ({} non-test), {} emitted, {} gap(s), {:.1}% expressible, {} nodule(s) recorded in the \
+         remap manifest -> {}, {}, {}",
         results.len(),
         failures.len(),
         batch_summary.totals.total_items,
@@ -322,7 +337,9 @@ fn run_batch(input_dir: &Path, out_dir: &Path, vet: bool) -> ExitCode {
         batch_summary.totals.emitted,
         batch_summary.totals.gaps,
         batch_summary.totals.expressible_pct,
+        batch_summary.remap.nodules.len(),
         summary_path.display(),
+        remap_md_path.display(),
         union_path.display(),
     );
 

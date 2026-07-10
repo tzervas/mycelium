@@ -14654,12 +14654,13 @@ issues:
   - id: M-1044
     title: "M-1044 — the remap manifest (remap.json / REMAP.md): item-granular structural + idiom provenance ledger"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:tooling, priority:P2, status:todo]
+    labels: [phase:5, type:feature, area:tooling, priority:P2, status:done]
     epic: E32-1
     depends_on: [M-1042]
     doc_refs:
       - corpus:DN-109
       - src:crates/mycelium-transpile/src/batch.rs
+      - src:crates/mycelium-transpile/src/remap.rs
     body: |
       Filed 2026-07-10 from DN-109 §5.2 (the L5 structural-remapping design). Gated on DN-109's
       ratification of §7-c (whether the manifest is a new artifact or extends the existing
@@ -14684,6 +14685,38 @@ issues:
         idiom_choices already made, e.g. `&T` erasure); `REMAP.md` byte-derivable from `remap.json`;
         never a black box (S4) — every non-Mechanical choice has a `reason`; tests assert schema +
         round-trip; no guarantee-tag upgrade from the manifest's existence alone (VR-5).
+
+      **Landed 2026-07-11 (mitigation #14, checked basis — verify-first: `grep -rn remap
+      crates/mycelium-transpile/src` was empty before this change, confirmed no prior partial
+      landing).** DN-109's §7-c/§7-e forks were already ratified (2026-07-11, see DN-109's
+      ratification section) before this leaf began. Per §7-c: **extends** `summary.json`
+      (`BatchSummary.remap: RemapManifest`, `crates/mycelium-transpile/src/batch.rs`) rather than
+      minting a new sidecar — no standalone `remap.json` file is written; the manifest ships inside
+      `summary.json` and `REMAP.md` is rendered from that same struct
+      (`crates/mycelium-transpile/src/remap.rs::render_remap_md`, a pure projection — checked by a
+      round-trip test: serialize -> deserialize -> re-render -> byte-compare). Schema fields match
+      DN-109 §5.2 field-for-field (`phylum{source_crate,target_phylum}`,
+      `nodules[]{target_nodule,operation,sources[],rationale,safety,api_surface_changed,
+      identity_neutral,guarantee}`, `idiom_choices[]{target_span,rust_span,decision,class,chose,
+      alternatives,reason}`). v0 scope per the ratified §7-e Mechanical-only auto-fire: every
+      transpiled file gets exactly one pure `Keep` entry (structure-preserving 1:1, target nodule
+      derived via the already-`pub(crate)` `transpile::derive_nodule_path` from M-1042 — zero
+      changes to `transpile.rs`/`emit.rs`/`map.rs`/`visit.rs`); `idiom_choices` ships as an honestly
+      **empty** vec (the schema field is never-silent-present, but no per-item `&T`-erasure EXPLAIN
+      instrumentation exists yet in `map.rs`/`emit.rs` to populate it from — not invented here,
+      KISS/YAGNI boundary, tracked as residual future work rather than fabricated). Guarantee tag
+      stays `Declared` throughout, never upgraded from the manifest's mere presence (VR-5) — the
+      module doc comment states this explicitly. 11 new tests in
+      `crates/mycelium-transpile/src/tests/remap.rs` (JSON round-trip, the REMAP.md
+      byte-derivability property named in this DoD, rendering determinism, a Markdown-table
+      pipe/newline-escaping regression added during self-review — `render_remap_md` now escapes
+      `|`/`\n` in every free-text cell so a future non-`Keep` rationale/reason can never corrupt the
+      rendered table, v0 Keep-only behavior, a data-driven phylum-name fixture table, guarantee-tag
+      posture) plus 2 new assertions folded into the existing `src/tests/batch.rs` multi-file test;
+      `cargo test -p mycelium-transpile` green at 75 (was 66 + 9 net); `cargo clippy -p
+      mycelium-transpile --all-targets -D warnings` clean; `cargo fmt --check` clean; verified
+      end-to-end against a real corpus target (`crates/mycelium-std-cmp/src` -> `std.cmp`, matching
+      the phylum-naming convention DN-109 §2 cites) in addition to the unit-test fixtures.
 
   - id: M-1045
     title: "M-1045 — actionable suggested_idiom field on transpiler gap diagnostics"
