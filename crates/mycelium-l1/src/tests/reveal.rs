@@ -9,7 +9,7 @@ use crate::checkty::{check_nodule, Env};
 use crate::elab::elaborate;
 use crate::parse;
 use crate::reveal::{alpha_eq, reelaborate, render_surface, reveal_l0, RenderError, RevealError};
-use mycelium_core::{FloatWidth, Meta, Node, Payload, Provenance, Repr, ScalarKind, Value};
+use mycelium_core::{Alt, FloatWidth, Meta, Node, Payload, Provenance, Repr, ScalarKind, Value};
 
 fn env(src: &str) -> Env {
     check_nodule(&parse(src).expect("parses")).expect("checks")
@@ -73,13 +73,22 @@ fn reveal_l0_shows_the_real_elaborated_l0_term_for_every_fixture() {
 }
 
 // ---------------------------------------------------------------------------------------------
-// The E3 reveal-round-trip property (DN-110-8.2-hygiene-deepdive §7), at the primitive level this
-// increment ships: alpha_eq(reelaborate(reveal_l0(x)), reveal_l0(x)). `Empirical` over this corpus
-// (VR-5 — not `Proven`; see the module doc's guarantee-tag section).
+// Closedness-preservation through reelaborate (NOT the E3 alpha-equivalence regression test —
+// see the honest-scoping callout below and in the reveal.rs module doc). `reelaborate` returns
+// `shown.clone()` on its success path (v0 has no lossy step to invert — the module doc's
+// "reelaborate at v0" section), so composing it with `alpha_eq` here compares a term to a
+// bit-identical clone of itself: this validly checks that `reveal_l0`'s output survives an
+// independent closedness re-derivation with its structure intact, but it would ALSO pass with a
+// broken `alpha_eq` (identical operands don't distinguish a correct comparator from a broken one).
+// `alpha_eq` itself is unit-tested against genuinely differently-spelled alpha-variant pairs
+// separately, below. The real DN-110-8.2-hygiene-deepdive §7 E3 (expand → reveal_l0 → reelaborate →
+// alpha_eq over actual sugar-expansion `%`-freshened pairs) needs expression-position sugar rules
+// that don't exist yet — tracked as the M-1055 follow-on, not built in this increment. Do not cite
+// this test as E3 evidence (VR-5 — the claim must not silently cover more than what is checked).
 // ---------------------------------------------------------------------------------------------
 
 #[test]
-fn reveal_round_trip_property_holds_on_the_fixture_corpus() {
+fn reveal_l0_output_is_closed_and_survives_reelaboration() {
     for c in CASES {
         let e = env(c.src);
         let shown =
@@ -88,8 +97,17 @@ fn reveal_round_trip_property_holds_on_the_fixture_corpus() {
             reelaborate(&shown).unwrap_or_else(|err| panic!("{}: reelaborate: {err}", c.name));
         assert!(
             alpha_eq(&round_tripped, &shown),
-            "{}: alpha_eq(reelaborate(reveal_l0(x)), reveal_l0(x)) must hold — a FAIL here is the \
-             blocker signal DN-110-8.2-hygiene-deepdive §7 E3 is designed to catch",
+            "{}: closedness-preservation must hold (reelaborate returns a clone once its own \
+             independent closedness re-derivation succeeds — this is NOT an alpha_eq correctness \
+             check, since the compared operands are a bit-identical clone pair; see the module doc)",
+            c.name
+        );
+        // Reinforce, at the assertion site, exactly what this DOES check beyond alpha_eq: the
+        // clone really is structurally identical (a stronger, more direct witness than alpha_eq
+        // alone would give here, since alpha_eq degenerates to `==`-equivalent on identical trees).
+        assert_eq!(
+            round_tripped, shown,
+            "{}: reelaborate's success-path clone must be structurally identical to the shown term",
             c.name
         );
     }
@@ -231,6 +249,159 @@ fn alpha_eq_free_variables_compare_by_name() {
     let c = Node::Var("free2".to_owned());
     assert!(alpha_eq(&a, &b));
     assert!(!alpha_eq(&a, &c));
+}
+
+// --- Fix / FixGroup / Match coverage (adversarial-review fix, coverage gap) ---------------------
+//
+// `alpha_eq_at`/`collect_free_vars` are two hand-maintained parallel walks over the same five
+// binder-introducing `Node` forms (`Let`, `Lam`, `Fix`, `FixGroup`, `Alt::Ctor`) — a maintainability
+// watch-item: a future sixth binder form must update both walks, and nothing currently enforces
+// that mechanically (no shared "for each binder form" abstraction exists to fold them through).
+// Until then, these forms are exercised directly here rather than only indirectly through the
+// fixture corpus (which never actually reaches `alpha_eq_at`'s inequality branches — see the
+// closedness-preservation test above).
+
+/// A 2-field constructor `CtorRef` for [`Node::Construct`]/[`Alt::Ctor`] fixtures (mirrors
+/// `mycelium-core/src/node.rs`'s own test helper pattern) — arity 2 so a binder-*position* (not
+/// just binder-*spelling*) distinction is actually exercisable.
+fn ctor_ref_pair() -> mycelium_core::CtorRef {
+    use mycelium_core::{CtorSpec, DataRegistry, DeclSpec, FieldSpec};
+    use std::collections::BTreeMap;
+    let mut m = BTreeMap::new();
+    m.insert(
+        "Pair".to_owned(),
+        DeclSpec {
+            ctors: vec![CtorSpec {
+                fields: vec![
+                    FieldSpec::Repr(Repr::Binary { width: 8 }),
+                    FieldSpec::Repr(Repr::Binary { width: 8 }),
+                ],
+            }],
+        },
+    );
+    let reg = DataRegistry::build(&m).expect("registry builds");
+    reg.ctor_ref("Pair", 0).expect("Pair#0 exists")
+}
+
+#[test]
+fn alpha_eq_fix_renamed_binder() {
+    let a = Node::Fix {
+        name: "f".to_owned(),
+        body: Box::new(Node::Var("f".to_owned())),
+    };
+    let b = Node::Fix {
+        name: "g".to_owned(),
+        body: Box::new(Node::Var("g".to_owned())),
+    };
+    assert!(
+        alpha_eq(&a, &b),
+        "a consistently-renamed self-reference is alpha_eq"
+    );
+}
+
+#[test]
+fn alpha_eq_fix_vs_free_same_spelling_false() {
+    // Both sides are `Fix` (same node shape), so the comparison reaches the `Var` arm rather than
+    // short-circuiting on a variant mismatch. `a`'s body "f" is bound (matches the Fix's own name
+    // "f"); `b`'s body still spells "f" but `b`'s Fix binds "g" — so in `b`, "f" is free. Same
+    // spelling, opposite bound/free status: must be unequal.
+    let a = Node::Fix {
+        name: "f".to_owned(),
+        body: Box::new(Node::Var("f".to_owned())),
+    };
+    let b = Node::Fix {
+        name: "g".to_owned(),
+        body: Box::new(Node::Var("f".to_owned())),
+    };
+    assert!(
+        !alpha_eq(&a, &b),
+        "a bound occurrence must not be alpha_eq to a free occurrence of the same spelling"
+    );
+}
+
+#[test]
+fn alpha_eq_fixgroup_renamed_binders_mutual() {
+    // f/g <-> p/q, a consistent bijective rename preserving relative position.
+    let a = Node::FixGroup {
+        defs: vec![
+            ("f".to_owned(), Box::new(Node::Var("g".to_owned()))),
+            ("g".to_owned(), Box::new(Node::Var("f".to_owned()))),
+        ],
+        body: Box::new(Node::Var("f".to_owned())),
+    };
+    let b = Node::FixGroup {
+        defs: vec![
+            ("p".to_owned(), Box::new(Node::Var("q".to_owned()))),
+            ("q".to_owned(), Box::new(Node::Var("p".to_owned()))),
+        ],
+        body: Box::new(Node::Var("p".to_owned())),
+    };
+    assert!(
+        alpha_eq(&a, &b),
+        "a consistent bijective rename of a mutual-recursion group is alpha_eq"
+    );
+}
+
+#[test]
+fn alpha_eq_fixgroup_mismatched_arity_is_false_not_panic() {
+    let one_def = Node::FixGroup {
+        defs: vec![("f".to_owned(), Box::new(Node::Var("f".to_owned())))],
+        body: Box::new(Node::Var("f".to_owned())),
+    };
+    let two_defs = Node::FixGroup {
+        defs: vec![
+            ("f".to_owned(), Box::new(Node::Var("g".to_owned()))),
+            ("g".to_owned(), Box::new(Node::Var("f".to_owned()))),
+        ],
+        body: Box::new(Node::Var("f".to_owned())),
+    };
+    // Both directions — the early `d1.len() != d2.len()` check must fire symmetrically, never
+    // index out of bounds (no panic in either direction).
+    assert!(!alpha_eq(&one_def, &two_defs));
+    assert!(!alpha_eq(&two_defs, &one_def));
+}
+
+/// Build a `match <scrutinee> { <ctor>(binders...) => <body_var> }` fixture — the shared shape
+/// [`alpha_eq_match_ctor_renamed_binders`]/[`alpha_eq_ctor_binder_vs_free_same_spelling_false`]
+/// vary only the binder spellings / body reference over.
+fn match_with_ctor_alt(binders: [&str; 2], body_var: &str) -> Node {
+    Node::Match {
+        scrutinee: Box::new(Node::Var("scrutinee".to_owned())),
+        alts: vec![Alt::Ctor {
+            ctor: ctor_ref_pair(),
+            binders: binders.iter().map(|s| (*s).to_owned()).collect(),
+            body: Node::Var(body_var.to_owned()),
+        }],
+        default: None,
+    }
+}
+
+#[test]
+fn alpha_eq_match_ctor_renamed_binders() {
+    let a = match_with_ctor_alt(["x", "y"], "x"); // refers to binder position 0
+    let same_position = match_with_ctor_alt(["a", "b"], "a"); // renamed, still position 0
+    let different_position = match_with_ctor_alt(["a", "b"], "b"); // renamed, now position 1
+    assert!(
+        alpha_eq(&a, &same_position),
+        "a consistent binder rename at the same relative position is alpha_eq"
+    );
+    assert!(
+        !alpha_eq(&a, &different_position),
+        "referring to a different relative binder position is a real semantic difference"
+    );
+}
+
+#[test]
+fn alpha_eq_ctor_binder_vs_free_same_spelling_false() {
+    // `a`'s body "x" is bound (binder position 0 is "x"); `b`'s binders are ["z","y"] — "x" no
+    // longer appears among them, so `b`'s body "x" is free. Same spelling, opposite bound/free
+    // status: must be unequal (the `Alt::Ctor` analogue of `alpha_eq_fix_vs_free_same_spelling_false`).
+    let a = match_with_ctor_alt(["x", "y"], "x");
+    let b = match_with_ctor_alt(["z", "y"], "x");
+    assert!(
+        !alpha_eq(&a, &b),
+        "a bound ctor-binder occurrence must not be alpha_eq to a free occurrence of the same spelling"
+    );
 }
 
 // ---------------------------------------------------------------------------------------------

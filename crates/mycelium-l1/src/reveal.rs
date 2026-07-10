@@ -3,11 +3,13 @@
 //!
 //! `reveal` is the transparency inspector house rule #2 requires: it shows the **real L0 term the
 //! kernel runs**, never a lossy text reconstruction (DN-38 §5). This module ships the
-//! **E3-enabling core** — the four primitives an implementer (or a future `reveal` CLI /
-//! `certified`-mode round-trip check) composes: [`reveal_l0`] (the shown L0 term), [`render_surface`]
-//! (a best-effort, honestly-labelled surface pretty-printer), [`alpha_eq`] (the structural
-//! alpha-equivalence [`Node`] needs but its derived-looking [`PartialEq`] does not provide), and
-//! [`reelaborate`] (the L0-level round-trip witness E3 asserts against).
+//! **E3-enabling core** — the four primitives a future E1/E3 hygiene-experiment harness (M-1055) or
+//! `reveal` CLI / `certified`-mode round-trip check composes: [`reveal_l0`] (the shown L0 term),
+//! [`render_surface`] (a best-effort, honestly-labelled surface pretty-printer), [`alpha_eq`] (the
+//! structural alpha-equivalence [`Node`] needs but its derived-looking [`PartialEq`] does not
+//! provide), and [`reelaborate`] (the closedness-re-derivation primitive the L0-level round-trip
+//! witness composes from — **not yet wired to a genuine E3 regression corpus**; see the "honest
+//! scoping" callout below).
 //!
 //! # Scope (Increment-1 — do not read more into this module than it claims)
 //!
@@ -51,11 +53,11 @@
 //!   claim* (alpha-correctness, honest-labelling, closedness-preservation): **`Empirical`** — checked
 //!   by the fixture-table + property test in `src/tests/reveal.rs`, **not** `Proven` (no mechanized
 //!   proof of alpha-comparison correctness or of the pretty-printer's grammar coverage claim).
-//! - The reveal-round-trip property tested here, `alpha_eq(reelaborate(reveal_l0(x)), reveal_l0(x))`
-//!   (DN-110-8.2-hygiene-deepdive §7 E3, restated at the primitive level this increment ships):
-//!   **`Empirical`** over the fixture corpus — never `Proven`, and explicitly **not** the stronger
-//!   surface-round-trip claim DN-38 §5's `certified` obligation eventually wants (out of scope, see
-//!   above).
+//! - The **closedness-preservation** property tested here (`src/tests/reveal.rs`'s
+//!   `reveal_l0_output_is_closed_and_survives_reelaboration`),
+//!   `alpha_eq(reelaborate(reveal_l0(x)), reveal_l0(x))` over the fixture corpus: **`Empirical`**,
+//!   but see the honest-scoping callout immediately below — **this is not yet the DN-110-8.2-hygiene-
+//!   deepdive §7 E3 regression test**, and no claim here should be read as E3 evidence.
 //!
 //! # `reelaborate` at v0 — what it actually checks, honestly
 //!
@@ -69,10 +71,28 @@
 //! structural walk over the shown [`Node`] alone (no access to the original `Env`/source). It
 //! **recomputes**, rather than merely returns, that witness: [`reelaborate`] returns a clone of the
 //! input **iff** the closedness re-derivation succeeds, and a never-silent [`RevealError::NotClosed`]
-//! naming the offending free names otherwise (G2). This gives the round-trip property real teeth (a
+//! naming the offending free names otherwise (G2). This gives the closedness property real teeth (a
 //! `reveal_l0` that ever leaked an unbound reference would fail it) while staying honest about not
 //! being a full re-elaboration-from-surface — that stronger obligation is DN-38 §5's `certified`
 //! round-trip, Increment-3.
+//!
+//! **Honest scoping (VR-5 — do not overclaim this as E3): the corpus round-trip test is NOT yet
+//! the DN-110-8.2-hygiene-deepdive §7 E3 regression test, and must not be read/cited as such.**
+//! [`reelaborate`] returns `shown.clone()` on the success path (see above — v0 has no lossy step to
+//! invert, so re-derivation is a validated clone). Composed with `alpha_eq`, the corpus test therefore
+//! compares a term to a **bit-identical clone of itself** — it would pass even with a broken
+//! `alpha_eq` (a `false`-always or `true`-always comparator both happen to agree on identical
+//! operands via different code paths; only a genuinely *differently-spelled-but-equivalent* pair
+//! distinguishes a correct alpha-comparator from a broken one). What it *does* check, and check
+//! validly, is **closedness-preservation**: that `reveal_l0`'s output survives an independent
+//! closedness re-derivation with its structure intact. The real E3 — genuinely different-but-
+//! alpha-equivalent pairs, produced by an actual sugar **expansion** with `%`-freshening
+//! (`expand → reveal_l0 → reelaborate → alpha_eq`) — needs expression-position sugar rules that do
+//! not exist yet; it is the E1/E3 experiment DN-110-8.2-hygiene-deepdive §7 names, tracked as a
+//! follow-on (M-1055), not built in this increment. `alpha_eq` itself is separately unit-tested
+//! against hand-built alpha-variant pairs (renamed binders across every binder-introducing `Node`
+//! form — `Let`/`Lam`/`Fix`/`FixGroup`/`Alt::Ctor`) in `src/tests/reveal.rs`, which *is* a genuine
+//! (if synthetic, non-sugar-derived) correctness check on the comparator in isolation.
 
 use std::collections::BTreeSet;
 use std::fmt::Write as _;
