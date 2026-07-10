@@ -1420,7 +1420,12 @@ Closes the transpiler-side half of §8.16 item 4. `&`/`|` now emit `and`/`or` (n
   follow-on once the unknown-prim method-call gate exists. **Net metric delta: 0.00pp** (checked_fraction
   and expressible_fraction both unchanged from baseline — the honest, no-regression outcome).
   **Two FLAGs for the cloud / language lane:** **FLAG-L1-match-Bytes** (L1 `match` on a `Bytes`
-  scrutinee — unblocks #72, and every string-`match` port target) and **FLAG-tr-unknown-prim** (the
-  method-call desugar emits unknown methods blindly — a VR-5/G2 defect gated only by a known-prim set /
-  symbol table; ENB-1 / register #21/#50). Emission `Declared`; profiling `Empirical`. **Status
-  unchanged (Draft).** (Append-only; VR-5; G2.)
+  scrutinee — unblocks #72, and every string-`match` port target — **tracked as M-1035 / ENB-12 under
+  E28-1**) and **FLAG-tr-unknown-prim** (the method-call desugar emits unknown methods blindly — a
+  VR-5/G2 defect gated only by a known-prim set / symbol table; ENB-1 / register #21/#50 —
+  **cross-refed on M-1024**, no duplicate issue, mitigation #14). **Denominator note (G2):** this
+  baseline's raw denominator (5,061 non-excluded items) differs by 2 from §8.19/§8.20's 5,059 — the two
+  are distinct profiling runs (§8.21 measured at dev tip `8cd0a796`), so a small measurement-window
+  difference; both yield the same rounded headline percentages, flagged here rather than silently
+  reconciled. Emission `Declared`; profiling `Empirical`. **Status unchanged (Draft).** (Append-only;
+  VR-5; G2.)
