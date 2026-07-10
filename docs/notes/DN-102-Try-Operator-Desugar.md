@@ -141,6 +141,15 @@ KISS increment; §6 tracks the general position.
 - **FLAG-try-4 — surface honesty tag.** The `?` desugar is `Declared` (a type-level surface contract)
   until the differential in §7 witnesses `?` ≡ the hand-`match` oracle on both paths, which upgrades the
   *agreement* claim to `Empirical` (never the desugar rule itself past its basis — VR-5).
+- **FLAG-try-5 — `Result`/`Option` dispatch is by type *name*, not structure (v0).** `check_try_let`
+  selects the `Ok`/`Err` vs `Some`/`None` constructor set by matching the operand's type name literally
+  (`Ty::Data("Result", [_, _])` / `Ty::Data("Option", [_])`), then builds those constructor patterns.
+  A nodule that *shadows* the name with a differently-shaped type (e.g. `type Result[A, E] = Foo(A) |
+  Bar(E)`) and applies `?` to it **fails closed** — a never-silent constructor-mismatch `CheckError`,
+  never a silent mis-desugar (G2) — but with the generic "`Ok` is not a constructor of `Result`"
+  surface rather than a targeted diagnostic. This is the accepted v0 restriction (`?` is sugar over the
+  *standard* `Result`/`Option`); structural dispatch (or a pre-check of the declared constructors with a
+  pointed diagnostic) is the follow-up if a port witnesses the shadowing need. (PR #1363 review.)
 
 ## §7 Definition of Done (this note's gate)
 

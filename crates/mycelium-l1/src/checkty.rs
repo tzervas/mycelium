@@ -4292,11 +4292,19 @@ impl Cx<'_> {
         body: &Expr,
         expected: Option<&Ty>,
     ) -> Result<(Ty, Expr), CheckError> {
-        // Peek the operand's type to pick the constructor set (Result vs Option). This `infer` is a
-        // type-only read; `check_match` below re-checks the scrutinee once for the real rewrite — the
-        // double read is harmless for the non-affine `Result`/`Option` operand (a `?` on an affine
-        // `Substrate` is refused here anyway, since `Substrate` is neither `Result` nor `Option`).
+        // Peek the operand's type to pick the constructor set (Result vs Option). `infer` runs the
+        // FULL checker on `inner` (including the affine/linear `use_at` tracker), and `check_match`
+        // below re-checks the *same* scrutinee for the real rewrite — so the peek must NOT leave its
+        // affine effects behind. Otherwise an operand whose evaluation consumes an affine `Substrate`
+        // (e.g. `let x = f(s)? in …` where `f` consumes `s`) is marked used TWICE and rejected with a
+        // spurious `double-consume` — a false rejection on the *dominant* port shape this feature
+        // targets. Snapshot the affine tracker before the peek and restore it after, so only
+        // `check_match`'s single real pass records the consume — the same speculative-then-real idiom
+        // `check_if`/`check_match` use (`self.affine.snapshot()`/`restore()`). (M-1025 / DN-102 §3;
+        // PR #1363 review.)
+        let affine_snap = self.affine.snapshot();
         let ity = self.infer(scope, inner)?;
+        self.affine.restore(&affine_snap);
         // The fresh propagation binder. `$` is not a source-identifier character, so this can never
         // collide with a user name; and it is scoped to the propagation arm only (never the `body`
         // arm), so it also cannot shadow anything `body` references.

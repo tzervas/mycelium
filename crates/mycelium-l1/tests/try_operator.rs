@@ -139,6 +139,28 @@ fn cases() -> Vec<Case> {
                  fn main_m() => Option[Binary{{8}}] = m(None);\n"
             ),
         },
+        // ---- Option, chained `?` (two propagating binds) — parity with the Result-chain cases.
+        Case {
+            label: "option-chain-some",
+            src: format!(
+                "{PRELUDE}\
+                 fn q(o: Option[Binary{{8}}], p: Option[Binary{{8}}]) => Option[Binary{{8}}] = let x = o? in let y = p? in Some(xor(x, y));\n\
+                 fn m(o: Option[Binary{{8}}], p: Option[Binary{{8}}]) => Option[Binary{{8}}] = match o {{ Some(x) => match p {{ Some(y) => Some(xor(x, y)), None => None }}, None => None }};\n\
+                 fn main_q() => Option[Binary{{8}}] = q(Some(0b0000_1111), Some(0b0101_0101));\n\
+                 fn main_m() => Option[Binary{{8}}] = m(Some(0b0000_1111), Some(0b0101_0101));\n"
+            ),
+        },
+        // ---- Option, chained `?`, second step propagates None (short-circuit past the first bind).
+        Case {
+            label: "option-chain-none2",
+            src: format!(
+                "{PRELUDE}\
+                 fn q(o: Option[Binary{{8}}], p: Option[Binary{{8}}]) => Option[Binary{{8}}] = let x = o? in let y = p? in Some(xor(x, y));\n\
+                 fn m(o: Option[Binary{{8}}], p: Option[Binary{{8}}]) => Option[Binary{{8}}] = match o {{ Some(x) => match p {{ Some(y) => Some(xor(x, y)), None => None }}, None => None }};\n\
+                 fn main_q() => Option[Binary{{8}}] = q(Some(0b0000_1111), None);\n\
+                 fn main_m() => Option[Binary{{8}}] = m(Some(0b0000_1111), None);\n"
+            ),
+        },
     ]
 }
 
@@ -216,4 +238,37 @@ fn a_question_on_a_non_result_option_operand_is_refused() {
         msg.contains("Result") && msg.contains("Option"),
         "the refusal must say the operand needs a Result/Option type, got: {msg}"
     );
+}
+
+#[test]
+fn a_bare_tail_question_outside_a_let_is_refused() {
+    // A tail `e?` (the whole function body is a `?`, no enclosing `let`-binder) is a non-`let`
+    // position — refused never-silently, distinct from the call-argument position already covered.
+    let msg = reject(
+        "nodule d;\n\
+         type Result[A, E] = Ok(A) | Err(E);\n\
+         fn f(r: Result[Binary{8}, Binary{8}]) => Result[Binary{8}, Binary{8}] = r?;\n",
+    );
+    assert!(
+        msg.contains("try-operator") || msg.contains("let`-binder") || msg.contains("let-binder"),
+        "the tail-`?` refusal must name the `let`-binder-RHS restriction, got: {msg}"
+    );
+}
+
+// ---- Regression (PR #1363 review, HIGH): the type-peek in `check_try_let` must not double-invoke
+// the affine/linear tracker. An operand whose evaluation consumes an affine `Substrate` must be
+// marked used EXACTLY once — before the fix the peek + `check_match` re-check counted the consume
+// twice and rejected this well-typed program with a spurious `double-consume` (a false rejection on
+// the dominant `let x = f(s)? in …` port shape). This is a check-time property, so a check-only
+// witness suffices (the `Substrate` value has no L1/L0 literal to differential-evaluate).
+
+#[test]
+fn a_question_on_an_affine_substrate_operand_checks_exactly_once() {
+    let src = "nodule d;\n\
+        type Result[A, E] = Ok(A) | Err(E);\n\
+        fn f(s: Substrate{Sock}) => Result[Substrate{Sock}, Binary{8}] = Ok(consume s);\n\
+        fn g(s: Substrate{Sock}) => Result[Substrate{Sock}, Binary{8}] = let x = f(s)? in Ok(x);\n";
+    let nodule = parse(src).expect("the affine `?` program parses");
+    check_nodule(&nodule)
+        .expect("an affine `?`-operand is consumed once, not double-counted by the type peek");
 }

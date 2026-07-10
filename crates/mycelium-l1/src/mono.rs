@@ -1336,8 +1336,12 @@ impl<'e> Mono<'e> {
             }
             // DN-102 (M-1025 ENB-2): `e?` is a transparent surface marker — rewrite the operand and
             // reconstruct, exactly as for `Consume`/`Wrapping`. The desugar to the `Result`/`Option`
-            // `match` bind happens in the checker/elab/eval `Let` handling, not in mono (a well-formed
-            // `Try` is always the `bound` of a `Let`), so mono just preserves the marker.
+            // `match` bind happens ONLY in the checker's `Let` handling (`checkty::check_try_let`),
+            // which replaces the whole `Let{bound:Try,…}` with a bare `Match` — so a well-formed,
+            // already-checked program never carries a `Try` into mono (elab/eval keep only a defensive
+            // never-silent residual for a checker bypass). mono runs post-check, so this arm is dead on
+            // the happy path; it stays transparent (not a refusal) so a raw `Try` still reaches elab's
+            // residual guard rather than being silently dropped here.
             Expr::Try(operand) => {
                 let operand2 = self.rewrite(site, scope, operand, expected)?;
                 Ok(Expr::Try(Box::new(operand2)))

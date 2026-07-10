@@ -13811,6 +13811,16 @@ issues:
       - FLAG-try-3 — the `.myc` frontend represents-but-does-not-produce `?` (no self-hosted lex/parse
         rule yet); `myc check` (Rust-backed) handles `?` in a `.myc` file. The `.myc` elab/eval mirror
         follows the port's general cadence (DN-26), not this increment.
+      - FLAG-try-5 — `?` dispatches on the operand's type NAME (`Result`/`Option`), not its structure
+        (DN-102 §6). A user type shadowing the name with a different shape fails closed (never-silent
+        constructor-mismatch, G2) rather than with a targeted diagnostic; structural dispatch is the
+        follow-up if a port witnesses the need (PR #1363 review).
+
+      Review (PR #1363, pr-reviewer T2 deep): the Expr-walker sweep verified COMPLETE (no missed
+      walker across the Rust core, 6 test-harness encoders, 5 `.myc` mirrors, and the mycelium-fmt/-lsp
+      consumers); one HIGH fixed pre-merge — the type-peek in `check_try_let` double-invoked the affine
+      tracker (spurious `double-consume` on an affine-`Substrate` `?`-operand), resolved by snapshotting
+      the affine tracker around the peek, with a regression witness in `tests/try_operator.rs`.
 
   - id: M-1026
     title: "enb ENB-3 — impl-level generic-parameter slot"
