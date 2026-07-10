@@ -12,6 +12,51 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### docs(notes): maintainer ratification — DN-110 native-metaprogramming facility + §8.2 hygiene mechanism (2026-07-10)
+
+Records the maintainer's ratification of **DN-110** (Mycelium's native facility for the role Rust fills
+with macros — generative-lowering + expression-position sugar rules) and its companion **DN-110-8.2
+hygiene deep-dive**, both held as Draft PRs (append-only; house rule #3 — no existing decision text
+rewritten, each note gains a dated "Ratification" section plus a Status-line update).
+
+- **DN-110 — Status Draft → Accepted (design, pending Enactment — see below).** §1's five-job role
+  decomposition confirmed (J1 derive-gen / J2 delegation already native+landed; J4 compile-time
+  computation native via DN-55 static specialization; J5 foreign-syntax DSL a Bridge/flagged exclusion;
+  **J3 expression-position sugar the single real gap**). §6's **Rank 1** accepted as the recommended
+  mechanism: generalize the landed `lower`/`derive` term-level lowering framework (DN-54/M-812) to
+  expression position, with `reveal`/M-1051 as the mandatory transparency spine. §8.2's hygiene/scoping
+  model accepted **as the basis**, citing the companion deep-dive's `%`-namespace-partition mechanism.
+- **Accepted, NOT Enacted (VR-5, house rule #3, honesty-critical).** This ratifies the *design* only —
+  no code has landed for J3, `reveal`/M-1051 has not shipped, and the E1/E3 hygiene experiments have not
+  run. **The facility's guarantees stay `Declared`** throughout; no guarantee tag is upgraded past its
+  basis. `Enacted` requires full implementation + the E1/E3 (+E2/E4/E5) experiments passing +
+  `reveal`/M-1051 landing — not before.
+- **§2 taxonomy carve-out.** The Adaptation/Solution/Approximation/Bridge labels are ratified only as
+  **provisional, intuitive handles**, not canonical terminology. The canonical Rust→Mycelium
+  translation taxonomy is **deferred to a forthcoming companion DN-111 (Draft, not yet authored)**.
+- **DN-110-8.2-hygiene-deepdive.md — Status Draft → "Accepted as the basis for DN-110 §8.2".** The §4
+  hygiene model (def-site resolution plus `%`-namespace freshening reusing the landed `Elab::fresh`
+  gensym plus partition-safe substitution plus affine/type checking on the expanded L0, reusing the
+  landed M-919 affine tracker) and the §7 experiment plan are accepted; **E1 + E3 commissioned** as the Rank-1
+  go/no-go for J3. The §9 tractability verdict (keep DN-110 Rank-1; §8.2 downgraded from "sharpest open
+  question" to "mechanism identified, two bounded residuals to prototype") is recorded. §10's residual
+  open questions (OQ-H1…OQ-H6) are **not** dispositioned by this pass — flagged, not guessed — and
+  carry into the follow-up issues below. The note stands as a **companion** to DN-110 (cross-referenced
+  from DN-110 §8.2), not folded into its text.
+- **§8.1 (J5 permanent exclusion vs. later Bridge) and DN-110's remaining §11 open questions stay open**,
+  not dispositioned by this ratification.
+
+`docs/Doc-Index.md` gains rows for **DN-110** (→ Accepted) and the **DN-110-8.2 companion note** (→
+Accepted as the basis for DN-110 §8.2). `tools/github/issues.yaml` gains **M-1054…M-1057** (all
+`status:todo`): a native-facility implementation epic (`depends_on: [M-812, M-1051]`, noting the §8.2
+hygiene model is its own sub-design carrying OQ-H1…OQ-H6), an E1+E3 hygiene-experiment prototype issue
+(`depends_on: [M-1051]`, noting OQ-H1 as the expression analogue of DN-54 §10 OQ-D), a
+`/native-translate` methodology-skill issue, and a DN-111 taxonomy-companion authoring task; plus a
+`corpus:DN-110` `doc_refs` cross-ref added to **M-875** and **M-1032** (redirect, not supersede — both
+stay scoped to the transpiler-side expand-first question, already answered by DN-100). Validated
+(`python3 -c "import yaml; yaml.safe_load(...)"` clean, no duplicate ids; `doc_refs_check.py` clean).
+`scripts/checks/markdown.sh` green on all touched `.md`.
+
 ### docs(notes): maintainer ratification batch — DN-101 through DN-109 (2026-07-11)
 
 Records the maintainer's ratification decisions on all nine ENB/design-reasoner notes from the
