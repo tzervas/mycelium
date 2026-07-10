@@ -9,4 +9,5 @@ mod invariant;
 mod map;
 mod prim_map;
 mod reserved;
+mod taxonomy;
 mod vet;

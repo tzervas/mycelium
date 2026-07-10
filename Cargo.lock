@@ -725,15 +725,18 @@ dependencies = [
  "mycelium-interp",
  "mycelium-l1",
  "mycelium-mlir",
+ "mycelium-std-content",
  "mycelium-std-core",
  "mycelium-std-diag",
  "mycelium-std-error",
+ "mycelium-std-numerics",
  "mycelium-std-recover",
  "mycelium-std-select",
  "mycelium-std-spore",
  "mycelium-std-swap",
  "mycelium-std-ternary",
  "mycelium-std-testing",
+ "mycelium-std-time",
 ]
 
 [[package]]

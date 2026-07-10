@@ -110,8 +110,18 @@ def build_target_entry(
         entry["rust_sources"] = [{"path": input_rel, "sha256": sha256_of(src_path)}]
         total_items = gap["total_top_level_items"]
         gaps_list = gap["gaps"]
-        test_items = sum(1 for g in gaps_list if g["category"] == "TestItem")
-        non_test_items = total_items - test_items
+        # Denominator-excluded = the non-translatable-surface gap categories: `#[cfg(test)]`
+        # TestItem *and* bodyless `mod foo;` ModuleDecl file-linkage decls. This mirrors
+        # `gap.rs::Category::excluded_from_denominator` (M-1006 Phase-2), so the semcore single-file
+        # path computes the identical denominator the stdlib batch path already gets from
+        # summary.json's `non_test_items` (which excludes both). Before this fix the semcore path
+        # subtracted only TestItem, so a semcore file carrying a `mod foo;` would have understated its
+        # denominator vs the batch path (VR-5: only shrink by genuinely-non-surface items, never to
+        # flatter a number — and never inconsistently between the two paths).
+        excluded = sum(
+            1 for g in gaps_list if g["category"] in ("TestItem", "ModuleDecl")
+        )
+        non_test_items = total_items - excluded
         emitted = len(gap["emitted_items"])
         gap_count = len(gaps_list)
         vrec = vet["records"][0] if vet["records"] else None

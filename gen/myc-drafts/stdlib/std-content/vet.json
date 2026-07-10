@@ -33,7 +33,7 @@
       "class": "CheckError",
       "exit_code": 3,
       "diagnostic": "check-error: check error in `digest_eq`: unknown type `ContentHash`",
-      "non_test_items": 16,
+      "non_test_items": 12,
       "emitted_items": 2
     },
     {
@@ -46,7 +46,7 @@
       "emitted_items": 0
     }
   ],
-  "total_non_test_items": 35,
+  "total_non_test_items": 31,
   "total_emitted_items": 7,
   "total_checked_clean_items": 5,
   "class_counts": {

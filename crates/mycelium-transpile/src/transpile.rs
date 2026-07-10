@@ -55,8 +55,8 @@ pub fn transpile_source(
                 file: file_label.to_string(),
                 line: 1,
                 col: 1,
-                category: Category::Other,
-                rust_construct: Category::Other.as_str().to_string(),
+                category: Category::InnerAttr,
+                rust_construct: Category::InnerAttr.as_str().to_string(),
                 snippet: non_doc.join(" "),
                 reason: "crate/file-level inner attributes (#![...]) are not transpiled (no \
                           nodule-header equivalent for these Rust-specific directives)"
@@ -281,11 +281,27 @@ fn dispatch_item(item: &Item) -> Outcome {
         Item::Mod(m) => {
             if emit::is_cfg_test(&m.attrs) {
                 Outcome::TestExcluded
+            } else if m.content.is_none() {
+                // Bodyless `mod foo;` / `pub mod foo;` — file-linkage, not translatable library
+                // surface. The module tree is implicit in Mycelium's nodule-per-file layout; the
+                // sibling `foo.rs` transpiles as its own nodule. Recorded but excluded from the
+                // denominator (like a test item), never silently dropped (G2/VR-5; M-1006 Phase-2).
+                Outcome::Gap(GapReason::new(
+                    Category::ModuleDecl,
+                    "external `mod foo;` declaration — file-linkage, not translatable library \
+                     surface (Mycelium's nodule-per-file model makes the module tree implicit in \
+                     the file layout; the sibling file transpiles as its own nodule). Excluded from \
+                     the expressible-fraction denominator, recorded not dropped",
+                ))
             } else {
+                // Inline `mod foo { … }` — its body is real dropped content, so this stays a counted
+                // coverage gap (flatten-able in a later ladder phase), distinct from the bodyless
+                // file-linkage case above.
                 Outcome::Gap(GapReason::new(
                     Category::Other,
-                    "`mod` declaration — Mycelium's nodule-per-file model has no nested-module \
-                     construct in this grammar fragment",
+                    "inline `mod foo { … }` — Mycelium's nodule-per-file model has no nested-module \
+                     construct in this grammar fragment; the module body is dropped (a real coverage \
+                     gap, not file-linkage — its inner items could be flattened in a later phase)",
                 ))
             }
         }

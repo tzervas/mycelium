@@ -971,7 +971,7 @@ fn collect_tuple_arities_expr(e: &crate::ast::Expr, out: &mut std::collections::
             collect_tuple_arities_expr(body, out);
         }
         Expr::Swap { value, .. } => collect_tuple_arities_expr(value, out),
-        Expr::Wild(b) | Expr::Spore(b) | Expr::Consume(b) | Expr::Wrapping(b) => {
+        Expr::Wild(b) | Expr::Spore(b) | Expr::Consume(b) | Expr::Wrapping(b) | Expr::Try(b) => {
             collect_tuple_arities_expr(b, out);
         }
         Expr::Colony(hyphae) => {
@@ -1015,6 +1015,24 @@ fn collect_tuple_arities_expr(e: &crate::ast::Expr, out: &mut std::collections::
 pub struct PhylumEnv {
     /// One `(nodule path, checked Env)` per nodule, in source order.
     pub nodules: Vec<(Path, Env)>,
+    /// Per-nodule record of the names each nodule **declares itself** — the runtime-link owner map
+    /// (M-1024). Parallel to [`Self::nodules`]. Consulted only by [`Self::link`], which merges each
+    /// name from its **home** nodule's *checked* [`Env`] (never an imported, less-resolved copy) and
+    /// refuses a cross-nodule name collision never-silently. Kept private (an internal owner record,
+    /// not part of the import/coherence views).
+    own: Vec<OwnDecls>,
+}
+
+/// The names one nodule **declares itself** (M-1024): its own data types, functions, and traits, with
+/// the injected prelude `Bool` and the conditionally-seeded built-in `Fuse` trait excluded (they are
+/// identical in every nodule, so they are seeded once by [`PhylumEnv::link`] rather than treated as a
+/// per-nodule declaration that could "collide"). This is the authoritative-owner record the flat
+/// phylum link merges from.
+#[derive(Debug, Default, Clone)]
+struct OwnDecls {
+    types: BTreeSet<String>,
+    fns: BTreeSet<String>,
+    traits: BTreeSet<String>,
 }
 
 impl PhylumEnv {
@@ -1032,6 +1050,149 @@ impl PhylumEnv {
     #[must_use]
     pub fn nodule(&self, path: &Path) -> Option<&Env> {
         self.nodules.iter().find(|(p, _)| p == path).map(|(_, e)| e)
+    }
+
+    /// **The phylum-wide runtime link (M-1024; ENB-1).** Fold every nodule's *checked* declarations
+    /// into **one** [`Env`] so the downstream pipeline ([`crate::elab`] / [`crate::mono`] /
+    /// [`crate::eval`], all of which consume a single `&Env`) can **execute a `use`d symbol across
+    /// nodules** — the runtime dual of the check-time cross-nodule resolution (`resolve_imports`,
+    /// M-662). This is the "give the evaluator a phylum-wide view" close that retires the
+    /// local-mirror sidestep (DN-99 register row #41; ADR-045 unfrozen posture).
+    ///
+    /// **What it reuses (DRY, KC-3 — no new L0 node):** the check pass already resolved every `use`
+    /// against the phylum-wide export table and refused unknown/private/ambiguous imports; those
+    /// checks stand. `link` reuses that verified structure by merging **each name from its home
+    /// nodule's checked `Env`** — the authoritative, ambient-resolved declaration — keyed by simple
+    /// name. (An *imported* copy in a consumer nodule's `Env` is a less-resolved clone of the home
+    /// decl; `link` never merges those, so the linked env is *strictly more correct* than running a
+    /// consumer nodule's per-nodule `Env` directly — which is why a phylum, including a phylum-of-one,
+    /// should be run through `link`.)
+    ///
+    /// **Flat-namespace v0 (never-silent boundary, G2/VR-5).** The merge is a **flat phylum
+    /// namespace**: exactly one declaration per simple name across the whole phylum. This runs the
+    /// common shape — a shared-type/helper nodule plus consumers with distinct names (the stdlib
+    /// porter's user story) — and the *transitive* case a per-nodule `Env` cannot (a `pub` fn whose
+    /// body calls its home nodule's **private** helper now resolves, because the helper is linked in
+    /// from its home nodule). A **cross-nodule simple-name collision** (two nodules each declaring the
+    /// same fn/type/trait name) is an **explicit [`CheckError`]**, never a silent winner — the
+    /// qualified-name / per-frame home-nodule scoping that would *disambiguate* a collision (rather
+    /// than refuse it) is the flagged design residual (M-982 follow-up; needs the ratifying DN).
+    ///
+    /// # Errors
+    /// A never-silent [`CheckError`] on any cross-nodule collision the flat namespace cannot represent
+    /// (a duplicate simple name across nodules, or — defensively — a duplicate coherence-keyed
+    /// instance/impl/`lower` rule, which the check pass's phylum-wide coherence should already have
+    /// refused).
+    pub fn link(&self) -> Result<Env, CheckError> {
+        // Seed the shared prelude once (identical in every nodule): the `Bool` type, and the built-in
+        // `Fuse` trait iff any nodule uses it (mirrors `register_nodule_decls`' conditional seeding).
+        let mut types: BTreeMap<String, DataInfo> = BTreeMap::new();
+        let p = prelude();
+        types.insert(p.name.clone(), p);
+        let mut traits: BTreeMap<String, TraitInfo> = BTreeMap::new();
+        if self
+            .nodules
+            .iter()
+            .any(|(_, e)| e.traits.contains_key(crate::fuse::TRAIT_NAME))
+        {
+            traits.insert(crate::fuse::TRAIT_NAME.to_owned(), crate::fuse::prelude());
+        }
+        let mut fns: BTreeMap<String, FnDecl> = BTreeMap::new();
+        let mut totality: BTreeMap<String, crate::totality::Totality> = BTreeMap::new();
+        let mut instances: BTreeMap<(String, String), InstanceInfo> = BTreeMap::new();
+        let mut impls: BTreeMap<(String, String), Vec<FnDecl>> = BTreeMap::new();
+        let mut lower_rules: BTreeMap<String, LowerDecl> = BTreeMap::new();
+        let mut derived_provenance: BTreeMap<(String, String), (String, String)> = BTreeMap::new();
+        let mut via_provenance: BTreeMap<(String, String), (u32, String)> = BTreeMap::new();
+
+        // A cross-nodule collision on a simple name the flat namespace cannot represent (G2).
+        let collide = |kind: &str, name: &str| {
+            CheckError::new(
+                name,
+                format!(
+                    "cross-nodule name collision: `{name}` ({kind}) is declared by more than one \
+                     nodule of this phylum — the v0 runtime link is a flat phylum namespace (one \
+                     declaration per simple name; M-1024). Rename one, or await the qualified \
+                     per-nodule scoping that disambiguates a collision (M-982 — never a silent \
+                     winner, G2)"
+                ),
+            )
+        };
+
+        // Merge each name from its HOME nodule's checked `Env` (the authoritative resolved decl).
+        for ((_path, env), own) in self.nodules.iter().zip(self.own.iter()) {
+            for name in &own.types {
+                if types.contains_key(name) {
+                    return Err(collide("type", name));
+                }
+                if let Some(info) = env.types.get(name) {
+                    types.insert(name.clone(), info.clone());
+                }
+            }
+            for name in &own.traits {
+                if traits.contains_key(name) {
+                    return Err(collide("trait", name));
+                }
+                if let Some(info) = env.traits.get(name) {
+                    traits.insert(name.clone(), info.clone());
+                }
+            }
+            for name in &own.fns {
+                if fns.contains_key(name) {
+                    return Err(collide("fn", name));
+                }
+                if let Some(fd) = env.fns.get(name) {
+                    fns.insert(name.clone(), fd.clone());
+                }
+                if let Some(t) = env.totality.get(name) {
+                    totality.insert(name.clone(), *t);
+                }
+            }
+            // Instances / impls / lower rules / provenance are coherence-keyed and phylum-unique by
+            // construction: each nodule's checked `Env` carries only ITS OWN coherence facts (they are
+            // built from `effective_nodule`, never from imports — `check_nodule_with`), and the check
+            // pass's phylum-wide orphan rule already refused any cross-nodule duplicate key. So a
+            // collision here is unreachable on a checked phylum — but we guard EVERY coherence map
+            // uniformly and never-silently (G2): if the upstream coherence invariant is ever violated,
+            // `link` refuses explicitly rather than silently keeping one side (no first-wins winner).
+            for (k, v) in &env.instances {
+                if instances.insert(k.clone(), v.clone()).is_some() {
+                    return Err(collide("instance", &format!("{}:{}", k.0, k.1)));
+                }
+            }
+            for (k, v) in &env.impls {
+                if impls.insert(k.clone(), v.clone()).is_some() {
+                    return Err(collide("impl", &format!("{}:{}", k.0, k.1)));
+                }
+            }
+            for (name, v) in &env.lower_rules {
+                if lower_rules.insert(name.clone(), v.clone()).is_some() {
+                    return Err(collide("lower rule", name));
+                }
+            }
+            for (k, v) in &env.derived_provenance {
+                if derived_provenance.insert(k.clone(), v.clone()).is_some() {
+                    return Err(collide("derived impl", &format!("{}:{}", k.0, k.1)));
+                }
+            }
+            for (k, v) in &env.via_provenance {
+                if via_provenance.insert(k.clone(), v.clone()).is_some() {
+                    return Err(collide("via impl", &format!("{}:{}", k.0, k.1)));
+                }
+            }
+        }
+
+        Ok(Env {
+            types,
+            fns,
+            totality,
+            traits,
+            instances,
+            impls,
+            lower_rules,
+            derived_provenance,
+            via_provenance,
+        })
     }
 }
 
@@ -1123,9 +1284,16 @@ pub fn check_nodule(nodule: &Nodule) -> Result<Env, CheckError> {
 /// Two strictly-separate phylum-wide views (conflating them is a bug — they answer different
 /// questions): the **import registry** ([`Exports`]) is `pub`-only (what a `use` may bind); the
 /// **coherence view** is pub-blind (every nodule's trait/type declarations are visible to the orphan
-/// rule regardless of `pub`). Cross-nodule **execution** is staged — the per-nodule [`Env`]s are real
-/// and complete for type-checking; running a `use`d fn across nodules is a follow-up (eval keeps its
-/// per-nodule reach; a cross-nodule call lowers to a never-silent `Unsupported`/`Residual`).
+/// rule regardless of `pub`).
+///
+/// Cross-nodule **execution** (M-1024; ENB-1): each per-nodule [`Env`] already carries its *directly*
+/// imported `pub` decls (they are seeded into its checking registry — [`check_nodule_with`] — and
+/// retained), so a `use`d `pub` fn with a self-contained body already runs when a consumer nodule's
+/// `Env` is evaluated. The **transitive** case — a `pub` fn whose body calls its home nodule's
+/// *private* helper — needs the whole phylum linked into one [`Env`]: use [`PhylumEnv::link`], the
+/// runtime dual of the import resolution above (a **flat phylum namespace**, never-silent on a
+/// cross-nodule name collision). Qualified per-nodule scoping that would *disambiguate* a collision
+/// (rather than refuse it) is the flagged residual (M-982).
 ///
 /// # Errors
 /// Any never-silent refusal: an unknown/private/ambiguous import, a duplicate import, a coherence or
@@ -1271,7 +1439,27 @@ fn check_phylum_inner(phylum: &Phylum, matured_scope: bool) -> Result<PhylumEnv,
     // 3. Check each nodule's bodies with (a) its resolved `use` imports merged into its registries and
     //    (b) the phylum-wide pub-blind orphan rule. Each yields a checked `Env`.
     let mut out = Vec::with_capacity(resolved.len());
+    let mut own = Vec::with_capacity(resolved.len());
     for (i, (nodule, regs)) in resolved.iter().zip(per_nodule_regs).enumerate() {
+        // M-1024: capture this nodule's OWN declared names (the runtime-link owner record) before
+        // `regs` is consumed below. Exclude the injected prelude `Bool` and the conditionally-seeded
+        // built-in `Fuse` trait — they are identical everywhere and are seeded once by `link`, never a
+        // per-nodule collision.
+        own.push(OwnDecls {
+            types: regs
+                .types
+                .keys()
+                .filter(|n| n.as_str() != "Bool")
+                .cloned()
+                .collect(),
+            fns: regs.fns.keys().cloned().collect(),
+            traits: regs
+                .traits
+                .keys()
+                .filter(|n| n.as_str() != crate::fuse::TRAIT_NAME)
+                .cloned()
+                .collect(),
+        });
         let imports = resolve_imports(nodule, &exports)?;
         // Pass this nodule's via_objects (objects with `via` decls) for Phase 0b expansion of
         // delegation impls (DN-53 M-811). The slice is empty for nodules with no `via` clauses.
@@ -1286,7 +1474,7 @@ fn check_phylum_inner(phylum: &Phylum, matured_scope: bool) -> Result<PhylumEnv,
         )?;
         out.push((nodule.path.clone(), env));
     }
-    Ok(PhylumEnv { nodules: out })
+    Ok(PhylumEnv { nodules: out, own })
 }
 
 /// `nodule.path` + `.` + `name` — a top-level item's **qualified name** (the import-registry key;
@@ -2473,7 +2661,14 @@ fn rhs_contains_wild(rhs: &Expr) -> Result<bool, crate::totality::WalkDepthExcee
 /// `concrete` (keeping the occurrence's own guarantee index if written — `T @ Exact` ↦ `C @ Exact`);
 /// every structural form recurses; reprs / `Substrate` / `Bytes` / `Float` / VSA / dense carry no
 /// nested type-name and are cloned verbatim. Total, allocation-bounded by the input's size.
-fn subst_type_param_in_typeref(tr: &TypeRef, param: &str, concrete: &TypeRef) -> TypeRef {
+// `pub(crate)` (widened from private, zero logic change) so the M-1013 Stage-5 self-hosting
+// differential (`compiler_stage5_tyref.rs`) can call this real oracle directly — the eval-PR-1
+// harness-marshalling precedent (DN-26 §10.2).
+pub(crate) fn subst_type_param_in_typeref(
+    tr: &TypeRef,
+    param: &str,
+    concrete: &TypeRef,
+) -> TypeRef {
     match &tr.base {
         BaseType::Named(name, args) if name == param && args.is_empty() => TypeRef {
             base: concrete.base.clone(),
@@ -2610,6 +2805,7 @@ fn subst_type_param_in_expr(e: &Expr, param: &str, concrete: &TypeRef) -> Expr {
         Expr::Spore(b) => Expr::Spore(boxed(b)),
         Expr::Consume(b) => Expr::Consume(boxed(b)),
         Expr::Wrapping(b) => Expr::Wrapping(boxed(b)),
+        Expr::Try(b) => Expr::Try(boxed(b)),
         Expr::Colony(hyphae) => Expr::Colony(
             hyphae
                 .iter()
@@ -3587,7 +3783,9 @@ struct Cx<'a> {
 /// the recursive `Self` type `Data(name, …)` (the "cons": `Cons(A, Self)`). This matches every
 /// `lib/std` list type (`Vec`, `Trits`, `ByteList`, `GRowList`, …) uniformly. A type not of this shape
 /// yields `None`, so the `Seq{T,N}` and no-context paths are untouched (never a silent reinterpret).
-fn cons_list_ctors(
+// `pub(crate)` (widened from private, zero logic change) for the M-1013 Stage-5 self-hosting
+// differential (`compiler_stage5_classify.rs`) — the eval-PR-1 harness-marshalling precedent.
+pub(crate) fn cons_list_ctors(
     types: &std::collections::BTreeMap<String, DataInfo>,
     expected: &Ty,
 ) -> Option<(String, String)> {
@@ -3730,6 +3928,16 @@ impl Cx<'_> {
             Expr::Wrapping(body) => self.check_wrapping(scope, body, expected),
             // DN-03 §1 / M-664: `consume <expr>` — affine acquisition of a `Substrate` value (LR-8).
             Expr::Consume(operand) => self.check_consume(scope, operand, expected),
+            // DN-102 / M-1025 ENB-2: a bare `?` reaching the dispatch is a `?` **outside** a `let`-binder
+            // RHS (the only position handled — intercepted in `check_let`). v0 refuses it never-silently
+            // (G2): the general-position CPS lift is deferred (FLAG-try-1). This also catches a repeated
+            // `e??` (the inner `?`'s operand is itself a `Try`).
+            Expr::Try(_) => self.err(
+                "`?` (the try-operator) is only supported as a `let`-binder RHS in v0 — write \
+                 `let x = e? in body` (DN-102 §5). A `?` in any other position (a nested `g(f()?)`, a \
+                 repeated `e??`, or a tail `e?`) needs the general-position CPS lift, which is deferred \
+                 (FLAG-try-1); rewrite it as `let tmp = <inner>? in <continuation using tmp>`.",
+            ),
             Expr::Colony(hyphae) => self.check_colony(scope, hyphae, expected),
             // RFC-0024 §4A (M-704): a `lambda(p: A) => body` checks to `Ty::Fn(A, B)` where
             // `B = infer(body)` under `scope ∪ {p: A}`. The closure's *capture set* (free variables
@@ -4010,6 +4218,24 @@ impl Cx<'_> {
         body: &Expr,
         expected: Option<&Ty>,
     ) -> Result<(Ty, Expr), CheckError> {
+        // DN-102 (M-1025 ENB-2): `let x = e? in body` — the try-operator desugar. When the binder RHS
+        // is a `?`, rewrite to the type-directed `match` bind over `e`'s `Result`/`Option` channel;
+        // the continuation `body` lives inside the binding arm so the propagation arm unifies with no
+        // early-return / never-type (DN-102 §2). This is the ONLY position `?` is supported in v0
+        // (DN-102 §5) — a `?` elsewhere is refused by the `Expr::Try` arm of `check`.
+        if let Expr::Try(inner) = bound {
+            if ty.is_some() {
+                // Never-silent (G2): an explicit binder ascription on a `?`-let is not part of the v0
+                // surface — the success binder's type comes from `e`'s `Result`/`Option` payload, so a
+                // `: T` here would be ignored. Refuse rather than silently drop it (VR-5).
+                return self.err(format!(
+                    "let `{name}`: an explicit ascription on a `?`-binder is not supported in v0 — \
+                     the success type is taken from the operand's `Result`/`Option` payload \
+                     (DN-102 §5). Drop the `: …` or bind and ascribe on a separate `let`."
+                ));
+            }
+            return self.check_try_let(scope, name, inner, body, expected);
+        }
         let want = match ty {
             Some(t) => Some(resolve_ty(self.site, self.types, self.tyvars, t)?.0),
             None => None,
@@ -4035,6 +4261,92 @@ impl Cx<'_> {
                 body: Box::new(body2),
             },
         ))
+    }
+
+    /// `let x = e? in body` — the **try-operator desugar** (DN-102 / M-1025 ENB-2). The `?` on the
+    /// binder RHS propagates the operand's error/absence channel: it rewrites, **type-directed on the
+    /// operand's checked `Result`/`Option` type**, to the existing `match` bind with the continuation
+    /// `body` inside the binding arm —
+    ///
+    /// ```text
+    /// let x = e? in body                       let x = e? in body
+    ///   ⇓  (e : Result[A, E])                    ⇓  (e : Option[A])
+    /// match e { Ok(x) => body,                 match e { Some(x) => body,
+    ///           Err($try_err) => Err($try_err) }          None => None }
+    /// ```
+    ///
+    /// Because `body` is in tail position its type is the enclosing function's return type
+    /// `Result[B, E]` (resp. `Option[B]`), so the `Err($f) => Err($f)` arm (`Result[B, E]`) **unifies**
+    /// with it — **no early return, no never-type** (`->!` stays deferred, DN-99 #88; DN-102 §2). The
+    /// **error-type unification rule** (DN-102 §3) falls out of that arm-type unification: `E` on both
+    /// sides must match, forcing the function to return the same error channel — a mismatch is the
+    /// ordinary never-silent `match`-arm `CheckError` (G2). KC-3: no new L0 node — the returned
+    /// rewritten `Match` is what the evaluator/elaborator consume, so a `Try` never survives past the
+    /// checker (elab/eval keep only a defensive residual). Guarantee: `Declared` (surface contract)
+    /// until the DN-102 §7 differential witnesses `?` ≡ the hand-`match` oracle (VR-5).
+    fn check_try_let(
+        &self,
+        scope: &mut Vec<(String, Ty)>,
+        name: &str,
+        inner: &Expr,
+        body: &Expr,
+        expected: Option<&Ty>,
+    ) -> Result<(Ty, Expr), CheckError> {
+        // Peek the operand's type to pick the constructor set (Result vs Option). `infer` runs the
+        // FULL checker on `inner` (including the affine/linear `use_at` tracker), and `check_match`
+        // below re-checks the *same* scrutinee for the real rewrite — so the peek must NOT leave its
+        // affine effects behind. Otherwise an operand whose evaluation consumes an affine `Substrate`
+        // (e.g. `let x = f(s)? in …` where `f` consumes `s`) is marked used TWICE and rejected with a
+        // spurious `double-consume` — a false rejection on the *dominant* port shape this feature
+        // targets. Snapshot the affine tracker before the peek and restore it after, so only
+        // `check_match`'s single real pass records the consume — the same speculative-then-real idiom
+        // `check_if`/`check_match` use (`self.affine.snapshot()`/`restore()`). (M-1025 / DN-102 §3;
+        // PR #1363 review.)
+        let affine_snap = self.affine.snapshot();
+        let ity = self.infer(scope, inner)?;
+        self.affine.restore(&affine_snap);
+        // The fresh propagation binder. `$` is not a source-identifier character, so this can never
+        // collide with a user name; and it is scoped to the propagation arm only (never the `body`
+        // arm), so it also cannot shadow anything `body` references.
+        const ERRB: &str = "$try_err";
+        let arms = match &ity {
+            Ty::Data(n, args) if n == "Result" && args.len() == 2 => vec![
+                Arm {
+                    pattern: Pattern::Ctor("Ok".to_owned(), vec![Pattern::Ident(name.to_owned())]),
+                    body: body.clone(),
+                },
+                Arm {
+                    pattern: Pattern::Ctor("Err".to_owned(), vec![Pattern::Ident(ERRB.to_owned())]),
+                    body: Expr::App {
+                        head: Box::new(Expr::Path(Path(vec!["Err".to_owned()]))),
+                        args: vec![Expr::Path(Path(vec![ERRB.to_owned()]))],
+                    },
+                },
+            ],
+            Ty::Data(n, args) if n == "Option" && args.len() == 1 => vec![
+                Arm {
+                    pattern: Pattern::Ctor(
+                        "Some".to_owned(),
+                        vec![Pattern::Ident(name.to_owned())],
+                    ),
+                    body: body.clone(),
+                },
+                Arm {
+                    pattern: Pattern::Ident("None".to_owned()),
+                    body: Expr::Path(Path(vec!["None".to_owned()])),
+                },
+            ],
+            _ => {
+                return self.err(format!(
+                    "`?` operand must have a `Result[_, _]` or `Option[_]` type, got `{ity}` — the \
+                     try-operator propagates an error/absence channel (DN-102 §3; M-1025)"
+                ));
+            }
+        };
+        // Check the desugared match: exhaustiveness (Maranget usefulness) AND the arm-type unification
+        // that *is* the error-type unification rule (DN-102 §3). The returned rewritten `Match` is
+        // stored back into the checked `Env` (downstream passes see it, never the `Try`).
+        self.check_match(scope, inner, &arms, expected)
     }
 
     /// **Lambda / closure typing** (RFC-0024 §4A.6, M-704). A `lambda(p: A) => body` checks to
@@ -7166,7 +7478,11 @@ fn app_node(head: &Expr, args: Vec<Expr>) -> Expr {
 }
 
 /// The paradigm name of a representation type (for the never-silent cross-paradigm framing).
-fn paradigm_name(t: &Ty) -> Option<&'static str> {
+///
+/// `pub(crate)` (widened from private, zero logic change) so the M-1013 Stage-5 self-hosting
+/// differential (`compiler_stage5_classify.rs`) can call this real oracle directly, exactly as the
+/// eval PR-1 leaf widened `try_match` (DN-26 §10.2 harness marshalling).
+pub(crate) fn paradigm_name(t: &Ty) -> Option<&'static str> {
     match t {
         Ty::Binary(_) => Some("Binary"),
         Ty::Ternary(_) => Some("Ternary"),

@@ -795,6 +795,27 @@ pub enum Expr {
     /// has no value-level affine-usage tracker (only pattern-binder linearity), so single-use is a
     /// `Declared` property of the construct, not yet a checked one.
     Consume(Box<Expr>),
+    /// `e?` — the **postfix try-operator** (DN-102; M-1025 ENB-2). A one-operand surface marker that
+    /// **propagates** the error/absence channel of a `Result[A, E]`/`Option[A]` operand: in
+    /// `let x = e? in body` it desugars — type-directed on `e`'s checked type — to the existing `match`
+    /// bind `match e { Ok(x) => body, Err($f) => Err($f) }` (resp. `Some(x) => body, None => None`),
+    /// with the continuation `body` inside the binding arm so the propagation arm unifies **without** an
+    /// early return or a never-type (DN-102 §2; `->!` stays deferred, DN-99 #88). This reuses the
+    /// existing `Expr::Match` + `Result`/`Option` machinery — **no new L0 node** (KC-3).
+    ///
+    /// The **error-type unification rule** (DN-102 §3) falls out of the desugar: the `Err($f) => Err($f)`
+    /// arm forces `body`'s error channel to match `e`'s, so the enclosing function's return type must be
+    /// `Result[_, E]` (resp. `Option[_]`) for the same `E` — a mismatch is a never-silent `CheckError`
+    /// ([`crate::checkty`]), never a silent coercion (G2; no `From`-error widening in v0 — DN-102 §6).
+    ///
+    /// **v0 position restriction (DN-102 §5):** `?` is legal **only** as a `let`-binder RHS (the
+    /// dominant port shape, and the one position whose success-continuation is statically visible). A
+    /// `Try` in any other position is a never-silent refusal in [`crate::checkty`] (the general-position
+    /// CPS lift is the deferred FLAG-try-1). Structural walkers treat `Try(b)` transparently (recurse
+    /// into `b`, as for [`Expr::Consume`]/[`Expr::Wrapping`]), since a well-formed `Try` is always
+    /// consumed at its enclosing `Let`. Guarantee: `Declared` (surface contract) until the DN-102 §7
+    /// differential witnesses `?` ≡ the hand-`match` oracle (then the *agreement* is `Empirical` — VR-5).
+    Try(Box<Expr>),
     /// `colony { hypha e1, hypha e2, … }` — the **structured-concurrency scope** (RFC-0008 §4.7;
     /// DN-06 §1.3): a dynamic runtime grouping of cooperating `hypha`. The block body is a
     /// **non-empty** list of `hypha` spawns; the colony does not exit until every child has joined

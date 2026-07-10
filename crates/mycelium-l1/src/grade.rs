@@ -303,6 +303,10 @@ impl Gx<'_> {
             // The single-use affinity it asserts is a *usage* discipline, orthogonal to the value's
             // accuracy grade.
             Expr::Consume(b) => self.grade(scope, b),
+            // DN-102 (M-1025 ENB-2): `e?` yields `e`'s success value on the Ok/Some path and propagates
+            // the Err/None otherwise; the produced value carries the operand's grade (transparent, as
+            // `Consume`). The desugar is checked/lowered at the enclosing `Let`.
+            Expr::Try(b) => self.grade(scope, b),
             // RFC-0024 §4A (M-704): a `lambda` (closure) is a `Declared`-grade construct — its
             // lowering is a structural rewrite + a type-level contract (the three-way differential is
             // `Empirical`, but the construct itself attests no more than `Declared`; VR-5). Grading

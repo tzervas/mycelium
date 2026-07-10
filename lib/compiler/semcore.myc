@@ -385,6 +385,11 @@ fn hypha_body(h: Hypha) => Expr =
   match h { Hy(_, b) => b };
 
 // Expr: mirrors ast.myc::Expr verbatim, field-for-field, same variant order.
+// FLAG-semcore-37 / FLAG-try-3 (DN-102): `Wrapping` (M-791) and `Try` (`?`, M-1025) are REPRESENTED and
+// traversed here (grade / collect_tuple_arities_expr / fvw all recurse into its child, mirroring
+// `Consume`), but the self-hosted lexer/parser does not yet PRODUCE it (no `wrapping` keyword in
+// token/lex; no parse rule) — surface parsing of `wrapping { e }` is deferred remaining work
+// (never-silent, G2). The Rust reference frontend produces it (ast.rs::Expr::Wrapping).
 type Expr =
     Let(Bytes, Option[TypeRef], Expr, Expr)
   | If(Expr, Expr, Expr)
@@ -394,7 +399,13 @@ type Expr =
   | WithParadigm(Paradigm, Expr)
   | Wild(Expr)
   | Spore(Expr)
+  | Wrapping(Expr)
   | Consume(Expr)
+  // DN-102 (M-1025 ENB-2): the `?` try-operator node. REPRESENTED + traversed here (like
+  // `Wrapping`/`Consume`), but the self-hosted lexer/parser does NOT yet PRODUCE it — the Rust
+  // reference frontend does (ast.rs::Expr::Try), and `myc check` (Rust-backed) handles `?` in a
+  // `.myc` file. Represented-not-produced (never-silent, G2; FLAG-try-3).
+  | Try(Expr)
   | Colony(Vec[Hypha])
   | Lambda(Vec[Param], Expr)
   | App(Expr, Vec[Expr])
@@ -1290,7 +1301,9 @@ fn grade_expr(depth: Binary{32}, fns: Vec[Pair[Bytes, FnDecl]], scope: Vec[Pair[
     WithParadigm(_, body) => grade(depth, fns, scope, site, body),
     Wild(_) => Ok(GDeclared),
     Spore(_) => Ok(GDeclared),
+    Wrapping(_) => Ok(GDeclared),
     Consume(b) => grade(depth, fns, scope, site, b),
+    Try(b) => grade(depth, fns, scope, site, b),
     Colony(hyphae) => grade_colony(depth, fns, scope, site, hyphae),
     Lambda(_, _) => Ok(GDeclared),
     App(head, args) => grade_app(depth, fns, scope, site, head, args),
@@ -2188,7 +2201,9 @@ fn collect_tuple_arities_expr(acc: Vec[Binary{32}], e: Expr) => Vec[Binary{32}] 
     WithParadigm(_, body) => collect_tuple_arities_expr(acc, body),
     Wild(b) => collect_tuple_arities_expr(acc, b),
     Spore(b) => collect_tuple_arities_expr(acc, b),
+    Wrapping(b) => collect_tuple_arities_expr(acc, b),
     Consume(b) => collect_tuple_arities_expr(acc, b),
+    Try(b) => collect_tuple_arities_expr(acc, b),
     Colony(hs) => collect_tuple_arities_hyphae(acc, hs),
     Lambda(ps, body) => collect_tuple_arities_expr(collect_tuple_arities_params(acc, ps), body),
     App(head, args) => collect_tuple_arities_exprs(collect_tuple_arities_expr(acc, head), args),
@@ -3168,7 +3183,9 @@ fn fvw(e: Expr, bound: Vec[Bytes], seen: Vec[Bytes], out: Vec[Bytes], depth: Bin
       WithParadigm(_, body) => fvw(body, bound, seen, out, d),
       Wild(b) => fvw(b, bound, seen, out, d),
       Spore(b) => fvw(b, bound, seen, out, d),
+      Wrapping(b) => fvw(b, bound, seen, out, d),
       Consume(b) => fvw(b, bound, seen, out, d),
+      Try(b) => fvw(b, bound, seen, out, d),
       Colony(hyphae) => fvw_hyphae(hyphae, bound, seen, out, d),
       Lambda(params, body) => fvw(body, union_names(bound, param_names(params)), seen, out, d),
       App(head, args) => match fvw(head, bound, seen, out, d) {
@@ -4552,4 +4569,156 @@ fn lval_match_zip(types: Vec[DataInfo], subs: Vec[Pattern], fields: Vec[LVal],
         }
       }
     }
+  };
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// M-1013 checkty PR-2 — two pure checkty.rs classifiers (Stage-5 increment continues; DN-26 §7.3).
+// Both are pure structural functions over the ALREADY-ported `Ty`/`DataInfo` vocabulary — no Env,
+// no PrimRegistry, no SwapEngine, no fuel/depth, no trusted-kernel `Value`, no Rust trait. Each
+// mirrors its Rust oracle arm-for-arm and is differential-witnessed in `compiler_stage5_classify.rs`.
+// Neither introduces a NEW surface-inexpressibility: `paradigm_name` is a flat `Ty` match (the
+// established `&'static str -> Bytes` idiom, no new FLAG); `cons_list_ctors` reads the type registry
+// through the already-established FLAG-semcore-4 `Vec[DataInfo]` + `types_lookup` assoc-list.
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+
+// paradigm_name: mirrors checkty.rs::paradigm_name (checkty.rs 7175-7197) — the swap-paradigm name
+// of a representation type, for the never-silent cross-paradigm framing (RFC-0001 §4.1 / M-892).
+// The four swap-paradigms (Binary/Ternary/Dense/VSA) name themselves; every other `Ty` is `None` —
+// `Seq`/`Bytes`/`Float` are first-class reprs but not v0 swap-paradigms (RFC-0032 D3/D4, ADR-040 §5),
+// and `Data`/`Substrate`/`Var`/`Fn` are not representation types at all (RFC-0024 §3). All 11 arms
+// are enumerated EXPLICITLY (no `_` wildcard), exactly as the Rust does: a future `Ty` variant must
+// force a paradigm decision here, never be absorbed into a silent `None` (G2 — never-silent).
+fn paradigm_name(t: Ty) => Option[Bytes] =
+  match t {
+    TyBinary(_) => Some("Binary"),
+    TyTernary(_) => Some("Ternary"),
+    TyDense(_, _) => Some("Dense"),
+    TyVsa(_, _, _) => Some("VSA"),
+    TySeq(_, _) => None,
+    TyBytes => None,
+    TyFloat => None,
+    TyData(_, _) => None,
+    TySubstrate(_) => None,
+    TyVar(_) => None,
+    TyFn(_, _) => None
+  };
+
+// cons_list_scan: checkty.rs::cons_list_ctors's `for c in &di.ctors { match c.fields.len() ... }`
+// mutable-accumulator loop, restated as a threaded fold over the ctor list carrying the
+// `(nil_name?, cons_name?)` pair (the FLAG-semcore-6 value-threaded collapse of the two `mut`
+// locals). The field-count dispatch mirrors the Rust exactly: 0 fields -> record `nil`; exactly 2
+// fields whose SECOND is the recursive `Data(name, ..)` self-reference at the type's own arity ->
+// record `cons`; every other shape leaves the accumulator untouched. The 1-field and 3+-field
+// shapes fall to Rust's OUTER `match c.fields.len() { _ => {} }` (the `Nil`/`Cons(_, _)` inner arms
+// below); a 2-field ctor whose 2nd field is NOT the `Data(..)` self-reference falls to Rust's inner
+// `if let Ty::Data(..) = &c.fields[1] { .. } else {}` (the `_` arm on `f1` below). `&c.fields[1]`
+// (Rust indexing) is expressed structurally as the exactly-two-elements shape (`Cons(_, Cons(f1,
+// Nil))`), destructured one level at a time per this nodule's single-level-pattern convention.
+fn cons_list_scan(ctors: Vec[CtorInfo], name: Bytes, nparams: Binary{32},
+    nil: Option[Bytes], cons: Option[Bytes]) => Pair[Option[Bytes], Option[Bytes]] =
+  match ctors {
+    Nil => Pr(nil, cons),
+    Cons(c, rest) => match ci_fields(c) {
+      Nil => cons_list_scan(rest, name, nparams, Some(ci_name(c)), cons),
+      Cons(_, tl) => match tl {
+        Nil => cons_list_scan(rest, name, nparams, nil, cons),
+        Cons(f1, rest2) => match rest2 {
+          Cons(_, _) => cons_list_scan(rest, name, nparams, nil, cons),
+          Nil => match f1 {
+            TyData(fname, fargs) => match and_(beq(fname, name), eq_u(ty_len(fargs), nparams)) {
+              True => cons_list_scan(rest, name, nparams, nil, Some(ci_name(c))),
+              False => cons_list_scan(rest, name, nparams, nil, cons)
+            },
+            _ => cons_list_scan(rest, name, nparams, nil, cons)
+          }
+        }
+      }
+    }
+  };
+
+// cons_list_ctors: mirrors checkty.rs::cons_list_ctors (checkty.rs 3592-3624) — recognizes whether
+// `expected` is a 2-constructor linked-list type (one nullary "nil" ctor; one binary "cons" ctor
+// whose SECOND field is the recursive `Data(name, ..)` self-reference at the type's own arity) and
+// returns `(nil_name, cons_name)`; every non-conforming shape yields `None` (never a silent
+// reinterpret — the `Seq{T,N}`/no-context paths stay untouched). Pure structural registry
+// inspection: no Env, no evaluator, no kernel `Value`. `BTreeMap<String, DataInfo>` is the
+// already-established FLAG-semcore-4 `Vec[DataInfo]` + `types_lookup` (no new deviation). The Rust
+// `di.ctors.len() != 2` early-return is expressed by matching the ctor list's shape to exactly two
+// elements before scanning (one level at a time per the single-level-pattern convention).
+fn cons_list_ctors(types: Vec[DataInfo], expected: Ty) => Option[Pair[Bytes, Bytes]] =
+  match expected {
+    TyData(name, _) => match types_lookup(types, name) {
+      None => None,
+      Some(d) => match di_ctors(d) {
+        Nil => None,
+        Cons(_, r1) => match r1 {
+          Nil => None,
+          Cons(_, r2) => match r2 {
+            Cons(_, _) => None,
+            Nil => match cons_list_scan(di_ctors(d), name, names_len(di_params(d)), None, None) {
+              Pr(nopt, copt) => match nopt {
+                Some(n) => match copt {
+                  Some(cn) => Some(Pr(n, cn)),
+                  None => None
+                },
+                None => None
+              }
+            }
+          }
+        }
+      }
+    },
+    _ => None
+  };
+
+// ── subst_type_param_in_typeref (checkty.rs::subst_type_param_in_typeref) ────────────────────────
+// DN-54 §10 Model-A rule instantiation (M-973): substitute the rule's type parameter `param` with the
+// concrete `TypeRef` throughout a `TypeRef`. A bare nullary `Named(param, [])` occurrence becomes
+// `concrete`, keeping the occurrence's own guarantee if written (`T @ Exact` ↦ `C @ Exact`) — the
+// `tr.guarantee.or(concrete.guarantee)` first-Some-wins merge, mirrored by `strength_or`; every
+// structural form recurses; reprs / `Substrate` / `Bytes` / `Float` / VSA / dense / `Ambient` carry
+// no nested type-name and are returned verbatim (the Rust `tr.clone()` — widths are a *separate*
+// parameter space, DN-42, so a type parameter never appears in a width slot). Total and
+// allocation-bounded by the input's size (like `subst_ty`, this structural substitution takes no
+// depth budget — the Rust oracle is likewise unbudgeted). The Rust `if name == param &&
+// args.is_empty()` guard is expressed one level at a time (the single-level-pattern convention): a
+// `Named` first splits on its argument list, and the nullary case then compares the name. The
+// argument-list recursion reuses the direct-recursive-map idiom (FLAG-semcore-5, no generic `map`).
+// A complete, wildcard-free `BaseType` match (all 12 arms) — a future `BaseType` variant is a compile
+// error here, never a silent pass-through (G2).
+
+// strength_or: `Option[Strength]::or` — keep the left guarantee if present, else take the right. The
+// exact semantics of `tr.guarantee.or(concrete.guarantee)`: an occurrence's own `@ g` wins over the
+// concrete type's, and a bare occurrence inherits the concrete's guarantee.
+fn strength_or(a: Option[Strength], b: Option[Strength]) => Option[Strength] =
+  match a { Some(_) => a, None => b };
+
+fn subst_typeref_list(trs: Vec[TypeRef], param: Bytes, concrete: TypeRef) => Vec[TypeRef] =
+  match trs {
+    Nil => Nil,
+    Cons(h, t) => Cons(subst_type_param_in_typeref(h, param, concrete),
+                       subst_typeref_list(t, param, concrete))
+  };
+
+fn subst_type_param_in_typeref(tr: TypeRef, param: Bytes, concrete: TypeRef) => TypeRef =
+  match typeref_base(tr) {
+    Named(name, args) => match args {
+      Nil => match bytes_eq(name, param) {
+        0b1 => TR(typeref_base(concrete), strength_or(typeref_guarantee(tr), typeref_guarantee(concrete))),
+        _ => tr
+      },
+      Cons(_, _) => TR(Named(name, subst_typeref_list(args, param, concrete)), typeref_guarantee(tr))
+    },
+    KwSeq(elem, len) => TR(KwSeq(subst_type_param_in_typeref(elem, param, concrete), len), typeref_guarantee(tr)),
+    FnArrow(a, b) => TR(FnArrow(subst_type_param_in_typeref(a, param, concrete),
+                                subst_type_param_in_typeref(b, param, concrete)), typeref_guarantee(tr)),
+    Tuple(elems) => TR(Tuple(subst_typeref_list(elems, param, concrete)), typeref_guarantee(tr)),
+    KwBinary(_) => tr,
+    KwTernary(_) => tr,
+    KwDense(_, _) => tr,
+    Vsa(_, _, _) => tr,
+    KwSubstrate(_) => tr,
+    KwBytes => tr,
+    KwFloat => tr,
+    Ambient(_) => tr
   };

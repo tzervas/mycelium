@@ -550,6 +550,10 @@ mod fp {
             Expr::Consume(value) => expr(tag(fp, 87), value),
             // RFC-0034 §10.1 (CU-5): `wrapping { <expr> }` — single-body wrapper form (unique tag 97).
             Expr::Wrapping(body) => expr(tag(fp, 97), body),
+            // DN-102 (M-1025 ENB-2): `Try` appended out of order (tag 98) so the existing tags stay
+            // stable — mirrors how `Wrapping` (97) was appended. No stage3 program exercises `?`, so
+            // this arm is never hit; it keeps the encoder exhaustive + parity-ready.
+            Expr::Try(inner) => expr(tag(fp, 98), inner),
             Expr::Colony(hyphae) => hypha_list(tag(fp, 88), hyphae),
             Expr::Lambda { params, body } => {
                 let fp = param_list(tag(fp, 89), params);

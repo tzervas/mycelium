@@ -23,8 +23,8 @@
 //!
 //! M-981 applies: only the L1-eval leg is exercised (small synthetic fixtures, not a corpus program).
 
-use crate::ast::{BaseType, Strength};
-use crate::checkty::{check_nodule, Ty, Width};
+use crate::ast::{BaseType, Scalar, Sparsity, Strength, TypeRef, WidthRef};
+use crate::checkty::{check_nodule, subst_type_param_in_typeref, Ty, Width};
 use crate::eval::{Evaluator, L1Value};
 use crate::mono::{
     closure_field_ty, closure_param_ref, item_key, mangle_ty_in_ty, monomorphize, ty_to_ref,
@@ -445,5 +445,240 @@ fn tyref_marshal_discriminates() {
         got, want,
         "tyref_marshal_discriminates: Binary{{16}} decoded equal to the Binary{{8}} oracle value \
          -- the decoder is not reading the width dimension"
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+// subst_type_param_in_typeref (LIVE — checkty::subst_type_param_in_typeref; DN-54 §10 Model-A, M-973):
+// the rule-parameter → concrete-type substitution over a `TypeRef`. This is the FIRST differential to
+// need the guarantee slot on the INPUT side — the shared `marshal_support::encode_typeref` forces
+// `None` (no prior oracle read it), but subst's subtlest behaviour is the `tr.guarantee.or(
+// concrete.guarantee)` first-Some merge — so this file adds a guarantee-THREADING encoder (`enc_tr`);
+// the output guarantee is already checked by the shared `decode_typeref` (l128).
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+
+/// A guarantee-threading `TypeRef` → `.myc` source encoder (the shared `encode_typeref` discards the
+/// guarantee; `subst` preserves/merges it, so we must emit the REAL `Some(Strength)`/`None`). Atoms
+/// carry no nested `TypeRef`, so the shared `encode_basetype` is exact for them.
+fn enc_tr(t: &TypeRef) -> String {
+    format!(
+        "TR({}, {})",
+        enc_base(&t.base),
+        encode_guarantee(t.guarantee)
+    )
+}
+fn enc_base(b: &BaseType) -> String {
+    match b {
+        BaseType::Named(n, args) => format!("Named({}, {})", encode_bytes(n), enc_tr_list(args)),
+        BaseType::Seq { elem, len } => format!("KwSeq({}, {})", enc_tr(elem), encode_u32(*len)),
+        BaseType::Fn(a, r) => format!("FnArrow({}, {})", enc_tr(a), enc_tr(r)),
+        BaseType::Tuple(elems) => format!("Tuple({})", enc_tr_list(elems)),
+        other => encode_basetype(other),
+    }
+}
+fn enc_tr_list(ts: &[TypeRef]) -> String {
+    let mut s = String::from("Nil");
+    for t in ts.iter().rev() {
+        s = format!("Cons({}, {})", enc_tr(t), s);
+    }
+    s
+}
+
+// Small `TypeRef` fixture constructors (test bodies stay `assert over a case`).
+fn tref(base: BaseType) -> TypeRef {
+    TypeRef {
+        base,
+        guarantee: None,
+    }
+}
+fn tref_g(base: BaseType, g: Strength) -> TypeRef {
+    TypeRef {
+        base,
+        guarantee: Some(g),
+    }
+}
+fn bnamed(n: &str, args: Vec<TypeRef>) -> BaseType {
+    BaseType::Named(n.to_owned(), args)
+}
+
+#[test]
+fn subst_type_param_in_typeref_cases() {
+    // (input `tr`, rule parameter, concrete replacement) — spanning EVERY BaseType arm plus the
+    // guarantee-merge (`Option::or`, first-Some-wins) and the four corners of the Rust
+    // `name == param && args.is_empty()` guard.
+    let cases: Vec<(TypeRef, &str, TypeRef)> = vec![
+        // ── the param hit + its guarantee-merge corners ──────────────────────────────────────────
+        // both bare → base replaced, guarantee stays None
+        (tref(bnamed("T", vec![])), "T", tref(bnamed("Bool", vec![]))),
+        // the occurrence's own `@ Exact` wins over the concrete's (None)
+        (
+            tref_g(bnamed("T", vec![]), Strength::Exact),
+            "T",
+            tref(bnamed("Bool", vec![])),
+        ),
+        // a bare occurrence inherits the concrete's `@ Proven`
+        (
+            tref(bnamed("T", vec![])),
+            "T",
+            tref_g(bnamed("Bool", vec![]), Strength::Proven),
+        ),
+        // both tagged → the occurrence's `@ Empirical` wins (left-biased `or`)
+        (
+            tref_g(bnamed("T", vec![]), Strength::Empirical),
+            "T",
+            tref_g(bnamed("Bool", vec![]), Strength::Declared),
+        ),
+        // the concrete is itself a STRUCTURED type — the whole base replaces the parameter
+        (
+            tref(bnamed("T", vec![])),
+            "T",
+            tref(BaseType::Seq {
+                elem: Box::new(tref(BaseType::Bytes)),
+                len: 4,
+            }),
+        ),
+        // ── the guard's negative corners ─────────────────────────────────────────────────────────
+        // nullary name != param → returned verbatim (guarantee preserved)
+        (
+            tref_g(bnamed("U", vec![]), Strength::Declared),
+            "T",
+            tref(bnamed("Bool", vec![])),
+        ),
+        // name == param BUT applied (args non-empty) → keep the name, recurse the args (Rust arm 2)
+        (
+            tref(bnamed("T", vec![tref(bnamed("X", vec![]))])),
+            "T",
+            tref(bnamed("Bool", vec![])),
+        ),
+        // ── structural recursion ─────────────────────────────────────────────────────────────────
+        // applied Named recurses into its args
+        (
+            tref(bnamed("List", vec![tref(bnamed("T", vec![]))])),
+            "T",
+            tref(bnamed("Bool", vec![])),
+        ),
+        // a nested occurrence's OWN guarantee is preserved through the recursion (List[T @ Empirical])
+        (
+            tref(bnamed(
+                "List",
+                vec![tref_g(bnamed("T", vec![]), Strength::Empirical)],
+            )),
+            "T",
+            tref(bnamed("Bool", vec![])),
+        ),
+        // Seq recurses its element, keeps the outer guarantee + length
+        (
+            tref_g(
+                BaseType::Seq {
+                    elem: Box::new(tref(bnamed("T", vec![]))),
+                    len: 8,
+                },
+                Strength::Proven,
+            ),
+            "T",
+            tref(bnamed("Bool", vec![])),
+        ),
+        // Fn recurses both sides — only the parameter position substitutes
+        (
+            tref(BaseType::Fn(
+                Box::new(tref(bnamed("T", vec![]))),
+                Box::new(tref(bnamed("U", vec![]))),
+            )),
+            "T",
+            tref(bnamed("Bool", vec![])),
+        ),
+        // Tuple recurses each element
+        (
+            tref(BaseType::Tuple(vec![
+                tref(bnamed("T", vec![])),
+                tref(BaseType::Bytes),
+            ])),
+            "T",
+            tref(bnamed("Bool", vec![])),
+        ),
+        // ── the verbatim atoms (no nested type-name; whole `tr`, guarantee included, clones) ───────
+        (
+            tref_g(BaseType::Binary(WidthRef::Lit(8)), Strength::Exact),
+            "T",
+            tref(bnamed("Bool", vec![])),
+        ),
+        (
+            tref(BaseType::Ternary(WidthRef::Name("M".to_owned()))),
+            "T",
+            tref(bnamed("Bool", vec![])),
+        ),
+        (
+            tref(BaseType::Dense(16, Scalar::F32)),
+            "T",
+            tref(bnamed("Bool", vec![])),
+        ),
+        (
+            tref(BaseType::Vsa {
+                model: "HRR".to_owned(),
+                dim: 1024,
+                sparsity: Sparsity::Dense,
+            }),
+            "T",
+            tref(bnamed("Bool", vec![])),
+        ),
+        (
+            tref(BaseType::Substrate("gpu".to_owned())),
+            "T",
+            tref(bnamed("Bool", vec![])),
+        ),
+        (
+            tref_g(BaseType::Bytes, Strength::Declared),
+            "T",
+            tref(bnamed("Bool", vec![])),
+        ),
+        (tref(BaseType::Float), "T", tref(bnamed("Bool", vec![]))),
+    ];
+    for (tr, param, concrete) in cases {
+        let want = subst_type_param_in_typeref(&tr, param, &concrete);
+        let driver = format!(
+            "fn main() => TypeRef = subst_type_param_in_typeref({}, {}, {});\n",
+            enc_tr(&tr),
+            encode_bytes(param),
+            enc_tr(&concrete)
+        );
+        assert_typeref_marshal(
+            &format!("subst_type_param_in_typeref({tr:?}, {param}, {concrete:?})"),
+            &driver,
+            want,
+        );
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+// Non-vacuity twin: a param hit MUST change the type — the port's output must NOT decode equal to the
+// un-substituted input, and MUST equal the live oracle (guards against an identity/echo port).
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+#[test]
+fn subst_marshal_discriminates() {
+    let tr = tref(bnamed("T", vec![]));
+    let concrete = tref(bnamed("Bool", vec![]));
+    let driver = format!(
+        "fn main() => TypeRef = subst_type_param_in_typeref({}, {}, {});\n",
+        enc_tr(&tr),
+        encode_bytes("T"),
+        enc_tr(&concrete)
+    );
+    let src = program(&driver);
+    let env = check_nodule(&parse(&src).unwrap_or_else(|e| panic!("parse: {e}")))
+        .unwrap_or_else(|e| panic!("check: {e}"));
+    let mono = monomorphize(&env, "main").unwrap_or_else(|e| panic!("mono: {e}"));
+    let got = decode_typeref(
+        &Evaluator::new(&mono)
+            .call("main", vec![])
+            .unwrap_or_else(|e| panic!("eval: {e}")),
+    );
+    assert_ne!(
+        got, tr,
+        "subst of the parameter itself must not be the identity (the port ignored the substitution)"
+    );
+    assert_eq!(
+        got,
+        subst_type_param_in_typeref(&tr, "T", &concrete),
+        "port must match the live oracle"
     );
 }

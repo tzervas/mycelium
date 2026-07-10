@@ -851,7 +851,8 @@ fn encode_opt_typeref(t: &Option<TypeRef>) -> String {
     }
 }
 
-/// The FULL `Expr` mirror encoder (all 18 arms), field-for-field with `semcore.myc`'s `Expr`.
+/// The FULL `Expr` mirror encoder, field-for-field with `semcore.myc`'s `Expr` (incl. the DN-102
+/// `Try` variant — M-1025 ENB-2; represented-not-produced on the `.myc` side, like `Wrapping`).
 fn encode_expr(e: &Expr) -> String {
     match e {
         Expr::Let {
@@ -914,6 +915,7 @@ fn encode_expr(e: &Expr) -> String {
         Expr::Spore(b) => format!("Spore({})", encode_expr(b)),
         Expr::Consume(b) => format!("Consume({})", encode_expr(b)),
         Expr::Wrapping(b) => format!("Wrapping({})", encode_expr(b)),
+        Expr::Try(b) => format!("Try({})", encode_expr(b)),
         Expr::Colony(hs) => format!("Colony({})", encode_hypha_list(hs)),
         Expr::Lambda { params, body } => {
             format!(

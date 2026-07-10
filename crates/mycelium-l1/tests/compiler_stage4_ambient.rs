@@ -481,6 +481,8 @@ mod fp {
             // RFC-0034 §10.1 (CU-5): `wrapping { <expr> }` — fingerprint like the other single-body
             // wrapper forms (unique tag 97).
             Expr::Wrapping(body) => expr(tag(fp, 97), body),
+            // DN-102 (M-1025 ENB-2): `Try` at tag 98, appended out of order like `Wrapping` (97).
+            Expr::Try(inner) => expr(tag(fp, 98), inner),
             Expr::Colony(hyphae) => hypha_list(tag(fp, 88), hyphae),
             Expr::Lambda { params, body } => {
                 let fp = param_list(tag(fp, 89), params);

@@ -3,9 +3,9 @@
 //! `Cargo.toml`'s `quote` comment): fixtures are written directly under `std::env::temp_dir()` in
 //! a per-test unique subdirectory, cleaned up at the end of each test.
 
-use crate::batch::{discover_rs_files, summarize, transpile_batch};
+use crate::batch::{discover_rs_files, output_rel_path, summarize, transpile_batch};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 static COUNTER: AtomicU64 = AtomicU64::new(0);
@@ -179,4 +179,58 @@ fn batch_summary_over_zero_files_is_all_zero_not_a_panic() {
     assert_eq!(batch_summary.totals.gaps, 0);
     assert_eq!(batch_summary.totals.expressible_pct, 0.0);
     assert!(union.gaps.is_empty());
+}
+
+// ── M-1006 Phase-2: path-qualified batch output (`output_rel_path`) ──────────────────────────────
+
+/// A file under the batch root maps to its **relative path** with `.rs` stripped, so a whole-corpus
+/// run mirrors the source tree under the out-dir.
+#[test]
+fn output_rel_path_mirrors_the_tree_under_root() {
+    let root = Path::new("crates");
+    let got = output_rel_path(Path::new("crates/mycelium-core/src/lib.rs"), root)
+        .expect("under root -> Ok");
+    assert_eq!(got, PathBuf::from("mycelium-core/src/lib"));
+}
+
+/// The whole-corpus collision the fix targets: two crates' `lib.rs` must map to **distinct** outputs
+/// (path-qualified), never the same flat `lib` — the property that makes the run non-lossy.
+#[test]
+fn same_stem_files_in_different_crates_get_distinct_outputs() {
+    let root = Path::new("crates");
+    let a = output_rel_path(Path::new("crates/mycelium-core/src/lib.rs"), root).unwrap();
+    let b = output_rel_path(Path::new("crates/mycelium-std/src/lib.rs"), root).unwrap();
+    assert_ne!(
+        a, b,
+        "two crates' lib.rs must not collide at the same output path"
+    );
+    assert_eq!(a, PathBuf::from("mycelium-core/src/lib"));
+    assert_eq!(b, PathBuf::from("mycelium-std/src/lib"));
+}
+
+/// A flat single-crate `src/` root reduces to the bare stem — identical to the pre-Phase-2 flat
+/// naming, which is why the committed `gen/myc-drafts/` 17-target manifest sees zero churn.
+#[test]
+fn flat_single_crate_root_reduces_to_bare_stem() {
+    let root = Path::new("crates/mycelium-std-fs/src");
+    let got = output_rel_path(Path::new("crates/mycelium-std-fs/src/lib.rs"), root).unwrap();
+    assert_eq!(got, PathBuf::from("lib"));
+}
+
+/// A file not under the batch root falls back to the bare stem via `Err` (the caller warns — never
+/// a silent mis-placement, G2).
+#[test]
+fn not_under_root_falls_back_to_bare_stem_via_err() {
+    let root = Path::new("crates");
+    let got = output_rel_path(Path::new("/elsewhere/foo.rs"), root);
+    assert_eq!(got, Err(PathBuf::from("foo")));
+}
+
+/// Only the final `.rs` is stripped — a `foo.bar.rs` source keeps its `foo.bar` stem (so `append_ext`
+/// in the CLI yields `foo.bar.myc`, not `foo.myc`).
+#[test]
+fn only_the_rs_extension_is_stripped() {
+    let root = Path::new("crates/x/src");
+    let got = output_rel_path(Path::new("crates/x/src/foo.bar.rs"), root).unwrap();
+    assert_eq!(got, PathBuf::from("foo.bar"));
 }

@@ -1368,6 +1368,17 @@ impl Elab<'_> {
             // kernel-`Value` world is a separate, still-open question owned by that crate — not
             // reopened or silently assumed answered by this arm (out of this leaf's scope).
             Expr::Consume(operand) => self.expr(stack, scope, operand),
+            // DN-102 / M-1025 ENB-2: `e?` is desugared to a `match` bind by the checker (which rewrites
+            // the whole enclosing `let`; the rewritten body is what elaboration consumes), so a `Try`
+            // reaching here is an internal invariant violation — a program was elaborated without the
+            // desugaring check pass. Refuse never-silently (G2), never fabricate a lowering. Mirrors the
+            // `Expr::Lambda` invariant guard below (closures are lowered by mono before elab).
+            Expr::Try(_) => residual(
+                site,
+                "internal: a `?` try-operator reached elaboration undesugared — the checker rewrites \
+                 `let x = e? in body` to the `Result`/`Option` `match` bind (DN-102 §4). Check the \
+                 program first.",
+            ),
             Expr::Colony(hyphae) => self.elab_colony(stack, scope, hyphae),
             // RFC-0024 §4A (M-704): closures are **lowered by monomorphization** (`mono.rs`) — a
             // lambda becomes a tag-sum constructor application + a generated `apply` dispatcher, so a

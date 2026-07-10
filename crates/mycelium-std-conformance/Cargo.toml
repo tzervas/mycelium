@@ -28,12 +28,15 @@ mycelium-cert = { path = "../mycelium-cert" }
 mycelium-mlir = { path = "../mycelium-mlir" }
 # The retained Rust oracles (RFC-0031 D6, test scope only; crates not retired). Each `std_<name>.rs`
 # differential compares its `.myc` port against the ACTUAL public surface of the matching oracle.
+mycelium-std-content = { path = "../mycelium-std-content" }
 mycelium-std-core = { path = "../mycelium-std-core" }
 mycelium-std-diag = { path = "../mycelium-std-diag" }
 mycelium-std-error = { path = "../mycelium-std-error" }
+mycelium-std-numerics = { path = "../mycelium-std-numerics" }
 mycelium-std-recover = { path = "../mycelium-std-recover" }
 mycelium-std-select = { path = "../mycelium-std-select" }
 mycelium-std-spore = { path = "../mycelium-std-spore" }
 mycelium-std-swap = { path = "../mycelium-std-swap" }
 mycelium-std-ternary = { path = "../mycelium-std-ternary" }
 mycelium-std-testing = { path = "../mycelium-std-testing" }
+mycelium-std-time = { path = "../mycelium-std-time" }

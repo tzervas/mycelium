@@ -203,6 +203,33 @@ reading both the Rust output and the self-hosted output for the same input.
       structurally identical to its type/trait branches, so this is a low-risk, explicitly flagged
       narrowing, not a silent one. A full increment 2–8 reconciliation of this wave-progress note is
       still owed (out of this change's scope — flagged up, not attempted here).
+
+      **M-1013 checkty PR-2** ports two PURE `checkty.rs` classifiers into `semcore.myc`:
+      `paradigm_name` (checkty.rs 7175-7197 — the swap-paradigm name of a representation type; all 11
+      `Ty` arms enumerated, no wildcard) and `cons_list_ctors` (checkty.rs 3592-3624 — the two-ctor
+      linked-list recognizer) with its `cons_list_scan` fold, gated by
+      `crates/mycelium-l1/src/tests/compiler_stage5_classify.rs` (5 tests: all 11 `paradigm_name` arms;
+      11 `cons_list_ctors` shapes including the one-field / three-plus-field scan paths and the
+      no-nullary `(None, Some)` / `(None, None)` finals; two `marshal_discriminates` non-vacuity twins).
+      No new FLAG (the `&'static str`→`Bytes` idiom and the FLAG-semcore-4 `Vec[DataInfo]` `BTreeMap`
+      stand-in); both oracles `pub(crate)`-widened, zero logic change; native `myc check` reports `ok`.
+      (STEP 5/6 and eval PR-1 also landed on `dev` between STEP 4 and this note; the full increment
+      2–8+ reconciliation of this wave-progress note remains owed — flagged up, not attempted here.)
+
+      **M-1013 checkty PR-3** ports `checkty.rs`'s `subst_type_param_in_typeref` (the DN-54 §10 Model-A
+      rule-instantiation substitution, M-973) into `semcore.myc`: a bare nullary `Named(param, [])`
+      becomes the concrete type's base with the `tr.guarantee.or(concrete.guarantee)` first-Some merge
+      (`strength_or`); the structural forms recurse; the eight atoms clone verbatim. A complete
+      wildcard-free 12-arm `BaseType` match (G2), unbudgeted like the `subst_ty` precedent. No new FLAG
+      (`BaseType` is a field-for-field mirror; the `name == param && args.is_empty()` guard is expressed
+      one level at a time; the arg-list recursion reuses the FLAG-semcore-5 direct-map idiom). Oracle
+      `pub(crate)`-widened, zero logic change. Gated by the extended
+      `crates/mycelium-l1/src/tests/compiler_stage5_tyref.rs` (now 11 tests): 19
+      `subst_type_param_in_typeref_cases` (every `BaseType` arm; the four guarantee-merge corners; the
+      guard's negative corners; nested-guarantee preservation) plus a `subst_marshal_discriminates`
+      non-vacuity twin — the first Stage-5 differential to marshal a guarantee-bearing `TypeRef` on the
+      input side (a guarantee-threading `enc_tr` encoder; the shared `encode_typeref` discards the
+      slot). Native `myc check` reports `ok`. Unlocks the `subst_type_param_in_{sig,expr,impl}` family.
 - [ ] **Stage 6 / M-742** — `just bootstrap`: interpreted-first then AOT, stage-2 three-way
 
 *This README is the M-740 wave map; it is updated as each stage lands. Grounded in DN-26 §7/§9,

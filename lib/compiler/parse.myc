@@ -1425,6 +1425,11 @@ fn hypha_body(h: Hypha) => Expr =
 
 // ── Expr (mirrors ast.rs::Expr — an expression; every variant is bare/unrenamed except where
 // FLAG-ast-4/5 note a collision elsewhere in this file) ─────────────────────────────────────────
+// FLAG-parse-12: the `Wrapping` variant (M-791) is represented above and walked (the walk_expr
+// fingerprint arm, tag 0x6E), but the parser does NOT yet PRODUCE it — there is no `wrapping { e }`
+// parse rule (nor a `wrapping` keyword in the lexer). Surface parsing of the wrapping-arithmetic
+// opt-in is deferred remaining work (never-silent, G2); the Rust reference parser produces it
+// (ast.rs::Expr::Wrapping).
 type Expr =
     Let(Bytes, Option[TypeRef], Expr, Expr)
   | If(Expr, Expr, Expr)
@@ -1434,7 +1439,13 @@ type Expr =
   | WithParadigm(Paradigm, Expr)
   | Wild(Expr)
   | Spore(Expr)
+  | Wrapping(Expr)
   | Consume(Expr)
+  // DN-102 (M-1025 ENB-2): the `?` try-operator node. REPRESENTED + traversed here (like
+  // `Wrapping`/`Consume`), but the self-hosted lexer/parser does NOT yet PRODUCE it — the Rust
+  // reference frontend does (ast.rs::Expr::Try), and `myc check` (Rust-backed) handles `?` in a
+  // `.myc` file. Represented-not-produced (never-silent, G2; FLAG-try-3).
+  | Try(Expr)
   | Colony(Vec[Hypha])
   | Lambda(Vec[Param], Expr)
   | App(Expr, Vec[Expr])
@@ -4349,6 +4360,8 @@ fn walk_expr(fp: Fp, e: Expr) => Fp =
     WithParadigm(par, body) => walk_expr(walk_paradigm(fp_tag(fp, 0b0000_0000_0000_0000_0000_0000_0101_0100), par), body),
     Wild(body) => walk_expr(fp_tag(fp, 0b0000_0000_0000_0000_0000_0000_0101_0101), body),
     Spore(value) => walk_expr(fp_tag(fp, 0b0000_0000_0000_0000_0000_0000_0101_0110), value),
+    Wrapping(value) => walk_expr(fp_tag(fp, 0b0000_0000_0000_0000_0000_0000_0110_1110), value),
+    Try(value) => walk_expr(fp_tag(fp, 0b0000_0000_0000_0000_0000_0000_0110_1111), value),
     Consume(value) => walk_expr(fp_tag(fp, 0b0000_0000_0000_0000_0000_0000_0101_0111), value),
     Colony(hyphae) => walk_hypha_list(fp_tag(fp, 0b0000_0000_0000_0000_0000_0000_0101_1000), hyphae),
     Lambda(params, body) => walk_expr(walk_param_list(fp_tag(fp, 0b0000_0000_0000_0000_0000_0000_0101_1001), params), body),

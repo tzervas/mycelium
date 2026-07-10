@@ -12977,6 +12977,32 @@ issues:
       port surface in controlled phases (per-phase minting, mitigation #1), each folding lessons back
       into the transpiler; reconcile with rwr's M-947..M-957 at Phase-II.
 
+      PHASE-2 OPENED (2026-07-10, status stays in-progress; DN-34 SS8.19, Empirical): ran the ladder's
+      first WHOLE-CORPUS profile (mycelium-transpile over crates/: 337 files, 0 parse failures, 5472
+      items, 573 emitted) -- the Phase-2 mandate to expand beyond the 17-target port surface. Verify-first
+      profiling of the opaque Other bucket (37.8% of all gaps) surfaced a taxonomy category error: 267
+      bodyless `mod foo;` decls (file-linkage, not translatable surface -- nodule-per-file makes the module
+      tree implicit; sibling file transpiles as its own nodule) and 58 crate-level inner attributes (`#![..]`,
+      not syn::Items). Added two honest Category variants (ModuleDecl, InnerAttr); ModuleDecl is excluded
+      from the expressible-fraction denominator exactly as TestItem is (recorded not dropped, G2; not counted
+      against coverage). Inline `mod {..}` (dropped body) stays a counted Other gap (VR-5: only non-surface
+      is excluded). Metric effect (never-silent): whole-corpus Other 2245 -> 1924; expressible 10.8% ->
+      11.3%; on the committed 17-target manifest union expressible 13.4% -> 14.1% and checked_fraction 7.8%
+      -> 8.2% with the numerator UNCHANGED (59 clean items) -- the whole move is the tighter denominator, no
+      emission added/upgraded. Files: crates/mycelium-transpile/src/{gap,transpile}.rs + a taxonomy test
+      module; gen/myc-drafts/ manifest regenerated. Phase-2 residual worklist (recorded, G2): Import (1085,
+      18.3% -- the cross-nodule symbol-table prerequisite, the largest remaining automation lever, its own
+      future wave), Impl (578), DeriveAttr (497, mostly language-surface), Struct (423); plus a path-qualified
+      batch-output layout as the whole-corpus-completeness follow-on (a naive whole-crates run overwrites
+      same-stem outputs -- never-silently but lossily).
+
+      PHASE-2 FOLLOW-ON LANDED (2026-07-10, DN-34 SS8.20): the path-qualified batch-output layout is done --
+      directory mode now mirrors the source tree under the out-dir (pure, unit-tested batch::output_rel_path),
+      so the whole-crates/ run writes all 337 .myc files with zero collisions (was ~25 clobbered). Zero
+      committed manifest churn (the 17 targets are flat single-crate src/ dirs, so mirrored path == bare
+      stem). Emission-plumbing only; no metric/tag move. Remaining lever: Import cross-nodule resolution (its
+      own scoped wave).
+
   - id: M-1007
     title: "semcore Stage-5 increment 2: checkty type algebra (has_var/type_head/subst_ty/param_subst)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
@@ -13460,3 +13486,628 @@ issues:
       Definition of Done:
       - The core query/encode path runs as a .myc package with a differential vs the Rust engine
         (Empirical); the gate that unblocked this issue is cited in its landed-basis note.
+
+  - id: M-1020
+    title: "Port std-numerics to .myc (kickoff spw, Wave-0 pilot leaf)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:stdlib, priority:P2, status:done]
+    epic: E33-1
+    depends_on: [M-1003]
+    landed_date: 2026-07-09
+    landed_basis: "Ported the honesty-crux STRENGTH surface of std-numerics to self-hosted lib/std/numerics.myc (225 lines) with crates/mycelium-std-conformance/tests/std_numerics.rs — 63 differential cases, three-way L1-eval == L0-interp == AOT + a live mycelium_core / mycelium_std_numerics oracle, GREEN; myc-check clean; fmt + clippy -D warnings clean. Independently, adversarially re-verified (verdict accept, NOT forced-green; tags + gaps confirmed honest). Empirical (differential agreement). STEP-0: zero transpiler checked-% delta (7.4%, unchanged; net assist ~0%, only the NumErr/CheckErr enums graduated verbatim). Residual FLAGged to enb (M-1023): the float-valued eps/delta magnitude surface (no scalar-Float VALUE in the .myc runtime — Gap A / M-895 / M-896 / ADR-040), the sealed FR-N3 ProvenThm witness (Approx::proven OMITTED not faked, VR-5), the &mut Formatter Display (ADR-003). ADR-043 retirement NOT triggered — mycelium-std-numerics is not fully replaced (retireReady=false). Landed on claude/spw-integration -> draft PR into dev 2026-07-09 (kickoff spw Wave-0 pilot)."
+    doc_refs:
+      - corpus:RFC-0031
+      - src:crates/mycelium-std-numerics/src/lib.rs
+      - src:lib/std/numerics.myc
+      - src:crates/mycelium-std-conformance/tests/std_numerics.rs
+      - src:.claude/kickoffs/spw.md
+      - src:docs/planning/self-hosting-port-ledger.md
+    body: |
+      Minted 2026-07-09 (kickoff `spw`, Wave-0 stdlib-port-wave pilot). Port `std-numerics`
+      (27 non-test items; committed draft checked% 7.4 — mostly hand-port) to self-hosted
+      `lib/std/numerics.myc` with a `crates/mycelium-std-conformance/tests/std_numerics.rs`
+      three-way differential + Rust-oracle comparison. Model: Opus.
+
+      User stories:
+      - As a stdlib author, I want the numerics ε/δ carrier surface self-hosted, so that the
+        honesty-lattice carrier is expressed in the language it certifies.
+
+      Definition of Done:
+      - STEP 0 (maintainer directive 2026-07-09): re-run the CURRENT transpiler on the target and
+        record the honest `checked_fraction`/`emitted` delta vs the committed manifest (Empirical) —
+        two emitter features landed since the manifest base (DN-51 narrow-cast→truncate; D3 operand
+        inference), so measure whether quality legitimately improved before hand-porting.
+      - The five D5 rows: surface-check first (STOP + FLAG to `enb` if a below-grammar enabler is
+        missing — never force, G2); behavior-neutral pre-port polish; `.myc` nodule + `include_str!`
+        harness three-way (L1-eval ≡ L0-interp ≡ AOT); differential vs the retained Rust oracle
+        green (earns `Empirical`); per-op tags carried at the same strength (VR-5).
+      - Change-scoped gates only; ownership boundary honored (only `lib/std/numerics.myc` +
+        `tests/std_numerics.rs`; `Cargo.toml`/`harness/mod.rs`/shared indices read-only, FLAG up).
+
+  - id: M-1021
+    title: "Port std-time to .myc (kickoff spw, Wave-0 pilot leaf)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:stdlib, priority:P2, status:done]
+    epic: E33-1
+    depends_on: [M-1003]
+    landed_date: 2026-07-09
+    landed_basis: "Ported the full value-semantic surface of std-time to self-hosted lib/std/time.myc (388 lines) with crates/mycelium-std-conformance/tests/std_time.rs — 29 differential cases, three-way L1-eval == L0-interp == AOT + a live mycelium_std_time oracle, GREEN; myc-check clean; fmt + clippy -D warnings clean. Independently, adversarially re-verified (verdict accept, NOT forced-green; tags + gaps confirmed honest). Empirical. STEP-0: zero transpiler checked-% delta (18.9%, unchanged; net assist ~0%). Ported: the 4 instant/duration value types, the complete comparison surface (signed lt_s, width-uncapped), the deterministic ManualClock, the declared-effect wrappers, the 11-row guarantee matrix. Residual FLAGged to enb (M-1023): signed 128-bit duration/instant arithmetic (kernel TC_MAX_WIDTH=64 two's-complement cap), saturating advance (silent-clamp vs never-silent mismatch), TimeErr diagnostic payloads/Display; OS SystemClock/ClockSource is deferred host-FFI (-> M-541). ADR-043 retirement NOT triggered (retireReady=false). Landed on claude/spw-integration -> draft PR into dev 2026-07-09 (kickoff spw Wave-0 pilot)."
+    doc_refs:
+      - corpus:RFC-0031
+      - src:crates/mycelium-std-time/src/lib.rs
+      - src:lib/std/time.myc
+      - src:crates/mycelium-std-conformance/tests/std_time.rs
+      - src:.claude/kickoffs/spw.md
+      - src:docs/planning/self-hosting-port-ledger.md
+    body: |
+      Minted 2026-07-09 (kickoff `spw`, Wave-0 stdlib-port-wave pilot). Port `std-time`
+      (37 non-test items; committed draft checked% 18.9) to self-hosted `lib/std/time.myc` with a
+      `crates/mycelium-std-conformance/tests/std_time.rs` three-way differential + Rust-oracle
+      comparison. Model: Opus.
+
+      User stories:
+      - As a stdlib author, I want the time surface self-hosted, so that duration/instant algebra
+        is expressed in Mycelium.
+
+      Definition of Done:
+      - STEP 0 (maintainer directive 2026-07-09): re-run the CURRENT transpiler and record the
+        honest `checked_fraction`/`emitted` delta vs the committed manifest (Empirical) before
+        hand-porting.
+      - The five D5 rows (surface-check → STOP+FLAG if enabler missing; behavior-neutral pre-port
+        polish; nodule + include_str! three-way; Rust-oracle differential green → `Empirical`;
+        tags carried at same strength, VR-5).
+      - Change-scoped gates only; ownership boundary honored (only `lib/std/time.myc` +
+        `tests/std_time.rs`; shared files read-only, FLAG up).
+
+  - id: M-1022
+    title: "Port std-content to .myc (kickoff spw, Wave-0 pilot leaf)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:stdlib, priority:P2, status:done]
+    epic: E33-1
+    depends_on: [M-1003]
+    landed_date: 2026-07-09
+    landed_basis: "Ported the content-addressing surface of std-content to self-hosted lib/std/content.myc (521 lines) with crates/mycelium-std-conformance/tests/std_content.rs — 47 differential cases, three-way L1-eval == L0-interp == AOT + a live mycelium_std_content oracle, GREEN; myc-check clean; fmt + clippy -D warnings clean. Independently, adversarially re-verified (verdict accept, NOT forced-green; tags + gaps confirmed honest). Empirical. STEP-0: zero transpiler checked-% delta (14.3%, unchanged; net assist ~0%); the draft lib.myc 'unknown type ContentHash' CheckError was resolved by hand-adding the ContentHash(Bytes) newtype. Ported: digest_eq (via M-912 bytes_eq), the ContentRef/RefKind accessors, the hand-rolled recursive parse_ref / content_ref_from_str byte scanners, the 7-row guarantee matrix, the NameRegistry assoc-list read/write surface (never silently substituted). Residual FLAGged to enb (M-1023): hash_of_value / hash_of_def (kernel structural-hash normalizer over Value/Node, RFC-0031 D1); a bytes.find / split_once prim would collapse the hand-rolled scanners. ADR-043 retirement NOT triggered (retireReady=false). Landed on claude/spw-integration -> draft PR into dev 2026-07-09 (kickoff spw Wave-0 pilot)."
+    doc_refs:
+      - corpus:RFC-0031
+      - src:crates/mycelium-std-content/src/lib.rs
+      - src:lib/std/content.myc
+      - src:crates/mycelium-std-conformance/tests/std_content.rs
+      - src:.claude/kickoffs/spw.md
+      - src:docs/planning/self-hosting-port-ledger.md
+    body: |
+      Minted 2026-07-09 (kickoff `spw`, Wave-0 stdlib-port-wave pilot). Port `std-content`
+      (35 non-test items; committed draft checked% 20.0; one CheckError in the draft `lib.myc`:
+      `unknown type ContentHash` — a hand-port target) to self-hosted `lib/std/content.myc` with a
+      `crates/mycelium-std-conformance/tests/std_content.rs` three-way differential + Rust-oracle
+      comparison. Model: Opus.
+
+      User stories:
+      - As a stdlib author, I want the content-addressing surface self-hosted, so that content
+        refs/hashes are expressed in Mycelium.
+
+      Definition of Done:
+      - STEP 0 (maintainer directive 2026-07-09): re-run the CURRENT transpiler and record the
+        honest `checked_fraction`/`emitted` delta vs the committed manifest (Empirical) before
+        hand-porting — pay attention to whether the draft `lib.myc` CheckError now resolves.
+      - The five D5 rows (surface-check → STOP+FLAG if enabler missing; behavior-neutral pre-port
+        polish; nodule + include_str! three-way; Rust-oracle differential green → `Empirical`;
+        tags carried at same strength, VR-5).
+      - Change-scoped gates only; ownership boundary honored (only `lib/std/content.myc` +
+        `tests/std_content.rs`; shared files read-only, FLAG up).
+
+  - id: M-1023
+    title: "enb — enabler FLAGs surfaced by the spw Wave-0 stdlib ports (numerics/time/content)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:todo]
+    epic: E28-1
+    depends_on: [M-1020, M-1021, M-1022]
+    doc_refs:
+      - corpus:ADR-038
+      - corpus:RFC-0031
+      - corpus:ADR-040
+      - src:crates/mycelium-core/src/binary.rs
+      - src:crates/mycelium-interp/src/prims.rs
+      - src:.claude/kickoffs/spw.md
+      - src:lib/std/numerics.myc
+      - src:lib/std/time.myc
+      - src:lib/std/content.myc
+    body: |
+      Consolidated backlog issue (kickoff `spw`, Wave-0 pilot, 2026-07-09). The three differential-
+      witnessed stdlib ports (M-1020/M-1021/M-1022) surfaced real below-grammar / runtime blockers that
+      keep each port an HONEST PARTIAL (VR-5/G2). Routed here to the `enb` epic (E28-1) so the Wave-0
+      residual has a tracked path to closure — never silently dropped (G2). None was forced; each blocked
+      op was FLAGged, not faked. This is a tracking/consolidation issue, not a single-PR feature; each
+      item below either maps to an existing `enb` gap (cross-referenced) or is a newly-surfaced need.
+
+      ALREADY TRACKED (cross-reference, not a duplicate):
+      - Scalar-Float VALUE in the `.myc` runtime — Gap A / M-895 (ADR) · M-896 (Repr variant) ·
+        M-897…M-900 (literal/arith/cmp/conformance) · ADR-040 §2.5. The DOMINANT std.numerics blocker:
+        the entire float-valued eps/delta magnitude surface (error_bound/prob_bound/union_delta/
+        accuracy_to_probability/check_error/check_union, combine's eps-composition, Bound/BoundKind,
+        DECLARED_FLOAT_EPS, matrix magnitudes) stays Rust (mycelium-numerics, RFC-0031 D1) until it lands.
+
+      NEWLY SURFACED (not previously tracked in issues.yaml):
+      - TC_MAX_WIDTH=64 two's-complement ARITHMETIC prim cap (crates/mycelium-core/src/binary.rs:140,362 —
+        add_s/sub_s/neg_s/mul_s refuse when the width itself exceeds 64, via an i128 intermediate range
+        check). The DOMINANT std.time blocker: faithful signed 128-bit Duration/WallInstant arithmetic
+        (duration_add/sub/scale, checked_neg/abs) and the u64-difference ops (mono_diff/logical_diff need
+        >=65-bit signed) all refuse at width 128 regardless of value — a structural cap, not an edge case.
+        The signed COMPARE family (binary::cmp_signed -> lt_s) is width-uncapped, so the ORDERING surface
+        IS ported. Fix options: a multi-limb TC arithmetic prim lane, OR a DN-ratified Binary{64}-narrowed
+        Duration with a domain-bounded differential.
+      - No top-level `const` item production in the grammar — blocks a literal port of const tables
+        (DECLARED_FLOAT_EPS, the GUARANTEE_MATRIX/MATRIX). Non-hard: the lib/std/core.myc precedent
+        (`fn matrix() => Vec[Row] = Cons(row_a(), Cons(row_b(), ...))`) is the standing workaround, reused
+        by all three ports. Recorded because this const-table gap class recurs across ports.
+      - No slice/array type (`&[T]` / `[T]`) anywhere in the grammar — blocks signatures like
+        `&[GuaranteeRow]` / `&[MatrixRow]` and the union_delta/check_error/check_union/composed_prob_basis
+        surface.
+      - No unit/void (`-> ()`) return type representable — matrix.rs `assert_matrix_invariants() -> ()`
+        was gapped for exactly this.
+      - No sealed/private-field or private-constructor VISIBILITY primitive — blocks reproducing the
+        FR-N3 ProvenThm capability-gate (Rust's `mod sealed { pub(super) struct Sealed }` + private-field
+        pattern has no `.myc` analogue). Approx::proven was OMITTED rather than ported ungated (porting an
+        ungated public `proven` would fabricate a `Proven`-strength escape hatch, violating the invariant
+        it protects — VR-5). A real DESIGN gap: needs an `enb` sealing/visibility enabler OR an accepted
+        alternate idiom (a DN) before `Approx::proven` can be honestly ported.
+      - No `bytes.find` / `split_once` / `contains` prim (only bytes.len/get/slice/concat/eq + hash.blake3
+        are registered in crates/mycelium-interp/src/prims.rs) — std.content's parse_ref and
+        content_ref_from_str are hand-rolled recursive byte scans; a find/split_once prim would collapse
+        them.
+      - No kernel structural-hash prim over the interpreter's own Value/Node (std.content's
+        hash_of_value / hash_of_def) — RFC-0031 D1 boundary; only raw-bytes hash.blake3 is surfaced
+        (M-912). Candidate enabler: a kernel prim analogous to hash.blake3 but over the interpreter's own
+        alpha-normalized Value/Node representation, OR full Value/Node self-hosting in lib/compiler
+        (explicitly out of the spw kickoff's scope).
+      - Cross-nodule `use` / import with a resolvable symbol table still open (DN-34 §4/§8.2) — sidestepped
+        today by LOCALLY MIRRORING the needed kernel ADTs (lib/std/core.myc, lib/std/diag.myc precedent),
+        a confirmed-viable convention; noted so the underlying import gap is not forgotten.
+
+      NON-BLOCKING (ergonomics backlog; workarounds exist, recorded per G2, not gating any port):
+      - No inherent-impl generic-parameter slot (`impl<T> Foo<T>` has no grammar production) — worked
+        around with top-level `[A]`-parameterized fns (lib/std/option.myc idiom).
+      - No saturating_add prim / never-silent-variant DN — std.time's saturating advance_mono/step_logical
+        omitted (Rust `saturating_add` silent-clamp != the self-hosted never-silent checked add_u).
+
+      DEFERRED HOST-FFI (not an `enb` grammar/runtime enabler — tracked elsewhere):
+      - OS SystemClock read + the ClockSource trait object (std.time) -> M-541 (std-sys clock floor,
+        wild/@std-sys side-effect handling). The deterministic ManualClock half IS ported.
+
+      VERIFY-FIRST NOTE, surfaced not acted on (mitigation #14, for the recover/swap owners): both
+      lib/std/recover.myc (FLAG-recover-1) and lib/std/swap.myc (FLAG-swap-1) assert "no content-hash
+      primitive is exposed to .myc" for ContentHash broadly. M-912's hash.blake3/bytes_eq (landed
+      2026-07-02) now make ContentHash-as-opaque-digest expressible (std.content's digest_eq is landed),
+      so that claim is now TRUE ONLY for the hash_of_value/hash_of_def STRUCTURAL-hash surface, not the
+      opaque-digest surface. Landing ordering is ambiguous (both files + M-912 share the 2026-07-02
+      landing day), so this is NOT a confirmed staleness and NOTHING was re-implemented — flagged for the
+      recover/swap owners (or a later integrator) to re-verify + append-only clarify, not acted on here
+      (out of this wave's ownership boundary).
+
+      User stories:
+      - As the `enb` epic owner, I want the spw Wave-0 ports' surfaced blockers consolidated with their
+        exact kernel/grammar loci and their existing-gap cross-references, so that the Wave-0 residual has
+        a single tracked path to closure and the Rust oracle crates a concrete ADR-043 retirement trigger.
+
+      Definition of Done:
+      - Each newly-surfaced enabler above is either scheduled under `enb` (mapped to a Gap A–E lane or a
+        new child) or explicitly maintainer-deferred with rationale (G2); as its enablers land, the
+        corresponding M-1020/M-1021/M-1022 residual becomes `.myc`-expressible and a follow-up whole-crate
+        differential can re-attempt the full port and (per ADR-043) trigger the Rust crate's retirement.
+      - No enabler here is silently dropped; the verify-first note is either resolved (append-only) by the
+        recover/swap owners or explicitly left open with rationale.
+
+  - id: M-1024
+    title: "enb ENB-1 — cross-nodule symbol resolution + runtime execution"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P1, status:in-progress]
+    epic: E28-1
+    depends_on: [M-982, M-1023]
+    doc_refs:
+      - corpus:DN-99
+      - corpus:DN-101
+      - corpus:DN-34
+      - corpus:RFC-0031
+      - src:crates/mycelium-l1/src/checkty.rs
+      - src:crates/mycelium-l1/src/eval.rs
+      - src:crates/mycelium-l1/tests/phylum_exec.rs
+    body: |
+      From DN-99 §8 ENB-1 (Draft backlog, kickoff `spw`). Closes register rows #41 (cross-nodule
+      runtime exec), #13 (mod-declaration), #1 (import-use), #16/#18 (qualified path). The check-time
+      half is LANDED (resolve_imports, M-662); the runtime half is open — the evaluator holds a single
+      per-nodule env. Under the whole-project unfrozen posture (ADR-045) this is the PREFERRED real close
+      over the local-mirror sidestep: give the evaluator a phylum-wide view that reuses the check-time
+      import registry as the runtime link table (DRY, KC-3 — no new L0 node), then AOT parity. Rides
+      M-982. HIGH semcore-lane collision — touches `crates/mycelium-l1/**`: cloud-semcore-lane, coordinate
+      M-1013 (unfrozen-actionable, NOT deferred-by-freeze). Needs a Draft DN before implementation.
+
+      Cross-ref (trx increment, 2026-07-10; DN-34 §8.21): also tracks **FLAG-tr-unknown-prim** — the
+      transpiler's generic method-call desugar (`emit.rs` `Expr::MethodCall` fallthrough) emits unknown
+      prim methods blindly (`b.is_ascii_alphanumeric()` becomes `is_ascii_alphanumeric(b)`, a
+      plausible-but-wrong VR-5/G2 emission). Closing it cleanly needs a known-prim set / symbol table,
+      which the cross-nodule symbol resolution this issue establishes (register #21/#50) is the natural
+      home for — so no separate issue is filed (mitigation #14).
+
+      User stories:
+      - As a stdlib porter, I want a `.myc` nodule to call symbols defined in another nodule at RUNTIME,
+        so that a multi-nodule port runs end-to-end instead of local-mirroring every shared ADT.
+
+      Definition of Done:
+      - Two-nodule phylum witness green under both the interpreter and AOT; the runtime link table reuses
+        the check-time import registry (no duplicate resolution); never-silent on an unresolved symbol
+        (explicit error, not a panic); a Draft DN records the design before the L1 change.
+
+      Progress (2026-07-10, PR #1360 — FIRST landable increment; status → in-progress, NOT done):
+      - LANDED: `PhylumEnv::link()` (checkty.rs) folds every nodule's checked decls into one linked `Env`
+        the existing elab/mono/eval pipeline consumes unchanged (KC-3 no new L0 node; DRY reuses the
+        check-time registry). Draft DN recorded (DN-101, renumbered from DN-100 to avoid M-1032's).
+      - Verify-first (mitigation #14): DIRECT cross-nodule execution already worked (undocumented); the
+        real gap closed is TRANSITIVE (a `pub` fn calling its home nodule's private helper). 6 differential
+        witnesses in `tests/phylum_exec.rs` (direct + transitive vs an inlined oracle on the L1-eval and
+        L0-elaborate legs; never-silent collision refusal; without-link `Stuck` control; positive
+        direct-without-link control; phylum-of-one). Coherence-map merges (impls/instances/lower/prov)
+        are uniformly never-silent (G2) after PR review — no first-wins winner on any duplicate key.
+      - v0 flat namespace: a cross-nodule name collision is a never-silent `CheckError` (G2). No tag upgraded.
+      - RESIDUAL (this issue stays open): AOT/MLIR parity leg = follow-up increment (interpreter + L0 legs
+        witnessed here, not AOT). `.myc` runtime parity = N/A until the `.myc` evaluator exists (feasibility
+        -gated on M-986/M-987; the check-time dual resolve_imports is already ported, M-1013 STEP 4).
+        Collision DISAMBIGUATION (qualified per-nodule scoping) deferred to M-982 — needs a ratifying DN
+        (see DN-101 §5). FLAG-tr-unknown-prim (the known-prim symbol table) still owed here (register
+        #21/#50). Register rows #72/#85 corrected `tr-only` → `language-enabler` (DN-34 §8.21).
+
+  - id: M-1025
+    title: "enb ENB-2 — `?` try-operator grammar sugar + desugar"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P1, status:in-progress]
+    epic: E28-1
+    depends_on: [M-527, M-1023]
+    doc_refs:
+      - corpus:DN-99
+      - corpus:DN-102
+      - corpus:DN-34
+      - src:crates/mycelium-l1/src/token.rs
+      - src:crates/mycelium-l1/src/parse.rs
+      - src:crates/mycelium-l1/src/checkty.rs
+      - src:crates/mycelium-l1/tests/try_operator.rs
+    body: |
+      From DN-99 §8 ENB-2 (Draft backlog). Closes register rows #60 (`?` grammar sugar, genuinely open —
+      verified zero `?`/`Question` tokens in token.rs) and #52 (the try-operator idiom facet). A
+      `Question` token plus a postfix desugar to the already-present `Result`/`Option` bind — surface +
+      lowering over EXISTING runtime semantics, NO new kernel semantics. Pins the error-type unification
+      rule. HIGH semcore-lane collision — touches `crates/mycelium-l1/**` (token/parse/elab + the
+      self-hosted frontend under port): cloud-semcore-lane, coordinate M-1013 (unfrozen-actionable, not
+      deferred-by-freeze). Needs a Draft DN.
+
+      User stories:
+      - As a stdlib porter, I want to write `expr?` in `.myc`, so that error-propagating Rust ports keep
+        their shape instead of hand-desugaring every `?` to nested `match`.
+
+      Definition of Done:
+      - Differential `?` ≡ the hand-`match`/`and_then` desugar (three-way where forms close); the
+        error-type unification rule pinned; conformance accept + reject; a Draft DN records the desugar.
+
+      Landed — FIRST INCREMENT (2026-07-10, PR #1363; `status: in-progress`, NOT done). The `let`-binder-RHS
+      scope of `?` is landed in the Rust reference frontend: `Tok::Question` (lexer) -> `parse_app` postfix
+      `e?` -> `Expr::Try` -> the CHECKER desugars `let x = e? in body`, type-directed on `e`'s checked
+      `Result`/`Option` type, to the existing `match` bind (`Ok(x) => body, Err($f) => Err($f)` /
+      `Some(x) => body, None => None`) with the continuation inside the binding arm — so the propagation
+      arm unifies with NO early-return and NO never-type (the DN-102 §2 fork resolution). `Try` never
+      survives checking (KC-3, no new L0 node); elab/eval keep only a defensive never-silent residual.
+      The `.myc` mirror REPRESENTS `Try(Expr)` (all 5 encoders + every walker) but does not yet PRODUCE
+      it (`Wrapping` precedent). Design recorded in Draft DN-102 (maintainer ratifies the v0 scoping +
+      the CPS-lift follow-up — house rule #3, not self-ratified). VERIFIED: `cargo test -p mycelium-l1`
+      (`tests/try_operator.rs` — 6 behavioural cases Ok/Err + Some/None + chained on L1-eval AND the
+      three-way L0 leg, plus 4 never-silent reject witnesses), `-p mycelium-fmt`, `-p mycelium-lsp` green;
+      `cargo fmt --check` + `cargo clippy -p mycelium-l1 --all-targets -D warnings` clean; `myc check` on
+      the touched `.myc` mirrors green.
+
+      Residual (flagged, VR-5/G2 — NOT done):
+      - FLAG-try-1 — general `?` position (the CPS lift). `?` outside a `let`-binder RHS (`g(f()?)`,
+        `f()?.m`, tail `e?`, repeated `e??`) is a never-silent refusal, not lowered. Generalizing it
+        needs a CPS lift of the enclosing expression, which is gated on the never-type `-> !` / an
+        early-return form (M-1030 / DN-99 #88) — deferred to an ENB continuation (DN-102 §5/§6).
+      - FLAG-try-2 — no `From`-error widening. The error-type unification rule (DN-102 §3) is exact-match
+        only; a widening `?` (Rust's `From::from` on the error) is refused until an error-conversion trait
+        lands.
+      - FLAG-try-3 — the `.myc` frontend represents-but-does-not-produce `?` (no self-hosted lex/parse
+        rule yet); `myc check` (Rust-backed) handles `?` in a `.myc` file. The `.myc` elab/eval mirror
+        follows the port's general cadence (DN-26), not this increment.
+      - FLAG-try-5 — `?` dispatches on the operand's type NAME (`Result`/`Option`), not its structure
+        (DN-102 §6). A user type shadowing the name with a different shape fails closed (never-silent
+        constructor-mismatch, G2) rather than with a targeted diagnostic; structural dispatch is the
+        follow-up if a port witnesses the need (PR #1363 review).
+
+      Review (PR #1363, pr-reviewer T2 deep): the Expr-walker sweep verified COMPLETE (no missed
+      walker across the Rust core, 6 test-harness encoders, 5 `.myc` mirrors, and the mycelium-fmt/-lsp
+      consumers); one HIGH fixed pre-merge — the type-peek in `check_try_let` double-invoked the affine
+      tracker (spurious `double-consume` on an affine-`Substrate` `?`-operand), resolved by snapshotting
+      the affine tracker around the peek, with a regression witness in `tests/try_operator.rs`.
+
+  - id: M-1026
+    title: "enb ENB-3 — impl-level generic-parameter slot"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:todo]
+    epic: E28-1
+    depends_on: [M-1023]
+    doc_refs:
+      - corpus:DN-99
+      - corpus:DN-34
+      - src:crates/mycelium-l1/src/parse.rs
+      - src:crates/mycelium-l1/src/ast.rs
+    body: |
+      From DN-99 §8 ENB-3 (Draft backlog). Closes register row #63 (generic-parameterized impl-block,
+      partial — no impl type-params slot). Add the `type_params` slot to `parse_impl_item` (mirroring
+      fn/object), thread it into the impl AST, monomorphize via the existing path; decide lifetime
+      erasure. Needed for a faithful impl-block-preserving self-host; the stdlib lane is unblocked
+      meanwhile by impls-as-functions. HIGH semcore-lane collision — touches `crates/mycelium-l1/**`:
+      cloud-semcore-lane, coordinate M-1013. Needs a Draft DN.
+
+      User stories:
+      - As a semcore porter, I want `impl[T] Foo[T]` to parse and check, so that generic inherent-impl
+        blocks port faithfully rather than flattening to free functions.
+
+      Definition of Done:
+      - `impl[T] Foo[T]` parses + checks; monomorphization reuses the existing path; the lifetime-erasure
+        question is decided in the Draft DN; conformance accept + reject; three-way where forms close.
+
+  - id: M-1027
+    title: "enb ENB-4 — per-constructor visibility seal"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:todo]
+    epic: E28-1
+    depends_on: [M-1023]
+    doc_refs:
+      - corpus:DN-99
+      - corpus:DN-53
+      - src:crates/mycelium-l1/src/ast.rs
+      - src:crates/mycelium-l1/src/checkty.rs
+    body: |
+      From DN-99 §8 ENB-4 (Draft backlog). Closes register row #37 (sealed-constructor visibility,
+      genuinely open — verified `ast.rs` has item-level-only `enum Vis {Private,Pub}`) and the #69
+      field-visibility sub-case. A `priv`/seal marker on the `constructor` production so
+      `pub type T = priv Mk(..)` exports the type NAME but withholds cross-nodule CONSTRUCTION — the
+      analogue of Rust's `mod sealed { pub(super) struct Sealed }` capability-gate the spw Wave-0 hit
+      (M-1023's Approx::proven was OMITTED rather than ported ungated — VR-5). Design with named-field
+      visibility (DN-53 §B.5); resolve DN-53 §B.6 Q1 first. HIGH semcore-lane collision — touches
+      `crates/mycelium-l1/**`: cloud-semcore-lane, coordinate M-1013. Needs a Draft DN.
+
+      User stories:
+      - As a stdlib author, I want a sealed constructor so a capability type's name is exported but its
+        construction is withheld cross-nodule, so that FR-N3-style `Proven`-gates port without fabricating
+        an ungated escape hatch.
+
+      Definition of Done:
+      - Conformance accept (in-nodule construction) + reject (cross-nodule construction) + differential;
+        DN-53 §B.6 Q1 resolved; the seal never-silent (an out-of-nodule construction is an explicit
+        checker error); a Draft DN records the marker and its interaction with named-field visibility.
+
+  - id: M-1028
+    title: "enb ENB-5 — transcendental + eps/delta float numerics"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:numerics, priority:P2, status:todo]
+    epic: E28-1
+    depends_on: [M-1023]
+    doc_refs:
+      - corpus:DN-99
+      - corpus:ADR-040
+      - src:crates/mycelium-interp/src/prims.rs
+    body: |
+      From DN-99 §8 ENB-5 (Draft backlog). Closes register row #42 (float eps/delta transcendentals,
+      genuinely open — scalar float #43 is already CLOSED via ADR-040 Enacted, do-not-reopen). The
+      DOMINANT std.numerics blocker (M-1020/M-1023): the float-valued eps/delta magnitude surface
+      (error_bound/prob_bound/union_delta/accuracy_to_probability/check_error/check_union and the
+      guarantee matrix). ADR-gated (parallel to ADR-040): decide kernel-prim vs libm-behind-`wild`
+      routing, the per-op eps/guarantee matrix, and the float `ApproxRule` wiring; then a serial prim
+      lane registers prims with never-silent domain errors. Prim registration lands in
+      `crates/mycelium-interp/src/prims.rs`; the type/elab wiring touches `crates/mycelium-l1/**` —
+      cloud-semcore-lane, coordinate M-1013. Needs a Draft DN/ADR.
+
+      User stories:
+      - As a numerics-stdlib author, I want transcendental + eps/delta float ops in-language, so that the
+        std.numerics magnitude surface ports off the Rust oracle (mycelium-numerics) into `.myc`.
+
+      Definition of Done:
+      - Prims registered + typed with never-silent domain errors; the per-op eps/guarantee matrix decided
+        and recorded (VR-5 — `Empirical`/`Declared` per op, no `Proven` without a checked theorem);
+        property tests on the bounds; conformance accept + reject; a Draft DN/ADR records the routing.
+
+  - id: M-1029
+    title: "enb ENB-6 — platform-width + char-type decision (subsumes signed)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:numerics, priority:P2, status:todo]
+    epic: E28-1
+    depends_on: [M-874, M-1023]
+    doc_refs:
+      - corpus:DN-99
+      - corpus:ADR-028
+      - src:crates/mycelium-l1/src/checkty.rs
+    body: |
+      From DN-99 §8 ENB-6 (Draft backlog). Closes register rows #45 (platform-width + char, partial),
+      #26 (signed-int-type) and #44 (signed-integer-first-class-type) — the signed sub-questions
+      collapse in. Prefer the canonicalized `Binary{N}` mapping (accepted-idiom, no kernel change) for
+      `usize`/`uN`; route `char` through the Bytes/std.text bridge; escalate to a platform-abstract width
+      / char paradigm only on witnessed demand. Resolves M-874. The signed ARITHMETIC ops are already
+      landed (prims.rs:169, ADR-028) and the ORDERING surface is ported (M-1023) — this is the
+      typed-view/decision layer, not new kernel ops. Touches `crates/mycelium-l1/**` type resolution —
+      cloud-semcore-lane, coordinate M-1013. Needs a Draft DN (decision record).
+
+      User stories:
+      - As a stdlib porter, I want a canonical width/char mapping decided once, so that `usize`/`isize`/
+        `char` ports are consistent and the M-1023 std.time TC width cap has a ratified resolution.
+
+      Definition of Done:
+      - A Draft DN records the `usize`/`isize`/`char` mapping decision (M-874 resolved); the width choice
+        stays never-silent (a chosen `Binary{N}` is recorded, FLAGged); no fabricated kernel op — the
+        existing signed ops dispatch; port guide records the width-selection table.
+
+  - id: M-1030
+    title: "enb ENB-7 — host-effect real-syscall registry + fixture differential (incl. never-type `-> !`)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:todo]
+    epic: E28-1
+    depends_on: [M-1023]
+    doc_refs:
+      - corpus:DN-99
+      - corpus:DN-34
+      - src:crates/mycelium-l1/src/eval.rs
+      - src:crates/mycelium-interp/src/prims.rs
+    body: |
+      From DN-99 §8 ENB-7 (Draft backlog). Closes register rows #79 (host-effect wild execution, partial)
+      and #88 (never-type divergence `-> !`, genuinely open — verified `ast.rs` has no bottom BaseType).
+      Grant real `wild:read/write/get_env/exit` ops from `mycelium-std-sys` into the PrimRegistry; add a
+      fixture/sandbox differential for non-deterministic host ops (equality differential is defeated by
+      real syscalls). Model `-> !` (never-type) as a divergent host-effect prim + a `diverges` effect —
+      do NOT add a bottom `BaseType` (YAGNI, house rule #5) — with the totality-checker interaction
+      specified. HIGH semcore-lane collision — touches `crates/mycelium-l1/**`: cloud-semcore-lane,
+      coordinate M-1013. Needs a Draft DN.
+
+      User stories:
+      - As a std-sys author, I want real host syscalls exposed as never-silent `wild:` prims (and `exit`
+        modelled as divergence), so that std.sys ports run against the OS with an honest fixture witness.
+
+      Definition of Done:
+      - One real syscall end-to-end + a fixture/sandbox witness for the non-deterministic ops; `exit`/
+        divergence modelled as an effect with the totality interaction specified (no bottom BaseType);
+        never-silent on out-of-domain host ops; a Draft DN records the effect model.
+
+  - id: M-1031
+    title: "enb ENB-8 — runtime-tier value-semantics mapping (post-Phase-7)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P3, status:todo]
+    epic: E28-1
+    depends_on: [M-1023]
+    doc_refs:
+      - corpus:DN-99
+      - corpus:DN-94
+      - corpus:RFC-0008
+      - src:crates/mycelium-l1/src/ast.rs
+    body: |
+      From DN-99 §8 ENB-8 (Draft backlog). Closes register row #56 (shared-ownership / interior
+      mutability, partial). `Box`→plain-`T` is DONE; shared-mutable-state is excluded by RFC-0008 RT1 /
+      DN-94; tasks/channels wait for the runtime tier (`hypha`/`mesh`, ratified-not-lexed). Out of
+      RFC-0031 scope; blocks nothing now. A Draft DN maps the value-semantics runtime substrate (no
+      user-facing Arc/Mutex/Box) before the L1 change. HIGH semcore-lane collision — touches
+      `crates/mycelium-l1/**` when it lands: cloud-semcore-lane, coordinate M-1013. Lowest priority (P3).
+
+      User stories:
+      - As a runtime designer, I want the value-semantics mapping for the concurrency tier decided before
+        it is lexed, so that `hypha`/`mesh` land without introducing user-facing shared-mutable state.
+
+      Definition of Done:
+      - A Draft DN maps the value-semantics runtime substrate (RT1/DN-94 preserved — no user-facing
+        Arc/Mutex/Box); no L1 change lands until the map is ratified; blocks-nothing-now recorded.
+
+  - id: M-1032
+    title: "enb ENB-9 — macro expand-first transpiler pre-pass (toolchain DN)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:tooling, priority:P2, status:todo]
+    epic: E28-1
+    depends_on: [M-875, M-1023]
+    doc_refs:
+      - corpus:DN-99
+      - corpus:DN-34
+      - corpus:DN-100
+      - src:crates/mycelium-transpile/src/transpile.rs
+    body: |
+      From DN-99 §8 ENB-9 (Draft backlog). Closes register row #51 (macro-expand, transpiler-only). A
+      macro expand-first pre-pass in the transpiler (`cargo expand` vs a vendored expander — a toolchain
+      DN decides) so `matches!`/`format!`/etc. are expanded before translation. NONE semcore-lane
+      collision — lands in `crates/mycelium-transpile/**`, OUTSIDE the semcore lane (no M-1013
+      coordination needed). Optional bulk lever; measure before/after `expressible_fraction` on std-cmp.
+      Needs a toolchain Draft DN.
+
+      User stories:
+      - As a transpiler maintainer, I want macros expanded before translation, so that macro-heavy Rust
+        modules raise their `expressible_fraction` without hand-expanding every invocation.
+
+      Definition of Done:
+      - Before/after `expressible_fraction` measured on a macro-heavy target (std-cmp); the expander
+        choice recorded in a toolchain Draft DN; emitted `.myc` stays `Declared` until a differential
+        upgrades it (M-991); no fabricated output on an unexpandable macro (never-silent gap).
+
+  - id: M-1033
+    title: "enb ENB-10 — statement-sequencing (`let _`) + record-update-mutation split"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:todo]
+    epic: E28-1
+    depends_on: [M-1023]
+    doc_refs:
+      - corpus:DN-99
+      - corpus:DN-34
+      - src:crates/mycelium-transpile/src/emit.rs
+    body: |
+      From DN-99 §8 ENB-10 (Draft backlog). Closes register row #89 (statement-sequencing body, partial).
+      Two parts: Part 1 (transpiler-only, `low` collision) — emit `let _ = e in body` for value-producing
+      discarded statements in `Stmt::Local`; Part 2 (grammar-`enb`, HIGH collision) — the
+      record-update-mutation→functional rewrite is a SEPARATE DN-gated gap that touches
+      `crates/mycelium-l1/**`: cloud-semcore-lane, coordinate M-1013 for Part 2 only. Part 1 lands in
+      `crates/mycelium-transpile/**` with no coordination. Needs a Draft DN for Part 2.
+
+      User stories:
+      - As a transpiler maintainer, I want value-producing statements emitted as `let _ = e in body`, so
+        that statement-sequenced Rust bodies translate without dropping the effect.
+
+      Definition of Done:
+      - Part 1: the transpiler emits `let _ = e in body`; vet shows `let (`/discarded-value sites off the
+        MultiStmtBody gap. Part 2: the mutation→functional rewrite is scoped to a separate Draft DN (not
+        conflated); neither part fabricates mutation the transpiler was not taught (never-silent).
+
+  - id: M-1034
+    title: "enb ENB-11 — signed/format idiom-ratification notes (port-guide close)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:docs, area:language, priority:P1, status:todo]
+    epic: E28-1
+    depends_on: [M-533, M-1023]
+    doc_refs:
+      - corpus:DN-99
+      - corpus:DN-34
+      - corpus:RFC-0031
+    body: |
+      From DN-99 §8 ENB-11 (Draft backlog). Idiom-close (docs, NONE semcore-lane collision — no M-1013
+      coordination). Closes the idiom arm of register row #70 (format-string mini-language) and the #26
+      signed idiom. Record, once, in the RFC-0031 port guide: the Display-composition recipe (hand-compose
+      over Bytes) and the signed sign-magnitude idiom. The residual float `{:.2e}` precision prim is NOT
+      an idiom — it is ENB-5-adjacent (tracked under M-1028/M-533), flagged here so the split is
+      never-silent. Docs-only; no kernel/grammar change.
+
+      User stories:
+      - As a stdlib porter, I want the sanctioned format-composition and signed idioms written down once,
+        so that ports apply a consistent convention instead of re-deriving it per module.
+
+      Definition of Done:
+      - The RFC-0031 port guide records the Display-composition recipe and the signed idiom; the residual
+        float-precision prim is explicitly cross-referenced to M-1028/M-533 (not silently folded into the
+        idiom); docs-only, no code.
+
+  - id: M-1035
+    title: "enb ENB-12 — L1 `match` on a `Bytes` scrutinee (string-literal-pattern enabler)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:todo]
+    epic: E28-1
+    depends_on: [M-1023]
+    doc_refs:
+      - corpus:DN-99
+      - corpus:DN-34
+      - src:crates/mycelium-l1/src/checkty.rs
+    body: |
+      From the trx transpiler-increment profiling (DN-34 §8.21, 2026-07-10; FLAG-L1-match-Bytes). The L1
+      checker categorically REJECTS a `match` whose scrutinee is `Bytes` (`check-error: match scrutinee
+      must be a data, Binary, or Ternary type, got Bytes` — verified against the real `myc check` oracle).
+      This blocks DN-99 register #72 (string-literal match pattern): grammatically valid Mycelium surface
+      (`pattern ::= literal ::= StrLit`) that the transpiler now gaps never-silently rather than emit
+      check-failing `.myc` (VR-5/G2). Reclassified from DN-99 #72's `tr-only` guess to a LANGUAGE-ENABLER
+      gap (mitigation #14) — the enabler unblocks #72 and every string-`match` port target. HIGH
+      semcore-lane collision — touches `crates/mycelium-l1/**` (the checker's match-scrutinee-type rule):
+      cloud-semcore-lane, coordinate the serial enb pipeline / M-1013 (unfrozen-actionable per ADR-045,
+      not deferred-by-freeze). Needs a Draft DN before the L1 change.
+
+      User stories:
+      - As a stdlib porter, I want to `match` on a `&str`/`Bytes` value in `.myc`, so that string-dispatch
+        Rust ports keep their `match "literal" => …` shape instead of hand-lowering to an if-else chain.
+
+      Definition of Done:
+      - The L1 checker accepts a `match` on a `Bytes` scrutinee with string-literal arms (or the ratified
+        equivalent surface); a differential vs the Rust semantics plus conformance accept + reject; the
+        transpiler's #72 gap flips from gapped to emitted once the enabler lands (the trx pin
+        `string_literal_pattern_gaps_with_l1_enabler_reason` updated in lockstep); never-silent on a
+        non-exhaustive/ill-typed match (explicit error, not a panic); a Draft DN records the rule before
+        the L1 change.

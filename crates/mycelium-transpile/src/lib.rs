@@ -41,7 +41,9 @@ pub mod reserved;
 pub mod transpile;
 pub mod vet;
 
-pub use batch::{discover_rs_files, summarize, transpile_batch, BatchSummary, UnionGapReport};
+pub use batch::{
+    discover_rs_files, output_rel_path, summarize, transpile_batch, BatchSummary, UnionGapReport,
+};
 pub use gap::{Category, Gap, GapReport};
 pub use transpile::{transpile_file, transpile_source};
 pub use vet::{vet_batch, MycChecker, VetClass, VetInput, VetRecord, VetReport};
