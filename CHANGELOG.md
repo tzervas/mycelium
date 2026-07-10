@@ -12,6 +12,52 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### feat(l1): per-constructor visibility seal — `priv` ctor — M-1027 (ENB-4) (2026-07-10)
+
+Closes the **sealed-constructor visibility** surface gap (DN-99 register row #37 / §A3, ENB-4; and the
+row #69 positional field-visibility sub-case): a `priv` marker on the `constructor` production so
+`pub type T = priv Mk(..)` exports the type **NAME** (usable cross-nodule in signatures, `use`, and
+**pattern position**) but **withholds the constructor from cross-nodule CONSTRUCTION** — the FR-N3
+capability-gate ("only the home nodule mints one"). This lets M-1023's omitted `Approx::proven` port
+faithfully instead of fabricating an ungated escape hatch (VR-5). Under the whole-project unfrozen
+posture (ADR-045). Design recorded in **Draft DN-104** (the maintainer ratifies the binary-seal decision
+and the `priv` keyword — house rule #3, not self-ratified).
+
+- **Surface + AST boolean + one export-table predicate, no new kernel node (KC-3/DRY).** `Tok::Priv`
+  is a reserved keyword (never a silent identifier — G2), parsed as an optional prefix in `parse_ctor`
+  and threaded into the AST (`Ctor.sealed: bool`, not flattened — faithful for printing / round-trip).
+  A `pub type`'s `priv` constructor names are recorded per-type in the phylum export table
+  (`Exports.sealed_ctors`) and folded, on import, into a per-nodule **withheld set**
+  (`NoduleImports.sealed`) — the exact twin of the existing `ambiguous` glob-collision machinery,
+  reusing the already-Enacted M-662/M-1024 cross-nodule export/resolution layer. The nodule's **own**
+  constructor names are subtracted (a home construction is never wrongly refused).
+- **The DN-53 §B.6 Q1 fork resolved to the BINARY seal.** Not a full Rust-style `pub(path)` scoped-
+  visibility grammar (KISS/YAGNI); `priv` is forward-compatible as the `nodule`-scoped point of a
+  future lattice. Confronted on its merits in DN-104 §3 (no sycophancy — house rule #4).
+- **Never-silent boundary (G2/VR-5).** Three refusals, each naming the fix: constructing a sealed ctor
+  from a **foreign nodule** (the withheld-construction `CheckError`, at both the nullary-value and
+  saturated-`App` sites, before the arity check so the seal diagnostic wins); a redundant `priv` on a
+  **non-`pub`** type (refused at registration — the whole type is already unimportable); and `priv`
+  inside an **`object`** body (out of scope in v0, refused at parse). The type NAME and pattern-matching
+  are unaffected — only *construction* is withheld (the capability property is unforgeability, not
+  opacity). No guarantee tag upgraded past its basis (`Declared` → `Empirical` by the witnesses; no
+  `Proven`).
+- **`.myc` mirror (DN-26 dual — surface + AST + fingerprint parity).** The `Priv` token
+  (`token`/`lex`.myc), `Ctor` carrying `sealed` (`ast`/`parse`/`semcore`/`ambient`.myc), `parse_ctor`
+  reading `priv`, and the structural-fingerprint walker hashing the seal (**tag 110**, both Rust and
+  `.myc` sides — folded only when sealed, so an unsealed ctor hashes byte-identically). The **cross-
+  nodule *enforcement* mirror rides the checkty `.myc` port (M-741)** — this increment mirrors the
+  `.myc` surface/AST/fingerprint, not the enforcement layer; a `priv` in a `.myc` `object` body is
+  accepted-then-unused (Rust refuses at parse). Honest residual, not a silent omission (DN-104 §6).
+- **How verified (change-scoped):** `crates/mycelium-l1/tests/ctor_seal.rs` — 10 differential
+  witnesses (home-construct OK ×2, foreign-construct REFUSED + the unsealed control proving the seal is
+  non-vacuous, cross-nodule type-use-in-signature + pattern-match OK, redundant-seal + object-body
+  refusals, per-ctor subset seal, surface round-trip). `cargo test -p mycelium-l1 -p mycelium-fmt -p
+  mycelium-lsp` green; `cargo clippy -p mycelium-l1 --all-targets -D warnings` clean; native `myc check`
+  clean over the touched `.myc` (dogfood parity, all 9 self-hosted nodules) — the `.myc` surface is
+  additionally witnessed by the Rust differential. (The cross-nodule *enforcement* is Rust-only — the
+  residual below.)
+
 ### feat(l1): impl-level generic-parameter slot — `impl[T] Foo[T]` — M-1026 (ENB-3) (2026-07-10)
 
 Closes the **inherent-impl** scope of the impl-level-generics surface gap (DN-99 register row #63 / §A2,

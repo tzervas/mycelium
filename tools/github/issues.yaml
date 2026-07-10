@@ -13871,14 +13871,18 @@ issues:
   - id: M-1027
     title: "enb ENB-4 — per-constructor visibility seal"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P2, status:todo]
+    labels: [phase:5, type:feature, area:language, priority:P2, status:done]
     epic: E28-1
     depends_on: [M-1023]
     doc_refs:
+      - corpus:DN-104
       - corpus:DN-99
       - corpus:DN-53
       - src:crates/mycelium-l1/src/ast.rs
+      - src:crates/mycelium-l1/src/token.rs
+      - src:crates/mycelium-l1/src/parse.rs
       - src:crates/mycelium-l1/src/checkty.rs
+      - src:crates/mycelium-l1/tests/ctor_seal.rs
     body: |
       From DN-99 §8 ENB-4 (Draft backlog). Closes register row #37 (sealed-constructor visibility,
       genuinely open — verified `ast.rs` has item-level-only `enum Vis {Private,Pub}`) and the #69
@@ -13898,6 +13902,26 @@ issues:
       - Conformance accept (in-nodule construction) + reject (cross-nodule construction) + differential;
         DN-53 §B.6 Q1 resolved; the seal never-silent (an out-of-nodule construction is an explicit
         checker error); a Draft DN records the marker and its interaction with named-field visibility.
+
+      Landed (PR #1370, feature commit ccda3954, merged to dev 2026-07-10 — status:done):
+      - Rust frontend, full + verified: `Tok::Priv` reserved keyword; `ast::Ctor.sealed`; `parse_ctor`
+        reads the optional `priv`; checkty `Exports.sealed_ctors` (per-`pub`-type) folded into a
+        per-nodule `NoduleImports.sealed` withheld set (own ctors subtracted), reusing the M-662/M-1024
+        export layer; the withheld-construction refusal at both constructor-application sites; the
+        redundant-`priv`-on-non-`pub`-type refusal at registration; the `priv`-in-`object`-body parse
+        refusal; ambient/fmt render `priv `. All refusals never-silent (G2). DN-53 §B.6 Q1 resolved to
+        the BINARY seal (Draft DN-104 — maintainer ratifies). Witnessed by 10 differentials
+        (`tests/ctor_seal.rs`): home-construct OK, foreign-construct refused (+ unsealed control),
+        cross-nodule type-use + pattern-match OK, redundant/object-body refusals, per-ctor subset seal.
+      - Residual (honest, not silent — DN-104 §6): the `.myc` mirror carries the **surface + AST +
+        structural-fingerprint** parity only (`Priv` token; `Ctor` `sealed` field; `parse_ctor` reads
+        `priv`; fingerprint tag 110 both sides). The **cross-nodule *enforcement* mirror** (the export-
+        table withheld set) is **Rust-only** and rides the checkty `.myc` port (**M-741**) — the whole
+        M-662/M-1024 cross-nodule checking layer is not yet ported to `.myc`. Minor parity gap: `priv`
+        in a `.myc` `object` body is accepted-then-unused (the Rust frontend refuses it at parse).
+        Native `myc check` is clean over the touched `.myc` (dogfood parity, 9 self-hosted nodules); the
+        `.myc` surface is additionally Rust-differential-witnessed. Enforcement-mirror completion tracked
+        under M-741.
 
   - id: M-1028
     title: "enb ENB-5 — transcendental + eps/delta float numerics"

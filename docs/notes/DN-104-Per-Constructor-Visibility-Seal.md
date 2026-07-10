@@ -103,7 +103,8 @@ analogue that does not require named-field syntax).
 **AST.** `Ctor` gains `sealed: bool` (`crates/mycelium-l1/src/ast.rs`). The parser sets it from the
 optional `priv` prefix in `parse_ctor`. Every other `Ctor` construction site (ambient rebuild, the test
 fixtures) threads it through; the surface printers (`ambient::print_type_decl`, `mycelium-fmt`'s
-`render_ctor`) emit `priv ` for a sealed ctor so `parse → expand_to_source → parse` round-trips.
+`render_ctor`) emit a leading `priv` marker for a sealed ctor so `parse → expand_to_source → parse`
+round-trips.
 
 **Export table (M-662 reuse).** The phylum-wide export table (`Exports`) gains a
 `sealed: BTreeMap<qualified-type-name, {sealed ctor names}>`, populated from each `pub type`'s AST while
