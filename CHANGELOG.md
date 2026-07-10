@@ -12,6 +12,41 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### feat(l1): cross-nodule runtime execution via `PhylumEnv::link` — M-1024 (ENB-1) first increment (2026-07-10)
+
+Closes the **runtime-execution** half of cross-nodule symbols (DN-99 register row #41, ENB-1) — the
+runtime dual of the landed check-time resolution (`checkty::resolve_imports`, M-662). Under the
+whole-project unfrozen posture (ADR-045). **M-1024 stays `in-progress`** (first landable increment;
+residual flagged below). Design recorded in **Draft DN-101** (renumbered from DN-100 at integration —
+that number was taken by M-1032's macro-expand DN, which landed on `dev` first; G2, never-silent).
+
+- **`PhylumEnv::link()`** (`crates/mycelium-l1/src/checkty.rs`) folds every nodule's **checked**
+  declarations into **one** linked `Env` the existing `elab`/`mono`/`eval` pipeline consumes unchanged
+  (**KC-3** — no new L0 node; **DRY** — reuses the check-time registry/coherence). Each name is merged
+  from its **home** nodule's checked (authoritative, ambient-resolved) decl, never a less-resolved
+  imported copy — so the linked `Env` is strictly more correct than running a consumer's per-nodule
+  `Env` directly (a phylum-of-one included).
+- **Verify-first (mitigation #14):** **direct** cross-nodule execution *already worked* (undocumented —
+  a consumer's checked `Env` retains its imported `pub` decls with bodies); the stale `check_phylum`
+  doc comment is corrected. The real gap closed here is **transitive** — a `pub` fn whose body calls
+  its home nodule's **private** helper, previously `Stuck "unknown function"` from the per-nodule `Env`.
+- **Never-silent boundary (G2/VR-5):** the v0 flat phylum namespace is one declaration per simple name;
+  a cross-nodule name collision is an explicit `CheckError`, **never a silent winner**. Qualified
+  per-nodule scoping that would *disambiguate* a collision (rather than refuse it) is the flagged
+  **M-982** residual (needs the ratifying DN). No guarantee/emission tag upgraded.
+- **How verified (change-scoped):** `crates/mycelium-l1/tests/phylum_exec.rs` — 6 differential
+  witnesses (direct + transitive vs an inlined single-nodule oracle on the **L1-eval** and
+  **L0-elaborate** legs; the never-silent collision refusal; the without-link `Stuck` control asserting
+  the specific variant; the positive direct-without-link control isolating the "already worked"
+  finding; phylum-of-one backward-compat). `cargo test -p mycelium-l1` green;
+  `cargo fmt --check` + `cargo clippy -p mycelium-l1 --all-targets -D warnings` clean; markdown gate
+  clean.
+- **Residual (flagged, VR-5/G2):** AOT/MLIR parity leg = M-1024 follow-up (interpreter + L0 legs only
+  here — do **not** read as AOT-complete); `.myc` runtime parity = **N/A** (the self-hosted
+  `lib/compiler/*.myc` frontend has no evaluator — gated on M-986/M-987); collision disambiguation →
+  M-982. DN-99 register rows #72/#85 also corrected `tr-only` → `language-enabler` (mitigation #14;
+  DN-34 §8.21; #72 → M-1035, #85 gated on the ENB-1 symbol table).
+
 ### fix(l1): add the missing `Wrapping(_)` arm to the `compiler_stage3_ast` test-driver's `classify_expr` (2026-07-10)
 
 Fixes a RED `dev`: 17 failing `ast_myc_*` tests in `crates/mycelium-l1/tests/compiler_stage3_ast.rs`.

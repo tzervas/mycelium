@@ -13699,15 +13699,17 @@ issues:
   - id: M-1024
     title: "enb ENB-1 — cross-nodule symbol resolution + runtime execution"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P1, status:todo]
+    labels: [phase:5, type:feature, area:language, priority:P1, status:in-progress]
     epic: E28-1
     depends_on: [M-982, M-1023]
     doc_refs:
       - corpus:DN-99
+      - corpus:DN-101
       - corpus:DN-34
       - corpus:RFC-0031
       - src:crates/mycelium-l1/src/checkty.rs
       - src:crates/mycelium-l1/src/eval.rs
+      - src:crates/mycelium-l1/tests/phylum_exec.rs
     body: |
       From DN-99 §8 ENB-1 (Draft backlog, kickoff `spw`). Closes register rows #41 (cross-nodule
       runtime exec), #13 (mod-declaration), #1 (import-use), #16/#18 (qualified path). The check-time
@@ -13733,6 +13735,24 @@ issues:
       - Two-nodule phylum witness green under both the interpreter and AOT; the runtime link table reuses
         the check-time import registry (no duplicate resolution); never-silent on an unresolved symbol
         (explicit error, not a panic); a Draft DN records the design before the L1 change.
+
+      Progress (2026-07-10, PR #1360 — FIRST landable increment; status → in-progress, NOT done):
+      - LANDED: `PhylumEnv::link()` (checkty.rs) folds every nodule's checked decls into one linked `Env`
+        the existing elab/mono/eval pipeline consumes unchanged (KC-3 no new L0 node; DRY reuses the
+        check-time registry). Draft DN recorded (DN-101, renumbered from DN-100 to avoid M-1032's).
+      - Verify-first (mitigation #14): DIRECT cross-nodule execution already worked (undocumented); the
+        real gap closed is TRANSITIVE (a `pub` fn calling its home nodule's private helper). 6 differential
+        witnesses in `tests/phylum_exec.rs` (direct + transitive vs an inlined oracle on the L1-eval and
+        L0-elaborate legs; never-silent collision refusal; without-link `Stuck` control; positive
+        direct-without-link control; phylum-of-one). Coherence-map merges (impls/instances/lower/prov)
+        are uniformly never-silent (G2) after PR review — no first-wins winner on any duplicate key.
+      - v0 flat namespace: a cross-nodule name collision is a never-silent `CheckError` (G2). No tag upgraded.
+      - RESIDUAL (this issue stays open): AOT/MLIR parity leg = follow-up increment (interpreter + L0 legs
+        witnessed here, not AOT). `.myc` runtime parity = N/A until the `.myc` evaluator exists (feasibility
+        -gated on M-986/M-987; the check-time dual resolve_imports is already ported, M-1013 STEP 4).
+        Collision DISAMBIGUATION (qualified per-nodule scoping) deferred to M-982 — needs a ratifying DN
+        (see DN-101 §5). FLAG-tr-unknown-prim (the known-prim symbol table) still owed here (register
+        #21/#50). Register rows #72/#85 corrected `tr-only` → `language-enabler` (DN-34 §8.21).
 
   - id: M-1025
     title: "enb ENB-2 — `?` try-operator grammar sugar + desugar"

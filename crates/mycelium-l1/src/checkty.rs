@@ -1015,6 +1015,24 @@ fn collect_tuple_arities_expr(e: &crate::ast::Expr, out: &mut std::collections::
 pub struct PhylumEnv {
     /// One `(nodule path, checked Env)` per nodule, in source order.
     pub nodules: Vec<(Path, Env)>,
+    /// Per-nodule record of the names each nodule **declares itself** — the runtime-link owner map
+    /// (M-1024). Parallel to [`Self::nodules`]. Consulted only by [`Self::link`], which merges each
+    /// name from its **home** nodule's *checked* [`Env`] (never an imported, less-resolved copy) and
+    /// refuses a cross-nodule name collision never-silently. Kept private (an internal owner record,
+    /// not part of the import/coherence views).
+    own: Vec<OwnDecls>,
+}
+
+/// The names one nodule **declares itself** (M-1024): its own data types, functions, and traits, with
+/// the injected prelude `Bool` and the conditionally-seeded built-in `Fuse` trait excluded (they are
+/// identical in every nodule, so they are seeded once by [`PhylumEnv::link`] rather than treated as a
+/// per-nodule declaration that could "collide"). This is the authoritative-owner record the flat
+/// phylum link merges from.
+#[derive(Debug, Default, Clone)]
+struct OwnDecls {
+    types: BTreeSet<String>,
+    fns: BTreeSet<String>,
+    traits: BTreeSet<String>,
 }
 
 impl PhylumEnv {
@@ -1032,6 +1050,149 @@ impl PhylumEnv {
     #[must_use]
     pub fn nodule(&self, path: &Path) -> Option<&Env> {
         self.nodules.iter().find(|(p, _)| p == path).map(|(_, e)| e)
+    }
+
+    /// **The phylum-wide runtime link (M-1024; ENB-1).** Fold every nodule's *checked* declarations
+    /// into **one** [`Env`] so the downstream pipeline ([`crate::elab`] / [`crate::mono`] /
+    /// [`crate::eval`], all of which consume a single `&Env`) can **execute a `use`d symbol across
+    /// nodules** — the runtime dual of the check-time cross-nodule resolution (`resolve_imports`,
+    /// M-662). This is the "give the evaluator a phylum-wide view" close that retires the
+    /// local-mirror sidestep (DN-99 register row #41; ADR-045 unfrozen posture).
+    ///
+    /// **What it reuses (DRY, KC-3 — no new L0 node):** the check pass already resolved every `use`
+    /// against the phylum-wide export table and refused unknown/private/ambiguous imports; those
+    /// checks stand. `link` reuses that verified structure by merging **each name from its home
+    /// nodule's checked `Env`** — the authoritative, ambient-resolved declaration — keyed by simple
+    /// name. (An *imported* copy in a consumer nodule's `Env` is a less-resolved clone of the home
+    /// decl; `link` never merges those, so the linked env is *strictly more correct* than running a
+    /// consumer nodule's per-nodule `Env` directly — which is why a phylum, including a phylum-of-one,
+    /// should be run through `link`.)
+    ///
+    /// **Flat-namespace v0 (never-silent boundary, G2/VR-5).** The merge is a **flat phylum
+    /// namespace**: exactly one declaration per simple name across the whole phylum. This runs the
+    /// common shape — a shared-type/helper nodule plus consumers with distinct names (the stdlib
+    /// porter's user story) — and the *transitive* case a per-nodule `Env` cannot (a `pub` fn whose
+    /// body calls its home nodule's **private** helper now resolves, because the helper is linked in
+    /// from its home nodule). A **cross-nodule simple-name collision** (two nodules each declaring the
+    /// same fn/type/trait name) is an **explicit [`CheckError`]**, never a silent winner — the
+    /// qualified-name / per-frame home-nodule scoping that would *disambiguate* a collision (rather
+    /// than refuse it) is the flagged design residual (M-982 follow-up; needs the ratifying DN).
+    ///
+    /// # Errors
+    /// A never-silent [`CheckError`] on any cross-nodule collision the flat namespace cannot represent
+    /// (a duplicate simple name across nodules, or — defensively — a duplicate coherence-keyed
+    /// instance/impl/`lower` rule, which the check pass's phylum-wide coherence should already have
+    /// refused).
+    pub fn link(&self) -> Result<Env, CheckError> {
+        // Seed the shared prelude once (identical in every nodule): the `Bool` type, and the built-in
+        // `Fuse` trait iff any nodule uses it (mirrors `register_nodule_decls`' conditional seeding).
+        let mut types: BTreeMap<String, DataInfo> = BTreeMap::new();
+        let p = prelude();
+        types.insert(p.name.clone(), p);
+        let mut traits: BTreeMap<String, TraitInfo> = BTreeMap::new();
+        if self
+            .nodules
+            .iter()
+            .any(|(_, e)| e.traits.contains_key(crate::fuse::TRAIT_NAME))
+        {
+            traits.insert(crate::fuse::TRAIT_NAME.to_owned(), crate::fuse::prelude());
+        }
+        let mut fns: BTreeMap<String, FnDecl> = BTreeMap::new();
+        let mut totality: BTreeMap<String, crate::totality::Totality> = BTreeMap::new();
+        let mut instances: BTreeMap<(String, String), InstanceInfo> = BTreeMap::new();
+        let mut impls: BTreeMap<(String, String), Vec<FnDecl>> = BTreeMap::new();
+        let mut lower_rules: BTreeMap<String, LowerDecl> = BTreeMap::new();
+        let mut derived_provenance: BTreeMap<(String, String), (String, String)> = BTreeMap::new();
+        let mut via_provenance: BTreeMap<(String, String), (u32, String)> = BTreeMap::new();
+
+        // A cross-nodule collision on a simple name the flat namespace cannot represent (G2).
+        let collide = |kind: &str, name: &str| {
+            CheckError::new(
+                name,
+                format!(
+                    "cross-nodule name collision: `{name}` ({kind}) is declared by more than one \
+                     nodule of this phylum — the v0 runtime link is a flat phylum namespace (one \
+                     declaration per simple name; M-1024). Rename one, or await the qualified \
+                     per-nodule scoping that disambiguates a collision (M-982 — never a silent \
+                     winner, G2)"
+                ),
+            )
+        };
+
+        // Merge each name from its HOME nodule's checked `Env` (the authoritative resolved decl).
+        for ((_path, env), own) in self.nodules.iter().zip(self.own.iter()) {
+            for name in &own.types {
+                if types.contains_key(name) {
+                    return Err(collide("type", name));
+                }
+                if let Some(info) = env.types.get(name) {
+                    types.insert(name.clone(), info.clone());
+                }
+            }
+            for name in &own.traits {
+                if traits.contains_key(name) {
+                    return Err(collide("trait", name));
+                }
+                if let Some(info) = env.traits.get(name) {
+                    traits.insert(name.clone(), info.clone());
+                }
+            }
+            for name in &own.fns {
+                if fns.contains_key(name) {
+                    return Err(collide("fn", name));
+                }
+                if let Some(fd) = env.fns.get(name) {
+                    fns.insert(name.clone(), fd.clone());
+                }
+                if let Some(t) = env.totality.get(name) {
+                    totality.insert(name.clone(), *t);
+                }
+            }
+            // Instances / impls / lower rules / provenance are coherence-keyed and phylum-unique by
+            // construction: each nodule's checked `Env` carries only ITS OWN coherence facts (they are
+            // built from `effective_nodule`, never from imports — `check_nodule_with`), and the check
+            // pass's phylum-wide orphan rule already refused any cross-nodule duplicate key. So a
+            // collision here is unreachable on a checked phylum — but we guard EVERY coherence map
+            // uniformly and never-silently (G2): if the upstream coherence invariant is ever violated,
+            // `link` refuses explicitly rather than silently keeping one side (no first-wins winner).
+            for (k, v) in &env.instances {
+                if instances.insert(k.clone(), v.clone()).is_some() {
+                    return Err(collide("instance", &format!("{}:{}", k.0, k.1)));
+                }
+            }
+            for (k, v) in &env.impls {
+                if impls.insert(k.clone(), v.clone()).is_some() {
+                    return Err(collide("impl", &format!("{}:{}", k.0, k.1)));
+                }
+            }
+            for (name, v) in &env.lower_rules {
+                if lower_rules.insert(name.clone(), v.clone()).is_some() {
+                    return Err(collide("lower rule", name));
+                }
+            }
+            for (k, v) in &env.derived_provenance {
+                if derived_provenance.insert(k.clone(), v.clone()).is_some() {
+                    return Err(collide("derived impl", &format!("{}:{}", k.0, k.1)));
+                }
+            }
+            for (k, v) in &env.via_provenance {
+                if via_provenance.insert(k.clone(), v.clone()).is_some() {
+                    return Err(collide("via impl", &format!("{}:{}", k.0, k.1)));
+                }
+            }
+        }
+
+        Ok(Env {
+            types,
+            fns,
+            totality,
+            traits,
+            instances,
+            impls,
+            lower_rules,
+            derived_provenance,
+            via_provenance,
+        })
     }
 }
 
@@ -1123,9 +1284,16 @@ pub fn check_nodule(nodule: &Nodule) -> Result<Env, CheckError> {
 /// Two strictly-separate phylum-wide views (conflating them is a bug — they answer different
 /// questions): the **import registry** ([`Exports`]) is `pub`-only (what a `use` may bind); the
 /// **coherence view** is pub-blind (every nodule's trait/type declarations are visible to the orphan
-/// rule regardless of `pub`). Cross-nodule **execution** is staged — the per-nodule [`Env`]s are real
-/// and complete for type-checking; running a `use`d fn across nodules is a follow-up (eval keeps its
-/// per-nodule reach; a cross-nodule call lowers to a never-silent `Unsupported`/`Residual`).
+/// rule regardless of `pub`).
+///
+/// Cross-nodule **execution** (M-1024; ENB-1): each per-nodule [`Env`] already carries its *directly*
+/// imported `pub` decls (they are seeded into its checking registry — [`check_nodule_with`] — and
+/// retained), so a `use`d `pub` fn with a self-contained body already runs when a consumer nodule's
+/// `Env` is evaluated. The **transitive** case — a `pub` fn whose body calls its home nodule's
+/// *private* helper — needs the whole phylum linked into one [`Env`]: use [`PhylumEnv::link`], the
+/// runtime dual of the import resolution above (a **flat phylum namespace**, never-silent on a
+/// cross-nodule name collision). Qualified per-nodule scoping that would *disambiguate* a collision
+/// (rather than refuse it) is the flagged residual (M-982).
 ///
 /// # Errors
 /// Any never-silent refusal: an unknown/private/ambiguous import, a duplicate import, a coherence or
@@ -1271,7 +1439,27 @@ fn check_phylum_inner(phylum: &Phylum, matured_scope: bool) -> Result<PhylumEnv,
     // 3. Check each nodule's bodies with (a) its resolved `use` imports merged into its registries and
     //    (b) the phylum-wide pub-blind orphan rule. Each yields a checked `Env`.
     let mut out = Vec::with_capacity(resolved.len());
+    let mut own = Vec::with_capacity(resolved.len());
     for (i, (nodule, regs)) in resolved.iter().zip(per_nodule_regs).enumerate() {
+        // M-1024: capture this nodule's OWN declared names (the runtime-link owner record) before
+        // `regs` is consumed below. Exclude the injected prelude `Bool` and the conditionally-seeded
+        // built-in `Fuse` trait — they are identical everywhere and are seeded once by `link`, never a
+        // per-nodule collision.
+        own.push(OwnDecls {
+            types: regs
+                .types
+                .keys()
+                .filter(|n| n.as_str() != "Bool")
+                .cloned()
+                .collect(),
+            fns: regs.fns.keys().cloned().collect(),
+            traits: regs
+                .traits
+                .keys()
+                .filter(|n| n.as_str() != crate::fuse::TRAIT_NAME)
+                .cloned()
+                .collect(),
+        });
         let imports = resolve_imports(nodule, &exports)?;
         // Pass this nodule's via_objects (objects with `via` decls) for Phase 0b expansion of
         // delegation impls (DN-53 M-811). The slice is empty for nodules with no `via` clauses.
@@ -1286,7 +1474,7 @@ fn check_phylum_inner(phylum: &Phylum, matured_scope: bool) -> Result<PhylumEnv,
         )?;
         out.push((nodule.path.clone(), env));
     }
-    Ok(PhylumEnv { nodules: out })
+    Ok(PhylumEnv { nodules: out, own })
 }
 
 /// `nodule.path` + `.` + `name` — a top-level item's **qualified name** (the import-registry key;
