@@ -224,8 +224,53 @@ DN-53-sanctioned near-term close, not a contradiction of the deferral.
   **for the never-silent, opt-in-discipline mechanism this note actually delivers**; **not** upgraded to
   a `Proven` or enforced-capability claim (no such claim is checked — VR-5; §6 known gap M-1036).
 
+## Ratification / Maintainer decision (2026-07-11)
+
+> **Direction on §3 (the DN-53 §B.6 Q1 fork) — pursue the fuller option B long term.** Maintainer:
+> *"SS3 — if option B full pub(path) is better long term, especially in the scope of this project's
+> intents as a programming language, it makes sense to plan and implement that. We're literally driving
+> to multi-phylum work already; once fully self-hosted after we close every gap, we'll dogfood via the
+> transpiler, then hand-check/correct the resulting code nodule/phylum by nodule/phylum."*
+
+**Recorded decision (append-only — this note's original §3/§4 text above is unchanged; this section
+adds the maintainer's forward direction, per house rule #3):**
+
+1. **This note's status stays Draft, unchanged.** §3's binary-seal resolution (option A) is what
+   M-1027 actually shipped (the never-silent, opt-in-discipline mechanism — **not** the enforced
+   capability boundary; see the CRITICAL callout above and §6). Flipping this note to Accepted would
+   misrepresent it as ratifying the binary-only model as the **final** design, which the maintainer's
+   direction below contradicts. The note is left exactly as drafted (append-only); this section reads
+   through it as a forward-looking addendum, the same pattern the integration-review CRITICAL callout
+   already established for this note.
+2. **Long-term direction: pursue §3's option (B) — the fuller `pub(path)` scoped-visibility model —
+   not just as a residual, but as the direction to *plan and implement*.** §3 originally recommended
+   option (A) binary seal for v0 (KISS/YAGNI, "we do not build (B) speculatively") and noted (A) is
+   "forward-compatible... `priv Mk` is exactly `pub(nodule) Mk`". The maintainer's direction **narrows
+   that residual to an intended forward path**: given the project's trajectory toward multi-phylum work
+   and full self-hosting (dogfooding the transpiler, then hand-checking/correcting the ported code
+   nodule-by-nodule/phylum-by-phylum), the fuller `pub(path)` grammar (§3 option B: `pub(nodule)`,
+   `pub(phylum)`, `pub(in a.b)`) is judged **better long term** and worth planning and implementing —
+   superseding the binary seal as the end-state, not merely a hypothetical extension. The **v0 binary
+   seal (M-1027) remains the shipped interim** mechanism; `pub(path)` is the forward design to build
+   toward, following the same plan-the-API-first, implement-progressively discipline as DN-101's
+   ratification above.
+3. **Tied to M-1036.** `tools/github/issues.yaml` **M-1036** ("nodule-qualified type identity — the
+   real fix for M-1027's ctor-seal capability-gate bypass") already carries `doc_refs: corpus:DN-104`
+   and is the tracked follow-on closest in scope (both concern what DN-104's seal needs to become a real
+   boundary). M-1036's body is updated with a progress note recording this forward direction — noting
+   that `pub(path)` and nodule-qualified type identity are **related but distinct** concerns (identity
+   resolution vs. visibility scoping) and both bear on making the seal a real capability boundary.
+4. **New follow-up filed (warranted — a new feature, not M-1036's scope):** **M-1050** — "design +
+   implement `pub(path)` scoped visibility (successor to the binary `priv` seal, DN-104 §3 option B)"
+   (`status:todo`, `doc_refs: corpus:DN-104`, `depends_on: [M-1036]`, `tools/github/issues.yaml`).
+
 ## §8 Changelog
 
+- **2026-07-11** — **Maintainer direction recorded (house rule #3): pursue §3 option (B) —
+  the fuller `pub(path)` scoped-visibility model — as the long-term successor to the shipped binary
+  seal.** Status stays **Draft** (the shipped M-1027 binary seal is not re-ratified as final; see the
+  added "Ratification / Maintainer decision" section). M-1036 updated with the forward-direction note;
+  new follow-up filed as **M-1050**. Append-only — the original design record above is unchanged.
 - **2026-07-10** — DN-104 created (**Draft**). Recorded the per-constructor visibility-seal design
   (surface/grammar §2; the marker-keyword choice §2.1; the binary-seal-vs-`pub(path)` fork resolved to
   binary §3; the AST-boolean + export-table-withheld-set + never-silent-refusal mechanism §4; the DN-53

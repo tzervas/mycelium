@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-106 |
-| **Status** | **Draft** (2026-07-10). Authored as the **triage** of M-1033 (ENB-10) / DN-99 register row **#89**, per mitigation #14 (*verify a stale issue's claim against the codebase before implementing*). It records what is **genuinely open** in the L1/semcore lane versus what is **already closed** or belongs to the **transpiler lane** — and finds, on investigation, that **both** sub-gaps' language side is already closed, three-way witnessed. It **enacts nothing** and **moves no other doc's status** (house rule #3, append-only). Tags are `Empirical` where read against the code / witnessed by a running differential, `Declared` for any design not yet ratified (VR-5). |
+| **Status** | **Accepted** (2026-07-11, maintainer ratification — see the dated "Ratification / Maintainer decision" note below: the §3 fork resolution is confirmed, reframed under a general surface-sugar-transparency principle that also settles §6 items 1/2/4). Originally **Draft** (2026-07-10). Authored as the **triage** of M-1033 (ENB-10) / DN-99 register row **#89**, per mitigation #14 (*verify a stale issue's claim against the codebase before implementing*). It records what is **genuinely open** in the L1/semcore lane versus what is **already closed** or belongs to the **transpiler lane** — and finds, on investigation, that **both** sub-gaps' language side is already closed, three-way witnessed. At Draft time it **enacted nothing** and **moved no other doc's status** (house rule #3, append-only). Tags are `Empirical` where read against the code / witnessed by a running differential, `Declared` for any design not yet ratified (VR-5). |
 | **Decides** | *Proposes, for ratification:* (1) **Part 1 (statement-sequencing, `let _ = e in body`) is ALREADY CLOSED at the L1 level** — grammatical (`ebnf:291` `let_expr ::= 'let' Ident … 'in' expr`; `Ident` admits `_`), parsed (`parse.rs::parse_let` → `ident()`), checked (`checkty.rs::check_let`), evaluated + elaborated (three-way witnessed, §7) — and is moreover the **established affine drop/use-once surface** (`src/tests/affine.rs`; DN-71/M-903). Its sole residual is the **transpiler emit** of `let _ = e in body` for value-producing discarded statements, which lives in `crates/mycelium-transpile` (Part 1 of the issue), **not** in the semcore lane. (2) **Part 2 (record-update / mutation→functional) needs NO new L1 grammar.** The functional-update **target form** — `match base { Ctor(f0, …, fN) => Ctor(f0, …, NEW_fk, …, fN) }` (destructure-and-reconstruct) — is **already expressible** (three-way witnessed, §7). Mycelium has **no named-field record literal and no field-projection expression by design** (value-semantic **positional** constructors; §2), so a `{ ..base, field: v }` record-update literal is **intentionally absent** and its addition to L1 is **rejected** (§3, fork B). The mutation→functional rewrite and the struct-update→reconstruct rewrite are **transpiler translation rules** (`crates/mycelium-transpile`), and the *split* between a functional update and an in-place mutation is a transpiler translation **policy** that must never fabricate mutation the transpiler was not taught (G2). (3) **Correction (mitigation #14):** the M-1033 issue body's framing of Part 2 as *"grammar-`enb`, HIGH collision, touches `crates/mycelium-l1/**`, coordinate M-1013"* is **over-scoped** — it carries forward **DN-99 §8's own ENB-10 backlog synthesis** (layer *"transpiler + grammar-`enb`"*, collision *"low/HIGH"*, note *"Part 2 … separate DN-gated"*), which itself sat in tension with **DN-99 register row #89**'s own **`tr`/`low`** tags and explicitly **deferred Part 2's classification to a separate DN**. **This note is that DN**, and resolves the tension in favour of row #89's `tr`/`low`: **M-1033's L1/semcore residual is NIL**; the real residual is entirely in the transpiler lane. It does **not** edit `issues.yaml`, `CHANGELOG.md`, `Doc-Index.md`, or the DN-99 register (the integrating session owns those — §8 lists the reconciliations to apply). |
 | **Feeds** | DN-99 §8 / register row **#89** (statement-sequencing-body) — the L1 side confirmed **already-closed**, the residual confirmed **transpiler-lane** (mitigation #14 correction of the M-1033 issue-body over-scope; the register's own row #89 tags already agree — layer `tr`, collision `low`). ENB-10 / M-1033 — L1/semcore residual scoped to **NIL**; Part 1 (`let _` emit) and Part 2 (mutation→functional rewrite) hand off to `crates/mycelium-transpile`. DN-71 / M-903 (`let _` as the affine drop/use-once surface). DN-26 (SCC self-hosting — the `.myc` mirror already carries `let`/`match`/ctor-application; **no mirror change**). KC-3 (the value-semantic positional-constructor design that makes a record-update literal unnecessary). |
 | **Grounds on** | Mitigation #14 (the tracker is `Declared`; the codebase is ground truth — verify before building), VR-5 (no closure claimed past its basis; the "already-closed" claims are `Empirical`, witnessed by the §7 three-way differentials, not asserted), KC-3 / KISS / YAGNI (do not add a record-update literal + field-projection subsystem the language deliberately omits, when destructure-and-reconstruct already expresses the target), G2 (never-silent — the transpiler *gaps* an untranslatable mutation rather than fabricate one; `{ ..base, … }` is an explicit parse refusal today, §7), house rule #4 (no sycophancy — §3 confronts the real fork on its merits and §6 states the residuals plainly, including that this note ships **no** L1 code change because none is warranted). |
@@ -170,8 +170,106 @@ integrating session should, on ratification:
 
 ---
 
+## Ratification / Maintainer decision (2026-07-11)
+
+> **Surface-sugar transparency (maintainer, 2026-07-11 — "that's re 106").** *"We can carry the named
+> surface sugars as well, try to drive developers to the language's native targets, but realistically
+> the surface sugar hides nothing — it can all be expanded/revealed at any point by the dev to its
+> lower desugared grammar. So sugar is merely memetic and mnemonic convenience."*
+>
+> **The gap-closure default (same thread, addendum).** *"Outside of those cases where it's 'the
+> language chooses not to do this', [a gap] should be resolved by creating the convenience sugar and
+> ensuring it lowers mechanically and reliably."*
+
+**Recorded decision (append-only — this note's original §2/§3/§6 text above is unchanged; this section
+adds the ratification + the two general principles it establishes, per house rule #3):**
+
+1. **§3's fork resolution is confirmed, and reframed under a general principle.** The core-semantics
+   half of §3's resolution stands exactly as drafted: **no new L1 grammar** — field read/update stays
+   `match`-destructure-and-reconstruct over the positional-`Ctor` model (§2), and Part 1
+   (`let _ = e in body`) needs no dedicated construct. What the maintainer adds is the **treatment of
+   fork (B)** ("add a record-update literal `{ ..base, field: v }` to L1"). §3/§6 item 4 as originally
+   drafted called (B) "**not adopted**... contradicts the positional-constructor design." Read through
+   this ratification: (B) as a **first-class L1 semantic construct** (a new AST node with its own
+   checker/eval/elab handling, competing with the positional model) stays correctly rejected — the
+   maintainer is not reopening the KC-3 core-kernel decision. But (B) reframed as a **surface sugar** —
+   named-field-style update syntax that **mechanically and reliably lowers** to the existing
+   destructure-and-reconstruct `match` (fork A's target, unchanged) at the surface/transpiler layer,
+   with the lowering **reversible/revealable on demand** (a `desugar`/`expand`/`EXPLAIN` operation
+   showing the dev the lower grammar it compiles to) — is **now explicitly in scope to carry**. This
+   does not change §7's witnesses or §4's affine-drop-surface finding; it resolves what was `Declared`
+   in §3 (the fork was open pending ratification) to a settled reading, closing this note's open
+   question. **DN-106 moves Draft → Accepted** on this basis.
+2. **General principle 1 — surface-sugar transparency (binds beyond DN-106).** A surface sugar may be
+   carried alongside its native/core target when: (a) it **drives developers toward the native
+   desugared form** (the sugar is documented as sugar over the core construct, not a replacement for
+   understanding it); (b) it **hides nothing** — the dev can expand/reveal the lower desugared grammar
+   on demand at any point (house rule #2, no black boxes; the existing `EXPLAIN` machinery, e.g. DN-109
+   §3.2/§5.2's EXPLAIN-able idiom manifest, is the natural mechanism); and (c) the sugar is **purely
+   memetic/mnemonic convenience** — its emission is never a silent semantic change (VR-5/G2: a sugar
+   that changed behavior versus its expansion would not be sugar, it would be new semantics needing its
+   own ratification).
+3. **General principle 2 — the gap-closure default.** For a missing surface construct, the **default**
+   resolution is: **create a convenience sugar that lowers mechanically and reliably to the existing
+   core grammar** (per principle 1) — **not** silence, and **not** automatically a new kernel primitive.
+   The **only** exception is the **deliberate-exclusion set**: constructs the language chooses **not**
+   to support on principle (e.g. in-place mutation — value semantics is a design choice, not a gap;
+   representation swaps stay never-silent by design, S1; an unbounded loop is not rewritten as a
+   silently-bounded one) — DN-99's "Judgment/flag, never guess" rows and its never-silent-refusal rows
+   are exactly this set, and they stay excluded, never sugared over. Outside that set, a gap defaults to
+   "build the mechanically-lowering sugar," reframing what would otherwise look like an unresolved
+   language gap.
+3a. **Refinement (same thread, 2026-07-11) — the deliberate-exclusion set is not merely handled by bare
+   refusal.** The maintainer sharpened principle 2: Mycelium has **different native ways to solve the
+   same underlying problems** the excluded Rust constructs solved — value-semantics /
+   destructure-and-reconstruct functional-update for mutable state (exactly this note's Part 2),
+   structured/bounded control (`for`) for unbounded loops, an explicit never-silent `swap` for a
+   representation change, errors-as-values for exceptions/panics. So porting a "deliberately excluded"
+   construct is **not** a dead end reached by bare refusal — it is: **map the excluded construct's
+   underlying PROBLEM to Mycelium's native SOLUTION.** Where that mapping is safe/mechanical, **auto-emit
+   it** (this is exactly what fork A already does for Part 2 — the mutation→functional-update mapping
+   *is* problem→native-solution, not a refusal). Where the mapping needs **judgment** the source doesn't
+   carry (e.g. `&mut` aliasing that `syn` cannot prove non-aliasing for, DN-109 D7), the transpiler
+   **flags WITH the suggested native idiom** (DN-109 D6's `suggested_idiom` field on a gap diagnostic) —
+   pointing the dev at the known native solution — rather than a bare, unhelpful refusal. **Bare
+   never-silent refusal (no suggested mapping) is the last resort**, reserved for a construct with no
+   yet-identified native-solution mapping. This refines, append-only, both principle 2 above and this
+   note's own §6 residuals (Part 1/Part 2 are affirmative problem→native-solution mappings, not mere
+   refusals) — it does not change any witness or fork resolution already recorded.
+4. **Cross-links.** This settles into **DN-109's L4 idiom framework** (`docs/notes/DN-109-Idiom-Optimal-Transpilation-And-Structural-Remapping.md` §3.1/§3.2): DN-109's ratchet already requires every
+   non-1:1 idiom choice be semantics-preserving, never upgrade a guarantee tag, and be **recorded in an
+   EXPLAIN-able manifest** — exactly principle 1's (b)/(c) above, now generalized as the project's
+   standing sugar-transparency rule rather than a DN-109-local ratchet. It also grounds the **L1
+   hand-expressibility layer** of `docs/planning/zero-hand-port-delta-ledger.md` §1 (the ~85% ceiling):
+   most of that ceiling's remaining L1 gap-closure work is "add a mechanically-lowering sugar" per
+   principle 2, with the ledger's few genuine build-gaps (transcendental floats #42, never-type #88,
+   async #56) and the deliberate-exclusion set as the only non-sugar residual.
+5. **Follow-up filed.** Reversible on-demand desugar/expand is a **capability requirement**, not yet a
+   formalized, generally-available tool (today `EXPLAIN` covers the transpiler's idiom-choice manifest,
+   DN-109 §5.2; there is no general "reveal this surface sugar's lower grammar" command surfaced to a
+   dev at any sugar site). Filed as **M-1051** — "desugar/expand-on-demand tooling for surface sugars
+   (the DN-106 sugar-transparency principle, general)" (`status:todo`, `doc_refs: corpus:DN-106,
+   corpus:DN-109`, `tools/github/issues.yaml`).
+
 ## Changelog
 
+- **2026-07-11** — **Refinement to the gap-closure default (same ratification thread).** The
+  deliberate-exclusion set is not merely handled by bare never-silent refusal: excluded constructs get
+  their underlying problem mapped to Mycelium's **native solution** (functional-update, bounded `for`,
+  explicit `swap`, errors-as-values), auto-emitted where safe/mechanical, or flagged **with the
+  suggested native idiom** (DN-109 D6 `suggested_idiom`) where judgment is needed — bare refusal is the
+  last resort. Append-only addendum to principle 2 above; no witness or fork resolution changes.
+- **2026-07-11** — **Ratified (maintainer, house rule #3).** Status **Draft → Accepted**: §3's fork
+  resolution confirmed (no new L1 grammar), with fork (B) reframed — a record-update-literal-style
+  surface sugar over the unchanged destructure-and-reconstruct target is now in scope, provided it
+  lowers mechanically/reliably and is reversibly expandable on demand (no black box, house rule #2).
+  Establishes two general principles beyond this note: **surface-sugar transparency** (a sugar may be
+  carried when it drives toward the native target, hides nothing via on-demand expand/EXPLAIN, and is
+  purely mnemonic — never a silent semantic change) and the **gap-closure default** (build a
+  mechanically-lowering sugar unless the construct is in the language's deliberate-exclusion set).
+  Cross-linked to DN-109's L4 EXPLAIN-able idiom manifest and the zero-hand-port delta ledger's L1
+  layer. Follow-up filed as **M-1051**. Append-only — the original §2/§3/§6 design record above is
+  unchanged; this is an added ratification note.
 - **2026-07-10** — DN-106 created (**Draft**): the ENB-10 triage. Finds (mitigation #14) that **both**
   M-1033 sub-gaps' language side is already closed — Part 1 (`let _ = e in body` statement-sequencing,
   also the affine drop surface) and Part 2 (functional field-update via destructure-and-reconstruct) are

@@ -12,6 +12,180 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### docs(notes): maintainer ratification batch — DN-101 through DN-109 (2026-07-11)
+
+Records the maintainer's ratification decisions on all nine ENB/design-reasoner notes from the
+2026-07-10 batch (append-only; house rule #3 — no existing decision text rewritten, each note gains a
+dated "Ratification / Maintainer decision" section plus a Status-line update where the maintainer
+ratified).
+
+- **DN-101 (Cross-Nodule Runtime Link) — Status Draft → Accepted.** The v0 flat-namespace collision
+  policy (§5 option A) is confirmed as the shipped baseline; the long-term choice between §5 option
+  (B) qualified per-frame scoping and option (C) name-mangled qualified keys is explicitly left open
+  for a dedicated planning pass (API design first, then progressive/iterative implementation). Filed
+  **M-1048**.
+- **DN-102 (`?` Try-Operator Desugar) — NOT ratified; stays Draft.** The maintainer requires a second
+  research pass grounded in the DN-99 gap-review data and project intent before re-staging for
+  ratification. **FLAG-try-2** (no `From`-error widening) is cross-routed into DN-99's §8 `enb`
+  backlog as an ENB-2 sub-gap addendum. Filed **M-1049**.
+- **DN-103 (Impl-Level Generic-Parameter Slot) — Status Draft → Accepted.** §3 Fork 1 ("parse-time
+  flatten vs AST slot") is ratified as **option (B)** — the AST slot + Phase-0 desugar-prepend design,
+  matching the note's own recommendation.
+- **DN-104 (Per-Constructor Visibility Seal) — Status stays Draft** (the shipped M-1027 binary seal is
+  not re-ratified as the final design). The maintainer directs pursuing §3's fuller **option (B)**
+  (`pub(path)` scoped visibility) as the long-term successor to the binary `priv` seal. `M-1036`
+  (nodule-qualified type identity) updated with this forward-direction progress note; filed **M-1050**
+  (`depends_on: [M-1036]`) as the design+implementation follow-up.
+- **DN-105 (`match` on a `Bytes` Scrutinee) — Status Draft → Accepted, ratified as drafted.** The §3
+  literal-only-equality fork and the §4 per-surface-form redundancy-key choice both confirmed.
+- **DN-106 (Statement-Sequencing + Record-Update Triage) — Status Draft → Accepted.** §3's fork
+  confirmed (no new L1 grammar); fork (B) reframed as an in-scope, mechanically-lowering, reversibly-
+  expandable **surface sugar**. Establishes two general, project-wide principles: **surface-sugar
+  transparency** (a sugar may be carried when it drives toward the native target, hides nothing via
+  on-demand expand/EXPLAIN, and is purely mnemonic) and the **gap-closure default** (map an excluded
+  construct's underlying problem to Mycelium's native solution — auto-emit where mechanical, flag
+  **with the suggested native idiom** where judgment is needed; bare refusal is the last resort).
+  Cross-linked to DN-109's L4 idiom framework and the zero-hand-port delta ledger. Filed **M-1051**
+  (desugar/expand-on-demand tooling).
+- **DN-107 (Host-Effect Real-Syscall Registry + Never-Type) — Status Draft → Accepted.** Rank 1
+  accepted for both sub-gaps (real `wild:` prims via H-i; divergence-as-effect N-C, no bottom `Ty`).
+  The §6 fork resolved to **6-a**: general-`?` is independent of the never-type. Corrects **M-1025**'s
+  FLAG-try-1 progress note (the "gated on the never-type" framing lived there, not in DN-102's own
+  text) to decouple the CPS lift from M-1030, tracked via M-1049.
+- **DN-108 (Numerics Transcendentals) — Status Draft → Accepted.** Rank 1 accepted (op-level bound in
+  the ADR-010 provenance certificate, v0 tag `Declared`). OQ-3 (vendored vs host libm) accepted with
+  recommendation (vendored/version-locked); OQ-4 resolved to land-now (M-1028). Filed **M-1053**
+  (companion ADR + the OQ-3 implementation decision).
+- **DN-109 (L4 Idiom-Optimal Transpilation + L5 Structural Remapping) — Status Draft (advisory) →
+  Accepted.** The Mechanical-only v0 auto-fire set, the remap-manifest schema, and structure-
+  preserving 1:1 all accepted; forks §7-a (L2 surface) and §7-c (extend the existing gap-report
+  artifact) accepted per the note's own leans. **Fork §7-b/F1 REFRAMED** (not left open): the `&mut`-
+  aliasing (D7) and unbounded-iterator (D8) cases are the deliberate-exclusion set, with native
+  Mycelium solutions (functional update, bounded `for`) — a borrowck/rust-analyzer frontend is an
+  **optional precision aid**, not a porting blocker; the default path is flag-with-suggested-native-
+  idiom (`suggested_idiom`, M-1045). **Fork §7-d is FLAGGED**, genuinely unresolved (not silently
+  assumed). Adds a new pipeline-wide transparency/revealability requirement, cross-linked to DN-106's
+  desugar/expand capability (M-1051). Filed **M-1052**.
+
+`docs/Doc-Index.md` status-column cells updated for DN-101/DN-103/DN-105/DN-106/DN-107/DN-108/DN-109
+(→ Accepted); DN-102/DN-104 cells stay Draft, matching their own dispositions above.
+`tools/github/issues.yaml` gains **M-1048…M-1053** (all `status:todo`) plus progress notes on
+**M-1025** and **M-1036**; validated (`python3 -c "import yaml; yaml.safe_load(...)"` clean, no
+duplicate ids; `doc_refs_check.py` clean). `scripts/checks/markdown.sh` green on all touched `.md`.
+
+### docs(planning): zero-hand-port delta ledger + DN-109 idiom/structural design (2026-07-10)
+
+Lands the capstone planning deliverable for the zero-hand-port program: a five-layer analysis
+swarm (L1 hand-expressibility ceiling, L2 engines, L3 transpiler, L4/L5 idiom + structural design,
+plus a DX/QoL track) synthesized into one living register.
+
+- **`docs/planning/zero-hand-port-delta-ledger.md`** (Status: Draft, living — updated in place as
+  phases close). Frames the program around two numbers: the ~85% hand-expressibility ceiling (L1)
+  vs the ~7.8% measured auto-transpile floor (`checked_fraction`, L3) — the delta between them is
+  the roadmap. Finds ~75-80% of the ~812 measured gap instances are downstream language/kernel
+  surface, not transpiler defects (empirically proven: faithful new transpiler rules moved
+  `checked_fraction` by 0 across several ladder phases; only kernel/language surface closures
+  moved it). Records the visitor-DRY meta-gap (a new `Expr` variant costs ~13 hand-edits) as the
+  force-multiplier to build first, and the flat-emit stem-collision data-loss bug as an L5
+  prerequisite fix. Names 6 strategic forks for the maintainer (F1, acquiring a borrowck frontend,
+  is pivotal). Supporting per-layer inventories committed as appendices under
+  `docs/planning/zero-hand-port/` (`delta-L2-engines.md`, `delta-L3-transpiler.md`,
+  `delta-DX-qol.md`, `delta-L4L5-idiom-structural-DRAFT.md`).
+- **DN-109 — Layer-4 Idiom-Optimal Transpilation and Layer-5 Structural Remapping**
+  (`docs/notes/DN-109-Idiom-Optimal-Transpilation-And-Structural-Remapping.md`, **Draft, pending
+  ratification** — house rule #3, not self-ratified). Recommends a three-bucket idiom-decision
+  framework (Mechanical auto-emit / Heuristic-plus-flag / Judgment-flag-never-guess) bound by a
+  conjunctive no-silent-upgrade ratchet (semantics-preserving, no inferred `swap` per S1, no
+  guarantee-tag upgrade per VR-5, EXPLAIN-recorded), plus a structure-preserving-1:1 default and a
+  **mandatory remap manifest** (`remap.json`/`REMAP.md`) as the transpiler's structural + idiom
+  provenance artifact of record. Verify-first finding (mitigation #14): the transpiler's batch mode
+  discards directory structure today and last-writer-wins on stem collision — a real data-loss bug,
+  not just a missing feature.
+- **Seven new tracked issues filed** (`tools/github/issues.yaml`, epic E32-1, all `status:todo`):
+  **M-1041** (DRY `ExprVisitor`/fold trait — the L2 meta-gap and DX-D1 finding converged
+  independently on the same gap), **M-1042** (structured, source-tree-mirroring transpiler output
+  with path-qualified nodule names, fixing the flat-emit collision), **M-1043** (per-item
+  `// src: file:line` provenance breadcrumbs in emitted `.myc`), **M-1044** (the remap manifest,
+  gated on DN-109's ratification), **M-1045** (actionable `suggested_idiom` on gap diagnostics),
+  **M-1046** (closest-to-clean investment ranking in the vet report), **M-1047** (transpiler DX
+  polish: `mycfmt` post-pass, dry-run/summary mode, minimal arg parsing — combined). One prior DX
+  finding (the tree-sitter `priv` grammar gap) had already independently landed same-day as M-1039
+  and is recorded as closed rather than re-filed (verified against the codebase before filing,
+  mitigation #14).
+
+`docs/Doc-Index.md` updated with the DN-109 row and a zero-hand-port program pointer under
+Build Status. `python3 -c "import yaml; yaml.safe_load(...)"` clean, no duplicate ids;
+`tools/github/doc_refs_check.py` clean; `scripts/checks/markdown.sh` green on all touched/new
+`.md` files.
+
+### fix(grammar,docs): terminal-review fast-follows — tree-sitter `priv` structural gap + wrong path citation (M-1039/M-1040) (2026-07-10)
+
+Two small findings from the terminal review of the enb-wave batch, tracked and closed same-day.
+
+- **tree-sitter editor grammar missing the `priv` constructor-seal keyword.**
+  `tools/grammar/generate.py`'s hand-maintained `STRUCTURAL_KEYWORDS` set was never updated for `priv`
+  after M-1027/DN-104 landed the per-constructor visibility seal (`pub type T = priv Mk(..)`), so the
+  generator auto-mis-classified `priv` as reserved-inactive and the tree-sitter `constructor` rule had
+  no `priv` prefix — the editor grammar could not parse a construct the L1 compiler accepts. Fixed by
+  adding `priv` to `STRUCTURAL_KEYWORDS` and `optional('priv')` to the `constructor` rule template,
+  then regenerating (`python3 tools/grammar/generate.py`); the committed `grammar.js` delta is the
+  mechanical regen output. `scripts/checks/drift.sh` / `grammar.sh` green.
+- **Wrong path citation in the self-hosting port ledger.** `docs/planning/self-hosting-port-ledger.md`
+  cited `crates/mycelium-l1/src/phylum_exec.rs` for `PhylumEnv::link` — that path is the *test* file
+  (`crates/mycelium-l1/tests/phylum_exec.rs`); the impl is `crates/mycelium-l1/src/checkty.rs:1086`
+  (verified by grep). Corrected the citation.
+
+Tracked as **M-1039** (grammar gap) and **M-1040** (doc-hygiene), both filed `status:done` with a
+landed basis at PR #1385.
+
+### feat(scripts): worktree `target/` cache pruning — `disk-watchdog` + `worktree-target-sweep` (2026-07-10)
+
+Implements the maintainer's storage-management ask for the multi-worktree swarm setup. Measured:
+sccache cross-worktree hit rate is ~0 here (each worktree builds its own `target/`, so cache sharing
+doesn't help) — the real reclaimable win is pruning stale build output.
+
+- `scripts/disk-watchdog.sh` — read-only usage monitor; lists the top reclaimable worktree `target/`
+  dirs by size once a warn/crit threshold is crossed. Never deletes.
+- `scripts/worktree-target-sweep.sh` — dry-run-by-default sweeper. A worktree's `target/` is
+  reclaimable only when not locked, its branch is merged into the mainline (default `dev`) or the
+  worktree dir is gone, `target/` has been idle >= `--stale-min` (default 240) minutes, and no
+  `rustc`/`cargo` process is building under that path. `--apply` to delete; `--incremental-only`
+  reaps just stale `incremental/` cruft in kept worktrees.
+- `just reclaim` (watchdog + sweeper dry-run) / `just reclaim-apply` (sweeper `--apply`).
+
+`scripts/checks/shell.sh` (shellcheck) 73/73 clean incl. both new scripts.
+
+### feat(tools): diff-based, rate-limit-frugal GitHub issue sync + orphan reconciliation (2026-07-10)
+
+Adds `tools/github/sync_issues.py`: a diff-based sync between `tools/github/issues.yaml` and GitHub
+Issues — one bulk read, then plan/apply only the drifted or missing deltas (create + edit changed
+fields), with a classified orphan-reconciliation mode (`--reconcile-orphans`: closed-id-dup /
+open-id-dup / adoptable / non-task classes). Adds `just issues-sync` (dry-run plan) / `just
+issues-sync-apply` (apply, capped `--max-writes 25`), `.claude/skills/issues-sync/SKILL.md`, and
+`tools/github/README.md`. Desktop/periodic op — needs `gh` authenticated to the repo owner; not part
+of the per-commit gate. `--self-test` 25/25 checks pass.
+
+### docs(dn-108): numerics transcendentals accuracy-bounds design note (M-1028/ENB-5, DN-99 #42) (2026-07-10)
+
+Adds Draft design-reasoner note **DN-108** (`docs/notes/DN-108-Numerics-Transcendentals-Accuracy-Bounds.md`)
+working DN-99 register row #42 forward: recommends transcendental/irrational-result functions
+(`sqrt`/`exp`/`ln`/`sin`/`cos`/`pow`) surface as `flt.*` interpreter prims returning a plain
+`Repr::Float` whose accuracy bound rides the existing `Bound`/`Approx` certificate (ADR-010) — no new
+numeric type, no new kernel node (KC-3). The v0 tag is explicitly `Declared` (not `Empirical` — no
+measured trial corpus yet, VR-5); domain errors and approximate-input composition both refuse
+never-silently (G2). Enacts nothing; ratifies nothing (house rule #3) — status stays Draft. `doc_refs:
+corpus:DN-108` wired onto **M-1028**.
+
+### docs(dn-107): host-effect real-syscall registry + never-type divergence design note (M-1030/ENB-7) (2026-07-10)
+
+Adds Draft design-reasoner note **DN-107** (`docs/notes/DN-107-Host-Effect-And-Never-Type.md`) working
+the M-1030 (ENB-7) decision forward: separates the two ENB-7 sub-gaps (host-effect real syscalls #79;
+never-type `-> !` divergence #88), proposes granting real `wild:read/write/get_env/exit` prims over
+the existing RFC-0028 `wild`/RFC-0014 effect surface, and recommends divergence-as-effect (no bottom
+`Ty`, Rank 1) over a nominal `Never`+`absurd` (Rank 2 reserve) or a true bottom subtype (Rank 3,
+rejected for v0). Enacts nothing; ratifies nothing (house rule #3) — status stays Draft. `doc_refs:
+corpus:DN-107` wired onto **M-1030**.
+
 ### chore(integration): enb batch close-out — api-gate tool-flag fix + baseline catch-up (M-1038) (2026-07-10)
 
 Integration-tier close-out for the enb batch (M-1024/1025/1026/1027/1035/1033). The bounded canary

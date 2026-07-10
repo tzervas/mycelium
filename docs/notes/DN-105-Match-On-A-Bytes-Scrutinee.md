@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-105 |
-| **Status** | **Draft** (2026-07-10). Authored alongside the **first landable increment** of M-1035 (ENB-12). It records the design of allowing a `match` whose scrutinee is a `Bytes` value, with **byte-string-literal** arms and a **required default arm** — the surface, the equality/exhaustiveness semantics, the never-silent non-exhaustive refusal, and the DN-26 Rust↔`.myc` dual. It **enacts nothing** and **moves no other doc's status** (house rule #3, append-only). Tags are `Empirical` where read against the code / witnessed by a running differential, `Declared` for any design not yet ratified (VR-5). |
+| **Status** | **Accepted** (2026-07-11, maintainer ratification — the maintainer approved this note as drafted, part of a batch ratifying DN-101–DN-109; see the dated "Ratification / Maintainer decision" note below). Originally **Draft** (2026-07-10). Authored alongside the **first landable increment** of M-1035 (ENB-12). It records the design of allowing a `match` whose scrutinee is a `Bytes` value, with **byte-string-literal** arms and a **required default arm** — the surface, the equality/exhaustiveness semantics, the never-silent non-exhaustive refusal, and the DN-26 Rust↔`.myc` dual. It **enacts nothing** and **moves no other doc's status** (house rule #3, append-only). Tags are `Empirical` where read against the code / witnessed by a running differential, `Declared` for any design not yet ratified (VR-5). |
 | **Decides** | *Proposes, for ratification:* (1) **lift the checker's match-scrutinee-type gate** to admit `Ty::Bytes` alongside `Data`/`Binary`/`Ternary` (`crates/mycelium-l1/src/checkty.rs::check_match`) — the single categorical block; (2) the **pattern form is the existing byte-string literal**, in both its surface spellings — the `0x…` hex form (`Literal::Bytes`, RFC-0032 D4 / M-750) **and** the `"…"` text form (`Literal::Str`, M-910/M-911) — both already type as `Bytes` and already normalize to a matrix `Pat::Lit`; **no new pattern/AST node** (KC-3); (3) **equality is byte-content equality** — a literal arm matches iff the scrutinee's `Repr::Bytes`/`Payload::Bytes` byte-vector equals the literal's (the evaluator's existing `try_match` `Pattern::Lit` `repr==repr && payload==payload` rule, unchanged); (4) **`Bytes` is an OPEN domain** — a literal column never completes it, so a **wildcard/default arm is REQUIRED**; a non-exhaustive `Bytes` match is a never-silent `W7` refusal (witness `_`), exactly as the existing usefulness/decision machinery already treats every non-`Data` scrutinee; (5) the **genuine fork resolves to literal-only equality patterns** (§3), **not** structural byte patterns (prefix/slice/cons destructuring) — the latter is a large separate design, deferred; (6) the **redundancy key stays per-surface-form** (`by:` for hex, `s:` for text) for this increment (§4), a conservative under-report of cross-form redundancy that is documented as a limitation, never a silent miscompile. It does **not** edit `issues.yaml`, `CHANGELOG.md`, or `Doc-Index.md` (the integrating session owns those). |
 | **Feeds** | DN-99 §A3 / register row **#72** (string-literal match pattern) — reclassified from `tr-only` to **language-enabler** (mitigation #14); ENB-12 / M-1035; the trx transpiler pin `string_literal_pattern_gaps_with_l1_enabler_reason` (DN-34 §8.21, FLAG-L1-match-Bytes), which flips from *gapped* to *emitted* once this lands; M-750 / M-910/M-911 (the `Bytes` repr + the `0x…` and `"…"` literal forms this reuses, Enacted); DN-26 (SCC self-hosting, the Rust↔`.myc` dual). |
 | **Grounds on** | KC-3 (small kernel — no new L0 node, no new pattern node, no new checking pass; the enabler is a **one-clause relaxation** of an existing type gate, and every downstream consumer — normalize/usefulness/decision/eval/elab — already handles an open-domain literal column generically), DRY (reuse the `Binary`/`Ternary` open-domain machinery verbatim — `Bytes` was already `signature() → None`), G2 (never-silent — a non-exhaustive `Bytes` match and an ill-typed literal arm are explicit refusals, and a first-match-wins runtime is deterministic), VR-5 (no tag upgraded past its basis — the semantics are `Declared` until ratified, earned `Empirical` by the §7 witnesses), KISS/YAGNI (literal-only equality over a structural byte-pattern grammar). |
@@ -204,8 +204,29 @@ choices (§3 fork, §4 key) are `Declared` until the maintainer ratifies (VR-5).
 
 ---
 
+## Ratification / Maintainer decision (2026-07-11)
+
+> **Ratified as drafted** — part of the maintainer's batch approval "approving and ratifying the rest
+> of that set from 101–109."
+
+**Recorded decision (append-only — this note's original §2–§6 text above is unchanged; this section
+adds the ratification, per house rule #3):** DN-105 is ratified **as drafted**, with no amendment.
+Confirmed on this basis: the checker's match-scrutinee-type gate lifts to admit `Ty::Bytes` (§1); the
+pattern form is the existing byte-string literal in both spellings, no new pattern/AST node (§2);
+byte-content equality, with `Bytes` an **open domain** requiring a wildcard/default arm — a
+non-exhaustive `Bytes` match stays a never-silent `W7` refusal (§2); the **§3 fork resolves to (A)
+literal-only equality patterns**, not structural byte patterns (deferred, §6.1); the **§4 redundancy-key
+sub-fork resolves to keeping per-surface-form keys** (`by:`/`s:`), the conservative, never-silently-wrong
+choice (§4, §6.2). **DN-105 moves Draft → Accepted** on this basis; §6's residuals (structural byte
+patterns, the cross-form redundancy under-report, the `.myc` `0x…`-hex eval deferral, the native-LLVM
+`Bytes`-match refusal) remain open follow-up scope, not blocking this ratification, and are already
+tracked (M-1035 / the DN's own §6 notes).
+
 ## Changelog
 
+- **2026-07-11** — **Ratified (maintainer, house rule #3).** Status **Draft → Accepted**, as drafted
+  (no amendment) — part of the batch ratification of DN-101–DN-109. Append-only — the original design
+  record above is unchanged; this is an added ratification note.
 - **2026-07-10** — DN-105 created (**Draft**): `match` on a `Bytes` scrutinee — the ENB-12
   string-literal-pattern enabler. Records the one-clause `check_match` gate lift, the byte-content
   equality + required-default (open-domain) exhaustiveness semantics, the literal-only-vs-structural fork

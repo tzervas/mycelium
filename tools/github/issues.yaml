@@ -13822,6 +13822,16 @@ issues:
       tracker (spurious `double-consume` on an affine-`Substrate` `?`-operand), resolved by snapshotting
       the affine tracker around the peek, with a regression witness in `tests/try_operator.rs`.
 
+      Progress note (2026-07-11, DN-107 ratification — corrects FLAG-try-1's framing, append-only):
+      DN-107 (ENB-7, host-effect + never-type) was ratified with its §6 fork resolved in favour of the
+      note's own lean — general-position `?` (this issue's FLAG-try-1) is INDEPENDENT of the never-type
+      `-> !`. The CPS lift `match f() { Ok(x) => Ok(g(x)), Err(e) => Err(e) }` unifies both arms by
+      ordinary structural equality (`Result[B,E]`), no bottom type needed. FLAG-try-1's "gated on the
+      never-type `-> !` / an early-return form (M-1030 / DN-99 #88)" framing above is therefore
+      RELAXED: the general-`?` CPS lift is its own follow-up (tracked via M-1049, DN-102's
+      second-research-pass issue), independent of M-1030/DN-107's scope. No change to this issue's own
+      landed status or DoD.
+
   - id: M-1026
     title: "enb ENB-3 — impl-level generic-parameter slot"
     milestone: "Phase 5 — Self-Hosting & Core Library"
@@ -13983,6 +13993,18 @@ issues:
         same-named-but-unrelated local type in a phylum that never crosses with the sealed one still
         checks unchanged (no false-positive collision across unrelated phyla/nodules).
 
+      Progress note (2026-07-11, maintainer direction on DN-104 — this issue's own DoD unchanged):
+      the maintainer directed pursuing DN-104 §3's fuller **option B, `pub(path)` scoped visibility**,
+      as the long-term successor to the shipped binary `priv` seal (filed separately as **M-1050**,
+      which `depends_on` this issue). The two are RELATED but DISTINCT: this issue (M-1036) fixes
+      identity RESOLUTION (bare-name lookup lets a foreign same-named local type impersonate the
+      sealed one); M-1050 generalizes visibility SCOPING (binary nodule-boundary seal → an arbitrary
+      nodule/phylum path grammar). A `pub(path)` grammar layered on today's bare-name resolution would
+      still inherit this issue's shadow-bypass gap, so M-1036 (this issue) is the prerequisite — fixing
+      nodule-qualified identity first is what lets `pub(path)` (M-1050) actually deliver a real
+      capability boundary rather than compounding an unforgeable-in-name-only mechanism. No change to
+      this issue's own scope or DoD.
+
   - id: M-1028
     title: "enb ENB-5 — transcendental + eps/delta float numerics"
     milestone: "Phase 5 — Self-Hosting & Core Library"
@@ -13992,6 +14014,7 @@ issues:
     doc_refs:
       - corpus:DN-99
       - corpus:ADR-040
+      - corpus:DN-108
       - src:crates/mycelium-interp/src/prims.rs
     body: |
       From DN-99 §8 ENB-5 (Draft backlog). Closes register row #42 (float eps/delta transcendentals,
@@ -14012,6 +14035,11 @@ issues:
       - Prims registered + typed with never-silent domain errors; the per-op eps/guarantee matrix decided
         and recorded (VR-5 — `Empirical`/`Declared` per op, no `Proven` without a checked theorem);
         property tests on the bounds; conformance accept + reject; a Draft DN/ADR records the routing.
+
+      DN-108 filed (Draft, 2026-07-10): a design-reasoner note working this decision forward — a ranked
+      recommendation only, not a ratification (house rule #3). Recommends `flt.*` prims over the
+      existing `Bound`/`Approx` certificate (ADR-010), v0 tag `Declared` (not `Empirical` — no measured
+      trial corpus yet, VR-5). Status stays `todo` here until the maintainer ratifies DN-108.
 
   - id: M-1029
     title: "enb ENB-6 — platform-width + char-type decision (subsumes signed)"
@@ -14051,6 +14079,7 @@ issues:
     doc_refs:
       - corpus:DN-99
       - corpus:DN-34
+      - corpus:DN-107
       - src:crates/mycelium-l1/src/eval.rs
       - src:crates/mycelium-interp/src/prims.rs
     body: |
@@ -14071,6 +14100,10 @@ issues:
       - One real syscall end-to-end + a fixture/sandbox witness for the non-deterministic ops; `exit`/
         divergence modelled as an effect with the totality interaction specified (no bottom BaseType);
         never-silent on out-of-domain host ops; a Draft DN records the effect model.
+
+      DN-107 filed (Draft, 2026-07-10): a design-reasoner note working this decision forward — a ranked
+      recommendation only, not a ratification (house rule #3). Status stays `todo` here until the
+      maintainer ratifies DN-107 and implementation lands (VR-5 — no status flip on a Draft basis).
 
   - id: M-1031
     title: "enb ENB-8 — runtime-tier value-semantics mapping (post-Phase-7)"
@@ -14395,3 +14428,535 @@ issues:
       `-transpile`); gate re-run confirms GREEN. No further action — a future `cargo-public-api` major
       version may drift the flag shape again; re-verify empirically against `--help` if the gate starts
       uniformly failing again (the tell: identical failure across every crate, not a per-crate diff).
+
+  - id: M-1039
+    title: "tree-sitter editor grammar missing the priv constructor-seal keyword (M-1027/DN-104 gap)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:bug, area:tooling, priority:P3, status:done]
+    epic: E16-1
+    depends_on: [M-731, M-1027]
+    doc_refs:
+      - corpus:DN-104
+      - corpus:RFC-0026
+      - src:tools/grammar/generate.py
+      - src:tools/grammar/tree-sitter-mycelium/grammar.js
+    body: |
+      Found at the follow-up-batch terminal review (2026-07-10), after M-1027/DN-104 landed the
+      per-constructor visibility seal (`pub type T = priv Mk(..)`, `Tok::Priv`, `parse_ctor` in
+      `crates/mycelium-l1/src/parse.rs`). `tools/grammar/generate.py`'s hand-maintained
+      `STRUCTURAL_KEYWORDS` set (the mechanism M-731/RFC-0026 uses to decide which lexer keywords a
+      structural tree-sitter production actually consumes vs. lexes-only-as-`reserved_keyword`) was
+      never updated for `priv`, so the generator auto-mis-classified it as reserved-inactive — and the
+      tree-sitter `constructor` rule (`grammar.js`) had no `priv` prefix at all. Net effect: the L1
+      compiler accepts a sealed constructor but the editor grammar (VS Code / any tree-sitter consumer)
+      could not parse it, silently diverging from the language it is supposed to highlight (a real gap,
+      not a cosmetic one — G2).
+
+      User stories:
+      - As an editor-tooling user, I want the tree-sitter grammar to parse every construct the L1
+        compiler accepts, so that a sealed constructor is highlighted correctly instead of erroring.
+
+      Definition of Done:
+      - `priv` added to `STRUCTURAL_KEYWORDS`; the `constructor` production template gains
+        `optional('priv')` ahead of the name field; `python3 tools/grammar/generate.py` regenerates
+        `grammar.js`/`highlights.scm`/`keywords.json` with `priv` removed from `KW_RESERVED_INACTIVE`
+        and the constructor rule updated; `--self-test`, `--check`, `scripts/checks/drift.sh`, and
+        `scripts/checks/grammar.sh` all green.
+
+      DONE (2026-07-10, PR #1385 -> dev). Fixed exactly as scoped above; the committed `grammar.js`
+      delta is the mechanical regen output, not hand-edited. No `tree-sitter test` corpus case was
+      added for the new `priv` prefix (the `tree-sitter` CLI was not available offline in this
+      session) — `scripts/checks/grammar.sh`'s accept/reject corpus + the generator's own
+      `--self-test`/`--check` are the gates that ran; a `tree-sitter parse` smoke test on a
+      `priv`-sealed fixture is a reasonable follow-up if the CLI becomes available (not blocking —
+      the grammar.js rule shape mirrors `parse_ctor` exactly, `Empirical` by code-reading, not yet by
+      a tree-sitter-CLI witness).
+
+  - id: M-1040
+    title: "doc-hygiene: self-hosting-port-ledger.md cited the phylum_exec.rs test file, not the PhylumEnv::link impl"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:docs, area:project, priority:P3, status:done]
+    epic: E28-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-101
+      - src:crates/mycelium-l1/src/checkty.rs:1086
+    body: |
+      Found at the follow-up-batch terminal review (2026-07-10). The enabler ledger
+      (`docs/planning/self-hosting-port-ledger.md`) row for "Cross-nodule runtime link" cited
+      `crates/mycelium-l1/src/phylum_exec.rs` as the `PhylumEnv::link` implementation site — that path
+      is actually the *test* file `crates/mycelium-l1/tests/phylum_exec.rs` (DN-101's three-way
+      witness); the real implementation is `crates/mycelium-l1/src/checkty.rs:1086` (verified by grep,
+      not assumed). A stale citation like this sends a reader to the wrong file (G2-adjacent — a
+      grounding claim, house rule #4, should resolve to the right place).
+
+      User stories:
+      - As a reader of the self-hosting port ledger, I want each "Rust module" citation to point at the
+        actual implementation, so that I don't chase a test file looking for the logic it witnesses.
+
+      Definition of Done:
+      - The row's citation corrected to `crates/mycelium-l1/src/checkty.rs:1086` (impl) with the test
+        witness reference moved to the "Basis" column as `tests/phylum_exec.rs`; `scripts/checks/links.sh`
+        and `scripts/checks/markdown.sh` on the touched file stay green.
+
+      DONE (2026-07-10, PR #1385 -> dev). One-line citation fix, no other rows in the ledger audited
+      for the same class of error in this pass (scope-limited to the row found) — a fuller citation
+      sweep across the ledger's other rows is not covered by this issue and is not currently tracked
+      elsewhere; flagged here in case a future doc-hygiene pass wants to pick it up.
+
+  - id: M-1041
+    title: "M-1041 — DRY ExprVisitor/fold trait across the mycelium-l1 walkers and the transpiler's emit.rs (the visitor-DRY meta-gap)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:chore, area:language, priority:P2, status:todo]
+    epic: E32-1
+    depends_on: [M-641]
+    doc_refs:
+      - corpus:DN-109
+      - src:crates/mycelium-l1/src/totality.rs
+      - src:crates/mycelium-transpile/src/emit.rs
+    body: |
+      Filed 2026-07-10 from the zero-hand-port delta-ledger analysis (docs/planning/zero-hand-port-delta-ledger.md
+      §3/§4.5, DN-109 §9). TWO independent analyses converged on the same gap: the L2 engine audit found
+      that a new `Expr` variant touches ~13 sites (8 exhaustive walkers in mycelium-l1 — parse, ambient,
+      checkty, elab, eval, grade, mono, totality — plus fmt, plus ~5 mirror encoders in lib/compiler/*.myc);
+      the DX/QoL audit independently found emit.rs/map.rs in mycelium-transpile are ~15 free `emit_*`/`map_*`
+      functions (emit_expr_inner alone a 19-arm match) with the same shape of tax. M-641 (E4-1, done)
+      already extracted `totality::walk_expr`, a depth-budgeted callback HOF reused for pure *collection*
+      passes (call-set/cycle/free-var) — it is NOT a semantic visitor: every pass needing per-variant
+      handling still writes its own exhaustive match. This issue is the force-multiplier: a real
+      trait-based `ExprVisitor`/fold (or an equivalent dispatch macro) that lets one new Expr variant be
+      ONE edit instead of ~13, spanning both mycelium-l1's walkers and mycelium-transpile's emit/map
+      dispatch. The M-1006 transpiler ladder pays this tax every phase, so this is on the critical path.
+
+      User stories:
+      - As a compiler engineer adding a new Expr variant, I want one visitor trait to implement instead
+        of hand-editing 13 separate exhaustive matches, so that language-surface closure work (the
+        dominant zero-hand-port lever per the ledger §2) isn't slowed by a DRY tax on every construct.
+
+      Definition of Done:
+      - A trait-based `ExprVisitor`/fold abstraction lands over the mycelium-l1 walkers AND
+        mycelium-transpile's emit/map dispatch (or a documented reason the two crates need separate
+        abstractions); adding a synthetic test variant/case demonstrates a single-site edit; Rust
+        exhaustiveness still catches a missed arm at compile time (no silent gap); `cargo test`
+        byte-identical on existing walker outputs; no guarantee-tag change (VR-5); net LOC trends down
+        or flat despite the added abstraction.
+
+  - id: M-1042
+    title: "M-1042 — structured (source-tree-mirroring) transpiler output with path-qualified nodule names"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:tooling, priority:P2, status:todo]
+    epic: E32-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-109
+      - src:crates/mycelium-transpile/src/bin/mycelium-transpile.rs
+      - src:crates/mycelium-transpile/src/batch.rs
+    body: |
+      Filed 2026-07-10 from the zero-hand-port delta-ledger analysis (docs/planning/zero-hand-port-delta-ledger.md
+      §4/§4.5, DN-109 §5.1/§9). `run_batch` (mycelium-transpile.rs) writes FLAT `out_dir/<stem>.myc`,
+      discarding the Rust module directory structure; two files sharing a stem (e.g. two `mod.rs`)
+      collide last-writer-wins with only a WARNING (bin:222-229) — a real data-loss bug, mitigated today
+      only at the workflow layer (regenerate.sh gives each target its own out-dir) but not in the CLI
+      itself. This is DN-109 §5.1's path-model prerequisite: preserve the Rust `mod` tree as a nodule
+      dotted path (`a/b/mod.rs` -> `nodule a.b;`) and mirror the source tree under out_dir
+      (`<rel/path>.myc`), making the CLI collision-safe on its own, not just via the driver-script
+      workaround.
+
+      User stories:
+      - As a hand-porter running the transpiler directly (not via regenerate.sh), I want the output tree
+        to mirror the Rust source tree with path-qualified nodule names, so that I never silently lose a
+        file to a stem collision.
+
+      Definition of Done:
+      - Batch-mode output mirrors the source directory structure under out_dir; nodule paths are
+        dotted-qualified from the mod tree; two same-stem files (e.g. two `mod.rs`) both survive with
+        distinct qualified names; the last-writer-wins WARNING path is removed (structurally impossible,
+        not just warned); existing single-file-mode behavior unchanged; tests in the crate's
+        src/tests/ layout; `just transpile-vet` still green.
+
+  - id: M-1043
+    title: "M-1043 — per-item `// src: file:line` provenance breadcrumbs in emitted .myc"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:tooling, priority:P3, status:todo]
+    epic: E32-1
+    depends_on: [M-1042]
+    doc_refs:
+      - corpus:DN-109
+      - src:crates/mycelium-transpile/src/emit.rs
+      - src:crates/mycelium-transpile/src/gap.rs
+    body: |
+      Filed 2026-07-10 from the zero-hand-port delta-ledger analysis (docs/planning/zero-hand-port-delta-ledger.md
+      §4.5 DX-D3b). The `// nodule:` header and `@summary` provenance banner are already emitted
+      (transpile.rs:449-465) but there is no PER-ITEM `// src: <file>:<line>` breadcrumb above each
+      emitted item — a hand-porter must cross-reference gap.json to locate the original Rust source for
+      any given emitted item. The span data already exists on `Gap`/the syn node; this is a small,
+      high-leverage addition (rated the single biggest hand-porter accelerator in the DX audit).
+
+      User stories:
+      - As a hand-porter refining an emitted draft, I want each item's Rust source location inline as a
+        comment, so that I don't have to cross-reference a separate gap report to find what I'm editing.
+
+      Definition of Done:
+      - Every emitted top-level item carries a `// src: <relative-path>:<line>` comment immediately
+        above it; span data sourced from the same location already captured for `Gap`; comment format
+        documented in the crate README; `just transpile-vet` / `mycfmt` unaffected (comment syntax
+        already supported); tests assert the breadcrumb on a small fixture.
+
+  - id: M-1044
+    title: "M-1044 — the remap manifest (remap.json / REMAP.md): item-granular structural + idiom provenance ledger"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:tooling, priority:P2, status:todo]
+    epic: E32-1
+    depends_on: [M-1042]
+    doc_refs:
+      - corpus:DN-109
+      - src:crates/mycelium-transpile/src/batch.rs
+    body: |
+      Filed 2026-07-10 from DN-109 §5.2 (the L5 structural-remapping design). Gated on DN-109's
+      ratification of §7-c (whether the manifest is a new artifact or extends the existing
+      summary.json/union.gap.json) and the v0 auto-fire set (§7-e) — do not begin implementation before
+      those forks are resolved by the maintainer (house rule #3). Once ratified: a committed,
+      item-granular sidecar per transpiled phylum — machine-readable `remap.json` plus a rendered
+      `REMAP.md` — recording, per target nodule, the restructuring `operation`
+      (Keep/Consolidate/Split/Relocate/CrateToPhylum), `sources` (rust_path/rust_span/moved_items),
+      `rationale`, `safety` (Safe/Review per DN-109 §4.2), `api_surface_changed`, `identity_neutral`
+      (ADR-003), plus an `idiom_choices` EXPLAIN trail (the L4 decision-class + chosen/alternative +
+      reason per DN-109 §3.2 clause 4). This is the maintainer's "mapped, documented, explained
+      (how/where/why)" hard requirement, mandatory from v0 even for pure 1:1 Keep.
+
+      User stories:
+      - As a reviewer of a ported phylum, I want one machine-readable ledger with every non-1:1
+        structural decision and every non-mechanical idiom choice explained, so I can audit a port
+        without diffing the Rust by eye (DN-109 §1.2).
+
+      Definition of Done:
+      - DN-109 §7-c and §7-e ratified first (this issue does not decide them); schema matches the
+        ratified version of DN-109 §5.2; emitted for every batch run (v0: pure Keep entries plus any
+        idiom_choices already made, e.g. `&T` erasure); `REMAP.md` byte-derivable from `remap.json`;
+        never a black box (S4) — every non-Mechanical choice has a `reason`; tests assert schema +
+        round-trip; no guarantee-tag upgrade from the manifest's existence alone (VR-5).
+
+  - id: M-1045
+    title: "M-1045 — actionable suggested_idiom field on transpiler gap diagnostics"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:tooling, priority:P3, status:todo]
+    epic: E32-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-109
+      - src:crates/mycelium-transpile/src/gap.rs
+    body: |
+      Filed 2026-07-10 from the zero-hand-port delta-ledger analysis (docs/planning/zero-hand-port-delta-ledger.md
+      §4.5 DX-D6). Gap reasons already say what/why (gap.rs, e.g. good detail on `NamedFieldDrop`) but
+      rarely give the exact hand-idiom to apply next — never-silent is satisfied but not maximally
+      helpful. Add an optional `suggested_idiom` field to `Gap`, populated for the common, well
+      understood classes (record literal -> positional ctor ordering hint; `use` -> the cross-nodule
+      FLAG with the DN-109-recommended manual workaround; reserved-word -> a rename suggestion). Must
+      never guess a *semantic* answer (Judgment-class gaps get no suggestion, or an explicitly-flagged
+      one) — this is a documentation aid, not a new auto-transform (does not change §3.2's ratchet).
+
+      User stories:
+      - As a hand-porter facing a gap, I want a suggested next step where one is safely knowable, so
+        that never-silent diagnostics are also genuinely actionable, not just honest.
+
+      Definition of Done:
+      - `Gap.suggested_idiom: Option<String>` populated for at least the record/reserved-word/import
+        classes; never populated for Judgment-class gaps without an explicit human-facing caveat; field
+        surfaced in `gap.json` and the human-readable report; tests cover populated + intentionally-empty
+        cases; no change to `checked_fraction`/`expressible_fraction` semantics.
+
+  - id: M-1046
+    title: "M-1046 — \"closest-to-clean\" investment ranking in the vet report"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:tooling, priority:P3, status:todo]
+    epic: E32-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-109
+      - src:crates/mycelium-transpile/src/vet.rs
+    body: |
+      Filed 2026-07-10 from the zero-hand-port delta-ledger analysis (docs/planning/zero-hand-port-delta-ledger.md
+      §4.5 DX-D8). `checked_fraction` is file-gated all-or-nothing (vet.rs:143,
+      checked_clean_items_is_file_gated_all_or_nothing) — one poison item zeros a whole file's credit,
+      and the report never says which item to fix first, nor ranks files by how close they are to fully
+      clean. `VetRecord::diagnostic` already captures the first check-error per file. Add a ranked
+      worklist to the vet/manifest output: files ordered by (emitted minus checked) delta, each with its
+      first blocking diagnostic surfaced, so a porter knows where to invest fix-up effort first.
+
+      User stories:
+      - As a porter working through the M-1006 ladder, I want the vet report to rank files by how close
+        they are to fully clean with the blocking diagnostic up front, so that I fix the highest-leverage
+        file first instead of scanning the whole union report.
+
+      Definition of Done:
+      - Vet output includes a ranked-by-delta file list with each entry's first blocking diagnostic
+        (reusing the existing `VetRecord::diagnostic` capture, no new parsing); ranking is stable/
+        deterministic; tests assert the ranking on a small fixture with a known delta ordering; no
+        change to the underlying file-gated `checked_fraction` metric itself (this is a reporting
+        addition, not a metric change).
+
+  - id: M-1047
+    title: "M-1047 — transpiler DX polish: mycfmt post-pass, dry-run/summary mode, minimal arg parsing"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:chore, area:tooling, priority:P3, status:todo]
+    epic: E32-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-109
+      - src:crates/mycelium-transpile/src/bin/mycelium-transpile.rs
+      - src:crates/mycelium-transpile/src/transpile.rs
+    body: |
+      Filed 2026-07-10 from the zero-hand-port delta-ledger analysis (docs/planning/zero-hand-port-delta-ledger.md
+      §4.5 DX-D4/D5/D12), combined into one polish issue per the ledger's own recommendation (these are
+      small, disjoint-effort, non-blocking QoL items on the same CLI binary). Three closures: (D4)
+      emitted `.myc` is hand-rolled `chunks.join("\n\n")` (transpile.rs:462) with no canonical
+      formatting — add an optional `--fmt` post-pass piping emission through `mycfmt` (M-364) for
+      readable drafts; (D5) the CLI always writes artifacts, add `--summary`/`--dry-run` to compute and
+      print the gap/category/fraction table without writing files, for fast gap-profiling; (D12) arg
+      parsing is a hand-rolled `env::args` loop with no `--help` (bin:33-42) — once these flags land
+      (>=3 total), adopt a minimal arg helper. Watch/incremental mode explicitly deferred (YAGNI, corpus
+      is small).
+
+      User stories:
+      - As a porter profiling a crate before committing to a full port, I want a dry-run mode that
+        prints the gap distribution without writing files, so I can triage quickly (ties to the
+        /myc-drafts triage-before-porting workflow).
+      - As a reader of a generated draft, I want it passed through mycfmt, so the formatting is
+        canonical rather than whatever the emitter hardcoded.
+
+      Definition of Done:
+      - `--fmt` post-pass available (opt-in, off by default to keep byte-for-byte reproducibility the
+        default per the DX audit's confirmed-GOOD determinism finding); `--summary`/`--dry-run` writes
+        nothing and prints the same table already computed for stdout; `--help` documents all flags;
+        existing default (no-flag) behavior byte-identical to today; tests cover each new flag.
+
+  - id: M-1048
+    title: "DN-101 long-term cross-nodule-link API — determine option B vs C, design API, iterate"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:research, area:language, priority:P2, status:todo]
+    epic: E28-1
+    depends_on: [M-1024]
+    doc_refs:
+      - corpus:DN-101
+    body: |
+      Filed 2026-07-11 from the maintainer's ratification of DN-101 (ENB-1, cross-nodule runtime link).
+      DN-101 moved Draft → Accepted with the v0 flat-namespace collision policy (§5 option A) confirmed
+      as the shipped baseline, but the maintainer explicitly left the LONG-TERM choice open between
+      DN-101 §5's two deferred alternatives: **option (B)** qualified names + per-frame home-nodule
+      scoping (the fully general end-state, tracked at M-982) and **option (C)** name-mangling to
+      qualified keys (a medium-cost AST/elab rewrite-pass middle path). Maintainer: "I'd rather
+      determine if option C or B is best long term, hard work is fine, plan it out first, nail down
+      what the api should look like, and go from there progressively/iteratively and keep the docs
+      updated and aligned."
+
+      User stories:
+      - As a language designer, I want the long-term cross-nodule name-resolution model settled (B vs
+        C) with its API shape planned before implementation starts, so that the v0 flat-namespace
+        refusal has a clear, iteratively-buildable successor rather than an open-ended deferral.
+
+      Definition of Done:
+      - A design pass (a new or amended DN) compares option B and option C against the project's
+        current cross-nodule call-site shapes, names the API surface each implies (how a disambiguated
+        reference reads at a call site), and recommends one for maintainer ratification; the docs
+        (DN-101, DN-99 register row #41, M-982) stay updated and aligned with the decision as it forms;
+        implementation then proceeds progressively/iteratively per the ratified plan, not as one big
+        rewrite.
+
+  - id: M-1049
+    title: "DN-102 second research pass + resolve FLAG-try-2 via language gap closure; re-stage for ratification"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:research, area:language, priority:P2, status:todo]
+    epic: E28-1
+    depends_on: [M-1025]
+    doc_refs:
+      - corpus:DN-102
+      - corpus:DN-99
+    body: |
+      Filed 2026-07-11 from the maintainer's non-ratification of DN-102 (ENB-2, the `?` try-operator
+      desugar). The maintainer declined to ratify DN-102 as drafted: "many must be resolved via
+      language gap closure; the flag try 2 issue presents an issue that must be resolved from that gap
+      review pass and should have been raised as part of it. much of this may just need a second
+      research pass to stage for ratification based on the data, project intent, and solid reasoned
+      research." DN-102 stays Draft pending this pass.
+
+      Two coupled closures:
+      1. A second research pass over DN-102's desugar rule (§2), error-type unification rule (§3), and
+         v0 `let`-RHS position restriction (§5) — grounded in the DN-99 surface-gap-closure register's
+         data and the project's zero-hand-port intent (ADR-045) — to re-stage the note for ratification.
+      2. Resolve **FLAG-try-2** (no `From`-error widening; the error-type unification rule is
+         exact-match only because Mycelium has no error-conversion trait wiring) via genuine language
+         gap closure, per the DN-99 ENB-2 gap-routing addendum (§8) this issue is cross-referenced from.
+
+      User stories:
+      - As a stdlib porter relying on `?`, I want error-widening (`From`-style) to be either supported
+        or explicitly, permanently scoped out by a ratified decision, so that the `?` desugar's coverage
+        is settled rather than an open residual FLAG.
+
+      Definition of Done:
+      - The second research pass is documented (a DN revision or a new companion DN) citing DN-99 data
+        and project-intent grounding for each of DN-102's open design points; FLAG-try-2 is resolved
+        either by a concrete error-conversion-trait design (with its own DoD) or by a ratified,
+        permanent exact-match-only decision with reasoning recorded; DN-102 is re-submitted for
+        maintainer ratification on this basis.
+
+  - id: M-1050
+    title: "design + implement pub(path) scoped visibility (successor to the binary priv seal, DN-104 §3 option B)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:todo]
+    epic: E28-1
+    depends_on: [M-1036]
+    doc_refs:
+      - corpus:DN-104
+      - corpus:DN-53
+    body: |
+      Filed 2026-07-11 from the maintainer's forward-direction decision on DN-104 (ENB-4, the
+      per-constructor visibility seal). DN-104 §3 confronted a fork — binary seal (option A, shipped
+      v0 via M-1027) vs full `pub(path)` scoped visibility (option B: `pub(nodule)`, `pub(phylum)`,
+      `pub(in a.b)`) — and recommended (A) for v0 under KISS/YAGNI, noting (A) is forward-compatible
+      with (B) ("`priv Mk` is exactly `pub(nodule) Mk`"). The maintainer directs pursuing the FULLER
+      option B as the long-term design: "if option B full pub(path) is better long term, especially in
+      the scope of this project's intents as a programming language, it makes sense to plan and
+      implement that. We're literally driving to multi-phylum work already; once fully self-hosted
+      after we close every gap, we'll dogfood via the transpiler, then hand-check/correct the resulting
+      code nodule/phylum by nodule/phylum."
+
+      This is related to, but distinct from, **M-1036** (nodule-qualified type identity — the fix for
+      the same-named-local-shadow bypass): M-1036 is about identity RESOLUTION (making the seal
+      unforgeable against a colliding name), while this issue is about visibility SCOPING (generalizing
+      the binary nodule-boundary seal to a path-scoped grammar). Both bear on making DN-104's mechanism
+      a real capability boundary; this issue depends on M-1036 landing first since a `pub(path)` grammar
+      layered on a still-bare-name-resolved seal would inherit the same shadow-bypass gap.
+
+      User stories:
+      - As a stdlib/semcore author organizing multi-phylum code, I want visibility scoped to an
+        arbitrary nodule/phylum path (not just a binary sealed/unsealed nodule boundary), so that a
+        capability type's construction can be shared with a designated subset of trusted nodules
+        without exporting it phylum-wide.
+
+      Definition of Done:
+      - A Draft DN designs the `pub(path)` grammar (`pub(nodule)`/`pub(phylum)`/`pub(in a.b)`), its
+        interaction with the M-1036 nodule-qualified-identity fix, and a migration story for existing
+        `priv`-sealed constructors (forward-compatible re-expression as `pub(nodule)`, per DN-104 §3);
+        the maintainer ratifies; implementation follows the DN's plan, conformance accept/reject +
+        differential witnesses per the usual ENB pattern, never-silent on any unsupported path form.
+
+  - id: M-1051
+    title: "desugar/expand-on-demand tooling for surface sugars (the DN-106 sugar-transparency principle, general)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:tooling, priority:P2, status:todo]
+    epic: E28-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-106
+      - corpus:DN-109
+    body: |
+      Filed 2026-07-11 from the maintainer's ratification of DN-106 (ENB-10 triage). The maintainer
+      established a general **surface-sugar transparency** principle ("that's re 106"): "We can carry
+      the named surface sugars as well, try to drive developers to the language's native targets, but
+      realistically the surface sugar hides nothing — it can all be expanded/revealed at any point by
+      the dev to its lower desugared grammar. So sugar is merely memetic and mnemonic convenience." And
+      the companion **gap-closure default**: "Outside of those cases where it's 'the language chooses
+      not to do this', [a gap] should be resolved by creating the convenience sugar and ensuring it
+      lowers mechanically and reliably."
+
+      Today `EXPLAIN` covers the transpiler's idiom-choice manifest (DN-109 §5.2, the L4 idiom-decision
+      EXPLAIN trail) but there is no general, uniform "reveal this surface sugar's lower desugared
+      grammar" capability surfaced to a developer at an arbitrary sugar site in the language itself
+      (e.g. at a `?`-operator use, a `let _`-sequencing site, a future record-update-literal sugar per
+      DN-106's reframed §3 fork B). This issue tracks building that capability so the transparency
+      principle is actually load-bearing tooling, not just a documented intent.
+
+      User stories:
+      - As a Mycelium developer using a surface sugar (`?`, a future record-update literal, or any
+        other mechanically-lowering convenience form), I want a command/tool that shows me exactly what
+        core-grammar form my sugar expands to, so that the sugar never becomes a black box I have to
+        trust rather than verify (house rule #2).
+
+      Definition of Done:
+      - A `desugar`/`expand` operation (CLI flag, LSP action, or `EXPLAIN`-integrated command — design
+        choice for the implementing DN) that, given a source span containing a surface sugar, shows its
+        fully-desugared lower-grammar equivalent; covers at minimum the sugars landed under the ENB
+        wave (`?` per DN-102, `let _` per DN-106, any future record-update sugar); never silently
+        approximates the expansion (an unsupported sugar site is a never-silent refusal, not a guess);
+        cross-referenced from DN-109's idiom-choice EXPLAIN manifest so the transpiler and the
+        interactive tooling share one transparency mechanism rather than diverging ones.
+
+  - id: M-1052
+    title: "DN-109 F1 (reframed) — optional borrowck/rust-analyzer precision aid for auto-detecting deliberate-exclusion sites (D7/D8), vs the flagged-suggested-native-idiom default path"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:research, area:tooling, priority:P3, status:todo]
+    epic: E32-1
+    depends_on: [M-1045]
+    doc_refs:
+      - corpus:DN-109
+      - corpus:DN-34
+    body: |
+      Filed 2026-07-11 from the maintainer's ratification of DN-109 (L4 idiom-decision framework / L5
+      structural remapping). DN-109 §7-b (fork "F1" in the companion zero-hand-port delta ledger, its
+      most pivotal open fork) originally framed acquiring a rustc/rust-analyzer borrowck front-end as
+      close to necessary for handling D7 (`&mut` aliasing) and D8 (unbounded-iterator boundedness) at
+      all — without it, both stay "Judgment/flags forever."
+
+      The maintainer reframed this: D7 and D8 are exactly the project's DELIBERATE-EXCLUSION set
+      (in-place aliasable mutation; unbounded iteration), and Mycelium has NATIVE SOLUTIONS to the
+      underlying problems those Rust constructs solved — destructure-and-reconstruct functional update
+      (D7's native solution; the same mapping DN-106 ratified for record-update) and bounded `for` /
+      structural recursion (D8's native solution, RFC-0007 §4.8). So porting these is
+      problem-to-native-solution mapping, not merely refusal: auto-emit where the mapping is
+      safe/mechanical (as D4's `&T`-erasure already does), and where it needs judgment (a case `syn`
+      cannot statically settle), FLAG WITH THE SUGGESTED NATIVE IDIOM (the `suggested_idiom` gap-
+      diagnostic field, M-1045) rather than a bare, unhelpful refusal. A borrowck frontend is therefore
+      an OPTIONAL PRECISION AID — it would let some D7/D8 sites be proven safe and promoted from
+      Judgment to Heuristic/Mechanical (fewer flags, more auto-emission) — but is NOT required for
+      mechanical porting to proceed, since the flag-with-suggestion path already gets a developer to
+      the native solution without it.
+
+      User stories:
+      - As a maintainer deciding whether to acquire a borrowck/rust-analyzer front-end for the
+        transpiler, I want a concrete accounting of what it would upgrade (which D7/D8 sites move from
+        Judgment-flag to Heuristic/Mechanical auto-emit) versus what already works without it (the
+        flag-with-suggested-native-idiom path), so the large scope commitment (DN-34 §6-Q1/Q3) is
+        weighed against its actual marginal benefit rather than treated as a porting blocker.
+
+      Definition of Done:
+      - A study (a DN or an appendix to the zero-hand-port delta ledger) that (a) confirms
+        `suggested_idiom` (M-1045) is landed and covers D7/D8 gap sites with the correct native-idiom
+        suggestion; (b) estimates, from the corpus, what fraction of D7/D8 sites a borrowck frontend
+        would provably resolve (auto-emit-eligible) versus what fraction are irreducibly judgment calls
+        even with perfect aliasing information; (c) recommends, on that evidence, whether to acquire the
+        frontend now, later, or never — explicitly NOT gated on this issue for mechanical porting to
+        continue using the flag-with-suggestion default.
+
+  - id: M-1053
+    title: "DN-108 companion ADR (transcendental prim accuracy contract, parallel to ADR-040) + OQ-3 vendored-vs-host-libm implementation decision"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:numerics, priority:P2, status:todo]
+    epic: E28-1
+    depends_on: [M-1028]
+    doc_refs:
+      - corpus:DN-108
+      - corpus:ADR-040
+    body: |
+      Filed 2026-07-11 from the maintainer's ratification of DN-108 (ENB-5, transcendental + eps/delta
+      float numerics). DN-108 §8 requires, for the *implementing* increment beyond the ratified design:
+      (item 4) a companion ADR for the transcendental prim class's accuracy contract, parallel to
+      ADR-040's scalar-float landing; and (§7 OQ-3) a decision on whether v0 calls a vendored /
+      version-locked transcendental routine (reproducible, heavier) or the ambient host libm (light,
+      platform-dependent) — DN-108 itself leans vendored, "for a never-silent, reproducible result"
+      (§6.4: most libms are not correctly-rounded, so a bit-identical three-way differential needs a
+      version-locked implementation to diff against). The ratification adopted the vendored lean as
+      direction but left the concrete routine/integration choice as implementation work.
+
+      User stories:
+      - As a numerics implementer landing `flt.sqrt/exp/ln/sin/cos/pow` (M-1028), I want a ratified ADR
+        naming the accuracy contract (v0 tag `Declared`, asserted-ULP sourcing, the composition-refusal
+        rule) and a settled vendored-vs-host-libm choice, so the M-1028 implementation has a stable
+        target rather than re-litigating DN-108's design mid-implementation.
+
+      Definition of Done:
+      - A Draft ADR (parallel to ADR-040) records the transcendental prim class's accuracy contract
+        (DN-108 §5.1's minimal v0 scope: the six named functions, `Declared` tag, asserted-ULP bound
+        sourcing, `NumErr::Domain` refusals, `ApproxRule::Refuse` composition) and is ratified; OQ-3 is
+        settled with a concrete implementation choice (a specific vendored/version-locked routine or
+        library, or a reasoned decision to use the host libm after all with the reproducibility
+        trade-off explicitly accepted); M-1028 proceeds against the ratified ADR + OQ-3 decision.
