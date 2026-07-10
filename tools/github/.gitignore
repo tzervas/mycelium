@@ -1,0 +1,9 @@
+# Local, machine-specific artifacts for the GitHub PM-sync tooling — never committed.
+
+# The cached bulk issue snapshot written by sync_issues.py (a fetch cache, not source of truth).
+.gh-snapshot.json
+
+# uv dev-venv + bytecode (declared by pyproject.toml; already covered by the root .gitignore,
+# repeated here so `tools/github/` is self-describing).
+.venv/
+__pycache__/
