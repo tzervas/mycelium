@@ -18,6 +18,28 @@ impl core::marker::Unpin for mycelium_check::FindingKind
 impl core::marker::UnsafeUnpin for mycelium_check::FindingKind
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_check::FindingKind
 impl core::panic::unwind_safe::UnwindSafe for mycelium_check::FindingKind
+pub enum mycelium_check::PhylumErrorKind
+pub mycelium_check::PhylumErrorKind::Check
+pub mycelium_check::PhylumErrorKind::Duplicate
+pub mycelium_check::PhylumErrorKind::Parse
+impl mycelium_check::PhylumErrorKind
+pub fn mycelium_check::PhylumErrorKind::as_str(self) -> &'static str
+impl core::clone::Clone for mycelium_check::PhylumErrorKind
+pub fn mycelium_check::PhylumErrorKind::clone(&self) -> mycelium_check::PhylumErrorKind
+impl core::cmp::Eq for mycelium_check::PhylumErrorKind
+impl core::cmp::PartialEq for mycelium_check::PhylumErrorKind
+pub fn mycelium_check::PhylumErrorKind::eq(&self, &mycelium_check::PhylumErrorKind) -> bool
+impl core::fmt::Debug for mycelium_check::PhylumErrorKind
+pub fn mycelium_check::PhylumErrorKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_check::PhylumErrorKind
+impl core::marker::StructuralPartialEq for mycelium_check::PhylumErrorKind
+impl core::marker::Freeze for mycelium_check::PhylumErrorKind
+impl core::marker::Send for mycelium_check::PhylumErrorKind
+impl core::marker::Sync for mycelium_check::PhylumErrorKind
+impl core::marker::Unpin for mycelium_check::PhylumErrorKind
+impl core::marker::UnsafeUnpin for mycelium_check::PhylumErrorKind
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_check::PhylumErrorKind
+impl core::panic::unwind_safe::UnwindSafe for mycelium_check::PhylumErrorKind
 pub struct mycelium_check::Finding
 pub mycelium_check::Finding::file: alloc::string::String
 pub mycelium_check::Finding::kind: mycelium_check::FindingKind
@@ -42,6 +64,61 @@ impl core::marker::Unpin for mycelium_check::Finding
 impl core::marker::UnsafeUnpin for mycelium_check::Finding
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_check::Finding
 impl core::panic::unwind_safe::UnwindSafe for mycelium_check::Finding
+pub struct mycelium_check::NoduleVerdict
+pub mycelium_check::NoduleVerdict::class: &'static str
+pub mycelium_check::NoduleVerdict::nodule: alloc::string::String
+impl core::clone::Clone for mycelium_check::NoduleVerdict
+pub fn mycelium_check::NoduleVerdict::clone(&self) -> mycelium_check::NoduleVerdict
+impl core::cmp::Eq for mycelium_check::NoduleVerdict
+impl core::cmp::PartialEq for mycelium_check::NoduleVerdict
+pub fn mycelium_check::NoduleVerdict::eq(&self, &mycelium_check::NoduleVerdict) -> bool
+impl core::fmt::Debug for mycelium_check::NoduleVerdict
+pub fn mycelium_check::NoduleVerdict::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_check::NoduleVerdict
+impl core::marker::Freeze for mycelium_check::NoduleVerdict
+impl core::marker::Send for mycelium_check::NoduleVerdict
+impl core::marker::Sync for mycelium_check::NoduleVerdict
+impl core::marker::Unpin for mycelium_check::NoduleVerdict
+impl core::marker::UnsafeUnpin for mycelium_check::NoduleVerdict
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_check::NoduleVerdict
+impl core::panic::unwind_safe::UnwindSafe for mycelium_check::NoduleVerdict
+pub struct mycelium_check::PhylumError
+pub mycelium_check::PhylumError::kind: mycelium_check::PhylumErrorKind
+pub mycelium_check::PhylumError::message: alloc::string::String
+pub mycelium_check::PhylumError::site: alloc::string::String
+impl core::clone::Clone for mycelium_check::PhylumError
+pub fn mycelium_check::PhylumError::clone(&self) -> mycelium_check::PhylumError
+impl core::cmp::Eq for mycelium_check::PhylumError
+impl core::cmp::PartialEq for mycelium_check::PhylumError
+pub fn mycelium_check::PhylumError::eq(&self, &mycelium_check::PhylumError) -> bool
+impl core::fmt::Debug for mycelium_check::PhylumError
+pub fn mycelium_check::PhylumError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_check::PhylumError
+impl core::marker::Freeze for mycelium_check::PhylumError
+impl core::marker::Send for mycelium_check::PhylumError
+impl core::marker::Sync for mycelium_check::PhylumError
+impl core::marker::Unpin for mycelium_check::PhylumError
+impl core::marker::UnsafeUnpin for mycelium_check::PhylumError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_check::PhylumError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_check::PhylumError
+pub struct mycelium_check::PhylumReport
+pub mycelium_check::PhylumReport::error: core::option::Option<mycelium_check::PhylumError>
+pub mycelium_check::PhylumReport::files_checked: usize
+pub mycelium_check::PhylumReport::nodules: alloc::vec::Vec<mycelium_check::NoduleVerdict>
+pub mycelium_check::PhylumReport::ok: bool
+impl mycelium_check::PhylumReport
+pub fn mycelium_check::PhylumReport::exit_code(&self) -> u8
+impl core::clone::Clone for mycelium_check::PhylumReport
+pub fn mycelium_check::PhylumReport::clone(&self) -> mycelium_check::PhylumReport
+impl core::fmt::Debug for mycelium_check::PhylumReport
+pub fn mycelium_check::PhylumReport::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_check::PhylumReport
+impl core::marker::Send for mycelium_check::PhylumReport
+impl core::marker::Sync for mycelium_check::PhylumReport
+impl core::marker::Unpin for mycelium_check::PhylumReport
+impl core::marker::UnsafeUnpin for mycelium_check::PhylumReport
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_check::PhylumReport
+impl core::panic::unwind_safe::UnwindSafe for mycelium_check::PhylumReport
 pub struct mycelium_check::Report
 pub mycelium_check::Report::files_checked: usize
 pub mycelium_check::Report::findings: alloc::vec::Vec<mycelium_check::Finding>
@@ -82,6 +159,8 @@ impl core::marker::Unpin for mycelium_check::ResolveError
 impl core::marker::UnsafeUnpin for mycelium_check::ResolveError
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_check::ResolveError
 impl core::panic::unwind_safe::UnwindSafe for mycelium_check::ResolveError
+pub fn mycelium_check::check_phylum_dir(&std::path::Path) -> core::result::Result<mycelium_check::PhylumReport, mycelium_check::ResolveError>
+pub fn mycelium_check::check_phylum_sources(&[(alloc::string::String, alloc::string::String)]) -> mycelium_check::PhylumReport
 pub fn mycelium_check::check_project(&std::path::Path) -> core::result::Result<mycelium_check::Report, mycelium_check::ResolveError>
 pub fn mycelium_check::check_source(&str, &str, &mycelium_lsp::diagnostics::policy::DiagnosticPolicy, &mycelium_lsp::diagnostics::registry::ClassRegistry, &mut alloc::vec::Vec<mycelium_check::Finding>)
 pub fn mycelium_check::check_source_default(&str, &str, &mut alloc::vec::Vec<mycelium_check::Finding>)

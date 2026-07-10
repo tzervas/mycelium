@@ -191,11 +191,13 @@ pub mycelium_l1::ast::Expr::Swap
 pub mycelium_l1::ast::Expr::Swap::policy: mycelium_l1::ast::Path
 pub mycelium_l1::ast::Expr::Swap::target: mycelium_l1::ast::TypeRef
 pub mycelium_l1::ast::Expr::Swap::value: alloc::boxed::Box<mycelium_l1::ast::Expr>
+pub mycelium_l1::ast::Expr::Try(alloc::boxed::Box<mycelium_l1::ast::Expr>)
 pub mycelium_l1::ast::Expr::TupleLit(alloc::vec::Vec<mycelium_l1::ast::Expr>)
 pub mycelium_l1::ast::Expr::Wild(alloc::boxed::Box<mycelium_l1::ast::Expr>)
 pub mycelium_l1::ast::Expr::WithParadigm
 pub mycelium_l1::ast::Expr::WithParadigm::body: alloc::boxed::Box<mycelium_l1::ast::Expr>
 pub mycelium_l1::ast::Expr::WithParadigm::paradigm: mycelium_l1::ast::Paradigm
+pub mycelium_l1::ast::Expr::Wrapping(alloc::boxed::Box<mycelium_l1::ast::Expr>)
 impl core::clone::Clone for mycelium_l1::ast::Expr
 pub fn mycelium_l1::ast::Expr::clone(&self) -> mycelium_l1::ast::Expr
 impl core::cmp::PartialEq for mycelium_l1::ast::Expr
@@ -471,6 +473,7 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::Arm
 pub struct mycelium_l1::ast::Ctor
 pub mycelium_l1::ast::Ctor::fields: alloc::vec::Vec<mycelium_l1::ast::TypeRef>
 pub mycelium_l1::ast::Ctor::name: alloc::string::String
+pub mycelium_l1::ast::Ctor::sealed: bool
 impl core::clone::Clone for mycelium_l1::ast::Ctor
 pub fn mycelium_l1::ast::Ctor::clone(&self) -> mycelium_l1::ast::Ctor
 impl core::cmp::PartialEq for mycelium_l1::ast::Ctor
@@ -585,6 +588,7 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::ImplDecl
 pub struct mycelium_l1::ast::InherentImplDecl
 pub mycelium_l1::ast::InherentImplDecl::for_ty: mycelium_l1::ast::TypeRef
 pub mycelium_l1::ast::InherentImplDecl::methods: alloc::vec::Vec<mycelium_l1::ast::FnDecl>
+pub mycelium_l1::ast::InherentImplDecl::params: alloc::vec::Vec<alloc::string::String>
 impl core::clone::Clone for mycelium_l1::ast::InherentImplDecl
 pub fn mycelium_l1::ast::InherentImplDecl::clone(&self) -> mycelium_l1::ast::InherentImplDecl
 impl core::cmp::PartialEq for mycelium_l1::ast::InherentImplDecl
@@ -1006,6 +1010,7 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::checkty::InstanceInfo
 pub struct mycelium_l1::checkty::PhylumEnv
 pub mycelium_l1::checkty::PhylumEnv::nodules: alloc::vec::Vec<(mycelium_l1::ast::Path, mycelium_l1::checkty::Env)>
 impl mycelium_l1::checkty::PhylumEnv
+pub fn mycelium_l1::checkty::PhylumEnv::link(&self) -> core::result::Result<mycelium_l1::checkty::Env, mycelium_l1::checkty::CheckError>
 pub fn mycelium_l1::checkty::PhylumEnv::nodule(&self, &mycelium_l1::ast::Path) -> core::option::Option<&mycelium_l1::checkty::Env>
 pub fn mycelium_l1::checkty::PhylumEnv::single(&self) -> core::option::Option<&mycelium_l1::checkty::Env>
 impl core::clone::Clone for mycelium_l1::checkty::PhylumEnv
@@ -1654,7 +1659,9 @@ pub mycelium_l1::token::Tok::Pipe
 pub mycelium_l1::token::Tok::PipePipe
 pub mycelium_l1::token::Tok::Plus
 pub mycelium_l1::token::Tok::Policy
+pub mycelium_l1::token::Tok::Priv
 pub mycelium_l1::token::Tok::Pub
+pub mycelium_l1::token::Tok::Question
 pub mycelium_l1::token::Tok::RAngle
 pub mycelium_l1::token::Tok::RBrace
 pub mycelium_l1::token::Tok::RBracket
@@ -1687,6 +1694,7 @@ pub mycelium_l1::token::Tok::Via
 pub mycelium_l1::token::Tok::Vsa
 pub mycelium_l1::token::Tok::Wild
 pub mycelium_l1::token::Tok::With
+pub mycelium_l1::token::Tok::Wrapping
 pub mycelium_l1::token::Tok::Xloc
 impl core::clone::Clone for mycelium_l1::token::Tok
 pub fn mycelium_l1::token::Tok::clone(&self) -> mycelium_l1::token::Tok
@@ -2289,6 +2297,7 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::Phylum
 pub struct mycelium_l1::PhylumEnv
 pub mycelium_l1::PhylumEnv::nodules: alloc::vec::Vec<(mycelium_l1::ast::Path, mycelium_l1::checkty::Env)>
 impl mycelium_l1::checkty::PhylumEnv
+pub fn mycelium_l1::checkty::PhylumEnv::link(&self) -> core::result::Result<mycelium_l1::checkty::Env, mycelium_l1::checkty::CheckError>
 pub fn mycelium_l1::checkty::PhylumEnv::nodule(&self, &mycelium_l1::ast::Path) -> core::option::Option<&mycelium_l1::checkty::Env>
 pub fn mycelium_l1::checkty::PhylumEnv::single(&self) -> core::option::Option<&mycelium_l1::checkty::Env>
 impl core::clone::Clone for mycelium_l1::checkty::PhylumEnv

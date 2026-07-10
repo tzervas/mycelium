@@ -354,13 +354,20 @@ fn fndecl_body(f: FnDecl) => Expr =
   match f { FD(_, _, _, _, b) => b };
 
 // ── Ctor (mirrors ast.rs::Ctor — one constructor of a TypeDecl) ─────────────────────────────────
-type Ctor = Ctr(Bytes, Vec[TypeRef]);
+// M-1027 / DN-104: the 3rd field is the `sealed` flag — a `priv`-marked constructor of a `pub type`
+// exports the type NAME but withholds cross-nodule construction (the FR-N3 capability-gate). `False`
+// for an unmarked constructor (the default; backward-compatible).
+type Ctor = Ctr(Bytes, Vec[TypeRef], Bool);
 
 fn ctor_name(c: Ctor) => Bytes =
-  match c { Ctr(n, _) => n };
+  match c { Ctr(n, _, _) => n };
 
 fn ctor_fields(c: Ctor) => Vec[TypeRef] =
-  match c { Ctr(_, f) => f };
+  match c { Ctr(_, f, _) => f };
+
+// ctor_sealed: the per-constructor `priv` seal (M-1027 / DN-104).
+fn ctor_sealed(c: Ctor) => Bool =
+  match c { Ctr(_, _, s) => s };
 
 // ── TypeDecl (mirrors ast.rs::TypeDecl — `type Name<params> = Ctor | …`) ────────────────────────
 type TypeDecl = TD(Vis, Bytes, Vec[Bytes], Vec[Ctor]);
@@ -443,14 +450,19 @@ fn objectdecl_impls(o: ObjectDecl) => Vec[ImplDecl] =
 fn objectdecl_fns(o: ObjectDecl) => Vec[FnDecl] =
   match o { OD(_, _, _, _, _, _, f) => f };
 
-// ── InherentImplDecl (mirrors ast.rs::InherentImplDecl — M-664 `impl T { fn … }`) ───────────────
-type InherentImplDecl = IID(TypeRef, Vec[FnDecl]);
+// ── InherentImplDecl (mirrors ast.rs::InherentImplDecl — M-664 + DN-103 `impl[T]? T { fn … }`) ────
+// First field: the impl-level type-parameter slot (DN-103 / M-1026 / ENB-3) — unbounded names, Nil
+// for the plain M-664 block.
+type InherentImplDecl = IID(Vec[Bytes], TypeRef, Vec[FnDecl]);
+
+fn inherentimpldecl_params(i: InherentImplDecl) => Vec[Bytes] =
+  match i { IID(p, _, _) => p };
 
 fn inherentimpldecl_for_ty(i: InherentImplDecl) => TypeRef =
-  match i { IID(t, _) => t };
+  match i { IID(_, t, _) => t };
 
 fn inherentimpldecl_methods(i: InherentImplDecl) => Vec[FnDecl] =
-  match i { IID(_, m) => m };
+  match i { IID(_, _, m) => m };
 
 // ── LowerRhs (mirrors ast.rs::LowerRhs — DN-54 §10 the RHS of a `lower` rule; FLAG-ast-5 LR-
 // prefix, both variants renamed since `Impl` collides with `Item::Impl`) ────────────────────────

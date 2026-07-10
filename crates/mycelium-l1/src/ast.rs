@@ -215,6 +215,14 @@ pub enum Item {
 /// is just the first explicitly-typed value parameter).
 #[derive(Debug, Clone, PartialEq)]
 pub struct InherentImplDecl {
+    /// Impl-level **type parameters** — the `[T, …]` slot after `impl` (`impl[T] Foo[T] { … }`;
+    /// DN-103 / M-1026 / ENB-3). **Unbounded names** (bounds live only on `fn` type-params — the
+    /// dictionary site, RFC-0019 §4.1 — so a `: bound` here is a never-silent parse refusal, mirroring
+    /// a `type`/`trait` head). Empty for the plain `impl T { … }` block (the identity — every M-664
+    /// program is unchanged). At the Phase-0 desugar these params are **prepended** to each lifted
+    /// method's `fn` type-parameters, so a generic inherent method becomes an ordinary generic free
+    /// function and monomorphization reuses the existing fn-generics path (KC-3/DRY).
+    pub params: Vec<String>,
     /// The type the methods are associated with (`impl Binary{8} { … }` ⇒ `Binary{8}`).
     pub for_ty: TypeRef,
     /// The method definitions, lifted verbatim to top-level `fn`s at desugar time.
@@ -318,6 +326,17 @@ pub struct Ctor {
     pub name: String,
     /// Positional field types.
     pub fields: Vec<TypeRef>,
+    /// **Per-constructor visibility seal** (M-1027 / ENB-4; DN-104). A `priv`-marked constructor of a
+    /// `pub type` exports the **type NAME** (usable in a client nodule's signatures / `use` / pattern
+    /// position) but **withholds the constructor from cross-nodule CONSTRUCTION via an imported name**
+    /// — a never-silent refusal for a well-behaved caller going through `use`. **Not yet an enforced
+    /// security/capability boundary** (known gap, M-1036: a same-named local shadow type bypasses it —
+    /// see `checkty::NoduleImports::sealed`'s doc comment and `tests/ctor_seal.rs`). `false` for an
+    /// unmarked constructor (the default, backward-compatible). Meaningful only on a `pub type`; a seal
+    /// on a nodule-private type
+    /// is a never-silent redundant-seal refusal at registration (DN-104 §4; G2). The surface keyword is
+    /// `priv` (`Tok::Priv`); this field is the keyword-independent *property* (DN-104 §2.1).
+    pub sealed: bool,
 }
 
 /// `trait Name<params> { fn … }` (LR-2; conventional term). `params` are **unbounded** type-variable

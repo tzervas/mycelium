@@ -645,18 +645,20 @@ fn cases() -> Vec<Case> {
                 contains: "and(a, b)",
             },
         },
-        // ── DN-99 #72 string-literal pattern — RECLASSIFIED open (needs an L1 enabler) ───────────
-        // A string-literal match arm `"yes" => …` is grammatically valid Mycelium surface, but the
-        // L1 checker categorically rejects a `match` on a `Bytes` scrutinee (verified against the
-        // real oracle). So it is NOT transpiler-only (DN-99 #72's `tr-only` guess is wrong —
-        // mitigation #14): emitting it would produce parse-clean but check-FAILING `.myc`, regressing
-        // checked_fraction. It is gapped never-silently with the precise LANGUAGE-ENABLER reason,
-        // never fake-emitted (VR-5/G2). See `string_literal_pattern_gaps_with_l1_enabler_reason`.
+        // ── DN-99 #72 string-literal pattern — ENABLER LANDED (M-1035/ENB-12), now EMITS ─────────
+        // A string-literal match arm `"yes" => …` is grammatically valid Mycelium surface. It was
+        // gapped while the L1 checker rejected a `match` on a `Bytes` scrutinee; M-1035/ENB-12
+        // landed that enabler (`check_match` admits `Ty::Bytes` with a required wildcard/default
+        // arm for the open domain). So the faithful surface now EMITS and `myc check`-cleans —
+        // verified against the real oracle. `&str` → `Bytes`, `true`/`false` → `True`/`False`, so
+        // this lowers to `match s { "yes" => True, _ => False }` (the first enabler-driven trx win).
+        // See `string_literal_pattern_emits_with_l1_enabler`.
         Case {
-            name: "string_literal_pattern_stays_gapped_pending_l1",
+            name: "string_literal_pattern_emits_with_l1_enabler",
             rust: "fn classify(s: &str) -> bool { match s { \"yes\" => true, _ => false } }",
-            expect: Expect::Gapped {
-                category: Category::Other,
+            expect: Expect::Emitted {
+                item: "classify",
+                contains: "match s { \"yes\" => True, _ => False }",
             },
         },
     ]
@@ -831,34 +833,116 @@ fn string_control_char_never_leaks_raw_byte() {
     );
 }
 
-/// DN-99 #72 reclassification pin (trx profiling, mitigation #14): a string-literal match pattern
-/// is grammatically valid Mycelium surface, but the L1 checker categorically rejects a `match` on a
-/// `Bytes` scrutinee, so emitting it would regress `checked_fraction`. It is therefore gapped
-/// never-silently with a reason that (a) names it a LANGUAGE-ENABLER gap (not transpiler-only) and
-/// (b) cites the exact L1 diagnostic — never fake-emitted (VR-5/G2). This guards against a future
-/// change re-emitting the check-failing surface.
+/// DN-99 #72 enabler-landed pin (M-1035/ENB-12, the first enabler-driven trx win): once the L1
+/// checker admits a `Bytes` scrutinee in `match` (with the required wildcard/default arm for the
+/// open domain), a string-literal match pattern EMITS and `myc check`-cleans. This pins the
+/// faithful lowering (`&str`→`Bytes`, `"yes"` verbatim, `true`/`false`→`True`/`False`, `_` default)
+/// and — its VR-5/G2 twin — that a string-literal match WITHOUT a default stays gapped never-
+/// silently (a non-exhaustive `Bytes` match is check-failing surface we must not emit).
 #[test]
-fn string_literal_pattern_gaps_with_l1_enabler_reason() {
+fn string_literal_pattern_emits_with_l1_enabler() {
+    // With the default arm: emits the faithful, check-clean surface.
     let rust = "fn classify(s: &str) -> bool { match s { \"yes\" => true, _ => false } }";
     let (myc, report) = transpile_source(rust, "fixture.rs", "fixture")
         .unwrap_or_else(|e| panic!("failed to parse/transpile: {e}"));
     assert!(
-        report.emitted_items.is_empty(),
-        "the string-pattern fn must stay fully gapped (no check-failing emission), got {:?}",
+        report.emitted_items.iter().any(|n| n == "classify"),
+        "the string-pattern fn must now emit (enabler landed), got emitted={:?} gaps={:?}",
+        report.emitted_items,
+        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+    );
+    assert!(
+        myc.contains("match s { \"yes\" => True, _ => False }"),
+        "the faithful check-clean string-pattern surface must be emitted, got:\n{myc}"
+    );
+
+    // Without a default arm: `Bytes` is an open domain, so an emission would be non-exhaustive and
+    // check-FAIL — it must stay gapped never-silently with a reason naming the open-domain default
+    // requirement (VR-5/G2), never fake-emitted.
+    let no_default = "fn c(s: &str) -> bool { match s { \"yes\" => true, \"no\" => false } }";
+    let (myc2, report2) = transpile_source(no_default, "fixture.rs", "fixture")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile: {e}"));
+    assert!(
+        !report2.emitted_items.iter().any(|n| n == "c"),
+        "a defaultless string-literal match must stay gapped (would be non-exhaustive), got {:?}",
+        report2.emitted_items
+    );
+    assert!(
+        !myc2.contains("match s"),
+        "the non-exhaustive (check-failing) surface must NEVER be emitted, got:\n{myc2}"
+    );
+    assert!(
+        report2
+            .gaps
+            .iter()
+            .any(|g| g.reason.contains("without a wildcard/default arm")
+                && g.reason.contains("open value domain")),
+        "the defaultless-match gap must cite the open-`Bytes` default requirement, got {:?}",
+        report2.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+    );
+}
+
+/// The #72 co-poison fix: a Rust ownership/identity-conversion no-op method (`.to_owned()`,
+/// `.clone()`, `.to_string()`, `.into()`, …) has no Mycelium free-function/prim referent, so
+/// desugaring it to a bare `to_owned(recv)` would FABRICATE an unknown prim (`myc check`:
+/// `unknown function/constructor/prim to_owned`). It must be gapped, never fake-emitted (G2/VR-5).
+/// Verified against the real oracle in the vet loop: without this gap, emitting the string-literal
+/// `match` (M-1035) in `checkty::vsa_kernel_model_id` — whose arms are `"MAP-I".to_owned()` — poisons
+/// the whole file's file-gated `checked_fraction`; with it, that fn gaps cleanly (no regression) and
+/// gapping the fabricated conversions un-poisons real files (a measured `checked_fraction` rise).
+#[test]
+fn conversion_noop_method_gaps_never_fabricates_unknown_prim() {
+    // A bare `.to_owned()` on a `&str` must gap, not emit a fabricated `to_owned(...)` call.
+    let rust = "fn f(s: &str) -> String { s.to_owned() }";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "fixture")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile: {e}"));
+    assert!(
+        !report.emitted_items.iter().any(|n| n == "f"),
+        "a `.to_owned()`-bodied fn must gap (no fabricated bare-call emission), got {:?}",
         report.emitted_items
     );
     assert!(
-        !myc.contains("\"yes\""),
-        "the check-failing string-pattern surface must NEVER be emitted, got:\n{myc}"
+        !myc.contains("to_owned("),
+        "the fabricated `to_owned(...)` bare call must NEVER be emitted, got:\n{myc}"
     );
     assert!(
-        report
-            .gaps
-            .iter()
-            .any(|g| g.reason.contains("on a `Bytes` scrutinee")
-                && g.reason.contains("LANGUAGE-ENABLER")),
-        "the string-pattern gap must cite the L1 match-on-Bytes enabler, got {:?}",
+        report.gaps.iter().any(|g| g
+            .reason
+            .contains("ownership/identity-conversion no-op method")),
+        "the conversion gap must name the no-op-conversion class, got {:?}",
         report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+    );
+
+    // The real `checkty::vsa_kernel_model_id` shape: a string-literal `match` (now emittable per
+    // M-1035) whose arm bodies are `.to_owned()` — the whole fn must gap cleanly (the enabler flip
+    // does NOT drag a fabricated `to_owned` into an emission), so no check-failing surface lands.
+    let real =
+        "fn m(s: &str) -> String { match s { \"A\" => \"a\".to_owned(), _ => s.to_owned() } }";
+    let (myc2, report2) = transpile_source(real, "fixture.rs", "fixture")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile: {e}"));
+    assert!(
+        !report2.emitted_items.iter().any(|n| n == "m"),
+        "the to_owned-bodied string-match fn must gap (no fabricated emission), got {:?}",
+        report2.emitted_items
+    );
+    assert!(
+        !myc2.contains("to_owned("),
+        "no fabricated `to_owned(...)` may leak even inside a now-emittable string-match, got:\n{myc2}"
+    );
+
+    // An explicit `.deref()` call is the same fabrication class (the docstring claims `Deref`
+    // coverage): it must gap, never emit a fabricated `deref(recv)` bare call (PR #1372 review fix).
+    let deref = "fn g(s: &str) -> &str { s.deref() }";
+    let (myc3, report3) = transpile_source(deref, "fixture.rs", "fixture")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile: {e}"));
+    assert!(
+        !report3.emitted_items.iter().any(|n| n == "g"),
+        "a `.deref()`-bodied fn must gap (no fabricated bare-call emission), got {:?}",
+        report3.emitted_items
+    );
+    assert!(
+        !myc3.contains("deref("),
+        "the fabricated `deref(...)` bare call must NEVER be emitted, got:\n{myc3}"
     );
 }
 

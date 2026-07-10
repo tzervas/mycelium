@@ -316,13 +316,16 @@ type BaseType =
 // Ctor: mirrors ast.rs::Ctor (a constructor name + its positional field TypeRefs). NEW ctor `Ct`
 // (FLAG-semcore-2 prefix scheme — distinct from the surface `Kw*`/checked `Ty*` families and from the
 // `CI` checked-ctor mirror below).
-type Ctor = Ct(Bytes, Vec[TypeRef]);
+// M-1027 / DN-104: the 3rd field is the `sealed` (`priv`) flag — surface parity with ast.rs::Ctor.
+// The checked `CtorInfo` (`CI`) mirror below does NOT carry it (the cross-nodule construction seal is
+// enforced by the export-table layer, which is not ported to `.myc` — DN-104 §6 residual).
+type Ctor = Ct(Bytes, Vec[TypeRef], Bool);
 
 fn ct_name(c: Ctor) => Bytes =
-  match c { Ct(n, _) => n };
+  match c { Ct(n, _, _) => n };
 
 fn ct_fields(c: Ctor) => Vec[TypeRef] =
-  match c { Ct(_, f) => f };
+  match c { Ct(_, f, _) => f };
 
 // TypeDecl: mirrors ast.rs::TypeDecl field-for-field (vis, name, params, ctors — declaration order).
 type TypeDecl = TD(Vis, Bytes, Vec[Bytes], Vec[Ctor]);
@@ -2031,13 +2034,15 @@ fn imd_for_ty(i: ImplDecl) => TypeRef =
 fn imd_methods(i: ImplDecl) => Vec[FnDecl] =
   match i { ImD(_, _, _, m) => m };
 
-type InherentImplDecl = IID(TypeRef, Vec[FnDecl]);
+// DN-103 / M-1026: first field is the impl-level type-parameter slot (unbounded names, Nil for the
+// plain M-664 block). The desugar-prepend is Rust-only (pre-desugared before this mirror runs).
+type InherentImplDecl = IID(Vec[Bytes], TypeRef, Vec[FnDecl]);
 
 fn iid_for_ty(i: InherentImplDecl) => TypeRef =
-  match i { IID(f, _) => f };
+  match i { IID(_, f, _) => f };
 
 fn iid_methods(i: InherentImplDecl) => Vec[FnDecl] =
-  match i { IID(_, m) => m };
+  match i { IID(_, _, m) => m };
 
 // ViaDecl: mirrors ast.rs::ViaDecl field-for-field (field_idx, trait_name, trait_args). No accessor —
 // `collect_tuple_arities_item`'s Object arm does NOT walk `via_decls` (a dead field, kept only so
@@ -4459,26 +4464,23 @@ fn item_key(item: WorkItem) => Bytes =
 // type registry) and one OUT-OF-SCOPE arm (`Lit`, FLAG-semcore-35 below); `Or` already refuses in
 // the Rust oracle (a checker invariant, ported verbatim as the same refusal).
 //
-// FLAG-semcore-35 (`Pattern::Lit` is OUT OF SCOPE for this increment -- an honest narrowing, not a
-// silent gap). Rust's `Lit` arm compares a literal pattern against `L1Value::Repr(v)` via
-// `crate::elab::lit_value` + the TRUSTED KERNEL `Value`'s `repr()`/`payload()` equality -- bridging
-// that trusted-kernel comparison into this checked fragment is real, separate work (no primitive
-// for kernel-`Value` construction/comparison exists in this language today; the same class of gap
-// M-982 already names for `BTreeMap`). `lval_try_match`'s `PLit` arm below refuses explicitly
-// (`Err`, never a fabricated `Ok`/silently-wrong comparison -- G2/VR-5) rather than mis-model it.
-// Rust's `Lit` arm is `Ok(false)` for `Data`/`Substrate`/`Fn` and only the `Repr` case does a real
-// comparison; THIS port's `PLit` arm is a BLANKET `Err` covering all of them, wider than strictly
-// necessary (the `Data`-vs-`Lit` and `Substrate`/`Fn`-vs-`Lit` "always false" sub-cases ARE
-// portable on their own). It is drawn this wide on purpose: `LVal` below collapses `Repr`/
-// `Substrate`/`Fn` into one `LOpaque` (precisely BECAUSE every arm this increment ports treats the
-// three identically), so a narrower `PLit` arm would have to re-introduce a way to distinguish
-// "this `LOpaque` came from a `Repr`" from "this `LOpaque` came from a `Substrate`/`Fn`" -- more
-// surface for one still-out-of-scope arm. The differential below therefore never constructs a
-// `PLit` case expecting oracle agreement (that would be a fabricated-coverage claim -- G2); it adds
-// one standalone "refuses cleanly, never panics" probe instead (`lval_try_match_lit_refuses`).
-// Every OTHER arm this port implements (`Wildcard`/`Ident`/`Ctor`/`Tuple`) treats `Repr`/
-// `Substrate`/`Fn` identically (bind-whole or no-match) in the REAL oracle, which is exactly why
-// `LVal`'s `LOpaque` collapse is lossless for everything this increment DOES claim to port.
+// FLAG-semcore-35 (`Pattern::Lit` -- an honest narrowing, now PARTIALLY lifted by DN-105 / M-1035).
+// Rust's `Lit` arm compares a literal pattern against `L1Value::Repr(v)` via `crate::elab::lit_value`
+// + the TRUSTED KERNEL `Value`'s `repr()`/`payload()` equality. **DN-105 lifts the `Bytes` case**: a
+// `Bytes` scrutinee now rides a dedicated `LReprBytes(Bytes)` carrier (see `LVal` below), so
+// `lval_try_match`'s `PLit` arm compares it against a TEXT (`Str`) byte-string literal by byte
+// content -- a real eval-match mirror for the string-literal (#72) target. What STAYS deferred: the
+// `0x..`-hex byte-string *value synthesis* (`lit_value`'s `LBytes` arm, FLAG-semcore-25 -- no
+// wild-free hex->byte primitive), so a `0x..` pattern arm's eval propagates that `Err`; and every
+// NON-`Bytes` repr (`Binary`/`Ternary`/`Float`) plus `Substrate`/`Fn`, which still collapse into one
+// `LOpaque` (their payload dropped) -- their `PLit` arm stays an explicit `Err`, never a fabricated
+// `Ok`/silently-wrong comparison (G2/VR-5). A `Data` value vs a literal is `Ok(false)` (faithful to
+// Rust's `Data => Ok(false)`). So the port now claims oracle parity for the `Bytes`-vs-`Str`-literal
+// eval-match (witnessed in `compiler_stage5_evalmatch.rs`), keeps the `0x..`/`LOpaque` sub-cases as
+// explicit, never-silent deferrals, and the standalone clean-refusal probe still covers the deferred
+// path. Every OTHER arm this port implements (`Wildcard`/`Ident`/`Ctor`/`Tuple`) treats the collapsed
+// `LOpaque` reprs identically (bind-whole or no-match) in the REAL oracle, which is exactly why the
+// `LOpaque` collapse stays lossless for everything OUTSIDE the newly-lifted `Bytes` case.
 //
 // FLAG-semcore-36 (`LVal` -- the eval.rs::L1Value mirror, TRIMMED to what `try_match`'s ported
 // fragment needs). `Data { ty, ctor, fields }` mirrors verbatim (`LData`, FLAG-semcore-2 `L`-prefix
@@ -4489,7 +4491,16 @@ fn item_key(item: WorkItem) => Bytes =
 // prepended, unlike the FLAG-semcore-13 assoc-list convention) via `bind_append` below, because
 // `binds`' ORDER is part of the observable differential (`Vec` equality is order-sensitive) --
 // unlike `unify`'s substitution, whose FIRST-MATCH lookup semantics make prepend-order invisible.
-type LVal = LData(Bytes, Bytes, Vec[LVal]) | LOpaque;
+// DN-105 / M-1035 (ENB-12): the `Bytes` repr value is LIFTED out of the `LOpaque` collapse into a
+// dedicated `LReprBytes(Bytes)` carrier, so `lval_try_match`'s `PLit` arm can compare a `Bytes`
+// scrutinee against a TEXT (`Str`) byte-string-literal pattern by byte content -- a REAL eval-match
+// mirror of eval.rs's `try_match` `Pattern::Lit` `Repr`-case for the string-literal (#72) target
+// (DN-105 §5). Every OTHER repr (`Binary`/`Ternary`/`Float`) plus `Substrate`/`Fn` stays collapsed
+// into `LOpaque` (their `PLit` eval-match stays deferred -- FLAG-semcore-35), and the `0x..`-hex
+// byte-string *value synthesis* stays deferred too (FLAG-semcore-25 -- `lit_value`'s `LBytes` arm),
+// so a `0x..` pattern arm's eval propagates that deferral as an explicit `Err`, never a silent
+// mismatch (G2). The Bytes carrier is thus a MINIMAL, targeted lift, not a full `L1Value` port.
+type LVal = LData(Bytes, Bytes, Vec[LVal]) | LReprBytes(Bytes) | LOpaque;
 
 // bind_append: append one `(name, val)` binding to the END of `binds` -- mirrors Rust's
 // `binds.push((n.clone(), val.clone()))` exactly (order-preserving; bounded by one pattern's own
@@ -4534,6 +4545,10 @@ fn lval_try_match(types: Vec[DataInfo], pat: Pattern, val: LVal, binds: Vec[Pair
         True => match bytes_eq(ctor, n) { 0b1 => Ok(Pr(True, binds)), _ => Ok(Pr(False, binds)) },
         False => Ok(Pr(True, bind_append(binds, n, val)))
       },
+      // DN-105: a `Bytes` repr value binds to a plain ident exactly like any other non-data value
+      // (Rust `try_match`'s `Ident` fall-through `binds.push`) -- never a ctor-name test (a repr
+      // value names no constructor).
+      LReprBytes(_) => Ok(Pr(True, bind_append(binds, n, val))),
       LOpaque => Ok(Pr(True, bind_append(binds, n, val)))
     },
     PCtor(n, subs) => match val {
@@ -4541,9 +4556,34 @@ fn lval_try_match(types: Vec[DataInfo], pat: Pattern, val: LVal, binds: Vec[Pair
         0b1 => lval_match_zip(types, subs, fields, binds),
         _ => Ok(Pr(False, binds))
       },
+      // DN-105: a `Bytes` repr value matches NO constructor pattern -- never-silent `Ok(false)`
+      // (mirrors Rust's `L1Value::Repr => Ok(false)` in the `Ctor` arm; G2).
+      LReprBytes(_) => Ok(Pr(False, binds)),
       LOpaque => Ok(Pr(False, binds))
     },
-    PLit(_) => Err("lval_try_match: Pattern::Lit needs trusted-kernel Value equality -- out of scope for M-1013 eval PR-1 (FLAG-semcore-35); never silently mismatched"),
+    // DN-105 / M-1035 (ENB-12): the `Pattern::Lit` eval-match, mirroring eval.rs::try_match's
+    // `Pattern::Lit` arm for the `Bytes` (string-literal, #72) target. A `Bytes` scrutinee
+    // (`LReprBytes`) is compared by BYTE CONTENT against the literal's own value (`lit_value`):
+    //   - a TEXT (`Str`) literal lowers to `Val(RBytes, PlBytes(pb), _)` -> `bytes_eq(pb, b)`;
+    //   - a `0x..` hex literal (`lit_value`'s `LBytes` arm) is DEFERRED (FLAG-semcore-25), so its
+    //     `Err` propagates -- an explicit, never-silent refusal, not a fabricated match (G2);
+    //   - any non-`Bytes` literal value vs a `Bytes` scrutinee is a never-silent `Ok(false)` (the
+    //     checker keeps it off this arm anyway -- W7 repr match).
+    // A `Data` value vs a literal pattern is `Ok(false)` (faithful to Rust's `Data => Ok(false)`).
+    // An `LOpaque` value (a collapsed non-`Bytes` repr / `Substrate` / `Fn`) stays DEFERRED
+    // (FLAG-semcore-35): its payload was dropped by the collapse, so there is nothing to compare --
+    // an explicit `Err`, never a silently-wrong `Ok`.
+    PLit(lit) => match val {
+      LReprBytes(b) => match lit_value(lit) {
+        Err(e) => Err(e),
+        Ok(lv) => match lv {
+          Val(RBytes, PlBytes(pb), _) => match bytes_eq(pb, b) { 0b1 => Ok(Pr(True, binds)), _ => Ok(Pr(False, binds)) },
+          _ => Ok(Pr(False, binds))
+        }
+      },
+      LData(_, _, _) => Ok(Pr(False, binds)),
+      LOpaque => Err("lval_try_match: Pattern::Lit on a collapsed non-Bytes repr / Substrate / Fn value needs trusted-kernel Value equality -- deferred (FLAG-semcore-35); never silently mismatched")
+    },
     PTuple(subs) => lval_try_match(types, PCtor(tuple_ctor_name(pattern_len(subs)), subs), val, binds),
     POr(_) => Err("lval_try_match: Pattern::Or must be desugared by the checker before evaluation (invariant violation) -- mirrors eval.rs::try_match's own refusal verbatim")
   };

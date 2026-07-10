@@ -376,6 +376,8 @@ impl Resolver {
             ctors.push(Ctor {
                 name: c.name.clone(),
                 fields,
+                // The `priv` seal is surface metadata, untouched by ambient resolution (M-1027).
+                sealed: c.sealed,
             });
         }
         Ok(TypeDecl {
@@ -446,7 +448,13 @@ impl Resolver {
         for m in &id.methods {
             methods.push(self.fn_decl(amb, m)?);
         }
-        Ok(InherentImplDecl { for_ty, methods })
+        // DN-103 / M-1026: the impl-level type-parameter names are inert here (ambient carries no
+        // per-param frame); pass them through unchanged so the desugar sees the faithful block.
+        Ok(InherentImplDecl {
+            params: id.params.clone(),
+            for_ty,
+            methods,
+        })
     }
 
     fn fn_decl(&mut self, amb: Option<Paradigm>, fd: &FnDecl) -> Result<FnDecl, AmbientError> {
@@ -486,6 +494,9 @@ impl Resolver {
             Ctor {
                 name: od.ctor.name.clone(),
                 fields,
+                // An `object` constructor is never `priv`-sealed (refused at parse; DN-104 §2), so this
+                // is always `false` — threaded for structural fidelity (M-1027).
+                sealed: od.ctor.sealed,
             }
         };
         // Resolve `via` trait arguments.
@@ -964,11 +975,14 @@ fn print_type_decl(td: &TypeDecl) -> String {
         .ctors
         .iter()
         .map(|c| {
+            // M-1027 / DN-104 §2: a `priv`-sealed constructor renders with its leading `priv ` marker
+            // so `parse → expand_to_source → parse` round-trips the seal (never silently dropped — G2).
+            let seal = if c.sealed { "priv " } else { "" };
             if c.fields.is_empty() {
-                c.name.clone()
+                format!("{seal}{}", c.name)
             } else {
                 let fs: Vec<String> = c.fields.iter().map(print_type_ref).collect();
-                format!("{}({})", c.name, fs.join(", "))
+                format!("{seal}{}({})", c.name, fs.join(", "))
             }
         })
         .collect();
@@ -1101,7 +1115,14 @@ fn print_impl_decl(id: &ImplDecl) -> String {
 
 /// Canonical surface form of an inherent method block `impl T { fn … }` (DN-03 §1 / M-664).
 fn print_inherent_impl_decl(id: &InherentImplDecl) -> String {
-    let mut s = format!("impl {} {{\n", print_type_ref(&id.for_ty));
+    // DN-103 / M-1026: render the impl-level type-parameter slot `impl[T, …]` when present (empty for
+    // the plain M-664 block — the identity, printed exactly as before).
+    let tps = if id.params.is_empty() {
+        String::new()
+    } else {
+        format!("[{}]", id.params.join(", "))
+    };
+    let mut s = format!("impl{} {} {{\n", tps, print_type_ref(&id.for_ty));
     for m in &id.methods {
         // DN-57 §3 (M-818): each inherent method is a component — terminated by `;`.
         s.push_str(&format!("  {}", terminate_item(&print_fn_decl(m))));

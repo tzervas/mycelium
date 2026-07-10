@@ -1481,6 +1481,106 @@ fn monomorphize_specializes_first_or_to_a_closed_env() {
     );
 }
 
+// --- M-1026 / ENB-3 (DN-103): impl-level generic-parameter slot -------------------------------
+
+/// A generic inherent method (`impl[A] Box[A] { fn unbox(b: Box[A]) => A }`) checks, and
+/// monomorphizes across **two** type arguments — the ENB-3 witness (DN-103 §7). The impl-level `A`
+/// is prepended to the lifted method's `fn` type-parameters at the Phase-0 desugar, so the method
+/// becomes an ordinary generic free function and reuses the existing fn-generics monomorphizer
+/// (KC-3/DRY). `main` reaches `unbox` at both `Binary{8}` and `Binary{16}`, so the closed env
+/// carries exactly two `unbox$…` specializations, each monomorphic.
+#[test]
+fn generic_inherent_method_monomorphizes_across_two_type_args() {
+    let env = check(
+        "nodule d;\n\
+         type Box[A] = Bx(A);\n\
+         impl[A] Box[A] { fn unbox(b: Box[A]) => A = match b { Bx(x) => x }; };\n\
+         fn main() => (Binary{8}, Binary{16}) = (unbox(Bx(0b0000_0001)), unbox(Bx(0b0000_0000_0000_0001)));",
+    )
+    .expect("a generic inherent-impl program checks");
+    let mono = monomorphize(&env, "main").expect("monomorphizes");
+    let unbox_specializations: Vec<&String> = mono
+        .fns
+        .keys()
+        .filter(|n| n.starts_with("unbox$"))
+        .collect();
+    assert_eq!(
+        unbox_specializations.len(),
+        2,
+        "two type args ⇒ two `unbox$…` specializations, got: {unbox_specializations:?}"
+    );
+    assert!(
+        mono.fns.values().all(|fd| fd.sig.params.is_empty())
+            && mono.types.values().all(|d| d.params.is_empty()),
+        "the monomorphized env is closed (no generic fns or data left)"
+    );
+}
+
+/// The plain M-664 inherent block (`impl T { … }`, no impl-level slot) is unchanged — the empty
+/// `params` is the identity (DN-103 §2, backward-compat).
+#[test]
+fn plain_inherent_impl_without_slot_is_unchanged() {
+    check(
+        "nodule d;\ntype Box[A] = Bx(A);\nimpl Box[Binary{8}] { fn id8(b: Box[Binary{8}]) => Box[Binary{8}] = b; };\nfn main() => Box[Binary{8}] = id8(Bx(0b0000_0001));",
+    )
+    .expect("a plain (non-generic-slot) inherent impl still checks");
+}
+
+/// A non-empty impl-level slot on a **trait** instance (`impl[T] Trait for Foo[T]`) is a
+/// never-silent parse refusal — generic trait-instance coherence is deferred (DN-103 §3 Fork 2 / §6;
+/// G2).
+#[test]
+fn generic_trait_instance_slot_is_refused() {
+    let err = parse(
+        "nodule d;\ntrait Cmp[A] { fn cmp(a: A, b: A) => Binary{2}; };\nimpl[T] Cmp[T] for T { fn cmp(a: T, b: T) => Binary{2} = 0b00; };",
+    )
+    .expect_err("a generic trait instance must be refused");
+    assert!(
+        err.to_string().contains("trait instance") && err.to_string().contains("deferred"),
+        "got: {err}"
+    );
+}
+
+/// A `: bound` inside the impl-level slot is refused — bounds live only on `fn` type-parameters
+/// (RFC-0019 §4.1), the same never-silent refusal as on a `type`/`trait` head (DN-103 §2; G2).
+#[test]
+fn impl_slot_bound_is_refused() {
+    let err = parse(
+        "nodule d;\ntrait Cmp[A] { fn cmp(a: A, b: A) => Binary{2}; };\ntype Box[A] = Bx(A);\nimpl[T: Cmp] Box[T] { fn peek(b: Box[T]) => Box[T] = b; };",
+    )
+    .expect_err("a bound on an impl-level type-parameter must be refused");
+    assert!(err.to_string().contains("bound"), "got: {err}");
+}
+
+/// A duplicate between an impl-level param and a method's own `fn` type-parameter is caught by the
+/// existing duplicate-type-parameter check on the lifted sig (DN-103 §4; never silent — G2).
+#[test]
+fn duplicate_impl_and_method_type_param_is_refused() {
+    let err = check(
+        "nodule d;\ntype Box[A] = Bx(A);\nimpl[T] Box[T] { fn dup[T](b: Box[T]) => Box[T] = b; };\nfn main() => Box[Binary{8}] = dup(Bx(0b0000_0001));",
+    )
+    .expect_err("a param name shared by the impl slot and the method must be refused");
+    assert!(
+        err.message.contains("duplicate") && err.message.contains("T"),
+        "got: {}",
+        err.message
+    );
+}
+
+/// A self-duplicate WITHIN the impl-level slot itself is refused even with **zero methods** — the
+/// per-lifted-method check cannot see a method-less block, so the standalone slot check fires
+/// (DN-103 §6; never silent — G2).
+#[test]
+fn duplicate_impl_slot_self_param_zero_methods_is_refused() {
+    let err = check("nodule d;\ntype Box[A] = Bx(A);\nimpl[T, T] Box[T] { };\n")
+        .expect_err("a self-duplicate in the impl-level slot must be refused even with no methods");
+    assert!(
+        err.message.contains("duplicate") && err.message.contains("impl-level slot"),
+        "got: {}",
+        err.message
+    );
+}
+
 // --- M-686: HOF checker (RFC-0024 §3) — Ty::Fn + fn-as-value + HOF application ----------------
 
 /// Shared helper: a minimal `Result<A, E>` data type + typical HOF helpers used by multiple
