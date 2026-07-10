@@ -128,7 +128,7 @@ fn batch_summary_totals_match_per_file_sums() {
         );
     }
 
-    let (batch_summary, union) = summarize(&results);
+    let (batch_summary, union) = summarize(&results, tmp.path());
     assert_eq!(batch_summary.files.len(), 3);
 
     let sum_total_items: usize = batch_summary.files.iter().map(|f| f.total_items).sum();
@@ -166,19 +166,43 @@ fn batch_summary_totals_match_per_file_sums() {
         "expressible_pct out of [0,100]: {}",
         batch_summary.totals.expressible_pct
     );
+
+    // M-1044 / DN-109 §5.2: one pure-`Keep` remap entry per transpiled file, none dropped —
+    // never-silent at the nodule-provenance level too, not just the gap level.
+    assert_eq!(
+        batch_summary.remap.nodules.len(),
+        results.len(),
+        "expected exactly one remap entry per transpiled file"
+    );
+    for n in &batch_summary.remap.nodules {
+        assert_eq!(n.operation, crate::remap::RemapOperation::Keep);
+        assert_eq!(n.safety, crate::remap::RemapSafety::Safe);
+        assert!(n.identity_neutral, "a pure Keep is identity-neutral");
+        assert!(
+            !n.api_surface_changed,
+            "a pure Keep must not claim an API-surface change"
+        );
+        assert_eq!(n.guarantee, "Declared");
+        assert_eq!(n.sources.len(), 1, "a Keep has exactly one source file");
+    }
+    // v0 Mechanical-only: no idiom-choice instrumentation exists yet, so the field is honestly
+    // empty rather than fabricated (see `src/remap.rs` module docs).
+    assert!(batch_summary.remap.idiom_choices.is_empty());
 }
 
 /// A batch over zero files (e.g. a directory that discovers nothing) yields an honest all-zero
 /// summary, not a divide-by-zero panic or a fabricated percentage.
 #[test]
 fn batch_summary_over_zero_files_is_all_zero_not_a_panic() {
-    let (batch_summary, union) = summarize(&[]);
+    let (batch_summary, union) = summarize(&[], Path::new("crates/x/src"));
     assert!(batch_summary.files.is_empty());
     assert_eq!(batch_summary.totals.total_items, 0);
     assert_eq!(batch_summary.totals.emitted, 0);
     assert_eq!(batch_summary.totals.gaps, 0);
     assert_eq!(batch_summary.totals.expressible_pct, 0.0);
     assert!(union.gaps.is_empty());
+    // Honest all-zero: no nodules recorded either (nothing was transpiled).
+    assert!(batch_summary.remap.nodules.is_empty());
 }
 
 // ── M-1006 Phase-2: path-qualified batch output (`output_rel_path`) ──────────────────────────────

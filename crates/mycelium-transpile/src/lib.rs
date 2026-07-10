@@ -37,6 +37,7 @@ pub mod emit;
 pub mod gap;
 pub mod map;
 pub mod prim_map;
+pub mod remap;
 pub mod reserved;
 pub mod transpile;
 pub mod vet;
@@ -46,6 +47,10 @@ pub use batch::{
     discover_rs_files, output_rel_path, summarize, transpile_batch, BatchSummary, UnionGapReport,
 };
 pub use gap::{Category, Gap, GapReport};
+pub use remap::{
+    build_remap_manifest, render_remap_md, IdiomChoice, IdiomClass, NoduleRemap, PhylumRemap,
+    RemapManifest, RemapOperation, RemapSafety, RemapSource,
+};
 pub use transpile::{transpile_file, transpile_source};
 pub use vet::{vet_batch, MycChecker, VetClass, VetInput, VetRecord, VetReport};
 
