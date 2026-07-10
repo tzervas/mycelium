@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-107 |
-| **Status** | **Draft** (2026-07-10). A **design-reasoner** note working the M-1030 (ENB-7) decision **forward to a ranked recommendation, not a ratification**. It records the decision frame, the real alternatives for both sub-gaps, an evaluated ranked recommendation with a minimal v0 scope, and an adversarial stress-test; it **enacts nothing** and **moves no other doc's status** (house rule #3, append-only). Tags: `Empirical` for claims read against the tree at `5130badc`; `Declared` for every proposed-but-unratified design and every unproven soundness claim (VR-5 — nothing here is `Proven`). |
+| **Status** | **Accepted** (2026-07-11, maintainer ratification — see the dated "Ratification / Maintainer decision" note below: Rank 1 accepted for both sub-gaps, and the §6 fork resolved in favour of the note's own lean, general-`?` decoupled from the never-type). Originally **Draft** (2026-07-10). A **design-reasoner** note working the M-1030 (ENB-7) decision **forward to a ranked recommendation, not a ratification** at Draft time. It records the decision frame, the real alternatives for both sub-gaps, an evaluated ranked recommendation with a minimal v0 scope, and an adversarial stress-test; it **enacts nothing** and **moves no other doc's status** (house rule #3, append-only). Tags: `Empirical` for claims read against the tree at `5130badc`; `Declared` for every proposed-but-unratified design and every unproven soundness claim (VR-5 — nothing here is `Proven`). |
 | **Decides** | *Proposes, for ratification (does NOT decide — house rule #3):* (1) the two ENB-7 sub-gaps are **separable**, coupled at exactly one point (`exit` is both a host op and a divergence); (2) **host-effects (#79)** land by **granting real `wild:read/write/get_env/exit` prims into the `PrimRegistry`** over the **already-ratified** RFC-0028 `wild`-block surface + the RFC-0014 `ffi` effect (no new representation) plus a **fixture/sandbox differential** — this sub-gap is design-closed, largely registry wiring; (3) **the never-type (#88)** is modelled as **divergence-as-effect with NO bottom `Ty`** (Rank 1): a new `diverges` effect on the RFC-0014 lattice, `wild:exit` carrying `!{ffi, diverges}`, a **narrow, never-silent checker admissibility rule** ("an *unconditionally-diverging* expression is well-typed at any expected type"), and an **honest totality-checker interaction** (`!diverges` = non-total, flagged, never silent); (4) a **nominal `Never` + `absurd` eliminator** is the Rank-2 **append-only upgrade path** held in reserve; a **true bottom subtype `⊥ <: T`** (Rank 3) is **rejected for v0** (it forces subtyping into a structural-equality checker); (5) a **FORK for the maintainer** — whether general-position `?` (DN-102 §6 FLAG-try-1) actually *depends* on M-1030 at all, since a CPS lift appears to need no bottom type (§6). It does **not** edit `issues.yaml`, `CHANGELOG.md`, or `Doc-Index.md` (the integrating session owns those). |
 | **Feeds** | DN-99 §A6 (#79) + §A7 (#88) / §8 ENB-7 / register rows #79 (host-effect wild execution, `partial`) + #88 (never-type divergence `-> !`, `open`); M-1030; DN-102 §2/§5/§6 (the `?` desugar — the sole named downstream consumer, and the source of the "depends on the never-type" framing this note tests); RFC-0014 (declarative error recovery + **bounded effects** — the effect lattice this extends); RFC-0028 (`wild` blocks — the host-effect surface this reuses); DN-26 (SCC self-hosting, the Rust↔`.myc` dual); DN-34 §8 (surface-gap census). |
 | **Grounds on** | KC-3 (small kernel — Rank 1 adds **no** `Ty` variant and **no** subtyping; it extends an existing effect lattice and adds one narrow admissibility rule), DRY (reuse RFC-0014 effects + RFC-0028 `wild` + the `wild:` prim naming — the host-effect representation already exists), G2 (never-silent — an out-of-domain host op, a non-total `diverges` function, a `?` outside its supported position each print the fix), VR-5 (no tag upgraded past its basis — every soundness claim below is `Declared`, earned `Empirical` only by the §8 witnesses), KISS/YAGNI (divergence-as-effect over a bottom type; the `let`-RHS `?` subset over a full CPS lift). |
@@ -303,8 +303,57 @@ Status stays **Draft** until the maintainer ratifies — the reasoner does not s
 
 ---
 
+## Ratification / Maintainer decision (2026-07-11)
+
+> **Ratified** — part of the maintainer's batch approval "approving and ratifying the rest of that set
+> from 101–109."
+
+**Recorded decision (append-only — this note's original §2–§7 text above is unchanged; this section
+adds the ratification, per house rule #3, resolving the §8 DoD items):**
+
+1. **The frame (§2) confirmed:** #79 (host-effects) is `partial` and #88 (never-type) is genuinely
+   `open`, coupled only at `exit`.
+2. **Host-effects (§4 H-i) accepted:** real `wild:read/write/get_env/exit` prims ride the existing
+   RFC-0028 + RFC-0014 representation, with a fixture/sandbox differential (not an equality
+   differential, per §7 item 7 / OPEN-4). H-ii (capability parameter) and H-iii (marker trait) stay
+   rejected for v0, recorded as a future ADR-032 *certified*-mode direction (FLAG-ne-6), not
+   foreclosed.
+3. **The never-type decision (§5) accepted: Rank 1 — divergence-as-effect (N-C), no bottom `Ty`.** A
+   `diverges` effect on the RFC-0014 lattice; `wild:exit` carries `!{ffi, diverges}`; the narrow
+   admissibility rule (an unconditionally-diverging expression is well-typed at any expected type); the
+   totality checker treats `!diverges` as honestly non-total, flagged, never silent. N-B (nominal
+   `Never` + `absurd`) stays the named Rank-2 append-only upgrade path, held in reserve; N-A (a true
+   bottom subtype) stays rejected for v0.
+4. **The §6 fork is resolved in favour of the note's own lean (6-a): general-`?` is INDEPENDENT of the
+   never-type.** DN-107 §6 found, on analysis, that the general-position `?` CPS lift
+   (`match f() { Ok(x) => Ok(g(x)), Err(e) => Err(e) }`) "appears not to need a bottom type either" —
+   both arms are `Result[B,E]` and unify by ordinary structural equality, "no `⊥`, no divergence." This
+   reading is **adopted as the resolution**: general-`?` is unblocked by *implementing the CPS lift*
+   (real work, but bottom-type-free), not by this note's never-type close. **Correction (verified
+   precisely, mitigation #14): the "gated on the never-type `-> !`" framing does not appear in DN-102's
+   own text (DN-102 §6 FLAG-try-1 says only "deferred to a follow-up," naming no dependency) — it is
+   `tools/github/issues.yaml`'s **M-1025** issue body that carries that framing ("needs a CPS lift of
+   the enclosing expression, which is gated on the never-type `-> !` … M-1030 / DN-99 #88"). So the
+   relaxation applies there: **M-1025's FLAG-try-1 note is corrected (append-only, a progress note, not
+   a rewrite)** to drop the never-type gating and record general-`?` as its own CPS-lift follow-up,
+   independent of M-1030. It is tracked by **M-1049** (DN-102's second-research-pass issue, which now
+   additionally scopes in "confirm the CPS lift needs no never-type" as part of its research pass) and
+   does not block or wait on M-1030's implementation.
+5. **§7's open questions (OPEN-1…4) are accepted as the risk register** for the implementing wave, tags
+   staying `Declared`/`Empirical` as scoped, never `Proven` (VR-5) — not resolved here, tracked under
+   **M-1030** (the implementing issue).
+6. **DN-107 moves Draft → Accepted** on this basis. The implementing increment (real syscall + fixture
+   witness, the totality interaction, the OPEN-2/OPEN-3 reject witnesses) remains separate landed work
+   under M-1030, per §8 item 6 — this ratification accepts the *design*, not a claim that the code has
+   landed.
+
 ## Changelog
 
+- **2026-07-11** — **Ratified (maintainer, house rule #3).** Status **Draft → Accepted** — part of the
+  batch ratification of DN-101–DN-109. Rank 1 accepted for both #79 (host-effects, H-i) and #88
+  (never-type, N-C divergence-as-effect); the §6 fork resolved to **6-a** (general-`?` independent of
+  the never-type — DN-102 §6 FLAG-try-1 relaxed, append-only, tracked via M-1049). Append-only — the
+  original design record above is unchanged; this is an added ratification note.
 - **2026-07-10** — DN-107 created as **Draft** (M-1030 / ENB-7). A design-reasoner note working the
   host-effect (#79) + never-type (#88) decision forward to a **ranked recommendation, not a
   ratification**. Frames the two sub-gaps as separable-but-coupled-at-`exit` (§2, verified against the

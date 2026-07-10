@@ -13822,6 +13822,16 @@ issues:
       tracker (spurious `double-consume` on an affine-`Substrate` `?`-operand), resolved by snapshotting
       the affine tracker around the peek, with a regression witness in `tests/try_operator.rs`.
 
+      Progress note (2026-07-11, DN-107 ratification — corrects FLAG-try-1's framing, append-only):
+      DN-107 (ENB-7, host-effect + never-type) was ratified with its §6 fork resolved in favour of the
+      note's own lean — general-position `?` (this issue's FLAG-try-1) is INDEPENDENT of the never-type
+      `-> !`. The CPS lift `match f() { Ok(x) => Ok(g(x)), Err(e) => Err(e) }` unifies both arms by
+      ordinary structural equality (`Result[B,E]`), no bottom type needed. FLAG-try-1's "gated on the
+      never-type `-> !` / an early-return form (M-1030 / DN-99 #88)" framing above is therefore
+      RELAXED: the general-`?` CPS lift is its own follow-up (tracked via M-1049, DN-102's
+      second-research-pass issue), independent of M-1030/DN-107's scope. No change to this issue's own
+      landed status or DoD.
+
   - id: M-1026
     title: "enb ENB-3 — impl-level generic-parameter slot"
     milestone: "Phase 5 — Self-Hosting & Core Library"
@@ -13982,6 +13992,18 @@ issues:
         the note's capability-gate framing is restored/ratified. Backward compatibility: an unambiguous
         same-named-but-unrelated local type in a phylum that never crosses with the sealed one still
         checks unchanged (no false-positive collision across unrelated phyla/nodules).
+
+      Progress note (2026-07-11, maintainer direction on DN-104 — this issue's own DoD unchanged):
+      the maintainer directed pursuing DN-104 §3's fuller **option B, `pub(path)` scoped visibility**,
+      as the long-term successor to the shipped binary `priv` seal (filed separately as **M-1050**,
+      which `depends_on` this issue). The two are RELATED but DISTINCT: this issue (M-1036) fixes
+      identity RESOLUTION (bare-name lookup lets a foreign same-named local type impersonate the
+      sealed one); M-1050 generalizes visibility SCOPING (binary nodule-boundary seal → an arbitrary
+      nodule/phylum path grammar). A `pub(path)` grammar layered on today's bare-name resolution would
+      still inherit this issue's shadow-bypass gap, so M-1036 (this issue) is the prerequisite — fixing
+      nodule-qualified identity first is what lets `pub(path)` (M-1050) actually deliver a real
+      capability boundary rather than compounding an unforgeable-in-name-only mechanism. No change to
+      this issue's own scope or DoD.
 
   - id: M-1028
     title: "enb ENB-5 — transcendental + eps/delta float numerics"
@@ -14707,3 +14729,234 @@ issues:
         default per the DX audit's confirmed-GOOD determinism finding); `--summary`/`--dry-run` writes
         nothing and prints the same table already computed for stdout; `--help` documents all flags;
         existing default (no-flag) behavior byte-identical to today; tests cover each new flag.
+
+  - id: M-1048
+    title: "DN-101 long-term cross-nodule-link API — determine option B vs C, design API, iterate"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:research, area:language, priority:P2, status:todo]
+    epic: E28-1
+    depends_on: [M-1024]
+    doc_refs:
+      - corpus:DN-101
+    body: |
+      Filed 2026-07-11 from the maintainer's ratification of DN-101 (ENB-1, cross-nodule runtime link).
+      DN-101 moved Draft → Accepted with the v0 flat-namespace collision policy (§5 option A) confirmed
+      as the shipped baseline, but the maintainer explicitly left the LONG-TERM choice open between
+      DN-101 §5's two deferred alternatives: **option (B)** qualified names + per-frame home-nodule
+      scoping (the fully general end-state, tracked at M-982) and **option (C)** name-mangling to
+      qualified keys (a medium-cost AST/elab rewrite-pass middle path). Maintainer: "I'd rather
+      determine if option C or B is best long term, hard work is fine, plan it out first, nail down
+      what the api should look like, and go from there progressively/iteratively and keep the docs
+      updated and aligned."
+
+      User stories:
+      - As a language designer, I want the long-term cross-nodule name-resolution model settled (B vs
+        C) with its API shape planned before implementation starts, so that the v0 flat-namespace
+        refusal has a clear, iteratively-buildable successor rather than an open-ended deferral.
+
+      Definition of Done:
+      - A design pass (a new or amended DN) compares option B and option C against the project's
+        current cross-nodule call-site shapes, names the API surface each implies (how a disambiguated
+        reference reads at a call site), and recommends one for maintainer ratification; the docs
+        (DN-101, DN-99 register row #41, M-982) stay updated and aligned with the decision as it forms;
+        implementation then proceeds progressively/iteratively per the ratified plan, not as one big
+        rewrite.
+
+  - id: M-1049
+    title: "DN-102 second research pass + resolve FLAG-try-2 via language gap closure; re-stage for ratification"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:research, area:language, priority:P2, status:todo]
+    epic: E28-1
+    depends_on: [M-1025]
+    doc_refs:
+      - corpus:DN-102
+      - corpus:DN-99
+    body: |
+      Filed 2026-07-11 from the maintainer's non-ratification of DN-102 (ENB-2, the `?` try-operator
+      desugar). The maintainer declined to ratify DN-102 as drafted: "many must be resolved via
+      language gap closure; the flag try 2 issue presents an issue that must be resolved from that gap
+      review pass and should have been raised as part of it. much of this may just need a second
+      research pass to stage for ratification based on the data, project intent, and solid reasoned
+      research." DN-102 stays Draft pending this pass.
+
+      Two coupled closures:
+      1. A second research pass over DN-102's desugar rule (§2), error-type unification rule (§3), and
+         v0 `let`-RHS position restriction (§5) — grounded in the DN-99 surface-gap-closure register's
+         data and the project's zero-hand-port intent (ADR-045) — to re-stage the note for ratification.
+      2. Resolve **FLAG-try-2** (no `From`-error widening; the error-type unification rule is
+         exact-match only because Mycelium has no error-conversion trait wiring) via genuine language
+         gap closure, per the DN-99 ENB-2 gap-routing addendum (§8) this issue is cross-referenced from.
+
+      User stories:
+      - As a stdlib porter relying on `?`, I want error-widening (`From`-style) to be either supported
+        or explicitly, permanently scoped out by a ratified decision, so that the `?` desugar's coverage
+        is settled rather than an open residual FLAG.
+
+      Definition of Done:
+      - The second research pass is documented (a DN revision or a new companion DN) citing DN-99 data
+        and project-intent grounding for each of DN-102's open design points; FLAG-try-2 is resolved
+        either by a concrete error-conversion-trait design (with its own DoD) or by a ratified,
+        permanent exact-match-only decision with reasoning recorded; DN-102 is re-submitted for
+        maintainer ratification on this basis.
+
+  - id: M-1050
+    title: "design + implement pub(path) scoped visibility (successor to the binary priv seal, DN-104 §3 option B)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:todo]
+    epic: E28-1
+    depends_on: [M-1036]
+    doc_refs:
+      - corpus:DN-104
+      - corpus:DN-53
+    body: |
+      Filed 2026-07-11 from the maintainer's forward-direction decision on DN-104 (ENB-4, the
+      per-constructor visibility seal). DN-104 §3 confronted a fork — binary seal (option A, shipped
+      v0 via M-1027) vs full `pub(path)` scoped visibility (option B: `pub(nodule)`, `pub(phylum)`,
+      `pub(in a.b)`) — and recommended (A) for v0 under KISS/YAGNI, noting (A) is forward-compatible
+      with (B) ("`priv Mk` is exactly `pub(nodule) Mk`"). The maintainer directs pursuing the FULLER
+      option B as the long-term design: "if option B full pub(path) is better long term, especially in
+      the scope of this project's intents as a programming language, it makes sense to plan and
+      implement that. We're literally driving to multi-phylum work already; once fully self-hosted
+      after we close every gap, we'll dogfood via the transpiler, then hand-check/correct the resulting
+      code nodule/phylum by nodule/phylum."
+
+      This is related to, but distinct from, **M-1036** (nodule-qualified type identity — the fix for
+      the same-named-local-shadow bypass): M-1036 is about identity RESOLUTION (making the seal
+      unforgeable against a colliding name), while this issue is about visibility SCOPING (generalizing
+      the binary nodule-boundary seal to a path-scoped grammar). Both bear on making DN-104's mechanism
+      a real capability boundary; this issue depends on M-1036 landing first since a `pub(path)` grammar
+      layered on a still-bare-name-resolved seal would inherit the same shadow-bypass gap.
+
+      User stories:
+      - As a stdlib/semcore author organizing multi-phylum code, I want visibility scoped to an
+        arbitrary nodule/phylum path (not just a binary sealed/unsealed nodule boundary), so that a
+        capability type's construction can be shared with a designated subset of trusted nodules
+        without exporting it phylum-wide.
+
+      Definition of Done:
+      - A Draft DN designs the `pub(path)` grammar (`pub(nodule)`/`pub(phylum)`/`pub(in a.b)`), its
+        interaction with the M-1036 nodule-qualified-identity fix, and a migration story for existing
+        `priv`-sealed constructors (forward-compatible re-expression as `pub(nodule)`, per DN-104 §3);
+        the maintainer ratifies; implementation follows the DN's plan, conformance accept/reject +
+        differential witnesses per the usual ENB pattern, never-silent on any unsupported path form.
+
+  - id: M-1051
+    title: "desugar/expand-on-demand tooling for surface sugars (the DN-106 sugar-transparency principle, general)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:tooling, priority:P2, status:todo]
+    epic: E28-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-106
+      - corpus:DN-109
+    body: |
+      Filed 2026-07-11 from the maintainer's ratification of DN-106 (ENB-10 triage). The maintainer
+      established a general **surface-sugar transparency** principle ("that's re 106"): "We can carry
+      the named surface sugars as well, try to drive developers to the language's native targets, but
+      realistically the surface sugar hides nothing — it can all be expanded/revealed at any point by
+      the dev to its lower desugared grammar. So sugar is merely memetic and mnemonic convenience." And
+      the companion **gap-closure default**: "Outside of those cases where it's 'the language chooses
+      not to do this', [a gap] should be resolved by creating the convenience sugar and ensuring it
+      lowers mechanically and reliably."
+
+      Today `EXPLAIN` covers the transpiler's idiom-choice manifest (DN-109 §5.2, the L4 idiom-decision
+      EXPLAIN trail) but there is no general, uniform "reveal this surface sugar's lower desugared
+      grammar" capability surfaced to a developer at an arbitrary sugar site in the language itself
+      (e.g. at a `?`-operator use, a `let _`-sequencing site, a future record-update-literal sugar per
+      DN-106's reframed §3 fork B). This issue tracks building that capability so the transparency
+      principle is actually load-bearing tooling, not just a documented intent.
+
+      User stories:
+      - As a Mycelium developer using a surface sugar (`?`, a future record-update literal, or any
+        other mechanically-lowering convenience form), I want a command/tool that shows me exactly what
+        core-grammar form my sugar expands to, so that the sugar never becomes a black box I have to
+        trust rather than verify (house rule #2).
+
+      Definition of Done:
+      - A `desugar`/`expand` operation (CLI flag, LSP action, or `EXPLAIN`-integrated command — design
+        choice for the implementing DN) that, given a source span containing a surface sugar, shows its
+        fully-desugared lower-grammar equivalent; covers at minimum the sugars landed under the ENB
+        wave (`?` per DN-102, `let _` per DN-106, any future record-update sugar); never silently
+        approximates the expansion (an unsupported sugar site is a never-silent refusal, not a guess);
+        cross-referenced from DN-109's idiom-choice EXPLAIN manifest so the transpiler and the
+        interactive tooling share one transparency mechanism rather than diverging ones.
+
+  - id: M-1052
+    title: "DN-109 F1 (reframed) — optional borrowck/rust-analyzer precision aid for auto-detecting deliberate-exclusion sites (D7/D8), vs the flagged-suggested-native-idiom default path"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:research, area:tooling, priority:P3, status:todo]
+    epic: E32-1
+    depends_on: [M-1045]
+    doc_refs:
+      - corpus:DN-109
+      - corpus:DN-34
+    body: |
+      Filed 2026-07-11 from the maintainer's ratification of DN-109 (L4 idiom-decision framework / L5
+      structural remapping). DN-109 §7-b (fork "F1" in the companion zero-hand-port delta ledger, its
+      most pivotal open fork) originally framed acquiring a rustc/rust-analyzer borrowck front-end as
+      close to necessary for handling D7 (`&mut` aliasing) and D8 (unbounded-iterator boundedness) at
+      all — without it, both stay "Judgment/flags forever."
+
+      The maintainer reframed this: D7 and D8 are exactly the project's DELIBERATE-EXCLUSION set
+      (in-place aliasable mutation; unbounded iteration), and Mycelium has NATIVE SOLUTIONS to the
+      underlying problems those Rust constructs solved — destructure-and-reconstruct functional update
+      (D7's native solution; the same mapping DN-106 ratified for record-update) and bounded `for` /
+      structural recursion (D8's native solution, RFC-0007 §4.8). So porting these is
+      problem-to-native-solution mapping, not merely refusal: auto-emit where the mapping is
+      safe/mechanical (as D4's `&T`-erasure already does), and where it needs judgment (a case `syn`
+      cannot statically settle), FLAG WITH THE SUGGESTED NATIVE IDIOM (the `suggested_idiom` gap-
+      diagnostic field, M-1045) rather than a bare, unhelpful refusal. A borrowck frontend is therefore
+      an OPTIONAL PRECISION AID — it would let some D7/D8 sites be proven safe and promoted from
+      Judgment to Heuristic/Mechanical (fewer flags, more auto-emission) — but is NOT required for
+      mechanical porting to proceed, since the flag-with-suggestion path already gets a developer to
+      the native solution without it.
+
+      User stories:
+      - As a maintainer deciding whether to acquire a borrowck/rust-analyzer front-end for the
+        transpiler, I want a concrete accounting of what it would upgrade (which D7/D8 sites move from
+        Judgment-flag to Heuristic/Mechanical auto-emit) versus what already works without it (the
+        flag-with-suggested-native-idiom path), so the large scope commitment (DN-34 §6-Q1/Q3) is
+        weighed against its actual marginal benefit rather than treated as a porting blocker.
+
+      Definition of Done:
+      - A study (a DN or an appendix to the zero-hand-port delta ledger) that (a) confirms
+        `suggested_idiom` (M-1045) is landed and covers D7/D8 gap sites with the correct native-idiom
+        suggestion; (b) estimates, from the corpus, what fraction of D7/D8 sites a borrowck frontend
+        would provably resolve (auto-emit-eligible) versus what fraction are irreducibly judgment calls
+        even with perfect aliasing information; (c) recommends, on that evidence, whether to acquire the
+        frontend now, later, or never — explicitly NOT gated on this issue for mechanical porting to
+        continue using the flag-with-suggestion default.
+
+  - id: M-1053
+    title: "DN-108 companion ADR (transcendental prim accuracy contract, parallel to ADR-040) + OQ-3 vendored-vs-host-libm implementation decision"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:numerics, priority:P2, status:todo]
+    epic: E28-1
+    depends_on: [M-1028]
+    doc_refs:
+      - corpus:DN-108
+      - corpus:ADR-040
+    body: |
+      Filed 2026-07-11 from the maintainer's ratification of DN-108 (ENB-5, transcendental + eps/delta
+      float numerics). DN-108 §8 requires, for the *implementing* increment beyond the ratified design:
+      (item 4) a companion ADR for the transcendental prim class's accuracy contract, parallel to
+      ADR-040's scalar-float landing; and (§7 OQ-3) a decision on whether v0 calls a vendored /
+      version-locked transcendental routine (reproducible, heavier) or the ambient host libm (light,
+      platform-dependent) — DN-108 itself leans vendored, "for a never-silent, reproducible result"
+      (§6.4: most libms are not correctly-rounded, so a bit-identical three-way differential needs a
+      version-locked implementation to diff against). The ratification adopted the vendored lean as
+      direction but left the concrete routine/integration choice as implementation work.
+
+      User stories:
+      - As a numerics implementer landing `flt.sqrt/exp/ln/sin/cos/pow` (M-1028), I want a ratified ADR
+        naming the accuracy contract (v0 tag `Declared`, asserted-ULP sourcing, the composition-refusal
+        rule) and a settled vendored-vs-host-libm choice, so the M-1028 implementation has a stable
+        target rather than re-litigating DN-108's design mid-implementation.
+
+      Definition of Done:
+      - A Draft ADR (parallel to ADR-040) records the transcendental prim class's accuracy contract
+        (DN-108 §5.1's minimal v0 scope: the six named functions, `Declared` tag, asserted-ULP bound
+        sourcing, `NumErr::Domain` refusals, `ApproxRule::Refuse` composition) and is ratified; OQ-3 is
+        settled with a concrete implementation choice (a specific vendored/version-locked routine or
+        library, or a reasoned decision to use the host libm after all with the reproducibility
+        trade-off explicitly accepted); M-1028 proceeds against the ratified ADR + OQ-3 decision.

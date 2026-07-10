@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-108 |
-| **Status** | **Draft** (2026-07-10). Authored as a **design-forward reasoner note** for the DN-99 register row **#42** (float-eps-delta-numerics / transcendentals, `open`, runtime-`enb`, ENB-5) — one of the four DN-99 `open` surface gaps. It **works the decision forward to a ranked recommendation**; it **enacts nothing**, **ratifies nothing**, and **moves no other doc's status** (house rule #3, append-only). Tags are `Empirical` where read against the tree (dev tip `5130badc`, 2026-07-10), `Declared` for any design not yet built/ratified (VR-5). |
+| **Status** | **Accepted** (2026-07-11, maintainer ratification — see the dated "Ratification / Maintainer decision" note below: Rank 1 accepted, OQ-3/OQ-4 resolved with recommendation, tracked as follow-up). Originally **Draft** (2026-07-10). Authored as a **design-forward reasoner note** for the DN-99 register row **#42** (float-eps-delta-numerics / transcendentals, `open`, runtime-`enb`, ENB-5) — one of the four DN-99 `open` surface gaps. It **works the decision forward to a ranked recommendation**; it **enacts nothing**, **ratifies nothing**, and **moves no other doc's status** (house rule #3, append-only). Tags are `Empirical` where read against the tree (dev tip `5130badc`, 2026-07-10), `Declared` for any design not yet built/ratified (VR-5). |
 | **Decides** | *Proposes, for ratification (does not self-ratify):* (1) transcendental/irrational-result functions (`sqrt`, `exp`, `ln`, `sin`, `cos`, `pow`) surface as **`flt.*` interpreter prims** that return a plain `Repr::Float` **value** whose honest accuracy bound rides in **the existing `Bound`/`Approx` provenance certificate** (ADR-010) — **no new numeric surface type, no new kernel node** (FR-N1 / KC-3); (2) the v0 per-op guarantee tag is **`Declared`**, not `Empirical` — the ε is *asserted* from the host libm's documented ULP bound, there being no measured reference-case corpus yet (VR-5: no `Empirical` without trials; §6/§7.2); (3) out-of-domain inputs (`ln(x ≤ 0)`, `sqrt(x < 0)`, `pow` indeterminate forms) are a **never-silent `Result`/`NumErr::Domain` refusal**, never a silent NaN or fabricated value (G2); (4) **v0 refuses composition of an *approximate* transcendental input** (`ApproxRule::Refuse` — the ADR-040 §2.5 posture), because transcendental ε-propagation is nonlinear and has no checked rule yet — `sin(exp(x))` over an already-approximate `x` refuses rather than compounding a fabricated bound; only `Exact` (literal) inputs feed v0 transcendentals; (5) the **fast/certified mode split (RFC-0034/ADR-032)** is the *growth path* (`certified` earns `Empirical`→`Proven` as a corpus/theorem lands), **not** a v0 requirement (YAGNI). It does **not** edit `issues.yaml`, `CHANGELOG.md`, `Doc-Index.md`, `lib/**`, or `crates/**` — the integrator / cloud semcore lane own those (FLAGGED in §9). |
 | **Feeds** | DN-99 register row #42 + §4 Track-A **A4** (ENB-5); ADR-010 (the ε/δ kernel + shared certificate this note *consumes*, adds nothing to); ADR-040 / DN-69 (the scalar-float landing whose `flt.*` + `ApproxRule` pattern this note extends); ADR-032 / RFC-0034 (fast·balanced·certified mode — the growth path); DN-104 / M-1027 (the constructor seal that lets `Approx::proven` port faithfully — the path to a `Proven` transcendental); RFC-0001 §4.7 (bound composition / the guarantee lattice); `lib/std/numerics.myc` FLAG-num-1 (the ε/δ magnitude surface this row would close). |
 | **Grounds on** | KC-3 (small kernel — reuse the ADR-010 `Bound`/`Approx` certificate and the M-204 `ApproxRule` prim dispatch; **no new L0 node, no new numeric type, no new checking pass** — the prims are new registry entries, the bound is the existing record), DRY (the `flt.*` group + `flt_bound()` shape is the template), G2/never-silent (domain refusals + composition refusals both print the fix; no silent NaN, no fabricated ε), VR-5 (the tag is exactly what the basis supports — v0 = `Declared` because the ε is asserted; upgraded only by a corpus / a checked theorem), KISS/YAGNI (defer interval arithmetic and the first-class `Bounded<Float>` surface; defer the mode split to when `certified` has content). |
@@ -343,8 +343,51 @@ them. **FLAGs to the integrator:**
 
 ---
 
+## Ratification / Maintainer decision (2026-07-11)
+
+> **Ratified** — part of the maintainer's batch approval "approving and ratifying the rest of that set
+> from 101–109."
+
+**Recorded decision (append-only — this note's original §1–§7 text above is unchanged; this section
+resolves the §8 DoD items, per house rule #3):**
+
+1. **Representation choice (§8.1) accepted: Rank 1 — (a) op-level bound in provenance.** Transcendental
+   prims (`flt.sqrt/exp/ln/sin/cos/pow`) return a plain `Repr::Float` value carrying
+   `Bound{ErrorBound{eps, Linf}, BUserDeclared, Declared}` in the existing ADR-010 certificate — no new
+   numeric type, no new kernel node, no new checking pass (§5, §5.1).
+2. **v0 tag (§8.2) accepted: `Declared`**, not `Empirical`/`Proven` — the ε is asserted from libm's
+   documented ULP bound, with no measured reference-case corpus yet (§6.2, VR-5).
+3. **OQ-3 (vendored vs host libm) — accepted with recommendation, tracked follow-up, not blocking.**
+   §7 OQ-3 itself leans "vendored, for a never-silent, reproducible result" (§6.4: transcendentals are
+   not correctly-rounded on most libms, so a bit-identical differential needs a version-locked routine).
+   **This lean is adopted as the v0 direction** — implement against a vendored/version-locked routine
+   rather than the ambient host libm — but the concrete choice of routine and its integration are
+   **implementation work, not blocking this ratification**. Tracked via **M-1053** (below).
+4. **OQ-4 (land-now vs defer) — resolved: land now.** Rank 1 (§5) is confirmed as landing now, not
+   deferred to (e); the honest do-nothing fallback (Rank 5) is not adopted. Implementation proceeds
+   under the existing **M-1028** (ENB-5) tracking issue.
+5. **The ENB-5 tracking issue + companion ADR (§8.4) authorized.** M-1028 already exists as the ENB-5
+   tracking issue (`doc_refs: corpus:DN-108`); a **companion ADR** for the transcendental prim class's
+   accuracy contract (parallel to ADR-040) is additionally authorized and tracked via **M-1053**.
+6. **The v0 functional limit (§8.5) accepted.** Approximate-input composition refuses
+   (`ApproxRule::Refuse`, §6.1 — `sin(exp(x))` over an approximate input does not evaluate in v0, only
+   `sin(<literal>)` does); the differential pins **tag + domain refusals**, not bit-identical
+   transcendental values (§6.4). OQ-1 (the sound composition rule / transcendental `ErrorOp`) and OQ-2
+   (earning `Empirical`/`Proven`) stay open follow-up work under M-1028/M-1053, not blocking this
+   ratification.
+7. **DN-108 moves Draft → Accepted** on this basis.
+8. **Follow-up filed:** **M-1053** — "DN-108 companion ADR (transcendental prim accuracy contract,
+   parallel to ADR-040) + OQ-3 vendored-vs-host-libm implementation decision" (`status:todo`,
+   `depends_on: [M-1028]`, `doc_refs: corpus:DN-108`, `tools/github/issues.yaml`).
+
 ## §10 Changelog
 
+- **2026-07-11** — **Ratified (maintainer, house rule #3).** Status **Draft → Accepted** — part of the
+  batch ratification of DN-101–DN-109. Rank 1 (op-level provenance bound, v0 tag `Declared`) accepted;
+  OQ-3 (vendored libm) accepted with recommendation (vendored/version-locked, per the note's own lean);
+  OQ-4 resolved to land-now (M-1028). Companion ADR + the OQ-3 implementation decision tracked via
+  **M-1053**. Append-only — the original design record above is unchanged; this is an added
+  ratification note.
 - **2026-07-10** — DN-108 created (**Draft**). Design-forward reasoner note for DN-99 register row #42
   (transcendental ε/δ numerics, ENB-5 / A4). Framed the requirements (R1–R6) + DoD + user stories;
   enumerated five real alternatives (op-level provenance bound / first-class `Bounded<Float>` / interval

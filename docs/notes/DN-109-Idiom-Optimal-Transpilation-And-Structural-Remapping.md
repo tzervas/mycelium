@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-109 |
-| **Status** | **Draft (advisory)** (2026-07-10). RECOMMENDS a design; **ratifies nothing, ships no code.** House rule #3, a maintainer moves this to Accepted. |
+| **Status** | **Accepted** (2026-07-11, maintainer ratification — see the dated "Ratification / Maintainer decision" note below: the L4/L5 design accepted, fork F1/§7-b reframed per the gap-closure-default and native-solution-mapping principles, one fork (§7-d) flagged as not cleanly resolved). Originally **Draft (advisory)** (2026-07-10). At Draft time this RECOMMENDED a design; **ratified nothing, shipped no code.** |
 | **Feeds / builds on** | **DN-34** (Rust to Mycelium transpiler strategy, the gap-profiling instrument, not a bulk porter; §8.7-§8.8 M-991 verdict), **DN-85** (multi-language transpilation program), **DN-06** (`phylum`/`nodule`/`colony` lexicon), **RFC-0006** (L0 to L1 to L2 layer cake plus invariants S1-S5), **RFC-0001/0012** (paradigms plus ambient repr), **ADR-003** (content-addressed identity over elaborated L0), **ADR-014** (`wild`), **G2/VR-5** (never-silent / honest tags). |
 | **Decides** | *Nothing normatively.* Recommends (L4) a three-bucket idiom-decision framework, mechanical / heuristic / judgment, bound by a single "no-silent-upgrade" rule; and (L5) a structure-preserving default plus a machine-readable **remap manifest** provenance artifact, with the transpiler additions required to support it. |
 | **Guarantee** | Every claim here is **`Declared`**, this is a design proposal, not a measurement or a proof. |
@@ -328,6 +328,94 @@ or explicitly gated on this note's ratification (the remap manifest, the idiom E
   spw stdlib-port surface-gap register). This design lands as **DN-109**, confirmed free by grep
   of `docs/notes/` at reconciliation time (highest landed was DN-108).
 
+## Ratification / Maintainer decision (2026-07-11)
+
+> **Ratified** — part of the maintainer's batch approval "approving and ratifying the rest of that set
+> from 101–109."
+>
+> **F1 reframe (maintainer, same thread).** Per the maintainer's gap-closure principle (established
+> ratifying DN-106): the `&mut`/aliasing (D7) and unbounded-loop (D8) cases this note's fork §7-b names
+> are **deliberate exclusions**, not gaps a borrowck frontend is *required* to close.
+>
+> **Refinement (maintainer, same thread).** *"Mycelium has different native ways to solve the same
+> problems those excluded constructs solved — value-semantics/functional-update for mutable state,
+> structured/bounded control for unbounded loops, explicit never-silent `swap` for representation
+> change, errors-as-values, etc. So porting an excluded construct = map its underlying PROBLEM →
+> Mycelium's native SOLUTION (auto-emit where safe/mechanical; where it needs judgment … flag WITH the
+> suggested native idiom … so the dev applies the known native solution). Bare never-silent refusal is
+> only the last resort."* And the **transparency requirement**: the full lowering pipeline
+> (surface→…→lowest compiled form) must work across the language's intentionally-different
+> conventions/environments **and** stay transparent/revealable.
+
+**Recorded decision (append-only — this note's original §1–§10 text above is unchanged; this section
+resolves the §8 DoD items + the §7 forks, per house rule #3):**
+
+1. **§3.1 classification + the v0 auto-fire set (§7-e) accepted.** The Mechanical bucket (D1–D4,
+   D6-detect, D10) auto-fires in v0; Heuristic and Judgment emit flags (never silent rewrites), exactly
+   as §3.3's ranked recommendation B specifies.
+2. **The remap-manifest schema (§5.2) accepted** as the provenance artifact of record; **structure-
+   preserving 1:1 (§5.3-B) accepted as v0**, mandatory manifest from v0 even for pure `Keep`.
+3. **Fork §7-a (restructuring target level) accepted per the note's own lean: L2 surface** (more
+   legible for the review loop), not Core IR.
+4. **Fork §7-c (manifest: new artifact or extend `summary.json`/`union.gap.json`) accepted per the
+   note's own lean: extend** the existing gap-report artifact rather than introduce a new one (§5.2's
+   "Leaning: extend" text) — an implementation detail for **M-1044**, not blocking this ratification.
+5. **Fork §7-b / F1 (acquire a rustc/rust-analyzer borrowck frontend) — REFRAMED, not left open, per
+   the gap-closure default + the native-solution-mapping refinement above.** §6.1/§7-b originally framed
+   D7 (`&mut` aliasing) and D8 (unbounded-iterator boundedness) as staying "Judgment/flags forever"
+   *without* a borrowck frontend, implying the frontend is close to a *requirement* for handling them at
+   all. That framing is corrected: **D7 and D8 are exactly the deliberate-exclusion set** (in-place
+   aliasable mutation, unbounded iteration) that Mycelium's native solutions already cover —
+   destructure-and-reconstruct functional update (the D7 problem's native solution, and precisely what
+   DN-106 ratified for the record-update case) and bounded `for`/structural recursion (the D8 problem's
+   native solution, RFC-0007 §4.8). Per the refinement: where the Rust↔Mycelium problem→solution mapping
+   is **safe/mechanical**, the transpiler auto-emits it (D4's `&T`-erasure precedent, already landed);
+   where it needs **judgment** the source doesn't carry — `syn` cannot prove D7's non-aliasing, D8's
+   boundedness is not always syntactically evident — the transpiler **flags WITH the suggested native
+   idiom** (§3.1's `suggested_idiom` extension to a gap diagnostic, filed as **M-1045**) rather than a
+   bare, unhelpful refusal. **A borrowck/rust-analyzer frontend is therefore an OPTIONAL PRECISION AID**
+   — it would let the transpiler auto-detect *which* sites are provably safe to auto-map vs which need
+   the flagged-suggestion path (upgrading some D7/D8 sites from Judgment to Heuristic/Mechanical with a
+   checked basis) — **not a blocker for mechanical porting**, since the flagged-suggestion path already
+   gets a developer to Mycelium's native solution without it. Recorded as a **tracked forward question**
+   (not resolved to "acquire" or "don't acquire" — that remains a real, large scope commitment per
+   DN-34 §6-Q1/Q3 and the delta ledger's F1), filed as **M-1052** (below).
+6. **Fork §7-d (does non-1:1 restructuring belong in the transpiler, or a separate human-driven
+   post-transpile pass?) — FLAGGED, not cleanly resolved.** Neither the maintainer's ratification message
+   nor this note's own text states a lean for §7-d (unlike §7-a/§7-c, which the note's own prose already
+   leans on). Per the standing instruction to flag rather than guess a maintainer's position: **this
+   fork stays genuinely open**, tracked as a residual of this ratification rather than silently assumed
+   either way. It does not block DN-109's Accepted status (the manifest, per §5.2, "works either way" —
+   only the *decision engine's ownership* is unresolved) but is called out here for the maintainer's
+   confirmation.
+7. **New requirement (this ratification, not in the original §1–§10 text): the full lowering pipeline
+   must stay transparent/revealable across the language's intentionally-different conventions.** Beyond
+   §3.2's EXPLAIN-able-manifest ratchet (which covers idiom *choices*), the maintainer requires that the
+   **entire** surface→…→lowest-compiled-form pipeline remain inspectable end-to-end, including at the
+   points where Mycelium's native solution genuinely differs in convention/environment from the Rust
+   source (value semantics vs `&mut`, bounded `for` vs unbounded `loop`, explicit `swap` vs `as`,
+   errors-as-values vs panics/exceptions) — a dev must be able to reveal, at any stage, why the pipeline
+   chose the native form it did. This **ties directly to the desugar/expand-on-demand capability** filed
+   under DN-106's ratification (**M-1051**): the same on-demand-reveal mechanism DN-106 requires for
+   surface sugars is the natural vehicle for this pipeline-wide transparency requirement too — cross-
+   linked so the two don't diverge into separate tooling.
+8. **DN-109 moves Draft (advisory) → Accepted** on this basis (items 1–4, 5's reframe, and 7 resolve the
+   note's design; item 6 is flagged as a residual open question, not a blocker).
+9. **Follow-up filed:** **M-1052** — "DN-109 F1 (reframed) — optional borrowck/rust-analyzer precision
+   aid for auto-detecting deliberate-exclusion sites (D7/D8), vs the flagged-suggested-native-idiom
+   default path" (`status:todo`, `doc_refs: corpus:DN-109, corpus:DN-34`, `tools/github/issues.yaml`).
+
 ## Changelog (this note)
 
+- **2026-07-11** — **Ratified (maintainer, house rule #3).** Status **Draft (advisory) → Accepted** —
+  part of the batch ratification of DN-101–DN-109. §3.1/§7-e (Mechanical-only v0 auto-fire), §5.2/§5.3-B
+  (remap manifest + structure-preserving 1:1), §7-a (L2 surface), and §7-c (extend the existing gap-
+  report artifact) accepted per the note's own recommendations/leans. **Fork §7-b/F1 REFRAMED**: D7/D8
+  are the deliberate-exclusion set with native Mycelium solutions (functional update, bounded `for`); a
+  borrowck frontend is an optional precision aid, not a porting blocker — the default path is
+  flag-with-suggested-native-idiom (`suggested_idiom`, M-1045). **Fork §7-d FLAGGED** as genuinely
+  unresolved (decision-engine ownership), not silently assumed. Adds a new pipeline-wide
+  transparency/revealability requirement, cross-linked to DN-106's desugar/expand capability (M-1051).
+  Follow-up filed as **M-1052**. Append-only — the original design record above is unchanged; this is
+  an added ratification note.
 - 2026-07-10 — filed Draft, from the L4/L5 analysis (`docs/planning/zero-hand-port/delta-L4L5-idiom-structural-DRAFT.md`).

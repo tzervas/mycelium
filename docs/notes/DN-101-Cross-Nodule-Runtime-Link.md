@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-101 |
-| **Status** | **Draft** (2026-07-10). Authored alongside the **first landable increment** of M-1024 (ENB-1). It records the design of the cross-nodule **runtime-execution** close, recommends a name-collision policy **for ratification**, and **enacts nothing** and **moves no other doc's status** (house rule #3, append-only). Tags are `Empirical` where read against the code / witnessed by a running differential, `Declared` for any design not yet ratified (VR-5). |
+| **Status** | **Accepted** (2026-07-11, maintainer ratification — see the dated "Ratification / Maintainer decision" note below; the v0 flat-namespace policy of §5 option (A) is ratified as the shipped baseline, with the long-term choice between §5 options (B) and (C) left explicitly open for a dedicated planning pass). Originally **Draft** (2026-07-10), authored alongside the **first landable increment** of M-1024 (ENB-1). It records the design of the cross-nodule **runtime-execution** close, recommended a name-collision policy **for ratification**, and at Draft time **enacted nothing** and **moved no other doc's status** (house rule #3, append-only). Tags are `Empirical` where read against the code / witnessed by a running differential, `Declared` for any design not yet ratified (VR-5). |
 | **Decides** | *Proposes, for ratification:* (1) that the runtime dual of the check-time import resolution (`resolve_imports`, M-662) is a **phylum-wide runtime link** producing one linked `Env` the existing elab/mono/eval pipeline consumes unchanged; (2) the **v0 flat-namespace** semantics (one declaration per simple name across the phylum) with a **never-silent refusal** on a cross-nodule name collision; (3) the **residual** to defer (AOT parity, qualified per-nodule scoping for collision *disambiguation*, the `.myc` runtime mirror). It does **not** edit `issues.yaml`, `CHANGELOG.md`, or `Doc-Index.md` (the integrating session owns those). |
 | **Feeds** | DN-99 §A0 / register row #41 (ENB-1); M-1024; M-982 (the deferred collision-disambiguation follow-up); DN-26 (SCC self-hosting); DN-34 §4/§8.2 (the cross-nodule gap). |
 | **Grounds on** | KC-3 (small kernel, no new L0 node), DRY (reuse the check-time registry), G2 (never-silent), VR-5 (no tag upgraded past its basis). |
@@ -109,8 +109,36 @@ guessed. **This is the open decision the maintainer should ratify** before (A) i
 
 ---
 
+## Ratification / Maintainer decision (2026-07-11)
+
+> **Ratifies §5.** Maintainer: *"I'd rather determine if option C or B is best long term, hard work is
+> fine, plan it out first, nail down what the api should look like, and go from there
+> progressively/iteratively and keep the docs updated and aligned. Ratify."*
+
+**Recorded decision (append-only — this note's original §5 text above is unchanged; this section adds
+the ratification, per house rule #3):**
+
+1. **DN-101 moves Draft → Accepted.** The §5 table's option **(A) flat namespace, refuse collision**
+   is ratified as the **shipped v0 baseline** — it is what M-1024's first landable increment actually
+   implements, and it stays the running semantics.
+2. **The long-term choice is left open, not resolved by this ratification.** The maintainer's "option C
+   or B" refers to the two deferred alternatives in the §5 table: **option (B) qualified names +
+   per-frame home-nodule scoping** (the fully general end-state, tracked as M-982) and **option (C)
+   name-mangling to qualified keys** (the medium-cost AST/elab rewrite-pass middle path). Which of
+   these is best **long term** is explicitly **not decided here** — it is deferred to a **dedicated
+   planning pass**: design the API shape first (what a cross-nodule reference/call site should look
+   like under each option), then implement **progressively/iteratively**, keeping the docs updated and
+   aligned as the design firms up.
+3. **Follow-up filed:** **M-1048** — "DN-101 long-term cross-nodule-link API — determine option B vs C,
+   design API, iterate" (`status:todo`, `doc_refs: corpus:DN-101`, `tools/github/issues.yaml`).
+
 ## Changelog
 
+- **2026-07-11** — **Ratified (maintainer, house rule #3).** Status **Draft → Accepted**: the v0
+  flat-namespace collision policy (§5 option A) is confirmed as the shipped baseline; the long-term
+  option-B-vs-option-C choice is left open for a dedicated planning pass (API design first, then
+  progressive/iterative implementation, docs kept aligned throughout). Follow-up filed as **M-1048**.
+  Append-only — the original §5 design record above is unchanged; this is an added ratification note.
 - **2026-07-10** — DN-101 created (**Draft**): records the cross-nodule runtime-link close (ENB-1 /
   M-1024), the `PhylumEnv::link` design, the v0 flat-namespace collision policy (recommended, not
   ratified), and the deferred residual (AOT parity, qualified scoping = M-982, `.myc` runtime mirror =
