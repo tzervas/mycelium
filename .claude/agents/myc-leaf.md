@@ -53,6 +53,13 @@ In a repo-scoped session commit with `--no-verify` and run the equivalent gates 
 `clippy -D warnings` · `cargo test` or `just check` · `scripts/checks/markdown.sh` on any `.md` ·
 `branch-guard.sh` · `secrets.sh`). FLAG parent-owned files up; flag ambiguity, never guess (G2/VR-5).
 
+**Blocked-op protocol (mitigation #15).** A `PreToolUse`/branch-guard/worktree-guard block or a plain
+permission denial is a policy boundary, not a bug — never retry-loop the same blocked op, never
+circumvent it, never fabricate that it succeeded. Try the sanctioned alternative first (PR instead of a
+protected-branch push, `--no-verify` + out-of-band gates for an external-hook 403, split `commit`/`push`
+for the string-match false-positive). If none applies, `SendMessage(to: "main")` with the exact command
+and why, keep working on other non-blocked parts of your task meanwhile, and flag it in your report.
+
 ## Report format
 Branch + SHA · which `FR/NFR/VR/SC` it advances and how verified · new bounds + their tags/property
 tests · FLAGs for the integrating parent (changelog line, index rows, issue close-out).

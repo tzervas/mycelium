@@ -60,6 +60,15 @@ branches (`main`/`integration`/`dev`/`claude/head/*`) are **PR-only**, never a d
 `branch-guard.sh` · `secrets.sh` · `structured.sh`/`links.sh` for YAML/cross-ref edits). Flag ambiguity,
 never guess (G2/VR-5).
 
+**Blocked-op protocol (mitigation #15) — this binds you especially, since you drive the protected-branch
+merges.** A `PreToolUse`/branch-guard/worktree-guard block or a plain permission denial is a policy
+boundary, not a bug — never retry-loop the same blocked op, never circumvent it (no editing the guard,
+no smuggling a force), and never report a merge/close-out as done when it was blocked. Try the sanctioned
+alternative first (PR instead of a raw push to a protected branch, `--no-verify` + out-of-band gates for
+an external-hook 403, split `commit`/`push` for the string-match false-positive). If none applies,
+`SendMessage(to: "main")` with the exact command and why, keep reconciling other shared files meanwhile,
+and flag the open item in your report.
+
 ## Report format
 The batch landed · shared files reconciled + indices regenerated (with the regen commands run) · full
 `just check` result · issues/epics closed · the `/sync-down` result (PR per tier) · any residual FLAGs

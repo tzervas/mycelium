@@ -58,6 +58,13 @@ branch; split `commit` and `push`; **no force ever** (#10/#12, DN-97). Commit wi
 `scripts/checks/markdown.sh` + `branch-guard.sh` out-of-band on your `.md`. Flag ambiguity, never guess
 (G2/VR-5).
 
+**Blocked-op protocol (mitigation #15).** A `PreToolUse`/branch-guard/worktree-guard block or a plain
+permission denial is a policy boundary, not a code failure — never retry-loop the same blocked op, never
+circumvent it, never fabricate that it succeeded. Try the sanctioned alternative first (PR instead of a
+protected-branch push, `--no-verify` + out-of-band gates for an external-hook 403, split `commit`/`push`
+for the string-match false-positive). If none applies, `SendMessage(to: "main")` with the exact command
+and why, keep reasoning/drafting elsewhere in your DN meanwhile, and flag it in your report.
+
 ## Report format
 Branch + SHA · the Draft DN/ADR number (verified free) · the ranked recommendation with its objective
 table · the adversarial stress-test verdict · the Definition of Done for maintainer ratification · FLAGs
