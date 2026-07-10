@@ -70,7 +70,6 @@ nodule std.numerics;
 //   truth) AND the real `mycelium_std_numerics::{NumErr, CheckErr}` enum oracle (the refusal/verdict
 //   VARIANT set — an exhaustive Rust match makes a variant add/remove a compile-time differential
 //   break, never silent). No shared/integrator-owned file was edited to enable this (it was already so).
-
 // ── Guarantee lattice (mirror of mycelium_core::GuaranteeStrength) ─────────────────────────────────
 // Exact ⊐ Proven ⊐ Empirical ⊐ Declared (strongest → weakest; VR-5). Constructors are G-prefixed
 // because `Exact`/`Proven`/`Empirical`/`Declared` are RESERVED (the `T @ Exact` strength-annotation
@@ -81,10 +80,10 @@ type Guarantee = GExact | GProven | GEmpirical | GDeclared;
 // `GuaranteeStrength::rank`. Total, match-defined → Exact.
 fn rank(g: Guarantee) => Binary{8} =
   match g {
-    GExact     => 0b0000_0000,
-    GProven    => 0b0000_0001,
+    GExact => 0b0000_0000,
+    GProven => 0b0000_0001,
     GEmpirical => 0b0000_0010,
-    GDeclared  => 0b0000_0011
+    GDeclared => 0b0000_0011
   };
 
 // meet: the lattice MEET (greatest lower bound) — the WEAKEST (larger-rank) of the two strengths
@@ -97,19 +96,19 @@ fn rank(g: Guarantee) => Binary{8} =
 // would upgrade a composed strength past its weakest input — the exact VR-5 violation this guards.
 fn meet(a: Guarantee, b: Guarantee) => Guarantee =
   match a {
-    GExact => b,                 // identity: meet(Exact, g) == g
-    GDeclared => GDeclared,      // absorbing bottom: meet(Declared, g) == Declared
+    GExact => b,
+    GDeclared => GDeclared,
     GProven => match b {
-      GExact     => GProven,
-      GProven    => GProven,
+      GExact => GProven,
+      GProven => GProven,
       GEmpirical => GEmpirical,
-      GDeclared  => GDeclared
+      GDeclared => GDeclared
     },
     GEmpirical => match b {
-      GExact     => GEmpirical,
-      GProven    => GEmpirical,
+      GExact => GEmpirical,
+      GProven => GEmpirical,
       GEmpirical => GEmpirical,
-      GDeclared  => GDeclared
+      GDeclared => GDeclared
     }
   };
 
@@ -144,9 +143,9 @@ type BoundBasis = BProvenThm(Bytes) | BEmpiricalFit(Binary{8}, Bytes) | BUserDec
 // canonical VR-5 violation; the differential against BoundBasis::strength catches it.
 fn basis_strength(b: BoundBasis) => Guarantee =
   match b {
-    BProvenThm(_)      => GProven,
-    BEmpiricalFit(_,_) => GEmpirical,
-    BUserDeclared      => GDeclared
+    BProvenThm(_) => GProven,
+    BEmpiricalFit(_, _) => GEmpirical,
+    BUserDeclared => GDeclared
   };
 
 // ── Approx[A] carrier (mirror of mycelium_std_numerics::Approx<T>, strength component) ─────────────
@@ -206,11 +205,11 @@ type NumErr = BadEps | BadDelta | NoRule | NormMismatch | Overflow;
 // the differential at compile time — never silent).
 fn num_err_code(e: NumErr) => Binary{8} =
   match e {
-    BadEps       => 0b0000_0000,
-    BadDelta     => 0b0000_0001,
-    NoRule       => 0b0000_0010,
+    BadEps => 0b0000_0000,
+    BadDelta => 0b0000_0001,
+    NoRule => 0b0000_0010,
     NormMismatch => 0b0000_0011,
-    Overflow     => 0b0000_0100
+    Overflow => 0b0000_0100
   };
 
 // CheckErr: structured verdict for the tier-i re-validation checker (spec §3; RFC-0013). Emitted
