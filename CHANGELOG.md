@@ -29,7 +29,7 @@ languages, kernel included) plus the DN-39 TCB-admission boundary plus the never
 are all **retained**. **`Accepted → Enacted` is withheld** — the §2.4 re-freeze conditions are not met (the
 window is open). The Bucket-B descriptive sweep (`CURRENT-STATE.md`, `README.md`, ≈25 std-crate "DN-66
 freeze" headers, `.claude/memory/*`, an RFC-0001 footer) is FLAGged as a coordinated follow-on PR. (ADR-045;
-amends ADR-042 / DN-56 / DN-66 for the window; VR-5 / G2 / house rules #3/#4/#5.)
+amends ADR-042 / DN-56 / DN-66 for the window; RFC-0001 L0-floor lift recorded; VR-5 / G2 / house rules #3/#4/#5.)
 
 ### docs(dn-99): surface-gap closure register + plan for the spw / RFC-0031 stdlib-port wave (2026-07-10)
 
