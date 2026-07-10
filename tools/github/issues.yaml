@@ -12996,6 +12996,13 @@ issues:
       batch-output layout as the whole-corpus-completeness follow-on (a naive whole-crates run overwrites
       same-stem outputs -- never-silently but lossily).
 
+      PHASE-2 FOLLOW-ON LANDED (2026-07-10, DN-34 SS8.20): the path-qualified batch-output layout is done --
+      directory mode now mirrors the source tree under the out-dir (pure, unit-tested batch::output_rel_path),
+      so the whole-crates/ run writes all 337 .myc files with zero collisions (was ~25 clobbered). Zero
+      committed manifest churn (the 17 targets are flat single-crate src/ dirs, so mirrored path == bare
+      stem). Emission-plumbing only; no metric/tag move. Remaining lever: Import cross-nodule resolution (its
+      own scoped wave).
+
   - id: M-1007
     title: "semcore Stage-5 increment 2: checkty type algebra (has_var/type_head/subst_ty/param_subst)"
     milestone: "Phase 5 — Self-Hosting & Core Library"

@@ -12,6 +12,22 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### feat(transpile): M-1006 Phase-2 — path-qualified batch output (whole-corpus-completeness) (2026-07-10)
+
+Lands the whole-corpus-completeness follow-on noted in DN-34 §8.19 (kickoff `trx2`, E33-1). The
+transpiler's directory/batch mode named each output by **file stem only**, so a whole-`crates/` run had
+every crate's `lib.rs`/`mod.rs`/`error.rs` overwrite the previous one — last-writer-wins, loudly warned
+but **lossy** (~25 of 337 files clobbered), which blocked keeping every emission in an automated
+multi-crate translation wave. Outputs are now **path-qualified** by mirroring the source tree under the
+out-dir (a file's path relative to the batch root becomes its output path — `mycelium-core/src/lib.myc` vs
+`mycelium-std/src/lib.myc`), injective by construction so the collision cannot occur. The `crates/` run now
+writes all **337** `.myc` files with **zero** collision warnings. Zero committed churn: the 17
+`gen/myc-drafts/` targets are flat single-crate `src/` dirs, so their mirrored path reduces to the bare
+stem — byte-identical to the prior flat naming. Files: the `mycelium-transpile` CLI bin plus a pure,
+unit-tested `batch::output_rel_path`; DN-34 §8.20. Emission-plumbing only — no transpilation
+logic, metric, or guarantee tag moves (emission stays `Declared`). Verified: change-scoped `cargo fmt` /
+`clippy -D warnings` / `test -p mycelium-transpile` green (63 tests, +5 for `output_rel_path`).
+
 ### feat(transpile): M-1006 Phase-2 opens — whole-corpus profile + honest file-linkage taxonomy (2026-07-10)
 
 Opens the M-1006 ladder's Phase-2 (expand the Rust→Mycelium rip-through beyond the 17-target port

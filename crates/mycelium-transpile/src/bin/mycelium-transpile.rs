@@ -4,11 +4,16 @@
 //! `<input>` is either:
 //! - a single `.rs` file — writes `<out-dir>/<stem>.myc` + `<out-dir>/<stem>.gap.json`, then
 //!   prints a one-line summary (unchanged single-file behavior); or
-//! - a directory (typically a crate's `src/`) — recurses every `*.rs` file (skipping test
-//!   infrastructure, `src/batch.rs::discover_rs_files`), transpiles each independently, writes
-//!   the same per-file `<stem>.myc`/`<stem>.gap.json` pair for every discovered file **plus** two
-//!   combined artifacts: `<out-dir>/summary.json` (per-file + aggregate counts) and
-//!   `<out-dir>/union.gap.json` (every gap from every file, plus aggregate category counts).
+//! - a directory (typically a crate's `src/`, or the whole `crates/` corpus) — recurses every
+//!   `*.rs` file (skipping test infrastructure, `src/batch.rs::discover_rs_files`), transpiles each
+//!   independently, and writes a `.myc`/`.gap.json` pair for every discovered file at a
+//!   **path-qualified** output that mirrors the source tree under `<out-dir>` (a file's path
+//!   relative to the batch root becomes its output path — `mycelium-core/src/lib.myc`, not a flat
+//!   `lib.myc`), so a whole-corpus run never overwrites two crates' same-stem files (M-1006
+//!   Phase-2). For a single-crate `src/` with a flat layout the mirrored path is just the stem, so
+//!   the output is identical to the pre-Phase-2 flat naming. Also writes two combined artifacts:
+//!   `<out-dir>/summary.json` (per-file + aggregate counts) and `<out-dir>/union.gap.json` (every
+//!   gap from every file, plus aggregate category counts).
 //!
 //! `--vet` (M-1000) runs the **real** `myc check` oracle over every emitted `.myc`, writes
 //! `<out-dir>/vet.json` (per-file + aggregate vet records), and prints the **`checked_fraction`**
@@ -21,7 +26,7 @@
 //! `Empirical` (measured — see `src/vet.rs`). No `clap` dependency — plain `std::env::args`
 //! (kickoff-scoped minimal deps).
 
-use mycelium_transpile::batch::{discover_rs_files, summarize, transpile_batch};
+use mycelium_transpile::batch::{discover_rs_files, output_rel_path, summarize, transpile_batch};
 use mycelium_transpile::vet::{vet_batch, MycChecker, VetInput, VetReport};
 use mycelium_transpile::{transpile_file, GapReport};
 use std::env;
@@ -113,23 +118,43 @@ fn print_vet_summary(report: &VetReport, vet_path: &Path) {
     );
 }
 
-/// Write `<out_dir>/<stem>.myc` + `<out_dir>/<stem>.gap.json` for one already-transpiled file.
-/// Shared by both single-file and batch mode so the two never drift.
+/// Append a `.ext` suffix to a path **without** replacing any existing extension — unlike
+/// `Path::with_extension`, which would eat a trailing dotted segment (`foo.bar` +`myc` →`foo.myc`).
+/// So `<base>` → `<base>.myc` / `<base>.gap.json` faithfully, even for a `foo.bar` stem.
+fn append_ext(base: &Path, ext: &str) -> PathBuf {
+    let mut s = base.as_os_str().to_os_string();
+    s.push(".");
+    s.push(ext);
+    PathBuf::from(s)
+}
+
+/// Write `<out_dir>/<rel_noext>.myc` + `<out_dir>/<rel_noext>.gap.json` for one already-transpiled
+/// file, creating any parent directories. `rel_noext` is the output path **without** extension,
+/// relative to `out_dir`: a bare stem in single-file mode (`lib`), or the source's path **mirrored
+/// under the batch root** in directory mode (`mycelium-core/src/lib`) — the latter is what makes a
+/// whole-corpus run non-lossy (two crates' `lib.rs` land at distinct, path-qualified outputs instead
+/// of one overwriting the other; M-1006 Phase-2). Shared by both modes so they never drift. Returns
+/// the written `.myc` path (for the vet loop).
 fn write_pair(
-    stem: &str,
+    out_dir: &Path,
+    rel_noext: &Path,
     myc_text: &str,
     report: &GapReport,
-    out_dir: &Path,
-) -> Result<(), String> {
-    let myc_path = out_dir.join(format!("{stem}.myc"));
-    let gap_path = out_dir.join(format!("{stem}.gap.json"));
+) -> Result<PathBuf, String> {
+    let base = out_dir.join(rel_noext);
+    if let Some(parent) = base.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|e| format!("failed to create {}: {e}", parent.display()))?;
+    }
+    let myc_path = append_ext(&base, "myc");
+    let gap_path = append_ext(&base, "gap.json");
     fs::write(&myc_path, myc_text)
         .map_err(|e| format!("failed to write {}: {e}", myc_path.display()))?;
     let gap_json = serde_json::to_string_pretty(report)
-        .map_err(|e| format!("failed to serialize gap report for {stem}: {e}"))?;
+        .map_err(|e| format!("failed to serialize gap report for {}: {e}", base.display()))?;
     fs::write(&gap_path, gap_json)
         .map_err(|e| format!("failed to write {}: {e}", gap_path.display()))?;
-    Ok(())
+    Ok(myc_path)
 }
 
 fn run_single_file(input: &Path, out_dir: &Path, vet: bool) -> ExitCode {
@@ -146,10 +171,13 @@ fn run_single_file(input: &Path, out_dir: &Path, vet: bool) -> ExitCode {
         .and_then(|s| s.to_str())
         .unwrap_or("output");
 
-    if let Err(e) = write_pair(stem, &myc_text, &report, out_dir) {
-        eprintln!("mycelium-transpile: {e}");
-        return ExitCode::FAILURE;
-    }
+    let myc_path = match write_pair(out_dir, Path::new(stem), &myc_text, &report) {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("mycelium-transpile: {e}");
+            return ExitCode::FAILURE;
+        }
+    };
 
     let emitted = report.emitted_items.len();
     let gapped = report.gaps.len();
@@ -167,7 +195,6 @@ fn run_single_file(input: &Path, out_dir: &Path, vet: bool) -> ExitCode {
     );
 
     if vet {
-        let myc_path: PathBuf = out_dir.join(format!("{stem}.myc"));
         let inputs = vec![VetInput::from_report(myc_path, &report)];
         run_vet(&inputs, out_dir);
     }
@@ -202,38 +229,50 @@ fn run_batch(input_dir: &Path, out_dir: &Path, vet: bool) -> ExitCode {
         eprintln!("mycelium-transpile: {}: {err}", path.display());
     }
 
-    // Per-file artifacts, named by stem — collisions (two files sharing a stem, e.g. two
-    // `mod.rs`) are resolved by keeping the *last* write and flagging it loudly (never silent),
-    // since this PoC's per-file naming scheme has no path-qualification mechanism.
-    let mut seen_stems: std::collections::HashMap<String, std::path::PathBuf> =
-        std::collections::HashMap::new();
-    // Collect one vet input per written `.myc` (only used when `--vet`); the myc path mirrors
-    // `write_pair`'s naming so a stem collision (last-writer-wins, warned above) vets the file that
-    // actually landed on disk.
-    let mut vet_inputs: std::collections::BTreeMap<String, VetInput> =
+    // Per-file artifacts, **path-qualified** by mirroring the source tree under `out_dir` (M-1006
+    // Phase-2): each file's path relative to the batch root becomes its output path, so two crates'
+    // `lib.rs` land at distinct outputs (`mycelium-core/src/lib.myc` vs `mycelium-std/src/lib.myc`)
+    // instead of one silently overwriting the other — the whole-corpus-completeness fix that lets an
+    // automated multi-crate wave keep every emission. Distinct source files have distinct relative
+    // paths, so a collision is impossible by construction; a defensive guard still flags the
+    // impossible case (never silent, G2) rather than trusting the invariant blindly.
+    let mut written: std::collections::HashSet<PathBuf> = std::collections::HashSet::new();
+    // One vet input per written `.myc` (only used when `--vet`), keyed by the actual output path so
+    // the order is deterministic and the file vetted is exactly the file written.
+    let mut vet_inputs: std::collections::BTreeMap<PathBuf, VetInput> =
         std::collections::BTreeMap::new();
     for r in &results {
-        let stem = r
-            .path
-            .file_stem()
-            .and_then(|s| s.to_str())
-            .unwrap_or("output")
-            .to_string();
-        if let Some(prev) = seen_stems.insert(stem.clone(), r.path.clone()) {
+        // Path relative to the batch root, `.rs` extension stripped (pure logic in `batch.rs` so it
+        // is unit-tested there). Fall back to the bare stem if the path is somehow not under the
+        // root (never-silent — warned, not silently mis-placed).
+        let rel_noext = match output_rel_path(&r.path, input_dir) {
+            Ok(rel) => rel,
+            Err(fallback) => {
+                eprintln!(
+                    "mycelium-transpile: WARNING {} is not under the batch root {} — falling back \
+                     to a bare-stem output name",
+                    r.path.display(),
+                    input_dir.display()
+                );
+                fallback
+            }
+        };
+        let myc_path = match write_pair(out_dir, &rel_noext, &r.myc, &r.report) {
+            Ok(p) => p,
+            Err(e) => {
+                eprintln!("mycelium-transpile: {e}");
+                return ExitCode::FAILURE;
+            }
+        };
+        if !written.insert(myc_path.clone()) {
             eprintln!(
-                "mycelium-transpile: WARNING stem collision `{stem}.myc`/`{stem}.gap.json` — \
-                 {} overwrites {} (no path-qualification in this PoC's per-file naming)",
-                r.path.display(),
-                prev.display()
+                "mycelium-transpile: WARNING output path collision at {} — a prior file already \
+                 wrote here (should be impossible with path-qualified naming)",
+                myc_path.display()
             );
         }
-        if let Err(e) = write_pair(&stem, &r.myc, &r.report, out_dir) {
-            eprintln!("mycelium-transpile: {e}");
-            return ExitCode::FAILURE;
-        }
         if vet {
-            let myc_path = out_dir.join(format!("{stem}.myc"));
-            vet_inputs.insert(stem, VetInput::from_report(myc_path, &r.report));
+            vet_inputs.insert(myc_path.clone(), VetInput::from_report(myc_path, &r.report));
         }
     }
 

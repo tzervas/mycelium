@@ -1366,3 +1366,25 @@ Closes the transpiler-side half of §8.16 item 4. `&`/`|` now emit `and`/`or` (n
   same-stem outputs (`lib.myc` over `lib.myc`) — never-silently (it warns per collision) but lossily; a
   path-qualified output layout is the clean follow-on that makes a whole-corpus emission complete. Emission
   `Declared`; vet `Empirical`. **Status unchanged (Draft).** (Append-only; VR-5; G2.)
+- **2026-07-10 — §8.20 added: path-qualified batch output lands the whole-corpus-completeness follow-on
+  from §8.19 (M-1006 Phase-2, kickoff `trx2`).** Acts on §8.19's noted batch-output prerequisite. Before
+  this, directory/batch mode named each output by **file stem only** (`<out>/lib.myc`), so a whole-`crates/`
+  run had every crate's `lib.rs` (and `mod.rs`, `error.rs`, …) **overwrite** the previous one — last-writer-wins,
+  loudly warned (never silent, G2) but **lossy**: of 337 discovered files, ~25 were clobbered, so an automated
+  multi-crate translation wave could not keep every emission. The fix (`src/bin/mycelium-transpile.rs` +
+  a pure, unit-tested `batch::output_rel_path`): each file's output is **path-qualified** by mirroring the
+  source tree under the out-dir — a file's path *relative to the batch root* becomes its output path
+  (`mycelium-core/src/lib.myc` vs `mycelium-std/src/lib.myc`), which is injective by construction (distinct
+  sources have distinct relative paths), so the collision cannot occur; a defensive guard still flags the
+  impossible duplicate (G2). **Whole-corpus verification:** the `crates/` run now writes all **337** `.myc`
+  files with **zero** collision warnings (was ~25 clobbered). **Zero committed churn:** the 17
+  `gen/myc-drafts/` targets are all flat single-crate `src/` dirs (no nested `.rs`), so their mirrored path
+  reduces to the bare stem — byte-identical to the pre-Phase-2 flat naming (the regenerated manifest changed
+  only its `generated_from_commit` provenance SHA, which was reverted to keep this increment's diff to the
+  code). Single-file mode is unchanged. Five data-driven `output_rel_path` tests pin the mapping (under-root
+  mirroring, the two-crates-`lib.rs` non-collision property, flat-root-reduces-to-stem, not-under-root
+  `Err` fallback, `.rs`-only extension stripping); change-scoped `cargo fmt`/`clippy -D warnings`/`test -p
+  mycelium-transpile` green (63 tests). This is an emission-plumbing change only — **no transpilation logic,
+  no metric, no guarantee tag moves** (emission stays `Declared`). **Status unchanged (Draft).** The larger
+  §8.19 automation lever — `Import` cross-nodule resolution — remains the next, separately-scoped wave.
+  (Append-only; VR-5; G2.)
