@@ -1,0 +1,45 @@
+# Mycelium GitHub PM-sync tooling — uv/pip dev-venv metadata.
+#
+# The reconcile engine `gh-issues-sync.py` and its siblings (gh-issues-dedup.py, doc_refs_check.py,
+# manifest-check.py, git-signing-sync.py) are pure Python standard library EXCEPT **PyYAML** (the
+# `issues.yaml` parser — gh-issues-sync.py:73). This file declares that one dependency so `uv sync`
+# here builds a reproducible, isolated dev venv (`.venv/`, already gitignored) that the wrappers
+# (`gh-sync-all.sh` / `gh-sync-all.ps1`) run the engine under — no reliance on a system-wide PyYAML.
+#
+# Runtime ALSO needs the `gh` GitHub CLI on PATH (authenticated to the repo owner) — a system tool,
+# not a pip dependency, so it is not declared here (see RECONCILE.md).
+#
+# Usage (from tools/github/, or with `--project tools/github` from the repo root):
+#   uv sync                                            # create .venv/ with PyYAML (+ dev: ruff)
+#   uv run python gh-issues-sync.py --all --dry-run    # run the engine in the venv
+#   bash gh-sync-all.sh --dry-run                      # the wrapper auto-prefers `uv run`
+
+[project]
+name = "mycelium-gh-pm-sync"
+version = "0.1.0"
+description = "Mycelium GitHub project-management sync engine (issues/labels/milestones/PRs/Project v2)"
+readme = "RECONCILE.md"
+requires-python = ">=3.11"
+# Sole third-party runtime dependency: PyYAML (the issues.yaml parser). Everything else is stdlib.
+dependencies = ["PyYAML>=6"]
+
+[dependency-groups]
+# Tooling for working ON these scripts — ruff is the repo's linter/formatter (CLAUDE.md). Installed
+# by default on `uv sync`; use `uv sync --no-dev` for a runtime-only venv (CI just running the sync).
+dev = ["ruff>=0.6"]
+
+[tool.uv]
+# VIRTUAL project: manage the venv/deps but do NOT build/install these hyphen-named scripts as a
+# package — they are standalone files run by path, not an importable/installable module. Avoids a
+# spurious "no build backend" build attempt on `uv sync`.
+package = false
+
+[tool.ruff]
+# Match the repo-wide ruff default width (88) so tools/github/*.py format identically to the tree
+# (parity with scripts/checks/format.sh — plain `ruff format`, no width override); same rationale as
+# the sibling tools/llm-harness/pyproject.toml.
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+# Default rule set — checked identically to the rest of the repo (no extra/looser rules).
