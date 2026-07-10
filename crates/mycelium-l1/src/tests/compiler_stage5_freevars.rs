@@ -392,7 +392,7 @@ fn freevars_basic_cases() {
         "list_literal",
         &Expr::Lit(Literal::List(vec![pathv("a"), pathv("b")])),
     );
-    // Fuse / TupleLit / If / Ascribe / Swap / WithParadigm / Wild / Spore / Consume walk-throughs.
+    // Fuse / TupleLit / If / Ascribe / Swap / WithParadigm / Wild / Spore / Consume / Wrapping walk-throughs.
     assert_free_vars(
         "fuse",
         &Expr::Fuse {
@@ -440,6 +440,8 @@ fn freevars_basic_cases() {
     assert_free_vars("wild", &Expr::Wild(Box::new(pathv("w"))));
     assert_free_vars("spore", &Expr::Spore(Box::new(pathv("s"))));
     assert_free_vars("consume", &Expr::Consume(Box::new(pathv("r"))));
+    // `wrapping { x }` (M-791) recurses into its body exactly like `consume`: free_vars = ["x"].
+    assert_free_vars("wrapping", &Expr::Wrapping(Box::new(pathv("x"))));
     assert_free_vars(
         "reclaim",
         &Expr::Reclaim {

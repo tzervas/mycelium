@@ -12,6 +12,69 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### docs(adr-045): ratify the whole-project unfreeze for early gap-closure (Draft → Accepted) (2026-07-10)
+
+Ratifies **ADR-045 — Whole-Project Unfreeze (L0 Core IR → L1 kernel → L2/L3 grammar → stdlib lexicon) for
+Early Gap-Closure** (Draft → **Accepted**, maintainer-directed 2026-07-10). Broadens the original
+kernel+lexicon Draft to the **whole project** and resolves its three scoping questions: **OQ-1** L0 Core IR
+(RFC-0001) **in scope** (overriding the Draft's keep-L0-frozen lean — recorded per house rule #4, not
+erased); **OQ-2** L2/L3 surface grammar **in scope**; **OQ-3** the window is bounded by the **DN-99 residual
+worklist** (the 4 open + 12 partial register rows, tracked as the M-1024…M-1034 `enb` backlog under E28-1)
+exhausted, a DN-56/DN-76-successor scorecard re-scored green, and a follow-up maintainer-ratified ADR
+reinstating the DN-39-only diff policy — re-score owner the maintainer. Landed-basis: maintainer-ratified
+whole-project unfreeze, 2026-07-10. Applies the append-only cascade (Bucket-A/E): dated "Amended by ADR-045
+(Accepted)" status pointers on **ADR-042 §2.1(a)**, **DN-56 §9/§6**, **DN-66 §2** (decision bodies
+unchanged), and records RFC-0001's L0-floor lift; the ADR-042 §2.1(b) END-STATE (zero foreign first-party
+languages, kernel included) plus the DN-39 TCB-admission boundary plus the never-silent/honesty discipline
+are all **retained**. **`Accepted → Enacted` is withheld** — the §2.4 re-freeze conditions are not met (the
+window is open). The Bucket-B descriptive sweep (`CURRENT-STATE.md`, `README.md`, ≈25 std-crate "DN-66
+freeze" headers, `.claude/memory/*`, an RFC-0001 footer) is FLAGged as a coordinated follow-on PR. (ADR-045;
+amends ADR-042 / DN-56 / DN-66 for the window; RFC-0001 L0-floor lift recorded; VR-5 / G2 / house rules #3/#4/#5.)
+
+### docs(dn-99): surface-gap closure register + plan for the spw / RFC-0031 stdlib-port wave (2026-07-10)
+
+Adds **DN-99 — Surface-Gap Closure Register and Plan** (Draft), the single closure register for the
+`spw` stdlib-port wave: 92 enumerated surface gaps, each with a status
+(open/partial/already-closed/transpiler-only/idiom), an `Empirical` evidence cite
+(`file:line` / `M-id` read against dev tip `6d906b76`), a layer, a closure approach, a DoD, a DN-flag,
+a tracking ref, a semcore-lane collision class, a size, and a priority. Foregrounds the already-closed
+set (§3) so landed work is not re-opened — the Float correction (ADR-040 Enacted 2026-07-02; `flt.*`
+prims registered) refutes the stale ".myc has no float surface" flag (mitigation #14). Ranks a two-track
+closure plan (§4) toward the zero-hand-port north star: language `enb` closures (grammar/kernel/runtime)
+and transpiler closures, under the whole-project unfrozen posture (ADR-045). Attests completeness
+honestly (§5): one targeted spot-verify round; residual uncertainty `Declared`, never claimed `Proven`.
+The §8 `enb` backlog is filed as **M-1024…M-1034** under epic E28-1 — each cross-references M-1023's
+Wave-0 consolidation, and those touching `mycelium-l1` note "cloud-semcore-lane, coordinate M-1013"
+(unfrozen-actionable, not deferred-by-freeze). Enacts nothing; moves no other doc's status. Authored
+READ + DN only. (DN-99; RFC-0031; E28-1; VR-5 / G2 / house rule #3.)
+
+### fix(semcore): complete the `Wrapping` Expr-variant port across the self-hosted `.myc` frontend (2026-07-10)
+
+Closes a pre-existing transparency gap in the self-hosted compiler. `ast.rs::Expr` has 19 variants
+including `Wrapping(Box<Expr>)` (the M-791 wrapping-arithmetic opt-in), but the five `.myc` compiler
+nodules (`ast`/`ambient`/`totality`/`parse`/`semcore`.myc) each declared an 18-variant `Expr` with
+`Wrapping` absent — while `semcore.myc` claimed to mirror `ast.myc::Expr` "verbatim, field-for-field."
+That claim was false and the omission carried no FLAG (surfaced under house rule #4). This change adds
+`| Wrapping(Expr)` between `Spore` and `Consume` (matching the Rust variant order) in all five `Expr`
+decls, and a `Wrapping` arm to every exhaustive Expr-walker — so the type now genuinely mirrors the
+reference AST and every traversal handles the variant (wildcard-free; a future variant is still a
+`myc check` error, G2). Most walkers recurse into the single child exactly like `Consume` (`resolve_expr`,
+`collect_calls_expr`, `descend_walk`, `collect_tuple_arities_expr`, `fvw`); `print_expr` renders the
+block surface `wrapping { <expr> }`; the `walk_expr` structural fingerprint uses a NEW unused tag
+(`0x6E`, identical in `parse.myc` and `ambient.myc`) so no existing Stage-4 fingerprint hash shifts.
+**One non-mechanical arm — `grade`:** `wrapping { … }` attests **`Declared`** as a leaf (RFC-0034 §10 —
+the enclosed modular ops are the developer's explicit opt-in, never upgraded past that basis), matching
+`Spore`/`Wild` and the Rust `Expr::Wrapping(_) => Declared` — it does NOT inherit the body's grade the
+way the grade-transparent `Consume` move does. The `compiler_stage5_freevars` differential gains a
+`Wrapping` fixture (`free_vars(wrapping { x }) == ["x"]`) pinning the `fvw` arm against the live
+`mono::free_vars` oracle. **Never-silent remaining work (FLAG-semcore-37 / FLAG-parse-12 / FLAG-ast-9):**
+the self-hosted lexer/parser does not yet *produce* a `Wrapping` node (no `wrapping` keyword in
+token/lex, no parse rule) — the AST is deliberately ahead of the surface; parsing `wrapping { e }` is
+deferred. The five-way `Expr` (and keyword/token) duplication this touch exercised is flagged for a
+future DRY decision. Verified: `myc-dogfood --strict` green (9/9 nodules), `cargo test -p mycelium-l1
+--lib` green (471 passed), `clippy -D warnings` + `cargo fmt` clean, `markdown` gate clean. Graded
+`Empirical`. (M-1013 / M-791; E18-1; RFC-0034 §10; VR-5/G2.)
+
 ### feat(transpile): M-1006 Phase-2 — path-qualified batch output (whole-corpus-completeness) (2026-07-10)
 
 Lands the whole-corpus-completeness follow-on noted in DN-34 §8.19 (kickoff `trx2`, E33-1). The
@@ -51,6 +114,7 @@ Phase-2 residual worklist (`Import` 1,085 = the cross-nodule symbol-table prereq
 remaining automation lever; a path-qualified batch-output layout as the whole-corpus-completeness
 follow-on). Verified: change-scoped `cargo fmt`/`clippy -D warnings`/`test -p mycelium-transpile` green
 (58 tests). Emission `Declared`; vet `Empirical`; DN-34 stays `Draft`.
+
 ### build(checks): auto-reflow the MD004 soft-wrap `+`/`*`-at-line-start pitfall (`just md-fix`) (2026-07-10)
 
 The recurring MD004 false-positive — prose that soft-wraps so a `+`/`*` operator lands at line start,
