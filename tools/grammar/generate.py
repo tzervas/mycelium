@@ -114,6 +114,7 @@ STRUCTURAL_KEYWORDS = {
     "paradigm",
     "phylum",
     "policy",
+    "priv",
     "pub",
     "reclaim",
     "spore",
@@ -394,6 +395,7 @@ module.exports = grammar({
       '=', sep1($.constructor, '|'),
     ),
     constructor: $ => seq(
+      optional('priv'),
       field('name', $.identifier),
       optional(seq('(', sep1($.type_ref, ','), ')')),
     ),

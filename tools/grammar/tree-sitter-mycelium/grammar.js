@@ -16,7 +16,7 @@ const KW_TYPE = ['Binary', 'Bytes', 'Dense', 'Float', 'Seq', 'Sparse', 'Substrat
 const KW_SCALAR = ['BF16', 'F16', 'F32', 'F64'];
 const KW_STRENGTH = ['Declared', 'Empirical', 'Exact', 'Proven'];
 // Reserved-not-active (DN-03 §4; EBNF header): lexed as keywords, consumed by no production.
-const KW_RESERVED_INACTIVE = ['backbone', 'cyst', 'graft', 'grow', 'matured', 'mesh', 'priv', 'wrapping', 'xloc'];
+const KW_RESERVED_INACTIVE = ['backbone', 'cyst', 'graft', 'grow', 'matured', 'mesh', 'wrapping', 'xloc'];
 
 // RFC-0025 §4.1 tiers (M-705/M-745), written loosest→tightest; every binary operator is
 // left-associative, prefix operators bind tighter than every binary operator.
@@ -66,6 +66,7 @@ module.exports = grammar({
       '=', sep1($.constructor, '|'),
     ),
     constructor: $ => seq(
+      optional('priv'),
       field('name', $.identifier),
       optional(seq('(', sep1($.type_ref, ','), ')')),
     ),
