@@ -34,7 +34,7 @@ for d in crates/*/ xtask/; do
     skip "$pkg: bin-only (no library target) — no public-API baseline"
     continue
   fi
-  if cargo public-api --toolchain "$api_toolchain" --package "$pkg" --simplified >"$baseline_dir/$pkg.txt" 2>/dev/null; then
+  if cargo +"$api_toolchain" public-api --package "$pkg" --simplified >"$baseline_dir/$pkg.txt" 2>/dev/null; then
     ok "$pkg → $baseline_dir/$pkg.txt"
   else
     fail "$pkg: cargo public-api failed"
