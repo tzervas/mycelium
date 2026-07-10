@@ -13992,6 +13992,7 @@ issues:
     doc_refs:
       - corpus:DN-99
       - corpus:ADR-040
+      - corpus:DN-108
       - src:crates/mycelium-interp/src/prims.rs
     body: |
       From DN-99 §8 ENB-5 (Draft backlog). Closes register row #42 (float eps/delta transcendentals,
@@ -14012,6 +14013,11 @@ issues:
       - Prims registered + typed with never-silent domain errors; the per-op eps/guarantee matrix decided
         and recorded (VR-5 — `Empirical`/`Declared` per op, no `Proven` without a checked theorem);
         property tests on the bounds; conformance accept + reject; a Draft DN/ADR records the routing.
+
+      DN-108 filed (Draft, 2026-07-10): a design-reasoner note working this decision forward — a ranked
+      recommendation only, not a ratification (house rule #3). Recommends `flt.*` prims over the
+      existing `Bound`/`Approx` certificate (ADR-010), v0 tag `Declared` (not `Empirical` — no measured
+      trial corpus yet, VR-5). Status stays `todo` here until the maintainer ratifies DN-108.
 
   - id: M-1029
     title: "enb ENB-6 — platform-width + char-type decision (subsumes signed)"
@@ -14051,6 +14057,7 @@ issues:
     doc_refs:
       - corpus:DN-99
       - corpus:DN-34
+      - corpus:DN-107
       - src:crates/mycelium-l1/src/eval.rs
       - src:crates/mycelium-interp/src/prims.rs
     body: |
@@ -14071,6 +14078,10 @@ issues:
       - One real syscall end-to-end + a fixture/sandbox witness for the non-deterministic ops; `exit`/
         divergence modelled as an effect with the totality interaction specified (no bottom BaseType);
         never-silent on out-of-domain host ops; a Draft DN records the effect model.
+
+      DN-107 filed (Draft, 2026-07-10): a design-reasoner note working this decision forward — a ranked
+      recommendation only, not a ratification (house rule #3). Status stays `todo` here until the
+      maintainer ratifies DN-107 and implementation lands (VR-5 — no status flip on a Draft basis).
 
   - id: M-1031
     title: "enb ENB-8 — runtime-tier value-semantics mapping (post-Phase-7)"
@@ -14395,3 +14406,78 @@ issues:
       `-transpile`); gate re-run confirms GREEN. No further action — a future `cargo-public-api` major
       version may drift the flag shape again; re-verify empirically against `--help` if the gate starts
       uniformly failing again (the tell: identical failure across every crate, not a per-crate diff).
+
+  - id: M-1039
+    title: "tree-sitter editor grammar missing the priv constructor-seal keyword (M-1027/DN-104 gap)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:bug, area:tooling, priority:P3, status:done]
+    epic: E16-1
+    depends_on: [M-731, M-1027]
+    doc_refs:
+      - corpus:DN-104
+      - corpus:RFC-0026
+      - src:tools/grammar/generate.py
+      - src:tools/grammar/tree-sitter-mycelium/grammar.js
+    body: |
+      Found at the follow-up-batch terminal review (2026-07-10), after M-1027/DN-104 landed the
+      per-constructor visibility seal (`pub type T = priv Mk(..)`, `Tok::Priv`, `parse_ctor` in
+      `crates/mycelium-l1/src/parse.rs`). `tools/grammar/generate.py`'s hand-maintained
+      `STRUCTURAL_KEYWORDS` set (the mechanism M-731/RFC-0026 uses to decide which lexer keywords a
+      structural tree-sitter production actually consumes vs. lexes-only-as-`reserved_keyword`) was
+      never updated for `priv`, so the generator auto-mis-classified it as reserved-inactive — and the
+      tree-sitter `constructor` rule (`grammar.js`) had no `priv` prefix at all. Net effect: the L1
+      compiler accepts a sealed constructor but the editor grammar (VS Code / any tree-sitter consumer)
+      could not parse it, silently diverging from the language it is supposed to highlight (a real gap,
+      not a cosmetic one — G2).
+
+      User stories:
+      - As an editor-tooling user, I want the tree-sitter grammar to parse every construct the L1
+        compiler accepts, so that a sealed constructor is highlighted correctly instead of erroring.
+
+      Definition of Done:
+      - `priv` added to `STRUCTURAL_KEYWORDS`; the `constructor` production template gains
+        `optional('priv')` ahead of the name field; `python3 tools/grammar/generate.py` regenerates
+        `grammar.js`/`highlights.scm`/`keywords.json` with `priv` removed from `KW_RESERVED_INACTIVE`
+        and the constructor rule updated; `--self-test`, `--check`, `scripts/checks/drift.sh`, and
+        `scripts/checks/grammar.sh` all green.
+
+      DONE (2026-07-10, PR #1385 -> dev). Fixed exactly as scoped above; the committed `grammar.js`
+      delta is the mechanical regen output, not hand-edited. No `tree-sitter test` corpus case was
+      added for the new `priv` prefix (the `tree-sitter` CLI was not available offline in this
+      session) — `scripts/checks/grammar.sh`'s accept/reject corpus + the generator's own
+      `--self-test`/`--check` are the gates that ran; a `tree-sitter parse` smoke test on a
+      `priv`-sealed fixture is a reasonable follow-up if the CLI becomes available (not blocking —
+      the grammar.js rule shape mirrors `parse_ctor` exactly, `Empirical` by code-reading, not yet by
+      a tree-sitter-CLI witness).
+
+  - id: M-1040
+    title: "doc-hygiene: self-hosting-port-ledger.md cited the phylum_exec.rs test file, not the PhylumEnv::link impl"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:docs, area:project, priority:P3, status:done]
+    epic: E28-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-101
+      - src:crates/mycelium-l1/src/checkty.rs:1086
+    body: |
+      Found at the follow-up-batch terminal review (2026-07-10). The enabler ledger
+      (`docs/planning/self-hosting-port-ledger.md`) row for "Cross-nodule runtime link" cited
+      `crates/mycelium-l1/src/phylum_exec.rs` as the `PhylumEnv::link` implementation site — that path
+      is actually the *test* file `crates/mycelium-l1/tests/phylum_exec.rs` (DN-101's three-way
+      witness); the real implementation is `crates/mycelium-l1/src/checkty.rs:1086` (verified by grep,
+      not assumed). A stale citation like this sends a reader to the wrong file (G2-adjacent — a
+      grounding claim, house rule #4, should resolve to the right place).
+
+      User stories:
+      - As a reader of the self-hosting port ledger, I want each "Rust module" citation to point at the
+        actual implementation, so that I don't chase a test file looking for the logic it witnesses.
+
+      Definition of Done:
+      - The row's citation corrected to `crates/mycelium-l1/src/checkty.rs:1086` (impl) with the test
+        witness reference moved to the "Basis" column as `tests/phylum_exec.rs`; `scripts/checks/links.sh`
+        and `scripts/checks/markdown.sh` on the touched file stay green.
+
+      DONE (2026-07-10, PR #1385 -> dev). One-line citation fix, no other rows in the ledger audited
+      for the same class of error in this pass (scope-limited to the row found) — a fuller citation
+      sweep across the ledger's other rows is not covered by this issue and is not currently tracked
+      elsewhere; flagged here in case a future doc-hygiene pass wants to pick it up.

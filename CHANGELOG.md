@@ -12,6 +12,74 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### fix(grammar,docs): terminal-review fast-follows — tree-sitter `priv` structural gap + wrong path citation (M-1039/M-1040) (2026-07-10)
+
+Two small findings from the terminal review of the enb-wave batch, tracked and closed same-day.
+
+- **tree-sitter editor grammar missing the `priv` constructor-seal keyword.**
+  `tools/grammar/generate.py`'s hand-maintained `STRUCTURAL_KEYWORDS` set was never updated for `priv`
+  after M-1027/DN-104 landed the per-constructor visibility seal (`pub type T = priv Mk(..)`), so the
+  generator auto-mis-classified `priv` as reserved-inactive and the tree-sitter `constructor` rule had
+  no `priv` prefix — the editor grammar could not parse a construct the L1 compiler accepts. Fixed by
+  adding `priv` to `STRUCTURAL_KEYWORDS` and `optional('priv')` to the `constructor` rule template,
+  then regenerating (`python3 tools/grammar/generate.py`); the committed `grammar.js` delta is the
+  mechanical regen output. `scripts/checks/drift.sh` / `grammar.sh` green.
+- **Wrong path citation in the self-hosting port ledger.** `docs/planning/self-hosting-port-ledger.md`
+  cited `crates/mycelium-l1/src/phylum_exec.rs` for `PhylumEnv::link` — that path is the *test* file
+  (`crates/mycelium-l1/tests/phylum_exec.rs`); the impl is `crates/mycelium-l1/src/checkty.rs:1086`
+  (verified by grep). Corrected the citation.
+
+Tracked as **M-1039** (grammar gap) and **M-1040** (doc-hygiene), both filed `status:done` with a
+landed basis at PR #1385.
+
+### feat(scripts): worktree `target/` cache pruning — `disk-watchdog` + `worktree-target-sweep` (2026-07-10)
+
+Implements the maintainer's storage-management ask for the multi-worktree swarm setup. Measured:
+sccache cross-worktree hit rate is ~0 here (each worktree builds its own `target/`, so cache sharing
+doesn't help) — the real reclaimable win is pruning stale build output.
+
+- `scripts/disk-watchdog.sh` — read-only usage monitor; lists the top reclaimable worktree `target/`
+  dirs by size once a warn/crit threshold is crossed. Never deletes.
+- `scripts/worktree-target-sweep.sh` — dry-run-by-default sweeper. A worktree's `target/` is
+  reclaimable only when not locked, its branch is merged into the mainline (default `dev`) or the
+  worktree dir is gone, `target/` has been idle >= `--stale-min` (default 240) minutes, and no
+  `rustc`/`cargo` process is building under that path. `--apply` to delete; `--incremental-only`
+  reaps just stale `incremental/` cruft in kept worktrees.
+- `just reclaim` (watchdog + sweeper dry-run) / `just reclaim-apply` (sweeper `--apply`).
+
+`scripts/checks/shell.sh` (shellcheck) 73/73 clean incl. both new scripts.
+
+### feat(tools): diff-based, rate-limit-frugal GitHub issue sync + orphan reconciliation (2026-07-10)
+
+Adds `tools/github/sync_issues.py`: a diff-based sync between `tools/github/issues.yaml` and GitHub
+Issues — one bulk read, then plan/apply only the drifted or missing deltas (create + edit changed
+fields), with a classified orphan-reconciliation mode (`--reconcile-orphans`: closed-id-dup /
+open-id-dup / adoptable / non-task classes). Adds `just issues-sync` (dry-run plan) / `just
+issues-sync-apply` (apply, capped `--max-writes 25`), `.claude/skills/issues-sync/SKILL.md`, and
+`tools/github/README.md`. Desktop/periodic op — needs `gh` authenticated to the repo owner; not part
+of the per-commit gate. `--self-test` 25/25 checks pass.
+
+### docs(dn-108): numerics transcendentals accuracy-bounds design note (M-1028/ENB-5, DN-99 #42) (2026-07-10)
+
+Adds Draft design-reasoner note **DN-108** (`docs/notes/DN-108-Numerics-Transcendentals-Accuracy-Bounds.md`)
+working DN-99 register row #42 forward: recommends transcendental/irrational-result functions
+(`sqrt`/`exp`/`ln`/`sin`/`cos`/`pow`) surface as `flt.*` interpreter prims returning a plain
+`Repr::Float` whose accuracy bound rides the existing `Bound`/`Approx` certificate (ADR-010) — no new
+numeric type, no new kernel node (KC-3). The v0 tag is explicitly `Declared` (not `Empirical` — no
+measured trial corpus yet, VR-5); domain errors and approximate-input composition both refuse
+never-silently (G2). Enacts nothing; ratifies nothing (house rule #3) — status stays Draft. `doc_refs:
+corpus:DN-108` wired onto **M-1028**.
+
+### docs(dn-107): host-effect real-syscall registry + never-type divergence design note (M-1030/ENB-7) (2026-07-10)
+
+Adds Draft design-reasoner note **DN-107** (`docs/notes/DN-107-Host-Effect-And-Never-Type.md`) working
+the M-1030 (ENB-7) decision forward: separates the two ENB-7 sub-gaps (host-effect real syscalls #79;
+never-type `-> !` divergence #88), proposes granting real `wild:read/write/get_env/exit` prims over
+the existing RFC-0028 `wild`/RFC-0014 effect surface, and recommends divergence-as-effect (no bottom
+`Ty`, Rank 1) over a nominal `Never`+`absurd` (Rank 2 reserve) or a true bottom subtype (Rank 3,
+rejected for v0). Enacts nothing; ratifies nothing (house rule #3) — status stays Draft. `doc_refs:
+corpus:DN-107` wired onto **M-1030**.
+
 ### chore(integration): enb batch close-out — api-gate tool-flag fix + baseline catch-up (M-1038) (2026-07-10)
 
 Integration-tier close-out for the enb batch (M-1024/1025/1026/1027/1035/1033). The bounded canary
