@@ -711,13 +711,21 @@ impl Parser {
     }
 
     fn parse_ctor(&mut self) -> Result<Ctor, ParseError> {
+        // M-1027 / DN-104 §2: an optional leading `priv` seals the constructor — the type NAME is
+        // exported (if the `type` is `pub`) but the constructor is withheld from cross-nodule
+        // construction (the FR-N3 capability-gate). Absent ⇒ `sealed: false` (backward-compatible).
+        let sealed = self.eat(&Tok::Priv);
         let name = self.ident()?;
         let mut fields = Vec::new();
         if self.eat(&Tok::LParen) {
             fields = self.comma_separated(None, Self::parse_type_ref)?;
             self.expect(&Tok::RParen, "`)` to close the constructor fields")?;
         }
-        Ok(Ctor { name, fields })
+        Ok(Ctor {
+            name,
+            fields,
+            sealed,
+        })
     }
 
     fn parse_trait_decl(&mut self, vis: Vis) -> Result<TraitDecl, ParseError> {
@@ -1178,6 +1186,15 @@ impl Parser {
     /// other follower is an explicit parse error naming both forms.
     fn parse_impl_item(&mut self) -> Result<Item, ParseError> {
         self.expect(&Tok::Impl, "`impl`")?;
+        // Impl-level type parameters (`impl[T] Foo[T] { … }`; DN-103 / M-1026 / ENB-3). The `[T, …]`
+        // slot sits *immediately after* `impl`, before the head. Unambiguous: no `base_type` begins
+        // with `[` (heads are repr keywords or a `Named` identifier; type *arguments* `[…]` are a
+        // *suffix* on a `Named` head), so a leading `[` here is always the params slot. A bare
+        // `impl Foo[T] { … }` (next token is the identifier `Foo`) leaves this empty — the M-664
+        // identity, every existing program unchanged. A `: bound` inside the slot is the never-silent
+        // refusal `parse_type_params_opt` already raises for a `type`/`trait` head (bounds live only
+        // on `fn` type-params, RFC-0019 §4.1).
+        let impl_params = self.parse_type_params_opt()?;
         // The head is a base type: a trait ref `Trait[args]?` parses as `Named(trait, args)`, and an
         // inherent target `T` (`Binary{8}`, `Foo[X]`, …) parses as its own base type. Disambiguate
         // *after* the head by the follower.
@@ -1186,6 +1203,21 @@ impl Parser {
             // Trait-instance: `impl Trait[args]? for T { … }`. The head before `for` must be a
             // trait *name* (a `Named` base type) — never silent if it is a repr/structural type (G2).
             self.bump(); // `for`
+                         // A generic trait *instance* (`impl[T] Trait for Foo[T]`) needs coherence/orphan checking
+                         // and dictionary construction over a *parametric* instance head (RFC-0019 §4.5) — a larger
+                         // change than the inherent lowering, deferred (DN-103 §3 Fork 2 / §6). Refuse a non-empty
+                         // impl-level slot on a trait impl explicitly — never a silent accept of a form we do not
+                         // yet check soundly (G2).
+            if !impl_params.is_empty() {
+                return Err(ParseError::new(
+                    self.pos(),
+                    "impl-level type parameters on a trait instance (`impl[T] Trait for …`) are \
+                     deferred — generic trait-instance coherence is not yet supported (DN-103 §3 / \
+                     RFC-0019 §4.5). Use a generic inherent block (`impl[T] Foo[T] { … }`) or the \
+                     impls-as-functions idiom (free generic `fn`s) meanwhile (never silent — G2)"
+                        .to_owned(),
+                ));
+            }
             let (trait_name, trait_args) = match head {
                 BaseType::Named(name, args) => (name, args),
                 _ => {
@@ -1207,10 +1239,15 @@ impl Parser {
                 methods,
             }))
         } else if self.at(&Tok::LBrace) {
-            // Inherent block: `impl T { fn … }` (M-664). The head *is* the target type.
+            // Inherent block: `impl[T]? T { fn … }` (M-664 + DN-103). The head *is* the target type;
+            // `impl_params` are the impl-level generics (empty for the plain M-664 block).
             let for_ty = TypeRef::unguaranteed(head);
             let methods = self.parse_impl_body()?;
-            Ok(Item::InherentImpl(InherentImplDecl { for_ty, methods }))
+            Ok(Item::InherentImpl(InherentImplDecl {
+                params: impl_params,
+                for_ty,
+                methods,
+            }))
         } else {
             Err(ParseError::new(
                 self.pos(),
@@ -1295,6 +1332,18 @@ impl Parser {
             ));
         }
         let ctor = self.parse_ctor()?;
+        // M-1027 / DN-104 §2: the `priv` constructor seal is scoped to the `type` declaration form;
+        // sealing an `object`'s constructor is out of scope in v0. Refuse it never-silently (G2) with a
+        // teaching pointer, rather than silently accepting a marker the object surface does not model.
+        if ctor.sealed {
+            return Err(ParseError::new(
+                self.pos(),
+                "the `priv` constructor seal is not supported inside an `object` body in v0 \
+                 (DN-104 §2 scopes the seal to the `type` declaration form) — express the sealed \
+                 constructor as a `pub type … = priv Ctor(..)` declaration instead (never-silent, G2)"
+                    .to_owned(),
+            ));
+        }
         // The constructor is terminated by a mandatory `;` (it is not an expression statement).
         self.expect(
             &Tok::Semi,

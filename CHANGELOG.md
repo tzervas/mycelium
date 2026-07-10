@@ -12,6 +12,238 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### chore(integration): enb batch close-out — api-gate tool-flag fix + baseline catch-up (M-1038) (2026-07-10)
+
+Integration-tier close-out for the enb batch (M-1024/1025/1026/1027/1035/1033). The bounded canary
+gate found the batch content itself clean (fmt/clippy/tests/drift/indices/markdown/links/secrets/
+deny/licenses all green); the only red was the `api` gate, which decomposed into two things resolved
+here (filed as **M-1038**):
+
+- **Tool-flag drift (environmental, pre-existing — fails identically on `main`):** `cargo-public-api`
+  0.52.0 removed the `--toolchain` flag that `scripts/checks/api.sh` and `scripts/api-baseline.sh`
+  both passed. Fixed to the rustup selector form (`cargo +"$api_toolchain" public-api …`), verified
+  empirically to build and emit a non-empty surface before any mass regeneration.
+- **Baseline catch-up (genuine landed surface, not batch leakage):** with the gate unblocked, the
+  diff — unregenerated since 2026-07-06 — covered both the enb batch's stated deltas (`mycelium-l1`:
+  `Expr::Try`/`Expr::Wrapping`/`Ctor::sealed`/`InherentImplDecl::params`/`PhylumEnv::link`/
+  `Tok::Priv`/`Tok::Question`/`Tok::Wrapping`; `mycelium-transpile`: the `emit_expr`/
+  `emit_block_as_expr` param thread, new `gap::Category` variants, `prim_map`,
+  `batch::output_rel_path`) and prior work that landed 2026-07-07..08 while this same broken gate
+  silently masked the drift (`mycelium-core::binary` CU-1/CU-3/CU-5/CU-6 bit-manipulation/float-conv/
+  wrapping prims; `mycelium-interp::prims::eval_wrapping`; `mycelium-check`'s M-1006 `--phylum`
+  cross-nodule mode). Every added symbol traced to a landed, merged commit (`git log -S`) — nothing
+  unreviewed, no accidental `pub`, no unrelated-crate leak (the transparency review this batch's DoD
+  requires). Baselines regenerated (`just api-baseline`) for the 5 affected crates
+  (`mycelium-check`/`-core`/`-interp`/`-l1`/`-transpile`); `scripts/checks/api.sh` re-run GREEN
+  (57/57 crates checked/skip-N/A, zero FAIL).
+
+`docs/api-index/` and `docs/tero-index/` regenerated to reflect the new public surface (`just
+docs-index`, `just tero-index-gen`); `doc_refs_check.py` clean. Per-batch issue status close-out was
+already correctly applied by the batch's own per-issue PRs (M-1024/M-1025 honestly `in-progress` with
+their stated residuals; M-1026/M-1027/M-1035 `done` with residuals noted; M-1033 `todo` per DN-106) —
+verified against the codebase, not rubber-stamped (mitigation #14); no status changed here. DN-101
+through DN-106 remain `Draft` (maintainer-ratification-pending), already indexed in `Doc-Index.md`.
+
+### docs(dn-106): triage ENB-10 statement-sequencing + record-update — both closed at L1 (M-1033) (2026-07-10)
+
+Adds **DN-106 — Statement-Sequencing (`let _`) + Record-Update / Mutation Split: a Triage (ENB-10)**
+(Draft) plus four pinning regression witnesses in `crates/mycelium-l1/tests/enablement.rs` — **no
+AST/grammar/code change**. Per mitigation #14 (verify a stale issue's claim against the codebase before
+implementing), the M-1033 triage finds that **both** ENB-10 sub-gaps' language side is **already closed at
+L1**, three-way witnessed (L1-eval ≡ elaborate→L0-interp ≡ trampoline-AOT):
+
+- **Part 1 — statement-sequencing `let _ = e in body`** is an ordinary `let` whose binder is the
+  identifier `_` (grammatical `ebnf:291`/`ebnf:447`, parsed, checked, evaluated, elaborated) and is
+  moreover the established affine drop/use-once surface (DN-71/M-903). Two pins lock the plain and the
+  ascribed `let _: T = e in body` discard forms.
+- **Part 2 — functional field-update** is the already-expressible destructure-and-reconstruct
+  `match base { Ctor(f0, …) => Ctor(f0, …, NEW, …) }` (Mycelium has positional constructors, no
+  named-field record literal and no field-projection, by design — KC-3). One pin locks the reconstruct
+  form value-correct; one never-silent pin locks that a Rust-style `{ ..base, field: v }` record-update
+  literal has **no** Mycelium surface and is an explicit parse refusal (G2), never a silent mis-parse.
+
+The real residual is entirely **transpiler-lane** (`crates/mycelium-transpile`: the `let _` emit and the
+mutation→functional rewrite), confirming DN-99 register row #89's own `tr`/`low` tags and correcting the
+M-1033 issue body's over-scoped "grammar-`enb`, HIGH collision, touches `crates/mycelium-l1/**`" framing
+(mitigation #14). **M-1033's L1/semcore residual is NIL**; the issue is re-scoped to its transpiler-lane
+residual. DN-106 enacts nothing and moves no other doc's status (append-only, house rule #3); tags are
+`Empirical` where three-way-witnessed, `Declared` for the unratified Part-2 fork resolution (VR-5).
+Reviewed per `/pr-review` (PR #1373); the pins keep the closure from silently regressing. (DN-106 Draft;
+DN-99 #89 aligned; M-1033 re-scoped; VR-5 / G2 / house rules #3/#4.)
+
+### feat(transpile): flip DN-99 #72 string-literal `match` gap→emit on the M-1035 enabler; gap fabricated conversion no-ops (2026-07-10)
+
+The first **enabler-driven transpiler win**: now that **M-1035 / ENB-12** landed the L1
+match-on-`Bytes` enabler (DN-99 register row #72), the Rust→Mycelium transpiler flips #72 from
+*gapped* to *emitted* — `match s { "yes" => true, _ => false }` lowers to the faithful, `myc
+check`-clean `match s { "yes" => True, _ => False }` (`&str` → `Bytes`, `"yes"` verbatim,
+`true`/`false` → `True`/`False`). Scope: `crates/mycelium-transpile` only (PR #1372 → dev). Emissions
+stay `Declared` (no guarantee tag upgraded — VR-5).
+
+- **Emit only WITH a wildcard/default arm; else gap, never-silently (G2/VR-5).** `Bytes` is an OPEN
+  value domain, so M-1035's W7 coverage rejects a non-exhaustive `Bytes` match (`non-exhaustive match
+  on Bytes: missing _`). The `Expr::Match` guard emits a string-literal match **only** when it carries
+  an unguarded irrefutable default (wildcard `_` or a bare binding); a defaultless string-literal
+  match still gaps with the precise open-domain reason — never a check-failing non-exhaustive surface.
+  Pinned by `string_literal_pattern_emits_with_l1_enabler` (positive + the defaultless-gaps negative).
+- **Co-fix: gap Rust ownership/identity-conversion no-op methods, never fabricate a prim (G2/VR-5).**
+  `.to_owned()` / `.clone()` / `.to_string()` / `.into()` / `.as_ref()` / … have no Mycelium
+  free-function or prim referent (value semantics — ADR-003), so the old bare-call desugar
+  (`recv.to_owned()` → `to_owned(recv)`) **fabricated** a call to a non-existent prim (`myc check`:
+  `unknown function/constructor/prim to_owned`). These are now gapped explicitly instead of
+  fake-emitted. This un-poisons real files under the vet loop's file-gated `checked_fraction` (the
+  `checkty::vsa_kernel_model_id` string-`match` whose arm bodies are `"MAP-I".to_owned()` now gaps
+  cleanly rather than dragging a fabricated `to_owned` into an emission). Pinned by
+  `conversion_noop_method_gaps_never_fabricates_unknown_prim`.
+- **Measured effect (`Empirical`).** `checked_fraction` on the 24-target port-surface corpus rises
+  **6.193% → 6.740% (+0.547pp)** — but the load-bearing change is *correctness*: no more fabricated
+  prims (an honest gap is the right outcome for an unmapped conversion — VR-5/G2). The corpus win now
+  awaits the conversion-method mapping (`ToOwned`/`Clone`/`ToString`/`Into` → identity-or-real-surface),
+  filed as the next `checked_fraction` lever.
+- **How verified (change-scoped).** `cargo test -p mycelium-transpile` green (62 tests, incl. the two
+  new pins) · `cargo fmt --check` clean · `cargo clippy -p mycelium-transpile --all-targets -D
+  warnings` clean. The `Bytes`-match surface's `myc check`-cleanliness rides M-1035's own three-way
+  differential (`crates/mycelium-l1/tests/enablement.rs`), unchanged here.
+
+### feat(l1): admit a `Bytes` scrutinee in `match` — M-1035 (ENB-12) (2026-07-10)
+
+Closes **DN-99 register row #72** (string-literal match pattern): the L1 checker now admits a `match`
+whose scrutinee is a `Bytes` value, with **byte-string-literal** arms and a **required default arm** —
+the ENB-12 enabler that unblocks every string-dispatch (`match s { "get" => …, "post" => …, _ => … }`)
+port target. Under the whole-project unfrozen posture (ADR-045). Design recorded in **Draft DN-105**
+(the maintainer ratifies — house rule #3, not self-ratified).
+
+- **One-clause enabler, not a new pattern subsystem (KC-3/DRY).** The single categorical block was
+  `check_match`'s scrutinee-type gate, which admitted only `Data`/`Binary`/`Ternary`; lifting it to
+  admit `Ty::Bytes` is the whole language change. Everything downstream already handled an open-domain
+  literal column generically — `normalize_pattern` already types `0x…`/`"…"` literal patterns as
+  `Bytes`, `usefulness::signature()` already returns `None` for `Bytes` (an OPEN domain), the decision
+  compiler already marks a non-`Data` column incomplete, and the evaluator's `try_match` already
+  compares `Repr::Bytes`/`Payload::Bytes` by content. No new L0 node, no new pattern/AST node, no new
+  checking pass.
+- **Byte-content equality; both surface spellings.** A `"…"` text literal (`Literal::Str`) and a `0x…`
+  hex literal (`Literal::Bytes`) lower to the SAME `Repr::Bytes` value, so `"foo"` and `0x666f6f`
+  denote equal values and match interchangeably (`elab.rs::lit_key_to_value` decodes the `by:` and `s:`
+  literal-pattern keys to `Repr::Bytes`, using the established `Meta::exact(Provenance::Root)` literal
+  form — no guarantee tag upgraded, VR-5).
+- **`Bytes` is OPEN ⇒ a default arm is REQUIRED, never-silently (G2).** A literal column never
+  completes the domain, so a `Bytes` match without a wildcard/default is a static **W7 non-exhaustive
+  refusal** (witness `_`), exactly as for `Binary`/`Ternary`. An ill-typed literal arm (a `Binary`
+  literal against a `Bytes` scrutinee) is likewise a static refusal, never a silent coercion.
+- **`.myc` mirror (DN-26 dual).** Pattern-typing + coverage leaves were already at parity (generic over
+  open types). The `Bytes` repr value is lifted out of the `LOpaque` collapse into a dedicated
+  `LReprBytes(Bytes)` carrier so `lval_try_match`'s `PLit` arm does a real byte-content match against a
+  text (`Str`) byte-string literal — the eval-match mirror for #72. All three `LVal` consumers
+  (`PIdent`/`PCtor`/`PLit`) handle the new variant exhaustively; no AST/pattern node changed, so the
+  fingerprint/classify walkers are unaffected. The `0x…`-hex value synthesis in `.myc` stays deferred
+  (FLAG-semcore-25, an honest `Err`); other reprs stay `LOpaque` (FLAG-semcore-35).
+- **Honest residuals (VR-5/G2).** The native-LLVM textual-IR backend cannot lower a `Bytes`-scrutinee
+  match (its `Binary8`-specialized switch) — it **refuses explicitly** (`AotError`), and the
+  trampoline AOT handles the case; the cross-surface-form redundancy key stays per-form (`by:`/`s:`), a
+  conservative under-report of a redundancy *lint*, never a wrong-arm miscompile (DN-105 §4); the trx
+  transpiler's #72 pin (`string_literal_pattern_gaps_with_l1_enabler_reason`) can now flip *gapped* →
+  *emitted* as a **separate transpile-crate follow-up** (outside the `mycelium-l1` lane).
+- **How verified (change-scoped).** `crates/mycelium-l1/tests/enablement.rs` — a three-way differential
+  (L1-eval ≡ elaborate→L0-interp ≡ trampoline-AOT): text-literal hit, fall-through-to-default,
+  hex/text cross-spelling hit (`"foo"` hits a `0x666f6f` arm), plus static rejects of the
+  non-exhaustive and ill-typed cases and the explicit native-LLVM refusal. `.myc` eval-match
+  differential vs the real `Evaluator::try_match` oracle (`src/tests/compiler_stage5_evalmatch.rs`):
+  text-literal hit/miss, empty-string edge, binder-captures-`Bytes`, `Bytes`-vs-`Ctor` false, and the
+  honest `0x…`-hex deferral probe. `cargo test -p mycelium-l1` green · `cargo fmt --check` clean ·
+  `cargo clippy -p mycelium-l1 --all-targets -D warnings` clean · `myc check lib/compiler/semcore.myc`
+  clean (dogfood parity) · `markdown.sh` + `doc_refs_check.py` clean.
+
+### feat(l1): per-constructor visibility seal — `priv` ctor — M-1027 (ENB-4) (2026-07-10)
+
+Closes the **sealed-constructor visibility** surface gap (DN-99 register row #37 / §A3, ENB-4; and the
+row #69 positional field-visibility sub-case): a `priv` marker on the `constructor` production so
+`pub type T = priv Mk(..)` exports the type **NAME** (usable cross-nodule in signatures, `use`, and
+**pattern position**) but **withholds the constructor from cross-nodule CONSTRUCTION via an imported
+name** — a never-silent refusal for a well-behaved caller going through `use`. Under the whole-project
+unfrozen posture (ADR-045). Design recorded in **Draft DN-104** (the maintainer ratifies the corrected,
+narrower scope below — house rule #3, not self-ratified).
+
+**CRITICAL, found + independently reproduced at integration review (house rule #4 — no claim upgraded
+past a checked basis):** this mechanism is **NOT an enforced security/capability boundary**. Mycelium
+resolves types/ctors by bare name in the *caller's own scope* (own local decls shadow imports — the
+pre-existing RFC-0006 §4.3 / M-662 precedence rule), so a foreign nodule that declares its **own
+same-named local (unsealed) type**, without ever importing the real sealed one, bypasses the seal
+entirely — `check_phylum` accepts it. This falsifies the "unforgeable capability-gate"/FR-N3 framing
+the design originally claimed; **M-1023's `Approx::proven` port must not treat this as a real security
+boundary** until the real fix — nodule-qualified type identity — lands (tracked as **M-1036**). Pinned
+as a differential witness (`ctor_seal.rs::known_gap_a_same_named_local_shadow_type_bypasses_the_seal`),
+not silently absent from coverage. As landed, `priv` is an **opt-in API-discipline nudge** for
+well-behaved `use`-based callers, not a capability guarantee.
+
+- **Surface + AST boolean + one export-table predicate, no new kernel node (KC-3/DRY).** `Tok::Priv`
+  is a reserved keyword (never a silent identifier — G2), parsed as an optional prefix in `parse_ctor`
+  and threaded into the AST (`Ctor.sealed: bool`, not flattened — faithful for printing / round-trip).
+  A `pub type`'s `priv` constructor names are recorded per-type in the phylum export table
+  (`Exports.sealed_ctors`) and folded, on import, into a per-nodule **withheld set**
+  (`NoduleImports.sealed`) — the exact twin of the existing `ambiguous` glob-collision machinery,
+  reusing the already-Enacted M-662/M-1024 cross-nodule export/resolution layer. The nodule's **own**
+  constructor names are subtracted (a home construction is never wrongly refused).
+- **The DN-53 §B.6 Q1 fork resolved to the BINARY seal.** Not a full Rust-style `pub(path)` scoped-
+  visibility grammar (KISS/YAGNI); `priv` is forward-compatible as the `nodule`-scoped point of a
+  future lattice. Confronted on its merits in DN-104 §3 (no sycophancy — house rule #4).
+- **Never-silent boundary for the import path (G2/VR-5).** Three refusals, each naming the fix:
+  constructing a sealed ctor from a **foreign nodule via an imported name** (the withheld-construction
+  `CheckError`, at both the nullary-value and saturated-`App` sites, before the arity check so the seal
+  diagnostic wins); a redundant `priv` on a **non-`pub`** type (refused at registration); and `priv`
+  inside an **`object`** body (refused at parse in the Rust frontend; the `.myc` mirror does not yet
+  match — a residual, DN-104 §6). The type NAME and pattern-matching are unaffected — only
+  *construction-via-import* is withheld. No guarantee tag upgraded past its checked basis (`Declared` →
+  `Empirical` for the import-path refusal only; explicitly **not** upgraded to a capability/security
+  claim — see the CRITICAL note above).
+- **`.myc` mirror (DN-26 dual — surface + AST + fingerprint parity).** The `Priv` token
+  (`token`/`lex`.myc), `Ctor` carrying `sealed` (`ast`/`parse`/`semcore`/`ambient`.myc), `parse_ctor`
+  reading `priv`, and the structural-fingerprint walker hashing the seal (**tag 110**, both Rust and
+  `.myc` sides — folded only when sealed, so an unsealed ctor hashes byte-identically). The **cross-
+  nodule *enforcement* mirror rides the checkty `.myc` port (M-741)** — this increment mirrors the
+  `.myc` surface/AST/fingerprint, not the enforcement layer; a `priv` in a `.myc` `object` body is
+  accepted-then-unused (Rust refuses at parse). Honest residual, not a silent omission (DN-104 §6).
+- **How verified (change-scoped):** `crates/mycelium-l1/tests/ctor_seal.rs` — 11 differential
+  witnesses (home-construct OK ×2, foreign-construct-via-import REFUSED + the unsealed control proving
+  the seal is non-vacuous, cross-nodule type-use-in-signature + pattern-match OK, redundant-seal +
+  object-body refusals, per-ctor subset seal, surface round-trip, **+ the pinned known-gap witness for
+  the same-name-shadow bypass**). `cargo test -p mycelium-l1 -p mycelium-fmt -p mycelium-lsp` green;
+  `cargo clippy -p mycelium-l1 --all-targets -D warnings` clean; native `myc check` clean over the
+  touched `.myc` (dogfood parity, all 9 self-hosted nodules) — the `.myc` surface is additionally
+  witnessed by the Rust differential.
+
+### feat(l1): impl-level generic-parameter slot — `impl[T] Foo[T]` — M-1026 (ENB-3) (2026-07-10)
+
+Closes the **inherent-impl** scope of the impl-level-generics surface gap (DN-99 register row #63 / §A2,
+ENB-3): a generic inherent block `impl[T] Foo[T] { fn … }` now parses, checks, and monomorphizes, so a Rust
+`impl<T> Foo<T> { … }` ports faithfully instead of flattening to free functions. Under the whole-project
+unfrozen posture (ADR-045). Design recorded in **Draft DN-103** (the maintainer ratifies the v0 scoping —
+house rule #3, not self-ratified).
+
+- **Surface + slot, no new kernel node (KC-3/DRY).** A `[T, …]` type-parameter slot is parsed
+  **immediately after the `impl` keyword** via the existing unbounded-name parser (`parse_type_params_opt`);
+  it is unambiguous (no `base_type` begins with `[`, so a leading `[` after `impl` is always the slot) and
+  backward-compatible (`impl Foo[T] { … }` still parses `[T]` as the head's type argument). The slot is
+  threaded into the AST (`InherentImplDecl.params`), kept faithful through ambient/print/walk.
+- **Phase-0 desugar reuses the existing monomorphizer.** At the desugar that already lifts inherent methods
+  to free functions, each method gains the impl's params **prepended** to its own `fn` type-parameters — so
+  the method becomes an ordinary generic free function and monomorphization runs the **existing** fn-generics
+  path with **zero new mono code** (VR-5: no guarantee-tag upgraded past its basis). For the plain M-664
+  block (empty slot) this is the identity — methods lift verbatim, every existing program unchanged.
+- **Never-silent boundary (G2/VR-5).** Three refusals, each naming the fix: a non-empty slot on a **trait
+  instance** (`impl[T] Trait for Foo[T]`) is deferred (generic trait-instance coherence, RFC-0019 §4.5), a
+  `: bound` inside the slot is refused (bounds live only on `fn` type-params, RFC-0019 §4.1), and a duplicate
+  name shared by the impl slot and a method is caught by the existing duplicate-type-parameter check.
+- **`.myc` mirror (DN-26 dual).** The 3-field `IID` slot lands in all four self-hosted mirrors
+  (`ast`/`ambient`/`parse`/`semcore`.myc) plus the stage-5 encoder and the stage-3 classify-test ctor; the
+  self-hosted parser produces the slot. The desugar-prepend stays Rust-only (pre-desugared before the mirror
+  runs). `classify_expr` is unaffected (a struct-field extension, not a new node/variant; item-classify
+  wildcards the variant).
+- **How verified (change-scoped):** `crates/mycelium-l1/tests/check.rs` — a differential
+  (`generic_inherent_method_monomorphizes_across_two_type_args`: two type args yield exactly two `unbox$…`
+  specializations and a fully closed monomorphized env), a backward-compat identity witness, and three
+  never-silent reject witnesses (trait-instance, bound-in-slot, duplicate-param). `cargo test -p
+  mycelium-l1 -p mycelium-fmt -p mycelium-lsp` green; dogfood `myc check` strict on the touched `.myc`.
+
 ### feat(l1): `?` try-operator grammar sugar + type-directed `match` desugar — M-1025 (ENB-2) first increment (2026-07-10)
 
 Closes the **`let`-binder-RHS scope** of the `?` try-operator surface gap (DN-99 register rows #60

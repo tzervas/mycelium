@@ -2311,6 +2311,56 @@ fn lit_key_to_value(site: &str, key: &str) -> Result<Value, ElabError> {
             |e| residual(site, format!("malformed ternary literal key: {e}")),
             Ok,
         )
+    } else if let Some(hex) = key.strip_prefix("by:") {
+        // DN-105 / M-1035 (ENB-12): a `0x…` byte-string literal-pattern key (`by:<hex>`, hex digits,
+        // `_` separators already stripped by `literal_key`). Decode the hex pairs into bytes — the
+        // exact inverse of `lit_value`'s `Literal::Bytes` arm — into the SAME `Repr::Bytes` value the
+        // scrutinee holds, so the L0 `Alt::Lit` compares byte-for-byte. Even-hex parity is a lexer
+        // invariant; a stray non-hex pair is a never-silent internal `Residual` (defense in depth, G2).
+        let chars: Vec<char> = hex.chars().collect();
+        if !chars.len().is_multiple_of(2) {
+            return residual(
+                site,
+                format!("internal: odd-length byte-literal key `by:{hex}` (even-hex is a lexer invariant)"),
+            );
+        }
+        let mut bytes = Vec::with_capacity(chars.len() / 2);
+        for pair in chars.chunks(2) {
+            let hs: String = pair.iter().collect();
+            match u8::from_str_radix(&hs, 16) {
+                Ok(b) => bytes.push(b),
+                Err(_) => {
+                    return residual(
+                        site,
+                        format!("internal: non-hex byte pair {hs:?} in key `by:{hex}`"),
+                    )
+                }
+            }
+        }
+        Value::new(
+            Repr::Bytes,
+            Payload::Bytes(bytes),
+            Meta::exact(Provenance::Root),
+        )
+        .map_or_else(
+            |e| residual(site, format!("malformed byte-literal key: {e}")),
+            Ok,
+        )
+    } else if let Some(text) = key.strip_prefix("s:") {
+        // DN-105 / M-1035 (ENB-12): a `"…"` textual string literal-pattern key (`s:<content>`, the
+        // decoded UTF-8 text). Lowers to the SAME `Repr::Bytes`/`Payload::Bytes` value as
+        // `lit_value`'s `Literal::Str` arm — its UTF-8 bytes (KC-3, no new value form). `0x…` and
+        // `"…"` denoting the same bytes therefore produce equal L0 `Alt::Lit` values (byte-content
+        // equality — DN-105 §2), even though their coverage keys stay per-surface-form (DN-105 §4).
+        Value::new(
+            Repr::Bytes,
+            Payload::Bytes(text.as_bytes().to_vec()),
+            Meta::exact(Provenance::Root),
+        )
+        .map_or_else(
+            |e| residual(site, format!("malformed string-literal key: {e}")),
+            Ok,
+        )
     } else if let Some(text) = key.strip_prefix("f:") {
         // M-897: a float literal pattern is refused by the checker (`normalize_pattern`, ADR-040
         // FLAG-4) before any decision tree is built, so an `f:` key reaching the L0 bridge is an

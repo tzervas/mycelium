@@ -101,7 +101,7 @@ type Tok =
     Nodule | Phylum | Colony
   | Hypha | Fuse | Mesh | Graft | Cyst | Xloc | Forage | Backbone | Tier | Reclaim
   | Consume | Grow | Derive
-  | Use | Pub | Type | Trait | Impl | Fn | Matured | Thaw
+  | Use | Pub | Priv | Type | Trait | Impl | Fn | Matured | Thaw
   | Let | In | If | Then | Else | Match | For | Swap
   | Default | Paradigm | With | Wild | Spore | To | Policy
   | Lambda | Object | Via | Lower
@@ -203,6 +203,9 @@ fn keyword(word: Bytes) => Option[Tok] =
                                               _ =>
                                               match bytes_eq(word, "pub") {
                                                 0b1 => Some(Pub),
+                                                _ =>
+                                                match bytes_eq(word, "priv") {
+                                                0b1 => Some(Priv),
                                                 _ =>
                                                 match bytes_eq(word, "type") {
                                                   0b1 => Some(Type),
@@ -331,6 +334,7 @@ fn keyword(word: Bytes) => Option[Tok] =
                                                       0b1 => Some(Strength(GDeclared)),
                                                       _ =>
                                                       None
+                                                    }
                                                     }
                                                     }
                                                     }
