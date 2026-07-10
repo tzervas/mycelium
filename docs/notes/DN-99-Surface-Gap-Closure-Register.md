@@ -55,6 +55,9 @@ expresses it; only the auto-emitter is open) · `idiom` (closed by a sanctioned 
 **Layer**: `grm` grammar-`enb` · `rt` runtime-`enb` · `tr` transpiler · `ac` accepted-idiom · `cl`
 already-closed. **DN?** = needs its own Draft DN before implementation. **Coll.** = collision with the
 cloud semcore lane (`crates/mycelium-l1/**` + `lib/compiler/**`): `none` / `low` / `HIGH`. Sz = S/M/L/XL.
+**Pri** = backlog-filing priority `P1` (highest) / `P2` / `P3` — the order to file/close a row; a
+distinct axis from §4's language-enabler *build* rank (a row may file at `P2` yet be the rank-1 build
+unblocker, e.g. #41).
 
 | # | Gap | Status | Layer | Evidence (cite) | Closure approach | DoD (short) | DN? | Tracking | Coll. | Sz | Pri |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -151,9 +154,9 @@ cloud semcore lane (`crates/mycelium-l1/**` + `lib/compiler/**`): `none` / `low`
 | 91 | generic-function-declaration (`fn f<T>`) | closed | cl | `ebnf:162`; `parse.rs:857`; `emit.rs:229` | none — `fn f[T]` landed; `<T>` retired | register corrected to already-closed | no | RFC-0037; RFC-0019 §4.1 | none | S | P3 |
 | 92 | box-recursive-indirection-type (`Box<T>`) | idiom | ac | `map.rs:176`; `ast.myc:44`; `checkty.rs:1652` | Box field → plain `T` (value-semantic recursion) | idiom documented; optional tr erase-arm | no | untracked | low | S | P3 |
 
-**Status tally:** `open` = 4 (#37, #42, #60, #88) · `partial` = 11 (#24, #41, #44, #45, #55, #56, #63, #65, #70, #71, #89) · `already-closed` = 16 · `transpiler-only` = 10 · `idiom` (closed-by-convention) = 51.
-**Total = 92.** So **67 are closed today** (16 landed + 51 idiom), **10 need only transpiler work**, and
-**15 carry a genuine language/runtime residual** (the 4 `open` + 11 `partial`), of which **15 rows are
+**Status tally:** `open` = 4 (#37, #42, #60, #88) · `partial` = 12 (#24, #41, #44, #45, #55, #56, #63, #65, #70, #71, #79, #89) · `already-closed` = 16 · `transpiler-only` = 10 · `idiom` (closed-by-convention) = 50.
+**Total = 92.** So **66 are closed today** (16 landed + 50 idiom), **10 need only transpiler work**, and
+**16 carry a genuine language/runtime residual** (the 4 `open` + 12 `partial`), of which **15 rows are
 tagged `DN? = yes`** (before de-dup; §8 collapses the duplicates into the filable backlog).
 
 ---
