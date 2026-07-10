@@ -14335,3 +14335,63 @@ issues:
       - No guarantee tag upgraded; emissions stay `Declared` pending a differential (VR-5/G2). Cross-ref
         M-1024 / FLAG-tr-unknown-prim resolved or explicitly deferred with the symbol-table dependency
         noted.
+
+  - id: M-1038
+    title: "api gate tool-flag drift — cargo-public-api 0.52.0 removed --toolchain (fixed) + baseline catch-up"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:chore, area:tooling, priority:P2, status:done]
+    epic: E28-1
+    depends_on: []
+    doc_refs:
+      - src:scripts/checks/api.sh
+      - src:scripts/api-baseline.sh
+    body: |
+      Found at the enb-batch (M-1024/1025/1026/1027/1035/1033) integration close-out, 2026-07-10.
+      `cargo-public-api` 0.52.0 (the version installed in this environment) REMOVED the `--toolchain`
+      flag that `scripts/checks/api.sh:49` and `scripts/api-baseline.sh:37` both passed
+      (`cargo public-api --toolchain "$api_toolchain" --package "$pkg" --simplified`), so every
+      invocation failed identically for every crate regardless of branch content — pure environmental
+      tool-version drift, not a batch-content defect (it fails the same way on `main`). This is
+      logically separate from the enb batch and tracked here rather than folded into any of the batch
+      issues (mitigation #14 honesty — the batch itself was clean).
+
+      Root cause verified empirically (not guessed, G2): `cargo public-api --help` on 0.52.0 has no
+      `--toolchain` option; the correct replacement is the rustup toolchain-selector form
+      (`cargo +"$api_toolchain" public-api --package "$pkg" --simplified`), confirmed to build and
+      emit a non-empty surface (`cargo +nightly public-api --package mycelium-fmt --simplified`, 120
+      lines, exit 0).
+
+      Fixed in both scripts (same one-line change, same `$api_toolchain` knob preserved). With the gate
+      unblocked, the surface-vs-baseline diff ran for the first time since the baselines were last
+      regenerated (2026-07-06) and surfaced FIVE crates' worth of accumulated, legitimate surface
+      growth — not just the enb batch's stated deltas (`mycelium-l1`: `Expr::Try`/`Expr::Wrapping`/
+      `Ctor::sealed`/`InherentImplDecl::params`/`PhylumEnv::link`/`Tok::Priv`/`Tok::Question`/
+      `Tok::Wrapping`; `mycelium-transpile`: the `emit_expr`/`emit_block_as_expr` param thread, new
+      `gap::Category` variants, `prim_map`, `batch::output_rel_path`) but ALSO prior work that landed
+      2026-07-07..08 while this same broken gate silently masked the drift: `mycelium-core::binary`
+      (CU-1/CU-3/CU-5/CU-6 — `bit.mul`/popcount/clz/ctz, never-silent Binary<->Float conversion,
+      wrapping-mode add/sub/mul), `mycelium-interp::prims::eval_wrapping` (CU-5 dispatch), and
+      `mycelium-check` (`PhylumReport`/`PhylumError`/`check_phylum_dir`/`check_phylum_sources`, the
+      M-1006 `--phylum` cross-nodule check mode). Every added symbol was traced to a landed, merged
+      commit (`git log -S`) — nothing unreviewed, no accidental `pub`, no leaked surface from an
+      unrelated crate (the transparency review this issue's DoD requires). Baselines regenerated via
+      `just api-baseline`; `scripts/checks/api.sh` re-run GREEN (57/57 crates checked/skip-N/A, zero
+      FAIL) after the regen.
+
+      User stories:
+      - As an integrator closing out a batch, I want the api-surface gate to actually run (not silently
+        fail on every crate due to a stale CLI flag), so that a real surface regression is caught instead
+        of masked behind a uniform tool error.
+
+      Definition of Done:
+      - `scripts/checks/api.sh` and `scripts/api-baseline.sh` invoke `cargo-public-api` with a form valid
+        for the installed 0.52.0 (verified empirically, not assumed); the gate runs to completion and
+        distinguishes a real surface diff from a tool failure again; baselines regenerated and reviewed
+        (every added symbol traced to a landed commit, no unintended leak); `bash scripts/checks/api.sh`
+        green.
+
+      DONE (2026-07-10, this close-out). Both scripts fixed to `cargo +"$api_toolchain" public-api …`;
+      baselines regenerated for the 5 affected crates (`mycelium-check`/`-core`/`-interp`/`-l1`/
+      `-transpile`); gate re-run confirms GREEN. No further action — a future `cargo-public-api` major
+      version may drift the flag shape again; re-verify empirically against `--help` if the gate starts
+      uniformly failing again (the tell: identical failure across every crate, not a per-crate diff).

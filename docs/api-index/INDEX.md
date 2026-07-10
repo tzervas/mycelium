@@ -217,12 +217,19 @@
 | `mycelium_check::Finding` | struct | `crates/mycelium-check/src/lib.rs:34` | One aggregated diagnostic. |
 | `mycelium_check::Finding::with_route` | fn | `crates/mycelium-check/src/lib.rs:52` | Attach a baseline route, fluently (M-644 ergonomics). |
 | `mycelium_check::FindingKind` | enum | `crates/mycelium-check/src/lib.rs:25` | What kind of refusal a finding records. |
+| `mycelium_check::NoduleVerdict` | struct | `crates/mycelium-check/src/lib.rs:260` | A per-nodule verdict, emitted **only** when the whole phylum checked clean (never fabricated). |
+| `mycelium_check::PhylumError` | struct | `crates/mycelium-check/src/lib.rs:249` | The single refusal that blocked a phylum (all-or-nothing — there is at most one). |
+| `mycelium_check::PhylumErrorKind` | enum | `crates/mycelium-check/src/lib.rs:226` | What kind of refusal blocked a phylum from checking clean. |
+| `mycelium_check::PhylumErrorKind::as_str` | fn | `crates/mycelium-check/src/lib.rs:238` | The stable lowercase tag used in the `--json` contract (`"parse"`/`"duplicate"`/`"check"`). |
+| `mycelium_check::PhylumReport` | struct | `crates/mycelium-check/src/lib.rs:269` | The result of checking a set of sources **as one phylum**. |
 | `mycelium_check::Report` | struct | `crates/mycelium-check/src/lib.rs:60` | The aggregated result of checking a set of sources. |
 | `mycelium_check::Report::exit_code` | fn | `crates/mycelium-check/src/lib.rs:91` | The CI exit code: 2 if any parse error, else 3 if any check error, else 0. |
 | `mycelium_check::Report::is_ok` | fn | `crates/mycelium-check/src/lib.rs:85` | Whether the report is clean (no findings). |
 | `mycelium_check::Report::with_files_checked` | fn | `crates/mycelium-check/src/lib.rs:78` | Set the checked-file count, fluently (M-644 ergonomics). |
 | `mycelium_check::Report::with_finding` | fn | `crates/mycelium-check/src/lib.rs:71` | Push a finding, fluently (M-644 ergonomics). |
 | `mycelium_check::ResolveError` | struct | `crates/mycelium-check/src/lib.rs:104` | A project-resolution failure — no/ambiguous input (no sources, an unreadable file). |
+| `mycelium_check::check_phylum_dir` | fn | `crates/mycelium-check/src/lib.rs:391` | Resolve and check every `.myc` under `dir` **as one phylum** (the FS wrapper over |
+| `mycelium_check::check_phylum_sources` | fn | `crates/mycelium-check/src/lib.rs:303` | Check an explicit set of `(path, contents)` sources **as one cross-resolving phylum** (the |
 | `mycelium_check::check_project` | fn | `crates/mycelium-check/src/lib.rs:189` | Resolve and check a whole project: every `.myc` under `dir`. |
 | `mycelium_check::check_source` | fn | `crates/mycelium-check/src/lib.rs:116` | Check one source, appending any finding. |
 | `mycelium_check::check_source_default` | fn | `crates/mycelium-check/src/lib.rs:162` | Check one source under the **default baseline policy** — the M-644 ergonomic convenience for the |
@@ -330,24 +337,35 @@
 | `mycelium_core::WrappingOpt` | struct | `crates/mycelium-core/src/wrapping.rs:44` | The explicit, named Axis-B opt-out (RFC-0034 §10; M-791). |
 | `mycelium_core::binary` | mod | `crates/mycelium-core/src/lib.rs:13` | — |
 | `mycelium_core::binary::DIV_MAX_WIDTH:` | const | `crates/mycelium-core/src/binary.rs:257` | The current [`div_rem`] operand-width cap (`n ≤ 64`) — exact via a `u64` unsigned magnitude, the |
+| `mycelium_core::binary::FLOAT_CONV_MAX_WIDTH:` | const | `crates/mycelium-core/src/binary.rs:585` | The current [`checked_uint_to_f64`]/[`checked_f64_to_uint`] operand-width cap (`n ≤ 64`), |
+| `mycelium_core::binary::FLOAT_EXACT_MAX:` | const | `crates/mycelium-core/src/binary.rs:590` | The largest non-negative integer magnitude IEEE-754 binary64 represents **exactly** — every |
 | `mycelium_core::binary::MUL_MAX_WIDTH:` | const | `crates/mycelium-core/src/binary.rs:140` | The current [`mul`] operand-width cap (`n ≤ 64`) — exact via an `i128` intermediate product, the |
 | `mycelium_core::binary::SHIFT_MAX_WIDTH:` | const | `crates/mycelium-core/src/binary.rs:299` | The current [`shl`]/[`shr`] operand-width cap (`n ≤ 64`) — exact via a `u64`/`u128` unsigned |
 | `mycelium_core::binary::TC_MAX_WIDTH:` | const | `crates/mycelium-core/src/binary.rs:362` | The current [`add`]/[`sub`]/[`neg`] operand-width cap (`n ≤ 64`) — exact via the `i64` two's- |
 | `mycelium_core::binary::add` | fn | `crates/mycelium-core/src/binary.rs:371` | Two's-complement fixed-width add of two equal-width `n`-bit two's-complement integers (MSB-first), |
 | `mycelium_core::binary::bits_to_int` | fn | `crates/mycelium-core/src/binary.rs:62` | The signed two's-complement value of an MSB-first bit string. |
 | `mycelium_core::binary::bits_to_uint` | fn | `crates/mycelium-core/src/binary.rs:108` | The **unsigned** magnitude of an MSB-first bit string, exact for `n ≤ 64`. |
+| `mycelium_core::binary::checked_f64_to_uint` | fn | `crates/mycelium-core/src/binary.rs:615` | `Float → Binary{M}`, never-silent (ADR-040 §2.4; CU-3). |
+| `mycelium_core::binary::checked_uint_to_f64` | fn | `crates/mycelium-core/src/binary.rs:597` | `Binary{N} → Float`, checked-exact (ADR-040 §2.4; CU-3). |
+| `mycelium_core::binary::clz` | fn | `crates/mycelium-core/src/binary.rs:239` | **Count leading zeros** — the number of most-significant `0` bits before the first `1` |
 | `mycelium_core::binary::cmp_signed` | fn | `crates/mycelium-core/src/binary.rs:549` | **Signed** (two's-complement) total order over two equal-width bitvectors — the distinct-named |
+| `mycelium_core::binary::ctz` | fn | `crates/mycelium-core/src/binary.rs:247` | **Count trailing zeros** — the number of least-significant `0` bits before the first `1`, or `n` |
 | `mycelium_core::binary::div_rem` | fn | `crates/mycelium-core/src/binary.rs:272` | Unsigned fixed-width division and remainder of two equal-width `n`-bit bitvectors (MSB-first), |
 | `mycelium_core::binary::div_signed` | fn | `crates/mycelium-core/src/binary.rs:475` | **Signed** (two's-complement) fixed-width division of two equal-width `n`-bit two's-complement |
 | `mycelium_core::binary::int_to_bits` | fn | `crates/mycelium-core/src/binary.rs:81` | The `n`-bit two's-complement representation of `value`, MSB-first — or `None` if `value` is |
 | `mycelium_core::binary::mul` | fn | `crates/mycelium-core/src/binary.rs:155` | Two's-complement fixed-width multiply of two equal-width `n`-bit two's-complement integers |
+| `mycelium_core::binary::mul_unsigned` | fn | `crates/mycelium-core/src/binary.rs:192` | **Unsigned** fixed-width multiply of two equal-width `n`-bit unsigned bitvectors (MSB-first), for |
 | `mycelium_core::binary::neg` | fn | `crates/mycelium-core/src/binary.rs:423` | Two's-complement fixed-width negate (`−a`) of an `n`-bit two's-complement integer (MSB-first), for |
+| `mycelium_core::binary::popcount` | fn | `crates/mycelium-core/src/binary.rs:231` | **Population count** of an `n`-bit bitvector — the number of `1` bits, as the `n`-bit unsigned |
 | `mycelium_core::binary::rem_signed` | fn | `crates/mycelium-core/src/binary.rs:497` | **Signed** (two's-complement) fixed-width remainder — the companion to [`div_signed`], with the |
 | `mycelium_core::binary::shl` | fn | `crates/mycelium-core/src/binary.rs:314` | **Logical** (unsigned) fixed-width left shift of an `n`-bit bitvector (MSB-first) by a |
 | `mycelium_core::binary::shr` | fn | `crates/mycelium-core/src/binary.rs:341` | **Logical** (unsigned, zero-filling) fixed-width right shift — the counterpart to [`shl`], same |
 | `mycelium_core::binary::shr_signed` | fn | `crates/mycelium-core/src/binary.rs:519` | **Arithmetic** (sign-extending) fixed-width right shift — the distinct-named signed counterpart |
 | `mycelium_core::binary::sub` | fn | `crates/mycelium-core/src/binary.rs:395` | Two's-complement fixed-width subtract (`a − b`) of two equal-width `n`-bit two's-complement |
 | `mycelium_core::binary::uint_to_bits` | fn | `crates/mycelium-core/src/binary.rs:120` | The `n`-bit **unsigned** representation of `value`, MSB-first — `None` if `value` does not fit |
+| `mycelium_core::binary::wrapping_add` | fn | `crates/mycelium-core/src/binary.rs:666` | Two's-complement fixed-width **wrapping** add (RFC-0034 §10; CU-5): the sum reduced modulo |
+| `mycelium_core::binary::wrapping_mul` | fn | `crates/mycelium-core/src/binary.rs:694` | Two's-complement fixed-width **wrapping** multiply (RFC-0034 §10; CU-5). |
+| `mycelium_core::binary::wrapping_sub` | fn | `crates/mycelium-core/src/binary.rs:680` | Two's-complement fixed-width **wrapping** subtract (`a − b`, RFC-0034 §10; CU-5). |
 | `mycelium_core::bound` | mod | `crates/mycelium-core/src/lib.rs:14` | — |
 | `mycelium_core::bound::Bound::well_formed` | fn | `crates/mycelium-core/src/bound.rs:119` | Well-formedness per `bound.schema.json`: the payload ranges (magnitudes finite and in range) |
 | `mycelium_core::bound::BoundBasis::strength` | fn | `crates/mycelium-core/src/bound.rs:42` | The honest [`GuaranteeStrength`] this basis implies (M-I2/M-I3/M-I4): the basis *is* the |
@@ -713,6 +731,7 @@
 | `mycelium_interp::prims::PrimRegistry::names` | fn | `crates/mycelium-interp/src/prims.rs:280` | The registered primitive names (sorted). |
 | `mycelium_interp::prims::PrimRegistry::register` | fn | `crates/mycelium-interp/src/prims.rs:268` | Register (or replace) a primitive. |
 | `mycelium_interp::prims::PrimRegistry::with_builtins` | fn | `crates/mycelium-interp/src/prims.rs:125` | The default registry: the exact built-ins — elementwise logical (`core.id`, |
+| `mycelium_interp::prims::eval_wrapping` | fn | `crates/mycelium-interp/src/prims.rs:1132` | Evaluate `prim` (one of `bin.add`/`bin.sub`/`bin.mul`) under the **named** `wrapping` opt-out |
 | `mycelium_interp::supervise` | mod | `crates/mycelium-interp/src/lib.rs:112` | — |
 | `mycelium_interp::supervise::CancelToken::cancel` | fn | `crates/mycelium-interp/src/supervise.rs:48` | Request cancellation. |
 | `mycelium_interp::supervise::CancelToken::check` | fn | `crates/mycelium-interp/src/supervise.rs:63` | Observe the token at a checkpoint: an explicit [`Cancelled`] if cancellation was requested, else |
@@ -821,6 +840,7 @@
 | `mycelium_l1::checkty::Env::type_info` | fn | `crates/mycelium-l1/src/checkty.rs:587` | The registered data type named `name`, if any. |
 | `mycelium_l1::checkty::InstanceInfo` | struct | `crates/mycelium-l1/src/checkty.rs:277` | A registered **instance** `impl Trait<args> for T` (RFC-0019 §4.5). |
 | `mycelium_l1::checkty::MAX_CHECK_DEPTH:` | const | `crates/mycelium-l1/src/checkty.rs:42` | The checker's **explicit expression-nesting budget** (the "banked guard 4" discipline; A4-02). |
+| `mycelium_l1::checkty::PhylumEnv::link` | fn | `crates/mycelium-l1/src/checkty.rs:1086` | **The phylum-wide runtime link (M-1024; ENB-1).** Fold every nodule's *checked* declarations |
 | `mycelium_l1::checkty::PhylumEnv::nodule` | fn | `crates/mycelium-l1/src/checkty.rs:1051` | The checked [`Env`] of the nodule whose path equals `path`, if present. |
 | `mycelium_l1::checkty::PhylumEnv::single` | fn | `crates/mycelium-l1/src/checkty.rs:1042` | The single nodule's [`Env`] when this is a phylum-of-one, else `None`. |
 | `mycelium_l1::checkty::TraitInfo` | struct | `crates/mycelium-l1/src/checkty.rs:264` | A registered **trait** (RFC-0019 §4.2; LR-2). |
@@ -2780,15 +2800,24 @@
 | `mycelium_transpile::emit::non_doc_attrs` | fn | `crates/mycelium-transpile/src/emit.rs:213` | Every non-doc attribute on an item, rendered as text — these are always dropped (KNOWN HARD |
 | `mycelium_transpile::gap` | mod | `crates/mycelium-transpile/src/lib.rs:37` | — |
 | `mycelium_transpile::gap::Category::as_str` | fn | `crates/mycelium-transpile/src/gap.rs:97` | — |
+| `mycelium_transpile::gap::Category::excluded_from_denominator` | fn | `crates/mycelium-transpile/src/gap.rs:132` | Whether a gap of this category is **excluded from the expressible-fraction denominator** — |
 | `mycelium_transpile::gap::GapReason` | struct | `crates/mycelium-transpile/src/gap.rs:163` | Internal helper carrying a [`Category`] + reason before a [`Gap`] is materialized with its |
 | `mycelium_transpile::gap::GapReason::new` | fn | `crates/mycelium-transpile/src/gap.rs:169` | — |
 | `mycelium_transpile::gap::GapReport::category_counts` | fn | `crates/mycelium-transpile/src/gap.rs:236` | Per-category gap counts, for reporting. |
+| `mycelium_transpile::gap::GapReport::denominator_excluded_count` | fn | `crates/mycelium-transpile/src/gap.rs:205` | Count of top-level items recorded as gaps that are **excluded from the denominator** |
 | `mycelium_transpile::gap::GapReport::expressible_fraction` | fn | `crates/mycelium-transpile/src/gap.rs:227` | Fraction of non-test top-level items for which some `.myc` text was emitted. |
 | `mycelium_transpile::gap::GapReport::non_test_item_count` | fn | `crates/mycelium-transpile/src/gap.rs:220` | `total_top_level_items` minus the denominator-excluded items (test items **and** bodyless |
 | `mycelium_transpile::gap::GapReport::test_item_count` | fn | `crates/mycelium-transpile/src/gap.rs:193` | Count of gaps tagged [`Category::TestItem`] — `#[cfg(test)]` items excluded from scope. |
 | `mycelium_transpile::map` | mod | `crates/mycelium-transpile/src/lib.rs:38` | — |
 | `mycelium_transpile::map::map_type` | fn | `crates/mycelium-transpile/src/map.rs:77` | Map a Rust type to its Mycelium `type_ref` text. |
 | `mycelium_transpile::map::tokens_to_string` | fn | `crates/mycelium-transpile/src/map.rs:16` | Render a `syn` node's tokens back to text, for gap snippets and unmapped-type messages only |
+| `mycelium_transpile::output_rel_path` | fn | `crates/mycelium-transpile/src/batch.rs:62` | The **path-qualified** output stem (extension-stripped, relative to the run's `out-dir`) for a |
+| `mycelium_transpile::prim_map` | mod | `crates/mycelium-transpile/src/lib.rs:39` | — |
+| `mycelium_transpile::prim_map::PrimMapping` | struct | `crates/mycelium-transpile/src/prim_map.rs:88` | One forward-mapped Rust `Expr::MethodCall` pattern (see module docs). |
+| `mycelium_transpile::prim_map::ReceiverGate` | enum | `crates/mycelium-transpile/src/prim_map.rs:79` | The gate on a `wired: true` row's **receiver** — required so a coincidentally-same-named method |
+| `mycelium_transpile::prim_map::TABLE:` | const | `crates/mycelium-transpile/src/prim_map.rs:140` | The table. |
+| `mycelium_transpile::prim_map::lookup` | fn | `crates/mycelium-transpile/src/prim_map.rs:221` | Look up `rust_method` in [`TABLE`] (first match; the table has no duplicate `rust_method` |
+| `mycelium_transpile::prim_map::receiver_gate_matches` | fn | `crates/mycelium-transpile/src/prim_map.rs:228` | Whether `receiver_ty` (a resolved [`crate::emit::TypeEnv`] entry, when the receiver is a known |
 | `mycelium_transpile::reserved` | mod | `crates/mycelium-transpile/src/lib.rs:40` | — |
 | `mycelium_transpile::reserved::RESERVED:` | const | `crates/mycelium-transpile/src/reserved.rs:30` | The Mycelium reserved-word set — a verbatim snapshot of `mycelium-l1`'s `token::keyword` table |
 | `mycelium_transpile::reserved::guard_ident` | fn | `crates/mycelium-transpile/src/reserved.rs:110` | Guard an identifier the emitter is about to place into `.myc` surface text. |
@@ -3522,6 +3551,18 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_check::FindingKind::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_check::FindingKind::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_check::FindingKind::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_check::NoduleVerdict::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_check::NoduleVerdict::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_check::NoduleVerdict::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_check::PhylumError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_check::PhylumError::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_check::PhylumError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_check::PhylumErrorKind::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_check::PhylumErrorKind::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_check::PhylumErrorKind::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_check::PhylumReport::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_check::PhylumReport::exit_code` | dedup-alias: same definition as `mycelium_check::Report::exit_code` at crates/mycelium-check/src/lib.rs:91 — one canonical row kept |
+| `mycelium_check::PhylumReport::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_check::Report::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_check::Report::default` | definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated |
 | `mycelium_check::Report::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
@@ -8336,6 +8377,7 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_transpile::batch::UnionGapReport::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
 | `mycelium_transpile::batch::UnionGapReport::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
 | `mycelium_transpile::batch::discover_rs_files` | dedup-alias: same definition as `mycelium_transpile::discover_rs_files` at crates/mycelium-transpile/src/batch.rs:26 — one canonical row kept |
+| `mycelium_transpile::batch::output_rel_path` | dedup-alias: same definition as `mycelium_transpile::output_rel_path` at crates/mycelium-transpile/src/batch.rs:62 — one canonical row kept |
 | `mycelium_transpile::batch::summarize` | dedup-alias: same definition as `mycelium_transpile::summarize` at crates/mycelium-transpile/src/batch.rs:156 — one canonical row kept |
 | `mycelium_transpile::batch::transpile_batch` | dedup-alias: same definition as `mycelium_transpile::transpile_batch` at crates/mycelium-transpile/src/batch.rs:139 — one canonical row kept |
 | `mycelium_transpile::gap::Category` | dedup-alias: same definition as `mycelium_transpile::Category` at crates/mycelium-transpile/src/gap.rs:17 — one canonical row kept |
@@ -8367,6 +8409,11 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_transpile::gap::GapReport::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_transpile::gap::GapReport::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
 | `mycelium_transpile::gap::GapReport::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
+| `mycelium_transpile::prim_map::PrimMapping::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_transpile::prim_map::PrimMapping::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_transpile::prim_map::ReceiverGate::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_transpile::prim_map::ReceiverGate::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_transpile::prim_map::ReceiverGate::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_transpile::transpile::transpile_file` | dedup-alias: same definition as `mycelium_transpile::transpile_file` at crates/mycelium-transpile/src/transpile.rs:20 — one canonical row kept |
 | `mycelium_transpile::transpile::transpile_source` | dedup-alias: same definition as `mycelium_transpile::transpile_source` at crates/mycelium-transpile/src/transpile.rs:32 — one canonical row kept |
 | `mycelium_transpile::vet::MycChecker` | dedup-alias: same definition as `mycelium_transpile::MycChecker` at crates/mycelium-transpile/src/vet.rs:321 — one canonical row kept |

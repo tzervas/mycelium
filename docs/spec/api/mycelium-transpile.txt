@@ -85,6 +85,7 @@ impl core::marker::UnsafeUnpin for mycelium_transpile::batch::UnionGapReport
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::batch::UnionGapReport
 impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::batch::UnionGapReport
 pub fn mycelium_transpile::batch::discover_rs_files(&std::path::Path) -> core::io::error::Result<alloc::vec::Vec<std::path::PathBuf>>
+pub fn mycelium_transpile::batch::output_rel_path(&std::path::Path, &std::path::Path) -> core::result::Result<std::path::PathBuf, std::path::PathBuf>
 pub fn mycelium_transpile::batch::summarize(&[mycelium_transpile::batch::FileResult]) -> (mycelium_transpile::batch::BatchSummary, mycelium_transpile::batch::UnionGapReport)
 pub fn mycelium_transpile::batch::transpile_batch(&[std::path::PathBuf]) -> (alloc::vec::Vec<mycelium_transpile::batch::FileResult>, alloc::vec::Vec<(std::path::PathBuf, alloc::string::String)>)
 pub mod mycelium_transpile::emit
@@ -100,9 +101,9 @@ impl core::marker::UnsafeUnpin for mycelium_transpile::emit::Emitted
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::emit::Emitted
 impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::emit::Emitted
 pub fn mycelium_transpile::emit::doc_lines(&[syn::attr::Attribute]) -> alloc::vec::Vec<alloc::string::String>
-pub fn mycelium_transpile::emit::emit_block_as_expr(&syn::stmt::Block, core::option::Option<&str>) -> core::result::Result<alloc::string::String, mycelium_transpile::gap::GapReason>
+pub fn mycelium_transpile::emit::emit_block_as_expr(&syn::stmt::Block, core::option::Option<&str>, &std::collections::hash::map::HashMap<alloc::string::String, alloc::string::String>) -> core::result::Result<alloc::string::String, mycelium_transpile::gap::GapReason>
 pub fn mycelium_transpile::emit::emit_enum(&syn::item::ItemEnum) -> core::result::Result<mycelium_transpile::emit::Emitted, mycelium_transpile::gap::GapReason>
-pub fn mycelium_transpile::emit::emit_expr(&syn::expr::Expr, core::option::Option<&str>) -> core::result::Result<alloc::string::String, mycelium_transpile::gap::GapReason>
+pub fn mycelium_transpile::emit::emit_expr(&syn::expr::Expr, core::option::Option<&str>, &std::collections::hash::map::HashMap<alloc::string::String, alloc::string::String>) -> core::result::Result<alloc::string::String, mycelium_transpile::gap::GapReason>
 pub fn mycelium_transpile::emit::emit_fn(&syn::item::ItemFn) -> core::result::Result<mycelium_transpile::emit::Emitted, mycelium_transpile::gap::GapReason>
 pub fn mycelium_transpile::emit::emit_impl(&syn::item::ItemImpl) -> core::result::Result<mycelium_transpile::emit::Emitted, mycelium_transpile::gap::GapReason>
 pub fn mycelium_transpile::emit::emit_struct(&syn::item::ItemStruct) -> core::result::Result<mycelium_transpile::emit::Emitted, mycelium_transpile::gap::GapReason>
@@ -118,9 +119,12 @@ pub mycelium_transpile::gap::Category::DeriveAttr
 pub mycelium_transpile::gap::Category::GenericBound
 pub mycelium_transpile::gap::Category::Impl
 pub mycelium_transpile::gap::Category::Import
+pub mycelium_transpile::gap::Category::InnerAttr
 pub mycelium_transpile::gap::Category::MacroDef
 pub mycelium_transpile::gap::Category::MacroInvocation
+pub mycelium_transpile::gap::Category::ModuleDecl
 pub mycelium_transpile::gap::Category::MultiStmtBody
+pub mycelium_transpile::gap::Category::NamedFieldDrop
 pub mycelium_transpile::gap::Category::Other
 pub mycelium_transpile::gap::Category::PayloadVariant
 pub mycelium_transpile::gap::Category::RecursionBudget
@@ -131,6 +135,7 @@ pub mycelium_transpile::gap::Category::Trait
 pub mycelium_transpile::gap::Category::WhereClause
 impl mycelium_transpile::gap::Category
 pub fn mycelium_transpile::gap::Category::as_str(self) -> &'static str
+pub fn mycelium_transpile::gap::Category::excluded_from_denominator(self) -> bool
 impl core::clone::Clone for mycelium_transpile::gap::Category
 pub fn mycelium_transpile::gap::Category::clone(&self) -> mycelium_transpile::gap::Category
 impl core::cmp::Eq for mycelium_transpile::gap::Category
@@ -198,6 +203,7 @@ pub mycelium_transpile::gap::GapReport::source: alloc::string::String
 pub mycelium_transpile::gap::GapReport::total_top_level_items: usize
 impl mycelium_transpile::gap::GapReport
 pub fn mycelium_transpile::gap::GapReport::category_counts(&self) -> alloc::collections::btree::map::BTreeMap<&'static str, usize>
+pub fn mycelium_transpile::gap::GapReport::denominator_excluded_count(&self) -> usize
 pub fn mycelium_transpile::gap::GapReport::expressible_fraction(&self) -> f64
 pub fn mycelium_transpile::gap::GapReport::non_test_item_count(&self) -> usize
 pub fn mycelium_transpile::gap::GapReport::test_item_count(&self) -> usize
@@ -217,6 +223,50 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::gap::GapReport
 pub mod mycelium_transpile::map
 pub fn mycelium_transpile::map::map_type(&syn::ty::Type, core::option::Option<&str>) -> core::result::Result<alloc::string::String, mycelium_transpile::gap::GapReason>
 pub fn mycelium_transpile::map::tokens_to_string<T: quote::to_tokens::ToTokens>(&T) -> alloc::string::String
+pub mod mycelium_transpile::prim_map
+pub enum mycelium_transpile::prim_map::ReceiverGate
+pub mycelium_transpile::prim_map::ReceiverGate::AnyBinaryWidth
+pub mycelium_transpile::prim_map::ReceiverGate::Exact(&'static str)
+impl core::clone::Clone for mycelium_transpile::prim_map::ReceiverGate
+pub fn mycelium_transpile::prim_map::ReceiverGate::clone(&self) -> mycelium_transpile::prim_map::ReceiverGate
+impl core::cmp::Eq for mycelium_transpile::prim_map::ReceiverGate
+impl core::cmp::PartialEq for mycelium_transpile::prim_map::ReceiverGate
+pub fn mycelium_transpile::prim_map::ReceiverGate::eq(&self, &mycelium_transpile::prim_map::ReceiverGate) -> bool
+impl core::fmt::Debug for mycelium_transpile::prim_map::ReceiverGate
+pub fn mycelium_transpile::prim_map::ReceiverGate::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_transpile::prim_map::ReceiverGate
+impl core::marker::StructuralPartialEq for mycelium_transpile::prim_map::ReceiverGate
+impl core::marker::Freeze for mycelium_transpile::prim_map::ReceiverGate
+impl core::marker::Send for mycelium_transpile::prim_map::ReceiverGate
+impl core::marker::Sync for mycelium_transpile::prim_map::ReceiverGate
+impl core::marker::Unpin for mycelium_transpile::prim_map::ReceiverGate
+impl core::marker::UnsafeUnpin for mycelium_transpile::prim_map::ReceiverGate
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::prim_map::ReceiverGate
+impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::prim_map::ReceiverGate
+pub struct mycelium_transpile::prim_map::PrimMapping
+pub mycelium_transpile::prim_map::PrimMapping::bridge_binary1_to_bool: bool
+pub mycelium_transpile::prim_map::PrimMapping::citation: &'static str
+pub mycelium_transpile::prim_map::PrimMapping::myc_prim: &'static str
+pub mycelium_transpile::prim_map::PrimMapping::pending_category: mycelium_transpile::gap::Category
+pub mycelium_transpile::prim_map::PrimMapping::receiver_gate: mycelium_transpile::prim_map::ReceiverGate
+pub mycelium_transpile::prim_map::PrimMapping::rust_method: &'static str
+pub mycelium_transpile::prim_map::PrimMapping::slug: &'static str
+pub mycelium_transpile::prim_map::PrimMapping::wired: bool
+impl core::clone::Clone for mycelium_transpile::prim_map::PrimMapping
+pub fn mycelium_transpile::prim_map::PrimMapping::clone(&self) -> mycelium_transpile::prim_map::PrimMapping
+impl core::fmt::Debug for mycelium_transpile::prim_map::PrimMapping
+pub fn mycelium_transpile::prim_map::PrimMapping::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_transpile::prim_map::PrimMapping
+impl core::marker::Freeze for mycelium_transpile::prim_map::PrimMapping
+impl core::marker::Send for mycelium_transpile::prim_map::PrimMapping
+impl core::marker::Sync for mycelium_transpile::prim_map::PrimMapping
+impl core::marker::Unpin for mycelium_transpile::prim_map::PrimMapping
+impl core::marker::UnsafeUnpin for mycelium_transpile::prim_map::PrimMapping
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::prim_map::PrimMapping
+impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::prim_map::PrimMapping
+pub const mycelium_transpile::prim_map::TABLE: &[mycelium_transpile::prim_map::PrimMapping]
+pub fn mycelium_transpile::prim_map::lookup(&str) -> core::option::Option<&'static mycelium_transpile::prim_map::PrimMapping>
+pub fn mycelium_transpile::prim_map::receiver_gate_matches(mycelium_transpile::prim_map::ReceiverGate, core::option::Option<&str>) -> bool
 pub mod mycelium_transpile::reserved
 pub const mycelium_transpile::reserved::RESERVED: &[&str]
 pub fn mycelium_transpile::reserved::guard_ident(&str, &str) -> core::result::Result<(), mycelium_transpile::gap::GapReason>
@@ -347,9 +397,12 @@ pub mycelium_transpile::Category::DeriveAttr
 pub mycelium_transpile::Category::GenericBound
 pub mycelium_transpile::Category::Impl
 pub mycelium_transpile::Category::Import
+pub mycelium_transpile::Category::InnerAttr
 pub mycelium_transpile::Category::MacroDef
 pub mycelium_transpile::Category::MacroInvocation
+pub mycelium_transpile::Category::ModuleDecl
 pub mycelium_transpile::Category::MultiStmtBody
+pub mycelium_transpile::Category::NamedFieldDrop
 pub mycelium_transpile::Category::Other
 pub mycelium_transpile::Category::PayloadVariant
 pub mycelium_transpile::Category::RecursionBudget
@@ -360,6 +413,7 @@ pub mycelium_transpile::Category::Trait
 pub mycelium_transpile::Category::WhereClause
 impl mycelium_transpile::gap::Category
 pub fn mycelium_transpile::gap::Category::as_str(self) -> &'static str
+pub fn mycelium_transpile::gap::Category::excluded_from_denominator(self) -> bool
 impl core::clone::Clone for mycelium_transpile::gap::Category
 pub fn mycelium_transpile::gap::Category::clone(&self) -> mycelium_transpile::gap::Category
 impl core::cmp::Eq for mycelium_transpile::gap::Category
@@ -457,6 +511,7 @@ pub mycelium_transpile::GapReport::source: alloc::string::String
 pub mycelium_transpile::GapReport::total_top_level_items: usize
 impl mycelium_transpile::gap::GapReport
 pub fn mycelium_transpile::gap::GapReport::category_counts(&self) -> alloc::collections::btree::map::BTreeMap<&'static str, usize>
+pub fn mycelium_transpile::gap::GapReport::denominator_excluded_count(&self) -> usize
 pub fn mycelium_transpile::gap::GapReport::expressible_fraction(&self) -> f64
 pub fn mycelium_transpile::gap::GapReport::non_test_item_count(&self) -> usize
 pub fn mycelium_transpile::gap::GapReport::test_item_count(&self) -> usize
@@ -572,6 +627,7 @@ impl core::marker::UnsafeUnpin for mycelium_transpile::vet::VetReport
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::vet::VetReport
 impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::vet::VetReport
 pub fn mycelium_transpile::discover_rs_files(&std::path::Path) -> core::io::error::Result<alloc::vec::Vec<std::path::PathBuf>>
+pub fn mycelium_transpile::output_rel_path(&std::path::Path, &std::path::Path) -> core::result::Result<std::path::PathBuf, std::path::PathBuf>
 pub fn mycelium_transpile::summarize(&[mycelium_transpile::batch::FileResult]) -> (mycelium_transpile::batch::BatchSummary, mycelium_transpile::batch::UnionGapReport)
 pub fn mycelium_transpile::transpile_batch(&[std::path::PathBuf]) -> (alloc::vec::Vec<mycelium_transpile::batch::FileResult>, alloc::vec::Vec<(std::path::PathBuf, alloc::string::String)>)
 pub fn mycelium_transpile::transpile_file(&std::path::Path) -> core::result::Result<(alloc::string::String, mycelium_transpile::gap::GapReport), alloc::string::String>
