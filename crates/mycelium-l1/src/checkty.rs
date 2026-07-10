@@ -2473,7 +2473,14 @@ fn rhs_contains_wild(rhs: &Expr) -> Result<bool, crate::totality::WalkDepthExcee
 /// `concrete` (keeping the occurrence's own guarantee index if written — `T @ Exact` ↦ `C @ Exact`);
 /// every structural form recurses; reprs / `Substrate` / `Bytes` / `Float` / VSA / dense carry no
 /// nested type-name and are cloned verbatim. Total, allocation-bounded by the input's size.
-fn subst_type_param_in_typeref(tr: &TypeRef, param: &str, concrete: &TypeRef) -> TypeRef {
+// `pub(crate)` (widened from private, zero logic change) so the M-1013 Stage-5 self-hosting
+// differential (`compiler_stage5_tyref.rs`) can call this real oracle directly — the eval-PR-1
+// harness-marshalling precedent (DN-26 §10.2).
+pub(crate) fn subst_type_param_in_typeref(
+    tr: &TypeRef,
+    param: &str,
+    concrete: &TypeRef,
+) -> TypeRef {
     match &tr.base {
         BaseType::Named(name, args) if name == param && args.is_empty() => TypeRef {
             base: concrete.base.clone(),
