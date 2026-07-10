@@ -200,10 +200,14 @@ L3  Projections / editor surface     ← committed (DN-09 KC-2 verdict: text syn
                                         projection layer co-equally; M-380 for projections)
 L2  Surface term language ("Myc")    ← the Rust-class language: ADTs, traits, nodules, recursion
 L1  Kernel calculus                  ← small typed core: λ + data + explicit recursion + Repr types
-L0  Core IR (frozen, RFC-0001)       ← Const | Var | Let | Op | Swap + Meta/WF1–WF5
+L0  Core IR (RFC-0001; unfrozen for the ADR-045 window) ← Const | Var | Let | Op | Swap + Meta/WF1–WF5
 ```
 
-- **L0 is the trusted base** (KC-3, ADR-007). It is frozen; changes need their own RFC. The
+- **L0 is the trusted base** (KC-3, ADR-007). Its NOW-horizon freeze is normally on (changes need
+  their own RFC) but is **lifted for a bounded, re-freezable gap-closure window** per
+  [ADR-045](../../docs/adr/ADR-045-Kernel-And-Lexicon-Unfreeze-For-Early-Gap-Closure.md) (Accepted
+  2026-07-10) — L0/L1 kernel, L2/L3 grammar, and the stdlib lexicon all unfrozen together; re-freeze
+  is bound to the DN-99 residual worklist. The
   reference interpreter runs L0. `Exact ⊐ Proven ⊐ Empirical ⊐ Declared` guarantee tags live here.
 - **L1 adds five nodes** to L0: `Lam | App | Construct | Match | Fix` (RFC-0007 §3). Data-type
   declarations live in a content-addressed registry, not in the term language.

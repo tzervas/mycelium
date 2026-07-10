@@ -12,6 +12,29 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### docs(adr-045): Bucket-B descriptive freeze-doc sweep — correct stale "frozen" claims to the unfreeze (2026-07-10)
+
+Lands the **Bucket-B** follow-on FLAGged by the ADR-045 ratification entry below: a purely
+**descriptive** (append-only) correction of prose that still described the kernel/L0/L1/lexicon as
+FROZEN, now pointing at the ratified **whole-project unfreeze** (**ADR-045**, Accepted 2026-07-10).
+No Accepted/Enacted decision body is rewritten and no status is changed — only framing text and new
+forward-reference pointers are added. Touches: **`docs/CURRENT-STATE.md`** (the "Kernel FROZEN"
+status paragraph, the `frz`-kickoff historical note, and the kernel-freeze-condition-#3 open-decision
+note — all now read "unfrozen for the ADR-045 gap-closure window; end-state (ADR-042) unchanged;
+re-freeze bounded by the DN-99 worklist"); **`README.md`** (a new direction-note paragraph under the
+ADR-042/ADR-043 blurb recording the temporary unfreeze); the **25** `mycelium-std-*` crates' DN-66
+"Stability" doc-comment headers (comment-only additions — zero code
+changed, verified by diff and `cargo fmt --check`), each gaining a paragraph noting the DN-66 freeze
+is lifted for the window per ADR-045 while the "spec amendment + changelog entry, not a silent edit"
+discipline (G2) holds; **`.claude/memory/lang-lexicon-syntax.md`** and
+**`.claude/memory/language-execution.md`** (the L0-layer-cake "frozen" references — the unrelated
+`hash-frozen`/migration-verdict senses of "frozen" elsewhere in these files are deliberately
+untouched, out of scope); and an append-only **RFC-0001** footnote (following the existing
+RFC-0034/ADR-032 footnote precedent) recording the L0-floor freeze lift without touching the RFC's
+r0–r5 decision history. Verified: `git diff` confirms every crate-header change is a `//!` line
+addition only (no code); `cargo fmt --check` clean on all 25 touched crates. (ADR-045 Bucket-B;
+VR-5/G2/house rule #3.)
+
 ### docs(adr-045): ratify the whole-project unfreeze for early gap-closure (Draft → Accepted) (2026-07-10)
 
 Ratifies **ADR-045 — Whole-Project Unfreeze (L0 Core IR → L1 kernel → L2/L3 grammar → stdlib lexicon) for
