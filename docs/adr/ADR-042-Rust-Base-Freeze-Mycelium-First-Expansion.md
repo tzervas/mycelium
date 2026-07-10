@@ -322,3 +322,9 @@ and never silent (G2), and the residual count is tracked toward zero (§6 OQ-1).
   OS/hardware ABI seam (minimal `wild`). Remaining open questions: the trust story (OQ-1), Phase-I-enabler
   classification (OQ-2), a freeze review-lens (OQ-3), the native-codegen-backend design (OQ-5). Doc-Index /
   README / CHANGELOG rows owned by the integrating parent. (VR-5 / G2 / house rule #4.)
+- **2026-07-10 — Forward-reference (append-only; no status change).** → see **ADR-045** (Draft),
+  "Kernel and Lexicon Unfreeze for Early Gap-Closure": it proposes lifting the §2.1(a) Decision (1)
+  NOW-horizon Rust-base freeze for a **bounded** gap-closure/optimization window; the §2.1(b) END-STATE
+  (zero foreign first-party languages, kernel included, by the DN-88 gate) is explicitly **UNCHANGED**.
+  This ADR is **not amended** here (house rule #3) — the amendment lands only if/when the maintainer
+  ratifies ADR-045 Draft to Accepted. Status stays **Accepted**. (VR-5/G2.)
