@@ -296,7 +296,7 @@ Regenerate with `just docs-index` (runs `tools/docgen/code_index.py`). The commi
 - `index.json` — machine-readable rows (stable anchor, kind, file:line, status/tag where the source declares one, verbatim-ish summary)
 - `INDEX.md` — grep-friendly table for agent context lookups
 
-`Empirical/Declared` heuristic — source is ground truth; unextractable constructs go to the `flagged` section, never dropped. `docs/api-index/` and `docs/lib-index/` are referenced as sibling indices, never duplicated. Regenerate with `just tero-index-gen` (runs `crates/mycelium-tero`'s `tero-index` bin); drift-gated in `just check` (`scripts/checks/tero-index.sh`, `just tero-index`). Integrator-regenerated, never hand-merged.
+`Empirical/Declared` heuristic — source is ground truth; unextractable constructs go to the `flagged` section, never dropped. `docs/api-index/` and `docs/lib-index/` are referenced as sibling indices, never duplicated. Regenerate with `just tero-index-gen` (runs the published, checksum-pinned `tero-index` binary from `tzervas/tero-rs` — `crates/mycelium-tero` was extracted there and is no longer an in-tree crate; see `tools/tero-rs/PROVENANCE.md` and `scripts/fetch-tero-index.sh`); drift-gated in `just check` (`scripts/checks/tero-index.sh`, `just tero-index`). Integrator-regenerated, never hand-merged.
 
 ### Reader guide — README topic docs (`docs/guide/`)
 

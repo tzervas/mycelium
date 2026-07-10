@@ -26688,853 +26688,6 @@
       "corpus_refs": []
     },
     {
-      "symbol": "mycelium_tero::Answer",
-      "kind": "struct",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/query.rs",
-      "line": 211,
-      "summary": "An answer to a [`Query`]: a non-empty, ranked/ordered set of Layer-1 rows plus the [`Explain`]",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::Answer::citations",
-      "kind": "fn",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero::Answer",
-      "file": "crates/mycelium-tero/src/query.rs",
-      "line": 225,
-      "summary": "The resolvable citation for each item, same order as [`Answer::items`].",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::Answer::explain",
-      "kind": "fn",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero::Answer",
-      "file": "crates/mycelium-tero/src/query.rs",
-      "line": 231,
-      "summary": "The EXPLAIN trace for this answer's candidate set and ordering.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::Answer::items",
-      "kind": "fn",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero::Answer",
-      "file": "crates/mycelium-tero/src/query.rs",
-      "line": 219,
-      "summary": "The cited rows, in the answer's final order.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::AppState",
-      "kind": "struct",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/front/http.rs",
-      "line": 51,
-      "summary": "Shared, cheaply-cloneable server state.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::AppState::new",
-      "kind": "fn",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero::AppState",
-      "file": "crates/mycelium-tero/src/front/http.rs",
-      "line": 62,
-      "summary": "Build server state.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::AuthError",
-      "kind": "enum",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/front/auth.rs",
-      "line": 107,
-      "summary": "A per-request authorization failure, mapped to a `4xx` / JSON-RPC code by the front (via",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::Citation",
-      "kind": "struct",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/query.rs",
-      "line": 131,
-      "summary": "A resolvable citation to one Layer-1 row — the atomic unit of provenance every [`Answer`] is",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::EvalQuestion",
-      "kind": "struct",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/eval/mod.rs",
-      "line": 30,
-      "summary": "One eval question, drawn from a real agent task over this corpus, with a **stable, resolvable gold",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::EvalReport",
-      "kind": "struct",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/eval/mod.rs",
-      "line": 139,
-      "summary": "The full eval report — the machine artifact (`eval/verdict.json`) and the source of the human",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::EvalSuite",
-      "kind": "struct",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/eval/mod.rs",
-      "line": 43,
-      "summary": "The committed question-set file shape (`eval/questions.json`).",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::EvalSuite::from_json",
-      "kind": "fn",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero::EvalSuite",
-      "file": "crates/mycelium-tero/src/eval/mod.rs",
-      "line": 54,
-      "summary": "Parse a suite from its committed JSON text.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::Explain",
-      "kind": "struct",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/query.rs",
-      "line": 184,
-      "summary": "The EXPLAIN trace for an [`Answer`]: the candidate universe, how many matched, the ordering",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::Family",
-      "kind": "enum",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/model.rs",
-      "line": 77,
-      "summary": "Which corpus family a row was extracted from (drives grouping in `INDEX.md` + a stable primary",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::Flagged",
-      "kind": "struct",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/model.rs",
-      "line": 239,
-      "summary": "A construct/source the heuristic could not (or does not yet) place — recorded, never dropped",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::GateEvidence",
-      "kind": "struct",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/eval/verdict.rs",
-      "line": 188,
-      "summary": "The measured evidence a gate verdict rests on — every number, with its denominator, recorded so",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::GateVerdict",
-      "kind": "enum",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/eval/verdict.rs",
-      "line": 216,
-      "summary": "The append-only gate verdict.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::GateVerdict::evidence",
-      "kind": "fn",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero::GateVerdict",
-      "file": "crates/mycelium-tero/src/eval/verdict.rs",
-      "line": 252,
-      "summary": "The measured evidence, whichever arm.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::GateVerdict::is_open",
-      "kind": "fn",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero::GateVerdict",
-      "file": "crates/mycelium-tero/src/eval/verdict.rs",
-      "line": 237,
-      "summary": "Whether the gate opened.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::GateVerdict::status",
-      "kind": "fn",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero::GateVerdict",
-      "file": "crates/mycelium-tero/src/eval/verdict.rs",
-      "line": 129,
-      "summary": "A short status word for the report.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::HONESTY_TAG:",
-      "kind": "const",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/model.rs",
-      "line": 26,
-      "summary": "The top-of-file honesty grading, mirroring `docs/api-index/INDEX.md`'s header posture verbatim",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::ITEM_TAG:",
-      "kind": "const",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/model.rs",
-      "line": 35,
-      "summary": "The uniform per-row honesty tag.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::LatencyBaseline",
-      "kind": "struct",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/eval/verdict.rs",
-      "line": 51,
-      "summary": "A committed latency baseline: a host tag (the portability guard) plus every captured `(case,",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::LatencyBaseline::lookup",
-      "kind": "fn",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero::LatencyBaseline",
-      "file": "crates/mycelium-tero/src/eval/verdict.rs",
-      "line": 67,
-      "summary": "Look up this baseline's `ns_per_call` for `(case_id, system)`, if captured.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::LatencyBaseline::to_json",
-      "kind": "fn",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero::LatencyBaseline",
-      "file": "crates/mycelium-tero/src/eval/verdict.rs",
-      "line": 88,
-      "summary": "Serialize this baseline to pretty JSON (the committed-artifact format).",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::LatencyEntry",
-      "kind": "struct",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/eval/verdict.rs",
-      "line": 38,
-      "summary": "One committed latency snapshot: a `(case, system)` `ns_per_call` from a prior run.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::LatencyOutcome",
-      "kind": "enum",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/eval/verdict.rs",
-      "line": 96,
-      "summary": "The latency-gate verdict for one `(case, system)` pair — this run vs the committed baseline.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::LatencyOutcome::is_regression",
-      "kind": "fn",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero::LatencyOutcome",
-      "file": "crates/mycelium-tero/src/eval/verdict.rs",
-      "line": 142,
-      "summary": "Whether this is a flagged regression.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::Layer2Answer",
-      "kind": "struct",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/vsa2/mod.rs",
-      "line": 48,
-      "summary": "A Layer-2 answer: the recovered Layer-1 [`Citation`] (its evidence — the DoD requirement), the",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::Layer2Answer::citation",
-      "kind": "fn",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero::Layer2Answer",
-      "file": "crates/mycelium-tero/src/vsa2/mod.rs",
-      "line": 59,
-      "summary": "The Layer-1 evidence this Layer-2 answer names — always resolvable (a Layer-2 answer with no",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::Layer2Answer::confidence",
-      "kind": "fn",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero::Layer2Answer",
-      "file": "crates/mycelium-tero/src/vsa2/mod.rs",
-      "line": 65,
-      "summary": "The retrieval confidence (top cosine).",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::Layer2Answer::margin",
-      "kind": "fn",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero::Layer2Answer",
-      "file": "crates/mycelium-tero/src/vsa2/mod.rs",
-      "line": 71,
-      "summary": "The margin to the runner-up.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::Layer2Explain",
-      "kind": "struct",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/vsa2/explain.rs",
-      "line": 24,
-      "summary": "The inspectable trace behind one Layer-2 retrieval.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::Layer2Index",
-      "kind": "struct",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/vsa2/mod.rs",
-      "line": 101,
-      "summary": "The Layer-2 index facade: a VSA codebook over a Layer-1 report plus the machinery to query it and",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::Layer2Index::build",
-      "kind": "fn",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero::Layer2Index",
-      "file": "crates/mycelium-tero/src/vsa2/mod.rs",
-      "line": 116,
-      "summary": "Build the Layer-2 index from a Layer-1 report: encode every row into the cleanup codebook",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::Layer2Index::probe_kind",
-      "kind": "fn",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero::Layer2Index",
-      "file": "crates/mycelium-tero/src/vsa2/mod.rs",
-      "line": 297,
-      "summary": "**Optional structured probe** (secondary path): recover a record's `kind` filler by an",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::Layer2Index::query",
-      "kind": "fn",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero::Layer2Index",
-      "file": "crates/mycelium-tero/src/vsa2/mod.rs",
-      "line": 213,
-      "summary": "The served Layer-2 query path: form the probe, clean up to the best record, and — above the",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::Layer2Index::rank",
-      "kind": "fn",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero::Layer2Index",
-      "file": "crates/mycelium-tero/src/vsa2/mod.rs",
-      "line": 197,
-      "summary": "Rank the codebook against a free-text query, returning the top-`k` candidates (for the eval",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::Layer2Index::refused",
-      "kind": "fn",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero::Layer2Index",
-      "file": "crates/mycelium-tero/src/vsa2/mod.rs",
-      "line": 177,
-      "summary": "The never-silent encode refusals.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::Layer2Index::resolve",
-      "kind": "fn",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero::Layer2Index",
-      "file": "crates/mycelium-tero/src/vsa2/mod.rs",
-      "line": 190,
-      "summary": "Resolve an `anchor` to its Layer-1 citation, if it is a real row (the provenance check the",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::Layer2Index::summary",
-      "kind": "fn",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero::Layer2Index",
-      "file": "crates/mycelium-tero/src/vsa2/mod.rs",
-      "line": 183,
-      "summary": "The honest build summary.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::Layer2Refusal",
-      "kind": "enum",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/vsa2/decode.rs",
-      "line": 38,
-      "summary": "A typed, never-silent Layer-2 \"no answer\" (the semantic-layer twin of [`crate::query::Refusal`]).",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::Query",
-      "kind": "enum",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/query.rs",
-      "line": 93,
-      "summary": "A structured or free-text query over the Layer-1 model (DN-87 §4: \"structured queries (by id,",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::QueryEngine",
-      "kind": "struct",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/query.rs",
-      "line": 59,
-      "summary": "A read-only query engine over a [`TeroIndexReport`] (typically loaded via",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::REGRESSION_BAND:",
-      "kind": "const",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/eval/verdict.rs",
-      "line": 18,
-      "summary": "The regression band half-width, reified (no black box) — matches `mycelium-bench`'s",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::RankedHit",
-      "kind": "struct",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/query.rs",
-      "line": 168,
-      "summary": "One item's place in an [`Explain`] trace: its final rank position is implicit in",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::Refusal",
-      "kind": "enum",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/query.rs",
-      "line": 244,
-      "summary": "A typed, never-silent \"no answer\" (DN-87 §6.2).",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::SIBLING_INDICES:",
-      "kind": "const",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/model.rs",
-      "line": 40,
-      "summary": "The sibling indices this one deliberately does **not** duplicate — each owns its own domain and",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::Scope",
-      "kind": "enum",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/front/auth.rs",
-      "line": 27,
-      "summary": "The access scope a token carries.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::Scope::allows",
-      "kind": "fn",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero::Scope",
-      "file": "crates/mycelium-tero/src/front/auth.rs",
-      "line": 45,
-      "summary": "Whether a token of `self` scope may perform an operation requiring `required` scope.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::Scope::as_str",
-      "kind": "fn",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero::Scope",
-      "file": "crates/mycelium-tero/src/front/auth.rs",
-      "line": 51,
-      "summary": "The wire keyword (`read` / `refresh`).",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::SiblingIndex",
-      "kind": "struct",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/model.rs",
-      "line": 57,
-      "summary": "A pointer to a sibling index (see [`SIBLING_INDICES`]).",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::SystemMetrics",
-      "kind": "struct",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/eval/mod.rs",
-      "line": 61,
-      "summary": "Per-system aggregate metrics, with **explicit denominators** (never a bare rate).",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::SystemMetrics::provenance_fidelity",
-      "kind": "fn",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero::SystemMetrics",
-      "file": "crates/mycelium-tero/src/eval/mod.rs",
-      "line": 104,
-      "summary": "Provenance fidelity in `[0, 1]`.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::SystemMetrics::rate_at_1",
-      "kind": "fn",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero::SystemMetrics",
-      "file": "crates/mycelium-tero/src/eval/mod.rs",
-      "line": 83,
-      "summary": "correctness@1 as a rate in `[0, 1]` (`0` when no questions).",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::SystemMetrics::rate_at_k",
-      "kind": "fn",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero::SystemMetrics",
-      "file": "crates/mycelium-tero/src/eval/mod.rs",
-      "line": 93,
-      "summary": "correctness@k as a rate in `[0, 1]`.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::TERO_L2_SEED:",
-      "kind": "const",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/vsa2/atoms.rs",
-      "line": 17,
-      "summary": "The one committed master seed for Layer-2 atom generation.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::TeroIndexItem",
-      "kind": "struct",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/model.rs",
-      "line": 116,
-      "summary": "One indexed row: a citable unit of the corpus with its provenance, status/tag where the source",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::TeroIndexReport",
-      "kind": "struct",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/model.rs",
-      "line": 248,
-      "summary": "The full build result: every extracted row plus every flagged gap, in stable sorted order.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::TeroIndexReport::sort",
-      "kind": "fn",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero::TeroIndexReport",
-      "file": "crates/mycelium-tero/src/model.rs",
-      "line": 259,
-      "summary": "Sort rows + flags into the canonical, deterministic order (the byte-identical-regeneration",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::TokenTable",
-      "kind": "struct",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/front/auth.rs",
-      "line": 140,
-      "summary": "A runtime allow-list of `token -> scope`.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::TokenTable::authorize",
-      "kind": "fn",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero::TokenTable",
-      "file": "crates/mycelium-tero/src/front/auth.rs",
-      "line": 190,
-      "summary": "Authorize a presented token for an operation requiring `required` scope.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::TokenTable::from_env",
-      "kind": "fn",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero::TokenTable",
-      "file": "crates/mycelium-tero/src/front/auth.rs",
-      "line": 148,
-      "summary": "Load tokens from the environment: `TERO_TOKENS_FILE` (a path to a `token:scope` list) takes",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::TokenTable::is_empty",
-      "kind": "fn",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero::TokenTable",
-      "file": "crates/mycelium-tero/src/front/auth.rs",
-      "line": 211,
-      "summary": "Always `false` for a constructed table (kept for the `clippy::len_without_is_empty` lint).",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::TokenTable::len",
-      "kind": "fn",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero::TokenTable",
-      "file": "crates/mycelium-tero/src/front/auth.rs",
-      "line": 205,
-      "summary": "The number of configured tokens (never zero post-construction — see [`TokenTableError::Empty`]).",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::TokenTable::parse",
-      "kind": "fn",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero::TokenTable",
-      "file": "crates/mycelium-tero/src/front/auth.rs",
-      "line": 160,
-      "summary": "Parse a whitespace/comma-separated `token:scope` list into a table.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::TokenTableError",
-      "kind": "enum",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/front/auth.rs",
-      "line": 71,
-      "summary": "A configuration error building the [`TokenTable`] — surfaced at startup, never swallowed.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::build_tero_index",
-      "kind": "fn",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/index.rs",
-      "line": 30,
-      "summary": "Build the full tero-index report from the corpus rooted at `repo_root`.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::crate_summary",
-      "kind": "fn",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/lib.rs",
-      "line": 91,
-      "summary": "The program's one-line summary, used by the (future) API fronts' identify endpoint.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::decide_gate",
-      "kind": "fn",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/eval/verdict.rs",
-      "line": 263,
-      "summary": "Decide the gate from the measured `evidence` (pure — the sole gate decision point).",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::host_tag",
-      "kind": "fn",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/eval/mod.rs",
-      "line": 165,
-      "summary": "A single-machine host tag for latency provenance: `\"<arch>-<os>, <n> hw threads\"`.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::latency_classify",
-      "kind": "fn",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/eval/verdict.rs",
-      "line": 150,
-      "summary": "Classify one `(case, system)` pair's fresh timing against the committed `baseline`, gated on the",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::load_report",
-      "kind": "fn",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/load.rs",
-      "line": 43,
-      "summary": "Load a `TeroIndexReport` from a previously emitted `index.json` at `path` (typically",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::run_eval",
-      "kind": "fn",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/eval/mod.rs",
-      "line": 199,
-      "summary": "Run the eval harness: grade both systems over `questions`, measure latency across `trials` reps,",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::serve_mcp_stdio",
-      "kind": "fn",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/front/mcp.rs",
-      "line": 70,
-      "summary": "Run the MCP server over the process's real stdio — the entry point an MCP client launches",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::write_json",
-      "kind": "fn",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/emit.rs",
-      "line": 21,
-      "summary": "Write `docs/tero-index/index.json`.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_tero::write_markdown",
-      "kind": "fn",
-      "crate": "mycelium-tero",
-      "module": "mycelium_tero",
-      "file": "crates/mycelium-tero/src/emit.rs",
-      "line": 47,
-      "summary": "Write `docs/tero-index/INDEX.md`.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
       "symbol": "mycelium_transpile::BatchSummary",
       "kind": "struct",
       "crate": "mycelium-transpile",
@@ -50545,568 +49698,828 @@
       "reason": "dedup-alias: same definition as `mycelium_std_vsa::reconstruct_role` at crates/mycelium-std-vsa/src/recon.rs:50 — one canonical row kept"
     },
     {
+      "symbol": "mycelium_tero::Answer",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::Answer::citations",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
       "symbol": "mycelium_tero::Answer::clone",
-      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Answer::eq",
-      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Answer::explain",
-      "reason": "ambiguous: short name 'explain' is defined in multiple modules; attributed to crates/mycelium-tero/src/query.rs by heuristic — verify against source (ground truth)"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Answer::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::Answer::items",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::AppState",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::AppState::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::AppState::new",
-      "reason": "ambiguous: short name 'new' is defined in multiple modules; attributed to crates/mycelium-tero/src/front/http.rs by heuristic — verify against source (ground truth)"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::AuthError",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::AuthError::clone",
-      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::AuthError::eq",
-      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::AuthError::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::Citation",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Citation::clone",
-      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Citation::eq",
-      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Citation::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Citation::from",
-      "reason": "definition not found via regex heuristic (kind='fn', name='from') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Citation::from",
-      "reason": "definition not found via regex heuristic (kind='fn', name='from') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Citation::serialize",
-      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::EvalQuestion",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::EvalQuestion::clone",
-      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::EvalQuestion::deserialize",
-      "reason": "definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::EvalQuestion::eq",
-      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::EvalQuestion::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::EvalQuestion::serialize",
-      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::EvalReport",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::EvalReport::clone",
-      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::EvalReport::deserialize",
-      "reason": "definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::EvalReport::eq",
-      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::EvalReport::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::EvalReport::serialize",
-      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::EvalSuite",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::EvalSuite::clone",
-      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::EvalSuite::deserialize",
-      "reason": "definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::EvalSuite::eq",
-      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::EvalSuite::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::EvalSuite::from_json",
-      "reason": "ambiguous: short name 'from_json' is defined in multiple modules; attributed to crates/mycelium-tero/src/eval/mod.rs by heuristic — verify against source (ground truth)"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::EvalSuite::serialize",
-      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::Explain",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Explain::clone",
-      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Explain::eq",
-      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Explain::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Explain::serialize",
-      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::Family",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Family::as_str",
-      "reason": "ambiguous: short name 'as_str' is defined in multiple modules; attributed to crates/mycelium-tero/src/front/auth.rs by heuristic — verify against source (ground truth)"
-    },
-    {
-      "symbol": "mycelium_tero::Family::as_str",
-      "reason": "dedup-alias: same definition as `mycelium_tero::Scope::as_str` at crates/mycelium-tero/src/front/auth.rs:51 — one canonical row kept"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Family::clone",
-      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Family::cmp",
-      "reason": "definition not found via regex heuristic (kind='fn', name='cmp') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Family::deserialize",
-      "reason": "definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Family::eq",
-      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Family::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Family::partial_cmp",
-      "reason": "definition not found via regex heuristic (kind='fn', name='partial_cmp') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Family::serialize",
-      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::Flagged",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Flagged::clone",
-      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Flagged::deserialize",
-      "reason": "definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Flagged::eq",
-      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Flagged::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Flagged::serialize",
-      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::GateEvidence",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::GateEvidence::clone",
-      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::GateEvidence::deserialize",
-      "reason": "definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::GateEvidence::eq",
-      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::GateEvidence::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::GateEvidence::serialize",
-      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::GateVerdict",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::GateVerdict::clone",
-      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::GateVerdict::deserialize",
-      "reason": "definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::GateVerdict::eq",
-      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::GateVerdict::evidence",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::GateVerdict::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::GateVerdict::is_open",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::GateVerdict::serialize",
-      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::GateVerdict::status",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::HONESTY_TAG:",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::ITEM_TAG:",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::LatencyBaseline",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::LatencyBaseline::clone",
-      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::LatencyBaseline::deserialize",
-      "reason": "definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::LatencyBaseline::eq",
-      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::LatencyBaseline::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::LatencyBaseline::from_json",
-      "reason": "ambiguous: short name 'from_json' is defined in multiple modules; attributed to crates/mycelium-tero/src/eval/mod.rs by heuristic — verify against source (ground truth)"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
-      "symbol": "mycelium_tero::LatencyBaseline::from_json",
-      "reason": "dedup-alias: same definition as `mycelium_tero::EvalSuite::from_json` at crates/mycelium-tero/src/eval/mod.rs:54 — one canonical row kept"
+      "symbol": "mycelium_tero::LatencyBaseline::lookup",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::LatencyBaseline::serialize",
-      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::LatencyBaseline::to_json",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::LatencyEntry",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::LatencyEntry::clone",
-      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::LatencyEntry::deserialize",
-      "reason": "definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::LatencyEntry::eq",
-      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::LatencyEntry::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::LatencyEntry::serialize",
-      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::LatencyOutcome",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::LatencyOutcome::clone",
-      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::LatencyOutcome::eq",
-      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::LatencyOutcome::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::LatencyOutcome::is_regression",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::LatencyOutcome::serialize",
-      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::LatencyOutcome::status",
-      "reason": "dedup-alias: same definition as `mycelium_tero::GateVerdict::status` at crates/mycelium-tero/src/eval/verdict.rs:129 — one canonical row kept"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Answer",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Answer::citation",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Layer2Answer::clone",
-      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Answer::confidence",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Layer2Answer::eq",
-      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Layer2Answer::explain",
-      "reason": "ambiguous: short name 'explain' is defined in multiple modules; attributed to crates/mycelium-tero/src/query.rs by heuristic — verify against source (ground truth)"
-    },
-    {
-      "symbol": "mycelium_tero::Layer2Answer::explain",
-      "reason": "dedup-alias: same definition as `mycelium_tero::Answer::explain` at crates/mycelium-tero/src/query.rs:231 — one canonical row kept"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Layer2Answer::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Answer::margin",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Explain",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Layer2Explain::clone",
-      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Layer2Explain::eq",
-      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Layer2Explain::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Layer2Explain::serialize",
-      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Index",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Index::build",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Layer2Index::clone",
-      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Layer2Index::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Layer2Index::is_empty",
-      "reason": "ambiguous: short name 'is_empty' is defined in multiple modules; attributed to crates/mycelium-tero/src/front/auth.rs by heuristic — verify against source (ground truth)"
-    },
-    {
-      "symbol": "mycelium_tero::Layer2Index::is_empty",
-      "reason": "dedup-alias: same definition as `mycelium_tero::TokenTable::is_empty` at crates/mycelium-tero/src/front/auth.rs:211 — one canonical row kept"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Layer2Index::len",
-      "reason": "ambiguous: short name 'len' is defined in multiple modules; attributed to crates/mycelium-tero/src/front/auth.rs by heuristic — verify against source (ground truth)"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
-      "symbol": "mycelium_tero::Layer2Index::len",
-      "reason": "dedup-alias: same definition as `mycelium_tero::TokenTable::len` at crates/mycelium-tero/src/front/auth.rs:205 — one canonical row kept"
+      "symbol": "mycelium_tero::Layer2Index::probe_kind",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Index::query",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Index::rank",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Index::refused",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Index::resolve",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Index::summary",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::Layer2Refusal",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Layer2Refusal::clone",
-      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Layer2Refusal::eq",
-      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Layer2Refusal::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Layer2Refusal::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::Query",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Query::clone",
-      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Query::eq",
-      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Query::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::QueryEngine",
-      "reason": "definition not found via regex heuristic (kind='fn', name='QueryEngine') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::QueryEngine",
-      "reason": "definition not found via regex heuristic (kind='fn', name='QueryEngine') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::QueryEngine",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::REGRESSION_BAND:",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::RankedHit",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::RankedHit::clone",
-      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::RankedHit::eq",
-      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::RankedHit::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::RankedHit::serialize",
-      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::Refusal",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Refusal::clone",
-      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Refusal::eq",
-      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Refusal::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Refusal::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Refusal::serialize",
-      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::SIBLING_INDICES:",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::Scope",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::Scope::allows",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Scope::as_str",
-      "reason": "ambiguous: short name 'as_str' is defined in multiple modules; attributed to crates/mycelium-tero/src/front/auth.rs by heuristic — verify against source (ground truth)"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Scope::clone",
-      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Scope::eq",
-      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::Scope::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::SiblingIndex",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::SiblingIndex::clone",
-      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::SiblingIndex::eq",
-      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::SiblingIndex::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::SiblingIndex::serialize",
-      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::SystemMetrics",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::SystemMetrics::clone",
-      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::SystemMetrics::deserialize",
-      "reason": "definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::SystemMetrics::eq",
-      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::SystemMetrics::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::SystemMetrics::provenance_fidelity",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::SystemMetrics::rate_at_1",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::SystemMetrics::rate_at_k",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::SystemMetrics::serialize",
-      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::TERO_L2_SEED:",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::TeroIndexItem",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::TeroIndexItem::clone",
-      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::TeroIndexItem::deserialize",
-      "reason": "definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::TeroIndexItem::eq",
-      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::TeroIndexItem::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::TeroIndexItem::new",
-      "reason": "ambiguous: short name 'new' is defined in multiple modules; attributed to crates/mycelium-tero/src/front/http.rs by heuristic — verify against source (ground truth)"
-    },
-    {
-      "symbol": "mycelium_tero::TeroIndexItem::new",
-      "reason": "dedup-alias: same definition as `mycelium_tero::AppState::new` at crates/mycelium-tero/src/front/http.rs:62 — one canonical row kept"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::TeroIndexItem::serialize",
-      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::TeroIndexReport",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::TeroIndexReport::clone",
-      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::TeroIndexReport::default",
-      "reason": "definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::TeroIndexReport::eq",
-      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::TeroIndexReport::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::TeroIndexReport::sort",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::TokenTable",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::TokenTable::authorize",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::TokenTable::clone",
-      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::TokenTable::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::TokenTable::from_env",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::TokenTable::is_empty",
-      "reason": "ambiguous: short name 'is_empty' is defined in multiple modules; attributed to crates/mycelium-tero/src/front/auth.rs by heuristic — verify against source (ground truth)"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::TokenTable::len",
-      "reason": "ambiguous: short name 'len' is defined in multiple modules; attributed to crates/mycelium-tero/src/front/auth.rs by heuristic — verify against source (ground truth)"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::TokenTable::parse",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::TokenTableError",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::TokenTableError::clone",
-      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::TokenTableError::eq",
-      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::TokenTableError::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_tero::TokenTableError::fmt",
-      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::build_tero_index",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::crate_summary",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::decide_gate",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::host_tag",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::latency_classify",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::load_report",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::run_eval",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::serve_mcp_stdio",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::write_json",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
+    },
+    {
+      "symbol": "mycelium_tero::write_markdown",
+      "reason": "no src/ directory found for crate 'mycelium-tero'"
     },
     {
       "symbol": "mycelium_transpile::batch::BatchSummary",
