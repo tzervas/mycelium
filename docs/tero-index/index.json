@@ -6089,12 +6089,93 @@
       "tag": "Empirical/Declared"
     },
     {
+      "anchor": "dn-102-try-operator-desugar--second-research-pass-2026-07-11-m-1049-re-stage-for-ratification",
+      "family": "doc",
+      "kind": "section",
+      "title": "Second research pass (2026-07-11) — M-1049 (re-stage for ratification)",
+      "file": "docs/notes/DN-102-Try-Operator-Desugar.md",
+      "line": 194,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-102-try-operator-desugar--second-research-pass-2026-07-11-m-1049-re-stage-for-ratification--sp-1-what-the-ratified-frame-changes-and-what-it-does-not",
+      "family": "doc",
+      "kind": "section",
+      "title": "SP.1 What the ratified frame changes (and what it does not)",
+      "file": "docs/notes/DN-102-Try-Operator-Desugar.md",
+      "line": 207,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-102-try-operator-desugar--second-research-pass-2026-07-11-m-1049-re-stage-for-ratification--sp-2-flag-try-2-resolved-the-from-error-widening-gap-task-1",
+      "family": "doc",
+      "kind": "section",
+      "title": "SP.2 FLAG-try-2 resolved — the `From`-error-widening gap (task 1)",
+      "file": "docs/notes/DN-102-Try-Operator-Desugar.md",
+      "line": 236,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-102-try-operator-desugar--second-research-pass-2026-07-11-m-1049-re-stage-for-ratification--sp-3-as-a-sugar-macro-does-principle-5-simplify-the-desugar-task-2",
+      "family": "doc",
+      "kind": "section",
+      "title": "SP.3 `?` as a sugar/macro — does principle 5 simplify the desugar? (task 2)",
+      "file": "docs/notes/DN-102-Try-Operator-Desugar.md",
+      "line": 290,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-102-try-operator-desugar--second-research-pass-2026-07-11-m-1049-re-stage-for-ratification--sp-4-reconciliation-with-the-landed-m-1025-let-rhs-desugar-empirical",
+      "family": "doc",
+      "kind": "section",
+      "title": "SP.4 Reconciliation with the landed M-1025 let-RHS desugar (`Empirical`)",
+      "file": "docs/notes/DN-102-Try-Operator-Desugar.md",
+      "line": 326,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-102-try-operator-desugar--second-research-pass-2026-07-11-m-1049-re-stage-for-ratification--sp-5-ratification-recommendation-ranked-a-draft-for-the-maintainer-not-a-ratification",
+      "family": "doc",
+      "kind": "section",
+      "title": "SP.5 Ratification recommendation — RANKED (a Draft for the maintainer, not a ratification)",
+      "file": "docs/notes/DN-102-Try-Operator-Desugar.md",
+      "line": 342,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-102-try-operator-desugar--second-research-pass-2026-07-11-m-1049-re-stage-for-ratification--sp-6-adversarial-stress-test-argue-against-the-recommendation-vr-5-house-rule-4",
+      "family": "doc",
+      "kind": "section",
+      "title": "SP.6 Adversarial stress-test (argue against the recommendation — VR-5/house rule #4)",
+      "file": "docs/notes/DN-102-Try-Operator-Desugar.md",
+      "line": 382,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-102-try-operator-desugar--second-research-pass-2026-07-11-m-1049-re-stage-for-ratification--sp-7-definition-of-done-what-re-ratification-requires-this-pass",
+      "family": "doc",
+      "kind": "section",
+      "title": "SP.7 Definition of Done — what re-ratification requires (this pass)",
+      "file": "docs/notes/DN-102-Try-Operator-Desugar.md",
+      "line": 413,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-102-try-operator-desugar--second-research-pass-2026-07-11-m-1049-re-stage-for-ratification--sp-8-flags-shared-file-rows-flagged-up-not-applied-here",
+      "family": "doc",
+      "kind": "section",
+      "title": "SP.8 FLAGs (shared-file rows — FLAGGED up, not applied here)",
+      "file": "docs/notes/DN-102-Try-Operator-Desugar.md",
+      "line": 426,
+      "tag": "Empirical/Declared"
+    },
+    {
       "anchor": "dn-102-try-operator-desugar--8-grounding",
       "family": "doc",
       "kind": "section",
       "title": "§8 Grounding",
       "file": "docs/notes/DN-102-Try-Operator-Desugar.md",
-      "line": 194,
+      "line": 443,
       "tag": "Empirical/Declared"
     },
     {
@@ -6103,7 +6184,7 @@
       "kind": "section",
       "title": "Changelog",
       "file": "docs/notes/DN-102-Try-Operator-Desugar.md",
-      "line": 209,
+      "line": 458,
       "tag": "Empirical/Declared"
     },
     {
@@ -18944,7 +19025,7 @@
       "kind": "section",
       "title": "§9 Changelog",
       "file": "docs/notes/DN-99-Surface-Gap-Closure-Register.md",
-      "line": 380,
+      "line": 397,
       "tag": "Empirical/Declared"
     },
     {
