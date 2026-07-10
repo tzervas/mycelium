@@ -140,7 +140,13 @@ soft-wraps such that a continuation line *starts* with one of those (e.g. wrappi
 a continuation line** — reword (`+`→"and"/"plus") or keep the token off line-start. Likewise a blank
 line *between two adjacent blockquotes* trips **MD028** — join them with a `>` continuation line. The
 `markdown.sh` gate (now in the out-of-band set above) catches both; running it on touched docs before
-committing prevents the red gate at PR time.
+committing prevents the red gate at PR time. **Auto-fix (2026-07-10):** when the gate flags an MD004
+`+`/`*` soft-wrap, run **`just md-fix`** — a findings-driven reflow (`scripts/checks/md_wrap_fix.py`,
+also a `repo: local` pre-commit hook) that lifts the flagged marker off line-start. It is safe by
+construction: it reflows **only** the exact lines markdownlint flags (a green doc is a no-op — a
+legitimately-`+`-listed doc like DN-15 is untouched), and it **reports, never rewrites,** anything
+that resembles a real list. (Note `markdownlint --fix` is the wrong tool here: it normalizes marker
+*style* and so rewrites genuine lists to match the prose-wrap marker — green gate, corrupted content.)
 
 ## Test layout — no tests in logic files (in-crate `src/tests/`)
 **Logic files carry no test code.** Every `#[cfg(test)]` unit test lives in a dedicated **in-crate**

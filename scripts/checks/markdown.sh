@@ -24,5 +24,5 @@ fi
 if npx --yes markdownlint-cli2@0.22.1 --config .markdownlint.jsonc "${TRACKED[@]}"; then
   ok "${#TRACKED[@]} doc(s) clean"
 else
-  fail "markdownlint findings"; exit 1
+  fail "markdownlint findings — for MD004 \`+\`/\`*\` soft-wraps run \`just md-fix\` to auto-reflow"; exit 1
 fi
