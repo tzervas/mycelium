@@ -12,6 +12,70 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### fix(l1): add the missing `Wrapping(_)` arm to the `compiler_stage3_ast` test-driver's `classify_expr` (2026-07-10)
+
+Fixes a RED `dev`: 17 failing `ast_myc_*` tests in `crates/mycelium-l1/tests/compiler_stage3_ast.rs`.
+The #1355 `Wrapping` Expr-variant port (M-1013/M-791) correctly added `| Wrapping(Expr)` to
+`lib/compiler/ast.myc::Expr` (between `Spore` and `Consume`, mirroring `ast.rs::Expr`'s declaration
+order) — but this test file's embedded `.myc` driver prelude (`driver_prelude()`'s `classify_expr`
+helper, appended to every `program_with_prelude` fixture) still had an 18-arm match, so the
+self-hosted checker's exhaustiveness gate (`myc check`: "non-exhaustive match on Expr: missing
+Wrapping(_)") failed on every test that pulls in the shared prelude — not just the one test that
+directly exercises `Expr` classification. Root cause was a completeness gap in the test harness, not
+in `ast.myc` itself (`myc-check` on `ast.myc` is green both before and after this change). Fix: added
+`Wrapping(_) => 0b00000000000000000000000000010010` (18) between the existing `Spore` (7) and
+`Consume` (8) arms, positioned to mirror the oracle's declaration order for readability but given a
+**new, unused** code (18, the next free value) rather than renumbering `Consume..TupleLit` — since
+`ast_myc_classifies_every_expr_variant` hard-codes expected classification codes 0–17 for the other 18
+variants and does not (yet) assert a value for `Wrapping` itself; renumbering would have silently
+changed those tests' semantics for no reason (VR-5 — preserve what's already checked). Verified:
+`cargo test -p mycelium-l1 --test compiler_stage3_ast` 26/26 green (was 9 passed/17 failed);
+`cargo test -p mycelium-l1` full suite green, no regressions; `myc check lib/compiler/ast.myc` clean;
+`cargo fmt --check` and `cargo clippy -p mycelium-l1 --all-targets -D warnings` clean. (M-1013/M-791;
+VR-5/G2.)
+
+### feat(transpile): trx increment — reclassify DN-99 #72 as an L1-enabler gap, DN-100 macro pre-pass DN, #1349 FLAG fixes (2026-07-10)
+
+A transpiler-track increment toward the zero-hand-port north star (kickoff `trx`, lane
+`crates/mycelium-transpile` + DN-100/DN-34 only). **Emission stays `Declared` (VR-5); the transpiler
+classifies more honestly, never upgrades a guarantee tag.** Verify-first (mitigation #14) profiling of
+DN-99 Track B's "trivial B1" literal-pattern closures against the real `myc check` oracle (whole
+`crates/` corpus, 337 files) showed the B1 ranking wrong for a `checked_fraction` win, so the honest
+outcome is a **0.00pp** metric change (checked_fraction 3.8% = 191/5061, expressible 11.3% = 573/5061,
+both unchanged from the #1349 baseline):
+
+- **DN-99 #72 (string-literal `match` pattern) reclassified transpiler-only → LANGUAGE-ENABLER.** The
+  L1 checker categorically rejects a `match` on a `Bytes` scrutinee (`match scrutinee must be a data,
+  Binary, or Ternary type, got Bytes` — verified against the oracle), so emitting the faithful surface
+  produces parse-clean but check-*failing* `.myc` (a regression). `emit.rs` now gaps it **never-silently
+  (G2)** with a precise reason naming the L1 enabler and citing the exact diagnostic — a transparency
+  improvement over the prior generic message, **still gapped, zero metric change** — pinned by
+  `string_literal_pattern_gaps_with_l1_enabler_reason`.
+- **DN-99 #85 (byte-literal pattern) correctly NOT landed.** It is genuinely transpiler-only and
+  myc-check-clean in isolation, but its sole corpus occurrence (`is_ident_byte`) co-locates an
+  unknown-prim method call the desugar emits blindly (a pre-existing VR-5/G2 defect needing a symbol
+  table), so landing it would regress the file-gated metric. Shipping a regression contradicts the
+  raise-`checked_fraction` mandate.
+- **DN-100 (Draft)** added — the toolchain DN for **M-1032 / ENB-9** macro expand-first pre-pass:
+  whole-corpus macro profile (82 invocations, 18 files, ~93% custom `macro_rules!`), honest ROI (an
+  expressibility lever with an uncertain `checked_fraction` effect), 4 alternatives, a ranked
+  recommendation (opt-in `cargo expand` and a std-macro shim), and a DoD. Enacts nothing; **not
+  self-ratified** (maintainer ratifies).
+- **#1349 residual FLAG fixes:** `manifest_gen.py` semcore denominator now excludes `ModuleDecl` as well
+  as `TestItem` (matching `gap.rs::Category::excluded_from_denominator`, M-1006 Phase-2, so the semcore
+  single-file path and the stdlib batch path compute the identical denominator); `vet.rs` denominator
+  prose corrected to "non-excluded"; DN-34 **§8.19** count 267→264 (its own arithmetic 5323−5059=264),
+  **§8.20** "~25 files"→112 clobbered across 25 stem-groups, and new **§8.21** records the profiling
+  finding.
+
+**Two FLAGs filed for the language lane:** **FLAG-L1-match-Bytes** → new issue **M-1035** (ENB-12,
+E28-1, area:language P2 — L1 `match` on a `Bytes` scrutinee, unblocks #72 and every string-`match` port
+target); **FLAG-tr-unknown-prim** → subsumed by **M-1024** (ENB-1 cross-nodule symbol resolution, in
+flight — a known-prim symbol table closes it), cross-referenced in its body (no duplicate issue,
+mitigation #14). Change-scoped green: `cargo fmt --check`, `cargo clippy -p mycelium-transpile -D
+warnings`, `cargo test -p mycelium-transpile`, `scripts/checks/markdown.sh`, `doc_refs_check.py`.
+(kickoff `trx`; PR #1359; DN-34 §8.21 / DN-99 #72,#85 / DN-100; VR-5 / G2 / house rule #4.)
+
 ### docs(adr-045): Bucket-B descriptive freeze-doc sweep — correct stale "frozen" claims to the unfreeze (2026-07-10)
 
 Lands the **Bucket-B** follow-on FLAGged by the ADR-045 ratification entry below: a purely
