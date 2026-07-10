@@ -45,6 +45,30 @@ python3 tools/github/sync_issues.py --refresh
 Add `--update-bodies` only when you intend to push issue bodies (off by default — GitHub bodies
 accrue enactment notes a manifest would clobber). Add `--verbose` to list orphans.
 
+## Reconcile orphans (so they stop being orphaned)
+
+The plan may report **orphans** (GitHub issues not resolvable to an `issues.yaml` entry). Don't just
+report them — **classify and reconcile** them (dry-run first; never deletes):
+
+```bash
+# 5. Classified plan: each orphan → non-task (allowlist) / superseded (dup) / adoptable / uncertain.
+python3 tools/github/sync_issues.py --reconcile-orphans
+
+# 6. Act per class (deliberate — class-2 comments + class-3 adoptions are persistent):
+python3 tools/github/sync_issues.py --reconcile-orphans --apply --max-writes 25
+```
+
+- **non-task** → recorded in `pr-overrides.json` `orphans.allowlist` (an issue already in the engine's
+  `overrides` block, like `#67`, is accounted automatically — no action).
+- **superseded** → an idempotent link comment to the canonical issue (marker-guarded) + recorded in
+  `orphans.superseded`. Never reopened, never deleted.
+- **adoptable** → reverse-imported into `issues.yaml` as the next free `M-id` with best-effort fields
+  and `_adopt_flags` for a human to complete; idmap row appended. **Eyeball each adoption.**
+- **uncertain** → NO auto-action; a human decides (e.g. an OPEN issue that mirrors a tracked entry).
+
+After a reconcile, a re-run reports **0 orphans** except any left **uncertain** (by design). See the
+three-class table in `tools/github/README.md`.
+
 ## Safeguards (never-silent, G2)
 
 - **Dry-run by default** — no `--apply`, no writes. The plan is printed in full.

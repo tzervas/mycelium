@@ -57,6 +57,30 @@ How it stays rate-limit-frugal:
 Honest tags: the diff is **Exact** over the cached snapshot; the *snapshot* is **Empirical** (only as
 fresh as the last fetch); orphan handling is **Declared** (report, never delete).
 
+#### Orphan reconciliation (`--reconcile-orphans`)
+
+An **orphan** is a GitHub issue not resolvable to any `issues.yaml` entry. Reporting is not enough —
+`--reconcile-orphans` **classifies** each orphan and (under `--apply`) makes it stop being one.
+Dry-run by default; **never deletes**; each class has a distinct, never-silent action:
+
+```bash
+python tools/github/sync_issues.py --reconcile-orphans            # classified plan (no writes)
+python tools/github/sync_issues.py --reconcile-orphans --apply    # act per class (deliberate)
+```
+
+| Class | What it is | Reconcile action |
+|---|---|---|
+| **1 · non-task** | a **closed** issue with no duplicate signal — a tracked RFC/discussion issue (e.g. `#67` RFC-0006) | record it in `pr-overrides.json` → `orphans.allowlist` so it is *accounted for* and no longer flagged. (An issue already in the engine's `overrides` block — like `#67` — is accounted automatically.) |
+| **2 · superseded** | a **closed** issue whose title's task-id (`M-###`) maps via `idmap.tsv` to a **different**, canonical issue — a duplicate | confirm it is closed (never reopen); post an **idempotent** link comment to the canonical issue (marker-guarded, never re-posted); record it in `orphans.superseded`. **Never deletes.** |
+| **3 · adoptable** | an **open** issue with no duplicate signal — a genuine issue opened directly on GitHub | **reverse-import** into the source of truth: mint the next free `M-id` (collision-checked), append a best-effort `issues.yaml` entry (title/body/labels/state mapped; uninferable phase/type/area/priority surfaced as `_adopt_flags`), append the `idmap.tsv` row. **FLAGged for human review.** |
+| **· uncertain** | a conflicting signal — an **open** task-id duplicate, or a strong title match to a tracked entry | **no auto-action**; flagged for a human to decide (G2/VR-5). |
+
+The reconcile ledger lives in the **same `pr-overrides.json`** the engine already uses — under a new
+top-level `orphans` block that the engine ignores (its loader reads only `overrides`), so extending
+the file is side-effect-free there. Class-2 comments and class-3 adoptions are **persistent GitHub /
+source mutations** — run `--apply` deliberately. After a reconcile, a re-run reports **0 orphans**
+except any left in the **uncertain** bucket (which by design require a human decision).
+
 ### `gh-issues-sync.py` — the full cross-platform reconcile engine
 
 The superset: labels + milestones + **issues** + PRs + the Project v2 board, plus manifest validation
@@ -66,8 +90,8 @@ per-issue fan-out. Use it for a full-suite reconcile; use `sync_issues.py` for t
 issue-only, dry-run-first pass. See `RECONCILE.md` for the engine's full contract.
 
 `sync_issues.py` adds, over the engine's issue level: a **persisted snapshot cache**, a
-**dry-run-first default**, a **`--max-writes` cap**, explicit **orphan reporting**, and an
-**API-call tally**.
+**dry-run-first default**, a **`--max-writes` cap**, **classified orphan reconciliation**
+(`--reconcile-orphans`), and an **API-call tally**.
 
 ## Deprecated / historical
 

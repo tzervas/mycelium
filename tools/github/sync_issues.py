@@ -60,8 +60,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -77,11 +79,20 @@ DEFAULT_REPO = "tzervas/mycelium"
 ISSUES_YAML = HERE / "issues.yaml"
 IDMAP_TSV = HERE / "idmap.tsv"
 SNAPSHOT_CACHE = HERE / ".gh-snapshot.json"
+# The engine's declared-override manifest. We EXTEND it (never fork it): its `overrides` block is
+# read as class-1 accounting; a new top-level `orphans` block (which the engine ignores — its loader
+# only reads `overrides`) records class-1 allowlist + class-2 superseded reconciliations.
+PR_OVERRIDES = HERE / "pr-overrides.json"
 
 # Stop writing when the remaining core rate-limit budget drops below this floor (never-silent).
 RATE_FLOOR = 50
 # Auto-refetch the snapshot cache when it is older than this many seconds (24h default).
 DEFAULT_MAX_CACHE_AGE = 24 * 60 * 60
+# A title Jaccard-token overlap at/above this flags an orphan as a likely duplicate of a tracked
+# entry (→ uncertain, human-confirmed) rather than a fresh adoptable issue (never-guess, G2).
+SIMILARITY_FLAG = 0.5
+# Idempotency marker embedded in the class-2 supersede link comment (so a re-run never re-posts).
+SUPERSEDE_MARKER = "<!-- sync_issues:superseded -->"
 
 
 # ─────────────────────────────────────────────────────────────────────────────────────────────
@@ -203,6 +214,140 @@ def edit_args(changes):
 
 
 # ─────────────────────────────────────────────────────────────────────────────────────────────
+# PURE orphan classification + reconcile-action rendering (no I/O) — covered by --self-test
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+_ID_RE = re.compile(r"^(M-\d+|E\d+-\d+)\b")
+
+
+def title_task_id(title):
+    """PURE: the leading task-id token of a title (``M-###``/``E##-#``), or None."""
+    m = _ID_RE.match((title or "").strip())
+    return m.group(1) if m else None
+
+
+def _tokens(title):
+    return set(re.findall(r"[a-z0-9]+", (title or "").lower()))
+
+
+def title_similarity(a, b):
+    """PURE: Jaccard token overlap of two titles in [0,1] (0 when either is empty)."""
+    ta, tb = _tokens(a), _tokens(b)
+    if not ta or not tb:
+        return 0.0
+    return len(ta & tb) / len(ta | tb)
+
+
+def best_similar(title, issues):
+    """PURE: the (entry_id, score) of the issues.yaml title closest to ``title`` (or None)."""
+    best = None
+    for e in issues:
+        s = title_similarity(title, e["title"])
+        if best is None or s > best[1]:
+            best = (e["id"], s)
+    return best
+
+
+def classify_orphan(rec, *, issues_by_id, idmap, similar):
+    """PURE: classify one UNACCOUNTED orphan into a reconcile class + evidence (never guesses).
+
+    Returns (klass, evidence) with klass in:
+      * ``superseded`` — a **closed** issue whose title's task-id maps (via idmap) to a DIFFERENT,
+        canonical issue number ⇒ a duplicate of an already-tracked task.
+      * ``adoptable``  — an **open** issue with no duplicate signal ⇒ a genuine issue that should be
+        reverse-imported into ``issues.yaml`` as a new task.
+      * ``non-task``   — a **closed** issue with no duplicate signal ⇒ allowlist it as a tracked
+        non-task (an RFC/discussion issue, like #67).
+      * ``uncertain``  — a conflicting signal (an OPEN task-id-duplicate, or a strong title match to a
+        tracked entry) ⇒ **no auto-action**, flagged for a human (G2/VR-5).
+    ``similar`` is ``best_similar(rec["title"], issues)`` — passed in so this stays pure.
+    """
+    tid = title_task_id(rec["title"])
+    if tid and tid in issues_by_id:
+        canonical = idmap.get(tid)
+        if canonical and canonical != rec["number"]:
+            if rec.get("state") == "closed":
+                return "superseded", {"task_id": tid, "canonical": canonical}
+            return "uncertain", {
+                "task_id": tid,
+                "canonical": canonical,
+                "why": "duplicate task-id but the orphan is OPEN — confirm before superseding",
+            }
+    if similar and similar[1] >= SIMILARITY_FLAG:
+        return "uncertain", {
+            "similar_to": similar[0],
+            "score": round(similar[1], 2),
+            "why": "title closely matches a tracked entry — duplicate or adopt? confirm",
+        }
+    if rec.get("state") == "open":
+        return "adoptable", {}
+    return "non-task", {}
+
+
+def supersede_comment_body(canonical, task_id):
+    """PURE: the idempotent link-comment body posted on a class-2 duplicate (carries the marker)."""
+    return (
+        f"Superseded by #{canonical} — the canonical tracking issue for {task_id}. "
+        f"Recorded by `sync_issues.py --reconcile-orphans`. {SUPERSEDE_MARKER}"
+    )
+
+
+def allowlist_record(rec, reason):
+    """PURE: the class-1 ``orphans.allowlist`` record for a tracked non-task."""
+    return {"number": rec["number"], "title": rec["title"], "reason": reason}
+
+
+def superseded_record(rec, canonical, task_id):
+    """PURE: the class-2 ``orphans.superseded`` record for a duplicate issue."""
+    return {
+        "number": rec["number"],
+        "canonical": canonical,
+        "task_id": task_id,
+        "title": rec["title"],
+    }
+
+
+def next_free_mid(issues):
+    """PURE: mint the next free ``M-####`` id above the current max (collision-checked; mitigation #1)."""
+    nums = [int(m.group(1)) for e in issues if (m := re.fullmatch(r"M-(\d+)", e["id"]))]
+    taken = {e["id"] for e in issues}
+    candidate = (max(nums) + 1) if nums else 1
+    while f"M-{candidate:03d}" in taken:
+        candidate += 1
+    return f"M-{candidate:03d}"
+
+
+def build_adopted_entry(rec, mid):
+    """PURE: a reviewable ``issues.yaml`` entry reverse-imported from a GitHub issue (class 3).
+
+    Best-effort field mapping — title/body/labels/state carried over; a ``status:*`` label is derived
+    from the GitHub state. Fields we CANNOT infer (phase/type/area/priority) are surfaced in an
+    ``_adopt_flags`` list so a human completes them before the entry is treated as final (G2). Never
+    silently invents a phase/priority.
+    """
+    gh_labels = [lb for lb in (rec.get("labels") or []) if not lb.startswith("status:")]
+    status = "status:todo" if rec.get("state") == "open" else "status:done"
+    missing = [
+        p
+        for p in ("phase:", "type:", "area:", "priority:")
+        if not any(lb.startswith(p) for lb in gh_labels)
+    ]
+    entry = {
+        "id": mid,
+        "title": rec["title"],
+        "labels": sorted(gh_labels + [status]),
+        "body": (rec.get("body") or "")
+        + f"\n\n(Adopted from GitHub #{rec['number']} by sync_issues.py; review the FLAGged fields.)",
+        "_adopt_flags": [
+            f"missing {p.rstrip(':')} label — set before final" for p in missing
+        ]
+        + [
+            f"reverse-imported from GitHub #{rec['number']} — confirm milestone/depends_on/doc_refs"
+        ],
+    }
+    return entry
+
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────
 # I/O — loaders, the gh CLI, the cached bulk snapshot
 # ─────────────────────────────────────────────────────────────────────────────────────────────
 def load_issues(path):
@@ -226,6 +371,65 @@ def load_idmap(path):
             if len(parts) >= 2 and parts[1].strip().isdigit():
                 mapping[parts[0].strip()] = int(parts[1].strip())
     return mapping
+
+
+def load_orphan_accounting(path):
+    """Return the set of issue numbers already ACCOUNTED FOR (so they are not re-reported as orphans).
+
+    Reads ``pr-overrides.json``: the engine's ``overrides`` block (a declared tracked non-task like
+    #67) PLUS the ``orphans`` block this tool owns (``allowlist`` = class-1 recorded, ``superseded``
+    = class-2 recorded). Also returns the raw ``orphans`` config so the reconcile path can append to
+    it. Tolerant of an absent file (returns an empty accounting) but never-silent on a parse error.
+    """
+    accounted, orphans_cfg = set(), {"allowlist": [], "superseded": []}
+    if not path.exists():
+        return accounted, orphans_cfg
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        sys.exit(f"pr-overrides.json: JSON parse error — {exc}")
+    for key in raw.get("overrides") or {}:
+        if key.isdigit():
+            accounted.add(int(key))
+    cfg = raw.get("orphans") or {}
+    for section in ("allowlist", "superseded"):
+        for rec in cfg.get(section) or []:
+            num = rec.get("number")
+            if isinstance(num, int):
+                accounted.add(num)
+            orphans_cfg[section].append(rec)
+    return accounted, orphans_cfg
+
+
+def write_orphan_accounting(path, allowlist_adds, superseded_adds):
+    """Append class-1/class-2 records to the ``orphans`` block of pr-overrides.json (source edit).
+
+    Idempotent: a number already present in a section is not duplicated. The engine ignores this
+    block (its loader reads only ``overrides``), so extending the file is side-effect-free there.
+    """
+    raw = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+    cfg = raw.setdefault("orphans", {})
+    cfg.setdefault(
+        "_about",
+        "Orphan reconciliation ledger owned by sync_issues.py (the engine ignores this block). "
+        "allowlist = tracked non-task issues; superseded = duplicate issues recorded, not deleted.",
+    )
+    added = 0
+    for section, adds in (
+        ("allowlist", allowlist_adds),
+        ("superseded", superseded_adds),
+    ):
+        lst = cfg.setdefault(section, [])
+        present = {r.get("number") for r in lst}
+        for rec in adds:
+            if rec["number"] not in present:
+                lst.append(rec)
+                present.add(rec["number"])
+                added += 1
+    path.write_text(
+        json.dumps(raw, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
+    return added
 
 
 class ApiCounter:
@@ -399,10 +603,163 @@ def apply_update(repo, number, changes, counter):
     print(f"   ~ updated #{number}: {render_changes(changes)}")
 
 
+def issue_has_marker(repo, number, marker, counter):
+    """Return True if issue ``number`` already carries a comment with ``marker`` (idempotency read)."""
+    raw = gh(
+        ["api", f"repos/{repo}/issues/{number}/comments?per_page=100", "--paginate"],
+        counter=counter,
+        kind="read",
+    )
+    try:
+        comments = json.loads(raw)
+    except json.JSONDecodeError:
+        return False
+    return any(marker in (c.get("body") or "") for c in comments)
+
+
+def post_supersede_comment(repo, number, body, counter):
+    """Post the class-2 link comment on a duplicate issue (idempotency is the caller's guard)."""
+    gh(
+        ["issue", "comment", str(number), "--repo", repo, "--body", body],
+        counter=counter,
+        kind="write",
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+# Orphan reconciliation (classified; dry-run by default; never auto-delete)
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+def reconcile_orphans(args, issues, idmap, by_number, matched, counter):
+    """Classify every unaccounted orphan and (under --apply) reconcile it per class. Never deletes."""
+    accounted, _cfg = load_orphan_accounting(PR_OVERRIDES)
+    issues_by_id = {e["id"] for e in issues}
+    orphans = [
+        r for n, r in by_number.items() if n not in matched and n not in accounted
+    ]
+
+    plans = []  # (klass, rec, evidence)
+    for rec in orphans:
+        klass, ev = classify_orphan(
+            rec,
+            issues_by_id=issues_by_id,
+            idmap=idmap,
+            similar=best_similar(rec["title"], issues),
+        )
+        plans.append((klass, rec, ev))
+
+    order = {"non-task": 0, "superseded": 1, "adoptable": 2, "uncertain": 3}
+    plans.sort(key=lambda p: (order[p[0]], p[1]["number"]))
+    counts = {k: sum(1 for p in plans if p[0] == k) for k in order}
+
+    print("\n== ORPHAN RECONCILE PLAN ==")
+    print(f"   unaccounted orphans: {len(orphans)}")
+    for k in order:
+        print(f"   {k:11s}: {counts[k]}")
+    for klass, rec, ev in plans:
+        note = f" [{ev}]" if ev else ""
+        if klass == "non-task":
+            action = (
+                "allowlist as tracked non-task (pr-overrides.json orphans.allowlist)"
+            )
+        elif klass == "superseded":
+            action = (
+                f"record superseded → canonical #{ev['canonical']} ({ev['task_id']}); "
+                f"post idempotent link comment"
+            )
+        elif klass == "adoptable":
+            action = f"reverse-import as {next_free_mid(issues)} (best-effort; FLAG for review)"
+        else:
+            action = "NO auto-action — human confirm"
+        print(f"   #{rec['number']} [{rec.get('state')}] {klass}: {rec['title'][:70]}")
+        print(f"        → {action}{note}")
+
+    if not args.apply:
+        print(
+            "\n>> DRY-RUN (default): no mutations. Re-run with --reconcile-orphans --apply to act. "
+            "Class-2 comments + class-3 adoptions are persistent — run them deliberately."
+        )
+        return 0
+
+    # ── --apply: perform each class's reconcile action (rate-gated + capped) ──
+    remaining = core_remaining(counter)
+    if remaining is not None and remaining < RATE_FLOOR:
+        sys.exit(
+            f"\n!! core rate-limit budget low ({remaining} < {RATE_FLOOR}); refusing to write."
+        )
+    allowlist_adds, superseded_adds = [], []
+    adopted_entries, adopted_idmap = [], []
+    writes = 0
+    for klass, rec, ev in plans:
+        if writes >= args.max_writes:
+            print(
+                f"   … --max-writes {args.max_writes} reached; stopping (re-run to continue)."
+            )
+            break
+        if klass == "non-task":
+            allowlist_adds.append(
+                allowlist_record(rec, "closed non-task tracking issue")
+            )
+            print(f"   + allowlisted #{rec['number']}")
+        elif klass == "superseded":
+            body = supersede_comment_body(ev["canonical"], ev["task_id"])
+            if not issue_has_marker(
+                args.repo, rec["number"], SUPERSEDE_MARKER, counter
+            ):
+                post_supersede_comment(args.repo, rec["number"], body, counter)
+                writes += 1
+                print(
+                    f"   ~ commented #{rec['number']} → superseded by #{ev['canonical']}"
+                )
+            else:
+                print(
+                    f"   = #{rec['number']} already has the supersede comment (idempotent)"
+                )
+            superseded_adds.append(
+                superseded_record(rec, ev["canonical"], ev["task_id"])
+            )
+        elif klass == "adoptable":
+            mid = next_free_mid(issues)
+            entry = build_adopted_entry(rec, mid)
+            issues.append({"id": mid, "title": rec["title"]})  # reserve the id in-run
+            adopted_entries.append(entry)
+            adopted_idmap.append((mid, rec["number"], by_number[rec["number"]]["id"]))
+            print(f"   + adopted #{rec['number']} → {mid} (review the FLAGged fields)")
+        else:
+            print(
+                f"   ? #{rec['number']} uncertain — skipped (human confirm): {ev.get('why')}"
+            )
+
+    if allowlist_adds or superseded_adds:
+        added = write_orphan_accounting(PR_OVERRIDES, allowlist_adds, superseded_adds)
+        print(f">> pr-overrides.json: recorded {added} orphan reconciliation(s)")
+    if adopted_entries:
+        _append_adopted_issues(ISSUES_YAML, adopted_entries)
+        append_idmap(IDMAP_TSV, adopted_idmap)
+        print(
+            f">> issues.yaml: reverse-imported {len(adopted_entries)} adopted entry(ies) (FLAG)"
+        )
+    if SNAPSHOT_CACHE.exists():
+        SNAPSHOT_CACHE.unlink()
+    print(
+        f"\n>> orphan reconcile done: {counter.writes} mutating gh call(s). Cache invalidated."
+    )
+    return 0
+
+
+def _append_adopted_issues(path, entries):
+    """Append reverse-imported entries to issues.yaml, preserving the existing document (append-only)."""
+    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    data["issues"].extend(entries)
+    path.write_text(
+        yaml.safe_dump(data, sort_keys=False, allow_unicode=True, width=100),
+        encoding="utf-8",
+    )
+
+
 # ─────────────────────────────────────────────────────────────────────────────────────────────
 # Plan + drive
 # ─────────────────────────────────────────────────────────────────────────────────────────────
-def print_plan(to_create, to_update, in_sync, orphans, *, verbose):
+def print_plan(to_create, to_update, in_sync, orphans, accounted_orphans, *, verbose):
     print("\n== PLAN ==")
     print(f"   in-sync  : {len(in_sync):4d}  (skipped — zero API calls)")
     print(f"   update   : {len(to_update):4d}  (only drifted fields)")
@@ -410,6 +767,11 @@ def print_plan(to_create, to_update, in_sync, orphans, *, verbose):
     print(
         f"   orphan   : {len(orphans):4d}  (on GitHub, not in issues.yaml — reported, not deleted)"
     )
+    print(
+        f"   accounted: {accounted_orphans:4d}  (orphans already recorded in pr-overrides.json)"
+    )
+    if orphans:
+        print("   → reconcile them with:  --reconcile-orphans  (dry-run) then --apply")
     if to_create:
         print("\n   -- to create --")
         for e in to_create:
@@ -442,9 +804,24 @@ def run(args):
     to_create, to_update, in_sync, matched = classify(
         issues, idmap, by_number, by_title, update_bodies=args.update_bodies
     )
-    orphans = [r for n, r in by_number.items() if n not in matched]
 
-    print_plan(to_create, to_update, in_sync, orphans, verbose=args.verbose)
+    if args.reconcile_orphans:
+        return reconcile_orphans(args, issues, idmap, by_number, matched, counter)
+
+    accounted, _cfg = load_orphan_accounting(PR_OVERRIDES)
+    orphans = [
+        r for n, r in by_number.items() if n not in matched and n not in accounted
+    ]
+    accounted_orphans = sum(1 for n in by_number if n not in matched and n in accounted)
+
+    print_plan(
+        to_create,
+        to_update,
+        in_sync,
+        orphans,
+        accounted_orphans,
+        verbose=args.verbose,
+    )
 
     naive = len(issues)  # the per-issue baseline: one write round-trip per task
     planned_writes = len(to_create) + len(to_update)
@@ -620,7 +997,121 @@ def self_test():
         == "labels +a -b, state=closed",
     )
 
-    total = 14
+    # ── orphan classifier (each class + the uncertain guards) ──
+    orphan_issues = [
+        {"id": "M-302", "title": "M-302 — real task", "labels": [], "body": ""},
+        {
+            "id": "M-855",
+            "title": "JIT for dynamic VSA/HDC workloads + ADR-009 deferral",
+            "body": "",
+        },
+    ]
+    ids = {e["id"] for e in orphan_issues}
+    om = {"M-302": 87}  # canonical lives at #87
+
+    def cls(rec):
+        return classify_orphan(
+            rec,
+            issues_by_id=ids,
+            idmap=om,
+            similar=best_similar(rec["title"], orphan_issues),
+        )[0]
+
+    check(
+        "class-2 superseded (closed id-dup)",
+        cls({"number": 126, "title": "M-302 — real task", "state": "closed"})
+        == "superseded",
+    )
+    check(
+        "open id-dup ⇒ uncertain",
+        cls({"number": 500, "title": "M-302 — real task", "state": "open"})
+        == "uncertain",
+    )
+    check(
+        "class-3 adoptable (open, novel)",
+        cls(
+            {
+                "number": 900,
+                "title": "totally unrelated brand new topic xyz",
+                "state": "open",
+            }
+        )
+        == "adoptable",
+    )
+    check(
+        "class-1 non-task (closed, novel)",
+        cls(
+            {
+                "number": 901,
+                "title": "totally unrelated brand new topic xyz",
+                "state": "closed",
+            }
+        )
+        == "non-task",
+    )
+    check(
+        "strong title match ⇒ uncertain (the #468/M-855 case)",
+        cls(
+            {
+                "number": 468,
+                "title": "JIT for dynamic / VSA workloads (ADR-009 deferred to enacted)",
+                "state": "open",
+            }
+        )
+        == "uncertain",
+    )
+
+    # ── reconcile-action rendering (pure; proves the actions without touching the API) ──
+    check(
+        "supersede comment marker + link",
+        SUPERSEDE_MARKER in supersede_comment_body(87, "M-302")
+        and "#87" in supersede_comment_body(87, "M-302"),
+    )
+    check(
+        "next_free_mid above max",
+        next_free_mid([{"id": "M-001", "title": "a"}, {"id": "M-1037", "title": "b"}])
+        == "M-1038",
+    )
+    adopted = build_adopted_entry(
+        {
+            "number": 468,
+            "title": "Adopt me",
+            "labels": ["area:vsa"],
+            "state": "open",
+            "body": "x",
+        },
+        "M-1038",
+    )
+    check(
+        "adopted entry: id + derived status + FLAGs",
+        adopted["id"] == "M-1038"
+        and "status:todo" in adopted["labels"]
+        and any("missing priority" in f for f in adopted["_adopt_flags"]),
+    )
+
+    # ── accounting round-trip (the offline acceptance-test mechanism) ──
+    # Recording an orphan ⇒ a later load counts it as accounted ⇒ it is no longer an orphan.
+    with tempfile.TemporaryDirectory() as td:
+        tmp = Path(td) / "pr-overrides.json"
+        tmp.write_text('{"overrides": {"67": {"milestone": "P"}}}', encoding="utf-8")
+        acc0, _ = load_orphan_accounting(tmp)
+        check("overrides key accounted (#67)", 67 in acc0)
+        added = write_orphan_accounting(
+            tmp,
+            [{"number": 901, "title": "t", "reason": "r"}],
+            [{"number": 126, "canonical": 87, "task_id": "M-302", "title": "t"}],
+        )
+        acc1, _ = load_orphan_accounting(tmp)
+        check("recorded orphans accounted", added == 2 and {126, 901} <= acc1)
+        # idempotent: a second identical write adds nothing.
+        again = write_orphan_accounting(
+            tmp,
+            [{"number": 901, "title": "t", "reason": "r"}],
+            [{"number": 126, "canonical": 87, "task_id": "M-302", "title": "t"}],
+        )
+        check("accounting idempotent", again == 0)
+
+    total = 25
     print(f"\n>> self-test: {ok}/{total} checks passed")
     return 0 if ok == total else 1
 
@@ -658,6 +1149,11 @@ def main(argv=None):
         type=int,
         default=DEFAULT_MAX_CACHE_AGE,
         help="auto-refetch the snapshot when older than N seconds (default 86400)",
+    )
+    p.add_argument(
+        "--reconcile-orphans",
+        action="store_true",
+        help="classify + reconcile GitHub orphans (allowlist / superseded / adopt); never deletes",
     )
     p.add_argument(
         "--verbose", action="store_true", help="list orphan issues in the plan"
