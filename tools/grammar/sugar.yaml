@@ -30,10 +30,14 @@
 # separately below (`glyph_sugars` / `not_lexed_sugars`) so DN-38/DN-102's documented sugars are
 # still represented, honestly scoped out of the keyword-driven drift guard.
 #
-# DEFERRED (do not invent values): a `native_strategy` column (Adaptation / Solution /
-# Approximation / Bridge, per the transpiler idiom taxonomy — DN-109) is NOT added here; the
-# taxonomy that would classify each row is still settling.
-# TODO(DN-taxonomy): native_strategy column — add once the taxonomy DN ratifies it.
+# DEFERRED (do not invent values): a `native_strategy` column (Native Equivalent / Idiomatic
+# Remapping / Approximation / Interop Bridge — DN-111's now-ratified canonical taxonomy, with the
+# original Adaptation/Solution/Approximation/Bridge handles retained as aliases; DN-109 supplies
+# the orthogonal decidability axis) is NOT added here. The taxonomy itself is settled (DN-111,
+# Accepted 2026-07-10) but classifying each of this file's 45 rows against it is deferred, bounded
+# follow-up work — not invented per-row here (VR-5).
+# TODO(DN-111): native_strategy column — populate against the ratified DN-111 enum (tracked as a
+# residual note on M-1058; see tools/github/issues.yaml).
 #
 # `build_status` values: Exact | Proven | Empirical | Declared | Gap (VR-5 lattice, `Gap` added
 # for "documented but genuinely unbuilt/reserved" — the same use DN-38 §6 makes of the word).

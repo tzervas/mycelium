@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-111 (next free note number — DN-110 is the prior highest in `docs/Doc-Index.md` + `docs/notes/`, verified free 2026-07-10 against the tree at `dev` tip `4353681c`; a Draft number is cheap to renumber at merge, so it is picked-and-noted, not blocked on). |
-| **Status** | **Draft** (2026-07-10). Authored as **READ + a new DN only** — it enacts nothing, ships no code, and **moves no other doc's status** (house rule #3, append-only). It is the **companion taxonomy DN deferred from DN-110** (DN-110 Ratification point 5 + §12.1: the maintainer accepted that this taxonomy warrants its *own* companion DN — not a DN-109 append — but declined to lock DN-110 §2's four labels as canonical; **this note settles the canonical terminology**). It **refines** DN-110 §2's provisional handles into grounded, citable terms, keeping the handles as a legibility mapping. It does **not** edit DN-110 (Accepted — append-only), `issues.yaml`, `CHANGELOG.md`, `Doc-Index.md`, or any code — those are FLAGGED up (§9). |
+| **Status** | **Accepted** (2026-07-10, maintainer ratification — see the dated "Ratification (maintainer, 2026-07-10)" section below). **Accepted ratifies the TERMINOLOGY + TAXONOMY only — it enacts nothing, ships no code, and Enacted is not claimed** (house rule #3: `Enacted` requires stepping through `Accepted` first and means *fully implemented/landed*; this note has no implementation to land). The four canonical category names are now the citable vocabulary; the *classifications* a construct receives under them remain `Declared` projections until each is checked against a landed mechanism or a register-verified closure (VR-5 — no tag upgraded past its basis). Originally **Draft** (2026-07-10). Authored as **READ + a new DN only** — it moved no other doc's status at Draft time (house rule #3, append-only). It is the **companion taxonomy DN deferred from DN-110** (DN-110 Ratification point 5 + §12.1: the maintainer accepted that this taxonomy warrants its *own* companion DN — not a DN-109 append — but declined to lock DN-110 §2's four labels as canonical; **this note settles the canonical terminology**). It **refines** DN-110 §2's provisional handles into grounded, citable terms, keeping the handles as a legibility mapping. It does **not** edit DN-110 (Accepted — append-only) — the append-only pointer resolving DN-110 §2's provisional-labels carve-out is applied by the integrating parent at this same ratification pass (§9 FLAG, DN-111 DoD-6). |
 | **Decides** | *Proposes, for ratification:* (1) the **canonical taxonomy** for mapping a Rust construct's underlying *problem* to Mycelium's native answer — a four-category **native-equivalence spectrum**: **Native Equivalent · Idiomatic Remapping · Approximation · Interop Bridge** — each grounded in established PL/translation vocabulary + this project's existing corpus vocabulary, with DN-110's handles (Adaptation/Solution/Approximation/Bridge) retained as aliases; (2) that **two handles are renamed** (Adaptation→Native Equivalent; Solution→Idiomatic Remapping) for grounded reasons (§4.2), and **two are kept** (Approximation; Bridge→canonical "Interop Bridge") because they are already the best terms (KISS — no rename for its own sake); (3) the **decision procedure + honesty posture** per category (VR-5); (4) the **formal reconciliation** of this *relationship axis* with DN-109 L4's *decidability axis* as **orthogonal** (§6). |
 | **Feeds / builds on** | **DN-110 §2/§2.1/§9/§12.1** (the provisional taxonomy this note refines; its Ratification deferred the canonical terms here); **DN-109** (L4 idiom buckets Mechanical/Heuristic/Judgment — the *decidability axis* this taxonomy is the orthogonal *relationship-axis* complement of; its title "Idiom-Optimal Transpilation and **Structural Remapping**" supplies the reused "remapping" vocabulary); **DN-99** (surface-gap closure register — its Status column `open/partial/already-closed/transpiler-only/idiom` is the corpus vocabulary the four categories re-read, row-by-row cited); **DN-106** (surface-sugar transparency + the gap-closure default + the deliberate-exclusion set); **DN-38** (layered-lowering atlas + `reveal`); **DN-54** (`lower`/`derive`, M-812 landed); **DN-55** (static specialization). The **kernel-unfrozen north star** (ADR-045; different native path per problem, zero hand-ports) is the frame; the **transparency lattice** `Exact ⊐ Proven ⊐ Empirical ⊐ Declared` (house rule #1) governs every category's honesty posture. Feeds **M-1056** (`/native-translate` skill) and the sugar-index `native_strategy` column (§7). |
 | **Guarantee** | Every design/vocabulary claim here is **`Declared`** (a naming proposal). Where it cites a *landed* mechanism (`lower`/`derive`, M-812) or a *register-verified* closure (DN-99 rows, `file:line`-cited), that underlying fact is **`Empirical`** at its own source; the *terminology* proposed here is `Declared`. No tag is upgraded past its basis (VR-5). |
@@ -428,6 +428,70 @@ the integrator (main):**
   work-item and, if the column is wanted, mint it** with the contract from §7 (value set = the DN-111
   enum) and `doc_refs: [corpus:DN-111, corpus:DN-110]`. This note does not mint or assert the slot (VR-5).
 - **`CLAUDE.md`** — no change proposed.
+
+---
+
+## Ratification (maintainer, 2026-07-10)
+
+**Recorded decision (append-only — this note's original §1–§9 text above is unchanged; this section adds
+the ratification, per house rule #3):**
+
+1. **§4 canonical taxonomy accepted, as drafted.** The four-category native-equivalence spectrum —
+   **Native Equivalent / Idiomatic Remapping / Approximation / Interop Bridge** — is ratified as the
+   canonical Rust→Mycelium native-translation vocabulary. The two renames (Adaptation→**Native
+   Equivalent**; Solution→**Idiomatic Remapping**) are accepted for their §4.2 grounded reasons (the V&D
+   "adaptation" false-friend collision; the "Solution" genus/species overload with DN-109 F1). The two
+   kept terms (**Approximation**; Bridge→**Interop Bridge**, qualified) are confirmed as already the
+   best-grounded words — no rename for its own sake (KISS/rule #5). The maintainer's original intuitive
+   handles — **Adaptation / Solution / Approximation / Bridge** — are ratified as **permanent aliases**
+   for the four canonical terms, never deprecated; either form may be used, with the canonical term
+   preferred in new citable vocabulary.
+2. **§4.1 two-question generator + §5 per-category decision procedure and honesty posture accepted.**
+   The {exact?} × {native?} derivation of exactly four categories, and each category's honesty-posture
+   ceiling (Native Equivalent/Idiomatic Remapping may carry `Exact`/`Proven` where the underlying
+   construct supports it; Approximation is capped at `Empirical`/`Declared`, never-silent; Interop
+   Bridge is Judgment/never-silent, claims no native semantics) are accepted as drafted.
+3. **§6 reconciliation with DN-109 accepted.** The relationship axis (this taxonomy) and DN-109's L4
+   decidability axis (Mechanical/Heuristic/Judgment) are confirmed orthogonal; the §6 2-D grid is
+   accepted as the joint classification surface. This re-decides nothing in DN-109 — it names the
+   second axis DN-110 §2.1 already asserted, now with canonical labels.
+4. **§8.1 finding accepted — classification is of a (construct, context) pair, time-indexed.** The
+   sharpest adversarial finding (the same construct, e.g. `&mut`, lands in different cells depending on
+   a semantic fact `syn` cannot see, so the decidability analysis often *selects* the relationship cell)
+   is accepted as an honest, standing limitation of the taxonomy, not a defect to paper over. Per §8.4,
+   every classification implicitly carries an "as of language version X" scope; the `/native-translate`
+   skill (M-1056) must stamp its output with the corpus/tree state it classified against.
+5. **CRITICAL — Accepted ratifies the TERMINOLOGY + TAXONOMY only, not any classification (house rule
+   #3 / VR-5).** This ratifies the four category *names*, the generator, the decision procedure, the
+   honesty-posture ceilings, and the DN-109 reconciliation. It does **not** certify that any specific
+   construct's classification is correct or final — every worked example in §5 and every future
+   classification against this taxonomy remains **`Declared`** (a projection) until independently
+   checked at its own source (a landed mechanism, a register-verified DN-99 closure, or a differential).
+   No guarantee tag anywhere is upgraded past its basis by this ratification. This note ships no code
+   and enacts nothing; `Enacted` is not claimed (house rule #3 — `Enacted` requires full
+   implementation/landing, which does not apply to a vocabulary note).
+6. **§9 FLAGs applied at this same pass (by the integrating parent, not this note):**
+   - **DN-110 §2** gains the append-only pointer resolving its provisional-labels carve-out (added
+     above, this same commit) — DN-110's own Ratification text is unchanged, append-only.
+   - **M-1057** (this note's own tracking issue) flips `needs-design → done`, landed basis = this DN.
+   - **M-1056** (`/native-translate` skill) gains `doc_refs: corpus:DN-111` and a terminology-only note
+     to emit the canonical enum once implemented (DN-110 §9's six steps unchanged).
+   - **The sugar-index `native_strategy` column** (§7, the "M-1058/task-13" reference): **verified** —
+     `M-1058` (the sugar-index generator) landed on `dev` **before** this DN-111 ratification pass
+     (PR #1403), with its `native_strategy` column deliberately deferred (a `# TODO(DN-taxonomy)`
+     placeholder in `tools/grammar/sugar.yaml`, "still settling"). That placeholder is updated at this
+     same pass to point at the now-ratified DN-111 enum; **populating the column's 45 rows is left as
+     an explicit follow-up** (not fabricated here — VR-5, no invented per-row classifications).
+   - **`CHANGELOG.md`** / **`docs/Doc-Index.md`** gain entries for this ratification (below / the
+     integrating parent's close-out), per the standing append-only discipline.
+
+### Follow-up (filed/updated at this ratification — see `tools/github/issues.yaml`)
+
+- **M-1057** → `done` (this DN is the landed basis).
+- **M-1056** → `doc_refs` gains `corpus:DN-111`; body notes the pending terminology-only follow-up edit.
+- **A sugar-index `native_strategy` column population** — deferred, tracked as a residual note on
+  **M-1058** rather than a new issue (the column's *contract* is settled by this DN; populating 45 rows
+  against it is bounded follow-up work, not a new design question).
 
 ---
 

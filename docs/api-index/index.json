@@ -26693,7 +26693,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/batch.rs",
-      "line": 113,
+      "line": 119,
       "summary": "The combined `summary.json` artifact for a batch/directory transpile run.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26732,6 +26732,28 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_transpile::IdiomChoice",
+      "kind": "struct",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile",
+      "file": "crates/mycelium-transpile/src/remap.rs",
+      "line": 97,
+      "summary": "One `idiom_choices[]` entry (DN-109 §5.2): the L4 EXPLAIN trail for a non-default idiom decision",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::IdiomClass",
+      "kind": "enum",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile",
+      "file": "crates/mycelium-transpile/src/remap.rs",
+      "line": 64,
+      "summary": "The L4 idiom-decision class (DN-109 §3.1) an [`IdiomChoice`] belongs to.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_transpile::MycChecker",
       "kind": "struct",
       "crate": "mycelium-transpile",
@@ -26743,12 +26765,78 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_transpile::NoduleRemap",
+      "kind": "struct",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile",
+      "file": "crates/mycelium-transpile/src/remap.rs",
+      "line": 82,
+      "summary": "One target nodule's restructuring record (DN-109 §5.2 `nodules[]`).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::PhylumRemap",
+      "kind": "struct",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile",
+      "file": "crates/mycelium-transpile/src/remap.rs",
+      "line": 113,
+      "summary": "The `phylum` header (DN-109 §5.2): which Rust crate this manifest's batch run transpiled, and",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::RemapManifest",
+      "kind": "struct",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile",
+      "file": "crates/mycelium-transpile/src/remap.rs",
+      "line": 121,
+      "summary": "The full remap manifest for one batch run (DN-109 §5.2), folded into",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::RemapOperation",
+      "kind": "enum",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile",
+      "file": "crates/mycelium-transpile/src/remap.rs",
+      "line": 44,
+      "summary": "The restructuring operation recorded for a target nodule (DN-109 §4.1).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::RemapSafety",
+      "kind": "enum",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile",
+      "file": "crates/mycelium-transpile/src/remap.rs",
+      "line": 57,
+      "summary": "DN-109 §4.2's safe/risky classification for a restructuring entry.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::RemapSource",
+      "kind": "struct",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile",
+      "file": "crates/mycelium-transpile/src/remap.rs",
+      "line": 74,
+      "summary": "One `sources` entry under a [`NoduleRemap`] (DN-109 §5.2): the Rust-side origin of the material",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_transpile::UnionGapReport",
       "kind": "struct",
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/batch.rs",
-      "line": 122,
+      "line": 129,
       "summary": "The combined `union.gap.json` artifact: every [`Gap`] from every file in the batch, plus the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26814,7 +26902,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::batch",
       "file": "crates/mycelium-transpile/src/batch.rs",
-      "line": 129,
+      "line": 136,
       "summary": "One file's parse/transpile outcome, kept alongside its report so the CLI can still write the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26825,7 +26913,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::batch",
       "file": "crates/mycelium-transpile/src/batch.rs",
-      "line": 75,
+      "line": 76,
       "summary": "One file's contribution to a [`BatchSummary`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26836,8 +26924,19 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::batch",
       "file": "crates/mycelium-transpile/src/batch.rs",
-      "line": 102,
+      "line": 103,
       "summary": "The batch-wide aggregate — same shape as [`FileSummary`] minus the per-file `file` name, so a",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::build_remap_manifest",
+      "kind": "fn",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile",
+      "file": "crates/mycelium-transpile/src/remap.rs",
+      "line": 160,
+      "summary": "Build the v0 [`RemapManifest`] for a batch run: the `phylum` header derived from `root`, one",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -26847,7 +26946,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/batch.rs",
-      "line": 26,
+      "line": 27,
       "summary": "Recursively discover every `*.rs` file under `root`, skipping test infrastructure: any",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26869,7 +26968,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 174,
+      "line": 212,
       "summary": "The `.myc` text (+ any dropped sub-features, e.g.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26880,7 +26979,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 193,
+      "line": 231,
       "summary": "Extract `///`/`//!` doc-comment lines (represented by `syn` as `#[doc = \"...\"]` attributes),",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26891,7 +26990,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 550,
+      "line": 588,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26902,7 +27001,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 1639,
+      "line": 1741,
       "summary": "`enum` -> `type_item` (`type Name = C1 | C2(T1, T2) | ...;`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26913,7 +27012,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 753,
+      "line": 791,
       "summary": "Translate one Rust expression.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26924,7 +27023,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 1863,
+      "line": 1965,
       "summary": "Top-level `fn` -> `fn_item`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26935,7 +27034,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 2013,
+      "line": 2115,
       "summary": "`impl` -> `impl_item` (trait-instance or inherent form).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26946,7 +27045,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 1764,
+      "line": 1866,
       "summary": "`struct` -> a single-constructor `type_item`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26957,7 +27056,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 1898,
+      "line": 2000,
       "summary": "`trait` -> `trait_item` (`trait Name { fn sig1; fn sig2; ...",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26968,7 +27067,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 223,
+      "line": 261,
       "summary": "Heuristic `#[cfg(test)]` detection (Declared: a token-text `contains(\"test\")` check, not a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26979,7 +27078,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 1519,
+      "line": 1621,
       "summary": "Translate one Rust pattern.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26990,7 +27089,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 213,
+      "line": 251,
       "summary": "Every non-doc attribute on an item, rendered as text — these are always dropped (KNOWN HARD",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27144,7 +27243,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/batch.rs",
-      "line": 62,
+      "line": 63,
       "summary": "The **path-qualified** output stem (extension-stripped, relative to the run's `out-dir`) for a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27216,12 +27315,34 @@
       "corpus_refs": []
     },
     {
-      "symbol": "mycelium_transpile::reserved",
+      "symbol": "mycelium_transpile::remap",
       "kind": "mod",
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/lib.rs",
       "line": 40,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::render_remap_md",
+      "kind": "fn",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile",
+      "file": "crates/mycelium-transpile/src/remap.rs",
+      "line": 205,
+      "summary": "Render the human-readable **`REMAP.md`** view of a [`RemapManifest`] — a **pure projection**: it",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::reserved",
+      "kind": "mod",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile",
+      "file": "crates/mycelium-transpile/src/lib.rs",
+      "line": 41,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27265,7 +27386,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/batch.rs",
-      "line": 156,
+      "line": 168,
       "summary": "Build the [`BatchSummary`] + [`UnionGapReport`] artifacts from a batch's [`FileResult`]s.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27276,7 +27397,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/lib.rs",
-      "line": 41,
+      "line": 42,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27287,7 +27408,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/batch.rs",
-      "line": 139,
+      "line": 146,
       "summary": "Transpile every file in `files` (already-discovered `.rs` paths), collecting a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27320,7 +27441,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/lib.rs",
-      "line": 42,
+      "line": 43,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -49699,7 +49820,7 @@
     },
     {
       "symbol": "mycelium_transpile::batch::BatchSummary",
-      "reason": "dedup-alias: same definition as `mycelium_transpile::BatchSummary` at crates/mycelium-transpile/src/batch.rs:113 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_transpile::BatchSummary` at crates/mycelium-transpile/src/batch.rs:119 — one canonical row kept"
     },
     {
       "symbol": "mycelium_transpile::batch::BatchSummary::clone",
@@ -49751,7 +49872,7 @@
     },
     {
       "symbol": "mycelium_transpile::batch::UnionGapReport",
-      "reason": "dedup-alias: same definition as `mycelium_transpile::UnionGapReport` at crates/mycelium-transpile/src/batch.rs:122 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_transpile::UnionGapReport` at crates/mycelium-transpile/src/batch.rs:129 — one canonical row kept"
     },
     {
       "symbol": "mycelium_transpile::batch::UnionGapReport::clone",
@@ -49779,19 +49900,19 @@
     },
     {
       "symbol": "mycelium_transpile::batch::discover_rs_files",
-      "reason": "dedup-alias: same definition as `mycelium_transpile::discover_rs_files` at crates/mycelium-transpile/src/batch.rs:26 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_transpile::discover_rs_files` at crates/mycelium-transpile/src/batch.rs:27 — one canonical row kept"
     },
     {
       "symbol": "mycelium_transpile::batch::output_rel_path",
-      "reason": "dedup-alias: same definition as `mycelium_transpile::output_rel_path` at crates/mycelium-transpile/src/batch.rs:62 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_transpile::output_rel_path` at crates/mycelium-transpile/src/batch.rs:63 — one canonical row kept"
     },
     {
       "symbol": "mycelium_transpile::batch::summarize",
-      "reason": "dedup-alias: same definition as `mycelium_transpile::summarize` at crates/mycelium-transpile/src/batch.rs:156 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_transpile::summarize` at crates/mycelium-transpile/src/batch.rs:168 — one canonical row kept"
     },
     {
       "symbol": "mycelium_transpile::batch::transpile_batch",
-      "reason": "dedup-alias: same definition as `mycelium_transpile::transpile_batch` at crates/mycelium-transpile/src/batch.rs:139 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_transpile::transpile_batch` at crates/mycelium-transpile/src/batch.rs:146 — one canonical row kept"
     },
     {
       "symbol": "mycelium_transpile::gap::Category",
@@ -49928,6 +50049,366 @@
     {
       "symbol": "mycelium_transpile::prim_map::ReceiverGate::fmt",
       "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::IdiomChoice",
+      "reason": "dedup-alias: same definition as `mycelium_transpile::IdiomChoice` at crates/mycelium-transpile/src/remap.rs:97 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::IdiomChoice::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::IdiomChoice::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::IdiomChoice::deserialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::IdiomChoice::deserialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::IdiomChoice::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::IdiomChoice::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::IdiomChoice::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::IdiomChoice::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::IdiomChoice::serialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::IdiomChoice::serialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::IdiomClass",
+      "reason": "dedup-alias: same definition as `mycelium_transpile::IdiomClass` at crates/mycelium-transpile/src/remap.rs:64 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::IdiomClass::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::IdiomClass::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::IdiomClass::deserialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::IdiomClass::deserialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::IdiomClass::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::IdiomClass::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::IdiomClass::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::IdiomClass::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::IdiomClass::serialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::IdiomClass::serialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::NoduleRemap",
+      "reason": "dedup-alias: same definition as `mycelium_transpile::NoduleRemap` at crates/mycelium-transpile/src/remap.rs:82 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::NoduleRemap::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::NoduleRemap::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::NoduleRemap::deserialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::NoduleRemap::deserialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::NoduleRemap::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::NoduleRemap::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::NoduleRemap::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::NoduleRemap::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::NoduleRemap::serialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::NoduleRemap::serialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::PhylumRemap",
+      "reason": "dedup-alias: same definition as `mycelium_transpile::PhylumRemap` at crates/mycelium-transpile/src/remap.rs:113 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::PhylumRemap::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::PhylumRemap::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::PhylumRemap::deserialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::PhylumRemap::deserialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::PhylumRemap::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::PhylumRemap::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::PhylumRemap::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::PhylumRemap::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::PhylumRemap::serialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::PhylumRemap::serialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::RemapManifest",
+      "reason": "dedup-alias: same definition as `mycelium_transpile::RemapManifest` at crates/mycelium-transpile/src/remap.rs:121 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::RemapManifest::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::RemapManifest::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::RemapManifest::deserialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::RemapManifest::deserialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::RemapManifest::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::RemapManifest::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::RemapManifest::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::RemapManifest::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::RemapManifest::serialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::RemapManifest::serialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::RemapOperation",
+      "reason": "dedup-alias: same definition as `mycelium_transpile::RemapOperation` at crates/mycelium-transpile/src/remap.rs:44 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::RemapOperation::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::RemapOperation::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::RemapOperation::deserialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::RemapOperation::deserialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::RemapOperation::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::RemapOperation::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::RemapOperation::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::RemapOperation::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::RemapOperation::serialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::RemapOperation::serialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::RemapSafety",
+      "reason": "dedup-alias: same definition as `mycelium_transpile::RemapSafety` at crates/mycelium-transpile/src/remap.rs:57 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::RemapSafety::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::RemapSafety::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::RemapSafety::deserialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::RemapSafety::deserialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::RemapSafety::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::RemapSafety::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::RemapSafety::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::RemapSafety::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::RemapSafety::serialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::RemapSafety::serialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::RemapSource",
+      "reason": "dedup-alias: same definition as `mycelium_transpile::RemapSource` at crates/mycelium-transpile/src/remap.rs:74 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::RemapSource::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::RemapSource::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::RemapSource::deserialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::RemapSource::deserialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::RemapSource::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::RemapSource::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::RemapSource::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::RemapSource::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::RemapSource::serialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::RemapSource::serialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::build_remap_manifest",
+      "reason": "dedup-alias: same definition as `mycelium_transpile::build_remap_manifest` at crates/mycelium-transpile/src/remap.rs:160 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_transpile::remap::render_remap_md",
+      "reason": "dedup-alias: same definition as `mycelium_transpile::render_remap_md` at crates/mycelium-transpile/src/remap.rs:205 — one canonical row kept"
     },
     {
       "symbol": "mycelium_transpile::transpile::transpile_file",

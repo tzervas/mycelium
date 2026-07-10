@@ -12,6 +12,125 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### chore(integration): dev -> integration close-out — DN-111 ratification + gap-close-run batch reconciliation (2026-07-10)
+
+Integration-tier close-out for the gap-close-run batch (dn-102 second pass, blocked-op protocol,
+trunk-PR-only rule, tero-trim, M-1041-A `ExprVisitor`, M-1042 nodule-path, M-1044 remap-manifest,
+DN-110 ratification, sugar-index M-1058 — nine PRs landed on `dev` this session) plus the held DN-111
+ratification. Reconciles the batch's shared-file FLAGs **once**, per the concurrent-PR development
+pattern's integration tier.
+
+- **DN-111 — Status Draft → Accepted (maintainer ratification, 2026-07-10; design ratification only,
+  NOT Enacted).** Ratifies the **canonical Rust→Mycelium native-translation taxonomy**: **Native
+  Equivalent** (was Adaptation — renamed, corrects a Vinay-and-Darbelnet false-friend collision),
+  **Idiomatic Remapping** (was Solution — renamed, corrects a genus/species overload with DN-109 F1),
+  **Approximation** (kept — already the correct PL term), **Interop Bridge** (kept, qualified). Net:
+  2 renamed, 2 kept; DN-110's original handles (Adaptation/Solution/Approximation/Bridge) retained as
+  **permanent aliases**, never deprecated. Ratifies the §4.1 two-question generator, the §5 per-category
+  decision procedure and honesty-posture ceilings, and the §6 orthogonal-2-D-grid reconciliation with
+  DN-109's decidability axis (Mechanical/Heuristic/Judgment). Accepts the §8.1 adversarial finding —
+  classification is of a **(construct, context) pair**, time-indexed under the unfrozen kernel — as an
+  honest standing limitation. **Ratifies TERMINOLOGY + TAXONOMY only** (VR-5): no classification against
+  it is upgraded past `Declared` by this ratification; ships no code, enacts nothing. DN-110 §2 gains the
+  append-only pointer resolving its provisional-labels carve-out (DN-110's own Ratification text
+  unchanged, append-only per house rule #3).
+- **Follow-up close-outs applied at this pass:** **M-1057** (DN-111's own tracking issue) → `done`.
+  **M-1056** (`/native-translate` skill) gains `doc_refs: corpus:DN-111` and a terminology-only update
+  noting the skill should emit the canonical enum once implemented. **M-1058** (sugar-index) status
+  corrected `in-progress` → `done` (verified merged on `dev`, PR #1403, before this flip — mitigation
+  #14); its deferred `native_strategy` column's placeholder comment in `tools/grammar/sugar.yaml`
+  updated to cite the now-ratified DN-111 enum (was "DN-109's taxonomy is still settling"); populating
+  the column's 45 rows stays deferred, bounded follow-up (not fabricated here, VR-5).
+- **Batch fast-follow progress notes recorded (issues.yaml):** **M-1041** (DRY `ExprVisitor`/fold —
+  Scope-A landed, PR #1398: the pilot abstraction over `mycelium-transpile`'s `emit.rs`/`map.rs`;
+  status `in-progress` — the `mycelium-l1` walker half + `prim_map.rs`/`Pat` dispatch remain, honestly
+  not claimed done). **M-1049** (DN-102 second research pass — PR #1395: FLAG-try-2 resolved via the
+  native `map_err(e, conv)?` idiom, no error-conversion-trait subsystem; recommends Rank 1) — status
+  `in-progress`: the research pass is complete and DN-102 re-submitted/surfaced for ratification, but
+  **DN-102's own Status stays Draft** (the maintainer has not yet ratified it — surfaced as an open item
+  below, not decided here per house rule #3). M-1042 (nodule-path) and M-1044 (remap-manifest) were
+  already correctly closed `done` by their own leaf PRs (#1399/#1400) — no change needed here.
+- **`docs/Doc-Index.md`** gains a new **DN-111** row (Accepted); the **DN-110** row's summary updated to
+  reflect the resolved taxonomy carve-out; the **DN-102** row's summary appended with the second-pass
+  addendum (status stays Draft); a new **`docs/sugar-index/`** entry under §6 Agent tooling index; the
+  §5 zero-hand-port bullet updated with M-1041/M-1042/M-1044 landing status.
+- **`docs/spec/api/mycelium-transpile.txt` (public-API baseline) regenerated first** (`just
+  api-baseline`) — the committed baseline predated M-1044's `remap` module, so `docs/api-index/`
+  (which sources from `docs/spec/api/*.txt`, not raw source) could not see it without a baseline
+  catch-up first; the M-1041-A `visit` module is `pub(crate)`, correctly not part of the public
+  surface. `scripts/checks/api.sh` re-run **green (57/57 crates)** after the catch-up — every added
+  symbol traces to a landed, merged commit, nothing unreviewed. **`docs/api-index/`** then
+  regenerated (`just docs-index`) for the newly-visible public surface: `mycelium_transpile::remap`
+  (M-1044, `RemapManifest`/`RemapOperation`/`IdiomClass`/etc., `BatchSummary::remap` +
+  `batch::summarize`).
+- **`docs/tero-index/`** regenerated (`just tero-index-gen`) after the Doc-Index/DN-status/issues edits
+  above (the standing lesson: these edits need a tero-index regen or the drift gate flags).
+- Validated: `python3 -c "import yaml; yaml.safe_load(open('tools/github/issues.yaml'))"` clean, **no
+  duplicate ids** (565 issues checked); `python3 tools/github/doc_refs_check.py` clean;
+  `scripts/checks/markdown.sh` green on all touched/new `.md` (483 docs, 0 errors).
+- **Surfaced for the maintainer (not ratified here, held for the orchestrator to escalate):** **DN-100**
+  (transpiler cargo-expand pre-pass) and **DN-102** (`?` try-operator desugar, second pass now complete)
+  both remain **Draft**, awaiting a ratification pass.
+
+### feat(transpile): zero-hand-port force-multiplier fast-follows — ExprVisitor pilot, nodule-path fix, remap manifest (M-1041/M-1042/M-1044, 2026-07-10)
+
+Three `mycelium-transpile` PRs from the zero-hand-port delta-ledger's filed force-multiplier issues
+(behavior-preserving where noted, tests green throughout):
+
+- **M-1041 Scope-A — the DRY `ExprVisitor`/`TypeVisitor` pilot** (PR #1398). Replaces 5 independently
+  hand-rolled `match`-over-`{Expr,Type}`-variant dispatch functions across `emit.rs` (3) and `map.rs`
+  (2) with 2 canonical dispatchers (new `crates/mycelium-transpile/src/visit.rs`: `walk_expr`/
+  `walk_type`) over visitor traits with an associated `Output` type and a required `fallback` method —
+  a new `Expr`/`Type` shape now touches one trait method plus whichever visitor(s) care, never a
+  silently-drifting nth hand-written match. Behavior-preserving: byte-identical `cargo test -p
+  mycelium-transpile` (65/65) before/after. Scope-A only — `prim_map.rs`'s 9 more `Expr::` matches, the
+  `Pat`/`map_pattern` dispatch, and the `mycelium-l1` walker half of this issue's DoD are flagged
+  follow-on targets, not done here.
+- **M-1042 (residual) — path-qualified nodule names for nested modules** (PR #1399). Verify-first
+  (mitigation #14) found the issue's central DoD clause (flat-emit last-writer-wins collision) already
+  landed by `e0085ec0`; the genuine residual was `derive_nodule_path` deriving a nodule header from the
+  crate directory name alone, so two nested `mod.rs` files in the same crate emitted the SAME header
+  despite writing to distinct output paths. Fixed by anchoring on the file's last `src` path component
+  plus its dotted intra-crate module path (`crates/mycelium-std-cmp/src/foo/mod.rs` → `std.cmp.foo`).
+  Data-driven fixture-table tests + a same-crate-sibling-non-collision property test added.
+- **M-1044 — the remap manifest** (PR #1400), implementing DN-109 §5.2 per its ratified §7-c/§7-e
+  forks: folds `remap: RemapManifest` into the existing `BatchSummary` (no standalone `remap.json`);
+  `REMAP.md` renders as a pure, round-trip-tested projection. v0 scope (ratified Mechanical-only
+  auto-fire): every transpiled file gets one pure `Keep` entry; `idiom_choices` ships honestly empty (no
+  per-item EXPLAIN instrumentation exists yet to populate it from — not fabricated). Guarantee tag stays
+  `Declared` throughout (VR-5 — the manifest records decisions, it does not certify them). 11 new tests
+  (`src/tests/remap.rs`) plus 2 folded into `src/tests/batch.rs`; `cargo test -p mycelium-transpile`
+  green at 75 (was 66).
+
+All three: `cargo fmt`/`clippy -D warnings` clean, change-scoped per the leaf/working-tier gate policy.
+Shared files (`CHANGELOG`/`Doc-Index`/`api-index`) were left to the integrating parent per each PR's own
+FLAG — reconciled above.
+
+### docs(agents): blocked-op protocol (mitigation #15) + trunk-branches-are-PR-only hardening (2026-07-10)
+
+Two agent-persona house-rule additions, both purely additive/append-only (house rule #3), landed as
+separate PRs the same session:
+
+- **Mitigation #15 — the blocked-op protocol** (PR #1396). A standing response for every spawned agent
+  that hits a `PreToolUse` hook block or a permission wall, instead of retry-looping, circumventing the
+  guard, or fabricating success: (1) recognize the block as a policy/permission boundary, not a code
+  failure; (2) never retry-loop or circumvent maliciously, never fabricate completion; (3) try the
+  sanctioned alternative first (a PR instead of a raw protected-tier push; `--no-verify` plus
+  out-of-band gates for an external-hook 403; split `commit`/`push` for the branch-guard string-match
+  false-positive); (4) no alternative → `SendMessage(to: "main")` with the precise ask, keep doing other
+  non-blocked work, flag it in the final report. Added as new `CLAUDE.md` mitigation #15 plus a
+  persona-voiced paragraph in each of `.claude/agents/{myc-leaf,myc-porter,integrator,design-reasoner,
+  pr-reviewer,security-reviewer}.md`.
+- **Trunk-branches-are-PR-only, made unmissable** (PR #1397). A prominent, affirmative callout added to
+  every agent persona file and to `CLAUDE.md`'s "Commits & PRs" section header: `main`/`integration`/
+  `dev` never take a direct commit/merge/push, only a GitHub PR — cross-referencing the branch-guard hook
+  and mitigation #10. Workers that drive trunk landings (`myc-leaf`/`myc-porter`/`integrator`) get the
+  most explicit placement; the read-only reviewers get a concise one-liner that they never merge to a
+  trunk at all.
+
+`scripts/checks/markdown.sh` green (0 errors, 478/483 tracked docs at landing time); `scripts/checks/
+secrets.sh` and `scripts/checks/branch-guard.sh` both clean.
+
 ### docs(notes): maintainer ratification — DN-110 native-metaprogramming facility + §8.2 hygiene mechanism (2026-07-10)
 
 Records the maintainer's ratification of **DN-110** (Mycelium's native facility for the role Rust fills

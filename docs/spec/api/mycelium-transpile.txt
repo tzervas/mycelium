@@ -2,6 +2,7 @@ pub mod mycelium_transpile
 pub mod mycelium_transpile::batch
 pub struct mycelium_transpile::batch::BatchSummary
 pub mycelium_transpile::batch::BatchSummary::files: alloc::vec::Vec<mycelium_transpile::batch::FileSummary>
+pub mycelium_transpile::batch::BatchSummary::remap: mycelium_transpile::remap::RemapManifest
 pub mycelium_transpile::batch::BatchSummary::totals: mycelium_transpile::batch::Totals
 impl core::clone::Clone for mycelium_transpile::batch::BatchSummary
 pub fn mycelium_transpile::batch::BatchSummary::clone(&self) -> mycelium_transpile::batch::BatchSummary
@@ -86,7 +87,7 @@ impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::batch::Unio
 impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::batch::UnionGapReport
 pub fn mycelium_transpile::batch::discover_rs_files(&std::path::Path) -> core::io::error::Result<alloc::vec::Vec<std::path::PathBuf>>
 pub fn mycelium_transpile::batch::output_rel_path(&std::path::Path, &std::path::Path) -> core::result::Result<std::path::PathBuf, std::path::PathBuf>
-pub fn mycelium_transpile::batch::summarize(&[mycelium_transpile::batch::FileResult]) -> (mycelium_transpile::batch::BatchSummary, mycelium_transpile::batch::UnionGapReport)
+pub fn mycelium_transpile::batch::summarize(&[mycelium_transpile::batch::FileResult], &std::path::Path) -> (mycelium_transpile::batch::BatchSummary, mycelium_transpile::batch::UnionGapReport)
 pub fn mycelium_transpile::batch::transpile_batch(&[std::path::PathBuf]) -> (alloc::vec::Vec<mycelium_transpile::batch::FileResult>, alloc::vec::Vec<(std::path::PathBuf, alloc::string::String)>)
 pub mod mycelium_transpile::emit
 pub struct mycelium_transpile::emit::Emitted
@@ -267,6 +268,205 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::prim_map::Prim
 pub const mycelium_transpile::prim_map::TABLE: &[mycelium_transpile::prim_map::PrimMapping]
 pub fn mycelium_transpile::prim_map::lookup(&str) -> core::option::Option<&'static mycelium_transpile::prim_map::PrimMapping>
 pub fn mycelium_transpile::prim_map::receiver_gate_matches(mycelium_transpile::prim_map::ReceiverGate, core::option::Option<&str>) -> bool
+pub mod mycelium_transpile::remap
+pub enum mycelium_transpile::remap::IdiomClass
+pub mycelium_transpile::remap::IdiomClass::Heuristic
+pub mycelium_transpile::remap::IdiomClass::Judgment
+pub mycelium_transpile::remap::IdiomClass::Mechanical
+impl core::clone::Clone for mycelium_transpile::remap::IdiomClass
+pub fn mycelium_transpile::remap::IdiomClass::clone(&self) -> mycelium_transpile::remap::IdiomClass
+impl core::cmp::Eq for mycelium_transpile::remap::IdiomClass
+impl core::cmp::PartialEq for mycelium_transpile::remap::IdiomClass
+pub fn mycelium_transpile::remap::IdiomClass::eq(&self, &mycelium_transpile::remap::IdiomClass) -> bool
+impl core::fmt::Debug for mycelium_transpile::remap::IdiomClass
+pub fn mycelium_transpile::remap::IdiomClass::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_transpile::remap::IdiomClass
+impl core::marker::StructuralPartialEq for mycelium_transpile::remap::IdiomClass
+impl serde_core::ser::Serialize for mycelium_transpile::remap::IdiomClass
+pub fn mycelium_transpile::remap::IdiomClass::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_transpile::remap::IdiomClass
+pub fn mycelium_transpile::remap::IdiomClass::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_transpile::remap::IdiomClass
+impl core::marker::Send for mycelium_transpile::remap::IdiomClass
+impl core::marker::Sync for mycelium_transpile::remap::IdiomClass
+impl core::marker::Unpin for mycelium_transpile::remap::IdiomClass
+impl core::marker::UnsafeUnpin for mycelium_transpile::remap::IdiomClass
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::remap::IdiomClass
+impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::remap::IdiomClass
+pub enum mycelium_transpile::remap::RemapOperation
+pub mycelium_transpile::remap::RemapOperation::Consolidate
+pub mycelium_transpile::remap::RemapOperation::CrateToPhylum
+pub mycelium_transpile::remap::RemapOperation::Keep
+pub mycelium_transpile::remap::RemapOperation::Relocate
+pub mycelium_transpile::remap::RemapOperation::Split
+impl core::clone::Clone for mycelium_transpile::remap::RemapOperation
+pub fn mycelium_transpile::remap::RemapOperation::clone(&self) -> mycelium_transpile::remap::RemapOperation
+impl core::cmp::Eq for mycelium_transpile::remap::RemapOperation
+impl core::cmp::PartialEq for mycelium_transpile::remap::RemapOperation
+pub fn mycelium_transpile::remap::RemapOperation::eq(&self, &mycelium_transpile::remap::RemapOperation) -> bool
+impl core::fmt::Debug for mycelium_transpile::remap::RemapOperation
+pub fn mycelium_transpile::remap::RemapOperation::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_transpile::remap::RemapOperation
+impl core::marker::StructuralPartialEq for mycelium_transpile::remap::RemapOperation
+impl serde_core::ser::Serialize for mycelium_transpile::remap::RemapOperation
+pub fn mycelium_transpile::remap::RemapOperation::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_transpile::remap::RemapOperation
+pub fn mycelium_transpile::remap::RemapOperation::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_transpile::remap::RemapOperation
+impl core::marker::Send for mycelium_transpile::remap::RemapOperation
+impl core::marker::Sync for mycelium_transpile::remap::RemapOperation
+impl core::marker::Unpin for mycelium_transpile::remap::RemapOperation
+impl core::marker::UnsafeUnpin for mycelium_transpile::remap::RemapOperation
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::remap::RemapOperation
+impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::remap::RemapOperation
+pub enum mycelium_transpile::remap::RemapSafety
+pub mycelium_transpile::remap::RemapSafety::Review
+pub mycelium_transpile::remap::RemapSafety::Safe
+impl core::clone::Clone for mycelium_transpile::remap::RemapSafety
+pub fn mycelium_transpile::remap::RemapSafety::clone(&self) -> mycelium_transpile::remap::RemapSafety
+impl core::cmp::Eq for mycelium_transpile::remap::RemapSafety
+impl core::cmp::PartialEq for mycelium_transpile::remap::RemapSafety
+pub fn mycelium_transpile::remap::RemapSafety::eq(&self, &mycelium_transpile::remap::RemapSafety) -> bool
+impl core::fmt::Debug for mycelium_transpile::remap::RemapSafety
+pub fn mycelium_transpile::remap::RemapSafety::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_transpile::remap::RemapSafety
+impl core::marker::StructuralPartialEq for mycelium_transpile::remap::RemapSafety
+impl serde_core::ser::Serialize for mycelium_transpile::remap::RemapSafety
+pub fn mycelium_transpile::remap::RemapSafety::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_transpile::remap::RemapSafety
+pub fn mycelium_transpile::remap::RemapSafety::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_transpile::remap::RemapSafety
+impl core::marker::Send for mycelium_transpile::remap::RemapSafety
+impl core::marker::Sync for mycelium_transpile::remap::RemapSafety
+impl core::marker::Unpin for mycelium_transpile::remap::RemapSafety
+impl core::marker::UnsafeUnpin for mycelium_transpile::remap::RemapSafety
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::remap::RemapSafety
+impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::remap::RemapSafety
+pub struct mycelium_transpile::remap::IdiomChoice
+pub mycelium_transpile::remap::IdiomChoice::alternatives: alloc::vec::Vec<alloc::string::String>
+pub mycelium_transpile::remap::IdiomChoice::chose: alloc::string::String
+pub mycelium_transpile::remap::IdiomChoice::class: mycelium_transpile::remap::IdiomClass
+pub mycelium_transpile::remap::IdiomChoice::decision: alloc::string::String
+pub mycelium_transpile::remap::IdiomChoice::reason: alloc::string::String
+pub mycelium_transpile::remap::IdiomChoice::rust_span: alloc::string::String
+pub mycelium_transpile::remap::IdiomChoice::target_span: alloc::string::String
+impl core::clone::Clone for mycelium_transpile::remap::IdiomChoice
+pub fn mycelium_transpile::remap::IdiomChoice::clone(&self) -> mycelium_transpile::remap::IdiomChoice
+impl core::cmp::Eq for mycelium_transpile::remap::IdiomChoice
+impl core::cmp::PartialEq for mycelium_transpile::remap::IdiomChoice
+pub fn mycelium_transpile::remap::IdiomChoice::eq(&self, &mycelium_transpile::remap::IdiomChoice) -> bool
+impl core::fmt::Debug for mycelium_transpile::remap::IdiomChoice
+pub fn mycelium_transpile::remap::IdiomChoice::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_transpile::remap::IdiomChoice
+impl serde_core::ser::Serialize for mycelium_transpile::remap::IdiomChoice
+pub fn mycelium_transpile::remap::IdiomChoice::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_transpile::remap::IdiomChoice
+pub fn mycelium_transpile::remap::IdiomChoice::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_transpile::remap::IdiomChoice
+impl core::marker::Send for mycelium_transpile::remap::IdiomChoice
+impl core::marker::Sync for mycelium_transpile::remap::IdiomChoice
+impl core::marker::Unpin for mycelium_transpile::remap::IdiomChoice
+impl core::marker::UnsafeUnpin for mycelium_transpile::remap::IdiomChoice
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::remap::IdiomChoice
+impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::remap::IdiomChoice
+pub struct mycelium_transpile::remap::NoduleRemap
+pub mycelium_transpile::remap::NoduleRemap::api_surface_changed: bool
+pub mycelium_transpile::remap::NoduleRemap::guarantee: alloc::string::String
+pub mycelium_transpile::remap::NoduleRemap::identity_neutral: bool
+pub mycelium_transpile::remap::NoduleRemap::operation: mycelium_transpile::remap::RemapOperation
+pub mycelium_transpile::remap::NoduleRemap::rationale: alloc::string::String
+pub mycelium_transpile::remap::NoduleRemap::safety: mycelium_transpile::remap::RemapSafety
+pub mycelium_transpile::remap::NoduleRemap::sources: alloc::vec::Vec<mycelium_transpile::remap::RemapSource>
+pub mycelium_transpile::remap::NoduleRemap::target_nodule: alloc::string::String
+impl core::clone::Clone for mycelium_transpile::remap::NoduleRemap
+pub fn mycelium_transpile::remap::NoduleRemap::clone(&self) -> mycelium_transpile::remap::NoduleRemap
+impl core::cmp::Eq for mycelium_transpile::remap::NoduleRemap
+impl core::cmp::PartialEq for mycelium_transpile::remap::NoduleRemap
+pub fn mycelium_transpile::remap::NoduleRemap::eq(&self, &mycelium_transpile::remap::NoduleRemap) -> bool
+impl core::fmt::Debug for mycelium_transpile::remap::NoduleRemap
+pub fn mycelium_transpile::remap::NoduleRemap::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_transpile::remap::NoduleRemap
+impl serde_core::ser::Serialize for mycelium_transpile::remap::NoduleRemap
+pub fn mycelium_transpile::remap::NoduleRemap::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_transpile::remap::NoduleRemap
+pub fn mycelium_transpile::remap::NoduleRemap::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_transpile::remap::NoduleRemap
+impl core::marker::Send for mycelium_transpile::remap::NoduleRemap
+impl core::marker::Sync for mycelium_transpile::remap::NoduleRemap
+impl core::marker::Unpin for mycelium_transpile::remap::NoduleRemap
+impl core::marker::UnsafeUnpin for mycelium_transpile::remap::NoduleRemap
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::remap::NoduleRemap
+impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::remap::NoduleRemap
+pub struct mycelium_transpile::remap::PhylumRemap
+pub mycelium_transpile::remap::PhylumRemap::source_crate: alloc::string::String
+pub mycelium_transpile::remap::PhylumRemap::target_phylum: alloc::string::String
+impl core::clone::Clone for mycelium_transpile::remap::PhylumRemap
+pub fn mycelium_transpile::remap::PhylumRemap::clone(&self) -> mycelium_transpile::remap::PhylumRemap
+impl core::cmp::Eq for mycelium_transpile::remap::PhylumRemap
+impl core::cmp::PartialEq for mycelium_transpile::remap::PhylumRemap
+pub fn mycelium_transpile::remap::PhylumRemap::eq(&self, &mycelium_transpile::remap::PhylumRemap) -> bool
+impl core::fmt::Debug for mycelium_transpile::remap::PhylumRemap
+pub fn mycelium_transpile::remap::PhylumRemap::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_transpile::remap::PhylumRemap
+impl serde_core::ser::Serialize for mycelium_transpile::remap::PhylumRemap
+pub fn mycelium_transpile::remap::PhylumRemap::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_transpile::remap::PhylumRemap
+pub fn mycelium_transpile::remap::PhylumRemap::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_transpile::remap::PhylumRemap
+impl core::marker::Send for mycelium_transpile::remap::PhylumRemap
+impl core::marker::Sync for mycelium_transpile::remap::PhylumRemap
+impl core::marker::Unpin for mycelium_transpile::remap::PhylumRemap
+impl core::marker::UnsafeUnpin for mycelium_transpile::remap::PhylumRemap
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::remap::PhylumRemap
+impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::remap::PhylumRemap
+pub struct mycelium_transpile::remap::RemapManifest
+pub mycelium_transpile::remap::RemapManifest::idiom_choices: alloc::vec::Vec<mycelium_transpile::remap::IdiomChoice>
+pub mycelium_transpile::remap::RemapManifest::nodules: alloc::vec::Vec<mycelium_transpile::remap::NoduleRemap>
+pub mycelium_transpile::remap::RemapManifest::phylum: mycelium_transpile::remap::PhylumRemap
+impl core::clone::Clone for mycelium_transpile::remap::RemapManifest
+pub fn mycelium_transpile::remap::RemapManifest::clone(&self) -> mycelium_transpile::remap::RemapManifest
+impl core::cmp::Eq for mycelium_transpile::remap::RemapManifest
+impl core::cmp::PartialEq for mycelium_transpile::remap::RemapManifest
+pub fn mycelium_transpile::remap::RemapManifest::eq(&self, &mycelium_transpile::remap::RemapManifest) -> bool
+impl core::fmt::Debug for mycelium_transpile::remap::RemapManifest
+pub fn mycelium_transpile::remap::RemapManifest::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_transpile::remap::RemapManifest
+impl serde_core::ser::Serialize for mycelium_transpile::remap::RemapManifest
+pub fn mycelium_transpile::remap::RemapManifest::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_transpile::remap::RemapManifest
+pub fn mycelium_transpile::remap::RemapManifest::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_transpile::remap::RemapManifest
+impl core::marker::Send for mycelium_transpile::remap::RemapManifest
+impl core::marker::Sync for mycelium_transpile::remap::RemapManifest
+impl core::marker::Unpin for mycelium_transpile::remap::RemapManifest
+impl core::marker::UnsafeUnpin for mycelium_transpile::remap::RemapManifest
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::remap::RemapManifest
+impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::remap::RemapManifest
+pub struct mycelium_transpile::remap::RemapSource
+pub mycelium_transpile::remap::RemapSource::moved_items: alloc::vec::Vec<alloc::string::String>
+pub mycelium_transpile::remap::RemapSource::rust_path: alloc::string::String
+pub mycelium_transpile::remap::RemapSource::rust_span: core::option::Option<alloc::string::String>
+impl core::clone::Clone for mycelium_transpile::remap::RemapSource
+pub fn mycelium_transpile::remap::RemapSource::clone(&self) -> mycelium_transpile::remap::RemapSource
+impl core::cmp::Eq for mycelium_transpile::remap::RemapSource
+impl core::cmp::PartialEq for mycelium_transpile::remap::RemapSource
+pub fn mycelium_transpile::remap::RemapSource::eq(&self, &mycelium_transpile::remap::RemapSource) -> bool
+impl core::fmt::Debug for mycelium_transpile::remap::RemapSource
+pub fn mycelium_transpile::remap::RemapSource::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_transpile::remap::RemapSource
+impl serde_core::ser::Serialize for mycelium_transpile::remap::RemapSource
+pub fn mycelium_transpile::remap::RemapSource::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_transpile::remap::RemapSource
+pub fn mycelium_transpile::remap::RemapSource::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_transpile::remap::RemapSource
+impl core::marker::Send for mycelium_transpile::remap::RemapSource
+impl core::marker::Sync for mycelium_transpile::remap::RemapSource
+impl core::marker::Unpin for mycelium_transpile::remap::RemapSource
+impl core::marker::UnsafeUnpin for mycelium_transpile::remap::RemapSource
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::remap::RemapSource
+impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::remap::RemapSource
+pub fn mycelium_transpile::remap::build_remap_manifest(&[mycelium_transpile::batch::FileResult], &std::path::Path) -> mycelium_transpile::remap::RemapManifest
+pub fn mycelium_transpile::remap::render_remap_md(&mycelium_transpile::remap::RemapManifest) -> alloc::string::String
 pub mod mycelium_transpile::reserved
 pub const mycelium_transpile::reserved::RESERVED: &[&str]
 pub fn mycelium_transpile::reserved::guard_ident(&str, &str) -> core::result::Result<(), mycelium_transpile::gap::GapReason>
@@ -436,6 +636,79 @@ impl core::marker::Unpin for mycelium_transpile::gap::Category
 impl core::marker::UnsafeUnpin for mycelium_transpile::gap::Category
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::gap::Category
 impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::gap::Category
+pub enum mycelium_transpile::IdiomClass
+pub mycelium_transpile::IdiomClass::Heuristic
+pub mycelium_transpile::IdiomClass::Judgment
+pub mycelium_transpile::IdiomClass::Mechanical
+impl core::clone::Clone for mycelium_transpile::remap::IdiomClass
+pub fn mycelium_transpile::remap::IdiomClass::clone(&self) -> mycelium_transpile::remap::IdiomClass
+impl core::cmp::Eq for mycelium_transpile::remap::IdiomClass
+impl core::cmp::PartialEq for mycelium_transpile::remap::IdiomClass
+pub fn mycelium_transpile::remap::IdiomClass::eq(&self, &mycelium_transpile::remap::IdiomClass) -> bool
+impl core::fmt::Debug for mycelium_transpile::remap::IdiomClass
+pub fn mycelium_transpile::remap::IdiomClass::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_transpile::remap::IdiomClass
+impl core::marker::StructuralPartialEq for mycelium_transpile::remap::IdiomClass
+impl serde_core::ser::Serialize for mycelium_transpile::remap::IdiomClass
+pub fn mycelium_transpile::remap::IdiomClass::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_transpile::remap::IdiomClass
+pub fn mycelium_transpile::remap::IdiomClass::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_transpile::remap::IdiomClass
+impl core::marker::Send for mycelium_transpile::remap::IdiomClass
+impl core::marker::Sync for mycelium_transpile::remap::IdiomClass
+impl core::marker::Unpin for mycelium_transpile::remap::IdiomClass
+impl core::marker::UnsafeUnpin for mycelium_transpile::remap::IdiomClass
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::remap::IdiomClass
+impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::remap::IdiomClass
+pub enum mycelium_transpile::RemapOperation
+pub mycelium_transpile::RemapOperation::Consolidate
+pub mycelium_transpile::RemapOperation::CrateToPhylum
+pub mycelium_transpile::RemapOperation::Keep
+pub mycelium_transpile::RemapOperation::Relocate
+pub mycelium_transpile::RemapOperation::Split
+impl core::clone::Clone for mycelium_transpile::remap::RemapOperation
+pub fn mycelium_transpile::remap::RemapOperation::clone(&self) -> mycelium_transpile::remap::RemapOperation
+impl core::cmp::Eq for mycelium_transpile::remap::RemapOperation
+impl core::cmp::PartialEq for mycelium_transpile::remap::RemapOperation
+pub fn mycelium_transpile::remap::RemapOperation::eq(&self, &mycelium_transpile::remap::RemapOperation) -> bool
+impl core::fmt::Debug for mycelium_transpile::remap::RemapOperation
+pub fn mycelium_transpile::remap::RemapOperation::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_transpile::remap::RemapOperation
+impl core::marker::StructuralPartialEq for mycelium_transpile::remap::RemapOperation
+impl serde_core::ser::Serialize for mycelium_transpile::remap::RemapOperation
+pub fn mycelium_transpile::remap::RemapOperation::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_transpile::remap::RemapOperation
+pub fn mycelium_transpile::remap::RemapOperation::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_transpile::remap::RemapOperation
+impl core::marker::Send for mycelium_transpile::remap::RemapOperation
+impl core::marker::Sync for mycelium_transpile::remap::RemapOperation
+impl core::marker::Unpin for mycelium_transpile::remap::RemapOperation
+impl core::marker::UnsafeUnpin for mycelium_transpile::remap::RemapOperation
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::remap::RemapOperation
+impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::remap::RemapOperation
+pub enum mycelium_transpile::RemapSafety
+pub mycelium_transpile::RemapSafety::Review
+pub mycelium_transpile::RemapSafety::Safe
+impl core::clone::Clone for mycelium_transpile::remap::RemapSafety
+pub fn mycelium_transpile::remap::RemapSafety::clone(&self) -> mycelium_transpile::remap::RemapSafety
+impl core::cmp::Eq for mycelium_transpile::remap::RemapSafety
+impl core::cmp::PartialEq for mycelium_transpile::remap::RemapSafety
+pub fn mycelium_transpile::remap::RemapSafety::eq(&self, &mycelium_transpile::remap::RemapSafety) -> bool
+impl core::fmt::Debug for mycelium_transpile::remap::RemapSafety
+pub fn mycelium_transpile::remap::RemapSafety::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_transpile::remap::RemapSafety
+impl core::marker::StructuralPartialEq for mycelium_transpile::remap::RemapSafety
+impl serde_core::ser::Serialize for mycelium_transpile::remap::RemapSafety
+pub fn mycelium_transpile::remap::RemapSafety::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_transpile::remap::RemapSafety
+pub fn mycelium_transpile::remap::RemapSafety::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_transpile::remap::RemapSafety
+impl core::marker::Send for mycelium_transpile::remap::RemapSafety
+impl core::marker::Sync for mycelium_transpile::remap::RemapSafety
+impl core::marker::Unpin for mycelium_transpile::remap::RemapSafety
+impl core::marker::UnsafeUnpin for mycelium_transpile::remap::RemapSafety
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::remap::RemapSafety
+impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::remap::RemapSafety
 pub enum mycelium_transpile::VetClass
 pub mycelium_transpile::VetClass::CheckError
 pub mycelium_transpile::VetClass::Clean
@@ -468,6 +741,7 @@ impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::vet::VetCla
 impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::vet::VetClass
 pub struct mycelium_transpile::BatchSummary
 pub mycelium_transpile::BatchSummary::files: alloc::vec::Vec<mycelium_transpile::batch::FileSummary>
+pub mycelium_transpile::BatchSummary::remap: mycelium_transpile::remap::RemapManifest
 pub mycelium_transpile::BatchSummary::totals: mycelium_transpile::batch::Totals
 impl core::clone::Clone for mycelium_transpile::batch::BatchSummary
 pub fn mycelium_transpile::batch::BatchSummary::clone(&self) -> mycelium_transpile::batch::BatchSummary
@@ -528,6 +802,33 @@ impl core::marker::Unpin for mycelium_transpile::gap::GapReport
 impl core::marker::UnsafeUnpin for mycelium_transpile::gap::GapReport
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::gap::GapReport
 impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::gap::GapReport
+pub struct mycelium_transpile::IdiomChoice
+pub mycelium_transpile::IdiomChoice::alternatives: alloc::vec::Vec<alloc::string::String>
+pub mycelium_transpile::IdiomChoice::chose: alloc::string::String
+pub mycelium_transpile::IdiomChoice::class: mycelium_transpile::remap::IdiomClass
+pub mycelium_transpile::IdiomChoice::decision: alloc::string::String
+pub mycelium_transpile::IdiomChoice::reason: alloc::string::String
+pub mycelium_transpile::IdiomChoice::rust_span: alloc::string::String
+pub mycelium_transpile::IdiomChoice::target_span: alloc::string::String
+impl core::clone::Clone for mycelium_transpile::remap::IdiomChoice
+pub fn mycelium_transpile::remap::IdiomChoice::clone(&self) -> mycelium_transpile::remap::IdiomChoice
+impl core::cmp::Eq for mycelium_transpile::remap::IdiomChoice
+impl core::cmp::PartialEq for mycelium_transpile::remap::IdiomChoice
+pub fn mycelium_transpile::remap::IdiomChoice::eq(&self, &mycelium_transpile::remap::IdiomChoice) -> bool
+impl core::fmt::Debug for mycelium_transpile::remap::IdiomChoice
+pub fn mycelium_transpile::remap::IdiomChoice::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_transpile::remap::IdiomChoice
+impl serde_core::ser::Serialize for mycelium_transpile::remap::IdiomChoice
+pub fn mycelium_transpile::remap::IdiomChoice::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_transpile::remap::IdiomChoice
+pub fn mycelium_transpile::remap::IdiomChoice::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_transpile::remap::IdiomChoice
+impl core::marker::Send for mycelium_transpile::remap::IdiomChoice
+impl core::marker::Sync for mycelium_transpile::remap::IdiomChoice
+impl core::marker::Unpin for mycelium_transpile::remap::IdiomChoice
+impl core::marker::UnsafeUnpin for mycelium_transpile::remap::IdiomChoice
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::remap::IdiomChoice
+impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::remap::IdiomChoice
 pub struct mycelium_transpile::MycChecker
 pub mycelium_transpile::MycChecker::command: alloc::vec::Vec<alloc::string::String>
 pub mycelium_transpile::MycChecker::cwd: core::option::Option<std::path::PathBuf>
@@ -545,6 +846,102 @@ impl core::marker::Unpin for mycelium_transpile::vet::MycChecker
 impl core::marker::UnsafeUnpin for mycelium_transpile::vet::MycChecker
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::vet::MycChecker
 impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::vet::MycChecker
+pub struct mycelium_transpile::NoduleRemap
+pub mycelium_transpile::NoduleRemap::api_surface_changed: bool
+pub mycelium_transpile::NoduleRemap::guarantee: alloc::string::String
+pub mycelium_transpile::NoduleRemap::identity_neutral: bool
+pub mycelium_transpile::NoduleRemap::operation: mycelium_transpile::remap::RemapOperation
+pub mycelium_transpile::NoduleRemap::rationale: alloc::string::String
+pub mycelium_transpile::NoduleRemap::safety: mycelium_transpile::remap::RemapSafety
+pub mycelium_transpile::NoduleRemap::sources: alloc::vec::Vec<mycelium_transpile::remap::RemapSource>
+pub mycelium_transpile::NoduleRemap::target_nodule: alloc::string::String
+impl core::clone::Clone for mycelium_transpile::remap::NoduleRemap
+pub fn mycelium_transpile::remap::NoduleRemap::clone(&self) -> mycelium_transpile::remap::NoduleRemap
+impl core::cmp::Eq for mycelium_transpile::remap::NoduleRemap
+impl core::cmp::PartialEq for mycelium_transpile::remap::NoduleRemap
+pub fn mycelium_transpile::remap::NoduleRemap::eq(&self, &mycelium_transpile::remap::NoduleRemap) -> bool
+impl core::fmt::Debug for mycelium_transpile::remap::NoduleRemap
+pub fn mycelium_transpile::remap::NoduleRemap::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_transpile::remap::NoduleRemap
+impl serde_core::ser::Serialize for mycelium_transpile::remap::NoduleRemap
+pub fn mycelium_transpile::remap::NoduleRemap::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_transpile::remap::NoduleRemap
+pub fn mycelium_transpile::remap::NoduleRemap::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_transpile::remap::NoduleRemap
+impl core::marker::Send for mycelium_transpile::remap::NoduleRemap
+impl core::marker::Sync for mycelium_transpile::remap::NoduleRemap
+impl core::marker::Unpin for mycelium_transpile::remap::NoduleRemap
+impl core::marker::UnsafeUnpin for mycelium_transpile::remap::NoduleRemap
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::remap::NoduleRemap
+impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::remap::NoduleRemap
+pub struct mycelium_transpile::PhylumRemap
+pub mycelium_transpile::PhylumRemap::source_crate: alloc::string::String
+pub mycelium_transpile::PhylumRemap::target_phylum: alloc::string::String
+impl core::clone::Clone for mycelium_transpile::remap::PhylumRemap
+pub fn mycelium_transpile::remap::PhylumRemap::clone(&self) -> mycelium_transpile::remap::PhylumRemap
+impl core::cmp::Eq for mycelium_transpile::remap::PhylumRemap
+impl core::cmp::PartialEq for mycelium_transpile::remap::PhylumRemap
+pub fn mycelium_transpile::remap::PhylumRemap::eq(&self, &mycelium_transpile::remap::PhylumRemap) -> bool
+impl core::fmt::Debug for mycelium_transpile::remap::PhylumRemap
+pub fn mycelium_transpile::remap::PhylumRemap::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_transpile::remap::PhylumRemap
+impl serde_core::ser::Serialize for mycelium_transpile::remap::PhylumRemap
+pub fn mycelium_transpile::remap::PhylumRemap::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_transpile::remap::PhylumRemap
+pub fn mycelium_transpile::remap::PhylumRemap::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_transpile::remap::PhylumRemap
+impl core::marker::Send for mycelium_transpile::remap::PhylumRemap
+impl core::marker::Sync for mycelium_transpile::remap::PhylumRemap
+impl core::marker::Unpin for mycelium_transpile::remap::PhylumRemap
+impl core::marker::UnsafeUnpin for mycelium_transpile::remap::PhylumRemap
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::remap::PhylumRemap
+impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::remap::PhylumRemap
+pub struct mycelium_transpile::RemapManifest
+pub mycelium_transpile::RemapManifest::idiom_choices: alloc::vec::Vec<mycelium_transpile::remap::IdiomChoice>
+pub mycelium_transpile::RemapManifest::nodules: alloc::vec::Vec<mycelium_transpile::remap::NoduleRemap>
+pub mycelium_transpile::RemapManifest::phylum: mycelium_transpile::remap::PhylumRemap
+impl core::clone::Clone for mycelium_transpile::remap::RemapManifest
+pub fn mycelium_transpile::remap::RemapManifest::clone(&self) -> mycelium_transpile::remap::RemapManifest
+impl core::cmp::Eq for mycelium_transpile::remap::RemapManifest
+impl core::cmp::PartialEq for mycelium_transpile::remap::RemapManifest
+pub fn mycelium_transpile::remap::RemapManifest::eq(&self, &mycelium_transpile::remap::RemapManifest) -> bool
+impl core::fmt::Debug for mycelium_transpile::remap::RemapManifest
+pub fn mycelium_transpile::remap::RemapManifest::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_transpile::remap::RemapManifest
+impl serde_core::ser::Serialize for mycelium_transpile::remap::RemapManifest
+pub fn mycelium_transpile::remap::RemapManifest::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_transpile::remap::RemapManifest
+pub fn mycelium_transpile::remap::RemapManifest::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_transpile::remap::RemapManifest
+impl core::marker::Send for mycelium_transpile::remap::RemapManifest
+impl core::marker::Sync for mycelium_transpile::remap::RemapManifest
+impl core::marker::Unpin for mycelium_transpile::remap::RemapManifest
+impl core::marker::UnsafeUnpin for mycelium_transpile::remap::RemapManifest
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::remap::RemapManifest
+impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::remap::RemapManifest
+pub struct mycelium_transpile::RemapSource
+pub mycelium_transpile::RemapSource::moved_items: alloc::vec::Vec<alloc::string::String>
+pub mycelium_transpile::RemapSource::rust_path: alloc::string::String
+pub mycelium_transpile::RemapSource::rust_span: core::option::Option<alloc::string::String>
+impl core::clone::Clone for mycelium_transpile::remap::RemapSource
+pub fn mycelium_transpile::remap::RemapSource::clone(&self) -> mycelium_transpile::remap::RemapSource
+impl core::cmp::Eq for mycelium_transpile::remap::RemapSource
+impl core::cmp::PartialEq for mycelium_transpile::remap::RemapSource
+pub fn mycelium_transpile::remap::RemapSource::eq(&self, &mycelium_transpile::remap::RemapSource) -> bool
+impl core::fmt::Debug for mycelium_transpile::remap::RemapSource
+pub fn mycelium_transpile::remap::RemapSource::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_transpile::remap::RemapSource
+impl serde_core::ser::Serialize for mycelium_transpile::remap::RemapSource
+pub fn mycelium_transpile::remap::RemapSource::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_transpile::remap::RemapSource
+pub fn mycelium_transpile::remap::RemapSource::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_transpile::remap::RemapSource
+impl core::marker::Send for mycelium_transpile::remap::RemapSource
+impl core::marker::Sync for mycelium_transpile::remap::RemapSource
+impl core::marker::Unpin for mycelium_transpile::remap::RemapSource
+impl core::marker::UnsafeUnpin for mycelium_transpile::remap::RemapSource
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::remap::RemapSource
+impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::remap::RemapSource
 pub struct mycelium_transpile::UnionGapReport
 pub mycelium_transpile::UnionGapReport::category_counts: alloc::collections::btree::map::BTreeMap<&'static str, usize>
 pub mycelium_transpile::UnionGapReport::gaps: alloc::vec::Vec<mycelium_transpile::gap::Gap>
@@ -626,9 +1023,11 @@ impl core::marker::Unpin for mycelium_transpile::vet::VetReport
 impl core::marker::UnsafeUnpin for mycelium_transpile::vet::VetReport
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::vet::VetReport
 impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::vet::VetReport
+pub fn mycelium_transpile::build_remap_manifest(&[mycelium_transpile::batch::FileResult], &std::path::Path) -> mycelium_transpile::remap::RemapManifest
 pub fn mycelium_transpile::discover_rs_files(&std::path::Path) -> core::io::error::Result<alloc::vec::Vec<std::path::PathBuf>>
 pub fn mycelium_transpile::output_rel_path(&std::path::Path, &std::path::Path) -> core::result::Result<std::path::PathBuf, std::path::PathBuf>
-pub fn mycelium_transpile::summarize(&[mycelium_transpile::batch::FileResult]) -> (mycelium_transpile::batch::BatchSummary, mycelium_transpile::batch::UnionGapReport)
+pub fn mycelium_transpile::render_remap_md(&mycelium_transpile::remap::RemapManifest) -> alloc::string::String
+pub fn mycelium_transpile::summarize(&[mycelium_transpile::batch::FileResult], &std::path::Path) -> (mycelium_transpile::batch::BatchSummary, mycelium_transpile::batch::UnionGapReport)
 pub fn mycelium_transpile::transpile_batch(&[std::path::PathBuf]) -> (alloc::vec::Vec<mycelium_transpile::batch::FileResult>, alloc::vec::Vec<(std::path::PathBuf, alloc::string::String)>)
 pub fn mycelium_transpile::transpile_file(&std::path::Path) -> core::result::Result<(alloc::string::String, mycelium_transpile::gap::GapReport), alloc::string::String>
 pub fn mycelium_transpile::transpile_source(&str, &str, &str) -> core::result::Result<(alloc::string::String, mycelium_transpile::gap::GapReport), alloc::string::String>
