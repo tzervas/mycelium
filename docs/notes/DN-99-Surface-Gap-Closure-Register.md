@@ -369,6 +369,23 @@ DN + tracking issue** for the integrator to file. All touch the **cloud semcore 
 > implementation-readiness alongside DN-102's required second research pass, filed as **M-1049**
 > (`doc_refs: corpus:DN-102, corpus:DN-99`). See DN-102's "Ratification / Maintainer decision
 > (2026-07-11)" section for the maintainer's exact words.
+>
+> **ENB-2 FLAG-try-2 RESOLUTION addendum (2026-07-11, DN-102 second research pass / M-1049 —
+> append-only, this register's rows are unchanged).** The second research pass (DN-102 §SP.2) **resolves**
+> the FLAG-try-2 sub-gap and **refines this routing note's wording**: the sub-gap is **not**
+> "error-conversion-**trait** wiring … pending." Under the ratified principles (DN-106 gap-closure
+> default + native-solution mapping; DN-109 D13), the **implicit, trait-dispatched `From` widening is a
+> deliberate exclusion** — the error-channel analogue of an inferred `swap` (a black-box conversion the
+> `?` site does not name; house rule #2 / G2 / VR-5). The underlying problem (propagate a sub-error
+> across error types) is **mapped to Mycelium's native solution: explicit conversion** via the landed
+> `map_err[A,E,F](r, f: E => F) => Result[A,F]` (`lib/std/result.myc:39`; `Empirical`) — `map_err(e,
+> conv)?`, visible and never-silent. An **explicit-conversion `?` sugar** (e.g. `e ?with conv`) that
+> lowers mechanically (`Err($f) => Err(conv($f))`) is a **deferred, additive** follow-up (YAGNI — the
+> combinator already expresses it), and is **not** implicit `From`. The transpiler **flags-with-
+> suggested-native-idiom** (DN-109 D6 / M-1045) rather than bare-refusing. **No error-conversion-trait
+> subsystem is adopted or needed.** So the ENB-2 sub-gap is **resolved (deliberate-exclusion-of-implicit,
+> plus native explicit-conversion), not open-pending.** The maintainer confirms this wording on ratifying
+> DN-102 (M-1049).
 
 **Transpiler-only closures needing NO new DN** (file as ordinary tracking issues under M-1006 / the trx2
 ladder): #72 string-literal pattern, #85 byte-literal/byte-string, #71 tuple-let-destructure, #21
@@ -379,6 +396,13 @@ policy, #10 payload-variant census refresh, #24 struct-literal `..rest`.
 
 ## §9 Changelog
 
+- **2026-07-11** — **ENB-2 FLAG-try-2 RESOLUTION addendum** (§8): the DN-102 second research pass
+  (M-1049) resolves the FLAG-try-2 sub-gap and refines the prior routing note — implicit trait-`From`
+  widening is a **deliberate exclusion** (inferred-conversion black box, DN-109 D13), mapped to the
+  native **explicit `map_err(e, conv)?`** solution (`lib/std/result.myc:39`), with an explicit-
+  conversion `?` sugar as a deferred additive follow-up; **no error-conversion-trait subsystem** is
+  adopted. Append-only — the register's rows and tally are unchanged; this adds a dated cross-reference
+  note only, pending the maintainer's DN-102 ratification.
 - **2026-07-11** — **ENB-2 gap-routing addendum** (§8, after the backlog table): the maintainer's
   DN-102 non-ratification decision routes **FLAG-try-2** (`From`-error widening) into this register as
   an explicit sub-gap of the ENB-2 row, tracked via **M-1049**. Append-only — the register's rows and
