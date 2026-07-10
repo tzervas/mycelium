@@ -207,6 +207,16 @@ doc-index:
 # Drift gate: committed docs/lib-index/ must match a fresh regeneration. Skip if cargo absent.
 lib-index:
     @bash scripts/checks/lib-index.sh
+# Drift gate: committed docs/sugar-index/ must match tools/grammar/sugar.yaml, which must itself
+# cross-check clean against the lexer keyword() table (DN-38 §6 realized as a generated artifact).
+# Skip if python3 (or pyyaml) is absent.
+sugar-index:
+    @bash scripts/checks/sugar-index.sh
+# (Re)generate the committed sugar index (docs/sugar-index/) from tools/grammar/sugar.yaml; commit
+# the result. Run after editing sugar.yaml or after a token.rs::keyword() change that shifts a
+# cited line number.
+sugar-index-gen:
+    @python3 tools/grammar/sugar_index.py
 
 # (Re)generate THIRD-PARTY-LICENSES.md from Cargo.lock via cargo-about (about.toml + about.hbs).
 # Run after any dependency bump/add/remove; commit the result. Needs cargo-about:

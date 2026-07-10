@@ -15220,3 +15220,65 @@ issues:
         append-only pointer resolving its provisional-labels carve-out once DN-111 lands (this issue's
         own landing does not retroactively edit DN-110's Ratification record -- that stays as drafted,
         append-only).
+
+  - id: M-1058
+    title: "v0 generated surface + sugar mapping (tools/grammar/sugar.yaml + sugar_index.py) — DN-38 §6 realized as a drift-gated artifact"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:feature, area:tooling, priority:P2, status:in-progress]
+    epic: E28-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-38
+      - corpus:DN-53
+      - corpus:DN-54
+      - corpus:DN-102
+      - src:tools/grammar/sugar.yaml
+      - src:tools/grammar/sugar_index.py
+    landed_basis: >
+      status:in-progress — v0 built on branch claude/sugar-index-generator (draft PR, held for
+      maintainer review since this adds a new gate to `just check`): tools/grammar/sugar.yaml (a
+      hand-authored, 45-row registry — one row per crates/mycelium-l1/src/token.rs::keyword()
+      identifier keyword, seeded from DN-38 §6 + DN-53/DN-54/DN-102, plus glyph_sugars for DN-102's
+      `?` and not_lexed_sugars for DN-38 §5's `reveal`) + tools/grammar/sugar_index.py (mechanical
+      cross-check against token.rs::keyword() via generate.py's STRUCTURAL_KEYWORDS, reused not
+      re-derived; renders docs/sugar-index/; --check drift gate + --self-test incl. two synthetic
+      fail-loud demos) + docs/sugar-index/ (generated) + scripts/checks/sugar-index.sh +
+      justfile (sugar-index / sugar-index-gen) + scripts/checks/all.sh (wired into the `just check`
+      gate list, sharing doc-index's component-id family per the exhausted 5-bit id-space note).
+      NOT yet merged — status flips to done on landing; the maintainer may also revise scope on
+      review. Cross-reference: M-1051 is the SEPARATE runtime desugar/expand-on-demand tooling
+      (developer-facing "show me the lowering at this sugar site"); this issue is unrelated to and
+      distinct from the M-1054 DN-110 native-metaprogramming epic (a same-numbered collision this
+      issue was renumbered away from, mitigation #1 — this was M-1054 in an earlier revision of this
+      branch, before DN-110's ratification landed on dev and claimed that id).
+    body: |
+      Filed 2026-07-11 (verify-first per mitigation #14: grep of issues.yaml + docs/tero-index/
+      INDEX.md for `sugar-index`/`sugar.yaml`/`sugar-registry` found no prior issue or landing — this
+      is new tooling, not a re-implementation). Builds the DN-38 Layered-Lowering Atlas's §6
+      per-feature Lowering Map as a **generated, drift-gated artifact** rather than hand-maintained
+      prose, following the api-index (M-392, `tools/docgen/code_index.py`) and editor-grammar
+      (M-731, `tools/grammar/generate.py`) generator precedent: a structured source-of-truth
+      registry (`sugar.yaml`) plus a generator that mechanically cross-checks it against the lexer
+      and renders a committed, grep-friendly index — so the sugar catalog can never silently
+      diverge from `token.rs::keyword()` the way hand-maintained prose could.
+
+      User stories:
+      - As an agent or developer surveying "what surface sugar exists and what does it lower to",
+        I want a single generated, drift-gated table (keyword, grammar rule, lowering target,
+        defining doc, honest build-status tag) instead of re-deriving it from scattered DNs each
+        time, so the answer is trustworthy and can't quietly go stale as token.rs evolves.
+      - As a maintainer reviewing this PR, I want the new `just check` gate's fail-loud behavior
+        demonstrated (a missing registry row, a stale token.rs:LINE citation) before it's wired in,
+        so I can trust it will catch real drift rather than false-passing.
+
+      Definition of Done (v0, this issue):
+      - `tools/grammar/sugar.yaml` covers every `token.rs::keyword()` identifier keyword (45/45 at
+        authoring time), tagged honestly per VR-5 (`Exact`/`Empirical`/`Declared`/`Gap`; no upgrade
+        past a checked basis); `tools/grammar/sugar_index.py` cross-checks coverage + status
+        agreement + citation resolution and fails loudly (non-zero exit) on any drift, with a
+        `--self-test` exercising two synthetic drift-guard demos; `docs/sugar-index/` is the
+        rendered, committed artifact; `scripts/checks/sugar-index.sh` + `just sugar-index` /
+        `sugar-index-gen` wire it in, skip-graceful without python3/pyyaml. Deferred to a follow-up
+        (not this issue): the `native_strategy` taxonomy column (DN-109's taxonomy is still
+        settling — a `# TODO(DN-taxonomy)` placeholder note is left in `sugar.yaml` instead of
+        invented values).
