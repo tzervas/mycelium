@@ -136,6 +136,40 @@ fn transitive_case_without_link_is_a_never_silent_stuck() {
 }
 
 // ---------------------------------------------------------------------------------------------
+// Control (positive twin of the Stuck control): DIRECT cross-nodule execution already works WITHOUT
+// the phylum-wide link — a consumer nodule's checked `Env` retains its imported `pub` decls WITH
+// their bodies, so a self-contained `use`d fn runs from the per-nodule `Env` alone. Isolates DN-101
+// §2's "direct cross-nodule exec already worked" verify-first finding (mitigation #14) as a committed
+// guard, rather than relying on it passing incidentally through `link` in test 1. Only the TRANSITIVE
+// case (a private home-nodule callee) needs the link — this direct case does not.
+// ---------------------------------------------------------------------------------------------
+#[test]
+fn direct_case_without_link_already_executes_from_per_nodule_env() {
+    let src = "phylum p\n\
+        nodule b;\n\
+        pub fn flip(x: Binary{8}) => Binary{8} = not(x);\n\
+        nodule a;\n\
+        use b.flip;\n\
+        fn main() => Binary{8} = flip(0b0000_0011);";
+    let penv = check_phylum(&parse_phylum(src).expect("parse")).expect("check");
+    let env_a = penv
+        .nodule(&mycelium_l1::ast::Path(vec!["a".to_owned()]))
+        .expect("nodule a");
+    // Run `a`'s per-nodule env DIRECTLY (no `link()`): the self-contained imported `pub fn flip`
+    // already executes. Mutant witness: dropping the direct-import seeding in `check_nodule_with`
+    // (which retains imported `pub` bodies in the consumer `Env`) would make this a `Stuck`.
+    let mono = monomorphize(env_a, "main").expect("mono");
+    let registry = build_registry(&mono).expect("build_registry");
+    let direct = Evaluator::new(&mono)
+        .call("main", vec![])
+        .expect("a self-contained imported `pub fn` runs from the per-nodule env, without the link")
+        .to_core(&mono, &registry)
+        .expect("L1 result in the r3 data fragment");
+    // …and it equals the linked + inlined-oracle value (test 1's `run_phylum`), not merely `Ok`.
+    assert_eq!(direct, run_phylum(src));
+}
+
+// ---------------------------------------------------------------------------------------------
 // Cross-nodule name collision: two nodules each declare a `helper`. The flat v0 namespace cannot
 // represent both, so `link` refuses never-silently (never a silent winner — G2).
 // ---------------------------------------------------------------------------------------------

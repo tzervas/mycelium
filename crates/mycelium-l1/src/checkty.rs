@@ -1149,15 +1149,21 @@ impl PhylumEnv {
                 }
             }
             // Instances / impls / lower rules / provenance are coherence-keyed and phylum-unique by
-            // construction (the check pass's phylum-wide coherence refuses a duplicate key); merge
-            // each nodule's own set, guarding the invariant defensively (never-silent, G2).
+            // construction: each nodule's checked `Env` carries only ITS OWN coherence facts (they are
+            // built from `effective_nodule`, never from imports — `check_nodule_with`), and the check
+            // pass's phylum-wide orphan rule already refused any cross-nodule duplicate key. So a
+            // collision here is unreachable on a checked phylum — but we guard EVERY coherence map
+            // uniformly and never-silently (G2): if the upstream coherence invariant is ever violated,
+            // `link` refuses explicitly rather than silently keeping one side (no first-wins winner).
             for (k, v) in &env.instances {
                 if instances.insert(k.clone(), v.clone()).is_some() {
                     return Err(collide("instance", &format!("{}:{}", k.0, k.1)));
                 }
             }
             for (k, v) in &env.impls {
-                impls.entry(k.clone()).or_insert_with(|| v.clone());
+                if impls.insert(k.clone(), v.clone()).is_some() {
+                    return Err(collide("impl", &format!("{}:{}", k.0, k.1)));
+                }
             }
             for (name, v) in &env.lower_rules {
                 if lower_rules.insert(name.clone(), v.clone()).is_some() {
@@ -1165,12 +1171,14 @@ impl PhylumEnv {
                 }
             }
             for (k, v) in &env.derived_provenance {
-                derived_provenance
-                    .entry(k.clone())
-                    .or_insert_with(|| v.clone());
+                if derived_provenance.insert(k.clone(), v.clone()).is_some() {
+                    return Err(collide("derived impl", &format!("{}:{}", k.0, k.1)));
+                }
             }
             for (k, v) in &env.via_provenance {
-                via_provenance.entry(k.clone()).or_insert_with(|| v.clone());
+                if via_provenance.insert(k.clone(), v.clone()).is_some() {
+                    return Err(collide("via impl", &format!("{}:{}", k.0, k.1)));
+                }
             }
         }
 

@@ -132,7 +132,7 @@ unblocker, e.g. #41).
 | 69 | restricted-visibility-modifier (`pub(crate)`) | idiom | ac | `ast.rs:42`; DN-53 §B.6 Q1 | collapse to binary; field newtype → seal idiom | no `pub(` survives; genuine sub-scope FLAGged | no | DN-53 §B.6 Q1/B.5 | none | S | P2 |
 | 70 | **format-string-mini-language** | **partial** | **ac+rt** | `fmt.myc:19`; `transpile.rs:298`; M-533 | hand-compose over Bytes; Display + `{:.2e}` prim = M-533 | idiom recipe; M-533 DN for float-precision prim | **yes** | M-533; DN-34 §8 | **HIGH** (residual) | L | **P1** |
 | 71 | tuple-let-destructure (transpiler) | partial | tr | `emit.rs:569`; M-826 | `let (a,b)=e`→`match e{(a,b)=>…}` in Stmt::Local | vet: `let (` sites off MultiStmtBody-gap | no | M-1006 | low | S | P2 |
-| 72 | string-literal-pattern | tr-only | tr | `emit.rs:1458`; M-910/911 | add `Lit::Str` arm to `map_pattern_inner` | or-pattern of str literals emits, `myc check`-clean | no | DN-34 §8.5; M-876-adj | low | S | P2 |
+| 72 | string-literal-pattern | language-enabler | rt | `emit.rs:1458`; DN-34 §8.21; M-1035 | L1 enabler — accept `match` on a `Bytes` scrutinee (M-1035); the transpiler arm emits once it lands (now gapped never-silently, G2) | L1 accepts match-on-`Bytes`; the `emit.rs` gap flips to emitted in lockstep (`string_literal_pattern_gaps_with_l1_enabler_reason`) | yes | M-1035; DN-34 §8.21 | HIGH | S | P2 |
 | 73 | or-pattern-in-match-arm | closed | cl | `emit.rs:1466`; M-873; RFC-0020 §9 | none — emits end-to-end (100% witnessed) | one regression fixture (nice-to-have) | no | M-873; RFC-0020 §9 | none | S | P3 |
 | 74 | reserved-word-ctor-declaration | idiom | ac | `lex.myc:96-127`; `core.myc:82` | prefix-rename at decl (Kw-/G-/S-) + FLAG | docs enumerate the decl slot | no | DN-02/03; DN-80 §5 | low | S | P3 |
 | 75 | drop-trait-raii-destructor | idiom | ac | `checkty.rs:49`; `ambient.myc:362` | rewrite RAII as explicit depth-threading | budget-threading differential parity | no | RFC-0031; DN-84 | HIGH (port site) | S | P3 |
@@ -145,7 +145,7 @@ unblocker, e.g. #41).
 | 82 | assignment-and-mutation-statement | idiom | ac | `ast.rs:693`; `substrate.myc:162`; ADR-003 | functional rewrite (`let` shadow / fold / thread) | catalog row; tr NOT taught to invent mutation | no | DN-34 | none | S | P3 |
 | 83 | imperative-loop-construct | idiom | ac | `RFC-0007:257`; `iter.myc:75` | recursion / bounded `for`-fold | playbook row; optional tr fold-emit | no | RFC-0007 §4.8 | partial (l1 sites=boot10) | M | P2 |
 | 84 | empty-marker-trait-impl | tr-only | ac | `parse.myc:3640`; `semcore.myc:2656`; FLAG-core-4 | drop (errors-as-values); optional tr empty-ImplDecl | recorded expressible + accepted drop | no | FLAG-core-4; M-535 | none | S | P3 |
-| 85 | byte-literal + byte-string (`b'…'`/`b"…"`) | tr-only | tr | `emit.rs:787`; `lex.myc:513` | add `Lit::Byte`→`0b…`, `Lit::ByteStr`→`0x…` arms | both forms emit `myc check`-clean, tested | no | M-873 | low | S | P2 |
+| 85 | byte-literal + byte-string (`b'…'`/`b"…"`) | language-enabler | tr | `emit.rs:787`; `lex.myc:513`; DN-34 §8.21 | the byte-literal arm is `myc check`-clean **in isolation**, but corpus closure is gated on the ENB-1 unknown-prim symbol table (M-1024; FLAG-tr-unknown-prim) — landing it alone regresses `checked_fraction` via the co-located blind method-call emit | byte-literal arm lands once the ENB-1 known-prim gate exists; not a standalone transpiler-only win | no | M-1024; DN-34 §8.21 | HIGH | S | P2 |
 | 86 | bitwise-and-shift-operator-suite | closed | cl | `token.rs:290`; `parse.rs:2396`; M-745 | none — `<<>>&\|^!` desugar landed; compound-assign=SSA | register row + compound-assign note | no | M-745; RFC-0025 §4.1 | none | S | P3 |
 | 87 | phantom-type-marker | idiom | ac | `checkty.rs:1691` (unused params tolerated) | drop PhantomData fields; keep unused type params | DN records contract; regression test FLAGged | no | untracked | low (test) | S | P3 |
 | 88 | **never-type-divergence (`-> !`)** | **open** | **rt** | `ast.rs:553` (no bottom); `sys.rs:32` | model as divergent host-effect prim + `diverges` effect | DN: divergence-as-effect + totality interaction | **yes** | untracked | **HIGH** | M | P3 |
@@ -354,3 +354,13 @@ policy, #10 payload-variant census refresh, #24 struct-literal `..rest`.
   `lib/compiler/**`, `crates/mycelium-l1/**`, `issues.yaml`, `CHANGELOG.md`, or `Doc-Index.md`
   (integration/cloud-semcore-lane owned; FLAGGED up per §7). Append-only; status advances only by
   maintainer ratification (house rule #3).
+- **2026-07-10** — **register correction (mitigation #14, verify-first): rows #72 and #85
+  reclassified `tr-only` → `language-enabler`.** Whole-corpus profiling against the real `myc check`
+  oracle (DN-34 §8.21) proved the DN-99 Track-B "trivial transpiler-only" B1 label wrong for these two
+  literal-pattern closures: **#72** (string-literal `match` pattern) needs an L1 enabler — the checker
+  categorically rejects a `match` on a `Bytes` scrutinee — now tracked as **M-1035** (ENB-12); **#85**
+  (byte-literal) has a `myc check`-clean transpiler arm *in isolation* but its corpus closure is gated
+  on the **ENB-1** unknown-prim symbol table (FLAG-tr-unknown-prim, cross-refed on **M-1024** /
+  DN-101), so it is not a standalone transpiler-only win. The prior "add-an-arm / `myc check`-clean"
+  DoDs were the stale guesses. Only the two rows' classification + tracking are corrected here
+  (append-only spirit — the register's structure is unchanged); see DN-34 §8.21 for the measured basis.

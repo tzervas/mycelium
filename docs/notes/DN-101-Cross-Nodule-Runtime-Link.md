@@ -1,8 +1,8 @@
-# Design Note DN-100 — Cross-Nodule Runtime Link (the ENB-1 runtime-execution close)
+# Design Note DN-101 — Cross-Nodule Runtime Link (the ENB-1 runtime-execution close)
 
 | Field | Value |
 |---|---|
-| **Note** | DN-100 |
+| **Note** | DN-101 |
 | **Status** | **Draft** (2026-07-10). Authored alongside the **first landable increment** of M-1024 (ENB-1). It records the design of the cross-nodule **runtime-execution** close, recommends a name-collision policy **for ratification**, and **enacts nothing** and **moves no other doc's status** (house rule #3, append-only). Tags are `Empirical` where read against the code / witnessed by a running differential, `Declared` for any design not yet ratified (VR-5). |
 | **Decides** | *Proposes, for ratification:* (1) that the runtime dual of the check-time import resolution (`resolve_imports`, M-662) is a **phylum-wide runtime link** producing one linked `Env` the existing elab/mono/eval pipeline consumes unchanged; (2) the **v0 flat-namespace** semantics (one declaration per simple name across the phylum) with a **never-silent refusal** on a cross-nodule name collision; (3) the **residual** to defer (AOT parity, qualified per-nodule scoping for collision *disambiguation*, the `.myc` runtime mirror). It does **not** edit `issues.yaml`, `CHANGELOG.md`, or `Doc-Index.md` (the integrating session owns those). |
 | **Feeds** | DN-99 §A0 / register row #41 (ENB-1); M-1024; M-982 (the deferred collision-disambiguation follow-up); DN-26 (SCC self-hosting); DN-34 §4/§8.2 (the cross-nodule gap). |
@@ -111,7 +111,10 @@ guessed. **This is the open decision the maintainer should ratify** before (A) i
 
 ## Changelog
 
-- **2026-07-10** — DN-100 created (**Draft**): records the cross-nodule runtime-link close (ENB-1 /
+- **2026-07-10** — DN-101 created (**Draft**): records the cross-nodule runtime-link close (ENB-1 /
   M-1024), the `PhylumEnv::link` design, the v0 flat-namespace collision policy (recommended, not
   ratified), and the deferred residual (AOT parity, qualified scoping = M-982, `.myc` runtime mirror =
   M-986/M-987). Witnessed by `crates/mycelium-l1/tests/phylum_exec.rs`.
+- **2026-07-10** — renumbered DN-100 → **DN-101** at integration (never-silent, G2): the number DN-100
+  was concurrently taken by the M-1032 (ENB-9) macro-expand transpiler DN, which landed on `dev` first.
+  Content unchanged; only the note number + its internal references were updated to avoid the collision.
