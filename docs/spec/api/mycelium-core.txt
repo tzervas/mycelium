@@ -1,24 +1,35 @@
 pub mod mycelium_core
 pub mod mycelium_core::binary
 pub const mycelium_core::binary::DIV_MAX_WIDTH: usize
+pub const mycelium_core::binary::FLOAT_CONV_MAX_WIDTH: usize
+pub const mycelium_core::binary::FLOAT_EXACT_MAX: u64
 pub const mycelium_core::binary::MUL_MAX_WIDTH: usize
 pub const mycelium_core::binary::SHIFT_MAX_WIDTH: usize
 pub const mycelium_core::binary::TC_MAX_WIDTH: usize
 pub fn mycelium_core::binary::add(&[bool], &[bool]) -> core::option::Option<alloc::vec::Vec<bool>>
 pub fn mycelium_core::binary::bits_to_int(&[bool]) -> i64
 pub fn mycelium_core::binary::bits_to_uint(&[bool]) -> u64
+pub fn mycelium_core::binary::checked_f64_to_uint(f64, u32) -> core::option::Option<u64>
+pub fn mycelium_core::binary::checked_uint_to_f64(&[bool]) -> core::option::Option<f64>
+pub fn mycelium_core::binary::clz(&[bool]) -> alloc::vec::Vec<bool>
 pub fn mycelium_core::binary::cmp_signed(&[bool], &[bool]) -> core::option::Option<core::cmp::Ordering>
+pub fn mycelium_core::binary::ctz(&[bool]) -> alloc::vec::Vec<bool>
 pub fn mycelium_core::binary::div_rem(&[bool], &[bool]) -> core::option::Option<(alloc::vec::Vec<bool>, alloc::vec::Vec<bool>)>
 pub fn mycelium_core::binary::div_signed(&[bool], &[bool]) -> core::option::Option<alloc::vec::Vec<bool>>
 pub fn mycelium_core::binary::int_to_bits(i64, u32) -> core::option::Option<alloc::vec::Vec<bool>>
 pub fn mycelium_core::binary::mul(&[bool], &[bool]) -> core::option::Option<alloc::vec::Vec<bool>>
+pub fn mycelium_core::binary::mul_unsigned(&[bool], &[bool]) -> core::option::Option<alloc::vec::Vec<bool>>
 pub fn mycelium_core::binary::neg(&[bool]) -> core::option::Option<alloc::vec::Vec<bool>>
+pub fn mycelium_core::binary::popcount(&[bool]) -> alloc::vec::Vec<bool>
 pub fn mycelium_core::binary::rem_signed(&[bool], &[bool]) -> core::option::Option<alloc::vec::Vec<bool>>
 pub fn mycelium_core::binary::shl(&[bool], &[bool]) -> core::option::Option<alloc::vec::Vec<bool>>
 pub fn mycelium_core::binary::shr(&[bool], &[bool]) -> core::option::Option<alloc::vec::Vec<bool>>
 pub fn mycelium_core::binary::shr_signed(&[bool], &[bool]) -> core::option::Option<alloc::vec::Vec<bool>>
 pub fn mycelium_core::binary::sub(&[bool], &[bool]) -> core::option::Option<alloc::vec::Vec<bool>>
 pub fn mycelium_core::binary::uint_to_bits(u64, u32) -> core::option::Option<alloc::vec::Vec<bool>>
+pub fn mycelium_core::binary::wrapping_add(&[bool], &[bool]) -> core::option::Option<alloc::vec::Vec<bool>>
+pub fn mycelium_core::binary::wrapping_mul(&[bool], &[bool]) -> core::option::Option<alloc::vec::Vec<bool>>
+pub fn mycelium_core::binary::wrapping_sub(&[bool], &[bool]) -> core::option::Option<alloc::vec::Vec<bool>>
 pub mod mycelium_core::bound
 pub enum mycelium_core::bound::BoundBasis
 pub mycelium_core::bound::BoundBasis::EmpiricalFit

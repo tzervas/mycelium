@@ -12,6 +12,38 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### chore(integration): enb batch close-out — api-gate tool-flag fix + baseline catch-up (M-1038) (2026-07-10)
+
+Integration-tier close-out for the enb batch (M-1024/1025/1026/1027/1035/1033). The bounded canary
+gate found the batch content itself clean (fmt/clippy/tests/drift/indices/markdown/links/secrets/
+deny/licenses all green); the only red was the `api` gate, which decomposed into two things resolved
+here (filed as **M-1038**):
+
+- **Tool-flag drift (environmental, pre-existing — fails identically on `main`):** `cargo-public-api`
+  0.52.0 removed the `--toolchain` flag that `scripts/checks/api.sh` and `scripts/api-baseline.sh`
+  both passed. Fixed to the rustup selector form (`cargo +"$api_toolchain" public-api …`), verified
+  empirically to build and emit a non-empty surface before any mass regeneration.
+- **Baseline catch-up (genuine landed surface, not batch leakage):** with the gate unblocked, the
+  diff — unregenerated since 2026-07-06 — covered both the enb batch's stated deltas (`mycelium-l1`:
+  `Expr::Try`/`Expr::Wrapping`/`Ctor::sealed`/`InherentImplDecl::params`/`PhylumEnv::link`/
+  `Tok::Priv`/`Tok::Question`/`Tok::Wrapping`; `mycelium-transpile`: the `emit_expr`/
+  `emit_block_as_expr` param thread, new `gap::Category` variants, `prim_map`,
+  `batch::output_rel_path`) and prior work that landed 2026-07-07..08 while this same broken gate
+  silently masked the drift (`mycelium-core::binary` CU-1/CU-3/CU-5/CU-6 bit-manipulation/float-conv/
+  wrapping prims; `mycelium-interp::prims::eval_wrapping`; `mycelium-check`'s M-1006 `--phylum`
+  cross-nodule mode). Every added symbol traced to a landed, merged commit (`git log -S`) — nothing
+  unreviewed, no accidental `pub`, no unrelated-crate leak (the transparency review this batch's DoD
+  requires). Baselines regenerated (`just api-baseline`) for the 5 affected crates
+  (`mycelium-check`/`-core`/`-interp`/`-l1`/`-transpile`); `scripts/checks/api.sh` re-run GREEN
+  (57/57 crates checked/skip-N/A, zero FAIL).
+
+`docs/api-index/` and `docs/tero-index/` regenerated to reflect the new public surface (`just
+docs-index`, `just tero-index-gen`); `doc_refs_check.py` clean. Per-batch issue status close-out was
+already correctly applied by the batch's own per-issue PRs (M-1024/M-1025 honestly `in-progress` with
+their stated residuals; M-1026/M-1027/M-1035 `done` with residuals noted; M-1033 `todo` per DN-106) —
+verified against the codebase, not rubber-stamped (mitigation #14); no status changed here. DN-101
+through DN-106 remain `Draft` (maintainer-ratification-pending), already indexed in `Doc-Index.md`.
+
 ### docs(dn-106): triage ENB-10 statement-sequencing + record-update — both closed at L1 (M-1033) (2026-07-10)
 
 Adds **DN-106 — Statement-Sequencing (`let _`) + Record-Update / Mutation Split: a Triage (ENB-10)**

@@ -49045,6 +49045,23 @@
       "tag": "Empirical/Declared"
     },
     {
+      "anchor": "M-1038",
+      "family": "issue",
+      "kind": "issue",
+      "id": "M-1038",
+      "title": "api gate tool-flag drift — cargo-public-api 0.52.0 removed --toolchain (fixed) + baseline catch-up",
+      "file": "tools/github/issues.yaml",
+      "line": 14339,
+      "status": "done",
+      "summary": "Found at the enb-batch (M-1024/1025/1026/1027/1035/1033) integration close-out, 2026-07-10.",
+      "epic": "E28-1",
+      "doc_refs": [
+        "src:scripts/checks/api.sh",
+        "src:scripts/api-baseline.sh"
+      ],
+      "tag": "Empirical/Declared"
+    },
+    {
       "anchor": "cl--unreleased",
       "family": "changelog",
       "kind": "release",
