@@ -557,7 +557,8 @@ fn ast_myc_classifies_every_item_variant() {
     let trait_ctor = "Trait(TrD(Private, \"T\", Nil, Nil))";
     let impl_ctor = "Impl(ImD(\"T\", Nil, sample_typeref(), Nil))";
     let fn_ctor = "Fn(FD(Private, False, None, FS(\"f\", Nil, Nil, sample_typeref(), Nil, Nil), sample_expr()))";
-    let object_ctor = "Object(OD(Private, \"O\", Nil, Ctr(\"O\", Nil), Nil, Nil, Nil))";
+    // M-1027 / DN-104: `Ctr` carries the `sealed` (`priv`) flag as its 3rd field (`False` = unsealed).
+    let object_ctor = "Object(OD(Private, \"O\", Nil, Ctr(\"O\", Nil, False), Nil, Nil, Nil))";
     let lower_ctor = "Lower(LD(\"L\", Nil, LRExpr(sample_expr())))";
     let derive_ctor = "Derive(DD(\"D\", sample_typeref()))";
     // DN-103 / M-1026: IID carries the impl-level type-parameter slot (unbounded names) first; `Nil`

@@ -326,6 +326,14 @@ pub struct Ctor {
     pub name: String,
     /// Positional field types.
     pub fields: Vec<TypeRef>,
+    /// **Per-constructor visibility seal** (M-1027 / ENB-4; DN-104). A `priv`-marked constructor of a
+    /// `pub type` exports the **type NAME** (usable in a client nodule's signatures / `use` / pattern
+    /// position) but **withholds the constructor from cross-nodule CONSTRUCTION** — the FR-N3
+    /// capability-gate ("only the home nodule mints one"). `false` for an unmarked constructor (the
+    /// default, backward-compatible). Meaningful only on a `pub type`; a seal on a nodule-private type
+    /// is a never-silent redundant-seal refusal at registration (DN-104 §4; G2). The surface keyword is
+    /// `priv` (`Tok::Priv`); this field is the keyword-independent *property* (DN-104 §2.1).
+    pub sealed: bool,
 }
 
 /// `trait Name<params> { fn … }` (LR-2; conventional term). `params` are **unbounded** type-variable

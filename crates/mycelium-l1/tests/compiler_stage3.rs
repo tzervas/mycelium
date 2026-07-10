@@ -339,7 +339,15 @@ mod fp {
     }
 
     fn ctor(fp: Fp, c: &Ctor) -> Fp {
-        typeref_list(bytes(tag(fp, 48), &c.name), &c.fields)
+        // M-1027 / DN-104: the `sealed` (`priv`) flag joins the fingerprint via tag 110 (next after the
+        // 1..109 table), folded ONLY when sealed — so an unsealed ctor hashes byte-identically to the
+        // pre-M-1027 form (lock-step with parse.myc's `walk_ctor`/`walk_ctor_seal`).
+        let fp = typeref_list(bytes(tag(fp, 48), &c.name), &c.fields);
+        if c.sealed {
+            tag(fp, 110)
+        } else {
+            fp
+        }
     }
 
     fn ctor_list(fp: Fp, xs: &[Ctor]) -> Fp {

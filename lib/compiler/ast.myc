@@ -354,13 +354,20 @@ fn fndecl_body(f: FnDecl) => Expr =
   match f { FD(_, _, _, _, b) => b };
 
 // ── Ctor (mirrors ast.rs::Ctor — one constructor of a TypeDecl) ─────────────────────────────────
-type Ctor = Ctr(Bytes, Vec[TypeRef]);
+// M-1027 / DN-104: the 3rd field is the `sealed` flag — a `priv`-marked constructor of a `pub type`
+// exports the type NAME but withholds cross-nodule construction (the FR-N3 capability-gate). `False`
+// for an unmarked constructor (the default; backward-compatible).
+type Ctor = Ctr(Bytes, Vec[TypeRef], Bool);
 
 fn ctor_name(c: Ctor) => Bytes =
-  match c { Ctr(n, _) => n };
+  match c { Ctr(n, _, _) => n };
 
 fn ctor_fields(c: Ctor) => Vec[TypeRef] =
-  match c { Ctr(_, f) => f };
+  match c { Ctr(_, f, _) => f };
+
+// ctor_sealed: the per-constructor `priv` seal (M-1027 / DN-104).
+fn ctor_sealed(c: Ctor) => Bool =
+  match c { Ctr(_, _, s) => s };
 
 // ── TypeDecl (mirrors ast.rs::TypeDecl — `type Name<params> = Ctor | …`) ────────────────────────
 type TypeDecl = TD(Vis, Bytes, Vec[Bytes], Vec[Ctor]);

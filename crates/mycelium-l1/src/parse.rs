@@ -711,13 +711,21 @@ impl Parser {
     }
 
     fn parse_ctor(&mut self) -> Result<Ctor, ParseError> {
+        // M-1027 / DN-104 §2: an optional leading `priv` seals the constructor — the type NAME is
+        // exported (if the `type` is `pub`) but the constructor is withheld from cross-nodule
+        // construction (the FR-N3 capability-gate). Absent ⇒ `sealed: false` (backward-compatible).
+        let sealed = self.eat(&Tok::Priv);
         let name = self.ident()?;
         let mut fields = Vec::new();
         if self.eat(&Tok::LParen) {
             fields = self.comma_separated(None, Self::parse_type_ref)?;
             self.expect(&Tok::RParen, "`)` to close the constructor fields")?;
         }
-        Ok(Ctor { name, fields })
+        Ok(Ctor {
+            name,
+            fields,
+            sealed,
+        })
     }
 
     fn parse_trait_decl(&mut self, vis: Vis) -> Result<TraitDecl, ParseError> {
@@ -1324,6 +1332,18 @@ impl Parser {
             ));
         }
         let ctor = self.parse_ctor()?;
+        // M-1027 / DN-104 §2: the `priv` constructor seal is scoped to the `type` declaration form;
+        // sealing an `object`'s constructor is out of scope in v0. Refuse it never-silently (G2) with a
+        // teaching pointer, rather than silently accepting a marker the object surface does not model.
+        if ctor.sealed {
+            return Err(ParseError::new(
+                self.pos(),
+                "the `priv` constructor seal is not supported inside an `object` body in v0 \
+                 (DN-104 §2 scopes the seal to the `type` declaration form) — express the sealed \
+                 constructor as a `pub type … = priv Ctor(..)` declaration instead (never-silent, G2)"
+                    .to_owned(),
+            ));
+        }
         // The constructor is terminated by a mandatory `;` (it is not an expression statement).
         self.expect(
             &Tok::Semi,

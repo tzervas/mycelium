@@ -111,6 +111,7 @@ pub(crate) fn classify(kind: &LexKind) -> Option<u32> {
         | Tok::Derive
         | Tok::Use
         | Tok::Pub
+        | Tok::Priv
         | Tok::Type
         | Tok::Trait
         | Tok::Impl
