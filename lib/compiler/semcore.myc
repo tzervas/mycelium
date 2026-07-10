@@ -4553,3 +4553,103 @@ fn lval_match_zip(types: Vec[DataInfo], subs: Vec[Pattern], fields: Vec[LVal],
       }
     }
   };
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// M-1013 checkty PR-2 — two pure checkty.rs classifiers (Stage-5 increment continues; DN-26 §7.3).
+// Both are pure structural functions over the ALREADY-ported `Ty`/`DataInfo` vocabulary — no Env,
+// no PrimRegistry, no SwapEngine, no fuel/depth, no trusted-kernel `Value`, no Rust trait. Each
+// mirrors its Rust oracle arm-for-arm and is differential-witnessed in `compiler_stage5_classify.rs`.
+// Neither introduces a NEW surface-inexpressibility: `paradigm_name` is a flat `Ty` match (the
+// established `&'static str -> Bytes` idiom, no new FLAG); `cons_list_ctors` reads the type registry
+// through the already-established FLAG-semcore-4 `Vec[DataInfo]` + `types_lookup` assoc-list.
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+
+// paradigm_name: mirrors checkty.rs::paradigm_name (checkty.rs 7175-7197) — the swap-paradigm name
+// of a representation type, for the never-silent cross-paradigm framing (RFC-0001 §4.1 / M-892).
+// The four swap-paradigms (Binary/Ternary/Dense/VSA) name themselves; every other `Ty` is `None` —
+// `Seq`/`Bytes`/`Float` are first-class reprs but not v0 swap-paradigms (RFC-0032 D3/D4, ADR-040 §5),
+// and `Data`/`Substrate`/`Var`/`Fn` are not representation types at all (RFC-0024 §3). All 11 arms
+// are enumerated EXPLICITLY (no `_` wildcard), exactly as the Rust does: a future `Ty` variant must
+// force a paradigm decision here, never be absorbed into a silent `None` (G2 — never-silent).
+fn paradigm_name(t: Ty) => Option[Bytes] =
+  match t {
+    TyBinary(_) => Some("Binary"),
+    TyTernary(_) => Some("Ternary"),
+    TyDense(_, _) => Some("Dense"),
+    TyVsa(_, _, _) => Some("VSA"),
+    TySeq(_, _) => None,
+    TyBytes => None,
+    TyFloat => None,
+    TyData(_, _) => None,
+    TySubstrate(_) => None,
+    TyVar(_) => None,
+    TyFn(_, _) => None
+  };
+
+// cons_list_scan: checkty.rs::cons_list_ctors's `for c in &di.ctors { match c.fields.len() ... }`
+// mutable-accumulator loop, restated as a threaded fold over the ctor list carrying the
+// `(nil_name?, cons_name?)` pair (the FLAG-semcore-6 value-threaded collapse of the two `mut`
+// locals). The field-count dispatch mirrors the Rust exactly: 0 fields -> record `nil`; exactly 2
+// fields whose SECOND is the recursive `Data(name, ..)` self-reference at the type's own arity ->
+// record `cons`; every other shape leaves the accumulator untouched. The 1-field and 3+-field
+// shapes fall to Rust's OUTER `match c.fields.len() { _ => {} }` (the `Nil`/`Cons(_, _)` inner arms
+// below); a 2-field ctor whose 2nd field is NOT the `Data(..)` self-reference falls to Rust's inner
+// `if let Ty::Data(..) = &c.fields[1] { .. } else {}` (the `_` arm on `f1` below). `&c.fields[1]`
+// (Rust indexing) is expressed structurally as the exactly-two-elements shape (`Cons(_, Cons(f1,
+// Nil))`), destructured one level at a time per this nodule's single-level-pattern convention.
+fn cons_list_scan(ctors: Vec[CtorInfo], name: Bytes, nparams: Binary{32},
+    nil: Option[Bytes], cons: Option[Bytes]) => Pair[Option[Bytes], Option[Bytes]] =
+  match ctors {
+    Nil => Pr(nil, cons),
+    Cons(c, rest) => match ci_fields(c) {
+      Nil => cons_list_scan(rest, name, nparams, Some(ci_name(c)), cons),
+      Cons(_, tl) => match tl {
+        Nil => cons_list_scan(rest, name, nparams, nil, cons),
+        Cons(f1, rest2) => match rest2 {
+          Cons(_, _) => cons_list_scan(rest, name, nparams, nil, cons),
+          Nil => match f1 {
+            TyData(fname, fargs) => match and_(beq(fname, name), eq_u(ty_len(fargs), nparams)) {
+              True => cons_list_scan(rest, name, nparams, nil, Some(ci_name(c))),
+              False => cons_list_scan(rest, name, nparams, nil, cons)
+            },
+            _ => cons_list_scan(rest, name, nparams, nil, cons)
+          }
+        }
+      }
+    }
+  };
+
+// cons_list_ctors: mirrors checkty.rs::cons_list_ctors (checkty.rs 3592-3624) — recognizes whether
+// `expected` is a 2-constructor linked-list type (one nullary "nil" ctor; one binary "cons" ctor
+// whose SECOND field is the recursive `Data(name, ..)` self-reference at the type's own arity) and
+// returns `(nil_name, cons_name)`; every non-conforming shape yields `None` (never a silent
+// reinterpret — the `Seq{T,N}`/no-context paths stay untouched). Pure structural registry
+// inspection: no Env, no evaluator, no kernel `Value`. `BTreeMap<String, DataInfo>` is the
+// already-established FLAG-semcore-4 `Vec[DataInfo]` + `types_lookup` (no new deviation). The Rust
+// `di.ctors.len() != 2` early-return is expressed by matching the ctor list's shape to exactly two
+// elements before scanning (one level at a time per the single-level-pattern convention).
+fn cons_list_ctors(types: Vec[DataInfo], expected: Ty) => Option[Pair[Bytes, Bytes]] =
+  match expected {
+    TyData(name, _) => match types_lookup(types, name) {
+      None => None,
+      Some(d) => match di_ctors(d) {
+        Nil => None,
+        Cons(_, r1) => match r1 {
+          Nil => None,
+          Cons(_, r2) => match r2 {
+            Cons(_, _) => None,
+            Nil => match cons_list_scan(di_ctors(d), name, names_len(di_params(d)), None, None) {
+              Pr(nopt, copt) => match nopt {
+                Some(n) => match copt {
+                  Some(cn) => Some(Pr(n, cn)),
+                  None => None
+                },
+                None => None
+              }
+            }
+          }
+        }
+      }
+    },
+    _ => None
+  };
