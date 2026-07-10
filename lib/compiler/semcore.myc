@@ -4653,3 +4653,55 @@ fn cons_list_ctors(types: Vec[DataInfo], expected: Ty) => Option[Pair[Bytes, Byt
     },
     _ => None
   };
+
+// ── subst_type_param_in_typeref (checkty.rs::subst_type_param_in_typeref) ────────────────────────
+// DN-54 §10 Model-A rule instantiation (M-973): substitute the rule's type parameter `param` with the
+// concrete `TypeRef` throughout a `TypeRef`. A bare nullary `Named(param, [])` occurrence becomes
+// `concrete`, keeping the occurrence's own guarantee if written (`T @ Exact` ↦ `C @ Exact`) — the
+// `tr.guarantee.or(concrete.guarantee)` first-Some-wins merge, mirrored by `strength_or`; every
+// structural form recurses; reprs / `Substrate` / `Bytes` / `Float` / VSA / dense / `Ambient` carry
+// no nested type-name and are returned verbatim (the Rust `tr.clone()` — widths are a *separate*
+// parameter space, DN-42, so a type parameter never appears in a width slot). Total and
+// allocation-bounded by the input's size (like `subst_ty`, this structural substitution takes no
+// depth budget — the Rust oracle is likewise unbudgeted). The Rust `if name == param &&
+// args.is_empty()` guard is expressed one level at a time (the single-level-pattern convention): a
+// `Named` first splits on its argument list, and the nullary case then compares the name. The
+// argument-list recursion reuses the direct-recursive-map idiom (FLAG-semcore-5, no generic `map`).
+// A complete, wildcard-free `BaseType` match (all 12 arms) — a future `BaseType` variant is a compile
+// error here, never a silent pass-through (G2).
+
+// strength_or: `Option[Strength]::or` — keep the left guarantee if present, else take the right. The
+// exact semantics of `tr.guarantee.or(concrete.guarantee)`: an occurrence's own `@ g` wins over the
+// concrete type's, and a bare occurrence inherits the concrete's guarantee.
+fn strength_or(a: Option[Strength], b: Option[Strength]) => Option[Strength] =
+  match a { Some(_) => a, None => b };
+
+fn subst_typeref_list(trs: Vec[TypeRef], param: Bytes, concrete: TypeRef) => Vec[TypeRef] =
+  match trs {
+    Nil => Nil,
+    Cons(h, t) => Cons(subst_type_param_in_typeref(h, param, concrete),
+                       subst_typeref_list(t, param, concrete))
+  };
+
+fn subst_type_param_in_typeref(tr: TypeRef, param: Bytes, concrete: TypeRef) => TypeRef =
+  match typeref_base(tr) {
+    Named(name, args) => match args {
+      Nil => match bytes_eq(name, param) {
+        0b1 => TR(typeref_base(concrete), strength_or(typeref_guarantee(tr), typeref_guarantee(concrete))),
+        _ => tr
+      },
+      Cons(_, _) => TR(Named(name, subst_typeref_list(args, param, concrete)), typeref_guarantee(tr))
+    },
+    KwSeq(elem, len) => TR(KwSeq(subst_type_param_in_typeref(elem, param, concrete), len), typeref_guarantee(tr)),
+    FnArrow(a, b) => TR(FnArrow(subst_type_param_in_typeref(a, param, concrete),
+                                subst_type_param_in_typeref(b, param, concrete)), typeref_guarantee(tr)),
+    Tuple(elems) => TR(Tuple(subst_typeref_list(elems, param, concrete)), typeref_guarantee(tr)),
+    KwBinary(_) => tr,
+    KwTernary(_) => tr,
+    KwDense(_, _) => tr,
+    Vsa(_, _, _) => tr,
+    KwSubstrate(_) => tr,
+    KwBytes => tr,
+    KwFloat => tr,
+    Ambient(_) => tr
+  };
