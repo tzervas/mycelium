@@ -13825,14 +13825,16 @@ issues:
   - id: M-1026
     title: "enb ENB-3 — impl-level generic-parameter slot"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P2, status:todo]
+    labels: [phase:5, type:feature, area:language, priority:P2, status:done]
     epic: E28-1
     depends_on: [M-1023]
     doc_refs:
+      - corpus:DN-103
       - corpus:DN-99
       - corpus:DN-34
       - src:crates/mycelium-l1/src/parse.rs
       - src:crates/mycelium-l1/src/ast.rs
+      - src:crates/mycelium-l1/src/checkty.rs
     body: |
       From DN-99 §8 ENB-3 (Draft backlog). Closes register row #63 (generic-parameterized impl-block,
       partial — no impl type-params slot). Add the `type_params` slot to `parse_impl_item` (mirroring
@@ -13840,6 +13842,23 @@ issues:
       erasure. Needed for a faithful impl-block-preserving self-host; the stdlib lane is unblocked
       meanwhile by impls-as-functions. HIGH semcore-lane collision — touches `crates/mycelium-l1/**`:
       cloud-semcore-lane, coordinate M-1013. Needs a Draft DN.
+
+      DONE (landed-basis, PR #1367 → dev, 2026-07-10). The inherent-impl slot `impl[T] Foo[T] { … }`
+      parses, checks, and monomorphizes: a `[T, …]` slot is parsed immediately after `impl`
+      (`parse_impl_item`, unambiguous — no base type begins with `[`), threaded into
+      `InherentImplDecl.params`, and desugared at Phase-0 by prepending the params to each lifted
+      method's own `fn` type-params — so monomorphization reuses the EXISTING fn-generics path with zero
+      new mono code (KC-3/DRY; VR-5 — no tag upgraded). Verified: `crates/mycelium-l1/tests/check.rs`
+      differential (`generic_inherent_method_monomorphizes_across_two_type_args` — two type args ⇒ two
+      specializations + a closed monomorphized env), a backward-compat identity witness, and three
+      never-silent reject witnesses (generic-trait-instance / bound-in-slot / duplicate-param). The
+      four `.myc` mirrors + stage-5 encoder + stage-3 classify-test carry the 3-field `IID` slot; dogfood
+      `myc check` strict. Lifetime-erasure resolves N/A (no lifetime surface in v0). Design: Draft DN-103
+      (maintainer ratifies the v0 scoping — house rule #3).
+
+      Deferred residuals (genuinely separate scope, NOT in this DoD — each never-silent, DN-103 §3/§6):
+      generic trait-instance slots (`impl[T] Trait for Foo[T]`) → an RFC-0019 §4.5 coherence amendment;
+      width-param impls → DN-42.
 
       User stories:
       - As a semcore porter, I want `impl[T] Foo[T]` to parse and check, so that generic inherent-impl

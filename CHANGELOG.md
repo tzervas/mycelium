@@ -12,6 +12,39 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### feat(l1): impl-level generic-parameter slot — `impl[T] Foo[T]` — M-1026 (ENB-3) (2026-07-10)
+
+Closes the **inherent-impl** scope of the impl-level-generics surface gap (DN-99 register row #63 / §A2,
+ENB-3): a generic inherent block `impl[T] Foo[T] { fn … }` now parses, checks, and monomorphizes, so a Rust
+`impl<T> Foo<T> { … }` ports faithfully instead of flattening to free functions. Under the whole-project
+unfrozen posture (ADR-045). Design recorded in **Draft DN-103** (the maintainer ratifies the v0 scoping —
+house rule #3, not self-ratified).
+
+- **Surface + slot, no new kernel node (KC-3/DRY).** A `[T, …]` type-parameter slot is parsed
+  **immediately after the `impl` keyword** via the existing unbounded-name parser (`parse_type_params_opt`);
+  it is unambiguous (no `base_type` begins with `[`, so a leading `[` after `impl` is always the slot) and
+  backward-compatible (`impl Foo[T] { … }` still parses `[T]` as the head's type argument). The slot is
+  threaded into the AST (`InherentImplDecl.params`), kept faithful through ambient/print/walk.
+- **Phase-0 desugar reuses the existing monomorphizer.** At the desugar that already lifts inherent methods
+  to free functions, each method gains the impl's params **prepended** to its own `fn` type-parameters — so
+  the method becomes an ordinary generic free function and monomorphization runs the **existing** fn-generics
+  path with **zero new mono code** (VR-5: no guarantee-tag upgraded past its basis). For the plain M-664
+  block (empty slot) this is the identity — methods lift verbatim, every existing program unchanged.
+- **Never-silent boundary (G2/VR-5).** Three refusals, each naming the fix: a non-empty slot on a **trait
+  instance** (`impl[T] Trait for Foo[T]`) is deferred (generic trait-instance coherence, RFC-0019 §4.5), a
+  `: bound` inside the slot is refused (bounds live only on `fn` type-params, RFC-0019 §4.1), and a duplicate
+  name shared by the impl slot and a method is caught by the existing duplicate-type-parameter check.
+- **`.myc` mirror (DN-26 dual).** The 3-field `IID` slot lands in all four self-hosted mirrors
+  (`ast`/`ambient`/`parse`/`semcore`.myc) plus the stage-5 encoder and the stage-3 classify-test ctor; the
+  self-hosted parser produces the slot. The desugar-prepend stays Rust-only (pre-desugared before the mirror
+  runs). `classify_expr` is unaffected (a struct-field extension, not a new node/variant; item-classify
+  wildcards the variant).
+- **How verified (change-scoped):** `crates/mycelium-l1/tests/check.rs` — a differential
+  (`generic_inherent_method_monomorphizes_across_two_type_args`: two type args yield exactly two `unbox$…`
+  specializations and a fully closed monomorphized env), a backward-compat identity witness, and three
+  never-silent reject witnesses (trait-instance, bound-in-slot, duplicate-param). `cargo test -p
+  mycelium-l1 -p mycelium-fmt -p mycelium-lsp` green; dogfood `myc check` strict on the touched `.myc`.
+
 ### feat(l1): `?` try-operator grammar sugar + type-directed `match` desugar — M-1025 (ENB-2) first increment (2026-07-10)
 
 Closes the **`let`-binder-RHS scope** of the `?` try-operator surface gap (DN-99 register rows #60
