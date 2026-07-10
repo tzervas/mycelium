@@ -286,6 +286,13 @@ map:
 # (Re)generate the committed public-API snapshots under docs/spec/api/ after an intended change.
 api-baseline:
     @bash scripts/api-baseline.sh
+# Diff-based, rate-limit-frugal GitHub issue sync — DRY-RUN plan (one bulk read, zero writes).
+# Desktop/periodic op: needs `gh` authenticated to the repo owner. See tools/github/README.md.
+issues-sync:
+    python3 tools/github/sync_issues.py --refresh
+# Apply ONLY the drifted/missing-issue deltas (create + edit changed fields), capped for safety.
+issues-sync-apply:
+    python3 tools/github/sync_issues.py --apply --max-writes 25
 # Build rustdoc HTML locally (NOT committed — output in target/doc/).
 docs:
     cargo doc --workspace --no-deps
