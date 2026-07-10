@@ -15,13 +15,14 @@
     {
       "file": "crates/mycelium-std-vsa/src/lib.rs",
       "total_items": 10,
-      "non_test_items": 10,
+      "non_test_items": 6,
       "emitted": 0,
       "gaps": 11,
       "expressible_pct": 0.0,
       "category_counts": {
         "Import": 6,
-        "Other": 5
+        "InnerAttr": 1,
+        "ModuleDecl": 4
       }
     },
     {
@@ -64,14 +65,16 @@
   ],
   "totals": {
     "total_items": 31,
-    "non_test_items": 31,
+    "non_test_items": 27,
     "emitted": 0,
     "gaps": 32,
     "expressible_pct": 0.0,
     "category_counts": {
       "GenericBound": 12,
       "Import": 12,
-      "Other": 7,
+      "InnerAttr": 1,
+      "ModuleDecl": 4,
+      "Other": 2,
       "Struct": 1
     }
   }

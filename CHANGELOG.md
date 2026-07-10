@@ -75,6 +75,46 @@ future DRY decision. Verified: `myc-dogfood --strict` green (9/9 nodules), `carg
 --lib` green (471 passed), `clippy -D warnings` + `cargo fmt` clean, `markdown` gate clean. Graded
 `Empirical`. (M-1013 / M-791; E18-1; RFC-0034 §10; VR-5/G2.)
 
+### feat(transpile): M-1006 Phase-2 — path-qualified batch output (whole-corpus-completeness) (2026-07-10)
+
+Lands the whole-corpus-completeness follow-on noted in DN-34 §8.19 (kickoff `trx2`, E33-1). The
+transpiler's directory/batch mode named each output by **file stem only**, so a whole-`crates/` run had
+every crate's `lib.rs`/`mod.rs`/`error.rs` overwrite the previous one — last-writer-wins, loudly warned
+but **lossy** (~25 of 337 files clobbered), which blocked keeping every emission in an automated
+multi-crate translation wave. Outputs are now **path-qualified** by mirroring the source tree under the
+out-dir (a file's path relative to the batch root becomes its output path — `mycelium-core/src/lib.myc` vs
+`mycelium-std/src/lib.myc`), injective by construction so the collision cannot occur. The `crates/` run now
+writes all **337** `.myc` files with **zero** collision warnings. Zero committed churn: the 17
+`gen/myc-drafts/` targets are flat single-crate `src/` dirs, so their mirrored path reduces to the bare
+stem — byte-identical to the prior flat naming. Files: the `mycelium-transpile` CLI bin plus a pure,
+unit-tested `batch::output_rel_path`; DN-34 §8.20. Emission-plumbing only — no transpilation
+logic, metric, or guarantee tag moves (emission stays `Declared`). Verified: change-scoped `cargo fmt` /
+`clippy -D warnings` / `test -p mycelium-transpile` green (63 tests, +5 for `output_rel_path`).
+
+### feat(transpile): M-1006 Phase-2 opens — whole-corpus profile + honest file-linkage taxonomy (2026-07-10)
+
+Opens the M-1006 ladder's Phase-2 (expand the Rust→Mycelium rip-through beyond the 17-target port
+surface — kickoff `trx2`, E33-1). Ran the transpiler's first **whole-corpus** profile
+(`mycelium-transpile crates/`: 337 files, 0 parse failures, 5,472 items, 573 emitted) and used it to
+correct a gap-taxonomy category error surfaced by verify-first profiling of the opaque `Other` bucket
+(37.8% of all gaps). Two sub-populations there are **not translatable library surface**: bodyless
+`mod foo;` declarations (file-linkage — the module tree is implicit in Mycelium's nodule-per-file
+layout, so the sibling file transpiles as its own nodule) and crate/file-level inner attributes
+(`#![…]`, which are not `syn::Item`s). Added two honest `Category` variants, **`ModuleDecl`** and
+**`InnerAttr`**, and excluded `ModuleDecl` from the expressible-fraction denominator on the identical
+rationale `TestItem` already carries (recorded, never dropped — G2; but not counted against coverage).
+An inline `mod foo { … }` (a dropped real body) stays a counted `Other` gap — VR-5: the denominator
+only ever shrinks by genuinely-non-surface items. **Metric effect (never-silent):** whole-corpus `Other`
+2,245 → 1,924; expressible 10.8% → 11.3%. On the committed `gen/myc-drafts/` 17-target manifest,
+union expressible 13.4% → 14.1% and `checked_fraction` 7.8% → 8.2% — the numerator (59 myc-check-clean
+items) is **unchanged**; the whole move is the tighter, more-correct denominator, no emission added or
+upgraded. Files: `crates/mycelium-transpile/src/{gap,transpile}.rs` plus a data-driven `taxonomy` test
+module; `gen/myc-drafts/` manifest regenerated (deterministic); DN-34 §8.19 records the baseline and the
+Phase-2 residual worklist (`Import` 1,085 = the cross-nodule symbol-table prerequisite, the largest
+remaining automation lever; a path-qualified batch-output layout as the whole-corpus-completeness
+follow-on). Verified: change-scoped `cargo fmt`/`clippy -D warnings`/`test -p mycelium-transpile` green
+(58 tests). Emission `Declared`; vet `Empirical`; DN-34 stays `Draft`.
+
 ### build(checks): auto-reflow the MD004 soft-wrap `+`/`*`-at-line-start pitfall (`just md-fix`) (2026-07-10)
 
 The recurring MD004 false-positive — prose that soft-wraps so a `+`/`*` operator lands at line start,

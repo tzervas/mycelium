@@ -13,8 +13,8 @@
       "file": "crates/mycelium-std-rand/src/lib.rs",
       "line": 1,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "InnerAttr",
+      "rust_construct": "InnerAttr",
       "snippet": "# ! [forbid (unsafe_code)]",
       "reason": "crate/file-level inner attributes (#![...]) are not transpiled (no nodule-header equivalent for these Rust-specific directives)",
       "item_name": null
