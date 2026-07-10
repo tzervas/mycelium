@@ -1,0 +1,407 @@
+{
+  "generated": "Empirical/Declared — a curated projection of tools/grammar/sugar.yaml (itself a projection of the source DNs + token.rs). sugar.yaml + the cited DNs + token.rs are ground truth; use this index to find where to Read, not as an authoritative reference.",
+  "source": "tools/grammar/sugar.yaml",
+  "sugars": [
+    {
+      "keyword": "backbone",
+      "status": "reserved",
+      "grammar_rule": "ebnf: not yet productionized (DN-03 §4 / RFC-0008 §4.5 reserved-not-active); token.rs:447",
+      "lowering_target": "Gap — reserved runtime-vocabulary term, no L1 construct yet",
+      "defining_doc": "DN-03 §4; RFC-0008 §4.5",
+      "build_status": "Gap"
+    },
+    {
+      "keyword": "colony",
+      "status": "active",
+      "grammar_rule": "ebnf:colony_expr (mycelium.ebnf:344); token.rs:437",
+      "lowering_target": "native — structured-concurrency scope grouping hyphae; an expression, not a top-level item",
+      "defining_doc": "RFC-0008 §4.7 (M-666)",
+      "build_status": "Empirical",
+      "note": "Left the reserved-not-active set with M-666 (\"now active\" — parse.rs comment)."
+    },
+    {
+      "keyword": "consume",
+      "status": "active",
+      "grammar_rule": "ebnf:consume_expr (mycelium.ebnf:328); token.rs:452",
+      "lowering_target": "affine acquisition of a Substrate value (LR-8); v0 elaborates to a never-silent Residual",
+      "defining_doc": "DN-03 §1 (M-664)",
+      "build_status": "Declared",
+      "note": "No value-level affine-usage tracker exists in v0 (issues.yaml M-664 landed_basis) — the checker requires a Substrate{tag} operand (never-silent on any other type, G2), but single-use affinity enforcement is not yet built. Downgrade to stay honest (VR-5).\n"
+    },
+    {
+      "keyword": "cyst",
+      "status": "reserved",
+      "grammar_rule": "ebnf: not yet productionized (DN-03 §4 / RFC-0008 §4.5 reserved-not-active); token.rs:444",
+      "lowering_target": "Gap — reserved runtime-vocabulary term, no L1 construct yet",
+      "defining_doc": "DN-03 §4; RFC-0008 §4.5",
+      "build_status": "Gap"
+    },
+    {
+      "keyword": "default",
+      "status": "active",
+      "grammar_rule": "ebnf:default_item (mycelium.ebnf:145); token.rs:485",
+      "lowering_target": "native — declares the nodule/phylum default ambient paradigm",
+      "defining_doc": "RFC-0012 (ambient repr); not an itemized DN-38 §6 row for this specific keyword",
+      "build_status": "Declared"
+    },
+    {
+      "keyword": "derive",
+      "status": "active",
+      "grammar_rule": "ebnf:derive_item (mycelium.ebnf:204); token.rs:464",
+      "lowering_target": "applies a registered `lower` rule at a use site; a nameable, content-addressed (hash-deduped) L0 artifact",
+      "defining_doc": "DN-54; DN-38 §8.1 (naming settled: `derive` over `grow`)",
+      "build_status": "Empirical",
+      "note": "Settles the grow -> derive reconciliation (DN-38 §8.1); `grow` is now a rejected/superseded token (see reserved rows)."
+    },
+    {
+      "keyword": "else",
+      "status": "active",
+      "grammar_rule": "ebnf:if_expr (mycelium.ebnf:292); token.rs:481",
+      "lowering_target": "native — if_expr alternative separator",
+      "defining_doc": "none — general L1 surface",
+      "build_status": "Declared"
+    },
+    {
+      "keyword": "fn",
+      "status": "active",
+      "grammar_rule": "ebnf:fn_item (mycelium.ebnf:169); token.rs:474",
+      "lowering_target": "native — the base callable/function-declaration form",
+      "defining_doc": "none — general L1 surface",
+      "build_status": "Declared"
+    },
+    {
+      "keyword": "for",
+      "status": "active",
+      "grammar_rule": "ebnf:for_expr (mycelium.ebnf:300); token.rs:483",
+      "lowering_target": "elab_for -> self-recursive tail Fix fold over a finite acyclic spine",
+      "defining_doc": "RFC-0007 §4.8; DN-36 §2.1; DN-38 §6",
+      "build_status": "Exact",
+      "note": "Safe-loop lowering is Exact (DN-38 §6); FBIP in-place perf is a Declared roadmap item (DN-36 §6)."
+    },
+    {
+      "keyword": "forage",
+      "status": "active",
+      "grammar_rule": "ebnf:hypha (mycelium.ebnf:345, the '@' 'forage' '(' expr ')' prefix); token.rs:446",
+      "lowering_target": "native — adaptive placement-policy annotation on a hypha (D-lite surface)",
+      "defining_doc": "DN-70 D1 (M-906)",
+      "build_status": "Empirical",
+      "note": "Left the reserved-not-active set with M-906 — only its D-lite surface."
+    },
+    {
+      "keyword": "fuse",
+      "status": "active",
+      "grammar_rule": "ebnf:fuse_expr (mycelium.ebnf:354); token.rs:441",
+      "lowering_target": "native — lawful binary merge over the Fuse semilattice (RFC-0008 RT6)",
+      "defining_doc": "DN-58 §A (M-667)",
+      "build_status": "Empirical"
+    },
+    {
+      "keyword": "graft",
+      "status": "reserved",
+      "grammar_rule": "ebnf: not yet productionized (DN-03 §4 / RFC-0008 §4.5 reserved-not-active); token.rs:443",
+      "lowering_target": "Gap — reserved runtime-vocabulary term, no L1 construct yet",
+      "defining_doc": "DN-03 §4; RFC-0008 §4.5",
+      "build_status": "Gap"
+    },
+    {
+      "keyword": "grow",
+      "status": "reserved",
+      "grammar_rule": "ebnf: not productionized — a teaching-diagnostic reject only (parse.rs); token.rs:453",
+      "lowering_target": "superseded by `derive` (DN-38 §8.1 / M-812); cannot be used as an identifier (G2)",
+      "defining_doc": "DN-38 §8.1; M-812",
+      "build_status": "Declared",
+      "note": "Deliberately non-functional by design (rejected with a teaching diagnostic), not an unbuilt gap."
+    },
+    {
+      "keyword": "hypha",
+      "status": "active",
+      "grammar_rule": "ebnf:hypha (mycelium.ebnf:345); token.rs:440",
+      "lowering_target": "native — spawns one concurrent task; only valid inside a colony block (RT7 — an orphan hypha is not expressible)",
+      "defining_doc": "RFC-0008 §4.7 (M-666)",
+      "build_status": "Empirical"
+    },
+    {
+      "keyword": "if",
+      "status": "active",
+      "grammar_rule": "ebnf:if_expr (mycelium.ebnf:292); token.rs:479",
+      "lowering_target": "native — already an L0 form (Match over a boolean scrutinee)",
+      "defining_doc": "none — general L1 surface",
+      "build_status": "Declared"
+    },
+    {
+      "keyword": "impl",
+      "status": "active",
+      "grammar_rule": "ebnf:impl_item (mycelium.ebnf:132); token.rs:473",
+      "lowering_target": "trait-instance impl: dictionary-passing monomorphization (mono.rs); inherent impl (M-664): desugars to top-level free functions (KC-3, zero kernel growth)",
+      "defining_doc": "RFC-0019 (trait instance); DN-03 §1 / M-664 (inherent)",
+      "build_status": "Empirical",
+      "note": "M-664 landed_basis: cargo test -p mycelium-l1 green (203 lib + 105 check + conformance)."
+    },
+    {
+      "keyword": "in",
+      "status": "active",
+      "grammar_rule": "ebnf:let_expr (mycelium.ebnf:291); token.rs:478",
+      "lowering_target": "native — let_expr binder/body separator",
+      "defining_doc": "none — general L1 surface",
+      "build_status": "Declared"
+    },
+    {
+      "keyword": "lambda",
+      "status": "active",
+      "grammar_rule": "ebnf:lambda_expr (mycelium.ebnf:213); token.rs:457",
+      "lowering_target": "native (parses) — closure form (Lam); capture/closure SEMANTICS deferred",
+      "defining_doc": "RFC-0037; M-704",
+      "build_status": "Declared",
+      "note": "token.rs comment: \"lambda parses (semantics deferred to M-704)\" — the parse surface is ahead of the checked semantics (VR-5: not upgraded past that basis)."
+    },
+    {
+      "keyword": "let",
+      "status": "active",
+      "grammar_rule": "ebnf:let_expr (mycelium.ebnf:291); token.rs:477",
+      "lowering_target": "native — already an L0 form (Let); no dedicated desugar pass",
+      "defining_doc": "none — general L1 surface; not an itemized DN-38 §6 row",
+      "build_status": "Declared",
+      "note": "No dedicated per-op guarantee audit in this v0 registry (VR-5: not upgraded past that basis)."
+    },
+    {
+      "keyword": "lower",
+      "status": "active",
+      "grammar_rule": "ebnf:lower_item (mycelium.ebnf:203); token.rs:462",
+      "lowering_target": "declares a user-extensible generative-lowering rule; RHS elaborated to L0 (KC-3 kernel-growth guard: existing L0 nodes only)",
+      "defining_doc": "DN-54",
+      "build_status": "Empirical",
+      "note": "M-812 + M-812-cont landed (RHS elaboration, IL-grammar RHS type-check, KC-3 guard, cross-rule acyclicity, §7 verification discipline) per the DN-75 completion audit; DN-54 itself is held at `Accepted` pending a deliberate `Enacted` follow-up.\n"
+    },
+    {
+      "keyword": "match",
+      "status": "active",
+      "grammar_rule": "ebnf:match_expr (mycelium.ebnf:293); token.rs:482",
+      "lowering_target": "native — already an L0 form (Match); Maranget usefulness exhaustiveness-checked",
+      "defining_doc": "none — general L1 surface",
+      "build_status": "Declared"
+    },
+    {
+      "keyword": "matured",
+      "status": "reserved",
+      "grammar_rule": "ebnf: reserved header-key marker (mycelium.ebnf comment lines 15-18); no term production; token.rs:475",
+      "lowering_target": "native — scope-level header key (`// @matured: true`, Nodule-Header spec §3) feeding the totality gate; NOT a term-position construct",
+      "defining_doc": "RFC-0017 (Enacted); DN-38 §6 (Maturation row)",
+      "build_status": "Exact",
+      "note": "DN-38 §6 tags the maturation GATE mechanism Exact; the `matured` WORD itself is reserved-not-active as a term-position keyword (no term production consumes it — see `thaw`, its de-maturation companion). §4.1 top-down inheritance is a separate Declared gap.\n"
+    },
+    {
+      "keyword": "mesh",
+      "status": "reserved",
+      "grammar_rule": "ebnf: not yet productionized (DN-03 §4 / RFC-0008 §4.5 reserved-not-active); token.rs:442",
+      "lowering_target": "Gap — reserved runtime-vocabulary term, no L1 construct yet",
+      "defining_doc": "DN-03 §4; RFC-0008 §4.5",
+      "build_status": "Gap"
+    },
+    {
+      "keyword": "nodule",
+      "status": "active",
+      "grammar_rule": "ebnf:nodule_header (mycelium.ebnf:110); token.rs:433",
+      "lowering_target": "native — the basic static unit / module-opening header",
+      "defining_doc": "RFC-0006 §4.3; DN-06",
+      "build_status": "Declared"
+    },
+    {
+      "keyword": "object",
+      "status": "active",
+      "grammar_rule": "ebnf:object_item (mycelium.ebnf:190); token.rs:458",
+      "lowering_target": "type + impl + via (checkty.rs Phase 0 structural expansion + Phase 0b via-forwarding impl generation)",
+      "defining_doc": "DN-53",
+      "build_status": "Empirical",
+      "note": "M-811 landed; three-way differential (observe(object) == observe(lower(object))) in tests/object_desugar.rs. Item-level `pub fn` inside an object body is deferred (DN-53 §B.2).\n"
+    },
+    {
+      "keyword": "paradigm",
+      "status": "active",
+      "grammar_rule": "ebnf:default_item (mycelium.ebnf:145-146); token.rs:486",
+      "lowering_target": "native — sub-keyword of default_item/with_expr naming Binary/Ternary/Dense/VSA",
+      "defining_doc": "RFC-0012; RFC-0012 §4.2",
+      "build_status": "Declared"
+    },
+    {
+      "keyword": "phylum",
+      "status": "active",
+      "grammar_rule": "ebnf:phylum_header (mycelium.ebnf:92); token.rs:436",
+      "lowering_target": "native — library/package-scale grouping header (a grouping, not a container)",
+      "defining_doc": "RFC-0006 §4.3; DN-06; M-662 (activated it — was reserved-not-active before)",
+      "build_status": "Declared"
+    },
+    {
+      "keyword": "policy",
+      "status": "active",
+      "grammar_rule": "ebnf:swap_expr (mycelium.ebnf:310); token.rs:495",
+      "lowering_target": "native — swap_expr sub-keyword naming the swap policy path",
+      "defining_doc": "same as swap",
+      "build_status": "Declared"
+    },
+    {
+      "keyword": "priv",
+      "status": "active",
+      "grammar_rule": "ebnf: not yet in mycelium.ebnf (EBNF-drift gap — DN-104 lands after the committed grammar snapshot); token.rs:470",
+      "lowering_target": "native — per-constructor seal marker (dual to pub); meaningful only before a constructor name",
+      "defining_doc": "M-1027 / DN-104",
+      "build_status": "Empirical",
+      "note": "Never a silent identifier (G2)."
+    },
+    {
+      "keyword": "pub",
+      "status": "active",
+      "grammar_rule": "ebnf:type_item (mycelium.ebnf:151, representative — 'pub'? also in trait_item/fn_item/object_item); token.rs:467",
+      "lowering_target": "native — cross-nodule/phylum export marker (M-662); granular item-level pub (DN-53 §B)",
+      "defining_doc": "M-662; DN-53 §B",
+      "build_status": "Empirical"
+    },
+    {
+      "keyword": "reclaim",
+      "status": "active",
+      "grammar_rule": "ebnf:reclaim_expr (mycelium.ebnf:362); token.rs:449",
+      "lowering_target": "native — supervised reclamation scope (RFC-0008 RT7)",
+      "defining_doc": "DN-58 §B (M-667)",
+      "build_status": "Empirical"
+    },
+    {
+      "keyword": "spore",
+      "status": "active",
+      "grammar_rule": "ebnf:spore_expr (mycelium.ebnf:320); token.rs:489",
+      "lowering_target": "native — deployable/published-artifact constructor",
+      "defining_doc": "ADR-013",
+      "build_status": "Declared"
+    },
+    {
+      "keyword": "swap",
+      "status": "active",
+      "grammar_rule": "ebnf:swap_expr (mycelium.ebnf:310); token.rs:484",
+      "lowering_target": "native — the never-silent representation-change primitive itself; it IS the L0 form (target + policy always lexical, S1/WF2), not a sugar lowering to something else",
+      "defining_doc": "RFC-0006 (surface layer); per-swap guarantee tags live in the numerics/repr code, out of this registry's v0 scope",
+      "build_status": "Declared"
+    },
+    {
+      "keyword": "thaw",
+      "status": "active",
+      "grammar_rule": "ebnf:fn_item (mycelium.ebnf:169); token.rs:476",
+      "lowering_target": "native — de-maturation marker: keeps one fn interpreted inside an otherwise-matured scope",
+      "defining_doc": "RFC-0017 §4.3 (Enacted)",
+      "build_status": "Exact",
+      "note": "Companion to `matured`; the rare iterate/debug escape hatch."
+    },
+    {
+      "keyword": "then",
+      "status": "active",
+      "grammar_rule": "ebnf:if_expr (mycelium.ebnf:292); token.rs:480",
+      "lowering_target": "native — if_expr consequence separator",
+      "defining_doc": "none — general L1 surface",
+      "build_status": "Declared"
+    },
+    {
+      "keyword": "tier",
+      "status": "active",
+      "grammar_rule": "ebnf:tier_fn_item (mycelium.ebnf:174, the '@' 'tier' '(' tier_mode ')' prefix); token.rs:448",
+      "lowering_target": "native — @tier(compiled|interpreted) execution-mode hint attached to a fn declaration",
+      "defining_doc": "DN-58 §C (M-667)",
+      "build_status": "Empirical",
+      "note": "A bare `tier` item (not attached to a fn) is a never-silent teaching-diagnostic reject."
+    },
+    {
+      "keyword": "to",
+      "status": "active",
+      "grammar_rule": "ebnf:swap_expr (mycelium.ebnf:310); token.rs:494",
+      "lowering_target": "native — swap_expr sub-keyword naming the target type",
+      "defining_doc": "same as swap",
+      "build_status": "Declared"
+    },
+    {
+      "keyword": "trait",
+      "status": "active",
+      "grammar_rule": "ebnf:trait_item (mycelium.ebnf:161); token.rs:472",
+      "lowering_target": "dictionary-passing -> monomorphization + static dispatch (mono.rs; no runtime vtable)",
+      "defining_doc": "DN-38 §6 (Traits/generics row); RFC-0019",
+      "build_status": "Empirical",
+      "note": "Tested checker (DN-38 §6); the coherence-result tag is Declared-with-argument (RFC-0019 Enacted, not machine-checked)."
+    },
+    {
+      "keyword": "type",
+      "status": "active",
+      "grammar_rule": "ebnf:type_item (mycelium.ebnf:151); token.rs:471",
+      "lowering_target": "Construct / Match (RFC-0011 Enacted r3)",
+      "defining_doc": "DN-37 §2.1/§3.3; DN-38 §6 (Objects row)",
+      "build_status": "Exact",
+      "note": "DN-38 §6 tags the type+Match/Construct foundation Exact; the emulation menu (~>, decorators, super-traits, default bodies) is Declared."
+    },
+    {
+      "keyword": "use",
+      "status": "active",
+      "grammar_rule": "ebnf:use_item (mycelium.ebnf:139); token.rs:465",
+      "lowering_target": "native — cross-nodule import",
+      "defining_doc": "none — general L1 surface",
+      "build_status": "Declared"
+    },
+    {
+      "keyword": "via",
+      "status": "active",
+      "grammar_rule": "ebnf:via_clause (mycelium.ebnf:192); token.rs:461",
+      "lowering_target": "generated forwarding impl (delegates to a held field by index; not subtype inheritance)",
+      "defining_doc": "DN-53",
+      "build_status": "Empirical",
+      "note": "Active only inside object bodies; reserved everywhere else (never-silent — G2)."
+    },
+    {
+      "keyword": "wild",
+      "status": "active",
+      "grammar_rule": "ebnf:wild_expr (mycelium.ebnf:317); token.rs:488",
+      "lowering_target": "native — audited FFI-floor escape hatch; only legal inside a @std-sys nodule (checker-enforced, never-silent)",
+      "defining_doc": "RFC-0016 §8-Q6; M-661",
+      "build_status": "Declared"
+    },
+    {
+      "keyword": "with",
+      "status": "active",
+      "grammar_rule": "ebnf:with_expr (mycelium.ebnf:289); token.rs:487",
+      "lowering_target": "native — explicit ambient-paradigm override scope",
+      "defining_doc": "RFC-0012 §4.2",
+      "build_status": "Declared",
+      "note": "Related to, but distinct from, DN-38 §6's Ambient-repr row (which covers the OMITTED-paradigm identity elaboration, not this explicit override)."
+    },
+    {
+      "keyword": "wrapping",
+      "status": "reserved",
+      "grammar_rule": "ebnf: not yet productionized (RFC-0034 §10/§10.1 reserved opt-out marker); token.rs:493",
+      "lowering_target": "Gap — reserved named modular-arithmetic opt-out marker, no term production yet",
+      "defining_doc": "RFC-0034 §10 (CU-5)",
+      "build_status": "Gap"
+    },
+    {
+      "keyword": "xloc",
+      "status": "reserved",
+      "grammar_rule": "ebnf: not yet productionized (DN-03 §4 / RFC-0008 §4.5 reserved-not-active); token.rs:445",
+      "lowering_target": "Gap — reserved runtime-vocabulary term, no L1 construct yet",
+      "defining_doc": "DN-03 §4; RFC-0008 §4.5",
+      "build_status": "Gap"
+    }
+  ],
+  "glyph_sugars": [
+    {
+      "glyph": "?",
+      "status": "active",
+      "grammar_rule": "ebnf: not yet in mycelium.ebnf (EBNF-drift gap, DN-102 §4); lexer: crates/mycelium-l1/src/lexer.rs (single(Tok::Question))",
+      "lowering_target": "`let x = e? in body` -> a type-directed match: Result -> `match e { Ok(x) => body, Err($f) => Err($f) }`; Option -> `match e { Some(x) => body, None => None }` (DN-102 §2/§4)\n",
+      "defining_doc": "DN-102",
+      "build_status": "Declared",
+      "note": "DN-102 is Draft (2026-07-10), not yet ratified — the desugar rule and the v0 position restriction (legal only as a let-binder RHS; DN-102 §5) are Declared pending ratification. Empirical evidence exists from the differential/conformance witnesses named in DN-102 §7, but the row stays Declared overall (VR-5: no upgrade past the ratification-pending basis). Any non-let-RHS position is a never-silent CheckError (G2), not a general CPS lift (deferred).\n"
+    }
+  ],
+  "not_lexed_sugars": [
+    {
+      "name": "reveal",
+      "status": "not-lexed",
+      "grammar_rule": null,
+      "lowering_target": "tooling — reads the L0 term, emits surface (round-trips in certified mode); no surface grammar production exists yet",
+      "defining_doc": "DN-38 §5, §8.1",
+      "build_status": "Gap",
+      "note": "Greenfield (DN-38 §6: \"no surface form today\"). Precedent (cargo-expand/Lean/Racket) is Empirical; the Mycelium `reveal` inspector itself is unbuilt. See M-1051 for the related but DISTINCT desugar/expand-on-demand tooling issue (general, developer-facing \"show me the lower grammar at this sugar site\" capability) — that issue is NOT this static catalog.\n"
+    }
+  ]
+}
