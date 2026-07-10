@@ -441,25 +441,74 @@ fn span_line_col(item: &Item) -> (usize, usize) {
 }
 
 /// Best-effort nodule-path derivation (Declared heuristic): `crates/mycelium-std-cmp/src/lib.rs`
-/// -> `std.cmp`, matching `lib/std/cmp.myc`'s actual header for the crate this PoC targets. Not
-/// guaranteed to be meaningful for an arbitrary input path — the CLI documents this.
-fn derive_nodule_path(path: &Path) -> String {
-    let crate_dir = path
-        .parent() // .../src
-        .and_then(Path::parent) // .../mycelium-std-cmp
-        .and_then(|p| p.file_name())
-        .and_then(|n| n.to_str());
-    match crate_dir {
-        Some(dir) => {
-            let stripped = dir.strip_prefix("mycelium-").unwrap_or(dir);
-            stripped.replace('-', ".")
+/// -> `std.cmp`, matching `lib/std/cmp.myc`'s actual header for the crate this PoC targets.
+///
+/// **DN-109 section 5.1 item 1 (M-1042).** Also incorporates the file's **intra-crate module
+/// path** — the path components between `src/` and the leaf file — so two same-stem files in
+/// different subdirectories of the same crate (two `mod.rs`, say) get distinct dotted nodule
+/// names instead of colliding on the crate-level prefix alone: `crates/mycelium-std-cmp/src/
+/// foo/mod.rs` -> `std.cmp.foo`, `crates/mycelium-std-cmp/src/foo/bar.rs` -> `std.cmp.foo.bar`.
+/// A `mod.rs`/`lib.rs` leaf contributes no segment of its own (it names the *enclosing*
+/// directory, not a new submodule); every other path component becomes a dotted segment. This
+/// generalizes the prior top-level-only derivation without changing it for the common case (a
+/// file directly under a crate's `src/`, e.g. `lib.rs`) — same crate-prefix logic, just anchored
+/// on the last `src` path component (robust to whatever root a batch run walks: M-1006 Phase-2's
+/// whole-corpus run, or the per-crate `<crate>/src` root every real invocation
+/// (`scripts/checks/transpile-vet.sh`, `gen/myc-drafts/regenerate.sh`) actually uses today — no
+/// extra root parameter needs threading through `batch.rs`/the CLI for this).
+///
+/// Not guaranteed to be meaningful for an arbitrary input path outside this `<crate>/src/...`
+/// convention — the CLI documents this; a path with no `src` ancestor falls back to the bare
+/// file stem (never a silent mis-derivation, G2).
+pub(crate) fn derive_nodule_path(path: &Path) -> String {
+    let components: Vec<&std::ffi::OsStr> = path.components().map(|c| c.as_os_str()).collect();
+    let Some(src_idx) = components.iter().rposition(|c| *c == "src") else {
+        return fallback_stem(path);
+    };
+    let Some(prefix) = (src_idx > 0)
+        .then(|| components[src_idx - 1].to_str())
+        .flatten()
+    else {
+        return fallback_stem(path);
+    };
+    let crate_prefix = {
+        let stripped = prefix.strip_prefix("mycelium-").unwrap_or(prefix);
+        stripped.replace('-', ".")
+    };
+
+    let after_src = &components[src_idx + 1..];
+    let mut segments = Vec::with_capacity(after_src.len());
+    for (i, comp) in after_src.iter().enumerate() {
+        let name = comp.to_str().unwrap_or("");
+        if i + 1 == after_src.len() {
+            // Leaf file: strip `.rs`; a `mod`/`lib` stem names the enclosing directory, not a
+            // new segment.
+            let stem = Path::new(name)
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or(name);
+            if stem != "mod" && stem != "lib" {
+                segments.push(stem.to_string());
+            }
+        } else {
+            segments.push(name.to_string());
         }
-        None => path
-            .file_stem()
-            .and_then(|s| s.to_str())
-            .unwrap_or("unknown")
-            .to_string(),
     }
+
+    if segments.is_empty() {
+        crate_prefix
+    } else {
+        format!("{crate_prefix}.{}", segments.join("."))
+    }
+}
+
+/// Fallback nodule-path derivation for a path with no `src` ancestor to anchor on — the bare
+/// file stem, never a silent panic/empty string (G2).
+fn fallback_stem(path: &Path) -> String {
+    path.file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("unknown")
+        .to_string()
 }
 
 fn render_nodule(nodule_path: &str, chunks: &[String], file_attrs: &[syn::Attribute]) -> String {

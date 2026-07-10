@@ -119,6 +119,21 @@ maintainer decision.
 post-enb-wave (the wave landed kernel surface; per the ladder pattern the floor is likely
 materially greater than 7.8%). Measure, don't assume.
 
+**Phase 0 partial re-measure (`Empirical`, 2026-07-10, `just transpile-vet` default 5-target set —
+NOT the full 17-target corpus this §'s 7.8% figure covers, so not yet directly comparable; recorded
+per the append-rather-than-overwrite discipline above):** `crates/mycelium-l1/src/eval.rs`
+`checked_fraction` **7.1%** (3/42); `crates/mycelium-l1/src/fuse.rs` **0.0%** (0/10, hard parse
+error — `[ParseError=1]`); `crates/mycelium-std-time/src` **18.9%** (7/37); `crates/mycelium-std-rand/src`
+**0.0%** checked / 17.6% expressible (6/34 emitted, 0 clean — `[CheckError=1]`);
+`crates/mycelium-std-cmp/src` **0.0%** checked / 12.6% expressible (14/111 emitted, 0 clean —
+`[CheckError=1]`). Union over these 5 targets: **10/234 ≈ 4.3%** checked_fraction, 30/234 ≈ 12.8%
+expressible_fraction. Directionally consistent with the ledger's own finding (§2: transpiler rules
+alone move `checked_fraction` by ~0, kernel/language surface is the lever) — `std-time`'s 18.9% is
+the highest of the five, plausibly reflecting the enb-wave's `?`/generic-slot/visibility-seal
+closures reaching a stdlib crate that exercises them, though this is not isolated/attributed here.
+**The full 17-target corpus re-measure this Phase's DoD calls for is still outstanding** — this is a
+bounded default-set sample, not the complete Phase-0 close-out.
+
 **Phase 1 — force-multiplier infrastructure (build first):**
 
 - DRY `ExprVisitor` plus mirror-parity generator (kills the ~13-site tax) — *file it, untracked.*

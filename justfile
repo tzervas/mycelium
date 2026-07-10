@@ -207,6 +207,16 @@ doc-index:
 # Drift gate: committed docs/lib-index/ must match a fresh regeneration. Skip if cargo absent.
 lib-index:
     @bash scripts/checks/lib-index.sh
+# Drift gate: committed docs/sugar-index/ must match tools/grammar/sugar.yaml, which must itself
+# cross-check clean against the lexer keyword() table (DN-38 §6 realized as a generated artifact).
+# Skip if python3 (or pyyaml) is absent.
+sugar-index:
+    @bash scripts/checks/sugar-index.sh
+# (Re)generate the committed sugar index (docs/sugar-index/) from tools/grammar/sugar.yaml; commit
+# the result. Run after editing sugar.yaml or after a token.rs::keyword() change that shifts a
+# cited line number.
+sugar-index-gen:
+    @python3 tools/grammar/sugar_index.py
 
 # (Re)generate THIRD-PARTY-LICENSES.md from Cargo.lock via cargo-about (about.toml + about.hbs).
 # Run after any dependency bump/add/remove; commit the result. Needs cargo-about:
@@ -308,13 +318,15 @@ docs:
 # Regenerate committed agent index (docs/api-index/); commit the result after any public-API change.
 docs-index:
     python3 tools/docgen/code_index.py
-# Drift gate: committed docs/tero-index/ must match a fresh regeneration. Skip if cargo absent.
+# Drift gate: committed docs/tero-index/ must match a fresh regeneration via the published tero-rs
+# tero-index binary (scripts/fetch-tero-index.sh; skip-graceful if unfetchable).
 tero-index:
     @bash scripts/checks/tero-index.sh
-# (Re)generate committed tero-index (docs/tero-index/) from the whole corpus (M-1015). Commit the
-# result after any corpus change (docs/issues/changelog/skills).
+# (Re)generate committed tero-index (docs/tero-index/) from the whole corpus (M-1015), via the
+# published tero-index binary (tools/tero-rs/PROVENANCE.md). Commit the result after any corpus
+# change (docs/issues/changelog/skills).
 tero-index-gen:
-    cargo run -q -p mycelium-tero --bin tero-index -- --repo-root . --out docs/tero-index
+    bin=$(bash scripts/fetch-tero-index.sh) && "$bin" --repo-root . --out docs/tero-index
 # (Re)generate committed lib-index (docs/lib-index/) from lib/*.myc (M-1004). Commit the result
 # after any change under lib/std/ or lib/compiler/.
 lib-index-gen:

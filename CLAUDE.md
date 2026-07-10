@@ -172,6 +172,14 @@ durability tier — full workspace, mutants, fuzz — is run deliberately, not i
 not add `on: push` / `on: pull_request` auto-triggers without an explicit decision.
 
 ## Commits & PRs
+
+> **Trunk branches are PR-only.** `main`, `integration`, and `dev` are protected — NEVER `git commit` /
+> `git merge` / `git push` directly to any of them (the branch-guard `PreToolUse` hook blocks it;
+> mitigation #10). The only way work reaches a trunk is a **GitHub PR**: lineage-preserving `--no-ff`
+> up-flow into `dev`/`integration` (`gh pr merge --merge`), or a curated **squash** PR into `main`
+> (`/land`). Merging is the agent's own gate after review (see Autonomous PR workflow below) — but
+> always **via the PR**, never raw git.
+
 - Conventional, imperative subjects referencing the issue/task
   (`docs(rfc-0003): tighten capacity-bound wording`, `feat(swap): …`).
 - A PR states which `FR/NFR/VR/SC` it advances (or which ADR/RFC it implements) and **how it was
@@ -568,6 +576,31 @@ test, `git log --grep <M-id>` and search the touched paths for prior landings). 
 exists, **flip the status with a checked landed-basis instead of re-implementing** (and fix stale
 `doc_refs` pointers in the same commit); if partially done, scope the leaf to the *residual* gap only
 and say so. The issue tracker is `Declared`; the codebase is ground truth (VR-5).
+
+### 15. Blocked-op protocol — a permission wall is a policy signal, not a bug to route around (standing policy, 2026-07-10)
+**Pattern:** an agent hits a `PreToolUse` hook block (branch-guard, worktree-guard, a pre-commit
+external-hook 403) or a plain permission denial, and — lacking a standing response — either
+retry-loops the identical blocked op, tries to circumvent it (edit the hook, drop `--no-verify` in
+somewhere it doesn't belong, force a workaround), or worse, silently reports success anyway.
+**Mitigation (standing policy, every agent, every persona):**
+1. **Recognize it.** A block from `PreToolUse`/branch-guard/worktree-guard/a permission denial is a
+   **policy or permission boundary**, not a code failure — don't debug it like one.
+2. **Don't loop, don't circumvent, don't fabricate.** Never retry the same blocked op hoping it
+   changes; never route around a guard maliciously; never report the op as done when it was blocked.
+3. **Try the sanctioned alternative first** — most blocks already have one documented in this file:
+   a protected-branch write (`main`/`integration`/`dev`/`claude/head/*`) → open a PR, never a raw
+   push/merge/commit (#10); a destructive tag-rewrite/force → the non-destructive path (fresh tag;
+   merge, never rebase, a published branch) (item 6 above); a compound `commit && push` tripping the
+   branch-guard string-match → split into separate commands, and keep protected-branch names out of
+   commit-message bodies (#12); an external-hook 403 on commit/push in a repo-scoped session →
+   `git commit --no-verify` / `git push --no-verify` **plus** the equivalent gates run out-of-band
+   (the pre-commit section above); a self-permission edit → out of scope for any agent — only a human
+   can grant it.
+4. **No sanctioned alternative? Ping, don't bash.** If the op genuinely needs a permission you don't
+   hold, or you need guidance to pick the right alternative, stop retrying and **`SendMessage(to:
+   "main")`** with the precise ask (the exact command, why it's needed, whether it's auth-needed or
+   guidance-needed) — then keep doing other non-blocked work while you wait, and flag the open item in
+   your final report. Never stall silently; never fabricate completion.
 
 ## Autonomous PR workflow — review-before-merge, no human gate
 

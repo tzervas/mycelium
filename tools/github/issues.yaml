@@ -9309,6 +9309,7 @@ issues:
     epic: E18-1
     doc_refs:
       - corpus:DN-34
+      - corpus:DN-110
       - src:crates/mycelium-transpile/fixtures/UNION-BACKLOG.md
     body: |
       The #2 demand bucket (DN-34 §8.5): 22% of gaps are macro_rules! definitions + item-position
@@ -9330,6 +9331,12 @@ issues:
       - A design decision (DN/arch note) on the expand-first approach + the toolchain requirement,
         then (follow-on) the transpiler gains an optional expansion pre-pass, never-silent about
         whether a run was expanded or raw. No code required by this design task.
+
+      Note (2026-07-10, DN-110 ratification -- redirect, NOT supersede): the native TARGET facility
+      for the macro role (a Rust `#[derive]`/`impl_*!` mapping to a Mycelium `lower`/`derive` rule) is
+      designed in DN-110 -- complementary, not a re-decision of this issue's scope. This issue stays
+      scoped to the transpiler-side expand-first question, which DN-100 already answered; DN-110 is
+      the native-language-side counterpart DN-100's expansions map INTO (DN-110 §10).
 
   - id: M-876
     title: "M-876 -- design: surface completeness for transpilation (bounded generics, records, trait Self-bodies)"
@@ -13352,7 +13359,7 @@ issues:
       - corpus:DN-87
       - src:tools/docgen/code_index.py
       - src:crates/mycelium-doc/src/lib_index.rs
-      - src:crates/mycelium-tero/src/index.rs
+      - src:tools/tero-rs/PROVENANCE.md
       - src:docs/tero-index/INDEX.md
       - src:scripts/checks/tero-index.sh
     body: |
@@ -13384,6 +13391,15 @@ issues:
       needs a byte-scheme redesign, an open deliberate decision) + docs/spec/api/mycelium-tero.txt
       baseline. Deterministic two-run byte-identical (incl. the self-referential fixpoint fix);
       27 tests; change-scoped gates green. DoD met.
+
+      TRIM (2026-07-10, chore/extract-tero-trim): crates/mycelium-tero was extracted verbatim into
+      its own published repo (tzervas/tero-rs, renamed `tero`; tools/tero-rs/PROVENANCE.md) and
+      removed from this workspace -- mycelium now consumes a checksum-pinned published `tero-index`
+      binary (scripts/fetch-tero-index.sh) instead of recompiling the crate in-tree. Verified via a
+      three-way differential (in-tree crate / published binary / committed docs/tero-index/, all
+      byte-identical) before removal -- no behavior change, a build-speed trim only. The MCP/HTTP/
+      eval fronts this issue's Layer-1 engine underpins are unaffected: `.mcp.json` still runs the
+      vendored packages/tero-mcp-lite/ Python server, unchanged.
 
   - id: M-1016
     title: "M-1016 — Query engine + mandatory provenance (EXPLAIN-able retrieval)"
@@ -14142,6 +14158,7 @@ issues:
       - corpus:DN-99
       - corpus:DN-34
       - corpus:DN-100
+      - corpus:DN-110
       - src:crates/mycelium-transpile/src/transpile.rs
     body: |
       From DN-99 §8 ENB-9 (Draft backlog). Closes register row #51 (macro-expand, transpiler-only). A
@@ -14159,6 +14176,11 @@ issues:
       - Before/after `expressible_fraction` measured on a macro-heavy target (std-cmp); the expander
         choice recorded in a toolchain Draft DN; emitted `.myc` stays `Declared` until a differential
         upgrades it (M-991); no fabricated output on an unexpandable macro (never-silent gap).
+
+      Note (2026-07-10, DN-110 ratification): scope unchanged (transpiler-side ENB-9, expand-first
+      pre-pass, answered by DN-100). `corpus:DN-110` added for the native-target relationship — a Rust
+      `#[derive]`/`impl_*!` macro this pre-pass would expand maps, on the Mycelium side, to a
+      `lower`/`derive` rule (DN-110 §10); the two are complementary, not overlapping decisions.
 
   - id: M-1033
     title: "enb ENB-10 — statement-sequencing (`let _`) + record-update-mutation split (L1 closed; transpiler-lane residual)"
@@ -14507,13 +14529,28 @@ issues:
   - id: M-1041
     title: "M-1041 — DRY ExprVisitor/fold trait across the mycelium-l1 walkers and the transpiler's emit.rs (the visitor-DRY meta-gap)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:chore, area:language, priority:P2, status:todo]
+    labels: [phase:5, type:chore, area:language, priority:P2, status:in-progress]
     epic: E32-1
     depends_on: [M-641]
     doc_refs:
       - corpus:DN-109
       - src:crates/mycelium-l1/src/totality.rs
       - src:crates/mycelium-transpile/src/emit.rs
+      - src:crates/mycelium-transpile/src/visit.rs
+    landed_basis: >
+      status:in-progress (Scope-A of this issue's two-crate DoD landed, Scope-B/C outstanding) —
+      PR #1398 (`claude/m1041a-expr-visitor`, merged to `dev` 2026-07-10) lands the pilot
+      `ExprVisitor`/`TypeVisitor` abstraction (new `crates/mycelium-transpile/src/visit.rs`,
+      associated-`Output`-type traits with a required `fallback`) over `mycelium-transpile`'s
+      `emit.rs` (3 independently hand-rolled `syn::Expr` matches -> 1 canonical `walk_expr`
+      dispatcher) and `map.rs` (2 independently hand-rolled `syn::Type` matches -> 1 canonical
+      `walk_type` dispatcher) — behavior-preserving, byte-identical `cargo test -p
+      mycelium-transpile` (65/65) before and after. Explicitly out of this leaf's scope (flagged,
+      not silently dropped): `prim_map.rs`'s 9 more `Expr::` matches, the `Pat`/`map_pattern`
+      dispatch, and the full DoD's OTHER half — the 8 exhaustive `mycelium-l1` walkers (parse,
+      ambient, checkty, elab, eval, grade, mono, totality) this issue's own DoD names. This is the
+      **pilot** setting the pattern; a follow-on Scope-B/C leaf should extend it to `prim_map.rs`/
+      `Pat` and then to the `mycelium-l1` walker side before this issue can flip to `done`.
     body: |
       Filed 2026-07-10 from the zero-hand-port delta-ledger analysis (docs/planning/zero-hand-port-delta-ledger.md
       §3/§4.5, DN-109 §9). TWO independent analyses converged on the same gap: the L2 engine audit found
@@ -14544,13 +14581,14 @@ issues:
   - id: M-1042
     title: "M-1042 — structured (source-tree-mirroring) transpiler output with path-qualified nodule names"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:tooling, priority:P2, status:todo]
+    labels: [phase:5, type:feature, area:tooling, priority:P2, status:done]
     epic: E32-1
     depends_on: []
     doc_refs:
       - corpus:DN-109
       - src:crates/mycelium-transpile/src/bin/mycelium-transpile.rs
       - src:crates/mycelium-transpile/src/batch.rs
+      - src:crates/mycelium-transpile/src/transpile.rs
     body: |
       Filed 2026-07-10 from the zero-hand-port delta-ledger analysis (docs/planning/zero-hand-port-delta-ledger.md
       §4/§4.5, DN-109 §5.1/§9). `run_batch` (mycelium-transpile.rs) writes FLAT `out_dir/<stem>.myc`,
@@ -14573,6 +14611,45 @@ issues:
         distinct qualified names; the last-writer-wins WARNING path is removed (structurally impossible,
         not just warned); existing single-file-mode behavior unchanged; tests in the crate's
         src/tests/ layout; `just transpile-vet` still green.
+
+      RE-SCOPED 2026-07-10 (mitigation #14 — verify-first caught this issue stale before
+      implementation): the output-path half of this DoD (structurally-impossible flat-emit
+      collision, source-tree mirroring under out_dir) was ALREADY LANDED by `e0085ec0` ("M-1006
+      Phase-2 — path-qualified batch output") — `run_batch` now mirrors the source tree under
+      `out_dir` via `batch::output_rel_path` (5 unit tests pin the mapping); the last-writer-wins
+      WARNING path is gone. Confirmed against the codebase (`git show e0085ec0 --stat`,
+      `src/batch.rs`) before starting — not re-implemented.
+
+      DONE 2026-07-10 (the residual): `derive_nodule_path` (transpile.rs) still derived the
+      `// nodule: <path>;` header from the crate directory name alone, so two nested `mod.rs`
+      files in the same crate kept emitting the SAME nodule header even though M-1006 Phase-2
+      now writes them to distinct output paths. Fixed by anchoring the derivation on the file's
+      last `src` path component and appending its intra-crate module path as dotted segments
+      (`mod.rs`/`lib.rs` leaves contribute no segment of their own — they name the enclosing
+      directory): `crates/mycelium-std-cmp/src/foo/mod.rs` -> `std.cmp.foo`,
+      `crates/mycelium-std-cmp/src/foo/bar.rs` -> `std.cmp.foo.bar`. Self-contained in
+      `transpile.rs` (no root parameter threaded through `batch.rs`/the CLI — every real
+      invocation already passes a `<crate>/src`-rooted or file-rooted path, and the derivation
+      is anchored on the path's own `src` component, which generalizes to both). The existing
+      top-level case (a file directly under `src/`, e.g. `lib.rs`) is unchanged.
+      Data-driven fixture-table tests added in `src/tests/transpile.rs` (regression + nested +
+      two-deep + non-mod-rs submodule + hyphenated-crate + no-`src`-ancestor fallback cases, plus
+      a same-crate-sibling-non-collision property test). `derive_nodule_path` promoted to
+      `pub(crate)` for white-box testability (existing crate precedent: `emit::binary_width` etc.).
+      Verified end-to-end against real source (`mycelium-core/src` — `lib.rs` -> `core`,
+      `ternary/mod.rs` -> `core.ternary`), not just the fixture table.
+
+      FLAG (follow-up, out of this change's scope — `crates/mycelium-transpile/src/` only): the
+      committed `gen/myc-drafts/semcore/{checkty,elab,eval,mono,fuse}/*.myc` drafts all emit
+      `// nodule: l1` today (single-file transpiles of 5 `crates/mycelium-l1/src/*.rs` targets,
+      which previously collided identically on the crate-level prefix — a second latent instance
+      of the same collision class this fix closes for single-file mode too). After this change
+      they will instead each derive their own file-qualified nodule (`l1.checkty`, `l1.elab`, …)
+      on the next `gen/myc-drafts/regenerate.sh` run — a comment-text-only diff (`manifest_gen.py`
+      does not parse the emitted header, only carries descriptive prose about the eventual
+      hand-merge into `compiler.semcore`), not a functional break. Left un-regenerated here per
+      this leaf's disjoint-ownership scope; a follow-up `/myc-drafts` regenerate pass should pick
+      it up.
 
   - id: M-1043
     title: "M-1043 — per-item `// src: file:line` provenance breadcrumbs in emitted .myc"
@@ -14605,12 +14682,13 @@ issues:
   - id: M-1044
     title: "M-1044 — the remap manifest (remap.json / REMAP.md): item-granular structural + idiom provenance ledger"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:tooling, priority:P2, status:todo]
+    labels: [phase:5, type:feature, area:tooling, priority:P2, status:done]
     epic: E32-1
     depends_on: [M-1042]
     doc_refs:
       - corpus:DN-109
       - src:crates/mycelium-transpile/src/batch.rs
+      - src:crates/mycelium-transpile/src/remap.rs
     body: |
       Filed 2026-07-10 from DN-109 §5.2 (the L5 structural-remapping design). Gated on DN-109's
       ratification of §7-c (whether the manifest is a new artifact or extends the existing
@@ -14635,6 +14713,38 @@ issues:
         idiom_choices already made, e.g. `&T` erasure); `REMAP.md` byte-derivable from `remap.json`;
         never a black box (S4) — every non-Mechanical choice has a `reason`; tests assert schema +
         round-trip; no guarantee-tag upgrade from the manifest's existence alone (VR-5).
+
+      **Landed 2026-07-11 (mitigation #14, checked basis — verify-first: `grep -rn remap
+      crates/mycelium-transpile/src` was empty before this change, confirmed no prior partial
+      landing).** DN-109's §7-c/§7-e forks were already ratified (2026-07-11, see DN-109's
+      ratification section) before this leaf began. Per §7-c: **extends** `summary.json`
+      (`BatchSummary.remap: RemapManifest`, `crates/mycelium-transpile/src/batch.rs`) rather than
+      minting a new sidecar — no standalone `remap.json` file is written; the manifest ships inside
+      `summary.json` and `REMAP.md` is rendered from that same struct
+      (`crates/mycelium-transpile/src/remap.rs::render_remap_md`, a pure projection — checked by a
+      round-trip test: serialize -> deserialize -> re-render -> byte-compare). Schema fields match
+      DN-109 §5.2 field-for-field (`phylum{source_crate,target_phylum}`,
+      `nodules[]{target_nodule,operation,sources[],rationale,safety,api_surface_changed,
+      identity_neutral,guarantee}`, `idiom_choices[]{target_span,rust_span,decision,class,chose,
+      alternatives,reason}`). v0 scope per the ratified §7-e Mechanical-only auto-fire: every
+      transpiled file gets exactly one pure `Keep` entry (structure-preserving 1:1, target nodule
+      derived via the already-`pub(crate)` `transpile::derive_nodule_path` from M-1042 — zero
+      changes to `transpile.rs`/`emit.rs`/`map.rs`/`visit.rs`); `idiom_choices` ships as an honestly
+      **empty** vec (the schema field is never-silent-present, but no per-item `&T`-erasure EXPLAIN
+      instrumentation exists yet in `map.rs`/`emit.rs` to populate it from — not invented here,
+      KISS/YAGNI boundary, tracked as residual future work rather than fabricated). Guarantee tag
+      stays `Declared` throughout, never upgraded from the manifest's mere presence (VR-5) — the
+      module doc comment states this explicitly. 11 new tests in
+      `crates/mycelium-transpile/src/tests/remap.rs` (JSON round-trip, the REMAP.md
+      byte-derivability property named in this DoD, rendering determinism, a Markdown-table
+      pipe/newline-escaping regression added during self-review — `render_remap_md` now escapes
+      `|`/`\n` in every free-text cell so a future non-`Keep` rationale/reason can never corrupt the
+      rendered table, v0 Keep-only behavior, a data-driven phylum-name fixture table, guarantee-tag
+      posture) plus 2 new assertions folded into the existing `src/tests/batch.rs` multi-file test;
+      `cargo test -p mycelium-transpile` green at 75 (was 66 + 9 net); `cargo clippy -p
+      mycelium-transpile --all-targets -D warnings` clean; `cargo fmt --check` clean; verified
+      end-to-end against a real corpus target (`crates/mycelium-std-cmp/src` -> `std.cmp`, matching
+      the phylum-naming convention DN-109 §2 cites) in addition to the unit-test fixtures.
 
   - id: M-1045
     title: "M-1045 — actionable suggested_idiom field on transpiler gap diagnostics"
@@ -14765,12 +14875,28 @@ issues:
   - id: M-1049
     title: "DN-102 second research pass + resolve FLAG-try-2 via language gap closure; re-stage for ratification"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:research, area:language, priority:P2, status:todo]
+    labels: [phase:5, type:research, area:language, priority:P2, status:in-progress]
     epic: E28-1
     depends_on: [M-1025]
     doc_refs:
       - corpus:DN-102
       - corpus:DN-99
+    landed_basis: >
+      status:in-progress (research pass complete + re-submitted; DN-102 itself not yet ratified) —
+      PR #1395 (`claude/dn-102-second-pass`, merged to `dev` 2026-07-10) appends DN-102's "Second
+      research pass (2026-07-11) — M-1049" section (SP.1–SP.8): reconciles the design with DN-106/
+      DN-109/DN-107 (all ratified since the first pass); resolves FLAG-try-2 by scoping implicit
+      `From`-error widening as a deliberate exclusion (DN-109 D13 inferred-conversion black-box
+      family) mapped to the native `map_err(e, conv)?` idiom (`lib/std/result.myc:39`), no
+      error-conversion-trait subsystem proposed; evaluates and declines the `?`-as-macro framing;
+      reconciles with the landed M-1025 let-RHS increment (no revision needed); recommends Rank 1
+      (ratify the landed v0 core + adopt the SP resolutions). A matching append-only addendum was
+      added to DN-99's ENB-2 backlog row. This issue's first two DoD clauses (pass documented,
+      FLAG-try-2 resolved) are complete; the third ("DN-102 is re-submitted for maintainer
+      ratification") is procedurally complete (the pass is held/surfaced) but **DN-102's own Status
+      stays Draft** — the maintainer has not yet ratified it (surfaced as an open Draft-DN item in
+      this integration close-out, not decided here — house rule #3, only the maintainer ratifies).
+      Flip this issue to `done` once DN-102 is actually ratified, or revise if declined again.
     body: |
       Filed 2026-07-11 from the maintainer's non-ratification of DN-102 (ENB-2, the `?` try-operator
       desugar). The maintainer declined to ratify DN-102 as drafted: "many must be resolved via
@@ -14960,3 +15086,253 @@ issues:
         settled with a concrete implementation choice (a specific vendored/version-locked routine or
         library, or a reasoned decision to use the host libm after all with the reproducibility
         trade-off explicitly accepted); M-1028 proceeds against the ratified ADR + OQ-3 decision.
+
+  - id: M-1054
+    title: "native metaprogramming/sugar facility -- generalize lower/derive to expression-position sugar rules (DN-110 Rank 1)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:epic, area:language, priority:P2, status:todo]
+    epic: E28-1
+    depends_on: [M-812, M-1051]
+    doc_refs:
+      - corpus:DN-110
+      - corpus:DN-54
+      - corpus:DN-38
+      - corpus:DN-106
+    body: |
+      Filed 2026-07-10 from the maintainer's ratification of DN-110 (native metaprogramming / sugar-
+      lowering facility). Implements DN-110 §5-A Rank 1: generalize the landed `lower`/`derive`
+      term-level lowering framework (DN-54/M-812) to expression position -- the J3 "expression-position
+      mechanically-lowering sugar" gap (`format!`/`matches!`/`vec!`-role constructs), co-gated on
+      `reveal`/expand-on-demand (M-1051, the mandatory transparency spine per DN-110 §3.4/§8.4).
+
+      This is an EPIC -- its DoD is design-gated: DN-110 is ratified as a design (Accepted, NOT
+      Enacted), but the concrete expression-position hygiene/scoping model is its own gating
+      sub-design, not yet built. The **§8.2 hygiene model is its own sub-design carrying open questions
+      OQ-H1 through OQ-H6** (`docs/notes/DN-110-8.2-hygiene-deepdive.md` §10) -- OQ-H1 (def-site
+      resolution across phyla/separate compilation) and OQ-H3 (`reveal` round-trip fidelity for
+      `%`-namespace names) are on the critical path and gate the go/no-go (tracked separately, see
+      M-1055's E1+E3 experiments). This epic does not decompose into leaf issues until the go/no-go
+      experiments (M-1055) return a PASS verdict.
+
+      User stories:
+      - As a self-hosting engineer porting the Rust stdlib, I want `impl_narrow_int!`/`impl_std_error!`
+        boilerplate to map to `lower`/`derive` sites and `format!`/`matches!` to map to expression sugar
+        rules, so a macro-heavy Rust module becomes mechanically portable (DN-110 §4 user story 1).
+      - As a Mycelium application developer, I want to eliminate my own repeated boilerplate with a
+        named sugar I define once that lowers to ordinary code, and to `reveal` the lower form at any
+        point, so the abstraction never becomes a black box (house rule #2; DN-110 §4 user story 2).
+      - As a reviewer/auditor, I want every generated or sugared form to carry an EXPLAIN-able trail to
+        the exact core grammar it compiles to (DN-110 §4 user story 3).
+
+      Definition of Done (DN-110 §3.6, ratified 2026-07-10):
+      - Every sugar rule is (a) a mechanical, reliable lowering to existing core grammar with zero
+        L0-node growth (KC-3, the DN-54 §6 guard), (b) `reveal`-able / reversibly expandable on demand,
+        and (c) hygiene-witnessed by the DN-38 §7 differential+hygiene harness (the E1-E5 corpus, per
+        the DN-110-8.2 companion note); guarantee tags propagate the weakest tag of the RHS, never
+        upgraded (VR-5). Blocked on M-1051 (`reveal`) landing and M-1055's E1+E3 go/no-go passing before
+        any code lands (VR-5: no guarantee tag claimed until the checked basis exists).
+
+  - id: M-1055
+    title: "E1 + E3 hygiene experiment prototype -- DN-110 §8.2 expression-position sugar-rule hygiene, Rank-1 go/no-go for J3"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P1, status:todo]
+    epic: E28-1
+    depends_on: [M-1051]
+    doc_refs:
+      - corpus:DN-110
+      - corpus:DN-110-8.2-hygiene-deepdive
+      - corpus:DN-54
+    body: |
+      Filed 2026-07-10 from the maintainer's ratification of DN-110-8.2-hygiene-deepdive.md (the
+      companion §8.2 deep-dive, itself accepted as the basis for DN-110 §8.2 at this ratification).
+      Prototypes the two experiments the deep-dive names as the **Rank-1 go/no-go for J3** (DN-110 §9):
+
+      - **E1 -- capture-avoidance** (the `swap!` classic): validates the `%`-namespace-freshening plus
+        capture-safe substitution model (deep-dive §4 (A)+(B)) against a table of collision cases,
+        asserting alpha-equality and observational equality versus a hand-written oracle.
+      - **E3 -- `reveal` round-trip fidelity** (the gating experiment, designed to possibly BREAK the
+        model): asserts `reelaborate(reveal_l0(expand))` is alpha-equal to `expand` at the L0-term
+        level, and forces the OQ-H3 decision (L0-level identity vs a documented surface display-
+        renaming) rather than discovering it after `reveal`/M-1051 ships. **A FAIL here is a blocker
+        signal for Rank-1 on J3** -- the honest fallback is DN-110 Rank 2 (blessed-core desugarings
+        only) for expression-position sugar.
+
+      E3 needs `reveal`/expand-on-demand (M-1051, `status:todo`) to exist first; M-919 (the affine
+      tracker E5 would need) is already landed. **OQ-H1** (def-site resolution across phyla / separate
+      compilation, the expression analogue of DN-54 §10 OQ-D) is the other critical-path open question,
+      exercised by E2 (not gating for this issue's go/no-go, but tracked alongside E1/E3 if scope
+      allows).
+
+      User stories:
+      - As the maintainer deciding whether to fund DN-110's implementation epic (M-1054), I want E1 and
+        E3 run against the real elaborator, so the go/no-go is `Empirical`, not `Declared` (VR-5).
+
+      Definition of Done:
+      - E1 and E3 are implemented per the deep-dive's §7 harness shape (in-crate white-box test module,
+        table-driven, alpha-equality plus observational equality) in `crates/mycelium-l1` and return a
+        PASS/FAIL verdict with the pass/fail criteria the deep-dive names (§7 E1, §7 E3); the verdict
+        is recorded back into DN-110-8.2-hygiene-deepdive.md / DN-110 (a Ratification addendum, not a
+        rewrite) before M-1054 proceeds past its design-gate.
+
+  - id: M-1056
+    title: "/native-translate methodology skill -- Rust-construct classification decision procedure (DN-110 §9)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:tooling, priority:P3, status:todo]
+    epic: E28-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-111
+      - corpus:DN-110
+      - corpus:DN-109
+      - corpus:DN-99
+      - corpus:DN-106
+    body: |
+      Filed 2026-07-10 from the maintainer's ratification of DN-110. A follow-up deliverable (DN-110
+      §9/§12, not authored in DN-110 itself -- it would race the design note on scope). Authors a
+      reusable skill, working name `/native-translate`, that operationalizes DN-110 §9's operational
+      decision-procedure: given one Rust construct/surface gap, verify it is not already closed
+      (mitigation #14 -- check the DN-99 register/delta ledger and grep the codebase first), identify
+      the underlying PROBLEM (not Rust's mechanism), classify it against the **DN-111 canonical
+      taxonomy** (Native Equivalent / Idiomatic Remapping / Approximation / Interop Bridge -- see below),
+      apply the DN-109 §3.2 EXPLAIN-able ratchet to any auto-fire, and emit a register-style record into
+      the DN-99/DN-109 manifest.
+
+      TERMINOLOGY UPDATE (2026-07-10, at the DN-111 ratification pass): DN-111 has been authored and
+      Accepted -- the canonical enum is **NativeEquivalent | IdiomaticRemapping | Approximation |
+      InteropBridge**, with DN-110's Adaptation/Solution/Approximation/Bridge handles retained as
+      aliases for legibility. This note, filed while DN-111 was still unauthored, is superseded on this
+      one point: implement the skill's Step-3 classification and Step-6 register emit against the
+      **DN-111 canonical enum**, not the provisional DN-110 §2 handles -- a terminology-only change,
+      DN-110 §9's six steps are otherwise unchanged.
+
+      User stories:
+      - As an engineer translating any Rust construct (not just macros), I want a decision procedure
+        that tells me whether the construct is a Native Equivalent / Idiomatic Remapping / Approximation
+        / Interop Bridge (DN-111's canonical taxonomy, aliases Adaptation/Solution/Approximation/Bridge
+        retained) and what the honest native target + explicit delta is, so I classify by evidence
+        against the corpus, not by shoehorning Rust's idiom (DN-110 §4 user story 4).
+
+      Definition of Done:
+      - A `.claude/skills/native-translate/` skill (or equivalent) implements DN-110 §9's six steps
+        verbatim, producing the §9 Step 6 register-style artifact; validated against at least the DN-110
+        §1 worked examples (J1-J5) as a self-check.
+
+  - id: M-1057
+    title: "DN-111 -- canonical Rust->Mycelium native-translation taxonomy (companion to DN-110 §2, DN-109, DN-99, DN-106)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:language, priority:P3, status:done]
+    epic: E28-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-111
+      - corpus:DN-110
+      - corpus:DN-109
+      - corpus:DN-99
+      - corpus:DN-106
+    landed_basis: >
+      status:done -- DN-111 (docs/notes/DN-111-Canonical-Rust-To-Mycelium-Native-Translation-Taxonomy.md)
+      authored (Draft PR #1405) and ratified Accepted by the maintainer 2026-07-10 (see DN-111's own
+      "Ratification (maintainer, 2026-07-10)" section). Canonical taxonomy: Native Equivalent /
+      Idiomatic Remapping / Approximation / Interop Bridge, with DN-110's Adaptation/Solution/
+      Approximation/Bridge handles retained as permanent aliases. DN-110 §2 gained the append-only
+      pointer resolving its provisional-labels carve-out at this same pass (DN-110's own Ratification
+      text unchanged, append-only per house rule #3). Accepted ratifies the TERMINOLOGY + TAXONOMY
+      only -- individual classifications against it stay `Declared` until independently checked
+      (VR-5); this issue's DoD ("authored and ratified, settling the canonical taxonomy terms") is
+      fully met by that ratification, distinct from any downstream classification work.
+    body: |
+      Filed 2026-07-10 from the maintainer's ratification of DN-110. DN-110 §2 proposed a general
+      Rust->Mycelium native-translation taxonomy (Adaptation/Solution/Approximation/Bridge) as the
+      problem-relationship re-reading of vocabulary already used, informally, by DN-99's register
+      Status column, DN-109's L4 idiom buckets, and DN-106's gap-closure default. The maintainer's
+      ratification (2026-07-10) accepted DN-110 §12.1's own reasoned recommendation that this taxonomy
+      warrants its own **companion DN** (not a DN-109 append-only extension), but explicitly declined to
+      lock in DN-110 §2's four specific labels as canonical -- they are ratified only as provisional,
+      intuitive handles pending this DN.
+
+      This is a DESIGN AUTHORING task, not a redecision: DN-111 should (a) settle the canonical
+      terminology (refining or replacing Adaptation/Solution/Approximation/Bridge), (b) formally
+      reconcile the taxonomy's relationship axis with DN-109's decidability axis (Mechanical/
+      Heuristic/Judgment) per DN-110 §2.1, and (c) cross-link every corpus artifact that already
+      instantiates the informal version (DN-99, DN-106, DN-109, DN-110) without re-deciding any of
+      their own settled forks. Per DN-110 §12.1: "its scope is the maintainer's to set" -- this issue
+      does not presume DN-111's authoring session or approach.
+
+      User stories:
+      - As a designer classifying a new Rust construct's native Mycelium translation, I want one
+        citable, canonical taxonomy (not four different local re-readings across DN-99/DN-106/DN-109/
+        DN-110) so "this mapping is an Adaptation per DN-1xx" resolves unambiguously.
+
+      Definition of Done:
+      - A Draft DN-111 authored and ratified, settling the canonical taxonomy terms; DN-110 §2 gains an
+        append-only pointer resolving its provisional-labels carve-out once DN-111 lands (this issue's
+        own landing does not retroactively edit DN-110's Ratification record -- that stays as drafted,
+        append-only).
+
+  - id: M-1058
+    title: "v0 generated surface + sugar mapping (tools/grammar/sugar.yaml + sugar_index.py) — DN-38 §6 realized as a drift-gated artifact"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:feature, area:tooling, priority:P2, status:done]
+    epic: E28-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-38
+      - corpus:DN-53
+      - corpus:DN-54
+      - corpus:DN-102
+      - corpus:DN-111
+      - src:tools/grammar/sugar.yaml
+      - src:tools/grammar/sugar_index.py
+    landed_basis: >
+      status:done — v0 landed on `dev` (PR #1403, `claude/sugar-index-generator`, merged
+      2026-07-10): tools/grammar/sugar.yaml (a hand-authored, 45-row registry — one row per
+      crates/mycelium-l1/src/token.rs::keyword() identifier keyword, seeded from DN-38 §6 +
+      DN-53/DN-54/DN-102, plus glyph_sugars for DN-102's `?` and not_lexed_sugars for DN-38 §5's
+      `reveal`) + tools/grammar/sugar_index.py (mechanical cross-check against
+      token.rs::keyword() via generate.py's STRUCTURAL_KEYWORDS, reused not re-derived; renders
+      docs/sugar-index/; --check drift gate + --self-test incl. two synthetic fail-loud demos) +
+      docs/sugar-index/ (generated) + scripts/checks/sugar-index.sh + justfile (sugar-index /
+      sugar-index-gen) + scripts/checks/all.sh (wired into the `just check` gate list, sharing
+      doc-index's component-id family per the exhausted 5-bit id-space note). Confirmed merged
+      (`git log dev --oneline | grep '#1403'`) before this status flip (mitigation #14 —
+      verified against the codebase, not rubber-stamped). Follow-up at the DN-111 ratification
+      pass (2026-07-10): the deferred `native_strategy` column's placeholder comment in
+      `sugar.yaml` updated to point at the now-ratified DN-111 enum (was "DN-109's taxonomy is
+      still settling"); the column itself remains deferred — populating its 45 rows is bounded
+      follow-up work, not done here (VR-5, no invented per-row classifications). Cross-reference:
+      M-1051 is the SEPARATE runtime desugar/expand-on-demand tooling (developer-facing "show me
+      the lowering at this sugar site"); this issue is unrelated to and distinct from the M-1054
+      DN-110 native-metaprogramming epic (a same-numbered collision this issue was renumbered away
+      from, mitigation #1 — this was M-1054 in an earlier revision of this branch, before DN-110's
+      ratification landed on dev and claimed that id).
+    body: |
+      Filed 2026-07-11 (verify-first per mitigation #14: grep of issues.yaml + docs/tero-index/
+      INDEX.md for `sugar-index`/`sugar.yaml`/`sugar-registry` found no prior issue or landing — this
+      is new tooling, not a re-implementation). Builds the DN-38 Layered-Lowering Atlas's §6
+      per-feature Lowering Map as a **generated, drift-gated artifact** rather than hand-maintained
+      prose, following the api-index (M-392, `tools/docgen/code_index.py`) and editor-grammar
+      (M-731, `tools/grammar/generate.py`) generator precedent: a structured source-of-truth
+      registry (`sugar.yaml`) plus a generator that mechanically cross-checks it against the lexer
+      and renders a committed, grep-friendly index — so the sugar catalog can never silently
+      diverge from `token.rs::keyword()` the way hand-maintained prose could.
+
+      User stories:
+      - As an agent or developer surveying "what surface sugar exists and what does it lower to",
+        I want a single generated, drift-gated table (keyword, grammar rule, lowering target,
+        defining doc, honest build-status tag) instead of re-deriving it from scattered DNs each
+        time, so the answer is trustworthy and can't quietly go stale as token.rs evolves.
+      - As a maintainer reviewing this PR, I want the new `just check` gate's fail-loud behavior
+        demonstrated (a missing registry row, a stale token.rs:LINE citation) before it's wired in,
+        so I can trust it will catch real drift rather than false-passing.
+
+      Definition of Done (v0, this issue):
+      - `tools/grammar/sugar.yaml` covers every `token.rs::keyword()` identifier keyword (45/45 at
+        authoring time), tagged honestly per VR-5 (`Exact`/`Empirical`/`Declared`/`Gap`; no upgrade
+        past a checked basis); `tools/grammar/sugar_index.py` cross-checks coverage + status
+        agreement + citation resolution and fails loudly (non-zero exit) on any drift, with a
+        `--self-test` exercising two synthetic drift-guard demos; `docs/sugar-index/` is the
+        rendered, committed artifact; `scripts/checks/sugar-index.sh` + `just sugar-index` /
+        `sugar-index-gen` wire it in, skip-graceful without python3/pyyaml. Deferred to a follow-up
+        (not this issue): the `native_strategy` taxonomy column — the taxonomy itself is now settled
+        (DN-111, Accepted 2026-07-10), but populating this file's 45 rows against it is left as a
+        `# TODO(DN-111)` placeholder in `sugar.yaml` rather than invented here.
