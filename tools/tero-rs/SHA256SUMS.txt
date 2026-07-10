@@ -1,0 +1,4 @@
+0ac75b8fef9e7674b7a5a732897d1c14ed0db12a9a56fadb7d2e67feef80a6ca  tero-eval-v0.1.3-linux-x86_64
+38276f1521fbfa8f4f99571170aca6fea0a4c4b8fd25fc1207c6edf28a33fcff  tero-http-v0.1.3-linux-x86_64
+8591905f36ade7a260da811c05a203e54d0059d06ae6ec7b07e3e8b50a41d9e8  tero-index-v0.1.3-linux-x86_64
+44e6d7e30de3576b9bb9b1a540318dfe3553d8b4f7e57053b7c2edb886b7ae42  tero-mcp-v0.1.3-linux-x86_64

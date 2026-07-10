@@ -116,6 +116,28 @@ digest is a snapshot, that table is live.
     cross-nodule name-collision disambiguation. The **Draft DNs 102–106** authored this wave are **pending
     maintainer ratification** (append-only — specs stay "implemented, pending ratification", never
     silently `Accepted`).
+- **Ratification catch-up (2026-07-10..11, subsequent sessions) — DN-101/103/105/106/107/108/109
+  ratified Accepted; DN-102/DN-104 stay Draft** (see `docs/Doc-Index.md` for the per-note detail);
+  **DN-110** (native-metaprogramming facility, design-ratification-only) and **DN-111** (canonical
+  Rust→Mycelium native-translation taxonomy — Native Equivalent / Idiomatic Remapping / Approximation
+  / Interop Bridge, DN-110's original handles retained as aliases) both **Accepted 2026-07-10**.
+  **DN-102's second research pass** (M-1049, PR #1395) resolved FLAG-try-2 and re-submitted the note
+  for ratification, but **DN-102 itself stays Draft** — awaiting the maintainer, alongside **DN-100**
+  (transpiler cargo-expand pre-pass, also still Draft).
+- **Zero-hand-port Phase 1 force-multiplier trio landed (2026-07-10):** **M-1041 Scope-A** (the
+  `ExprVisitor`/`TypeVisitor` DRY pilot over `mycelium-transpile`'s emit/map dispatch — the `mycelium-l1`
+  walker half + `prim_map.rs`/`Pat` dispatch remain, `in-progress`), **M-1042** (path-qualified
+  source-tree-mirroring transpiler output, `done`), **M-1044** (the remap manifest folded into
+  `BatchSummary`, `done` — DN-109 §5.2 realized). The **sugar-index** (M-1058,
+  `tools/grammar/sugar.yaml` + generator, `docs/sugar-index/`) also landed, realizing DN-38 §6's
+  Lowering Map as a drift-gated artifact; its `native_strategy` column is deferred (contract now
+  settled by DN-111, population is bounded follow-up).
+- **Phase-0 `checked_fraction` re-baseline (`Empirical`, partial — the default 5-target
+  `just transpile-vet` set, not the full 17-target corpus the delta ledger's 7.8% figure covers):**
+  `eval.rs` 7.1%, `fuse.rs` 0.0% (parse error), `std-time` **18.9%** (the highest of the five),
+  `std-rand` 0.0% checked/17.6% expressible, `std-cmp` 0.0% checked/12.6% expressible; union ≈4.3%
+  checked / ≈12.8% expressible over the 5 targets. Full detail + the union math:
+  `docs/planning/zero-hand-port-delta-ledger.md` §6 Phase 0.
 - **`trx2` wave 1 landed (2026-07-06, this promotion)** — the M-993 semcore port now plans against
   the DN-34 §8.9 **812-gap ranked worklist** + per-module draft scaffolds instead of porting cold;
   the remaining trx2 work is **M-1006** (the maintainer-decided phased whole-corpus rip-through

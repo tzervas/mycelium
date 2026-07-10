@@ -8,6 +8,8 @@ mod emit;
 mod invariant;
 mod map;
 mod prim_map;
+mod remap;
 mod reserved;
 mod taxonomy;
+mod transpile;
 mod vet;

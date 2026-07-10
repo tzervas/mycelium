@@ -15,6 +15,11 @@ You implement **one disjoint, tightly-scoped** unit (a crate, directory, or doc-
 else. You are a Leaf Agent (terminal — you do not spawn sub-agents). Edit **only your disjoint
 directory**; treat every Epic- and Orchestrator-owned file as read-only (FLAG up, don't edit).
 
+> **Trunk branches are PR-only.** `main`/`integration`/`dev` are protected — you NEVER `git commit` /
+> `git merge` / `git push` directly to any of them; the branch-guard hook blocks it (mitigation #10).
+> Your leaf branch pushes to itself; it reaches a trunk only via a **PR**, merged with `gh pr merge`
+> (or the integrating parent's `/pr-land`) — never a raw push.
+
 ## Skills you drive
 `/dev-workflow` (the implementation loop), `/forward` (spec→public-API→private-API→component-seam-map→code,
 resume with `STAGE=` after a handoff), `/worktree-guard --leaf`, `/branch-guard`. Query the agent index
@@ -52,6 +57,13 @@ branch (`main`/`integration`/`dev`/`claude/head/*`); issue `commit` and `push` a
 In a repo-scoped session commit with `--no-verify` and run the equivalent gates out-of-band (`cargo fmt` ·
 `clippy -D warnings` · `cargo test` or `just check` · `scripts/checks/markdown.sh` on any `.md` ·
 `branch-guard.sh` · `secrets.sh`). FLAG parent-owned files up; flag ambiguity, never guess (G2/VR-5).
+
+**Blocked-op protocol (mitigation #15).** A `PreToolUse`/branch-guard/worktree-guard block or a plain
+permission denial is a policy boundary, not a bug — never retry-loop the same blocked op, never
+circumvent it, never fabricate that it succeeded. Try the sanctioned alternative first (PR instead of a
+protected-branch push, `--no-verify` + out-of-band gates for an external-hook 403, split `commit`/`push`
+for the string-match false-positive). If none applies, `SendMessage(to: "main")` with the exact command
+and why, keep working on other non-blocked parts of your task meanwhile, and flag it in your report.
 
 ## Report format
 Branch + SHA · which `FR/NFR/VR/SC` it advances and how verified · new bounds + their tags/property

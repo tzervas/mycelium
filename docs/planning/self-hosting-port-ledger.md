@@ -155,6 +155,33 @@ flagged, never silently dropped.
 `match` — both pre-existing, three-way witnessed and pinned in `tests/enablement.rs`); the residual is
 transpiler-lane, so there is no new self-hosted-frontend capability to reproduce here.
 
+### 2026-07-10 addendum — transpiler force-multiplier trio + the native-translation taxonomy (context, not new L1 rows)
+
+Three items landed this session that are **transpiler-tooling**, not L1-frontend capability — they add
+no new row to the table above (the `.myc` self-hosted frontend has nothing new to reproduce), but they
+materially change *how* future self-hosted-frontend port targets get measured and classified, so they
+are recorded here for context:
+
+- **M-1041 Scope-A** (the `ExprVisitor`/`TypeVisitor` DRY pilot, `crates/mycelium-transpile/src/visit.rs`)
+  and **M-1042**/**M-1044** (path-qualified nodule output + the remap manifest) are the **Phase 1
+  force-multiplier infrastructure** the zero-hand-port delta ledger's §6 roadmap calls for before
+  Phase 2's language/kernel surface closure. When `boot10`/E18-1 eventually ports `mycelium-transpile`
+  itself to `.myc`, these three land as the shape of the port target (the visitor abstraction + the
+  remap-manifest schema), not as a self-hosting *gap* to close.
+- **DN-110/DN-111** (both Accepted 2026-07-10) settle the **canonical Rust→Mycelium native-translation
+  taxonomy** (Native Equivalent / Idiomatic Remapping / Approximation / Interop Bridge) that this
+  ledger's own port-target classifications should eventually cite — a future refresh of this ledger's
+  rows may add a `native_strategy` column mirroring the sugar-index's own deferred one (M-1058).
+- **Phase-0 `checked_fraction` re-baseline (`Empirical`, `just transpile-vet` default 5-target set,
+  measured this session against `dev` tip post-enb-wave):** `crates/mycelium-l1/src/eval.rs`
+  **7.1%** (3/42 items myc-check-clean); `crates/mycelium-l1/src/fuse.rs` **0.0%** (0/10, hard parse
+  error); `crates/mycelium-std-time/src` **18.9%** (7/37); `crates/mycelium-std-rand/src` **0.0%**
+  checked / 17.6% expressible (6/34 emitted, 0 clean); `crates/mycelium-std-cmp/src` **0.0%** checked /
+  12.6% expressible (14/111 emitted, 0 clean). Union across the 5 targets: 10/234 items myc-check-clean
+  (**≈4.3%** checked_fraction), 30/234 emitted (≈12.8% expressible_fraction) — measured, not assumed,
+  per the delta ledger's own Phase-0 instruction (§6); this is a real number from this default target
+  set, not a whole-corpus re-measure (that remains a separate, larger undertaking).
+
 ### Forward items (not yet landed — tracked for when they do)
 
 | Component | Status | What it will add to this ledger when it lands |

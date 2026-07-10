@@ -8,6 +8,7 @@
 //! per-file [`crate::gap::GapReport`]s, so it inherits their tag rather than degrading it further.
 
 use crate::gap::{Gap, GapReport};
+use crate::remap::{build_remap_manifest, RemapManifest};
 use crate::transpile::transpile_file;
 use serde::Serialize;
 use std::collections::BTreeMap;
@@ -109,10 +110,16 @@ pub struct Totals {
 }
 
 /// The combined `summary.json` artifact for a batch/directory transpile run.
+///
+/// **M-1044 / DN-109 §5.2 (§7-c ratified "extend, don't mint a new artifact"):** carries the
+/// [`RemapManifest`] provenance ledger as an additive `remap` field alongside the pre-existing
+/// per-file/aggregate counts — the same summary artifact, not a second sidecar. See
+/// [`crate::remap`] for the schema and its `Declared`-and-stays-`Declared` guarantee posture.
 #[derive(Debug, Clone, Serialize)]
 pub struct BatchSummary {
     pub files: Vec<FileSummary>,
     pub totals: Totals,
+    pub remap: RemapManifest,
 }
 
 /// The combined `union.gap.json` artifact: every [`Gap`] from every file in the batch, plus the
@@ -153,7 +160,12 @@ pub fn transpile_batch(files: &[PathBuf]) -> (Vec<FileResult>, Vec<(PathBuf, Str
 }
 
 /// Build the [`BatchSummary`] + [`UnionGapReport`] artifacts from a batch's [`FileResult`]s.
-pub fn summarize(results: &[FileResult]) -> (BatchSummary, UnionGapReport) {
+///
+/// `root` is the batch's discovery root (the same path passed to [`discover_rs_files`]/
+/// [`output_rel_path`]) — threaded through so [`BatchSummary::remap`]'s `phylum` header (M-1044)
+/// can derive the source-crate/target-phylum names the same way the rest of the batch pipeline
+/// derives paths, without re-deriving it from scratch per file.
+pub fn summarize(results: &[FileResult], root: &Path) -> (BatchSummary, UnionGapReport) {
     let mut files = Vec::with_capacity(results.len());
     let mut all_gaps: Vec<Gap> = Vec::new();
 
@@ -192,8 +204,14 @@ pub fn summarize(results: &[FileResult]) -> (BatchSummary, UnionGapReport) {
         category_counts: category_counts.clone(),
     };
 
+    let remap = build_remap_manifest(results, root);
+
     (
-        BatchSummary { files, totals },
+        BatchSummary {
+            files,
+            totals,
+            remap,
+        },
         UnionGapReport {
             gaps: all_gaps,
             category_counts,
