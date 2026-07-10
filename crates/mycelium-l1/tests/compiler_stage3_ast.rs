@@ -560,7 +560,9 @@ fn ast_myc_classifies_every_item_variant() {
     let object_ctor = "Object(OD(Private, \"O\", Nil, Ctr(\"O\", Nil), Nil, Nil, Nil))";
     let lower_ctor = "Lower(LD(\"L\", Nil, LRExpr(sample_expr())))";
     let derive_ctor = "Derive(DD(\"D\", sample_typeref()))";
-    let inherent_ctor = "InherentImpl(IID(sample_typeref(), Nil))";
+    // DN-103 / M-1026: IID carries the impl-level type-parameter slot (unbounded names) first; `Nil`
+    // here is the plain M-664 block (no impl-level generics).
+    let inherent_ctor = "InherentImpl(IID(Nil, sample_typeref(), Nil))";
     run_enum_table(
         "Item",
         "classify_item",

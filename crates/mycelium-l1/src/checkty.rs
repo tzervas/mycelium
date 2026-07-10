@@ -14,8 +14,8 @@ use crate::affine::{Tracker, UseOutcome};
 use crate::ambient::AmbientError;
 use crate::ast::{
     Arm, BaseType, DeriveDecl, Expr, FnDecl, FnSig, Hypha, ImplDecl, Item, Literal, LowerDecl,
-    Nodule, ObjectDecl, Paradigm, Param, Path, Pattern, Phylum, Scalar, Sparsity, Strength,
-    TraitRef, TypeDecl, TypeRef, UsePath, WidthRef,
+    Nodule, ObjectDecl, Paradigm, Param, ParamKind, Path, Pattern, Phylum, Scalar, Sparsity,
+    Strength, TraitRef, TypeDecl, TypeParam, TypeRef, UsePath, WidthRef,
 };
 
 /// The checker's **explicit expression-nesting budget** (the "banked guard 4" discipline; A4-02).
@@ -1369,7 +1369,43 @@ fn check_phylum_inner(phylum: &Phylum, matured_scope: bool) -> Result<PhylumEnv,
                 // never-silent gap to close (G2). Behaviour pinned by
                 // `inherent_impl_on_an_unknown_for_ty_is_accepted_in_v0` (tests/check.rs).
                 Item::InherentImpl(id) => {
-                    for m in id.methods {
+                    // DN-103 §6: a self-duplicate WITHIN the impl-level slot itself
+                    // (`impl[T, T] Foo[T] { … }`) is refused independent of method count — the
+                    // per-lifted-method check below rides each method's combined param list, so a
+                    // zero-method block would miss it. Mirror the standalone `TypeDecl`/`LowerDecl`
+                    // slot-duplicate refusal here (never silent — G2).
+                    if let Some(dup) = first_duplicate(&id.params) {
+                        return Err(CheckError::new(
+                            "impl",
+                            format!(
+                                "duplicate type parameter `{dup}` in an impl-level slot \
+                                 `impl[…]` (DN-103 / M-1026; never silent — G2)"
+                            ),
+                        ));
+                    }
+                    // DN-103 / M-1026 / ENB-3: an impl-level generic slot (`impl[T] Foo[T] { … }`)
+                    // prepends its params to each lifted method's own `fn` type-parameters, so the
+                    // method becomes an ordinary generic free function — monomorphization then reuses
+                    // the existing fn-generics path with zero new mono code (KC-3/DRY). A duplicate
+                    // between an impl param and a method's own param is caught by the existing
+                    // duplicate-type-parameter check on the lifted sig (never silent — G2). For the
+                    // plain M-664 block (`id.params` empty) this is the identity — methods lift
+                    // verbatim exactly as before.
+                    let impl_tps: Vec<TypeParam> = id
+                        .params
+                        .iter()
+                        .map(|name| TypeParam {
+                            name: name.clone(),
+                            kind: ParamKind::Type,
+                            bounds: Vec::new(),
+                        })
+                        .collect();
+                    for mut m in id.methods {
+                        if !impl_tps.is_empty() {
+                            let mut params = impl_tps.clone();
+                            params.extend(m.sig.params);
+                            m.sig.params = params;
+                        }
                         items.push(Item::Fn(m));
                     }
                 }

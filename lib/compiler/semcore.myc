@@ -2031,13 +2031,15 @@ fn imd_for_ty(i: ImplDecl) => TypeRef =
 fn imd_methods(i: ImplDecl) => Vec[FnDecl] =
   match i { ImD(_, _, _, m) => m };
 
-type InherentImplDecl = IID(TypeRef, Vec[FnDecl]);
+// DN-103 / M-1026: first field is the impl-level type-parameter slot (unbounded names, Nil for the
+// plain M-664 block). The desugar-prepend is Rust-only (pre-desugared before this mirror runs).
+type InherentImplDecl = IID(Vec[Bytes], TypeRef, Vec[FnDecl]);
 
 fn iid_for_ty(i: InherentImplDecl) => TypeRef =
-  match i { IID(f, _) => f };
+  match i { IID(_, f, _) => f };
 
 fn iid_methods(i: InherentImplDecl) => Vec[FnDecl] =
-  match i { IID(_, m) => m };
+  match i { IID(_, _, m) => m };
 
 // ViaDecl: mirrors ast.rs::ViaDecl field-for-field (field_idx, trait_name, trait_args). No accessor —
 // `collect_tuple_arities_item`'s Object arm does NOT walk `via_decls` (a dead field, kept only so
