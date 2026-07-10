@@ -29,6 +29,7 @@ mod mono;
 mod mono_tag;
 mod nodule;
 mod parse;
+mod reveal;
 mod substrate;
 mod totality;
 mod usefulness;
