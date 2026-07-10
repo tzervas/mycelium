@@ -4,8 +4,8 @@
       "file": "crates/mycelium-std-dense/src/lib.rs",
       "line": 1,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "InnerAttr",
+      "rust_construct": "InnerAttr",
       "snippet": "# ! [forbid (unsafe_code)]",
       "reason": "crate/file-level inner attributes (#![...]) are not transpiled (no nodule-header equivalent for these Rust-specific directives)",
       "item_name": null
@@ -214,8 +214,9 @@
   "category_counts": {
     "Impl": 5,
     "Import": 2,
+    "InnerAttr": 1,
     "MultiStmtBody": 1,
-    "Other": 8,
+    "Other": 7,
     "PayloadVariant": 1,
     "Struct": 3,
     "TestItem": 1

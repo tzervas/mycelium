@@ -47,15 +47,17 @@
     {
       "file": "crates/mycelium-std-content/src/lib.rs",
       "total_items": 17,
-      "non_test_items": 16,
+      "non_test_items": 12,
       "emitted": 2,
       "gaps": 18,
-      "expressible_pct": 12.5,
+      "expressible_pct": 16.666666666666664,
       "category_counts": {
         "DeriveAttr": 2,
         "GenericBound": 1,
         "Import": 5,
-        "Other": 9,
+        "InnerAttr": 1,
+        "ModuleDecl": 4,
+        "Other": 4,
         "TestItem": 1
       }
     },
@@ -76,17 +78,19 @@
   ],
   "totals": {
     "total_items": 40,
-    "non_test_items": 35,
+    "non_test_items": 31,
     "emitted": 7,
     "gaps": 43,
-    "expressible_pct": 20.0,
+    "expressible_pct": 22.58064516129032,
     "category_counts": {
       "DeriveAttr": 7,
       "GenericBound": 1,
       "Impl": 7,
       "Import": 9,
+      "InnerAttr": 1,
+      "ModuleDecl": 4,
       "NamedFieldDrop": 2,
-      "Other": 10,
+      "Other": 5,
       "Struct": 2,
       "TestItem": 5
     }

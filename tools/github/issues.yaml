@@ -12977,6 +12977,25 @@ issues:
       port surface in controlled phases (per-phase minting, mitigation #1), each folding lessons back
       into the transpiler; reconcile with rwr's M-947..M-957 at Phase-II.
 
+      PHASE-2 OPENED (2026-07-10, status stays in-progress; DN-34 SS8.19, Empirical): ran the ladder's
+      first WHOLE-CORPUS profile (mycelium-transpile over crates/: 337 files, 0 parse failures, 5472
+      items, 573 emitted) -- the Phase-2 mandate to expand beyond the 17-target port surface. Verify-first
+      profiling of the opaque Other bucket (37.8% of all gaps) surfaced a taxonomy category error: 267
+      bodyless `mod foo;` decls (file-linkage, not translatable surface -- nodule-per-file makes the module
+      tree implicit; sibling file transpiles as its own nodule) and 58 crate-level inner attributes (`#![..]`,
+      not syn::Items). Added two honest Category variants (ModuleDecl, InnerAttr); ModuleDecl is excluded
+      from the expressible-fraction denominator exactly as TestItem is (recorded not dropped, G2; not counted
+      against coverage). Inline `mod {..}` (dropped body) stays a counted Other gap (VR-5: only non-surface
+      is excluded). Metric effect (never-silent): whole-corpus Other 2245 -> 1924; expressible 10.8% ->
+      11.3%; on the committed 17-target manifest union expressible 13.4% -> 14.1% and checked_fraction 7.8%
+      -> 8.2% with the numerator UNCHANGED (59 clean items) -- the whole move is the tighter denominator, no
+      emission added/upgraded. Files: crates/mycelium-transpile/src/{gap,transpile}.rs + a taxonomy test
+      module; gen/myc-drafts/ manifest regenerated. Phase-2 residual worklist (recorded, G2): Import (1085,
+      18.3% -- the cross-nodule symbol-table prerequisite, the largest remaining automation lever, its own
+      future wave), Impl (578), DeriveAttr (497, mostly language-surface), Struct (423); plus a path-qualified
+      batch-output layout as the whole-corpus-completeness follow-on (a naive whole-crates run overwrites
+      same-stem outputs -- never-silently but lossily).
+
   - id: M-1007
     title: "semcore Stage-5 increment 2: checkty type algebra (has_var/type_head/subst_ty/param_subst)"
     milestone: "Phase 5 — Self-Hosting & Core Library"

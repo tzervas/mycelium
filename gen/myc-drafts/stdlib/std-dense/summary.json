@@ -10,8 +10,9 @@
       "category_counts": {
         "Impl": 5,
         "Import": 2,
+        "InnerAttr": 1,
         "MultiStmtBody": 1,
-        "Other": 8,
+        "Other": 7,
         "PayloadVariant": 1,
         "Struct": 3,
         "TestItem": 1
@@ -27,8 +28,9 @@
     "category_counts": {
       "Impl": 5,
       "Import": 2,
+      "InnerAttr": 1,
       "MultiStmtBody": 1,
-      "Other": 8,
+      "Other": 7,
       "PayloadVariant": 1,
       "Struct": 3,
       "TestItem": 1

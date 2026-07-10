@@ -12,6 +12,30 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### feat(transpile): M-1006 Phase-2 opens — whole-corpus profile + honest file-linkage taxonomy (2026-07-10)
+
+Opens the M-1006 ladder's Phase-2 (expand the Rust→Mycelium rip-through beyond the 17-target port
+surface — kickoff `trx2`, E33-1). Ran the transpiler's first **whole-corpus** profile
+(`mycelium-transpile crates/`: 337 files, 0 parse failures, 5,472 items, 573 emitted) and used it to
+correct a gap-taxonomy category error surfaced by verify-first profiling of the opaque `Other` bucket
+(37.8% of all gaps). Two sub-populations there are **not translatable library surface**: bodyless
+`mod foo;` declarations (file-linkage — the module tree is implicit in Mycelium's nodule-per-file
+layout, so the sibling file transpiles as its own nodule) and crate/file-level inner attributes
+(`#![…]`, which are not `syn::Item`s). Added two honest `Category` variants, **`ModuleDecl`** and
+**`InnerAttr`**, and excluded `ModuleDecl` from the expressible-fraction denominator on the identical
+rationale `TestItem` already carries (recorded, never dropped — G2; but not counted against coverage).
+An inline `mod foo { … }` (a dropped real body) stays a counted `Other` gap — VR-5: the denominator
+only ever shrinks by genuinely-non-surface items. **Metric effect (never-silent):** whole-corpus `Other`
+2,245 → 1,924; expressible 10.8% → 11.3%. On the committed `gen/myc-drafts/` 17-target manifest,
+union expressible 13.4% → 14.1% and `checked_fraction` 7.8% → 8.2% — the numerator (59 myc-check-clean
+items) is **unchanged**; the whole move is the tighter, more-correct denominator, no emission added or
+upgraded. Files: `crates/mycelium-transpile/src/{gap,transpile}.rs` plus a data-driven `taxonomy` test
+module; `gen/myc-drafts/` manifest regenerated (deterministic); DN-34 §8.19 records the baseline and the
+Phase-2 residual worklist (`Import` 1,085 = the cross-nodule symbol-table prerequisite, the largest
+remaining automation lever; a path-qualified batch-output layout as the whole-corpus-completeness
+follow-on). Verified: change-scoped `cargo fmt`/`clippy -D warnings`/`test -p mycelium-transpile` green
+(58 tests). Emission `Declared`; vet `Empirical`; DN-34 stays `Draft`.
+
 ### chore: clean-snapshot prep — archives extracted to the `archive` branch, indices regenerated (2026-07-09)
 
 Prep a lean trunk ahead of a promotion: historical archives moved out of the day-to-day tree but
