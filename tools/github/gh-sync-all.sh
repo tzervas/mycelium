@@ -47,11 +47,21 @@ for arg in "$@"; do
   esac
 done
 
-# Resolve a python interpreter (python3 preferred; Termux often has bare `python`).
+# Prefer uv's managed dev venv — tools/github/pyproject.toml declares PyYAML, so `uv run` executes
+# the engine against a reproducible, isolated `.venv` (auto-synced from pyproject.toml + uv.lock)
+# rather than a system-wide PyYAML. `--project "$HERE"` pins the project regardless of the caller's
+# CWD; uv does NOT change directory (same relative-path behavior as the bare-python path below).
+# Fall back to a bare python3 (+ system PyYAML) when uv is absent (minimal CI images / Termux). Both
+# drive the SAME engine (DRY). Set MYC_GH_SYNC_NO_UV=1 to force the bare-python path.
+if [[ "${MYC_GH_SYNC_NO_UV:-0}" != "1" ]] && command -v uv >/dev/null 2>&1 && [[ -f "$HERE/pyproject.toml" ]]; then
+  exec uv run --project "$HERE" python "$HERE/gh-issues-sync.py" "${ENGINE_ARGS[@]}"
+fi
+
+# Fallback: resolve a python interpreter (python3 preferred; Termux often has bare `python`).
 PY=""
 for cand in python3 python; do
   if command -v "$cand" >/dev/null 2>&1; then PY="$cand"; break; fi
 done
-[[ -n "$PY" ]] || { echo "ERROR: no python3/python on PATH" >&2; exit 1; }
+[[ -n "$PY" ]] || { echo "ERROR: no python3/python on PATH (and no uv) — install uv, or python3 + PyYAML" >&2; exit 1; }
 
 exec "$PY" "$HERE/gh-issues-sync.py" "${ENGINE_ARGS[@]}"

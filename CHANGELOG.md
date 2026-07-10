@@ -12,6 +12,394 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### feat(l1): `?` try-operator grammar sugar + type-directed `match` desugar — M-1025 (ENB-2) first increment (2026-07-10)
+
+Closes the **`let`-binder-RHS scope** of the `?` try-operator surface gap (DN-99 register rows #60
+and #52, ENB-2) — the dominant Rust error-propagation shape (`let x = f()?;`) now ports without hand-writing
+a nested `match`. Under the whole-project unfrozen posture (ADR-045). **M-1025 stays `in-progress`**
+(first landable increment; general-position CPS lift flagged below). Design recorded in **Draft DN-102**
+(the maintainer ratifies the v0 scoping and the CPS-lift follow-up — house rule #3, not self-ratified).
+
+- **Surface + lowering, no new kernel node (KC-3).** `Tok::Question` (lexer) parses as a `parse_app`
+  postfix `e?` wrapping the operand in `Expr::Try` (`crates/mycelium-l1/src`); the **checker** desugars
+  `let x = e? in body` — type-directed on `e`'s checked `Result`/`Option` type — to the existing `match`
+  bind (`Ok(x) => body, Err($try_err) => Err($try_err)` resp. `Some(x) => body, None => None`), with the
+  continuation `body` **inside** the binding arm. `Try` never survives checking; elab/eval keep only a
+  defensive never-silent residual.
+- **The design fork, confronted not guessed (DN-102 §2).** Rust's `?` desugars via an early `return` and
+  the never-type `!`; Mycelium has neither (no `return` form; `-> !` deferred, DN-99 #88). The naive
+  local desugar is doubly ill-typed here (`A` vs `Result[A, E]` do not unify). Putting the continuation
+  in the binding arm makes both arms `typeof(body)`, so the propagation arm unifies with **no early
+  return and no never-type** — the sound form.
+- **Never-silent boundary (G2/VR-5).** The error-type unification rule (DN-102 §3) falls out of the
+  `Err($f) => Err($f)` arm — exact-match, **no** `From`-error widening in v0. Every unsupported position
+  is a refusal, never a mis-desugar: a `?` outside a `let`-binder RHS, a repeated `e??`, an ascribed
+  `?`-binder, and a `?` on a non-`Result`/`Option` operand each raise a `CheckError` naming the fix.
+- **`.myc` mirror (DN-26 dual).** `Try(Expr)` is **represented + traversed** across all five self-hosted
+  encoders (`ast`/`semcore`/`parse`/`ambient`/`totality`.myc) and every walker, but the self-hosted
+  lexer/parser does **not** yet PRODUCE it — the `Wrapping` represented-not-produced precedent (FLAG-try-3).
+- **How verified (change-scoped):** `crates/mycelium-l1/tests/try_operator.rs` — 6 behavioural witnesses
+  (`Result` Ok/Err, `Option` Some/None, chained `?`, and a chained short-circuit) each pinned against a
+  hand-`match` twin on **both** the L1-eval leg and the three-way L0 leg (monomorphize -> elaborate ->
+  L0-interp vs the L1 `to_core` projection), plus 4 never-silent reject witnesses. `cargo test -p
+  mycelium-l1 -p mycelium-fmt -p mycelium-lsp` green; `cargo fmt --check` and `cargo clippy -p
+  mycelium-l1 --all-targets -D warnings` clean; `myc check` on the touched `.myc` mirrors green.
+- **Residual (flagged, VR-5/G2):** FLAG-try-1 — the general `?` position (a CPS lift of the enclosing
+  expression) is deferred, gated on the never-type `-> !` / an early-return form (M-1030 / DN-99 #88);
+  FLAG-try-2 — no `From`-error widening (exact error-channel match only); FLAG-try-3 — the `.myc`
+  frontend represents-but-does-not-produce `?` (the `.myc` elab/eval mirror follows the port cadence,
+  DN-26).
+
+### feat(l1): cross-nodule runtime execution via `PhylumEnv::link` — M-1024 (ENB-1) first increment (2026-07-10)
+
+Closes the **runtime-execution** half of cross-nodule symbols (DN-99 register row #41, ENB-1) — the
+runtime dual of the landed check-time resolution (`checkty::resolve_imports`, M-662). Under the
+whole-project unfrozen posture (ADR-045). **M-1024 stays `in-progress`** (first landable increment;
+residual flagged below). Design recorded in **Draft DN-101** (renumbered from DN-100 at integration —
+that number was taken by M-1032's macro-expand DN, which landed on `dev` first; G2, never-silent).
+
+- **`PhylumEnv::link()`** (`crates/mycelium-l1/src/checkty.rs`) folds every nodule's **checked**
+  declarations into **one** linked `Env` the existing `elab`/`mono`/`eval` pipeline consumes unchanged
+  (**KC-3** — no new L0 node; **DRY** — reuses the check-time registry/coherence). Each name is merged
+  from its **home** nodule's checked (authoritative, ambient-resolved) decl, never a less-resolved
+  imported copy — so the linked `Env` is strictly more correct than running a consumer's per-nodule
+  `Env` directly (a phylum-of-one included).
+- **Verify-first (mitigation #14):** **direct** cross-nodule execution *already worked* (undocumented —
+  a consumer's checked `Env` retains its imported `pub` decls with bodies); the stale `check_phylum`
+  doc comment is corrected. The real gap closed here is **transitive** — a `pub` fn whose body calls
+  its home nodule's **private** helper, previously `Stuck "unknown function"` from the per-nodule `Env`.
+- **Never-silent boundary (G2/VR-5):** the v0 flat phylum namespace is one declaration per simple name;
+  a cross-nodule name collision is an explicit `CheckError`, **never a silent winner**. Qualified
+  per-nodule scoping that would *disambiguate* a collision (rather than refuse it) is the flagged
+  **M-982** residual (needs the ratifying DN). No guarantee/emission tag upgraded.
+- **How verified (change-scoped):** `crates/mycelium-l1/tests/phylum_exec.rs` — 6 differential
+  witnesses (direct + transitive vs an inlined single-nodule oracle on the **L1-eval** and
+  **L0-elaborate** legs; the never-silent collision refusal; the without-link `Stuck` control asserting
+  the specific variant; the positive direct-without-link control isolating the "already worked"
+  finding; phylum-of-one backward-compat). `cargo test -p mycelium-l1` green;
+  `cargo fmt --check` + `cargo clippy -p mycelium-l1 --all-targets -D warnings` clean; markdown gate
+  clean.
+- **Residual (flagged, VR-5/G2):** AOT/MLIR parity leg = M-1024 follow-up (interpreter + L0 legs only
+  here — do **not** read as AOT-complete); `.myc` runtime parity = **N/A** (the self-hosted
+  `lib/compiler/*.myc` frontend has no evaluator — gated on M-986/M-987); collision disambiguation →
+  M-982. DN-99 register rows #72/#85 also corrected `tr-only` → `language-enabler` (mitigation #14;
+  DN-34 §8.21; #72 → M-1035, #85 gated on the ENB-1 symbol table).
+
+### fix(l1): add the missing `Wrapping(_)` arm to the `compiler_stage3_ast` test-driver's `classify_expr` (2026-07-10)
+
+Fixes a RED `dev`: 17 failing `ast_myc_*` tests in `crates/mycelium-l1/tests/compiler_stage3_ast.rs`.
+The #1355 `Wrapping` Expr-variant port (M-1013/M-791) correctly added `| Wrapping(Expr)` to
+`lib/compiler/ast.myc::Expr` (between `Spore` and `Consume`, mirroring `ast.rs::Expr`'s declaration
+order) — but this test file's embedded `.myc` driver prelude (`driver_prelude()`'s `classify_expr`
+helper, appended to every `program_with_prelude` fixture) still had an 18-arm match, so the
+self-hosted checker's exhaustiveness gate (`myc check`: "non-exhaustive match on Expr: missing
+Wrapping(_)") failed on every test that pulls in the shared prelude — not just the one test that
+directly exercises `Expr` classification. Root cause was a completeness gap in the test harness, not
+in `ast.myc` itself (`myc-check` on `ast.myc` is green both before and after this change). Fix: added
+`Wrapping(_) => 0b00000000000000000000000000010010` (18) between the existing `Spore` (7) and
+`Consume` (8) arms, positioned to mirror the oracle's declaration order for readability but given a
+**new, unused** code (18, the next free value) rather than renumbering `Consume..TupleLit` — since
+`ast_myc_classifies_every_expr_variant` hard-codes expected classification codes 0–17 for the other 18
+variants and does not (yet) assert a value for `Wrapping` itself; renumbering would have silently
+changed those tests' semantics for no reason (VR-5 — preserve what's already checked). Verified:
+`cargo test -p mycelium-l1 --test compiler_stage3_ast` 26/26 green (was 9 passed/17 failed);
+`cargo test -p mycelium-l1` full suite green, no regressions; `myc check lib/compiler/ast.myc` clean;
+`cargo fmt --check` and `cargo clippy -p mycelium-l1 --all-targets -D warnings` clean. (M-1013/M-791;
+VR-5/G2.)
+
+### feat(transpile): trx increment — reclassify DN-99 #72 as an L1-enabler gap, DN-100 macro pre-pass DN, #1349 FLAG fixes (2026-07-10)
+
+A transpiler-track increment toward the zero-hand-port north star (kickoff `trx`, lane
+`crates/mycelium-transpile` + DN-100/DN-34 only). **Emission stays `Declared` (VR-5); the transpiler
+classifies more honestly, never upgrades a guarantee tag.** Verify-first (mitigation #14) profiling of
+DN-99 Track B's "trivial B1" literal-pattern closures against the real `myc check` oracle (whole
+`crates/` corpus, 337 files) showed the B1 ranking wrong for a `checked_fraction` win, so the honest
+outcome is a **0.00pp** metric change (checked_fraction 3.8% = 191/5061, expressible 11.3% = 573/5061,
+both unchanged from the #1349 baseline):
+
+- **DN-99 #72 (string-literal `match` pattern) reclassified transpiler-only → LANGUAGE-ENABLER.** The
+  L1 checker categorically rejects a `match` on a `Bytes` scrutinee (`match scrutinee must be a data,
+  Binary, or Ternary type, got Bytes` — verified against the oracle), so emitting the faithful surface
+  produces parse-clean but check-*failing* `.myc` (a regression). `emit.rs` now gaps it **never-silently
+  (G2)** with a precise reason naming the L1 enabler and citing the exact diagnostic — a transparency
+  improvement over the prior generic message, **still gapped, zero metric change** — pinned by
+  `string_literal_pattern_gaps_with_l1_enabler_reason`.
+- **DN-99 #85 (byte-literal pattern) correctly NOT landed.** It is genuinely transpiler-only and
+  myc-check-clean in isolation, but its sole corpus occurrence (`is_ident_byte`) co-locates an
+  unknown-prim method call the desugar emits blindly (a pre-existing VR-5/G2 defect needing a symbol
+  table), so landing it would regress the file-gated metric. Shipping a regression contradicts the
+  raise-`checked_fraction` mandate.
+- **DN-100 (Draft)** added — the toolchain DN for **M-1032 / ENB-9** macro expand-first pre-pass:
+  whole-corpus macro profile (82 invocations, 18 files, ~93% custom `macro_rules!`), honest ROI (an
+  expressibility lever with an uncertain `checked_fraction` effect), 4 alternatives, a ranked
+  recommendation (opt-in `cargo expand` and a std-macro shim), and a DoD. Enacts nothing; **not
+  self-ratified** (maintainer ratifies).
+- **#1349 residual FLAG fixes:** `manifest_gen.py` semcore denominator now excludes `ModuleDecl` as well
+  as `TestItem` (matching `gap.rs::Category::excluded_from_denominator`, M-1006 Phase-2, so the semcore
+  single-file path and the stdlib batch path compute the identical denominator); `vet.rs` denominator
+  prose corrected to "non-excluded"; DN-34 **§8.19** count 267→264 (its own arithmetic 5323−5059=264),
+  **§8.20** "~25 files"→112 clobbered across 25 stem-groups, and new **§8.21** records the profiling
+  finding.
+
+**Two FLAGs filed for the language lane:** **FLAG-L1-match-Bytes** → new issue **M-1035** (ENB-12,
+E28-1, area:language P2 — L1 `match` on a `Bytes` scrutinee, unblocks #72 and every string-`match` port
+target); **FLAG-tr-unknown-prim** → subsumed by **M-1024** (ENB-1 cross-nodule symbol resolution, in
+flight — a known-prim symbol table closes it), cross-referenced in its body (no duplicate issue,
+mitigation #14). Change-scoped green: `cargo fmt --check`, `cargo clippy -p mycelium-transpile -D
+warnings`, `cargo test -p mycelium-transpile`, `scripts/checks/markdown.sh`, `doc_refs_check.py`.
+(kickoff `trx`; PR #1359; DN-34 §8.21 / DN-99 #72,#85 / DN-100; VR-5 / G2 / house rule #4.)
+
+### docs(adr-045): Bucket-B descriptive freeze-doc sweep — correct stale "frozen" claims to the unfreeze (2026-07-10)
+
+Lands the **Bucket-B** follow-on FLAGged by the ADR-045 ratification entry below: a purely
+**descriptive** (append-only) correction of prose that still described the kernel/L0/L1/lexicon as
+FROZEN, now pointing at the ratified **whole-project unfreeze** (**ADR-045**, Accepted 2026-07-10).
+No Accepted/Enacted decision body is rewritten and no status is changed — only framing text and new
+forward-reference pointers are added. Touches: **`docs/CURRENT-STATE.md`** (the "Kernel FROZEN"
+status paragraph, the `frz`-kickoff historical note, and the kernel-freeze-condition-#3 open-decision
+note — all now read "unfrozen for the ADR-045 gap-closure window; end-state (ADR-042) unchanged;
+re-freeze bounded by the DN-99 worklist"); **`README.md`** (a new direction-note paragraph under the
+ADR-042/ADR-043 blurb recording the temporary unfreeze); the **25** `mycelium-std-*` crates' DN-66
+"Stability" doc-comment headers (comment-only additions — zero code
+changed, verified by diff and `cargo fmt --check`), each gaining a paragraph noting the DN-66 freeze
+is lifted for the window per ADR-045 while the "spec amendment + changelog entry, not a silent edit"
+discipline (G2) holds; **`.claude/memory/lang-lexicon-syntax.md`** and
+**`.claude/memory/language-execution.md`** (the L0-layer-cake "frozen" references — the unrelated
+`hash-frozen`/migration-verdict senses of "frozen" elsewhere in these files are deliberately
+untouched, out of scope); and an append-only **RFC-0001** footnote (following the existing
+RFC-0034/ADR-032 footnote precedent) recording the L0-floor freeze lift without touching the RFC's
+r0–r5 decision history. Verified: `git diff` confirms every crate-header change is a `//!` line
+addition only (no code); `cargo fmt --check` clean on all 25 touched crates. (ADR-045 Bucket-B;
+VR-5/G2/house rule #3.)
+
+### docs(adr-045): ratify the whole-project unfreeze for early gap-closure (Draft → Accepted) (2026-07-10)
+
+Ratifies **ADR-045 — Whole-Project Unfreeze (L0 Core IR → L1 kernel → L2/L3 grammar → stdlib lexicon) for
+Early Gap-Closure** (Draft → **Accepted**, maintainer-directed 2026-07-10). Broadens the original
+kernel+lexicon Draft to the **whole project** and resolves its three scoping questions: **OQ-1** L0 Core IR
+(RFC-0001) **in scope** (overriding the Draft's keep-L0-frozen lean — recorded per house rule #4, not
+erased); **OQ-2** L2/L3 surface grammar **in scope**; **OQ-3** the window is bounded by the **DN-99 residual
+worklist** (the 4 open + 12 partial register rows, tracked as the M-1024…M-1034 `enb` backlog under E28-1)
+exhausted, a DN-56/DN-76-successor scorecard re-scored green, and a follow-up maintainer-ratified ADR
+reinstating the DN-39-only diff policy — re-score owner the maintainer. Landed-basis: maintainer-ratified
+whole-project unfreeze, 2026-07-10. Applies the append-only cascade (Bucket-A/E): dated "Amended by ADR-045
+(Accepted)" status pointers on **ADR-042 §2.1(a)**, **DN-56 §9/§6**, **DN-66 §2** (decision bodies
+unchanged), and records RFC-0001's L0-floor lift; the ADR-042 §2.1(b) END-STATE (zero foreign first-party
+languages, kernel included) plus the DN-39 TCB-admission boundary plus the never-silent/honesty discipline
+are all **retained**. **`Accepted → Enacted` is withheld** — the §2.4 re-freeze conditions are not met (the
+window is open). The Bucket-B descriptive sweep (`CURRENT-STATE.md`, `README.md`, ≈25 std-crate "DN-66
+freeze" headers, `.claude/memory/*`, an RFC-0001 footer) is FLAGged as a coordinated follow-on PR. (ADR-045;
+amends ADR-042 / DN-56 / DN-66 for the window; RFC-0001 L0-floor lift recorded; VR-5 / G2 / house rules #3/#4/#5.)
+
+### docs(dn-99): surface-gap closure register + plan for the spw / RFC-0031 stdlib-port wave (2026-07-10)
+
+Adds **DN-99 — Surface-Gap Closure Register and Plan** (Draft), the single closure register for the
+`spw` stdlib-port wave: 92 enumerated surface gaps, each with a status
+(open/partial/already-closed/transpiler-only/idiom), an `Empirical` evidence cite
+(`file:line` / `M-id` read against dev tip `6d906b76`), a layer, a closure approach, a DoD, a DN-flag,
+a tracking ref, a semcore-lane collision class, a size, and a priority. Foregrounds the already-closed
+set (§3) so landed work is not re-opened — the Float correction (ADR-040 Enacted 2026-07-02; `flt.*`
+prims registered) refutes the stale ".myc has no float surface" flag (mitigation #14). Ranks a two-track
+closure plan (§4) toward the zero-hand-port north star: language `enb` closures (grammar/kernel/runtime)
+and transpiler closures, under the whole-project unfrozen posture (ADR-045). Attests completeness
+honestly (§5): one targeted spot-verify round; residual uncertainty `Declared`, never claimed `Proven`.
+The §8 `enb` backlog is filed as **M-1024…M-1034** under epic E28-1 — each cross-references M-1023's
+Wave-0 consolidation, and those touching `mycelium-l1` note "cloud-semcore-lane, coordinate M-1013"
+(unfrozen-actionable, not deferred-by-freeze). Enacts nothing; moves no other doc's status. Authored
+READ + DN only. (DN-99; RFC-0031; E28-1; VR-5 / G2 / house rule #3.)
+
+### fix(semcore): complete the `Wrapping` Expr-variant port across the self-hosted `.myc` frontend (2026-07-10)
+
+Closes a pre-existing transparency gap in the self-hosted compiler. `ast.rs::Expr` has 19 variants
+including `Wrapping(Box<Expr>)` (the M-791 wrapping-arithmetic opt-in), but the five `.myc` compiler
+nodules (`ast`/`ambient`/`totality`/`parse`/`semcore`.myc) each declared an 18-variant `Expr` with
+`Wrapping` absent — while `semcore.myc` claimed to mirror `ast.myc::Expr` "verbatim, field-for-field."
+That claim was false and the omission carried no FLAG (surfaced under house rule #4). This change adds
+`| Wrapping(Expr)` between `Spore` and `Consume` (matching the Rust variant order) in all five `Expr`
+decls, and a `Wrapping` arm to every exhaustive Expr-walker — so the type now genuinely mirrors the
+reference AST and every traversal handles the variant (wildcard-free; a future variant is still a
+`myc check` error, G2). Most walkers recurse into the single child exactly like `Consume` (`resolve_expr`,
+`collect_calls_expr`, `descend_walk`, `collect_tuple_arities_expr`, `fvw`); `print_expr` renders the
+block surface `wrapping { <expr> }`; the `walk_expr` structural fingerprint uses a NEW unused tag
+(`0x6E`, identical in `parse.myc` and `ambient.myc`) so no existing Stage-4 fingerprint hash shifts.
+**One non-mechanical arm — `grade`:** `wrapping { … }` attests **`Declared`** as a leaf (RFC-0034 §10 —
+the enclosed modular ops are the developer's explicit opt-in, never upgraded past that basis), matching
+`Spore`/`Wild` and the Rust `Expr::Wrapping(_) => Declared` — it does NOT inherit the body's grade the
+way the grade-transparent `Consume` move does. The `compiler_stage5_freevars` differential gains a
+`Wrapping` fixture (`free_vars(wrapping { x }) == ["x"]`) pinning the `fvw` arm against the live
+`mono::free_vars` oracle. **Never-silent remaining work (FLAG-semcore-37 / FLAG-parse-12 / FLAG-ast-9):**
+the self-hosted lexer/parser does not yet *produce* a `Wrapping` node (no `wrapping` keyword in
+token/lex, no parse rule) — the AST is deliberately ahead of the surface; parsing `wrapping { e }` is
+deferred. The five-way `Expr` (and keyword/token) duplication this touch exercised is flagged for a
+future DRY decision. Verified: `myc-dogfood --strict` green (9/9 nodules), `cargo test -p mycelium-l1
+--lib` green (471 passed), `clippy -D warnings` + `cargo fmt` clean, `markdown` gate clean. Graded
+`Empirical`. (M-1013 / M-791; E18-1; RFC-0034 §10; VR-5/G2.)
+
+### feat(transpile): M-1006 Phase-2 — path-qualified batch output (whole-corpus-completeness) (2026-07-10)
+
+Lands the whole-corpus-completeness follow-on noted in DN-34 §8.19 (kickoff `trx2`, E33-1). The
+transpiler's directory/batch mode named each output by **file stem only**, so a whole-`crates/` run had
+every crate's `lib.rs`/`mod.rs`/`error.rs` overwrite the previous one — last-writer-wins, loudly warned
+but **lossy** (~25 of 337 files clobbered), which blocked keeping every emission in an automated
+multi-crate translation wave. Outputs are now **path-qualified** by mirroring the source tree under the
+out-dir (a file's path relative to the batch root becomes its output path — `mycelium-core/src/lib.myc` vs
+`mycelium-std/src/lib.myc`), injective by construction so the collision cannot occur. The `crates/` run now
+writes all **337** `.myc` files with **zero** collision warnings. Zero committed churn: the 17
+`gen/myc-drafts/` targets are flat single-crate `src/` dirs, so their mirrored path reduces to the bare
+stem — byte-identical to the prior flat naming. Files: the `mycelium-transpile` CLI bin plus a pure,
+unit-tested `batch::output_rel_path`; DN-34 §8.20. Emission-plumbing only — no transpilation
+logic, metric, or guarantee tag moves (emission stays `Declared`). Verified: change-scoped `cargo fmt` /
+`clippy -D warnings` / `test -p mycelium-transpile` green (63 tests, +5 for `output_rel_path`).
+
+### feat(transpile): M-1006 Phase-2 opens — whole-corpus profile + honest file-linkage taxonomy (2026-07-10)
+
+Opens the M-1006 ladder's Phase-2 (expand the Rust→Mycelium rip-through beyond the 17-target port
+surface — kickoff `trx2`, E33-1). Ran the transpiler's first **whole-corpus** profile
+(`mycelium-transpile crates/`: 337 files, 0 parse failures, 5,472 items, 573 emitted) and used it to
+correct a gap-taxonomy category error surfaced by verify-first profiling of the opaque `Other` bucket
+(37.8% of all gaps). Two sub-populations there are **not translatable library surface**: bodyless
+`mod foo;` declarations (file-linkage — the module tree is implicit in Mycelium's nodule-per-file
+layout, so the sibling file transpiles as its own nodule) and crate/file-level inner attributes
+(`#![…]`, which are not `syn::Item`s). Added two honest `Category` variants, **`ModuleDecl`** and
+**`InnerAttr`**, and excluded `ModuleDecl` from the expressible-fraction denominator on the identical
+rationale `TestItem` already carries (recorded, never dropped — G2; but not counted against coverage).
+An inline `mod foo { … }` (a dropped real body) stays a counted `Other` gap — VR-5: the denominator
+only ever shrinks by genuinely-non-surface items. **Metric effect (never-silent):** whole-corpus `Other`
+2,245 → 1,924; expressible 10.8% → 11.3%. On the committed `gen/myc-drafts/` 17-target manifest,
+union expressible 13.4% → 14.1% and `checked_fraction` 7.8% → 8.2% — the numerator (59 myc-check-clean
+items) is **unchanged**; the whole move is the tighter, more-correct denominator, no emission added or
+upgraded. Files: `crates/mycelium-transpile/src/{gap,transpile}.rs` plus a data-driven `taxonomy` test
+module; `gen/myc-drafts/` manifest regenerated (deterministic); DN-34 §8.19 records the baseline and the
+Phase-2 residual worklist (`Import` 1,085 = the cross-nodule symbol-table prerequisite, the largest
+remaining automation lever; a path-qualified batch-output layout as the whole-corpus-completeness
+follow-on). Verified: change-scoped `cargo fmt`/`clippy -D warnings`/`test -p mycelium-transpile` green
+(58 tests). Emission `Declared`; vet `Empirical`; DN-34 stays `Draft`.
+
+### build(checks): auto-reflow the MD004 soft-wrap `+`/`*`-at-line-start pitfall (`just md-fix`) (2026-07-10)
+
+The recurring MD004 false-positive — prose that soft-wraps so a `+`/`*` operator lands at line start,
+which `markdownlint` reads as a list item and fails the `markdown` gate (CLAUDE.md §"Markdown
+authoring") — now has a safe automated fix. `scripts/checks/md_wrap_fix.py` (invoked via **`just
+md-fix`** and a `repo: local` pre-commit hook) is **findings-driven**: it asks `markdownlint` for the
+exact MD004 lines and reflows only those, lifting the flagged marker off line-start (behaviour-neutral
+for prose — the wrapped and reflowed forms render identically). It is safe by construction: a green doc
+is a no-op (verified across all 459 tracked docs), so a legitimately-`+`-listed doc such as DN-15 is
+untouched; and it **reports, never rewrites,** any finding that resembles a real list (the previous
+line is a list intro or item, or the next line is another item at the same marker). `markdownlint
+--fix` is deliberately NOT used — it normalizes marker *style*, so under the repo's `consistent` MD004
+it rewrites genuine `-` lists to match the prose-wrap marker (verified: a real `-` list became a `+`
+list), i.e. a green gate over corrupted content. The `markdown` gate's failure message now points at
+`just md-fix`, and the CLAUDE.md pitfall note documents the tool. Verified: the fixer reflows a planted
+`+` wrap and re-greens the doc, leaves a colon-introduced `+` list for manual review, and is a no-op on
+the whole corpus; `ruff check`/`ruff format` clean. (Tooling/DX; VR-5/G2.)
+
+### E18-1 semcore self-hosting — Stage-5 continues: M-1013 checkty PR-3 (`subst_type_param_in_typeref`) (2026-07-10)
+
+The M-993 staged port of `lib/compiler/semcore.myc` advances one increment: `checkty.rs`'s
+**`subst_type_param_in_typeref`** — the DN-54 §10 Model-A rule-instantiation substitution (M-973) that
+replaces a rule's type parameter with a concrete `TypeRef` throughout a `TypeRef`, differential-
+witnessed via the DN-26 §10.2 harness-marshalling method (the real Rust oracle vs. the `.myc` port,
+decoded and compared with Rust's own derived `==`) and green under native `myc check`. A bare nullary
+`Named(param, [])` occurrence becomes the concrete type's base, keeping the occurrence's own guarantee
+where written and otherwise inheriting the concrete's — the `tr.guarantee.or(concrete.guarantee)`
+first-Some-wins merge, ported as the `strength_or` helper; every structural form (`Named` arguments,
+`Seq` element, `Fn` arrow, `Tuple` elements) recurses; the repr / `Substrate` / `Bytes` / `Float` /
+VSA / dense / `Ambient` atoms carry no nested type-name and clone verbatim. The port is a complete,
+wildcard-free 12-arm `BaseType` match (a future `BaseType` variant is a `myc check` error, never a
+silent pass-through; G2), and like the Rust oracle it takes no recursion budget (the `subst_ty`
+structural-substitution precedent). No new FLAG: `BaseType` is already a field-for-field mirror, the
+Rust `if name == param && args.is_empty()` guard is expressed one level at a time (the single-level
+pattern convention), and the argument-list recursion reuses the direct-recursive-map idiom
+(FLAG-semcore-5, no generic `map`). The Rust oracle was widened `pub(crate)` (zero logic change) for the
+differential. The gate extends `crates/mycelium-l1/src/tests/compiler_stage5_tyref.rs` (now 11 tests)
+with `subst_type_param_in_typeref_cases` (19 cases: every `BaseType` arm; the four guarantee-merge
+corners of bare/bare, occurrence-tagged, concrete-tagged, both-tagged; the guard's negative corners of
+nullary-miss and applied-`name == param`; and nested-guarantee preservation) plus a
+`subst_marshal_discriminates` non-vacuity twin. This is the first Stage-5 differential to marshal a
+guarantee-bearing `TypeRef` on the INPUT side (the shared `encode_typeref` discards the slot), so it
+adds a guarantee-threading `enc_tr` encoder; the output guarantee is already checked by the file's
+`decode_typeref`. Verified: `cargo test -p mycelium-l1 --lib` green (469 → 471 passed), `clippy -p
+mycelium-l1 --tests -D warnings` clean, `cargo fmt` clean, `myc-dogfood --strict` green (all 9
+self-hosted nodules). Graded `Empirical` (differential agreement); DN-26 stays **Draft** (→ Resolved
+with M-741). Unlocks the DN-54 `subst_type_param_in_{sig,expr,impl}` family as the next rungs.
+(M-993/M-1013 checkty PR-3; E18-1; DN-26; DN-54; VR-5/G2.)
+
+### E18-1 semcore self-hosting — Stage-5 continues: M-1013 checkty PR-2 (two pure checkty classifiers) (2026-07-10)
+
+The M-993 staged port of `lib/compiler/semcore.myc` advances one increment: two PURE `checkty.rs`
+classifiers, each differential-witnessed via the DN-26 §10.2 harness-marshalling method (the real Rust
+oracle vs. the `.myc` port, decoded and compared with Rust's own derived `==`) and green under native
+`myc check`. **`paradigm_name`** (checkty.rs 7175-7197) — the swap-paradigm name of a representation
+type (`Binary`/`Ternary`/`Dense`/`VSA`, `None` for every other `Ty`) — ports as a flat 11-arm match
+with every arm enumerated explicitly (no wildcard, so a future `Ty` variant must force a paradigm
+decision rather than fall silently to `None`; G2). **`cons_list_ctors`** (checkty.rs 3592-3624), the
+two-constructor linked-list recognizer (one nullary "nil"; one binary "cons" whose second field is the
+recursive `Data(name, ..)` self-reference at the type's own arity), ports as a threaded fold
+(`cons_list_scan`) that reads the type registry through the already-established FLAG-semcore-4
+`Vec[DataInfo]` assoc-list (`types_lookup` standing in for `BTreeMap`). Neither adds a NEW
+surface-inexpressibility: `paradigm_name` uses the standard `&'static str`→`Bytes` idiom, and
+`cons_list_ctors` reuses the existing assoc-list registry convention. Both Rust oracles were widened
+`pub(crate)` (zero logic change) for the differential. The new gate
+(`crates/mycelium-l1/src/tests/compiler_stage5_classify.rs`, 5 tests) builds its `DataInfo` fixtures by
+extracting them from a parsed + checked `env.types` (never hand-built, so a marshalling bug cannot hide
+behind a hand-typed mismatch); it covers all 11 `paradigm_name` arms plus 11 `cons_list_ctors` shapes
+(match, arity-parametric match, wrong-second-field, different-data-second-field, three-ctor, one-ctor,
+missing name, non-`Data`, the one-field and three-plus-field scan paths, and the no-nullary
+`(None, Some)` / `(None, None)` finals), with a non-vacuity `*_discriminates` twin per direction. A
+three-lens adversarial review (faithfulness, coverage, honesty) found no divergence from the oracle.
+Verified: `cargo test -p mycelium-l1 --lib` green (464 → 469 passed), `clippy -p mycelium-l1 --tests -D
+warnings` clean, `cargo fmt` clean, `myc-dogfood --strict` green (all 9 self-hosted nodules). Graded
+`Empirical` (differential agreement); DN-26 stays **Draft** (→ Resolved with M-741). (M-993/M-1013
+checkty PR-2; E18-1; DN-26; VR-5/G2.)
+
+### spw Wave-0 stdlib-port pilot — std.numerics / std.time / std.content self-hosted to `lib/std/*.myc` (2026-07-09)
+
+The `spw` Wave-0 pilot validates the parallel `.myc` dogfooding-port loop end-to-end: three unported
+stdlib crates ported to self-hosted `lib/std/{numerics,time,content}.myc`, each with a
+`crates/mycelium-std-conformance/tests/std_<mod>.rs` **three-way differential** (L1-eval ≡ L0-interp ≡
+AOT, TV-checked) **plus** a live Rust-oracle comparison — the agreement earns **`Empirical`**, never a
+stronger tag (VR-5). Each was independently, adversarially re-verified (accept, not forced-green; tags
+and gaps confirmed honest). Landed (M-1020 / M-1021 / M-1022):
+
+- **`std.numerics`** (`lib/std/numerics.myc`, 225 lines; 63 differential cases): the honesty-crux
+  STRENGTH surface — the Guarantee/BoundBasis strength-lattice (rank/meet/meet_all/basis_strength),
+  the `Approx[A]` carrier, and the `NumErr`/`CheckErr` variant sets. The dominant float-valued ε/δ
+  magnitude surface stays Rust (no scalar-Float VALUE in the `.myc` runtime yet — FLAGged to `enb`);
+  the sealed FR-N3 `ProvenThm` witness (`Approx::proven`) was **omitted rather than ported ungated**,
+  refusing to fabricate a `Proven`-strength escape hatch (VR-5).
+- **`std.time`** (`lib/std/time.myc`, 388 lines; 29 cases): the full value-semantic surface — the four
+  instant/duration value types, the complete comparison surface (signed `lt_s`, uncapped), the
+  deterministic `ManualClock`, the declared-effect wrappers, and the 11-row guarantee matrix. Signed
+  128-bit duration/instant **arithmetic** is blocked by the kernel's `TC_MAX_WIDTH=64` two's-complement
+  cap (FLAGged to `enb`); only the comparison half is portable today.
+- **`std.content`** (`lib/std/content.myc`, 521 lines; 47 cases): the content-addressing surface —
+  `digest_eq` (via M-912 `bytes_eq`), the `ContentRef`/`RefKind` accessors, the hand-rolled recursive
+  `parse_ref` / `content_ref_from_str` byte scanners, the 7-row guarantee matrix, and the
+  `NameRegistry` read/write surface (an assoc-list redesign, never silently substituted).
+  `hash_of_value` / `hash_of_def` stay kernel-bound (the structural-hash normalizer, RFC-0031 D1 —
+  FLAGged to `enb`).
+
+**STEP-0 transpiler finding (honest, `Empirical`, disconfirming):** re-running the CURRENT transpiler
+on all three targets showed **ZERO checked-% delta** vs the committed manifest — numerics 7.4%, content
+14.3%, time 18.9%, all unchanged. The two emitter features that landed since the manifest base (DN-51
+narrow-cast→truncate; D3 operand-type inference through paren/reference wrappers) are real but
+**orthogonal** to these modules' gap classes, so net transpiler-assist to the shipped nodules is ~0%
+(only already-clean draft enums/types graduated verbatim; the rest is hand-ported). This is the M-991
+"scaffold-not-porter" verdict holding, recorded plainly (VR-5/G2).
+
+Enabler blockers surfaced by the ports are FLAGged to the `enb` epic (E28-1), not forced or silently
+dropped (G2): no scalar-Float VALUE in the runtime (the dominant numerics blocker — already tracked as
+Gap A / M-895 / M-896 / ADR-040); the `TC_MAX_WIDTH=64` signed-arithmetic cap (the dominant time
+blocker); no top-level `const` item; no slice/array (`&[T]` / `[T]`) type; no unit/`()` return; no
+sealed/private-visibility primitive (blocks the FR-N3 capability-gate); and no `bytes.find` /
+`split_once` prim — plus the still-open cross-nodule `use`-import gap (sidestepped here by the
+local-mirror convention). Consolidated as **M-1023** under `enb`. **Retirement (ADR-043): NOT
+triggered** — all three are honest partial ports (the Rust oracle crates are not fully replaced), so no
+Rust crate is retired. Verified: `myc-check` clean on all three nodules; `cargo test -p
+mycelium-std-conformance --test std_numerics --test std_time --test std_content` green; `cargo fmt` and
+`clippy -D warnings` clean. (M-1020 / M-1021 / M-1022; E33-1; ADR-042 / ADR-043; RFC-0031 D5/D6;
+VR-5/G2.)
+
 ### chore: clean-snapshot prep — archives extracted to the `archive` branch, indices regenerated (2026-07-09)
 
 Prep a lean trunk ahead of a promotion: historical archives moved out of the day-to-day tree but

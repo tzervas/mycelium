@@ -13,6 +13,16 @@ if ! cargo public-api --help >/dev/null 2>&1; then
   exit 0
 fi
 
+# Introspect the surface with a NIGHTLY toolchain (MYC_API_TOOLCHAIN, default `nightly`) — rustdoc-JSON
+# is nightly-only; the MSRV-pinned 1.96.1 still builds every real artifact (ADR-041). The SAME knob
+# drives scripts/checks/api.sh, so the baselines are generated with the toolchain the gate reads them
+# with. Skip-graceful when the nightly toolchain is absent (matches the gate).
+api_toolchain="${MYC_API_TOOLCHAIN:-nightly}"
+if ! { have rustup && rustup run "$api_toolchain" rustdoc --version >/dev/null 2>&1; }; then
+  skip "no '$api_toolchain' rustdoc (\`rustup toolchain install $api_toolchain --profile minimal --component rustdoc\` or run scripts/install-tools.sh) — cannot generate baselines"
+  exit 0
+fi
+
 baseline_dir="docs/spec/api"
 mkdir -p "$baseline_dir"
 for d in crates/*/ xtask/; do
@@ -24,7 +34,7 @@ for d in crates/*/ xtask/; do
     skip "$pkg: bin-only (no library target) — no public-API baseline"
     continue
   fi
-  if cargo public-api --package "$pkg" --simplified >"$baseline_dir/$pkg.txt" 2>/dev/null; then
+  if cargo public-api --toolchain "$api_toolchain" --package "$pkg" --simplified >"$baseline_dir/$pkg.txt" 2>/dev/null; then
     ok "$pkg → $baseline_dir/$pkg.txt"
   else
     fail "$pkg: cargo public-api failed"

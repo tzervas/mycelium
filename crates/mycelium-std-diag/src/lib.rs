@@ -40,6 +40,12 @@
 //! Accepted (2026-06-20)) and asserted by its guarantee-matrix table, is the **frozen baseline** per
 //! [DN-66](../../../docs/notes/DN-66-Stdlib-Stable-API-Freeze-And-Rust-Crate-Retirement-Status.md).
 //! A future breaking change here needs a spec amendment + changelog entry, not a silent edit (G2).
+//!
+//! **Unfrozen for the gap-closure window (ADR-045, Accepted 2026-07-10):** this DN-66 freeze is
+//! lifted per [ADR-045](../../../docs/adr/ADR-045-Kernel-And-Lexicon-Unfreeze-For-Early-Gap-Closure.md)
+//! for a bounded window; a breaking change here still needs a spec amendment + changelog entry
+//! (G2), not a silent edit — the window closes per the ADR-045 §2.4 re-freeze conditions, bound by
+//! the DN-99 residual worklist.
 //! It remains the RFC-0031 D6 differential-oracle reference. A `.myc` port of the
 //! [`guarantee_matrix`] DATA now exists (`lib/std/diag.myc`, M-926, kickoff `opp`) — but the
 //! kernel-type re-export half of this crate's surface (`Diag`/`Locus`/`Trace`/`Code`/`Severity`)

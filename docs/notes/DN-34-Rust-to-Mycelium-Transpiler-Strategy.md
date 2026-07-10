@@ -1331,3 +1331,101 @@ Closes the transpiler-side half of §8.16 item 4. `&`/`|` now emit `and`/`or` (n
   (the lossy-swap cast surface/name is undecided — a design question, not a prim_map wiring gap; the
   Session-4 "flip the prim_map CU-3 row" framing was wrong — CU-3 has no prim_map row by design).
   Emission `Declared`; vet `Empirical`. **Status unchanged (Draft).** (Append-only; VR-5; G2.)
+- **2026-07-10 — §8.19 added: M-1006 Phase-2 opens — the whole-corpus profile + a taxonomy/denominator
+  refinement that stops counting file-linkage as un-expressible surface (kickoff `trx2`, E33-1).** The
+  ladder's Phase-2 mandate is to expand the rip-through **beyond the 17-target port surface** to the rest
+  of the Rust corpus (M-1006 DoD). This entry records the **first whole-corpus baseline** and the honest
+  gap-taxonomy fix it surfaced. **Baseline (`Empirical`, `mycelium-transpile crates/`):** 337 files (0
+  parse failures), 5,472 top-level items, 573 emitted. **The profiling finding** (house rule #4 —
+  verify-first): the opaque `Category::Other` bucket held **37.8%** of all gaps, and cracking it open by
+  reason showed two sub-populations that are **not translatable library surface at all** — (a) **264
+  bodyless `mod foo;` declarations** (file-linkage: Mycelium's nodule-per-file model, grammar
+  `nodule_block ::= nodule_header ';' (item ';')*` with no `mod` item production, makes the module tree
+  implicit in the file layout, so the sibling file transpiles as its own nodule and the `lib/std/*.myc`
+  hand-ports carry zero `mod` decls), and (b) **58 crate/file-level inner attributes** (`#![forbid(...)]`,
+  which are not `syn::Item`s at all). **The fix** (`crates/mycelium-transpile/src/{gap,transpile}.rs`):
+  two new honest categories, `ModuleDecl` (bodyless `mod foo;`) and `InnerAttr` (`#![…]`), replace the
+  `Other` label for these; and `ModuleDecl` is **excluded from the expressible-fraction denominator on the
+  identical rationale `TestItem` already is** — a file-linkage declaration is recorded (never dropped, G2)
+  but is not a translatable library item, so counting it against coverage was a category error that
+  *understated* the true fraction. An **inline** `mod foo { … }` (a dropped real body) stays a counted
+  `Other` gap — VR-5: the denominator only ever shrinks by genuinely-non-surface items, never to flatter a
+  number. **Metric effect (never-silent):** whole-corpus `Other` 2,245 → 1,924 (37.8% → 32.4%);
+  denominator 5,323 → 5,059 non-test items; expressible **10.8% → 11.3%**. On the committed 17-target
+  `gen/myc-drafts/` manifest the same refinement moves union non-test items 760 → 721, expressible 13.4%
+  → 14.1%, and **`checked_fraction` 7.8% → 8.2%** — the numerator (myc-check-clean items) is **unchanged
+  at 59**; the entire move is the tighter, more-correct denominator (no emission was added or upgraded).
+  Data-driven `taxonomy` test module pins the categorization and the denominator arithmetic; change-scoped
+  `cargo fmt`/`clippy -D warnings`/`test -p mycelium-transpile` green (58 tests). **Residual Phase-2
+  worklist (recorded, G2 — the stopping point is never silent):** after the file-linkage reclassification
+  the whole-corpus transpiler-relevant surface is dominated by `Import` (1,085, 18.3% — the cross-nodule
+  symbol-table prerequisite: the grammar's `use_item` **does** exist, so a corpus-wide symbol table could
+  let these emit and resolve; the single largest automation lever, its own future wave), `Impl` (578),
+  `DeriveAttr` (497, mostly language-surface), and `Struct` (423, type-coverage/positional). A separate
+  batch-output prerequisite is also noted for automation: a naive whole-`crates/` run currently overwrites
+  same-stem outputs (`lib.myc` over `lib.myc`) — never-silently (it warns per collision) but lossily; a
+  path-qualified output layout is the clean follow-on that makes a whole-corpus emission complete. Emission
+  `Declared`; vet `Empirical`. **Status unchanged (Draft).** (Append-only; VR-5; G2.)
+- **2026-07-10 — §8.20 added: path-qualified batch output lands the whole-corpus-completeness follow-on
+  from §8.19 (M-1006 Phase-2, kickoff `trx2`).** Acts on §8.19's noted batch-output prerequisite. Before
+  this, directory/batch mode named each output by **file stem only** (`<out>/lib.myc`), so a whole-`crates/`
+  run had every crate's `lib.rs` (and `mod.rs`, `error.rs`, …) **overwrite** the previous one — last-writer-wins,
+  loudly warned (never silent, G2) but **lossy**: of 337 discovered files, 112 (across 25 same-stem groups, e.g.
+  57 `lib.rs`, 14 `guarantee_matrix.rs`, 8 `error.rs`) were clobbered, so an automated
+  multi-crate translation wave could not keep every emission. The fix (`src/bin/mycelium-transpile.rs` +
+  a pure, unit-tested `batch::output_rel_path`): each file's output is **path-qualified** by mirroring the
+  source tree under the out-dir — a file's path *relative to the batch root* becomes its output path
+  (`mycelium-core/src/lib.myc` vs `mycelium-std/src/lib.myc`), which is injective by construction (distinct
+  sources have distinct relative paths), so the collision cannot occur; a defensive guard still flags the
+  impossible duplicate (G2). **Whole-corpus verification:** the `crates/` run now writes all **337** `.myc`
+  files with **zero** collision warnings (was 112 clobbered across 25 stem-groups). **Zero committed churn:** the 17
+  `gen/myc-drafts/` targets are all flat single-crate `src/` dirs (no nested `.rs`), so their mirrored path
+  reduces to the bare stem — byte-identical to the pre-Phase-2 flat naming (the regenerated manifest changed
+  only its `generated_from_commit` provenance SHA, which was reverted to keep this increment's diff to the
+  code). Single-file mode is unchanged. Five data-driven `output_rel_path` tests pin the mapping (under-root
+  mirroring, the two-crates-`lib.rs` non-collision property, flat-root-reduces-to-stem, not-under-root
+  `Err` fallback, `.rs`-only extension stripping); change-scoped `cargo fmt`/`clippy -D warnings`/`test -p
+  mycelium-transpile` green (63 tests). This is an emission-plumbing change only — **no transpilation logic,
+  no metric, no guarantee tag moves** (emission stays `Declared`). **Status unchanged (Draft).** The larger
+  §8.19 automation lever — `Import` cross-nodule resolution — remains the next, separately-scoped wave.
+  (Append-only; VR-5; G2.)
+- **2026-07-10 — §8.21 added: whole-corpus profiling reclassifies the DN-99 "trivial" transpiler-only
+  literal-pattern closures as language-enabler gaps (transpiler-increment, kickoff trx).** DN-99 Track B
+  ranked byte-literal (#85) and string-literal-pattern (#72) as **B1 "trivial, high-frequency"**
+  transpiler-only closures. Implementing both and **measuring against the real `myc check` oracle over
+  the whole `crates/` corpus** (337 files) showed the B1 label is wrong for a `checked_fraction` win —
+  a **verify-first** correction (mitigation #14). **Baseline** (`Empirical`): checked_fraction **3.8%**
+  (191/5061 items), expressible 11.3% (573/5061), 84/199 emitting-files clean. **With both closures
+  emitting:** checked_fraction **fell to 3.6%** (183/5061) while expressible rose to 11.4% (578) —
+  three previously-clean files flipped to `CheckError`. **Root causes** (both verified against the real
+  oracle): **(1) #72 string-literal pattern is NOT transpiler-only** — the emitted surface parses, but
+  the L1 checker **categorically rejects a `match` on a `Bytes` scrutinee** (`check-error: match
+  scrutinee must be a data, Binary, or Ternary type, got Bytes`), so emitting it produces parse-clean
+  but check-*failing* `.myc`. It is a **LANGUAGE-ENABLER gap** (L1 needs match-on-`Bytes` /
+  string-literal-pattern support), reclassified from DN-99 #72's `tr-only` guess. **(2) #85 byte-literal
+  *is* genuinely transpiler-only and myc-check-clean on well-formed input** (verified: `fn tag(b:u8) ->
+  bool { match b { b'A' => .. } }` → `match b { 0b0100_0001 => .. }` → `myc check` **ok**), but its sole
+  corpus occurrence (`is_ident_byte`, in two crates) co-locates an **unknown-prim method call**
+  (`b.is_ascii_alphanumeric()`), which the generic method-call desugar (`emit.rs`, `Expr::MethodCall`
+  fallthrough) emits **blindly** as `is_ascii_alphanumeric(b)` — a pre-existing plausible-but-wrong
+  emission (VR-5/G2) that only a **cross-nodule symbol table / known-prim gate** (register #21/#50 /
+  ENB-1) can close cleanly. So unblocking `is_ident_byte`'s body merely *exposed* that deeper defect,
+  regressing the file-gated metric. **Action taken** (`crates/mycelium-transpile`, change-scoped): the
+  **string-literal-pattern arm is landed as a precise, never-silent gap** whose reason names the L1
+  enabler + cites the exact oracle diagnostic (a **transparency** improvement over the prior generic
+  "unsupported literal pattern kind" — zero metric change, still gapped), pinned by
+  `string_literal_pattern_gaps_with_l1_enabler_reason`. The **byte-literal emission was NOT landed** —
+  it is correct but regresses this corpus's `checked_fraction` via defect (2), so shipping it would
+  contradict the increment's mandate (raise, never regress, the honest number); it becomes a trivial
+  follow-on once the unknown-prim method-call gate exists. **Net metric delta: 0.00pp** (checked_fraction
+  and expressible_fraction both unchanged from baseline — the honest, no-regression outcome).
+  **Two FLAGs for the cloud / language lane:** **FLAG-L1-match-Bytes** (L1 `match` on a `Bytes`
+  scrutinee — unblocks #72, and every string-`match` port target — **tracked as M-1035 / ENB-12 under
+  E28-1**) and **FLAG-tr-unknown-prim** (the method-call desugar emits unknown methods blindly — a
+  VR-5/G2 defect gated only by a known-prim set / symbol table; ENB-1 / register #21/#50 —
+  **cross-refed on M-1024**, no duplicate issue, mitigation #14). **Denominator note (G2):** this
+  baseline's raw denominator (5,061 non-excluded items) differs by 2 from §8.19/§8.20's 5,059 — the two
+  are distinct profiling runs (§8.21 measured at dev tip `8cd0a796`), so a small measurement-window
+  difference; both yield the same rounded headline percentages, flagged here rather than silently
+  reconciled. Emission `Declared`; profiling `Empirical`. **Status unchanged (Draft).** (Append-only;
+  VR-5; G2.)

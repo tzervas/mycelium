@@ -29,14 +29,24 @@ in-progress with its only blocker being the maintainer's own release act (**M-73
 | T8 — docs/stability | E17-1 | `in-progress` — 3/4 children done (M-735/M-736/M-737); **M-738 (release act) blocked only on the maintainer's tag-cut**, not engineering |
 | T9 — self-hosting | E18-1 | `needs-design` — explicitly **not** tag-gating (ADR-036) |
 
-**Kernel FROZEN (declared 2026-07-02) — DN-56 → Enacted.** The freeze was declared on the **DN-76
-green scorecard** (4/4 conditions plus the KC-3 completeness review; M-969, PR #1051); post-freeze
-kernel diffs are **DN-39-only**. **RFC-0041 → Enacted (2026-07-05):** recursion-depth safety landed
-via the promoted W0–W7 wave (PR #1155) — work-stack budgets everywhere, the `myc run` SIGABRT
-closed; **DN-84 → Resolved**. See
-`docs/notes/DN-56-Kernel-Completeness-And-Freeze-Criterion.md` and DN-76. *(Refreshed 2026-07-05 —
-this paragraph previously said "1/5 conditions met", a pre-freeze snapshot superseded by the
-2026-07-02 declaration.)*
+**Kernel/L0/L1/lexicon UNFROZEN for the gap-closure window per ADR-045 (Accepted 2026-07-10);
+end-state (ADR-042) unchanged; re-freeze bounded by the DN-99 worklist.** The kernel freeze was
+originally declared 2026-07-02 (DN-56 → Enacted) on the **DN-76 green scorecard** (4/4 conditions
+plus the KC-3 completeness review; M-969, PR #1051), with post-freeze kernel diffs **DN-39-only**;
+**ADR-045** (Accepted 2026-07-10, maintainer-ratified whole-project unfreeze) **suspends** that
+freeze — plus the L0 Core IR floor (RFC-0001) and the DN-66 stdlib-lexicon freeze — for a **bounded,
+re-freezable window**, so the language can close its expressibility gaps early. DN-56's decision body
+is unchanged (append-only status pointer only; it stays **Enacted**); the **ADR-042 §2.1(b) END-STATE**
+(full `.myc` self-hosting, kernel included) is untouched. Re-freeze triggers only once the **DN-99
+residual worklist** (the `enb` backlog, M-1024…M-1034) is exhausted, the DN-56/DN-76-successor
+scorecard re-scores green, and a follow-up maintainer-ratified ADR reinstates the diff policy (ADR-045
+§2.4). **RFC-0041 → Enacted (2026-07-05):** recursion-depth safety landed via the promoted W0–W7 wave
+(PR #1155) — work-stack budgets everywhere, the `myc run` SIGABRT closed; **DN-84 → Resolved**. See
+`docs/notes/DN-56-Kernel-Completeness-And-Freeze-Criterion.md`, DN-76, and
+`docs/adr/ADR-045-Kernel-And-Lexicon-Unfreeze-For-Early-Gap-Closure.md`. *(Refreshed 2026-07-10 —
+this paragraph previously said "Kernel FROZEN", a pre-unfreeze snapshot superseded by the ADR-045
+ratification; before that, refreshed 2026-07-05 to correct a stale "1/5 conditions met" pre-freeze
+snapshot.)*
 
 ## Corpus status digest
 
@@ -104,7 +114,9 @@ digest is a snapshot, that table is live.
   ratification-gated) · `opp` (opportunistic `.myc` ports, non-gating, parallel) · `frz` (H2
   Rust-reference closeout — kernel freeze (DN-56) + inject-mode (RFC-0038) + R2 remainder (M-828) +
   l1-semantics tail; its **kernel-freeze declaration is the last Phase-I act**, gated on `enb`+`grm`,
-  with the heavy runtime items M-869/M-868/M-831 marked Phase-II/non-gating). Every task
+  with the heavy runtime items M-869/M-868/M-831 marked Phase-II/non-gating — that declared freeze is
+  now **unfrozen for the ADR-045 gap-closure window**, Accepted 2026-07-10; see the status paragraph
+  above). Every task
   carries a user story + DoD; M-ids **M-877…M-935 + `frz`'s M-958…M-969** (plus the RFC-0033-named
   M-766/M-767) are **proposed only** — minted at each kickoff after slot re-verification (mitigation #1).
 - **Phase-II kickoffs authored (2026-07-01, same planning tier)** — `.claude/kickoffs/{flp,rwr}.md`:
@@ -130,7 +142,8 @@ recent landings:
 - **Tuple-type** (prerequisite for multi-arg arrows / full partial application — RFC-0024 §4A.8; map
   group G2).
 - **ADR-033 `FieldSpec::Fn` FLAG-1** (dynamic-dispatch soundness; shared prerequisite for kernel-freeze
-  condition #3 — map group G4/G5).
+  condition #3 — map group G4/G5; the kernel freeze this condition gated is unfrozen for the
+  ADR-045 gap-closure window, Accepted 2026-07-10).
 - **RFC-0037 + DN-54** — RFC-0037 itself is **Enacted** (2026-06-27, the grammar epic); the open
   piece is **DN-54's derive-site consumption model**, underdetermined and needs maintainer
   ratification (DN-54 stays `Accepted`, not `Enacted`; see E11-1's `landed_basis`).

@@ -202,6 +202,7 @@ const CTOR_INVENTORY: &[(&str, &str)] = &[
     ("Expr::Wild", "Wild"),
     ("Expr::Spore", "Spore"),
     ("Expr::Consume", "Consume"),
+    ("Expr::Try", "Try"),
     ("Expr::Colony", "Colony"),
     ("Expr::Lambda", "Lambda"),
     ("Expr::App", "App"),
@@ -259,8 +260,9 @@ fn contains_word(haystack: &str, needle: &str) -> bool {
 }
 
 /// The inventory count leg (`Declared`/audited — see the module doc comment): the transcribed
-/// table above must have exactly 103 rows (102 constructors ported from `ast.rs`'s 36 types —
-/// `BaseType` alone has 12 variants — plus this leaf's own `EB` addition), and every listed `.myc`
+/// table above must have exactly 104 rows (103 constructors ported from `ast.rs`'s 36 types —
+/// `BaseType` alone has 12 variants, and `Expr` now carries the DN-102 `Try` node (M-1025) — plus
+/// this leaf's own `EB` addition), and every listed `.myc`
 /// constructor name must actually appear
 /// (as a whole word, never a substring match) in the ported source — a cheap, honest textual audit
 /// that catches a dropped or mistyped row without re-deriving a full parser in the test harness.
@@ -268,9 +270,9 @@ fn contains_word(haystack: &str, needle: &str) -> bool {
 fn ast_myc_ctor_inventory_count_and_presence() {
     assert_eq!(
         CTOR_INVENTORY.len(),
-        103,
-        "expected 102 ported ast.rs constructors (BaseType has 12 variants, not 11 — corrected \
-         during authoring) + 1 leaf-added EffectBudget entry"
+        104,
+        "expected 103 ported ast.rs constructors (BaseType has 12 variants, not 11 — corrected \
+         during authoring; + the DN-102 `Expr::Try` node, M-1025) + 1 leaf-added EffectBudget entry"
     );
     for (rust_name, myc_ctor) in CTOR_INVENTORY {
         assert!(
@@ -396,7 +398,9 @@ fn driver_prelude() -> &'static str {
      \x20   WithParadigm(_, _) => 0b00000000000000000000000000000101,\n\
      \x20   Wild(_) => 0b00000000000000000000000000000110,\n\
      \x20   Spore(_) => 0b00000000000000000000000000000111,\n\
+     \x20   Wrapping(_) => 0b00000000000000000000000000010010,\n\
      \x20   Consume(_) => 0b00000000000000000000000000001000,\n\
+     \x20   Try(_) => 0b00000000000000000000000000010011,\n\
      \x20   Colony(_) => 0b00000000000000000000000000001001,\n\
      \x20   Lambda(_, _) => 0b00000000000000000000000000001010,\n\
      \x20   App(_, _) => 0b00000000000000000000000000001011,\n\

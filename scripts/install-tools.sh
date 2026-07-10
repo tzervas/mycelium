@@ -298,14 +298,18 @@ elif have cargo; then
     else skip "cargo: $t (install failed or offline; \`just map\`/\`just api\` will skip it)"; fi
   done
   # `cargo public-api` (the `just api` surface gate) builds rustdoc-JSON, which needs a **nightly**
-  # rustdoc. Provision it here (idempotent: `rustup` is a no-op when nightly is already present) so
-  # the gate runs in the snapshot rather than failing at runtime on a missing toolchain. Minimal
-  # profile + the `rustdoc` component is all the surface build needs (not a full nightly std).
+  # rustdoc — so the surface is introspected with a nightly toolchain (MYC_API_TOOLCHAIN, default
+  # `nightly`; pin to `nightly-YYYY-MM-DD` for baselines reproducible across rebuilds), while the
+  # MSRV-pinned 1.96.1 still builds every real artifact (ADR-041 — this only reads the surface). The
+  # SAME MYC_API_TOOLCHAIN drives scripts/checks/api.sh + scripts/api-baseline.sh, so install and gate
+  # never disagree. Provision it here (idempotent: `rustup` is a no-op when the toolchain is present).
+  # Minimal profile + the `rustdoc` component is all the surface build needs (not a full nightly std).
   if have rustup; then
-    if rustup run nightly rustdoc --version >/dev/null 2>&1; then ok "rustup: nightly (rustdoc) present"
-    elif rustup toolchain install nightly --profile minimal --component rustdoc >/dev/null 2>&1; then
-      ok "rustup: nightly installed (rustdoc for \`cargo public-api\`)"
-    else skip "rustup: nightly install failed (\`just api\` will fail to build the surface)"; fi
+    api_tc="${MYC_API_TOOLCHAIN:-nightly}"
+    if rustup run "$api_tc" rustdoc --version >/dev/null 2>&1; then ok "rustup: $api_tc (rustdoc) present"
+    elif rustup toolchain install "$api_tc" --profile minimal --component rustdoc >/dev/null 2>&1; then
+      ok "rustup: $api_tc installed (rustdoc for \`cargo public-api\`)"
+    else skip "rustup: $api_tc install failed (\`just api\` will fail to build the surface)"; fi
   else
     skip "no rustup — \`cargo public-api\` cannot build rustdoc-JSON (\`just api\` will fail)"
   fi

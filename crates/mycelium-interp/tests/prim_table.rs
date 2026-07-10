@@ -165,6 +165,21 @@ fn every_interp_builtin_intrinsic_matches_its_composition_path() {
                 "prim `{name}`: the table's intrinsic must match empirical_flt_result's ADR-040 \
                  §2.6 Empirical (VR-5)",
             );
+        } else if name == "bit.truncate" {
+            // DN-51 §2 D3/§6 (M-I4): `bit.truncate` is the explicit **total-but-lossy** `Binary`
+            // narrow — it unconditionally drops the high bits and never refuses, so it carries an
+            // honest **`Declared`** tag (a zero-magnitude `UserDeclared` bound, the shape of the
+            // `wrapping_*` opt-out — `prim_truncate`/`wrapping_result` in `src/prims.rs`). It is
+            // NOT `compose_result`'s `Exact`: the narrowing loses information, and VR-5 forbids
+            // upgrading the tag past that basis. So the table must report `Declared` here — the
+            // total-but-lossy analogue of the `flt.` group's Empirical carve-out above (the
+            // developer opted into the lossiness; the guarantee stays at its supportable strength).
+            assert_eq!(
+                table.intrinsic(name),
+                Some(GuaranteeStrength::Declared),
+                "prim `{name}`: the table's intrinsic must stay the DN-51 §2 D3 total-but-lossy \
+                 `Declared` — never upgraded to `Exact` (VR-5)",
+            );
         } else {
             assert_eq!(
                 table.intrinsic(name),

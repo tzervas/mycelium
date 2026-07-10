@@ -36,6 +36,13 @@ in-progress piece.
 > native `myc` toolchain) and archiving it to a protected legacy branch (never lost). This is the
 > direction, actively underway (see status below), not a completed migration — every claim stays
 > tagged to its checked basis (VR-5).
+>
+> **Temporary whole-project unfreeze (ADR-045, Accepted 2026-07-10).** The NOW-horizon freeze above —
+> plus the L0 Core IR floor, the L1 kernel primitive/type set, the L2/L3 surface grammar, and the
+> stdlib "lexicon" — is **lifted for a bounded, re-freezable gap-closure window**, so the language can
+> close its expressibility gaps early rather than after the stdlib fans out into per-component repos.
+> The ADR-042 END-STATE above is **unchanged**; re-freeze is bound to the DN-99 residual worklist
+> (see [ADR-045](docs/adr/ADR-045-Kernel-And-Lexicon-Unfreeze-For-Early-Gap-Closure.md)).
 
 ---
 

@@ -48,6 +48,28 @@ pub fn discover_rs_files(root: &Path) -> io::Result<Vec<PathBuf>> {
     Ok(out)
 }
 
+/// The **path-qualified** output stem (extension-stripped, relative to the run's `out-dir`) for a
+/// discovered file in a directory/batch run (M-1006 Phase-2): the file's path **relative to the
+/// batch `root`**, with the `.rs` extension stripped, so a whole-corpus run mirrors the source tree
+/// and two crates' `lib.rs` land at distinct outputs (`mycelium-core/src/lib` vs
+/// `mycelium-std/src/lib`) instead of one overwriting the other. Distinct source files have distinct
+/// relative paths, so the mapping is injective by construction.
+///
+/// Returns `Ok(rel_noext)` when `file` is under `root` (the normal case), or `Err(fallback)` — the
+/// bare file stem — when it is not (the caller reports the fallback, never silently mis-placing the
+/// output; G2). The `.with_extension("")` strips only the final `.rs`, so a `foo.bar.rs` source
+/// keeps its `foo.bar` stem.
+pub fn output_rel_path(file: &Path, root: &Path) -> Result<PathBuf, PathBuf> {
+    match file.strip_prefix(root) {
+        Ok(rel) => Ok(rel.with_extension("")),
+        Err(_) => Err(PathBuf::from(
+            file.file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("output"),
+        )),
+    }
+}
+
 /// One file's contribution to a [`BatchSummary`].
 #[derive(Debug, Clone, Serialize)]
 pub struct FileSummary {
