@@ -31,7 +31,7 @@ declare -A COMPONENT_ID=(
   # doc-index's 23 (the same committed-index-drift family): the packed exit byte decodes to the
   # family; the run digest still names the exact failing gate by name. A 32nd unique id requires
   # a byte-scheme redesign (a deliberate decision, not an integration edit) — see M-1015's
-  # close-out note in tools/github/issues.yaml. sugar-index (M-1054; the DN-38 §6 generated
+  # close-out note in tools/github/issues.yaml. sugar-index (M-1058; the DN-38 §6 generated
   # catalog) joins the SAME committed-index-drift family for the same reason.
   [tero-index]=23
   [sugar-index]=23

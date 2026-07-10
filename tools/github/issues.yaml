@@ -9309,6 +9309,7 @@ issues:
     epic: E18-1
     doc_refs:
       - corpus:DN-34
+      - corpus:DN-110
       - src:crates/mycelium-transpile/fixtures/UNION-BACKLOG.md
     body: |
       The #2 demand bucket (DN-34 §8.5): 22% of gaps are macro_rules! definitions + item-position
@@ -9330,6 +9331,12 @@ issues:
       - A design decision (DN/arch note) on the expand-first approach + the toolchain requirement,
         then (follow-on) the transpiler gains an optional expansion pre-pass, never-silent about
         whether a run was expanded or raw. No code required by this design task.
+
+      Note (2026-07-10, DN-110 ratification -- redirect, NOT supersede): the native TARGET facility
+      for the macro role (a Rust `#[derive]`/`impl_*!` mapping to a Mycelium `lower`/`derive` rule) is
+      designed in DN-110 -- complementary, not a re-decision of this issue's scope. This issue stays
+      scoped to the transpiler-side expand-first question, which DN-100 already answered; DN-110 is
+      the native-language-side counterpart DN-100's expansions map INTO (DN-110 §10).
 
   - id: M-876
     title: "M-876 -- design: surface completeness for transpilation (bounded generics, records, trait Self-bodies)"
@@ -14151,6 +14158,7 @@ issues:
       - corpus:DN-99
       - corpus:DN-34
       - corpus:DN-100
+      - corpus:DN-110
       - src:crates/mycelium-transpile/src/transpile.rs
     body: |
       From DN-99 §8 ENB-9 (Draft backlog). Closes register row #51 (macro-expand, transpiler-only). A
@@ -14168,6 +14176,11 @@ issues:
       - Before/after `expressible_fraction` measured on a macro-heavy target (std-cmp); the expander
         choice recorded in a toolchain Draft DN; emitted `.myc` stays `Declared` until a differential
         upgrades it (M-991); no fabricated output on an unexpandable macro (never-silent gap).
+
+      Note (2026-07-10, DN-110 ratification): scope unchanged (transpiler-side ENB-9, expand-first
+      pre-pass, answered by DN-100). `corpus:DN-110` added for the native-target relationship — a Rust
+      `#[derive]`/`impl_*!` macro this pre-pass would expand maps, on the Mycelium side, to a
+      `lower`/`derive` rule (DN-110 §10); the two are complementary, not overlapping decisions.
 
   - id: M-1033
     title: "enb ENB-10 — statement-sequencing (`let _`) + record-update-mutation split (L1 closed; transpiler-lane residual)"
@@ -15044,6 +15057,171 @@ issues:
         trade-off explicitly accepted); M-1028 proceeds against the ratified ADR + OQ-3 decision.
 
   - id: M-1054
+    title: "native metaprogramming/sugar facility -- generalize lower/derive to expression-position sugar rules (DN-110 Rank 1)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:epic, area:language, priority:P2, status:todo]
+    epic: E28-1
+    depends_on: [M-812, M-1051]
+    doc_refs:
+      - corpus:DN-110
+      - corpus:DN-54
+      - corpus:DN-38
+      - corpus:DN-106
+    body: |
+      Filed 2026-07-10 from the maintainer's ratification of DN-110 (native metaprogramming / sugar-
+      lowering facility). Implements DN-110 §5-A Rank 1: generalize the landed `lower`/`derive`
+      term-level lowering framework (DN-54/M-812) to expression position -- the J3 "expression-position
+      mechanically-lowering sugar" gap (`format!`/`matches!`/`vec!`-role constructs), co-gated on
+      `reveal`/expand-on-demand (M-1051, the mandatory transparency spine per DN-110 §3.4/§8.4).
+
+      This is an EPIC -- its DoD is design-gated: DN-110 is ratified as a design (Accepted, NOT
+      Enacted), but the concrete expression-position hygiene/scoping model is its own gating
+      sub-design, not yet built. The **§8.2 hygiene model is its own sub-design carrying open questions
+      OQ-H1 through OQ-H6** (`docs/notes/DN-110-8.2-hygiene-deepdive.md` §10) -- OQ-H1 (def-site
+      resolution across phyla/separate compilation) and OQ-H3 (`reveal` round-trip fidelity for
+      `%`-namespace names) are on the critical path and gate the go/no-go (tracked separately, see
+      M-1055's E1+E3 experiments). This epic does not decompose into leaf issues until the go/no-go
+      experiments (M-1055) return a PASS verdict.
+
+      User stories:
+      - As a self-hosting engineer porting the Rust stdlib, I want `impl_narrow_int!`/`impl_std_error!`
+        boilerplate to map to `lower`/`derive` sites and `format!`/`matches!` to map to expression sugar
+        rules, so a macro-heavy Rust module becomes mechanically portable (DN-110 §4 user story 1).
+      - As a Mycelium application developer, I want to eliminate my own repeated boilerplate with a
+        named sugar I define once that lowers to ordinary code, and to `reveal` the lower form at any
+        point, so the abstraction never becomes a black box (house rule #2; DN-110 §4 user story 2).
+      - As a reviewer/auditor, I want every generated or sugared form to carry an EXPLAIN-able trail to
+        the exact core grammar it compiles to (DN-110 §4 user story 3).
+
+      Definition of Done (DN-110 §3.6, ratified 2026-07-10):
+      - Every sugar rule is (a) a mechanical, reliable lowering to existing core grammar with zero
+        L0-node growth (KC-3, the DN-54 §6 guard), (b) `reveal`-able / reversibly expandable on demand,
+        and (c) hygiene-witnessed by the DN-38 §7 differential+hygiene harness (the E1-E5 corpus, per
+        the DN-110-8.2 companion note); guarantee tags propagate the weakest tag of the RHS, never
+        upgraded (VR-5). Blocked on M-1051 (`reveal`) landing and M-1055's E1+E3 go/no-go passing before
+        any code lands (VR-5: no guarantee tag claimed until the checked basis exists).
+
+  - id: M-1055
+    title: "E1 + E3 hygiene experiment prototype -- DN-110 §8.2 expression-position sugar-rule hygiene, Rank-1 go/no-go for J3"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P1, status:todo]
+    epic: E28-1
+    depends_on: [M-1051]
+    doc_refs:
+      - corpus:DN-110
+      - corpus:DN-110-8.2-hygiene-deepdive
+      - corpus:DN-54
+    body: |
+      Filed 2026-07-10 from the maintainer's ratification of DN-110-8.2-hygiene-deepdive.md (the
+      companion §8.2 deep-dive, itself accepted as the basis for DN-110 §8.2 at this ratification).
+      Prototypes the two experiments the deep-dive names as the **Rank-1 go/no-go for J3** (DN-110 §9):
+
+      - **E1 -- capture-avoidance** (the `swap!` classic): validates the `%`-namespace-freshening plus
+        capture-safe substitution model (deep-dive §4 (A)+(B)) against a table of collision cases,
+        asserting alpha-equality and observational equality versus a hand-written oracle.
+      - **E3 -- `reveal` round-trip fidelity** (the gating experiment, designed to possibly BREAK the
+        model): asserts `reelaborate(reveal_l0(expand))` is alpha-equal to `expand` at the L0-term
+        level, and forces the OQ-H3 decision (L0-level identity vs a documented surface display-
+        renaming) rather than discovering it after `reveal`/M-1051 ships. **A FAIL here is a blocker
+        signal for Rank-1 on J3** -- the honest fallback is DN-110 Rank 2 (blessed-core desugarings
+        only) for expression-position sugar.
+
+      E3 needs `reveal`/expand-on-demand (M-1051, `status:todo`) to exist first; M-919 (the affine
+      tracker E5 would need) is already landed. **OQ-H1** (def-site resolution across phyla / separate
+      compilation, the expression analogue of DN-54 §10 OQ-D) is the other critical-path open question,
+      exercised by E2 (not gating for this issue's go/no-go, but tracked alongside E1/E3 if scope
+      allows).
+
+      User stories:
+      - As the maintainer deciding whether to fund DN-110's implementation epic (M-1054), I want E1 and
+        E3 run against the real elaborator, so the go/no-go is `Empirical`, not `Declared` (VR-5).
+
+      Definition of Done:
+      - E1 and E3 are implemented per the deep-dive's §7 harness shape (in-crate white-box test module,
+        table-driven, alpha-equality plus observational equality) in `crates/mycelium-l1` and return a
+        PASS/FAIL verdict with the pass/fail criteria the deep-dive names (§7 E1, §7 E3); the verdict
+        is recorded back into DN-110-8.2-hygiene-deepdive.md / DN-110 (a Ratification addendum, not a
+        rewrite) before M-1054 proceeds past its design-gate.
+
+  - id: M-1056
+    title: "/native-translate methodology skill -- Rust-construct classification decision procedure (DN-110 §9)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:tooling, priority:P3, status:todo]
+    epic: E28-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-110
+      - corpus:DN-109
+      - corpus:DN-99
+      - corpus:DN-106
+    body: |
+      Filed 2026-07-10 from the maintainer's ratification of DN-110. A follow-up deliverable (DN-110
+      §9/§12, not authored in DN-110 itself -- it would race the design note on scope). Authors a
+      reusable skill, working name `/native-translate`, that operationalizes DN-110 §9's operational
+      decision-procedure: given one Rust construct/surface gap, verify it is not already closed
+      (mitigation #14 -- check the DN-99 register/delta ledger and grep the codebase first), identify
+      the underlying PROBLEM (not Rust's mechanism), classify it against the §2 taxonomy (**provisional
+      handles pending DN-111** -- see DN-110's Ratification), apply the DN-109 §3.2 EXPLAIN-able ratchet
+      to any auto-fire, and emit a register-style record into the DN-99/DN-109 manifest.
+
+      Note (VR-5): since DN-110 §2's taxonomy labels are provisional pending the DN-111 companion, this
+      skill's classification vocabulary should be revisited once DN-111 lands -- author it now against
+      the provisional labels (DN-110 §9 is fully specified), but expect a terminology-only follow-up
+      edit when DN-111 ratifies the canonical names.
+
+      User stories:
+      - As an engineer translating any Rust construct (not just macros), I want a decision procedure
+        that tells me whether the construct is an Adaptation/Solution/Approximation/Bridge (or
+        DN-111's eventual canonical equivalent) and what the honest native target + explicit delta is,
+        so I classify by evidence against the corpus, not by shoehorning Rust's idiom (DN-110 §4 user
+        story 4).
+
+      Definition of Done:
+      - A `.claude/skills/native-translate/` skill (or equivalent) implements DN-110 §9's six steps
+        verbatim, producing the §9 Step 6 register-style artifact; validated against at least the DN-110
+        §1 worked examples (J1-J5) as a self-check.
+
+  - id: M-1057
+    title: "DN-111 -- canonical Rust->Mycelium native-translation taxonomy (companion to DN-110 §2, DN-109, DN-99, DN-106)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:language, priority:P3, status:needs-design]
+    epic: E28-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-110
+      - corpus:DN-109
+      - corpus:DN-99
+      - corpus:DN-106
+    body: |
+      Filed 2026-07-10 from the maintainer's ratification of DN-110. DN-110 §2 proposed a general
+      Rust->Mycelium native-translation taxonomy (Adaptation/Solution/Approximation/Bridge) as the
+      problem-relationship re-reading of vocabulary already used, informally, by DN-99's register
+      Status column, DN-109's L4 idiom buckets, and DN-106's gap-closure default. The maintainer's
+      ratification (2026-07-10) accepted DN-110 §12.1's own reasoned recommendation that this taxonomy
+      warrants its own **companion DN** (not a DN-109 append-only extension), but explicitly declined to
+      lock in DN-110 §2's four specific labels as canonical -- they are ratified only as provisional,
+      intuitive handles pending this DN.
+
+      This is a DESIGN AUTHORING task, not a redecision: DN-111 should (a) settle the canonical
+      terminology (refining or replacing Adaptation/Solution/Approximation/Bridge), (b) formally
+      reconcile the taxonomy's relationship axis with DN-109's decidability axis (Mechanical/
+      Heuristic/Judgment) per DN-110 §2.1, and (c) cross-link every corpus artifact that already
+      instantiates the informal version (DN-99, DN-106, DN-109, DN-110) without re-deciding any of
+      their own settled forks. Per DN-110 §12.1: "its scope is the maintainer's to set" -- this issue
+      does not presume DN-111's authoring session or approach.
+
+      User stories:
+      - As a designer classifying a new Rust construct's native Mycelium translation, I want one
+        citable, canonical taxonomy (not four different local re-readings across DN-99/DN-106/DN-109/
+        DN-110) so "this mapping is an Adaptation per DN-1xx" resolves unambiguously.
+
+      Definition of Done:
+      - A Draft DN-111 authored and ratified, settling the canonical taxonomy terms; DN-110 §2 gains an
+        append-only pointer resolving its provisional-labels carve-out once DN-111 lands (this issue's
+        own landing does not retroactively edit DN-110's Ratification record -- that stays as drafted,
+        append-only).
+
+  - id: M-1058
     title: "v0 generated surface + sugar mapping (tools/grammar/sugar.yaml + sugar_index.py) — DN-38 §6 realized as a drift-gated artifact"
     milestone: "Phase 8 — Toolchain & Release Engineering"
     labels: [phase:8, type:feature, area:tooling, priority:P2, status:in-progress]
@@ -15069,8 +15247,10 @@ issues:
       gate list, sharing doc-index's component-id family per the exhausted 5-bit id-space note).
       NOT yet merged — status flips to done on landing; the maintainer may also revise scope on
       review. Cross-reference: M-1051 is the SEPARATE runtime desugar/expand-on-demand tooling
-      (developer-facing "show me the lowering at this sugar site"); this issue is the static,
-      generated catalog only.
+      (developer-facing "show me the lowering at this sugar site"); this issue is unrelated to and
+      distinct from the M-1054 DN-110 native-metaprogramming epic (a same-numbered collision this
+      issue was renumbered away from, mitigation #1 — this was M-1054 in an earlier revision of this
+      branch, before DN-110's ratification landed on dev and claimed that id).
     body: |
       Filed 2026-07-11 (verify-first per mitigation #14: grep of issues.yaml + docs/tero-index/
       INDEX.md for `sugar-index`/`sugar.yaml`/`sugar-registry` found no prior issue or landing — this
