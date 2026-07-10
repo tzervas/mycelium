@@ -27,10 +27,16 @@
 //! returns one exit code, not a per-item result. The vet metric bridges that per-file verdict back
 //! to the per-item denominator `expressible_fraction` uses, so the two are directly comparable:
 //!
-//! - **Denominator** = **non-test top-level items** (summed over vetted files) — the *same*
-//!   denominator as [`crate::gap::GapReport::expressible_fraction`]. Stated, so the two fractions
-//!   line up and `checked_fraction ≤ expressible_fraction` always holds (an item can only be
-//!   checked-clean if it was emitted at all).
+//! - **Denominator** = **non-excluded top-level items** (summed over vetted files) — the *same*
+//!   denominator as [`crate::gap::GapReport::expressible_fraction`], i.e.
+//!   [`crate::gap::GapReport::non_test_item_count`]: every top-level item **minus** the
+//!   denominator-excluded ones ([`crate::gap::Category::excluded_from_denominator`] — `#[cfg(test)]`
+//!   `TestItem`s **and**, since M-1006 Phase-2, bodyless `mod foo;` `ModuleDecl` file-linkage
+//!   declarations, both recorded-never-dropped but not translatable library surface). The
+//!   [`VetRecord::non_test_items`] field keeps its name for API stability but carries this
+//!   non-*excluded* count. Stated, so the two fractions line up and
+//!   `checked_fraction ≤ expressible_fraction` always holds (an item can only be checked-clean if it
+//!   was emitted at all).
 //! - **Numerator** = the **file-gated** item bridge: a file's emitted items are credited to the
 //!   checked numerator **iff the file's *entire* emitted `.myc` is myc-check-clean**; a file that
 //!   fails parse/check contributes **0** (we never guess *which* item broke a failing file — VR-5/
@@ -127,8 +133,9 @@ pub struct VetRecord {
     /// parse/check failure, else the first non-empty stderr/stdout line. Truncated for report size
     /// (see [`MAX_DIAGNOSTIC_LEN`]), never dropped entirely.
     pub diagnostic: String,
-    /// Non-test top-level items in the source file — this file's contribution to the shared
-    /// denominator.
+    /// Non-*excluded* top-level items in the source file (every top-level item minus the
+    /// denominator-excluded `TestItem`/`ModuleDecl` gaps — see the module docs) — this file's
+    /// contribution to the shared denominator. Field name kept for API stability.
     pub non_test_items: usize,
     /// Items for which `.myc` text was emitted — this file's contribution to the expressible
     /// numerator, and (when [`VetClass::Clean`]) the checked numerator.
@@ -159,7 +166,8 @@ pub struct VetReport {
     /// One record per vetted `.myc` file (never deduplicated — each is a distinct file).
     pub records: Vec<VetRecord>,
     /// Sum of `non_test_items` across all vetted files — the shared denominator for **both**
-    /// `expressible_fraction` and `checked_fraction` (stated denominator: non-test top-level items).
+    /// `expressible_fraction` and `checked_fraction` (stated denominator: non-*excluded* top-level
+    /// items — every top-level item minus the `TestItem`/`ModuleDecl` denominator-excluded gaps).
     pub total_non_test_items: usize,
     /// Sum of `emitted_items` across all vetted files (the expressible numerator).
     pub total_emitted_items: usize,

@@ -645,6 +645,20 @@ fn cases() -> Vec<Case> {
                 contains: "and(a, b)",
             },
         },
+        // ── DN-99 #72 string-literal pattern — RECLASSIFIED open (needs an L1 enabler) ───────────
+        // A string-literal match arm `"yes" => …` is grammatically valid Mycelium surface, but the
+        // L1 checker categorically rejects a `match` on a `Bytes` scrutinee (verified against the
+        // real oracle). So it is NOT transpiler-only (DN-99 #72's `tr-only` guess is wrong —
+        // mitigation #14): emitting it would produce parse-clean but check-FAILING `.myc`, regressing
+        // checked_fraction. It is gapped never-silently with the precise LANGUAGE-ENABLER reason,
+        // never fake-emitted (VR-5/G2). See `string_literal_pattern_gaps_with_l1_enabler_reason`.
+        Case {
+            name: "string_literal_pattern_stays_gapped_pending_l1",
+            rust: "fn classify(s: &str) -> bool { match s { \"yes\" => true, _ => false } }",
+            expect: Expect::Gapped {
+                category: Category::Other,
+            },
+        },
     ]
 }
 
@@ -814,6 +828,37 @@ fn string_control_char_never_leaks_raw_byte() {
         !myc.contains('\u{7}') && !myc.contains("\\x07"),
         "gapped control-char string must never leak a raw byte or a fabricated `\\x07` escape \
          (StrLit has no `\\xNN` form), got:\n{myc}"
+    );
+}
+
+/// DN-99 #72 reclassification pin (trx profiling, mitigation #14): a string-literal match pattern
+/// is grammatically valid Mycelium surface, but the L1 checker categorically rejects a `match` on a
+/// `Bytes` scrutinee, so emitting it would regress `checked_fraction`. It is therefore gapped
+/// never-silently with a reason that (a) names it a LANGUAGE-ENABLER gap (not transpiler-only) and
+/// (b) cites the exact L1 diagnostic — never fake-emitted (VR-5/G2). This guards against a future
+/// change re-emitting the check-failing surface.
+#[test]
+fn string_literal_pattern_gaps_with_l1_enabler_reason() {
+    let rust = "fn classify(s: &str) -> bool { match s { \"yes\" => true, _ => false } }";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "fixture")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile: {e}"));
+    assert!(
+        report.emitted_items.is_empty(),
+        "the string-pattern fn must stay fully gapped (no check-failing emission), got {:?}",
+        report.emitted_items
+    );
+    assert!(
+        !myc.contains("\"yes\""),
+        "the check-failing string-pattern surface must NEVER be emitted, got:\n{myc}"
+    );
+    assert!(
+        report
+            .gaps
+            .iter()
+            .any(|g| g.reason.contains("on a `Bytes` scrutinee")
+                && g.reason.contains("LANGUAGE-ENABLER")),
+        "the string-pattern gap must cite the L1 match-on-Bytes enabler, got {:?}",
+        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
     );
 }
 
