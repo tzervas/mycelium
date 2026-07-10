@@ -85,6 +85,16 @@ L1 surface gaps mechanical, hence zero-hand-port-friendly).
 > `/native-translate` decision procedure) is ratified on the strength of the *classification behavior* it
 > describes, not on these specific words being locked in — do not treat "Adaptation"/"Solution"/
 > "Approximation"/"Bridge" as frozen vocabulary pending DN-111.
+>
+> **Append-only pointer (integrating parent, 2026-07-10) — this carve-out is now RESOLVED.** **DN-111**
+> (`docs/notes/DN-111-Canonical-Rust-To-Mycelium-Native-Translation-Taxonomy.md`) has been authored and
+> **Accepted** by the maintainer (see its own "Ratification (maintainer, 2026-07-10)" section): the
+> canonical terms are **Native Equivalent** (was Adaptation) / **Idiomatic Remapping** (was Solution) /
+> **Approximation** (kept) / **Interop Bridge** (kept, qualified). This DN-110 §2 table and its "Adaptation
+> / Solution / Approximation / Bridge" vocabulary are **unchanged, append-only** (house rule #3 — this note
+> is Accepted and not rewritten); the four handles above now read as **retained aliases** for DN-111's
+> canonical terms, not as provisional placeholders awaiting a companion DN. New cross-links should cite
+> `corpus:DN-111` for the canonical name and treat this §2 table's terms as the legible shorthand.
 
 The macro-role question is one instance of a **larger principle the maintainer states directly**:
 translating a Rust construct maps its underlying **PROBLEM** to Mycelium's own native answer; it does **not**

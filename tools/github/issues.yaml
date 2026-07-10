@@ -14529,13 +14529,28 @@ issues:
   - id: M-1041
     title: "M-1041 — DRY ExprVisitor/fold trait across the mycelium-l1 walkers and the transpiler's emit.rs (the visitor-DRY meta-gap)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:chore, area:language, priority:P2, status:todo]
+    labels: [phase:5, type:chore, area:language, priority:P2, status:in-progress]
     epic: E32-1
     depends_on: [M-641]
     doc_refs:
       - corpus:DN-109
       - src:crates/mycelium-l1/src/totality.rs
       - src:crates/mycelium-transpile/src/emit.rs
+      - src:crates/mycelium-transpile/src/visit.rs
+    landed_basis: >
+      status:in-progress (Scope-A of this issue's two-crate DoD landed, Scope-B/C outstanding) —
+      PR #1398 (`claude/m1041a-expr-visitor`, merged to `dev` 2026-07-10) lands the pilot
+      `ExprVisitor`/`TypeVisitor` abstraction (new `crates/mycelium-transpile/src/visit.rs`,
+      associated-`Output`-type traits with a required `fallback`) over `mycelium-transpile`'s
+      `emit.rs` (3 independently hand-rolled `syn::Expr` matches -> 1 canonical `walk_expr`
+      dispatcher) and `map.rs` (2 independently hand-rolled `syn::Type` matches -> 1 canonical
+      `walk_type` dispatcher) — behavior-preserving, byte-identical `cargo test -p
+      mycelium-transpile` (65/65) before and after. Explicitly out of this leaf's scope (flagged,
+      not silently dropped): `prim_map.rs`'s 9 more `Expr::` matches, the `Pat`/`map_pattern`
+      dispatch, and the full DoD's OTHER half — the 8 exhaustive `mycelium-l1` walkers (parse,
+      ambient, checkty, elab, eval, grade, mono, totality) this issue's own DoD names. This is the
+      **pilot** setting the pattern; a follow-on Scope-B/C leaf should extend it to `prim_map.rs`/
+      `Pat` and then to the `mycelium-l1` walker side before this issue can flip to `done`.
     body: |
       Filed 2026-07-10 from the zero-hand-port delta-ledger analysis (docs/planning/zero-hand-port-delta-ledger.md
       §3/§4.5, DN-109 §9). TWO independent analyses converged on the same gap: the L2 engine audit found
@@ -14860,12 +14875,28 @@ issues:
   - id: M-1049
     title: "DN-102 second research pass + resolve FLAG-try-2 via language gap closure; re-stage for ratification"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:research, area:language, priority:P2, status:todo]
+    labels: [phase:5, type:research, area:language, priority:P2, status:in-progress]
     epic: E28-1
     depends_on: [M-1025]
     doc_refs:
       - corpus:DN-102
       - corpus:DN-99
+    landed_basis: >
+      status:in-progress (research pass complete + re-submitted; DN-102 itself not yet ratified) —
+      PR #1395 (`claude/dn-102-second-pass`, merged to `dev` 2026-07-10) appends DN-102's "Second
+      research pass (2026-07-11) — M-1049" section (SP.1–SP.8): reconciles the design with DN-106/
+      DN-109/DN-107 (all ratified since the first pass); resolves FLAG-try-2 by scoping implicit
+      `From`-error widening as a deliberate exclusion (DN-109 D13 inferred-conversion black-box
+      family) mapped to the native `map_err(e, conv)?` idiom (`lib/std/result.myc:39`), no
+      error-conversion-trait subsystem proposed; evaluates and declines the `?`-as-macro framing;
+      reconciles with the landed M-1025 let-RHS increment (no revision needed); recommends Rank 1
+      (ratify the landed v0 core + adopt the SP resolutions). A matching append-only addendum was
+      added to DN-99's ENB-2 backlog row. This issue's first two DoD clauses (pass documented,
+      FLAG-try-2 resolved) are complete; the third ("DN-102 is re-submitted for maintainer
+      ratification") is procedurally complete (the pass is held/surfaced) but **DN-102's own Status
+      stays Draft** — the maintainer has not yet ratified it (surfaced as an open Draft-DN item in
+      this integration close-out, not decided here — house rule #3, only the maintainer ratifies).
+      Flip this issue to `done` once DN-102 is actually ratified, or revise if declined again.
     body: |
       Filed 2026-07-11 from the maintainer's non-ratification of DN-102 (ENB-2, the `?` try-operator
       desugar). The maintainer declined to ratify DN-102 as drafted: "many must be resolved via
@@ -15150,6 +15181,7 @@ issues:
     epic: E28-1
     depends_on: []
     doc_refs:
+      - corpus:DN-111
       - corpus:DN-110
       - corpus:DN-109
       - corpus:DN-99
@@ -15160,21 +15192,25 @@ issues:
       reusable skill, working name `/native-translate`, that operationalizes DN-110 §9's operational
       decision-procedure: given one Rust construct/surface gap, verify it is not already closed
       (mitigation #14 -- check the DN-99 register/delta ledger and grep the codebase first), identify
-      the underlying PROBLEM (not Rust's mechanism), classify it against the §2 taxonomy (**provisional
-      handles pending DN-111** -- see DN-110's Ratification), apply the DN-109 §3.2 EXPLAIN-able ratchet
-      to any auto-fire, and emit a register-style record into the DN-99/DN-109 manifest.
+      the underlying PROBLEM (not Rust's mechanism), classify it against the **DN-111 canonical
+      taxonomy** (Native Equivalent / Idiomatic Remapping / Approximation / Interop Bridge -- see below),
+      apply the DN-109 §3.2 EXPLAIN-able ratchet to any auto-fire, and emit a register-style record into
+      the DN-99/DN-109 manifest.
 
-      Note (VR-5): since DN-110 §2's taxonomy labels are provisional pending the DN-111 companion, this
-      skill's classification vocabulary should be revisited once DN-111 lands -- author it now against
-      the provisional labels (DN-110 §9 is fully specified), but expect a terminology-only follow-up
-      edit when DN-111 ratifies the canonical names.
+      TERMINOLOGY UPDATE (2026-07-10, at the DN-111 ratification pass): DN-111 has been authored and
+      Accepted -- the canonical enum is **NativeEquivalent | IdiomaticRemapping | Approximation |
+      InteropBridge**, with DN-110's Adaptation/Solution/Approximation/Bridge handles retained as
+      aliases for legibility. This note, filed while DN-111 was still unauthored, is superseded on this
+      one point: implement the skill's Step-3 classification and Step-6 register emit against the
+      **DN-111 canonical enum**, not the provisional DN-110 §2 handles -- a terminology-only change,
+      DN-110 §9's six steps are otherwise unchanged.
 
       User stories:
       - As an engineer translating any Rust construct (not just macros), I want a decision procedure
-        that tells me whether the construct is an Adaptation/Solution/Approximation/Bridge (or
-        DN-111's eventual canonical equivalent) and what the honest native target + explicit delta is,
-        so I classify by evidence against the corpus, not by shoehorning Rust's idiom (DN-110 §4 user
-        story 4).
+        that tells me whether the construct is a Native Equivalent / Idiomatic Remapping / Approximation
+        / Interop Bridge (DN-111's canonical taxonomy, aliases Adaptation/Solution/Approximation/Bridge
+        retained) and what the honest native target + explicit delta is, so I classify by evidence
+        against the corpus, not by shoehorning Rust's idiom (DN-110 §4 user story 4).
 
       Definition of Done:
       - A `.claude/skills/native-translate/` skill (or equivalent) implements DN-110 §9's six steps
@@ -15184,14 +15220,26 @@ issues:
   - id: M-1057
     title: "DN-111 -- canonical Rust->Mycelium native-translation taxonomy (companion to DN-110 §2, DN-109, DN-99, DN-106)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:design, area:language, priority:P3, status:needs-design]
+    labels: [phase:5, type:design, area:language, priority:P3, status:done]
     epic: E28-1
     depends_on: []
     doc_refs:
+      - corpus:DN-111
       - corpus:DN-110
       - corpus:DN-109
       - corpus:DN-99
       - corpus:DN-106
+    landed_basis: >
+      status:done -- DN-111 (docs/notes/DN-111-Canonical-Rust-To-Mycelium-Native-Translation-Taxonomy.md)
+      authored (Draft PR #1405) and ratified Accepted by the maintainer 2026-07-10 (see DN-111's own
+      "Ratification (maintainer, 2026-07-10)" section). Canonical taxonomy: Native Equivalent /
+      Idiomatic Remapping / Approximation / Interop Bridge, with DN-110's Adaptation/Solution/
+      Approximation/Bridge handles retained as permanent aliases. DN-110 §2 gained the append-only
+      pointer resolving its provisional-labels carve-out at this same pass (DN-110's own Ratification
+      text unchanged, append-only per house rule #3). Accepted ratifies the TERMINOLOGY + TAXONOMY
+      only -- individual classifications against it stay `Declared` until independently checked
+      (VR-5); this issue's DoD ("authored and ratified, settling the canonical taxonomy terms") is
+      fully met by that ratification, distinct from any downstream classification work.
     body: |
       Filed 2026-07-10 from the maintainer's ratification of DN-110. DN-110 §2 proposed a general
       Rust->Mycelium native-translation taxonomy (Adaptation/Solution/Approximation/Bridge) as the
@@ -15224,7 +15272,7 @@ issues:
   - id: M-1058
     title: "v0 generated surface + sugar mapping (tools/grammar/sugar.yaml + sugar_index.py) — DN-38 §6 realized as a drift-gated artifact"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:feature, area:tooling, priority:P2, status:in-progress]
+    labels: [phase:8, type:feature, area:tooling, priority:P2, status:done]
     epic: E28-1
     depends_on: []
     doc_refs:
@@ -15232,25 +15280,31 @@ issues:
       - corpus:DN-53
       - corpus:DN-54
       - corpus:DN-102
+      - corpus:DN-111
       - src:tools/grammar/sugar.yaml
       - src:tools/grammar/sugar_index.py
     landed_basis: >
-      status:in-progress — v0 built on branch claude/sugar-index-generator (draft PR, held for
-      maintainer review since this adds a new gate to `just check`): tools/grammar/sugar.yaml (a
-      hand-authored, 45-row registry — one row per crates/mycelium-l1/src/token.rs::keyword()
-      identifier keyword, seeded from DN-38 §6 + DN-53/DN-54/DN-102, plus glyph_sugars for DN-102's
-      `?` and not_lexed_sugars for DN-38 §5's `reveal`) + tools/grammar/sugar_index.py (mechanical
-      cross-check against token.rs::keyword() via generate.py's STRUCTURAL_KEYWORDS, reused not
-      re-derived; renders docs/sugar-index/; --check drift gate + --self-test incl. two synthetic
-      fail-loud demos) + docs/sugar-index/ (generated) + scripts/checks/sugar-index.sh +
-      justfile (sugar-index / sugar-index-gen) + scripts/checks/all.sh (wired into the `just check`
-      gate list, sharing doc-index's component-id family per the exhausted 5-bit id-space note).
-      NOT yet merged — status flips to done on landing; the maintainer may also revise scope on
-      review. Cross-reference: M-1051 is the SEPARATE runtime desugar/expand-on-demand tooling
-      (developer-facing "show me the lowering at this sugar site"); this issue is unrelated to and
-      distinct from the M-1054 DN-110 native-metaprogramming epic (a same-numbered collision this
-      issue was renumbered away from, mitigation #1 — this was M-1054 in an earlier revision of this
-      branch, before DN-110's ratification landed on dev and claimed that id).
+      status:done — v0 landed on `dev` (PR #1403, `claude/sugar-index-generator`, merged
+      2026-07-10): tools/grammar/sugar.yaml (a hand-authored, 45-row registry — one row per
+      crates/mycelium-l1/src/token.rs::keyword() identifier keyword, seeded from DN-38 §6 +
+      DN-53/DN-54/DN-102, plus glyph_sugars for DN-102's `?` and not_lexed_sugars for DN-38 §5's
+      `reveal`) + tools/grammar/sugar_index.py (mechanical cross-check against
+      token.rs::keyword() via generate.py's STRUCTURAL_KEYWORDS, reused not re-derived; renders
+      docs/sugar-index/; --check drift gate + --self-test incl. two synthetic fail-loud demos) +
+      docs/sugar-index/ (generated) + scripts/checks/sugar-index.sh + justfile (sugar-index /
+      sugar-index-gen) + scripts/checks/all.sh (wired into the `just check` gate list, sharing
+      doc-index's component-id family per the exhausted 5-bit id-space note). Confirmed merged
+      (`git log dev --oneline | grep '#1403'`) before this status flip (mitigation #14 —
+      verified against the codebase, not rubber-stamped). Follow-up at the DN-111 ratification
+      pass (2026-07-10): the deferred `native_strategy` column's placeholder comment in
+      `sugar.yaml` updated to point at the now-ratified DN-111 enum (was "DN-109's taxonomy is
+      still settling"); the column itself remains deferred — populating its 45 rows is bounded
+      follow-up work, not done here (VR-5, no invented per-row classifications). Cross-reference:
+      M-1051 is the SEPARATE runtime desugar/expand-on-demand tooling (developer-facing "show me
+      the lowering at this sugar site"); this issue is unrelated to and distinct from the M-1054
+      DN-110 native-metaprogramming epic (a same-numbered collision this issue was renumbered away
+      from, mitigation #1 — this was M-1054 in an earlier revision of this branch, before DN-110's
+      ratification landed on dev and claimed that id).
     body: |
       Filed 2026-07-11 (verify-first per mitigation #14: grep of issues.yaml + docs/tero-index/
       INDEX.md for `sugar-index`/`sugar.yaml`/`sugar-registry` found no prior issue or landing — this
@@ -15279,6 +15333,6 @@ issues:
         `--self-test` exercising two synthetic drift-guard demos; `docs/sugar-index/` is the
         rendered, committed artifact; `scripts/checks/sugar-index.sh` + `just sugar-index` /
         `sugar-index-gen` wire it in, skip-graceful without python3/pyyaml. Deferred to a follow-up
-        (not this issue): the `native_strategy` taxonomy column (DN-109's taxonomy is still
-        settling — a `# TODO(DN-taxonomy)` placeholder note is left in `sugar.yaml` instead of
-        invented values).
+        (not this issue): the `native_strategy` taxonomy column — the taxonomy itself is now settled
+        (DN-111, Accepted 2026-07-10), but populating this file's 45 rows against it is left as a
+        `# TODO(DN-111)` placeholder in `sugar.yaml` rather than invented here.
