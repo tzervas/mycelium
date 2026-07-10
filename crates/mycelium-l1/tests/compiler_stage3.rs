@@ -411,6 +411,10 @@ mod fp {
     }
 
     fn inherentimpldecl(fp: Fp, i: &InherentImplDecl) -> Fp {
+        // DN-103 / M-1026: fold the impl-level type-parameter slot (unbounded names) first, matching
+        // how `typedecl`/`traitdecl`/`lowerdecl` fold their `params` — so the fingerprint genuinely
+        // distinguishes `impl[T] Foo[T]` from `impl Foo[T]` (mirror kept lock-step with parse.myc).
+        let fp = bytes_list(fp, &i.params);
         let fp = typeref(tag(fp, 56), &i.for_ty);
         fndecl_list(fp, &i.methods)
     }

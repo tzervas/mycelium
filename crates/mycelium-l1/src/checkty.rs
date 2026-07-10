@@ -1369,6 +1369,20 @@ fn check_phylum_inner(phylum: &Phylum, matured_scope: bool) -> Result<PhylumEnv,
                 // never-silent gap to close (G2). Behaviour pinned by
                 // `inherent_impl_on_an_unknown_for_ty_is_accepted_in_v0` (tests/check.rs).
                 Item::InherentImpl(id) => {
+                    // DN-103 §6: a self-duplicate WITHIN the impl-level slot itself
+                    // (`impl[T, T] Foo[T] { … }`) is refused independent of method count — the
+                    // per-lifted-method check below rides each method's combined param list, so a
+                    // zero-method block would miss it. Mirror the standalone `TypeDecl`/`LowerDecl`
+                    // slot-duplicate refusal here (never silent — G2).
+                    if let Some(dup) = first_duplicate(&id.params) {
+                        return Err(CheckError::new(
+                            "impl",
+                            format!(
+                                "duplicate type parameter `{dup}` in an impl-level slot \
+                                 `impl[…]` (DN-103 / M-1026; never silent — G2)"
+                            ),
+                        ));
+                    }
                     // DN-103 / M-1026 / ENB-3: an impl-level generic slot (`impl[T] Foo[T] { … }`)
                     // prepends its params to each lifted method's own `fn` type-parameters, so the
                     // method becomes an ordinary generic free function — monomorphization then reuses

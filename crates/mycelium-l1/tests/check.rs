@@ -1567,6 +1567,20 @@ fn duplicate_impl_and_method_type_param_is_refused() {
     );
 }
 
+/// A self-duplicate WITHIN the impl-level slot itself is refused even with **zero methods** — the
+/// per-lifted-method check cannot see a method-less block, so the standalone slot check fires
+/// (DN-103 §6; never silent — G2).
+#[test]
+fn duplicate_impl_slot_self_param_zero_methods_is_refused() {
+    let err = check("nodule d;\ntype Box[A] = Bx(A);\nimpl[T, T] Box[T] { };\n")
+        .expect_err("a self-duplicate in the impl-level slot must be refused even with no methods");
+    assert!(
+        err.message.contains("duplicate") && err.message.contains("impl-level slot"),
+        "got: {}",
+        err.message
+    );
+}
+
 // --- M-686: HOF checker (RFC-0024 §3) — Ty::Fn + fn-as-value + HOF application ----------------
 
 /// Shared helper: a minimal `Result<A, E>` data type + typical HOF helpers used by multiple

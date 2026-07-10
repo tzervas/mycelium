@@ -1430,8 +1430,11 @@ fn walk_objectdecl(fp: Fp, o: ObjectDecl) => Fp =
       fns)
   };
 
+// DN-103 / M-1026: fold the impl-level type-parameter slot (unbounded names) first — matching how
+// TypeDecl/TraitDecl/LowerDecl fold their `params` — so the fingerprint distinguishes `impl[T] Foo[T]`
+// from `impl Foo[T]` (lock-step with the oracle `fp::inherentimpldecl`, no new tag-table entry).
 fn walk_inherentimpldecl(fp: Fp, i: InherentImplDecl) => Fp =
-  match i { IID(_, for_ty, methods) => walk_fndecl_list(walk_typeref(fp_tag(fp, 0b0000_0000_0000_0000_0000_0000_0011_1000), for_ty), methods) };
+  match i { IID(params, for_ty, methods) => walk_fndecl_list(walk_typeref(fp_tag(walk_bytes_list2(fp, params), 0b0000_0000_0000_0000_0000_0000_0011_1000), for_ty), methods) };
 
 fn walk_lowerrhs(fp: Fp, r: LowerRhs) => Fp =
   match r {
