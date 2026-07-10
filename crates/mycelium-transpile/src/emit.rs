@@ -71,15 +71,37 @@ pub(crate) type TypeEnv = HashMap<String, String>;
 /// decimal digit string (`Expr::Lit`'s arm, unchanged) and never claims one as a known `Binary{N}`
 /// operand for the gate below.
 pub(crate) fn expr_env_type(e: &Expr, env: &TypeEnv) -> Option<String> {
-    match e {
-        Expr::Path(p) if p.qself.is_none() && p.path.segments.len() == 1 => {
-            let name = p.path.segments.last()?.ident.to_string();
-            env.get(&name).cloned()
-        }
-        Expr::Paren(p) => expr_env_type(&p.expr, env),
-        Expr::Reference(r) => expr_env_type(&r.expr, env),
-        _ => None,
+    // Routed through `crate::visit::ExprVisitor` (M-1041 Scope-A): a narrow visitor overriding
+    // only the 3 shapes this probe cares about (`visit_path`/`visit_paren`/`visit_reference`),
+    // inheriting `fallback -> None` for every other `Expr` shape -- behaviorally identical to the
+    // pre-refactor hand-written 3-arm `match` + `_ => None` this replaced.
+    struct EnvTypeVisitor<'a> {
+        env: &'a TypeEnv,
     }
+    impl crate::visit::ExprVisitor for EnvTypeVisitor<'_> {
+        type Output = Option<String>;
+
+        fn fallback(&mut self, _expr: &Expr) -> Self::Output {
+            None
+        }
+
+        fn visit_path(&mut self, _expr: &Expr, p: &syn::ExprPath) -> Self::Output {
+            if p.qself.is_some() || p.path.segments.len() != 1 {
+                return None;
+            }
+            let name = p.path.segments.last()?.ident.to_string();
+            self.env.get(&name).cloned()
+        }
+
+        fn visit_paren(&mut self, _expr: &Expr, p: &syn::ExprParen) -> Self::Output {
+            expr_env_type(&p.expr, self.env)
+        }
+
+        fn visit_reference(&mut self, _expr: &Expr, r: &syn::ExprReference) -> Self::Output {
+            expr_env_type(&r.expr, self.env)
+        }
+    }
+    crate::visit::walk_expr(e, &mut EnvTypeVisitor { env })
 }
 
 /// [`expr_env_type`] narrowed to the `Binary{N}` case (via [`binary_width`]) — the gate
@@ -94,17 +116,33 @@ fn expr_env_binary_width(e: &Expr, env: &TypeEnv) -> Option<u32> {
 /// known type text. `None` for every other expression shape, an unresolvable `Self`, or a struct
 /// that itself does not resolve/emit (never records a type this module cannot back up — VR-5).
 fn known_struct_literal_ty(e: &Expr, self_ty: Option<&str>) -> Option<String> {
-    let Expr::Struct(se) = e else { return None };
-    if se.qself.is_some() || se.rest.is_some() {
-        return None;
+    // Routed through `crate::visit::ExprVisitor` (M-1041 Scope-A): a narrow visitor overriding
+    // only `visit_struct`, inheriting `fallback -> None` for every other shape -- behaviorally
+    // identical to the pre-refactor `let Expr::Struct(se) = e else { return None }` this replaced.
+    struct StructLitVisitor<'a> {
+        self_ty: Option<&'a str>,
     }
-    let raw = se.path.segments.last()?.ident.to_string();
-    let sty = if raw == "Self" {
-        self_ty?.to_string()
-    } else {
-        raw
-    };
-    struct_layout(&sty).map(|_| sty)
+    impl crate::visit::ExprVisitor for StructLitVisitor<'_> {
+        type Output = Option<String>;
+
+        fn fallback(&mut self, _expr: &Expr) -> Self::Output {
+            None
+        }
+
+        fn visit_struct(&mut self, _expr: &Expr, se: &syn::ExprStruct) -> Self::Output {
+            if se.qself.is_some() || se.rest.is_some() {
+                return None;
+            }
+            let raw = se.path.segments.last()?.ident.to_string();
+            let sty = if raw == "Self" {
+                self.self_ty?.to_string()
+            } else {
+                raw
+            };
+            struct_layout(&sty).map(|_| sty)
+        }
+    }
+    crate::visit::walk_expr(e, &mut StructLitVisitor { self_ty })
 }
 
 /// Per-file emit context installed by `transpile::transpile_source` for the item loop (see
@@ -758,23 +796,59 @@ pub fn emit_expr(expr: &Expr, self_ty: Option<&str>, env: &TypeEnv) -> Result<St
 /// Recursive calls within this match use the public `emit_expr` name so each nested call re-enters
 /// the guard.
 fn emit_expr_inner(expr: &Expr, self_ty: Option<&str>, env: &TypeEnv) -> Result<String, GapReason> {
-    match expr {
-        Expr::Path(p) if p.qself.is_none() => {
-            // Declared mapping decision: a qualified path (`Type::Variant`, UFCS calls) is
-            // reduced to its last segment — Mycelium constructor/value references are bare
-            // identifiers within a nodule (matching `lib/std/cmp.myc`'s own style, e.g. `Lt`
-            // rather than `Ordering.Lt`); this transpiler emits everything into one nodule, so
-            // qualification carries no distinguishing information here.
-            let seg = p
-                .path
-                .segments
-                .last()
-                .ok_or_else(|| GapReason::new(Category::Other, "empty path expression"))?;
-            let name = seg.ident.to_string();
-            guard_ident(&name, "value/constructor reference")?;
-            Ok(name)
+    // Routed through `crate::visit::ExprVisitor` (M-1041 Scope-A): the previous single ~19-arm
+    // hand-written `match` now lives as `EmitVisitor`'s per-variant methods (below), reached via
+    // the shared `crate::visit::walk_expr` dispatcher. Every method body is the unmodified
+    // content of its former match arm (only bare `self_ty`/`env` references became
+    // `self.self_ty`/`self.env` — the same values, now visitor fields instead of function
+    // parameters), so this is a pure relocation, not a behavior change (verified: byte-identical
+    // `cargo test -p mycelium-transpile`).
+    let mut visitor = EmitVisitor { self_ty, env };
+    crate::visit::walk_expr(expr, &mut visitor)
+}
+
+/// The `emit_expr_inner` translation, reified as a `crate::visit::ExprVisitor` (M-1041 Scope-A —
+/// the DRY force-multiplier pilot). Each method below is the *unmodified* body of its former
+/// match arm in the pre-refactor `emit_expr_inner` — only the outer dispatch moved to the shared
+/// `crate::visit::walk_expr`, and every bare `self_ty`/`env` reference became
+/// `self.self_ty`/`self.env` (fields instead of function parameters, same values). No emitted
+/// `.myc` text and no `GapReason` message changed.
+struct EmitVisitor<'a> {
+    self_ty: Option<&'a str>,
+    env: &'a TypeEnv,
+}
+
+impl crate::visit::ExprVisitor for EmitVisitor<'_> {
+    type Output = Result<String, GapReason>;
+
+    fn fallback(&mut self, expr: &Expr) -> Self::Output {
+        Err(GapReason::new(
+            Category::Other,
+            format!("unsupported expression form `{}`", tokens_to_string(expr)),
+        ))
+    }
+
+    fn visit_path(&mut self, expr: &Expr, p: &syn::ExprPath) -> Self::Output {
+        if p.qself.is_some() {
+            return self.fallback(expr);
         }
-        Expr::Lit(l) => match &l.lit {
+        // Declared mapping decision: a qualified path (`Type::Variant`, UFCS calls) is
+        // reduced to its last segment — Mycelium constructor/value references are bare
+        // identifiers within a nodule (matching `lib/std/cmp.myc`'s own style, e.g. `Lt`
+        // rather than `Ordering.Lt`); this transpiler emits everything into one nodule, so
+        // qualification carries no distinguishing information here.
+        let seg = p
+            .path
+            .segments
+            .last()
+            .ok_or_else(|| GapReason::new(Category::Other, "empty path expression"))?;
+        let name = seg.ident.to_string();
+        guard_ident(&name, "value/constructor reference")?;
+        Ok(name)
+    }
+
+    fn visit_lit(&mut self, _expr: &Expr, l: &syn::ExprLit) -> Self::Output {
+        match &l.lit {
             Lit::Bool(b) => Ok(if b.value { "True" } else { "False" }.to_string()),
             Lit::Int(i) => Ok(i.base10_digits().to_string()),
             // A Rust string literal maps to a Mycelium `StrLit` (grammar `literal ::= … | StrLit`,
@@ -818,612 +892,640 @@ fn emit_expr_inner(expr: &Expr, self_ty: Option<&str>, env: &TypeEnv) -> Result<
                     tokens_to_string(l)
                 ),
             )),
-        },
-        Expr::If(e) => {
-            let else_branch = e.else_branch.as_ref().ok_or_else(|| {
-                GapReason::new(
-                    Category::Other,
-                    "`if` without an `else` branch — if_expr requires both arms",
-                )
-            })?;
-            if matches!(*e.cond, Expr::Let(_)) {
-                return Err(GapReason::new(
-                    Category::Other,
-                    "`if let` has no Mycelium equivalent in this grammar fragment",
-                ));
-            }
-            let cond = emit_expr(&e.cond, self_ty, env)?;
-            let then_ = emit_block_as_expr(&e.then_branch, self_ty, env)?;
-            let else_ = emit_expr(&else_branch.1, self_ty, env)?;
-            Ok(format!("if {cond} then {then_} else {else_}"))
         }
-        Expr::Match(m) => {
-            let scrutinee = emit_expr(&m.expr, self_ty, env)?;
-            // M-1035/ENB-12: a string-literal arm implies a `Bytes` scrutinee, and `Bytes` is an
-            // OPEN value domain — the L1 checker's W7 coverage rejects a non-exhaustive `Bytes`
-            // match (`non-exhaustive match on Bytes: missing _`, verified against the oracle). So a
-            // string-literal `match` is emittable-and-check-clean ONLY with a wildcard/default arm;
-            // without one, emit nothing (gap the whole match) rather than a check-failing surface
-            // that would regress `checked_fraction` (VR-5/G2). Non-string matches are unaffected.
-            if m.arms.iter().any(|a| pattern_contains_str_lit(&a.pat))
-                && !m
-                    .arms
-                    .iter()
-                    .any(|a| a.guard.is_none() && is_irrefutable_match_default(&a.pat))
-            {
+    }
+
+    fn visit_if(&mut self, _expr: &Expr, e: &syn::ExprIf) -> Self::Output {
+        let else_branch = e.else_branch.as_ref().ok_or_else(|| {
+            GapReason::new(
+                Category::Other,
+                "`if` without an `else` branch — if_expr requires both arms",
+            )
+        })?;
+        if matches!(*e.cond, Expr::Let(_)) {
+            return Err(GapReason::new(
+                Category::Other,
+                "`if let` has no Mycelium equivalent in this grammar fragment",
+            ));
+        }
+        let cond = emit_expr(&e.cond, self.self_ty, self.env)?;
+        let then_ = emit_block_as_expr(&e.then_branch, self.self_ty, self.env)?;
+        let else_ = emit_expr(&else_branch.1, self.self_ty, self.env)?;
+        Ok(format!("if {cond} then {then_} else {else_}"))
+    }
+
+    fn visit_match(&mut self, _expr: &Expr, m: &syn::ExprMatch) -> Self::Output {
+        let scrutinee = emit_expr(&m.expr, self.self_ty, self.env)?;
+        // M-1035/ENB-12: a string-literal arm implies a `Bytes` scrutinee, and `Bytes` is an
+        // OPEN value domain — the L1 checker's W7 coverage rejects a non-exhaustive `Bytes`
+        // match (`non-exhaustive match on Bytes: missing _`, verified against the oracle). So a
+        // string-literal `match` is emittable-and-check-clean ONLY with a wildcard/default arm;
+        // without one, emit nothing (gap the whole match) rather than a check-failing surface
+        // that would regress `checked_fraction` (VR-5/G2). Non-string matches are unaffected.
+        if m.arms.iter().any(|a| pattern_contains_str_lit(&a.pat))
+            && !m
+                .arms
+                .iter()
+                .any(|a| a.guard.is_none() && is_irrefutable_match_default(&a.pat))
+        {
+            return Err(GapReason::new(
+                Category::Other,
+                "string-literal `match` on a `Bytes` scrutinee without a wildcard/default arm \
+                 (`_ => …`): `Bytes` is an open value domain, so the L1 checker rejects a \
+                 non-exhaustive match (`non-exhaustive match on Bytes: missing _` — M-1035/ \
+                 ENB-12 W7 coverage); emitting it would regress checked_fraction (VR-5/G2)",
+            ));
+        }
+        let mut arms = Vec::with_capacity(m.arms.len());
+        for arm in &m.arms {
+            if arm.guard.is_some() {
                 return Err(GapReason::new(
                     Category::Other,
-                    "string-literal `match` on a `Bytes` scrutinee without a wildcard/default arm \
-                     (`_ => …`): `Bytes` is an open value domain, so the L1 checker rejects a \
-                     non-exhaustive match (`non-exhaustive match on Bytes: missing _` — M-1035/ \
-                     ENB-12 W7 coverage); emitting it would regress checked_fraction (VR-5/G2)",
+                    "match-arm guard (`if ...`) has no Mycelium equivalent (arm grammar has \
+                     no guard slot)",
                 ));
             }
-            let mut arms = Vec::with_capacity(m.arms.len());
-            for arm in &m.arms {
-                if arm.guard.is_some() {
+            let pat = map_pattern(&arm.pat)?;
+            // A match arm's pattern can **bind** names that shadow an outer local of the same
+            // name with a completely different (and possibly narrower/wider) type — e.g. an
+            // enum payload field bound by the pattern is not the outer parameter it shadows.
+            // `env` must never let `Expr::Binary`'s operand-type gate keep firing on such a
+            // name using the *outer* type, so strip every name this arm's pattern binds from a
+            // per-arm copy of `env` before emitting the arm body (VR-5: absence, never a stale
+            // guess — see `collect_pattern_bound_names`'s docs for why this is conservative).
+            let arm_env = if self.env.is_empty() {
+                self.env.clone()
+            } else {
+                let mut bound = HashSet::new();
+                collect_pattern_bound_names(&arm.pat, &mut bound);
+                if bound.is_empty() {
+                    self.env.clone()
+                } else {
+                    let mut e = self.env.clone();
+                    for name in &bound {
+                        e.remove(name);
+                    }
+                    e
+                }
+            };
+            let body = emit_expr(&arm.body, self.self_ty, &arm_env)?;
+            arms.push(format!("{pat} => {body}"));
+        }
+        Ok(format!("match {scrutinee} {{ {} }}", arms.join(", ")))
+    }
+
+    fn visit_binary(&mut self, _expr: &Expr, b: &syn::ExprBinary) -> Self::Output {
+        use syn::BinOp;
+        let lhs = emit_expr(&b.left, self.self_ty, self.env)?;
+        let rhs = emit_expr(&b.right, self.self_ty, self.env)?;
+        // trx2 Lane C Deliverable 1 — operand-type-gated operator emission (VERIFY-FIRST,
+        // mitigation #14; every claim below is a *measured* `myc check` result over the built
+        // `target/debug/myc`, not a doc-derived guess — see the crate's `src/tests/emit.rs`
+        // `binop_operand_gated` fixtures for the same probes committed as regression tests).
+        //
+        // The kernel's real bitwise/comparison surface (`crates/mycelium-l1/src/checkty.rs`
+        // `prim_kernel_name`/`prim_sig`, `Π`) registers `and`/`or`/`xor`/`not`/`eq`/`lt` as
+        // BARE-CALL builtin prims resolvable with **no import** (checkty.rs:7214-7264) — but
+        // the PARSER's glyph→word desugar table (`crates/mycelium-l1/src/parse.rs::infix_op`)
+        // does NOT send every glyph to its matching prim name: `&` desugars to word `"band"`
+        // and `|` to `"bor"` (parse.rs:2383/2385) — names that exist ONLY as ordinary
+        // `lib/std/math.myc` functions (`band`/`bor`, wrapping `and`/`or`), not as prims, so a
+        // glyph emission with no `use std.math.band;` import (this transpiler emits one
+        // import-less nodule — see `emit_expr`'s `Expr::Path` doc) fails `myc check` with
+        // "unknown function/constructor/prim `band`"/`"bor"` — confirmed empirically. `^`
+        // (BitXor) is the one glyph that already desugars to the CORRECT prim name (`"xor"`,
+        // parse.rs:2384) and checks clean as-is — left unchanged below.
+        //
+        // `!=`/`>` are a *different* shape of the same problem, one level deeper: they desugar
+        // to words `"ne"`/`"gt"` (parse.rs:2390/2392), but `ne`/`gt` are not prims at all —
+        // they are ordinary (and, as committed today, non-`pub`) functions in
+        // `lib/std/cmp.myc` (§CU-4). Confirmed empirically: `ne(a, b)`/`gt(a, b)` as a BARE
+        // CALL fails identically to the `!=`/`>` glyphs ("unknown function/constructor/prim
+        // `ne`"/`"gt"`) — because a glyph and its desugar-target word call parse to the exact
+        // same `Expr::App` node (parse.rs's `op_call` doc: "`a + b` and `add(a, b)` are
+        // structurally identical after parsing"), so respelling the *emitted text* from `!=`
+        // to `ne(a, b)` changes NOTHING about whether it checks — both fail exactly alike, with
+        // or without importing `std.cmp` (whose `ne`/`gt`/`cmp`/... are not `pub` in the
+        // committed corpus, so even a real `use std.cmp.ne;` import would additionally fail).
+        // This directly **contradicts** an initial-brief assumption that a `ne`/`gt` word-call
+        // spelling would newly check-clean (VR-5/house-rule-#4: surfacing the disconfirming
+        // finding, not implementing an assumption the codebase doesn't support). Emitting the
+        // bare identifier form was therefore rejected as a no-op change.
+        //
+        // The real, verified fix for `!=`/`>`: compose them from the two comparison prims that
+        // ARE bare-call-resolvable with no import (`eq`/`lt`, confirmed above) — exactly the
+        // derivation `lib/std/cmp.myc`'s own `ne{N}`/`gt{N}` bodies use (cmp.myc:111-116:
+        // `ne(a,b) = match eq(a,b) { 0b1 => False, _ => True }`; `gt(a,b) = match cmp(a,b) {
+        // Gt=>True,... }`, and `cmp` itself is `match eq(a,b) {0b1=>Eq, _=>match lt(a,b)
+        // {0b1=>Lt, _=>Gt}}` — so `gt` unfolds to "not eq, and not lt"). This is a faithful,
+        // prim-composed body, not a fabrication — the same idiom this module already uses for
+        // `try_width_cast_widen_body`'s synthesized `width_cast` call. Verified `myc
+        // check`-clean end-to-end (both cases, no import) via the committed regression tests
+        // below.
+        //
+        // Every case here is gated on **both operands resolving to a known `Binary{N}`** via
+        // `expr_env_binary_width` (only a bare identifier already in `env` can ever resolve —
+        // never a guess, VR-5); an unresolved operand keeps the prior, unchanged glyph
+        // emission (Declared heuristic, exactly as before this deliverable).
+        let both_known_binary = expr_env_binary_width(&b.left, self.env).is_some()
+            && expr_env_binary_width(&b.right, self.env).is_some();
+        match &b.op {
+            // RFC-0032 D1 (ratified): `==`/`<` glyphs are the canonical surface for `eq`/`lt`
+            // — left unchanged (not part of this deliverable's operand-gated rewrite).
+            BinOp::Eq(_) => Ok(format!("{lhs} == {rhs}")),
+            BinOp::Lt(_) => Ok(format!("{lhs} < {rhs}")),
+            BinOp::Ne(_) if both_known_binary => Ok(format!(
+                "(match eq({lhs}, {rhs}) {{ 0b1 => False, _ => True }})"
+            )),
+            BinOp::Ne(_) => Ok(format!("{lhs} != {rhs}")),
+            BinOp::Gt(_) if both_known_binary => Ok(format!(
+                "(match eq({lhs}, {rhs}) {{ 0b1 => False, _ => match lt({lhs}, {rhs}) {{ 0b1 \
+                 => False, _ => True }} }})"
+            )),
+            BinOp::Gt(_) => Ok(format!("{lhs} > {rhs}")),
+            BinOp::And(_) => Ok(format!("{lhs} && {rhs}")),
+            BinOp::Or(_) => Ok(format!("{lhs} || {rhs}")),
+            BinOp::BitAnd(_) if both_known_binary => Ok(format!("and({lhs}, {rhs})")),
+            BinOp::BitAnd(_) => Ok(format!("{lhs} & {rhs}")),
+            BinOp::BitOr(_) if both_known_binary => Ok(format!("or({lhs}, {rhs})")),
+            BinOp::BitOr(_) => Ok(format!("{lhs} | {rhs}")),
+            // `^` already desugars to the correct prim name (`"xor"`, parse.rs:2384) — no
+            // rewrite needed; confirmed `myc check`-clean as a bare glyph.
+            BinOp::BitXor(_) => Ok(format!("{lhs} ^ {rhs}")),
+            BinOp::Shl(_) => Ok(format!("{lhs} << {rhs}")),
+            BinOp::Shr(_) => Ok(format!("{lhs} >> {rhs}")),
+            BinOp::Add(_) => Ok(format!("{lhs} + {rhs}")),
+            BinOp::Sub(_) => Ok(format!("{lhs} - {rhs}")),
+            BinOp::Mul(_) => Ok(format!("{lhs} * {rhs}")),
+            BinOp::Div(_) => Ok(format!("{lhs} / {rhs}")),
+            BinOp::Rem(_) => Ok(format!("{lhs} % {rhs}")),
+            // RFC-0025 §4.1: `<=`/`>=` glyphs are RETIRED; word forms `lte`/`gte` instead.
+            // (Pre-existing: `lte`/`gte` have the identical not-a-prim/non-`pub`-stdlib-fn
+            // gap `ne`/`gt` had — out of scope for this deliverable, which only covers
+            // `& | ^ != >`; left unchanged.)
+            BinOp::Le(_) => Ok(format!("lte({lhs}, {rhs})")),
+            BinOp::Ge(_) => Ok(format!("gte({lhs}, {rhs})")),
+            other => Err(GapReason::new(
+                Category::Other,
+                format!(
+                    "unsupported/compound binary operator `{}`",
+                    tokens_to_string(other)
+                ),
+            )),
+        }
+    }
+
+    fn visit_unary(&mut self, _expr: &Expr, u: &syn::ExprUnary) -> Self::Output {
+        let operand = emit_expr(&u.expr, self.self_ty, self.env)?;
+        match &u.op {
+            syn::UnOp::Neg(_) => Ok(format!("-{operand}")),
+            syn::UnOp::Not(_) => Ok(format!("!{operand}")),
+            _ => Err(GapReason::new(
+                Category::Other,
+                "unsupported unary operator (e.g. `*` deref has no equivalent in a \
+                 value-semantic grammar)",
+            )),
+        }
+    }
+
+    fn visit_call(&mut self, _expr: &Expr, c: &syn::ExprCall) -> Self::Output {
+        let func = match &*c.func {
+            Expr::Path(p) if p.qself.is_none() && p.path.segments.len() == 1 => p
+                .path
+                .segments
+                .last()
+                .map(|s| s.ident.to_string())
+                .ok_or_else(|| GapReason::new(Category::Other, "empty call-target path"))?,
+            Expr::Path(p) if p.qself.is_none() => {
+                // A qualified/associated-function call (`Type::method(...)`, e.g. Rust's
+                // widening bodies `i16::from(self)`). Mycelium calls are bare identifiers
+                // (`app_expr ::= primary ('(' args? ')')*`, `primary ::= ... | path`,
+                // `path ::= Ident ('.' Ident)*` — no `::`/qualifier form). An earlier
+                // iteration of this arm collapsed any path to its last segment, which for a
+                // *call target* fabricates a call to whatever that segment's name happens to
+                // be — e.g. `i16::from(self)` -> `from(self)`, and `from` is NOT a confirmed
+                // Mycelium builtin (grep of `docs/spec/grammar/mycelium.ebnf` finds it only in
+                // prose, never in a grammar production). There is no established Mycelium
+                // surface form for a Rust conversion-op/associated-fn call, so — mirroring
+                // `map::map_type`'s identical qualified-path decision — this is left an
+                // explicit gap rather than a fabricated call (G2/DN-34 §4).
+                return Err(GapReason::new(
+                    Category::Other,
+                    format!(
+                        "qualified/associated-function call `{}` — no established Mycelium \
+                         surface form for a Rust conversion-op body; emitting the bare \
+                         last-segment name would fabricate a call (e.g. `from(...)` is not a \
+                         Mycelium builtin)",
+                        tokens_to_string(&*c.func)
+                    ),
+                ));
+            }
+            _ => {
+                return Err(GapReason::new(
+                    Category::Other,
+                    "call target is not a simple path (e.g. a closure call) — no confirmed \
+                     mapping",
+                ))
+            }
+        };
+        // M-1001: a call to a function whose name is a reserved word (e.g. a Rust `.swap()`
+        // method or a `to(..)` helper) would emit un-parseable text; gap it (VR-5/G2).
+        guard_ident(&func, "call target")?;
+        let mut args = Vec::with_capacity(c.args.len());
+        for a in &c.args {
+            args.push(emit_expr(a, self.self_ty, self.env)?);
+        }
+        Ok(format!("{func}({})", args.join(", ")))
+    }
+
+    fn visit_method_call(&mut self, _expr: &Expr, m: &syn::ExprMethodCall) -> Self::Output {
+        // trx2 Lane C Deliverable 2 — forward-mapped kernel prim surface (`crate::prim_map`).
+        // Consulted BEFORE the generic desugar below so a confirmed row wins; gated on the
+        // receiver's *known* type (never a guess — VR-5) so an unrelated Rust type's
+        // same-named method never triggers a wrong/misleading mapping. A row whose gate
+        // doesn't match (receiver type unknown or doesn't match) falls straight through to the
+        // unchanged generic desugar, exactly as if no row existed.
+        let method_name = m.method.to_string();
+        if let Some(row) = crate::prim_map::lookup(&method_name) {
+            let receiver_ty = expr_env_type(&m.receiver, self.env);
+            if crate::prim_map::receiver_gate_matches(row.receiver_gate, receiver_ty.as_deref()) {
+                if !row.wired {
+                    // PENDING-BACKEND: the mapping is known (a decided ruling — see
+                    // `crate::prim_map` module docs for each row's citation) but the kernel/
+                    // grammar backend is not landed — always an explicit gap, NEVER an
+                    // emission (VR-5/G2: a forward-declared mapping is documentation, not a
+                    // fabricated success).
                     return Err(GapReason::new(
-                        Category::Other,
-                        "match-arm guard (`if ...`) has no Mycelium equivalent (arm grammar has \
-                         no guard slot)",
+                        row.pending_category,
+                        format!(
+                            "PENDING-BACKEND({}): {} forward-mapped, backend unwired — gated \
+                             off (VR-5/G2). {}",
+                            row.slug, row.myc_prim, row.citation
+                        ),
                     ));
                 }
-                let pat = map_pattern(&arm.pat)?;
-                // A match arm's pattern can **bind** names that shadow an outer local of the same
-                // name with a completely different (and possibly narrower/wider) type — e.g. an
-                // enum payload field bound by the pattern is not the outer parameter it shadows.
-                // `env` must never let `Expr::Binary`'s operand-type gate keep firing on such a
-                // name using the *outer* type, so strip every name this arm's pattern binds from a
-                // per-arm copy of `env` before emitting the arm body (VR-5: absence, never a stale
-                // guess — see `collect_pattern_bound_names`'s docs for why this is conservative).
-                let arm_env = if env.is_empty() {
-                    env.clone()
-                } else {
-                    let mut bound = HashSet::new();
-                    collect_pattern_bound_names(&arm.pat, &mut bound);
-                    if bound.is_empty() {
-                        env.clone()
-                    } else {
-                        let mut e = env.clone();
-                        for name in &bound {
-                            e.remove(name);
-                        }
-                        e
-                    }
-                };
-                let body = emit_expr(&arm.body, self_ty, &arm_env)?;
-                arms.push(format!("{pat} => {body}"));
-            }
-            Ok(format!("match {scrutinee} {{ {} }}", arms.join(", ")))
-        }
-        Expr::Binary(b) => {
-            use syn::BinOp;
-            let lhs = emit_expr(&b.left, self_ty, env)?;
-            let rhs = emit_expr(&b.right, self_ty, env)?;
-            // trx2 Lane C Deliverable 1 — operand-type-gated operator emission (VERIFY-FIRST,
-            // mitigation #14; every claim below is a *measured* `myc check` result over the built
-            // `target/debug/myc`, not a doc-derived guess — see the crate's `src/tests/emit.rs`
-            // `binop_operand_gated` fixtures for the same probes committed as regression tests).
-            //
-            // The kernel's real bitwise/comparison surface (`crates/mycelium-l1/src/checkty.rs`
-            // `prim_kernel_name`/`prim_sig`, `Π`) registers `and`/`or`/`xor`/`not`/`eq`/`lt` as
-            // BARE-CALL builtin prims resolvable with **no import** (checkty.rs:7214-7264) — but
-            // the PARSER's glyph→word desugar table (`crates/mycelium-l1/src/parse.rs::infix_op`)
-            // does NOT send every glyph to its matching prim name: `&` desugars to word `"band"`
-            // and `|` to `"bor"` (parse.rs:2383/2385) — names that exist ONLY as ordinary
-            // `lib/std/math.myc` functions (`band`/`bor`, wrapping `and`/`or`), not as prims, so a
-            // glyph emission with no `use std.math.band;` import (this transpiler emits one
-            // import-less nodule — see `emit_expr`'s `Expr::Path` doc) fails `myc check` with
-            // "unknown function/constructor/prim `band`"/`"bor"` — confirmed empirically. `^`
-            // (BitXor) is the one glyph that already desugars to the CORRECT prim name (`"xor"`,
-            // parse.rs:2384) and checks clean as-is — left unchanged below.
-            //
-            // `!=`/`>` are a *different* shape of the same problem, one level deeper: they desugar
-            // to words `"ne"`/`"gt"` (parse.rs:2390/2392), but `ne`/`gt` are not prims at all —
-            // they are ordinary (and, as committed today, non-`pub`) functions in
-            // `lib/std/cmp.myc` (§CU-4). Confirmed empirically: `ne(a, b)`/`gt(a, b)` as a BARE
-            // CALL fails identically to the `!=`/`>` glyphs ("unknown function/constructor/prim
-            // `ne`"/`"gt"`) — because a glyph and its desugar-target word call parse to the exact
-            // same `Expr::App` node (parse.rs's `op_call` doc: "`a + b` and `add(a, b)` are
-            // structurally identical after parsing"), so respelling the *emitted text* from `!=`
-            // to `ne(a, b)` changes NOTHING about whether it checks — both fail exactly alike, with
-            // or without importing `std.cmp` (whose `ne`/`gt`/`cmp`/... are not `pub` in the
-            // committed corpus, so even a real `use std.cmp.ne;` import would additionally fail).
-            // This directly **contradicts** an initial-brief assumption that a `ne`/`gt` word-call
-            // spelling would newly check-clean (VR-5/house-rule-#4: surfacing the disconfirming
-            // finding, not implementing an assumption the codebase doesn't support). Emitting the
-            // bare identifier form was therefore rejected as a no-op change.
-            //
-            // The real, verified fix for `!=`/`>`: compose them from the two comparison prims that
-            // ARE bare-call-resolvable with no import (`eq`/`lt`, confirmed above) — exactly the
-            // derivation `lib/std/cmp.myc`'s own `ne{N}`/`gt{N}` bodies use (cmp.myc:111-116:
-            // `ne(a,b) = match eq(a,b) { 0b1 => False, _ => True }`; `gt(a,b) = match cmp(a,b) {
-            // Gt=>True,... }`, and `cmp` itself is `match eq(a,b) {0b1=>Eq, _=>match lt(a,b)
-            // {0b1=>Lt, _=>Gt}}` — so `gt` unfolds to "not eq, and not lt"). This is a faithful,
-            // prim-composed body, not a fabrication — the same idiom this module already uses for
-            // `try_width_cast_widen_body`'s synthesized `width_cast` call. Verified `myc
-            // check`-clean end-to-end (both cases, no import) via the committed regression tests
-            // below.
-            //
-            // Every case here is gated on **both operands resolving to a known `Binary{N}`** via
-            // `expr_env_binary_width` (only a bare identifier already in `env` can ever resolve —
-            // never a guess, VR-5); an unresolved operand keeps the prior, unchanged glyph
-            // emission (Declared heuristic, exactly as before this deliverable).
-            let both_known_binary = expr_env_binary_width(&b.left, env).is_some()
-                && expr_env_binary_width(&b.right, env).is_some();
-            match &b.op {
-                // RFC-0032 D1 (ratified): `==`/`<` glyphs are the canonical surface for `eq`/`lt`
-                // — left unchanged (not part of this deliverable's operand-gated rewrite).
-                BinOp::Eq(_) => Ok(format!("{lhs} == {rhs}")),
-                BinOp::Lt(_) => Ok(format!("{lhs} < {rhs}")),
-                BinOp::Ne(_) if both_known_binary => Ok(format!(
-                    "(match eq({lhs}, {rhs}) {{ 0b1 => False, _ => True }})"
-                )),
-                BinOp::Ne(_) => Ok(format!("{lhs} != {rhs}")),
-                BinOp::Gt(_) if both_known_binary => Ok(format!(
-                    "(match eq({lhs}, {rhs}) {{ 0b1 => False, _ => match lt({lhs}, {rhs}) {{ 0b1 \
-                     => False, _ => True }} }})"
-                )),
-                BinOp::Gt(_) => Ok(format!("{lhs} > {rhs}")),
-                BinOp::And(_) => Ok(format!("{lhs} && {rhs}")),
-                BinOp::Or(_) => Ok(format!("{lhs} || {rhs}")),
-                BinOp::BitAnd(_) if both_known_binary => Ok(format!("and({lhs}, {rhs})")),
-                BinOp::BitAnd(_) => Ok(format!("{lhs} & {rhs}")),
-                BinOp::BitOr(_) if both_known_binary => Ok(format!("or({lhs}, {rhs})")),
-                BinOp::BitOr(_) => Ok(format!("{lhs} | {rhs}")),
-                // `^` already desugars to the correct prim name (`"xor"`, parse.rs:2384) — no
-                // rewrite needed; confirmed `myc check`-clean as a bare glyph.
-                BinOp::BitXor(_) => Ok(format!("{lhs} ^ {rhs}")),
-                BinOp::Shl(_) => Ok(format!("{lhs} << {rhs}")),
-                BinOp::Shr(_) => Ok(format!("{lhs} >> {rhs}")),
-                BinOp::Add(_) => Ok(format!("{lhs} + {rhs}")),
-                BinOp::Sub(_) => Ok(format!("{lhs} - {rhs}")),
-                BinOp::Mul(_) => Ok(format!("{lhs} * {rhs}")),
-                BinOp::Div(_) => Ok(format!("{lhs} / {rhs}")),
-                BinOp::Rem(_) => Ok(format!("{lhs} % {rhs}")),
-                // RFC-0025 §4.1: `<=`/`>=` glyphs are RETIRED; word forms `lte`/`gte` instead.
-                // (Pre-existing: `lte`/`gte` have the identical not-a-prim/non-`pub`-stdlib-fn
-                // gap `ne`/`gt` had — out of scope for this deliverable, which only covers
-                // `& | ^ != >`; left unchanged.)
-                BinOp::Le(_) => Ok(format!("lte({lhs}, {rhs})")),
-                BinOp::Ge(_) => Ok(format!("gte({lhs}, {rhs})")),
-                other => Err(GapReason::new(
-                    Category::Other,
-                    format!(
-                        "unsupported/compound binary operator `{}`",
-                        tokens_to_string(other)
-                    ),
-                )),
-            }
-        }
-        Expr::Unary(u) => {
-            let operand = emit_expr(&u.expr, self_ty, env)?;
-            match &u.op {
-                syn::UnOp::Neg(_) => Ok(format!("-{operand}")),
-                syn::UnOp::Not(_) => Ok(format!("!{operand}")),
-                _ => Err(GapReason::new(
-                    Category::Other,
-                    "unsupported unary operator (e.g. `*` deref has no equivalent in a \
-                     value-semantic grammar)",
-                )),
-            }
-        }
-        Expr::Call(c) => {
-            let func =
-                match &*c.func {
-                    Expr::Path(p) if p.qself.is_none() && p.path.segments.len() == 1 => p
-                        .path
-                        .segments
-                        .last()
-                        .map(|s| s.ident.to_string())
-                        .ok_or_else(|| GapReason::new(Category::Other, "empty call-target path"))?,
-                    Expr::Path(p) if p.qself.is_none() => {
-                        // A qualified/associated-function call (`Type::method(...)`, e.g. Rust's
-                        // widening bodies `i16::from(self)`). Mycelium calls are bare identifiers
-                        // (`app_expr ::= primary ('(' args? ')')*`, `primary ::= ... | path`,
-                        // `path ::= Ident ('.' Ident)*` — no `::`/qualifier form). An earlier
-                        // iteration of this arm collapsed any path to its last segment, which for a
-                        // *call target* fabricates a call to whatever that segment's name happens to
-                        // be — e.g. `i16::from(self)` -> `from(self)`, and `from` is NOT a confirmed
-                        // Mycelium builtin (grep of `docs/spec/grammar/mycelium.ebnf` finds it only in
-                        // prose, never in a grammar production). There is no established Mycelium
-                        // surface form for a Rust conversion-op/associated-fn call, so — mirroring
-                        // `map::map_type`'s identical qualified-path decision — this is left an
-                        // explicit gap rather than a fabricated call (G2/DN-34 §4).
-                        return Err(GapReason::new(
-                            Category::Other,
-                            format!(
-                            "qualified/associated-function call `{}` — no established Mycelium \
-                             surface form for a Rust conversion-op body; emitting the bare \
-                             last-segment name would fabricate a call (e.g. `from(...)` is not a \
-                             Mycelium builtin)",
-                            tokens_to_string(&*c.func)
-                        ),
-                        ));
-                    }
-                    _ => return Err(GapReason::new(
-                        Category::Other,
-                        "call target is not a simple path (e.g. a closure call) — no confirmed \
-                         mapping",
-                    )),
-                };
-            // M-1001: a call to a function whose name is a reserved word (e.g. a Rust `.swap()`
-            // method or a `to(..)` helper) would emit un-parseable text; gap it (VR-5/G2).
-            guard_ident(&func, "call target")?;
-            let mut args = Vec::with_capacity(c.args.len());
-            for a in &c.args {
-                args.push(emit_expr(a, self_ty, env)?);
-            }
-            Ok(format!("{func}({})", args.join(", ")))
-        }
-        Expr::MethodCall(m) => {
-            // trx2 Lane C Deliverable 2 — forward-mapped kernel prim surface (`crate::prim_map`).
-            // Consulted BEFORE the generic desugar below so a confirmed row wins; gated on the
-            // receiver's *known* type (never a guess — VR-5) so an unrelated Rust type's
-            // same-named method never triggers a wrong/misleading mapping. A row whose gate
-            // doesn't match (receiver type unknown or doesn't match) falls straight through to the
-            // unchanged generic desugar, exactly as if no row existed.
-            let method_name = m.method.to_string();
-            if let Some(row) = crate::prim_map::lookup(&method_name) {
-                let receiver_ty = expr_env_type(&m.receiver, env);
-                if crate::prim_map::receiver_gate_matches(row.receiver_gate, receiver_ty.as_deref())
-                {
-                    if !row.wired {
-                        // PENDING-BACKEND: the mapping is known (a decided ruling — see
-                        // `crate::prim_map` module docs for each row's citation) but the kernel/
-                        // grammar backend is not landed — always an explicit gap, NEVER an
-                        // emission (VR-5/G2: a forward-declared mapping is documentation, not a
-                        // fabricated success).
-                        return Err(GapReason::new(
-                            row.pending_category,
-                            format!(
-                                "PENDING-BACKEND({}): {} forward-mapped, backend unwired — gated \
-                                 off (VR-5/G2). {}",
-                                row.slug, row.myc_prim, row.citation
-                            ),
-                        ));
-                    }
-                    let recv = emit_expr(&m.receiver, self_ty, env)?;
-                    let mut args = vec![recv];
-                    for a in &m.args {
-                        args.push(emit_expr(a, self_ty, env)?);
-                    }
-                    let call = format!("{}({})", row.myc_prim, args.join(", "));
-                    return Ok(if row.bridge_binary1_to_bool {
-                        // The prim's own return is `Binary{1}`; Rust's method returns `bool` ->
-                        // bridge to `Bool` the same proven way `Expr::Binary`'s `!=`/`>` composition
-                        // does (see that arm's doc) — a bare call would fail `myc check`'s
-                        // `Binary{1}` vs `Bool` mismatch (confirmed empirically).
-                        format!("(match {call} {{ 0b1 => True, _ => False }})")
-                    } else {
-                        call
-                    });
+                let recv = emit_expr(&m.receiver, self.self_ty, self.env)?;
+                let mut args = vec![recv];
+                for a in &m.args {
+                    args.push(emit_expr(a, self.self_ty, self.env)?);
                 }
+                let call = format!("{}({})", row.myc_prim, args.join(", "));
+                return Ok(if row.bridge_binary1_to_bool {
+                    // The prim's own return is `Binary{1}`; Rust's method returns `bool` ->
+                    // bridge to `Bool` the same proven way `Expr::Binary`'s `!=`/`>` composition
+                    // does (see that arm's doc) — a bare call would fail `myc check`'s
+                    // `Binary{1}` vs `Bool` mismatch (confirmed empirically).
+                    format!("(match {call} {{ 0b1 => True, _ => False }})")
+                } else {
+                    call
+                });
             }
-            // A Rust **ownership/identity-conversion no-op method** (`ToOwned::to_owned`,
-            // `Clone::clone`, `ToString::to_string`, `Into::into`, `AsRef`/`Borrow` accessors, …)
-            // has NO Mycelium free-function or prim referent: Mycelium is value-semantic (ADR-003),
-            // so these are either identity or an unmapped conversion — desugaring `recv.to_owned()`
-            // to a bare `to_owned(recv)` FABRICATES a call to a non-existent prim (`myc check`:
-            // `unknown function/constructor/prim to_owned`), which is exactly the never-silent
-            // violation the house rules forbid (G2/VR-5). Gap it explicitly instead of emitting a
-            // check-failing surface. (This is the #72 co-poison fix: the string-literal-`match`
-            // enabler (M-1035) let `checkty::vsa_kernel_model_id`'s match emit, but its arm bodies
-            // are `"MAP-I".to_owned()` — without this gap, the fabricated `to_owned` poisons the
-            // whole file under the vet loop's file-gated all-or-nothing `checked_fraction`.)
-            if is_unmappable_conversion_method(&method_name) {
-                return Err(GapReason::new(
-                    Category::Other,
-                    format!(
-                        "Rust ownership/identity-conversion no-op method `.{method_name}()` has no \
-                         Mycelium free-function/prim referent (value semantics — ADR-003); \
-                         desugaring it to a bare `{method_name}(recv)` would fabricate an unknown \
-                         prim (`unknown function/constructor/prim `{method_name}`` — verified \
-                         against the oracle), so it is gapped, never fake-emitted (G2/VR-5)"
-                    ),
-                ));
-            }
-            // Declared mapping decision: the grammar's `app_expr` has no postfix method-call
-            // form (`primary ('(' args? ')')*` only) — desugar `recv.method(args)` to
-            // `method(recv, args...)`, matching how `lib/std/cmp.myc`'s free functions
-            // (`cmp`/`le`/`ge`/...) take the receiver as an ordinary first argument.
-            guard_ident(&method_name, "method call")?;
-            let recv = emit_expr(&m.receiver, self_ty, env)?;
-            let mut args = vec![recv];
-            for a in &m.args {
-                args.push(emit_expr(a, self_ty, env)?);
-            }
-            Ok(format!("{method_name}({})", args.join(", ")))
         }
-        Expr::Paren(p) => Ok(format!("({})", emit_expr(&p.expr, self_ty, env)?)),
-        Expr::Reference(r) => {
-            // Declared simplification: Mycelium is value-semantic (ADR-003) with no reference
-            // type in this grammar fragment — `&expr`/`&mut expr` is treated as
-            // reference-transparent and erased to its inner expression.
-            emit_expr(&r.expr, self_ty, env)
+        // A Rust **ownership/identity-conversion no-op method** (`ToOwned::to_owned`,
+        // `Clone::clone`, `ToString::to_string`, `Into::into`, `AsRef`/`Borrow` accessors, …)
+        // has NO Mycelium free-function or prim referent: Mycelium is value-semantic (ADR-003),
+        // so these are either identity or an unmapped conversion — desugaring `recv.to_owned()`
+        // to a bare `to_owned(recv)` FABRICATES a call to a non-existent prim (`myc check`:
+        // `unknown function/constructor/prim to_owned`), which is exactly the never-silent
+        // violation the house rules forbid (G2/VR-5). Gap it explicitly instead of emitting a
+        // check-failing surface. (This is the #72 co-poison fix: the string-literal-`match`
+        // enabler (M-1035) let `checkty::vsa_kernel_model_id`'s match emit, but its arm bodies
+        // are `"MAP-I".to_owned()` — without this gap, the fabricated `to_owned` poisons the
+        // whole file under the vet loop's file-gated all-or-nothing `checked_fraction`.)
+        if is_unmappable_conversion_method(&method_name) {
+            return Err(GapReason::new(
+                Category::Other,
+                format!(
+                    "Rust ownership/identity-conversion no-op method `.{method_name}()` has no \
+                     Mycelium free-function/prim referent (value semantics — ADR-003); \
+                     desugaring it to a bare `{method_name}(recv)` would fabricate an unknown \
+                     prim (`unknown function/constructor/prim `{method_name}`` — verified \
+                     against the oracle), so it is gapped, never fake-emitted (G2/VR-5)"
+                ),
+            ));
         }
-        Expr::Tuple(t) if t.elems.len() >= 2 => {
+        // Declared mapping decision: the grammar's `app_expr` has no postfix method-call
+        // form (`primary ('(' args? ')')*` only) — desugar `recv.method(args)` to
+        // `method(recv, args...)`, matching how `lib/std/cmp.myc`'s free functions
+        // (`cmp`/`le`/`ge`/...) take the receiver as an ordinary first argument.
+        guard_ident(&method_name, "method call")?;
+        let recv = emit_expr(&m.receiver, self.self_ty, self.env)?;
+        let mut args = vec![recv];
+        for a in &m.args {
+            args.push(emit_expr(a, self.self_ty, self.env)?);
+        }
+        Ok(format!("{method_name}({})", args.join(", ")))
+    }
+
+    fn visit_paren(&mut self, _expr: &Expr, p: &syn::ExprParen) -> Self::Output {
+        Ok(format!("({})", emit_expr(&p.expr, self.self_ty, self.env)?))
+    }
+
+    fn visit_reference(&mut self, _expr: &Expr, r: &syn::ExprReference) -> Self::Output {
+        // Declared simplification: Mycelium is value-semantic (ADR-003) with no reference
+        // type in this grammar fragment — `&expr`/`&mut expr` is treated as
+        // reference-transparent and erased to its inner expression.
+        emit_expr(&r.expr, self.self_ty, self.env)
+    }
+
+    fn visit_tuple(&mut self, _expr: &Expr, t: &syn::ExprTuple) -> Self::Output {
+        if t.elems.len() >= 2 {
             let mut parts = Vec::with_capacity(t.elems.len());
             for e in &t.elems {
-                parts.push(emit_expr(e, self_ty, env)?);
+                parts.push(emit_expr(e, self.self_ty, self.env)?);
             }
             Ok(format!("({})", parts.join(", ")))
+        } else if t.elems.is_empty() {
+            Err(GapReason::new(
+                Category::Other,
+                "unit value `()` has no Mycelium literal",
+            ))
+        } else {
+            Err(GapReason::new(
+                Category::Other,
+                "single-element tuple `(x,)` has no Mycelium equivalent (tuple type requires arity \
+                 >= 2, M-826)",
+            ))
         }
-        Expr::Tuple(t) if t.elems.is_empty() => Err(GapReason::new(
-            Category::Other,
-            "unit value `()` has no Mycelium literal",
-        )),
-        Expr::Tuple(_) => Err(GapReason::new(
-            Category::Other,
-            "single-element tuple `(x,)` has no Mycelium equivalent (tuple type requires arity \
-             >= 2, M-826)",
-        )),
+    }
+
+    fn visit_array(&mut self, _expr: &Expr, a: &syn::ExprArray) -> Self::Output {
         // An explicit-element array `[e1, e2, …]` maps to a Mycelium `ListLit` (grammar line 415:
         // `ListLit ::= '[' (expr (',' expr)*)? ']'`, constructs a `Seq{T, N}` — RFC-0032 D3, the
         // `Seq`/`Vec` list-literal surface ratified in RFC-0040 §Vec-List-Literal-Desugaring). An
         // empty `[]` is a valid empty ListLit. Each element recurses through the guarded
         // `emit_expr`, so a non-expressible element gaps the whole array (never a partial list).
-        Expr::Array(a) => {
-            let mut elems = Vec::with_capacity(a.elems.len());
-            for e in &a.elems {
-                elems.push(emit_expr(e, self_ty, env)?);
-            }
-            Ok(format!("[{}]", elems.join(", ")))
+        let mut elems = Vec::with_capacity(a.elems.len());
+        for e in &a.elems {
+            elems.push(emit_expr(e, self.self_ty, self.env)?);
         }
+        Ok(format!("[{}]", elems.join(", ")))
+    }
+
+    fn visit_repeat(&mut self, _expr: &Expr, _r: &syn::ExprRepeat) -> Self::Output {
         // An array-repeat `[x; N]` has no Mycelium surface: `ListLit` (grammar line 415) enumerates
         // its elements and carries no repeat/count form — so this is an explicit, cited gap rather
         // than a fabricated expansion (which would also require evaluating `N`).
-        Expr::Repeat(_) => Err(GapReason::new(
+        Err(GapReason::new(
             Category::Other,
             "array-repeat expression `[x; N]` has no Mycelium equivalent — `ListLit ::= '[' (expr \
              (',' expr)*)? ']'` (grammar line 415) enumerates its elements and has no repeat form",
-        )),
-        Expr::Block(b) if b.label.is_none() => emit_block_as_expr(&b.block, self_ty, env),
-        // M-1006 Lever 1 — field projection `self.<field>`. The grammar has NO projection surface
-        // (`path ::= Ident ('.' Ident)*` is a namespace glyph; `self.0` cannot even lex), but reading
-        // one field of a single-constructor product has a faithful equivalent: a `match` that binds
-        // exactly that field. Only `self` has a statically-known type here (the impl's `self_ty` — the
-        // transpiler tracks no other local types), so only `self.<field>` desugars; any other base
-        // gaps. Gated (via `struct_layout`) on `self_ty` being an *emitted* in-file struct so the
-        // `Ty(...)` constructor the `match` names actually exists (never poison the file's check).
-        Expr::Field(fe) => {
-            let base_is_self = matches!(
-                &*fe.base,
-                Expr::Path(p) if p.qself.is_none() && p.path.is_ident("self")
-            );
-            if !base_is_self {
-                return Err(GapReason::new(
-                    Category::Other,
-                    "field access on a non-`self` base — the transpiler tracks no local types, so \
-                     the projection cannot be resolved to a constructor position (only \
-                     `self.<field>` desugars to a `match`)",
-                ));
+        ))
+    }
+
+    fn visit_block(&mut self, expr: &Expr, b: &syn::ExprBlock) -> Self::Output {
+        if b.label.is_none() {
+            emit_block_as_expr(&b.block, self.self_ty, self.env)
+        } else {
+            self.fallback(expr)
+        }
+    }
+
+    // M-1006 Lever 1 — field projection `self.<field>`. The grammar has NO projection surface
+    // (`path ::= Ident ('.' Ident)*` is a namespace glyph; `self.0` cannot even lex), but reading
+    // one field of a single-constructor product has a faithful equivalent: a `match` that binds
+    // exactly that field. Only `self` has a statically-known type here (the impl's `self_ty` — the
+    // transpiler tracks no other local types), so only `self.<field>` desugars; any other base
+    // gaps. Gated (via `struct_layout`) on `self_ty` being an *emitted* in-file struct so the
+    // `Ty(...)` constructor the `match` names actually exists (never poison the file's check).
+    fn visit_field(&mut self, _expr: &Expr, fe: &syn::ExprField) -> Self::Output {
+        let base_is_self = matches!(
+            &*fe.base,
+            Expr::Path(p) if p.qself.is_none() && p.path.is_ident("self")
+        );
+        if !base_is_self {
+            return Err(GapReason::new(
+                Category::Other,
+                "field access on a non-`self` base — the transpiler tracks no local types, so \
+                 the projection cannot be resolved to a constructor position (only \
+                 `self.<field>` desugars to a `match`)",
+            ));
+        }
+        let sty = self.self_ty.ok_or_else(|| {
+            GapReason::new(
+                Category::Other,
+                "`self` field access with no enclosing impl/trait `self` type",
+            )
+        })?;
+        let layout = struct_layout(sty).ok_or_else(|| {
+            GapReason::new(
+                Category::Other,
+                format!(
+                    "field projection `self.{}` on `{sty}` — not an in-file single-ctor struct \
+                     that emits (an enum / external / non-resolvable type has no constructor to \
+                     `match` against)",
+                    member_text(&fe.member)
+                ),
+            )
+        })?;
+        let pos = match &fe.member {
+            syn::Member::Named(id) => {
+                let n = id.to_string();
+                layout.iter().position(|f| f.as_deref() == Some(n.as_str()))
             }
-            let sty = self_ty.ok_or_else(|| {
-                GapReason::new(
-                    Category::Other,
-                    "`self` field access with no enclosing impl/trait `self` type",
-                )
-            })?;
-            let layout = struct_layout(sty).ok_or_else(|| {
-                GapReason::new(
-                    Category::Other,
-                    format!(
-                        "field projection `self.{}` on `{sty}` — not an in-file single-ctor struct \
-                         that emits (an enum / external / non-resolvable type has no constructor to \
-                         `match` against)",
-                        member_text(&fe.member)
-                    ),
-                )
-            })?;
-            let pos = match &fe.member {
-                syn::Member::Named(id) => {
-                    let n = id.to_string();
-                    layout.iter().position(|f| f.as_deref() == Some(n.as_str()))
-                }
-                syn::Member::Unnamed(idx) => {
-                    let i = idx.index as usize;
-                    (i < layout.len()).then_some(i)
-                }
+            syn::Member::Unnamed(idx) => {
+                let i = idx.index as usize;
+                (i < layout.len()).then_some(i)
             }
-            .ok_or_else(|| {
-                GapReason::new(
-                    Category::Other,
-                    format!(
-                        "field `{}` not found on struct `{sty}`",
-                        member_text(&fe.member)
-                    ),
-                )
-            })?;
-            // Bind the accessed position to `p{pos}` (a guaranteed-valid, non-reserved ident),
-            // wildcard the rest, and return the binding. Parenthesized so it composes as a binary /
-            // application operand subexpression.
-            let bind = format!("p{pos}");
-            let pats: Vec<String> = (0..layout.len())
-                .map(|i| {
-                    if i == pos {
-                        bind.clone()
-                    } else {
-                        "_".to_string()
-                    }
+        }
+        .ok_or_else(|| {
+            GapReason::new(
+                Category::Other,
+                format!(
+                    "field `{}` not found on struct `{sty}`",
+                    member_text(&fe.member)
+                ),
+            )
+        })?;
+        // Bind the accessed position to `p{pos}` (a guaranteed-valid, non-reserved ident),
+        // wildcard the rest, and return the binding. Parenthesized so it composes as a binary /
+        // application operand subexpression.
+        let bind = format!("p{pos}");
+        let pats: Vec<String> = (0..layout.len())
+            .map(|i| {
+                if i == pos {
+                    bind.clone()
+                } else {
+                    "_".to_string()
+                }
+            })
+            .collect();
+        Ok(format!(
+            "(match self {{ {sty}({}) => {bind} }})",
+            pats.join(", ")
+        ))
+    }
+
+    // M-1006 Lever 1 — struct-literal construction `Ty { a: x, b: y }` / `Self { .. }` -> the
+    // positional constructor call `Ty(x, y)` (arguments ordered by the struct's declaration
+    // order). Gated on `Ty` being an emitted in-file struct. `..rest` (struct-update) and a
+    // partial literal have no Mycelium surface -> explicit gap (never a fabricated field).
+    fn visit_struct(&mut self, expr: &Expr, se: &syn::ExprStruct) -> Self::Output {
+        if se.qself.is_some() {
+            return self.fallback(expr);
+        }
+        if se.rest.is_some() {
+            return Err(GapReason::new(
+                Category::Other,
+                "struct-update syntax `..rest` has no Mycelium equivalent (no record-update \
+                 surface)",
+            ));
+        }
+        let seg = se
+            .path
+            .segments
+            .last()
+            .ok_or_else(|| GapReason::new(Category::Other, "empty struct-literal path"))?;
+        let raw = seg.ident.to_string();
+        let sty = if raw == "Self" {
+            self.self_ty
+                .ok_or_else(|| {
+                    GapReason::new(
+                        Category::Other,
+                        "`Self { .. }` with no enclosing impl/trait `self` type",
+                    )
+                })?
+                .to_string()
+        } else {
+            raw
+        };
+        let layout = struct_layout(&sty).ok_or_else(|| {
+            GapReason::new(
+                Category::Other,
+                format!(
+                    "struct literal `{sty} {{ .. }}` — not an in-file single-ctor struct that \
+                     emits (no constructor to build)"
+                ),
+            )
+        })?;
+        let mut args = Vec::with_capacity(layout.len());
+        for (i, slot) in layout.iter().enumerate() {
+            let fv = se
+                .fields
+                .iter()
+                .find(|fv| match (&fv.member, slot) {
+                    (syn::Member::Named(id), Some(name)) => id == name.as_str(),
+                    (syn::Member::Unnamed(idx), None) => idx.index as usize == i,
+                    _ => false,
                 })
-                .collect();
-            Ok(format!(
-                "(match self {{ {sty}({}) => {bind} }})",
-                pats.join(", ")
+                .ok_or_else(|| {
+                    GapReason::new(
+                        Category::Other,
+                        format!(
+                            "struct literal `{sty}` gives no value for the field at position \
+                             {i} — a partial constructor has no Mycelium surface (VR-5)"
+                        ),
+                    )
+                })?;
+            args.push(emit_expr(&fv.expr, self.self_ty, self.env)?);
+        }
+        Ok(format!("{sty}({})", args.join(", ")))
+    }
+
+    // A Rust `as` cast (`syn::Expr::Cast`). Rust `as` is **lossy / wrapping / saturating /
+    // rounding by design**; Mycelium's conversion prims are **checked / refusing by design**, so
+    // fidelity — not opportunistic emission — governs this arm: a checked prim is emitted **only**
+    // where it matches Rust's `as` semantics *exactly*, and every other cast is a never-silent gap
+    // rather than an unfaithful emission (G2/VR-5; trx2 A1, DN-34 §8.18).
+    //
+    // The one decidable-faithful slice is **`Binary{N} as Binary{M}` widening/identity** (`M >=
+    // N`): DN-41's `bit.width_cast` zero-extends on the MSB side (verified `prim_width_cast`,
+    // `mycelium-interp/src/prims.rs`), and `Binary` is sign-free unsigned magnitude (ADR-028), so
+    // that exactly matches Rust's unsigned widening/identity. **Narrowing** (`M < N`) was NOT
+    // faithful with `width_cast` alone: Rust `as` narrowing **wraps** (keeps the low `M` bits), but
+    // `width_cast` **refuses** (`EvalError::Overflow`) on any set dropped high bit — a *checked*
+    // narrow, not a wrapping one. DN-51 (**Accepted**) *names* the faithful wrapping form — an
+    // explicit `truncate` op, "unconditionally drops the high `N - M` bits… total but lossy"
+    // (DN-51 §2 D3) — and it is now **landed** (maintainer-authorized DN-39 post-freeze promotion:
+    // `bit.truncate` registered in `crates/mycelium-core/src/prim.rs`'s Π table, implemented in
+    // `crates/mycelium-interp/src/prims.rs::prim_truncate`, surfaced in
+    // `crates/mycelium-l1/src/checkty.rs`). So a narrow now emits `truncate` — it matches Rust `as`
+    // narrowing's wrap semantics *exactly* (DN-51 §2 D3: unconditional low-`M`-bits keep, never a
+    // refusal), the same fidelity bar the widen/identity arm above already meets.
+    // Any **float-crossing** cast (`Binary{N} as Float`, `Float as Binary{N}`, `Float as Float`)
+    // is CU-3 territory: the CU-3 kernel prims are checked/refusing where Rust `as` rounds/
+    // saturates (`flt.to_bin` refuses out-of-range vs Rust's saturation; `bin.to_flt` errs
+    // `|n| > 2^53` vs Rust's rounding — ADR-040 §2.4), so the faithful form is the reified **lossy
+    // swap** (ADR-040 §2.4/§5, explicitly *not* a prim), which the transpiler cannot emit yet — an
+    // explicit `PENDING-DESIGN(CU-3-fidelity)` gap (`prim_map.rs` §CU-3 records the same exclusion:
+    // no confirmed prim name, `as` has no `Call`/`MethodCall` shape to key on).
+    fn visit_cast(&mut self, expr: &Expr, c: &syn::ExprCast) -> Self::Output {
+        // The operand's Mycelium type — decidable for a bare in-scope identifier or a
+        // structurally-transparent `(e)`/`&e` wrapper around one; `None` for a call/field/
+        // literal/etc. (see `expr_env_type`'s doc — D3 operand-type-inference depth, DN-34
+        // §8.16 residual, including why a suffixed literal was tried and rejected there).
+        let operand_ty = expr_env_type(&c.expr, self.env);
+        let operand_is_float = operand_ty.as_deref() == Some("Float");
+        let operand_width = operand_ty.as_deref().and_then(binary_width);
+        // The target's width iff it is an *unsigned* integer (`u8..u128` -> `Binary{M}`); signed /
+        // platform-width / non-int targets yield `None` here (their own `map_type` gap is not
+        // surfaced — the fidelity dispatch below produces the honest, cast-specific reason instead).
+        let target_width = map_type(&c.ty, self.self_ty)
+            .ok()
+            .as_deref()
+            .and_then(binary_width);
+        // A float on *either* side (target `f32`/`f64` at the syn level, or a `Float` operand) makes
+        // this a CU-3 float-crossing cast regardless of the other side's mapping.
+        let target_is_float = type_is_float(&c.ty);
+
+        if target_is_float || operand_is_float {
+            // CU-3: no faithful prim — the lossy swap is the correct form and is not emittable yet.
+            Err(GapReason::new(
+                Category::Other,
+                format!(
+                    "PENDING-DESIGN(CU-3-fidelity): cast `{}` crosses the Binary/Float boundary — \
+                     Rust `as` is lossy here (float->int *saturates*, int->float *rounds*), but the \
+                     CU-3 kernel prims are checked/refusing (`flt.to_bin` refuses out-of-range; \
+                     `bin.to_flt` errs |n| > 2^53 — ADR-040 §2.4), so no faithful prim exists. The \
+                     faithful form is the reified lossy swap (ADR-040 §2.4/§5, NOT a prim), which \
+                     the transpiler cannot emit yet — explicit gap (G2/VR-5)",
+                    tokens_to_string(expr)
+                ),
+            ))
+        } else if operand_ty.is_none() {
+            // Operand type unknown — never guess it (VR-5).
+            Err(GapReason::new(
+                Category::Other,
+                format!(
+                    "cast `{}` — operand type unknown: `as` fidelity requires a known operand type, \
+                     but the operand is not a bare in-scope identifier (or a `(..)`/`&..` wrapper \
+                     around one) whose type this transpiler can resolve without guessing (no \
+                     general expression-typing pass; VR-5)",
+                    tokens_to_string(expr)
+                ),
+            ))
+        } else if let (Some(n), Some(m)) = (operand_width, target_width) {
+            // `Binary{N} as Binary{M}` — the decidable int->int slice.
+            if m >= n {
+                // Widen / identity: `width_cast` zero-extends (unsigned), matching Rust exactly.
+                // Faithful + `myc check`-clean (DN-41 §3; reuses the `try_width_cast_widen_body`
+                // witness form `width_cast(<value>, <M-bit zero BinLit>)`).
+                let operand = emit_expr(&c.expr, self.self_ty, self.env)?;
+                Ok(format!("width_cast({operand}, {})", zero_bin_literal(m)))
+            } else {
+                // Narrow: Rust wraps (low `M` bits); `truncate` unconditionally keeps the low `M`
+                // bits (DN-51 §2 D3) — an exact semantic match, now landed (maintainer-authorized
+                // DN-39 post-freeze promotion). Reuses the same width-witness ABI `width_cast`
+                // uses (`zero_bin_literal(m)` — only the witness's width is read, its bits are
+                // ignored, DN-41 §3), since `truncate` was built as `width_cast`'s sibling.
+                let operand = emit_expr(&c.expr, self.self_ty, self.env)?;
+                Ok(format!("truncate({operand}, {})", zero_bin_literal(m)))
+            }
+        } else {
+            // Operand known but not `Binary{N}` (e.g. `Bool`, a user type), or the target is not an
+            // unsigned-int `Binary{M}` (signed int / pointer / user type) and no float is involved.
+            // No faithful, decidable cast form — explicit gap rather than a guess (VR-5).
+            Err(GapReason::new(
+                Category::Other,
+                format!(
+                    "cast `{}` has no faithful, decidable Mycelium form — the operand is not a known \
+                     `Binary{{N}}` value and/or the target is not an unsigned `Binary{{M}}` integer \
+                     (signed integers, pointers, and user types have no confirmed `as`-cast surface); \
+                     left an explicit gap rather than a guessed conversion (VR-5)",
+                    tokens_to_string(expr)
+                ),
             ))
         }
-        // M-1006 Lever 1 — struct-literal construction `Ty { a: x, b: y }` / `Self { .. }` -> the
-        // positional constructor call `Ty(x, y)` (arguments ordered by the struct's declaration
-        // order). Gated on `Ty` being an emitted in-file struct. `..rest` (struct-update) and a
-        // partial literal have no Mycelium surface -> explicit gap (never a fabricated field).
-        Expr::Struct(se) if se.qself.is_none() => {
-            if se.rest.is_some() {
-                return Err(GapReason::new(
-                    Category::Other,
-                    "struct-update syntax `..rest` has no Mycelium equivalent (no record-update \
-                     surface)",
-                ));
-            }
-            let seg = se
-                .path
-                .segments
-                .last()
-                .ok_or_else(|| GapReason::new(Category::Other, "empty struct-literal path"))?;
-            let raw = seg.ident.to_string();
-            let sty = if raw == "Self" {
-                self_ty
-                    .ok_or_else(|| {
-                        GapReason::new(
-                            Category::Other,
-                            "`Self { .. }` with no enclosing impl/trait `self` type",
-                        )
-                    })?
-                    .to_string()
-            } else {
-                raw
-            };
-            let layout = struct_layout(&sty).ok_or_else(|| {
-                GapReason::new(
-                    Category::Other,
-                    format!(
-                        "struct literal `{sty} {{ .. }}` — not an in-file single-ctor struct that \
-                         emits (no constructor to build)"
-                    ),
-                )
-            })?;
-            let mut args = Vec::with_capacity(layout.len());
-            for (i, slot) in layout.iter().enumerate() {
-                let fv = se
-                    .fields
-                    .iter()
-                    .find(|fv| match (&fv.member, slot) {
-                        (syn::Member::Named(id), Some(name)) => id == name.as_str(),
-                        (syn::Member::Unnamed(idx), None) => idx.index as usize == i,
-                        _ => false,
-                    })
-                    .ok_or_else(|| {
-                        GapReason::new(
-                            Category::Other,
-                            format!(
-                                "struct literal `{sty}` gives no value for the field at position \
-                                 {i} — a partial constructor has no Mycelium surface (VR-5)"
-                            ),
-                        )
-                    })?;
-                args.push(emit_expr(&fv.expr, self_ty, env)?);
-            }
-            Ok(format!("{sty}({})", args.join(", ")))
-        }
-        // A Rust `as` cast (`syn::Expr::Cast`). Rust `as` is **lossy / wrapping / saturating /
-        // rounding by design**; Mycelium's conversion prims are **checked / refusing by design**, so
-        // fidelity — not opportunistic emission — governs this arm: a checked prim is emitted **only**
-        // where it matches Rust's `as` semantics *exactly*, and every other cast is a never-silent gap
-        // rather than an unfaithful emission (G2/VR-5; trx2 A1, DN-34 §8.18).
-        //
-        // The one decidable-faithful slice is **`Binary{N} as Binary{M}` widening/identity** (`M >=
-        // N`): DN-41's `bit.width_cast` zero-extends on the MSB side (verified `prim_width_cast`,
-        // `mycelium-interp/src/prims.rs`), and `Binary` is sign-free unsigned magnitude (ADR-028), so
-        // that exactly matches Rust's unsigned widening/identity. **Narrowing** (`M < N`) was NOT
-        // faithful with `width_cast` alone: Rust `as` narrowing **wraps** (keeps the low `M` bits), but
-        // `width_cast` **refuses** (`EvalError::Overflow`) on any set dropped high bit — a *checked*
-        // narrow, not a wrapping one. DN-51 (**Accepted**) *names* the faithful wrapping form — an
-        // explicit `truncate` op, "unconditionally drops the high `N - M` bits… total but lossy"
-        // (DN-51 §2 D3) — and it is now **landed** (maintainer-authorized DN-39 post-freeze promotion:
-        // `bit.truncate` registered in `crates/mycelium-core/src/prim.rs`'s Π table, implemented in
-        // `crates/mycelium-interp/src/prims.rs::prim_truncate`, surfaced in
-        // `crates/mycelium-l1/src/checkty.rs`). So a narrow now emits `truncate` — it matches Rust `as`
-        // narrowing's wrap semantics *exactly* (DN-51 §2 D3: unconditional low-`M`-bits keep, never a
-        // refusal), the same fidelity bar the widen/identity arm above already meets.
-        // Any **float-crossing** cast (`Binary{N} as Float`, `Float as Binary{N}`, `Float as Float`)
-        // is CU-3 territory: the CU-3 kernel prims are checked/refusing where Rust `as` rounds/
-        // saturates (`flt.to_bin` refuses out-of-range vs Rust's saturation; `bin.to_flt` errs
-        // `|n| > 2^53` vs Rust's rounding — ADR-040 §2.4), so the faithful form is the reified **lossy
-        // swap** (ADR-040 §2.4/§5, explicitly *not* a prim), which the transpiler cannot emit yet — an
-        // explicit `PENDING-DESIGN(CU-3-fidelity)` gap (`prim_map.rs` §CU-3 records the same exclusion:
-        // no confirmed prim name, `as` has no `Call`/`MethodCall` shape to key on).
-        Expr::Cast(c) => {
-            // The operand's Mycelium type — decidable for a bare in-scope identifier or a
-            // structurally-transparent `(e)`/`&e` wrapper around one; `None` for a call/field/
-            // literal/etc. (see `expr_env_type`'s doc — D3 operand-type-inference depth, DN-34
-            // §8.16 residual, including why a suffixed literal was tried and rejected there).
-            let operand_ty = expr_env_type(&c.expr, env);
-            let operand_is_float = operand_ty.as_deref() == Some("Float");
-            let operand_width = operand_ty.as_deref().and_then(binary_width);
-            // The target's width iff it is an *unsigned* integer (`u8..u128` -> `Binary{M}`); signed /
-            // platform-width / non-int targets yield `None` here (their own `map_type` gap is not
-            // surfaced — the fidelity dispatch below produces the honest, cast-specific reason instead).
-            let target_width = map_type(&c.ty, self_ty)
-                .ok()
-                .as_deref()
-                .and_then(binary_width);
-            // A float on *either* side (target `f32`/`f64` at the syn level, or a `Float` operand) makes
-            // this a CU-3 float-crossing cast regardless of the other side's mapping.
-            let target_is_float = type_is_float(&c.ty);
-
-            if target_is_float || operand_is_float {
-                // CU-3: no faithful prim — the lossy swap is the correct form and is not emittable yet.
-                Err(GapReason::new(
-                    Category::Other,
-                    format!(
-                        "PENDING-DESIGN(CU-3-fidelity): cast `{}` crosses the Binary/Float boundary — \
-                         Rust `as` is lossy here (float->int *saturates*, int->float *rounds*), but the \
-                         CU-3 kernel prims are checked/refusing (`flt.to_bin` refuses out-of-range; \
-                         `bin.to_flt` errs |n| > 2^53 — ADR-040 §2.4), so no faithful prim exists. The \
-                         faithful form is the reified lossy swap (ADR-040 §2.4/§5, NOT a prim), which \
-                         the transpiler cannot emit yet — explicit gap (G2/VR-5)",
-                        tokens_to_string(expr)
-                    ),
-                ))
-            } else if operand_ty.is_none() {
-                // Operand type unknown — never guess it (VR-5).
-                Err(GapReason::new(
-                    Category::Other,
-                    format!(
-                        "cast `{}` — operand type unknown: `as` fidelity requires a known operand type, \
-                         but the operand is not a bare in-scope identifier (or a `(..)`/`&..` wrapper \
-                         around one) whose type this transpiler can resolve without guessing (no \
-                         general expression-typing pass; VR-5)",
-                        tokens_to_string(expr)
-                    ),
-                ))
-            } else if let (Some(n), Some(m)) = (operand_width, target_width) {
-                // `Binary{N} as Binary{M}` — the decidable int->int slice.
-                if m >= n {
-                    // Widen / identity: `width_cast` zero-extends (unsigned), matching Rust exactly.
-                    // Faithful + `myc check`-clean (DN-41 §3; reuses the `try_width_cast_widen_body`
-                    // witness form `width_cast(<value>, <M-bit zero BinLit>)`).
-                    let operand = emit_expr(&c.expr, self_ty, env)?;
-                    Ok(format!("width_cast({operand}, {})", zero_bin_literal(m)))
-                } else {
-                    // Narrow: Rust wraps (low `M` bits); `truncate` unconditionally keeps the low `M`
-                    // bits (DN-51 §2 D3) — an exact semantic match, now landed (maintainer-authorized
-                    // DN-39 post-freeze promotion). Reuses the same width-witness ABI `width_cast`
-                    // uses (`zero_bin_literal(m)` — only the witness's width is read, its bits are
-                    // ignored, DN-41 §3), since `truncate` was built as `width_cast`'s sibling.
-                    let operand = emit_expr(&c.expr, self_ty, env)?;
-                    Ok(format!("truncate({operand}, {})", zero_bin_literal(m)))
-                }
-            } else {
-                // Operand known but not `Binary{N}` (e.g. `Bool`, a user type), or the target is not an
-                // unsigned-int `Binary{M}` (signed int / pointer / user type) and no float is involved.
-                // No faithful, decidable cast form — explicit gap rather than a guess (VR-5).
-                Err(GapReason::new(
-                    Category::Other,
-                    format!(
-                        "cast `{}` has no faithful, decidable Mycelium form — the operand is not a known \
-                         `Binary{{N}}` value and/or the target is not an unsigned `Binary{{M}}` integer \
-                         (signed integers, pointers, and user types have no confirmed `as`-cast surface); \
-                         left an explicit gap rather than a guessed conversion (VR-5)",
-                        tokens_to_string(expr)
-                    ),
-                ))
-            }
-        }
-        _ => Err(GapReason::new(
-            Category::Other,
-            format!("unsupported expression form `{}`", tokens_to_string(expr)),
-        )),
     }
 }
 

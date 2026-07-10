@@ -40,6 +40,7 @@ pub mod prim_map;
 pub mod reserved;
 pub mod transpile;
 pub mod vet;
+pub(crate) mod visit;
 
 pub use batch::{
     discover_rs_files, output_rel_path, summarize, transpile_batch, BatchSummary, UnionGapReport,
