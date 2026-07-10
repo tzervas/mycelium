@@ -14706,15 +14706,17 @@ issues:
       instrumentation exists yet in `map.rs`/`emit.rs` to populate it from — not invented here,
       KISS/YAGNI boundary, tracked as residual future work rather than fabricated). Guarantee tag
       stays `Declared` throughout, never upgraded from the manifest's mere presence (VR-5) — the
-      module doc comment states this explicitly. 10 new tests in
+      module doc comment states this explicitly. 11 new tests in
       `crates/mycelium-transpile/src/tests/remap.rs` (JSON round-trip, the REMAP.md
-      byte-derivability property named in this DoD, determinism, v0 Keep-only behavior, a
-      data-driven phylum-name fixture table, guarantee-tag posture) plus 2 new assertions folded
-      into the existing `src/tests/batch.rs` multi-file test; `cargo test -p mycelium-transpile`
-      green at 74 (was 66 + 8 net); `cargo clippy -p mycelium-transpile --all-targets -D warnings`
-      clean; `cargo fmt --check` clean; verified end-to-end against a real corpus target
-      (`crates/mycelium-std-cmp/src` -> `std.cmp`, matching the phylum-naming convention DN-109 §2
-      cites) in addition to the unit-test fixtures.
+      byte-derivability property named in this DoD, rendering determinism, a Markdown-table
+      pipe/newline-escaping regression added during self-review — `render_remap_md` now escapes
+      `|`/`\n` in every free-text cell so a future non-`Keep` rationale/reason can never corrupt the
+      rendered table, v0 Keep-only behavior, a data-driven phylum-name fixture table, guarantee-tag
+      posture) plus 2 new assertions folded into the existing `src/tests/batch.rs` multi-file test;
+      `cargo test -p mycelium-transpile` green at 75 (was 66 + 9 net); `cargo clippy -p
+      mycelium-transpile --all-targets -D warnings` clean; `cargo fmt --check` clean; verified
+      end-to-end against a real corpus target (`crates/mycelium-std-cmp/src` -> `std.cmp`, matching
+      the phylum-naming convention DN-109 §2 cites) in addition to the unit-test fixtures.
 
   - id: M-1045
     title: "M-1045 — actionable suggested_idiom field on transpiler gap diagnostics"

@@ -152,6 +152,46 @@ fn remap_md_rendering_is_deterministic() {
     assert_eq!(render_remap_md(&manifest), render_remap_md(&manifest));
 }
 
+/// A literal `|` or newline in free-text schema fields (`rationale`/`reason`/`chose`/
+/// `alternatives`/spans/paths — all plain `String`s per DN-109 §5.2, unconstrained by v0's own
+/// fixed-constant usage) must not corrupt the rendered Markdown table: the `|` is escaped so it
+/// doesn't terminate the cell early, and a newline is collapsed to a space so the row stays one
+/// physical line. Every table row present, and every row still has exactly 7 unescaped `|`
+/// column separators (a corrupted table would show more, from an unescaped cell value).
+#[test]
+fn remap_md_escapes_pipes_and_newlines_in_free_text_cells() {
+    let mut manifest = full_fixture();
+    manifest.nodules[0].rationale = "contains | a pipe\nand a newline".to_string();
+    manifest.idiom_choices[0].reason = "also | pipes\nand newlines".to_string();
+
+    let rendered = render_remap_md(&manifest);
+    assert!(
+        rendered.contains("contains \\| a pipe and a newline"),
+        "expected the pipe escaped and the newline collapsed to a space in the nodule table; \
+         got:\n{rendered}"
+    );
+    assert!(
+        rendered.contains("also \\| pipes and newlines"),
+        "expected the pipe escaped and the newline collapsed to a space in the idiom-choices \
+         table; got:\n{rendered}"
+    );
+
+    // Every data row in both tables still has exactly 7 column-separating `|` (8 pipe characters
+    // total per row: the 6 internal separators plus the leading/trailing border pipes) once the
+    // escaped `\|` occurrences are excluded — i.e. the corrupted-cell text did not add extra
+    // (unescaped) column breaks.
+    for line in rendered.lines() {
+        if !line.starts_with('|') {
+            continue;
+        }
+        let unescaped_pipes = line.replace("\\|", "").matches('|').count();
+        assert_eq!(
+            unescaped_pipes, 8,
+            "row has the wrong column count (table corrupted by an unescaped `|`): {line:?}"
+        );
+    }
+}
+
 // ── `build_remap_manifest` — the v0 Mechanical-only Keep-only behavior ────────────────────────────
 
 /// A synthetic [`FileResult`] for a source path, without running the real transpiler (this module

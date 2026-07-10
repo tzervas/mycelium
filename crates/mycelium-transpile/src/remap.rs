@@ -185,6 +185,18 @@ pub fn build_remap_manifest(results: &[FileResult], root: &Path) -> RemapManifes
     }
 }
 
+/// Escape a value before it lands inside a Markdown table cell: a literal `|` would otherwise
+/// terminate the cell early (splitting the row) and a literal newline would break the row outright.
+/// v0's own `rationale` text is a fixed, pipe-free constant, so this never fires today — but
+/// `rationale`/`reason`/`chose` are free-text `String` fields in the schema (DN-109 §5.2), and a
+/// later human-authored `Consolidate`/`Split`/`Relocate` rationale or an `idiom_choices` entry
+/// could legitimately contain either character. Escaping unconditionally keeps the renderer correct
+/// over the *whole* schema, not just the fields v0 happens to populate — never a silently-corrupted
+/// table row (G2).
+fn md_cell(s: &str) -> String {
+    s.replace('|', "\\|").replace('\n', " ")
+}
+
 /// Render the human-readable **`REMAP.md`** view of a [`RemapManifest`] — a **pure projection**: it
 /// reads only the fields of `manifest`, so `render_remap_md` applied to a manifest deserialized
 /// from `remap.json`/`summary.json` produces byte-identical output to applying it directly (checked
@@ -215,18 +227,18 @@ pub fn render_remap_md(manifest: &RemapManifest) -> String {
             let sources = n
                 .sources
                 .iter()
-                .map(|s| format!("`{}`", s.rust_path))
+                .map(|s| format!("`{}`", md_cell(&s.rust_path)))
                 .collect::<Vec<_>>()
                 .join(", ");
             out.push_str(&format!(
                 "| `{}` | {:?} | {:?} | {} | {} | {} | {} |\n",
-                n.target_nodule,
+                md_cell(&n.target_nodule),
                 n.operation,
                 n.safety,
                 n.api_surface_changed,
                 n.identity_neutral,
                 sources,
-                n.rationale,
+                md_cell(&n.rationale),
             ));
         }
         out.push('\n');
@@ -247,15 +259,21 @@ pub fn render_remap_md(manifest: &RemapManifest) -> String {
              |---|---|---|---|---|---|---|\n",
         );
         for c in &manifest.idiom_choices {
+            let alternatives = c
+                .alternatives
+                .iter()
+                .map(|a| md_cell(a))
+                .collect::<Vec<_>>()
+                .join("; ");
             out.push_str(&format!(
                 "| `{}` | `{}` | {} | {:?} | {} | {} | {} |\n",
-                c.target_span,
-                c.rust_span,
-                c.decision,
+                md_cell(&c.target_span),
+                md_cell(&c.rust_span),
+                md_cell(&c.decision),
                 c.class,
-                c.chose,
-                c.alternatives.join("; "),
-                c.reason,
+                md_cell(&c.chose),
+                alternatives,
+                md_cell(&c.reason),
             ));
         }
     }
