@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-110 (next free note number — DN-109 was the prior highest in `docs/Doc-Index.md`, 2026-07-11; a Draft number is cheap to renumber at merge, so it is picked-and-noted, not blocked on). |
-| **Status** | **Draft** (2026-07-11). Authored as **READ + a new DN only**; it **enacts nothing**, ships no code, and **moves no other doc's status** (house rule #3, append-only). It answers the maintainer's design question — *what is Mycelium's own native construct(s) for the ROLE Rust reaches for macros to fill* — as **one instance of a general Rust→Mycelium native-translation principle** (§2), enumerates the real alternatives, **recommends (ranked)**, adversarially stress-tests, and gives a **skill-derivable operational decision-procedure** (§9); it **does not self-ratify**; the maintainer ratifies (house rule #4). |
+| **Status** | **Accepted** (2026-07-10, maintainer ratification — see the dated "Ratification (maintainer, 2026-07-10)" section below). **Accepted is a DESIGN ratification, NOT Enacted** (house rule #3: Enacted requires stepping through Accepted first, and means *fully implemented/landed*; this note ships no code). The facility's guarantees stay **`Declared`** until implementation + the E1/E3 experiments (DN-110-8.2 deep-dive §7) + `reveal`/M-1051 land — no guarantee tag is upgraded past its basis (VR-5). Originally **Draft** (2026-07-11). Authored as **READ + a new DN only**; at Draft time it **enacted nothing**, shipped no code, and **moved no other doc's status** (house rule #3, append-only). It answers the maintainer's design question — *what is Mycelium's own native construct(s) for the ROLE Rust reaches for macros to fill* — as **one instance of a general Rust→Mycelium native-translation principle** (§2, **provisional terminology — see the Ratification's taxonomy carve-out and the forthcoming companion DN-111**), enumerates the real alternatives, **recommends (ranked)**, adversarially stress-tests, and gives a **skill-derivable operational decision-procedure** (§9). |
 | **Decides** | *Proposes, for ratification:* (0) a **general translation taxonomy** — **Adaptation / Solution / Approximation / Bridge** — for mapping any Rust construct's underlying *problem* to Mycelium's own native answer, reconciled with DN-109's L4 idiom buckets and DN-99's register status column (§2); (1) that the macro-role (compile-time codegen, boilerplate, syntactic/DSL abstraction, derive-gen, generative expansion) is met by a **blend of existing + one extended native mechanism**, NOT by importing a surface-syntactic hygienic-pattern-macro system; (2) that the **generative-lowering framework already landed** (`lower`/`derive`, DN-38/DN-54/M-812) is the spine, **generalized** to expression-position **sugar rules** (the `format!`/`matches!` role) under one term-level lowering-rule model; (3) that **`reveal` / expand-on-demand (M-1051)** is the mandatory transparency spine (house rule #2, DN-106); (4) that **compile-time computation** stays on the **static-specialization** path (DN-55); (5) that **foreign-concrete-syntax macros** are declined as primary and handled as a **Bridge** (library-with-parser) or flagged exclusion. It does **not** edit `issues.yaml`, `CHANGELOG.md`, `Doc-Index.md`, the grammar, `crates/mycelium-l1/**`, or `lib/compiler/**` (integration- / semcore-lane owned; §12 lists the FLAGs). |
 | **Feeds / builds on** | **DN-109** (L4 idiom framework: Mechanical/Heuristic/Judgment, the EXPLAIN-able ratchet, the F1 "map PROBLEM→native SOLUTION" reframe — the *decidability axis* this note's taxonomy is the *relationship axis* complement of); **DN-99** (surface-gap closure register — the enumerated per-construct native closures this taxonomy generalizes, and the `docs/planning/zero-hand-port-delta-ledger.md` companion); **DN-106** (surface-sugar transparency + the gap-closure default; M-1051 desugar/expand-on-demand); **DN-38** (layered-lowering atlas + generative-lowering mechanism + `reveal` — the seamless-gradient thesis and the lowering LAW); **DN-54** (user-extensible generative-lowering surface + checker — `lower`/`derive`, M-812 landed); **DN-53/DN-37** (`object`/`via`); **DN-55** (static specialization = compile-time-computation native path); **DN-100 / M-1032 / M-875** (the *Rust-macro* transpiler side — the complementary direction this facility is the native **target** of); **RFC-0006** (L0→L1→L2 + S1–S5); **ADR-003** (content-addressed identity); **KC-3** (small kernel). The **kernel-unfrozen north star** (ADR-045; `.claude/memory` — different native path per problem, zero hand-ports via mechanical porting) is the frame. |
 | **Guarantee** | Every design claim here is **`Declared`** (a proposal). Where it cites a *landed* mechanism (`lower`/`derive` elaboration, M-812/M-812-cont) or a *register-verified* closure (DN-99 rows, `file:line`-cited), that underlying fact is **`Empirical`** at its own source; the *generalizations* proposed here are `Declared`. No tag is upgraded past its basis (VR-5). |
@@ -75,6 +75,16 @@ L1 surface gaps mechanical, hence zero-hand-port-friendly).
 ---
 
 ## §2 The general principle — the Rust→Mycelium native-translation taxonomy (Adaptation / Solution / Approximation / Bridge)
+
+> **Ratification carve-out (maintainer, 2026-07-10 — see the "Ratification" section near the end of this
+> note for the full record).** The four labels below (**Adaptation / Solution / Approximation / Bridge**)
+> are ratified here only as **provisional, intuitive handles** the maintainer is comfortable reasoning
+> with today — **not** as canonical, ratified terminology for the general Rust→Mycelium translation
+> taxonomy. The canonical taxonomy, with refined/final terms, is **deferred to a forthcoming companion
+> DN-111 (Draft, not yet authored)**. Everything in this DN that *uses* the taxonomy (§5–§9, the
+> `/native-translate` decision procedure) is ratified on the strength of the *classification behavior* it
+> describes, not on these specific words being locked in — do not treat "Adaptation"/"Solution"/
+> "Approximation"/"Bridge" as frozen vocabulary pending DN-111.
 
 The macro-role question is one instance of a **larger principle the maintainer states directly**:
 translating a Rust construct maps its underlying **PROBLEM** to Mycelium's own native answer; it does **not**
@@ -365,6 +375,13 @@ prevent). Recommended stance (`Declared`, to be ratified): **definition-site res
 substitution as the default** (the `syntax-rules`/Lean-macro consensus), with any use-site-capture escape an
 *explicit, flagged* opt-in.
 
+> **Cross-ref (added at ratification, 2026-07-10 — append-only).** This stance is worked forward,
+> ground-truthed against the codebase, and given a concrete mechanism + five-experiment validation plan in
+> the companion note **`docs/notes/DN-110-8.2-hygiene-deepdive.md`**: def-site resolution plus **`%`-namespace
+> freshening** of RHS binders (reusing the landed `Elab::fresh` gensym) plus partition-safe substitution of
+> use-site argument terms plus affine/type checking on the *expanded* L0. Ratified as the basis for this
+> section — see the "Ratification" section below.
+
 ### §8.3 "Zero kernel growth" ≠ "zero complexity" (KC-3 honesty)
 
 The KC-3 headline — **zero new L0 node** — is real and `Proven`-by-construction for the *kernel* (DN-54 §6,
@@ -564,8 +581,94 @@ and its scope is the maintainer's to set).
 
 ---
 
+## Ratification (maintainer, 2026-07-10)
+
+**Recorded decision (append-only — this note's original §1–§12 text above is unchanged; this section adds
+the ratification, per house rule #3):**
+
+1. **§1 role decomposition accepted.** The five-job decomposition of the macro role (J1 derive-gen / J2
+   delegation / J3 expression sugar / J4 compile-time computation / J5 foreign-syntax DSL) is confirmed:
+   J1/J2 are already native + landed (`lower`/`derive`/`object`, M-811/M-812 — Adaptation), J4 is native
+   via static specialization (DN-55 — Solution), J5 is a Bridge / flagged exclusion (§8.1), and **J3 —
+   expression-position sugar — is the single real gap** this note's new scope covers.
+2. **Rank-1 accepted.** §6's Rank 1 — generalize the landed `lower`/`derive` term-level lowering framework
+   (DN-54/M-812) to expression position, with `reveal`/M-1051 as the mandatory transparency spine and
+   `object`/`via` retained for composition (§5-A) — is accepted as the recommended mechanism, over §5-B
+   (pattern macros), §5-C (comptime), and §5-D (a parallel `sugar` keyword, folded into Rank 1 as drafted).
+   Rank 2 (§5-E, blessed-core desugarings) is confirmed as the complementary fallback layer, not a
+   competing choice.
+3. **§8.2 hygiene mechanism accepted as the basis.** The expression-position hygiene/scoping model —
+   def-site resolution of RHS free identifiers, `%`-namespace freshening of RHS binders (reusing the
+   landed `Elab::fresh` gensym), partition-safe substitution of use-site argument terms, and affine/type
+   checking on the *expanded* L0 — is accepted as the design of record for §8.2, on the basis of the
+   companion note **`docs/notes/DN-110-8.2-hygiene-deepdive.md`** (itself ratified at this same
+   maintainer pass — see that note's own "Ratification" section). That note's §9 tractability verdict
+   ("keep Rank-1; §8.2 downgraded from 'sharpest open question' to 'mechanism identified, dominant hazard
+   already mitigated, two bounded residuals to prototype'") is accepted, and its E1 + E3 experiments are
+   commissioned as the Rank-1 go/no-go for J3 (tracked via a new follow-up issue, §Follow-up below). The
+   note's own §10 residual open questions (OQ-H1…OQ-H6) are **not** dispositioned by this pass — they
+   stay open, flagged rather than guessed (G2/VR-5), carried into the follow-up implementation epic and
+   the E1+E3 experiment issue.
+4. **CRITICAL — Accepted is a design ratification, NOT Enacted (house rule #3 / VR-5).** This ratifies
+   the *design* named in points 1–3 above — the role decomposition, the Rank-1 mechanism choice, and the
+   §8.2 hygiene basis. It does **not** ratify a built, tested, or verified mechanism: no code has landed
+   for J3's expression-position sugar rules, `reveal`/M-1051 (the mandatory transparency spine this
+   facility is co-gated on, §3.4/§8.4) has not shipped, and the E1/E3 hygiene experiments have not run.
+   **The facility's guarantees stay `Declared` throughout** — no guarantee tag anywhere in this note or
+   its companion is upgraded past its basis by this ratification (VR-5). Per house rule #3, `Enacted`
+   requires stepping through `Accepted` first and means *fully implemented/landed, complete and stable* —
+   this DN **must not** be treated as Enacted, and will not move to Enacted until: (a) the expression-
+   position argument matcher, capture-avoiding substitution, and hygiene machinery described in §5-A/§4
+   of the companion note are implemented in the elaborator; (b) the E1 and E3 experiments (and, per the
+   companion note's own recommendation, E2/E4/E5) have run with a PASS verdict; and (c) `reveal`/M-1051
+   has shipped and its round-trip fidelity has been checked (E3's own gating criterion — if E3 fails,
+   the honest fallback per this note's own §6 is Rank-2, blessed-core desugarings only, for J3). Until
+   then, any claim that native metaprogramming/sugar-rules are "available" or "hygienic" in Mycelium is
+   `Declared`, not `Empirical` or `Proven` — say so plainly (house rule #4).
+5. **Taxonomy carve-out (§2) — the four labels are provisional, not canonical.** The maintainer accepts
+   §2's *classification behavior* (the four-way relationship-axis split and its use throughout §5–§9) as
+   the working basis for this note's own recommendation, but the specific terms **Adaptation / Solution /
+   Approximation / Bridge** are ratified only as **provisional, intuitive handles** — convenient for
+   reasoning today, **not** locked in as canonical taxonomy vocabulary. The canonical Rust→Mycelium
+   translation taxonomy, with refined/final terminology, is **deferred to a forthcoming companion
+   DN-111 (Draft, not yet authored)** — per §12.1's own reasoned recommendation that this taxonomy
+   warrants its own companion DN rather than a DN-109 extension (that home question is itself accepted:
+   companion DN, not a DN-109 append). A pointer to this carve-out has been added at §2 (append-only,
+   2026-07-10); do **not** treat "Adaptation"/"Solution"/"Approximation"/"Bridge" as frozen pending
+   DN-111's authoring and ratification.
+6. **§8.1 (J5 permanent exclusion vs. later Bridge) and the remaining §11 open questions are NOT
+   dispositioned here** — genuinely unresolved, flagged rather than guessed (G2/VR-5), unchanged by this
+   ratification pass.
+
+### Follow-up (filed at this ratification — see `tools/github/issues.yaml` for the minted ids)
+
+- A **native-facility implementation epic** (§12's FLAGGED issue), `depends_on: [M-812, M-1051]`, DoD
+  from §3.6, noting the §8.2 hygiene model is its own sub-design carrying OQ-H1…OQ-H6.
+- An **E1 + E3 hygiene experiment prototype** issue, `depends_on: [M-1051]` (E3's `reveal` round-trip
+  needs M-1051; M-919, the affine tracker E5 needs, is already landed), noting OQ-H1 as the expression
+  analogue of DN-54 §10 OQ-D.
+- A **`/native-translate` skill** issue (§9's authoring spec, §12's FLAGGED follow-up deliverable).
+- A **DN-111 taxonomy companion DN** authoring task (point 5 above).
+- **M-875 / M-1032 redirect, not supersede** (§10, §12's FLAG): both stay scoped to the transpiler-side
+  expand-first question, already answered by DN-100; both gain a `corpus:DN-110` `doc_refs` cross-ref
+  noting DN-110 is the complementary native-target facility, not a re-decision of their scope.
+
+---
+
 ## §13 Changelog
 
+- **2026-07-10** — **Ratified (maintainer, house rule #3).** Status **Draft → Accepted** (design
+  ratification, **NOT Enacted** — VR-5, the facility's guarantees stay `Declared` until implementation +
+  the E1/E3 experiments + `reveal`/M-1051 land). §1's role decomposition confirmed; §6's Rank-1 mechanism
+  accepted; §8.2's hygiene mechanism accepted as the basis, citing the companion
+  `docs/notes/DN-110-8.2-hygiene-deepdive.md` (itself ratified at this pass). §2's taxonomy labels
+  (Adaptation/Solution/Approximation/Bridge) ratified only as **provisional handles**, not canonical
+  terminology — the canonical taxonomy is deferred to a forthcoming companion **DN-111 (Draft)**. §8.1
+  (J5) and the remaining §11 OQs stay open, not dispositioned. Follow-up filed: a native-facility
+  implementation epic, an E1+E3 hygiene-experiment prototype issue, a `/native-translate` skill issue, a
+  DN-111 authoring task, and an M-875/M-1032 `corpus:DN-110` cross-ref redirect (not a supersede). See the
+  "Ratification (maintainer, 2026-07-10)" section above for the full record. Append-only — the original
+  §1–§12 design record above is unchanged.
 - **2026-07-11** — DN-110 created (**Draft**). Answers the maintainer's design question — Mycelium's native
   construct(s) for the role Rust fills with macros — framed as **one instance of a general Rust→Mycelium
   native-translation taxonomy** (Adaptation / Solution / Approximation / Bridge, §2), grounded row-by-row in the
