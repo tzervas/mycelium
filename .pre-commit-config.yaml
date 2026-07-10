@@ -58,6 +58,12 @@ repos:
         language: script
         pass_filenames: false
         files: \.sh$
+      - id: md-wrap-fix
+        name: markdown soft-wrap reflow (MD004 +/*-at-line-start autofix — findings-driven, safe)
+        entry: scripts/checks/md_wrap_fix.py --fix
+        language: script
+        pass_filenames: true
+        files: \.md$
       - id: markdownlint
         name: markdownlint
         entry: scripts/checks/markdown.sh

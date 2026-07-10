@@ -51,6 +51,23 @@ Phase-2 residual worklist (`Import` 1,085 = the cross-nodule symbol-table prereq
 remaining automation lever; a path-qualified batch-output layout as the whole-corpus-completeness
 follow-on). Verified: change-scoped `cargo fmt`/`clippy -D warnings`/`test -p mycelium-transpile` green
 (58 tests). Emission `Declared`; vet `Empirical`; DN-34 stays `Draft`.
+### build(checks): auto-reflow the MD004 soft-wrap `+`/`*`-at-line-start pitfall (`just md-fix`) (2026-07-10)
+
+The recurring MD004 false-positive — prose that soft-wraps so a `+`/`*` operator lands at line start,
+which `markdownlint` reads as a list item and fails the `markdown` gate (CLAUDE.md §"Markdown
+authoring") — now has a safe automated fix. `scripts/checks/md_wrap_fix.py` (invoked via **`just
+md-fix`** and a `repo: local` pre-commit hook) is **findings-driven**: it asks `markdownlint` for the
+exact MD004 lines and reflows only those, lifting the flagged marker off line-start (behaviour-neutral
+for prose — the wrapped and reflowed forms render identically). It is safe by construction: a green doc
+is a no-op (verified across all 459 tracked docs), so a legitimately-`+`-listed doc such as DN-15 is
+untouched; and it **reports, never rewrites,** any finding that resembles a real list (the previous
+line is a list intro or item, or the next line is another item at the same marker). `markdownlint
+--fix` is deliberately NOT used — it normalizes marker *style*, so under the repo's `consistent` MD004
+it rewrites genuine `-` lists to match the prose-wrap marker (verified: a real `-` list became a `+`
+list), i.e. a green gate over corrupted content. The `markdown` gate's failure message now points at
+`just md-fix`, and the CLAUDE.md pitfall note documents the tool. Verified: the fixer reflows a planted
+`+` wrap and re-greens the doc, leaves a colon-introduced `+` list for manual review, and is a no-op on
+the whole corpus; `ruff check`/`ruff format` clean. (Tooling/DX; VR-5/G2.)
 
 ### E18-1 semcore self-hosting — Stage-5 continues: M-1013 checkty PR-3 (`subst_type_param_in_typeref`) (2026-07-10)
 
@@ -110,6 +127,54 @@ Verified: `cargo test -p mycelium-l1 --lib` green (464 → 469 passed), `clippy 
 warnings` clean, `cargo fmt` clean, `myc-dogfood --strict` green (all 9 self-hosted nodules). Graded
 `Empirical` (differential agreement); DN-26 stays **Draft** (→ Resolved with M-741). (M-993/M-1013
 checkty PR-2; E18-1; DN-26; VR-5/G2.)
+
+### spw Wave-0 stdlib-port pilot — std.numerics / std.time / std.content self-hosted to `lib/std/*.myc` (2026-07-09)
+
+The `spw` Wave-0 pilot validates the parallel `.myc` dogfooding-port loop end-to-end: three unported
+stdlib crates ported to self-hosted `lib/std/{numerics,time,content}.myc`, each with a
+`crates/mycelium-std-conformance/tests/std_<mod>.rs` **three-way differential** (L1-eval ≡ L0-interp ≡
+AOT, TV-checked) **plus** a live Rust-oracle comparison — the agreement earns **`Empirical`**, never a
+stronger tag (VR-5). Each was independently, adversarially re-verified (accept, not forced-green; tags
+and gaps confirmed honest). Landed (M-1020 / M-1021 / M-1022):
+
+- **`std.numerics`** (`lib/std/numerics.myc`, 225 lines; 63 differential cases): the honesty-crux
+  STRENGTH surface — the Guarantee/BoundBasis strength-lattice (rank/meet/meet_all/basis_strength),
+  the `Approx[A]` carrier, and the `NumErr`/`CheckErr` variant sets. The dominant float-valued ε/δ
+  magnitude surface stays Rust (no scalar-Float VALUE in the `.myc` runtime yet — FLAGged to `enb`);
+  the sealed FR-N3 `ProvenThm` witness (`Approx::proven`) was **omitted rather than ported ungated**,
+  refusing to fabricate a `Proven`-strength escape hatch (VR-5).
+- **`std.time`** (`lib/std/time.myc`, 388 lines; 29 cases): the full value-semantic surface — the four
+  instant/duration value types, the complete comparison surface (signed `lt_s`, uncapped), the
+  deterministic `ManualClock`, the declared-effect wrappers, and the 11-row guarantee matrix. Signed
+  128-bit duration/instant **arithmetic** is blocked by the kernel's `TC_MAX_WIDTH=64` two's-complement
+  cap (FLAGged to `enb`); only the comparison half is portable today.
+- **`std.content`** (`lib/std/content.myc`, 521 lines; 47 cases): the content-addressing surface —
+  `digest_eq` (via M-912 `bytes_eq`), the `ContentRef`/`RefKind` accessors, the hand-rolled recursive
+  `parse_ref` / `content_ref_from_str` byte scanners, the 7-row guarantee matrix, and the
+  `NameRegistry` read/write surface (an assoc-list redesign, never silently substituted).
+  `hash_of_value` / `hash_of_def` stay kernel-bound (the structural-hash normalizer, RFC-0031 D1 —
+  FLAGged to `enb`).
+
+**STEP-0 transpiler finding (honest, `Empirical`, disconfirming):** re-running the CURRENT transpiler
+on all three targets showed **ZERO checked-% delta** vs the committed manifest — numerics 7.4%, content
+14.3%, time 18.9%, all unchanged. The two emitter features that landed since the manifest base (DN-51
+narrow-cast→truncate; D3 operand-type inference through paren/reference wrappers) are real but
+**orthogonal** to these modules' gap classes, so net transpiler-assist to the shipped nodules is ~0%
+(only already-clean draft enums/types graduated verbatim; the rest is hand-ported). This is the M-991
+"scaffold-not-porter" verdict holding, recorded plainly (VR-5/G2).
+
+Enabler blockers surfaced by the ports are FLAGged to the `enb` epic (E28-1), not forced or silently
+dropped (G2): no scalar-Float VALUE in the runtime (the dominant numerics blocker — already tracked as
+Gap A / M-895 / M-896 / ADR-040); the `TC_MAX_WIDTH=64` signed-arithmetic cap (the dominant time
+blocker); no top-level `const` item; no slice/array (`&[T]` / `[T]`) type; no unit/`()` return; no
+sealed/private-visibility primitive (blocks the FR-N3 capability-gate); and no `bytes.find` /
+`split_once` prim — plus the still-open cross-nodule `use`-import gap (sidestepped here by the
+local-mirror convention). Consolidated as **M-1023** under `enb`. **Retirement (ADR-043): NOT
+triggered** — all three are honest partial ports (the Rust oracle crates are not fully replaced), so no
+Rust crate is retired. Verified: `myc-check` clean on all three nodules; `cargo test -p
+mycelium-std-conformance --test std_numerics --test std_time --test std_content` green; `cargo fmt` and
+`clippy -D warnings` clean. (M-1020 / M-1021 / M-1022; E33-1; ADR-042 / ADR-043; RFC-0031 D5/D6;
+VR-5/G2.)
 
 ### chore: clean-snapshot prep — archives extracted to the `archive` branch, indices regenerated (2026-07-09)
 

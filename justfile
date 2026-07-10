@@ -121,6 +121,11 @@ lint:
     @bash scripts/checks/lint.sh
 md:
     @bash scripts/checks/markdown.sh
+# Auto-reflow the persistent MD004 soft-wrap `+`/`*`-at-line-start pitfall (findings-driven: only
+# reflows lines markdownlint actually flags, so a green doc is untouched; reports — never rewrites —
+# anything resembling a real list). The autofix button for the `md` gate; also a pre-commit hook.
+md-fix *files:
+    @python3 scripts/checks/md_wrap_fix.py --fix {{files}}
 links:
     @bash scripts/checks/links.sh
 doc-currency:

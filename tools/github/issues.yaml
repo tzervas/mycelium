@@ -13486,3 +13486,212 @@ issues:
       Definition of Done:
       - The core query/encode path runs as a .myc package with a differential vs the Rust engine
         (Empirical); the gate that unblocked this issue is cited in its landed-basis note.
+
+  - id: M-1020
+    title: "Port std-numerics to .myc (kickoff spw, Wave-0 pilot leaf)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:stdlib, priority:P2, status:done]
+    epic: E33-1
+    depends_on: [M-1003]
+    landed_date: 2026-07-09
+    landed_basis: "Ported the honesty-crux STRENGTH surface of std-numerics to self-hosted lib/std/numerics.myc (225 lines) with crates/mycelium-std-conformance/tests/std_numerics.rs — 63 differential cases, three-way L1-eval == L0-interp == AOT + a live mycelium_core / mycelium_std_numerics oracle, GREEN; myc-check clean; fmt + clippy -D warnings clean. Independently, adversarially re-verified (verdict accept, NOT forced-green; tags + gaps confirmed honest). Empirical (differential agreement). STEP-0: zero transpiler checked-% delta (7.4%, unchanged; net assist ~0%, only the NumErr/CheckErr enums graduated verbatim). Residual FLAGged to enb (M-1023): the float-valued eps/delta magnitude surface (no scalar-Float VALUE in the .myc runtime — Gap A / M-895 / M-896 / ADR-040), the sealed FR-N3 ProvenThm witness (Approx::proven OMITTED not faked, VR-5), the &mut Formatter Display (ADR-003). ADR-043 retirement NOT triggered — mycelium-std-numerics is not fully replaced (retireReady=false). Landed on claude/spw-integration -> draft PR into dev 2026-07-09 (kickoff spw Wave-0 pilot)."
+    doc_refs:
+      - corpus:RFC-0031
+      - src:crates/mycelium-std-numerics/src/lib.rs
+      - src:lib/std/numerics.myc
+      - src:crates/mycelium-std-conformance/tests/std_numerics.rs
+      - src:.claude/kickoffs/spw.md
+      - src:docs/planning/self-hosting-port-ledger.md
+    body: |
+      Minted 2026-07-09 (kickoff `spw`, Wave-0 stdlib-port-wave pilot). Port `std-numerics`
+      (27 non-test items; committed draft checked% 7.4 — mostly hand-port) to self-hosted
+      `lib/std/numerics.myc` with a `crates/mycelium-std-conformance/tests/std_numerics.rs`
+      three-way differential + Rust-oracle comparison. Model: Opus.
+
+      User stories:
+      - As a stdlib author, I want the numerics ε/δ carrier surface self-hosted, so that the
+        honesty-lattice carrier is expressed in the language it certifies.
+
+      Definition of Done:
+      - STEP 0 (maintainer directive 2026-07-09): re-run the CURRENT transpiler on the target and
+        record the honest `checked_fraction`/`emitted` delta vs the committed manifest (Empirical) —
+        two emitter features landed since the manifest base (DN-51 narrow-cast→truncate; D3 operand
+        inference), so measure whether quality legitimately improved before hand-porting.
+      - The five D5 rows: surface-check first (STOP + FLAG to `enb` if a below-grammar enabler is
+        missing — never force, G2); behavior-neutral pre-port polish; `.myc` nodule + `include_str!`
+        harness three-way (L1-eval ≡ L0-interp ≡ AOT); differential vs the retained Rust oracle
+        green (earns `Empirical`); per-op tags carried at the same strength (VR-5).
+      - Change-scoped gates only; ownership boundary honored (only `lib/std/numerics.myc` +
+        `tests/std_numerics.rs`; `Cargo.toml`/`harness/mod.rs`/shared indices read-only, FLAG up).
+
+  - id: M-1021
+    title: "Port std-time to .myc (kickoff spw, Wave-0 pilot leaf)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:stdlib, priority:P2, status:done]
+    epic: E33-1
+    depends_on: [M-1003]
+    landed_date: 2026-07-09
+    landed_basis: "Ported the full value-semantic surface of std-time to self-hosted lib/std/time.myc (388 lines) with crates/mycelium-std-conformance/tests/std_time.rs — 29 differential cases, three-way L1-eval == L0-interp == AOT + a live mycelium_std_time oracle, GREEN; myc-check clean; fmt + clippy -D warnings clean. Independently, adversarially re-verified (verdict accept, NOT forced-green; tags + gaps confirmed honest). Empirical. STEP-0: zero transpiler checked-% delta (18.9%, unchanged; net assist ~0%). Ported: the 4 instant/duration value types, the complete comparison surface (signed lt_s, width-uncapped), the deterministic ManualClock, the declared-effect wrappers, the 11-row guarantee matrix. Residual FLAGged to enb (M-1023): signed 128-bit duration/instant arithmetic (kernel TC_MAX_WIDTH=64 two's-complement cap), saturating advance (silent-clamp vs never-silent mismatch), TimeErr diagnostic payloads/Display; OS SystemClock/ClockSource is deferred host-FFI (-> M-541). ADR-043 retirement NOT triggered (retireReady=false). Landed on claude/spw-integration -> draft PR into dev 2026-07-09 (kickoff spw Wave-0 pilot)."
+    doc_refs:
+      - corpus:RFC-0031
+      - src:crates/mycelium-std-time/src/lib.rs
+      - src:lib/std/time.myc
+      - src:crates/mycelium-std-conformance/tests/std_time.rs
+      - src:.claude/kickoffs/spw.md
+      - src:docs/planning/self-hosting-port-ledger.md
+    body: |
+      Minted 2026-07-09 (kickoff `spw`, Wave-0 stdlib-port-wave pilot). Port `std-time`
+      (37 non-test items; committed draft checked% 18.9) to self-hosted `lib/std/time.myc` with a
+      `crates/mycelium-std-conformance/tests/std_time.rs` three-way differential + Rust-oracle
+      comparison. Model: Opus.
+
+      User stories:
+      - As a stdlib author, I want the time surface self-hosted, so that duration/instant algebra
+        is expressed in Mycelium.
+
+      Definition of Done:
+      - STEP 0 (maintainer directive 2026-07-09): re-run the CURRENT transpiler and record the
+        honest `checked_fraction`/`emitted` delta vs the committed manifest (Empirical) before
+        hand-porting.
+      - The five D5 rows (surface-check → STOP+FLAG if enabler missing; behavior-neutral pre-port
+        polish; nodule + include_str! three-way; Rust-oracle differential green → `Empirical`;
+        tags carried at same strength, VR-5).
+      - Change-scoped gates only; ownership boundary honored (only `lib/std/time.myc` +
+        `tests/std_time.rs`; shared files read-only, FLAG up).
+
+  - id: M-1022
+    title: "Port std-content to .myc (kickoff spw, Wave-0 pilot leaf)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:stdlib, priority:P2, status:done]
+    epic: E33-1
+    depends_on: [M-1003]
+    landed_date: 2026-07-09
+    landed_basis: "Ported the content-addressing surface of std-content to self-hosted lib/std/content.myc (521 lines) with crates/mycelium-std-conformance/tests/std_content.rs — 47 differential cases, three-way L1-eval == L0-interp == AOT + a live mycelium_std_content oracle, GREEN; myc-check clean; fmt + clippy -D warnings clean. Independently, adversarially re-verified (verdict accept, NOT forced-green; tags + gaps confirmed honest). Empirical. STEP-0: zero transpiler checked-% delta (14.3%, unchanged; net assist ~0%); the draft lib.myc 'unknown type ContentHash' CheckError was resolved by hand-adding the ContentHash(Bytes) newtype. Ported: digest_eq (via M-912 bytes_eq), the ContentRef/RefKind accessors, the hand-rolled recursive parse_ref / content_ref_from_str byte scanners, the 7-row guarantee matrix, the NameRegistry assoc-list read/write surface (never silently substituted). Residual FLAGged to enb (M-1023): hash_of_value / hash_of_def (kernel structural-hash normalizer over Value/Node, RFC-0031 D1); a bytes.find / split_once prim would collapse the hand-rolled scanners. ADR-043 retirement NOT triggered (retireReady=false). Landed on claude/spw-integration -> draft PR into dev 2026-07-09 (kickoff spw Wave-0 pilot)."
+    doc_refs:
+      - corpus:RFC-0031
+      - src:crates/mycelium-std-content/src/lib.rs
+      - src:lib/std/content.myc
+      - src:crates/mycelium-std-conformance/tests/std_content.rs
+      - src:.claude/kickoffs/spw.md
+      - src:docs/planning/self-hosting-port-ledger.md
+    body: |
+      Minted 2026-07-09 (kickoff `spw`, Wave-0 stdlib-port-wave pilot). Port `std-content`
+      (35 non-test items; committed draft checked% 20.0; one CheckError in the draft `lib.myc`:
+      `unknown type ContentHash` — a hand-port target) to self-hosted `lib/std/content.myc` with a
+      `crates/mycelium-std-conformance/tests/std_content.rs` three-way differential + Rust-oracle
+      comparison. Model: Opus.
+
+      User stories:
+      - As a stdlib author, I want the content-addressing surface self-hosted, so that content
+        refs/hashes are expressed in Mycelium.
+
+      Definition of Done:
+      - STEP 0 (maintainer directive 2026-07-09): re-run the CURRENT transpiler and record the
+        honest `checked_fraction`/`emitted` delta vs the committed manifest (Empirical) before
+        hand-porting — pay attention to whether the draft `lib.myc` CheckError now resolves.
+      - The five D5 rows (surface-check → STOP+FLAG if enabler missing; behavior-neutral pre-port
+        polish; nodule + include_str! three-way; Rust-oracle differential green → `Empirical`;
+        tags carried at same strength, VR-5).
+      - Change-scoped gates only; ownership boundary honored (only `lib/std/content.myc` +
+        `tests/std_content.rs`; shared files read-only, FLAG up).
+
+  - id: M-1023
+    title: "enb — enabler FLAGs surfaced by the spw Wave-0 stdlib ports (numerics/time/content)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:todo]
+    epic: E28-1
+    depends_on: [M-1020, M-1021, M-1022]
+    doc_refs:
+      - corpus:ADR-038
+      - corpus:RFC-0031
+      - corpus:ADR-040
+      - src:crates/mycelium-core/src/binary.rs
+      - src:crates/mycelium-interp/src/prims.rs
+      - src:.claude/kickoffs/spw.md
+      - src:lib/std/numerics.myc
+      - src:lib/std/time.myc
+      - src:lib/std/content.myc
+    body: |
+      Consolidated backlog issue (kickoff `spw`, Wave-0 pilot, 2026-07-09). The three differential-
+      witnessed stdlib ports (M-1020/M-1021/M-1022) surfaced real below-grammar / runtime blockers that
+      keep each port an HONEST PARTIAL (VR-5/G2). Routed here to the `enb` epic (E28-1) so the Wave-0
+      residual has a tracked path to closure — never silently dropped (G2). None was forced; each blocked
+      op was FLAGged, not faked. This is a tracking/consolidation issue, not a single-PR feature; each
+      item below either maps to an existing `enb` gap (cross-referenced) or is a newly-surfaced need.
+
+      ALREADY TRACKED (cross-reference, not a duplicate):
+      - Scalar-Float VALUE in the `.myc` runtime — Gap A / M-895 (ADR) · M-896 (Repr variant) ·
+        M-897…M-900 (literal/arith/cmp/conformance) · ADR-040 §2.5. The DOMINANT std.numerics blocker:
+        the entire float-valued eps/delta magnitude surface (error_bound/prob_bound/union_delta/
+        accuracy_to_probability/check_error/check_union, combine's eps-composition, Bound/BoundKind,
+        DECLARED_FLOAT_EPS, matrix magnitudes) stays Rust (mycelium-numerics, RFC-0031 D1) until it lands.
+
+      NEWLY SURFACED (not previously tracked in issues.yaml):
+      - TC_MAX_WIDTH=64 two's-complement ARITHMETIC prim cap (crates/mycelium-core/src/binary.rs:140,362 —
+        add_s/sub_s/neg_s/mul_s refuse when the width itself exceeds 64, via an i128 intermediate range
+        check). The DOMINANT std.time blocker: faithful signed 128-bit Duration/WallInstant arithmetic
+        (duration_add/sub/scale, checked_neg/abs) and the u64-difference ops (mono_diff/logical_diff need
+        >=65-bit signed) all refuse at width 128 regardless of value — a structural cap, not an edge case.
+        The signed COMPARE family (binary::cmp_signed -> lt_s) is width-uncapped, so the ORDERING surface
+        IS ported. Fix options: a multi-limb TC arithmetic prim lane, OR a DN-ratified Binary{64}-narrowed
+        Duration with a domain-bounded differential.
+      - No top-level `const` item production in the grammar — blocks a literal port of const tables
+        (DECLARED_FLOAT_EPS, the GUARANTEE_MATRIX/MATRIX). Non-hard: the lib/std/core.myc precedent
+        (`fn matrix() => Vec[Row] = Cons(row_a(), Cons(row_b(), ...))`) is the standing workaround, reused
+        by all three ports. Recorded because this const-table gap class recurs across ports.
+      - No slice/array type (`&[T]` / `[T]`) anywhere in the grammar — blocks signatures like
+        `&[GuaranteeRow]` / `&[MatrixRow]` and the union_delta/check_error/check_union/composed_prob_basis
+        surface.
+      - No unit/void (`-> ()`) return type representable — matrix.rs `assert_matrix_invariants() -> ()`
+        was gapped for exactly this.
+      - No sealed/private-field or private-constructor VISIBILITY primitive — blocks reproducing the
+        FR-N3 ProvenThm capability-gate (Rust's `mod sealed { pub(super) struct Sealed }` + private-field
+        pattern has no `.myc` analogue). Approx::proven was OMITTED rather than ported ungated (porting an
+        ungated public `proven` would fabricate a `Proven`-strength escape hatch, violating the invariant
+        it protects — VR-5). A real DESIGN gap: needs an `enb` sealing/visibility enabler OR an accepted
+        alternate idiom (a DN) before `Approx::proven` can be honestly ported.
+      - No `bytes.find` / `split_once` / `contains` prim (only bytes.len/get/slice/concat/eq + hash.blake3
+        are registered in crates/mycelium-interp/src/prims.rs) — std.content's parse_ref and
+        content_ref_from_str are hand-rolled recursive byte scans; a find/split_once prim would collapse
+        them.
+      - No kernel structural-hash prim over the interpreter's own Value/Node (std.content's
+        hash_of_value / hash_of_def) — RFC-0031 D1 boundary; only raw-bytes hash.blake3 is surfaced
+        (M-912). Candidate enabler: a kernel prim analogous to hash.blake3 but over the interpreter's own
+        alpha-normalized Value/Node representation, OR full Value/Node self-hosting in lib/compiler
+        (explicitly out of the spw kickoff's scope).
+      - Cross-nodule `use` / import with a resolvable symbol table still open (DN-34 §4/§8.2) — sidestepped
+        today by LOCALLY MIRRORING the needed kernel ADTs (lib/std/core.myc, lib/std/diag.myc precedent),
+        a confirmed-viable convention; noted so the underlying import gap is not forgotten.
+
+      NON-BLOCKING (ergonomics backlog; workarounds exist, recorded per G2, not gating any port):
+      - No inherent-impl generic-parameter slot (`impl<T> Foo<T>` has no grammar production) — worked
+        around with top-level `[A]`-parameterized fns (lib/std/option.myc idiom).
+      - No saturating_add prim / never-silent-variant DN — std.time's saturating advance_mono/step_logical
+        omitted (Rust `saturating_add` silent-clamp != the self-hosted never-silent checked add_u).
+
+      DEFERRED HOST-FFI (not an `enb` grammar/runtime enabler — tracked elsewhere):
+      - OS SystemClock read + the ClockSource trait object (std.time) -> M-541 (std-sys clock floor,
+        wild/@std-sys side-effect handling). The deterministic ManualClock half IS ported.
+
+      VERIFY-FIRST NOTE, surfaced not acted on (mitigation #14, for the recover/swap owners): both
+      lib/std/recover.myc (FLAG-recover-1) and lib/std/swap.myc (FLAG-swap-1) assert "no content-hash
+      primitive is exposed to .myc" for ContentHash broadly. M-912's hash.blake3/bytes_eq (landed
+      2026-07-02) now make ContentHash-as-opaque-digest expressible (std.content's digest_eq is landed),
+      so that claim is now TRUE ONLY for the hash_of_value/hash_of_def STRUCTURAL-hash surface, not the
+      opaque-digest surface. Landing ordering is ambiguous (both files + M-912 share the 2026-07-02
+      landing day), so this is NOT a confirmed staleness and NOTHING was re-implemented — flagged for the
+      recover/swap owners (or a later integrator) to re-verify + append-only clarify, not acted on here
+      (out of this wave's ownership boundary).
+
+      User stories:
+      - As the `enb` epic owner, I want the spw Wave-0 ports' surfaced blockers consolidated with their
+        exact kernel/grammar loci and their existing-gap cross-references, so that the Wave-0 residual has
+        a single tracked path to closure and the Rust oracle crates a concrete ADR-043 retirement trigger.
+
+      Definition of Done:
+      - Each newly-surfaced enabler above is either scheduled under `enb` (mapped to a Gap A–E lane or a
+        new child) or explicitly maintainer-deferred with rationale (G2); as its enablers land, the
+        corresponding M-1020/M-1021/M-1022 residual becomes `.myc`-expressible and a follow-up whole-crate
+        differential can re-attempt the full port and (per ADR-043) trigger the Rust crate's retirement.
+      - No enabler here is silently dropped; the verify-first note is either resolved (append-only) by the
+        recover/swap owners or explicitly left open with rationale.
