@@ -374,6 +374,8 @@ fn is_unmappable_conversion_method(method: &str) -> bool {
             | "as_mut"
             | "borrow"
             | "borrow_mut"
+            | "deref"
+            | "deref_mut"
     )
 }
 
@@ -1562,7 +1564,7 @@ fn map_pattern_inner(pat: &Pat) -> Result<String, GapReason> {
             // oracle (`fn c(s: Bytes) => Bool = match s { "yes" => True, _ => False };` → `ok`).
             // The **open-`Bytes` exhaustiveness** requirement (M-1035's W7 coverage: a `Bytes` match
             // needs a wildcard/default arm, else `non-exhaustive match on Bytes: missing _`) is
-            // enforced at the `Expr::Match` level (see `map_pattern_needs_bytes_default` /
+            // enforced at the `Expr::Match` level (see `pattern_contains_str_lit` /
             // `is_irrefutable_match_default`), so a string-literal match is emitted only when it
             // carries the default M-1035 requires — never a check-failing non-exhaustive one
             // (VR-5/G2). See DN-34 §8.21 and `string_literal_pattern_emits_with_l1_enabler`.

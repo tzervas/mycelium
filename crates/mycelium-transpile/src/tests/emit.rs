@@ -929,6 +929,21 @@ fn conversion_noop_method_gaps_never_fabricates_unknown_prim() {
         !myc2.contains("to_owned("),
         "no fabricated `to_owned(...)` may leak even inside a now-emittable string-match, got:\n{myc2}"
     );
+
+    // An explicit `.deref()` call is the same fabrication class (the docstring claims `Deref`
+    // coverage): it must gap, never emit a fabricated `deref(recv)` bare call (PR #1372 review fix).
+    let deref = "fn g(s: &str) -> &str { s.deref() }";
+    let (myc3, report3) = transpile_source(deref, "fixture.rs", "fixture")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile: {e}"));
+    assert!(
+        !report3.emitted_items.iter().any(|n| n == "g"),
+        "a `.deref()`-bodied fn must gap (no fabricated bare-call emission), got {:?}",
+        report3.emitted_items
+    );
+    assert!(
+        !myc3.contains("deref("),
+        "the fabricated `deref(...)` bare call must NEVER be emitted, got:\n{myc3}"
+    );
 }
 
 /// The sharpened `MultiStmtBody` reason (this leaf, E33-1 M-1006 phase-1) names the *kind* of the
