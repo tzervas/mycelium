@@ -12,6 +12,25 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### docs(adr-045): ratify the whole-project unfreeze for early gap-closure (Draft → Accepted) (2026-07-10)
+
+Ratifies **ADR-045 — Whole-Project Unfreeze (L0 Core IR → L1 kernel → L2/L3 grammar → stdlib lexicon) for
+Early Gap-Closure** (Draft → **Accepted**, maintainer-directed 2026-07-10). Broadens the original
+kernel+lexicon Draft to the **whole project** and resolves its three scoping questions: **OQ-1** L0 Core IR
+(RFC-0001) **in scope** (overriding the Draft's keep-L0-frozen lean — recorded per house rule #4, not
+erased); **OQ-2** L2/L3 surface grammar **in scope**; **OQ-3** the window is bounded by the **DN-99 residual
+worklist** (the 4 open + 12 partial register rows, tracked as the M-1024…M-1034 `enb` backlog under E28-1)
+exhausted, a DN-56/DN-76-successor scorecard re-scored green, and a follow-up maintainer-ratified ADR
+reinstating the DN-39-only diff policy — re-score owner the maintainer. Landed-basis: maintainer-ratified
+whole-project unfreeze, 2026-07-10. Applies the append-only cascade (Bucket-A/E): dated "Amended by ADR-045
+(Accepted)" status pointers on **ADR-042 §2.1(a)**, **DN-56 §9/§6**, **DN-66 §2** (decision bodies
+unchanged), and records RFC-0001's L0-floor lift; the ADR-042 §2.1(b) END-STATE (zero foreign first-party
+languages, kernel included) plus the DN-39 TCB-admission boundary plus the never-silent/honesty discipline
+are all **retained**. **`Accepted → Enacted` is withheld** — the §2.4 re-freeze conditions are not met (the
+window is open). The Bucket-B descriptive sweep (`CURRENT-STATE.md`, `README.md`, ≈25 std-crate "DN-66
+freeze" headers, `.claude/memory/*`, an RFC-0001 footer) is FLAGged as a coordinated follow-on PR. (ADR-045;
+amends ADR-042 / DN-56 / DN-66 for the window; VR-5 / G2 / house rules #3/#4/#5.)
+
 ### docs(dn-99): surface-gap closure register + plan for the spw / RFC-0031 stdlib-port wave (2026-07-10)
 
 Adds **DN-99 — Surface-Gap Closure Register and Plan** (Draft), the single closure register for the

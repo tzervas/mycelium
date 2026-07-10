@@ -256,11 +256,12 @@ DN-66 stays **Accepted**; this records the enactment timing, it does not advance
 
 ## Changelog
 
-- **2026-07-10 — Forward-reference (append-only; no status change).** → see **ADR-045** (Draft): it
-  proposes lifting the **§2** stdlib stable-API ("lexicon") freeze of the 26 `mycelium-std-*` public
-  APIs for a **bounded** early gap-closure/optimization window; the **§8** enactment/retirement gate
-  (retirement waits on fully-operational `.myc` rewrites) is **unchanged**. DN-66 is **not modified**
-  here and stays **Accepted**; the amendment lands only if the maintainer ratifies ADR-045. (house rule #3.)
+- **2026-07-10 — Amended by ADR-045 (Accepted 2026-07-10; append-only status pointer — decision body unchanged).**
+  → see **ADR-045** (Accepted): the **§2** stdlib stable-API ("lexicon") freeze of the 26 `mycelium-std-*`
+  public APIs is **unfrozen for a bounded, re-freezable whole-project gap-closure window** (re-freeze on
+  ADR-045 §2.4); the **§8** enactment/retirement gate (retirement waits on fully-operational `.myc` rewrites)
+  is **unchanged**. DN-66's decision body is **not modified** here — only this dated pointer is appended;
+  DN-66 stays **Accepted**. (house rule #3.)
 - **2026-07-02 — Currency note appended (acy integration-closeout, no status change).** §6 records
   that the M-883/M-884 `mycelium-rt-abi` extraction voided §4.c's "`mlir` depends on
   `mycelium-std-runtime` directly" basis; §4.c's original text is unchanged (append-only, house rule
