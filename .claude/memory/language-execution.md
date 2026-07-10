@@ -9,8 +9,10 @@ Not normative. Cite from here, verify in source.
 
 The L1 concrete surface language (`.myc` files), the trusted reference interpreter, and the AOT
 performance path (MLIR→LLVM). Source ground truth is `docs/spec/grammar/mycelium.ebnf` (NORMATIVE
-oracle). The layer cake (RFC-0006 §3): L0 (frozen, trusted) → L1 (kernel calculus) → L2/L3
-(surface; not yet ratified). Only L0 is the trusted base; everything above is elaboration.
+oracle). The layer cake (RFC-0006 §3): L0 (trusted base) → L1 (kernel calculus) → L2/L3
+(surface; not yet ratified). Only L0 is the trusted base; everything above is elaboration. L0's
+NOW-horizon freeze is **lifted for a bounded gap-closure window** per ADR-045 (Accepted
+2026-07-10) — see the Core IR section below.
 
 ---
 
@@ -136,9 +138,15 @@ recursion is handled via SCC + position-assignment search (MAX_ASSIGNMENTS = 409
 Ten node kinds (RFC-0007 §3; interp/src/lib.rs:1–23):
 
 ```text
-L0 (frozen): Const | Var | Let | Op | Swap
+L0 (unfrozen for the ADR-045 window): Const | Var | Let | Op | Swap
 L1 (r4):     Lam   | App | Construct | Match | Fix
 ```
+
+L0's NOW-horizon freeze (normally: changes need their own RFC) is **lifted for a bounded,
+re-freezable gap-closure window** per
+[ADR-045](../../docs/adr/ADR-045-Kernel-And-Lexicon-Unfreeze-For-Early-Gap-Closure.md) (Accepted
+2026-07-10); the end-state (ADR-042) is unchanged and re-freeze is bound to the DN-99 residual
+worklist.
 
 Plus `FixGroup` for mutual recursion (RFC-0001 r5; interp/src/lib.rs:480).
 
