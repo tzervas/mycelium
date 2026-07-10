@@ -13869,7 +13869,7 @@ issues:
         question is decided in the Draft DN; conformance accept + reject; three-way where forms close.
 
   - id: M-1027
-    title: "enb ENB-4 — per-constructor visibility seal"
+    title: "enb ENB-4 — per-constructor visibility seal (never-silent import-path refusal only — NOT a capability boundary; see M-1036)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:feature, area:language, priority:P2, status:done]
     epic: E28-1
@@ -13903,16 +13903,30 @@ issues:
         DN-53 §B.6 Q1 resolved; the seal never-silent (an out-of-nodule construction is an explicit
         checker error); a Draft DN records the marker and its interaction with named-field visibility.
 
-      Landed (PR #1370, feature commit ccda3954, merged to dev 2026-07-10 — status:done):
+      Landed (PR #1370, feature commit ccda3954 + integration-review correction commit, merged to dev
+      2026-07-10 — status:done for the scope actually delivered, see the CRITICAL note below):
       - Rust frontend, full + verified: `Tok::Priv` reserved keyword; `ast::Ctor.sealed`; `parse_ctor`
         reads the optional `priv`; checkty `Exports.sealed_ctors` (per-`pub`-type) folded into a
         per-nodule `NoduleImports.sealed` withheld set (own ctors subtracted), reusing the M-662/M-1024
-        export layer; the withheld-construction refusal at both constructor-application sites; the
-        redundant-`priv`-on-non-`pub`-type refusal at registration; the `priv`-in-`object`-body parse
-        refusal; ambient/fmt render `priv `. All refusals never-silent (G2). DN-53 §B.6 Q1 resolved to
-        the BINARY seal (Draft DN-104 — maintainer ratifies). Witnessed by 10 differentials
-        (`tests/ctor_seal.rs`): home-construct OK, foreign-construct refused (+ unsealed control),
-        cross-nodule type-use + pattern-match OK, redundant/object-body refusals, per-ctor subset seal.
+        export layer; the withheld-construction refusal at both constructor-application sites for a
+        caller that imports the sealed ctor by name; the redundant-`priv`-on-non-`pub`-type refusal at
+        registration; the `priv`-in-`object`-body parse refusal (Rust frontend only — the `.myc` mirror
+        does not yet match, a minor parity gap). All refusals never-silent (G2). DN-53 §B.6 Q1 resolved
+        to the BINARY seal (Draft DN-104 — maintainer ratifies the corrected, narrower scope below).
+      - **CRITICAL (found + independently reproduced at integration review, house rule #4): this is NOT
+        an enforced security/capability boundary.** Mycelium resolves types/ctors by bare name in the
+        *caller's own scope* (own local decls shadow imports — pre-existing RFC-0006 §4.3 / M-662), so a
+        foreign nodule that declares its **own same-named local (unsealed) type**, never importing the
+        real sealed one, bypasses the seal entirely — `check_phylum` accepts it. This falsifies the
+        issue's "FR-N3-style Proven-gates" / "unforgeable" framing above; **M-1023's `Approx::proven`
+        port must NOT rely on this as a real security boundary.** The real fix needs nodule-qualified
+        type identity, tracked as **M-1036** (higher-priority follow-on). As landed, `priv` is an
+        opt-in API-discipline nudge for a well-behaved caller going through `use home.Ctor` — a useful,
+        honestly-scoped never-silent hint, not a capability gate. Witnessed by 11 differentials
+        (`tests/ctor_seal.rs`): home-construct OK, foreign-construct-via-import refused (+ unsealed
+        control), cross-nodule type-use + pattern-match OK, redundant/object-body refusals, per-ctor
+        subset seal, **+ `known_gap_a_same_named_local_shadow_type_bypasses_the_seal` pinning the
+        bypass** so it is never silently absent from the suite's claimed coverage.
       - Residual (honest, not silent — DN-104 §6): the `.myc` mirror carries the **surface + AST +
         structural-fingerprint** parity only (`Priv` token; `Ctor` `sealed` field; `parse_ctor` reads
         `priv`; fingerprint tag 110 both sides). The **cross-nodule *enforcement* mirror** (the export-
@@ -13922,6 +13936,52 @@ issues:
         Native `myc check` is clean over the touched `.myc` (dogfood parity, 9 self-hosted nodules); the
         `.myc` surface is additionally Rust-differential-witnessed. Enforcement-mirror completion tracked
         under M-741.
+
+  - id: M-1036
+    title: "nodule-qualified type identity — the real fix for M-1027's ctor-seal capability-gate bypass"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:bug, area:language, priority:P1, status:todo]
+    epic: E28-1
+    depends_on: [M-1027]
+    doc_refs:
+      - corpus:DN-104
+      - corpus:DN-99
+      - src:crates/mycelium-l1/src/checkty.rs
+      - src:crates/mycelium-l1/tests/ctor_seal.rs
+    body: |
+      Found + independently reproduced during PR #1370's (M-1027 / ENB-4) integration review
+      (2026-07-10, house rule #4 — no claim upgraded past a checked basis). Mycelium resolves
+      types/ctors by **bare name, re-resolved in the calling nodule's own scope** (own local decls
+      shadow imports — the pre-existing RFC-0006 §4.3 / M-662 precedence rule), not by
+      **nodule-qualified nominal identity** (the way Rust's `mod::Type` path-qualifies a type). This
+      means M-1027's per-constructor `priv` seal (DN-104) — whose entire stated purpose is an
+      "unforgeable capability-gate" for FR-N3-style `Proven`-tokens — is **bypassed** by a foreign
+      nodule that declares its **own same-named local (unsealed) type**, never importing the real
+      sealed one: `check_phylum` accepts a program that passes a locally-forged value of the decoy
+      type wherever the sealed type is expected. Reproduced standalone (`cargo run` against a small
+      `mycelium-l1` harness) and pinned as a differential witness
+      (`crates/mycelium-l1/tests/ctor_seal.rs::known_gap_a_same_named_local_shadow_type_bypasses_the_seal`,
+      asserting the current `Ok` — flip it to assert the refusal once this issue lands). Until this
+      lands, DN-104's `priv` seal is an opt-in API-discipline nudge for a well-behaved `use`-based
+      caller — **not** a security/capability boundary — and **M-1023's `Approx::proven` port must not
+      rely on it as one**.
+
+      User stories:
+      - As a stdlib author relying on M-1027's sealed-constructor capability-gate (e.g. M-1023's
+        `Approx::proven`), I want the seal to actually withhold construction from ANY foreign nodule
+        (including one that declares its own same-named local type), so that the "unforgeable" claim
+        DN-104 makes is true rather than bypassable by an adversarial or accidentally-colliding name.
+
+      Definition of Done:
+      - Types/constructors are resolved against their **declaring nodule** (nodule-qualified nominal
+        identity), not bare name alone — so a same-named local type in a foreign nodule is a distinct
+        type from the sealed one and cannot satisfy a signature/pattern expecting it (a type mismatch,
+        never-silent, not a values-forged-through pass). `known_gap_a_same_named_local_shadow_type_
+        bypasses_the_seal` is updated to assert the refusal and renamed to drop "known_gap". A property
+        test over generated same-name-collision programs. DN-104 §6's CRITICAL residual is closed and
+        the note's capability-gate framing is restored/ratified. Backward compatibility: an unambiguous
+        same-named-but-unrelated local type in a phylum that never crosses with the sealed one still
+        checks unchanged (no false-positive collision across unrelated phyla/nodules).
 
   - id: M-1028
     title: "enb ENB-5 — transcendental + eps/delta float numerics"

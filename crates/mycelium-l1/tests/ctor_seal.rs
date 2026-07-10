@@ -194,3 +194,37 @@ fn a_multi_ctor_type_seals_only_the_marked_ctor() {
         "the sealed sibling ctor is withheld cross-nodule; got: {err}"
     );
 }
+
+// ---------------------------------------------------------------------------------------------
+// KNOWN GAP (pinned, not silently absent — G2/VR-5): a same-named local shadow bypasses the seal.
+// ---------------------------------------------------------------------------------------------
+
+#[test]
+fn known_gap_a_same_named_local_shadow_type_bypasses_the_seal() {
+    // Mycelium resolves types by BARE NAME, re-resolved in the *calling* nodule's own scope
+    // (`resolve_ty` looks the name up in the caller's `Cx.types`, not the callee's declaring
+    // scope), and "local decl shadows import" is the pre-existing, documented precedence rule
+    // (RFC-0006 §4.3 / M-662). So a foreign nodule can declare its OWN unsealed type of the
+    // SAME NAME — never importing the real sealed `a.T` — and the checker accepts passing a
+    // value of its local decoy `T` to a function that expects `a.T`, because both resolve to the
+    // bare name "T" in their respective scopes. This falsifies the "unforgeable capability-gate"
+    // framing this feature was built to deliver (DN-99 row #37 / FR-N3 / M-1023's `Approx::proven`
+    // port) for anything but a well-behaved caller that goes through `use a.T` — it is NOT a
+    // security/capability boundary against an adversarial or even accidentally-colliding same-
+    // named local declaration. Pinned here so the gap is visible in the differential suite, not
+    // silently absent from what the PR's "silent-hole sweep" claimed was exhaustive coverage
+    // (found in review, verified by reproduction — house rule #4: no claim upgraded past a
+    // checked basis). Tracked as **M-1036** (nodule-qualified type identity — the real fix; DN-104
+    // §6). Until M-1036 lands, `priv` is an opt-in API-discipline nudge for well-behaved cross-
+    // nodule callers, NOT an enforced capability boundary — DN-104 must not be ratified with the
+    // stronger claim.
+    let result = check_phy(
+        "phylum p\nnodule a;\npub type T = priv Mk(Binary{8});\npub fn use_t(x: T) => Binary{8} = match x { Mk(v) => v };\nnodule b;\nuse a.use_t;\ntype T = Mk(Binary{8});\nfn forge() => T = Mk(0b00000000);\npub fn exploit() => Binary{8} = use_t(forge());",
+    );
+    assert!(
+        result.is_ok(),
+        "this PINS the current (unsound) behavior — if this now returns Err, the bypass has been \
+         fixed (e.g. by M-1036 landing nodule-qualified type identity); update this test to assert \
+         the refusal instead and close M-1036. Got: {result:?}"
+    );
+}

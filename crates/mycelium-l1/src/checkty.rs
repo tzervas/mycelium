@@ -1250,11 +1250,22 @@ pub(crate) struct NoduleImports {
     pub(crate) ambiguous: BTreeSet<String>,
     /// **Withheld (sealed) constructor names** (M-1027 / ENB-4; DN-104 §4). The imported constructor
     /// simple-names that are `priv`-sealed in their home nodule — **constructing** one from *this*
-    /// nodule is a never-silent [`CheckError`] (the FR-N3 capability-gate: only the home nodule mints
-    /// one). The exact twin of [`Self::ambiguous`]: `ambiguous` answers "which imported names may not be
-    /// *referenced*", `sealed` answers "which imported constructor names may not be *constructed*". This
-    /// nodule's **own** constructor names are subtracted (an own constructor is always constructible in
-    /// its home; own decls shadow imports). Consulted only at the two constructor-application sites.
+    /// nodule via an imported (`use`-resolved) name is a never-silent [`CheckError`]. The exact twin
+    /// of [`Self::ambiguous`]: `ambiguous` answers "which imported names may not be *referenced*",
+    /// `sealed` answers "which imported constructor names may not be *constructed*". This nodule's
+    /// **own** constructor names are subtracted (an own constructor is always constructible in its
+    /// home; own decls shadow imports). Consulted only at the two constructor-application sites.
+    ///
+    /// **Known gap (M-1036, not yet fixed — see `tests/ctor_seal.rs`'s
+    /// `known_gap_a_same_named_local_shadow_type_bypasses_the_seal`):** this withheld set is keyed
+    /// by **bare constructor name**, and Mycelium resolves types/ctors by bare name in the
+    /// *caller's own scope* (own decls shadow imports — the pre-existing RFC-0006 §4.3 precedence
+    /// rule), not by nodule-qualified nominal identity. So a foreign nodule that declares its own
+    /// unsealed type/ctor of the **same name** — without ever importing the sealed original — is
+    /// never populated into *its* withheld set and bypasses the seal entirely. This is **not** an
+    /// enforced capability/security boundary against an adversarial or accidentally-colliding
+    /// same-named local declaration; it only ever refuses a well-behaved caller that goes through
+    /// `use home.Ctor`. A real fix needs nodule-qualified type identity (tracked as M-1036).
     pub(crate) sealed: BTreeSet<String>,
 }
 
@@ -3965,12 +3976,20 @@ impl Cx<'_> {
             .find_map(|d| d.ctors.iter().position(|c| c.name == name).map(|i| (d, i)))
     }
 
-    /// M-1027 / DN-104 §4: the **cross-nodule construction seal**. If `name` is a constructor imported
-    /// from another nodule where it is `priv`-sealed, **constructing** it here is a never-silent
-    /// [`CheckError`] (the FR-N3 capability-gate: only the home nodule mints one). Returns `Err` at the
-    /// two constructor-application sites for a withheld name; `Ok(())` otherwise (an unsealed ctor, or a
-    /// home constructor — own decls are subtracted from the withheld set in `resolve_imports`). The type
-    /// **name** and **pattern-matching** are unaffected — only *construction* is withheld (DN-104 §4).
+    /// M-1027 / DN-104 §4: the **cross-nodule construction seal**. If `name` is a constructor **imported
+    /// by name** (`use home.Ctor`) from another nodule where it is `priv`-sealed, **constructing** it
+    /// here is a never-silent [`CheckError`]. Returns `Err` at the two constructor-application sites for
+    /// a withheld name; `Ok(())` otherwise (an unsealed ctor, or a home constructor — own decls are
+    /// subtracted from the withheld set in `resolve_imports`). The type **name** and **pattern-matching**
+    /// are unaffected — only *construction* is withheld (DN-104 §4).
+    ///
+    /// **Not an enforced security/capability boundary (known gap, M-1036)** — this check is keyed by
+    /// bare constructor name in [`NoduleImports::sealed`], so a caller that declares its own same-named
+    /// **local** (unsealed) type/ctor — rather than importing the real one — never populates its
+    /// withheld set and bypasses this check entirely (own decls shadow imports, RFC-0006 §4.3; pinned
+    /// by `tests/ctor_seal.rs::known_gap_a_same_named_local_shadow_type_bypasses_the_seal`). It refuses
+    /// a well-behaved cross-nodule caller that actually goes through `use`; it does not defend against
+    /// an adversarial or accidentally-colliding same name.
     fn check_ctor_seal(&self, name: &str, ty_name: &str) -> Result<(), CheckError> {
         if self.imports.sealed.contains(name) {
             return self.err(format!(

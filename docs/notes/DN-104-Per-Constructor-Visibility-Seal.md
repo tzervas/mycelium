@@ -17,6 +17,25 @@
 > genuine fork (binary seal vs full `pub(path)` scoped visibility) on its merits and §6 states the
 > residuals (pattern-position sealing, named-field visibility, the `.myc` enforcement mirror) plainly
 > rather than claiming a finished "full visibility system".
+>
+> **CRITICAL, added at integration review (2026-07-10, dev-lane `/pr-review` + independently
+> reproduced by the integrator — house rule #4, no claim upgraded past a checked basis).** The
+> mechanism below is **NOT an enforced security/capability boundary**, contrary to §1's and §3's
+> "capability-gate"/"unforgeable" framing as originally drafted. Mycelium resolves types and
+> constructors **by bare name, re-resolved in the caller's own scope** (own local decls shadow
+> imports — the pre-existing RFC-0006 §4.3 / M-662 precedence rule), not by nodule-qualified
+> nominal identity. A foreign nodule can therefore declare **its own unsealed type/ctor of the same
+> name** — never importing the real sealed one — and the checker accepts it: `check_phylum` returns
+> `Ok` for a same-named local shadow that passes a locally-forged value where the sealed type is
+> expected. Reproduced and **pinned** as
+> `tests/ctor_seal.rs::known_gap_a_same_named_local_shadow_type_bypasses_the_seal`. The seal, as
+> landed, is an **opt-in API-discipline nudge that refuses a well-behaved caller going through
+> `use home.Ctor`** — it is not unforgeable and does not defend against an adversarial or even
+> accidentally-colliding same name. **§1/§3/§4 below are left as originally drafted (append-only —
+> the design record is not silently rewritten) but must be read through this correction; §6 records
+> it as a residual and tracks the real fix as M-1036 (nodule-qualified type identity).** Until
+> M-1036 lands, the maintainer should **not** ratify this note as delivering the FR-N3 capability
+> guarantee — only the never-silent, opt-in-discipline mechanism.
 
 ---
 
@@ -144,6 +163,22 @@ DN-53-sanctioned near-term close, not a contradiction of the deferral.
 
 ## §6 Residuals (stated plainly, not glossed — house rule #4)
 
+- **CRITICAL — not an enforced security/capability boundary (M-1036, added at integration review
+  2026-07-10).** The withheld set (`NoduleImports.sealed`) is keyed by **bare constructor name** and
+  populated only along the `use`-import path; it is never consulted for a caller's **own locally
+  declared** type/ctor. Because Mycelium resolves types/ctors by bare name in the *caller's own scope*
+  (own decls shadow imports — RFC-0006 §4.3 / M-662, pre-existing and unrelated to this note), a foreign
+  nodule that declares a **same-named local (unsealed) type**, without ever importing the real sealed
+  one, bypasses the seal entirely — `check_phylum` accepts the resulting program. This falsifies the
+  §1/§3 "unforgeable capability-gate" framing for anything but a well-behaved caller that goes through
+  `use home.Ctor`; it is **not** a defense against an adversarial or accidentally-colliding same name,
+  and **M-1023's `Approx::proven` port must not rely on it as a real security boundary** until fixed.
+  Pinned by `tests/ctor_seal.rs::known_gap_a_same_named_local_shadow_type_bypasses_the_seal` (asserts
+  the current, unsound `Ok` — update to assert the refusal once fixed). The real fix needs
+  **nodule-qualified type identity** (types resolved against their *declaring* nodule, not the caller's
+  bare-name lookup) — a materially larger change than this note's scope, tracked as **M-1036**. The
+  maintainer should ratify this note as delivering the **never-silent, opt-in-discipline** mechanism
+  only, not the FR-N3 capability guarantee, until M-1036 lands.
 - **Marker keyword `priv` vs `seal`/`sealed`** (§2.1) — recommended `priv` (register-fidelity, `pub`/`priv`
   symmetry); the maintainer may prefer the more intent-revealing `sealed`. The AST field (`sealed`) is
   keyword-independent, so a later keyword swap is a lexer + parser + printer change only.
@@ -160,22 +195,34 @@ DN-53-sanctioned near-term close, not a contradiction of the deferral.
   mirror **rides the checkty cross-nodule port**, and is FLAGGED as a residual (DN-26 parity is at the
   surface + vocabulary layer this increment, not the enforcement layer). This is honest scope, not a
   silent omission.
+- **`.myc` object-body seal parity gap (added at integration review 2026-07-10).** The Rust frontend
+  refuses `priv` inside an `object` body at parse (`crates/mycelium-l1/src/parse.rs`, §2 scope); the
+  `.myc` self-hosted `parse_object_decl` (`lib/compiler/parse.myc`) currently has **no matching
+  refusal** — it accepts `priv` there and threads the (unused) `sealed` flag through `OD(...)` silently.
+  A minor parity gap, not a soundness issue (the Rust frontend is the checked oracle); a one-line
+  symmetric refusal in `parse_object_decl` would close it.
 
 ## §7 Definition of Done + witnesses
 
 - **Accept** — a sealed constructor is constructible **in its home nodule** (`pub type T = priv Mk(A)`;
   the home nodule's `fn mk() => T = Mk(a)` checks); the type **name** is importable and usable in a foreign
   nodule's signature (`fn f(x: T) => T = x` checks after `use home.T`).
-- **Reject (never-silent, G2)** — (a) a foreign nodule constructing the sealed ctor (`use home.Mk; fn
-  forge() => T = Mk(a)`) → the withheld-construction refusal; (b) `priv` on a non-`pub` type → the
-  redundant-seal refusal.
-- **Differential (DN-26 / `/myc-dogfood`)** — the Rust-oracle differential witnesses the three behaviours
-  (home-construct OK · foreign-construct refused · cross-nodule type-use OK); the `.myc` frontend
-  `myc check`-clean with the `priv`/`sealed` surface (enforcement mirror FLAGGED as riding the checkty
-  port — §6).
+- **Reject (never-silent, G2)** — (a) a foreign nodule constructing the sealed ctor **via an imported
+  name** (`use home.Mk; fn forge() => T = Mk(a)`) → the withheld-construction refusal; (b) `priv` on a
+  non-`pub` type → the redundant-seal refusal.
+- **NOT rejected (the §6 known gap, M-1036)** — a foreign nodule constructing a **same-named local
+  (unsealed) type/ctor** it never imported, then passing that value where the sealed type is expected,
+  type-checks (`check_phylum` returns `Ok`). This is the gap that falsifies the "unforgeable" framing;
+  pinned by `tests/ctor_seal.rs::known_gap_a_same_named_local_shadow_type_bypasses_the_seal`.
+- **Differential (DN-26 / `/myc-dogfood`)** — the Rust-oracle differential witnesses the three intended
+  behaviours (home-construct OK · foreign-construct-via-import refused · cross-nodule type-use OK) **and**
+  pins the known gap above as an 11th witness; the `.myc` frontend `myc check`-clean over the touched
+  nodules (dogfood parity, surface/AST/fingerprint layer; enforcement mirror FLAGGED as riding the
+  checkty port — §6).
 - **Guarantee** — `Declared` (surface + a boolean on an existing node + one predicate at the existing
-  construction sites), upgraded to `Empirical` by the running conformance + differential witnesses above;
-  **not** upgraded past that (no `Proven` claim — VR-5).
+  construction sites), upgraded to `Empirical` by the running conformance + differential witnesses above
+  **for the never-silent, opt-in-discipline mechanism this note actually delivers**; **not** upgraded to
+  a `Proven` or enforced-capability claim (no such claim is checked — VR-5; §6 known gap M-1036).
 
 ## §8 Changelog
 
@@ -187,3 +234,16 @@ DN-53-sanctioned near-term close, not a contradiction of the deferral.
   FLAGGED up). `Empirical` where cited against the tree (dev `30a0ff3f`) or witnessed by a running test;
   `Declared` for the unratified seal semantics + the §B.6 Q1 resolution. Append-only; status advances only
   by maintainer ratification (house rule #3).
+- **2026-07-10 (integration review)** — a dev-lane `/pr-review` pass found, and the integrator
+  independently reproduced (`cargo run` against a standalone same-named-shadow program), a **Critical**
+  soundness gap: the withheld set is bypassed by a foreign nodule's same-named local (unsealed) type
+  declaration, because Mycelium resolves types/ctors by bare name in the caller's own scope rather than
+  by nodule-qualified nominal identity — a pre-existing property of the type-resolution model, not a bug
+  introduced by this note's mechanism. Added the CRITICAL callout after the grounding block, a new §6
+  residual bullet (+ the M-1036 tracking issue for the real fix — nodule-qualified type identity), a
+  pinned "NOT rejected" case in §7, and softened §1/§3/§4's "unforgeable capability-gate" language via
+  the callout (the original prose is left intact below it, append-only — read through the correction).
+  Also added the `.myc` object-body seal parity gap to §6 (previously disclosed only in the PR commit
+  message, not the design record). Status **stays Draft**; the maintainer ratifies knowing the corrected,
+  narrower scope (never-silent opt-in discipline, not an enforced capability boundary) — never silently
+  upgraded (VR-5/G2, house rule #4).

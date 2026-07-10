@@ -91,10 +91,12 @@ pub enum Tok {
     Pub,
     /// `priv` — the **per-constructor visibility seal** marker (M-1027 / ENB-4; DN-104). Dual to
     /// [`Tok::Pub`]: on a `pub type`, a `priv`-marked constructor (`= priv Mk(..)`) exports the type
-    /// **name** but **withholds the constructor from cross-nodule construction** (the FR-N3
-    /// capability-gate). Reserved as a keyword so it can never be a silent identifier (G2). It is
-    /// meaningful **only** immediately before a constructor name; a `priv` anywhere else is an explicit
-    /// parse error (the parser consults it only in `parse_ctor`).
+    /// **name** but **withholds the constructor from cross-nodule construction via an imported name**
+    /// — a discipline nudge for a well-behaved caller, not yet an enforced security/capability
+    /// boundary (known gap, M-1036 — see `checkty::NoduleImports::sealed`). Reserved as a keyword so
+    /// it can never be a silent identifier (G2). It is meaningful **only** immediately before a
+    /// constructor name; a `priv` anywhere else is an explicit parse error (the parser consults it
+    /// only in `parse_ctor`).
     Priv,
     /// `type` — data-type declaration.
     Type,

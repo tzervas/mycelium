@@ -154,7 +154,10 @@ unblocker, e.g. #41).
 | 91 | generic-function-declaration (`fn f<T>`) | closed | cl | `ebnf:162`; `parse.rs:857`; `emit.rs:229` | none — `fn f[T]` landed; `<T>` retired | register corrected to already-closed | no | RFC-0037; RFC-0019 §4.1 | none | S | P3 |
 | 92 | box-recursive-indirection-type (`Box<T>`) | idiom | ac | `map.rs:176`; `ast.myc:44`; `checkty.rs:1652` | Box field → plain `T` (value-semantic recursion) | idiom documented; optional tr erase-arm | no | untracked | low | S | P3 |
 
-**Status tally:** `open` = 4 (#37, #42, #60, #88) · `partial` = 12 (#24, #41, #44, #45, #55, #56, #63, #65, #70, #71, #79, #89) · `already-closed` = 16 · `transpiler-only` = 10 · `idiom` (closed-by-convention) = 50.
+**Status tally:** `open` = 3 (#42, #60, #88) · `landed-with-residual` = 1 (#37 — M-1027/DN-104, 2026-07-10;
+the import-path refusal landed, the capability-gate claim did NOT — see A3 above and M-1036) ·
+`partial` = 12 (#24, #41, #44, #45, #55, #56, #63, #65, #70, #71, #79, #89) · `already-closed` = 16 ·
+`transpiler-only` = 10 · `idiom` (closed-by-convention) = 50.
 **Total = 92.** So **66 are closed today** (16 landed + 50 idiom), **10 need only transpiler work**, and
 **16 carry a genuine language/runtime residual** (the 4 `open` + 12 `partial`), of which **15 rows are
 tagged `DN? = yes`** (before de-dup; §8 collapses the duplicates into the filable backlog).
@@ -218,7 +221,10 @@ impls-as-functions meanwhile. `HIGH` collision; Draft DN.
 **A3 — per-constructor visibility seal (grammar-`enb`, #37).** A `priv`/seal marker on the `constructor`
 production so `pub type T = priv Mk(..)` exports the type *name* but withholds cross-nodule
 construction; design with named-field visibility (DN-53 §B.5) and resolve §B.6 Q1 first. `HIGH`
-collision; Draft DN.
+collision; Draft DN. **Landed (M-1027, PR #1370, 2026-07-10) — Draft DN-104.** The Rust frontend +
+`.myc` surface parity are in; the seal withholds construction **via an imported name only** — it is
+**not** an enforced capability/security boundary (a same-named local shadow bypasses it; DN-104 §6
+CRITICAL residual). The real fix (nodule-qualified type identity) is tracked as **M-1036**.
 
 **A4 — transcendental + ε/δ float numerics (runtime-`enb`, #42; XL).** ADR-gated: decide kernel-prim vs
 libm-behind-`wild` routing, the per-op ε/guarantee matrix, and the float `ApproxRule` wiring; then a
