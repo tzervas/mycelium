@@ -1,6 +1,6 @@
 {
   "epic": "E33-1",
-  "generated_from_commit": "13b00ff9d07328c4b67eb9f7fa722dcfeebbfdcc",
+  "generated_from_commit": "73f310b371e5e3272b5378f4610685a78f066144",
   "kickoff": "trx2",
   "schema_version": 1,
   "targets": [
@@ -22,7 +22,7 @@
       "rust_sources": [
         {
           "path": "crates/mycelium-l1/src/checkty.rs",
-          "sha256": "bfd270e0cc29e0094e29c7c6767d7f8c2f5aa02f33259d7e0604d77dc905d6ca"
+          "sha256": "d8dd59123bb7fde2b11eb009960da8861a161857df81f514abcdc6a942c130f2"
         }
       ],
       "stats": {
@@ -59,7 +59,7 @@
       "rust_sources": [
         {
           "path": "crates/mycelium-l1/src/elab.rs",
-          "sha256": "3dc10a57f7906aedf0f3a4742b78939dc9c7f51208aa2013b337e7cc6435dd35"
+          "sha256": "e7cbe6d9e45d016178c68096052f2ae78724a4da608ed99aa94190102a5d0c58"
         }
       ],
       "stats": {
@@ -96,7 +96,7 @@
       "rust_sources": [
         {
           "path": "crates/mycelium-l1/src/eval.rs",
-          "sha256": "cf591ac48db72a0b863a040c23f394f0ea9e34f985e66ab03f09ea2b78ca25fa"
+          "sha256": "e68a85910f14dd4af7360abe89c69a5d1af2b5db9631c2e64bf3f8a9687ee0c1"
         }
       ],
       "stats": {
@@ -132,7 +132,7 @@
       "rust_sources": [
         {
           "path": "crates/mycelium-l1/src/mono.rs",
-          "sha256": "54a3a0b82b0c1c71e87443cb69b6495710474157001c32569e2dfe5098e3d322"
+          "sha256": "c6ca09d7ca5a52122e42cbad2c78153880a6ec6458af1d80b4a945a0e8a87b7f"
         }
       ],
       "stats": {
@@ -215,8 +215,10 @@
         "GenericBound": 1,
         "Impl": 7,
         "Import": 9,
+        "InnerAttr": 1,
+        "ModuleDecl": 4,
         "NamedFieldDrop": 2,
-        "Other": 10,
+        "Other": 5,
         "Struct": 2,
         "TestItem": 5
       },
@@ -247,11 +249,11 @@
       ],
       "stats": {
         "checked_clean_items": 5,
-        "checked_fraction_pct": 14.29,
+        "checked_fraction_pct": 16.13,
         "emitted_items": 7,
-        "expressible_fraction_pct": 20.0,
+        "expressible_fraction_pct": 22.58,
         "gap_count": 43,
-        "non_test_items": 35,
+        "non_test_items": 31,
         "total_top_level_items": 40
       },
       "status": "ok",
@@ -266,8 +268,9 @@
       "gap_category_counts": {
         "Impl": 5,
         "Import": 2,
+        "InnerAttr": 1,
         "MultiStmtBody": 1,
-        "Other": 8,
+        "Other": 7,
         "PayloadVariant": 1,
         "Struct": 3,
         "TestItem": 1
@@ -302,10 +305,12 @@
         "DeriveAttr": 26,
         "Impl": 11,
         "Import": 12,
+        "InnerAttr": 1,
         "MacroInvocation": 1,
+        "ModuleDecl": 6,
         "MultiStmtBody": 6,
         "NamedFieldDrop": 5,
-        "Other": 15,
+        "Other": 8,
         "PayloadVariant": 2,
         "Struct": 5,
         "TestItem": 7
@@ -345,11 +350,11 @@
       ],
       "stats": {
         "checked_clean_items": 8,
-        "checked_fraction_pct": 15.09,
+        "checked_fraction_pct": 17.02,
         "emitted_items": 15,
-        "expressible_fraction_pct": 28.3,
+        "expressible_fraction_pct": 31.91,
         "gap_count": 90,
-        "non_test_items": 53,
+        "non_test_items": 47,
         "total_top_level_items": 60
       },
       "status": "ok",
@@ -365,10 +370,12 @@
         "DeriveAttr": 11,
         "Impl": 13,
         "Import": 9,
+        "InnerAttr": 1,
         "MacroInvocation": 3,
+        "ModuleDecl": 4,
         "MultiStmtBody": 3,
         "NamedFieldDrop": 9,
-        "Other": 16,
+        "Other": 11,
         "ReservedWord": 4,
         "Struct": 2,
         "TestItem": 5
@@ -402,9 +409,9 @@
         "checked_clean_items": 0,
         "checked_fraction_pct": 0.0,
         "emitted_items": 14,
-        "expressible_fraction_pct": 22.22,
+        "expressible_fraction_pct": 23.73,
         "gap_count": 75,
-        "non_test_items": 63,
+        "non_test_items": 59,
         "total_top_level_items": 68
       },
       "status": "ok",
@@ -421,9 +428,11 @@
         "GenericBound": 2,
         "Impl": 3,
         "Import": 4,
+        "InnerAttr": 1,
+        "ModuleDecl": 1,
         "MultiStmtBody": 3,
         "NamedFieldDrop": 1,
-        "Other": 10,
+        "Other": 8,
         "Struct": 4,
         "TestItem": 2
       },
@@ -442,11 +451,11 @@
       ],
       "stats": {
         "checked_clean_items": 2,
-        "checked_fraction_pct": 7.41,
+        "checked_fraction_pct": 7.69,
         "emitted_items": 2,
-        "expressible_fraction_pct": 7.41,
+        "expressible_fraction_pct": 7.69,
         "gap_count": 31,
-        "non_test_items": 27,
+        "non_test_items": 26,
         "total_top_level_items": 29
       },
       "status": "ok",
@@ -462,10 +471,11 @@
         "GenericBound": 5,
         "Impl": 3,
         "Import": 1,
+        "InnerAttr": 1,
         "MacroInvocation": 1,
         "MultiStmtBody": 7,
         "NamedFieldDrop": 1,
-        "Other": 8,
+        "Other": 7,
         "ReservedWord": 1,
         "Struct": 2,
         "TestItem": 1,
@@ -502,9 +512,11 @@
         "GenericBound": 12,
         "Impl": 27,
         "Import": 28,
+        "InnerAttr": 1,
+        "ModuleDecl": 13,
         "MultiStmtBody": 1,
         "NamedFieldDrop": 3,
-        "Other": 34,
+        "Other": 20,
         "PayloadVariant": 3,
         "Struct": 19,
         "TestItem": 3,
@@ -573,11 +585,11 @@
       ],
       "stats": {
         "checked_clean_items": 13,
-        "checked_fraction_pct": 8.97,
+        "checked_fraction_pct": 9.85,
         "emitted_items": 22,
-        "expressible_fraction_pct": 15.17,
+        "expressible_fraction_pct": 16.67,
         "gap_count": 154,
-        "non_test_items": 145,
+        "non_test_items": 132,
         "total_top_level_items": 148
       },
       "status": "ok",
@@ -594,9 +606,11 @@
         "GenericBound": 1,
         "Impl": 7,
         "Import": 7,
+        "InnerAttr": 1,
+        "ModuleDecl": 7,
         "MultiStmtBody": 1,
         "NamedFieldDrop": 1,
-        "Other": 27,
+        "Other": 19,
         "PayloadVariant": 1,
         "ReservedWord": 1,
         "Struct": 1,
@@ -641,11 +655,11 @@
       ],
       "stats": {
         "checked_clean_items": 15,
-        "checked_fraction_pct": 23.81,
+        "checked_fraction_pct": 26.79,
         "emitted_items": 18,
-        "expressible_fraction_pct": 28.57,
+        "expressible_fraction_pct": 32.14,
         "gap_count": 57,
-        "non_test_items": 63,
+        "non_test_items": 56,
         "total_top_level_items": 70
       },
       "status": "ok",
@@ -661,7 +675,7 @@
         "DeriveAttr": 2,
         "Impl": 2,
         "Import": 2,
-        "Other": 1,
+        "InnerAttr": 1,
         "TestItem": 1
       },
       "kind": "stdlib",
@@ -695,10 +709,11 @@
         "GenericBound": 2,
         "Impl": 7,
         "Import": 1,
+        "InnerAttr": 1,
         "MacroInvocation": 1,
         "MultiStmtBody": 1,
         "NamedFieldDrop": 2,
-        "Other": 13,
+        "Other": 12,
         "PayloadVariant": 1,
         "Struct": 4,
         "TestItem": 1,
@@ -733,7 +748,9 @@
       "gap_category_counts": {
         "GenericBound": 12,
         "Import": 12,
-        "Other": 7,
+        "InnerAttr": 1,
+        "ModuleDecl": 4,
+        "Other": 2,
         "Struct": 1
       },
       "kind": "stdlib",
@@ -767,7 +784,7 @@
         "emitted_items": 0,
         "expressible_fraction_pct": 0.0,
         "gap_count": 32,
-        "non_test_items": 31,
+        "non_test_items": 27,
         "total_top_level_items": 31
       },
       "status": "ok",

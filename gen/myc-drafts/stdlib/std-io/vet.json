@@ -33,7 +33,7 @@
       "class": "Clean",
       "exit_code": 0,
       "diagnostic": "",
-      "non_test_items": 8,
+      "non_test_items": 4,
       "emitted_items": 0
     },
     {
@@ -46,7 +46,7 @@
       "emitted_items": 3
     }
   ],
-  "total_non_test_items": 63,
+  "total_non_test_items": 59,
   "total_emitted_items": 14,
   "total_checked_clean_items": 0,
   "class_counts": {

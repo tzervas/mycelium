@@ -9,8 +9,8 @@
       "file": "crates/mycelium-std-numerics/src/lib.rs",
       "line": 1,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "InnerAttr",
+      "rust_construct": "InnerAttr",
       "snippet": "# ! [forbid (unsafe_code)]",
       "reason": "crate/file-level inner attributes (#![...]) are not transpiled (no nodule-header equivalent for these Rust-specific directives)",
       "item_name": null
@@ -19,10 +19,10 @@
       "file": "crates/mycelium-std-numerics/src/lib.rs",
       "line": 58,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "ModuleDecl",
+      "rust_construct": "ModuleDecl",
       "snippet": "pub mod matrix ;",
-      "reason": "`mod` declaration — Mycelium's nodule-per-file model has no nested-module construct in this grammar fragment",
+      "reason": "external `mod foo;` declaration — file-linkage, not translatable library surface (Mycelium's nodule-per-file model makes the module tree implicit in the file layout; the sibling file transpiles as its own nodule). Excluded from the expressible-fraction denominator, recorded not dropped",
       "item_name": "matrix"
     },
     {
@@ -72,7 +72,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Module-private seal so [`ProvenThm`] cannot be constructed outside this crate.\"] # [doc = \"\"] # [doc = \" `ProvenThm` carries a `_seal: Sealed` field (private). Because `Sealed` is in a private module\"] # [doc = \" and its constructor is not exported, the only way to obtain a `ProvenThm` is via\"] # [doc = \" [`ProvenThm::new`] — which is the sanctioned, validating entry point.\"] # [doc = \"\"] # [doc = \" This enforces FR-N3 at the type level: there is **no** `unsafe` or reflection route around it\"] # [doc = \" in Rust's type system (the `#![forbid(unsafe_code)]` lint above backs this up).\"] mod sealed { # [doc = \" Private zero-size sentinel that cannot be named outside this crate.\"] # [derive (Debug , Clone , PartialEq)] pub (super) struct Sealed ; }",
-      "reason": "`mod` declaration — Mycelium's nodule-per-file model has no nested-module construct in this grammar fragment",
+      "reason": "inline `mod foo { … }` — Mycelium's nodule-per-file model has no nested-module construct in this grammar fragment; the module body is dropped (a real coverage gap, not file-linkage — its inner items could be flattened in a later phase)",
       "item_name": "sealed"
     },
     {

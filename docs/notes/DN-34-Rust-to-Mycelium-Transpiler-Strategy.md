@@ -1331,3 +1331,60 @@ Closes the transpiler-side half of §8.16 item 4. `&`/`|` now emit `and`/`or` (n
   (the lossy-swap cast surface/name is undecided — a design question, not a prim_map wiring gap; the
   Session-4 "flip the prim_map CU-3 row" framing was wrong — CU-3 has no prim_map row by design).
   Emission `Declared`; vet `Empirical`. **Status unchanged (Draft).** (Append-only; VR-5; G2.)
+- **2026-07-10 — §8.19 added: M-1006 Phase-2 opens — the whole-corpus profile + a taxonomy/denominator
+  refinement that stops counting file-linkage as un-expressible surface (kickoff `trx2`, E33-1).** The
+  ladder's Phase-2 mandate is to expand the rip-through **beyond the 17-target port surface** to the rest
+  of the Rust corpus (M-1006 DoD). This entry records the **first whole-corpus baseline** and the honest
+  gap-taxonomy fix it surfaced. **Baseline (`Empirical`, `mycelium-transpile crates/`):** 337 files (0
+  parse failures), 5,472 top-level items, 573 emitted. **The profiling finding** (house rule #4 —
+  verify-first): the opaque `Category::Other` bucket held **37.8%** of all gaps, and cracking it open by
+  reason showed two sub-populations that are **not translatable library surface at all** — (a) **267
+  bodyless `mod foo;` declarations** (file-linkage: Mycelium's nodule-per-file model, grammar
+  `nodule_block ::= nodule_header ';' (item ';')*` with no `mod` item production, makes the module tree
+  implicit in the file layout, so the sibling file transpiles as its own nodule and the `lib/std/*.myc`
+  hand-ports carry zero `mod` decls), and (b) **58 crate/file-level inner attributes** (`#![forbid(...)]`,
+  which are not `syn::Item`s at all). **The fix** (`crates/mycelium-transpile/src/{gap,transpile}.rs`):
+  two new honest categories, `ModuleDecl` (bodyless `mod foo;`) and `InnerAttr` (`#![…]`), replace the
+  `Other` label for these; and `ModuleDecl` is **excluded from the expressible-fraction denominator on the
+  identical rationale `TestItem` already is** — a file-linkage declaration is recorded (never dropped, G2)
+  but is not a translatable library item, so counting it against coverage was a category error that
+  *understated* the true fraction. An **inline** `mod foo { … }` (a dropped real body) stays a counted
+  `Other` gap — VR-5: the denominator only ever shrinks by genuinely-non-surface items, never to flatter a
+  number. **Metric effect (never-silent):** whole-corpus `Other` 2,245 → 1,924 (37.8% → 32.4%);
+  denominator 5,323 → 5,059 non-test items; expressible **10.8% → 11.3%**. On the committed 17-target
+  `gen/myc-drafts/` manifest the same refinement moves union non-test items 760 → 721, expressible 13.4%
+  → 14.1%, and **`checked_fraction` 7.8% → 8.2%** — the numerator (myc-check-clean items) is **unchanged
+  at 59**; the entire move is the tighter, more-correct denominator (no emission was added or upgraded).
+  Data-driven `taxonomy` test module pins the categorization and the denominator arithmetic; change-scoped
+  `cargo fmt`/`clippy -D warnings`/`test -p mycelium-transpile` green (58 tests). **Residual Phase-2
+  worklist (recorded, G2 — the stopping point is never silent):** after the file-linkage reclassification
+  the whole-corpus transpiler-relevant surface is dominated by `Import` (1,085, 18.3% — the cross-nodule
+  symbol-table prerequisite: the grammar's `use_item` **does** exist, so a corpus-wide symbol table could
+  let these emit and resolve; the single largest automation lever, its own future wave), `Impl` (578),
+  `DeriveAttr` (497, mostly language-surface), and `Struct` (423, type-coverage/positional). A separate
+  batch-output prerequisite is also noted for automation: a naive whole-`crates/` run currently overwrites
+  same-stem outputs (`lib.myc` over `lib.myc`) — never-silently (it warns per collision) but lossily; a
+  path-qualified output layout is the clean follow-on that makes a whole-corpus emission complete. Emission
+  `Declared`; vet `Empirical`. **Status unchanged (Draft).** (Append-only; VR-5; G2.)
+- **2026-07-10 — §8.20 added: path-qualified batch output lands the whole-corpus-completeness follow-on
+  from §8.19 (M-1006 Phase-2, kickoff `trx2`).** Acts on §8.19's noted batch-output prerequisite. Before
+  this, directory/batch mode named each output by **file stem only** (`<out>/lib.myc`), so a whole-`crates/`
+  run had every crate's `lib.rs` (and `mod.rs`, `error.rs`, …) **overwrite** the previous one — last-writer-wins,
+  loudly warned (never silent, G2) but **lossy**: of 337 discovered files, ~25 were clobbered, so an automated
+  multi-crate translation wave could not keep every emission. The fix (`src/bin/mycelium-transpile.rs` +
+  a pure, unit-tested `batch::output_rel_path`): each file's output is **path-qualified** by mirroring the
+  source tree under the out-dir — a file's path *relative to the batch root* becomes its output path
+  (`mycelium-core/src/lib.myc` vs `mycelium-std/src/lib.myc`), which is injective by construction (distinct
+  sources have distinct relative paths), so the collision cannot occur; a defensive guard still flags the
+  impossible duplicate (G2). **Whole-corpus verification:** the `crates/` run now writes all **337** `.myc`
+  files with **zero** collision warnings (was ~25 clobbered). **Zero committed churn:** the 17
+  `gen/myc-drafts/` targets are all flat single-crate `src/` dirs (no nested `.rs`), so their mirrored path
+  reduces to the bare stem — byte-identical to the pre-Phase-2 flat naming (the regenerated manifest changed
+  only its `generated_from_commit` provenance SHA, which was reverted to keep this increment's diff to the
+  code). Single-file mode is unchanged. Five data-driven `output_rel_path` tests pin the mapping (under-root
+  mirroring, the two-crates-`lib.rs` non-collision property, flat-root-reduces-to-stem, not-under-root
+  `Err` fallback, `.rs`-only extension stripping); change-scoped `cargo fmt`/`clippy -D warnings`/`test -p
+  mycelium-transpile` green (63 tests). This is an emission-plumbing change only — **no transpilation logic,
+  no metric, no guarantee tag moves** (emission stays `Declared`). **Status unchanged (Draft).** The larger
+  §8.19 automation lever — `Import` cross-nodule resolution — remains the next, separately-scoped wave.
+  (Append-only; VR-5; G2.)

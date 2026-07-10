@@ -70,6 +70,26 @@ pub enum Category {
     /// for a field whose *type* has no mapping) so the emitted-with-names-dropped set is countable on
     /// its own and never conflated with an un-emitted struct.
     NamedFieldDrop,
+    /// M-1006 (kickoff `trx2`, E33-1, Phase-2): a **bodyless external module declaration**
+    /// (`mod foo;`, `pub mod foo;` — `syn::ItemMod` with `content: None`). This is **file-linkage,
+    /// not translatable library surface**: Mycelium's nodule-per-file model (grammar
+    /// `nodule_block ::= nodule_header ';' (item ';')*`; no `mod` item production) makes the module
+    /// tree *implicit in the file layout*, so a `mod foo;` has no `.myc` equivalent and needs none —
+    /// the sibling `foo.rs` transpiles as its **own** nodule (exactly as the `lib/std/*.myc`
+    /// hand-ports carry no `mod` decls). Recorded (never silently dropped, G2) but **excluded from
+    /// the expressible-fraction denominator** (see [`Category::excluded_from_denominator`]),
+    /// identically to [`Category::TestItem`]: counting a file-linkage declaration as an
+    /// *un-expressible library item* is a category error that understates true coverage. An
+    /// **inline** `mod foo { … }` (`content: Some`) is *not* this — its body is real dropped content,
+    /// so it stays a counted `Other` gap (a genuine coverage gap, flatten-able in a later phase).
+    ModuleDecl,
+    /// M-1006 (kickoff `trx2`, E33-1, Phase-2): a crate/file-level **inner attribute** (`#![…]`, e.g.
+    /// `#![forbid(unsafe_code)]`) — a Rust-specific directive that is **not a `syn::Item`** at all
+    /// (it lives in `syn::File::attrs`, outside `total_top_level_items`), so it never entered the
+    /// denominator and is *not* denominator-excluded — it is simply given its own honest label
+    /// instead of the opaque `Other`, so the profile's largest bucket stops conflating "un-mapped
+    /// library construct" with "non-item file directive" (G2 — recorded, never dropped).
+    InnerAttr,
     Other,
 }
 
@@ -93,8 +113,24 @@ impl Category {
             Category::Import => "Import",
             Category::ReservedWord => "ReservedWord",
             Category::NamedFieldDrop => "NamedFieldDrop",
+            Category::ModuleDecl => "ModuleDecl",
+            Category::InnerAttr => "InnerAttr",
             Category::Other => "Other",
         }
+    }
+
+    /// Whether a gap of this category is **excluded from the expressible-fraction denominator** —
+    /// i.e. it is recorded (never silently dropped, G2) but does **not** count as translatable
+    /// library surface. Two categories qualify, on the identical rationale:
+    /// - [`Category::TestItem`] — `#[cfg(test)]` items, out of the transpilation scope.
+    /// - [`Category::ModuleDecl`] — bodyless `mod foo;` file-linkage declarations (the module tree
+    ///   is implicit in Mycelium's nodule-per-file layout; the sibling file transpiles separately).
+    ///
+    /// Everything else — including a real coverage gap, an unresolved [`Category::Import`], or an
+    /// inline `mod { … }` whose body is dropped — **stays in the denominator** (VR-5: only exclude
+    /// what is genuinely not translatable surface; never shrink the denominator to flatter a number).
+    pub fn excluded_from_denominator(self) -> bool {
+        matches!(self, Category::TestItem | Category::ModuleDecl)
     }
 }
 
@@ -161,10 +197,29 @@ impl GapReport {
             .count()
     }
 
-    /// `total_top_level_items` minus test items — the denominator for the expressible fraction.
+    /// Count of top-level items recorded as gaps that are **excluded from the denominator**
+    /// ([`Category::excluded_from_denominator`] — test items + bodyless `mod foo;` file-linkage
+    /// declarations). Each is a real `syn::Item` in `total_top_level_items`, so it must be subtracted
+    /// to get the translatable-surface denominator. (Non-item gaps such as [`Category::InnerAttr`]
+    /// are *not* counted here — they were never in `total_top_level_items` to begin with.)
+    pub fn denominator_excluded_count(&self) -> usize {
+        self.gaps
+            .iter()
+            .filter(|g| g.category.excluded_from_denominator())
+            .count()
+    }
+
+    /// `total_top_level_items` minus the denominator-excluded items (test items **and** bodyless
+    /// `mod foo;` file-linkage declarations) — the denominator for the expressible fraction, i.e. the
+    /// count of **translatable library-surface** items. The name is retained for API stability; its
+    /// meaning was generalized in M-1006 Phase-2 from "non-test" to "non-excluded" when `mod foo;`
+    /// declarations were reclassified as non-translatable file-linkage (see
+    /// [`Category::excluded_from_denominator`]). VR-5: this only ever *shrinks* the denominator by
+    /// items that are genuinely not translatable surface — it never flatters coverage by excluding a
+    /// real gap.
     pub fn non_test_item_count(&self) -> usize {
         self.total_top_level_items
-            .saturating_sub(self.test_item_count())
+            .saturating_sub(self.denominator_excluded_count())
     }
 
     /// Fraction of non-test top-level items for which some `.myc` text was emitted.
