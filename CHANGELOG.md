@@ -12,6 +12,50 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### docs(dn-99): surface-gap closure register + plan for the spw / RFC-0031 stdlib-port wave (2026-07-10)
+
+Adds **DN-99 — Surface-Gap Closure Register and Plan** (Draft), the single closure register for the
+`spw` stdlib-port wave: 92 enumerated surface gaps, each with a status
+(open/partial/already-closed/transpiler-only/idiom), an `Empirical` evidence cite
+(`file:line` / `M-id` read against dev tip `6d906b76`), a layer, a closure approach, a DoD, a DN-flag,
+a tracking ref, a semcore-lane collision class, a size, and a priority. Foregrounds the already-closed
+set (§3) so landed work is not re-opened — the Float correction (ADR-040 Enacted 2026-07-02; `flt.*`
+prims registered) refutes the stale ".myc has no float surface" flag (mitigation #14). Ranks a two-track
+closure plan (§4) toward the zero-hand-port north star: language `enb` closures (grammar/kernel/runtime)
+and transpiler closures, under the whole-project unfrozen posture (ADR-045). Attests completeness
+honestly (§5): one targeted spot-verify round; residual uncertainty `Declared`, never claimed `Proven`.
+The §8 `enb` backlog is filed as **M-1024…M-1034** under epic E28-1 — each cross-references M-1023's
+Wave-0 consolidation, and those touching `mycelium-l1` note "cloud-semcore-lane, coordinate M-1013"
+(unfrozen-actionable, not deferred-by-freeze). Enacts nothing; moves no other doc's status. Authored
+READ + DN only. (DN-99; RFC-0031; E28-1; VR-5 / G2 / house rule #3.)
+
+### fix(semcore): complete the `Wrapping` Expr-variant port across the self-hosted `.myc` frontend (2026-07-10)
+
+Closes a pre-existing transparency gap in the self-hosted compiler. `ast.rs::Expr` has 19 variants
+including `Wrapping(Box<Expr>)` (the M-791 wrapping-arithmetic opt-in), but the five `.myc` compiler
+nodules (`ast`/`ambient`/`totality`/`parse`/`semcore`.myc) each declared an 18-variant `Expr` with
+`Wrapping` absent — while `semcore.myc` claimed to mirror `ast.myc::Expr` "verbatim, field-for-field."
+That claim was false and the omission carried no FLAG (surfaced under house rule #4). This change adds
+`| Wrapping(Expr)` between `Spore` and `Consume` (matching the Rust variant order) in all five `Expr`
+decls, and a `Wrapping` arm to every exhaustive Expr-walker — so the type now genuinely mirrors the
+reference AST and every traversal handles the variant (wildcard-free; a future variant is still a
+`myc check` error, G2). Most walkers recurse into the single child exactly like `Consume` (`resolve_expr`,
+`collect_calls_expr`, `descend_walk`, `collect_tuple_arities_expr`, `fvw`); `print_expr` renders the
+block surface `wrapping { <expr> }`; the `walk_expr` structural fingerprint uses a NEW unused tag
+(`0x6E`, identical in `parse.myc` and `ambient.myc`) so no existing Stage-4 fingerprint hash shifts.
+**One non-mechanical arm — `grade`:** `wrapping { … }` attests **`Declared`** as a leaf (RFC-0034 §10 —
+the enclosed modular ops are the developer's explicit opt-in, never upgraded past that basis), matching
+`Spore`/`Wild` and the Rust `Expr::Wrapping(_) => Declared` — it does NOT inherit the body's grade the
+way the grade-transparent `Consume` move does. The `compiler_stage5_freevars` differential gains a
+`Wrapping` fixture (`free_vars(wrapping { x }) == ["x"]`) pinning the `fvw` arm against the live
+`mono::free_vars` oracle. **Never-silent remaining work (FLAG-semcore-37 / FLAG-parse-12 / FLAG-ast-9):**
+the self-hosted lexer/parser does not yet *produce* a `Wrapping` node (no `wrapping` keyword in
+token/lex, no parse rule) — the AST is deliberately ahead of the surface; parsing `wrapping { e }` is
+deferred. The five-way `Expr` (and keyword/token) duplication this touch exercised is flagged for a
+future DRY decision. Verified: `myc-dogfood --strict` green (9/9 nodules), `cargo test -p mycelium-l1
+--lib` green (471 passed), `clippy -D warnings` + `cargo fmt` clean, `markdown` gate clean. Graded
+`Empirical`. (M-1013 / M-791; E18-1; RFC-0034 §10; VR-5/G2.)
+
 ### build(checks): auto-reflow the MD004 soft-wrap `+`/`*`-at-line-start pitfall (`just md-fix`) (2026-07-10)
 
 The recurring MD004 false-positive — prose that soft-wraps so a `+`/`*` operator lands at line start,
@@ -88,6 +132,54 @@ Verified: `cargo test -p mycelium-l1 --lib` green (464 → 469 passed), `clippy 
 warnings` clean, `cargo fmt` clean, `myc-dogfood --strict` green (all 9 self-hosted nodules). Graded
 `Empirical` (differential agreement); DN-26 stays **Draft** (→ Resolved with M-741). (M-993/M-1013
 checkty PR-2; E18-1; DN-26; VR-5/G2.)
+
+### spw Wave-0 stdlib-port pilot — std.numerics / std.time / std.content self-hosted to `lib/std/*.myc` (2026-07-09)
+
+The `spw` Wave-0 pilot validates the parallel `.myc` dogfooding-port loop end-to-end: three unported
+stdlib crates ported to self-hosted `lib/std/{numerics,time,content}.myc`, each with a
+`crates/mycelium-std-conformance/tests/std_<mod>.rs` **three-way differential** (L1-eval ≡ L0-interp ≡
+AOT, TV-checked) **plus** a live Rust-oracle comparison — the agreement earns **`Empirical`**, never a
+stronger tag (VR-5). Each was independently, adversarially re-verified (accept, not forced-green; tags
+and gaps confirmed honest). Landed (M-1020 / M-1021 / M-1022):
+
+- **`std.numerics`** (`lib/std/numerics.myc`, 225 lines; 63 differential cases): the honesty-crux
+  STRENGTH surface — the Guarantee/BoundBasis strength-lattice (rank/meet/meet_all/basis_strength),
+  the `Approx[A]` carrier, and the `NumErr`/`CheckErr` variant sets. The dominant float-valued ε/δ
+  magnitude surface stays Rust (no scalar-Float VALUE in the `.myc` runtime yet — FLAGged to `enb`);
+  the sealed FR-N3 `ProvenThm` witness (`Approx::proven`) was **omitted rather than ported ungated**,
+  refusing to fabricate a `Proven`-strength escape hatch (VR-5).
+- **`std.time`** (`lib/std/time.myc`, 388 lines; 29 cases): the full value-semantic surface — the four
+  instant/duration value types, the complete comparison surface (signed `lt_s`, uncapped), the
+  deterministic `ManualClock`, the declared-effect wrappers, and the 11-row guarantee matrix. Signed
+  128-bit duration/instant **arithmetic** is blocked by the kernel's `TC_MAX_WIDTH=64` two's-complement
+  cap (FLAGged to `enb`); only the comparison half is portable today.
+- **`std.content`** (`lib/std/content.myc`, 521 lines; 47 cases): the content-addressing surface —
+  `digest_eq` (via M-912 `bytes_eq`), the `ContentRef`/`RefKind` accessors, the hand-rolled recursive
+  `parse_ref` / `content_ref_from_str` byte scanners, the 7-row guarantee matrix, and the
+  `NameRegistry` read/write surface (an assoc-list redesign, never silently substituted).
+  `hash_of_value` / `hash_of_def` stay kernel-bound (the structural-hash normalizer, RFC-0031 D1 —
+  FLAGged to `enb`).
+
+**STEP-0 transpiler finding (honest, `Empirical`, disconfirming):** re-running the CURRENT transpiler
+on all three targets showed **ZERO checked-% delta** vs the committed manifest — numerics 7.4%, content
+14.3%, time 18.9%, all unchanged. The two emitter features that landed since the manifest base (DN-51
+narrow-cast→truncate; D3 operand-type inference through paren/reference wrappers) are real but
+**orthogonal** to these modules' gap classes, so net transpiler-assist to the shipped nodules is ~0%
+(only already-clean draft enums/types graduated verbatim; the rest is hand-ported). This is the M-991
+"scaffold-not-porter" verdict holding, recorded plainly (VR-5/G2).
+
+Enabler blockers surfaced by the ports are FLAGged to the `enb` epic (E28-1), not forced or silently
+dropped (G2): no scalar-Float VALUE in the runtime (the dominant numerics blocker — already tracked as
+Gap A / M-895 / M-896 / ADR-040); the `TC_MAX_WIDTH=64` signed-arithmetic cap (the dominant time
+blocker); no top-level `const` item; no slice/array (`&[T]` / `[T]`) type; no unit/`()` return; no
+sealed/private-visibility primitive (blocks the FR-N3 capability-gate); and no `bytes.find` /
+`split_once` prim — plus the still-open cross-nodule `use`-import gap (sidestepped here by the
+local-mirror convention). Consolidated as **M-1023** under `enb`. **Retirement (ADR-043): NOT
+triggered** — all three are honest partial ports (the Rust oracle crates are not fully replaced), so no
+Rust crate is retired. Verified: `myc-check` clean on all three nodules; `cargo test -p
+mycelium-std-conformance --test std_numerics --test std_time --test std_content` green; `cargo fmt` and
+`clippy -D warnings` clean. (M-1020 / M-1021 / M-1022; E33-1; ADR-042 / ADR-043; RFC-0031 D5/D6;
+VR-5/G2.)
 
 ### chore: clean-snapshot prep — archives extracted to the `archive` branch, indices regenerated (2026-07-09)
 

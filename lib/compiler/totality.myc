@@ -251,6 +251,7 @@ type Expr =
   | WithParadigm(Paradigm, Expr)
   | Wild(Expr)
   | Spore(Expr)
+  | Wrapping(Expr)
   | Consume(Expr)
   | Colony(Vec[Hypha])
   | Lambda(Vec[Param], Expr)
@@ -458,6 +459,7 @@ fn collect_calls_expr(e: Expr, fn_names: Vec[Bytes], depth: Binary{32}, acc: Vec
       // calls inside a `wild` body never leak into the enclosing fn's call graph.
       Wild(_) => Ok(acc),
       Spore(b) => collect_calls_expr(b, fn_names, d, acc),
+      Wrapping(b) => collect_calls_expr(b, fn_names, d, acc),
       Consume(b) => collect_calls_expr(b, fn_names, d, acc),
       Colony(hyphae) => collect_calls_hypha_list(hyphae, fn_names, d, acc),
       Lambda(_, body) => collect_calls_expr(body, fn_names, d, acc),
@@ -746,6 +748,7 @@ fn descend_walk(e: Expr, pos: Vec[Pair[Bytes, Binary{32}]], param: Bytes, smalle
       // opacity invariant (a call inside `wild` is not analyzable Mycelium recursion).
       Wild(_) => Ok(ok),
       Spore(b) => descend_walk(b, pos, param, smaller, ok, d),
+      Wrapping(b) => descend_walk(b, pos, param, smaller, ok, d),
       Consume(b) => descend_walk(b, pos, param, smaller, ok, d),
       Lambda(_, body) => descend_walk(body, pos, param, smaller, ok, d),
       Colony(hyphae) => descend_walk_hyphae(hyphae, pos, param, smaller, ok, d),
