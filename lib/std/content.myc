@@ -80,14 +80,16 @@ nodule std.content;
 //   `Binary{32}` indices — expressible with today's primitive set, but genuine hand-written
 //   recursion with zero transpiler assist. A `bytes.find`/`bytes.split_once` prim would collapse
 //   these to a few lines; recorded so the enabler track knows this gap-class recurs (parser ports).
-
 // ── Local prelude types (self-contained — the single-nodule harness has no cross-nodule import; the
 //    lib/std/text.myc + lib/std/core.myc self-containedness convention) ────────────────────────────
 // `Option`/`Result`/`Pair`/`Vec` are declared here rather than imported (no `use` surface in the
 // D5 single-nodule harness). `Bool`/`True`/`False` and `Bytes`/`Binary{W}` are built-in.
 type Option[A] = Some(A) | None;
+
 type Result[A, E] = Ok(A) | Err(E);
+
 type Pair[A, B] = Pr(A, B);
+
 type Vec[A] = Nil | Cons(A, Vec[A]);
 
 // ── Bool combinators (local, total, Exact — the lib/std/core.myc convention) ─────────────────────
@@ -141,12 +143,22 @@ fn content_ref_kind_prefix(k: RefKind) => Bytes =
 // `RefKind::from_prefix`). Byte-equality against each known prefix (the M-912 `bytes_eq` prim; no
 // string-match construct exists). Total → explicit `Option` (never-silent — G2), Exact.
 fn ref_kind_from_prefix(s: Bytes) => Option[RefKind] =
-  match bytes_eq(s, "value") { 0b1 => Some(Value), _ =>
-  match bytes_eq(s, "def") { 0b1 => Some(Def), _ =>
-  match bytes_eq(s, "op") { 0b1 => Some(Operation), _ =>
-  match bytes_eq(s, "policy") { 0b1 => Some(Policy), _ =>
-  match bytes_eq(s, "spore") { 0b1 => Some(Spore), _ =>
-  match bytes_eq(s, "other") { 0b1 => Some(Other), _ => None } } } } } };
+  match bytes_eq(s, "value") {
+    0b1 => Some(Value),
+    _ => match bytes_eq(s, "def") {
+      0b1 => Some(Def),
+      _ => match bytes_eq(s, "op") {
+        0b1 => Some(Operation),
+        _ => match bytes_eq(s, "policy") {
+          0b1 => Some(Policy),
+          _ => match bytes_eq(s, "spore") {
+            0b1 => Some(Spore),
+            _ => match bytes_eq(s, "other") { 0b1 => Some(Other), _ => None }
+          }
+        }
+      }
+    }
+  };
 
 // ── ContentRef — a typed `(kind, hash)` pointer (positional ADT, the MatrixRow/draft precedent) ──
 type ContentRef = ContentRef(RefKind, ContentHash);
@@ -176,7 +188,8 @@ fn content_ref_into_hash(r: ContentRef) => ContentHash =
 fn content_ref_as_str_repr(r: ContentRef) => Bytes =
   bytes_concat(
     bytes_concat(content_ref_kind_prefix(content_ref_kind(r)), "+"),
-    content_hash_str(content_ref_hash(r)));
+    content_hash_str(content_ref_hash(r))
+  );
 
 // ── MalformedDigest — the only error the module produces (graduated verbatim from the clean draft) ─
 // Fields: (input, description) — both `Bytes`. In Rust `description` is `&'static str`; here both are
@@ -199,10 +212,9 @@ fn malformed_digest_description(e: MalformedDigest) => Bytes =
 // the real Rust `to_string()` for inputs without embedded quotes/escapes — see std_content.rs.)
 fn malformed_digest_display(e: MalformedDigest) => Bytes =
   bytes_concat(
-    bytes_concat(
-      bytes_concat("malformed content address \"", malformed_digest_input(e)),
-      "\": "),
-    malformed_digest_description(e));
+    bytes_concat(bytes_concat("malformed content address \"", malformed_digest_input(e)), "\": "),
+    malformed_digest_description(e)
+  );
 
 // ── parse_ref — the `<algo>:<digest>` shape scanner (hand-rolled recursive byte scan) ────────────
 // Byte-faithful to `mycelium_core::id::ContentHash::parse` (shape-only: `algo` is `[a-z0-9]+`,
@@ -210,7 +222,6 @@ fn malformed_digest_display(e: MalformedDigest) => Bytes =
 // branching. `Exact` (deterministic); explicit `Result` on bad shape (never a coerced/zeroed digest
 // — C1/G2). ASCII byte thresholds are written as 8-bit binary literals; indices are `Binary{32}` (to
 // match `bytes_len`).
-
 // in_range8: `lo <= x < hi_excl` over a byte. Two `lt`+bridge comparisons. Total, Exact.
 fn in_range8(x: Binary{8}, lo: Binary{8}, hi_excl: Binary{8}) => Bool =
   match lt(x, lo) { 0b1 => False, _ => bit_true(lt(x, hi_excl)) };
@@ -236,9 +247,9 @@ fn is_algo_byte(x: Binary{8}) => Bool =
 
 // is_digest_byte: `[A-Za-z0-9_-]` — the digest charset (ContentHash::parse).
 fn is_digest_byte(x: Binary{8}) => Bool =
-  bool_or(
-    bool_or(is_lower(x), bool_or(is_upper(x), is_digit_ascii(x))),
-    bool_or(byte_eq8(x, 0b0101_1111), byte_eq8(x, 0b0010_1101)));
+  bool_or(bool_or(is_lower(x), bool_or(is_upper(x), is_digit_ascii(x))),
+  bool_or(byte_eq8(x, 0b0101_1111),
+  byte_eq8(x, 0b0010_1101)));
 
 // find_colon: first index in `[i, len)` whose byte is `:` (0x3A), else `None`. Recurses on `i+1`;
 // terminates at `i == len` (bounded by the input length; the L1 fuel guard is the never-silent
@@ -246,9 +257,9 @@ fn is_digest_byte(x: Binary{8}) => Bool =
 fn find_colon(s: Bytes, i: Binary{32}, len: Binary{32}) => Option[Binary{32}] =
   match lt(i, len) {
     0b1 => match eq(bytes_get(s, i), 0b0011_1010) {
-             0b1 => Some(i),
-             _ => find_colon(s, add_u(i, 0b0000_0000_0000_0000_0000_0000_0000_0001), len)
-           },
+      0b1 => Some(i),
+      _ => find_colon(s, add_u(i, 0b0000_0000_0000_0000_0000_0000_0000_0001), len)
+    },
     _ => None
   };
 
@@ -257,18 +268,18 @@ fn find_colon(s: Bytes, i: Binary{32}, len: Binary{32}) => Option[Binary{32}] =
 fn all_algo_class(s: Bytes, i: Binary{32}, end: Binary{32}) => Bool =
   match lt(i, end) {
     0b1 => match is_algo_byte(bytes_get(s, i)) {
-             True => all_algo_class(s, add_u(i, 0b0000_0000_0000_0000_0000_0000_0000_0001), end),
-             False => False
-           },
+      True => all_algo_class(s, add_u(i, 0b0000_0000_0000_0000_0000_0000_0000_0001), end),
+      False => False
+    },
     _ => True
   };
 
 fn all_digest_class(s: Bytes, i: Binary{32}, end: Binary{32}) => Bool =
   match lt(i, end) {
     0b1 => match is_digest_byte(bytes_get(s, i)) {
-             True => all_digest_class(s, add_u(i, 0b0000_0000_0000_0000_0000_0000_0000_0001), end),
-             False => False
-           },
+      True => all_digest_class(s, add_u(i, 0b0000_0000_0000_0000_0000_0000_0000_0001), end),
+      False => False
+    },
     _ => True
   };
 
@@ -278,23 +289,23 @@ fn all_digest_class(s: Bytes, i: Binary{32}, end: Binary{32}) => Bool =
 fn parse_ref(s: Bytes) => Result[ContentHash, MalformedDigest] =
   match find_colon(s, 0b0000_0000_0000_0000_0000_0000_0000_0000, bytes_len(s)) {
     None => Err(MalformedDigest(s, "missing ':' separator between algo and digest")),
-    Some(c) =>
-      match eq(c, 0b0000_0000_0000_0000_0000_0000_0000_0000) {
-        0b1 => Err(MalformedDigest(s, "algo part is empty")),
-        _ =>
-          match eq(add_u(c, 0b0000_0000_0000_0000_0000_0000_0000_0001), bytes_len(s)) {
-            0b1 => Err(MalformedDigest(s, "digest part is empty")),
-            _ =>
-              match all_algo_class(s, 0b0000_0000_0000_0000_0000_0000_0000_0000, c) {
-                False => Err(MalformedDigest(s, "algo must be [a-z0-9]+")),
-                True =>
-                  match all_digest_class(s, add_u(c, 0b0000_0000_0000_0000_0000_0000_0000_0001), bytes_len(s)) {
-                    False => Err(MalformedDigest(s, "digest must be [A-Za-z0-9_-]+")),
-                    True => Ok(ContentHash(s))
-                  }
-              }
+    Some(c) => match eq(c, 0b0000_0000_0000_0000_0000_0000_0000_0000) {
+      0b1 => Err(MalformedDigest(s, "algo part is empty")),
+      _ => match eq(add_u(c, 0b0000_0000_0000_0000_0000_0000_0000_0001), bytes_len(s)) {
+        0b1 => Err(MalformedDigest(s, "digest part is empty")),
+        _ => match all_algo_class(s, 0b0000_0000_0000_0000_0000_0000_0000_0000, c) {
+          False => Err(MalformedDigest(s, "algo must be [a-z0-9]+")),
+          True => match all_digest_class(
+                  s,
+                  add_u(c, 0b0000_0000_0000_0000_0000_0000_0000_0001),
+                  bytes_len(s)
+                ) {
+            False => Err(MalformedDigest(s, "digest must be [A-Za-z0-9_-]+")),
+            True => Ok(ContentHash(s))
           }
+        }
       }
+    }
   };
 
 // parse_ref_ok: whether the address is well-formed (the accept/reject bit for the differential). Exact.
@@ -314,9 +325,9 @@ fn parse_ref_description(s: Bytes) => Bytes =
 fn find_plus(s: Bytes, i: Binary{32}, len: Binary{32}) => Option[Binary{32}] =
   match lt(i, len) {
     0b1 => match eq(bytes_get(s, i), 0b0010_1011) {
-             0b1 => Some(i),
-             _ => find_plus(s, add_u(i, 0b0000_0000_0000_0000_0000_0000_0000_0001), len)
-           },
+      0b1 => Some(i),
+      _ => find_plus(s, add_u(i, 0b0000_0000_0000_0000_0000_0000_0000_0001), len)
+    },
     _ => None
   };
 
@@ -326,11 +337,12 @@ fn content_ref_from_str(s: Bytes) => Result[ContentRef, MalformedDigest] =
     Some(p) =>
       match ref_kind_from_prefix(bytes_slice(s, 0b0000_0000_0000_0000_0000_0000_0000_0000, p)) {
         None => Err(MalformedDigest(s, "unknown content-ref kind prefix")),
-        Some(k) =>
-          match parse_ref(bytes_slice(s, add_u(p, 0b0000_0000_0000_0000_0000_0000_0000_0001), bytes_len(s))) {
-            Ok(h) => Ok(content_ref_new(k, h)),
-            Err(_) => Err(MalformedDigest(s, "malformed `<algo>:<digest>` content address"))
-          }
+        Some(k) => match parse_ref(
+                bytes_slice(s, add_u(p, 0b0000_0000_0000_0000_0000_0000_0000_0001), bytes_len(s))
+              ) {
+          Ok(h) => Ok(content_ref_new(k, h)),
+          Err(_) => Err(MalformedDigest(s, "malformed `<algo>:<digest>` content address"))
+        }
       }
   };
 
@@ -343,7 +355,9 @@ fn content_ref_from_str_ok(s: Bytes) => Bool =
 // whose rows are pure data). Fields mirror `guarantee_matrix::MatrixRow` field-for-field:
 //   MatrixRow(op, guarantee, fallibility, error_set, effects, explainable).
 type Fallibility = Total | Fallible;
+
 type Explainable = Yes | NotApplicable;
+
 type MatrixRow = MatrixRow(Bytes, Bytes, Fallibility, Bytes, Bytes, Explainable);
 
 fn row_op(r: MatrixRow) => Bytes =
@@ -380,7 +394,14 @@ fn row_as_ref() => MatrixRow =
   MatrixRow("as_ref", "Exact", Total, "", "none", NotApplicable);
 
 fn row_parse_ref() => MatrixRow =
-  MatrixRow("parse_ref", "Exact", Fallible, "Err(MalformedDigest) on bad shape", "none", NotApplicable);
+  MatrixRow(
+    "parse_ref",
+    "Exact",
+    Fallible,
+    "Err(MalformedDigest) on bad shape",
+    "none",
+    NotApplicable
+  );
 
 fn row_resolve_name() => MatrixRow =
   MatrixRow("resolve_name", "Exact", Fallible, "None when name unbound", "none", NotApplicable);
@@ -409,7 +430,11 @@ fn matrix_len(xs: Vec[MatrixRow]) => Binary{8} =
 fn all_guarantee_exact(xs: Vec[MatrixRow]) => Bool =
   match xs {
     Nil => True,
-    Cons(r, rest) => bool_and(bit_true(bytes_eq(row_guarantee(r), "Exact")), all_guarantee_exact(rest))
+    Cons(r, rest) =>
+      bool_and(
+        bit_true(bytes_eq(row_guarantee(r), "Exact")),
+        all_guarantee_exact(rest)
+      )
   };
 
 // all_effects_none: every row's effects field is EXACTLY `"none"` —
@@ -436,14 +461,16 @@ fn fallible_count(xs: Vec[MatrixRow]) => Binary{8} =
 fn all_explain_na(xs: Vec[MatrixRow]) => Bool =
   match xs {
     Nil => True,
-    Cons(r, rest) => match row_explainable(r) {
-      NotApplicable => all_explain_na(rest),
-      Yes => False
-    }
+    Cons(r, rest) =>
+      match row_explainable(r) {
+        NotApplicable => all_explain_na(rest),
+        Yes => False
+      }
   };
 
 // ── NameRegistry — the `hash <-> name` side-table, REDESIGNED as an assoc-list (FLAG-content-2) ──
 type Entry = Entry(ContentHash, Bytes);
+
 type NameRegistry = Reg(Vec[Entry]);
 
 fn entry_hash(e: Entry) => ContentHash =
@@ -476,10 +503,7 @@ fn name_registry_resolve_name(r: NameRegistry, h: ContentHash) => Option[Bytes] 
 // name_registry_names_of: 0-or-1-element list per the carried one-name limitation (NameRegistry::
 // names_of). Empty `Vec` when unbound — never a sentinel (C1).
 fn name_registry_names_of(r: NameRegistry, h: ContentHash) => Vec[Bytes] =
-  match name_registry_resolve_name(r, h) {
-    Some(n) => Cons(n, Nil),
-    None => Nil
-  };
+  match name_registry_resolve_name(r, h) { Some(n) => Cons(n, Nil), None => Nil };
 
 // entries_replace: bind `h -> name`, preserving the at-most-one-entry-per-hash invariant — replace
 // in place if present (returning the previous name), else append. Returns `(entries, previous)`.
@@ -488,18 +512,21 @@ fn entries_replace(es: Vec[Entry], h: ContentHash, name: Bytes) => Pair[Vec[Entr
     Nil => Pr(Cons(Entry(h, name), Nil), None),
     Cons(e, rest) => match digest_eq(entry_hash(e), h) {
       True => Pr(Cons(Entry(h, name), rest), Some(entry_name(e))),
-      False => match entries_replace(rest, h, name) {
-        Pr(newrest, prev) => Pr(Cons(e, newrest), prev)
-      }
+      False =>
+        match entries_replace(rest, h, name) {
+          Pr(newrest, prev) => Pr(Cons(e, newrest), prev)
+        }
     }
   };
 
 // name_registry_bind: bind a name, returning `(new registry, previous name Option)` — the
 // NameRegistry::bind contract (re-binding does not change identity; the previous name is returned).
-fn name_registry_bind(r: NameRegistry, h: ContentHash, name: Bytes) => Pair[NameRegistry, Option[Bytes]] =
-  match entries_replace(name_registry_entries(r), h, name) {
-    Pr(es2, prev) => Pr(Reg(es2), prev)
-  };
+fn name_registry_bind(
+  r: NameRegistry,
+  h: ContentHash,
+  name: Bytes
+) => Pair[NameRegistry, Option[Bytes]] =
+  match entries_replace(name_registry_entries(r), h, name) { Pr(es2, prev) => Pr(Reg(es2), prev) };
 
 // name_registry_insert / name_registry_bind_prev: the two projections of `bind` (registry-after, and
 // the previous-name Option) — ergonomic accessors for chaining in the differential.
