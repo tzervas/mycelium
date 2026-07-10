@@ -12,6 +12,33 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### fix(semcore): complete the `Wrapping` Expr-variant port across the self-hosted `.myc` frontend (2026-07-10)
+
+Closes a pre-existing transparency gap in the self-hosted compiler. `ast.rs::Expr` has 19 variants
+including `Wrapping(Box<Expr>)` (the M-791 wrapping-arithmetic opt-in), but the five `.myc` compiler
+nodules (`ast`/`ambient`/`totality`/`parse`/`semcore`.myc) each declared an 18-variant `Expr` with
+`Wrapping` absent — while `semcore.myc` claimed to mirror `ast.myc::Expr` "verbatim, field-for-field."
+That claim was false and the omission carried no FLAG (surfaced under house rule #4). This change adds
+`| Wrapping(Expr)` between `Spore` and `Consume` (matching the Rust variant order) in all five `Expr`
+decls, and a `Wrapping` arm to every exhaustive Expr-walker — so the type now genuinely mirrors the
+reference AST and every traversal handles the variant (wildcard-free; a future variant is still a
+`myc check` error, G2). Most walkers recurse into the single child exactly like `Consume` (`resolve_expr`,
+`collect_calls_expr`, `descend_walk`, `collect_tuple_arities_expr`, `fvw`); `print_expr` renders the
+block surface `wrapping { <expr> }`; the `walk_expr` structural fingerprint uses a NEW unused tag
+(`0x6E`, identical in `parse.myc` and `ambient.myc`) so no existing Stage-4 fingerprint hash shifts.
+**One non-mechanical arm — `grade`:** `wrapping { … }` attests **`Declared`** as a leaf (RFC-0034 §10 —
+the enclosed modular ops are the developer's explicit opt-in, never upgraded past that basis), matching
+`Spore`/`Wild` and the Rust `Expr::Wrapping(_) => Declared` — it does NOT inherit the body's grade the
+way the grade-transparent `Consume` move does. The `compiler_stage5_freevars` differential gains a
+`Wrapping` fixture (`free_vars(wrapping { x }) == ["x"]`) pinning the `fvw` arm against the live
+`mono::free_vars` oracle. **Never-silent remaining work (FLAG-semcore-37 / FLAG-parse-12 / FLAG-ast-9):**
+the self-hosted lexer/parser does not yet *produce* a `Wrapping` node (no `wrapping` keyword in
+token/lex, no parse rule) — the AST is deliberately ahead of the surface; parsing `wrapping { e }` is
+deferred. The five-way `Expr` (and keyword/token) duplication this touch exercised is flagged for a
+future DRY decision. Verified: `myc-dogfood --strict` green (9/9 nodules), `cargo test -p mycelium-l1
+--lib` green (471 passed), `clippy -D warnings` + `cargo fmt` clean. Graded `Empirical`. (M-1013 /
+M-791; E18-1; RFC-0034 §10; VR-5/G2.)
+
 ### build(checks): auto-reflow the MD004 soft-wrap `+`/`*`-at-line-start pitfall (`just md-fix`) (2026-07-10)
 
 The recurring MD004 false-positive — prose that soft-wraps so a `+`/`*` operator lands at line start,
