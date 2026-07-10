@@ -162,8 +162,9 @@ continuity rides `issues.yaml` + branches, never by editing the other lane's tre
   gap-closure at wave scale — which those narrower channels do not cleanly cover (§4).
 - **A re-score instrument is owed.** §2.4 condition 2 requires a DN-76-successor scorecard; standing it up
   is follow-on work (owned by the semcore/freeze lane, not this ADR).
-- **Cascade on acceptance (see §8).** On ratification, ADR-042/DN-56/DN-66 take their append-only status
-  amendments, and a separate descriptive sweep + shared-memory update follows — none of it done while Draft.
+- **Cascade on acceptance (see §8).** On ratification (now done), ADR-042/DN-56/DN-66 took their append-only
+  status pointers (Bucket-A) and the orchestrator-owned rows landed (Bucket-E); the separate descriptive
+  sweep + shared-memory update (Bucket-B) follows as a coordinated follow-on PR.
 
 ## 4. Adversarial stress-test (VR-5 / house rule #4 — arguing against the recommendation)
 
@@ -194,8 +195,10 @@ that a **bounded standing unfreeze ADR** is the right formalization. The stronge
   decision. It is **not**, if done append-only: DN-56 is *superseded/amended forward*, never edited to say
   "unfrozen"; the freeze declaration stands in history and the window is a new, dated, forward decision that
   the re-freeze ADR later closes. The append-only discipline (house rule #3) is preserved **only** if the
-  status transitions happen at ratification and via supersession — which is exactly why this session leaves
-  ADR-042/DN-56/DN-66 statuses untouched while Draft.
+  status transitions happen at ratification and via supersession — which is exactly how they landed here: on
+  ratification, ADR-042/DN-56/DN-66 received **dated status pointers** ("Amended by ADR-045"), their decision
+  **bodies unchanged**; no doc was edited to say "unfrozen" in its body, and DN-56's freeze declaration
+  stands in history.
 
 **Stress-test verdict:** the unfreeze is **defensible but not unconditionally** — it is the right call
 **iff** (a) the gap worklist is genuinely wave-sized (F1), and (b) the window is hard-bounded with a named
