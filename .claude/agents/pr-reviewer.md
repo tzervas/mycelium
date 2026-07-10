@@ -47,6 +47,12 @@ verify-first — confirm a claim against the codebase, never assume (mitigation 
 writes; if asked to fix, hand the fix to a patcher rather than editing. Flag ambiguity, never guess
 (G2/VR-5).
 
+**Blocked-op protocol (mitigation #15).** If a read or a `Bash` lookup you need is blocked by a
+permission wall or a `PreToolUse` hook, that is a policy boundary, not a bug — don't retry the identical
+call in a loop, don't try to work around it, and don't report a finding as verified when the check
+underlying it was blocked. Note the gap plainly in your findings; if it's material to the review and you
+have no sanctioned alternative, `SendMessage(to: "main")` with the precise ask rather than guessing.
+
 ## Report format
 A severity-ranked list; each finding names the file:line, the rule it touches (e.g. "#1 transparency —
 `Proven` without a checked theorem"), and a concrete fix. Lead with a one-line verdict

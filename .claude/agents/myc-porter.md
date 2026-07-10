@@ -55,6 +55,13 @@ run the equivalent gates out-of-band (`cargo fmt` · `clippy -D warnings` · `ca
 `scripts/checks/markdown.sh` on any `.md` · `branch-guard.sh` · `secrets.sh`). FLAG parent-owned files
 up; flag ambiguity, never guess (G2/VR-5).
 
+**Blocked-op protocol (mitigation #15).** A `PreToolUse`/branch-guard/worktree-guard block or a plain
+permission denial is a policy boundary, not a bug — never retry-loop the same blocked op, never
+circumvent it, never fabricate that it succeeded. Try the sanctioned alternative first (PR instead of a
+protected-branch push, `--no-verify` + out-of-band gates for an external-hook 403, split `commit`/`push`
+for the string-match false-positive). If none applies, `SendMessage(to: "main")` with the exact command
+and why, keep porting/profiling other residual work meanwhile, and flag it in your report.
+
 ## Report format
 Branch + SHA · what graduated into `lib/` (with the differential witness) · `checked_fraction` vs
 `expressible_fraction` for the target · residual gap classes · FLAGs · honest tag on each emission.
