@@ -4851,3 +4851,73 @@ fn bytes_match_native_llvm_refuses_explicitly() {
          Binary8-specialized), never silently miscompile it"
     );
 }
+
+// ---- M-1033 (ENB-10) — statement-sequencing (`let _`) + record-update / mutation split -------
+//
+// TRIAGE PINS (DN-106). The M-1033 triage (mitigation #14) found that **both** ENB-10 sub-gaps'
+// language side is ALREADY CLOSED at the L1 level — the real residual is transpiler-lane
+// (`crates/mycelium-transpile`: the `let _` emit and the mutation→functional rewrite), not a
+// mycelium-l1 grammar change. These three-way witnesses PIN that closure so it cannot silently
+// regress (VR-5: the codebase is ground truth; the "already-closed" claim is `Empirical`, not
+// asserted). No new AST node / grammar is added — this is a conformance pin, not an enabler.
+
+/// Part 1 — statement-sequencing: `let _ = e in body` evaluates the value-producing `e` for effect,
+/// discards its result, and yields `body`. Three-way (L1-eval ≡ elaborate→L0-interp ≡ trampoline-AOT):
+/// the discarded `not(0x00)` never reaches the result; all three paths yield the body `0b0000_0001`.
+/// (`let _` is grammatical — `ebnf:291` + `Ident` admits `_` — parsed, checked, and is moreover the
+/// established affine drop/use-once surface, DN-71/M-903 / `src/tests/affine.rs`.)
+#[test]
+fn stmt_sequencing_let_underscore_discard_three_way() {
+    assert_three_way(
+        "M-1033 Part 1: let _ = e in body",
+        "nodule d;\nfn main() => Binary{8} = let _ = not(0b0000_0000) in 0b0000_0001;",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("00000001".chars().map(|c| c == '1').collect()),
+    );
+}
+
+/// The ascribed form `let _: T = e in body` is equally accepted (the ascription checks `e`'s type,
+/// then the value is discarded) — pins that the discard is not special-cased away from the normal
+/// let-ascription path.
+#[test]
+fn stmt_sequencing_let_underscore_ascribed_three_way() {
+    assert_three_way(
+        "M-1033 Part 1: let _: T = e in body",
+        "nodule d;\nfn main() => Binary{8} = let _: Binary{8} = not(0b0000_0000) in 0b0000_0001;",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("00000001".chars().map(|c| c == '1').collect()),
+    );
+}
+
+/// Part 2 — functional field-update is the destructure-and-reconstruct `match base { Ctor(f0, …) =>
+/// Ctor(f0, …, NEW, …) }` (Mycelium has positional constructors, no named-field record literal and no
+/// field-projection, BY DESIGN — DN-106 §2). Here the second field of a `Pair` is functionally updated
+/// from `0x00` to `0b0000_0001` and read back through a projector; three-way agreement pins the target
+/// form Part 2 translates *into* as already-expressible and value-correct.
+#[test]
+fn functional_field_update_via_match_reconstruct_three_way() {
+    assert_three_way(
+        "M-1033 Part 2: functional field-update = destructure + reconstruct",
+        "nodule d;\ntype Pair = Mk(Binary{8}, Binary{8});\n\
+         fn snd(p: Pair) => Binary{8} = match p { Mk(a, b) => b };\n\
+         fn main() => Binary{8} = \
+           snd(match Mk(0b0000_0000, 0b0000_0000) { Mk(a, b) => Mk(a, 0b0000_0001) });",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("00000001".chars().map(|c| c == '1').collect()),
+    );
+}
+
+/// Never-silent (G2): a Rust-style record-update literal `{ ..base, field: v }` has NO Mycelium
+/// surface — its absence is a deliberate consequence of the positional-constructor design (DN-106
+/// §2/§3, fork B rejected). Pin that it is an explicit `ParseError`, never a silent mis-parse, so the
+/// transpiler's never-fabricate policy (Part 2) rests on a checked refusal.
+#[test]
+fn record_update_spread_literal_has_no_surface_and_refuses_at_parse() {
+    let src = "nodule d;\ntype Pair = Mk(Binary{8}, Binary{8});\n\
+               fn upd(p: Pair) => Pair = { ..p, 1: 0b0000_0001 };";
+    assert!(
+        parse(src).is_err(),
+        "a `{{ ..base, field: v }}` record-update literal must be an explicit parse refusal — Mycelium \
+         has no named-field record surface (positional constructors, DN-106 §2), never a silent mis-parse"
+    );
+}
