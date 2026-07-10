@@ -241,7 +241,7 @@
       "kind": "section",
       "title": "2. Dependency DAG",
       "file": "docs/Doc-Index.md",
-      "line": 230,
+      "line": 231,
       "tag": "Empirical/Declared"
     },
     {
@@ -250,7 +250,7 @@
       "kind": "section",
       "title": "3. What the research resolved (decisions now baked in)",
       "file": "docs/Doc-Index.md",
-      "line": 255,
+      "line": 256,
       "tag": "Empirical/Declared"
     },
     {
@@ -259,7 +259,7 @@
       "kind": "section",
       "title": "4. Remaining experiments (small; for the build phase, not blockers to design)",
       "file": "docs/Doc-Index.md",
-      "line": 266,
+      "line": 267,
       "tag": "Empirical/Declared"
     },
     {
@@ -268,7 +268,7 @@
       "kind": "section",
       "title": "5. Build status — the live phase ladder",
       "file": "docs/Doc-Index.md",
-      "line": 270,
+      "line": 271,
       "tag": "Empirical/Declared"
     },
     {
@@ -277,7 +277,7 @@
       "kind": "section",
       "title": "6. Agent tooling index",
       "file": "docs/Doc-Index.md",
-      "line": 279,
+      "line": 281,
       "tag": "Empirical/Declared"
     },
     {
@@ -286,7 +286,7 @@
       "kind": "section",
       "title": "Reader guide — README topic docs (`docs/guide/`)",
       "file": "docs/Doc-Index.md",
-      "line": 299,
+      "line": 301,
       "tag": "Empirical/Declared"
     },
     {
@@ -295,7 +295,7 @@
       "kind": "section",
       "title": "7. Maintenance",
       "file": "docs/Doc-Index.md",
-      "line": 308,
+      "line": 310,
       "tag": "Empirical/Declared"
     },
     {
@@ -6725,6 +6725,235 @@
       "title": "§10 Changelog",
       "file": "docs/notes/DN-108-Numerics-Transcendentals-Accuracy-Bounds.md",
       "line": 346,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-109-idiom-optimal-transpilation-and-structural-remapping",
+      "family": "doc",
+      "kind": "note",
+      "id": "DN-109",
+      "title": "Design Note DN-109 — Layer-4 Idiom-Optimal Transpilation and Layer-5 Structural Remapping (module to nodule / crate to phylum)",
+      "file": "docs/notes/DN-109-Idiom-Optimal-Transpilation-And-Structural-Remapping.md",
+      "line": 1,
+      "status": "Draft",
+      "guarantee_tag": "Declared",
+      "summary": "**Posture (transparency rule / VR-5 / G2).** This is a recommendation for a maintainer to",
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-109-idiom-optimal-transpilation-and-structural-remapping--1-frame-the-two-coupled-questions",
+      "family": "doc",
+      "kind": "section",
+      "title": "§1 Frame — the two coupled questions",
+      "file": "docs/notes/DN-109-Idiom-Optimal-Transpilation-And-Structural-Remapping.md",
+      "line": 21,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-109-idiom-optimal-transpilation-and-structural-remapping--1-frame-the-two-coupled-questions--1-1-definition-of-done-this-note-for-maintainer-ratification",
+      "family": "doc",
+      "kind": "section",
+      "title": "§1.1 Definition of Done (this note, for maintainer ratification)",
+      "file": "docs/notes/DN-109-Idiom-Optimal-Transpilation-And-Structural-Remapping.md",
+      "line": 35,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-109-idiom-optimal-transpilation-and-structural-remapping--1-frame-the-two-coupled-questions--1-2-user-stories",
+      "family": "doc",
+      "kind": "section",
+      "title": "§1.2 User stories",
+      "file": "docs/notes/DN-109-Idiom-Optimal-Transpilation-And-Structural-Remapping.md",
+      "line": 45,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-109-idiom-optimal-transpilation-and-structural-remapping--2-grounding-the-baseline-mitigation-14-verified-against-code-2026-07-10",
+      "family": "doc",
+      "kind": "section",
+      "title": "§2 Grounding the baseline (mitigation #14, verified against code, 2026-07-10)",
+      "file": "docs/notes/DN-109-Idiom-Optimal-Transpilation-And-Structural-Remapping.md",
+      "line": 61,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-109-idiom-optimal-transpilation-and-structural-remapping--3-l4-the-idiom-decision-framework-mechanical-heuristic-judgment",
+      "family": "doc",
+      "kind": "section",
+      "title": "§3 L4 — the idiom-decision framework (mechanical / heuristic / judgment)",
+      "file": "docs/notes/DN-109-Idiom-Optimal-Transpilation-And-Structural-Remapping.md",
+      "line": 80,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-109-idiom-optimal-transpilation-and-structural-remapping--3-l4-the-idiom-decision-framework-mechanical-heuristic-judgment--3-1-the-decision-points-classified-declared",
+      "family": "doc",
+      "kind": "section",
+      "title": "§3.1 The decision points, classified (`Declared`)",
+      "file": "docs/notes/DN-109-Idiom-Optimal-Transpilation-And-Structural-Remapping.md",
+      "line": 93,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-109-idiom-optimal-transpilation-and-structural-remapping--3-l4-the-idiom-decision-framework-mechanical-heuristic-judgment--3-2-the-one-binding-rule-the-ratchet",
+      "family": "doc",
+      "kind": "section",
+      "title": "§3.2 The one binding rule (the ratchet)",
+      "file": "docs/notes/DN-109-Idiom-Optimal-Transpilation-And-Structural-Remapping.md",
+      "line": 112,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-109-idiom-optimal-transpilation-and-structural-remapping--3-l4-the-idiom-decision-framework-mechanical-heuristic-judgment--3-3-l4-alternatives-evaluated",
+      "family": "doc",
+      "kind": "section",
+      "title": "§3.3 L4 alternatives, evaluated",
+      "file": "docs/notes/DN-109-Idiom-Optimal-Transpilation-And-Structural-Remapping.md",
+      "line": 122,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-109-idiom-optimal-transpilation-and-structural-remapping--4-l5-structural-remapping-module-to-nodule-crate-to-phylum",
+      "family": "doc",
+      "kind": "section",
+      "title": "§4 L5 — structural remapping (module to nodule / crate to phylum)",
+      "file": "docs/notes/DN-109-Idiom-Optimal-Transpilation-And-Structural-Remapping.md",
+      "line": 140,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-109-idiom-optimal-transpilation-and-structural-remapping--4-l5-structural-remapping-module-to-nodule-crate-to-phylum--4-1-the-restructuring-operations",
+      "family": "doc",
+      "kind": "section",
+      "title": "§4.1 The restructuring operations",
+      "file": "docs/notes/DN-109-Idiom-Optimal-Transpilation-And-Structural-Remapping.md",
+      "line": 147,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-109-idiom-optimal-transpilation-and-structural-remapping--4-l5-structural-remapping-module-to-nodule-crate-to-phylum--4-2-safe-vs-risky",
+      "family": "doc",
+      "kind": "section",
+      "title": "§4.2 Safe vs risky",
+      "file": "docs/notes/DN-109-Idiom-Optimal-Transpilation-And-Structural-Remapping.md",
+      "line": 153,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-109-idiom-optimal-transpilation-and-structural-remapping--4-l5-structural-remapping-module-to-nodule-crate-to-phylum--4-3-identity-note-adr-003",
+      "family": "doc",
+      "kind": "section",
+      "title": "§4.3 Identity note (ADR-003)",
+      "file": "docs/notes/DN-109-Idiom-Optimal-Transpilation-And-Structural-Remapping.md",
+      "line": 165,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-109-idiom-optimal-transpilation-and-structural-remapping--5-l5-what-the-transpiler-must-gain-and-the-provenance-artifact",
+      "family": "doc",
+      "kind": "section",
+      "title": "§5 L5 — what the transpiler must gain, and the provenance artifact",
+      "file": "docs/notes/DN-109-Idiom-Optimal-Transpilation-And-Structural-Remapping.md",
+      "line": 173,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-109-idiom-optimal-transpilation-and-structural-remapping--5-l5-what-the-transpiler-must-gain-and-the-provenance-artifact--5-1-transpiler-additions-v0",
+      "family": "doc",
+      "kind": "section",
+      "title": "§5.1 Transpiler additions (v0)",
+      "file": "docs/notes/DN-109-Idiom-Optimal-Transpilation-And-Structural-Remapping.md",
+      "line": 175,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-109-idiom-optimal-transpilation-and-structural-remapping--5-l5-what-the-transpiler-must-gain-and-the-provenance-artifact--5-2-the-remap-manifest-the-provenance-artifact-of-record",
+      "family": "doc",
+      "kind": "section",
+      "title": "§5.2 The remap manifest (the provenance artifact of record)",
+      "file": "docs/notes/DN-109-Idiom-Optimal-Transpilation-And-Structural-Remapping.md",
+      "line": 189,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-109-idiom-optimal-transpilation-and-structural-remapping--5-l5-what-the-transpiler-must-gain-and-the-provenance-artifact--5-3-l5-alternatives-evaluated",
+      "family": "doc",
+      "kind": "section",
+      "title": "§5.3 L5 alternatives, evaluated",
+      "file": "docs/notes/DN-109-Idiom-Optimal-Transpilation-And-Structural-Remapping.md",
+      "line": 219,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-109-idiom-optimal-transpilation-and-structural-remapping--6-adversarial-stress-test-vr-5-trap-where-this-breaks",
+      "family": "doc",
+      "kind": "section",
+      "title": "§6 Adversarial stress-test (VR-5 trap), where this breaks",
+      "file": "docs/notes/DN-109-Idiom-Optimal-Transpilation-And-Structural-Remapping.md",
+      "line": 238,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-109-idiom-optimal-transpilation-and-structural-remapping--6-adversarial-stress-test-vr-5-trap-where-this-breaks--6-1-the-mut-to-value-semantics-aliasing-trap-top-concern-1",
+      "family": "doc",
+      "kind": "section",
+      "title": "§6.1 The `&mut` to value-semantics aliasing trap (top concern #1)",
+      "file": "docs/notes/DN-109-Idiom-Optimal-Transpilation-And-Structural-Remapping.md",
+      "line": 240,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-109-idiom-optimal-transpilation-and-structural-remapping--6-adversarial-stress-test-vr-5-trap-where-this-breaks--6-2-the-swap-insertion-guarantee-upgrade-termination-trap-top-concern-2",
+      "family": "doc",
+      "kind": "section",
+      "title": "§6.2 The swap-insertion / guarantee-upgrade / termination trap (top concern #2)",
+      "file": "docs/notes/DN-109-Idiom-Optimal-Transpilation-And-Structural-Remapping.md",
+      "line": 251,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-109-idiom-optimal-transpilation-and-structural-remapping--7-forks-left-for-the-maintainer-not-decided-here-house-rule-3-vr-5",
+      "family": "doc",
+      "kind": "section",
+      "title": "§7 Forks left for the maintainer (NOT decided here, house rule #3 / VR-5)",
+      "file": "docs/notes/DN-109-Idiom-Optimal-Transpilation-And-Structural-Remapping.md",
+      "line": 271,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-109-idiom-optimal-transpilation-and-structural-remapping--8-definition-of-done-for-maintainer-ratification-rule-6",
+      "family": "doc",
+      "kind": "section",
+      "title": "§8 Definition of Done for maintainer ratification (rule #6)",
+      "file": "docs/notes/DN-109-Idiom-Optimal-Transpilation-And-Structural-Remapping.md",
+      "line": 293,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-109-idiom-optimal-transpilation-and-structural-remapping--9-tracked-issues-filed-alongside-this-note-2026-07-10",
+      "family": "doc",
+      "kind": "section",
+      "title": "§9 Tracked issues filed alongside this note (2026-07-10)",
+      "file": "docs/notes/DN-109-Idiom-Optimal-Transpilation-And-Structural-Remapping.md",
+      "line": 303,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-109-idiom-optimal-transpilation-and-structural-remapping--10-flags-append-only-rows-the-integrating-parent-applies",
+      "family": "doc",
+      "kind": "section",
+      "title": "§10 FLAGs (append-only rows the integrating parent applies)",
+      "file": "docs/notes/DN-109-Idiom-Optimal-Transpilation-And-Structural-Remapping.md",
+      "line": 321,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "dn-109-idiom-optimal-transpilation-and-structural-remapping--changelog-this-note",
+      "family": "doc",
+      "kind": "section",
+      "title": "Changelog (this note)",
+      "file": "docs/notes/DN-109-Idiom-Optimal-Transpilation-And-Structural-Remapping.md",
+      "line": 331,
       "tag": "Empirical/Declared"
     },
     {
@@ -21186,6 +21415,564 @@
       "title": "Sequencing notes",
       "file": "docs/planning/value-model-implementation-plan.md",
       "line": 135,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "zero-hand-port-delta-ledger",
+      "family": "doc",
+      "kind": "other",
+      "title": "Zero-Hand-Port Delta Ledger",
+      "file": "docs/planning/zero-hand-port-delta-ledger.md",
+      "line": 1,
+      "status": "Draft",
+      "guarantee_tag": "Declared",
+      "summary": "The measured remaining delta between today and 100% clean, idiomatic, Mycelium-optimal",
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "zero-hand-port-delta-ledger--1-the-two-numbers-that-frame-everything",
+      "family": "doc",
+      "kind": "section",
+      "title": "1. The two numbers that frame everything",
+      "file": "docs/planning/zero-hand-port-delta-ledger.md",
+      "line": 13,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "zero-hand-port-delta-ledger--2-composition-of-the-delta-l3-empirically-proven",
+      "family": "doc",
+      "kind": "section",
+      "title": "2. Composition of the delta (L3, empirically proven)",
+      "file": "docs/planning/zero-hand-port-delta-ledger.md",
+      "line": 26,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "zero-hand-port-delta-ledger--3-engine-reality-l2",
+      "family": "doc",
+      "kind": "section",
+      "title": "3. Engine reality (L2)",
+      "file": "docs/planning/zero-hand-port-delta-ledger.md",
+      "line": 38,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "zero-hand-port-delta-ledger--4-idiom-structural-design-l4-l5",
+      "family": "doc",
+      "kind": "section",
+      "title": "4. Idiom + structural design (L4/L5)",
+      "file": "docs/planning/zero-hand-port-delta-ledger.md",
+      "line": 49,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "zero-hand-port-delta-ledger--4-5-dx-qol-track-the-close-out-all-qol-dx-gaps-directive",
+      "family": "doc",
+      "kind": "section",
+      "title": "4.5. DX / QoL track (the \"close out all QoL/DX gaps\" directive)",
+      "file": "docs/planning/zero-hand-port-delta-ledger.md",
+      "line": 71,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "zero-hand-port-delta-ledger--5-the-ceiling-fork-the-honest-limit-of-mechanical-zero-hand-port",
+      "family": "doc",
+      "kind": "section",
+      "title": "5. The ceiling fork (the honest limit of *mechanical* zero-hand-port)",
+      "file": "docs/planning/zero-hand-port-delta-ledger.md",
+      "line": 108,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "zero-hand-port-delta-ledger--6-sequenced-roadmap-blast-radius-ranked",
+      "family": "doc",
+      "kind": "section",
+      "title": "6. Sequenced roadmap (blast-radius-ranked)",
+      "file": "docs/planning/zero-hand-port-delta-ledger.md",
+      "line": 116,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "zero-hand-port-delta-ledger--7-strategic-forks-for-the-maintainer",
+      "family": "doc",
+      "kind": "section",
+      "title": "7. Strategic forks for the maintainer",
+      "file": "docs/planning/zero-hand-port-delta-ledger.md",
+      "line": 151,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "zero-hand-port-delta-ledger--8-honesty-caveats-vr-5",
+      "family": "doc",
+      "kind": "section",
+      "title": "8. Honesty caveats (VR-5)",
+      "file": "docs/planning/zero-hand-port-delta-ledger.md",
+      "line": 163,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "zero-hand-port-delta-ledger--changelog",
+      "family": "doc",
+      "kind": "section",
+      "title": "Changelog",
+      "file": "docs/planning/zero-hand-port-delta-ledger.md",
+      "line": 174,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-dx-qol",
+      "family": "doc",
+      "kind": "other",
+      "title": "Appendix — DX / QoL Track (Transpiler + Toolchain + Port Workflow)",
+      "file": "docs/planning/zero-hand-port/delta-DX-qol.md",
+      "line": 1,
+      "summary": "Supporting inventory for `docs/planning/zero-hand-port-delta-ledger.md` §4.5. Draft, 2026-07-10.",
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-dx-qol--register",
+      "family": "doc",
+      "kind": "section",
+      "title": "Register",
+      "file": "docs/planning/zero-hand-port/delta-DX-qol.md",
+      "line": 37,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-dx-qol--counts-by-severity-12-gaps-plus-2-sub-rows-folded",
+      "family": "doc",
+      "kind": "section",
+      "title": "Counts by severity (12 gaps plus 2 sub-rows folded)",
+      "file": "docs/planning/zero-hand-port/delta-DX-qol.md",
+      "line": 57,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-dx-qol--tracked-vs-newly-surfaced",
+      "family": "doc",
+      "kind": "section",
+      "title": "Tracked vs newly-surfaced",
+      "file": "docs/planning/zero-hand-port/delta-DX-qol.md",
+      "line": 64,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-dx-qol--flags-un-groundable",
+      "family": "doc",
+      "kind": "section",
+      "title": "Flags / un-groundable",
+      "file": "docs/planning/zero-hand-port/delta-DX-qol.md",
+      "line": 76,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l2-engines",
+      "family": "doc",
+      "kind": "other",
+      "title": "Appendix — Layer-2 (Engines) Coverage Audit",
+      "file": "docs/planning/zero-hand-port/delta-L2-engines.md",
+      "line": 1,
+      "summary": "Supporting inventory for `docs/planning/zero-hand-port-delta-ledger.md` §3. Draft, 2026-07-10.",
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l2-engines--engine-pipeline-as-built",
+      "family": "doc",
+      "kind": "section",
+      "title": "Engine pipeline (as-built)",
+      "file": "docs/planning/zero-hand-port/delta-L2-engines.md",
+      "line": 10,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l2-engines--coverage-matrix",
+      "family": "doc",
+      "kind": "section",
+      "title": "Coverage matrix",
+      "file": "docs/planning/zero-hand-port/delta-L2-engines.md",
+      "line": 32,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l2-engines--coverage-matrix--expr-variants-ast-rs-693-882",
+      "family": "doc",
+      "kind": "section",
+      "title": "Expr variants (ast.rs 693-882)",
+      "file": "docs/planning/zero-hand-port/delta-L2-engines.md",
+      "line": 37,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l2-engines--coverage-matrix--items-ast-rs-173-208",
+      "family": "doc",
+      "kind": "section",
+      "title": "Items (ast.rs 173-208)",
+      "file": "docs/planning/zero-hand-port/delta-L2-engines.md",
+      "line": 61,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l2-engines--coverage-matrix--patterns-literals",
+      "family": "doc",
+      "kind": "section",
+      "title": "Patterns / Literals",
+      "file": "docs/planning/zero-hand-port/delta-L2-engines.md",
+      "line": 74,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l2-engines--findings",
+      "family": "doc",
+      "kind": "section",
+      "title": "Findings",
+      "file": "docs/planning/zero-hand-port/delta-L2-engines.md",
+      "line": 81,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l2-engines--findings--biggest-laggard-the-native-llvm-aot-backend-mycelium-mlir-llvm-rs",
+      "family": "doc",
+      "kind": "section",
+      "title": "Biggest laggard: the native LLVM AOT backend (`mycelium-mlir::llvm.rs`)",
+      "file": "docs/planning/zero-hand-port/delta-L2-engines.md",
+      "line": 83,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l2-engines--findings--counts-19-expr-class-constructs",
+      "family": "doc",
+      "kind": "section",
+      "title": "Counts (19 Expr-class constructs)",
+      "file": "docs/planning/zero-hand-port/delta-L2-engines.md",
+      "line": 92,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l2-engines--findings--mirror-progress-dn-26-m-741",
+      "family": "doc",
+      "kind": "section",
+      "title": "Mirror progress (DN-26 / M-741)",
+      "file": "docs/planning/zero-hand-port/delta-L2-engines.md",
+      "line": 106,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l2-engines--findings--visitor-dry-meta-gap-confirmed-real-l2-meta-gap",
+      "family": "doc",
+      "kind": "section",
+      "title": "Visitor-DRY meta-gap: CONFIRMED (real L2 meta-gap)",
+      "file": "docs/planning/zero-hand-port/delta-L2-engines.md",
+      "line": 114,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l2-engines--findings--reconciliation-to-tracked-issues",
+      "family": "doc",
+      "kind": "section",
+      "title": "Reconciliation to tracked issues",
+      "file": "docs/planning/zero-hand-port/delta-L2-engines.md",
+      "line": 128,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l2-engines--findings--highest-leverage-engine-work",
+      "family": "doc",
+      "kind": "section",
+      "title": "Highest-leverage engine work",
+      "file": "docs/planning/zero-hand-port/delta-L2-engines.md",
+      "line": 139,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l2-engines--findings--un-groundable-flagged",
+      "family": "doc",
+      "kind": "section",
+      "title": "Un-groundable / flagged",
+      "file": "docs/planning/zero-hand-port/delta-L2-engines.md",
+      "line": 148,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l3-transpiler",
+      "family": "doc",
+      "kind": "other",
+      "title": "Appendix — Layer-3 (Transpiler Translation Rules) Grounded Inventory",
+      "file": "docs/planning/zero-hand-port/delta-L3-transpiler.md",
+      "line": 1,
+      "summary": "Supporting inventory for `docs/planning/zero-hand-port-delta-ledger.md` §1-§2. Draft, 2026-07-10.",
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l3-transpiler--1-last-measured-checked-fraction-plus-corpus-measured-empirical",
+      "family": "doc",
+      "kind": "section",
+      "title": "1. Last measured checked_fraction plus corpus (MEASURED, `Empirical`)",
+      "file": "docs/planning/zero-hand-port/delta-L3-transpiler.md",
+      "line": 19,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l3-transpiler--2-rule-coverage-inventory-from-emit-rs-transpile-rs-dispatch",
+      "family": "doc",
+      "kind": "section",
+      "title": "2. Rule-coverage inventory (from `emit.rs` / `transpile.rs` dispatch)",
+      "file": "docs/planning/zero-hand-port/delta-L3-transpiler.md",
+      "line": 46,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l3-transpiler--3-gap-class-taxonomy-table-ranked-union-812-gaps-17-targets-dn-34-8-9-later-phases-reduced-some",
+      "family": "doc",
+      "kind": "section",
+      "title": "3. Gap-class taxonomy table (ranked; union 812 gaps / 17 targets, DN-34 §8.9, later phases reduced some)",
+      "file": "docs/planning/zero-hand-port/delta-L3-transpiler.md",
+      "line": 84,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l3-transpiler--4-the-load-bearing-ratio-transpiler-only-vs-downstream",
+      "family": "doc",
+      "kind": "section",
+      "title": "4. The load-bearing ratio: transpiler-only vs downstream",
+      "file": "docs/planning/zero-hand-port/delta-L3-transpiler.md",
+      "line": 103,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l3-transpiler--5-highest-leverage-transpiler-work-ranked",
+      "family": "doc",
+      "kind": "section",
+      "title": "5. Highest-leverage transpiler work (ranked)",
+      "file": "docs/planning/zero-hand-port/delta-L3-transpiler.md",
+      "line": 130,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l3-transpiler--6-issue-reconciliation-vr-5",
+      "family": "doc",
+      "kind": "section",
+      "title": "6. Issue reconciliation (VR-5)",
+      "file": "docs/planning/zero-hand-port/delta-L3-transpiler.md",
+      "line": 145,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l4l5-idiom-structural-draft",
+      "family": "doc",
+      "kind": "other",
+      "title": "Appendix — Layer-4/Layer-5 Idiom + Structural Design (source draft for DN-109)",
+      "file": "docs/planning/zero-hand-port/delta-L4L5-idiom-structural-DRAFT.md",
+      "line": 1,
+      "status": "Draft",
+      "guarantee_tag": "Declared",
+      "summary": "This is the working draft the L4/L5 analysis produced 2026-07-10; it was reconciled and landed",
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l4l5-idiom-structural-draft--design-note-dn-109-source-draft-layer-4-idiom-optimal-transpilation-and-layer-5-structural-remapping-module-to-nodule-crate-to-phylum",
+      "family": "doc",
+      "kind": "section",
+      "title": "Design Note DN-109 (source draft) — Layer-4 Idiom-Optimal Transpilation and Layer-5 Structural Remapping (module to nodule / crate to phylum)",
+      "file": "docs/planning/zero-hand-port/delta-L4L5-idiom-structural-DRAFT.md",
+      "line": 12,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l4l5-idiom-structural-draft--1-frame-the-two-coupled-questions",
+      "family": "doc",
+      "kind": "section",
+      "title": "§1 Frame — the two coupled questions",
+      "file": "docs/planning/zero-hand-port/delta-L4L5-idiom-structural-DRAFT.md",
+      "line": 32,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l4l5-idiom-structural-draft--1-frame-the-two-coupled-questions--1-1-definition-of-done-this-note-for-maintainer-ratification",
+      "family": "doc",
+      "kind": "section",
+      "title": "§1.1 Definition of Done (this note, for maintainer ratification)",
+      "file": "docs/planning/zero-hand-port/delta-L4L5-idiom-structural-DRAFT.md",
+      "line": 46,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l4l5-idiom-structural-draft--1-frame-the-two-coupled-questions--1-2-user-stories",
+      "family": "doc",
+      "kind": "section",
+      "title": "§1.2 User stories",
+      "file": "docs/planning/zero-hand-port/delta-L4L5-idiom-structural-DRAFT.md",
+      "line": 56,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l4l5-idiom-structural-draft--2-grounding-the-baseline-mitigation-14-verified-against-code-2026-07-10",
+      "family": "doc",
+      "kind": "section",
+      "title": "§2 Grounding the baseline (mitigation #14, verified against code, 2026-07-10)",
+      "file": "docs/planning/zero-hand-port/delta-L4L5-idiom-structural-DRAFT.md",
+      "line": 72,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l4l5-idiom-structural-draft--3-l4-the-idiom-decision-framework-mechanical-heuristic-judgment",
+      "family": "doc",
+      "kind": "section",
+      "title": "§3 L4 — the idiom-decision framework (mechanical / heuristic / judgment)",
+      "file": "docs/planning/zero-hand-port/delta-L4L5-idiom-structural-DRAFT.md",
+      "line": 91,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l4l5-idiom-structural-draft--3-l4-the-idiom-decision-framework-mechanical-heuristic-judgment--3-1-the-decision-points-classified-declared",
+      "family": "doc",
+      "kind": "section",
+      "title": "§3.1 The decision points, classified (`Declared`)",
+      "file": "docs/planning/zero-hand-port/delta-L4L5-idiom-structural-DRAFT.md",
+      "line": 104,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l4l5-idiom-structural-draft--3-l4-the-idiom-decision-framework-mechanical-heuristic-judgment--3-2-the-one-binding-rule-the-ratchet",
+      "family": "doc",
+      "kind": "section",
+      "title": "§3.2 The one binding rule (the ratchet)",
+      "file": "docs/planning/zero-hand-port/delta-L4L5-idiom-structural-DRAFT.md",
+      "line": 123,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l4l5-idiom-structural-draft--3-l4-the-idiom-decision-framework-mechanical-heuristic-judgment--3-3-l4-alternatives-evaluated",
+      "family": "doc",
+      "kind": "section",
+      "title": "§3.3 L4 alternatives, evaluated",
+      "file": "docs/planning/zero-hand-port/delta-L4L5-idiom-structural-DRAFT.md",
+      "line": 133,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l4l5-idiom-structural-draft--4-l5-structural-remapping-module-to-nodule-crate-to-phylum",
+      "family": "doc",
+      "kind": "section",
+      "title": "§4 L5 — structural remapping (module to nodule / crate to phylum)",
+      "file": "docs/planning/zero-hand-port/delta-L4L5-idiom-structural-DRAFT.md",
+      "line": 151,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l4l5-idiom-structural-draft--4-l5-structural-remapping-module-to-nodule-crate-to-phylum--4-1-the-restructuring-operations",
+      "family": "doc",
+      "kind": "section",
+      "title": "§4.1 The restructuring operations",
+      "file": "docs/planning/zero-hand-port/delta-L4L5-idiom-structural-DRAFT.md",
+      "line": 158,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l4l5-idiom-structural-draft--4-l5-structural-remapping-module-to-nodule-crate-to-phylum--4-2-safe-vs-risky",
+      "family": "doc",
+      "kind": "section",
+      "title": "§4.2 Safe vs risky",
+      "file": "docs/planning/zero-hand-port/delta-L4L5-idiom-structural-DRAFT.md",
+      "line": 164,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l4l5-idiom-structural-draft--4-l5-structural-remapping-module-to-nodule-crate-to-phylum--4-3-identity-note-adr-003",
+      "family": "doc",
+      "kind": "section",
+      "title": "§4.3 Identity note (ADR-003)",
+      "file": "docs/planning/zero-hand-port/delta-L4L5-idiom-structural-DRAFT.md",
+      "line": 176,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l4l5-idiom-structural-draft--5-l5-what-the-transpiler-must-gain-and-the-provenance-artifact",
+      "family": "doc",
+      "kind": "section",
+      "title": "§5 L5 — what the transpiler must gain, and the provenance artifact",
+      "file": "docs/planning/zero-hand-port/delta-L4L5-idiom-structural-DRAFT.md",
+      "line": 184,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l4l5-idiom-structural-draft--5-l5-what-the-transpiler-must-gain-and-the-provenance-artifact--5-1-transpiler-additions-v0",
+      "family": "doc",
+      "kind": "section",
+      "title": "§5.1 Transpiler additions (v0)",
+      "file": "docs/planning/zero-hand-port/delta-L4L5-idiom-structural-DRAFT.md",
+      "line": 186,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l4l5-idiom-structural-draft--5-l5-what-the-transpiler-must-gain-and-the-provenance-artifact--5-2-the-remap-manifest-the-provenance-artifact-of-record",
+      "family": "doc",
+      "kind": "section",
+      "title": "§5.2 The remap manifest (the provenance artifact of record)",
+      "file": "docs/planning/zero-hand-port/delta-L4L5-idiom-structural-DRAFT.md",
+      "line": 200,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l4l5-idiom-structural-draft--5-l5-what-the-transpiler-must-gain-and-the-provenance-artifact--5-3-l5-alternatives-evaluated",
+      "family": "doc",
+      "kind": "section",
+      "title": "§5.3 L5 alternatives, evaluated",
+      "file": "docs/planning/zero-hand-port/delta-L4L5-idiom-structural-DRAFT.md",
+      "line": 229,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l4l5-idiom-structural-draft--6-adversarial-stress-test-vr-5-trap-where-this-breaks",
+      "family": "doc",
+      "kind": "section",
+      "title": "§6 Adversarial stress-test (VR-5 trap), where this breaks",
+      "file": "docs/planning/zero-hand-port/delta-L4L5-idiom-structural-DRAFT.md",
+      "line": 248,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l4l5-idiom-structural-draft--6-adversarial-stress-test-vr-5-trap-where-this-breaks--6-1-the-mut-to-value-semantics-aliasing-trap-top-concern-1",
+      "family": "doc",
+      "kind": "section",
+      "title": "§6.1 The `&mut` to value-semantics aliasing trap (top concern #1)",
+      "file": "docs/planning/zero-hand-port/delta-L4L5-idiom-structural-DRAFT.md",
+      "line": 250,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l4l5-idiom-structural-draft--6-adversarial-stress-test-vr-5-trap-where-this-breaks--6-2-the-swap-insertion-guarantee-upgrade-termination-trap-top-concern-2",
+      "family": "doc",
+      "kind": "section",
+      "title": "§6.2 The swap-insertion / guarantee-upgrade / termination trap (top concern #2)",
+      "file": "docs/planning/zero-hand-port/delta-L4L5-idiom-structural-DRAFT.md",
+      "line": 261,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l4l5-idiom-structural-draft--7-forks-left-for-the-maintainer-not-decided-here-house-rule-3-vr-5",
+      "family": "doc",
+      "kind": "section",
+      "title": "§7 Forks left for the maintainer (NOT decided here, house rule #3 / VR-5)",
+      "file": "docs/planning/zero-hand-port/delta-L4L5-idiom-structural-DRAFT.md",
+      "line": 281,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l4l5-idiom-structural-draft--8-definition-of-done-for-maintainer-ratification-rule-6",
+      "family": "doc",
+      "kind": "section",
+      "title": "§8 Definition of Done for maintainer ratification (rule #6)",
+      "file": "docs/planning/zero-hand-port/delta-L4L5-idiom-structural-DRAFT.md",
+      "line": 301,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "delta-l4l5-idiom-structural-draft--9-flags-append-only-rows-the-integrating-parent-applies-not-edited-by-this-draft",
+      "family": "doc",
+      "kind": "section",
+      "title": "§9 FLAGs (append-only rows the integrating parent applies, not edited by this draft)",
+      "file": "docs/planning/zero-hand-port/delta-L4L5-idiom-structural-DRAFT.md",
+      "line": 311,
       "tag": "Empirical/Declared"
     },
     {
@@ -49389,6 +50176,138 @@
       "tag": "Empirical/Declared"
     },
     {
+      "anchor": "M-1041",
+      "family": "issue",
+      "kind": "issue",
+      "id": "M-1041",
+      "title": "M-1041 — DRY ExprVisitor/fold trait across the mycelium-l1 walkers and the transpiler's emit.rs (the visitor-DRY meta-gap)",
+      "file": "tools/github/issues.yaml",
+      "line": 14485,
+      "status": "todo",
+      "summary": "Filed 2026-07-10 from the zero-hand-port delta-ledger analysis (docs/planning/zero-hand-port-delta-ledger.md",
+      "epic": "E32-1",
+      "depends_on": [
+        "M-641"
+      ],
+      "doc_refs": [
+        "corpus:DN-109",
+        "src:crates/mycelium-l1/src/totality.rs",
+        "src:crates/mycelium-transpile/src/emit.rs"
+      ],
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "M-1042",
+      "family": "issue",
+      "kind": "issue",
+      "id": "M-1042",
+      "title": "M-1042 — structured (source-tree-mirroring) transpiler output with path-qualified nodule names",
+      "file": "tools/github/issues.yaml",
+      "line": 14522,
+      "status": "todo",
+      "summary": "Filed 2026-07-10 from the zero-hand-port delta-ledger analysis (docs/planning/zero-hand-port-delta-ledger.md",
+      "epic": "E32-1",
+      "doc_refs": [
+        "corpus:DN-109",
+        "src:crates/mycelium-transpile/src/bin/mycelium-transpile.rs",
+        "src:crates/mycelium-transpile/src/batch.rs"
+      ],
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "M-1043",
+      "family": "issue",
+      "kind": "issue",
+      "id": "M-1043",
+      "title": "M-1043 — per-item `// src: file:line` provenance breadcrumbs in emitted .myc",
+      "file": "tools/github/issues.yaml",
+      "line": 14555,
+      "status": "todo",
+      "summary": "Filed 2026-07-10 from the zero-hand-port delta-ledger analysis (docs/planning/zero-hand-port-delta-ledger.md",
+      "epic": "E32-1",
+      "depends_on": [
+        "M-1042"
+      ],
+      "doc_refs": [
+        "corpus:DN-109",
+        "src:crates/mycelium-transpile/src/emit.rs",
+        "src:crates/mycelium-transpile/src/gap.rs"
+      ],
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "M-1044",
+      "family": "issue",
+      "kind": "issue",
+      "id": "M-1044",
+      "title": "M-1044 — the remap manifest (remap.json / REMAP.md): item-granular structural + idiom provenance ledger",
+      "file": "tools/github/issues.yaml",
+      "line": 14583,
+      "status": "todo",
+      "summary": "Filed 2026-07-10 from DN-109 §5.2 (the L5 structural-remapping design). Gated on DN-109's",
+      "epic": "E32-1",
+      "depends_on": [
+        "M-1042"
+      ],
+      "doc_refs": [
+        "corpus:DN-109",
+        "src:crates/mycelium-transpile/src/batch.rs"
+      ],
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "M-1045",
+      "family": "issue",
+      "kind": "issue",
+      "id": "M-1045",
+      "title": "M-1045 — actionable suggested_idiom field on transpiler gap diagnostics",
+      "file": "tools/github/issues.yaml",
+      "line": 14617,
+      "status": "todo",
+      "summary": "Filed 2026-07-10 from the zero-hand-port delta-ledger analysis (docs/planning/zero-hand-port-delta-ledger.md",
+      "epic": "E32-1",
+      "doc_refs": [
+        "corpus:DN-109",
+        "src:crates/mycelium-transpile/src/gap.rs"
+      ],
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "M-1046",
+      "family": "issue",
+      "kind": "issue",
+      "id": "M-1046",
+      "title": "M-1046 — \"closest-to-clean\" investment ranking in the vet report",
+      "file": "tools/github/issues.yaml",
+      "line": 14646,
+      "status": "todo",
+      "summary": "Filed 2026-07-10 from the zero-hand-port delta-ledger analysis (docs/planning/zero-hand-port-delta-ledger.md",
+      "epic": "E32-1",
+      "doc_refs": [
+        "corpus:DN-109",
+        "src:crates/mycelium-transpile/src/vet.rs"
+      ],
+      "tag": "Empirical/Declared"
+    },
+    {
+      "anchor": "M-1047",
+      "family": "issue",
+      "kind": "issue",
+      "id": "M-1047",
+      "title": "M-1047 — transpiler DX polish: mycfmt post-pass, dry-run/summary mode, minimal arg parsing",
+      "file": "tools/github/issues.yaml",
+      "line": 14676,
+      "status": "todo",
+      "summary": "Filed 2026-07-10 from the zero-hand-port delta-ledger analysis (docs/planning/zero-hand-port-delta-ledger.md",
+      "epic": "E32-1",
+      "doc_refs": [
+        "corpus:DN-109",
+        "src:crates/mycelium-transpile/src/bin/mycelium-transpile.rs",
+        "src:crates/mycelium-transpile/src/transpile.rs"
+      ],
+      "tag": "Empirical/Declared"
+    },
+    {
       "anchor": "cl--unreleased",
       "family": "changelog",
       "kind": "release",
@@ -49399,13 +50318,24 @@
       "tag": "Empirical/Declared"
     },
     {
+      "anchor": "cl--docs-planning-zero-hand-port-delta-ledger-dn-109-idiom-structural-design-2026-07-10",
+      "family": "changelog",
+      "kind": "entry",
+      "id": "DN-109",
+      "title": "docs(planning): zero-hand-port delta ledger + DN-109 idiom/structural design (2026-07-10)",
+      "file": "CHANGELOG.md",
+      "line": 15,
+      "summary": "docs(planning): zero-hand-port delta ledger + DN-109 idiom/structural design (2026-07-10)",
+      "tag": "Empirical/Declared"
+    },
+    {
       "anchor": "cl--fix-grammar-docs-terminal-review-fast-follows-tree-sitter-priv-structural-gap-wrong-path-citation-m-1039-m-1040-2026-07-10",
       "family": "changelog",
       "kind": "entry",
       "id": "M-1039",
       "title": "fix(grammar,docs): terminal-review fast-follows — tree-sitter `priv` structural gap + wrong path citation (M-1039/M-1040) (2026-07-10)",
       "file": "CHANGELOG.md",
-      "line": 15,
+      "line": 60,
       "summary": "fix(grammar,docs): terminal-review fast-follows — tree-sitter `priv` structural gap + wrong path citation (M-1039/M-1040) (2026-07-10)",
       "tag": "Empirical/Declared"
     },
@@ -49415,7 +50345,7 @@
       "kind": "entry",
       "title": "feat(scripts): worktree `target/` cache pruning — `disk-watchdog` + `worktree-target-sweep` (2026-07-10)",
       "file": "CHANGELOG.md",
-      "line": 35,
+      "line": 80,
       "summary": "feat(scripts): worktree `target/` cache pruning — `disk-watchdog` + `worktree-target-sweep` (2026-07-10)",
       "tag": "Empirical/Declared"
     },
@@ -49425,7 +50355,7 @@
       "kind": "entry",
       "title": "feat(tools): diff-based, rate-limit-frugal GitHub issue sync + orphan reconciliation (2026-07-10)",
       "file": "CHANGELOG.md",
-      "line": 52,
+      "line": 97,
       "summary": "feat(tools): diff-based, rate-limit-frugal GitHub issue sync + orphan reconciliation (2026-07-10)",
       "tag": "Empirical/Declared"
     },
@@ -49436,7 +50366,7 @@
       "id": "M-1028",
       "title": "docs(dn-108): numerics transcendentals accuracy-bounds design note (M-1028/ENB-5, DN-99 #42) (2026-07-10)",
       "file": "CHANGELOG.md",
-      "line": 62,
+      "line": 107,
       "summary": "docs(dn-108): numerics transcendentals accuracy-bounds design note (M-1028/ENB-5, DN-99 #42) (2026-07-10)",
       "tag": "Empirical/Declared"
     },
@@ -49447,7 +50377,7 @@
       "id": "M-1030",
       "title": "docs(dn-107): host-effect real-syscall registry + never-type divergence design note (M-1030/ENB-7) (2026-07-10)",
       "file": "CHANGELOG.md",
-      "line": 73,
+      "line": 118,
       "summary": "docs(dn-107): host-effect real-syscall registry + never-type divergence design note (M-1030/ENB-7) (2026-07-10)",
       "tag": "Empirical/Declared"
     },
@@ -49458,7 +50388,7 @@
       "id": "M-1038",
       "title": "chore(integration): enb batch close-out — api-gate tool-flag fix + baseline catch-up (M-1038) (2026-07-10)",
       "file": "CHANGELOG.md",
-      "line": 83,
+      "line": 128,
       "summary": "chore(integration): enb batch close-out — api-gate tool-flag fix + baseline catch-up (M-1038) (2026-07-10)",
       "tag": "Empirical/Declared"
     },
@@ -49469,7 +50399,7 @@
       "id": "M-1033",
       "title": "docs(dn-106): triage ENB-10 statement-sequencing + record-update — both closed at L1 (M-1033) (2026-07-10)",
       "file": "CHANGELOG.md",
-      "line": 115,
+      "line": 160,
       "summary": "docs(dn-106): triage ENB-10 statement-sequencing + record-update — both closed at L1 (M-1033) (2026-07-10)",
       "tag": "Empirical/Declared"
     },
@@ -49480,7 +50410,7 @@
       "id": "DN-99",
       "title": "feat(transpile): flip DN-99 #72 string-literal `match` gap→emit on the M-1035 enabler; gap fabricated conversion no-ops (2026-07-10)",
       "file": "CHANGELOG.md",
-      "line": 142,
+      "line": 187,
       "summary": "feat(transpile): flip DN-99 #72 string-literal `match` gap→emit on the M-1035 enabler; gap fabricated conversion no-ops (2026-07-10)",
       "tag": "Empirical/Declared"
     },
@@ -49491,7 +50421,7 @@
       "id": "M-1035",
       "title": "feat(l1): admit a `Bytes` scrutinee in `match` — M-1035 (ENB-12) (2026-07-10)",
       "file": "CHANGELOG.md",
-      "line": 176,
+      "line": 221,
       "summary": "feat(l1): admit a `Bytes` scrutinee in `match` — M-1035 (ENB-12) (2026-07-10)",
       "tag": "Empirical/Declared"
     },
@@ -49502,7 +50432,7 @@
       "id": "M-1027",
       "title": "feat(l1): per-constructor visibility seal — `priv` ctor — M-1027 (ENB-4) (2026-07-10)",
       "file": "CHANGELOG.md",
-      "line": 224,
+      "line": 269,
       "summary": "feat(l1): per-constructor visibility seal — `priv` ctor — M-1027 (ENB-4) (2026-07-10)",
       "tag": "Empirical/Declared"
     },
@@ -49513,7 +50443,7 @@
       "id": "M-1026",
       "title": "feat(l1): impl-level generic-parameter slot — `impl[T] Foo[T]` — M-1026 (ENB-3) (2026-07-10)",
       "file": "CHANGELOG.md",
-      "line": 282,
+      "line": 327,
       "summary": "feat(l1): impl-level generic-parameter slot — `impl[T] Foo[T]` — M-1026 (ENB-3) (2026-07-10)",
       "tag": "Empirical/Declared"
     },
@@ -49524,7 +50454,7 @@
       "id": "M-1025",
       "title": "feat(l1): `?` try-operator grammar sugar + type-directed `match` desugar — M-1025 (ENB-2) first increment (2026-07-10)",
       "file": "CHANGELOG.md",
-      "line": 315,
+      "line": 360,
       "summary": "feat(l1): `?` try-operator grammar sugar + type-directed `match` desugar — M-1025 (ENB-2) first increment (2026-07-10)",
       "tag": "Empirical/Declared"
     },
@@ -49535,7 +50465,7 @@
       "id": "M-1024",
       "title": "feat(l1): cross-nodule runtime execution via `PhylumEnv::link` — M-1024 (ENB-1) first increment (2026-07-10)",
       "file": "CHANGELOG.md",
-      "line": 353,
+      "line": 398,
       "summary": "feat(l1): cross-nodule runtime execution via `PhylumEnv::link` — M-1024 (ENB-1) first increment (2026-07-10)",
       "tag": "Empirical/Declared"
     },
@@ -49545,7 +50475,7 @@
       "kind": "entry",
       "title": "fix(l1): add the missing `Wrapping(_)` arm to the `compiler_stage3_ast` test-driver's `classify_expr` (2026-07-10)",
       "file": "CHANGELOG.md",
-      "line": 388,
+      "line": 433,
       "summary": "fix(l1): add the missing `Wrapping(_)` arm to the `compiler_stage3_ast` test-driver's `classify_expr` (2026-07-10)",
       "tag": "Empirical/Declared"
     },
@@ -49556,7 +50486,7 @@
       "id": "DN-99",
       "title": "feat(transpile): trx increment — reclassify DN-99 #72 as an L1-enabler gap, DN-100 macro pre-pass DN, #1349 FLAG fixes (2026-07-10)",
       "file": "CHANGELOG.md",
-      "line": 410,
+      "line": 455,
       "summary": "feat(transpile): trx increment — reclassify DN-99 #72 as an L1-enabler gap, DN-100 macro pre-pass DN, #1349 FLAG fixes (2026-07-10)",
       "tag": "Empirical/Declared"
     },
@@ -49566,7 +50496,7 @@
       "kind": "entry",
       "title": "docs(adr-045): Bucket-B descriptive freeze-doc sweep — correct stale \"frozen\" claims to the unfreeze (2026-07-10)",
       "file": "CHANGELOG.md",
-      "line": 452,
+      "line": 497,
       "summary": "docs(adr-045): Bucket-B descriptive freeze-doc sweep — correct stale \"frozen\" claims to the unfreeze (2026-07-10)",
       "tag": "Empirical/Declared"
     },
@@ -49576,7 +50506,7 @@
       "kind": "entry",
       "title": "docs(adr-045): ratify the whole-project unfreeze for early gap-closure (Draft → Accepted) (2026-07-10)",
       "file": "CHANGELOG.md",
-      "line": 475,
+      "line": 520,
       "summary": "docs(adr-045): ratify the whole-project unfreeze for early gap-closure (Draft → Accepted) (2026-07-10)",
       "tag": "Empirical/Declared"
     },
@@ -49587,7 +50517,7 @@
       "id": "RFC-0031",
       "title": "docs(dn-99): surface-gap closure register + plan for the spw / RFC-0031 stdlib-port wave (2026-07-10)",
       "file": "CHANGELOG.md",
-      "line": 494,
+      "line": 539,
       "summary": "docs(dn-99): surface-gap closure register + plan for the spw / RFC-0031 stdlib-port wave (2026-07-10)",
       "tag": "Empirical/Declared"
     },
@@ -49597,7 +50527,7 @@
       "kind": "entry",
       "title": "fix(semcore): complete the `Wrapping` Expr-variant port across the self-hosted `.myc` frontend (2026-07-10)",
       "file": "CHANGELOG.md",
-      "line": 511,
+      "line": 556,
       "summary": "fix(semcore): complete the `Wrapping` Expr-variant port across the self-hosted `.myc` frontend (2026-07-10)",
       "tag": "Empirical/Declared"
     },
@@ -49608,7 +50538,7 @@
       "id": "M-1006",
       "title": "feat(transpile): M-1006 Phase-2 — path-qualified batch output (whole-corpus-completeness) (2026-07-10)",
       "file": "CHANGELOG.md",
-      "line": 538,
+      "line": 583,
       "summary": "feat(transpile): M-1006 Phase-2 — path-qualified batch output (whole-corpus-completeness) (2026-07-10)",
       "tag": "Empirical/Declared"
     },
@@ -49619,7 +50549,7 @@
       "id": "M-1006",
       "title": "feat(transpile): M-1006 Phase-2 opens — whole-corpus profile + honest file-linkage taxonomy (2026-07-10)",
       "file": "CHANGELOG.md",
-      "line": 554,
+      "line": 599,
       "summary": "feat(transpile): M-1006 Phase-2 opens — whole-corpus profile + honest file-linkage taxonomy (2026-07-10)",
       "tag": "Empirical/Declared"
     },
@@ -49629,7 +50559,7 @@
       "kind": "entry",
       "title": "build(checks): auto-reflow the MD004 soft-wrap `+`/`*`-at-line-start pitfall (`just md-fix`) (2026-07-10)",
       "file": "CHANGELOG.md",
-      "line": 578,
+      "line": 623,
       "summary": "build(checks): auto-reflow the MD004 soft-wrap `+`/`*`-at-line-start pitfall (`just md-fix`) (2026-07-10)",
       "tag": "Empirical/Declared"
     },
@@ -49640,7 +50570,7 @@
       "id": "E18-1",
       "title": "E18-1 semcore self-hosting — Stage-5 continues: M-1013 checkty PR-3 (`subst_type_param_in_typeref`) (2026-07-10)",
       "file": "CHANGELOG.md",
-      "line": 596,
+      "line": 641,
       "summary": "E18-1 semcore self-hosting — Stage-5 continues: M-1013 checkty PR-3 (`subst_type_param_in_typeref`) (2026-07-10)",
       "tag": "Empirical/Declared"
     },
@@ -49651,7 +50581,7 @@
       "id": "E18-1",
       "title": "E18-1 semcore self-hosting — Stage-5 continues: M-1013 checkty PR-2 (two pure checkty classifiers) (2026-07-10)",
       "file": "CHANGELOG.md",
-      "line": 627,
+      "line": 672,
       "summary": "E18-1 semcore self-hosting — Stage-5 continues: M-1013 checkty PR-2 (two pure checkty classifiers) (2026-07-10)",
       "tag": "Empirical/Declared"
     },
@@ -49661,7 +50591,7 @@
       "kind": "entry",
       "title": "spw Wave-0 stdlib-port pilot — std.numerics / std.time / std.content self-hosted to `lib/std/*.myc` (2026-07-09)",
       "file": "CHANGELOG.md",
-      "line": 655,
+      "line": 700,
       "summary": "spw Wave-0 stdlib-port pilot — std.numerics / std.time / std.content self-hosted to `lib/std/*.myc` (2026-07-09)",
       "tag": "Empirical/Declared"
     },
@@ -49671,7 +50601,7 @@
       "kind": "entry",
       "title": "chore: clean-snapshot prep — archives extracted to the `archive` branch, indices regenerated (2026-07-09)",
       "file": "CHANGELOG.md",
-      "line": 703,
+      "line": 748,
       "summary": "chore: clean-snapshot prep — archives extracted to the `archive` branch, indices regenerated (2026-07-09)",
       "tag": "Empirical/Declared"
     },
@@ -49682,7 +50612,7 @@
       "id": "DN-97",
       "title": "DN-97 ratified (Rank 1) — the unified branch/merge/propagation workflow + `/forward` + `/sync-down` skills (2026-07-09)",
       "file": "CHANGELOG.md",
-      "line": 726,
+      "line": 771,
       "summary": "DN-97 ratified (Rank 1) — the unified branch/merge/propagation workflow + `/forward` + `/sync-down` skills (2026-07-09)",
       "tag": "Empirical/Declared"
     },
@@ -49693,7 +50623,7 @@
       "id": "E18-1",
       "title": "E18-1 semcore self-hosting — Stage-5 continues: M-1013 STEP 4/5/6 + the first eval.rs fragment (2026-07-09)",
       "file": "CHANGELOG.md",
-      "line": 749,
+      "line": 794,
       "summary": "E18-1 semcore self-hosting — Stage-5 continues: M-1013 STEP 4/5/6 + the first eval.rs fragment (2026-07-09)",
       "tag": "Empirical/Declared"
     },
@@ -49704,7 +50634,7 @@
       "id": "DN-51",
       "title": "Kernel: `bit.truncate` prim (DN-51) + transpiler narrow-cast now emits it (2026-07-09)",
       "file": "CHANGELOG.md",
-      "line": 778,
+      "line": 823,
       "summary": "Kernel: `bit.truncate` prim (DN-51) + transpiler narrow-cast now emits it (2026-07-09)",
       "tag": "Empirical/Declared"
     },
@@ -49714,7 +50644,7 @@
       "kind": "entry",
       "title": "Lint: `unsafe_code = \"allow\"` so documented unsafe never erroneously alarms — local, remote, or ad-hoc (2026-07-09)",
       "file": "CHANGELOG.md",
-      "line": 798,
+      "line": 843,
       "summary": "Lint: `unsafe_code = \"allow\"` so documented unsafe never erroneously alarms — local, remote, or ad-hoc (2026-07-09)",
       "tag": "Empirical/Declared"
     },
@@ -49725,7 +50655,7 @@
       "id": "ADR-014",
       "title": "Lint: enforce the mandatory `// SAFETY:` comment via clippy (ADR-014 refinement, 2026-07-09)",
       "file": "CHANGELOG.md",
-      "line": 815,
+      "line": 860,
       "summary": "Lint: enforce the mandatory `// SAFETY:` comment via clippy (ADR-014 refinement, 2026-07-09)",
       "tag": "Empirical/Declared"
     },
@@ -49735,7 +50665,7 @@
       "kind": "entry",
       "title": "trx2 Lane C — CU-3/5/7 kernel prims + transpiler operand-gated emission and forward-mapped prim table (2026-07-08)",
       "file": "CHANGELOG.md",
-      "line": 825,
+      "line": 870,
       "summary": "trx2 Lane C — CU-3/5/7 kernel prims + transpiler operand-gated emission and forward-mapped prim table (2026-07-08)",
       "tag": "Empirical/Declared"
     },
@@ -49746,7 +50676,7 @@
       "id": "M-1006",
       "title": "M-1006 transpiler-hardening ladder — String→`Bytes` lands the largest `checked_fraction` gain (2026-07-07)",
       "file": "CHANGELOG.md",
-      "line": 846,
+      "line": 891,
       "summary": "M-1006 transpiler-hardening ladder — String→`Bytes` lands the largest `checked_fraction` gain (2026-07-07)",
       "tag": "Empirical/Declared"
     },
@@ -49757,7 +50687,7 @@
       "id": "E18-1",
       "title": "E18-1 semcore self-hosting — Stage-5 increments (M-1007 → M-1013 PR-2) (2026-07-07)",
       "file": "CHANGELOG.md",
-      "line": 866,
+      "line": 911,
       "summary": "E18-1 semcore self-hosting — Stage-5 increments (M-1007 → M-1013 PR-2) (2026-07-07)",
       "tag": "Empirical/Declared"
     },
@@ -49768,7 +50698,7 @@
       "id": "DN-87",
       "title": "mycelium-tero (DN-87 / E39-1) — transparent memory substrate & agent knowledge API (M-1015…M-1018, 2026-07-07)",
       "file": "CHANGELOG.md",
-      "line": 885,
+      "line": 930,
       "summary": "mycelium-tero (DN-87 / E39-1) — transparent memory substrate & agent knowledge API (M-1015…M-1018, 2026-07-07)",
       "tag": "Empirical/Declared"
     },
@@ -49779,7 +50709,7 @@
       "id": "M-1013",
       "title": "M-1013 STEP 2 — semcore Stage-5 differential retrofit to harness marshalling (2026-07-07)",
       "file": "CHANGELOG.md",
-      "line": 915,
+      "line": 960,
       "summary": "M-1013 STEP 2 — semcore Stage-5 differential retrofit to harness marshalling (2026-07-07)",
       "tag": "Empirical/Declared"
     },
@@ -49790,7 +50720,7 @@
       "id": "M-1008",
       "title": "M-1008/M-1009/M-1010 + M-1011(partial) — semcore pure-leaf port wave (M-993 ladder) (2026-07-07)",
       "file": "CHANGELOG.md",
-      "line": 932,
+      "line": 977,
       "summary": "M-1008/M-1009/M-1010 + M-1011(partial) — semcore pure-leaf port wave (M-993 ladder) (2026-07-07)",
       "tag": "Empirical/Declared"
     },
@@ -49801,7 +50731,7 @@
       "id": "M-1015",
       "title": "M-1015 — docs/tero-index/: the whole-corpus Layer-1 citation index (DN-87 / E39-1) (2026-07-07)",
       "file": "CHANGELOG.md",
-      "line": 946,
+      "line": 991,
       "summary": "M-1015 — docs/tero-index/: the whole-corpus Layer-1 citation index (DN-87 / E39-1) (2026-07-07)",
       "tag": "Empirical/Declared"
     },
@@ -49812,7 +50742,7 @@
       "id": "DN-87",
       "title": "mycelium-tero — DN-87 named; kickoff `mem` FIRED; the scaffold lands (2026-07-07)",
       "file": "CHANGELOG.md",
-      "line": 965,
+      "line": 1010,
       "summary": "mycelium-tero — DN-87 named; kickoff `mem` FIRED; the scaffold lands (2026-07-07)",
       "tag": "Empirical/Declared"
     },
@@ -49823,7 +50753,7 @@
       "id": "DN-87",
       "title": "DN-87 — the transparent memory substrate & agent knowledge API captured; E39-1 + M-1015…M-1019 minted (2026-07-07)",
       "file": "CHANGELOG.md",
-      "line": 975,
+      "line": 1020,
       "summary": "DN-87 — the transparent memory substrate & agent knowledge API captured; E39-1 + M-1015…M-1019 minted (2026-07-07)",
       "tag": "Empirical/Declared"
     },
@@ -49834,7 +50764,7 @@
       "id": "DN-85",
       "title": "DN-85 — the multi-language transpilation program + single-language full-stack goal (2026-07-06)",
       "file": "CHANGELOG.md",
-      "line": 994,
+      "line": 1039,
       "summary": "DN-85 — the multi-language transpilation program + single-language full-stack goal (2026-07-06)",
       "tag": "Empirical/Declared"
     },
@@ -49845,7 +50775,7 @@
       "id": "DN-86",
       "title": "DN-86 — multi-language transpiler front-ends architecture (2026-07-06)",
       "file": "CHANGELOG.md",
-      "line": 1008,
+      "line": 1053,
       "summary": "DN-86 — multi-language transpiler front-ends architecture (2026-07-06)",
       "tag": "Empirical/Declared"
     },
@@ -49856,7 +50786,7 @@
       "id": "M-1006",
       "title": "M-1006 phase-1 — transpiler hardening against the DN-34 §8.9 gap worklist (2026-07-06)",
       "file": "CHANGELOG.md",
-      "line": 1025,
+      "line": 1070,
       "summary": "M-1006 phase-1 — transpiler hardening against the DN-34 §8.9 gap worklist (2026-07-06)",
       "tag": "Empirical/Declared"
     },
@@ -49866,7 +50796,7 @@
       "kind": "entry",
       "title": "Transpiler usage operationalized as skills — `/transpile-vet` + `/myc-drafts` (2026-07-06)",
       "file": "CHANGELOG.md",
-      "line": 1042,
+      "line": 1087,
       "summary": "Transpiler usage operationalized as skills — `/transpile-vet` + `/myc-drafts` (2026-07-06)",
       "tag": "Empirical/Declared"
     },
@@ -49877,7 +50807,7 @@
       "id": "M-1002",
       "title": "M-1002/M-1003 — gen/myc-drafts/: the vetted draft corpus over the full boot10 port surface (2026-07-06)",
       "file": "CHANGELOG.md",
-      "line": 1053,
+      "line": 1098,
       "summary": "M-1002/M-1003 — gen/myc-drafts/: the vetted draft corpus over the full boot10 port surface (2026-07-06)",
       "tag": "Empirical/Declared"
     },
@@ -49888,7 +50818,7 @@
       "id": "M-1000",
       "title": "M-1000/M-1001 — the transpile → myc-check vet loop + top gap-class closure; M-991 assessed (2026-07-06)",
       "file": "CHANGELOG.md",
-      "line": 1068,
+      "line": 1113,
       "summary": "M-1000/M-1001 — the transpile → myc-check vet loop + top gap-class closure; M-991 assessed (2026-07-06)",
       "tag": "Empirical/Declared"
     },
@@ -49899,7 +50829,7 @@
       "id": "M-1004",
       "title": "M-1004/M-1005 — docs/lib-index/: the api-index analogue for the self-hosted `.myc` tree (2026-07-06)",
       "file": "CHANGELOG.md",
-      "line": 1083,
+      "line": 1128,
       "summary": "M-1004/M-1005 — docs/lib-index/: the api-index analogue for the self-hosted `.myc` tree (2026-07-06)",
       "tag": "Empirical/Declared"
     },
@@ -49910,7 +50840,7 @@
       "id": "M-996",
       "title": "M-996 — AOT env-machine TCO: tail frames elided, observably (maintainer-authorized) (2026-07-06)",
       "file": "CHANGELOG.md",
-      "line": 1130,
+      "line": 1175,
       "summary": "M-996 — AOT env-machine TCO: tail frames elided, observably (maintainer-authorized) (2026-07-06)",
       "tag": "Empirical/Declared"
     },
@@ -49921,7 +50851,7 @@
       "id": "M-995",
       "title": "M-995 — AOT env-machine value structural-sharing (the M-987 perf win on the AOT path) (2026-07-06)",
       "file": "CHANGELOG.md",
-      "line": 1167,
+      "line": 1212,
       "summary": "M-995 — AOT env-machine value structural-sharing (the M-987 perf win on the AOT path) (2026-07-06)",
       "tag": "Empirical/Declared"
     },
@@ -49932,7 +50862,7 @@
       "id": "M-994",
       "title": "M-994 fix (b) — O(1) `Data` clone via `Arc` structural sharing (M-987 ~n³→~n²; M-994 resolved) (2026-07-06)",
       "file": "CHANGELOG.md",
-      "line": 1194,
+      "line": 1239,
       "summary": "M-994 fix (b) — O(1) `Data` clone via `Arc` structural sharing (M-987 ~n³→~n²; M-994 resolved) (2026-07-06)",
       "tag": "Empirical/Declared"
     },
@@ -49943,7 +50873,7 @@
       "id": "M-994",
       "title": "M-994 fix (a) — widen L1 evaluator TCO through tail-transparent frames (M-986 closed) (2026-07-06)",
       "file": "CHANGELOG.md",
-      "line": 1220,
+      "line": 1265,
       "summary": "M-994 fix (a) — widen L1 evaluator TCO through tail-transparent frames (M-986 closed) (2026-07-06)",
       "tag": "Empirical/Declared"
     },
@@ -49954,7 +50884,7 @@
       "id": "M-740",
       "title": "M-740 Stage 5 (increment 1) — partial self-hosted `compiler.semcore` (2026-07-06)",
       "file": "CHANGELOG.md",
-      "line": 1247,
+      "line": 1292,
       "summary": "M-740 Stage 5 (increment 1) — partial self-hosted `compiler.semcore` (2026-07-06)",
       "tag": "Empirical/Declared"
     },
@@ -49965,7 +50895,7 @@
       "id": "M-740",
       "title": "M-740 Stage 4 — self-hosted SCC leaf nodules (substrate · totality · ambient) (2026-07-06)",
       "file": "CHANGELOG.md",
-      "line": 1280,
+      "line": 1325,
       "summary": "M-740 Stage 4 — self-hosted SCC leaf nodules (substrate · totality · ambient) (2026-07-06)",
       "tag": "Empirical/Declared"
     },
@@ -49976,7 +50906,7 @@
       "id": "M-740",
       "title": "M-740 Stage 3 — self-hosted AST vocabulary + parser (2026-07-05)",
       "file": "CHANGELOG.md",
-      "line": 1326,
+      "line": 1371,
       "summary": "M-740 Stage 3 — self-hosted AST vocabulary + parser (2026-07-05)",
       "tag": "Empirical/Declared"
     },
@@ -49987,7 +50917,7 @@
       "id": "M-740",
       "title": "M-740 Stage 2 — self-hosted nodule-header recogniser (2026-07-05)",
       "file": "CHANGELOG.md",
-      "line": 1380,
+      "line": 1425,
       "summary": "M-740 Stage 2 — self-hosted nodule-header recogniser (2026-07-05)",
       "tag": "Empirical/Declared"
     },
@@ -49997,7 +50927,7 @@
       "kind": "entry",
       "title": "Kickoff-corpus reconciliation (2026-07-05)",
       "file": "CHANGELOG.md",
-      "line": 1406,
+      "line": 1451,
       "summary": "Kickoff-corpus reconciliation (2026-07-05)",
       "tag": "Empirical/Declared"
     },
@@ -50008,7 +50938,7 @@
       "id": "RFC-0041",
       "title": "RFC-0041 promotion to `main` — recursion-depth safety Enacted with this landing (2026-07-05: M-978 · M-979 · M-959 · M-969 status reconcile)",
       "file": "CHANGELOG.md",
-      "line": 1439,
+      "line": 1484,
       "summary": "RFC-0041 promotion to `main` — recursion-depth safety Enacted with this landing (2026-07-05: M-978 · M-979 · M-959 · M-969 status reconcile)",
       "tag": "Empirical/Declared"
     },
@@ -50019,7 +50949,7 @@
       "id": "RFC-0041",
       "title": "RFC-0041 W7 — Enacted-closure wave: the §9 DoD open items closed or honestly re-scoped (2026-07-03: M-979)",
       "file": "CHANGELOG.md",
-      "line": 1462,
+      "line": 1507,
       "summary": "RFC-0041 W7 — Enacted-closure wave: the §9 DoD open items closed or honestly re-scoped (2026-07-03: M-979)",
       "tag": "Empirical/Declared"
     },
@@ -50030,7 +50960,7 @@
       "id": "RFC-0041",
       "title": "RFC-0041 W6 — data-spine iteration: the wide-tuple asymmetry documented (RFC-0041 Phase-4 COMPLETE) (2026-07-03: M-979)",
       "file": "CHANGELOG.md",
-      "line": 1498,
+      "line": 1543,
       "summary": "RFC-0041 W6 — data-spine iteration: the wide-tuple asymmetry documented (RFC-0041 Phase-4 COMPLETE) (2026-07-03: M-979)",
       "tag": "Empirical/Declared"
     },
@@ -50041,7 +50971,7 @@
       "id": "RFC-0041",
       "title": "RFC-0041 W4 — L0 reference-interpreter budgeted work-stack; the flagship `myc run` SIGABRT closed (2026-07-03: M-979)",
       "file": "CHANGELOG.md",
-      "line": 1530,
+      "line": 1575,
       "summary": "RFC-0041 W4 — L0 reference-interpreter budgeted work-stack; the flagship `myc run` SIGABRT closed (2026-07-03: M-979)",
       "tag": "Empirical/Declared"
     },
@@ -50052,7 +50982,7 @@
       "id": "RFC-0041",
       "title": "RFC-0041 W3+W5 — frozen-core iterative destruction, L1-eval CEK machine, TCO, eval raise (2026-07-03: M-979)",
       "file": "CHANGELOG.md",
-      "line": 1559,
+      "line": 1604,
       "summary": "RFC-0041 W3+W5 — frozen-core iterative destruction, L1-eval CEK machine, TCO, eval raise (2026-07-03: M-979)",
       "tag": "Empirical/Declared"
     },
@@ -50063,7 +50993,7 @@
       "id": "RFC-0041",
       "title": "RFC-0041 W3½ — AOT env-machine extraction onto the shared budget (2026-07-03: M-979)",
       "file": "CHANGELOG.md",
-      "line": 1605,
+      "line": 1650,
       "summary": "RFC-0041 W3½ — AOT env-machine extraction onto the shared budget (2026-07-03: M-979)",
       "tag": "Empirical/Declared"
     },
@@ -50074,7 +51004,7 @@
       "id": "RFC-0041",
       "title": "RFC-0041 W2 — host-stack grow, startup assertion, frame baseline (2026-07-03: M-979)",
       "file": "CHANGELOG.md",
-      "line": 1627,
+      "line": 1672,
       "summary": "RFC-0041 W2 — host-stack grow, startup assertion, frame baseline (2026-07-03: M-979)",
       "tag": "Empirical/Declared"
     },
@@ -50085,7 +51015,7 @@
       "id": "RFC-0041",
       "title": "RFC-0041 W1 — budget crate + frontend guard wiring (2026-07-03: M-979)",
       "file": "CHANGELOG.md",
-      "line": 1656,
+      "line": 1701,
       "summary": "RFC-0041 W1 — budget crate + frontend guard wiring (2026-07-03: M-979)",
       "tag": "Empirical/Declared"
     },
@@ -50096,7 +51026,7 @@
       "id": "RFC-0041",
       "title": "RFC-0041 W0 — recursion-depth safety net (gates + metric + census; 2026-07-03: M-979)",
       "file": "CHANGELOG.md",
-      "line": 1700,
+      "line": 1745,
       "summary": "RFC-0041 W0 — recursion-depth safety net (gates + metric + census; 2026-07-03: M-979)",
       "tag": "Empirical/Declared"
     },
@@ -50107,7 +51037,7 @@
       "id": "DN-84",
       "title": "DN-84 — dynamic host-stack + unified deterministic depth budget (2026-07-03: M-978 · M-979)",
       "file": "CHANGELOG.md",
-      "line": 1731,
+      "line": 1776,
       "summary": "DN-84 — dynamic host-stack + unified deterministic depth budget (2026-07-03: M-978 · M-979)",
       "tag": "Empirical/Declared"
     },
@@ -50118,7 +51048,7 @@
       "id": "ADR-041",
       "title": "Toolchain + dependency freshness: MSRV → 1.96.1, workspace deps refreshed (2026-07-03: ADR-041)",
       "file": "CHANGELOG.md",
-      "line": 1745,
+      "line": 1790,
       "summary": "Toolchain + dependency freshness: MSRV → 1.96.1, workspace deps refreshed (2026-07-03: ADR-041)",
       "tag": "Empirical/Declared"
     },
@@ -50129,7 +51059,7 @@
       "id": "M-976",
       "title": "Human-readable `.myc` formatting + `Vec` list literal (2026-07-03: M-976 · M-977)",
       "file": "CHANGELOG.md",
-      "line": 1770,
+      "line": 1815,
       "summary": "Human-readable `.myc` formatting + `Vec` list literal (2026-07-03: M-976 · M-977)",
       "tag": "Empirical/Declared"
     },
@@ -50140,7 +51070,7 @@
       "id": "M-969",
       "title": "Kernel freeze declared (2026-07-02: M-969 — the closing act of Phase-I)",
       "file": "CHANGELOG.md",
-      "line": 1792,
+      "line": 1837,
       "summary": "Kernel freeze declared (2026-07-02: M-969 — the closing act of Phase-I)",
       "tag": "Empirical/Declared"
     },
@@ -50150,7 +51080,7 @@
       "kind": "entry",
       "title": "Added / Changed / Fixed (2026-07-02: `grm`/`frz` — lowering-surface close-out, mycfmt readable, transparency fixes)",
       "file": "CHANGELOG.md",
-      "line": 1819,
+      "line": 1864,
       "summary": "Added / Changed / Fixed (2026-07-02: `grm`/`frz` — lowering-surface close-out, mycfmt readable, transparency fixes)",
       "tag": "Empirical/Declared"
     },
@@ -50161,7 +51091,7 @@
       "id": "M-697",
       "title": "Added (2026-07-02: M-697 — language identity and full-surface syntax highlighting for `.myc`)",
       "file": "CHANGELOG.md",
-      "line": 1866,
+      "line": 1911,
       "summary": "Added (2026-07-02: M-697 — language identity and full-surface syntax highlighting for `.myc`)",
       "tag": "Empirical/Declared"
     },
@@ -50172,7 +51102,7 @@
       "id": "M-971",
       "title": "Fixed (2026-07-02: M-971 — DN-68 acyclic-deps regression, 12 to 0 violations; dev to integration close-out)",
       "file": "CHANGELOG.md",
-      "line": 1905,
+      "line": 1950,
       "summary": "Fixed (2026-07-02: M-971 — DN-68 acyclic-deps regression, 12 to 0 violations; dev to integration close-out)",
       "tag": "Empirical/Declared"
     },
@@ -50182,7 +51112,7 @@
       "kind": "entry",
       "title": "Added (2026-07-02: Phase-I H1 wave — enb enablers, opp ports, grm/frz dossiers; integration close-out)",
       "file": "CHANGELOG.md",
-      "line": 1932,
+      "line": 1977,
       "summary": "Added (2026-07-02: Phase-I H1 wave — enb enablers, opp ports, grm/frz dossiers; integration close-out)",
       "tag": "Empirical/Declared"
     },
@@ -50192,7 +51122,7 @@
       "kind": "entry",
       "title": "Changed (2026-07-02: Phase-I H1 wave — decision dispositions and status transitions)",
       "file": "CHANGELOG.md",
-      "line": 1975,
+      "line": 2020,
       "summary": "Changed (2026-07-02: Phase-I H1 wave — decision dispositions and status transitions)",
       "tag": "Empirical/Declared"
     },
@@ -50202,7 +51132,7 @@
       "kind": "entry",
       "title": "Added (2026-07-02: kickoff `acy` — Phase-I H0 acyclic-deps hardening, integration close-out)",
       "file": "CHANGELOG.md",
-      "line": 2003,
+      "line": 2048,
       "summary": "Added (2026-07-02: kickoff `acy` — Phase-I H0 acyclic-deps hardening, integration close-out)",
       "tag": "Empirical/Declared"
     },
@@ -50213,7 +51143,7 @@
       "id": "ADR-038",
       "title": "Changed (2026-07-01: ADR-038 ratified — Accepted; FLAG-V1/V2 resolved)",
       "file": "CHANGELOG.md",
-      "line": 2050,
+      "line": 2095,
       "summary": "Changed (2026-07-01: ADR-038 ratified — Accepted; FLAG-V1/V2 resolved)",
       "tag": "Empirical/Declared"
     },
@@ -50224,7 +51154,7 @@
       "id": "ADR-038",
       "title": "Changed (2026-07-01: ADR-038 refinement — versioning axis + execution doctrine, still Proposed)",
       "file": "CHANGELOG.md",
-      "line": 2073,
+      "line": 2118,
       "summary": "Changed (2026-07-01: ADR-038 refinement — versioning axis + execution doctrine, still Proposed)",
       "tag": "Empirical/Declared"
     },
@@ -50235,7 +51165,7 @@
       "id": "ADR-038",
       "title": "Added (2026-07-01: ADR-038 Proposed — function-first release strategy + the road-to-1.0.0 umbrella roadmap)",
       "file": "CHANGELOG.md",
-      "line": 2097,
+      "line": 2142,
       "summary": "Added (2026-07-01: ADR-038 Proposed — function-first release strategy + the road-to-1.0.0 umbrella roadmap)",
       "tag": "Empirical/Declared"
     },
@@ -50246,7 +51176,7 @@
       "id": "M-873",
       "title": "Added (2026-07-01: M-873 follow-on — transpiler hardening: width_cast emission, batch mode, 8-twin union backlog)",
       "file": "CHANGELOG.md",
-      "line": 2131,
+      "line": 2176,
       "summary": "Added (2026-07-01: M-873 follow-on — transpiler hardening: width_cast emission, batch mode, 8-twin union backlog)",
       "tag": "Empirical/Declared"
     },
@@ -50257,7 +51187,7 @@
       "id": "M-873",
       "title": "Added (2026-07-01: M-873 — Rust→Mycelium transpiler PoC + prioritized surface-feature backlog)",
       "file": "CHANGELOG.md",
-      "line": 2154,
+      "line": 2199,
       "summary": "Added (2026-07-01: M-873 — Rust→Mycelium transpiler PoC + prioritized surface-feature backlog)",
       "tag": "Empirical/Declared"
     },
@@ -50268,7 +51198,7 @@
       "id": "M-872",
       "title": "Added (2026-07-01: M-872 — remote registry name@version immutability + dogfooding effort/usage assessment)",
       "file": "CHANGELOG.md",
-      "line": 2182,
+      "line": 2227,
       "summary": "Added (2026-07-01: M-872 — remote registry name@version immutability + dogfooding effort/usage assessment)",
       "tag": "Empirical/Declared"
     },
@@ -50279,7 +51209,7 @@
       "id": "ADR-037",
       "title": "Added (2026-07-01: ADR-037 / M-871 — remote spore registry: GHCR/OCI dense-map distribution + live dogfood)",
       "file": "CHANGELOG.md",
-      "line": 2200,
+      "line": 2245,
       "summary": "Added (2026-07-01: ADR-037 / M-871 — remote spore registry: GHCR/OCI dense-map distribution + live dogfood)",
       "tag": "Empirical/Declared"
     },
@@ -50290,7 +51220,7 @@
       "id": "M-870",
       "title": "Added (2026-07-01: M-870 — third-party attributions + NOTICE generation)",
       "file": "CHANGELOG.md",
-      "line": 2234,
+      "line": 2279,
       "summary": "Added (2026-07-01: M-870 — third-party attributions + NOTICE generation)",
       "tag": "Empirical/Declared"
     },
@@ -50301,7 +51231,7 @@
       "id": "M-363",
       "title": "Added (2026-07-01: M-363 follow-up — myc-doc BOOK output + a Podman/Docker docs container)",
       "file": "CHANGELOG.md",
-      "line": 2255,
+      "line": 2300,
       "summary": "Added (2026-07-01: M-363 follow-up — myc-doc BOOK output + a Podman/Docker docs container)",
       "tag": "Empirical/Declared"
     },
@@ -50312,7 +51242,7 @@
       "id": "M-865",
       "title": "Added (2026-07-01: M-865 — harness-level parallel AOT/JIT dispatch extending M-862's pure-arg batch)",
       "file": "CHANGELOG.md",
-      "line": 2301,
+      "line": 2346,
       "summary": "Added (2026-07-01: M-865 — harness-level parallel AOT/JIT dispatch extending M-862's pure-arg batch)",
       "tag": "Empirical/Declared"
     },
@@ -50323,7 +51253,7 @@
       "id": "M-864",
       "title": "Changed (2026-07-01: M-864 — persistent bounded work-stealing pool for the Scheduler, nested-safe submission)",
       "file": "CHANGELOG.md",
-      "line": 2336,
+      "line": 2381,
       "summary": "Changed (2026-07-01: M-864 — persistent bounded work-stealing pool for the Scheduler, nested-safe submission)",
       "tag": "Empirical/Declared"
     },
@@ -50334,7 +51264,7 @@
       "id": "ADR-036",
       "title": "Added (2026-07-01: ADR-036 — dogfooding and public-release strategy ratified)",
       "file": "CHANGELOG.md",
-      "line": 2401,
+      "line": 2446,
       "summary": "Added (2026-07-01: ADR-036 — dogfooding and public-release strategy ratified)",
       "tag": "Empirical/Declared"
     },
@@ -50345,7 +51275,7 @@
       "id": "ADR-035",
       "title": "Added (2026-07-01: Phase-2 ratification — ADR-035 T4 scope amendment + RFC-0033/ADR-025..028 ratification)",
       "file": "CHANGELOG.md",
-      "line": 2421,
+      "line": 2466,
       "summary": "Added (2026-07-01: Phase-2 ratification — ADR-035 T4 scope amendment + RFC-0033/ADR-025..028 ratification)",
       "tag": "Empirical/Declared"
     },
@@ -50356,7 +51286,7 @@
       "id": "M-863",
       "title": "Changed (2026-07-01: M-863 — AOT ratification act: RFC-0029 → Enacted, DN-15 → Resolved, E15-1/E25-1/E19-1 status flips)",
       "file": "CHANGELOG.md",
-      "line": 2457,
+      "line": 2502,
       "summary": "Changed (2026-07-01: M-863 — AOT ratification act: RFC-0029 → Enacted, DN-15 → Resolved, E15-1/E25-1/E19-1 status flips)",
       "tag": "Empirical/Declared"
     },
@@ -50366,7 +51296,7 @@
       "kind": "entry",
       "title": "Added (2026-07-01: Wave-1 — native-scheduler parallelism, dialect Dense/VSA, stdlib freeze, governance gates)",
       "file": "CHANGELOG.md",
-      "line": 2494,
+      "line": 2539,
       "summary": "Added (2026-07-01: Wave-1 — native-scheduler parallelism, dialect Dense/VSA, stdlib freeze, governance gates)",
       "tag": "Empirical/Declared"
     },
@@ -50376,7 +51306,7 @@
       "kind": "entry",
       "title": "Documentation (2026-07-01: README/docs decomposition — leaner landing pages, topic-split guides, accuracy pass)",
       "file": "CHANGELOG.md",
-      "line": 2553,
+      "line": 2598,
       "summary": "Documentation (2026-07-01: README/docs decomposition — leaner landing pages, topic-split guides, accuracy pass)",
       "tag": "Empirical/Declared"
     },
@@ -50387,7 +51317,7 @@
       "id": "E25-1",
       "title": "Added (2026-06-30: E25-1 staging-tier close-out — dynamic-VSA JIT, dialect Construct/Match/Swap, unified mutant-witnessed differential)",
       "file": "CHANGELOG.md",
-      "line": 2574,
+      "line": 2619,
       "summary": "Added (2026-06-30: E25-1 staging-tier close-out — dynamic-VSA JIT, dialect Construct/Match/Swap, unified mutant-witnessed differential)",
       "tag": "Empirical/Declared"
     },
@@ -50398,7 +51328,7 @@
       "id": "E25-1",
       "title": "Added (2026-06-30: E25-1 native-AOT full-coverage increments land — recursion, closures, Swap, Dense, VSA, trit.mul dialect)",
       "file": "CHANGELOG.md",
-      "line": 2623,
+      "line": 2668,
       "summary": "Added (2026-06-30: E25-1 native-AOT full-coverage increments land — recursion, closures, Swap, Dense, VSA, trit.mul dialect)",
       "tag": "Empirical/Declared"
     },
@@ -50409,7 +51339,7 @@
       "id": "RFC-0039",
       "title": "Added (2026-06-30: RFC-0039 — Native Dense & VSA Codegen, Accepted)",
       "file": "CHANGELOG.md",
-      "line": 2717,
+      "line": 2762,
       "summary": "Added (2026-06-30: RFC-0039 — Native Dense & VSA Codegen, Accepted)",
       "tag": "Empirical/Declared"
     },
@@ -50419,7 +51349,7 @@
       "kind": "entry",
       "title": "Fixed (2026-06-30: branch-guard PreToolUse hook — worktree resolution)",
       "file": "CHANGELOG.md",
-      "line": 2736,
+      "line": 2781,
       "summary": "Fixed (2026-06-30: branch-guard PreToolUse hook — worktree resolution)",
       "tag": "Empirical/Declared"
     },
@@ -50429,7 +51359,7 @@
       "kind": "entry",
       "title": "Added (2026-06-30: concurrent-PR pattern operationalized as parameterized skills — `/wave`, `/pr-land`, `/worktree-guard`)",
       "file": "CHANGELOG.md",
-      "line": 2748,
+      "line": 2793,
       "summary": "Added (2026-06-30: concurrent-PR pattern operationalized as parameterized skills — `/wave`, `/pr-land`, `/worktree-guard`)",
       "tag": "Empirical/Declared"
     },
@@ -50440,7 +51370,7 @@
       "id": "ADR-034",
       "title": "Changed (2026-06-30: ADR-034 — native AOT re-gated INTO `lang 1.0.0`)",
       "file": "CHANGELOG.md",
-      "line": 2771,
+      "line": 2816,
       "summary": "Changed (2026-06-30: ADR-034 — native AOT re-gated INTO `lang 1.0.0`)",
       "tag": "Empirical/Declared"
     },
@@ -50451,7 +51381,7 @@
       "id": "RFC-0038",
       "title": "Changed (2026-06-29: RFC-0038 ratified — `Proposed → Accepted`)",
       "file": "CHANGELOG.md",
-      "line": 2794,
+      "line": 2839,
       "summary": "Changed (2026-06-29: RFC-0038 ratified — `Proposed → Accepted`)",
       "tag": "Empirical/Declared"
     },
@@ -50462,7 +51392,7 @@
       "id": "RFC-0038",
       "title": "Changed (2026-06-29: RFC-0038 §8.8 — colony trust topology + #772 review fixes, M-849)",
       "file": "CHANGELOG.md",
-      "line": 2805,
+      "line": 2850,
       "summary": "Changed (2026-06-29: RFC-0038 §8.8 — colony trust topology + #772 review fixes, M-849)",
       "tag": "Empirical/Declared"
     },
@@ -50473,7 +51403,7 @@
       "id": "DN-65",
       "title": "Added (2026-06-29: DN-65 — scoped-PR decomposition & per-PR toolchain scoping workflow policy, M-848)",
       "file": "CHANGELOG.md",
-      "line": 2822,
+      "line": 2867,
       "summary": "Added (2026-06-29: DN-65 — scoped-PR decomposition & per-PR toolchain scoping workflow policy, M-848)",
       "tag": "Empirical/Declared"
     },
@@ -50484,7 +51414,7 @@
       "id": "RFC-0038",
       "title": "Changed (2026-06-29: RFC-0038 §8.4–§8.7 — enforcement granularity, scope resolution, and the deviation manifest, M-847)",
       "file": "CHANGELOG.md",
-      "line": 2835,
+      "line": 2880,
       "summary": "Changed (2026-06-29: RFC-0038 §8.4–§8.7 — enforcement granularity, scope resolution, and the deviation manifest, M-847)",
       "tag": "Empirical/Declared"
     },
@@ -50495,7 +51425,7 @@
       "id": "M-832",
       "title": "Added (2026-06-29: VSA proof-discovery — all three effective-`m` models + both Lean 4 and Liquid Haskell, M-832)",
       "file": "CHANGELOG.md",
-      "line": 2852,
+      "line": 2897,
       "summary": "Added (2026-06-29: VSA proof-discovery — all three effective-`m` models + both Lean 4 and Liquid Haskell, M-832)",
       "tag": "Empirical/Declared"
     },
@@ -50506,7 +51436,7 @@
       "id": "DN-64",
       "title": "Added (2026-06-29: DN-64 §7 maintainer dispositions — RFC-0038 inject-mode security axis, research/26+27 R&D records, VSA-bounds GPU experiment, M-827…M-846)",
       "file": "CHANGELOG.md",
-      "line": 2868,
+      "line": 2913,
       "summary": "Added (2026-06-29: DN-64 §7 maintainer dispositions — RFC-0038 inject-mode security axis, research/26+27 R&D records, VSA-bounds GPU experiment, M-827…M-846)",
       "tag": "Empirical/Declared"
     },
@@ -50517,7 +51447,7 @@
       "id": "M-822",
       "title": "Added (2026-06-29: serial-lane closeout — M-822 partial application, M-826 tuple type, M-823 or-patterns + R20-Q5, M-824 DN-54 design-pass, M-825 backbone)",
       "file": "CHANGELOG.md",
-      "line": 2906,
+      "line": 2951,
       "summary": "Added (2026-06-29: serial-lane closeout — M-822 partial application, M-826 tuple type, M-823 or-patterns + R20-Q5, M-824 DN-54 design-pass, M-825 backbone)",
       "tag": "Empirical/Declared"
     },
@@ -50528,7 +51458,7 @@
       "id": "DN-64",
       "title": "Added (2026-06-29: DN-64 — language-design synthesis exploration note, research aside)",
       "file": "CHANGELOG.md",
-      "line": 2938,
+      "line": 2983,
       "summary": "Added (2026-06-29: DN-64 — language-design synthesis exploration note, research aside)",
       "tag": "Empirical/Declared"
     },
@@ -50539,7 +51469,7 @@
       "id": "DN-57",
       "title": "Changed (2026-06-29: DN-57 → Enacted — delimiter semantics surface complete)",
       "file": "CHANGELOG.md",
-      "line": 2950,
+      "line": 2995,
       "summary": "Changed (2026-06-29: DN-57 → Enacted — delimiter semantics surface complete)",
       "tag": "Empirical/Declared"
     },
@@ -50550,7 +51480,7 @@
       "id": "M-819",
       "title": "Added (2026-06-29: next-wave — M-819 `mycfmt --flatten`, M-820 `myc --stream`, M-677 effect budgets, M-668 DN-63 R2 planning)",
       "file": "CHANGELOG.md",
-      "line": 2963,
+      "line": 3008,
       "summary": "Added (2026-06-29: next-wave — M-819 `mycfmt --flatten`, M-820 `myc --stream`, M-677 effect budgets, M-668 DN-63 R2 planning)",
       "tag": "Empirical/Declared"
     },
@@ -50561,7 +51491,7 @@
       "id": "M-818",
       "title": "Changed (2026-06-29: strm — M-818 mandatory `;` component terminator (DN-57); closes M-821)",
       "file": "CHANGELOG.md",
-      "line": 3007,
+      "line": 3052,
       "summary": "Changed (2026-06-29: strm — M-818 mandatory `;` component terminator (DN-57); closes M-821)",
       "tag": "Empirical/Declared"
     },
@@ -50572,7 +51502,7 @@
       "id": "DN-54",
       "title": "Added (2026-06-29: lwd — M-812-cont DN-54 `lower`/`derive` elaboration + KC-3 kernel-growth guard)",
       "file": "CHANGELOG.md",
-      "line": 3034,
+      "line": 3079,
       "summary": "Added (2026-06-29: lwd — M-812-cont DN-54 `lower`/`derive` elaboration + KC-3 kernel-growth guard)",
       "tag": "Empirical/Declared"
     },
@@ -50583,7 +51513,7 @@
       "id": "M-704",
       "title": "Added (2026-06-29: hof — M-704 dynamic higher-order functions / closures, RFC-0024 §4A)",
       "file": "CHANGELOG.md",
-      "line": 3060,
+      "line": 3105,
       "summary": "Added (2026-06-29: hof — M-704 dynamic higher-order functions / closures, RFC-0024 §4A)",
       "tag": "Empirical/Declared"
     },
@@ -50594,7 +51524,7 @@
       "id": "RFC-0020",
       "title": "Changed (2026-06-29: s10 — RFC-0020 carve-out enactment (M-707) + RFC-0030 grammar completeness (M-706))",
       "file": "CHANGELOG.md",
-      "line": 3091,
+      "line": 3136,
       "summary": "Changed (2026-06-29: s10 — RFC-0020 carve-out enactment (M-707) + RFC-0030 grammar completeness (M-706))",
       "tag": "Empirical/Declared"
     },
@@ -50605,7 +51535,7 @@
       "id": "M-664",
       "title": "Added (2026-06-28: srf — M-664 `consume` expression + inherent `impl T { … }` blocks)",
       "file": "CHANGELOG.md",
-      "line": 3117,
+      "line": 3162,
       "summary": "Added (2026-06-28: srf — M-664 `consume` expression + inherent `impl T { … }` blocks)",
       "tag": "Empirical/Declared"
     },
@@ -50616,7 +51546,7 @@
       "id": "DN-58",
       "title": "Added (2026-06-28: prm wave — `fuse` (data) + `reclaim` EXECUTE three-way; DN-58 → Enacted, M-710/M-817 done)",
       "file": "CHANGELOG.md",
-      "line": 3147,
+      "line": 3192,
       "summary": "Added (2026-06-28: prm wave — `fuse` (data) + `reclaim` EXECUTE three-way; DN-58 → Enacted, M-710/M-817 done)",
       "tag": "Empirical/Declared"
     },
@@ -50627,7 +51557,7 @@
       "id": "DN-40",
       "title": "Changed (2026-06-28: `hrd` — DN-40 A1/A2/A3 doc-drift closure; code already landed, docs reconciled)",
       "file": "CHANGELOG.md",
-      "line": 3180,
+      "line": 3225,
       "summary": "Changed (2026-06-28: `hrd` — DN-40 A1/A2/A3 doc-drift closure; code already landed, docs reconciled)",
       "tag": "Empirical/Declared"
     },
@@ -50638,7 +51568,7 @@
       "id": "M-745",
       "title": "Added (2026-06-28: ops kickoff — M-745 angle/shift operators wired in `mycelium-l1`)",
       "file": "CHANGELOG.md",
-      "line": 3199,
+      "line": 3244,
       "summary": "Added (2026-06-28: ops kickoff — M-745 angle/shift operators wired in `mycelium-l1`)",
       "tag": "Empirical/Declared"
     },
@@ -50649,7 +51579,7 @@
       "id": "ADR-033",
       "title": "Added (2026-06-28: r4v + ADR-033 FLAG-1 integration wave — fuse/reclaim/tier L1 surface ACTIVE; ADR-033 full-sig encoding landed)",
       "file": "CHANGELOG.md",
-      "line": 3230,
+      "line": 3275,
       "summary": "Added (2026-06-28: r4v + ADR-033 FLAG-1 integration wave — fuse/reclaim/tier L1 surface ACTIVE; ADR-033 full-sig encoding landed)",
       "tag": "Empirical/Declared"
     },
@@ -50659,7 +51589,7 @@
       "kind": "entry",
       "title": "Added (2026-06-28: obj+low integration wave — `object`/`via` + `lower`/`derive` surface, Rust-first)",
       "file": "CHANGELOG.md",
-      "line": 3266,
+      "line": 3311,
       "summary": "Added (2026-06-28: obj+low integration wave — `object`/`via` + `lower`/`derive` surface, Rust-first)",
       "tag": "Empirical/Declared"
     },
@@ -50669,7 +51599,7 @@
       "kind": "entry",
       "title": "Added (2026-06-28: maintainer ratification — 8 design vehicles → Accepted, decisions recorded)",
       "file": "CHANGELOG.md",
-      "line": 3300,
+      "line": 3345,
       "summary": "Added (2026-06-28: maintainer ratification — 8 design vehicles → Accepted, decisions recorded)",
       "tag": "Empirical/Declared"
     },
@@ -50679,7 +51609,7 @@
       "kind": "entry",
       "title": "Older entries",
       "file": "CHANGELOG.md",
-      "line": 3311,
+      "line": 3356,
       "summary": "Older entries",
       "tag": "Empirical/Declared"
     },
