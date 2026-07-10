@@ -43,6 +43,15 @@ prerequisite the prior self-contained `cargo run -p mycelium-tero` did not have 
 the trim-pass PR description for the tradeoff and the maintainer decision it's gated on (make the
 repo public, vendor the binary, or accept the `gh`-auth prerequisite as-is).
 
+**Exit-code contract + platform pin (fetch script, hardened 2026-07-10).** `fetch-tero-index.sh`
+returns `0` = resolved, `1` = NOT-FETCHABLE (no pin, an unsupported host platform, no/unauthenticated
+`gh`, or a failed download) so the gate SKIPS, and `4` = a freshly-downloaded asset FAILED its pinned
+SHA256 so the gate FAILS loudly — a tampering signal is never degraded to a skip (G2). The mismatched
+download stays in a temp dir (trap-cleaned) and is never moved into the cache, so no unverified
+artifact is left behind. The pinned asset is `linux-x86_64` only, so a non-matching host takes the
+not-fetchable/skip path rather than fetching a binary it cannot execute; add per-platform assets here
+if the release later ships them.
+
 ## Bump policy
 
 Bumping the pin (a new tero-rs release) is a **source-repo change, not a mycelium change** per the

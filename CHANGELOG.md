@@ -12,41 +12,6 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
-### chore(extract): trim vendored tero dev-source; wire to published tero (2026-07-10)
-
-`crates/mycelium-tero` (DN-87/E39-1, M-1015…M-1018) was extracted verbatim into its own published
-repo, `tzervas/tero-rs` (private, renamed `tero`), which now ships binaries + a container image at
-`v0.1.3`. This trim removes the in-tree crate mycelium was still recompiling on every `tero-index`
-regeneration and rewires the gate to consume the published binary instead — a build-speed win with
-no behavior change, verified `Empirical`.
-
-- **Removed:** `crates/mycelium-tero/` (workspace member + all source); the `tokio`/`axum`
-  workspace dependencies added at M-1017 solely for its HTTP front (no other consumer); its
-  `xtask/deps-strata.toml` stratum/tier entries.
-- **Added:** `scripts/fetch-tero-index.sh` — resolves a checksum-verified, cached `tero-index`
-  binary from the pinned `tero-rs` release (`tools/tero-rs/PROVENANCE.md` + `SHA256SUMS.txt`),
-  fetching via an authenticated `gh` (the repo is private) on a cache miss. `scripts/checks/tero-index.sh`
-  and `just tero-index-gen` now run this binary instead of `cargo run -p mycelium-tero`; the gate
-  stays skip-graceful (no cached-or-fetchable binary ⇒ skip, never a false-red).
-- **Kept as-is:** `packages/tero-mcp-lite/` and the `.mcp.json` `tero` MCP registration — this
-  vendored, zero-dependency Python server (no compile step) is an intentional *consumed* snapshot,
-  not development source; `.mcp.json` already ran it, unaffected by this trim.
-- **Verified before removal (Empirical, not just claimed):** a three-way differential —
-  `cargo run -p mycelium-tero --bin tero-index` (in-tree, pre-removal) vs. the downloaded/
-  checksum-verified `tero-index-v0.1.3-linux-x86_64` binary vs. the already-committed
-  `docs/tero-index/` — all three byte-identical (`index.json` + `INDEX.md`). Post-removal:
-  `cargo build --workspace` clean, `scripts/checks/deps-acyclic.sh` green, `python3
-  tools/github/doc_refs_check.py` clean (one dangling `M-1015` `src:` ref to the removed crate
-  repointed to `tools/tero-rs/PROVENANCE.md`), `docs/api-index/` + `docs/tero-index/` regenerated.
-- **FLAGGED for the maintainer (not executed here):** the private-repo prerequisite. Fetching a
-  fresh (uncached) `tero-index` binary now requires an authenticated `gh` CLI with read access to
-  `tzervas/tero-rs` — a new prerequisite the prior self-contained `cargo run -p mycelium-tero` did
-  not have. Options: make `tero-rs` public, vendor the binary (checked into a release asset /
-  `git-lfs`), or accept the `gh`-auth prerequisite as the standing cost (current default — the gate
-  degrades to a graceful skip, never a false-red, when it's unmet). This pattern (verify via
-  differential → remove recompiled dev-source → consume a pinned published artifact) generalizes to
-  the other tools extracted per the workspace-tools publish program.
-
 ### docs(notes): maintainer ratification batch — DN-101 through DN-109 (2026-07-11)
 
 Records the maintainer's ratification decisions on all nine ENB/design-reasoner notes from the
@@ -107,6 +72,41 @@ ratified).
 `tools/github/issues.yaml` gains **M-1048…M-1053** (all `status:todo`) plus progress notes on
 **M-1025** and **M-1036**; validated (`python3 -c "import yaml; yaml.safe_load(...)"` clean, no
 duplicate ids; `doc_refs_check.py` clean). `scripts/checks/markdown.sh` green on all touched `.md`.
+
+### chore(extract): trim vendored tero dev-source; wire to published tero (2026-07-10)
+
+`crates/mycelium-tero` (DN-87/E39-1, M-1015…M-1018) was extracted verbatim into its own published
+repo, `tzervas/tero-rs` (private, renamed `tero`), which now ships binaries + a container image at
+`v0.1.3`. This trim removes the in-tree crate mycelium was still recompiling on every `tero-index`
+regeneration and rewires the gate to consume the published binary instead — a build-speed win with
+no behavior change, verified `Empirical`.
+
+- **Removed:** `crates/mycelium-tero/` (workspace member + all source); the `tokio`/`axum`
+  workspace dependencies added at M-1017 solely for its HTTP front (no other consumer); its
+  `xtask/deps-strata.toml` stratum/tier entries.
+- **Added:** `scripts/fetch-tero-index.sh` — resolves a checksum-verified, cached `tero-index`
+  binary from the pinned `tero-rs` release (`tools/tero-rs/PROVENANCE.md` + `SHA256SUMS.txt`),
+  fetching via an authenticated `gh` (the repo is private) on a cache miss. `scripts/checks/tero-index.sh`
+  and `just tero-index-gen` now run this binary instead of `cargo run -p mycelium-tero`; the gate
+  stays skip-graceful (no cached-or-fetchable binary ⇒ skip, never a false-red), while a freshly-downloaded asset that fails its pinned SHA256 hard-fails the gate (a supply-chain tampering signal, never a skip) and an unsupported host platform takes the skip path (the pin ships a `linux-x86_64` asset).
+- **Kept as-is:** `packages/tero-mcp-lite/` and the `.mcp.json` `tero` MCP registration — this
+  vendored, zero-dependency Python server (no compile step) is an intentional *consumed* snapshot,
+  not development source; `.mcp.json` already ran it, unaffected by this trim.
+- **Verified before removal (Empirical, not just claimed):** a three-way differential —
+  `cargo run -p mycelium-tero --bin tero-index` (in-tree, pre-removal) vs. the downloaded/
+  checksum-verified `tero-index-v0.1.3-linux-x86_64` binary vs. the already-committed
+  `docs/tero-index/` — all three byte-identical (`index.json` + `INDEX.md`). Post-removal:
+  `cargo build --workspace` clean, `scripts/checks/deps-acyclic.sh` green, `python3
+  tools/github/doc_refs_check.py` clean (one dangling `M-1015` `src:` ref to the removed crate
+  repointed to `tools/tero-rs/PROVENANCE.md`), `docs/api-index/` + `docs/tero-index/` regenerated.
+- **FLAGGED for the maintainer (not executed here):** the private-repo prerequisite. Fetching a
+  fresh (uncached) `tero-index` binary now requires an authenticated `gh` CLI with read access to
+  `tzervas/tero-rs` — a new prerequisite the prior self-contained `cargo run -p mycelium-tero` did
+  not have. Options: make `tero-rs` public, vendor the binary (checked into a release asset /
+  `git-lfs`), or accept the `gh`-auth prerequisite as the standing cost (current default — the gate
+  degrades to a graceful skip, never a false-red, when it's unmet). This pattern (verify via
+  differential → remove recompiled dev-source → consume a pinned published artifact) generalizes to
+  the other tools extracted per the workspace-tools publish program.
 
 ### docs(planning): zero-hand-port delta ledger + DN-109 idiom/structural design (2026-07-10)
 

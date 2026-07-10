@@ -27,12 +27,20 @@ cd "$REPO_ROOT" || exit 1
 
 section "tero-index"
 # Specific reason sub-codes (consumed by all.sh's packed exit byte): 2 = committed index is stale
-# (run `just tero-index-gen` + commit), 3 = the generator failed to run. 0 = current.
+# (run `just tero-index-gen` + commit), 3 = the generator failed to run, 4 = fetched binary FAILED
+# its pinned checksum (a tampering signal — a hard fail, never a skip). 0 = current.
 
-tero_index_bin="$(bash "$SCRIPT_DIR/../fetch-tero-index.sh" 2>&1)" || {
+# Resolve the published tero-index binary. Distinguish a benign not-fetchable gap (skip) from a
+# checksum MISMATCH (fail) by the fetch script's exit code (1 -> skip, 4 -> fail; see its header).
+fetch_rc=0
+tero_index_bin="$(bash "$SCRIPT_DIR/../fetch-tero-index.sh" 2>&1)" || fetch_rc=$?
+if [[ $fetch_rc -eq 4 ]]; then
+  fail "tero-index binary CHECKSUM MISMATCH — refusing to use it (possible tampering) — ${tero_index_bin##*$'\n'}"
+  exit 4
+elif [[ $fetch_rc -ne 0 ]]; then
   skip "tero-index binary unavailable — ${tero_index_bin##*$'\n'}"
   exit 0
-}
+fi
 
 tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT

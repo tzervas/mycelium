@@ -9,10 +9,15 @@
 # out to fetch that consumed artifact.
 #
 # Contract: prints the resolved binary's ABSOLUTE PATH on stdout on success (nothing else — callers
-# can `bin="$(scripts/fetch-tero-index.sh)"`); all diagnostics go to stderr. Exit 0 = resolved
-# (either cache hit or fresh verified fetch), non-zero = unresolved (caller decides skip vs fail;
-# see scripts/checks/tero-index.sh, which treats this as skip-graceful, mirroring the "skip if
-# cargo absent" convention every other Rust gate uses).
+# can `bin="$(scripts/fetch-tero-index.sh)"`); all diagnostics go to stderr. Exit codes are
+# meaningful so the caller can tell a benign environment gap (skip) from a tampering signal (fail):
+#   0 = resolved (cache hit or fresh verified fetch)
+#   1 = UNRESOLVED / NOT FETCHABLE — no pin, unsupported platform, no `gh`, unauthenticated, or the
+#       download failed. A benign environment gap; the caller SKIPS (never a false-red), mirroring
+#       the "skip if cargo absent" convention every other Rust gate uses.
+#   4 = CHECKSUM MISMATCH — a freshly-downloaded asset did not match its pinned SHA256. A
+#       tampering/compromise signal, NOT an environment gap; the caller FAILS loudly, never skips.
+# See scripts/checks/tero-index.sh, which maps 1->skip and 4->fail (G2: a mismatch is never silent).
 #
 # FLAG (honest, not silent): tero-rs is a PRIVATE repo, so a fresh fetch requires an authenticated
 # `gh` CLI. This is a new prerequisite the prior self-contained `cargo run -p mycelium-tero` did not
@@ -27,6 +32,20 @@ PIN_VERSION="v0.1.3"
 ASSET="tero-index-v0.1.3-linux-x86_64"
 CACHE_DIR="${MYCELIUM_TERO_CACHE:-$HOME/.cache/mycelium/tero-rs}"
 BIN_PATH="$CACHE_DIR/$ASSET"
+
+# Platform guard: the pin (SHA256SUMS.txt) ships a linux-x86_64 asset only. On any other host the
+# downloaded binary could pass the checksum yet fail to *execute*, which would surface as a hard
+# error downstream rather than the intended skip. So refuse early with exit 1 (NOT-FETCHABLE ->
+# skip), never a false-red. (Add per-platform asset selection here if the release later ships more.)
+_os="$(uname -s 2>/dev/null || echo unknown)"
+_arch="$(uname -m 2>/dev/null || echo unknown)"
+case "$_os/$_arch" in
+  Linux/x86_64 | Linux/amd64) : ;;
+  *)
+    echo "fetch-tero-index: pinned asset $ASSET is linux-x86_64 only; this host is $_os/$_arch — no fetchable binary (skip, not a failure)" >&2
+    exit 1
+    ;;
+esac
 
 sha256_of() { sha256sum "$1" 2>/dev/null | awk '{print $1}'; }
 expected_sha256() { grep -F " $ASSET" "$PIN_DIR/SHA256SUMS.txt" 2>/dev/null | awk '{print $1}'; }
@@ -63,8 +82,11 @@ fi
 
 got="$(sha256_of "$tmpdir/$ASSET")"
 if [[ "$got" != "$expected" ]]; then
-  echo "fetch-tero-index: CHECKSUM MISMATCH for $ASSET — expected $expected, got $got. Refusing to use it (see tools/tero-rs/PROVENANCE.md before re-pinning)." >&2
-  exit 1
+  echo "fetch-tero-index: CHECKSUM MISMATCH for $ASSET — expected $expected, got $got. Refusing to use it (possible tampering; see tools/tero-rs/PROVENANCE.md before re-pinning)." >&2
+  # exit 4 (NOT 1): a mismatch is a supply-chain tampering signal, not a benign not-fetchable gap —
+  # the caller must FAIL, never skip. The mismatched download stays in $tmpdir (trap-cleaned), never
+  # moved into the cache, so no partial/unverified artifact is left behind.
+  exit 4
 fi
 
 chmod +x "$tmpdir/$ASSET"
