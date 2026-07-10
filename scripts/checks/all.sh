@@ -10,7 +10,7 @@ cd "$REPO_ROOT" || exit 1
 # the user's terminal, so colors should survive.
 [[ -t 1 ]] && export MYC_FORCE_COLOR=1
 
-checks=(structured shell markdown links doc-currency doc-status schema grammar spell secrets format lint safety unsafe-per-use deps-acyclic test myc-fmt myc-check myc-sec myc-lint myc-doc myc-spore myc-dogfood proofs api doc-index lib-index tero-index deny drift license-first-party licenses)
+checks=(structured shell markdown links doc-currency doc-status schema grammar spell secrets format lint safety unsafe-per-use deps-acyclic test myc-fmt myc-check myc-sec myc-lint myc-doc myc-spore myc-dogfood proofs api doc-index lib-index tero-index sugar-index deny drift license-first-party licenses)
 
 # --- Specific exit codes: which component failed, and why -------------------------------------
 # A process exit status is a single byte (0-255), so we pack it: the high 5 bits are a stable
@@ -31,8 +31,10 @@ declare -A COMPONENT_ID=(
   # doc-index's 23 (the same committed-index-drift family): the packed exit byte decodes to the
   # family; the run digest still names the exact failing gate by name. A 32nd unique id requires
   # a byte-scheme redesign (a deliberate decision, not an integration edit) — see M-1015's
-  # close-out note in tools/github/issues.yaml.
+  # close-out note in tools/github/issues.yaml. sugar-index (M-1054; the DN-38 §6 generated
+  # catalog) joins the SAME committed-index-drift family for the same reason.
   [tero-index]=23
+  [sugar-index]=23
 )
 # REASON sub-codes (0-7): 1 = generic failure (a gate that just `exit 1`s). A gate MAY exit 2-6 to
 # name a *specific* failure mode (documented in that gate's script); 7 = an unexpected/other exit
