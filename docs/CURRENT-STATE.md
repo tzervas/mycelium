@@ -87,6 +87,35 @@ digest is a snapshot, that table is live.
 
 ## Active / next work
 
+- **`enb` gap-closure wave in flight (E28-1, ADR-045 unfreeze) — 2026-07-10.** Under the ADR-045
+  whole-project unfreeze (Accepted 2026-07-10), the DN-99 §8 `enb` backlog (M-1024…M-1034) is closing the
+  surface gaps that block the RFC-0031 stdlib port. **Landed this batch** (each three-way witnessed —
+  L1-eval ≡ elaborate→L0-interp ≡ trampoline-AOT — and per-PR `/pr-review`d; `Empirical`):
+  - **M-1024** — cross-nodule runtime execution via `PhylumEnv::link` (ENB-1, first increment; DN-101).
+    Closes transitive cross-nodule calls (a `pub` fn calling its home nodule's private helper); AOT
+    parity is the tracked follow-up.
+  - **M-1025** — the `?` try-operator grammar sugar plus type-directed `match` desugar (ENB-2, first
+    increment; DN-102). v0 is `let`-binder-RHS position only; general-position CPS lift is gated on the
+    never-type (M-1030).
+  - **M-1026** — the impl-level generic-parameter slot `impl[T] Foo[T]` (ENB-3; DN-103). v0 inherent
+    impls only; generic trait instances deferred.
+  - **M-1027** — the per-constructor visibility seal (`priv` ctor) (ENB-4; DN-104). **Honestly scoped: an
+    encapsulation / API-discipline hint, NOT an enforced security/capability boundary** — a foreign
+    nodule's same-named local shadow type bypasses it (bare-name resolution, RFC-0006 §4.3); the real
+    nodule-qualified nominal-identity fix is tracked as **M-1036** (pinned by a `known_gap` differential).
+  - **M-1035** — a `Bytes` scrutinee in `match` (ENB-12; DN-105), unblocking every string-dispatch port
+    target. The trx #72 transpiler emit-flip rode it (**+0.547pp** checked-fraction, 6.193%→6.740%) with
+    a never-silent co-fix that GAPS fabricated ownership/identity-conversion no-ops (the real
+    conversion-op mapping is M-1037).
+  - **M-1033** — statement-sequencing (`let _`) plus record-update triaged (ENB-10; DN-106): **both**
+    sub-gaps' language side is already closed at L1 (three-way witnessed, mitigation #14); the residual is
+    transpiler-lane only, so the L1/semcore residual is NIL.
+  - **Open design-gated residuals** (unfrozen-actionable, not deferred): **M-1028** transcendental / ε-δ
+    float routing (ADR-gated), **M-1030** host-effect real-syscall registry plus the never-type,
+    **M-1036** nodule-qualified nominal type identity (the ctor-seal capability-gate fix), **M-982**
+    cross-nodule name-collision disambiguation. The **Draft DNs 102–106** authored this wave are **pending
+    maintainer ratification** (append-only — specs stay "implemented, pending ratification", never
+    silently `Accepted`).
 - **`trx2` wave 1 landed (2026-07-06, this promotion)** — the M-993 semcore port now plans against
   the DN-34 §8.9 **812-gap ranked worklist** + per-module draft scaffolds instead of porting cold;
   the remaining trx2 work is **M-1006** (the maintainer-decided phased whole-corpus rip-through

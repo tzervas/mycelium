@@ -169,6 +169,7 @@ pub const mycelium_interp::prims::FLT_CMP_CONFORMANCE_METHOD: &str
 pub const mycelium_interp::prims::FLT_CMP_CONFORMANCE_TRIALS: u64
 pub const mycelium_interp::prims::FLT_CONFORMANCE_METHOD: &str
 pub const mycelium_interp::prims::FLT_CONFORMANCE_TRIALS: u64
+pub fn mycelium_interp::prims::eval_wrapping(&str, &[&mycelium_core::value::Value]) -> core::result::Result<mycelium_core::value::Value, mycelium_interp::EvalError>
 pub type mycelium_interp::prims::PrimFn = fn(&str, &[&mycelium_core::value::Value]) -> core::result::Result<mycelium_core::value::Value, mycelium_interp::EvalError>
 pub mod mycelium_interp::supervise
 pub enum mycelium_interp::supervise::Escalation

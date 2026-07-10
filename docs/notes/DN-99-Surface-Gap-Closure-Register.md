@@ -132,7 +132,7 @@ unblocker, e.g. #41).
 | 69 | restricted-visibility-modifier (`pub(crate)`) | idiom | ac | `ast.rs:42`; DN-53 §B.6 Q1 | collapse to binary; field newtype → seal idiom | no `pub(` survives; genuine sub-scope FLAGged | no | DN-53 §B.6 Q1/B.5 | none | S | P2 |
 | 70 | **format-string-mini-language** | **partial** | **ac+rt** | `fmt.myc:19`; `transpile.rs:298`; M-533 | hand-compose over Bytes; Display + `{:.2e}` prim = M-533 | idiom recipe; M-533 DN for float-precision prim | **yes** | M-533; DN-34 §8 | **HIGH** (residual) | L | **P1** |
 | 71 | tuple-let-destructure (transpiler) | partial | tr | `emit.rs:569`; M-826 | `let (a,b)=e`→`match e{(a,b)=>…}` in Stmt::Local | vet: `let (` sites off MultiStmtBody-gap | no | M-1006 | low | S | P2 |
-| 72 | string-literal-pattern | language-enabler | rt | `emit.rs:1458`; DN-34 §8.21; M-1035 | L1 enabler — accept `match` on a `Bytes` scrutinee (M-1035); the transpiler arm emits once it lands (now gapped never-silently, G2) | L1 accepts match-on-`Bytes`; the `emit.rs` gap flips to emitted in lockstep (`string_literal_pattern_gaps_with_l1_enabler_reason`) | yes | M-1035; DN-34 §8.21 | HIGH | S | P2 |
+| 72 | string-literal-pattern | closed | rt | `emit.rs`; DN-34 §8.21; M-1035; PR #1372 | L1 enabler landed (M-1035/ENB-12) AND the transpiler arm now EMITS (PR #1372): `match s { "yes" => True, _ => False }`, `myc check`-clean — emit only WITH a wildcard/default arm (open-`Bytes` W7), else gaps never-silently (G2/VR-5) | closed: `string_literal_pattern_emits_with_l1_enabler` pins emit+defaultless-gap; corpus win awaits conversion-method mapping (M-1037) | no | M-1035; PR #1372; DN-34 §8.21 | low (residual: M-1037) | S | P2 |
 | 73 | or-pattern-in-match-arm | closed | cl | `emit.rs:1466`; M-873; RFC-0020 §9 | none — emits end-to-end (100% witnessed) | one regression fixture (nice-to-have) | no | M-873; RFC-0020 §9 | none | S | P3 |
 | 74 | reserved-word-ctor-declaration | idiom | ac | `lex.myc:96-127`; `core.myc:82` | prefix-rename at decl (Kw-/G-/S-) + FLAG | docs enumerate the decl slot | no | DN-02/03; DN-80 §5 | low | S | P3 |
 | 75 | drop-trait-raii-destructor | idiom | ac | `checkty.rs:49`; `ambient.myc:362` | rewrite RAII as explicit depth-threading | budget-threading differential parity | no | RFC-0031; DN-84 | HIGH (port site) | S | P3 |
@@ -154,7 +154,10 @@ unblocker, e.g. #41).
 | 91 | generic-function-declaration (`fn f<T>`) | closed | cl | `ebnf:162`; `parse.rs:857`; `emit.rs:229` | none — `fn f[T]` landed; `<T>` retired | register corrected to already-closed | no | RFC-0037; RFC-0019 §4.1 | none | S | P3 |
 | 92 | box-recursive-indirection-type (`Box<T>`) | idiom | ac | `map.rs:176`; `ast.myc:44`; `checkty.rs:1652` | Box field → plain `T` (value-semantic recursion) | idiom documented; optional tr erase-arm | no | untracked | low | S | P3 |
 
-**Status tally:** `open` = 4 (#37, #42, #60, #88) · `partial` = 12 (#24, #41, #44, #45, #55, #56, #63, #65, #70, #71, #79, #89) · `already-closed` = 16 · `transpiler-only` = 10 · `idiom` (closed-by-convention) = 50.
+**Status tally:** `open` = 3 (#42, #60, #88) · `landed-with-residual` = 1 (#37 — M-1027/DN-104, 2026-07-10;
+the import-path refusal landed, the capability-gate claim did NOT — see A3 above and M-1036) ·
+`partial` = 12 (#24, #41, #44, #45, #55, #56, #63, #65, #70, #71, #79, #89) · `already-closed` = 16 ·
+`transpiler-only` = 10 · `idiom` (closed-by-convention) = 50.
 **Total = 92.** So **66 are closed today** (16 landed + 50 idiom), **10 need only transpiler work**, and
 **16 carry a genuine language/runtime residual** (the 4 `open` + 12 `partial`), of which **15 rows are
 tagged `DN? = yes`** (before de-dup; §8 collapses the duplicates into the filable backlog).
@@ -218,7 +221,10 @@ impls-as-functions meanwhile. `HIGH` collision; Draft DN.
 **A3 — per-constructor visibility seal (grammar-`enb`, #37).** A `priv`/seal marker on the `constructor`
 production so `pub type T = priv Mk(..)` exports the type *name* but withholds cross-nodule
 construction; design with named-field visibility (DN-53 §B.5) and resolve §B.6 Q1 first. `HIGH`
-collision; Draft DN.
+collision; Draft DN. **Landed (M-1027, PR #1370, 2026-07-10) — Draft DN-104.** The Rust frontend +
+`.myc` surface parity are in; the seal withholds construction **via an imported name only** — it is
+**not** an enforced capability/security boundary (a same-named local shadow bypasses it; DN-104 §6
+CRITICAL residual). The real fix (nodule-qualified type identity) is tracked as **M-1036**.
 
 **A4 — transcendental + ε/δ float numerics (runtime-`enb`, #42; XL).** ADR-gated: decide kernel-prim vs
 libm-behind-`wild` routing, the per-op ε/guarantee matrix, and the float `ApproxRule` wiring; then a
@@ -338,6 +344,20 @@ DN + tracking issue** for the integrator to file. All touch the **cloud semcore 
 | ENB-10 | statement-sequencing (`let _`) + record-update-mutation split | transpiler + grammar-`enb` | #89 | low/HIGH | P2 | Part 1 tr-only; Part 2 (mutation→functional) separate DN-gated |
 | ENB-11 | signed/format ratification notes (idiom-close) | idiom (docs) | #70 (idiom arm), #26 | none | P1 | Display-composition recipe; float `{:.2e}` prim residual = ENB-5-adjacent |
 
+> **ENB-10 triage update (2026-07-10, DN-106 — append-only, this note's decisions unchanged).** M-1033
+> (ENB-10) was triaged per mitigation #14 (verify a stale issue's claim against the codebase before
+> implementing). Finding: **both** sub-gaps' LANGUAGE side is already closed at L1 — three-way witnessed
+> (L1-eval ≡ elaborate→L0-interp ≡ trampoline-AOT) and pinned as four regression witnesses in
+> `crates/mycelium-l1/tests/enablement.rs` (PR #1373) — which resolves the tension between **this
+> register's own two ENB-10 tags**: row #89 carries layer `tr` / collision `low`, while the §8 ENB-10
+> backlog synthesis (above) carried `transpiler + grammar-`enb`` / `low/HIGH` and deferred Part 2's
+> classification to "a separate DN." **DN-106 is that DN**, and resolves it in favour of row #89's
+> `tr`/`low`: **M-1033's L1/semcore residual is NIL**; the real residual is entirely transpiler-lane
+> (Part 1 `let _` emit for value-producing discarded statements; Part 2 the mutation→functional
+> destructure-and-reconstruct rewrite). A `{ ..base, field: v }` record-update literal has no Mycelium
+> surface by design (positional constructors, DN-106 §2/§3) and its addition to L1 is rejected (fork B).
+> See **DN-106** (Draft).
+
 **Transpiler-only closures needing NO new DN** (file as ordinary tracking issues under M-1006 / the trx2
 ladder): #72 string-literal pattern, #85 byte-literal/byte-string, #71 tuple-let-destructure, #21
 field-access desugar, #29 struct-variant pattern, #64 turbofish-never-silent, #50 impl/derive emit
@@ -364,3 +384,15 @@ policy, #10 payload-variant census refresh, #24 struct-literal `..rest`.
   DN-101), so it is not a standalone transpiler-only win. The prior "add-an-arm / `myc check`-clean"
   DoDs were the stale guesses. Only the two rows' classification + tracking are corrected here
   (append-only spirit — the register's structure is unchanged); see DN-34 §8.21 for the measured basis.
+- **2026-07-10** — **row #72 CLOSED (emitted-with-enabler): the M-1035/ENB-12 L1 enabler was
+  consumed by the transpiler (PR #1372 → dev).** The trx #72 arm flipped *gapped* → *emitted* — a
+  string-literal `match` now lowers to the faithful, `myc check`-clean `match s { "yes" => True, _ =>
+  False }` (`&str` → `Bytes`, `true`/`false` → `True`/`False`), but only WITH a wildcard/default arm;
+  a defaultless string-literal match still gaps never-silently (an open-`Bytes` non-exhaustive surface
+  is check-failing — VR-5/G2). Pinned by `string_literal_pattern_emits_with_l1_enabler`. The measured
+  corpus win is small (`checked_fraction` +0.547pp, 6.193% → 6.740%) because most string-`match` arm
+  bodies are ownership/identity-conversion no-ops (`.to_owned()`/`.clone()`/…) that PR #1372 now GAPS
+  rather than fabricates (the honest never-silent outcome) — the full corpus win awaits the
+  conversion-method mapping, filed as **M-1037** (relates to the ENB-1 unknown-prim symbol table /
+  FLAG-tr-unknown-prim on **M-1024** / DN-101). Row #72's classification + notes are corrected here;
+  the register's structure is unchanged (append-only spirit, house rule #3).

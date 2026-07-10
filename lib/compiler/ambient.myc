@@ -128,13 +128,14 @@ type BaseType =
   | Tuple(Vec[TypeRef]);
 type ExecutionMode = Interpreted | Compiled;
 type FnDecl = FD(Vis, Bool, Option[ExecutionMode], FnSig, Expr);
-type Ctor = Ctr(Bytes, Vec[TypeRef]);
+// M-1027 / DN-104: the 3rd field is the `sealed` (`priv`) flag (surface parity with ast.rs::Ctor).
+type Ctor = Ctr(Bytes, Vec[TypeRef], Bool);
 type TypeDecl = TD(Vis, Bytes, Vec[Bytes], Vec[Ctor]);
 type TraitDecl = TrD(Vis, Bytes, Vec[Bytes], Vec[FnSig]);
 type ImplDecl = ImD(Bytes, Vec[TypeRef], TypeRef, Vec[FnDecl]);
 type ViaDecl = VD(Binary{32}, Bytes, Vec[TypeRef]);
 type ObjectDecl = OD(Vis, Bytes, Vec[Bytes], Ctor, Vec[ViaDecl], Vec[ImplDecl], Vec[FnDecl]);
-type InherentImplDecl = IID(TypeRef, Vec[FnDecl]);
+type InherentImplDecl = IID(Vec[Bytes], TypeRef, Vec[FnDecl]);  // DN-103: impl-level type-param slot first
 type LowerRhs = LRExpr(Expr) | LRImpl(ImplDecl);
 type LowerDecl = LD(Bytes, Vec[Bytes], LowerRhs);
 type DeriveDecl = DD(Bytes, TypeRef);
@@ -697,9 +698,10 @@ fn resolve_fnsig_list(amb: Option[Paradigm], xs: Vec[FnSig]) => Result[Vec[FnSig
 // ── resolver core: Ctor / TypeDecl / TraitDecl ─────────────────────────────────────────────────────
 fn resolve_ctor(amb: Option[Paradigm], site: Bytes, c: Ctor) => Result[Ctor, AmbientError] =
   match c {
-    Ctr(name, fields) => match resolve_typeref_list(amb, site, fields, zero32()) {
+    Ctr(name, fields, sealed) => match resolve_typeref_list(amb, site, fields, zero32()) {
       Err(e) => Err(e),
-      Ok(fields2) => Ok(Ctr(name, fields2))
+      // M-1027 / DN-104: the `priv` seal is surface metadata, untouched by ambient resolution.
+      Ok(fields2) => Ok(Ctr(name, fields2, sealed))
     }
   };
 
@@ -785,11 +787,11 @@ fn resolve_impldecl_list(amb: Option[Paradigm], xs: Vec[ImplDecl]) => Result[Vec
 
 fn resolve_inherent_impl_decl(amb: Option[Paradigm], i: InherentImplDecl) => Result[InherentImplDecl, AmbientError] =
   match i {
-    IID(for_ty, methods) => match resolve_type_ref(amb, "impl", for_ty, zero32()) {
+    IID(params, for_ty, methods) => match resolve_type_ref(amb, "impl", for_ty, zero32()) {
       Err(e) => Err(e),
       Ok(for_ty2) => match resolve_fndecl_list(amb, methods) {
         Err(e) => Err(e),
-        Ok(methods2) => Ok(IID(for_ty2, methods2))
+        Ok(methods2) => Ok(IID(params, for_ty2, methods2))  // DN-103: params are inert here, carried through
       }
     }
   };
@@ -1096,7 +1098,13 @@ fn print_literal(l: Literal) => Bytes =
 
 // ── printer: Item-level declarations ───────────────────────────────────────────────────────────────
 fn print_ctor(c: Ctor) => Bytes =
-  match c { Ctr(name, fields) => match fields { Nil => name, Cons(_, _) => bytes_concat(name, bytes_concat("(", bytes_concat(print_type_ref_list(fields), ")"))) } };
+  match c { Ctr(name, fields, sealed) =>
+    bytes_concat(
+      // M-1027 / DN-104 §2: a `priv`-sealed constructor renders with its leading `priv ` marker so the
+      // seal round-trips through `expand_to_source` (mirrors ambient.rs::print_type_decl).
+      match sealed { True => "priv ", False => "" },
+      match fields { Nil => name, Cons(_, _) => bytes_concat(name, bytes_concat("(", bytes_concat(print_type_ref_list(fields), ")"))) }
+    ) };
 
 fn print_ctor_list(xs: Vec[Ctor]) => Bytes =
   match xs { Nil => empty_bytes(), Cons(h, rest) => match rest { Nil => print_ctor(h), Cons(_, _) => bytes_concat(print_ctor(h), bytes_concat(" | ", print_ctor_list(rest))) } };
@@ -1140,8 +1148,9 @@ fn print_impl_decl(id: ImplDecl) => Bytes =
   };
 
 fn print_inherent_impl_decl(i: InherentImplDecl) => Bytes =
-  match i { IID(for_ty, methods) =>
-    bytes_concat("impl ", bytes_concat(print_type_ref(for_ty), bytes_concat(" {\n", bytes_concat(print_impldecl_methods_acc(methods, empty_bytes()), "}\n"))))
+  match i { IID(params, for_ty, methods) =>
+    // DN-103: render the impl-level type-parameter slot `impl[T, …]` when present (empty ⇒ `impl `).
+    bytes_concat("impl", bytes_concat(print_params_brackets(params), bytes_concat(" ", bytes_concat(print_type_ref(for_ty), bytes_concat(" {\n", bytes_concat(print_impldecl_methods_acc(methods, empty_bytes()), "}\n"))))))
   };
 
 fn print_via_decl(v: ViaDecl) => Bytes =
@@ -1161,7 +1170,7 @@ fn print_fn_decl_list_indented_acc(xs: Vec[FnDecl], acc: Bytes) => Bytes =
 
 fn print_object_decl(od: ObjectDecl) => Bytes =
   match od { OD(vis, name, params, ctor, via_decls, impls, fns) =>
-    let ctor_str = match ctor { Ctr(cname, fields) => match fields {
+    let ctor_str = match ctor { Ctr(cname, fields, _) => match fields {
       Nil => cname,
       Cons(_, _) => bytes_concat(cname, bytes_concat("(", bytes_concat(print_type_ref_list(fields), ")")))
     } } in
@@ -1378,8 +1387,13 @@ fn walk_fnsig(fp: Fp, s: FnSig) => Fp =
       budgets)
   };
 
+// M-1027 / DN-104: the `sealed` (`priv`) flag joins the structural fingerprint via tag 110, folded
+// ONLY when sealed — so an unsealed ctor's fingerprint stays byte-identical (lock-step with parse.myc).
+fn walk_ctor_seal(fp: Fp, s: Bool) => Fp =
+  match s { False => fp, True => fp_tag(fp, 0b0000_0000_0000_0000_0000_0000_0110_1110) };
+
 fn walk_ctor(fp: Fp, c: Ctor) => Fp =
-  match c { Ctr(name, fields) => walk_typeref_list(fp_bytes(fp_tag(fp, 0b0000_0000_0000_0000_0000_0000_0011_0000), name), fields) };
+  match c { Ctr(name, fields, sealed) => walk_ctor_seal(walk_typeref_list(fp_bytes(fp_tag(fp, 0b0000_0000_0000_0000_0000_0000_0011_0000), name), fields), sealed) };
 
 fn walk_ctor_list(fp: Fp, xs: Vec[Ctor]) => Fp =
   match xs { Nil => fp, Cons(h, rest) => walk_ctor_list(walk_ctor(fp, h), rest) };
@@ -1429,8 +1443,11 @@ fn walk_objectdecl(fp: Fp, o: ObjectDecl) => Fp =
       fns)
   };
 
+// DN-103 / M-1026: fold the impl-level type-parameter slot (unbounded names) first — matching how
+// TypeDecl/TraitDecl/LowerDecl fold their `params` — so the fingerprint distinguishes `impl[T] Foo[T]`
+// from `impl Foo[T]` (lock-step with the oracle `fp::inherentimpldecl`, no new tag-table entry).
 fn walk_inherentimpldecl(fp: Fp, i: InherentImplDecl) => Fp =
-  match i { IID(for_ty, methods) => walk_fndecl_list(walk_typeref(fp_tag(fp, 0b0000_0000_0000_0000_0000_0000_0011_1000), for_ty), methods) };
+  match i { IID(params, for_ty, methods) => walk_fndecl_list(walk_typeref(fp_tag(walk_bytes_list2(fp, params), 0b0000_0000_0000_0000_0000_0000_0011_1000), for_ty), methods) };
 
 fn walk_lowerrhs(fp: Fp, r: LowerRhs) => Fp =
   match r {
@@ -1612,7 +1629,7 @@ fn test_input_7() => Nodule =
   Nd(Pth(Cons("t7", Nil)), False,
     Cons(Default(PBinary),
       Cons(Object(OD(Private, "Cell", Nil,
-          Ctr("Cell", Cons(TR(Ambient(APSize(0b0000_0000_0000_0000_0000_0000_0001_0000)), None), Nil)),
+          Ctr("Cell", Cons(TR(Ambient(APSize(0b0000_0000_0000_0000_0000_0000_0001_0000)), None), Nil), False),
           Nil, Nil, Nil)),
         Nil)));
 

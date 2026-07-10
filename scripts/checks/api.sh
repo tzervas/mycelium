@@ -46,7 +46,7 @@ for d in crates/*/ xtask/; do
     skip "$pkg: no baseline ($base) — run \`just api-baseline\`"
     continue
   fi
-  if ! cur="$(cargo public-api --toolchain "$api_toolchain" --package "$pkg" --simplified 2>/dev/null)"; then
+  if ! cur="$(cargo +"$api_toolchain" public-api --package "$pkg" --simplified 2>/dev/null)"; then
     fail "$pkg: cargo public-api failed to build the surface"
     rc=1
     continue

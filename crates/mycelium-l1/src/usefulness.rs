@@ -284,13 +284,17 @@ fn prepend(head: Pat, rest: Vec<Pat>) -> Vec<Pat> {
 }
 
 /// Render a witness pattern for a diagnostic (`Cons(_, Nil)`, `0b1010`, `<+0->`, `_`). Literal keys
-/// carry a `b:`/`t:` tag (from `checkty::literal_key`) that is rewritten back to surface syntax.
+/// carry a `b:`/`t:`/`by:`/`s:` tag (from `checkty::literal_key`) that is rewritten back to surface
+/// syntax. (A `Bytes` scrutinee is an open domain, so a `Bytes` witness is always `_`, never a
+/// `by:`/`s:` literal — the `by:`/`s:` arms below are defensive diagnostic polish, DN-105 §5.)
 pub(crate) fn render(p: &Pat) -> String {
     match p {
         Pat::Wild => "_".to_owned(),
         Pat::Lit(k) => match k.split_once(':') {
             Some(("b", bits)) => format!("0b{bits}"),
             Some(("t", trits)) => format!("<{trits}>"),
+            Some(("by", hex)) => format!("0x{hex}"),
+            Some(("s", text)) => format!("{text:?}"),
             _ => k.clone(),
         },
         Pat::Ctor(n, subs) if subs.is_empty() => n.clone(),

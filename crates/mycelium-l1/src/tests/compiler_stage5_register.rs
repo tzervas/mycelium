@@ -307,10 +307,12 @@ fn encode_names(names: &[String]) -> String {
 }
 
 fn encode_ctor(c: &Ctor) -> String {
+    // M-1027 / DN-104: the semcore `Ct` mirror carries the `sealed` (`priv`) flag as its 3rd field.
     format!(
-        "Ct({}, {})",
+        "Ct({}, {}, {})",
         encode_bytes(&c.name),
-        encode_typeref_list(&c.fields)
+        encode_typeref_list(&c.fields),
+        if c.sealed { "True" } else { "False" }
     )
 }
 
@@ -375,6 +377,7 @@ fn ctor(name: &str, fields: Vec<TypeRef>) -> Ctor {
     Ctor {
         name: name.to_owned(),
         fields,
+        sealed: false,
     }
 }
 
@@ -1085,8 +1088,10 @@ fn encode_impl_decl_list(ids: &[ImplDecl]) -> String {
 }
 
 fn encode_inherent_impl_decl(iid: &InherentImplDecl) -> String {
+    // DN-103 / M-1026: IID carries the impl-level type-parameter slot (unbounded names) first.
     format!(
-        "IID({}, {})",
+        "IID({}, {}, {})",
+        encode_names(&iid.params),
         encode_typeref(&iid.for_ty),
         encode_fn_decl_list(&iid.methods)
     )
@@ -1478,6 +1483,7 @@ fn collect_tuple_arities_cases() {
         (
             "inherent_impl_leg",
             nodule(vec![Item::InherentImpl(InherentImplDecl {
+                params: vec![],
                 for_ty: tup_ty(vec![nm("A"), nm("B")]),
                 methods: vec![fn_decl(
                     fn_sig(
@@ -2623,6 +2629,10 @@ fn decode_nodule_imports(v: &L1Value) -> NoduleImports {
         fns: decode_empty_fndecl_map(&fields[1]),
         traits: decode_str_traitinfo_map(&fields[2]),
         ambiguous: decode_bytes_set(&fields[3]),
+        // M-1027 / DN-104 §6: the `.myc` mirror does not model the cross-nodule construction seal
+        // (its `NoduleImports` `NI` carries 4 fields — the enforcement layer is Rust-only until the
+        // checkty cross-nodule port), so the decoded value's withheld set is empty. FLAGGED residual.
+        sealed: std::collections::BTreeSet::new(),
     }
 }
 

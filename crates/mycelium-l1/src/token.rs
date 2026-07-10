@@ -89,6 +89,15 @@ pub enum Tok {
     /// identifier (G2). It precedes `fn`/`trait`/`type` (and `thaw fn`); a `pub` anywhere else is an
     /// explicit parse error.
     Pub,
+    /// `priv` — the **per-constructor visibility seal** marker (M-1027 / ENB-4; DN-104). Dual to
+    /// [`Tok::Pub`]: on a `pub type`, a `priv`-marked constructor (`= priv Mk(..)`) exports the type
+    /// **name** but **withholds the constructor from cross-nodule construction via an imported name**
+    /// — a discipline nudge for a well-behaved caller, not yet an enforced security/capability
+    /// boundary (known gap, M-1036 — see `checkty::NoduleImports::sealed`). Reserved as a keyword so
+    /// it can never be a silent identifier (G2). It is meaningful **only** immediately before a
+    /// constructor name; a `priv` anywhere else is an explicit parse error (the parser consults it
+    /// only in `parse_ctor`).
+    Priv,
     /// `type` — data-type declaration.
     Type,
     /// `trait` — typeclass (conventional; `guild` was declined).
@@ -456,6 +465,9 @@ pub fn keyword(word: &str) -> Option<Tok> {
         "use" => Tok::Use,
         // `pub` — the M-662 cross-nodule export marker (reserved so it is never a silent identifier).
         "pub" => Tok::Pub,
+        // `priv` — the M-1027/DN-104 per-constructor seal marker (reserved, dual to `pub`; never a
+        // silent identifier — G2). Meaningful only before a constructor name (`= priv Mk(..)`).
+        "priv" => Tok::Priv,
         "type" => Tok::Type,
         "trait" => Tok::Trait,
         "impl" => Tok::Impl,
