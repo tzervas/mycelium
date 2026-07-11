@@ -67,7 +67,7 @@ fn a_small_corpus_builds_emits_and_passes_the_quality_bar() {
     assert!(model.documents.len() >= 4, "got {}", model.documents.len());
 
     // Emit every view; the artifact set includes the index, a page per doc, JSON, Typst, EPUB note.
-    let arts = emit_all(&model);
+    let arts = emit_all(&model, None);
     assert!(arts.files.contains_key("index.html"));
     assert!(arts.files.contains_key("doc-model.json"));
     assert!(arts.files.contains_key("doc.typ"));

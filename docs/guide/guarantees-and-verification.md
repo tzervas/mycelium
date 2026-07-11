@@ -24,6 +24,31 @@ The lattice composes by *meet* (weakest wins) through operations, so a composed 
 spuriously claim a stronger guarantee than its inputs. Out-of-range input is an explicit
 `Result`/`Option`, never a silent clamp or fallback.
 
+The tag is written into the function signature itself, not asserted in a comment — three
+structurally similar swaps, three honestly different tags
+([`examples/repr-tour/swaps.myc`](../../examples/repr-tour/swaps.myc), checked clean by
+`cargo run -p mycelium-cli --bin myc -- check`):
+
+```mycelium
+fn widen(x: Binary{8}) => Ternary{6} @ Declared =
+  swap(x, to: Ternary{6}, policy: roundtrip);
+
+fn narrow(x: Dense{768, F32}) => Dense{768, BF16} @ Empirical =
+  swap(x, to: Dense{768, BF16}, policy: bf16_round);
+
+fn certified(x: Dense{768, F32}) => Dense{768, BF16} @ Proven =
+  swap(x, to: Dense{768, BF16}, policy: bf16_round);
+```
+
+**Honesty note on this snippet:** it is a syntax demonstration (source: `examples/repr-tour/`'s own
+header comment), not a claim about the "real" guarantee owed to each specific swap — `widen`'s
+`@ Declared` here is illustrative, and is *not* the tag the binary↔ternary swap actually carries
+elsewhere (that one is `Proven` bijective — see the split-verification table below). What the
+snippet does demonstrate honestly: `narrow` and `certified` are the *same* BF16-rounding call at
+two different assurance levels — `@ Empirical` when only trial data backs the ε bound, `@ Proven`
+once the cited theorem's side-conditions are checked — and the code shape doesn't change; only the
+checked basis, and its type-level tag, does.
+
 ## The split verification regime
 
 ADR-002 splits how a swap's guarantee is established, by swap class:

@@ -1,0 +1,18 @@
+{
+  "title": "Mycelium — Design Notes I (DN-01..DN-49)",
+  "preface": "The first half of the design-note corpus (explorations that recommend, not decide) plus the reference notes. Split into two bundles so each stays under NotebookLM's 500k-word/source cap. Generated from the corpus by myc-doc.",
+  "chapters": [
+    {
+      "title": "Design Notes DN-01..DN-49",
+      "globs": ["docs/notes/DN-0[0-9]-*.md", "docs/notes/DN-[1-4][0-9]-*.md"]
+    },
+    {
+      "title": "Reference notes",
+      "sources": [
+        "docs/notes/Lexicon-Reference.md",
+        "docs/notes/Example-Programs-Reference.md",
+        "docs/notes/Native-Ternary-Forward-Compat.md"
+      ]
+    }
+  ]
+}

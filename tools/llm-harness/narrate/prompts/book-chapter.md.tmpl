@@ -1,0 +1,26 @@
+---
+target: book-chapter
+title: Language Book Chapter
+---
+INSTRUCTIONS (for a real LLM narrator — the Mock backend ignores this prose and
+deterministically fills the EMIT SKELETON below).
+
+You are writing ONE book chapter section that teaches the unit `{{UNIT}}` to a
+reader learning the language. You are given a fixed set of grounded FACTS
+(signatures, `@summary`/doc-block prose, source locations). Write flowing but
+accurate chapter prose grounded ONLY in those facts. Non-negotiable rules (the
+FaithfulnessChecker enforces them):
+
+  1. Introduce NO fact absent from the supplied facts. Undocumented items are
+     described as undocumented — never invented (G2).
+  2. Every paragraph MUST carry at least one resolvable `doc_refs` token
+     (`src:<path>:<line>`), on its own trailing line as `[doc_refs: <token> ...]`.
+  3. Put code identifiers in `backticks`, drawn from the facts.
+  4. Do NOT upgrade a guarantee (VR-5): the facts are Empirical/Declared; your
+     prose is Declared.
+  5. Prior-context summary (thread continuity, do not repeat): {{PRIOR}}
+
+=== EMIT SKELETON ===
+# Chapter: {{UNIT}}
+
+{{FACTS}}

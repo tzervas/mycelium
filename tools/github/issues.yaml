@@ -15188,6 +15188,9 @@ issues:
       - corpus:DN-38
       - corpus:DN-106
       - corpus:DN-110-8.2-hygiene-deepdive
+      - corpus:DN-115
+      - corpus:DN-116
+      - corpus:DN-117
       - src:crates/mycelium-l1/src/tests/hygiene_expr_sugar.rs
     body: |
       Filed 2026-07-10 from the maintainer's ratification of DN-110 (native metaprogramming / sugar-
@@ -15335,6 +15338,82 @@ issues:
       DoD, but the DoD itself (every sugar rule mechanical + `reveal`-able + hygiene-witnessed, wired
       into ordinary elaboration) is not yet met. DN-110 stays `Accepted`, NOT `Enacted`; no tag
       upgraded past its checked basis (VR-5).
+
+      **Stage 1b LANDED (2026-07-11, append-only, PM close-out; mitigation #14 -- verified against
+      `dev`, not rubber-stamped).** PR #1434 (`claude/leaf/m1054-stage1b-check-accept`, merged to
+      `dev` -- confirmed via `git log dev` merge commit `3cd7dbc2`) lands the check-phase accept path
+      `checkty.rs::Cx::check_sugar_call` (Option B -- the def-time RHS type-scheme, `want == got`
+      typed once from the RHS) plus `Elab::app`'s new dispatch to the existing Stage-1 expansion
+      machinery, closing the Stage-1b residual named above: a value-parametric sugar-rule call site
+      is now reachable end-to-end from ordinary elaboration, over the white-box, affine-free,
+      single-nodule, monomorphic fragment (two never-silent gates -- OQ-H1 free-identifier refusal,
+      OQ-H4 affine-value-param refusal -- bound the accepted fragment; `crates/mycelium-l1/src/tests/
+      reachability_stage1b.rs`'s dual-oracle corpus is the checked basis). Full record:
+      `docs/notes/DN-114-M1054-Stage1b-Check-Phase-Sugar-Accept.md` (a leaf-scoped implementation
+      note, landed with this PR). Status stays `in-progress` -- Stage 3 (affine soundness over the
+      expanded surface) and Stage 4 (cross-nodule/phylum resolution, DN-113/M-1060) are not yet
+      built. DN-110 stays `Accepted`, NOT `Enacted`; no tag upgraded past its checked basis (VR-5).
+
+      **Stage 2 (DN-115, OQ-H1 single-nodule def-site resolution) LANDED (2026-07-11, append-only,
+      PM close-out; mitigation #14 -- re-verified against `dev` after this session pulled it down
+      mid-close-out, merge commit `b9b66345`, PR #1435).** `docs/notes/DN-115-M1054-Stage2-Defsite-
+      Resolution-Single-Nodule.md` -- Accepted (delegated ratification) -- finds single-nodule
+      def-site resolution / referential transparency already holds **by construction** since Stage
+      1b (Pass-1 elaboration against the def-site env); Stage 2 is *prove it + close two narrow
+      gate-correctness gaps + document the invariant*, not *add a new resolution mechanism*. Landed
+      in the same PR: **G1** (`checkty.rs::rhs_first_free_id`'s `Expr::Path` arm now consults a
+      shared `prim_name_is_recognized` view -- `prim_family` union `VSA_PRIM_NAMES` union
+      `float_prim_name_is_recognized` -- closing an over-refusal on a same-nodule VSA/float-prim RHS,
+      mutation-verified); **G2** (a `call_head: bool` parameter narrows a bare nullary-`lower`-rule
+      RHS accept to call position only, a diagnosability/gate-accuracy fix -- adversarial review
+      found the pre-fix gate already refused the shape via a downstream full RHS type-check, so this
+      is NOT a soundness fix, honestly re-scoped in the note's own Ratification §4). New
+      `crates/mycelium-l1/src/tests/defsite_resolution_stage2.rs`, 6 tests green (a real-elaborator
+      dual-oracle test + its mandatory non-vacuity capture control, the G1 float+VSA fixtures, the G2
+      value-position fixture, a cross-nodule-shaped control confirming Stage 4 stays refused);
+      `cargo test -p mycelium-l1`: 544 lib tests + every integration target, 0 failures. Single-nodule
+      def-site resolution and the G1/G2 fixtures move `Declared -> Empirical` (VR-5, no upgrade past
+      the checked basis); cross-nodule/phylum resolution and reveal-provenance (routed to OQ-H3/
+      M-1051, untouched) stay `Declared`/open. Tracked as **M-1069** (minted this close-out, per
+      DN-115 §10 FLAG-issues.yaml -- `status:done` since the work already landed rather than
+      remaining a `todo` to schedule).
+
+      **DN-114 ID collision, deferred renumber (2026-07-11, append-only, PM close-out).** The
+      Stage-1b note above is filed as `docs/notes/DN-114-M1054-Stage1b-Check-Phase-Sugar-Accept.md`,
+      which shares its DN-114 number with `docs/notes/DN-114-Validated-Narrative-Generation.md` (the
+      docs-access wave's note, epic **E40-1** -- see that epic's own DN-114 ID note). Per maintainer
+      directive at this close-out, the narrative-generation note KEEPS DN-114; this Stage-1b note is
+      the one that needs renumbering (candidate: DN-116, since DN-115 is now taken by the Stage-2
+      note above) -- but that renumber is EXPLICITLY DEFERRED to a follow-up pass so every inbound
+      ref (now including DN-115's own citations of "DN-114") updates in one pass rather than twice.
+      Not a ratification of anything -- purely a disambiguation + follow-up record.
+
+      **DN-115 §10 FLAGs, partially applied by this PM close-out.** `docs/Doc-Index.md` gained a
+      DN-115 row this close-out (needed to keep `corpus:DN-115` `doc_refs` resolvable for M-1069,
+      below). **Residual, NOT applied here** (out of this session's scope -- a curatorial
+      `CHANGELOG.md` entry, left for the integrating parent doing that wave): the DN-115 §10
+      `FLAG-CHANGELOG` design-phase entry. Still outstanding on `dev` as of this close-out (verified
+      absent by grep).
+
+      **DN-114 renumber RESOLVED (2026-07-11, integration close-out for the docs+facility Stage-1b/2
+      wave, append-only).** The deferred renumber above is done: the Stage-1b note moved
+      `docs/notes/DN-114-M1054-Stage1b-Check-Phase-Sugar-Accept.md` ->
+      `docs/notes/DN-116-M1054-Stage1b-Check-Phase-Sugar-Accept.md` (git mv), self-refs updated, and
+      every **docs-only** inbound citation repointed to DN-116: DN-115's own body/header, and the
+      Stage-3 build-plan note DN-117 (`docs/notes/DN-117-M1054-Stage3-Affine-Over-Substituted-Expr.md`
+      -- brought into the corpus from the separately-building Stage-3 leaf,
+      `claude/leaf/M1054-DN117-stage3-affine-scoping`, as a docs-only addition; Stage 3's own code
+      stays on that leaf, out of scope for this release). `docs/Doc-Index.md` gained rows for DN-116
+      and DN-117; this issue's own `doc_refs` above now cite `corpus:DN-116`/`corpus:DN-117`;
+      M-1069's `doc_refs` repointed `corpus:DN-114` -> `corpus:DN-116`. The narrative-generation note
+      `docs/notes/DN-114-Validated-Narrative-Generation.md` (E40-1) is UNCHANGED and KEEPS DN-114, per
+      the standing maintainer directive. **Residual, deliberately NOT applied** (mycelium-l1 is
+      off-limits this session -- a concurrent Stage-3 agent is actively editing it): every
+      `crates/mycelium-l1/` source/test comment citing "DN-114" (`elab.rs`, `checkty.rs`,
+      `src/tests/checkty.rs`, `src/tests/defsite_resolution_stage2.rs`,
+      `src/tests/reachability_stage1b.rs`, `src/tests/facility_stage1_hygiene.rs`) still reads
+      "DN-114" and means DN-116 -- flagged, not silent (G2); `grep DN-114 crates/mycelium-l1/` finds
+      the residual set for whoever next touches that crate.
 
   - id: M-1055
     title: "E1 + E3 hygiene experiment prototype -- DN-110 §8.2 expression-position sugar-rule hygiene, Rank-1 go/no-go for J3"
@@ -15746,3 +15825,265 @@ issues:
       - `.myc` parity noted, not silently assumed, per the checkty `.myc` port's own progress.
       - Guarantee tags stay `Declared` until this DoD's fixtures/differentials land, then `Empirical`
         (VR-5 -- no upgrade past the checked basis).
+
+  - id: E40-1
+    title: "E40-1 (epic) — validated documentation generation: the generated read (DN-114 / M-363)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:epic, area:tooling, priority:P2, status:needs-design]
+    epic: E40
+    depends_on: []
+    doc_refs:
+      - corpus:DN-114
+      - corpus:Narrative-Authoring-Pipeline
+      - src:tools/llm-harness/narrate/
+      - src:.claude/skills/gen-book/
+    body: |
+      EPIC (DN-114, maintainer directive 2026-07-11). Finish the documentation-generation pipeline:
+      generate the language BOOK + REFERENCE MANUALS + a LEARNING/WRITING corpus from the extracted
+      code/example/doc-comment basis, with a GENERATED narrative "read" on top -- via parameterized,
+      idempotent prompts over context chunks -- that is VALIDATED (no hallucination, no trash) by the
+      DN-114 faithfulness oracle, differentially updatable, and published alongside the release
+      artifacts. Builds the ratified-but-unbuilt M-363 generators on the `narrate/` harness landed
+      Draft with DN-114. GATED on maintainer ratification of DN-114 (Draft -> Accepted).
+
+      User stories:
+      - As a learner, I want a readable, navigable book + reference manual generated from the corpus,
+        so that I can learn and write Mycelium without reading the raw normative docs.
+      - As the maintainer, I want every generated sentence validated against its source facts and
+        tagged honestly, so that the docs never hallucinate and I tune prompts, not prose.
+
+      Definition of Done:
+      - DN-114 Accepted; M-1061..M-1066 done; the faithfulness oracle runs a real adversarial verifier
+        (not the mock) with a reported validated_fraction; the book/manual/learning-corpus generate +
+        validate + commit with provenance (Declared until reviewed); differential + drift-gated;
+        published alongside the release artifact. Deferred site polish (M-1067/M-1068) tracked separately.
+
+      DN-114 ID note (2026-07-11, append-only, PM close-out, house rule #3). `DN-114` here IS
+      `docs/notes/DN-114-Validated-Narrative-Generation.md` -- CONFIRMED, KEPT (maintainer directive,
+      2026-07-11 close-out) -- this epic + M-1061..M-1066's `corpus:DN-114` doc_refs stay as-is, no
+      renumber. A separate, unrelated file also on `dev` currently shares the DN-114 number --
+      `docs/notes/DN-114-M1054-Stage1b-Check-Phase-Sugar-Accept.md` (the M-1054 native-metaprogramming
+      facility's leaf-scoped Stage-1b note, landed PR #1434) -- a real ID collision (mitigation #1),
+      but resolving it is EXPLICITLY DEFERRED to a follow-up pass -- the facility's Stage 2 (DN-115)
+      landed mid-session (PR #1435) already citing the Stage-1b note as DN-114, so the deferred
+      renumber (candidate DN-116) should update every inbound ref, including DN-115's, in one pass.
+      See M-1054's own body for the matching cross-reference. Not a ratification of anything, not a
+      status change -- purely a disambiguation record.
+
+  - id: M-1061
+    title: "M-1061 — build gen-book (Narrative-Authoring-Pipeline output b) on the narrate harness + DN-114 oracle"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:feature, area:tooling, priority:P2, status:needs-design]
+    epic: E40-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-114
+      - corpus:Narrative-Authoring-Pipeline
+      - src:tools/llm-harness/narrate/
+    body: |
+      Build `gen-book`: sequence the RFC guide-level sections + Example Programs Reference + Glossary
+      into a learner ordering, and generate the interpretive glue via the narrate `book-chapter` prompt
+      family, gated by the DN-114 faithfulness oracle (commit only validated sentences; rest Declared).
+      GATED on DN-114 ratification.
+
+      User story: As a learner, I want a generated language book, so that I can read forward instead of
+      hopping RFCs. DoD: the book generates end-to-end, every committed sentence passes the oracle
+      (validated_fraction reported), output tagged Empirical/Declared with provenance, rendered by the
+      themed myc-doc.
+
+  - id: M-1062
+    title: "M-1062 — build gen-manual (Narrative-Authoring-Pipeline output c) on the narrate harness + DN-114 oracle"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:feature, area:tooling, priority:P2, status:needs-design]
+    epic: E40-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-114
+      - corpus:Narrative-Authoring-Pipeline
+    body: |
+      Build `gen-manual`: project the RFC reference-level designs + grammar EBNF + schemas + stdlib
+      specs into a normative reference manual, with generated connective prose validated by the DN-114
+      oracle. GATED on DN-114 ratification.
+
+      User story: As a Mycelium programmer, I want a generated reference manual, so that I have one
+      normative place to look up a construct. DoD: manual generates + validates end-to-end; cross-refs
+      resolve to content addresses; committed prose passes the oracle; tagged with provenance.
+
+  - id: M-1063
+    title: "M-1063 — build the learning/writing corpus generator (narrate learning-lesson prompt family)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:feature, area:tooling, priority:P3, status:needs-design]
+    epic: E40-1
+    depends_on: [M-1061]
+    doc_refs:
+      - corpus:DN-114
+      - src:tools/llm-harness/narrate/
+    body: |
+      Build the learning/writing corpus generator: task-oriented lessons for LEARNING and WRITING
+      Mycelium (patterns, idioms, worked examples), generated from the checked example corpus + guide
+      sections, validated by the DN-114 oracle. GATED on DN-114 ratification.
+
+      User story: As a newcomer, I want lessons that teach me to write Mycelium, so that I learn by
+      doing. DoD: lessons generate + validate; every code snippet is a checked example; committed prose
+      passes the oracle; tagged with provenance.
+
+  - id: M-1064
+    title: "M-1064 — real adversarial-LLM faithfulness verifier backend (replace the DN-114 MockChecker)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:feature, area:tooling, priority:P2, status:needs-design]
+    epic: E40-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-114
+      - src:tools/llm-harness/narrate/
+      - src:tools/llm-harness/coauthor.py
+    body: |
+      Implement the real adversarial-LLM `Checker` behind the DN-114 protocol (the shipped MockChecker
+      is a deterministic lexical stand-in). A verifier prompt lists every clause not entailed by the
+      cited facts; the loop drops/regenerates those. Reuse the coauthor.py backend + spend caps.
+
+      User story: As the maintainer, I want a real faithfulness check, so that validated_fraction means
+      semantic faithfulness, not a lexical proxy. DoD: real verifier runs behind the protocol; a
+      labelled benchmark shows it catches injected hallucinations; validated_fraction is Empirical with
+      a named method (VR-5); costs are capped + logged.
+
+  - id: M-1065
+    title: "M-1065 — Narrative-Authoring-Pipeline §4.1 faithfulness check (9th quality-bar check) — spec + doc_lint"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:spec, area:tooling, priority:P2, status:needs-design]
+    epic: E40-1
+    depends_on: [M-1064]
+    doc_refs:
+      - corpus:DN-114
+      - corpus:Narrative-Authoring-Pipeline
+      - src:crates/mycelium-doc/src/doc_lint.rs
+    body: |
+      On DN-114 ratification, specify the 9th §4.1 quality-bar check into Narrative-Authoring-Pipeline
+      (append-only) and implement it in doc_lint: any COMMITTED generated prose must have
+      validated_fraction == 1.0 (unvalidated content must not be committed); a drift/lint gate enforces
+      it. GATED on DN-114 ratification + M-1064.
+
+      User story: As the maintainer, I want the faithfulness gate enforced in the lint, so that no
+      unvalidated generated prose can land. DoD: the spec §4.1 carries the 9th check; doc_lint enforces
+      it; a fixture proves a hallucinated sentence fails the gate.
+
+  - id: M-1066
+    title: "M-1066 — run the full validated generation wave (book + manual + learning corpus, per chapter/module)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:infra, area:tooling, priority:P2, status:needs-design]
+    epic: E40-1
+    depends_on: [M-1061, M-1062, M-1063, M-1064, M-1065]
+    doc_refs:
+      - corpus:DN-114
+      - src:.claude/skills/gen-book/
+    body: |
+      Run the decomposed generation wave: one chapter/module = one bounded working set (DN-96
+      windowing via /gen-book) -> generate -> validate -> commit validated prose with provenance ->
+      render. A multi-agent wave; produces committed prose for maintainer review. GATED on the
+      generators (M-1061..M-1063) + the real verifier (M-1064) + the gate (M-1065).
+
+      User story: As the maintainer, I want the whole read generated + validated in reviewable batches,
+      so that I tune, not write, the docs. DoD: the corpus's book/manual/learning read is generated,
+      each unit's validated_fraction recorded, all committed prose passes the §4.1 gate, tagged Declared
+      pending review.
+
+  - id: M-1067
+    title: "M-1067 — status/guarantee badges in myc-doc (pipe-table metadata parser + doc-IR fields)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:feature, area:tooling, priority:P3, status:needs-design]
+    epic: E40-1
+    depends_on: []
+    doc_refs:
+      - src:crates/mycelium-doc/src/ir.rs
+      - src:crates/mycelium-doc/src/corpus.rs
+    body: |
+      Parse the `| Field | Value |` header tables (Status/Date/Depends-on) that myc-doc currently
+      ingests as prose, add decision-status + guarantee-tag fields to the doc-IR, and render them as
+      badges (Draft/Accepted/Enacted/Superseded; Exact/Proven/Empirical/Declared) in the themed site.
+      Deferred site-polish follow-on to the C1/C2 theme+highlighting wave.
+
+      User story: As a reader, I want to see a decision's status + a claim's guarantee level at a glance,
+      so that I trust the page. DoD: the pipe-table parser + IR fields land with tests; badges render in
+      html/book; the doc_lint dual-projection parity stays green.
+
+  - id: M-1068
+    title: "M-1068 — federated docs portal: separate docs-site repo + multi-repo aggregation (DN-27/DN-88)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:research, area:tooling, priority:P3, status:needs-design]
+    epic: E40-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-27
+      - corpus:DN-88
+      - src:crates/mycelium-doc/src/ir.rs
+    body: |
+      Design (a new DN) + build the federated docs portal: extract the docs SITE to its own repo
+      (source of truth stays this repo), and aggregate per-component-repo docs into a central portal
+      after the DN-27/DN-88 monorepo decomposition -- repo/version namespacing on the content-addressed
+      doc-IR, a cross-repo xref resolver, an aggregation/merge tool. Builds on Narrative-Authoring-
+      Pipeline's v0-single-version -> multi-repo future.
+
+      User story: As a reader, I want one portal over all component repos' docs, so that decomposition
+      doesn't fragment the documentation. DoD: a Draft DN ratified; repo/version dimension on nodes +
+      anchors; a two-repo aggregation demonstrated; the single-repo site unchanged for v0.
+
+  - id: M-1069
+    title: "M-1054 Stage 2 (DN-115) -- single-nodule def-site resolution: prove-by-construction + G1/G2 gate-correctness fixes"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:done]
+    epic: E28-1
+    depends_on: [M-1054]
+    doc_refs:
+      - corpus:DN-115
+      - corpus:DN-116
+      - src:crates/mycelium-l1/src/checkty.rs
+      - src:crates/mycelium-l1/src/tests/defsite_resolution_stage2.rs
+    landed_basis: >
+      status:done (2026-07-11, PM close-out; mitigation #14 -- verified against `dev`, not
+      rubber-stamped). Minted this close-out per DN-115 §10's own FLAG-issues.yaml ("a new Stage-2
+      implementation M-id -- maintainer mints -- depends_on DN-115") -- filed directly `done` because
+      the implementation had already landed (PR #1435, `claude/leaf/m1054-stage2-dn-scoping`, merged
+      to `dev`, merge commit `b9b66345`) by the time this PM close-out reached it, rather than being
+      scheduled as a `todo`. See M-1054's own body (the "Stage 2 (DN-115) ... LANDED" append-only
+      entry, this same close-out) for the full landed-basis detail this issue summarizes: G1 (VSA/
+      float-prim RHS over-refusal, closed via a shared `prim_name_is_recognized` name view) and G2
+      (bare nullary-`lower`-rule value-position over-acceptance, closed via a `call_head` gate
+      parameter, honestly re-scoped as a diagnosability fix per the note's own adversarial finding)
+      -- both landed and mutation/dual-oracle-verified in `defsite_resolution_stage2.rs` (6 tests
+      green); single-nodule def-site resolution itself moves `Declared -> Empirical` (already implicit
+      by construction since Stage 1b, now proven non-vacuously on the real elaborator). `cargo test -p
+      mycelium-l1`: 544 lib tests + every integration target, 0 failures.
+    body: |
+      Filed 2026-07-11 at the M-1054/DN-115 PM close-out (mitigation #1 -- verified M-1069 free before
+      minting). DN-115 (design-reasoner scoping, Accepted via delegated ratification) found that
+      single-nodule referential transparency for a sugar rule's free RHS identifiers already holds
+      by construction since Stage 1b (Pass-1 elaboration against the def-site env) -- so this issue's
+      job was never "add def-site resolution", but proving that guarantee non-vacuously on the real
+      elaborator and closing two narrow check-phase gate-correctness gaps (G1, G2) the proof surfaced,
+      while leaving cross-nodule/phylum resolution refused (Stage 4, DN-113/M-1060's job).
+
+      User stories (DN-115 §0/§8):
+      - As a sugar-rule author, I want a same-nodule free identifier in my rule's RHS to resolve to
+        its definition-site meaning (not whatever the call site happens to shadow it with), so macro
+        hygiene half (B) -- referential transparency -- holds for expression-position sugar the same
+        way DN-54's type-position lowering already guarantees it.
+      - As a reviewer, I want the claim "single-nodule def-site resolution already works" checked
+        non-vacuously on the real elaborator (dual-oracled, with a genuine capture-control negative
+        test), not asserted from reading the code alone (VR-5, mitigation #14).
+      - As the maintainer, I want the Stage-4 (cross-nodule) boundary explicitly documented and
+        still-refused, so extending resolution across nodules later is a deliberate change, never a
+        silent regression (G2).
+
+      Definition of Done (DN-115 §8, met):
+      - The §1 finding (single-nodule resolution already holds) is confirmed on the real elaborator
+        with a non-vacuous, dual-oracled test plus a hand-built capture control. ✅
+      - G1 (VSA/float-prim RHS over-refusal) and G2 (nullary-`lower`-rule value-position
+        over-acceptance) are closed, each with a dedicated, mutation-verified fixture. ✅
+      - The Stage-4 boundary (cross-nodule/phylum free-id resolution stays refused) is confirmed with
+        an explicit regression + documented on `rhs_first_free_id`'s own doc comment. ✅
+      - Change-scoped gates green: `cargo fmt -p mycelium-l1`, `cargo clippy -p mycelium-l1
+        --all-targets -- -D warnings`, `cargo test -p mycelium-l1` (544 lib tests + every integration
+        target, 0 failures). ✅
+      - Guarantee tags move exactly as bounded: single-nodule resolution + G1/G2 fixtures
+        `Declared -> Empirical`; cross-nodule/phylum resolution and reveal-provenance (routed to
+        OQ-H3/M-1051) stay `Declared`/open -- no upgrade past the checked basis (VR-5). ✅

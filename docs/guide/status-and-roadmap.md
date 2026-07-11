@@ -127,6 +127,8 @@ the `mycelium-mlir` and `mycelium-bench` crate summaries.
 ---
 
 **See also:** [Workspace map](workspace-map.md) · [Decisions & reading order](decisions-and-reading-order.md) ·
-[Guarantees & verification](guarantees-and-verification.md)
+[Guarantees & verification](guarantees-and-verification.md) · [Docsite preview](docsite-preview.md)
+— screenshots of the themed corpus/API/rustdoc site this status page's own source material renders
+into (`mycelium-doc`, M-363)
 
 [← Back to README](../../README.md)

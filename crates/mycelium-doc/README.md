@@ -29,6 +29,10 @@ conformance, no-dead-xref, dual-projection parity, no-hallucinated-prose, and ch
 - ADR-003
 - G2, G11, KC-3
 
+## Visual reference
+
+Screenshots of the rendered docsite (both light and dark themes) are available in [docsite-preview.md](../../docs/guide/docsite-preview.md), showing the documentation home page, corpus navigation tree, syntax-highlighted code examples, and rendered specifications. These are the actual outputs produced by `myc-doc build` and `scripts/docsite.sh` using this crate's HTML and Typst renderers.
+
 ## Role in the workspace
 
 Depends on `mycelium-core`, `mycelium-proj`, and `mycelium-l1`; provides the doc-IR and quality lint consumed by `mycelium-lint` (`DOC_QUALITY_CHECKS`) and the `myc-doc` binary. See the [workspace overview](../../README.md). Further reading: the [doc index](../../docs/Doc-Index.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-doc).

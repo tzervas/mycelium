@@ -5782,7 +5782,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc",
       "file": "crates/mycelium-doc/src/book.rs",
-      "line": 48,
+      "line": 57,
       "summary": "A never-silent book-build error (a broken manifest entry, a bad manifest, an anchor collision) —",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5793,7 +5793,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc",
       "file": "crates/mycelium-doc/src/book.rs",
-      "line": 60,
+      "line": 69,
       "summary": "The committed chapter manifest (`docs/book-manifest.json`) — curated order, drift-proof globs.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5804,7 +5804,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc",
       "file": "crates/mycelium-doc/src/build.rs",
-      "line": 25,
+      "line": 26,
       "summary": "What to ingest.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5826,7 +5826,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc",
       "file": "crates/mycelium-doc/src/book.rs",
-      "line": 72,
+      "line": 81,
       "summary": "One chapter: an ordered list of explicit sources, optionally extended by drift-proof globs.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5854,6 +5854,17 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_doc::DiffCache",
+      "kind": "struct",
+      "crate": "mycelium-doc",
+      "module": "mycelium_doc",
+      "file": "crates/mycelium-doc/src/cache.rs",
+      "line": 38,
+      "summary": "The persisted cache: `emitted-path → blake3(bytes)`, plus the format version.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_doc::DocLintReport",
       "kind": "struct",
       "crate": "mycelium-doc",
@@ -5872,6 +5883,17 @@
       "file": "crates/mycelium-doc/src/ir.rs",
       "line": 375,
       "summary": "The whole projected corpus: top-level documents plus the navigable index over every node.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_doc::EmitReport",
+      "kind": "struct",
+      "crate": "mycelium-doc",
+      "module": "mycelium_doc",
+      "file": "crates/mycelium-doc/src/cache.rs",
+      "line": 89,
+      "summary": "What an incremental emit did — every count explicit, for a never-silent CLI summary.",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -6002,7 +6024,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc::book",
       "file": "crates/mycelium-doc/src/book.rs",
-      "line": 43,
+      "line": 52,
       "summary": "The repo-relative default location of the committed chapter manifest.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6024,7 +6046,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc",
       "file": "crates/mycelium-doc/src/build.rs",
-      "line": 68,
+      "line": 79,
       "summary": "Build the resolved doc model from the input.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6035,8 +6057,8 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc::build::BuildInput",
       "file": "crates/mycelium-doc/src/build.rs",
-      "line": 52,
-      "summary": "The conventional layout rooted at `repo_root`: `docs/`, `docs/spec/schemas/`, `examples/`,",
+      "line": 62,
+      "summary": "The conventional layout rooted at `repo_root`: `docs/`, `docs/spec/schemas/`, `research/`,",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -6046,7 +6068,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc::build",
       "file": "crates/mycelium-doc/src/build.rs",
-      "line": 19,
+      "line": 20,
       "summary": "EPUB is an honest deferral (spec §8 / §4.1 \"never a half-build\").",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6057,8 +6079,74 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc",
       "file": "crates/mycelium-doc/src/book.rs",
-      "line": 301,
+      "line": 543,
       "summary": "Build every book artifact: the ToC/landing page, one page per chapter entry (prev/next nav), and",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_doc::cache",
+      "kind": "mod",
+      "crate": "mycelium-doc",
+      "module": "mycelium_doc",
+      "file": "crates/mycelium-doc/src/lib.rs",
+      "line": 22,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_doc::cache::CACHE_FILE:",
+      "kind": "const",
+      "crate": "mycelium-doc",
+      "module": "mycelium_doc::cache",
+      "file": "crates/mycelium-doc/src/cache.rs",
+      "line": 30,
+      "summary": "The on-disk cache filename (written inside the output directory).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_doc::cache::CACHE_VERSION:",
+      "kind": "const",
+      "crate": "mycelium-doc",
+      "module": "mycelium_doc::cache",
+      "file": "crates/mycelium-doc/src/cache.rs",
+      "line": 34,
+      "summary": "The cache format version.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_doc::cache::DiffCache::load",
+      "kind": "fn",
+      "crate": "mycelium-doc",
+      "module": "mycelium_doc::cache::DiffCache",
+      "file": "crates/mycelium-doc/src/cache.rs",
+      "line": 62,
+      "summary": "Load a prior cache from `out_dir/.myc-doc-cache.json`.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_doc::cache::DiffCache::of",
+      "kind": "fn",
+      "crate": "mycelium-doc",
+      "module": "mycelium_doc::cache::DiffCache",
+      "file": "crates/mycelium-doc/src/cache.rs",
+      "line": 48,
+      "summary": "The cache computed from a freshly-rendered artifact set (before any write).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_doc::cache::DiffCache::store",
+      "kind": "fn",
+      "crate": "mycelium-doc",
+      "module": "mycelium_doc::cache::DiffCache",
+      "file": "crates/mycelium-doc/src/cache.rs",
+      "line": 73,
+      "summary": "Persist this cache to `out_dir/.myc-doc-cache.json`.",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -6068,7 +6156,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc",
       "file": "crates/mycelium-doc/src/lib.rs",
-      "line": 22,
+      "line": 23,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6145,7 +6233,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc",
       "file": "crates/mycelium-doc/src/lib.rs",
-      "line": 23,
+      "line": 24,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6189,7 +6277,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc",
       "file": "crates/mycelium-doc/src/lib.rs",
-      "line": 24,
+      "line": 25,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6250,12 +6338,23 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_doc::emit::html::SemanticNav",
+      "kind": "type",
+      "crate": "mycelium-doc",
+      "module": "mycelium_doc::emit::html",
+      "file": "crates/mycelium-doc/src/emit/html.rs",
+      "line": 24,
+      "summary": "A resolved **semantic spine** for the sidebar: `(chapter-title, [doc anchors])` in book-manifest",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_doc::emit::html::render",
       "kind": "fn",
       "crate": "mycelium-doc",
       "module": "mycelium_doc::emit::html",
       "file": "crates/mycelium-doc/src/emit/html.rs",
-      "line": 39,
+      "line": 154,
       "summary": "Render the whole model to an HTML site: `index.html` plus one `pages/<anchor>.html` per document.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6266,7 +6365,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc::emit::html",
       "file": "crates/mycelium-doc/src/emit/html.rs",
-      "line": 50,
+      "line": 170,
       "summary": "The concatenation of every page (for the parity/legibility lints, which scan the rendered output).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6277,7 +6376,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc::emit::html",
       "file": "crates/mycelium-doc/src/emit/html.rs",
-      "line": 30,
+      "line": 143,
       "summary": "The pinned template content hash (provenance, §6) — the address of the shared template/style.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6354,7 +6453,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc::emit::typst",
       "file": "crates/mycelium-doc/src/emit/typst.rs",
-      "line": 11,
+      "line": 117,
       "summary": "Render the whole model to one Typst document source.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6365,8 +6464,19 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc",
       "file": "crates/mycelium-doc/src/build.rs",
-      "line": 165,
+      "line": 198,
       "summary": "Emit every artifact (HTML site · Typst source · machine JSON · the EPUB deferral note).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_doc::emit_incremental",
+      "kind": "fn",
+      "crate": "mycelium-doc",
+      "module": "mycelium_doc",
+      "file": "crates/mycelium-doc/src/cache.rs",
+      "line": 110,
+      "summary": "Write `arts` under `out_dir` incrementally, using (and refreshing) the differential cache.",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -6376,7 +6486,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc",
       "file": "crates/mycelium-doc/src/lib.rs",
-      "line": 25,
+      "line": 26,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6470,12 +6580,111 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_doc::highlight",
+      "kind": "mod",
+      "crate": "mycelium-doc",
+      "module": "mycelium_doc",
+      "file": "crates/mycelium-doc/src/lib.rs",
+      "line": 27,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_doc::highlight::highlight",
+      "kind": "fn",
+      "crate": "mycelium-doc",
+      "module": "mycelium_doc::highlight",
+      "file": "crates/mycelium-doc/src/highlight.rs",
+      "line": 178,
+      "summary": "Highlight `source` as Mycelium, or `None` to signal the caller should emit plain escaped text.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_doc::highlight::is_myc_lang",
+      "kind": "fn",
+      "crate": "mycelium-doc",
+      "module": "mycelium_doc::highlight",
+      "file": "crates/mycelium-doc/src/highlight.rs",
+      "line": 159,
+      "summary": "Is `lang` a Mycelium fence we highlight? (`myc` or `myc-checked` — both go through the L1 lexer.)",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_doc::inline",
+      "kind": "mod",
+      "crate": "mycelium-doc",
+      "module": "mycelium_doc",
+      "file": "crates/mycelium-doc/src/lib.rs",
+      "line": 28,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_doc::inline::MAX_DEPTH:",
+      "kind": "const",
+      "crate": "mycelium-doc",
+      "module": "mycelium_doc::inline",
+      "file": "crates/mycelium-doc/src/inline.rs",
+      "line": 27,
+      "summary": "The maximum inline nesting depth parsed; beyond it the remainder is emitted as literal text (a",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_doc::inline::Span",
+      "kind": "enum",
+      "crate": "mycelium-doc",
+      "module": "mycelium_doc::inline",
+      "file": "crates/mycelium-doc/src/inline.rs",
+      "line": 31,
+      "summary": "One inline span — a render-time view over a slice of the node's text (never an IR node).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_doc::inline::is_external",
+      "kind": "fn",
+      "crate": "mycelium-doc",
+      "module": "mycelium_doc::inline",
+      "file": "crates/mycelium-doc/src/inline.rs",
+      "line": 256,
+      "summary": "Whether a link `href` is an external target the inline renderer should link directly.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_doc::inline::parse",
+      "kind": "fn",
+      "crate": "mycelium-doc",
+      "module": "mycelium_doc::inline",
+      "file": "crates/mycelium-doc/src/inline.rs",
+      "line": 53,
+      "summary": "Parse `text` into inline spans (the subset in the module docs).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_doc::inline::to_plain",
+      "kind": "fn",
+      "crate": "mycelium-doc",
+      "module": "mycelium_doc::inline",
+      "file": "crates/mycelium-doc/src/inline.rs",
+      "line": 265,
+      "summary": "Strip inline markdown from `text`, returning **plain, unescaped** text — formatting markers and",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_doc::ir",
       "kind": "mod",
       "crate": "mycelium-doc",
       "module": "mycelium_doc",
       "file": "crates/mycelium-doc/src/lib.rs",
-      "line": 26,
+      "line": 29,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6569,12 +6778,23 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_doc::label",
+      "kind": "mod",
+      "crate": "mycelium-doc",
+      "module": "mycelium_doc",
+      "file": "crates/mycelium-doc/src/lib.rs",
+      "line": 30,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_doc::lib_index",
       "kind": "mod",
       "crate": "mycelium-doc",
       "module": "mycelium_doc",
       "file": "crates/mycelium-doc/src/lib.rs",
-      "line": 27,
+      "line": 31,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6684,8 +6904,129 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc",
       "file": "crates/mycelium-doc/src/book.rs",
-      "line": 93,
+      "line": 102,
       "summary": "Load the committed manifest from `<repo_root>/docs/book-manifest.json`.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_doc::load_manifest_from",
+      "kind": "fn",
+      "crate": "mycelium-doc",
+      "module": "mycelium_doc",
+      "file": "crates/mycelium-doc/src/book.rs",
+      "line": 112,
+      "summary": "Load a manifest from an **explicit path** — the entry the `--manifest` scoped-emission path uses",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_doc::resolve_manifest_chapters",
+      "kind": "fn",
+      "crate": "mycelium-doc",
+      "module": "mycelium_doc",
+      "file": "crates/mycelium-doc/src/book.rs",
+      "line": 490,
+      "summary": "The manifest's chapters resolved to **(chapter-title, [ingested-doc anchors])**, best-effort over",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_doc::resolve_manifest_docs",
+      "kind": "fn",
+      "crate": "mycelium-doc",
+      "module": "mycelium_doc",
+      "file": "crates/mycelium-doc/src/book.rs",
+      "line": 470,
+      "summary": "Resolve a manifest to the **ordered set of ingested documents** it names — the same resolution",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_doc::short_label",
+      "kind": "fn",
+      "crate": "mycelium-doc",
+      "module": "mycelium_doc",
+      "file": "crates/mycelium-doc/src/label.rs",
+      "line": 23,
+      "summary": "A concise navigation label for `node` (see the module rules).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_doc::theme",
+      "kind": "mod",
+      "crate": "mycelium-doc",
+      "module": "mycelium_doc",
+      "file": "crates/mycelium-doc/src/lib.rs",
+      "line": 32,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_doc::theme::CORPUS_SEARCH_JS:",
+      "kind": "const",
+      "crate": "mycelium-doc",
+      "module": "mycelium_doc::theme",
+      "file": "crates/mycelium-doc/src/theme.rs",
+      "line": 255,
+      "summary": "The corpus-site client-side search: a small substring/prefix filter over the already-emitted",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_doc::theme::HEAD_THEME_INIT:",
+      "kind": "const",
+      "crate": "mycelium-doc",
+      "module": "mycelium_doc::theme",
+      "file": "crates/mycelium-doc/src/theme.rs",
+      "line": 217,
+      "summary": "The `<head>` theme bootstrap — runs **before first paint** so the correct palette is applied with",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_doc::theme::READING_CSS:",
+      "kind": "const",
+      "crate": "mycelium-doc",
+      "module": "mycelium_doc::theme",
+      "file": "crates/mycelium-doc/src/theme.rs",
+      "line": 33,
+      "summary": "The shared, self-contained stylesheet (the one reviewed template's CSS, §5).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_doc::theme::SKIP_LINK:",
+      "kind": "const",
+      "crate": "mycelium-doc",
+      "module": "mycelium_doc::theme",
+      "file": "crates/mycelium-doc/src/theme.rs",
+      "line": 295,
+      "summary": "The skip-to-content link (accessibility — first focusable element).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_doc::theme::THEME_TOGGLE_BUTTON:",
+      "kind": "const",
+      "crate": "mycelium-doc",
+      "module": "mycelium_doc::theme",
+      "file": "crates/mycelium-doc/src/theme.rs",
+      "line": 224,
+      "summary": "The theme-toggle button (goes in the header bar).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_doc::theme::THEME_TOGGLE_JS:",
+      "kind": "const",
+      "crate": "mycelium-doc",
+      "module": "mycelium_doc::theme",
+      "file": "crates/mycelium-doc/src/theme.rs",
+      "line": 230,
+      "summary": "Wires [`THEME_TOGGLE_BUTTON`]: flips the *effective* theme (honouring the OS default when no",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -8609,7 +8950,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 7988,
+      "line": 8664,
       "summary": "The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8620,7 +8961,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 7937,
+      "line": 8613,
       "summary": "The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8642,7 +8983,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 7978,
+      "line": 8654,
       "summary": "Canonicalize a surface VSA model ident to the **kernel model id** (`Repr::Vsa { model }` —",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8664,7 +9005,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::elab",
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 1371,
+      "line": 1377,
       "summary": "Build the content-addressed data registry `Σ` (RFC-0001 §4.3 r3) from the checked environment's",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8752,7 +9093,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 624,
+      "line": 630,
       "summary": "**M-1054 Stage 1 — the hygienic value-parametric expansion** (DN-110 §5-A /",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -33918,7 +34259,7 @@
     },
     {
       "symbol": "mycelium_doc::book::BookError",
-      "reason": "dedup-alias: same definition as `mycelium_doc::BookError` at crates/mycelium-doc/src/book.rs:48 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_doc::BookError` at crates/mycelium-doc/src/book.rs:57 — one canonical row kept"
     },
     {
       "symbol": "mycelium_doc::book::BookError::clone",
@@ -33954,7 +34295,7 @@
     },
     {
       "symbol": "mycelium_doc::book::BookManifest",
-      "reason": "dedup-alias: same definition as `mycelium_doc::BookManifest` at crates/mycelium-doc/src/book.rs:60 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_doc::BookManifest` at crates/mycelium-doc/src/book.rs:69 — one canonical row kept"
     },
     {
       "symbol": "mycelium_doc::book::BookManifest::clone",
@@ -33990,7 +34331,7 @@
     },
     {
       "symbol": "mycelium_doc::book::ChapterSpec",
-      "reason": "dedup-alias: same definition as `mycelium_doc::ChapterSpec` at crates/mycelium-doc/src/book.rs:72 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_doc::ChapterSpec` at crates/mycelium-doc/src/book.rs:81 — one canonical row kept"
     },
     {
       "symbol": "mycelium_doc::book::ChapterSpec::clone",
@@ -34026,15 +34367,27 @@
     },
     {
       "symbol": "mycelium_doc::book::build_book",
-      "reason": "dedup-alias: same definition as `mycelium_doc::build_book` at crates/mycelium-doc/src/book.rs:301 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_doc::build_book` at crates/mycelium-doc/src/book.rs:543 — one canonical row kept"
     },
     {
       "symbol": "mycelium_doc::book::load_manifest",
-      "reason": "dedup-alias: same definition as `mycelium_doc::load_manifest` at crates/mycelium-doc/src/book.rs:93 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_doc::load_manifest` at crates/mycelium-doc/src/book.rs:102 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_doc::book::load_manifest_from",
+      "reason": "dedup-alias: same definition as `mycelium_doc::load_manifest_from` at crates/mycelium-doc/src/book.rs:112 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_doc::book::resolve_manifest_chapters",
+      "reason": "dedup-alias: same definition as `mycelium_doc::resolve_manifest_chapters` at crates/mycelium-doc/src/book.rs:490 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_doc::book::resolve_manifest_docs",
+      "reason": "dedup-alias: same definition as `mycelium_doc::resolve_manifest_docs` at crates/mycelium-doc/src/book.rs:470 — one canonical row kept"
     },
     {
       "symbol": "mycelium_doc::build::BuildInput",
-      "reason": "dedup-alias: same definition as `mycelium_doc::BuildInput` at crates/mycelium-doc/src/build.rs:25 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_doc::BuildInput` at crates/mycelium-doc/src/build.rs:26 — one canonical row kept"
     },
     {
       "symbol": "mycelium_doc::build::BuildInput::clone",
@@ -34054,11 +34407,79 @@
     },
     {
       "symbol": "mycelium_doc::build::build",
-      "reason": "dedup-alias: same definition as `mycelium_doc::build` at crates/mycelium-doc/src/build.rs:68 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_doc::build` at crates/mycelium-doc/src/build.rs:79 — one canonical row kept"
     },
     {
       "symbol": "mycelium_doc::build::emit_all",
-      "reason": "dedup-alias: same definition as `mycelium_doc::emit_all` at crates/mycelium-doc/src/build.rs:165 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_doc::emit_all` at crates/mycelium-doc/src/build.rs:198 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_doc::cache::DiffCache",
+      "reason": "dedup-alias: same definition as `mycelium_doc::DiffCache` at crates/mycelium-doc/src/cache.rs:38 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_doc::cache::DiffCache::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_doc::cache::DiffCache::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_doc::cache::DiffCache::deserialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_doc::cache::DiffCache::deserialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_doc::cache::DiffCache::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_doc::cache::DiffCache::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_doc::cache::DiffCache::serialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_doc::cache::DiffCache::serialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_doc::cache::EmitReport",
+      "reason": "dedup-alias: same definition as `mycelium_doc::EmitReport` at crates/mycelium-doc/src/cache.rs:89 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_doc::cache::EmitReport::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_doc::cache::EmitReport::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_doc::cache::EmitReport::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_doc::cache::EmitReport::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_doc::cache::EmitReport::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_doc::cache::EmitReport::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_doc::cache::emit_incremental",
+      "reason": "dedup-alias: same definition as `mycelium_doc::emit_incremental` at crates/mycelium-doc/src/cache.rs:110 — one canonical row kept"
     },
     {
       "symbol": "mycelium_doc::corpus::AnchorAlloc::default",
@@ -34231,6 +34652,18 @@
     {
       "symbol": "mycelium_doc::hash::DocHasher::default",
       "reason": "definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_doc::inline::Span",
+      "reason": "definition not found via regex heuristic (kind='fn', name='Span') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_doc::inline::Span",
+      "reason": "definition not found via regex heuristic (kind='fn', name='Span') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_doc::inline::Span",
+      "reason": "definition not found via regex heuristic (kind='fn', name='Span') — possibly macro-generated or cfg-gated"
     },
     {
       "symbol": "mycelium_doc::ir::DocModel",
@@ -34495,6 +34928,10 @@
     {
       "symbol": "mycelium_doc::ir::XrefTarget::serialize",
       "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_doc::label::short_label",
+      "reason": "dedup-alias: same definition as `mycelium_doc::short_label` at crates/mycelium-doc/src/label.rs:23 — one canonical row kept"
     },
     {
       "symbol": "mycelium_doc::lib_index::Flagged::clone",
@@ -36054,7 +36491,7 @@
     },
     {
       "symbol": "mycelium_l1::elab::elaborate_lower_rule_with_args",
-      "reason": "dedup-alias: same definition as `mycelium_l1::elaborate_lower_rule_with_args` at crates/mycelium-l1/src/elab.rs:624 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::elaborate_lower_rule_with_args` at crates/mycelium-l1/src/elab.rs:630 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::elab::elaborate_reclaim",

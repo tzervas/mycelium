@@ -1,0 +1,10 @@
+{
+  "title": "Mycelium — RFCs (subsystem designs)",
+  "preface": "The full subsystem designs (RFC-0001..RFC-0041): normative, reference-level. A language-focused per-cluster bundle for Google NotebookLM (under the 500k-word/source cap). Generated from the corpus by myc-doc.",
+  "chapters": [
+    {
+      "title": "RFCs",
+      "globs": ["docs/rfcs/RFC-*.md"]
+    }
+  ]
+}
