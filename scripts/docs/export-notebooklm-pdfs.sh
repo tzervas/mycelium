@@ -72,7 +72,11 @@ else
     cargo install typst-cli --root "$TYPST_DIR" >/dev/null 2>&1 && TYPST="$TYPST_DIR/bin/typst" || true
   fi
 fi
-[ -n "$TYPST" ] && log "typst: $TYPST" || log "typst unavailable — Markdown fallback for PDF steps"
+if [ -n "$TYPST" ]; then
+  log "typst: $TYPST"
+else
+  log "typst unavailable — Markdown fallback for PDF steps"
+fi
 
 # ---- 3. per-cluster render --------------------------------------------------
 emit_markdown_bundle() {  # $1 manifest, $2 out.md
