@@ -18,6 +18,7 @@ mod compiler_stage5_typealg;
 mod compiler_stage5_tyref;
 mod compiler_stage5_unify;
 mod decision;
+mod defsite_resolution_stage2;
 mod elab;
 mod error;
 mod eval;

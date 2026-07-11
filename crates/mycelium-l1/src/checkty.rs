@@ -5651,13 +5651,41 @@ impl Cx<'_> {
         // Stage 2 (OQ-H1) gate — the first genuinely free RHS identifier, if any (see
         // `rhs_first_free_id`'s doc comment for the exact accepted-fragment boundary).
         let bound: Vec<String> = rule.value_params.iter().map(|p| p.name.clone()).collect();
-        if let Some(free) = self.rhs_first_free_id(rhs, &bound, 0)? {
+        if let Some(free) = self.rhs_first_free_id(rhs, &bound, false, 0)? {
+            // DN-115 §4.2/G2 — a name that *is* a same-nodule nullary `lower`-rule but was refused
+            // anyway can only mean it was referenced in **value** (non-call-head) position: the
+            // gate accepts a lower-rule name only as a call head (`rhs_first_free_id`'s `call_head`
+            // parameter), because `Elab::app` is the only elaborator path that resolves one. Give
+            // this its own diagnostic rather than the generic "neither a value parameter, ..."
+            // message, which would be misleading here (`free` *is* recognized, just not in this
+            // position) — never-silent, Stage-2-labeled (G2).
+            //
+            // **Honesty note (VR-5, DN-115's Ratification section):** this diagnostic does NOT
+            // claim a bare reference "would type-check and residual at elaboration" — adversarial
+            // verification during the Stage-2 leaf found that claim false: `infer_expr_rule_rhs_type`
+            // always follows this gate with a full RHS type-check whose `Cx::check_path` never
+            // resolves a bare `lower`-rule reference either, so the program was already refused
+            // before this fix, just via a generic "unknown name" message from that later,
+            // internal-only call instead of this clear, Stage-2-labeled one. What this fix actually
+            // buys is an earlier, correctly-labeled refusal (not a soundness fix) — say exactly that.
+            if self.lower_rules.contains_key(free) {
+                return self.err(format!(
+                    "`{name}`'s RHS references the `lower`-rule `{free}` in value position — a \
+                     `lower` rule has no L0 form of its own to fall through to (M-1054 Stage 1b \
+                     §5.2 wiring; DN-114) and resolves only when it is the head of a call \
+                     (`{free}(...)`). Refused here, at check, with this specific diagnostic \
+                     (DN-115 §4.2/G2) rather than falling through to a later, generic \"unknown \
+                     name\" refusal from this rule's own RHS re-type-check — never-silent either \
+                     way, but this names the actual mismatch (G2)."
+                ));
+            }
             return self.err(format!(
                 "`{name}`'s RHS references `{free}`, which is neither a value parameter, an \
-                 RHS-local binder, nor a same-nodule fn/constructor/prim/`lower`-rule — M-1054 \
-                 Stage 1b accepts only the single-nodule, params-and-globally-unambiguous- \
-                 fns/ctors-only fragment; cross-nodule / ambiguous def-site resolution is Stage 2 \
-                 work (OQ-H1), not built yet (never a silent free-variable splice — G2)."
+                 RHS-local binder, nor a same-nodule fn/constructor/prim/`lower`-rule (in \
+                 call-head position) — M-1054 Stage 2 (OQ-H1) accepts only the single-nodule, \
+                 params-and-globally-unambiguous-fns/ctors/prims/lower-rule-calls-only fragment; \
+                 cross-nodule / ambiguous def-site resolution is Stage 4 work (DN-113/DN-115), not \
+                 built yet (never a silent free-variable splice — G2)."
             ));
         }
         // Both gates passed: type the RHS once (Option B, DN-114 — see the doc comment above) and
@@ -5764,14 +5792,43 @@ impl Cx<'_> {
         }
     }
 
-    /// **M-1054 Stage 1b Stage-2 gate helper (OQ-H1)** — depth-first, left-to-right search for the
-    /// first RHS identifier that is genuinely **free**: not `bound` (the value parameters, plus
+    /// **M-1054 Stage 1b/2 Stage-2 gate helper (OQ-H1)** — depth-first, left-to-right search for
+    /// the first RHS identifier that is genuinely **free**: not `bound` (the value parameters, plus
     /// every RHS-local binder introduced by an ancestor `let`/`lambda`/`for`/match-arm-pattern), and
-    /// not a same-nodule, unambiguous top-level `fn`, nullary `lower`-rule reference, or constructor
-    /// name (a bare nullary-constructor `Var` reference, or any constructor named in call-head
-    /// position, resolves through the ordinary global namespace exactly like a `fn` reference does —
-    /// [`crate::elab::Elab::expr`]'s own `Expr::Path` handling treats them identically). `None` means
-    /// every RHS identifier is within the Stage 1b fragment; `Some(name)` names the first offender.
+    /// not a same-nodule, unambiguous top-level `fn`, constructor name (a bare nullary-constructor
+    /// `Var` reference, or any constructor named in call-head position, resolves through the
+    /// ordinary global namespace exactly like a `fn` reference does — [`crate::elab::Elab::expr`]'s
+    /// own `Expr::Path` handling treats them identically), or recognized prim
+    /// ([`prim_name_is_recognized`] — DN-115 §4.1/G1). `None` means every RHS identifier is within
+    /// the accepted fragment; `Some(name)` names the first offender.
+    ///
+    /// **`call_head` (DN-115 §4.2/G2) — a nullary `lower`-rule resolves only in call-head
+    /// position.** `true` iff `e` is exactly the `head` of an enclosing [`Expr::App`] (mirroring
+    /// [`crate::elab::Elab::app`]'s own dispatch, `elab.rs`, which pattern-matches
+    /// `Expr::App{head: Expr::Path(..), ..}` **literally** and has no `lower_rules` lookup in its
+    /// value-position `Expr::Path` arm — `Elab::app` is the only place that consults `lower_rules`
+    /// at all). This gate previously accepted a bare (non-call, value-position) reference to a
+    /// nullary `lower`-rule name position-agnostically; it now **narrows** (KISS, not the
+    /// alternative of extending elab's `Expr::Path` arm — DN-115 §4.2) to name the mismatch with
+    /// its own clear, check-phase diagnostic. **Honesty note (VR-5):** the narrowing is a
+    /// diagnostic-quality + gate/mechanism-self-consistency fix, not a closed soundness gap — a
+    /// bare reference was *already* refused before this fix too (via a later, generic "unknown
+    /// name" error from this rule's own RHS re-type-check, `infer_expr_rule_rhs_type` →
+    /// `Cx::check_path`, which never resolves a `lower`-rule name either); see DN-115's
+    /// Ratification section for the adversarial verification. Every non-`Expr::Path` recursive
+    /// call passes `false` — no other syntactic position is ever a call head.
+    ///
+    /// **Single-nodule def-site-resolution invariant (DN-115 §3).** This gate is a pure
+    /// *admissibility* test — it does not itself resolve anything. Every id it accepts is resolved
+    /// by Pass-1 elaboration ([`crate::elab::elaborate_value_parametric_rule_inner`]) against the
+    /// **def-site** global env, which coincides with the **use-site** env only because a `lower`
+    /// rule and its call today live in the **same nodule** (no cross-nodule import is consulted —
+    /// `self.imports` is never read here). That coincidence is what makes Pass-1's use-env lookup
+    /// def-site-correct; Stage 4's cross-nodule case (where the two envs diverge) must thread an
+    /// explicit def-site env rather than silently reuse this same mechanism (G2) — this gate keeps
+    /// refusing every genuinely cross-nodule/phylum free id so that widening is deliberate, never
+    /// silent.
+    ///
     /// Exhaustively recurses into every [`Expr`] child so no subtree is silently skipped (G2) — an
     /// unrecognized/future `Expr` variant is a compile error here (no wildcard arm), not a silent
     /// gap. Depth-bounded by [`MAX_CHECK_DEPTH`] like every other recursive walk in this module.
@@ -5779,6 +5836,7 @@ impl Cx<'_> {
         &self,
         e: &'e Expr,
         bound: &[String],
+        call_head: bool,
         depth: u32,
     ) -> Result<Option<&'e str>, CheckError> {
         if depth > MAX_CHECK_DEPTH {
@@ -5794,21 +5852,26 @@ impl Cx<'_> {
         match e {
             Expr::Path(p) if p.0.len() == 1 => {
                 let name = p.0[0].as_str();
-                // `prim_family`-recognized names (the scalar/binary/ternary/dense/seq/bytes core
-                // arithmetic/comparison primitives — e.g. `add_s`) are globally, unambiguously
-                // resolvable kernel identifiers, never a def-site/import concern — squarely inside
-                // the Stage 1b fragment alongside a `fn`/ctor/`lower`-rule reference. **Known
-                // residual (flagged, not silent — G2):** the VSA-prim (`try_check_vsa_prim`) and
-                // float-prim (`try_check_float_prim`) dispatch sets are *not* checked here (those
-                // dispatchers are full argument-shape-matching functions, not name predicates) — an
-                // RHS calling e.g. `vsa_bind`/a float prim would be (over-)refused by this gate as
-                // if it were a free identifier. Not exercised by any Stage 1b fixture; a residual
-                // for whoever extends this gate's coverage.
-                if bound.iter().any(|b| b == name)
-                    || self.fns.contains_key(name)
-                    || self.lower_rules.contains_key(name)
+                if bound.iter().any(|b| b == name) {
+                    return Ok(None);
+                }
+                // DN-115 §4.2/G2 — a nullary `lower`-rule name resolves only in call-head position
+                // (see the doc comment above); checked before the position-agnostic sets below so a
+                // name that is *both* a lower-rule and, say, a ctor cannot silently fall through to
+                // the wrong branch.
+                if self.lower_rules.contains_key(name) {
+                    return if call_head { Ok(None) } else { Ok(Some(name)) };
+                }
+                // Same-nodule top-level `fn`/constructor/recognized-prim references are accepted
+                // position-agnostically (DN-115 §2.1 table — already resolved either as a call or a
+                // value by Pass-1 elaboration/defunctionalization). `prim_name_is_recognized`
+                // (DN-115 §4.1/G1) closes the VSA/float-prim over-refusal this gate previously had:
+                // `prim_family` alone missed the two argument-shape-matching dispatch sets
+                // (`try_check_vsa_prim`/`try_check_float_prim`), so a legitimate VSA/float prim in a
+                // rule RHS was wrongly refused as if it were a free identifier.
+                if self.fns.contains_key(name)
                     || self.ctor(name).is_some()
-                    || prim_family(name).is_some()
+                    || prim_name_is_recognized(name)
                 {
                     return Ok(None);
                 }
@@ -5823,29 +5886,29 @@ impl Cx<'_> {
                 name,
                 ..
             } => {
-                if let Some(f) = self.rhs_first_free_id(b, bound, d)? {
+                if let Some(f) = self.rhs_first_free_id(b, bound, false, d)? {
                     return Ok(Some(f));
                 }
                 let mut bound2 = bound.to_vec();
                 bound2.push(name.clone());
-                self.rhs_first_free_id(body, &bound2, d)
+                self.rhs_first_free_id(body, &bound2, false, d)
             }
             Expr::If { cond, conseq, alt } => {
                 for sub in [cond, conseq, alt] {
-                    if let Some(f) = self.rhs_first_free_id(sub, bound, d)? {
+                    if let Some(f) = self.rhs_first_free_id(sub, bound, false, d)? {
                         return Ok(Some(f));
                     }
                 }
                 Ok(None)
             }
             Expr::Match { scrutinee, arms } => {
-                if let Some(f) = self.rhs_first_free_id(scrutinee, bound, d)? {
+                if let Some(f) = self.rhs_first_free_id(scrutinee, bound, false, d)? {
                     return Ok(Some(f));
                 }
                 for arm in arms {
                     let mut bound2 = bound.to_vec();
                     collect_pattern_binders(&arm.pattern, &mut bound2);
-                    if let Some(f) = self.rhs_first_free_id(&arm.body, &bound2, d)? {
+                    if let Some(f) = self.rhs_first_free_id(&arm.body, &bound2, false, d)? {
                         return Ok(Some(f));
                     }
                 }
@@ -5858,28 +5921,30 @@ impl Cx<'_> {
                 init,
                 body,
             } => {
-                if let Some(f) = self.rhs_first_free_id(xs, bound, d)? {
+                if let Some(f) = self.rhs_first_free_id(xs, bound, false, d)? {
                     return Ok(Some(f));
                 }
-                if let Some(f) = self.rhs_first_free_id(init, bound, d)? {
+                if let Some(f) = self.rhs_first_free_id(init, bound, false, d)? {
                     return Ok(Some(f));
                 }
                 let mut bound2 = bound.to_vec();
                 bound2.push(x.clone());
                 bound2.push(acc.clone());
-                self.rhs_first_free_id(body, &bound2, d)
+                self.rhs_first_free_id(body, &bound2, false, d)
             }
             Expr::Lambda { params, body } => {
                 let mut bound2 = bound.to_vec();
                 bound2.extend(params.iter().map(|p| p.name.clone()));
-                self.rhs_first_free_id(body, &bound2, d)
+                self.rhs_first_free_id(body, &bound2, false, d)
             }
             Expr::App { head, args } => {
-                if let Some(f) = self.rhs_first_free_id(head, bound, d)? {
+                // `head` is exactly the call-head position (DN-115 §4.2/G2) — mirrors
+                // `Elab::app`'s own literal `Expr::App{head: Expr::Path(..), ..}` dispatch.
+                if let Some(f) = self.rhs_first_free_id(head, bound, true, d)? {
                     return Ok(Some(f));
                 }
                 for a in args {
-                    if let Some(f) = self.rhs_first_free_id(a, bound, d)? {
+                    if let Some(f) = self.rhs_first_free_id(a, bound, false, d)? {
                         return Ok(Some(f));
                     }
                 }
@@ -5887,7 +5952,7 @@ impl Cx<'_> {
             }
             Expr::Fuse { left, right } => {
                 for sub in [left, right] {
-                    if let Some(f) = self.rhs_first_free_id(sub, bound, d)? {
+                    if let Some(f) = self.rhs_first_free_id(sub, bound, false, d)? {
                         return Ok(Some(f));
                     }
                 }
@@ -5895,23 +5960,23 @@ impl Cx<'_> {
             }
             Expr::Reclaim { policy, body } => {
                 for sub in [policy, body] {
-                    if let Some(f) = self.rhs_first_free_id(sub, bound, d)? {
+                    if let Some(f) = self.rhs_first_free_id(sub, bound, false, d)? {
                         return Ok(Some(f));
                     }
                 }
                 Ok(None)
             }
-            Expr::Swap { value, .. } => self.rhs_first_free_id(value, bound, d),
+            Expr::Swap { value, .. } => self.rhs_first_free_id(value, bound, false, d),
             Expr::WithParadigm { body, .. }
             | Expr::Wild(body)
             | Expr::Spore(body)
             | Expr::Wrapping(body)
             | Expr::Consume(body)
-            | Expr::Try(body) => self.rhs_first_free_id(body, bound, d),
-            Expr::Ascribe(inner, _) => self.rhs_first_free_id(inner, bound, d),
+            | Expr::Try(body) => self.rhs_first_free_id(body, bound, false, d),
+            Expr::Ascribe(inner, _) => self.rhs_first_free_id(inner, bound, false, d),
             Expr::TupleLit(items) => {
                 for it in items {
-                    if let Some(f) = self.rhs_first_free_id(it, bound, d)? {
+                    if let Some(f) = self.rhs_first_free_id(it, bound, false, d)? {
                         return Ok(Some(f));
                     }
                 }
@@ -5920,11 +5985,11 @@ impl Cx<'_> {
             Expr::Colony(hyphae) => {
                 for h in hyphae {
                     if let Some(forage) = &h.forage {
-                        if let Some(f) = self.rhs_first_free_id(forage, bound, d)? {
+                        if let Some(f) = self.rhs_first_free_id(forage, bound, false, d)? {
                             return Ok(Some(f));
                         }
                     }
-                    if let Some(f) = self.rhs_first_free_id(&h.body, bound, d)? {
+                    if let Some(f) = self.rhs_first_free_id(&h.body, bound, false, d)? {
                         return Ok(Some(f));
                     }
                 }
@@ -7459,16 +7524,7 @@ impl Cx<'_> {
         name: &str,
         args: &[Expr],
     ) -> Result<Option<(Ty, Expr)>, CheckError> {
-        if !matches!(
-            name,
-            "vsa_bind"
-                | "vsa_unbind"
-                | "vsa_permute"
-                | "vsa_bundle"
-                | "vsa_cleanup"
-                | "vsa_reconstruct"
-                | "vsa_required_dim"
-        ) {
+        if !VSA_PRIM_NAMES.contains(&name) {
             return Ok(None);
         }
         // The M-892 introduction dispatch set (must mirror `vsa_model_of` in
@@ -7904,19 +7960,10 @@ impl Cx<'_> {
                 app_node(head, vec![v2, w2]),
             )));
         }
-        let is_cmp = matches!(
-            name,
-            "flt_lt" | "flt_le" | "flt_gt" | "flt_ge" | "flt_eq" | "flt_total_le"
-        );
+        let is_cmp = FLOAT_CMP_PRIM_NAMES.contains(&name);
         // ADR-040 §2.5 (CU-2): the mandated classification predicates — unary `Float → Binary{1}`.
-        let is_class = matches!(name, "flt_is_nan" | "flt_is_finite" | "flt_is_infinite");
-        if !is_cmp
-            && !is_class
-            && !matches!(
-                name,
-                "flt_add" | "flt_sub" | "flt_mul" | "flt_div" | "flt_neg"
-            )
-        {
+        let is_class = FLOAT_CLASS_PRIM_NAMES.contains(&name);
+        if !is_cmp && !is_class && !FLOAT_ARITH_PRIM_NAMES.contains(&name) {
             return Ok(None);
         }
         let want = if name == "flt_neg" || is_class { 1 } else { 2 };
@@ -8423,6 +8470,67 @@ fn prim_family(name: &str) -> Option<PrimFam> {
         "add" | "sub" | "mul" | "neg" => PrimFam::Ternary,
         _ => return None,
     })
+}
+
+/// **M-1054 Stage 2 (G1, DN-115 §4.1)** — the VSA-prim dispatch set's **name view**, factored out
+/// of [`Cx::try_check_vsa_prim`] so the checker's own argument-shape-matching dispatcher and the
+/// Stage-2 free-identifier gate ([`Cx::rhs_first_free_id`], via [`prim_name_is_recognized`]) share
+/// **one** source of truth for "is this name a VSA prim at all" (DRY) — never two lists that could
+/// drift (M-892/M-894's introduction + codebook dispatch set).
+const VSA_PRIM_NAMES: &[&str] = &[
+    "vsa_bind",
+    "vsa_unbind",
+    "vsa_permute",
+    "vsa_bundle",
+    "vsa_cleanup",
+    "vsa_reconstruct",
+    "vsa_required_dim",
+];
+
+/// **M-1054 Stage 2 (G1, DN-115 §4.1)** — the float-prim dispatch set's **name view**, factored
+/// into four sub-group consts so [`Cx::try_check_float_prim`] and
+/// [`float_prim_name_is_recognized`] share **one** source of truth per sub-group (DRY) instead of
+/// two independently-maintained lists that could drift (ADR-040 §2.1/§2.4/§2.5: the Binary↔Float
+/// conversions, comparisons, classification predicates, and scalar arithmetic).
+const FLOAT_CMP_PRIM_NAMES: &[&str] = &[
+    "flt_lt",
+    "flt_le",
+    "flt_gt",
+    "flt_ge",
+    "flt_eq",
+    "flt_total_le",
+];
+const FLOAT_CLASS_PRIM_NAMES: &[&str] = &["flt_is_nan", "flt_is_finite", "flt_is_infinite"];
+const FLOAT_ARITH_PRIM_NAMES: &[&str] = &["flt_add", "flt_sub", "flt_mul", "flt_div", "flt_neg"];
+
+/// The float-prim name view used by [`prim_name_is_recognized`] — the union of the three
+/// sub-group consts above (kept as a function, not a `const &[&str]`, because Rust has no stable
+/// const slice-concatenation) plus the two Binary↔Float conversion names
+/// [`Cx::try_check_float_prim`] matches individually (`bin_to_flt`/`flt_to_bin`, each its own
+/// dedicated pre-branch there with a distinct arity — CU-3). Those two names are the one place in
+/// this pair of functions not threaded through a shared const (a literal two-name duplication,
+/// narrow and stable — ADR-040 §2.4 fixes both spellings), everything else is a single source of
+/// truth per sub-group (DRY).
+fn float_prim_name_is_recognized(name: &str) -> bool {
+    matches!(name, "bin_to_flt" | "flt_to_bin")
+        || FLOAT_CMP_PRIM_NAMES.contains(&name)
+        || FLOAT_CLASS_PRIM_NAMES.contains(&name)
+        || FLOAT_ARITH_PRIM_NAMES.contains(&name)
+}
+
+/// **M-1054 Stage 2 (G1, DN-115 §4.1)** — a pure **name** predicate ("is `name` any kernel-
+/// recognized prim at all", ignoring argument shape) covering every dispatcher [`Cx::check_app`]
+/// tries: the width-preserving [`prim_family`] set, plus [`VSA_PRIM_NAMES`] and the float-prim
+/// groups via [`float_prim_name_is_recognized`] (the two argument-shape-matching dispatchers —
+/// [`Cx::try_check_vsa_prim`] / [`Cx::try_check_float_prim`] — have no name-only view of their own;
+/// this is that view). Used by [`Cx::rhs_first_free_id`] to close the over-refusal gap DN-115 §4.1
+/// flags: previously only `prim_family` was consulted there, so a legitimate VSA/float prim in a
+/// `lower`-rule RHS was wrongly refused as a free identifier even though [`Cx::check_app`] would
+/// have resolved it fine at an ordinary call site.
+fn prim_name_is_recognized(name: &str) -> bool {
+    prim_family(name).is_some()
+        || VSA_PRIM_NAMES.contains(&name)
+        || float_prim_name_is_recognized(name)
 }
 
 /// Encode a non-negative decimal `v` as an **unsigned** `Binary{width}` literal (MSB-first), or an
