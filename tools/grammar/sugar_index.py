@@ -24,6 +24,12 @@ the editor grammars, so the sugar catalog can never silently diverge from the le
 the keyword()-driven cross-check (see `sugar.yaml`'s scope note) — they have no `token.rs:LINE`
 citation to validate against.
 
+Every row also renders its `native_strategy` (M-1058 follow-up): the ratified DN-111
+native-equivalence taxonomy value (`NativeEquivalent`/`IdiomaticRemapping`/`Approximation`/
+`InteropBridge`, or `unclassified` where `sugar.yaml` honestly declines to guess — VR-5). This
+generator only RENDERS the field verbatim from `sugar.yaml`; it does not classify or validate it
+(classification lives in `sugar.yaml` itself, via `.claude/skills/native-translate/SKILL.md`).
+
 HONESTY (VR-5, G2): this generated index is `Empirical`/`Declared` — a projection of the
 hand-authored `sugar.yaml` registry (itself a curated projection of the source DNs + token.rs).
 `sugar.yaml` + the DNs it cites + token.rs are ground truth; use this index to find where to
@@ -174,8 +180,8 @@ def render_json(registry: dict) -> str:
 
 def _table(rows: list[dict], id_field: str, id_header: str) -> list[str]:
     lines = [
-        f"| {id_header} | Status | Grammar rule | Lowering target | Defining doc | Build status |",
-        "|---|---|---|---|---|---|",
+        f"| {id_header} | Status | Grammar rule | Lowering target | Defining doc | Build status | Native strategy |",
+        "|---|---|---|---|---|---|---|",
     ]
     for row in sorted(rows, key=_row_sort_key):
         rid = f"`{row.get(id_field)}`"
@@ -190,8 +196,9 @@ def _table(rows: list[dict], id_field: str, id_header: str) -> list[str]:
         )
         doc = str(row.get("defining_doc") or "—").replace("|", "\\|")
         build = row.get("build_status", "—")
+        native_strategy = str(row.get("native_strategy") or "—").replace("|", "\\|")
         lines.append(
-            f"| {rid} | {status} | {grammar_rule} | {lowering} | {doc} | {build} |"
+            f"| {rid} | {status} | {grammar_rule} | {lowering} | {doc} | {build} | {native_strategy} |"
         )
     lines.append("")
     return lines
@@ -206,6 +213,13 @@ def render_markdown(registry: dict) -> str:
         "> Realizes DN-38 §6's per-feature Lowering Map as a generated artifact. Source of "
         "truth: `tools/grammar/sugar.yaml` (hand-authored) + `crates/mycelium-l1/src/token.rs` "
         "(mechanically cross-checked)."
+    )
+    lines.append(
+        "> **Native strategy** (M-1058 follow-up, DN-111): the ratified DN-111 taxonomy — "
+        "`NativeEquivalent` (alias Adaptation) · `IdiomaticRemapping` (alias Solution) · "
+        "`Approximation` · `InteropBridge` (alias Bridge), or `unclassified` where no row exists "
+        "to classify yet (a `Gap`/superseded keyword) — never a fabricated guess (VR-5). See "
+        "`.claude/skills/native-translate/SKILL.md` for the classification procedure."
     )
     lines.append("")
     lines.append(

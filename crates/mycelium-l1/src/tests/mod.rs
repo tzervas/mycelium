@@ -33,6 +33,7 @@ mod mono_tag;
 mod nodule;
 mod parse;
 mod reveal;
+mod reveal_roundtrip_e3;
 mod substrate;
 mod totality;
 mod usefulness;
