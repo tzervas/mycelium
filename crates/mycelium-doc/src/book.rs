@@ -38,6 +38,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::emit::{html_escape, Artifacts};
 use crate::ir::{DocModel, Level, Node, Payload, Provenance, SourceKind};
+use crate::theme;
 
 /// The repo-relative default location of the committed chapter manifest.
 pub const DEFAULT_MANIFEST_PATH: &str = "docs/book-manifest.json";
@@ -91,8 +92,17 @@ pub struct ChapterSpec {
 /// # Errors
 /// A missing or unparseable manifest is a `BookError`, never a silent empty book.
 pub fn load_manifest(repo_root: &Path) -> Result<BookManifest, BookError> {
-    let path = repo_root.join(DEFAULT_MANIFEST_PATH);
-    let src = std::fs::read_to_string(&path)
+    load_manifest_from(&repo_root.join(DEFAULT_MANIFEST_PATH))
+}
+
+/// Load a manifest from an **explicit path** — the entry the `--manifest` scoped-emission path uses
+/// (a per-cluster manifest, the same `{title, chapters:[{sources, globs, exclude}]}` shape as the
+/// committed book manifest). [`load_manifest`] is the convenience wrapper for the default location.
+///
+/// # Errors
+/// A missing or unparseable manifest is a `BookError`, never a silent empty subset (G2).
+pub fn load_manifest_from(path: &Path) -> Result<BookManifest, BookError> {
+    let src = std::fs::read_to_string(path)
         .map_err(|e| BookError(format!("reading {}: {e}", path.display())))?;
     serde_json::from_str(&src).map_err(|e| BookError(format!("parsing {}: {e}", path.display())))
 }
@@ -242,53 +252,117 @@ fn extract_article(page_html: &str) -> &str {
     &page_html[start..end]
 }
 
-/// The shared visual language (the same design tokens as [`crate::emit::html`]'s one template,
-/// §5 — "one reviewed template" — extended with the chapter-nav/prev-next/search chrome a linear
-/// book needs and the wiki-style corpus index does not).
-const BOOK_STYLE: &str = "\
-:root{--fg:#1a1a2e;--bg:#fdfdfd;--accent:#3a5;--dim:#667;--code:#f4f4f8}\
-*{box-sizing:border-box}\
-body{margin:0;font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--fg);background:var(--bg)}\
-header,nav,main,footer{max-width:54rem;margin:0 auto;padding:1rem 1.25rem}\
-header{border-bottom:2px solid var(--accent)}\
-nav ul{list-style:none;padding-left:1rem}\
-a{color:var(--accent)}a.unresolved{color:#b00;text-decoration:line-through}\
-h1,h2,h3,h4,h5,h6{line-height:1.25}\
-pre{background:var(--code);padding:.75rem 1rem;border-radius:6px;overflow:auto}\
-code{font:0.9em ui-monospace,SFMono-Regular,Menlo,monospace}\
-.undocumented{color:var(--dim);font-style:italic;border-left:3px solid #c93;padding-left:.5rem}\
-.level{font-size:.7rem;color:var(--dim);text-transform:uppercase;letter-spacing:.05em}\
-.checked{color:var(--accent);font-size:.75rem}\
-.crumb{font-size:.85rem;color:var(--dim)}\
-.pager{display:flex;justify-content:space-between;margin:2rem 0;font-size:.9rem}\
-.pager a{border:1px solid #ddd;border-radius:6px;padding:.5rem .9rem}\
-#book-search-box{width:100%;padding:.5rem;font-size:1rem;border:1px solid #ddd;border-radius:6px}\
-#book-search-results li{margin:.5rem 0}\
-footer{color:var(--dim);font-size:.85rem;border-top:1px solid #ddd;margin-top:2rem}";
+/// One curated book page: a sticky header (with the theme toggle), a persistent **chapter-tree
+/// sidebar** + reading `<main>` (the shared [`crate::theme`] layout, §5 — the same comfortable visual
+/// language as the corpus site), and the book's own prev/next chrome inside `main`. `sidebar` is the
+/// chapter tree; `breadcrumb`/pager live in `main`.
+fn book_shell(book_title: &str, page_title: &str, sidebar: &str, main: &str) -> String {
+    book_document(book_title, page_title, "../", sidebar, main)
+}
 
-fn book_shell(book_title: &str, page_title: &str, nav: &str, main: &str) -> String {
+/// The shared document skeleton for every book page (chapter page, ToC landing, search) — one
+/// template, the self-contained offline theme, no-flash init, and the theme toggle. `index_prefix`
+/// is `"../"` from a `book/pages/` page and `""` from `book/index.html`/`book/search.html`.
+fn book_document(
+    book_title: &str,
+    page_title: &str,
+    index_prefix: &str,
+    sidebar: &str,
+    main: &str,
+) -> String {
     format!(
         "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n\
          <meta charset=\"utf-8\">\n\
          <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n\
          <title>{page_title} — {book_title}</title>\n\
-         <style>{BOOK_STYLE}</style>\n\
-         </head>\n<body>\n\
-         <header><h1 class=\"site-title\">{book_title}</h1>\
-         <p>A curated linear composition of the honest corpus projection — never a parallel truth \
-         (ADR-003/G11). <a href=\"../search.html\">Search the book</a></p></header>\n\
-         {nav}\n<main>\n{main}\n</main>\n\
+         <style>{css}</style>\n{head_init}\n\
+         </head>\n<body>\n{skip}\n\
+         <header class=\"site-header\"><div class=\"bar\">\
+         <p class=\"site-title\">{book_title}</p>\
+         <p class=\"tagline\">A curated linear composition of the honest corpus projection — never a \
+         parallel truth (ADR-003/G11). <a href=\"{index_prefix}search.html\">Search the book</a></p>\
+         {toggle}</div></header>\n\
+         <div class=\"layout no-toc\">\n{sidebar}\n\
+         <main id=\"content\">\n{main}\n</main>\n</div>\n\
          <footer>Generated by <code>myc-doc book</code> — every page composes the same \
          content-addressed article the corpus site renders (dual-projection parity by \
          construction). Undocumented items are flagged, never invented (G2).</footer>\n\
+         {toggle_js}\n\
          </body>\n</html>\n",
         book_title = html_escape(book_title),
         page_title = html_escape(page_title),
+        css = theme::READING_CSS,
+        head_init = theme::HEAD_THEME_INIT,
+        skip = theme::SKIP_LINK,
+        toggle = theme::THEME_TOGGLE_BUTTON,
+        toggle_js = theme::THEME_TOGGLE_JS,
     )
+}
+
+/// The persistent chapter-tree sidebar: chapters as group labels, their pages as links, plus a
+/// Table-of-contents / Search link pair at the top. `page_prefix` reaches a chapter page
+/// (`""` from a `book/pages/` page, `"pages/"` from `book/index.html`); `index_prefix` reaches the
+/// ToC/search (`"../"` from a page, `""` from the index). `current` marks the page being read.
+fn book_sidebar(
+    manifest: &BookManifest,
+    pages: &[Page],
+    page_prefix: &str,
+    index_prefix: &str,
+    current: Option<&str>,
+) -> String {
+    let mut nav = String::from("<nav class=\"sidebar\" aria-label=\"Book navigation\">\n");
+    nav.push_str(&format!(
+        "<ul>\n  <li><a href=\"{ip}index.html\">Table of contents</a></li>\n\
+         \x20 <li><a href=\"{ip}search.html\">Search the book</a></li>\n</ul>\n",
+        ip = index_prefix,
+    ));
+    for (ci, chapter) in manifest.chapters.iter().enumerate() {
+        nav.push_str(&format!(
+            "<p class=\"nav-group\">{}. {}</p>\n<ul>\n",
+            ci + 1,
+            html_escape(&chapter.title)
+        ));
+        for page in pages.iter().filter(|p| p.chapter_idx == ci) {
+            let cur = if current == Some(page.node.anchor.as_str()) {
+                " aria-current=\"page\""
+            } else {
+                ""
+            };
+            nav.push_str(&format!(
+                "  <li><a href=\"{pp}{a}.html\"{cur}>{t}</a></li>\n",
+                pp = page_prefix,
+                a = html_escape(&page.node.anchor),
+                t = html_escape(page_title(&page.node)),
+            ));
+        }
+        nav.push_str("</ul>\n");
+    }
+    nav.push_str("</nav>");
+    nav
 }
 
 fn page_title(node: &Node) -> &str {
     node.title.as_deref().unwrap_or(&node.anchor)
+}
+
+/// Resolve a manifest to the **ordered set of ingested documents** it names — the same resolution
+/// (curated `sources` + drift-proof `globs` + `exclude`, and the one synthesized grammar EBNF)
+/// [`build_book`] uses, exposed for **scoped emission** (`myc-doc build --manifest`, per-cluster PDF
+/// export). Ingest the whole corpus first (so cross-references resolve against the *full* anchor
+/// universe — the caller does this), then select and order exactly the manifest's documents.
+///
+/// # Errors
+/// A manifest entry that resolves to no ingested document (or a duplicate/collision) is a
+/// `BookError` — never a silently-empty subset (§4.1 "never a half-build"; G2).
+pub fn resolve_manifest_docs(
+    model: &DocModel,
+    manifest: &BookManifest,
+    repo_root: &Path,
+) -> Result<Vec<Node>, BookError> {
+    Ok(resolve_pages(model, manifest, repo_root)?
+        .into_iter()
+        .map(|p| p.node)
+        .collect())
 }
 
 /// Build every book artifact: the ToC/landing page, one page per chapter entry (prev/next nav), and
@@ -343,20 +417,25 @@ pub fn build_book(
             })
             .unwrap_or_else(|| "<a href=\"../index.html\">Table of contents →</a>".to_owned());
 
-        let nav = format!(
-            "<nav aria-label=\"Chapter\"><p class=\"crumb\"><a href=\"../index.html\">Table of \
-             contents</a> · Chapter {}: {}</p></nav>",
+        let breadcrumb = format!(
+            "<p class=\"crumb\"><a href=\"../index.html\">Table of contents</a> · Chapter {}: {}</p>",
             page.chapter_idx + 1,
             html_escape(&chapter.title)
         );
         let main = format!(
-            "{article}\n<div class=\"pager\"><span>{prev_link}</span><span>{next_link}</span></div>"
+            "{breadcrumb}\n{article}\n\
+             <div class=\"pager\"><span>{prev_link}</span><span>{next_link}</span></div>"
         );
+        let sidebar = book_sidebar(manifest, &pages, "", "../", Some(&page.node.anchor));
         arts.put(
             format!("book/pages/{}.html", page.node.anchor),
-            book_shell(&manifest.title, page_title(&page.node), &nav, &main),
+            book_shell(&manifest.title, page_title(&page.node), &sidebar, &main),
         );
     }
+
+    // The chapter-tree sidebar for the root-level pages (ToC + search): pages live under `pages/`,
+    // the ToC/search are siblings at `book/` root.
+    let index_sidebar = book_sidebar(manifest, &pages, "pages/", "", None);
 
     // ── the ToC / landing page ──────────────────────────────────────────────────────────────────
     let mut toc = String::from("<nav aria-label=\"Table of contents\">\n");
@@ -377,46 +456,36 @@ pub fn build_book(
         toc.push_str("</ol></section>\n");
     }
     toc.push_str("</nav>");
-    let main = format!(
-        "<p>{}</p>\n<p><a href=\"search.html\">Search the book</a> · {} chapters, {} pages.</p>",
-        html_escape(&manifest.preface),
-        manifest.chapters.len(),
-        pages.len()
+    let index_main = format!(
+        "<h1>{title}</h1>\n<p>{preface}</p>\n{toc}\n\
+         <p>{chapters} chapters, {pages} pages. <a href=\"search.html\">Search the book</a>.</p>",
+        title = html_escape(&manifest.title),
+        preface = html_escape(&manifest.preface),
+        chapters = manifest.chapters.len(),
+        pages = pages.len(),
     );
     arts.put(
         "book/index.html",
-        book_index_shell(&manifest.title, &toc, &main),
+        book_document(
+            &manifest.title,
+            &manifest.title,
+            "",
+            &index_sidebar,
+            &index_main,
+        ),
     );
 
     // ── search index + search page (client-side, no new dep) ───────────────────────────────────
     let search_index = render_search_index(&pages, manifest);
     arts.put("book/search-index.json", search_index);
     arts.put("book/assets/search.js", SEARCH_JS.to_owned());
+    let search_main = format!("<h1>Search the book</h1>\n{SEARCH_PAGE_BODY}");
     arts.put(
         "book/search.html",
-        book_index_shell(&manifest.title, "", SEARCH_PAGE_BODY),
+        book_document(&manifest.title, "Search", "", &index_sidebar, &search_main),
     );
 
     Ok(arts)
-}
-
-fn book_index_shell(book_title: &str, nav: &str, main: &str) -> String {
-    format!(
-        "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n\
-         <meta charset=\"utf-8\">\n\
-         <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n\
-         <title>{book_title}</title>\n\
-         <style>{BOOK_STYLE}</style>\n\
-         </head>\n<body>\n\
-         <header><h1 class=\"site-title\">{book_title}</h1>\
-         <p>A curated linear composition of the honest corpus projection — never a parallel truth \
-         (ADR-003/G11). <a href=\"search.html\">Search the book</a></p></header>\n\
-         {nav}\n<main>\n{main}\n</main>\n\
-         <footer>Generated by <code>myc-doc book</code> from the M-363 doc-IR. Undocumented items \
-         are flagged, never invented (G2).</footer>\n\
-         </body>\n</html>\n",
-        book_title = html_escape(book_title),
-    )
 }
 
 /// One search record — title, the chapter it lives in, its page URL (relative to `book/`), and a
