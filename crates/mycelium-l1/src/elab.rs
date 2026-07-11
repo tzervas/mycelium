@@ -616,11 +616,11 @@ pub fn elaborate_lower_rule(env: &Env, rule_name: &str) -> Result<Node, ElabErro
 /// resolution (C)** is Stage 2's job (OQ-H1), not attempted here. The **affine re-check (D)** over
 /// the expanded surface is Stage 3's job; this function does not run the affine tracker at all.
 ///
-/// **Stage 1 → Stage 1b update (DN-114 — this note is a claim too, VR-5, kept current).** At
+/// **Stage 1 → Stage 1b update (DN-116 — this note is a claim too, VR-5, kept current).** At
 /// Stage 1 landing, the L1 check-phase counterpart — the checker's `check_sugar_call` — refused
 /// every recognized sugar-rule call site unconditionally, and this function was reachable only by
 /// direct/test call. **Since M-1054 Stage 1b, both halves are wired together**: the checker's
-/// accept path (Option B, DN-114 — types the call once, from the RHS's own def-time-fixed result
+/// accept path (Option B, DN-116 — types the call once, from the RHS's own def-time-fixed result
 /// type, gated on the same (C)/(D) residuals named above — see that function's own doc comment)
 /// now accepts a call whose RHS clears both gates, and [`Elab::app`]'s §5.2 dispatch reaches this
 /// exact function from the ordinary program-elaboration pipeline. Stage 1b does **not** change
@@ -2414,7 +2414,7 @@ impl Elab<'_> {
             );
         }
 
-        // **M-1054 Stage 1b §5.2 wiring** (DN-114) — a value-parametric `lower` sugar-rule call
+        // **M-1054 Stage 1b §5.2 wiring** (DN-116) — a value-parametric `lower` sugar-rule call
         // (`Cx::check_sugar_call`'s M-1054 Stage 1b accept path, `checkty.rs`) has no L0 form of its
         // own to fall through to: the call is a sugar *invocation*, not a callable name. Elaborate
         // each argument first (left-to-right, matching every other call-site branch above — CBV),

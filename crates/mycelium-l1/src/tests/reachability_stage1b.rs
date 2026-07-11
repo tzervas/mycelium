@@ -1,4 +1,4 @@
-//! **M-1054 Stage 1b — end-to-end reachability** (DN-110 §5-A; DN-114). Companion to
+//! **M-1054 Stage 1b — end-to-end reachability** (DN-110 §5-A; DN-116). Companion to
 //! `src/tests/facility_stage1_hygiene.rs` (which calls [`elaborate_lower_rule_with_args`] —
 //! Stage 1's L0 elab-phase mechanism — **directly**, exercising (A)+(B) hygiene on the production
 //! expansion path but never through the ordinary program-elaboration pipeline) and

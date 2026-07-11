@@ -54,7 +54,7 @@
 //! `elaborate_lower_rule`/`elaborate_lower_rule_with_args` **directly** (the white-box entry
 //! points, unchanged by M-1054 Stage 1b), never through `Cx::check_sugar_call` — so this module
 //! says nothing about the L1 check-phase or the full check→elab reachability chain either way.
-//! **Since M-1054 Stage 1b** (DN-114), `Cx::check_sugar_call` no longer unconditionally refuses
+//! **Since M-1054 Stage 1b** (DN-116), `Cx::check_sugar_call` no longer unconditionally refuses
 //! every recognized call — it accepts a call whose RHS clears the Stage-2 (OQ-H1)/Stage-3 (OQ-H4)
 //! gates, and `Elab::app` dispatches such a call to this exact `elaborate_lower_rule_with_args`
 //! machinery (§5.2 wiring) — see `src/tests/reachability_stage1b.rs` for that full-chain

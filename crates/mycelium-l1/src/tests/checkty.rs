@@ -693,7 +693,7 @@ fn lower_derive_items_add_no_l0_to_an_unrelated_entry() {
 
 // -------------------------------------------------------------------------------------------
 // M-1054 Stage 0/1b — expression-position sugar-rule call-site recognition (`Cx::check_sugar_call`,
-// DN-110 §5-A / DN-114). Companion to `src/tests/elab.rs`'s `elaborate_lower_rule_with_args`
+// DN-110 §5-A / DN-116). Companion to `src/tests/elab.rs`'s `elaborate_lower_rule_with_args`
 // matcher/guard tests (the L0 elab-phase half) and `src/tests/reachability_stage1b.rs` (the
 // full-chain check→elab→eval reachability corpus). No surface grammar produces a non-empty
 // `LowerDecl::value_params` yet (§8.6 is an open naming question), so every fixture here
@@ -702,7 +702,7 @@ fn lower_derive_items_add_no_l0_to_an_unrelated_entry() {
 //
 // **Stage 0 → Stage 1b note (VR-5 — this banner is a claim too, kept current):** Stage 0 refused
 // *every* recognized, arity/type-matched sugar call unconditionally (never returned `Ok`). Stage
-// 1b (M-1054, DN-114) lands the accept path: a recognized call whose RHS also clears the Stage-2
+// 1b (M-1054, DN-116) lands the accept path: a recognized call whose RHS also clears the Stage-2
 // (OQ-H1 free-identifier) and Stage-3 (OQ-H4 affine) gates is now **accepted**, typed by
 // `infer_expr_rule_rhs_type`. The arity-mismatch / type-mismatch / item-shaped-rule refusals below
 // are unchanged by Stage 1b (those gates fire *before* the RHS is ever consulted); only the
@@ -768,7 +768,7 @@ fn stage0_base_env() -> Env {
     env("nodule d;\nlower Eight = 0b0000_0001;")
 }
 
-/// **Recognition + accept (M-1054 Stage 1b, DN-114).** A value-parametric sugar rule invoked with
+/// **Recognition + accept (M-1054 Stage 1b, DN-116).** A value-parametric sugar rule invoked with
 /// the right arity and well-typed arguments, whose RHS clears both Stage 1b gates (this fixture's
 /// inert `0b0000_0001` RHS trivially does — no free identifiers, no affine binding), is *recognized
 /// and accepted* by `check_sugar_call`: `infer_type` now returns `Ok`, typed at the RHS's own
@@ -786,14 +786,14 @@ fn stage1b_sugar_call_recognized_and_accepted() {
     assert_eq!(
         ty,
         Ty::Binary(Width::Lit(8)),
-        "the accepted call's type must be the RHS's own def-time-fixed result type (Option B, DN-114), not the arguments' or anything else"
+        "the accepted call's type must be the RHS's own def-time-fixed result type (Option B, DN-116), not the arguments' or anything else"
     );
 }
 
 // ---- Adversarial-verify finding 1 (2026-07-11, HIGH — fixed): a composite/nested-Substrate value
 // parameter must hit the Stage-3 (OQ-H4) residual, not just a top-level `Substrate` type ----------
 //
-// `Self::ty_structurally_contains_substrate`'s own doc comment (`checkty.rs`) and DN-114 §3.2 carry
+// `Self::ty_structurally_contains_substrate`'s own doc comment (`checkty.rs`) and DN-116 §3.2 carry
 // the full narrative; these fixtures pin the regression + its non-vacuity.
 
 /// A bare named-type `TypeRef` with no type arguments (`Data("Handle", [])` once resolved) —
@@ -806,7 +806,7 @@ fn named_ty(name: &str) -> TypeRef {
 }
 
 /// Register a `Data` type `Handle` whose sole constructor `Wrap` wraps a `Substrate{gpu}` field —
-/// the composite/nested-affine shape DN-114 §3.2's adversarial-verify finding names — directly into
+/// the composite/nested-affine shape DN-116 §3.2's adversarial-verify finding names — directly into
 /// `e.types` (white-box, matching [`register_value_parametric_rule`]'s own convention of hand-
 /// building registry entries rather than routing through a surface grammar that does not yet exist
 /// for this shape either).
@@ -854,7 +854,7 @@ fn register_dup_handle_rule(e: &mut Env) {
 
 /// **Superseded by Stage 3's real linear check (DN-117 §2, 2026-07-11) — was
 /// `stage3_composite_substrate_field_value_param_is_refused`, asserted wholesale refusal of any
-/// `Handle`-typed value parameter.** The composite/nested-affine hazard DN-114 §3.2 first found is
+/// `Handle`-typed value parameter.** The composite/nested-affine hazard DN-116 §3.2 first found is
 /// now caught *precisely* rather than refused wholesale: a `Handle`-typed value parameter used
 /// **twice** in the RHS (`Dup`, extracting the wrapped field via two separate `match`es) is REFUSED
 /// only when the caller's argument genuinely carries a duplicatable affine move — here, a freshly

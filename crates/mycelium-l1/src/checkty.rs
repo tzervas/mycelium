@@ -2701,7 +2701,7 @@ fn check_lower_rule_rhs_type(
 /// empty `value_params` makes this identical to the pre-Stage-1b empty-scope walk — no behavioral
 /// change for that case) and infers the RHS's type once.
 ///
-/// **Why the call site reuses this instead of re-checking per-argument types (Option B, DN-114):**
+/// **Why the call site reuses this instead of re-checking per-argument types (Option B, DN-116):**
 /// the checker has **no coercion** (`want == got`, exact match — see the ordinary user-fn accept
 /// branch's own `if want != got` gate) so a monomorphic value-parametric rule's RHS result type is
 /// **fixed at definition** — inferring it once, with the params bound to their *declared* types
@@ -5569,7 +5569,7 @@ impl Cx<'_> {
     }
 
     /// **M-1054 Stage 1b — expression-position sugar-rule call-site ACCEPT** (DN-110 §5-A;
-    /// DN-114, Option B — the def-time RHS type-scheme). A `lower`-declared rule with **value**
+    /// DN-116, Option B — the def-time RHS type-scheme). A `lower`-declared rule with **value**
     /// parameters ([`LowerDecl::value_params`] — distinct from the `derive`-facing *type*
     /// parameters in [`LowerDecl::params`]) is recognized at an ordinary call site `Name(args)`,
     /// arity- and type-matched exactly like a user-fn call (DRY with the fn branch above — same
@@ -5589,7 +5589,7 @@ impl Cx<'_> {
     /// ratified two-phase split: L1 check-phase for typing/def-site/affine, L0 elab-phase for the
     /// hygienic expansion (never doubly-expanding, never dragging `%`-freshening into the checker).
     ///
-    /// **Two honest, never-silent gates keep this accept sound (G2/VR-5) — see DN-114/DN-117:**
+    /// **Two honest, never-silent gates keep this accept sound (G2/VR-5) — see DN-116/DN-117:**
     /// - **Stage 3 (OQ-H4, affine soundness — DN-117, real linear check, landed).** A value
     ///   parameter (or RHS-local binding) with an affine surface no longer refuses *wholesale*.
     ///   Instead: [`Self::ty_structurally_contains_substrate`] is retained only as a cheap
@@ -5645,7 +5645,7 @@ impl Cx<'_> {
         }
         // Stage 3 (OQ-H4) gate — TRIGGER, not decision (DN-117 §3.2, demoted from the earlier
         // wholesale-refusal): does any value parameter's *declared* type structurally contain
-        // `Substrate` (DN-114 §3.2's recursive walk, retained verbatim as a cheap, sound-to-widen
+        // `Substrate` (DN-116 §3.2's recursive walk, retained verbatim as a cheap, sound-to-widen
         // early signal)? This alone under-covers the "affine-hiding-non-affine-type" class (DN-117
         // §2/§5 R3 — an `Int`-typed param whose *argument* nonetheless carries affine content via a
         // side-effecting `consume`), so it is OR'd below with a precise per-argument signal computed
@@ -5727,7 +5727,7 @@ impl Cx<'_> {
                 return self.err(format!(
                     "`{name}`'s RHS references the `lower`-rule `{free}` in value position — a \
                      `lower` rule has no L0 form of its own to fall through to (M-1054 Stage 1b \
-                     §5.2 wiring; DN-114) and resolves only when it is the head of a call \
+                     §5.2 wiring; DN-116) and resolves only when it is the head of a call \
                      (`{free}(...)`). Refused here, at check, with this specific diagnostic \
                      (DN-115 §4.2/G2) rather than falling through to a later, generic \"unknown \
                      name\" refusal from this rule's own RHS re-type-check — never-silent either \
@@ -5797,7 +5797,7 @@ impl Cx<'_> {
                 )
             })?;
         }
-        // Every gate passed: type the RHS once (Option B, DN-114 — see the doc comment above) and
+        // Every gate passed: type the RHS once (Option B, DN-116 — see the doc comment above) and
         // accept, rebuilding the call node exactly like the ordinary user-fn branch does.
         let ret_ty = infer_expr_rule_rhs_type(
             rule,
@@ -5818,7 +5818,7 @@ impl Cx<'_> {
     /// abstract [`Ty::Var`]s against `ty`'s own type arguments via [`subst_ty`]), or inside a
     /// [`Seq`](Ty::Seq) element / [`Fn`](Ty::Fn) argument-or-return position.
     ///
-    /// **No longer the accept/refuse decision (DN-117 §3.2, superseding the earlier DN-114 §3.2
+    /// **No longer the accept/refuse decision (DN-117 §3.2, superseding the earlier DN-116 §3.2
     /// design).** This predicate used to *refuse outright* any value parameter it matched; it is now
     /// one of two conditions [`Self::check_sugar_call`] OR's together to decide whether to run the
     /// real substituted-`Expr` affine walk (the other being a precise per-argument tracker-touch
@@ -6116,7 +6116,7 @@ impl Cx<'_> {
     /// (which operates on L0 `Node`s at *elaboration* time): splices each `params[i].1` (an
     /// already-checked argument `Expr`) at every **unshadowed** occurrence of `params[i].0` (a
     /// value-parameter name) inside `e`. The result is discarded after the Stage-3 affine verdict
-    /// ([`Self::check_sugar_call`]) — Option B (DN-114) is untouched; `Elab::app` still re-derives
+    /// ([`Self::check_sugar_call`]) — Option B (DN-116) is untouched; `Elab::app` still re-derives
     /// the real expansion independently at L0 (no double-expansion, DRY).
     ///
     /// **Shadowing (B).** An occurrence bound by an inner `let`/`match`-arm/`for`/`lambda` binder of
