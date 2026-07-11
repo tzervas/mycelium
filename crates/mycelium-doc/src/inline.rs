@@ -173,10 +173,12 @@ fn match_em(text: &str, i: usize, delim: u8, depth: u8) -> Option<(Span<'_>, usi
     None
 }
 
-/// `[text](href)` — text is parsed, href is the raw target (a `"title"` suffix stripped).
+/// `[text](href)` — text is parsed, href is the raw target (a `"title"` suffix stripped). The closing
+/// `]` is matched with **bracket-depth tracking**, so link text may itself contain balanced brackets
+/// (`[List[0]](url)` → text `List[0]`); genuinely unbalanced bracket text finds no matching `]` and is
+/// left fully literal rather than cut at the wrong bracket (G2 — never mis-parse).
 fn match_link(text: &str, i: usize, depth: u8) -> Option<(Span<'_>, usize)> {
-    let close_br_rel = text[i + 1..].find(']')?;
-    let close_br = i + 1 + close_br_rel;
+    let close_br = matching_bracket(text, i)?;
     if text.as_bytes().get(close_br + 1) != Some(&b'(') {
         return None;
     }
@@ -196,6 +198,34 @@ fn match_link(text: &str, i: usize, depth: u8) -> Option<(Span<'_>, usize)> {
         },
         close_paren + 1,
     ))
+}
+
+/// The byte index of the `]` that matches the `[` at `open` (bracket-depth balanced), or `None` if
+/// unbalanced. Inline code spans are skipped so a `[`/`]` inside backticks does not perturb the depth.
+fn matching_bracket(text: &str, open: usize) -> Option<usize> {
+    let b = text.as_bytes();
+    let mut depth = 0i32;
+    let mut j = open;
+    while j < b.len() {
+        match b[j] {
+            b'`' => {
+                if let Some(rel) = text[j + 1..].find('`') {
+                    j = j + 1 + rel + 1;
+                    continue;
+                }
+            }
+            b'[' => depth += 1,
+            b']' => {
+                depth -= 1;
+                if depth == 0 {
+                    return Some(j);
+                }
+            }
+            _ => {}
+        }
+        j = advance(text, j);
+    }
+    None
 }
 
 /// The byte offset of the closing `delim` (a 2-char marker like `**`) at/after `from`, skipping any
@@ -225,4 +255,24 @@ fn find_closer(text: &str, from: usize, delim: &str) -> Option<usize> {
 #[must_use]
 pub fn is_external(href: &str) -> bool {
     href.starts_with("http://") || href.starts_with("https://") || href.starts_with("mailto:")
+}
+
+/// Strip inline markdown from `text`, returning **plain, unescaped** text — formatting markers and
+/// link syntax removed, code/link text kept. For nav labels / a `<title>` / a JSON search field where
+/// literal `**`/backticks would leak (the emitter HTML-escapes for an HTML context; a JSON context is
+/// escaped by the serializer). E.g. ``"DN-102 · The `?` Try-Operator"`` → `"DN-102 · The ? Try-Operator"`.
+#[must_use]
+pub fn to_plain(text: &str) -> String {
+    fn walk(spans: &[Span<'_>], out: &mut String) {
+        for span in spans {
+            match span {
+                Span::Text(t) | Span::Code(t) => out.push_str(t),
+                Span::Strong(inner) | Span::Em(inner) => walk(inner, out),
+                Span::Link { text, .. } => walk(text, out),
+            }
+        }
+    }
+    let mut out = String::new();
+    walk(&parse(text), &mut out);
+    out
 }
