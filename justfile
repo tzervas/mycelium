@@ -361,6 +361,11 @@ docs-site:
 # Advisory, NOT part of `just check`. Output under target/doc-book/book/ (gitignored).
 docs-book:
     cargo run -q -p mycelium-doc --bin myc-doc -- book --repo-root . --out target/doc-book
+# Export the language-focused corpus as per-cluster bundles for Google NotebookLM (PDF via the
+# ratified Typst path; never-silent Markdown fallback if typst is unavailable). Under dist/notebooklm/.
+# Advisory. Manifests live in tools/docgen/notebooklm/. Upload the bundles as NotebookLM sources.
+notebooklm-pdfs out="dist/notebooklm":
+    @bash scripts/docs/export-notebooklm-pdfs.sh "{{out}}"
 # Build the local docs Podman/Docker container (corpus + book + rustdoc + agent index, served via
 # python3 -m http.server). Advisory. Prefers podman, falls back to docker, errors clearly if neither.
 docs-container-build:
@@ -368,6 +373,20 @@ docs-container-build:
 # Run the built docs container, serving on http://localhost:8080.
 docs-container-run:
     @bash scripts/docs-container.sh run
+
+# Docs asset automation (capture -> optimize -> replace-in-place -> prune): builds the local
+# docsite, captures the canonical screenshot set (light + dark themes) into docs/assets/ via
+# Playwright, optimizes the PNGs (oxipng/pngquant, skip-graceful), and prunes any docs/assets/*
+# file no committed doc references. Idempotent: STABLE, descriptive filenames (never
+# content-hashed) mean a re-run overwrites in place. Advisory, NOT part of `just check` (needs a
+# browser + first-run network access); the always-on companion gate is `just docs-assets-check`.
+docs-assets:
+    @bash scripts/docs-assets.sh
+# Drift/lint gate: docs/assets/ has no file referenced-but-missing or present-but-orphaned.
+# Lightweight + browser-free (pure reference check, no screenshot regeneration) — this is what
+# `just check` runs; see scripts/checks/docs-assets.sh for why it's scoped this way.
+docs-assets-check:
+    @bash scripts/checks/docs-assets.sh
 
 # --- spore registry: GHCR/OCI dense-map dogfood (ADR-037 / M-871) ---
 # Local OCI round-trip self-test: stand up a throwaway registry:2 (podman), publish+resolve the

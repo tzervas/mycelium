@@ -246,3 +246,137 @@ fn the_committed_repo_manifest_parses_and_matches_the_documented_schema() {
     assert!(!manifest.chapters.is_empty());
     assert!(manifest.chapters.iter().all(|c| !c.title.is_empty()));
 }
+
+#[test]
+fn resolve_manifest_docs_selects_and_orders_exactly_the_named_subset() {
+    // The scoped-emission path (`myc-doc build --manifest`): ingest the whole corpus, then select the
+    // manifest's documents in manifest order (the same resolution the book uses).
+    let root = small_corpus();
+    let model = built_model(&root);
+    let manifest = small_manifest();
+
+    let docs = resolve_manifest_docs(&model, &manifest, &root).expect("subset resolves");
+    let anchors: Vec<&str> = docs.iter().map(|d| d.anchor.as_str()).collect();
+    // Home, Getting-Started, the synthesized grammar page, alpha, beta (README excluded), CONTRIBUTING.
+    assert_eq!(
+        anchors,
+        vec![
+            "home",
+            "getting-started",
+            "book-grammar-ebnf",
+            "alpha",
+            "beta",
+            "contributing",
+        ],
+        "subset is exactly the manifest's docs, in manifest order"
+    );
+
+    // Emitting the scoped model yields ONLY those pages — the excluded README never appears.
+    let scoped = crate::ir::DocModel::new(docs);
+    let arts = crate::emit::html::render(&scoped, None);
+    let page_count = arts
+        .files
+        .keys()
+        .filter(|k| k.starts_with("pages/"))
+        .count();
+    assert_eq!(page_count, 6);
+    assert!(!arts.files.contains_key("pages/readme.html"));
+
+    fs::remove_dir_all(&root).ok();
+}
+
+#[test]
+fn glob_match_supports_bracket_character_classes() {
+    // The committed NotebookLM manifests' bracket globs (which the old single-`*` matcher could not
+    // express — resolving those clusters to zero pages).
+    assert!(glob_match(
+        "docs/notes/DN-[5-9][0-9]-*.md",
+        "docs/notes/DN-54-Foo.md"
+    ));
+    assert!(glob_match(
+        "docs/notes/DN-[5-9][0-9]-*.md",
+        "docs/notes/DN-99-Bar.md"
+    ));
+    assert!(!glob_match(
+        "docs/notes/DN-[5-9][0-9]-*.md",
+        "docs/notes/DN-49-X.md"
+    )); // 4 ∉ [5-9]
+    assert!(!glob_match(
+        "docs/notes/DN-[5-9][0-9]-*.md",
+        "docs/notes/DN-100-X.md"
+    )); // 3 digits
+    assert!(glob_match(
+        "docs/notes/DN-1[0-9][0-9]-*.md",
+        "docs/notes/DN-114-X.md"
+    ));
+    assert!(!glob_match(
+        "docs/notes/DN-1[0-9][0-9]-*.md",
+        "docs/notes/DN-99-X.md"
+    ));
+    // Literal sets, ranges, negation, and the plain star still work.
+    assert!(glob_match("a[bc]d", "abd") && glob_match("a[bc]d", "acd"));
+    assert!(!glob_match("a[bc]d", "aed"));
+    assert!(glob_match("x[!0-9]y", "xay") && !glob_match("x[!0-9]y", "x5y"));
+    assert!(glob_match(
+        "docs/spec/stdlib/*.md",
+        "docs/spec/stdlib/vsa.md"
+    ));
+    assert!(!glob_match("docs/spec/stdlib/*.md", "docs/spec/other.md"));
+}
+
+#[test]
+fn book_nav_labels_strip_inline_markdown() {
+    // A backtick-bearing title must read cleanly in the book nav / search index, not leak markdown.
+    let root = temp_dir("navmd");
+    write(
+        &root,
+        "docs/notes/DN-102-Try.md",
+        "# Design Note DN-102 — The `?` Try-Operator Desugar\n\nLead.\n",
+    );
+    let model = build(&BuildInput::conventional(&root)).expect("build");
+    let manifest = BookManifest {
+        title: "T".to_owned(),
+        preface: "p".to_owned(),
+        chapters: vec![ChapterSpec {
+            title: "Notes".to_owned(),
+            sources: vec![],
+            globs: vec!["docs/notes/*.md".to_owned()],
+            exclude: vec![],
+        }],
+    };
+    let arts = build_book(&model, &manifest, &root).expect("book builds");
+
+    let page = arts
+        .files
+        .get("book/pages/dn-102-try.html")
+        .expect("the DN page");
+    assert!(page.contains("The ? Try-Operator"), "stripped nav label");
+    assert!(
+        !page.contains("The `?`"),
+        "no literal backtick leaks into the book nav"
+    );
+    // The search-index title is stripped too (plain JSON string).
+    let idx = arts.files.get("book/search-index.json").unwrap();
+    assert!(idx.contains("The ? Try-Operator") && !idx.contains("The `?`"));
+
+    fs::remove_dir_all(&root).ok();
+}
+
+#[test]
+fn resolve_manifest_docs_fails_loudly_on_an_unresolved_entry() {
+    // Never-silent (G2): a manifest entry that resolves to nothing is an error, not an empty subset.
+    let root = small_corpus();
+    let model = built_model(&root);
+    let mut manifest = small_manifest();
+    manifest.chapters.push(ChapterSpec {
+        title: "Broken".to_owned(),
+        sources: vec!["docs/nope.md".to_owned()],
+        globs: vec![],
+        exclude: vec![],
+    });
+
+    let err = resolve_manifest_docs(&model, &manifest, &root).expect_err("must fail loudly");
+    assert!(err.0.contains("nope.md"));
+
+    fs::remove_dir_all(&root).ok();
+}

@@ -13,6 +13,9 @@ swap engines and adds no trusted code (KC-3/C5). The `explain` function projects
 dual human/machine `ExplainRecord` (G11/C3). Tags are derived from the certificate's basis, never
 asserted (VR-5/C2).
 
+At the Mycelium language level, the `Swapped`/`explain` API is backed by the `swap` keyword and the
+per-operation guarantee tags shown in `../../examples/repr-tour/swaps.myc` — e.g., `fn narrow(Dense{F32}) => Dense{BF16} @ Empirical` demonstrates both the swap syntax and how certification (the `cert`) enables annotating operations with their guarantee strength across the `Exact ⊐ Proven ⊐ Empirical ⊐ Declared` lattice.
+
 ## Key items
 
 - `Swapped` — the swap result: `{value, cert}`; `.explain()` projects to `ExplainRecord`.

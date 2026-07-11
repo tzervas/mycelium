@@ -1,0 +1,33 @@
+{
+  "title": "Mycelium — Language Specification",
+  "preface": "The normative language spec: SPECIFICATION, grammar (EBNF), per-nodule stdlib specs, swaps, and the tool contracts. A language-focused per-cluster bundle for Google NotebookLM (under the 500k-word/source cap). Generated from the corpus by myc-doc.",
+  "chapters": [
+    {
+      "title": "Core spec & contracts",
+      "sources": [
+        "docs/spec/Lint-and-Autofix-Contract.md",
+        "docs/spec/Myc-Check-Driver-Contract.md",
+        "docs/spec/Mycfmt-Formatter-Contract.md",
+        "docs/spec/Narrative-Authoring-Pipeline.md",
+        "docs/spec/Nodule-Header-and-Project-Manifest.md",
+        "docs/spec/SPECIFICATION.md",
+        "docs/spec/Security-Checks-Contract.md",
+        "docs/spec/Spore-Build-and-Publish-Contract.md",
+        "docs/spec/Surface-Stability-Declaration.md"
+      ]
+    },
+    {
+      "title": "Grammar & schemas",
+      "globs": ["docs/spec/grammar/*.md", "docs/spec/schemas/*.md", "docs/spec/api/*.md"]
+    },
+    {
+      "title": "Standard-library specs",
+      "globs": ["docs/spec/stdlib/*.md"],
+      "exclude": ["docs/spec/stdlib/_TEMPLATE.md"]
+    },
+    {
+      "title": "Swaps",
+      "globs": ["docs/spec/swaps/*.md"]
+    }
+  ]
+}

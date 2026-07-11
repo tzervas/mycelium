@@ -1,0 +1,13 @@
+{
+  "name": "mycelium-docs-assets-capture",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Playwright capture tooling for the docs/assets/ screenshot set (scripts/docs-assets.sh). Not published; local dev tooling only.",
+  "license": "MIT",
+  "scripts": {
+    "capture": "node capture.mjs"
+  },
+  "dependencies": {
+    "playwright-core": "1.61.1"
+  }
+}

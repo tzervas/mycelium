@@ -53,6 +53,31 @@ Three non-negotiables shape every decision:
   (Unison-style, ADR-003). A stable component is content-addressed + spec-ratified +
   verification-passed, and only then eligible for AOT compilation.
 
+The first two bullets — representation-as-type, and swap as the only conversion — read directly
+off a real, checked nodule
+([`examples/repr-tour/ambient.myc`](../../examples/repr-tour/ambient.myc), checked clean by
+`cargo run -p mycelium-cli --bin myc -- check`):
+
+```mycelium
+nodule tour.ambient;
+
+default paradigm Binary;
+
+fn mask(x: {8}, m: {8}) => {8} =
+  xor(x, m);
+
+fn ones() => {8} =
+  255;
+
+fn widen(x: {8}) => Ternary{6} =
+  with paradigm Ternary { swap(x, to: {6}, policy: roundtrip) };
+```
+
+`default paradigm Binary` sets an ambient repr so `{8}` in `mask`/`ones` is sugar for `Binary{8}`
+(RFC-0012) — the type is still fully explicit, just not re-spelled at every call site. `widen`
+still has to leave the `with paradigm Ternary { … }` block through an explicit `swap(...)` call;
+there is no implicit path from `Binary` to `Ternary`, ambient or not (G2).
+
 For how these ideas cash out as a concrete guarantee lattice and verification regime, see
 [Guarantees & verification](guarantees-and-verification.md).
 

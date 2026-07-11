@@ -166,3 +166,92 @@ fn extra_md_files_are_ingested_and_their_xrefs_resolve() {
 
     std::fs::remove_dir_all(&root).ok();
 }
+
+/// A hermetic temp tree standing in for the repo layout, so `research_root`/`extra_md_files`
+/// tests don't depend on the real `research/`/`CONTRIBUTING.md` (which move independently of this
+/// test suite).
+fn temp_root(name: &str) -> std::path::PathBuf {
+    std::env::temp_dir().join(format!(
+        "mycdoc-{name}-{}",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ))
+}
+
+#[test]
+fn conventional_ingests_research_root() {
+    // The doc-ingestion gap this closes: `BuildInput::conventional` used to walk only `docs/` +
+    // `docs/spec/schemas` + `examples/`/`lib/std` — never `research/` — so a manifest cluster
+    // globbing `research/*-RECORD.md` (tools/docgen/notebooklm/research.json) always resolved to
+    // zero pages. `conventional` now sets `research_root`, and `build` walks it the same
+    // skip-graceful, sorted flat-markdown way as `corpus_root`.
+    let root = temp_root("research-root");
+    std::fs::create_dir_all(root.join("research")).unwrap();
+    std::fs::write(
+        root.join("research/01-example-RECORD.md"),
+        "# 01 — Example Record\n\nFindings.\n",
+    )
+    .unwrap();
+
+    let input = BuildInput::conventional(&root);
+    assert_eq!(input.research_root, Some(root.join("research")));
+    let model = build(&input).expect("build succeeds");
+
+    let record = model
+        .documents
+        .iter()
+        .find(|d| d.provenance.source == "research/01-example-RECORD.md")
+        .expect("research/*-RECORD.md was ingested");
+    assert_eq!(record.title.as_deref(), Some("01 — Example Record"));
+    // Not under docs/rfcs//adr//notes//devlog//spec/ — falls to Other, same as any other
+    // unclassified corpus doc (CONTRIBUTING.md, Glossary.md).
+    assert_eq!(classify(&record.provenance.source), SourceKind::Other);
+
+    std::fs::remove_dir_all(&root).ok();
+}
+
+#[test]
+fn conventional_leaves_research_root_absent_gracefully() {
+    // A repo tree without a `research/` directory (e.g. a hermetic test fixture) must not error —
+    // the same skip-graceful posture `example_roots` already has.
+    let root = temp_root("no-research");
+    std::fs::create_dir_all(root.join("docs")).unwrap();
+    let input = BuildInput::conventional(&root);
+    let model = build(&input).expect("build succeeds without a research/ directory");
+    assert!(model
+        .documents
+        .iter()
+        .all(|d| !d.provenance.source.starts_with("research/")));
+    std::fs::remove_dir_all(&root).ok();
+}
+
+#[test]
+fn conventional_ingests_contributing_md_by_default() {
+    // `docs/book-manifest.json`'s Contributing chapter names `CONTRIBUTING.md`, and
+    // `myc-doc build --manifest` (unlike the `book` subcommand) built its model straight from
+    // `BuildInput::conventional` with no override — so CONTRIBUTING.md never resolved on that path.
+    // `conventional` now seeds `extra_md_files` with it directly (the `book` CLI arm no longer needs
+    // its own override — same field, same pipeline, set once).
+    let root = temp_root("contributing-default");
+    std::fs::create_dir_all(&root).unwrap();
+    std::fs::write(
+        root.join("CONTRIBUTING.md"),
+        "# Contributing\n\nGuidelines.\n",
+    )
+    .unwrap();
+
+    let input = BuildInput::conventional(&root);
+    assert_eq!(input.extra_md_files, vec![root.join("CONTRIBUTING.md")]);
+    let model = build(&input).expect("build succeeds");
+
+    let contributing = model
+        .documents
+        .iter()
+        .find(|d| d.provenance.source == "CONTRIBUTING.md")
+        .expect("CONTRIBUTING.md was ingested by default");
+    assert_eq!(contributing.title.as_deref(), Some("Contributing"));
+
+    std::fs::remove_dir_all(&root).ok();
+}
