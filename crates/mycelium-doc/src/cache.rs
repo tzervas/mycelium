@@ -160,18 +160,35 @@ pub fn emit_incremental(
     }
 
     // Remove orphans: artifacts the prior cache emitted that are absent now (a removed doc). Never
-    // silent — counted in the report. The cache file itself is never an artifact, so never an orphan.
+    // silent — removals are counted, and a removal that FAILS is reported in the notice (G2), never
+    // dropped. The cache file itself is never an artifact, so never an orphan.
     let mut removed = 0usize;
+    let mut failed: Vec<String> = Vec::new();
     if let Some(p) = &prior {
         let current: BTreeSet<&String> = arts.files.keys().collect();
         for old in p.entries.keys() {
             if !current.contains(old) {
                 let path = out_dir.join(old);
-                if path.exists() && std::fs::remove_file(&path).is_ok() {
-                    removed += 1;
+                if !path.exists() {
+                    continue; // already gone
+                }
+                match std::fs::remove_file(&path) {
+                    Ok(()) => removed += 1,
+                    Err(e) => failed.push(format!("{old} ({e})")),
                 }
             }
         }
+    }
+    if !failed.is_empty() {
+        let msg = format!(
+            "could not remove {} orphaned artifact(s): {}",
+            failed.len(),
+            failed.join(", ")
+        );
+        notice = Some(match notice {
+            Some(n) => format!("{n}; {msg}"),
+            None => msg,
+        });
     }
 
     fresh.store(out_dir)?;

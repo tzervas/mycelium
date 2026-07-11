@@ -10,7 +10,9 @@
 
 use crate::ir::Node;
 
-/// A concise navigation label for `node` (see the module rules). Never empty.
+/// A concise navigation label for `node` (see the module rules). Never empty. Inline markdown is
+/// stripped up front ([`crate::inline::to_plain`]), so word-capping can never split a `` `code` ``
+/// span and leave a dangling backtick in the label.
 ///
 /// - **ID'd** (`RFC-NNNN`/`ADR-NNN`/`DN-NN`): `"<ID> · <short title>"` — the title with the ID (and a
 ///   `Design Note ` prefix) stripped, cut at the first of `—`/`(`/`:`, word-capped ~30.
@@ -19,7 +21,9 @@ use crate::ir::Node;
 ///   word-capped ~32.
 #[must_use]
 pub fn short_label(node: &Node) -> String {
-    let title = node.title.as_deref().unwrap_or(&node.anchor).trim();
+    let raw = node.title.as_deref().unwrap_or(&node.anchor);
+    let plain = crate::inline::to_plain(raw);
+    let title = plain.trim();
     if title.is_empty() {
         return node.anchor.clone();
     }

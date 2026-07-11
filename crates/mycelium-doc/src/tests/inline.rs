@@ -129,6 +129,22 @@ fn non_ascii_text_is_handled_without_panic() {
 }
 
 #[test]
+fn link_text_with_balanced_brackets_is_matched_not_mis_cut() {
+    // `[List[0]](url)` — the closing `]` is bracket-depth matched, so the link text keeps its inner
+    // brackets instead of being cut at the wrong `]`.
+    assert_eq!(
+        parse("[List[0]](https://x.io)"),
+        vec![Span::Link {
+            text: vec![Span::Text("List[0]")],
+            href: "https://x.io"
+        }]
+    );
+    // Genuinely unbalanced bracket text finds no match → the leading `[` stays literal (no panic).
+    let spans = parse("[a[b unbalanced");
+    assert_eq!(spans, vec![Span::Text("[a[b unbalanced")]);
+}
+
+#[test]
 fn is_external_classifies_hrefs() {
     assert!(is_external("https://x"));
     assert!(is_external("http://x"));

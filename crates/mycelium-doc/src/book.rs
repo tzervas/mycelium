@@ -37,8 +37,16 @@ use std::path::Path;
 use serde::{Deserialize, Serialize};
 
 use crate::emit::{html_escape, Artifacts};
+use crate::inline;
 use crate::ir::{DocModel, Level, Node, Payload, Provenance, SourceKind};
 use crate::theme;
+
+/// An HTML nav label: inline markdown stripped ([`inline::to_plain`]) then HTML-escaped — so a
+/// backtick-bearing title (e.g. ``"DN-102 · The `?` Try-Operator"``) reads cleanly in the book nav
+/// instead of leaking literal markdown (mirrors `emit::html`'s `inline_text`).
+fn nav_label(text: &str) -> String {
+    html_escape(&inline::to_plain(text))
+}
 
 /// The repo-relative default location of the committed chapter manifest.
 pub const DEFAULT_MANIFEST_PATH: &str = "docs/book-manifest.json";
@@ -107,17 +115,112 @@ pub fn load_manifest_from(path: &Path) -> Result<BookManifest, BookError> {
     serde_json::from_str(&src).map_err(|e| BookError(format!("parsing {}: {e}", path.display())))
 }
 
-/// A single wildcard-per-pattern match: `prefix` + `*` + `suffix` — a hand-rolled subset (no `**`,
-/// no character classes), matching this crate's "honestly a subset, named as one" convention.
-fn glob_match(pattern: &str, candidate: &str) -> bool {
-    match pattern.split_once('*') {
-        None => pattern == candidate,
-        Some((prefix, suffix)) => {
-            candidate.len() >= prefix.len() + suffix.len()
-                && candidate.starts_with(prefix)
-                && candidate.ends_with(suffix)
+/// A hand-rolled glob-**subset** matcher — the "honestly a subset, named as one" convention — over
+/// three metacharacters: `*` (any run, including empty), `?` (any one char), and `[…]` **character
+/// classes** with ranges (`[0-9]`, `[a-z]`), literal sets (`[abc]`), and negation (`[!…]`/`[^…]`).
+/// A literal `]` may lead the class (`[]…]`); an unterminated `[` matches a literal `[`. No `**`, no
+/// path-segment semantics (`*` spans `/`) — enough for the committed manifests' bracket globs
+/// (`docs/notes/DN-[5-9][0-9]-*.md`, `DN-1[0-9][0-9]-*.md`), which the old single-`*` matcher could
+/// not express (it resolved those clusters to zero pages — a silent Markdown fallback, now fixed).
+///
+/// `pub(crate)` for white-box unit testing in `src/tests/book.rs`, not a downstream API.
+pub(crate) fn glob_match(pattern: &str, candidate: &str) -> bool {
+    let p: Vec<char> = pattern.chars().collect();
+    let c: Vec<char> = candidate.chars().collect();
+    glob_match_at(&p, 0, &c, 0)
+}
+
+/// Match `pattern[pi..]` against `candidate[ci..]` (recursive; `*` backtracks).
+fn glob_match_at(p: &[char], mut pi: usize, c: &[char], mut ci: usize) -> bool {
+    while pi < p.len() {
+        match p[pi] {
+            '*' => {
+                while pi < p.len() && p[pi] == '*' {
+                    pi += 1; // collapse consecutive `*`
+                }
+                if pi == p.len() {
+                    return true; // trailing `*` matches the rest
+                }
+                return (ci..=c.len()).any(|k| glob_match_at(p, pi, c, k));
+            }
+            '?' => {
+                if ci >= c.len() {
+                    return false;
+                }
+                pi += 1;
+                ci += 1;
+            }
+            '[' => match match_class(p, pi, c.get(ci).copied()) {
+                Some((matched, next_pi)) => {
+                    if !matched {
+                        return false;
+                    }
+                    pi = next_pi;
+                    ci += 1;
+                }
+                None => {
+                    // Unterminated `[` → literal `[`.
+                    if c.get(ci) != Some(&'[') {
+                        return false;
+                    }
+                    pi += 1;
+                    ci += 1;
+                }
+            },
+            ch => {
+                if c.get(ci) != Some(&ch) {
+                    return false;
+                }
+                pi += 1;
+                ci += 1;
+            }
         }
     }
+    ci == c.len()
+}
+
+/// Match one candidate char `ch` against the character class starting at `p[pi] == '['`. Returns
+/// `Some((matched, next_pi))` where `next_pi` is just past the closing `]`, or `None` if the class is
+/// unterminated (no closing `]`) — then the caller treats `[` as a literal. `ch == None` (candidate
+/// exhausted) never matches a class.
+fn match_class(p: &[char], pi: usize, ch: Option<char>) -> Option<(bool, usize)> {
+    let mut j = pi + 1;
+    let negate = matches!(p.get(j), Some('!') | Some('^'));
+    if negate {
+        j += 1;
+    }
+    let body_start = j;
+    // Find the closing `]` (a `]` in the first body position is a literal member).
+    let mut end = None;
+    let mut k = j;
+    while k < p.len() {
+        if p[k] == ']' && k != body_start {
+            end = Some(k);
+            break;
+        }
+        k += 1;
+    }
+    let end = end?;
+    let class = &p[body_start..end];
+    let Some(ch) = ch else {
+        return Some((false, end + 1)); // no candidate char: a class (it consumes one) cannot match
+    };
+    let mut matched = false;
+    let mut m = 0;
+    while m < class.len() {
+        if m + 2 < class.len() && class[m + 1] == '-' {
+            if class[m] <= ch && ch <= class[m + 2] {
+                matched = true;
+            }
+            m += 3;
+        } else {
+            if ch == class[m] {
+                matched = true;
+            }
+            m += 1;
+        }
+    }
+    Some((matched ^ negate, end + 1))
 }
 
 /// Synthesize a single [`Payload::Document`] node wrapping a non-markdown file **verbatim** as an
@@ -290,7 +393,7 @@ fn book_document(
          {toggle_js}\n\
          </body>\n</html>\n",
         book_title = html_escape(book_title),
-        page_title = html_escape(page_title),
+        page_title = nav_label(page_title),
         css = theme::READING_CSS,
         head_init = theme::HEAD_THEME_INIT,
         skip = theme::SKIP_LINK,
@@ -335,8 +438,8 @@ fn book_sidebar(
                 "  <li><a href=\"{pp}{a}.html\"{cur} title=\"{full}\">{short}</a></li>\n",
                 pp = page_prefix,
                 a = html_escape(&page.node.anchor),
-                full = html_escape(page_title(&page.node)),
-                short = html_escape(&crate::short_label(&page.node)),
+                full = nav_label(page_title(&page.node)),
+                short = nav_label(&crate::short_label(&page.node)),
             ));
         }
         nav.push_str(&format!(
@@ -467,7 +570,7 @@ pub fn build_book(
                 format!(
                     "<a href=\"{}.html\">← {}</a>",
                     html_escape(&p.node.anchor),
-                    html_escape(page_title(&p.node))
+                    nav_label(page_title(&p.node))
                 )
             })
             .unwrap_or_else(|| "<a href=\"../index.html\">← Table of contents</a>".to_owned());
@@ -477,7 +580,7 @@ pub fn build_book(
                 format!(
                     "<a href=\"{}.html\">{} →</a>",
                     html_escape(&p.node.anchor),
-                    html_escape(page_title(&p.node))
+                    nav_label(page_title(&p.node))
                 )
             })
             .unwrap_or_else(|| "<a href=\"../index.html\">Table of contents →</a>".to_owned());
@@ -515,7 +618,7 @@ pub fn build_book(
                 "  <li><a href=\"pages/{a}.html\" data-cid=\"{cid}\">{t}</a></li>\n",
                 a = html_escape(&page.node.anchor),
                 cid = html_escape(page.node.id.as_str()),
-                t = html_escape(page_title(&page.node)),
+                t = nav_label(page_title(&page.node)),
             ));
         }
         toc.push_str("</ol></section>\n");
@@ -557,7 +660,9 @@ pub fn build_book(
 /// short snippet (the document's lead prose, when present — grounded, never invented).
 #[derive(Debug, Serialize)]
 struct SearchRecord<'a> {
-    title: &'a str,
+    /// The page's display title with inline markdown stripped (plain text; the JSON serializer owns
+    /// the string escaping) — so literal `**`/backticks never leak into the book search UI.
+    title: String,
     chapter: &'a str,
     url: String,
     snippet: String,
@@ -579,7 +684,7 @@ fn render_search_index(pages: &[Page], manifest: &BookManifest) -> String {
     let records: Vec<SearchRecord<'_>> = pages
         .iter()
         .map(|p| SearchRecord {
-            title: page_title(&p.node),
+            title: inline::to_plain(page_title(&p.node)),
             chapter: &manifest.chapters[p.chapter_idx].title,
             url: format!("pages/{}.html", p.node.anchor),
             snippet: lead_snippet(&p.node),

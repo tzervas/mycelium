@@ -102,6 +102,34 @@ fn an_orphaned_page_is_removed_never_left_as_a_dead_file() {
 }
 
 #[test]
+fn a_failed_orphan_removal_is_reported_never_silent() {
+    let dir = temp_dir("orphanfail");
+    emit_incremental(
+        &arts_of(&[("index.html", "<x>"), ("pages/gone.html", "G")]),
+        &dir,
+        true,
+    )
+    .expect("first");
+    // Make the orphan path un-removable by `remove_file`: replace the file with a directory.
+    let orphan = dir.join("pages/gone.html");
+    std::fs::remove_file(&orphan).unwrap();
+    std::fs::create_dir(&orphan).unwrap();
+
+    let report = emit_incremental(&arts_of(&[("index.html", "<x>")]), &dir, true).expect("emit");
+    assert_eq!(
+        report.removed, 0,
+        "the un-removable orphan is not counted removed"
+    );
+    assert!(
+        report.notice.as_deref().unwrap_or("").contains("gone.html"),
+        "the removal failure is reported, never silent: {:?}",
+        report.notice
+    );
+
+    std::fs::remove_dir_all(&dir).ok();
+}
+
+#[test]
 fn no_cache_forces_a_full_rebuild_with_a_notice() {
     let dir = temp_dir("full");
     let arts = arts_of(&[("index.html", "<x>"), ("pages/a.html", "A")]);
