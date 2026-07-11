@@ -44,7 +44,20 @@ certified `swap` operation.
 
 **Why:** ML practitioners routinely suffer from silent precision loss and from the impossibility
 of auditing what happened to a pipeline's accuracy claims. Mycelium addresses this structurally,
-not through documentation conventions.
+not through documentation conventions. Where PyTorch's `.half()` is a bare method call with no
+type-level trace of what it cost, the same F32→BF16 narrowing in Mycelium is a `swap` whose result
+type carries its own guarantee tag
+([`examples/repr-tour/swaps.myc`](../../examples/repr-tour/swaps.myc), checked clean by
+`cargo run -p mycelium-cli --bin myc -- check`):
+
+```mycelium
+fn narrow(x: Dense{768, F32}) => Dense{768, BF16} @ Empirical =
+  swap(x, to: Dense{768, BF16}, policy: bf16_round);
+```
+
+The `@ Empirical` is not a comment — it is part of the function's type, propagates by *meet*
+through anything downstream that consumes the result, and can only be strengthened to `@ Proven`
+once a cited theorem's side-conditions are checked (never asserted, VR-5).
 
 ## vs. VSA / HDC libraries (torchhd, resonator-network implementations)
 

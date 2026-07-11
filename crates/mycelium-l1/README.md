@@ -26,4 +26,4 @@ Pattern matching covers data types, `Binary`/`Ternary` literal arms, and nested 
 
 ## Role in the workspace
 
-Depends on `mycelium-core`, `mycelium-interp`, `mycelium-cert`, and `mycelium-stack`. The primary entry point for source-to-Core-IR compilation; `mycelium-mlir` is a dev-dependency for the three-way differential. See the [workspace overview](../../README.md). Further reading: the [doc index](../../docs/Doc-Index.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-l1).
+Depends on `mycelium-core`, `mycelium-interp`, `mycelium-cert`, and `mycelium-stack`. The primary entry point for source-to-Core-IR compilation; `mycelium-mlir` is a dev-dependency for the three-way differential. The `.myc` surface syntax validated by this crate's parser and typechecker is syntax-highlighted by the documentation pipeline — see [docsite-preview.md](../../docs/guide/docsite-preview.md) for visual examples. See the [workspace overview](../../README.md). Further reading: the [doc index](../../docs/Doc-Index.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-l1).

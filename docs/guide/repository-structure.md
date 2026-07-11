@@ -9,7 +9,7 @@ mycelium/
 ├── CONTRIBUTING.md           ← decision process, transparency rule, dev env, workflow
 ├── CLAUDE.md                 ← operating guide for Claude Code / agents (the house rules)
 ├── CHANGELOG.md              ← Keep-a-Changelog; design baseline + implementation edits
-├── Cargo.toml                ← Rust workspace (50 crates + xtask; MSRV 1.96.1, ADR-007/ADR-041)
+├── Cargo.toml                ← Rust workspace (56 crates + xtask; MSRV 1.96.1, ADR-007/ADR-041)
 ├── rust-toolchain.toml       ← pinned MSRV
 ├── justfile                  ← one source of truth for local↔CI checks (`just check`)
 ├── deny.toml                 ← cargo-deny supply-chain policy
@@ -19,6 +19,7 @@ mycelium/
 │   ├── Doc-Index.md                     ← map of the corpus + status + dependency DAG
 │   ├── Glossary.md                      ← the fungal lexicon + transparency/architecture terms
 │   ├── guide/       ← this directory — topic docs the root README links out to
+│   ├── assets/      ← committed docsite screenshots (light/dark), referenced by guide docs
 │   ├── rfcs/        ← RFC-0001…0039 (normative designs) + index
 │   ├── adr/         ← ADR-010…034 as files (ADR-001…009 live in the Foundation §8) + index
 │   ├── notes/       ← DN-01 onward design notes + reference material (lexicon, examples, research
@@ -49,6 +50,10 @@ mycelium/
 
 ## Documentation, generated and hand-written
 
+- **Local docsite** — `just docs-site` (`scripts/docsite.sh`) assembles a single themed,
+  light/dark, syntax-highlighted local site under `target/docsite/` from the design corpus (via
+  `myc-doc build`, `mycelium-doc`), the agent code index, and rustdoc. Screenshots:
+  [Docsite preview](docsite-preview.md).
 - **Wiki** — the browsable project wiki is generated from
   [`docs/wiki/`](../wiki/) (Home · Architecture · Crate Index · Memory Model · Tunable
   Certification · Getting Started · API Reference) and published to the GitHub wiki by the
