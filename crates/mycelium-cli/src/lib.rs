@@ -37,7 +37,7 @@ use mycelium_l1::ast::{Item, Path as NoduleAstPath};
 use mycelium_l1::lexer::lex;
 use mycelium_l1::token::{Pos, Spanned, Tok};
 use mycelium_l1::{
-    check_nodule, check_phylum, elaborate, parse, CheckError, Env, Nodule, ParseError, Phylum,
+    check_nodule, check_phylum, elaborate, parse, CheckError, Nodule, ParseError, Phylum,
     PhylumEnv, UsePath,
 };
 use mycelium_proj::parse_manifest;
@@ -163,16 +163,28 @@ pub fn build(manifest_path: &Path) -> Result<(Spore, String), Report> {
 }
 
 /// The outcome of [`check_project`]: which nodules type-checked, and the structured failures.
+///
+/// **Per-phylum, not per-file (M-1024).** `check_project` assembles every `.myc` source under the
+/// project into **one phylum** and checks it as a whole via [`assemble_and_check_phylum`] — the same
+/// front half [`run_multi_nodule`] uses — so a cross-nodule `use` resolves exactly as it does under
+/// `myc run` (this fixed a real bug: `myc check` used to refuse every cross-nodule `use` because each
+/// file was checked in isolation, while `myc run` already resolved them). Because [`check_phylum`] is
+/// **all-or-nothing** (one [`CheckError`] for the whole phylum, never a per-nodule verdict), the
+/// honesty follows through here too (VR-5, mirroring `mycelium-check`'s `PhylumReport`): on success
+/// every source is listed in `checked` (the phylum-wide check that passed necessarily passed all of
+/// them); on failure `checked` stays empty and the single blocking [`Report`] is the only entry in
+/// `failures` — never a fabricated per-nodule split we cannot know.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct CheckReport {
-    /// Source files that parsed and type-checked cleanly.
+    /// Source files checked cleanly (populated only when the whole phylum checked clean).
     pub checked: Vec<String>,
-    /// Per-file structured failures (parse or type errors), each with a location (DN-22).
+    /// The structured failure(s), each with a location where known (DN-22). All-or-nothing: at most
+    /// one entry (the single refusal that blocked the phylum), never a per-file fabrication.
     pub failures: Vec<Report>,
 }
 
 impl CheckReport {
-    /// Whether every checked file passed.
+    /// Whether the phylum checked clean.
     #[must_use]
     pub fn ok(&self) -> bool {
         self.failures.is_empty()
@@ -180,48 +192,29 @@ impl CheckReport {
 }
 
 /// `myc check` — parse and type-check every `.myc` source under the project directory containing
-/// `manifest_path`. Each nodule is checked independently (per-nodule scope — honest `Declared`:
-/// cross-nodule resolution is the elaborator's job, not re-implemented here). Returns a structured
-/// [`CheckReport`]; a parse/type error becomes a located [`Report`] in `failures`, never a panic (G2).
+/// `manifest_path`, **as one phylum** (M-1024): the same parse → dedup/use-resolve/cycle-guard →
+/// assemble → [`check_phylum`] front half [`run_multi_nodule`] uses, via the shared
+/// [`assemble_and_check_phylum`] seam — so `myc check` and `myc run` resolve cross-nodule references
+/// identically, diverging only *after* assembly (`check` reports the verdict and stops; `run`
+/// additionally finds `main`, links via [`PhylumEnv::link`], and evaluates). This fixes a real
+/// user-facing bug: the prior per-file [`check_nodule`] loop could never resolve a cross-nodule `use`,
+/// so `myc check` refused programs `myc run` accepted. Returns a structured [`CheckReport`]
+/// (all-or-nothing per-phylum honesty — see its doc); a parse/link/check error becomes a located
+/// [`Report`] in `failures`, never a panic (G2).
 ///
 /// # Errors
-/// [`Report`] (`myc-io`) only when the source tree cannot be walked; per-file check failures are
+/// [`Report`] (`myc-io`) only when the source tree cannot be walked; a parse/link/check failure is
 /// carried in the returned [`CheckReport`], not as an `Err`.
 pub fn check_project(manifest_path: &Path) -> Result<CheckReport, Report> {
     let (_, project_dir) = load_manifest(manifest_path)?;
     let sources =
         mycelium_cli_common::walk_myc(&project_dir).map_err(|e| Report::new("myc-io", e, 66))?;
     let mut report = CheckReport::default();
-    for path in sources {
-        let rel = path
-            .strip_prefix(&project_dir)
-            .unwrap_or(&path)
-            .display()
-            .to_string();
-        let text = match std::fs::read_to_string(&path) {
-            Ok(t) => t,
-            Err(e) => {
-                report
-                    .failures
-                    .push(Report::new("myc-io", format!("{rel}: {e}"), 66).at(rel.clone()));
-                continue;
-            }
-        };
-        match parse(&text) {
-            Err(pe) => report.failures.push(
-                Report::new("myc-parse", pe.message.clone(), 65)
-                    .at(format!("{rel}:{}:{}", pe.pos.line, pe.pos.col))
-                    .help("fix the syntax error at the indicated position"),
-            ),
-            Ok(nodule) => match check_nodule(&nodule) {
-                Err(ce) => report.failures.push(
-                    Report::new("myc-check", ce.to_string(), 65)
-                        .at(rel.clone())
-                        .help("resolve the type error reported above"),
-                ),
-                Ok(_env) => report.checked.push(rel),
-            },
+    match assemble_and_check_phylum(&sources, &project_dir) {
+        Ok((_phylum_env, parsed)) => {
+            report.checked = parsed.into_iter().map(|(rel, _)| rel).collect();
         }
+        Err(r) => report.failures.push(r),
     }
     Ok(report)
 }
@@ -336,6 +329,9 @@ pub fn corpus_context() -> bool {
 /// ([`mycelium_cli_common::walk_myc`]). **Zero** sources is refused (`myc-run-no-source`). **One**
 /// source runs the M-908 v0 path directly. **Two or more** sources run the M-909 multi-nodule path:
 ///
+/// Steps 1-3 are the shared [`assemble_and_check_phylum`] seam (M-1024) — the same front half
+/// `myc check`'s [`check_project`] runs, so both commands resolve cross-nodule references
+/// identically:
 /// 1. **Parse** every source independently (each file is a bare `nodule <path>; …` block — a
 ///    phylum-of-one in [`mycelium_l1`] terms).
 /// 2. **Link-check** the parsed nodules before any type-checking, since [`check_phylum`] itself does
@@ -348,24 +344,29 @@ pub fn corpus_context() -> bool {
 ///      tolerates cyclic nodule refs at the type-check level via its two-pass export/coherence
 ///      build) — `myc run` v0 additionally requires the *link* graph to be acyclic, matching the
 ///      conservative "refuse rather than guess" posture used throughout this driver; this may be
-///      lifted once a real project-scoped linker replaces the v0 flatten-by-name scheme below.
+///      lifted once a real project-scoped linker replaces the v0 flat-namespace scheme below.
 /// 3. Assemble the parsed nodules into one [`Phylum`] (no `phylum` header — `path: None`) and
 ///    [`check_phylum`] it, which enforces cross-nodule `pub`/`use` visibility and the phylum-wide
 ///    orphan rule (M-662). A check failure is `myc-check`.
+///
+/// `run` diverges from `check` after assembly:
 /// 4. **Find the entry nodule**: exactly one of the checked nodules must declare a nullary `main` —
 ///    zero is `myc-run-no-entry`, more than one is `myc-run-entry-ambiguous` (never guesses which).
-/// 5. **Link for elaboration**: [`check_phylum`]'s per-nodule [`Env`] only carries a nodule's own
-///    declarations plus what it *directly* imports (RFC-0006 §4.3) — not the transitive closure a
-///    call chain through an imported function may need (e.g. `main` imports `helper` from nodule
-///    `B`, and `helper`'s body calls a second, *private* function of `B` that `main` never
-///    imported). Since [`check_phylum`] has already validated every cross-nodule reference in the
-///    program is legal, `myc run` v0 safely **flattens every checked nodule's `Env` into one merged
-///    `Env`** (by simple name) purely for elaboration/execution — a v0 CLI-level linking policy, not
-///    an `mycelium-l1`/`mycelium-interp` change. The one residual risk this reintroduces — two
-///    *different* nodules independently declaring an item with the same simple name — is itself
-///    checked during the merge and refused as `myc-run-nodule-fn-collision` if the declarations
-///    differ (identical entries, e.g. a name re-exported through an import, are not a conflict).
-/// 6. [`elaborate`] the entry nodule's `main` against the merged `Env` to a closed L0 Core IR node,
+/// 5. **Link for elaboration** via **the canonical linker**, [`PhylumEnv::link`]
+///    (M-1024/DN-101 §5-A — the single, DRY linker; this driver no longer carries its own duplicate).
+///    [`check_phylum`]'s per-nodule `Env` only carries a nodule's own declarations plus what it
+///    *directly* imports (RFC-0006 §4.3) — not the transitive closure a call chain through an
+///    imported function may need (e.g. `main` imports `helper` from nodule `B`, and `helper`'s body
+///    calls a second, *private* function of `B` that `main` never imported). `link` folds every
+///    nodule's declarations into one flat, phylum-wide `Env`, merging each name from its **home**
+///    nodule's checked declaration (never a less-resolved imported clone) — see `link`'s doc for the
+///    full model. The one residual risk this reintroduces — two *different* nodules independently
+///    declaring an item with the same simple name — is refused as `myc-run-nodule-fn-collision`; per
+///    DN-101 §5-A this is the intended v0 flat-namespace semantics: `link` refuses **any**
+///    cross-nodule simple-name duplicate, even a byte-identical one (stricter than this driver's
+///    prior, now-retired flatten-by-name merge, which tolerated identical re-exports — a correctness
+///    upgrade, not a regression).
+/// 6. [`elaborate`] the entry nodule's `main` against the linked `Env` to a closed L0 Core IR node,
 ///    then run it on the trusted reference interpreter ([`mycelium_interp::Interpreter`]) — same as
 ///    the M-908 v0 path.
 ///
@@ -486,12 +487,91 @@ fn run_single_nodule(
 
 /// The M-909 multi-nodule path: manifest-driven project loading, nodule linking, and end-to-end
 /// execution. See [`run`]'s doc for the full six-step model. `opts` selects the interpreter's depth
-/// budget ([`interpreter_for`] — RFC-0041 §5).
+/// budget ([`interpreter_for`] — RFC-0041 §5). Steps 1-3 (parse → dedup/use-resolve/cycle-guard →
+/// assemble → [`check_phylum`]) are the shared [`assemble_and_check_phylum`] seam (M-1024) — the same
+/// front half `myc check`'s [`check_project`] runs, so the two commands resolve cross-nodule
+/// references identically and diverge only here, after assembly.
 fn run_multi_nodule(
     sources: &[PathBuf],
     project_dir: &Path,
     opts: &RunOptions,
 ) -> Result<RunReport, Report> {
+    // Steps 1-3: parse, link-check (duplicate/unresolved/cyclic), assemble, check_phylum.
+    let (phylum_env, parsed) = assemble_and_check_phylum(sources, project_dir)?;
+
+    // Step 4: find the single nodule declaring a nullary `main` (never guess between candidates).
+    const ENTRY: &str = "main";
+    let entry_path = find_entry_nodule(&phylum_env, &parsed)?;
+    let entry_rel = parsed
+        .iter()
+        .find(|(_, n)| &n.path == entry_path)
+        .map(|(rel, _)| rel.clone())
+        .unwrap_or_else(|| entry_path.0.join("."));
+
+    // Step 5: the canonical phylum-wide runtime link (M-1024; DN-101 §5-A) — `PhylumEnv::link`
+    // folds every nodule's checked declarations into one `Env`, keyed by simple name, merging each
+    // name from its HOME nodule's checked declaration (never a less-resolved imported clone) — see
+    // `run`'s doc and `PhylumEnv::link`'s doc for the full model. A genuine cross-nodule simple-name
+    // collision refuses explicitly rather than silently picking a winner (G2); this is a v0
+    // flat-namespace limit carried forward unchanged (M-982 follow-up disambiguates it later), now
+    // STRICTER than the retired `merge_phylum_env` (which tolerated a byte-identical re-export
+    // across nodules) — `link` refuses ANY cross-nodule simple-name duplicate among owned
+    // declarations, the intended v0 semantics (DN-101 §5-A): a correctness upgrade, not a
+    // regression.
+    let merged = phylum_env.link().map_err(|ce| {
+        Report::new("myc-run-nodule-fn-collision", ce.message, 65).help(
+            "rename one of the conflicting declarations — cross-nodule name collisions are not \
+             yet disambiguated (v0; a future project-scoped linker will lift this, M-982)",
+        )
+    })?;
+
+    // Step 6: elaborate + run, same as the single-nodule path.
+    let node = elaborate(&merged, ENTRY).map_err(|ee| {
+        Report::new("myc-run-residual", ee.to_string(), 70)
+            .at(entry_rel.clone())
+            .help(
+                "the program uses a construct outside the evaluation-complete fragment \
+                 (RFC-0007 §4.6); `myc run` v0 executes only the elaborated fragment",
+            )
+    })?;
+
+    let interp = interpreter_for(opts);
+    let value = interp.eval(&node).map_err(|ee| {
+        Report::new("myc-run-eval", ee.to_string(), 65)
+            .at(entry_rel.clone())
+            .help("the program failed during interpreted evaluation — see the error above")
+    })?;
+
+    Ok(RunReport {
+        source: entry_rel,
+        entry: ENTRY.to_owned(),
+        rendered: format!("{value:?}"),
+    })
+}
+
+/// **The shared phylum-assembler seam (M-1024)** — parse every source, run the v0 CLI-level
+/// link-check guards, assemble one header-less [`Phylum`], and [`check_phylum`] it. Both
+/// [`check_project`] (`myc check`) and [`run_multi_nodule`] (`myc run`/`myc build`) call this so the
+/// two commands share ONE assembly + resolution path, diverging only after it (`check` reports the
+/// verdict and stops; `run` additionally finds `main`, links via [`PhylumEnv::link`], and evaluates).
+/// This is the DRY consolidation that fixed `myc check`'s inability to resolve a cross-nodule `use`
+/// (it used to check each file with [`check_nodule`] in isolation — no phylum-wide view at all).
+///
+/// Steps: (1) parse every source independently — each file is a bare `nodule <path>; …` block; (2)
+/// the never-silent v0 CLI link-check guards ([`check_no_duplicate_nodule_paths`] /
+/// [`check_use_targets_resolve`] / [`check_no_nodule_cycles`] — G2: [`check_phylum`] does not itself
+/// guard duplicate nodule paths or cyclic `use` graphs, so these run first); (3) assemble one
+/// [`Phylum`] (no header — `path: None`) and [`check_phylum`] it as a whole.
+///
+/// # Errors
+/// A located [`Report`] on: an I/O failure (`myc-io`), a parse failure (`myc-parse`), a v0 CLI link
+/// policy refusal (`myc-run-nodule-duplicate` / `myc-run-nodule-unresolved` / `myc-run-nodule-cyclic`
+/// — named after `run`'s codes, since `check` reuses the identical v0 CLI-level guard), or the
+/// phylum-wide type check itself (`myc-check`).
+fn assemble_and_check_phylum(
+    sources: &[PathBuf],
+    project_dir: &Path,
+) -> Result<(PhylumEnv, Vec<(String, Nodule)>), Report> {
     // Step 1: parse every source independently — each file is a bare `nodule <path>; …` block.
     let mut parsed: Vec<(String, Nodule)> = Vec::with_capacity(sources.len());
     for source_path in sources {
@@ -522,42 +602,7 @@ fn run_multi_nodule(
             .help("resolve the type error reported above (see `myc check`)")
     })?;
 
-    // Step 4: find the single nodule declaring a nullary `main` (never guess between candidates).
-    const ENTRY: &str = "main";
-    let entry_path = find_entry_nodule(&phylum_env, &parsed)?;
-    let entry_rel = parsed
-        .iter()
-        .find(|(_, n)| &n.path == entry_path)
-        .map(|(rel, _)| rel.clone())
-        .unwrap_or_else(|| entry_path.0.join("."));
-
-    // Step 5: flatten every checked nodule's Env into one merged Env for elaboration (see `run`'s
-    // doc — this is a v0 CLI-level linking policy, not an l1/interp change). A genuine simple-name
-    // collision across two *different* nodules refuses rather than silently picking a winner.
-    let merged = merge_phylum_env(&phylum_env)?;
-
-    // Step 6: elaborate + run, same as the single-nodule path.
-    let node = elaborate(&merged, ENTRY).map_err(|ee| {
-        Report::new("myc-run-residual", ee.to_string(), 70)
-            .at(entry_rel.clone())
-            .help(
-                "the program uses a construct outside the evaluation-complete fragment \
-                 (RFC-0007 §4.6); `myc run` v0 executes only the elaborated fragment",
-            )
-    })?;
-
-    let interp = interpreter_for(opts);
-    let value = interp.eval(&node).map_err(|ee| {
-        Report::new("myc-run-eval", ee.to_string(), 65)
-            .at(entry_rel.clone())
-            .help("the program failed during interpreted evaluation — see the error above")
-    })?;
-
-    Ok(RunReport {
-        source: entry_rel,
-        entry: ENTRY.to_owned(),
-        rendered: format!("{value:?}"),
-    })
+    Ok((phylum_env, parsed))
 }
 
 /// `path`, relative to `project_dir` (falls back to the absolute path if stripping fails — never
@@ -775,116 +820,6 @@ fn find_entry_nodule<'a>(
                 65,
             )
             .help("keep a nullary `main` in exactly one nodule of the project"))
-        }
-    }
-}
-
-/// Flatten every checked nodule's [`Env`] into one merged `Env`, by simple name, for elaboration
-/// (see [`run`]'s doc, step 5). [`check_phylum`] has already validated every cross-nodule reference
-/// in the program is legal, so this merge is safe **except** for a genuine simple-name collision —
-/// two different nodules independently declaring an item with the same name but a different
-/// definition — which is refused as `myc-run-nodule-fn-collision` rather than silently picking a
-/// winner (G2). An identical re-inserted entry (e.g. a name a nodule imported, cloned verbatim into
-/// its own [`Env`] by [`check_phylum`]) is not a conflict.
-fn merge_phylum_env(phylum_env: &PhylumEnv) -> Result<Env, Report> {
-    let mut types = BTreeMap::new();
-    let mut fns = BTreeMap::new();
-    let mut totality = BTreeMap::new();
-    let mut traits = BTreeMap::new();
-    let mut instances = BTreeMap::new();
-    let mut impls = BTreeMap::new();
-    let mut lower_rules = BTreeMap::new();
-    // DN-54 §10 Model A derive-site provenance (M-973): keyed by the same `(trait, head)` coherence
-    // key as `instances`/`impls`, so it merges the same pub-key way across the phylum's nodules.
-    let mut derived_provenance = BTreeMap::new();
-    // `via`-delegation EXPLAIN provenance (M-966): keyed the same way, merges identically.
-    let mut via_provenance = BTreeMap::new();
-    let mut conflicts: Vec<String> = Vec::new();
-
-    for (_, env) in &phylum_env.nodules {
-        merge_map(&mut types, &env.types, String::clone, &mut conflicts);
-        merge_map(&mut fns, &env.fns, String::clone, &mut conflicts);
-        merge_map(&mut totality, &env.totality, String::clone, &mut conflicts);
-        merge_map(&mut traits, &env.traits, String::clone, &mut conflicts);
-        merge_map(&mut instances, &env.instances, fmt_pair_key, &mut conflicts);
-        merge_map(&mut impls, &env.impls, fmt_pair_key, &mut conflicts);
-        merge_map(
-            &mut lower_rules,
-            &env.lower_rules,
-            String::clone,
-            &mut conflicts,
-        );
-        merge_map(
-            &mut derived_provenance,
-            &env.derived_provenance,
-            fmt_pair_key,
-            &mut conflicts,
-        );
-        merge_map(
-            &mut via_provenance,
-            &env.via_provenance,
-            fmt_pair_key,
-            &mut conflicts,
-        );
-    }
-
-    if !conflicts.is_empty() {
-        conflicts.sort_unstable();
-        conflicts.dedup();
-        return Err(Report::new(
-            "myc-run-nodule-fn-collision",
-            format!(
-                "myc run v0 links nodules by simple name; the following name(s) are declared \
-                 differently by more than one nodule and cannot be unambiguously linked: {}",
-                conflicts.join(", ")
-            ),
-            65,
-        )
-        .help(
-            "rename one of the conflicting declarations — cross-nodule name collisions are not \
-             yet disambiguated (v0; a future project-scoped linker will lift this)",
-        ));
-    }
-
-    Ok(Env {
-        types,
-        fns,
-        totality,
-        traits,
-        instances,
-        impls,
-        lower_rules,
-        derived_provenance,
-        via_provenance,
-    })
-}
-
-/// `(String, String)`-keyed maps (`instances`/`impls`) format their key as `left::right` for a
-/// collision report.
-fn fmt_pair_key(k: &(String, String)) -> String {
-    format!("{}::{}", k.0, k.1)
-}
-
-/// Merge `src` into `dst` by key: a new key is inserted; an existing key with an **equal** value is
-/// left alone (e.g. the same declaration re-appearing via two nodules' imports); an existing key
-/// with a **different** value is recorded (via `fmt_key`) in `conflicts` rather than silently
-/// overwritten (G2 — the caller turns a non-empty `conflicts` into an explicit [`Report`]).
-fn merge_map<K, V>(
-    dst: &mut BTreeMap<K, V>,
-    src: &BTreeMap<K, V>,
-    fmt_key: impl Fn(&K) -> String,
-    conflicts: &mut Vec<String>,
-) where
-    K: Ord + Clone,
-    V: PartialEq + Clone,
-{
-    for (k, v) in src {
-        match dst.get(k) {
-            None => {
-                dst.insert(k.clone(), v.clone());
-            }
-            Some(existing) if existing == v => {}
-            Some(_) => conflicts.push(fmt_key(k)),
         }
     }
 }

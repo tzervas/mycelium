@@ -84,6 +84,73 @@ fn init_scaffolds_a_buildable_checkable_phylum() {
 }
 
 #[test]
+fn check_resolves_the_committed_cross_nodule_fixture_m1024() {
+    // The user-facing bug M-1024 fixed: `myc check`'s per-file `check_nodule` loop could never
+    // resolve a cross-nodule `use` (each file was a phylum-of-one in isolation), while `myc run`
+    // already resolved it via the same fixture. `check_project` now shares `run_multi_nodule`'s
+    // front half (`assemble_and_check_phylum`), so this must check clean — proving the fix, not
+    // just documenting it.
+    let report = check_project(&run_multi_fixture_manifest()).expect("walk succeeds");
+    assert!(
+        report.ok(),
+        "the cross-nodule fixture must check clean now (M-1024): {:?}",
+        report.failures
+    );
+    // Per-phylum honesty (VR-5): success lists every source, since the phylum-wide check that
+    // passed necessarily passed all of them.
+    assert_eq!(report.checked.len(), 2, "{:?}", report.checked);
+    assert!(report.checked.iter().any(|f| f == "mathutils.myc"));
+    assert!(report.checked.iter().any(|f| f == "run_multi_nodule.myc"));
+}
+
+#[test]
+fn check_project_is_all_or_nothing_never_a_fabricated_per_nodule_split() {
+    // M-1024: `check_phylum` is all-or-nothing — a single `CheckError` for the whole phylum, never
+    // a per-nodule verdict. `check_project` must not fabricate which nodules "would have" passed
+    // (VR-5): on a real cross-nodule check failure, `checked` stays empty and `failures` carries
+    // exactly the one blocking refusal.
+    let parent = scratch("check-all-or-nothing");
+    write_manifest(&parent, "collide");
+    std::fs::write(
+        parent.join("runner.myc"),
+        "nodule runner;\nfn main() => Binary{8} = 0b0000_0000;\n",
+    )
+    .unwrap();
+    std::fs::write(
+        parent.join("x.myc"),
+        "nodule x;\nfn helper(v: Binary{8}) => Binary{8} = v;\n",
+    )
+    .unwrap();
+    std::fs::write(
+        parent.join("y.myc"),
+        "nodule y;\nfn helper(v: Binary{8}) => Binary{8} = not(v);\n",
+    )
+    .unwrap();
+    // No `use` links these three nodules, so `check_phylum` itself sees no name collision (unlike
+    // `myc run`'s stricter v0 link-for-elaboration guard) — instead exercise an ordinary cross-nodule
+    // check refusal: an unresolved call.
+    std::fs::write(
+        parent.join("bad.myc"),
+        "nodule bad;\nfn f() => Binary{8} = nope(0b0000_0000);\n",
+    )
+    .unwrap();
+    let report = check_project(&parent.join("mycelium-proj.toml")).expect("walk succeeds");
+    assert!(!report.ok());
+    assert!(
+        report.checked.is_empty(),
+        "all-or-nothing: no fabricated per-nodule verdicts on failure: {:?}",
+        report.checked
+    );
+    assert_eq!(
+        report.failures.len(),
+        1,
+        "exactly one blocking refusal, never a per-file fan-out: {:?}",
+        report.failures
+    );
+    assert_eq!(report.failures[0].code, "myc-check");
+}
+
+#[test]
 fn init_refuses_a_bad_name_without_normalizing() {
     let parent = scratch("badname");
     for bad in ["Acme", "1geo", "geo-metry", "", "geo.core"] {
