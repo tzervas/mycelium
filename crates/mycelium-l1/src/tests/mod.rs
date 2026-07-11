@@ -22,6 +22,7 @@ mod elab;
 mod error;
 mod eval;
 mod fuse;
+mod hygiene_expr_sugar;
 mod lexer;
 mod lib_root;
 mod marshal_support;
