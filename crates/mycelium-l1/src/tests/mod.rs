@@ -3,6 +3,7 @@
 //! `use crate::<mod>::*` for white-box access to the logic module's `pub(crate)` items.
 
 mod affine;
+mod affine_stage3;
 mod ambient;
 mod ast;
 mod checkty;

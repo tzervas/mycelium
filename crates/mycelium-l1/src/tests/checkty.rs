@@ -852,13 +852,87 @@ fn register_dup_handle_rule(e: &mut Env) {
     );
 }
 
-/// **The load-bearing regression (DN-114 §3.2, adversarial-verify finding 1, HIGH — fixed).** A
-/// value parameter typed `Handle` — a `Data` type whose constructor *structurally contains* a
-/// `Substrate` field, not a top-level `Substrate` type itself — must be refused by the Stage-3
-/// (OQ-H4) gate exactly as a bare `Substrate`-typed value parameter is, citing "Stage 3" and
-/// "OQ-H4".
+/// **Superseded by Stage 3's real linear check (DN-117 §2, 2026-07-11) — was
+/// `stage3_composite_substrate_field_value_param_is_refused`, asserted wholesale refusal of any
+/// `Handle`-typed value parameter.** The composite/nested-affine hazard DN-114 §3.2 first found is
+/// now caught *precisely* rather than refused wholesale: a `Handle`-typed value parameter used
+/// **twice** in the RHS (`Dup`, extracting the wrapped field via two separate `match`es) is REFUSED
+/// only when the caller's argument genuinely carries a duplicatable affine move — here, a freshly
+/// constructed `Wrap(consume some_substrate)` whose inner `consume` gets spliced (and so
+/// re-evaluated) at both RHS occurrences, exactly DN-117 §2/§5's R2 shape. Uses the
+/// `#[cfg(test)]`-only active-tracker entry point ([`infer_type_with_active_affine`]) — the real
+/// double-consume detection needs a live [`crate::affine::Tracker`], which the ordinary
+/// `infer_type` (deliberately inert — post-check re-inference) cannot exercise; see that function's
+/// own doc comment. The sibling case — passing a *pre-existing*, non-consuming `Handle`-typed local
+/// and destructuring it twice (this test's OLD fixture) — is honestly documented as a **pre-existing,
+/// Stage-3-independent** limitation of the landed M-919 tracker in
+/// `stage3_prior_handle_alias_destructured_twice_is_a_known_pre_existing_gap`, below (verified via
+/// an equivalent hand-written, non-sugar `fn` fixture: the landed tracker does not catch it either
+/// — Stage 3 faithfully inherits, not regresses, hand-written code's own static posture, DN-117
+/// §4.3).
 #[test]
-fn stage3_composite_substrate_field_value_param_is_refused() {
+fn stage3_composite_substrate_field_value_param_refused_on_genuine_duplication() {
+    let mut e = stage0_base_env();
+    register_handle_wrapping_substrate(&mut e);
+    register_dup_handle_rule(&mut e);
+    let call = call_expr(
+        "Dup",
+        vec![Expr::App {
+            head: Box::new(Expr::Path(Path(vec!["Wrap".to_owned()]))),
+            args: vec![Expr::Consume(Box::new(Expr::Path(Path(vec![
+                "some_substrate".to_owned(),
+            ]))))],
+        }],
+    );
+    let mut scope = vec![("some_substrate".to_owned(), Ty::Substrate("gpu".to_owned()))];
+    let err = infer_type_with_active_affine(&e, &mut scope, &call).expect_err(
+        "a composite (`Handle`)-typed value parameter used twice in the RHS, whose argument \
+         genuinely carries a duplicated affine move once substituted, must be refused \
+         (M-1054 Stage 3/OQ-H4/DN-117)",
+    );
+    assert!(
+        err.message.contains("Stage 3") && err.message.contains("OQ-H4"),
+        "expected the Stage-3 (OQ-H4) diagnostic, got: {}",
+        err.message
+    );
+    assert!(
+        err.message.contains("double-consume"),
+        "expected the underlying double-consume diagnostic to be named, got: {}",
+        err.message
+    );
+}
+
+/// **Honest, Stage-3-independent limitation (DN-117 §4.3's "matches hand-written code's own static
+/// posture exactly" — verified, not assumed).** Referencing the *same*, pre-existing `Handle`-typed
+/// local twice and destructuring each occurrence independently is accepted — by an equivalent
+/// **ordinary, non-sugar** `fn` too (each `match`'s field-capture creates its own fresh, independent
+/// tracker slot, DN-71 §4.2; the landed tracker does not itself track a composite value's identity
+/// across two separate destructurings of it — a real, pre-existing M-919 gap, not something this
+/// leaf introduces or is asked to close). This is *not* the same shape as
+/// `stage3_composite_substrate_field_value_param_refused_on_genuine_duplication`'s R2 fixture
+/// (a *freshly constructed* `Wrap(consume s)` argument, re-evaluated by the splice) — this fixture
+/// aliases a *pre-existing* binding instead, which the tracker only ever tracks by scope index, not
+/// by "this Data value's wrapped field came from the same acquisition."
+#[test]
+fn stage3_prior_handle_alias_destructured_twice_is_a_known_pre_existing_gap() {
+    // The ordinary hand-written equivalent, independent of any sugar rule at all — confirms this is
+    // not a Stage-3-introduced regression.
+    check_nodule(
+        &parse(
+            "nodule d;\ntype Handle = Wrap(Substrate{gpu});\n\
+             fn f(h: Handle) => (Substrate{gpu}, Substrate{gpu}) = \
+             (match h { Wrap(s1) => s1 }, match h { Wrap(s2) => s2 });",
+        )
+        .expect("parses"),
+    )
+    .expect(
+        "the ordinary hand-written fn (no sugar involved) is ALSO accepted by the landed tracker \
+         — grounding that this is a pre-existing gap, not a Stage-3 regression",
+    );
+
+    // The value-parametric-sugar analogue, over the same real Cx pipeline (the exact assertion this
+    // test module makes for the composite case): a bare, pre-existing `Handle`-typed local, passed
+    // once, destructured at both RHS occurrences.
     let mut e = stage0_base_env();
     register_handle_wrapping_substrate(&mut e);
     register_dup_handle_rule(&mut e);
@@ -870,20 +944,10 @@ fn stage3_composite_substrate_field_value_param_is_refused() {
         "some_handle".to_owned(),
         Ty::Data("Handle".to_owned(), vec![]),
     )];
-    let err = infer_type(&e, &mut scope, &call).expect_err(
-        "a value parameter whose type structurally contains `Substrate` must be refused \
-         (Stage 3/OQ-H4), not just a top-level `Substrate` type",
-    );
-    assert!(
-        err.message.contains("Stage 3") && err.message.contains("OQ-H4"),
-        "expected the Stage-3 (OQ-H4) diagnostic, got: {}",
-        err.message
-    );
-    assert!(
-        err.message.contains("structurally contains"),
-        "expected the diagnostic to name the structural-containment shape (not just a top-level \
-         `Substrate` type), got: {}",
-        err.message
+    infer_type_with_active_affine(&e, &mut scope, &call).expect(
+        "aliasing a pre-existing Handle-typed local across two independent destructurings is \
+         accepted, matching the equivalent hand-written fn's own (pre-existing) posture — DN-117 \
+         §4.3: Stage 3 must not be *stricter* than hand-written code, only as precise",
     );
 }
 
