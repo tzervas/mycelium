@@ -577,11 +577,11 @@
 
 | Symbol | Kind | File:Line | Summary |
 |---|---|---|---|
-| `mycelium_doc::BookError` | struct | `crates/mycelium-doc/src/book.rs:49` | A never-silent book-build error (a broken manifest entry, a bad manifest, an anchor collision) — |
-| `mycelium_doc::BookManifest` | struct | `crates/mycelium-doc/src/book.rs:61` | The committed chapter manifest (`docs/book-manifest.json`) — curated order, drift-proof globs. |
+| `mycelium_doc::BookError` | struct | `crates/mycelium-doc/src/book.rs:57` | A never-silent book-build error (a broken manifest entry, a bad manifest, an anchor collision) — |
+| `mycelium_doc::BookManifest` | struct | `crates/mycelium-doc/src/book.rs:69` | The committed chapter manifest (`docs/book-manifest.json`) — curated order, drift-proof globs. |
 | `mycelium_doc::BuildInput` | struct | `crates/mycelium-doc/src/build.rs:25` | What to ingest. |
 | `mycelium_doc::CHECK_NAMES:` | const | `crates/mycelium-doc/src/doc_lint.rs:16` | The eight §4.1 checks, by canonical name — the single source of truth (`mycelium-lint` re-exports |
-| `mycelium_doc::ChapterSpec` | struct | `crates/mycelium-doc/src/book.rs:73` | One chapter: an ordered list of explicit sources, optionally extended by drift-proof globs. |
+| `mycelium_doc::ChapterSpec` | struct | `crates/mycelium-doc/src/book.rs:81` | One chapter: an ordered list of explicit sources, optionally extended by drift-proof globs. |
 | `mycelium_doc::CheckOutcome` | struct | `crates/mycelium-doc/src/doc_lint.rs:76` | The outcome of one check. |
 | `mycelium_doc::CheckStatus` | enum | `crates/mycelium-doc/src/doc_lint.rs:65` | Whether a check is fully active, partly dormant (named sub-aspects await machinery), or dormant. |
 | `mycelium_doc::DocLintReport` | struct | `crates/mycelium-doc/src/doc_lint.rs:89` | The full §4.1 lint report. |
@@ -597,12 +597,12 @@
 | `mycelium_doc::apiref::project_nodule` | fn | `crates/mycelium-doc/src/apiref.rs:21` | Project a `.myc` source into a [`Payload::Document`] (`source_kind: api`) of api-item nodes. |
 | `mycelium_doc::apiref::project_schema` | fn | `crates/mycelium-doc/src/apiref.rs:107` | Project a JSON-schema file into a [`Payload::Document`] of api-item nodes (one per top-level |
 | `mycelium_doc::book` | mod | `crates/mycelium-doc/src/lib.rs:20` | — |
-| `mycelium_doc::book::DEFAULT_MANIFEST_PATH:` | const | `crates/mycelium-doc/src/book.rs:44` | The repo-relative default location of the committed chapter manifest. |
+| `mycelium_doc::book::DEFAULT_MANIFEST_PATH:` | const | `crates/mycelium-doc/src/book.rs:52` | The repo-relative default location of the committed chapter manifest. |
 | `mycelium_doc::build` | mod | `crates/mycelium-doc/src/lib.rs:21` | — |
 | `mycelium_doc::build` | fn | `crates/mycelium-doc/src/build.rs:68` | Build the resolved doc model from the input. |
 | `mycelium_doc::build::BuildInput::conventional` | fn | `crates/mycelium-doc/src/build.rs:52` | The conventional layout rooted at `repo_root`: `docs/`, `docs/spec/schemas/`, `examples/`, |
 | `mycelium_doc::build::EPUB_DEFERRAL:` | const | `crates/mycelium-doc/src/build.rs:19` | EPUB is an honest deferral (spec §8 / §4.1 "never a half-build"). |
-| `mycelium_doc::build_book` | fn | `crates/mycelium-doc/src/book.rs:440` | Build every book artifact: the ToC/landing page, one page per chapter entry (prev/next nav), and |
+| `mycelium_doc::build_book` | fn | `crates/mycelium-doc/src/book.rs:543` | Build every book artifact: the ToC/landing page, one page per chapter entry (prev/next nav), and |
 | `mycelium_doc::corpus` | mod | `crates/mycelium-doc/src/lib.rs:23` | — |
 | `mycelium_doc::corpus::AnchorAlloc` | struct | `crates/mycelium-doc/src/corpus.rs:14` | Allocates globally-unique, stable anchor slugs (so deep links never collide — §4.1 navigability). |
 | `mycelium_doc::corpus::AnchorAlloc::alloc` | fn | `crates/mycelium-doc/src/corpus.rs:26` | Slugify `base` (optionally namespaced under `ns`) and make it unique by `-N` suffixing. |
@@ -659,7 +659,7 @@
 | `mycelium_doc::lib_index::write_json` | fn | `crates/mycelium-doc/src/lib_index.rs:128` | Write `docs/lib-index/index.json`. |
 | `mycelium_doc::lib_index::write_markdown` | fn | `crates/mycelium-doc/src/lib_index.rs:150` | Write `docs/lib-index/INDEX.md`. |
 | `mycelium_doc::lint` | fn | `crates/mycelium-doc/src/doc_lint.rs:116` | Run all eight §4.1 checks over the model. |
-| `mycelium_doc::load_manifest` | fn | `crates/mycelium-doc/src/book.rs:94` | Load the committed manifest from `<repo_root>/docs/book-manifest.json`. |
+| `mycelium_doc::load_manifest` | fn | `crates/mycelium-doc/src/book.rs:102` | Load the committed manifest from `<repo_root>/docs/book-manifest.json`. |
 
 ## mycelium-fmt
 
@@ -4144,7 +4144,7 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_diag::Trace::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_diag::Trace::hash` | definition not found via regex heuristic (kind='fn', name='hash') — possibly macro-generated or cfg-gated |
 | `mycelium_diag::Trace::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
-| `mycelium_doc::book::BookError` | dedup-alias: same definition as `mycelium_doc::BookError` at crates/mycelium-doc/src/book.rs:49 — one canonical row kept |
+| `mycelium_doc::book::BookError` | dedup-alias: same definition as `mycelium_doc::BookError` at crates/mycelium-doc/src/book.rs:57 — one canonical row kept |
 | `mycelium_doc::book::BookError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::book::BookError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::book::BookError::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
@@ -4153,7 +4153,7 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_doc::book::BookError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::book::BookError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::book::BookError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_doc::book::BookManifest` | dedup-alias: same definition as `mycelium_doc::BookManifest` at crates/mycelium-doc/src/book.rs:61 — one canonical row kept |
+| `mycelium_doc::book::BookManifest` | dedup-alias: same definition as `mycelium_doc::BookManifest` at crates/mycelium-doc/src/book.rs:69 — one canonical row kept |
 | `mycelium_doc::book::BookManifest::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::book::BookManifest::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::book::BookManifest::deserialize` | definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated |
@@ -4162,7 +4162,7 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_doc::book::BookManifest::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::book::BookManifest::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::book::BookManifest::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
-| `mycelium_doc::book::ChapterSpec` | dedup-alias: same definition as `mycelium_doc::ChapterSpec` at crates/mycelium-doc/src/book.rs:73 — one canonical row kept |
+| `mycelium_doc::book::ChapterSpec` | dedup-alias: same definition as `mycelium_doc::ChapterSpec` at crates/mycelium-doc/src/book.rs:81 — one canonical row kept |
 | `mycelium_doc::book::ChapterSpec::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::book::ChapterSpec::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::book::ChapterSpec::deserialize` | definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated |
@@ -4171,8 +4171,8 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_doc::book::ChapterSpec::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::book::ChapterSpec::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::book::ChapterSpec::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
-| `mycelium_doc::book::build_book` | dedup-alias: same definition as `mycelium_doc::build_book` at crates/mycelium-doc/src/book.rs:440 — one canonical row kept |
-| `mycelium_doc::book::load_manifest` | dedup-alias: same definition as `mycelium_doc::load_manifest` at crates/mycelium-doc/src/book.rs:94 — one canonical row kept |
+| `mycelium_doc::book::build_book` | dedup-alias: same definition as `mycelium_doc::build_book` at crates/mycelium-doc/src/book.rs:543 — one canonical row kept |
+| `mycelium_doc::book::load_manifest` | dedup-alias: same definition as `mycelium_doc::load_manifest` at crates/mycelium-doc/src/book.rs:102 — one canonical row kept |
 | `mycelium_doc::build::BuildInput` | dedup-alias: same definition as `mycelium_doc::BuildInput` at crates/mycelium-doc/src/build.rs:25 — one canonical row kept |
 | `mycelium_doc::build::BuildInput::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::build::BuildInput::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |

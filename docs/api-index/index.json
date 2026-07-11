@@ -5782,7 +5782,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc",
       "file": "crates/mycelium-doc/src/book.rs",
-      "line": 49,
+      "line": 57,
       "summary": "A never-silent book-build error (a broken manifest entry, a bad manifest, an anchor collision) —",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5793,7 +5793,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc",
       "file": "crates/mycelium-doc/src/book.rs",
-      "line": 61,
+      "line": 69,
       "summary": "The committed chapter manifest (`docs/book-manifest.json`) — curated order, drift-proof globs.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5826,7 +5826,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc",
       "file": "crates/mycelium-doc/src/book.rs",
-      "line": 73,
+      "line": 81,
       "summary": "One chapter: an ordered list of explicit sources, optionally extended by drift-proof globs.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6002,7 +6002,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc::book",
       "file": "crates/mycelium-doc/src/book.rs",
-      "line": 44,
+      "line": 52,
       "summary": "The repo-relative default location of the committed chapter manifest.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6057,7 +6057,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc",
       "file": "crates/mycelium-doc/src/book.rs",
-      "line": 440,
+      "line": 543,
       "summary": "Build every book artifact: the ToC/landing page, one page per chapter entry (prev/next nav), and",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6684,7 +6684,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc",
       "file": "crates/mycelium-doc/src/book.rs",
-      "line": 94,
+      "line": 102,
       "summary": "Load the committed manifest from `<repo_root>/docs/book-manifest.json`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -33918,7 +33918,7 @@
     },
     {
       "symbol": "mycelium_doc::book::BookError",
-      "reason": "dedup-alias: same definition as `mycelium_doc::BookError` at crates/mycelium-doc/src/book.rs:49 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_doc::BookError` at crates/mycelium-doc/src/book.rs:57 — one canonical row kept"
     },
     {
       "symbol": "mycelium_doc::book::BookError::clone",
@@ -33954,7 +33954,7 @@
     },
     {
       "symbol": "mycelium_doc::book::BookManifest",
-      "reason": "dedup-alias: same definition as `mycelium_doc::BookManifest` at crates/mycelium-doc/src/book.rs:61 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_doc::BookManifest` at crates/mycelium-doc/src/book.rs:69 — one canonical row kept"
     },
     {
       "symbol": "mycelium_doc::book::BookManifest::clone",
@@ -33990,7 +33990,7 @@
     },
     {
       "symbol": "mycelium_doc::book::ChapterSpec",
-      "reason": "dedup-alias: same definition as `mycelium_doc::ChapterSpec` at crates/mycelium-doc/src/book.rs:73 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_doc::ChapterSpec` at crates/mycelium-doc/src/book.rs:81 — one canonical row kept"
     },
     {
       "symbol": "mycelium_doc::book::ChapterSpec::clone",
@@ -34026,11 +34026,11 @@
     },
     {
       "symbol": "mycelium_doc::book::build_book",
-      "reason": "dedup-alias: same definition as `mycelium_doc::build_book` at crates/mycelium-doc/src/book.rs:440 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_doc::build_book` at crates/mycelium-doc/src/book.rs:543 — one canonical row kept"
     },
     {
       "symbol": "mycelium_doc::book::load_manifest",
-      "reason": "dedup-alias: same definition as `mycelium_doc::load_manifest` at crates/mycelium-doc/src/book.rs:94 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_doc::load_manifest` at crates/mycelium-doc/src/book.rs:102 — one canonical row kept"
     },
     {
       "symbol": "mycelium_doc::build::BuildInput",
