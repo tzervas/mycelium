@@ -400,27 +400,104 @@ pub(crate) fn ty_local_name(qualified_or_bare: &str) -> &str {
 /// keys are bare, so the fallback only ever succeeds when the qualified input's local part is
 /// genuinely registered *in that registry*.
 ///
-/// **Known residual, flagged not silently glossed (G2/VR-5) — a narrower, deeper gap than DN-112
-/// Rank 1's own check-time scope.** In `crate::mono`/`crate::elab`, the consulted registry is a
-/// *single nodule's own* `Env.types` (own decls shadow imports — RFC-0006 §4.3, pre-existing). If
-/// that nodule (a) declares its **own** local type of the same bare name as a **foreign** type
-/// (shadowing, as in the M-1036 exploit shape) **and** (b) legitimately reaches a value of the
-/// *foreign* type in an executed body (e.g. via an imported function's signature, never through the
-/// shadowed name itself), this fallback resolves the foreign qualified name to the *local* shadow's
-/// `DataInfo` — the wrong declaration's ctors/shape — because a single bare-keyed registry cannot
-/// hold both entries at once. The **static check stays sound** (the two types are correctly
-/// distinguished and the program only reaches elaboration if it type-checks — DN-112's own boundary
-/// is the checker), so this cannot admit an *unsound accept*; it is an unwitnessed elaboration-time
-/// misresolution risk in a narrow, adversarial-shadow-plus-legitimate-cross-nodule-use combination,
-/// out of DN-112 Rank 1's stated "check-time (L1)... no runtime change" scope (§3). A real fix needs
-/// per-import-provenance-scoped resolution in `crate::mono` — materially larger than this note's
-/// mechanism, tracked as a follow-on (not silently assumed away).
+/// **CORRECTED (CRITICAL #2, post-landing — the claim below was FALSE; VR-5 downgrade).** The
+/// original doc text here claimed *"the static check stays sound... this cannot admit an unsound
+/// accept... an unwitnessed elaboration-time misresolution risk... out of DN-112 Rank 1's stated
+/// check-time scope."* That is **wrong**: this exact fallback is also reached from **inside the
+/// checker itself** — [`normalize_pattern`] is called from `Cx::check_pattern` (check-time, not
+/// merely elaboration), and a same-nodule-shadow-plus-legitimate-cross-nodule-reach program was
+/// reproduced type-checking a pattern binder to the SHADOW's `DataInfo` (a `Binary{4}` local decoy)
+/// while the scrutinee's real runtime value was the FOREIGN type's shape (`Binary{8}`) — a
+/// checker-accepted static/runtime type mismatch, unsealed, no `priv` needed. Closed at the
+/// pattern-normalization call sites via [`lookup_data_home_checked`] (conservative refuse — see its
+/// own doc comment for why the full correct-home resolution is not reachable from a single
+/// bare-keyed registry). **Every other consumer of this plain `lookup_data`** (`crate::mono`,
+/// `crate::elab`'s non-pattern paths, `crate::decision`, `crate::usefulness`, `crate::fuse`) is
+/// **unaudited by this fix** — the same latent risk this doc originally (mis)claimed was merely an
+/// elaboration-time curiosity may be reachable through them too; treat as an **open, disclosed
+/// residual**, not re-asserted-safe (G2/VR-5 — downgrade honestly, never claim more than checked).
+///
+/// **Original (uncorrected) framing, kept for the historical record — DO NOT treat as current:**
+/// *"the consulted registry is a single nodule's own `Env.types`... if that nodule (a) declares its
+/// own local type of the same bare name as a foreign type and (b) legitimately reaches a value of
+/// the foreign type... this fallback resolves the foreign qualified name to the local shadow's
+/// `DataInfo`... The static check stays sound... this cannot admit an unsound accept."* This framing
+/// is superseded by the correction above.
 #[must_use]
 pub(crate) fn lookup_data<'a>(
     types: &'a BTreeMap<String, DataInfo>,
     name: &str,
 ) -> Option<&'a DataInfo> {
     types.get(name).or_else(|| types.get(ty_local_name(name)))
+}
+
+/// **Home-checked** variant of [`lookup_data`] (CRITICAL #2 fix, DN-112 Rank 1 / M-1036 residual
+/// close). Used at the pattern-normalization call sites ([`normalize_pattern`], shared by
+/// `Cx::check_pattern` at check-time and the elaborator) — the sites where [`lookup_data`]'s own
+/// bare-keyed fallback was found to be reachable from **inside the checker itself**, not merely
+/// elaboration, making the type/runtime mismatch **checker-accepted** rather than an elaboration-only
+/// curiosity (see the corrected doc comment on [`lookup_data`] above).
+///
+/// When the exact-key lookup misses and the bare-local fallback would resolve a **qualified** `name`
+/// (one with a `home::` prefix) against a `DataInfo` whose own [`DataInfo::home`] is **different**
+/// from that prefix — the exact same-nodule-shadow-plus-legitimate-cross-nodule-reach shape — this
+/// **refuses explicitly** (G2) rather than silently proceeding with the wrong declaration's
+/// ctors/field-shape. This is the **conservative (b) closure**, not the full (a) correct-home
+/// resolution: a single bare-keyed registry (own decls shadow imports, RFC-0006 §4.3) holds at most
+/// ONE `DataInfo` per bare name, so once a nodule locally shadows a foreign type's bare name, the
+/// foreign type's own `DataInfo` is not reachable from `types` at all — there is nothing correct to
+/// resolve against here. **The full (a) fix — resolving against the foreign type's own `DataInfo`
+/// via per-import-provenance-scoped resolution — needs a materially larger change in `crate::mono`
+/// (per-import registries, not one merged bare-keyed map) and is an explicit, disclosed residual, not
+/// silently deferred (G2/VR-5).** A false-refuse of the legitimate shadow+cross-nodule-pattern shape
+/// is sound (conservative); the prior false-accept was not.
+///
+/// # Errors
+/// A [`CheckError`] iff `name` is not registered at all under its own bare key (an internal
+/// consistency violation — the same condition [`lookup_data`]'s callers previously `.expect()`ed,
+/// now surfaced never-silently instead of panicking), or iff `name` is nodule-qualified and its home
+/// prefix does not match the resolved [`DataInfo::home`] (the shadow/home-mismatch case above).
+pub(crate) fn lookup_data_home_checked<'a>(
+    types: &'a BTreeMap<String, DataInfo>,
+    name: &str,
+    site: &str,
+) -> Result<&'a DataInfo, CheckError> {
+    if let Some(info) = types.get(name) {
+        return Ok(info);
+    }
+    let local = ty_local_name(name);
+    let Some(info) = types.get(local) else {
+        return Err(CheckError::new(
+            site,
+            format!(
+                "internal: data type `{name}` is not registered in this nodule's own type \
+                 registry — a checked type escaped registration (report this; never a silent \
+                 default, G2)"
+            ),
+        ));
+    };
+    // `name`'s qualifier prefix is everything before the LAST `::` (home strings use `.` as their
+    // OWN internal separator — `nodule_home` — so a single `::` unambiguously splits home from
+    // bare name; see `ty_local_name`'s doc comment). An unqualified `name` has no home to compare
+    // against — the common own-type / single-nodule case, structurally unaffected.
+    if let Some((home, _)) = name.rsplit_once("::") {
+        if home != info.home {
+            return Err(CheckError::new(
+                site,
+                format!(
+                    "type-identity mismatch: `{name}` resolves, in this nodule's own type \
+                     registry, to a DIFFERENT declaration of the same bare name — `{}` is \
+                     declared in `{}`, not the expected `{home}` (a local type shadows a \
+                     foreign-home type of the same name, and this position legitimately reaches \
+                     a value of the foreign type — CRITICAL #2 / DN-112 Rank 1 residual close;\
+                     refused rather than silently checked against the wrong declaration's shape, \
+                     G2/VR-5)",
+                    info.name, info.home
+                ),
+            ));
+        }
+    }
+    Ok(info)
 }
 
 /// Substitute type arguments for the abstract parameters in a stage-1 type (RFC-0007 §11.2): replace
@@ -6731,10 +6808,27 @@ impl Cx<'_> {
         args: &[Expr],
     ) -> Result<(Ty, Expr), CheckError> {
         let callee_vars = fd.sig.param_names();
+        // DN-112 Rank 1 / M-1036 (CRITICAL #1 fix): mirror `check_app`'s monomorphic-callee path —
+        // prefer this callee's baked signature (resolved ONCE against its OWN declaring nodule,
+        // `resolve_fn_sig`) over re-resolving `pm.ty` fresh against `self.types` (this caller's own
+        // registry). `resolve_fn_sig` is baked with the SAME `tyvars = sig.param_names()` as
+        // `callee_vars` here, so a baked param type lines up positionally with `fd.sig.value_params`
+        // and may itself still legitimately contain `Ty::Var(callee_var)` for a parameter that
+        // mentions the callee's own type variable — those resolve to a concrete type via `subst`
+        // exactly like the freshly-resolved path already does. Without this, a foreign caller with
+        // EVEN ONE unrelated generic parameter routed every FIXED parameter/return type back through
+        // the caller's own (possibly wrong-home, shadowed) registry — reopening the seal bypass one
+        // level up from the monomorphic fix (the DN-112 §10 item 2 exploit shape, generic-arity
+        // variant). Absent (not every signature is bakeable — best-effort, see `resolve_fn_sig`'s doc
+        // comment) falls back to the pre-existing fresh-resolution path, unchanged.
+        let baked = self.imports.resolved_fn_sigs.get(name);
         let mut subst: BTreeMap<String, Ty> = BTreeMap::new();
         let mut rebuilt = Vec::with_capacity(args.len());
-        for (pm, a) in fd.sig.value_params.iter().zip(args) {
-            let want = resolve_ty(self.site, self.types, &callee_vars, &pm.ty)?.0;
+        for (i, (pm, a)) in fd.sig.value_params.iter().zip(args).enumerate() {
+            let want = match baked.and_then(|(params, _)| params.get(i)) {
+                Some(w) => w.clone(),
+                None => resolve_ty(self.site, self.types, &callee_vars, &pm.ty)?.0,
+            };
             let want_now = subst_ty(&want, &subst);
             // A fully-concrete (post-substitution) expected type drives the argument's check (so a
             // bare decimal takes the width); a still-abstract one lets the argument synthesize.
@@ -6788,10 +6882,12 @@ impl Cx<'_> {
                 )?;
             }
         }
-        let ret = subst_ty(
-            &resolve_ty(self.site, self.types, &callee_vars, &fd.sig.ret)?.0,
-            &subst,
-        );
+        // Same baked-signature preference for the return type (CRITICAL #1 fix, see above).
+        let ret_base = match baked {
+            Some((_, ret)) => ret.clone(),
+            None => resolve_ty(self.site, self.types, &callee_vars, &fd.sig.ret)?.0,
+        };
+        let ret = subst_ty(&ret_base, &subst);
         Ok((ret, app_node(head, rebuilt)))
     }
 
@@ -8649,7 +8745,10 @@ pub(crate) fn normalize_pattern(
             // data type's constructors; otherwise it binds the whole position (at this occurrence).
             if let Ty::Data(tn, _) = expected {
                 // DN-112 Rank 1 / M-1036: `tn` is checked (possibly qualified); `types` is bare-keyed.
-                let d = lookup_data(types, tn).expect("registered data type");
+                // CRITICAL #2 fix: home-checked lookup — a same-nodule-shadow-plus-foreign-reach
+                // mismatch refuses explicitly here (G2) rather than silently resolving `tn` against
+                // the WRONG (locally-shadowed) `DataInfo` (see `lookup_data_home_checked`'s doc).
+                let d = lookup_data_home_checked(types, tn, site)?;
                 if let Some(c) = d.ctors.iter().find(|c| c.name == *n) {
                     if !c.fields.is_empty() {
                         return Err(CheckError::new(
@@ -8675,9 +8774,8 @@ pub(crate) fn normalize_pattern(
                     ),
                 ));
             };
-            let d = lookup_data(types, tn)
-                .expect("registered data type")
-                .clone();
+            // CRITICAL #2 fix: home-checked lookup (see the `Pattern::Ident` arm above).
+            let d = lookup_data_home_checked(types, tn, site)?.clone();
             let Some(c) = d.ctors.iter().find(|c| c.name == *n) else {
                 return Err(CheckError::new(
                     site,

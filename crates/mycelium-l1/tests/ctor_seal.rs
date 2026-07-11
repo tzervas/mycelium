@@ -310,6 +310,141 @@ fn a_legitimate_factory_returning_a_sealed_type_still_works_across_nodules() {
 }
 
 // ---------------------------------------------------------------------------------------------
+// CRITICAL #1 (found reproducing on top of the landed DN-112 Rank 1 fix): `check_app_generic_fn`
+// re-resolved every parameter FRESH against the caller's own registry, ignoring the baked
+// `imports.resolved_fn_sigs` entry the monomorphic path (`check_app`) already consulted — so a
+// callee with ANY (even wholly unrelated) type parameter reopened the same-nodule-shadow bypass.
+// Fixed by mirroring the monomorphic path's baked-signature preference in the generic path too.
+// ---------------------------------------------------------------------------------------------
+
+#[test]
+fn a_generic_callee_no_longer_bypasses_the_seal_via_fresh_reresolution() {
+    // `use_t[X](x: T, y: X) => X = y` is generic over `X` (unrelated to the sealed `T`). Pre-fix,
+    // `check_app_generic_fn` resolved `x`'s parameter type (`T`) FRESH against `b`'s own registry
+    // for EVERY call — including this one — so `b`'s local decoy `T` (never imported, never
+    // sealed) silently satisfied `x: T`, forging a value of the sealed `a::T` one level up from
+    // the already-fixed monomorphic-callee exploit (DN-112 §10 item 2's own shape, generic-arity
+    // variant). Fixed by consulting `imports.resolved_fn_sigs` (the baked, declaring-nodule-
+    // resolved signature) here too, exactly as `check_app`'s monomorphic path already does.
+    let result = check_phy(
+        "phylum p\n\
+         nodule a;\n\
+         pub type T = priv Mk(Binary{8});\n\
+         pub fn use_t[X](x: T, y: X) => X = y;\n\
+         nodule b;\n\
+         use a.use_t;\n\
+         type T = Mk(Binary{8});\n\
+         fn forge() => T = Mk(0b0000_0000);\n\
+         pub fn exploit() => Binary{1} = use_t(forge(), 0b1);",
+    );
+    let err = result.expect_err(
+        "the generic-callee variant of the shadow-bypass exploit must be refused too (CRITICAL #1 \
+         fix) — a same-named local decoy must not forge a sealed foreign type through a generic \
+         call path either, even when the callee has an unrelated type parameter",
+    );
+    assert!(
+        err.message.contains('T') || err.message.to_lowercase().contains("type"),
+        "the refusal should be a type-identity mismatch naming the mismatched type; got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn a_legitimate_generic_cross_nodule_call_referencing_an_imported_type_still_checks() {
+    // Non-vacuity / non-over-restriction control for CRITICAL #1: a well-behaved generic call that
+    // references a REAL imported (never shadowed) cross-nodule sealed type in a FIXED parameter,
+    // alongside its own unrelated type parameter, must still check — the baked-signature
+    // preference in the generic path must not over-restrict the legitimate case. `b` never
+    // constructs `T` directly; it only receives it from `a`'s factory `mint` and passes it
+    // straight into the generic `use_t`.
+    check_phy(
+        "phylum p\n\
+         nodule a;\n\
+         pub type T = priv Mk(Binary{8});\n\
+         pub fn mint(x: Binary{8}) => T = Mk(x);\n\
+         pub fn use_t[X](x: T, y: X) => X = y;\n\
+         nodule b;\n\
+         use a.mint;\n\
+         use a.use_t;\n\
+         pub fn ok() => Binary{1} = use_t(mint(0b0000_0001), 0b1);",
+    )
+    .expect(
+        "a legitimate generic call passing a genuinely-imported cross-nodule sealed value through \
+         a fixed parameter, alongside an unrelated type parameter, still checks (CRITICAL #1 fix \
+         must not over-restrict)",
+    );
+}
+
+// ---------------------------------------------------------------------------------------------
+// CRITICAL #2 (found scrutinizing `lookup_data`'s own documented residual): the same-nodule-
+// shadow-plus-legitimate-cross-nodule-reach fallback is used in `normalize_pattern`, called from
+// `Cx::check_pattern` — INSIDE the checker, not merely elaboration. The `lookup_data` doc's claim
+// "the static check stays sound" was FALSE for this call path: an UNSEALED type still lets the
+// checker bind a pattern's field type to the WRONG (locally-shadowed) `DataInfo`. Fixed by a
+// home-checked lookup (`lookup_data_home_checked`) at the pattern-normalization call sites,
+// refusing explicitly (G2) on a home mismatch — the conservative closure, since a single
+// bare-keyed registry cannot hold both the shadow's and the foreign type's `DataInfo` at once.
+// ---------------------------------------------------------------------------------------------
+
+#[test]
+fn a_shadow_plus_foreign_reach_pattern_match_no_longer_type_confuses() {
+    // `T` is UNSEALED — no seal, no capability gate, purely a type-IDENTITY bug. `b` shadows `T`
+    // locally (`Binary{4}`) and legitimately reaches the REAL `a::T` (`Binary{8}`) via the
+    // imported factory `make()`. Pre-fix, `match make() { Mk(v) => v }` type-checked `v` against
+    // `b`'s own (WRONG) shadow `DataInfo` — the checker accepted `v: Binary{4}` while the value
+    // actually produced at runtime is `a::T`'s real `Binary{8}` field.
+    //
+    // The exploit's return type is deliberately `Binary{4}` (the SHADOW's width, not the real
+    // `Binary{8}`) — matching the WRONG pre-fix inference exactly, so the bug is not incidentally
+    // caught by an unrelated return-type mismatch (as a naive `Binary{8}` return would be, since
+    // `v`'s pre-fix WRONG inferred type is `Binary{4}`; the checker-accepted mismatch is between
+    // `v`'s *checked* type and the value's *real runtime* shape, not between two checked types).
+    // Fixed: the home-checked lookup refuses this pattern explicitly rather than silently
+    // resolving against the shadow's shape.
+    let err = phy_err(
+        "phylum p\n\
+         nodule a;\n\
+         pub type T = Mk(Binary{8});\n\
+         pub fn make() => T = Mk(0b0000_0001);\n\
+         nodule b;\n\
+         use a.make;\n\
+         type T = Mk(Binary{4});\n\
+         pub fn exploit() => Binary{4} = match make() { Mk(v) => v };",
+    );
+    assert!(
+        !err.is_empty(),
+        "the shadow-plus-foreign-reach pattern match must be refused (CRITICAL #2 fix) rather \
+         than silently type-checking the binder against the wrong (shadow) DataInfo"
+    );
+}
+
+#[test]
+fn the_no_shadow_control_pattern_still_checks_correctly() {
+    // Non-vacuity / non-over-restriction control for CRITICAL #2: the SAME shape, minus the local
+    // shadow in `b` — must still check (and the binder correctly gets `a::T`'s real field type).
+    // `b` imports `T` explicitly (`use a.T;`, matching the existing
+    // `a_foreign_nodule_may_pattern_match_a_sealed_ctor` convention) so its own registry has a
+    // bare-keyed entry to pattern-match against — pattern-matching a cross-nodule type's
+    // constructors requires the type's DataInfo be locally registered under some bare key,
+    // pre-existing (not introduced by the CRITICAL #2 fix): the previous `lookup_data(...)
+    // .expect(...)` would have PANICKED on an unregistered bare name exactly the same way.
+    check_phy(
+        "phylum p\n\
+         nodule a;\n\
+         pub type T = Mk(Binary{8});\n\
+         pub fn make() => T = Mk(0b0000_0001);\n\
+         nodule b;\n\
+         use a.T;\n\
+         use a.make;\n\
+         pub fn ok() => Binary{8} = match make() { Mk(v) => v };",
+    )
+    .expect(
+        "without a local shadow, the cross-nodule pattern match still checks (no \
+         over-restriction from the CRITICAL #2 home-check)",
+    );
+}
+
+// ---------------------------------------------------------------------------------------------
 // DN-112 §10 item 3 — impl-coherence twin: two same-named-different-home types each carry a
 // distinct impl of the same trait, with NO false-overlap refusal; a genuine same-home overlap
 // still refuses (the orphan/global-uniqueness rule is unchanged for the real collision case).
@@ -447,5 +582,76 @@ fn tuple_types_cross_nodule_boundaries_without_a_false_mismatch() {
     )
     .expect(
         "Tuple$N must resolve under the SAME reserved home in every nodule (DN-112 §9 invariant i)",
+    );
+}
+
+// ---------------------------------------------------------------------------------------------
+// Elab-sibling scrutiny (CRITICAL #2's flagged follow-up): `elab::field_spec`/
+// `ty_to_field_ty_ref` strip a nullary `Ty::Data`'s possibly-qualified identity to its LOCAL name
+// for the L0 `FieldSpec`/`FieldTyRef` bridge — the SAME "collapse qualified → bare" shape as
+// `lookup_data`'s own residual, but reachable WITHOUT ever pattern-matching the mismatched field
+// (a wildcard sub-pattern `Wrap(_)` never queries the field's identity in `normalize_pattern`, so
+// CRITICAL #2's check-time fix never fires for it) — confirmed a REAL, distinct hole and fixed
+// the same conservative way (home-checked; stage the field, `build_registry`'s existing
+// "skip type; Residual if reachable" mechanism closes it).
+// ---------------------------------------------------------------------------------------------
+
+#[test]
+fn a_wildcard_shielded_shadow_plus_foreign_field_no_longer_silently_misregisters() {
+    // `Something = Wrap(T)` is declared in `a` (`T` home `a`, `Binary{8}`); `b` imports
+    // `Something` and `make_something` but never imports `T` itself — `b` locally shadows `T`
+    // with an UNRELATED shape (`Binary{4}`). `b`'s `peek` pattern-matches `Something` but uses a
+    // WILDCARD for the `T`-typed field (`Wrap(_)`) — never triggering CRITICAL #2's
+    // `normalize_pattern` home-check (a wildcard binds nothing, so it never queries the field's
+    // `DataInfo`). Pre-fix, `elab::build_registry(b_env)` would resolve `Something`'s `Wrap`
+    // field (`FieldSpec::Data("T")`, stripped from qualified `a::T`) against `b`'s own registry
+    // entry for bare `"T"` — `b`'s shadow (`Binary{4}`), NOT `a`'s real `T` (`Binary{8}`) — a
+    // content-addressed registry entry built with the WRONG field shape, entirely outside any
+    // pattern-matching path. Fixed: the same home-checked lookup stages (skips) this field,
+    // so `Something` never gets an (incorrectly-shaped) registry entry at all — a `T` value
+    // never silently gets `Binary{4}`'s shape baked into `Something`'s content hash.
+    let phy = check_phy(
+        "phylum p\n\
+         nodule a;\n\
+         pub type T = Mk(Binary{8});\n\
+         pub type Something = Wrap(T);\n\
+         pub fn make_something() => Something = Wrap(Mk(0b0000_0001));\n\
+         nodule b;\n\
+         use a.Something;\n\
+         use a.make_something;\n\
+         type T = Mk(Binary{4});\n\
+         pub fn peek() => Binary{1} = match make_something() { Wrap(_) => 0b1 };",
+    )
+    .expect(
+        "the checker itself accepts this program — the wildcard sub-pattern never triggers \
+         CRITICAL #2's pattern-normalization home-check, so this is a genuinely DISTINCT \
+         reachable path into the same aliasing shape, not a re-hit of CRITICAL #2",
+    );
+    let (_, b_env) = phy
+        .nodules
+        .iter()
+        .find(|(p, _)| p.0.len() == 1 && p.0[0] == "b")
+        .expect("nodule b is present");
+
+    // `Something`'s field-shape aliasing must never silently reach a built registry entry keyed
+    // "Something" whose Wrap field carries `b`'s shadow shape. Fixed: `field_spec` stages
+    // (skips) the mismatched field, so `Something` gets NO registry entry — confirmed by asking
+    // the registry for its declaration hash: `None` (staged, not "shaped either way").
+    let registry = mycelium_l1::elab::build_registry(b_env)
+        .expect("build_registry: an unreferenced staged type is not a dangling-ref failure");
+    assert!(
+        registry.decl_hash("Something").is_none(),
+        "post-fix, `Something`'s home-mismatched field must leave it UNREGISTERED (staged) — \
+         never silently registered under the wrong (shadow) field shape"
+    );
+
+    // Elaborating an entry that actually NEEDS `Something`'s registry entry surfaces the gap
+    // never-silently (an explicit `ElabError`), never a wrong-shaped construction.
+    let elab_result = mycelium_l1::elaborate(b_env, "peek");
+    assert!(
+        elab_result.is_err(),
+        "elaborating `peek` (which constructs/matches `Something`) must surface the staged \
+         field as an explicit residual, never silently elaborate against the wrong field shape; \
+         got: {elab_result:?}"
     );
 }

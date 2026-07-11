@@ -39,7 +39,10 @@ use mycelium_core::{
 };
 
 use crate::ast::{Arm, BaseType, Expr, Literal, Path, Scalar, Sparsity, TypeRef, WidthRef};
-use crate::checkty::{infer_type, normalize_pattern, prim_kernel_name, resolve_ty, Env, Ty};
+use crate::checkty::{
+    infer_type, lookup_data_home_checked, normalize_pattern, prim_kernel_name, resolve_ty,
+    DataInfo, Env, Ty,
+};
 use crate::decision::{self, Head, Tree};
 
 /// Why a definition could not be elaborated to L0 — always explicit, never a partial artifact
@@ -1381,7 +1384,7 @@ pub fn build_registry(env: &Env) -> Result<DataRegistry, ElabError> {
         for c in &d.ctors {
             let mut fields = Vec::with_capacity(c.fields.len());
             for f in &c.fields {
-                match field_spec(f) {
+                match field_spec(&env.types, f) {
                     Some(fs) => fields.push(fs),
                     None => continue 'types, // a non-r3 field — skip this type (Residual if used)
                 }
@@ -1426,7 +1429,7 @@ pub fn build_registry(env: &Env) -> Result<DataRegistry, ElabError> {
 /// [`build_registry`] called directly, and through [`elaborate_direct`] (below) — the narrow,
 /// additive entry point that targets the kernel primitive `elaborate` cannot reach without also
 /// changing `mono.rs`'s defunctionalization scope (out of this leaf's owned files).
-pub(crate) fn field_spec(ty: &Ty) -> Option<FieldSpec> {
+pub(crate) fn field_spec(types: &BTreeMap<String, DataInfo>, ty: &Ty) -> Option<FieldSpec> {
     Some(match ty {
         Ty::Binary(crate::checkty::Width::Lit(n)) => FieldSpec::Repr(Repr::Binary { width: *n }),
         Ty::Binary(crate::checkty::Width::Var(_)) => return None, // width-var must not reach elab
@@ -1461,7 +1464,27 @@ pub(crate) fn field_spec(ty: &Ty) -> Option<FieldSpec> {
         // runtime/representation change) — `build_registry` keys `specs` by the bare/local name it
         // reads from `env.types`' own (unchanged, simple-name) keys, so a possibly-qualified `n`
         // (a checked `Ty::Data` identity) is stripped to its local part here to match.
+        //
+        // **Home-checked (CRITICAL #2 sibling fix, found scrutinizing this same "collapse
+        // qualified → bare" shape).** A LOCAL nodule shadow of the same bare name as a foreign
+        // type reachable ONLY via a declared type's field (never through pattern-matching, so
+        // `crate::checkty::lookup_data_home_checked`'s check-time refusal never fires) would
+        // otherwise have `build_registry` resolve THIS field's `FieldSpec::Data(local)` against
+        // the WRONG (shadow's) registry entry — a content-addressed registry built with the wrong
+        // field shape for a type that was never pattern-matched at all. Reuses the same
+        // conservative home-check as the pattern-normalization fix, but ONLY for a genuinely
+        // QUALIFIED `n` (contains `::`) — an unqualified `n` has no cross-nodule home to compare
+        // and needs no registry precondition (unchanged, pure-syntactic passthrough for the
+        // overwhelmingly common own-nodule/no-collision case). On a mismatch, stage this field
+        // (`None`) exactly like any other non-r3 field — `build_registry`'s EXISTING "skip the
+        // type; `Residual` if reachable" mechanism (its own doc comment) then closes it
+        // never-silently, with no new error path needed (DRY).
         Ty::Data(n, args) if args.is_empty() => {
+            if n.contains("::")
+                && lookup_data_home_checked(types, n, "<data registry field>").is_err()
+            {
+                return None;
+            }
             FieldSpec::Data(crate::checkty::ty_local_name(n).to_owned())
         }
         Ty::Data(_, _) | Ty::Var(_) => return None,
@@ -1472,8 +1495,8 @@ pub(crate) fn field_spec(ty: &Ty) -> Option<FieldSpec> {
         // nested arrows, RFC-0024 §4A.5/M-822), and the nesting composes through the recursive
         // `FieldTyRef::Fn` case in `ty_to_field_ty_ref`.
         Ty::Fn(param, ret) => {
-            let param = ty_to_field_ty_ref(param)?;
-            let ret = ty_to_field_ty_ref(ret)?;
+            let param = ty_to_field_ty_ref(types, param)?;
+            let ret = ty_to_field_ty_ref(types, ret)?;
             FieldSpec::Fn {
                 arity: 1,
                 sig: FnSig {
@@ -1532,17 +1555,27 @@ pub(crate) fn ty_to_repr(ty: &Ty) -> Option<Repr> {
 /// instantiation, an unresolved [`Ty::Var`]/width, or [`Ty::Substrate`] (M-923; mirrors
 /// [`field_spec`]'s own staging: a signature leaf that cannot resolve keeps the *owning* `Fn`
 /// field staged, never a half-encoded signature — G2/VR-5).
-pub(crate) fn ty_to_field_ty_ref(ty: &Ty) -> Option<FieldTyRef> {
+pub(crate) fn ty_to_field_ty_ref(
+    types: &BTreeMap<String, DataInfo>,
+    ty: &Ty,
+) -> Option<FieldTyRef> {
     Some(match ty {
         // DN-112 §3 (Rank 1 / M-1036): same local-name stripping as `field_spec` (this bridge stays
-        // nodule-agnostic — no runtime/representation change).
+        // nodule-agnostic — no runtime/representation change). Home-checked the same way as
+        // `field_spec`'s own `Ty::Data` arm (CRITICAL #2 sibling fix — see its doc comment) — only
+        // for a genuinely qualified `n`, so an unqualified name needs no registry precondition.
         Ty::Data(n, args) if args.is_empty() => {
+            if n.contains("::")
+                && lookup_data_home_checked(types, n, "<data registry field>").is_err()
+            {
+                return None;
+            }
             FieldTyRef::Data(crate::checkty::ty_local_name(n).to_owned())
         }
         Ty::Data(_, _) | Ty::Var(_) | Ty::Substrate(_) => return None,
         Ty::Fn(param, ret) => {
-            let param = ty_to_field_ty_ref(param)?;
-            let ret = ty_to_field_ty_ref(ret)?;
+            let param = ty_to_field_ty_ref(types, param)?;
+            let ret = ty_to_field_ty_ref(types, ret)?;
             FieldTyRef::Fn(Box::new(FnSig {
                 arity: 1,
                 params: vec![param],
