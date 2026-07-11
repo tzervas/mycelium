@@ -54,6 +54,71 @@ fn inline_markdown_renders_as_typst_markup() {
 }
 
 #[test]
+fn leading_block_markup_and_inline_calls_are_neutralized_so_typst_compiles() {
+    // A paragraph whose (block-parser-joined) lines start with Typst block-markup triggers
+    // `/ - + = N.`, plus inline `` `code`(x) `` (curried-call trap), a `]` (bracket-arg trap), and
+    // an external link — the exact shapes that broke `typst compile`.
+    let mut a = AnchorAlloc::new();
+    let src = "# T\n\n## S\n\nlead line with a `code`(f64) call and a bracket ] and **bold**\n\
+               / slash-led line\n- dash-led line\n+ plus-led line\n= equals-led line\n\
+               1. ordered-led line\nsee [site](https://ex.io)\n";
+    let doc = ingest("docs/spec/d.md", src, SourceKind::Spec, &mut a);
+    let typ = render(&DocModel::new(vec![doc]));
+
+    // Leading block markup is guarded with a zero-width `#h(0pt)` so it is literal text.
+    for lead in ["#h(0pt)/", "#h(0pt)-", "#h(0pt)+", "#h(0pt)=", "#h(0pt)1."] {
+        assert!(typ.contains(lead), "missing leading-markup guard {lead:?}");
+    }
+    // An inline call is followed by a zero-width break so a trailing `(` is not a curried call.
+    assert!(
+        typ.contains("#raw(\"code\")\u{200b}("),
+        "inline call not separated from ("
+    );
+    // `]` in body text is escaped so it cannot close a `#strong[…]`/`#emph[…]` argument early.
+    assert!(typ.contains("\\]"), "] not escaped");
+
+    // Skip-graceful end-to-end compile: only when a `typst` binary is available (env override or
+    // PATH). Absent → the structural asserts above are the gate (same posture as the rest of the gate).
+    if let Some(bin) = typst_binary() {
+        let dir = std::env::temp_dir().join(format!(
+            "mycdoc-typst-{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        let typ_path = dir.join("doc.typ");
+        std::fs::write(&typ_path, &typ).unwrap();
+        let status = std::process::Command::new(&bin)
+            .arg("compile")
+            .arg(&typ_path)
+            .arg(dir.join("doc.pdf"))
+            .status()
+            .expect("spawn typst");
+        assert!(status.success(), "typst compile failed on the emitted .typ");
+        std::fs::remove_dir_all(&dir).ok();
+    }
+}
+
+/// A `typst` binary to compile with, if one is available: `MYC_TYPST_BIN`, else `typst` on `PATH`.
+/// `None` → the compile step skips gracefully (structural asserts still run).
+fn typst_binary() -> Option<String> {
+    if let Ok(p) = std::env::var("MYC_TYPST_BIN") {
+        if std::path::Path::new(&p).exists() {
+            return Some(p);
+        }
+    }
+    // Probe PATH: a version call that spawns successfully means `typst` is usable.
+    std::process::Command::new("typst")
+        .arg("--version")
+        .output()
+        .ok()
+        .filter(|o| o.status.success())
+        .map(|_| "typst".to_owned())
+}
+
+#[test]
 fn code_blocks_get_a_print_legible_show_rule() {
     // The print pass (§8.2): body ~10.5pt, comfortable margins, and a `raw.where(block:true)` show
     // rule that renders code smaller (~0.82x) with tighter leading in a hairline-bordered tinted box
