@@ -609,6 +609,19 @@ pub fn elaborate_lower_rule(env: &Env, rule_name: &str) -> Result<Node, ElabErro
 /// mismatch), if `args` is non-empty (the Stage-0 guard above), or — for the degenerate nullary
 /// case — if the RHS is outside the evaluation-complete fragment (unchanged from
 /// [`elaborate_lower_rule`]'s prior behavior).
+///
+/// **Guard-strictness asymmetry with `checkty.rs` (read before wiring the two together).**
+/// [`crate::checkty::Cx::check_sugar_call`] — the L1 check-phase recognition half of Stage 0 — is
+/// *stricter* than this function: it refuses **every** recognized sugar-rule call site, including
+/// the 0-value-param/0-arg case, because at the surface a call written `Name()` is *new* surface
+/// capability with no pre-Stage-0 precedent. This function's guard is looser by one case: a rule
+/// declaring **zero** value parameters called with **zero** `args` takes the pre-existing nullary
+/// path all the way through to `Ok` (that *is* the degenerate case [`elaborate_lower_rule`] always
+/// supported, pre-dating Stage 0). The two are not wired together in Stage 0 — nothing currently
+/// calls this function with a non-empty `args` derived from a checker-accepted call site, so the
+/// asymmetry is inert today. A Stage-1 author connecting checker-side recognition to this
+/// elaboration path must not assume the two guards coincide at `n = 0`; re-derive the composed
+/// behavior explicitly rather than relying on symmetry that was never established here.
 pub fn elaborate_lower_rule_with_args(
     env: &Env,
     rule_name: &str,
