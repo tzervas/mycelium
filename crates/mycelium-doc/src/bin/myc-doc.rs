@@ -141,10 +141,10 @@ fn run(args: &[String]) -> Result<u8, (u8, String)> {
             Ok(EX_OK)
         }
         "book" => {
-            let mut input = BuildInput::conventional(&repo_root);
-            // Ride CONTRIBUTING.md through the same ingest+resolve pipeline as the corpus walk (the
-            // Contributing chapter's source) — see BuildInput::extra_md_files.
-            input.extra_md_files = vec![repo_root.join("CONTRIBUTING.md")];
+            // `BuildInput::conventional` already rides CONTRIBUTING.md (+ research/) through the
+            // same ingest+resolve pipeline as the corpus walk — see `BuildInput::extra_md_files` /
+            // `research_root`. No book-specific override needed.
+            let input = BuildInput::conventional(&repo_root);
             let model = build(&input).map_err(|e| (EX_IO, format!("build: {e}")))?;
             let manifest = mycelium_doc::load_manifest(&repo_root)
                 .map_err(|e| (EX_FINDING, format!("book manifest: {e}")))?;
