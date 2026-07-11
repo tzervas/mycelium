@@ -1,14 +1,17 @@
 # DN-113 — The Cross-Phylum (Crate→Crate) Import / Resolution Subsystem
 
-> **Status:** **Draft** (2026-07-10) — a design-reasoner PLAN in the plan → review → improve →
-> ratify → implement cycle. This note **recommends, ranked; it does not ratify.** It moves **no**
-> other doc's status and enacts nothing (house rule #3). The maintainer ratifies (§DoD).
+> **Status:** **Accepted** (2026-07-10, delegated ratification — see the dated "Ratification
+> (maintainer-delegated, orchestrator-selected on the merits, 2026-07-10)" section below). **Accepted
+> ratifies the v1 DESIGN only, NOT Enacted** (house rule #3: `Enacted` requires stepping through
+> `Accepted` first and means *fully implemented/landed*; this note has no implementation to land —
+> M-1060 tracks that). Originally **Draft** (2026-07-10) — a design-reasoner PLAN in the plan → review
+> → improve → ratify → implement cycle.
 >
 > **Grounding basis.** `Empirical` where read against the codebase at `dev` **`45927ea4`** (commands
-> and file:line cited inline). The proposed design + every recommendation are **`Declared`** until
-> implemented and differential-witnessed (VR-5). This is genuinely green-field: **0 % is wired
-> today** (§1 audit). Where the design is undetermined it is flagged as an open question, never
-> guessed (G2/VR-5).
+> and file:line cited inline). The proposed design is **`Declared`** until implemented and
+> differential-witnessed (VR-5) — ratifying the design does not itself build or witness it. This is
+> genuinely green-field: **0 % is wired today** (§1 audit). Where the design is undetermined it is
+> flagged as an open question, never guessed (G2/VR-5).
 >
 > **Author:** design-reasoner (Opus). **Owns:** only this note.
 
@@ -324,16 +327,31 @@ the existing types, not forked into new ones** — stated so the implementer can
 - **OQ-CP-1 (diamond coalescing).** Is v1's strict "different hash ⇒ different phylum, types don't
   cross" (§9.1) the accepted default, or does v1 need a SemVer-compatibility **coalescing** policy?
   The strict answer is never-silent and content-honest; coalescing is a convenience that must **not**
-  become a silent winner. **Sharpest — needs a maintainer disposition.**
+  become a silent winner. **Sharpest — needs a maintainer disposition.** **RESOLVED at ratification
+  (2026-07-10): the strict-reject default is accepted — NO silent SemVer-coalescing. Two different
+  pinned hashes are two different phyla; a value crossing between them is a never-silent type
+  mismatch. SemVer-coalescing stays deferred as a possible explicit opt-in v2 policy — see the
+  Ratification section below.**
 - **OQ-CP-2 (syntax marker).** `::` boundary (§4 Rank 1) vs `.`-plus-dep-table (Rank 2, zero grammar
   change but needs a never-silent collision rule). Grammar activation is FLAG-SYNTAX to RFC-0006.
+  **RESOLVED at ratification (2026-07-10): Rank 1 (`::`) accepted — see the Ratification section
+  below; FLAG-SYNTAX routing to RFC-0006 §4.3 stands, unchanged.**
 - **OQ-CP-3 (loading).** v1 B2 (verified source) — accepted? Or commission B3 (spore interface blob /
-  separate compilation) now, with its own ADR?
+  separate compilation) now, with its own ADR? **RESOLVED at ratification (2026-07-10): v1 = B2
+  (verified source tree) + B4 (generated content-pinned lock), accepted as specified in §5.2/§8; B3
+  (separate-compilation interface blob) stays deferred to v2/its own ADR — see the Ratification
+  section below.**
 - **OQ-CP-4 (OQ-H1 granularity).** Accept `(phylum_hash, qname)` as the v1 capture unit (§6), with
   per-function content-addressing deferred? Or require function-content-addressing in v1? This is the
   cross-phylum half of **DN-110-8.2 §10 OQ-H1**; this note recommends the phylum-granular answer.
+  **RESOLVED at ratification (2026-07-10): `(phylum_hash, qualified_name)` accepted as the v1 capture
+  unit; per-function content-addressing DEFERRED, honestly — see the Ratification section below. This
+  resolves the cross-phylum half of DN-110-8.2 §10 OQ-H1 to this design; it does not itself close
+  OQ-H1 (house rule #3).**
 - **OQ-CP-5 (lock format).** Does v1 ship a `mycelium-proj.lock` (B4), and what is its shape /
-  ownership (generated, committed)?
+  ownership (generated, committed)? **NOT dispositioned by this ratification** — v1 shipping a lock
+  (B4) is accepted as part of the v1/deferred boundary (§8, OQ-CP-3 above), but the lock's exact
+  shape/ownership is left open, genuinely unresolved — flagged, not guessed (G2/VR-5).
 
 ---
 
@@ -360,6 +378,66 @@ phylum and a consumer) where `myc check` resolves a cross-phylum `use`, a **hash
 refuses never-silently, a **cycle** fixture that refuses, and a differential that the linked `Env` a
 cross-phylum reference resolves through is the **same** one `PhylumEnv::link` produces (the DRY proof,
 §7). Advances **FR/NFR** for the phylum/library capability (RFC-0006 §4.3) and grounds **OQ-H1**.
+
+---
+
+## Ratification (maintainer-delegated, orchestrator-selected on the merits, 2026-07-10)
+
+**Recorded decision (append-only — this note's original §1–§11 text above is unchanged; this section
+adds the ratification, per house rule #3).** The maintainer delegated the choice among this note's
+ranked options ("ratify the options best fit objectively speaking for this project"); the integrating
+orchestrator selected the recommended design below on the merits stated in §3–§9, and this section
+records that selection as the ratification. This is a **delegated ratification, not a self-ratification
+by the reasoner** — the maintainer authorized the delegation; the selection is grounded entirely in this
+note's own objective-function analysis (§3's criteria table) and its adversarial stress-test (§9), not
+asserted without basis.
+
+1. **Syntax (§4/OQ-CP-2) — Rank 1 (A1) accepted.** `use dep::nod.sym` — the `::` phylum-boundary head
+   on the existing `use` production, the local `[dependencies]` name as the head, `.` staying the
+   nodule/path separator. Self-evidently never-silent by construction (G2), the smallest grammar
+   addition (one token, one optional `phylum` field), and it avoids A3's head-ambiguity collision rule.
+   **FLAG-SYNTAX stands** — this is a design ratification; the surface-grammar activation still routes
+   to RFC-0006 §4.3 (unchanged from the note's own framing).
+2. **Loading (§5.2/OQ-CP-3) — v1 = B2 + B4 accepted; B3 deferred.** Load each dependency from a
+   **verified source tree** and assert its checked phylum's content hash equals the manifest pin (a
+   never-silent `Integrity`-class refusal on mismatch); add a generated **lock** (B4) for deterministic
+   transitive-graph resolution. **B3 (a spore-carried checked-exports interface blob / true separate
+   compilation) is explicitly DEFERRED** — it serializes an identity-bearing interface, which is its
+   own ADR-level decision (blob contents, versioning/ABI, trust boundary), not a v1 requirement (KISS/
+   YAGNI, per the note's own §5.2 rationale). v1 is honestly **whole-graph compilation with
+   content-pinned inputs**, not separate compilation — say so, don't claim the B3 property (VR-5).
+3. **OQ-H1 granularity (§6/OQ-CP-4) — PHYLUM-level accepted; per-function hashing DEFERRED.** The v1
+   cross-phylum def-site ref is `(phylum_hash: ContentHash, qualified_name: "nod.sym")` — content-
+   **stable** (the phylum hash fixes the referenced symbol's bytes transitively) even though a function
+   is not *independently* content-hashed (only types are, today — §1 fact 7). Extending content-
+   addressing to per-symbol/per-function hashes is **deferred, honestly** — flagged as future work, not
+   claimed as done. This resolves the cross-phylum half of DN-110-8.2 §10 **OQ-H1** to this design; it
+   does **not** itself close OQ-H1 (house rule #3 — a design note does not retroactively close a
+   different note's open question, it only supplies the resolution basis for one facet of it).
+4. **Diamond policy (§9.1/OQ-CP-1) — NO silent SemVer-coalescing.** Two different pinned content hashes
+   for "the same" dependency name (`A@h1` vs `A@h2` in a diamond) are **two different phyla** — their
+   types do not cross, and a value of one flowing where the other is expected is a **never-silent type
+   mismatch**, never a "highest version wins" resolution. House rule #2 forbids a silent coalescing
+   default outright, and this ratifies the note's own §9.1 finding that the strict-reject is the
+   correct, content-honest v1 default. **A SemVer-compatibility coalescing policy stays DEFERRED as a
+   possible EXPLICIT opt-in v2 mechanism** — never a silent default, never assumed without a future
+   ratification of its own.
+5. **The v1/deferred boundary (§8) accepted as specified.** v1 = explicit (non-glob) cross-phylum
+   `use`, the `Phyla`/`check_phylum_with_deps` additive type, B2+B4 loading, content-pinned resolution,
+   layered over the existing `Exports`/`resolve_imports`/`link` machinery (DRY, §7), and never-silent
+   refusals for every named failure mode (unknown dep, unknown/private symbol, hash mismatch, version
+   skew, name collision, cycle). Deferred, never-silently: separate compilation (B3), re-export (with
+   the §9.4 origin-hash rule specified now so v2 is not a silent gap), per-function content hashing,
+   glob cross-phylum `use` (folds into M-982), version-range constraints, and runtime/dynamic
+   multi-spore linking.
+6. **Implementation issue minted.** **M-1060** — see `tools/github/issues.yaml` (applied by the
+   integrating parent, per FLAG-ISSUE below).
+7. **CRITICAL — Accepted ratifies the v1 DESIGN only, NOT Enacted (house rule #3 / VR-5).** This is
+   genuinely green-field (§1: 0% wired today). No code has landed for the `Phyla` type, the `::` syntax,
+   the B2/B4 loading path, or any cross-phylum resolution. Every guarantee this note's design implies
+   stays **`Declared`** until M-1060 implements and differential-witnesses it (the §11 "how verified"
+   criteria: a two-phylum fixture, a hash-mismatch refusal, a cycle refusal, and the DRY-linked-`Env`
+   differential). Nothing here is upgraded past its checked basis by this ratification.
 
 ---
 
@@ -391,6 +469,16 @@ cross-phylum reference resolves through is the **same** one `PhylumEnv::link` pr
 
 ## Changelog (this note)
 
+- **2026-07-10 (later same day) — Ratified (maintainer-delegated, orchestrator-selected on the merits,
+  house rule #3).** Status **Draft → Accepted** (v1 design ratification, **NOT Enacted** — VR-5,
+  guarantees stay `Declared` until M-1060 implements and differential-witnesses the design). Accepts:
+  the `::` phylum-boundary `use` syntax (Rank 1); B2 (verified source tree) + B4 (generated lock)
+  loading, B3 deferred; the `(phylum_hash, qualified_name)` OQ-H1 capture-unit granularity,
+  per-function hashing deferred; the strict no-silent-SemVer-coalescing diamond policy (OQ-CP-1), with
+  an explicit-opt-in coalescing policy deferred to a possible v2; the §8 v1/deferred boundary as
+  specified. Mints **M-1060** (the v1 implementation issue). OQ-CP-2/CP-3/CP-4/CP-1 resolved; OQ-CP-5
+  (lock format/shape) stays genuinely open. See the "Ratification (maintainer-delegated,
+  orchestrator-selected on the merits, 2026-07-10)" section above for the full recorded decision.
 - **2026-07-10 — Draft filed.** design-reasoner (Opus), read against `dev 45927ea4`. Enumerates the
   cross-phylum import/resolution subsystem: syntax (§4), the `Phyla` model + loading (§5), content-
   pinned resolution + OQ-H1 (§6), layering over the canonical linker (§7), the v1/deferred boundary

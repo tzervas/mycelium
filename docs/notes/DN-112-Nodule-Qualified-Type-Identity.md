@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-112 |
-| **Status** | **Draft** (2026-07-10). A design-reasoner mini-DN that works **M-1036** forward to a ranked recommendation for maintainer ratification. It decides the **type-identity mechanism** DN-104 §6 left open — the residual that turns M-1027's landed `priv` constructor seal (DN-104, Draft) from a never-silent API-discipline nudge into an **enforced capability boundary**. It **recommends, does not ratify** (house rule #3, append-only): status stays Draft; the maintainer ratifies the mechanism. Tags are `Empirical` where read against the code at `dev@45927ea4`, `Declared` for any design not yet implemented/ratified (VR-5). |
+| **Status** | **Accepted** (2026-07-10, delegated ratification — see the dated "Ratification (maintainer-delegated, orchestrator-selected on the merits, 2026-07-10)" section below). **Accepted ratifies the MECHANISM only, NOT Enacted** (house rule #3: `Enacted` requires stepping through `Accepted` first and means *fully implemented/landed*; this note has no implementation to land — M-1036 tracks that). Originally **Draft** (2026-07-10). A design-reasoner mini-DN that worked **M-1036** forward to a ranked recommendation for maintainer ratification. It decides the **type-identity mechanism** DN-104 §6 left open — the residual that turns M-1027's landed `priv` constructor seal (DN-104, Draft) from a never-silent API-discipline nudge into an **enforced capability boundary**. Tags are `Empirical` where read against the code at `dev@45927ea4`, `Declared` for any design not yet implemented/witnessed (VR-5). |
 | **Decides (proposes, for ratification)** | (1) the **`Ty::Data` identity mechanism** — how two same-named data types declared in **different nodules** become *distinct* types (ranked: §4); (2) whether the **`type_head` coherence-key** twin gap is **in- or out-of-scope** for M-1036 — decided **IN-SCOPE** (§5, G2 — stated, not silently dropped); (3) **printer/EXPLAIN rendering** — own-nodule types render bare, cross-nodule render qualified, never-silent (§6); (4) confirmation that the change keeps **`mono.rs` mangling collision-free** (§7); (5) the **KC-3 framing + blast radius** — a check-time identity refinement, no L0/runtime change (§3); (6) the **guarantee posture** — `Empirical` on the general fix, `Declared` on a point-patch (§8). |
 | **Feeds** | M-1036 (this note is its design gate); DN-104 §6 CRITICAL residual (the real fix it names); DN-99 §A3 / register row #37 (sealed-constructor visibility) + FR-N3 (the unforgeable-capability driver); M-1023 (`Approx::proven` — the port that must not rely on the seal as a boundary until this lands); M-1050 (`pub(path)` scoped visibility — DN-104 §3 option B — which `depends_on` M-1036 and inherits the shadow bypass until this lands); RFC-0006 §4.3 / M-662 / M-1024 (the bare-name resolution + cross-nodule link machinery this note refines). |
 | **Grounds on** | KC-3 (small kernel — a check-time identity refinement, no new L0 node, no runtime/representation change), DRY (reuse the existing `Ty::Data` `String` slot + the M-662 per-nodule registry as the home carrier), G2 (never-silent — a same-named cross-nodule mismatch is an explicit `CheckError`; the printer discloses the home), VR-5 (no tag upgraded past its basis — `Declared` until the flipped differential + property test witness it `Empirical`), KISS/YAGNI (nodule-qualified name over a content-addressed type id). |
@@ -323,13 +323,22 @@ must then satisfy:
 8. **`.myc` parity** noted, not silently assumed: the self-hosted frontend mirrors identity per DN-26 as
    the checkty cross-nodule port progresses (DN-104 §6 already flags the enforcement mirror rides that
    port).
+9. **CONDITION (added by ratification, 2026-07-10 — see the Ratification section below).** The
+   implementation MUST include a dedicated regression test that pins the **builtin/prelude
+   uniform-home invariant** named as the sharpest stress-test finding (§9): `Bool`/`Option`/`Result`/
+   `Tuple$N` and every other prelude/synthetic type stay resolvable under **one** reserved home across
+   every nodule — a resolution path that over-qualifies a builtin per-current-nodule must be **caught**
+   by this test, not merely honored by convention. This converts §9's risk finding from an unwitnessed
+   convention into a tested property; it is **additional to**, not a replacement for, item 5's general
+   same-name-collision property test.
 
 ## §11 Open questions
 
 - **OQ-1 (mechanism, for the maintainer).** Rank 1 (qualified name in the existing `String`) vs Rank 2
   (explicit `home` field)? §9's prelude-exemption argument is a genuine reason a maintainer could pick
   Rank 2 for structural robustness. This note recommends Rank 1 on KISS/blast-radius but the margin is
-  narrow — a real fork, stated on merits.
+  narrow — a real fork, stated on merits. **RESOLVED at ratification (2026-07-10): Rank 1 accepted,
+  CONDITIONED on §10 item 9's builtin-invariant test — see the Ratification section below.**
 - **OQ-2 (home separator).** Which qualifier separator (`::`, `.`, a reserved char), and its
   normalization in `mangle_ty` (§7)? Must be mangling-safe and not a legal identifier char.
 - **OQ-3 (`Display` context).** Context-aware own-bare/cross-qualified printer with a fully-qualified
@@ -338,8 +347,65 @@ must then satisfy:
   identity fix (it `depends_on` M-1036). Confirm the qualified identity is the substrate `pub(path)`
   resolves *against* — noted so the two land in the right order (identity first, per the M-1036 body).
 
+## Ratification (maintainer-delegated, orchestrator-selected on the merits, 2026-07-10)
+
+**Recorded decision (append-only — this note's original §1–§11 text above is unchanged; this section
+adds the ratification, per house rule #3).** The maintainer delegated the choice among this note's
+ranked alternatives ("ratify the options best fit objectively speaking for this project"); the
+integrating orchestrator selected the option below on the merits stated in §4–§9, and this section
+records that selection as the ratification. This is a **delegated ratification, not a self-ratification
+by the reasoner** — the maintainer authorized the delegation; the selection is grounded entirely in this
+note's own objective-function analysis (§4's criteria table), not asserted without basis.
+
+1. **§4 Rank 1 (Alt 1) accepted.** The nodule-qualified name carried in the **existing** `Ty::Data`
+   `String` slot — stamped at `resolve_ty` from the resolved `DataInfo.home` (the declaring nodule,
+   never the use-site) — is ratified as the type-identity mechanism for M-1036. It is **collision-free
+   by construction** for `PartialEq`/`subst_ty`/`mangle_ty` (a different home is a different string is a
+   different mangle), leaves the ~79 `Ty::Data` destructure sites that merely bind `(n, args)`
+   **untouched**, and is the smallest kernel delta that closes the witnessed seal-bypass gap (KC-3 —
+   "KC-3-minimal" per the §4 objective table's own verdict row). Rank 2 (explicit `home` field) and
+   Rank 3 (content-addressed id) are **not** selected — Rank 2 remains the honest fallback per §9's own
+   stress-test framing should a future implementation surface the string-overload concern in practice
+   (not merely hypothetically); Rank 3 is YAGNI for the witnessed demand (§4).
+2. **§5 `type_head` coherence-key fix — IN-SCOPE, confirmed.** The impl-coherence twin gap closes as an
+   **automatic consequence** of Rank 1 (`type_head` reads the same qualified `n`) with zero additional
+   code, per §5's own reasoning. Ratified as stated — not deferred, not silently dropped (G2).
+3. **CONDITION added to the Definition of Done (§10 item 9, appended above).** The implementation MUST
+   ship a **dedicated regression test pinning the builtin/prelude uniform-home invariant** — `Bool`,
+   `Option`, `Result`, `Tuple$N`, and every other prelude/synthetic type must stay resolvable under
+   **one** reserved home across every nodule, and a resolution path that over-qualifies a builtin
+   per-current-nodule must be **caught**, not merely avoided by convention. This is the direct answer to
+   §9's own sharpest adversarial finding (the prelude-fracture regression risk) — it converts that risk
+   from an unwitnessed convention into a tested property, and it is a condition on M-1036's DoD, not an
+   optional nice-to-have.
+4. **Guarantee posture confirmed — `Empirical` post-fix, NOT `Proven` (VR-5).** Per §8, once M-1036 lands
+   the general fix (Rank 1) witnessed by the flipped `ctor_seal.rs` differential, the §10-item-5
+   same-name-collision property test, **and** this ratification's §10-item-9 builtin-invariant test, the
+   posture is `Empirical` — earned by trials over a witnessed corpus, not `Proven` (no theorem of
+   unforgeability is discharged). A narrower point-patch, if one were chosen instead, stays `Declared`
+   per §8's own framing — unchanged by this ratification.
+5. **CRITICAL — Accepted ratifies the MECHANISM only, NOT Enacted (house rule #3 / VR-5).** No code has
+   landed for M-1036 at this ratification; the seal-bypass gap (`ctor_seal.rs::known_gap_a_same_named_
+   local_shadow_type_bypasses_the_seal`) remains open until M-1036 implements and witnesses the
+   mechanism above. This note's own guarantee-posture claims stay `Declared` until then — nothing here
+   is upgraded past its checked basis by this ratification.
+6. **Unblocks M-1036.** `tools/github/issues.yaml` M-1036 gains a note (applied by the integrating
+   parent, not this note) recording that its mechanism is DN-112 Rank 1 plus the §10-item-9
+   builtin-home-invariant test.
+
+---
+
 ## §12 Changelog
 
+- **2026-07-10 (later same day) — Ratified (maintainer-delegated, orchestrator-selected on the merits,
+  house rule #3).** Status **Draft → Accepted** (design ratification, **NOT Enacted** — VR-5, guarantees
+  stay `Declared` until M-1036 implements and witnesses the mechanism). §4 Rank 1 (nodule-qualified name
+  in the existing `Ty::Data` `String` slot) accepted; §5's `type_head` coherence fix confirmed in-scope
+  as an automatic consequence; a new DoD condition (§10 item 9) added requiring a dedicated
+  builtin/prelude uniform-home-invariant regression test, directly answering §9's sharpest adversarial
+  finding; guarantee posture confirmed `Empirical` post-fix, `Declared` on any narrower point-patch.
+  OQ-1 resolved to Rank 1, conditioned. See the "Ratification (maintainer-delegated, orchestrator-selected
+  on the merits, 2026-07-10)" section above for the full recorded decision.
 - **2026-07-10** — DN-112 created (**Draft**). A design-reasoner mini-DN working M-1036 forward:
   recommends **Alt 1 — nodule-qualified name in the existing `Ty::Data` `String` slot** (Rank 1; Alt 2
   explicit-field second, Alt 3 content-id third — §4 objective table), decides the **`type_head`

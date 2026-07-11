@@ -12,6 +12,59 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### docs: DN-112 + DN-113 ratified (delegated) + DN-110/M-1054 gate-met correction (2026-07-10)
+
+Integration-tier close-out for a maintainer-delegated ratification pass ("ratify the options best fit
+objectively speaking for this project" — the maintainer delegated the option choice; the orchestrator
+selected the options below on the merits stated in each note's own objective-function analysis). Both
+are **design ratifications only, NOT Enacted** (house rule #3) — no code lands with this entry.
+
+- **Accepted (design, delegated ratification, pending Enactment): DN-112 nodule-qualified type
+  identity (Rank 1 + builtin-invariant test).** `docs/notes/DN-112-Nodule-Qualified-Type-Identity.md`
+  Status **Draft → Accepted**. Ratifies **Rank 1** — a nodule-qualified name carried in the existing
+  `Ty::Data` `String` slot, stamped at `resolve_ty` from `DataInfo.home` (the declaring nodule),
+  collision-free by construction for `PartialEq`/`subst_ty`/mangling, leaving ~79 destructure sites
+  untouched (KC-3-minimal). The `type_head` impl-coherence twin gap is confirmed **IN-SCOPE** (an
+  automatic consequence of Rank 1). A new DoD **condition** is added: the implementation must ship a
+  dedicated regression test pinning the **builtin/prelude uniform-home invariant**
+  (`Bool`/`Option`/`Result`/`Tuple$N` stay under one reserved home across every nodule) — the direct
+  answer to the note's own sharpest adversarial finding. Guarantee posture: `Empirical` once the
+  general fix lands and is witnessed (the flipped `ctor_seal.rs` differential + the collision property
+  test + the builtin-invariant test), `Declared` on a narrower point-patch (VR-5). Unblocks **M-1036**
+  — `tools/github/issues.yaml` gains a mechanism note.
+- **Accepted (design, delegated ratification, pending Enactment): DN-113 cross-phylum
+  import/resolution subsystem (v1 design).** `docs/notes/DN-113-Cross-Phylum-Import-Resolution-Subsystem.md`
+  Status **Draft → Accepted**. Ratifies the recommended v1 design: the `::` phylum-boundary `use` head
+  (`use dep::nod.sym`, Rank 1); loading via a verified source tree plus a generated content-pinned lock
+  (B2+B4), with the separate-compilation interface blob (B3) explicitly deferred; the OQ-H1 cross-phylum
+  def-site-ref granularity accepted at **phylum level** — `(phylum_hash, qualified_name)`, with
+  per-function content-addressing deferred, honestly; the diamond/version-conflict policy (OQ-CP-1) set
+  to **strict, no silent SemVer-coalescing** — two differently-pinned phyla are two different phyla, a
+  crossing value is a never-silent type mismatch, with an explicit-opt-in coalescing policy deferred to
+  a possible v2 (never a silent default, per house rule #2). The v1/deferred boundary (§8) is accepted
+  as specified. Mints **M-1060** (the v1 implementation issue, `depends_on: [M-1024]`, relating to
+  M-1054 and M-982).
+- **DN-110/M-1054 gate-met correction + FLAG-A architecture ratification (append-only, mitigation
+  #14).** `docs/notes/DN-110-Native-Metaprogramming-And-Sugar-Lowering-Facility.md` gains a second §8.4
+  addendum recording **FLAG-A** — the facility's two-phase build architecture (an L1 check-phase
+  resolving a value-parametric sugar call's def-site and running the affine tracker on the substituted
+  `Expr`; an L0 elab-phase extending `elaborate_lower_rule` to be value-parametric, freshening
+  `%`-namespace binders off the GLOBAL `Elab::fresh` counter) — the corpus's first citable record of
+  this previously-unrecorded decision. Corrects M-1054's stale "blocked until M-1055 PASS" body text:
+  **E1 and E3 have both PASSED** (E3 landed via PR #1423, `crates/mycelium-l1/src/tests/
+  reveal_roundtrip_e3.rs`), satisfying M-1055's own E1+E3 Definition of Done — **M-1054 is unblocked**
+  (`status:todo → status:in-progress`; M-1055 `status:in-progress → status:done`). The facility builds
+  as a staged serial pipeline: Stage 0 (a provably-inert, always-refusing recognition+matcher skeleton
+  that cannot emit an expansion) is the sanctioned entry point; hygiene lands in Stage 1. DN-110 stays
+  `Accepted`, NOT `Enacted`; no guarantee tag is upgraded past its checked basis by this correction
+  (VR-5) — it corrects status and records architecture, it does not certify anything as built.
+- **`docs/Doc-Index.md` reconciled.** DN-112 and DN-113 rows added, status **Accepted**.
+- **`tools/github/issues.yaml` reconciled (append-only, mitigation #2, validated + deduped).** M-1036
+  gains a DN-112-Rank-1 mechanism note plus a `corpus:DN-112` `doc_refs` entry; **M-1060** minted
+  (next free id after M-1059); M-1054 gains the gate-met + FLAG-A note and its `status` label corrected
+  `todo → in-progress`; M-1055 gains an E3 close-out addendum and its `status` label corrected
+  `in-progress → done` (landed basis: PR #1413 E1 + PR #1423 E3).
+
 ### test(l1): M-1055 E2 + E5 hygiene experiments — close-out (2026-07-10)
 
 Integration-tier close-out reconciling the FLAGs from PR #1415 (`claude/leaf/m1055-e2-e5-hygiene`,
