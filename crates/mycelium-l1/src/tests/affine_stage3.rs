@@ -558,3 +558,172 @@ fn r5_match_arm_independence_is_not_a_false_positive() {
          here over the *substituted* term (DN-117 R5)",
     );
 }
+
+// -------------------------------------------------------------------------------------------
+// CRITICAL — FLAG-pattern-ctor-collision false-accept, fixed 2026-07-11 by adversarial review
+// of facility Stage 3. `Cx::stage3_substitute_pattern` used to leave a match-arm `Pattern::Ident`
+// binder UNRENAMED whenever its spelling happened to coincide with some unrelated registered
+// nullary constructor (`Cx::is_any_nullary_ctor`), on the theory that this was "sound — never
+// corrupts a real ctor reference." That theory was false: when the identifier is genuinely a
+// binder (not a ctor reference) in *this* pattern, leaving it unrenamed skips the walk's own
+// (A)-style capture-avoidance discipline, so a spliced argument's free variable of the *same*
+// spelling (a caller-outer local, purely coincidentally named the same as the colliding ctor) is
+// captured by the pattern binder instead of resolving to the caller's value — hiding a genuine
+// double-consume from the tracker. Fixed: the ambiguous case now REFUSES the whole sugar call
+// (a conservative false-REFUSE is sound; the false-ACCEPT was not) rather than guessing which
+// reading is meant.
+//
+// Shape (mirrors the confirmed repro): `Sentinel = s` (a nullary ctor spelled `s`); `Pick3(h:
+// Handle, q: Substrate) = match h { Wrap(s) => consume q }` — the field-pattern binder `s` is
+// ambiguous only because it happens to spell `Sentinel`'s ctor, not because of anything about
+// `Handle`/`Wrap`. Called as `(Pick3(Wrap(consume h_backing), s), consume s)` with a caller-outer
+// local also named `s`: under the pre-fix behavior, the unrenamed pattern binder `s` shadows the
+// substituted occurrence of `q` (itself `s`, textually) inside the match arm, so the arm's
+// `consume q` consumes the FRESH pattern-bound `s` (from destructuring `Wrap(consume h_backing)`)
+// instead of the caller's outer `s` — leaving the outer `s` still "Live" when the tuple's second
+// element separately does `consume s`, a genuine double-consume of the caller's outer local that
+// the pre-fix tracker never saw.
+// -------------------------------------------------------------------------------------------
+
+/// Register `Sentinel = s` — a single nullary constructor spelled `s`, purely to make the
+/// spelling `s` ambiguous as a match-arm binder (`Cx::is_any_nullary_ctor("s")` becomes `true`).
+/// `Sentinel` is otherwise unrelated to `Handle`/`Pick3` — the collision is a pure spelling
+/// coincidence, exactly the class this fix closes.
+fn register_sentinel_s(e: &mut Env) {
+    e.types.insert(
+        "Sentinel".to_owned(),
+        DataInfo {
+            name: "Sentinel".to_owned(),
+            params: vec![],
+            ctors: vec![CtorInfo {
+                name: "s".to_owned(),
+                fields: vec![],
+            }],
+        },
+    );
+}
+
+/// `Pick3(h: Handle, q: Substrate) = match h { Wrap(s) => consume q }` — `s` is a genuine
+/// field-pattern binder here (this pattern's scrutinee, `Handle`, has nothing to do with
+/// `Sentinel`), but its spelling collides with `Sentinel`'s nullary ctor.
+fn pattern_ctor_collision_env() -> Env {
+    let mut e = base_env();
+    register_handle(&mut e);
+    register_sentinel_s(&mut e);
+    register_rule(
+        &mut e,
+        "Pick3",
+        vec![("h", named_ty("Handle")), ("q", substrate_ty("gpu"))],
+        Expr::Match {
+            scrutinee: Box::new(sv("h")),
+            arms: vec![Arm {
+                pattern: Pattern::Ctor("Wrap".to_owned(), vec![Pattern::Ident("s".to_owned())]),
+                body: consume(sv("q")),
+            }],
+        },
+    );
+    e
+}
+
+fn pattern_ctor_collision_call() -> Expr {
+    Expr::TupleLit(vec![
+        call("Pick3", vec![wrap_consume("h_backing"), sv("s")]),
+        consume(sv("s")),
+    ])
+}
+
+fn pattern_ctor_collision_scope() -> Vec<(String, Ty)> {
+    vec![
+        ("h_backing".to_owned(), Ty::Substrate("gpu".to_owned())),
+        ("s".to_owned(), Ty::Substrate("gpu".to_owned())),
+    ]
+}
+
+#[test]
+fn stage3_pattern_ctor_collision_false_accept_is_now_refused() {
+    let e = pattern_ctor_collision_env();
+    let mut scope = pattern_ctor_collision_scope();
+    let err = infer_type_with_active_affine(&e, &mut scope, &pattern_ctor_collision_call())
+        .expect_err(
+            "CRITICAL, fixed 2026-07-11: a match-arm binder `s` that merely spells the same as \
+             an unrelated registered nullary ctor `s` must not let a spliced argument's free \
+             variable `s` be captured by that binder — this call genuinely double-consumes the \
+             caller's outer `s` (once via the substituted `consume q` inside `Pick3`'s match arm \
+             had renaming happened correctly, once via the outer `consume s`) and must be \
+             REFUSED, not silently accepted",
+        );
+    assert!(
+        err.message.contains("nullary") && err.message.contains("constructor"),
+        "expected the FLAG-pattern-ctor-collision ambiguity refusal, got: {}",
+        err.message
+    );
+}
+
+// **Non-vacuity — confirmed by hand during this fix's development, not re-automated as a
+// permanent sabotage hook (documented here, not silently omitted — VR-5).** With
+// `Cx::stage3_substitute_pattern`'s ambiguous-`Ident` arm reverted to the pre-fix behavior
+// (`pat.clone()` — leave unrenamed, no refusal) and every other line unchanged,
+// `stage3_pattern_ctor_collision_false_accept_is_now_refused` (above) wrongly returns `Ok`
+// instead of `Err` — i.e. `pattern_ctor_collision_call()` is falsely ACCEPTED under the old
+// code, over the exact same env/scope/call this module now asserts refuses. This confirms the
+// refusal is load-bearing (it catches a real, reproducible hazard) rather than a pre-existing
+// refusal for some unrelated reason. Unlike the R2/R3 splice-sabotage controls above (which flip
+// a *runtime* `#[cfg(test)]` toggle, `infer_type_with_active_affine_sabotaged`, so both readings
+// stay reachable from one build), this fix changes which of two *incompatible* `Pattern` shapes
+// `stage3_substitute_pattern` commits to at a single decision point — there is no sound way to
+// keep both branches live behind one runtime toggle without duplicating the whole function,
+// which is out of proportion to this fix's scope. Recorded here as a manual, documented
+// confirmation (reproduced during development by `git stash`-reverting just this fix and
+// re-running the test above, which then panics with `Ok(...)` instead of the expected `Err` —
+// see this fix's own report) rather than a permanent sabotage hook.
+
+// -------------------------------------------------------------------------------------------
+// Control — a match-arm binder whose spelling does NOT collide with any registered nullary
+// constructor must still be renamed and ACCEPTED normally (no over-refusal of the ordinary
+// case introduced by this fix).
+// -------------------------------------------------------------------------------------------
+
+/// `Pick3Control(h: Handle, q: Substrate) = match h { Wrap(t) => consume q }` — no `t`-spelled
+/// nullary ctor is registered anywhere in this env, so `t` is unambiguously a fresh binder.
+fn pattern_no_collision_env() -> Env {
+    let mut e = base_env();
+    register_handle(&mut e);
+    register_rule(
+        &mut e,
+        "Pick3Control",
+        vec![("h", named_ty("Handle")), ("q", substrate_ty("gpu"))],
+        Expr::Match {
+            scrutinee: Box::new(sv("h")),
+            arms: vec![Arm {
+                pattern: Pattern::Ctor("Wrap".to_owned(), vec![Pattern::Ident("t".to_owned())]),
+                body: consume(sv("q")),
+            }],
+        },
+    );
+    e
+}
+
+fn pattern_no_collision_call() -> Expr {
+    call(
+        "Pick3Control",
+        vec![wrap_consume("h_backing"), sv("outer_q")],
+    )
+}
+
+fn pattern_no_collision_scope() -> Vec<(String, Ty)> {
+    vec![
+        ("h_backing".to_owned(), Ty::Substrate("gpu".to_owned())),
+        ("outer_q".to_owned(), Ty::Substrate("gpu".to_owned())),
+    ]
+}
+
+#[test]
+fn stage3_pattern_no_collision_control_still_accepts() {
+    let e = pattern_no_collision_env();
+    let mut scope = pattern_no_collision_scope();
+    infer_type_with_active_affine(&e, &mut scope, &pattern_no_collision_call()).expect(
+        "a match-arm binder whose spelling does NOT collide with any registered nullary \
+         constructor must still be fresh-renamed and ACCEPTED normally — this fix must not \
+         over-refuse the ordinary, unambiguous case",
+    );
+}

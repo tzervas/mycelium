@@ -6138,11 +6138,13 @@ impl Cx<'_> {
     /// the *real*, elaboration-time expansion (Stage 1's own (A) freshening already prevents it
     /// there) — it is specific to this check-time-only, separately-built substituted term, so it
     /// needs its own (A) step. `%`-renaming a `Let`/`Lambda`/`For` binder is always unambiguously
-    /// safe (those never denote anything but a fresh binder); see
-    /// [`Self::stage3_substitute_pattern`]'s own doc comment for the one narrower residual this
-    /// does *not* close (a match-arm pattern identifier that is genuinely ambiguous between "binder"
-    /// and "nullary constructor reference" without a scrutinee type — FLAG-pattern-ctor-collision,
-    /// DN-117 ratification note).
+    /// safe (those never denote anything but a fresh binder); a match-arm pattern identifier that is
+    /// genuinely ambiguous between "binder" and "nullary constructor reference" without a scrutinee
+    /// type cannot be safely `%`-renamed either way — see
+    /// [`Self::stage3_substitute_pattern`]'s own doc comment: this ambiguous case now **refuses the
+    /// whole sugar call** (fixed 2026-07-11, a CRITICAL false-accept found by adversarial review;
+    /// FLAG-pattern-ctor-collision, DN-117 ratification note) rather than leaving the binder
+    /// unrenamed, which is exactly the capture hazard this paragraph describes.
     ///
     /// Depth-bounded by [`MAX_CHECK_DEPTH`] like every other recursive walk in this module (never a
     /// silent stack overflow on a pathological RHS, G2).
@@ -6346,7 +6348,7 @@ impl Cx<'_> {
     ) -> Result<Arm, CheckError> {
         let mut binder_count = 0usize;
         let pattern2 =
-            self.stage3_substitute_pattern(&arm.pattern, shadow, fresh, &mut binder_count);
+            self.stage3_substitute_pattern(&arm.pattern, shadow, fresh, &mut binder_count)?;
         let body2 = self.stage3_substitute_expr(&arm.body, params, shadow, fresh, depth)?;
         for _ in 0..binder_count {
             shadow.pop();
@@ -6361,69 +6363,95 @@ impl Cx<'_> {
     /// identifiers, pushing each `(orig, fresh)` pair onto `shadow` and incrementing `binder_count`
     /// (so the caller pops exactly as many as were pushed).
     ///
-    /// **`Pattern::Ident` ambiguity (FLAG-pattern-ctor-collision, DN-117 ratification note) — the one
-    /// residual this walk does not fully close.** A bare `Pattern::Ident(name)` is *either* a binder
-    /// *or* a nullary-constructor reference, disambiguated only at the real `Cx::check_match`
-    /// (`Self::resolve_pattern`) against the **scrutinee's type** — type information this pure
-    /// `Expr`-level substitution walk does not have (no scrutinee type is threaded through). This
-    /// function uses a **conservative, type-independent** approximation: [`Self::is_any_nullary_ctor`]
-    /// — is `name` the spelling of *any* registered nullary constructor, anywhere in the type
-    /// registry (not scrutinee-scoped)? If so, it is left **unrenamed** (treated as a possible ctor
-    /// reference — never corrupts a genuine one); otherwise it is renamed as a genuine binder (sound:
-    /// `resolve_pattern`'s own documented fallback is identical — "a binder whose name merely
-    /// collides with a nullary ctor of an *unrelated* type stays a binder"). The one narrow residual
-    /// gap this leaves: a pattern identifier that (a) spells a real ctor of *some* type, (b) is
-    /// actually meant as a binder in *this* pattern (a different, unrelated scrutinee type), *and*
-    /// (c) coincides with a free variable inside a spliced argument — a compound, narrow coincidence,
-    /// left as an open FLAG rather than guessed at with full scrutinee-type threading (which would
-    /// require re-deriving enough of `check_match`'s own resolution here — DN-117 does not specify
-    /// this, and out of proportion to this leaf's ≤~1-2k-LOC scope).
+    /// **`Pattern::Ident` ambiguity (FLAG-pattern-ctor-collision, DN-117 ratification note) — now a
+    /// refusal, not a silent "leave unrenamed" (fixed 2026-07-11, post-ratification adversarial
+    /// review — CRITICAL false-accept, see this note's own errata entry).** A bare
+    /// `Pattern::Ident(name)` is *either* a binder *or* a nullary-constructor reference,
+    /// disambiguated only at the real `Cx::check_match` (`Self::resolve_pattern`) against the
+    /// **scrutinee's type** — type information this pure `Expr`-level substitution walk does not
+    /// have (no scrutinee type is threaded through). [`Self::is_any_nullary_ctor`] — is `name` the
+    /// spelling of *any* registered nullary constructor, anywhere in the type registry (not
+    /// scrutinee-scoped)? — is the only conservative, type-independent test available here, and it
+    /// is genuinely ambiguous: `name` could be a binder for *this* pattern's (unrelated) scrutinee
+    /// type, or a real ctor reference. **The previously-shipped choice ("leave it unrenamed,
+    /// treating it as a possible ctor reference") was UNSOUND, not merely narrow:** when `name` is
+    /// actually a genuine binder here, leaving it unrenamed skips this walk's own capture-avoidance
+    /// discipline (see [`Self::stage3_substitute_expr`]'s doc comment on why every RHS-local binder
+    /// must be `%`-freshened) — a spliced argument's free variable of the same spelling (e.g. a
+    /// caller-outer local also named `name`) is then *captured* by this unrenamed pattern binder
+    /// instead of referring to the caller's value, so the tracker never sees the real double-consume
+    /// this produces. **Confirmed reproducible** (`stage3_pattern_ctor_collision_*` tests,
+    /// `src/tests/affine_stage3.rs`): a nullary ctor spelled `s`, a rule `Pick3(h: Handle, q:
+    /// Substrate) = match h { Wrap(s) => consume q }`, called as `(Pick3(Wrap(consume h_backing),
+    /// s), consume s)` with a caller-outer `s` — accepted a genuine double-consume of the outer `s`.
+    /// **Fix: refuse the whole sugar call** with a never-silent diagnostic (G2) rather than guess
+    /// which reading is meant — a conservative false-REFUSE here is sound; the false-ACCEPT was not.
+    /// The full close (scrutinee-type-directed disambiguation, mirroring `resolve_pattern`'s own
+    /// logic) is out of proportion to this fix's scope and remains open, tracked by
+    /// FLAG-pattern-ctor-collision.
     fn stage3_substitute_pattern(
         &self,
         pat: &Pattern,
         shadow: &mut Vec<(String, String)>,
         fresh: &mut Stage3Fresh,
         binder_count: &mut usize,
-    ) -> Pattern {
-        match pat {
+    ) -> Result<Pattern, CheckError> {
+        Ok(match pat {
             Pattern::Wildcard | Pattern::Lit(_) => pat.clone(),
             Pattern::Ident(name) => {
                 if self.is_any_nullary_ctor(name) {
-                    pat.clone()
-                } else {
-                    let f = fresh.mint();
-                    shadow.push((name.clone(), f.clone()));
-                    *binder_count += 1;
-                    Pattern::Ident(f)
+                    // FLAG-pattern-ctor-collision — genuinely ambiguous without the scrutinee's
+                    // type (see this fn's own doc comment). Refuse rather than risk the capture
+                    // hazard a silent "leave unrenamed" produces (confirmed false-accept, fixed
+                    // 2026-07-11 — never a guess, G2/VR-5).
+                    return Err(CheckError::new(
+                        self.site,
+                        format!(
+                            "this `lower` sugar rule's RHS binds `{name}` in a match-arm pattern, \
+                             but `{name}` is also the spelling of a registered nullary \
+                             constructor elsewhere — ambiguous between \"binder\" and \
+                             \"constructor reference\" without the scrutinee's type, which this \
+                             check-time substitution walk does not have (M-1054 Stage 3 \
+                             (OQ-H4)/DN-117, FLAG-pattern-ctor-collision). Refused rather than \
+                             risk capturing a spliced argument's free variable of the same \
+                             spelling (a confirmed false-accept of a genuine double-consume) — \
+                             rename this binder, or the colliding constructor, to disambiguate \
+                             (never a silent guess, G2)."
+                        ),
+                    ));
                 }
+                let f = fresh.mint();
+                shadow.push((name.clone(), f.clone()));
+                *binder_count += 1;
+                Pattern::Ident(f)
             }
             Pattern::Ctor(name, fields) => Pattern::Ctor(
                 name.clone(),
                 fields
                     .iter()
                     .map(|f| self.stage3_substitute_pattern(f, shadow, fresh, binder_count))
-                    .collect(),
+                    .collect::<Result<Vec<_>, _>>()?,
             ),
             Pattern::Tuple(fields) => Pattern::Tuple(
                 fields
                     .iter()
                     .map(|f| self.stage3_substitute_pattern(f, shadow, fresh, binder_count))
-                    .collect(),
+                    .collect::<Result<Vec<_>, _>>()?,
             ),
             Pattern::Or(alts) => Pattern::Or(
                 alts.iter()
                     .map(|a| self.stage3_substitute_pattern(a, shadow, fresh, binder_count))
-                    .collect(),
+                    .collect::<Result<Vec<_>, _>>()?,
             ),
-        }
+        })
     }
 
     /// Conservative, type-independent check: does `name` spell **any** registered nullary
     /// constructor, anywhere in the type registry (not scoped to a particular scrutinee type)? Used
-    /// only by [`Self::stage3_substitute_pattern`]'s renaming decision — see that function's doc
+    /// only by [`Self::stage3_substitute_pattern`]'s ambiguity gate — see that function's doc
     /// comment for why a scrutinee-scoped `resolve_pattern`-style resolution is not available at
-    /// this (pure `Expr`, no type context) walk, and the narrow residual gap this conservative
-    /// choice leaves.
+    /// this (pure `Expr`, no type context) walk, and why the ambiguous case now refuses rather than
+    /// guesses.
     fn is_any_nullary_ctor(&self, name: &str) -> bool {
         self.types.values().any(|d| {
             d.ctors

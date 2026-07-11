@@ -539,6 +539,42 @@ while landing it (VR-5 — grounded, not merely asserted).
     this leaf); FLAG-renumber is unaffected; FLAG-lambda-affine stays open (point 8, above). One new
     flag is added: **FLAG-pattern-ctor-collision** (point 4, above) — the narrow match-arm-pattern
     residual in the check-time-only substitution's capture-avoidance.
+11. **ERRATA (2026-07-11, append-only — text above kept, not rewritten, house rule #3) — CRITICAL,
+    fixed post-ratification: point 4's "sound (never corrupts a real ctor reference)" claim was
+    WRONG.** A separate leaf's adversarial review of facility Stage 3 found the ambiguous-`Ident`
+    handling point 4 describes was **not** sound — it was a confirmed, reproducible **false ACCEPT**
+    of a genuine double-consume, on `claude/leaf/m1054-stage3-affine`. Point 4's own reasoning
+    ("never corrupts a real ctor reference") only checked the *ctor-reference* reading; it did not
+    check the *binder* reading, and that is exactly where the hazard lives: when the ambiguous
+    identifier is genuinely a binder (not a ctor reference) for *this* pattern, leaving it
+    **unrenamed** — the choice point 4 ratified — skips this same walk's own (A)-style
+    capture-avoidance discipline (the paragraph immediately preceding point 4's own citation, in
+    `Cx::stage3_substitute_expr`'s doc comment). A spliced argument's free variable of the same
+    spelling as the unrenamed binder (a caller-outer local, coincidentally named the same as the
+    colliding nullary ctor — a pure spelling accident, unrelated to the binder's own scrutinee type)
+    is then **captured** by the pattern binder instead of resolving to the caller's value, hiding a
+    real double-consume from the tracker. **Confirmed reproducible** (verified both ways: the exact
+    call is falsely `Ok`-accepted under the pre-fix code and correctly `Err`-refused under the
+    post-fix code, by `git stash`-reverting and restoring just the fix and re-running the same
+    fixture — `stage3_pattern_ctor_collision_false_accept_is_now_refused`,
+    `crates/mycelium-l1/src/tests/affine_stage3.rs`): `Sentinel = s` (a nullary ctor spelled `s`);
+    `Pick3(h: Handle, q: Substrate) = match h { Wrap(s) => consume q }`; called as
+    `(Pick3(Wrap(consume h_backing), s), consume s)` with a caller-outer local also named `s` — the
+    call was wrongly accepted, silently double-consuming the caller's outer `s`.
+    **Fix (landed, same errata date):** `Cx::stage3_substitute_pattern` now **refuses the whole
+    sugar call** in the ambiguous case, with a never-silent diagnostic (G2), rather than guessing
+    which reading is meant — threaded as a `Result<Pattern, CheckError>` through
+    `stage3_substitute_pattern`/`stage3_substitute_arm` (previously infallible). **A conservative
+    false-REFUSE here is sound; the false-ACCEPT it replaces was not.** The full close (real
+    scrutinee-type-directed disambiguation, mirroring `Self::resolve_pattern`'s own logic) remains
+    out of proportion to this fix's scope and stays open — FLAG-pattern-ctor-collision (point 10)
+    is **not** closed by this errata, only its unsound resolution is. Two new tests added
+    (non-vacuity control included — a same-shape call with a *non*-colliding binder spelling still
+    ACCEPTS, confirming this fix does not over-refuse the ordinary case); the crate's full
+    `cargo test -p mycelium-l1` (unit + every integration target) stays green, 0 failures.
+    Guarantee posture: the corrected claim is `Empirical` (checked by the new corpus above), not
+    `Proven` — same posture as the rest of this note's `Declared`/`Empirical` claims; no tag is
+    upgraded past its checked basis (VR-5).
 
 ---
 
@@ -556,3 +592,12 @@ while landing it (VR-5 — grounded, not merely asserted).
   `Empirical` for the double-consume upper bound over the real substituted `Expr`, checked by the
   landed corpus; no `Proven` claim. Not `Enacted` (house rule #3) — that is the integrating parent's
   call.
+- **2026-07-11 — Errata (CRITICAL fix, same day, separate leaf).** Ratification point 4's
+  "sound (never corrupts a real ctor reference)" claim for the pattern-ctor-collision residual was
+  found WRONG by adversarial review — a confirmed reproducible false ACCEPT of a genuine
+  double-consume, not merely a narrow unclosed residual. Fixed:
+  `Cx::stage3_substitute_pattern` now refuses the whole sugar call in the ambiguous case (a
+  never-silent diagnostic, G2) instead of leaving the binder unrenamed. See Ratification point 11
+  above for the full grounded correction; still `Empirical`, no `Proven` claim; FLAG-pattern-ctor-
+  collision (the disambiguation gap itself) stays open. Branch
+  `claude/leaf/m1054-stage3-affine`, held for re-verify (not merged).
