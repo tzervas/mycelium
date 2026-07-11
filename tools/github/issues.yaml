@@ -14980,12 +14980,29 @@ issues:
   - id: M-1051
     title: "desugar/expand-on-demand tooling for surface sugars (the DN-106 sugar-transparency principle, general)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:tooling, priority:P2, status:todo]
+    labels: [phase:5, type:feature, area:tooling, priority:P2, status:in-progress]
     epic: E28-1
     depends_on: []
     doc_refs:
       - corpus:DN-106
       - corpus:DN-109
+      - corpus:DN-110-8.2-hygiene-deepdive
+      - src:crates/mycelium-l1/src/reveal.rs
+    landed_basis: >
+      status:in-progress (Increment-1 of a 3-increment DoD landed, Increments 2/3 outstanding) —
+      PR #1412 (`claude/leaf/m1051-reveal-increment1`, merged to `dev` 2026-07-10) lands
+      `crates/mycelium-l1/src/reveal.rs`: `reveal_l0` (Exact — a direct wrap of `elab::elaborate`),
+      `alpha_eq` (Empirical — structural alpha-equivalence, unit-tested against hand-built
+      adversarial pairs incl. Fix/FixGroup/Match binder forms), `render_surface` (Empirical, never-
+      silent `RenderError::Unrenderable` refusal for a `Dense`/`Vsa` `Const` payload or a non-finite
+      `Float` — no black boxes, house rule #2), and `reelaborate` (Empirical, an honestly-scoped
+      closedness re-derivation — NOT a full surface re-parse pipeline). `cargo test -p mycelium-l1`
+      green (21/21 new reveal tests; 0 regressions). **Honest scope note (VR-5):** the module's own
+      doc flags that the shipped corpus test is closedness-preservation, not the DN-110-8.2-hygiene-
+      deepdive §7 E3 alpha-equivalence regression — that composition is definitionally vacuous at v0
+      (`reelaborate` has no lossy step to invert; see M-1055's landed_basis). Increment-2 (CLI/LSP
+      surfacing of `desugar`/`expand`) and Increment-3 (the `certified`-mode round-trip check, DN-38
+      §5/§8.3) remain unbuilt — this issue stays `in-progress`, not `done`.
     body: |
       Filed 2026-07-11 from the maintainer's ratification of DN-106 (ENB-10 triage). The maintainer
       established a general **surface-sugar transparency** principle ("that's re 106"): "We can carry
@@ -15103,12 +15120,14 @@ issues:
     milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:epic, area:language, priority:P2, status:todo]
     epic: E28-1
-    depends_on: [M-812, M-1051]
+    depends_on: [M-812, M-1051, M-1055]
     doc_refs:
       - corpus:DN-110
       - corpus:DN-54
       - corpus:DN-38
       - corpus:DN-106
+      - corpus:DN-110-8.2-hygiene-deepdive
+      - src:crates/mycelium-l1/src/tests/hygiene_expr_sugar.rs
     body: |
       Filed 2026-07-10 from the maintainer's ratification of DN-110 (native metaprogramming / sugar-
       lowering facility). Implements DN-110 §5-A Rank 1: generalize the landed `lower`/`derive`
@@ -15143,16 +15162,72 @@ issues:
         upgraded (VR-5). Blocked on M-1051 (`reveal`) landing and M-1055's E1+E3 go/no-go passing before
         any code lands (VR-5: no guarantee tag claimed until the checked basis exists).
 
+      Design notes appended 2026-07-10 from the M-1055 E1 language-fit review (append-only, house
+      rule #3 -- carried here so they survive to inform the eventual build; none of this is a build
+      or ratification claim, all `Declared` unless independently checked, VR-5):
+
+      1. **OQ-H5 (per-site fresh-counter architecture).** The E1 prototype's `expand()` resets its
+         gensym counter per call (`%0`, `%1`, ...) -- fine for E1's single-expansion fixtures, but it
+         is explicitly NOT what the real facility must do. The facility must use the elaborator's
+         GLOBAL `Elab::fresh` counter, minting site-qualified names of the deep-dive §4(A) shape
+         (`%sugar#<rule>@<siteN>%tmp`), so that nested/repeated expansions freshen into DISTINCT
+         per-expansion-site scopes (the E4 nested-expansion property, DN-110-8.2-hygiene-deepdive
+         §7 E4 / §10 OQ-H5) rather than colliding on a reused local counter. Building the facility
+         against E1's per-call reset instead of the global fresh counter would silently reintroduce
+         cross-expansion capture the moment two sugar invocations appear in the same elaboration.
+      2. **OQ-H1 (def-site resolution).** E1 deliberately does not implement deep-dive §4(C) -- def-
+         site resolution of a sugar RHS's free identifiers to content-addressed L0 references
+         (ADR-003) -- it substitutes only the RHS's own bound parameters. The facility must build
+         this resolution pass; it is not something E1's PASS verdict already covers, and the
+         cross-phylum residual (OQ-H1's own open question, deep-dive §10/§8 item 1) is unresolved.
+      3. **Long-term (separate decision, not scoped to this epic): alpha-canonical `Node` hashing.**
+         Canonicalizing binders to de Bruijn indices before `content_hash` would make content-
+         addressing alpha-aware and give free expansion dedup (the deep-dive §6 "true half" finding
+         -- today two alpha-equivalent terms hash differently because binders are named strings, DN-
+         110-8.2-hygiene-deepdive §3 finding #1 / §6 "false half"). This is real, but it touches the
+         ADR-003 content-addressed identity model repo-wide, well beyond this epic's J3 scope, and is
+         flagged here as a future direction, not decided or scheduled by this note (house rule #3).
+
   - id: M-1055
     title: "E1 + E3 hygiene experiment prototype -- DN-110 §8.2 expression-position sugar-rule hygiene, Rank-1 go/no-go for J3"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P1, status:todo]
+    labels: [phase:5, type:feature, area:language, priority:P1, status:in-progress]
     epic: E28-1
     depends_on: [M-1051]
     doc_refs:
       - corpus:DN-110
       - corpus:DN-110-8.2-hygiene-deepdive
       - corpus:DN-54
+      - src:crates/mycelium-l1/src/tests/hygiene_expr_sugar.rs
+    landed_basis: >
+      status:in-progress (E1 of this issue's E1+E3 DoD landed with a PASS verdict; E3 is NOT built —
+      see below; E2/E5 out of this issue's scope) — PR #1413
+      (`claude/leaf/m1055-e1-capture-avoidance`, merged to `dev` 2026-07-10) adds a test-only
+      `crates/mycelium-l1/src/tests/hygiene_expr_sugar.rs` prototyping deep-dive §4 (A)+(B) (`%`-
+      freshening of RHS binders + capture-safe verbatim substitution). **E1 verdict: PASS.** All 4
+      core fixtures (`binder_shadows_use_site`, `arg_mentions_raw_binder_spelling`,
+      `multi_param_used_twice`, `nested_binder_in_rhs`) pass both `alpha_eq`-to-oracle and
+      independent `mycelium_interp::Interpreter::eval` observational-equality checks; each also
+      carries a hand-built unhygienic "captured" counter-expansion evaluating to a demonstrably
+      different, hand-derived wrong value (proving the harness can observe a real capture bug); a
+      live negative control (freshening temporarily disabled in `expand()`) made both checks fail as
+      expected, then was reverted before commit. An optional non-gating E4 bonus fixture also
+      passes. `cargo test -p mycelium-l1` green (498 passed, 1 ignored, 0 failed). This moves
+      capture-avoidance for **(A)+(B) only** from `Declared` to `Empirical` (VR-5) — E2 (def-site
+      resolution, sub-question (C)) and E5 (affine-on-expanded-L0, sub-question (D)) are unbuilt and
+      stay `Declared`. **E3 is deliberately NOT built and is not merely deferred-but-pending: the
+      deep-dive's own §7 header and `reveal.rs`'s honest-scoping callout (M-1051's landed_basis)
+      both record that `reelaborate(reveal_l0(x))` is definitionally `x.clone()` at v0** — `reveal`
+      v0 has no lossy step for `reelaborate` to invert, so an E3 harness built against v0 `reveal`
+      would compare a term to a bit-identical clone of itself (vacuous, would pass even with a
+      broken comparator — the same trap PR #1412's adversarial review caught and fixed in `reveal`
+      itself). E3 becomes meaningfully non-vacuous only once M-1051 Increment-3 (the `certified`-
+      mode round-trip check, DN-38 §5) lands. **Consequently E1 is, for now, the sole empirical half
+      of this issue's own E1+E3 go/no-go DoD** — the DoD's E3 leg is blocked on M-1051 Increment-3,
+      not abandoned. This issue stays `in-progress`, not `done`; M-1054 (the implementation epic)
+      stays design-gated pending E3 (or a maintainer-ratified disposition accepting E1-only as
+      sufficient for a J3 go, which this close-out does not itself decide — house rule #3/#4, no
+      self-ratification).
     body: |
       Filed 2026-07-10 from the maintainer's ratification of DN-110-8.2-hygiene-deepdive.md (the
       companion §8.2 deep-dive, itself accepted as the basis for DN-110 §8.2 at this ratification).

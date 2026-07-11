@@ -12,6 +12,57 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### feat(l1)/test(l1): M-1051 reveal Increment-1 + M-1055 E1 capture-avoidance PASS — integration close-out (2026-07-10)
+
+Integration-tier close-out reconciling the FLAGs from PR #1412 (M-1051 `reveal` Increment-1) and PR
+1413 (M-1055 E1 capture-avoidance experiment) — both already merged to `dev` this session.
+
+- **M-1051 — `reveal` Increment-1 landed; Increments 2 and 3 remain (`status:in-progress`, NOT
+  `done`).** New `crates/mycelium-l1/src/reveal.rs` ships the desugar-on-demand core: `reveal_l0`
+  (`Exact`, a direct wrap of `elab::elaborate`); `alpha_eq` (`Empirical`, structural alpha-
+  equivalence, unit-tested against hand-built adversarial pairs including Fix/FixGroup/Match binder
+  forms); `render_surface` (`Empirical`, a total pretty-printer with a never-silent
+  `RenderError::Unrenderable` refusal for a `Dense`/`Vsa` `Const` payload or a non-finite `Float` —
+  no black boxes, house rule #2); `reelaborate` (`Empirical`, an honestly-scoped closedness re-
+  derivation, explicitly NOT a full surface re-parse pipeline). `cargo test -p mycelium-l1` green
+  (21/21 new `reveal` tests, 0 regressions). Increment-2 (CLI/LSP surfacing) and Increment-3 (the
+  `certified`-mode round-trip check, DN-38 §5/§8.3) are unbuilt.
+- **M-1055 — E1 (capture-avoidance) verdict: PASS; E3 deliberately not built
+  (`status:in-progress`, NOT `done`).** A test-only harness
+  (`crates/mycelium-l1/src/tests/hygiene_expr_sugar.rs`) validates DN-110-8.2-hygiene-deepdive §4
+  (A) and (B) — `%`-namespace freshening of RHS binders plus capture-safe verbatim substitution —
+  over 4 core fixtures, each checked by `alpha_eq`-to-oracle AND independent
+  `mycelium_interp::Interpreter::eval` observational equality, plus a hand-built unhygienic
+  "captured" counter-expansion per fixture (proving the harness can observe a real capture bug), plus
+  a live-verified negative control (freshening disabled, both checks failed as expected, reverted
+  before commit). This moves capture-avoidance for (A) and (B) **only** from `Declared` to
+  `Empirical`; E2 (def-site resolution) and E5 (affine-on-expanded-L0) stay `Declared`, unbuilt.
+  **E3 (`reveal` round-trip fidelity — the deep-dive's own designated gating experiment for this
+  issue's E1+E3 DoD) is deliberately not built**, not merely deferred-and-pending: both the deep-dive
+  §7 header and `reveal.rs`'s own honest-scoping callout record that
+  `reelaborate(reveal_l0(x))` is definitionally `x.clone()` at v0 (`reveal` v0 has no lossy step to
+  invert), so an E3 harness against v0 `reveal` would be vacuous — the same trap PR #1412's
+  adversarial review caught and fixed in `reveal` itself. E3 becomes meaningfully non-vacuous only
+  once M-1051 Increment-3 lands; until then, **E1 is the sole empirical half of M-1055's own E1+E3
+  go/no-go**, and M-1054 stays design-gated.
+- **M-1054 (the native-facility implementation epic) gains three design notes from the E1
+  language-fit review**, appended to its issue body (append-only, house rule #3) so they survive to
+  inform the eventual build: (1) **OQ-H5** — the facility must use the elaborator's GLOBAL
+  `Elab::fresh` counter and site-qualified `%sugar#<rule>@<siteN>%tmp` names
+  (DN-110-8.2-hygiene-deepdive §4(A)), NOT E1's prototype per-call `%0` counter reset, or nested/
+  repeated expansions will silently collide; (2) **OQ-H1** — def-site resolution of a sugar RHS's
+  free identifiers to content-addressed L0 references (DN-110-8.2-hygiene-deepdive §4(C)) is unbuilt
+  by E1 and must be built by the facility, cross-phylum residual unresolved; (3) a longer-term,
+  separately-decided note that alpha-canonical `Node` hashing (canonicalizing binders to de Bruijn
+  before `content_hash`) would make content-addressing alpha-aware and give free expansion dedup
+  (the deep-dive §6 "true half" finding) — out of this epic's scope, touches the ADR-003 identity
+  model repo-wide.
+- **Honest scope note (VR-5).** DN-110 and `DN-110-8.2-hygiene-deepdive.md` stay `Accepted` (design
+  ratification only) — this close-out records issue-level status; it does not move either note
+  toward `Enacted`. None of M-1051 / M-1055 / M-1054 is marked `done`; each carries an honest
+  landed-basis note scoped to what actually landed. `tools/github/issues.yaml` validated + checked
+  for duplicate ids after edit (mitigation #2).
+
 ### docs(notes): maintainer ratification — DN-100 macro-expand-first pre-pass; DN-102 `?` try-operator desugar (2026-07-10)
 
 Accepted (design, pending Enactment): **DN-100** and **DN-102**, per the maintainer's "ratify the
