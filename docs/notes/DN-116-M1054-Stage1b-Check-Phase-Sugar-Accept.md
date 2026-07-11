@@ -168,6 +168,26 @@ helper used twice in the RHS has no affine-typed *value parameter* at all, so pa
 miss it; the composite value-parameter case above has no RHS-local `let` binding at all, so part 2
 alone would miss it).
 
+**Superseded-in-part by Stage 3 / DN-117 (2026-07-11, append-only — house rule #3, the text above is
+kept, not rewritten).** M-1054 Stage 3 (OQ-H4) has since landed
+(`docs/notes/DN-117-M1054-Stage3-Affine-Over-Substituted-Expr.md`, `Accepted`): §3.2's two-part
+wholesale-refusal gate described above is **replaced** by a real linear-use check over a
+check-time-only substituted `Expr` (the argument spliced at every RHS occurrence of its value
+param, walked by the real M-919 `Tracker`) — **accept-linear-or-dropped, refuse-duplicated**,
+rather than refusing every affine-typed value parameter or RHS-local binding outright. Concretely:
+part 1 (`ty_structurally_contains_substrate`) is demoted from the accept/refuse decision to a cheap
+*trigger* only; part 2 (`rhs_first_affine_binding`/`expr_is_structurally_affine`) is **deleted** —
+its job turned out to be fully subsumed by `infer_expr_rule_rhs_type`'s own pre-existing
+active-tracker walk over the unsubstituted RHS (DN-117 §3.3), which needed no new machinery at all.
+The composite (`Handle`/`Wrap(Substrate)`) case this section's adversarial-verify finding closed is
+now handled precisely by the real walk (DN-117 R2/A2), not by the structural over-approximation
+described above. The corrected drop verdict (an unused affine value parameter, or an unused
+RHS-local affine binding, is **accepted**, not refused — the static pass enforces only
+use-at-most-once, never a must-consume lower bound) is DN-117 §4.3's own grounded correction of this
+note's original (defensive, over-refusing) posture. See DN-117 for the full mechanism, its own
+adversarial findings, and the non-vacuous test corpus
+(`crates/mycelium-l1/src/tests/affine_stage3.rs`).
+
 ## §4 `Elab::app`'s §5.2 dispatch
 
 A single new branch in `Elab::app` (`elab.rs`), tried **last**, mirroring `check_sugar_call`'s own

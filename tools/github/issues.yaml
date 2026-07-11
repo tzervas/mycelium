@@ -15415,6 +15415,37 @@ issues:
       "DN-114" and means DN-116 -- flagged, not silent (G2); `grep DN-114 crates/mycelium-l1/` finds
       the residual set for whoever next touches that crate.
 
+      **Stage 3 (DN-117, OQ-H4 affine soundness over the substituted `Expr`) progressed + the
+      DN-114 mycelium-l1 residual RESOLVED (2026-07-11, append-only, this Stage-3 landing pass --
+      `claude/leaf/m1054-stage3-affine`, pulling `dev` down per mitigation #6).** The residual
+      flagged immediately above is closed: all 22 `crates/mycelium-l1/` source/test-comment
+      occurrences of "DN-114" (`elab.rs`, `checkty.rs`, `src/tests/checkty.rs`,
+      `src/tests/defsite_resolution_stage2.rs`, `src/tests/reachability_stage1b.rs`,
+      `src/tests/facility_stage1_hygiene.rs`) repointed to **DN-116**, verified by
+      `grep -rn DN-114 crates/mycelium-l1/` returning empty. On the Stage-3 design/implementation
+      side (`docs/notes/DN-117-M1054-Stage3-Affine-Over-Substituted-Expr.md`), the leaf's own
+      Ratification section moves DN-117 to **Accepted** (delegated ratification, mirroring the
+      Stage 2/DN-115 precedent -- ratifies the §1-§7 design decisions, NOT `Enacted`, per house
+      rule #3), and a same-day append-only Errata (Ratification point 11) records a CRITICAL fix:
+      an adversarial review found `Cx::stage3_substitute_pattern` left an ambiguous match-arm
+      `Pattern::Ident` binder unrenamed whenever its spelling collided with a registered nullary
+      constructor, which could let a spliced argument's free variable be captured by the pattern
+      binder instead of the caller's value, hiding a real double-consume (confirmed reproducible
+      both ways by a `git stash`-revert of just the fix). Fixed: `stage3_substitute_pattern`/
+      `stage3_substitute_arm` now return `Result<_, CheckError>`, refusing the whole sugar call in
+      the ambiguous case with a never-silent diagnostic (G2) rather than guessing -- a conservative
+      false-REFUSE, not the unsound false-ACCEPT it replaces. Two new tests in
+      `crates/mycelium-l1/src/tests/affine_stage3.rs` (the exploit, now refused; a non-collision
+      control, still accepted -- no over-refusal). `cargo test -p mycelium-l1`: 559 lib tests
+      (0 failed, 1 ignored) + every integration target green after this landing pass's `dev`
+      pull-down merge, confirming no regression; `clippy -D warnings` / `fmt` clean.
+      Guarantee posture unchanged by this note: the double-consume upper bound over the real
+      substituted `Expr` is `Empirical` (checked by the §5/§7 + errata corpus); no `Proven` claim
+      anywhere (VR-5). Status stays `in-progress` -- Stage 3's own `Enacted`/close-out call (and
+      the still-open FLAG-pattern-ctor-collision disambiguation residual DN-117 §9/Ratification
+      point 10 names) are for a subsequent integrating pass, not this one; Stage 4 (cross-nodule,
+      DN-113/M-1060) remains unbuilt.
+
   - id: M-1055
     title: "E1 + E3 hygiene experiment prototype -- DN-110 §8.2 expression-position sugar-rule hygiene, Rank-1 go/no-go for J3"
     milestone: "Phase 5 — Self-Hosting & Core Library"

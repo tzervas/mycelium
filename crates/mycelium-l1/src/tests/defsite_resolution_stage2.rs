@@ -44,7 +44,7 @@
 //! # An honest correction to DN-115 §4.2's own framing (VR-5 — surfaced, not smoothed over)
 //!
 //! DN-115 §4.2 characterizes the G2 gap as "a program the checker **accepts** would **red** at
-//! elab — precisely the 'green at check, red at eval' failure DN-114 §1 exists to prevent."
+//! elab — precisely the 'green at check, red at eval' failure DN-116 §1 exists to prevent."
 //! **Adversarial verification during this leaf (temporarily reverting the gate's position
 //! sensitivity and driving the exact `BareRef`-style fixture through the real `infer_type`)
 //! disproves the literal claim**: `check_sugar_call` always follows its Stage-2 gate with a full
@@ -586,7 +586,7 @@ fn stage2_bare_nullary_lower_rule_value_position_refused() {
 
 /// **DN-115 §6 item 5.** A free RHS identifier that is not in *any* same-nodule registry (no
 /// `fn`/ctor/prim/`lower`-rule of that name) — the shape a genuinely cross-nodule (Stage 4)
-/// reference would present as, since this gate never consults `self.imports` (DN-114 §3.1; DN-115
+/// reference would present as, since this gate never consults `self.imports` (DN-116 §3.1; DN-115
 /// §5). Stage 2 must **not** start accepting it. Companion to (and independent of)
 /// `reachability_stage1b.rs::control_free_non_param_id_hits_stage2_residual`, whose own regression
 /// coverage this leaf's `rhs_first_free_id` edits must not break (re-run, still green — see the

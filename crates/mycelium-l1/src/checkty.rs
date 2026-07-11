@@ -2701,7 +2701,7 @@ fn check_lower_rule_rhs_type(
 /// empty `value_params` makes this identical to the pre-Stage-1b empty-scope walk — no behavioral
 /// change for that case) and infers the RHS's type once.
 ///
-/// **Why the call site reuses this instead of re-checking per-argument types (Option B, DN-114):**
+/// **Why the call site reuses this instead of re-checking per-argument types (Option B, DN-116):**
 /// the checker has **no coercion** (`want == got`, exact match — see the ordinary user-fn accept
 /// branch's own `if want != got` gate) so a monomorphic value-parametric rule's RHS result type is
 /// **fixed at definition** — inferring it once, with the params bound to their *declared* types
@@ -2724,24 +2724,25 @@ fn check_lower_rule_rhs_type(
 /// from the (now possibly non-empty) value-param scope closes both: every `let`/lambda/match binder
 /// pushed during the RHS walk — value param **or** RHS-local — is tracked exactly as it would be
 /// inside an ordinary function body, so a double-consume of either is refused here too, never
-/// silently. **This is the M-919 *upper-bound* (duplication) check only** — it does not by itself
-/// make a *call site* with a `Substrate`-**containing** value parameter safe to accept (a
-/// value-parametric expansion *splices* the caller's argument node into the RHS, which is a
-/// different hazard than an ordinary function call — see [`Cx::check_sugar_call`]'s own Stage-3
-/// (OQ-H4) gate, which refuses any value parameter whose type is or **structurally contains**
-/// `Substrate` outright, via [`Cx::ty_structurally_contains_substrate`]'s recursive walk into
-/// registered `Data` types' constructor fields — not just a top-level `Substrate` type — rather
-/// than relying on this tracker alone).
+/// silently. **This is the M-919 *upper-bound* (duplication) check only, over the RHS-local
+/// bindings and the *unsubstituted* value-param references.** It does not by itself make a *call
+/// site* with a `Substrate`-**containing** value parameter safe to accept — a value-parametric
+/// expansion *splices* the caller's argument node into the RHS at every occurrence of its param,
+/// which is a different hazard than an ordinary function call (each param used only once here,
+/// against its own *declared* type, not the call site's actual argument content). Closing that is
+/// [`Cx::check_sugar_call`]'s own Stage-3 (OQ-H4/DN-117) job: the real substituted-`Expr` affine
+/// walk (triggered by [`Cx::ty_structurally_contains_substrate`] or a per-argument tracker-touch
+/// signal — see that function's doc comment).
 ///
-/// **Stage-3's two gates are not redundant with each other (DN-114 §3.2, resolved 2026-07-11).**
-/// [`Cx::check_sugar_call`]'s Stage-3 part 1 (the value-parameter structural-containment check just
-/// named) and part 2 ([`Cx::rhs_first_affine_binding`], the RHS-*local*-binding check) close two
-/// distinct hazard classes: part 1 gates a value **parameter's declared type**; part 2 gates an
-/// RHS-local `let`-bound affine **acquisition** (a helper `fn` returning `Substrate`, or a bare
-/// `consume`) that appears in no parameter's type at all. A rule with no affine-typed value
-/// parameter but a `let`-bound `Substrate`-returning helper used twice in its RHS is caught only by
-/// part 2; a rule whose value parameter's type structurally wraps a `Substrate` field with no
-/// RHS-local `let` at all is caught only by part 1. Neither subsumes the other.
+/// **Stage 3's RHS-local-affine-binding case needs no separate structural gate (DN-117 §3.3,
+/// 2026-07-11 — superseding the earlier two-part-gate design).** This function's own active
+/// tracker, seeded from the value-param scope and walking the *unsubstituted* `rhs`, already and
+/// unconditionally catches a duplicated RHS-local affine acquisition (a `let`-bound helper-fn call
+/// returning `Substrate`, or a bare `consume`, referenced more than once) — that hazard does not
+/// depend on value-parameter substitution at all, so no additional structural pre-check
+/// (`Cx::rhs_first_affine_binding`, since removed) is needed; a **dropped** RHS-local affine binding
+/// is correctly *accepted* here too (DN-117 §4.3 — the static pass enforces only the use-at-most-once
+/// upper bound), where the earlier structural gate wrongly refused it wholesale.
 #[allow(clippy::too_many_arguments)] // mirrors check_lower_rule_rhs_type/check_fn_body's own shape
 fn infer_expr_rule_rhs_type(
     ld: &LowerDecl,
@@ -2771,6 +2772,8 @@ fn infer_expr_rule_rhs_type(
         std_sys: false,
         depth: Cell::new(0),
         affine: Tracker::seeded(&scope),
+        #[cfg(test)]
+        stage3_sabotage_skip_substitution: false,
     };
     cx.infer(&mut scope, rhs).map_err(|e| {
         CheckError::new(
@@ -3877,6 +3880,8 @@ fn check_fn_body(
         // scope so a `Substrate`-typed parameter is already tracked as the body starts (M-903;
         // DN-71 §4.2: a parameter pass counts as the caller's move-in).
         affine: Tracker::seeded(&scope),
+        #[cfg(test)]
+        stage3_sabotage_skip_substitution: false,
     };
     let (got, body) = cx.check(&mut scope, &fd.body, Some(&ret))?;
     if got != ret {
@@ -3941,6 +3946,27 @@ fn check_bounds(
     Ok(bounds)
 }
 
+/// A minimal, per-call fresh-name generator for [`Cx::stage3_substitute_expr`]'s (A)-style
+/// RHS-local-binder renaming (M-1054 Stage 3, DN-117 §2 step 1) — the check-time-only analogue of
+/// [`crate::elab::Elab::fresh`]. `%`-prefixed (surface-illegal — `crate::lexer::is_ident_start`
+/// forbids `%`, mirrored by every other synthetic-name scheme in this module/`elab.rs`), so a
+/// minted name can never collide with a real surface identifier; the counter makes distinct mints
+/// within one substitution walk distinct from each other. Not persisted past one
+/// `check_sugar_call` invocation — a fresh instance every time (no cross-call state, unlike
+/// `elab.rs`'s `SUGAR_EXPANSION_SITE`, which needs cross-invocation uniqueness for the *real*,
+/// elaboration-time expansion; this walk's renamed binders are discarded with the rest of the
+/// substituted term).
+#[derive(Default)]
+struct Stage3Fresh(u64);
+
+impl Stage3Fresh {
+    fn mint(&mut self) -> String {
+        let n = self.0;
+        self.0 += 1;
+        format!("%stage3-subst%{n}")
+    }
+}
+
 /// The checking context for one function body.
 struct Cx<'a> {
     site: &'a str,
@@ -3994,6 +4020,18 @@ struct Cx<'a> {
     /// `crate::affine`'s module docs for why. (FLAG-6 fix, M-973: this doc previously read that the
     /// tracker was inert in `check_lower_rule_rhs_type`, stale since M-919 made it active there.)
     affine: Tracker,
+    /// **Test-only non-vacuity sabotage toggle (M-1054 Stage 3, DN-117 §5 item 2).** When `true`,
+    /// [`Self::check_sugar_call`]'s Stage-3 walk feeds the walk the **unsubstituted** `rhs` instead
+    /// of the real, spliced [`Self::stage3_substitute_expr`] output — simulating "the substitution
+    /// never ran" to prove the substituted-`Expr` walk is load-bearing: a fixture that must
+    /// genuinely REFUSE (e.g. the composite/hidden-affine classes no type-based gate alone can
+    /// catch) should wrongly ACCEPT under this sabotage. **Does not exist in a non-test build at
+    /// all** (`#[cfg(test)]`-gated field — zero production footprint); every non-test `Cx`
+    /// construction site sets it `false` (also `#[cfg(test)]`-gated, so it only compiles under
+    /// `cfg(test)` too — see each `Cx { .. }` literal). Set `true` only by the dedicated
+    /// `#[cfg(test)]`-only entry point in `src/tests/affine_stage3.rs`.
+    #[cfg(test)]
+    stage3_sabotage_skip_substitution: bool,
 }
 
 /// RFC-0040 (M-977): if `expected` is a **cons-list-shaped** user ADT, return its `(nil, cons)`
@@ -5531,7 +5569,7 @@ impl Cx<'_> {
     }
 
     /// **M-1054 Stage 1b — expression-position sugar-rule call-site ACCEPT** (DN-110 §5-A;
-    /// DN-114, Option B — the def-time RHS type-scheme). A `lower`-declared rule with **value**
+    /// DN-116, Option B — the def-time RHS type-scheme). A `lower`-declared rule with **value**
     /// parameters ([`LowerDecl::value_params`] — distinct from the `derive`-facing *type*
     /// parameters in [`LowerDecl::params`]) is recognized at an ordinary call site `Name(args)`,
     /// arity- and type-matched exactly like a user-fn call (DRY with the fn branch above — same
@@ -5551,20 +5589,28 @@ impl Cx<'_> {
     /// ratified two-phase split: L1 check-phase for typing/def-site/affine, L0 elab-phase for the
     /// hygienic expansion (never doubly-expanding, never dragging `%`-freshening into the checker).
     ///
-    /// **Two honest, never-silent gates keep this accept sound (G2/VR-5) — see DN-114:**
-    /// - **Stage 3 (OQ-H4, affine soundness).** Refuses any `Substrate`-typed value parameter, and
-    ///   (defensively) any RHS-local binding that is *structurally* affine-producing (a `let`-bound
-    ///   call to a fn whose declared return type is `Substrate`, or a bare `consume`). An ordinary
+    /// **Two honest, never-silent gates keep this accept sound (G2/VR-5) — see DN-116/DN-117:**
+    /// - **Stage 3 (OQ-H4, affine soundness — DN-117, real linear check, landed).** A value
+    ///   parameter (or RHS-local binding) with an affine surface no longer refuses *wholesale*.
+    ///   Instead: [`Self::ty_structurally_contains_substrate`] is retained only as a cheap
+    ///   **trigger** (DN-117 §3.2), together with a precise per-argument "did checking this
+    ///   argument touch the affine tracker at all" signal (a strict superset of the trigger DN-117
+    ///   §3.2's literal text names — needed to catch the "affine-hiding-non-affine-type" class,
+    ///   DN-117 §2/§5 R3, that no *type*-based trigger alone can see). When triggered, the real
+    ///   M-919 [`crate::affine::Tracker`] walks the **substituted** `Expr` — each argument spliced
+    ///   at every unshadowed occurrence of its value param, the check-time-only analogue of
+    ///   [`crate::elab::sugar_expand`]'s (B) substitution (see [`Self::stage3_substitute_expr`]) —
+    ///   and the call is accepted **iff no [`UseOutcome::DoubleUse`] is produced**. An ordinary
     ///   (non-affine) argument may safely be spliced into the RHS at more than one occurrence (see
-    ///   [`crate::elab::sugar_expand`] — re-evaluation, not a soundness hazard, for a pure v0
-    ///   value); an *affine* argument may not — [`crate::elab::Elab::app`]'s ordinary fn-call
-    ///   inlining `Let`-binds each argument **exactly once**, but Stage 1's (B) substitution
+    ///   [`crate::elab::sugar_expand`]'s own doc comment — re-evaluation, not a soundness hazard,
+    ///   for a pure v0 value); an *affine* argument may not — [`crate::elab::Elab::app`]'s ordinary
+    ///   fn-call inlining `Let`-binds each argument **exactly once**, but Stage 1's (B) substitution
     ///   splices the raw argument node verbatim at **every** RHS occurrence of its value param, so
-    ///   an affine value param could be double-consumed by expansion alone. Closing this at the
-    ///   value-parameter level removes the hazard entirely; the RHS-local-binding check is an
-    ///   additional structural safety net over the realistic "helper-fn-acquired `Substrate`" shape
-    ///   [`infer_expr_rule_rhs_type`]'s own doc comment names — not a full second affine-inference
-    ///   pass (that remains Stage 3's own job, the substituted-Expr affine re-check, M-919/OQ-H4).
+    ///   an affine value param genuinely used more than once would be double-consumed by expansion
+    ///   alone — this is exactly what the substituted-`Expr` walk now catches precisely (accept
+    ///   linear-or-dropped, refuse duplicated — DN-117 §4.3: **a dropped affine value param is
+    ///   ACCEPTED**, not refused; the static pass enforces only the use-at-most-once upper bound,
+    ///   the must-consume lower bound is an M-904 runtime concern, unchanged by this gate).
     /// - **Stage 2 (OQ-H1, def-site resolution).** Refuses an RHS identifier that is genuinely
     ///   **free** — neither a value parameter, an RHS-local binder, nor a same-nodule,
     ///   unambiguous top-level fn/constructor/`lower`-rule name (see [`Self::rhs_first_free_id`]).
@@ -5597,38 +5643,50 @@ impl Cx<'_> {
                 args.len()
             ));
         }
-        // Stage 3 (OQ-H4) gate, part 1 — a value parameter whose type **is, or structurally
-        // contains** (DN-114 §3.2), `Substrate` is refused outright (see the doc comment above for
-        // why, and `Self::ty_structurally_contains_substrate`'s own doc comment for the recursive
-        // walk): checked before the per-argument type walk so the dedicated affine diagnostic wins
-        // over an incidental argument-type mismatch (G2).
-        for pm in &rule.value_params {
-            let (pty, _) = resolve_ty(self.site, self.types, &[], &pm.ty)?;
-            let mut visiting = BTreeSet::new();
-            if self.ty_structurally_contains_substrate(&pty, &mut visiting) {
-                return self.err(format!(
-                    "`{name}` (a `lower` sugar rule) has value parameter `{}` of type `{pty}`, \
-                     which is (or structurally contains — DN-114 §3.2) an affine (`Substrate`) \
-                     field — M-1054 Stage 1b accepts only the affine-free fragment: expansion \
-                     (`crate::elab::sugar_expand`'s (B) substitution) splices a use-site argument \
-                     node into every RHS occurrence of its value param, which would double-consume \
-                     an affine field referenced more than once (e.g. via two separate pattern \
-                     matches that each extract it). The substituted-Expr affine re-check over the \
-                     expanded RHS is Stage 3 work (M-919/OQ-H4), not built yet (never a \
-                     silently-unchecked affine accept — G2).",
-                    pm.name
-                ));
-            }
-        }
+        // Stage 3 (OQ-H4) gate — TRIGGER, not decision (DN-117 §3.2, demoted from the earlier
+        // wholesale-refusal): does any value parameter's *declared* type structurally contain
+        // `Substrate` (DN-116 §3.2's recursive walk, retained verbatim as a cheap, sound-to-widen
+        // early signal)? This alone under-covers the "affine-hiding-non-affine-type" class (DN-117
+        // §2/§5 R3 — an `Int`-typed param whose *argument* nonetheless carries affine content via a
+        // side-effecting `consume`), so it is OR'd below with a precise per-argument signal computed
+        // while type-checking each argument (never a silent gap — see that loop's own comment).
+        let mut has_affine_surface = rule.value_params.iter().any(|pm| {
+            resolve_ty(self.site, self.types, &[], &pm.ty)
+                .map(|(pty, _)| {
+                    let mut visiting = BTreeSet::new();
+                    self.ty_structurally_contains_substrate(&pty, &mut visiting)
+                })
+                .unwrap_or(false)
+        });
         // Match + check each argument against its declared parameter type — the same bidirectional
         // discipline the user-fn branch (above, in `check_app`) uses, so a bare-decimal argument
         // still takes its parameter's width and a genuine mismatch is reported per-parameter, by
         // name (DRY with that branch's `edge_mismatch` diagnostic). Rebuilt args feed the accepted
         // call node below, mirroring the user-fn branch's own `rebuilt`.
+        //
+        // `pre_args_snapshot` — the affine tracker's state *before* any argument is examined. Each
+        // argument's own check below records ordinary "the caller passed this argument once"
+        // affine bookkeeping against `self.affine` (correct for an ordinary fn call's Let-bind-once
+        // semantics, which this loop's *shape* mirrors) — but that bookkeeping is the WRONG model
+        // for a value-parametric rule's actual expansion semantics, where the argument is evaluated
+        // once *per occurrence of its param in the RHS* (zero, one, or many — DN-117 §2). When the
+        // Stage-3 trigger fires below, the substituted-`Expr` walk restores this snapshot and
+        // becomes the *sole* source of truth for this call's affine ledger, discarding this loop's
+        // own (occurrence-blind) bookkeeping — see that block's own comment.
+        let pre_args_snapshot = self.affine.snapshot();
         let mut rebuilt = Vec::with_capacity(args.len());
         for (pm, a) in rule.value_params.iter().zip(args) {
             let (want, _) = resolve_ty(self.site, self.types, &[], &pm.ty)?;
+            let pre_arg = self.affine.snapshot();
             let (got, a2) = self.check(scope, a, Some(&want))?;
+            // Precise per-argument trigger signal: did checking *this* argument touch the affine
+            // tracker at all (any slot's Live/Moved state changed)? This is exact, not a structural
+            // over-approximation — it fires exactly when the argument, as actually checked,
+            // references or produces affine content reachable through an existing scope slot (e.g.
+            // R3's `let _ = consume s in 0`), independent of the param's own declared type.
+            if self.affine.snapshot() != pre_arg {
+                has_affine_surface = true;
+            }
             if want != got {
                 return self.err(format!(
                     "`{name}` parameter `{}`: {}",
@@ -5638,16 +5696,13 @@ impl Cx<'_> {
             }
             rebuilt.push(a2);
         }
-        // Stage 3 (OQ-H4) gate, part 2 — a structurally affine RHS-local binding (see the doc
-        // comment above: a `let`-bound call to a `Substrate`-returning fn, or a bare `consume`).
-        if let Some(offender) = self.rhs_first_affine_binding(rhs, 0)? {
-            return self.err(format!(
-                "`{name}`'s RHS introduces an affine (`Substrate`)-typed local binding `{offender}` \
-                 — M-1054 Stage 1b accepts only the affine-free fragment; the substituted-Expr \
-                 affine re-check over the expanded RHS is Stage 3 work (M-919/OQ-H4), not built yet \
-                 (never a silently-unchecked affine accept — G2)."
-            ));
-        }
+        // Stage 3 (OQ-H4) gate, former "part 2" (an RHS-local `let`-bound affine acquisition) is
+        // SUBSUMED, not re-checked here (DN-117 §3.3, net DRY win): `infer_expr_rule_rhs_type`
+        // (below) already, unconditionally, walks the raw (unsubstituted) `rhs` with its own active
+        // seeded `Tracker` — an RHS-local affine binding used more than once is caught there
+        // directly (that check does not depend on value-parameter substitution at all), and a
+        // dropped-but-unused one is correctly accepted (DN-117 §4.3) rather than refused wholesale
+        // by a structural pre-check that could not tell "unused" from "used twice" apart.
         // Stage 2 (OQ-H1) gate — the first genuinely free RHS identifier, if any (see
         // `rhs_first_free_id`'s doc comment for the exact accepted-fragment boundary).
         let bound: Vec<String> = rule.value_params.iter().map(|p| p.name.clone()).collect();
@@ -5672,7 +5727,7 @@ impl Cx<'_> {
                 return self.err(format!(
                     "`{name}`'s RHS references the `lower`-rule `{free}` in value position — a \
                      `lower` rule has no L0 form of its own to fall through to (M-1054 Stage 1b \
-                     §5.2 wiring; DN-114) and resolves only when it is the head of a call \
+                     §5.2 wiring; DN-116) and resolves only when it is the head of a call \
                      (`{free}(...)`). Refused here, at check, with this specific diagnostic \
                      (DN-115 §4.2/G2) rather than falling through to a later, generic \"unknown \
                      name\" refusal from this rule's own RHS re-type-check — never-silent either \
@@ -5688,7 +5743,61 @@ impl Cx<'_> {
                  built yet (never a silent free-variable splice — G2)."
             ));
         }
-        // Both gates passed: type the RHS once (Option B, DN-114 — see the doc comment above) and
+        // Stage 3 (OQ-H4) real linear check — only when triggered (DN-117 §3.2): build the
+        // check-time-only substituted `Expr` (each argument spliced at every unshadowed occurrence
+        // of its value param) and walk it with the real M-919 `Tracker`, accepting iff no
+        // `UseOutcome::DoubleUse` is produced. See `Self::stage3_substitute_expr`'s doc comment for
+        // the shadowing/capture-avoidance discipline.
+        if has_affine_surface {
+            // Discard the per-argument loop's own (occurrence-blind) bookkeeping above — the
+            // substituted-`Expr` walk below re-derives it correctly, once, from scratch (see the
+            // `pre_args_snapshot` comment above for why the per-arg loop's own bookkeeping is not
+            // the right model here).
+            self.affine.restore(&pre_args_snapshot);
+            let params_for_subst: Vec<(String, Expr)> = rule
+                .value_params
+                .iter()
+                .map(|p| p.name.clone())
+                .zip(rebuilt.iter().cloned())
+                .collect();
+            let mut shadow: Vec<(String, String)> = Vec::new();
+            let mut fresh = Stage3Fresh::default();
+            #[cfg_attr(not(test), allow(unused_mut))]
+            let mut substituted =
+                self.stage3_substitute_expr(rhs, &params_for_subst, &mut shadow, &mut fresh, 0)?;
+            // Non-vacuity sabotage hook (`#[cfg(test)]`-only, DN-117 §5 item 2) — see
+            // `Cx::stage3_sabotage_skip_substitution`'s doc comment. No-op (and does not exist at
+            // all) outside a test build.
+            #[cfg(test)]
+            if self.stage3_sabotage_skip_substitution {
+                substituted = rhs.clone();
+            }
+            // Defensive completeness (DN-117 §2 step 2, mirroring `infer_expr_rule_rhs_type`'s own
+            // seeding): also push the rule's own declared value-param bindings on top of the real
+            // ambient scope, in case some occurrence was not spliced (should not happen under
+            // complete substitution — never a silent skip if it ever does, G2). These slots are
+            // never expected to be referenced by the substituted term.
+            let depth = scope.len();
+            for pm in &rule.value_params {
+                let (pty, _) = resolve_ty(self.site, self.types, &[], &pm.ty)?;
+                scope.push((pm.name.clone(), pty.clone()));
+                self.affine.push(&pty);
+            }
+            let walk_result = self.check(scope, &substituted, None);
+            scope.truncate(depth);
+            self.affine.truncate(depth);
+            walk_result.map_err(|e| {
+                CheckError::new(
+                    self.site,
+                    format!(
+                        "`{name}` (a `lower` sugar rule) rejects this call — M-1054 Stage 3 \
+                         (OQ-H4/DN-117) real affine re-check over the substituted expansion: {}",
+                        e.message
+                    ),
+                )
+            })?;
+        }
+        // Every gate passed: type the RHS once (Option B, DN-116 — see the doc comment above) and
         // accept, rebuilding the call node exactly like the ordinary user-fn branch does.
         let ret_ty = infer_expr_rule_rhs_type(
             rule,
@@ -5703,19 +5812,23 @@ impl Cx<'_> {
         Ok((ret_ty, app_node(head, rebuilt)))
     }
 
-    /// **M-1054 Stage 1b Stage-3 gate helper (OQ-H4), part 1's recursive core** — does `ty`
+    /// **M-1054 Stage 3 (OQ-H4/DN-117) gate — the Stage-3 *trigger*'s recursive core** — does `ty`
     /// **structurally contain** [`Ty::Substrate`] anywhere: at the top level, nested inside a
     /// registered [`Data`](Ty::Data) type's constructor fields (recursively, resolving each field's
     /// abstract [`Ty::Var`]s against `ty`'s own type arguments via [`subst_ty`]), or inside a
-    /// [`Seq`](Ty::Seq) element / [`Fn`](Ty::Fn) argument-or-return position. Closes the DN-114 §3.2
-    /// composite/nested-affine hazard part 1's earlier `matches!(pty, Ty::Substrate(_))` check
-    /// missed entirely: a `Data("Handle")` whose sole constructor wraps a `Substrate` field (e.g.
-    /// `Wrap(Substrate{gpu})`) is refused here even though `pty` itself is `Data("Handle", [])`, not
-    /// `Ty::Substrate` — because the RHS can still pattern-match the value twice to extract the
-    /// affine field at each occurrence, double-consuming it exactly as a bare `Substrate` parameter
-    /// would (part 2, [`Self::rhs_first_affine_binding`], is a defensive net over *some* of that
-    /// shape via `let`-bound extraction helpers, but never inspected match-arm patterns — this is
-    /// the primary, structural closure of the hazard, not a redundant second check).
+    /// [`Seq`](Ty::Seq) element / [`Fn`](Ty::Fn) argument-or-return position.
+    ///
+    /// **No longer the accept/refuse decision (DN-117 §3.2, superseding the earlier DN-116 §3.2
+    /// design).** This predicate used to *refuse outright* any value parameter it matched; it is now
+    /// one of two conditions [`Self::check_sugar_call`] OR's together to decide whether to run the
+    /// real substituted-`Expr` affine walk (the other being a precise per-argument tracker-touch
+    /// signal — that function's own doc comment) — the walk itself is what accepts or refuses. A
+    /// `Data("Handle")` whose sole constructor wraps a `Substrate` field (e.g. `Wrap(Substrate{gpu})`)
+    /// still matches here even though `pty` itself is `Data("Handle", [])`, not `Ty::Substrate` —
+    /// this is exactly what makes the composite/nested-affine case (a caller's argument
+    /// pattern-matched twice to extract the affine field) trigger the real walk, which then decides
+    /// linear-use (accept) vs. duplication (refuse) precisely, rather than refusing every composite
+    /// argument wholesale as the earlier design did.
     ///
     /// **Termination (never a silent infinite loop, G2).** `visiting` accumulates the [`Data`]
     /// **type names** currently on the walk's call stack (on-path cycle detection, not a permanent
@@ -5998,158 +6111,353 @@ impl Cx<'_> {
         }
     }
 
-    /// **M-1054 Stage 1b Stage-3 gate helper (OQ-H4), part 2** — a **structural** (not fully
-    /// type-inferring) search for an RHS `let`-bound local whose bound expression is *syntactically*
-    /// affine-producing: a bare `consume <expr>` (always yields a `Substrate` value — see
-    /// [`crate::ast::Expr::Consume`]'s own doc comment), or a call `head(args)` where `head` is a
-    /// known top-level `fn` whose **declared** return type is `Substrate` (the exact
-    /// "helper-fn-acquired `Substrate`" shape [`infer_expr_rule_rhs_type`]'s own doc comment names).
-    /// Narrower than a full second affine-inference pass over the RHS (that remains Stage 3's own
-    /// job, M-919/OQ-H4) but sufficient to refuse the realistic shape rather than silently accept it
-    /// (G2) — see [`Self::check_sugar_call`]'s doc comment for why this is a defensive addition
-    /// alongside the value-parameter check, not the primary soundness gate. Exhaustively recurses
-    /// into every [`Expr`] child (no wildcard arm) so no subtree is silently skipped.
-    fn rhs_first_affine_binding<'e>(
+    /// **M-1054 Stage 3 (OQ-H4), DN-117 §2 step 1 — the check-time-only substituted `Expr`
+    /// builder.** The `Expr`-level analogue of [`crate::elab::sugar_expand`]'s (B) substitution
+    /// (which operates on L0 `Node`s at *elaboration* time): splices each `params[i].1` (an
+    /// already-checked argument `Expr`) at every **unshadowed** occurrence of `params[i].0` (a
+    /// value-parameter name) inside `e`. The result is discarded after the Stage-3 affine verdict
+    /// ([`Self::check_sugar_call`]) — Option B (DN-116) is untouched; `Elab::app` still re-derives
+    /// the real expansion independently at L0 (no double-expansion, DRY).
+    ///
+    /// **Shadowing (B).** An occurrence bound by an inner `let`/`match`-arm/`for`/`lambda` binder of
+    /// the same spelling as a value param is *not* substituted — it refers to that inner binder, not
+    /// the param (mirrors [`crate::elab::sugar_expand`]'s own unshadowed-occurrence logic,
+    /// `elab.rs:942`).
+    ///
+    /// **(A)-style fresh-renaming of RHS-local binders — a necessary refinement beyond DN-117 §2's
+    /// literal (B)-only text (flagged in this leaf's report/ratification, not silently added).**
+    /// Every RHS-local binder this walk introduces (`Let`/`Lambda`/`For`/match-arm pattern idents)
+    /// is renamed to a fresh, `%`-prefixed synthetic name (guaranteed disjoint from any surface
+    /// spelling — `%` is lexer-illegal, `is_ident_start`/`is_ident_continue`), exactly mirroring
+    /// [`crate::elab::sugar_expand`]'s own (A) step. **Why this is needed, not optional:** without
+    /// it, a spliced argument's own free variable (e.g. a caller's `s` inside `consume s`) could be
+    /// *captured* by an RHS-local binder that coincidentally shares its spelling (e.g.
+    /// `let s = 5 in p`) — the substituted term would then wrongly resolve the spliced `s` to the
+    /// RHS's own local `s`, producing a spurious type-mismatch refusal (a false REFUSE of a
+    /// linear-use ACCEPT case) rather than the correct verdict. This capture hazard cannot arise for
+    /// the *real*, elaboration-time expansion (Stage 1's own (A) freshening already prevents it
+    /// there) — it is specific to this check-time-only, separately-built substituted term, so it
+    /// needs its own (A) step. `%`-renaming a `Let`/`Lambda`/`For` binder is always unambiguously
+    /// safe (those never denote anything but a fresh binder); a match-arm pattern identifier that is
+    /// genuinely ambiguous between "binder" and "nullary constructor reference" without a scrutinee
+    /// type cannot be safely `%`-renamed either way — see
+    /// [`Self::stage3_substitute_pattern`]'s own doc comment: this ambiguous case now **refuses the
+    /// whole sugar call** (fixed 2026-07-11, a CRITICAL false-accept found by adversarial review;
+    /// FLAG-pattern-ctor-collision, DN-117 ratification note) rather than leaving the binder
+    /// unrenamed, which is exactly the capture hazard this paragraph describes.
+    ///
+    /// Depth-bounded by [`MAX_CHECK_DEPTH`] like every other recursive walk in this module (never a
+    /// silent stack overflow on a pathological RHS, G2).
+    #[allow(clippy::too_many_arguments)]
+    fn stage3_substitute_expr(
         &self,
-        e: &'e Expr,
+        e: &Expr,
+        params: &[(String, Expr)],
+        shadow: &mut Vec<(String, String)>,
+        fresh: &mut Stage3Fresh,
         depth: u32,
-    ) -> Result<Option<&'e str>, CheckError> {
+    ) -> Result<Expr, CheckError> {
         if depth > MAX_CHECK_DEPTH {
             return Err(CheckError::new(
                 self.site,
                 format!(
                     "expression nesting exceeds the checker depth budget ({MAX_CHECK_DEPTH}) — a \
-                     pathologically-nested `lower` rule RHS (M-1054 Stage 1b affine-binding walk)"
+                     pathologically-nested `lower` rule RHS (M-1054 Stage 3 substituted-Expr walk)"
                 ),
             ));
         }
         let d = depth + 1;
-        match e {
+        Ok(match e {
+            Expr::Path(p) if p.0.len() == 1 => {
+                let n = &p.0[0];
+                if let Some((_, f)) = shadow.iter().rev().find(|(orig, _)| orig == n) {
+                    Expr::Path(Path(vec![f.clone()]))
+                } else if let Some((_, arg)) = params.iter().find(|(pn, _)| pn == n) {
+                    arg.clone()
+                } else {
+                    e.clone()
+                }
+            }
+            Expr::Path(_) | Expr::Lit(_) => e.clone(),
             Expr::Let {
-                name, bound, body, ..
+                name,
+                ty,
+                bound,
+                body,
             } => {
-                if self.expr_is_structurally_affine(bound)? {
-                    return Ok(Some(name.as_str()));
+                let bound2 = self.stage3_substitute_expr(bound, params, shadow, fresh, d)?;
+                let f = fresh.mint();
+                shadow.push((name.clone(), f.clone()));
+                let body2 = self.stage3_substitute_expr(body, params, shadow, fresh, d)?;
+                shadow.pop();
+                Expr::Let {
+                    name: f,
+                    ty: ty.clone(),
+                    bound: Box::new(bound2),
+                    body: Box::new(body2),
                 }
-                if let Some(f) = self.rhs_first_affine_binding(bound, d)? {
-                    return Ok(Some(f));
-                }
-                self.rhs_first_affine_binding(body, d)
             }
-            Expr::Path(_) | Expr::Lit(_) => Ok(None),
-            Expr::If { cond, conseq, alt } => {
-                for sub in [cond, conseq, alt] {
-                    if let Some(f) = self.rhs_first_affine_binding(sub, d)? {
-                        return Ok(Some(f));
-                    }
-                }
-                Ok(None)
-            }
+            Expr::If { cond, conseq, alt } => Expr::If {
+                cond: Box::new(self.stage3_substitute_expr(cond, params, shadow, fresh, d)?),
+                conseq: Box::new(self.stage3_substitute_expr(conseq, params, shadow, fresh, d)?),
+                alt: Box::new(self.stage3_substitute_expr(alt, params, shadow, fresh, d)?),
+            },
             Expr::Match { scrutinee, arms } => {
-                if let Some(f) = self.rhs_first_affine_binding(scrutinee, d)? {
-                    return Ok(Some(f));
-                }
+                let scrutinee2 =
+                    self.stage3_substitute_expr(scrutinee, params, shadow, fresh, d)?;
+                let mut arms2 = Vec::with_capacity(arms.len());
                 for arm in arms {
-                    if let Some(f) = self.rhs_first_affine_binding(&arm.body, d)? {
-                        return Ok(Some(f));
-                    }
+                    arms2.push(self.stage3_substitute_arm(arm, params, shadow, fresh, d)?);
                 }
-                Ok(None)
+                Expr::Match {
+                    scrutinee: Box::new(scrutinee2),
+                    arms: arms2,
+                }
             }
-            Expr::For { xs, init, body, .. } => {
-                for sub in [xs.as_ref(), init.as_ref(), body.as_ref()] {
-                    if let Some(f) = self.rhs_first_affine_binding(sub, d)? {
-                        return Ok(Some(f));
-                    }
+            Expr::For {
+                x,
+                xs,
+                acc,
+                init,
+                body,
+            } => {
+                let xs2 = self.stage3_substitute_expr(xs, params, shadow, fresh, d)?;
+                let init2 = self.stage3_substitute_expr(init, params, shadow, fresh, d)?;
+                let fx = fresh.mint();
+                let facc = fresh.mint();
+                shadow.push((x.clone(), fx.clone()));
+                shadow.push((acc.clone(), facc.clone()));
+                let body2 = self.stage3_substitute_expr(body, params, shadow, fresh, d)?;
+                shadow.pop();
+                shadow.pop();
+                Expr::For {
+                    x: fx,
+                    xs: Box::new(xs2),
+                    acc: facc,
+                    init: Box::new(init2),
+                    body: Box::new(body2),
                 }
-                Ok(None)
             }
-            Expr::Lambda { body, .. } => self.rhs_first_affine_binding(body, d),
-            Expr::App { head, args } => {
-                if let Some(f) = self.rhs_first_affine_binding(head, d)? {
-                    return Ok(Some(f));
-                }
-                for a in args {
-                    if let Some(f) = self.rhs_first_affine_binding(a, d)? {
-                        return Ok(Some(f));
-                    }
-                }
-                Ok(None)
-            }
-            Expr::Fuse { left, right } => {
-                for sub in [left, right] {
-                    if let Some(f) = self.rhs_first_affine_binding(sub, d)? {
-                        return Ok(Some(f));
-                    }
-                }
-                Ok(None)
-            }
-            Expr::Reclaim { policy, body } => {
-                for sub in [policy, body] {
-                    if let Some(f) = self.rhs_first_affine_binding(sub, d)? {
-                        return Ok(Some(f));
-                    }
-                }
-                Ok(None)
-            }
-            Expr::Swap { value, .. } => self.rhs_first_affine_binding(value, d),
-            Expr::WithParadigm { body, .. }
-            | Expr::Wild(body)
-            | Expr::Spore(body)
-            | Expr::Wrapping(body)
-            | Expr::Consume(body)
-            | Expr::Try(body) => self.rhs_first_affine_binding(body, d),
-            Expr::Ascribe(inner, _) => self.rhs_first_affine_binding(inner, d),
-            Expr::TupleLit(items) => {
-                for it in items {
-                    if let Some(f) = self.rhs_first_affine_binding(it, d)? {
-                        return Ok(Some(f));
-                    }
-                }
-                Ok(None)
-            }
+            Expr::Swap {
+                value,
+                target,
+                policy,
+            } => Expr::Swap {
+                value: Box::new(self.stage3_substitute_expr(value, params, shadow, fresh, d)?),
+                target: target.clone(),
+                policy: policy.clone(),
+            },
+            Expr::WithParadigm { paradigm, body } => Expr::WithParadigm {
+                paradigm: *paradigm,
+                body: Box::new(self.stage3_substitute_expr(body, params, shadow, fresh, d)?),
+            },
+            Expr::Wild(b) => Expr::Wild(Box::new(
+                self.stage3_substitute_expr(b, params, shadow, fresh, d)?,
+            )),
+            Expr::Spore(b) => Expr::Spore(Box::new(
+                self.stage3_substitute_expr(b, params, shadow, fresh, d)?,
+            )),
+            Expr::Wrapping(b) => Expr::Wrapping(Box::new(
+                self.stage3_substitute_expr(b, params, shadow, fresh, d)?,
+            )),
+            Expr::Consume(b) => Expr::Consume(Box::new(
+                self.stage3_substitute_expr(b, params, shadow, fresh, d)?,
+            )),
+            Expr::Try(b) => Expr::Try(Box::new(
+                self.stage3_substitute_expr(b, params, shadow, fresh, d)?,
+            )),
             Expr::Colony(hyphae) => {
+                let mut out = Vec::with_capacity(hyphae.len());
                 for h in hyphae {
-                    if let Some(forage) = &h.forage {
-                        if let Some(f) = self.rhs_first_affine_binding(forage, d)? {
-                            return Ok(Some(f));
-                        }
-                    }
-                    if let Some(f) = self.rhs_first_affine_binding(&h.body, d)? {
-                        return Ok(Some(f));
-                    }
+                    let forage = match &h.forage {
+                        Some(f) => Some(Box::new(
+                            self.stage3_substitute_expr(f, params, shadow, fresh, d)?,
+                        )),
+                        None => None,
+                    };
+                    let body = self.stage3_substitute_expr(&h.body, params, shadow, fresh, d)?;
+                    out.push(Hypha { forage, body });
                 }
-                Ok(None)
+                Expr::Colony(out)
             }
-        }
+            Expr::Lambda {
+                params: lparams,
+                body,
+            } => {
+                let mut renamed = Vec::with_capacity(lparams.len());
+                for p in lparams {
+                    let f = fresh.mint();
+                    shadow.push((p.name.clone(), f.clone()));
+                    renamed.push(Param {
+                        name: f,
+                        ty: p.ty.clone(),
+                    });
+                }
+                let body2 = self.stage3_substitute_expr(body, params, shadow, fresh, d)?;
+                for _ in lparams {
+                    shadow.pop();
+                }
+                Expr::Lambda {
+                    params: renamed,
+                    body: Box::new(body2),
+                }
+            }
+            Expr::App { head, args } => {
+                let head2 = self.stage3_substitute_expr(head, params, shadow, fresh, d)?;
+                let mut args2 = Vec::with_capacity(args.len());
+                for a in args {
+                    args2.push(self.stage3_substitute_expr(a, params, shadow, fresh, d)?);
+                }
+                Expr::App {
+                    head: Box::new(head2),
+                    args: args2,
+                }
+            }
+            Expr::Fuse { left, right } => Expr::Fuse {
+                left: Box::new(self.stage3_substitute_expr(left, params, shadow, fresh, d)?),
+                right: Box::new(self.stage3_substitute_expr(right, params, shadow, fresh, d)?),
+            },
+            Expr::Reclaim { policy, body } => Expr::Reclaim {
+                policy: Box::new(self.stage3_substitute_expr(policy, params, shadow, fresh, d)?),
+                body: Box::new(self.stage3_substitute_expr(body, params, shadow, fresh, d)?),
+            },
+            Expr::Ascribe(inner, t) => Expr::Ascribe(
+                Box::new(self.stage3_substitute_expr(inner, params, shadow, fresh, d)?),
+                t.clone(),
+            ),
+            Expr::TupleLit(items) => {
+                let mut out = Vec::with_capacity(items.len());
+                for it in items {
+                    out.push(self.stage3_substitute_expr(it, params, shadow, fresh, d)?);
+                }
+                Expr::TupleLit(out)
+            }
+        })
     }
 
-    /// Is `e` *syntactically* an affine-producing expression — a bare `consume`, or a call to a
-    /// known top-level `fn` whose declared return type resolves to `Substrate`? Used only by
-    /// [`Self::rhs_first_affine_binding`]'s `let`-binding check (see that function's doc comment for
-    /// the full scope/honesty note). `Ok(false)` for every other shape — including a call to an
-    /// *unknown* name (already refused elsewhere by [`Self::rhs_first_free_id`]) or a generic `fn`
-    /// (its return type may depend on an uninstantiated type variable; not this structural check's
-    /// concern).
-    fn expr_is_structurally_affine(&self, e: &Expr) -> Result<bool, CheckError> {
-        match e {
-            Expr::Consume(_) => Ok(true),
-            Expr::App { head, .. } => {
-                let Expr::Path(p) = head.as_ref() else {
-                    return Ok(false);
-                };
-                if p.0.len() != 1 {
-                    return Ok(false);
-                }
-                let Some(fd) = self.fns.get(&p.0[0]) else {
-                    return Ok(false);
-                };
-                let (rty, _) =
-                    resolve_ty(self.site, self.types, &fd.sig.param_names(), &fd.sig.ret)?;
-                Ok(matches!(rty, Ty::Substrate(_)))
-            }
-            _ => Ok(false),
+    /// [`Self::stage3_substitute_expr`]'s `Arm` companion — renames the arm's pattern binders (see
+    /// [`Self::stage3_substitute_pattern`]) before substituting the body, popping exactly as many
+    /// shadow entries as the ORIGINAL (pre-rename) pattern bound.
+    fn stage3_substitute_arm(
+        &self,
+        arm: &Arm,
+        params: &[(String, Expr)],
+        shadow: &mut Vec<(String, String)>,
+        fresh: &mut Stage3Fresh,
+        depth: u32,
+    ) -> Result<Arm, CheckError> {
+        let mut binder_count = 0usize;
+        let pattern2 =
+            self.stage3_substitute_pattern(&arm.pattern, shadow, fresh, &mut binder_count)?;
+        let body2 = self.stage3_substitute_expr(&arm.body, params, shadow, fresh, depth)?;
+        for _ in 0..binder_count {
+            shadow.pop();
         }
+        Ok(Arm {
+            pattern: pattern2,
+            body: body2,
+        })
+    }
+
+    /// [`Self::stage3_substitute_expr`]'s `Pattern` companion — fresh-renames a pattern's binder
+    /// identifiers, pushing each `(orig, fresh)` pair onto `shadow` and incrementing `binder_count`
+    /// (so the caller pops exactly as many as were pushed).
+    ///
+    /// **`Pattern::Ident` ambiguity (FLAG-pattern-ctor-collision, DN-117 ratification note) — now a
+    /// refusal, not a silent "leave unrenamed" (fixed 2026-07-11, post-ratification adversarial
+    /// review — CRITICAL false-accept, see this note's own errata entry).** A bare
+    /// `Pattern::Ident(name)` is *either* a binder *or* a nullary-constructor reference,
+    /// disambiguated only at the real `Cx::check_match` (`Self::resolve_pattern`) against the
+    /// **scrutinee's type** — type information this pure `Expr`-level substitution walk does not
+    /// have (no scrutinee type is threaded through). [`Self::is_any_nullary_ctor`] — is `name` the
+    /// spelling of *any* registered nullary constructor, anywhere in the type registry (not
+    /// scrutinee-scoped)? — is the only conservative, type-independent test available here, and it
+    /// is genuinely ambiguous: `name` could be a binder for *this* pattern's (unrelated) scrutinee
+    /// type, or a real ctor reference. **The previously-shipped choice ("leave it unrenamed,
+    /// treating it as a possible ctor reference") was UNSOUND, not merely narrow:** when `name` is
+    /// actually a genuine binder here, leaving it unrenamed skips this walk's own capture-avoidance
+    /// discipline (see [`Self::stage3_substitute_expr`]'s doc comment on why every RHS-local binder
+    /// must be `%`-freshened) — a spliced argument's free variable of the same spelling (e.g. a
+    /// caller-outer local also named `name`) is then *captured* by this unrenamed pattern binder
+    /// instead of referring to the caller's value, so the tracker never sees the real double-consume
+    /// this produces. **Confirmed reproducible** (`stage3_pattern_ctor_collision_*` tests,
+    /// `src/tests/affine_stage3.rs`): a nullary ctor spelled `s`, a rule `Pick3(h: Handle, q:
+    /// Substrate) = match h { Wrap(s) => consume q }`, called as `(Pick3(Wrap(consume h_backing),
+    /// s), consume s)` with a caller-outer `s` — accepted a genuine double-consume of the outer `s`.
+    /// **Fix: refuse the whole sugar call** with a never-silent diagnostic (G2) rather than guess
+    /// which reading is meant — a conservative false-REFUSE here is sound; the false-ACCEPT was not.
+    /// The full close (scrutinee-type-directed disambiguation, mirroring `resolve_pattern`'s own
+    /// logic) is out of proportion to this fix's scope and remains open, tracked by
+    /// FLAG-pattern-ctor-collision.
+    fn stage3_substitute_pattern(
+        &self,
+        pat: &Pattern,
+        shadow: &mut Vec<(String, String)>,
+        fresh: &mut Stage3Fresh,
+        binder_count: &mut usize,
+    ) -> Result<Pattern, CheckError> {
+        Ok(match pat {
+            Pattern::Wildcard | Pattern::Lit(_) => pat.clone(),
+            Pattern::Ident(name) => {
+                if self.is_any_nullary_ctor(name) {
+                    // FLAG-pattern-ctor-collision — genuinely ambiguous without the scrutinee's
+                    // type (see this fn's own doc comment). Refuse rather than risk the capture
+                    // hazard a silent "leave unrenamed" produces (confirmed false-accept, fixed
+                    // 2026-07-11 — never a guess, G2/VR-5).
+                    return Err(CheckError::new(
+                        self.site,
+                        format!(
+                            "this `lower` sugar rule's RHS binds `{name}` in a match-arm pattern, \
+                             but `{name}` is also the spelling of a registered nullary \
+                             constructor elsewhere — ambiguous between \"binder\" and \
+                             \"constructor reference\" without the scrutinee's type, which this \
+                             check-time substitution walk does not have (M-1054 Stage 3 \
+                             (OQ-H4)/DN-117, FLAG-pattern-ctor-collision). Refused rather than \
+                             risk capturing a spliced argument's free variable of the same \
+                             spelling (a confirmed false-accept of a genuine double-consume) — \
+                             rename this binder, or the colliding constructor, to disambiguate \
+                             (never a silent guess, G2)."
+                        ),
+                    ));
+                }
+                let f = fresh.mint();
+                shadow.push((name.clone(), f.clone()));
+                *binder_count += 1;
+                Pattern::Ident(f)
+            }
+            Pattern::Ctor(name, fields) => Pattern::Ctor(
+                name.clone(),
+                fields
+                    .iter()
+                    .map(|f| self.stage3_substitute_pattern(f, shadow, fresh, binder_count))
+                    .collect::<Result<Vec<_>, _>>()?,
+            ),
+            Pattern::Tuple(fields) => Pattern::Tuple(
+                fields
+                    .iter()
+                    .map(|f| self.stage3_substitute_pattern(f, shadow, fresh, binder_count))
+                    .collect::<Result<Vec<_>, _>>()?,
+            ),
+            Pattern::Or(alts) => Pattern::Or(
+                alts.iter()
+                    .map(|a| self.stage3_substitute_pattern(a, shadow, fresh, binder_count))
+                    .collect::<Result<Vec<_>, _>>()?,
+            ),
+        })
+    }
+
+    /// Conservative, type-independent check: does `name` spell **any** registered nullary
+    /// constructor, anywhere in the type registry (not scoped to a particular scrutinee type)? Used
+    /// only by [`Self::stage3_substitute_pattern`]'s ambiguity gate — see that function's doc
+    /// comment for why a scrutinee-scoped `resolve_pattern`-style resolution is not available at
+    /// this (pure `Expr`, no type context) walk, and why the ambiguous case now refuses rather than
+    /// guesses.
+    fn is_any_nullary_ctor(&self, name: &str) -> bool {
+        self.types.values().any(|d| {
+            d.ctors
+                .iter()
+                .any(|c| c.name == name && c.fields.is_empty())
+        })
     }
 
     /// Check a call to a **generic** function (RFC-0007 §11.3): resolve the callee's signature with
@@ -8252,6 +8560,70 @@ pub(crate) fn infer_type(
         // would risk a false positive on a fragment that isn't the original walk, and the term
         // already passed the real check).
         affine: Tracker::inert(),
+        #[cfg(test)]
+        stage3_sabotage_skip_substitution: false,
+    };
+    cx.infer(scope, e)
+}
+
+/// **Test-only** twin of [`infer_type`] with an **active** affine tracker
+/// ([`Tracker::seeded`], seeded from `scope` — the caller's own pre-existing local bindings, e.g.
+/// a `Substrate`-typed local a fixture wants tracked), instead of `infer_type`'s deliberate
+/// [`Tracker::inert`]. Needed because every M-1054 Stage 1b/Stage 3 white-box fixture checks a bare
+/// call `Expr` directly (no surface grammar for `value_params` yet — DN-110 §8.6, so there is no
+/// `check_nodule`/`fn`-body route to a real, active-tracker `Cx`) via `infer_type`, whose `inert`
+/// tracker is exactly right for its own (post-check re-inference) job but makes every `self.affine`
+/// interaction inside [`Cx::check_sugar_call`]'s Stage-3 (OQ-H4/DN-117) mechanism a no-op — the
+/// per-argument tracker-touch trigger and the substituted-`Expr` double-consume walk both need a
+/// real, active tracker to do anything. `#[cfg(test)]`-gated (never a shipped alternate entry
+/// point — the one production `infer_type` stays `Tracker::inert()`, unconditionally).
+#[cfg(test)]
+pub(crate) fn infer_type_with_active_affine(
+    env: &Env,
+    scope: &mut Vec<(String, Ty)>,
+    e: &Expr,
+) -> Result<Ty, CheckError> {
+    infer_type_with_active_affine_inner(env, scope, e, false)
+}
+
+/// **Test-only, non-vacuity sabotage twin** of [`infer_type_with_active_affine`] (M-1054 Stage 3,
+/// DN-117 §5 item 2): identical, except every `Cx::check_sugar_call` reached while checking `e`
+/// runs its Stage-3 walk over the **unsubstituted** RHS (see
+/// `Cx::stage3_sabotage_skip_substitution`'s own doc comment) — simulating "the substituted-`Expr`
+/// splice never happened," to prove that splice is load-bearing: a fixture that must genuinely
+/// REFUSE under the real mechanism (composite/hidden-affine duplication) should wrongly **ACCEPT**
+/// here.
+#[cfg(test)]
+pub(crate) fn infer_type_with_active_affine_sabotaged(
+    env: &Env,
+    scope: &mut Vec<(String, Ty)>,
+    e: &Expr,
+) -> Result<Ty, CheckError> {
+    infer_type_with_active_affine_inner(env, scope, e, true)
+}
+
+#[cfg(test)]
+fn infer_type_with_active_affine_inner(
+    env: &Env,
+    scope: &mut Vec<(String, Ty)>,
+    e: &Expr,
+    sabotage: bool,
+) -> Result<Ty, CheckError> {
+    let no_imports = NoduleImports::default();
+    let cx = Cx {
+        site: "<test:active-affine>",
+        types: &env.types,
+        fns: &env.fns,
+        traits: &env.traits,
+        instances: &env.instances,
+        imports: &no_imports,
+        lower_rules: &env.lower_rules,
+        tyvars: &[],
+        bounds: &[],
+        std_sys: true,
+        depth: Cell::new(0),
+        affine: Tracker::seeded(scope),
+        stage3_sabotage_skip_substitution: sabotage,
     };
     cx.infer(scope, e)
 }

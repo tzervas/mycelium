@@ -52,6 +52,54 @@ continues building separately and is **not** part of this release.
   Tags stay at their checked strength — Stage 1b/2 reachability `Empirical` on the real elaborator
   path; Stage 3 (full affine re-check) and cross-nodule resolution stay `Declared` (VR-5).
 
+### fix(l1): M-1054 native metaprogramming facility Stage 3 — affine soundness over the substituted `Expr`, plus a critical pattern-ctor false-accept fix (DN-117 Accepted) (2026-07-11)
+
+Lands Stage 3 of the DN-110 §5-A Rank-1 facility (`claude/leaf/m1054-stage3-affine`, pulled down
+against `dev` per mitigation #6). **M-1054 stays `status:in-progress`** — Stage 4 (cross-nodule
+resolution, DN-113/M-1060) is not part of this release.
+
+- **Stage 3 mechanism (`checkty.rs`) — accept-linear, refuse-duplicated.** Replaces the Stage 1b/2
+  wholesale refuse-all-affine gate with a precise check: the M-919 affine `Tracker` now walks the
+  **substituted `Expr`** (each type-checked argument spliced at every RHS occurrence of its value
+  param), at check time, inside `Cx::check_sugar_call` — a check-time-only artifact; `Elab::app`'s
+  dispatch and `elab.rs::sugar_expand` are untouched. The prior conservative structural
+  over-approximations (`rhs_first_affine_binding`/`expr_is_structurally_affine`) are replaced by
+  the real per-argument linear-use walk; `ty_structurally_contains_substrate` is demoted from
+  decision to trigger. A dropped affine value param or RHS-local affine binding is **ACCEPT**
+  (runtime-backstopped, M-904), correcting the earlier defensive over-refusal.
+- **CRITICAL fix, same leaf — pattern/ctor-name-collision false-accept.** Adversarial review found
+  `Cx::stage3_substitute_pattern` left a match-arm `Pattern::Ident` binder **unrenamed** whenever
+  its spelling coincided with an unrelated registered nullary constructor, on the theory this was
+  sound. It was not: when the identifier was genuinely a binder, leaving it unrenamed skipped this
+  same walk's own capture-avoidance discipline, letting a spliced argument's free variable of the
+  same spelling be captured by the pattern binder instead of the caller's value — hiding a real
+  double-consume from the affine tracker. Confirmed reproducible both ways (false `Ok`-accept
+  pre-fix, correct `Err`-refuse post-fix, via a `git stash`-revert of just the fix). Fixed:
+  `stage3_substitute_pattern`/`stage3_substitute_arm` now return `Result<_, CheckError>`, refusing
+  the whole sugar call with a never-silent diagnostic (G2) in the ambiguous case rather than
+  guessing — a conservative false-REFUSE, not the unsound false-ACCEPT it replaces. The full close
+  (scrutinee-type-directed disambiguation) stays open (FLAG-pattern-ctor-collision). Two new tests
+  in `crates/mycelium-l1/src/tests/affine_stage3.rs` (the exploit, now refused; a non-collision
+  control, still accepted — no over-refusal), on top of the leaf's original 12-test §5 corpus.
+- **DN-117 — Accepted** (`docs/notes/DN-117-M1054-Stage3-Affine-Over-Substituted-Expr.md`,
+  delegated ratification, mirroring the DN-115/Stage-2 precedent — ratifies the §1–§7 design
+  decisions, **NOT `Enacted`**, house rule #3) with a same-day append-only Errata (Ratification
+  point 11) recording the pattern-ctor false-accept finding + fix above.
+- **DN-114 mycelium-l1 residual, resolved.** The prior Stage-1b/2 entry above deferred repointing
+  `crates/mycelium-l1/` source/test comments citing "DN-114" (meaning the renumbered DN-116
+  Stage-1b note) while this Stage-3 leaf was actively editing that crate. Closed in this landing's
+  own `dev` pull-down merge: all 22 occurrences across `elab.rs`, `checkty.rs`,
+  `src/tests/checkty.rs`, `src/tests/defsite_resolution_stage2.rs`,
+  `src/tests/reachability_stage1b.rs`, and `src/tests/facility_stage1_hygiene.rs` repointed to
+  **DN-116**, verified by an empty `grep -rn DN-114 crates/mycelium-l1/`.
+- **Verified:** `cargo test -p mycelium-l1` — 559 lib tests (0 failed, 1 ignored) plus every
+  integration target green, after this landing's `dev` pull-down merge (no regression);
+  `clippy -D warnings` / `fmt` clean. Tags stay at their checked strength — the double-consume
+  upper bound over the real substituted `Expr` moves to `Empirical` (checked by the §5/§7 +
+  errata corpus); no `Proven` claim anywhere (VR-5). The pattern-ctor disambiguation residual and
+  the pre-existing prior-handle-alias gap (inherited from M-919, not a Stage-3 regression) stay
+  honestly open, not silently closed.
+
 ### docs(docs-access): fast-follows — real research/CONTRIBUTING PDF ingestion, asset automation, live dark theme, presentable READMEs (2026-07-11)
 
 Four follow-on PRs completing the documentation-access initiative (above) into a shippable,

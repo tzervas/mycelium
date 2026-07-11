@@ -1,4 +1,4 @@
-//! **M-1054 Stage 1b — end-to-end reachability** (DN-110 §5-A; DN-114). Companion to
+//! **M-1054 Stage 1b — end-to-end reachability** (DN-110 §5-A; DN-116). Companion to
 //! `src/tests/facility_stage1_hygiene.rs` (which calls [`elaborate_lower_rule_with_args`] —
 //! Stage 1's L0 elab-phase mechanism — **directly**, exercising (A)+(B) hygiene on the production
 //! expansion path but never through the ordinary program-elaboration pipeline) and
@@ -78,7 +78,7 @@
 use crate::ast::{
     BaseType, Expr, FnDecl, FnSig, Literal, LowerDecl, LowerRhs, Param, Path, TypeRef, WidthRef,
 };
-use crate::checkty::{check_nodule, infer_type, Env, Ty, Width};
+use crate::checkty::{check_nodule, infer_type, infer_type_with_active_affine, Env, Ty, Width};
 use crate::elab::{
     elaborate, elaborate_lower_rule, elaborate_value_parametric_rule_disable_freshening_for_test,
 };
@@ -495,11 +495,15 @@ fn control_item_shaped_rule_still_has_no_expression_form() {
 // Non-vacuity control (c): the two Stage 1b gates each fire on the shape they're named for.
 // -------------------------------------------------------------------------------------------
 
-/// **Stage 3 (OQ-H4) gate fires on an affine value parameter.** A rule declaring a
-/// `Substrate`-typed value parameter is refused outright — never silently accepted (G2) — citing
-/// "Stage 3" and "OQ-H4".
+/// **Superseded by Stage 3's real linear check (DN-117, 2026-07-11) — was
+/// `control_affine_value_param_hits_stage3_residual`, asserted wholesale refusal.** A rule
+/// declaring a `Substrate`-typed value parameter used **exactly once** (linearly) in its RHS is now
+/// **accepted** — the old wholesale-refusal gate DN-117 replaces was strictly stricter than the
+/// language's own static contract (it refused every affine value param, not just duplicated ones).
+/// The duplicate-use refusal corpus (composite + top-level double-consume, cross-argument aliasing,
+/// the affine-hiding-non-affine-type case) lives in `tests/affine_stage3.rs`'s R1–R5.
 #[test]
-fn control_affine_value_param_hits_stage3_residual() {
+fn control_affine_value_param_used_once_is_now_accepted_stage3() {
     let mut e = base_env();
     e.lower_rules.insert(
         "AffineParam".to_owned(),
@@ -515,12 +519,9 @@ fn control_affine_value_param_hits_stage3_residual() {
     );
     let call = scall("AffineParam", vec![sv("some_substrate")]);
     let mut scope = vec![("some_substrate".to_owned(), Ty::Substrate("gpu".to_owned()))];
-    let err = infer_type(&e, &mut scope, &call)
-        .expect_err("an affine (Substrate) value parameter must be refused (Stage 3/OQ-H4)");
-    assert!(
-        err.message.contains("Stage 3") && err.message.contains("OQ-H4"),
-        "expected the Stage-3 (OQ-H4) diagnostic, got: {}",
-        err.message
+    infer_type_with_active_affine(&e, &mut scope, &call).expect(
+        "a Substrate-typed value parameter used exactly once (linearly) must now be ACCEPTED \
+         (M-1054 Stage 3 / DN-117 — accept-linear, refuse-duplicated, not refuse-wholesale)",
     );
 }
 
@@ -548,11 +549,19 @@ fn control_free_non_param_id_hits_stage2_residual() {
     );
 }
 
-/// **Stage 3 (OQ-H4) gate, part 2, fires on a structurally affine RHS-local binding** — a
-/// `let`-bound call to a `fn` whose declared return type is `Substrate` (the exact
-/// "helper-fn-acquired `Substrate`" shape `infer_expr_rule_rhs_type`'s own doc comment names).
+/// **Superseded by Stage 3's real linear check (DN-117 §4.3, 2026-07-11) — was
+/// `control_affine_rhs_local_binding_hits_stage3_residual`, asserted wholesale refusal.** A rule
+/// whose RHS `let`-binds a `Substrate`-returning helper call but never references the binding
+/// afterward (a **drop**) is now **accepted**: the landed M-919 static pass enforces only the
+/// use-at-most-once *upper* bound, not a must-consume *lower* bound (grounded in
+/// `tests/affine.rs::a_never_consumed_substrate_binding_checks_the_static_pass_does_not_reject_leaks`);
+/// the must-consume bound is an M-904 *runtime* concern. The old structural gate this supersedes
+/// was stricter than the language's own static contract (DN-117 §4.3/§7.3 — a grounded correction
+/// of the original task brief, not a new gap). The genuine duplicate-RHS-local-binding refusal is
+/// unconditionally, still caught by `infer_expr_rule_rhs_type`'s own active tracker (unchanged by
+/// this leaf) — see `tests/affine_stage3.rs` for that corpus.
 #[test]
-fn control_affine_rhs_local_binding_hits_stage3_residual() {
+fn control_affine_rhs_local_binding_dropped_is_now_accepted_stage3() {
     let mut e = base_env();
     e.fns.insert(
         "acquire_thing".to_owned(),
@@ -577,11 +586,8 @@ fn control_affine_rhs_local_binding_hits_stage3_residual() {
         slet("s", scall("acquire_thing", vec![]), sv("a")),
     );
     let call = scall("AffineLocal", vec![sc(1), sc(2)]);
-    let err = infer_type(&e, &mut Vec::new(), &call)
-        .expect_err("a structurally affine RHS-local binding must be refused (Stage 3/OQ-H4)");
-    assert!(
-        err.message.contains("Stage 3") && err.message.contains("OQ-H4"),
-        "expected the Stage-3 (OQ-H4) diagnostic, got: {}",
-        err.message
+    infer_type(&e, &mut Vec::new(), &call).expect(
+        "a dropped (never-referenced) RHS-local affine binding must now be ACCEPTED (M-1054 \
+         Stage 3 / DN-117 §4.3 — the drop lower bound is a runtime, M-904 concern)",
     );
 }

@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **Draft** — a design-reasoner build-plan scoping note for the M-1054 native-metaprogramming facility's Stage 3. Records a ranked recommendation + a ratifiable build plan for the orchestrator's/maintainer's review; it is **not** a self-ratification (house rule #3). It does **not** move DN-110/DN-110-8.2 off `Accepted`, nor M-1054 off `in-progress`. Moves to `Accepted` only via maintainer/orchestrator ratification of this note (see §8 Definition of Done). |
+| **Status** | **Accepted** (2026-07-11, delegated ratification — see the dated "Ratification (maintainer-delegated, orchestrator-selected on the merits, 2026-07-11)" section below, mirroring the M-1054 Stage 2 (DN-115) ratification precedent). **Accepted ratifies the §1–§7 design decisions (Rank 1/FLAG-A, the gate→trigger demotion, the drop-accept correction, the §5 test contract) and records the implementation leaf's own adversarial findings while landing it, NOT `Enacted`** (house rule #3: `Enacted` requires stepping through `Accepted` first and means *fully implemented/landed, outside ongoing maintenance* — a call for the integrating parent, not this leaf). Originally **Draft** (2026-07-11) — a design-reasoner build-plan scoping note; the author never moved status to `Accepted` (house rule #3). It does **not** move DN-110/DN-110-8.2 off `Accepted`, nor M-1054 off `in-progress`. |
 | **Kind** | Design note (leaf-scoped, forward-to-recommendation). No code lands with this note — it scopes the Stage-3 implementation for a subsequent `/forward` leaf. |
 | **Decides (proposes, for ratification)** | *For M-1054 Stage 3's scope only; all `Declared` unless a landed/checked basis is cited:* (1) **Q1 mechanism** — run the M-919 affine `Tracker` over the **substituted `Expr`** (each type-checked argument `Expr` spliced at every RHS occurrence of its value param), at **check time**, inside `Cx::check_sugar_call` — the L1-surface-AST layer the affine tracker already operates on (FLAG-A), **not** a post-elab L0 `Node` pass. Reconciles with Option B (DN-116): check still returns the call node for `Elab::app` to expand; the substituted `Expr` is a **check-time-only** artifact for the affine verdict. (2) **Q2 accounting** — reuse the existing `Tracker` (`use_at` + `snapshot`/`restore`/`merge_alt`) for linear-use counting, which already handles match arms / lets / lambdas by scope-index; **replace** the three conservative structural approximations (`ty_structurally_contains_substrate` part 1, `rhs_first_affine_binding`/`expr_is_structurally_affine` part 2) as the *accept/refuse decision*, retaining the cheap `ty_structurally_contains_substrate` predicate only as the *trigger* that decides whether the substituted-Expr walk is needed. (3) **Q3 orthogonality** — Stage 3 is orthogonal to Stage 2 (def-site resolution) and Stage 1 (`%`-freshening); the guarantee-tag ratchet moves the double-consume (**upper-bound**) property `Declared → Empirical` for the real substituted-Expr, **stays `Empirical`** (no `Proven` without a checked theorem), and the **drop lower-bound stays a runtime (M-904) concern, not a static refusal** (grounded correction of the task brief — see §4.3). (4) **Q5 scope** — a ≤~1–2k-LOC reviewable unit: the substituted-Expr affine re-check + gate relaxation + tests; cross-nodule affine stays **Stage 4** (DN-113/M-1060). |
 | **Grounds in** | DN-110 §8.2 (D)/OQ-H4 (`Accepted` basis); DN-110-8.2-hygiene-deepdive §4(D), §7 E5, §10 OQ-H4; DN-116 (Stage-1b, Option B + §3.2 Stage-3 gate); DN-115 (Stage 2, orthogonality); M-919/DN-71 Model S §4.2 (the landed affine tracker); the E5 experiment `crates/mycelium-l1/src/tests/hygiene_affine_expanded.rs` (landed, `Empirical` for the upper bound). Read against `dev @ 3c7e85d7`. |
@@ -16,7 +16,9 @@
 > note's, updated in the same pass — see M-1054's issue body and DN-115 §10). This note was authored
 > as **DN-117** because DN-116 was reserved for that renumber (verified free at the time: no `DN-117`
 > in `docs/notes/`, `docs/Doc-Index.md`, `tools/github/issues.yaml`, or `CHANGELOG.md` at
-> `dev @ 3c7e85d7`).
+> `dev @ 3c7e85d7`). `crates/mycelium-l1/` source/test comments citing the old "DN-114" spelling for
+> this Stage-1b note were repointed to DN-116 in the same Stage-3 landing pass (the residual the
+> renumber note below once deferred).
 
 ---
 
@@ -422,12 +424,164 @@ code lands with the note), the maintainer/orchestrator confirms:
   an append-only pointer to FLAG-A / DN-117 §2 pinning the layer as the L1 substituted-`Expr`.
 - **FLAG-renumber (2026-07-11, RESOLVED same day):** this note's "DN-116" refs are to the M-1054
   Stage-1b note, renumbered from DN-114 to **DN-116** at the 2026-07-11 integration close-out; this
-  note's inbound refs were folded into that same renumber pass. Residual: `crates/mycelium-l1/`
-  source comments still cite "DN-114" (deliberately deferred — a concurrent Stage-3 agent is editing
-  that crate; not touched by the renumber pass).
+  note's inbound refs were folded into that same renumber pass. `crates/mycelium-l1/` source/test
+  comments citing the old "DN-114" spelling were repointed to DN-116 in this Stage-3 landing's own
+  pull-down merge (no longer deferred).
 - **FLAG-lambda-affine (2026-07-11, open question):** confirm during implementation whether an affine
   value captured by a lambda invoked multiple times is soundly tracked for hand-written code; Stage 3
   inherits that posture and must not over-claim (§6).
+
+---
+
+## Ratification (maintainer-delegated, orchestrator-selected on the merits, 2026-07-11)
+
+**Recorded decision (append-only — this note's original §0–§9 text above is unchanged; this section
+adds the ratification, per house rule #3, mirroring the M-1054 Stage 2 (DN-115) ratification
+precedent).** The recommended design (Rank 1 / FLAG-A) was selected on the merits stated in §1–§7;
+this section records that selection **plus** the implementation leaf's own adversarial findings
+while landing it (VR-5 — grounded, not merely asserted).
+
+1. **Q1 mechanism (Rank 1 / FLAG-A) — ACCEPTED and LANDED as specified.** The check-time-only
+   substituted `Expr` (shadowing-aware (B) splice) is built inside `Cx::check_sugar_call` and walked
+   by the real M-919 `Tracker`, seeded/scoped as DN-117 directed; the call node returned to `Elab::app`
+   is unchanged (Option B intact); `elab.rs::sugar_expand` is byte-unmodified. Rank 2 (an L0 `Node`
+   pass) stays rejected, for the reasons §2 already gives.
+2. **Q2 disposition — ACCEPTED and LANDED, with the trigger widened beyond this note's own §3.2
+   literal text (a grounded refinement, not a guess — see finding 3 below).**
+   `ty_structurally_contains_substrate` is demoted to a trigger input (never the decision); the
+   part-2 helpers (`rhs_first_affine_binding`/`expr_is_structurally_affine`) are **deleted**, per
+   §3.3's own KISS recommendation — their job is subsumed by `infer_expr_rule_rhs_type`'s existing,
+   unconditional, unsubstituted-RHS walk (already active there since M-919), which the R3 finding
+   below confirms is unaffected. No occurrence-count fast path was added to the correctness path.
+3. **ADVERSARIAL FINDING (HIGH, fixed in the same leaf) — §3.2's literal trigger text
+   under-specifies R3; the implementation widens it, not narrows it.** §3.2 names exactly two trigger
+   conditions ("any value param for which `ty_structurally_contains_substrate` holds, **or** any
+   RHS-local affine binding"), both keyed on the **rule's own static shape**. R3 (§5, "affine-hiding
+   non-affine type": an `Int`-typed param whose *argument* carries a side-effecting `consume`)
+   defeats a purely rule-shape-keyed trigger by construction — no static fact about the *rule*
+   distinguishes it from an ordinary, safe `Int` param. **Fix (landed):** the trigger is the OR of
+   (a) §3.2's own type-based condition and (b) a new, *exact* (not approximate) per-argument signal —
+   did checking this argument, as actually typed, touch the affine tracker at all (any slot's
+   Live/Moved state changed)? This is a strict superset of §3.2's own text (never narrows what it
+   already covered) and is a natural, near-zero-cost byproduct of the per-argument check the code
+   already runs (KISS preserved — no new machinery, just a widened OR). Verified non-vacuously: the
+   `#[cfg(test)]`-only sabotage hook (`Cx::stage3_sabotage_skip_substitution`,
+   `infer_type_with_active_affine_sabotaged`) feeds R2 and R3 the *unsubstituted* RHS, and both
+   wrongly ACCEPT under that sabotage — proving the real splice (not the trigger alone) does the
+   work, and that R3 specifically needs the widened trigger to ever reach it.
+4. **ADVERSARIAL FINDING (MEDIUM, fixed in the same leaf) — a capture hazard in the check-time-only
+   substitution, beyond §2 step 1's literal (B)-only text.** §2 step 1 only specifies the shadow-skip
+   half of substitution (don't splice an occurrence shadowed by an inner binder of the *param's*
+   spelling). Verification found a second, distinct hazard: a spliced argument's own free variable
+   (e.g. a caller's `s` inside `consume s`) can be *captured* by an RHS-local binder that
+   coincidentally shares its spelling (`let s = 5 in p`), producing a spurious refusal of an
+   otherwise-linear ACCEPT case. **Fix (landed):** the substitution walk also fresh-renames every
+   RHS-local binder it introduces (`Let`/`Lambda`/`For`/most match-arm-pattern idents) to a
+   `%`-prefixed synthetic name, mirroring `elab.rs::sugar_expand`'s own (A) step at this layer — an
+   established, already-landed technique re-applied, not an invented one. **One narrow residual is
+   honestly left open, not silently closed:** a match-arm `Pattern::Ident` that is genuinely
+   ambiguous between "binder" and "nullary constructor reference" cannot be disambiguated without a
+   scrutinee type, which this pure-`Expr` walk does not have; a conservative,
+   type-independent approximation (`Cx::is_any_nullary_ctor` — never rename a name that spells *any*
+   registered nullary ctor anywhere) is sound (never corrupts a real ctor reference) but leaves a
+   compound, narrow coincidence unclosed (FLAG-pattern-ctor-collision, `Cx::stage3_substitute_pattern`'s
+   own doc comment). Flagged, not guessed past.
+5. **ADVERSARIAL FINDING (Empirical, pre-existing — not a Stage-3 regression) — aliasing a
+   *pre-existing* composite-affine local across two independent destructurings is accepted, and
+   this is inherited, not introduced.** Verified directly: an equivalent **ordinary, non-sugar** `fn`
+   with the identical shape (`match h {Wrap(s1)=>s1}, match h {Wrap(s2)=>s2}` over the same
+   pre-existing `h: Handle`) is *also* accepted by the landed M-919 tracker today (each pattern-match
+   field-capture creates its own independent slot, with no memory that both destructure the same
+   underlying value) — see `crates/mycelium-l1/src/tests/checkty.rs`'s
+   `stage3_prior_handle_alias_destructured_twice_is_a_known_pre_existing_gap`. Stage 3 faithfully
+   inherits this pre-existing M-919 posture (DN-117 §4.3's own design goal — match hand-written
+   code's posture exactly, never stricter, never laxer) rather than closing or worsening it; recorded
+   here as an open, honestly-flagged item for a *future* M-919 hardening (composite-value-identity
+   tracking), not this leaf's scope.
+6. **Q3 drop verdict — ACCEPTED and LANDED exactly as specified (§4.3).** A dropped affine value
+   param, and a dropped RHS-local affine binding, are both **ACCEPT** — verified by `A3`
+   (`crates/mycelium-l1/src/tests/affine_stage3.rs`) and the two superseded `reachability_stage1b.rs`
+   controls (which asserted the old wholesale-refusal verdict and now assert ACCEPT, with the
+   supersede documented in place — see house rule #3 applied to tests too, DN-117 §5's own
+   instruction). No `Proven` claim is made; guarantee stays `Empirical`.
+7. **Q4 test contract — ACCEPTED as the bar, and LANDED, exceeding it in one respect.** The §5
+   corpus (A1–A3 accept; R1–R5 refuse) is fully implemented in
+   `crates/mycelium-l1/src/tests/affine_stage3.rs` (12 tests), plus the two superseded
+   `reachability_stage1b.rs` controls rewritten in place (not merely deleted — house rule #3). The
+   mandatory non-vacuity items are both present: (1) the `A1→R1` mutation flips ACCEPT→REFUSE
+   (`mutation_a1_to_r1_flips_accept_to_refuse`); (2) the sabotage control
+   (`r2_sabotage_without_substitution_wrongly_accepts`,
+   `r3_sabotage_without_substitution_wrongly_accepts`) flips R2 and R3 to false-accept. **Honesty
+   note, not silently omitted:** `R4` (cross-argument aliasing) and `R1` (top-level duplication) do
+   **not** flip under the sabotage control — documented per-fixture in the test module and confirmed
+   by a dedicated non-flip assertion (`r4_sabotage_does_not_change_the_verdict_different_layer_refuses_it`):
+   both are already caught by mechanisms other than the substituted-`Expr` splice (the ordinary
+   per-argument affine bookkeeping for R4; the defensive param-scope seeding for R1's simple
+   top-level case), so sabotaging *only* the splice cannot un-catch them. Reporting only the fixtures
+   that flip, and being explicit about the two that don't (and why), is the honest form of this
+   control (VR-5) — not a failure of the design.
+8. **Q5 boundary — CONFIRMED.** Cross-nodule affine stays Stage 4 (untouched); the lambda-capture
+   open question (FLAG-lambda-affine, §9) is **not** newly closed by this leaf — Stage 3 inherits
+   whatever posture the landed tracker already has for a lambda-captured affine value, unchanged and
+   unexamined here, exactly as flagged.
+9. **CRITICAL — Accepted ratifies the design + implementation choices above; Enacted is NOT reached
+   by this note (house rule #3 / VR-5).** Implementation landed in this **same** leaf's PR
+   (`crates/mycelium-l1/src/checkty.rs` — the substituted-`Expr` builder + walk, the gate→trigger
+   demotion, the part-2 helper deletion, the `#[cfg(test)]`-only active-tracker and sabotage entry
+   points; `crates/mycelium-l1/src/tests/affine_stage3.rs` — new, 12 tests;
+   `crates/mycelium-l1/src/tests/checkty.rs` + `reachability_stage1b.rs` — 4 pre-existing tests
+   updated/superseded in place), change-scoped gates green (`cargo fmt -p mycelium-l1`, `cargo
+   clippy -p mycelium-l1 --all-targets -- -D warnings`, `cargo test -p mycelium-l1` — unit +
+   every integration target, 0 failures). Landing code in the same PR that ratifies the design does
+   not itself confer `Enacted` — that status means "complete and stable, outside ongoing maintenance
+   and future-dev integration," a call for the integrating parent to make on its own review, not this
+   leaf. No guarantee tag here is upgraded past its checked basis: the double-consume (upper-bound)
+   property over the real substituted `Expr` moves `Declared → Empirical`, checked by the §5/§7
+   corpus above; no `Proven` claim is made anywhere (no checked theorem exists); the drop lower bound,
+   cross-nodule affine, and the lambda-capture/prior-alias residuals stay exactly as scoped (`Declared`
+   or explicitly open).
+10. **FLAG dispositions.** FLAG-DN114-supersede and FLAG-DN110-8.2 (§9) remain standing for the
+    integrating parent (this leaf does not edit those notes — orchestrator-owned per its own scope
+    note); FLAG-DocIndex/FLAG-CHANGELOG/FLAG-issues remain standing (shared files, not edited from
+    this leaf); FLAG-renumber is unaffected; FLAG-lambda-affine stays open (point 8, above). One new
+    flag is added: **FLAG-pattern-ctor-collision** (point 4, above) — the narrow match-arm-pattern
+    residual in the check-time-only substitution's capture-avoidance.
+11. **ERRATA (2026-07-11, append-only — text above kept, not rewritten, house rule #3) — CRITICAL,
+    fixed post-ratification: point 4's "sound (never corrupts a real ctor reference)" claim was
+    WRONG.** A separate leaf's adversarial review of facility Stage 3 found the ambiguous-`Ident`
+    handling point 4 describes was **not** sound — it was a confirmed, reproducible **false ACCEPT**
+    of a genuine double-consume, on `claude/leaf/m1054-stage3-affine`. Point 4's own reasoning
+    ("never corrupts a real ctor reference") only checked the *ctor-reference* reading; it did not
+    check the *binder* reading, and that is exactly where the hazard lives: when the ambiguous
+    identifier is genuinely a binder (not a ctor reference) for *this* pattern, leaving it
+    **unrenamed** — the choice point 4 ratified — skips this same walk's own (A)-style
+    capture-avoidance discipline (the paragraph immediately preceding point 4's own citation, in
+    `Cx::stage3_substitute_expr`'s doc comment). A spliced argument's free variable of the same
+    spelling as the unrenamed binder (a caller-outer local, coincidentally named the same as the
+    colliding nullary ctor — a pure spelling accident, unrelated to the binder's own scrutinee type)
+    is then **captured** by the pattern binder instead of resolving to the caller's value, hiding a
+    real double-consume from the tracker. **Confirmed reproducible** (verified both ways: the exact
+    call is falsely `Ok`-accepted under the pre-fix code and correctly `Err`-refused under the
+    post-fix code, by `git stash`-reverting and restoring just the fix and re-running the same
+    fixture — `stage3_pattern_ctor_collision_false_accept_is_now_refused`,
+    `crates/mycelium-l1/src/tests/affine_stage3.rs`): `Sentinel = s` (a nullary ctor spelled `s`);
+    `Pick3(h: Handle, q: Substrate) = match h { Wrap(s) => consume q }`; called as
+    `(Pick3(Wrap(consume h_backing), s), consume s)` with a caller-outer local also named `s` — the
+    call was wrongly accepted, silently double-consuming the caller's outer `s`.
+    **Fix (landed, same errata date):** `Cx::stage3_substitute_pattern` now **refuses the whole
+    sugar call** in the ambiguous case, with a never-silent diagnostic (G2), rather than guessing
+    which reading is meant — threaded as a `Result<Pattern, CheckError>` through
+    `stage3_substitute_pattern`/`stage3_substitute_arm` (previously infallible). **A conservative
+    false-REFUSE here is sound; the false-ACCEPT it replaces was not.** The full close (real
+    scrutinee-type-directed disambiguation, mirroring `Self::resolve_pattern`'s own logic) remains
+    out of proportion to this fix's scope and stays open — FLAG-pattern-ctor-collision (point 10)
+    is **not** closed by this errata, only its unsound resolution is. Two new tests added
+    (non-vacuity control included — a same-shape call with a *non*-colliding binder spelling still
+    ACCEPTS, confirming this fix does not over-refuse the ordinary case); the crate's full
+    `cargo test -p mycelium-l1` (unit + every integration target) stays green, 0 failures.
+    Guarantee posture: the corrected claim is `Empirical` (checked by the new corpus above), not
+    `Proven` — same posture as the rest of this note's `Declared`/`Empirical` claims; no tag is
+    upgraded past its checked basis (VR-5).
 
 ---
 
@@ -437,3 +591,20 @@ code lands with the note), the maintainer/orchestrator confirms:
   (OQ-H4). Ranked recommendation: L1 substituted-`Expr` affine check at check time (FLAG-A / Rank 1).
   Records the grounded correction of the task brief's drop-case verdict (ACCEPT, not REJECT; §4.3).
   Read against `dev @ 3c7e85d7`. Not self-ratified (house rule #3).
+- **2026-07-11 — Accepted (ratification + implementation, same leaf).** Design ratified per the
+  Ratification section above; Stage 3 implemented in `crates/mycelium-l1/src/checkty.rs` +
+  `crates/mycelium-l1/src/tests/affine_stage3.rs` (12 new tests) with two adversarial findings fixed
+  in-flight (the R3 trigger-widening, the check-time-only capture hazard) and two honestly recorded
+  (the pattern-ctor-collision residual; the pre-existing prior-handle-alias gap, not a regression).
+  `Empirical` for the double-consume upper bound over the real substituted `Expr`, checked by the
+  landed corpus; no `Proven` claim. Not `Enacted` (house rule #3) — that is the integrating parent's
+  call.
+- **2026-07-11 — Errata (CRITICAL fix, same day, separate leaf).** Ratification point 4's
+  "sound (never corrupts a real ctor reference)" claim for the pattern-ctor-collision residual was
+  found WRONG by adversarial review — a confirmed reproducible false ACCEPT of a genuine
+  double-consume, not merely a narrow unclosed residual. Fixed:
+  `Cx::stage3_substitute_pattern` now refuses the whole sugar call in the ambiguous case (a
+  never-silent diagnostic, G2) instead of leaving the binder unrenamed. See Ratification point 11
+  above for the full grounded correction; still `Empirical`, no `Proven` claim; FLAG-pattern-ctor-
+  collision (the disambiguation gap itself) stays open. Branch
+  `claude/leaf/m1054-stage3-affine`, held for re-verify (not merged).
