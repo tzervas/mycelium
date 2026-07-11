@@ -1,5 +1,6 @@
 use crate::ast::{
-    BaseType, Expr, Item, Literal, LowerDecl, LowerRhs, Nodule, Param, Path, TypeRef, WidthRef,
+    Arm, BaseType, Expr, Item, Literal, LowerDecl, LowerRhs, Nodule, Param, Path, Pattern, TypeRef,
+    WidthRef,
 };
 use crate::checkty::*;
 use crate::parse;
@@ -785,8 +786,193 @@ fn stage1b_sugar_call_recognized_and_accepted() {
     assert_eq!(
         ty,
         Ty::Binary(Width::Lit(8)),
-        "the accepted call's type must be the RHS's own def-time-fixed result type (Option B,          DN-114), not the arguments' or anything else"
+        "the accepted call's type must be the RHS's own def-time-fixed result type (Option B, DN-114), not the arguments' or anything else"
     );
+}
+
+// ---- Adversarial-verify finding 1 (2026-07-11, HIGH — fixed): a composite/nested-Substrate value
+// parameter must hit the Stage-3 (OQ-H4) residual, not just a top-level `Substrate` type ----------
+//
+// `Self::ty_structurally_contains_substrate`'s own doc comment (`checkty.rs`) and DN-114 §3.2 carry
+// the full narrative; these fixtures pin the regression + its non-vacuity.
+
+/// A bare named-type `TypeRef` with no type arguments (`Data("Handle", [])` once resolved) —
+/// mirrors [`bin_ty`] for a registered `Data` type.
+fn named_ty(name: &str) -> TypeRef {
+    TypeRef {
+        base: BaseType::Named(name.to_owned(), vec![]),
+        guarantee: None,
+    }
+}
+
+/// Register a `Data` type `Handle` whose sole constructor `Wrap` wraps a `Substrate{gpu}` field —
+/// the composite/nested-affine shape DN-114 §3.2's adversarial-verify finding names — directly into
+/// `e.types` (white-box, matching [`register_value_parametric_rule`]'s own convention of hand-
+/// building registry entries rather than routing through a surface grammar that does not yet exist
+/// for this shape either).
+fn register_handle_wrapping_substrate(e: &mut Env) {
+    e.types.insert(
+        "Handle".to_owned(),
+        DataInfo {
+            name: "Handle".to_owned(),
+            params: vec![],
+            ctors: vec![CtorInfo {
+                name: "Wrap".to_owned(),
+                fields: vec![Ty::Substrate("gpu".to_owned())],
+            }],
+        },
+    );
+}
+
+/// Register a value-parametric `lower` rule `Dup(h: Handle)` whose RHS pattern-matches `h` **twice**
+/// — each occurrence extracting the wrapped affine field via `match h { Wrap(s) => s }` — the exact
+/// shape that splices the caller's single `h` argument node at two RHS occurrences (a real
+/// double-consume hazard once expanded), and which the pre-fix top-level-only
+/// `matches!(pty, Ty::Substrate(_))` check missed entirely (`pty` here is `Data("Handle", [])`, not
+/// `Ty::Substrate`).
+fn register_dup_handle_rule(e: &mut Env) {
+    let extract = |v: &str| Expr::Match {
+        scrutinee: Box::new(Expr::Path(Path(vec!["h".to_owned()]))),
+        arms: vec![Arm {
+            pattern: Pattern::Ctor("Wrap".to_owned(), vec![Pattern::Ident(v.to_owned())]),
+            body: Expr::Path(Path(vec![v.to_owned()])),
+        }],
+    };
+    e.lower_rules.insert(
+        "Dup".to_owned(),
+        LowerDecl {
+            name: "Dup".to_owned(),
+            params: vec![],
+            value_params: vec![Param {
+                name: "h".to_owned(),
+                ty: named_ty("Handle"),
+            }],
+            rhs: LowerRhs::Expr(Expr::TupleLit(vec![extract("s1"), extract("s2")])),
+        },
+    );
+}
+
+/// **The load-bearing regression (DN-114 §3.2, adversarial-verify finding 1, HIGH — fixed).** A
+/// value parameter typed `Handle` — a `Data` type whose constructor *structurally contains* a
+/// `Substrate` field, not a top-level `Substrate` type itself — must be refused by the Stage-3
+/// (OQ-H4) gate exactly as a bare `Substrate`-typed value parameter is, citing "Stage 3" and
+/// "OQ-H4".
+#[test]
+fn stage3_composite_substrate_field_value_param_is_refused() {
+    let mut e = stage0_base_env();
+    register_handle_wrapping_substrate(&mut e);
+    register_dup_handle_rule(&mut e);
+    let call = call_expr(
+        "Dup",
+        vec![Expr::Path(Path(vec!["some_handle".to_owned()]))],
+    );
+    let mut scope = vec![(
+        "some_handle".to_owned(),
+        Ty::Data("Handle".to_owned(), vec![]),
+    )];
+    let err = infer_type(&e, &mut scope, &call).expect_err(
+        "a value parameter whose type structurally contains `Substrate` must be refused \
+         (Stage 3/OQ-H4), not just a top-level `Substrate` type",
+    );
+    assert!(
+        err.message.contains("Stage 3") && err.message.contains("OQ-H4"),
+        "expected the Stage-3 (OQ-H4) diagnostic, got: {}",
+        err.message
+    );
+    assert!(
+        err.message.contains("structurally contains"),
+        "expected the diagnostic to name the structural-containment shape (not just a top-level \
+         `Substrate` type), got: {}",
+        err.message
+    );
+}
+
+/// **Non-vacuity — a plain, non-affine `Data` type must stay accepted (no over-refusal, VR-5).** A
+/// `Handle2` type structurally identical to `Handle` but wrapping a `Binary{8}` field instead of
+/// `Substrate` must NOT trip the Stage-3 gate — proving the recursive structural walk refuses only
+/// what actually reaches a `Substrate`, not every `Data`-typed value parameter.
+#[test]
+fn stage3_composite_non_affine_data_value_param_still_accepted() {
+    let mut e = stage0_base_env();
+    e.types.insert(
+        "Handle2".to_owned(),
+        DataInfo {
+            name: "Handle2".to_owned(),
+            params: vec![],
+            ctors: vec![CtorInfo {
+                name: "Wrap2".to_owned(),
+                fields: vec![Ty::Binary(Width::Lit(8))],
+            }],
+        },
+    );
+    e.lower_rules.insert(
+        "DupOk".to_owned(),
+        LowerDecl {
+            name: "DupOk".to_owned(),
+            params: vec![],
+            value_params: vec![Param {
+                name: "h".to_owned(),
+                ty: named_ty("Handle2"),
+            }],
+            rhs: LowerRhs::Expr(Expr::Path(Path(vec!["h".to_owned()]))),
+        },
+    );
+    let call = call_expr(
+        "DupOk",
+        vec![Expr::Path(Path(vec!["some_handle2".to_owned()]))],
+    );
+    let mut scope = vec![(
+        "some_handle2".to_owned(),
+        Ty::Data("Handle2".to_owned(), vec![]),
+    )];
+    let ty = infer_type(&e, &mut scope, &call)
+        .expect("a plain, non-affine `Data`-typed value parameter must not be refused");
+    assert_eq!(ty, Ty::Data("Handle2".to_owned(), vec![]));
+}
+
+/// **Termination — a recursive `Data` type with no affine field must still accept (never a silent
+/// infinite loop, G2).** `Ring = Node(Ring)` is self-referential; the structural walk's on-path
+/// `visiting` cycle-cut must terminate on it without finding a (nonexistent) `Substrate`.
+#[test]
+fn stage3_recursive_non_affine_data_terminates_and_accepts() {
+    let mut e = stage0_base_env();
+    e.types.insert(
+        "Ring".to_owned(),
+        DataInfo {
+            name: "Ring".to_owned(),
+            params: vec![],
+            ctors: vec![
+                CtorInfo {
+                    name: "Node".to_owned(),
+                    fields: vec![Ty::Data("Ring".to_owned(), vec![])],
+                },
+                CtorInfo {
+                    name: "Leaf".to_owned(),
+                    fields: vec![],
+                },
+            ],
+        },
+    );
+    e.lower_rules.insert(
+        "RingId".to_owned(),
+        LowerDecl {
+            name: "RingId".to_owned(),
+            params: vec![],
+            value_params: vec![Param {
+                name: "r".to_owned(),
+                ty: named_ty("Ring"),
+            }],
+            rhs: LowerRhs::Expr(Expr::Path(Path(vec!["r".to_owned()]))),
+        },
+    );
+    let call = call_expr(
+        "RingId",
+        vec![Expr::Path(Path(vec!["some_ring".to_owned()]))],
+    );
+    let mut scope = vec![("some_ring".to_owned(), Ty::Data("Ring".to_owned(), vec![]))];
+    let ty = infer_type(&e, &mut scope, &call)
+        .expect("a recursive, non-affine `Data`-typed value parameter must not be refused, and the structural walk must terminate rather than loop");
+    assert_eq!(ty, Ty::Data("Ring".to_owned(), vec![]));
 }
 
 /// **Arity mismatch is refused, never silently.** `Swap2` declares 2 value parameters; calling it

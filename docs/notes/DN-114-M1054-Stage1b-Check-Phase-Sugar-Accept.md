@@ -108,19 +108,40 @@ single-nodule scope entirely; `imports` is not consulted by this gate.
 
 Two parts, both citing "Stage 3" and "OQ-H4":
 
-1. **Any `Substrate`-typed value parameter is refused outright.** `Elab::app`'s ordinary (non-sugar)
-   fn-call inlining `Let`-binds each argument **exactly once**
-   (`bindings.push((param.name.clone(), self.fresh(&param.name), karg, pty))`, then a single
-   `Node::Let` per parameter) — even if the parameter is referenced multiple times in the body, the
-   body references the *let-bound fresh variable*, never the raw argument node twice. Stage 1's (B)
-   substitution is different: `sugar_expand` splices the **raw argument `Node` verbatim** at
-   **every** RHS occurrence of its value param (no let-binding, by design — value params are
-   substituted, not bound). An ordinary (non-affine) argument may safely be spliced at more than one
-   occurrence (re-evaluation, not a soundness hazard, for a pure v0 value); an *affine* argument may
-   not — splicing it into two occurrences would double-consume it. This is a **real, structural**
-   hazard (not a defensive guess): refusing every `Substrate`-typed value parameter removes it
-   entirely, at zero cost to the fragment this leaf targets (the reachability test corpus is
-   affine-free by construction).
+1. **Any value parameter whose type *is, or structurally contains*, `Substrate` is refused
+   outright.** `Elab::app`'s ordinary (non-sugar) fn-call inlining `Let`-binds each argument
+   **exactly once** (`bindings.push((param.name.clone(), self.fresh(&param.name), karg, pty))`, then
+   a single `Node::Let` per parameter) — even if the parameter is referenced multiple times in the
+   body, the body references the *let-bound fresh variable*, never the raw argument node twice.
+   Stage 1's (B) substitution is different: `sugar_expand` splices the **raw argument `Node`
+   verbatim** at **every** RHS occurrence of its value param (no let-binding, by design — value
+   params are substituted, not bound). An ordinary (non-affine) argument may safely be spliced at
+   more than one occurrence (re-evaluation, not a soundness hazard, for a pure v0 value); an
+   *affine* argument may not — splicing it into two occurrences would double-consume it. This is a
+   **real, structural** hazard (not a defensive guess): refusing every `Substrate`-**containing**
+   value parameter removes it entirely.
+   **Adversarial-verify finding (2026-07-11, HIGH — fixed).** The original check
+   (`matches!(pty, Ty::Substrate(_))`) matched only a **top-level** `Substrate` type, missing a
+   *composite* value param — a `Data` type whose constructor structurally wraps a `Substrate` field
+   (e.g. `Data("Handle")` with ctor `Wrap(Substrate{gpu})`). A rule `Dup(h: Handle)` referencing `h`
+   twice, each occurrence pattern-matched (`match h { Wrap(s) => … }`) to extract the affine field,
+   was **false-accepted** by part 1 and missed by part 2 (part 2 only inspects `Let`-bound affine
+   producers, never match-arm patterns) — the expander then splices the caller's single `h` argument
+   node at both occurrences, double-consuming the extracted `Substrate` field on `eval`. **Fixed**
+   by `Self::ty_structurally_contains_substrate` (`checkty.rs`): a recursive structural walk over
+   `pty` that resolves into a registered `Data` type's constructor field types (substituting the
+   type's own arguments for its abstract params via `subst_ty`) and refuses if `Substrate` is
+   reachable anywhere in that structure, not just at the top level. Termination is by an on-path
+   `visiting: BTreeSet<String>` of type names (cycle-cut, not a depth counter — the finite type
+   registry bounds recursion depth without one); a plain non-affine `Data` type, including a
+   recursive one with no affine field, still accepts. See `ty_structurally_contains_substrate`'s own
+   doc comment for the full termination argument and its honest scope note (an unresolved abstract
+   `Ty::Var` field is conservatively treated as non-`Substrate` — Stage 1b's single-nodule,
+   concrete-value-param scope means this isn't reachable in practice; flagged, not silently
+   widened). Regression: `checkty.rs`'s `stage3_composite_substrate_field_value_param_refused_*`
+   fixtures (the `Handle`/`Wrap(Substrate)`/`Dup` shape above), verified non-vacuous by temporarily
+   reverting the recursive walk to the old top-level-only `matches!` and confirming the fixture
+   false-accepts, then restoring.
 2. **A structurally affine RHS-local binding is refused defensively.** A `let`-bound call to a `fn`
    whose *declared* return type is `Substrate`, or a bare `consume`, is refused
    (`Self::rhs_first_affine_binding` + `Self::expr_is_structurally_affine`, `checkty.rs`) — the exact
@@ -129,16 +150,23 @@ Two parts, both citing "Stage 3" and "OQ-H4":
    narrower than the eventual Stage 3 substituted-Expr affine re-check (M-919/OQ-H4 proper), but
    sufficient to refuse the realistic shape rather than silently accept it.
 
-**Design-reasoner note, flagged for review, not decided here (house rule #3 — no self-ratification):**
-this leaf's own analysis (not independently checked) is that part 2 may be *redundant* with part 1 —
-Stage 1's per-expansion-site freshening (OQ-H5) keeps an RHS-local `Substrate` binding's own
-use-count correct at every independent expansion, and `infer_expr_rule_rhs_type`'s seeded Tracker
-already validates the RHS's *own* internal double-consume correctness once, at definition time,
-which (freshening only renaming, never changing multiplicities) should remain sound at every
-expansion site. Part 2 is kept anyway because it is cheap, matches the DN-110-8.2 deep-dive's own
-named concern, and errs toward refusing rather than risking an unverified accept — but the maintainer
-/ a future Stage 3 leaf should treat this as an open question, not a proven necessity, when deciding
-whether Stage 3 proper needs to relax or extend it.
+**Design-reasoner note — superseded by the 2026-07-11 adversarial-verify finding above (house rule 3,
+no self-ratification; this record stays append-only, so the original reasoning is kept, not
+deleted, with the correction appended).** The original text here argued part 2 may be *redundant*
+with part 1, reasoning that Stage 1's per-expansion-site freshening (OQ-H5) plus
+`infer_expr_rule_rhs_type`'s seeded Tracker keep an RHS-local `Substrate` binding's own use-count
+correct at every expansion site. **That argument did not hold**, but not for a part-2 reason: part 1
+itself was under-strength (top-level-only), which the composite-type finding above closed by making
+part 1 structurally recursive. With part 1 now closing the composite/nested case too, **part 2 is
+still not redundant with part 1** — part 1 gates the *value parameter's declared type*; part 2 gates
+a *different* hazard entirely, an RHS-**local** `let`-bound affine acquisition (a helper `fn`
+returning `Substrate`, or a bare `consume`) that never appears in any parameter's type at all. The
+two parts close two distinct hazard classes (parameter-typed vs. locally-acquired affine values);
+neither subsumes the other. This resolves the design-reasoner's open question: **not redundant**,
+confirmed by tracing a concrete case each part alone would miss (a `let`-bound `Substrate`-returning
+helper used twice in the RHS has no affine-typed *value parameter* at all, so part 1 alone would
+miss it; the composite value-parameter case above has no RHS-local `let` binding at all, so part 2
+alone would miss it).
 
 ## §4 `Elab::app`'s §5.2 dispatch
 

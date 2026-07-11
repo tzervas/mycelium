@@ -2725,10 +2725,23 @@ fn check_lower_rule_rhs_type(
 /// pushed during the RHS walk — value param **or** RHS-local — is tracked exactly as it would be
 /// inside an ordinary function body, so a double-consume of either is refused here too, never
 /// silently. **This is the M-919 *upper-bound* (duplication) check only** — it does not by itself
-/// make a *call site* with a `Substrate`-typed value parameter safe to accept (a value-parametric
-/// expansion *splices* the caller's argument node into the RHS, which is a different hazard than an
-/// ordinary function call — see [`Cx::check_sugar_call`]'s own Stage-3 (OQ-H4) gate, which refuses
-/// any `Substrate`-typed value parameter outright rather than relying on this tracker alone).
+/// make a *call site* with a `Substrate`-**containing** value parameter safe to accept (a
+/// value-parametric expansion *splices* the caller's argument node into the RHS, which is a
+/// different hazard than an ordinary function call — see [`Cx::check_sugar_call`]'s own Stage-3
+/// (OQ-H4) gate, which refuses any value parameter whose type is or **structurally contains**
+/// `Substrate` outright, via [`Cx::ty_structurally_contains_substrate`]'s recursive walk into
+/// registered `Data` types' constructor fields — not just a top-level `Substrate` type — rather
+/// than relying on this tracker alone).
+///
+/// **Stage-3's two gates are not redundant with each other (DN-114 §3.2, resolved 2026-07-11).**
+/// [`Cx::check_sugar_call`]'s Stage-3 part 1 (the value-parameter structural-containment check just
+/// named) and part 2 ([`Cx::rhs_first_affine_binding`], the RHS-*local*-binding check) close two
+/// distinct hazard classes: part 1 gates a value **parameter's declared type**; part 2 gates an
+/// RHS-local `let`-bound affine **acquisition** (a helper `fn` returning `Substrate`, or a bare
+/// `consume`) that appears in no parameter's type at all. A rule with no affine-typed value
+/// parameter but a `let`-bound `Substrate`-returning helper used twice in its RHS is caught only by
+/// part 2; a rule whose value parameter's type structurally wraps a `Substrate` field with no
+/// RHS-local `let` at all is caught only by part 1. Neither subsumes the other.
 #[allow(clippy::too_many_arguments)] // mirrors check_lower_rule_rhs_type/check_fn_body's own shape
 fn infer_expr_rule_rhs_type(
     ld: &LowerDecl,
@@ -5584,20 +5597,25 @@ impl Cx<'_> {
                 args.len()
             ));
         }
-        // Stage 3 (OQ-H4) gate, part 1 — a `Substrate`-typed value parameter is refused outright
-        // (see the doc comment above for why): checked before the per-argument type walk so the
-        // dedicated affine diagnostic wins over an incidental argument-type mismatch (G2).
+        // Stage 3 (OQ-H4) gate, part 1 — a value parameter whose type **is, or structurally
+        // contains** (DN-114 §3.2), `Substrate` is refused outright (see the doc comment above for
+        // why, and `Self::ty_structurally_contains_substrate`'s own doc comment for the recursive
+        // walk): checked before the per-argument type walk so the dedicated affine diagnostic wins
+        // over an incidental argument-type mismatch (G2).
         for pm in &rule.value_params {
             let (pty, _) = resolve_ty(self.site, self.types, &[], &pm.ty)?;
-            if matches!(pty, Ty::Substrate(_)) {
+            let mut visiting = BTreeSet::new();
+            if self.ty_structurally_contains_substrate(&pty, &mut visiting) {
                 return self.err(format!(
-                    "`{name}` (a `lower` sugar rule) has an affine (`Substrate`) value parameter \
-                     `{}` — M-1054 Stage 1b accepts only the affine-free fragment: expansion \
+                    "`{name}` (a `lower` sugar rule) has value parameter `{}` of type `{pty}`, \
+                     which is (or structurally contains — DN-114 §3.2) an affine (`Substrate`) \
+                     field — M-1054 Stage 1b accepts only the affine-free fragment: expansion \
                      (`crate::elab::sugar_expand`'s (B) substitution) splices a use-site argument \
                      node into every RHS occurrence of its value param, which would double-consume \
-                     an affine argument referenced more than once. The substituted-Expr affine \
-                     re-check over the expanded RHS is Stage 3 work (M-919/OQ-H4), not built yet \
-                     (never a silently-unchecked affine accept — G2).",
+                     an affine field referenced more than once (e.g. via two separate pattern \
+                     matches that each extract it). The substituted-Expr affine re-check over the \
+                     expanded RHS is Stage 3 work (M-919/OQ-H4), not built yet (never a \
+                     silently-unchecked affine accept — G2).",
                     pm.name
                 ));
             }
@@ -5655,6 +5673,95 @@ impl Cx<'_> {
             self.lower_rules,
         )?;
         Ok((ret_ty, app_node(head, rebuilt)))
+    }
+
+    /// **M-1054 Stage 1b Stage-3 gate helper (OQ-H4), part 1's recursive core** — does `ty`
+    /// **structurally contain** [`Ty::Substrate`] anywhere: at the top level, nested inside a
+    /// registered [`Data`](Ty::Data) type's constructor fields (recursively, resolving each field's
+    /// abstract [`Ty::Var`]s against `ty`'s own type arguments via [`subst_ty`]), or inside a
+    /// [`Seq`](Ty::Seq) element / [`Fn`](Ty::Fn) argument-or-return position. Closes the DN-114 §3.2
+    /// composite/nested-affine hazard part 1's earlier `matches!(pty, Ty::Substrate(_))` check
+    /// missed entirely: a `Data("Handle")` whose sole constructor wraps a `Substrate` field (e.g.
+    /// `Wrap(Substrate{gpu})`) is refused here even though `pty` itself is `Data("Handle", [])`, not
+    /// `Ty::Substrate` — because the RHS can still pattern-match the value twice to extract the
+    /// affine field at each occurrence, double-consuming it exactly as a bare `Substrate` parameter
+    /// would (part 2, [`Self::rhs_first_affine_binding`], is a defensive net over *some* of that
+    /// shape via `let`-bound extraction helpers, but never inspected match-arm patterns — this is
+    /// the primary, structural closure of the hazard, not a redundant second check).
+    ///
+    /// **Termination (never a silent infinite loop, G2).** `visiting` accumulates the [`Data`]
+    /// **type names** currently on the walk's call stack (on-path cycle detection, not a permanent
+    /// memo): re-entering a name already on the stack — a directly or mutually recursive `Data`
+    /// type — returns `false` for that occurrence *without recursing further*, since any affine
+    /// field reachable through that name was (or will be) found via the first, non-cyclic entry to
+    /// it in the same walk. Because the type registry (`self.types`) is finite, the recursion depth
+    /// is bounded by the number of distinct registered type names — no separate depth counter is
+    /// needed (unlike the AST-walking helpers in this module, which bound *expression* nesting
+    /// against [`MAX_CHECK_DEPTH`]; this walk bounds *type* nesting against the finite type
+    /// registry instead).
+    ///
+    /// **Honest scope (VR-5) — not over-refusing.** A plain `Data` type with no affine field
+    /// anywhere in its structure (including its own recursive occurrences) stays accepted: the walk
+    /// returns `false` for it. An **abstract** field type (`Ty::Var` left unresolved because the
+    /// owning `Data`'s parameter list and `ty`'s own argument list don't cover it — e.g. a
+    /// value-parametric rule whose value-param type is itself an unsubstituted generic parameter)
+    /// is conservatively treated as **not** containing `Substrate` (`Ty::Var(_) => false`): Stage 1b
+    /// is the single-nodule, concrete-argument fragment (OQ-H1's own scope note), so a genuinely
+    /// abstract value-parameter type is not yet reachable through this gate in practice; if that
+    /// ever changes, this is the seam to revisit (FLAG, not silently widened).
+    fn ty_structurally_contains_substrate(&self, ty: &Ty, visiting: &mut BTreeSet<String>) -> bool {
+        match ty {
+            Ty::Substrate(_) => true,
+            Ty::Data(name, args) => {
+                if args
+                    .iter()
+                    .any(|a| self.ty_structurally_contains_substrate(a, visiting))
+                {
+                    return true;
+                }
+                if !visiting.insert(name.clone()) {
+                    // Already on the walk's call stack — a recursive/mutually-recursive `Data`
+                    // type. Cut here (never a silent infinite loop); any affine field elsewhere in
+                    // this type's structure is found via its first, non-cyclic entry in this walk.
+                    return false;
+                }
+                let found = match self.types.get(name) {
+                    Some(info) => {
+                        let subst: BTreeMap<String, Ty> = info
+                            .params
+                            .iter()
+                            .cloned()
+                            .zip(args.iter().cloned())
+                            .collect();
+                        info.ctors.iter().any(|ctor| {
+                            ctor.fields.iter().any(|fty| {
+                                let resolved = subst_ty(fty, &subst);
+                                self.ty_structurally_contains_substrate(&resolved, visiting)
+                            })
+                        })
+                    }
+                    // An unregistered type name shouldn't occur for a `pty` that already resolved
+                    // (`resolve_ty` would have refused it) — conservatively `false` rather than a
+                    // panic (never a silent crash either; this is a defensive fallback, not the
+                    // primary path).
+                    None => false,
+                };
+                visiting.remove(name);
+                found
+            }
+            Ty::Seq(elem, _) => self.ty_structurally_contains_substrate(elem, visiting),
+            Ty::Fn(param, ret) => {
+                self.ty_structurally_contains_substrate(param, visiting)
+                    || self.ty_structurally_contains_substrate(ret, visiting)
+            }
+            Ty::Binary(_)
+            | Ty::Ternary(_)
+            | Ty::Dense(_, _)
+            | Ty::Vsa { .. }
+            | Ty::Bytes
+            | Ty::Float
+            | Ty::Var(_) => false,
+        }
     }
 
     /// **M-1054 Stage 1b Stage-2 gate helper (OQ-H1)** — depth-first, left-to-right search for the
