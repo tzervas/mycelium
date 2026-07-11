@@ -691,12 +691,23 @@ fn lower_derive_items_add_no_l0_to_an_unrelated_entry() {
 }
 
 // -------------------------------------------------------------------------------------------
-// M-1054 Stage 0 — expression-position sugar-rule call-site recognition (`Cx::check_sugar_call`,
-// DN-110 §5-A). Companion to `src/tests/elab.rs`'s `elaborate_lower_rule_with_args` matcher/guard
-// tests (the L0 elab-phase half of Stage 0). No surface grammar produces a non-empty
+// M-1054 Stage 0/1b — expression-position sugar-rule call-site recognition (`Cx::check_sugar_call`,
+// DN-110 §5-A / DN-114). Companion to `src/tests/elab.rs`'s `elaborate_lower_rule_with_args`
+// matcher/guard tests (the L0 elab-phase half) and `src/tests/reachability_stage1b.rs` (the
+// full-chain check→elab→eval reachability corpus). No surface grammar produces a non-empty
 // `LowerDecl::value_params` yet (§8.6 is an open naming question), so every fixture here
 // hand-constructs the rule and inserts it directly into a checked `Env` (white-box, matching the
 // house test-layout convention).
+//
+// **Stage 0 → Stage 1b note (VR-5 — this banner is a claim too, kept current):** Stage 0 refused
+// *every* recognized, arity/type-matched sugar call unconditionally (never returned `Ok`). Stage
+// 1b (M-1054, DN-114) lands the accept path: a recognized call whose RHS also clears the Stage-2
+// (OQ-H1 free-identifier) and Stage-3 (OQ-H4 affine) gates is now **accepted**, typed by
+// `infer_expr_rule_rhs_type`. The arity-mismatch / type-mismatch / item-shaped-rule refusals below
+// are unchanged by Stage 1b (those gates fire *before* the RHS is ever consulted); only the
+// well-formed, gate-clearing case's outcome changed, from refuse to accept — see
+// `stage1b_sugar_call_recognized_and_accepted` below (the direct former-Stage-0-refusal fixture,
+// now updated to its Stage 1b outcome).
 // -------------------------------------------------------------------------------------------
 
 /// A `Binary{width}` surface `TypeRef` with no guarantee slot (the common fixture shape).
@@ -707,10 +718,15 @@ fn bin_ty(width: u32) -> TypeRef {
     }
 }
 
-/// M-1054 Stage 0 fixture: register a value-parametric `lower` rule with `n` `Binary{8}` value
-/// parameters `p0, p1, …` into `e` under `name`. The RHS is irrelevant to every recognition test
-/// below (`check_sugar_call` never reads it — Stage 0 refuses before it would); it reuses the
-/// base nodule's own `Eight` rule's RHS as an inert placeholder.
+/// M-1054 Stage 0/1b fixture: register a value-parametric `lower` rule with `n` `Binary{8}` value
+/// parameters `p0, p1, …` into `e` under `name`. The RHS (`0b0000_0001`, a bare `Binary{8}`
+/// literal — the base nodule's own `Eight` rule's RHS, reused as an inert placeholder) is
+/// irrelevant to the arity/type-mismatch/item-shaped-rule refusal tests below (those gates fire
+/// *before* the RHS is ever consulted); it **is** read by the well-formed-call accept test
+/// (`stage1b_sugar_call_recognized_and_accepted`), which is exactly why an inert literal — no
+/// free identifiers, no affine binding — was chosen: it clears both Stage 1b gates trivially,
+/// isolating that test to recognition + accept, not the gates (those get their own dedicated
+/// fixtures below).
 fn register_value_parametric_rule(e: &mut Env, name: &str, n: usize) {
     let rhs = e.lower_rules["Eight"].rhs.clone();
     e.lower_rules.insert(
@@ -751,28 +767,25 @@ fn stage0_base_env() -> Env {
     env("nodule d;\nlower Eight = 0b0000_0001;")
 }
 
-/// **Recognition works.** A value-parametric sugar rule invoked with the right arity and
-/// well-typed arguments is *recognized and dispatched* to `check_sugar_call` — evidenced by the
-/// Stage-0 gate diagnostic (naming DN-110/Stage 1), not "unknown function" (which is what this
-/// name would have produced before this branch existed) and not a type/arity error (which would
-/// mean recognition dispatched but matching failed).
+/// **Recognition + accept (M-1054 Stage 1b, DN-114).** A value-parametric sugar rule invoked with
+/// the right arity and well-typed arguments, whose RHS clears both Stage 1b gates (this fixture's
+/// inert `0b0000_0001` RHS trivially does — no free identifiers, no affine binding), is *recognized
+/// and accepted* by `check_sugar_call`: `infer_type` now returns `Ok`, typed at the RHS's own
+/// (fixed, def-time) result type, not "unknown function" (what this name would have produced
+/// before Stage 0's recognition branch existed) and not the old, now-superseded Stage-0-only
+/// "recognized but gated" refusal (see the module banner's Stage 0 → Stage 1b note above — this is
+/// the direct updated fixture for that former test).
 #[test]
-fn stage0_sugar_call_is_recognized_and_dispatched() {
+fn stage1b_sugar_call_recognized_and_accepted() {
     let mut e = stage0_base_env();
     register_value_parametric_rule(&mut e, "Swap2", 2);
     let call = call_expr("Swap2", vec![bin8_lit("0000_0001"), bin8_lit("0000_0010")]);
-    let err = infer_type(&e, &mut Vec::new(), &call).expect_err("Stage 0 must refuse the call");
-    assert!(
-        err.message.contains("recognized")
-            && err.message.contains("M-1054 Stage 0")
-            && err.message.contains("Stage 1"),
-        "expected the recognized-but-gated Stage-0/Stage-1 diagnostic, got: {}",
-        err.message
-    );
-    assert!(
-        !err.message.contains("unknown function"),
-        "a registered sugar rule must never fall through to the unknown-name diagnostic, got: {}",
-        err.message
+    let ty = infer_type(&e, &mut Vec::new(), &call)
+        .expect("a recognized, gate-clearing sugar call must be accepted (M-1054 Stage 1b)");
+    assert_eq!(
+        ty,
+        Ty::Binary(Width::Lit(8)),
+        "the accepted call's type must be the RHS's own def-time-fixed result type (Option B,          DN-114), not the arguments' or anything else"
     );
 }
 
