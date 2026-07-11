@@ -90,6 +90,16 @@ pub enum Category {
     /// instead of the opaque `Other`, so the profile's largest bucket stops conflating "un-mapped
     /// library construct" with "non-item file directive" (G2 — recorded, never dropped).
     InnerAttr,
+    /// DN-118 Phase 1 (the closure-EMIT pass): a `syn::ExprClosure` this pass either could not
+    /// give a `param ::= Ident ':' type_ref` (an untyped/destructuring/zero-arity closure
+    /// parameter, or an `async`/`const`/`static` closure — no correspondence), or — the
+    /// safety-critical DN-109 D7 gate — one whose body syntactically shows it mutating a captured
+    /// (non-parameter) binding in place (`FnMut`/`&mut`-style: a direct/compound assignment, an
+    /// explicit `&mut`, or a method-call receiver, none of which `syn` can prove is value-safe
+    /// without borrowck facts). Distinct from `Other` so the closure-specific residue (the
+    /// FnMut/&mut safety boundary in particular) is countable on its own, never conflated with an
+    /// ordinary unmapped-construct gap.
+    Closure,
     Other,
 }
 
@@ -115,6 +125,7 @@ impl Category {
             Category::NamedFieldDrop => "NamedFieldDrop",
             Category::ModuleDecl => "ModuleDecl",
             Category::InnerAttr => "InnerAttr",
+            Category::Closure => "Closure",
             Category::Other => "Other",
         }
     }
