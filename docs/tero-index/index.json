@@ -7432,12 +7432,21 @@
       "tag": "Empirical/Declared"
     },
     {
+      "anchor": "dn-110-8-2-hygiene-deepdive--e1-result-2026-07-10-append-only-addendum-not-a-rewrite-of-1-12",
+      "family": "doc",
+      "kind": "section",
+      "title": "E1 Result (2026-07-10) — append-only addendum, NOT a rewrite of §1–§12",
+      "file": "docs/notes/DN-110-8.2-hygiene-deepdive.md",
+      "line": 432,
+      "tag": "Empirical/Declared"
+    },
+    {
       "anchor": "dn-110-8-2-hygiene-deepdive--changelog",
       "family": "doc",
       "kind": "section",
       "title": "Changelog",
       "file": "docs/notes/DN-110-8.2-hygiene-deepdive.md",
-      "line": 432,
+      "line": 505,
       "tag": "Empirical/Declared"
     },
     {
