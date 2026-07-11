@@ -766,7 +766,10 @@
 | `mycelium_l1::Phylum` | struct | `crates/mycelium-l1/src/ast.rs:16` | A **phylum** — the library-scale static grouping above `nodule` (DN-06; RFC-0006 §4.3; M-662). |
 | `mycelium_l1::PhylumEnv` | struct | `crates/mycelium-l1/src/checkty.rs:1015` | The checked environments of a whole **phylum** (M-662): one [`Env`] per nodule, paired with the |
 | `mycelium_l1::ReleaseEvent` | struct | `crates/mycelium-l1/src/substrate.rs:252` | A recorded **scope-exit release** — the DN-71 §8 FLAG-4 v0 drop-without-consume posture (M-904). |
+| `mycelium_l1::RenderError` | enum | `crates/mycelium-l1/src/reveal.rs:542` | A [`render_surface`] refusal — never a silent gap or a `todo!()` (house rule #2/G2). |
+| `mycelium_l1::Rendered` | struct | `crates/mycelium-l1/src/reveal.rs:522` | The output of [`render_surface`]: best-effort surface text for a closed L0 [`Node`], plus an |
 | `mycelium_l1::Resolved` | struct | `crates/mycelium-l1/src/ambient.rs:148` | The resolved twin plus its provenance trace. |
+| `mycelium_l1::RevealError` | enum | `crates/mycelium-l1/src/reveal.rs:128` | Errors from the `reveal` primitives ([`reveal_l0`], [`reelaborate`]). |
 | `mycelium_l1::SubstrateError` | enum | `crates/mycelium-l1/src/substrate.rs:279` | Why a `Substrate` operation was refused — always explicit (never-silent; G2/VR-5). |
 | `mycelium_l1::SubstrateHandle` | struct | `crates/mycelium-l1/src/substrate.rs:97` | An opaque, runtime-only **affine `Substrate` handle** (DN-71 Model S §4.1; M-902). |
 | `mycelium_l1::SubstrateProvenance` | struct | `crates/mycelium-l1/src/substrate.rs:61` | How a [`SubstrateHandle`] was acquired — acquisition-provenance metadata (DN-71 §4.1; FLAG-9's |
@@ -774,6 +777,7 @@
 | `mycelium_l1::Ty` | enum | `crates/mycelium-l1/src/checkty.rs:78` | A checked type. |
 | `mycelium_l1::UsePath` | struct | `crates/mycelium-l1/src/ast.rs:63` | A `use` import target (`use a.b.Item` or the glob `use a.b.*`; M-662; RFC-0006 §4.3). |
 | `mycelium_l1::Vis` | enum | `crates/mycelium-l1/src/ast.rs:42` | **Cross-nodule visibility** of a top-level item (M-662; RFC-0006 §4.3). |
+| `mycelium_l1::alpha_eq` | fn | `crates/mycelium-l1/src/reveal.rs:298` | Structural **alpha-equivalence** over [`Node`]. |
 | `mycelium_l1::ambient` | mod | `crates/mycelium-l1/src/lib.rs:41` | — |
 | `mycelium_l1::ambient::ResolutionNote` | struct | `crates/mycelium-l1/src/ambient.rs:137` | A record of one ambient fill, for EXPLAIN / "where did this paradigm come from?" (§4.3). |
 | `mycelium_l1::ast` | mod | `crates/mycelium-l1/src/lib.rs:42` | — |
@@ -898,9 +902,13 @@
 | `mycelium_l1::parse` | fn | `crates/mycelium-l1/src/parse.rs:35` | Parse a complete **single-`nodule`** program from source — the v0 entry point, unchanged by the |
 | `mycelium_l1::parse_nodule_header` | fn | `crates/mycelium-l1/src/nodule.rs:75` | Recognise the optional nodule header marker on the first non-blank line of `src`. |
 | `mycelium_l1::parse_phylum` | fn | `crates/mycelium-l1/src/parse.rs:64` | Parse a complete **phylum** program (M-662; RFC-0006 §4.3): an optional `phylum <path>` header |
+| `mycelium_l1::reelaborate` | fn | `crates/mycelium-l1/src/reveal.rs:169` | Re-derive (not merely inspect) the closedness witness of a shown L0 [`Node`] — the v0 |
+| `mycelium_l1::render_surface` | fn | `crates/mycelium-l1/src/reveal.rs:580` | Render `node` toward surface grammar, best-effort, covering the whole closed [`Node`] grammar |
 | `mycelium_l1::resolve` | fn | `crates/mycelium-l1/src/ambient.rs:162` | Resolve a parsed [`Nodule`] to its longhand twin (RFC-0012 §4.3/§4.4). |
 | `mycelium_l1::resolve_report` | fn | `crates/mycelium-l1/src/ambient.rs:176` | Like [`resolve`], but also returns the provenance trace ([`ResolutionNote`]s) for EXPLAIN (§4.3). |
-| `mycelium_l1::substrate` | mod | `crates/mycelium-l1/src/lib.rs:65` | The `Substrate` v0 value form (M-902; DN-71 Model S §4.1) — an interpreter-level opaque affine |
+| `mycelium_l1::reveal` | mod | `crates/mycelium-l1/src/lib.rs:66` | `reveal` — desugar-on-demand, Increment-1 (M-1051; DN-38 §5/§8.3; DN-110 §3.4/§8.4; |
+| `mycelium_l1::reveal_l0` | fn | `crates/mycelium-l1/src/reveal.rs:122` | Show the real, elaborated L0 [`Node`] for entry symbol `site` in `env` (DN-38 §5). |
+| `mycelium_l1::substrate` | mod | `crates/mycelium-l1/src/lib.rs:72` | The `Substrate` v0 value form (M-902; DN-71 Model S §4.1) — an interpreter-level opaque affine |
 | `mycelium_l1::substrate::SubstrateHandle::acquire` | fn | `crates/mycelium-l1/src/substrate.rs:126` | **Acquire** a fresh `Substrate` handle for `tag`, recording how it was acquired. |
 | `mycelium_l1::substrate::SubstrateHandle::explain` | fn | `crates/mycelium-l1/src/substrate.rs:159` | A never-silent, one-line EXPLAIN description of this handle (house rule 2 — no black boxes): |
 | `mycelium_l1::substrate::SubstrateHandle::id` | fn | `crates/mycelium-l1/src/substrate.rs:144` | The opaque host-handle **identity** — distinct per acquire, and **not** |
@@ -910,14 +918,14 @@
 | `mycelium_l1::substrate::SubstrateHandle::tag` | fn | `crates/mycelium-l1/src/substrate.rs:137` | The affine-resource `tag` (the `Substrate{tag}` name — RFC-0006 LR-8). |
 | `mycelium_l1::substrate::SubstrateHandle::try_consume` | fn | `crates/mycelium-l1/src/substrate.rs:192` | The **consume/move transition** for the affine construct (DN-71 Model S §4.2; M-903): the |
 | `mycelium_l1::substrate::SubstrateProvenance::new` | fn | `crates/mycelium-l1/src/substrate.rs:73` | A provenance record naming the acquiring op and the acquisition site. |
-| `mycelium_l1::token` | mod | `crates/mycelium-l1/src/lib.rs:66` | — |
+| `mycelium_l1::token` | mod | `crates/mycelium-l1/src/lib.rs:73` | — |
 | `mycelium_l1::token::Pos` | struct | `crates/mycelium-l1/src/token.rs:5` | A 1-based source position, for never-silent parse diagnostics. |
 | `mycelium_l1::token::ScalarTok` | enum | `crates/mycelium-l1/src/token.rs:396` | Scalar-kind keyword payload. |
 | `mycelium_l1::token::Spanned` | struct | `crates/mycelium-l1/src/token.rs:422` | A token with its starting position. |
 | `mycelium_l1::token::StrengthTok` | enum | `crates/mycelium-l1/src/token.rs:409` | Guarantee-strength keyword payload. |
 | `mycelium_l1::token::Tok` | enum | `crates/mycelium-l1/src/token.rs:22` | A lexical token. |
 | `mycelium_l1::token::keyword` | fn | `crates/mycelium-l1/src/token.rs:431` | Resolve an identifier-shaped lexeme to its keyword token, or `None` if it is a plain identifier. |
-| `mycelium_l1::totality` | mod | `crates/mycelium-l1/src/lib.rs:67` | — |
+| `mycelium_l1::totality` | mod | `crates/mycelium-l1/src/lib.rs:74` | — |
 | `mycelium_l1::totality::MAX_WALK_DEPTH:` | const | `crates/mycelium-l1/src/totality.rs:62` | Explicit depth budget for this module's own AST traversals (M-674 remaining TODO item 2): the |
 | `mycelium_l1::totality::WalkDepthExceeded` | struct | `crates/mycelium-l1/src/totality.rs:69` | A never-silent refusal from a pass-internal AST traversal ([`walk_expr`], [`descend_walk`], or |
 | `mycelium_l1::totality::classify_all` | fn | `crates/mycelium-l1/src/totality.rs:100` | Classify every function in the table. |
@@ -4796,6 +4804,35 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_l1::nodule::parse_nodule_header` | dedup-alias: same definition as `mycelium_l1::parse_nodule_header` at crates/mycelium-l1/src/nodule.rs:75 — one canonical row kept |
 | `mycelium_l1::parse::parse` | dedup-alias: same definition as `mycelium_l1::parse` at crates/mycelium-l1/src/parse.rs:35 — one canonical row kept |
 | `mycelium_l1::parse::parse_phylum` | dedup-alias: same definition as `mycelium_l1::parse_phylum` at crates/mycelium-l1/src/parse.rs:64 — one canonical row kept |
+| `mycelium_l1::reveal::RenderError` | dedup-alias: same definition as `mycelium_l1::RenderError` at crates/mycelium-l1/src/reveal.rs:542 — one canonical row kept |
+| `mycelium_l1::reveal::RenderError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_l1::reveal::RenderError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_l1::reveal::RenderError::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_l1::reveal::RenderError::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_l1::reveal::RenderError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_l1::reveal::RenderError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_l1::reveal::RenderError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_l1::reveal::RenderError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_l1::reveal::Rendered` | dedup-alias: same definition as `mycelium_l1::Rendered` at crates/mycelium-l1/src/reveal.rs:522 — one canonical row kept |
+| `mycelium_l1::reveal::Rendered::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_l1::reveal::Rendered::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_l1::reveal::Rendered::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_l1::reveal::Rendered::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_l1::reveal::Rendered::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_l1::reveal::Rendered::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_l1::reveal::RevealError` | dedup-alias: same definition as `mycelium_l1::RevealError` at crates/mycelium-l1/src/reveal.rs:128 — one canonical row kept |
+| `mycelium_l1::reveal::RevealError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_l1::reveal::RevealError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_l1::reveal::RevealError::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_l1::reveal::RevealError::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_l1::reveal::RevealError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_l1::reveal::RevealError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_l1::reveal::RevealError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_l1::reveal::RevealError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_l1::reveal::alpha_eq` | dedup-alias: same definition as `mycelium_l1::alpha_eq` at crates/mycelium-l1/src/reveal.rs:298 — one canonical row kept |
+| `mycelium_l1::reveal::reelaborate` | dedup-alias: same definition as `mycelium_l1::reelaborate` at crates/mycelium-l1/src/reveal.rs:169 — one canonical row kept |
+| `mycelium_l1::reveal::render_surface` | dedup-alias: same definition as `mycelium_l1::render_surface` at crates/mycelium-l1/src/reveal.rs:580 — one canonical row kept |
+| `mycelium_l1::reveal::reveal_l0` | dedup-alias: same definition as `mycelium_l1::reveal_l0` at crates/mycelium-l1/src/reveal.rs:122 — one canonical row kept |
 | `mycelium_l1::substrate::ReleaseEvent` | dedup-alias: same definition as `mycelium_l1::ReleaseEvent` at crates/mycelium-l1/src/substrate.rs:252 — one canonical row kept |
 | `mycelium_l1::substrate::ReleaseEvent::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::substrate::ReleaseEvent::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
