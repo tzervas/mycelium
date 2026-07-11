@@ -610,17 +610,23 @@ pub fn elaborate_lower_rule(env: &Env, rule_name: &str) -> Result<Node, ElabErro
 /// mismatch), or if the RHS (after value-parametric expansion, or — for the degenerate nullary
 /// case — as written) is outside the evaluation-complete fragment.
 ///
-/// # Scope (Stage 1 only — see the M-1054 issue body for the residual gap)
+/// # Scope (Stage 1's own (A)+(B) — see the M-1054 issue body for the residual gap)
 /// This function performs **(A)+(B) only**. A genuinely **free** identifier in the RHS (neither a
 /// value parameter nor an RHS-local binder) is left as a bare `Var` unresolved — **def-site
 /// resolution (C)** is Stage 2's job (OQ-H1), not attempted here. The **affine re-check (D)** over
 /// the expanded surface is Stage 3's job; this function does not run the affine tracker at all.
-/// [`crate::checkty::Cx::check_sugar_call`] (the L1 check-phase counterpart) is **unchanged** by
-/// this Stage: it still refuses every recognized sugar-rule call site — this function is reachable
-/// only by direct/test call, not yet wired into the ordinary program-elaboration pipeline
-/// (`self.app`'s call dispatch). Wiring the two together is left to whoever lands the surface
-/// grammar for `value_params` (§8.6 is still an open naming question) — re-derive the composed
-/// behavior explicitly rather than assuming it falls out of this change.
+///
+/// **Stage 1 → Stage 1b update (DN-114 — this note is a claim too, VR-5, kept current).** At
+/// Stage 1 landing, the L1 check-phase counterpart — the checker's `check_sugar_call` — refused
+/// every recognized sugar-rule call site unconditionally, and this function was reachable only by
+/// direct/test call. **Since M-1054 Stage 1b, both halves are wired together**: the checker's
+/// accept path (Option B, DN-114 — types the call once, from the RHS's own def-time-fixed result
+/// type, gated on the same (C)/(D) residuals named above — see that function's own doc comment)
+/// now accepts a call whose RHS clears both gates, and [`Elab::app`]'s §5.2 dispatch reaches this
+/// exact function from the ordinary program-elaboration pipeline. Stage 1b does **not** change
+/// this function's own (A)+(B)-only scope — (C) and (D) remain unattempted *here*; Stage 1b closes
+/// the reachability gap by gating (C)/(D) at the **checker**, before a call ever reaches this
+/// function, rather than by extending this function itself.
 pub fn elaborate_lower_rule_with_args(
     env: &Env,
     rule_name: &str,
@@ -2406,6 +2412,31 @@ impl Elab<'_> {
                      is staged (RFC-0019 §4.4 / RFC-0007 §12.3; the M-673 follow-up). No L0 form yet."
                 ),
             );
+        }
+
+        // **M-1054 Stage 1b §5.2 wiring** (DN-114) — a value-parametric `lower` sugar-rule call
+        // (`Cx::check_sugar_call`'s M-1054 Stage 1b accept path, `checkty.rs`) has no L0 form of its
+        // own to fall through to: the call is a sugar *invocation*, not a callable name. Elaborate
+        // each argument first (left-to-right, matching every other call-site branch above — CBV),
+        // then hand the elaborated `Node`s to the landed Stage 1 hygienic expansion
+        // ([`elaborate_lower_rule_with_args`]) — the L0 expansion `check_sugar_call`'s own doc
+        // comment defers to this function for ("This function TYPES the call... the hygienic
+        // expansion is `Elab::app`'s job"). Tried only here, as the **last resort** — mirroring
+        // `check_sugar_call`'s identical placement in `Cx::check_app` — so a name that resolves any
+        // other way (HOF/rec/fn/ctor/prim/trait-method, all above) is completely unaffected
+        // (regression-safe by construction, same rationale as the checker-side comment on
+        // `a_lower_rule_named_like_a_ctor_does_not_self_cycle`). Item-shaped-RHS refusal and arity
+        // re-validation are **not** duplicated here — `elaborate_lower_rule_with_args` /
+        // `match_value_params` already perform both, never-silently (G2), and a program reaching
+        // elaboration has already passed `check_sugar_call`'s own identical gates, so this call sees
+        // only already-checked, expr-shaped, arity-matched invocations in practice; the callee's own
+        // checks remain the defense-in-depth (no assumption is silently unverified — DRY, KC-3).
+        if self.env.lower_rules.contains_key(name) {
+            let mut kargs = Vec::with_capacity(args.len());
+            for a in args {
+                kargs.push(self.expr(stack, scope, a)?);
+            }
+            return elaborate_lower_rule_with_args(self.env, name, &kargs);
         }
 
         residual(site, format!("unknown function/constructor/prim `{name}`"))

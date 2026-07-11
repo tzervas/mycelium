@@ -50,8 +50,15 @@
 //! # Scope / guarantee tag (VR-5)
 //! A PASS here moves capture-avoidance for **(A)+(B), on the real `elaborate_lower_rule_with_args`
 //! path**, `Declared -> Empirical`. It says nothing about (C) def-site resolution or (D) affine-on-
-//! expanded-L0 (both stay `Declared`, Stage 2/3), and nothing about the L1 check-phase
-//! (`Cx::check_sugar_call`, unchanged by this leaf — still refuses every recognized call).
+//! expanded-L0 (both stay `Declared`, Stage 2/3). This module's fixtures all call
+//! `elaborate_lower_rule`/`elaborate_lower_rule_with_args` **directly** (the white-box entry
+//! points, unchanged by M-1054 Stage 1b), never through `Cx::check_sugar_call` — so this module
+//! says nothing about the L1 check-phase or the full check→elab reachability chain either way.
+//! **Since M-1054 Stage 1b** (DN-114), `Cx::check_sugar_call` no longer unconditionally refuses
+//! every recognized call — it accepts a call whose RHS clears the Stage-2 (OQ-H1)/Stage-3 (OQ-H4)
+//! gates, and `Elab::app` dispatches such a call to this exact `elaborate_lower_rule_with_args`
+//! machinery (§5.2 wiring) — see `src/tests/reachability_stage1b.rs` for that full-chain
+//! (check → elab → eval) reachability corpus, this module's production-elaborator-path companion.
 
 use crate::ast::{BaseType, Expr, Literal, LowerDecl, LowerRhs, Param, Path, TypeRef, WidthRef};
 use crate::checkty::{check_nodule, Env};
