@@ -602,7 +602,7 @@
 | `mycelium_doc::build` | fn | `crates/mycelium-doc/src/build.rs:68` | Build the resolved doc model from the input. |
 | `mycelium_doc::build::BuildInput::conventional` | fn | `crates/mycelium-doc/src/build.rs:52` | The conventional layout rooted at `repo_root`: `docs/`, `docs/spec/schemas/`, `examples/`, |
 | `mycelium_doc::build::EPUB_DEFERRAL:` | const | `crates/mycelium-doc/src/build.rs:19` | EPUB is an honest deferral (spec §8 / §4.1 "never a half-build"). |
-| `mycelium_doc::build_book` | fn | `crates/mycelium-doc/src/book.rs:375` | Build every book artifact: the ToC/landing page, one page per chapter entry (prev/next nav), and |
+| `mycelium_doc::build_book` | fn | `crates/mycelium-doc/src/book.rs:440` | Build every book artifact: the ToC/landing page, one page per chapter entry (prev/next nav), and |
 | `mycelium_doc::corpus` | mod | `crates/mycelium-doc/src/lib.rs:23` | — |
 | `mycelium_doc::corpus::AnchorAlloc` | struct | `crates/mycelium-doc/src/corpus.rs:14` | Allocates globally-unique, stable anchor slugs (so deep links never collide — §4.1 navigability). |
 | `mycelium_doc::corpus::AnchorAlloc::alloc` | fn | `crates/mycelium-doc/src/corpus.rs:26` | Slugify `base` (optionally namespaced under `ns`) and make it unique by `-N` suffixing. |
@@ -620,17 +620,17 @@
 | `mycelium_doc::emit::Artifacts::put` | fn | `crates/mycelium-doc/src/emit/mod.rs:28` | Add (or overwrite) one artifact. |
 | `mycelium_doc::emit::Artifacts::write_to` | fn | `crates/mycelium-doc/src/emit/mod.rs:37` | Write every artifact under `out_dir`, creating parent directories. |
 | `mycelium_doc::emit::html` | mod | `crates/mycelium-doc/src/emit/mod.rs:7` | — |
-| `mycelium_doc::emit::html::render` | fn | `crates/mycelium-doc/src/emit/html.rs:105` | Render the whole model to an HTML site: `index.html` plus one `pages/<anchor>.html` per document. |
-| `mycelium_doc::emit::html::render_concat` | fn | `crates/mycelium-doc/src/emit/html.rs:119` | The concatenation of every page (for the parity/legibility lints, which scan the rendered output). |
-| `mycelium_doc::emit::html::template_hash` | fn | `crates/mycelium-doc/src/emit/html.rs:96` | The pinned template content hash (provenance, §6) — the address of the shared template/style. |
+| `mycelium_doc::emit::html::render` | fn | `crates/mycelium-doc/src/emit/html.rs:154` | Render the whole model to an HTML site: `index.html` plus one `pages/<anchor>.html` per document. |
+| `mycelium_doc::emit::html::render_concat` | fn | `crates/mycelium-doc/src/emit/html.rs:170` | The concatenation of every page (for the parity/legibility lints, which scan the rendered output). |
+| `mycelium_doc::emit::html::template_hash` | fn | `crates/mycelium-doc/src/emit/html.rs:143` | The pinned template content hash (provenance, §6) — the address of the shared template/style. |
 | `mycelium_doc::emit::html_escape` | fn | `crates/mycelium-doc/src/emit/mod.rs:55` | Escape text for HTML body content / attribute values. |
 | `mycelium_doc::emit::json` | mod | `crates/mycelium-doc/src/emit/mod.rs:8` | — |
 | `mycelium_doc::emit::json::render` | fn | `crates/mycelium-doc/src/emit/json.rs:27` | Render the machine artifacts: the full model JSON + the JSONL search index. |
 | `mycelium_doc::emit::json::render_model_json` | fn | `crates/mycelium-doc/src/emit/json.rs:36` | The whole model, serialized (pretty) — every node id is present (the parity hook). |
 | `mycelium_doc::emit::json::render_search_index` | fn | `crates/mycelium-doc/src/emit/json.rs:42` | One JSON record per node, newline-delimited (a streamable search/tooling index). |
 | `mycelium_doc::emit::typst` | mod | `crates/mycelium-doc/src/emit/mod.rs:9` | — |
-| `mycelium_doc::emit::typst::render` | fn | `crates/mycelium-doc/src/emit/typst.rs:60` | Render the whole model to one Typst document source. |
-| `mycelium_doc::emit_all` | fn | `crates/mycelium-doc/src/build.rs:165` | Emit every artifact (HTML site · Typst source · machine JSON · the EPUB deferral note). |
+| `mycelium_doc::emit::typst::render` | fn | `crates/mycelium-doc/src/emit/typst.rs:117` | Render the whole model to one Typst document source. |
+| `mycelium_doc::emit_all` | fn | `crates/mycelium-doc/src/build.rs:168` | Emit every artifact (HTML site · Typst source · machine JSON · the EPUB deferral note). |
 | `mycelium_doc::hash` | mod | `crates/mycelium-doc/src/lib.rs:26` | — |
 | `mycelium_doc::hash::DocHasher` | struct | `crates/mycelium-doc/src/hash.rs:14` | A canonical, injective content hasher: tagged, length-prefixed writes feed a single BLAKE3 state. |
 | `mycelium_doc::hash::DocHasher::child` | fn | `crates/mycelium-doc/src/hash.rs:64` | Absorb an already-computed child address (a content hash), length-prefixed. |
@@ -649,7 +649,7 @@
 | `mycelium_doc::ir::Payload::kind_str` | fn | `crates/mycelium-doc/src/ir.rs:208` | The canonical kind label (for diagnostics / the machine projection). |
 | `mycelium_doc::ir::XrefResolution` | enum | `crates/mycelium-doc/src/ir.rs:102` | How a cross-reference resolved against the model (the §4.1 `no-dead-xref` verdict). |
 | `mycelium_doc::ir::XrefTarget` | struct | `crates/mycelium-doc/src/ir.rs:124` | The resolved-or-not target of a cross-reference. |
-| `mycelium_doc::lib_index` | mod | `crates/mycelium-doc/src/lib.rs:30` | — |
+| `mycelium_doc::lib_index` | mod | `crates/mycelium-doc/src/lib.rs:31` | — |
 | `mycelium_doc::lib_index::Flagged` | struct | `crates/mycelium-doc/src/lib_index.rs:86` | A construct the heuristic could not (or does not yet) extract — never silently dropped (G2). |
 | `mycelium_doc::lib_index::HONESTY_TAG:` | const | `crates/mycelium-doc/src/lib_index.rs:44` | The top-level honesty tag (mirrors `tools/docgen/code_index.py::HONESTY_TAG`, adapted to the |
 | `mycelium_doc::lib_index::ITEM_TAG:` | const | `crates/mycelium-doc/src/lib_index.rs:53` | The per-item honesty tag every extracted row carries. |
@@ -4171,7 +4171,7 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_doc::book::ChapterSpec::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::book::ChapterSpec::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::book::ChapterSpec::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
-| `mycelium_doc::book::build_book` | dedup-alias: same definition as `mycelium_doc::build_book` at crates/mycelium-doc/src/book.rs:375 — one canonical row kept |
+| `mycelium_doc::book::build_book` | dedup-alias: same definition as `mycelium_doc::build_book` at crates/mycelium-doc/src/book.rs:440 — one canonical row kept |
 | `mycelium_doc::book::load_manifest` | dedup-alias: same definition as `mycelium_doc::load_manifest` at crates/mycelium-doc/src/book.rs:94 — one canonical row kept |
 | `mycelium_doc::build::BuildInput` | dedup-alias: same definition as `mycelium_doc::BuildInput` at crates/mycelium-doc/src/build.rs:25 — one canonical row kept |
 | `mycelium_doc::build::BuildInput::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
@@ -4179,7 +4179,7 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_doc::build::BuildInput::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::build::BuildInput::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::build::build` | dedup-alias: same definition as `mycelium_doc::build` at crates/mycelium-doc/src/build.rs:68 — one canonical row kept |
-| `mycelium_doc::build::emit_all` | dedup-alias: same definition as `mycelium_doc::emit_all` at crates/mycelium-doc/src/build.rs:165 — one canonical row kept |
+| `mycelium_doc::build::emit_all` | dedup-alias: same definition as `mycelium_doc::emit_all` at crates/mycelium-doc/src/build.rs:168 — one canonical row kept |
 | `mycelium_doc::corpus::AnchorAlloc::default` | definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::corpus::AnchorAlloc::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::doc_lint::CHECK_NAMES:` | dedup-alias: same definition as `mycelium_doc::CHECK_NAMES:` at crates/mycelium-doc/src/doc_lint.rs:16 — one canonical row kept |

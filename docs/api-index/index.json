@@ -6057,7 +6057,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc",
       "file": "crates/mycelium-doc/src/book.rs",
-      "line": 375,
+      "line": 440,
       "summary": "Build every book artifact: the ToC/landing page, one page per chapter entry (prev/next nav), and",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6255,7 +6255,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc::emit::html",
       "file": "crates/mycelium-doc/src/emit/html.rs",
-      "line": 105,
+      "line": 154,
       "summary": "Render the whole model to an HTML site: `index.html` plus one `pages/<anchor>.html` per document.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6266,7 +6266,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc::emit::html",
       "file": "crates/mycelium-doc/src/emit/html.rs",
-      "line": 119,
+      "line": 170,
       "summary": "The concatenation of every page (for the parity/legibility lints, which scan the rendered output).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6277,7 +6277,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc::emit::html",
       "file": "crates/mycelium-doc/src/emit/html.rs",
-      "line": 96,
+      "line": 143,
       "summary": "The pinned template content hash (provenance, §6) — the address of the shared template/style.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6354,7 +6354,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc::emit::typst",
       "file": "crates/mycelium-doc/src/emit/typst.rs",
-      "line": 60,
+      "line": 117,
       "summary": "Render the whole model to one Typst document source.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6365,7 +6365,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc",
       "file": "crates/mycelium-doc/src/build.rs",
-      "line": 165,
+      "line": 168,
       "summary": "Emit every artifact (HTML site · Typst source · machine JSON · the EPUB deferral note).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6574,7 +6574,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc",
       "file": "crates/mycelium-doc/src/lib.rs",
-      "line": 30,
+      "line": 31,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -34026,7 +34026,7 @@
     },
     {
       "symbol": "mycelium_doc::book::build_book",
-      "reason": "dedup-alias: same definition as `mycelium_doc::build_book` at crates/mycelium-doc/src/book.rs:375 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_doc::build_book` at crates/mycelium-doc/src/book.rs:440 — one canonical row kept"
     },
     {
       "symbol": "mycelium_doc::book::load_manifest",
@@ -34058,7 +34058,7 @@
     },
     {
       "symbol": "mycelium_doc::build::emit_all",
-      "reason": "dedup-alias: same definition as `mycelium_doc::emit_all` at crates/mycelium-doc/src/build.rs:165 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_doc::emit_all` at crates/mycelium-doc/src/build.rs:168 — one canonical row kept"
     },
     {
       "symbol": "mycelium_doc::corpus::AnchorAlloc::default",
