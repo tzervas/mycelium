@@ -15336,6 +15336,62 @@ issues:
       into ordinary elaboration) is not yet met. DN-110 stays `Accepted`, NOT `Enacted`; no tag
       upgraded past its checked basis (VR-5).
 
+      **Stage 1b LANDED (2026-07-11, append-only, PM close-out; mitigation #14 -- verified against
+      `dev`, not rubber-stamped).** PR #1434 (`claude/leaf/m1054-stage1b-check-accept`, merged to
+      `dev` -- confirmed via `git log dev` merge commit `3cd7dbc2`) lands the check-phase accept path
+      `checkty.rs::Cx::check_sugar_call` (Option B -- the def-time RHS type-scheme, `want == got`
+      typed once from the RHS) plus `Elab::app`'s new dispatch to the existing Stage-1 expansion
+      machinery, closing the Stage-1b residual named above: a value-parametric sugar-rule call site
+      is now reachable end-to-end from ordinary elaboration, over the white-box, affine-free,
+      single-nodule, monomorphic fragment (two never-silent gates -- OQ-H1 free-identifier refusal,
+      OQ-H4 affine-value-param refusal -- bound the accepted fragment; `crates/mycelium-l1/src/tests/
+      reachability_stage1b.rs`'s dual-oracle corpus is the checked basis). Full record:
+      `docs/notes/DN-114-M1054-Stage1b-Check-Phase-Sugar-Accept.md` (a leaf-scoped implementation
+      note, landed with this PR). Status stays `in-progress` -- Stage 3 (affine soundness over the
+      expanded surface) and Stage 4 (cross-nodule/phylum resolution, DN-113/M-1060) are not yet
+      built. DN-110 stays `Accepted`, NOT `Enacted`; no tag upgraded past its checked basis (VR-5).
+
+      **Stage 2 (DN-115, OQ-H1 single-nodule def-site resolution) LANDED (2026-07-11, append-only,
+      PM close-out; mitigation #14 -- re-verified against `dev` after this session pulled it down
+      mid-close-out, merge commit `b9b66345`, PR #1435).** `docs/notes/DN-115-M1054-Stage2-Defsite-
+      Resolution-Single-Nodule.md` -- Accepted (delegated ratification) -- finds single-nodule
+      def-site resolution / referential transparency already holds **by construction** since Stage
+      1b (Pass-1 elaboration against the def-site env); Stage 2 is *prove it + close two narrow
+      gate-correctness gaps + document the invariant*, not *add a new resolution mechanism*. Landed
+      in the same PR: **G1** (`checkty.rs::rhs_first_free_id`'s `Expr::Path` arm now consults a
+      shared `prim_name_is_recognized` view -- `prim_family` union `VSA_PRIM_NAMES` union
+      `float_prim_name_is_recognized` -- closing an over-refusal on a same-nodule VSA/float-prim RHS,
+      mutation-verified); **G2** (a `call_head: bool` parameter narrows a bare nullary-`lower`-rule
+      RHS accept to call position only, a diagnosability/gate-accuracy fix -- adversarial review
+      found the pre-fix gate already refused the shape via a downstream full RHS type-check, so this
+      is NOT a soundness fix, honestly re-scoped in the note's own Ratification §4). New
+      `crates/mycelium-l1/src/tests/defsite_resolution_stage2.rs`, 6 tests green (a real-elaborator
+      dual-oracle test + its mandatory non-vacuity capture control, the G1 float+VSA fixtures, the G2
+      value-position fixture, a cross-nodule-shaped control confirming Stage 4 stays refused);
+      `cargo test -p mycelium-l1`: 544 lib tests + every integration target, 0 failures. Single-nodule
+      def-site resolution and the G1/G2 fixtures move `Declared -> Empirical` (VR-5, no upgrade past
+      the checked basis); cross-nodule/phylum resolution and reveal-provenance (routed to OQ-H3/
+      M-1051, untouched) stay `Declared`/open. Tracked as **M-1069** (minted this close-out, per
+      DN-115 §10 FLAG-issues.yaml -- `status:done` since the work already landed rather than
+      remaining a `todo` to schedule).
+
+      **DN-114 ID collision, deferred renumber (2026-07-11, append-only, PM close-out).** The
+      Stage-1b note above is filed as `docs/notes/DN-114-M1054-Stage1b-Check-Phase-Sugar-Accept.md`,
+      which shares its DN-114 number with `docs/notes/DN-114-Validated-Narrative-Generation.md` (the
+      docs-access wave's note, epic **E40-1** -- see that epic's own DN-114 ID note). Per maintainer
+      directive at this close-out, the narrative-generation note KEEPS DN-114; this Stage-1b note is
+      the one that needs renumbering (candidate: DN-116, since DN-115 is now taken by the Stage-2
+      note above) -- but that renumber is EXPLICITLY DEFERRED to a follow-up pass so every inbound
+      ref (now including DN-115's own citations of "DN-114") updates in one pass rather than twice.
+      Not a ratification of anything -- purely a disambiguation + follow-up record.
+
+      **DN-115 §10 FLAGs, partially applied by this PM close-out.** `docs/Doc-Index.md` gained a
+      DN-115 row this close-out (needed to keep `corpus:DN-115` `doc_refs` resolvable for M-1069,
+      below). **Residual, NOT applied here** (out of this session's scope -- a curatorial
+      `CHANGELOG.md` entry, left for the integrating parent doing that wave): the DN-115 §10
+      `FLAG-CHANGELOG` design-phase entry. Still outstanding on `dev` as of this close-out (verified
+      absent by grep).
+
   - id: M-1055
     title: "E1 + E3 hygiene experiment prototype -- DN-110 §8.2 expression-position sugar-rule hygiene, Rank-1 go/no-go for J3"
     milestone: "Phase 5 — Self-Hosting & Core Library"
@@ -15779,6 +15835,18 @@ issues:
         validate + commit with provenance (Declared until reviewed); differential + drift-gated;
         published alongside the release artifact. Deferred site polish (M-1067/M-1068) tracked separately.
 
+      DN-114 ID note (2026-07-11, append-only, PM close-out, house rule #3). `DN-114` here IS
+      `docs/notes/DN-114-Validated-Narrative-Generation.md` -- CONFIRMED, KEPT (maintainer directive,
+      2026-07-11 close-out) -- this epic + M-1061..M-1066's `corpus:DN-114` doc_refs stay as-is, no
+      renumber. A separate, unrelated file also on `dev` currently shares the DN-114 number --
+      `docs/notes/DN-114-M1054-Stage1b-Check-Phase-Sugar-Accept.md` (the M-1054 native-metaprogramming
+      facility's leaf-scoped Stage-1b note, landed PR #1434) -- a real ID collision (mitigation #1),
+      but resolving it is EXPLICITLY DEFERRED to a follow-up pass -- the facility's Stage 2 (DN-115)
+      landed mid-session (PR #1435) already citing the Stage-1b note as DN-114, so the deferred
+      renumber (candidate DN-116) should update every inbound ref, including DN-115's, in one pass.
+      See M-1054's own body for the matching cross-reference. Not a ratification of anything, not a
+      status change -- purely a disambiguation record.
+
   - id: M-1061
     title: "M-1061 — build gen-book (Narrative-Authoring-Pipeline output b) on the narrate harness + DN-114 oracle"
     milestone: "Phase 8 — Toolchain & Release Engineering"
@@ -15935,3 +16003,64 @@ issues:
       User story: As a reader, I want one portal over all component repos' docs, so that decomposition
       doesn't fragment the documentation. DoD: a Draft DN ratified; repo/version dimension on nodes +
       anchors; a two-repo aggregation demonstrated; the single-repo site unchanged for v0.
+
+  - id: M-1069
+    title: "M-1054 Stage 2 (DN-115) -- single-nodule def-site resolution: prove-by-construction + G1/G2 gate-correctness fixes"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:done]
+    epic: E28-1
+    depends_on: [M-1054]
+    doc_refs:
+      - corpus:DN-115
+      - corpus:DN-114
+      - src:crates/mycelium-l1/src/checkty.rs
+      - src:crates/mycelium-l1/src/tests/defsite_resolution_stage2.rs
+    landed_basis: >
+      status:done (2026-07-11, PM close-out; mitigation #14 -- verified against `dev`, not
+      rubber-stamped). Minted this close-out per DN-115 §10's own FLAG-issues.yaml ("a new Stage-2
+      implementation M-id -- maintainer mints -- depends_on DN-115") -- filed directly `done` because
+      the implementation had already landed (PR #1435, `claude/leaf/m1054-stage2-dn-scoping`, merged
+      to `dev`, merge commit `b9b66345`) by the time this PM close-out reached it, rather than being
+      scheduled as a `todo`. See M-1054's own body (the "Stage 2 (DN-115) ... LANDED" append-only
+      entry, this same close-out) for the full landed-basis detail this issue summarizes: G1 (VSA/
+      float-prim RHS over-refusal, closed via a shared `prim_name_is_recognized` name view) and G2
+      (bare nullary-`lower`-rule value-position over-acceptance, closed via a `call_head` gate
+      parameter, honestly re-scoped as a diagnosability fix per the note's own adversarial finding)
+      -- both landed and mutation/dual-oracle-verified in `defsite_resolution_stage2.rs` (6 tests
+      green); single-nodule def-site resolution itself moves `Declared -> Empirical` (already implicit
+      by construction since Stage 1b, now proven non-vacuously on the real elaborator). `cargo test -p
+      mycelium-l1`: 544 lib tests + every integration target, 0 failures.
+    body: |
+      Filed 2026-07-11 at the M-1054/DN-115 PM close-out (mitigation #1 -- verified M-1069 free before
+      minting). DN-115 (design-reasoner scoping, Accepted via delegated ratification) found that
+      single-nodule referential transparency for a sugar rule's free RHS identifiers already holds
+      by construction since Stage 1b (Pass-1 elaboration against the def-site env) -- so this issue's
+      job was never "add def-site resolution", but proving that guarantee non-vacuously on the real
+      elaborator and closing two narrow check-phase gate-correctness gaps (G1, G2) the proof surfaced,
+      while leaving cross-nodule/phylum resolution refused (Stage 4, DN-113/M-1060's job).
+
+      User stories (DN-115 §0/§8):
+      - As a sugar-rule author, I want a same-nodule free identifier in my rule's RHS to resolve to
+        its definition-site meaning (not whatever the call site happens to shadow it with), so macro
+        hygiene half (B) -- referential transparency -- holds for expression-position sugar the same
+        way DN-54's type-position lowering already guarantees it.
+      - As a reviewer, I want the claim "single-nodule def-site resolution already works" checked
+        non-vacuously on the real elaborator (dual-oracled, with a genuine capture-control negative
+        test), not asserted from reading the code alone (VR-5, mitigation #14).
+      - As the maintainer, I want the Stage-4 (cross-nodule) boundary explicitly documented and
+        still-refused, so extending resolution across nodules later is a deliberate change, never a
+        silent regression (G2).
+
+      Definition of Done (DN-115 §8, met):
+      - The §1 finding (single-nodule resolution already holds) is confirmed on the real elaborator
+        with a non-vacuous, dual-oracled test plus a hand-built capture control. ✅
+      - G1 (VSA/float-prim RHS over-refusal) and G2 (nullary-`lower`-rule value-position
+        over-acceptance) are closed, each with a dedicated, mutation-verified fixture. ✅
+      - The Stage-4 boundary (cross-nodule/phylum free-id resolution stays refused) is confirmed with
+        an explicit regression + documented on `rhs_first_free_id`'s own doc comment. ✅
+      - Change-scoped gates green: `cargo fmt -p mycelium-l1`, `cargo clippy -p mycelium-l1
+        --all-targets -- -D warnings`, `cargo test -p mycelium-l1` (544 lib tests + every integration
+        target, 0 failures). ✅
+      - Guarantee tags move exactly as bounded: single-nodule resolution + G1/G2 fixtures
+        `Declared -> Empirical`; cross-nodule/phylum resolution and reveal-provenance (routed to
+        OQ-H3/M-1051) stay `Declared`/open -- no upgrade past the checked basis (VR-5). ✅
