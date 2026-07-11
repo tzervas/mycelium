@@ -1,0 +1,10 @@
+{
+  "title": "Mycelium — Design Notes II (DN-50..DN-112)",
+  "preface": "The second half of the design-note corpus (explorations that recommend, not decide). Split into two bundles so each stays under NotebookLM's 500k-word/source cap. Generated from the corpus by myc-doc.",
+  "chapters": [
+    {
+      "title": "Design Notes DN-50..DN-112",
+      "globs": ["docs/notes/DN-[5-9][0-9]-*.md", "docs/notes/DN-1[0-9][0-9]-*.md"]
+    }
+  ]
+}

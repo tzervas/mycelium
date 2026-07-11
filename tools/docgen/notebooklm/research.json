@@ -1,0 +1,10 @@
+{
+  "title": "Mycelium — Research evidence base",
+  "preface": "The prior-art surveys and research findings (the T0.x/T1.x/T2.x evidence every normative claim traces back to). Optional bundle for deeper NotebookLM study of the reasoning behind the design. Generated from the corpus by myc-doc.",
+  "chapters": [
+    {
+      "title": "Research records",
+      "globs": ["research/*-RECORD.md"]
+    }
+  ]
+}
