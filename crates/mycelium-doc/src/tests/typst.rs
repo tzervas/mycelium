@@ -40,6 +40,20 @@ fn body_metacharacters_are_escaped() {
 }
 
 #[test]
+fn inline_markdown_renders_as_typst_markup() {
+    let mut a = AnchorAlloc::new();
+    let src = "# D\n\n## S\n\nSee **bold**, *em*, `snippet`, and [site](https://ex.io).\n";
+    let doc = ingest("docs/spec/d.md", src, SourceKind::Spec, &mut a);
+    let typ = render(&DocModel::new(vec![doc]));
+    assert!(typ.contains("#strong[bold]"));
+    assert!(typ.contains("#emph[em]"));
+    assert!(typ.contains("#raw(\"snippet\")"));
+    assert!(typ.contains("#link(\"https://ex.io\")[site]"));
+    // The literal markdown is gone from the Typst prose.
+    assert!(!typ.contains("**bold**"));
+}
+
+#[test]
 fn code_blocks_get_a_print_legible_show_rule() {
     // The print pass (§8.2): body ~10.5pt, comfortable margins, and a `raw.where(block:true)` show
     // rule that renders code smaller (~0.82x) with tighter leading in a hairline-bordered tinted box

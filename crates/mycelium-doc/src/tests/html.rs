@@ -150,6 +150,64 @@ fn table_row_and_separator_helpers_are_exact() {
 }
 
 #[test]
+fn inline_markdown_renders_as_html_spans_in_prose() {
+    let mut a = AnchorAlloc::new();
+    let src = "# D\n\nLead.\n\n## S\n\nSee **bold**, *em*, `snippet`, and [site](https://ex.io).\n";
+    let doc = ingest("docs/spec/d.md", src, SourceKind::Spec, &mut a);
+    let html = render_concat(&DocModel::new(vec![doc]));
+    assert!(html.contains("<strong>bold</strong>"));
+    assert!(html.contains("<em>em</em>"));
+    assert!(html.contains("<code class=\"inl\">snippet</code>"));
+    assert!(html.contains("<a class=\"x\" href=\"https://ex.io\">site</a>"));
+    // The literal markdown is gone from the prose.
+    assert!(!html.contains("**bold**"));
+}
+
+#[test]
+fn table_cells_render_inline_markdown() {
+    let mut a = AnchorAlloc::new();
+    let src = "# T\n\n## H\n\n| Field | Value |\n|-------|-------|\n| **Status** | `Accepted` |\n";
+    let doc = ingest("docs/rfcs/RFC-1.md", src, SourceKind::Rfc, &mut a);
+    let html = render_concat(&DocModel::new(vec![doc]));
+    assert!(html.contains("<td><strong>Status</strong></td>"));
+    assert!(html.contains("<td><code class=\"inl\">Accepted</code></td>"));
+}
+
+#[test]
+fn a_heading_renders_inline_in_the_h_tag_but_plain_in_nav() {
+    let mut a = AnchorAlloc::new();
+    let src = "# D\n\n## The `swap` operation\n\nBody.\n";
+    let arts = render(&DocModel::new(vec![ingest(
+        "docs/spec/d.md",
+        src,
+        SourceKind::Spec,
+        &mut a,
+    )]));
+    let page = arts
+        .files
+        .iter()
+        .find(|(k, _)| k.starts_with("pages/"))
+        .map(|(_, v)| v.as_str())
+        .unwrap();
+    // The heading body carries inline code...
+    assert!(page.contains("<code class=\"inl\">swap</code>"));
+    // ...but the "on this page" ToC shows plain text (no nested tags, no literal backticks).
+    assert!(page.contains("The swap operation</a>"));
+    assert!(!page.contains("The `swap` operation"));
+}
+
+#[test]
+fn inline_markdown_is_not_applied_inside_code_blocks() {
+    let mut a = AnchorAlloc::new();
+    let src = "# D\n\n## S\n\n```text\nliteral **stars** and `ticks`\n```\n";
+    let doc = ingest("docs/spec/d.md", src, SourceKind::Spec, &mut a);
+    let html = render_concat(&DocModel::new(vec![doc]));
+    // Inside <pre><code>, `**`/backticks stay literal — never <strong>/<code class="inl">.
+    assert!(html.contains("literal **stars** and `ticks`"));
+    assert!(!html.contains("<strong>stars</strong>"));
+}
+
+#[test]
 fn an_undocumented_api_item_renders_a_visible_marker() {
     let mut a = AnchorAlloc::new();
     let doc = crate::apiref::project_nodule(
