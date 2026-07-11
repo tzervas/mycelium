@@ -12,6 +12,21 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### chore(docgen): verify + automate diff-friendly index regen (2026-07-11)
+
+PR #1421. Maintainer directive: audit the five doc-gen generators (api-index, tero-index,
+sugar-index, lib-index, editor grammars) for diff-friendly (update-in-place, not full-file-rewrite)
+output. **Audit result: all 5 already diff-friendly, no fixes needed** — stable sort keys, pretty and
+stable JSON, no volatile timestamp/run-id/host-path field in any generator or committed artifact
+(grepped `datetime|timestamp|generated[_-]?at|utcnow|SystemTime::now|chrono::`, zero hits). Verified
+empirically per generator: a tiny real source edit regenerates a small, localized diff, then reverts
+cleanly (`git status --short` clean after every probe-and-revert) — no generator or committed
+artifact was actually changed by this PR. **Adds `just docs-regen-all`** — the single entrypoint
+running all five `*-gen` recipes (`docs-index`, `tero-index-gen`, `sugar-index-gen`,
+`lib-index-gen`, `grammar-gen`) in one command; verified zero-drift from a clean tree and all five
+drift gates green afterward. Used by this session's own index regeneration (see the
+`chore(regen)` entry).
+
 ### chore(integration): gap-close-run batch — dev to integration close-out (2026-07-11)
 
 Integration-tier close-out for the whole gap-close-run session (mitigation #14 throughout — every

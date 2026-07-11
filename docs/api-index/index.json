@@ -8747,6 +8747,17 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_l1::elaborate_lower_rule_with_args",
+      "kind": "fn",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1",
+      "file": "crates/mycelium-l1/src/elab.rs",
+      "line": 624,
+      "summary": "**M-1054 Stage 1 — the hygienic value-parametric expansion** (DN-110 §5-A /",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_l1::elaborate_reclaim",
       "kind": "fn",
       "crate": "mycelium-l1",
@@ -9238,6 +9249,61 @@
       "file": "crates/mycelium-l1/src/lib.rs",
       "line": 66,
       "summary": "`reveal` — desugar-on-demand, Increment-1 (M-1051; DN-38 §5/§8.3; DN-110 §3.4/§8.4;",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_l1::reveal::CertVerdict",
+      "kind": "struct",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1::reveal",
+      "file": "crates/mycelium-l1/src/reveal.rs",
+      "line": 976,
+      "summary": "The Increment-3 `certified`-mode round-trip verdict (DN-38 §5).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_l1::reveal::CertVerdict::l0_witness_holds",
+      "kind": "fn",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1::reveal::CertVerdict",
+      "file": "crates/mycelium-l1/src/reveal.rs",
+      "line": 990,
+      "summary": "`true` iff the L0-term-level witness holds — the property `certified` mode actually",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_l1::reveal::L0Witness",
+      "kind": "enum",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1::reveal",
+      "file": "crates/mycelium-l1/src/reveal.rs",
+      "line": 901,
+      "summary": "The L0-term-level identity witness (OQ-H3 option (1), module doc) — the property the",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_l1::reveal::SurfaceOutcome",
+      "kind": "enum",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1::reveal",
+      "file": "crates/mycelium-l1/src/reveal.rs",
+      "line": 931,
+      "summary": "The (secondary, best-effort) surface round-trip outcome (OQ-H3 option (1): out-of-contract for",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_l1::reveal::certified_roundtrip",
+      "kind": "fn",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1::reveal",
+      "file": "crates/mycelium-l1/src/reveal.rs",
+      "line": 1013,
+      "summary": "Run the Increment-3 `certified` round-trip check over `shown` (an already-elaborated, closed",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -35987,6 +36053,10 @@
       "reason": "dedup-alias: same definition as `mycelium_l1::elaborate_lower_rule` at crates/mycelium-l1/src/elab.rs:583 — one canonical row kept"
     },
     {
+      "symbol": "mycelium_l1::elab::elaborate_lower_rule_with_args",
+      "reason": "dedup-alias: same definition as `mycelium_l1::elaborate_lower_rule_with_args` at crates/mycelium-l1/src/elab.rs:624 — one canonical row kept"
+    },
+    {
       "symbol": "mycelium_l1::elab::elaborate_reclaim",
       "reason": "dedup-alias: same definition as `mycelium_l1::elaborate_reclaim` at crates/mycelium-l1/src/elab.rs:512 — one canonical row kept"
     },
@@ -36515,6 +36585,30 @@
       "reason": "dedup-alias: same definition as `mycelium_l1::parse_phylum` at crates/mycelium-l1/src/parse.rs:64 — one canonical row kept"
     },
     {
+      "symbol": "mycelium_l1::reveal::CertVerdict::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::reveal::CertVerdict::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::reveal::CertVerdict::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::reveal::L0Witness::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::reveal::L0Witness::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::reveal::L0Witness::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
       "symbol": "mycelium_l1::reveal::RenderError",
       "reason": "dedup-alias: same definition as `mycelium_l1::RenderError` at crates/mycelium-l1/src/reveal.rs:595 — one canonical row kept"
     },
@@ -36612,6 +36706,18 @@
     },
     {
       "symbol": "mycelium_l1::reveal::RevealError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::reveal::SurfaceOutcome::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::reveal::SurfaceOutcome::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::reveal::SurfaceOutcome::fmt",
       "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
     },
     {

@@ -862,6 +862,7 @@
 | `mycelium_l1::elaborate_colony` | fn | `crates/mycelium-l1/src/elab.rs:446` | **Per-hypha elaboration of a `colony` entry** for the *real-concurrency* execution path |
 | `mycelium_l1::elaborate_direct` | fn | `crates/mycelium-l1/src/elab.rs:420` | **ADR-033/DN-74 (M-923):** elaborate `entry` **without** the [`crate::mono::monomorphize`] |
 | `mycelium_l1::elaborate_lower_rule` | fn | `crates/mycelium-l1/src/elab.rs:583` | **Elaborate a user-defined generative-lowering rule's RHS to a closed L0 [`Node`]** (DN-54 |
+| `mycelium_l1::elaborate_lower_rule_with_args` | fn | `crates/mycelium-l1/src/elab.rs:624` | **M-1054 Stage 1 — the hygienic value-parametric expansion** (DN-110 §5-A / |
 | `mycelium_l1::elaborate_reclaim` | fn | `crates/mycelium-l1/src/elab.rs:512` | **Policy + body elaboration of a `reclaim` entry** for the *real-supervision* execution path |
 | `mycelium_l1::error` | mod | `crates/mycelium-l1/src/lib.rs:46` | — |
 | `mycelium_l1::error::ParseError::at` | fn | `crates/mycelium-l1/src/error.rs:27` | Ergonomic alias for [`ParseError::new`] taking any `impl Into<String>` message (so a `&str` |
@@ -907,6 +908,11 @@
 | `mycelium_l1::resolve` | fn | `crates/mycelium-l1/src/ambient.rs:162` | Resolve a parsed [`Nodule`] to its longhand twin (RFC-0012 §4.3/§4.4). |
 | `mycelium_l1::resolve_report` | fn | `crates/mycelium-l1/src/ambient.rs:176` | Like [`resolve`], but also returns the provenance trace ([`ResolutionNote`]s) for EXPLAIN (§4.3). |
 | `mycelium_l1::reveal` | mod | `crates/mycelium-l1/src/lib.rs:66` | `reveal` — desugar-on-demand, Increment-1 (M-1051; DN-38 §5/§8.3; DN-110 §3.4/§8.4; |
+| `mycelium_l1::reveal::CertVerdict` | struct | `crates/mycelium-l1/src/reveal.rs:976` | The Increment-3 `certified`-mode round-trip verdict (DN-38 §5). |
+| `mycelium_l1::reveal::CertVerdict::l0_witness_holds` | fn | `crates/mycelium-l1/src/reveal.rs:990` | `true` iff the L0-term-level witness holds — the property `certified` mode actually |
+| `mycelium_l1::reveal::L0Witness` | enum | `crates/mycelium-l1/src/reveal.rs:901` | The L0-term-level identity witness (OQ-H3 option (1), module doc) — the property the |
+| `mycelium_l1::reveal::SurfaceOutcome` | enum | `crates/mycelium-l1/src/reveal.rs:931` | The (secondary, best-effort) surface round-trip outcome (OQ-H3 option (1): out-of-contract for |
+| `mycelium_l1::reveal::certified_roundtrip` | fn | `crates/mycelium-l1/src/reveal.rs:1013` | Run the Increment-3 `certified` round-trip check over `shown` (an already-elaborated, closed |
 | `mycelium_l1::reveal_l0` | fn | `crates/mycelium-l1/src/reveal.rs:175` | Show the real, elaborated L0 [`Node`] for entry symbol `site` in `env` (DN-38 §5). |
 | `mycelium_l1::substrate` | mod | `crates/mycelium-l1/src/lib.rs:72` | The `Substrate` v0 value form (M-902; DN-71 Model S §4.1) — an interpreter-level opaque affine |
 | `mycelium_l1::substrate::SubstrateHandle::acquire` | fn | `crates/mycelium-l1/src/substrate.rs:126` | **Acquire** a fresh `Substrate` handle for `tag`, recording how it was acquired. |
@@ -4672,6 +4678,7 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_l1::elab::elaborate_colony` | dedup-alias: same definition as `mycelium_l1::elaborate_colony` at crates/mycelium-l1/src/elab.rs:446 — one canonical row kept |
 | `mycelium_l1::elab::elaborate_direct` | dedup-alias: same definition as `mycelium_l1::elaborate_direct` at crates/mycelium-l1/src/elab.rs:420 — one canonical row kept |
 | `mycelium_l1::elab::elaborate_lower_rule` | dedup-alias: same definition as `mycelium_l1::elaborate_lower_rule` at crates/mycelium-l1/src/elab.rs:583 — one canonical row kept |
+| `mycelium_l1::elab::elaborate_lower_rule_with_args` | dedup-alias: same definition as `mycelium_l1::elaborate_lower_rule_with_args` at crates/mycelium-l1/src/elab.rs:624 — one canonical row kept |
 | `mycelium_l1::elab::elaborate_reclaim` | dedup-alias: same definition as `mycelium_l1::elaborate_reclaim` at crates/mycelium-l1/src/elab.rs:512 — one canonical row kept |
 | `mycelium_l1::error::ParseError` | dedup-alias: same definition as `mycelium_l1::ParseError` at crates/mycelium-l1/src/error.rs:9 — one canonical row kept |
 | `mycelium_l1::error::ParseError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
@@ -4804,6 +4811,12 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_l1::nodule::parse_nodule_header` | dedup-alias: same definition as `mycelium_l1::parse_nodule_header` at crates/mycelium-l1/src/nodule.rs:75 — one canonical row kept |
 | `mycelium_l1::parse::parse` | dedup-alias: same definition as `mycelium_l1::parse` at crates/mycelium-l1/src/parse.rs:35 — one canonical row kept |
 | `mycelium_l1::parse::parse_phylum` | dedup-alias: same definition as `mycelium_l1::parse_phylum` at crates/mycelium-l1/src/parse.rs:64 — one canonical row kept |
+| `mycelium_l1::reveal::CertVerdict::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_l1::reveal::CertVerdict::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_l1::reveal::CertVerdict::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_l1::reveal::L0Witness::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_l1::reveal::L0Witness::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_l1::reveal::L0Witness::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::reveal::RenderError` | dedup-alias: same definition as `mycelium_l1::RenderError` at crates/mycelium-l1/src/reveal.rs:595 — one canonical row kept |
 | `mycelium_l1::reveal::RenderError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::reveal::RenderError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
@@ -4829,6 +4842,9 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_l1::reveal::RevealError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::reveal::RevealError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::reveal::RevealError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_l1::reveal::SurfaceOutcome::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_l1::reveal::SurfaceOutcome::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_l1::reveal::SurfaceOutcome::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::reveal::alpha_eq` | dedup-alias: same definition as `mycelium_l1::alpha_eq` at crates/mycelium-l1/src/reveal.rs:351 — one canonical row kept |
 | `mycelium_l1::reveal::reelaborate` | dedup-alias: same definition as `mycelium_l1::reelaborate` at crates/mycelium-l1/src/reveal.rs:222 — one canonical row kept |
 | `mycelium_l1::reveal::render_surface` | dedup-alias: same definition as `mycelium_l1::render_surface` at crates/mycelium-l1/src/reveal.rs:633 — one canonical row kept |
