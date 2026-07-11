@@ -21,6 +21,7 @@ mod decision;
 mod elab;
 mod error;
 mod eval;
+mod facility_stage1_hygiene;
 mod fuse;
 mod hygiene_affine_expanded;
 mod hygiene_defsite_resolution;
