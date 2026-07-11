@@ -2627,35 +2627,24 @@ fn check_lower_decl_structural(
     Ok(())
 }
 
-/// **§4.1 IL-grammar RHS type-check** of a registered `lower` rule (DN-54 §4.1 / M-812-cont). The
-/// RHS must type-check as an L1 expression with the rule's type parameters in scope as abstract
-/// type-variables (the rule is parametric over the type it is derived for). An ill-typed / ill-formed
-/// RHS is an explicit refusal at definition time — so no `derive` site can invoke a rule that would
-/// produce broken L0. Run over the whole rule set *after* §4.2 acyclicity (so a cyclic set reports
-/// the cycle, not an "unknown name" for the cycle's rule-reference edge).
+/// **§4.1 IL-grammar RHS type-check** of a registered `lower` rule (DN-54 §4.1 / M-812-cont),
+/// **shared** (M-1054 Stage 1b) with [`Cx::check_sugar_call`]'s call-site accept path — see
+/// [`infer_expr_rule_rhs_type`], the one `Cx::infer` pass both now run. The RHS must type-check as
+/// an L1 expression with the rule's type parameters in scope as abstract type-variables (the rule is
+/// parametric over the type it is derived for) **and**, since M-1054 Stage 1b, its declared **value**
+/// parameters ([`LowerDecl::value_params`]) bound to their declared types — see
+/// [`infer_expr_rule_rhs_type`]'s own doc comment for why. An ill-typed / ill-formed RHS is an
+/// explicit refusal at definition time — so no `derive` site (nor, since Stage 1b, a value-parametric
+/// call site) can invoke a rule that would produce broken L0. Run over the whole rule set *after*
+/// §4.2 acyclicity (so a cyclic set reports the cycle, not an "unknown name" for the cycle's
+/// rule-reference edge).
 ///
 /// **Guarantee: `Declared`** (a structural type/grammar check, not a theorem — VR-5) **layered with
 /// `Empirical`** (M-919; DN-71 Model S §4.2) for any `Substrate`-typed binding the RHS introduces —
-/// see the affine-tracker note below. The RHS has no *value parameters* in v0 (`lower Name[T] =
-/// <expr>`), so the value scope starts empty; the rule's `[…]` params are the *type* scope only. No
-/// expected type is pinned (a rule may lower to any well-typed term) — pure inference. The
-/// `@std-sys` gate is held **closed**: a `lower` rule is never an FFI escape (the §4.6 structural
-/// check already refused any direct `wild`; this is defense in depth).
-///
-/// **Affine tracking is ACTIVE here, seeded empty (M-919 fix; DN-71 Model S §4.2).** A `lower`
-/// rule's RHS has no *initial* `Substrate` binding (no value params, no literal — DN-71 §4.1), but
-/// its RHS **can** legally introduce one mid-body: DN-54 §3.3 permits calling other already-checked
-/// top-level `fn`s, and nothing in v0 restricts those callees to non-affine return types, so a `let
-/// s = acquire_thing() in …` inside a rule's RHS can bind a real `Substrate{tag}` value (`acquire_thing`
-/// itself having gone through the ordinary `check_fn_body`'s active tracker at its own definition
-/// site, in an `@std-sys` nodule). An **inert** tracker here would silently exempt every such binding
-/// from the double-consume check ordinary function bodies get — a real, verified coverage gap (a
-/// probe reproduction confirmed a same-rule double-consume via a helper-fn-acquired `Substrate` type-checked
-/// under the pre-fix inert tracker). Seeding an **active-but-empty** tracker (mirroring
-/// `check_fn_body`'s `Tracker::seeded`, just from an empty initial scope, since a rule has no value
-/// params to seed from) closes this: every `let`/lambda/match binder pushed during the RHS walk is
-/// tracked exactly as it would be inside an ordinary function body, so a double-consume of a
-/// derive-site-acquired `Substrate` is refused here too, never silently.
+/// see [`infer_expr_rule_rhs_type`]'s affine-tracker note. No expected type is pinned (a rule may
+/// lower to any well-typed term) — pure inference. The `@std-sys` gate is held **closed**: a `lower`
+/// rule is never an FFI escape (the §4.6 structural check already refused any direct `wild`; this is
+/// defense in depth).
 fn check_lower_rule_rhs_type(
     ld: &LowerDecl,
     types: &BTreeMap<String, DataInfo>,
@@ -2701,6 +2690,61 @@ fn check_lower_rule_rhs_type(
     let rhs = ld
         .expr_rhs()
         .expect("item-shaped rules returned above; this is the expression arm");
+    infer_expr_rule_rhs_type(ld, rhs, types, fns, traits, instances, imports, lower_rules)?;
+    Ok(())
+}
+
+/// **M-1054 Stage 1b** — the one `Cx::infer` pass shared by a `lower` rule's **definition-time**
+/// validation ([`check_lower_rule_rhs_type`]) and a value-parametric call site's **accept path**
+/// ([`Cx::check_sugar_call`]). Binds `ld`'s declared **value** parameters
+/// ([`LowerDecl::value_params`]) into the initial scope at their declared types (a nullary rule's
+/// empty `value_params` makes this identical to the pre-Stage-1b empty-scope walk — no behavioral
+/// change for that case) and infers the RHS's type once.
+///
+/// **Why the call site reuses this instead of re-checking per-argument types (Option B, DN-114):**
+/// the checker has **no coercion** (`want == got`, exact match — see the ordinary user-fn accept
+/// branch's own `if want != got` gate) so a monomorphic value-parametric rule's RHS result type is
+/// **fixed at definition** — inferring it once, with the params bound to their *declared* types
+/// (never the calling site's own argument nodes), gives the one answer every call site shares.
+/// [`Cx::check_sugar_call`] still separately re-checks each *argument's* type against the declared
+/// parameter type at every call site (so a bare-decimal argument still takes its parameter's width,
+/// and an argument/parameter mismatch is still reported there) — this function only fixes the
+/// **result**.
+///
+/// **Affine tracking is ACTIVE here, seeded from the value-param scope (M-919 fix; DN-71 Model S
+/// §4.2), mirroring [`check_fn_body`]'s own `Tracker::seeded(&scope)` call.** Before M-1054 Stage
+/// 1b a `lower` rule had no value parameters in v0, so the tracker seeded empty; now a declared
+/// value parameter is tracked exactly like an ordinary function parameter (a call-site argument
+/// pass counts as the caller's move-in — M-903). The RHS can **also** still legally introduce a
+/// *local* `Substrate` binding mid-body (DN-54 §3.3 permits calling other already-checked top-level
+/// `fn`s, and nothing in v0 restricts those callees to non-affine return types) — an **inert**
+/// tracker would silently exempt every such binding from the double-consume check ordinary function
+/// bodies get (a real, previously-verified coverage gap: a probe reproduction confirmed a same-rule
+/// double-consume via a helper-fn-acquired `Substrate` type-checked under an inert tracker). Seeding
+/// from the (now possibly non-empty) value-param scope closes both: every `let`/lambda/match binder
+/// pushed during the RHS walk — value param **or** RHS-local — is tracked exactly as it would be
+/// inside an ordinary function body, so a double-consume of either is refused here too, never
+/// silently. **This is the M-919 *upper-bound* (duplication) check only** — it does not by itself
+/// make a *call site* with a `Substrate`-typed value parameter safe to accept (a value-parametric
+/// expansion *splices* the caller's argument node into the RHS, which is a different hazard than an
+/// ordinary function call — see [`Cx::check_sugar_call`]'s own Stage-3 (OQ-H4) gate, which refuses
+/// any `Substrate`-typed value parameter outright rather than relying on this tracker alone).
+#[allow(clippy::too_many_arguments)] // mirrors check_lower_rule_rhs_type/check_fn_body's own shape
+fn infer_expr_rule_rhs_type(
+    ld: &LowerDecl,
+    rhs: &Expr,
+    types: &BTreeMap<String, DataInfo>,
+    fns: &BTreeMap<String, FnDecl>,
+    traits: &BTreeMap<String, TraitInfo>,
+    instances: &BTreeMap<(String, String), InstanceInfo>,
+    imports: &NoduleImports,
+    lower_rules: &BTreeMap<String, LowerDecl>,
+) -> Result<Ty, CheckError> {
+    let mut scope: Vec<(String, Ty)> = Vec::with_capacity(ld.value_params.len());
+    for p in &ld.value_params {
+        let (pty, _) = resolve_ty(&ld.name, types, &ld.params, &p.ty)?;
+        scope.push((p.name.clone(), pty));
+    }
     let cx = Cx {
         site: &ld.name,
         types,
@@ -2713,13 +2757,8 @@ fn check_lower_rule_rhs_type(
         bounds: &[],
         std_sys: false,
         depth: Cell::new(0),
-        // M-919 / DN-71 Model S §4.2: active, seeded from the (empty) initial value scope — see the
-        // doc comment above. A `lower` rule has no value *parameters*, but its RHS can still
-        // introduce a `Substrate`-typed local via a helper-fn call, and that binding must be
-        // use-once-checked exactly like any other affine binding (never silently exempted).
-        affine: Tracker::seeded(&[]),
+        affine: Tracker::seeded(&scope),
     };
-    let mut scope: Vec<(String, Ty)> = Vec::new();
     cx.infer(&mut scope, rhs).map_err(|e| {
         CheckError::new(
             &ld.name,
@@ -2728,8 +2767,7 @@ fn check_lower_rule_rhs_type(
                 ld.name, e.message
             ),
         )
-    })?;
-    Ok(())
+    })
 }
 
 /// Does the expression tree contain a `wild { … }` block anywhere? (DN-54 §4.6 — a `lower` rule's
@@ -2745,6 +2783,32 @@ fn rhs_contains_wild(rhs: &Expr) -> Result<bool, crate::totality::WalkDepthExcee
         }
     })?;
     Ok(found)
+}
+
+/// Collect every identifier a surface [`Pattern`] binds, appending to `out` (M-1054 Stage 1b's
+/// Stage-2 free-identifier gate, [`Cx::rhs_first_free_id`]). Mirrors the constructor-arm binding
+/// shape the real decision-tree compiler (`crate::decision`) and elaborator already use — every
+/// `Pattern::Ident`/`Ctor`/`Tuple` field becomes a binder in the arm body's scope; `Wildcard`/`Lit`
+/// bind nothing. `Or`'s alternatives are collected from **every** branch (a union, not just the
+/// first) — conservative rather than relying on the "every alternative binds the same identifier
+/// set" invariant holding at this point in the pipeline (that invariant is itself validated later,
+/// downstream, by `check_match`/`normalize_pattern` — see that function's own doc comment — not yet
+/// by the time this Stage 1b gate runs over the raw surface tree).
+fn collect_pattern_binders(pat: &Pattern, out: &mut Vec<String>) {
+    match pat {
+        Pattern::Wildcard | Pattern::Lit(_) => {}
+        Pattern::Ident(name) => out.push(name.clone()),
+        Pattern::Ctor(_, fields) | Pattern::Tuple(fields) => {
+            for f in fields {
+                collect_pattern_binders(f, out);
+            }
+        }
+        Pattern::Or(alts) => {
+            for a in alts {
+                collect_pattern_binders(a, out);
+            }
+        }
+    }
 }
 
 // ---- DN-54 §10 Model A: derive-site type-parameter instantiation (M-973) ----
@@ -5453,21 +5517,46 @@ impl Cx<'_> {
         }
     }
 
-    /// **M-1054 Stage 0 — expression-position sugar-rule call-site recognition** (DN-110 §5-A). A
-    /// `lower`-declared rule with **value** parameters ([`LowerDecl::value_params`] — distinct from
-    /// the `derive`-facing *type* parameters in [`LowerDecl::params`]) is recognized at an ordinary
-    /// call site `Name(args)`, arity- and type-matched exactly like a user-fn call (DRY with the
-    /// fn branch above — same `resolve_ty` + bidirectional `self.check` + [`edge_mismatch`]
-    /// diagnostic shape).
+    /// **M-1054 Stage 1b — expression-position sugar-rule call-site ACCEPT** (DN-110 §5-A;
+    /// DN-114, Option B — the def-time RHS type-scheme). A `lower`-declared rule with **value**
+    /// parameters ([`LowerDecl::value_params`] — distinct from the `derive`-facing *type*
+    /// parameters in [`LowerDecl::params`]) is recognized at an ordinary call site `Name(args)`,
+    /// arity- and type-matched exactly like a user-fn call (DRY with the fn branch above — same
+    /// `resolve_ty` + bidirectional `self.check` + [`edge_mismatch`] diagnostic shape), then —
+    /// unlike Stage 0 — **accepted**, mirroring the ordinary user-fn accept branch above
+    /// (`Ok((ret, app_node(head, rebuilt)))`).
     ///
-    /// **This function can never return `Ok`.** After a successful arity/type match it still
-    /// refuses — with a dedicated, distinguishable diagnostic naming the gate — rather than
-    /// expanding the call. The capture-avoiding substitution + `%`-freshening a real expansion needs
-    /// (DN-110-8.2-hygiene-deepdive §4 (A)+(B); OQ-H5) is Stage 1+ work, not built yet: emitting a
-    /// literal (unfreshened) splice here would be a capture-unsafe expansion that could actually
-    /// ship, which G2/VR-5 forbid (a correct partial landing beats a guessed unsafe one). The guard
-    /// is **structural** — there is no accept path through this function for a value-parametric
-    /// rule to fall through, not a runtime flag a future edit could forget to check.
+    /// **Why a type-only accept is sound (Option B).** The checker has **no coercion**: every
+    /// accept path in this module is an exact `want == got` match. So a monomorphic
+    /// value-parametric rule's RHS result type is **fixed at definition**, never dependent on the
+    /// calling site's own argument *nodes* — [`infer_expr_rule_rhs_type`] (shared with
+    /// [`check_lower_rule_rhs_type`]'s definition-time validation) infers it **once**, from the
+    /// value params bound to their *declared* types, giving the one answer every call site shares.
+    /// This function TYPES the call; it never re-derives or re-expands the RHS — the hygienic
+    /// **expansion** is [`crate::elab::Elab::app`]'s job (M-1054 Stage 1b §5.2 wiring), reusing the
+    /// landed Stage 1 [`crate::elab::elaborate_lower_rule_with_args`] machinery. This honors the
+    /// ratified two-phase split: L1 check-phase for typing/def-site/affine, L0 elab-phase for the
+    /// hygienic expansion (never doubly-expanding, never dragging `%`-freshening into the checker).
+    ///
+    /// **Two honest, never-silent gates keep this accept sound (G2/VR-5) — see DN-114:**
+    /// - **Stage 3 (OQ-H4, affine soundness).** Refuses any `Substrate`-typed value parameter, and
+    ///   (defensively) any RHS-local binding that is *structurally* affine-producing (a `let`-bound
+    ///   call to a fn whose declared return type is `Substrate`, or a bare `consume`). An ordinary
+    ///   (non-affine) argument may safely be spliced into the RHS at more than one occurrence (see
+    ///   [`crate::elab::sugar_expand`] — re-evaluation, not a soundness hazard, for a pure v0
+    ///   value); an *affine* argument may not — [`crate::elab::Elab::app`]'s ordinary fn-call
+    ///   inlining `Let`-binds each argument **exactly once**, but Stage 1's (B) substitution
+    ///   splices the raw argument node verbatim at **every** RHS occurrence of its value param, so
+    ///   an affine value param could be double-consumed by expansion alone. Closing this at the
+    ///   value-parameter level removes the hazard entirely; the RHS-local-binding check is an
+    ///   additional structural safety net over the realistic "helper-fn-acquired `Substrate`" shape
+    ///   [`infer_expr_rule_rhs_type`]'s own doc comment names — not a full second affine-inference
+    ///   pass (that remains Stage 3's own job, the substituted-Expr affine re-check, M-919/OQ-H4).
+    /// - **Stage 2 (OQ-H1, def-site resolution).** Refuses an RHS identifier that is genuinely
+    ///   **free** — neither a value parameter, an RHS-local binder, nor a same-nodule,
+    ///   unambiguous top-level fn/constructor/`lower`-rule name (see [`Self::rhs_first_free_id`]).
+    ///   Stage 1b is scoped to the single-nodule, params-and-globally-unambiguous-fns/ctors-only
+    ///   fragment; cross-nodule / import-ambiguous def-site resolution is Stage 2's own job.
     ///
     /// An item-shaped rule (DN-54 §10 Model A — `derive`-only, no expression-position form at all)
     /// is refused with its own clearer diagnostic rather than falling through to arity matching.
@@ -5479,8 +5568,7 @@ impl Cx<'_> {
         scope: &mut Vec<(String, Ty)>,
         args: &[Expr],
     ) -> Result<(Ty, Expr), CheckError> {
-        let _ = head; // recognized/matched only — Stage 0 never builds a replacement App node.
-        let crate::ast::LowerRhs::Expr(_) = &rule.rhs else {
+        let crate::ast::LowerRhs::Expr(rhs) = &rule.rhs else {
             return self.err(format!(
                 "`{name}` is a `lower` rule with an item-shaped (`impl … for …`) RHS (DN-54 §10 \
                  Model A) — it has no expression-position form; apply it with `derive {name} for \
@@ -5490,19 +5578,39 @@ impl Cx<'_> {
         if rule.value_params.len() != args.len() {
             return self.err(format!(
                 "`{name}` (a `lower` sugar rule) takes {} value parameter(s), got {} argument(s) \
-                 — arity mismatch (M-1054 Stage 0 call-site recognition; never a silent \
+                 — arity mismatch (M-1054 call-site recognition; never a silent \
                  truncation/padding, G2)",
                 rule.value_params.len(),
                 args.len()
             ));
         }
+        // Stage 3 (OQ-H4) gate, part 1 — a `Substrate`-typed value parameter is refused outright
+        // (see the doc comment above for why): checked before the per-argument type walk so the
+        // dedicated affine diagnostic wins over an incidental argument-type mismatch (G2).
+        for pm in &rule.value_params {
+            let (pty, _) = resolve_ty(self.site, self.types, &[], &pm.ty)?;
+            if matches!(pty, Ty::Substrate(_)) {
+                return self.err(format!(
+                    "`{name}` (a `lower` sugar rule) has an affine (`Substrate`) value parameter \
+                     `{}` — M-1054 Stage 1b accepts only the affine-free fragment: expansion \
+                     (`crate::elab::sugar_expand`'s (B) substitution) splices a use-site argument \
+                     node into every RHS occurrence of its value param, which would double-consume \
+                     an affine argument referenced more than once. The substituted-Expr affine \
+                     re-check over the expanded RHS is Stage 3 work (M-919/OQ-H4), not built yet \
+                     (never a silently-unchecked affine accept — G2).",
+                    pm.name
+                ));
+            }
+        }
         // Match + check each argument against its declared parameter type — the same bidirectional
         // discipline the user-fn branch (above, in `check_app`) uses, so a bare-decimal argument
         // still takes its parameter's width and a genuine mismatch is reported per-parameter, by
-        // name (DRY with that branch's `edge_mismatch` diagnostic).
+        // name (DRY with that branch's `edge_mismatch` diagnostic). Rebuilt args feed the accepted
+        // call node below, mirroring the user-fn branch's own `rebuilt`.
+        let mut rebuilt = Vec::with_capacity(args.len());
         for (pm, a) in rule.value_params.iter().zip(args) {
             let (want, _) = resolve_ty(self.site, self.types, &[], &pm.ty)?;
-            let (got, _) = self.check(scope, a, Some(&want))?;
+            let (got, a2) = self.check(scope, a, Some(&want))?;
             if want != got {
                 return self.err(format!(
                     "`{name}` parameter `{}`: {}",
@@ -5510,18 +5618,366 @@ impl Cx<'_> {
                     edge_mismatch("argument", &want, &got)
                 ));
             }
+            rebuilt.push(a2);
         }
-        // Recognition + arity/type matching both succeeded: this is a well-formed invocation of a
-        // real sugar rule. Stage 0's guard — refuse anyway, naming the exact gate, rather than
-        // expand (never a fabricated / capture-unsafe accept — G2/VR-5). Stage 1 lands the hygiene
-        // machinery a future revision of this function would need before it could return `Ok`.
-        self.err(format!(
-            "`{name}(…)` is a recognized, arity/type-matched expression-position sugar-rule \
-             invocation (DN-110 §5-A) — but M-1054 Stage 0 lands only recognition + the matcher \
-             skeleton, not the capture-avoiding expansion (OQ-H5 / DN-110-8.2-hygiene-deepdive §4; \
-             Stage 1 work). Refusing rather than emitting an unhygienic literal splice (never \
-             silent, G2)."
-        ))
+        // Stage 3 (OQ-H4) gate, part 2 — a structurally affine RHS-local binding (see the doc
+        // comment above: a `let`-bound call to a `Substrate`-returning fn, or a bare `consume`).
+        if let Some(offender) = self.rhs_first_affine_binding(rhs, 0)? {
+            return self.err(format!(
+                "`{name}`'s RHS introduces an affine (`Substrate`)-typed local binding `{offender}` \
+                 — M-1054 Stage 1b accepts only the affine-free fragment; the substituted-Expr \
+                 affine re-check over the expanded RHS is Stage 3 work (M-919/OQ-H4), not built yet \
+                 (never a silently-unchecked affine accept — G2)."
+            ));
+        }
+        // Stage 2 (OQ-H1) gate — the first genuinely free RHS identifier, if any (see
+        // `rhs_first_free_id`'s doc comment for the exact accepted-fragment boundary).
+        let bound: Vec<String> = rule.value_params.iter().map(|p| p.name.clone()).collect();
+        if let Some(free) = self.rhs_first_free_id(rhs, &bound, 0)? {
+            return self.err(format!(
+                "`{name}`'s RHS references `{free}`, which is neither a value parameter, an \
+                 RHS-local binder, nor a same-nodule fn/constructor/prim/`lower`-rule — M-1054 \
+                 Stage 1b accepts only the single-nodule, params-and-globally-unambiguous- \
+                 fns/ctors-only fragment; cross-nodule / ambiguous def-site resolution is Stage 2 \
+                 work (OQ-H1), not built yet (never a silent free-variable splice — G2)."
+            ));
+        }
+        // Both gates passed: type the RHS once (Option B, DN-114 — see the doc comment above) and
+        // accept, rebuilding the call node exactly like the ordinary user-fn branch does.
+        let ret_ty = infer_expr_rule_rhs_type(
+            rule,
+            rhs,
+            self.types,
+            self.fns,
+            self.traits,
+            self.instances,
+            self.imports,
+            self.lower_rules,
+        )?;
+        Ok((ret_ty, app_node(head, rebuilt)))
+    }
+
+    /// **M-1054 Stage 1b Stage-2 gate helper (OQ-H1)** — depth-first, left-to-right search for the
+    /// first RHS identifier that is genuinely **free**: not `bound` (the value parameters, plus
+    /// every RHS-local binder introduced by an ancestor `let`/`lambda`/`for`/match-arm-pattern), and
+    /// not a same-nodule, unambiguous top-level `fn`, nullary `lower`-rule reference, or constructor
+    /// name (a bare nullary-constructor `Var` reference, or any constructor named in call-head
+    /// position, resolves through the ordinary global namespace exactly like a `fn` reference does —
+    /// [`crate::elab::Elab::expr`]'s own `Expr::Path` handling treats them identically). `None` means
+    /// every RHS identifier is within the Stage 1b fragment; `Some(name)` names the first offender.
+    /// Exhaustively recurses into every [`Expr`] child so no subtree is silently skipped (G2) — an
+    /// unrecognized/future `Expr` variant is a compile error here (no wildcard arm), not a silent
+    /// gap. Depth-bounded by [`MAX_CHECK_DEPTH`] like every other recursive walk in this module.
+    fn rhs_first_free_id<'e>(
+        &self,
+        e: &'e Expr,
+        bound: &[String],
+        depth: u32,
+    ) -> Result<Option<&'e str>, CheckError> {
+        if depth > MAX_CHECK_DEPTH {
+            return Err(CheckError::new(
+                self.site,
+                format!(
+                    "expression nesting exceeds the checker depth budget ({MAX_CHECK_DEPTH}) — a \
+                     pathologically-nested `lower` rule RHS (M-1054 Stage 1b free-identifier walk)"
+                ),
+            ));
+        }
+        let d = depth + 1;
+        match e {
+            Expr::Path(p) if p.0.len() == 1 => {
+                let name = p.0[0].as_str();
+                // `prim_family`-recognized names (the scalar/binary/ternary/dense/seq/bytes core
+                // arithmetic/comparison primitives — e.g. `add_s`) are globally, unambiguously
+                // resolvable kernel identifiers, never a def-site/import concern — squarely inside
+                // the Stage 1b fragment alongside a `fn`/ctor/`lower`-rule reference. **Known
+                // residual (flagged, not silent — G2):** the VSA-prim (`try_check_vsa_prim`) and
+                // float-prim (`try_check_float_prim`) dispatch sets are *not* checked here (those
+                // dispatchers are full argument-shape-matching functions, not name predicates) — an
+                // RHS calling e.g. `vsa_bind`/a float prim would be (over-)refused by this gate as
+                // if it were a free identifier. Not exercised by any Stage 1b fixture; a residual
+                // for whoever extends this gate's coverage.
+                if bound.iter().any(|b| b == name)
+                    || self.fns.contains_key(name)
+                    || self.lower_rules.contains_key(name)
+                    || self.ctor(name).is_some()
+                    || prim_family(name).is_some()
+                {
+                    return Ok(None);
+                }
+                Ok(Some(name))
+            }
+            // A dotted/multi-segment path is a distinct, already-refused v0 shape (`check_app`'s own
+            // "dotted call" refusal) — not this gate's concern.
+            Expr::Path(_) | Expr::Lit(_) => Ok(None),
+            Expr::Let {
+                bound: b,
+                body,
+                name,
+                ..
+            } => {
+                if let Some(f) = self.rhs_first_free_id(b, bound, d)? {
+                    return Ok(Some(f));
+                }
+                let mut bound2 = bound.to_vec();
+                bound2.push(name.clone());
+                self.rhs_first_free_id(body, &bound2, d)
+            }
+            Expr::If { cond, conseq, alt } => {
+                for sub in [cond, conseq, alt] {
+                    if let Some(f) = self.rhs_first_free_id(sub, bound, d)? {
+                        return Ok(Some(f));
+                    }
+                }
+                Ok(None)
+            }
+            Expr::Match { scrutinee, arms } => {
+                if let Some(f) = self.rhs_first_free_id(scrutinee, bound, d)? {
+                    return Ok(Some(f));
+                }
+                for arm in arms {
+                    let mut bound2 = bound.to_vec();
+                    collect_pattern_binders(&arm.pattern, &mut bound2);
+                    if let Some(f) = self.rhs_first_free_id(&arm.body, &bound2, d)? {
+                        return Ok(Some(f));
+                    }
+                }
+                Ok(None)
+            }
+            Expr::For {
+                x,
+                xs,
+                acc,
+                init,
+                body,
+            } => {
+                if let Some(f) = self.rhs_first_free_id(xs, bound, d)? {
+                    return Ok(Some(f));
+                }
+                if let Some(f) = self.rhs_first_free_id(init, bound, d)? {
+                    return Ok(Some(f));
+                }
+                let mut bound2 = bound.to_vec();
+                bound2.push(x.clone());
+                bound2.push(acc.clone());
+                self.rhs_first_free_id(body, &bound2, d)
+            }
+            Expr::Lambda { params, body } => {
+                let mut bound2 = bound.to_vec();
+                bound2.extend(params.iter().map(|p| p.name.clone()));
+                self.rhs_first_free_id(body, &bound2, d)
+            }
+            Expr::App { head, args } => {
+                if let Some(f) = self.rhs_first_free_id(head, bound, d)? {
+                    return Ok(Some(f));
+                }
+                for a in args {
+                    if let Some(f) = self.rhs_first_free_id(a, bound, d)? {
+                        return Ok(Some(f));
+                    }
+                }
+                Ok(None)
+            }
+            Expr::Fuse { left, right } => {
+                for sub in [left, right] {
+                    if let Some(f) = self.rhs_first_free_id(sub, bound, d)? {
+                        return Ok(Some(f));
+                    }
+                }
+                Ok(None)
+            }
+            Expr::Reclaim { policy, body } => {
+                for sub in [policy, body] {
+                    if let Some(f) = self.rhs_first_free_id(sub, bound, d)? {
+                        return Ok(Some(f));
+                    }
+                }
+                Ok(None)
+            }
+            Expr::Swap { value, .. } => self.rhs_first_free_id(value, bound, d),
+            Expr::WithParadigm { body, .. }
+            | Expr::Wild(body)
+            | Expr::Spore(body)
+            | Expr::Wrapping(body)
+            | Expr::Consume(body)
+            | Expr::Try(body) => self.rhs_first_free_id(body, bound, d),
+            Expr::Ascribe(inner, _) => self.rhs_first_free_id(inner, bound, d),
+            Expr::TupleLit(items) => {
+                for it in items {
+                    if let Some(f) = self.rhs_first_free_id(it, bound, d)? {
+                        return Ok(Some(f));
+                    }
+                }
+                Ok(None)
+            }
+            Expr::Colony(hyphae) => {
+                for h in hyphae {
+                    if let Some(forage) = &h.forage {
+                        if let Some(f) = self.rhs_first_free_id(forage, bound, d)? {
+                            return Ok(Some(f));
+                        }
+                    }
+                    if let Some(f) = self.rhs_first_free_id(&h.body, bound, d)? {
+                        return Ok(Some(f));
+                    }
+                }
+                Ok(None)
+            }
+        }
+    }
+
+    /// **M-1054 Stage 1b Stage-3 gate helper (OQ-H4), part 2** — a **structural** (not fully
+    /// type-inferring) search for an RHS `let`-bound local whose bound expression is *syntactically*
+    /// affine-producing: a bare `consume <expr>` (always yields a `Substrate` value — see
+    /// [`crate::ast::Expr::Consume`]'s own doc comment), or a call `head(args)` where `head` is a
+    /// known top-level `fn` whose **declared** return type is `Substrate` (the exact
+    /// "helper-fn-acquired `Substrate`" shape [`infer_expr_rule_rhs_type`]'s own doc comment names).
+    /// Narrower than a full second affine-inference pass over the RHS (that remains Stage 3's own
+    /// job, M-919/OQ-H4) but sufficient to refuse the realistic shape rather than silently accept it
+    /// (G2) — see [`Self::check_sugar_call`]'s doc comment for why this is a defensive addition
+    /// alongside the value-parameter check, not the primary soundness gate. Exhaustively recurses
+    /// into every [`Expr`] child (no wildcard arm) so no subtree is silently skipped.
+    fn rhs_first_affine_binding<'e>(
+        &self,
+        e: &'e Expr,
+        depth: u32,
+    ) -> Result<Option<&'e str>, CheckError> {
+        if depth > MAX_CHECK_DEPTH {
+            return Err(CheckError::new(
+                self.site,
+                format!(
+                    "expression nesting exceeds the checker depth budget ({MAX_CHECK_DEPTH}) — a \
+                     pathologically-nested `lower` rule RHS (M-1054 Stage 1b affine-binding walk)"
+                ),
+            ));
+        }
+        let d = depth + 1;
+        match e {
+            Expr::Let {
+                name, bound, body, ..
+            } => {
+                if self.expr_is_structurally_affine(bound)? {
+                    return Ok(Some(name.as_str()));
+                }
+                if let Some(f) = self.rhs_first_affine_binding(bound, d)? {
+                    return Ok(Some(f));
+                }
+                self.rhs_first_affine_binding(body, d)
+            }
+            Expr::Path(_) | Expr::Lit(_) => Ok(None),
+            Expr::If { cond, conseq, alt } => {
+                for sub in [cond, conseq, alt] {
+                    if let Some(f) = self.rhs_first_affine_binding(sub, d)? {
+                        return Ok(Some(f));
+                    }
+                }
+                Ok(None)
+            }
+            Expr::Match { scrutinee, arms } => {
+                if let Some(f) = self.rhs_first_affine_binding(scrutinee, d)? {
+                    return Ok(Some(f));
+                }
+                for arm in arms {
+                    if let Some(f) = self.rhs_first_affine_binding(&arm.body, d)? {
+                        return Ok(Some(f));
+                    }
+                }
+                Ok(None)
+            }
+            Expr::For { xs, init, body, .. } => {
+                for sub in [xs.as_ref(), init.as_ref(), body.as_ref()] {
+                    if let Some(f) = self.rhs_first_affine_binding(sub, d)? {
+                        return Ok(Some(f));
+                    }
+                }
+                Ok(None)
+            }
+            Expr::Lambda { body, .. } => self.rhs_first_affine_binding(body, d),
+            Expr::App { head, args } => {
+                if let Some(f) = self.rhs_first_affine_binding(head, d)? {
+                    return Ok(Some(f));
+                }
+                for a in args {
+                    if let Some(f) = self.rhs_first_affine_binding(a, d)? {
+                        return Ok(Some(f));
+                    }
+                }
+                Ok(None)
+            }
+            Expr::Fuse { left, right } => {
+                for sub in [left, right] {
+                    if let Some(f) = self.rhs_first_affine_binding(sub, d)? {
+                        return Ok(Some(f));
+                    }
+                }
+                Ok(None)
+            }
+            Expr::Reclaim { policy, body } => {
+                for sub in [policy, body] {
+                    if let Some(f) = self.rhs_first_affine_binding(sub, d)? {
+                        return Ok(Some(f));
+                    }
+                }
+                Ok(None)
+            }
+            Expr::Swap { value, .. } => self.rhs_first_affine_binding(value, d),
+            Expr::WithParadigm { body, .. }
+            | Expr::Wild(body)
+            | Expr::Spore(body)
+            | Expr::Wrapping(body)
+            | Expr::Consume(body)
+            | Expr::Try(body) => self.rhs_first_affine_binding(body, d),
+            Expr::Ascribe(inner, _) => self.rhs_first_affine_binding(inner, d),
+            Expr::TupleLit(items) => {
+                for it in items {
+                    if let Some(f) = self.rhs_first_affine_binding(it, d)? {
+                        return Ok(Some(f));
+                    }
+                }
+                Ok(None)
+            }
+            Expr::Colony(hyphae) => {
+                for h in hyphae {
+                    if let Some(forage) = &h.forage {
+                        if let Some(f) = self.rhs_first_affine_binding(forage, d)? {
+                            return Ok(Some(f));
+                        }
+                    }
+                    if let Some(f) = self.rhs_first_affine_binding(&h.body, d)? {
+                        return Ok(Some(f));
+                    }
+                }
+                Ok(None)
+            }
+        }
+    }
+
+    /// Is `e` *syntactically* an affine-producing expression — a bare `consume`, or a call to a
+    /// known top-level `fn` whose declared return type resolves to `Substrate`? Used only by
+    /// [`Self::rhs_first_affine_binding`]'s `let`-binding check (see that function's doc comment for
+    /// the full scope/honesty note). `Ok(false)` for every other shape — including a call to an
+    /// *unknown* name (already refused elsewhere by [`Self::rhs_first_free_id`]) or a generic `fn`
+    /// (its return type may depend on an uninstantiated type variable; not this structural check's
+    /// concern).
+    fn expr_is_structurally_affine(&self, e: &Expr) -> Result<bool, CheckError> {
+        match e {
+            Expr::Consume(_) => Ok(true),
+            Expr::App { head, .. } => {
+                let Expr::Path(p) = head.as_ref() else {
+                    return Ok(false);
+                };
+                if p.0.len() != 1 {
+                    return Ok(false);
+                }
+                let Some(fd) = self.fns.get(&p.0[0]) else {
+                    return Ok(false);
+                };
+                let (rty, _) =
+                    resolve_ty(self.site, self.types, &fd.sig.param_names(), &fd.sig.ret)?;
+                Ok(matches!(rty, Ty::Substrate(_)))
+            }
+            _ => Ok(false),
+        }
     }
 
     /// Check a call to a **generic** function (RFC-0007 §11.3): resolve the callee's signature with
@@ -7614,10 +8070,15 @@ pub(crate) fn infer_type(
         traits: &env.traits,
         instances: &env.instances,
         imports: &no_imports,
-        // M-1054 Stage 0: available for uniformity with the other Cx sites, though re-inference over
-        // an already-checked v0 term can never actually contain a sugar-rule call site (Stage 0
-        // never accepts one — see `Cx::check_sugar_call`), so this is exercised at zero behavioral
-        // cost here.
+        // M-1054: available for uniformity with the other Cx sites. Before Stage 1b, re-inference
+        // over an already-checked v0 term could never actually contain a sugar-rule call site
+        // (Stage 0 never accepted one). Since Stage 1b, `Cx::check_sugar_call` *does* accept a
+        // value-parametric sugar call, rebuilding it as an ordinary `App` node — so a checked term
+        // embedding one (e.g. as a `match` scrutinee re-inferred here, `elab.rs`'s `infer_type`
+        // call sites) reaches `check_app`'s same last-resort `lower_rules` branch again during
+        // re-inference. That is harmless/idempotent (the same accept, the same type, every time —
+        // no coercion exists to drift), not the "never reached" case this comment used to claim;
+        // corrected here rather than left stale (VR-5 — a comment is a claim too).
         lower_rules: &env.lower_rules,
         // Re-inference runs over already-checked, monomorphic terms (a generic *instantiation* is
         // refused at elaboration before re-inference — RFC-0007 §11.3 staging), so no type
