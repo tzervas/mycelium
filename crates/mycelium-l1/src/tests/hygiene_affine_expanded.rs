@@ -29,10 +29,29 @@
 //! for "the sugar's RHS after its parameter is replaced by the use-site argument" at the level the
 //! real affine tracker operates on.
 //!
+//! **A positive finding, not just a workaround.** Because L0 `Node` is genuinely untyped
+//! (`node.rs:101`), running the affine tracker on substituted *surface* source isn't merely this
+//! experiment's expedient stand-in — it likely **previews how the real M-1054 facility will have to
+//! be wired**: `check_lower_rule_rhs_type` (`checkty.rs:2657`) already type/affine-checks a rule's
+//! RHS as an L1 surface expression, and any future value-parameter substitution M-1054 adds would
+//! most naturally re-run that same L1-level pass on the substituted RHS, exactly the shape this
+//! module exercises — not a parallel Node-level pass that does not otherwise exist in the codebase.
+//!
 //! **Deliberately non-capturing (out of scope here — that is E1's job):** every fixture's
 //! substituted argument spelling never collides with any name the sugar's own RHS introduces, so
 //! this module says nothing about hygiene/capture — only about affine soundness once the (already
 //! capture-safe, per E1) substitution has happened.
+//!
+//! # Additive, non-gating scope (read before treating a PASS as M-1055 progress)
+//!
+//! **E2 and E5 are additive exploration, not progress against M-1055's formal Definition of Done.**
+//! M-1055's DoD is **E1 + E3** — the Rank-1 go/no-go the deep-dive commissions (§9); E3 (`reveal`
+//! round-trip fidelity) needs `reveal` Increment-3 and is **unbuilt**, so the formal DoD is not
+//! satisfied by this module or its E2 sibling. What a PASS here actually establishes: hygiene-model
+//! clause **(D)** (affine soundness) moves `Declared → Empirical` **for the upper-bound
+//! (duplication) property only**, via the real M-919 static pass — the drop lower-bound property is
+//! an M-904 **runtime** concern, not validated as a static-rejection claim here (see the
+//! scope-honesty section below).
 //!
 //! # Test-only — NOT the M-1054 facility
 //!
@@ -59,13 +78,16 @@
 //! The task brief that commissioned this experiment describes case (c) — a sugar that **drops**
 //! its parameter unused — as one of two sub-cases (with duplication) expected to be a **rejected**
 //! affine violation on the expanded L0. **The landed M-919 static checker does not, in fact, reject
-//! an unused `Substrate` binding** — `crate::affine`'s own module docs are explicit that the
-//! *static* pass enforces only the **upper** bound (at most one move); the **lower** bound (at
-//! least one move) is closed at **runtime** instead (DN-71 §8 FLAG-4's v0 posture, M-904's
-//! `release_if_abandoned`/`SubstrateHandle::release`), and this is directly witnessed by the
-//! already-landed `tests/affine.rs::a_never_consumed_substrate_binding_checks_the_static_pass_does_not_reject_leaks`
-//! test. So [`fixture_dropping_unused`]'s **independent hand-verdict is ACCEPT**, grounded against
-//! that landed test — not the REJECT the task brief assumed. This is not an E5 failure and not a
+//! an unused `Substrate` binding.** (Citation correction: `crate::affine`'s own module docs only
+//! *structurally imply* this — they document the tracker as enforcing use-once, not the absence of
+//! a lower-bound check; the explicit statement that the *static* pass enforces only the **upper**
+//! bound, with the **lower** bound closed at **runtime** instead, lives in the already-landed
+//! `tests/affine.rs:304-312` — the
+//! `a_never_consumed_substrate_binding_checks_the_static_pass_does_not_reject_leaks` test's own doc
+//! comment — plus **DN-71 §8 FLAG-4**'s v0 posture and M-904's `release_if_abandoned`/
+//! `SubstrateHandle::release`.) So [`fixture_dropping_unused`]'s **independent hand-verdict is
+//! ACCEPT**, confirmed via that landed test + DN-71 §8 FLAG-4 / M-904 — not the REJECT the task
+//! brief assumed. This is not an E5 failure and not a
 //! new laundering channel opened by sugar: the sugar's expansion is checked by the exact same
 //! static pass an equivalent hand-written function body would be, and that pass's documented v0
 //! contract is silent on drops either way (mitigation #14 — verify the claim against the codebase

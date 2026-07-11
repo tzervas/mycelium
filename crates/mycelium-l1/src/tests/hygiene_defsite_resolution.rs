@@ -19,6 +19,25 @@
 //! *different* binding of the same spelling in scope at the use site, both within one nodule. OQ-H1
 //! stays open and is carried in this task's report, not dispositioned here.
 //!
+//! **A further, unexercised composition gap (caveat, not a claim of soundness):** [`DefEnv::get`]
+//! splices the resolved def-site [`Node`] **verbatim** — it does *not* route the spliced content
+//! back through (A)'s `%`-freshening walk. In the real DN-110 §4(C) design this is a non-issue (a
+//! def-site reference is resolved to a **content-addressed reference**, not textually re-spliced —
+//! deep-dive §4(C)), but *this prototype* literally re-inlines raw content, so a fixture where the
+//! def-site helper's own bound-variable spelling collides with an RHS binder or a use-site binder
+//! is **not tested here** — this module's one fixture avoids that composition by construction (the
+//! def-site helper's own `x` never collides with anything in scope at the splice point). Flagged as
+//! an open gap in this prototype's coverage, not fixed by inventing a fixture for it (G2/VR-5).
+//!
+//! # Additive, non-gating scope (read before treating a PASS as M-1055 progress)
+//!
+//! **E2 and E5 are additive exploration, not progress against M-1055's formal Definition of Done.**
+//! M-1055's DoD is **E1 + E3** — the Rank-1 go/no-go the deep-dive commissions (§9); E3 (`reveal`
+//! round-trip fidelity) needs `reveal` Increment-3 and is **unbuilt**, so the formal DoD is not
+//! satisfied by this module or its E5 sibling. What a PASS here actually establishes: hygiene-model
+//! clause **(C)** (def-site resolution) moves `Declared → Empirical` **for the in-scope,
+//! same-nodule case only** — cross-phylum resolution (**OQ-H1**) stays open and undecided.
+//!
 //! # Test-only — NOT the M-1054 facility
 //!
 //! Exactly the same posture as E1 (see its module docs): [`expand`] is a throwaway experiment
