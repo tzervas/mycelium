@@ -8,15 +8,13 @@
 // re-running this never accumulates duplicates).
 //
 // Honesty note (VR-5 / G2 — screenshots are Declared projections, never fabricated):
-// target/docsite/ currently ships exactly ONE fixed light stylesheet — the same
-// `:root{--fg;--bg;--accent;--dim;--code}` custom-property set is emitted by
-// crates/mycelium-doc/src/emit/html.rs, crates/mycelium-doc/src/book.rs, AND
-// scripts/docsite.sh's landing page, and none of the three has a `prefers-color-scheme` media
-// query yet. Rather than emit a "-dark" file that is pixel-identical to "-light" (which would
-// misrepresent the site as having a dark theme it doesn't), this script injects a CAPTURE-TIME
-// stylesheet override (DARK_OVERRIDE_CSS below) that re-themes the page through those same
-// custom properties. This is a documentation-tooling artifact — it changes nothing about the
-// site's real (light-only) output. Disclosed here and in docs/guide/docsite-preview.md.
+// every page under target/docsite/ now ships a REAL `prefers-color-scheme: dark` rule — the
+// corpus/book pages (crates/mycelium-doc/src/emit/html.rs, crates/mycelium-doc/src/book.rs) via
+// the shared `crates/mycelium-doc/src/theme.rs` guarantee-lattice dark palette (plus a persisted
+// `data-theme` toggle), and this script's own hand-rolled pages (landing/lang-ref/api-index
+// wrapper) via scripts/docsite.sh's `DOCSITE_DARK_CSS`. So the capture below just switches the
+// browser's emulated color scheme (`page.emulateMedia`) — no capture-time stylesheet override is
+// needed or applied; every "-dark" screenshot is the site's genuine dark rendering.
 //
 // Usage: node capture.mjs --base-url http://127.0.0.1:PORT --site-dir <target/docsite> --out docs/assets
 // Env: MYC_PW_CHROMIUM=<path> overrides the Chromium executable Playwright launches (falls back
@@ -46,18 +44,6 @@ function findByPrefix(dir, prefix) {
   const hit = readdirSync(dir).find((f) => f.toLowerCase().startsWith(prefix.toLowerCase()) && f.endsWith(".html"));
   return hit ? join(dir, hit) : null;
 }
-
-// Re-themes the site's existing CSS custom properties for a capture-time-only dark rendering —
-// see the file-header honesty note. Kept minimal: override the shared :root variables (covers
-// body/text/links/code blocks on every page family) plus the few hardcoded literal colors that
-// would otherwise look wrong against a dark background.
-const DARK_OVERRIDE_CSS = `
-:root{--fg:#e6e6f0;--bg:#12121a;--accent:#6fe0a0;--dim:#9494ab;--code:#1d1d29}
-.browse{background:#16241b;border-color:var(--accent)}
-.missing{background:#241c14;border-color:#c93}
-footer{border-top-color:#2a2a38}
-a.unresolved{color:#ff6b6b}
-`;
 
 async function main() {
   const { baseUrl, siteDir, out } = parseArgs(process.argv.slice(2));
@@ -107,9 +93,6 @@ async function main() {
       for (const theme of ["light", "dark"]) {
         await page.emulateMedia({ colorScheme: theme });
         await page.goto(url, { waitUntil: "networkidle" });
-        if (theme === "dark") {
-          await page.addStyleTag({ content: DARK_OVERRIDE_CSS });
-        }
         const destPath = join(out, `${t.name}-${theme}.png`);
         await page.screenshot({ path: destPath });
         const size = statSync(destPath).size;
