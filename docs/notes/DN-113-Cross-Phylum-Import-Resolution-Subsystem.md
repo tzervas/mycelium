@@ -1,4 +1,4 @@
-# DN-112 — The Cross-Phylum (Crate→Crate) Import / Resolution Subsystem
+# DN-113 — The Cross-Phylum (Crate→Crate) Import / Resolution Subsystem
 
 > **Status:** **Draft** (2026-07-10) — a design-reasoner PLAN in the plan → review → improve →
 > ratify → implement cycle. This note **recommends, ranked; it does not ratify.** It moves **no**
@@ -355,8 +355,8 @@ This note reaches **Accepted** when the maintainer:
    subsystem lands and is differential-witnessed (a real cross-phylum `use` fixture over `lib/std`
    plus a second phylum, the M-662/M-1024 witnessing pattern).
 
-**Verification the implementation must show (the "how verified"):** a two-phylum fixture (a dep phylum
-+ a consumer) where `myc check` resolves a cross-phylum `use`, a **hash-mismatch** fixture that
+**Verification the implementation must show (the "how verified"):** a two-phylum fixture (a dep
+phylum and a consumer) where `myc check` resolves a cross-phylum `use`, a **hash-mismatch** fixture that
 refuses never-silently, a **cycle** fixture that refuses, and a differential that the linked `Env` a
 cross-phylum reference resolves through is the **same** one `PhylumEnv::link` produces (the DRY proof,
 §7). Advances **FR/NFR** for the phylum/library capability (RFC-0006 §4.3) and grounds **OQ-H1**.
@@ -365,8 +365,9 @@ cross-phylum reference resolves through is the **same** one `PhylumEnv::link` pr
 
 ## §12 FLAGs (append-only rows the integrating parent applies — I do not edit these files)
 
-- **FLAG-DOCINDEX.** Add a `docs/Doc-Index.md` row for **DN-112** (this note), in the DN block after
-  the DN-111 row (`Doc-Index.md:142`). Suggested summary: *"Draft — designs the green-field
+- **FLAG-DOCINDEX.** Add a `docs/Doc-Index.md` row for **DN-113** (this note), in the DN block after
+  the highest existing DN row (DN-112 the ctor-seal note, or DN-111 if the DN-112 row is not yet
+  present). Suggested summary: *"Draft — designs the green-field
   cross-phylum import/resolution subsystem: a `::` phylum-boundary `use` head, an additive `Phyla`
   dep-graph + `check_phylum_with_deps`, content-pinned resolution to a `(phylum_hash, qname)`
   def-site ref (grounds DN-110-8.2 OQ-H1's cross-phylum half), loaded B2-from-verified-source with a
@@ -374,17 +375,17 @@ cross-phylum reference resolves through is the **same** one `PhylumEnv::link` pr
   defers separate-comp/re-export/glob/ranges never-silently. Recommends, does not ratify."* Status
   column: **Draft (2026-07-10)**.
 - **FLAG-ISSUE (M-1060).** Mint **M-1060** in `tools/github/issues.yaml` (next free id; max is
-  M-1059) — *"implement the DN-112 v1 cross-phylum import/resolution subsystem"* — with user stories
-  US-1…US-5 (§2) and the §11 DoD. Suggested `depends_on`: the DN-112 ratification; relates to
+  M-1059) — *"implement the DN-113 v1 cross-phylum import/resolution subsystem"* — with user stories
+  US-1…US-5 (§2) and the §11 DoD. Suggested `depends_on`: the DN-113 ratification; relates to
   **M-1054** (the facility whose OQ-H1 cross-phylum def-site resolution this grounds) and **M-982**
   (the qualified-scoping residual §7 shares). Milestone: *Phase 5 — Self-Hosting & Core Library*
-  (same as M-1054). `doc_refs`: `corpus:DN-112`, `src:crates/mycelium-l1/src/checkty.rs:1086`,
+  (same as M-1054). `doc_refs`: `corpus:DN-113`, `src:crates/mycelium-l1/src/checkty.rs:1086`,
   `src:crates/mycelium-proj/src/manifest.rs:84`.
 - **FLAG-SYNTAX.** The `::` phylum-boundary `use` head (§4 Rank 1) is a surface-grammar change —
   route to **RFC-0006 §4.3** (the `use` production) for activation on ratification. No grammar file
   edited by this note.
 - **FLAG-CHANGELOG.** Add an append-only `CHANGELOG.md` entry under the design-phase Unreleased
-  section noting DN-112 (Draft) filed.
+  section noting DN-113 (Draft) filed.
 
 ---
 
