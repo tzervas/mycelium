@@ -386,6 +386,13 @@ DN + tracking issue** for the integrator to file. All touch the **cloud semcore 
 > subsystem is adopted or needed.** So the ENB-2 sub-gap is **resolved (deliberate-exclusion-of-implicit,
 > plus native explicit-conversion), not open-pending.** The maintainer confirms this wording on ratifying
 > DN-102 (M-1049).
+>
+> **ENB-2 wording CONFIRMED (2026-07-10, on DN-102 ratification — append-only, this register's rows
+> are unchanged).** DN-102 is ratified → Accepted (maintainer, 2026-07-10), adopting SP.5 Rank 1 in
+> full, including the SP.2 FLAG-try-2 resolution recorded in the addendum immediately above. The
+> maintainer confirms this addendum's wording stands as the ENB-2 sub-gap's resolved (not open-pending)
+> status. See DN-102's "Ratification (maintainer, 2026-07-10)" section for the full ratification
+> record; **M-1049** is closed on this basis (see `tools/github/issues.yaml`).
 
 **Transpiler-only closures needing NO new DN** (file as ordinary tracking issues under M-1006 / the trx2
 ladder): #72 string-literal pattern, #85 byte-literal/byte-string, #71 tuple-let-destructure, #21
@@ -396,6 +403,10 @@ policy, #10 payload-variant census refresh, #24 struct-literal `..rest`.
 
 ## §9 Changelog
 
+- **2026-07-10** — **ENB-2 wording CONFIRMED addendum** (§8): DN-102 is ratified → Accepted
+  (maintainer, 2026-07-10), and the maintainer confirms the 2026-07-11 FLAG-try-2 RESOLUTION addendum's
+  wording stands. **M-1049** closed on this basis. Append-only — the register's rows and tally are
+  unchanged; DN-99 itself stays **Draft** (this note is not itself ratified by DN-102's ratification).
 - **2026-07-11** — **ENB-2 FLAG-try-2 RESOLUTION addendum** (§8): the DN-102 second research pass
   (M-1049) resolves the FLAG-try-2 sub-gap and refines the prior routing note — implicit trait-`From`
   widening is a **deliberate exclusion** (inferred-conversion black box, DN-109 D13), mapped to the

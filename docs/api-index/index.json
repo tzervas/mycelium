@@ -7691,6 +7691,28 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_l1::RenderError",
+      "kind": "enum",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1",
+      "file": "crates/mycelium-l1/src/reveal.rs",
+      "line": 542,
+      "summary": "A [`render_surface`] refusal — never a silent gap or a `todo!()` (house rule #2/G2).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_l1::Rendered",
+      "kind": "struct",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1",
+      "file": "crates/mycelium-l1/src/reveal.rs",
+      "line": 522,
+      "summary": "The output of [`render_surface`]: best-effort surface text for a closed L0 [`Node`], plus an",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_l1::Resolved",
       "kind": "struct",
       "crate": "mycelium-l1",
@@ -7698,6 +7720,17 @@
       "file": "crates/mycelium-l1/src/ambient.rs",
       "line": 148,
       "summary": "The resolved twin plus its provenance trace.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_l1::RevealError",
+      "kind": "enum",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1",
+      "file": "crates/mycelium-l1/src/reveal.rs",
+      "line": 128,
+      "summary": "Errors from the `reveal` primitives ([`reveal_l0`], [`reelaborate`]).",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -7775,6 +7808,17 @@
       "file": "crates/mycelium-l1/src/ast.rs",
       "line": 42,
       "summary": "**Cross-nodule visibility** of a top-level item (M-662; RFC-0006 §4.3).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_l1::alpha_eq",
+      "kind": "fn",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1",
+      "file": "crates/mycelium-l1/src/reveal.rs",
+      "line": 298,
+      "summary": "Structural **alpha-equivalence** over [`Node`].",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -9143,6 +9187,28 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_l1::reelaborate",
+      "kind": "fn",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1",
+      "file": "crates/mycelium-l1/src/reveal.rs",
+      "line": 169,
+      "summary": "Re-derive (not merely inspect) the closedness witness of a shown L0 [`Node`] — the v0",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_l1::render_surface",
+      "kind": "fn",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1",
+      "file": "crates/mycelium-l1/src/reveal.rs",
+      "line": 580,
+      "summary": "Render `node` toward surface grammar, best-effort, covering the whole closed [`Node`] grammar",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_l1::resolve",
       "kind": "fn",
       "crate": "mycelium-l1",
@@ -9165,12 +9231,34 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_l1::reveal",
+      "kind": "mod",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1",
+      "file": "crates/mycelium-l1/src/lib.rs",
+      "line": 66,
+      "summary": "`reveal` — desugar-on-demand, Increment-1 (M-1051; DN-38 §5/§8.3; DN-110 §3.4/§8.4;",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_l1::reveal_l0",
+      "kind": "fn",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1",
+      "file": "crates/mycelium-l1/src/reveal.rs",
+      "line": 122,
+      "summary": "Show the real, elaborated L0 [`Node`] for entry symbol `site` in `env` (DN-38 §5).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_l1::substrate",
       "kind": "mod",
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/lib.rs",
-      "line": 65,
+      "line": 72,
       "summary": "The `Substrate` v0 value form (M-902; DN-71 Model S §4.1) — an interpreter-level opaque affine",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -9280,7 +9368,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/lib.rs",
-      "line": 66,
+      "line": 73,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -9357,7 +9445,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/lib.rs",
-      "line": 67,
+      "line": 74,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -36425,6 +36513,122 @@
     {
       "symbol": "mycelium_l1::parse::parse_phylum",
       "reason": "dedup-alias: same definition as `mycelium_l1::parse_phylum` at crates/mycelium-l1/src/parse.rs:64 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_l1::reveal::RenderError",
+      "reason": "dedup-alias: same definition as `mycelium_l1::RenderError` at crates/mycelium-l1/src/reveal.rs:542 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_l1::reveal::RenderError::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::reveal::RenderError::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::reveal::RenderError::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::reveal::RenderError::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::reveal::RenderError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::reveal::RenderError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::reveal::RenderError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::reveal::RenderError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::reveal::Rendered",
+      "reason": "dedup-alias: same definition as `mycelium_l1::Rendered` at crates/mycelium-l1/src/reveal.rs:522 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_l1::reveal::Rendered::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::reveal::Rendered::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::reveal::Rendered::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::reveal::Rendered::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::reveal::Rendered::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::reveal::Rendered::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::reveal::RevealError",
+      "reason": "dedup-alias: same definition as `mycelium_l1::RevealError` at crates/mycelium-l1/src/reveal.rs:128 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_l1::reveal::RevealError::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::reveal::RevealError::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::reveal::RevealError::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::reveal::RevealError::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::reveal::RevealError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::reveal::RevealError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::reveal::RevealError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::reveal::RevealError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::reveal::alpha_eq",
+      "reason": "dedup-alias: same definition as `mycelium_l1::alpha_eq` at crates/mycelium-l1/src/reveal.rs:298 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_l1::reveal::reelaborate",
+      "reason": "dedup-alias: same definition as `mycelium_l1::reelaborate` at crates/mycelium-l1/src/reveal.rs:169 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_l1::reveal::render_surface",
+      "reason": "dedup-alias: same definition as `mycelium_l1::render_surface` at crates/mycelium-l1/src/reveal.rs:580 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_l1::reveal::reveal_l0",
+      "reason": "dedup-alias: same definition as `mycelium_l1::reveal_l0` at crates/mycelium-l1/src/reveal.rs:122 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::substrate::ReleaseEvent",

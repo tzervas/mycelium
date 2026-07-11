@@ -57,6 +57,13 @@ pub mod lexer;
 pub mod mono;
 pub mod nodule;
 pub mod parse;
+/// `reveal` — desugar-on-demand, Increment-1 (M-1051; DN-38 §5/§8.3; DN-110 §3.4/§8.4;
+/// DN-110-8.2-hygiene-deepdive §5/§7 E3/§10 OQ-H3). The E3-enabling core: [`reveal::reveal_l0`]
+/// (the shown L0 term), [`reveal::render_surface`] (the honestly-labelled surface pretty-printer),
+/// [`reveal::alpha_eq`] (structural alpha-equivalence — `Node`'s `PartialEq` is not alpha-aware),
+/// and [`reveal::reelaborate`] (the L0-level round-trip witness). See the module doc for the pinned
+/// v0-fidelity/OQ-H3 rulings.
+pub mod reveal;
 /// The `Substrate` v0 value form (M-902; DN-71 Model S §4.1) — an interpreter-level opaque affine
 /// handle at the L1 evaluator level. No new L0 node / no `Repr` growth (KC-3). The affine use-once
 /// **runtime backstop** now lives here too (M-903 — [`substrate::SubstrateHandle::try_consume`]);
@@ -90,5 +97,8 @@ pub use mono::{
 };
 pub use nodule::{parse_nodule_header, NoduleHeader, NoduleHeaderError};
 pub use parse::{parse, parse_phylum};
+pub use reveal::{
+    alpha_eq, reelaborate, render_surface, reveal_l0, RenderError, Rendered, RevealError,
+};
 pub use substrate::{ReleaseEvent, SubstrateError, SubstrateHandle, SubstrateProvenance};
 pub use totality::Totality;

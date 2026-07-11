@@ -1463,6 +1463,74 @@ pub fn mycelium_l1::nodule::parse_nodule_header(&str) -> core::result::Result<co
 pub mod mycelium_l1::parse
 pub fn mycelium_l1::parse::parse(&str) -> core::result::Result<mycelium_l1::ast::Nodule, mycelium_l1::error::ParseError>
 pub fn mycelium_l1::parse::parse_phylum(&str) -> core::result::Result<mycelium_l1::ast::Phylum, mycelium_l1::error::ParseError>
+pub mod mycelium_l1::reveal
+pub enum mycelium_l1::reveal::RenderError
+pub mycelium_l1::reveal::RenderError::DepthExceeded(mycelium_l1::totality::WalkDepthExceeded)
+pub mycelium_l1::reveal::RenderError::Unrenderable
+pub mycelium_l1::reveal::RenderError::Unrenderable::detail: alloc::string::String
+pub mycelium_l1::reveal::RenderError::Unrenderable::node: &'static str
+impl core::clone::Clone for mycelium_l1::reveal::RenderError
+pub fn mycelium_l1::reveal::RenderError::clone(&self) -> mycelium_l1::reveal::RenderError
+impl core::cmp::Eq for mycelium_l1::reveal::RenderError
+impl core::cmp::PartialEq for mycelium_l1::reveal::RenderError
+pub fn mycelium_l1::reveal::RenderError::eq(&self, &mycelium_l1::reveal::RenderError) -> bool
+impl core::error::Error for mycelium_l1::reveal::RenderError
+impl core::fmt::Debug for mycelium_l1::reveal::RenderError
+pub fn mycelium_l1::reveal::RenderError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_l1::reveal::RenderError
+pub fn mycelium_l1::reveal::RenderError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::reveal::RenderError
+impl core::marker::Freeze for mycelium_l1::reveal::RenderError
+impl core::marker::Send for mycelium_l1::reveal::RenderError
+impl core::marker::Sync for mycelium_l1::reveal::RenderError
+impl core::marker::Unpin for mycelium_l1::reveal::RenderError
+impl core::marker::UnsafeUnpin for mycelium_l1::reveal::RenderError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::reveal::RenderError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::reveal::RenderError
+pub enum mycelium_l1::reveal::RevealError
+pub mycelium_l1::reveal::RevealError::DepthExceeded(mycelium_l1::totality::WalkDepthExceeded)
+pub mycelium_l1::reveal::RevealError::Elab(mycelium_l1::elab::ElabError)
+pub mycelium_l1::reveal::RevealError::NotClosed(alloc::vec::Vec<alloc::string::String>)
+impl core::clone::Clone for mycelium_l1::reveal::RevealError
+pub fn mycelium_l1::reveal::RevealError::clone(&self) -> mycelium_l1::reveal::RevealError
+impl core::cmp::Eq for mycelium_l1::reveal::RevealError
+impl core::cmp::PartialEq for mycelium_l1::reveal::RevealError
+pub fn mycelium_l1::reveal::RevealError::eq(&self, &mycelium_l1::reveal::RevealError) -> bool
+impl core::error::Error for mycelium_l1::reveal::RevealError
+impl core::fmt::Debug for mycelium_l1::reveal::RevealError
+pub fn mycelium_l1::reveal::RevealError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_l1::reveal::RevealError
+pub fn mycelium_l1::reveal::RevealError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::reveal::RevealError
+impl core::marker::Freeze for mycelium_l1::reveal::RevealError
+impl core::marker::Send for mycelium_l1::reveal::RevealError
+impl core::marker::Sync for mycelium_l1::reveal::RevealError
+impl core::marker::Unpin for mycelium_l1::reveal::RevealError
+impl core::marker::UnsafeUnpin for mycelium_l1::reveal::RevealError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::reveal::RevealError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::reveal::RevealError
+pub struct mycelium_l1::reveal::Rendered
+pub mycelium_l1::reveal::Rendered::reparseable: bool
+pub mycelium_l1::reveal::Rendered::text: alloc::string::String
+impl core::clone::Clone for mycelium_l1::reveal::Rendered
+pub fn mycelium_l1::reveal::Rendered::clone(&self) -> mycelium_l1::reveal::Rendered
+impl core::cmp::Eq for mycelium_l1::reveal::Rendered
+impl core::cmp::PartialEq for mycelium_l1::reveal::Rendered
+pub fn mycelium_l1::reveal::Rendered::eq(&self, &mycelium_l1::reveal::Rendered) -> bool
+impl core::fmt::Debug for mycelium_l1::reveal::Rendered
+pub fn mycelium_l1::reveal::Rendered::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::reveal::Rendered
+impl core::marker::Freeze for mycelium_l1::reveal::Rendered
+impl core::marker::Send for mycelium_l1::reveal::Rendered
+impl core::marker::Sync for mycelium_l1::reveal::Rendered
+impl core::marker::Unpin for mycelium_l1::reveal::Rendered
+impl core::marker::UnsafeUnpin for mycelium_l1::reveal::Rendered
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::reveal::Rendered
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::reveal::Rendered
+pub fn mycelium_l1::reveal::alpha_eq(&mycelium_core::node::Node, &mycelium_core::node::Node) -> bool
+pub fn mycelium_l1::reveal::reelaborate(&mycelium_core::node::Node) -> core::result::Result<mycelium_core::node::Node, mycelium_l1::reveal::RevealError>
+pub fn mycelium_l1::reveal::render_surface(&mycelium_core::node::Node) -> core::result::Result<mycelium_l1::reveal::Rendered, mycelium_l1::reveal::RenderError>
+pub fn mycelium_l1::reveal::reveal_l0(&mycelium_l1::checkty::Env, &str) -> core::result::Result<mycelium_core::node::Node, mycelium_l1::reveal::RevealError>
 pub mod mycelium_l1::substrate
 pub enum mycelium_l1::substrate::SubstrateError
 pub mycelium_l1::substrate::SubstrateError::AlreadyConsumed
@@ -1944,6 +2012,51 @@ impl core::marker::Unpin for mycelium_l1::eval::L1Value
 impl core::marker::UnsafeUnpin for mycelium_l1::eval::L1Value
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::eval::L1Value
 impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::eval::L1Value
+pub enum mycelium_l1::RenderError
+pub mycelium_l1::RenderError::DepthExceeded(mycelium_l1::totality::WalkDepthExceeded)
+pub mycelium_l1::RenderError::Unrenderable
+pub mycelium_l1::RenderError::Unrenderable::detail: alloc::string::String
+pub mycelium_l1::RenderError::Unrenderable::node: &'static str
+impl core::clone::Clone for mycelium_l1::reveal::RenderError
+pub fn mycelium_l1::reveal::RenderError::clone(&self) -> mycelium_l1::reveal::RenderError
+impl core::cmp::Eq for mycelium_l1::reveal::RenderError
+impl core::cmp::PartialEq for mycelium_l1::reveal::RenderError
+pub fn mycelium_l1::reveal::RenderError::eq(&self, &mycelium_l1::reveal::RenderError) -> bool
+impl core::error::Error for mycelium_l1::reveal::RenderError
+impl core::fmt::Debug for mycelium_l1::reveal::RenderError
+pub fn mycelium_l1::reveal::RenderError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_l1::reveal::RenderError
+pub fn mycelium_l1::reveal::RenderError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::reveal::RenderError
+impl core::marker::Freeze for mycelium_l1::reveal::RenderError
+impl core::marker::Send for mycelium_l1::reveal::RenderError
+impl core::marker::Sync for mycelium_l1::reveal::RenderError
+impl core::marker::Unpin for mycelium_l1::reveal::RenderError
+impl core::marker::UnsafeUnpin for mycelium_l1::reveal::RenderError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::reveal::RenderError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::reveal::RenderError
+pub enum mycelium_l1::RevealError
+pub mycelium_l1::RevealError::DepthExceeded(mycelium_l1::totality::WalkDepthExceeded)
+pub mycelium_l1::RevealError::Elab(mycelium_l1::elab::ElabError)
+pub mycelium_l1::RevealError::NotClosed(alloc::vec::Vec<alloc::string::String>)
+impl core::clone::Clone for mycelium_l1::reveal::RevealError
+pub fn mycelium_l1::reveal::RevealError::clone(&self) -> mycelium_l1::reveal::RevealError
+impl core::cmp::Eq for mycelium_l1::reveal::RevealError
+impl core::cmp::PartialEq for mycelium_l1::reveal::RevealError
+pub fn mycelium_l1::reveal::RevealError::eq(&self, &mycelium_l1::reveal::RevealError) -> bool
+impl core::error::Error for mycelium_l1::reveal::RevealError
+impl core::fmt::Debug for mycelium_l1::reveal::RevealError
+pub fn mycelium_l1::reveal::RevealError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_l1::reveal::RevealError
+pub fn mycelium_l1::reveal::RevealError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::reveal::RevealError
+impl core::marker::Freeze for mycelium_l1::reveal::RevealError
+impl core::marker::Send for mycelium_l1::reveal::RevealError
+impl core::marker::Sync for mycelium_l1::reveal::RevealError
+impl core::marker::Unpin for mycelium_l1::reveal::RevealError
+impl core::marker::UnsafeUnpin for mycelium_l1::reveal::RevealError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::reveal::RevealError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::reveal::RevealError
 pub enum mycelium_l1::SubstrateError
 pub mycelium_l1::SubstrateError::AlreadyConsumed
 pub mycelium_l1::SubstrateError::AlreadyConsumed::id: u64
@@ -2332,6 +2445,24 @@ impl core::marker::Unpin for mycelium_l1::substrate::ReleaseEvent
 impl core::marker::UnsafeUnpin for mycelium_l1::substrate::ReleaseEvent
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::substrate::ReleaseEvent
 impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::substrate::ReleaseEvent
+pub struct mycelium_l1::Rendered
+pub mycelium_l1::Rendered::reparseable: bool
+pub mycelium_l1::Rendered::text: alloc::string::String
+impl core::clone::Clone for mycelium_l1::reveal::Rendered
+pub fn mycelium_l1::reveal::Rendered::clone(&self) -> mycelium_l1::reveal::Rendered
+impl core::cmp::Eq for mycelium_l1::reveal::Rendered
+impl core::cmp::PartialEq for mycelium_l1::reveal::Rendered
+pub fn mycelium_l1::reveal::Rendered::eq(&self, &mycelium_l1::reveal::Rendered) -> bool
+impl core::fmt::Debug for mycelium_l1::reveal::Rendered
+pub fn mycelium_l1::reveal::Rendered::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::reveal::Rendered
+impl core::marker::Freeze for mycelium_l1::reveal::Rendered
+impl core::marker::Send for mycelium_l1::reveal::Rendered
+impl core::marker::Sync for mycelium_l1::reveal::Rendered
+impl core::marker::Unpin for mycelium_l1::reveal::Rendered
+impl core::marker::UnsafeUnpin for mycelium_l1::reveal::Rendered
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::reveal::Rendered
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::reveal::Rendered
 pub struct mycelium_l1::Resolved
 pub mycelium_l1::Resolved::nodule: mycelium_l1::ast::Nodule
 pub mycelium_l1::Resolved::notes: alloc::vec::Vec<mycelium_l1::ambient::ResolutionNote>
@@ -2411,6 +2542,7 @@ impl core::marker::Unpin for mycelium_l1::ast::UsePath
 impl core::marker::UnsafeUnpin for mycelium_l1::ast::UsePath
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::ast::UsePath
 impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::UsePath
+pub fn mycelium_l1::alpha_eq(&mycelium_core::node::Node, &mycelium_core::node::Node) -> bool
 pub fn mycelium_l1::check_and_resolve(&mycelium_l1::ast::Nodule) -> core::result::Result<(mycelium_l1::checkty::Env, mycelium_l1::ast::Nodule), mycelium_l1::checkty::CheckError>
 pub fn mycelium_l1::check_nodule(&mycelium_l1::ast::Nodule) -> core::result::Result<mycelium_l1::checkty::Env, mycelium_l1::checkty::CheckError>
 pub fn mycelium_l1::check_nodule_matured(&mycelium_l1::ast::Nodule, bool) -> core::result::Result<mycelium_l1::checkty::Env, mycelium_l1::checkty::CheckError>
@@ -2428,5 +2560,8 @@ pub fn mycelium_l1::monomorphize_with_selections(&mycelium_l1::checkty::Env, &st
 pub fn mycelium_l1::parse(&str) -> core::result::Result<mycelium_l1::ast::Nodule, mycelium_l1::error::ParseError>
 pub fn mycelium_l1::parse_nodule_header(&str) -> core::result::Result<core::option::Option<mycelium_l1::nodule::NoduleHeader>, mycelium_l1::nodule::NoduleHeaderError>
 pub fn mycelium_l1::parse_phylum(&str) -> core::result::Result<mycelium_l1::ast::Phylum, mycelium_l1::error::ParseError>
+pub fn mycelium_l1::reelaborate(&mycelium_core::node::Node) -> core::result::Result<mycelium_core::node::Node, mycelium_l1::reveal::RevealError>
+pub fn mycelium_l1::render_surface(&mycelium_core::node::Node) -> core::result::Result<mycelium_l1::reveal::Rendered, mycelium_l1::reveal::RenderError>
 pub fn mycelium_l1::resolve(&mycelium_l1::ast::Nodule) -> core::result::Result<mycelium_l1::ast::Nodule, mycelium_l1::ambient::AmbientError>
 pub fn mycelium_l1::resolve_report(&mycelium_l1::ast::Nodule) -> core::result::Result<mycelium_l1::ambient::Resolved, mycelium_l1::ambient::AmbientError>
+pub fn mycelium_l1::reveal_l0(&mycelium_l1::checkty::Env, &str) -> core::result::Result<mycelium_core::node::Node, mycelium_l1::reveal::RevealError>
