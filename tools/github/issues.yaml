@@ -15188,6 +15188,9 @@ issues:
       - corpus:DN-38
       - corpus:DN-106
       - corpus:DN-110-8.2-hygiene-deepdive
+      - corpus:DN-115
+      - corpus:DN-116
+      - corpus:DN-117
       - src:crates/mycelium-l1/src/tests/hygiene_expr_sugar.rs
     body: |
       Filed 2026-07-10 from the maintainer's ratification of DN-110 (native metaprogramming / sugar-
@@ -15391,6 +15394,26 @@ issues:
       `CHANGELOG.md` entry, left for the integrating parent doing that wave): the DN-115 §10
       `FLAG-CHANGELOG` design-phase entry. Still outstanding on `dev` as of this close-out (verified
       absent by grep).
+
+      **DN-114 renumber RESOLVED (2026-07-11, integration close-out for the docs+facility Stage-1b/2
+      wave, append-only).** The deferred renumber above is done: the Stage-1b note moved
+      `docs/notes/DN-114-M1054-Stage1b-Check-Phase-Sugar-Accept.md` ->
+      `docs/notes/DN-116-M1054-Stage1b-Check-Phase-Sugar-Accept.md` (git mv), self-refs updated, and
+      every **docs-only** inbound citation repointed to DN-116: DN-115's own body/header, and the
+      Stage-3 build-plan note DN-117 (`docs/notes/DN-117-M1054-Stage3-Affine-Over-Substituted-Expr.md`
+      -- brought into the corpus from the separately-building Stage-3 leaf,
+      `claude/leaf/M1054-DN117-stage3-affine-scoping`, as a docs-only addition; Stage 3's own code
+      stays on that leaf, out of scope for this release). `docs/Doc-Index.md` gained rows for DN-116
+      and DN-117; this issue's own `doc_refs` above now cite `corpus:DN-116`/`corpus:DN-117`;
+      M-1069's `doc_refs` repointed `corpus:DN-114` -> `corpus:DN-116`. The narrative-generation note
+      `docs/notes/DN-114-Validated-Narrative-Generation.md` (E40-1) is UNCHANGED and KEEPS DN-114, per
+      the standing maintainer directive. **Residual, deliberately NOT applied** (mycelium-l1 is
+      off-limits this session -- a concurrent Stage-3 agent is actively editing it): every
+      `crates/mycelium-l1/` source/test comment citing "DN-114" (`elab.rs`, `checkty.rs`,
+      `src/tests/checkty.rs`, `src/tests/defsite_resolution_stage2.rs`,
+      `src/tests/reachability_stage1b.rs`, `src/tests/facility_stage1_hygiene.rs`) still reads
+      "DN-114" and means DN-116 -- flagged, not silent (G2); `grep DN-114 crates/mycelium-l1/` finds
+      the residual set for whoever next touches that crate.
 
   - id: M-1055
     title: "E1 + E3 hygiene experiment prototype -- DN-110 §8.2 expression-position sugar-rule hygiene, Rank-1 go/no-go for J3"
@@ -16012,7 +16035,7 @@ issues:
     depends_on: [M-1054]
     doc_refs:
       - corpus:DN-115
-      - corpus:DN-114
+      - corpus:DN-116
       - src:crates/mycelium-l1/src/checkty.rs
       - src:crates/mycelium-l1/src/tests/defsite_resolution_stage2.rs
     landed_basis: >

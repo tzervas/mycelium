@@ -60,6 +60,12 @@ unported stdlib crates + the `std-cmp` pilot). It is **advisory** (measures the 
 never gates), mirroring `scripts/checks/myc-dogfood.sh`. Run it with no args for the default set, or
 pass explicit `<crate-src | .rs>` targets.
 
+## Further reading
+
+The strategy this crate implements (`DN-34-Rust-to-Mycelium-Transpiler-Strategy.md`) and the rest of
+the design corpus render into a themed, syntax-highlighted local docsite (`just docs-site`) —
+screenshots: [Docsite preview](../../docs/guide/docsite-preview.md).
+
 ## Layout
 
 `src/transpile.rs` (driver) · `src/emit.rs` (`.myc` emitter) · `src/map.rs` (Rust type → `type_ref`

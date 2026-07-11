@@ -10,6 +10,7 @@ reported to stderr, not silently dropped (G2).
 Guarantee: Empirical/Declared — a filesystem projection; the manifest + corpus are
 ground truth.
 """
+
 from __future__ import annotations
 
 import glob as _glob
@@ -31,8 +32,7 @@ def resolve(manifest_path: str, repo_root: str) -> list[str]:
                 picked.append(src)
         for pattern in chapter.get("globs", []):
             hits = sorted(
-                str(Path(p).relative_to(root))
-                for p in _glob.glob(str(root / pattern))
+                str(Path(p).relative_to(root)) for p in _glob.glob(str(root / pattern))
             )
             if not hits:
                 print(f"warn: glob matched nothing: {pattern}", file=sys.stderr)
@@ -52,7 +52,9 @@ def resolve(manifest_path: str, repo_root: str) -> list[str]:
 
 def main() -> int:
     if len(sys.argv) < 2:
-        print("usage: notebooklm_resolve.py <manifest.json> [repo_root]", file=sys.stderr)
+        print(
+            "usage: notebooklm_resolve.py <manifest.json> [repo_root]", file=sys.stderr
+        )
         return 2
     manifest = sys.argv[1]
     repo_root = sys.argv[2] if len(sys.argv) > 2 else "."

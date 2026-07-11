@@ -21,20 +21,30 @@ can see what it looks like before building it — and the canonical source for t
 not a hosted product — this page exists so the shape of that output is visible from the repo
 itself, without anyone having to build and serve it first.
 
-**Honesty note (VR-5/G2 — these are Declared projections, not a live product):** the docsite
-currently ships **one fixed light stylesheet** — `crates/mycelium-doc/src/emit/html.rs`,
-`crates/mycelium-doc/src/book.rs`, and `scripts/docsite.sh`'s own landing page all emit the same
-`:root{--fg;--bg;--accent;--dim;--code}` custom-property set, and none of the three has a
-`prefers-color-scheme` media query yet. The `-dark` screenshots below are captured with a
-**capture-time-only** stylesheet override (`scripts/docs-assets/capture.mjs`'s `DARK_OVERRIDE_CSS`)
-that re-themes the page through those same custom properties — a documentation-tooling artifact,
-not a claim that the site ships a dark theme today. A real dark theme (a `prefers-color-scheme`
-media query in the three emitters above) is unscoped future work, not part of this asset-automation
-change.
+**Honesty note (VR-5/G2 — these are Declared/Empirical projections, not a live product):** the
+docsite ships a **real** light/dark theme — every page honours the reader's OS
+`prefers-color-scheme` by default, and a persisted `data-theme` toggle (top-right of the corpus/book
+header) overrides it in both directions. Two independent sources cooperate:
+- The corpus/book pages (`crates/mycelium-doc/src/emit/html.rs`, `crates/mycelium-doc/src/book.rs`)
+  share one stylesheet, [`crate::theme::READING_CSS`](../../crates/mycelium-doc/src/theme.rs) — the
+  guarantee-lattice palette (`moss`/`amber`/`clay`/`ink-blue`) declared for both light and dark, with
+  a `@media (prefers-color-scheme: dark)` default and `:root[data-theme="dark"|"light"]` overrides
+  for the toggle. Asserted by a `cargo test -p mycelium-doc` case
+  (`the_emitted_css_ships_a_real_prefers_color_scheme_dark_rule`).
+- `scripts/docsite.sh`'s own hand-rolled pages (the landing `index.html`, the language-reference
+  page, and the api-index HTML wrapper) are independent, non-Rust output with their own small
+  `--fg`/`--bg`/`--accent`/`--dim`/`--code` custom-property set; they now carry their own real
+  `@media (prefers-color-scheme: dark)` override (`DOCSITE_DARK_CSS` in `scripts/docsite.sh`, shared
+  across all three so they agree) rather than theme.rs's palette (a different renderer, so a
+  separate — but equally real — dark rule, not a second copy of the same one).
+
+The `-dark` screenshots below are the site's genuine dark rendering: `scripts/docs-assets/capture.mjs`
+just switches the browser's emulated `prefers-color-scheme` (`page.emulateMedia`) before capturing —
+no capture-time stylesheet override is applied or needed anymore.
 
 ## Home page
 
-| Light | Dark (capture-time override — see note above) |
+| Light | Dark |
 |---|---|
 | ![Docsite home page, light theme](../assets/docsite-home-light.png) | ![Docsite home page, dark theme](../assets/docsite-home-dark.png) |
 
@@ -82,3 +92,7 @@ referenced-but-missing / present-but-orphaned drift check the `docs/api-index/` 
 ## Changelog
 
 - 2026-07-11 — Added (docs asset automation: `just docs-assets` + `scripts/checks/docs-assets.sh`).
+- 2026-07-11 — Real light/dark theme wired site-wide (`prefers-color-scheme` + `data-theme` toggle
+  in `crates/mycelium-doc/src/theme.rs`/`html.rs`/`book.rs`; a matching `DOCSITE_DARK_CSS` for
+  `scripts/docsite.sh`'s own pages); the `-dark` screenshots are now genuine renders, not a
+  capture-time override — the prior disclaimer no longer applies.

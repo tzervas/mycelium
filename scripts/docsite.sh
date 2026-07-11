@@ -34,6 +34,16 @@ cd "$REPO_ROOT" || exit 1
 
 section "docsite (local browsable site — advisory, not a gate)"
 
+# Shared REAL dark-mode override (a genuine `prefers-color-scheme: dark` media query, not a
+# capture-time-only patch) for this script's own hand-rolled pages (landing index.html, the
+# lang-ref page, the api-index HTML wrapper). One named constant so all three agree (DRY within
+# this script) — mirrors the corpus/book renderer's approach (crates/mycelium-doc/src/theme.rs)
+# of declaring light + dark palettes explicitly, though this script emits independent pages built
+# from a different custom-property set (`--fg`/`--bg`/`--accent`/`--dim`/`--code`), so it carries
+# its own small dark palette rather than importing the Rust crate's. Exported so the Python
+# api-index-wrapper heredoc below (a separate `python3` process) can read it too.
+export DOCSITE_DARK_CSS='@media (prefers-color-scheme: dark){:root{--fg:#e6e6f0;--bg:#12121a;--accent:#6fe0a0;--dim:#9494ab;--code:#1d1d29}.browse{background:#16241b;border-color:var(--accent)}.missing{background:#241c14;border-color:#c93}footer{border-top-color:#2a2a38}}'
+
 OUT="$REPO_ROOT/target/docsite"
 rm -rf "$OUT"
 mkdir -p "$OUT"
@@ -89,10 +99,14 @@ fi
 # Wrap INDEX.md in a minimal HTML page for in-browser viewing.
 if [[ $HAS_API_INDEX -eq 1 ]] && [[ -f "$API_INDEX_OUT/INDEX.md" ]]; then
   python3 - "$API_INDEX_OUT/INDEX.md" "$API_INDEX_OUT/index.html" <<'PYEOF' 2>/dev/null || true
-import sys, re, html, pathlib
+import os, sys, re, html, pathlib
 
 src = pathlib.Path(sys.argv[1]).read_text()
 out_path = pathlib.Path(sys.argv[2])
+# Real prefers-color-scheme dark override, shared with this script's other hand-rolled pages —
+# see DOCSITE_DARK_CSS in scripts/docsite.sh (passed through the environment; this heredoc runs
+# as a separate `python3` process, not bash, so it cannot read the shell variable directly).
+dark_css = os.environ.get("DOCSITE_DARK_CSS", "")
 
 # Minimal Markdown-to-HTML: headings, tables, code spans, bold, paragraphs.
 def md2html(text):
@@ -165,6 +179,7 @@ th{{background:#f0f4f0}}
 code{{font:0.9em ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--code);padding:.1em .3em;border-radius:3px}}
 blockquote{{border-left:3px solid var(--accent);margin:1rem 0;padding:.5rem 1rem;color:var(--dim)}}
 footer{{color:var(--dim);font-size:.85rem;border-top:1px solid #ddd;margin-top:2rem}}
+{dark_css}
 </style>
 </head>
 <body>
@@ -268,7 +283,9 @@ if [[ $HAS_CORPUS -eq 1 ]]; then
     fi
   done
 
-  cat > "$LANG_REF_OUT/index.html" <<'LANGREF_CSS'
+  # Unquoted delimiter (was quoted 'LANGREF_CSS') so ${DOCSITE_DARK_CSS} below expands — this
+  # block otherwise has no `$`/backtick content, so interpolation is safe.
+  cat > "$LANG_REF_OUT/index.html" <<LANGREF_CSS
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -293,6 +310,7 @@ pre{background:var(--code);padding:.75rem 1rem;border-radius:6px;overflow:auto;f
 .note{background:#f0f8f0;border:1px solid var(--accent);border-radius:6px;padding:.75rem 1rem;margin:1.5rem 0;font-size:.9em}
 .warn{background:#fff8f0;border:1px solid #c93;border-radius:6px;padding:.75rem 1rem;margin:.75rem 0;font-size:.9em}
 footer{color:var(--dim);font-size:.85rem;border-top:1px solid #ddd;margin-top:2rem}
+${DOCSITE_DARK_CSS}
 </style>
 </head>
 LANGREF_CSS
@@ -530,6 +548,7 @@ li{margin:.5rem 0}
 code{font:0.9em ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--code);padding:.15em .4em;border-radius:3px}
 pre{background:var(--code);padding:.75rem 1rem;border-radius:6px;overflow:auto}
 footer{color:var(--dim);font-size:.85rem;border-top:1px solid #ddd;margin-top:2rem}
+${DOCSITE_DARK_CSS}
 </style>
 </head>
 <body>

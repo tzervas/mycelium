@@ -2,11 +2,11 @@
 
 | Field | Value |
 |---|---|
-| **Note** | DN-115 — a design-reasoner scoping note (plan → review → improve → ratify → implement) for **Stage 2** of the M-1054 native-metaprogramming facility: lifting DN-114's **Stage-2 gate** (`checkty.rs::rhs_first_free_id`) for the **single-nodule** case so a sugar rule's free RHS identifier binds its **definition-site** meaning (referential transparency, OQ-H1). Filed leaf-scoped (not folded into DN-110/DN-110-8.2, which stay the design-level source) so the semcore serial lane can iterate without editing a shared/held design doc. |
+| **Note** | DN-115 — a design-reasoner scoping note (plan → review → improve → ratify → implement) for **Stage 2** of the M-1054 native-metaprogramming facility: lifting DN-116's **Stage-2 gate** (`checkty.rs::rhs_first_free_id`) for the **single-nodule** case so a sugar rule's free RHS identifier binds its **definition-site** meaning (referential transparency, OQ-H1). Filed leaf-scoped (not folded into DN-110/DN-110-8.2, which stay the design-level source) so the semcore serial lane can iterate without editing a shared/held design doc. |
 | **Status** | **Accepted** (2026-07-11, delegated ratification — see the dated "Ratification (maintainer-delegated, orchestrator-selected on the merits, 2026-07-11)" section below). **Accepted ratifies the §1 finding + the Q1/G2/§6 design decisions only, NOT Enacted** (house rule #3: `Enacted` requires stepping through `Accepted` first and means *fully implemented/landed*; the implementation is this same leaf's PR, self-integrated — see the Ratification section for what actually landed). Originally **Draft** (2026-07-11) — a design-reasoner recommendation for the maintainer/orchestrator to ratify; the author never moved status to `Accepted` (house rule #3). |
 | **Owner-scope** | Owns only this file. Treats `crates/mycelium-l1/**` (semcore serial lane — this scoping is **READ-ONLY** on it), `docs/Doc-Index.md`, `CHANGELOG.md`, `tools/github/issues.yaml`, `docs/api-index/`, and every other note/RFC/ADR as **read-only** — FLAGGED for the integrating parent, not edited here. |
 | **Decides (proposes, for ratification)** | *All `Declared` unless a landed/checked basis is cited.* (1) The **primary, code-grounded finding**: single-nodule def-site resolution / referential transparency is **already achieved by construction** in Stage 1b — so Stage 2 is **not** "add def-site resolution" but "**prove** the present guarantee end-to-end (`Declared → Empirical`) on the real elaborator, close two narrow gate-correctness gaps, and make the single-nodule invariant explicit so Stage 4 is a deliberate change." (2) The **resolved reference** for single-nodule is the **already-content-addressed inlined L0 body** (status quo) — **no new L0 node / reference kind** (KC-3, YAGNI); the explicit cross-nodule *symbol reference* is Stage 4 / DN-113 work, resolved by **M-1024's linker** (`resolve_imports`/`PhylumEnv::link`), not by raw hashing. (3) Resolution stays where it is — **Pass-1 elab against the def-site env** — with a documented invariant that use-env == def-env **only** because single-nodule; the Stage-2 gate is **relaxed** only for the two over-/under-refusal gaps, and **still refuses** every genuinely cross-nodule/phylum free id (→ Stage 4). |
-| **Feeds / builds on** | **M-1054** (the epic) / **DN-114** §3.1 (the Stage-2 gate this note revisits) / **DN-110-8.2-hygiene-deepdive** §4(C), §6, §7 E2, §10 OQ-H1 (the design-level source) / **DN-113** (cross-phylum resolution — Stage 4, the deferred half) / **M-1024** (`checkty.rs::resolve_imports`/`PhylumEnv::link`, the same-phylum linker) / **ADR-003** (content-addressed L0 identity) / **KC-3** (no kernel growth). |
+| **Feeds / builds on** | **M-1054** (the epic) / **DN-116** §3.1 (the Stage-2 gate this note revisits) / **DN-110-8.2-hygiene-deepdive** §4(C), §6, §7 E2, §10 OQ-H1 (the design-level source) / **DN-113** (cross-phylum resolution — Stage 4, the deferred half) / **M-1024** (`checkty.rs::resolve_imports`/`PhylumEnv::link`, the same-phylum linker) / **ADR-003** (content-addressed L0 identity) / **KC-3** (no kernel growth). |
 | **Grounding basis** | `Empirical` where read against the codebase at `dev`/worktree tip **`3cd7dbc2`** (the Stage-1b landing; commands + `file:line` cited inline). The proposed Stage-2 build is **`Declared`** until landed + tested. Where undetermined, flagged as an open question, never guessed (G2/VR-5). |
 
 ---
@@ -15,7 +15,7 @@
 
 Macro hygiene half (B) — *referential transparency*: a free identifier in a sugar rule's RHS must
 resolve to **what it meant at the rule's definition site**, regardless of what that name means at the
-use/call site. Stage 2 is: relax DN-114's Stage-2 gate so single-nodule free RHS ids are
+use/call site. Stage 2 is: relax DN-116's Stage-2 gate so single-nodule free RHS ids are
 **accepted-with-def-site-resolution** instead of refused, while still refusing the cross-nodule/phylum
 case (→ Stage 4).
 
@@ -105,7 +105,7 @@ identity underneath — **not** Option B (raw hashing is not the resolution mech
 ## §3 Where resolution happens, and the use-site-shadowing hazard (task Q2 + Q3)
 
 **Q2 — phase.** Resolution stays in **Pass-1 elaboration** (`el.expr` against the def-site env), which
-composes with DN-114's ratified two-phase split (L1 check/type/gate; L0 expand) with **zero change**:
+composes with DN-116's ratified two-phase split (L1 check/type/gate; L0 expand) with **zero change**:
 the checker's Stage-2 gate stays a pure *admissibility* test (does every free id resolve in-fragment at
 the def-site?), and the L0 phase does the actual resolution as it already does. The resolved ref is
 **not** threaded from `check_sugar_call` into the expander — it is resolved **independently at expand
@@ -143,7 +143,7 @@ here (deepdive §6); it only makes the resolved body dedup cleanly.
 
 ## §4 The two narrow gate-correctness gaps Stage 2 should close (the real, small work)
 
-Both are single-nodule, both flagged in DN-114 §3.1 / the gate's own doc comment — neither is a
+Both are single-nodule, both flagged in DN-116 §3.1 / the gate's own doc comment — neither is a
 referential-transparency hole.
 
 ### §4.1 G1 — VSA/float-prim over-refusal (accept path too narrow)
@@ -164,7 +164,7 @@ but `Elab::app`'s §5.2 dispatch resolves a lower-rule only in **call** position
 **bare** nullary-lower-rule reference in value position falls to the `Expr::Path` arm
 (`elab.rs:1704-1754`), which does **not** consult `lower_rules` ⇒ `residual("unresolved name")`. So a
 program the checker **accepts** would **red at elab** — precisely the "green at check, red at eval"
-failure DN-114 §1 exists to prevent. Not exercised by any fixture (latent). **Fix (KISS, preferred):**
+failure DN-116 §1 exists to prevent. Not exercised by any fixture (latent). **Fix (KISS, preferred):**
 **narrow the gate** — accept a nullary-lower-rule id only in call-head position (mirror the elab
 dispatch's own position sensitivity), refusing the bare value-position form with a never-silent,
 Stage-2-labeled message. (Alternative — extend the `Expr::Path` arm to resolve a bare nullary lower
@@ -178,7 +178,7 @@ maintainer.)
   `rhs_first_affine_binding` at `:5643-5650`; the Stage-2 gate at `:5654`). Stage 2 edits only
   `rhs_first_free_id` (+ a prim-name helper); it does not touch either affine check. Confirmed
   orthogonal by construction.
-- **Cross-nodule/phylum stays refused.** The gate does **not** consult `self.imports` (DN-114 §3.1);
+- **Cross-nodule/phylum stays refused.** The gate does **not** consult `self.imports` (DN-116 §3.1);
   Stage 2 keeps it that way. A cross-nodule (even same-phylum) free id remains a never-silent,
   Stage-4-directed refusal. This is *required for correctness*, not just scope-limiting: resolving a
   cross-nodule id against the **use-site** env (which is what Pass-1 does today) would bind the wrong
@@ -223,7 +223,7 @@ as `reachability_stage1b.rs::full_chain_step2` does.
    (`reachability_stage1b.rs`) must still pass for a **genuinely cross-nodule** free id — Stage 2 must
    **not** start accepting those. Add/keep a cross-nodule-shaped fixture that stays refused → Stage 4.
 
-Every control is verified to **genuinely fail when its mechanism is disabled** (the DN-114 §5
+Every control is verified to **genuinely fail when its mechanism is disabled** (the DN-116 §5
 non-vacuity law), hand-checked during development and restored before commit.
 
 ## §7 The argument *against* my own recommendation (VR-5 — no sycophancy, even to my own plan)

@@ -12,6 +12,79 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### feat(l1): M-1054 native metaprogramming facility Stage 1b + Stage 2 — check-phase accept, `Elab::app` dispatch, def-site resolution (DN-116/DN-115, M-1069) (2026-07-11)
+
+Two further staged increments of the DN-110 §5-A Rank-1 facility, on top of the landed Stage 0+1
+(above). **M-1054 stays `status:in-progress`** — Stage 3 (affine-over-substituted-`Expr`, DN-117)
+continues building separately and is **not** part of this release.
+
+- **Stage 1b (PR #1434, `claude/leaf/m1054-stage1b-check-accept`) — end-to-end reachability.**
+  `Cx::check_sugar_call` (`checkty.rs`) starts **accepting** a well-formed value-parametric sugar
+  call instead of unconditionally refusing it, typed via **Option B** — a monomorphic rule's RHS
+  result type is fixed at *definition* (`infer_expr_rule_rhs_type`, shared with the existing
+  def-time RHS validator, DRY); `Elab::app` gains a new last-resort §5.2 dispatch branch to the
+  existing, unmodified Stage 1 expansion machinery. Two never-silent gates bound the accepted
+  fragment: a Stage 2 (OQ-H1) free-identifier gate, and a Stage 3 (OQ-H4) affine gate refusing any
+  value parameter that *is or structurally contains* `Substrate` — an adversarial-verify finding
+  during this leaf's own review caught a **composite/nested**-affine false-accept (a `Data` ctor
+  wrapping `Substrate`) the original top-level-only check missed; fixed by a recursive structural
+  walk (`ty_structurally_contains_substrate`), regression-pinned. Filed as design note **DN-116**
+  (originally DN-114 — renumbered at this integration close-out; see below).
+- **Stage 2 (PR #1435, `claude/leaf/m1054-stage2-dn-scoping`) — def-site resolution, single-nodule
+  fragment (DN-115, `status:done`, M-1069).** Finds single-nodule def-site resolution /
+  referential transparency for a sugar rule's free RHS identifiers already holds **by construction**
+  since Stage 1b (Pass-1 elaboration against the def-site env) — Stage 2's real work is *proving it
+  non-vacuously on the real elaborator* plus closing two narrow check-phase gate-correctness gaps:
+  G1 (the VSA/float-prim RHS dispatch sets were over-refused as free identifiers) and G2 (a nullary
+  `lower`-rule referenced in value position was over-accepted). The cross-nodule/phylum boundary
+  (Stage 4) stays refused (DN-113/M-1060's job). Design-reasoner-ratified (maintainer-delegated,
+  orchestrator-selected on the merits, 2026-07-11); implementation tracked as **M-1069**.
+- **DN-114 ID collision, resolved (M-1054's own PM close-out, PR #1436, then this integration
+  close-out).** The Stage-1b note was filed as `DN-114`, colliding with the unrelated, separately
+  numbered `docs/notes/DN-114-Validated-Narrative-Generation.md` (E40-1, kept as DN-114 per
+  maintainer directive). Renumbered to **DN-116** at this close-out (file moved; docs-only inbound
+  refs — DN-115, DN-117 — repointed in the same pass). `crates/mycelium-l1/` source comments
+  still citing "DN-114" are a deliberately deferred residual (a concurrent Stage-3 agent is actively
+  editing that crate) — flagged, not silent.
+- **Verified:** `cargo test -p mycelium-l1` green at each leaf (535 passed, 1 ignored, 0 failed at
+  Stage 1b); `clippy -D warnings` / `fmt` clean; dual-oracle capture-safety + non-vacuity controls
+  for every gate (each independently verified to genuinely fail when its mechanism is disabled).
+  Tags stay at their checked strength — Stage 1b/2 reachability `Empirical` on the real elaborator
+  path; Stage 3 (full affine re-check) and cross-nodule resolution stay `Declared` (VR-5).
+
+### docs(docs-access): fast-follows — real research/CONTRIBUTING PDF ingestion, asset automation, live dark theme, presentable READMEs (2026-07-11)
+
+Four follow-on PRs completing the documentation-access initiative (above) into a shippable,
+themed docsite with real generated assets.
+
+- **Spec-manifest fix (PR #1488, `fix/docgen-research-spec-manifests`)** — the NotebookLM
+  research/spec manifests were emitting placeholder text instead of the real PDFs; fixed so every
+  cluster renders its actual source content.
+- **Research + CONTRIBUTING ingestion (PR #1490, `claude/fix-docgen-research-contributing-ingestion`)**
+  — `build --manifest` now ingests all 7 `research/` PDFs plus `CONTRIBUTING.md` into the NotebookLM
+  research-PDF cluster and the curated book, closing the prior partial-ingestion gap.
+- **Docs asset automation (PR #1489, `feat(docs): docs asset automation`)** — `just docs-assets`
+  (`scripts/docs-assets.sh`) drives the full capture → optimize → replace-in-place → prune workflow
+  via Playwright (`scripts/docs-assets/capture.mjs`): builds `target/docsite/`, serves it locally,
+  captures the committed screenshot set in both themes, optimizes PNGs (`oxipng`/`pngquant`,
+  skip-graceful), and prunes any `docs/assets/*` file no longer referenced. `scripts/checks/docs-assets.sh`
+  (wired into `just check`) is the lightweight, browser-free drift gate — referenced-but-missing or
+  present-but-orphaned, the same discipline as the `api-index`/`tero-index` gates.
+- **Real light/dark docsite theme (PR #1491, `feat(docgen): real light/dark docsite theme`)** — every
+  page now honours the reader's OS `prefers-color-scheme` by default, with a persisted `data-theme`
+  toggle overriding it in both directions; `crate::theme::READING_CSS` (`crates/mycelium-doc/src/theme.rs`)
+  carries a real `@media (prefers-color-scheme: dark)` rule for the corpus/book pages (asserted by
+  `the_emitted_css_ships_a_real_prefers_color_scheme_dark_rule`), and `scripts/docsite.sh`'s own
+  hand-rolled pages carry a matching `DOCSITE_DARK_CSS`. The `-dark` screenshots are now genuine
+  renders (`page.emulateMedia`), not a capture-time stylesheet override — `docs/guide/docsite-preview.md`'s
+  prior "dark not real" disclaimer no longer applies.
+- **Presentable READMEs (PR #1492, `docs(readme): compelling, honest README + guide showcase`)** —
+  a rewritten root `README.md` (verified `.myc` examples, docsite screenshots) and crate
+  cross-links to the docsite preview, with a corrected crate count.
+- **Advances:** documentation access + publishing. **Verified:** `scripts/checks/docs-assets.sh`
+  green (no drift); `myc-doc lint` green on the real corpus; markdown gate clean; the real
+  light/dark theme asserted by a dedicated `cargo test -p mycelium-doc` case.
+
 ### docs(docs-access): documentation-access & generation initiative — Claude Project prompt · themed+highlighted site + Pages/release publishing · NotebookLM export · validated narrative generation (DN-114) (2026-07-11)
 
 A cohesive documentation-access layer so the corpus is explorable, learnable, and shippable — built by

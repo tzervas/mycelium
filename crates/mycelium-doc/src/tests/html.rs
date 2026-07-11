@@ -84,6 +84,28 @@ fn the_page_carries_a_sidebar_search_toc_and_theme_toggle() {
 }
 
 #[test]
+fn the_emitted_css_ships_a_real_prefers_color_scheme_dark_rule() {
+    // Real dark mode (not a capture-time-only override, CLAUDE.md docs-assets note): the emitted
+    // stylesheet must honor the reader's OS preference by default AND let the persisted
+    // `data-theme` toggle (crate::theme::THEME_TOGGLE_JS) win over it in both directions.
+    let m = model();
+    let html = render_concat(&m);
+    assert!(
+        html.contains("@media (prefers-color-scheme: dark)"),
+        "no prefers-color-scheme media query in the emitted CSS"
+    );
+    // A genuine dark-palette value from crate::theme::READING_CSS's dark block (not the light
+    // one) — proves the media query carries real color overrides, not an empty/no-op rule.
+    assert!(
+        html.contains("--paper:#14160f"),
+        "prefers-color-scheme dark block is missing its dark palette value"
+    );
+    // The persisted-toggle override also resolves to the same dark palette in both directions.
+    assert!(html.contains(":root[data-theme=\"dark\"]"));
+    assert!(html.contains(":root[data-theme=\"light\"]"));
+}
+
+#[test]
 fn myc_examples_are_lexically_highlighted_but_the_language_class_stays() {
     let m = model();
     let html = render_concat(&m);

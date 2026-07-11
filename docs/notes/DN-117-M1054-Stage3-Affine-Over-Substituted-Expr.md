@@ -4,17 +4,21 @@
 |---|---|
 | **Status** | **Accepted** (2026-07-11, delegated ratification — see the dated "Ratification (maintainer-delegated, orchestrator-selected on the merits, 2026-07-11)" section below, mirroring the M-1054 Stage 2 (DN-115) ratification precedent). **Accepted ratifies the §1–§7 design decisions (Rank 1/FLAG-A, the gate→trigger demotion, the drop-accept correction, the §5 test contract) and records the implementation leaf's own adversarial findings while landing it, NOT `Enacted`** (house rule #3: `Enacted` requires stepping through `Accepted` first and means *fully implemented/landed, outside ongoing maintenance* — a call for the integrating parent, not this leaf). Originally **Draft** (2026-07-11) — a design-reasoner build-plan scoping note; the author never moved status to `Accepted` (house rule #3). It does **not** move DN-110/DN-110-8.2 off `Accepted`, nor M-1054 off `in-progress`. |
 | **Kind** | Design note (leaf-scoped, forward-to-recommendation). No code lands with this note — it scopes the Stage-3 implementation for a subsequent `/forward` leaf. |
-| **Decides (proposes, for ratification)** | *For M-1054 Stage 3's scope only; all `Declared` unless a landed/checked basis is cited:* (1) **Q1 mechanism** — run the M-919 affine `Tracker` over the **substituted `Expr`** (each type-checked argument `Expr` spliced at every RHS occurrence of its value param), at **check time**, inside `Cx::check_sugar_call` — the L1-surface-AST layer the affine tracker already operates on (FLAG-A), **not** a post-elab L0 `Node` pass. Reconciles with Option B (DN-114): check still returns the call node for `Elab::app` to expand; the substituted `Expr` is a **check-time-only** artifact for the affine verdict. (2) **Q2 accounting** — reuse the existing `Tracker` (`use_at` + `snapshot`/`restore`/`merge_alt`) for linear-use counting, which already handles match arms / lets / lambdas by scope-index; **replace** the three conservative structural approximations (`ty_structurally_contains_substrate` part 1, `rhs_first_affine_binding`/`expr_is_structurally_affine` part 2) as the *accept/refuse decision*, retaining the cheap `ty_structurally_contains_substrate` predicate only as the *trigger* that decides whether the substituted-Expr walk is needed. (3) **Q3 orthogonality** — Stage 3 is orthogonal to Stage 2 (def-site resolution) and Stage 1 (`%`-freshening); the guarantee-tag ratchet moves the double-consume (**upper-bound**) property `Declared → Empirical` for the real substituted-Expr, **stays `Empirical`** (no `Proven` without a checked theorem), and the **drop lower-bound stays a runtime (M-904) concern, not a static refusal** (grounded correction of the task brief — see §4.3). (4) **Q5 scope** — a ≤~1–2k-LOC reviewable unit: the substituted-Expr affine re-check + gate relaxation + tests; cross-nodule affine stays **Stage 4** (DN-113/M-1060). |
-| **Grounds in** | DN-110 §8.2 (D)/OQ-H4 (`Accepted` basis); DN-110-8.2-hygiene-deepdive §4(D), §7 E5, §10 OQ-H4; DN-114 (Stage-1b, Option B + §3.2 Stage-3 gate); DN-115 (Stage 2, orthogonality); M-919/DN-71 Model S §4.2 (the landed affine tracker); the E5 experiment `crates/mycelium-l1/src/tests/hygiene_affine_expanded.rs` (landed, `Empirical` for the upper bound). Read against `dev @ 3c7e85d7`. |
+| **Decides (proposes, for ratification)** | *For M-1054 Stage 3's scope only; all `Declared` unless a landed/checked basis is cited:* (1) **Q1 mechanism** — run the M-919 affine `Tracker` over the **substituted `Expr`** (each type-checked argument `Expr` spliced at every RHS occurrence of its value param), at **check time**, inside `Cx::check_sugar_call` — the L1-surface-AST layer the affine tracker already operates on (FLAG-A), **not** a post-elab L0 `Node` pass. Reconciles with Option B (DN-116): check still returns the call node for `Elab::app` to expand; the substituted `Expr` is a **check-time-only** artifact for the affine verdict. (2) **Q2 accounting** — reuse the existing `Tracker` (`use_at` + `snapshot`/`restore`/`merge_alt`) for linear-use counting, which already handles match arms / lets / lambdas by scope-index; **replace** the three conservative structural approximations (`ty_structurally_contains_substrate` part 1, `rhs_first_affine_binding`/`expr_is_structurally_affine` part 2) as the *accept/refuse decision*, retaining the cheap `ty_structurally_contains_substrate` predicate only as the *trigger* that decides whether the substituted-Expr walk is needed. (3) **Q3 orthogonality** — Stage 3 is orthogonal to Stage 2 (def-site resolution) and Stage 1 (`%`-freshening); the guarantee-tag ratchet moves the double-consume (**upper-bound**) property `Declared → Empirical` for the real substituted-Expr, **stays `Empirical`** (no `Proven` without a checked theorem), and the **drop lower-bound stays a runtime (M-904) concern, not a static refusal** (grounded correction of the task brief — see §4.3). (4) **Q5 scope** — a ≤~1–2k-LOC reviewable unit: the substituted-Expr affine re-check + gate relaxation + tests; cross-nodule affine stays **Stage 4** (DN-113/M-1060). |
+| **Grounds in** | DN-110 §8.2 (D)/OQ-H4 (`Accepted` basis); DN-110-8.2-hygiene-deepdive §4(D), §7 E5, §10 OQ-H4; DN-116 (Stage-1b, Option B + §3.2 Stage-3 gate); DN-115 (Stage 2, orthogonality); M-919/DN-71 Model S §4.2 (the landed affine tracker); the E5 experiment `crates/mycelium-l1/src/tests/hygiene_affine_expanded.rs` (landed, `Empirical` for the upper bound). Read against `dev @ 3c7e85d7`. |
 | **Guarantee posture** | `Empirical` where read against the codebase at `dev @ 3c7e85d7` (the cited functions, the E5 module, the landed tracker semantics); `Declared` for the proposed (unbuilt) Stage-3 mechanism and its soundness argument. No `Proven` claim anywhere. |
 
-> **Note on DN-114 references in this file.** "DN-114" below means
-> `docs/notes/DN-114-M1054-Stage1b-Check-Phase-Sugar-Accept.md` (the M-1054 Stage-1b note), which
-> shares its number with the unrelated `DN-114-Validated-Narrative-Generation.md` and is slated to
-> renumber to **DN-116** (deferred renumber pass; see M-1054's issue body and DN-115 §10). When that
-> renumber lands, this note's "DN-114" inbound refs update in the same pass. This note is authored as
-> **DN-117** because DN-116 is reserved for that renumber (verified free: no `DN-117` in
-> `docs/notes/`, `docs/Doc-Index.md`, `tools/github/issues.yaml`, or `CHANGELOG.md` at `dev @ 3c7e85d7`).
+> **Note on DN-116 references in this file (renumber RESOLVED, 2026-07-11 integration close-out).**
+> "DN-116" below means `docs/notes/DN-116-M1054-Stage1b-Check-Phase-Sugar-Accept.md` (the M-1054
+> Stage-1b note) — originally filed as DN-114, which collided with the unrelated
+> `docs/notes/DN-114-Validated-Narrative-Generation.md` (kept as DN-114 per maintainer directive). The
+> renumber to **DN-116** landed at this close-out (file moved; docs-only inbound refs, including this
+> note's, updated in the same pass — see M-1054's issue body and DN-115 §10). This note was authored
+> as **DN-117** because DN-116 was reserved for that renumber (verified free at the time: no `DN-117`
+> in `docs/notes/`, `docs/Doc-Index.md`, `tools/github/issues.yaml`, or `CHANGELOG.md` at
+> `dev @ 3c7e85d7`). `crates/mycelium-l1/` source/test comments citing the old "DN-114" spelling for
+> this Stage-1b note were repointed to DN-116 in the same Stage-3 landing pass (the residual the
+> renumber note below once deferred).
 
 ---
 
@@ -37,7 +41,7 @@ Before scoping, each premise of the design question was checked against `dev @ 3
    double-consume without ever counting actual uses over the substituted expansion.
 
 2. **The reason: the affine tracker never sees the substituted expansion.** `check_sugar_call`
-   returns `app_node(head, rebuilt)` — a **call node** (Option B, DN-114 §2) — and the actual
+   returns `app_node(head, rebuilt)` — a **call node** (Option B, DN-116 §2) — and the actual
    splicing of the argument node at each RHS occurrence happens later, in
    `elab.rs::sugar_expand` (`crates/mycelium-l1/src/elab.rs:921`) / `elaborate_value_parametric_rule_inner`
    (`elab.rs:799`), at **elaboration**, which runs **after** check. So at check time there is no
@@ -109,7 +113,7 @@ Inside `Cx::check_sugar_call`, after arity + per-argument type checks produce th
    a **check-time-only** artifact, discarded after the affine verdict; elaboration re-derives the
    expansion independently (no double-expansion, DRY).
 
-**Why this is correct for both the top-level and the composite case** (the DN-114 §3.2 review
+**Why this is correct for both the top-level and the composite case** (the DN-116 §3.2 review
 finding): the affine identity lives in the **argument expression**, not the parameter's declared type.
 For a top-level `p: Substrate` used twice, checking the *unsubstituted* RHS would already catch it (`p`
 is a `Live` slot referenced twice); but for a composite `h: Handle` (a `Data` wrapping `Substrate`)
@@ -282,7 +286,7 @@ white-box in-crate per house-rule test layout. Reuse the E5 helpers (`is_double_
   DN-71 both-sites `double-consume` diagnostic (`is_double_consume`).
 - **R2 — composite double-consume via two pattern matches.** `dup2(h: Handle) = (match h { Wrap(s) =>
   consume s }, match h { Wrap(s) => consume s })` invoked with a single affine `Handle` argument →
-  **REFUSE** (the exact DN-114 §3.2 review case; the substituted term consumes the extracted field
+  **REFUSE** (the exact DN-116 §3.2 review case; the substituted term consumes the extracted field
   twice). *This is the case the structural gate could only refuse by over-approximating; here it is
   refused for the right reason and A2 shows a sibling composite is accepted.*
 - **R3 — affine-hiding non-affine type.** `dupI(p: Int) = (p, p)` invoked with `let _ = consume s in 0`
@@ -304,7 +308,7 @@ white-box in-crate per house-rule test layout. Reuse the E5 helpers (`is_double_
    accepted or always rejected fails at least one direction.
 2. **Sabotage control:** temporarily disable the substitution (feed the *unsubstituted* RHS to the
    walk, or seed an **inert** tracker) and assert R2/R3 then **false-accept** — proving the substituted
-   walk is load-bearing, then restore. (This is the exact non-vacuity method DN-114 §3.2 used for the
+   walk is load-bearing, then restore. (This is the exact non-vacuity method DN-116 §3.2 used for the
    composite gate: revert-to-old, confirm false-accept, restore.)
 3. **Every REFUSE asserts the *specific* `double-consume` diagnostic** (`is_double_consume`), never
    "failed for some reason" — so a refusal for an unrelated cause cannot masquerade as a pass.
@@ -327,7 +331,7 @@ diagnostic changes from "Stage 1b accepts only the affine-free fragment / not bu
   part-1 gate from refusal to trigger; the removal/demotion of part-2 helpers; the diagnostic wiring
   (reuse the DN-71 both-sites message).
 - Tests: the §5 acceptance/refusal/non-vacuity corpus; the two superseded controls rewritten.
-- Docs (FLAGged to the integrating parent, not edited from this leaf): DN-114 §3.2 gains an
+- Docs (FLAGged to the integrating parent, not edited from this leaf): DN-116 §3.2 gains an
   append-only "superseded by Stage 3 (DN-117)" pointer; DN-110-8.2 OQ-H4 marked resolved (use-time
   precise, per its own recommendation); `CHANGELOG.md` + `Doc-Index.md` + `issues.yaml` M-1054 status
   rows.
@@ -357,7 +361,7 @@ diagnostic changes from "Stage 1b accepts only the affine-free fragment / not bu
    affine-hiding-non-affine-type case (R3). The unsubstituted walk is *necessary but not sufficient* —
    substitution is load-bearing. **Recommendation survives.**
 2. **"The substituted `Expr` duplicates argument *evaluation* — is that a new hazard?"** No: value
-   params are substituted (not `let`-bound) **by design** (DN-114 §3.2 line 119); duplicating a *pure*
+   params are substituted (not `let`-bound) **by design** (DN-116 §3.2 line 119); duplicating a *pure*
    value's evaluation is re-evaluation, not a soundness hazard in v0, and duplicating an *affine*
    argument's evaluation is exactly the double-consume the tracker now catches. The affine subset is
    the only unsound subset, and it is precisely the subset the walk refuses. **Survives.**
@@ -398,7 +402,7 @@ code lands with the note), the maintainer/orchestrator confirms:
 5. **Q5 boundary** — cross-nodule affine is Stage 4; the lambda-capture and loop-multiplicity items are
    FLAGged out, not silently included.
 6. **Enactment gate (separate, later):** Stage 3 is `Enacted` only when the implementation leaf lands
-   green (`just check`), the tag has moved to `Empirical` on the real substituted-`Expr`, DN-114 §3.2
+   green (`just check`), the tag has moved to `Empirical` on the real substituted-`Expr`, DN-116 §3.2
    carries the append-only supersede pointer, and DN-110-8.2 OQ-H4 is marked resolved.
 
 ---
@@ -412,14 +416,17 @@ code lands with the note), the maintainer/orchestrator confirms:
 - **FLAG-issues (2026-07-11):** M-1054's issue body / a new Stage-3 sub-issue should reference DN-117
   as the Stage-3 build-plan basis, and (when the implementation leaf runs) `depends_on` M-919 (landed) +
   the Stage-2 M-1069 close-out. Orchestrator-owned; not edited here.
-- **FLAG-DN114-supersede (2026-07-11):** DN-114 §3.2 (the wholesale Stage-3 gate) needs an
+- **FLAG-DN114-supersede (2026-07-11):** DN-116 §3.2 (the wholesale Stage-3 gate) needs an
   append-only "superseded-in-part by Stage 3 / DN-117 (accept-linear, refuse-duplicated)" pointer when
   Stage 3 lands — house rule #3, supersede-don't-rewrite.
 - **FLAG-DN110-8.2 (2026-07-11):** DN-110-8.2 §10 OQ-H4 should be marked **resolved** (use-time
   precise, per its own §10 recommendation) at Stage-3 enactment; and (D)'s "expanded L0" phrasing gets
   an append-only pointer to FLAG-A / DN-117 §2 pinning the layer as the L1 substituted-`Expr`.
-- **FLAG-renumber (2026-07-11):** this note's "DN-114" refs are to the M-1054 Stage-1b note slated to
-  renumber to **DN-116**; fold this note's inbound refs into that same renumber pass.
+- **FLAG-renumber (2026-07-11, RESOLVED same day):** this note's "DN-116" refs are to the M-1054
+  Stage-1b note, renumbered from DN-114 to **DN-116** at the 2026-07-11 integration close-out; this
+  note's inbound refs were folded into that same renumber pass. `crates/mycelium-l1/` source/test
+  comments citing the old "DN-114" spelling were repointed to DN-116 in this Stage-3 landing's own
+  pull-down merge (no longer deferred).
 - **FLAG-lambda-affine (2026-07-11, open question):** confirm during implementation whether an affine
   value captured by a lambda invoked multiple times is soundly tracked for hand-written code; Stage 3
   inherits that posture and must not over-claim (§6).
