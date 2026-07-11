@@ -64,12 +64,16 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::book::ChapterSpec
 pub const mycelium_doc::book::DEFAULT_MANIFEST_PATH: &str
 pub fn mycelium_doc::book::build_book(&mycelium_doc::ir::DocModel, &mycelium_doc::book::BookManifest, &std::path::Path) -> core::result::Result<mycelium_doc::emit::Artifacts, mycelium_doc::book::BookError>
 pub fn mycelium_doc::book::load_manifest(&std::path::Path) -> core::result::Result<mycelium_doc::book::BookManifest, mycelium_doc::book::BookError>
+pub fn mycelium_doc::book::load_manifest_from(&std::path::Path) -> core::result::Result<mycelium_doc::book::BookManifest, mycelium_doc::book::BookError>
+pub fn mycelium_doc::book::resolve_manifest_chapters(&mycelium_doc::ir::DocModel, &mycelium_doc::book::BookManifest) -> alloc::vec::Vec<(alloc::string::String, alloc::vec::Vec<alloc::string::String>)>
+pub fn mycelium_doc::book::resolve_manifest_docs(&mycelium_doc::ir::DocModel, &mycelium_doc::book::BookManifest, &std::path::Path) -> core::result::Result<alloc::vec::Vec<mycelium_doc::ir::Node>, mycelium_doc::book::BookError>
 pub mod mycelium_doc::build
 pub struct mycelium_doc::build::BuildInput
 pub mycelium_doc::build::BuildInput::corpus_root: core::option::Option<std::path::PathBuf>
 pub mycelium_doc::build::BuildInput::example_roots: alloc::vec::Vec<std::path::PathBuf>
 pub mycelium_doc::build::BuildInput::extra_md_files: alloc::vec::Vec<std::path::PathBuf>
 pub mycelium_doc::build::BuildInput::repo_root: std::path::PathBuf
+pub mycelium_doc::build::BuildInput::research_root: core::option::Option<std::path::PathBuf>
 pub mycelium_doc::build::BuildInput::schemas_root: core::option::Option<std::path::PathBuf>
 impl mycelium_doc::build::BuildInput
 pub fn mycelium_doc::build::BuildInput::conventional(impl core::convert::Into<std::path::PathBuf>) -> Self
@@ -86,7 +90,54 @@ impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::build::BuildInput
 impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::build::BuildInput
 pub const mycelium_doc::build::EPUB_DEFERRAL: &str
 pub fn mycelium_doc::build::build(&mycelium_doc::build::BuildInput) -> core::io::error::Result<mycelium_doc::ir::DocModel>
-pub fn mycelium_doc::build::emit_all(&mycelium_doc::ir::DocModel) -> mycelium_doc::emit::Artifacts
+pub fn mycelium_doc::build::emit_all(&mycelium_doc::ir::DocModel, core::option::Option<mycelium_doc::emit::html::SemanticNav<'_>>) -> mycelium_doc::emit::Artifacts
+pub mod mycelium_doc::cache
+pub struct mycelium_doc::cache::DiffCache
+pub mycelium_doc::cache::DiffCache::entries: alloc::collections::btree::map::BTreeMap<alloc::string::String, alloc::string::String>
+pub mycelium_doc::cache::DiffCache::version: u32
+impl mycelium_doc::cache::DiffCache
+pub fn mycelium_doc::cache::DiffCache::load(&std::path::Path) -> core::option::Option<mycelium_doc::cache::DiffCache>
+pub fn mycelium_doc::cache::DiffCache::of(&mycelium_doc::emit::Artifacts) -> mycelium_doc::cache::DiffCache
+pub fn mycelium_doc::cache::DiffCache::store(&self, &std::path::Path) -> core::io::error::Result<()>
+impl core::clone::Clone for mycelium_doc::cache::DiffCache
+pub fn mycelium_doc::cache::DiffCache::clone(&self) -> mycelium_doc::cache::DiffCache
+impl core::fmt::Debug for mycelium_doc::cache::DiffCache
+pub fn mycelium_doc::cache::DiffCache::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for mycelium_doc::cache::DiffCache
+pub fn mycelium_doc::cache::DiffCache::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_doc::cache::DiffCache
+pub fn mycelium_doc::cache::DiffCache::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_doc::cache::DiffCache
+impl core::marker::Send for mycelium_doc::cache::DiffCache
+impl core::marker::Sync for mycelium_doc::cache::DiffCache
+impl core::marker::Unpin for mycelium_doc::cache::DiffCache
+impl core::marker::UnsafeUnpin for mycelium_doc::cache::DiffCache
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::cache::DiffCache
+impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::cache::DiffCache
+pub struct mycelium_doc::cache::EmitReport
+pub mycelium_doc::cache::EmitReport::notice: core::option::Option<alloc::string::String>
+pub mycelium_doc::cache::EmitReport::removed: usize
+pub mycelium_doc::cache::EmitReport::skipped: usize
+pub mycelium_doc::cache::EmitReport::total: usize
+pub mycelium_doc::cache::EmitReport::written: usize
+impl core::clone::Clone for mycelium_doc::cache::EmitReport
+pub fn mycelium_doc::cache::EmitReport::clone(&self) -> mycelium_doc::cache::EmitReport
+impl core::cmp::Eq for mycelium_doc::cache::EmitReport
+impl core::cmp::PartialEq for mycelium_doc::cache::EmitReport
+pub fn mycelium_doc::cache::EmitReport::eq(&self, &mycelium_doc::cache::EmitReport) -> bool
+impl core::fmt::Debug for mycelium_doc::cache::EmitReport
+pub fn mycelium_doc::cache::EmitReport::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_doc::cache::EmitReport
+impl core::marker::Freeze for mycelium_doc::cache::EmitReport
+impl core::marker::Send for mycelium_doc::cache::EmitReport
+impl core::marker::Sync for mycelium_doc::cache::EmitReport
+impl core::marker::Unpin for mycelium_doc::cache::EmitReport
+impl core::marker::UnsafeUnpin for mycelium_doc::cache::EmitReport
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::cache::EmitReport
+impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::cache::EmitReport
+pub const mycelium_doc::cache::CACHE_FILE: &str
+pub const mycelium_doc::cache::CACHE_VERSION: u32
+pub fn mycelium_doc::cache::emit_incremental(&mycelium_doc::emit::Artifacts, &std::path::Path, bool) -> core::io::error::Result<mycelium_doc::cache::EmitReport>
 pub mod mycelium_doc::corpus
 pub struct mycelium_doc::corpus::AnchorAlloc
 impl mycelium_doc::corpus::AnchorAlloc
@@ -212,9 +263,10 @@ pub const mycelium_doc::doc_lint::CHECK_NAMES: &[&str]
 pub fn mycelium_doc::doc_lint::lint(&mycelium_doc::ir::DocModel) -> mycelium_doc::doc_lint::DocLintReport
 pub mod mycelium_doc::emit
 pub mod mycelium_doc::emit::html
-pub fn mycelium_doc::emit::html::render(&mycelium_doc::ir::DocModel) -> mycelium_doc::emit::Artifacts
+pub fn mycelium_doc::emit::html::render(&mycelium_doc::ir::DocModel, core::option::Option<mycelium_doc::emit::html::SemanticNav<'_>>) -> mycelium_doc::emit::Artifacts
 pub fn mycelium_doc::emit::html::render_concat(&mycelium_doc::ir::DocModel) -> alloc::string::String
 pub fn mycelium_doc::emit::html::template_hash() -> alloc::string::String
+pub type mycelium_doc::emit::html::SemanticNav<'a> = &'a [(alloc::string::String, alloc::vec::Vec<alloc::string::String>)]
 pub mod mycelium_doc::emit::json
 pub fn mycelium_doc::emit::json::render(&mycelium_doc::ir::DocModel) -> mycelium_doc::emit::Artifacts
 pub fn mycelium_doc::emit::json::render_model_json(&mycelium_doc::ir::DocModel) -> alloc::string::String
@@ -260,6 +312,37 @@ impl core::marker::Unpin for mycelium_doc::hash::DocHasher
 impl core::marker::UnsafeUnpin for mycelium_doc::hash::DocHasher
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::hash::DocHasher
 impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::hash::DocHasher
+pub mod mycelium_doc::highlight
+pub fn mycelium_doc::highlight::highlight(&str, &str) -> core::option::Option<alloc::string::String>
+pub fn mycelium_doc::highlight::is_myc_lang(&str) -> bool
+pub mod mycelium_doc::inline
+pub enum mycelium_doc::inline::Span<'a>
+pub mycelium_doc::inline::Span::Code(&'a str)
+pub mycelium_doc::inline::Span::Em(alloc::vec::Vec<mycelium_doc::inline::Span<'a>>)
+pub mycelium_doc::inline::Span::Link
+pub mycelium_doc::inline::Span::Link::href: &'a str
+pub mycelium_doc::inline::Span::Link::text: alloc::vec::Vec<mycelium_doc::inline::Span<'a>>
+pub mycelium_doc::inline::Span::Strong(alloc::vec::Vec<mycelium_doc::inline::Span<'a>>)
+pub mycelium_doc::inline::Span::Text(&'a str)
+impl<'a> core::clone::Clone for mycelium_doc::inline::Span<'a>
+pub fn mycelium_doc::inline::Span<'a>::clone(&self) -> mycelium_doc::inline::Span<'a>
+impl<'a> core::cmp::Eq for mycelium_doc::inline::Span<'a>
+impl<'a> core::cmp::PartialEq for mycelium_doc::inline::Span<'a>
+pub fn mycelium_doc::inline::Span<'a>::eq(&self, &mycelium_doc::inline::Span<'a>) -> bool
+impl<'a> core::fmt::Debug for mycelium_doc::inline::Span<'a>
+pub fn mycelium_doc::inline::Span<'a>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<'a> core::marker::StructuralPartialEq for mycelium_doc::inline::Span<'a>
+impl<'a> core::marker::Freeze for mycelium_doc::inline::Span<'a>
+impl<'a> core::marker::Send for mycelium_doc::inline::Span<'a>
+impl<'a> core::marker::Sync for mycelium_doc::inline::Span<'a>
+impl<'a> core::marker::Unpin for mycelium_doc::inline::Span<'a>
+impl<'a> core::marker::UnsafeUnpin for mycelium_doc::inline::Span<'a>
+impl<'a> core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::inline::Span<'a>
+impl<'a> core::panic::unwind_safe::UnwindSafe for mycelium_doc::inline::Span<'a>
+pub const mycelium_doc::inline::MAX_DEPTH: u8
+pub fn mycelium_doc::inline::is_external(&str) -> bool
+pub fn mycelium_doc::inline::parse(&str) -> alloc::vec::Vec<mycelium_doc::inline::Span<'_>>
+pub fn mycelium_doc::inline::to_plain(&str) -> alloc::string::String
 pub mod mycelium_doc::ir
 pub enum mycelium_doc::ir::Level
 pub mycelium_doc::ir::Level::Detailed
@@ -465,6 +548,8 @@ impl core::marker::Unpin for mycelium_doc::ir::XrefTarget
 impl core::marker::UnsafeUnpin for mycelium_doc::ir::XrefTarget
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::ir::XrefTarget
 impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::ir::XrefTarget
+pub mod mycelium_doc::label
+pub fn mycelium_doc::label::short_label(&mycelium_doc::ir::Node) -> alloc::string::String
 pub mod mycelium_doc::lib_index
 pub struct mycelium_doc::lib_index::Flagged
 pub mycelium_doc::lib_index::Flagged::item: alloc::string::String
@@ -538,6 +623,13 @@ pub const mycelium_doc::lib_index::ITEM_TAG: &str
 pub fn mycelium_doc::lib_index::build_lib_index(&std::path::Path) -> core::io::error::Result<mycelium_doc::lib_index::LibIndexReport>
 pub fn mycelium_doc::lib_index::write_json(&mycelium_doc::lib_index::LibIndexReport, &std::path::Path) -> core::io::error::Result<()>
 pub fn mycelium_doc::lib_index::write_markdown(&mycelium_doc::lib_index::LibIndexReport, &std::path::Path) -> core::io::error::Result<()>
+pub mod mycelium_doc::theme
+pub const mycelium_doc::theme::CORPUS_SEARCH_JS: &str
+pub const mycelium_doc::theme::HEAD_THEME_INIT: &str
+pub const mycelium_doc::theme::READING_CSS: &str
+pub const mycelium_doc::theme::SKIP_LINK: &str
+pub const mycelium_doc::theme::THEME_TOGGLE_BUTTON: &str
+pub const mycelium_doc::theme::THEME_TOGGLE_JS: &str
 pub enum mycelium_doc::CheckStatus
 pub mycelium_doc::CheckStatus::Active
 pub mycelium_doc::CheckStatus::Dormant(alloc::string::String)
@@ -711,6 +803,7 @@ pub mycelium_doc::BuildInput::corpus_root: core::option::Option<std::path::PathB
 pub mycelium_doc::BuildInput::example_roots: alloc::vec::Vec<std::path::PathBuf>
 pub mycelium_doc::BuildInput::extra_md_files: alloc::vec::Vec<std::path::PathBuf>
 pub mycelium_doc::BuildInput::repo_root: std::path::PathBuf
+pub mycelium_doc::BuildInput::research_root: core::option::Option<std::path::PathBuf>
 pub mycelium_doc::BuildInput::schemas_root: core::option::Option<std::path::PathBuf>
 impl mycelium_doc::build::BuildInput
 pub fn mycelium_doc::build::BuildInput::conventional(impl core::convert::Into<std::path::PathBuf>) -> Self
@@ -765,6 +858,28 @@ impl core::marker::Unpin for mycelium_doc::doc_lint::CheckOutcome
 impl core::marker::UnsafeUnpin for mycelium_doc::doc_lint::CheckOutcome
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::doc_lint::CheckOutcome
 impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::doc_lint::CheckOutcome
+pub struct mycelium_doc::DiffCache
+pub mycelium_doc::DiffCache::entries: alloc::collections::btree::map::BTreeMap<alloc::string::String, alloc::string::String>
+pub mycelium_doc::DiffCache::version: u32
+impl mycelium_doc::cache::DiffCache
+pub fn mycelium_doc::cache::DiffCache::load(&std::path::Path) -> core::option::Option<mycelium_doc::cache::DiffCache>
+pub fn mycelium_doc::cache::DiffCache::of(&mycelium_doc::emit::Artifacts) -> mycelium_doc::cache::DiffCache
+pub fn mycelium_doc::cache::DiffCache::store(&self, &std::path::Path) -> core::io::error::Result<()>
+impl core::clone::Clone for mycelium_doc::cache::DiffCache
+pub fn mycelium_doc::cache::DiffCache::clone(&self) -> mycelium_doc::cache::DiffCache
+impl core::fmt::Debug for mycelium_doc::cache::DiffCache
+pub fn mycelium_doc::cache::DiffCache::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for mycelium_doc::cache::DiffCache
+pub fn mycelium_doc::cache::DiffCache::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_doc::cache::DiffCache
+pub fn mycelium_doc::cache::DiffCache::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_doc::cache::DiffCache
+impl core::marker::Send for mycelium_doc::cache::DiffCache
+impl core::marker::Sync for mycelium_doc::cache::DiffCache
+impl core::marker::Unpin for mycelium_doc::cache::DiffCache
+impl core::marker::UnsafeUnpin for mycelium_doc::cache::DiffCache
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::cache::DiffCache
+impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::cache::DiffCache
 pub struct mycelium_doc::DocLintReport
 pub mycelium_doc::DocLintReport::outcomes: alloc::vec::Vec<mycelium_doc::doc_lint::CheckOutcome>
 impl mycelium_doc::doc_lint::DocLintReport
@@ -805,6 +920,27 @@ impl core::marker::Unpin for mycelium_doc::ir::DocModel
 impl core::marker::UnsafeUnpin for mycelium_doc::ir::DocModel
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::ir::DocModel
 impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::ir::DocModel
+pub struct mycelium_doc::EmitReport
+pub mycelium_doc::EmitReport::notice: core::option::Option<alloc::string::String>
+pub mycelium_doc::EmitReport::removed: usize
+pub mycelium_doc::EmitReport::skipped: usize
+pub mycelium_doc::EmitReport::total: usize
+pub mycelium_doc::EmitReport::written: usize
+impl core::clone::Clone for mycelium_doc::cache::EmitReport
+pub fn mycelium_doc::cache::EmitReport::clone(&self) -> mycelium_doc::cache::EmitReport
+impl core::cmp::Eq for mycelium_doc::cache::EmitReport
+impl core::cmp::PartialEq for mycelium_doc::cache::EmitReport
+pub fn mycelium_doc::cache::EmitReport::eq(&self, &mycelium_doc::cache::EmitReport) -> bool
+impl core::fmt::Debug for mycelium_doc::cache::EmitReport
+pub fn mycelium_doc::cache::EmitReport::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_doc::cache::EmitReport
+impl core::marker::Freeze for mycelium_doc::cache::EmitReport
+impl core::marker::Send for mycelium_doc::cache::EmitReport
+impl core::marker::Sync for mycelium_doc::cache::EmitReport
+impl core::marker::Unpin for mycelium_doc::cache::EmitReport
+impl core::marker::UnsafeUnpin for mycelium_doc::cache::EmitReport
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::cache::EmitReport
+impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::cache::EmitReport
 pub struct mycelium_doc::Finding
 pub mycelium_doc::Finding::anchor: alloc::string::String
 pub mycelium_doc::Finding::check: alloc::string::String
@@ -878,6 +1014,11 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::ir::Provenance
 pub const mycelium_doc::CHECK_NAMES: &[&str]
 pub fn mycelium_doc::build(&mycelium_doc::build::BuildInput) -> core::io::error::Result<mycelium_doc::ir::DocModel>
 pub fn mycelium_doc::build_book(&mycelium_doc::ir::DocModel, &mycelium_doc::book::BookManifest, &std::path::Path) -> core::result::Result<mycelium_doc::emit::Artifacts, mycelium_doc::book::BookError>
-pub fn mycelium_doc::emit_all(&mycelium_doc::ir::DocModel) -> mycelium_doc::emit::Artifacts
+pub fn mycelium_doc::emit_all(&mycelium_doc::ir::DocModel, core::option::Option<mycelium_doc::emit::html::SemanticNav<'_>>) -> mycelium_doc::emit::Artifacts
+pub fn mycelium_doc::emit_incremental(&mycelium_doc::emit::Artifacts, &std::path::Path, bool) -> core::io::error::Result<mycelium_doc::cache::EmitReport>
 pub fn mycelium_doc::lint(&mycelium_doc::ir::DocModel) -> mycelium_doc::doc_lint::DocLintReport
 pub fn mycelium_doc::load_manifest(&std::path::Path) -> core::result::Result<mycelium_doc::book::BookManifest, mycelium_doc::book::BookError>
+pub fn mycelium_doc::load_manifest_from(&std::path::Path) -> core::result::Result<mycelium_doc::book::BookManifest, mycelium_doc::book::BookError>
+pub fn mycelium_doc::resolve_manifest_chapters(&mycelium_doc::ir::DocModel, &mycelium_doc::book::BookManifest) -> alloc::vec::Vec<(alloc::string::String, alloc::vec::Vec<alloc::string::String>)>
+pub fn mycelium_doc::resolve_manifest_docs(&mycelium_doc::ir::DocModel, &mycelium_doc::book::BookManifest, &std::path::Path) -> core::result::Result<alloc::vec::Vec<mycelium_doc::ir::Node>, mycelium_doc::book::BookError>
+pub fn mycelium_doc::short_label(&mycelium_doc::ir::Node) -> alloc::string::String

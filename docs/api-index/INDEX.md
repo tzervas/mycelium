@@ -579,13 +579,15 @@
 |---|---|---|---|
 | `mycelium_doc::BookError` | struct | `crates/mycelium-doc/src/book.rs:57` | A never-silent book-build error (a broken manifest entry, a bad manifest, an anchor collision) — |
 | `mycelium_doc::BookManifest` | struct | `crates/mycelium-doc/src/book.rs:69` | The committed chapter manifest (`docs/book-manifest.json`) — curated order, drift-proof globs. |
-| `mycelium_doc::BuildInput` | struct | `crates/mycelium-doc/src/build.rs:25` | What to ingest. |
+| `mycelium_doc::BuildInput` | struct | `crates/mycelium-doc/src/build.rs:26` | What to ingest. |
 | `mycelium_doc::CHECK_NAMES:` | const | `crates/mycelium-doc/src/doc_lint.rs:16` | The eight §4.1 checks, by canonical name — the single source of truth (`mycelium-lint` re-exports |
 | `mycelium_doc::ChapterSpec` | struct | `crates/mycelium-doc/src/book.rs:81` | One chapter: an ordered list of explicit sources, optionally extended by drift-proof globs. |
 | `mycelium_doc::CheckOutcome` | struct | `crates/mycelium-doc/src/doc_lint.rs:76` | The outcome of one check. |
 | `mycelium_doc::CheckStatus` | enum | `crates/mycelium-doc/src/doc_lint.rs:65` | Whether a check is fully active, partly dormant (named sub-aspects await machinery), or dormant. |
+| `mycelium_doc::DiffCache` | struct | `crates/mycelium-doc/src/cache.rs:38` | The persisted cache: `emitted-path → blake3(bytes)`, plus the format version. |
 | `mycelium_doc::DocLintReport` | struct | `crates/mycelium-doc/src/doc_lint.rs:89` | The full §4.1 lint report. |
 | `mycelium_doc::DocModel` | struct | `crates/mycelium-doc/src/ir.rs:375` | The whole projected corpus: top-level documents plus the navigable index over every node. |
+| `mycelium_doc::EmitReport` | struct | `crates/mycelium-doc/src/cache.rs:89` | What an incremental emit did — every count explicit, for a never-silent CLI summary. |
 | `mycelium_doc::Finding` | struct | `crates/mycelium-doc/src/doc_lint.rs:52` | One finding from a check. |
 | `mycelium_doc::Level` | enum | `crates/mycelium-doc/src/ir.rs:22` | Graded depth (RFC-0013's `minimal / medium / detailed` levels, reused for docs — §4.1 progressive |
 | `mycelium_doc::Node` | struct | `crates/mycelium-doc/src/ir.rs:224` | One node of the content-addressed doc-IR. |
@@ -599,10 +601,16 @@
 | `mycelium_doc::book` | mod | `crates/mycelium-doc/src/lib.rs:20` | — |
 | `mycelium_doc::book::DEFAULT_MANIFEST_PATH:` | const | `crates/mycelium-doc/src/book.rs:52` | The repo-relative default location of the committed chapter manifest. |
 | `mycelium_doc::build` | mod | `crates/mycelium-doc/src/lib.rs:21` | — |
-| `mycelium_doc::build` | fn | `crates/mycelium-doc/src/build.rs:68` | Build the resolved doc model from the input. |
-| `mycelium_doc::build::BuildInput::conventional` | fn | `crates/mycelium-doc/src/build.rs:52` | The conventional layout rooted at `repo_root`: `docs/`, `docs/spec/schemas/`, `examples/`, |
-| `mycelium_doc::build::EPUB_DEFERRAL:` | const | `crates/mycelium-doc/src/build.rs:19` | EPUB is an honest deferral (spec §8 / §4.1 "never a half-build"). |
+| `mycelium_doc::build` | fn | `crates/mycelium-doc/src/build.rs:79` | Build the resolved doc model from the input. |
+| `mycelium_doc::build::BuildInput::conventional` | fn | `crates/mycelium-doc/src/build.rs:62` | The conventional layout rooted at `repo_root`: `docs/`, `docs/spec/schemas/`, `research/`, |
+| `mycelium_doc::build::EPUB_DEFERRAL:` | const | `crates/mycelium-doc/src/build.rs:20` | EPUB is an honest deferral (spec §8 / §4.1 "never a half-build"). |
 | `mycelium_doc::build_book` | fn | `crates/mycelium-doc/src/book.rs:543` | Build every book artifact: the ToC/landing page, one page per chapter entry (prev/next nav), and |
+| `mycelium_doc::cache` | mod | `crates/mycelium-doc/src/lib.rs:22` | — |
+| `mycelium_doc::cache::CACHE_FILE:` | const | `crates/mycelium-doc/src/cache.rs:30` | The on-disk cache filename (written inside the output directory). |
+| `mycelium_doc::cache::CACHE_VERSION:` | const | `crates/mycelium-doc/src/cache.rs:34` | The cache format version. |
+| `mycelium_doc::cache::DiffCache::load` | fn | `crates/mycelium-doc/src/cache.rs:62` | Load a prior cache from `out_dir/.myc-doc-cache.json`. |
+| `mycelium_doc::cache::DiffCache::of` | fn | `crates/mycelium-doc/src/cache.rs:48` | The cache computed from a freshly-rendered artifact set (before any write). |
+| `mycelium_doc::cache::DiffCache::store` | fn | `crates/mycelium-doc/src/cache.rs:73` | Persist this cache to `out_dir/.myc-doc-cache.json`. |
 | `mycelium_doc::corpus` | mod | `crates/mycelium-doc/src/lib.rs:23` | — |
 | `mycelium_doc::corpus::AnchorAlloc` | struct | `crates/mycelium-doc/src/corpus.rs:14` | Allocates globally-unique, stable anchor slugs (so deep links never collide — §4.1 navigability). |
 | `mycelium_doc::corpus::AnchorAlloc::alloc` | fn | `crates/mycelium-doc/src/corpus.rs:26` | Slugify `base` (optionally namespaced under `ns`) and make it unique by `-N` suffixing. |
@@ -620,6 +628,7 @@
 | `mycelium_doc::emit::Artifacts::put` | fn | `crates/mycelium-doc/src/emit/mod.rs:28` | Add (or overwrite) one artifact. |
 | `mycelium_doc::emit::Artifacts::write_to` | fn | `crates/mycelium-doc/src/emit/mod.rs:37` | Write every artifact under `out_dir`, creating parent directories. |
 | `mycelium_doc::emit::html` | mod | `crates/mycelium-doc/src/emit/mod.rs:7` | — |
+| `mycelium_doc::emit::html::SemanticNav` | type | `crates/mycelium-doc/src/emit/html.rs:24` | A resolved **semantic spine** for the sidebar: `(chapter-title, [doc anchors])` in book-manifest |
 | `mycelium_doc::emit::html::render` | fn | `crates/mycelium-doc/src/emit/html.rs:154` | Render the whole model to an HTML site: `index.html` plus one `pages/<anchor>.html` per document. |
 | `mycelium_doc::emit::html::render_concat` | fn | `crates/mycelium-doc/src/emit/html.rs:170` | The concatenation of every page (for the parity/legibility lints, which scan the rendered output). |
 | `mycelium_doc::emit::html::template_hash` | fn | `crates/mycelium-doc/src/emit/html.rs:143` | The pinned template content hash (provenance, §6) — the address of the shared template/style. |
@@ -630,7 +639,8 @@
 | `mycelium_doc::emit::json::render_search_index` | fn | `crates/mycelium-doc/src/emit/json.rs:42` | One JSON record per node, newline-delimited (a streamable search/tooling index). |
 | `mycelium_doc::emit::typst` | mod | `crates/mycelium-doc/src/emit/mod.rs:9` | — |
 | `mycelium_doc::emit::typst::render` | fn | `crates/mycelium-doc/src/emit/typst.rs:117` | Render the whole model to one Typst document source. |
-| `mycelium_doc::emit_all` | fn | `crates/mycelium-doc/src/build.rs:168` | Emit every artifact (HTML site · Typst source · machine JSON · the EPUB deferral note). |
+| `mycelium_doc::emit_all` | fn | `crates/mycelium-doc/src/build.rs:198` | Emit every artifact (HTML site · Typst source · machine JSON · the EPUB deferral note). |
+| `mycelium_doc::emit_incremental` | fn | `crates/mycelium-doc/src/cache.rs:110` | Write `arts` under `out_dir` incrementally, using (and refreshing) the differential cache. |
 | `mycelium_doc::hash` | mod | `crates/mycelium-doc/src/lib.rs:26` | — |
 | `mycelium_doc::hash::DocHasher` | struct | `crates/mycelium-doc/src/hash.rs:14` | A canonical, injective content hasher: tagged, length-prefixed writes feed a single BLAKE3 state. |
 | `mycelium_doc::hash::DocHasher::child` | fn | `crates/mycelium-doc/src/hash.rs:64` | Absorb an already-computed child address (a content hash), length-prefixed. |
@@ -640,6 +650,15 @@
 | `mycelium_doc::hash::DocHasher::str` | fn | `crates/mycelium-doc/src/hash.rs:46` | Absorb a length-prefixed string (the prefix makes the framing injective). |
 | `mycelium_doc::hash::DocHasher::tag` | fn | `crates/mycelium-doc/src/hash.rs:34` | Absorb a one-byte domain/kind tag. |
 | `mycelium_doc::hash::DocHasher::u64` | fn | `crates/mycelium-doc/src/hash.rs:40` | Absorb a `u64` (little-endian, fixed width — framing is injective). |
+| `mycelium_doc::highlight` | mod | `crates/mycelium-doc/src/lib.rs:27` | — |
+| `mycelium_doc::highlight::highlight` | fn | `crates/mycelium-doc/src/highlight.rs:178` | Highlight `source` as Mycelium, or `None` to signal the caller should emit plain escaped text. |
+| `mycelium_doc::highlight::is_myc_lang` | fn | `crates/mycelium-doc/src/highlight.rs:159` | Is `lang` a Mycelium fence we highlight? (`myc` or `myc-checked` — both go through the L1 lexer.) |
+| `mycelium_doc::inline` | mod | `crates/mycelium-doc/src/lib.rs:28` | — |
+| `mycelium_doc::inline::MAX_DEPTH:` | const | `crates/mycelium-doc/src/inline.rs:27` | The maximum inline nesting depth parsed; beyond it the remainder is emitted as literal text (a |
+| `mycelium_doc::inline::Span` | enum | `crates/mycelium-doc/src/inline.rs:31` | One inline span — a render-time view over a slice of the node's text (never an IR node). |
+| `mycelium_doc::inline::is_external` | fn | `crates/mycelium-doc/src/inline.rs:256` | Whether a link `href` is an external target the inline renderer should link directly. |
+| `mycelium_doc::inline::parse` | fn | `crates/mycelium-doc/src/inline.rs:53` | Parse `text` into inline spans (the subset in the module docs). |
+| `mycelium_doc::inline::to_plain` | fn | `crates/mycelium-doc/src/inline.rs:265` | Strip inline markdown from `text`, returning **plain, unescaped** text — formatting markers and |
 | `mycelium_doc::ir` | mod | `crates/mycelium-doc/src/lib.rs:29` | — |
 | `mycelium_doc::ir::DocModel::all_nodes` | fn | `crates/mycelium-doc/src/ir.rs:400` | Every node across every document, depth-first (the order a reader meets them). |
 | `mycelium_doc::ir::DocModel::id_set` | fn | `crates/mycelium-doc/src/ir.rs:410` | The set of content addresses present in the model (used by the dual-projection-parity lint). |
@@ -649,6 +668,7 @@
 | `mycelium_doc::ir::Payload::kind_str` | fn | `crates/mycelium-doc/src/ir.rs:208` | The canonical kind label (for diagnostics / the machine projection). |
 | `mycelium_doc::ir::XrefResolution` | enum | `crates/mycelium-doc/src/ir.rs:102` | How a cross-reference resolved against the model (the §4.1 `no-dead-xref` verdict). |
 | `mycelium_doc::ir::XrefTarget` | struct | `crates/mycelium-doc/src/ir.rs:124` | The resolved-or-not target of a cross-reference. |
+| `mycelium_doc::label` | mod | `crates/mycelium-doc/src/lib.rs:30` | — |
 | `mycelium_doc::lib_index` | mod | `crates/mycelium-doc/src/lib.rs:31` | — |
 | `mycelium_doc::lib_index::Flagged` | struct | `crates/mycelium-doc/src/lib_index.rs:86` | A construct the heuristic could not (or does not yet) extract — never silently dropped (G2). |
 | `mycelium_doc::lib_index::HONESTY_TAG:` | const | `crates/mycelium-doc/src/lib_index.rs:44` | The top-level honesty tag (mirrors `tools/docgen/code_index.py::HONESTY_TAG`, adapted to the |
@@ -660,6 +680,17 @@
 | `mycelium_doc::lib_index::write_markdown` | fn | `crates/mycelium-doc/src/lib_index.rs:150` | Write `docs/lib-index/INDEX.md`. |
 | `mycelium_doc::lint` | fn | `crates/mycelium-doc/src/doc_lint.rs:116` | Run all eight §4.1 checks over the model. |
 | `mycelium_doc::load_manifest` | fn | `crates/mycelium-doc/src/book.rs:102` | Load the committed manifest from `<repo_root>/docs/book-manifest.json`. |
+| `mycelium_doc::load_manifest_from` | fn | `crates/mycelium-doc/src/book.rs:112` | Load a manifest from an **explicit path** — the entry the `--manifest` scoped-emission path uses |
+| `mycelium_doc::resolve_manifest_chapters` | fn | `crates/mycelium-doc/src/book.rs:490` | The manifest's chapters resolved to **(chapter-title, [ingested-doc anchors])**, best-effort over |
+| `mycelium_doc::resolve_manifest_docs` | fn | `crates/mycelium-doc/src/book.rs:470` | Resolve a manifest to the **ordered set of ingested documents** it names — the same resolution |
+| `mycelium_doc::short_label` | fn | `crates/mycelium-doc/src/label.rs:23` | A concise navigation label for `node` (see the module rules). |
+| `mycelium_doc::theme` | mod | `crates/mycelium-doc/src/lib.rs:32` | — |
+| `mycelium_doc::theme::CORPUS_SEARCH_JS:` | const | `crates/mycelium-doc/src/theme.rs:255` | The corpus-site client-side search: a small substring/prefix filter over the already-emitted |
+| `mycelium_doc::theme::HEAD_THEME_INIT:` | const | `crates/mycelium-doc/src/theme.rs:217` | The `<head>` theme bootstrap — runs **before first paint** so the correct palette is applied with |
+| `mycelium_doc::theme::READING_CSS:` | const | `crates/mycelium-doc/src/theme.rs:33` | The shared, self-contained stylesheet (the one reviewed template's CSS, §5). |
+| `mycelium_doc::theme::SKIP_LINK:` | const | `crates/mycelium-doc/src/theme.rs:295` | The skip-to-content link (accessibility — first focusable element). |
+| `mycelium_doc::theme::THEME_TOGGLE_BUTTON:` | const | `crates/mycelium-doc/src/theme.rs:224` | The theme-toggle button (goes in the header bar). |
+| `mycelium_doc::theme::THEME_TOGGLE_JS:` | const | `crates/mycelium-doc/src/theme.rs:230` | Wires [`THEME_TOGGLE_BUTTON`]: flips the *effective* theme (honouring the OS default when no |
 
 ## mycelium-fmt
 
@@ -849,12 +880,12 @@
 | `mycelium_l1::checkty::PhylumEnv::single` | fn | `crates/mycelium-l1/src/checkty.rs:1042` | The single nodule's [`Env`] when this is a phylum-of-one, else `None`. |
 | `mycelium_l1::checkty::TraitInfo` | struct | `crates/mycelium-l1/src/checkty.rs:264` | A registered **trait** (RFC-0019 §4.2; LR-2). |
 | `mycelium_l1::checkty::Width` | enum | `crates/mycelium-l1/src/checkty.rs:59` | A width argument in a [`Ty::Binary`] or [`Ty::Ternary`] — either a concrete literal or an |
-| `mycelium_l1::checkty::prim_kernel_name` | fn | `crates/mycelium-l1/src/checkty.rs:7988` | The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1). |
-| `mycelium_l1::checkty::prim_sig` | fn | `crates/mycelium-l1/src/checkty.rs:7937` | The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic. |
+| `mycelium_l1::checkty::prim_kernel_name` | fn | `crates/mycelium-l1/src/checkty.rs:8664` | The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1). |
+| `mycelium_l1::checkty::prim_sig` | fn | `crates/mycelium-l1/src/checkty.rs:8613` | The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic. |
 | `mycelium_l1::checkty::type_head` | fn | `crates/mycelium-l1/src/checkty.rs:296` | The **coherence key** of a type (RFC-0019 §4.5): the head a `(trait, type-head)` instance key is |
-| `mycelium_l1::checkty::vsa_kernel_model_id` | fn | `crates/mycelium-l1/src/checkty.rs:7978` | Canonicalize a surface VSA model ident to the **kernel model id** (`Repr::Vsa { model }` — |
+| `mycelium_l1::checkty::vsa_kernel_model_id` | fn | `crates/mycelium-l1/src/checkty.rs:8654` | Canonicalize a surface VSA model ident to the **kernel model id** (`Repr::Vsa { model }` — |
 | `mycelium_l1::elab` | mod | `crates/mycelium-l1/src/lib.rs:45` | — |
-| `mycelium_l1::elab::build_registry` | fn | `crates/mycelium-l1/src/elab.rs:1371` | Build the content-addressed data registry `Σ` (RFC-0001 §4.3 r3) from the checked environment's |
+| `mycelium_l1::elab::build_registry` | fn | `crates/mycelium-l1/src/elab.rs:1377` | Build the content-addressed data registry `Σ` (RFC-0001 §4.3 r3) from the checked environment's |
 | `mycelium_l1::elab::lit_value` | fn | `crates/mycelium-l1/src/elab.rs:103` | Build the L0 [`Value`] of a representation literal (Q6: a literal *is* its representation — |
 | `mycelium_l1::elab::policy_name_ref` | fn | `crates/mycelium-l1/src/elab.rs:345` | The v0 **policy-name reference**: a deterministic, domain-separated content address derived |
 | `mycelium_l1::elab::type_repr` | fn | `crates/mycelium-l1/src/elab.rs:245` | Resolve a surface [`TypeRef`] to a kernel [`Repr`] (swap targets). |
@@ -862,7 +893,7 @@
 | `mycelium_l1::elaborate_colony` | fn | `crates/mycelium-l1/src/elab.rs:446` | **Per-hypha elaboration of a `colony` entry** for the *real-concurrency* execution path |
 | `mycelium_l1::elaborate_direct` | fn | `crates/mycelium-l1/src/elab.rs:420` | **ADR-033/DN-74 (M-923):** elaborate `entry` **without** the [`crate::mono::monomorphize`] |
 | `mycelium_l1::elaborate_lower_rule` | fn | `crates/mycelium-l1/src/elab.rs:583` | **Elaborate a user-defined generative-lowering rule's RHS to a closed L0 [`Node`]** (DN-54 |
-| `mycelium_l1::elaborate_lower_rule_with_args` | fn | `crates/mycelium-l1/src/elab.rs:624` | **M-1054 Stage 1 — the hygienic value-parametric expansion** (DN-110 §5-A / |
+| `mycelium_l1::elaborate_lower_rule_with_args` | fn | `crates/mycelium-l1/src/elab.rs:630` | **M-1054 Stage 1 — the hygienic value-parametric expansion** (DN-110 §5-A / |
 | `mycelium_l1::elaborate_reclaim` | fn | `crates/mycelium-l1/src/elab.rs:512` | **Policy + body elaboration of a `reclaim` entry** for the *real-supervision* execution path |
 | `mycelium_l1::error` | mod | `crates/mycelium-l1/src/lib.rs:46` | — |
 | `mycelium_l1::error::ParseError::at` | fn | `crates/mycelium-l1/src/error.rs:27` | Ergonomic alias for [`ParseError::new`] taking any `impl Into<String>` message (so a `&str` |
@@ -4173,13 +4204,33 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_doc::book::ChapterSpec::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::book::build_book` | dedup-alias: same definition as `mycelium_doc::build_book` at crates/mycelium-doc/src/book.rs:543 — one canonical row kept |
 | `mycelium_doc::book::load_manifest` | dedup-alias: same definition as `mycelium_doc::load_manifest` at crates/mycelium-doc/src/book.rs:102 — one canonical row kept |
-| `mycelium_doc::build::BuildInput` | dedup-alias: same definition as `mycelium_doc::BuildInput` at crates/mycelium-doc/src/build.rs:25 — one canonical row kept |
+| `mycelium_doc::book::load_manifest_from` | dedup-alias: same definition as `mycelium_doc::load_manifest_from` at crates/mycelium-doc/src/book.rs:112 — one canonical row kept |
+| `mycelium_doc::book::resolve_manifest_chapters` | dedup-alias: same definition as `mycelium_doc::resolve_manifest_chapters` at crates/mycelium-doc/src/book.rs:490 — one canonical row kept |
+| `mycelium_doc::book::resolve_manifest_docs` | dedup-alias: same definition as `mycelium_doc::resolve_manifest_docs` at crates/mycelium-doc/src/book.rs:470 — one canonical row kept |
+| `mycelium_doc::build::BuildInput` | dedup-alias: same definition as `mycelium_doc::BuildInput` at crates/mycelium-doc/src/build.rs:26 — one canonical row kept |
 | `mycelium_doc::build::BuildInput::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::build::BuildInput::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::build::BuildInput::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::build::BuildInput::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_doc::build::build` | dedup-alias: same definition as `mycelium_doc::build` at crates/mycelium-doc/src/build.rs:68 — one canonical row kept |
-| `mycelium_doc::build::emit_all` | dedup-alias: same definition as `mycelium_doc::emit_all` at crates/mycelium-doc/src/build.rs:168 — one canonical row kept |
+| `mycelium_doc::build::build` | dedup-alias: same definition as `mycelium_doc::build` at crates/mycelium-doc/src/build.rs:79 — one canonical row kept |
+| `mycelium_doc::build::emit_all` | dedup-alias: same definition as `mycelium_doc::emit_all` at crates/mycelium-doc/src/build.rs:198 — one canonical row kept |
+| `mycelium_doc::cache::DiffCache` | dedup-alias: same definition as `mycelium_doc::DiffCache` at crates/mycelium-doc/src/cache.rs:38 — one canonical row kept |
+| `mycelium_doc::cache::DiffCache::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_doc::cache::DiffCache::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_doc::cache::DiffCache::deserialize` | definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated |
+| `mycelium_doc::cache::DiffCache::deserialize` | definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated |
+| `mycelium_doc::cache::DiffCache::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_doc::cache::DiffCache::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_doc::cache::DiffCache::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
+| `mycelium_doc::cache::DiffCache::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
+| `mycelium_doc::cache::EmitReport` | dedup-alias: same definition as `mycelium_doc::EmitReport` at crates/mycelium-doc/src/cache.rs:89 — one canonical row kept |
+| `mycelium_doc::cache::EmitReport::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_doc::cache::EmitReport::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_doc::cache::EmitReport::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_doc::cache::EmitReport::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_doc::cache::EmitReport::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_doc::cache::EmitReport::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_doc::cache::emit_incremental` | dedup-alias: same definition as `mycelium_doc::emit_incremental` at crates/mycelium-doc/src/cache.rs:110 — one canonical row kept |
 | `mycelium_doc::corpus::AnchorAlloc::default` | definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::corpus::AnchorAlloc::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::doc_lint::CHECK_NAMES:` | dedup-alias: same definition as `mycelium_doc::CHECK_NAMES:` at crates/mycelium-doc/src/doc_lint.rs:16 — one canonical row kept |
@@ -4223,6 +4274,9 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_doc::emit::Artifacts::default` | definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::emit::Artifacts::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::hash::DocHasher::default` | definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated |
+| `mycelium_doc::inline::Span` | definition not found via regex heuristic (kind='fn', name='Span') — possibly macro-generated or cfg-gated |
+| `mycelium_doc::inline::Span` | definition not found via regex heuristic (kind='fn', name='Span') — possibly macro-generated or cfg-gated |
+| `mycelium_doc::inline::Span` | definition not found via regex heuristic (kind='fn', name='Span') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::ir::DocModel` | dedup-alias: same definition as `mycelium_doc::DocModel` at crates/mycelium-doc/src/ir.rs:375 — one canonical row kept |
 | `mycelium_doc::ir::DocModel::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::ir::DocModel::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
@@ -4289,6 +4343,7 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_doc::ir::XrefTarget::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::ir::XrefTarget::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::ir::XrefTarget::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
+| `mycelium_doc::label::short_label` | dedup-alias: same definition as `mycelium_doc::short_label` at crates/mycelium-doc/src/label.rs:23 — one canonical row kept |
 | `mycelium_doc::lib_index::Flagged::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::lib_index::Flagged::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::lib_index::Flagged::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
@@ -4678,7 +4733,7 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_l1::elab::elaborate_colony` | dedup-alias: same definition as `mycelium_l1::elaborate_colony` at crates/mycelium-l1/src/elab.rs:446 — one canonical row kept |
 | `mycelium_l1::elab::elaborate_direct` | dedup-alias: same definition as `mycelium_l1::elaborate_direct` at crates/mycelium-l1/src/elab.rs:420 — one canonical row kept |
 | `mycelium_l1::elab::elaborate_lower_rule` | dedup-alias: same definition as `mycelium_l1::elaborate_lower_rule` at crates/mycelium-l1/src/elab.rs:583 — one canonical row kept |
-| `mycelium_l1::elab::elaborate_lower_rule_with_args` | dedup-alias: same definition as `mycelium_l1::elaborate_lower_rule_with_args` at crates/mycelium-l1/src/elab.rs:624 — one canonical row kept |
+| `mycelium_l1::elab::elaborate_lower_rule_with_args` | dedup-alias: same definition as `mycelium_l1::elaborate_lower_rule_with_args` at crates/mycelium-l1/src/elab.rs:630 — one canonical row kept |
 | `mycelium_l1::elab::elaborate_reclaim` | dedup-alias: same definition as `mycelium_l1::elaborate_reclaim` at crates/mycelium-l1/src/elab.rs:512 — one canonical row kept |
 | `mycelium_l1::error::ParseError` | dedup-alias: same definition as `mycelium_l1::ParseError` at crates/mycelium-l1/src/error.rs:9 — one canonical row kept |
 | `mycelium_l1::error::ParseError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |

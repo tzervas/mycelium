@@ -1,8 +1,8 @@
-# Design Note DN-114 — M-1054 Stage 1b: Check-Phase Sugar-Call Accept (Option B, the Def-Time RHS Type-Scheme)
+# Design Note DN-116 — M-1054 Stage 1b: Check-Phase Sugar-Call Accept (Option B, the Def-Time RHS Type-Scheme)
 
 | Field | Value |
 |---|---|
-| **Note** | DN-114 — a leaf-scoped implementation note for the M-1054 native-metaprogramming facility's Stage 1b: making the verified Stage-1 hygienic expander ([`elaborate_lower_rule_with_args`](../../crates/mycelium-l1/src/elab.rs), `crates/mycelium-l1/src/elab.rs`) reachable end-to-end from a value-parametric sugar-rule call site — the checker's `Cx::check_sugar_call` accept path plus `Elab::app`'s new §5.2 dispatch. Filed as a leaf-scoped note (not folded into DN-110/DN-110-8.2-hygiene-deepdive, which stay the design-level source) so the semcore serial lane can iterate without editing a shared/held design doc. |
+| **Note** | DN-116 — a leaf-scoped implementation note for the M-1054 native-metaprogramming facility's Stage 1b: making the verified Stage-1 hygienic expander ([`elaborate_lower_rule_with_args`](../../crates/mycelium-l1/src/elab.rs), `crates/mycelium-l1/src/elab.rs`) reachable end-to-end from a value-parametric sugar-rule call site — the checker's `Cx::check_sugar_call` accept path plus `Elab::app`'s new §5.2 dispatch. Filed as a leaf-scoped note (not folded into DN-110/DN-110-8.2-hygiene-deepdive, which stay the design-level source) so the semcore serial lane can iterate without editing a shared/held design doc. |
 | **Status** | **Draft** — records a leaf's implementation choice (Option B) and its two honesty gates for the orchestrator's review; not itself a ratification of DN-110/DN-110-8.2's design (those stay `Accepted`, not `Enacted` — see DN-110's own status line). Moves toward `Accepted` only via the orchestrator's/maintainer's review of the PR this note ships with. |
 | **Owner-scope** | Owns only this file. Treats `docs/Doc-Index.md`, `CHANGELOG.md`, `tools/github/issues.yaml`, `docs/api-index/`, and every other note/RFC/ADR as **read-only** — flagged, not edited, for the integrating parent to reconcile at `dev → integration`. |
 | **Decides** | *For this leaf's scope only* (all `Declared` unless a landed/checked basis is cited): (1) **Option B** — a monomorphic value-parametric `lower` rule's RHS result type is fixed at **definition** (no coercion exists in this checker — `want == got` everywhere), so the accept path types the call **once**, from the RHS inferred with its value params bound to their *declared* types, never from the call site's own argument nodes; (2) two **honest, never-silent gates** bound the accepted fragment to what Stage 1b's elaboration side can actually expand soundly — **Stage 2 (OQ-H1)**: refuse a genuinely free RHS identifier (not a value param, not an RHS-local binder, not a same-nodule fn/ctor/prim/`lower`-rule); **Stage 3 (OQ-H4)**: refuse an affine (`Substrate`) value parameter, and (defensively) a structurally affine RHS-local binding; (3) `Elab::app` dispatches a checker-accepted sugar call to the existing Stage 1 expansion machinery — no new elaboration logic, no double-expansion. |
@@ -265,3 +265,14 @@ the new dispatch — each reset `Elab::fresh`'s counter to `0`).
   `sugar_expand`/`elaborate_value_parametric_rule_inner` are unmodified by this leaf; every
   reachability-test finding was a genuine, expected coverage gap (the old refusal), not a
   correctness defect in the landed Stage 1 mechanism.
+- **DN-116 renumber (integration close-out, 2026-07-11) — residual, deliberately deferred.** This
+  note was filed as **DN-114** and collided with the unrelated `docs/notes/DN-114-Validated-Narrative-Generation.md`
+  (E40-1, kept as DN-114 per maintainer directive). Renumbered to **DN-116** at this close-out (file
+  moved; self-refs and DN-115's citations of it updated in the same pass). **`crates/mycelium-l1/`
+  source comments and test-module doc comments citing "DN-114"**
+  (`elab.rs`, `checkty.rs`, `src/tests/checkty.rs`, `src/tests/defsite_resolution_stage2.rs`,
+  `src/tests/reachability_stage1b.rs`, `src/tests/facility_stage1_hygiene.rs`) **were NOT repointed
+  in this pass** — a concurrent Stage-3 agent is actively editing `mycelium-l1`, and touching those
+  files here would race it. Flagged, not silent (G2): those in-source citations still read "DN-114"
+  and mean this note (now DN-116) until a follow-up touches that crate — grep `DN-114` in
+  `crates/mycelium-l1/` to find the residual set.
