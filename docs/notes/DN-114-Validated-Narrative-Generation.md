@@ -102,10 +102,16 @@ This note **refines, does not supersede**, `Narrative-Authoring-Pipeline.md`:
   "small tasks, context chunks, parameterized idempotent prompts" shape the maintainer asked for.
 
 ## §7 Trade-offs & honest limitations (no sycophancy)
-- **The shipped checker is a stand-in.** The `MockChecker` is lexical; it approximates faithfulness, it does
-  not prove it. `validated_fraction` from the mock path is an **`Empirical` lower-bound proxy** — real
-  semantic faithfulness needs the adversarial-LLM verifier (deferred; interface shipped). Do not read a mock
-  `validated_fraction` as a semantic guarantee.
+- **The shipped checker is a stand-in — and a deliberately narrow one (be precise about its scope).** The
+  `MockChecker` is lexical: it catches a claim whose *code tokens* — backticked spans, `snake_case`/`camelCase`,
+  and bare **PascalCase type names** (Mycelium's own convention: `Result`/`Option`/`Binary`/…) — are absent
+  from the cited facts, and it requires a minimum lexical-overlap signal for a free-text sentence rather than
+  passing it vacuously; a sentence with no groundable signal is bucketed **unverifiable-by-mock** and is *not*
+  counted as grounded. What it **cannot** catch is a fluent free-text over-claim or invented rationale phrased
+  entirely in in-vocabulary words — precisely §1's hardest class. So `validated_fraction` from the mock path
+  is an **`Empirical` lower-bound proxy**, never a semantic guarantee; real faithfulness needs the
+  adversarial-LLM verifier (**M-1063**; deferred, interface shipped). Do not read a mock `validated_fraction`
+  as semantic proof.
 - **Cost & drift of a second registry** — prompt templates are new material to maintain against the corpus;
   they must be regenerated/reviewed as the fact schema evolves.
 - **Residual risk** — a false fact *in the source* propagates faithfully (the oracle checks faithfulness to

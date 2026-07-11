@@ -25,12 +25,14 @@ supersede `docs/spec/Narrative-Authoring-Pipeline.md` and fight the non-YAML pip
   navigation map. Modeled on `.claude/agent-context.md`.
 - **`mycelium-doc` renderer overhaul** (C1/C2/C4) — a comfortable reading theme (`src/theme.rs`: a
   reviewed design-token system whose palette is the guarantee lattice made visual, serif reading column,
-  light+dark, scroll-safe tables, a sidebar+ToC+search shell), **lexer-span syntax highlighting**
+  light+dark, scroll-safe tables, a short-label collapsible **semantic+logical sidebar tree** (Topics
+  from the book-manifest spine, then a by-type appendix) + ToC + search), **lexer-span syntax highlighting**
   (`src/highlight.rs` via `mycelium-l1` — **no new dep**; `Empirical/Declared` lexical, never-silent
   plain-text fallback), inline-markdown rendering (bold/em/inline-code/links in prose, headings, and
   table cells; code blocks untouched), a **differential re-emit cache** (`src/cache.rs`, id-hash keyed),
   a `build --manifest` scoped emission, and a **Typst PDF print-legibility pass** (code ~0.82× body in a
-  hairline box, light-only). Dual-projection parity + all 8 §4.1 `doc_lint` checks stay green.
+  hairline box, light-only; every emitted `.typ` compiles clean — verified on the full corpus). Dual-projection
+  parity + all 8 §4.1 `doc_lint` checks stay green.
 - **Publishing** (C3) — `.github/workflows/publish-docs.yml` now deploys the full themed docsite
   (corpus, agent index, and rustdoc) to GitHub Pages (manual-dispatch), and `scripts/dist/package-docs.sh` ships a
   portable rendered-docs bundle **alongside** the release artifact (`just package-release`). `.gitattributes`
@@ -45,9 +47,9 @@ supersede `docs/spec/Narrative-Authoring-Pipeline.md` and fight the non-YAML pip
   skill implement it (constrained-from-facts generation, resolvable `doc_refs`, an adversarial
   claim-grounding gate, a `validated_fraction`, commit-only-validated with never-silent drops, idempotent
   content-addressed caching). Output is always `Empirical`/`Declared`; the shipped checker is honestly a
-  deterministic lexical stand-in (§7). Epic **E40-1** + **M-1060..M-1067** decompose the follow-on wave.
+  deterministic lexical stand-in (§7). Epic **E40-1** + **M-1061..M-1068** decompose the follow-on wave.
 - **Advances:** documentation access + the M-363 pipeline. **Verified:** `cargo test -p mycelium-doc`
-  (111) green + `myc-doc lint` green on the real corpus (332 docs / 14.7k nodes, all 8 checks); the
+  (129 unit + 3 integration) green + `myc-doc lint` green on the real corpus (335 docs / 14,885 nodes, all 8 checks); the
   `narrate` harness 46 tests green, demo `validated_fraction = 1.0`, negative-control drops an injected
   hallucination; `doc_refs_check` OK; markdown gate clean; the themed site screenshotted (light+dark) in
   headless Chromium. Tags at supportable strength (renderer heuristics `Empirical/Declared`; DN-114 +

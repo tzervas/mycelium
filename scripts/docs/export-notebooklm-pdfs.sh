@@ -55,12 +55,16 @@ else
     aarch64|arm64) TRIPLE="aarch64-unknown-linux-musl" ;;
   esac
   if [ -n "$TRIPLE" ] && command -v curl >/dev/null 2>&1; then
-    URL="https://github.com/typst/typst/releases/latest/download/typst-${TRIPLE}.tar.xz"
+    # PINNED release (never 'latest') so the fetched-and-executed binary is reproducible; verify after.
+    TYPST_VERSION="${TYPST_VERSION:-0.15.0}"
+    URL="https://github.com/typst/typst/releases/download/v${TYPST_VERSION}/typst-${TRIPLE}.tar.xz"
     log "fetching $URL"
     if curl -fsSL "$URL" -o "$TYPST_DIR/typst.tar.xz" 2>/dev/null \
        && tar -xJf "$TYPST_DIR/typst.tar.xz" -C "$TYPST_DIR" 2>/dev/null; then
       found="$(find "$TYPST_DIR" -name typst -type f | head -1 || true)"
       [ -n "$found" ] && { mv "$found" "$TYPST_DIR/typst"; chmod +x "$TYPST_DIR/typst"; TYPST="$TYPST_DIR/typst"; }
+      # Integrity sanity-check: confirm the pinned version is what we fetched (never-silent on mismatch).
+      [ -n "$TYPST" ] && { got="$("$TYPST" --version 2>/dev/null)"; case "$got" in *"$TYPST_VERSION"*) : ;; *) log "warn: typst version mismatch (wanted $TYPST_VERSION, got '${got:-none}')";; esac; }
     fi
   fi
   if [ -z "$TYPST" ] && command -v cargo >/dev/null 2>&1; then
@@ -85,17 +89,22 @@ for manifest in "$MANIFEST_DIR"/*.json; do
   say "cluster: $name"
   pdf="$OUT/mycelium-$name.pdf"
   workdir="target/notebooklm/$name"
-  ok=""
+  ok=""; build_err=""
   if [ -n "$MYC_DOC" ] && [ -n "$TYPST" ]; then
     rm -rf "$workdir"; mkdir -p "$workdir"
-    if "$MYC_DOC" build --repo-root . --manifest "$manifest" --out "$workdir" >/dev/null 2>&1; then
+    # Capture the primary build's stderr (do NOT swallow it), so a real bug is distinguishable from
+    # an absent-typst fallback (G2: the cause is logged, not hidden).
+    if build_err="$("$MYC_DOC" build --repo-root . --manifest "$manifest" --out "$workdir" 2>&1 >/dev/null)"; then
       typ="$(find "$workdir" -name '*.typ' | head -1 || true)"
-      if [ -n "$typ" ] && "$TYPST" compile "$typ" "$pdf" >/dev/null 2>&1; then
+      if [ -n "$typ" ] && "$TYPST" compile "$typ" "$pdf" 2>"$workdir/typst.err" >/dev/null; then
         ok="pdf"
+      else
+        build_err="typst compile failed: $(tail -1 "$workdir/typst.err" 2>/dev/null)"
       fi
     fi
   fi
   if [ -z "$ok" ]; then
+    [ -n "$build_err" ] && log "  cause (a bug, not absent-typst): $build_err"
     md="$OUT/mycelium-$name.md"
     emit_markdown_bundle "$manifest" "$md"
     rendered+=("$md"); mode_used+=("markdown")
