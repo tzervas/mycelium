@@ -299,10 +299,12 @@ fn book_document(
     )
 }
 
-/// The persistent chapter-tree sidebar: chapters as group labels, their pages as links, plus a
-/// Table-of-contents / Search link pair at the top. `page_prefix` reaches a chapter page
+/// The persistent chapter-tree sidebar: each chapter is a **collapsible `<details>`** group of its
+/// pages (short-labeled, full title in a `title=""` tooltip), plus a Table-of-contents / Search link
+/// pair at the top. The chapter holding the current page defaults to `open` (others collapsed);
+/// the current page keeps its `aria-current` highlight. `page_prefix` reaches a chapter page
 /// (`""` from a `book/pages/` page, `"pages/"` from `book/index.html`); `index_prefix` reaches the
-/// ToC/search (`"../"` from a page, `""` from the index). `current` marks the page being read.
+/// ToC/search (`"../"` from a page, `""` from the index).
 fn book_sidebar(
     manifest: &BookManifest,
     pages: &[Page],
@@ -317,25 +319,33 @@ fn book_sidebar(
         ip = index_prefix,
     ));
     for (ci, chapter) in manifest.chapters.iter().enumerate() {
-        nav.push_str(&format!(
-            "<p class=\"nav-group\">{}. {}</p>\n<ul>\n",
-            ci + 1,
-            html_escape(&chapter.title)
-        ));
-        for page in pages.iter().filter(|p| p.chapter_idx == ci) {
+        let chapter_pages: Vec<&Page> = pages.iter().filter(|p| p.chapter_idx == ci).collect();
+        if chapter_pages.is_empty() {
+            continue;
+        }
+        let open = current.is_some_and(|c| chapter_pages.iter().any(|p| p.node.anchor == c));
+        let mut items = String::new();
+        for page in &chapter_pages {
             let cur = if current == Some(page.node.anchor.as_str()) {
                 " aria-current=\"page\""
             } else {
                 ""
             };
-            nav.push_str(&format!(
-                "  <li><a href=\"{pp}{a}.html\"{cur}>{t}</a></li>\n",
+            items.push_str(&format!(
+                "  <li><a href=\"{pp}{a}.html\"{cur} title=\"{full}\">{short}</a></li>\n",
                 pp = page_prefix,
                 a = html_escape(&page.node.anchor),
-                t = html_escape(page_title(&page.node)),
+                full = html_escape(page_title(&page.node)),
+                short = html_escape(&crate::short_label(&page.node)),
             ));
         }
-        nav.push_str("</ul>\n");
+        nav.push_str(&format!(
+            "<details{o}><summary>{n}. {t} <span class=\"count\">{c}</span></summary>\n<ul>\n{items}</ul>\n</details>\n",
+            o = if open { " open" } else { "" },
+            n = ci + 1,
+            t = html_escape(&chapter.title),
+            c = chapter_pages.len(),
+        ));
     }
     nav.push_str("</nav>");
     nav
@@ -365,6 +375,61 @@ pub fn resolve_manifest_docs(
         .collect())
 }
 
+/// The manifest's chapters resolved to **(chapter-title, [ingested-doc anchors])**, best-effort over
+/// the *corpus* model — the **semantic spine** for the corpus-site sidebar tree. Unlike
+/// [`resolve_manifest_docs`], this is **lenient and never errors**: a chapter entry that is not an
+/// ingested corpus document (a book-only page like `CONTRIBUTING.md` or the synthesized grammar EBNF,
+/// which the corpus `build` does not include) is simply skipped — those pages exist in the *book*, not
+/// the corpus site. Nothing corpus-side is dropped: every corpus doc still appears in the sidebar's
+/// by-type groups regardless of the semantic spine (G2). `sources` keep their curated order; `globs`
+/// are sorted by source path. Chapters that resolve to no corpus doc are omitted.
+#[must_use]
+pub fn resolve_manifest_chapters(
+    model: &DocModel,
+    manifest: &BookManifest,
+) -> Vec<(String, Vec<String>)> {
+    let by_source: BTreeMap<&str, &Node> = model
+        .documents
+        .iter()
+        .map(|d| (d.provenance.source.as_str(), d))
+        .collect();
+    let mut out = Vec::new();
+    for chapter in &manifest.chapters {
+        let mut anchors = Vec::new();
+        let mut seen = BTreeSet::new();
+        for src in &chapter.sources {
+            if let Some(n) = by_source.get(src.as_str()) {
+                if seen.insert(n.anchor.clone()) {
+                    anchors.push(n.anchor.clone());
+                }
+            }
+        }
+        if !chapter.globs.is_empty() {
+            let mut matched: Vec<&Node> = model
+                .documents
+                .iter()
+                .filter(|d| {
+                    chapter
+                        .globs
+                        .iter()
+                        .any(|g| glob_match(g, &d.provenance.source))
+                })
+                .filter(|d| !chapter.exclude.contains(&d.provenance.source))
+                .collect();
+            matched.sort_by(|a, b| a.provenance.source.cmp(&b.provenance.source));
+            for n in matched {
+                if seen.insert(n.anchor.clone()) {
+                    anchors.push(n.anchor.clone());
+                }
+            }
+        }
+        if !anchors.is_empty() {
+            out.push((chapter.title.clone(), anchors));
+        }
+    }
+    out
+}
+
 /// Build every book artifact: the ToC/landing page, one page per chapter entry (prev/next nav), and
 /// the search index + its page.
 ///
@@ -382,7 +447,7 @@ pub fn build_book(
     // Render every page's article through the SAME html renderer as the corpus site (composition,
     // not re-authorship) — scoped to exactly the book's pages.
     let scoped = DocModel::new(pages.iter().map(|p| p.node.clone()).collect());
-    let rendered = crate::emit::html::render(&scoped);
+    let rendered = crate::emit::html::render(&scoped, None);
 
     let mut arts = Artifacts::new();
 

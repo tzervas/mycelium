@@ -273,7 +273,7 @@ fn resolve_manifest_docs_selects_and_orders_exactly_the_named_subset() {
 
     // Emitting the scoped model yields ONLY those pages — the excluded README never appears.
     let scoped = crate::ir::DocModel::new(docs);
-    let arts = crate::emit::html::render(&scoped);
+    let arts = crate::emit::html::render(&scoped, None);
     let page_count = arts
         .files
         .keys()

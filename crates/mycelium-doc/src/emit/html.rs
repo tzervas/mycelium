@@ -10,11 +10,18 @@
 //! self-contained, offline stylesheet ([`crate::theme::READING_CSS`]); Mycelium code examples are
 //! coloured by the trusted L1 lexer ([`crate::highlight`]) with a never-silent plain-text fallback.
 
+use std::collections::BTreeMap;
+
 use crate::emit::{html_escape, Artifacts};
 use crate::highlight;
 use crate::inline::{self, Span};
 use crate::ir::{DocModel, Node, Payload, SourceKind, XrefResolution};
+use crate::label::short_label;
 use crate::theme;
+
+/// A resolved **semantic spine** for the sidebar: `(chapter-title, [doc anchors])` in book-manifest
+/// order (from [`crate::book::resolve_manifest_chapters`]). `None` when no manifest is available.
+pub type SemanticNav<'a> = &'a [(String, Vec<String>)];
 
 /// Render parsed inline [`Span`]s to HTML: `<strong>`/`<em>`/`<code class="inl">`, and `<a class="x">`
 /// for **external** links only (internal/relative links render as their text — their resolved
@@ -80,16 +87,56 @@ fn inline_text(text: &str) -> String {
     render_inline_text(&inline::parse(text))
 }
 
-/// The corpus-family groups, in navigation order (shared by the index and the sidebar tree).
-const GROUPS: &[(SourceKind, &str)] = &[
-    (SourceKind::Spec, "Specifications & contracts"),
-    (SourceKind::Rfc, "RFCs"),
-    (SourceKind::Adr, "Architecture decisions"),
-    (SourceKind::Note, "Design notes"),
-    (SourceKind::Api, "API reference"),
-    (SourceKind::Devlog, "Devlog"),
-    (SourceKind::Other, "Other"),
+/// The by-type family groups, in the sidebar's "By type" (logical/appendix) order. Every document
+/// maps to exactly one via [`family_of`], so the logical section covers the FULL corpus — nothing is
+/// dropped even if a doc is in no semantic chapter (G2).
+const FAMILIES: &[&str] = &[
+    "RFCs",
+    "ADRs",
+    "Design Notes",
+    "Language Spec",
+    "Standard Library",
+    "API Reference",
+    "Devlog",
+    "Guide & Reference",
 ];
+
+/// The by-type family a document belongs to (its logical/appendix group).
+fn family_of(node: &Node) -> &'static str {
+    match source_kind(node) {
+        SourceKind::Rfc => "RFCs",
+        SourceKind::Adr => "ADRs",
+        SourceKind::Note => "Design Notes",
+        SourceKind::Devlog => "Devlog",
+        SourceKind::Api => "API Reference",
+        SourceKind::Spec if node.provenance.source.contains("/stdlib/") => "Standard Library",
+        SourceKind::Spec => "Language Spec",
+        SourceKind::Other => "Guide & Reference",
+    }
+}
+
+/// The numeric ID of an ID'd doc anchor (`rfc-0002` → 2), for numeric (not lexical) nav ordering —
+/// so `DN-100` sorts after `DN-99` (a lexical anchor sort would not).
+fn anchor_number(anchor: &str) -> Option<u64> {
+    for pfx in ["rfc-", "adr-", "dn-"] {
+        if let Some(rest) = anchor.strip_prefix(pfx) {
+            let num: String = rest.chars().take_while(char::is_ascii_digit).collect();
+            return num.parse().ok();
+        }
+    }
+    None
+}
+
+/// Sort key within a nav group: numbered docs by number first, then the rest alphabetically.
+fn nav_sort_key(node: &Node) -> (u64, String) {
+    (
+        anchor_number(&node.anchor).unwrap_or(u64::MAX),
+        node.title
+            .clone()
+            .unwrap_or_else(|| node.anchor.clone())
+            .to_lowercase(),
+    )
+}
 
 /// The pinned template content hash (provenance, §6) — the address of the shared template/style.
 #[must_use]
@@ -101,26 +148,30 @@ pub fn template_hash() -> String {
 }
 
 /// Render the whole model to an HTML site: `index.html` plus one `pages/<anchor>.html` per document.
+/// `semantic` (from the book manifest) drives the sidebar's topical spine; `None` renders the by-type
+/// tree only.
 #[must_use]
-pub fn render(model: &DocModel) -> Artifacts {
+pub fn render(model: &DocModel, semantic: Option<SemanticNav<'_>>) -> Artifacts {
     let mut arts = Artifacts::new();
-    arts.put("index.html", render_index(model));
+    arts.put("index.html", render_index(model, semantic));
     for doc in &model.documents {
         arts.put(
             format!("pages/{}.html", doc.anchor),
-            render_page(doc, model),
+            render_page(doc, model, semantic),
         );
     }
     arts
 }
 
 /// The concatenation of every page (for the parity/legibility lints, which scan the rendered output).
+/// Renders with the by-type sidebar only (the lints have no manifest; the semantic spine adds only
+/// duplicate nav links, which do not affect the structural/parity checks).
 #[must_use]
 pub fn render_concat(model: &DocModel) -> String {
-    let mut s = render_index(model);
+    let mut s = render_index(model, None);
     for doc in &model.documents {
         s.push('\n');
-        s.push_str(&render_page(doc, model));
+        s.push_str(&render_page(doc, model, None));
     }
     s
 }
@@ -211,43 +262,107 @@ fn short_hash(h: &str) -> String {
     }
 }
 
-/// The persistent navigation sidebar: a client-side search box over `search-index.jsonl`, then the
-/// corpus grouped by family. `link_prefix` is `"pages/"` on the index and `""` on a page (both reach
-/// the sibling `pages/<anchor>.html`). `current` highlights the page being read (`aria-current`).
-fn render_sidebar(model: &DocModel, link_prefix: &str, current: Option<&str>) -> String {
+/// The persistent navigation sidebar: a search box, then a **combined semantic + logical tree** of
+/// collapsible `<details>` groups.
+///
+/// - **Topics** (semantic, first) mirror the book-manifest chapters (`semantic`) — the curated
+///   "what to read, by topic" path. Only present when a manifest resolved.
+/// - **By type** (logical, then) are the full by-[`family_of`] sets — the appendix-style browse. This
+///   section covers EVERY corpus doc, so nothing is dropped even if a doc is in no chapter (G2). A doc
+///   may appear in both a topic and its type group — that is expected and fine.
+///
+/// Labels are short ([`short_label`]) with the full title in a `title=""` tooltip; the group holding
+/// the current page defaults to `open` (others collapsed); the current page keeps its `aria-current`
+/// highlight. `link_prefix` is `"pages/"` on the index and `""` on a page.
+fn render_sidebar(
+    model: &DocModel,
+    semantic: Option<SemanticNav<'_>>,
+    link_prefix: &str,
+    current: Option<&str>,
+) -> String {
+    let by_anchor: BTreeMap<&str, &Node> = model
+        .documents
+        .iter()
+        .map(|d| (d.anchor.as_str(), d))
+        .collect();
+
     let mut nav = String::from("<nav class=\"sidebar\" aria-label=\"Documentation navigation\">\n");
     nav.push_str(
         "<input id=\"corpus-search-box\" class=\"nav-search\" type=\"search\" \
          placeholder=\"Search the docs…\" aria-label=\"Search the documentation\" autocomplete=\"off\">\n\
          <ul id=\"corpus-search-results\" class=\"search-results\" aria-live=\"polite\"></ul>\n",
     );
-    for (kind, label) in GROUPS {
-        let mut items = String::new();
-        for doc in &model.documents {
-            if source_kind(doc) == *kind {
-                let current_attr = if current == Some(doc.anchor.as_str()) {
-                    " aria-current=\"page\""
-                } else {
-                    ""
-                };
-                items.push_str(&format!(
-                    "  <li><a href=\"{prefix}{a}.html\"{cur}>{t}</a></li>\n",
-                    prefix = link_prefix,
-                    a = html_escape(&doc.anchor),
-                    cur = current_attr,
-                    t = inline_text(doc_title(doc)),
-                ));
+
+    // ── Topics (semantic spine, book-manifest chapters) ─────────────────────────────────────────
+    if let Some(chapters) = semantic {
+        if !chapters.is_empty() {
+            nav.push_str("<p class=\"nav-title\">Topics</p>\n");
+            let mut first = true;
+            for (title, anchors) in chapters {
+                let open = current.is_some_and(|c| anchors.iter().any(|a| a == c))
+                    || (current.is_none() && first);
+                first = false;
+                let mut items = String::new();
+                for a in anchors {
+                    if let Some(n) = by_anchor.get(a.as_str()) {
+                        items.push_str(&render_doc_link(n, link_prefix, current));
+                    }
+                }
+                nav.push_str(&render_group(open, title, anchors.len(), &items));
             }
         }
-        if !items.is_empty() {
-            nav.push_str(&format!(
-                "<p class=\"nav-group\">{}</p>\n<ul>\n{items}</ul>\n",
-                html_escape(label)
-            ));
-        }
     }
+
+    // ── By type (logical/appendix — the FULL sets) ──────────────────────────────────────────────
+    nav.push_str("<p class=\"nav-title\">By type</p>\n");
+    let current_family = current.and_then(|c| by_anchor.get(c)).map(|n| family_of(n));
+    for family in FAMILIES {
+        let mut docs: Vec<&Node> = model
+            .documents
+            .iter()
+            .filter(|d| family_of(d) == *family)
+            .collect();
+        if docs.is_empty() {
+            continue;
+        }
+        docs.sort_by_key(|n| nav_sort_key(n));
+        let open = current_family == Some(*family);
+        let items: String = docs
+            .iter()
+            .map(|n| render_doc_link(n, link_prefix, current))
+            .collect();
+        nav.push_str(&render_group(open, family, docs.len(), &items));
+    }
+
     nav.push_str("</nav>");
     nav
+}
+
+/// One collapsible sidebar group: a `<details>` (open when it holds the current page) with a
+/// `<summary>Label (count)</summary>` and the pre-rendered `<li>` items.
+fn render_group(open: bool, label: &str, count: usize, items: &str) -> String {
+    format!(
+        "<details{o}><summary>{l} <span class=\"count\">{count}</span></summary>\n<ul>\n{items}</ul>\n</details>\n",
+        o = if open { " open" } else { "" },
+        l = html_escape(label),
+    )
+}
+
+/// One sidebar doc link: the short label (full title in the `title=""` tooltip), with `aria-current`
+/// on the page being read.
+fn render_doc_link(node: &Node, link_prefix: &str, current: Option<&str>) -> String {
+    let cur = if current == Some(node.anchor.as_str()) {
+        " aria-current=\"page\""
+    } else {
+        ""
+    };
+    format!(
+        "  <li><a href=\"{p}{a}.html\"{cur} title=\"{full}\">{short}</a></li>\n",
+        p = link_prefix,
+        a = html_escape(&node.anchor),
+        full = inline_text(doc_title(node)),
+        short = inline_text(&short_label(node)),
+    )
 }
 
 /// The "on this page" table of contents, built from the document's headings (level-2 sections and
@@ -296,8 +411,8 @@ fn collect_toc<'a>(nodes: &'a [Node], depth: u8, out: &mut Vec<(u8, &'a str, &'a
 
 /// The index→detail entry point (§4.1 #2): documents grouped by corpus family in the sidebar, plus a
 /// short welcome. The sidebar's search box is the site-wide search UI (over `search-index.jsonl`).
-fn render_index(model: &DocModel) -> String {
-    let sidebar = render_sidebar(model, "pages/", None);
+fn render_index(model: &DocModel, semantic: Option<SemanticNav<'_>>) -> String {
+    let sidebar = render_sidebar(model, semantic, "pages/", None);
     let main = format!(
         "<h1>Mycelium Documentation</h1>\n\
          <p>The living projection of the cited corpus — RFCs, architecture decisions, design notes, \
@@ -314,19 +429,19 @@ fn render_index(model: &DocModel) -> String {
     page_shell("Index", "", &sidebar, None, &main)
 }
 
-fn render_page(doc: &Node, model: &DocModel) -> String {
+fn render_page(doc: &Node, model: &DocModel, semantic: Option<SemanticNav<'_>>) -> String {
     let mut main = String::new();
     main.push_str(&format!(
         "<article id=\"{id}\" data-cid=\"{cid}\"><h1>{t}</h1>\n",
         id = html_escape(&doc.anchor),
         cid = html_escape(doc.id.as_str()),
-        t = html_escape(doc_title(doc)),
+        t = inline_html(doc_title(doc)),
     ));
     for child in &doc.children {
         render_node(child, 2, &doc.anchor, &mut main);
     }
     main.push_str("</article>");
-    let sidebar = render_sidebar(model, "", Some(&doc.anchor));
+    let sidebar = render_sidebar(model, semantic, "", Some(&doc.anchor));
     let toc = render_toc(doc);
     page_shell(doc_title(doc), "../", &sidebar, toc.as_deref(), &main)
 }

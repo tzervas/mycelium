@@ -27,6 +27,7 @@ pub mod hash;
 pub mod highlight;
 pub mod inline;
 pub mod ir;
+pub mod label;
 pub mod lib_index;
 pub mod theme;
 
@@ -34,8 +35,8 @@ pub mod theme;
 mod tests;
 
 pub use book::{
-    build_book, load_manifest, load_manifest_from, resolve_manifest_docs, BookError, BookManifest,
-    ChapterSpec,
+    build_book, load_manifest, load_manifest_from, resolve_manifest_chapters,
+    resolve_manifest_docs, BookError, BookManifest, ChapterSpec,
 };
 pub use build::{build, emit_all, BuildInput};
 pub use cache::{emit_incremental, DiffCache, EmitReport};
@@ -43,3 +44,4 @@ pub use doc_lint::{
     lint, CheckOutcome, CheckStatus, DocLintReport, Finding, Severity, CHECK_NAMES,
 };
 pub use ir::{DocModel, Level, Node, Payload, Provenance, SourceKind};
+pub use label::short_label;

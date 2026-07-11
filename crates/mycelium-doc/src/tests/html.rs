@@ -18,7 +18,7 @@ fn model() -> DocModel {
 #[test]
 fn the_site_has_an_index_and_a_page_per_doc() {
     let m = model();
-    let arts = render(&m);
+    let arts = render(&m, None);
     assert!(arts.files.contains_key("index.html"));
     assert_eq!(
         arts.files
@@ -63,7 +63,7 @@ fn output_is_semantic_and_accessible() {
 #[test]
 fn the_page_carries_a_sidebar_search_toc_and_theme_toggle() {
     let m = model();
-    let page = render(&m);
+    let page = render(&m, None);
     let doc_html = page
         .files
         .iter()
@@ -177,12 +177,15 @@ fn table_cells_render_inline_markdown() {
 fn a_heading_renders_inline_in_the_h_tag_but_plain_in_nav() {
     let mut a = AnchorAlloc::new();
     let src = "# D\n\n## The `swap` operation\n\nBody.\n";
-    let arts = render(&DocModel::new(vec![ingest(
-        "docs/spec/d.md",
-        src,
-        SourceKind::Spec,
-        &mut a,
-    )]));
+    let arts = render(
+        &DocModel::new(vec![ingest(
+            "docs/spec/d.md",
+            src,
+            SourceKind::Spec,
+            &mut a,
+        )]),
+        None,
+    );
     let page = arts
         .files
         .iter()
@@ -205,6 +208,61 @@ fn inline_markdown_is_not_applied_inside_code_blocks() {
     // Inside <pre><code>, `**`/backticks stay literal — never <strong>/<code class="inl">.
     assert!(html.contains("literal **stars** and `ticks`"));
     assert!(!html.contains("<strong>stars</strong>"));
+}
+
+#[test]
+fn the_sidebar_is_a_collapsible_short_labeled_semantic_plus_logical_tree() {
+    let mut a = AnchorAlloc::new();
+    let rfc = ingest(
+        "docs/rfcs/RFC-0002-Swap.md",
+        "# RFC-0002 — Swap Certificate & Split Regime\n\nLead.\n\n## S\n\nBody.\n",
+        SourceKind::Rfc,
+        &mut a,
+    );
+    let adr = ingest(
+        "docs/adr/ADR-010-Verified.md",
+        "# ADR-010 — Verified Numerics Foundation\n\nLead.\n\n## S\n\nBody.\n",
+        SourceKind::Adr,
+        &mut a,
+    );
+    let m = DocModel::new(vec![rfc, adr]);
+    let rfc_anchor = m.documents[0].anchor.clone();
+    let adr_anchor = m.documents[1].anchor.clone();
+    // Semantic spine: one topical chapter naming the RFC.
+    let nav = vec![("Language Reference".to_owned(), vec![rfc_anchor.clone()])];
+
+    let arts = render(&m, Some(&nav));
+    let idx = arts.files.get("index.html").unwrap();
+
+    // Collapsible native <details>/<summary> groups, with counts.
+    assert!(idx.contains("<details"));
+    assert!(idx.contains("<summary>"));
+    assert!(idx.contains("class=\"count\""));
+    // Both a SEMANTIC ("Topics") and a LOGICAL ("By type") section.
+    assert!(idx.contains("<p class=\"nav-title\">Topics</p>"));
+    assert!(idx.contains("<p class=\"nav-title\">By type</p>"));
+    assert!(idx.contains("Language Reference"), "the semantic chapter");
+    assert!(
+        idx.contains("RFCs") && idx.contains("ADRs"),
+        "by-type groups"
+    );
+    // Short label (not the full title), with the full title in the tooltip.
+    assert!(
+        idx.contains("RFC-0002 \u{b7} Swap Certificate"),
+        "short label"
+    );
+    assert!(
+        idx.contains("Split Regime"),
+        "full title kept in the tooltip"
+    );
+    // Nothing dropped: every doc is reachable in the logical tree (the ADR is in no chapter).
+    assert!(idx.contains(&format!("{rfc_anchor}.html")));
+    assert!(idx.contains(&format!("{adr_anchor}.html")));
+
+    // On the RFC's own page, the group(s) holding it default to open (semantic + its type group).
+    let page = arts.files.get(&format!("pages/{rfc_anchor}.html")).unwrap();
+    assert!(page.contains("<details open>"), "current group is expanded");
+    assert!(page.contains("aria-current=\"page\""));
 }
 
 #[test]

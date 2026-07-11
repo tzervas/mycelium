@@ -22,8 +22,8 @@ use std::process::ExitCode;
 use mycelium_doc::build::{emit_all, EPUB_DEFERRAL};
 use mycelium_doc::doc_lint::{CheckStatus, Severity};
 use mycelium_doc::{
-    build, doc_lint, emit_incremental, load_manifest_from, resolve_manifest_docs, BuildInput,
-    DocModel, CHECK_NAMES,
+    build, doc_lint, emit_incremental, load_manifest, load_manifest_from,
+    resolve_manifest_chapters, resolve_manifest_docs, BuildInput, DocModel, CHECK_NAMES,
 };
 
 const EX_OK: u8 = 0;
@@ -111,7 +111,14 @@ fn run(args: &[String]) -> Result<u8, (u8, String)> {
                     DocModel::new(docs)
                 }
             };
-            let arts = emit_all(&model);
+            // Best-effort semantic spine for the sidebar from the committed book manifest — never an
+            // error: an absent/unparseable manifest just yields the by-type-only tree (G2).
+            let chapters = load_manifest(&repo_root)
+                .ok()
+                .map(|m| resolve_manifest_chapters(&model, &m))
+                .unwrap_or_default();
+            let semantic = (!chapters.is_empty()).then_some(chapters.as_slice());
+            let arts = emit_all(&model, semantic);
             // Incremental re-emit via the differential cache (never-silent: a missing/corrupt cache
             // or `--full`/`--no-cache` degrades to a full rebuild with a printed notice).
             let report = emit_incremental(&arts, &out, use_cache)
