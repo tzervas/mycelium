@@ -22,6 +22,8 @@ mod elab;
 mod error;
 mod eval;
 mod fuse;
+mod hygiene_affine_expanded;
+mod hygiene_defsite_resolution;
 mod hygiene_expr_sugar;
 mod lexer;
 mod lib_root;
