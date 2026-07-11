@@ -1,5 +1,6 @@
-//! Build orchestration: walk the corpus + schemas + example project roots, project each into the
-//! doc-IR, **resolve cross-references against the assembled model**, and hand back a finalized
+//! Build orchestration: walk the corpus + research evidence base + schemas + example project roots,
+//! project each into the doc-IR, **resolve cross-references against the assembled model**, and hand
+//! back a finalized
 //! [`DocModel`]. This is the drift-proof projection toolchain's entry point — everything downstream
 //! (emit, §4.1 lint) is a pure function of the model it returns.
 //!
@@ -29,33 +30,43 @@ pub struct BuildInput {
     pub corpus_root: Option<PathBuf>,
     /// The JSON-schema root (e.g. `docs/spec/schemas`), if any.
     pub schemas_root: Option<PathBuf>,
+    /// The research-evidence-base root (`research/`) — the T0.x/T1.x/T2.x prior-art surveys and
+    /// findings every normative claim traces back to. Ingested the same way as `corpus_root` (a flat
+    /// markdown walk; skip-graceful if absent), so its `*-RECORD.md` files join the shared anchor
+    /// universe and the `tools/docgen/notebooklm/research.json` cluster manifest (which globs
+    /// `research/*-RECORD.md`) resolves to real ingested pages instead of an always-empty subset
+    /// (G2: was a silent source-ingestion gap, not a manifest bug — `BuildInput::conventional` below
+    /// closes it for every command, not just `--manifest`).
+    pub research_root: Option<PathBuf>,
     /// Example/project roots to project `.myc` nodules from (e.g. `examples`).
     pub example_roots: Vec<PathBuf>,
-    /// Individual markdown files **outside** `corpus_root` to ingest through the same pipeline (so
-    /// their cross-references resolve against the full anchor universe, same as everything under
-    /// `docs/`). v0 use: the book output (§`crate::book`) pulls in repo-root docs like
-    /// `CONTRIBUTING.md` for its Contributing chapter — `BuildInput::conventional` leaves this empty
-    /// (default `build`/`lint` behaviour is unchanged), the book CLI path opts in explicitly. A
+    /// Individual markdown files **outside** `corpus_root`/`research_root` to ingest through the
+    /// same pipeline (so their cross-references resolve against the full anchor universe, same as
+    /// everything under `docs/`). v0 use: `CONTRIBUTING.md` — needed both by the book output
+    /// (§`crate::book`, for its Contributing chapter) and by `myc-doc build --manifest
+    /// docs/book-manifest.json` (the same chapter, scoped-emission path) — both wire it in here so
+    /// it rides the *same* ingest+resolve pipeline rather than each inventing its own bolt-on. A
     /// listed path that does not exist is skipped, not an error (the same skip-graceful posture as
     /// `example_roots`).
     pub extra_md_files: Vec<PathBuf>,
 }
 
 impl BuildInput {
-    /// The conventional layout rooted at `repo_root`: `docs/`, `docs/spec/schemas/`, `examples/`,
-    /// and `lib/std/` (the self-hosted standard library — M-736). Every `.myc` nodule under
-    /// `lib/std/` is projected into the API reference (per-module `fn` signatures + `@summary`),
-    /// so the generated stdlib API docs grow as the E13-1 self-hosting migration lands modules.
-    /// Today only `lib/std/result.myc` self-hosts; the remaining stdlib modules are Rust-first and
-    /// appear here as they are ported (the gap is honest, not silent — G2).
+    /// The conventional layout rooted at `repo_root`: `docs/`, `docs/spec/schemas/`, `research/`,
+    /// `examples/`, and `lib/std/` (the self-hosted standard library — M-736). Every `.myc` nodule
+    /// under `lib/std/` is projected into the API reference (per-module `fn` signatures +
+    /// `@summary`), so the generated stdlib API docs grow as the E13-1 self-hosting migration lands
+    /// modules. Today only `lib/std/result.myc` self-hosts; the remaining stdlib modules are
+    /// Rust-first and appear here as they are ported (the gap is honest, not silent — G2).
     #[must_use]
     pub fn conventional(repo_root: impl Into<PathBuf>) -> Self {
         let repo_root = repo_root.into();
         BuildInput {
             corpus_root: Some(repo_root.join("docs")),
             schemas_root: Some(repo_root.join("docs/spec/schemas")),
+            research_root: Some(repo_root.join("research")),
             example_roots: vec![repo_root.join("examples"), repo_root.join("lib/std")],
-            extra_md_files: Vec::new(),
+            extra_md_files: vec![repo_root.join("CONTRIBUTING.md")],
             repo_root,
         }
     }
@@ -73,6 +84,25 @@ pub fn build(input: &BuildInput) -> std::io::Result<DocModel> {
 
     // 1) Markdown corpus.
     if let Some(root) = &input.corpus_root {
+        let mut md = collect_files(root, "md")?;
+        md.sort();
+        for path in md {
+            if is_excluded(&path) {
+                continue;
+            }
+            let rel = repo_rel(&input.repo_root, &path);
+            let src = std::fs::read_to_string(&path)?;
+            let kind = classify(&rel);
+            let node = ingest(&rel, &src, kind, &mut alloc);
+            file_index.insert(rel.clone(), node.anchor.clone());
+            docs.push(node);
+        }
+    }
+
+    // 1.3) Research evidence base (research/*.md, e.g. the T0.x/T1.x/T2.x `*-RECORD.md` files) —
+    // same flat markdown walk + ingest pipeline as the corpus (skip-graceful: an absent root, e.g.
+    // in a hermetic test tree, yields nothing rather than an error).
+    if let Some(root) = &input.research_root {
         let mut md = collect_files(root, "md")?;
         md.sort();
         for path in md {
