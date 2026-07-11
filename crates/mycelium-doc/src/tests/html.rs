@@ -1,0 +1,163 @@
+//! White-box tests for [`crate::emit::html`] — extracted from the logic file (as-touched, CLAUDE.md
+//! test layout rule) when the readability theme, syntax highlighting, sidebar/ToC, and pipe-table
+//! rendering landed. Uses `pub(crate)` access to the table helpers.
+
+use crate::corpus::{ingest, AnchorAlloc};
+use crate::emit::html::{
+    is_separator_cell, render, render_concat, render_table, split_row, template_hash,
+};
+use crate::ir::{DocModel, SourceKind};
+
+fn model() -> DocModel {
+    let mut a = AnchorAlloc::new();
+    let src = "# Doc\n\nLead.\n\n## Sec\n\nBody with [a link](other.md#x).\n\n```myc-checked\nfn f() -> Binary{8} = 0b0\n```\n";
+    let doc = ingest("docs/spec/doc.md", src, SourceKind::Spec, &mut a);
+    DocModel::new(vec![doc])
+}
+
+#[test]
+fn the_site_has_an_index_and_a_page_per_doc() {
+    let m = model();
+    let arts = render(&m);
+    assert!(arts.files.contains_key("index.html"));
+    assert_eq!(
+        arts.files
+            .keys()
+            .filter(|k| k.starts_with("pages/"))
+            .count(),
+        1
+    );
+}
+
+#[test]
+fn every_node_id_is_embedded_for_parity() {
+    let m = model();
+    let html = render_concat(&m);
+    for id in m.id_set() {
+        assert!(html.contains(&id), "missing cid {id} in HTML");
+    }
+}
+
+#[test]
+fn the_template_is_one_and_pinned() {
+    let m = model();
+    let html = render_concat(&m);
+    let th = template_hash();
+    assert!(th.starts_with("blake3:"));
+    assert!(html.contains("one template"));
+}
+
+#[test]
+fn output_is_semantic_and_accessible() {
+    let m = model();
+    let html = render_concat(&m);
+    // Exactly the `<main>` landmark the §4.1 legibility lint requires (bare tag; the focus target is
+    // an inner `#content` wrapper).
+    assert!(html.contains("<main>"));
+    assert!(html.contains("id=\"content\""));
+    assert!(html.contains("aria-label"));
+    assert!(html.contains("lang=\"en\""));
+    assert!(html.contains("class=\"language-"));
+}
+
+#[test]
+fn the_page_carries_a_sidebar_search_toc_and_theme_toggle() {
+    let m = model();
+    let page = render(&m);
+    let doc_html = page
+        .files
+        .iter()
+        .find(|(k, _)| k.starts_with("pages/"))
+        .map(|(_, v)| v.as_str())
+        .unwrap();
+    assert!(doc_html.contains("class=\"sidebar\""));
+    assert!(doc_html.contains("On this page"));
+    assert!(doc_html.contains("corpus-search-box"));
+    assert!(doc_html.contains("theme-toggle"));
+    // The sidebar marks the current page.
+    assert!(doc_html.contains("aria-current=\"page\""));
+    // The self-contained theme is inlined (no external asset fetch): the CSS is inline, and there is
+    // no external stylesheet link or remote script/asset src.
+    assert!(doc_html.contains("<style>"));
+    assert!(!doc_html.contains("<link "), "no external stylesheet");
+    assert!(!doc_html.contains("src=\"http"), "no remote script/asset");
+}
+
+#[test]
+fn myc_examples_are_lexically_highlighted_but_the_language_class_stays() {
+    let m = model();
+    let html = render_concat(&m);
+    // The `language-` hook (the doc-lint requirement + highlight.js-compatible class) is preserved.
+    assert!(html.contains("class=\"language-myc-checked\""));
+    // The trusted L1 lexer coloured the tokens: `fn` keyword, `f(` function, `Binary` type.
+    assert!(html.contains("class=\"tok-kw\""), "keyword highlighted");
+    assert!(html.contains("class=\"tok-fn\""), "fn-position highlighted");
+    assert!(html.contains("class=\"tok-type\""), "type highlighted");
+}
+
+#[test]
+fn a_non_myc_example_is_not_highlighted_but_stays_escaped() {
+    let mut a = AnchorAlloc::new();
+    let src = "# D\n\nLead.\n\n## S\n\n```text\nfn not <highlighted> & raw\n```\n";
+    let doc = ingest("docs/spec/d.md", src, SourceKind::Spec, &mut a);
+    let html = render_concat(&DocModel::new(vec![doc]));
+    assert!(html.contains("class=\"language-text\""));
+    // No token SPANS are emitted for a non-myc block (the `.tok-*` classes still exist in the inlined
+    // CSS, so we check for the span, not the bare class substring).
+    assert!(
+        !html.contains("<span class=\"tok-"),
+        "non-myc must not be highlighted"
+    );
+    // Still escaped — never raw markup injection.
+    assert!(html.contains("&lt;highlighted&gt;"));
+}
+
+#[test]
+fn a_pipe_table_in_prose_renders_as_a_real_table() {
+    let mut a = AnchorAlloc::new();
+    let src =
+        "# T\n\nLead.\n\n## Header\n\n| Field | Value |\n|-------|-------|\n| Status | Accepted |\n";
+    let doc = ingest("docs/rfcs/RFC-0001.md", src, SourceKind::Rfc, &mut a);
+    let html = render_concat(&DocModel::new(vec![doc]));
+    assert!(html.contains("<table"), "table rendered");
+    assert!(html.contains("table-wrap"), "wrapped for overflow scroll");
+    assert!(html.contains("<th>Field</th>"));
+    assert!(html.contains("<td>Status</td>"));
+    assert!(html.contains("<td>Accepted</td>"));
+}
+
+#[test]
+fn render_table_detects_well_formed_tables_and_rejects_prose() {
+    // Well-formed: header + matching-width separator.
+    let t = "| A | B |\n|---|:-:|\n| 1 | 2 |";
+    let out = render_table(t, "blake3:x").expect("a well-formed table");
+    assert!(out.contains("<th>A</th>") && out.contains("<td>1</td>"));
+    // Not a table: a stray dashed line whose cell count differs from the header.
+    assert!(render_table("Intro line\n---\nmore prose", "cid").is_none());
+    // Not a table: only one line.
+    assert!(render_table("| a | b |", "cid").is_none());
+}
+
+#[test]
+fn table_row_and_separator_helpers_are_exact() {
+    assert_eq!(split_row("| a | b | c |"), vec!["a", "b", "c"]);
+    assert_eq!(split_row("x | y"), vec!["x", "y"]);
+    assert!(is_separator_cell("---"));
+    assert!(is_separator_cell(":-:"));
+    assert!(is_separator_cell("--:"));
+    assert!(!is_separator_cell("ab"));
+    assert!(!is_separator_cell(""));
+}
+
+#[test]
+fn an_undocumented_api_item_renders_a_visible_marker() {
+    let mut a = AnchorAlloc::new();
+    let doc = crate::apiref::project_nodule(
+        "x.myc",
+        "// nodule: x\nnodule x\nfn g() -> Binary{8} = 0b0\n",
+        &mut a,
+    );
+    let m = DocModel::new(vec![doc]);
+    let html = render_concat(&m);
+    assert!(html.contains("undocumented"));
+}

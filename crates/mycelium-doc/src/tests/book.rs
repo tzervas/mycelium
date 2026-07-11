@@ -246,3 +246,60 @@ fn the_committed_repo_manifest_parses_and_matches_the_documented_schema() {
     assert!(!manifest.chapters.is_empty());
     assert!(manifest.chapters.iter().all(|c| !c.title.is_empty()));
 }
+
+#[test]
+fn resolve_manifest_docs_selects_and_orders_exactly_the_named_subset() {
+    // The scoped-emission path (`myc-doc build --manifest`): ingest the whole corpus, then select the
+    // manifest's documents in manifest order (the same resolution the book uses).
+    let root = small_corpus();
+    let model = built_model(&root);
+    let manifest = small_manifest();
+
+    let docs = resolve_manifest_docs(&model, &manifest, &root).expect("subset resolves");
+    let anchors: Vec<&str> = docs.iter().map(|d| d.anchor.as_str()).collect();
+    // Home, Getting-Started, the synthesized grammar page, alpha, beta (README excluded), CONTRIBUTING.
+    assert_eq!(
+        anchors,
+        vec![
+            "home",
+            "getting-started",
+            "book-grammar-ebnf",
+            "alpha",
+            "beta",
+            "contributing",
+        ],
+        "subset is exactly the manifest's docs, in manifest order"
+    );
+
+    // Emitting the scoped model yields ONLY those pages — the excluded README never appears.
+    let scoped = crate::ir::DocModel::new(docs);
+    let arts = crate::emit::html::render(&scoped);
+    let page_count = arts
+        .files
+        .keys()
+        .filter(|k| k.starts_with("pages/"))
+        .count();
+    assert_eq!(page_count, 6);
+    assert!(!arts.files.contains_key("pages/readme.html"));
+
+    fs::remove_dir_all(&root).ok();
+}
+
+#[test]
+fn resolve_manifest_docs_fails_loudly_on_an_unresolved_entry() {
+    // Never-silent (G2): a manifest entry that resolves to nothing is an error, not an empty subset.
+    let root = small_corpus();
+    let model = built_model(&root);
+    let mut manifest = small_manifest();
+    manifest.chapters.push(ChapterSpec {
+        title: "Broken".to_owned(),
+        sources: vec!["docs/nope.md".to_owned()],
+        globs: vec![],
+        exclude: vec![],
+    });
+
+    let err = resolve_manifest_docs(&model, &manifest, &root).expect_err("must fail loudly");
+    assert!(err.0.contains("nope.md"));
+
+    fs::remove_dir_all(&root).ok();
+}

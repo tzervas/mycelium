@@ -19,18 +19,25 @@
 pub mod apiref;
 pub mod book;
 pub mod build;
+pub mod cache;
 pub mod corpus;
 pub mod doc_lint;
 pub mod emit;
 pub mod hash;
+pub mod highlight;
 pub mod ir;
 pub mod lib_index;
+pub mod theme;
 
 #[cfg(test)]
 mod tests;
 
-pub use book::{build_book, load_manifest, BookError, BookManifest, ChapterSpec};
+pub use book::{
+    build_book, load_manifest, load_manifest_from, resolve_manifest_docs, BookError, BookManifest,
+    ChapterSpec,
+};
 pub use build::{build, emit_all, BuildInput};
+pub use cache::{emit_incremental, DiffCache, EmitReport};
 pub use doc_lint::{
     lint, CheckOutcome, CheckStatus, DocLintReport, Finding, Severity, CHECK_NAMES,
 };

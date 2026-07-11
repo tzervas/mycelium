@@ -1,36 +1,37 @@
-//! The static-HTML renderer (spec §8.1 — static HTML path). One reviewed template (§5): a `<header>`,
-//! an index→detail `<nav>`, a level-graded `<main>`, and a provenance `<footer>` — **semantic HTML by
-//! construction** (the §4.1 legibility/accessibility bar: heading order never skips, code carries a
-//! `language-*` class, the nav is labelled). Every node element carries `data-cid="blake3:…"`, its
-//! content address — the hook the dual-projection-parity lint checks against the JSON view.
+//! The static-HTML renderer (spec §8.1 — static HTML path). One reviewed template (§5): a `<header>`
+//! bar, a **persistent navigation `<nav>` sidebar** with client-side search, a level-graded `<main>`
+//! within a readable measure, an **"on this page" table of contents**, and a provenance `<footer>` —
+//! **semantic HTML by construction** (the §4.1 legibility/accessibility bar: heading order never
+//! skips, code carries a `language-*` class, every nav is labelled). Every node element carries
+//! `data-cid="blake3:…"`, its content address — the hook the dual-projection-parity lint checks
+//! against the JSON view.
+//!
+//! The shared visual language (typography, light/dark palettes, tables, syntax colours) lives in one
+//! self-contained, offline stylesheet ([`crate::theme::READING_CSS`]); Mycelium code examples are
+//! coloured by the trusted L1 lexer ([`crate::highlight`]) with a never-silent plain-text fallback.
 
 use crate::emit::{html_escape, Artifacts};
+use crate::highlight;
 use crate::ir::{DocModel, Node, Payload, SourceKind, XrefResolution};
+use crate::theme;
 
-/// The one reviewed template's CSS (the shared visual language, §5). Its content feeds the pinned
-/// template hash recorded in every page footer (provenance, §6).
-const STYLE: &str = "\
-:root{--fg:#1a1a2e;--bg:#fdfdfd;--accent:#3a5;--dim:#667;--code:#f4f4f8}\
-*{box-sizing:border-box}\
-body{margin:0;font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--fg);background:var(--bg)}\
-header,nav,main,footer{max-width:54rem;margin:0 auto;padding:1rem 1.25rem}\
-header{border-bottom:2px solid var(--accent)}\
-nav ul{list-style:none;padding-left:1rem}\
-a{color:var(--accent)}a.unresolved{color:#b00;text-decoration:line-through}\
-h1,h2,h3,h4,h5,h6{line-height:1.25}\
-pre{background:var(--code);padding:.75rem 1rem;border-radius:6px;overflow:auto}\
-code{font:0.9em ui-monospace,SFMono-Regular,Menlo,monospace}\
-.undocumented{color:var(--dim);font-style:italic;border-left:3px solid #c93;padding-left:.5rem}\
-.level{font-size:.7rem;color:var(--dim);text-transform:uppercase;letter-spacing:.05em}\
-.checked{color:var(--accent);font-size:.75rem}\
-footer{color:var(--dim);font-size:.85rem;border-top:1px solid #ddd;margin-top:2rem}";
+/// The corpus-family groups, in navigation order (shared by the index and the sidebar tree).
+const GROUPS: &[(SourceKind, &str)] = &[
+    (SourceKind::Spec, "Specifications & contracts"),
+    (SourceKind::Rfc, "RFCs"),
+    (SourceKind::Adr, "Architecture decisions"),
+    (SourceKind::Note, "Design notes"),
+    (SourceKind::Api, "API reference"),
+    (SourceKind::Devlog, "Devlog"),
+    (SourceKind::Other, "Other"),
+];
 
 /// The pinned template content hash (provenance, §6) — the address of the shared template/style.
 #[must_use]
 pub fn template_hash() -> String {
     use crate::hash::DocHasher;
     let mut h = DocHasher::new();
-    h.tag(200).str(STYLE);
+    h.tag(200).str(theme::READING_CSS);
     h.finish().as_str().to_owned()
 }
 
@@ -40,7 +41,10 @@ pub fn render(model: &DocModel) -> Artifacts {
     let mut arts = Artifacts::new();
     arts.put("index.html", render_index(model));
     for doc in &model.documents {
-        arts.put(format!("pages/{}.html", doc.anchor), render_page(doc));
+        arts.put(
+            format!("pages/{}.html", doc.anchor),
+            render_page(doc, model),
+        );
     }
     arts
 }
@@ -51,7 +55,7 @@ pub fn render_concat(model: &DocModel) -> String {
     let mut s = render_index(model);
     for doc in &model.documents {
         s.push('\n');
-        s.push_str(&render_page(doc));
+        s.push_str(&render_page(doc, model));
     }
     s
 }
@@ -67,23 +71,71 @@ fn source_kind(doc: &Node) -> SourceKind {
     }
 }
 
-fn page_shell(title: &str, nav: &str, main: &str) -> String {
+/// The one reviewed page template (§5): head (self-contained theme + no-flash init), a sticky header
+/// bar with the theme toggle, the sidebar/main/ToC layout, footer, and the end-of-body scripts.
+///
+/// `search_base` is `""` on the index and `"../"` on a `pages/` page (the relative prefix the search
+/// JS prepends to reach `search-index.jsonl`). `toc` is `None` on the index (no per-page ToC).
+fn page_shell(
+    title: &str,
+    search_base: &str,
+    sidebar: &str,
+    toc: Option<&str>,
+    main: &str,
+) -> String {
+    let layout_class = if toc.is_some() {
+        "layout"
+    } else {
+        "layout no-toc"
+    };
+    let toc_html = toc.unwrap_or("");
     format!(
         "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n\
          <meta charset=\"utf-8\">\n\
          <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n\
          <title>{title} — Mycelium</title>\n\
-         <style>{STYLE}</style>\n\
+         <style>{css}</style>\n{head_init}\n\
          </head>\n<body>\n\
-         <header><h1 class=\"site-title\">Mycelium Documentation</h1>\
-         <p>A projection of the cited corpus — never a parallel truth (ADR-003/G11).</p></header>\n\
-         {nav}\n<main>\n{main}\n</main>\n\
+         {skip}\n\
+         <header class=\"site-header\"><div class=\"bar\">\
+         <p class=\"site-title\">Mycelium Documentation</p>\
+         <p class=\"tagline\">A projection of the cited corpus — never a parallel truth (ADR-003/G11).</p>\
+         {toggle}</div></header>\n\
+         <div class=\"{layout_class}\">\n{sidebar}\n\
+         <main>\n<div id=\"content\" tabindex=\"-1\">\n{main}\n</div>\n</main>\n\
+         {toc_html}\n</div>\n\
          <footer>Generated from the Mycelium corpus · one template (hash <code>{th}</code>) · \
          every block is content-addressed (ADR-003). Undocumented items are flagged, never invented (G2).</footer>\n\
+         <script>window.MYC_BASE={base_json};</script>\n\
+         {toggle_js}\n{search_js}\n\
          </body>\n</html>\n",
         title = html_escape(title),
+        css = theme::READING_CSS,
+        head_init = theme::HEAD_THEME_INIT,
+        skip = theme::SKIP_LINK,
+        toggle = theme::THEME_TOGGLE_BUTTON,
+        toggle_js = theme::THEME_TOGGLE_JS,
+        search_js = theme::CORPUS_SEARCH_JS,
+        base_json = json_str(search_base),
         th = html_escape(&short_hash(&template_hash())),
     )
+}
+
+/// A minimal JSON string literal (for the inlined `window.MYC_BASE`). Only `"`, `\`, and `<` need
+/// escaping here; the base is always a short ASCII path like `""` or `"../"`.
+fn json_str(s: &str) -> String {
+    let mut out = String::with_capacity(s.len() + 2);
+    out.push('"');
+    for c in s.chars() {
+        match c {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            '<' => out.push_str("\\u003c"),
+            _ => out.push(c),
+        }
+    }
+    out.push('"');
+    out
 }
 
 fn short_hash(h: &str) -> String {
@@ -94,45 +146,110 @@ fn short_hash(h: &str) -> String {
     }
 }
 
-/// The index→detail entry point (§4.1 #2): documents grouped by corpus family, each a deep link.
-fn render_index(model: &DocModel) -> String {
-    let groups = [
-        (SourceKind::Spec, "Specifications & contracts"),
-        (SourceKind::Rfc, "RFCs"),
-        (SourceKind::Adr, "Architecture decisions"),
-        (SourceKind::Note, "Design notes"),
-        (SourceKind::Api, "API reference"),
-        (SourceKind::Devlog, "Devlog"),
-        (SourceKind::Other, "Other"),
-    ];
-    let mut nav = String::from("<nav aria-label=\"Documentation index\">\n");
-    for (kind, label) in groups {
+/// The persistent navigation sidebar: a client-side search box over `search-index.jsonl`, then the
+/// corpus grouped by family. `link_prefix` is `"pages/"` on the index and `""` on a page (both reach
+/// the sibling `pages/<anchor>.html`). `current` highlights the page being read (`aria-current`).
+fn render_sidebar(model: &DocModel, link_prefix: &str, current: Option<&str>) -> String {
+    let mut nav = String::from("<nav class=\"sidebar\" aria-label=\"Documentation navigation\">\n");
+    nav.push_str(
+        "<input id=\"corpus-search-box\" class=\"nav-search\" type=\"search\" \
+         placeholder=\"Search the docs…\" aria-label=\"Search the documentation\" autocomplete=\"off\">\n\
+         <ul id=\"corpus-search-results\" class=\"search-results\" aria-live=\"polite\"></ul>\n",
+    );
+    for (kind, label) in GROUPS {
         let mut items = String::new();
         for doc in &model.documents {
-            if source_kind(doc) == kind {
+            if source_kind(doc) == *kind {
+                let current_attr = if current == Some(doc.anchor.as_str()) {
+                    " aria-current=\"page\""
+                } else {
+                    ""
+                };
                 items.push_str(&format!(
-                    "  <li><a href=\"pages/{a}.html\" data-cid=\"{cid}\">{t}</a></li>\n",
+                    "  <li><a href=\"{prefix}{a}.html\"{cur}>{t}</a></li>\n",
+                    prefix = link_prefix,
                     a = html_escape(&doc.anchor),
-                    cid = html_escape(doc.id.as_str()),
+                    cur = current_attr,
                     t = html_escape(doc_title(doc)),
                 ));
             }
         }
         if !items.is_empty() {
             nav.push_str(&format!(
-                "<section><h2>{}</h2>\n<ul>\n{items}</ul></section>\n",
+                "<p class=\"nav-group\">{}</p>\n<ul>\n{items}</ul>\n",
                 html_escape(label)
             ));
         }
     }
     nav.push_str("</nav>");
-    let main = "<p>Pick a document from the index. Each page offers graded depth \
-                (minimal · medium · detailed — RFC-0013 levels reused).</p>"
-        .to_owned();
-    page_shell("Index", &nav, &main)
+    nav
 }
 
-fn render_page(doc: &Node) -> String {
+/// The "on this page" table of contents, built from the document's headings (level-2 sections and
+/// their immediate level-3 subsections — deeper levels are omitted to keep the ToC scannable).
+/// `None` when the document has no headings (so no empty ToC rail is rendered).
+fn render_toc(doc: &Node) -> Option<String> {
+    let mut entries: Vec<(u8, &str, &str)> = Vec::new();
+    collect_toc(&doc.children, 2, &mut entries);
+    if entries.is_empty() {
+        return None;
+    }
+    let mut nav = String::from(
+        "<nav class=\"on-this-page\" aria-label=\"On this page\">\
+         <p class=\"toc-title\">On this page</p>\n<ul>\n",
+    );
+    for (depth, anchor, label) in entries {
+        nav.push_str(&format!(
+            "  <li><a class=\"lvl-{depth}\" href=\"#{a}\">{t}</a></li>\n",
+            a = html_escape(anchor),
+            t = html_escape(label),
+        ));
+    }
+    nav.push_str("</ul></nav>");
+    Some(nav)
+}
+
+/// Collect `(depth, anchor, label)` for `Section`/`ApiItem` headings down to depth 3 (inclusive).
+fn collect_toc<'a>(nodes: &'a [Node], depth: u8, out: &mut Vec<(u8, &'a str, &'a str)>) {
+    if depth > 3 {
+        return;
+    }
+    for node in nodes {
+        match &node.payload {
+            Payload::Section => {
+                out.push((depth, &node.anchor, node.title.as_deref().unwrap_or("")));
+                collect_toc(&node.children, depth + 1, out);
+            }
+            Payload::ApiItem { signature, .. } => {
+                out.push((depth, &node.anchor, signature.as_deref().unwrap_or("")));
+                collect_toc(&node.children, depth + 1, out);
+            }
+            _ => {}
+        }
+    }
+}
+
+/// The index→detail entry point (§4.1 #2): documents grouped by corpus family in the sidebar, plus a
+/// short welcome. The sidebar's search box is the site-wide search UI (over `search-index.jsonl`).
+fn render_index(model: &DocModel) -> String {
+    let sidebar = render_sidebar(model, "pages/", None);
+    let main = format!(
+        "<h1>Mycelium Documentation</h1>\n\
+         <p>The living projection of the cited corpus — RFCs, architecture decisions, design notes, \
+         specifications, and the projected API reference. Every page is content-addressed \
+         (ADR-003/G11); nothing here is a parallel truth.</p>\n\
+         <h2>Browse the corpus</h2>\n\
+         <p>Use the navigation sidebar (grouped by family) or the search box to find a document. \
+         Each page offers graded depth (minimal \u{00b7} medium \u{00b7} detailed — RFC-0013 levels \
+         reused) and an \u{201c}on this page\u{201d} outline.</p>\n\
+         <p>{count} documents, {nodes} content-addressed blocks.</p>",
+        count = model.documents.len(),
+        nodes = model.all_nodes().len(),
+    );
+    page_shell("Index", "", &sidebar, None, &main)
+}
+
+fn render_page(doc: &Node, model: &DocModel) -> String {
     let mut main = String::new();
     main.push_str(&format!(
         "<article id=\"{id}\" data-cid=\"{cid}\"><h1>{t}</h1>\n",
@@ -144,9 +261,9 @@ fn render_page(doc: &Node) -> String {
         render_node(child, 2, &doc.anchor, &mut main);
     }
     main.push_str("</article>");
-    let nav =
-        "<nav aria-label=\"Site\"><ul><li><a href=\"../index.html\">← Index</a></li></ul></nav>";
-    page_shell(doc_title(doc), nav, &main)
+    let sidebar = render_sidebar(model, "", Some(&doc.anchor));
+    let toc = render_toc(doc);
+    page_shell(doc_title(doc), "../", &sidebar, toc.as_deref(), &main)
 }
 
 /// Render one node at heading `depth` (2..=6, clamped — heading order never skips, §4.1 #8).
@@ -171,10 +288,18 @@ fn render_node(node: &Node, depth: usize, doc_anchor: &str, buf: &mut String) {
             buf.push_str("</section>\n");
         }
         Payload::Prose { text } => {
-            buf.push_str(&format!(
-                "<p data-cid=\"{cid}\">{}</p>\n",
-                html_escape(text)
-            ));
+            // A GitHub-style pipe table projects (as prose) into one newline-joined block — render it
+            // as a real <table> (presentation only; the node id is unchanged, so dual-projection
+            // parity and content-addressing are untouched — the JSON/Typst views render the same
+            // node as verbatim text). Everything else stays a paragraph.
+            if let Some(table) = render_table(text, &cid) {
+                buf.push_str(&table);
+            } else {
+                buf.push_str(&format!(
+                    "<p data-cid=\"{cid}\">{}</p>\n",
+                    html_escape(text)
+                ));
+            }
         }
         Payload::Example {
             lang,
@@ -186,10 +311,13 @@ fn render_node(node: &Node, depth: usize, doc_anchor: &str, buf: &mut String) {
             } else {
                 " <span class=\"level\" title=\"illustrative, not CI-checked\">illustrative</span>"
             };
+            // Wire the trusted L1 lexer for `myc`/`myc-checked` fences (never-silent: any failure —
+            // a lexer error, a non-myc language, a non-ASCII span — falls back to the plain escaped
+            // source; highlighting is a lexical Empirical/Declared heuristic, never fabricated).
+            let inner = highlight::highlight(lang, source).unwrap_or_else(|| html_escape(source));
             buf.push_str(&format!(
-                "<figure data-cid=\"{cid}\">{badge}\n<pre><code class=\"language-{lang}\">{src}</code></pre>\n</figure>\n",
+                "<figure data-cid=\"{cid}\">{badge}\n<pre><code class=\"language-{lang}\">{inner}</code></pre>\n</figure>\n",
                 lang = html_escape(lang),
-                src = html_escape(source),
             ));
         }
         Payload::Xref { target } => {
@@ -249,72 +377,60 @@ fn render_node(node: &Node, depth: usize, doc_anchor: &str, buf: &mut String) {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::corpus::{ingest, AnchorAlloc};
-    use crate::ir::SourceKind;
-
-    fn model() -> DocModel {
-        let mut a = AnchorAlloc::new();
-        let src = "# Doc\n\nLead.\n\n## Sec\n\nBody with [a link](other.md#x).\n\n```myc-checked\nfn f() -> Binary{8} = 0b0\n```\n";
-        let doc = ingest("docs/spec/doc.md", src, SourceKind::Spec, &mut a);
-        DocModel::new(vec![doc])
+/// Render a GitHub-style pipe table (`| a | b |` with a `|---|---|` separator row) as a scroll-safe
+/// `<table>`, keeping the node's `data-cid`. Returns `None` when `text` is not a well-formed table
+/// (then the caller renders a paragraph) — a robust check: the separator row must have the same cell
+/// count as the header, so ordinary prose with a stray dash is never mistaken for a table.
+///
+/// `pub(crate)` (with [`split_row`]/[`is_separator_cell`]) for white-box unit testing in
+/// `src/tests/html.rs`, not a downstream API.
+pub(crate) fn render_table(text: &str, cid: &str) -> Option<String> {
+    let lines: Vec<&str> = text.lines().collect();
+    if lines.len() < 2 {
+        return None;
     }
-
-    #[test]
-    fn the_site_has_an_index_and_a_page_per_doc() {
-        let m = model();
-        let arts = render(&m);
-        assert!(arts.files.contains_key("index.html"));
-        assert_eq!(
-            arts.files
-                .keys()
-                .filter(|k| k.starts_with("pages/"))
-                .count(),
-            1
-        );
+    // The header must be genuinely pipe-delimited (GFM tables always carry `|`) — this rejects a
+    // setext-style `Heading\n---` line, which is a header+dashes but not a table.
+    if !lines[0].contains('|') {
+        return None;
     }
-
-    #[test]
-    fn every_node_id_is_embedded_for_parity() {
-        let m = model();
-        let html = render_concat(&m);
-        for id in m.id_set() {
-            assert!(html.contains(&id), "missing cid {id} in HTML");
+    let header = split_row(lines[0]);
+    if header.is_empty() {
+        return None;
+    }
+    let sep = split_row(lines[1]);
+    if sep.len() != header.len() || !sep.iter().all(|c| is_separator_cell(c)) {
+        return None;
+    }
+    let mut out = format!("<div class=\"table-wrap\"><table data-cid=\"{cid}\">\n<thead><tr>");
+    for cell in &header {
+        out.push_str(&format!("<th>{}</th>", html_escape(cell)));
+    }
+    out.push_str("</tr></thead>\n<tbody>\n");
+    for line in &lines[2..] {
+        if line.trim().is_empty() {
+            continue;
         }
+        out.push_str("<tr>");
+        for cell in split_row(line) {
+            out.push_str(&format!("<td>{}</td>", html_escape(&cell)));
+        }
+        out.push_str("</tr>\n");
     }
+    out.push_str("</tbody></table></div>\n");
+    Some(out)
+}
 
-    #[test]
-    fn the_template_is_one_and_pinned() {
-        let m = model();
-        let html = render_concat(&m);
-        let th = template_hash();
-        assert!(th.starts_with("blake3:"));
-        // The footer pins the (short) template hash on every page.
-        assert!(html.contains("one template"));
-    }
+/// Split a pipe-table row into trimmed cells (a single optional leading/trailing `|` is stripped).
+pub(crate) fn split_row(line: &str) -> Vec<String> {
+    let t = line.trim();
+    let t = t.strip_prefix('|').unwrap_or(t);
+    let t = t.strip_suffix('|').unwrap_or(t);
+    t.split('|').map(|c| c.trim().to_owned()).collect()
+}
 
-    #[test]
-    fn output_is_semantic_and_accessible() {
-        let m = model();
-        let html = render_concat(&m);
-        assert!(html.contains("<main>"));
-        assert!(html.contains("aria-label"));
-        assert!(html.contains("lang=\"en\""));
-        assert!(html.contains("class=\"language-"));
-    }
-
-    #[test]
-    fn an_undocumented_api_item_renders_a_visible_marker() {
-        let mut a = AnchorAlloc::new();
-        let doc = crate::apiref::project_nodule(
-            "x.myc",
-            "// nodule: x\nnodule x\nfn g() -> Binary{8} = 0b0\n",
-            &mut a,
-        );
-        let m = DocModel::new(vec![doc]);
-        let html = render_concat(&m);
-        assert!(html.contains("undocumented"));
-    }
+/// Whether a separator cell is well-formed (`-`, optionally with alignment colons: `:--`, `--:`, `:-:`).
+pub(crate) fn is_separator_cell(cell: &str) -> bool {
+    let c = cell.trim();
+    !c.is_empty() && c.contains('-') && c.chars().all(|ch| ch == '-' || ch == ':')
 }
