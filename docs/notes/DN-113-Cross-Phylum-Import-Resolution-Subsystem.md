@@ -1,19 +1,11 @@
 # DN-113 — The Cross-Phylum (Crate→Crate) Import / Resolution Subsystem
 
-> **Status:** **Accepted** (2026-07-10, delegated ratification — see the dated "Ratification
-> (maintainer-delegated, orchestrator-selected on the merits, 2026-07-10)" section below). **Accepted
-> ratifies the v1 DESIGN only, NOT Enacted** (house rule #3: `Enacted` requires stepping through
-> `Accepted` first and means *fully implemented/landed*; this note has no implementation to land —
-> M-1060 tracks that). Originally **Draft** (2026-07-10) — a design-reasoner PLAN in the plan → review
-> → improve → ratify → implement cycle.
->
-> **Grounding basis.** `Empirical` where read against the codebase at `dev` **`45927ea4`** (commands
-> and file:line cited inline). The proposed design is **`Declared`** until implemented and
-> differential-witnessed (VR-5) — ratifying the design does not itself build or witness it. This is
-> genuinely green-field: **0 % is wired today** (§1 audit). Where the design is undetermined it is
-> flagged as an open question, never guessed (G2/VR-5).
->
-> **Author:** design-reasoner (Opus). **Owns:** only this note.
+| Field | Value |
+|---|---|
+| **Note** | DN-113 |
+| **Status** | **Accepted** (2026-07-10, delegated ratification — see the dated "Ratification (maintainer-delegated, orchestrator-selected on the merits, 2026-07-10)" section below). **Accepted ratifies the v1 DESIGN only, NOT Enacted** (house rule #3: `Enacted` requires stepping through `Accepted` first and means *fully implemented/landed*; this note has no implementation to land — M-1060 tracks that). Originally **Draft** (2026-07-10) — a design-reasoner PLAN in the plan → review → improve → ratify → implement cycle. |
+| **Grounding basis** | `Empirical` where read against the codebase at `dev` **`45927ea4`** (commands and file:line cited inline). The proposed design is **`Declared`** until implemented and differential-witnessed (VR-5) — ratifying the design does not itself build or witness it. This is genuinely green-field: **0 % is wired today** (§1 audit). Where the design is undetermined it is flagged as an open question, never guessed (G2/VR-5). |
+| **Author** | design-reasoner (Opus). Owns only this note. |
 
 ---
 

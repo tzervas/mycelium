@@ -130,8 +130,25 @@ digest is a snapshot, that table is live.
   source-tree-mirroring transpiler output, `done`), **M-1044** (the remap manifest folded into
   `BatchSummary`, `done` — DN-109 §5.2 realized). The **sugar-index** (M-1058,
   `tools/grammar/sugar.yaml` + generator, `docs/sugar-index/`) also landed, realizing DN-38 §6's
-  Lowering Map as a drift-gated artifact; its `native_strategy` column is deferred (contract now
-  settled by DN-111, population is bounded follow-up).
+  Lowering Map as a drift-gated artifact; its `native_strategy` column, deferred at that landing, is
+  now **populated** (2026-07-11 — see the gap-close-run bullet below).
+- **Gap-close-run batch landed (2026-07-11, this integration close-out).** **M-1054** (native
+  metaprogramming facility): Stage 0 (call-site recognition + a provably-inert matcher skeleton,
+  PR #1426) and **Stage 1** (production capture-avoidance — the first stage that actually emits an
+  expansion, `Declared → Empirical` for that path, PR #1429) both landed; epic stays
+  `in-progress` — the facility is not yet wired into ordinary elaboration dispatch (Stage 1b
+  residual). **M-1051** (`reveal`) Increment-3 (`certified_roundtrip`, the L0-term-level identity
+  witness plus a best-effort surface round-trip on a narrow `Const`/`Var`/`Let` fragment) landed
+  (PR #1423), satisfying **M-1055**'s E1+E3 go/no-go (`done`); M-1051 stays `in-progress` pending
+  Increment-2 (CLI/LSP surfacing). **M-1024**'s CLI-side duplicate linker collapsed onto the
+  canonical `PhylumEnv::link` (PR #1427), fixing a real `myc check` cross-nodule bug along the way.
+  **M-1056** (`/native-translate` skill) authored and landed `done`, immediately applied to
+  populate the sugar-index `native_strategy` column for all 47 rows (35 NativeEquivalent, 3
+  IdiomaticRemapping, 1 Approximation, 8 honestly `unclassified`) — M-1058's follow-up closed
+  (PR #1422). **DN-112** (nodule-qualified type identity) and **DN-113** (cross-phylum
+  import/resolution v1 design) both ratified `Accepted` (delegated ratification), minting M-1060.
+  None of this moves the facility past `Accepted`-not-`Enacted` (house rule #3); every tag above
+  stays at its checked basis (VR-5).
 - **Phase-0 `checked_fraction` re-baseline (`Empirical`, partial — the default 5-target
   `just transpile-vet` set, not the full 17-target corpus the delta ledger's 7.8% figure covers):**
   `eval.rs` 7.1%, `fuse.rs` 0.0% (parse error), `std-time` **18.9%** (the highest of the five),
