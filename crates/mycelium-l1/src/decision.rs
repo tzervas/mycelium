@@ -184,7 +184,8 @@ fn compile_rows(
     let mut cases: Vec<(Head, Tree)> = Vec::new();
     // Whether the cases cover the column's whole signature (so no default is needed).
     let complete = match &ty0 {
-        Ty::Data(n, _) => types.get(n).is_some_and(|d| {
+        // DN-112 Rank 1 / M-1036: `n` is a checked (possibly qualified) `Ty::Data` name.
+        Ty::Data(n, _) => crate::checkty::lookup_data(types, n).is_some_and(|d| {
             // Iterate constructors in signature order for a stable, complete switch.
             d.ctors
                 .iter()
@@ -195,7 +196,7 @@ fn compile_rows(
     };
 
     if let Ty::Data(dn, _) = &ty0 {
-        if let Some(d) = types.get(dn) {
+        if let Some(d) = crate::checkty::lookup_data(types, dn) {
             let d = d.clone();
             for ci in &d.ctors {
                 if ctor_heads.iter().any(|(m, _)| *m == ci.name) {

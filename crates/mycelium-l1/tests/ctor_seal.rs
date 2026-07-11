@@ -1,4 +1,5 @@
-//! **Per-constructor visibility seal** (M-1027 / ENB-4; DN-104) integration tests.
+//! **Per-constructor visibility seal** (M-1027 / ENB-4; DN-104), now an **enforced** capability
+//! boundary via **nodule-qualified type identity** (DN-112 Rank 1; M-1036) integration tests.
 //!
 //! A `priv`-marked constructor of a `pub type` exports the type **NAME** (usable cross-nodule in
 //! signatures, `use`, and pattern position) but **withholds the constructor from cross-nodule
@@ -12,6 +13,17 @@
 //! Every "the seal fires" test is paired with a **control** proving the check is not vacuous (the same
 //! shape, minus the seal, is accepted). Honesty (VR-5): the seal is a `Declared` capability-gate whose
 //! *never-silent behavior* these tests pin — not a proof.
+//!
+//! **DN-112 Rank 1 / M-1036 (2026-07-11).** `Ty::Data` identity is now nodule-qualified (`"a::T"`
+//! for `T` declared in nodule `a`) and an imported function's signature is baked against its own
+//! declaring nodule at export time — closing the same-named-local-shadow bypass the seal's own
+//! bare-name resolution previously admitted (the former `known_gap_…` test, now flipped to assert
+//! the refusal). The section below adds: the flipped exploit test, non-over-restriction controls
+//! (unrelated same-named types used independently, a legitimate cross-nodule factory pattern), the
+//! `type_head` coherence twin-fix witness (DN-112 §10 item 3), a mangling collision-freedom witness
+//! (§10 item 4), and the builtin/prelude uniform-home-invariant regression test the ratification's
+//! DoD item 9 requires (`Bool`/`Tuple$N` must resolve identically under every nodule). Guarantee:
+//! `Empirical` for the general fix — earned by these witnesses, not proved (VR-5; DN-112 §8).
 
 use mycelium_l1::{check_nodule, check_phylum, parse as parse_nodule, parse_phylum, CheckError};
 
@@ -196,35 +208,244 @@ fn a_multi_ctor_type_seals_only_the_marked_ctor() {
 }
 
 // ---------------------------------------------------------------------------------------------
-// KNOWN GAP (pinned, not silently absent — G2/VR-5): a same-named local shadow bypasses the seal.
+// CLOSED (DN-112 Rank 1 / M-1036 — nodule-qualified type identity): a same-named local shadow no
+// longer bypasses the seal. Was `known_gap_a_same_named_local_shadow_type_bypasses_the_seal`
+// (pinned the unsound `Ok`); flipped here to assert the refusal, per that test's own instructions.
 // ---------------------------------------------------------------------------------------------
 
 #[test]
-fn known_gap_a_same_named_local_shadow_type_bypasses_the_seal() {
-    // Mycelium resolves types by BARE NAME, re-resolved in the *calling* nodule's own scope
-    // (`resolve_ty` looks the name up in the caller's `Cx.types`, not the callee's declaring
-    // scope), and "local decl shadows import" is the pre-existing, documented precedence rule
-    // (RFC-0006 §4.3 / M-662). So a foreign nodule can declare its OWN unsealed type of the
-    // SAME NAME — never importing the real sealed `a.T` — and the checker accepts passing a
-    // value of its local decoy `T` to a function that expects `a.T`, because both resolve to the
-    // bare name "T" in their respective scopes. This falsifies the "unforgeable capability-gate"
-    // framing this feature was built to deliver (DN-99 row #37 / FR-N3 / M-1023's `Approx::proven`
-    // port) for anything but a well-behaved caller that goes through `use a.T` — it is NOT a
-    // security/capability boundary against an adversarial or even accidentally-colliding same-
-    // named local declaration. Pinned here so the gap is visible in the differential suite, not
-    // silently absent from what the PR's "silent-hole sweep" claimed was exhaustive coverage
-    // (found in review, verified by reproduction — house rule #4: no claim upgraded past a
-    // checked basis). Tracked as **M-1036** (nodule-qualified type identity — the real fix; DN-104
-    // §6). Until M-1036 lands, `priv` is an opt-in API-discipline nudge for well-behaved cross-
-    // nodule callers, NOT an enforced capability boundary — DN-104 must not be ratified with the
-    // stronger claim.
+fn a_same_named_local_shadow_type_no_longer_bypasses_the_seal() {
+    // Mycelium used to resolve types by BARE NAME, re-resolved in the *calling* nodule's own scope
+    // — "local decl shadows import" (RFC-0006 §4.3 / M-662) meant a foreign nodule could declare
+    // its OWN unsealed type of the SAME NAME — never importing the real sealed `a.T` — and pass a
+    // value of its local decoy `T` where `a.T` was expected, because both resolved to the bare
+    // name "T". DN-112 Rank 1 (M-1036) closes this: every `Ty::Data` identity is now nodule-
+    // qualified (`a::T` vs `b::T`), and an imported function's signature is baked against its
+    // *own* declaring nodule at export time (never re-derived at a foreign call site) — so `b`'s
+    // decoy `T` and `a`'s real `T` are structurally distinct types, and passing one where the
+    // other is expected is an ordinary, never-silent type mismatch (DN-112 §10 item 2's own
+    // framing: "a never-silent type mismatch, not a values-forged pass" — not necessarily the
+    // `priv`-seal diagnostic itself, since the mismatch is caught by ordinary type equality before
+    // the seal check would even need to fire).
     let result = check_phy(
         "phylum p\nnodule a;\npub type T = priv Mk(Binary{8});\npub fn use_t(x: T) => Binary{8} = match x { Mk(v) => v };\nnodule b;\nuse a.use_t;\ntype T = Mk(Binary{8});\nfn forge() => T = Mk(0b00000000);\npub fn exploit() => Binary{8} = use_t(forge());",
     );
+    let err = result.expect_err(
+        "the shadow-bypass exploit must now be refused (DN-112 Rank 1 / M-1036) — a same-named \
+         local decoy no longer silently forges a sealed foreign type",
+    );
     assert!(
-        result.is_ok(),
-        "this PINS the current (unsound) behavior — if this now returns Err, the bypass has been \
-         fixed (e.g. by M-1036 landing nodule-qualified type identity); update this test to assert \
-         the refusal instead and close M-1036. Got: {result:?}"
+        err.message.contains("T") || err.message.to_lowercase().contains("type"),
+        "the refusal should be a type-identity mismatch naming the mismatched type; got: {}",
+        err.message
+    );
+}
+
+// ---------------------------------------------------------------------------------------------
+// Non-vacuity + no over-restriction (DN-112 §9 invariant i / §10 item 5's backward-compat story):
+// two UNRELATED nodules independently declaring a same-named, unsealed type — never mixed at a
+// call site — must still type-check exactly as before this fix (no false cross-nodule collision).
+// ---------------------------------------------------------------------------------------------
+
+#[test]
+fn unrelated_same_named_types_in_different_nodules_used_independently_still_check() {
+    // `a` and `b` each declare their OWN `type T`, used only within their own bodies — never
+    // mixed. The qualified-identity mechanism must not manufacture a false collision here.
+    check_phy(
+        "phylum p\n\
+         nodule a;\n\
+         type T = Mk(Binary{8});\n\
+         pub fn make_a() => Binary{8} = match Mk(0b0000_0001) { Mk(v) => v };\n\
+         nodule b;\n\
+         type T = Mk(Binary{4});\n\
+         pub fn make_b() => Binary{4} = match Mk(0b0001) { Mk(v) => v };",
+    )
+    .expect(
+        "two unrelated same-named (different-shape!) types, never mixed, must both check \
+         (no false-positive collision across unrelated nodules — DN-112 §9 invariant i)",
+    );
+}
+
+#[test]
+fn cross_nodule_mixing_of_unsealed_same_named_types_is_also_refused() {
+    // The general identity fix applies to ANY same-named-different-home mixing, not just the
+    // sealed-constructor case — an UNSEALED type from `b` passed where `a`'s same-named type is
+    // expected is ALSO now a type mismatch (demonstrating the fix is about identity, not merely
+    // ctor-seal bookkeeping).
+    let err = phy_err(
+        "phylum p\n\
+         nodule a;\n\
+         pub type T = Mk(Binary{8});\n\
+         pub fn use_t(x: T) => Binary{8} = match x { Mk(v) => v };\n\
+         nodule b;\n\
+         use a.use_t;\n\
+         type T = Mk(Binary{8});\n\
+         fn forge() => T = Mk(0b0000_0000);\n\
+         pub fn exploit() => Binary{8} = use_t(forge());",
+    );
+    assert!(
+        !err.is_empty(),
+        "an unsealed cross-nodule same-name mix is still a real type mismatch"
+    );
+}
+
+#[test]
+fn a_legitimate_factory_returning_a_sealed_type_still_works_across_nodules() {
+    // Non-regression control (DN-104's own recommended pattern): `b` never constructs the sealed
+    // type directly, only receives it from `a`'s `pub fn` factory and passes it straight back to
+    // another `a`-owned function — the baked-signature mechanism (DN-112 Rank 1) must not
+    // over-restrict this well-behaved, always-legitimate cross-nodule flow.
+    check_phy(
+        "phylum p\n\
+         nodule a;\n\
+         pub type T = priv Mk(Binary{8});\n\
+         pub fn mint(x: Binary{8}) => T = Mk(x);\n\
+         pub fn read(t: T) => Binary{8} = match t { Mk(v) => v };\n\
+         nodule b;\n\
+         use a.mint;\n\
+         use a.read;\n\
+         pub fn roundtrip() => Binary{8} = read(mint(0b0000_0001));",
+    )
+    .expect("a value minted by its home nodule's factory and passed straight back still checks");
+}
+
+// ---------------------------------------------------------------------------------------------
+// DN-112 §10 item 3 — impl-coherence twin: two same-named-different-home types each carry a
+// distinct impl of the same trait, with NO false-overlap refusal; a genuine same-home overlap
+// still refuses (the orphan/global-uniqueness rule is unchanged for the real collision case).
+// ---------------------------------------------------------------------------------------------
+
+#[test]
+fn same_named_different_home_types_each_get_their_own_coherent_instance() {
+    // `a::Dup` and `b::Dup` are unrelated same-named types; each `impl`s the SAME trait `Show`.
+    // Pre-fix, `type_head` was bare-name-keyed (`Data:Dup` for both) — a false overlap. Post-fix,
+    // `type_head` embeds the qualified name (`Data:a::Dup` vs `Data:b::Dup`) — both instances
+    // register, no coherence violation.
+    check_phy(
+        "phylum p\n\
+         nodule a;\n\
+         pub trait Show[A] { fn show(x: A) => Binary{1}; };\n\
+         type Dup = DA(Binary{8});\n\
+         impl Show[Dup] for Dup { fn show(x: Dup) => Binary{1} = 0b1; };\n\
+         nodule b;\n\
+         use a.Show;\n\
+         type Dup = DB(Binary{4});\n\
+         impl Show[Dup] for Dup { fn show(x: Dup) => Binary{1} = 0b0; };",
+    )
+    .expect(
+        "two same-named-different-home types each impl the same trait without a false-overlap \
+         refusal (DN-112 §5 / §10 item 3 — the coherence key is now nodule-qualified)",
+    );
+}
+
+#[test]
+fn a_genuine_same_home_overlap_still_refuses() {
+    // Two impls of the SAME trait for the SAME (single) type — a real coherence violation, must
+    // stay refused exactly as before this fix (the qualification must not loosen genuine overlap).
+    let err = phy_err(
+        "nodule a;\n\
+         trait Show[A] { fn show(x: A) => Binary{1}; };\n\
+         type Dup = DA(Binary{8});\n\
+         impl Show[Dup] for Dup { fn show(x: Dup) => Binary{1} = 0b1; };\n\
+         impl Show[Dup] for Dup { fn show(x: Dup) => Binary{1} = 0b0; };",
+    );
+    assert!(
+        !err.is_empty(),
+        "a genuine same-home double-impl must still be refused as a coherence violation"
+    );
+}
+
+// ---------------------------------------------------------------------------------------------
+// DN-112 §10 item 4 — mangling collision-freedom: two same-named-different-home types (each
+// declared alone in its own program, so `PhylumEnv::link`'s pre-existing bare-name-uniqueness
+// invariant is never in play) monomorphize to DISTINCT mangled registry keys — never aliased to
+// one entry. Witnessed through the public `monomorphize` API (mono.rs's mangling internals are
+// crate-private; this is the end-to-end behavioral consequence DN-112 §7 requires).
+// ---------------------------------------------------------------------------------------------
+
+#[test]
+fn same_bare_named_types_in_different_homes_mangle_to_distinct_registry_keys() {
+    // `T` is GENERIC (`T[X]`) so `monomorphize` must actually run the mangling pass (`mangle_decl`)
+    // to emit `T[Binary{8}]`'s monomorphic instance — a monomorphic (already-closed) program takes
+    // a fast passthrough path that never mangles at all, which would make this witness vacuous.
+    let env_a = check_nodule(
+        &parse_nodule(
+            "nodule a;\ntype T[X] = Mk(X);\npub fn main() => T[Binary{8}] = Mk(0b0000_0001);",
+        )
+        .expect("parses"),
+    )
+    .expect("checks");
+    let mono_a = mycelium_l1::monomorphize(&env_a, "main").expect("monomorphizes");
+
+    let env_b = check_nodule(
+        &parse_nodule(
+            "nodule b;\ntype T[X] = Mk(X);\npub fn main() => T[Binary{8}] = Mk(0b0000_0001);",
+        )
+        .expect("parses"),
+    )
+    .expect("checks");
+    let mono_b = mycelium_l1::monomorphize(&env_b, "main").expect("monomorphizes");
+
+    // Both programs declare a bare-surface `T` with the identical shape; their mangled/registered
+    // identities must differ (home `a` vs home `b`) — collision-freedom, not merely non-crashing.
+    let keys_a: std::collections::BTreeSet<&String> = mono_a.types.keys().collect();
+    let keys_b: std::collections::BTreeSet<&String> = mono_b.types.keys().collect();
+    assert_ne!(
+        keys_a, keys_b,
+        "same-named-different-home types must mangle to DISTINCT registry keys \
+         (DN-112 §7 mangling collision-freedom); got the same key sets {keys_a:?}"
+    );
+    // Neither side's `T[Binary{8}]` mangled to the bare (unqualified) pre-fix form that both would
+    // have collided on — confirming this is a real qualification effect, not an unrelated diff.
+    assert!(
+        !keys_a.iter().any(|k| k.as_str() == "T$Binary8"),
+        "post-fix, a NAMED nodule's type must NOT mangle to the bare pre-fix form; got {keys_a:?}"
+    );
+}
+
+// ---------------------------------------------------------------------------------------------
+// DN-112 §10 item 9 (ratification CONDITION — the builtin/prelude uniform-home invariant, §9's
+// own sharpest adversarial finding): `Bool` (and, structurally, any `PRELUDE_HOME` type) MUST stay
+// resolvable under ONE reserved home across every nodule — a program that computes a `Bool` in one
+// nodule and consumes it (via `if`/`match`) in ANOTHER must still type-check. A resolution path
+// that over-qualified `Bool` per-current-nodule would make this refuse with a false type mismatch.
+// ---------------------------------------------------------------------------------------------
+
+#[test]
+fn bool_crosses_nodule_boundaries_without_a_false_mismatch() {
+    // `a` computes a `Bool` (via `if`, which desugars to a `Match` on the prelude `Bool`) and
+    // returns it from a `pub fn`; `b` imports that fn and immediately `if`s on the result — an
+    // over-qualified `Bool` (e.g. stamped `a::Bool`) would make `b`'s own `if`-condition check (a
+    // BARE, always-`PRELUDE_HOME` `Bool` on `b`'s side) refuse with a spurious type mismatch.
+    check_phy(
+        "phylum p\n\
+         nodule a;\n\
+         pub fn a_is_zero(x: Binary{8}) => Bool = match x { 0b0000_0000 => True, _ => False };\n\
+         nodule b;\n\
+         use a.a_is_zero;\n\
+         pub fn b_consumes(x: Binary{8}) => Binary{1} = \
+             if a_is_zero(x) then 0b1 else 0b0;",
+    )
+    .expect(
+        "Bool must resolve under the SAME reserved home in every nodule — a cross-nodule Bool \
+         round-trip must not spuriously mismatch (DN-112 §9 invariant i / §10 item 9)",
+    );
+}
+
+#[test]
+fn tuple_types_cross_nodule_boundaries_without_a_false_mismatch() {
+    // The synthetic `Tuple$N` family carries the same single-reserved-home invariant as `Bool`
+    // (DN-112 §9 invariant i) — a tuple built in one nodule and destructured in another must not
+    // spuriously mismatch either.
+    check_phy(
+        "phylum p\n\
+         nodule a;\n\
+         pub fn a_pair() => (Binary{8}, Binary{8}) = (0b0000_0001, 0b0000_0010);\n\
+         nodule b;\n\
+         use a.a_pair;\n\
+         pub fn b_consumes() => Binary{8} = match a_pair() { (x, _) => x };",
+    )
+    .expect(
+        "Tuple$N must resolve under the SAME reserved home in every nodule (DN-112 §9 invariant i)",
     );
 }

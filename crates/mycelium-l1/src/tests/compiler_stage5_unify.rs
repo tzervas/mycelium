@@ -347,6 +347,7 @@ fn tern_var(n: &str) -> Ty {
 /// A `DataInfo` fixture: `name<params>` with a single constructor of the given field types.
 fn di(name: &str, params: &[&str], ctor: &str, fields: Vec<Ty>) -> DataInfo {
     DataInfo {
+        home: String::new(), // DN-112/M-1036: test fixture, unqualified/bare identity
         name: name.to_owned(),
         params: params.iter().map(|p| (*p).to_owned()).collect(),
         ctors: vec![CtorInfo {

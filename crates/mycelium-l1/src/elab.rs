@@ -1457,7 +1457,13 @@ pub(crate) fn field_spec(ty: &Ty) -> Option<FieldSpec> {
         Ty::Float => FieldSpec::Repr(Repr::Float {
             width: FloatWidth::F64,
         }),
-        Ty::Data(n, args) if args.is_empty() => FieldSpec::Data(n.clone()),
+        // DN-112 §3 (Rank 1 / M-1036): the L0/`DataRegistry` bridge stays nodule-agnostic (no
+        // runtime/representation change) — `build_registry` keys `specs` by the bare/local name it
+        // reads from `env.types`' own (unchanged, simple-name) keys, so a possibly-qualified `n`
+        // (a checked `Ty::Data` identity) is stripped to its local part here to match.
+        Ty::Data(n, args) if args.is_empty() => {
+            FieldSpec::Data(crate::checkty::ty_local_name(n).to_owned())
+        }
         Ty::Data(_, _) | Ty::Var(_) => return None,
         Ty::Substrate(_) => return None,
         // ADR-033/DN-74 (M-923): a function-typed field lowers to `FieldSpec::Fn { arity, sig }`
@@ -1528,7 +1534,11 @@ pub(crate) fn ty_to_repr(ty: &Ty) -> Option<Repr> {
 /// field staged, never a half-encoded signature — G2/VR-5).
 pub(crate) fn ty_to_field_ty_ref(ty: &Ty) -> Option<FieldTyRef> {
     Some(match ty {
-        Ty::Data(n, args) if args.is_empty() => FieldTyRef::Data(n.clone()),
+        // DN-112 §3 (Rank 1 / M-1036): same local-name stripping as `field_spec` (this bridge stays
+        // nodule-agnostic — no runtime/representation change).
+        Ty::Data(n, args) if args.is_empty() => {
+            FieldTyRef::Data(crate::checkty::ty_local_name(n).to_owned())
+        }
         Ty::Data(_, _) | Ty::Var(_) | Ty::Substrate(_) => return None,
         Ty::Fn(param, ret) => {
             let param = ty_to_field_ty_ref(param)?;
@@ -2531,10 +2541,8 @@ impl Elab<'_> {
         let Ty::Data(tname, _) = &sty else {
             return residual(&site, format!("`for` spine is not a data type: {sty}"));
         };
-        let d = self
-            .env
-            .types
-            .get(tname)
+        // DN-112 Rank 1 / M-1036: `tname` is a checked (possibly qualified) `Ty::Data` name.
+        let d = crate::checkty::lookup_data(&self.env.types, tname)
             .ok_or_else(|| ElabError::Residual {
                 site: site.clone(),
                 what: format!("unknown type `{tname}`"),

@@ -99,7 +99,12 @@ fn enumerate_finite_domain(
     let Ty::Data(name, _args) = ty else {
         return None;
     };
-    let info = types.get(name)?;
+    // DN-112 §3 (Rank 1 / M-1036): `name` may be a checked (qualified) `Ty::Data` identity, but
+    // `crate::eval::L1Value::Data::ty` is always the bare/local name (every other construction
+    // site — `eval.rs`'s `eval_path`/`enter_call` — stamps it from `DataInfo::name`, unqualified);
+    // stay consistent so `env.types.get(ty)` (unchanged, bare-keyed) still finds it downstream.
+    let local = crate::checkty::ty_local_name(name);
+    let info = crate::checkty::lookup_data(types, name)?;
     if info.ctors.is_empty() || info.ctors.iter().any(|c| !c.fields.is_empty()) {
         return None;
     }
@@ -107,7 +112,7 @@ fn enumerate_finite_domain(
         info.ctors
             .iter()
             .map(|c| crate::eval::L1Value::Data {
-                ty: name.clone(),
+                ty: local.to_owned(),
                 ctor: c.name.clone(),
                 fields: std::sync::Arc::new(vec![]),
             })

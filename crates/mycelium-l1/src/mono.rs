@@ -822,10 +822,9 @@ impl<'e> Mono<'e> {
         if self.out_types.contains_key(&mangled) {
             return Ok(());
         }
-        let d = self
-            .src
-            .types
-            .get(name)
+        // DN-112 Rank 1 / M-1036: `name` is a checked (possibly qualified) `Ty::Data` identity;
+        // `self.src.types` (the checked `Env`) is still keyed by bare/simple name.
+        let d = crate::checkty::lookup_data(&self.src.types, name)
             .ok_or_else(|| ElabError::Residual {
                 site: name.to_owned(),
                 what: format!("unknown data type `{name}` during monomorphization"),
@@ -880,6 +879,11 @@ impl<'e> Mono<'e> {
             mangled.clone(),
             DataInfo {
                 name: mangled,
+                // DN-112 Rank 1 / M-1036: mono's output registry is keyed by the final, already-flat
+                // mangled name (which — via `mangle_ty`'s separator normalization — already encodes
+                // any source home distinction injectively); no further qualification is needed, so
+                // this entry sits under the single reserved home (never re-qualified downstream).
+                home: crate::checkty::PRELUDE_HOME.to_owned(),
                 params: vec![],
                 ctors,
             },
@@ -1033,6 +1037,10 @@ impl<'e> Mono<'e> {
                 arrow.clone(),
                 DataInfo {
                     name: arrow.clone(),
+                    // DN-112 Rank 1 / M-1036: a closure tag-sum's `arrow` name is already a
+                    // self-contained, injective synthetic identity (`mangle_arrow`) — the single
+                    // reserved home, same as mono's other output entries above.
+                    home: crate::checkty::PRELUDE_HOME.to_owned(),
                     params: vec![],
                     ctors,
                 },
@@ -1140,7 +1148,8 @@ impl<'e> Mono<'e> {
             }
             // A monomorphic (nullary) data type still needs registering if it is reachable; enqueue it
             // either way (empty targs mangle to the original name, so it is byte-identical).
-            if self.src.types.contains_key(n) {
+            // DN-112 Rank 1 / M-1036: `n` may be qualified; `self.src.types` is bare-keyed.
+            if crate::checkty::lookup_data(&self.src.types, n).is_some() {
                 self.enqueue(Item::Data {
                     name: n.clone(),
                     targs: args.clone(),
@@ -1391,7 +1400,11 @@ impl<'e> Mono<'e> {
         // `expected` for a generic type (mirroring `check_path`); a monomorphic one needs no context.
         if let Some((d, i)) = self.src.ctor(name) {
             if d.ctors[i].fields.is_empty() {
-                let (dname, targs) = self.ctor_data_instance(site, &d.name, expected)?;
+                // DN-112 Rank 1 / M-1036: the owner type's qualified identity (home = the
+                // *declaring* nodule) — threaded through so `ctor_data_instance`'s comparison
+                // against `expected` (a checked, qualified `Ty::Data`) is consistent.
+                let qname = crate::checkty::qualify_type_name(&d.home, &d.name);
+                let (dname, targs) = self.ctor_data_instance(site, &qname, expected)?;
                 self.enqueue(Item::Data {
                     name: dname.clone(),
                     targs: targs.clone(),
@@ -1671,7 +1684,8 @@ impl<'e> Mono<'e> {
 
         // (2) Saturated constructor application.
         if let Some((d, _)) = self.src.ctor(name) {
-            let dname = d.name.clone();
+            // DN-112 Rank 1 / M-1036: the owner type's qualified identity.
+            let dname = crate::checkty::qualify_type_name(&d.home, &d.name);
             // The concrete data instance of this constructor application — `infer_type` types the whole
             // app to `Ty::Data(dname, targs)` (it solves the data targs from the field args + expected).
             // `app_ctor_data_instance` resolves only via the `n == dname` arm, so its data name is
@@ -1786,14 +1800,14 @@ impl<'e> Mono<'e> {
         dname: &str,
         expected: Option<&Ty>,
     ) -> Result<(String, Vec<Ty>), ElabError> {
-        let d = self
-            .src
-            .types
-            .get(dname)
-            .ok_or_else(|| ElabError::Residual {
+        // DN-112 Rank 1 / M-1036: `dname` is qualified (the caller now passes the owner's qualified
+        // identity); `self.src.types` is bare-keyed.
+        let d = crate::checkty::lookup_data(&self.src.types, dname).ok_or_else(|| {
+            ElabError::Residual {
                 site: site.to_owned(),
                 what: format!("unknown data type `{dname}`"),
-            })?;
+            }
+        })?;
         if d.params.is_empty() {
             return Ok((dname.to_owned(), vec![]));
         }
@@ -1884,14 +1898,13 @@ impl<'e> Mono<'e> {
         cname: &str,
         targs: &[Ty],
     ) -> Result<Vec<Ty>, ElabError> {
-        let d = self
-            .src
-            .types
-            .get(dname)
-            .ok_or_else(|| ElabError::Residual {
+        // DN-112 Rank 1 / M-1036: `dname` may be qualified (a checked `Ty::Data`'s name).
+        let d = crate::checkty::lookup_data(&self.src.types, dname).ok_or_else(|| {
+            ElabError::Residual {
                 site: site.to_owned(),
                 what: format!("unknown data type `{dname}`"),
-            })?;
+            }
+        })?;
         let c = d
             .ctors
             .iter()
@@ -2555,14 +2568,13 @@ impl<'e> Mono<'e> {
     /// The element type of a linear-recursive spine type `tname` at `targs` — the single non-spine
     /// field of its cons constructor, with the type arguments substituted in.
     fn for_elem_ty(&self, site: &str, tname: &str, targs: &[Ty]) -> Result<Ty, ElabError> {
-        let d = self
-            .src
-            .types
-            .get(tname)
-            .ok_or_else(|| ElabError::Residual {
+        // DN-112 Rank 1 / M-1036: `tname` is a checked (possibly qualified) `Ty::Data` name.
+        let d = crate::checkty::lookup_data(&self.src.types, tname).ok_or_else(|| {
+            ElabError::Residual {
                 site: site.to_owned(),
                 what: format!("unknown type `{tname}`"),
-            })?;
+            }
+        })?;
         let subst = param_subst(&d.params, targs);
         for c in &d.ctors {
             if c.fields.is_empty() {
@@ -3030,9 +3042,14 @@ pub(crate) fn mangle_ty(t: &Ty) -> String {
         // silent drop — G2). The `#` appears only inside a composite name; a monomorphic data type is
         // still registered and referenced under its bare name (`mangle_ty_in_ty` clones a nullary
         // `Data` directly), so monomorphic passthrough is unaffected.
-        Ty::Data(n, args) if args.is_empty() => format!("{n}#"),
+        //
+        // DN-112 §7 caveat: `n` may be nodule-qualified (`"a::T"`, DN-112 Rank 1 / M-1036) — the
+        // home separator is normalized to a mangling-safe fragment first (`mangle_safe_name`), so
+        // two same-named-different-home types still mangle to **distinct**, identifier-safe strings
+        // (mono collision-freedom).
+        Ty::Data(n, args) if args.is_empty() => format!("{}#", mangle_safe_name(n)),
         Ty::Data(n, args) => {
-            let mut s = n.clone();
+            let mut s = mangle_safe_name(n);
             for a in args {
                 s.push('$');
                 s.push_str(&mangle_ty(a));
@@ -3049,6 +3066,16 @@ pub(crate) fn mangle_ty(t: &Ty) -> String {
     }
 }
 
+/// **DN-112 §7 caveat** (Rank 1 / M-1036): normalize a nodule-qualified `Ty::Data` identity's
+/// separators into `mangle_ty`/`mangle_decl`-safe fragments — `::` (between home and bare name) and
+/// `.` (inside a dotted nodule-path home, e.g. `"a.b::T"`) are each replaced with a `$`-joined,
+/// non-identifier-colliding marker. Neither `::` nor `.` is a legal Mycelium surface-identifier
+/// character, so this substitution can never collide with a real (unqualified) name — a no-op for
+/// every existing single-nodule/prelude-home program (byte-for-byte unchanged mangling).
+fn mangle_safe_name(n: &str) -> String {
+    n.replace("::", "$H$").replace('.', "$P$")
+}
+
 /// The scalar tag used inside [`mangle_ty`] (`F16`/`BF16`/`F32`/`F64`).
 fn scalar_tag(s: Scalar) -> &'static str {
     match s {
@@ -3060,13 +3087,16 @@ fn scalar_tag(s: Scalar) -> &'static str {
 }
 
 /// Mangle a declaration name (fn or data type) at concrete type arguments: `name` + `"$" + mangle_ty`
-/// per argument. **Empty `targs` ⇒ the original name, byte-for-byte** — so monomorphic code and
-/// non-generic programs are untouched.
+/// per argument. **Empty `targs` ⇒ the original (separator-normalized) name** — so a monomorphic,
+/// non-generic, single-nodule/prelude-home program is byte-for-byte unchanged (`mangle_safe_name` is
+/// a no-op absent `::`/`.`; DN-112 §7). A `name` fed in here may be a nodule-qualified `Ty::Data`
+/// identity (Rank 1 / M-1036), so the separator normalization applies even at zero arity — a
+/// qualified data type's mangled/registered name must be identifier-safe regardless of genericity.
 pub(crate) fn mangle_decl(name: &str, targs: &[Ty]) -> String {
     if targs.is_empty() {
-        return name.to_owned();
+        return mangle_safe_name(name);
     }
-    let mut s = name.to_owned();
+    let mut s = mangle_safe_name(name);
     for t in targs {
         s.push('$');
         s.push_str(&mangle_ty(t));
@@ -3130,7 +3160,11 @@ pub(crate) fn mangle_ty_in_ty(t: &Ty) -> Ty {
         // RFC-0032 D3: mangle the element type (it may carry a mono'd applied data type), keeping the
         // sequence structure; primitive element reprs pass through unchanged.
         Ty::Seq(elem, n) => Ty::Seq(Box::new(mangle_ty_in_ty(elem)), *n),
-        Ty::Data(_, args) if args.is_empty() => t.clone(),
+        // DN-112 §7 (Rank 1 / M-1036): a nullary data type's "already mangled" passthrough must
+        // stay in sync with `mangle_decl`'s separator normalization (`emit_data` registers this
+        // same type's entry under `mangle_decl(name, [])` = `mangle_safe_name(name)`) — otherwise a
+        // nodule-qualified nullary type's field references and its own registered key diverge.
+        Ty::Data(n, args) if args.is_empty() => Ty::Data(mangle_safe_name(n), vec![]),
         Ty::Data(_, _) => Ty::Data(mangle_ty(t), vec![]),
         Ty::Var(v) => Ty::Var(v.clone()), // defended against earlier; pass through if it ever appears
         // RFC-0024 §4 / M-687: function types pass through un-mangled; the defunctionalization
@@ -3218,7 +3252,12 @@ pub(crate) fn ty_to_ref(t: &Ty) -> TypeRef {
         // ADR-040 (M-897): the nullary scalar-float repr round-trips like `Bytes`.
         Ty::Float => BaseType::Float,
         // A mono'd data type is nullary (its arguments are baked into its mangled name).
-        Ty::Data(n, args) if args.is_empty() => BaseType::Named(n.clone(), vec![]),
+        // DN-112 §7 (Rank 1 / M-1036): `n` may be nodule-qualified and not yet separator-normalized
+        // (some callers hand `ty_to_ref` a `concrete_ty` result that never ran through
+        // `mangle_ty_in_ty`) — normalize here too, so this arm's own "nullary ⇒ already its mangled
+        // form" invariant holds regardless of caller discipline (defensive, matching
+        // `mangle_ty_in_ty`'s identical fix; a no-op for every unqualified/pre-fix name).
+        Ty::Data(n, args) if args.is_empty() => BaseType::Named(mangle_safe_name(n), vec![]),
         Ty::Data(_, _) => BaseType::Named(mangle_ty(t), vec![]),
         Ty::Var(v) => BaseType::Named(format!("VAR_{v}"), vec![]),
         // RFC-0024 §4 / M-687: function types in rewritten fn-decl positions; defunctionalization

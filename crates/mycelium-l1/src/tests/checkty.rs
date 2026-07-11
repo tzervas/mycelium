@@ -814,6 +814,7 @@ fn register_handle_wrapping_substrate(e: &mut Env) {
     e.types.insert(
         "Handle".to_owned(),
         DataInfo {
+            home: String::new(), // DN-112/M-1036: test fixture, unqualified/bare identity
             name: "Handle".to_owned(),
             params: vec![],
             ctors: vec![CtorInfo {
@@ -961,6 +962,7 @@ fn stage3_composite_non_affine_data_value_param_still_accepted() {
     e.types.insert(
         "Handle2".to_owned(),
         DataInfo {
+            home: String::new(), // DN-112/M-1036: test fixture, unqualified/bare identity
             name: "Handle2".to_owned(),
             params: vec![],
             ctors: vec![CtorInfo {
@@ -1003,6 +1005,7 @@ fn stage3_recursive_non_affine_data_terminates_and_accepts() {
     e.types.insert(
         "Ring".to_owned(),
         DataInfo {
+            home: String::new(), // DN-112/M-1036: test fixture, unqualified/bare identity
             name: "Ring".to_owned(),
             params: vec![],
             ctors: vec![
@@ -1338,6 +1341,101 @@ fn empty_list_literal_without_context_is_refused() {
             || err.message.contains("element type")
             || err.message.contains("Seq"),
         "expected undetermined-element-type error for empty `[]`, got: {}",
+        err.message
+    );
+}
+
+// ---------------------------------------------------------------------------------------------
+// DN-112 Rank 1 / M-1036 — the nodule-qualified type-identity helpers themselves (white-box unit
+// tests; the end-to-end integration witnesses live in `tests/ctor_seal.rs`, which cannot reach
+// these `pub(crate)` helpers directly).
+// ---------------------------------------------------------------------------------------------
+
+#[test]
+fn qualify_type_name_qualifies_a_real_home_and_stays_bare_for_prelude_or_empty() {
+    assert_eq!(qualify_type_name("a", "T"), "a::T");
+    assert_eq!(qualify_type_name("a.b", "T"), "a.b::T");
+    // The reserved/single-home exemption (DN-112 §9 invariant i): PRELUDE_HOME never qualifies.
+    assert_eq!(qualify_type_name(PRELUDE_HOME, "Bool"), "Bool");
+    // An empty (path-less/anonymous nodule) home also stays bare (the documented narrow residual —
+    // see `nodule_home`'s doc comment).
+    assert_eq!(qualify_type_name("", "T"), "T");
+}
+
+#[test]
+fn ty_local_name_strips_exactly_the_last_qualifier_segment() {
+    assert_eq!(ty_local_name("a::T"), "T");
+    assert_eq!(ty_local_name("a.b::T"), "T");
+    // Unqualified input is returned unchanged (the common, single-nodule case — a pure passthrough).
+    assert_eq!(ty_local_name("T"), "T");
+    assert_eq!(ty_local_name("Bool"), "Bool");
+}
+
+#[test]
+fn qualify_then_ty_local_name_round_trips_for_any_real_home() {
+    // The pair is a round-trip inverse for any non-reserved, non-empty home — the invariant
+    // `resolve_ty`'s stamping site relies on (`ty_local_name(name)` before re-qualifying, so a
+    // round-trip through an already-qualified name never double-qualifies).
+    for (home, bare) in [("a", "T"), ("a.b.c", "Widget"), ("solo_nodule", "X")] {
+        let qualified = qualify_type_name(home, bare);
+        assert_eq!(ty_local_name(&qualified), bare);
+    }
+}
+
+#[test]
+fn lookup_data_finds_a_bare_key_directly_and_a_qualified_name_via_local_fallback() {
+    let mut types: BTreeMap<String, DataInfo> = BTreeMap::new();
+    types.insert(
+        "T".to_owned(),
+        DataInfo {
+            name: "T".to_owned(),
+            home: "a".to_owned(),
+            params: vec![],
+            ctors: vec![],
+        },
+    );
+    // The exact (bare) key — the surface-resolution common case.
+    assert!(lookup_data(&types, "T").is_some());
+    // A qualified name falls back to its local part (the post-check consumer case —
+    // `crate::mono`/`crate::elab`/`crate::decision`/`crate::usefulness`).
+    assert!(lookup_data(&types, "a::T").is_some());
+    assert_eq!(lookup_data(&types, "a::T").unwrap().home, "a");
+    // A genuinely unknown name (exact AND local-fallback both miss) is `None` — never a guess.
+    assert!(lookup_data(&types, "b::U").is_none());
+    assert!(lookup_data(&types, "U").is_none());
+}
+
+#[test]
+fn nodule_home_joins_a_dotted_path_and_is_empty_for_a_path_less_nodule() {
+    assert_eq!(nodule_home(&crate::ast::Path(vec!["a".to_owned()])), "a");
+    assert_eq!(
+        nodule_home(&crate::ast::Path(vec!["a".to_owned(), "b".to_owned()])),
+        "a.b"
+    );
+    assert_eq!(nodule_home(&crate::ast::Path(vec![])), "");
+}
+
+/// **DN-112 Rank 1 / M-1036 — the seal becomes real.** A minimal, direct check of the exploit
+/// program's core shape at the `check_nodule`/`Env` level (the fuller cross-nodule differential
+/// lives in `tests/ctor_seal.rs`): two nodules each declaring a same-named `T`, with a value of
+/// one home's `T` passed where the other home's `T` is expected, is a type mismatch naming both
+/// qualified identities — never a silent same-bare-name pass.
+#[test]
+fn cross_nodule_same_bare_name_types_are_distinct_in_a_checked_signature() {
+    let src = "phylum p\n\
+               nodule a;\n\
+               pub type T = Mk(Binary{8});\n\
+               pub fn take(x: T) => Binary{8} = match x { Mk(v) => v };\n\
+               nodule b;\n\
+               use a.take;\n\
+               type T = Mk(Binary{8});\n\
+               fn make() => T = Mk(0b0000_0000);\n\
+               pub fn bad() => Binary{8} = take(make());";
+    let ph = crate::parse::parse_phylum(src).expect("parses as a phylum");
+    let err = check_phylum(&ph).expect_err("a::T and b::T must not unify");
+    assert!(
+        err.message.contains("a::T") && err.message.contains("b::T"),
+        "the mismatch names BOTH qualified identities; got: {}",
         err.message
     );
 }

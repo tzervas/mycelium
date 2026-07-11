@@ -1884,7 +1884,13 @@ impl<'e> Evaluator<'e> {
         let mut elem = None;
         let mut rest = None;
         for (f, v) in d.ctors[ci].fields.iter().zip(fields.iter()) {
-            if matches!(f, crate::checkty::Ty::Data(n, _) if *n == *ty) {
+            // DN-112 Rank 1 / M-1036: `n` (the declared field type, from `resolve_ty`) may be
+            // nodule-qualified, but `ty` (the runtime value's type tag) is always bare/local (every
+            // `L1Value::Data` construction site stamps it from `DataInfo::name`, unqualified) —
+            // compare `n`'s local part.
+            if matches!(f, crate::checkty::Ty::Data(n, _)
+                if crate::checkty::ty_local_name(n) == ty.as_str())
+            {
                 rest = Some(v.clone());
             } else {
                 elem = Some(v.clone());

@@ -317,6 +317,7 @@ fn encode_binds(binds: &[(String, Ty, Vec<usize>)]) -> String {
 // Small fixture constructors.
 fn di(name: &str, params: &[&str], ctors: Vec<(&str, Vec<Ty>)>) -> DataInfo {
     DataInfo {
+        home: String::new(), // DN-112/M-1036: test fixture, unqualified/bare identity
         name: name.to_owned(),
         params: params.iter().map(|p| (*p).to_owned()).collect(),
         ctors: ctors
