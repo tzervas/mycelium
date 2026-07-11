@@ -880,10 +880,10 @@
 | `mycelium_l1::checkty::PhylumEnv::single` | fn | `crates/mycelium-l1/src/checkty.rs:1042` | The single nodule's [`Env`] when this is a phylum-of-one, else `None`. |
 | `mycelium_l1::checkty::TraitInfo` | struct | `crates/mycelium-l1/src/checkty.rs:264` | A registered **trait** (RFC-0019 §4.2; LR-2). |
 | `mycelium_l1::checkty::Width` | enum | `crates/mycelium-l1/src/checkty.rs:59` | A width argument in a [`Ty::Binary`] or [`Ty::Ternary`] — either a concrete literal or an |
-| `mycelium_l1::checkty::prim_kernel_name` | fn | `crates/mycelium-l1/src/checkty.rs:8664` | The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1). |
-| `mycelium_l1::checkty::prim_sig` | fn | `crates/mycelium-l1/src/checkty.rs:8613` | The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic. |
+| `mycelium_l1::checkty::prim_kernel_name` | fn | `crates/mycelium-l1/src/checkty.rs:9036` | The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1). |
+| `mycelium_l1::checkty::prim_sig` | fn | `crates/mycelium-l1/src/checkty.rs:8985` | The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic. |
 | `mycelium_l1::checkty::type_head` | fn | `crates/mycelium-l1/src/checkty.rs:296` | The **coherence key** of a type (RFC-0019 §4.5): the head a `(trait, type-head)` instance key is |
-| `mycelium_l1::checkty::vsa_kernel_model_id` | fn | `crates/mycelium-l1/src/checkty.rs:8654` | Canonicalize a surface VSA model ident to the **kernel model id** (`Repr::Vsa { model }` — |
+| `mycelium_l1::checkty::vsa_kernel_model_id` | fn | `crates/mycelium-l1/src/checkty.rs:9026` | Canonicalize a surface VSA model ident to the **kernel model id** (`Repr::Vsa { model }` — |
 | `mycelium_l1::elab` | mod | `crates/mycelium-l1/src/lib.rs:45` | — |
 | `mycelium_l1::elab::build_registry` | fn | `crates/mycelium-l1/src/elab.rs:1377` | Build the content-addressed data registry `Σ` (RFC-0001 §4.3 r3) from the checked environment's |
 | `mycelium_l1::elab::lit_value` | fn | `crates/mycelium-l1/src/elab.rs:103` | Build the L0 [`Value`] of a representation literal (Q6: a literal *is* its representation — |
