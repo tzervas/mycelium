@@ -110,6 +110,12 @@ pub(crate) trait ExprVisitor {
     fn visit_cast(&mut self, expr: &Expr, _c: &syn::ExprCast) -> Self::Output {
         self.fallback(expr)
     }
+    /// DN-118 Phase 1 (the closure-EMIT pass): a `syn::ExprClosure` (`|a, b| …`). Added alongside
+    /// the pre-existing 17 shapes — a consumer that does not override this still falls through to
+    /// its own `fallback`, exactly like every other never-silent-by-construction shape here.
+    fn visit_closure(&mut self, expr: &Expr, _c: &syn::ExprClosure) -> Self::Output {
+        self.fallback(expr)
+    }
 }
 
 /// The single canonical `syn::Expr` dispatch (see module docs) — every `Expr::*`-matching
@@ -136,6 +142,7 @@ pub(crate) fn walk_expr<V: ExprVisitor + ?Sized>(expr: &Expr, v: &mut V) -> V::O
         Expr::Field(f) => v.visit_field(expr, f),
         Expr::Struct(s) => v.visit_struct(expr, s),
         Expr::Cast(c) => v.visit_cast(expr, c),
+        Expr::Closure(c) => v.visit_closure(expr, c),
         _ => v.fallback(expr),
     }
 }

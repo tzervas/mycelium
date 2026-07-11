@@ -661,6 +661,101 @@ fn cases() -> Vec<Case> {
                 contains: "match s { \"yes\" => True, _ => False }",
             },
         },
+        // ── DN-118 Phase 1 — the closure-EMIT pass (`lambda_expr`) ────────────────────────────────
+        // A move/`Copy`-capture closure (every free var read-only, no mutation signal): Mechanical
+        // per the DN-109 D5/D7 ratchet, auto-emitted as `lambda(params) => body`, captures left as
+        // ordinary in-scope references (mono's whole-program defunctionalization, RFC-0024 §4A,
+        // resolves the capture set — this transpiler never synthesizes an env record). Verified
+        // `myc check`-clean end-to-end (this exact shape) in DN-118 Phase 0's verify-first probe —
+        // the `apply$Fn` synthetic-`Env` gap the facility hit is a *different*, unrelated mechanism
+        // (`elaborate_lower_rule`'s ad-hoc single-function `Env`, `lower`-rule RHS elaboration
+        // only), not a general `myc check`/whole-program limitation.
+        Case {
+            name: "closure_move_copy_capture_emits_lambda",
+            rust: "fn make_masker(n: u16) -> u16 { let f = |x: u16| x & n; f(n) }",
+            expect: Expect::Emitted {
+                item: "make_masker",
+                contains: "let f = lambda(x: Binary{16}) => and(x, n) in f(n)",
+            },
+        },
+        // An untyped closure parameter has no `lambda_expr`'s `Ident ':' type_ref` correspondence
+        // — this transpiler has no type-inference pass to recover an omitted type (VR-5: absence,
+        // never a guess).
+        Case {
+            name: "closure_untyped_param_gapped",
+            rust: "fn f(n: u16) -> u16 { let g = |x| x; g(n) }",
+            expect: Expect::Gapped {
+                category: Category::Closure,
+            },
+        },
+        // VERIFY-FIRST FINDING (mitigation #14): a multi-parameter closure PARSES to a `lambda`
+        // declaration but the L1 checker curries it (RFC-0024 §4A.8/M-822), so an ordinary
+        // multi-arg call site (`f(a, b)`, this transpiler's existing `Expr::Call` emission)
+        // fails `myc check` — confirmed empirically against the real oracle, NOT emitted as a
+        // plausible-but-failing form (G2/VR-5); deferred as a separate, larger call-site-aware
+        // unit of work.
+        Case {
+            name: "closure_multi_param_gapped",
+            rust: "fn combine(a: u16, b: u16) -> u16 { let f = |x: u16, y: u16| and(x, y); \
+                   f(a, b) }",
+            expect: Expect::Gapped {
+                category: Category::Closure,
+            },
+        },
+        // A zero-parameter closure has no v0 `lambda` form (the grammar note on `lambda_expr`).
+        Case {
+            name: "closure_zero_param_gapped",
+            rust: "fn f(n: u16) -> u16 { let g = || n; g() }",
+            expect: Expect::Gapped {
+                category: Category::Closure,
+            },
+        },
+        // The DN-109 D7 safety gate: a captured binding mutated via compound assignment
+        // (`total += x`, the syntactic shape of an `FnMut`-style accumulator capture) is FLAGGED,
+        // never auto-emitted — `syn` carries no borrowck facts, so this cannot be proven
+        // value-safe (mono would otherwise silently snapshot `total`'s value at closure
+        // construction, diverging from the Rust closure's per-call-mutated semantics).
+        Case {
+            name: "closure_fnmut_compound_assign_capture_gapped",
+            rust: "fn f(n: u16) -> u16 { let mut total = 0; let mut g = |x: u16| total += x; \
+                   g(n); total }",
+            expect: Expect::Gapped {
+                category: Category::Closure,
+            },
+        },
+        // The same D7 gate for an explicit `&mut` on a captured binding.
+        Case {
+            name: "closure_fnmut_explicit_mut_ref_capture_gapped",
+            rust: "fn f(n: u16) -> u16 { let mut total = 0; let g = |x: u16| { let r = &mut \
+                   total; x }; g(n) }",
+            expect: Expect::Gapped {
+                category: Category::Closure,
+            },
+        },
+        // The same D7 gate for a captured binding used as a method-call RECEIVER — `syn` cannot
+        // decide `&self` vs `&mut self` from syntax alone, so this is conservatively flagged too
+        // (never auto-emitted on the hope the method happens to be read-only).
+        Case {
+            name: "closure_captured_method_receiver_gapped",
+            rust: "fn f(n: u16) -> u16 { let v = n; let g = |x: u16| v.wrapping_add(x); g(n) }",
+            expect: Expect::Gapped {
+                category: Category::Closure,
+            },
+        },
+        // NEGATIVE control: a closure that mutates a PURELY INTERNAL local (never escapes, never a
+        // capture — bound and mutated entirely within the closure's own body) must NOT be
+        // misclassified as a captured-mutation `Closure` gap. It still gaps (Mycelium's body
+        // grammar has no assignment-statement production at all, `MultiStmtBody`'s pre-existing
+        // semicolon-terminated-statement refusal), but via the ordinary generic path — pinning
+        // that the DN-109 D7 scan does not false-positive on a shadowed/local name.
+        Case {
+            name: "closure_purely_local_mutation_not_misclassified_as_closure_gap",
+            rust: "fn f(n: u16) -> u16 { let g = |x: u16| { let mut acc = 0; acc += x; acc }; \
+                   g(n) }",
+            expect: Expect::Gapped {
+                category: Category::MultiStmtBody,
+            },
+        },
     ]
 }
 
@@ -1057,6 +1152,72 @@ fn binop_operand_gated_forms_check_clean() {
             rec.diagnostic
         );
     }
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// **The DN-118 Phase 1 verify-first live-oracle proof** (mitigation #14): the closure-EMIT pass's
+/// `lambda` output — for a move/`Copy`-capture closure, the `closure_move_copy_capture_emits_lambda`
+/// fixture above — is run through the REAL `myc-check` oracle, WHOLE-NODULE (one file, mirroring the
+/// real driver), not just asserted as a substring match. This is the property the whole Phase 1
+/// closure-EMIT pass exists to prove: the `apply$Fn` synthetic-`Env` gap the facility hit
+/// (`elaborate_lower_rule`'s ad-hoc single-function `Env`, a `lower`-rule-only mechanism, DN-118's
+/// header) is CLOSED here because mono's whole-program defunctionalization (RFC-0024 §4A, M-704)
+/// resolves the generated `apply$Fn$Binary16$Binary16` dispatcher itself when the whole nodule is
+/// checked — exactly as DN-118 Phase 0's standalone verify-first probe (`myc check` + `myc run`
+/// against a hand-written `.myc`) already confirmed. Skips gracefully (never fails) when
+/// `myc-check` is not built.
+#[test]
+fn closure_move_copy_capture_checks_clean() {
+    let Some(bin) = find_myc_check() else {
+        eprintln!(
+            "emit: live oracle test skipped — no runnable myc-check (set MYC_CHECK_CMD or build \
+             `cargo build -p mycelium-check --bin myc-check`). The fixture-corpus text assertion \
+             (`closure_move_copy_capture_emits_lambda`) still covers the emitted shape."
+        );
+        return;
+    };
+
+    let dir = std::env::temp_dir().join(format!(
+        "mycelium-transpile-emit-closure-oracle-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0)
+    ));
+    std::fs::create_dir_all(&dir).expect("temp dir");
+
+    // The move/Copy-capture closure case (`closure_move_copy_capture_emits_lambda`'s Rust source) —
+    // the shape whose transpiled `.myc` must resolve `apply$Fn$Binary16$Binary16` whole-program.
+    let rust = "fn make_masker(n: u16) -> u16 { let f = |x: u16| x & n; f(n) }";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile `{rust}`: {e}"));
+    assert!(
+        !report.emitted_items.is_empty(),
+        "closure case failed to emit at all: gaps={:?}",
+        report.gaps
+    );
+    assert!(
+        report.gaps.is_empty(),
+        "closure case must have zero gaps (the `apply$Fn` gap must be fully closed): {:?}",
+        report.gaps
+    );
+    let path = dir.join("closure_case.myc");
+    std::fs::write(&path, &myc).expect("write closure case .myc");
+
+    let checker = crate::vet::MycChecker {
+        command: vec![bin.display().to_string()],
+        cwd: None,
+    };
+    let rec = checker.vet_file(&path, "fixture.rs", 1, 1);
+    assert_eq!(
+        rec.class,
+        crate::vet::VetClass::Clean,
+        "closure case must check CLEAN with the real myc-check oracle (the apply$Fn dispatcher \
+         must resolve whole-program) — emitted:\n{myc}\ndiagnostic={:?}",
+        rec.diagnostic
+    );
 
     let _ = std::fs::remove_dir_all(&dir);
 }
