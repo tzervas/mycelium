@@ -10,7 +10,7 @@
 //! [`crate::elab::elaborate`] entry point — which now dispatches to the sugar rule through
 //! [`crate::elab::Elab::app`]'s new §5.2 branch, **not** a direct call to the expander.
 //!
-//! # Why the "colliding" argument is elicited, not hand-picked (THE NON-VACUITY LAW)
+//! # Why the "colliding" binder is spelled `"t"`, not the elicited name (THE NON-VACUITY LAW)
 //! Exactly the hazard `facility_stage1_hygiene.rs`'s own module doc names: the real elaborator's
 //! Pass 1 already assigns every `let`/`lambda` binder a fresh, `%`-namespaced kernel name via
 //! [`crate::elab::Elab::fresh`] (unconditionally — the same machinery every elaboration path uses),
@@ -19,14 +19,37 @@
 //! every *independent* top-level elaboration, so two unrelated elaborations — here, `main`'s own
 //! (via [`crate::elab::elaborate`]) and `Swap2`'s RHS expansion (via
 //! [`elaborate_lower_rule_with_args`], invoked mid-way through `main`'s elaboration by
-//! `Elab::app`'s new dispatch) — can each independently mint the identical kernel name (`"t%0"`)
-//! for their own, unrelated binders. So the argument passed for `Swap2`'s `b` parameter is built by
-//! **actually eliciting** the real elaborator's own first-fresh-name choice for a `let t = … in t`
-//! shape ([`fresh_kernel_name_via_real_elaboration`], the identical technique
-//! `facility_stage1_hygiene.rs` uses) — non-vacuous by construction, robust to `Elab::fresh`'s exact
-//! numbering scheme ever changing, and reproduces the realistic "unrelated elaboration happens to
-//! mint the same first fresh name" shape rather than a hand-picked string that happens to look
-//! right.
+//! `Elab::app`'s new dispatch) — can each independently mint the identical kernel name for their
+//! own, unrelated binders, *provided each reaches its first `let` as its instance's first `fresh`
+//! call with the same base spelling*.
+//!
+//! **Adversarial-verify finding (2026-07-11, HIGH — fixed).** An earlier version of this fixture
+//! *elicited* Swap2's RHS's own raw (unfreshened) kernel name via
+//! [`fresh_kernel_name_via_real_elaboration`] (e.g. `"t%0"`) and then reused that **elicited
+//! string** as the *surface spelling* of `main`'s own outer `let`. That is vacuous: `main`'s own
+//! elaboration (a **second**, independent real Pass 1) unconditionally re-freshens *every* `let`
+//! regardless of its surface spelling — `fresh("t%0")` mints a **new**, different name (e.g.
+//! `"t%0%0"`), never `"t%0"` again — so `main`'s outer binder and Swap2's un-freshened-under-
+//! mutation inner binder never actually coincided. The full-chain test therefore passed at
+//! `elaborate_value_parametric_rule_inner`'s production `freshen_binders: true` call site
+//! (`elab.rs:775`) for the wrong reason: flipping it to `false` did **not** change the observed
+//! value, because there was never a real collision to suppress or reproduce.
+//!
+//! **Fixed** by spelling `main`'s own outer `let` with the **same literal base** (`"t"`) Swap2's
+//! RHS uses for its own local binder — *not* an elicited, already-freshened string. Both `main`'s
+//! elaboration and Swap2's RHS Pass 1 are independent, freshly-created [`crate::elab::Elab`]
+//! instances (`fresh`'s counter resets to `0` for each — see [`elaborate_lower_rule_with_args`]'s
+//! doc comment), and this outer `let` is the first binder each of them freshens, so
+//! `fresh("t")` on each instance deterministically mints the **identical** kernel spelling — the
+//! genuine OQ-H5 cross-invocation hazard, not a hand-picked matching string (no assumption about
+//! `Elab::fresh`'s exact numbering *format* is needed, only that it is a deterministic function of
+//! `(instance, base, call order)` — true by construction of [`crate::elab::Elab::fresh`]). This is
+//! verified, not merely argued: [`full_chain_control_disable_freshening_breaks_both_oracles`]'s own
+//! non-vacuity requirement (below) is re-verified against this design by literally flipping
+//! `elab.rs:775`'s `freshen_binders: true` to `false`, confirming
+//! [`full_chain_step2_elaborate_dispatches_and_is_capture_safe`] now genuinely **fails** (reproducing
+//! the captured value, `2`, instead of the hygienic one, `8`), then restoring it and confirming the
+//! test passes again — see that test's own doc comment for the recorded result.
 //!
 //! # The dual non-vacuity oracle (same discipline as E1 / `facility_stage1_hygiene.rs`)
 //! (1) [`alpha_eq`] against an independently hand-built oracle using disjoint binder spellings; (2)
@@ -218,10 +241,14 @@ fn with_main(e: &mut Env, body: Expr) {
     );
 }
 
-/// **Non-vacuity construction** (see the module doc's central point) — identical technique to
+/// **Non-vacuity construction, used only by the raw-`Node`-level disable-freshening control**
+/// (`full_chain_control_disable_freshening_breaks_both_oracles`, below) — identical technique to
 /// `facility_stage1_hygiene.rs`'s helper of the same name: elicit the real elaborator's own
 /// first-fresh-name choice for a `let <base> = … in <base>` shape through the real public nullary
-/// entry point ([`elaborate_lower_rule`]), reading back the kernel variable it minted.
+/// entry point ([`elaborate_lower_rule`]), reading back the kernel variable it minted. **Not** used
+/// to spell `main`'s own outer binder (see the module doc's adversarial-verify finding for why
+/// reusing an *elicited* — already-freshened — string as a *surface* spelling is vacuous: `main`'s
+/// own elaboration would re-freshen it again, never reproducing the elicited name).
 fn fresh_kernel_name_via_real_elaboration(base: &str) -> String {
     let rule_name = format!("Probe{base}");
     let src = format!("nodule d;\nlower {rule_name} = let {base} = 0b00000000 in {base};");
@@ -234,30 +261,32 @@ fn fresh_kernel_name_via_real_elaboration(base: &str) -> String {
 }
 
 /// The shared swap2-classic fixture: `Swap2(a, b) = let t = a in add_s(b, t)`, called as
-/// `let <colliding> = 7 in Swap2(1, <colliding>)` — `<colliding>` is the real elaborator's own
-/// first-fresh-name choice for base `"t"` (see the module doc). Hygienic: the rule's own `t` is
-/// re-freshened under a site-qualified namespace, so `b`'s `7` survives: `add_s(7, 1) = 8`.
-/// Captured (freshening disabled): the rule's `t` keeps its raw (unqualified, but still Pass-1-
-/// fresh) name, which — being the *same* first-fresh-name-for-"t" any independent elaboration
-/// mints — collides with the outer `let <colliding> = 7 in …` binding; both operands then read the
-/// *inner* `1`: `add_s(1, 1) = 2`.
+/// `let t = 7 in Swap2(1, t)` — **`main`'s outer binder is spelled with the same literal base
+/// (`"t"`) Swap2's own RHS-local binder uses** (see the module doc's non-vacuity note: this, not an
+/// already-freshened elicited string, is what makes the two independent elaborations' first-fresh
+/// choices genuinely coincide). Hygienic: the rule's own `t` is re-freshened under a
+/// site-qualified namespace, so `b`'s `7` survives: `add_s(7, 1) = 8`. Captured (freshening
+/// disabled): the rule's `t` keeps its raw (unqualified, but still Pass-1-fresh) name, which — being
+/// the *same* first-fresh-name-for-`"t"` `main`'s own independent elaboration also mints for its
+/// outer binder — collides with it; both operands then read the *inner* `1`: `add_s(1, 1) = 2`.
 struct Swap2Fixture {
-    colliding: String,
     rhs: Expr,
     main_body: Expr,
+    /// Swap2's RHS's own raw (unfreshened) kernel id for its local `t` — elicited independently
+    /// (see [`fresh_kernel_name_via_real_elaboration`]), used only by the raw-`Node`-level
+    /// disable-freshening control below (which bypasses surface elaboration for `main`'s side
+    /// entirely, so needs the raw id spelled out explicitly rather than relying on `main`'s own
+    /// elaboration to reproduce it).
+    raw_rhs_binder: String,
     oracle: Node,
     expected_hygienic: i64,
     expected_captured: i64,
 }
 
 fn swap2_fixture() -> Swap2Fixture {
-    let colliding = fresh_kernel_name_via_real_elaboration("t");
+    let raw_rhs_binder = fresh_kernel_name_via_real_elaboration("t");
     let rhs = slet("t", sv("a"), sadd(sv("b"), sv("t")));
-    let main_body = slet(
-        &colliding,
-        sc(7),
-        scall("Swap2", vec![sc(1), sv(&colliding)]),
-    );
+    let main_body = slet("t", sc(7), scall("Swap2", vec![sc(1), sv("t")]));
     let oracle = letn(
         "oracle_use_site",
         c(7),
@@ -268,9 +297,9 @@ fn swap2_fixture() -> Swap2Fixture {
         ),
     );
     Swap2Fixture {
-        colliding,
         rhs,
         main_body,
+        raw_rhs_binder,
         oracle,
         expected_hygienic: 8,
         expected_captured: 2,
@@ -288,22 +317,49 @@ fn full_chain_step1_check_accepts() {
     let mut e = base_env();
     let f = swap2_fixture();
     with_rule(&mut e, "Swap2", f.rhs);
-    let call = scall("Swap2", vec![sc(1), sv(&f.colliding)]);
-    // `<colliding>` is free at this bare-call-expression scope (not wrapped in its own `let`
-    // here) — check it in a scope that already binds it, matching how it appears inside `main`.
-    let mut scope = vec![(f.colliding.clone(), Ty::Binary(Width::Lit(8)))];
-    let ty = infer_type(&e, &mut scope, &call)
-        .expect("a recognized, gate-clearing sugar call must be accepted (M-1054 Stage 1b)");
+    // **Finding-3 coupling (adversarial verify, 2026-07-11, MEDIUM — fixed):** check the exact
+    // `main_body` — `let t = 7 in Swap2(1, t)` — that
+    // `full_chain_step2_elaborate_dispatches_and_is_capture_safe` (below) then elaborates, via the
+    // same top-level check entry (`infer_type` with an empty starting scope, exactly as `main`'s
+    // own nullary body would be checked), rather than a hand-scoped bare call built independently
+    // of `main_body`. This proves check-accept and correct-elab hold on the **same program**, so a
+    // future step1/step2 fixture desync (one checking a variant the other never elaborates, or vice
+    // versa) is caught rather than silently possible.
+    let ty = infer_type(&e, &mut Vec::new(), &f.main_body)
+        .expect("a recognized, gate-clearing sugar call — reached from `main`'s own body — must be accepted (M-1054 Stage 1b)");
     assert_eq!(ty, Ty::Binary(Width::Lit(8)));
 }
 
 /// **(2)+(3) ordinary `elaborate` expands (the new §5.2 `Elab::app` dispatch, not a direct
 /// expander call) and the result is capture-safe via two independent oracles.**
+///
+/// **Also re-checks `main_body` itself** (Finding-3 coupling — see
+/// `full_chain_step1_check_accepts`'s own comment): this single test both types and elaborates the
+/// identical `main_body`, so it is on its own sufficient evidence that a program the checker
+/// accepts also elaborates correctly via the §5.2 path.
+///
+/// **Non-vacuity, verified by mutation (2026-07-11):** with `elab.rs:775`'s
+/// `elaborate_value_parametric_rule_inner(env, rule_name, rhs_expr, matched, true)` temporarily
+/// flipped to `false` (production freshening off), this test was confirmed to **fail** —
+/// `as_i64(&observed)` reproduces the captured value `2`, not the hygienic `8`, and `alpha_eq`
+/// against `f.oracle` fails — because `main`'s own outer `t` binder and Swap2's un-freshened RHS
+/// `t` binder now genuinely collide (see the module doc's non-vacuity note for why `main_body`'s
+/// outer binder is spelled with the literal base `"t"`, not an already-freshened elicited string).
+/// Restoring the flip to `true` makes it pass again. This discriminates a broken freshening wire —
+/// the earlier fixture (which reused an elicited, already-freshened string as `main`'s own surface
+/// spelling) did not: flipping the same call site left this test passing either way, because
+/// `main`'s second, independent Pass 1 re-freshened that string before it could ever collide.
 #[test]
 fn full_chain_step2_elaborate_dispatches_and_is_capture_safe() {
     let mut e = base_env();
     let f = swap2_fixture();
     with_rule(&mut e, "Swap2", f.rhs);
+
+    // Check the exact program before elaborating it (Finding-3 coupling).
+    let checked_ty = infer_type(&e, &mut Vec::new(), &f.main_body)
+        .expect("`main_body` must be checker-accepted before this test elaborates it");
+    assert_eq!(checked_ty, Ty::Binary(Width::Lit(8)));
+
     with_main(&mut e, f.main_body);
 
     let elaborated = elaborate(&e, "main")
@@ -341,7 +397,7 @@ fn full_chain_control_disable_freshening_breaks_both_oracles() {
     let f = swap2_fixture();
     with_rule(&mut e, "Swap2", f.rhs.clone());
 
-    let args = [c(1), v(&f.colliding)];
+    let args = [c(1), v(&f.raw_rhs_binder)];
     let disabled = elaborate_value_parametric_rule_disable_freshening_for_test(
         &e,
         "Swap2",
@@ -349,7 +405,7 @@ fn full_chain_control_disable_freshening_breaks_both_oracles() {
         &[("a", &args[0]), ("b", &args[1])],
     )
     .expect("the negative control must still expand (only freshening is disabled)");
-    let wrapped = letn(&f.colliding, c(7), disabled);
+    let wrapped = letn(&f.raw_rhs_binder, c(7), disabled);
 
     let interp = Interpreter::default();
     let observed = interp
