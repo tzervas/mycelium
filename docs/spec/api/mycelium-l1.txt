@@ -607,6 +607,7 @@ pub struct mycelium_l1::ast::LowerDecl
 pub mycelium_l1::ast::LowerDecl::name: alloc::string::String
 pub mycelium_l1::ast::LowerDecl::params: alloc::vec::Vec<alloc::string::String>
 pub mycelium_l1::ast::LowerDecl::rhs: mycelium_l1::ast::LowerRhs
+pub mycelium_l1::ast::LowerDecl::value_params: alloc::vec::Vec<mycelium_l1::ast::Param>
 impl mycelium_l1::ast::LowerDecl
 pub fn mycelium_l1::ast::LowerDecl::expr_rhs(&self) -> core::option::Option<&mycelium_l1::ast::Expr>
 pub fn mycelium_l1::ast::LowerDecl::impl_rhs(&self) -> core::option::Option<&mycelium_l1::ast::ImplDecl>
@@ -1084,6 +1085,7 @@ pub fn mycelium_l1::elab::elaborate(&mycelium_l1::checkty::Env, &str) -> core::r
 pub fn mycelium_l1::elab::elaborate_colony(&mycelium_l1::checkty::Env, &str) -> core::result::Result<alloc::vec::Vec<mycelium_core::node::Node>, mycelium_l1::elab::ElabError>
 pub fn mycelium_l1::elab::elaborate_direct(&mycelium_l1::checkty::Env, &str) -> core::result::Result<mycelium_core::node::Node, mycelium_l1::elab::ElabError>
 pub fn mycelium_l1::elab::elaborate_lower_rule(&mycelium_l1::checkty::Env, &str) -> core::result::Result<mycelium_core::node::Node, mycelium_l1::elab::ElabError>
+pub fn mycelium_l1::elab::elaborate_lower_rule_with_args(&mycelium_l1::checkty::Env, &str, &[mycelium_core::node::Node]) -> core::result::Result<mycelium_core::node::Node, mycelium_l1::elab::ElabError>
 pub fn mycelium_l1::elab::elaborate_reclaim(&mycelium_l1::checkty::Env, &str) -> core::result::Result<(mycelium_core::node::Node, mycelium_core::node::Node), mycelium_l1::elab::ElabError>
 pub fn mycelium_l1::elab::lit_value(&str, &mycelium_l1::ast::Literal) -> core::result::Result<mycelium_core::value::Value, mycelium_l1::elab::ElabError>
 pub fn mycelium_l1::elab::policy_name_ref(&mycelium_l1::ast::Path) -> mycelium_core::node::PolicyRef
@@ -1464,6 +1466,25 @@ pub mod mycelium_l1::parse
 pub fn mycelium_l1::parse::parse(&str) -> core::result::Result<mycelium_l1::ast::Nodule, mycelium_l1::error::ParseError>
 pub fn mycelium_l1::parse::parse_phylum(&str) -> core::result::Result<mycelium_l1::ast::Phylum, mycelium_l1::error::ParseError>
 pub mod mycelium_l1::reveal
+pub enum mycelium_l1::reveal::L0Witness
+pub mycelium_l1::reveal::L0Witness::Closed
+pub mycelium_l1::reveal::L0Witness::ClosedButNotAlphaEq
+pub mycelium_l1::reveal::L0Witness::Refused(mycelium_l1::reveal::RevealError)
+impl core::clone::Clone for mycelium_l1::reveal::L0Witness
+pub fn mycelium_l1::reveal::L0Witness::clone(&self) -> mycelium_l1::reveal::L0Witness
+impl core::cmp::Eq for mycelium_l1::reveal::L0Witness
+impl core::cmp::PartialEq for mycelium_l1::reveal::L0Witness
+pub fn mycelium_l1::reveal::L0Witness::eq(&self, &mycelium_l1::reveal::L0Witness) -> bool
+impl core::fmt::Debug for mycelium_l1::reveal::L0Witness
+pub fn mycelium_l1::reveal::L0Witness::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::reveal::L0Witness
+impl core::marker::Freeze for mycelium_l1::reveal::L0Witness
+impl core::marker::Send for mycelium_l1::reveal::L0Witness
+impl core::marker::Sync for mycelium_l1::reveal::L0Witness
+impl core::marker::Unpin for mycelium_l1::reveal::L0Witness
+impl core::marker::UnsafeUnpin for mycelium_l1::reveal::L0Witness
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::reveal::L0Witness
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::reveal::L0Witness
 pub enum mycelium_l1::reveal::RenderError
 pub mycelium_l1::reveal::RenderError::DepthExceeded(mycelium_l1::totality::WalkDepthExceeded)
 pub mycelium_l1::reveal::RenderError::Unrenderable
@@ -1509,6 +1530,52 @@ impl core::marker::Unpin for mycelium_l1::reveal::RevealError
 impl core::marker::UnsafeUnpin for mycelium_l1::reveal::RevealError
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::reveal::RevealError
 impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::reveal::RevealError
+pub enum mycelium_l1::reveal::SurfaceOutcome
+pub mycelium_l1::reveal::SurfaceOutcome::AlphaMismatch
+pub mycelium_l1::reveal::SurfaceOutcome::AlphaMismatch::text: alloc::string::String
+pub mycelium_l1::reveal::SurfaceOutcome::Ok
+pub mycelium_l1::reveal::SurfaceOutcome::Ok::text: alloc::string::String
+pub mycelium_l1::reveal::SurfaceOutcome::OutOfContract
+pub mycelium_l1::reveal::SurfaceOutcome::OutOfContract::text: alloc::string::String
+pub mycelium_l1::reveal::SurfaceOutcome::RenderFailed(alloc::string::String)
+pub mycelium_l1::reveal::SurfaceOutcome::ReparseFailed
+pub mycelium_l1::reveal::SurfaceOutcome::ReparseFailed::reason: alloc::string::String
+pub mycelium_l1::reveal::SurfaceOutcome::ReparseFailed::text: alloc::string::String
+impl core::clone::Clone for mycelium_l1::reveal::SurfaceOutcome
+pub fn mycelium_l1::reveal::SurfaceOutcome::clone(&self) -> mycelium_l1::reveal::SurfaceOutcome
+impl core::cmp::Eq for mycelium_l1::reveal::SurfaceOutcome
+impl core::cmp::PartialEq for mycelium_l1::reveal::SurfaceOutcome
+pub fn mycelium_l1::reveal::SurfaceOutcome::eq(&self, &mycelium_l1::reveal::SurfaceOutcome) -> bool
+impl core::fmt::Debug for mycelium_l1::reveal::SurfaceOutcome
+pub fn mycelium_l1::reveal::SurfaceOutcome::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::reveal::SurfaceOutcome
+impl core::marker::Freeze for mycelium_l1::reveal::SurfaceOutcome
+impl core::marker::Send for mycelium_l1::reveal::SurfaceOutcome
+impl core::marker::Sync for mycelium_l1::reveal::SurfaceOutcome
+impl core::marker::Unpin for mycelium_l1::reveal::SurfaceOutcome
+impl core::marker::UnsafeUnpin for mycelium_l1::reveal::SurfaceOutcome
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::reveal::SurfaceOutcome
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::reveal::SurfaceOutcome
+pub struct mycelium_l1::reveal::CertVerdict
+pub mycelium_l1::reveal::CertVerdict::l0: mycelium_l1::reveal::L0Witness
+pub mycelium_l1::reveal::CertVerdict::surface: mycelium_l1::reveal::SurfaceOutcome
+impl mycelium_l1::reveal::CertVerdict
+pub fn mycelium_l1::reveal::CertVerdict::l0_witness_holds(&self) -> bool
+impl core::clone::Clone for mycelium_l1::reveal::CertVerdict
+pub fn mycelium_l1::reveal::CertVerdict::clone(&self) -> mycelium_l1::reveal::CertVerdict
+impl core::cmp::Eq for mycelium_l1::reveal::CertVerdict
+impl core::cmp::PartialEq for mycelium_l1::reveal::CertVerdict
+pub fn mycelium_l1::reveal::CertVerdict::eq(&self, &mycelium_l1::reveal::CertVerdict) -> bool
+impl core::fmt::Debug for mycelium_l1::reveal::CertVerdict
+pub fn mycelium_l1::reveal::CertVerdict::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::reveal::CertVerdict
+impl core::marker::Freeze for mycelium_l1::reveal::CertVerdict
+impl core::marker::Send for mycelium_l1::reveal::CertVerdict
+impl core::marker::Sync for mycelium_l1::reveal::CertVerdict
+impl core::marker::Unpin for mycelium_l1::reveal::CertVerdict
+impl core::marker::UnsafeUnpin for mycelium_l1::reveal::CertVerdict
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::reveal::CertVerdict
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::reveal::CertVerdict
 pub struct mycelium_l1::reveal::Rendered
 pub mycelium_l1::reveal::Rendered::reparseable: bool
 pub mycelium_l1::reveal::Rendered::text: alloc::string::String
@@ -1528,6 +1595,7 @@ impl core::marker::UnsafeUnpin for mycelium_l1::reveal::Rendered
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::reveal::Rendered
 impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::reveal::Rendered
 pub fn mycelium_l1::reveal::alpha_eq(&mycelium_core::node::Node, &mycelium_core::node::Node) -> bool
+pub fn mycelium_l1::reveal::certified_roundtrip(&mycelium_core::node::Node, &str) -> mycelium_l1::reveal::CertVerdict
 pub fn mycelium_l1::reveal::reelaborate(&mycelium_core::node::Node) -> core::result::Result<mycelium_core::node::Node, mycelium_l1::reveal::RevealError>
 pub fn mycelium_l1::reveal::render_surface(&mycelium_core::node::Node) -> core::result::Result<mycelium_l1::reveal::Rendered, mycelium_l1::reveal::RenderError>
 pub fn mycelium_l1::reveal::reveal_l0(&mycelium_l1::checkty::Env, &str) -> core::result::Result<mycelium_core::node::Node, mycelium_l1::reveal::RevealError>
@@ -2552,6 +2620,7 @@ pub fn mycelium_l1::elaborate(&mycelium_l1::checkty::Env, &str) -> core::result:
 pub fn mycelium_l1::elaborate_colony(&mycelium_l1::checkty::Env, &str) -> core::result::Result<alloc::vec::Vec<mycelium_core::node::Node>, mycelium_l1::elab::ElabError>
 pub fn mycelium_l1::elaborate_direct(&mycelium_l1::checkty::Env, &str) -> core::result::Result<mycelium_core::node::Node, mycelium_l1::elab::ElabError>
 pub fn mycelium_l1::elaborate_lower_rule(&mycelium_l1::checkty::Env, &str) -> core::result::Result<mycelium_core::node::Node, mycelium_l1::elab::ElabError>
+pub fn mycelium_l1::elaborate_lower_rule_with_args(&mycelium_l1::checkty::Env, &str, &[mycelium_core::node::Node]) -> core::result::Result<mycelium_core::node::Node, mycelium_l1::elab::ElabError>
 pub fn mycelium_l1::elaborate_reclaim(&mycelium_l1::checkty::Env, &str) -> core::result::Result<(mycelium_core::node::Node, mycelium_core::node::Node), mycelium_l1::elab::ElabError>
 pub fn mycelium_l1::expand_phylum_to_source(&mycelium_l1::ast::Phylum) -> alloc::string::String
 pub fn mycelium_l1::expand_to_source(&mycelium_l1::ast::Nodule) -> alloc::string::String

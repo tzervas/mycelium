@@ -30,14 +30,23 @@
 # separately below (`glyph_sugars` / `not_lexed_sugars`) so DN-38/DN-102's documented sugars are
 # still represented, honestly scoped out of the keyword-driven drift guard.
 #
-# DEFERRED (do not invent values): a `native_strategy` column (Native Equivalent / Idiomatic
-# Remapping / Approximation / Interop Bridge — DN-111's now-ratified canonical taxonomy, with the
-# original Adaptation/Solution/Approximation/Bridge handles retained as aliases; DN-109 supplies
-# the orthogonal decidability axis) is NOT added here. The taxonomy itself is settled (DN-111,
-# Accepted 2026-07-10) but classifying each of this file's 45 rows against it is deferred, bounded
-# follow-up work — not invented per-row here (VR-5).
-# TODO(DN-111): native_strategy column — populate against the ratified DN-111 enum (tracked as a
-# residual note on M-1058; see tools/github/issues.yaml).
+# `native_strategy` column (M-1058 follow-up, populated 2026-07-10 via /native-translate against
+# the ratified DN-111 taxonomy — NativeEquivalent | IdiomaticRemapping | Approximation |
+# InteropBridge; DN-110's Adaptation/Solution/Approximation/Bridge handles are permanent aliases).
+# Classified against the INTRA-Mycelium relationship: does this row's `keyword` map directly/
+# structure-preservingly onto its `lowering_target` (NativeEquivalent — the target is an internal
+# L0/elaboration detail with no competing named surface form, e.g. `swap` IS the L0 form), or does
+# it re-express into OTHER already-named sugar.yaml surface keywords (IdiomaticRemapping — e.g.
+# `object` -> `type`+`impl`+`via`), or does the mapping carry an explicit, honestly-flagged
+# capability residue (Approximation — e.g. `lambda`'s deferred capture semantics)? Per DN-111 §6,
+# the relationship axis is ORTHOGONAL to checkedness/decidability: a row whose `build_status` is
+# `Declared`/`Empirical` because its CHECKER (not its mapping) is incomplete (e.g. `trait`'s
+# not-machine-checked coherence, `consume`'s unbuilt affine tracker) stays classified by what the
+# construct's relationship IS, not by how well its enforcement is verified — that's `build_status`'s
+# job. A row with NO landed L1 construct yet (`build_status: Gap`) or that is deliberately
+# non-functional (`grow`, superseded) is marked `unclassified  # needs-review` rather than forced
+# into a bucket — there is no mapping yet to classify (VR-5: never fabricate a confident
+# classification). See `.claude/skills/native-translate/SKILL.md` for the procedure used.
 #
 # `build_status` values: Exact | Proven | Empirical | Declared | Gap (VR-5 lattice, `Gap` added
 # for "documented but genuinely unbuilt/reserved" — the same use DN-38 §6 makes of the word).
@@ -51,6 +60,7 @@ sugars:
     grammar_rule: "ebnf:object_item (mycelium.ebnf:190); token.rs:458"
     lowering_target: "type + impl + via (checkty.rs Phase 0 structural expansion + Phase 0b via-forwarding impl generation)"
     defining_doc: DN-53
+    native_strategy: IdiomaticRemapping  # re-expresses into OTHER named surface keywords (type+impl+via); exact per the M-811 three-way differential (DN-111 §4.1 Q2a=reformed)
     build_status: Empirical
     note: >
       M-811 landed; three-way differential (observe(object) == observe(lower(object))) in
@@ -61,6 +71,7 @@ sugars:
     grammar_rule: "ebnf:via_clause (mycelium.ebnf:192); token.rs:461"
     lowering_target: "generated forwarding impl (delegates to a held field by index; not subtype inheritance)"
     defining_doc: DN-53
+    native_strategy: IdiomaticRemapping  # part of the object family (DN-53) — re-expresses into a generated impl, not `via` itself
     build_status: Empirical
     note: "Active only inside object bodies; reserved everywhere else (never-silent — G2)."
 
@@ -69,6 +80,7 @@ sugars:
     grammar_rule: "ebnf:lower_item (mycelium.ebnf:203); token.rs:462"
     lowering_target: "declares a user-extensible generative-lowering rule; RHS elaborated to L0 (KC-3 kernel-growth guard: existing L0 nodes only)"
     defining_doc: DN-54
+    native_strategy: NativeEquivalent  # the J1 macro-role exemplar: Mycelium's direct, first-class answer to "generate a structural operation for a type" (DN-111 §5.1 J1)
     build_status: Empirical
     note: >
       M-812 + M-812-cont landed (RHS elaboration, IL-grammar RHS type-check, KC-3 guard,
@@ -80,6 +92,7 @@ sugars:
     grammar_rule: "ebnf:derive_item (mycelium.ebnf:204); token.rs:464"
     lowering_target: "applies a registered `lower` rule at a use site; a nameable, content-addressed (hash-deduped) L0 artifact"
     defining_doc: "DN-54; DN-38 §8.1 (naming settled: `derive` over `grow`)"
+    native_strategy: NativeEquivalent  # companion to `lower` in the J1 macro-role exemplar (DN-111 §5.1 J1)
     build_status: Empirical
     note: "Settles the grow -> derive reconciliation (DN-38 §8.1); `grow` is now a rejected/superseded token (see reserved rows)."
 
@@ -88,6 +101,7 @@ sugars:
     grammar_rule: "ebnf:consume_expr (mycelium.ebnf:328); token.rs:452"
     lowering_target: "affine acquisition of a Substrate value (LR-8); v0 elaborates to a never-silent Residual"
     defining_doc: "DN-03 §1 (M-664)"
+    native_strategy: NativeEquivalent  # direct first-class affine primitive, no re-expression; the missing single-use enforcement is a decidability-axis (checker) gap, not a relationship-axis one (DN-111 §6) — build_status stays Declared
     build_status: Declared
     note: >
       No value-level affine-usage tracker exists in v0 (issues.yaml M-664 landed_basis) — the
@@ -100,6 +114,7 @@ sugars:
     grammar_rule: "ebnf:for_expr (mycelium.ebnf:300); token.rs:483"
     lowering_target: "elab_for -> self-recursive tail Fix fold over a finite acyclic spine"
     defining_doc: "RFC-0007 §4.8; DN-36 §2.1; DN-38 §6"
+    native_strategy: NativeEquivalent  # the canonical bounded-iteration primitive; Fix-fold is an L0-elaboration detail with no competing named surface form (DN-38 §6 tags the foundation Exact)
     build_status: Exact
     note: "Safe-loop lowering is Exact (DN-38 §6); FBIP in-place perf is a Declared roadmap item (DN-36 §6)."
 
@@ -108,6 +123,7 @@ sugars:
     grammar_rule: "ebnf:type_item (mycelium.ebnf:151); token.rs:471"
     lowering_target: "Construct / Match (RFC-0011 Enacted r3)"
     defining_doc: "DN-37 §2.1/§3.3; DN-38 §6 (Objects row)"
+    native_strategy: NativeEquivalent  # the same relationship DN-111 §5.1 cites for Rust struct/enum -> type/Construct/Match: `type` is the single named canonical answer, Construct/Match are its L0 realization
     build_status: Exact
     note: "DN-38 §6 tags the type+Match/Construct foundation Exact; the emulation menu (~>, decorators, super-traits, default bodies) is Declared."
 
@@ -116,6 +132,7 @@ sugars:
     grammar_rule: "ebnf:trait_item (mycelium.ebnf:161); token.rs:472"
     lowering_target: "dictionary-passing -> monomorphization + static dispatch (mono.rs; no runtime vtable)"
     defining_doc: "DN-38 §6 (Traits/generics row); RFC-0019"
+    native_strategy: NativeEquivalent  # direct first-class construct; the not-machine-checked coherence residue is a decidability-axis gap (DN-111 §6), not a relationship-axis one
     build_status: Empirical
     note: "Tested checker (DN-38 §6); the coherence-result tag is Declared-with-argument (RFC-0019 Enacted, not machine-checked)."
 
@@ -124,6 +141,7 @@ sugars:
     grammar_rule: "ebnf:impl_item (mycelium.ebnf:132); token.rs:473"
     lowering_target: "trait-instance impl: dictionary-passing monomorphization (mono.rs); inherent impl (M-664): desugars to top-level free functions (KC-3, zero kernel growth)"
     defining_doc: "RFC-0019 (trait instance); DN-03 §1 / M-664 (inherent)"
+    native_strategy: IdiomaticRemapping  # inherent impl desugars into a genuinely different convention (top-level free functions, KC-3 zero-growth), exact per M-664's landed_basis
     build_status: Empirical
     note: "M-664 landed_basis: cargo test -p mycelium-l1 green (203 lib + 105 check + conformance)."
 
@@ -132,6 +150,7 @@ sugars:
     grammar_rule: "ebnf: reserved header-key marker (mycelium.ebnf comment lines 15-18); no term production; token.rs:475"
     lowering_target: "native — scope-level header key (`// @matured: true`, Nodule-Header spec §3) feeding the totality gate; NOT a term-position construct"
     defining_doc: "RFC-0017 (Enacted); DN-38 §6 (Maturation row)"
+    native_strategy: NativeEquivalent  # "native —" marker: direct, no re-expression; DN-38 §6 tags the gate mechanism Exact
     build_status: Exact
     note: >
       DN-38 §6 tags the maturation GATE mechanism Exact; the `matured` WORD itself is
@@ -143,6 +162,7 @@ sugars:
     grammar_rule: "ebnf:fn_item (mycelium.ebnf:169); token.rs:476"
     lowering_target: "native — de-maturation marker: keeps one fn interpreted inside an otherwise-matured scope"
     defining_doc: "RFC-0017 §4.3 (Enacted)"
+    native_strategy: NativeEquivalent  # "native —" marker, `matured`'s direct companion
     build_status: Exact
     note: "Companion to `matured`; the rare iterate/debug escape hatch."
 
@@ -152,6 +172,7 @@ sugars:
     grammar_rule: "ebnf:colony_expr (mycelium.ebnf:344); token.rs:437"
     lowering_target: "native — structured-concurrency scope grouping hyphae; an expression, not a top-level item"
     defining_doc: "RFC-0008 §4.7 (M-666)"
+    native_strategy: NativeEquivalent  # "native —" marker, direct
     build_status: Empirical
     note: "Left the reserved-not-active set with M-666 (\"now active\" — parse.rs comment)."
 
@@ -160,6 +181,7 @@ sugars:
     grammar_rule: "ebnf:hypha (mycelium.ebnf:345); token.rs:440"
     lowering_target: "native — spawns one concurrent task; only valid inside a colony block (RT7 — an orphan hypha is not expressible)"
     defining_doc: "RFC-0008 §4.7 (M-666)"
+    native_strategy: NativeEquivalent  # "native —" marker, direct
     build_status: Empirical
 
   - keyword: forage
@@ -167,6 +189,7 @@ sugars:
     grammar_rule: "ebnf:hypha (mycelium.ebnf:345, the '@' 'forage' '(' expr ')' prefix); token.rs:446"
     lowering_target: "native — adaptive placement-policy annotation on a hypha (D-lite surface)"
     defining_doc: "DN-70 D1 (M-906)"
+    native_strategy: NativeEquivalent  # "native —" marker, direct
     build_status: Empirical
     note: "Left the reserved-not-active set with M-906 — only its D-lite surface."
 
@@ -175,6 +198,7 @@ sugars:
     grammar_rule: "ebnf:tier_fn_item (mycelium.ebnf:174, the '@' 'tier' '(' tier_mode ')' prefix); token.rs:448"
     lowering_target: "native — @tier(compiled|interpreted) execution-mode hint attached to a fn declaration"
     defining_doc: "DN-58 §C (M-667)"
+    native_strategy: NativeEquivalent  # "native —" marker, direct
     build_status: Empirical
     note: "A bare `tier` item (not attached to a fn) is a never-silent teaching-diagnostic reject."
 
@@ -183,6 +207,7 @@ sugars:
     grammar_rule: "ebnf:reclaim_expr (mycelium.ebnf:362); token.rs:449"
     lowering_target: "native — supervised reclamation scope (RFC-0008 RT7)"
     defining_doc: "DN-58 §B (M-667)"
+    native_strategy: NativeEquivalent  # "native —" marker, direct
     build_status: Empirical
 
   - keyword: fuse
@@ -190,6 +215,7 @@ sugars:
     grammar_rule: "ebnf:fuse_expr (mycelium.ebnf:354); token.rs:441"
     lowering_target: "native — lawful binary merge over the Fuse semilattice (RFC-0008 RT6)"
     defining_doc: "DN-58 §A (M-667)"
+    native_strategy: NativeEquivalent  # "native —" marker, direct
     build_status: Empirical
 
   # --- item-level visibility (DN-53 §B / DN-104) --------------------------------------------------
@@ -198,6 +224,7 @@ sugars:
     grammar_rule: "ebnf:type_item (mycelium.ebnf:151, representative — 'pub'? also in trait_item/fn_item/object_item); token.rs:467"
     lowering_target: "native — cross-nodule/phylum export marker (M-662); granular item-level pub (DN-53 §B)"
     defining_doc: "M-662; DN-53 §B"
+    native_strategy: NativeEquivalent  # "native —" marker, direct
     build_status: Empirical
 
   - keyword: priv
@@ -205,6 +232,7 @@ sugars:
     grammar_rule: "ebnf: not yet in mycelium.ebnf (EBNF-drift gap — DN-104 lands after the committed grammar snapshot); token.rs:470"
     lowering_target: "native — per-constructor seal marker (dual to pub); meaningful only before a constructor name"
     defining_doc: "M-1027 / DN-104"
+    native_strategy: NativeEquivalent  # "native —" marker, direct
     build_status: Empirical
     note: "Never a silent identifier (G2)."
 
@@ -214,6 +242,7 @@ sugars:
     grammar_rule: "ebnf:let_expr (mycelium.ebnf:291); token.rs:477"
     lowering_target: "native — already an L0 form (Let); no dedicated desugar pass"
     defining_doc: "none — general L1 surface; not an itemized DN-38 §6 row"
+    native_strategy: NativeEquivalent  # "native — already an L0 form"
     build_status: Declared
     note: "No dedicated per-op guarantee audit in this v0 registry (VR-5: not upgraded past that basis)."
 
@@ -222,6 +251,7 @@ sugars:
     grammar_rule: "ebnf:let_expr (mycelium.ebnf:291); token.rs:478"
     lowering_target: "native — let_expr binder/body separator"
     defining_doc: "none — general L1 surface"
+    native_strategy: NativeEquivalent  # "native —" marker, direct
     build_status: Declared
 
   - keyword: if
@@ -229,6 +259,7 @@ sugars:
     grammar_rule: "ebnf:if_expr (mycelium.ebnf:292); token.rs:479"
     lowering_target: "native — already an L0 form (Match over a boolean scrutinee)"
     defining_doc: "none — general L1 surface"
+    native_strategy: NativeEquivalent  # "native — already an L0 form"; the canonical boolean-branch primitive (contrast `if let`, a different construct DN-111 §5.2 classifies IdiomaticRemapping)
     build_status: Declared
 
   - keyword: then
@@ -236,6 +267,7 @@ sugars:
     grammar_rule: "ebnf:if_expr (mycelium.ebnf:292); token.rs:480"
     lowering_target: "native — if_expr consequence separator"
     defining_doc: "none — general L1 surface"
+    native_strategy: NativeEquivalent  # "native —" marker, direct
     build_status: Declared
 
   - keyword: "else"
@@ -243,6 +275,7 @@ sugars:
     grammar_rule: "ebnf:if_expr (mycelium.ebnf:292); token.rs:481"
     lowering_target: "native — if_expr alternative separator"
     defining_doc: "none — general L1 surface"
+    native_strategy: NativeEquivalent  # "native —" marker, direct
     build_status: Declared
 
   - keyword: match
@@ -250,6 +283,7 @@ sugars:
     grammar_rule: "ebnf:match_expr (mycelium.ebnf:293); token.rs:482"
     lowering_target: "native — already an L0 form (Match); Maranget usefulness exhaustiveness-checked"
     defining_doc: "none — general L1 surface"
+    native_strategy: NativeEquivalent  # "native — already an L0 form"
     build_status: Declared
 
   - keyword: nodule
@@ -257,6 +291,7 @@ sugars:
     grammar_rule: "ebnf:nodule_header (mycelium.ebnf:110); token.rs:433"
     lowering_target: "native — the basic static unit / module-opening header"
     defining_doc: "RFC-0006 §4.3; DN-06"
+    native_strategy: NativeEquivalent  # "native —" marker, direct
     build_status: Declared
 
   - keyword: phylum
@@ -264,6 +299,7 @@ sugars:
     grammar_rule: "ebnf:phylum_header (mycelium.ebnf:92); token.rs:436"
     lowering_target: "native — library/package-scale grouping header (a grouping, not a container)"
     defining_doc: "RFC-0006 §4.3; DN-06; M-662 (activated it — was reserved-not-active before)"
+    native_strategy: NativeEquivalent  # "native —" marker, direct
     build_status: Declared
 
   - keyword: use
@@ -271,6 +307,7 @@ sugars:
     grammar_rule: "ebnf:use_item (mycelium.ebnf:139); token.rs:465"
     lowering_target: "native — cross-nodule import"
     defining_doc: "none — general L1 surface"
+    native_strategy: NativeEquivalent  # "native —" marker, direct
     build_status: Declared
 
   - keyword: default
@@ -278,6 +315,7 @@ sugars:
     grammar_rule: "ebnf:default_item (mycelium.ebnf:145); token.rs:485"
     lowering_target: "native — declares the nodule/phylum default ambient paradigm"
     defining_doc: "RFC-0012 (ambient repr); not an itemized DN-38 §6 row for this specific keyword"
+    native_strategy: NativeEquivalent  # "native —" marker, direct
     build_status: Declared
 
   - keyword: paradigm
@@ -285,6 +323,7 @@ sugars:
     grammar_rule: "ebnf:default_item (mycelium.ebnf:145-146); token.rs:486"
     lowering_target: "native — sub-keyword of default_item/with_expr naming Binary/Ternary/Dense/VSA"
     defining_doc: "RFC-0012; RFC-0012 §4.2"
+    native_strategy: NativeEquivalent  # "native —" marker, direct
     build_status: Declared
 
   - keyword: with
@@ -292,6 +331,7 @@ sugars:
     grammar_rule: "ebnf:with_expr (mycelium.ebnf:289); token.rs:487"
     lowering_target: "native — explicit ambient-paradigm override scope"
     defining_doc: "RFC-0012 §4.2"
+    native_strategy: NativeEquivalent  # "native —" marker, direct
     build_status: Declared
     note: "Related to, but distinct from, DN-38 §6's Ambient-repr row (which covers the OMITTED-paradigm identity elaboration, not this explicit override)."
 
@@ -300,6 +340,7 @@ sugars:
     grammar_rule: "ebnf:wild_expr (mycelium.ebnf:317); token.rs:488"
     lowering_target: "native — audited FFI-floor escape hatch; only legal inside a @std-sys nodule (checker-enforced, never-silent)"
     defining_doc: "RFC-0016 §8-Q6; M-661"
+    native_strategy: NativeEquivalent  # DN-111 §8.3's own "wild fold": a first-class native construct whose ROLE *is* the Interop Bridge — carries the Interop-Bridge honesty posture (never-silent, flagged) despite being direct
     build_status: Declared
 
   - keyword: spore
@@ -307,6 +348,7 @@ sugars:
     grammar_rule: "ebnf:spore_expr (mycelium.ebnf:320); token.rs:489"
     lowering_target: "native — deployable/published-artifact constructor"
     defining_doc: "ADR-013"
+    native_strategy: NativeEquivalent  # "native —" marker, direct
     build_status: Declared
 
   - keyword: swap
@@ -314,6 +356,7 @@ sugars:
     grammar_rule: "ebnf:swap_expr (mycelium.ebnf:310); token.rs:484"
     lowering_target: "native — the never-silent representation-change primitive itself; it IS the L0 form (target + policy always lexical, S1/WF2), not a sugar lowering to something else"
     defining_doc: "RFC-0006 (surface layer); per-swap guarantee tags live in the numerics/repr code, out of this registry's v0 scope"
+    native_strategy: NativeEquivalent  # the row's own text: "it IS the L0 form... not a sugar lowering to something else" — the textbook direct case
     build_status: Declared
 
   - keyword: to
@@ -321,6 +364,7 @@ sugars:
     grammar_rule: "ebnf:swap_expr (mycelium.ebnf:310); token.rs:494"
     lowering_target: "native — swap_expr sub-keyword naming the target type"
     defining_doc: "same as swap"
+    native_strategy: NativeEquivalent  # sub-keyword of `swap`, same direct relationship
     build_status: Declared
 
   - keyword: policy
@@ -328,6 +372,7 @@ sugars:
     grammar_rule: "ebnf:swap_expr (mycelium.ebnf:310); token.rs:495"
     lowering_target: "native — swap_expr sub-keyword naming the swap policy path"
     defining_doc: "same as swap"
+    native_strategy: NativeEquivalent  # sub-keyword of `swap`, same direct relationship
     build_status: Declared
 
   - keyword: fn
@@ -335,6 +380,7 @@ sugars:
     grammar_rule: "ebnf:fn_item (mycelium.ebnf:169); token.rs:474"
     lowering_target: "native — the base callable/function-declaration form"
     defining_doc: "none — general L1 surface"
+    native_strategy: NativeEquivalent  # "native —" marker, direct
     build_status: Declared
 
   - keyword: lambda
@@ -342,6 +388,7 @@ sugars:
     grammar_rule: "ebnf:lambda_expr (mycelium.ebnf:213); token.rs:457"
     lowering_target: "native (parses) — closure form (Lam); capture/closure SEMANTICS deferred"
     defining_doc: "RFC-0037; M-704"
+    native_strategy: Approximation  # unlike trait/consume's checker-only gaps, capture/closure semantics are UNSPECIFIED for a whole capability subset — a genuine dropped-capability residue on the mapping itself (DN-111 §5.3 test), not just an unverified check
     build_status: Declared
     note: "token.rs comment: \"lambda parses (semantics deferred to M-704)\" — the parse surface is ahead of the checked semantics (VR-5: not upgraded past that basis)."
 
@@ -351,6 +398,7 @@ sugars:
     grammar_rule: "ebnf: not yet productionized (DN-03 §4 / RFC-0008 §4.5 reserved-not-active); token.rs:447"
     lowering_target: "Gap — reserved runtime-vocabulary term, no L1 construct yet"
     defining_doc: "DN-03 §4; RFC-0008 §4.5"
+    native_strategy: unclassified  # needs-review — no L1 construct exists yet (Gap); nothing to classify a relationship against until built (VR-5)
     build_status: Gap
 
   - keyword: cyst
@@ -358,6 +406,7 @@ sugars:
     grammar_rule: "ebnf: not yet productionized (DN-03 §4 / RFC-0008 §4.5 reserved-not-active); token.rs:444"
     lowering_target: "Gap — reserved runtime-vocabulary term, no L1 construct yet"
     defining_doc: "DN-03 §4; RFC-0008 §4.5"
+    native_strategy: unclassified  # needs-review — no L1 construct exists yet (Gap)
     build_status: Gap
 
   - keyword: graft
@@ -365,6 +414,7 @@ sugars:
     grammar_rule: "ebnf: not yet productionized (DN-03 §4 / RFC-0008 §4.5 reserved-not-active); token.rs:443"
     lowering_target: "Gap — reserved runtime-vocabulary term, no L1 construct yet"
     defining_doc: "DN-03 §4; RFC-0008 §4.5"
+    native_strategy: unclassified  # needs-review — no L1 construct exists yet (Gap)
     build_status: Gap
 
   - keyword: mesh
@@ -372,6 +422,7 @@ sugars:
     grammar_rule: "ebnf: not yet productionized (DN-03 §4 / RFC-0008 §4.5 reserved-not-active); token.rs:442"
     lowering_target: "Gap — reserved runtime-vocabulary term, no L1 construct yet"
     defining_doc: "DN-03 §4; RFC-0008 §4.5"
+    native_strategy: unclassified  # needs-review — no L1 construct exists yet (Gap)
     build_status: Gap
 
   - keyword: xloc
@@ -379,6 +430,7 @@ sugars:
     grammar_rule: "ebnf: not yet productionized (DN-03 §4 / RFC-0008 §4.5 reserved-not-active); token.rs:445"
     lowering_target: "Gap — reserved runtime-vocabulary term, no L1 construct yet"
     defining_doc: "DN-03 §4; RFC-0008 §4.5"
+    native_strategy: unclassified  # needs-review — no L1 construct exists yet (Gap)
     build_status: Gap
 
   - keyword: grow
@@ -386,6 +438,7 @@ sugars:
     grammar_rule: "ebnf: not productionized — a teaching-diagnostic reject only (parse.rs); token.rs:453"
     lowering_target: "superseded by `derive` (DN-38 §8.1 / M-812); cannot be used as an identifier (G2)"
     defining_doc: "DN-38 §8.1; M-812"
+    native_strategy: unclassified  # needs-review — deliberately non-functional reserved word (superseded by derive), not a native-translation mapping at all
     build_status: Declared
     note: "Deliberately non-functional by design (rejected with a teaching diagnostic), not an unbuilt gap."
 
@@ -394,6 +447,7 @@ sugars:
     grammar_rule: "ebnf: not yet productionized (RFC-0034 §10/§10.1 reserved opt-out marker); token.rs:493"
     lowering_target: "Gap — reserved named modular-arithmetic opt-out marker, no term production yet"
     defining_doc: "RFC-0034 §10 (CU-5)"
+    native_strategy: unclassified  # needs-review — no term production exists yet (Gap)
     build_status: Gap
 
 # Glyph-lexed sugars (a single atomic token OUTSIDE the identifier keyword() table — lexer.rs, not
@@ -406,6 +460,7 @@ glyph_sugars:
       `let x = e? in body` -> a type-directed match: Result -> `match e { Ok(x) => body, Err($f) =>
       Err($f) }`; Option -> `match e { Some(x) => body, None => None }` (DN-102 §2/§4)
     defining_doc: DN-102
+    native_strategy: NativeEquivalent  # DN-111 §5.1's own worked example: Mycelium's never-silent Result/Option WITH `?` is direct because it IS the native answer (the match encoding is elaboration detail, per the §8.2 discriminating test) — contrast `if let`, a different construct DN-111 §5.2 classifies IdiomaticRemapping
     build_status: Declared
     note: >
       DN-102 is Draft (2026-07-10), not yet ratified — the desugar rule and the v0 position
@@ -425,6 +480,7 @@ not_lexed_sugars:
     grammar_rule: null
     lowering_target: "tooling — reads the L0 term, emits surface (round-trips in certified mode); no surface grammar production exists yet"
     defining_doc: "DN-38 §5, §8.1"
+    native_strategy: unclassified  # needs-review — greenfield tooling, no surface production exists yet (Gap); nothing built to classify a relationship against
     build_status: Gap
     note: >
       Greenfield (DN-38 §6: "no surface form today"). Precedent (cargo-expand/Lean/Racket) is
