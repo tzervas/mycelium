@@ -1501,6 +1501,7 @@ fn collect_tuple_arities_cases() {
             nodule(vec![Item::Lower(LowerDecl {
                 name: "L".to_owned(),
                 params: vec!["T".to_owned()],
+                value_params: vec![],
                 rhs: LowerRhs::Expr(Expr::TupleLit(vec![var("a"), var("b")])),
             })]),
         ),
@@ -1510,6 +1511,7 @@ fn collect_tuple_arities_cases() {
             nodule(vec![Item::Lower(LowerDecl {
                 name: "L2".to_owned(),
                 params: vec!["T".to_owned()],
+                value_params: vec![],
                 rhs: LowerRhs::Impl(ImplDecl {
                     trait_name: "Cmp".to_owned(),
                     trait_args: vec![],

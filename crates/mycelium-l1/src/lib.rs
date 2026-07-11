@@ -86,8 +86,8 @@ pub use checkty::{
     CheckError, Env, PhylumEnv, Ty,
 };
 pub use elab::{
-    elaborate, elaborate_colony, elaborate_direct, elaborate_lower_rule, elaborate_reclaim,
-    ElabError,
+    elaborate, elaborate_colony, elaborate_direct, elaborate_lower_rule,
+    elaborate_lower_rule_with_args, elaborate_reclaim, ElabError,
 };
 pub use error::ParseError;
 pub use eval::{Evaluator, ForageDecision, ForageError, L1Error, L1Value};

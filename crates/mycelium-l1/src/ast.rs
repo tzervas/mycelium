@@ -244,6 +244,24 @@ pub struct LowerDecl {
     /// Empty means a nullary rule. Each name is unbound at the declaration; the checker introduces
     /// them as [`crate::checkty::Ty::Var`] while checking the RHS.
     pub params: Vec<String>,
+    /// **M-1054 Stage 0** — the rule's **value** parameters (DN-110 §5-A: generalizing `lower`/
+    /// `derive` to expression-position sugar rules), distinct from the *type* parameters in
+    /// [`Self::params`] above. `["a", "b"]`-shaped, typed like a `fn`'s [`Param`]s — the names an
+    /// expression-position invocation `Name(arg0, arg1)` binds its arguments to.
+    ///
+    /// **Always empty in v0**: no committed surface grammar produces a non-empty value here yet
+    /// (§8.6 of DN-110 leaves the concrete spelling an open naming question — a distinct keyword vs.
+    /// reusing `lower`'s `[…]` slot is not decided). The field exists so [`crate::checkty`]'s
+    /// call-site recognition and [`crate::elab::elaborate_lower_rule_with_args`]'s matcher skeleton
+    /// have a real, typed shape to match against — constructed directly (white-box) by the Stage 0
+    /// test corpus, never by the parser. **Honesty (`Declared`):** a non-empty `value_params` is
+    /// recognized at a call site (arity + per-argument type matched, never a silent mismatch — G2)
+    /// but the call is refused regardless of a successful match — the capture-avoiding
+    /// substitution/freshening the expansion needs (DN-110-8.2-hygiene-deepdive §4 (A)+(B); OQ-H5)
+    /// is Stage 1+ work. This field cannot cause an unhygienic expansion to ship: nothing in Stage 0
+    /// reads it to *build* an expanded term, only to *match against* one (VR-5 — no guarantee tag
+    /// claimed past this checked basis).
+    pub value_params: Vec<Param>,
     /// The rule's right-hand side — either an **expression**-shaped term (the v0 form,
     /// `lower Name = <expr>`) or an **item**-shaped template (DN-54 §10 Model A, M-973 —
     /// `lower Name[T] = impl Trait for T { … }`). See [`LowerRhs`].

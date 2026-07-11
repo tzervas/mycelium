@@ -2410,6 +2410,7 @@ fn check_nodule_with(
             &traits,
             &instances,
             imports,
+            &lower_rules,
             nodule.std_sys,
             fd,
         )?;
@@ -2447,6 +2448,7 @@ fn check_nodule_with(
                 &traits,
                 &instances,
                 imports,
+                &lower_rules,
                 effective_nodule.std_sys,
                 id,
             )?;
@@ -2489,7 +2491,7 @@ fn check_nodule_with(
     // (Phase 0c) closes the one surface-growth a rule could smuggle in. The elaboration itself
     // ([`crate::elab::elaborate_lower_rule`]) is `Empirical` (earned by the §7 differential).
     for ld in lower_rules.values() {
-        check_lower_rule_rhs_type(ld, &types, &fns, &traits, &instances, imports)?;
+        check_lower_rule_rhs_type(ld, &types, &fns, &traits, &instances, imports, &lower_rules)?;
     }
 
     // Pass 3c: **effect coverage** (RFC-0014 §3.4/§4.5 I3; M-660 — guarantee: `Declared`, a
@@ -2661,6 +2663,7 @@ fn check_lower_rule_rhs_type(
     traits: &BTreeMap<String, TraitInfo>,
     instances: &BTreeMap<(String, String), InstanceInfo>,
     imports: &NoduleImports,
+    lower_rules: &BTreeMap<String, LowerDecl>,
 ) -> Result<(), CheckError> {
     // An **item-shaped** rule (DN-54 §10 Model A, M-973) is not an expression: its full type-check
     // happens at each `derive` site, over the concrete (substituted) sibling `impl` — through the
@@ -2705,6 +2708,7 @@ fn check_lower_rule_rhs_type(
         traits,
         instances,
         imports,
+        lower_rules,
         tyvars: &ld.params,
         bounds: &[],
         std_sys: false,
@@ -3625,12 +3629,14 @@ fn check_impl_method_set(tr: &TraitInfo, id: &ImplDecl) -> Result<(), CheckError
 /// with the trait's params substituted by this impl's `trait_args`; the method body is checked the
 /// normal fn-body way against those substituted value-param/return types. A signature mismatch
 /// (wrong param types or arity, wrong return) is an explicit refusal, never silently accepted.
+#[allow(clippy::too_many_arguments)] // M-1054 Stage 0 added `lower_rules`, threaded straight through
 fn check_impl_methods(
     types: &BTreeMap<String, DataInfo>,
     fns: &BTreeMap<String, FnDecl>,
     traits: &BTreeMap<String, TraitInfo>,
     instances: &BTreeMap<(String, String), InstanceInfo>,
     imports: &NoduleImports,
+    lower_rules: &BTreeMap<String, LowerDecl>,
     std_sys: bool,
     id: &ImplDecl,
 ) -> Result<Vec<FnDecl>, CheckError> {
@@ -3728,7 +3734,16 @@ fn check_impl_methods(
         // trait/instance context is available so the body may itself call trait methods. The
         // `@std-sys` context (M-661) flows in so a `wild` block inside an impl method is gated
         // exactly as in a top-level fn (an impl in a non-`@std-sys` nodule may not contain `wild`).
-        let (body, _ret) = check_fn_body(types, fns, traits, instances, imports, std_sys, method)?;
+        let (body, _ret) = check_fn_body(
+            types,
+            fns,
+            traits,
+            instances,
+            imports,
+            lower_rules,
+            std_sys,
+            method,
+        )?;
         resolved.push(FnDecl {
             vis: method.vis,
             thaw: method.thaw,
@@ -3746,12 +3761,14 @@ fn check_impl_methods(
 /// value-param + return types, and runs the bidirectional [`Cx::check`]. Returns the **resolved**
 /// body (ambient bare-decimals filled) and the resolved return type. Shared by Pass 3 (top-level
 /// fns) and [`check_impl_methods`] (impl methods) — DRY.
+#[allow(clippy::too_many_arguments)] // M-1054 Stage 0 added `lower_rules`, threaded straight through
 fn check_fn_body(
     types: &BTreeMap<String, DataInfo>,
     fns: &BTreeMap<String, FnDecl>,
     traits: &BTreeMap<String, TraitInfo>,
     instances: &BTreeMap<(String, String), InstanceInfo>,
     imports: &NoduleImports,
+    lower_rules: &BTreeMap<String, LowerDecl>,
     std_sys: bool,
     fd: &FnDecl,
 ) -> Result<(Expr, Ty), CheckError> {
@@ -3774,6 +3791,7 @@ fn check_fn_body(
         traits,
         instances,
         imports,
+        lower_rules,
         tyvars: &tyvars,
         bounds: &bounds,
         std_sys,
@@ -3864,6 +3882,16 @@ struct Cx<'a> {
     /// only carries the `ambiguous` set so a reference to an ambiguous name is refused, never a silent
     /// winner (G2). Empty (`ambiguous` empty) in re-inference and in a phylum-of-one.
     imports: &'a NoduleImports,
+    /// **M-1054 Stage 0** — the nodule's registered `lower` rules (DN-110 §5-A), consulted **only**
+    /// after every existing call-resolution path (fn/HOF/ctor/trait-method/prim families) has
+    /// already missed [`Self::check_app`], so a name that resolves any other way is completely
+    /// unaffected by this field's presence (regression-safe by construction). Lets an expression
+    /// position call site `Name(args)` be *recognized* as a sugar-rule invocation and arity/type-
+    /// matched against [`LowerDecl::value_params`] — see [`Self::check_sugar_call`]. Always empty in
+    /// `infer_type`'s re-inference context exactly like `traits`/`instances` above (re-inference runs
+    /// over already-checked terms, which — in v0 — never contain a sugar-rule call, since Stage 0
+    /// never accepts one; kept non-empty there anyway, for uniformity, at zero behavioral cost).
+    lower_rules: &'a BTreeMap<String, LowerDecl>,
     /// The type parameters in scope for this body (RFC-0007 §11.2) — empty for a monomorphic
     /// function. A bare `Named` type that matches one of these resolves to [`Ty::Var`].
     tyvars: &'a [String],
@@ -5365,6 +5393,17 @@ impl Cx<'_> {
             return Ok(ret);
         }
         let Some(fam) = prim_family(name) else {
+            // M-1054 Stage 0 — expression-position sugar-rule call-site recognition (DN-110 §5-A).
+            // Tried only here, as the last resort: every existing resolution path (HOF/fn/ctor/
+            // trait-method/comparison/seq-bytes/dense/vsa/float prims/`prim_family`) has already
+            // missed, so a `lower` rule that happens to share a name with any of those is never
+            // reachable through this branch — zero behavioral change for any name that already
+            // resolved before this branch existed (regression-safe by construction; see
+            // `a_lower_rule_named_like_a_ctor_does_not_self_cycle` for why a ctor-shadowing rule name
+            // must keep resolving as the ctor, not a recursive sugar-call).
+            if let Some(rule) = self.lower_rules.get(name) {
+                return self.check_sugar_call(head, name, rule, scope, args);
+            }
             return self.err(teach_unknown(
                 name,
                 &format!("unknown function/constructor/prim `{name}`"),
@@ -5412,6 +5451,77 @@ impl Cx<'_> {
                 "`{name}` does not accept argument types {arg_tys:?} (T-Op; RFC-0007 §4.4)"
             )),
         }
+    }
+
+    /// **M-1054 Stage 0 — expression-position sugar-rule call-site recognition** (DN-110 §5-A). A
+    /// `lower`-declared rule with **value** parameters ([`LowerDecl::value_params`] — distinct from
+    /// the `derive`-facing *type* parameters in [`LowerDecl::params`]) is recognized at an ordinary
+    /// call site `Name(args)`, arity- and type-matched exactly like a user-fn call (DRY with the
+    /// fn branch above — same `resolve_ty` + bidirectional `self.check` + [`edge_mismatch`]
+    /// diagnostic shape).
+    ///
+    /// **This function can never return `Ok`.** After a successful arity/type match it still
+    /// refuses — with a dedicated, distinguishable diagnostic naming the gate — rather than
+    /// expanding the call. The capture-avoiding substitution + `%`-freshening a real expansion needs
+    /// (DN-110-8.2-hygiene-deepdive §4 (A)+(B); OQ-H5) is Stage 1+ work, not built yet: emitting a
+    /// literal (unfreshened) splice here would be a capture-unsafe expansion that could actually
+    /// ship, which G2/VR-5 forbid (a correct partial landing beats a guessed unsafe one). The guard
+    /// is **structural** — there is no accept path through this function for a value-parametric
+    /// rule to fall through, not a runtime flag a future edit could forget to check.
+    ///
+    /// An item-shaped rule (DN-54 §10 Model A — `derive`-only, no expression-position form at all)
+    /// is refused with its own clearer diagnostic rather than falling through to arity matching.
+    fn check_sugar_call(
+        &self,
+        head: &Expr,
+        name: &str,
+        rule: &LowerDecl,
+        scope: &mut Vec<(String, Ty)>,
+        args: &[Expr],
+    ) -> Result<(Ty, Expr), CheckError> {
+        let _ = head; // recognized/matched only — Stage 0 never builds a replacement App node.
+        let crate::ast::LowerRhs::Expr(_) = &rule.rhs else {
+            return self.err(format!(
+                "`{name}` is a `lower` rule with an item-shaped (`impl … for …`) RHS (DN-54 §10 \
+                 Model A) — it has no expression-position form; apply it with `derive {name} for \
+                 <Type>`, not `{name}(…)` (never a silent reinterpretation, G2)"
+            ));
+        };
+        if rule.value_params.len() != args.len() {
+            return self.err(format!(
+                "`{name}` (a `lower` sugar rule) takes {} value parameter(s), got {} argument(s) \
+                 — arity mismatch (M-1054 Stage 0 call-site recognition; never a silent \
+                 truncation/padding, G2)",
+                rule.value_params.len(),
+                args.len()
+            ));
+        }
+        // Match + check each argument against its declared parameter type — the same bidirectional
+        // discipline the user-fn branch (above, in `check_app`) uses, so a bare-decimal argument
+        // still takes its parameter's width and a genuine mismatch is reported per-parameter, by
+        // name (DRY with that branch's `edge_mismatch` diagnostic).
+        for (pm, a) in rule.value_params.iter().zip(args) {
+            let (want, _) = resolve_ty(self.site, self.types, &[], &pm.ty)?;
+            let (got, _) = self.check(scope, a, Some(&want))?;
+            if want != got {
+                return self.err(format!(
+                    "`{name}` parameter `{}`: {}",
+                    pm.name,
+                    edge_mismatch("argument", &want, &got)
+                ));
+            }
+        }
+        // Recognition + arity/type matching both succeeded: this is a well-formed invocation of a
+        // real sugar rule. Stage 0's guard — refuse anyway, naming the exact gate, rather than
+        // expand (never a fabricated / capture-unsafe accept — G2/VR-5). Stage 1 lands the hygiene
+        // machinery a future revision of this function would need before it could return `Ok`.
+        self.err(format!(
+            "`{name}(…)` is a recognized, arity/type-matched expression-position sugar-rule \
+             invocation (DN-110 §5-A) — but M-1054 Stage 0 lands only recognition + the matcher \
+             skeleton, not the capture-avoiding expansion (OQ-H5 / DN-110-8.2-hygiene-deepdive §4; \
+             Stage 1 work). Refusing rather than emitting an unhygienic literal splice (never \
+             silent, G2)."
+        ))
     }
 
     /// Check a call to a **generic** function (RFC-0007 §11.3): resolve the callee's signature with
@@ -7504,6 +7614,11 @@ pub(crate) fn infer_type(
         traits: &env.traits,
         instances: &env.instances,
         imports: &no_imports,
+        // M-1054 Stage 0: available for uniformity with the other Cx sites, though re-inference over
+        // an already-checked v0 term can never actually contain a sugar-rule call site (Stage 0
+        // never accepts one — see `Cx::check_sugar_call`), so this is exercised at zero behavioral
+        // cost here.
+        lower_rules: &env.lower_rules,
         // Re-inference runs over already-checked, monomorphic terms (a generic *instantiation* is
         // refused at elaboration before re-inference — RFC-0007 §11.3 staging), so no type
         // parameters / bounds are in scope here.
