@@ -573,7 +573,60 @@ fn elaborate_reclaim_inner(env: &Env, entry: &str) -> Result<(Node, Node), ElabE
 /// [`ElabError::UnknownFn`] if `rule_name` is not a registered `lower` rule; [`ElabError::Residual`]
 /// if the RHS is outside the evaluation-complete fragment (e.g. it mentions an un-instantiated type
 /// parameter, or a `wild`/`spore`/`Substrate` site — never a fabricated artifact, G2).
+///
+/// **Unchanged by M-1054 Stage 0**: this is the exact pre-Stage-0 nullary signature, kept stable so
+/// every existing caller (in-crate + the `tests/lower_derive.rs` integration harness) is unaffected.
+/// It is now a thin wrapper over [`elaborate_lower_rule_with_args`] with an empty argument list —
+/// the "one entry point, nullary is the degenerate no-args case" shape the M-1054 Stage 0 facility
+/// scoping calls for, without breaking a public signature no test in this tree needed changed.
 pub fn elaborate_lower_rule(env: &Env, rule_name: &str) -> Result<Node, ElabError> {
+    elaborate_lower_rule_with_args(env, rule_name, &[])
+}
+
+/// **M-1054 Stage 0 — the value-parametric matcher skeleton** (DN-110 §5-A), extending
+/// [`elaborate_lower_rule`] with an `args: &[Node]` path. One entry point: an empty `args` is
+/// exactly the pre-existing nullary rule elaboration (byte-identical — the code below is unchanged
+/// from [`elaborate_lower_rule`]'s old body for that case), and a non-empty `args` is the new,
+/// value-parametric path — matched via [`match_value_params`], then **structurally refused**.
+///
+/// # The Stage-0 guard (why this can never emit an unsafe expansion)
+/// A `lower` rule's declared [`crate::ast::LowerDecl::value_params`] are paired with `args` by
+/// position (arity-checked, never a silent truncate/pad — G2) — the binding a Stage-1
+/// capture-avoiding substitution pass will eventually consume. **Stage 0 stops there.** Splicing
+/// `args` into the RHS verbatim, without first routing every RHS-introduced binder through
+/// `%`-freshening (DN-110-8.2-hygiene-deepdive §4 (A)+(B); OQ-H5), would be a capture-unsafe
+/// expansion — exactly the hazard [`crate`]'s `src/tests/hygiene_expr_sugar.rs` E1 corpus exists to
+/// characterize, and this facility must not ship an unwitnessed instance of it. So: **whenever
+/// `args` is non-empty, this function unconditionally returns [`ElabError::Residual`]**, before any
+/// substitution logic runs (there is none to run — Stage 0 builds none). This is a structural
+/// property of the control flow (the only path to a `Node` result is the pre-existing nullary
+/// branch below, taken only when `args.is_empty()`), not a runtime flag a future edit could disable
+/// by mistake; `src/tests/elab.rs`'s Stage-0 guard tests exercise this directly.
+///
+/// # Errors
+/// [`ElabError::UnknownFn`] if `rule_name` is not registered; [`ElabError::Residual`] if the rule is
+/// item-shaped (no expression-position form), if `args.len() != value_params.len()` (arity
+/// mismatch), if `args` is non-empty (the Stage-0 guard above), or — for the degenerate nullary
+/// case — if the RHS is outside the evaluation-complete fragment (unchanged from
+/// [`elaborate_lower_rule`]'s prior behavior).
+///
+/// **Guard-strictness asymmetry with `checkty.rs` (read before wiring the two together).**
+/// [`crate::checkty::Cx::check_sugar_call`] — the L1 check-phase recognition half of Stage 0 — is
+/// *stricter* than this function: it refuses **every** recognized sugar-rule call site, including
+/// the 0-value-param/0-arg case, because at the surface a call written `Name()` is *new* surface
+/// capability with no pre-Stage-0 precedent. This function's guard is looser by one case: a rule
+/// declaring **zero** value parameters called with **zero** `args` takes the pre-existing nullary
+/// path all the way through to `Ok` (that *is* the degenerate case [`elaborate_lower_rule`] always
+/// supported, pre-dating Stage 0). The two are not wired together in Stage 0 — nothing currently
+/// calls this function with a non-empty `args` derived from a checker-accepted call site, so the
+/// asymmetry is inert today. A Stage-1 author connecting checker-side recognition to this
+/// elaboration path must not assume the two guards coincide at `n = 0`; re-derive the composed
+/// behavior explicitly rather than relying on symmetry that was never established here.
+pub fn elaborate_lower_rule_with_args(
+    env: &Env,
+    rule_name: &str,
+    args: &[Node],
+) -> Result<Node, ElabError> {
     let Some(rule) = env.lower_rules.get(rule_name) else {
         return Err(ElabError::UnknownFn(rule_name.to_owned()));
     };
@@ -595,6 +648,27 @@ pub fn elaborate_lower_rule(env: &Env, rule_name: &str) -> Result<Node, ElabErro
             );
         }
     };
+    // M-1054 Stage 0 — the value-parametric matcher skeleton: pair each declared value parameter
+    // with its use-site argument `Node`, arity-checked. `matched` is deliberately never consumed
+    // beyond this point — see the guard immediately below.
+    let matched = match_value_params(rule_name, &rule.value_params, args)?;
+    if !matched.is_empty() {
+        // STAGE-0 GUARD (structural, not a flag — see the doc comment above). Refuse rather than
+        // splice `matched` into the RHS unfreshened; Stage 1 lands the hygiene machinery that would
+        // let this branch do real work.
+        return residual(
+            rule_name,
+            format!(
+                "`{rule_name}` was invoked with {} value argument(s) — expression-position \
+                 sugar-rule expansion is recognized and arity/type-matched (M-1054 Stage 0), but \
+                 the capture-avoiding substitution + `%`-freshening it needs (DN-110-8.2-hygiene-\
+                 deepdive §4 (A)+(B); OQ-H5) is Stage 1+ work, not built yet. Refusing rather than \
+                 emitting an unhygienic literal splice (never silent — G2).",
+                matched.len()
+            ),
+        );
+    }
+    // Degenerate no-args case — identical to the pre-M-1054 nullary path (unchanged below).
     let rhs_expr = rule
         .expr_rhs()
         .expect("matched the Expr arm just above — item-shaped rules returned early");
@@ -624,6 +698,35 @@ pub fn elaborate_lower_rule(env: &Env, rule_name: &str) -> Result<Node, ElabErro
     let mut env2 = env.clone();
     env2.fns.insert(entry.clone(), synth);
     elaborate(&env2, &entry)
+}
+
+/// M-1054 Stage 0 — pair each declared value parameter with its use-site argument `Node`, by
+/// position (the binding a Stage-1 capture-avoiding substitution pass will consume). Arity-checked,
+/// never a silent truncate/pad (G2): a mismatch is an explicit [`ElabError::Residual`] naming both
+/// counts. Deliberately returns only the *pairing* — no substitution happens here or anywhere in
+/// Stage 0; see [`elaborate_lower_rule_with_args`]'s guard for why the caller can never turn this
+/// pairing into an emitted expansion.
+fn match_value_params<'a>(
+    rule_name: &str,
+    value_params: &'a [crate::ast::Param],
+    args: &'a [Node],
+) -> Result<Vec<(&'a str, &'a Node)>, ElabError> {
+    if value_params.len() != args.len() {
+        return residual(
+            rule_name,
+            format!(
+                "`{rule_name}` declares {} value parameter(s) but was applied to {} argument \
+                 node(s) — arity mismatch (never a silent truncation/padding, G2)",
+                value_params.len(),
+                args.len()
+            ),
+        );
+    }
+    Ok(value_params
+        .iter()
+        .map(|p| p.name.as_str())
+        .zip(args.iter())
+        .collect())
 }
 
 /// Shared front-end of [`elaborate`]/[`elaborate_colony`]: validate the entry is a closed (nullary,
