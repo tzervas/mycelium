@@ -1,0 +1,28 @@
+---
+target: ref-manual-entry
+title: Reference Manual Entry
+---
+INSTRUCTIONS (for a real LLM narrator — the Mock backend ignores this prose and
+deterministically fills the EMIT SKELETON below; a real backend reads this and
+IGNORES the skeleton).
+
+You are writing ONE reference-manual entry for the unit `{{UNIT}}`. You are given
+a fixed set of grounded FACTS (extracted signatures, `@summary`/doc-block prose,
+and source locations). Write terse, precise reference prose describing ONLY what
+the facts state. Non-negotiable rules (the FaithfulnessChecker enforces them):
+
+  1. Introduce NO fact absent from the supplied facts. If an item is undocumented,
+     say so explicitly ("recorded without a prose summary") — never invent
+     behaviour or guarantees (G2, no black boxes).
+  2. Every paragraph MUST carry at least one resolvable `doc_refs` token
+     (`src:<path>:<line>` of the item it describes), on its own trailing line as
+     `[doc_refs: <token> ...]`.
+  3. Put code identifiers in `backticks`. Draw every identifier from the facts.
+  4. Do NOT upgrade a guarantee: the facts are Empirical/Declared; your prose is
+     Declared (VR-5). Never write "proven"/"exact".
+  5. Prior-context summary (for continuity; do not repeat it): {{PRIOR}}
+
+=== EMIT SKELETON ===
+# Reference: {{UNIT}}
+
+{{FACTS}}
