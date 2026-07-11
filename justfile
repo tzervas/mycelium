@@ -361,6 +361,11 @@ docs-site:
 # Advisory, NOT part of `just check`. Output under target/doc-book/book/ (gitignored).
 docs-book:
     cargo run -q -p mycelium-doc --bin myc-doc -- book --repo-root . --out target/doc-book
+# Export the language-focused corpus as per-cluster bundles for Google NotebookLM (PDF via the
+# ratified Typst path; never-silent Markdown fallback if typst is unavailable). Under dist/notebooklm/.
+# Advisory. Manifests live in tools/docgen/notebooklm/. Upload the bundles as NotebookLM sources.
+notebooklm-pdfs out="dist/notebooklm":
+    @bash scripts/docs/export-notebooklm-pdfs.sh "{{out}}"
 # Build the local docs Podman/Docker container (corpus + book + rustdoc + agent index, served via
 # python3 -m http.server). Advisory. Prefers podman, falls back to docker, errors clearly if neither.
 docs-container-build:

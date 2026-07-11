@@ -15746,3 +15746,192 @@ issues:
       - `.myc` parity noted, not silently assumed, per the checkty `.myc` port's own progress.
       - Guarantee tags stay `Declared` until this DoD's fixtures/differentials land, then `Empirical`
         (VR-5 -- no upgrade past the checked basis).
+
+  - id: E40-1
+    title: "E40-1 (epic) — validated documentation generation: the generated read (DN-114 / M-363)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:epic, area:tooling, priority:P2, status:needs-design]
+    epic: E40
+    depends_on: []
+    doc_refs:
+      - corpus:DN-114
+      - corpus:Narrative-Authoring-Pipeline
+      - src:tools/llm-harness/narrate/
+      - src:.claude/skills/gen-book/
+    body: |
+      EPIC (DN-114, maintainer directive 2026-07-11). Finish the documentation-generation pipeline:
+      generate the language BOOK + REFERENCE MANUALS + a LEARNING/WRITING corpus from the extracted
+      code/example/doc-comment basis, with a GENERATED narrative "read" on top -- via parameterized,
+      idempotent prompts over context chunks -- that is VALIDATED (no hallucination, no trash) by the
+      DN-114 faithfulness oracle, differentially updatable, and published alongside the release
+      artifacts. Builds the ratified-but-unbuilt M-363 generators on the `narrate/` harness landed
+      Draft with DN-114. GATED on maintainer ratification of DN-114 (Draft -> Accepted).
+
+      User stories:
+      - As a learner, I want a readable, navigable book + reference manual generated from the corpus,
+        so that I can learn and write Mycelium without reading the raw normative docs.
+      - As the maintainer, I want every generated sentence validated against its source facts and
+        tagged honestly, so that the docs never hallucinate and I tune prompts, not prose.
+
+      Definition of Done:
+      - DN-114 Accepted; M-1061..M-1066 done; the faithfulness oracle runs a real adversarial verifier
+        (not the mock) with a reported validated_fraction; the book/manual/learning-corpus generate +
+        validate + commit with provenance (Declared until reviewed); differential + drift-gated;
+        published alongside the release artifact. Deferred site polish (M-1067/M-1068) tracked separately.
+
+  - id: M-1061
+    title: "M-1061 — build gen-book (Narrative-Authoring-Pipeline output b) on the narrate harness + DN-114 oracle"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:feature, area:tooling, priority:P2, status:needs-design]
+    epic: E40-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-114
+      - corpus:Narrative-Authoring-Pipeline
+      - src:tools/llm-harness/narrate/
+    body: |
+      Build `gen-book`: sequence the RFC guide-level sections + Example Programs Reference + Glossary
+      into a learner ordering, and generate the interpretive glue via the narrate `book-chapter` prompt
+      family, gated by the DN-114 faithfulness oracle (commit only validated sentences; rest Declared).
+      GATED on DN-114 ratification.
+
+      User story: As a learner, I want a generated language book, so that I can read forward instead of
+      hopping RFCs. DoD: the book generates end-to-end, every committed sentence passes the oracle
+      (validated_fraction reported), output tagged Empirical/Declared with provenance, rendered by the
+      themed myc-doc.
+
+  - id: M-1062
+    title: "M-1062 — build gen-manual (Narrative-Authoring-Pipeline output c) on the narrate harness + DN-114 oracle"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:feature, area:tooling, priority:P2, status:needs-design]
+    epic: E40-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-114
+      - corpus:Narrative-Authoring-Pipeline
+    body: |
+      Build `gen-manual`: project the RFC reference-level designs + grammar EBNF + schemas + stdlib
+      specs into a normative reference manual, with generated connective prose validated by the DN-114
+      oracle. GATED on DN-114 ratification.
+
+      User story: As a Mycelium programmer, I want a generated reference manual, so that I have one
+      normative place to look up a construct. DoD: manual generates + validates end-to-end; cross-refs
+      resolve to content addresses; committed prose passes the oracle; tagged with provenance.
+
+  - id: M-1063
+    title: "M-1063 — build the learning/writing corpus generator (narrate learning-lesson prompt family)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:feature, area:tooling, priority:P3, status:needs-design]
+    epic: E40-1
+    depends_on: [M-1061]
+    doc_refs:
+      - corpus:DN-114
+      - src:tools/llm-harness/narrate/
+    body: |
+      Build the learning/writing corpus generator: task-oriented lessons for LEARNING and WRITING
+      Mycelium (patterns, idioms, worked examples), generated from the checked example corpus + guide
+      sections, validated by the DN-114 oracle. GATED on DN-114 ratification.
+
+      User story: As a newcomer, I want lessons that teach me to write Mycelium, so that I learn by
+      doing. DoD: lessons generate + validate; every code snippet is a checked example; committed prose
+      passes the oracle; tagged with provenance.
+
+  - id: M-1064
+    title: "M-1064 — real adversarial-LLM faithfulness verifier backend (replace the DN-114 MockChecker)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:feature, area:tooling, priority:P2, status:needs-design]
+    epic: E40-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-114
+      - src:tools/llm-harness/narrate/
+      - src:tools/llm-harness/coauthor.py
+    body: |
+      Implement the real adversarial-LLM `Checker` behind the DN-114 protocol (the shipped MockChecker
+      is a deterministic lexical stand-in). A verifier prompt lists every clause not entailed by the
+      cited facts; the loop drops/regenerates those. Reuse the coauthor.py backend + spend caps.
+
+      User story: As the maintainer, I want a real faithfulness check, so that validated_fraction means
+      semantic faithfulness, not a lexical proxy. DoD: real verifier runs behind the protocol; a
+      labelled benchmark shows it catches injected hallucinations; validated_fraction is Empirical with
+      a named method (VR-5); costs are capped + logged.
+
+  - id: M-1065
+    title: "M-1065 — Narrative-Authoring-Pipeline §4.1 faithfulness check (9th quality-bar check) — spec + doc_lint"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:spec, area:tooling, priority:P2, status:needs-design]
+    epic: E40-1
+    depends_on: [M-1064]
+    doc_refs:
+      - corpus:DN-114
+      - corpus:Narrative-Authoring-Pipeline
+      - src:crates/mycelium-doc/src/doc_lint.rs
+    body: |
+      On DN-114 ratification, specify the 9th §4.1 quality-bar check into Narrative-Authoring-Pipeline
+      (append-only) and implement it in doc_lint: any COMMITTED generated prose must have
+      validated_fraction == 1.0 (unvalidated content must not be committed); a drift/lint gate enforces
+      it. GATED on DN-114 ratification + M-1064.
+
+      User story: As the maintainer, I want the faithfulness gate enforced in the lint, so that no
+      unvalidated generated prose can land. DoD: the spec §4.1 carries the 9th check; doc_lint enforces
+      it; a fixture proves a hallucinated sentence fails the gate.
+
+  - id: M-1066
+    title: "M-1066 — run the full validated generation wave (book + manual + learning corpus, per chapter/module)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:infra, area:tooling, priority:P2, status:needs-design]
+    epic: E40-1
+    depends_on: [M-1061, M-1062, M-1063, M-1064, M-1065]
+    doc_refs:
+      - corpus:DN-114
+      - src:.claude/skills/gen-book/
+    body: |
+      Run the decomposed generation wave: one chapter/module = one bounded working set (DN-96
+      windowing via /gen-book) -> generate -> validate -> commit validated prose with provenance ->
+      render. A multi-agent wave; produces committed prose for maintainer review. GATED on the
+      generators (M-1061..M-1063) + the real verifier (M-1064) + the gate (M-1065).
+
+      User story: As the maintainer, I want the whole read generated + validated in reviewable batches,
+      so that I tune, not write, the docs. DoD: the corpus's book/manual/learning read is generated,
+      each unit's validated_fraction recorded, all committed prose passes the §4.1 gate, tagged Declared
+      pending review.
+
+  - id: M-1067
+    title: "M-1067 — status/guarantee badges in myc-doc (pipe-table metadata parser + doc-IR fields)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:feature, area:tooling, priority:P3, status:needs-design]
+    epic: E40-1
+    depends_on: []
+    doc_refs:
+      - src:crates/mycelium-doc/src/ir.rs
+      - src:crates/mycelium-doc/src/corpus.rs
+    body: |
+      Parse the `| Field | Value |` header tables (Status/Date/Depends-on) that myc-doc currently
+      ingests as prose, add decision-status + guarantee-tag fields to the doc-IR, and render them as
+      badges (Draft/Accepted/Enacted/Superseded; Exact/Proven/Empirical/Declared) in the themed site.
+      Deferred site-polish follow-on to the C1/C2 theme+highlighting wave.
+
+      User story: As a reader, I want to see a decision's status + a claim's guarantee level at a glance,
+      so that I trust the page. DoD: the pipe-table parser + IR fields land with tests; badges render in
+      html/book; the doc_lint dual-projection parity stays green.
+
+  - id: M-1068
+    title: "M-1068 — federated docs portal: separate docs-site repo + multi-repo aggregation (DN-27/DN-88)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:research, area:tooling, priority:P3, status:needs-design]
+    epic: E40-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-27
+      - corpus:DN-88
+      - src:crates/mycelium-doc/src/ir.rs
+    body: |
+      Design (a new DN) + build the federated docs portal: extract the docs SITE to its own repo
+      (source of truth stays this repo), and aggregate per-component-repo docs into a central portal
+      after the DN-27/DN-88 monorepo decomposition -- repo/version namespacing on the content-addressed
+      doc-IR, a cross-repo xref resolver, an aggregation/merge tool. Builds on Narrative-Authoring-
+      Pipeline's v0-single-version -> multi-repo future.
+
+      User story: As a reader, I want one portal over all component repos' docs, so that decomposition
+      doesn't fragment the documentation. DoD: a Draft DN ratified; repo/version dimension on nodes +
+      anchors; a two-repo aggregation demonstrated; the single-repo site unchanged for v0.

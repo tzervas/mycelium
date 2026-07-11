@@ -60,3 +60,9 @@ fi
 
 size="$(du -h "$out" 2>/dev/null | cut -f1)"
 echo "package-release: wrote $out (${size:-unknown size})"
+
+# Ship portable rendered docs ALONGSIDE the source artifact (best-effort, never fails the release).
+# Set MYC_SKIP_DOCS_BUNDLE=1 to opt out (e.g. a fast source-only package).
+if [[ "${MYC_SKIP_DOCS_BUNDLE:-0}" != "1" ]]; then
+  bash scripts/dist/package-docs.sh "$version" || echo "package-release: docs bundle skipped (see above)." >&2
+fi

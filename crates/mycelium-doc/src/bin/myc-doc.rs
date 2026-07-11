@@ -5,6 +5,8 @@
 //! Usage:
 //! ```text
 //!   myc-doc build      [--repo-root .] [--out target/doc]     # project + emit every view
+//!                      [--manifest <p.json>]                  #   scope emission to a subset (cluster PDF)
+//!                      [--full|--no-cache]                    #   bypass the differential re-emit cache
 //!   myc-doc book       [--repo-root .] [--out target/doc]     # + the curated chaptered book (book/)
 //!   myc-doc lint       [--repo-root .]                        # run the 8 §4.1 checks (gate)
 //!   myc-doc status                                            # print the lint's active status
@@ -19,7 +21,10 @@ use std::process::ExitCode;
 
 use mycelium_doc::build::{emit_all, EPUB_DEFERRAL};
 use mycelium_doc::doc_lint::{CheckStatus, Severity};
-use mycelium_doc::{build, doc_lint, BuildInput, CHECK_NAMES};
+use mycelium_doc::{
+    build, doc_lint, emit_incremental, load_manifest, load_manifest_from,
+    resolve_manifest_chapters, resolve_manifest_docs, BuildInput, DocModel, CHECK_NAMES,
+};
 
 const EX_OK: u8 = 0;
 const EX_FINDING: u8 = 1;
@@ -49,6 +54,10 @@ fn run(args: &[String]) -> Result<u8, (u8, String)> {
     } else {
         PathBuf::from("target/doc")
     };
+    // `build` options: a manifest scopes emission to a subset (per-cluster PDF export); the diff
+    // cache makes re-emit incremental unless `--full`/`--no-cache` forces a full rebuild.
+    let mut manifest_path: Option<PathBuf> = None;
+    let mut use_cache = true;
     let mut i = 1;
     while i < args.len() {
         match args[i].as_str() {
@@ -60,6 +69,11 @@ fn run(args: &[String]) -> Result<u8, (u8, String)> {
                 i += 1;
                 out = PathBuf::from(args.get(i).ok_or((EX_USAGE, usage()))?);
             }
+            "--manifest" => {
+                i += 1;
+                manifest_path = Some(PathBuf::from(args.get(i).ok_or((EX_USAGE, usage()))?));
+            }
+            "--full" | "--no-cache" => use_cache = false,
             other => return Err((EX_USAGE, format!("unknown argument: {other}\n{}", usage()))),
         }
         i += 1;
@@ -78,17 +92,50 @@ fn run(args: &[String]) -> Result<u8, (u8, String)> {
         }
         "build" => {
             let input = BuildInput::conventional(&repo_root);
-            let model = build(&input).map_err(|e| (EX_IO, format!("build: {e}")))?;
-            let arts = emit_all(&model);
-            let n = arts
-                .write_to(&out)
+            // Always ingest the WHOLE corpus so cross-references resolve against the full anchor
+            // universe; a `--manifest` then scopes emission to the named subset (in manifest order).
+            let full = build(&input).map_err(|e| (EX_IO, format!("build: {e}")))?;
+            let model = match &manifest_path {
+                None => full,
+                Some(path) => {
+                    let manifest = load_manifest_from(path)
+                        .map_err(|e| (EX_FINDING, format!("manifest: {e}")))?;
+                    let docs = resolve_manifest_docs(&full, &manifest, &repo_root)
+                        .map_err(|e| (EX_FINDING, format!("manifest: {e}")))?;
+                    println!(
+                        ">> myc-doc build: --manifest '{}' scopes emission to {} of {} documents",
+                        manifest.title,
+                        docs.len(),
+                        full.documents.len()
+                    );
+                    DocModel::new(docs)
+                }
+            };
+            // Best-effort semantic spine for the sidebar from the committed book manifest — never an
+            // error: an absent/unparseable manifest just yields the by-type-only tree (G2).
+            let chapters = load_manifest(&repo_root)
+                .ok()
+                .map(|m| resolve_manifest_chapters(&model, &m))
+                .unwrap_or_default();
+            let semantic = (!chapters.is_empty()).then_some(chapters.as_slice());
+            let arts = emit_all(&model, semantic);
+            // Incremental re-emit via the differential cache (never-silent: a missing/corrupt cache
+            // or `--full`/`--no-cache` degrades to a full rebuild with a printed notice).
+            let report = emit_incremental(&arts, &out, use_cache)
                 .map_err(|e| (EX_IO, format!("emit: {e}")))?;
+            if let Some(notice) = &report.notice {
+                println!("   note: {notice}");
+            }
             println!(
-                ">> myc-doc build: projected {} documents ({} nodes) → {} artifacts under {}",
+                ">> myc-doc build: projected {} documents ({} nodes) → {} artifacts under {} \
+                 ({} written, {} unchanged/skipped, {} orphan(s) removed)",
                 model.documents.len(),
                 model.all_nodes().len(),
-                n,
-                out.display()
+                report.total,
+                out.display(),
+                report.written,
+                report.skipped,
+                report.removed,
             );
             println!("   {EPUB_DEFERRAL}");
             Ok(EX_OK)
@@ -183,5 +230,8 @@ fn print_report(model: &mycelium_doc::DocModel, report: &doc_lint::DocLintReport
 }
 
 fn usage() -> String {
-    "usage: myc-doc <build|book|lint|status|lib-index> [--repo-root <dir>] [--out <dir>]".to_owned()
+    "usage: myc-doc <build|book|lint|status|lib-index> [--repo-root <dir>] [--out <dir>]\n\
+     \x20             [--manifest <path.json>]  (build: scope emission to a subset)\n\
+     \x20             [--full|--no-cache]       (build: force a full re-emit, bypass the diff cache)"
+        .to_owned()
 }

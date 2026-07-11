@@ -1,0 +1,9 @@
+# Generated narration artifacts — deterministic but reproducible on demand, so
+# not committed (mirrors tools/llm-harness/.gitignore's posture for reports/).
+out/*
+!out/.gitkeep
+reports/*
+!reports/.gitkeep
+.cache/
+__pycache__/
+*.pyc

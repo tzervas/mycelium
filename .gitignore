@@ -82,6 +82,7 @@ CLAUDE.local.md
 
 # ---- Local check-tool installs ----
 .tools-venv/
+.tools/
 node_modules/
 
 # ---- Secrets & credentials (NEVER commit) ----

@@ -1,0 +1,27 @@
+{
+  "title": "Mycelium — Orientation (charter, glossary, guide)",
+  "preface": "The friendly + charter layer: what Mycelium is, its vocabulary, and the narrative guide. One of the language-focused per-cluster bundles for Google NotebookLM (kept under the 500k-word/source cap). Generated from the corpus by myc-doc; nothing authored separately (ADR-003/G11).",
+  "chapters": [
+    {
+      "title": "Charter & Glossary",
+      "sources": [
+        "docs/Mycelium_Project_Foundation.md",
+        "docs/Glossary.md",
+        "docs/CURRENT-STATE.md"
+      ]
+    },
+    {
+      "title": "Guide",
+      "globs": ["docs/guide/*.md"]
+    },
+    {
+      "title": "Wiki & Reference",
+      "globs": ["docs/wiki/*.md", "docs/reference/*.md"],
+      "exclude": ["docs/wiki/_Sidebar.md", "docs/wiki/README.md", "docs/reference/README.md"]
+    },
+    {
+      "title": "Examples",
+      "globs": ["docs/examples/*.md"]
+    }
+  ]
+}

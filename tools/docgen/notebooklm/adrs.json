@@ -1,0 +1,10 @@
+{
+  "title": "Mycelium — Architecture Decision Records",
+  "preface": "The standalone ADRs (ADR-010+); the founding ADR-001..009 live inside the Foundation charter (see the Orientation bundle). A language-focused per-cluster bundle for Google NotebookLM (under the 500k-word/source cap). Generated from the corpus by myc-doc.",
+  "chapters": [
+    {
+      "title": "ADRs",
+      "globs": ["docs/adr/ADR-*.md"]
+    }
+  ]
+}
