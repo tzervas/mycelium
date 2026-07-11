@@ -1481,7 +1481,15 @@ impl Parser {
         } else {
             LowerRhs::Expr(self.parse_expr()?)
         };
-        Ok(LowerDecl { name, params, rhs })
+        // M-1054 Stage 0: `LowerDecl::value_params` has no surface grammar yet (DN-110 §8.6 is an
+        // open naming question — a distinct keyword vs. reusing this `[…]` slot for value params is
+        // not decided). Always empty from the parser; only white-box test fixtures populate it.
+        Ok(LowerDecl {
+            name,
+            params,
+            value_params: Vec::new(),
+            rhs,
+        })
     }
 
     /// Parse an **item-shaped** `lower`-rule RHS (DN-54 §10.1(b) / §10.3 Model A; OQ-B; M-973). The
