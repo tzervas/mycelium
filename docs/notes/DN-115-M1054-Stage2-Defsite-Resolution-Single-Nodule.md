@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-115 — a design-reasoner scoping note (plan → review → improve → ratify → implement) for **Stage 2** of the M-1054 native-metaprogramming facility: lifting DN-114's **Stage-2 gate** (`checkty.rs::rhs_first_free_id`) for the **single-nodule** case so a sugar rule's free RHS identifier binds its **definition-site** meaning (referential transparency, OQ-H1). Filed leaf-scoped (not folded into DN-110/DN-110-8.2, which stay the design-level source) so the semcore serial lane can iterate without editing a shared/held design doc. |
-| **Status** | **Draft** — a design-reasoner recommendation for the maintainer/orchestrator to ratify. This note **recommends, it does not ratify** (house rule #3; the author never moves status to `Accepted`). Moves `Draft → Accepted` only via maintainer/orchestrator review of the PR this note ships with; the code it plans stays `Declared` until landed + tested (VR-5). |
+| **Status** | **Accepted** (2026-07-11, delegated ratification — see the dated "Ratification (maintainer-delegated, orchestrator-selected on the merits, 2026-07-11)" section below). **Accepted ratifies the §1 finding + the Q1/G2/§6 design decisions only, NOT Enacted** (house rule #3: `Enacted` requires stepping through `Accepted` first and means *fully implemented/landed*; the implementation is this same leaf's PR, self-integrated — see the Ratification section for what actually landed). Originally **Draft** (2026-07-11) — a design-reasoner recommendation for the maintainer/orchestrator to ratify; the author never moved status to `Accepted` (house rule #3). |
 | **Owner-scope** | Owns only this file. Treats `crates/mycelium-l1/**` (semcore serial lane — this scoping is **READ-ONLY** on it), `docs/Doc-Index.md`, `CHANGELOG.md`, `tools/github/issues.yaml`, `docs/api-index/`, and every other note/RFC/ADR as **read-only** — FLAGGED for the integrating parent, not edited here. |
 | **Decides (proposes, for ratification)** | *All `Declared` unless a landed/checked basis is cited.* (1) The **primary, code-grounded finding**: single-nodule def-site resolution / referential transparency is **already achieved by construction** in Stage 1b — so Stage 2 is **not** "add def-site resolution" but "**prove** the present guarantee end-to-end (`Declared → Empirical`) on the real elaborator, close two narrow gate-correctness gaps, and make the single-nodule invariant explicit so Stage 4 is a deliberate change." (2) The **resolved reference** for single-nodule is the **already-content-addressed inlined L0 body** (status quo) — **no new L0 node / reference kind** (KC-3, YAGNI); the explicit cross-nodule *symbol reference* is Stage 4 / DN-113 work, resolved by **M-1024's linker** (`resolve_imports`/`PhylumEnv::link`), not by raw hashing. (3) Resolution stays where it is — **Pass-1 elab against the def-site env** — with a documented invariant that use-env == def-env **only** because single-nodule; the Stage-2 gate is **relaxed** only for the two over-/under-refusal gaps, and **still refuses** every genuinely cross-nodule/phylum free id (→ Stage 4). |
 | **Feeds / builds on** | **M-1054** (the epic) / **DN-114** §3.1 (the Stage-2 gate this note revisits) / **DN-110-8.2-hygiene-deepdive** §4(C), §6, §7 E2, §10 OQ-H1 (the design-level source) / **DN-113** (cross-phylum resolution — Stage 4, the deferred half) / **M-1024** (`checkty.rs::resolve_imports`/`PhylumEnv::link`, the same-phylum linker) / **ADR-003** (content-addressed L0 identity) / **KC-3** (no kernel growth). |
@@ -303,6 +303,100 @@ representation (Option C); def-site-import-context threading. All refused, never
 
 ---
 
-*Author: design-reasoner (Opus). Recommends; does not ratify (house rule #3). Every code citation is
-`Empirical` at worktree tip `3cd7dbc2`; every design proposal is `Declared` until landed + tested
-(VR-5).*
+## Ratification (maintainer-delegated, orchestrator-selected on the merits, 2026-07-11)
+
+**Recorded decision (append-only — this note's original §0–§10 text above is unchanged; this
+section adds the ratification, per house rule #3).** The maintainer delegated the choice among this
+note's options ("ratify the options best fit objectively speaking for this project"); the
+integrating orchestrator selected the recommended design below on the merits stated in §1–§8, and
+this section records that selection **plus** the implementation leaf's own adversarial findings
+while landing it (VR-5 — grounded, not merely asserted).
+
+1. **§1 finding — ACCEPTED, and now independently confirmed on the real elaborator (not just read
+   against the code).** Single-nodule def-site resolution / referential transparency holds **by
+   construction** via Pass-1 elaboration against the def-site env; Stage 2 is *prove + close two
+   gate gaps + document the invariant*, never *add a new resolution mechanism*. The counter-evidence
+   test this note's own §8 DoD names (a single-nodule fixture where a use-site local *does* capture
+   a def-site free id on the real elaborator) was attempted and **could not be constructed** —
+   `stage2_defsite_resolution_real_elaborator` (below) passes on the real `elaborate(&env, "main")`
+   path, dual-oracled (`alpha_eq` + independent `Interpreter::eval`), with a genuine, hand-built
+   capture control (`stage2_control_use_site_shadow_would_capture`) proving the harness *can*
+   observe a break when one is deliberately constructed at the `Node` level. This moves single-nodule
+   def-site resolution **`Declared → Empirical`** (§5's own tag boundary), superseding the
+   grounding basis from "`Empirical` where read against the codebase" to "`Empirical` — checked by a
+   passing, non-vacuous test on the real elaborator."
+2. **Q1 resolved-reference ranking (A ≫ C ≫ B) — ACCEPTED as specified.** No new L0 reference node,
+   no qualified-symbol threading for the single-nodule case; the status-quo content-addressed
+   inlined L0 body stays the resolved reference. Zero `crates/mycelium-l1/src/elab.rs` edits were
+   needed or made (§9's own size table already anticipated this — Option C is Stage-4-only).
+3. **G1 fix — ACCEPTED and LANDED.** `checkty.rs::rhs_first_free_id`'s `Expr::Path` arm now consults
+   `prim_name_is_recognized` (a `prim_family` ∪ `VSA_PRIM_NAMES` ∪ `float_prim_name_is_recognized`
+   name view, DRY-shared with `Cx::try_check_vsa_prim`/`Cx::try_check_float_prim`'s own dispatch
+   sets rather than a second independently-maintained list). Verified by mutation (temporarily
+   reverting to the old `prim_family`-only predicate during development, confirming both new G1
+   fixtures — a float prim (`flt_neg`) and a VSA prim (`vsa_required_dim`) in a rule RHS — fail with
+   the exact pre-fix over-refusal, then restoring): `Declared → Empirical` on
+   `stage2_vsa_or_float_prim_rhs_now_accepted` + `stage2_vsa_prim_rhs_now_accepted`.
+4. **G2 fix — ACCEPTED and LANDED as the narrow-the-gate (KISS) form**, per the maintainer's
+   pre-delegated choice (the `Expr::Path` arm in `elab.rs` is untouched). `rhs_first_free_id` gained
+   a `call_head: bool` parameter (`true` only for the literal head of an `Expr::App`, mirroring
+   `Elab::app`'s own `Expr::App{head: Expr::Path(..), ..}`-only dispatch exactly); a same-nodule
+   nullary `lower`-rule name is now accepted only in that position, with its own differentiated,
+   never-silent check-phase diagnostic (naming the rule, "value position", and DN-115/G2) rather
+   than falling through to the generic Stage-2 "neither a value parameter, ..." message.
+   **Adversarial correction to this note's own §4.2 motivating claim (VR-5 — recorded, not
+   smoothed over):** driving the exact `BareRef`/`NullaryHelper`-shaped fixture through the real
+   `infer_type`, with the position-sensitivity fix temporarily reverted, shows the **pre-fix gate
+   already refused this program** — every time — via `infer_expr_rule_rhs_type`'s own subsequent
+   full RHS type-check (`Cx::check_path`'s unconditional fallback, which never resolves a bare
+   `lower`-rule reference regardless of what the Stage-2 gate decided), not an elaboration-time
+   residual. **So there was no live "green at check, red at eval" soundness gap for this exact
+   shape** — the pre-fix diagnostic was merely a confusing, generic "unknown name" one instead of a
+   clear, Stage-2-labeled one. The fix is still ratified and landed (diagnostic quality +
+   gate/mechanism self-consistency are real, worthwhile properties, and it is the maintainer's
+   pre-delegated choice on the merits) — but its benefit is honestly re-scoped: not a soundness
+   fix, a **diagnosability + gate-accuracy** fix. `Declared → Empirical` on
+   `stage2_bare_nullary_lower_rule_value_position_refused`, which asserts the actual (verified)
+   behavior rather than the originally-hypothesized one.
+5. **§6 test plan — ACCEPTED as the `Declared → Empirical` bar, and LANDED** (with the G2 item's
+   assertion honestly adjusted per point 4, above — it checks the real diagnostic/message, not a
+   hypothesized elaboration residual). New in-crate module
+   `crates/mycelium-l1/src/tests/defsite_resolution_stage2.rs`, 6 tests, all green: the real-
+   elaborator dual-oracle test + its mandatory non-vacuity capture control (items 1–2), the G1
+   float+VSA acceptance fixtures (item 3, two fixtures — DN-115's own text says "VSA/float", this
+   leaf covers both dispatch sets rather than only one, since they are independently-maintained
+   name sets), the G2 value-position refusal fixture (item 4), and a dedicated cross-nodule-shaped
+   regression (item 5), alongside the pre-existing `reachability_stage1b.rs` regression
+   (`control_free_non_param_id_hits_stage2_residual`), confirmed still green.
+6. **The Stage-4 boundary — CONFIRMED.** Cross-nodule/phylum free-id resolution stays refused
+   (`self.imports` is never consulted by this gate); `stage2_control_cross_nodule_shaped_free_id_stays_refused`
+   makes this explicit within the new module, and the single-nodule invariant is now documented
+   directly on `rhs_first_free_id`'s own doc comment (`checkty.rs`) so Stage 4's def-site-env
+   threading is a deliberate change, never a silent regression (§3's own DoD item).
+7. **Reveal-provenance (A-vs-C) — DEFERRED to OQ-H3 / M-1051, untouched**, per this note's own §7/§8
+   and the orchestrator's pre-delegated instruction. No `reveal`-related code was touched by this
+   leaf; the §7 pointer stands as written.
+8. **CRITICAL — Accepted ratifies the design + implementation choices above; Enacted is NOT
+   reached by this note (house rule #3 / VR-5).** Implementation landed in this **same** leaf's PR
+   (`crates/mycelium-l1/src/checkty.rs` — `rhs_first_free_id`, `prim_name_is_recognized` +
+   `VSA_PRIM_NAMES`/float sub-groups; `crates/mycelium-l1/src/tests/defsite_resolution_stage2.rs` —
+   new), change-scoped gates green (`cargo fmt -p mycelium-l1`, `cargo clippy -p mycelium-l1
+   --all-targets -- -D warnings`, `cargo test -p mycelium-l1` — 544 lib tests + every integration
+   target, 0 failures). Landing code in the same PR that ratifies the design does not itself confer
+   `Enacted` — that status means "complete and stable, outside ongoing maintenance and future-dev
+   integration," a call for the integrating parent to make on its own review, not this leaf. No
+   guarantee tag here is upgraded past its checked basis: single-nodule def-site resolution and the
+   G1/G2 fixtures move to `Empirical`; cross-nodule/phylum resolution and reveal-provenance stay
+   `Declared`/open.
+9. **Implementation-issue tracking.** This leaf implements Stage 2 directly under the umbrella
+   **M-1054** epic (`tools/github/issues.yaml`); §10's own `FLAG-issues.yaml` (a new dedicated
+   Stage-2 sub-`M-id`) is left standing for the integrating parent to apply at its discretion for
+   tracking granularity — not required for this ratification, since the work already landed rather
+   than remaining a `todo` to schedule.
+
+---
+
+*Author: design-reasoner (Opus), Draft §0–§10; ratification + implementation, M-1054 Stage 2 leaf
+(Sonnet), 2026-07-11. Every code citation in §0–§10 is `Empirical` at worktree tip `3cd7dbc2`; every
+design proposal there was `Declared` until landed + tested. The Ratification section's own claims are
+`Empirical`, checked against worktree tip `8bea5f2e` plus this leaf's own commits (VR-5).*
