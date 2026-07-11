@@ -12,6 +12,201 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### chore(docgen): verify + automate diff-friendly index regen (2026-07-11)
+
+PR #1421. Maintainer directive: audit the five doc-gen generators (api-index, tero-index,
+sugar-index, lib-index, editor grammars) for diff-friendly (update-in-place, not full-file-rewrite)
+output. **Audit result: all 5 already diff-friendly, no fixes needed** — stable sort keys, pretty and
+stable JSON, no volatile timestamp/run-id/host-path field in any generator or committed artifact
+(grepped `datetime|timestamp|generated[_-]?at|utcnow|SystemTime::now|chrono::`, zero hits). Verified
+empirically per generator: a tiny real source edit regenerates a small, localized diff, then reverts
+cleanly (`git status --short` clean after every probe-and-revert) — no generator or committed
+artifact was actually changed by this PR. **Adds `just docs-regen-all`** — the single entrypoint
+running all five `*-gen` recipes (`docs-index`, `tero-index-gen`, `sugar-index-gen`,
+`lib-index-gen`, `grammar-gen`) in one command; verified zero-drift from a clean tree and all five
+drift gates green afterward. Used by this session's own index regeneration (see the
+`chore(regen)` entry).
+
+### chore(integration): gap-close-run batch — dev to integration close-out (2026-07-11)
+
+Integration-tier close-out for the whole gap-close-run session (mitigation #14 throughout — every
+status flip below is checked against the merged code/PRs, never rubber-stamped). Reconciles the
+CHANGELOG (this entry and the four below), `docs/Doc-Index.md`, `tools/github/issues.yaml`, the
+committed indices, and the DN-113 doc-status header — the shared collision surface every leaf in
+this batch correctly FLAGGED up rather than touched directly.
+
+- **`docs/notes/DN-113-Cross-Phylum-Import-Resolution-Subsystem.md` Status header converted to the
+  recognized `| **Status** | ... |` table-row form** (was a blockquote `> **Status:** ...`, which
+  `scripts/doc_status_check.py`'s `STATUS_ROW` regex does not match — a genuine gate gap, not a
+  content change). Content is preserved verbatim, only the container changes (a `| Field | Value |`
+  table matching DN-112's own style). `python3 scripts/doc_status_check.py` now exits 0.
+- **`tools/github/issues.yaml` reconciled (append-only, mitigation #2, validated + deduped — 567
+  issues, zero duplicate ids after every edit below).** M-1054 gains a Stage-0+Stage-1-landed
+  addendum (status stays `in-progress` — the facility is real, checked progress but not yet wired
+  into ordinary elaboration; see the M-1054 entry below); M-1051 gains an Increment-3-landed
+  addendum (status stays `in-progress` — Increment-2 CLI/LSP surfacing is the sole remaining gap);
+  M-1024 gains a CLI-linker-reconciliation addendum (status stays `in-progress` — AOT parity is
+  still the tracked residual); **M-1056 status corrected `todo → done`** (the `/native-translate`
+  skill is authored and was applied in production to classify all 47 sugar-index rows, a stronger
+  validation than the DoD's literal minimum — see the skill entry below); M-1058 gains a
+  native-strategy-population addendum (status stays `done`, superseding its own "remains deferred"
+  note).
+- **Draft DNs surfaced for maintainer ratification: none outstanding from this batch.** DN-112 and
+  DN-113 are already `Accepted` (delegated ratification, 2026-07-10/11 — see the entry below);
+  DN-110 and DN-111 are already `Accepted` (prior sessions). No new Draft design note was authored
+  in this close-out.
+- **Periodic docs refreshed:** `docs/CURRENT-STATE.md` gains a bullet recording the facility
+  Stage 0+1 landing, the `reveal` Increment-3 landing, the M-1024 CLI reconciliation, and the
+  native-strategy population (superseding its own "population is bounded follow-up" line); append-
+  only — no decision status moves to `Enacted` by this refresh (house rule #3), the facility stays
+  `Accepted`-not-`Enacted` throughout.
+- **Gate:** `just check-canary` (every always-on gate + Tier-0 change-scoped tests) — the base-crate
+  (`mycelium-l1`) heavy Tier-1/durability sweep (full reverse-dep tests, proptest HIGH, mutants/fuzz,
+  VSA/GPU) is desktop-held per the cloud-session policy, not re-run here; the batch's own 526
+  `mycelium-l1` lib tests are green (verified per-PR, see each entry below).
+
+### feat(l1): M-1054 native metaprogramming facility Stage 0 + Stage 1 — recognition + production capture-avoidance (2026-07-11)
+
+Two staged increments of the DN-110 §5-A Rank-1 facility (generalizing the landed `lower`/`derive`
+term-level lowering framework to expression position) landed this session. **Neither closes the
+epic — M-1054 stays `status:in-progress`** (see the issues.yaml addendum above); this is real,
+checked progress toward its DoD, not a completion claim.
+
+- **Stage 0 (PR #1426, `claude/leaf/m1054-stage0-facility-skeleton`) — call-site recognition + a
+  value-parametric matcher skeleton, provably inert.** `ast.rs` gains `LowerDecl::value_params` (the
+  rule's VALUE parameters, distinct from the existing type-parameter `params`). `checkty.rs` gains
+  `Cx::check_sugar_call`, tried only as `check_app`'s last resort after every existing resolution
+  path has missed: arity/type-matches a call against a registered `lower` rule's `value_params`
+  (the same `resolve_ty` plus bidirectional `check` shape as an ordinary fn call, DRY), then refuses
+  — unconditionally, every path a named refusal, adversarially verified to be structurally incapable
+  of emitting an expansion. `elab.rs` gains `elaborate_lower_rule_with_args`, extending
+  `elaborate_lower_rule` (which becomes a thin empty-args wrapper — every existing caller, including
+  the external `tests/lower_derive.rs` harness, is untouched).
+- **Stage 1 (PR #1429, `claude/leaf/m1054-stage1-facility-hygiene`, review fast-follow `26344f99`)
+  — the first facility stage that actually emits an expansion.** `elab.rs`'s
+  `elaborate_lower_rule_with_args` gains a two-pass hygienic expansion: pass 1 ordinary `Elab::expr`
+  elaboration of the RHS with value params bound to their bare surface spelling; pass 2
+  `sugar_expand` (a direct port of the M-1055 E1 prototype's `Expander::go`) freshens every
+  RHS-introduced binder via `Elab::fresh` under a process-wide site-qualified namespace
+  (`SUGAR_EXPANSION_SITE`, OQ-H5) and substitutes value-parameter placeholders with their matched
+  argument `Node`s. New `src/tests/facility_stage1_hygiene.rs` (7 fixtures post-review, each checked
+  3 ways — `alpha_eq` vs. an independent oracle, `Interpreter::eval` agreement, and a
+  disable-freshening negative control proving the corpus is non-vacuous). Human maintainer plus Grok
+  adversarial review posted 8 comments; all verified and replied to, actionable ones landed in
+  `26344f99` (widened `sugar_expand`/`sugar_expand_alt` to `pub(crate)` and directly unit-tested on
+  hand-built `Lam`/`Fix`/`FixGroup`/`Alt::Ctor` nodes — the full pipeline only ever reaches `Let`,
+  a real coverage gap now closed; two new fixtures for shadowed-value-parameter and
+  later-fresh-name collision).
+- **Verdict: PASS — production capture-avoidance (A)+(B) on the real
+  `elaborate_lower_rule_with_args` path moves `Declared → Empirical`, for that path specifically**
+  (E1's own `Empirical` stays scoped to the test-only prototype it covered; (C) def-site resolution
+  and (D) affine-on-expanded-L0 stay `Declared`, Stage 2/3, untouched). `cargo test -p mycelium-l1
+  --lib`: 526 passed, 0 failed, 1 ignored (was 519 pre-Stage-1). `clippy -D warnings` / `fmt` clean.
+- **Stage 1b residual, honestly flagged (not a full DoD close):** `checkty::Cx::check_sugar_call` is
+  UNCHANGED by Stage 1 — it still refuses every recognized call site; **the facility is not yet
+  wired into ordinary program-elaboration dispatch, so no ordinary `.myc` program can invoke it
+  yet.** Also: `elaborate_lower_rule`'s synthetic-single-function-`Env` mechanism cannot elaborate a
+  `lower` rule whose RHS is a lambda IIFE (pre-existing, independent of Stage 1); free RHS
+  identifiers are left as bare `Var`s (Stage 2's OQ-H1 def-site-resolution job); `SUGAR_EXPANSION_SITE`
+  is a process-wide monotonic counter, not bit-reproducible across separate process runs (does not
+  affect alpha-equivalence correctness). DN-110 stays `Accepted`, NOT `Enacted`; no tag upgraded
+  past its checked basis (VR-5).
+
+### feat(reveal)/test(l1): M-1051 Increment-3 certified round-trip + M-1055 E3 PASS (2026-07-11)
+
+PR #1423 (`claude/leaf/m1051-inc3-e3-reveal-roundtrip`, review fast-follow `2ae0cd63`). Builds
+`crate::reveal::certified_roundtrip` (DN-38 §5's `delaborate . lower = id` obligation, gated by
+`certified` mode) and the M-1055 E3 go/no-go experiment
+(`crates/mycelium-l1/src/tests/reveal_roundtrip_e3.rs`).
+
+- **`certified_roundtrip` always computes the L0-term-level identity witness** (`reelaborate` +
+  `alpha_eq`), and, as a secondary best-effort convenience, attempts a genuine surface round-trip
+  (real reparse → real re-check → real re-elaborate → `alpha_eq`) whenever `render_surface` flags
+  the text `reparseable` — reporting an explicit `SurfaceOutcome`, never trusting the flag alone
+  (house rule #2, never-silent).
+- **Verify-first finding, review-hardened (empirical):** `reparseable = true` is necessary but not
+  sufficient for real parser acceptance. Confirmed non-reparseable in practice: `Node::Lam` (no
+  param-type annotation in the render), every `Node::Op` (the `#op[..]` marker; kernel prim names
+  are always `.`/`:`-namespaced), and — added during adversarial review, closing an over-generalized
+  initial claim — `App`/`Match` (real re-check refuses even `%`/`#`-marker-free terms). The
+  genuinely surface-round-trippable fragment is narrow: `Const`/`Var`/`Let`(-of-those) only.
+- **OQ-H3 disposed: option (1)/(a) — L0-term-level identity witness, never a surface re-parse for
+  `%`-names**; option (2) (display-renaming) stays deferred.
+- **M-1055's E3 experiment: 6 tests, all green** — composes `certified_roundtrip` over the E1
+  non-vacuity recipe (independently-spelled oracle, `Interpreter::eval` differential, a
+  disable-freshening mutation self-check). With E1 (PASS, prior session) and E3 (PASS, here) both
+  built and run, **M-1055's own E1+E3 Definition of Done is SATISFIED** — M-1055 status
+  `in-progress → done` (already applied in a prior close-out pass; recorded here for the CHANGELOG
+  record of this PR).
+- **Docs (append-only):** `DN-110-8.2-hygiene-deepdive.md` gains an "E3 Result" addendum;
+  `DN-110-Native-Metaprogramming-And-Sugar-Lowering-Facility.md` §8.4 gains a narrowly-scoped
+  addendum — the reveal spine moves `Declared → Empirical` only for the L0-term-level claim on the
+  reparseable fragment, not a blanket upgrade. DN-110 stays `Accepted`, not `Enacted`.
+- M-1051 stays `status:in-progress` — Increment-2 (CLI/LSP surfacing of `desugar`/`expand`) is the
+  sole remaining gap in its 3-increment DoD.
+
+### fix(cli): M-1024 linker reconciliation — collapse duplicate linkers onto canonical `PhylumEnv::link` (2026-07-11)
+
+PR #1427 (`claude/leaf/m1024-linker-reconciliation`). Collapses `mycelium-cli`'s own duplicate
+flatten-by-name linker onto the canonical `checkty::PhylumEnv::link` (M-1024/DN-101 §5-A,
+differential-tested by `crates/mycelium-l1/tests/phylum_exec.rs`) — and fixes a real user-facing
+bug along the way.
+
+- **The bug (fixed):** `myc check` type-checked each `.myc` source in isolation (`check_nodule` per
+  file — a phylum-of-one), so a project with a genuine cross-nodule `use` always refused under
+  `myc check`, even though the identical project ran fine under `myc run` (which already assembled
+  every source into one `Phylum` via `check_phylum`). Verified before-vs-after against the committed
+  `tests/fixtures/run-multi-nodule/` fixture.
+- **The DRY consolidation:** a new shared seam, `assemble_and_check_phylum(sources, project_dir)`
+  in `mycelium-cli`, is now the one path both `check_project` (`myc check`) and `run_multi_nodule`
+  (`myc run`/`myc build`) call — diverging only after assembly. Retired the CLI's own duplicate
+  linker (`merge_phylum_env` / `merge_map` / `fmt_pair_key`, ~155 LOC); `run_multi_nodule` now calls
+  `phylum_env.link()`, the canonical `mycelium-l1` linker, directly. Net `crates/mycelium-cli/src/lib.rs`:
+  -65 LOC. `checkty.rs` confirmed untouched (parallel-safe with the concurrent M-1054 facility build
+  touching that file).
+- **Intentional behavioral delta (per DN-101 §5-A v0 flat-namespace semantics):** `link` refuses ANY
+  cross-nodule simple-name duplicate, even byte-identical — stricter than the retired linker's
+  identical-bytes tolerance. A correctness upgrade, not a regression.
+- **`CheckReport` honesty shift:** since `check_phylum` is all-or-nothing (one `CheckError` for the
+  whole phylum, never a per-nodule verdict), `CheckReport.checked`/`failures` now follow the same
+  all-or-nothing honesty as `mycelium-check`'s `PhylumReport` (VR-5) instead of implying a per-nodule
+  split it cannot supply.
+- `cargo test -p mycelium-cli`: 36 passed (2 new). `cargo test -p mycelium-check`: 9 passed,
+  unchanged. `cargo test -p mycelium-l1 --test phylum_exec`: 6 passed, unchanged (the `link`
+  differential itself, untouched by this CLI-side change). `clippy -D warnings` / `fmt` clean.
+- FLAGGED follow-up (not done here, out of this leaf's declared scope): `mycelium-check`'s
+  `check_project`/`check_sources` (phylum-of-one) still exist alongside `check_phylum_dir` (already
+  phylum-aware); a smaller in-crate follow-up could point `myc-check --project` at
+  `check_phylum_dir` instead.
+
+### feat(skills,sugar-index): `/native-translate` classification skill (M-1056) + native-strategy population (M-1058 follow-up) (2026-07-11)
+
+PR #1422. Operationalizes the ratified DN-111 native-equivalence taxonomy in two parts.
+
+- **`.claude/skills/native-translate/SKILL.md` (M-1056, status `todo → done`).** Implements DN-110
+  §9's six-step decision procedure: verify-first against the DN-99 register/corpus (mitigation #14);
+  identify the underlying PROBLEM, not Rust's mechanism (DN-109 F1); classify via the DN-111
+  `{exact?}×{native?}` generator into `NativeEquivalent | IdiomaticRemapping | Approximation |
+  InteropBridge`; apply the DN-109 §3.2 auto-fire ratchet; a sugar-specific `lower`-rule case;
+  produce the §9 Step-6 register-style artifact. Documents the per-category VR-5 tag ceiling, the
+  (construct, context)-pair plus time-indexed caveat (DN-111 §8.1/§8.4), and the `wild`-fold seam
+  (DN-111 §8.3).
+- **Self-check basis:** rather than a standalone synthetic self-check against the DN-110 §1 J1–J5
+  table, the skill was applied in the SAME PR to classify all 47 `tools/grammar/sugar.yaml` rows —
+  covering the J1 exemplar (`lower`/`derive` → `NativeEquivalent`, matching DN-110 §1's J1 row) and
+  the J2 exemplar (`object`/`via`/`impl` → `IdiomaticRemapping`, matching DN-110 §1's J2 row)
+  directly, a materially stronger validation than the DoD's literal minimum.
+- **Sugar-index `native_strategy` column populated (M-1058 follow-up, status stays `done`,
+  supersedes its own "remains deferred" note).** 35 `NativeEquivalent`, 3 `IdiomaticRemapping`
+  (the `object`/`via`/`impl` inherent-desugar family), 1 `Approximation` (`lambda`'s deferred
+  capture semantics), 8 honestly `unclassified # needs-review` (Gap rows with no landed L1
+  construct, plus `grow`'s deliberate non-functional reservation) — marked, never fabricated
+  (VR-5). `sugar_index.py` regenerated to render the column; `docs/sugar-index/INDEX.md`/`index.json`
+  committed.
+- Verification: `python3 tools/grammar/sugar_index.py --self-test` green; `scripts/checks/sugar-index.sh`
+  green; `scripts/checks/markdown.sh` green (484 docs, 0 errors); `ruff check`/`ruff format --check`
+  clean on `sugar_index.py`; full pre-commit suite green on both commits.
+
 ### docs: DN-112 + DN-113 ratified (delegated) + DN-110/M-1054 gate-met correction (2026-07-10)
 
 Integration-tier close-out for a maintainer-delegated ratification pass ("ratify the options best fit
